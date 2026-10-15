@@ -120,14 +120,8 @@ class JsStmtEmitter {
 		return hint;
 	}
 
-	static function simpleTypeName(fullName:String):String {
-		if (fullName == null || fullName.length == 0)
-			return "";
-		final parts = fullName.split(".");
-		return parts[parts.length - 1];
-	}
-
-	static function emitCatchCondition(typeHint:String, errRef:String):String {
+	/** Canonical projected types select actual class constructors, including their prototype ancestry. */
+	static function emitCatchCondition(typeHint:String, errRef:String, scope:JsFunctionScope):String {
 		final normalized = normalizeCatchType(typeHint);
 		if (normalized.length == 0 || normalized == "Dynamic" || normalized == "Any")
 			return "true";
@@ -144,32 +138,10 @@ class JsStmtEmitter {
 			case "Array" | "StdTypes.Array":
 				"Array.isArray(" + errRef + ")";
 			default:
-				final simple = simpleTypeName(normalized);
-				final normalizedQuoted = JsNameMangler.quoteString(normalized);
-				final simpleQuoted = JsNameMangler.quoteString(simple);
-				"("
-				+ errRef
-				+ " != null && typeof "
-				+ errRef
-				+ " === \"object\" && ("
-				+ errRef
-				+ ".__hx_name === "
-				+ normalizedQuoted
-				+ " || "
-				+ errRef
-				+ ".__hx_name === "
-				+ simpleQuoted
-				+ " || ("
-				+ errRef
-				+ ".constructor != null && ("
-				+ errRef
-				+ ".constructor.__hx_name === "
-				+ normalizedQuoted
-				+ " || "
-				+ errRef
-				+ ".constructor.__hx_name === "
-				+ simpleQuoted
-				+ "))))";
+				final reference = scope.resolveClassRef(normalized);
+				if (reference == null)
+					throw "JavaScript catch requires its resolved class owner: " + normalized;
+				"(" + errRef + " instanceof " + reference + ")";
 		}
 	}
 
@@ -187,7 +159,7 @@ class JsStmtEmitter {
 			for (i in 0...catches.length) {
 				final c = catches[i];
 				final head = i == 0 ? "if" : "else if";
-				final condition = emitCatchCondition(c.typeHint, "__hx_err");
+				final condition = emitCatchCondition(c.typeHint, "__hx_err", scope);
 				writer.writeln(head + " (" + condition + ") {");
 				writer.pushIndent();
 				final bind = scope.declareLocal(c.name);

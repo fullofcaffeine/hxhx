@@ -526,10 +526,13 @@ class TypedBodySource {
 				throw "source control must be lowered before backend projection (haxe_ocaml-o25kr)";
 			case ControlTry:
 				final catches = typedExpression.getSourceCatches();
-				final names = exactProjectedNames(catalog, typedExpression.getLocalBindings(), [for (entry in catches) entry.getName()], "typed catch region");
+				final bindings = typedExpression.getLocalBindings();
+				final names = exactProjectedNames(catalog, bindings, [for (entry in catches) entry.getName()], "typed catch region");
+				// Imports and aliases are already resolved on each handler binding.
+				// Targets must not repeat name resolution from the authored hint.
 				ELoweredControl(Try([
 					for (index in 0...catches.length)
-						new HxSourceCatch(names[index], catches[index].getTypeHint(), catches[index].getPosition())
+						new HxSourceCatch(names[index], canonicalTypeHint(bindings[index].getType()), catches[index].getPosition())
 				]), "",
 					expressionTail(expressions, 0, catalog, projectionFacts), sourcePosition(typedExpression.getPosition()));
 			case ControlBranch:
@@ -832,13 +835,13 @@ class TypedBodySource {
 					[for (body in statements) statement(body, catalog, projectionFacts)], position, typedStatement.getSwitchHasExhaustiveCoverage());
 			case Try:
 				final catchNames = typedStatement.getCatchNames();
-				final catchTypeHints = typedStatement.getCatchTypeHints();
-				final projectedCatchNames = exactProjectedNames(catalog, typedStatement.getLocalBindings(), catchNames, "typed catch statement");
+				final bindings = typedStatement.getLocalBindings();
+				final projectedCatchNames = exactProjectedNames(catalog, bindings, catchNames, "typed catch statement");
 				final catches = new Array<{name:String, typeHint:String, body:HxStmt}>();
 				for (index in 0...catchNames.length)
 					catches.push({
 						name: projectedCatchNames[index],
-						typeHint: catchTypeHints[index],
+						typeHint: canonicalTypeHint(bindings[index].getType()),
 						body: statement(statements[index + 1], catalog, projectionFacts)
 					});
 				STry(statement(statements[0], catalog, projectionFacts), catches, position);
