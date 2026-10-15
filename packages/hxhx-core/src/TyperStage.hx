@@ -2544,6 +2544,11 @@ class TyperStage {
 		}
 		final runtimeTarget = TypedRuntimeTypeResolver.resolve(expr, scope, ctx, ValueExpression);
 		if (runtimeTarget != null) {
+			// Inferred Class<T>/Enum<T> values need the same real provider closure
+			// as annotated values. Keep the selected runtime target and type intact.
+			final provider = runtimeTarget.getValueType().getNominalIdentity();
+			if (provider != null)
+				ctx.resolveType(provider.getCanonicalName());
 			final scheme = TyClassValueScheme.select(runtimeTarget, ctx.getIndex());
 			return scheme == null ? runtimeTarget.getValueType() : TyType.classValue(scheme);
 		}

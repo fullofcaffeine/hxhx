@@ -357,6 +357,10 @@ class CppManagedRootedExpression {
 	/** Declaration storage comes from exact binding events; native type text cannot choose it. */
 	public function renderStatement(statement:HxStmt, indent:String):Array<String> {
 		return switch statement {
+			case SExpr(value, _) if (TypedRuntimeTypeSource.isMarker(value)):
+				// A discarded descriptor is still a checked value occurrence, not
+				// a call to the private marker's identifier as an ordinary local.
+				renderDiscard(value, indent);
 			case SThrow(value, _):
 				// Evaluate once while rooted, then retain that exact value across native unwinding.
 				final root = input.temporaryPrefix + "thrown";
