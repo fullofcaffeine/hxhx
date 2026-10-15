@@ -16422,24 +16422,7 @@ class CppTargetCore {
 			case EField(receiver, "stack") if (isCppExceptionValueType(exprCppType(receiver, scope))):
 				"std::vector<std::string>";
 			case ECall(EField(receiver, method), args):
-				var receiverType:Null<String> = null;
-				function fieldReceiverCppType():String {
-					if (receiverType == null)
-						receiverType = exprCppType(receiver, scope);
-					return receiverType;
-				}
-				final knownReturn = knownFieldCallReturnCppTypeWithReceiverCppType(receiver, method, args, fieldReceiverCppType, scope);
-				final primitiveAbstractReturn = knownReturn.length > 0 ? knownReturn : primitiveBackedAbstractMethodReturnCppTypeWithReceiverCppType(receiver,
-					method, fieldReceiverCppType, scope);
-				if (primitiveAbstractReturn.length > 0) primitiveAbstractReturn; else {
-					final staticOwner = staticReceiverClassName(receiver, scope);
-					if (staticOwner != null) {
-						classMethodCppReturnType(staticOwner, method, true, scope);
-					} else {
-						final ownerType = classNameFromCppExprType(fieldReceiverCppType(), scope);
-						ownerType == null ? "" : classMethodCppReturnType(ownerType, method, false, scope);
-					}
-				}
+				fieldCallResultType(receiver, method, args, scope);
 			case ECall(ELambda(lambdaArgs, body), args):
 				lambdaCallReturnCppType(lambdaArgs, body, args, scope);
 			case EBinop("=", left, _):
@@ -17892,54 +17875,7 @@ class CppTargetCore {
 			case ECall(EField(EIdent(typeName), "create"), _) if (scopeHasClass(scope, sanitizeTypePath(typeBaseName(typeName)))):
 				cppTypeHint(typeName, scope);
 			case ECall(EField(receiver, method), args):
-				var receiverType:Null<String> = null;
-				function fieldReceiverCppType():String {
-					if (receiverType == null)
-						receiverType = exprCppType(receiver, scope);
-					return receiverType;
-				}
-				final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
-				function traceFieldInferPhase(phase:String, start:Float, typeName:String):String {
-					if (timingEnabled)
-						traceCppScopeStmtTimingPhase(scope,
-							"phase=field_infer_"
-							+ phase
-							+ " seconds="
-							+ Std.string(Sys.time() - start)
-							+ " method="
-							+ sanitizeIdentifier(method)
-							+ " receiver="
-							+ exprKind(receiver)
-							+ " type="
-							+ traceCppSnippet(typeName));
-					return typeName;
-				}
-				final knownStart = timingEnabled ? Sys.time() : 0.0;
-				final knownReturn = knownFieldCallReturnCppTypeWithReceiverCppType(receiver, method, args, fieldReceiverCppType, scope);
-				traceFieldInferPhase("known", knownStart, knownReturn);
-				final primitiveStart = timingEnabled ? Sys.time() : 0.0;
-				final primitiveAbstractReturn = knownReturn.length > 0 ? knownReturn : primitiveBackedAbstractMethodReturnCppTypeWithReceiverCppType(receiver,
-					method, fieldReceiverCppType, scope);
-				traceFieldInferPhase("primitive", primitiveStart, primitiveAbstractReturn);
-				if (primitiveAbstractReturn.length > 0) primitiveAbstractReturn; else {
-					final staticStart = timingEnabled ? Sys.time() : 0.0;
-					final staticOwner = staticReceiverClassName(receiver, scope);
-					traceFieldInferPhase("static_owner", staticStart, staticOwner == null ? "" : staticOwner);
-					if (staticOwner != null) {
-						final returnStart = timingEnabled ? Sys.time() : 0.0;
-						traceFieldInferPhase("static_return", returnStart, classMethodCppReturnType(staticOwner, method, true, scope));
-					} else {
-						final receiverTypeStart = timingEnabled ? Sys.time() : 0.0;
-						final resolvedReceiverType = fieldReceiverCppType();
-						traceFieldInferPhase("receiver_type", receiverTypeStart, resolvedReceiverType);
-						final ownerStart = timingEnabled ? Sys.time() : 0.0;
-						final ownerType = classNameFromCppExprType(resolvedReceiverType, scope);
-						traceFieldInferPhase("owner_type", ownerStart, ownerType == null ? "" : ownerType);
-						final returnStart = timingEnabled ? Sys.time() : 0.0;
-						ownerType == null ? "" : traceFieldInferPhase("instance_return", returnStart,
-							classMethodCppReturnType(ownerType, method, false, scope));
-					}
-				}
+				inferredFieldCallResultType(receiver, method, args, scope);
 			case ECall(ELambda(lambdaArgs, body), args):
 				lambdaCallReturnCppType(lambdaArgs, body, args, scope);
 			case EBinop("=", left, _):
@@ -25579,5 +25515,90 @@ class CppTargetCore {
 			return "std::string";
 		final fieldType = cppTypeHint(raw, scope, classLookup);
 		return isScopeTypeParam(fieldType, scope) || isBareCppTypeParamName(fieldType) ? "std::string" : fieldType;
+	}
+
+	/**
+		Resolve the general field-call result after the earlier pattern cases decline it.
+
+		Keep this body outside the large pattern match: upstream typing duplicates a
+		fallback body across decision branches. An ordinary call keeps that tree small
+		while preserving lazy receiver typing and the original lookup order.
+	**/
+	static function fieldCallResultType(receiver:HxExpr, method:String, args:Array<HxExpr>, scope:CppRenderScope):String {
+		var receiverType:Null<String> = null;
+		function fieldReceiverCppType():String {
+			if (receiverType == null)
+				receiverType = exprCppType(receiver, scope);
+			return receiverType;
+		}
+		final knownReturn = knownFieldCallReturnCppTypeWithReceiverCppType(receiver, method, args, fieldReceiverCppType, scope);
+		final primitiveAbstractReturn = knownReturn.length > 0 ? knownReturn : primitiveBackedAbstractMethodReturnCppTypeWithReceiverCppType(receiver, method,
+			fieldReceiverCppType, scope);
+		return if (primitiveAbstractReturn.length > 0) primitiveAbstractReturn; else {
+			final staticOwner = staticReceiverClassName(receiver, scope);
+			if (staticOwner != null) {
+				classMethodCppReturnType(staticOwner, method, true, scope);
+			} else {
+				final ownerType = classNameFromCppExprType(fieldReceiverCppType(), scope);
+				ownerType == null ? "" : classMethodCppReturnType(ownerType, method, false, scope);
+			}
+		};
+	}
+
+	/**
+		Infer a general field-call result while retaining the phase diagnostics.
+
+		This non-inline boundary avoids duplicating the fallback in the pattern tree.
+		Receiver typing remains lazy and happens at most once in this invocation;
+		known, abstract, static and instance lookup keep their original order.
+	**/
+	static function inferredFieldCallResultType(receiver:HxExpr, method:String, args:Array<HxExpr>, scope:CppRenderScope):String {
+		var receiverType:Null<String> = null;
+		function fieldReceiverCppType():String {
+			if (receiverType == null)
+				receiverType = exprCppType(receiver, scope);
+			return receiverType;
+		}
+		final timingEnabled = traceCppScopeStmtTimingEnabled(scope);
+		function traceFieldInferPhase(phase:String, start:Float, typeName:String):String {
+			if (timingEnabled)
+				traceCppScopeStmtTimingPhase(scope,
+					"phase=field_infer_"
+					+ phase
+					+ " seconds="
+					+ Std.string(Sys.time() - start)
+					+ " method="
+					+ sanitizeIdentifier(method)
+					+ " receiver="
+					+ exprKind(receiver)
+					+ " type="
+					+ traceCppSnippet(typeName));
+			return typeName;
+		}
+		final knownStart = timingEnabled ? Sys.time() : 0.0;
+		final knownReturn = knownFieldCallReturnCppTypeWithReceiverCppType(receiver, method, args, fieldReceiverCppType, scope);
+		traceFieldInferPhase("known", knownStart, knownReturn);
+		final primitiveStart = timingEnabled ? Sys.time() : 0.0;
+		final primitiveAbstractReturn = knownReturn.length > 0 ? knownReturn : primitiveBackedAbstractMethodReturnCppTypeWithReceiverCppType(receiver, method,
+			fieldReceiverCppType, scope);
+		traceFieldInferPhase("primitive", primitiveStart, primitiveAbstractReturn);
+		return if (primitiveAbstractReturn.length > 0) primitiveAbstractReturn; else {
+			final staticStart = timingEnabled ? Sys.time() : 0.0;
+			final staticOwner = staticReceiverClassName(receiver, scope);
+			traceFieldInferPhase("static_owner", staticStart, staticOwner == null ? "" : staticOwner);
+			if (staticOwner != null) {
+				final returnStart = timingEnabled ? Sys.time() : 0.0;
+				traceFieldInferPhase("static_return", returnStart, classMethodCppReturnType(staticOwner, method, true, scope));
+			} else {
+				final receiverTypeStart = timingEnabled ? Sys.time() : 0.0;
+				final resolvedReceiverType = fieldReceiverCppType();
+				traceFieldInferPhase("receiver_type", receiverTypeStart, resolvedReceiverType);
+				final ownerStart = timingEnabled ? Sys.time() : 0.0;
+				final ownerType = classNameFromCppExprType(resolvedReceiverType, scope);
+				traceFieldInferPhase("owner_type", ownerStart, ownerType == null ? "" : ownerType);
+				final returnStart = timingEnabled ? Sys.time() : 0.0;
+				ownerType == null ? "" : traceFieldInferPhase("instance_return", returnStart, classMethodCppReturnType(ownerType, method, false, scope));
+			}
+		};
 	}
 }

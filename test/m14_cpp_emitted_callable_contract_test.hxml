@@ -2,3 +2,6 @@
 -cp test
 -main M14CppEmittedCallableContractTest
 --interp
+
+--next
+test/m14_cpp_field_call_result_type_test.hxml
