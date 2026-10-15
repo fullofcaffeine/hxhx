@@ -125,6 +125,7 @@ class CppManagedProgramPlan {
 				final instance = classes.methods.initializerInstanceCall(initializer, expression);
 				if (instance != null
 					&& !CppManagedArrayPush.selects(instance)
+					&& !CppManagedStringSubstr.selects(instance)
 					&& !CppManagedArrayJoin.selects(instance)
 					&& !CppManagedMapSet.selects(instance)
 					&& !CppManagedMapGet.selects(instance))
@@ -251,6 +252,7 @@ class CppManagedProgramPlan {
 					final instance = classes.methods.functionInstanceCall(selected.projection, expression);
 					if (instance != null
 						&& !CppManagedArrayPush.selects(instance)
+						&& !CppManagedStringSubstr.selects(instance)
 						&& !CppManagedArrayJoin.selects(instance)
 						&& !CppManagedMapSet.selects(instance)
 						&& !CppManagedMapGet.selects(instance))

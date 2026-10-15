@@ -7,4 +7,5 @@ rep=a#b#c
 parts=a|b|c
 map=a[1]b[22]c
 esc=a\+b
+unicode-map=First|Later
 OK ereg_basic

@@ -20,14 +20,14 @@ function qualifiedTypePaths(source:String, ?defines:haxe.ds.StringMap<String>):A
 	final candidates = new haxe.ds.StringMap<Bool>();
 	final paths = ~/\b(([A-Za-z_][A-Za-z0-9_]*\s*\.\s*)+[A-Z][A-Za-z0-9_]*)\b/g;
 	final whitespace = ~/\s+/g;
-	var pos = 0;
-	while (paths.matchSub(text, pos, -1)) {
-		final dep = whitespace.replace(paths.matched(1), "");
+	// Keep Unicode cursor advancement inside EReg. Mixing matchSub offsets with
+	// matchedPos can repeat a match forever on the upstream eval host.
+	paths.map(text, matched -> {
+		final dep = whitespace.replace(matched.matched(1), "");
 		if (!HxConditionalCompilation.isInactiveTargetQualifiedTypePath(dep, defines))
 			candidates.set(dep, true);
-		final matched = paths.matchedPos();
-		pos = matched.pos + matched.len;
-	}
+		return matched.matched(0);
+	});
 	final out = [for (dep in candidates.keys()) dep];
 	out.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
 	return out;

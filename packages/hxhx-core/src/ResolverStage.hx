@@ -89,19 +89,18 @@ class ResolverStage {
 
 		final candidates = new Map<String, Bool>();
 		function addMatches(re:EReg):Void {
-			var pos = 0;
-			while (re.matchSub(source, pos, -1)) {
-				final name = re.matched(1);
+			// Let EReg advance its own cursor. Eval's substring offsets and
+			// matchedPos coordinates disagree after multibyte source text.
+			re.map(source, matched -> {
+				final name = matched.matched(1);
 				if (name != null && name.length > 0)
 					candidates.set(name, true);
-				final mp = re.matchedPos();
-				pos = mp.pos + mp.len;
-			}
+				return matched.matched(0);
+			});
 		}
 		function addTypeListMatches(re:EReg):Void {
-			var pos = 0;
-			while (re.matchSub(source, pos, -1)) {
-				final list = re.matched(1);
+			re.map(source, matched -> {
+				final list = matched.matched(1);
 				if (list != null) {
 					for (raw in list.split(",")) {
 						final name = StringTools.trim(raw);
@@ -109,9 +108,8 @@ class ResolverStage {
 							candidates.set(name, true);
 					}
 				}
-				final mp = re.matchedPos();
-				pos = mp.pos + mp.len;
-			}
+				return matched.matched(0);
+			});
 		}
 
 		// Note: this is intentionally heuristic. It exists as a bootstrap bridge toward
@@ -194,9 +192,8 @@ class ResolverStage {
 			return [];
 
 		final re = ~/\baddCases\s*\(\s*["']([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)["']/g;
-		var pos = 0;
-		while (re.matchSub(source, pos, -1)) {
-			final packageName = re.matched(1);
+		re.map(source, matched -> {
+			final packageName = matched.matched(1);
 			if (packageName != null && packageName.length > 0) {
 				final relDir = packageName.split(".").join("/");
 				for (cp in classPaths) {
@@ -210,9 +207,8 @@ class ResolverStage {
 					}
 				}
 			}
-			final mp = re.matchedPos();
-			pos = mp.pos + mp.len;
-		}
+			return matched.matched(0);
+		});
 
 		final out = new Array<String>();
 		for (dep in outSet.keys())

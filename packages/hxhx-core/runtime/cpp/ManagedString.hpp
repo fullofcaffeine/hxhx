@@ -8,6 +8,75 @@
 
 namespace hxhx::managed {
 
+// Decode one scalar from the UTF-8 storage used by authored String literals and
+// native string operations. Embedded zeroes are characters, not terminators.
+// Malformed foreign bytes must be decoded at their input boundary; they cannot
+// silently become a different indexing scheme here.
+struct StringScalar {
+  std::size_t bytes;
+  std::uint32_t value;
+};
+
+inline StringScalar stringScalar(const std::string& text, std::size_t offset) {
+  const auto lead = static_cast<unsigned char>(text.at(offset));
+  if (lead < 0x80) return {1, lead};
+  const std::size_t count = lead >= 0xc2 && lead <= 0xdf ? 2 :
+                            lead >= 0xe0 && lead <= 0xef ? 3 :
+                            lead >= 0xf0 && lead <= 0xf4 ? 4 : 0;
+  if (count == 0 || count > text.size() - offset)
+    throw std::invalid_argument("substring requires valid UTF-8 storage");
+  std::uint32_t value = lead & (0x7f >> count);
+  for (std::size_t index = 1; index < count; ++index) {
+    const auto byte = static_cast<unsigned char>(text[offset + index]);
+    if ((byte & 0xc0) != 0x80) throw std::invalid_argument("substring requires valid UTF-8 storage");
+    value = (value << 6) | (byte & 0x3f);
+  }
+  const std::uint32_t minimum = count == 2 ? 0x80 : count == 3 ? 0x800 : 0x10000;
+  if (value < minimum || value > 0x10ffff || (value >= 0xd800 && value <= 0xdfff))
+    throw std::invalid_argument("substring requires valid UTF-8 storage");
+  return {count, value};
+}
+
+// Native Haxe 4.3.7 counts UTF-16 units, despite our UTF-8 storage. A slice that
+// cuts a surrogate pair contains U+FFFD for that half, as independently observed
+// before byte conversion. Full scalars retain their exact bytes. The bounds use
+// wide arithmetic so INT_MIN/INT_MAX never cause signed C++ overflow.
+inline Value stringSubstr(const Value& receiver, const Value& position, const Value& length) {
+  const std::string empty;
+  const auto& text = receiver.kind() == ValueKind::Null ? empty : receiver.asString();
+  std::int64_t size = 0;
+  for (std::size_t byte = 0; byte < text.size();) {
+    const auto scalar = stringScalar(text, byte);
+    size += scalar.value > 0xffff ? 2 : 1;
+    byte += scalar.bytes;
+  }
+  std::int64_t start = position.kind() == ValueKind::Null ? 0 : position.asInteger();
+  if (start < 0) start = std::max<std::int64_t>(0, size + start);
+  if (start >= size) return Value::string("");
+  std::int64_t count = length.kind() == ValueKind::Null ? size : length.asInteger();
+  // Native negative lengths count from the complete string's end. Its boundary
+  // rule returns empty when the adjusted range reaches that end exactly.
+  if (count < 0) {
+    count += size;
+    if (start + count >= size) return Value::string("");
+  }
+  if (count <= 0) return Value::string("");
+  const auto end = start + std::min(count, size - start);
+  std::string result;
+  std::int64_t unit = 0;
+  for (std::size_t byte = 0; byte < text.size() && unit < end;) {
+    const auto scalar = stringScalar(text, byte);
+    const auto next = unit + (scalar.value > 0xffff ? 2 : 1);
+    if (next > start) {
+      if (unit >= start && next <= end) result.append(text, byte, scalar.bytes);
+      else result.append("\xef\xbf\xbd", 3);
+    }
+    byte += scalar.bytes;
+    unit = next;
+  }
+  return Value::string(std::move(result));
+}
+
 // Admitted Std.string and enum comparison operations select this formatter.
 // The generated callback owns primitive and instance dispatch. Storage provides
 // field order; this helper never looks up source types or method declarations.

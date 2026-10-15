@@ -35,6 +35,28 @@ class M14ImplicitDependencyCommentsIntegrationTest {
 		check("same-package discovery", ResolverStage.implicitSamePackageDeps(samePackage, "app.Main", decl),
 			"Base,Face,Nearby,Static,app.Base,app.Face,app.Nearby,app.Static");
 
+		// Eval's regex substring offsets can disagree with matchedPos after Unicode.
+		// Enough multibyte text makes a manual offset loop repeat the same match.
+		final unicode = 'var text = "é😀é😀é😀é😀é😀é😀";\n';
+		Sys.println("IMPLICIT_DEPENDENCY_UNICODE:BEGIN");
+		check("Unicode same-package discovery", ResolverStage.implicitSamePackageDeps(unicode + samePackage + " new Later();", "app.Main", decl),
+			"Base,Face,Later,Nearby,Static,app.Base,app.Face,app.Later,app.Nearby,app.Static");
+		check("Unicode interfaces", ResolverStage.implicitSamePackageDeps(unicode + "class Child implements One, Two {}", "app.Main", decl),
+			"One,Two,app.One,app.Two");
+		check("Unicode eager discovery", ResolverStage.implicitQualifiedTypeDeps(unicode + "first.Dependency.run(); second.Later.run();"),
+			"first.Dependency,second.Later");
+		check("Unicode lazy discovery", ModuleLoader.implicitQualifiedTypeDeps(unicode + "first.Dependency.run(); second.Later.run();"),
+			"first.Dependency,second.Later");
+		final root = ".tmp/implicit-dependency-unicode";
+		for (pack in ["one", "two"]) {
+			sys.FileSystem.createDirectory(root + "/" + pack);
+			sys.io.File.saveContent(root + "/" + pack + "/TestCase.hx", "");
+			sys.io.File.saveContent(root + "/" + pack + "/Ignored.hx", "");
+		}
+		check("Unicode test package discovery",
+			ResolverStage.implicitUtestAddCasesDeps(unicode + 'runner.addCases("one"); runner.addCases("two");', [root], new CompilerSourceProvider()),
+			"one.TestCase,two.TestCase");
+
 		final literals = "var a = \"https://example/\\\"/*text*/\"; var b = '/*text*/'; var c = ~/[/][*]text[*][/]/;";
 		if (HxLexer.maskComments(literals) != literals)
 			throw "Comment-looking string or regular-expression text changed";
