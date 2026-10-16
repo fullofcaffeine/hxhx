@@ -33,12 +33,15 @@ class M14NativeClassStorageTest {
 		final storage = new Stage3OcamlClassStorage();
 		for (owner in classes)
 			storage.add(owner, false);
+		reject(() -> storage.classRegistration(second.getBackendProjection().getClasses()[0], value -> '"' + value + '"'), "exact class projection");
 		for (owner in first.getTypedClasses()) {
 			final type = TyType.nominal(owner.getSemanticInfo().getIdentity(), []);
 			require(storage.usesIdentity(type) == (owner.getSemanticInfo().getShortName() == "Main"), "wrong class representation selection");
 		}
 		final runtimeStorage = new Stage3OcamlClassStorage();
 		runtimeStorage.add(classes[0], true);
+		require(runtimeStorage.nominalName(TyType.nominal(first.getTypedClasses()[0].getSemanticInfo().getIdentity(), [])) == null,
+			"runtime provider borrowed ordinary class tags");
 		require(!runtimeStorage.usesIdentity(TyType.nominal(first.getTypedClasses()[0].getSemanticInfo().getIdentity(), [])),
 			"runtime provider acquired generated class storage");
 		var equalityCount = 0;

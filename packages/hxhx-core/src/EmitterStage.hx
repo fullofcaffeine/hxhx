@@ -6112,13 +6112,14 @@ class EmitterStage {
 							mutable: mutable
 						});
 					}
-					backend.ocaml.Stage3OcamlExceptions.tryStatement(body, handlers, currentFunctionLocalOcamlNames);
+					backend.ocaml.Stage3OcamlExceptions.tryStatement(body, handlers, currentFunctionLocalOcamlNames, currentClassStorage, escapeOcamlString);
 				case SThrow(expr, _pos):
 					if (currentTypedFunction == null)
 						throw "OCaml throw requires its exact typed function projection";
 					final value = currentTypedFunction.requireThrownValue(expr);
 					backend.ocaml.Stage3OcamlExceptions.throwValue(value,
-						exprToOcaml(expr, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
+						exprToOcaml(expr, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+						currentClassStorage);
 				case SSwitch(scrutinee, patterns, bodies, _pos):
 					if (currentFunctionLocalOcamlNames == null || patterns == null || bodies == null || patterns.length != bodies.length)
 						throw "OCaml switch statement requires aligned cases and its naming owner";
@@ -8138,6 +8139,11 @@ class EmitterStage {
 					out.push("[@@@warning \"-21-26\"]");
 					out.push("");
 
+					if (classProjection.hasSemanticFacts()) {
+						final registration = currentClassStorage.classRegistration(classProjection, escapeOcamlString);
+						if (registration != null)
+							out.push(registration);
+					}
 					final parsedFields = HxClassDecl.getFields(emittedClass);
 					final instanceInitializers = classProjection.hasSemanticFacts() ? currentClassStorage.instanceInitializers(classProjection) : null;
 					final emitParsedStaticFields = shouldEmitParsedStaticFields(outputModuleName);

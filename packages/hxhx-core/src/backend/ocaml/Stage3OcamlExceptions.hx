@@ -16,35 +16,39 @@ typedef Stage3OcamlCatch = {
 	The existing runtime owns value storage and type tags; this Haxe module owns
 	handler order and conversions. It does not infer types from emitted text.
 
-	Nominal throws still require instance identity metadata in this route. Reject
-	them until that carrier is proved; a source type name cannot establish a
-	runtime subtype after a value passes through Dynamic.
+	Ordinary class values retain their most-derived descriptor in private object
+	storage. Throwing through Dynamic or a broader catch keeps that identity.
+	Class storage admits nominal carriers; runtime-owned representations stay
+	under their own boundaries instead of borrowing a static throw-site tag.
  */
-function throwValue(value:TypedBackendThrownValue, rendered:String):String {
+function throwValue(value:TypedBackendThrownValue, rendered:String, classes:Stage3OcamlClassStorage):String {
 	final type = value.type;
 	final payload = switch type.getSemanticKey() {
 		case "primitive:Bool": "HxRuntime.box_bool (" + rendered + ")";
 		case "primitive:Int" | "primitive:Float" | "primitive:String" | "null": "Obj.repr (" + rendered + ")";
 		case _ if (type.isDynamic()): rendered;
+		case _ if (classes.nominalName(type) != null): "Obj.repr (" + rendered + ")";
 		case _: throw "Stage3 OCaml throw requires a supported exact runtime carrier: " + type.getSemanticKey();
 	};
 	return "HxType.hx_throw_typed_rtti (" + payload + ") [\"Dynamic\"]";
 }
 
 /** Catch only language exceptions; native returns and loop signals retain their destinations. */
-function tryStatement(body:String, catches:Array<Stage3OcamlCatch>, names:Stage3OcamlLocalNames):String {
+function tryStatement(body:String, catches:Array<Stage3OcamlCatch>, names:Stage3OcamlLocalNames, classes:Stage3OcamlClassStorage, quote:String->String):String {
 	final value = names.internalName("__hx_thrown_value");
 	final tags = names.internalName("__hx_thrown_tags");
 	final original = names.internalName("__hx_original_exception");
 	var handlers = "raise " + original;
 	for (offset in 0...catches.length) {
 		final entry = catches[catches.length - offset - 1];
+		final nominal = classes.nominalName(entry.type);
 		final converted = switch entry.type.getSemanticKey() {
 			case "primitive:Bool": "HxRuntime.unbox_bool_or_obj " + value;
 			case "primitive:Int": "(Obj.obj " + value + " : int)";
 			case "primitive:Float": "(Obj.obj " + value + " : float)";
 			case "primitive:String": "(Obj.obj " + value + " : string)";
 			case _ if (entry.type.isDynamic()): value;
+			case _ if (nominal != null): value;
 			case _: throw "Stage3 OCaml catch requires a supported exact runtime carrier: " + entry.type.getSemanticKey();
 		};
 		final bound = entry.mutable ? "ref (" + converted + ")" : converted;
@@ -52,8 +56,8 @@ function tryStatement(body:String, catches:Array<Stage3OcamlCatch>, names:Stage3
 		if (entry.type.isDynamic()) {
 			handlers = selected;
 		} else {
-			final tag = entry.type.getDisplay();
-			handlers = "(if HxRuntime.tags_has " + tags + " \"" + tag + "\" then " + selected + " else " + handlers + ")";
+			final tag = nominal == null ? entry.type.getDisplay() : nominal;
+			handlers = "(if HxRuntime.tags_has " + tags + " " + quote(tag) + " then " + selected + " else " + handlers + ")";
 		}
 	}
 	return "(try (" + body + ") with HxRuntime.Hx_exception (" + value + ", " + tags + ") as " + original + " -> " + handlers + ")";

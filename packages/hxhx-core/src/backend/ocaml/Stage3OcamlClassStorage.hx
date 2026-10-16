@@ -8,6 +8,7 @@ package backend.ocaml;
 	remains an ordinary field without changing String, Array, or Bytes operations.
 **/
 class Stage3OcamlClassStorage {
+	final nominals:Map<String, TypedBackendClassSemanticFacts> = [];
 	final owners:Map<String, TypedBackendClassSemanticFacts> = [];
 	final projections:Map<String, TypedBackendClassProjection> = [];
 	final modules:Map<String, String> = [];
@@ -20,11 +21,15 @@ class Stage3OcamlClassStorage {
 		if (runtimeProvided)
 			return;
 		final facts = projection.requireSemanticFacts();
-		if (facts.getIsExtern() || facts.getIsInterface() || !facts.getNominalKind().match(ClassInstance))
+		if (facts.getIsExtern() || !facts.getNominalKind().match(ClassInstance))
 			return;
 		final identity = facts.getClassIdentity();
-		if (owners.exists(identity))
+		if (nominals.exists(identity))
 			throw "native class storage owner registered twice: " + identity;
+		if (facts.getIsInterface()) {
+			nominals.set(identity, facts);
+			return;
+		}
 		final fields = new Array<TypedBackendFieldInitializerProjection>();
 		for (declaration in HxClassDecl.getFields(projection.getDeclaration()))
 			if (!HxFieldDecl.getIsStatic(declaration) && HxFieldDecl.getInit(declaration) != null) {
@@ -34,11 +39,51 @@ class Stage3OcamlClassStorage {
 				fields.push(matches[0]);
 			}
 		final initializer = new Stage3OcamlInstanceInitializers({projection: projection, owner: identity, fields: fields});
+		nominals.set(identity, facts);
 		owners.set(identity, facts);
 		projections.set(identity, projection);
 		initializers.set(identity, initializer);
 		if (outputModule != null)
 			modules.set(identity, outputModule);
+	}
+
+	/** Runtime catch names come from admitted declarations, never aliases or printed type hints. */
+	public function nominalName(type:TyType):Null<String> {
+		final identity = type.unwrapNull().getNominalIdentity();
+		final facts = identity == null ? null : nominals.get(identity.getCanonicalName());
+		return facts == null ? null : facts.requirePublicReflectionName();
+	}
+
+	/** Register Haxe-selected ancestry before this class runs any static initializer. */
+	public function classRegistration(projection:TypedBackendClassProjection, quote:String->String):Null<String> {
+		final identity = projection.requireSemanticFacts().getClassIdentity();
+		if (!owners.exists(identity))
+			return null;
+		if (projections.get(identity) != projection)
+			throw "native class registration requires its exact class projection";
+		final names = new Array<String>();
+		final visited:Map<String, Bool> = [];
+		final visiting:Map<String, Bool> = [];
+		function visit(owner:String):Void {
+			if (visiting.exists(owner))
+				throw "native class registration has cyclic ancestry: " + owner;
+			if (visited.exists(owner))
+				return;
+			final facts = nominals.get(owner);
+			if (facts == null)
+				throw "native class registration lacks exact ancestor facts: " + owner;
+			visiting.set(owner, true);
+			names.push(facts.requirePublicReflectionName());
+			final parent = facts.getSuperClassIdentity();
+			if (parent != null)
+				visit(parent);
+			for (type in facts.getInterfaceTypes())
+				visit(type.getNominalIdentity().getCanonicalName());
+			visiting.remove(owner);
+			visited.set(owner, true);
+		}
+		visit(identity);
+		return "let () = HxType.register_class_tags " + quote(names[0]) + " [" + names.map(quote).join("; ") + "]";
 	}
 
 	/** Return field execution only for the exact emitted class that owns it. */
@@ -188,7 +233,9 @@ class Stage3OcamlClassStorage {
 						fields.push("HxAnon.set (Obj.repr " + object + ") " + input.quote(field.name) + " HxRuntime.hx_null; ");
 				identity = facts.getSuperClassIdentity();
 			}
-			result = "let " + object + " = HxAnon.create () in " + fields.join("") + result;
+			final constructed = owners.get(occurrence.getConstructedType().getNominalIdentity().getCanonicalName());
+			result = "let " + object + " = HxAnon.create_with_class (HxType.class_ " + input.quote(constructed.requirePublicReflectionName()) + ") in "
+				+ fields.join("") + result;
 		}
 		return "(" + result + ")";
 	}
