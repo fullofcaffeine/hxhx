@@ -9,6 +9,57 @@ function supports(method:String):Bool {
 }
 
 /**
+	Retain an Array receiver when push becomes a callable value. The selected
+	standard-library method has no emitted body; its implementation is the same
+	mutable runtime operation used by a direct call. Capture the container now,
+	then perform each insertion when the returned function is invoked.
+ */
+function renderMethodValue(input:{
+	occurrence:TypedBackendMethodOccurrence,
+	metal:Bool,
+	emit:HxExpr->String,
+	names:Stage3OcamlLocalNames
+}):Null<String> {
+	final occurrence = input.occurrence;
+	final declaration = occurrence.getDeclaration();
+	if (declaration.getOwner().getCanonicalName() != "Array" || declaration.getSignature().getName() != "push")
+		return null;
+	declaration.requireSupportedImplementation();
+	final receiverType = occurrence.getReceiverType();
+	final callable = occurrence.getCallableType();
+	final parameters = callable.getFunctionParameters();
+	if (occurrence.getUse() != ValueRead
+		|| input.names == null
+		|| receiverType.getNominalIdentity() == null
+		|| receiverType.getNominalIdentity().getCanonicalName() != "Array"
+		|| receiverType.getTypeArguments().length != 1
+		|| parameters.length != 1
+		|| parameters[0].isOptional
+		|| parameters[0].isRest
+		|| parameters[0].type.getSemanticKey() != receiverType.getTypeArguments()[0].getSemanticKey()
+		|| callable.getFunctionReturn().getSemanticKey() != "primitive:Int")
+		throw "OCaml Array.push value requires its exact applied receiver and callable types";
+	final source = switch occurrence.getExpression() {
+		case EField(receiver, _): receiver;
+		case _: throw "OCaml Array.push value lost its selected receiver";
+	};
+	final argument = input.names.internalName("__hx_array_value");
+	return Stage3OcamlMethodValue.captureReceiver({receiver: source,
+		emit: input.emit,
+		names: input.names,
+		bind: receiver -> "fun "
+			+ argument
+			+ " -> "
+			+ push(receiverType, parameters[0].type, input.metal ? receiver : "(Obj.magic " + receiver + ")", argument)});
+}
+
+/** Exact element and operand types select the same storage representation for calls and saved methods. */
+private function push(receiverType:TyType, argumentType:TyType, receiver:String, argument:String):String {
+	final stored = receiverType.getTypeArguments()[0].isDynamic() ? "(Obj.magic (" + Stage3OcamlObjects.store(argumentType, argument) + "))" : argument;
+	return "HxArray.push " + receiver + " " + stored;
+}
+
+/**
 	Render selected Array operations through the shared array runtime.
 	The exact occurrence supplies receiver types before ordinary instance-call
 	adaptation discards them. Bind receiver and argument in Haxe evaluation order;
@@ -63,10 +114,7 @@ function render(input:{
 				"HxBootArray.join ("
 				+ receiver + ") (" + argument + ") (fun (s : string) -> s)"; else "HxBootArray.join_dyn (Obj.magic (" + receiver + ")) (" + argument + ")";
 		case "push":
-			final stored = receiverType.getTypeArguments()[0].isDynamic() ? "(Obj.magic ("
-				+ Stage3OcamlObjects.store(occurrence.getProjectedArgumentTypes()[0], argument)
-				+ "))" : argument;
-			"HxArray.push " + runtimeReceiver + " " + stored;
+			push(receiverType, occurrence.getProjectedArgumentTypes()[0], runtimeReceiver, argument);
 		case "copy": "HxArray.copy " + runtimeReceiver;
 		case "concat": "HxArray.concat " + runtimeReceiver + " " + argument;
 		case "slice":

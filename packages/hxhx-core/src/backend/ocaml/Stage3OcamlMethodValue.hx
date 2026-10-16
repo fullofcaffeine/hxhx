@@ -36,15 +36,32 @@ function render(input:MethodValueInput):String {
 		case EField(receiver, _): receiver;
 		case _: throw "OCaml method value lost its receiver selection";
 	};
+	return captureReceiver({
+		receiver: receiver,
+		emit: input.emit,
+		names: input.names,
+		bind: captured -> {
+			final applied = input.reference + " (" + captured + ")";
+			return signature.expected == 1 ? "fun () -> " + applied : applied;
+		}
+	});
+}
+
+/** Ordinary and runtime-backed methods share once-only capture and the explicit nullable-storage rejection. */
+function captureReceiver(input:{
+	receiver:HxExpr,
+	emit:HxExpr->String,
+	names:Stage3OcamlLocalNames,
+	bind:String->String
+}):String {
 	final captured = input.names.internalName("__hx_method_receiver");
-	final applied = input.reference + " (" + captured + ")";
 	return "(let "
 		+ captured
 		+ " = ("
-		+ input.emit(receiver)
+		+ input.emit(input.receiver)
 		+ ") in if HxRuntime.is_null (Obj.repr "
 		+ captured
 		+ ") then HxRuntime.hx_throw_typed (Obj.repr \"Capturing a method from a null receiver is not supported\") [\"String\"; \"Dynamic\"] else "
-		+ (signature.expected == 1 ? "fun () -> " + applied : applied)
+		+ input.bind(captured)
 		+ ")";
 }

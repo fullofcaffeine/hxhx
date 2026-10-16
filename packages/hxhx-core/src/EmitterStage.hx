@@ -3103,6 +3103,14 @@ class EmitterStage {
 		}
 		final methodValue = currentTypedInitializer != null ? currentTypedInitializer.findMethodUse(e) : currentTypedFunction == null ? null : currentTypedFunction.findMethodUse(e);
 		if (methodValue != null && methodValue.getUse() == ValueRead) {
+			final arrayMethod = backend.ocaml.Stage3OcamlArrayCalls.renderMethodValue({
+				occurrence: methodValue,
+				metal: isMetalProfileActive(),
+				emit: value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				names: currentFunctionLocalOcamlNames
+			});
+			if (arrayMethod != null)
+				return arrayMethod;
 			final declaration = methodValue.getDeclaration();
 			final ownerModule = ocamlModuleNameFromTypePath(declaration.getOwner().getCanonicalName());
 			final methodName = ocamlValueIdent(declaration.getSignature().getName());

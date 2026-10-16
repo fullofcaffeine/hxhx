@@ -8,3 +8,5 @@ test/m14_typed_array_access_projection_test.hxml
 --interp
 --next
 test/m14_stage3_array_producer_string_test.hxml
+--next
+test/m14_stage3_array_method_value_test.hxml
