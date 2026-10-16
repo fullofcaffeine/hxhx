@@ -6,6 +6,9 @@ enum Stage3OcamlEnumPayload {
 	NativeBool;
 	NativeString;
 	EnumBox(owner:String);
+
+	/** Null and a present value share the runtime's Obj.t boundary without losing either value. */
+	NullableValue(value:Stage3OcamlEnumPayload);
 }
 
 typedef Stage3OcamlEnumConstructor = {
@@ -13,7 +16,13 @@ typedef Stage3OcamlEnumConstructor = {
 	final name:String;
 	final declaration:String;
 	final targetName:String;
-	final payloads:Array<Stage3OcamlEnumPayload>;
+	final payloads:Array<Stage3OcamlEnumArgument>;
+};
+
+/** A nullable required argument still cannot be omitted from a constructor call. */
+typedef Stage3OcamlEnumArgument = {
+	final storage:Stage3OcamlEnumPayload;
+	final optional:Bool;
 };
 
 /**
@@ -65,9 +74,11 @@ class Stage3OcamlEnumPlan {
 				case Callable(method):
 					final payloads = [
 						for (argument in method.arguments) {
-							if (argument.isOptional || argument.isRest) throw "OCaml enum optional/rest payload is not implemented: "
-								+ method.canonicalIdentity;
-							payload(argument.semanticType, method.canonicalIdentity);
+							if (argument.isRest) throw "OCaml enum rest payload is not implemented: " + method.canonicalIdentity;
+							{
+								storage: payload(argument.semanticType, method.canonicalIdentity, argument.isOptional),
+								optional: argument.isOptional
+							};
 						}
 					];
 					{identity: method.canonicalIdentity, payloads: payloads};
@@ -85,18 +96,23 @@ class Stage3OcamlEnumPlan {
 			outputModule, constructors);
 	}
 
-	static function payload(type:TyType, declaration:String):Stage3OcamlEnumPayload {
+	/** Optional arguments store null when omitted, even when their declared type is a primitive. */
+	static function payload(type:TyType, declaration:String, optional:Bool):Stage3OcamlEnumPayload {
+		final value = requiredPayload(type.unwrapNull(), declaration);
+		return optional || type.isNullWrapped() ? NullableValue(value) : value;
+	}
+
+	static function requiredPayload(type:TyType, declaration:String):Stage3OcamlEnumPayload {
 		if (type.getSemanticKey() == TyType.fromHintText("Int").getSemanticKey())
 			return NativeInt;
 		if (type.getSemanticKey() == TyType.fromHintText("Bool").getSemanticKey())
 			return NativeBool;
 		if (type.getSemanticKey() == TyType.fromHintText("String").getSemanticKey())
 			return NativeString;
-		final inner = type.unwrapNull();
-		final nominal = inner.getNominalIdentity();
-		// Both nullable and non-null enum values use HxEnum's existing boxed boundary.
+		final nominal = type.getNominalIdentity();
+		// Enum values use HxEnum's existing boxed boundary.
 		// The request catalog must prove this exact nominal owner is an enum.
-		if (nominal != null && inner.getTypeArguments().length == 0)
+		if (nominal != null && type.getTypeArguments().length == 0)
 			return EnumBox(nominal.getCanonicalName());
 		throw "OCaml enum payload representation is not implemented: " + declaration + " / " + type.getDisplay();
 	}

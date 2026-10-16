@@ -27,24 +27,24 @@ class M14Stage3EnumPatternsTest {
 			catalog.add(owner, "Main_" + HxClassDecl.getName(owner.getDeclaration()), "");
 		catalog.validate();
 		final names = new backend.ocaml.Stage3OcamlLocalNames(new TypedBackendLocalCatalog([]), false, name -> name);
-		var checked = false;
+		var checked = 0;
 		for (owner in typed.getBackendProjection().getClasses()) {
 			final facts = owner.requireSemanticFacts();
 			for (constructor in facts.copyEnumConstructors())
 				switch (constructor.member) {
-					case Callable(method) if (constructor.name == "Pair"):
+					case Callable(method) if (constructor.name == "Pair" || constructor.name == "NullableNumber"):
 						function selected(ownerName:String, moduleName:String, declaration:String,
 								arguments:Array<HxExpr>):TypedExactEnumConstructorSource.TypedExactEnumConstructorCall {
 							return {
 								owner: ownerName,
 								modulePath: moduleName,
 								declaration: declaration,
-								constructor: "Pair",
+								constructor: constructor.name,
 								callee: EIdent("ignored"),
 								arguments: arguments
 							};
 						}
-						final args:Array<HxExpr> = [EInt(7), EBool(true)];
+						final args:Array<HxExpr> = constructor.name == "Pair" ? [EInt(7), EBool(true)] : [ENull];
 						final identity = facts.getClassIdentity();
 						final moduleName = facts.getModuleIdentity();
 						final exact = method.canonicalIdentity;
@@ -52,12 +52,12 @@ class M14Stage3EnumPatternsTest {
 						rejects(() -> catalog.call(selected(identity, "Missing", exact, args), _ -> "0", names), "exact program owner");
 						rejects(() -> catalog.call(selected(identity, moduleName, "Missing", args), _ -> "0", names), "exact constructor declaration");
 						rejects(() -> catalog.call(selected(identity, moduleName, exact, []), _ -> "0", names), "exact constructor declaration");
-						checked = true;
+						checked++;
 					case _:
 				}
 		}
-		if (!checked)
-			throw "enum selection controls did not exercise a payload constructor";
+		if (checked != 3)
+			throw "enum selection controls did not exercise both Pair owners and the required nullable payload";
 	}
 
 	static function observe(command:String, arguments:Array<String>, label:String):Void {
@@ -78,6 +78,10 @@ class M14Stage3EnumPatternsTest {
 		checkSelection(typed);
 		final unsupported = program("enum Choice { Values(values:Array<Int>); } class Main { static function main():Void {} }", "unsupported-enum/Main.hx");
 		rejects(() -> EmitterStage.emitToDir(new MacroExpandedProgram([unsupported], false), ".tmp/stage3-enum-unsupported", true, false),
+			"enum payload representation is not implemented");
+		final optionalArray = program("enum Choice { Values(?values:Array<Int>); } class Main { static function main():Void {} }",
+			"unsupported-optional-enum/Main.hx");
+		rejects(() -> EmitterStage.emitToDir(new MacroExpandedProgram([optionalArray], false), ".tmp/stage3-enum-optional-unsupported", true, false),
 			"enum payload representation is not implemented");
 		// A failed request must not retain its different Choice declaration.
 		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/stage3-enum-patterns", true);

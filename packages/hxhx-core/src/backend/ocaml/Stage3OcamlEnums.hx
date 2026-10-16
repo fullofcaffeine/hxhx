@@ -1,6 +1,7 @@
 package backend.ocaml;
 
 import backend.ocaml.Stage3OcamlEnumPlan.Stage3OcamlEnumConstructor;
+import backend.ocaml.Stage3OcamlEnumPlan.Stage3OcamlEnumPayload;
 import TypedExactEnumConstructorSource.TypedExactEnumConstructorCall;
 
 /**
@@ -11,8 +12,9 @@ import TypedExactEnumConstructorSource.TypedExactEnumConstructorCall;
 	owners. Haxe constructor indexes retain declaration order, while OCaml numbers
 	singletons and payload constructors separately.
 
-	The native payload contract covers Int, Bool, String, and boxed ordinary enums. Other payload
-	representations fail explicitly until their typed conversion is implemented.
+	The native payload contract covers Int, Bool, String, and boxed ordinary enums,
+	including their optional and nullable forms. Other payload representations fail
+	explicitly until their typed conversion is implemented.
 **/
 class Stage3OcamlEnums {
 	final owners:Map<String, Stage3OcamlEnumPlan> = new Map();
@@ -51,19 +53,24 @@ class Stage3OcamlEnums {
 	function payloadTypes(constructor:Stage3OcamlEnumConstructor):Array<String> {
 		return [
 			for (payload in constructor.payloads)
-				switch (payload) {
-					case NativeInt:
-						"int";
-					case NativeBool:
-						"bool";
-					case NativeString:
-						"string";
-					case EnumBox(identity):
-						if (!owners.exists(identity))
-							throw "OCaml enum payload representation is not implemented: " + constructor.declaration + " / " + identity;
-						"Obj.t";
-				}
+				payloadType(payload.storage, constructor.declaration)
 		];
+	}
+
+	/** A nullable payload must still prove that its non-null representation is supported. */
+	function payloadType(payload:Stage3OcamlEnumPayload, declaration:String):String {
+		return switch (payload) {
+			case NativeInt: "int";
+			case NativeBool: "bool";
+			case NativeString: "string";
+			case EnumBox(identity):
+				if (!owners.exists(identity))
+					throw "OCaml enum payload representation is not implemented: " + declaration + " / " + identity;
+				"Obj.t";
+			case NullableValue(value):
+				payloadType(value, declaration);
+				"Obj.t";
+		};
 	}
 
 	/** Produce one enum module; ordinary classes continue through their own emitter. */
@@ -103,7 +110,8 @@ class Stage3OcamlEnums {
 
 	/**
 		Validate the selected constructor, then evaluate its arguments once in Haxe
-		order. Nested lets avoid depending on OCaml's argument evaluation order.
+		order. Native variants need every payload slot, so omitted optional arguments
+		receive null. Nested lets preserve Haxe's argument evaluation order.
 	**/
 	public function call(selected:TypedExactEnumConstructorCall, emit:HxExpr->String, names:Stage3OcamlLocalNames):String {
 		final owner = owners.get(selected.owner);
@@ -114,16 +122,30 @@ class Stage3OcamlEnums {
 				continue;
 			if (constructor.payloads.length == 0)
 				throw "OCaml enum call selected a singleton field";
-			if (constructor.declaration != selected.declaration || constructor.payloads.length != selected.arguments.length)
+			if (constructor.declaration != selected.declaration || selected.arguments.length > constructor.payloads.length)
 				throw "OCaml enum call disagrees with its exact constructor declaration";
+			final operands = selected.arguments.copy();
+			while (operands.length < constructor.payloads.length) {
+				if (!constructor.payloads[operands.length].optional)
+					throw "OCaml enum call disagrees with its exact constructor declaration";
+				operands.push(ENull);
+			}
 			final callId = nextCall++;
 			final args = [
-				for (index in 0...selected.arguments.length)
+				for (index in 0...operands.length)
 					names.internalName("__hx_enum_arg_" + callId + "_" + index)
 			];
 			final bindings = [
-				for (index in 0...args.length)
-					"let " + args[index] + " = (" + emit(selected.arguments[index]) + ") in "
+				for (index in 0...args.length) {
+					final rendered = emit(operands[index]);
+					final stored = switch (constructor.payloads[index].storage) {
+						// Obj.repr preserves the null sentinel and already-boxed values.
+						// It also gives a concrete primitive the declared Obj.t storage type.
+						case NullableValue(_): "Obj.repr (" + rendered + ")";
+						case _: rendered;
+					};
+					"let " + args[index] + " = (" + stored + ") in ";
+				}
 			];
 			return "(" + bindings.join("") + owner.outputModule + "." + constructor.targetName + " " + args.join(" ") + ")";
 		}

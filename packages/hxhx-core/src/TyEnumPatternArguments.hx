@@ -39,5 +39,14 @@ function resolve(input:TyType, name:String, arity:Int, context:TyperContext, pos
 		reject("missing enum declaration binders");
 	final enumOwner:TyClassInfo = cast owner;
 	final substitutions = TyTypeSubstitution.bind(enumOwner.getTypeParameterIds(), type.getTypeArguments(), identity.getCanonicalName());
-	return [for (argument in arguments) TyTypeSubstitution.apply(argument, substitutions)];
+	final optional = signature.getArgOptional();
+	// An omitted enum argument remains null in the stored payload. Pattern locals
+	// must retain that possibility, including after generic substitution.
+	return [
+		for (index in 0...arguments.length) {
+			final argument = TyTypeSubstitution.apply(arguments[index], substitutions);
+			index < optional.length
+		&& optional[index] && !argument.isNullable() ? TyType.nullable(argument) : argument;
+		}
+	];
 }

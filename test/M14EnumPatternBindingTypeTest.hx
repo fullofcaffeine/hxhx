@@ -78,10 +78,19 @@ class M14EnumPatternBindingTypeTest {
 			"number:primitive:Int",
 			"flag:primitive:Bool",
 			"number:primitive:Int", // Wrap(Pair(number, true))
-			"number:primitive:Int" // Maybe(Pair(number, true))
+			"number:primitive:Int", // Maybe(Pair(number, true))
+			"number:nullable:primitive:Int", // OptionalNumber(number)
+			"number:nullable:primitive:Int", // NullableNumber(number)
+			"flag:nullable:primitive:Bool", // OptionalFlag(flag)
+			"value:nullable:primitive:String", // OptionalText(value)
+			"value:nullable:nominal:Main.Choice" // OptionalChoice(value)
 		]);
 		check('enum Box<T> { Item(value:T); } class Main { static function read(v:Box<String>):String return switch v {case Item(text): text; case _: "none";}; }',
 			"read", ["text:primitive:String"]);
+		check('enum Box<T> { Item(?value:T); } class Main { static function read(v:Box<Int>):Int return switch v {case Item(number): number == null ? 0 : number;}; }',
+			"read", ["number:nullable:primitive:Int"]);
+		check('enum Box { Item(?value:Null<Int>); } class Main { static function read(v:Box):Int return switch v {case Item(number): number == null ? 0 : number;}; }',
+			"read", ["number:nullable:primitive:Int"]);
 		check('enum Box<T> { Item(value:T); } class Main { static function read(v:Box<Array<Bool>>):Bool return switch v {case Item([flag]): flag; case _: false;}; }',
 			"read", ["flag:primitive:Bool"]);
 		check('enum Box<T> { Item(value:T); } class Main { static function read(v:Box<Bool>):Bool return switch v {case Box.Item(flag): flag; case _: false;}; }',
