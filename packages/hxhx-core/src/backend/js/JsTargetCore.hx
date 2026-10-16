@@ -352,6 +352,7 @@ class JsTargetCore implements ITargetCore {
 	static function emitRuntimePrelude(writer:JsWriter):Void {
 		writer.writeln("var $hxEnums = Object.create(null);");
 		JsEnumRuntime.emit(writer);
+		JsIntegerParsing.emitDefinition(writer);
 		writer.writeln("var __hx_exports = (typeof exports !== \"undefined\") ? exports : ((typeof globalThis !== \"undefined\") ? globalThis : {});");
 		writer.writeln("var __hx_classes = Object.create(null);");
 		writer.writeln("var __hx_type_placeholders = Object.create(null);");
@@ -1302,7 +1303,7 @@ class JsTargetCore implements ITargetCore {
 			case "parseInt":
 				if (params.length < 1)
 					return false;
-				writer.writeln("return parseInt(" + params[0] + ", 10);");
+				writer.writeln("return " + JsIntegerParsing.call(params[0]) + ";");
 				return true;
 			case "parseFloat":
 				if (params.length < 1)

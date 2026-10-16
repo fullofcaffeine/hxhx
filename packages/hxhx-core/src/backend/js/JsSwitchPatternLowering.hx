@@ -173,7 +173,7 @@ class JsSwitchPatternLowering {
 	static function lowerExtractor(extractorText:String, resultPattern:HxSwitchPattern, scrutineeVar:String, scope:Null<JsEmitScope>):JsSwitchPatternLowered {
 		final applied = switch (StringTools.trim(extractorText)) {
 			case "Std.parseInt(_)":
-				"parseInt(" + scrutineeVar + ", 10)";
+				JsIntegerParsing.call(scrutineeVar);
 			case "_.slice(0, 1)" | "_.slice(0,1)":
 				scrutineeVar + ".slice(0, 1)";
 			case _:
