@@ -22,7 +22,7 @@ class CompilerTypedTreeRevision {
 		if (typedFunction == null)
 			throw "cannot revise a null typed function body";
 		final facts = new Array<Null<String>>();
-		facts.push("typed-function-body-v26");
+		facts.push("typed-function-body-v27");
 		facts.push(typedFunction.getStableIdentity());
 		final environment = typedFunction.getEnvironment();
 		final parameters = environment == null ? [] : environment.getParams();
@@ -47,7 +47,7 @@ class CompilerTypedTreeRevision {
 		if (ownerIdentity == null || ownerIdentity.length == 0)
 			throw "typed expression revision requires an owner identity";
 		final facts = new Array<Null<String>>();
-		facts.push("typed-expression-v22");
+		facts.push("typed-expression-v23");
 		facts.push(ownerIdentity);
 		addExpression(facts, expression);
 		return CompilerCacheIdentity.encode(facts);
@@ -69,6 +69,8 @@ class CompilerTypedTreeRevision {
 		addLocalBindings(out, statement.getLocalBindings());
 		addStrings(out, [for (use in statement.getCatchUses()) use.getCanonicalIdentity()]);
 		final patterns = statement.getPatterns();
+		final selectedPatterns = statement.getSwitchPatterns();
+		out.push(selectedPatterns == null ? null : selectedPatterns.getSemanticKey());
 		out.push(Std.string(patterns.length));
 		for (pattern in patterns)
 			addPattern(out, pattern);
@@ -129,6 +131,8 @@ class CompilerTypedTreeRevision {
 		out.push(unaryFixityName(expression.getUnaryFixity()));
 		out.push(opaqueKindName(expression.getOpaqueKind()));
 		final patterns = expression.getPatterns();
+		final selectedPatterns = expression.getSwitchPatterns();
+		out.push(selectedPatterns == null ? null : selectedPatterns.getSemanticKey());
 		out.push(Std.string(patterns.length));
 		for (pattern in patterns)
 			addPattern(out, pattern);

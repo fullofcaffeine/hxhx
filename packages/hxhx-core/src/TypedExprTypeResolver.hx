@@ -21,6 +21,9 @@ typedef TypedExprTypeResolver = {
 	/** Apply the scrutinee enum's exact generic arguments before declaring payload locals. */
 	final enumPatternArguments:(input:TyType, name:String, arity:Int, position:HxPos) -> Null<Array<TyType>>;
 
+	/** Preserve named-pattern declarations for targets without rewriting source syntax. */
+	final switchPatterns:(input:TyType, patterns:Array<HxSwitchPattern>, position:HxPos) -> Null<TypedSwitchPatterns>;
+
 	/** Prove constructor coverage against the exact input enum before pattern locals enter scope. */
 	final enumSwitchCoverage:(input:TyType, patterns:Array<HxSwitchPattern>, position:HxPos, isCapture:String->Bool) -> Bool;
 

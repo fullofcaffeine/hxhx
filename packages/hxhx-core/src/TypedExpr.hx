@@ -120,13 +120,15 @@ class TypedExpr {
 	final constructorApplication:Null<TypedConstructorApplication>;
 	final argumentBinding:Null<TyCallArgumentBinding>;
 	final namedArguments:Null<TypedNamedCallBinding>;
+	final switchPatterns:Null<TypedSwitchPatterns>;
 
 	function new(tag:TypedExprTag, type:TyType, position:Null<HxPos>, ?texts:Array<String>, ?expressions:Array<TypedExpr>, ?patterns:Array<HxSwitchPattern>,
 			boolValue:Bool = false, intValue:Int = 0, floatValue:Float = 0.0, ?declaration:TyDeclarationInfo, ?unaryOperator:HxUnaryOperator,
 			?unaryFixity:HxUnaryFixity, ?opaqueKind:TypedOpaqueExprKind, ?fieldInfo:TyFieldInfo, ?localBindings:Array<TyLocalBinding>,
 			?extensionProvider:TyNominalTypeId, ?runtimeTypeTarget:TypedRuntimeTypeTarget, ?catchUses:Array<TypedCatchUse>,
 			?lambdaSignature:HxLambdaSignature, ?sourceFunction:HxSourceFunction, ?controlTarget:TyControlTarget, ?sourceCatches:Array<HxSourceCatch>,
-			?constructorApplication:TypedConstructorApplication, ?argumentBinding:TyCallArgumentBinding, ?namedArguments:TypedNamedCallBinding) {
+			?constructorApplication:TypedConstructorApplication, ?argumentBinding:TyCallArgumentBinding, ?namedArguments:TypedNamedCallBinding,
+			?switchPatterns:TypedSwitchPatterns) {
 		if (declaration != null)
 			declaration.requireSupportedImplementation();
 		if (constructorApplication != null) {
@@ -187,6 +189,12 @@ class TypedExpr {
 		this.constructorApplication = constructorApplication;
 		this.argumentBinding = argumentBinding;
 		this.namedArguments = namedArguments;
+		this.switchPatterns = switchPatterns;
+		if (switchPatterns != null) {
+			if ((tag != SwitchExpr && tag != ControlSwitch) || this.expressions.length == 0)
+				throw "named pattern selections require a typed switch";
+			switchPatterns.assertInput(this.expressions[0].getType(), this.patterns);
+		}
 		if (tag == TargetScope)
 			TypedTargetScope.kind(this);
 		assertArgumentBinding();
@@ -652,6 +660,18 @@ class TypedExpr {
 	public function getPatterns():Array<HxSwitchPattern>
 		return patterns.copy();
 
+	public function getSwitchPatterns():Null<TypedSwitchPatterns> {
+		if (switchPatterns != null)
+			switchPatterns.assertInput(expressions[0].getType(), patterns);
+		return switchPatterns;
+	}
+
+	/** Attach selected declarations without replacing the authored case syntax. */
+	public function withSwitchPatterns(facts:Null<TypedSwitchPatterns>):TypedExpr
+		return new TypedExpr(tag, type, position, texts, expressions, patterns, boolValue, intValue, floatValue, declaration, unaryOperator, unaryFixity,
+			opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget, catchUses, lambdaSignature, sourceFunction, controlTarget,
+			sourceCatches, constructorApplication, argumentBinding, namedArguments, facts);
+
 	/** A recorded proof permits result storage without an artificial default branch. */
 	public function getSwitchHasExhaustiveCoverage():Bool {
 		if (tag != SwitchExpr && tag != ControlSwitch)
@@ -727,12 +747,12 @@ class TypedExpr {
 	public function withControlTarget(target:TyControlTarget):TypedExpr
 		return new TypedExpr(tag, type, position, texts, expressions, patterns, boolValue, intValue, floatValue, declaration, unaryOperator, unaryFixity,
 			opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget, catchUses, lambdaSignature, sourceFunction, target, sourceCatches,
-			constructorApplication, argumentBinding, namedArguments);
+			constructorApplication, argumentBinding, namedArguments, switchPatterns);
 
 	public function withCatchUses(uses:Array<TypedCatchUse>):TypedExpr
 		return new TypedExpr(tag, type, position, texts, expressions, patterns, boolValue, intValue, floatValue, declaration, unaryOperator, unaryFixity,
 			opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget, uses, lambdaSignature, sourceFunction, controlTarget, sourceCatches,
-			constructorApplication, argumentBinding, namedArguments);
+			constructorApplication, argumentBinding, namedArguments, switchPatterns);
 
 	/** Preserve semantic facts on copies; changing the input type invalidates switch coverage and representation-preserving casts. **/
 	public function withExpressions(children:Array<TypedExpr>):TypedExpr {
@@ -746,7 +766,7 @@ class TypedExpr {
 		};
 		return new TypedExpr(tag, type, position, texts, children, patterns, retainedFact, intValue, floatValue, declaration, unaryOperator, unaryFixity,
 			opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget, catchUses, lambdaSignature, sourceFunction, controlTarget,
-			sourceCatches, constructorApplication, argumentBinding, namedArguments);
+			sourceCatches, constructorApplication, argumentBinding, namedArguments, sameInputType ? switchPatterns : null);
 	}
 
 	/** Instantiate an inline expression and its retained call proof atomically; local declarations are remapped by the inline owner. */
@@ -767,7 +787,8 @@ class TypedExpr {
 		return new TypedExpr(tag, applied, position, appliedTexts, children, patterns, boolValue, intValue, floatValue, declaration, unaryOperator,
 			unaryFixity, opaqueKind, fieldInfo, [], extensionProvider, runtimeTypeTarget, [], null, null, null, sourceCatches, null,
 			argumentBinding == null ? null : argumentBinding.substituteTypes(bindings),
-			namedArguments == null ? null : namedArguments.substituteTypes(bindings));
+			namedArguments == null ? null : namedArguments.substituteTypes(bindings),
+			switchPatterns == null ? null : switchPatterns.substituteTypes(bindings, patterns));
 	}
 
 	/** Re-label one structurally identical expression for a shared semantic view such as abstract `this`. **/
@@ -776,5 +797,5 @@ class TypedExpr {
 			tag != Cast ? boolValue : boolValue
 			&& semanticType.getSemanticKey() == type.getSemanticKey(), intValue, floatValue, declaration, unaryOperator,
 			unaryFixity, opaqueKind, fieldInfo, localBindings, extensionProvider, runtimeTypeTarget, catchUses, lambdaSignature, sourceFunction,
-			controlTarget, sourceCatches, constructorApplication, argumentBinding, namedArguments);
+			controlTarget, sourceCatches, constructorApplication, argumentBinding, namedArguments, switchPatterns);
 }

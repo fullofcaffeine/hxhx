@@ -33,6 +33,7 @@ class TypedBackendFunctionProjection {
 	final arrayAccesses:Array<TypedBackendArrayAccess>;
 	final equalities:Array<TypedBackendEqualityOccurrence>;
 	final conditions:Array<TypedBackendCondition>;
+	final namedPatterns:Array<TypedBackendNamedPattern>;
 	final callArguments:Array<TypedBackendCallArgument>;
 	final lambdas:Array<TypedBackendLambdaOccurrence>;
 	final statementControls:Array<TypedBackendStatementControl>;
@@ -47,7 +48,8 @@ class TypedBackendFunctionProjection {
 			?instanceCalls:Array<TypedBackendInstanceCallOccurrence>, ?statementControls:Array<TypedBackendStatementControl>, ?indexedAccesses:{
 			arrays:Array<TypedBackendArrayAccess>,
 			?equalities:Array<TypedBackendEqualityOccurrence>,
-			?conditions:Array<TypedBackendCondition>
+			?conditions:Array<TypedBackendCondition>,
+			?namedPatterns:Array<TypedBackendNamedPattern>
 		}) {
 		if (source == null || lowered == null)
 			throw "typed backend function projection requires authored and lowered owners";
@@ -100,6 +102,9 @@ class TypedBackendFunctionProjection {
 		this.arrayAccesses = indexedAccesses == null ? [] : indexedAccesses.arrays.copy();
 		this.equalities = indexedAccesses == null || indexedAccesses.equalities == null ? [] : indexedAccesses.equalities.copy();
 		this.conditions = indexedAccesses == null || indexedAccesses.conditions == null ? [] : indexedAccesses.conditions.copy();
+		this.namedPatterns = indexedAccesses == null || indexedAccesses.namedPatterns == null ? [] : indexedAccesses.namedPatterns.copy();
+		for (entry in this.namedPatterns)
+			entry.assertCurrent(stableIdentity, bodyRevision);
 		for (entry in this.conditions)
 			entry.assertCurrent(stableIdentity, bodyRevision);
 		for (entry in this.equalities)
@@ -151,6 +156,26 @@ class TypedBackendFunctionProjection {
 
 	public function getDeclaration():HxFunctionDecl
 		return declaration;
+
+	/** A case must belong to this current executable body before its declaration can guide emission. */
+	public function findNamedPattern(pattern:HxSwitchPattern):Null<TypedNamedPattern> {
+		for (entry in namedPatterns)
+			if (entry.pattern == pattern) {
+				requireCaptureCatalog().assertCurrent();
+				entry.assertCurrent(stableIdentity, bodyRevision);
+				var present = false;
+				function visit(candidate:HxSwitchPattern):Void {
+					if (candidate == pattern)
+						present = true;
+				}
+				TypedBackendSourceWalk.functionDeclaration(declaration, expression -> TypedBackendNamedPattern.inExpression(expression, visit),
+					statement -> TypedBackendNamedPattern.inStatement(statement, visit));
+				if (!present)
+					throw "named pattern is absent from its executable function";
+				return entry.selection;
+			}
+		return null;
+	}
 
 	/** Require an original expression after validating this projection against its current typed owner. */
 	public function requireExpression(expression:HxExpr):Void {

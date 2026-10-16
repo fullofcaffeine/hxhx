@@ -463,6 +463,9 @@ class TyperStage {
 				enumPatternArguments: function(input, name, arity, position) {
 					return TyEnumPatternArguments.resolve(input, name, arity, context, position);
 				},
+				switchPatterns: function(input, patterns, position) {
+					return TyNamedPatternResolver.resolve(input, patterns, context, position);
+				},
 				enumSwitchCoverage: function(input, patterns, position, isCapture) {
 					return TyEnumSwitchCoverage.proves(input, patterns, context, position, isCapture);
 				},

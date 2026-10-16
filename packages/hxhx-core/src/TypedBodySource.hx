@@ -344,18 +344,18 @@ class TypedBodySource {
 		};
 	}
 
-	static function projectPatterns(patterns:Array<HxSwitchPattern>, bindings:Array<TyLocalBinding>,
-			catalog:Null<TypedBackendLocalCatalog>):Array<HxSwitchPattern> {
-		if (catalog == null)
-			return patterns == null ? [] : patterns.copy();
+	static function projectPatterns(patterns:Array<HxSwitchPattern>, bindings:Array<TyLocalBinding>, catalog:Null<TypedBackendLocalCatalog>,
+			?selections:TypedSwitchPatterns, ?facts:TypedBodyProjectionBuilder):Array<HxSwitchPattern> {
 		final exactBindings = bindings == null ? [] : bindings;
 		final cursor = [0];
-		final projected = [
+		final projected = catalog == null ? patterns.copy() : [
 			for (pattern in patterns)
 				projectPattern(pattern, exactBindings, cursor, catalog, new haxe.ds.StringMap<String>())
 		];
-		if (cursor[0] != exactBindings.length)
+		if (catalog != null && cursor[0] != exactBindings.length)
 			throw "switch pattern projection consumed " + cursor[0] + " of " + exactBindings.length + " typed local bindings";
+		if (facts != null)
+			facts.projectNamedPatterns(selections, projected);
 		return projected;
 	}
 
@@ -556,7 +556,8 @@ class TypedBodySource {
 					projectionFacts == null ? operand : projectionFacts.projectThrownValue(expressions[0], operand)
 				], sourcePosition(typedExpression.getPosition()));
 			case ControlSwitch:
-				ELoweredControl(Switch(projectPatterns(typedExpression.getPatterns(), typedExpression.getLocalBindings(), catalog),
+				ELoweredControl(Switch(projectPatterns(typedExpression.getPatterns(), typedExpression.getLocalBindings(), catalog,
+					typedExpression.getSwitchPatterns(), projectionFacts),
 					typedExpression.getSwitchHasExhaustiveCoverage()),
 					"", [for (child in expressions) expression(child, catalog, projectionFacts)], typedExpression.getPosition());
 			case ControlFor:
@@ -740,7 +741,8 @@ class TypedBodySource {
 					suppressCallableAscription, projectionFacts);
 			case SwitchExpr:
 				ESwitch(expression(expressions[0], catalog, projectionFacts),
-					projectPatterns(typedExpression.getPatterns(), typedExpression.getLocalBindings(), catalog),
+					projectPatterns(typedExpression.getPatterns(), typedExpression.getLocalBindings(), catalog, typedExpression.getSwitchPatterns(),
+						projectionFacts),
 					expressionTail(expressions, 1, catalog, projectionFacts));
 			case NewValue:
 				final identity = typedExpression.getType().getNominalIdentity();
@@ -845,7 +847,8 @@ class TypedBodySource {
 			case DoWhile: SDoWhile(statement(statements[0], catalog, projectionFacts), condition(expressions[0], catalog, projectionFacts), position);
 			case Switch:
 				SSwitch(expression(expressions[0], catalog, projectionFacts),
-					projectPatterns(typedStatement.getPatterns(), typedStatement.getLocalBindings(), catalog),
+					projectPatterns(typedStatement.getPatterns(), typedStatement.getLocalBindings(), catalog, typedStatement.getSwitchPatterns(),
+						projectionFacts),
 					[for (body in statements) statement(body, catalog, projectionFacts)], position, typedStatement.getSwitchHasExhaustiveCoverage());
 			case Try:
 				final catchNames = typedStatement.getCatchNames();
@@ -946,7 +949,8 @@ class TypedBodySource {
 			projectionFacts.getMethods(), projectionFacts.getLambdas(), projectionFacts.getInstanceCalls(), projectionFacts.getStatementControls(), {
 				arrays: projectionFacts.getArrayAccesses(),
 				equalities: projectionFacts.getEqualities(),
-				conditions: projectionFacts.getConditions()
+				conditions: projectionFacts.getConditions(),
+				namedPatterns: projectionFacts.getNamedPatterns()
 			});
 	}
 
@@ -999,7 +1003,8 @@ class TypedBodySource {
 			projectionFacts.getLambdas(), projectionFacts.getInstanceCalls(), {
 				arrays: projectionFacts.getArrayAccesses(),
 				equalities: projectionFacts.getEqualities(),
-				conditions: projectionFacts.getConditions()
+				conditions: projectionFacts.getConditions(),
+				namedPatterns: projectionFacts.getNamedPatterns()
 			});
 	}
 

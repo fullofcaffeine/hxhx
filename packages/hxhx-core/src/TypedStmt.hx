@@ -45,10 +45,12 @@ class TypedStmt {
 	final catchUses:Array<TypedCatchUse>;
 	final controlTarget:Null<TyControlTarget>;
 	final switchHasExhaustiveCoverage:Bool;
+	final switchPatterns:Null<TypedSwitchPatterns>;
 
 	function new(tag:TypedStmtTag, position:Null<HxPos>, ?names:Array<String>, ?expressions:Array<TypedExpr>, ?statements:Array<TypedStmt>,
 			?patterns:Array<HxSwitchPattern>, ?catchNames:Array<String>, ?catchTypeHints:Array<String>, ?metadata:Array<String>,
-			?localBindings:Array<TyLocalBinding>, ?catchUses:Array<TypedCatchUse>, ?controlTarget:TyControlTarget, switchHasExhaustiveCoverage:Bool = false) {
+			?localBindings:Array<TyLocalBinding>, ?catchUses:Array<TypedCatchUse>, ?controlTarget:TyControlTarget, switchHasExhaustiveCoverage:Bool = false,
+			?switchPatterns:TypedSwitchPatterns) {
 		if (controlTarget != null) {
 			switch tag {
 				case While | DoWhile | ForIn | ForKeyValue | Break | Continue | Var:
@@ -68,6 +70,12 @@ class TypedStmt {
 		this.expressions = expressions == null ? [] : expressions.copy();
 		this.statements = statements == null ? [] : statements.copy();
 		this.patterns = patterns == null ? [] : patterns.copy();
+		this.switchPatterns = switchPatterns;
+		if (switchPatterns != null) {
+			if (tag != Switch || this.expressions.length == 0)
+				throw "named pattern selections require a typed switch statement";
+			switchPatterns.assertInput(this.expressions[0].getType(), this.patterns);
+		}
 		this.catchNames = catchNames == null ? [] : catchNames.copy();
 		this.catchTypeHints = catchTypeHints == null ? [] : catchTypeHints.copy();
 		this.metadata = metadata == null ? [] : metadata.copy();
@@ -155,6 +163,17 @@ class TypedStmt {
 	public function getPatterns():Array<HxSwitchPattern>
 		return patterns.copy();
 
+	public function getSwitchPatterns():Null<TypedSwitchPatterns> {
+		if (switchPatterns != null)
+			switchPatterns.assertInput(expressions[0].getType(), patterns);
+		return switchPatterns;
+	}
+
+	/** Keep the selected declaration alongside the source statement through shared passes. */
+	public function withSwitchPatterns(facts:Null<TypedSwitchPatterns>):TypedStmt
+		return new TypedStmt(tag, position, names, expressions, statements, patterns, catchNames, catchTypeHints, metadata, localBindings, catchUses,
+			controlTarget, switchHasExhaustiveCoverage, facts);
+
 	public function getCatchNames():Array<String>
 		return catchNames.copy();
 
@@ -174,7 +193,7 @@ class TypedStmt {
 
 	public function withCatchUses(uses:Array<TypedCatchUse>):TypedStmt
 		return new TypedStmt(tag, position, names, expressions, statements, patterns, catchNames, catchTypeHints, metadata, localBindings, uses,
-			controlTarget, switchHasExhaustiveCoverage);
+			controlTarget, switchHasExhaustiveCoverage, switchPatterns);
 
 	/** The exact loop introduced here, or selected by this break or continue statement. */
 	public function getControlTarget():Null<TyControlTarget>
@@ -183,13 +202,14 @@ class TypedStmt {
 	/** Attach the immutable destination selected during typing; recursive rebuilds preserve it. */
 	public function withControlTarget(target:TyControlTarget):TypedStmt
 		return new TypedStmt(tag, position, names, expressions, statements, patterns, catchNames, catchTypeHints, metadata, localBindings, catchUses, target,
-			switchHasExhaustiveCoverage);
+			switchHasExhaustiveCoverage, switchPatterns);
 
 	/** Rebuild this immutable statement after a shared recursive expression pass. **/
-	public function withChildren(newExpressions:Array<TypedExpr>, newStatements:Array<TypedStmt>):TypedStmt
-		return new TypedStmt(tag, position, names, newExpressions, newStatements, patterns, catchNames, catchTypeHints, metadata, localBindings, catchUses,
-			controlTarget, switchHasExhaustiveCoverage
-			&& newExpressions.length > 0
+	public function withChildren(newExpressions:Array<TypedExpr>, newStatements:Array<TypedStmt>):TypedStmt {
+		final sameInput = newExpressions.length > 0
 			&& expressions.length > 0
-			&& newExpressions[0].getType().getSemanticKey() == expressions[0].getType().getSemanticKey());
+			&& newExpressions[0].getType().getSemanticKey() == expressions[0].getType().getSemanticKey();
+		return new TypedStmt(tag, position, names, newExpressions, newStatements, patterns, catchNames, catchTypeHints, metadata, localBindings, catchUses,
+			controlTarget, switchHasExhaustiveCoverage && sameInput, sameInput ? switchPatterns : null);
+	}
 }

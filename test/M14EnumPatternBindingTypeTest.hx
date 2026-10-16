@@ -70,6 +70,7 @@ class M14EnumPatternBindingTypeTest {
 
 	static function main():Void {
 		checkParser();
+		M14NamedPatternProjectionTest.check();
 		reject("Second.Item(x)", "constructor belongs to another enum");
 		reject("Item(x,y)", "expected 1 payload patterns but received 2");
 		reject("Missing(x)", "constructor does not belong to Main.First");

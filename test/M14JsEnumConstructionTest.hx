@@ -15,7 +15,7 @@ class M14JsEnumConstructionTest {
 	}
 
 	static function main():Void {
-		final source = "enum Item { Empty; Payload(value:Int, ?note:String); } enum Other { Payload(value:Int); } class Main { static function main():Void {} }";
+		final source = "enum Item { Empty; Payload(value:Int, ?note:String); } enum Other { Payload(value:Int); } class Main { static function read(input:Item):Int return switch input { case Empty: 0; case Payload(_,_): 1; }; static function main():Void {} }";
 		final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
 		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		final program = new MacroExpandedProgram([typed], false);
@@ -33,6 +33,42 @@ class M14JsEnumConstructionTest {
 		writer.writeln("var other=" + backend.js.JsEnumDeclaration.construct(other, "Payload", ["9"]) + ";");
 		writer.writeln('if(calls!==1 || value._hx_index!==1 || value.value!==7 || value.note!=="note" || omitted.note!==null || empty._hx_index!==0) throw Error("payload");');
 		writer.writeln('if(other.__enum__===value.__enum__ || other._hx_index!==0 || $$hxEnums[value.__enum__].__constructs__[1].__params__.join(",")!=="value,note") throw Error("owner");');
+		backend.js.JsEnumRuntime.emit(writer);
+		var selectedPattern:Null<HxSwitchPattern> = null;
+		var payloadPattern:Null<HxSwitchPattern> = null;
+		var selectedBody:Null<TypedBackendFunctionProjection> = null;
+		for (owner in typed.getBackendProjection().getClasses())
+			for (body in owner.getFunctions())
+				if (HxFunctionDecl.getName(body.getDeclaration()) == "read") {
+					selectedBody = body;
+					function observe(pattern:HxSwitchPattern):Void {
+						if (pattern.match(PEnumValue("Empty")))
+							selectedPattern = pattern;
+						if (pattern.match(PEnumExtract("Payload", _)))
+							payloadPattern = pattern;
+					}
+					TypedBackendSourceWalk.functionDeclaration(body.getDeclaration(),
+						expression -> TypedBackendNamedPattern.inExpression(expression, observe),
+						statement -> TypedBackendNamedPattern.inStatement(statement, observe));
+				}
+		if (selectedBody == null || selectedPattern == null || payloadPattern == null)
+			throw "missing selected enum patterns";
+		final scope:backend.js.JsEmitScope = {
+			resolveLocal: _ -> null,
+			resolveClassRef: _ -> null,
+			resolveSuperClassRef: () -> null,
+			enumDeclarations: plan.requireRuntimeEnum,
+			namedPatterns: selectedBody.findNamedPattern
+		};
+		final singletonPattern = backend.js.JsSwitchPatternLowering.lower(selectedPattern, "input", scope);
+		final payloadMatch = backend.js.JsSwitchPatternLowering.lower(payloadPattern, "input", scope);
+		writer.writeln("function matchesEmpty(input) { return " + singletonPattern.cond + "; }");
+		writer.writeln("function matchesPayload(input) { return " + payloadMatch.cond + "; }");
+		writer.writeln('if(!matchesPayload(value) || matchesPayload(other) || matchesPayload(empty) || matchesPayload(null) || matchesPayload({value:7})) throw Error("selected payload owner");');
+		writer.writeln('if(!matchesEmpty(empty) || matchesEmpty(value) || matchesEmpty(null) || matchesEmpty("Empty")) throw Error("singleton pattern representation");');
+		writer.writeln('if(matchesEmpty({__enum__:empty.__enum__,_hx_index:0})) throw Error("forged singleton");');
+		if (selectedBody.findNamedPattern(PEnumValue("Empty")) != null)
+			throw "copied pattern borrowed selected declaration";
 		writer.writeln('console.log("ENUM_CONSTRUCTION_RUNTIME:PASS");');
 		final root = JsRuntimeFixture.reserveOutput();
 		final script = root + "/constructors.js";

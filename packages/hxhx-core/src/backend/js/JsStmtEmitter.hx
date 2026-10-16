@@ -238,7 +238,7 @@ class JsStmtEmitter {
 		for (i in 0...count) {
 			final pattern = patterns[i];
 			final body = bodies[i];
-			final lowered = JsSwitchPatternLowering.lower(pattern, scrutineeVar);
+			final lowered = JsSwitchPatternLowering.lower(pattern, scrutineeVar, scope.exprScope());
 			final head = isFirst ? "if" : "else if";
 			writer.writeln(head + " (" + lowered.cond + ") {");
 			writer.pushIndent();

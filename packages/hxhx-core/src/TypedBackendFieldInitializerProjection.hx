@@ -25,6 +25,7 @@ class TypedBackendFieldInitializerProjection {
 	final arrayAccesses:Array<TypedBackendArrayAccess>;
 	final equalities:Array<TypedBackendEqualityOccurrence>;
 	final conditions:Array<TypedBackendCondition>;
+	final namedPatterns:Array<TypedBackendNamedPattern>;
 	final localWrites:Array<TypedBackendLocalWrite>;
 	final callArguments:Array<TypedBackendCallArgument>;
 	final lambdas:Array<TypedBackendLambdaOccurrence>;
@@ -42,7 +43,8 @@ class TypedBackendFieldInitializerProjection {
 			?instanceCalls:Array<TypedBackendInstanceCallOccurrence>, ?indexedAccesses:{
 			arrays:Array<TypedBackendArrayAccess>,
 			?equalities:Array<TypedBackendEqualityOccurrence>,
-			?conditions:Array<TypedBackendCondition>
+			?conditions:Array<TypedBackendCondition>,
+			?namedPatterns:Array<TypedBackendNamedPattern>
 		}) {
 		if (stableIdentity == null || stableIdentity.length == 0)
 			throw "typed backend field initializer projection requires a stable identity";
@@ -81,6 +83,9 @@ class TypedBackendFieldInitializerProjection {
 		this.arrayAccesses = indexedAccesses == null ? [] : indexedAccesses.arrays.copy();
 		this.equalities = indexedAccesses == null || indexedAccesses.equalities == null ? [] : indexedAccesses.equalities.copy();
 		this.conditions = indexedAccesses == null || indexedAccesses.conditions == null ? [] : indexedAccesses.conditions.copy();
+		this.namedPatterns = indexedAccesses == null || indexedAccesses.namedPatterns == null ? [] : indexedAccesses.namedPatterns.copy();
+		for (entry in this.namedPatterns)
+			entry.assertCurrent(stableIdentity, bodyRevision);
 		for (entry in this.conditions)
 			entry.assertCurrent(stableIdentity, bodyRevision);
 		for (entry in this.equalities)
@@ -289,6 +294,25 @@ class TypedBackendFieldInitializerProjection {
 				requireExpression(expression);
 				entry.assertCurrent(stableIdentity, bodyRevision);
 				return entry;
+			}
+		return null;
+	}
+
+	/** Field initializers retain their own case selections, including those inside closures. */
+	public function findNamedPattern(pattern:HxSwitchPattern):Null<TypedNamedPattern> {
+		for (entry in namedPatterns)
+			if (entry.pattern == pattern) {
+				assertCurrent();
+				entry.assertCurrent(stableIdentity, bodyRevision);
+				var present = false;
+				TypedBackendSourceWalk.expression(HxFieldDecl.getInit(declaration),
+					expression -> TypedBackendNamedPattern.inExpression(expression, candidate -> {
+						if (candidate == pattern)
+							present = true;
+					}));
+				if (!present)
+					throw "named pattern is absent from its executable initializer";
+				return entry.selection;
 			}
 		return null;
 	}

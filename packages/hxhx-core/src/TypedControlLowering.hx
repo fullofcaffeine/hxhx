@@ -28,7 +28,7 @@ typedef LoweredFieldInitializer = {
 	here instead of being hidden inside a newly created closure.
  */
 class TypedControlLowering {
-	static final passIdentity = "source-control-v31";
+	static final passIdentity = "source-control-v32";
 
 	final owner:String;
 	var nextTemporary:Int = 0;
@@ -230,7 +230,7 @@ class TypedControlLowering {
 				[
 					TypedStmt.switchStmt(children[0], step.getPatterns(), bodies, step.getPosition(), step.getLocalBindings(),
 						step.getSwitchHasExhaustiveCoverage())
-				];
+						.withSwitchPatterns(step.getSwitchPatterns())];
 			case ControlFor | ControlWhile:
 				// Keep the selected loop destination through backend projection. Rebuilding
 				// source-shaped statements here discards the destination used by exits.
@@ -440,7 +440,8 @@ class TypedControlLowering {
 					children[index + 1].getPosition())
 		];
 		scrutinee.steps.push(TypedExpr.controlSwitch(scrutinee.value, patterns, regions, completionType, expression.getPosition(),
-			expression.getLocalBindings(), coversInput));
+			expression.getLocalBindings(), coversInput)
+			.withSwitchPatterns(expression.getSwitchPatterns()));
 		return {steps: scrutinee.steps, value: result, completes: completes};
 	}
 

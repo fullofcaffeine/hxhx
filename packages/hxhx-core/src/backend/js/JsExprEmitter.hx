@@ -32,6 +32,7 @@ class JsExprEmitter {
 			runtimeTypes: parent == null ? null : parent.runtimeTypes,
 			abstractValues: parent == null ? null : parent.abstractValues,
 			enumDeclarations: parent == null ? null : parent.enumDeclarations,
+			namedPatterns: parent == null ? null : parent.namedPatterns,
 			methodUses: parent == null ? null : parent.methodUses,
 			lambdaUses: parent == null ? null : parent.lambdaUses,
 			iterationStorage: parent == null ? null : parent.iterationStorage,
@@ -1891,7 +1892,7 @@ class JsExprEmitter {
 		for (i in 0...count) {
 			final pattern = patterns[i];
 			final branchExpr = exprs[i];
-			final lowered = JsSwitchPatternLowering.lower(pattern, "__sw");
+			final lowered = JsSwitchPatternLowering.lower(pattern, "__sw", scope);
 			final head = isFirst ? "if" : "else if";
 
 			var branchScope = scope;

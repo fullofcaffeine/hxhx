@@ -1079,7 +1079,8 @@ class TypedBodyBuilder {
 					if (environment != null)
 						environment.exitLexicalScope();
 				}
-				TypedExpr.switchExpr(typedScrutinee, patterns == null ? [] : patterns.copy(), typedBranches, nodeType, position, patternBindings, exhaustive);
+				TypedExpr.switchExpr(typedScrutinee, patterns == null ? [] : patterns.copy(), typedBranches, nodeType, position, patternBindings, exhaustive)
+					.withSwitchPatterns(typeResolver == null ? null : typeResolver.switchPatterns(typedScrutinee.getType(), patterns, diagnosticPosition));
 			case ENew(typePath, arguments):
 				final typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				final constructor = typeResolver == null ? null : typeResolver.constructorApplication(nodeType,
@@ -1357,7 +1358,8 @@ class TypedBodyBuilder {
 					if (environment != null)
 						environment.exitLexicalScope();
 				}
-				TypedStmt.switchStmt(typedScrutinee, patterns == null ? [] : patterns.copy(), typedBodies, storedPosition, bindings);
+				TypedStmt.switchStmt(typedScrutinee, patterns == null ? [] : patterns.copy(), typedBodies, storedPosition, bindings)
+					.withSwitchPatterns(typeResolver == null ? null : typeResolver.switchPatterns(typedScrutinee.getType(), patterns, diagnosticPosition));
 			case STry(body, catches, _):
 				final catchNames = new Array<String>();
 				final catchTypeHints = new Array<String>();

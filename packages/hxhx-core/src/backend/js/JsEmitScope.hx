@@ -10,6 +10,9 @@ typedef JsEmitScope = {
 	/** Exact retained enum declarations for target-owned quotation construction. */
 	final ?enumDeclarations:String->JsClassInheritancePlan.JsClassInheritanceNode;
 
+	/** Selected case declarations belong to exact patterns in the executable projection. */
+	final ?namedPatterns:HxSwitchPattern->Null<TypedNamedPattern>;
+
 	final ?methodUses:HxExpr->Null<TypedBackendMethodOccurrence>;
 	final ?lambdaUses:HxExpr->Null<TypedBackendLambdaOccurrence>;
 	final ?iterationStorage:JsIterationCaptureStorage;

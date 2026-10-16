@@ -93,6 +93,7 @@ class CompilerDependencyCollector {
 		if (statement == null)
 			return;
 		collectCatchUses(edgeByKey, consumerModule, index, statement.getLocalBindings(), statement.getCatchUses(), staticInitializer);
+		collectNamedPatterns(edgeByKey, consumerModule, index, statement.getSwitchPatterns(), staticInitializer);
 		for (expression in statement.getExpressions())
 			collectExpression(edgeByKey, consumerModule, index, currentOwner, expression, staticInitializer);
 		for (child in statement.getStatements())
@@ -104,6 +105,7 @@ class CompilerDependencyCollector {
 		if (expression == null)
 			return;
 		collectCatchUses(edgeByKey, consumerModule, index, expression.getLocalBindings(), expression.getCatchUses(), staticInitializer);
+		collectNamedPatterns(edgeByKey, consumerModule, index, expression.getSwitchPatterns(), staticInitializer);
 		collectType(edgeByKey, consumerModule, index, expression.getType(), "expression-type", staticInitializer);
 		final runtimeTarget = expression.getRuntimeTypeTarget();
 		final runtimeOwner = runtimeTarget == null ? null : runtimeTarget.getDeclarationIdentity();
@@ -126,6 +128,24 @@ class CompilerDependencyCollector {
 		}
 		for (child in expression.getExpressions())
 			collectExpression(edgeByKey, consumerModule, index, currentOwner, child, staticInitializer);
+	}
+
+	/** Cases consume declaration order and embedded constants even when the arm body never reads them. */
+	static function collectNamedPatterns(edgeByKey:haxe.ds.StringMap<CompilerDependencyEdge>, consumerModule:String, index:TyperIndex,
+			patterns:Null<TypedSwitchPatterns>, staticInitializer:Null<TyFieldInfo>):Void {
+		if (patterns == null)
+			return;
+		for (selection in patterns.getSelections()) {
+			if (selection == null)
+				continue;
+			switch selection.getKind() {
+				case Constructor(owner, name, _, _):
+					collectType(edgeByKey, consumerModule, index, TyType.nominal(owner, []), "pattern-constructor:" + name, staticInitializer);
+				case Constant(field):
+					addEdge(edgeByKey, consumerModule, field.getModulePath(), CompilerDependencyPhase.SharedTyping, CompilerDependencyKind.ConstantValue,
+						"field:" + field.getCanonicalKey());
+			}
+		}
 	}
 
 	/** Record only fields whose resolved declaration says callers may embed the initializer value. **/

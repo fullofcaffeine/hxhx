@@ -27,7 +27,34 @@ class TypedBodyProjectionBuilder {
 	final lambdas:Array<TypedBackendLambdaOccurrence> = [];
 	final returns:Array<TypedBackendReturnOccurrence> = [];
 	final statementControls:Array<TypedBackendStatementControl> = [];
+	final namedPatterns:Array<TypedBackendNamedPattern> = [];
 	var sealed:Bool = false;
+
+	/** Local renaming preserves pattern order, so each selected case keeps its exact projected object. */
+	public function projectNamedPatterns(facts:Null<TypedSwitchPatterns>, patterns:Array<HxSwitchPattern>):Void {
+		if (sealed)
+			throw "cannot add named patterns to a sealed projection";
+		if (facts == null)
+			return;
+		final names = TypedSwitchPatterns.named(patterns);
+		final selections = facts.getSelections();
+		if (names.length != selections.length)
+			throw "projected named pattern count differs from typing";
+		for (index in 0...names.length)
+			if (selections[index] != null)
+				namedPatterns.push(new TypedBackendNamedPattern({
+					owner: ownerIdentity,
+					revision: bodyRevision,
+					pattern: names[index],
+					selection: selections[index]
+				}));
+	}
+
+	public function getNamedPatterns():Array<TypedBackendNamedPattern> {
+		if (!sealed)
+			throw "named patterns require a sealed projection";
+		return namedPatterns.copy();
+	}
 
 	public function new(ownerIdentity:String, bodyRevision:String) {
 		this.ownerIdentity = ownerIdentity;
