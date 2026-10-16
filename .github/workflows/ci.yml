@@ -615,17 +615,14 @@ jobs:
             portable_shard_count: "3"
             portable_jobs: "4"
             portable_fixture_timeout_seconds: "2100"
-    # Runs 33284703349 and 33289157979 measured the other bounded rows' slowest
-    # 40-minute row at 23m06s and the slowest portable row at 38m25s. These
-    # budgets retain at least 16m54s and 11m35s of hosted-runner headroom.
-    # Focused run 38372712525 reached the 40-minute limit after 101/107 commands.
-    # Split those independent commands across clean runners. The observed times
-    # sum to about 18m45s per partition, including the prior run's final six
-    # commands. Failures shorten these measurements; hosted passes must confirm
-    # the headroom as repairs allow more nested checks to execute.
-    # Run 38586528338 measured 34m05s and 25m30s of focused command time.
-    # Moving runtime-type-operands and inheritance-module-loading to group 2
-    # balances those commands at 29m01s and 30m34s, excluding runner setup.
+    # Run 38827977209 exhausted focused group 1's 40-minute budget after only
+    # 34/53 commands. The constructor and inheritance groups used 11m55s and
+    # 9m14s of command time, so distribute the other C++ tests across those
+    # existing runners. Preserve every command, its relative aggregate order,
+    # dependency installation, and the same four 40-minute job limits.
+    # Recorded C++ command times sum to 23m44s and 28m53s in the new groups.
+    # Those sums exclude setup and include early failures; passing hosted runs
+    # must establish actual durations before the manifest records baselines.
     # The large hxhx application workload retains its own Q3 job below.
     timeout-minutes: ${{ matrix.timeout_minutes }}
     steps:
