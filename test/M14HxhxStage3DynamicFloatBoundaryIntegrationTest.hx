@@ -11,6 +11,10 @@ import TypedExpr.TypedExprTag;
 	Float contract. Native OCaml must therefore validate and convert the runtime
 	carrier at the call instead of pretending the source value was statically
 	Float.
+
+	The guarded form checks typing and emitted conversions. Runtime checks cover
+	direct Int/Float inputs and rejection of a non-numeric value; this fixture
+	does not establish native `Type.typeof` parity.
 **/
 class M14HxhxStage3DynamicFloatBoundaryIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
@@ -214,8 +218,14 @@ class M14HxhxStage3DynamicFloatBoundaryIntegrationTest {
 
 		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), outDir, true);
 		final generated = File.getContent(haxe.io.Path.join([outDir, "DynamicFloatBoundary.ml"]));
-		assertTrue(countOccurrences(generated, "HxDynamic.floatValue") == 2,
-			"Dynamic Float arguments did not use exactly the two checked call boundaries: " + generated);
+		assertTrue(countOccurrences(generated, "takeFloat (HxDynamic.floatValue (observed (value)))") == 1,
+			"the direct Dynamic argument lost its single checked conversion: " + generated);
+		// Switch decisions emit the TFloat and TInt alternatives as separate,
+		// mutually exclusive branches, each retaining the same checked call.
+		assertTrue(countOccurrences(generated, "takeFloat (HxDynamic.floatValue (value))") == 2,
+			"the guarded Dynamic argument lost a checked conversion in one of its two alternatives: " + generated);
+		assertTrue(countOccurrences(generated, "HxDynamic.floatValue") == 3,
+			"Dynamic Float emission added a conversion outside the direct call and two guarded alternatives: " + generated);
 		assertTrue(generated.indexOf("takeFloat (float_of_int 2)") >= 0, "a concrete Int argument lost its ordinary Float widening: " + generated);
 		assertTrue(generated.indexOf("takeDynamic (value)") >= 0, "a Dynamic parameter call gained an unrelated Float conversion: " + generated);
 		final nativeResult = run(executable, []);
