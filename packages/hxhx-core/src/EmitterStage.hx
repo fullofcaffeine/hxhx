@@ -1973,13 +1973,24 @@ class EmitterStage {
 	/**
 		Reports whether Stage3 can rely on an expression producing a Float.
 
-		A call's result type belongs to its selected declaration, not to its syntax.
-		Use the existing call-signature index so mixed arithmetic can retain that
-		Float result while it recursively classifies both operands.
+		Selected calls and fields retain their typed results through the backend
+		adapter. Use those facts before the ordinary call-signature lookup, and
+		preserve them through parentheses, so mixed arithmetic selects Float
+		operators even when the other operand is an Int.
 	**/
 	static function stage3IsFloatExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>, ?callSigByCallee:Map<String, EmitterCallSig>,
 			?staticImportByIdent:Map<String, String>):Bool {
+		final exact = objectAccessType(expr);
+		if (exact != null)
+			return exact.getSemanticKey() == "primitive:Float";
+		final staticCall = TypedExactStaticCallSource.decode(expr);
+		if (staticCall != null)
+			return staticCall.resultType == "Float";
+		final instanceCall = TypedExactCallSource.decodeInstance(expr);
+		if (instanceCall != null)
+			return instanceCall.resultType == "Float";
 		return switch (expr) {
+			case EParenthesized(inner, _): stage3IsFloatExpr(inner, tyByIdent, callSigByCallee, staticImportByIdent);
 			case EDiscardThen(_, continuation): stage3IsFloatExpr(continuation, tyByIdent, callSigByCallee, staticImportByIdent);
 			case EFloat(_):
 				true;
