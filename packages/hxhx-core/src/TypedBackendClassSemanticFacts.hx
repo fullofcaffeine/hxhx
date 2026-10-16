@@ -83,6 +83,7 @@ class TypedBackendClassSemanticFacts {
 	final nominalKind:TypedBackendNominalKind;
 	final moduleIdentity:String;
 	final declaredName:String;
+	final publicReflectionName:Null<TyPublicReflectionName>;
 	final typeParameters:Array<TyTypeParameterId>;
 	final superType:Null<TyType>;
 	final superClassIdentity:Null<String>;
@@ -113,6 +114,7 @@ class TypedBackendClassSemanticFacts {
 		// Only class declarations own interface relationships. This checked boundary
 		// keeps enum and abstract facts out of the class/interface membership graph.
 		final classInfo:Null<TyClassInfo> = Std.isOfType(info, TyClassInfo) ? cast info : null;
+		publicReflectionName = classInfo == null ? null : classInfo.getPublicReflectionName();
 		isInterface = classInfo != null && classInfo.getIsInterface();
 		isExtern = classInfo != null && classInfo.getIsExtern();
 		final indexedInterfaces = classInfo == null ? [] : classInfo.getDeclaredInterfaceTypes();
@@ -334,6 +336,7 @@ class TypedBackendClassSemanticFacts {
 		identityFacts.push(classIdentity);
 		identityFacts.push(moduleIdentity);
 		identityFacts.push(declaredName);
+		identityFacts.push(publicReflectionName == null ? null : publicReflectionName.getCanonicalIdentity());
 		identityFacts.push(enumDeclaration == null ? "not-enum" : enumDeclaration.getCanonicalIdentity());
 		switch (nominalKind) {
 			case ClassInstance:
@@ -427,6 +430,17 @@ class TypedBackendClassSemanticFacts {
 	public function getDeclaredName():String
 		return declaredName;
 
+	/**
+		Return the exact name used by Type.getClassName or Type.getEnumName.
+		Import aliases and compiler module-qualified identifiers do not alter it.
+		Unsupported host-owned or specialized identities fail before publication.
+	 */
+	public function requirePublicReflectionName():String {
+		if (publicReflectionName == null)
+			throw "abstract declarations do not own a public class or enum reflection name: " + classIdentity;
+		return publicReflectionName.requireName();
+	}
+
 	/** Return class-level generic parameters in declared order. **/
 	public function getTypeParameters():Array<String>
 		return [for (parameter in typeParameters) parameter.getName()];
@@ -481,7 +495,7 @@ class TypedBackendClassSemanticFacts {
 		return superTypeDisplay;
 
 	public function getSchemaRevision():String
-		return "typed-backend-class-semantic-facts-v13";
+		return "typed-backend-class-semantic-facts-v14";
 
 	/**
 		Publish an inferred result without replacing the declaration key selected

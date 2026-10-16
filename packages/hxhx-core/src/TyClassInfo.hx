@@ -13,12 +13,14 @@ class TyClassInfo extends TyNominalInfo {
 	final interfaceTypes:Array<TyType>;
 	final declaredInterfaceTypes:Array<TyType>;
 	final dynamicMemberType:Null<TyType>;
+	final publicReflectionName:TyPublicReflectionName;
 
 	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyFieldInfo>,
 			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
 			staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>, instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>,
 			declarations:Array<TyDeclarationInfo>, visibility:HxVisibility = HxVisibility.Public, isEnum:Bool = false, ?superType:TyType,
-			?typeParameters:Array<TyTypeParameterId>, ?interfaces:TyClassInterfaces, isExtern:Bool = false, ?enumDeclaration:HxEnumDeclaration) {
+			?typeParameters:Array<TyTypeParameterId>, ?interfaces:TyClassInterfaces, isExtern:Bool = false, ?enumDeclaration:HxEnumDeclaration,
+			?metadata:Array<String>) {
 		super(identity, shortName, modulePath, fields, properties, staticMethods, instanceMethods, staticMethodLists, instanceMethodLists, declarations,
 			visibility, isEnum, enumDeclaration);
 		this.superType = superType;
@@ -31,7 +33,12 @@ class TyClassInfo extends TyNominalInfo {
 		this.dynamicMemberType = relationships.dynamicMemberType;
 		if (this.isInterface && superType != null)
 			throw "an interface cannot own a superclass constructor edge";
+		this.publicReflectionName = new TyPublicReflectionName(this, metadata == null ? [] : metadata);
 	}
+
+	/** The shared index owns the immutable reflection name, including metadata restrictions. */
+	public function getPublicReflectionName():TyPublicReflectionName
+		return publicReflectionName;
 
 	/** Whether this declaration describes a target-owned definition. */
 	public function getIsExtern():Bool

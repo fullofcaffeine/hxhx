@@ -782,7 +782,7 @@ class TyperIndex {
 						isInterface: isInterface,
 						types: interfaceTypes
 					}, HxClassDecl.getIsExtern(classDeclaration),
-					HxClassDecl.getEnumDeclaration(classDeclaration));
+					HxClassDecl.getEnumDeclaration(classDeclaration), classMetadata);
 				completed.push({source: classDeclaration, info: info});
 			}
 		}
