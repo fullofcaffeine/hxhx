@@ -501,6 +501,8 @@ class TypedBodySource {
 	public static function expression(typedExpression:TypedExpr, ?catalog:TypedBackendLocalCatalog, ?projectionFacts:TypedBodyProjectionBuilder,
 			suppressCallableAscription:Bool = false, use:TypedBackendMethodOccurrence.TypedMethodUse = ValueRead):HxExpr {
 		final projected = projectExpression(typedExpression, catalog, projectionFacts, suppressCallableAscription, use);
+		if (projectionFacts != null)
+			projectionFacts.projectCollectionControl(typedExpression, projected);
 		return projectionFacts == null ? projected : projectionFacts.projectCallableExpression(typedExpression, projected);
 	}
 
@@ -948,6 +950,7 @@ class TypedBodySource {
 			projectionFacts.getThrownValues(), projectionFacts.getLocalWrites(), projectionFacts.getObjectAccesses(), projectionFacts.getCallArguments(),
 			projectionFacts.getMethods(), projectionFacts.getLambdas(), projectionFacts.getInstanceCalls(), projectionFacts.getStatementControls(), {
 				arrays: projectionFacts.getArrayAccesses(),
+				collectionControls: projectionFacts.getCollectionControls(),
 				equalities: projectionFacts.getEqualities(),
 				conditions: projectionFacts.getConditions(),
 				namedPatterns: projectionFacts.getNamedPatterns()
@@ -1002,6 +1005,7 @@ class TypedBodySource {
 			projectionFacts.getObjectAccesses(), projectionFacts.getLocalWrites(), projectionFacts.getCallArguments(), projectionFacts.getMethods(),
 			projectionFacts.getLambdas(), projectionFacts.getInstanceCalls(), {
 				arrays: projectionFacts.getArrayAccesses(),
+				collectionControls: projectionFacts.getCollectionControls(),
 				equalities: projectionFacts.getEqualities(),
 				conditions: projectionFacts.getConditions(),
 				namedPatterns: projectionFacts.getNamedPatterns()

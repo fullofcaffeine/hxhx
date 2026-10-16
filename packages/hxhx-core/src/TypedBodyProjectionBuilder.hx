@@ -21,6 +21,7 @@ class TypedBodyProjectionBuilder {
 	final localWrites:Array<TypedBackendLocalWrite> = [];
 	final objectAccesses:Array<TypedBackendObjectAccess> = [];
 	final arrayAccesses:Array<TypedBackendArrayAccess> = [];
+	final collectionControls:Array<TypedBackendCollectionControl> = [];
 	final equalities:Array<TypedBackendEqualityOccurrence> = [];
 	final conditions:Array<TypedBackendCondition> = [];
 	final callArguments:Array<TypedBackendCallArgument> = [];
@@ -60,6 +61,26 @@ class TypedBodyProjectionBuilder {
 		this.ownerIdentity = ownerIdentity;
 		this.bodyRevision = bodyRevision;
 		runtimeTypes = new TypedRuntimeTypeProjectionBuilder(ownerIdentity, bodyRevision);
+	}
+
+	/** Preserve selected collection operand types before projecting them as control syntax. */
+	public function projectCollectionControl(source:TypedExpr, expression:HxExpr):HxExpr {
+		if (sealed)
+			throw "cannot add collection controls to a sealed projection";
+		if (source.getTag() == ControlFor || source.getTag() == ArrayAppend)
+			collectionControls.push(new TypedBackendCollectionControl({
+				owner: ownerIdentity,
+				revision: bodyRevision,
+				source: source,
+				expression: expression
+			}));
+		return expression;
+	}
+
+	public function getCollectionControls():Array<TypedBackendCollectionControl> {
+		if (!sealed)
+			throw "collection controls require a sealed projection";
+		return collectionControls.copy();
 	}
 
 	/** Ordinary statement loops keep the same exact destinations as lowered expression loops. */

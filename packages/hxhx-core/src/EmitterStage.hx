@@ -6293,6 +6293,16 @@ class EmitterStage {
 					}
 					"raise (" + returnExc + " (" + payload + "))";
 				case SExpr(expr, _pos):
+					if (expr.match(ELoweredControl(ArrayAppend, _, _, _))) {
+						final occurrence = currentTypedInitializer != null ? currentTypedInitializer.requireCollectionControl(expr) : currentTypedFunction == null ? null : currentTypedFunction.requireCollectionControl(expr);
+						if (occurrence == null)
+							throw "OCaml append requires its exact executable projection";
+						return backend.ocaml.Stage3OcamlCollectionControl.append(occurrence,
+							value -> exprToOcaml(value, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+							currentFunctionLocalOcamlNames);
+					}
+					if (expr.match(ELoweredControl(_, _, _, _)))
+						return stmtToUnit(backend.ocaml.Stage3OcamlCollectionControl.statement(expr, currentTypedFunction), tyCtx);
 					// Avoid emitting invalid OCaml for unsupported assignment lvalues while still
 					// allowing modeled instance-field assignment side effects.
 					switch (expr) {

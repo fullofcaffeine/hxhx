@@ -23,6 +23,7 @@ class TypedBackendFieldInitializerProjection {
 	final casts:Array<TypedBackendCastOccurrence>;
 	final objectAccesses:Array<TypedBackendObjectAccess>;
 	final arrayAccesses:Array<TypedBackendArrayAccess>;
+	final collectionControls:Array<TypedBackendCollectionControl>;
 	final equalities:Array<TypedBackendEqualityOccurrence>;
 	final conditions:Array<TypedBackendCondition>;
 	final namedPatterns:Array<TypedBackendNamedPattern>;
@@ -42,6 +43,7 @@ class TypedBackendFieldInitializerProjection {
 			?methods:Array<TypedBackendMethodOccurrence>, ?lambdas:Array<TypedBackendLambdaOccurrence>,
 			?instanceCalls:Array<TypedBackendInstanceCallOccurrence>, ?indexedAccesses:{
 			arrays:Array<TypedBackendArrayAccess>,
+			?collectionControls:Array<TypedBackendCollectionControl>,
 			?equalities:Array<TypedBackendEqualityOccurrence>,
 			?conditions:Array<TypedBackendCondition>,
 			?namedPatterns:Array<TypedBackendNamedPattern>
@@ -81,6 +83,10 @@ class TypedBackendFieldInitializerProjection {
 		this.casts = casts == null ? [] : casts.copy();
 		this.objectAccesses = objectAccesses == null ? [] : objectAccesses.copy();
 		this.arrayAccesses = indexedAccesses == null ? [] : indexedAccesses.arrays.copy();
+		this.collectionControls = indexedAccesses == null
+			|| indexedAccesses.collectionControls == null ? [] : indexedAccesses.collectionControls.copy();
+		for (entry in this.collectionControls)
+			entry.assertCurrent(stableIdentity, bodyRevision);
 		this.equalities = indexedAccesses == null || indexedAccesses.equalities == null ? [] : indexedAccesses.equalities.copy();
 		this.conditions = indexedAccesses == null || indexedAccesses.conditions == null ? [] : indexedAccesses.conditions.copy();
 		this.namedPatterns = indexedAccesses == null || indexedAccesses.namedPatterns == null ? [] : indexedAccesses.namedPatterns.copy();
@@ -232,6 +238,17 @@ class TypedBackendFieldInitializerProjection {
 		});
 		if (!found)
 			throw "expression is absent from the current initializer projection";
+	}
+
+	/** Initializer collection operations retain their own types and executable ownership. */
+	public function requireCollectionControl(expression:HxExpr):TypedBackendCollectionControl {
+		requireExpression(expression);
+		for (entry in collectionControls)
+			if (entry.expression == expression) {
+				entry.assertCurrent(stableIdentity, bodyRevision);
+				return entry;
+			}
+		throw "collection control is absent from this exact initializer projection";
 	}
 
 	/** Initializer locals use their own storage facts and exact destination occurrences. */

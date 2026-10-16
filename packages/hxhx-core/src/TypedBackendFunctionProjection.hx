@@ -31,6 +31,7 @@ class TypedBackendFunctionProjection {
 	final localWrites:Array<TypedBackendLocalWrite>;
 	final objectAccesses:Array<TypedBackendObjectAccess>;
 	final arrayAccesses:Array<TypedBackendArrayAccess>;
+	final collectionControls:Array<TypedBackendCollectionControl>;
 	final equalities:Array<TypedBackendEqualityOccurrence>;
 	final conditions:Array<TypedBackendCondition>;
 	final namedPatterns:Array<TypedBackendNamedPattern>;
@@ -47,6 +48,7 @@ class TypedBackendFunctionProjection {
 			?methods:Array<TypedBackendMethodOccurrence>, ?lambdas:Array<TypedBackendLambdaOccurrence>,
 			?instanceCalls:Array<TypedBackendInstanceCallOccurrence>, ?statementControls:Array<TypedBackendStatementControl>, ?indexedAccesses:{
 			arrays:Array<TypedBackendArrayAccess>,
+			?collectionControls:Array<TypedBackendCollectionControl>,
 			?equalities:Array<TypedBackendEqualityOccurrence>,
 			?conditions:Array<TypedBackendCondition>,
 			?namedPatterns:Array<TypedBackendNamedPattern>
@@ -100,6 +102,10 @@ class TypedBackendFunctionProjection {
 		this.localWrites = localWrites == null ? [] : localWrites.copy();
 		this.objectAccesses = objectAccesses == null ? [] : objectAccesses.copy();
 		this.arrayAccesses = indexedAccesses == null ? [] : indexedAccesses.arrays.copy();
+		this.collectionControls = indexedAccesses == null
+			|| indexedAccesses.collectionControls == null ? [] : indexedAccesses.collectionControls.copy();
+		for (entry in this.collectionControls)
+			entry.assertCurrent(stableIdentity, bodyRevision);
 		this.equalities = indexedAccesses == null || indexedAccesses.equalities == null ? [] : indexedAccesses.equalities.copy();
 		this.conditions = indexedAccesses == null || indexedAccesses.conditions == null ? [] : indexedAccesses.conditions.copy();
 		this.namedPatterns = indexedAccesses == null || indexedAccesses.namedPatterns == null ? [] : indexedAccesses.namedPatterns.copy();
@@ -187,6 +193,17 @@ class TypedBackendFunctionProjection {
 		}, _ -> {});
 		if (!present)
 			throw "expression is absent from this exact function projection";
+	}
+
+	/** Expose operand types only for a current operation in this exact executable. */
+	public function requireCollectionControl(expression:HxExpr):TypedBackendCollectionControl {
+		requireExpression(expression);
+		for (entry in collectionControls)
+			if (entry.expression == expression) {
+				entry.assertCurrent(stableIdentity, bodyRevision);
+				return entry;
+			}
+		throw "collection control is absent from this exact function projection";
 	}
 
 	/** Presence alone exposes no default operands; consumers still use getDefaults for checked values. */
