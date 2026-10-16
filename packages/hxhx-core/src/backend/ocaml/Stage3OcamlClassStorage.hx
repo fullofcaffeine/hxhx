@@ -9,11 +9,13 @@ package backend.ocaml;
 **/
 class Stage3OcamlClassStorage {
 	final owners:Map<String, TypedBackendClassSemanticFacts> = [];
+	final projections:Map<String, TypedBackendClassProjection> = [];
+	final modules:Map<String, String> = [];
 
 	public function new() {}
 
 	/** The emitter supplies its actual runtime-module selection, not a second name allowlist. */
-	public function add(projection:TypedBackendClassProjection, runtimeProvided:Bool):Void {
+	public function add(projection:TypedBackendClassProjection, runtimeProvided:Bool, ?outputModule:String):Void {
 		if (runtimeProvided)
 			return;
 		final facts = projection.requireSemanticFacts();
@@ -23,6 +25,114 @@ class Stage3OcamlClassStorage {
 		if (owners.exists(identity))
 			throw "native class storage owner registered twice: " + identity;
 		owners.set(identity, facts);
+		projections.set(identity, projection);
+		if (outputModule != null)
+			modules.set(identity, outputModule);
+	}
+
+	/** Only a class emitted by this request may use ordinary object construction. */
+	public function ownsConstruction(occurrence:TypedBackendConstructorOccurrence):Bool {
+		occurrence.assertCurrent();
+		final identity = occurrence.getConstructedType().getNominalIdentity();
+		return identity != null && owners.exists(identity.getCanonicalName());
+	}
+
+	/** A checked spread passes its original array value, not the source-only spread marker. */
+	public function argumentValues(occurrence:TypedBackendConstructorOccurrence):Array<HxExpr> {
+		final arguments = occurrence.getArguments();
+		final kinds = occurrence.requireArgumentBinding().getOperandKinds();
+		return [
+			for (index in 0...arguments.length)
+				if (kinds[index] == Spread) switch arguments[index] {
+					case ECall(EIdent("__hxhx_spread"), [value]):
+						value;
+					case _:
+						throw "native constructor spread lost its original array operand";
+				} else arguments[index]
+		];
+	}
+
+	/**
+		Invoke the exact selected constructor after evaluating each source operand once.
+		Parent calls reuse this_ and never allocate another object. Field initialization
+		remains owned by the declaration; argument positions do not define field values.
+	 */
+	public function construct(input:{
+		occurrence:TypedBackendConstructorOccurrence,
+		currentModule:String,
+		names:Stage3OcamlLocalNames,
+		emitArgument:(expression:HxExpr, actual:TyType, expected:TyType) -> String,
+		quote:String->String
+	}):Null<String> {
+		final occurrence = input.occurrence;
+		if (!ownsConstruction(occurrence))
+			return null;
+		if (input.names == null)
+			throw "native construction requires its exact local naming owner";
+		final application = occurrence.requireApplication();
+		final declaration = application.getDeclaration();
+		final owner = declaration.getOwner().getCanonicalName();
+		final projection = projections.get(owner);
+		final module = modules.get(owner);
+		if (projection == null || module == null)
+			throw "native constructor provider was not emitted: " + owner;
+		final methods = projection.getFunctions().filter(fn -> fn.requireSemanticDeclaration() == declaration);
+		if (methods.length != 1)
+			throw "native constructor requires its exact declaration";
+		final binding = occurrence.requireArgumentBinding();
+		final slots = binding.getSlots();
+		if (slots.length != methods[0].getParameters().length)
+			throw "native constructor parameter projection changed its checked arity";
+		final arguments = argumentValues(occurrence);
+		final actual = binding.getOperandTypes();
+		final expected = binding.getExpectedArguments();
+		final locals = [
+			for (index in 0...arguments.length)
+				input.names.internalName("__hx_ctor_arg_" + index)
+		];
+		final rendered = [
+			for (index in 0...arguments.length)
+				input.emitArgument(arguments[index], actual[index], expected[index])
+		];
+		final parameters = [
+			for (slot in slots)
+				switch slot {
+					case Supplied(index):
+						locals[index];
+					case Omitted:
+						"(Obj.magic HxRuntime.hx_null)";
+					case RestElements(indices):
+						"HxBootArray.of_list [" + indices.map(index -> locals[index]).join("; ") + "]";
+					case RestSpread(index):
+						locals[index];
+				}
+		];
+		final object = occurrence.getIsSuperCall() ? "this_" : input.names.internalName("__hx_obj");
+		final callee = module == input.currentModule ? "new_" : module + ".new_";
+		final call = callee + " (" + object + ")" + parameters.map(parameter -> " (" + parameter + ")").join("");
+		var result = occurrence.getIsSuperCall() ? call : "ignore (" + call + "); " + object;
+		var index = arguments.length;
+		while (index-- > 0)
+			result = "let " + locals[index] + " = (" + rendered[index] + ") in " + result;
+		if (!occurrence.getIsSuperCall()) {
+			final fields = new Array<String>();
+			var identity:Null<String> = occurrence.getConstructedType().getNominalIdentity().getCanonicalName();
+			final visited:Map<String, Bool> = [];
+			while (identity != null) {
+				if (visited.exists(identity))
+					throw "native construction has cyclic class storage";
+				visited.set(identity, true);
+				final facts = owners.get(identity);
+				if (facts == null)
+					throw "native construction lacks inherited storage: " + identity;
+				for (field in facts.copyFields())
+					if (!field.isStatic && field.hasStorage)
+						fields.push("HxAnon.set (Obj.repr " + object + ") " + input.quote(field.name) + " HxRuntime.hx_null; ");
+				identity = facts.getSuperClassIdentity();
+			}
+			result = "let " + object + " = HxAnon.create () in " + fields.join("") + result;
+		}
+		return "(" + result + ")";
 	}
 
 	/** Class values compare by identity; primitive and target-owned values keep their own rules. */

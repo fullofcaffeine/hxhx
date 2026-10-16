@@ -52,7 +52,9 @@ class M14Stage3SameClassInstanceForwardIntegrationTest {
 		var thrown:Dynamic = null;
 		try {
 			final parsed = ParserStage.parse(src, sourcePath);
-			final typed = TyperStage.typeModule(parsed);
+			// Defaulted instance methods need the declaration that owns their receiver.
+			final resolved = new ResolvedModule("Runner", sourcePath, parsed);
+			final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 			final expanded = MacroStage.expandProgram([typed], []);
 			EmitterStage.emitToDir(expanded, outDir, true, false);
 

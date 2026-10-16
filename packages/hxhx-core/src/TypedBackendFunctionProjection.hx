@@ -189,6 +189,10 @@ class TypedBackendFunctionProjection {
 			throw "expression is absent from this exact function projection";
 	}
 
+	/** Presence alone exposes no default operands; consumers still use getDefaults for checked values. */
+	public function hasDefaults():Bool
+		return defaults.length != 0;
+
 	/** Return only the original conditional entry operands of this exact projection. */
 	public function getDefaults():Array<TypedBackendFunctionDefault> {
 		requireCaptureCatalog().assertCurrent();

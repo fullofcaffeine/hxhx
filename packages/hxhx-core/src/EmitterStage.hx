@@ -1948,6 +1948,14 @@ class EmitterStage {
 		return access == null ? null : access.resultType;
 	}
 
+	/** Allocation and parent calls retain their original typed occurrence through emission. */
+	static function exactConstructor(expr:HxExpr):Null<TypedBackendConstructorOccurrence> {
+		if (!expr.match(ENew(_, _)) && !expr.match(ECall(ESuper, _)))
+			return null;
+		return
+			currentTypedInitializer != null ? currentTypedInitializer.requireConstructor(expr) : currentTypedFunction == null ? null : currentTypedFunction.requireConstructor(expr);
+	}
+
 	static function stage3IsIntExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
 		final exact = objectAccessType(expr);
 		if (exact != null)
@@ -3108,6 +3116,29 @@ class EmitterStage {
 			});
 		}
 		final structuralAccess = objectAccess(e);
+		final construction = exactConstructor(e);
+		if (construction != null && currentClassStorage != null) {
+			final rendered = currentClassStorage.construct({
+				occurrence: construction,
+				currentModule: currentOcamlModuleName,
+				names: currentFunctionLocalOcamlNames,
+				emitArgument: (expression, actual, expected) -> {
+					final value = stage3IsFloatParamHint(expected.getDisplay()) ? exprToOcamlAsFloatValueStage3(expression, arityByIdent, tyByIdent,
+						staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+						callSigByCallee) : exprToOcaml(expression, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+							callSigByCallee);
+					final argument = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(expression) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(expression);
+					final callable = backend.ocaml.Stage3OcamlCallableConversion.adapt(argument, value, currentFunctionLocalOcamlNames);
+					if (callable != null)
+						return callable;
+					final carrier = actual.getSemanticKey() == "primitive:Bool" ? backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ExactBool : actual.isDynamic() ? backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.DynamicValue : backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ConcreteValue;
+					return backend.ocaml.OcamlDynamicOperatorLowering.callArgument(expected.getDisplay(), carrier, value);
+				},
+				quote: escapeOcamlString
+			});
+			if (rendered != null)
+				return rendered;
+		}
 		if (currentClassStorage != null && (e.match(EField(_, _)) || e.match(EIdent(_)))) {
 			final field = currentTypedInitializer != null ? currentTypedInitializer.findField(e) : currentTypedFunction == null ? null : currentTypedFunction.findField(e);
 			if (field != null) {
@@ -4719,6 +4750,13 @@ class EmitterStage {
 		//   upstream-shaped code without having to implement full typing/emission yet.
 		// - it is *not* semantically correct; it is only for bring-up.
 		function hasBringupPoison(e:HxExpr):Bool {
+			final construction = exactConstructor(e);
+			if (construction != null && currentClassStorage != null && currentClassStorage.ownsConstruction(construction)) {
+				for (argument in currentClassStorage.argumentValues(construction))
+					if (hasBringupPoison(argument))
+						return true;
+				return false;
+			}
 			final indexedAccess = arrayAccess(e);
 			if (!isMetalProfileActive() && indexedAccess != null && backend.ocaml.Stage3OcamlArrays.supportsAccess(indexedAccess)) {
 				// The typed renderer owns this operation; retain unsupported-operand checks
@@ -7362,7 +7400,7 @@ class EmitterStage {
 				final outputModule = moduleNameForDecl(decl, moduleTypeNameFor(tm), HxClassDecl.getName(cls.getDeclaration()));
 				currentEnums.add(cls, outputModule, HxModuleDecl.getPackagePath(decl));
 				if (cls.hasSemanticFacts())
-					currentClassStorage.add(cls, runtimeModuleNames.exists(outputModule));
+					currentClassStorage.add(cls, runtimeModuleNames.exists(outputModule), outputModule);
 			}
 		}
 		currentEnums.validate();
@@ -8567,6 +8605,18 @@ class EmitterStage {
 								+ ")";
 							};
 							EmitterStageDebug.traceStage3Phase("emit_fn_after_body:" + outputModuleName + ":" + nameRaw);
+							body = backend.ocaml.Stage3OcamlFunctionDefaults.render({
+								projection: tf,
+								names: currentFunctionLocalOcamlNames,
+								body: body,
+								emit: (expression, actual, expected) -> {
+									final value = stage3IsFloatParamHint(expected.getDisplay()) ? exprToOcamlAsFloatValueStage3(expression, arityByName,
+										tyByIdent, staticImportByIdent, HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass,
+										callSigByCallee) : exprToOcaml(expression, arityByName, tyByIdent, staticImportByIdent,
+											HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
+									return expected.isDynamic() ? backend.ocaml.Stage3OcamlObjects.store(actual, value) : value;
+								}
+							});
 
 							final kw = i == 0 ? "let rec" : "and";
 							out.push(kw + " " + name + " " + ocamlArgs + " : " + retTy + " = " + body);
