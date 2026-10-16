@@ -462,14 +462,15 @@ let merge_tags (a : string list) (b : string list) : string list =
 
 (* Runtime class identity for `Type.getClass`.
 
-   Our compiled class instances use OCaml records, and we use `Obj.magic` for
-   inheritance/interface upcasts. This means the only reliable way to identify
-   the most-derived class at runtime is to store a class value directly on the
-   instance.
+   Compiled class instances use either native records or the HxAnon field
+   carrier. Both retain a descriptor selected by Haxe at allocation, so an
+   upcast cannot replace the most-derived identity.
 
    Invariants enforced by codegen:
-   - All class instance records have a first field named `__hx_type : Obj.t`.
-   - That field stores the interned class value created by `class_ "<pack.Type>"`.
+   - Native class records have a first field named `__hx_type : Obj.t`.
+   - HxAnon instances retain the descriptor outside their public field map.
+   - Both store the interned class value created by `class_ "<pack.Type>"`.
+   - This primitive validates the descriptor; Haxe owns class/tag selection.
 *)
 let getClass (o : Obj.t) : Obj.t =
   if HxRuntime.is_null o then
@@ -478,6 +479,9 @@ let getClass (o : Obj.t) : Obj.t =
     HxRuntime.hx_null
   else if HxArray.is_value o then
     class_ "Array"
+  else if HxAnon.is_anon o then
+    let c = HxAnon.class_value o in
+    if is_type_value class_marker c then c else HxRuntime.hx_null
   else if Obj.tag o <> 0 then
     (* Avoid treating arbitrary OCaml blocks (strings, floats, closures, etc.) as
        our "class instance record" representation. *)
