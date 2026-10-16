@@ -4218,10 +4218,13 @@ class EmitterStage {
 					return
 						isDynamic ? backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.DynamicValue : backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ConcreteValue;
 				}
-				final dynamicBinary = backend.ocaml.OcamlDynamicOperatorLowering.binary(op, dynamicCarrier(a, dynamicLeft), dynamicCarrier(b, dynamicRight),
-					dynamicLeft, dynamicRight,
+				// The Dynamic helper rejects concrete operands without using their
+				// rendered text. Do not traverse those subtrees for a discarded result:
+				// repeating that work at each nested operator grows exponentially.
+				final dynamicBinary = (dynamicLeft || dynamicRight) ? backend.ocaml.OcamlDynamicOperatorLowering.binary(op, dynamicCarrier(a, dynamicLeft),
+					dynamicCarrier(b, dynamicRight), dynamicLeft, dynamicRight,
 					exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
-					exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
+					exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)) : null;
 				if (dynamicBinary != null) {
 					// A String-led Haxe addition stays String even when a Dynamic operand
 					// selects runtime dispatch. Restore that concrete result before a
