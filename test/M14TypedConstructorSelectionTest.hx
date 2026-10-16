@@ -3,14 +3,22 @@ import TypedExpr.TypedExprTag;
 /** Construction must retain its selected declaration through typed replay and exact generic application. */
 class M14TypedConstructorSelectionTest {
 	static function main():Void {
-		final source = 'class Main { static function main() { var a = new First(2); var b = new Second(3); var c = new Box<String>("word"); var bad = new Box<Int>("wrong"); var ordinary = new Plain(); var badArity = new First(); } }'
+		final source = 'class Main { static function main() { var a = new First(2); var b = new Second(3); var c = new Box<String>("word"); var bad = new Box<Int>("wrong"); var ordinary = new Plain(); var badArity = new First();'
+			+ ' var spread = new Many(...[1, 2]); var rest = new Many(3, 4); var empty = new Many(); var badSpread = new Many(...["wrong"]); } }'
 			+ ' abstract First(Int) { public function new(value:Int) { this = value; } }'
 			+ ' abstract Second(Int) { public function new(value:Int) { this = value + 1; } }'
 			+ ' abstract Box<T>(T) { public function new(value:T) { this = value; } }'
-			+ ' class Plain { public function new(value:Int = 4) {} }';
+			+ ' class Plain { public function new(value:Int = 4) {} }'
+			+ ' class Many { public function new(...values:Int) {} }';
 		final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
-		final index = TyperIndex.build([resolved]);
-		final typed = TyperStage.typeResolvedModule(resolved, index);
+		// Spread admission requires the real Array identity and its element type.
+		final args = hxhx.Stage1Compiler.Stage1Args.parse(["-main", "Main"], true);
+		final standardRoot = hxhx.Stage1Compiler.Stage1Args.getStandardLibraryRoot(args);
+		final index = TyperIndex.buildHeaders([resolved]);
+		final loader = new ModuleLoader([standardRoot + "/js/_std", standardRoot], hxhx.Stage3SetupSupport.buildDefinesMap([], "js", "js-native"), index,
+			null, true);
+		loader.markResolvedAlready([resolved]);
+		final typed = TyperStage.typeResolvedModule(resolved, index, loader, true);
 		var checked = 0;
 		for (cls in typed.getTypedClasses())
 			for (fn in cls.getFunctions()) {
@@ -22,7 +30,9 @@ class M14TypedConstructorSelectionTest {
 						continue;
 					final expression = expressions[0];
 					final declaration = expression.getDeclaration();
-					if (statement.getNames()[0] == "bad" || statement.getNames()[0] == "badArity") {
+					if (statement.getNames()[0] == "bad"
+						|| statement.getNames()[0] == "badArity"
+						|| statement.getNames()[0] == "badSpread") {
 						if (declaration != null)
 							throw "inapplicable generic constructor acquired a declaration";
 					} else {
@@ -37,7 +47,14 @@ class M14TypedConstructorSelectionTest {
 								+ " type="
 								+ expression.getType().getSemanticKey()
 								+ " declaration="
-								+ (declaration == null ? "none" : declaration.getIdentity().getCanonicalKey());
+								+ (declaration == null ? "none" : declaration.getIdentity().getCanonicalKey())
+								+ " operands="
+								+ expression.getExpressions()
+									.map(operand -> operand.getType().getSemanticKey()
+										+ "["
+										+ operand.getExpressions().map(child -> child.getType().getSemanticKey()).join(",")
+										+ "]")
+									.join(";");
 						if (expression.withExpressions(expression.getExpressions()).getDeclaration() != declaration)
 							throw "typed replay replaced the exact constructor declaration";
 						if (statement.getNames()[0] == "c"
@@ -66,7 +83,7 @@ class M14TypedConstructorSelectionTest {
 				}
 				TypedBodyInvariant.assertFunction(fn);
 			}
-		if (checked != 6)
+		if (checked != 10)
 			throw "constructor selection fixture lost a source occurrence";
 		final first = index.getByFullName("Main.First");
 		final second = index.getByFullName("Main.Second");

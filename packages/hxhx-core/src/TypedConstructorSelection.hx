@@ -38,20 +38,12 @@ function select(index:TyperIndex, constructed:TyType, arguments:Array<TyType>, s
 			continue;
 		final applied = TyNominalApplication.signature(index, owner, appliedOwner, signature);
 		final alignment = TyCallbackArgumentContext.align(TyCallableSignature.fromDeclaration(declaration, applied), sources, arguments, index);
-		final ranked = new Array<TyType>();
-		switch alignment {
+		final ranked = switch alignment {
 			case Rejected(_):
 				continue;
 			case Aligned(slots):
-				for (slot in slots)
-					switch slot {
-						case Omitted: ranked.push(TyType.fromHintText("Null"));
-						case Supplied(source): ranked.push(arguments[source]);
-						case RestElements(sources): for (source in sources)
-								ranked.push(arguments[source]);
-						case RestSpread(source): ranked.push(arguments[source]);
-					}
-		}
+				TyMethodArgumentOrder.rankSelectedSlots(slots, arguments);
+		};
 		// Ranking sees parameter positions after shared optional selection. These
 		// null type facts score omissions; they never become executable operands.
 		final candidateScore = score(applied, ranked, TyMethodGenericBinding.inferableTypeParameters(declaration));

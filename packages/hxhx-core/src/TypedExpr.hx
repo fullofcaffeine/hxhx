@@ -354,6 +354,7 @@ class TypedExpr {
 	}
 
 	/** Read the existing explicit spread intrinsic; ordinary function calls remain value operands. */
+	@:allow(TypedBodyBuilder)
 	@:allow(TypedCallExpectedArguments)
 	@:allow(TypedBackendConstructorOccurrence)
 	@:allow(TypedNamedCallPlan)
@@ -372,6 +373,7 @@ class TypedExpr {
 		];
 	}
 
+	@:allow(TypedBodyBuilder)
 	@:allow(TypedCallExpectedArguments)
 	@:allow(TypedBackendConstructorOccurrence)
 	@:allow(TypedNamedCallPlan)

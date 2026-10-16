@@ -916,7 +916,7 @@ class TypedBodyBuilder {
 						final receiver = buildExpr(callee, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 						final typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 						final application = typeResolver == null ? null : typeResolver.constructorApplication(receiver.getType(),
-							[for (argument in typedArguments) argument.getType()], arguments);
+							TypedExpr.operandTypes(typedArguments, TypedExpr.operandKinds(typedArguments)), arguments);
 						return TypedExpr.superConstructorCall(receiver, typedArguments, position, application);
 					case ELambda(names, body, signature) if (names.length == arguments.length):
 						final typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
@@ -1083,8 +1083,9 @@ class TypedBodyBuilder {
 					.withSwitchPatterns(typeResolver == null ? null : typeResolver.switchPatterns(typedScrutinee.getType(), patterns, diagnosticPosition));
 			case ENew(typePath, arguments):
 				final typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				// A spread contributes its checked container type, as it does for calls.
 				final constructor = typeResolver == null ? null : typeResolver.constructorApplication(nodeType,
-					[for (argument in typedArguments) argument.getType()], arguments);
+					TypedExpr.operandTypes(typedArguments, TypedExpr.operandKinds(typedArguments)), arguments);
 				final multiType = constructor == null ? null : constructor.getMultiTypeConstruction();
 				multiType == null ? TypedExpr.newValue(typePath, typedArguments, nodeType, position,
 					constructor) : multiType.apply(typedArguments, nodeType, position);

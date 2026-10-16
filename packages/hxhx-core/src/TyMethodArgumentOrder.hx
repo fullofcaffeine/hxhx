@@ -74,6 +74,15 @@ class TyMethodArgumentOrder {
 	public function rankedTypes(types:Array<TyType>):Array<TyType> {
 		if (types.length != sourceCount)
 			throw "method argument order has a stale source count";
+		return rankSelectedSlots(slots, types);
+	}
+
+	/**
+		Methods and constructors score the same already-aligned argument slots.
+		Alignment must first validate spread containers; scoring then compares their
+		element types with rest elements without changing the original operands.
+	 */
+	public static function rankSelectedSlots(slots:Array<TyCallArgumentSlot>, types:Array<TyType>):Array<TyType> {
 		final result = new Array<TyType>();
 		for (slot in slots)
 			switch slot {
