@@ -1,4 +1,5 @@
 [
+  "haxe test/m14_public_reflection_name_test.hxml",
   "haxe test/m14_js_runtime_type_operands_test.hxml",
   "haxe test/m14_enum_declaration_type_test.hxml",
   "haxe test/m14_shared_map_literal_typing_test.hxml",

@@ -140,7 +140,7 @@ function checkRuntimeTypeCoverage(packageJson, plan, expected) {
   if (JSON.stringify(expanded) !== JSON.stringify(expected)) {
     throw new Error('runtime-type split changed original commands or order')
   }
-  for (const command of expected.slice(32, 48)) {
+  for (const command of expected.slice(33, 49)) {
     if (!groups.some(group => command === `npm run ${group}` || packageJson.scripts[group] === command)) {
       throw new Error('each C++ runtime-type check must own an independent CI command')
     }
@@ -242,7 +242,7 @@ function main() {
 
   const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'))
   const runtimeCommands = JSON.parse(fs.readFileSync(path.join(repoRoot, 'test/fixtures/core_test_shards/runtime_type_commands.json'), 'utf8'))
-  assert(runtimeCommands.length === 52, 'the captured runtime-type inventory must retain all 52 commands')
+  assert(runtimeCommands.length === 53, 'the captured runtime-type inventory must retain all 53 commands')
   checkRuntimeTypeCoverage(packageJson, plan, runtimeCommands)
   for (const change of ['missing', 'duplicated']) {
     const invalid = structuredClone(packageJson)
