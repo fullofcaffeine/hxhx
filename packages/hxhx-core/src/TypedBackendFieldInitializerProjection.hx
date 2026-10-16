@@ -377,6 +377,12 @@ class TypedBackendFieldInitializerProjection {
 	public function getField():TyFieldInfo
 		return field;
 
+	/** Preserve the checked value type for target storage conversions, including Bool into Dynamic. */
+	public function getResultType():TyType {
+		assertCurrent();
+		return source.getExpression().getType();
+	}
+
 	public function getDeclaration():HxFieldDecl
 		return declaration;
 

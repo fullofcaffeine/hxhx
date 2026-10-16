@@ -1,0 +1,31 @@
+early field
+argument:7
+child second
+child field
+child before super
+super argument
+base field
+base body:2
+child after super:3:4
+8
+callable field
+true
+19
+11
+12
+argument:11
+forwarded field
+child second
+child field
+child before super
+super argument
+base field
+base body:2
+child after super:3:4
+12
+5
+11
+13
+17
+failing field
+init failure

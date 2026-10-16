@@ -7876,7 +7876,8 @@ class EmitterStage {
 				for (initializer in cls.getFieldInitializers())
 					if (initializer.getDeclaration() == field) {
 						currentTypedInitializer = initializer;
-						currentFunctionLocalOcamlNames = new backend.ocaml.Stage3OcamlLocalNames(initializer.getLocalCatalog(), false, ocamlValueIdent);
+						currentFunctionLocalOcamlNames = new backend.ocaml.Stage3OcamlLocalNames(initializer.getLocalCatalog(),
+							!HxFieldDecl.getIsStatic(field), ocamlValueIdent);
 						return;
 					}
 			}
@@ -8138,6 +8139,7 @@ class EmitterStage {
 					out.push("");
 
 					final parsedFields = HxClassDecl.getFields(emittedClass);
+					final instanceInitializers = classProjection.hasSemanticFacts() ? currentClassStorage.instanceInitializers(classProjection) : null;
 					final emitParsedStaticFields = shouldEmitParsedStaticFields(outputModuleName);
 					final staticFieldTypeByName:Map<String, TyType> = new Map();
 					for (f in parsedFields) {
@@ -8308,6 +8310,13 @@ class EmitterStage {
 					}
 
 					final preludeFnNames:Map<String, Bool> = new Map();
+					if (instanceInitializers != null) {
+						fnNames.set(instanceInitializers.getName(), true);
+						for (initializer in classProjection.getFieldInitializers())
+							if (initializer.getField().getIsStatic())
+								for (dependency in currentClassStorage.constructorDependencies(initializer.getConstructorCatalog(), outputModuleName))
+									staticInitCalls.set(dependency, true);
+					}
 					for (name in staticInitCalls.keys()) {
 						if (!fnNames.exists(name))
 							continue;
@@ -8325,7 +8334,18 @@ class EmitterStage {
 						final parsedFn = tf == null ? null : tf.getDeclaration();
 						final calls:Map<String, Bool> = new Map();
 						var refsStatic = false;
+						if (instanceInitializers != null && nameRaw == instanceInitializers.getName()) {
+							for (dependency in instanceInitializers.methodDependencies())
+								calls.set(dependency, true);
+							for (initializer in instanceInitializers.getFields())
+								for (dependency in currentClassStorage.constructorDependencies(initializer.getConstructorCatalog(), outputModuleName))
+									calls.set(dependency, true);
+							refsStatic = instanceInitializers.referencesOwnStatics();
+						}
 						if (tf != null && parsedFn != null) {
+							if (instanceInitializers != null)
+								for (dependency in currentClassStorage.constructorDependencies(tf.getConstructorCatalog(), outputModuleName))
+									calls.set(dependency, true);
 							final locals:Map<String, Bool> = new Map();
 							for (local in tf.getLocalCatalog().getEntries())
 								locals.set(local.getProjectedName(), true);
@@ -8479,7 +8499,48 @@ class EmitterStage {
 						typedFnsPrelude.push(tf);
 					}
 
-					function emitFnGroup(group:Array<TypedBackendFunctionProjection>):Void {
+					/** Render every field with its own catalogs, then restore the surrounding executable context. */
+					function emitInstanceFields():String {
+						return instanceInitializers.render(initializer -> {
+							final previousFunction = currentTypedFunction;
+							final previousInitializer = currentTypedInitializer;
+							final previousNames = currentFunctionLocalOcamlNames;
+							final previousTypes = currentFunctionLocalTypeHints;
+							final previousShadows = currentFunctionShadowingValueNames;
+							final previousCallable = currentCallableFunction;
+							currentTypedFunction = null;
+							currentCallableFunction = null;
+							installFieldLocalNames(classProjection, initializer.getDeclaration());
+							final types = staticFieldTypeByName.copy();
+							currentFunctionLocalTypeHints = new Map();
+							currentFunctionShadowingValueNames = new Map();
+							for (local in initializer.getLocalCatalog().getEntries()) {
+								final name = local.getProjectedName();
+								final type = local.getBinding().getType();
+								types.set(name, type);
+								currentFunctionLocalTypeHints.set(name, type);
+								currentFunctionShadowingValueNames.set(name, true);
+							}
+							final expected = initializer.getField().getType();
+							final floating = stage3IsFloatParamHint(expected.getDisplay());
+							final value = floating ? exprToOcamlAsFloatValueStage3(initializer.getExpression(), arityByName, types, staticImportByIdent,
+								HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass,
+								callSigByCallee) : exprToOcaml(initializer.getExpression(), arityByName, types, staticImportByIdent,
+									HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
+							final stored = backend.ocaml.Stage3OcamlObjects.store(floating ? expected : initializer.getResultType(), value);
+							currentTypedFunction = previousFunction;
+							currentTypedInitializer = previousInitializer;
+							currentFunctionLocalOcamlNames = previousNames;
+							currentFunctionLocalTypeHints = previousTypes;
+							currentFunctionShadowingValueNames = previousShadows;
+							currentCallableFunction = previousCallable;
+							return stored;
+						}, escapeOcamlString);
+					}
+
+					function emitFnGroup(group:Array<TypedBackendFunctionProjection>, includeInitializers:Bool = false):Void {
+						if (includeInitializers)
+							out.push("let rec " + instanceInitializers.getName() + " (this_ : _) : unit = " + emitInstanceFields());
 						for (i in 0...group.length) {
 							final tf = group[i];
 							final parsedFn = tf.getDeclaration();
@@ -8618,7 +8679,7 @@ class EmitterStage {
 								}
 							});
 
-							final kw = i == 0 ? "let rec" : "and";
+							final kw = i == 0 && !includeInitializers ? "let rec" : "and";
 							out.push(kw + " " + name + " " + ocamlArgs + " : " + retTy + " = " + body);
 							out.push("");
 							EmitterStageDebug.traceStage3Phase("emit_fn_done:" + outputModuleName + ":" + nameRaw);
@@ -8632,8 +8693,9 @@ class EmitterStage {
 						}
 					}
 
-					if (typedFnsPrelude.length > 0) {
-						emitFnGroup(typedFnsPrelude);
+					final initializerPrelude = instanceInitializers != null && preludeFnNames.exists(instanceInitializers.getName());
+					if (typedFnsPrelude.length > 0 || initializerPrelude) {
+						emitFnGroup(typedFnsPrelude, initializerPrelude);
 					}
 
 					// Emit class-scope static values (bootstrap subset).
@@ -8678,7 +8740,8 @@ class EmitterStage {
 						typedFnsRest.push(tf);
 					}
 
-					if (typedFnsRest.length > 0) {
+					final initializerRest = instanceInitializers != null && !initializerPrelude;
+					if (typedFnsRest.length > 0 || initializerRest) {
 						// Stage 3 bring-up: avoid putting *every* function in a single `let rec ... and ...` group.
 						//
 						// Why
@@ -8697,13 +8760,16 @@ class EmitterStage {
 						//
 						// This keeps output deterministic and matches OCaml scoping rules:
 						// callers must come *after* callees unless they share a recursive group.
-						final nRest = typedFnsRest.length;
+						final initializerIndex = initializerRest ? typedFnsRest.length : -1;
+						final nRest = typedFnsRest.length + (initializerRest ? 1 : 0);
 						final restIndexByName = new haxe.ds.StringMap<Int>();
-						for (i in 0...nRest) {
+						for (i in 0...typedFnsRest.length) {
 							final nm = HxFunctionDecl.getName(typedFnsRest[i].getDeclaration());
 							if (nm != null && nm.length > 0)
 								restIndexByName.set(nm, i);
 						}
+						if (initializerRest)
+							restIndexByName.set(instanceInitializers.getName(), initializerIndex);
 
 						final edges = new Array<Array<Int>>();
 						final revEdges = new Array<Array<Int>>();
@@ -8719,6 +8785,21 @@ class EmitterStage {
 							seenStamp[i] = 0;
 
 						for (i in 0...nRest) {
+							// Field helpers are real initializer executables, not fabricated Haxe methods.
+							if (instanceInitializers != null) {
+								final name = i == initializerIndex ? instanceInitializers.getName() : HxFunctionDecl.getName(typedFnsRest[i].getDeclaration());
+								analyzeFn(name);
+								for (dependency in fnCallsByName.get(name).keys()) {
+									final target = restIndexByName.get(dependency);
+									if (target != null && target != i && edges[i].indexOf(target) < 0) {
+										seenStamp[target] = i + 1;
+										edges[i].push(target);
+										revEdges[target].push(i);
+									}
+								}
+								if (i == initializerIndex)
+									continue;
+							}
 							final parsedFn = typedFnsRest[i].getDeclaration();
 							final localCatalog = typedFnsRest[i].getLocalCatalog();
 
@@ -9060,7 +9141,7 @@ class EmitterStage {
 						// Safety fallback: if something went wrong, emit everything in one group.
 						// (Don't emit partial SCC order and then re-emit; that would duplicate definitions.)
 						if (compOrder.length != nComp) {
-							emitFnGroup(typedFnsRest);
+							emitFnGroup(typedFnsRest, initializerRest);
 						} else {
 							for (c in compOrder) {
 								final nodes = comps[c];
@@ -9082,9 +9163,11 @@ class EmitterStage {
 								final group = new Array<TypedBackendFunctionProjection>();
 								if (nodes != null)
 									for (idx in nodes)
-										group.push(typedFnsRest[idx]);
-								if (group.length > 0)
-									emitFnGroup(group);
+										if (idx != initializerIndex)
+											group.push(typedFnsRest[idx]);
+								final includeInitializers = nodes != null && nodes.indexOf(initializerIndex) >= 0;
+								if (group.length > 0 || includeInitializers)
+									emitFnGroup(group, includeInitializers);
 							}
 						}
 					}

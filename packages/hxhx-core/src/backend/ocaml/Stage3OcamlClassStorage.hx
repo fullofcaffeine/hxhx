@@ -11,6 +11,7 @@ class Stage3OcamlClassStorage {
 	final owners:Map<String, TypedBackendClassSemanticFacts> = [];
 	final projections:Map<String, TypedBackendClassProjection> = [];
 	final modules:Map<String, String> = [];
+	final initializers:Map<String, Stage3OcamlInstanceInitializers> = [];
 
 	public function new() {}
 
@@ -24,10 +25,54 @@ class Stage3OcamlClassStorage {
 		final identity = facts.getClassIdentity();
 		if (owners.exists(identity))
 			throw "native class storage owner registered twice: " + identity;
+		final fields = new Array<TypedBackendFieldInitializerProjection>();
+		for (declaration in HxClassDecl.getFields(projection.getDeclaration()))
+			if (!HxFieldDecl.getIsStatic(declaration) && HxFieldDecl.getInit(declaration) != null) {
+				final matches = projection.getFieldInitializers().filter(value -> value.getDeclaration() == declaration);
+				if (matches.length != 1 || !facts.requireField(matches[0].getField()).hasStorage)
+					throw "native instance initialization requires its exact stored field";
+				fields.push(matches[0]);
+			}
+		final initializer = new Stage3OcamlInstanceInitializers({projection: projection, owner: identity, fields: fields});
 		owners.set(identity, facts);
 		projections.set(identity, projection);
+		initializers.set(identity, initializer);
 		if (outputModule != null)
 			modules.set(identity, outputModule);
+	}
+
+	/** Return field execution only for the exact emitted class that owns it. */
+	public function instanceInitializers(projection:TypedBackendClassProjection):Null<Stage3OcamlInstanceInitializers> {
+		final plan = initializers.get(projection.requireSemanticFacts().getClassIdentity());
+		if (plan != null)
+			plan.assertOwner(projection);
+		return plan != null && plan.hasFields() ? plan : null;
+	}
+
+	/** Retain child-to-parent forwarding, then initialize the selected constructor's own fields. */
+	function initializerOwners(application:TypedConstructorApplication):Array<String> {
+		return [
+			for (type in application.getForwardedTypes().concat([application.getOwnerType()]))
+				type.getNominalIdentity().getCanonicalName()
+		];
+	}
+
+	/** Local dependency ordering must include generated field helpers used by an exact construction. */
+	public function constructorDependencies(catalog:TypedBackendConstructorCatalog, currentModule:String):Array<String> {
+		final result = new Array<String>();
+		for (occurrence in catalog.getEntries()) {
+			if (!ownsConstruction(occurrence))
+				continue;
+			final application = occurrence.requireApplication();
+			if (modules.get(application.getDeclaration().getOwner().getCanonicalName()) == currentModule && result.indexOf("new") < 0)
+				result.push("new");
+			for (owner in initializerOwners(application)) {
+				final plan = initializers.get(owner);
+				if (plan != null && plan.hasFields() && modules.get(owner) == currentModule && result.indexOf(plan.getName()) < 0)
+					result.push(plan.getName());
+			}
+		}
+		return result;
 	}
 
 	/** Only a class emitted by this request may use ordinary object construction. */
@@ -111,6 +156,19 @@ class Stage3OcamlClassStorage {
 		final callee = module == input.currentModule ? "new_" : module + ".new_";
 		final call = callee + " (" + object + ")" + parameters.map(parameter -> " (" + parameter + ")").join("");
 		var result = occurrence.getIsSuperCall() ? call : "ignore (" + call + "); " + object;
+		final initialize = new Array<String>();
+		for (owner in initializerOwners(application)) {
+			final plan = initializers.get(owner);
+			if (plan == null)
+				throw "native construction lacks initializer owner: " + owner;
+			if (plan.hasFields()) {
+				final module = modules.get(owner);
+				if (module == null)
+					throw "native initializer provider was not emitted: " + owner;
+				initialize.push((module == input.currentModule ? "" : module + ".") + plan.getName() + " (" + object + "); ");
+			}
+		}
+		result = initialize.join("") + result;
 		var index = arguments.length;
 		while (index-- > 0)
 			result = "let " + locals[index] + " = (" + rendered[index] + ") in " + result;

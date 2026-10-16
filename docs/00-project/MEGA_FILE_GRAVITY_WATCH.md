@@ -14,6 +14,7 @@ MEGA_FILE_GRAVITY_WATCH:PASS
 ## Current Hotspots
 
 Measured on October 6, 2026, in the PR92 integration candidate.
+The EmitterStage count was refreshed on October 16, 2026.
 The guard allows small drift but asks for this table to be refreshed when a
 watched file moves by more than 250 lines.
 
@@ -21,7 +22,7 @@ watched file moves by more than 250 lines.
 | --- | ---: | --- |
 | `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 19,846 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
 | `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 25,549 | Fixed prelude assembly lives in `CppProgramPrelude`, and known standard-library carrier signatures live in `CppKnownStdlibSignatures`; rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support still make this a red hotspot. |
-| `packages/hxhx-core/src/EmitterStage.hx` | 9,332 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
+| `packages/hxhx-core/src/EmitterStage.hx` | 9,632 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
 | `packages/hxhx-core/src/HxParser.hx` | 4,937 | Parser behavior is central and easy to destabilize with local workarounds. |
 | `packages/hxhx-core/src/ParserStage.hx` | 279 | The July 24 parser hard cut removed the duplicate native decoder and profiling copies. Keep this file as the narrow stage/cache adapter around `HxParser`; module-local recovery scanning remains isolated in `ParserStageScanHelpers`. |
 | `packages/hxhx/src/hxhx/Stage3Compiler.hx` | 1,023 | Keep orchestration-only; do not let it become a target/runtime implementation surface. |
@@ -79,11 +80,22 @@ Pause for an extraction note or follow-up bead when a change would:
 - `haxe_ocaml-ejja`: Cpp compact primitive helper oracle freeze.
 - `haxe_ocaml-zo90`: Cpp sys/event-loop smoke scaffolding audit.
 - `haxe_ocaml-cy8e`: SourceTargetCommon target-family extraction plan.
+- `haxe_ocaml-j6aof`: static-initializer/function ordering in `EmitterStage`;
+  extract its dependency grouping before expanding that boundary again.
 - `haxe_ocaml-e1kqo`: retired the handwritten OCaml parser and the full
   `ParserStage` comparison copies.
 
 Source/native target-family extraction should be filed before adding more broad
 target-specific runtime/API support to `SourceTargetCommon.hx`.
+
+2026-10-16 checkpoint: `haxe_ocaml-j5icf` executes authored instance field
+initializers through `Stage3OcamlInstanceInitializers`. Class storage admits
+each field, and the helper retains its exact executable and local bindings.
+`EmitterStage` adds the helper to its existing function dependency groups and
+renders each field with its own context. Upstream/native checks cover inherited
+constructors, saved callables, closure state, and construction during static
+startup. The broader dependent-static-value case remains in `haxe_ocaml-j6aof`,
+which also owns extraction of this ordering boundary before further expansion.
 
 2026-07-26 checkpoint: `haxe_ocaml-850ii.32.2.26` grew
 `SourceTargetCommon.hx` from the July 22 count of 17,902 lines to 19,603 while
