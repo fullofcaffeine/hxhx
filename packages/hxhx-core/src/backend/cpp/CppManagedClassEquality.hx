@@ -1,8 +1,10 @@
 package backend.cpp;
 
-/** Exact Class<T> values compare declaration identity, never names or instance layout. */
+/** Class and enum handles compare declaration identity only within their own category. */
 function selects(op:String, left:TyType, right:TyType, classes:Null<CppManagedClassStorage>):Bool {
-	return (op == '==' || op == '!=') && classes != null && classes.isClassValue(left) && classes.isClassValue(right);
+	return (op == '==' || op == '!=')
+		&& classes != null
+		&& ((classes.isClassValue(left) && classes.isClassValue(right)) || (classes.isEnumHandle(left) && classes.isEnumHandle(right)));
 }
 
 /** Related ordinary instance types retain one allocation across aliases and checked class upcasts. */
@@ -32,11 +34,12 @@ function selectsOpaqueInstances(op:String, left:TyType, right:TyType, classes:Nu
 	have static lifetime and one address per admitted program declaration. Null stays
 	distinct from a descriptor; other value tags fail at the checked storage accessor.
  */
-function compute(op:String, left:String, right:String, destination:String, indent:String):Array<String> {
+function compute(op:String, left:String, right:String, destination:String, indent:String, enumHandle:Bool = false):Array<String> {
 	if (op != '==' && op != '!=')
 		throw 'managed class comparison requires equality or inequality';
-	final a = '(' + left + '.kind() == hxhx::managed::ValueKind::Null ? nullptr : ' + left + '.asDescriptor())';
-	final b = '(' + right + '.kind() == hxhx::managed::ValueKind::Null ? nullptr : ' + right + '.asDescriptor())';
+	final accessor = enumHandle ? '.asEnumDescriptor()' : '.asDescriptor()';
+	final a = '(' + left + '.kind() == hxhx::managed::ValueKind::Null ? nullptr : ' + left + accessor + ')';
+	final b = '(' + right + '.kind() == hxhx::managed::ValueKind::Null ? nullptr : ' + right + accessor + ')';
 	return [
 		indent + destination + '.set(hxhx::managed::Value::boolean(' + a + ' ' + op + ' ' + b + '));'
 	];

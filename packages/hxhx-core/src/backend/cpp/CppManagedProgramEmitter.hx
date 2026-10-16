@@ -38,6 +38,8 @@ class CppManagedProgramEmitter {
 		?standardStrings:Array<TyDeclarationInfo>,
 		?downcasts:Array<TyDeclarationInfo>,
 		?nativeStacks:Array<TyDeclarationInfo>,
+		?reflections:Array<TyDeclarationInfo>,
+		?reflection:CppManagedReflection,
 		?recordStack:Bool,
 		?statics:CppManagedStaticStorage,
 		?casts:CppManagedCastPlan,
@@ -130,6 +132,16 @@ class CppManagedProgramEmitter {
 		if (program.downcasts != null)
 			for (declaration in program.downcasts) {
 				final target:CppManagedStaticTarget = Downcast(declaration);
+				final identity = CppManagedStaticTarget.identity(target);
+				if (targets.exists(identity))
+					throw "managed program repeats a declaration identity";
+				targets.set(identity, target);
+			}
+		if (program.reflections != null)
+			for (declaration in program.reflections) {
+				if (program.reflection == null)
+					throw "managed reflection requires program-owned descriptors";
+				final target:CppManagedStaticTarget = Reflection(declaration, program.reflection);
 				final identity = CppManagedStaticTarget.identity(target);
 				if (targets.exists(identity))
 					throw "managed program repeats a declaration identity";

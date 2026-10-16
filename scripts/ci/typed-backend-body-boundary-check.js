@@ -51,6 +51,10 @@ const typedClassFactPlanCuts = new Set([
   "packages/hxhx-core/src/backend/cpp/CppManagedStaticDefault.hx",
   // Class-handle storage validates the exact core abstract and applied parameter shape.
   "packages/hxhx-core/src/backend/cpp/CppManagedClassValueType.hx",
+  // Enum handles and instance views validate their exact core abstracts before selecting storage.
+  "packages/hxhx-core/src/backend/cpp/CppManagedEnumValueType.hx",
+  // Reflection binds exact standard calls and shared public names to existing program-owned descriptors.
+  "packages/hxhx-core/src/backend/cpp/CppManagedReflection.hx",
   // Authored cast planning compares exact substituted storage types for owned occurrences.
   "packages/hxhx-core/src/backend/cpp/CppManagedCastPlan.hx",
   // Enum descriptor generation consumes only the exact typed constructor inventory.

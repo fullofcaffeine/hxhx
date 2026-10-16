@@ -154,17 +154,13 @@ class CppManagedClassStorage {
 
 	/** Class handles reuse instance identity without admitting an unsupported native layout. */
 	public function requireRuntimeDescriptor(occurrence:TypedBackendRuntimeTypeOccurrence, ?context:CppManagedEnclosingApplication):String {
-		program.assertPlanningCurrent();
-		assertRuntimeContext(occurrence, context);
-		if (occurrence.getValue() != null)
-			throw "managed class value requires a descriptor occurrence";
 		final target = occurrence.getTarget();
 		switch target.getKind() {
 			case ArrayCore | StringCore | Nominal(_):
 			case _:
 				throw "managed class value requires an explicit meta-value representation";
 		}
-		final owner = program.requireClass(program.requireClassIdentity(target.requireDeclarationIdentity().getCanonicalName()));
+		final owner = runtimeDescriptorOwner(occurrence, context);
 		switch owner.requireSemanticFacts().getNominalKind() {
 			case ClassInstance:
 			case _:
@@ -173,6 +169,50 @@ class CppManagedClassStorage {
 		final entry = descriptor(owner);
 		entry.runtimeKind = target.getKind();
 		return entry.symbol;
+	}
+
+	/** Class and enum literals share exact lexical ownership checks before selecting separate storage. */
+	public function runtimeDescriptorOwner(occurrence:TypedBackendRuntimeTypeOccurrence, ?context:CppManagedEnclosingApplication):TypedBackendClassProjection {
+		program.assertPlanningCurrent();
+		assertRuntimeContext(occurrence, context);
+		if (occurrence.getValue() != null)
+			throw "managed class value requires a descriptor occurrence";
+		return program.requireClass(program.requireClassIdentity(occurrence.getTarget().requireDeclarationIdentity().getCanonicalName()));
+	}
+
+	/** Reflection reuses the identity table even when no instance layout is required. */
+	public function requireReflectionDescriptor(owner:TypedBackendClassProjection, ?core:TypedRuntimeTypeTarget):String {
+		program.assertPlanningCurrent();
+		final facts = owner.requireSemanticFacts();
+		if (program.requireClass(program.requireClassIdentity(facts.getClassIdentity())) != owner
+			|| !facts.getNominalKind().match(ClassInstance))
+			throw "managed class reflection requires its exact program-owned class";
+		if (core != null) {
+			core.requireCoreReflectionName();
+			if (core.requireDeclarationIdentity().getCanonicalName() != facts.getClassIdentity())
+				throw "managed class reflection selected another core owner";
+		} else {
+			facts.requirePublicReflectionName();
+		}
+		final entry = descriptor(owner);
+		entry.runtimeKind = core == null ? Nominal(new TyNominalTypeId(facts.getClassIdentity())) : core.getKind();
+		return entry.symbol;
+	}
+
+	/**
+		Reflection needs a public name for every class handle this program can expose.
+		Identity-only host handles remain valid without reflection. Once reflection
+		is selected, reject unsupported host handles before publishing native source.
+		Only the explicitly selected String and Array core plans supply host names.
+	 */
+	public function assertReflectionNames():Void {
+		program.assertPlanningCurrent();
+		for (entry in descriptors)
+			switch entry.runtimeKind {
+				case StringCore | ArrayCore:
+				case _:
+					entry.owner.requireSemanticFacts().requirePublicReflectionName();
+			}
 	}
 
 	/**
@@ -254,6 +294,14 @@ class CppManagedClassStorage {
 		while (selected.getNullableInner() != null)
 			selected = selected.getNullableInner();
 		return CppManagedClassValueType.selects(program, selected);
+	}
+
+	/** Enum handles have their own core abstract and never select class-instance storage. */
+	public function isEnumHandle(type:TyType):Bool {
+		var selected = type;
+		while (selected.getNullableInner() != null)
+			selected = selected.getNullableInner();
+		return CppManagedEnumValueType.selects(program, selected);
 	}
 
 	/** Class and interface views retain allocation identity; an interface view never allocates its own payload. */

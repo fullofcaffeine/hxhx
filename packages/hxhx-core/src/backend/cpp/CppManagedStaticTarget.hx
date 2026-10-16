@@ -7,6 +7,7 @@ enum CppManagedStaticTarget {
 	RuntimePredicate(declaration:TyDeclarationInfo);
 	StandardString(declaration:TyDeclarationInfo);
 	Downcast(declaration:TyDeclarationInfo);
+	Reflection(declaration:TyDeclarationInfo, plan:CppManagedReflection);
 	NativeStack(declaration:TyDeclarationInfo, storage:CppManagedStaticStorage);
 }
 
@@ -16,6 +17,7 @@ function abi(target:CppManagedStaticTarget):CppManagedClosureAbi {
 		throw "managed static call requires an exact allocated target";
 	return switch target {
 		case Downcast(_): throw "managed downcast transport requires its exact call application";
+		case Reflection(_, _): throw "managed reflection transport requires its exact call application";
 		case Source(projection, symbol):
 			if (projection == null || symbol == null || !~/^[A-Za-z_][A-Za-z0-9_]*$/.match(symbol))
 				throw "managed static call requires an exact allocated target";
@@ -48,6 +50,8 @@ function validate(target:CppManagedStaticTarget):Void {
 	switch target {
 		case Downcast(declaration):
 			CppManagedDowncast.requireDeclaration(declaration);
+		case Reflection(declaration, plan):
+			plan.select(declaration);
 		case _:
 			abi(target);
 	}
@@ -58,8 +62,8 @@ function identity(target:CppManagedStaticTarget):String {
 	validate(target);
 	return switch target {
 		case Source(projection, _): projection.getStableIdentity();
-		case Output(declaration) | RuntimePredicate(declaration) | StandardString(declaration) | Downcast(declaration) | NativeStack(declaration,
-			_): declaration.getIdentity().getCanonicalKey();
+		case Output(declaration) | RuntimePredicate(declaration) | StandardString(declaration) | Downcast(declaration) | Reflection(declaration, _) |
+			NativeStack(declaration, _): declaration.getIdentity().getCanonicalKey();
 	};
 }
 
@@ -71,6 +75,7 @@ function sourceSymbol(target:CppManagedStaticTarget):String {
 		case RuntimePredicate(_): throw "managed runtime predicate has no authored entry symbol";
 		case StandardString(_): throw "managed standard string has no authored entry symbol";
 		case Downcast(_): throw "managed downcast has no authored entry symbol";
+		case Reflection(_, _): throw "managed reflection has no authored entry symbol";
 		case NativeStack(_, _): throw "managed stack capture has no authored entry symbol";
 	};
 }

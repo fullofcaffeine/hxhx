@@ -110,6 +110,22 @@ class CppManagedCastPlan {
 		return CppManagedClassValueType.permitsSchemeContext(program, target, source);
 	}
 
+	/** The core EnumValue view keeps the same enum instance rather than using a missing abstract backing type. */
+	public function permitsEnumInstanceView(target:TyType, source:TyType):Bool {
+		return CppManagedEnumValueType.permitsInstanceView(program, target, source);
+	}
+
+	/** Erase only a handle's parameter to Dynamic; preserve the class/enum category and pointer. */
+	public function permitsMetadataErasure(target:TyType, source:TyType):Bool {
+		while (target.getNullableInner() != null)
+			target = target.getNullableInner();
+		while (source.getNullableInner() != null)
+			source = source.getNullableInner();
+		final sameCategory = (CppManagedClassValueType.selects(program, target) && CppManagedClassValueType.selects(program, source))
+			|| (CppManagedEnumValueType.selects(program, target) && CppManagedEnumValueType.selects(program, source));
+		return sameCategory && target.getClassValueScheme() == null && target.getTypeArguments()[0].isDynamic();
+	}
+
 	/** An upcast keeps one instance; each ancestor must match after substituting all inherited type arguments. */
 	public function permitsClassUpcast(target:TyType, source:TyType):Bool {
 		if (target.getNominalIdentity() == null || source.getNominalIdentity() == null)
@@ -147,7 +163,9 @@ class CppManagedCastPlan {
 		CppManagedClosureAbi.assertComplete(type);
 		if (type.getNullableInner() != null)
 			return TyType.nullable(storageType(type.getNullableInner(), visiting));
-		if (CppManagedClassValueType.selects(program, type))
+		if (CppManagedClassValueType.selects(program, type)
+			|| CppManagedEnumValueType.selects(program, type)
+			|| CppManagedEnumValueType.selectsInstanceView(program, type))
 			return type;
 		final identity = type.getNominalIdentity();
 		if (identity == null)

@@ -12,7 +12,13 @@ function valueType(occurrence:TypedBackendRuntimeTypeOccurrence, ?classes:CppMan
 	if (occurrence.getValue() == null) {
 		if (classes == null)
 			throw "managed runtime class value requires its program descriptor plan";
-		classes.requireRuntimeDescriptor(occurrence, context);
+		if (occurrence.getTarget().getKind().match(EnumDeclaration(_))) {
+			if (enums == null)
+				throw "managed runtime enum value requires its program descriptor plan";
+			enums.requireRuntimeDescriptor(occurrence, classes, context);
+		} else {
+			classes.requireRuntimeDescriptor(occurrence, context);
+		}
 		return occurrence.getTarget().getValueType();
 	}
 	if (CppManagedMapTypeTest.selectsTarget(occurrence) || classes == null || classes.instanceTestDescriptor(occurrence, context) == null)
@@ -39,6 +45,12 @@ function render(input:{
 }, indent:String):Array<String> {
 	valueType(input.occurrence, input.classes, input.enums, input.context);
 	if (input.occurrence.getValue() == null) {
+		if (input.occurrence.getTarget().getKind().match(EnumDeclaration(_))) {
+			final symbol = input.enums.requireRuntimeDescriptor(input.occurrence, input.classes, input.context);
+			return [
+				indent + input.destination + ".set(hxhx::managed::Value::enumDescriptor(&" + symbol + "));"
+			];
+		}
 		final symbol = input.classes.requireRuntimeDescriptor(input.occurrence, input.context);
 		return [
 			indent + input.destination + ".set(hxhx::managed::Value::descriptor(&" + symbol + "));"

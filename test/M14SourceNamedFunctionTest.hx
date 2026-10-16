@@ -35,6 +35,7 @@ class M14SourceNamedFunctionTest {
 			"ManagedHeap.hpp",
 			"ManagedMap.hpp",
 			"ManagedOutput.hpp",
+			"ManagedReflection.hpp",
 			"ManagedStack.hpp",
 			"ManagedString.hpp",
 			"ManagedThrow.hpp",

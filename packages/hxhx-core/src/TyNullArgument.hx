@@ -34,6 +34,11 @@ function acceptsLiteral(type:TyType, index:TyperIndex):Bool {
 		final arguments = current.getTypeArguments();
 		if (parameters.length != arguments.length)
 			return false;
+		// These language-core abstracts carry reference values without an authored
+		// backing type. Their canonical identity and declared arity distinguish
+		// them from user abstracts; an unknown backing type alone proves nothing.
+		if (((name == "Class" || name == "Enum") && parameters.length == 1) || (name == "EnumValue" && parameters.length == 0))
+			return true;
 		current = TyTypeSubstitution.apply(abstractType.getUnderlyingType(), TyTypeSubstitution.bind(parameters, arguments, name));
 	}
 	return false;

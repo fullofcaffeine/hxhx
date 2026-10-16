@@ -49,6 +49,10 @@ function accepts(target:TyType, source:TyType, ?casts:CppManagedCastPlan):Bool {
 		return true;
 	if (casts != null && casts.permitsArrayClassErasure(target, source))
 		return true;
+	if (casts != null && casts.permitsMetadataErasure(target, source))
+		return true;
+	if (casts != null && casts.permitsEnumInstanceView(target, source))
+		return true;
 	if (casts != null && casts.permitsClassSchemeContext(target, source))
 		return true;
 	if (casts != null && casts.permitsClassUpcast(target, source))

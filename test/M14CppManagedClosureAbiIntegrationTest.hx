@@ -225,7 +225,8 @@ class M14CppManagedClosureAbiIntegrationTest {
 			"ManagedStack.hpp",
 			"ManagedCallable.hpp",
 			"ManagedOutput.hpp",
-			"ManagedString.hpp"
+			"ManagedString.hpp",
+			"ManagedReflection.hpp"
 		];
 		if (artifacts.length != requiredHeaders.length || runtime.getFiles().map(file -> file.name).join(",") != requiredHeaders.join(","))
 			throw "managed runtime packaging lost a native header";

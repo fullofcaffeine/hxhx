@@ -13,7 +13,9 @@ function render(program:CppTypedProgramProjection, source:TyType):String {
 	final visiting = new haxe.ds.StringMap<Bool>();
 	function select(type:TyType):String {
 		CppManagedClosureAbi.assertComplete(type);
-		if (CppManagedClassValueType.selects(program, type))
+		if (CppManagedClassValueType.selects(program, type)
+			|| CppManagedEnumValueType.selects(program, type)
+			|| CppManagedEnumValueType.selectsInstanceView(program, type))
 			return "hxhx::managed::Value{}";
 		return switch type.getSemanticKey() {
 			case "primitive:Int": "hxhx::managed::Value::integer(0)";

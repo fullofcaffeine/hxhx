@@ -37,6 +37,8 @@ function render(input:CppManagedSourceCallInput, indent:String):Array<String> {
 	switch input.callee {
 		case Static(Downcast(declaration)):
 			return CppManagedDowncast.render(declaration, input, indent);
+		case Static(Reflection(declaration, plan)):
+			return plan.render(declaration, input, indent);
 		case _:
 	}
 	final signature = switch input.callee {
@@ -66,6 +68,8 @@ function render(input:CppManagedSourceCallInput, indent:String):Array<String> {
 				return CppManagedStandardString.render(declaration, input, indent);
 			case Downcast(_):
 				throw "downcast must use its applied native operation";
+			case Reflection(_, _):
+				throw "reflection must use its applied native operation";
 			case NativeStack(declaration, storage):
 				return CppManagedNativeStack.render(declaration, storage, input, indent);
 			case Source(_, _):

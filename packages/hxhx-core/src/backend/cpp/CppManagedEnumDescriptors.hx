@@ -1,5 +1,7 @@
 package backend.cpp;
 
+import backend.cpp.CppManagedCallContext.CppManagedEnclosingApplication;
+
 /**
 	Emit immutable native enum metadata from exact typed declaration facts.
 	Singleton startup uses these descriptors before class initialization. Payload
@@ -79,6 +81,17 @@ class CppManagedEnumDescriptors {
 				case _:
 			}
 		throw "managed enum constructor is absent from its declaration inventory";
+	}
+
+	/** An enum literal retains its exact lexical occurrence and this registry's declaration owner. */
+	public function requireRuntimeDescriptor(occurrence:TypedBackendRuntimeTypeOccurrence, classes:CppManagedClassStorage,
+			?context:CppManagedEnclosingApplication):String {
+		if (classes == null || !occurrence.getTarget().getKind().match(EnumDeclaration(_)))
+			throw "managed enum handle requires its exact runtime occurrence";
+		final owner = classes.runtimeDescriptorOwner(occurrence, context);
+		if (owner.requireSemanticFacts().getIsExtern())
+			throw "managed enum handle requires an ordinary enum declaration";
+		return requireSymbol(owner);
 	}
 
 	/** A same-named class from another projection cannot borrow this program's symbol. */

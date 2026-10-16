@@ -33,6 +33,14 @@ class TypedRuntimeTypeTarget {
 	public function getKind():TypedRuntimeTypeKind
 		return kind;
 
+	/** Only these selected core runtime classes have fixed public reflection names. */
+	public function requireCoreReflectionName():String
+		return switch kind {
+			case StringCore: "String";
+			case ArrayCore: "Array";
+			case _: throw "runtime reflection name requires an explicitly selected core class";
+		};
+
 	/** Primitive type objects have no class declaration; Array and String retain their real providers. */
 	public function getDeclarationIdentity():Null<TyNominalTypeId>
 		return switch (kind) {

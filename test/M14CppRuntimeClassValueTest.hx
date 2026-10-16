@@ -12,6 +12,8 @@ class M14CppRuntimeClassValueTest {
 			"class_lookup",
 			"type_predicate",
 			"secondary_names",
+			"reflection_boundaries",
+			"unsupported_reflection",
 			"erased_array_alias",
 			"array_recovery",
 			"array_class_values",
@@ -33,6 +35,16 @@ class M14CppRuntimeClassValueTest {
 				name: "secondary_names",
 				source: "test/oracle/runtime_class_value_seed/names",
 				expected: "test/oracle/runtime_class_value_seed/names/expected.stdout"
+			},
+			{
+				name: "reflection_boundaries",
+				source: "test/oracle/cpp_managed_reflection_seed/src",
+				expected: "test/oracle/cpp_managed_reflection_seed/expected.stdout"
+			},
+			{
+				name: "unsupported_reflection",
+				source: "test/oracle/cpp_managed_reflection_seed/unsupported",
+				expected: ""
 			},
 			{
 				name: "erased_array_alias",
@@ -87,6 +99,10 @@ class M14CppRuntimeClassValueTest {
 		if (input.name == 'array_class_values')
 			M14CppArrayClassValueTransferContract.check(new backend.cpp.CppTypedProgramProjection(program), fixture.index);
 		final directory = ".tmp/cpp-runtime-class-value/" + input.name;
+		if (input.name == "unsupported_reflection") {
+			rejectUnsupportedReflection(program, fixture.defines, directory);
+			return;
+		}
 		final result = CppTargetCore.emit(program, new BackendContext(directory, null, "Main", true, true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "runtime class-value contract requires a native executable";
@@ -97,5 +113,29 @@ class M14CppRuntimeClassValueTest {
 		process.close();
 		if (code != 0 || stdout != sys.io.File.getContent(input.expected))
 			throw "native runtime class-value behavior differs: " + stdout + stderr;
+	}
+
+	/** Reject an unbound host descriptor before the target can overwrite prior generated output. */
+	static function rejectUnsupportedReflection(program:MacroExpandedProgram, defines:haxe.ds.StringMap<String>, directory:String):Void {
+		sys.FileSystem.createDirectory(directory);
+		final output = directory + "/Main.cpp";
+		final retained = "retained prior source\n";
+		sys.io.File.saveContent(output, retained);
+		final before = sys.FileSystem.readDirectory(directory);
+		before.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
+		var rejected = false;
+		try {
+			CppTargetCore.emit(program, new BackendContext(directory, output, "Main", true, false, defines));
+		} catch (error:haxe.Exception) {
+			if (error.message.indexOf("extern reflection requires a target-owned runtime identity") < 0)
+				throw error;
+			rejected = true;
+		}
+		if (!rejected)
+			throw "unsupported host reflection published a program";
+		final after = sys.FileSystem.readDirectory(directory);
+		after.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
+		if (sys.io.File.getContent(output) != retained || before.join("\n") != after.join("\n"))
+			throw "unsupported host reflection changed generated artifacts";
 	}
 }

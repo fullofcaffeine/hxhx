@@ -147,10 +147,13 @@ class CppTypedProgramProjection {
 		external callback must leave this scope and revalidate before continuing.
 	 */
 	@:allow(backend.cpp.CppManagedClassStorage)
+	@:allow(backend.cpp.CppManagedClassValueType)
 	@:allow(backend.cpp.CppManagedMethods)
 	@:allow(backend.cpp.CppManagedClassLayouts)
 	@:allow(backend.cpp.CppManagedCastPlan)
 	@:allow(backend.cpp.CppManagedEnumDescriptors)
+	@:allow(backend.cpp.CppManagedEnumValueType)
+	@:allow(backend.cpp.CppManagedReflection)
 	@:allow(backend.cpp.CppManagedStaticStorage)
 	function assertPlanningCurrent():Void {
 		if (!planning)

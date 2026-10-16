@@ -25,6 +25,7 @@ class CppManagedProgramPlan {
 	final statics:CppManagedStaticStorage;
 	final enums:CppManagedEnumDescriptors;
 	final classes:CppManagedClassStorage;
+	final reflection:CppManagedReflection;
 	final initializers:Array<{projection:TypedBackendFieldInitializerProjection, symbol:String}> = [];
 	final startupSymbols:Array<String> = [];
 	var hasRuntimePredicate:Bool = false;
@@ -36,6 +37,7 @@ class CppManagedProgramPlan {
 			program.assertCurrent();
 			classes = new CppManagedClassStorage(program);
 			enums = new CppManagedEnumDescriptors(program);
+			reflection = new CppManagedReflection(program, classes, enums);
 			final methods = new haxe.ds.StringMap<ManagedProgramMethod>();
 			final entries = new Array<ManagedProgramMethod>();
 			for (module in program.getModules())
@@ -176,6 +178,7 @@ class CppManagedProgramPlan {
 			final standardStrings = new Array<TyDeclarationInfo>();
 			final downcasts = new Array<TyDeclarationInfo>();
 			final nativeStacks = new Array<TyDeclarationInfo>();
+			final reflections = new Array<TyDeclarationInfo>();
 			var cursor = 0;
 			while (true) {
 				while (cursor < pending.length) {
@@ -226,6 +229,13 @@ class CppManagedProgramPlan {
 						&& !declaration.getHasBody()) {
 						CppManagedNativeStack.requireDeclaration(declaration);
 						nativeStacks.push(declaration);
+						continue;
+					}
+					if (CppManagedReflection.owns(declaration)
+						&& selected.owner.requireSemanticFacts().getIsExtern()
+						&& !declaration.getHasBody()) {
+						reflection.select(declaration);
+						reflections.push(declaration);
 						continue;
 					}
 					if (!declaration.getHasBody())
@@ -322,6 +332,8 @@ class CppManagedProgramPlan {
 				standardStrings: standardStrings,
 				downcasts: downcasts,
 				nativeStacks: nativeStacks,
+				reflections: reflections,
+				reflection: reflection,
 				recordStack: recordStack && nativeStacks.length > 0,
 				statics: statics,
 				casts: classes.casts,
@@ -358,6 +370,7 @@ class CppManagedProgramPlan {
 			initializerSources.push(emitter.renderInitializer(initializer.projection, initializer.symbol));
 		// Initializers and method bodies discover callable slots before storage is emitted.
 		final sources = [emitter.render()].concat(initializerSources);
+		sources.unshift(reflection.renderTables());
 		// Body admission can select layouts for field-only uses. Emit their one
 		// canonical descriptor table only after every body has completed planning.
 		sources.unshift(enums.render());
@@ -377,7 +390,7 @@ class CppManagedProgramPlan {
 		for (initializer in initializers)
 			startup.push("  " + initializer.symbol + "(heap);");
 		program.assertCurrent();
-		return '#include "ManagedCallable.hpp"\n#include "ManagedOutput.hpp"\n#include "ManagedString.hpp"\n'
+		return '#include "ManagedCallable.hpp"\n#include "ManagedOutput.hpp"\n#include "ManagedString.hpp"\n#include "ManagedReflection.hpp"\n'
 			+ sources.join("\n")
 			+ "\nvoid hxhx_program_run(hxhx::managed::Heap& heap) {\n"
 			+ startup.join("\n")

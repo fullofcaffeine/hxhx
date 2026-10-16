@@ -574,6 +574,7 @@ class CppManagedRootedExpression {
 				final call = invocation(value);
 				switch call.staticTarget {
 					case Downcast(declaration): return CppManagedDowncast.resultType(declaration, call.arguments, valueType, input.classes);
+					case Reflection(declaration, plan): return plan.resultType(declaration, call.arguments, valueType, input.classes);
 					case _:
 				}
 				final returned = (call.staticTarget == null ? new CppManagedClosureAbi(valueType(call.callee)) : CppManagedStaticTarget.abi(call.staticTarget))
@@ -782,8 +783,8 @@ class CppManagedRootedExpression {
 						+ '.get()', b + '.get()', destination,
 						indent + '  ') : (callables || instances) ? CppManagedReferenceEquality.compute(op, a + '.get()', b + '.get()', destination,
 						indent + '  ') : booleans ? CppManagedBoolean.compare(op, leftType, rightType, a + '.get()', b + '.get()', destination,
-							indent + '  ') : classes ? CppManagedClassEquality.compute(op, a + '.get()', b + '.get()', destination,
-							indent + '  ') : nulls ? CppManagedNullCompare.compute(op, a + '.get()', b + '.get()', destination,
+							indent + '  ') : classes ? CppManagedClassEquality.compute(op, a + '.get()', b + '.get()', destination, indent + '  ',
+							input.classes.isEnumHandle(leftType)) : nulls ? CppManagedNullCompare.compute(op, a + '.get()', b + '.get()', destination,
 							indent + '  ') : concatenation ? CppManagedStringConcat.compute(leftType, rightType, a + ".get()", b + ".get()", destination,
 							indent + "  ") : strings ? CppManagedStringEquality.compute(op, a + ".get()", b + ".get()", destination,
 							indent + "  ") : op == "%" ? CppManagedInteger.remainder({
@@ -1141,7 +1142,7 @@ class CppManagedRootedExpression {
 				throw "managed static callee requires explicit receiver-effect lowering";
 			CppManagedStaticTarget.validate(target);
 			switch target {
-				case Downcast(_):
+				case Downcast(_) | Reflection(_, _):
 					requireClassOperation(expression);
 				case _:
 			}

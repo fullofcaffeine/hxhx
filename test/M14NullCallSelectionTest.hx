@@ -34,6 +34,8 @@ class M14NullCallSelectionTest {
 	}
 
 	static function main():Void {
+		selected('class Main { static function classValue(value:Class<Main>):Void {} static function enumHandle(value:Enum<EnumValue>):Void {} static function enumValue(value:EnumValue):Void {} static function main():Void { classValue(null); enumHandle(null); enumValue(null); } }',
+			["Void", "Void", "Void"]);
 		selected('class Main { static function choose<T>(first:T, second:T):T { return second; } static function main():Void { choose(null, "ok"); choose("ok", null); } }',
 			["String", "String"]);
 		final nullOnly = calls('class Main { static function choose<T>(value:T):T { return value; } static function main():Void { choose(null); } }');

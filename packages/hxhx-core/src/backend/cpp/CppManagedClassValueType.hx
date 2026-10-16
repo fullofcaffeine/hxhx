@@ -14,7 +14,7 @@ function selects(program:CppTypedProgramProjection, type:TyType):Bool {
 	final identity = type.getNominalIdentity();
 	if (identity == null || identity.getCanonicalName() != "Class")
 		return false;
-	program.assertCurrent();
+	program.assertPlanningCurrent();
 	final facts = program.requireClass(program.requireClassIdentity(identity.getCanonicalName())).requireSemanticFacts();
 	if (type.getTypeArguments().length != 1 || facts.getTypeParameterIds().length != 1)
 		throw "managed class handle requires the exact Class type parameter";
@@ -35,7 +35,7 @@ private function descriptorView(program:CppTypedProgramProjection, type:TyType):
 	final scheme = type.getClassValueScheme();
 	if (scheme == null)
 		return type;
-	program.assertCurrent();
+	program.assertPlanningCurrent();
 	final facts = program.requireClass(program.requireClassIdentity(scheme.getIdentity().getCanonicalName())).requireSemanticFacts();
 	final parameters = facts.getTypeParameterIds();
 	final selected = scheme.getParameters();
