@@ -12,12 +12,17 @@ class M14GenericForwardingConstraintTest {
 		check("unconstrained", null);
 		check("scalar", null);
 		check("shadowed_bound", null, "S");
+		check("enum_method", "7\n0\n", "T", "requireEnum");
+		check("enum_class", "9\n", "T", "requireEnum");
+		check("enum_scalar", null, "T", "requireEnum");
+		check("enum_object", null, "T", "requireEnum");
+		check("enum_abstract", null, "T", "requireEnum");
 		checkCyclicBounds();
 		Sys.println("GENERIC_FORWARDING_CONSTRAINT:PASS");
 	}
 
 	/** Independent upstream acceptance and output govern each positive or negative source case. */
-	static function check(name:String, expected:Null<String>, rejectedParameter:String = "T"):Void {
+	static function check(name:String, expected:Null<String>, rejectedParameter:String = "T", method:String = "requireObject"):Void {
 		final root = "test/oracle/generic_forwarding_seed/" + name;
 		final process = new sys.io.Process("haxe", ["-cp", root, "-main", "Main", "--interp"]);
 		final stdout = process.stdout.readAll().toString();
@@ -31,14 +36,14 @@ class M14GenericForwardingConstraintTest {
 		final resolved = new ResolvedModule("Main", path, parsed);
 		final arguments = hxhx.Stage1Compiler.Stage1Args.parse(["-main", "Main"], true);
 		final standardRoot = hxhx.Stage1Compiler.Stage1Args.getStandardLibraryRoot(arguments);
-		// Class<T> must use its real standard-library declaration, as it does in the library workload.
-		final providers = ResolverStage.parseProjectRootsShallow([standardRoot], ["Class"], new haxe.ds.StringMap<String>());
+		// Bounds use the real core declarations, including the distinct EnumValue abstract.
+		final providers = ResolverStage.parseProjectRootsShallow([standardRoot], ["Class", "EnumValue"], new haxe.ds.StringMap<String>());
 		var typed:Null<TypedModule> = null;
 		try {
 			typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved].concat(providers)));
 		} catch (error:TyperError) {
 			if (expected != null
-				|| error.getMessage() != "Constraint check failure for requireObject." + rejectedParameter
+				|| error.getMessage() != "Constraint check failure for " + method + "." + rejectedParameter
 				|| error.getFilePath() != path)
 				throw error;
 		}
@@ -58,7 +63,7 @@ class M14GenericForwardingConstraintTest {
 								final call = statement.getExpressions()[0];
 								if (call.getTag() != Call
 									|| call.getDeclaration() == null
-									|| call.getDeclaration().getSignature().getName() != "requireObject"
+									|| call.getDeclaration().getSignature().getName() != method
 									|| call.getType().getSemanticKey() != expectedType.getSemanticKey())
 									throw "forwarding lost its selected declaration or exact caller parameter: " + name;
 								inspected = true;

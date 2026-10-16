@@ -10,6 +10,10 @@ keys. Singleton patterns must match enum objects in expression switches,
 statement switches, and nested payloads. Payload constructors must select their
 own branches.
 
+Direct `Type.enumEq` calls compare equal and unequal payloads and the enum values
+returned by `Type.typeof`. These calls must satisfy the real `EnumValue` bound
+without erasing the concrete argument type or replacing the provider body.
+
 Qualified patterns select the same declaration as bare patterns. Two enums can
 use the same constructor name without sharing cases. String-backed enum abstracts
 compare their declared values, even when those values differ from the case names.

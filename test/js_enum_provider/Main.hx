@@ -105,6 +105,10 @@ class Main {
 	}
 
 	static function main():Void {
+		if (!Type.enumEq(Item.Value(7), Item.Value(7))
+			|| Type.enumEq(Item.Value(7), Item.Value(8))
+			|| !Type.enumEq(Type.typeof(Item.Empty), Type.typeof(Item.Value(7))))
+			throw "constrained enum comparison";
 		if (dynamicItem(Item.Empty) != 0
 			|| dynamicItem(Item.Value(7)) != 7
 			|| !dynamicBare(Item.Empty)

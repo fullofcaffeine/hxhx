@@ -159,11 +159,18 @@ class TyperStage {
 				(expected, supplied) -> constraintAccepts(expected, supplied, ctx.getIndex()));
 	}
 
-	/** Bound checks preserve exact nominal ancestry and the object-only meaning of an empty record. */
+	/**
+		Use one bound relation during selection, publication, and class application.
+		Ordinary enum values satisfy the core EnumValue abstract without a class
+		inheritance edge. Other nominal bounds still require exact ancestry, and
+		empty records retain their object-only meaning.
+	 */
 	static function constraintAccepts(expected:TyType, supplied:TyType, index:TyperIndex):Bool {
 		if (supplied.isDynamic())
 			return true;
 		return TyCallerConstraintProof.accepts(expected, supplied, index.getParameterBounds, (target, actual) -> {
+			if (TyEnumValueCompatibility.accepts(index, target, actual))
+				return true;
 			if (target.isAnonymous() && target.getAnonymousFieldNames().length == 0)
 				return TyEmptyObjectConstraint.accepts(actual, index);
 			final owner = target.getNominalIdentity();
@@ -1722,16 +1729,7 @@ class TyperStage {
 					receiver.type, scope);
 				final failure = TyMethodGenericBinding.constraintFailure(declaration, applied, contextualRanked,
 					bound -> TyNominalApplication.applyType(ctx.getIndex(), c, boundReceiver, bound),
-					(expected, supplied) -> TyCallerConstraintProof.accepts(expected, supplied, ctx.getIndex().getParameterBounds, (expected, supplied) -> {
-						if (expected.isAnonymous() && expected.getAnonymousFieldNames().length == 0)
-							return TyEmptyObjectConstraint.accepts(supplied, ctx.getIndex());
-						final expectedOwner = expected.getNominalIdentity();
-						if (expectedOwner != null && supplied.getNominalIdentity() != null) {
-							final ancestor = TyNominalAncestor.view(ctx.getIndex(), supplied, expectedOwner);
-							return ancestor != null && ancestor.getSemanticKey() == expected.getSemanticKey();
-						}
-						return overloadArgScore(expected, supplied, [], ctx.getIndex()) >= 0;
-					}), ctx.getIndex());
+					(expected, supplied) -> constraintAccepts(expected, supplied, ctx.getIndex()), ctx.getIndex());
 				if (failure != null) {
 					rejectedMethodConstraint = failure;
 					continue;
