@@ -631,9 +631,11 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(containsTag(result, TypedExprTag.Binary), "catch body hid its string concatenation from typed traversal");
 		assertTrue(!containsTag(result, TypedExprTag.Opaque), "expression-level try/catch retained an opaque source payload");
 		final projection = TypedBodySource.functionProjection(typedFunction);
-		// This isolated printer check supplies the same typed catalog as full emission.
+		// Supply the request tables that full emission creates. This case catches
+		// Dynamic and therefore needs no nominal class entries in the class table.
 		@:privateAccess EmitterStage.currentFunctionLocalOcamlNames = new backend.ocaml.Stage3OcamlLocalNames(projection.getLocalCatalog(), false,
 			name -> @:privateAccess EmitterStage.ocamlValueIdent(name));
+		@:privateAccess EmitterStage.currentClassStorage = new backend.ocaml.Stage3OcamlClassStorage();
 		// Executable emission consumes the complete lowered statement projection.
 		// Rendering the authored initializer directly bypasses its result storage and control regions.
 		final localTypes = new Map<String, TyType>();
