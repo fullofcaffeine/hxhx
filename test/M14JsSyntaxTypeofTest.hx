@@ -1,7 +1,7 @@
 import hxhx.Stage1Compiler.Stage1Args;
 import hxhx.Stage3SetupSupport;
 
-/** Real-provider integration for JavaScript typeof and deletion, including aliases and ordered operands. */
+/** Real-provider syntax calls preserve aliases, ordered operands, and statement-valued arguments. */
 class M14JsSyntaxTypeofTest {
 	static function command(executable:String, arguments:Array<String>):Void {
 		final child = new sys.io.Process(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", executable].concat(arguments));
@@ -18,6 +18,7 @@ class M14JsSyntaxTypeofTest {
 		final output = JsRuntimeFixture.reserveOutput();
 		command("node_modules/.bin/haxe", ["-cp", root, "-main", "Main", "-js", output + "/upstream.js"]);
 		command("node", [output + "/upstream.js"]);
+		Sys.println("JS_SYNTAX_UPSTREAM:PASS");
 		sys.FileSystem.deleteFile(output + "/upstream.js");
 		sys.FileSystem.deleteDirectory(output);
 		final arguments = Stage1Args.parse(["-cp", root, "-main", "Main"], true);

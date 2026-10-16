@@ -13,5 +13,11 @@ grouping, imported aliases, and ordinary user methods with matching names.
 The `js.Syntax.code` calls are the explicit boundary for JavaScript values
 that Haxe has no literal for.
 
+Statement-valued arguments also cover code interpolation, `typeof`, deletion,
+and constructors selected by a literal name or runtime value. These checks
+preserve argument order and effects when an argument needs several statements.
+The template and literal constructor name must remain native syntax. An
+ordinary user method with the same name must remain an ordinary call.
+
 This fixture checks the syntax APIs. Bare `trace` binding and the broader
 logging contract remain tracked separately under `haxe_ocaml-hgtz2`.

@@ -36,7 +36,39 @@ class Main {
 		return 7;
 	}
 
+	static function ordered(value:Int):Int {
+		order += value + "/";
+		return value;
+	}
+
+	/** Statement-valued operands must preserve native syntax and ordinary operand order. */
+	static function controlOperands():Void {
+		final sum:Int = raw("{0} + {1}", ordered(1), {
+			ordered(2);
+			ordered(3);
+		});
+		if (sum != 4 || order != "1/2/3/")
+			throw "code statement operand order";
+		if (kind({next(); 7;}) != "number" || effects != 1)
+			throw "typeof statement operand";
+		final named:Array<Int> = Syntax.construct("Array", {next(); 3;});
+		if (named.length != 3 || effects != 2)
+			throw "construct literal name with statement operand";
+		final selected:Array<Int> = Syntax.construct(raw("Array"), {next(); 2;});
+		if (selected.length != 2 || effects != 3)
+			throw "construct runtime value with statement operand";
+		order = "";
+		if (!erase(receiver(), {next(); key();}) || order != "receiver;key;" || effects != 4 || record.value != null)
+			throw "delete statement operand order";
+		if (UserSyntax.code({next(); "value";}) != "ordinary:value" || effects != 5)
+			throw "ordinary method with statement operand";
+		record.value = 7;
+		effects = 0;
+		order = "";
+	}
+
 	static function main():Void {
+		controlOperands();
 		if (Syntax.typeof(null) != "object")
 			throw "null type";
 		if (kind(7) != "number")

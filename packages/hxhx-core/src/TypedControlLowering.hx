@@ -28,7 +28,7 @@ typedef LoweredFieldInitializer = {
 	here instead of being hidden inside a newly created closure.
  */
 class TypedControlLowering {
-	static final passIdentity = "source-control-v30";
+	static final passIdentity = "source-control-v31";
 
 	final owner:String;
 	var nextTemporary:Int = 0;
@@ -977,6 +977,8 @@ class TypedControlLowering {
 				// Earlier operands must finish before a later operand starts its statement region.
 				for (index in 0...values.length) {
 					final prior = values[index];
+					if (TypedJavaScriptSyntaxCall.retainsOperand(expression, index, prior))
+						continue;
 					final method = expression.getTag() == Call
 						&& index == 0 ? retainInvocationCallee(expression, prior, untypedContext, steps) : null;
 					if (method != null) {
