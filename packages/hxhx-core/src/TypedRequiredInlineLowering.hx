@@ -569,7 +569,7 @@ class TypedRequiredInlineLowering {
 			}
 	}
 
-	static function select(helpers:StringMap<TypedFunction>, index:TyperIndex):RequiredInlineSelection {
+	static function select(helpers:StringMap<TypedFunction>, index:TyperIndex, retainNativeCall:Null<TyDeclarationInfo->Bool>):RequiredInlineSelection {
 		final selected = new StringMap<Bool>();
 		// Every static helper in this inventory is an authored extern inline body.
 		for (identity => helper in helpers) {
@@ -591,6 +591,16 @@ class TypedRequiredInlineLowering {
 		}
 		final calls = selected.copy();
 		for (identity => helper in helpers) {
+			// A target may own an exact operation such as Map.get. Keep that call
+			// available to its checked native binding instead of exposing a provider
+			// body that uses a different runtime representation. Caller-storage writes
+			// still require shared expansion; an ordinary native call cannot own them.
+			if (retainNativeCall != null && retainNativeCall(helper.getDeclaration())) {
+				if (selected.exists(identity) && !helper.getDeclaration().getIsStatic())
+					throw "native call retention cannot replace required caller-storage expansion: " + identity;
+				calls.remove(identity);
+				continue;
+			}
 			final owner = index.getAbstractByFullName(helper.getDeclaration().getOwner().getCanonicalName());
 			if (isExtern(helper.getDeclaration(), index) || (owner != null && owner.getMultiTypePolicy() != null))
 				calls.set(identity, true);
@@ -598,17 +608,17 @@ class TypedRequiredInlineLowering {
 		return {calls: calls, writers: selected};
 	}
 
-	public static function lowerClasses(classes:Array<TypedClass>, index:TyperIndex):Array<TypedClass> {
+	public static function lowerClasses(classes:Array<TypedClass>, index:TyperIndex, ?retainNativeCall:TyDeclarationInfo->Bool):Array<TypedClass> {
 		final helpers = new StringMap<TypedFunction>();
 		inventory(classes, index, helpers);
-		return lower(classes, index, helpers, select(helpers, index));
+		return lower(classes, index, helpers, select(helpers, index, retainNativeCall));
 	}
 
-	public static function lowerModules(modules:Array<TypedModule>, index:TyperIndex):Array<TypedModule> {
+	public static function lowerModules(modules:Array<TypedModule>, index:TyperIndex, ?retainNativeCall:TyDeclarationInfo->Bool):Array<TypedModule> {
 		final helpers = new StringMap<TypedFunction>();
 		for (module in modules)
 			inventory(module.getTypedClasses(), index, helpers);
-		final selected = select(helpers, index);
+		final selected = select(helpers, index, retainNativeCall);
 		return [
 			for (module in modules)
 				module.withTypedClasses(lower(module.getTypedClasses(), index, helpers, selected))

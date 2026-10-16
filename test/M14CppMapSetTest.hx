@@ -29,8 +29,7 @@ class M14CppMapSetTest {
 		if (backend.cpp.CppManagedValueTransfer.supports(TyType.fromHintText("Int"), floating))
 			throw "Float narrowing borrowed integer widening";
 		final fixture = CppResolvedFixture.load({sourceRoot: "test/oracle/cpp_map_set_seed", mainModule: "MapWrite", requiredModules: ["haxe.ds.Map"]});
-		final program = new backend.cpp.CppTypedProgramProjection(new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules,
-			fixture.index), false));
+		final program = new backend.cpp.CppTypedProgramProjection(CppResolvedFixture.prepare(fixture));
 		final classes = new backend.cpp.CppManagedClassStorage(program);
 		var unrelated = false;
 		for (fn in program.requireClass(program.requireClassIdentity("MapWrite.Other")).getFunctions())
@@ -100,7 +99,7 @@ class M14CppMapSetTest {
 		final root = "test/oracle/cpp_map_set_seed";
 		observe("haxe", ["-cp", root, "-main", "Normal", "--interp"]);
 		final normal = CppResolvedFixture.load({sourceRoot: root, mainModule: "Normal", requiredModules: ["haxe.ds.Map", "Sys"]});
-		final normalProgram = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(normal.modules, normal.index), false);
+		final normalProgram = CppResolvedFixture.prepare(normal);
 		final result = backend.cpp.CppTargetCore.emit(normalProgram,
 			new backend.BackendContext(output + "/normal", null, "Normal", true, true, normal.defines));
 		if (!result.builtExecutable)

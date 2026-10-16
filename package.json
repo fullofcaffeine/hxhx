@@ -306,7 +306,7 @@
     "test:m14:hih-compound-assign": "haxe test/m14_hih_compound_assign_integration_test.hxml",
     "test:m14:hih-try-throw-stmt": "haxe test/m14_hih_try_throw_stmt_integration_test.hxml",
     "test:m14:hih-nullable-enum-branch-emit": "haxe test/m14_hih_nullable_enum_branch_emit_integration_test.hxml",
-    "test:m14:backend-registry": "haxe test/m14_backend_registry_integration_test.hxml",
+    "test:m14:backend-registry": "haxe test/m14_backend_registry_integration_test.hxml && haxe test/m14_native_call_retention_test.hxml",
     "test:m14:backend-provider-resolver": "haxe test/m14_backend_provider_resolver_integration_test.hxml",
     "test:m14:backend-plugin-manifest": "haxe test/m14_backend_plugin_manifest_integration_test.hxml",
     "test:m14:backend-plugin-loader": "haxe test/m14_backend_plugin_loader_integration_test.hxml",

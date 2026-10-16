@@ -2,9 +2,11 @@ package backend.cpp;
 
 /** Only the exact standard Map declaration selects this native operation. */
 function selects(call:Null<TypedBackendInstanceCallOccurrence>):Bool {
-	if (call == null)
-		return false;
-	final declaration = call.getDeclaration();
+	return call != null && selectsDeclaration(call.getDeclaration());
+}
+
+/** Shared preparation retains the same declaration that native emission later validates in full. */
+function selectsDeclaration(declaration:TyDeclarationInfo):Bool {
 	return declaration.getOwner().getCanonicalName() == "haxe.ds.Map"
 		&& declaration.getModulePath() == "haxe.ds.Map"
 		&& declaration.getSignature().getName() == "get";

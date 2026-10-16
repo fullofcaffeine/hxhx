@@ -21,7 +21,7 @@ class M14CppManagedEnumMapTest {
 			throw 'upstream enum Map contract changed';
 		Sys.println('CPP_MANAGED_ENUM_MAP_UPSTREAM:PASS');
 		final fixture = CppResolvedFixture.load({sourceRoot: root + '/src', mainModule: 'Main', requiredModules: ['haxe.ds.Map']});
-		final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index), false);
+		final program = CppResolvedFixture.prepare(fixture);
 		final output = '.tmp/cpp-managed-enum-map';
 		final result = CppTargetCore.emit(program, new BackendContext(output, null, 'Main', true, true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable || observe(result.entryPath, []) != expected)

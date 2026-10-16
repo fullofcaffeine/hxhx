@@ -10,5 +10,5 @@ function load(sourcePath:String = "test/oracle/cpp_arrow_map_literal_seed/src/Ma
 		mainModule: "Main",
 		requiredModules: ["haxe.ds.Map", "haxe.ds.IntMap"]
 	});
-	return new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index), false);
+	return CppResolvedFixture.prepare(fixture);
 }

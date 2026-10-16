@@ -6,7 +6,7 @@ class M14CppNumericErasureTest {
 			mainModule: "NumericTransport",
 			requiredModules: ["Any"]
 		});
-		final expanded = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index), false);
+		final expanded = CppResolvedFixture.prepare(fixture);
 		final program = new backend.cpp.CppTypedProgramProjection(expanded);
 		final classes = new backend.cpp.CppManagedClassStorage(program);
 		final owner = program.requireClass(program.requireClassIdentity("NumericTransport"));

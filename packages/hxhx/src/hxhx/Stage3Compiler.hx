@@ -728,19 +728,6 @@ class Stage3Compiler {
 				toType.push(nm);
 			}
 		}
-		typedModules = try {
-			TypedAbstractOperatorLowering.lowerModules(typedModules, typerIndex);
-		} catch (e:TyperError) {
-			closeMacroSession();
-			final rawDiagnostic = rawTyperDiagnostic(e);
-			if (rawDiagnostic != null)
-				return haxeDiagnosticError(rawDiagnostic);
-			return error("type failed during shared operator lowering: " + formatException(e));
-		} catch (e:String) {
-			closeMacroSession();
-			return error("type failed during shared operator lowering: " + e);
-		}
-
 		if (!requestContext.checkpoint("hooks"))
 			return CompilationRequestContext.CANCELLED_EXIT_CODE;
 		final hookError = Stage3HookSupport.runStandardMacroHooks(buildMacroPreparer.getSession(), requestOutput);
@@ -748,12 +735,6 @@ class Stage3Compiler {
 			closeMacroSession();
 			return error(hookError);
 		}
-		final dependencyError = recordDependencySnapshot(requestContext, typedModules, typerIndex, backendId, definesMap, cwd);
-		if (dependencyError != null) {
-			closeMacroSession();
-			return error("dependency observation failed: " + dependencyError);
-		}
-
 		final providerDefines = Stage3BackendPluginSupport.buildProviderDefines(allDefines);
 		final backendSelection = try {
 			Stage3BackendPluginSupport.selectBackend(backendId, providerDefines, requestOutput);
@@ -765,6 +746,26 @@ class Stage3Compiler {
 		final backendCaps = backendSelection.descriptor.capabilities;
 		final supportsCustomOutputFile = backendSelection.supportsCustomOutputFile;
 		final supportsBuildExecutable = backendSelection.supportsBuildExecutable;
+
+		// Hooks can change provider selection. Expand required bodies only after
+		// the winning backend supplies its exact native-operation contract.
+		typedModules = try {
+			TypedAbstractOperatorLowering.lowerModules(typedModules, typerIndex, backendSelection.retainNativeCall);
+		} catch (e:TyperError) {
+			closeMacroSession();
+			final rawDiagnostic = rawTyperDiagnostic(e);
+			if (rawDiagnostic != null)
+				return haxeDiagnosticError(rawDiagnostic);
+			return error("type failed during shared operator lowering: " + formatException(e));
+		} catch (e:String) {
+			closeMacroSession();
+			return error("type failed during shared operator lowering: " + e);
+		}
+		final dependencyError = recordDependencySnapshot(requestContext, typedModules, typerIndex, backendId, definesMap, cwd);
+		if (dependencyError != null) {
+			closeMacroSession();
+			return error("dependency observation failed: " + dependencyError);
+		}
 
 		// Diagnostic rung: stop after macros, typing, and backend selection so we can iterate Stage4
 		// macro model and Stage3 typer coverage without paying IR expansion or backend emit costs.

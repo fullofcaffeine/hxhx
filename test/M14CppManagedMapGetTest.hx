@@ -88,7 +88,7 @@ class M14CppManagedMapGetTest {
 			throw 'upstream Map.get output changed';
 		Sys.println('CPP_MANAGED_MAP_GET_UPSTREAM:PASS');
 		final fixture = CppResolvedFixture.load({sourceRoot: root + '/src', mainModule: 'Main', requiredModules: ['haxe.ds.Map']});
-		final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index), false);
+		final program = CppResolvedFixture.prepare(fixture);
 		assertCallOwnership(program);
 		final result = CppTargetCore.emit(program, new BackendContext('.tmp/cpp-managed-map-get', null, 'Main', true, true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable || observe(result.entryPath, []) != expected)

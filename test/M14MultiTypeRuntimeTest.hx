@@ -4,6 +4,7 @@ import sys.io.File;
 class M14MultiTypeRuntimeTest {
 	static function main():Void {
 		final source = File.getContent("test/fixtures/multitype_specialization/Main.hx");
+		assertNativeRetentionGuard(source);
 		run("declared_methods", source);
 		var rebind = StringTools.replace(source, "public inline function label()",
 			"public inline function clear():Void this = null; public inline function clearAgain():Void clear(); public inline function label()");
@@ -47,6 +48,29 @@ class M14MultiTypeRuntimeTest {
 		run("inferred_constructor_arguments",
 			effects + StringTools.replace(StringTools.replace(arguments, "new Choice<String>", "new Choice"), "new Choice<Int>", "new Choice"));
 		Sys.println("MULTITYPE_RUNTIME:PASS");
+	}
+
+	/** A native operation cannot silently replace an abstract helper that writes caller storage. */
+	static function assertNativeRetentionGuard(source:String):Void {
+		final writing = StringTools.replace(source, "public inline function description():String",
+			"public inline function clear():Void this = null; public inline function description():String");
+		final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(writing, "Main.hx"));
+		final index = TyperIndex.build([resolved]);
+		final typed = TyperStage.typeResolvedModule(resolved, index, null, true);
+		final owner = index.getAbstractByFullName("Main.Choice");
+		final declaration = owner.declarationForSignature(owner.instanceMethodCandidates("clear")[0]);
+		var rejected = false;
+		try {
+			TypedRequiredInlineLowering.lowerModules([typed], index, selected -> selected == declaration);
+		} catch (error:haxe.Exception) {
+			if (!StringTools.startsWith(error.message, "native call retention cannot replace required caller-storage expansion:"))
+				throw error;
+			rejected = true;
+		}
+		if (!rejected)
+			throw "native call retention erased caller-storage writeback";
+		// The C++ policy does not retain this unrelated abstract's methods.
+		TypedRequiredInlineLowering.lowerModules([typed], index, backend.cpp.CppNativeCallPolicy.retain);
 	}
 
 	static function run(name:String, source:String):Void {

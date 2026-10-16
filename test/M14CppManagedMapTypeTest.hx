@@ -25,10 +25,13 @@ class M14CppManagedMapTypeTest {
 			mainModule: 'Main',
 			requiredModules: ['haxe.ds.Map', 'haxe.ds.IntMap', 'haxe.ds.StringMap', 'Array']
 		});
-		final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index), false);
+		final original = new MacroExpandedProgram(fixture.modules, false);
+		final program = CppResolvedFixture.prepare(fixture);
 		final result = CppTargetCore.emit(program, new BackendContext('.tmp/cpp-managed-map-type', null, 'Main', true, true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable || observe(result.entryPath, []) != expected)
 			throw 'managed Map type behavior differs from upstream';
+		original.assertTypedBodyRevisionsCurrent();
+		program.assertTypedBodyRevisionsCurrent();
 		// This independent host observer changes the allocation budget, not the
 		// generated source. Sanitizers check both optimized and unoptimized code.
 		final output = '.tmp/cpp-managed-map-type';

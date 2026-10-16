@@ -17,7 +17,7 @@ typedef CppResolvedFixtureProgram = {
 	discarding provider bodies or letting a target interpret source permissions.
  */
 function prepare(fixture:CppResolvedFixtureProgram):MacroExpandedProgram {
-	return new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index), false);
+	return new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index, backend.cpp.CppNativeCallPolicy.retain), false);
 }
 
 /**

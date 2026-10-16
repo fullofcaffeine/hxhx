@@ -2,9 +2,11 @@ package backend.cpp;
 
 /** Only the indexed standard Map declaration owns this native mutation boundary. */
 function selects(call:Null<TypedBackendInstanceCallOccurrence>):Bool {
-	if (call == null)
-		return false;
-	final declaration = call.getDeclaration();
+	return call != null && selectsDeclaration(call.getDeclaration());
+}
+
+/** Keep native operation selection identical before and after shared inline preparation. */
+function selectsDeclaration(declaration:TyDeclarationInfo):Bool {
 	return declaration.getOwner().getCanonicalName() == "haxe.ds.Map"
 		&& declaration.getModulePath() == "haxe.ds.Map"
 		&& declaration.getSignature().getName() == "set";

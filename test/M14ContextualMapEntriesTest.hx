@@ -51,8 +51,7 @@ class M14ContextualMapEntriesTest {
 		])
 			if (!observed.exists(name) || observed.get(name) != 1)
 				throw "missing exact literal observation for " + name;
-		final program = new backend.cpp.CppTypedProgramProjection(new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules,
-			fixture.index), false));
+		final program = new backend.cpp.CppTypedProgramProjection(CppResolvedFixture.prepare(fixture));
 		var projected = 0;
 		for (fn in program.requireClass(program.requireClassIdentity("Entries")).getFunctions()) {
 			final name = fn.requireSemanticDeclaration().getSignature().getName();
