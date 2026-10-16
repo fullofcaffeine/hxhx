@@ -2074,6 +2074,14 @@ class EmitterStage {
 		final exact = objectAccessType(expr);
 		if (exact != null)
 			return exact.isDynamic();
+		// Selected calls retain their result type inside the shared projection.
+		// Looking up the wrapper's name would lose the callee's Dynamic carrier.
+		final staticCall = TypedExactStaticCallSource.decode(expr);
+		if (staticCall != null)
+			return backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(staticCall.resultType);
+		final instanceCall = TypedExactCallSource.decodeInstance(expr);
+		if (instanceCall != null)
+			return backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(instanceCall.resultType);
 		return switch (expr) {
 			case EDiscardThen(_, continuation): stage3IsDynamicExpr(continuation, tyByIdent, callSigByCallee);
 			case EIdent(name):
