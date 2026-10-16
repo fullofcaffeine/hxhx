@@ -125,10 +125,32 @@ function checkIndependentJobStarts(workflow) {
   }
 }
 
+/** Keep the original serial command available while CI observes each C++ failure independently. */
+function checkRuntimeTypeCoverage(packageJson, plan, expected) {
+  const parent = 'test:m14:runtime-type-operands'
+  const groups = parseAggregateCommands(packageJson, parent)
+  if (plan.aggregateCommands.includes(parent)) throw new Error('serial runtime-type parent must not own a CI slot')
+  const scheduled = plan.aggregateCommands.filter(command => groups.includes(command))
+  if (groups.length !== 19 || JSON.stringify(scheduled) !== JSON.stringify(groups)) {
+    throw new Error('runtime-type groups must run exactly once in their original order')
+  }
+  const expanded = groups.flatMap(group => expected.includes(`npm run ${group}`)
+    ? [`npm run ${group}`]
+    : packageJson.scripts[group].split(/\s*&&\s*/))
+  if (JSON.stringify(expanded) !== JSON.stringify(expected)) {
+    throw new Error('runtime-type split changed original commands or order')
+  }
+  for (const command of expected.slice(32, 48)) {
+    if (!groups.some(group => command === `npm run ${group}` || packageJson.scripts[group] === command)) {
+      throw new Error('each C++ runtime-type check must own an independent CI command')
+    }
+  }
+}
+
 function main() {
   checkCommandFailureReporting()
   const plan = loadPlan(repoRoot)
-  assert(plan.aggregateCommands.length === 152, `expected 152 npm test commands, found ${plan.aggregateCommands.length}`)
+  assert(plan.aggregateCommands.length === 170, `expected 170 npm test commands, found ${plan.aggregateCommands.length}`)
 
   const expectedAggregateJobs = [
     'guards',
@@ -147,10 +169,11 @@ function main() {
   const expectedCounts = {
     'compiler-foundation': 18,
     'compiler-packaging': 14,
-    'compiler-focused-1': 44,
+    'compiler-focused-1': 46,
     'compiler-focused-2': 49,
-    'compiler-focused-3': 11,
-    'compiler-focused-4': 9,
+    'compiler-focused-3': 12,
+    'compiler-focused-4': 6,
+    'compiler-focused-5': 18,
     'macro-host-integration': 3,
     portable: 1,
     'target-packages': 2,
@@ -163,6 +186,7 @@ function main() {
     'compiler-focused-2': 'Q2',
     'compiler-focused-3': 'Q2',
     'compiler-focused-4': 'Q2',
+    'compiler-focused-5': 'Q2',
     'macro-host-integration': 'Q2',
     portable: 'Q2',
     'target-packages': 'Q2',
@@ -217,6 +241,22 @@ function main() {
   )
 
   const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'))
+  const runtimeCommands = JSON.parse(fs.readFileSync(path.join(repoRoot, 'test/fixtures/core_test_shards/runtime_type_commands.json'), 'utf8'))
+  assert(runtimeCommands.length === 52, 'the captured runtime-type inventory must retain all 52 commands')
+  checkRuntimeTypeCoverage(packageJson, plan, runtimeCommands)
+  for (const change of ['missing', 'duplicated']) {
+    const invalid = structuredClone(packageJson)
+    const group = 'test:m14:cpp-managed-map-type'
+    invalid.scripts[group] = change === 'missing' ? '' : `${invalid.scripts[group]} && ${invalid.scripts[group]}`
+    expectThrow(() => checkRuntimeTypeCoverage(invalid, plan, runtimeCommands),
+      'changed original commands or order', `${change} runtime-type check`)
+  }
+  const missingRuntimeGroup = { ...plan, aggregateCommands: plan.aggregateCommands.filter(command => command !== 'test:m14:cpp-managed-object-map') }
+  expectThrow(() => checkRuntimeTypeCoverage(packageJson, missingRuntimeGroup, runtimeCommands),
+    'must run exactly once', 'runtime-type group omitted from CI')
+  const repeatedRuntimeParent = { ...plan, aggregateCommands: [...plan.aggregateCommands, 'test:m14:runtime-type-operands'] }
+  expectThrow(() => checkRuntimeTypeCoverage(packageJson, repeatedRuntimeParent, runtimeCommands),
+    'parent must not own a CI slot', 'runtime-type parent repeated beside its children')
   assert(
     packageJson.scripts['test:ci:shard'].includes('scripts/hxhx/with-heavy-run-lease.js'),
     'package.json test:ci:shard must use the cooperative local lease wrapper'
@@ -476,10 +516,11 @@ function main() {
   const expectedBoundedRows = [
     ['compiler-foundation', 'Compiler foundations and runtime'],
     ['compiler-packaging', 'OCaml packaging and metal profile'],
-    ['compiler-focused-1', 'Focused compiler regressions (1/4)'],
-    ['compiler-focused-2', 'Focused compiler regressions (2/4)'],
+    ['compiler-focused-1', 'Focused compiler regressions (1/5)'],
+    ['compiler-focused-2', 'Focused compiler regressions (2/5)'],
     ['compiler-focused-3', 'C++ constructor and instance regressions'],
     ['compiler-focused-4', 'C++ inheritance and nullable regressions'],
+    ['compiler-focused-5', 'C++ runtime type and Map regressions'],
     ['macro-host-integration', 'Macro-host integration'],
     ['target-packages', 'Snapshots and examples']
   ]

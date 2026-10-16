@@ -577,16 +577,19 @@ jobs:
             label: OCaml packaging and metal profile
             timeout_minutes: 40
           - shard: compiler-focused-1
-            label: Focused compiler regressions (1/4)
+            label: Focused compiler regressions (1/5)
             timeout_minutes: 40
           - shard: compiler-focused-2
-            label: Focused compiler regressions (2/4)
+            label: Focused compiler regressions (2/5)
             timeout_minutes: 40
           - shard: compiler-focused-3
             label: C++ constructor and instance regressions
             timeout_minutes: 40
           - shard: compiler-focused-4
             label: C++ inheritance and nullable regressions
+            timeout_minutes: 40
+          - shard: compiler-focused-5
+            label: C++ runtime type and Map regressions
             timeout_minutes: 40
           - shard: macro-host-integration
             label: Macro-host integration
@@ -615,14 +618,13 @@ jobs:
             portable_shard_count: "3"
             portable_jobs: "4"
             portable_fixture_timeout_seconds: "2100"
-    # Run 38827977209 exhausted focused group 1's 40-minute budget after only
-    # 34/53 commands. The constructor and inheritance groups used 11m55s and
-    # 9m14s of command time, so distribute the other C++ tests across those
-    # existing runners. Preserve every command, its relative aggregate order,
-    # dependency installation, and the same four 40-minute job limits.
-    # Recorded C++ command times sum to 23m44s and 28m53s in the new groups.
-    # Those sums exclude setup and include early failures; passing hosted runs
-    # must establish actual durations before the manifest records baselines.
+    # Run 38840273698 exhausted the inheritance runner's 40-minute budget.
+    # The runtime-type command also stopped at step 34 of 52; its early-failure
+    # duration hid 18 later checks. Give each C++ runtime check its own command
+    # on a fifth focused runner and move three Int64 checks off inheritance.
+    # Preserve all commands, relative aggregate order, dependencies and limits.
+    # Passing hosted runs must establish durations; early failures are not a
+    # reliable baseline for the completed workload.
     # The large hxhx application workload retains its own Q3 job below.
     timeout-minutes: ${{ matrix.timeout_minutes }}
     steps:

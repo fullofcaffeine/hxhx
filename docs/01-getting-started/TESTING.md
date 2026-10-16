@@ -56,19 +56,30 @@ npm test
 
 `npm test` is the complete serialized regression inventory, not the command to
 rerun after every small edit. Core CI routes that inventory by change risk and
-then reports one fail-closed `Tests` result. Q2 target/compiler changes run the
-first 105 commands in three isolated shards plus bounded native/plugin
-canaries. Q3 high-risk, scheduled, manual, and release work adds the fourth
-`hxhx-targets` shard, which treats the compiler as a large application and
-usually takes about 20–25 runner minutes. To reproduce any family locally
-without changing coverage ownership:
+then reports one `Tests` result that fails when any required check fails or is
+incomplete. The inventory has 170 named commands. Q2 target/compiler changes
+run compiler foundations, packaging, five focused groups, macro-host integration,
+portable fixtures, and snapshots/examples, plus native/plugin smoke checks.
+Q3 high-risk, scheduled, manual, and release work also runs `hxhx-targets`,
+which treats the compiler as a large application. To reproduce a group locally:
 
 ```bash
-npm run test:ci:shard -- --shard compiler
+npm run test:ci:shard -- --shard compiler-foundation
+npm run test:ci:shard -- --shard compiler-focused-5
 npm run test:ci:shard -- --shard macro-host-integration
 npm run test:ci:shard -- --shard target-packages
 npm run test:ci:shard -- --shard hxhx-targets
 ```
+
+`test:m14:runtime-type-operands` remains the full serial command for its 52
+checks. CI schedules its shared and Neko groups separately and gives each C++
+runtime-type check its own command. A failed Map test therefore does not hide
+the later class, array, or enum tests. For example, use
+`npm run test:m14:cpp-managed-map-type` to reproduce only the Map type program.
+The inventory guard compares this split with the original command list and
+rejects missing, duplicated, or reordered checks. New runner durations remain
+unmeasured until a complete hosted run finishes; every focused job keeps its
+40-minute limit.
 
 For the ordinary inner loop, prefer the narrow `test:*` or `guard:*` command
 that owns the behavior you changed, then broaden to its shard and finally to
