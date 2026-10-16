@@ -1,4 +1,4 @@
-#include "ManagedValue.hpp"
+#include "ManagedEquality.hpp"
 #include <iostream>
 #include <stdexcept>
 
@@ -12,6 +12,72 @@ static const EnumConstructorDescriptor choiceConstructors[] = {{"Empty", 0}, {"C
 static const EnumConstructorDescriptor otherConstructors[] = {{"Empty", 0}};
 static const EnumDescriptor choice{"example.Choice", choiceConstructors, 2};
 static const EnumDescriptor other{"example.Other", otherConstructors, 1};
+
+// A handle points at compiler-owned static metadata. Copying or storing it must
+// not create a second identity, turn it into a class, or retain an enum instance.
+static void descriptorTransport(std::size_t budget) {
+  static const EnumDescriptor sameName{"example.Choice", choiceConstructors, 2};
+  static const ClassDescriptor classWithSameName{"example.Choice", false, 0, nullptr};
+  Heap heap(budget);
+  {
+    Root<Value> type(heap, Value::enumDescriptor(&choice));
+    Root<Value> copy(heap, type.get());
+    Value replaced = Value::string("previous");
+    replaced = copy.get();
+    require(replaced.kind() == ValueKind::EnumDescriptor && replaced.asEnumDescriptor() == &choice,
+            "copy or replacement changed enum descriptor identity");
+    require(Value::enumDescriptor(nullptr).kind() == ValueKind::Null,
+            "null enum descriptor acquired a non-null tag");
+    const auto classType = Value::descriptor(&classWithSameName);
+    const auto otherType = Value::enumDescriptor(&sameName);
+    require(dynamicEquality(heap, type.get(), copy.get(), false, nullptr)
+                && !dynamicEquality(heap, type.get(), copy.get(), true, nullptr),
+            "copied enum descriptors lost erased equality");
+    require(!dynamicEquality(heap, type.get(), otherType, false, nullptr)
+                && dynamicEquality(heap, type.get(), otherType, true, nullptr),
+            "textual names replaced descriptor identity");
+    require(!dynamicEquality(heap, type.get(), classType, false, nullptr)
+                && !dynamicEquality(heap, classType, type.get(), false, nullptr)
+                && dynamicEquality(heap, type.get(), classType, true, nullptr),
+            "enum descriptor merged with a class descriptor");
+    require(!dynamicEquality(heap, type.get(), Value{}, false, nullptr)
+                && dynamicEquality(heap, Value{}, type.get(), true, nullptr),
+            "enum descriptor merged with null");
+    bool rejectedClass = false, rejectedManaged = false, rejectedEnum = false;
+    try { (void)type.get().asDescriptor(); } catch (const std::bad_variant_access&) { rejectedClass = true; }
+    try { (void)type.get().asManaged(); } catch (const std::bad_variant_access&) { rejectedManaged = true; }
+    try { (void)classType.asEnumDescriptor(); } catch (const std::bad_variant_access&) { rejectedEnum = true; }
+    require(rejectedClass && rejectedManaged && rejectedEnum,
+            "descriptor transport accepted the wrong physical category");
+
+    Root<Ref<EnumPayload>> first(heap), second(heap), different(heap);
+    heap.allocateInto(first, choice, 1, std::vector<Value>{type.get()});
+    heap.allocateInto(second, choice, 1, std::vector<Value>{copy.get()});
+    heap.allocateInto(different, choice, 1, std::vector<Value>{otherType});
+    require(enumEquality(heap, Value::managed(first.get()), Value::managed(second.get()), nullptr)
+                && !enumEquality(heap, Value::managed(first.get()), Value::managed(different.get()), nullptr),
+            "enum payload comparison lost descriptor identity");
+    require(!enumPayloadEquality(heap, type.get(), classType, nullptr),
+            "enum payload comparison merged descriptor categories");
+    Root<Ref<ArrayPayload>> array(heap);
+    heap.allocateInto(array, ArrayRepresentation::Reference);
+    array.get()->append(type.get());
+    array.get()->append(Value::managed(first.get()));
+    first.set({});
+    second.set({});
+    different.set({});
+    heap.collect();
+    require(heap.liveCount() == 2 && array.get()->read(0).asEnumDescriptor() == &choice
+                && &array.get()->read(1).asManaged().as<EnumPayload>()->descriptor() == &choice,
+            "mixed array tracing lost a descriptor or live enum");
+    array.set({});
+    heap.collect();
+    require(heap.liveCount() == 0 && heap.allocationBytes() == 0
+                && type.get().asEnumDescriptor() == &choice && copy.get().asEnumDescriptor() == &choice,
+            "enum handles retained an otherwise unreachable instance");
+  }
+  require(heap.rootCount() == 0, "descriptor transport leaked roots");
+}
 
 static void observe(std::size_t budget) {
   Heap heap(budget);
@@ -66,6 +132,8 @@ static void observe(std::size_t budget) {
 }
 
 int main() {
+  descriptorTransport(0);
+  descriptorTransport(1024 * 1024);
   observe(0);
   observe(1024 * 1024);
   std::cout << "CPP_MANAGED_ENUM:PASS\n";

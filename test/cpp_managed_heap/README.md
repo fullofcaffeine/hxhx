@@ -4,7 +4,7 @@ Run `npm run test:m14:cpp-managed-heap` with Node and a sanitizer-capable C++17
 compiler. The runner uses `clang++` by default. Set `CXX` to another compiler
 executable when needed. Each compile and execution has a 60-second timeout.
 For a focused edit, run `npm run test:m14:cpp-managed-heap -- ManagedCallableTest`.
-The other selectable fixtures are `ManagedHeapTest`, `ManagedValueTest`,
+The other selectable fixtures are `ManagedHeapTest`, `ManagedValueTest`, `ManagedEnumTest`,
 `ManagedAllocationFailureTest`, `ManagedStaticRootTest`, and `ManagedStackTest`.
 Unknown names fail instead of skipping checks.
 
@@ -24,6 +24,13 @@ reach the same storage. An owner-plus-index place survives vector buffer growth.
 An erased array/record/environment cycle stays alive through its external root
 and is collected after that root leaves. Recovery as the wrong physical payload
 must fail before access. Descriptor values have static identity and own no instances.
+
+`ManagedEnumTest.cpp` also checks enum handles stored in the common tagged value.
+Copies, array storage, and enum payload comparison preserve the original descriptor
+pointer. A class handle, an enum instance, and an enum handle remain distinct.
+Equal name text does not merge different descriptors. Keeping an enum handle alive
+does not retain otherwise unreachable enum instances. These checks cover native
+storage; generated Haxe reflection still needs its compiler integration tests.
 
 Storage tags do not implement Haxe conversions or class membership. Array storage
 checks its physical bounds; Haxe lowering must implement source indexing rules.

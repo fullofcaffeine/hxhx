@@ -14,12 +14,14 @@ namespace hxhx::managed {
 
 // Haxe-owned descriptor generation supplies the contents and static lifetime.
 struct ClassDescriptor;
-enum class ValueKind { Null, Boolean, Integer, Float, String, Managed, Descriptor };
+struct EnumDescriptor;
+enum class ValueKind { Null, Boolean, Integer, Float, String, Managed, Descriptor, EnumDescriptor };
 
 // Common storage transport, not a Haxe conversion or type-membership engine.
 // Managed alternatives are graph edges; descriptors never own live instances.
 class Value {
-  using Storage = std::variant<std::monostate, bool, std::int32_t, double, std::string, ErasedRef, const ClassDescriptor*>;
+  using Storage = std::variant<std::monostate, bool, std::int32_t, double, std::string, ErasedRef,
+                               const ClassDescriptor*, const EnumDescriptor*>;
   Storage storage_;
   explicit Value(Storage storage) : storage_(std::move(storage)) {}
 public:
@@ -57,6 +59,9 @@ public:
   static Value managed(ErasedRef value) { return value ? Value(Storage(value)) : Value(); }
   template<class Payload> static Value managed(Ref<Payload> value) { return managed(ErasedRef(value)); }
   static Value descriptor(const ClassDescriptor* value) { return value == nullptr ? Value() : Value(Storage(value)); }
+  // Enum<T> and Class<T> carry distinct static descriptor types. Transport
+  // preserves the selected pointer; it never allocates an identity or instance.
+  static Value enumDescriptor(const EnumDescriptor* value) { return value == nullptr ? Value() : Value(Storage(value)); }
 
   ValueKind kind() const noexcept {
     if (storage_.valueless_by_exception()) std::terminate();
@@ -68,6 +73,7 @@ public:
   const std::string& asString() const { return std::get<std::string>(storage_); }
   ErasedRef asManaged() const { return std::get<ErasedRef>(storage_); }
   const ClassDescriptor* asDescriptor() const { return std::get<const ClassDescriptor*>(storage_); }
+  const EnumDescriptor* asEnumDescriptor() const { return std::get<const EnumDescriptor*>(storage_); }
 
   void trace(Visitor& visitor) const noexcept {
     if (const auto* edge = std::get_if<ErasedRef>(&storage_)) visitor.mark(*edge);

@@ -70,6 +70,7 @@ inline bool enumPayloadEquality(Heap& heap, const Value& left, const Value& righ
   }
   if (left.kind() != right.kind()) return false;
   if (left.kind() == ValueKind::Descriptor) return left.asDescriptor() == right.asDescriptor();
+  if (left.kind() == ValueKind::EnumDescriptor) return left.asEnumDescriptor() == right.asEnumDescriptor();
   const auto a = left.asManaged(), b = right.asManaged();
   if (a.hasLayout<EnumPayload>() && b.hasLayout<EnumPayload>())
     return enumEquality(heap, left, right, convert);
@@ -99,6 +100,9 @@ inline bool dynamicEquality(Heap& heap, const Value& left, const Value& right, b
       break;
     case ValueKind::Descriptor:
       equal = left.asDescriptor() == right.asDescriptor();
+      break;
+    case ValueKind::EnumDescriptor:
+      equal = left.asEnumDescriptor() == right.asEnumDescriptor();
       break;
     case ValueKind::Managed: {
       const auto first = left.asManaged();
