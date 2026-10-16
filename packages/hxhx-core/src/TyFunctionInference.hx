@@ -59,6 +59,42 @@ class TyFunctionInference {
 	var locals:StringMap<TyInferenceTerm> = new StringMap();
 	var speculativeReplay:Bool = false;
 	var keyValueProtocols:Array<TyKeyValueProtocolSource> = [];
+	var diagnosticProbes:Array<{
+		final expression:HxExpr;
+		final fingerprint:String;
+		final outcome:TyDiagnosticProbeOutcome;
+	}> = [];
+
+	/** Retain an isolated diagnostic result before sealing; replay cannot invent a new query. */
+	public function diagnosticProbe(expression:HxExpr, evaluate:() -> TyDiagnosticProbeOutcome):TyDiagnosticProbeOutcome {
+		if (solver.isSealed())
+			return requireDiagnosticProbe(expression);
+		final fingerprint = TypedBodyFingerprint.exactExpression(expression);
+		for (index in 0...diagnosticProbes.length) {
+			final entry = diagnosticProbes[index];
+			if (entry.expression != expression)
+				continue;
+			if (entry.fingerprint != fingerprint)
+				throw "diagnostic probe source changed during inference";
+			final outcome = evaluate();
+			diagnosticProbes[index] = {expression: expression, fingerprint: fingerprint, outcome: outcome};
+			return outcome;
+		}
+		final outcome = evaluate();
+		diagnosticProbes.push({expression: expression, fingerprint: fingerprint, outcome: outcome});
+		return outcome;
+	}
+
+	/** Source object identity and its unchanged syntax belong to this function's inference owner. */
+	public function requireDiagnosticProbe(expression:HxExpr):TyDiagnosticProbeOutcome {
+		for (entry in diagnosticProbes)
+			if (entry.expression == expression) {
+				if (entry.fingerprint != TypedBodyFingerprint.exactExpression(expression))
+					throw "diagnostic probe source changed after inference";
+				return entry.outcome;
+			}
+		throw "diagnostic probe is absent from function inference: " + owner;
+	}
 
 	/** Allocate protocol query occurrences before sealing and retain them for exact replay. */
 	public function keyValueProtocolSource(source:HxExpr, ?select:HxExpr->TyKeyValueProtocolSource):TyKeyValueProtocolSource {
@@ -301,6 +337,7 @@ class TyFunctionInference {
 		candidate.callbackArguments = callbackArguments.copy();
 		candidate.sourceFunctions = sourceFunctions.copy();
 		candidate.keyValueProtocols = keyValueProtocols.copy();
+		candidate.diagnosticProbes = diagnosticProbes.copy();
 		for (key => value in locals)
 			candidate.locals.set(key, value);
 		return candidate;

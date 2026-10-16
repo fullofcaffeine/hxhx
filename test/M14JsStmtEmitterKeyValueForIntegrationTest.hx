@@ -41,25 +41,22 @@ class M14JsStmtEmitterKeyValueForIntegrationTest {
 		@:privateAccess M14KeyValueProtocolTest.main();
 		@:privateAccess M14KeyValueComprehensionTest.main();
 		pairs();
-		final typeErrorBody = HxParser.parseFunctionBodyText("var s = HelperMacros.typeErrorText(for (key => value in 1) { }); t(HelperMacros.typeError(for (key => value in new MyNotIterator()) { }));");
-		final typeErrorWriter = new JsWriter();
-		final typeErrorScope = new JsFunctionScope(new haxe.ds.StringMap<String>());
-		JsStmtEmitter.emitFunctionBody(typeErrorWriter, typeErrorBody, typeErrorScope);
-		final typeErrorJs = typeErrorWriter.toString();
-
-		assertContains(typeErrorJs, "var s = \"Int has no field keyValueIterator\";",
-			"HelperMacros.typeErrorText key/value for probe should fold to diagnostic text");
-		assertContains(typeErrorJs, "t(true);", "HelperMacros.typeError key/value for probe should fold to true");
-
-		final blockTypeErrorBody = HxParser.parseFunctionBodyText('f(typeError({ var b:{v:Dynamic} = {v:"foo"}; })); t(typeError({ var b:{v:Int} = {v:1.2}; }));');
-		final blockTypeErrorWriter = new JsWriter();
-		final blockTypeErrorScope = new JsFunctionScope(new haxe.ds.StringMap<String>());
-		JsStmtEmitter.emitFunctionBody(blockTypeErrorWriter, blockTypeErrorBody, blockTypeErrorScope);
-		final blockTypeErrorJs = blockTypeErrorWriter.toString();
-
-		assertContains(blockTypeErrorJs, "f(false);", "HelperMacros.typeError valid opaque block probe should fold to false");
-		assertContains(blockTypeErrorJs, "t(true);", "HelperMacros.typeError invalid opaque block probe should fold to true");
+		M14JsCompileTimeDiagnosticsTest.run();
+		assertRawDiagnosticInputRejected("var s = HelperMacros.typeErrorText(for (key => value in 1) {});");
+		assertRawDiagnosticInputRejected('typeError({var b:{v:Int} = {v:1.2};});');
 		Sys.println("JS_KEY_VALUE_INTEGRATION:PASS");
+	}
+
+	/** Structured probe arguments must pass through typing before reaching the JavaScript emitter. */
+	static function assertRawDiagnosticInputRejected(source:String):Void {
+		try {
+			JsStmtEmitter.emitFunctionBody(new JsWriter(), HxParser.parseFunctionBodyText(source), new JsFunctionScope(new haxe.ds.StringMap<String>()));
+		} catch (message:String) {
+			if (message.indexOf("source control must be lowered before JavaScript emission") < 0)
+				throw message;
+			return;
+		}
+		throw "raw diagnostic input bypassed shared typing";
 	}
 
 	/** A separate JavaScript assertion observes generated values without modifying the generated loop. */

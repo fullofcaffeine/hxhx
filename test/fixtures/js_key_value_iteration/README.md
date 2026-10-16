@@ -7,5 +7,7 @@ Array, and Std declarations. It checks the original label/value pairs, string ke
 Extractors.hx preserves the original nested enum and object patterns as authored runtime checks,
 including both OR alternatives and unmatched inputs. Its real Std.string call also exercises
 provider initialization before the String and Array type checks.
-The enclosing test retains the separate legacy callback-adapter runtime check and diagnostic probes.
+The enclosing test retains the separate legacy callback-adapter runtime check.
+Its diagnostic probes run through shared typing and JavaScript execution, with matching upstream macros;
+see [the diagnostic fixture](../js_compile_time_diagnostics/README.md).
 Generated-loop temporary names are not a runtime contract.

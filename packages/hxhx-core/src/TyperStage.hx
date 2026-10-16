@@ -1092,7 +1092,10 @@ class TyperStage {
 						() -> scope.getInference()
 							.keyValueProtocolSource(iterable, source -> TySourceFor.selectProtocol(source, inferProtocol, scope.getOwnerIdentity())));
 					if (bindingTypes == null)
-						throw new TyperError(ctx.getFilePath(), pos, "key/value loop requires a resolved iterator protocol");
+						throw new TyperError(ctx.getFilePath(), pos,
+							TySourceFor.protocolDiagnostic(iterableType,
+								iterable.match(ERange(_, _)) ? null : scope.getInference().keyValueProtocolSource(iterable), inferProtocol,
+								"key/value loop requires a resolved iterator protocol"));
 					final controls = scope.requireControlScope();
 					final target = controls.enter(Loop, TypedBodyFingerprint.forStatements([s]));
 					scope.enterLexicalScope();
@@ -1228,9 +1231,13 @@ class TyperStage {
 		return null;
 	}
 
-	/** Type a macro diagnostic probe without making its enclosing `try` value-producing. **/
-	static function typeErrorProbe(expression:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, position:HxPos):Void {
-		inferExprType(expression, scope.copyForInference(), ctx, position);
+	/** Inspect a diagnostic argument in its own lexical and inference snapshot. **/
+	static function typeErrorProbe(expression:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, position:HxPos):TyDiagnosticProbeOutcome {
+		return try {
+			Accepted(inferExprType(expression, scope.copyForInference(), ctx, position));
+		} catch (error:TyperError) {
+			Rejected(error.message);
+		};
 	}
 
 	public static inline var RAW_DIAGNOSTIC_PREFIX:String = "__HXHX_RAW_DIAGNOSTIC__:";
@@ -2795,11 +2802,12 @@ class TyperStage {
 					}
 				final compileTimeProbe = helperCompileTimeProbeName(callee);
 				if (args.length == 1 && compileTimeProbe != null) {
-					if (compileTimeProbe == "typeError") {
-						try {
-							typeErrorProbe(args[0], scope, ctx, pos);
-						} catch (_:TyperError) {}
-						return TyType.fromHintText("Bool");
+					if (compileTimeProbe == "typeError" || compileTimeProbe == "typeErrorText") {
+						// Retain the query outcome, not its temporary inference state.
+						// Projection later reads this exact call's result without typing
+						// invalid input inside the sealed enclosing function.
+						scope.getInference().diagnosticProbe(expr, () -> typeErrorProbe(args[0], scope, ctx, pos));
+						return compileTimeProbe == "typeError" ? TyType.fromHintText("Bool") : TyType.nullable(TyType.fromHintText("String"));
 					}
 					// These helpers inspect intentionally invalid syntax and turn
 					// its diagnostic into text. Their argument belongs to the
@@ -3423,9 +3431,14 @@ class TyperStage {
 					values: values,
 					expected: expectedResult,
 					typeExpression: (value, expected) -> inferExprType(value, scope, ctx, pos, expected),
-					accepts: (expected,
-						actual) -> overloadArgScore(expected, actual, [], ctx.getIndex()) >= 0
-							|| (actual.isNullLiteral() && TyNullArgument.acceptsLiteral(expected, ctx.getIndex())),
+					// Assignment has a direction: overload ranking alone permits
+					// numeric narrowing that a written field type must reject.
+					accepts: (expected, actual) -> switch TyAssignmentCompatibility.classify(expected, actual, Unchecked) {
+						case Compatible: true;
+						case Incompatible: false;
+						case Unknown: overloadArgScore(expected, actual, [],
+								ctx.getIndex()) >= 0 || (actual.isNullLiteral() && TyNullArgument.acceptsLiteral(expected, ctx.getIndex()));
+					},
 					filePath: ctx.getFilePath(),
 					position: pos
 				});

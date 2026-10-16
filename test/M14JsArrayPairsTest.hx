@@ -4,7 +4,6 @@ import hxhx.Stage3SetupSupport;
 /** Compare ordinary and local-function array iteration with independently compiled upstream behavior. */
 class M14JsArrayPairsTest {
 	static function main():Void {
-		@:privateAccess M14JsStmtEmitterKeyValueForIntegrationTest.pairs();
 		final root = "test/fixtures/js_array_pairs";
 		final output = JsRuntimeFixture.reserveOutput();
 		@:privateAccess M14JsFunctionLiteralRuntimeTest.command("haxe", ["-cp", root, "-main", "Main", "-js", output + "/upstream.js"]);

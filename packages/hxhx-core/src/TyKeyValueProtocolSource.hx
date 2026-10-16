@@ -9,6 +9,7 @@ class TyKeyValueProtocolSource {
 	final fingerprint:String;
 
 	public final acquire:HxExpr;
+	public final factory:Null<HxExpr>;
 	public final condition:HxExpr;
 	public final next:HxExpr;
 	public final key:HxExpr;
@@ -20,7 +21,8 @@ class TyKeyValueProtocolSource {
 		this.source = source;
 		this.owner = owner;
 		fingerprint = TypedBodyFingerprint.exactExpression(source);
-		acquire = direct ? source : ECall(EField(source, "keyValueIterator"), []);
+		factory = direct ? null : EField(source, "keyValueIterator");
+		acquire = direct ? source : ECall(factory, []);
 		condition = ECall(EField(acquire, "hasNext"), []);
 		next = ECall(EField(acquire, "next"), []);
 		key = EField(next, "key");

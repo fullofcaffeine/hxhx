@@ -14,6 +14,13 @@ function selectProtocol(source:HxExpr, resolve:HxExpr->TyType, owner:String):TyK
 	return new TyKeyValueProtocolSource(source, owner);
 }
 
+/** Report a missing factory only when its exact receiver and member query establish that absence. */
+function protocolDiagnostic(type:TyType, protocol:Null<TyKeyValueProtocolSource>, resolve:HxExpr->TyType, fallback:String):String {
+	if (!type.hasUnknownComponent() && !type.isDynamic() && protocol != null && protocol.factory != null && resolve(protocol.factory).isUnknown())
+		return type.getDisplay() + " has no field keyValueIterator";
+	return fallback;
+}
+
 /** Select concrete loop-local types from iterable facts shared by typing and replay. */
 function bindingTypes(binding:HxForBinding, iterable:HxExpr, type:TyType, ?resolve:HxExpr->TyType,
 		?protocol:() -> TyKeyValueProtocolSource):Null<Array<TyType>> {
@@ -70,8 +77,16 @@ function infer(input:{
 			final types = bindingTypes(binding, iterable, iterableType, inferProtocol,
 				() -> input.scope.getInference()
 					.keyValueProtocolSource(iterable, source -> selectProtocol(source, inferProtocol, input.scope.getOwnerIdentity())));
-			if (types == null)
-				throw new TyperError(input.filePath, position, "source for requires a resolved iterable protocol");
+			if (types == null) {
+				final fallback = "source for requires a resolved iterable protocol";
+				final message = switch binding {
+					case KeyValue(_, _):
+						protocolDiagnostic(iterableType, iterable.match(ERange(_, _)) ? null : input.scope.getInference().keyValueProtocolSource(iterable),
+							inferProtocol, fallback);
+					case Value(_): fallback;
+				};
+				throw new TyperError(input.filePath, position, message);
+			}
 			final controls = input.scope.requireControlScope();
 			final target = controls.enter(Loop, TypedBodyFingerprint.forExpression(input.expression));
 			input.scope.enterLexicalScope();

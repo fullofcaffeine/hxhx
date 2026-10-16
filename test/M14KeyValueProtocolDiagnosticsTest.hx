@@ -5,11 +5,18 @@ class M14KeyValueProtocolDiagnosticsTest {
 	public static function run():Void {
 		final cases = [
 			{
+				label: "range",
+				iterable: "0...2",
+				members: null,
+				diagnostic: "Int has no field key",
+				candidateDiagnostic: "resolved iterator protocol"
+			},
+			{
 				label: "scalar",
 				iterable: "1",
 				members: null,
 				diagnostic: "keyValueIterator",
-				candidateDiagnostic: "protocol"
+				candidateDiagnostic: "Int has no field keyValueIterator"
 			},
 			{
 				label: "missing-next",

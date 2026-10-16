@@ -229,7 +229,7 @@ class TypedBodyBuilder {
 		};
 	}
 
-	static function compileTimeProbe(callee:HxExpr, arguments:Array<HxExpr>, position:Null<HxPos>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
+	static function compileTimeProbe(source:HxExpr, callee:HxExpr, arguments:Array<HxExpr>, position:Null<HxPos>, environment:Null<TyFunctionEnv>,
 			typeResolver:Null<TypedExprTypeResolver>):Null<TypedExpr> {
 		if (arguments == null || arguments.length != 1)
 			return null;
@@ -280,15 +280,14 @@ class TypedBodyBuilder {
 			if (message != null)
 				return TypedExpr.stringLiteral(message, TyType.fromHintText("String"), position);
 		}
-		if (functionName == "typeError" && typeResolver != null && environment != null) {
-			var failed = false;
+		if ((functionName == "typeError" || functionName == "typeErrorText") && typeResolver != null && environment != null) {
+			var diagnostic:Null<String> = null;
 			var resolvedType:Null<TyType> = null;
-			try {
-				resolvedType = typeResolver.expressionType(arguments[0], diagnosticPosition == null ? HxPos.unknown() : diagnosticPosition,
-					environment.copyForInference(), null);
-				failed = false;
-			} catch (_:TyperError) {
-				failed = true;
+			switch environment.getInference().requireDiagnosticProbe(source) {
+				case Accepted(type):
+					resolvedType = type;
+				case Rejected(message):
+					diagnostic = message;
 			}
 			// A reported typer failure is decisive. A successful best-effort
 			// inference is decisive only when it produced an exact type. The
@@ -296,13 +295,15 @@ class TypedBodyBuilder {
 			// unknown or unresolved, so preserve those probes for the existing
 			// structural compatibility evaluator instead of sealing a false
 			// negative.
-			if (failed)
-				return TypedExpr.boolLiteral(true, TyType.fromHintText("Bool"), position);
+			if (diagnostic != null)
+				return functionName == "typeError" ? TypedExpr.boolLiteral(true, TyType.fromHintText("Bool"),
+					position) : TypedExpr.stringLiteral(diagnostic, TyType.fromHintText("String"), position);
 			if (resolvedType != null
 				&& !resolvedType.isUnknown()
 				&& !resolvedType.isUnresolved()
 				&& successfulProbeInferenceIsDecisive(arguments[0]))
-				return TypedExpr.boolLiteral(false, TyType.fromHintText("Bool"), position);
+				return functionName == "typeError" ? TypedExpr.boolLiteral(false, TyType.fromHintText("Bool"),
+					position) : TypedExpr.nullValue(TyType.nullable(TyType.fromHintText("String")), position);
 		}
 		return switch (functionName) {
 			case "typeError":
@@ -924,7 +925,7 @@ class TypedBodyBuilder {
 						return TypedExpr.call(typedLambda, typedArguments, null, typedLambda.getType().getFunctionReturn(), position);
 					case _:
 				}
-				final loweredProbe = compileTimeProbe(callee, arguments, position, diagnosticPosition, environment, typeResolver);
+				final loweredProbe = compileTimeProbe(expression, callee, arguments, position, environment, typeResolver);
 				if (loweredProbe != null) {
 					loweredProbe;
 				} else {

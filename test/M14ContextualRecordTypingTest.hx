@@ -44,6 +44,7 @@ class M14ContextualRecordTypingTest {
 			throw "contextual record fixture lost a literal: " + literals;
 		for (invalid in [
 			"final value:{item:Int} = {item: true};",
+			"final value:{item:Int} = {item: 1.2};",
 			"final value:{item:Int} = {item: 1, extra: true};",
 			"final value:{item:Int, other:String} = {item: 1};"
 		]) {
@@ -56,6 +57,7 @@ class M14ContextualRecordTypingTest {
 			if (!rejected)
 				throw "invalid contextual record was accepted: " + invalid;
 		}
+		typeSource("class Main { static function main():Void { final value:{amount:Float} = {amount: 2}; } }");
 		Sys.println("CONTEXTUAL_RECORD_TYPING:PASS");
 	}
 }
