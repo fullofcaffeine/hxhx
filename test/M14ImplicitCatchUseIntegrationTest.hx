@@ -36,7 +36,9 @@ class M14ImplicitCatchUseIntegrationTest {
 		});
 		final defines = Stage3SetupSupport.buildDefinesMap([], "neko", "neko-native");
 		final resolved = ResolverStage.parseProjectRoots(paths, ["Main"], defines, provider);
-		final index = TyperIndex.build(resolved);
+		// Discover declaration dependencies before publishing signatures, as production
+		// does. Eager publication can leave ValueException.value typed as unresolved Any.
+		final index = TyperIndex.buildHeaders(resolved);
 		final loader = new ModuleLoader(paths, defines, index, null, true, provider);
 		loader.markResolvedAlready(resolved);
 		final pending = resolved.copy();
