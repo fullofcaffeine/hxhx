@@ -140,24 +140,24 @@ class JsFunctionScope {
 		return safe;
 	}
 
-	/** Each emitted attempt owns fresh variable names; enclosing bindings and reservations survive it. */
-	public function withLexicalScope<T>(run:Void->T):T {
-		final previous = locals.copy();
-		function restore():Void {
-			locals.clear();
-			for (name => value in previous)
-				locals.set(name, value);
-		}
-		try {
-			final result = run();
-			restore();
-			return result;
-		} catch (error:Dynamic) {
-			// The host exception boundary must restore names for every thrown value.
-			// The value is rethrown unchanged and never enters compiler semantics.
-			restore();
-			throw error;
-		}
+	/**
+		Each switch attempt owns its local bindings and shares the enclosing name allocator.
+		Emission can fail without changing the parent's bindings or catching its error.
+		This is a lexical block in the same function, so exact typing and capture facts stay shared.
+	 */
+	public function lexicalChild():JsFunctionScope {
+		final child = new JsFunctionScope(classRefs, instanceFields, superClassRef, localCatalog, fieldCatalog, runtimeTypes, methodUses);
+		for (name => value in locals)
+			child.locals.set(name, value);
+		child.parentScope = parentScope;
+		child.abstractReceiver = abstractReceiver;
+		child.controlProjection = controlProjection;
+		child.iterationStorage = iterationStorage;
+		child.allocationScope = this;
+		child.enumDeclarations = enumDeclarations;
+		child.abstractPlan = abstractPlan;
+		child.abstractValues = abstractValues;
+		return child;
 	}
 
 	/** A wrapper parameter captures the cell object, while ordinary reads use its value. */

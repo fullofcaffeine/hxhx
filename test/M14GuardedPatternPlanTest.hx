@@ -216,7 +216,46 @@ class M14GuardedPatternPlanTest {
 		require(abruptCase.getSemanticKey() != firstPlan.getSemanticKey(), "accepted-body completion must participate in plan identity");
 	}
 
+	/** Attempt scopes isolate bindings and share unique names without intercepting thrown values. */
+	static function lexicalCleanup():Void {
+		final scope = new backend.js.JsFunctionScope(new haxe.ds.StringMap<String>());
+		final outer = scope.declareLocal("outer");
+		var failedName = "";
+		var caught = false;
+		try {
+			final attempt = scope.lexicalChild();
+			require(attempt.resolveLocal("outer") == outer, "attempt lost enclosing names");
+			failedName = attempt.declareLocal("temporary");
+			throw "scope sentinel";
+		} catch (error:String) {
+			caught = error == "scope sentinel";
+		}
+		require(caught
+			&& scope.resolveLocal("temporary") == null
+			&& scope.resolveLocal("outer") == outer, "string failure leaked names or changed its value");
+		final original = new haxe.Exception("same exception");
+		caught = false;
+		try {
+			final attempt = scope.lexicalChild();
+			require(attempt.declareLocal("temporary") != failedName, "failed attempt released a reserved name");
+			throw original;
+		} catch (error:haxe.Exception) {
+			caught = error == original;
+		}
+		require(caught && scope.resolveLocal("temporary") == null && scope.resolveLocal("outer") == outer,
+			"exception failure leaked names or changed identity");
+		final attempt = scope.lexicalChild();
+		final local = attempt.declareLocal("temporary");
+		final nested = attempt.lexicalChild();
+		require(nested.resolveLocal("temporary") == local, "nested attempt lost enclosing bindings");
+		final inner = nested.declareLocal("inner");
+		require(attempt.resolveLocal("inner") == null
+			&& scope.declareLocal("inner") != inner, "nested attempt leaked bindings or reused a name");
+		require(scope.resolveLocal("temporary") == null && scope.resolveLocal("outer") == outer, "normal completion leaked local names");
+	}
+
 	static function main():Void {
+		lexicalCleanup();
 		mutationAlternatives();
 		mutationCases(PArray([PBind("value"), PInt(2)]), PArray([PInt(1), PBind("value")]));
 		mutationCases(PArray([PBind("value"), PWildcard]), PArray([PWildcard, PBind("value")]));

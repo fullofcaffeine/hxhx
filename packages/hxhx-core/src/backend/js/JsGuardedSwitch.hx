@@ -48,20 +48,19 @@ function emit(writer:JsWriter, input:HxExpr, enabled:HxExpr, plan:TypedGuardedPa
 			+ no
 			+ "\n}",
 		attempt: (index, captures, rejected) -> {
-			final body = scope.withLexicalScope(() -> {
-				final out = new JsWriter();
-				for (capture in captures) {
-					final name = switch capture.source {
-						case PBind(name) | PCapture(name, _): name;
-						case _: throw "JavaScript guarded capture lost its binding occurrence";
-					};
-					final local = scope.declareLocal(name);
-					final value = scope.isIterationCapture(name) ? "{value: " + capture.value + "}" : capture.value;
-					out.writeln("var " + local + " = " + value + ";");
-				}
-				JsStmtEmitter.emitStmt(out, bodies[index], scope);
-				return out.toString();
-			});
+			final attemptScope = scope.lexicalChild();
+			final out = new JsWriter();
+			for (capture in captures) {
+				final name = switch capture.source {
+					case PBind(name) | PCapture(name, _): name;
+					case _: throw "JavaScript guarded capture lost its binding occurrence";
+				};
+				final local = attemptScope.declareLocal(name);
+				final value = attemptScope.isIterationCapture(name) ? "{value: " + capture.value + "}" : capture.value;
+				out.writeln("var " + local + " = " + value + ";");
+			}
+			JsStmtEmitter.emitStmt(out, bodies[index], attemptScope);
+			final body = out.toString();
 			"{\n" + body + "}\nif (" + retry + ") {\n" + rejected + "\n}";
 		}
 	});
