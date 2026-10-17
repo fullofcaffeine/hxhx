@@ -45,10 +45,14 @@ class M14ModuleFallbackIdentityIntegrationTest {
 			check(index.getByFullName("Library.Child") != null, "secondary type must retain its module owner");
 			final eager = ResolverStage.parseProjectRoots([root], [first], new StringMap());
 			check(eager.length == 1 && ResolvedModule.getModulePath(eager[0]) == "Library", "eager and lazy module identities differ");
-			final seeded = new ModuleLoader([root], new StringMap(), TyperIndex.build(eager), null, false);
-			seeded.markResolvedAlready(eager);
-			@:privateAccess seeded.loadModuleByPath("Library.value");
-			check(seeded.drainNewModules().length == 0, "already resolved source was loaded again through a member");
+			for (classPath in [root, FileSystem.absolutePath(root)]) {
+				final seededIndex = TyperIndex.build(eager);
+				final seeded = new ModuleLoader([classPath], new StringMap(), seededIndex, null, false);
+				seeded.markResolvedAlready(eager);
+				@:privateAccess seeded.loadModuleByPath("Library.value");
+				check(seeded.drainNewModules().length == 0, "already resolved source was loaded again through a member");
+				check(seededIndex.getRegisteredModule("Library").parsed == eager[0].parsed, "relative and absolute lookups replaced the registered source");
+			}
 		}
 
 		// A direct module is distinct even when another class path offers a fallback.

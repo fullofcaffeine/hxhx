@@ -127,7 +127,7 @@ class ModuleLoader extends LazyTypeLoader {
 			final mp = ResolvedModule.getModulePath(m);
 			if (mp != null && mp.length > 0)
 				visited.set(mp, true);
-			visitedSourceFiles.set(haxe.io.Path.normalize(ResolvedModule.getFilePath(m)), true);
+			visitedSourceFiles.set(CompilerSourceResolver.sourceFileKey(ResolvedModule.getFilePath(m)), true);
 		}
 		for (module in resolved)
 			prepareSignatureDependencies(module);
@@ -440,7 +440,7 @@ class ModuleLoader extends LazyTypeLoader {
 		}
 		// Resolve every new lookup before checking the source. Its observation must
 		// still record whether a direct file shadows a secondary-type fallback.
-		final selectedFileKey = haxe.io.Path.normalize(filePath);
+		final selectedFileKey = CompilerSourceResolver.sourceFileKey(filePath);
 		if (visitedSourceFiles.exists(selectedFileKey)) {
 			visited.set(modulePath, true);
 			return null;
