@@ -10,6 +10,10 @@ enum Choice {
 	OptionalFlag(?flag:Bool);
 	OptionalText(?value:String);
 	OptionalChoice(?value:Choice);
+	AnyValue(value:Dynamic);
+	OptionalAny(?value:Dynamic);
+	NullableAny(value:Null<Dynamic>);
+	AnyPair(first:Dynamic, second:Dynamic);
 }
 
 enum Other {
@@ -17,7 +21,25 @@ enum Other {
 	Pair(number:Int);
 }
 
+/** An ordinary reference must retain identity when stored in a Dynamic payload. */
+class Token {
+	public var value:Int;
+
+	public function new(value:Int) {
+		this.value = value;
+	}
+}
+
 class Main {
+	/** Pattern extraction returns the same checked Dynamic value stored by construction. */
+	static function readAny(value:Choice):Dynamic {
+		return switch value {
+			case AnyValue(value), OptionalAny(value), NullableAny(value): value;
+			case AnyPair(first, _): first;
+			case _: null;
+		};
+	}
+
 	static function read(value:Choice):Int {
 		return switch value {
 			case Empty: 1;
@@ -94,5 +116,26 @@ class Main {
 		Sys.println(read(Choice.OptionalText("yes")));
 		Sys.println(read(Choice.OptionalChoice()));
 		Sys.println(read(Choice.OptionalChoice(Choice.Pair(7, true))));
+		Sys.println(readAny(Choice.AnyValue(7)));
+		Sys.println(readAny(Choice.AnyValue(true)));
+		Sys.println(readAny(Choice.AnyValue(false)));
+		Sys.println(readAny(Choice.AnyValue(null)));
+		Sys.println(readAny(Choice.AnyValue("text")));
+		Sys.println(readAny(Choice.AnyValue(true)) == 1);
+		Sys.println(readAny(Choice.AnyValue(1)) == true);
+		var already:Dynamic = true;
+		Sys.println(readAny(Choice.AnyValue(already)));
+		Sys.println(readAny(Choice.OptionalAny()));
+		Sys.println(readAny(Choice.OptionalAny(null)));
+		Sys.println(readAny(Choice.OptionalAny(false)));
+		Sys.println(readAny(Choice.NullableAny(null)));
+		Sys.println(readAny(Choice.NullableAny(true)));
+		final token = new Token(4);
+		final wrapped = Choice.AnyValue(token);
+		Sys.println(readAny(wrapped) == token);
+		token.value = 9;
+		Sys.println(readAny(wrapped) == token);
+		Sys.println(token.value);
+		Sys.println(readAny(Choice.AnyPair(flag(), number())));
 	}
 }

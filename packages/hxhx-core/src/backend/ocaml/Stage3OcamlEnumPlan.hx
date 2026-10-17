@@ -5,6 +5,10 @@ enum Stage3OcamlEnumPayload {
 	NativeInt;
 	NativeBool;
 	NativeString;
+
+	/** Preserve the checked Dynamic runtime value, including its distinct Boolean box. */
+	DynamicValue;
+
 	EnumBox(owner:String);
 
 	/** Null and a present value share the runtime's Obj.t boundary without losing either value. */
@@ -103,6 +107,8 @@ class Stage3OcamlEnumPlan {
 	}
 
 	static function requiredPayload(type:TyType, declaration:String):Stage3OcamlEnumPayload {
+		if (type.isDynamic())
+			return DynamicValue;
 		if (type.getSemanticKey() == TyType.fromHintText("Int").getSemanticKey())
 			return NativeInt;
 		if (type.getSemanticKey() == TyType.fromHintText("Bool").getSemanticKey())

@@ -3123,7 +3123,9 @@ class EmitterStage {
 				throw "OCaml enum call requires its request and local naming owners";
 			return currentEnums.call(enumCall,
 				value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
-				currentFunctionLocalOcamlNames);
+				currentFunctionLocalOcamlNames,
+				value ->
+					currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(value) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(value));
 		}
 		final methodValue = currentTypedInitializer != null ? currentTypedInitializer.findMethodUse(e) : currentTypedFunction == null ? null : currentTypedFunction.findMethodUse(e);
 		if (methodValue != null && methodValue.getUse() == ValueRead) {

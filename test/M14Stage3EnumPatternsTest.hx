@@ -6,7 +6,16 @@ class M14Stage3EnumPatternsTest {
 	static final root = "test/fixtures/stage3_enum_patterns";
 
 	static function program(source:String, path:String):TypedModule {
-		return M14Stage3RuntimeFixture.typeMain({source: source, path: path, root: root});
+		return M14Stage3RuntimeFixture.typeMain({source: source, path: path, root: Path.directory(path)});
+	}
+
+	/** Negative sources own their classpath so lookup cannot reload the positive Main. */
+	static function negativeProgram(source:String, name:String):TypedModule {
+		final sourceRoot = ".tmp/stage3-enum-negative-" + name;
+		sys.FileSystem.createDirectory(sourceRoot);
+		final path = Path.join([sourceRoot, "Main.hx"]);
+		File.saveContent(path, source);
+		return program(source, path);
 	}
 
 	static function rejects(action:Void->Void, expected:String):Void {
@@ -28,6 +37,7 @@ class M14Stage3EnumPatternsTest {
 		catalog.validate();
 		final names = new backend.ocaml.Stage3OcamlLocalNames(new TypedBackendLocalCatalog([]), false, name -> name);
 		var checked = 0;
+		var checkedDynamic = 0;
 		for (owner in typed.getBackendProjection().getClasses()) {
 			final facts = owner.requireSemanticFacts();
 			for (constructor in facts.copyEnumConstructors())
@@ -48,16 +58,30 @@ class M14Stage3EnumPatternsTest {
 						final identity = facts.getClassIdentity();
 						final moduleName = facts.getModuleIdentity();
 						final exact = method.canonicalIdentity;
-						rejects(() -> catalog.call(selected("Missing", moduleName, exact, args), _ -> "0", names), "exact program owner");
-						rejects(() -> catalog.call(selected(identity, "Missing", exact, args), _ -> "0", names), "exact program owner");
-						rejects(() -> catalog.call(selected(identity, moduleName, "Missing", args), _ -> "0", names), "exact constructor declaration");
-						rejects(() -> catalog.call(selected(identity, moduleName, exact, []), _ -> "0", names), "exact constructor declaration");
+						rejects(() -> catalog.call(selected("Missing", moduleName, exact, args), _ -> "0", names, _ -> null), "exact program owner");
+						rejects(() -> catalog.call(selected(identity, "Missing", exact, args), _ -> "0", names, _ -> null), "exact program owner");
+						rejects(() -> catalog.call(selected(identity, moduleName, "Missing", args), _ -> "0", names, _ -> null),
+							"exact constructor declaration");
+						rejects(() -> catalog.call(selected(identity, moduleName, exact, []), _ -> "0", names, _ -> null), "exact constructor declaration");
 						checked++;
+					case Callable(method) if (constructor.name == "AnyValue"):
+						final selected:TypedExactEnumConstructorSource.TypedExactEnumConstructorCall = {
+							owner: facts.getClassIdentity(),
+							modulePath: facts.getModuleIdentity(),
+							declaration: method.canonicalIdentity,
+							constructor: constructor.name,
+							callee: EIdent("ignored"),
+							arguments: [EBool(true)]
+						};
+						rejects(() -> catalog.call(selected, _ -> "true", names, _ -> null), "exact typed operand");
+						checkedDynamic++;
 					case _:
 				}
 		}
 		if (checked != 3)
 			throw "enum selection controls did not exercise both Pair owners and the required nullable payload";
+		if (checkedDynamic != 1)
+			throw "Dynamic enum selection did not reject a missing operand type";
 	}
 
 	static function observe(command:String, arguments:Array<String>, label:String):Void {
@@ -76,11 +100,10 @@ class M14Stage3EnumPatternsTest {
 		final path = Path.join([root, "Main.hx"]);
 		final typed = program(File.getContent(path), path);
 		checkSelection(typed);
-		final unsupported = program("enum Choice { Values(values:Array<Int>); } class Main { static function main():Void {} }", "unsupported-enum/Main.hx");
+		final unsupported = negativeProgram("enum Choice { Values(values:Array<Int>); } class Main { static function main():Void {} }", "array");
 		rejects(() -> EmitterStage.emitToDir(new MacroExpandedProgram([unsupported], false), ".tmp/stage3-enum-unsupported", true, false),
 			"enum payload representation is not implemented");
-		final optionalArray = program("enum Choice { Values(?values:Array<Int>); } class Main { static function main():Void {} }",
-			"unsupported-optional-enum/Main.hx");
+		final optionalArray = negativeProgram("enum Choice { Values(?values:Array<Int>); } class Main { static function main():Void {} }", "optional-array");
 		rejects(() -> EmitterStage.emitToDir(new MacroExpandedProgram([optionalArray], false), ".tmp/stage3-enum-optional-unsupported", true, false),
 			"enum payload representation is not implemented");
 		// A failed request must not retain its different Choice declaration.

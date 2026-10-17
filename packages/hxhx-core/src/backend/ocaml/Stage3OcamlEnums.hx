@@ -12,7 +12,7 @@ import TypedExactEnumConstructorSource.TypedExactEnumConstructorCall;
 	owners. Haxe constructor indexes retain declaration order, while OCaml numbers
 	singletons and payload constructors separately.
 
-	The native payload contract covers Int, Bool, String, and boxed ordinary enums,
+	The native payload contract covers Int, Bool, String, Dynamic, and boxed ordinary enums,
 	including their optional and nullable forms. Other payload representations fail
 	explicitly until their typed conversion is implemented.
 **/
@@ -86,6 +86,7 @@ class Stage3OcamlEnums {
 			case NativeInt: "int";
 			case NativeBool: "bool";
 			case NativeString: "string";
+			case DynamicValue: "Obj.t";
 			case EnumBox(identity):
 				if (!owners.exists(identity))
 					throw "OCaml enum payload representation is not implemented: " + declaration + " / " + identity;
@@ -135,8 +136,11 @@ class Stage3OcamlEnums {
 		Validate the selected constructor, then evaluate its arguments once in Haxe
 		order. Native variants need every payload slot, so omitted optional arguments
 		receive null. Nested lets preserve Haxe's argument evaluation order.
+		The active executable must supply each Dynamic operand's retained type;
+		the exact constructor plan owns its destination and selects the conversion.
 	**/
-	public function call(selected:TypedExactEnumConstructorCall, emit:HxExpr->String, names:Stage3OcamlLocalNames):String {
+	public function call(selected:TypedExactEnumConstructorCall, emit:HxExpr->String, names:Stage3OcamlLocalNames,
+			argumentFacts:HxExpr->Null<TypedBackendCallArgument>):String {
 		final owner = owners.get(selected.owner);
 		if (owner == null || owner.moduleIdentity != selected.modulePath)
 			throw "OCaml enum call has no exact program owner: " + selected.owner;
@@ -162,6 +166,20 @@ class Stage3OcamlEnums {
 				for (index in 0...args.length) {
 					final rendered = emit(operands[index]);
 					final stored = switch (constructor.payloads[index].storage) {
+						case DynamicValue, NullableValue(DynamicValue):
+							// Literal or omitted null has one runtime carrier. Other values
+							// need their source type so Bool cannot become integer 0 or 1.
+							if (index >= selected.arguments.length || operands[index].match(ENull)) {
+								"Obj.repr (" + rendered + ")";
+							} else {
+								final fact = argumentFacts(operands[index]);
+								if (fact == null || fact.expression != operands[index] || fact.type.hasUnknownComponent())
+									throw "OCaml Dynamic enum argument requires its exact typed operand";
+								// The selected constructor owns the destination. The operand
+								// record supplies only its source carrier for this conversion.
+								final carrier = fact.type.getSemanticKey() == "primitive:Bool" ? OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ExactBool : fact.type.isDynamic() ? OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.DynamicValue : OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ConcreteValue;
+								OcamlDynamicOperatorLowering.callArgument("Dynamic", carrier, rendered);
+							}
 						// Obj.repr preserves the null sentinel and already-boxed values.
 						// It also gives a concrete primitive the declared Obj.t storage type.
 						case NullableValue(_): "Obj.repr (" + rendered + ")";

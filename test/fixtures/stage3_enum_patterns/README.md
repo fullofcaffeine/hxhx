@@ -23,13 +23,22 @@ The test also rejects mismatched owner, module, declaration, and arity records.
 A request with an unsupported array payload must fail explicitly. A subsequent
 valid request must compile and run without retaining the failed declaration.
 
-Native payload support covers Int, Bool, String, and ordinary enums, including
+Native payload support covers Int, Bool, String, Dynamic, and ordinary enums, including
 their optional and nullable forms. Omitted payloads and explicit null remain
 distinct from zero, false, and empty text. The observer also passes an existing
 nullable integer through a constructor and checks an optional recursive enum.
 A nested null pattern must match only null. Required nullable arguments still
 cannot be omitted. Generic, rest, array, object, and other payload representations
 remain unfinished. This test does not establish full enum or reflection parity.
+
+Dynamic payloads preserve null, text, integers, and the distinct Boolean runtime
+value. The test distinguishes true from integer 1, passes an already-Dynamic
+value, and retains an ordinary object's identity after mutation. Optional and
+nullable Dynamic arguments preserve null. A two-argument constructor prints
+`flag` before `number`, once each. Missing typed argument evidence is rejected.
+The generic Dynamic payload boundary is tracked by `haxe_ocaml-hiouw`.
+An object carried through Dynamic keeps its reference; declaring that object's
+class directly as the enum parameter remains a separate unsupported case.
 
 `npm run test:m14:enum-pattern-types` checks the shared typing prerequisite.
 It verifies payload types before emission and in the projected local catalog.
