@@ -2725,7 +2725,9 @@ class NekoTargetCore {
 	static function lowerNekoEnumExtractPattern(context:NekoEmitContext, name:String, args:Array<HxSwitchPattern>, scrutinee:String):NekoSwitchPatternLowered {
 		final params = "__hxhx_enum_params(" + scrutinee + ")";
 		final count = args == null ? 0 : args.length;
-		final conds = [nekoEnumCtorCond(scrutinee, name), "($asize(" + params + ") >= " + count + ")"];
+		// Typed enum bodies store a public Haxe Array. Its provider owns the
+		// logical length and indexed reads; VM array primitives cannot inspect it.
+		final conds = [nekoEnumCtorCond(scrutinee, name), "(" + params + ".length >= " + count + ")"];
 		final bindings = new Array<NekoSwitchPatternBinding>();
 		if (args != null) {
 			for (i in 0...args.length) {

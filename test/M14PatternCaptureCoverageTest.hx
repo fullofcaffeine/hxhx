@@ -38,15 +38,14 @@ class M14PatternCaptureCoverageTest {
 			#if pattern_capture_ocaml
 			final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), root + "/ocaml", true);
 			requireOutput(run(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", executable]), entry.expected);
-			#else
-			final context = new backend.BackendContext(root, root + "/local.n", "Main", true, false, HxDefineMap.fromRawDefines(["neko=1"]));
-			final generated = @:privateAccess backend.vm.NekoTargetCore.renderProgram(new MacroExpandedProgram([typed], false), context);
-			sys.io.File.saveContent(root + "/local.neko", generated);
-			run("nekoc", [root + "/local.neko"]);
-			requireOutput(run(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", "neko", root + "/local.n"]), entry.expected);
-			#end
 			Sys.println("PATTERN_CAPTURE_COVERAGE:PASS " + entry.name);
+			#else
+			Sys.println("PATTERN_CAPTURE_TYPED:PASS " + entry.name);
+			#end
 		}
+		#if !pattern_capture_ocaml
+		checkNekoRuntime(cases);
+		#end
 		final source = 'class Main {static inline var value=99; static function main(){var result=switch(4){case value:1;}; Sys.println(result);}}';
 		final root = ".tmp/pattern_capture_constant";
 		sys.FileSystem.createDirectory(root);
@@ -62,6 +61,40 @@ class M14PatternCaptureCoverageTest {
 			throw "static constant incorrectly proved exhaustive capture coverage";
 		Sys.println("PATTERN_CAPTURE_CONSTANT_REJECTION:PASS");
 	}
+
+	#if !pattern_capture_ocaml
+	/** Load real providers once while keeping each case's original local and static scopes separate. */
+	static function checkNekoRuntime(cases:Array<{name:String, source:String, expected:String}>):Void {
+		final root = ".tmp/pattern_capture_complete_neko";
+		sys.FileSystem.createDirectory(root);
+		final sources = new Array<{path:String, source:String}>();
+		final calls = new Array<String>();
+		final expected = new StringBuf();
+		for (index in 0...cases.length) {
+			final entry = cases[index];
+			final owner = "CaptureCase" + index;
+			// Only the entry class and visibility change. Upstream execution below
+			// independently checks the combined source against all original outputs.
+			final renamed = StringTools.replace(StringTools.replace(entry.source, "class Main", "class " + owner), "static function main()",
+				"public static function main()");
+			sources.push({path: owner + ".hx", source: renamed});
+			calls.push(owner + ".main();");
+			expected.add(entry.expected);
+		}
+		sources.push({path: "Main.hx", source: "class Main { static function main():Void {" + calls.join("") + "} }"});
+		for (source in sources)
+			sys.io.File.saveContent(root + "/" + source.path, source.source);
+		requireOutput(run("haxe", ["-cp", root, "-main", "Main", "--interp"]), expected.toString());
+		final program = NekoSourceProgramFixture.build(sources);
+		final context = new backend.BackendContext(root, root + "/local.n", "Main", true, false, HxDefineMap.fromRawDefines(["neko=1"]));
+		final generated = @:privateAccess backend.vm.NekoTargetCore.renderProgram(program, context);
+		sys.io.File.saveContent(root + "/local.neko", generated);
+		run("nekoc", [root + "/local.neko"]);
+		requireOutput(run(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", "neko", root + "/local.n"]), expected.toString());
+		for (entry in cases)
+			Sys.println("PATTERN_CAPTURE_COVERAGE:PASS " + entry.name);
+	}
+	#end
 
 	static function typeSource(source:String, path:String):TypedModule {
 		final module = new ResolvedModule("Main", path, ParserStage.parse(source, path));
