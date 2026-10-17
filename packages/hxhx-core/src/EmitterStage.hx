@@ -109,6 +109,7 @@ class EmitterStage {
 
 	static var currentCallables:Null<backend.ocaml.Stage3OcamlCallableProgram> = null;
 	static var currentClassStorage:Null<backend.ocaml.Stage3OcamlClassStorage> = null;
+	static var currentRuntimeTypes:Null<backend.ocaml.Stage3OcamlRuntimeTypes> = null;
 	static var currentCallableFunction:Null<backend.ocaml.Stage3OcamlCallableProgram.Stage3OcamlCallableFunction> = null;
 
 	static var currentModuleFilePath:Null<String> = null;
@@ -2671,12 +2672,6 @@ class EmitterStage {
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
 			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
 		switch (e) {
-			case ECall(EField(EIdent("Std"), "isOfType"), [valueExpr, typeExpr]):
-				return "Std.isOfType ("
-					+ exprToOcaml(valueExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ") (Obj.repr ("
-					+ exprToOcaml(typeExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ "))";
 			case ECall(EField(EIdent("Array"), "wrap"), [arg]):
 				return "(Obj.magic (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + "))";
 			case EField(EIdent("String"), "fromCharCode"):
@@ -3027,6 +3022,13 @@ class EmitterStage {
 
 	static function exprToOcaml(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
+		if (currentRuntimeTypes != null) {
+			final predicate = currentRuntimeTypes.renderCall(e, currentTypedFunction, currentTypedInitializer,
+				value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				currentFunctionLocalOcamlNames, escapeOcamlString);
+			if (predicate != null)
+				return predicate;
+		}
 		if (currentCallableFunction != null && currentTypedInitializer == null) {
 			final rendered = currentCallableFunction.render(e,
 				value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
@@ -3041,6 +3043,14 @@ class EmitterStage {
 	/** Callback plans consume exact projected occurrences before legacy call adaptation rebuilds them. */
 	static function exprToOcamlRaw(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
+		if (TypedRuntimeTypeSource.isMarker(e)) {
+			if (currentRuntimeTypes == null)
+				throw "OCaml runtime type operation requires its exact program plan";
+			final entry = currentRuntimeTypes.occurrence(e, currentTypedFunction, currentTypedInitializer);
+			return currentRuntimeTypes.render(entry,
+				exprToOcaml(entry.getValue(), arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				currentFunctionLocalOcamlNames, escapeOcamlString);
+		}
 		if (e.match(EField(_, "println"))) {
 			final intrinsic = backend.ocaml.Stage3OcamlIntrinsicCallable.emitValue(e,
 				currentTypedInitializer != null ? currentTypedInitializer.findCallableExpression : currentTypedFunction == null ? null : currentTypedFunction.findCallableExpression);
@@ -4758,6 +4768,12 @@ class EmitterStage {
 		//   upstream-shaped code without having to implement full typing/emission yet.
 		// - it is *not* semantically correct; it is only for bring-up.
 		function hasBringupPoison(e:HxExpr):Bool {
+			if (TypedRuntimeTypeSource.isMarker(e)) {
+				if (currentRuntimeTypes == null)
+					throw "OCaml runtime type validation requires its exact program plan";
+				final value = currentRuntimeTypes.checkedValue(e, currentTypedFunction, currentTypedInitializer);
+				return value != null && hasBringupPoison(value);
+			}
 			final construction = exactConstructor(e);
 			if (construction != null && currentClassStorage != null && currentClassStorage.ownsConstruction(construction)) {
 				for (argument in currentClassStorage.argumentValues(construction))
@@ -6582,7 +6598,7 @@ class EmitterStage {
 			return fromFile;
 
 		// Fallback (in-memory modules): use the parsed main class name when available.
-		final decl = tm == null ? null : tm.getBackendDeclaration();
+		final decl = tm == null ? null : tm.getBackendProjection().getDeclaration();
 		final main = decl == null ? null : HxModuleDecl.getMainClass(decl);
 		final nm0 = main == null ? null : HxClassDecl.getName(main);
 		final nm = nm0 == null ? "" : StringTools.trim(nm0);
@@ -6723,8 +6739,7 @@ class EmitterStage {
 		- Prefer `packages/reflaxe.ocaml/std/runtime`.
 		- Keep the historical `std/runtime` lookup only as a repo-layout fallback.
 	**/
-	static function copyStage3RuntimeForStage3(outAbs:String):Array<String> {
-		final runtimePaths = new Array<String>();
+	static function stage3RuntimeSourceDirectory():String {
 		final root = inferRepoRootForStage3Shims();
 		if (root == null || root.length == 0)
 			throw "stage3 emitter: cannot locate repo root for runtime templates (set HXHX_REPO_ROOT)";
@@ -6742,19 +6757,29 @@ class EmitterStage {
 		if (runtimeSrcDir == null)
 			throw "stage3 emitter: missing runtime directory (expected one of):\n- " + runtimeCandidates.join("\n- ");
 
+		return runtimeSrcDir;
+	}
+
+	/** Select the exact runtime modules before admitting operations or writing output. */
+	static function stage3RuntimePaths(runtimeSrcDir:String):Array<String> {
+		return [
+			for (name in sys.FileSystem.readDirectory(runtimeSrcDir))
+				if (name != null && StringTools.endsWith(name, ".ml")) "runtime/" + name
+		];
+	}
+
+	/** Copy only the runtime files whose identities selected this request's representations. */
+	static function copyStage3RuntimeForStage3(outAbs:String, runtimeSrcDir:String, runtimePaths:Array<String>):Void {
 		final runtimeOutDir = haxe.io.Path.join([outAbs, "runtime"]);
 		if (!sys.FileSystem.exists(runtimeOutDir))
 			sys.FileSystem.createDirectory(runtimeOutDir);
 
-		for (name in sys.FileSystem.readDirectory(runtimeSrcDir)) {
-			if (name == null || !StringTools.endsWith(name, ".ml"))
-				continue;
+		for (path in runtimePaths) {
+			final name = haxe.io.Path.withoutDirectory(path);
 			final srcPath = haxe.io.Path.join([runtimeSrcDir, name]);
 			final dstPath = haxe.io.Path.join([runtimeOutDir, name]);
 			sys.io.File.copy(srcPath, dstPath);
-			runtimePaths.push("runtime/" + name);
 		}
-		return runtimePaths;
 	}
 
 	static function writeStage3ShimIfMissing(outAbs:String, shimName:String, source:String):String {
@@ -7317,6 +7342,10 @@ class EmitterStage {
 		final previous = currentEnums;
 		final previousCallables = currentCallables;
 		final previousCallableFunction = currentCallableFunction;
+		final previousRuntimeTypes = currentRuntimeTypes;
+		final previousClassStorage = currentClassStorage;
+		currentRuntimeTypes = null;
+		currentClassStorage = null;
 		currentCallables = null;
 		currentCallableFunction = null;
 		currentEnums = new backend.ocaml.Stage3OcamlEnums(ocamlValueIdent, escapeOcamlString);
@@ -7327,42 +7356,36 @@ class EmitterStage {
 			currentEnums = previous;
 			currentCallables = previousCallables;
 			currentCallableFunction = previousCallableFunction;
+			currentRuntimeTypes = previousRuntimeTypes;
+			currentClassStorage = previousClassStorage;
 			throw error;
 		} catch (error:String) {
 			currentEnums = previous;
 			currentCallables = previousCallables;
 			currentCallableFunction = previousCallableFunction;
+			currentRuntimeTypes = previousRuntimeTypes;
+			currentClassStorage = previousClassStorage;
 			throw error;
 		} catch (error:haxe.Exception) {
 			currentEnums = previous;
 			currentCallables = previousCallables;
 			currentCallableFunction = previousCallableFunction;
+			currentRuntimeTypes = previousRuntimeTypes;
+			currentClassStorage = previousClassStorage;
 			throw error;
 		}
 		currentEnums = previous;
 		currentCallables = previousCallables;
 		currentCallableFunction = previousCallableFunction;
+		currentRuntimeTypes = previousRuntimeTypes;
+		currentClassStorage = previousClassStorage;
 		return result;
 	}
 
 	static function emitToDirWithEnumOwner(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool, buildExecutable:Bool,
 			ocamlProfile:backend.OcamlProfile):String {
-		TypedBackendProgramValidation.assertRuntimeTypeOperandsAbsent(p.getTypedModules(), "OCaml emitter");
-		traceEmitToDirEntry("emitToDir_enter");
-		final outAbs = requireEmitToDirOutAbs(outDir);
-		installEmitToDirProfile(ocamlProfile);
-		ensureEmitToDirOutDir(outAbs);
-
-		EmitterStageDebug.traceStage3Phase("emitToDir_before_generated_modules");
-		final generatedPaths = emitGeneratedOcamlModulesForStage3(p, outAbs);
-		EmitterStageDebug.traceStage3Phase("emitToDir_after_generated_modules:" + generatedPaths.length);
-		EmitterStageDebug.traceStage3Phase("emitToDir_before_runtime_copy");
-		final runtimePaths = copyStage3RuntimeForStage3(outAbs);
-		EmitterStageDebug.traceStage3Phase("emitToDir_after_runtime_copy:" + runtimePaths.length);
-		EmitterStageDebug.traceStage3Phase("emitToDir_before_bootstrap_shims");
-		for (shimPath in emitStage3BootstrapShimsForStage3(outAbs))
-			generatedPaths.push(shimPath);
-		EmitterStageDebug.traceStage3Phase("emitToDir_after_bootstrap_shims:" + generatedPaths.length);
+		final runtimeSrcDir = stage3RuntimeSourceDirectory();
+		final runtimePaths = stage3RuntimePaths(runtimeSrcDir);
 
 		EmitterStageDebug.traceStage3Phase("before_typed_modules");
 		final typedModulesRaw = p.getTypedModules();
@@ -7423,6 +7446,23 @@ class EmitterStage {
 			}
 		}
 		currentEnums.validate();
+		currentRuntimeTypes = new backend.ocaml.Stage3OcamlRuntimeTypes(typedModules, currentClassStorage);
+
+		traceEmitToDirEntry("emitToDir_enter");
+		final outAbs = requireEmitToDirOutAbs(outDir);
+		installEmitToDirProfile(ocamlProfile);
+		ensureEmitToDirOutDir(outAbs);
+
+		EmitterStageDebug.traceStage3Phase("emitToDir_before_generated_modules");
+		final generatedPaths = emitGeneratedOcamlModulesForStage3(p, outAbs);
+		EmitterStageDebug.traceStage3Phase("emitToDir_after_generated_modules:" + generatedPaths.length);
+		EmitterStageDebug.traceStage3Phase("emitToDir_before_runtime_copy");
+		copyStage3RuntimeForStage3(outAbs, runtimeSrcDir, runtimePaths);
+		EmitterStageDebug.traceStage3Phase("emitToDir_after_runtime_copy:" + runtimePaths.length);
+		EmitterStageDebug.traceStage3Phase("emitToDir_before_bootstrap_shims");
+		for (shimPath in emitStage3BootstrapShimsForStage3(outAbs))
+			generatedPaths.push(shimPath);
+		EmitterStageDebug.traceStage3Phase("emitToDir_after_bootstrap_shims:" + generatedPaths.length);
 
 		function emitEnum(classProjection:TypedBackendClassProjection, moduleName:String):Null<String> {
 			final source = currentEnums.render(classProjection);
@@ -7442,7 +7482,7 @@ class EmitterStage {
 		//   qualify those unqualified references during emission.
 		final moduleNameByPkgAndClass:Map<String, String> = new Map();
 		for (tm in typedModules) {
-			final decl = tm.getBackendDeclaration();
+			final decl = tm.getBackendProjection().getDeclaration();
 			final moduleTypeName = moduleTypeNameFor(tm);
 			final pkgRaw = decl == null ? "" : HxModuleDecl.getPackagePath(decl);
 			final pkg = pkgRaw == null ? "" : StringTools.trim(pkgRaw);
@@ -7564,7 +7604,7 @@ class EmitterStage {
 			for (k in runtimeModuleNames.keys())
 				existingMods.set(k, true);
 			for (tm in typedModules) {
-				final decl = tm.getBackendDeclaration();
+				final decl = tm.getBackendProjection().getDeclaration();
 				final moduleTypeName = moduleTypeNameFor(tm);
 				for (cls in HxModuleDecl.getClasses(decl)) {
 					final className = HxClassDecl.getName(cls);
@@ -7687,7 +7727,7 @@ class EmitterStage {
 			}
 		}
 		for (tm in typedModules) {
-			final decl = tm.getBackendDeclaration();
+			final decl = tm.getBackendProjection().getDeclaration();
 			final moduleTypeName = moduleTypeNameFor(tm);
 			for (typedClass in tm.getTypedClasses()) {
 				final cls = typedClass.getSourceDeclaration();
@@ -7761,7 +7801,8 @@ class EmitterStage {
 			final moduleEmitBodies = emitFullBodies;
 
 			final moduleProjection = tm.getBackendProjection();
-			moduleProjection.assertRuntimeTypeOperandsAbsent("OCaml emitter");
+			// The request plan admitted exact runtime type occurrences before output.
+			// Each rendered predicate still resolves through its owning projection.
 			final decl = moduleProjection.getDeclaration();
 			final mainClass = HxModuleDecl.getMainClass(decl);
 			final mainClassProjection = moduleProjection.findClass(mainClass);

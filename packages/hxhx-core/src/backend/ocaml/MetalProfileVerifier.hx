@@ -87,7 +87,7 @@ class MetalProfileVerifier {
 	static function verifyTypedModule(typedModule:TypedModule, violations:Array<MetalViolation>):Void {
 		final parsed = typedModule.getParsed();
 		final filePath = parsed.getFilePath();
-		final moduleDecl = typedModule.getBackendDeclaration();
+		final moduleDecl = typedModule.getBackendProjection().getDeclaration();
 		for (cls in HxModuleDecl.getClasses(moduleDecl)) {
 			final className = HxClassDecl.getName(cls);
 			for (field in HxClassDecl.getFields(cls)) {
@@ -168,6 +168,9 @@ class MetalProfileVerifier {
 	}
 
 	static function verifyExpr(filePath:String, className:String, fnName:String, stmtPos:Null<HxPos>, expr:HxExpr, violations:Array<MetalViolation>):Void {
+		if (TypedRuntimeTypeSource.isMarker(expr))
+			addViolation(violations, filePath, className, fnName, stmtPos, CODE_REFLECTION_CALL, "runtime type operation",
+				"runtime class identity needs the portable object representation", "use the portable profile for runtime class predicates");
 		switch (expr) {
 			case ESourceTry(_, bodies, position):
 				for (body in bodies)
