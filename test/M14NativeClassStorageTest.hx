@@ -18,6 +18,42 @@ class M14NativeClassStorageTest {
 		require(rejected, "missing ownership rejection: " + diagnostic);
 	}
 
+	/** Ancestry includes runtime and extern parents without assigning them generated object storage. */
+	static function providerAncestry():Void {
+		for (externParent in [false, true]) {
+			final source = "class Main extends Parent implements ChildMarker {} "
+				+ (externParent ? "extern " : "")
+				+ "class Parent implements ParentMarker {} "
+				+ "interface ParentMarker extends Root {} interface ChildMarker extends Root {} interface Root {}";
+			final module = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
+			final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
+			final classes = typed.getBackendProjection().getClasses();
+			final child = classes.filter(owner -> HxClassDecl.getName(owner.getDeclaration()) == "Main")[0];
+			final parent = classes.filter(owner -> HxClassDecl.getName(owner.getDeclaration()) == "Parent")[0];
+			final storage = new Stage3OcamlClassStorage();
+			for (owner in classes)
+				storage.add(owner, !externParent && owner == parent);
+			final quote = (value:String) -> '"' + value + '"';
+			if (externParent)
+				reject(() -> storage.classRegistration(child, quote), "extern reflection requires a target-owned runtime identity");
+			else
+				require(storage.classRegistration(child,
+					quote) == 'let () = HxType.register_class_tags "Main" ["Main"; "Parent"; "ParentMarker"; "Root"; "ChildMarker"]',
+					"provider ancestry lost an exact parent or repeated a shared interface");
+			final parentInfo = typed.getTypedClasses().filter(owner -> owner.getSemanticInfo().getShortName() == "Parent")[0];
+			final parentType = TyType.nominal(parentInfo.getSemanticInfo().getIdentity(), []);
+			require(storage.nominalName(parentType) == null, "ancestry metadata admitted a provider to typed catches");
+			require(!storage.usesIdentity(parentType), "ancestry metadata admitted a provider to generated storage");
+			require(storage.classRegistration(parent, quote) == null, "generated code registered a provider-owned class");
+			require(storage.instanceInitializers(parent) == null, "provider acquired generated instance initializers");
+			reject(() -> storage.add(parent, !externParent), "owner registered twice");
+			final incomplete = new Stage3OcamlClassStorage();
+			incomplete.add(child, false);
+			reject(() -> incomplete.classRegistration(child, quote), "lacks exact ancestor facts: Main.Parent");
+		}
+		Sys.println("NATIVE_CLASS_PROVIDER_ANCESTRY:PASS");
+	}
+
 	/** Reconstructed syntax and independently typed declarations cannot borrow current storage facts. */
 	static function ownership():Void {
 		final source = "class Main { public var length:Int; static var initial:Bool = new Main() == new Main(); "
@@ -101,6 +137,7 @@ class M14NativeClassStorageTest {
 	}
 
 	public static function main():Void {
+		providerAncestry();
 		ownership();
 		final root = "test/fixtures/native_class_storage";
 		final path = root + "/Main.hx";

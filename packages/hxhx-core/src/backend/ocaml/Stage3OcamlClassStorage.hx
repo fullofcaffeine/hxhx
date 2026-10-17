@@ -8,6 +8,9 @@ package backend.ocaml;
 	remains an ordinary field without changing String, Array, or Bytes operations.
 **/
 class Stage3OcamlClassStorage {
+	// Every exact class declaration can describe ancestry. Only admitted generated
+	// declarations below may select object storage or typed-catch representations.
+	final ancestry:Map<String, TypedBackendClassSemanticFacts> = [];
 	final nominals:Map<String, TypedBackendClassSemanticFacts> = [];
 	final owners:Map<String, TypedBackendClassSemanticFacts> = [];
 	final projections:Map<String, TypedBackendClassProjection> = [];
@@ -16,16 +19,21 @@ class Stage3OcamlClassStorage {
 
 	public function new() {}
 
-	/** The emitter supplies its actual runtime-module selection, not a second name allowlist. */
+	/**
+		Retain parent declarations even when another provider owns their representation.
+		The emitter supplies its actual runtime-module selection; that selection controls
+		storage and catch admission separately from the exact ancestry metadata.
+	 */
 	public function add(projection:TypedBackendClassProjection, runtimeProvided:Bool, ?outputModule:String):Void {
-		if (runtimeProvided)
-			return;
 		final facts = projection.requireSemanticFacts();
-		if (facts.getIsExtern() || !facts.getNominalKind().match(ClassInstance))
+		if (!facts.getNominalKind().match(ClassInstance))
 			return;
 		final identity = facts.getClassIdentity();
-		if (nominals.exists(identity))
+		if (ancestry.exists(identity))
 			throw "native class storage owner registered twice: " + identity;
+		ancestry.set(identity, facts);
+		if (runtimeProvided || facts.getIsExtern())
+			return;
 		if (facts.getIsInterface()) {
 			nominals.set(identity, facts);
 			return;
@@ -69,7 +77,7 @@ class Stage3OcamlClassStorage {
 				throw "native class registration has cyclic ancestry: " + owner;
 			if (visited.exists(owner))
 				return;
-			final facts = nominals.get(owner);
+			final facts = ancestry.get(owner);
 			if (facts == null)
 				throw "native class registration lacks exact ancestor facts: " + owner;
 			visiting.set(owner, true);
