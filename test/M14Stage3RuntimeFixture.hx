@@ -29,6 +29,38 @@ class M14Stage3RuntimeFixture {
 	}
 
 	public static function typeMain(input:{source:String, path:String, root:String}):TypedModule {
+		final context = loadContext(input);
+		return TyperStage.typeResolvedModule(context.main, context.index, context.loader, true);
+	}
+
+	/**
+		Prepare the original root observer with real provider bodies, including
+		required extern-inline expansion. These focused tests emit only their root;
+		they do not establish native support for the entire standard-library closure.
+	 */
+	public static function prepareMain(input:{source:String, path:String, root:String}):TypedModule {
+		final context = loadContext(input);
+		final pending = [context.main];
+		final typed = new Array<TypedModule>();
+		var cursor = 0;
+		while (cursor < pending.length) {
+			typed.push(TyperStage.typeResolvedModule(pending[cursor++], context.index, context.loader, true));
+			for (module in context.loader.drainNewModules())
+				pending.push(module);
+		}
+		final prepared = TypedAbstractOperatorLowering.lowerModules(typed, context.index);
+		final roots = prepared.filter(module -> module.getSourceOrigin().sourceModulePath == "Main");
+		if (roots.length != 1)
+			throw "native runtime fixture requires its exact prepared Main module";
+		return roots[0];
+	}
+
+	/** Focused typing and native preparation share the same provider identity and classpath rules. */
+	static function loadContext(input:{source:String, path:String, root:String}):{
+		main:ResolvedModule,
+		index:TyperIndex,
+		loader:ModuleLoader
+	} {
 		final module = new ResolvedModule("Main", input.path, ParserStage.parse(input.source, input.path));
 		final arguments = Stage1Args.parse(["-cp", input.root, "-main", "Main"], true);
 		final paths = Stage3SetupSupport.projectClassPaths({
@@ -41,6 +73,6 @@ class M14Stage3RuntimeFixture {
 		final index = TyperIndex.buildHeaders([module]);
 		final loader = new ModuleLoader(paths, Stage3SetupSupport.buildDefinesMap([], "ocaml", "ocaml"), index);
 		loader.markResolvedAlready([module]);
-		return TyperStage.typeResolvedModule(module, index, loader, true);
+		return {main: module, index: index, loader: loader};
 	}
 }

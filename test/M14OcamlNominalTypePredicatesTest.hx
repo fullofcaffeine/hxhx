@@ -122,7 +122,7 @@ class M14OcamlNominalTypePredicatesTest {
 		final path = root + "/Main.hx";
 		final expected = File.getContent(root + "/expected.stdout");
 		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", root, "--run", "Main"], expected: expected});
-		final module = M14Stage3RuntimeFixture.typeMain({source: File.getContent(path), path: path, root: root});
+		final module = M14Stage3RuntimeFixture.prepareMain({source: File.getContent(path), path: path, root: root});
 		final program = MacroStage.expandProgram([module], []);
 		final context = new backend.BackendContext(".tmp/ocaml_nominal_type_predicates", null, "Main", true, true,
 			HxDefineMap.fromRawDefines(["ocaml_profile=portable"]));
