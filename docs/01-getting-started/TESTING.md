@@ -57,19 +57,27 @@ npm test
 `npm test` is the complete serialized regression inventory, not the command to
 rerun after every small edit. Core CI routes that inventory by change risk and
 then reports one `Tests` result that fails when any required check fails or is
-incomplete. The inventory has 170 named commands. Q2 target/compiler changes
-run compiler foundations, packaging, five focused groups, macro-host integration,
-portable fixtures, and snapshots/examples, plus native/plugin smoke checks.
+incomplete. The inventory has 177 named commands. Q2 target/compiler changes
+run compiler foundations, packaging, five focused groups, two dedicated Neko groups,
+macro-host integration, portable fixtures, and snapshots/examples, plus native/plugin smoke checks.
 Q3 high-risk, scheduled, manual, and release work also runs `hxhx-targets`,
 which treats the compiler as a large application. To reproduce a group locally:
 
 ```bash
 npm run test:ci:shard -- --shard compiler-foundation
 npm run test:ci:shard -- --shard compiler-focused-5
+npm run test:ci:shard -- --shard compiler-focused-neko-runtime
+npm run test:ci:shard -- --shard compiler-focused-neko-locals
 npm run test:ci:shard -- --shard macro-host-integration
 npm run test:ci:shard -- --shard target-packages
 npm run test:ci:shard -- --shard hxhx-targets
 ```
+
+The two Neko groups run separately because real-provider compilation can consume
+most of a general compiler job's budget. Runtime-type and target-admission tests
+have a 60-minute ceiling; local-binding and constructor tests have a 40-minute
+ceiling. These limits include setup and do not represent measured completion times.
+Every original command remains required once, and a timeout still fails `Tests`.
 
 `test:m14:runtime-type-operands` remains the full serial command for its 52
 checks. CI schedules its shared and Neko groups separately and gives each C++

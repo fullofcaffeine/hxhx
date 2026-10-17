@@ -582,6 +582,12 @@ jobs:
           - shard: compiler-focused-2
             label: Focused compiler regressions (2/5)
             timeout_minutes: 40
+          - shard: compiler-focused-neko-runtime
+            label: Neko runtime types and target admission
+            timeout_minutes: 60
+          - shard: compiler-focused-neko-locals
+            label: Neko local bindings and constructors
+            timeout_minutes: 40
           - shard: compiler-focused-3
             label: C++ constructor and instance regressions
             timeout_minutes: 40

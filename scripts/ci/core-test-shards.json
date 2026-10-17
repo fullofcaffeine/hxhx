@@ -27,6 +27,18 @@
       "baselineSeconds": null
     },
     {
+      "id": "compiler-focused-neko-runtime",
+      "label": "Neko runtime types and target admission",
+      "minimumTier": "Q2",
+      "baselineSeconds": null
+    },
+    {
+      "id": "compiler-focused-neko-locals",
+      "label": "Neko local bindings and constructors",
+      "minimumTier": "Q2",
+      "baselineSeconds": null
+    },
+    {
       "id": "compiler-focused-3",
       "label": "C++ constructor and instance regressions",
       "minimumTier": "Q2",
@@ -167,7 +179,7 @@
     "test:m14:typer-abstract-catalog": "compiler-focused-2",
     "test:m14:typed-body-boundary": "compiler-focused-1",
     "test:m14:runtime-type-shared": "compiler-focused-1",
-    "test:m14:runtime-type-neko": "compiler-focused-2",
+    "test:m14:runtime-type-neko": "compiler-focused-neko-runtime",
     "test:m14:cpp-map-runtime-type-inventory": "compiler-focused-5",
     "test:m14:cpp-managed-map-type": "compiler-focused-5",
     "test:m14:cpp-managed-object-map": "compiler-focused-5",
@@ -190,7 +202,7 @@
     "test:m14:cpp-managed-runtime-packaging": "compiler-focused-3",
     "test:m14:typed-local-identity": "compiler-focused-1",
     "test:m14:js-typed-local-projection": "compiler-focused-1",
-    "test:m14:neko-typed-local-projection": "compiler-focused-2",
+    "test:m14:neko-typed-local-projection": "compiler-focused-neko-locals",
     "test:m14:lua-typed-local-projection": "compiler-focused-1",
     "test:m14:cs-typed-dynamic-local-projection": "compiler-focused-2",
     "test:m14:python-static-fields": "compiler-focused-1",

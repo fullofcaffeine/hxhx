@@ -170,7 +170,9 @@ function main() {
     'compiler-foundation': 18,
     'compiler-packaging': 14,
     'compiler-focused-1': 46,
-    'compiler-focused-2': 53,
+    'compiler-focused-2': 51,
+    'compiler-focused-neko-runtime': 1,
+    'compiler-focused-neko-locals': 1,
     'compiler-focused-3': 12,
     'compiler-focused-4': 9,
     'compiler-focused-5': 18,
@@ -184,6 +186,8 @@ function main() {
     'compiler-packaging': 'Q2',
     'compiler-focused-1': 'Q2',
     'compiler-focused-2': 'Q2',
+    'compiler-focused-neko-runtime': 'Q2',
+    'compiler-focused-neko-locals': 'Q2',
     'compiler-focused-3': 'Q2',
     'compiler-focused-4': 'Q2',
     'compiler-focused-5': 'Q2',
@@ -518,16 +522,18 @@ function main() {
     ['compiler-packaging', 'OCaml packaging and metal profile'],
     ['compiler-focused-1', 'Focused compiler regressions (1/5)'],
     ['compiler-focused-2', 'Focused compiler regressions (2/5)'],
+    ['compiler-focused-neko-runtime', 'Neko runtime types and target admission', 60],
+    ['compiler-focused-neko-locals', 'Neko local bindings and constructors'],
     ['compiler-focused-3', 'C++ constructor and instance regressions'],
     ['compiler-focused-4', 'C++ inheritance and nullable regressions'],
     ['compiler-focused-5', 'C++ runtime type and Map regressions'],
     ['macro-host-integration', 'Macro-host integration'],
     ['target-packages', 'Snapshots and examples']
   ]
-  for (const [shard, label] of expectedBoundedRows) {
+  for (const [shard, label, timeoutMinutes = 40] of expectedBoundedRows) {
     requireIncludes(
       q2Matrix,
-      `          - shard: ${shard}\n            label: ${label}\n            timeout_minutes: 40`,
+      `          - shard: ${shard}\n            label: ${label}\n            timeout_minutes: ${timeoutMinutes}`,
       `Core bounded shard ${shard}`
     )
   }
