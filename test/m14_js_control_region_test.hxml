@@ -23,11 +23,7 @@ test/m14_untyped_call_control_test.hxml
 -main M14EnumSwitchCoverageProofTest
 --interp
 --next
--cp packages/hxhx-core/src
--cp packages/reflaxe.ocaml/src
--cp test
--main M14PatternCaptureCoverageTest
---interp
+test/m14_pattern_capture_coverage_test.hxml
 --next
 -cp packages/hxhx-core/src
 -cp packages/reflaxe.ocaml/src
