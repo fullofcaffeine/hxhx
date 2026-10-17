@@ -474,6 +474,7 @@ class TypedBackendClassGraph {
 		final returnType = TyTypeSubstitution.apply(method.returnSemanticType, bindings);
 		return {
 			canonicalIdentity: method.canonicalIdentity,
+			nativeName: method.nativeName,
 			name: method.name,
 			isStatic: method.isStatic,
 			typeParameters: method.typeParameters.copy(),
@@ -543,6 +544,7 @@ class TypedBackendClassGraph {
 	static function copySpecializedMethod(method:TypedBackendClassMethodFact):TypedBackendClassMethodFact
 		return {
 			canonicalIdentity: method.canonicalIdentity,
+			nativeName: method.nativeName,
 			name: method.name,
 			isStatic: method.isStatic,
 			typeParameters: method.typeParameters.copy(),

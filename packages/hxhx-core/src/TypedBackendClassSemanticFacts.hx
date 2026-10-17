@@ -46,6 +46,7 @@ typedef TypedBackendClassMethodArgumentFact = {
 
 typedef TypedBackendClassMethodFact = {
 	final canonicalIdentity:String;
+	final nativeName:TyNativeName;
 	final name:String;
 	final isStatic:Bool;
 	final typeParameters:Array<TyTypeParameterId>;
@@ -84,6 +85,7 @@ class TypedBackendClassSemanticFacts {
 	final moduleIdentity:String;
 	final declaredName:String;
 	final publicReflectionName:Null<TyPublicReflectionName>;
+	final nativeName:Null<TyNativeName>;
 	final typeParameters:Array<TyTypeParameterId>;
 	final superType:Null<TyType>;
 	final superClassIdentity:Null<String>;
@@ -115,6 +117,7 @@ class TypedBackendClassSemanticFacts {
 		// keeps enum and abstract facts out of the class/interface membership graph.
 		final classInfo:Null<TyClassInfo> = Std.isOfType(info, TyClassInfo) ? cast info : null;
 		publicReflectionName = classInfo == null ? null : classInfo.getPublicReflectionName();
+		nativeName = classInfo == null ? null : classInfo.getNativeName();
 		isInterface = classInfo != null && classInfo.getIsInterface();
 		isExtern = classInfo != null && classInfo.getIsExtern();
 		final indexedInterfaces = classInfo == null ? [] : classInfo.getDeclaredInterfaceTypes();
@@ -280,6 +283,7 @@ class TypedBackendClassSemanticFacts {
 			final allowedTypeParameters = typeParameters.concat(methodTypeParameters);
 			final fact:TypedBackendClassMethodFact = {
 				canonicalIdentity: normalize(declaration.getIdentity().getCanonicalKey()),
+				nativeName: declaration.getNativeName(),
 				name: normalize(signature.getName()),
 				isStatic: signature.getIsStatic(),
 				typeParameters: methodTypeParameters,
@@ -337,6 +341,7 @@ class TypedBackendClassSemanticFacts {
 		identityFacts.push(moduleIdentity);
 		identityFacts.push(declaredName);
 		identityFacts.push(publicReflectionName == null ? null : publicReflectionName.getCanonicalIdentity());
+		identityFacts.push(nativeName == null ? null : nativeName.getCanonicalIdentity());
 		identityFacts.push(enumDeclaration == null ? "not-enum" : enumDeclaration.getCanonicalIdentity());
 		switch (nominalKind) {
 			case ClassInstance:
@@ -385,6 +390,7 @@ class TypedBackendClassSemanticFacts {
 		identityFacts.push(Std.string(methods.length));
 		for (method in methods) {
 			identityFacts.push(method.canonicalIdentity);
+			identityFacts.push(method.nativeName.getCanonicalIdentity());
 			identityFacts.push(method.name);
 			identityFacts.push(boolText(method.isStatic));
 			identityFacts.push(Std.string(method.typeParameters.length));
@@ -495,7 +501,11 @@ class TypedBackendClassSemanticFacts {
 		return superTypeDisplay;
 
 	public function getSchemaRevision():String
-		return "typed-backend-class-semantic-facts-v14";
+		return "typed-backend-class-semantic-facts-v15";
+
+	/** Frozen host-module metadata does not grant a reflected class identity. */
+	public function getNativeName():Null<TyNativeName>
+		return nativeName;
 
 	/**
 		Publish an inferred result without replacing the declaration key selected
@@ -541,6 +551,16 @@ class TypedBackendClassSemanticFacts {
 
 	public function copyMethods():Array<TypedBackendClassMethodFact>
 		return [for (method in methods) copyMethod(method)];
+
+	/** Matching text from another index cannot authorize a host call. */
+	public function requireMethod(declaration:TyDeclarationInfo):TypedBackendClassMethodFact {
+		if (declaration == null || declarationOwner.declarationForSignature(declaration.getSignature()) != declaration)
+			throw "backend method facts require their exact declaration";
+		final fact = findMethod(declaration.getIdentity().getCanonicalKey());
+		if (fact == null)
+			throw "backend method declaration has no published facts";
+		return fact;
+	}
 
 	/** Preserve source tag order while isolating callers from the retained member inventories. */
 	public function copyEnumConstructors():Array<TypedBackendEnumConstructorFact> {
@@ -608,6 +628,7 @@ class TypedBackendClassSemanticFacts {
 
 	static function sameMethod(left:TypedBackendClassMethodFact, right:TypedBackendClassMethodFact):Bool {
 		if (left.canonicalIdentity != right.canonicalIdentity
+			|| left.nativeName.getCanonicalIdentity() != right.nativeName.getCanonicalIdentity()
 			|| left.name != right.name
 			|| left.isStatic != right.isStatic
 			|| !sameTypeParameters(left.typeParameters, right.typeParameters)
@@ -668,6 +689,7 @@ class TypedBackendClassSemanticFacts {
 	static function copyMethod(fact:TypedBackendClassMethodFact):TypedBackendClassMethodFact
 		return {
 			canonicalIdentity: fact.canonicalIdentity,
+			nativeName: fact.nativeName,
 			name: fact.name,
 			isStatic: fact.isStatic,
 			typeParameters: fact.typeParameters.copy(),

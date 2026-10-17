@@ -3004,6 +3004,9 @@ class EmitterStage {
 
 	/** Direct calls and stored callback origins resolve the same exact typed declaration name. */
 	static function callableDeclarationReference(declaration:TyDeclarationInfo):String {
+		final native = currentCallables == null ? null : currentCallables.externs.reference(declaration);
+		if (native != null)
+			return native;
 		final intrinsic = backend.ocaml.Stage3OcamlIntrinsicCallable.reference(declaration);
 		if (intrinsic != null)
 			return intrinsic;
@@ -3022,6 +3025,13 @@ class EmitterStage {
 
 	static function exprToOcaml(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
+		if (currentCallables != null) {
+			final native = currentCallables.externs.renderCall(e, currentTypedFunction, currentTypedInitializer,
+				value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				currentFunctionLocalOcamlNames);
+			if (native != null)
+				return native;
+		}
 		if (currentRuntimeTypes != null) {
 			final predicate = currentRuntimeTypes.renderCall(e, currentTypedFunction, currentTypedInitializer,
 				value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
@@ -3043,6 +3053,11 @@ class EmitterStage {
 	/** Callback plans consume exact projected occurrences before legacy call adaptation rebuilds them. */
 	static function exprToOcamlRaw(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
+		if (currentCallables != null && (currentTypedFunction != null || currentTypedInitializer != null)) {
+			final native = currentCallables.externs.value(e, currentTypedFunction, currentTypedInitializer);
+			if (native != null)
+				return native;
+		}
 		if (TypedRuntimeTypeSource.isMarker(e)) {
 			if (currentRuntimeTypes == null)
 				throw "OCaml runtime type operation requires its exact program plan";
@@ -9293,7 +9308,7 @@ class EmitterStage {
 				final name = HxClassDecl.getName(declaration);
 				final isPrimary = name == className;
 				final outputModule = moduleNameForDecl(decl, moduleTypeName, name);
-				if (runtimeModuleNames.exists(outputModule))
+				if (runtimeModuleNames.exists(outputModule) || currentCallables.externs.ownsClass(projection))
 					continue;
 				EmitterStageDebug.traceStage3Module(isPrimary ? "main" : moduleEmitBodies ? "helper" : "stub", outputModule, tm.getParsed().getFilePath());
 				final path = isPrimary

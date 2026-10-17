@@ -264,6 +264,7 @@
     "test:m14:cpp-inherited-storage": "compiler-focused-4",
     "test:m14:cpp-string-length": "compiler-focused-4",
     "test:m14:ocaml-nominal-type-predicates": "compiler-focused-2",
-    "test:m14:ocaml-module-inventory": "compiler-focused-2"
+    "test:m14:ocaml-module-inventory": "compiler-focused-2",
+    "test:m14:ocaml-native-externs": "compiler-focused-2"
   }
 }

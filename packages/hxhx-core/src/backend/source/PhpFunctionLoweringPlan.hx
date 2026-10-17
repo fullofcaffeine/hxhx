@@ -1049,6 +1049,7 @@ class PhpFunctionLoweringPlan {
 	static function copyMethod(method:TypedBackendClassMethodFact):TypedBackendClassMethodFact
 		return {
 			canonicalIdentity: method.canonicalIdentity,
+			nativeName: method.nativeName,
 			name: method.name,
 			isStatic: method.isStatic,
 			typeParameters: method.typeParameters.copy(),

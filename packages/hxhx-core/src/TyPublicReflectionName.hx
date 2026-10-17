@@ -33,13 +33,10 @@ class TyPublicReflectionName {
 			final key = StringTools.trim(opening < 0 ? text : text.substr(0, opening));
 			switch (key) {
 				case "native":
-					final parsedName = switch (HxParser.parseCompleteExprText(text)) {
-						case ECall(EIdent("native"), [EString(value)]): value;
-						case _: throw "public reflection native metadata requires one literal string: " + owner;
-					};
-					if (nativeName != null && nativeName != parsedName)
+					if (info.getNativeName().hasConflict())
 						unsupported = "conflicting native reflection names";
-					nativeName = parsedName;
+					else
+						nativeName = info.getNativeName().getName();
 				case "generic", "genericBuild":
 					unsupported = "specialized generic reflection requires its generated declaration";
 				case "nativeGen", "realPath":

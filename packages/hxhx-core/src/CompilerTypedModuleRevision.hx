@@ -220,6 +220,7 @@ class CompilerTypedModuleRevision {
 		// The checked class boundary includes enums but excludes erased abstracts.
 		// Runtime names are public API even when no field or method changes.
 		out.push(Std.isOfType(semanticInfo, TyClassInfo) ? (cast semanticInfo : TyClassInfo).getPublicReflectionName().getCanonicalIdentity() : null);
+		out.push(Std.isOfType(semanticInfo, TyClassInfo) ? (cast semanticInfo : TyClassInfo).getNativeName().getCanonicalIdentity() : null);
 		// A switch consumes the complete enum domain, including values it omits.
 		// Changing alias equality can turn a complete switch into an incomplete one.
 		// Unlike an ordinary constant read, that dependency is part of type checking.
@@ -269,6 +270,7 @@ class CompilerTypedModuleRevision {
 			addStrings(out, HxFunctionDecl.getMetadata(sourceFunction));
 			final declaration = typedFunction.getDeclaration();
 			if (declaration != null) {
+				out.push(declaration.getNativeName().getCanonicalIdentity());
 				final signature = declaration.getSignature();
 				addTypes(out, signature.getArgs());
 				addBools(out, signature.getArgOptional());

@@ -31,6 +31,8 @@ const typedClassFactPlanCuts = new Set([
   "packages/hxhx-core/src/backend/ocaml/Stage3OcamlEnumPlan.hx",
   // Native class storage admits generated owners and validates exact stored fields before rendering.
   "packages/hxhx-core/src/backend/ocaml/Stage3OcamlClassStorage.hx",
+  // Native exports bind exact declarations to validated names and fixed checked host signatures.
+  "packages/hxhx-core/src/backend/ocaml/Stage3OcamlExternBindings.hx",
   // C++ indexes exact class/module owners here; callable plans still own target representation choices.
   "packages/hxhx-core/src/backend/cpp/CppTypedProgramProjection.hx",
   // Managed program admission joins exact method owners and extern bindings before emission.
@@ -172,7 +174,7 @@ requireFragment(
 );
 requireFragment(
   "packages/hxhx-core/src/TypedBackendClassSemanticFacts.hx",
-  'return "typed-backend-class-semantic-facts-v14"',
+  'return "typed-backend-class-semantic-facts-v15"',
   "versioned immutable typed backend class-fact schema",
 );
 requireFragment(

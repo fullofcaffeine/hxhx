@@ -12,6 +12,7 @@ class TyDeclarationInfo {
 	final owner:TyNominalTypeId;
 	final signature:TyFunSig;
 	final metadata:Array<String>;
+	final nativeName:TyNativeName;
 	final sourceDeclaration:HxFunctionDecl;
 	final implementation:Null<TyDeclarationInfo>;
 	final position:HxPos;
@@ -29,6 +30,7 @@ class TyDeclarationInfo {
 		this.owner = owner;
 		this.signature = signature;
 		this.metadata = metadata == null ? [] : metadata.copy();
+		this.nativeName = new TyNativeName(this.metadata);
 		this.sourceDeclaration = sourceDeclaration;
 		this.implementation = implementation;
 		if (implementation != null
@@ -60,7 +62,11 @@ class TyDeclarationInfo {
 		return signature;
 
 	public function getMetadata():Array<String>
-		return metadata;
+		return metadata.copy();
+
+	/** Indexing freezes a native member name before callers can mutate source metadata. */
+	public function getNativeName():TyNativeName
+		return nativeName;
 
 	public function getSourceDeclaration():HxFunctionDecl
 		return sourceDeclaration;

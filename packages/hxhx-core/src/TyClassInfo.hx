@@ -14,6 +14,7 @@ class TyClassInfo extends TyNominalInfo {
 	final declaredInterfaceTypes:Array<TyType>;
 	final dynamicMemberType:Null<TyType>;
 	final publicReflectionName:TyPublicReflectionName;
+	final nativeName:TyNativeName;
 
 	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyFieldInfo>,
 			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
@@ -33,8 +34,13 @@ class TyClassInfo extends TyNominalInfo {
 		this.dynamicMemberType = relationships.dynamicMemberType;
 		if (this.isInterface && superType != null)
 			throw "an interface cannot own a superclass constructor edge";
+		this.nativeName = new TyNativeName(metadata);
 		this.publicReflectionName = new TyPublicReflectionName(this, metadata == null ? [] : metadata);
 	}
+
+	/** Target linkage is independent of whether this class has a reflected runtime identity. */
+	public function getNativeName():TyNativeName
+		return nativeName;
 
 	/** The shared index owns the immutable reflection name, including metadata restrictions. */
 	public function getPublicReflectionName():TyPublicReflectionName
