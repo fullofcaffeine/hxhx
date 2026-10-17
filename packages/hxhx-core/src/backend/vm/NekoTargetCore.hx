@@ -22,6 +22,7 @@ private typedef NekoStaticFunctionRef = {
 private typedef NekoReachable = {
 	var constructors:Array<NekoClassInfo>;
 	var staticFunctions:Array<NekoStaticFunctionRef>;
+	var arrayFactory:Null<NekoProjectedFunction>;
 }
 
 private typedef NekoGeneratedSource = {
@@ -232,7 +233,8 @@ class NekoTargetCore {
 		out.push("var " + SYMBOL_TABLE + " = $new(null);");
 		NekoVmLoader.renderEntryExports(out, SYMBOL_TABLE, typedProgram);
 		NekoRuntimeTypeRegistry.renderDefinition(out, typedProgram, modules, SYMBOL_TABLE);
-		NekoRuntimeSupport.renderPrelude(out, classMeta, SYMBOL_TABLE, typedProgram);
+		NekoRuntimeSupport.renderPrelude(out, classMeta, SYMBOL_TABLE, typedProgram,
+			reachable.arrayFactory == null ? null : renderStaticFunctionValue(emitContext, reachable.arrayFactory));
 		renderLoaderPathPrelude(out, context);
 		// Neko closures capture bindings by value. A shared object lets earlier
 		// bodies resolve later functions and constructors when the call occurs.
@@ -240,8 +242,10 @@ class NekoTargetCore {
 			renderExactAbstractHelper(out, emitContext, helper);
 		for (info in reachable.constructors)
 			NekoConstructionEmitter.render(out, emitContext, info);
-		for (ref in reachable.staticFunctions)
+		for (ref in reachable.staticFunctions) {
 			renderFunction(out, emitContext, ref.info, ref.fn);
+			renderStaticMethodBinding(out, emitContext, ref.info, ref.fn);
+		}
 
 		NekoStaticInitializationEmitter.render(out, emitContext, startup);
 		final entry = renderFunctionRef(emitContext, mainInfo.fullName, "main");
@@ -284,6 +288,7 @@ class NekoTargetCore {
 
 		final startup = new NekoStaticInitializationPlan(program, typedProgram);
 		final reachable = collectReachable(emitContext, mainInfo, startup);
+		final arrayFactory = reachable.arrayFactory == null ? null : renderStaticFunctionValue(emitContext, reachable.arrayFactory);
 		final dir = Path.directory(entryPath);
 		final base = Path.withoutExtension(Path.withoutDirectory(entryPath));
 		final symbolsPath = Path.join([dir, base + "_symbols.neko"]);
@@ -306,7 +311,7 @@ class NekoTargetCore {
 		while (helperIndex < emitContext.abstractHelpers.length) {
 			final end = minInt(helperIndex + SPLIT_CHUNK_DECL_LIMIT, emitContext.abstractHelpers.length);
 			final chunkPath = Path.join([dir, base + "_chunk" + chunkIndex + ".neko"]);
-			final out = splitChunkHeader(symbolsLoadName, classMeta, typedProgram);
+			final out = splitChunkHeader(symbolsLoadName, classMeta, typedProgram, arrayFactory);
 			for (i in helperIndex...end)
 				renderExactAbstractHelper(out, emitContext, emitContext.abstractHelpers[i]);
 			support.push({kind: "chunk" + chunkIndex, path: chunkPath, source: out.join("\n")});
@@ -317,7 +322,7 @@ class NekoTargetCore {
 		while (constructorIndex < reachable.constructors.length) {
 			final end = minInt(constructorIndex + SPLIT_CHUNK_DECL_LIMIT, reachable.constructors.length);
 			final chunkPath = Path.join([dir, base + "_chunk" + chunkIndex + ".neko"]);
-			final out = splitChunkHeader(symbolsLoadName, classMeta, typedProgram);
+			final out = splitChunkHeader(symbolsLoadName, classMeta, typedProgram, arrayFactory);
 			for (i in constructorIndex...end)
 				NekoConstructionEmitter.render(out, emitContext, reachable.constructors[i]);
 			support.push({kind: "chunk" + chunkIndex, path: chunkPath, source: out.join("\n")});
@@ -329,10 +334,11 @@ class NekoTargetCore {
 		while (functionIndex < reachable.staticFunctions.length) {
 			final end = minInt(functionIndex + SPLIT_CHUNK_DECL_LIMIT, reachable.staticFunctions.length);
 			final chunkPath = Path.join([dir, base + "_chunk" + chunkIndex + ".neko"]);
-			final out = splitChunkHeader(symbolsLoadName, classMeta, typedProgram);
+			final out = splitChunkHeader(symbolsLoadName, classMeta, typedProgram, arrayFactory);
 			for (i in functionIndex...end) {
 				final ref = reachable.staticFunctions[i];
 				renderFunction(out, emitContext, ref.info, ref.fn);
+				renderStaticMethodBinding(out, emitContext, ref.info, ref.fn);
 			}
 			support.push({kind: "chunk" + chunkIndex, path: chunkPath, source: out.join("\n")});
 			functionIndex = end;
@@ -343,7 +349,7 @@ class NekoTargetCore {
 		NekoStaticInitializationEmitter.render(startupBody, emitContext, startup);
 		if (startupBody.length > 0) {
 			final startupPath = Path.join([dir, base + "_startup.neko"]);
-			final startupSource = splitChunkHeader(symbolsLoadName, classMeta, typedProgram).concat(startupBody);
+			final startupSource = splitChunkHeader(symbolsLoadName, classMeta, typedProgram, arrayFactory).concat(startupBody);
 			support.push({kind: "startup", path: startupPath, source: startupSource.join("\n")});
 		}
 
@@ -376,12 +382,13 @@ class NekoTargetCore {
 		out.push("");
 	}
 
-	static function splitChunkHeader(symbolsLoadName:String, classMeta:Array<NekoRuntimeClassMeta>, program:NekoTypedProgramProjection):Array<String> {
+	static function splitChunkHeader(symbolsLoadName:String, classMeta:Array<NekoRuntimeClassMeta>, program:NekoTypedProgramProjection,
+			arrayFactory:Null<String>):Array<String> {
 		final out = new Array<String>();
 		out.push("// Generated by hxhx native Neko backend MVP support chunk");
 		out.push("var " + SYMBOL_TABLE + " = $loader.loadmodule(" + quote(symbolsLoadName) + ", $loader).symbols;");
 		out.push("");
-		NekoRuntimeSupport.renderPrelude(out, classMeta, SYMBOL_TABLE, program);
+		NekoRuntimeSupport.renderPrelude(out, classMeta, SYMBOL_TABLE, program, arrayFactory);
 		return out;
 	}
 
@@ -539,6 +546,7 @@ class NekoTargetCore {
 		final constructorSeen = new StringMap<Bool>();
 		final staticFunctions = new Array<NekoStaticFunctionRef>();
 		final staticSeen = new StringMap<Bool>();
+		var arrayFactory:Null<NekoProjectedFunction> = null;
 		var addConstructor:NekoClassInfo->Void = null;
 		var addStatic:NekoClassInfo->HxFunctionDecl->Void = null;
 
@@ -570,6 +578,12 @@ class NekoTargetCore {
 				return;
 			staticSeen.set(key, true);
 			staticFunctions.push({key: key, info: info, fn: fn});
+			if (info.fullName == "Array" && HxFunctionDecl.getName(fn) == "new1")
+				arrayFactory = NekoArrayProvider.factory(context.typedProgram);
+			if (NekoArrayProvider.wrapsNativeResult(info.fullName, HxFunctionDecl.getName(fn))) {
+				final factory = NekoArrayProvider.factory(context.typedProgram);
+				addStatic(exactHelperClass(context, factory), factory.body.getDeclaration());
+			}
 			final staticContext = withFunctionArgs(withCurrentClass(context, info), fn);
 			for (stmt in HxFunctionDecl.getBody(fn))
 				collectStmtRefs(staticContext, stmt, addConstructor, addStatic);
@@ -589,12 +603,17 @@ class NekoTargetCore {
 				if (initializer.getField().getIsStatic())
 					collectExprRefs(withFieldInitializer(classContext, initializer.getDeclaration()), initializer.getExpression(), addConstructor, addStatic);
 		}
-		return {constructors: constructors, staticFunctions: staticFunctions};
+		return {constructors: constructors, staticFunctions: staticFunctions, arrayFactory: arrayFactory};
 	}
 
 	static function collectStmtRefs(context:NekoEmitContext, stmt:HxStmt, addConstructor:NekoClassInfo->Void,
 			addStatic:NekoClassInfo->HxFunctionDecl->Void):Void {
 		switch (stmt) {
+			case SGuardedSwitch(input, enabled, _, bodies, _):
+				collectExprRefs(context, input, addConstructor, addStatic);
+				collectExprRefs(context, enabled, addConstructor, addStatic);
+				for (body in bodies)
+					collectStmtRefs(context, body, addConstructor, addStatic);
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -651,6 +670,19 @@ class NekoTargetCore {
 
 	static function collectExprRefs(context:NekoEmitContext, expr:HxExpr, addConstructor:NekoClassInfo->Void,
 			addStatic:NekoClassInfo->HxFunctionDecl->Void):Void {
+		final method = switch expr {
+			case EField(_, _):
+				switch context.currentExecutable {
+					case FunctionBody(fn): fn.body.findMethodUse(expr);
+					case FieldInitializer(initializer): initializer.findMethodUse(expr);
+					case null: null;
+				}
+			case _: null;
+		};
+		if (method != null && method.getUse() != WriteTarget && NekoArrayProvider.methodReturnsArray(method.getDeclaration())) {
+			final factory = NekoArrayProvider.factory(context.typedProgram);
+			addStatic(exactHelperClass(context, factory), factory.body.getDeclaration());
+		}
 		final staticValue = NekoStaticFunctionValue.fromExpression(context, expr);
 		if (staticValue != null) {
 			addStatic(exactHelperClass(context, staticValue), staticValue.body.getDeclaration());
@@ -681,6 +713,8 @@ class NekoTargetCore {
 		}
 		final staticCall = NekoExactStaticCallPlan.fromExpression(context.typedProgram, expr);
 		if (staticCall != null) {
+			retainRestFactory(context,
+				NekoRestArguments.fromCall(context, expr, staticCall.call.arguments, staticCall.selected.body.requireSemanticDeclaration()), addStatic);
 			if (!NekoRuntimeTypeRegistry.ownsPredicate(staticCall.selected))
 				addStatic(exactHelperClass(context, staticCall.selected), staticCall.selected.body.getDeclaration());
 			for (argument in staticCall.call.arguments)
@@ -689,6 +723,12 @@ class NekoTargetCore {
 		}
 		final exactCall = NekoExactCallPlan.fromExpression(context.typedProgram, expr);
 		if (exactCall != null) {
+			retainRestFactory(context,
+				NekoRestArguments.fromCall(context, expr, exactCall.getArguments(), exactCall.selected.body.requireSemanticDeclaration()), addStatic);
+			if (NekoArrayProvider.methodReturnsArray(exactCall.selected.body.requireSemanticDeclaration())) {
+				final factory = NekoArrayProvider.factory(context.typedProgram);
+				addStatic(exactHelperClass(context, factory), factory.body.getDeclaration());
+			}
 			if (exactCall.usesAbstractReceiver()) {
 				final helper = exactCall.selected;
 				final identity = helper.body.getStableIdentity();
@@ -712,12 +752,21 @@ class NekoTargetCore {
 			case ENew(typePath, args):
 				if (!NekoStringIntrinsics.ownsConstructor(typePath)) {
 					final info = constructionClass(context, expr);
-					if (info != null)
+					if (info != null) {
+						retainRestFactory(context, restConstructorArguments(context, expr, args, info), addStatic);
 						addConstructor(info);
+					}
 				}
 				for (arg in args)
 					collectExprRefs(context, arg, addConstructor, addStatic);
 			case ECall(callee, args):
+				if (callee.match(ESuper) && context.currentClass != null) {
+					final lineage = constructionPlan(context, context.currentClass).lineage;
+					if (lineage.length > 1)
+						retainRestFactory(context, restConstructorArguments(context, expr, args, exactClassInfo(context, lineage[1])), addStatic);
+				} else {
+					retainRestFactory(context, NekoRestArguments.fromCall(context, expr, args), addStatic);
+				}
 				collectCallRefs(context, callee, args, addConstructor, addStatic);
 			case EReturn(value):
 				if (value != null)
@@ -738,8 +787,13 @@ class NekoTargetCore {
 					collectExprRefs(context, initializer, addConstructor, addStatic);
 			case EField(obj, _) | ENullSafeField(obj, _):
 				collectExprRefs(context, obj, addConstructor, addStatic);
-			case EPrivateAccess(inner, _) | EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | ECheckType(inner, _) | EUntyped(inner) |
-				EMacroExpr(inner, _):
+			case EMacroExpr(inner, _):
+				// Quoted syntax is data: retain its public containers, not calls in its payload.
+				if (NekoMacroExprLowering.requiresArrayProvider(inner)) {
+					final factory = NekoArrayProvider.factory(context.typedProgram);
+					addStatic(exactHelperClass(context, factory), factory.body.getDeclaration());
+				}
+			case EPrivateAccess(inner, _) | EParenthesized(inner, _) | EUnop(_, _, inner) | ECast(inner, _) | ECheckType(inner, _) | EUntyped(inner):
 				collectExprRefs(context, inner, addConstructor, addStatic);
 			case EBinop(_, left, right) | EDiscardThen(left, right):
 				collectExprRefs(context, left, addConstructor, addStatic);
@@ -762,6 +816,10 @@ class NekoTargetCore {
 				for (body in bodies)
 					collectExprRefs(context, body, addConstructor, addStatic);
 			case EArrayDecl(values):
+				if (!isMapLiteral(values)) {
+					final factory = NekoArrayProvider.factory(context.typedProgram);
+					addStatic(exactHelperClass(context, factory), factory.body.getDeclaration());
+				}
 				for (value in values)
 					collectExprRefs(context, value, addConstructor, addStatic);
 			case EArrayAccess(array, index):
@@ -799,6 +857,8 @@ class NekoTargetCore {
 			case ESuper:
 			case EIdent(_):
 			case EMacroType(_):
+				final factory = NekoArrayProvider.factory(context.typedProgram);
+				addStatic(exactHelperClass(context, factory), factory.body.getDeclaration());
 			case ETryCatchRaw(raw):
 				if (parseBytesSubTryRaw(raw) != null) {
 					final bytesInfo = lookupBytesClass(context);
@@ -811,6 +871,20 @@ class NekoTargetCore {
 				collectExprRefs(context, end, addConstructor, addStatic);
 			case EUnsupported(_):
 		}
+	}
+
+	/** Source-call packing retains the same constructor as an ordinary Array literal. */
+	static function retainRestFactory(context:NekoEmitContext, plan:Null<NekoRestArguments>, addStatic:NekoClassInfo->HxFunctionDecl->Void):Void {
+		if (plan != null && plan.needsArrayFactory()) {
+			final factory = NekoArrayProvider.factory(context.typedProgram);
+			addStatic(exactHelperClass(context, factory), factory.body.getDeclaration());
+		}
+	}
+
+	static function restConstructorArguments(context:NekoEmitContext, expression:HxExpr, arguments:Array<HxExpr>, info:NekoClassInfo):Null<NekoRestArguments> {
+		final constructor = constructionPlan(context, info).effectiveConstructor();
+		return constructor != null
+			&& NekoFunctionParameters.hasRest(HxFunctionDecl.getArgs(constructor)) ? NekoRestArguments.fromConstructor(context, expression, arguments) : null;
 	}
 
 	static function collectCallRefs(context:NekoEmitContext, callee:HxExpr, args:Array<HxExpr>, addConstructor:NekoClassInfo->Void,
@@ -882,7 +956,7 @@ class NekoTargetCore {
 		final info = exactHelperClass(context, selected);
 		final declaration = selected.body.getDeclaration();
 		final name = HxFunctionDecl.getName(declaration);
-		return isDynamicStaticFunction(declaration) ? renderStaticObjectRef(info.fullName)
+		return isDynamicStaticFunction(declaration) ? renderStaticObjectRef(context.typedProgram.requireClassIdentity(info.cls))
 			+ "."
 			+ safeIdent(name) : renderFunctionRef(context, info.fullName, name);
 	}
@@ -913,13 +987,20 @@ class NekoTargetCore {
 		helperContext.directAbstractReceiver = true;
 		registerLocal(helperContext, receiverName);
 		registerLocal(helperContext, argumentsName);
-		out.push(exactHelperRef(context, helper) + " = $varargs(function(" + argumentsName + ") {");
-		out.push("  var " + receiverName + " = " + argumentsName + "[0];");
-		renderVarArgBindings(out, helperContext, HxFunctionDecl.getArgs(fn), "  ", argumentsName, 1);
+		final fixedRest = NekoFunctionParameters.hasRest(HxFunctionDecl.getArgs(fn));
+		if (fixedRest) {
+			final parameters = [receiverName].concat([for (argument in HxFunctionDecl.getArgs(fn)) safeIdent(argument.name)]);
+			out.push(exactHelperRef(context, helper) + " = function(" + parameters.join(", ") + ") {");
+			renderParameterDefaults(out, helperContext, HxFunctionDecl.getArgs(fn), "  ");
+		} else {
+			out.push(exactHelperRef(context, helper) + " = $varargs(function(" + argumentsName + ") {");
+			out.push("  var " + receiverName + " = " + argumentsName + "[0];");
+			renderVarArgBindings(out, helperContext, HxFunctionDecl.getArgs(fn), "  ", argumentsName, 1);
+		}
 		renderCaptureParameters(out, helperContext, [for (arg in HxFunctionDecl.getArgs(fn)) arg.name], "  ");
 		for (statement in helper.body.getBody())
 			renderStmt(out, helperContext, statement, "  ");
-		out.push("});");
+		out.push(fixedRest ? "};" : "});");
 		out.push("");
 	}
 
@@ -934,18 +1015,24 @@ class NekoTargetCore {
 		out.push(renderFunctionDefinitionPrefix(context, info.fullName, HxFunctionDecl.getName(fn)) + renderFunctionStart(args, useVarArgs));
 		if (useVarArgs)
 			renderVarArgBindings(out, functionContext, HxFunctionDecl.getArgs(fn), "  ");
+		else
+			renderParameterDefaults(out, functionContext, HxFunctionDecl.getArgs(fn), "  ");
 		renderCaptureParameters(out, functionContext, [for (arg in HxFunctionDecl.getArgs(fn)) arg.name], "  ");
 		for (stmt in HxFunctionDecl.getBody(fn))
 			renderStmt(out, functionContext, stmt, "  ");
 		out.push(renderFunctionEnd(useVarArgs));
-		if (isDynamicStaticFunction(fn))
-			out.push(renderStaticObjectRef(info.fullName)
-				+ "."
-				+ safeIdent(HxFunctionDecl.getName(fn))
-				+ " = "
-				+ renderFunctionRef(context, info.fullName, HxFunctionDecl.getName(fn))
-				+ ";");
 		out.push("");
+	}
+
+	/** Publish the emitted callable on the class's shared static storage for reflection. */
+	static function renderStaticMethodBinding(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo, fn:HxFunctionDecl):Void {
+		out.push("$objset("
+			+ renderStaticObjectRef(context.typedProgram.requireClassIdentity(info.cls))
+			+ ", $hash("
+			+ quote(HxFunctionDecl.getName(fn))
+			+ "), "
+			+ renderFunctionRef(context, info.fullName, HxFunctionDecl.getName(fn))
+			+ ");");
 	}
 
 	static function renderSpecialFunction(out:Array<String>, context:NekoEmitContext, info:NekoClassInfo, fn:HxFunctionDecl):Bool {
@@ -959,10 +1046,10 @@ class NekoTargetCore {
 					renderRuntimeForwarder(out, context, info, fn, context.typedProgram.runtimeHelperName("__hxhx_type_class_name") + "(c)");
 					return true;
 				case "getInstanceFields":
-					renderRuntimeForwarder(out, context, info, fn, "__hxhx_type_fields(__hxhx_instance_fields, c)");
+					renderRuntimeForwarder(out, context, info, fn, NekoArrayProvider.fromNative(context, "__hxhx_type_fields(__hxhx_instance_fields, c)"));
 					return true;
 				case "getClassFields":
-					renderRuntimeForwarder(out, context, info, fn, "__hxhx_type_fields(__hxhx_static_fields, c)");
+					renderRuntimeForwarder(out, context, info, fn, NekoArrayProvider.fromNative(context, "__hxhx_type_fields(__hxhx_static_fields, c)"));
 					return true;
 				case _:
 			}
@@ -979,7 +1066,7 @@ class NekoTargetCore {
 					renderRuntimeForwarder(out, context, info, fn, "if (o == null) null else $objget(o, $hash(field))");
 					return true;
 				case "fields":
-					renderRuntimeForwarder(out, context, info, fn, "__hxhx_reflect_fields(o)");
+					renderRuntimeForwarder(out, context, info, fn, NekoArrayProvider.fromNative(context, "__hxhx_reflect_fields(o)"));
 					return true;
 				case _:
 			}
@@ -997,6 +1084,9 @@ class NekoTargetCore {
 		}
 		if (info.fullName == "Sys") {
 			switch (fnName) {
+				case "args":
+					renderRuntimeForwarder(out, context, info, fn, NekoArrayProvider.fromNative(context, "$loader.args"));
+					return true;
 				case "time":
 					renderRuntimeForwarder(out, context, info, fn, "$loader.loadprim(\"std@sys_time\", 0)()");
 					return true;
@@ -1089,6 +1179,8 @@ class NekoTargetCore {
 		out.push("    var " + selfName + " = this;");
 		if (useVarArgs)
 			renderVarArgBindings(out, methodContext, HxFunctionDecl.getArgs(fn), "    ");
+		else
+			renderParameterDefaults(out, methodContext, HxFunctionDecl.getArgs(fn), "    ");
 		renderCaptureParameters(out, methodContext, [for (arg in HxFunctionDecl.getArgs(fn)) arg.name], "    ");
 		for (stmt in HxFunctionDecl.getBody(fn))
 			renderStmt(out, methodContext, stmt, "    ");
@@ -1098,6 +1190,10 @@ class NekoTargetCore {
 	/** Optional parameters need an adapter in either layout because native Neko functions have fixed arity. */
 	static function shouldUseVarArgs(context:NekoEmitContext, args:Array<String>, ?fn:HxFunctionDecl):Bool {
 		if (args.length == 0)
+			return false;
+		// A rest function receives fixed native slots after caller-side packing.
+		// Keeping that arity lets reflection reject missing or flattened operands.
+		if (fn != null && NekoFunctionParameters.hasRest(HxFunctionDecl.getArgs(fn)))
 			return false;
 		if (context != null && context.packFunctionArguments)
 			return true;
@@ -1120,10 +1216,16 @@ class NekoTargetCore {
 			final arg = args[i];
 			final name = names[i];
 			out.push(indent + "var " + name + " = " + arrayName + "[" + (i + offset) + "];");
+		}
+		renderParameterDefaults(out, context, args, indent);
+	}
+
+	/** Defaults belong to the callee; a supplied null rest slot must not become an empty Array. */
+	static function renderParameterDefaults(out:Array<String>, context:NekoEmitContext, args:Array<HxFunctionArg>, indent:String):Void {
+		for (arg in args) {
+			final name = safeIdent(HxFunctionArg.getName(arg));
 			switch (HxFunctionArg.getDefaultValue(arg)) {
 				case NoDefault:
-					if (HxFunctionArg.getIsRest(arg))
-						out.push(indent + "if (" + name + " == null) " + name + " = $array();");
 				case Default(expr):
 					out.push(indent + "if (" + name + " == null) " + name + " = " + renderExpr(context, expr) + ";");
 			}
@@ -1174,6 +1276,22 @@ class NekoTargetCore {
 			case _:
 		}
 		switch (stmt) {
+			case SGuardedSwitch(input, enabled, plan, bodies, _):
+				final rendered = NekoGuardedSwitch.render({
+					context: context,
+					plan: plan,
+					value: renderExpr(context, input),
+					enabled: renderExpr(context, enabled),
+					identifier: safeIdent,
+					quote: quote,
+					body: (index, names) -> {
+						final lines = new Array<String>();
+						renderStmt(lines, withLocals(context, names), bodies[index], "");
+						return lines.join("\n");
+					}
+				});
+				for (line in rendered.split("\n"))
+					out.push(indent + line);
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -1217,7 +1335,14 @@ class NekoTargetCore {
 				if (lineage.length < 2)
 					throw "Neko superclass construction has no exact parent";
 				final parent = exactClassInfo(context, lineage[1]);
-				final arguments = [context.selfName].concat([for (arg in args) renderExpr(context, arg)]);
+				final rest = restConstructorArguments(context, switch stmt {
+					case SExpr(value, _): value;
+					case _: throw "missing super call";
+				}, args, parent);
+				final arguments = [context.selfName].concat(rest == null ? [
+					for (arg in args)
+						renderExpr(context, arg)
+				] : rest.render(context, value -> renderExpr(context, value)));
 				out.push(indent + renderInitializerRef(context, parent) + "(" + arguments.join(", ") + ");");
 			case SExpr(ECall(EField(receiver, "addCases"), args), _) if (renderUtestAddCasesStmt(out, context, receiver, args, indent)):
 			case SExpr(EBinop("=", left, right), _) if (shouldSplitStatementAssignmentRhs(context, right)):
@@ -1372,7 +1497,7 @@ class NekoTargetCore {
 				}
 				found;
 			case SIf(_, thenBranch, elseBranch, _): stmtContainsBreak(thenBranch) || (elseBranch != null && stmtContainsBreak(elseBranch));
-			case SSwitch(_, _, bodies, _):
+			case SSwitch(_, _, bodies, _) | SGuardedSwitch(_, _, _, bodies, _):
 				var found = false;
 				for (body in bodies) {
 					if (stmtContainsBreak(body)) {
@@ -1403,6 +1528,7 @@ class NekoTargetCore {
 
 	static function stmtTag(stmt:HxStmt):String {
 		return switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _): "SGuardedSwitch";
 			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(_, _): "SBlock";
 			case SVar(name, _, _, _): "SVar(" + name + ")";
@@ -1458,22 +1584,28 @@ class NekoTargetCore {
 				+ ")";
 		}
 		final staticCall = NekoExactStaticCallPlan.fromExpression(context == null ? null : context.typedProgram, expr);
-		if (staticCall != null)
-			return renderCall(context, staticCall.call.callee, staticCall.call.arguments, staticCall.selected);
+		if (staticCall != null) {
+			final rest = NekoRestArguments.fromCall(context, expr, staticCall.call.arguments, staticCall.selected.body.requireSemanticDeclaration());
+			return renderCall(context, staticCall.call.callee, staticCall.call.arguments, staticCall.selected,
+				rest == null ? null : rest.render(context, value -> renderExpr(context, value)));
+		}
 		final exactCall = NekoExactCallPlan.fromExpression(context == null ? null : context.typedProgram, expr);
 		if (exactCall != null) {
+			final rest = NekoRestArguments.fromCall(context, expr, exactCall.getArguments(), exactCall.selected.body.requireSemanticDeclaration());
+			final packed = rest == null ? null : rest.render(context, value -> renderExpr(context, value));
 			if (exactCall.usesAbstractReceiver()) {
-				final arguments = [renderExpr(context, exactCall.receiver)];
-				for (argument in exactCall.getArguments())
-					arguments.push(renderExpr(context, argument));
+				final arguments = [renderExpr(context,
+					exactCall.receiver)].concat(packed == null ? [for (value in exactCall.getArguments()) renderExpr(context, value)] : packed);
 				return exactHelperRef(context, exactCall.selected) + "(" + arguments.join(", ") + ")";
 			}
-			return renderExpr(context,
-				ECall(EField(exactCall.receiver, HxFunctionDecl.getName(exactCall.selected.body.getDeclaration())), exactCall.getArguments()));
+			return renderCall(context, EField(exactCall.receiver, HxFunctionDecl.getName(exactCall.selected.body.getDeclaration())), exactCall.getArguments(),
+				null, packed);
 		}
 		return switch (expr) {
 			case ENull:
 				"null";
+			case ELoweredControl(ArrayAppend, _, _, _):
+				NekoCollectionControl.renderAppend(context, expr, value -> renderExpr(context, value));
 			case EPrivateAccess(_, _):
 				throw "source access permission must be consumed before Neko emission";
 			case ESourceTry(_, _, _) | ESourceGroup(_, _) | ESourceFunction(_, _, _, _) | ESourceIf(_, _, _, _) | ESourceFor(_, _, _, _) | EThrow(_, _) |
@@ -1502,7 +1634,7 @@ class NekoTargetCore {
 			case EField(EIdent(className), field) if (lookupMutableStaticMemberOwner(context, className, field) != null):
 				final info = lookupMutableStaticMemberOwner(context, className, field);
 				"__hxhx_field("
-				+ renderStaticObjectRef(info.fullName)
+				+ renderStaticObjectRef(context.typedProgram.requireClassIdentity(info.cls))
 				+ ", "
 				+ quote(field)
 				+ ")";
@@ -1511,7 +1643,8 @@ class NekoTargetCore {
 			case ENullSafeField(_, _):
 				unsupportedExpr("null-safe field access requires shared evaluation lowering");
 			case ECall(callee, args):
-				renderCall(context, callee, args);
+				final rest = NekoRestArguments.fromCall(context, expr, args);
+				renderCall(context, callee, args, null, rest == null ? null : rest.render(context, value -> renderExpr(context, value)));
 			case EDiscardThen(effect, continuation):
 				"({ "
 				+ renderExpr(context, effect)
@@ -1569,7 +1702,8 @@ class NekoTargetCore {
 			case ECast(inner, _) | ECheckType(inner, _) | EUntyped(inner):
 				renderExpr(context, inner);
 			case EMacroExpr(inner, wrappers):
-				NekoMacroExprLowering.render(inner, wrappers, function(value) return renderExpr(context, value));
+				final factory = NekoMacroExprLowering.requiresArrayProvider(inner) ? NekoArrayProvider.boundFactory(context) : null;
+				NekoMacroExprLowering.render(inner, wrappers, function(value) return renderExpr(context, value), factory);
 			case EArrayDecl(values):
 				renderArray(context, values);
 			case EArrayAccess(array, EInt(0)) if (isNekoLoaderLocalGetPathCall(array)):
@@ -1579,7 +1713,7 @@ class NekoTargetCore {
 			case EAnon(fieldNames, fieldValues):
 				renderAnon(context, fieldNames, fieldValues);
 			case EMacroType(typeText):
-				NekoMacroTypeLowering.render(typeText);
+				NekoMacroTypeLowering.render(typeText, NekoArrayProvider.boundFactory(context));
 			case ENew(typePath, args):
 				renderNew(context, expr, typePath, args);
 			case ELambda(args, body):
@@ -1681,24 +1815,6 @@ class NekoTargetCore {
 		return "(" + target + " " + op + " " + renderExpr(context, right) + ")";
 	}
 
-	static function renderArrayPushExpr(context:NekoEmitContext, receiver:HxExpr, value:String):String {
-		return switch (receiver) {
-			case EIdent(_) | EField(_, _) | EArrayAccess(_, _):
-				final target = renderAssignableExpr(context, receiver, "array push receiver");
-				"(function() { "
-				+ target
-				+ " = __hxhx_array_push("
-				+ target
-				+ ", "
-				+ value
-				+ "); return $asize("
-				+ target
-				+ "); })()";
-			case _:
-				"__hxhx_array_push(" + renderExpr(context, receiver) + ", " + value + ")";
-		}
-	}
-
 	static function renderAssignableExpr(context:NekoEmitContext, expr:HxExpr, detail:String):String {
 		// Explicit untyped syntax changes checking, not storage identity or
 		// evaluation. Reuse its exact child so field catalogs still apply.
@@ -1727,7 +1843,7 @@ class NekoTargetCore {
 				renderThisValueSlotExpr(context, detail);
 			case EField(EIdent(className), field) if (lookupMutableStaticMemberOwner(context, className, field) != null):
 				final info = lookupMutableStaticMemberOwner(context, className, field);
-				renderStaticObjectRef(info.fullName) + "." + safeIdent(field);
+				renderStaticObjectRef(context.typedProgram.requireClassIdentity(info.cls)) + "." + safeIdent(field);
 			case EField(obj, field):
 				renderExpr(context, obj) + "." + safeIdent(field);
 			case EIdent(_) | EArrayAccess(_, _):
@@ -1912,8 +2028,6 @@ class NekoTargetCore {
 	static function renderNew(context:NekoEmitContext, expression:HxExpr, typePath:String, args:Array<HxExpr>):String {
 		if (NekoStringIntrinsics.ownsConstructor(typePath))
 			return NekoStringIntrinsics.renderConstructor([for (arg in args) renderExpr(context, arg)]);
-		if ((typePath == "Array" || typePath == "StdTypes.Array") && args.length == 0)
-			return "$array()";
 		if (isListTypePath(typePath) && args.length == 0)
 			return "__hxhx_list_new()";
 		final mapKind = mapKindForTypePath(typePath);
@@ -1922,12 +2036,15 @@ class NekoTargetCore {
 		if (typePath == "sys.io.Process")
 			return "__hxhx_process_new(" + renderProcessConstructorArgs(context, args).join(", ") + ")";
 		final info = constructionClass(context, expression);
-		if (info != null)
-			return renderConstructorRef(context, info.fullName) + "(" + [for (arg in args) renderExpr(context, arg)].join(", ") + ")";
+		if (info != null) {
+			final rest = restConstructorArguments(context, expression, args, info);
+			final rendered = rest == null ? [for (arg in args) renderExpr(context, arg)] : rest.render(context, value -> renderExpr(context, value));
+			return renderConstructorRef(context, info.fullName) + "(" + rendered.join(", ") + ")";
+		}
 		final tmp = "__hxhx_o";
 		final parts = ["(function() { var " + tmp + " = $new(null);"];
 		parts.push(tmp + ".__hx_ctor = " + quote(typePath) + ";");
-		parts.push(tmp + ".__hx_params = " + renderArray(context, args) + ";");
+		parts.push(tmp + ".__hx_params = $array(" + [for (arg in args) renderExpr(context, arg)].join(", ") + ");");
 		parts.push("return " + tmp + "; })()");
 		return parts.join(" ");
 	}
@@ -1935,7 +2052,7 @@ class NekoTargetCore {
 	static function renderProcessConstructorArgs(context:NekoEmitContext, args:Array<HxExpr>):Array<String> {
 		return [
 			args.length > 0 ? renderExpr(context, args[0]) : "null",
-			args.length > 1 ? renderExpr(context, args[1]) : "$array()",
+			args.length > 1 ? renderExpr(context, args[1]) : "null",
 			args.length > 2 ? renderExpr(context, args[2]) : "null"
 		];
 	}
@@ -1962,7 +2079,7 @@ class NekoTargetCore {
 	static function renderArray(context:NekoEmitContext, values:Array<HxExpr>):String {
 		if (isMapLiteral(values))
 			return renderMapLiteral(context, values);
-		return "$array(" + [for (v in values) renderExpr(context, v)].join(", ") + ")";
+		return NekoArrayProvider.fromValues(NekoArrayProvider.boundFactory(context), [for (v in values) renderExpr(context, v)]);
 	}
 
 	static function isMapLiteral(values:Array<HxExpr>):Bool {
@@ -2364,7 +2481,9 @@ class NekoTargetCore {
 		out.push(indent + "{");
 		out.push(indent + "  var " + iterableName + " = " + renderExpr(context, iterable) + ";");
 		out.push(indent + "  var " + indexName + " = 0;");
-		out.push(indent + "  while (" + indexName + " < $asize(" + iterableName + ")) {");
+		// Shared lowering preserves ranges explicitly; only their internal storage is a native VM array.
+		final length = iterable.match(ERange(_, _)) ? "$asize(" + iterableName + ")" : iterableName + ".length";
+		out.push(indent + "  while (" + indexName + " < " + length + ") {");
 		out.push(indent + "    var " + safeName + " = " + captureInitializer(context, name, iterableName + "[" + indexName + "]") + ";");
 		out.push(indent + "    " + indexName + " = " + indexName + " + 1;");
 		renderStmt(out, bodyContext, body, indent + "    ");
@@ -2381,19 +2500,66 @@ class NekoTargetCore {
 		final fieldsName = "__hxhx_kv_fields_" + safeKeyName;
 		final fieldName = "__hxhx_kv_field_" + safeKeyName;
 		final indexName = "__hxhx_kv_index_" + safeKeyName;
+		final arrayName = "__hxhx_kv_array_" + safeKeyName;
 		out.push(indent + "{");
 		out.push(indent + "  var " + sourceName + " = " + renderExpr(context, iterable) + ";");
-		out.push(indent + "  var " + fieldsName + " = $objfields(" + sourceName + ");");
+		out.push(indent
+			+ "  var "
+			+ arrayName
+			+ " = "
+			+ context.typedProgram.runtimeHelperName("__hxhx_type_get_class")
+			+ "("
+			+ sourceName
+			+ ") == "
+			+ context.typedProgram.runtimeHelperName("__hxhx_runtime_type_definition")
+			+ "(\"core:Array\");");
+		out.push(indent + "  var " + fieldsName + " = if (" + arrayName + ") null else $objfields(" + sourceName + ");");
 		out.push(indent + "  var " + indexName + " = 0;");
-		out.push(indent + "  while (" + indexName + " < $asize(" + fieldsName + ")) {");
-		out.push(indent + "    var " + fieldName + " = " + fieldsName + "[" + indexName + "];");
+		out.push(indent
+			+ "  while ("
+			+ indexName
+			+ " < (if ("
+			+ arrayName
+			+ ") "
+			+ sourceName
+			+ ".length else $asize("
+			+ fieldsName
+			+ "))) {");
+		out.push(indent
+			+ "    var "
+			+ fieldName
+			+ " = if ("
+			+ arrayName
+			+ ") "
+			+ indexName
+			+ " else "
+			+ fieldsName
+			+ "["
+			+ indexName
+			+ "];");
 		out.push(indent + "    " + indexName + " = " + indexName + " + 1;");
-		out.push(indent + "    var " + safeKeyName + " = " + captureInitializer(context, keyName, "$field(" + fieldName + ")") + ";");
+		out.push(indent
+			+ "    var "
+			+ safeKeyName
+			+ " = "
+			+ captureInitializer(context, keyName, "(if (" + arrayName + ") " + fieldName + " else $field(" + fieldName + "))")
+			+ ";");
 		out.push(indent
 			+ "    var "
 			+ safeValueName
 			+ " = "
-			+ captureInitializer(context, valueName, "$objget(" + sourceName + ", " + fieldName + ")")
+			+ captureInitializer(context, valueName,
+				"(if ("
+				+ arrayName
+				+ ") "
+				+ sourceName
+				+ "["
+				+ fieldName
+				+ "] else $objget("
+				+ sourceName
+				+ ", "
+				+ fieldName
+				+ "))")
 			+ ";");
 		renderStmt(out, bodyContext, body, indent + "    ");
 		out.push(indent + "  }");
@@ -2417,10 +2583,9 @@ class NekoTargetCore {
 					renderSwitchPatternValue(pattern);
 				case PCapture(_, inner):
 					renderSwitchPatternValue(inner);
-				case PUnsupportedGuard(_):
+				case PUnsupportedPattern(_):
 					null;
-				case PObject(_, _) | PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _) |
-					PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _) | POr(_):
+				case PObject(_, _) | PArray(_) | PExtractor(_, _) | PGuard(_, _) | POr(_):
 					unsupported("switch pattern", patternKind(pattern));
 			}
 			if (prefix == null)
@@ -2453,7 +2618,7 @@ class NekoTargetCore {
 		out.push(indent + "  var " + switchValue + " = " + renderExpr(context, scrutinee) + ";");
 		var emitted = false;
 		for (i in 0...count) {
-			final lowered = lowerNekoSwitchPattern(patterns[i], switchValue);
+			final lowered = lowerNekoSwitchPattern(context, patterns[i], switchValue);
 			out.push(indent + "  " + (emitted ? "else " : "") + "if (" + lowered.cond + ") {");
 			final branchContext = withLocals(context, [for (binding in lowered.bindings) binding.name]);
 			renderNekoSwitchBindings(out, branchContext, lowered.bindings, indent + "    ");
@@ -2472,7 +2637,7 @@ class NekoTargetCore {
 		];
 		var emitted = false;
 		for (i in 0...count) {
-			final lowered = lowerNekoSwitchPattern(patterns[i], switchValue);
+			final lowered = lowerNekoSwitchPattern(context, patterns[i], switchValue);
 			parts.push((emitted ? "else " : "") + "if (" + lowered.cond + ") {");
 			for (binding in lowered.bindings)
 				parts.push("var " + safeIdent(binding.name) + " = " + captureInitializer(context, binding.name, binding.expr) + ";");
@@ -2503,12 +2668,12 @@ class NekoTargetCore {
 
 	static function patternNeedsNekoIfLowering(pattern:HxSwitchPattern):Bool {
 		return switch (pattern) {
-			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PEnumValue(_) | PEnumExtract(_, _) | PIntEqualsGuard(_, _, _) | PIntCompareGuard(_, _, _, _):
+			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PEnumValue(_) | PEnumExtract(_, _) | PGuard(_, _):
 				true;
 			case PBind(_) | PCapture(_, _):
 				// A native switch label cannot declare the binding that branch closures capture.
 				true;
-			case PUnsupportedGuard(inner):
+			case PUnsupportedPattern(inner):
 				patternNeedsNekoIfLowering(inner);
 			case POr(_):
 				true;
@@ -2517,7 +2682,7 @@ class NekoTargetCore {
 		}
 	}
 
-	static function lowerNekoSwitchPattern(pattern:HxSwitchPattern, scrutinee:String):NekoSwitchPatternLowered {
+	static function lowerNekoSwitchPattern(context:NekoEmitContext, pattern:HxSwitchPattern, scrutinee:String):NekoSwitchPatternLowered {
 		return switch (pattern) {
 			case PNull:
 				{cond: "(" + scrutinee + " == null)", bindings: []};
@@ -2532,35 +2697,24 @@ class NekoTargetCore {
 			case PEnumValue(name):
 				{cond: nekoEnumCtorCond(scrutinee, name), bindings: []};
 			case PEnumExtract(name, args):
-				lowerNekoEnumExtractPattern(name, args, scrutinee);
+				lowerNekoEnumExtractPattern(context, name, args, scrutinee);
 			case PBind(name):
 				{cond: "true", bindings: [{name: name, expr: scrutinee}]};
 			case PCapture(name, inner):
-				final lowered = lowerNekoSwitchPattern(inner, scrutinee);
+				final lowered = lowerNekoSwitchPattern(context, inner, scrutinee);
 				final bindings = lowered.bindings.copy();
 				bindings.push({name: name, expr: scrutinee});
 				{cond: lowered.cond, bindings: bindings};
 			case PArray(items):
-				lowerNekoArrayPattern(items, scrutinee);
+				lowerNekoArrayPattern(context, items, scrutinee);
 			case PObject(fieldNames, fieldPatterns):
-				lowerNekoObjectPattern(fieldNames, fieldPatterns, scrutinee);
+				lowerNekoObjectPattern(context, fieldNames, fieldPatterns, scrutinee);
 			case PExtractor(extractorText, resultPattern):
-				lowerNekoExtractorPattern(extractorText, resultPattern, scrutinee);
-			case PUnsupportedGuard(inner):
-				final lowered = lowerNekoSwitchPattern(inner, scrutinee);
-				{cond: "(" + lowered.cond + " && false)", bindings: lowered.bindings};
-			case PIntEqualsGuard(inner, bindingName, value):
-				final lowered = lowerNekoSwitchPattern(inner, scrutinee);
-				final bound = nekoSwitchBindingValue(bindingName, lowered.bindings);
-				{cond: "((" + lowered.cond + ") && (" + bound + " == " + Std.string(value) + "))", bindings: lowered.bindings};
-			case PIntCompareGuard(inner, bindingName, op, value):
-				final lowered = lowerNekoSwitchPattern(inner, scrutinee);
-				final bound = nekoSwitchBindingValue(bindingName, lowered.bindings);
-				{cond: "((" + lowered.cond + ") && " + nekoIntCompareGuardCond(bound, op, value) + ")", bindings: lowered.bindings};
-			case POr(patterns):
-				lowerNekoOrPattern(patterns, scrutinee);
-			case PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PParsedIntSwitchGuard(_, _, _, _):
+				lowerNekoExtractorPattern(context, extractorText, resultPattern, scrutinee);
+			case PGuard(_, _) | PUnsupportedPattern(_):
 				unsupportedSwitchPatternLowering(pattern);
+			case POr(patterns):
+				lowerNekoOrPattern(context, patterns, scrutinee);
 		}
 	}
 
@@ -2568,14 +2722,14 @@ class NekoTargetCore {
 		return "__hxhx_enum_ctor_is(" + scrutinee + ", " + quote(name) + ")";
 	}
 
-	static function lowerNekoEnumExtractPattern(name:String, args:Array<HxSwitchPattern>, scrutinee:String):NekoSwitchPatternLowered {
+	static function lowerNekoEnumExtractPattern(context:NekoEmitContext, name:String, args:Array<HxSwitchPattern>, scrutinee:String):NekoSwitchPatternLowered {
 		final params = "__hxhx_enum_params(" + scrutinee + ")";
 		final count = args == null ? 0 : args.length;
 		final conds = [nekoEnumCtorCond(scrutinee, name), "($asize(" + params + ") >= " + count + ")"];
 		final bindings = new Array<NekoSwitchPatternBinding>();
 		if (args != null) {
 			for (i in 0...args.length) {
-				final lowered = lowerNekoSwitchPattern(args[i], params + "[" + i + "]");
+				final lowered = lowerNekoSwitchPattern(context, args[i], params + "[" + i + "]");
 				if (lowered.cond != "true")
 					conds.push("(" + lowered.cond + ")");
 				for (binding in lowered.bindings)
@@ -2585,23 +2739,15 @@ class NekoTargetCore {
 		return {cond: conds.join(" && "), bindings: bindings};
 	}
 
-	static function nekoIntCompareGuardCond(value:String, op:String, expected:Int):String {
-		return switch (op) {
-			case "<" | "<=" | ">" | ">=":
-				"(" + value + " " + op + " " + Std.string(expected) + ")";
-			case _:
-				"false";
-		}
-	}
-
-	static function lowerNekoExtractorPattern(extractorText:String, resultPattern:HxSwitchPattern, scrutinee:String):NekoSwitchPatternLowered {
+	static function lowerNekoExtractorPattern(context:NekoEmitContext, extractorText:String, resultPattern:HxSwitchPattern,
+			scrutinee:String):NekoSwitchPatternLowered {
 		final applied = switch (StringTools.trim(extractorText)) {
 			case "Std.parseInt(_)":
 				nekoStdParseIntExpr(scrutinee);
 			case _:
 				null;
 		}
-		final lowered = lowerNekoSwitchPattern(resultPattern, applied == null ? scrutinee : applied);
+		final lowered = lowerNekoSwitchPattern(context, resultPattern, applied == null ? scrutinee : applied);
 		if (applied == null)
 			return {cond: "false", bindings: lowered.bindings};
 		return lowered;
@@ -2617,14 +2763,15 @@ class NekoTargetCore {
 			+ ")";
 	}
 
-	static function lowerNekoObjectPattern(fieldNames:Array<String>, fieldPatterns:Array<HxSwitchPattern>, scrutinee:String):NekoSwitchPatternLowered {
+	static function lowerNekoObjectPattern(context:NekoEmitContext, fieldNames:Array<String>, fieldPatterns:Array<HxSwitchPattern>,
+			scrutinee:String):NekoSwitchPatternLowered {
 		final conds = ["(" + scrutinee + " != null)"];
 		final bindings = new Array<NekoSwitchPatternBinding>();
 		if (fieldNames != null && fieldPatterns != null) {
 			final count = fieldNames.length < fieldPatterns.length ? fieldNames.length : fieldPatterns.length;
 			for (i in 0...count) {
 				final fieldExpr = "$objget(" + scrutinee + ", $hash(" + quote(fieldNames[i]) + "))";
-				final lowered = lowerNekoSwitchPattern(fieldPatterns[i], fieldExpr);
+				final lowered = lowerNekoSwitchPattern(context, fieldPatterns[i], fieldExpr);
 				if (lowered.cond != "true")
 					conds.push("(" + lowered.cond + ")");
 				for (binding in lowered.bindings)
@@ -2634,13 +2781,13 @@ class NekoTargetCore {
 		return {cond: conds.join(" && "), bindings: bindings};
 	}
 
-	static function lowerNekoArrayPattern(items:Array<HxSwitchPattern>, scrutinee:String):NekoSwitchPatternLowered {
+	static function lowerNekoArrayPattern(context:NekoEmitContext, items:Array<HxSwitchPattern>, scrutinee:String):NekoSwitchPatternLowered {
 		final count = items == null ? 0 : items.length;
-		final conds = ["(" + scrutinee + " != null)", "($asize(" + scrutinee + ") == " + count + ")"];
+		final conds = [NekoArrayProvider.matchesLength(context.typedProgram, scrutinee, count)];
 		final bindings = new Array<NekoSwitchPatternBinding>();
 		if (items != null) {
 			for (i in 0...items.length) {
-				final lowered = lowerNekoSwitchPattern(items[i], scrutinee + "[" + i + "]");
+				final lowered = lowerNekoSwitchPattern(context, items[i], scrutinee + "[" + i + "]");
 				if (lowered.cond != "true")
 					conds.push("(" + lowered.cond + ")");
 				for (binding in lowered.bindings)
@@ -2650,22 +2797,13 @@ class NekoTargetCore {
 		return {cond: conds.join(" && "), bindings: bindings};
 	}
 
-	static function lowerNekoOrPattern(patterns:Array<HxSwitchPattern>, scrutinee:String):NekoSwitchPatternLowered {
+	static function lowerNekoOrPattern(context:NekoEmitContext, patterns:Array<HxSwitchPattern>, scrutinee:String):NekoSwitchPatternLowered {
 		final conds = new Array<String>();
 		if (patterns != null) {
 			for (pattern in patterns)
-				conds.push("(" + lowerNekoSwitchPattern(pattern, scrutinee).cond + ")");
+				conds.push("(" + lowerNekoSwitchPattern(context, pattern, scrutinee).cond + ")");
 		}
 		return {cond: conds.length == 0 ? "false" : "(" + conds.join(" || ") + ")", bindings: []};
-	}
-
-	static function nekoSwitchBindingValue(name:String, bindings:Array<NekoSwitchPatternBinding>):String {
-		if (bindings != null) {
-			for (binding in bindings)
-				if (binding.name == name)
-					return binding.expr;
-		}
-		return safeIdent(name);
 	}
 
 	static function unsupportedSwitchPatternLowering(pattern:HxSwitchPattern):NekoSwitchPatternLowered {
@@ -2681,10 +2819,9 @@ class NekoTargetCore {
 				renderSwitchPatternValue(pattern) + " => " + renderExpr(context, expr);
 			case PCapture(_, inner):
 				renderSwitchCase(context, inner, expr);
-			case PUnsupportedGuard(_):
+			case PUnsupportedPattern(_):
 				null;
-			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _) |
-				PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _) | POr(_):
+			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PGuard(_, _) | POr(_):
 				unsupported("switch pattern", patternKind(pattern));
 		}
 	}
@@ -2719,18 +2856,15 @@ class NekoTargetCore {
 			case PCapture(_, _): "PCapture";
 			case PArray(_): "PArray";
 			case PExtractor(_, _): "PExtractor";
-			case PLengthGuard(_, _, _): "PLengthGuard";
-			case PStartsWithGuard(_, _, _): "PStartsWithGuard";
-			case PIntEqualsGuard(_, _, _): "PIntEqualsGuard";
-			case PIntCompareGuard(_, _, _, _): "PIntCompareGuard";
-			case PParsedIntSwitchGuard(_, _, _, _): "PParsedIntSwitchGuard";
-			case PUnsupportedGuard(_): "PUnsupportedGuard";
+			case PGuard(_, _): "PGuard";
+			case PUnsupportedPattern(_): "PUnsupportedPattern";
 			case PBind(_): "PBind";
 			case POr(_): "POr";
 		}
 	}
 
-	static function renderCall(context:NekoEmitContext, callee:HxExpr, args:Array<HxExpr>, ?selectedStatic:NekoProjectedFunction):String {
+	static function renderCall(context:NekoEmitContext, callee:HxExpr, args:Array<HxExpr>, ?selectedStatic:NekoProjectedFunction,
+			?packedArguments:Array<String>):String {
 		switch (callee) {
 			case EParenthesized(inner, _) | ECast(inner, _) | ECheckType(inner, _) | EUntyped(inner):
 				// A wrapped local is a function value. Do not reinterpret its name
@@ -2738,16 +2872,17 @@ class NekoTargetCore {
 				switch inner {
 					case EIdent(name) if (isLocalName(context, name)):
 						return NekoValueCall.render(context.typedProgram, renderExpr(context, inner),
-							NekoLocalCallArguments.complete(context, callee, [for (arg in args) renderExpr(context, arg)]));
+							NekoLocalCallArguments.complete(context, callee,
+								packedArguments == null ? [for (arg in args) renderExpr(context, arg)] : packedArguments));
 					case _:
 				}
 				// Expose wrapped lambdas and selected declarations to their renderer.
-				return renderCall(context, inner, args, selectedStatic);
+				return renderCall(context, inner, args, selectedStatic, packedArguments);
 			case EIdent("__hxhx_throw"):
 				return "$throw(" + (args.length > 0 ? renderExpr(context, args[0]) : "null") + ")";
 			case _:
 		}
-		final renderedArgs = [for (arg in args) renderExpr(context, arg)];
+		final renderedArgs = packedArguments == null ? [for (arg in args) renderExpr(context, arg)] : packedArguments;
 		if (NekoStaticFieldPlan.fromExpression(context, callee) != null)
 			return NekoValueCall.render(context.typedProgram, renderExpr(context, callee), renderedArgs);
 		if (NekoRuntimeTypeRegistry.ownsPredicate(selectedStatic)) {
@@ -2756,7 +2891,7 @@ class NekoTargetCore {
 			return context.typedProgram.runtimeHelperName("__hxhx_is_of_type") + "(" + renderedArgs.join(", ") + ")";
 		}
 		final declaredMember = switch (callee) {
-			case EIdent(name) if (context.currentClass != null && !isLocalName(context, name)): isCurrentStaticFunction(context,
+			case EIdent(name) if (context.currentClass != null): isCurrentStaticFunction(context,
 					name) || lookupMutableStaticMemberOwner(context, context.currentClass.fullName,
 					name) != null || (context.selfName != null
 					&& (isCurrentInstanceMethod(context, name) || isCurrentInstanceField(context, name)));
@@ -2764,11 +2899,17 @@ class NekoTargetCore {
 		};
 		final stackPrimitive = declaredMember ? null : NekoStackPrimitives.renderCall(callee, renderedArgs);
 		final arrayPrimitive = declaredMember ? null : NekoArrayPrimitives.renderCall(callee, renderedArgs);
+		final callPrimitive = declaredMember ? null : NekoCallPrimitives.renderCall(callee, renderedArgs);
+		final objectPrimitive = declaredMember ? null : NekoObjectPrimitives.renderCall(callee, renderedArgs);
 		final printPrimitive = declaredMember ? null : NekoPrintPrimitive.renderCall(callee, renderedArgs);
 		if (printPrimitive != null)
 			return printPrimitive;
 		if (arrayPrimitive != null)
 			return arrayPrimitive;
+		if (callPrimitive != null)
+			return callPrimitive;
+		if (objectPrimitive != null)
+			return objectPrimitive;
 		if (stackPrimitive != null)
 			return stackPrimitive;
 		final stringIntrinsic = NekoStringIntrinsics.renderCall(callee, renderedArgs);
@@ -2777,8 +2918,6 @@ class NekoTargetCore {
 		switch (callee) {
 			case EIdent("trace") if (args.length > 0):
 				return "$print(" + renderedArgs.concat([quote("\n")]).join(", ") + ")";
-			case EField(EIdent("Sys"), "args"):
-				return "$loader.args";
 			case EField(EField(EIdent("unit"), "UnitBuilder"), "generateSpec") | EField(EIdent("UnitBuilder"), "generateSpec"):
 				return "$array()";
 			case EField(EIdent("TestIssues"), "addIssueClasses") | EField(EField(EIdent("unit"), "TestIssues"), "addIssueClasses"):
@@ -2796,9 +2935,9 @@ class NekoTargetCore {
 			case EField(EIdent("Type"), "getClassName") if (args.length >= 1):
 				return context.typedProgram.runtimeHelperName("__hxhx_type_class_name") + "(" + renderedArgs[0] + ")";
 			case EField(EIdent("Type"), "getInstanceFields") if (args.length >= 1):
-				return "__hxhx_type_fields(__hxhx_instance_fields, " + renderedArgs[0] + ")";
+				return NekoArrayProvider.fromNative(context, "__hxhx_type_fields(__hxhx_instance_fields, " + renderedArgs[0] + ")");
 			case EField(EIdent("Type"), "getClassFields") if (args.length >= 1):
-				return "__hxhx_type_fields(__hxhx_static_fields, " + renderedArgs[0] + ")";
+				return NekoArrayProvider.fromNative(context, "__hxhx_type_fields(__hxhx_static_fields, " + renderedArgs[0] + ")");
 			case EField(EIdent("Reflect"), "isObject") if (args.length >= 1):
 				return "(" + renderedArgs[0] + " != null && $typeof(" + renderedArgs[0] + ") == $tobject)";
 			case EField(EIdent("Reflect"), "hasField") if (args.length >= 2):
@@ -2806,11 +2945,9 @@ class NekoTargetCore {
 			case EField(EIdent("Reflect"), "field") if (args.length >= 2):
 				return "(if (" + renderedArgs[0] + " == null) null else $objget(" + renderedArgs[0] + ", $hash(" + renderedArgs[1] + ")))";
 			case EField(EIdent("Reflect"), "fields") if (args.length >= 1):
-				return "__hxhx_reflect_fields(" + renderedArgs[0] + ")";
+				return NekoArrayProvider.fromNative(context, "__hxhx_reflect_fields(" + renderedArgs[0] + ")");
 			case EField(EIdent("Reflect"), "isFunction") if (args.length >= 1):
 				return "__hxhx_reflect_is_function(" + renderedArgs[0] + ")";
-			case EField(EIdent("Reflect"), "callMethod") if (args.length >= 3):
-				return "__hxhx_reflect_call_method(" + renderedArgs[0] + ", " + renderedArgs[1] + ", " + renderedArgs[2] + ")";
 			case EField(EIdent("StringTools"), "startsWith") if (args.length >= 2):
 				return "__hxhx_string_starts_with(" + renderedArgs[0] + ", " + renderedArgs[1] + ")";
 			case EField(EIdent("StringTools"), "endsWith") if (args.length >= 2):
@@ -2833,13 +2970,12 @@ class NekoTargetCore {
 				final owner = exactHelperClass(context, selectedStatic);
 				final fn = selectedStatic.body.getDeclaration();
 				final method = HxFunctionDecl.getName(fn);
-				final reference = isDynamicStaticFunction(fn) ? "__hxhx_field(" + renderStaticObjectRef(owner.fullName) + ", " + quote(method) +
-					")" : renderFunctionRef(context, owner.fullName, method);
+				final reference = isDynamicStaticFunction(fn) ? "__hxhx_field("
+					+ renderStaticObjectRef(context.typedProgram.requireClassIdentity(owner.cls))
+					+ ", "
+					+ quote(method)
+					+ ")" : renderFunctionRef(context, owner.fullName, method);
 				return reference + "(" + renderedArgs.join(", ") + ")";
-			case EField(receiver, "indexOf") if (args.length >= 1):
-				return "__hxhx_array_indexOf(" + renderExpr(context, receiver) + ", " + renderedArgs[0] + ")";
-			case EField(receiver, "push") if (args.length >= 1):
-				return renderArrayPushExpr(context, receiver, renderedArgs[0]);
 			case EField(receiver, "endsWith") if (args.length >= 1):
 				return "__hxhx_string_ends_with(" + renderExpr(context, receiver) + ", " + renderedArgs[0] + ")";
 			case EField(ESuper, _):
@@ -2852,7 +2988,7 @@ class NekoTargetCore {
 				final staticFieldOwner = lookupMutableStaticMemberOwner(context, className, method);
 				if (staticFieldOwner != null)
 					return "__hxhx_field("
-						+ renderStaticObjectRef(staticFieldOwner.fullName)
+						+ renderStaticObjectRef(context.typedProgram.requireClassIdentity(staticFieldOwner.cls))
 						+ ", "
 						+ quote(method)
 						+ ")("
@@ -2957,9 +3093,10 @@ class NekoTargetCore {
 	/**
 		Resolves a bare identifier inside the current Neko emission scope.
 
-		Local names win first so method parameters, `var` declarations, loop binders,
-		and catch binders do not get rewritten accidentally. If no local shadows the
-		name, current-class instance methods and fields are emitted through the
+		Ordinary local names win first so parameters, variables, loop binders, and
+		catch binders retain their binding. Reserved VM aliases keep their native
+		meaning even when a local shares their spelling, matching upstream Neko.
+		If no local shadows the name, current-class instance methods and fields use the
 		constructor-created receiver object so constructor/method bodies mutate the
 		real instance state instead of unqualified Neko globals.
 	**/
@@ -2969,14 +3106,18 @@ class NekoTargetCore {
 			return loader;
 		if (context == null)
 			return safeIdent(name);
+		final primitive = NekoObjectPrimitives.renderValue(name);
 		if (isLocalName(context, name))
-			return safeIdent(name) + (context.captureStorage != null && context.captureStorage.contains(name) ? "[0]" : "");
+			return primitive != null ? primitive : safeIdent(name) + (context.captureStorage != null
+				&& context.captureStorage.contains(name) ? "[0]" : "");
 		if (context.selfName != null && isCurrentInstanceMethod(context, name))
 			return context.selfName + "." + safeIdent(name);
 		if (context.selfName != null && isCurrentInstanceField(context, name))
 			return context.selfName + "." + safeIdent(name);
 		if (isCurrentStaticFunction(context, name))
 			return renderFunctionRef(context, context.currentClass.fullName, name);
+		if (primitive != null)
+			return primitive;
 		return safeIdent(name);
 	}
 

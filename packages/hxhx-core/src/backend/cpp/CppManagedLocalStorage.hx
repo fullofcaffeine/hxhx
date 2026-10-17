@@ -11,7 +11,8 @@ package backend.cpp;
 	Ordinary declarations without initializers also retain a checked unassigned
 	state. A later write can assign null; a read before any write must fail.
 	Catch bindings create fresh storage when their selected handler is entered.
-	Pattern bindings and static locals retain their separate entry contracts.
+	Pattern attempts also create fresh storage, including after a rejected guard.
+	Static locals retain their separate entry contract.
  */
 class CppManagedLocalStorage {
 	final plan:CppManagedBodyStorage;
@@ -110,6 +111,18 @@ class CppManagedLocalStorage {
 		if (declaration.binding != binding || declaration.creation != CatchEntry || binding.getKind() != CatchVariable || !identifier(selectedRoot)
 			|| !identifier(heap))
 			throw "managed catch requires its exact creation event and rooted value";
+		return initialize(binding, heap, indent, (root, at) -> [at + root + ".set(" + selectedRoot + ".get());"]);
+	}
+
+	/** A rejected guard ends this attempt's cell; an escaping closure retains that cell's identity. */
+	public function renderPattern(binding:TyLocalBinding, selectedRoot:String, heap:String, indent:String):Array<String> {
+		final declaration = declarations[requireIndex(binding)];
+		if (declaration.binding != binding
+			|| declaration.creation != PatternMatch
+			|| binding.getKind() != PatternVariable
+			|| !identifier(selectedRoot)
+			|| !identifier(heap))
+			throw "managed pattern requires its exact creation event and rooted observation";
 		return initialize(binding, heap, indent, (root, at) -> [at + root + ".set(" + selectedRoot + ".get());"]);
 	}
 

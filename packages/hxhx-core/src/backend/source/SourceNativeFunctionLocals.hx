@@ -41,6 +41,21 @@ class SourceNativeFunctionLocals {
 		noRoot = input.noRoot;
 	}
 
+	/** Prevent generated observations from shadowing an authored or compiler-owned local. */
+	public function hasLocal(name:String):Bool
+		return projection.getLocalCatalog().findByProjectedName(name) != null;
+
+	/** Shared control keeps this function's checked return destination and pattern occurrences. */
+	public function requireRootControlIdentity():String
+		return projection.requireRootControlIdentity();
+
+	public function findNamedPattern(pattern:HxSwitchPattern):Null<TypedNamedPattern>
+		return projection.findNamedPattern(pattern);
+
+	/** Keep a constructor match attached to its exact emitted enum provider. */
+	public function requireEnumName(owner:TyNominalTypeId):String
+		return SourceEnumPatternOwner.requireName(program, owner, target);
+
 	/** Preserve the distinction between no initializer and an explicit null expression. */
 	public function declaration(name:String, hasNullInitializer:Bool):String {
 		final local = projection.getLocalCatalog().findByProjectedName(name);

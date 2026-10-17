@@ -17,6 +17,7 @@ function fromExpression(rooted:CppManagedRootedExpression):CppControlRegionServi
 		rootedValue: rooted.renderRootedReturn,
 		forLoop: rooted.renderFor,
 		switchArms: rooted.renderSwitch,
+		patternAttempts: rooted.renderPatternAttempts,
 		tryRegion: rooted.renderTry
 	};
 }

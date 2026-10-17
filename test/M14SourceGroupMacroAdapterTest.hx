@@ -37,15 +37,16 @@ class M14SourceGroupMacroAdapterTest {
 		sys.io.File.saveContent(root + "/quote.cpp", cpp);
 		command("c++", ["-std=c++17", "-o", root + "/quote.exe", root + "/quote.cpp"]);
 		check(root + "/quote.exe", [], expected);
+		final arrayFactory = NekoMacroArrayFixture.prepare(root);
 		// Neko closures capture locals by value; keep the recursive observer in a shared object slot.
 		final neko = "var observer=$new(null); observer.shape=function(value) { var node=value.expr; if(node.__hx_ctor == \"EBlock\") {"
-			+ " var items=node.__hx_params[0]; var out=\"block(\"; var i=0; while(i<$asize(items)){ if(i>0)out=out+\",\";"
+			+ " var items=node.__hx_params[0]; var out=\"block(\"; var i=0; while(i<items.length){ if(i>0)out=out+\",\";"
 			+ " out=out+observer.shape(items[i]); i=i+1; } return out+\")\"; }"
 			+ " if(node.__hx_ctor != \"EConst\" || node.__hx_params[0].__hx_ctor != \"CInt\") $throw(\"quote shape\");"
 			+ " return node.__hx_params[0].__hx_params[0]; };\n"
 			+ [
 				for (value in projected)
-					"$print(observer.shape(" + NekoMacroExprLowering.render(value, [], _ -> throw "source group used fallback") + "),\"\\n\");"
+					"$print(observer.shape(" + NekoMacroExprLowering.render(value, [], _ -> throw "source group used fallback", arrayFactory) + "),\"\\n\");"
 			].join("\n");
 		sys.io.File.saveContent(root + "/quote.neko", neko);
 		command("nekoc", [root + "/quote.neko"]);

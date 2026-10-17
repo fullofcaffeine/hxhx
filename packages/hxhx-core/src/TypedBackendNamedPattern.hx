@@ -34,6 +34,9 @@ class TypedBackendNamedPattern {
 	/** Visit only case patterns; ordinary enum expressions cannot authorize a case. */
 	public static function inExpression(expression:HxExpr, visit:HxSwitchPattern->Void):Void {
 		switch expression {
+			case ELoweredControl(PatternAttempts(plan), _, _, _):
+				for (pattern in TypedSwitchPatterns.named(plan.getPatterns()))
+					visit(pattern);
 			case ESwitch(_, patterns, _) | ELoweredControl(Switch(patterns, _), _, _, _):
 				for (pattern in TypedSwitchPatterns.named(patterns))
 					visit(pattern);
@@ -43,6 +46,9 @@ class TypedBackendNamedPattern {
 
 	public static function inStatement(statement:HxStmt, visit:HxSwitchPattern->Void):Void {
 		switch statement {
+			case SGuardedSwitch(_, _, plan, _, _):
+				for (pattern in TypedSwitchPatterns.named(plan.getPatterns()))
+					visit(pattern);
 			case SSwitch(_, patterns, _, _):
 				for (pattern in TypedSwitchPatterns.named(patterns))
 					visit(pattern);

@@ -407,6 +407,17 @@ class TyperStage {
 		TySwitchPatternBindings.declare(scope, pattern, baseTy, (input, name, arity) -> TyEnumPatternArguments.resolve(input, name, arity, ctx, pos));
 	}
 
+	/** Guards share ordinary expression inference, but must supply a Boolean condition. */
+	static function inferSwitchGuard(guard:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Void {
+		final expected = TyType.fromHintText("Bool");
+		final actual = inferExprType(guard, scope, ctx, pos, expected);
+		if (!scope.isUntypedContext()
+			&& !TyFieldAssignment.explicitlyUntyped(guard)
+			&& !actual.isNoNormalCompletion()
+			&& (actual.isUnknown() || actual.isUnresolved() || overloadArgScore(expected, actual, [], ctx.getIndex()) < 0))
+			throw new TyperError(ctx.getFilePath(), pos, actual.getDisplay() + " should be Bool in a switch guard");
+	}
+
 	/** Patterns constrain omitted inputs before either switch form declares payload locals. */
 	static function inferSwitchInput(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyType {
 		final actual = inferExprType(scrutinee, scope, ctx, pos);
@@ -1005,6 +1016,8 @@ class TyperStage {
 
 		function typeStmt(s:HxStmt):Void {
 			switch (s) {
+				case SGuardedSwitch(_, _, _, _, _):
+					throw "backend guarded switch cannot reach source statement analysis";
 				case STargetScope(_, _, _):
 					throw "native target scope is not valid in this source or target phase";
 				case SBlock(stmts, _pos):
@@ -1024,6 +1037,9 @@ class TyperStage {
 							scope.enterLexicalScope();
 							try {
 								declarePatternBindings(scope, pattern, scrutTy, ctx, pos);
+								final guard = TypedSwitchGuards.condition(pattern);
+								if (guard != null)
+									inferSwitchGuard(guard, scope, ctx, pos);
 								typeStmt(body);
 							} catch (error:Dynamic) {
 								// Haxe permits any thrown value. This cleanup boundary neither
@@ -1076,21 +1092,20 @@ class TyperStage {
 				case SBreak(_):
 				case SContinue(_):
 				case SForIn(name, iterable, body, pos):
-					// Bring-up: type-check the iterable expression and bind the loop variable.
-					final iterableTy = inferExprType(iterable, scope, ctx, pos);
-					final loopTy = switch (iterable) {
-						case ERange(_, _):
-							TyType.fromHintText("Int");
-						case _:
-							// Best-effort: if we can see an `Array<T>` element type, propagate it
-							// to the loop variable so string/number-heavy harness code can emit.
-							final elem = arrayElementType(iterableTy);
-							(elem != null && !elem.isUnknown()) ? elem : TyType.fromHintText("Dynamic");
-					}
+					final iterableType = inferExprType(iterable, scope, ctx, pos);
+					final inferProtocol = expression -> scope.withProtocolSource(iterable, iterableType, () -> inferExprType(expression, scope, ctx, pos));
+					final bindingTypes = TySourceFor.bindingTypes(Value(name), iterable, iterableType, inferProtocol,
+						() -> scope.getInference()
+							.iteratorProtocolSource(iterable, source -> TySourceFor.selectProtocol(source, inferProtocol, scope.getOwnerIdentity(), Values)));
+					if (bindingTypes == null)
+						throw new TyperError(ctx.getFilePath(), pos,
+							TySourceFor.protocolDiagnostic(iterableType,
+								iterable.match(ERange(_, _)) ? null : scope.getInference().iteratorProtocolSource(iterable), inferProtocol,
+								"value loop requires a resolved iterator protocol"));
 					final controls = scope.requireControlScope();
 					final target = controls.enter(Loop, TypedBodyFingerprint.forStatements([s]));
 					scope.enterLexicalScope();
-					scope.declareLocal(name, loopTy, LoopVariable);
+					scope.declareLocal(name, bindingTypes[0], LoopVariable);
 					typeStmt(body);
 					scope.exitLexicalScope();
 					controls.exit(target);
@@ -1100,11 +1115,12 @@ class TyperStage {
 					// Array statements use the same index and element contract as expression loops.
 					final bindingTypes = TySourceFor.bindingTypes(KeyValue(keyName, valueName), iterable, iterableType, inferProtocol,
 						() -> scope.getInference()
-							.keyValueProtocolSource(iterable, source -> TySourceFor.selectProtocol(source, inferProtocol, scope.getOwnerIdentity())));
+							.iteratorProtocolSource(iterable,
+								source -> TySourceFor.selectProtocol(source, inferProtocol, scope.getOwnerIdentity(), KeyValues)));
 					if (bindingTypes == null)
 						throw new TyperError(ctx.getFilePath(), pos,
 							TySourceFor.protocolDiagnostic(iterableType,
-								iterable.match(ERange(_, _)) ? null : scope.getInference().keyValueProtocolSource(iterable), inferProtocol,
+								iterable.match(ERange(_, _)) ? null : scope.getInference().iteratorProtocolSource(iterable), inferProtocol,
 								"key/value loop requires a resolved iterator protocol"));
 					final controls = scope.requireControlScope();
 					final target = controls.enter(Loop, TypedBodyFingerprint.forStatements([s]));
@@ -2871,10 +2887,6 @@ class TyperStage {
 						for (a in args)
 							inferExprType(a, scope, ctx, pos);
 						return TyType.fromHintText("String");
-					case EField(EIdent("Sys"), "args"):
-						for (a in args)
-							inferExprType(a, scope, ctx, pos);
-						return TyType.fromHintText("Array<String>");
 					case EField(EIdent("Timer"), "stamp"):
 						// Gate2 bring-up: RunCi uses `Timer.stamp()` for timing logs.
 						// We map it to a float so `Math.round(Timer.stamp() - t)` can type.
@@ -3173,6 +3185,9 @@ class TyperStage {
 						scope.enterLexicalScope();
 						try {
 							declarePatternBindings(scope, pattern, scrutTy, ctx, pos);
+							final guard = TypedSwitchGuards.condition(pattern);
+							if (guard != null)
+								inferSwitchGuard(guard, scope, ctx, pos);
 							branchTy = inferExprType(branchExpr, scope, ctx, pos, expectedResult);
 						} catch (error:Dynamic) {
 							// Opaque rethrow is required to restore scope for every Haxe failure.

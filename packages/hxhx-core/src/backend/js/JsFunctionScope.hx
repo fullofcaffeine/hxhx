@@ -140,10 +140,30 @@ class JsFunctionScope {
 		return safe;
 	}
 
+	/** Each emitted attempt owns fresh variable names; enclosing bindings and reservations survive it. */
+	public function withLexicalScope<T>(run:Void->T):T {
+		final previous = locals.copy();
+		function restore():Void {
+			locals.clear();
+			for (name => value in previous)
+				locals.set(name, value);
+		}
+		try {
+			final result = run();
+			restore();
+			return result;
+		} catch (error:Dynamic) {
+			// The host exception boundary must restore names for every thrown value.
+			// The value is rethrown unchanged and never enters compiler semantics.
+			restore();
+			throw error;
+		}
+	}
+
 	/** A wrapper parameter captures the cell object, while ordinary reads use its value. */
 	public function bindIterationCell(raw:String):String {
 		if (!isIterationCapture(raw))
-			throw "JavaScript capture wrapper requires an exact iteration binding";
+			throw "JavaScript capture wrapper requires an exact captured declaration";
 		final name = reserve("$hx_iteration");
 		locals.set(raw, name);
 		return name;

@@ -36,11 +36,12 @@ typedef NekoRuntimeClassMeta = {
 	  backend references the helper instead of inlining another emitter stub.
 **/
 class NekoRuntimeSupport {
-	public static function renderPrelude(out:Array<String>, classes:Array<NekoRuntimeClassMeta>, symbolTable:String, program:NekoTypedProgramProjection):Void {
+	public static function renderPrelude(out:Array<String>, classes:Array<NekoRuntimeClassMeta>, symbolTable:String, program:NekoTypedProgramProjection,
+			arrayFactory:Null<String>):Void {
 		if (symbolTable == null || symbolTable.length == 0)
 			throw "Neko runtime support requires the shared symbol object";
 		NekoStringRuntimeSource.render(out);
-		NekoStringMethodRuntimeSource.render(out);
+		NekoStringMethodRuntimeSource.render(out, arrayFactory);
 		out.push("var __hxhx_array_indexOf = function(a, value) {");
 		out.push("  var i = 0;");
 		out.push("  var len = $asize(a);");
@@ -141,12 +142,6 @@ class NekoRuntimeSupport {
 		out.push("  return $typeof(value) == $tfunction;");
 		out.push("}");
 		out.push("");
-		out.push("var __hxhx_reflect_call_method = function(o, func, args) {");
-		out.push("  if (func == null) return null;");
-		out.push("  if (args == null) args = $array();");
-		out.push("  return $call(func, o, args);");
-		out.push("}");
-		out.push("");
 		out.push("var __hxhx_sys_system_name = function() {");
 		out.push("  return $loader.loadprim(\"std@sys_string\", 0)();");
 		out.push("}");
@@ -226,7 +221,9 @@ class NekoRuntimeSupport {
 		out.push("");
 		out.push("var __hxhx_process_new = function(command, args, detached) {");
 		out.push("  if (detached == true) $throw(\"Detached process unsupported on this platform\");");
-		out.push("  if (args == null) args = $array();");
+		// Strings already use native storage. The Array provider trims spare capacity;
+		// null must reach the VM unchanged because it selects shell-command execution.
+		out.push("  var nativeArgs = if (args == null) null else args.__neko();");
 		out.push("  var run = $loader.loadprim(\"std@process_run\", 2);");
 		out.push("  var stdoutRead = $loader.loadprim(\"std@process_stdout_read\", 4);");
 		out.push("  var stderrRead = $loader.loadprim(\"std@process_stderr_read\", 4);");
@@ -234,7 +231,7 @@ class NekoRuntimeSupport {
 		out.push("  var pid = $loader.loadprim(\"std@process_pid\", 1);");
 		out.push("  var close = $loader.loadprim(\"std@process_close\", 1);");
 		out.push("  var kill = $loader.loadprim(\"std@process_kill\", 1);");
-		out.push("  var handle = run(command, args);");
+		out.push("  var handle = run(command, nativeArgs);");
 		out.push("  var process = $new(null);");
 		out.push("  process.__hx_ctor = \"sys.io.Process\";");
 		out.push("  process.__hx_params = $array(command, args, detached);");

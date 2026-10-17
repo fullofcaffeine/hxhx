@@ -23,6 +23,10 @@ private typedef TySwitchPatternBindingAnalysis = {
 	arithmetic must not become Dynamic merely because a pattern introduced a local.
 **/
 class TySwitchPatternBindings {
+	/** Count source occurrences without allocating replacement local identities during lowering. */
+	public static function occurrenceCount(pattern:HxSwitchPattern):Int
+		return analyze(pattern, TyType.unknown(), null).occurrences.length;
+
 	static function effectiveType(type:TyType):TyType
 		return type == null || type.isUnknown() ? TyType.fromHintText("Dynamic") : type;
 
@@ -132,8 +136,7 @@ class TySwitchPatternBindings {
 				mergeIndependent([for (item in children) analyze(item, itemType, enumArguments)]);
 			case PExtractor(_, resultPattern):
 				analyze(resultPattern, TyType.fromHintText("Dynamic"), enumArguments);
-			case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PIntCompareGuard(inner, _, _, _),
-				PParsedIntSwitchGuard(inner, _, _, _), PUnsupportedGuard(inner):
+			case PGuard(inner, _), PUnsupportedPattern(inner):
 				analyze(inner, baseType, enumArguments);
 			case POr(patterns):
 				analyzeOr(patterns, baseType, enumArguments);

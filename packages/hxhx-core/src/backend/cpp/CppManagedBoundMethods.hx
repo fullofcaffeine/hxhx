@@ -56,13 +56,19 @@ class CppManagedBoundMethods {
 		return occurrence;
 	}
 
-	/** Revalidate exact source ownership before applying any enclosing generic arguments. */
-	public function application(occurrence:TypedBackendMethodOccurrence, context:Null<CppManagedEnclosingApplication>):CppManagedFunctionApplication {
+	/** Native method bindings and authored bodies must prove the same exact source ownership. */
+	public function requireOwned(occurrence:TypedBackendMethodOccurrence, context:Null<CppManagedEnclosingApplication>):Void {
 		program.assertCurrent();
 		final owner = owners.get(occurrence);
 		if (owner == null || owner.find() != occurrence || occurrence.getUse() != ValueRead)
 			throw "managed bound method belongs to another program or occurrence";
 		CppManagedCallContext.assertOwner(context, owner.source);
+	}
+
+	/** Revalidate exact source ownership before applying any enclosing generic arguments. */
+	public function application(occurrence:TypedBackendMethodOccurrence, context:Null<CppManagedEnclosingApplication>):CppManagedFunctionApplication {
+		requireOwned(occurrence, context);
+		final owner = owners.get(occurrence);
 		final declaration = occurrence.getDeclaration();
 		final receiver = CppManagedCallContext.resolveType(context, occurrence.getReceiverType());
 		if (receiver.getNominalIdentity() == null)

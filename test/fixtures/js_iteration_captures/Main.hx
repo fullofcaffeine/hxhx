@@ -35,6 +35,35 @@ class Main {
 		final forwarded = holder.collect();
 		if (forwarded[0]()() != 8 || forwarded[1]()() != 10)
 			throw "forwarded iteration capture or receiver";
+		capturedDeclarations();
+	}
+
+	/** Declaration events must stay fresh, share writes, and support recursive initialization. */
+	static function capturedDeclarations():Void {
+		final readers:Array<Void->Int> = [];
+		final writers:Array<Void->Void> = [];
+		final recursions:Array<Int->Int> = [];
+		for (index in 0...2) {
+			var local:Int;
+			local = index;
+			readers.push(() -> local);
+			writers.push(() -> {
+				local += 10;
+			});
+			local += 1;
+			final base = index * 10;
+			function recurse(count:Int):Int {
+				if (count == 0)
+					return base;
+				return recurse(count - 1) + 1;
+			}
+			recursions.push(recurse);
+		}
+		writers[0]();
+		if (readers[0]() != 11 || readers[1]() != 2)
+			throw "captured declarations must share only their own execution's writes";
+		if (recursions[0](2) != 2 || recursions[1](2) != 12)
+			throw "recursive declaration must capture its initialized cell";
 	}
 }
 

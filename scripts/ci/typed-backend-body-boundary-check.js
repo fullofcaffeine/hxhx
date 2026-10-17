@@ -349,8 +349,8 @@ requireFragment(
 );
 requireFragment(
   "packages/hxhx-core/src/backend/source/SourceFunctionRenderFrame.hx",
-  "PhpFunction(renderer:PhpFunctionBodyRenderer, scope:PhpLexicalRenderScope)",
-  "closed PHP function renderer and lexical-scope frame",
+  "PhpFunction(renderer:PhpFunctionBodyRenderer, scope:PhpLexicalRenderScope, names:SourceTemporaryNames)",
+  "closed PHP function renderer, lexical scope, and function-owned temporary names",
 );
 rejectFragment(
   "packages/hxhx-core/src/backend/source/PhpFunctionBodyRenderer.hx",

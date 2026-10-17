@@ -83,6 +83,49 @@ class CppManagedEnumDescriptors {
 		throw "managed enum constructor is absent from its declaration inventory";
 	}
 
+	/** Pattern tests use the typed constructor ordinal of this program's ordinary enum descriptor. */
+	public function patternTarget(selected:TypedNamedPattern):{symbol:String, index:Int, arity:Int} {
+		program.assertPlanningCurrent();
+		return switch selected.getKind() {
+			case Constructor(identity, name, index, arity):
+				final owner = program.requireClass(program.requireClassIdentity(identity.getCanonicalName()));
+				final facts = owner.requireSemanticFacts();
+				final constructors = facts.copyEnumConstructors();
+				if (facts.getIsExtern() || index < 0 || index >= constructors.length)
+					throw "managed guarded pattern requires its ordinary enum provider";
+				final constructor = constructors[index];
+				final count = switch constructor.member {
+					case Singleton(_): 0;
+					case Callable(method): method.arguments.length;
+				};
+				if (constructor.index != index || constructor.name != name || count != arity)
+					throw "managed guarded constructor differs from typing";
+				{symbol: requireSymbol(owner), index: index, arity: arity};
+			case _: throw "managed guarded constructor requires an ordinary enum selection";
+		};
+	}
+
+	/** Applied payload types authorize nested field/array reads, without changing physical enum storage. */
+	public function patternPayload(selected:TypedNamedPattern, receiver:TyType, index:Int):TyType {
+		final target = patternTarget(selected);
+		if (index < 0 || index >= target.arity)
+			throw "managed guarded extraction has no exact payload";
+		return switch selected.getKind() {
+			case Constructor(identity, _, ordinal, _):
+				final owner = program.requireClass(program.requireClassIdentity(identity.getCanonicalName()));
+				final facts = owner.requireSemanticFacts();
+				final parameters = facts.getTypeParameterIds();
+				if (parameters.length > 0 && (receiver.getNominalIdentity() == null || !receiver.getNominalIdentity().equals(identity)))
+					throw "managed guarded generic enum requires its applied receiver";
+				final bindings = TyTypeSubstitution.bind(parameters, parameters.length == 0 ? [] : receiver.getTypeArguments(), identity.getCanonicalName());
+				switch facts.copyEnumConstructors()[ordinal].member {
+					case Callable(method): TyTypeSubstitution.apply(method.arguments[index].semanticType, bindings);
+					case _: throw "managed guarded singleton has no payload";
+				}
+			case _: throw "managed guarded extraction requires an ordinary enum selection";
+		};
+	}
+
 	/** An enum literal retains its exact lexical occurrence and this registry's declaration owner. */
 	public function requireRuntimeDescriptor(occurrence:TypedBackendRuntimeTypeOccurrence, classes:CppManagedClassStorage,
 			?context:CppManagedEnclosingApplication):String {

@@ -100,8 +100,9 @@ class TypedStmt {
 		return new TypedStmt(If, position, null, [condition], branches);
 	}
 
-	public static function forIn(name:String, iterable:TypedExpr, body:TypedStmt, position:Null<HxPos>, ?binding:TyLocalBinding):TypedStmt
-		return new TypedStmt(ForIn, position, [name], [iterable], [body], null, null, null, null, binding == null ? [] : [binding]);
+	public static function forIn(name:String, iterable:TypedExpr, body:TypedStmt, position:Null<HxPos>, ?binding:TyLocalBinding, ?protocol:TypedExpr):TypedStmt
+		return new TypedStmt(ForIn, position, [name], [iterable].concat(protocol == null ? [] : [protocol]), [body], null, null, null, null,
+			binding == null ? [] : [binding]);
 
 	public static function forKeyValue(keyName:String, valueName:String, iterable:TypedExpr, body:TypedStmt, position:Null<HxPos>,
 			?bindings:Array<TyLocalBinding>, ?protocol:TypedExpr):TypedStmt
@@ -115,8 +116,9 @@ class TypedStmt {
 		return new TypedStmt(DoWhile, position, null, [condition], [body]);
 
 	public static function switchStmt(scrutinee:TypedExpr, patterns:Array<HxSwitchPattern>, bodies:Array<TypedStmt>, position:Null<HxPos>,
-			?bindings:Array<TyLocalBinding>, exhaustive:Bool = false):TypedStmt
-		return new TypedStmt(Switch, position, null, [scrutinee], bodies, patterns, null, null, null, bindings, null, null, exhaustive);
+			?bindings:Array<TyLocalBinding>, exhaustive:Bool = false, ?guards:Array<TypedExpr>):TypedStmt
+		return new TypedStmt(Switch, position, null, [scrutinee].concat(guards == null ? [] : guards), bodies, patterns, null, null, null, bindings, null,
+			null, exhaustive);
 
 	public static function tryStmt(body:TypedStmt, catchNames:Array<String>, catchTypeHints:Array<String>, catchBodies:Array<TypedStmt>, position:Null<HxPos>,
 			?bindings:Array<TyLocalBinding>):TypedStmt
@@ -162,6 +164,13 @@ class TypedStmt {
 
 	public function getPatterns():Array<HxSwitchPattern>
 		return patterns.copy();
+
+	/** Recursive passes visit guards as ordinary expressions in the switch's case scopes. */
+	public function getSwitchGuards():Array<TypedExpr> {
+		if (tag != Switch)
+			throw "guard operands require a typed switch statement";
+		return TypedSwitchGuards.children(patterns, expressions, 1);
+	}
 
 	public function getSwitchPatterns():Null<TypedSwitchPatterns> {
 		if (switchPatterns != null)

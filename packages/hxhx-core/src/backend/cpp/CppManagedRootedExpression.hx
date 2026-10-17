@@ -199,8 +199,18 @@ class CppManagedRootedExpression {
 			prefix: input.temporaryPrefix,
 			valueType: valueType,
 			requireExpression: requireExpression,
+			checkedCondition: checkedCondition,
 			renderValue: render
 		});
+	}
+
+	/** A Dynamic branch conversion requires the exact condition retained by its executable owner. */
+	function checkedCondition(value:HxExpr):Null<TyType> {
+		final fact = switch input.owner {
+			case CallableBody(selected): selected.condition(value);
+			case FieldInitializer(projection): projection.findCondition(value);
+		};
+		return fact == null ? null : applicationType(fact.type);
 	}
 
 	/** Select one arm after rooted scrutinee evaluation; shared lowering owns its result writes. */
@@ -214,6 +224,27 @@ class CppManagedRootedExpression {
 			prefix: input.temporaryPrefix + "switch_",
 			renderValue: render,
 			renderBody: renderBody
+		}, indent);
+	}
+
+	/** Guarded cases retain rooted observations and the enclosing function's control destinations. */
+	public function renderPatternAttempts(source:HxExpr, indent:String, body:(Int, String) -> Array<String>):Array<String> {
+		return CppManagedGuardedSwitch.render({
+			source: source,
+			locals: locals,
+			heap: input.heap,
+			prefix: input.temporaryPrefix + "pattern_",
+			requireExpression: requireExpression,
+			renderValue: render,
+			condition: value -> renderControlValue(value, "bool"),
+			valueType: valueType,
+			namedPattern: pattern -> switch input.owner {
+				case CallableBody(access): access.namedPattern(pattern);
+				case FieldInitializer(projection): projection.findNamedPattern(pattern);
+			},
+			casts: input.casts,
+			enums: input.enums,
+			body: body
 		}, indent);
 	}
 
@@ -463,7 +494,10 @@ class CppManagedRootedExpression {
 		final bound = methodValue(value);
 		if (bound != null) {
 			requireClassOperation(value);
-			input.classes.methods.bound.application(bound, input.callContext);
+			if (CppManagedArrayPush.selectsDeclaration(bound.getDeclaration()))
+				CppManagedArrayPushValue.require(bound, input.callContext, input.classes);
+			else
+				input.classes.methods.bound.application(bound, input.callContext);
 			return bound.getCallableType();
 		}
 		final method = staticCallable(value);
@@ -518,7 +552,10 @@ class CppManagedRootedExpression {
 			case EThis: access.receiverType(value);
 			case ENew(_, _):
 				final selected = constructor(value);
-				input.classes.requireConstructor(selected, input.callContext);
+				if (CppManagedArrayConstructor.selects(selected))
+					CppManagedArrayConstructor.require(selected, input.callContext, input.classes);
+				else
+					input.classes.requireConstructor(selected, input.callContext);
 				input.classes.casts.appliedAbstractStorage(selected.getConstructedType(),
 					CppManagedCallContext.resolveType(input.callContext, selected.getConstructedType()));
 			case EArrayDecl(_) | EAnon(_, _): aggregate(value).getType();
@@ -566,10 +603,10 @@ class CppManagedRootedExpression {
 				TyType.fromHintText("Int");
 			case EUnop(LogicalNot, Prefix, operand):
 				requireExpression(value);
-				CppManagedBoolean.requireCondition(operand, valueType, requireExpression);
+				CppManagedBoolean.requireCondition(operand, valueType, requireExpression, checkedCondition);
 				TyType.fromHintText("Bool");
 			case ETernary(condition, yes, no):
-				CppManagedBoolean.requireCondition(condition, valueType, requireExpression);
+				CppManagedBoolean.requireCondition(condition, valueType, requireExpression, checkedCondition);
 				CppManagedValueTransfer.conditionalStorage(valueType(yes), valueType(no));
 			case ECall(_, _):
 				final call = invocation(value);
@@ -679,6 +716,9 @@ class CppManagedRootedExpression {
 			case EThis:
 				return [indent + destination + ".set(" + access.receiverValue(value) + ");"];
 			case ENew(_, _):
+				final selected = constructor(value);
+				if (CppManagedArrayConstructor.selects(selected))
+					return CppManagedArrayConstructor.render(selected, input.callContext, input.classes, input.heap, destination, indent);
 				return CppManagedConstructor.render({
 					casts: input.casts,
 					occurrence: constructor(value),

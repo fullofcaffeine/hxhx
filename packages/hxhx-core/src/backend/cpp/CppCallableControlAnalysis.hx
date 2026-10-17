@@ -45,6 +45,18 @@ function control(kind:HxLoweredControlKind, children:Array<HxExpr>, scope:CppRen
 				final types = [for (name in names) projectedType(name, scope)];
 				bindings(names, types, scope, candidates, nested -> visit(children[index + 1], scope, nested, resultType));
 			}
+		case PatternAttempts(plan):
+			final patterns = plan.getPatterns();
+			if (patterns.length == 0 || children.length != patterns.length + 2)
+				throw "C++ pattern attempts require their shared candidate layout";
+			visit(children[0], scope, candidates, "");
+			visit(children[1], scope, candidates, "bool");
+			for (index in 0...patterns.length) {
+				final names = new Array<String>();
+				patternNames(patterns[index], names);
+				bindings(names, [for (name in names) projectedType(name, scope)], scope, candidates,
+					nested -> visit(children[index + 2], scope, nested, resultType));
+			}
 		case Throw | ArrayAppend | MapInsert:
 			for (child in children)
 				visit(child, scope, candidates, "");
@@ -151,8 +163,7 @@ private function patternNames(pattern:HxSwitchPattern, names:Array<String>):Void
 		case PEnumExtract(_, children) | PObject(_, children) | PArray(children) | POr(children):
 			for (child in children)
 				patternNames(child, names);
-		case PExtractor(_, inner) | PLengthGuard(inner, _, _) | PStartsWithGuard(inner, _, _) | PIntEqualsGuard(inner, _, _) |
-			PIntCompareGuard(inner, _, _, _) | PParsedIntSwitchGuard(inner, _, _, _) | PUnsupportedGuard(inner):
+		case PExtractor(_, inner) | PGuard(inner, _) | PUnsupportedPattern(inner):
 			patternNames(inner, names);
 		case PNull | PWildcard | PBool(_) | PString(_) | PInt(_) | PEnumValue(_):
 	}

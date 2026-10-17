@@ -114,6 +114,8 @@ class MetalProfileVerifier {
 
 	static function verifyStmt(filePath:String, className:String, fnName:String, stmt:HxStmt, violations:Array<MetalViolation>):Void {
 		switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _):
+				throw "backend guarded switch cannot reach source statement analysis";
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):

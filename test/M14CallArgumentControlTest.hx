@@ -122,6 +122,12 @@ class M14CallArgumentControlTest {
 			"using Main.Extensions; class Sink { public var value:Int=10; public function new() {} } " +
 			"class Extensions { public static function add(sink:Sink, value:Null<Int>):Int return sink.value+(value==null?0:value); } " +
 			"class Main { static function main():Void { final sink=new Sink(); if(sink.add(true?3:null)!=13) throw 'extension call'; } }");
+		check("static_dynamic",
+			"class Main { static dynamic function run(value:Int):Int return 1; static function main():Void { " +
+			"final result=run({run=function(value:Int):Int return 2; 7;}); if(result!=1 || run(7)!=2) throw 'static method lookup moved'; } }");
+		check("static_effects",
+			"class Main { static var order:Int=0; static function accept(value:Int):Int { order=order*10+3; return value; } " +
+			"static function main():Void { final result=Main.accept({order=1; order=order*10+2; 7;}); if(result!=7 || order!=123) throw 'static argument order'; } }");
 		check("parent",
 			"class Base { public var value:Null<Int>; public function new(value:Null<Int>) { this.value=value; } } " +
 			"class Child extends Base { public function new() { super(true?3:null); } } " +

@@ -36,6 +36,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return Sys.command("sh", ["-c", "command -v " + name + " >/dev/null 2>&1"]) == 0;
 	}
 
+	/** Check behavior independently of the temporary variables chosen by lowering. */
+	static function assertPythonRuntime(outputPath:String, expected:String):Void {
+		if (!commandExists("python3"))
+			return;
+		final run = commandOutput("python3", [outputPath]);
+		assertTrue(run.code == 0, "generated Python should execute, stderr:\n" + run.stderr);
+		assertTrue(run.stdout == expected, "generated Python output mismatch, expected:\n" + expected + "got:\n" + run.stdout);
+	}
+
 	static function installTrueExecutable(path:String):Void {
 		final candidates = ["/usr/bin/true", "/bin/true"];
 		for (candidate in candidates) {
@@ -770,9 +779,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final valueSlotRenderer = new backend.source.PhpFunctionBodyRenderer(valueSlotProgramRenderer, planProjection.getProgramRenderFacts(),
 			planProjection.getModuleRenderFacts("unit.PlanChild"), valueSlotPlan);
 		switch (backend.source.SourceFunctionRenderFrame.SourceFunctionRenderFrameTools.forPhpRenderer(valueSlotRenderer)) {
-			case PhpFunction(_, scope):
+			case PhpFunction(_, scope, _):
 				assertTrue(scope.usesThisValueSlot(), "the request-owned renderer should activate the sealed class-wide this-value representation");
-			case Program(_) | NativeFunction(_):
+			case Program(_) | NativeFunction(_, _) | TypedFunction(_, _, _, _):
 				throw "the PHP function renderer should create a function frame";
 		}
 		var mismatchedPlanMessage = "";
@@ -10360,7 +10369,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "while (count < 2):", "while loops should render conditions");
 		assertContains(content, "    count += 1", "while loop bodies should render with nested indentation");
-		assertContains(content, "print(str(count))", "while-derived locals should still flow through later statements");
+		assertContains(content, "print(hxhx_std_string(count))", "while-derived locals should retain Haxe string conversion");
+		assertPythonRuntime(outputPath, "2\n");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10436,8 +10446,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "flag = (not False)", "logical not should lower to the Python unary form");
 		assertContains(content, "delta = (-1)", "unary minus should lower to the target unary form");
-		assertContains(content, "print(str(flag))", "unary-derived values should still flow through normal calls");
-		assertContains(content, "print(str(delta))", "multiple unary-derived values should still render");
+		assertContains(content, "print(hxhx_std_string(flag))", "unary-derived Bool values should retain Haxe string conversion");
+		assertContains(content, "print(hxhx_std_string(delta))", "multiple unary-derived values should still render");
+		assertPythonRuntime(outputPath, "true\n-1\n");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10488,7 +10499,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "count = 1", "postfix smoke should declare the local first");
 		assertContains(content, "count = (count + 1)", "postfix increment statements should lower to explicit assignments");
 		assertContains(content, "count = (count - 1)", "postfix decrement statements should lower to explicit assignments");
-		assertContains(content, "print(str(count))", "postfix-lowered locals should still flow through later statements");
+		assertContains(content, "print(hxhx_std_string(count))", "postfix-lowered locals should retain Haxe string conversion");
+		assertPythonRuntime(outputPath, "1\n");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10501,7 +10513,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "label = (\"yes\" if (True) else \"no\")", "ternary expressions should lower to the Python conditional form");
-		assertContains(content, "print(str(label))", "ternary-derived locals should still flow through later statements");
+		assertContains(content, "print(hxhx_std_string(label))", "ternary-derived locals should retain Haxe string conversion");
+		assertPythonRuntime(outputPath, "yes\n");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10530,7 +10543,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "values = Array([1, 2])", "array access smoke should render array literals through the Python Array shim");
 		assertContains(content, "first = values[0]", "array access expressions should lower to Python index syntax");
-		assertContains(content, "print(str(first))", "array-access-derived locals should still flow through later statements");
+		assertContains(content, "print(hxhx_std_string(first))", "array-access-derived locals should retain Haxe string conversion");
+		assertPythonRuntime(outputPath, "1\n");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10704,7 +10718,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final content = File.getContent(outputPath);
 		assertContains(content, "def hxhx_ushr(value, bits):", "Python source backend should emit the unsigned-right-shift helper");
 		assertContains(content, "shifted = hxhx_ushr((-1), 1)", "unsigned right shift should lower through the helper");
-		assertContains(content, "print(str(shifted))", "unsigned-right-shift results should still flow through later statements");
+		assertContains(content, "print(hxhx_std_string(shifted))", "unsigned-right-shift results should retain Haxe string conversion");
+		assertPythonRuntime(outputPath, "2147483647\n");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -12173,8 +12188,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpMacroSwitchGuardProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "Std::parseInt($__hxhx_switch->__hx_params[0]->__hx_params[0])",
-			"PHP guarded macro switch should substitute enum extractor bindings inside nested switch guards");
+		assertContains(content, "Std::parseInt(", "PHP guarded macro switch must retain the authored guard call");
 		assertNotContains(content, "&& false", "PHP parsed nested switch guards should not be lowered as unsupported guards");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
@@ -14450,22 +14464,25 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(switchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "label = (\"Python\" if", "switch expressions should render literal branch values");
-		assertContains(content, "or ((\"python\" == \"py\"))", "switch expressions should render or-pattern conditions");
-		assertContains(content, "print(str(label))", "switch expression results should render as normal values");
+		assertContains(content, "result = \"Python\"", "switch branches should assign their authored values");
+		assertContains(content, "or ((__hxhx_switch == \"py\"))", "switch expressions should preserve both or-pattern alternatives");
+		assertContains(content, "print(hxhx_std_string(label))", "switch results should retain Haxe string conversion");
+		assertPythonRuntime(outputPath, "Python\n");
 		deleteRecursive(tmpRoot);
 	}
 
-	static function assertUnsupportedSwitchGuardExpression():Void {
+	static function assertUnresolvedSwitchGuardRejected():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_guarded_switch_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(guardedSwitchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
-		final outputPath = Path.join([tmpRoot, "index.php"]);
-		final content = File.getContent(outputPath);
-		assertContains(content, "&& false", "unsupported switch guards should preserve the inner match and disable the branch");
-		assertContains(content, "$label = (", "guarded switch expressions should still lower to PHP conditional expressions");
+		var rejected = false;
+		try {
+			backend.emit(guardedSwitchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		} catch (error:TyperError) {
+			rejected = Std.string(error).indexOf("switch guard") >= 0;
+		}
+		assertTrue(rejected, "an unresolved guard must fail typing instead of silently disabling its case");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -14495,8 +14512,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(phpEnumIntGuardProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "__hx_params[0] > 1", "PHP enum int guard should lower the greater-than comparison");
-		assertContains(content, "__hx_params[0] <= 1", "PHP enum int guard should lower the less-than-or-equal comparison");
+		assertContains(content, "->__hx_params[0]", "PHP enum guards should observe their constructor payload");
+		assertContains(content, "($x > 1)", "PHP enum guards should compare the first attempt's captured value");
+		assertContains(content, "($x_1 <= 1)", "PHP enum guards should compare the retry's captured value");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP enum int guard should execute, stderr:\n" + run.stderr);
@@ -17015,7 +17033,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		final pos = HxPos.unknown();
 		final switchExpr = HxExpr.ESwitch(EIdent("items"), [
-			HxSwitchPattern.PLengthGuard(HxSwitchPattern.PBind("matched"), "matched", 3),
+			HxSwitchPattern.PGuard(HxSwitchPattern.PBind("matched"), EBinop("==", EField(EIdent("matched"), "length"), EInt(3))),
 			HxSwitchPattern.PBind("fallback")
 		], [EString("three"), EString("other")]);
 		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
@@ -17031,8 +17049,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "and (len(items) == 3)", "Python switch guard expressions should use Python conjunction syntax");
 		assertNotContains(content, "&&", "Python switch guard expressions should not emit C-style conjunctions");
+		final run = commandOutput("python3", [outputPath]);
+		assertTrue(run.code == 0 && run.stdout == "three\n", "Python must execute the matched guard and body: " + run.stdout + run.stderr);
 		deleteRecursive(tmpRoot);
 	}
 
@@ -17459,7 +17478,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertLambdaExpression();
 		assertPhpLambdaImmediateCallExpression();
 		assertSwitchExpression();
-		assertUnsupportedSwitchGuardExpression();
+		assertUnresolvedSwitchGuardRejected();
 		assertPhpTupleOrPatternCapture();
 		assertPhpEnumIntGuard();
 		assertPhpClassSwitch();

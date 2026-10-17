@@ -86,12 +86,14 @@ class NekoConstructionEmitter {
 		final prototype = context.typedProgram.runtimeHelperName("__hxhx_runtime_type_definition")
 			+ "("
 			+ NekoTargetCore.quote(NekoRuntimeTypeRegistry.classDescriptorIdentity(context.typedProgram, info.cls))
-			+ ").prototype";
+			+ ")."
+			+ context.typedProgram.runtimeHelperName("__hxhx_type_prototype");
 		if (plan.lineage.length > 1) {
 			final parent = context.typedProgram.runtimeHelperName("__hxhx_runtime_type_definition")
 				+ "("
 				+ NekoTargetCore.quote(NekoRuntimeTypeRegistry.classDescriptorIdentity(context.typedProgram, plan.lineage[1].getDeclaration()))
-				+ ").prototype";
+				+ ")."
+				+ context.typedProgram.runtimeHelperName("__hxhx_type_prototype");
 			out.push("$objsetproto(" + prototype + ", " + parent + ");");
 		}
 		for (field in HxClassDecl.getFields(info.cls))
@@ -146,6 +148,8 @@ class NekoConstructionEmitter {
 			out.push("  var " + selfName + " = " + arrayName + "[0];");
 			if (ctor != null)
 				NekoTargetCore.renderVarArgBindings(out, initializerContext, HxFunctionDecl.getArgs(ctor), "  ", arrayName, 1);
+		} else if (ctor != null) {
+			NekoTargetCore.renderParameterDefaults(out, initializerContext, HxFunctionDecl.getArgs(ctor), "  ");
 		}
 		if (ctor != null)
 			NekoTargetCore.renderCaptureParameters(out, initializerContext, [for (arg in HxFunctionDecl.getArgs(ctor)) arg.name], "  ");

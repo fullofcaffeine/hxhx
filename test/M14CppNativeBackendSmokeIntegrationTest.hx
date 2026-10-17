@@ -7619,7 +7619,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		typeToolsClasses.set("TypePath", typePathClass);
 		final impossibleEnumPayloadMethod = new HxFunctionDecl("toTypeParamLike", Public, true, [new HxFunctionArg("type", "Type", NoDefault, false, false)],
 			"TypeParam", [
-				SReturn(ESwitch(EIdent("type"), [PEnumExtract("TInst", [PUnsupportedGuard(PBind("e")), PWildcard]), PWildcard],
+				SReturn(ESwitch(EIdent("type"), [PEnumExtract("TInst", [PUnsupportedPattern(PBind("e")), PWildcard]), PWildcard],
 					[ECall(EEnumValue("TPExpr"), [EIdent("e")]), EEnumValue("TPType")]),
 					HxPos.unknown())
 			], "");

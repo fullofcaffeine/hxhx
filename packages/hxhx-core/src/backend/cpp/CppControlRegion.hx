@@ -20,6 +20,7 @@ typedef CppControlRegionServices = {
 
 	final forLoop:(binding:HxForBinding, iterable:HxExpr, indent:String, renderBody:String->Array<String>) -> Array<String>;
 	final switchArms:(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, indent:String, renderBody:(Int, String) -> Array<String>) -> Array<String>;
+	final patternAttempts:(source:HxExpr, indent:String, renderBody:(Int, String) -> Array<String>) -> Array<String>;
 
 	/** Handler emission stays in this lexical function and loop; callbacks generate source, not native lambdas. */
 	final tryRegion:(source:CppManagedCatchRegion.CppManagedTrySource, indent:String, renderBody:String->Array<String>,
@@ -185,6 +186,19 @@ private function renderEntries(entries:Array<HxExpr>, target:String, result:CppC
 	final lines = new Array<String>();
 	for (entry in entries) {
 		switch entry {
+			case ELoweredControl(PatternAttempts(plan), destination, children, _):
+				if (destination.length != 0 || children.length != plan.getPatterns().length + 2)
+					throw "C++ guarded switch differs from its shared case layout";
+				for (body in children.slice(2))
+					switch body {
+						case ELoweredControl(Scope, "", _, _):
+						case _: throw "C++ guarded case requires a shared lexical scope";
+					}
+				for (line in services.patternAttempts(entry, indent,
+					(index,
+							bodyIndent) -> CppLocalScope.isolate(scope,
+							() -> renderEntries([children[index + 2]], target, result, bodyIndent, scope, services, loop))))
+					lines.push(line);
 			case ELoweredControl(Try(clauses), destination, children, _):
 				if (destination.length != 0 || children.length != clauses.length + 1)
 					throw "C++ try differs from its shared handler layout";

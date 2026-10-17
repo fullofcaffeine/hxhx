@@ -65,8 +65,7 @@ function select(input:PatternSelection):String {
 private function head(pattern:HxSwitchPattern):HxSwitchPattern {
 	return switch pattern {
 		case PCapture(_, inner): head(inner);
-		case PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _) | PIntCompareGuard(_, _, _, _) |
-			PParsedIntSwitchGuard(_, _, _, _) | PUnsupportedGuard(_):
+		case PExtractor(_, _) | PGuard(_, _) | PUnsupportedPattern(_):
 			throw "OCaml switch requires executable guard or extractor lowering";
 		case _: pattern;
 	};

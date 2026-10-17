@@ -204,7 +204,7 @@ class CompilerDependencyCollector {
 				null;
 			case Lambda:
 				null;
-			case SwitchExpr | ControlSwitch:
+			case SwitchExpr | ControlSwitch | ControlPatternAttempts:
 				null;
 			case NewValue:
 				null;
@@ -235,7 +235,7 @@ class CompilerDependencyCollector {
 			case Opaque:
 				null;
 			case PrivateAccess | Parenthesized | TargetScope | Block | SourceGroup | SourceFunction | ControlRegion | SourceIf | SourceFor | SourceTry |
-				ControlTry | ThrowExpr | ControlBranch | ControlWhile | ControlFor | Metadata | KeyValueProtocol:
+				ControlTry | ThrowExpr | ControlBranch | ControlWhile | ControlFor | Metadata | IteratorProtocol:
 				null;
 			case Temporary:
 				null;

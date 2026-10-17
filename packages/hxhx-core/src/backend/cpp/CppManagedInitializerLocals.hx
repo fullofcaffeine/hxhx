@@ -24,7 +24,8 @@ class CppManagedInitializerLocals {
 		final root = facts.getFunctions()[0];
 		declarations = [
 			for (entry in facts.getBindings())
-				if (entry.functionIdentity == root.identity && (entry.creation == Declaration || entry.creation == CatchEntry)) entry
+				if (entry.functionIdentity == root.identity
+					&& (entry.creation == Declaration || entry.creation == CatchEntry || entry.creation == PatternMatch)) entry
 		];
 	}
 
@@ -96,6 +97,18 @@ class CppManagedInitializerLocals {
 			if (entry.binding == binding && entry.creation == event)
 				return;
 		throw "initializer local requires its exact creation event";
+	}
+
+	/** Each attempted case owns a fresh cell, while its source observation stays rooted. */
+	public function renderPattern(binding:TyLocalBinding, selectedRoot:String, heap:String, indent:String):Array<String> {
+		requireEvent(binding, PatternMatch);
+		if (binding.getKind() != PatternVariable
+			|| selectedRoot == null
+			|| heap == null
+			|| !~/^[A-Za-z_][A-Za-z0-9_]*$/.match(selectedRoot)
+			|| !~/^[A-Za-z_][A-Za-z0-9_]*$/.match(heap))
+			throw "initializer pattern requires its exact creation event and rooted observation";
+		return initialize(binding, heap, indent, (root, at) -> [at + root + ".set(" + selectedRoot + ".get());"]);
 	}
 
 	/** Declaration and catch entry share the same rooted allocation and publication path. */

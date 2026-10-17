@@ -38,10 +38,12 @@ class TypedBackendSourceWalk {
 				visit(callee);
 				for (argument in arguments)
 					visit(argument);
-			case ESwitch(value, _, branches):
+			case ESwitch(value, patterns, branches):
 				visit(value);
 				for (branch in branches)
 					visit(branch);
+				for (pattern in patterns)
+					visit(TypedSwitchGuards.condition(pattern));
 			case ESourceTry(_, values, _) | ENew(_, values) | EAnon(_, values) | EArrayDecl(values) | EVars(values) | ESourceGroup(values, _) |
 				ELoweredControl(_, _, values, _):
 				for (value in values)
@@ -80,6 +82,11 @@ class TypedBackendSourceWalk {
 				onExpression(value);
 		}
 		switch (node) {
+			case SGuardedSwitch(value, enabled, _, bodies, _):
+				visit(value);
+				visit(enabled);
+				for (body in bodies)
+					onStatement(body);
 			case STargetScope(_, body, _):
 				onStatement(body);
 			case SBlock(body, _):
@@ -95,10 +102,12 @@ class TypedBackendSourceWalk {
 			case SForIn(_, value, body, _) | SForKeyValue(_, _, value, body, _) | SWhile(value, body, _) | SDoWhile(body, value, _):
 				visit(value);
 				onStatement(body);
-			case SSwitch(value, _, bodies, _):
+			case SSwitch(value, patterns, bodies, _):
 				visit(value);
 				for (body in bodies)
 					onStatement(body);
+				for (pattern in patterns)
+					visit(TypedSwitchGuards.condition(pattern));
 			case STry(body, catches, _):
 				onStatement(body);
 				for (clause in catches)

@@ -16,8 +16,21 @@ package backend.vm;
 	  emitting target-invalid syntax.
 **/
 class NekoMacroExprLowering {
-	public static function render(expr:HxExpr, wrappers:Array<String>, fallback:HxExpr->String):String {
-		final builder = new NekoMacroExprBuilder(fallback);
+	/** Only public lists need Array; enum parameter storage remains a native VM vector. */
+	public static function requiresArrayProvider(expr:HxExpr):Bool {
+		return switch expr {
+			case ESourceGroup(_, _) | EArrayDecl(_): true;
+			case ECall(EIdent("__hxhx_macro_if"), args): Lambda.exists(args, requiresArrayProvider);
+			case ECall(_, _): true;
+			case EField(inner, _) | ENullSafeField(inner, _) | EUntyped(inner) | EParenthesized(inner, _) | EUnop(_, _, inner):
+				requiresArrayProvider(inner);
+			case EBinop(_, left, right) | ERange(left, right) | EArrayAccess(left, right): requiresArrayProvider(left) || requiresArrayProvider(right);
+			case _: false;
+		};
+	}
+
+	public static function render(expr:HxExpr, wrappers:Array<String>, fallback:HxExpr->String, arrayFactory:Null<NekoArrayProvider.NekoArrayFactory>):String {
+		final builder = new NekoMacroExprBuilder(fallback, arrayFactory);
 		var exprDef = builder.macroExprDef(expr);
 		if (wrappers != null) {
 			var i = wrappers.length;
@@ -37,11 +50,13 @@ class NekoMacroExprLowering {
 
 class NekoMacroExprBuilder {
 	final fallback:HxExpr->String;
+	final arrayFactory:Null<NekoArrayProvider.NekoArrayFactory>;
 	final statements:Array<String>;
 	var nextObjectId:Int = 0;
 
-	public function new(fallback:HxExpr->String) {
+	public function new(fallback:HxExpr->String, arrayFactory:Null<NekoArrayProvider.NekoArrayFactory>) {
 		this.fallback = fallback;
+		this.arrayFactory = arrayFactory;
 		this.statements = [];
 	}
 
@@ -64,7 +79,7 @@ class NekoMacroExprBuilder {
 			case ESourceGroup(children, _):
 				// Preserve source braces independently of the sequence used for runtime evaluation.
 				macroEnum("EBlock", [
-					"$array(" + [for (child in children) macroExprObject(macroExprDef(child))].join(", ") + ")"
+					NekoArrayProvider.fromValues(arrayFactory, [for (child in children) macroExprObject(macroExprDef(child))])
 				]);
 			case EString(value):
 				macroEnum("EConst", [macroEnum("CString", [quote(value), macroEnum("DoubleQuotes", [])])]);
@@ -84,7 +99,7 @@ class NekoMacroExprBuilder {
 				macroEnum("EArray", [macroExprObject(macroExprDef(receiver)), macroExprObject(macroExprDef(index))]);
 			case EArrayDecl(values):
 				final items = values == null ? [] : [for (value in values) macroExprObject(macroExprDef(value))];
-				macroEnum("EArrayDecl", ["$array(" + items.join(", ") + ")"]);
+				macroEnum("EArrayDecl", [NekoArrayProvider.fromValues(arrayFactory, items)]);
 			case EBinop(op, left, right):
 				macroEnum("EBinop", [
 					HxMacroBinaryOperator.render(op, macroEnum),
@@ -117,7 +132,10 @@ class NekoMacroExprBuilder {
 				]);
 			case ECall(callee, args):
 				final loweredArgs = args == null ? [] : [for (arg in args) macroExprObject(macroExprDef(arg))];
-				macroEnum("ECall", [macroExprObject(macroExprDef(callee)), "$array(" + loweredArgs.join(", ") + ")"]);
+				macroEnum("ECall", [
+					macroExprObject(macroExprDef(callee)),
+					NekoArrayProvider.fromValues(arrayFactory, loweredArgs)
+				]);
 			case EUntyped(inner):
 				macroEnum("EUntyped", [macroExprObject(macroExprDef(inner))]);
 			case EParenthesized(inner, _):

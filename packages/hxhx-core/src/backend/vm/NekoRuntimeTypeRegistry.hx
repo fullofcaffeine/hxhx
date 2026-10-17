@@ -27,7 +27,6 @@ function constructorOwner(program:NekoTypedProgramProjection, target:TypedRuntim
 private enum abstract RegistryKind(String) {
 	var NominalClass = "class";
 	var NominalInterface = "interface";
-	var NativeArray = "array";
 	var NativeString = "string";
 	var NativeInt = "int";
 	var NativeFloat = "float";
@@ -43,6 +42,7 @@ private typedef RegistryEntry = {
 	final name:String;
 	final kind:RegistryKind;
 	final assignable:Array<String>;
+	final ?storageIdentity:String;
 }
 
 /** Null denotes an extern interface with no Neko runtime type object; other targets require an exact registry entry. */
@@ -151,14 +151,16 @@ function renderDefinition(out:Array<String>, program:NekoTypedProgramProjection,
 		{
 			identity: "core:Array",
 			name: "Array",
-			kind: NativeArray,
-			assignable: []
+			kind: NominalClass,
+			assignable: ["core:Array"],
+			storageIdentity: "Array"
 		},
 		{
 			identity: "core:String",
 			name: "String",
 			kind: NativeString,
-			assignable: []
+			assignable: [],
+			storageIdentity: "String"
 		}
 	];
 	for (module in modules) {
@@ -187,6 +189,7 @@ function renderDefinition(out:Array<String>, program:NekoTypedProgramProjection,
 				identity: "nominal:" + facts.getClassIdentity(),
 				name: pack == null || pack.length == 0 ? name : pack + "." + name,
 				kind: facts.getIsInterface() ? NominalInterface : NominalClass,
+				storageIdentity: facts.getClassIdentity(),
 				assignable: [
 					for (node in program.classGraph.requireAssignableTypes(facts.getClassIdentity(), hasRuntimeMembership))
 						"nominal:" + node.classIdentity
@@ -197,16 +200,32 @@ function renderDefinition(out:Array<String>, program:NekoTypedProgramProjection,
 	entries.sort((left, right) -> left.identity < right.identity ? -1 : left.identity == right.identity ? 0 : 1);
 	out.push(symbols + ".__hxhx_types = $new(null);");
 	out.push(symbols + ".__hxhx_type_cells = $new(null);");
+	out.push(symbols + ".__hxhx_static_objects = $new(null);");
 	for (entry in entries) {
 		final object = "$objget(" + symbols + ".__hxhx_types, $hash(" + haxe.Json.stringify(entry.identity) + "))";
 		out.push("$objset(" + symbols + ".__hxhx_types, $hash(" + haxe.Json.stringify(entry.identity) + "), $new(null));");
-		out.push(object + ".identity = " + haxe.Json.stringify(entry.identity) + ";");
-		out.push(object + ".name = " + haxe.Json.stringify(entry.name) + ";");
-		out.push(object + ".kind = " + haxe.Json.stringify(entry.kind) + ";");
-		// Array and String have authored class bodies despite their distinct runtime type categories.
-		if (entry.kind == NominalClass || entry.kind == NativeArray || entry.kind == NativeString) {
-			out.push(object + ".prototype = $new(null);");
-			out.push(object + ".prototype.__class__ = " + object + ";");
+		out.push(object + "." + program.runtimeHelperName("__hxhx_type_identity") + " = " + haxe.Json.stringify(entry.identity) + ";");
+		out.push(object + "." + program.runtimeHelperName("__hxhx_type_name") + " = " + haxe.Json.stringify(entry.name) + ";");
+		out.push(object + "." + program.runtimeHelperName("__hxhx_type_kind") + " = " + haxe.Json.stringify(entry.kind) + ";");
+		// Static fields and reflected methods belong to this same original class
+		// object. Later replacement of a source type binding cannot duplicate it.
+		if (entry.storageIdentity != null)
+			out.push("$objset("
+				+ symbols
+				+ ".__hxhx_static_objects, $hash("
+				+ haxe.Json.stringify(entry.storageIdentity)
+				+ "), "
+				+ object
+				+ ");");
+		// String retains its native representation; Array uses the ordinary authored class.
+		if (entry.kind == NominalClass || entry.kind == NativeString) {
+			final prototype = object + "." + program.runtimeHelperName("__hxhx_type_prototype");
+			out.push(prototype + " = $new(null);");
+			out.push(prototype + ".__class__ = " + object + ";");
+			// Untyped target code can configure the public prototype during startup.
+			// Authored static fields may replace that public slot; construction keeps
+			// the private reference to the original instance prototype.
+			out.push(object + ".prototype = " + prototype + ";");
 		}
 		// Neko's public meta-category predicates test metadata presence, not its spelling.
 		final metadata = switch entry.kind {
@@ -233,13 +252,8 @@ function renderDefinition(out:Array<String>, program:NekoTypedProgramProjection,
 			for (identity in entry.assignable)
 				"$objget(" + symbols + ".__hxhx_types, $hash(" + haxe.Json.stringify(identity) + "))"
 		];
-		out.push("$objget("
-			+ symbols
-			+ ".__hxhx_types, $hash("
-			+ haxe.Json.stringify(entry.identity)
-			+ ")).assignable = $array("
-			+ values.join(", ")
-			+ ");");
+		out.push("$objget(" + symbols + ".__hxhx_types, $hash(" + haxe.Json.stringify(entry.identity) + "))."
+			+ program.runtimeHelperName("__hxhx_type_assignable") + " = $array(" + values.join(", ") + ");");
 	}
 	NekoNamedTypeRegistry.render(out, [for (entry in entries) {identity: entry.identity, name: entry.name}], symbols,
 		program.runtimeHelperName("__hxhx_named_types"));
@@ -267,18 +281,21 @@ function renderPrelude(out:Array<String>, symbols:String, program:NekoTypedProgr
 	out.push("var " + typeValue + " = function(identity) { return " + typeCell + "(identity)[0]; }");
 	out.push("var __hxhx_is_type_object = function(value) {");
 	out.push("  if (value == null || $typeof(value) != $tobject) return false;");
-	out.push("  var identity = $objget(value, $hash(\"identity\"));");
+	out.push("  var identity = $objget(value, $hash(" + haxe.Json.stringify(program.runtimeHelperName("__hxhx_type_identity")) + "));");
 	out.push("  return identity != null && $typeof(identity) == $tstring && $objget(__hxhx_types, $hash(identity)) == value;");
 	out.push("}");
 	out.push("var " + className + " = function(value) {");
-	out.push("  return if (__hxhx_is_type_object(value) && $objget(value, $hash(\"__name__\")) != null) value.name else null;");
+	out.push("  return if (__hxhx_is_type_object(value) && $objget(value, $hash(\"__name__\")) != null) value."
+		+ program.runtimeHelperName("__hxhx_type_name")
+		+ " else null;");
 	out.push("}");
 	out.push("var " + getClass + " = function(value) {");
-	out.push("  if ($typeof(value) == $tarray) return " + typeDefinition + "(\"core:Array\");");
 	out.push("  if ($typeof(value) == $tstring) return " + typeDefinition + "(\"core:String\");");
 	out.push("  if (value == null || $typeof(value) != $tobject) return null;");
 	out.push("  var selected = $objget(value, $hash(" + haxe.Json.stringify(typeValue) + "));");
-	out.push("  return if (__hxhx_is_type_object(selected) && selected.kind == \"class\") selected else null;");
+	out.push("  return if (__hxhx_is_type_object(selected) && selected."
+		+ program.runtimeHelperName("__hxhx_type_kind")
+		+ " == \"class\") selected else null;");
 	out.push("}");
 	out.push("var " + isOfType + " = function(value, target) {");
 	out.push("  if (value == null) return false;");
@@ -287,7 +304,6 @@ function renderPrelude(out:Array<String>, symbols:String, program:NekoTypedProgr
 	out.push("  if (target == " + typeValue + "(\"core:Enum\")) return $typeof(value) == $tobject && $objget(value, $hash(\"__ename__\")) != null;");
 	// Explicit untyped writes can replace a core binding with any runtime value.
 	// Compare the current binding without changing the native numeric predicates.
-	out.push("  if ($typeof(value) == $tarray) return target == " + typeValue + "(\"core:Array\");");
 	out.push("  if ($typeof(value) == $tstring) return target == " + typeValue + "(\"core:String\");");
 	out.push("  if ($typeof(value) == $tint) return target == "
 		+ typeValue
@@ -303,8 +319,8 @@ function renderPrelude(out:Array<String>, symbols:String, program:NekoTypedProgr
 	out.push("  }");
 	out.push("  if (__hxhx_is_type_object(target) == false) return false;");
 	out.push("  var actual = " + getClass + "(value);");
-	out.push("  if (actual == null || actual.kind != \"class\") return false;");
-	out.push("  var parents = actual.assignable;");
+	out.push("  if (actual == null || actual." + program.runtimeHelperName("__hxhx_type_kind") + " != \"class\") return false;");
+	out.push("  var parents = actual." + program.runtimeHelperName("__hxhx_type_assignable") + ";");
 	out.push("  var i = 0;");
 	out.push("  while (i < $asize(parents)) { if (parents[i] == target) return true; i = i + 1; }");
 	out.push("  return false;");

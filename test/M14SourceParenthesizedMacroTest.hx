@@ -28,7 +28,7 @@ class M14SourceParenthesizedMacroTest {
 			CppMacroExpr.macroExpr(parsed, []), @:privateAccess
 			CppTargetCore.macroExprText(parsed, []),
 			JsExprEmitter.emit(EMacroExpr(parsed, []), JsMacroQuotationFixture.scope()),
-			NekoMacroExprLowering.render(parsed, [], _ -> "unused"), @:privateAccess
+			NekoMacroExprLowering.render(parsed, [], _ -> "unused", null), @:privateAccess
 			SourceTargetCommon.pythonMacroExpr(parsed, []), @:privateAccess
 			SourceTargetCommon.phpMacroExpr(parsed, [])
 		];

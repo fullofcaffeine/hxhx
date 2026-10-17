@@ -1202,7 +1202,7 @@ class SourceTargetCommon {
 			if (target != Cs)
 				throw "C# callback reached a different target";
 			final locals = switch frame {
-				case NativeFunction(locals): locals;
+				case NativeFunction(locals, _): locals;
 				case _: throw "C# callback rendering requires its typed function frame";
 			};
 			final lines = ["(("
@@ -1254,7 +1254,7 @@ class SourceTargetCommon {
 		if (exactEnumConstructor != null) {
 			if (target == Cs)
 				throw "C# renderer received an exact enum constructor before request-owned target lowering";
-			if (target == Php && frame.match(PhpFunction(_, _))) {
+			if (target == Php && frame.match(PhpFunction(_, _, _))) {
 				final exact = SourceFunctionRenderFrameTools.requirePhpRenderer(frame)
 					.requireExactEnumConstructor(exactEnumConstructor.owner, exactEnumConstructor.modulePath, exactEnumConstructor.declaration,
 						exactEnumConstructor.constructor);
@@ -5611,6 +5611,11 @@ class SourceTargetCommon {
 
 	static function phpCollectAssignedIdentsInStmt(stmt:HxStmt, names:Array<String>):Void {
 		switch (stmt) {
+			case SGuardedSwitch(input, enabled, _, bodies, _):
+				phpCollectAssignedIdents(input, names);
+				phpCollectAssignedIdents(enabled, names);
+				for (body in bodies)
+					phpCollectAssignedIdentsInStmt(body, names);
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -5889,9 +5894,9 @@ class SourceTargetCommon {
 			case Python: renderPythonTryExpr(tryStatement, catches);
 			case Php:
 				switch (frame) {
-					case PhpFunction(_, _): renderPhpTryExprWithFrame(frame, tryStatement, catches);
+					case PhpFunction(_, _, _): renderPhpTryExprWithFrame(frame, tryStatement, catches);
 					case Program(_): renderPhpTryExpr(tryStatement, catches);
-					case NativeFunction(_): throw "native function scope cannot render a PHP try expression";
+					case NativeFunction(_, _) | TypedFunction(_, _, _, _): throw "native function scope cannot render a PHP try expression";
 				}
 			case Java: throw targetLabel(target) + " source backend MVP unsupported expression: ECall(__hxhx_try)";
 			case Cs: throw targetLabel(target) + " source backend MVP unsupported expression: ECall(__hxhx_try)";
@@ -8104,14 +8109,13 @@ class SourceTargetCommon {
 					].join(op);
 					"(" + parts + ")";
 				}
-			case PUnsupportedGuard(inner):
+			case PUnsupportedPattern(inner):
 				"(("
 				+ switchPatternCond(target, scrutinee, inner)
 				+ ") "
 				+ (target == Python || target == Lua ? "and" : "&&")
 				+ " false)";
-			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _) |
-				PIntCompareGuard(_, _, _, _) | PParsedIntSwitchGuard(_, _, _, _):
+			case PObject(_, _) | PArray(_) | PExtractor(_, _) | PGuard(_, _):
 				throw targetLabel(target) + " source backend MVP unsupported switch pattern: " + patternKind(pattern);
 		};
 	}
@@ -8160,12 +8164,8 @@ class SourceTargetCommon {
 			case PCapture(_, _): "PCapture";
 			case PArray(_): "PArray";
 			case PExtractor(_, _): "PExtractor";
-			case PLengthGuard(_, _, _): "PLengthGuard";
-			case PStartsWithGuard(_, _, _): "PStartsWithGuard";
-			case PIntEqualsGuard(_, _, _): "PIntEqualsGuard";
-			case PIntCompareGuard(_, _, _, _): "PIntCompareGuard";
-			case PParsedIntSwitchGuard(_, _, _, _): "PParsedIntSwitchGuard";
-			case PUnsupportedGuard(_): "PUnsupportedGuard";
+			case PGuard(_, _): "PGuard";
+			case PUnsupportedPattern(_): "PUnsupportedPattern";
 			case PBind(_): "PBind";
 			case POr(_): "POr";
 		};
@@ -9090,6 +9090,10 @@ class SourceTargetCommon {
 	static function renderStmtWithFrame(frame:SourceFunctionRenderFrame, stmt:HxStmt, indent:String):Array<String> {
 		final target = SourceFunctionRenderFrameTools.target(frame);
 		return switch (stmt) {
+			case SGuardedSwitch(value, enabled, plan, bodies, _): SourceGuardedSwitch.render(frame, value, enabled, plan, bodies, indent);
+			case SExpr(expression, _) if (expression.match(ELoweredControl(_, _, _, _))):
+				renderStmtWithFrame(frame,
+					TypedControlStatements.methodStatement(expression, SourceFunctionRenderFrameTools.requireRootControlIdentity(frame)), indent);
 			case STargetScope(kind, body, _):
 				CsSyntaxScopeEmitter.render(kind, target, indent, () -> renderStmtWithFrame(frame, body, indent));
 			case SBlock(stmts, _) if (target == Cs):
@@ -9157,6 +9161,7 @@ class SourceTargetCommon {
 
 	static function stmtKind(stmt:HxStmt):String {
 		return switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _): "SGuardedSwitch";
 			case STargetScope(_, _, _): "STargetScope";
 			case SBlock(_, _): "SBlock";
 			case SVar(_, _, _, _): "SVar";
@@ -9184,11 +9189,11 @@ class SourceTargetCommon {
 			?initialLocalTypes:haxe.ds.StringMap<String>):Array<String> {
 		final target = SourceFunctionRenderFrameTools.target(frame);
 		switch (frame) {
-			case PhpFunction(_, _):
+			case PhpFunction(_, _, _):
 				return renderPhpStmtsWithFrame(frame, stmts, indent, initialLocalTypes);
 			case Program(Php):
 				throw "PHP function bodies require PhpFunctionBodyRenderer";
-			case Program(_) | NativeFunction(_):
+			case Program(_) | NativeFunction(_, _) | TypedFunction(_, _, _, _):
 		}
 		final out = new Array<String>();
 		final localTypes = (target == Php || target == Cs)
@@ -9310,7 +9315,7 @@ class SourceTargetCommon {
 	 * legacy process-wide naming tables.
 	 */
 	static function phpRenderedTypeNameWithFrame(frame:SourceFunctionRenderFrame, typePath:String):String {
-		if (!frame.match(PhpFunction(_, _)))
+		if (!frame.match(PhpFunction(_, _, _)))
 			return phpRenderedTypeName(typePath);
 		if (typePath == null || typePath.length == 0)
 			return "";
@@ -9437,7 +9442,7 @@ class SourceTargetCommon {
 
 	static function phpEnumCtorRefWithFrame(frame:SourceFunctionRenderFrame, name:String):Null<PhpFunctionPlanEnumConstructorFact> {
 		return switch (frame) {
-			case PhpFunction(renderer, scope):
+			case PhpFunction(renderer, scope, _):
 				renderer.findEnumConstructor(name, scope.getPreferredEnumOwnerIdentity());
 			case Program(Php):
 				final legacy = phpEnumCtorRef(name);
@@ -9449,23 +9454,23 @@ class SourceTargetCommon {
 					constructorName: legacy.ctorName,
 					hasArguments: legacy.hasArgs
 				};
-			case Program(_) | NativeFunction(_):
+			case Program(_) | NativeFunction(_, _) | TypedFunction(_, _, _, _):
 				null;
 		};
 	}
 
 	static function phpFrameHasCurrentInstanceMethod(frame:SourceFunctionRenderFrame, name:String):Bool
 		return switch (frame) {
-			case PhpFunction(renderer, _): renderer.hasCurrentInstanceMethod(name);
+			case PhpFunction(renderer, _, _): renderer.hasCurrentInstanceMethod(name);
 			case Program(Php): phpCurrentInstanceMethodValue(name);
-			case Program(_) | NativeFunction(_): false;
+			case Program(_) | NativeFunction(_, _) | TypedFunction(_, _, _, _): false;
 		};
 
 	static function phpFrameHasLocal(frame:SourceFunctionRenderFrame, name:String):Bool
 		return switch (frame) {
-			case PhpFunction(_, scope): scope.findLocal(PhpName.valueIdentifier(name)) != null;
+			case PhpFunction(_, scope, _): scope.findLocal(PhpName.valueIdentifier(name)) != null;
 			case Program(Php): phpLocalExists(name);
-			case Program(_) | NativeFunction(_): false;
+			case Program(_) | NativeFunction(_, _) | TypedFunction(_, _, _, _): false;
 		};
 
 	static function phpEnumCtorValueExprWithFrame(frame:SourceFunctionRenderFrame, name:String):Null<String> {
@@ -9524,14 +9529,14 @@ class SourceTargetCommon {
 	static function phpEnumCtorCallExprWithFrame(frame:SourceFunctionRenderFrame, enumRef:PhpFunctionPlanEnumConstructorFact, args:Array<HxExpr>):String {
 		if (enumRef.hasArguments)
 			return switch (frame) {
-				case PhpFunction(_, scope):
+				case PhpFunction(_, scope, _):
 					final exactScope = scope.withPreferredEnumOwner(enumRef.ownerIdentity);
 					callExprWithFrame(SourceFunctionRenderFrameTools.withPhpScope(frame, exactScope), enumRef.enumName + "::" + enumRef.constructorName, args);
 				case Program(Php):
 					withPhpPreferredEnum(enumRef.enumName, function() {
 						return callExprWithFrame(frame, enumRef.enumName + "::" + enumRef.constructorName, args);
 					});
-				case Program(_) | NativeFunction(_):
+				case Program(_) | NativeFunction(_, _) | TypedFunction(_, _, _, _):
 					callExprWithFrame(frame, enumRef.enumName + "::" + enumRef.constructorName, args);
 			};
 		return enumRef.enumName + "::$" + enumRef.constructorName;
@@ -10697,11 +10702,9 @@ class SourceTargetCommon {
 						.getCaptureStorage()
 						.renewal(cleanName, indent) : [];
 					return renewal.concat([indent + varDecl(target, cleanName, rhs, typeHint, value)]);
-				case SExpr(expr, _) if (target == Php && expr.match(ELoweredControl(_, _, _, _))):
+				case SExpr(expr, _) if (expr.match(ELoweredControl(_, _, _, _))):
 					return renderStmtWithLocalsWithFrame(frame,
-						TypedControlStatements.methodStatement(expr,
-							SourceFunctionRenderFrameTools.requirePhpRenderer(frame).getPlan().requireRootControlIdentity()),
-						indent, localTypes);
+						TypedControlStatements.methodStatement(expr, SourceFunctionRenderFrameTools.requireRootControlIdentity(frame)), indent, localTypes);
 				case SExpr(EBinop("??=", left, right), _) if (target == Python):
 					return [indent + exprStmt(target, pythonNullCoalesceAssignStmt(left, right))];
 				case SExpr(EBinop(op, left, right), _) if (target == Python && isAssignmentOp(op)):
@@ -10812,7 +10815,7 @@ class SourceTargetCommon {
 	public static function renderNativeFunctionBody(locals:SourceNativeFunctionLocals, body:Array<HxStmt>, indent:String):Array<String> {
 		if (locals == null)
 			throw "native function rendering requires typed local ownership";
-		return renderStmtsWithFrame(NativeFunction(locals), body, indent);
+		return renderStmtsWithFrame(SourceFunctionRenderFrameTools.forNativeFunction(locals), body, indent);
 	}
 
 	/** Resolve a legacy declaration through its typed owner before entering Java rendering. */
@@ -10843,7 +10846,7 @@ class SourceTargetCommon {
 		if (!needsType)
 			return null;
 		return switch (frame) {
-			case NativeFunction(locals): locals.declaration(name, initializer != null);
+			case NativeFunction(locals, _): locals.declaration(name, initializer != null);
 			case Program(Java) | Program(Cs): throw "native local declaration requires its typed function scope: " + name;
 			case _: null;
 		};
@@ -10891,7 +10894,7 @@ class SourceTargetCommon {
 	static function renderFunctionStmtsWithFrame(frame:SourceFunctionRenderFrame, body:Array<HxStmt>, indent:String, context:String):Array<String> {
 		final target = SourceFunctionRenderFrameTools.target(frame);
 		if (target != Php)
-			throw "explicit function render frames are currently enabled only for PHP";
+			return renderStmtsWithFrame(frame, body, indent);
 		final renderer = SourceFunctionRenderFrameTools.requirePhpRenderer(frame);
 		SourceFunctionRenderFrameTools.requirePhpScope(frame);
 		return try {
@@ -10997,7 +11000,7 @@ class SourceTargetCommon {
 		switch (target) {
 			case Python:
 				out.push(indent + "for " + cleanName + " in " + source + ":");
-				for (line in renderStmt(target, body, childIndent))
+				for (line in renderStmtWithFrame(frame, body, childIndent))
 					out.push(line);
 			case Java:
 				out.push(indent + "for (var " + sanitizeJavaIdentifier(name) + " : " + source + ") {");
@@ -11016,7 +11019,7 @@ class SourceTargetCommon {
 				out.push(indent + "}");
 			case Lua:
 				out.push(indent + "for _, " + cleanName + " in ipairs(" + source + ") do");
-				for (line in renderStmt(target, body, childIndent))
+				for (line in renderStmtWithFrame(frame, body, childIndent))
 					out.push(line);
 				out.push(indent + "end");
 		}
@@ -11049,18 +11052,19 @@ class SourceTargetCommon {
 	}
 
 	static function renderForKeyValue(target:SourceNativeTarget, keyName:String, itemName:String, iterable:HxExpr, body:HxStmt, indent:String,
-			knownPhpLocals:Null<haxe.ds.StringMap<String>> = null):Array<String> {
+			knownPhpLocals:Null<haxe.ds.StringMap<String>> = null, ?functionFrame:SourceFunctionRenderFrame):Array<String> {
+		final frame:SourceFunctionRenderFrame = functionFrame == null ? Program(target) : functionFrame;
 		final cleanKey = sanitizeTypeName(keyName);
 		final cleanItem = sanitizeTypeName(itemName);
 		final keyValue = valueName(target, cleanKey);
 		final itemValue = valueName(target, cleanItem);
-		final source = renderExpr(target, iterable);
+		final source = renderExprWithFrame(frame, iterable);
 		final childIndent = indent + indentStep(target);
 		final out = new Array<String>();
 		switch (target) {
 			case Python:
 				out.push(indent + "for " + keyValue + ", " + itemValue + " in hxhx_key_value_iter(" + source + "):");
-				for (line in renderStmt(target, body, childIndent))
+				for (line in renderStmtWithFrame(frame, body, childIndent))
 					out.push(line);
 			case Php:
 				final pairName = "$__hx_kv_" + cleanKey + "_" + cleanItem;
@@ -11080,7 +11084,7 @@ class SourceTargetCommon {
 			knownPhpLocals:Null<haxe.ds.StringMap<String>> = null):Array<String> {
 		final target = SourceFunctionRenderFrameTools.target(frame);
 		if (target != Php)
-			return renderForKeyValue(target, keyName, itemName, iterable, body, indent, knownPhpLocals);
+			return renderForKeyValue(target, keyName, itemName, iterable, body, indent, knownPhpLocals, frame);
 		final cleanKey = PhpName.valueIdentifier(keyName);
 		final cleanItem = PhpName.valueIdentifier(itemName);
 		final keyValue = valueName(Php, cleanKey);
@@ -11134,13 +11138,13 @@ class SourceTargetCommon {
 
 	static function renderWhile(target:SourceNativeTarget, cond:HxExpr, body:HxStmt, indent:String, ?functionFrame:SourceFunctionRenderFrame):Array<String> {
 		final frame:SourceFunctionRenderFrame = functionFrame == null ? Program(target) : functionFrame;
-		final renderedCond = renderExpr(target, cond);
+		final renderedCond = renderExprWithFrame(frame, cond);
 		final childIndent = indent + indentStep(target);
 		final out = new Array<String>();
 		switch (target) {
 			case Python:
 				out.push(indent + "while " + renderedCond + ":");
-				for (line in renderStmt(target, body, childIndent))
+				for (line in renderStmtWithFrame(frame, body, childIndent))
 					out.push(line);
 			case Java:
 				out.push(indent + "while (" + renderedCond + ") {");
@@ -11154,12 +11158,12 @@ class SourceTargetCommon {
 				out.push(indent + "}");
 			case Php:
 				out.push(indent + "while (" + renderedCond + ") {");
-				for (line in renderStmt(target, body, childIndent))
+				for (line in renderStmtWithFrame(frame, body, childIndent))
 					out.push(line);
 				out.push(indent + "}");
 			case Lua:
 				out.push(indent + "while " + renderedCond + " do");
-				for (line in renderStmt(target, body, childIndent))
+				for (line in renderStmtWithFrame(frame, body, childIndent))
 					out.push(line);
 				out.push(indent + "end");
 		}
@@ -11184,7 +11188,7 @@ class SourceTargetCommon {
 	static function renderSwitchStmt(target:SourceNativeTarget, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>, indent:String,
 			?functionFrame:SourceFunctionRenderFrame, exhaustive:Bool = false):Array<String> {
 		final frame:SourceFunctionRenderFrame = functionFrame == null ? Program(target) : functionFrame;
-		final scrutineeExpr = renderExpr(target, scrutinee);
+		final scrutineeExpr = renderExprWithFrame(frame, scrutinee);
 		final childIndent = indent + indentStep(target);
 		final out = new Array<String>();
 		final count = patterns == null || bodies == null ? 0 : (patterns.length < bodies.length ? patterns.length : bodies.length);
@@ -11204,7 +11208,7 @@ class SourceTargetCommon {
 						final bindName = sanitizeTypeName(binding.name);
 						out.push(childIndent + varDecl(target, bindName, binding.expr));
 					}
-					for (line in renderStmt(target, bodies[i], childIndent))
+					for (line in renderStmtWithFrame(frame, bodies[i], childIndent))
 						out.push(line);
 				}
 			case Php:
@@ -11243,7 +11247,7 @@ class SourceTargetCommon {
 						final bindName = sanitizeTypeName(binding.name);
 						out.push(childIndent + varDecl(target, bindName, binding.expr));
 					}
-					for (line in renderStmt(target, bodies[i], childIndent))
+					for (line in renderStmtWithFrame(frame, bodies[i], childIndent))
 						out.push(line);
 				}
 				out.push(indent + "end");
@@ -11300,7 +11304,7 @@ class SourceTargetCommon {
 			for (binding in lowered.bindings) {
 				final bindName = sanitizeTypeName(binding.name);
 				final declaration = switch frame {
-					case NativeFunction(locals) if (target == Cs): locals.patternDeclaration(binding.name, binding.expr);
+					case NativeFunction(locals, _) if (target == Cs): locals.patternDeclaration(binding.name, binding.expr);
 					case _: varDecl(target, bindName, binding.expr);
 				};
 				out.push(childIndent + declaration);
@@ -11321,7 +11325,7 @@ class SourceTargetCommon {
 		return switch (pattern) {
 			case PArray(_) | PExtractor(_, _) | PEnumExtract(_, _):
 				true;
-			case PCapture(_, inner) | PIntCompareGuard(inner, _, _, _) | PParsedIntSwitchGuard(inner, _, _, _) | PUnsupportedGuard(inner):
+			case PCapture(_, inner) | PGuard(inner, _) | PUnsupportedPattern(inner):
 				csPatternNeedsSourceLowering(inner);
 			case POr(patterns):
 				if (patterns == null) {
@@ -11384,92 +11388,15 @@ class SourceTargetCommon {
 					cond: parts.length == 0 ? falseLiteral(target) : parts.join(target == Python || target == Lua ? " or " : " || "),
 					bindings: mergeSourceSwitchOrBindings(target, alternatives)
 				};
-			case PParsedIntSwitchGuard(inner, bindingName, multiplier, matchValue):
-				final lowered = lowerSourceSwitchPattern(target, inner, scrutinee, frame);
-				final bound = sourceSwitchBindingValue(target, bindingName, lowered.bindings);
-				final guardValue = sourceParsedIntSwitchGuardValue(target, bound, multiplier);
-				{cond: "(("
-					+ lowered.cond
-					+ ") "
-					+ sourceAndOp(target)
-					+ " "
-					+ equalityCond(target, guardValue, Std.string(matchValue))
-					+ ")",
-					bindings: lowered.bindings
-				};
-			case PUnsupportedGuard(inner):
-				final lowered = lowerSourceSwitchPattern(target, inner, scrutinee, frame);
-				{cond: "((" + lowered.cond + ") " + sourceAndOp(target) + " " + falseLiteral(target) + ")", bindings: lowered.bindings};
-			case PLengthGuard(inner, bindingName, length):
-				final lowered = lowerSourceSwitchPattern(target, inner, scrutinee, frame);
-				final value = sourceSwitchBindingValue(target, bindingName, lowered.bindings);
-				{cond: "(("
-					+ lowered.cond
-					+ ") "
-					+ sourceAndOp(target)
-					+ " ("
-					+ sourceLengthExpr(target, value)
-					+ " == "
-					+ Std.string(length)
-					+ "))",
-					bindings: lowered.bindings
-				};
-			case PStartsWithGuard(inner, bindingName, prefix):
-				final lowered = lowerSourceSwitchPattern(target, inner, scrutinee, frame);
-				final value = sourceSwitchBindingValue(target, bindingName, lowered.bindings);
-				{
-					cond: "((" + lowered.cond + ") " + sourceAndOp(target) + " (" + sourceStartsWithExpr(target, value, prefix) + "))",
-					bindings: lowered.bindings
-				};
-			case PIntEqualsGuard(inner, bindingName, value):
-				final lowered = lowerSourceSwitchPattern(target, inner, scrutinee, frame);
-				final bound = sourceSwitchBindingValue(target, bindingName, lowered.bindings);
-				{
-					cond: "((" + lowered.cond + ") " + sourceAndOp(target) + " " + equalityCond(target, bound, Std.string(value)) + ")",
-					bindings: lowered.bindings
-				};
-			case PIntCompareGuard(inner, bindingName, op, value):
-				final lowered = lowerSourceSwitchPattern(target, inner, scrutinee, frame);
-				final bound = sourceSwitchBindingValue(target, bindingName, lowered.bindings);
-				{
-					cond: "((" + lowered.cond + ") " + sourceAndOp(target) + " " + sourceIntCompareGuardCond(target, bound, op, value) + ")",
-					bindings: lowered.bindings
-				};
+			case PGuard(_, _) | PUnsupportedPattern(_):
+				throw "source targets require shared guard lowering and valid patterns";
 			case PExtractor(extractorText, resultPattern):
 				lowerSourceExtractorPattern(target, extractorText, resultPattern, scrutinee, frame);
 		};
 	}
 
-	static function sourceIntCompareGuardCond(target:SourceNativeTarget, value:String, op:String, expected:Int):String {
-		final mapped = binopToken(target, op);
-		if (mapped == null)
-			return falseLiteral(target);
-		return "(" + value + " " + mapped + " " + Std.string(expected) + ")";
-	}
-
 	static function sourceAndOp(target:SourceNativeTarget):String {
 		return target == Python || target == Lua ? "and" : "&&";
-	}
-
-	static function sourceParsedIntSwitchGuardValue(target:SourceNativeTarget, value:String, multiplier:Int):String {
-		final parsed = switch (target) {
-			case Php:
-				"Std::parseInt(" + value + ")";
-			case Python:
-				"int(" + value + ")";
-			case Java:
-				"Std.parseInt(" + value + ")";
-			case Cs:
-				"int.Parse(System.Convert.ToString(" + value + "))";
-			case Lua:
-				"tonumber(" + value + ")";
-		};
-		return switch (target) {
-			case Php:
-				"__hxhx_mul(" + parsed + ", " + Std.string(multiplier) + ")";
-			case Python | Java | Cs | Lua:
-				"(" + parsed + " * " + Std.string(multiplier) + ")";
-		};
 	}
 
 	static function sourceEnumValueCond(target:SourceNativeTarget, scrutinee:String, name:String, ?frame:SourceFunctionRenderFrame):String {
@@ -11478,7 +11405,7 @@ class SourceTargetCommon {
 				final enumCond = "(" + scrutinee + " !== null && is_object(" + scrutinee + ") && property_exists(" + scrutinee + ", "
 					+ quoteString("__hx_ctor") + ") && " + scrutinee + "->__hx_ctor === " + quoteString(name) + ")";
 				final enumAbstractFact = frame != null
-					&& frame.match(PhpFunction(_,
+					&& frame.match(PhpFunction(_, _,
 						_)) ? SourceFunctionRenderFrameTools.requirePhpProgramRenderer(frame).findEnumAbstractValue([name, sanitizeTypeName(name)]) : null;
 				final enumAbstractExpr = enumAbstractFact == null ? phpEnumAbstractValueExpr(name) : enumAbstractFact.typeName
 					+ "::$"
@@ -11486,7 +11413,7 @@ class SourceTargetCommon {
 				if (enumAbstractExpr != null) "(" + enumCond + " || __hxhx_equals(" + scrutinee + ", " + enumAbstractExpr + "))"; else
 					if (phpBuiltinTypeValueName(name)
 					|| (frame != null
-						&& frame.match(PhpFunction(_,
+						&& frame.match(PhpFunction(_, _,
 							_)) ? SourceFunctionRenderFrameTools.requirePhpProgramRenderer(frame).isKnownType(name) : phpKnownTypeName(name))) "("
 					+ enumCond
 					+ " || __hxhx_equals("
@@ -11716,30 +11643,6 @@ class SourceTargetCommon {
 
 	static function sourceSwitchArrayItemExpr(target:SourceNativeTarget, scrutinee:String, index:Int):String {
 		return scrutinee + "[" + (target == Lua ? Std.string(index + 1) : Std.string(index)) + "]";
-	}
-
-	static function sourceLengthExpr(target:SourceNativeTarget, value:String):String {
-		return switch (target) {
-			case Php: "count(" + value + ")";
-			case Python: "len(" + value + ")";
-			case Java:
-				value + ".length";
-			case Cs:
-				throw targetLabel(target) + " source backend MVP unsupported switch length guard";
-			case Lua:
-				"#" + value;
-		};
-	}
-
-	static function sourceStartsWithExpr(target:SourceNativeTarget, value:String, prefix:String):String {
-		return switch (target) {
-			case Php:
-				"str_starts_with(" + value + ", " + quoteString(prefix) + ")";
-			case Python:
-				value + ".startswith(" + quoteString(prefix) + ")";
-			case Java, Cs, Lua:
-				throw targetLabel(target) + " source backend MVP unsupported switch startsWith guard";
-		};
 	}
 
 	static function sourceSwitchBindingValue(target:SourceNativeTarget, name:String, bindings:Array<SourceSwitchPatternBinding>):String {
@@ -13745,30 +13648,34 @@ class SourceTargetCommon {
 			final key = methodName + "#" + Std.string(args.length);
 			if (!emittedMethods.exists(key)) {
 				emittedMethods.set(key, true);
-				out.push("  public static Object " + methodName + "(" + javaFunctionArgs(args) + ") {");
+				final exactFunction = javaFunctionProjection(program, decl, HxModuleDecl.getMainClass(decl), fn);
+				final parameters = JavaErasedParameters.plan(exactFunction);
+				out.push("  public static Object " + methodName + "(" + parameters.signature + ") {");
+				for (line in parameters.prologue)
+					out.push("    " + line);
 				if (functionRefs.exists(methodName)) {
-					for (line in javaMainHelperBody(program, javaFunctionProjection(program, decl, HxModuleDecl.getMainClass(decl), fn), "Object", className,
-						methodName))
+					for (line in javaMainHelperBody(program, exactFunction, "Object", className, methodName))
 						out.push(line);
 				} else {
 					out.push("    return null;");
 				}
 				out.push("  }");
+				// A non-callable parameter must not acquire callback overloads: null would
+				// become ambiguous or invoke a synthetic body instead of this declaration.
+				if (parameters.admitsCallableFirstArgument)
+					appendJavaFunctionalOverloads(out, emittedMethods, methodName, args.length, true, className);
 			}
-			final varargsKey = methodName + "#varargs";
-			if (!emittedMethods.exists(varargsKey)) {
-				emittedMethods.set(varargsKey, true);
-				out.push("  public static Object " + methodName + "(Object... args) {");
-				out.push("    return null;");
-				out.push("  }");
-			}
-			appendJavaFunctionalOverloads(out, emittedMethods, methodName, args.length, true, className);
 		}
 		appendJavaEntryBodyCallSupportMembers(out, emittedMethods, body, className);
 	}
 
 	static function collectJavaEntryBodyFunctionRefs(stmt:HxStmt, out:Map<String, Bool>):Void {
 		switch (stmt) {
+			case SGuardedSwitch(input, enabled, _, bodies, _):
+				collectJavaEntryBodyFunctionRefsInExpr(input, out, false);
+				collectJavaEntryBodyFunctionRefsInExpr(enabled, out, false);
+				for (body in bodies)
+					collectJavaEntryBodyFunctionRefs(body, out);
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -14011,13 +13918,18 @@ class SourceTargetCommon {
 				out.push("  public static Object " + methodName + "(" + javaSyntheticObjectArgs(call.arity) + ") {");
 				out.push("    return null;");
 				out.push("  }");
+				appendJavaFunctionalOverloads(out, emittedMethods, methodName, call.arity, true, className);
 			}
-			appendJavaFunctionalOverloads(out, emittedMethods, methodName, call.arity, true, className);
 		}
 	}
 
 	static function collectJavaEntryBodyDirectCalls(stmt:HxStmt, out:Array<{name:String, arity:Int}>):Void {
 		switch (stmt) {
+			case SGuardedSwitch(input, enabled, _, bodies, _):
+				collectJavaEntryBodyDirectCallsInExpr(input, out);
+				collectJavaEntryBodyDirectCallsInExpr(enabled, out);
+				for (body in bodies)
+					collectJavaEntryBodyDirectCalls(body, out);
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -14322,7 +14234,7 @@ class SourceTargetCommon {
 				out.push("");
 			final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
 			for (line in renderPythonHelperClass(cls, postStaticInitializers, pythonClassesByName, packageByClassName.get(className), pythonFields,
-				className == mainClassName))
+				className == mainClassName, program))
 				out.push(line);
 		}
 		final extraNamespaceClasses = new Array<String>();
@@ -14850,6 +14762,11 @@ class SourceTargetCommon {
 
 	static function phpRecordReferencedMemberStmt(stmt:HxStmt, names:Map<String, Bool>):Void {
 		switch (stmt) {
+			case SGuardedSwitch(input, enabled, _, bodies, _):
+				phpRecordReferencedMemberExpr(input, names);
+				phpRecordReferencedMemberExpr(enabled, names);
+				for (body in bodies)
+					phpRecordReferencedMemberStmt(body, names);
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -17359,6 +17276,11 @@ class SourceTargetCommon {
 		if (stmt == null)
 			return;
 		switch (stmt) {
+			case SGuardedSwitch(input, enabled, _, bodies, _):
+				phpCollectGenericStaticSpecializationsFromExpr(input, className, genericFns, localTypes, specializations, allowDirectCalls);
+				phpCollectGenericStaticSpecializationsFromExpr(enabled, className, genericFns, localTypes, specializations, allowDirectCalls);
+				for (body in bodies)
+					phpCollectGenericStaticSpecializationsFromStmt(body, className, genericFns, copyStringMap(localTypes), specializations, allowDirectCalls);
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -18090,6 +18012,7 @@ class SourceTargetCommon {
 
 	static function phpStmtTouchesThis(stmt:HxStmt):Bool {
 		return switch (stmt) {
+			case SGuardedSwitch(input, enabled, _, bodies, _): phpExprTouchesThis(input) || phpExprTouchesThis(enabled) || phpStmtListTouchesThis(bodies);
 			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				phpStmtListTouchesThis(stmts);
@@ -18187,6 +18110,11 @@ class SourceTargetCommon {
 
 	static function phpCollectDeclaredLocalsInStmt(stmt:HxStmt, names:Array<String>):Void {
 		switch (stmt) {
+			case SGuardedSwitch(_, _, plan, bodies, _):
+				for (pattern in plan.getPatterns())
+					phpCollectDeclaredLocalsInPattern(pattern, names);
+				for (body in bodies)
+					phpCollectDeclaredLocalsInStmt(body, names);
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -18259,9 +18187,7 @@ class SourceTargetCommon {
 				if (items != null)
 					for (item in items)
 						phpCollectDeclaredLocalsInPattern(item, names);
-			case PExtractor(_, resultPattern) | PLengthGuard(resultPattern, _, _) | PStartsWithGuard(resultPattern, _, _) |
-				PIntEqualsGuard(resultPattern, _, _) | PIntCompareGuard(resultPattern, _, _, _) | PParsedIntSwitchGuard(resultPattern, _, _, _) |
-				PUnsupportedGuard(resultPattern):
+			case PExtractor(_, resultPattern) | PGuard(resultPattern, _) | PUnsupportedPattern(resultPattern):
 				phpCollectDeclaredLocalsInPattern(resultPattern, names);
 			case POr(patterns):
 				if (patterns != null)
@@ -18273,6 +18199,11 @@ class SourceTargetCommon {
 
 	static function phpCollectUsedIdentsInStmt(stmt:HxStmt, names:Array<String>):Void {
 		switch (stmt) {
+			case SGuardedSwitch(input, enabled, _, bodies, _):
+				phpCollectUsedIdents(input, names);
+				phpCollectUsedIdents(enabled, names);
+				for (body in bodies)
+					phpCollectUsedIdentsInStmt(body, names);
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -18317,6 +18248,8 @@ class SourceTargetCommon {
 
 	static function phpStmtHasRefCaptureOfNames(stmt:HxStmt, names:Array<String>):Bool {
 		return switch (stmt) {
+			case SGuardedSwitch(input, enabled, _, bodies, _): phpExprHasRefCaptureOfNames(input,
+					names) || phpExprHasRefCaptureOfNames(enabled, names) || phpStmtListHasRefCaptureOfNames(bodies, names);
 			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				phpStmtListHasRefCaptureOfNames(stmts, names);
@@ -18400,6 +18333,8 @@ class SourceTargetCommon {
 
 	static function phpStmtHasLoopControlEscape(stmt:HxStmt):Bool {
 		return switch (stmt) {
+			case SGuardedSwitch(_, _, _, bodies, _):
+				phpStmtListHasLoopControlEscape(bodies);
 			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				phpStmtListHasLoopControlEscape(stmts);
@@ -18579,6 +18514,7 @@ class SourceTargetCommon {
 
 	static function phpRenameScopedLocalStmt(stmt:HxStmt, env:haxe.ds.StringMap<String>, counters:haxe.ds.StringMap<Int>, rewriteRawText:Bool):HxStmt {
 		return switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _): throw "guarded switch requires its target adapter";
 			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, pos):
 				SBlock(phpRenameScopedLocalStmtList(stmts, copyStringMap(env), counters, rewriteRawText), pos);
@@ -18785,23 +18721,10 @@ class SourceTargetCommon {
 				PArray([for (item in items) phpRenameScopedPattern(item, env, counters, rewriteRawText)]);
 			case PExtractor(extractorText, resultPattern):
 				PExtractor(extractorText, phpRenameScopedPattern(resultPattern, env, counters, rewriteRawText));
-			case PLengthGuard(inner, bindingName, length):
-				PLengthGuard(phpRenameScopedPattern(inner, env, counters, rewriteRawText), env.exists(bindingName) ? env.get(bindingName) : bindingName,
-					length);
-			case PStartsWithGuard(inner, bindingName, prefix):
-				PStartsWithGuard(phpRenameScopedPattern(inner, env, counters, rewriteRawText), env.exists(bindingName) ? env.get(bindingName) : bindingName,
-					prefix);
-			case PIntEqualsGuard(inner, bindingName, value):
-				PIntEqualsGuard(phpRenameScopedPattern(inner, env, counters, rewriteRawText), env.exists(bindingName) ? env.get(bindingName) : bindingName,
-					value);
-			case PIntCompareGuard(inner, bindingName, op, value):
-				PIntCompareGuard(phpRenameScopedPattern(inner, env, counters, rewriteRawText), env.exists(bindingName) ? env.get(bindingName) : bindingName,
-					op, value);
-			case PParsedIntSwitchGuard(inner, bindingName, multiplier, matchValue):
-				PParsedIntSwitchGuard(phpRenameScopedPattern(inner, env, counters, rewriteRawText),
-					env.exists(bindingName) ? env.get(bindingName) : bindingName, multiplier, matchValue);
-			case PUnsupportedGuard(inner):
-				PUnsupportedGuard(phpRenameScopedPattern(inner, env, counters, rewriteRawText));
+			case PGuard(_, _):
+				throw "PHP scoped patterns require shared guard lowering";
+			case PUnsupportedPattern(inner):
+				PUnsupportedPattern(phpRenameScopedPattern(inner, env, counters, rewriteRawText));
 			case POr(patterns):
 				POr([
 					for (item in patterns)
@@ -18822,6 +18745,7 @@ class SourceTargetCommon {
 
 	static function pythonRewriteSameClassMembersInStmt(stmt:HxStmt, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>, locals:Array<String>):HxStmt {
 		return switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _): throw "guarded switch requires its target adapter";
 			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, pos):
 				SBlock(pythonRewriteSameClassMembersInStmts(stmts, methodNames, fieldNames, copyStringArray(locals)), pos);
@@ -19132,6 +19056,7 @@ class SourceTargetCommon {
 
 	static function csRewriteSameClassStaticMembersInStmt(stmt:HxStmt, staticMemberNames:Map<String, Bool>, className:String, locals:Array<String>):HxStmt {
 		return switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _): throw "guarded switch requires its target adapter";
 			case STargetScope(kind, body, position):
 				STargetScope(kind, csRewriteSameClassStaticMembersInStmt(body, staticMemberNames, className, locals.copy()), position);
 			case SBlock(stmts, pos):
@@ -19290,6 +19215,7 @@ class SourceTargetCommon {
 	static function phpRewriteSameClassMembersInStmt(stmt:HxStmt, methodNames:Map<String, Bool>, fieldNames:Map<String, Bool>,
 			staticFieldNames:Map<String, Bool>, className:String, locals:Array<String>):HxStmt {
 		return switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _): throw "guarded switch requires its target adapter";
 			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, pos):
 				SBlock(phpRewriteSameClassMembersInStmts(stmts, methodNames, fieldNames, staticFieldNames, className, copyStringArray(locals)), pos);
@@ -19459,7 +19385,7 @@ class SourceTargetCommon {
 	}
 
 	static function renderPythonHelperClass(cls:HxClassDecl, postStaticInitializers:Array<String>, classesByName:Map<String, HxClassDecl>, packagePath:String,
-			pythonFields:PythonFieldAccessLowering, isEntryClass:Bool):Array<String> {
+			pythonFields:PythonFieldAccessLowering, isEntryClass:Bool, program:GenIrProgram):Array<String> {
 		final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
 		final fullName = packagePath != null
 			&& packagePath.length > 0 ? packagePath + "." + HxClassDecl.getName(cls) : HxClassDecl.getName(cls);
@@ -19540,7 +19466,8 @@ class SourceTargetCommon {
 				final body = !isStatic
 					|| isCtor ? pythonRewriteSameClassMembersInStmts(loweredBody, instanceMethodNames, instanceFieldNames,
 						[for (arg in HxFunctionDecl.getArgs(fn)) HxFunctionArg.getName(arg)]) : loweredBody;
-				for (line in renderFunctionStmts(Python, body, "        ", className + "." + HxFunctionDecl.getName(fn)))
+				for (line in renderFunctionStmtsWithFrame(SourceFunctionRenderFrameTools.forTypedFunction(Python, projection, program), body, "        ",
+					className + "." + HxFunctionDecl.getName(fn)))
 					out.push(line);
 			}
 			memberCount += 1;
@@ -19667,7 +19594,8 @@ class SourceTargetCommon {
 			out.set(valueName(Lua, call.name), true);
 	}
 
-	static function appendLuaMainStaticHelpers(out:Array<String>, projection:TypedBackendModuleProjection, className:String, entryBody:Array<HxStmt>):Void {
+	static function appendLuaMainStaticHelpers(out:Array<String>, program:GenIrProgram, projection:TypedBackendModuleProjection, className:String,
+			entryBody:Array<HxStmt>):Void {
 		final helperNames = new Array<String>();
 		final helpersByName = new Map<String, TypedBackendFunctionProjection>();
 		for (projectedClass in projection.getClasses()) {
@@ -19720,7 +19648,8 @@ class SourceTargetCommon {
 			final fn = functionProjection.getDeclaration();
 			final args = HxFunctionDecl.getArgs(fn);
 			out.push(methodName + " = function(" + luaFunctionArgs(args) + ")");
-			for (line in renderFunctionStmts(Lua, LuaStringLocalCallLowering.body(functionProjection), "  ", className + "." + methodName))
+			for (line in renderFunctionStmtsWithFrame(SourceFunctionRenderFrameTools.forTypedFunction(Lua, functionProjection, program),
+				LuaStringLocalCallLowering.body(functionProjection), "  ", className + "." + methodName))
 				out.push(line);
 			out.push("end");
 		}
@@ -19919,7 +19848,9 @@ class SourceTargetCommon {
 				appendSourceNativeTemplateLines(lines, "", "python/runtime", "Prelude.py");
 				lines.push("");
 				lines.push("def main():");
-				for (line in renderFunctionStmts(target, body, "    ", className + ".main"))
+				final mainProjection = strictTypedMainProjection(program, findMainModule(program, context)).main;
+				for (line in renderFunctionStmtsWithFrame(SourceFunctionRenderFrameTools.forTypedFunction(Python, mainProjection, program), body, "    ",
+					className + ".main"))
 					lines.push(line);
 				lines.push("");
 				for (line in renderSupportClasses(target, program, decl, className))
@@ -19995,9 +19926,11 @@ class SourceTargetCommon {
 					appendLuaUtilityProcessRuntime(lines);
 				} else {
 					appendLuaMainStaticFields(lines, decl, className);
-					appendLuaMainStaticHelpers(lines, strictProjection, className, body);
+					appendLuaMainStaticHelpers(lines, program, strictProjection, className, body);
 					lines.push("local function main()");
-					for (line in renderFunctionStmts(target, body, "  ", className + ".main"))
+					final mainProjection = strictTypedMainProjection(program, findMainModule(program, context)).main;
+					for (line in renderFunctionStmtsWithFrame(SourceFunctionRenderFrameTools.forTypedFunction(Lua, mainProjection, program), body, "  ",
+						className + ".main"))
 						lines.push(line);
 					lines.push("end");
 					lines.push("local __hxhx_traceback = (debug and debug.traceback) or tostring");

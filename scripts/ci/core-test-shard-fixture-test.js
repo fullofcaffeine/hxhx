@@ -140,7 +140,7 @@ function checkRuntimeTypeCoverage(packageJson, plan, expected) {
   if (JSON.stringify(expanded) !== JSON.stringify(expected)) {
     throw new Error('runtime-type split changed original commands or order')
   }
-  for (const command of expected.slice(33, 49)) {
+  for (const command of expected.slice(34, 50)) {
     if (!groups.some(group => command === `npm run ${group}` || packageJson.scripts[group] === command)) {
       throw new Error('each C++ runtime-type check must own an independent CI command')
     }
@@ -150,7 +150,7 @@ function checkRuntimeTypeCoverage(packageJson, plan, expected) {
 function main() {
   checkCommandFailureReporting()
   const plan = loadPlan(repoRoot)
-  assert(plan.aggregateCommands.length === 174, `expected 174 npm test commands, found ${plan.aggregateCommands.length}`)
+  assert(plan.aggregateCommands.length === 177, `expected 177 npm test commands, found ${plan.aggregateCommands.length}`)
 
   const expectedAggregateJobs = [
     'guards',
@@ -170,9 +170,9 @@ function main() {
     'compiler-foundation': 18,
     'compiler-packaging': 14,
     'compiler-focused-1': 46,
-    'compiler-focused-2': 52,
+    'compiler-focused-2': 53,
     'compiler-focused-3': 12,
-    'compiler-focused-4': 7,
+    'compiler-focused-4': 9,
     'compiler-focused-5': 18,
     'macro-host-integration': 3,
     portable: 1,
@@ -242,7 +242,7 @@ function main() {
 
   const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'))
   const runtimeCommands = JSON.parse(fs.readFileSync(path.join(repoRoot, 'test/fixtures/core_test_shards/runtime_type_commands.json'), 'utf8'))
-  assert(runtimeCommands.length === 53, 'the captured runtime-type inventory must retain all 53 commands')
+  assert(runtimeCommands.length === 54, 'the runtime-type inventory must retain the original 53 commands and the Array boundary group')
   checkRuntimeTypeCoverage(packageJson, plan, runtimeCommands)
   for (const change of ['missing', 'duplicated']) {
     const invalid = structuredClone(packageJson)

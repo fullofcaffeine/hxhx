@@ -58,7 +58,7 @@ class TyFunctionInference {
 	var capturedCalls:Array<InferredCapturedCall> = [];
 	var locals:StringMap<TyInferenceTerm> = new StringMap();
 	var speculativeReplay:Bool = false;
-	var keyValueProtocols:Array<TyKeyValueProtocolSource> = [];
+	var iteratorProtocols:Array<TyIteratorProtocolSource> = [];
 	var diagnosticProbes:Array<{
 		final expression:HxExpr;
 		final fingerprint:String;
@@ -97,8 +97,8 @@ class TyFunctionInference {
 	}
 
 	/** Allocate protocol query occurrences before sealing and retain them for exact replay. */
-	public function keyValueProtocolSource(source:HxExpr, ?select:HxExpr->TyKeyValueProtocolSource):TyKeyValueProtocolSource {
-		for (entry in keyValueProtocols)
+	public function iteratorProtocolSource(source:HxExpr, ?select:HxExpr->TyIteratorProtocolSource):TyIteratorProtocolSource {
+		for (entry in iteratorProtocols)
 			if (entry.owns(source)) {
 				entry.assertOwner(owner);
 				return entry;
@@ -111,7 +111,7 @@ class TyFunctionInference {
 		entry.assertOwner(owner);
 		if (!entry.owns(source))
 			throw "selected iterator protocol belongs to another source occurrence";
-		keyValueProtocols.push(entry);
+		iteratorProtocols.push(entry);
 		return entry;
 	}
 
@@ -336,7 +336,7 @@ class TyFunctionInference {
 		candidate.capturedCalls = capturedCalls.copy();
 		candidate.callbackArguments = callbackArguments.copy();
 		candidate.sourceFunctions = sourceFunctions.copy();
-		candidate.keyValueProtocols = keyValueProtocols.copy();
+		candidate.iteratorProtocols = iteratorProtocols.copy();
 		candidate.diagnosticProbes = diagnosticProbes.copy();
 		for (key => value in locals)
 			candidate.locals.set(key, value);

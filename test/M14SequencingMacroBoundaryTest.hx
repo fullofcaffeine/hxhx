@@ -56,7 +56,7 @@ class M14SequencingMacroBoundaryTest {
 		reject(() -> @:privateAccess EmitterStage.exprToOcaml(quoted), "OCaml unexpanded macro boundary");
 		reject(() -> CppMacroExpr.macroExpr(inner, []), "C++ macro object adapter");
 		reject(() -> @:privateAccess CppTargetCore.macroExprText(inner, []), "C++ macro text adapter");
-		reject(() -> NekoMacroExprLowering.render(inner, [], _ -> "unused"), "Neko macro adapter");
+		reject(() -> NekoMacroExprLowering.render(inner, [], _ -> "unused", null), "Neko macro adapter");
 		reject(() -> @:privateAccess SourceTargetCommon.pythonMacroExpr(inner, []), "Python macro adapter");
 		reject(() -> @:privateAccess SourceTargetCommon.phpMacroExpr(inner, []), "PHP macro adapter");
 		Sys.println("SEQUENCING_MACRO_BOUNDARY:PASS");

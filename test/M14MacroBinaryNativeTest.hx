@@ -42,7 +42,7 @@ class M14MacroBinaryNativeTest {
 					case "js": JsExprEmitter.emit(EMacroExpr(source, []), javascript.scope);
 					case "py": @:privateAccess SourceTargetCommon.pythonMacroExpr(source, []);
 					case "php": @:privateAccess SourceTargetCommon.phpMacroExpr(source, []);
-					case "neko": NekoMacroExprLowering.render(source, [], _ -> throw "native operator probe reached unsupported fallback");
+					case "neko": NekoMacroExprLowering.render(source, [], _ -> throw "native operator probe reached unsupported fallback", null);
 					case _: throw "unknown native observer";
 				};
 				calls.push("check(" + haxe.Json.stringify(tokens[index]) + ", " + value + ")" + (target == "py" ? "" : ";"));

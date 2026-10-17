@@ -20,6 +20,7 @@ class TypedBodyFingerprint {
 			case While(kind): kind == DoWhile ? "do-while" : "while";
 			case For(binding): CompilerCacheIdentity.encode(["for"].concat(HxForBinding.names(binding)));
 			case Switch(patterns, exhaustive): "switch:" + (exhaustive == true ? "complete:" : "partial:") + forExpression(ESwitch(ENull, patterns, []));
+			case PatternAttempts(plan): "pattern-attempts:" + plan.getSemanticKey();
 			case Try(catches): CompilerCacheIdentity.encode(["try"].concat([for (entry in catches) entry.getCanonicalIdentity()]));
 			case Break: "break";
 			case Continue: "continue";
@@ -111,35 +112,12 @@ class TypedBodyFingerprint {
 				addString(state, "pattern-extractor");
 				addString(state, extractorText);
 				addPattern(state, resultPattern);
-			case PLengthGuard(inner, bindingName, length):
-				addString(state, "pattern-length-guard");
+			case PGuard(inner, guard):
+				addString(state, "pattern-guard");
 				addPattern(state, inner);
-				addString(state, bindingName);
-				addInt(state, length);
-			case PStartsWithGuard(inner, bindingName, prefix):
-				addString(state, "pattern-starts-with-guard");
-				addPattern(state, inner);
-				addString(state, bindingName);
-				addString(state, prefix);
-			case PIntEqualsGuard(inner, bindingName, value):
-				addString(state, "pattern-int-equals-guard");
-				addPattern(state, inner);
-				addString(state, bindingName);
-				addInt(state, value);
-			case PIntCompareGuard(inner, bindingName, op, value):
-				addString(state, "pattern-int-compare-guard");
-				addPattern(state, inner);
-				addString(state, bindingName);
-				addString(state, op);
-				addInt(state, value);
-			case PParsedIntSwitchGuard(inner, bindingName, multiplier, matchValue):
-				addString(state, "pattern-parsed-int-switch-guard");
-				addPattern(state, inner);
-				addString(state, bindingName);
-				addInt(state, multiplier);
-				addInt(state, matchValue);
-			case PUnsupportedGuard(inner):
-				addString(state, "pattern-unsupported-guard");
+				addExpression(state, guard);
+			case PUnsupportedPattern(inner):
+				addString(state, "pattern-unsupported");
 				addPattern(state, inner);
 			case PBind(name):
 				addString(state, "pattern-bind");
@@ -237,6 +215,7 @@ class TypedBodyFingerprint {
 				if (state.isExact())
 					switch kind {
 						case Switch(patterns): addPatterns(state, patterns);
+						case PatternAttempts(plan): addPatterns(state, plan.getPatterns());
 						case _:
 					}
 				addString(state, target);
@@ -388,6 +367,13 @@ class TypedBodyFingerprint {
 
 	static function addStatement(state:BodyIdentityState, statement:HxStmt):Void {
 		switch (statement) {
+			case SGuardedSwitch(scrutinee, enabled, plan, bodies, position):
+				addString(state, "stmt-guarded-switch");
+				addExpression(state, scrutinee);
+				addExpression(state, enabled);
+				addString(state, plan.getSemanticKey());
+				addStatements(state, bodies);
+				addPosition(state, position);
 			case STargetScope(kind, body, position):
 				addString(state, loweredControlName(TargetScope(kind)));
 				addPosition(state, position);

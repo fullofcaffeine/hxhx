@@ -27,6 +27,8 @@ class JsStmtEmitter {
 
 	public static function emitStmt(writer:JsWriter, stmt:HxStmt, scope:JsFunctionScope):Void {
 		switch (stmt) {
+			case SGuardedSwitch(input, enabled, plan, bodies, _):
+				JsGuardedSwitch.emit(writer, input, enabled, plan, bodies, scope);
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -39,9 +41,11 @@ class JsStmtEmitter {
 			case SVar(name, _typeHint, init, _):
 				final local = scope.declareLocal(name);
 				if (scope.isIterationCapture(name)) {
-					if (init == null)
-						throw "captured iteration binding requires its selected initializer";
-					writer.writeln("var " + local + " = {value: " + JsExprEmitter.emit(init, scope.exprScope()) + "};");
+					// Recursive functions must capture the new cell before their
+					// initializer runs, and a later assignment must update that cell.
+					writer.writeln("var " + local + " = {value: null};");
+					if (init != null)
+						writer.writeln(local + ".value = " + JsExprEmitter.emit(init, scope.exprScope()) + ";");
 				} else if (init != null) {
 					writer.writeln("var " + local + " = " + JsExprEmitter.emit(init, scope.exprScope()) + ";");
 				} else {
@@ -244,7 +248,7 @@ class JsStmtEmitter {
 			writer.pushIndent();
 			for (binding in lowered.bindings) {
 				final bind = scope.declareLocal(binding.name);
-				writer.writeln("var " + bind + " = " + binding.expr + ";");
+				writer.writeln("var " + bind + " = " + (scope.isIterationCapture(binding.name) ? "{value: " + binding.expr + "}" : binding.expr) + ";");
 			}
 			emitStmtBlockContent(writer, body, scope);
 			writer.popIndent();

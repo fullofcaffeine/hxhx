@@ -22,6 +22,9 @@ enum HxLoweredControlKind {
 	/** Retain shared coverage through function and initializer statement adaptation. */
 	Switch(patterns:Array<HxSwitchPattern>, ?exhaustive:Bool);
 
+	/** Share observed input values across retries, with fresh bindings and one guard/body child per case. */
+	PatternAttempts(plan:TypedGuardedPatternPlan);
+
 	Try(catches:Array<HxSourceCatch>);
 	Break;
 	Continue;

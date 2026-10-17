@@ -548,7 +548,7 @@ class M14HihExprTextParserIntegrationTest {
 				assertTrue(bodies.length == 6, "expected all macro expression switch bodies to parse");
 				for (i in 0...5) {
 					switch (patterns[i]) {
-						case PUnsupportedGuard(PWildcard):
+						case PUnsupportedPattern(PWildcard):
 						case other:
 							fail("expected macro expression pattern to be consumed as unsupported guarded wildcard, got " + other);
 					}
@@ -580,7 +580,7 @@ class M14HihExprTextParserIntegrationTest {
 						fail("expected first char-code case to parse as PInt");
 				}
 				switch (patterns[1]) {
-					case PUnsupportedGuard(PInt(code)):
+					case PGuard(PInt(code), EBinop(">", EField(EIdent("s"), "length"), EInt(1))):
 						assertTrue(code == "%".code, "expected guarded '%'.code switch pattern");
 					case _:
 						fail("expected guarded char-code case to stay structured");
@@ -1517,7 +1517,7 @@ class M14HihExprTextParserIntegrationTest {
 			case ESwitch(EIdent("values"), patterns, _):
 				assertTrue(patterns.length == 2, "expected guarded switch cases");
 				switch (patterns[0]) {
-					case PLengthGuard(PCapture("rest", PWildcard), "rest", 3):
+					case PGuard(PCapture("rest", PWildcard), EBinop("==", EField(EIdent("rest"), "length"), EInt(3))):
 					case _:
 						fail("expected explicit wildcard capture with length comparison");
 				}
@@ -1537,7 +1537,7 @@ class M14HihExprTextParserIntegrationTest {
 						fail("expected comma-separated case group to parse as OR pattern");
 				}
 				switch (patterns[1]) {
-					case PIntEqualsGuard(PCapture("val", POr([PInt(4), PInt(5), PInt(6)])), "val", 5):
+					case PGuard(PCapture("val", POr([PInt(4), PInt(5), PInt(6)])), EBinop("==", EIdent("val"), EInt(5))):
 					case _:
 						fail("expected captured OR pattern with integer equality guard");
 				}
@@ -1551,12 +1551,12 @@ class M14HihExprTextParserIntegrationTest {
 					case ESwitch(EIdent("v"), comparePatterns, _):
 						assertTrue(comparePatterns.length == 3, "expected integer comparison guard cases");
 						switch (comparePatterns[0]) {
-							case PIntCompareGuard(PEnumExtract("One", [PBind("x")]), "x", "<=", 1):
+							case PGuard(PEnumExtract("One", [PBind("x")]), EBinop("<=", EIdent("x"), EInt(1))):
 							case _:
 								fail("expected enum extractor pattern with integer <= guard");
 						}
 						switch (comparePatterns[1]) {
-							case PIntCompareGuard(PEnumExtract("One", [PBind("x")]), "x", ">", 1):
+							case PGuard(PEnumExtract("One", [PBind("x")]), EBinop(">", EIdent("x"), EInt(1))):
 							case _:
 								fail("expected enum extractor pattern with integer > guard");
 						}

@@ -262,7 +262,10 @@
     "test:m14:cpp-static-callable": "compiler-focused-3",
     "test:m14:cpp-constructor-applications": "compiler-focused-3",
     "test:m14:cpp-inherited-storage": "compiler-focused-4",
+    "test:m14:cpp-guarded-control": "compiler-focused-4",
+    "test:m14:cpp-array-push-value": "compiler-focused-4",
     "test:m14:cpp-string-length": "compiler-focused-4",
+    "test:m14:source-guarded-control": "compiler-focused-2",
     "test:m14:ocaml-nominal-type-predicates": "compiler-focused-2",
     "test:m14:ocaml-module-inventory": "compiler-focused-2",
     "test:m14:ocaml-native-externs": "compiler-focused-2"

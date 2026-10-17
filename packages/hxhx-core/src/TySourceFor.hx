@@ -1,5 +1,5 @@
 /** A valid direct iterator takes precedence; otherwise select the iterable's factory. */
-function selectProtocol(source:HxExpr, resolve:HxExpr->TyType, owner:String):TyKeyValueProtocolSource {
+function selectProtocol(source:HxExpr, resolve:HxExpr->TyType, owner:String, kind:TyIteratorProtocolSource.TyIteratorProtocolKind):TyIteratorProtocolSource {
 	final hasNext = resolve(EField(source, "hasNext"));
 	final next = resolve(EField(source, "next"));
 	if (hasNext.isFunction()
@@ -7,23 +7,23 @@ function selectProtocol(source:HxExpr, resolve:HxExpr->TyType, owner:String):TyK
 		&& hasNext.getFunctionReturn().getSemanticKey() == "primitive:Bool"
 		&& next.isFunction()
 		&& next.getFunctionArguments().length == 0) {
-		final direct = new TyKeyValueProtocolSource(source, owner, true);
-		if (!resolve(direct.key).hasUnknownComponent() && !resolve(direct.value).hasUnknownComponent())
+		final direct = new TyIteratorProtocolSource(source, owner, kind, true);
+		if ((direct.key == null || !resolve(direct.key).hasUnknownComponent()) && !resolve(direct.value).hasUnknownComponent())
 			return direct;
 	}
-	return new TyKeyValueProtocolSource(source, owner);
+	return new TyIteratorProtocolSource(source, owner, kind);
 }
 
 /** Report a missing factory only when its exact receiver and member query establish that absence. */
-function protocolDiagnostic(type:TyType, protocol:Null<TyKeyValueProtocolSource>, resolve:HxExpr->TyType, fallback:String):String {
+function protocolDiagnostic(type:TyType, protocol:Null<TyIteratorProtocolSource>, resolve:HxExpr->TyType, fallback:String):String {
 	if (!type.hasUnknownComponent() && !type.isDynamic() && protocol != null && protocol.factory != null && resolve(protocol.factory).isUnknown())
-		return type.getDisplay() + " has no field keyValueIterator";
+		return type.getDisplay() + " has no field " + (protocol.kind == Values ? "iterator" : "keyValueIterator");
 	return fallback;
 }
 
 /** Select concrete loop-local types from iterable facts shared by typing and replay. */
 function bindingTypes(binding:HxForBinding, iterable:HxExpr, type:TyType, ?resolve:HxExpr->TyType,
-		?protocol:() -> TyKeyValueProtocolSource):Null<Array<TyType>> {
+		?protocol:() -> TyIteratorProtocolSource):Null<Array<TyType>> {
 	switch iterable {
 		case ERange(_, _):
 			return switch binding {
@@ -38,18 +38,23 @@ function bindingTypes(binding:HxForBinding, iterable:HxExpr, type:TyType, ?resol
 	if ((path != "Array" && path != "haxe.Array") || arguments.length != 1 || arguments[0].hasUnknownComponent()) {
 		if (resolve == null || protocol == null)
 			return null;
+		// Type queries select calls once; lowering later saves acquisition and
+		// executes each next operation exactly once, including for plain values.
+		final selected = protocol();
+		final condition = resolve(selected.condition);
+		final value = resolve(selected.value);
+		if (condition.getSemanticKey() != "primitive:Bool" || value.hasUnknownComponent())
+			return null;
 		return switch binding {
 			case KeyValue(_, _):
-				// These are type queries only. Executable acquisition and next calls
-				// must later be retained once in the typed loop's protocol lowering.
-				final selected = protocol();
-				final condition = resolve(selected.condition);
+				if (selected.kind != KeyValues || selected.key == null)
+					throw "key/value loop lost its selected iterator protocol";
 				final key = resolve(selected.key);
-				final value = resolve(selected.value);
-				if (condition.getSemanticKey() != "primitive:Bool" || key.hasUnknownComponent() || value.hasUnknownComponent())
-					return null;
-				[key, value];
-			case Value(_): null;
+				key.hasUnknownComponent() ? null : [key, value];
+			case Value(_):
+				if (selected.kind != Values)
+					throw "value loop lost its selected iterator protocol";
+				[value];
 		};
 	}
 	return switch binding {
@@ -76,15 +81,12 @@ function infer(input:{
 			final inferProtocol = expression -> input.scope.withProtocolSource(iterable, iterableType, () -> input.typeExpression(expression));
 			final types = bindingTypes(binding, iterable, iterableType, inferProtocol,
 				() -> input.scope.getInference()
-					.keyValueProtocolSource(iterable, source -> selectProtocol(source, inferProtocol, input.scope.getOwnerIdentity())));
+					.iteratorProtocolSource(iterable,
+						source -> selectProtocol(source, inferProtocol, input.scope.getOwnerIdentity(), binding.match(Value(_)) ? Values : KeyValues)));
 			if (types == null) {
 				final fallback = "source for requires a resolved iterable protocol";
-				final message = switch binding {
-					case KeyValue(_, _):
-						protocolDiagnostic(iterableType, iterable.match(ERange(_, _)) ? null : input.scope.getInference().keyValueProtocolSource(iterable),
-							inferProtocol, fallback);
-					case Value(_): fallback;
-				};
+				final message = protocolDiagnostic(iterableType,
+					iterable.match(ERange(_, _)) ? null : input.scope.getInference().iteratorProtocolSource(iterable), inferProtocol, fallback);
 				throw new TyperError(input.filePath, position, message);
 			}
 			final controls = input.scope.requireControlScope();

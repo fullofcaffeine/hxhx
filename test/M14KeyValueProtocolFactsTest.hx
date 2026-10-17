@@ -16,39 +16,39 @@ class M14KeyValueProtocolFactsTest {
 		final arguments:Array<HxExpr> = [];
 		final source:HxExpr = ECall(EIdent("source"), arguments);
 		final inference = new TyFunctionInference(owner);
-		final record = inference.keyValueProtocolSource(source, value -> new TyKeyValueProtocolSource(value, owner));
+		final record = inference.iteratorProtocolSource(source, value -> new TyIteratorProtocolSource(value, owner, KeyValues));
 		if (record.owns(ECall(EIdent("source"), [])))
 			throw "equal source text replaced an exact iterator occurrence";
 		final foreign = new TyFunctionInference("Main.other");
 		rejected(() -> {
-			foreign.keyValueProtocolSource(source, _ -> record);
+			foreign.iteratorProtocolSource(source, _ -> record);
 		}, "iterator protocol belongs to another inference owner");
 		final copiedSource:HxExpr = ECall(EIdent("source"), []);
 		rejected(() -> {
-			inference.keyValueProtocolSource(copiedSource, _ -> record);
+			inference.iteratorProtocolSource(copiedSource, _ -> record);
 		}, "selected iterator protocol belongs to another source occurrence");
 		inference.seal([]);
-		if (inference.keyValueProtocolSource(source) != record || inference.fork().keyValueProtocolSource(source) != record)
+		if (inference.iteratorProtocolSource(source) != record || inference.fork().iteratorProtocolSource(source) != record)
 			throw "sealed replay or speculation replaced selected query occurrences";
 		rejected(() -> {
-			inference.keyValueProtocolSource(copiedSource);
+			inference.iteratorProtocolSource(copiedSource);
 		}, "iterator protocol source is absent from sealed inference");
 		arguments.push(EInt(1));
 		rejected(() -> {
-			inference.keyValueProtocolSource(source);
+			inference.iteratorProtocolSource(source);
 		}, "iterator source or protocol queries changed after inference selection");
 		arguments.pop();
 		switch record.next {
 			case ECall(_, operands):
 				operands.push(EInt(1));
 				rejected(() -> {
-					inference.keyValueProtocolSource(source);
+					inference.iteratorProtocolSource(source);
 				}, "iterator source or protocol queries changed after inference selection");
 				operands.pop();
 			case _:
 				throw "iterator next query must remain a call";
 		}
-		if (inference.keyValueProtocolSource(source) != record)
+		if (inference.iteratorProtocolSource(source) != record)
 			throw "restored immutable facts did not retain their selected record";
 		assertScopedSourceReference(source, copiedSource, arguments);
 		Sys.println("KEY_VALUE_PROTOCOL_FACTS:PASS");

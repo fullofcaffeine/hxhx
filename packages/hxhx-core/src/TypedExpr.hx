@@ -64,9 +64,10 @@ enum TypedExprTag {
 	ControlBranch;
 	ControlWhile;
 	SourceFor;
-	KeyValueProtocol;
+	IteratorProtocol;
 	ControlFor;
 	ControlSwitch;
+	ControlPatternAttempts;
 	SourceTry;
 	ControlTry;
 	PrivateAccess;
@@ -191,7 +192,7 @@ class TypedExpr {
 		this.namedArguments = namedArguments;
 		this.switchPatterns = switchPatterns;
 		if (switchPatterns != null) {
-			if ((tag != SwitchExpr && tag != ControlSwitch) || this.expressions.length == 0)
+			if ((tag != SwitchExpr && tag != ControlSwitch && tag != ControlPatternAttempts) || this.expressions.length == 0)
 				throw "named pattern selections require a typed switch";
 			switchPatterns.assertInput(this.expressions[0].getType(), this.patterns);
 		}
@@ -449,15 +450,14 @@ class TypedExpr {
 		Retain selected iterator calls as visible typed children until executable lowering.
 		This is protocol evidence, not an extra source expression to execute or quote.
 	 */
-	public static function keyValueProtocol(input:{
+	public static function iteratorProtocol(input:{
 		acquire:TypedExpr,
 		condition:TypedExpr,
 		next:TypedExpr,
-		key:TypedExpr,
-		value:TypedExpr
+		fields:Array<TypedExpr>
 	}):TypedExpr
-		return new TypedExpr(KeyValueProtocol, TyType.fromHintText("Void"), input.acquire.getPosition(), null,
-			[input.acquire, input.condition, input.next, input.key, input.value]);
+		return new TypedExpr(IteratorProtocol, TyType.fromHintText("Void"), input.acquire.getPosition(), null,
+			[input.acquire, input.condition, input.next].concat(input.fields));
 
 	/** Ordered catch declarations and all bodies remain visible to typed replay and macro syntax. */
 	public static function sourceTry(catches:Array<HxSourceCatch>, bodies:Array<TypedExpr>, type:TyType, position:Null<HxPos>,
@@ -544,9 +544,9 @@ class TypedExpr {
 
 	/** Coverage comes from exact name/type resolution before pattern locals enter scope. */
 	public static function switchExpr(scrutinee:TypedExpr, patterns:Array<HxSwitchPattern>, branches:Array<TypedExpr>, type:TyType, position:Null<HxPos>,
-			?bindings:Array<TyLocalBinding>, exhaustive:Bool = false):TypedExpr
-		return new TypedExpr(SwitchExpr, type, position, null, [scrutinee].concat(branches == null ? [] : branches), patterns, exhaustive, 0, 0.0, null, null,
-			null, null, null, bindings);
+			?bindings:Array<TyLocalBinding>, exhaustive:Bool = false, ?guards:Array<TypedExpr>):TypedExpr
+		return new TypedExpr(SwitchExpr, type, position, null, [scrutinee].concat(branches == null ? [] : branches).concat(guards == null ? [] : guards),
+			patterns, exhaustive, 0, 0.0, null, null, null, null, null, bindings);
 
 	/** Retain the original selected constructor beside the applied nominal result; null denotes unresolved or implicit construction. */
 	public static function newValue(typePath:String, arguments:Array<TypedExpr>, type:TyType, position:Null<HxPos>,
@@ -618,6 +618,12 @@ class TypedExpr {
 		return new TypedExpr(ControlSwitch, type, position, null, [scrutinee].concat(branches), patterns, exhaustive, 0, 0.0, null, null, null, null, null,
 			bindings);
 
+	/** Retry structural alternatives with fresh bindings while retaining one guard/body origin per case. */
+	public static function controlPatternAttempts(scrutinee:TypedExpr, enabled:TypedExpr, bodies:Array<TypedExpr>, patterns:Array<HxSwitchPattern>,
+			bindings:Array<TyLocalBinding>, position:Null<HxPos>, exhaustive:Bool):TypedExpr
+		return new TypedExpr(ControlPatternAttempts, TyType.fromHintText("Void"), position, null, [scrutinee, enabled].concat(bodies), patterns, exhaustive,
+			0, 0.0, null, null, null, null, null, bindings);
+
 	/** Shared typing certifies unchanged storage for selected abstract or class-literal conversions; authored casts use false. */
 	public static function castValue(expression:TypedExpr, typeHint:String, type:TyType, position:Null<HxPos>, preservesRepresentation:Bool = false):TypedExpr
 		return new TypedExpr(Cast, type, position, [typeHint], [expression], null, preservesRepresentation);
@@ -662,6 +668,18 @@ class TypedExpr {
 	public function getPatterns():Array<HxSwitchPattern>
 		return patterns.copy();
 
+	/** Conditions stay in recursive typed traversal but are not case result expressions. */
+	public function getSwitchGuards():Array<TypedExpr> {
+		if (tag != SwitchExpr && tag != ControlSwitch)
+			throw "guard operands require a typed switch";
+		return TypedSwitchGuards.children(patterns, expressions, patterns.length + 1);
+	}
+
+	public function getSwitchBranches():Array<TypedExpr> {
+		getSwitchGuards();
+		return expressions.slice(1, patterns.length + 1);
+	}
+
 	public function getSwitchPatterns():Null<TypedSwitchPatterns> {
 		if (switchPatterns != null)
 			switchPatterns.assertInput(expressions[0].getType(), patterns);
@@ -676,7 +694,7 @@ class TypedExpr {
 
 	/** A recorded proof permits result storage without an artificial default branch. */
 	public function getSwitchHasExhaustiveCoverage():Bool {
-		if (tag != SwitchExpr && tag != ControlSwitch)
+		if (tag != SwitchExpr && tag != ControlSwitch && tag != ControlPatternAttempts)
 			throw "switch coverage requires a typed switch expression";
 		return boolValue;
 	}

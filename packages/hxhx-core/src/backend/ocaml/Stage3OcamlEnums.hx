@@ -49,6 +49,29 @@ class Stage3OcamlEnums {
 				payloadTypes(constructor);
 	}
 
+	/** Match only the enum and constructor admitted from the selected typed declaration. */
+	public function patternCondition(selected:TypedNamedPattern, value:String):String {
+		return switch selected.getKind() {
+			case Constructor(identity, name, index, arity):
+				final owner = owners.get(identity.getCanonicalName());
+				if (owner == null || index < 0 || index >= owner.constructors.length)
+					throw "OCaml guarded pattern has no exact enum provider";
+				final constructor = owner.constructors[index];
+				if (constructor.name != name || constructor.index != index || constructor.payloads.length != arity)
+					throw "OCaml guarded constructor differs from typing";
+				"(HxEnum.name_opt (Obj.repr "
+				+ value
+				+ ") = Some "
+				+ quote(owner.runtimeName)
+				+ " && HxType.enumIndex (Obj.repr "
+				+ value
+				+ ") = "
+				+ index
+				+ ")";
+			case _: throw "OCaml guarded constructor test requires an ordinary enum";
+		};
+	}
+
 	/** Reject erased or unmodeled payloads instead of claiming a native variant exists. */
 	function payloadTypes(constructor:Stage3OcamlEnumConstructor):Array<String> {
 		return [

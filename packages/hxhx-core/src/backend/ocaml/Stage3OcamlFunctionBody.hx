@@ -117,7 +117,7 @@ private function validate(statement:HxStmt):Int {
 		case SIf(_, yes, no, _): validate(yes) + (no == null ? 0 : validate(no));
 		case SWhile(_, body, _) | SDoWhile(body, _, _): validate(body);
 		case SForIn(_, ERange(_, _), body, _): validate(body);
-		case SSwitch(_, _, branches, _):
+		case SSwitch(_, _, branches, _) | SGuardedSwitch(_, _, _, branches, _):
 			var count = 0;
 			for (branch in branches)
 				count += validate(branch);

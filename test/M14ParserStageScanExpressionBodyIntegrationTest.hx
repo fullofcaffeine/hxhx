@@ -8,6 +8,20 @@ class M14ParserStageScanExpressionBodyIntegrationTest {
 	}
 
 	static function main():Void {
+		// Helper abstracts enter through declaration scanning. Their rest body
+		// container must match the ordinary method parser before typing begins.
+		for (element in ["Int", "Array<Int>", "haxe.Rest<Int>"]) {
+			final ordinary = "class RestBody { public function count(...items:" + element + "):Int return items.length; }";
+			final abstractSource = "abstract RestBody(Int) { public function count(...items:" + element + "):Int return items.length; }";
+			final classes = ParserStageScanHelpers.scanModuleLocalHelperClasses(ordinary, null)
+				.concat(ParserStageScanHelpers.scanModuleLocalHelperAbstracts(abstractSource, null));
+			classes.push(HxModuleDecl.getMainClass(new HxParser(ordinary).parseModule("RestBody")));
+			for (owner in classes) {
+				final argument = HxFunctionDecl.getArgs(HxClassDecl.getFunctions(owner)[0])[0];
+				assertTrue(HxFunctionArg.getTypeHint(argument) == "Array<" + element + ">", "scanner lost rest body container for " + element);
+				assertTrue(HxFunctionArg.getIsRest(argument), "scanner lost rest calling convention");
+			}
+		}
 		final calls = ParserStageScanHelpers.scanModuleLocalHelperClasses([
 			"class CallBodies {",
 			"  static function qualified():Void Sys.println(\"qualified\");",

@@ -36,8 +36,7 @@ function check(scrutinee:TyType, patterns:Array<HxSwitchPattern>, bodyCount:Int,
 				field == null ? Unsupported("unresolved enum pattern " + name) : Member(field);
 			case POr(items): Alternatives([for (item in items) resolve(item)]);
 			case PCapture(_, inner): resolve(inner);
-			case PLengthGuard(inner, _, _) | PStartsWithGuard(inner, _, _) | PIntEqualsGuard(inner, _, _) | PIntCompareGuard(inner, _, _, _) |
-				PParsedIntSwitchGuard(inner, _, _, _) | PUnsupportedGuard(inner): Guarded(resolve(inner));
+			case PGuard(inner, _) | PUnsupportedPattern(inner): Guarded(resolve(inner));
 			case _: Unsupported("pattern form requires enum-abstract coverage support");
 		};
 	}

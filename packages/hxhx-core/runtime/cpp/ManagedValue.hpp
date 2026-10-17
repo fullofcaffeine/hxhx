@@ -110,6 +110,9 @@ enum class ArrayRepresentation { Boolean, Integer, Float, String, Reference, Dyn
 class ArrayPayload {
   const ArrayRepresentation representation_;
   std::vector<Value> elements_;
+  // Haxe selects native method tokens. Tracing the cache preserves method
+  // identity while allowing unreachable array/callable cycles to be collected.
+  std::map<const void*, Value> boundCallables_;
 public:
   // The Haxe allocation plan selects this immutable fact. Storage never derives
   // a source representation from current elements, including an empty array.
@@ -119,8 +122,20 @@ public:
   Value read(std::size_t index) const { return elements_.at(index); }
   void write(std::size_t index, Value value) { elements_.at(index) = std::move(value); }
   void append(Value value) { elements_.push_back(std::move(value)); }
+  Value boundCallable(const void* key) const {
+    if (key == nullptr) throw std::invalid_argument("bound callable requires a selected token");
+    const auto found = boundCallables_.find(key);
+    return found == boundCallables_.end() ? Value() : found->second;
+  }
+  void storeBoundCallable(const void* key, Value value) {
+    if (key == nullptr || value.kind() != ValueKind::Managed)
+      throw std::invalid_argument("bound callable requires a selected token and managed value");
+    if (!boundCallables_.emplace(key, std::move(value)).second)
+      throw std::logic_error("bound callable slot is already initialized");
+  }
   void trace(Visitor& visitor) const noexcept {
     for (const auto& value : elements_) value.trace(visitor);
+    for (const auto& entry : boundCallables_) entry.second.trace(visitor);
   }
 };
 

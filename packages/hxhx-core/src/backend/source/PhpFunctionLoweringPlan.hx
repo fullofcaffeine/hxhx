@@ -99,6 +99,7 @@ class PhpFunctionLoweringPlan {
 	final runtimeTypes:TypedBackendRuntimeTypeCatalog;
 	final captureStorage:PhpCaptureStorage;
 	final rootControl:Null<Void->String>;
+	final selectNamedPattern:HxSwitchPattern->Null<TypedNamedPattern>;
 	final selectRuntimeType:HxExpr->TypedBackendRuntimeTypeOccurrence;
 	final canonicalIdentity:String;
 
@@ -117,6 +118,7 @@ class PhpFunctionLoweringPlan {
 		classFactsIdentity = normalize(classFacts.getCanonicalIdentity());
 		final initializerMode = fieldInitializerProjection != null;
 		rootControl = initializerMode ? null : functionProjection.requireRootControlIdentity;
+		selectNamedPattern = initializerMode ? fieldInitializerProjection.findNamedPattern : functionProjection.findNamedPattern;
 		captureStorage = initializerMode ? PhpCaptureStorage.forInitializer(fieldInitializerProjection) : PhpCaptureStorage.forFunction(functionProjection);
 		functionIdentity = normalize(initializerMode ? fieldInitializerProjection.getStableIdentity() : functionProjection.getStableIdentity());
 		bodyRevision = normalize(initializerMode ? fieldInitializerProjection.getBodyRevision() : functionProjection.getBodyRevision());
@@ -552,6 +554,10 @@ class PhpFunctionLoweringPlan {
 
 	public function copyLocals():Array<PhpFunctionPlanLocalFact>
 		return [for (local in locals) copyLocal(local)];
+
+	/** Retain the exact named pattern occurrence selected by shared typing. */
+	public function findNamedPattern(pattern:HxSwitchPattern):Null<TypedNamedPattern>
+		return selectNamedPattern(pattern);
 
 	public function findLocalByTargetName(targetName:String):Null<PhpFunctionPlanLocalFact> {
 		final fact = localIndex.get(normalize(targetName));

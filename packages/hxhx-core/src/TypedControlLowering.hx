@@ -28,7 +28,7 @@ typedef LoweredFieldInitializer = {
 	here instead of being hidden inside a newly created closure.
  */
 class TypedControlLowering {
-	static final passIdentity = "source-control-v32";
+	static final passIdentity = "source-control-v38";
 
 	final owner:String;
 	var nextTemporary:Int = 0;
@@ -36,6 +36,7 @@ class TypedControlLowering {
 	var activeLoop:Null<TyControlTarget> = null;
 	var untypedContext:Bool = false;
 	var hasTargetScope:Bool = false;
+	final patternLoopTargets = new Array<TyControlTarget>();
 
 	final rootTarget:Null<TyControlTarget>;
 
@@ -105,9 +106,23 @@ class TypedControlLowering {
 
 	/** Lift group evaluation into its enclosing statement list, preserving local visibility. */
 	function statement(input:TypedStmt):Array<TypedStmt> {
-		if (input.getTag() == ForKeyValue && input.getExpressions().length == 2) {
+		if (input.getTag() == Switch && input.getSwitchGuards().length != 0) {
+			final branches = [
+				for (body in input.getStatements())
+					TypedStatementControl.region(statement(body), rootTarget, body.getPosition())
+			];
+			final expression = TypedExpr.switchExpr(input.getExpressions()[0], input.getPatterns(), branches, TyType.fromHintText("Void"),
+				input.getPosition(), input.getLocalBindings(), input.getSwitchHasExhaustiveCoverage(), input.getSwitchGuards())
+				.withSwitchPatterns(input.getSwitchPatterns());
+			final result = new Array<TypedStmt>();
+			for (step in switchValue(expression, rootTarget, false).steps)
+				for (lowered in stepStatements(step))
+					result.push(lowered);
+			return result;
+		}
+		if ((input.getTag() == ForIn || input.getTag() == ForKeyValue) && input.getExpressions().length == 2) {
 			didLower = true;
-			return statement(TypedKeyValueIteration.lower({
+			return statement(TypedIteratorProtocol.lower({
 				protocol: input.getExpressions()[1],
 				body: input.getStatements()[0],
 				bindings: input.getLocalBindings(),
@@ -161,7 +176,16 @@ class TypedControlLowering {
 			}
 		];
 		activeLoop = previousLoop;
-		prefix.push(input.withChildren(values, children));
+		final updated = input.withChildren(values, children);
+		if (input.getControlTarget() != null
+			&& patternLoopTargets.indexOf(input.getControlTarget()) >= 0
+			&& (input.getTag() == While || input.getTag() == DoWhile || input.getTag() == ForIn || input.getTag() == ForKeyValue)) {
+			// Match attempts retain authored exits until statement adaptation. Keep
+			// their enclosing loop in that same region so its destination is visible.
+			prefix.push(TypedStmt.expressionStmt(TypedStatementControl.region([updated], rootTarget, input.getPosition()), input.getPosition()));
+		} else {
+			prefix.push(updated);
+		}
 		return prefix;
 	}
 
@@ -231,7 +255,7 @@ class TypedControlLowering {
 					TypedStmt.switchStmt(children[0], step.getPatterns(), bodies, step.getPosition(), step.getLocalBindings(),
 						step.getSwitchHasExhaustiveCoverage())
 						.withSwitchPatterns(step.getSwitchPatterns())];
-			case ControlFor | ControlWhile:
+			case ControlFor | ControlWhile | ControlPatternAttempts:
 				// Keep the selected loop destination through backend projection. Rebuilding
 				// source-shaped statements here discards the destination used by exits.
 				[TypedStmt.expressionStmt(step, step.getPosition())];
@@ -406,10 +430,8 @@ class TypedControlLowering {
 		for (pattern in patterns)
 			if (pattern.match(PWildcard))
 				coversInput = true;
-		final branches = [
-			for (index in 1...children.length)
-				needsValue ? value(children[index], target) : discard(children[index], target)
-		];
+		final bodies = expression.getSwitchBranches();
+		final branches = [for (body in bodies) needsValue ? value(body, target) : discard(body, target)];
 		var completes = !coversInput;
 		for (branch in branches)
 			completes = completes || branch.completes;
@@ -437,11 +459,32 @@ class TypedControlLowering {
 		final regions = [
 			for (index in 0...branches.length)
 				TypedExpr.controlRegion(branches[index].steps, branches[index].completes ? TyType.fromHintText("Void") : TyType.noNormalCompletion(),
-					children[index + 1].getPosition())
+					bodies[index].getPosition())
 		];
-		scrutinee.steps.push(TypedExpr.controlSwitch(scrutinee.value, patterns, regions, completionType, expression.getPosition(),
-			expression.getLocalBindings(), coversInput)
-			.withSwitchPatterns(expression.getSwitchPatterns()));
+		if (expression.getSwitchGuards().length != 0) {
+			if (activeLoop != null && patternLoopTargets.indexOf(activeLoop) < 0)
+				patternLoopTargets.push(activeLoop);
+			final guards = [for (guard in expression.getSwitchGuards()) value(guard, target)];
+			final inputBinding = temporary(scrutinee.value.getType());
+			final selectedBinding = temporary(TyType.fromHintText("Bool"));
+			scrutinee.steps.push(declaration(inputBinding, scrutinee.value, expression.getPosition()));
+			scrutinee.steps.push(declaration(selectedBinding, TypedExpr.boolLiteral(false, selectedBinding.getType(), expression.getPosition()),
+				expression.getPosition()));
+			for (step in TypedGuardedSwitch.lower({
+				source: expression,
+				input: inputBinding,
+				selected: selectedBinding,
+				bodies: regions,
+				guards: guards,
+				completionType: completionType,
+				exhaustive: coversInput
+			}))
+				scrutinee.steps.push(step);
+		} else {
+			scrutinee.steps.push(TypedExpr.controlSwitch(scrutinee.value, patterns, regions, completionType, expression.getPosition(),
+				expression.getLocalBindings(), coversInput)
+				.withSwitchPatterns(expression.getSwitchPatterns()));
+		}
 		return {steps: scrutinee.steps, value: result, completes: completes};
 	}
 
@@ -707,12 +750,23 @@ class TypedControlLowering {
 		than a callable read. Retain the parent marker or evaluated extension
 		receiver before argument statements. The existing unresolved untyped
 		abstract boundary also keeps its receiver without inventing a callable type.
-		Ordinary methods and function-valued fields keep callable capture.
+		A non-dynamic static method selected through its class has no runtime lookup
+		or receiver effect to preserve, so it keeps its direct invocation. Mutable
+		methods and function-valued fields still capture before argument effects.
 	 */
 	function retainInvocationCallee(call:TypedExpr, callee:TypedExpr, admitted:Bool, steps:Array<TypedExpr>):Null<TypedExpr> {
 		if (callee.getTag() == SuperValue && call.getConstructorApplication() != null)
 			return callee;
 		final children = callee.getExpressions();
+		final selected = call.getDeclaration();
+		if (selected != null
+			&& selected.getIsStatic()
+			&& !selected.getIsDynamic()
+			&& call.getExtensionProvider() == null
+			&& callee.getDeclaration() == selected
+			&& ((callee.getTag() == NameRead && children.length == 0)
+				|| (callee.getTag() == FieldRead && children.length == 1 && children[0].getTag() == RuntimeTypeValue)))
+			return callee;
 		switch callee.getTag() {
 			case Parenthesized | Untyped:
 				final inner = retainInvocationCallee(call, children[0], admitted || callee.getTag() == Untyped, steps);
@@ -822,7 +876,7 @@ class TypedControlLowering {
 			case SourceFor:
 				if (children.length == 3) {
 					didLower = true;
-					return value(TypedKeyValueIteration.lowerExpression({
+					return value(TypedIteratorProtocol.lowerExpression({
 						protocol: children[2],
 						body: children[1],
 						bindings: expression.getLocalBindings(),
@@ -849,14 +903,17 @@ class TypedControlLowering {
 				iterable.steps.push(TypedExpr.controlFor(HxForBinding.fromNames(expression.getTexts()), iterable.value, region, expression.getPosition(),
 					expression.getLocalBindings(), loopTarget));
 				return {steps: iterable.steps, value: null, completes: true};
-			case KeyValueProtocol:
+			case IteratorProtocol:
 				throw "iterator protocol evidence must be consumed by its source loop";
 			case BreakExpr | ContinueExpr:
 				if (activeLoop == null || expression.getControlTarget() != activeLoop)
 					throw "loop control lowering cannot change its typed loop destination";
 				didLower = true;
 				return {steps: [expression], value: null, completes: false};
-			case MacroExpr | MacroType | ControlRegion | ControlBranch | ControlWhile | ControlFor | ControlSwitch | ControlTry:
+			case ControlRegion | ControlBranch | ControlWhile | ControlFor | ControlSwitch | ControlPatternAttempts | ControlTry:
+				// Already-lowered statement regions retain their completion proof.
+				return expression.getType().isNoNormalCompletion() ? {steps: [expression], value: null, completes: false} : plain(expression);
+			case MacroExpr | MacroType:
 				return plain(expression);
 			case WhileExpr:
 				final loopTarget = expression.getControlTarget();
@@ -949,6 +1006,14 @@ class TypedControlLowering {
 				}
 				return {steps: steps, value: null, completes: true};
 			case Lambda:
+				// Creating a previously lowered callable does not execute its body.
+				// Its returns belong to the retained nested function destination.
+				if (children[0].getTag() == ControlRegion) {
+					final destination = children[0].getControlTarget();
+					if (destination == null || destination.getKind() != Function || destination.getOwnerIdentity() != owner)
+						throw "lowered callable requires its exact nested function destination";
+					return plain(expression);
+				}
 				final previousLoop = activeLoop;
 				activeLoop = null;
 				final plan = value(children[0], null);

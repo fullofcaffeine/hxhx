@@ -110,8 +110,7 @@ function resolve(input:TyType, patterns:Array<HxSwitchPattern>, context:TyperCon
 			case POr(children):
 				for (child in children)
 					visit(child, type);
-			case PCapture(_, child) | PLengthGuard(child, _, _) | PStartsWithGuard(child, _, _) | PIntEqualsGuard(child, _, _) |
-				PIntCompareGuard(child, _, _, _) | PParsedIntSwitchGuard(child, _, _, _) | PUnsupportedGuard(child):
+			case PGuard(child, _) | PCapture(_, child) | PUnsupportedPattern(child):
 				visit(child, type);
 			case PExtractor(_, child):
 				visit(child, TyType.unknown());

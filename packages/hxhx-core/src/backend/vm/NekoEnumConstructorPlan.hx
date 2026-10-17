@@ -11,6 +11,26 @@ import backend.vm.NekoTypedProgramProjection.NekoProjectedFunction;
 class NekoEnumConstructorPlan {
 	public final selected:NekoProjectedFunction;
 
+	/** A pattern can inspect only a constructor present in the exact program inventory. */
+	public static function patternTarget(program:NekoTypedProgramProjection, selection:TypedNamedPattern):{target:TypedRuntimeTypeTarget, name:String} {
+		return switch selection.getKind() {
+			case Constructor(identity, name, index, arity):
+				final owner = program.requireClass(identity.getCanonicalName()).requireSemanticFacts();
+				final constructors = owner.copyEnumConstructors();
+				if (!owner.getNominalKind().match(EnumValue) || index < 0 || index >= constructors.length)
+					throw "Neko guarded pattern requires its exact enum owner";
+				final constructor = constructors[index];
+				final count = switch constructor.member {
+					case Singleton(_): 0;
+					case Callable(method): method.arguments.length;
+				};
+				if (constructor.index != index || constructor.name != name || count != arity)
+					throw "Neko guarded constructor differs from its selected declaration";
+				{target: new TypedRuntimeTypeTarget(EnumDeclaration(identity)), name: name};
+			case _: throw "Neko guarded constructor test requires an ordinary enum";
+		};
+	}
+
 	final source:HxExpr;
 	final fingerprint:String;
 	final arguments:Array<HxExpr>;

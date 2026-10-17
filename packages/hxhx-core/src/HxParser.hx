@@ -363,6 +363,7 @@ class HxParser {
 
 	static function rebaseFunctionBodyStmt(stmt:HxStmt, base:HxPos, bodyStartIndex:Int):HxStmt {
 		return switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _): throw "backend guarded switch is not source syntax";
 			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, pos):
 				final shifted = new Array<HxStmt>();
@@ -612,6 +613,7 @@ class HxParser {
 
 	static function offsetFunctionBodyStmtColumns(stmt:HxStmt, delta:Int):HxStmt {
 		return switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _): throw "backend guarded switch is not source syntax";
 			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, pos):
 				final shifted = new Array<HxStmt>();
@@ -838,44 +840,9 @@ class HxParser {
 			} else {
 				parseExpr(() -> cur.kind.match(TColon) || cur.kind.match(TEof));
 			}
-			return switchPatternWithGuard(pattern, guard);
+			return PGuard(pattern, guard);
 		}
 		return pattern;
-	}
-
-	function switchPatternWithGuard(pattern:HxSwitchPattern, guard:HxExpr):HxSwitchPattern {
-		return switch (guard) {
-			case EBinop("==", EField(EIdent(name), "length"), EInt(length)):
-				PLengthGuard(pattern, name, length);
-			case ECall(EField(EIdent("StringTools"), "startsWith"), [EIdent(name), EString(prefix)]):
-				PStartsWithGuard(pattern, name, prefix);
-			case EBinop("==", EIdent(name), EInt(value)):
-				PIntEqualsGuard(pattern, name, value);
-			case EBinop(op, EIdent(name), EInt(value)) if (isIntCompareGuardOp(op)):
-				PIntCompareGuard(pattern, name, op, value);
-			case ESwitch(EBinop("*", ECall(EField(EIdent("Std"), "parseInt"), [EIdent(name)]), EInt(multiplier)), patterns, exprs):
-				switchParsedIntGuard(pattern, name, multiplier, patterns, exprs);
-			case _:
-				PUnsupportedGuard(pattern);
-		}
-	}
-
-	function isIntCompareGuardOp(op:String):Bool {
-		return op == "<" || op == "<=" || op == ">" || op == ">=";
-	}
-
-	function switchParsedIntGuard(pattern:HxSwitchPattern, name:String, multiplier:Int, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>):HxSwitchPattern {
-		if (patterns != null && exprs != null) {
-			final count = patterns.length < exprs.length ? patterns.length : exprs.length;
-			for (i in 0...count) {
-				switch [patterns[i], exprs[i]] {
-					case [PInt(value), EBool(true)]:
-						return PParsedIntSwitchGuard(pattern, name, multiplier, value);
-					case _:
-				}
-			}
-		}
-		return PUnsupportedGuard(pattern);
 	}
 
 	function parseSwitchPatternCaseGroup():HxSwitchPattern {
@@ -1087,7 +1054,7 @@ class HxParser {
 			case TIdent("macro"):
 				bump();
 			case _:
-				return PUnsupportedGuard(PWildcard);
+				return PUnsupportedPattern(PWildcard);
 		}
 
 		var parenDepth = 0;
@@ -1123,7 +1090,7 @@ class HxParser {
 			bump();
 			previousTokenWasAt = currentWasAt;
 		}
-		return PUnsupportedGuard(PWildcard);
+		return PUnsupportedPattern(PWildcard);
 	}
 
 	function isLikelyExtractorPatternStart():Bool {
@@ -1184,7 +1151,7 @@ class HxParser {
 		final memberPattern = memberParser.parseSwitchPatternAtom(false);
 		if (memberParser.cur.kind.match(TEof))
 			return memberPattern;
-		return PUnsupportedGuard(PWildcard);
+		return PUnsupportedPattern(PWildcard);
 	}
 
 	inline function peek():HxToken {
@@ -1944,6 +1911,7 @@ class HxParser {
 
 		inline function stmtKindText(stmt:HxStmt):String {
 			return switch (stmt) {
+				case SGuardedSwitch(_, _, _, _, _): throw "backend guarded switch is not source syntax";
 				case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 				case SBlock(_, _): "block";
 				case SVar(_, _, _, _): "var";

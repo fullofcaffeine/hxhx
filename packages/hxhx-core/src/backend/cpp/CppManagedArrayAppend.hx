@@ -53,24 +53,45 @@ function render(input:{
 		arrayType = arrayType.getNullableInner();
 	for (line in CppManagedValueTransfer.convertRoot(arrayType.getTypeArguments()[0], input.valueType, element, indent + "  ", input.casts))
 		lines.push(line);
+	for (line in publish({
+		array: array,
+		element: element,
+		payload: payload,
+		destination: input.destination
+	}, indent + "  "))
+		lines.push(line);
+	lines.push(indent + "}");
+	return lines;
+}
+
+/**
+	Mutate already rooted and type-checked operands, then publish the new length.
+	Both a direct call and a native stored method use this one storage operation.
+	The caller owns argument evaluation and conversion; this step does not allocate
+	managed objects or infer source types from the physical Array representation.
+ */
+function publish(input:{
+	array:String,
+	element:String,
+	payload:String,
+	?destination:String
+}, indent:String):Array<String> {
+	final array = input.array;
+	final element = input.element;
+	final payload = input.payload;
+	final lines = new Array<String>();
 	lines.push(indent
-		+ '  if ('
+		+ 'if ('
 		+ array
 		+ '.get().kind() == hxhx::managed::ValueKind::Null) throw std::invalid_argument("array append has no array");');
-	lines.push(indent + '  const auto ' + payload + ' = ' + array + '.get().asManaged().as<hxhx::managed::ArrayPayload>();');
+	lines.push(indent + 'const auto ' + payload + ' = ' + array + '.get().asManaged().as<hxhx::managed::ArrayPayload>();');
 	// Check before mutation so the public Int length never narrows an oversized native size.
 	lines.push(indent
-		+ '  if ('
+		+ 'if ('
 		+ payload
 		+ '->size() >= static_cast<std::size_t>(2147483647)) throw std::length_error("array append exceeds Haxe Int length");');
-	lines.push(indent + '  ' + payload + '->append(' + element + '.get());');
+	lines.push(indent + payload + '->append(' + element + '.get());');
 	if (input.destination != null)
-		lines.push(indent
-			+ '  '
-			+ input.destination
-			+ '.set(hxhx::managed::Value::integer(static_cast<std::int32_t>('
-			+ payload
-			+ '->size())));');
-	lines.push(indent + "}");
+		lines.push(indent + input.destination + '.set(hxhx::managed::Value::integer(static_cast<std::int32_t>(' + payload + '->size())));');
 	return lines;
 }

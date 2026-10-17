@@ -67,8 +67,7 @@ function resolve(patterns:Array<HxSwitchPattern>, context:TyperContext, position
 			case POr(alternatives):
 				for (alternative in alternatives)
 					visit(alternative);
-			case PCapture(_, inner) | PLengthGuard(inner, _, _) | PStartsWithGuard(inner, _, _) | PIntEqualsGuard(inner, _, _) |
-				PIntCompareGuard(inner, _, _, _) | PParsedIntSwitchGuard(inner, _, _, _) | PUnsupportedGuard(inner):
+			case PGuard(inner, _) | PCapture(_, inner) | PUnsupportedPattern(inner):
 				visit(inner);
 			case _:
 				// Nested payload patterns describe the payload, not the switch input.

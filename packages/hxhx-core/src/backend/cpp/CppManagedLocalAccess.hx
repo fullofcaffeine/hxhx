@@ -86,6 +86,12 @@ class CppManagedLocalAccess {
 	function captureCatalog():TypedBackendCaptureCatalog
 		return projection == null ? initializer.requireCaptureCatalog() : projection.requireCaptureCatalog();
 
+	/** Only the owning lexical expression can supply its retained Boolean-use facts. */
+	public function condition(expression:HxExpr):Null<TypedBackendCondition> {
+		requireLexicalExpression(expression);
+		return projection == null ? initializer.findCondition(expression) : projection.findCondition(expression);
+	}
+
 	/** Typed callable facts belong to this exact lexical expression, including nested functions. */
 	public function callableExpression(expression:HxExpr):Null<TypedExpr> {
 		final source = captureCatalog().findCallableExpression(expression);
@@ -129,6 +135,10 @@ class CppManagedLocalAccess {
 		requireExpression(expression);
 		return projection == null ? initializer.requireAggregate(expression) : projection.requireAggregate(expression);
 	}
+
+	/** The guarded-region owner checks lexical membership before selecting this exact pattern fact. */
+	public function namedPattern(pattern:HxSwitchPattern):Null<TypedNamedPattern>
+		return projection == null ? initializer.findNamedPattern(pattern) : projection.findNamedPattern(pattern);
 
 	/** Runtime tests retain exact occurrence identity within the current lexical body. */
 	public function runtimeType(expression:HxExpr):TypedBackendRuntimeTypeOccurrence {

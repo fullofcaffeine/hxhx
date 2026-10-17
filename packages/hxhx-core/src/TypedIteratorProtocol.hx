@@ -16,30 +16,29 @@ private typedef IterationLocal = {
 }
 
 /**
-	Materialize the selected key/value protocol as ordinary typed executable nodes.
-	Acquisition happens once, hasNext runs at every loop edge, and one next result
-	supplies both source bindings. Original loop targets and declaration identities
+	Materialize the selected value or key/value protocol as typed executable nodes.
+	Acquisition happens once, hasNext runs at every loop edge, and each next result
+	supplies either the value binding or both key/value bindings. Original loop targets and declaration identities
 	survive, while compiler temporaries are owned by this function and loop.
  */
-class TypedKeyValueIteration {
+class TypedIteratorProtocol {
 	/** Replay consumes only the exact query occurrences recorded by inference. */
-	public static function protocol(source:HxExpr, selected:TyKeyValueProtocolSource, build:HxExpr->TypedExpr):TypedExpr {
+	public static function protocol(source:HxExpr, selected:TyIteratorProtocolSource, build:HxExpr->TypedExpr):TypedExpr {
 		if (!selected.owns(source))
 			throw "iterator protocol belongs to another authored source occurrence";
-		return TypedExpr.keyValueProtocol({
+		return TypedExpr.iteratorProtocol({
 			acquire: build(selected.acquire),
 			condition: build(selected.condition),
 			next: build(selected.next),
-			key: build(selected.key),
-			value: build(selected.value)
+			fields: selected.kind == Values ? [] : [build(selected.key), build(selected.value)]
 		});
 	}
 
 	/** Only complete typed protocol evidence may be attached to a source loop. */
 	public static function assertProtocol(node:TypedExpr):Void {
 		final children = node.getExpressions();
-		if (node.getTag() != KeyValueProtocol || !node.getType().isVoid() || children.length != 5)
-			throw "iterator protocol requires acquisition, condition, next, key and value operands";
+		if (node.getTag() != IteratorProtocol || !node.getType().isVoid() || (children.length != 3 && children.length != 5))
+			throw "iterator protocol requires acquisition, condition, next and optional key/value fields";
 		if (children[1].getType().getSemanticKey() != "primitive:Bool")
 			throw "iterator protocol condition must have Boolean type";
 		for (child in children)
@@ -103,28 +102,34 @@ class TypedKeyValueIteration {
 
 	/** Validate once and prepare both executable forms from the same selected protocol. */
 	static function prepare<T>(input:IterationInput<T>):{cursor:IterationLocal, locals:Array<IterationLocal>, condition:TypedExpr} {
-		if (input.target == null || input.target.getOwnerIdentity() != input.owner || input.bindings.length != 2)
+		if (input.target == null || input.target.getOwnerIdentity() != input.owner)
 			throw "iterator lowering requires its exact loop and source bindings";
 		assertProtocol(input.protocol);
 		final operands = input.protocol.getExpressions();
+		final pairProtocol = operands.length == 5;
+		if (input.bindings.length != (pairProtocol ? 2 : 1))
+			throw "iterator lowering changed the selected source binding count";
 		final acquire = operands[0];
 		final hasNext = operands[1];
 		final next = operands[2];
-		final key = operands[3];
-		final value = operands[4];
 		if (hasNext.getType().getSemanticKey() != "primitive:Bool" || next.getType().hasUnknownComponent())
-			throw "iterator protocol requires a Boolean condition and complete pair type";
-		final allocator = new TyCompilerTemporaryAllocator(input.owner, "key-value-protocol-v1:" + input.target.getCanonicalIdentity(), "__hxhx_iterator_");
+			throw "iterator protocol requires a Boolean condition and complete result type";
+		final allocator = new TyCompilerTemporaryAllocator(input.owner, "iterator-protocol-v2:" + input.target.getCanonicalIdentity(), "__hxhx_iterator_");
 		final iterator = allocator.allocate("cursor", acquire.getType());
-		final pair = allocator.allocate("pair", next.getType());
 		final iteratorRead = TypedExpr.localRead(iterator.getSourceName(), iterator.getType(), input.position, iterator);
-		final pairRead = TypedExpr.localRead(pair.getSourceName(), pair.getType(), input.position, pair);
-		final fields = [pairField(key, pairRead), pairField(value, pairRead)];
-		final locals:Array<IterationLocal> = [{binding: pair, initializer: receiver(next, iteratorRead)}];
-		for (index in 0...2) {
+		final locals:Array<IterationLocal> = [];
+		final fields = if (pairProtocol) {
+			final pair = allocator.allocate("pair", next.getType());
+			final pairRead = TypedExpr.localRead(pair.getSourceName(), pair.getType(), input.position, pair);
+			locals.push({binding: pair, initializer: receiver(next, iteratorRead)});
+			[pairField(operands[3], pairRead), pairField(operands[4], pairRead)];
+		} else {
+			[receiver(next, iteratorRead)];
+		};
+		for (index in 0...input.bindings.length) {
 			final binding = input.bindings[index];
 			if (binding.getType().getSemanticKey() != fields[index].getType().getSemanticKey())
-				throw "iterator pair field changed its source binding type";
+				throw "iterator result changed its source binding type";
 			locals.push({binding: binding, initializer: fields[index], target: input.target});
 		}
 		return {cursor: {binding: iterator, initializer: acquire}, locals: locals, condition: receiver(hasNext, iteratorRead)};

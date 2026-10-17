@@ -50,6 +50,13 @@ function methodStatement(expression:HxExpr, target:String, ?onTry:(HxExpr, HxStm
 private function statement(expression:HxExpr, target:String, loop:String, onTry:Null<(HxExpr, HxStmt) -> Void>, onArrayAppend:Null<HxExpr->Void>,
 		onReturn:Null<(HxExpr, HxStmt) -> Void>):HxStmt {
 	final result:HxStmt = switch expression {
+		case ELoweredControl(PatternAttempts(plan), "", children, position):
+			if (children.length != plan.getPatterns().length + 2)
+				throw "guarded switch requires one canonical body per case";
+			SGuardedSwitch(children[0], children[1], plan, [
+				for (body in children.slice(2))
+					block(body, target, loop, onTry, onArrayAppend, onReturn)
+			], position);
 		case ELoweredControl(Scope, "", entries, position):
 			SBlock(statements(entries, target, loop, onTry, onArrayAppend, onReturn), position);
 		case ELoweredControl(TargetScope(kind), "", [body], position):

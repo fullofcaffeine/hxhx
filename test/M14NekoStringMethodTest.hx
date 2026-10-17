@@ -17,7 +17,9 @@ var pieces=value.split(":");
 Sys.println(pieces.length);Sys.println(pieces[0]);Sys.println(pieces[1]);
 var split=value.split;
 var saved=split(":");Sys.println(saved[0]);Sys.println(saved[1]);
-}}', "2\nleft\nright\nleft\nright\n");
+Sys.println(Type.getClass(pieces)==Array);Sys.println(Type.getClass(saved)==Array);
+var alias=pieces;Sys.println(pieces.push("tail"));Sys.println(alias[2]);Sys.println(saved.length);
+}}', "2\nleft\nright\nleft\nright\ntrue\ntrue\n3\ntail\n2\n");
 		assertSource("string_split_edges", 'class Main {
 static function main():Void {
 var adjacent=":a::b:".split(":");Sys.println(adjacent.length);Sys.println(adjacent.join("|"));

@@ -99,6 +99,10 @@ class CppManagedProgramPlan {
 			function enqueueBound(occurrence:Null<TypedBackendMethodOccurrence>, context:Null<CppManagedEnclosingApplication>):Void {
 				if (occurrence == null)
 					return;
+				if (CppManagedArrayPush.selectsDeclaration(occurrence.getDeclaration())) {
+					CppManagedArrayPushValue.require(occurrence, context, classes);
+					return;
+				}
 				final application = classes.methods.bound.application(occurrence, context);
 				if (application.projection.requireSemanticDeclaration().getHasBody())
 					enqueueApplication(application);
@@ -121,9 +125,14 @@ class CppManagedProgramPlan {
 						pending.push(method.getIdentity().getCanonicalKey());
 				}
 				CppManagedRuntimeType.validate(initializer.getRuntimeTypeCatalog(), classes, enums, CppManagedCallContext.fromInitializer(application));
-				for (occurrence in initializer.getConstructorCatalog().getEntries())
-					enqueueApplication(classes.constructorApplication(initializer.requireConstructor(occurrence.getExpression()),
-						CppManagedCallContext.fromInitializer(application)));
+				for (occurrence in initializer.getConstructorCatalog().getEntries()) {
+					final selected = initializer.requireConstructor(occurrence.getExpression());
+					final context = CppManagedCallContext.fromInitializer(application);
+					if (CppManagedArrayConstructor.selects(selected))
+						CppManagedArrayConstructor.require(selected, context, classes);
+					else
+						enqueueApplication(classes.constructorApplication(selected, context));
+				}
 				TypedBackendSourceWalk.expression(initializer.getExpression(), expression -> {
 					enqueueBound(classes.methods.bound.initializerValue(initializer, expression), CppManagedCallContext.fromInitializer(application));
 					final instance = classes.methods.initializerInstanceCall(initializer, expression);
@@ -258,9 +267,14 @@ class CppManagedProgramPlan {
 					}
 					for (initializer in classes.constructorInitializers(selected.projection, applications.get(identity)))
 						enqueueInitializer(initializer.projection, initializer);
-					for (occurrence in selected.projection.getConstructorCatalog().getEntries())
-						enqueueApplication(classes.constructorApplication(selected.projection.requireConstructor(occurrence.getExpression()),
-							CppManagedCallContext.fromFunction(applications.get(identity))));
+					for (occurrence in selected.projection.getConstructorCatalog().getEntries()) {
+						final construction = selected.projection.requireConstructor(occurrence.getExpression());
+						final context = CppManagedCallContext.fromFunction(applications.get(identity));
+						if (CppManagedArrayConstructor.selects(construction))
+							CppManagedArrayConstructor.require(construction, context, classes);
+						else
+							enqueueApplication(classes.constructorApplication(construction, context));
+					}
 					TypedBackendSourceWalk.functionDeclaration(selected.projection.getDeclaration(), expression -> {
 						enqueueBound(classes.methods.bound.functionValue(selected.projection, expression),
 							CppManagedCallContext.fromFunction(applications.get(identity)));

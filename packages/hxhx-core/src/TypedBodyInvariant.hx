@@ -103,6 +103,8 @@ class TypedBodyInvariant {
 			throw "typed body contains a null expression in " + owner;
 		expression.assertArgumentBinding();
 		final tag = expression.getTag();
+		if (tag == SwitchExpr || tag == ControlSwitch)
+			expression.getSwitchGuards();
 		if (tag == TraceCall
 			&& (!expression.getType().isVoid()
 				|| expression.getExpressions().length == 0
@@ -287,6 +289,17 @@ class TypedBodyInvariant {
 			throw "typed return expression has more than one value in " + owner;
 		if (tag == SourceIf && expression.getExpressions().length != 2 && expression.getExpressions().length != 3)
 			throw "typed source conditional must retain its condition and authored branches in " + owner;
+		if (tag == ControlPatternAttempts) {
+			final children = expression.getExpressions();
+			if (children.length != expression.getPatterns().length + 2
+				|| expression.getPatterns().length == 0
+				|| expression.getControlTarget() != null
+				|| children[1].getType().getDisplay() != "Bool")
+				throw "pattern attempts require an input, enable condition, and one body per case in " + owner;
+			for (body in children.slice(2))
+				if (body.getTag() != ControlRegion || body.getControlTarget() != null)
+					throw "pattern attempt requires a lexical case body in " + owner;
+		}
 		if (tag == ControlSwitch) {
 			final children = expression.getExpressions();
 			if (children.length != expression.getPatterns().length + 1 || expression.getControlTarget() != null)
@@ -301,9 +314,9 @@ class TypedBodyInvariant {
 			if (children.length != 2 && !(tag == SourceFor && children.length == 3))
 				throw "source for requires iterable and body children in " + owner;
 			if (children.length == 3) {
-				TypedKeyValueIteration.assertProtocol(children[2]);
-				if (localBindings.length != 2 || expression.getControlTarget() == null)
-					throw "protocol loop requires exact key/value bindings and a control target in " + owner;
+				TypedIteratorProtocol.assertProtocol(children[2]);
+				if (localBindings.length != (children[2].getExpressions().length == 5 ? 2 : 1) || expression.getControlTarget() == null)
+					throw "protocol loop requires exact source bindings and a control target in " + owner;
 			}
 			if (localBindings.length > 0)
 				assertBindingNames(localBindings, expression.getTexts(), owner);
@@ -314,8 +327,8 @@ class TypedBodyInvariant {
 					|| expression.getExpressions()[1].getControlTarget() != null))
 				throw "lowered for requires exact bindings, loop target, and lexical body in " + owner;
 		}
-		if (tag == KeyValueProtocol)
-			TypedKeyValueIteration.assertProtocol(expression);
+		if (tag == IteratorProtocol)
+			TypedIteratorProtocol.assertProtocol(expression);
 		if (tag == ControlBranch) {
 			final children = expression.getExpressions();
 			if (children.length != 2 && children.length != 3)
@@ -359,6 +372,11 @@ class TypedBodyInvariant {
 	static function assertStmt(statement:TypedStmt, owner:String):Void {
 		if (statement == null)
 			throw "typed body contains a null statement in " + owner;
+		if (statement.getTag() == Switch) {
+			statement.getSwitchGuards();
+			if (statement.getStatements().length != statement.getPatterns().length)
+				throw "typed switch lost its aligned case bodies in " + owner;
+		}
 		if (statement.getCatchUses().length > 0 && !statement.getTag().match(Try))
 			throw "implicit catch uses require a try statement in " + owner;
 		assertCatchUses(statement.getCatchUses(), statement.getLocalBindings(), owner);
@@ -367,10 +385,12 @@ class TypedBodyInvariant {
 		for (child in statement.getStatements())
 			assertStmt(child, owner);
 		final localBindings = statement.getLocalBindings();
-		if (statement.getTag() == ForKeyValue && statement.getExpressions().length > 1) {
-			if (statement.getExpressions().length != 2 || localBindings.length != 2 || statement.getControlTarget() == null)
+		if ((statement.getTag() == ForIn || statement.getTag() == ForKeyValue) && statement.getExpressions().length > 1) {
+			if (statement.getExpressions().length != 2
+				|| localBindings.length != (statement.getTag() == ForIn ? 1 : 2)
+				|| statement.getControlTarget() == null)
 				throw "statement protocol loop requires exact operands, bindings and control target in " + owner;
-			TypedKeyValueIteration.assertProtocol(statement.getExpressions()[1]);
+			TypedIteratorProtocol.assertProtocol(statement.getExpressions()[1]);
 		}
 		for (binding in localBindings)
 			assertBinding(binding, owner);

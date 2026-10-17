@@ -48,6 +48,10 @@ private function statements(entries:Array<HxExpr>):Array<HxStmt> {
 				if (children.length != patterns.length + 1)
 					throw "OCaml initializer switch requires aligned cases";
 				result.push(SSwitch(children[0], patterns, [for (child in children.slice(1)) SBlock(statements([child]), position)], position, exhaustive));
+			case ELoweredControl(PatternAttempts(plan), "", children, position):
+				if (children.length != plan.getPatterns().length + 2)
+					throw "OCaml initializer guarded switch requires aligned cases";
+				result.push(SGuardedSwitch(children[0], children[1], plan, [for (child in children.slice(2)) SBlock(statements([child]), position)], position));
 			case ELoweredControl(_, _, _, _):
 				throw "OCaml initializer requires an executable adapter for this shared control instruction";
 			case _:

@@ -775,7 +775,7 @@ class TypedBodyBuilder {
 				final directBindings = TySourceFor.bindingTypes(binding, iterable, typedIterable.getType());
 				final types = environment == null ? [] : TySourceFor.bindingTypes(binding, iterable, typedIterable.getType(),
 					typeResolver == null ? null : source -> typeResolver.expressionType(source, sourcePosition, environment, null),
-					() -> environment.getInference().keyValueProtocolSource(iterable));
+					() -> environment.getInference().iteratorProtocolSource(iterable));
 				if (types == null)
 					throw "source for replay requires a resolved iterable protocol";
 				final controls = environment == null ? null : environment.requireControlScope();
@@ -794,7 +794,7 @@ class TypedBodyBuilder {
 					controls.exit(target);
 				final protocol = environment == null
 					|| directBindings != null ? null : environment.withProtocolSource(iterable, typedIterable.getType(),
-						() -> TypedKeyValueIteration.protocol(iterable, environment.getInference().keyValueProtocolSource(iterable),
+						() -> TypedIteratorProtocol.protocol(iterable, environment.getInference().iteratorProtocolSource(iterable),
 							source -> buildExpr(source, null, sourcePosition, environment, typeResolver, callResolver, memberResolver)),
 						typedIterable);
 				TypedExpr.sourceFor(binding, typedIterable, typedBody, nodeType, exactPosition(sourcePosition), bindings, target, protocol);
@@ -933,6 +933,8 @@ class TypedBodyBuilder {
 						|| environment == null ? new TypedCallResolution() : callResolver(callee, arguments, diagnosticPosition, environment, expression);
 					// A declaration-selected generic call owns its applied signature. Replaying
 					// its callee must not allocate an unrelated stored-method capture.
+					// A selected enum constructor also owns its callable signature: the
+					// legacy bare-enum spelling alone can otherwise appear to be String.
 					final selected = resolution.getDeclaration();
 					if (resolution.getTargetScope() != null) {
 						if (selected == null || arguments.length != 1)
@@ -943,8 +945,8 @@ class TypedBodyBuilder {
 					final callable = selected != null
 						&& selected.getTypeParameterIds()
 							.length > 0 ? TyType.functionType(resolution.getExpectedArguments(),
-							nodeType) : typeResolver == null
-								|| environment == null ? null : typeResolver.callTargetType(callee, diagnosticPosition, environment);
+							nodeType) : selected != null && selected.getIsEnumConstructor() ? TyCallableSignature.fromDeclaration(selected).getFunctionType() : typeResolver == null
+							|| environment == null ? null : typeResolver.callTargetType(callee, diagnosticPosition, environment);
 					final typedCallee = buildExpr(callee, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, null, callable);
 					// Inspect the callable shape without changing a nested call's exact
 					// result type: its own argument binding still owns that result.
@@ -1067,6 +1069,8 @@ class TypedBodyBuilder {
 							|| typeResolver.enumSwitchCoverage(typedScrutinee.getType(), patterns, diagnosticPosition, isCapture)));
 				final typedBranches = new Array<TypedExpr>();
 				final patternBindings = new Array<TyLocalBinding>();
+				final guards = new Array<TypedExpr>();
+				final guarded = TypedSwitchGuards.has(patterns);
 				final count = patterns == null
 					|| expressions == null ? 0 : (patterns.length < expressions.length ? patterns.length : expressions.length);
 				for (index in 0...count) {
@@ -1074,12 +1078,21 @@ class TypedBodyBuilder {
 						environment.enterLexicalScope();
 					for (binding in declarePatternBindings(environment, patterns[index], typedScrutinee.getType(), typeResolver, diagnosticPosition))
 						patternBindings.push(binding);
+					if (guarded) {
+						final sourceGuard = TypedSwitchGuards.condition(patterns[index]);
+						final guard = sourceGuard == null ? TypedExpr.boolLiteral(true, TyType.fromHintText("Bool"),
+							position) : buildExpr(sourceGuard, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver,
+								TyType.fromHintText("Bool"));
+						guards.push(typeResolver == null
+							|| guard.getType().isNoNormalCompletion() ? guard : typeResolver.convertValue(guard, TyType.fromHintText("Bool")));
+					}
 					typedBranches.push(buildExpr(expressions[index], null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver,
 						expected));
 					if (environment != null)
 						environment.exitLexicalScope();
 				}
-				TypedExpr.switchExpr(typedScrutinee, patterns == null ? [] : patterns.copy(), typedBranches, nodeType, position, patternBindings, exhaustive)
+				TypedExpr.switchExpr(typedScrutinee, patterns == null ? [] : patterns.copy(), typedBranches, nodeType, position, patternBindings, exhaustive,
+					guards)
 					.withSwitchPatterns(typeResolver == null ? null : typeResolver.switchPatterns(typedScrutinee.getType(), patterns, diagnosticPosition));
 			case ENew(typePath, arguments):
 				final typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
@@ -1230,6 +1243,7 @@ class TypedBodyBuilder {
 	static function buildStmt(statement:HxStmt, environment:Null<TyFunctionEnv>, typeResolver:Null<TypedExprTypeResolver>,
 			callResolver:Null<TypedCallDeclarationResolver>, memberResolver:Null<TypedMemberDeclarationResolver>):TypedStmt {
 		final sourcePosition = switch (statement) {
+			case SGuardedSwitch(_, _, _, _, _): throw "backend guarded switch cannot reach source statement analysis";
 			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(_, position) | SVar(_, _, _, position) | SIf(_, _, _, position) | SForIn(_, _, _, position) | SForKeyValue(_, _, _, _, position) |
 				SWhile(_, _, position) | SDoWhile(_, _, position) | SSwitch(_, _, _, position) | STry(_, _, position) | SBreak(position) |
@@ -1238,6 +1252,7 @@ class TypedBodyBuilder {
 		final storedPosition = exactPosition(sourcePosition);
 		final diagnosticPosition = sourcePosition == null ? HxPos.unknown() : sourcePosition;
 		return switch (statement) {
+			case SGuardedSwitch(_, _, _, _, _): throw "backend guarded switch cannot reach source statement analysis";
 			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(statements, _):
 				if (environment != null)
@@ -1283,23 +1298,34 @@ class TypedBodyBuilder {
 				TypedStmt.ifStmt(typedCondition, typedWhenTrue, typedWhenFalse, storedPosition);
 			case SForIn(name, iterable, body, _):
 				final typedIterable = buildExpr(iterable, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				final directBindings = TySourceFor.bindingTypes(Value(name), iterable, typedIterable.getType());
+				final bindingTypes = TySourceFor.bindingTypes(Value(name), iterable, typedIterable.getType(),
+					typeResolver == null ? null : expression -> typeResolver.expressionType(expression, diagnosticPosition, environment, null),
+					environment == null ? null : () -> environment.getInference().iteratorProtocolSource(iterable));
+				if (environment != null && bindingTypes == null)
+					throw new TyperError("<typed-body>", diagnosticPosition, "value loop requires a resolved iterator protocol");
 				final controls = environment == null ? null : environment.requireControlScope();
 				final target = controls == null ? null : controls.enter(Loop, TypedBodyFingerprint.forStatements([statement]));
 				if (environment != null)
 					environment.enterLexicalScope();
-				final binding = environment == null ? null : environment.declareLocal(name, TyType.fromHintText("Dynamic"), LoopVariable).toBinding();
+				final binding = environment == null ? null : environment.declareLocal(name, bindingTypes[0], LoopVariable).toBinding();
 				final typedBody = buildStmt(body, environment, typeResolver, callResolver, memberResolver);
 				if (environment != null)
 					environment.exitLexicalScope();
 				if (controls != null)
 					controls.exit(target);
-				TypedStmt.forIn(name, typedIterable, typedBody, storedPosition, binding).withControlTarget(target);
+				final protocol = environment == null
+					|| directBindings != null ? null : environment.withProtocolSource(iterable, typedIterable.getType(),
+						() -> TypedIteratorProtocol.protocol(iterable, environment.getInference().iteratorProtocolSource(iterable),
+							source -> buildExpr(source, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, memberResolver)),
+						typedIterable);
+				TypedStmt.forIn(name, typedIterable, typedBody, storedPosition, binding, protocol).withControlTarget(target);
 			case SForKeyValue(keyName, valueName, iterable, body, _):
 				final typedIterable = buildExpr(iterable, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				final directBindings = TySourceFor.bindingTypes(KeyValue(keyName, valueName), iterable, typedIterable.getType());
 				final bindingTypes = TySourceFor.bindingTypes(KeyValue(keyName, valueName), iterable, typedIterable.getType(),
 					typeResolver == null ? null : expression -> typeResolver.expressionType(expression, diagnosticPosition, environment, null),
-					environment == null ? null : () -> environment.getInference().keyValueProtocolSource(iterable));
+					environment == null ? null : () -> environment.getInference().iteratorProtocolSource(iterable));
 				if (bindingTypes == null)
 					throw new TyperError("<typed-body>", diagnosticPosition, "key/value loop requires a resolved iterator protocol");
 				final controls = environment == null ? null : environment.requireControlScope();
@@ -1316,7 +1342,7 @@ class TypedBodyBuilder {
 				if (controls != null)
 					controls.exit(target);
 				final protocol = directBindings != null ? null : environment.withProtocolSource(iterable, typedIterable.getType(),
-					() -> TypedKeyValueIteration.protocol(iterable, environment.getInference().keyValueProtocolSource(iterable),
+					() -> TypedIteratorProtocol.protocol(iterable, environment.getInference().iteratorProtocolSource(iterable),
 						source -> buildExpr(source, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, memberResolver)),
 					typedIterable);
 				TypedStmt.forKeyValue(keyName, valueName, typedIterable, typedBody, storedPosition, bindings, protocol).withControlTarget(target);
@@ -1349,17 +1375,27 @@ class TypedBodyBuilder {
 				final typedScrutinee = buildExpr(scrutinee, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				final typedBodies = new Array<TypedStmt>();
 				final bindings = new Array<TyLocalBinding>();
+				final guards = new Array<TypedExpr>();
+				final guarded = TypedSwitchGuards.has(patterns);
 				final count = patterns == null || bodies == null ? 0 : (patterns.length < bodies.length ? patterns.length : bodies.length);
 				for (index in 0...count) {
 					if (environment != null)
 						environment.enterLexicalScope();
 					for (binding in declarePatternBindings(environment, patterns[index], typedScrutinee.getType(), typeResolver, diagnosticPosition))
 						bindings.push(binding);
+					if (guarded) {
+						final sourceGuard = TypedSwitchGuards.condition(patterns[index]);
+						final guard = sourceGuard == null ? TypedExpr.boolLiteral(true, TyType.fromHintText("Bool"),
+							storedPosition) : buildExpr(sourceGuard, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver,
+								TyType.fromHintText("Bool"));
+						guards.push(typeResolver == null
+							|| guard.getType().isNoNormalCompletion() ? guard : typeResolver.convertValue(guard, TyType.fromHintText("Bool")));
+					}
 					typedBodies.push(buildStmt(bodies[index], environment, typeResolver, callResolver, memberResolver));
 					if (environment != null)
 						environment.exitLexicalScope();
 				}
-				TypedStmt.switchStmt(typedScrutinee, patterns == null ? [] : patterns.copy(), typedBodies, storedPosition, bindings)
+				TypedStmt.switchStmt(typedScrutinee, patterns == null ? [] : patterns.copy(), typedBodies, storedPosition, bindings, false, guards)
 					.withSwitchPatterns(typeResolver == null ? null : typeResolver.switchPatterns(typedScrutinee.getType(), patterns, diagnosticPosition));
 			case STry(body, catches, _):
 				final catchNames = new Array<String>();

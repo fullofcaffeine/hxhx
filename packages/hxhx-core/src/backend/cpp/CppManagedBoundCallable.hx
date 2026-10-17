@@ -21,11 +21,13 @@ class CppManagedBoundCallable {
 	final resolve:String->CppManagedInstanceMethodEntry;
 	final entries = new haxe.ds.StringMap<BoundCallableEntry>();
 	final ordered:Array<BoundCallableEntry> = [];
+	final arrayPush:CppManagedArrayPushValue;
 
 	public function new(classes:CppManagedClassStorage, resolve:String->CppManagedInstanceMethodEntry) {
 		this.classes = classes;
 		this.methods = classes.methods.bound;
 		this.resolve = resolve;
+		this.arrayPush = new CppManagedArrayPushValue(classes);
 	}
 
 	function select(application:CppManagedFunctionApplication, signature:TyType):BoundCallableEntry {
@@ -52,6 +54,8 @@ class CppManagedBoundCallable {
 		prefix:String,
 		renderValue:(HxExpr, String, String) -> Array<String>
 	}, indent:String):Array<String> {
+		if (CppManagedArrayPush.selectsDeclaration(input.occurrence.getDeclaration()))
+			return arrayPush.renderValue(input, indent);
 		methods.application(input.occurrence, input.context);
 		final cases = methods.dispatch(input.occurrence, input.context);
 		final signature = CppManagedCallContext.resolveType(input.context, input.occurrence.getCallableType());
@@ -89,7 +93,7 @@ class CppManagedBoundCallable {
 
 	/** Emit after body admission discovers entries, but before any body that uses them. */
 	public function render():String {
-		return [for (entry in ordered) renderEntry(entry)].join("\n");
+		return arrayPush.render() + "\n" + [for (entry in ordered) renderEntry(entry)].join("\n");
 	}
 
 	function renderEntry(entry:BoundCallableEntry):String {

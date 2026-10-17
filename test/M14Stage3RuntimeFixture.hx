@@ -9,9 +9,17 @@ import hxhx.Stage3SetupSupport;
  */
 class M14Stage3RuntimeFixture {
 	/** Require the same observable output from upstream and native programs, including successful exit. */
-	public static function observe(input:{command:String, arguments:Array<String>, expected:String}):Void {
+	public static function observe(input:{
+		command:String,
+		arguments:Array<String>,
+		expected:String,
+		?timeoutSeconds:Int
+	}):Void {
 		final timeout = Sys.systemName() == "Mac" ? "gtimeout" : "timeout";
-		final process = new sys.io.Process(timeout, ["30", input.command].concat(input.arguments));
+		final seconds = input.timeoutSeconds == null ? 30 : input.timeoutSeconds;
+		if (seconds <= 0)
+			throw "runtime fixture observation requires a positive timeout";
+		final process = new sys.io.Process(timeout, [Std.string(seconds), input.command].concat(input.arguments));
 		final stdout = process.stdout.readAll().toString();
 		final stderr = process.stderr.readAll().toString();
 		final code = process.exitCode();

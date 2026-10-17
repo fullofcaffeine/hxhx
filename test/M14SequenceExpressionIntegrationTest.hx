@@ -82,10 +82,10 @@ class M14SequenceExpressionIntegrationTest {
 		for (statement in projection.getBody())
 			@:privateAccess backend.vm.NekoTargetCore.renderStmt(statements, context, statement, "");
 		final generated = "(function(){" + statements.join("\n") + "})()";
-		final quoted = backend.vm.NekoMacroExprLowering.render(ESourceGroup([EInt(1), EInt(2)], HxPos.unknown()), [],
-			_ -> throw "sequence quotation used fallback");
 		final root = ".tmp/sequence_neko_" + Date.now().getTime();
 		sys.FileSystem.createDirectory(root);
+		final quoted = backend.vm.NekoMacroExprLowering.render(ESourceGroup([EInt(1), EInt(2)], HxPos.unknown()), [],
+			_ -> throw "sequence quotation used fallback", NekoMacroArrayFixture.prepare(root));
 		final source = "var state=$new(null); state.n=0; var "
 			+ parameter
 			+ "=function(){ state.n=state.n+1; }; var result="
@@ -96,7 +96,7 @@ class M14SequenceExpressionIntegrationTest {
 			+ generated
 			+ "; $print(\"unexpected\\n\"); } catch e { $print(e,\":\",state.n,\"\\n\"); } var quoted="
 			+ quoted
-			+ "; var items=quoted.expr.__hx_params[0]; $print(quoted.expr.__hx_ctor,\":\",$asize(items),\":\","
+			+ "; var items=quoted.expr.__hx_params[0]; $print(quoted.expr.__hx_ctor,\":\",items.length,\":\","
 			+ "items[0].expr.__hx_params[0].__hx_params[0],\":\",items[1].expr.__hx_params[0].__hx_params[0],\"\\n\");";
 		sys.io.File.saveContent(root + "/sequence.neko", source);
 		run("nekoc", [root + "/sequence.neko"]);

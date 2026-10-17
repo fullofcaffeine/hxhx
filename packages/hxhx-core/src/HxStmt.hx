@@ -156,6 +156,9 @@ enum HxStmt {
 	// Only a typed projection supplies coverage; parsed switches leave it absent.
 	SSwitch(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>, pos:HxPos, ?exhaustive:Bool);
 
+	/** Backend-only match decisions retain one adapted body per authored guarded case. */
+	SGuardedSwitch(scrutinee:HxExpr, enabled:HxExpr, plan:TypedGuardedPatternPlan, bodies:Array<HxStmt>, pos:HxPos);
+
 	/**
 		Try/catch statement: `try stmt catch(name[:Type]) stmt ...`.
 

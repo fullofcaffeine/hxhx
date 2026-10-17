@@ -326,7 +326,7 @@ private class CaptureAnalysis {
 		final children = node.getExpressions();
 		final locals = node.getLocalBindings();
 		switch (node.getTag()) {
-			case MacroExpr | MacroType | KeyValueProtocol:
+			case MacroExpr | MacroType | IteratorProtocol:
 				// Protocol evidence repeats the iterable's type queries. Only the
 				// authored iterable creates closures; executable acquisition runs once.
 				return;
@@ -410,8 +410,8 @@ private class CaptureAnalysis {
 				if (node.getTag() == ControlFor && origin == null)
 					throw "capture analysis requires the authored typed body before control lowering";
 				declareAll(locals, scope, path, LoopIteration);
-			case SwitchExpr | ControlSwitch:
-				if (node.getTag() == ControlSwitch && origin == null)
+			case SwitchExpr | ControlSwitch | ControlPatternAttempts:
+				if (node.getTag() != SwitchExpr && origin == null)
 					throw "capture analysis requires the authored typed body before control lowering";
 				declareAll(locals, scope, path, PatternMatch);
 			case ThisValue:

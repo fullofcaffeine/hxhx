@@ -901,6 +901,7 @@ class CppTargetCore {
 		}
 		stmtMayContributeAnonStruct = function(stmt:HxStmt, scope:Null<CppRenderScope>):Bool {
 			return switch (stmt) {
+				case SGuardedSwitch(_, _, _, _, _): throw "backend guarded switch cannot reach source statement analysis";
 				case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 				case SBlock(stmts, _):
 					stmtsMayContributeAnonStruct(stmts, scope);
@@ -936,6 +937,8 @@ class CppTargetCore {
 		}
 		function addStmt(stmt:HxStmt, ?scope:CppRenderScope):Void {
 			switch (stmt) {
+				case SGuardedSwitch(_, _, _, _, _):
+					throw "backend guarded switch cannot reach source statement analysis";
 				case STargetScope(_, _, _):
 					throw "native target scope is not valid in this source or target phase";
 				case SBlock(stmts, _):
@@ -2378,6 +2381,8 @@ class CppTargetCore {
 
 	static function addOneStmtClassDependencies(stmt:HxStmt, add:String->Void, ?scope:CppRenderScope):Void {
 		switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _):
+				throw "backend guarded switch cannot reach source statement analysis";
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -4615,6 +4620,7 @@ class CppTargetCore {
 
 	static function stmtForwardsArgToUtestPosition(stmt:HxStmt, argName:String):Bool {
 		return switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _): throw "backend guarded switch cannot reach source statement analysis";
 			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				stmtListForwardsArgToUtestPosition(stmts, argName);
@@ -7762,6 +7768,8 @@ class CppTargetCore {
 	static function collectStaticFieldCallableArgTypesFromStmt(owner:String, field:String, arity:Int, stmt:HxStmt, scope:CppRenderScope,
 			matches:Array<Array<String>>):Void {
 		switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _):
+				throw "backend guarded switch cannot reach source statement analysis";
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -7929,6 +7937,8 @@ class CppTargetCore {
 	static function collectOptionalLambdaLocalCandidatesFromStmt(stmt:HxStmt, scope:CppRenderScope,
 			candidates:haxe.ds.StringMap<{args:Array<String>, body:HxExpr, optionalNames:haxe.ds.StringMap<Bool>}>):Void {
 		switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _):
+				throw "backend guarded switch cannot reach source statement analysis";
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -8030,6 +8040,8 @@ class CppTargetCore {
 
 	static function collectOptionalLambdaLocalCallsFromStmt(stmt:HxStmt, scope:CppRenderScope, callShapes:haxe.ds.StringMap<Array<Array<HxExpr>>>):Void {
 		switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _):
+				throw "backend guarded switch cannot reach source statement analysis";
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -8359,6 +8371,8 @@ class CppTargetCore {
 	static function collectGenericFactoryLocalTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<String>,
 			mapped:haxe.ds.StringMap<haxe.ds.StringMap<String>>):Void {
 		switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _):
+				throw "backend guarded switch cannot reach source statement analysis";
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -8635,6 +8649,8 @@ class CppTargetCore {
 
 	static function collectDynamicLocalTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
 		switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _):
+				throw "backend guarded switch cannot reach source statement analysis";
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -8923,6 +8939,8 @@ class CppTargetCore {
 	static function collectBindCallableCandidatesFromStmt(stmt:HxStmt, scope:CppRenderScope,
 			candidates:haxe.ds.StringMap<{args:Array<String>, body:HxExpr}>):Void {
 		switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _):
+				throw "backend guarded switch cannot reach source statement analysis";
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -8958,6 +8976,8 @@ class CppTargetCore {
 	static function collectBindCallableEvidenceFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<{args:Array<String>, body:HxExpr}>,
 			evidence:haxe.ds.StringMap<{argTypes:Array<String>, returnType:String}>, expectedType:String):Void {
 		switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _):
+				throw "backend guarded switch cannot reach source statement analysis";
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -9218,6 +9238,8 @@ class CppTargetCore {
 
 	static function collectHelperTypedAsLocalTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope):Void {
 		switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _):
+				throw "backend guarded switch cannot reach source statement analysis";
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -9420,6 +9442,8 @@ class CppTargetCore {
 
 	static function collectAssignedArgTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>):Void {
 		switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _):
+				throw "backend guarded switch cannot reach source statement analysis";
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -9543,6 +9567,8 @@ class CppTargetCore {
 
 	static function collectCallableArgTypeOverridesFromStmt(stmt:HxStmt, scope:CppRenderScope, candidates:haxe.ds.StringMap<Bool>, expectedType:String):Void {
 		switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _):
+				throw "backend guarded switch cannot reach source statement analysis";
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
@@ -20221,12 +20247,8 @@ class CppTargetCore {
 			case PCapture(_, _): "PCapture";
 			case PArray(_): "PArray";
 			case PExtractor(_, _): "PExtractor";
-			case PLengthGuard(_, _, _): "PLengthGuard";
-			case PStartsWithGuard(_, _, _): "PStartsWithGuard";
-			case PIntEqualsGuard(_, _, _): "PIntEqualsGuard";
-			case PIntCompareGuard(_, _, _, _): "PIntCompareGuard";
-			case PParsedIntSwitchGuard(_, _, _, _): "PParsedIntSwitchGuard";
-			case PUnsupportedGuard(_): "PUnsupportedGuard";
+			case PGuard(_, _): "PGuard";
+			case PUnsupportedPattern(_): "PUnsupportedPattern";
 			case PBind(_): "PBind";
 			case POr(_): "POr";
 		};
@@ -20258,7 +20280,7 @@ class CppTargetCore {
 				+ ")";
 			case PCapture(_, inner):
 				switchPatternCond(inner, switchValue, switchValueType, scope);
-			case PUnsupportedGuard(_):
+			case PUnsupportedPattern(_):
 				"false";
 			case POr(patterns):
 				if (patterns == null || patterns.length == 0) {
@@ -20273,8 +20295,7 @@ class CppTargetCore {
 				switchEnumExtractPatternCond(name, args, switchValue, switchValueType, scope);
 			case PObject(fieldNames, fieldPatterns):
 				switchObjectPatternCond(fieldNames, fieldPatterns, switchValue, scope);
-			case PArray(_) | PExtractor(_, _) | PLengthGuard(_, _, _) | PStartsWithGuard(_, _, _) | PIntEqualsGuard(_, _, _) | PIntCompareGuard(_, _, _, _) |
-				PParsedIntSwitchGuard(_, _, _, _):
+			case PArray(_) | PExtractor(_, _) | PGuard(_, _):
 				"false";
 		};
 	}
@@ -20415,8 +20436,7 @@ class CppTargetCore {
 							walk(items[i], "(" + value + "[" + Std.string(i) + "])");
 				case PExtractor(_, resultPattern):
 					walk(resultPattern, value);
-				case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PIntCompareGuard(inner, _, _, _),
-					PParsedIntSwitchGuard(inner, _, _, _), PUnsupportedGuard(inner):
+				case PGuard(inner, _), PUnsupportedPattern(inner):
 					walk(inner, value);
 				case POr(patterns):
 					if (patterns != null && patterns.length > 0)
@@ -21498,6 +21518,7 @@ class CppTargetCore {
 					directReturn: (value, selectedType, indent) -> [indent + "return " + valueExprForExpectedType(value, selectedType, scope) + ";"],
 					rootedValue: (_, _, _) -> throw "ordinary C++ body services cannot publish a managed result",
 					tryRegion: (_, _, _, _) -> throw "ordinary C++ body services cannot emit managed catch regions",
+					patternAttempts: (_, _, _) -> throw "ordinary C++ body services cannot emit managed pattern observations",
 					switchArms: (scrutinee, patterns, indent,
 						renderBody) -> renderSwitchBodies(scrutinee, patterns, patterns.length, indent, scope, renderBody),
 					forLoop: (binding, iterable, indent, renderBody) -> switch binding {
@@ -22511,6 +22532,7 @@ class CppTargetCore {
 
 	static function stmtKind(stmt:HxStmt):String {
 		return switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _): throw "backend guarded switch cannot reach source statement analysis";
 			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(_, _): "SBlock";
 			case SVar(_, _, _, _): "SVar";

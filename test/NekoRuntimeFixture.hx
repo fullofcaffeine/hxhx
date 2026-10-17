@@ -18,7 +18,11 @@ private function run(command:String, arguments:Array<String>):String {
 }
 
 /** Loads authored source through production target selection and retains both runtime outcomes. */
-function exercise(fixture:String, requireExceptionProvider:Bool, upstreamNeko:Bool = true, ?roots:Array<String>, ?runtimeVariants:Array<String>):Void {
+function exercise(fixture:String, requireExceptionProvider:Bool, upstreamNeko:Bool = true, ?roots:Array<String>, ?runtimeVariants:Array<String>,
+		?runtimeArguments:Array<String>):Void {
+	final executableArguments = runtimeArguments == null ? [] : runtimeArguments;
+	if (!upstreamNeko && executableArguments.length != 0)
+		throw "Neko fixture runtime arguments require the upstream Neko observer";
 	// Report phase boundaries so a slow full-provider check identifies its active work.
 	var phaseStarted = haxe.Timer.stamp();
 	function completed(phase:String):Void {
@@ -34,7 +38,7 @@ function exercise(fixture:String, requireExceptionProvider:Bool, upstreamNeko:Bo
 			snapshots.push(File.getContent(fixture + "/" + variant));
 	final upstream = if (upstreamNeko) {
 		run("haxe", ["-cp", fixture, "-main", "Main", "-neko", root + "/upstream.n"]);
-		run("neko", [root + "/upstream.n"]);
+		run("neko", [root + "/upstream.n"].concat(executableArguments));
 	} else {
 		run("haxe", ["-cp", fixture, "-main", "Main", "--interp"]);
 	};
@@ -75,7 +79,13 @@ function exercise(fixture:String, requireExceptionProvider:Bool, upstreamNeko:Bo
 				throw "fixture selected the wrong exception provider: " + provider;
 			foundExceptionProvider = true;
 		}
-		typed.push(TyperStage.typeResolvedModule(module, index, loader, true));
+		try {
+			typed.push(TyperStage.typeResolvedModule(module, index, loader, true));
+		} catch (error:haxe.Exception) {
+			Sys.println("NEKO_FIXTURE_TYPING_FAILURE module=" + ResolvedModule.getModulePath(module));
+			Sys.println(haxe.CallStack.toString(error.stack));
+			throw error;
+		}
 		for (loaded in loader.drainNewModules())
 			pending.push(loaded);
 	}
@@ -83,14 +93,28 @@ function exercise(fixture:String, requireExceptionProvider:Bool, upstreamNeko:Bo
 		throw "real Neko exception provider was not loaded";
 	completed("type;next=lower");
 	final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(typed, index), false);
+	final functions = [
+		for (module in program.getTypedModules())
+			for (owner in module.getTypedClasses())
+				for (fn in owner.getFunctions())
+					fn
+	];
+	final revisions = functions.map(CompilerTypedTreeRevision.functionBody);
+	function assertUnchanged():Void {
+		for (index in 0...functions.length)
+			if (CompilerTypedTreeRevision.functionBody(functions[index]) != revisions[index])
+				throw "Neko fixture emission changed its authored function source";
+	}
 	completed("lower;next=render-split");
 	final context = new BackendContext(root, root + "/main.n", "Main", true, false, defines);
 	final split = @:privateAccess NekoTargetCore.renderSplitProgram(program, context, root + "/main.neko");
+	assertUnchanged();
 	File.saveContent(split.entryPath, split.entrySource);
 	for (part in split.support)
 		File.saveContent(part.path, part.source);
 	completed("render-split;next=render-single");
 	File.saveContent(root + "/single.neko", @:privateAccess NekoTargetCore.renderProgram(program, context));
+	assertUnchanged();
 	completed("render-single;next=compile-native");
 	for (file in FileSystem.readDirectory(root))
 		if (StringTools.endsWith(file, ".neko")) {
@@ -101,7 +125,7 @@ function exercise(fixture:String, requireExceptionProvider:Bool, upstreamNeko:Bo
 	completed("compile-native;next=execute");
 	var failed = false;
 	for (layout in ["main", "single"]) {
-		final process = new sys.io.Process("neko", [root + "/" + layout + ".n"]);
+		final process = new sys.io.Process("neko", [root + "/" + layout + ".n"].concat(executableArguments));
 		final actual = process.stdout.readAll().toString();
 		final errors = process.stderr.readAll().toString();
 		final code = process.exitCode();

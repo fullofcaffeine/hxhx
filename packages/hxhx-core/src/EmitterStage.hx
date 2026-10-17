@@ -1445,8 +1445,7 @@ class EmitterStage {
 							walk(item);
 				case PExtractor(_extractorText, resultPattern):
 					walk(resultPattern);
-				case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PIntCompareGuard(inner, _, _, _),
-					PParsedIntSwitchGuard(inner, _, _, _), PUnsupportedGuard(inner):
+				case PGuard(inner, _), PUnsupportedPattern(inner):
 					walk(inner);
 				case POr(patterns):
 					if (patterns != null)
@@ -4579,8 +4578,7 @@ class EmitterStage {
 								extendTyByIdentForStage3(tyByIdent, name, TyType.fromHintText("Dynamic"));
 							case PArray(_items):
 								extendTyByIdentManyForStage3(tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
-							case PExtractor(_, _), PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PIntEqualsGuard(_, _, _), PIntCompareGuard(_, _, _, _),
-								PParsedIntSwitchGuard(_, _, _, _), PUnsupportedGuard(_):
+							case PExtractor(_, _), PGuard(_, _), PUnsupportedPattern(_):
 								extendTyByIdentManyForStage3(tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 							case PEnumExtract(_name, _args):
 								extendTyByIdentManyForStage3(tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
@@ -5202,6 +5200,11 @@ class EmitterStage {
 				if (catches != null)
 					for (c in catches)
 						collectAssignedNamesInStmtRec(c.body, out);
+			case SGuardedSwitch(scrutinee, enabled, _, bodies, _):
+				collectAssignedNamesInExprRec(scrutinee, out);
+				collectAssignedNamesInExprRec(enabled, out);
+				for (body in bodies)
+					collectAssignedNamesInStmtRec(body, out);
 			case SSwitch(scrutinee, _patterns, bodies, _pos):
 				collectAssignedNamesInExprRec(scrutinee, out);
 				if (bodies != null)
@@ -5349,6 +5352,11 @@ class EmitterStage {
 					nestedLocals.set(valueName, true);
 				scanExprForPreludeDepsRec(iterable, locals, calls, idents);
 				scanStmtForPreludeDepsRec(body, nestedLocals, calls, idents);
+			case SGuardedSwitch(scrutinee, enabled, _, bodies, _):
+				scanExprForPreludeDepsRec(scrutinee, locals, calls, idents);
+				scanExprForPreludeDepsRec(enabled, locals, calls, idents);
+				for (body in bodies)
+					scanStmtForPreludeDepsRec(body, locals, calls, idents);
 			case SSwitch(scrutinee, _patterns, bodies, _):
 				scanExprForPreludeDepsRec(scrutinee, locals, calls, idents);
 				if (bodies != null)
@@ -5735,6 +5743,9 @@ class EmitterStage {
 					false;
 				case SDoWhile(_body, _cond, _):
 					false;
+				case SGuardedSwitch(_, _, _, _, _):
+					// A rejected guard can fall through even when every selected body returns.
+					false;
 				case SSwitch(_scrutinee, _patterns, bodies, _):
 					// Bring-up: treat switches as non-returning unless every case body returns.
 					if (bodies == null || bodies.length == 0) {
@@ -6101,7 +6112,7 @@ class EmitterStage {
 					bodyHintsIntLoopVar(body, loopVarName);
 				case SForKeyValue(_keyName, _valueName, _iterable, body, _):
 					bodyHintsIntLoopVar(body, loopVarName);
-				case SSwitch(_scrutinee, _patterns, bodies, _):
+				case SSwitch(_, _, bodies, _) | SGuardedSwitch(_, _, _, bodies, _):
 					if (bodies == null) {
 						false;
 					} else {
@@ -6122,6 +6133,18 @@ class EmitterStage {
 			final erasedTyCtx = cast tyCtx;
 			final erasedReturnTyCtx = cast tyCtx;
 			return switch (s) {
+				case SGuardedSwitch(scrutinee, enabled, plan, bodies, _):
+					backend.ocaml.Stage3OcamlGuardedSwitch.render({
+						plan: plan,
+						value: exprToOcaml(scrutinee, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+						enabled: condToOcamlBool(enabled, erasedTyCtx),
+						names: currentFunctionLocalOcamlNames,
+						dialect: backendDialect,
+						quote: escapeOcamlString,
+						enums: currentEnums,
+						body: index -> stmtToUnit(bodies[index], tyCtx),
+						mutable: name -> currentMutableLocalRefNames.indexOf(name) >= 0
+					});
 				case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 				case SBlock(ss, _pos):
 					stmtListToOcaml(ss, allowedValueIdents, returnExc, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
@@ -6179,8 +6202,7 @@ class EmitterStage {
 									extendTyByIdentLocal(tyCtx, name, TyType.fromHintText("Dynamic"));
 								case PArray(_items):
 									extendTyByIdentManyForStage3(tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
-								case PExtractor(_, _), PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PIntEqualsGuard(_, _, _),
-									PIntCompareGuard(_, _, _, _), PParsedIntSwitchGuard(_, _, _, _), PUnsupportedGuard(_):
+								case PExtractor(_, _), PGuard(_, _), PUnsupportedPattern(_):
 									extendTyByIdentManyForStage3(tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 								case PEnumExtract(_name, _args):
 									extendTyByIdentManyForStage3(tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
@@ -8944,6 +8966,11 @@ class EmitterStage {
 											exprWorklist.push(expr);
 									case SBreak(_):
 									case SContinue(_):
+									case SGuardedSwitch(scrutinee, enabled, _, bodies, _):
+										exprWorklist.push(scrutinee);
+										exprWorklist.push(enabled);
+										for (body in bodies)
+											stmtWorklist.push(body);
 									case SSwitch(scrutinee, _patterns, bodies, _):
 										if (scrutinee != null)
 											exprWorklist.push(scrutinee);
@@ -8966,6 +8993,10 @@ class EmitterStage {
 								if (e == null)
 									continue;
 								switch (e) {
+									case EVars(values) | ELoweredControl(_, _, values, _):
+										// Calls inside shared control still order their module-local providers.
+										for (value in values)
+											exprWorklist.push(value);
 									case EIdent(name):
 										// Function values (e.g. `map(printField)`) also create ordering
 										// dependencies between module-local functions.

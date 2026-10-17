@@ -45,28 +45,8 @@ class JsSwitchPatternLowering {
 				lowerArray(items, scrutineeVar, scope);
 			case PExtractor(extractorText, resultPattern):
 				lowerExtractor(extractorText, resultPattern, scrutineeVar, scope);
-			case PLengthGuard(inner, bindingName, length):
-				final lowered = lower(inner, scrutineeVar, scope);
-				final guardCond = lowerGuardBindingValue(bindingName, lowered.bindings) + ".length === " + length;
-				{cond: "(" + lowered.cond + ") && (" + guardCond + ")", bindings: lowered.bindings};
-			case PStartsWithGuard(inner, bindingName, prefix):
-				final lowered = lower(inner, scrutineeVar, scope);
-				final guardCond = lowerGuardBindingValue(bindingName, lowered.bindings) + ".startsWith(" + JsNameMangler.quoteString(prefix) + ")";
-				{cond: "(" + lowered.cond + ") && (" + guardCond + ")", bindings: lowered.bindings};
-			case PIntEqualsGuard(inner, bindingName, value):
-				final lowered = lower(inner, scrutineeVar, scope);
-				final guardCond = lowerGuardBindingValue(bindingName, lowered.bindings) + " === " + Std.string(value);
-				{cond: "(" + lowered.cond + ") && (" + guardCond + ")", bindings: lowered.bindings};
-			case PIntCompareGuard(inner, bindingName, op, value):
-				final lowered = lower(inner, scrutineeVar, scope);
-				final guardCond = lowerGuardBindingValue(bindingName, lowered.bindings) + " " + op + " " + Std.string(value);
-				{cond: "(" + lowered.cond + ") && (" + guardCond + ")", bindings: lowered.bindings};
-			case PUnsupportedGuard(inner):
-				final lowered = lower(inner, scrutineeVar, scope);
-				{cond: "(" + lowered.cond + ") && false", bindings: lowered.bindings};
-			case PParsedIntSwitchGuard(inner, _, _, _):
-				final lowered = lower(inner, scrutineeVar, scope);
-				{cond: "(" + lowered.cond + ") && false", bindings: lowered.bindings};
+			case PGuard(_, _) | PUnsupportedPattern(_):
+				throw "JavaScript requires shared guard lowering and valid patterns";
 			case PBind(name):
 				{cond: "true", bindings: [{name: name, expr: scrutineeVar}]};
 			case POr(patterns):
@@ -82,6 +62,34 @@ class JsSwitchPatternLowering {
 	}
 
 	/** Use the selected declaration's representation; constructor spellings alone never choose a match. */
+	public static function constructor(pattern:HxSwitchPattern, scope:JsEmitScope):{reference:String, parameters:Null<Array<String>>} {
+		final selected = scope == null || scope.namedPatterns == null ? null : scope.namedPatterns(pattern);
+		if (selected == null)
+			throw "JavaScript named pattern requires its exact selected declaration";
+		final count = switch pattern {
+			case PEnumValue(_): 0;
+			case PEnumExtract(_, children): children.length;
+			case _: throw "JavaScript constructor lookup requires a named pattern";
+		};
+		return switch selected.getKind() {
+			case Constructor(identity, name, index, arity):
+				if (scope.enumDeclarations == null)
+					throw "JavaScript named pattern requires its retained enum provider";
+				final owner = scope.enumDeclarations(identity.getCanonicalName());
+				if (owner == null || owner.enumConstructors == null || index < 0 || index >= owner.enumConstructors.length)
+					throw "JavaScript pattern enum declaration differs from typing";
+				final member = owner.enumConstructors[index];
+				if (member.name != name
+					|| member.index != index
+					|| arity != count
+					|| (member.parameters == null ? 0 : member.parameters.length) != arity)
+					throw "JavaScript pattern constructor differs from typing";
+				{reference: owner.reference + JsNameMangler.propertySuffix(name), parameters: member.parameters};
+			case _: throw "JavaScript constructor lookup requires an ordinary enum";
+		};
+	}
+
+	/** Constants use their selected literal; ordinary enums use the admitted constructor representation. */
 	static function lowerNamed(pattern:HxSwitchPattern, args:Array<HxSwitchPattern>, scrutineeVar:String, scope:Null<JsEmitScope>):JsSwitchPatternLowered {
 		final selected = scope == null || scope.namedPatterns == null ? null : scope.namedPatterns(pattern);
 		if (selected == null)
@@ -95,22 +103,11 @@ class JsSwitchPatternLowering {
 					throw "named constant pattern requires a resolved value";
 				{cond: scrutineeVar + " === " + JsExprEmitter.emit(value, scope), bindings: []};
 			case Constructor(identity, name, index, arity):
-				if (scope.enumDeclarations == null)
-					throw "JavaScript named pattern requires its retained enum provider";
-				final owner = scope.enumDeclarations(identity.getCanonicalName());
-				if (owner == null || owner.enumConstructors == null || index < 0 || index >= owner.enumConstructors.length)
-					throw "JavaScript pattern enum declaration differs from typing";
-				final constructor = owner.enumConstructors[index];
-				if (constructor.name != name
-					|| constructor.index != index
-					|| arity != args.length
-					|| (constructor.parameters == null ? 0 : constructor.parameters.length) != arity)
-					throw "JavaScript pattern constructor differs from typing";
-				final reference = owner.reference + JsNameMangler.propertySuffix(name);
-				if (constructor.parameters == null) {
-					{cond: scrutineeVar + " === " + reference, bindings: []};
+				final member = constructor(pattern, scope);
+				if (member.parameters == null) {
+					{cond: scrutineeVar + " === " + member.reference, bindings: []};
 				} else {
-					lowerEnumExtract(reference, constructor.parameters, args, scrutineeVar, scope);
+					lowerEnumExtract(member.reference, member.parameters, args, scrutineeVar, scope);
 				}
 		};
 	}
@@ -183,16 +180,6 @@ class JsSwitchPatternLowering {
 		if (applied == null)
 			return {cond: "false", bindings: lowered.bindings};
 		return lowered;
-	}
-
-	static function lowerGuardBindingValue(name:String, bindings:Array<JsSwitchPatternBinding>):String {
-		if (bindings != null) {
-			for (binding in bindings) {
-				if (binding.name == name)
-					return binding.expr;
-			}
-		}
-		return JsNameMangler.identifier(name);
 	}
 
 	static function mergeCommonBindings(existing:Null<Array<JsSwitchPatternBinding>>, next:Array<JsSwitchPatternBinding>):Array<JsSwitchPatternBinding> {

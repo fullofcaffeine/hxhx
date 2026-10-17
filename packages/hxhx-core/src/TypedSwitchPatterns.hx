@@ -58,8 +58,7 @@ class TypedSwitchPatterns {
 				case PObject(_, children) | PArray(children) | POr(children):
 					for (child in children)
 						visit(child);
-				case PCapture(_, child) | PExtractor(_, child) | PLengthGuard(child, _, _) | PStartsWithGuard(child, _, _) | PIntEqualsGuard(child, _, _) |
-					PIntCompareGuard(child, _, _, _) | PParsedIntSwitchGuard(child, _, _, _) | PUnsupportedGuard(child):
+				case PGuard(child, _) | PCapture(_, child) | PExtractor(_, child) | PUnsupportedPattern(child):
 					visit(child);
 				case PNull | PWildcard | PBool(_) | PString(_) | PInt(_) | PBind(_):
 			}

@@ -284,13 +284,6 @@ class TypedBodySource {
 		return projected;
 	}
 
-	static function projectedPatternReference(names:haxe.ds.StringMap<String>, sourceName:String):String {
-		final projected = names.get(sourceName);
-		if (projected == null)
-			throw "switch guard references a pattern local without an exact typed binding: " + sourceName;
-		return projected;
-	}
-
 	static function projectPattern(pattern:HxSwitchPattern, bindings:Array<TyLocalBinding>, cursor:Array<Int>, catalog:TypedBackendLocalCatalog,
 			names:haxe.ds.StringMap<String>):HxSwitchPattern {
 		return switch (pattern) {
@@ -313,23 +306,10 @@ class TypedBodySource {
 				PArray([for (item in items) projectPattern(item, bindings, cursor, catalog, names)]);
 			case PExtractor(extractorText, resultPattern):
 				PExtractor(extractorText, projectPattern(resultPattern, bindings, cursor, catalog, names));
-			case PLengthGuard(inner, bindingName, length):
-				final projectedInner = projectPattern(inner, bindings, cursor, catalog, names);
-				PLengthGuard(projectedInner, projectedPatternReference(names, bindingName), length);
-			case PStartsWithGuard(inner, bindingName, prefix):
-				final projectedInner = projectPattern(inner, bindings, cursor, catalog, names);
-				PStartsWithGuard(projectedInner, projectedPatternReference(names, bindingName), prefix);
-			case PIntEqualsGuard(inner, bindingName, value):
-				final projectedInner = projectPattern(inner, bindings, cursor, catalog, names);
-				PIntEqualsGuard(projectedInner, projectedPatternReference(names, bindingName), value);
-			case PIntCompareGuard(inner, bindingName, op, value):
-				final projectedInner = projectPattern(inner, bindings, cursor, catalog, names);
-				PIntCompareGuard(projectedInner, projectedPatternReference(names, bindingName), op, value);
-			case PParsedIntSwitchGuard(inner, bindingName, multiplier, matchValue):
-				final projectedInner = projectPattern(inner, bindings, cursor, catalog, names);
-				PParsedIntSwitchGuard(projectedInner, projectedPatternReference(names, bindingName), multiplier, matchValue);
-			case PUnsupportedGuard(inner):
-				PUnsupportedGuard(projectPattern(inner, bindings, cursor, catalog, names));
+			case PGuard(inner, guard):
+				PGuard(projectPattern(inner, bindings, cursor, catalog, names), guard);
+			case PUnsupportedPattern(inner):
+				PUnsupportedPattern(projectPattern(inner, bindings, cursor, catalog, names));
 			case POr(patterns):
 				POr([
 					for (child in patterns)
@@ -526,7 +506,7 @@ class TypedBodySource {
 				throw "source metadata must be consumed before backend projection";
 			case FeatureDefinition | FeatureSelection:
 				throw "feature intrinsics require program-owned selection before backend projection";
-			case SourceGroup | SourceFunction | SourceIf | SourceFor | SourceTry | KeyValueProtocol:
+			case SourceGroup | SourceFunction | SourceIf | SourceFor | SourceTry | IteratorProtocol:
 				throw "source control must be lowered before backend projection (haxe_ocaml-o25kr)";
 			case ControlTry:
 				final catches = typedExpression.getSourceCatches();
@@ -562,6 +542,16 @@ class TypedBodySource {
 					typedExpression.getSwitchPatterns(), projectionFacts),
 					typedExpression.getSwitchHasExhaustiveCoverage()),
 					"", [for (child in expressions) expression(child, catalog, projectionFacts)], typedExpression.getPosition());
+			case ControlPatternAttempts:
+				final facts = typedExpression.getSwitchPatterns();
+				final patterns = projectPatterns(typedExpression.getPatterns(), typedExpression.getLocalBindings(), catalog, facts, projectionFacts);
+				final plan = TypedGuardedPatternPlan.fromSelected(patterns, facts == null ? [] : facts.getSelections(),
+					!typedExpression.getType().isNoNormalCompletion(), typedExpression.getSwitchHasExhaustiveCoverage(),
+					[for (body in expressions.slice(2)) TypedGuardedSwitch.acceptedCanComplete(body)]);
+				ELoweredControl(PatternAttempts(plan), "", [
+					expression(expressions[0], catalog, projectionFacts),
+					condition(expressions[1], catalog, projectionFacts)
+				].concat(expressionTail(expressions, 2, catalog, projectionFacts)), typedExpression.getPosition());
 			case ControlFor:
 				final target = typedExpression.getControlTarget();
 				if (target == null)
@@ -743,9 +733,13 @@ class TypedBodySource {
 					suppressCallableAscription, projectionFacts);
 			case SwitchExpr:
 				ESwitch(expression(expressions[0], catalog, projectionFacts),
-					projectPatterns(typedExpression.getPatterns(), typedExpression.getLocalBindings(), catalog, typedExpression.getSwitchPatterns(),
-						projectionFacts),
-					expressionTail(expressions, 1, catalog, projectionFacts));
+					TypedSwitchGuards.project(projectPatterns(typedExpression.getPatterns(), typedExpression.getLocalBindings(), catalog,
+						typedExpression.getSwitchPatterns(), projectionFacts),
+						typedExpression.getSwitchGuards(), guard -> condition(guard, catalog, projectionFacts)),
+					[
+						for (branch in typedExpression.getSwitchBranches())
+							expression(branch, catalog, projectionFacts)
+					]);
 			case NewValue:
 				final identity = typedExpression.getType().getNominalIdentity();
 				final path = resolvedNameWhenAliased(texts[0], identity);
@@ -849,8 +843,9 @@ class TypedBodySource {
 			case DoWhile: SDoWhile(statement(statements[0], catalog, projectionFacts), condition(expressions[0], catalog, projectionFacts), position);
 			case Switch:
 				SSwitch(expression(expressions[0], catalog, projectionFacts),
-					projectPatterns(typedStatement.getPatterns(), typedStatement.getLocalBindings(), catalog, typedStatement.getSwitchPatterns(),
-						projectionFacts),
+					TypedSwitchGuards.project(projectPatterns(typedStatement.getPatterns(), typedStatement.getLocalBindings(), catalog,
+						typedStatement.getSwitchPatterns(), projectionFacts),
+						typedStatement.getSwitchGuards(), guard -> condition(guard, catalog, projectionFacts)),
 					[for (body in statements) statement(body, catalog, projectionFacts)], position, typedStatement.getSwitchHasExhaustiveCoverage());
 			case Try:
 				final catchNames = typedStatement.getCatchNames();

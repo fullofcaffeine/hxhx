@@ -1,5 +1,3 @@
-import backend.BackendContext;
-import backend.vm.NekoTargetCore;
 import sys.io.File;
 import sys.FileSystem;
 
@@ -116,42 +114,8 @@ Sys.println(read()); Sys.println(read());
 		FileSystem.createDirectory(root);
 		final path = root + "/Main.hx";
 		File.saveContent(path, source);
-		run("haxe", ["-cp", root, "-main", "Main", "-neko", root + "/upstream.n"]);
-		if (run("neko", [root + "/upstream.n"]) != expected)
-			throw "upstream closure control differs";
-		final resolved = new ResolvedModule("Main", path, ParserStage.parse(source, path));
-		final defines = HxDefineMap.fromRawDefines(["neko=1"]);
-		final index = TyperIndex.buildHeaders([resolved]);
-		final loader = new ModuleLoader([root], defines, index);
-		loader.markResolvedAlready([resolved]);
-		final program = MacroStage.expandProgram([TyperStage.typeResolvedModule(resolved, index, loader)], []);
-		final context = new BackendContext(root, root + "/main.n", "Main", true, false, defines);
-		final split = @:privateAccess NekoTargetCore.renderSplitProgram(program, context, root + "/main.neko");
-		File.saveContent(split.entryPath, split.entrySource);
-		for (part in split.support)
-			File.saveContent(part.path, part.source);
-		File.saveContent(root + "/single.neko", @:privateAccess NekoTargetCore.renderProgram(program, context));
-		for (file in FileSystem.readDirectory(root))
-			if (StringTools.endsWith(file, ".neko"))
-				run("nekoc", [root + "/" + file]);
-		for (layout in ["main", "single"]) {
-			final actual = run("neko", [root + "/" + layout + ".n"]);
-			File.saveContent(root + "/" + layout + ".stdout", actual);
-			if (actual != expected)
-				throw "closure control differs in " + layout + ": " + root;
-			Sys.println("NEKO_CLOSURE_CONTROL:PASS fixture=" + name + " layout=" + layout);
-		}
-	}
-
-	/** Require process success as well as output, including native compilation errors. */
-	static function run(command:String, arguments:Array<String>):String {
-		final process = new sys.io.Process(command, arguments);
-		final output = process.stdout.readAll().toString();
-		final errors = process.stderr.readAll().toString();
-		final code = process.exitCode();
-		process.close();
-		if (code != 0)
-			throw command + " failed: " + errors;
-		return output;
+		File.saveContent(root + "/expected.stdout", expected);
+		// Resolve the real target providers, including Array for captured loop values.
+		NekoRuntimeFixture.exercise(root, false);
 	}
 }

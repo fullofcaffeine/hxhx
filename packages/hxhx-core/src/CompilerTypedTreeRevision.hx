@@ -191,35 +191,12 @@ class CompilerTypedTreeRevision {
 				out.push("pattern:extractor");
 				out.push(extractorText);
 				addPattern(out, resultPattern);
-			case PLengthGuard(inner, bindingName, length):
-				out.push("pattern:length-guard");
-				out.push(bindingName);
-				out.push(Std.string(length));
+			case PGuard(inner, guard):
+				out.push("pattern:guard");
 				addPattern(out, inner);
-			case PStartsWithGuard(inner, bindingName, prefix):
-				out.push("pattern:starts-with-guard");
-				out.push(bindingName);
-				out.push(prefix);
-				addPattern(out, inner);
-			case PIntEqualsGuard(inner, bindingName, value):
-				out.push("pattern:int-equals-guard");
-				out.push(bindingName);
-				out.push(Std.string(value));
-				addPattern(out, inner);
-			case PIntCompareGuard(inner, bindingName, op, value):
-				out.push("pattern:int-compare-guard");
-				out.push(bindingName);
-				out.push(op);
-				out.push(Std.string(value));
-				addPattern(out, inner);
-			case PParsedIntSwitchGuard(inner, bindingName, multiplier, matchValue):
-				out.push("pattern:parsed-int-switch-guard");
-				out.push(bindingName);
-				out.push(Std.string(multiplier));
-				out.push(Std.string(matchValue));
-				addPattern(out, inner);
-			case PUnsupportedGuard(inner):
-				out.push("pattern:unsupported-guard");
+				out.push(TypedBodyFingerprint.exactExpression(guard));
+			case PUnsupportedPattern(inner):
+				out.push("pattern:unsupported");
 				addPattern(out, inner);
 			case PBind(name):
 				out.push("pattern:bind");
@@ -282,11 +259,12 @@ class CompilerTypedTreeRevision {
 			case SourceGroup: "source-group";
 			case SourceIf: "source-if";
 			case SourceFor: "source-for";
-			case KeyValueProtocol: "key-value-protocol";
+			case IteratorProtocol: "iterator-protocol";
 			case SourceTry: "source-try";
 			case ControlTry: "control-try";
 			case ControlFor: "control-for";
 			case ControlSwitch: "control-switch";
+			case ControlPatternAttempts: "control-pattern-attempts";
 			case ThrowExpr: "throw";
 			case ControlBranch: "control-branch";
 			case ControlWhile: "control-while";

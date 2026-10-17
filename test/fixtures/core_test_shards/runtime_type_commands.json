@@ -22,6 +22,7 @@
   "npm run test:m14:neko-vm-loader",
   "npm run test:m14:neko-abstract-construction",
   "npm run test:m14:neko-prototypes",
+  "npm run test:m14:neko-array-objects",
   "npm run test:m14:neko-string-methods",
   "npm run test:m14:neko-native-bindings",
   "npm run test:m14:neko-boot-registry",

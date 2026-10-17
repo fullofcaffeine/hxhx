@@ -50,21 +50,29 @@ function conditionValue(type:TyType, value:String):String {
 }
 
 /** Validate condition operands without assigning a stored type to a logical result. */
-function requireCondition(value:HxExpr, valueType:HxExpr->TyType, requireExpression:HxExpr->Void):Void {
+function requireCondition(value:HxExpr, valueType:HxExpr->TyType, requireExpression:HxExpr->Void, ?checkedCondition:HxExpr->Null<TyType>):Void {
 	requireExpression(value);
 	switch value {
 		case EParenthesized(inner, _) | EUntyped(inner) | EUnop(LogicalNot, Prefix, inner):
-			requireCondition(inner, valueType, requireExpression);
+			requireCondition(inner, valueType, requireExpression, checkedCondition);
 		case EBinop(op, left, right) if (op == "&&" || op == "||"):
-			requireCondition(left, valueType, requireExpression);
-			requireCondition(right, valueType, requireExpression);
+			requireCondition(left, valueType, requireExpression, checkedCondition);
+			requireCondition(right, valueType, requireExpression, checkedCondition);
 		case ETernary(condition, yes, no):
 			for (part in [condition, yes, no])
-				requireCondition(part, valueType, requireExpression);
+				requireCondition(part, valueType, requireExpression, checkedCondition);
 		case _:
-			if (!supportsCondition(valueType(value)))
+			if (!supportsCondition(valueType(value)) && !checkedDynamic(value, valueType(value), checkedCondition))
 				throw "managed condition requires Bool or nullable Bool";
 	}
+}
+
+/** A Dynamic storage type alone cannot authorize a Boolean conversion outside a checked condition. */
+private function checkedDynamic(value:HxExpr, type:TyType, checkedCondition:Null<HxExpr->Null<TyType>>):Bool {
+	if (!type.isDynamic() || checkedCondition == null)
+		return false;
+	final checked = checkedCondition(value);
+	return checked != null && checked.getSemanticKey() == type.getSemanticKey();
 }
 
 /**
@@ -77,6 +85,7 @@ function renderCondition(value:HxExpr, input:{
 	prefix:String,
 	valueType:HxExpr->TyType,
 	requireExpression:HxExpr->Void,
+	?checkedCondition:HxExpr->Null<TyType>,
 	renderValue:(HxExpr, String, String) -> Array<String>
 }):String {
 	input.requireExpression(value);
@@ -102,7 +111,8 @@ function renderCondition(value:HxExpr, input:{
 		case _:
 			final type = input.valueType(value);
 			final root = input.prefix + "condition";
-			final test = conditionValue(type, root + ".get()");
+			final test = checkedDynamic(value, type,
+				input.checkedCondition) ? CppManagedDynamicCondition.read(root + ".get()") : conditionValue(type, root + ".get()");
 			final lines = [
 				"([&]() -> bool {",
 				"  hxhx::managed::Root<hxhx::managed::Value> " + root + "(" + input.heap + ");"

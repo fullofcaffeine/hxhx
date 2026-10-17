@@ -431,6 +431,15 @@ class CppManagedClassStorage {
 			throw "implicit field receiver belongs to another class family";
 	}
 
+	/** Native and authored constructors share the same exact executable ownership check. */
+	public function requireConstructorOwner(occurrence:TypedBackendConstructorOccurrence, ?context:CppManagedEnclosingApplication):Void {
+		program.assertPlanningCurrent();
+		final lexical = constructorOwners.get(occurrence);
+		if (lexical == null || lexical.find() != occurrence)
+			throw "managed constructor belongs to another program or occurrence";
+		CppManagedCallContext.assertOwner(context, lexical.source);
+	}
+
 	/**
 		Resolve an exact constructor application's types without promising its physical
 		storage or emitted entry. Generic execution additionally needs this same view
@@ -438,11 +447,8 @@ class CppManagedClassStorage {
 	 */
 	public function constructorApplication(occurrence:TypedBackendConstructorOccurrence,
 			?context:CppManagedEnclosingApplication):CppManagedFunctionApplication {
-		program.assertPlanningCurrent();
+		requireConstructorOwner(occurrence, context);
 		final lexical = constructorOwners.get(occurrence);
-		if (lexical == null || lexical.find() != occurrence)
-			throw "managed constructor belongs to another program or occurrence";
-		CppManagedCallContext.assertOwner(context, lexical.source);
 		// The caller resolves its own binders before the selected constructor binds
 		// its declaring class. Concrete facts do not need repeated substitution.
 		function appliedType(type:TyType):TyType

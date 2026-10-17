@@ -170,7 +170,8 @@ class CppManagedStoragePlan {
 		return [
 			for (binding in catalog.getPlan().getBindings())
 				if (binding.functionIdentity == owner
-					&& (binding.creation == Declaration || binding.creation == LoopIteration || binding.creation == CatchEntry)) binding
+					&& (binding.creation == Declaration || binding.creation == LoopIteration || binding.creation == CatchEntry
+						|| binding.creation == PatternMatch)) binding
 		];
 	}
 

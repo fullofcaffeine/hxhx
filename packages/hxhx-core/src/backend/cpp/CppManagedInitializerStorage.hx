@@ -38,7 +38,8 @@ class CppManagedInitializerStorage extends CppManagedCaptureStorage {
 		return [
 			for (binding in projection.requireCaptureCatalog().getPlan().getBindings())
 				if (binding.functionIdentity == identity
-					&& (binding.creation == Declaration || binding.creation == LoopIteration || binding.creation == CatchEntry)) binding
+					&& (binding.creation == Declaration || binding.creation == LoopIteration || binding.creation == CatchEntry
+						|| binding.creation == PatternMatch)) binding
 		];
 	}
 

@@ -1,38 +1,11 @@
 /**
-	Bootstrap switch-pattern representation for Stage 3 bring-up.
-
-	Why
-	- Upstream-shaped code (notably the `tests/RunCi.hx` harness) uses `switch`
-	  both as an expression and as a statement.
-	- Stage 3 initially captured `switch` as raw text (`ESwitchRaw`) to keep parsing
-	  deterministic, but that prevents running harness-style programs under the
-	  Stage3 bootstrap emitter (they need real control flow).
-
-	What
-	- A deliberately small pattern subset that is sufficient for orchestrators:
-	  - `null`
-	  - wildcard `_`
-	  - string/int literals
-	  - bare enum-like values (Stage3: a bare uppercase identifier such as `Macro`)
-	  - enum constructor extractors with nested argument patterns
-	  - object-field patterns such as `{ expr : EConst(c) }`
-	  - capture/alias patterns such as `value = CString("x")`
-	  - exact-length array patterns such as `[]` and `[head, tail]`
-	  - extractor patterns such as `extract(_) => Some(value)` as a parsed,
-		bring-up-safe shape
-	  - guarded patterns for currently supported guard forms
-	  - parsed-int switch guards for the small guard shape used by upstream macro tests
-	  - binder patterns (`case name:`) used as a catch-all.
-
-	How
-	- This is *not* full Haxe `switch` semantics:
-	  - only the guard forms listed above are modeled,
-	  - limited multiple patterns (`case a | b:`) are supported without guards.
-	  - enum constructor extractors only model constructor name + positional params;
-		richer pattern forms remain out of scope.
-	- It is intentionally “bring-up friendly” so we can run unmodified upstream
-	  harnesses without copying or translating upstream compiler code.
-**/
+	Preserve authored switch patterns separately from selected declaration facts.
+	Typing resolves names and case-local bindings. Ordinary guards retain their
+	complete source expression; shared control lowering evaluates them only after
+	a pattern matches. General extractor execution still has a separate lowering
+	contract. Unsupported source patterns remain explicit and cannot count as
+	exhaustive coverage.
+ */
 enum HxSwitchPattern {
 	PNull;
 	PWildcard;
@@ -45,12 +18,13 @@ enum HxSwitchPattern {
 	PCapture(name:String, pattern:HxSwitchPattern);
 	PArray(items:Array<HxSwitchPattern>);
 	PExtractor(extractorText:String, resultPattern:HxSwitchPattern);
-	PLengthGuard(pattern:HxSwitchPattern, bindingName:String, length:Int);
-	PStartsWithGuard(pattern:HxSwitchPattern, bindingName:String, prefix:String);
-	PIntEqualsGuard(pattern:HxSwitchPattern, bindingName:String, value:Int);
-	PIntCompareGuard(pattern:HxSwitchPattern, bindingName:String, op:String, value:Int);
-	PParsedIntSwitchGuard(pattern:HxSwitchPattern, bindingName:String, multiplier:Int, matchValue:Int);
-	PUnsupportedGuard(pattern:HxSwitchPattern);
+
+	/** The authored condition executes in the matched case's binding scope. */
+	PGuard(pattern:HxSwitchPattern, condition:HxExpr);
+
+	/** A consumed pattern whose semantics are not represented, such as a macro quotation. */
+	PUnsupportedPattern(pattern:HxSwitchPattern);
+
 	PBind(name:String);
 
 	/**

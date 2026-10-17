@@ -93,7 +93,7 @@ class TyCallableSignature {
 		final isRest = index < rest.length && rest[index];
 		return {
 			name: index < names.length ? names[index] : null,
-			type: isRest ? restElement(arguments[index]) : arguments[index],
+			type: isRest ? restElement(arguments[index], signature.getName()) : arguments[index],
 			isOptional: !isRest && index < optional.length && optional[index],
 			isRest: isRest,
 			metadata: []
@@ -101,12 +101,12 @@ class TyCallableSignature {
 	}
 
 	/** Written ellipsis uses Array in bodies; resolved standard Rest keeps its own container. Callers supply elements. */
-	static function restElement(container:TyType):TyType {
+	static function restElement(container:TyType, method:String):TyType {
 		final identity = container.getNominalIdentity();
 		final name = identity == null ? container.getUnresolvedPath() : identity.getCanonicalName();
 		final arguments = container.getTypeArguments();
 		if ((name != "Array" && name != "haxe.Array" && name != "haxe.Rest") || arguments.length != 1)
-			throw "rest method signature requires a standard container with one element type";
+			throw "rest method " + method + " requires a standard container with one element type, got " + container.getSemanticKey();
 		return arguments[0];
 	}
 

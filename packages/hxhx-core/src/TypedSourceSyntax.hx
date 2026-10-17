@@ -37,7 +37,7 @@ function expression(node:TypedExpr):HxExpr {
 		case SourceGroup: ESourceGroup(tail(0), position);
 		case SourceIf: ESourceIf(child(0), child(1), children.length == 3 ? child(2) : null, position);
 		case SourceFor: ESourceFor(HxForBinding.fromNames(node.getTexts()), child(0), child(1), position);
-		case KeyValueProtocol: throw "selected iterator protocol is not authored source syntax";
+		case IteratorProtocol: throw "selected iterator protocol is not authored source syntax";
 		case SourceTry: ESourceTry(node.getSourceCatches(), tail(0), position);
 		case ThrowExpr: EThrow(child(0), position);
 		case SourceFunction:
@@ -52,7 +52,8 @@ function expression(node:TypedExpr):HxExpr {
 		case WhileExpr: EWhile(child(0), tail(1), node.getBoolValue(), position, node.getWhileKind());
 		case BreakExpr: EBreak(position);
 		case ContinueExpr: EContinue(position);
-		case SwitchExpr: ESwitch(child(0), node.getPatterns(), tail(1));
+		case SwitchExpr: ESwitch(child(0), TypedSwitchGuards.project(node.getPatterns(), node.getSwitchGuards(), expression),
+				[for (branch in node.getSwitchBranches()) expression(branch)]);
 		case NewValue: ENew(texts[0], tail(0));
 		case Unary: EUnop(node.getUnaryOperator(), node.getUnaryFixity(), child(0));
 		case Binary | CompoundAssign: EBinop(texts[0], child(0), child(1));
@@ -73,7 +74,7 @@ function expression(node:TypedExpr):HxExpr {
 				case Unsupported: EUnsupported(texts[0]);
 				case null: throw "typed source syntax lost its opaque kind";
 			}
-		case Block | ControlRegion | ControlBranch | ControlWhile | ControlFor | ControlSwitch | ControlTry | FixedRange: throw HxMacroBlockBoundary.missingSourceGroup;
+		case Block | ControlRegion | ControlBranch | ControlWhile | ControlFor | ControlSwitch | ControlPatternAttempts | ControlTry | FixedRange: throw HxMacroBlockBoundary.missingSourceGroup;
 		case Temporary | RuntimeTypeValue | RuntimeTypeTest | ArrayAppend | MapInsert:
 			throw "lowered semantic expression cannot supply authored macro syntax";
 	};

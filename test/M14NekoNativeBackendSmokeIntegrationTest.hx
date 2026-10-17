@@ -477,14 +477,14 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		final prefixMacro = NekoMacroExprLowering.render(HxExpr.EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Prefix, HxExpr.EIdent("value")), [],
 			function(expr) {
 				return Std.string(expr);
-			});
+			}, null);
 		final postfixMacro = NekoMacroExprLowering.render(HxExpr.EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, HxExpr.EIdent("value")), [],
 			function(expr) {
 				return Std.string(expr);
-			});
+			}, null);
 		final nullSafeMacro = NekoMacroExprLowering.render(HxExpr.ENullSafeField(HxExpr.EIdent("value"), "field"), [], function(expr) {
 			return Std.string(expr);
-		});
+		}, null);
 		assertContains(prefixMacro, '"OpIncrement"', "Neko macro quote should use the public unary enum constructor");
 		assertContains(prefixMacro, "false", "Neko macro quote should preserve prefix fixity as postFix=false");
 		assertContains(postfixMacro, "true", "Neko macro quote should preserve postfix fixity as postFix=true");
@@ -656,7 +656,8 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		deleteRecursive(outDir);
 
 		FileSystem.createDirectory(outDir);
-		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { var t = macro :X -> Y; Sys.println("macro-type"); } }'), context);
+		BackendDispatchBoundary.emit(backend, program('class Main { static function main() { var t = macro :X -> Y; Sys.println("macro-type"); } }', true),
+			context);
 		final macroTypeSource = File.getContent(sourcePath);
 		assertContains(macroTypeSource, "__hxhx_o.__hx_ctor = \"TFunction\";", "expected macro type arrow to lower to TFunction");
 		assertContains(macroTypeSource, "__hxhx_o.__hx_ctor = \"TPath\";", "expected macro type paths to lower to TPath");

@@ -10,6 +10,10 @@ package backend.vm;
 	Static helpers support the current compiler bootstrap discovery route.
 **/
 class NekoFunctionParameters {
+	/** Rest calls supply an explicit Array slot, including when the source supplies no elements. */
+	public static function hasRest(arguments:Array<HxFunctionArg>):Bool
+		return Lambda.exists(arguments, HxFunctionArg.getIsRest);
+
 	public static function needsAdapter(arguments:Array<HxFunctionArg>):Bool {
 		for (argument in arguments) {
 			if (HxFunctionArg.getIsOptional(argument))

@@ -2012,7 +2012,10 @@ class ParserStageScanHelpers {
 								defaultValue = scannedDefaultValueFromText(defaultValueText);
 								i = scannedDefault.nextPos;
 							}
-							args.push(new HxFunctionArg(argName, argType, defaultValue, pendingOptional, pendingRest, defaultValueText, argumentMetadata));
+							// Scanned helper declarations share the method parser's rest
+							// container contract; the written element is not a body value.
+							args.push(HxFunctionSyntaxParser.methodArgument(new HxFunctionArg(argName, argType, defaultValue, pendingOptional, pendingRest,
+								defaultValueText, argumentMetadata)));
 							argIndex += 1;
 							expectArg = false;
 							pendingOptional = false;
@@ -2372,6 +2375,7 @@ class ParserStageScanHelpers {
 
 	static function hasUnsupportedStmt(stmt:HxStmt):Bool {
 		return switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _): throw "backend guarded switch cannot reach source statement analysis";
 			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				hasUnsupportedStmtList(stmts);

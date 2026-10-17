@@ -106,6 +106,13 @@ class CppManagedExpressionLocals {
 			case FieldInitializer(_): fieldLocals().renderCatch(binding, selectedRoot, heap, indent);
 		};
 
+	/** Pattern storage is created by its lexical owner once per attempted case. */
+	public function renderPattern(binding:TyLocalBinding, selectedRoot:String, heap:String, indent:String):Array<String>
+		return switch owner {
+			case CallableBody(selected): selected.locals.renderPattern(binding, selectedRoot, heap, indent);
+			case FieldInitializer(_): fieldLocals().renderPattern(binding, selectedRoot, heap, indent);
+		};
+
 	/** Field locals resolve through their field application, independently of the constructor. */
 	public function resolveType(type:TyType):TyType
 		return switch owner {
