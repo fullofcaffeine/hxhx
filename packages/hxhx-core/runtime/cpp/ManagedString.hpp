@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ManagedCallable.hpp"
+#include "ManagedInt64.hpp"
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
@@ -163,6 +164,10 @@ inline bool formatAggregateString(Heap& heap, Value input, Root<Value>& result, 
   Root<Value> parent(heap, input);
   Root<Value> child(heap), converted(heap);
   const auto payload = parent.get().asManaged();
+  if (payload.hasLayout<Int64Payload>()) {
+    result.set(Value::string(int64String(parent.get())));
+    return true;
+  }
   if (payload.hasLayout<EnumPayload>()) {
     const auto value = payload.as<EnumPayload>();
     std::string bytes = value->descriptor().constructors[value->constructorIndex()].name;

@@ -15,6 +15,7 @@ class CppManagedRuntimeMacro {
 		for (name in [
 			"ManagedHeap.hpp",
 			"ManagedValue.hpp",
+			"ManagedInt64.hpp",
 			"ManagedEquality.hpp",
 			"ManagedMap.hpp",
 			"ManagedThrow.hpp",

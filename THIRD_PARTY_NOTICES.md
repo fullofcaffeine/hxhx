@@ -17,9 +17,9 @@ The notices below document third-party sources used as compatibility references 
 - **Upstream repository:** `https://github.com/HaxeFoundation/haxe`
 - **Baseline tag:** `4.3.7`
 - **License:** MIT
-- **Local scope:** `packages/reflaxe.ocaml/std/ocaml/_std/**`
+- **Local scope:** `packages/reflaxe.ocaml/std/ocaml/_std/**` and `packages/hxhx-core/std/cpp/_std/**`
 - **Details:** `docs/00-project/STDLIB_PROVENANCE_LEDGER.json`
 
 Notes:
-- `_std` files are target overrides for `reflaxe.ocaml`.
+- `_std` files are target overrides for `reflaxe.ocaml` and the bundled native C++ target.
 - Some files are selectively synced from upstream stdlib; others are repo-authored overrides guided by upstream behavior.

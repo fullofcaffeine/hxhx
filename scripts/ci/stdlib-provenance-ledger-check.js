@@ -26,7 +26,7 @@ function summarize(paths, limit) {
 function main() {
 	const noticesPath = 'THIRD_PARTY_NOTICES.md'
 	const ledgerPath = 'docs/00-project/STDLIB_PROVENANCE_LEDGER.json'
-	const stdlibRoot = 'packages/reflaxe.ocaml/std/ocaml/_std/'
+	const stdlibRoots = ['packages/reflaxe.ocaml/std/ocaml/_std/', 'packages/hxhx-core/std/cpp/_std/']
 
 	if (!fs.existsSync(noticesPath)) {
 		fail(`missing required third-party notice file: ${noticesPath}`)
@@ -64,12 +64,12 @@ function main() {
 		return
 	}
 
-	const trackedStdlibFiles = gitTrackedUnder(stdlibRoot)
+	const trackedStdlibFiles = stdlibRoots.flatMap(gitTrackedUnder)
 		.filter((path) => path.endsWith('.hx'))
 		.sort()
 
 	if (trackedStdlibFiles.length === 0) {
-		fail(`no tracked stdlib override files found under ${stdlibRoot}`)
+		fail(`no tracked stdlib override files found under ${stdlibRoots.join(', ')}`)
 		return
 	}
 
@@ -89,8 +89,8 @@ function main() {
 			fail(`${ledgerPath} entry is missing path`)
 			continue
 		}
-		if (!path.startsWith(stdlibRoot)) {
-			fail(`${ledgerPath} entry path must stay under ${stdlibRoot}: ${path}`)
+		if (!stdlibRoots.some(root => path.startsWith(root))) {
+			fail(`${ledgerPath} entry path must stay under an approved stdlib root: ${path}`)
 		}
 		if (!path.endsWith('.hx')) {
 			fail(`${ledgerPath} entry path must be a .hx file: ${path}`)

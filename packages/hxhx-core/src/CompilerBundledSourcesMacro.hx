@@ -10,7 +10,7 @@ class CompilerBundledSourcesMacro {
 		final root = haxe.io.Path.normalize(haxe.io.Path.join([haxe.io.Path.directory(anchor), "../std"]));
 		final files = new Array<Expr>();
 		// This inventory is deliberate: adding a provider changes target semantics.
-		for (name in ["cpp/_std/haxe/Exception.hx"]) {
+		for (name in ["cpp/_std/haxe/Exception.hx", "cpp/_std/haxe/Int64.hx"]) {
 			final path = haxe.io.Path.join([root, name]);
 			Context.registerModuleDependency(Context.getLocalModule(), path);
 			final content = sys.io.File.getContent(path);

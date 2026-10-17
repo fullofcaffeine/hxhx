@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ManagedValue.hpp"
+#include "ManagedInt64.hpp"
 #include <cstdlib>
 
 namespace hxhx::managed {
@@ -51,6 +52,8 @@ inline bool enumPayloadEquality(Heap& heap, const Value& left, const Value& righ
   if (left.kind() == ValueKind::Null) return right.kind() == ValueKind::Null;
   if (right.kind() == ValueKind::Null)
     throw std::invalid_argument("unsupported upstream enum comparison with non-null left and null right payload (haxe_ocaml-rirak)");
+  if (isInt64Payload(left) || isInt64Payload(right))
+    throw std::invalid_argument("unsupported erased Int64 enum comparison (haxe_ocaml-sp2zl)");
   if (equalityNumeric(left.kind())) {
     double number = 0.0;
     if (equalityNumeric(right.kind())) number = equalityNumber(right);
@@ -86,6 +89,8 @@ inline bool dynamicEquality(Heap& heap, const Value& left, const Value& right, b
   const auto b = right.kind();
   if (a == ValueKind::Null || b == ValueKind::Null)
     return unequal ? a != b : a == b;
+  if (isInt64Payload(left) || isInt64Payload(right))
+    throw std::invalid_argument("unsupported erased Int64 equality (haxe_ocaml-sp2zl)");
   const bool numericA = equalityNumeric(a);
   const bool numericB = equalityNumeric(b);
   if (numericA && numericB)

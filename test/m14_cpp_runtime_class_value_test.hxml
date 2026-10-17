@@ -3,3 +3,5 @@
 -cp test
 -main M14CppRuntimeClassValueTest
 --interp
+--next
+test/m14_cpp_int64_transport_test.hxml

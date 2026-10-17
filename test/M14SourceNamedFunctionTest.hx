@@ -33,6 +33,7 @@ class M14SourceNamedFunctionTest {
 			"ManagedCallable.hpp",
 			"ManagedEquality.hpp",
 			"ManagedHeap.hpp",
+			"ManagedInt64.hpp",
 			"ManagedMap.hpp",
 			"ManagedOutput.hpp",
 			"ManagedReflection.hpp",

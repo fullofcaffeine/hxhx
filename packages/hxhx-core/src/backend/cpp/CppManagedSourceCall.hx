@@ -68,6 +68,8 @@ function render(input:CppManagedSourceCallInput, indent:String):Array<String> {
 				return CppManagedStandardString.render(declaration, input, indent);
 			case StandardInt(declaration):
 				return CppManagedStandardInt.render(declaration, input, indent);
+			case Int64Box(declaration):
+				return CppManagedInt64Box.render(declaration, input, indent);
 			case Downcast(_):
 				throw "downcast must use its applied native operation";
 			case Reflection(_, _):
