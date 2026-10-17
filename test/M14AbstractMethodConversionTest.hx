@@ -71,8 +71,76 @@ class M14AbstractMethodConversionTest {
 			TyType.fromHintText("String")) != null)
 			throw "an executable method displaced an applicable header conversion";
 		headerInferencePriority();
+		dynamicOutputSelection();
 		runtime();
+		M14AbstractDynamicConversionTest.verify();
 		Sys.println("ABSTRACT_METHOD_CONVERSION_SELECTION:PASS order=6 header=1 inference=1 rollback=1 negatives=3");
+	}
+
+	/** Plain erasure must yield to an authored Dynamic conversion, without selecting unrelated output methods. */
+	static function dynamicOutputSelection():Void {
+		final dynamicMethod = '@:to public function erase():Dynamic { Sys.println("erase"); return "opaque"; }';
+		final stringMethod = '@:to public function text():String { Sys.println("text"); return "string"; }';
+		final cases:Array<{
+			name:String,
+			header:String,
+			methods:String,
+			output:String,
+			selected:Null<String>
+		}> = [
+			{
+				name: "dynamic",
+				header: "",
+				methods: dynamicMethod,
+				output: "erase\nopaque\n",
+				selected: "erase"
+			},
+			{
+				name: "stringOnly",
+				header: "",
+				methods: stringMethod,
+				output: "7\n",
+				selected: null
+			},
+			{
+				name: "stringFirst",
+				header: "",
+				methods: stringMethod + dynamicMethod,
+				output: "erase\nopaque\n",
+				selected: "erase"
+			},
+			{
+				name: "dynamicFirst",
+				header: "",
+				methods: dynamicMethod + stringMethod,
+				output: "erase\nopaque\n",
+				selected: "erase"
+			},
+			{
+				name: "dynamicHeader",
+				header: " to Dynamic",
+				methods: dynamicMethod,
+				output: "erase\nopaque\n",
+				selected: "erase"
+			}
+		];
+		function source(entry:{header:String, methods:String}):String {
+			return 'abstract Token(Int)'
+				+ entry.header
+				+ '{ public function new(value:Int) this=value; '
+				+ entry.methods
+				+ '} class Main { static function main() { var value:Dynamic = new Token(7); Sys.println(value); } }';
+		}
+		for (entry in cases)
+			upstream("output_" + entry.name, source(entry), entry.output);
+		for (entry in cases) {
+			final plan = TyAbstractMethodConversion.select(index(source(entry)), TyType.fromHintText("Dynamic"),
+				TyType.nominal(new TyNominalTypeId("Main.Token"), []));
+			final selected = plan == null ? null : plan.getDeclaration().getSignature().getName();
+			if (selected != entry.selected)
+				throw "Dynamic output conversion differs: " + entry.name;
+		}
+		Sys.println("ABSTRACT_DYNAMIC_OUTPUT_SELECTION:PASS");
 	}
 
 	/** The method selector must leave an unresolved higher-priority header choice to its owning inference path. */
@@ -173,6 +241,6 @@ class M14AbstractMethodConversionTest {
 		final code = process.exitCode();
 		process.close();
 		if (accepted ? code != 0 || output != expected : code != 1 || errors.length == 0)
-			throw "upstream conversion selection differs: " + output + errors;
+			throw "upstream conversion selection differs: " + name + ": " + output + errors;
 	}
 }

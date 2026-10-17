@@ -1124,12 +1124,13 @@ class TypedBodyBuilder {
 				final typedRight = buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, destination);
 				final typedLeft = buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				// A declared conversion is executable behavior, including effects.
-				// Keep the selected field type and materialize the conversion once.
-				final hasMemberContract = typedLeft.getFieldInfo() != null
+				// Keep the selected local or field type and materialize the conversion once.
+				final hasValueContract = (typedLeft.getTag() == LocalRead && typedLeft.getLocalBindings().length == 1)
+					|| typedLeft.getFieldInfo() != null
 					|| (typeResolver != null
 						&& environment != null
 						&& typeResolver.isDynamicMemberWrite(left, diagnosticPosition, environment));
-				final converted = !hasMemberContract
+				final converted = !hasValueContract
 					|| typeResolver == null
 					|| (environment != null && environment.isUntypedContext())
 					|| TyFieldAssignment.explicitlyUntyped(right) ? typedRight : typeResolver.convertValue(typedRight, typedLeft.getType());

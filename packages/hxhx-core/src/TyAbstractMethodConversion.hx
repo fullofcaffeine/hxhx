@@ -2,8 +2,10 @@ import haxe.ds.StringMap;
 
 /**
 	A selected abstract conversion is an executable method call.
-	Declared header conversions precede methods; source output methods precede
+	Typed header conversions precede methods; source output methods precede
 	destination input methods. Output calls retain the source as their receiver.
+	A Dynamic destination tries an authored output method before plain erasure,
+	including when the abstract explicitly declares `to Dynamic` in its header.
 	Selection follows declaration order, as upstream does. Each attempted method
 	gets an inference fork; rejected input, result, or bounds cannot change the
 	caller's variables. The retained plan contains only complete semantic types.
@@ -57,8 +59,9 @@ class TyAbstractMethodConversion {
 			return actual == null || actual.isNullLiteral() ? null : select(index, expected.unwrapNull(), actual);
 		if (!complete(expected) || !complete(actual) || expected.getSemanticKey() == actual.getSemanticKey())
 			return null;
-		// A declared header conversion precedes executable conversion methods.
-		if (TyImplicitConversionPlan.select(index, expected, actual) != null)
+		// Dynamic erasure has no computation and must not suppress an authored
+		// output method. Other header conversions retain their normal priority.
+		if (!expected.isDynamic() && TyImplicitConversionPlan.select(index, expected, actual) != null)
 			return null;
 		return constrain(index, new TyInferenceSolver("abstract-input-method"), TyInferenceSolver.fromType(actual), expected);
 	}
@@ -68,7 +71,7 @@ class TyAbstractMethodConversion {
 		if (!complete(expected))
 			return null;
 		final source = solver.preview(actual);
-		if (complete(source) && TyImplicitConversionPlan.select(index, expected, source) != null)
+		if (!expected.isDynamic() && complete(source) && TyImplicitConversionPlan.select(index, expected, source) != null)
 			return null;
 		final output = choose(index, solver, actual, expected, true);
 		return output == null ? choose(index, solver, actual, expected, false) : output;
@@ -85,7 +88,7 @@ class TyAbstractMethodConversion {
 		if (owner == null || owner.getTypeParameterIds().length != ownerType.getTypeArguments().length)
 			return null;
 		if (complete(sourceType)) {
-			if (TyImplicitConversionPlan.select(index, expected, sourceType) != null)
+			if (!expected.isDynamic() && TyImplicitConversionPlan.select(index, expected, sourceType) != null)
 				return null;
 		} else if (owner.getImplicitFromTypes().length > 0) {
 			// Header-result inference owns this unresolved choice. A method cannot

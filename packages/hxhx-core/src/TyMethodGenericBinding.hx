@@ -107,20 +107,20 @@ class TyMethodGenericBinding {
 	}
 
 	static function collect(expected:TyType, actual:TyType, methodTypeParameters:Array<TyTypeParameterId>, bindings:haxe.ds.StringMap<TyType>,
-			index:TyperIndex):Bool {
+			index:TyperIndex, selectedSignature:Bool = false):Bool {
 		if (expected == null || actual == null)
 			return true;
 		final scheme = actual.getClassValueScheme();
 		final context = expected.unwrapNull().getNominalIdentity();
 		if (scheme != null && context != null && context.getCanonicalName() == "Class")
-			return collect(expected, scheme.preview(), methodTypeParameters, bindings, index);
+			return collect(expected, scheme.preview(), methodTypeParameters, bindings, index, selectedSignature);
 		// Null carries no concrete type evidence, even for a bare T parameter.
 		// Candidate legality is checked separately by overload selection.
 		if (actual.isNullLiteral())
 			return true;
 		final parameter = parameterIdentity(expected, methodTypeParameters);
 		if (parameter != null) {
-			if (actual.isUnknown() || actual.isDynamic())
+			if (actual.isUnknown() || (actual.isDynamic() && !selectedSignature))
 				return true;
 			final parameterKey = parameter.getCanonicalKey();
 			final previous = bindings.get(parameterKey);
@@ -128,6 +128,8 @@ class TyMethodGenericBinding {
 				bindings.set(parameterKey, actual);
 				return true;
 			}
+			if (selectedSignature)
+				return previous.getSemanticKey() == actual.getSemanticKey();
 			final unified = TyType.unify(previous, actual);
 			if (unified == null)
 				return false;
@@ -135,7 +137,7 @@ class TyMethodGenericBinding {
 			return true;
 		}
 		if (expected.isNullable() || actual.isNullable())
-			return collect(expected.unwrapNull(), actual.unwrapNull(), methodTypeParameters, bindings, index);
+			return collect(expected.unwrapNull(), actual.unwrapNull(), methodTypeParameters, bindings, index, selectedSignature);
 		if (expected.isFunction() || actual.isFunction()) {
 			if (!expected.isFunction() || !actual.isFunction())
 				return true;
@@ -144,13 +146,13 @@ class TyMethodGenericBinding {
 			if (expectedArguments.length != actualArguments.length)
 				return true;
 			for (argumentIndex in 0...expectedArguments.length)
-				if (!collect(expectedArguments[argumentIndex], actualArguments[argumentIndex], methodTypeParameters, bindings, index))
+				if (!collect(expectedArguments[argumentIndex], actualArguments[argumentIndex], methodTypeParameters, bindings, index, selectedSignature))
 					return false;
 			final expectedReturn = expected.getFunctionReturn();
 			final actualReturn = actual.getFunctionReturn();
 			return expectedReturn == null
 				|| actualReturn == null
-				|| collect(expectedReturn, actualReturn, methodTypeParameters, bindings, index);
+				|| collect(expectedReturn, actualReturn, methodTypeParameters, bindings, index, selectedSignature);
 		}
 		final expectedArguments = expected.getTypeArguments();
 		// Inherited arguments are evidence from the declared edge, not a change
@@ -162,7 +164,7 @@ class TyMethodGenericBinding {
 		if (!sameTypeConstructor(expected, selected) || expectedArguments.length != actualArguments.length)
 			return true;
 		for (argumentIndex in 0...expectedArguments.length)
-			if (!collect(expectedArguments[argumentIndex], actualArguments[argumentIndex], methodTypeParameters, bindings, index))
+			if (!collect(expectedArguments[argumentIndex], actualArguments[argumentIndex], methodTypeParameters, bindings, index, selectedSignature))
 				return false;
 		return true;
 	}
@@ -190,7 +192,11 @@ class TyMethodGenericBinding {
 		return bindings(sig, argTypes, suppliedArity, methodTypeParameters, index) != null;
 	}
 
-	/** Recover method binders from an already-selected call signature, without choosing another overload or argument order. */
+	/**
+		Recover binders from an already-selected signature without repeating inference.
+		An explicitly selected Dynamic is a complete type here. Repeated occurrences
+		must agree exactly; raw Dynamic arguments remain non-evidence during inference.
+	 */
 	@:allow(TypedRequiredInlineLowering)
 	static function inlineBindings(declaration:TyDeclarationInfo, selectedParameters:Array<TyType>, result:TyType, index:TyperIndex):haxe.ds.StringMap<TyType> {
 		final parameters = declaration.getTypeParameterIds();
@@ -200,9 +206,9 @@ class TyMethodGenericBinding {
 		if (declared.length != selectedParameters.length)
 			throw "inline specialization requires an exact selected parameter list";
 		for (slot in 0...declared.length)
-			if (!collect(declared[slot], selectedParameters[slot], parameters, bound, index))
+			if (!collect(declared[slot], selectedParameters[slot], parameters, bound, index, true))
 				throw "inline specialization has conflicting parameter evidence";
-		if (!collect(signature.getReturnType(), result, parameters, bound, index))
+		if (!collect(signature.getReturnType(), result, parameters, bound, index, true))
 			throw "inline specialization has conflicting result evidence";
 		for (parameter in parameters)
 			if (!bound.exists(parameter.getCanonicalKey()))

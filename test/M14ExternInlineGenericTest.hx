@@ -1,6 +1,7 @@
 /** A generic inline body must instantiate its own binders and the call facts inside that body together. */
 class M14ExternInlineGenericTest {
 	public static function run():Void {
+		assertSelectedDynamic();
 		final source = '@:native("console") extern class Console {public static function log(value:String):Void;}
 enum Flag { On; Off; }
 extern class Helper {
@@ -15,8 +16,9 @@ public static function first<T>(value:T):T{return value;}
 class Main {static function main():Void {Console.log(""+Helper.relay(7));Console.log(Helper.relay("kept"));
 Console.log(""+Helper.invoke(3,function(value:Int):Int{return value+2;}));
 Console.log(Helper.unchecked("unchecked"));
-Console.log(Helper.choose(Flag.On,"chosen","wrong"));Console.log(Helper.choose(Flag.Off,"wrong","fallback"));}}';
-		final expected = "7\nkept\n5\nunchecked\nchosen\nfallback\n";
+Console.log(Helper.choose(Flag.On,"chosen","wrong"));Console.log(Helper.choose(Flag.Off,"wrong","fallback"));
+var opaque:Dynamic="opaque";var result:Dynamic=Helper.relay(opaque);Console.log(result);}}';
+		final expected = "7\nkept\n5\nunchecked\nchosen\nfallback\nopaque\n";
 		final root = ".tmp/extern-inline-generic";
 		sys.FileSystem.createDirectory(root);
 		final path = root + "/Main.hx";
@@ -35,6 +37,33 @@ Console.log(Helper.choose(Flag.On,"chosen","wrong"));Console.log(Helper.choose(F
 		assertCallProofs(typed);
 		JsRuntimeFixture.assertRuntime(typed, "Main", expected);
 		Sys.println("EXTERN_INLINE_GENERIC:PASS");
+	}
+
+	/** Selection can settle a binder as Dynamic even though raw Dynamic input cannot infer that binder. */
+	static function assertSelectedDynamic():Void {
+		final parsed = ParserStage.parse("class Main { static function identity<T>(value:T):T return value; }", "Main.hx");
+		final index = TyperIndex.build([new ResolvedModule("Main", "Main.hx", parsed)]);
+		final owner = index.getByFullName("Main");
+		final signature = owner.staticMethod("identity");
+		final declaration = owner.declarationForSignature(signature);
+		final dynamicType = TyType.fromHintText("Dynamic");
+		final key = declaration.getTypeParameterIds()[0].getCanonicalKey();
+		final inferred = @:privateAccess TyMethodGenericBinding.bindings(signature, [dynamicType], 1, declaration.getTypeParameterIds(), index);
+		if (inferred == null || inferred.exists(key))
+			throw "raw Dynamic input supplied generic inference evidence";
+		final selected = @:privateAccess TyMethodGenericBinding.inlineBindings(declaration, [dynamicType], dynamicType, index);
+		if (!selected.exists(key) || !selected.get(key).isDynamic())
+			throw "selected Dynamic signature lost its generic binder";
+		var rejected = false;
+		try {
+			@:privateAccess TyMethodGenericBinding.inlineBindings(declaration, [dynamicType], TyType.fromHintText("Int"), index);
+		} catch (message:String) {
+			if (message != "inline specialization has conflicting result evidence")
+				throw message;
+			rejected = true;
+		}
+		if (!rejected)
+			throw "conflicting selected Dynamic and Int evidence was accepted";
 	}
 
 	/** Specialization preserves strict rejection of a later rewrite that changes an operand or its result type. */
@@ -61,7 +90,7 @@ Console.log(Helper.choose(Flag.On,"chosen","wrong"));Console.log(Helper.choose(F
 				for (fn in owner.getFunctions())
 					for (value in fn.getBody().getStatements())
 						statement(value);
-		if (calls.length != 2 || calls[0].getNamedArguments() == null || calls[1].getNamedArguments() == null)
+		if (calls.length != 3 || Lambda.exists(calls, call -> call.getNamedArguments() == null))
 			throw "generic inline expansion lost its selected nested calls";
 		if (uncheckedCasts != 1)
 			throw "generic inline expansion changed an unchecked cast into a checked cast";
