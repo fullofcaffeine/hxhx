@@ -59,7 +59,7 @@ class M14CppInt64MulIntIntegrationTest {
 		for (module in program.getTypedModules()) {
 			final name = module.getSourceOrigin().sourceModulePath;
 			if (name == "haxe.Int64")
-				provider = FileSystem.exists(module.getParsed().getFilePath());
+				provider = new CompilerSourceProvider().isFile(module.getParsed().getFilePath());
 			if (name == "Main" || name == "Contract")
 				for (owner in module.getTypedClasses())
 					for (fn in owner.getFunctions())

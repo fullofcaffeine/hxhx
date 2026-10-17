@@ -59,14 +59,13 @@ class M14CppMapRuntimeTypeInventoryTest {
 			"runtime-nominal:Math",
 			"runtime-nominal:cpp.ConstPointer",
 			"runtime-nominal:haxe.Exception",
-			"runtime-nominal:haxe.Int64.___Int64",
 			"runtime-nominal:haxe.ds.EnumValueMap",
 			"runtime-nominal:haxe.ds.IntMap",
 			"runtime-nominal:haxe.ds.ObjectMap",
 			"runtime-nominal:haxe.ds.StringMap"
 		];
-		// The real closure includes Math.__init__. Int64's __Int64 typedef must
-		// resolve to its concrete ___Int64 class rather than become a descriptor.
+		// The real closure includes Math.__init__. The bundled Int64 provider uses
+		// a checked native storage tag, so its helper needs no class-value descriptor.
 		// NativeString and exception helpers also retain their class operands.
 		assertProviderClassOperands(projection);
 		final actual = [for (descriptor in descriptors) descriptor.getTarget().getSemanticKey()];
@@ -95,11 +94,11 @@ class M14CppMapRuntimeTypeInventoryTest {
 					throw "repeated Array operands must share one descriptor";
 			}
 		}
-		if (tests != 4 || values != 7 || arrays != 2)
+		if (tests != 4 || values != 6 || arrays != 2)
 			throw "runtime plan confused Map instance tests with provider class values";
 		descriptors.pop();
 		operations.pop();
-		if (plan.getDescriptors().length != 9 || plan.getOperations().length != 11)
+		if (plan.getDescriptors().length != 8 || plan.getOperations().length != 10)
 			throw "runtime plan exposed its mutable inventory";
 		final marker = plan.getOperations()[0].occurrence.getExpression();
 		switch marker {
