@@ -139,8 +139,11 @@ class ModuleLoader extends LazyTypeLoader {
 		Discover headers breadth first in declaration order. This preserves request
 		preparation order while ordinary class cycles see only header identities.
 		Publish signatures after every reachable declaration header is available.
+
+		Body typing also calls this for lookup candidates that supplied no selected
+		declaration. Their headers can be queued without any completed signatures.
 	**/
-	function prepareSignatureDependencies(module:ResolvedModule):Void {
+	public function prepareSignatureDependencies(module:ResolvedModule):Void {
 		if (index == null)
 			return;
 		final modulePath = ResolvedModule.getModulePath(module);

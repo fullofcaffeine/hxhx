@@ -813,8 +813,12 @@ class TyperStage {
 		Why
 		- Stage 3.3 needs cross-module knowledge (imports, class fields, statics)
 		  to type `Util.ping()` and `this.x` in upstream-shaped code.
+		- Lookup can queue a candidate after reading only its declarations. Complete
+		  its signatures before retaining the exact semantic owner of each class.
 	**/
 	public static function typeResolvedModule(m:ResolvedModule, index:TyperIndex, ?loader:ModuleLoader, deferProgramLowering:Bool = false):TypedModule {
+		if (loader != null)
+			loader.prepareSignatureDependencies(m);
 		final pm = ResolvedModule.getParsed(m);
 		final decl = pm.getDecl();
 		final pkg = HxModuleDecl.getPackagePath(decl);

@@ -29,6 +29,7 @@ class M14SignatureDependencyLoadingIntegrationTest {
 			{name: "Envelope", source: 'class Envelope<T> { public var value:T; }'},
 			{name: "Left", source: 'class Left { public var right:Right; }'},
 			{name: "Right", source: 'class Right { public var left:Left; }'},
+			{name: "LookupOnly", source: 'class LookupOnly {} interface Unselected<T> {}'},
 			{name: "T", source: 'This file must not load for a local type parameter.'}
 		];
 		for (entry in sources)
@@ -55,7 +56,8 @@ class M14SignatureDependencyLoadingIntegrationTest {
 			check(rootProvider.staticMethod("defaulted").getArgs()[0].getSemanticKey() == "nominal:DefaultTarget",
 				"default type argument was hidden by a same-name alias parameter during dependency discovery");
 			final rootSelected = rootProvider.declarationForSignature(rootMethod);
-			final provider = loader.ensureTypeAvailable("Api", "", []);
+			final lookup = ParserStage.parse("import LookupOnly; class Inspection {}", "Inspection.hx");
+			final provider = loader.ensureTypeAvailable("Api", "", HxModuleDecl.getDirectives(lookup.getDecl()));
 			check(provider != null, "Api did not load");
 			final method = provider.staticMethod("accept");
 			check(method != null
@@ -86,8 +88,21 @@ class M14SignatureDependencyLoadingIntegrationTest {
 			final added = loader.drainNewModules();
 			check([for (module in added) if (ResolvedModule.getModulePath(module) == "Box") module].length == 1, "signature dependency must load once");
 			check([for (name in prepared) if (name == "Box") name].length == 1, "signature dependency must be prepared once");
-			for (module in resolved.concat(added))
-				TyperStage.typeResolvedModule(module, index, loader);
+			// Name lookup also inspects imports that do not supply the selected type.
+			// Their classes still need complete signatures when body typing starts.
+			final pending = resolved.concat(added);
+			var cursor = 0;
+			while (cursor < pending.length) {
+				final module = pending[cursor++];
+				final typed = TyperStage.typeResolvedModule(module, index, loader);
+				for (owner in typed.getTypedClasses())
+					check(owner.getSemanticInfo() != null
+						&& owner.getSemanticInfo() == index.getForSourceClass(owner.getSourceDeclaration()),
+						"typed lookup candidate lost its exact semantic owner: " + ResolvedModule.getModulePath(module));
+				for (loaded in loader.drainNewModules())
+					pending.push(loaded);
+			}
+			check(index.getByFullName("LookupOnly.Unselected") != null, "lookup-only interface did not receive semantic facts");
 			check(index.getByFullName("Api").declarationForSignature(method) == selected, "typing replaced a prepared declaration");
 			check(index.getByFullName("Main") == rootProvider && rootProvider.declarationForSignature(rootMethod) == rootSelected,
 				"typing replaced a root signature after publication");
