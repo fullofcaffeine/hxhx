@@ -185,6 +185,7 @@ class CppManagedProgramPlan {
 			final output = new Array<TyDeclarationInfo>();
 			final runtimePredicates = new Array<TyDeclarationInfo>();
 			final standardStrings = new Array<TyDeclarationInfo>();
+			final standardInts = new Array<TyDeclarationInfo>();
 			final downcasts = new Array<TyDeclarationInfo>();
 			final nativeStacks = new Array<TyDeclarationInfo>();
 			final reflections = new Array<TyDeclarationInfo>();
@@ -223,6 +224,13 @@ class CppManagedProgramPlan {
 						CppManagedStandardString.requireDeclaration(declaration);
 						standardStrings.push(declaration);
 						classes.strings.enable();
+						continue;
+					}
+					if (CppManagedStandardInt.owns(declaration)
+						&& selected.owner.requireSemanticFacts().getIsExtern()
+						&& !declaration.getHasBody()) {
+						CppManagedStandardInt.requireDeclaration(declaration);
+						standardInts.push(declaration);
 						continue;
 					}
 					if (CppManagedDowncast.owns(declaration)
@@ -344,6 +352,7 @@ class CppManagedProgramPlan {
 				output: output,
 				runtimePredicates: runtimePredicates,
 				standardStrings: standardStrings,
+				standardInts: standardInts,
 				downcasts: downcasts,
 				nativeStacks: nativeStacks,
 				reflections: reflections,

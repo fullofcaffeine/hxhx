@@ -8,6 +8,6 @@ Run `haxe test/m14_abstract_method_conversion_test.hxml` from the repository roo
 The native observer loads complete real providers, builds a C++ executable and
 compares its output with upstream Haxe and `expected.stdout`.
 
-Integer recovery through `Std.int` is a separate native binding gap. The unchanged
-round-trip fixture is retained in `../abstract_dynamic_conversion`; its README
-provides the reproduction command. This fixture proves output conversion only.
+The companion `../abstract_dynamic_conversion` also checks integer recovery
+through `Std.int`. Its original source and expectation remain intact, and its
+README provides the standalone command. This fixture checks output conversion only.

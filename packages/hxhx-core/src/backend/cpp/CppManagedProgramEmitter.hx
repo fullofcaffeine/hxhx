@@ -36,6 +36,7 @@ class CppManagedProgramEmitter {
 		output:Array<TyDeclarationInfo>,
 		?runtimePredicates:Array<TyDeclarationInfo>,
 		?standardStrings:Array<TyDeclarationInfo>,
+		?standardInts:Array<TyDeclarationInfo>,
 		?downcasts:Array<TyDeclarationInfo>,
 		?nativeStacks:Array<TyDeclarationInfo>,
 		?reflections:Array<TyDeclarationInfo>,
@@ -124,6 +125,14 @@ class CppManagedProgramEmitter {
 		if (program.standardStrings != null)
 			for (declaration in program.standardStrings) {
 				final target:CppManagedStaticTarget = StandardString(declaration);
+				final identity = CppManagedStaticTarget.identity(target);
+				if (targets.exists(identity))
+					throw "managed program repeats a declaration identity";
+				targets.set(identity, target);
+			}
+		if (program.standardInts != null)
+			for (declaration in program.standardInts) {
+				final target:CppManagedStaticTarget = StandardInt(declaration);
 				final identity = CppManagedStaticTarget.identity(target);
 				if (targets.exists(identity))
 					throw "managed program repeats a declaration identity";

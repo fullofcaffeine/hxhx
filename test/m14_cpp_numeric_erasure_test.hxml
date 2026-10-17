@@ -12,3 +12,5 @@ test/m14_cpp_parameter_write_test.hxml
 
 --next
 test/m14_cpp_integer_remainder_test.hxml
+--next
+test/m14_cpp_standard_int_test.hxml

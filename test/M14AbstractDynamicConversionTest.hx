@@ -12,6 +12,7 @@ class M14AbstractDynamicConversionTest {
 		JsRuntimeFixture.assertProgramRuntime(javascript, "Main", expected);
 		Sys.println("ABSTRACT_DYNAMIC_CONVERSION_JS:PASS");
 		verifyNative("test/fixtures/abstract_dynamic_output_native");
+		verifyNative(root);
 	}
 
 	/** Run any retained conversion fixture through complete providers and a real native executable. */
@@ -35,7 +36,7 @@ class M14AbstractDynamicConversionTest {
 		Sys.println("ABSTRACT_DYNAMIC_CONVERSION_CPP:PASS fixture=" + root);
 	}
 
-	/** Keep the separate integer-recovery gap reproducible without changing its source or expectation. */
+	/** Run a selected conversion contract without changing its authored source or expected output. */
 	static function main():Void {
 		final roots = Sys.args();
 		if (roots.length != 1)

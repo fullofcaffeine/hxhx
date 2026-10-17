@@ -6,6 +6,7 @@ enum CppManagedStaticTarget {
 	Output(declaration:TyDeclarationInfo);
 	RuntimePredicate(declaration:TyDeclarationInfo);
 	StandardString(declaration:TyDeclarationInfo);
+	StandardInt(declaration:TyDeclarationInfo);
 	Downcast(declaration:TyDeclarationInfo);
 	Reflection(declaration:TyDeclarationInfo, plan:CppManagedReflection);
 	NativeStack(declaration:TyDeclarationInfo, storage:CppManagedStaticStorage);
@@ -37,6 +38,10 @@ function abi(target:CppManagedStaticTarget):CppManagedClosureAbi {
 			CppManagedStandardString.requireDeclaration(declaration);
 			final signature = declaration.getSignature();
 			new CppManagedClosureAbi(TyType.functionType(signature.getArgs(), signature.getReturnType()), false);
+		case StandardInt(declaration):
+			CppManagedStandardInt.requireDeclaration(declaration);
+			final signature = declaration.getSignature();
+			new CppManagedClosureAbi(TyType.functionType(signature.getArgs(), signature.getReturnType()), false);
 		case NativeStack(declaration, storage):
 			CppManagedNativeStack.requireDeclaration(declaration);
 			storage.stackAccess("hxhx_heap");
@@ -62,8 +67,8 @@ function identity(target:CppManagedStaticTarget):String {
 	validate(target);
 	return switch target {
 		case Source(projection, _): projection.getStableIdentity();
-		case Output(declaration) | RuntimePredicate(declaration) | StandardString(declaration) | Downcast(declaration) | Reflection(declaration, _) |
-			NativeStack(declaration, _): declaration.getIdentity().getCanonicalKey();
+		case Output(declaration) | RuntimePredicate(declaration) | StandardString(declaration) | StandardInt(declaration) | Downcast(declaration) |
+			Reflection(declaration, _) | NativeStack(declaration, _): declaration.getIdentity().getCanonicalKey();
 	};
 }
 
@@ -74,6 +79,7 @@ function sourceSymbol(target:CppManagedStaticTarget):String {
 		case Output(_): throw "managed output has no authored entry symbol";
 		case RuntimePredicate(_): throw "managed runtime predicate has no authored entry symbol";
 		case StandardString(_): throw "managed standard string has no authored entry symbol";
+		case StandardInt(_): throw "managed standard integer has no authored entry symbol";
 		case Downcast(_): throw "managed downcast has no authored entry symbol";
 		case Reflection(_, _): throw "managed reflection has no authored entry symbol";
 		case NativeStack(_, _): throw "managed stack capture has no authored entry symbol";
