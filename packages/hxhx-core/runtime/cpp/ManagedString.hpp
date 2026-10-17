@@ -40,6 +40,24 @@ inline StringScalar stringScalar(const std::string& text, std::size_t offset) {
   return {count, value};
 }
 
+// Count UTF-16 units without allocating a converted string. Native String.length
+// reads null as zero. Embedded zeroes remain characters, and a supplementary
+// scalar contributes two units. Check the result before narrowing to Haxe Int.
+inline Value stringLength(const Value& receiver) {
+  if (receiver.kind() == ValueKind::Null) return Value::integer(0);
+  const auto& text = receiver.asString();
+  std::int32_t length = 0;
+  for (std::size_t byte = 0; byte < text.size();) {
+    const auto scalar = stringScalar(text, byte);
+    const std::int32_t width = scalar.value > 0xffff ? 2 : 1;
+    if (length > std::numeric_limits<std::int32_t>::max() - width)
+      throw std::length_error("string length exceeds Haxe Int capacity");
+    length += width;
+    byte += scalar.bytes;
+  }
+  return Value::integer(length);
+}
+
 // Native Haxe 4.3.7 counts UTF-16 units, despite our UTF-8 storage. A slice that
 // cuts a surrogate pair contains U+FFFD for that half, as independently observed
 // before byte conversion. Full scalars retain their exact bytes. The bounds use

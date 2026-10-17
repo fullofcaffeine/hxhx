@@ -505,7 +505,8 @@ class CppManagedRootedExpression {
 		final field = field(value);
 		if (field != null)
 			return field.getField().getIsStatic()
-				|| CppManagedArrayLength.selects(field) ? field.getType() : CppManagedInstanceField.transportType(instanceMember(field));
+				|| CppManagedArrayLength.selects(field)
+				|| CppManagedStringLength.selects(field) ? field.getType() : CppManagedInstanceField.transportType(instanceMember(field));
 		return switch value {
 			case EParenthesized(inner, _) | EUntyped(inner):
 				requireExpression(value);
@@ -643,6 +644,13 @@ class CppManagedRootedExpression {
 			return CppManagedInlineField.render(input, field, destination, indent);
 		if (field != null && CppManagedArrayLength.selects(field))
 			return CppManagedArrayLength.read({
+				occurrence: field,
+				heap: input.heap,
+				destination: destination,
+				renderReceiver: renderInstanceReceiver
+			}, indent);
+		if (field != null && CppManagedStringLength.selects(field))
+			return CppManagedStringLength.read({
 				occurrence: field,
 				heap: input.heap,
 				destination: destination,
@@ -1230,6 +1238,8 @@ class CppManagedRootedExpression {
 						input.classes.assertInitializer(projection);
 						if (CppManagedArrayLength.selects(occurrence))
 							CppManagedArrayLength.require(occurrence);
+						if (CppManagedStringLength.selects(occurrence))
+							CppManagedStringLength.require(occurrence);
 					}
 					occurrence;
 				}

@@ -261,6 +261,7 @@
     "test:m14:python-entry-members": "compiler-focused-2",
     "test:m14:cpp-static-callable": "compiler-focused-3",
     "test:m14:cpp-constructor-applications": "compiler-focused-3",
-    "test:m14:cpp-inherited-storage": "compiler-focused-4"
+    "test:m14:cpp-inherited-storage": "compiler-focused-4",
+    "test:m14:cpp-string-length": "compiler-focused-4"
   }
 }

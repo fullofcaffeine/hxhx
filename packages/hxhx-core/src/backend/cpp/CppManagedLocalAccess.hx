@@ -184,6 +184,8 @@ class CppManagedLocalAccess {
 			assertClassStorage(classes);
 			if (CppManagedArrayLength.selects(field))
 				CppManagedArrayLength.require(field);
+			if (CppManagedStringLength.selects(field))
+				CppManagedStringLength.require(field);
 		}
 		return field;
 	}
