@@ -225,16 +225,12 @@ class ModuleLoader extends LazyTypeLoader {
 
 	/** Discover source headers without recursively publishing another module's signatures. */
 	function declarationHeadersAvailable(path:String, context:TyTypeResolutionContext):Null<TyTypeDeclaration> {
-		var hit = index.resolveTypeDeclaration(path, context);
+		var hit = index.resolveTypeDeclaration(path, context, module -> {
+			loadModuleHeadersByPath(module);
+		});
 		if (hit != null)
 			return hit;
 		final candidates = candidateModulePaths(path, context.packagePath, context.directives);
-		for (candidate in candidates) {
-			loadModuleHeadersByPath(candidate);
-			hit = index.resolveTypeDeclaration(path, context);
-			if (hit != null)
-				return hit;
-		}
 		if (onMissingType != null)
 			for (candidate in candidates) {
 				if (typeNotFoundTried.exists(candidate))

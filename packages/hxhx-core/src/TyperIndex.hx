@@ -65,9 +65,9 @@ class TyperIndex {
 	public function resolveTypeUse(type:TyType, context:TyTypeResolutionContext):TyResolvedTypeUse
 		return typeUseResolver.resolve(type, context);
 
-	/** Declaration lookup does not promise that a nominal signature is ready. */
-	public function resolveTypeDeclaration(path:String, context:TyTypeResolutionContext):Null<TyTypeDeclaration>
-		return typeDeclarations.resolve(path, context);
+	/** Optional header discovery follows the catalog's scope order without promising ready signatures. */
+	public function resolveTypeDeclaration(path:String, context:TyTypeResolutionContext, ?loadHeaders:String->Void):Null<TyTypeDeclaration>
+		return typeDeclarations.resolve(path, context, loadHeaders);
 
 	/**
 		Find a static-member provider without constructing a value type.

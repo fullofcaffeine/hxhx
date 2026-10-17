@@ -4,7 +4,7 @@ import TyTypeDeclaration.TyTypeResolutionContext;
 /**
 	Look up source declarations before deciding whether they denote classes.
 
-	Local declarations precede imports, enclosing packages, and StdTypes. The
+	Local declarations and imports precede StdTypes and enclosing packages. The
 	catalog never searches unrelated modules for a globally unique short name.
 	Static-member consumers must separately require a nominal provider.
  */
@@ -41,11 +41,21 @@ class TyTypeDeclarationCatalog {
 		return null;
 	}
 
-	public function resolve(path:String, context:TyTypeResolutionContext):Null<TyTypeDeclaration> {
+	/**
+		The optional loader discovers headers at each scope before selecting a lower
+		priority declaration. It must not publish signatures or type method bodies.
+		Already loaded declarations therefore cannot change source lookup order.
+	 */
+	public function resolve(path:String, context:TyTypeResolutionContext, ?loadHeaders:String->Void):Null<TyTypeDeclaration> {
+		function load(module:String):Void {
+			if (loadHeaders != null)
+				loadHeaders(module);
+		}
 		final raw = StringTools.trim(path);
 		if (raw.length == 0)
 			return null;
 		if (raw.indexOf(".") >= 0) {
+			load(raw);
 			final exact = get(raw);
 			if (visible(exact, context.modulePath))
 				return exact;
@@ -58,6 +68,7 @@ class TyTypeDeclarationCatalog {
 			final importedPath = HxModuleDirective.getPath(directive);
 			switch (HxModuleDirective.getKind(directive)) {
 				case ImportNormal | ImportAlias(_):
+					load(importedPath);
 					if (HxModuleDirective.getImportedLocalName(directive) == raw) {
 						final selected = get(importedPath);
 						if (visible(selected, context.modulePath))
@@ -70,7 +81,9 @@ class TyTypeDeclarationCatalog {
 					}
 				case ImportAll:
 					// A type wildcard exposes static members, not sibling types.
+					load(importedPath);
 					if (get(importedPath) == null) {
+						load(importedPath + "." + raw);
 						final selected = get(importedPath + "." + raw);
 						if (visible(selected, context.modulePath))
 							return selected;
@@ -78,17 +91,25 @@ class TyTypeDeclarationCatalog {
 				case Using:
 			}
 		}
+		if (raw.indexOf(".") < 0) {
+			load("StdTypes");
+			final standard = moduleMember("StdTypes", raw, context.modulePath);
+			if (standard != null)
+				return standard;
+		}
 		var enclosingPackage = context.packagePath;
 		while (enclosingPackage.length > 0) {
+			load(enclosingPackage + "." + raw);
 			final selected = get(enclosingPackage + "." + raw);
 			if (visible(selected, context.modulePath))
 				return selected;
 			final dot = enclosingPackage.lastIndexOf(".");
 			enclosingPackage = dot < 0 ? "" : enclosingPackage.substr(0, dot);
 		}
+		load(raw);
 		final root = get(raw);
 		if (visible(root, context.modulePath))
 			return root;
-		return moduleMember("StdTypes", raw, context.modulePath);
+		return null;
 	}
 }
