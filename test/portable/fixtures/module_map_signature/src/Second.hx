@@ -4,6 +4,12 @@ import haxe.ds.ObjectMap;
 
 /** Its call back to First requires explicit types for both module exports. */
 class Second {
+	/** Observe producer evaluation while preserving the existing map and module cycle. */
+	public static function counted(value:StringMap<String>, effects:Array<Int>):StringMap<String> {
+		effects[0]++;
+		return First.identity(value);
+	}
+
 	public static function roundtrip(value:StringMap<String>):StringMap<String> {
 		return First.identity(value);
 	}

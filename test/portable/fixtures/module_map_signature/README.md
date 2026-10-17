@@ -12,6 +12,11 @@ array check mutates a stored array. Nullable Map abstracts, including a source
 typedef, keep their existing boxed storage at argument and result boundaries.
 Compile-time checks reject unsupported elements and unchecked private type names.
 
+A function can also return either null or a concrete map from another module.
+Both early and final returns preserve the original map, and the producer runs
+exactly once when selected. The conversion keeps the nullable result storage
+without copying the map or changing already-nullable values.
+
 Calling methods directly on a nullable nested-map lookup remains separate work
 under `haxe_ocaml-ud970`. This signature fixture does not claim that conversion
 path works. Mixed nullable/non-null map equality is covered separately by

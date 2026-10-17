@@ -6,6 +6,7 @@ import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlDeclarationSignature.projectDeclarationSignature;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
+import reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierContract;
 
 /** Checks exact map exports and keeps unsupported element types outside that contract. */
 @:access(reflaxe.ocaml.OcamlCompiler)
@@ -15,6 +16,23 @@ class CheckSignatures {
 			final representations = new OcamlRepresentationRegistry();
 			final context = new CompilationContext();
 			final voidType = Context.getType("Void");
+			for (source in [
+				"haxe.ds.StringMap<String>",
+				"haxe.ds.IntMap<String>",
+				"haxe.ds.ObjectMap<Key, String>",
+				"Map<String, String>"
+			]) {
+				final present = sourceType(source);
+				final nullable = sourceType("Null<" + source + ">");
+				if (!OcamlStandardMapCarrierContract.nullableResultNeedsBox(nullable, present)
+					|| OcamlStandardMapCarrierContract.nullableResultNeedsBox(nullable, nullable)
+					|| OcamlStandardMapCarrierContract.nullableResultNeedsBox(present, present))
+					throw "map result conversion lost the nullable boundary: " + source;
+			}
+			for (source in ["haxe.ds.IntMap<String>", "haxe.ds.StringMap<Int>", "haxe.ds.List<String>"]) {
+				if (OcamlStandardMapCarrierContract.nullableResultNeedsBox(sourceType("Null<haxe.ds.StringMap<String>>"), sourceType(source)))
+					throw "unrelated map result received a nullable conversion: " + source;
+			}
 			for (source in [
 				"haxe.ds.StringMap<Dynamic>",
 				"haxe.ds.IntMap<Array<Dynamic>>",

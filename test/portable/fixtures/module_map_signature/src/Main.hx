@@ -43,5 +43,18 @@ class Main {
 		Sys.println(First.nullable(null) == null);
 		final maybe:Null<Map<Int, String>> = replacement;
 		Sys.println(First.nullable(maybe) == maybe);
+
+		final effects = [0];
+		Sys.println(First.nullableFromCall(original, false, effects) == null);
+		Sys.println(effects[0]);
+		final nullableResult = First.nullableFromCall(original, true, effects);
+		Sys.println(nullableResult == original);
+		nullableResult.set("key", "nullable");
+		Sys.println(original.get("key"));
+		Sys.println(effects[0]);
+		Sys.println(First.nullableEarly(original, false, effects) == null);
+		Sys.println(effects[0]);
+		Sys.println(First.nullableEarly(original, true, effects) == original);
+		Sys.println(effects[0]);
 	}
 }

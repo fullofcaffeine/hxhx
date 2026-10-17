@@ -9189,8 +9189,8 @@ class OcamlBuilder {
 			function's sealed interface plan records that conversion, so it is applied
 			here before the surrounding callable boundary validates the result carrier.
 			Other fully admitted callables still apply their general result conversion
-			around the complete body later. The fallback below retains the older exact
-			nullable-primitive handling for functions outside that call matrix.
+			around the complete body later. Functions outside that call matrix retain
+			their nullable-primitive handling and convert exact maps to declared nullable storage.
 		**/
 	function buildDirectFunctionResult(value:TypedExpr):OcamlExpr {
 		final returns = currentCallableBoundary == null ? null : currentCallableBoundary.callbackReturns;
@@ -9225,6 +9225,14 @@ class OcamlBuilder {
 			return coerceForAssignment(returnType, value);
 		if (currentCallableBoundary != null)
 			return buildExpr(value);
+		// Concrete map exports retain HxMap storage even when the receiving function
+		// declares Null<Map>. Preserve that same reference in its Obj.t result slot.
+		if (reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierContract.nullableResultNeedsBox(returnType, value.t)
+			&& switch (typeExprFromHaxeType(returnType)) {
+				case TIdent("Obj.t"): true;
+				case _: false;
+			})
+			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(value)]);
 		final valueNullableKind = nullablePrimitiveKind(value.t);
 		if (valueNullableKind == "int" && isIntType(returnType)) {
 			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [buildExpr(value)]);

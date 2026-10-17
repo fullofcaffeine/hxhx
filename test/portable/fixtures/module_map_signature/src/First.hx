@@ -48,4 +48,18 @@ class First {
 	public static function nullable(value:Null<NullableMapValue>):Null<NullableMapValue> {
 		return value;
 	}
+
+	/** A concrete call result enters nullable storage once, after any early null return. */
+	public static function nullableFromCall(value:StringMap<String>, present:Bool, effects:Array<Int>):Null<StringMap<String>> {
+		if (!present)
+			return null;
+		return Second.counted(value, effects);
+	}
+
+	/** An early concrete result must agree with the final null result's storage. */
+	public static function nullableEarly(value:StringMap<String>, present:Bool, effects:Array<Int>):Null<StringMap<String>> {
+		if (present)
+			return Second.counted(value, effects);
+		return null;
+	}
 }

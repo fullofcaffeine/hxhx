@@ -108,6 +108,39 @@ class OcamlStandardMapCarrierContract {
 	}
 
 	/**
+		A direct map result needs Obj.repr when the declared result uses nullable storage.
+		Both sides must select the same canonical map family and applied key/value types.
+		Already nullable values and unrelated externs do not cross this boundary.
+	 */
+	public static function nullableResultNeedsBox(result:Type, value:Type):Bool {
+		final expected = switch (followAliases(result)) {
+			case TAbstract(reference, [inner]) if (reference.get().pack.length == 0 && reference.get().name == "Null"):
+				select(followAliases(inner));
+			case _: null;
+		};
+		final actual = select(followAliases(value));
+		return expected != null
+			&& actual != null
+			&& expected.kind == actual.kind
+			&& expected.keyType != null
+			&& expected.valueType != null
+			&& semanticTypeId(expected.keyType) == semanticTypeId(actual.keyType)
+			&& semanticTypeId(expected.valueType) == semanticTypeId(actual.valueType);
+	}
+
+	/** Ordinary TypeTools.follow erases Null around references; this boundary must retain it. */
+	static function followAliases(type:Type):Type {
+		return switch type {
+			case TType(reference, parameters):
+				final alias = reference.get();
+				followAliases(TypeTools.applyTypeParameters(alias.type, alias.params, parameters));
+			case TMono(reference): reference.get() == null ? type : followAliases(reference.get());
+			case TLazy(load): followAliases(load());
+			case _: type;
+		};
+	}
+
+	/**
 		Returns the standard carrier kind, or `null` for a non-Map declaration.
 	**/
 	public static function kindForClass(classType:ClassType):Null<OcamlStandardMapCarrierKind> {
