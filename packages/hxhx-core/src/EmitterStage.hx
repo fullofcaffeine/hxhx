@@ -9667,6 +9667,7 @@ class EmitterStage {
 		currentEnums = null;
 		currentCallables = null;
 		currentClassStorage = null;
+		currentRuntimeTypes = null;
 		currentCallableFunction = null;
 		currentTypedFunction = null;
 		currentTypedInitializer = null;

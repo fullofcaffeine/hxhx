@@ -68,6 +68,7 @@
         "var:currentEnums",
         "var:currentCallables",
         "var:currentClassStorage",
+        "var:currentRuntimeTypes",
         "var:currentCallableFunction",
         "var:currentTypedFunction",
         "var:currentTypedInitializer",

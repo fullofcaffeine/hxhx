@@ -60,6 +60,11 @@ class M14OcamlNominalTypePredicatesTest {
 				throw "test requires a runtime marker";
 		}
 		reject(() -> entry.assertCurrent(), "mutated");
+		// Simulate request cleanup after emission was interrupted. The server's
+		// outer reset must release this plan even when normal scope unwinding did not.
+		@:privateAccess EmitterStage.currentRuntimeTypes = plan;
+		CompilerRequestStaticState.reset();
+		require(@:privateAccess EmitterStage.currentRuntimeTypes == null, "request reset retained the previous runtime type plan");
 		Sys.println("OCAML_NOMINAL_TYPE_OWNERSHIP:PASS");
 	}
 
