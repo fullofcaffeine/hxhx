@@ -7804,18 +7804,17 @@ class EmitterStage {
 			// The request plan admitted exact runtime type occurrences before output.
 			// Each rendered predicate still resolves through its owning projection.
 			final decl = moduleProjection.getDeclaration();
+			final classes = moduleProjection.getClasses();
+			// A typedef or imports-only module keeps its type facts without an
+			// invented runtime class. The fallback main header is not an inventory.
+			if (classes.length == 0)
+				return {files: [], rootMain: null};
 			final mainClass = HxModuleDecl.getMainClass(decl);
-			final mainClassProjection = moduleProjection.findClass(mainClass);
-			if (mainClassProjection == null)
-				throw "Stage3 emitter cannot find the exact main-class projection for " + tm.getParsed().getFilePath();
 			final parsedMainName = HxClassDecl.getName(mainClass);
 			final moduleTypeName = moduleTypeNameFor(tm);
 			final className = moduleTypeName.length > 0 ? moduleTypeName : parsedMainName;
-			if (className == null || className.length == 0 || className == "Unknown")
-				return {files: [], rootMain: null};
 			final mainModuleName = moduleNameForDecl(decl, moduleTypeName, className);
 			EmitterStageDebug.traceStage3Module("module", mainModuleName, tm.getParsed().getFilePath());
-			final isRuntimeProvided = runtimeModuleNames.exists(mainModuleName);
 
 			// Import-driven resolution for `Int64.<field>` (Haxe `haxe.Int64` vs OCaml stdlib `Int64`).
 			// A normal type import introduces the local name `Int64`. A static wildcard
@@ -9279,35 +9278,31 @@ class EmitterStage {
 			var rootMain:Null<String> = null;
 			EmitterStageDebug.traceStage3Phase("emit_module_begin:" + className);
 
-			// Emit the main class first (typed, optional full bodies).
-			final mainPath = isRuntimeProvided ? null : emitClass(mainClassProjection, mainModuleName, isRoot);
-			EmitterStageDebug.traceStage3Phase("emit_module_after_main:" + className);
-			if (mainPath != null) {
-				files.push(mainPath);
-				if (isRoot)
-					rootMain = mainPath;
+			// Preserve primary-first emission when a real primary class exists.
+			// A typedef can instead own the module name while executable helpers
+			// retain their exact declarations and module-qualified native names.
+			final primary = classes.filter(projection -> HxClassDecl.getName(projection.getDeclaration()) == className);
+			if (primary.length > 1)
+				throw "Stage3 emitter has duplicate primary class projections";
+			if (primary.length == 1) {
+				classes.remove(primary[0]);
+				classes.unshift(primary[0]);
 			}
-
-			// Emit any additional module-local class declarations as separate compilation units.
-			//
-			// Why
-			// - Upstream Haxe modules can declare helper types in the same file (often `private class Foo`).
-			// - Each helper now has its own typed projection. Full-body output must use it
-			//   so calls such as `Foo.bar` reach the authored method instead of a placeholder.
-			for (c in HxModuleDecl.getClasses(decl)) {
-				final nm = HxClassDecl.getName(c);
-				if (nm == null || nm.length == 0 || nm == "Unknown")
+			for (projection in classes) {
+				final declaration = projection.getDeclaration();
+				final name = HxClassDecl.getName(declaration);
+				final isPrimary = name == className;
+				final outputModule = moduleNameForDecl(decl, moduleTypeName, name);
+				if (runtimeModuleNames.exists(outputModule))
 					continue;
-				if (nm == className)
-					continue;
-				final helperModuleName = moduleNameForDecl(decl, moduleTypeName, nm);
-				final helperProjection = moduleProjection.findClass(c);
-				if (helperProjection == null)
-					throw "Stage3 emitter cannot find the exact helper-class projection";
-				EmitterStageDebug.traceStage3Module(moduleEmitBodies ? "helper" : "stub", helperModuleName, tm.getParsed().getFilePath());
-				final p = moduleEmitBodies ? emitClass(helperProjection, helperModuleName, false) : emitStubClass(c);
-				if (p != null)
-					files.push(p);
+				EmitterStageDebug.traceStage3Module(isPrimary ? "main" : moduleEmitBodies ? "helper" : "stub", outputModule, tm.getParsed().getFilePath());
+				final path = isPrimary
+					|| moduleEmitBodies ? emitClass(projection, outputModule, isPrimary && isRoot) : emitStubClass(declaration);
+				if (path != null) {
+					files.push(path);
+					if (isPrimary && isRoot)
+						rootMain = path;
+				}
 			}
 			EmitterStageDebug.traceStage3Phase("emit_module_done:" + className + ":" + files.length);
 
