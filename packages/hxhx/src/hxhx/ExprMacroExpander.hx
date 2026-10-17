@@ -148,6 +148,9 @@ class ExprMacroExpander {
 	static function rewriteStmt(s:HxStmt, session:MacroRuntimeSession, allowed:haxe.ds.StringMap<Bool>, allowKeys:Array<String>,
 			importMap:haxe.ds.StringMap<String>, modulePkg:String, trace:Bool, onExpand:() -> Void):HxStmt {
 		return switch (s) {
+			// Typed match decisions belong to emission, after source macro expansion.
+			case SGuardedSwitch(_, _, _, _, _):
+				throw "backend guarded switch is not source syntax";
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, pos):

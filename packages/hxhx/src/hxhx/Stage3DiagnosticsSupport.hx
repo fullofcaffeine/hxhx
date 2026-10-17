@@ -170,6 +170,9 @@ class Stage3DiagnosticsSupport {
 		if (out.length >= max)
 			return;
 		switch (stmt) {
+			// This visitor reports parsed source, before typed match lowering.
+			case SGuardedSwitch(_, _, _, _, _):
+				throw "backend guarded switch is not source syntax";
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _pos):
@@ -230,6 +233,8 @@ class Stage3DiagnosticsSupport {
 
 	static function countUnsupportedExprsInStmt(stmt:HxStmt):Int {
 		return switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _):
+				throw "backend guarded switch is not source syntax";
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _pos):
