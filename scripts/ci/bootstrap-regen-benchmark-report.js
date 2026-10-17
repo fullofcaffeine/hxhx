@@ -31,7 +31,7 @@ const legacyScenarioDefinitionsV1 = {
   warm: 'forced incremental regeneration while reusing the repository Haxe server'
 }
 const stage0PolicyMeaning = 'wrapper uses the upstream-Haxe launcher; native uses the direct upstream-Haxe executable. Neither label means native hxhx.'
-const peakRssScope = 'focused stage0 client process only; the repository Haxe server and total job memory are not included'
+const peakRssScope = 'sampled focus-process RSS; the focus is an owned repository-server worker when observed, otherwise the largest client-tree process; this is not total job memory'
 
 const expectedTsvHeader = [
   'scenario',

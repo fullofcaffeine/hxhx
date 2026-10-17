@@ -12,7 +12,7 @@
 const fs = require('fs')
 const path = require('path')
 
-const SCHEMA = 'hxhx.core-test-shards.v3'
+const SCHEMA = 'hxhx.core-test-shards.v4'
 const QA_TIERS = ['Q0', 'Q1', 'Q2', 'Q3', 'Q4']
 const manifestRelativePath = 'scripts/ci/core-test-shards.json'
 
@@ -58,9 +58,10 @@ function validateManifest(manifest, aggregateCommands) {
       QA_TIERS.indexOf(shard.minimumTier) >= QA_TIERS.indexOf('Q2'),
       `shard ${shard.id} minimumTier must be Q2 or higher`
     )
+    // A new partition has no measured baseline; never invent timing evidence.
     invariant(
-      Number.isFinite(shard.baselineSeconds) && shard.baselineSeconds > 0,
-      `shard ${shard.id} needs a positive baselineSeconds value`
+      shard.baselineSeconds === null || (Number.isFinite(shard.baselineSeconds) && shard.baselineSeconds > 0),
+      `shard ${shard.id} needs a positive baselineSeconds value or explicit null until measured`
     )
     if (shard.preparation != null) {
       invariant(shard.preparation && typeof shard.preparation === 'object', `shard ${shard.id} preparation must be an object`)

@@ -1,5 +1,7 @@
 -cp test
 -cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp packages/reflaxe.ocaml/src
 
 -main M14AbstractBinaryCrossBackendIntegrationTest
 --interp

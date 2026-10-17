@@ -32,7 +32,7 @@ enum OcamlContainerElementLookup {
 	Required(id:String, conversion:Null<OcamlContainerElementDecision>);
 }
 
-/** One immutable enum-to-Dynamic conversion selected for an array literal element. */
+/** One immutable type-preserving conversion selected for a Dynamic array element. */
 typedef OcamlContainerElementDecision = {
 	final id:String;
 	final role:OcamlContainerElementRole;
@@ -59,10 +59,10 @@ typedef OcamlContainerElementDecision = {
 /**
 	Owns exact carrier conversions for typed container elements in one function.
 
-	The first admitted boundary is deliberately small: a directly written Haxe
-	enum constructor entering an `Array<Dynamic>` literal. The plan retains the
-	enum identity and the exact source occurrence before OCaml syntax exists.
-	Array syntax may then apply the recorded `HxEnum.box_if_needed` operation,
+	Exact Boolean values and directly written Haxe enum constructors need boxes
+	when they enter an `Array<Dynamic>` literal. The plan retains their input
+	type and exact source occurrence before OCaml syntax exists.
+	Array syntax applies the recorded Boolean or enum boxing operation,
 	but it may not infer an enum name from target text or native variant tags.
 **/
 class OcamlContainerElementPlan {
@@ -264,9 +264,19 @@ class OcamlContainerElementPlan {
 		requireSource(decision.source, "element", decision.id);
 		if (decision.containerSource.file != decision.source.file)
 			throw 'reflaxe.ocaml [ocaml-container-element:source-mismatch]: occurrence "${decision.id}" crosses source files';
-		if (decision.conversion != OcamlLocalCarrierConversion.BoxExactEnumToDynamic)
-			throw 'reflaxe.ocaml [ocaml-container-element:unsupported-conversion]: occurrence "${decision.id}" selects ${decision.conversion}';
-		OcamlEnumDynamicCarrier.requireIdentity(decision.inputSemanticTypeId, decision.inputCarrierTypeId);
+		switch (decision.conversion) {
+			case BoxExactEnumToDynamic:
+				OcamlEnumDynamicCarrier.requireIdentity(decision.inputSemanticTypeId, decision.inputCarrierTypeId);
+				if (decision.proofId != "dynamic-array-element-box-exact-enum-v1")
+					throw "reflaxe.ocaml [ocaml-container-element:invalid-proof]: enum element has the wrong boxing proof";
+			case BoxExactBoolToDynamic:
+				if (decision.inputSemanticTypeId != "Bool"
+					|| decision.inputCarrierTypeId != "bool"
+					|| decision.proofId != "dynamic-array-element-box-exact-bool-v1")
+					throw "reflaxe.ocaml [ocaml-container-element:invalid-proof]: Boolean element has the wrong carrier or boxing proof";
+			case _:
+				throw 'reflaxe.ocaml [ocaml-container-element:unsupported-conversion]: occurrence "${decision.id}" selects ${decision.conversion}';
+		}
 		if (decision.outputSemanticTypeId != "Dynamic" || decision.outputCarrierTypeId != OcamlEnumDynamicCarrier.DYNAMIC_CARRIER) {
 			throw 'reflaxe.ocaml [ocaml-container-element:wrong-output-carrier]: occurrence "${decision.id}" must produce Dynamic/${OcamlEnumDynamicCarrier.DYNAMIC_CARRIER}';
 		}
@@ -296,10 +306,11 @@ class OcamlContainerElementPlan {
 
 	static function requireUnsafeOperation(decision:OcamlContainerElementDecision):Void {
 		final operation = decision.unsafeOperation;
-		final expectedId = decision.id + ":unsafe:" + (OcamlUnsafeOperationKind.BoxExactEnumToDynamic : String);
+		final expectedOperation = decision.conversion == OcamlLocalCarrierConversion.BoxExactBoolToDynamic ? OcamlUnsafeOperationKind.BoxExactBoolToDynamic : OcamlUnsafeOperationKind.BoxExactEnumToDynamic;
+		final expectedId = decision.id + ":unsafe:" + (expectedOperation : String);
 		if (operation.id != expectedId
 			|| operation.conversionId != decision.id
-			|| operation.operation != OcamlUnsafeOperationKind.BoxExactEnumToDynamic
+			|| operation.operation != expectedOperation
 			|| !sameSource(operation.source, decision.source)
 			|| operation.inputSemanticTypeId != decision.inputSemanticTypeId
 			|| operation.inputCarrierTypeId != decision.inputCarrierTypeId
@@ -411,10 +422,10 @@ class OcamlContainerElementPlan {
 }
 
 /**
-	Finds direct enum constructors entering exact `Array<Dynamic>` literals.
+	Finds exact Boolean values and direct enum constructors entering `Array<Dynamic>` literals.
 
 	The planner reads the final typed array element type and each exact source
-	constructor once. Other arrays and indirect enum expressions remain outside
+	value once. Other arrays and indirect enum expressions remain outside
 	this first slice and therefore produce no conversion decision.
 **/
 class OcamlContainerElementPlanner {
@@ -430,20 +441,23 @@ class OcamlContainerElementPlanner {
 						final containerSource = OcamlLoweredOrigin.sourceSpan(current.pos);
 						for (elementIndex in 0...items.length) {
 							final item = items[elementIndex];
-							final identity = OcamlEnumDynamicCarrier.fromDirectValue(item);
+							final identity = elementIdentity(item);
 							if (identity == null)
 								continue;
 							final source = OcamlLoweredOrigin.sourceSpan(item.pos);
 							final role = OcamlContainerElementRole.ArrayLiteralDynamicElement;
 							final id = OcamlContainerElementPlan.occurrenceId(binding, role, containerSource, source, currentArrayOrdinal, elementIndex);
-							final reason = "One exact Haxe enum constructor enters an Array<Dynamic> literal slot and must retain its enum identity.";
-							final proofId = "dynamic-array-element-box-exact-enum-v1";
-							final proofClaim = "The typed array element is one directly written ordinary Haxe enum constructor. HxEnum.box_if_needed records its fully qualified enum name before the native OCaml variant enters the Dynamic Obj.t element carrier.";
+							final isBool = identity.semanticTypeId == "Bool";
+							final conversion = isBool ? OcamlLocalCarrierConversion.BoxExactBoolToDynamic : OcamlLocalCarrierConversion.BoxExactEnumToDynamic;
+							final operation = isBool ? OcamlUnsafeOperationKind.BoxExactBoolToDynamic : OcamlUnsafeOperationKind.BoxExactEnumToDynamic;
+							final reason = isBool ? "An exact Bool enters an Array<Dynamic> slot and must remain distinct from integer zero or one." : "One exact Haxe enum constructor enters an Array<Dynamic> literal slot and must retain its enum identity.";
+							final proofId = isBool ? "dynamic-array-element-box-exact-bool-v1" : "dynamic-array-element-box-exact-enum-v1";
+							final proofClaim = isBool ? "The final typed element has the exact non-null Bool carrier. HxRuntime.box_bool evaluates and boxes that value once before array storage; it preserves Boolean identity in Dynamic." : "The typed array element is one directly written ordinary Haxe enum constructor. HxEnum.box_if_needed records its fully qualified enum name before the native OCaml variant enters the Dynamic Obj.t element carrier.";
 							final profiles = ["metal", "portable"];
 							final unsafeOperation:OcamlUnsafeOperationRecord = {
-								id: id + ":unsafe:" + (OcamlUnsafeOperationKind.BoxExactEnumToDynamic : String),
+								id: id + ":unsafe:" + (operation : String),
 								conversionId: id,
-								operation: OcamlUnsafeOperationKind.BoxExactEnumToDynamic,
+								operation: operation,
 								source: source,
 								inputSemanticTypeId: identity.semanticTypeId,
 								inputCarrierTypeId: identity.carrierTypeId,
@@ -469,7 +483,7 @@ class OcamlContainerElementPlanner {
 								inputCarrierTypeId: identity.carrierTypeId,
 								outputSemanticTypeId: "Dynamic",
 								outputCarrierTypeId: OcamlEnumDynamicCarrier.DYNAMIC_CARRIER,
-								conversion: OcamlLocalCarrierConversion.BoxExactEnumToDynamic,
+								conversion: conversion,
 								reason: reason,
 								proofId: proofId,
 								proofClaim: proofClaim,
@@ -546,7 +560,7 @@ class OcamlContainerElementPlanner {
 					final containerSource = exactDynamicArray ? OcamlLoweredOrigin.sourceSpan(current.pos) : null;
 					for (elementIndex in 0...items.length) {
 						final item = items[elementIndex];
-						final identity = exactDynamicArray ? OcamlEnumDynamicCarrier.fromDirectValue(item) : null;
+						final identity = exactDynamicArray ? elementIdentity(item) : null;
 						if (identity == null || containerSource == null) {
 							requiredIds.push(null);
 							continue;
@@ -570,6 +584,13 @@ class OcamlContainerElementPlanner {
 			ids: ids,
 			requiredIdByContainer: requiredIdByContainer
 		};
+	}
+
+	/** Selects only values whose Dynamic storage requires a type-preserving box. */
+	static function elementIdentity(item:TypedExpr):Null<{final semanticTypeId:String; final carrierTypeId:String;}> {
+		if (OcamlRepresentationRegistry.isExactBool(item.t))
+			return {semanticTypeId: "Bool", carrierTypeId: "bool"};
+		return OcamlEnumDynamicCarrier.fromDirectValue(item);
 	}
 
 	static function isExactDynamicArray(type:Type):Bool {

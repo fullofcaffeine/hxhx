@@ -4,17 +4,15 @@ package hxhx;
 	Deterministic JSON parser for compiler-owned metadata documents.
 
 	Plugin manifests and native macro-module receipts both need consistent decoding across
-	interpreter, bootstrap, and native OCaml lanes. This boundary avoids `haxe.Json.parse`
-	because mixed `Dynamic` values can generate invalid unboxed OCaml when expression
-	preprocessors are disabled.
+	interpreter, bootstrap, and native OCaml builds. Each parsed value has one of the
+	closed `CompilerJsonValue` variants, including values nested in arrays or objects.
+	This keeps native payload representations concrete without reflective field access.
 
-	The parser accepts standard JSON values, boxes heterogeneous values explicitly, and
-	throws the first syntax error with its source position. Callers remain responsible for
-	validating their own document schema and converting the returned `Dynamic` value into
-	typed structures.
+	The parser throws the first syntax error with its source position. Callers remain
+	responsible for matching the value variants against their own document schema.
 **/
 class CompilerJsonParser {
-	public static function parse(content:String):Dynamic {
+	public static function parse(content:String):CompilerJsonValue {
 		return new CompilerJsonParser(content).parseDocument();
 	}
 
@@ -28,49 +26,47 @@ class CompilerJsonParser {
 		this.index = 0;
 	}
 
-	function parseDocument():Dynamic {
+	function parseDocument():CompilerJsonValue {
 		skipWhitespace();
 		final value = parseValue();
 		skipWhitespace();
 		if (!isEof())
 			fail("unexpected trailing token");
-		return value.value;
-	}
-
-	function parseValue():CompilerJsonValueBox {
-		if (isEof())
-			fail("unexpected EOF");
-		final code = peekCode();
-		var value = new CompilerJsonValueBox(null);
-		if (code == "{".code) {
-			value = new CompilerJsonValueBox(parseObject());
-		} else if (code == "[".code) {
-			value = new CompilerJsonValueBox(parseArray());
-		} else if (code == "\"".code) {
-			value = new CompilerJsonValueBox(parseString());
-		} else if (code == "t".code) {
-			expectKeyword("true");
-			value = new CompilerJsonValueBox(true);
-		} else if (code == "f".code) {
-			expectKeyword("false");
-			value = new CompilerJsonValueBox(false);
-		} else if (code == "n".code) {
-			expectKeyword("null");
-			value = new CompilerJsonValueBox(null);
-		} else if (code == "-".code || (code >= "0".code && code <= "9".code)) {
-			value = parseNumber();
-		} else {
-			fail("invalid token");
-		}
 		return value;
 	}
 
-	function parseObject():Dynamic {
+	function parseValue():CompilerJsonValue {
+		if (isEof())
+			fail("unexpected EOF");
+		final code = peekCode();
+		if (code == "{".code) {
+			return parseObject();
+		} else if (code == "[".code) {
+			return parseArray();
+		} else if (code == "\"".code) {
+			return JsonString(parseString());
+		} else if (code == "t".code) {
+			expectKeyword("true");
+			return JsonBool(true);
+		} else if (code == "f".code) {
+			expectKeyword("false");
+			return JsonBool(false);
+		} else if (code == "n".code) {
+			expectKeyword("null");
+			return JsonNull;
+		} else if (code == "-".code || (code >= "0".code && code <= "9".code)) {
+			return parseNumber();
+		} else {
+			throw "invalid token at position " + index;
+		}
+	}
+
+	function parseObject():CompilerJsonValue {
 		expectCode("{".code);
 		skipWhitespace();
-		final object:Dynamic = {};
+		final object = new haxe.ds.StringMap<CompilerJsonValue>();
 		if (consumeIf("}".code))
-			return object;
+			return JsonObject(object);
 
 		while (true) {
 			skipWhitespace();
@@ -78,34 +74,34 @@ class CompilerJsonParser {
 			skipWhitespace();
 			expectCode(":".code);
 			skipWhitespace();
-			Reflect.setField(object, key, parseValue().value);
+			object.set(key, parseValue());
 			skipWhitespace();
 			if (consumeIf("}".code))
-				return object;
+				return JsonObject(object);
 			expectCode(",".code);
 		}
 
-		return object;
+		return JsonObject(object);
 	}
 
-	function parseArray():CompilerJsonArray {
+	function parseArray():CompilerJsonValue {
 		expectCode("[".code);
 		skipWhitespace();
-		final values:Array<Dynamic> = [];
+		final values:Array<CompilerJsonValue> = [];
 		if (consumeIf("]".code))
-			return new CompilerJsonArray(values);
+			return JsonArray(values);
 
 		while (true) {
 			skipWhitespace();
-			final value:Dynamic = parseValue().value;
+			final value = parseValue();
 			values.push(value);
 			skipWhitespace();
 			if (consumeIf("]".code))
-				return new CompilerJsonArray(values);
+				return JsonArray(values);
 			expectCode(",".code);
 		}
 
-		return new CompilerJsonArray(values);
+		return JsonArray(values);
 	}
 
 	function parseString():String {
@@ -167,14 +163,10 @@ class CompilerJsonParser {
 	}
 
 	/**
-		Parses one JSON number and returns it through the parser's heterogeneous-value box.
-
-		The concrete payload remains an `Int` when the token has no fraction or exponent
-		and a `Float` otherwise. Returning the box instead of `Dynamic` keeps that union
-		inside the JSON value boundary rather than exporting an unsealed dynamic function
-		result to native targets.
+		Retains the token's integer or floating-point kind in its JSON variant.
+		Number scanning and conversion use the same rules as the other compiler routes.
 	**/
-	function parseNumber():CompilerJsonValueBox {
+	function parseNumber():CompilerJsonValue {
 		final start = index;
 		if (consumeIf("-".code)) {}
 		parseDigits(false);
@@ -198,12 +190,12 @@ class CompilerJsonParser {
 			final parsedFloat = Std.parseFloat(token);
 			if (Math.isNaN(parsedFloat))
 				fail("invalid float literal");
-			return new CompilerJsonValueBox(parsedFloat);
+			return JsonFloat(parsedFloat);
 		}
 		final parsedInt = Std.parseInt(token);
 		if (parsedInt == null)
 			fail("invalid int literal");
-		return new CompilerJsonValueBox(parsedInt);
+		return JsonInt(parsedInt);
 	}
 
 	function parseDigits(requireAtLeastOne:Bool):Void {
@@ -265,13 +257,5 @@ class CompilerJsonParser {
 
 	function fail(message:String):Void {
 		throw message + " at position " + index;
-	}
-}
-
-private class CompilerJsonValueBox {
-	public final value:Dynamic;
-
-	public function new(value:Dynamic) {
-		this.value = value;
 	}
 }

@@ -52,15 +52,17 @@ class M14Stage3SameClassInstanceForwardIntegrationTest {
 		var thrown:Dynamic = null;
 		try {
 			final parsed = ParserStage.parse(src, sourcePath);
-			final typed = TyperStage.typeModule(parsed);
+			// Defaulted instance methods need the declaration that owns their receiver.
+			final resolved = new ResolvedModule("Runner", sourcePath, parsed);
+			final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 			final expanded = MacroStage.expandProgram([typed], []);
 			EmitterStage.emitToDir(expanded, outDir, true, false);
 
 			final runnerMl = haxe.io.Path.join([outDir, 'Runner.ml']);
 			assertTrue(FileSystem.exists(runnerMl), 'Expected Runner.ml in emitted output.');
 			final ocaml = File.getContent(runnerMl);
-			assertTrue(ocaml.indexOf('addCaseOld (this_) (test) (setup) (teardown) (prefix) (pattern) (setupAsync) (teardownAsync)') >= 0,
-				'Expected same-class instance method forwarding to include this_ before forwarded arguments.');
+			assertTrue(ocaml.indexOf('addCaseOld (this_) (test) (setup) (teardown) (prefix) (Obj.repr (pattern)) (setupAsync) (teardownAsync)') >= 0,
+				'Expected same-class forwarding to retain one receiver, argument order, and the optional Dynamic representation.');
 			assertTrue(ocaml.indexOf('addCaseOld (test) (setup)') < 0, 'Expected forwarded instance call not to omit the receiver.');
 			assertTrue(ocaml.indexOf('mark (this_)') >= 0, 'Expected zero-argument same-class instance method call to include this_.');
 			assertTrue(ocaml.indexOf('mark (this_) ()') < 0, 'Expected zero-argument same-class instance method call not to append unit.');

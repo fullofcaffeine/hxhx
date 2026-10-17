@@ -1,7 +1,7 @@
 /**
-	Records one exact-case module lookup and the filesystem observations that justify it.
+	Records one exact-case module lookup and the source-provider observations that justify it.
 
-	`filePath` is the source file selected from the ordered class paths, or null
+	`filePath` is the filesystem or compiler-bundle source selected from the ordered class paths, or null
 	when no matching module exists. `observationRevision` changes when the exact
 	filename checked at any class-path position appears, disappears, changes kind,
 	or selects a different file. This lets a long-lived compiler notice a newly

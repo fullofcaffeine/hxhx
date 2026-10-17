@@ -153,3 +153,24 @@ The local shard command also holds the shared Haxe-family heavy-run lease for
 up to 30 minutes before starting; CI bypasses that user-scoped scheduler so its
 three Q2 runners remain parallel and Q3 adds the isolated large-consumer
 runner.
+
+## Current native macro-host build scheduling
+
+Direct macro-host API and native module-host tests use the same native build
+script as the shared integration artifact. That script acquires the existing
+Haxe-family heavy-run lease before each native compiler or Dune invocation.
+An inherited owner is reused. Lightweight Haxe checks and authenticated shared
+artifact reuse do not acquire a new lease.
+
+The build waits up to 1,800 seconds by default. Set
+`HAXE_FAMILY_HEAVY_RUN_WAIT_SECONDS` to select a different queue limit. A queue
+timeout returns 75 before the native command starts. The lease wrapper preserves
+command exit codes and forwards cancellation. A Stage3 scheduling timeout or
+cancellation does not start a fallback build. Generated temporary Haxe inputs
+remain subject to the existing build cleanup.
+
+Lease status messages use stderr. Stdout remains available for command results,
+including the executable path that macro-host consumers read. The focused
+`test:macro-runtime:host-lifecycle` checks include peer contention, inherited
+ownership, direct execution, failure propagation, and generated-input cleanup.
+This scheduling change does not increase README Goals readiness.

@@ -2,7 +2,20 @@ import sys.FileSystem;
 import sys.io.File;
 import haxe.ds.StringMap;
 
+/** Preserve checked receiver calls through native emission and exercise neighboring call diagnostics. */
 class M14HxhxStage3ReceiverCallIntegrationTest {
+	/** Compare an actual process result with the receiver program's independent expected output. */
+	static function observeReceiver(command:String, arguments:Array<String>):Void {
+		final timeout = Sys.systemName() == "Mac" ? "gtimeout" : "timeout";
+		final process = new sys.io.Process(timeout, ["30", command].concat(arguments));
+		final stdout = process.stdout.readAll().toString();
+		final stderr = process.stderr.readAll().toString();
+		final code = process.exitCode();
+		process.close();
+		assertTrue(code == 0, "Receiver program failed: " + stderr);
+		assertEquals(stdout, "42\n", "Receiver program returned the wrong result.");
+	}
+
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
 			throw message;
@@ -59,6 +72,7 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 	}
 
 	static function main():Void {
+		M14AdditionOperandInferenceTest.main();
 		assertRequestResetDropsAbortedFunctionShadowing();
 		final tmpRoot = haxe.io.Path.normalize('.tmp/m14_hxhx_stage3_receiver_call_' + Std.string(Date.now().getTime()));
 		final srcDir = haxe.io.Path.join([tmpRoot, 'src']);
@@ -122,10 +136,14 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 				.filter(fn -> fn.getName() == "dynamicLabel")[0];
 			assertTrue(dynamicLabel.getReturnType().getDisplay() == "Dynamic", "An explicit Dynamic return was narrowed by instance-call inference.");
 
-			final typed = TyperStage.typeModule(parsed);
-			final expanded = MacroStage.expandProgram([typed], []);
+			// Keep the declaration index that proved the instance call's Int result.
+			// Retyping without that index discards the facts required by Std.string.
+			final expanded = MacroStage.expandProgram([resolvedTyped], []);
 			final exePath = EmitterStage.emitToDir(expanded, outDir, true);
 			assertTrue(FileSystem.exists(exePath), 'Emitter did not produce executable: ' + exePath);
+			observeReceiver("node_modules/.bin/haxe", ["-cp", srcDir, "--run", "Main"]);
+			observeReceiver(exePath, []);
+			Sys.println("STAGE3_RECEIVER_CALL_RUNTIME:PASS");
 
 			var mainMl:Null<String> = null;
 			for (entry in FileSystem.readDirectory(outDir)) {
@@ -442,23 +460,10 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 					throw 'The Haxe parser did not parse the Issue10434 main body as an expression statement.';
 			}
 
-			final vectorOutDir = haxe.io.Path.join([tmpRoot, 'vector_out']);
-			final vectorLengthArg = new HxFunctionArg("length", "Int", HxDefaultValue.NoDefault);
-			final vectorArrayArg = new HxFunctionArg("array", "Array<Dynamic>", HxDefaultValue.NoDefault);
-			final vectorLocalR = new HxFieldDecl("r", HxVisibility.Public, true, "Dynamic", HxExpr.ENew("haxe.ds.Vector", [HxExpr.EIdent("length")]));
-			final vectorLocalLen = new HxFieldDecl("len", HxVisibility.Public, true, "Int", HxExpr.EIdent("length"));
-			final vectorClass = new HxClassDecl("Vector", false, [
-				new HxFunctionDecl("new", HxVisibility.Public, false, [vectorLengthArg], "Void", [], ""),
-				new HxFunctionDecl("fromArrayCopy", HxVisibility.Public, true, [vectorArrayArg], "haxe.ds.Vector<Dynamic>",
-					[HxStmt.SReturn(HxExpr.EIdent("array"), HxPos.unknown())], "")
-			], [vectorLocalR, vectorLocalLen]);
-			final vectorDecl = new HxModuleDecl("haxe.ds", [], vectorClass, [vectorClass], false, false);
-			final vectorTyped = TyperStage.typeModule(new ParsedModule("", vectorDecl, "haxe/ds/Vector.hx"));
-			EmitterStage.emitToDir(new MacroExpandedProgram([vectorTyped], false), vectorOutDir, true, false);
-			final vectorMl = File.getContent(haxe.io.Path.join([vectorOutDir, "Haxe_ds_Vector.ml"]));
-			assertNotContains(vectorMl, "let r =", "Stage3 OCaml should not emit haxe.ds.Vector scanned local `r` as a static field.");
-			assertNotContains(vectorMl, "let len =", "Stage3 OCaml should not emit haxe.ds.Vector scanned local `len` as a static field.");
-			assertNotContains(vectorMl, "new_ (__hx_obj)", "Stage3 OCaml should not emit Vector local initialization that calls an unbound constructor.");
+			// Real source proves local ownership before emission. Native compilation
+			// and execution then prove constructor binding and distinct copied storage.
+			M14MethodLocalConstructionTest.main();
+			M14NativeClassStorageTest.main();
 		} catch (e:Dynamic) {
 			thrown = e;
 		}

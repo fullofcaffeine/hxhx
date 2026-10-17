@@ -12,10 +12,16 @@
 	rather than a module-to-module edge. The remaining kinds reserve explicit names
 	for later macro, feature, and whole-program observations instead of encoding
 	those meanings as loosely related strings.
+
+	Private declarations do not appear in the public-interface revision. A
+	compiler-selected helper or an access-granted private call therefore consumes
+	the implementation revision, which includes private signatures and source.
+	This deliberately also invalidates those consumers after private body edits.
 **/
 enum CompilerDependencyKind {
 	ModuleResolution;
 	PublicInterface;
+	PrivateDeclaration;
 	InlineImplementation;
 	ConstantValue;
 	ConditionalCompilation;

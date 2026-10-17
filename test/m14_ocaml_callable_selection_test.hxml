@@ -1,0 +1,12 @@
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp test
+-main M14OcamlCallableSelectionTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp test
+-main M14OcamlCallableSelectionTest
+-neko .tmp/m14_ocaml_callable_selection_test.n
+-cmd neko .tmp/m14_ocaml_callable_selection_test.n

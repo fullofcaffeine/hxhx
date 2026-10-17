@@ -47,14 +47,9 @@ if ! GITLEAKS_BIN="$(resolve_gitleaks_bin)"; then
 fi
 run_gitleaks_staged "$GITLEAKS_BIN"
 
-if ! command -v haxelib >/dev/null 2>&1; then
-	echo "[pre-commit] ERROR: haxelib is required but not installed." >&2
-	exit 1
-fi
-
-if ! haxelib run formatter --help >/dev/null 2>&1; then
-	echo "[pre-commit] ERROR: haxelib formatter is required but not installed." >&2
-	echo "[pre-commit] Install: haxelib install formatter" >&2
+if ! node scripts/lint/formatter-toolchain.js --run --help >/dev/null 2>&1; then
+	echo "[pre-commit] ERROR: the pinned formatter is unavailable." >&2
+	echo "[pre-commit] Install: npm run setup:formatter" >&2
 	exit 1
 fi
 
@@ -75,7 +70,7 @@ if [ "${#STAGED_HX_FILES[@]}" -gt 0 ]; then
 	done
 
 	if [ "${#FORMAT_ARGS[@]}" -gt 0 ]; then
-		haxelib run formatter "${FORMAT_ARGS[@]}"
+		node scripts/lint/formatter-toolchain.js --run "${FORMAT_ARGS[@]}"
 		git add -- "${STAGED_HX_FILES[@]}"
 	fi
 fi

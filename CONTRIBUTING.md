@@ -21,7 +21,7 @@ The repo pre-commit hook enforces staged local-path checks, staged secret scanni
 ## Required local tools
 
 - `gitleaks` on `PATH` (or repo-local `./gitleaks`)
-- `haxelib formatter` (`haxelib install formatter`)
+- The pinned Haxe formatter (`npm run setup:formatter`, after `npm ci` and Lix installs Haxe 4.3.7).
 
 ## Guard commands
 

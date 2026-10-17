@@ -43,7 +43,7 @@ if ! grep -Fxq 'let value = let inner = 7 in inner' "$OUTPUT_DIR/Main.ml"; then
 	exit 1
 fi
 
-if ! grep -Fxq 'let main = fun () -> Stdlib.ignore ()' "$OUTPUT_DIR/Main.ml"; then
+if ! grep -Fxq 'let main = fun () -> (() : unit)' "$OUTPUT_DIR/Main.ml"; then
 	echo "Shared-expression fixture produced an unexpected Main.main function." >&2
 	exit 1
 fi
@@ -54,7 +54,7 @@ const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 if (report.schemaVersion !== 1 || report.route !== 'stock-haxe') {
 	throw new Error('shared target report did not record the stock Haxe route')
 }
-if (report.targetCoreId !== 'reflaxe.ocaml.target-program-core.v1') {
+if (report.targetCoreId !== 'reflaxe.ocaml.target-program-core.v3') {
 	throw new Error('shared target report did not execute the standalone target core')
 }
 for (const key of ['normalizedInputIdentity', 'loweredPlanIdentity', 'runtimeReasonIdentity', 'outputManifestIdentity']) {

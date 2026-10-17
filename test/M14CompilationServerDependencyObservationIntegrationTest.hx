@@ -197,14 +197,16 @@ class M14CompilationServerDependencyObservationIntegrationTest {
 		File.saveContent(lowApi, apiSource("Int", "42"));
 		File.saveContent(haxe.io.Path.join([low, "Main.hx"]),
 			"import Api; class Main { public static function main():Void { var answer:Dynamic = Api.answer(); } }");
+		// Haxe gives the last explicit classpath priority. Keep high at resolved
+		// index zero so equal-byte shadowing exercises a real provider change.
 		final args = [
 			"--hxhx-no-run",
 			"--hxhx-no-emit",
 			"--hxhx-server-report",
 			"-cp",
-			high,
-			"-cp",
 			low,
+			"-cp",
+			high,
 			"-main",
 			"Main"
 		];
@@ -475,11 +477,19 @@ class M14CompilationServerDependencyObservationIntegrationTest {
 			"returning to exact static-initialization revision A should reproduce the original snapshot");
 	}
 
-	/**
-		Prove both Stage3 typing exits publish the same normalized request settings.
+	/** Inspect the exact published observation without adding a production accessor for a test. */
+	static function publishedSnapshot(catalog:CompilationServerDependencyCatalog, args:Array<String>):CompilerDependencySnapshot {
+		final request = catalog.openRequest(args);
+		final snapshot = @:privateAccess request.previousSnapshot;
+		request.finish(false);
+		assertTrue(snapshot != null, "successful configuration request did not publish its snapshot");
+		return snapshot;
+	}
 
-		Each variant uses a fresh catalog, so the test compares sealed snapshot
-		fingerprints rather than relying on the catalog's exact-argv history key.
+	/**
+		Both typing exits normalize settings alike, but diagnostic mode visits more modules.
+		Compare configuration and the common Main revision directly. Keep complete
+		snapshot identities sensitive to the extra diagnostic provider modules.
 	**/
 	static function verifyProgramConfigurationSnapshots(root:String):Void {
 		final configurationRoot = haxe.io.Path.join([root, "program-configuration"]);
@@ -494,15 +504,30 @@ class M14CompilationServerDependencyObservationIntegrationTest {
 			"Main"
 		];
 		final configurationA = ["--dce", "full", "-D", "ocaml_profile=portable"];
-		final noEmitA = wire(compile(new CompilationServerSourceCache(), new CompilationServerDependencyCatalog(),
-			["--hxhx-no-emit"].concat(projectArgs).concat(configurationA)));
-		final typeOnlyA = wire(compile(new CompilationServerSourceCache(), new CompilationServerDependencyCatalog(),
-			["--hxhx-type-only"].concat(projectArgs).concat(configurationA)));
+		final noEmitArgs = ["--hxhx-no-emit"].concat(projectArgs).concat(configurationA);
+		final typeOnlyArgs = ["--hxhx-type-only"].concat(projectArgs).concat(configurationA);
+		final noEmitCatalog = new CompilationServerDependencyCatalog();
+		final typeOnlyCatalog = new CompilationServerDependencyCatalog();
+		final noEmitReply = compile(new CompilationServerSourceCache(), noEmitCatalog, noEmitArgs);
+		final typeOnlyReply = compile(new CompilationServerSourceCache(), typeOnlyCatalog, typeOnlyArgs);
+		assertTrue(!noEmitReply.isError && !typeOnlyReply.isError, "both configuration baselines must compile successfully");
+		final noEmitA = wire(noEmitReply);
+		final typeOnlyA = wire(typeOnlyReply);
+		final noEmitSnapshot = publishedSnapshot(noEmitCatalog, noEmitArgs);
+		final typeOnlySnapshot = publishedSnapshot(typeOnlyCatalog, typeOnlyArgs);
 		final configurationAReordered = wire(compile(new CompilationServerSourceCache(), new CompilationServerDependencyCatalog(),
 			["--hxhx-no-emit"].concat(projectArgs).concat(["-D", "ocaml_profile=portable", "--dce", "full"])));
 		final baselineSnapshot = reportValue(noEmitA, "hxhx_server_report.dependency_snapshot");
-		assertTrue(baselineSnapshot == reportValue(typeOnlyA, "hxhx_server_report.dependency_snapshot"),
+		assertTrue(noEmitSnapshot.getProgramConfiguration().getCanonicalIdentity() == typeOnlySnapshot.getProgramConfiguration().getCanonicalIdentity(),
 			"type-only and no-emit requests should publish the same normalized program configuration");
+		final noEmitMain = noEmitSnapshot.findModule("Main");
+		final typeOnlyMain = typeOnlySnapshot.findModule("Main");
+		assertTrue(noEmitMain != null && typeOnlyMain != null && noEmitMain.getCanonicalIdentity() == typeOnlyMain.getCanonicalIdentity(),
+			"typing mode changed the common Main module observation");
+		assertTrue(noEmitSnapshot.findModule("Class") == null && typeOnlySnapshot.findModule("Class") != null,
+			"the empty Main fixture must distinguish demand-driven typing from the diagnostic provider graph");
+		assertTrue(baselineSnapshot != reportValue(typeOnlyA, "hxhx_server_report.dependency_snapshot"),
+			"different observed module sets must retain different complete snapshot identities");
 		assertTrue(baselineSnapshot == reportValue(configurationAReordered, "hxhx_server_report.dependency_snapshot"),
 			"define insertion order should not change the Stage3 dependency snapshot");
 

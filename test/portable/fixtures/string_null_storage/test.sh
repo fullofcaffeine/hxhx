@@ -12,10 +12,14 @@ if ! grep -Eq '^type stringstate_t = .*mutable omitted : string.*mutable empty :
 	echo "Exact String instance fields did not use the sealed string carrier" >&2
 	exit 1
 fi
-if ! grep -Eq 'omitted = HxString.hx_null_string; empty = ""; explicitNull = HxString.hx_null_string.*: stringstate_t' "$source_file"; then
-	echo "Omitted and empty instance Strings are not distinct in generated storage" >&2
-	exit 1
-fi
+# Allocation supplies null defaults. Authored initializers run only in the
+# constructor body; the Haxe runtime checks distinguish that path from empty allocation.
+for allocation in stringstate_create stringstate___empty; do
+	if ! grep -Eq "^let ${allocation} = fun .*omitted = HxString.hx_null_string; empty = HxString.hx_null_string; explicitNull = HxString.hx_null_string.*: stringstate_t" "$source_file"; then
+		echo "String allocation $allocation did not preserve all null defaults" >&2
+		exit 1
+	fi
+done
 if ! grep -Eq 'let omitted = ref \(HxString.hx_null_string : string\)' "$source_file"; then
 	echo "The omitted static String did not consume its sealed null default" >&2
 	exit 1
@@ -46,9 +50,9 @@ function fail(message) {
 	process.exit(1)
 }
 
-if (report.schemaVersion !== 86
-	|| report.representationScope !== 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15'
-	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v31') {
+if (report.schemaVersion !== 94
+	|| report.representationScope !== 'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-callback-locals-v17'
+	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v34') {
 	fail('unexpected lowering report, representation, or call-model version')
 }
 

@@ -5,6 +5,12 @@ import haxe.macro.Expr;
 import haxe.macro.Type;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
+import reflaxe.ocaml.ast.OcamlASTPrinter;
+import reflaxe.ocaml.ast.OcamlTypeExpr;
+import reflaxe.ocaml.ast.OcamlRecordField;
+import reflaxe.ocaml.target.OcamlTargetClassMarker.lowerClassMarker;
+import reflaxe.ocaml.target.OcamlTargetInstanceRecord.declareInstanceRecord;
+import reflaxe.ocaml.target.OcamlTargetInstanceRecord.initializeInstanceRecord;
 import reflaxe.ocaml.lowered.OcamlClassIdentityMarkerPlan;
 import reflaxe.ocaml.lowered.OcamlClassIdentityMarkerPlan.OcamlClassIdentityMarkerDecision;
 import reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority;
@@ -44,6 +50,7 @@ class ClassIdentityMarkerRuntimeUseFixture {
 		proveRequirement(empty);
 		proveCheckedMarker(constructor);
 		proveCheckedMarker(empty);
+		proveRecordLayout(constructor);
 		proveDecisionFailures(classType, constructor);
 		proveAuthorityFailures(constructor);
 		proveFinalOutput(constructor, empty);
@@ -91,13 +98,46 @@ class ClassIdentityMarkerRuntimeUseFixture {
 	}
 
 	static function checkedMarker(decision:OcamlClassIdentityMarkerDecision, ?finalOutput:OcamlFinalRuntimeUseAuthority):OcamlExpr {
-		final requirements = OcamlRuntimeRequirementLedger.requirementsForClassIdentityMarker(decision);
-		final occurrence = decision.runtimeUseOccurrences[0];
-		final authority = new OcamlRuntimeUseAuthority(decision.revision, PROFILE, requirements, decision.runtimeUseOccurrences, finalOutput);
-		final reference = authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol);
-		final marker = OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(reference), [OcamlExpr.EConst(OcamlConst.CString(decision.runtimeClassName))]);
-		authority.reconcileExpression(marker);
-		return marker;
+		final lowered = lowerClassMarker(decision, PROFILE, finalOutput);
+		if (lowered.runtimeRequirements.length != 1 || lowered.runtimeRequirements[0].id != decision.runtimeRequirementIds[0])
+			throw "Shared class marker lost its runtime requirement.";
+		return lowered.expression;
+	}
+
+	/** Preserve the real fixture's field order and reject incomplete or reordered allocation. */
+	static function proveRecordLayout(decision:OcamlClassIdentityMarkerDecision):Void {
+		final declaration = declareInstanceRecord({
+			typeName: "marker_t",
+			fields: [
+				{name: "zeta", isMutable: true, typ: OcamlTypeExpr.TIdent("int")},
+				{name: "alpha", isMutable: true, typ: OcamlTypeExpr.TIdent("bool")}
+			]
+		});
+		final fields = switch (declaration.kind) {
+			case Record(fields): fields;
+			case _: throw "Shared instance declaration is not a record.";
+		};
+		if (fields.length != 3 || fields[0].name != "__hx_type" || fields[0].isMutable || fields[1].name != "zeta" || fields[2].name != "alpha")
+			throw "Shared instance declaration changed its header or member order.";
+		final values:Array<OcamlRecordField> = [
+			{name: "zeta", value: OcamlExpr.EConst(OcamlConst.CInt(0))},
+			{name: "alpha", value: OcamlExpr.EConst(OcamlConst.CBool(false))}
+		];
+		final finalOutput = new OcamlFinalRuntimeUseAuthority();
+		finalOutput.beginProgram(PROGRAM_REVISION, PROFILE);
+		final marker = checkedMarker(decision, finalOutput);
+		final record = initializeInstanceRecord({declaration: declaration, classMarker: marker, fields: values});
+		final syntax = new OcamlASTPrinter().printExpr(record);
+		if (syntax != '({ __hx_type = HxType.class_ "fixture.Marker"; zeta = 0; alpha = false } : marker_t)')
+			throw "Shared instance initializer changed its marker, field order or nominal type: " + syntax;
+		finalOutput.observeExpression(record, "fixture.Marker::create");
+		finalOutput.finishProgram();
+		expectFailure("missing member", "member inventory",
+			() -> initializeInstanceRecord({declaration: declaration, classMarker: marker, fields: [values[0]]}));
+		expectFailure("reordered member", "member order",
+			() -> initializeInstanceRecord({declaration: declaration, classMarker: marker, fields: [values[1], values[0]]}));
+		expectFailure("duplicate member", "distinct named members", () -> declareInstanceRecord({typeName: "marker_t", fields: [fields[1], fields[1]]}));
+		expectFailure("duplicate runtime marker", "distinct named members", () -> declareInstanceRecord({typeName: "marker_t", fields: [fields[0]]}));
 	}
 
 	static function proveDecisionFailures(classType:ClassType, decision:OcamlClassIdentityMarkerDecision):Void {

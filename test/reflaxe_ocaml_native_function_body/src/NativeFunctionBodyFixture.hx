@@ -25,7 +25,7 @@ class NativeFunctionBodyFixture {
 		assertInvalidBodies(typed);
 		assertUnsupportedSource("var value:Int;");
 		assertUnsupportedSource("var value:Int = 7; value = 8;");
-		assertUnsupportedSource("return;");
+		assertUnsupportedSource("return; var value:Int = 7;");
 		assertUnsupportedSource("if (true) { var value:Int = 7; }");
 		assertUnsupportedSource("main(7);");
 		final repeated = HxhxOcamlTargetProgramAdapter.fromProgram(new MacroExpandedProgram([typed], false), "Main");
@@ -79,9 +79,11 @@ class NativeFunctionBodyFixture {
 		}, "without a visible source binding");
 		final foreign = new TyLocalBinding(TyLocalId.forSourceDeclaration("Other.main", 0, Variable, "value"), "value", TyType.fromHintText("Int"), Variable);
 		final foreignDeclaration = TypedStmt.variable("value", "Int", TypedExpr.intLiteral(7, foreign.getType(), null), null, [], foreign);
+		// Reading public parameter facts validates the complete projection first.
+		// A foreign write must fail there before the target copies its local binding.
 		assertRejected(() -> {
 			HxhxOcamlTargetFunctionAdapter.fromFunction(selection.owner, fn.withBody(new TypedFunctionBody([foreignDeclaration], fingerprint)));
-		}, "local from another function");
+		}, "local write requires its exact typed owner and operand");
 		assertRejected(() -> {
 			HxhxOcamlTargetFunctionAdapter.fromFunction(selection.owner, fn.withBody(new TypedFunctionBody(statements, "stale")));
 		}, "typed body revision mismatch");

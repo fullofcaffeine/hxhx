@@ -24,7 +24,7 @@
     {
       "module": "HxAnon",
       "scope": "application",
-      "files": [{ "path": "HxAnon.ml", "sha256": "fd554a7c8487487c3a73dc4af57bdeb3a95584fe20d50292d4f4090d8007b4e1" }],
+      "files": [{ "path": "HxAnon.ml", "sha256": "5ba346efbb70007eec9168ca59d45f097bed4e45b55fba7052c26468b92f2ad4" }],
       "dependencies": ["HxArray", "HxIterator", "HxRuntime", "HxString"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],
@@ -33,7 +33,7 @@
     {
       "module": "HxArray",
       "scope": "application",
-      "files": [{ "path": "HxArray.ml", "sha256": "8745df6695231d1fbb3fe7b384bf35b7bafa6ccdc41b8014db876fa0af8f2692" }],
+      "files": [{ "path": "HxArray.ml", "sha256": "2668da4164ceaf3cd60589cf787fd86b5a24b79369ab8ff62292a9c55fa23bb6" }],
       "dependencies": ["HxRuntime"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],
@@ -60,7 +60,7 @@
     {
       "module": "HxDynamic",
       "scope": "application",
-      "files": [{ "path": "HxDynamic.ml", "sha256": "0e8b9b3b006b8664d6fd07514d8fc63bd1256d92ebbba67439c51a42bc6d14c2" }],
+      "files": [{ "path": "HxDynamic.ml", "sha256": "6195c08972146061d8cc50408de2bcc8b6fa04667f538f108b9ed0f453ebc39a" }],
       "dependencies": ["HxAnon", "HxArray", "HxRuntime", "HxType"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],
@@ -249,8 +249,8 @@
     {
       "module": "HxType",
       "scope": "application",
-      "files": [{ "path": "HxType.ml", "sha256": "a59fda18d722bfaaecc10ca9e13c74c9f114ed2622812fde39fdc61e4143c0f6" }],
-      "dependencies": ["HxArray", "HxEnum", "HxRuntime"],
+      "files": [{ "path": "HxType.ml", "sha256": "e90a5a5de3f5f5718d5ee192d4c8a16b6f22ced53a8305c08d61d84b0ba2dffa" }],
+      "dependencies": ["HxAnon", "HxArray", "HxEnum", "HxRuntime"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],
       "license": "MIT"

@@ -10,6 +10,8 @@ package backend.js;
 class JsNameMangler {
 	static function isReserved(name:String):Bool {
 		return switch (name) {
+			// Binding is a compiler operation even when a source local uses its helper name.
+			case "__hx_bind_method": true;
 			// Strict mode also forbids `eval` and `arguments` as binding names.
 			case "break" | "case" | "catch" | "class" | "const" | "continue" | "debugger" | "default" | "delete" | "do" | "else" | "enum" | "export" |
 				"extends" | "false" | "finally" | "for" | "function" | "if" | "import" | "in" | "instanceof" | "new" | "null" | "return" | "super" |

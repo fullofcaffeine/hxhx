@@ -6,12 +6,13 @@ SOURCE_FILE="out/Main.ml"
 REPORT_FILE="out/ocaml_lowering_report.json"
 REPORT_COPY="$(mktemp)"
 INSPECTION_COPY="$(mktemp)"
+INSPECTOR_DIR="$(mktemp -d)"
 INVALID_NOMINAL_ROOT="$(mktemp -d)"
 INVALID_ARRAY_ROOT="$(mktemp -d)"
 INVALID_LITERAL_ROOT="$(mktemp -d)"
 INVALID_ADMISSION_ROOT="$(mktemp -d)"
 INVALID_RESULT_ROOT="$(mktemp -d)"
-trap 'rm -f "$REPORT_COPY" "$INSPECTION_COPY"; rm -rf "$INVALID_NOMINAL_ROOT" "$INVALID_ARRAY_ROOT" "$INVALID_LITERAL_ROOT" "$INVALID_ADMISSION_ROOT" "$INVALID_RESULT_ROOT"' EXIT
+trap 'rm -f "$REPORT_COPY" "$INSPECTION_COPY"; rm -rf "$INSPECTOR_DIR" "$INVALID_NOMINAL_ROOT" "$INVALID_ARRAY_ROOT" "$INVALID_LITERAL_ROOT" "$INVALID_ADMISSION_ROOT" "$INVALID_RESULT_ROOT"' EXIT
 
 if [ ! -f "$SOURCE_FILE" ] || [ ! -f "$REPORT_FILE" ]; then
 	echo "Missing generated early-return source or lowering report" >&2
@@ -34,11 +35,11 @@ if (!Array.isArray(report.controlAdmissions)) {
 	fail('the lowering report cannot distinguish a blocked control family from a function with no control transfer')
 }
 
-if (report.schemaVersion !== 86
-	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v26'
+if (report.schemaVersion !== 94
+	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v28'
 	|| report.controlAdmissionModel !== 'typed-ocaml-control-admission-v1'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'
-	|| report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v5'
+	|| report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary-v7'
 	|| report.controlCount !== report.controls.length
 	|| report.controlAdmissionCount !== report.controlAdmissions.length
 	|| report.controlTargetCount !== report.controlTargets.length
@@ -241,7 +242,7 @@ const writeStringEnd = stdioSource.indexOf('\nlet ', writeStringStart + 1)
 const writeStringBody = stdioSource.slice(writeStringStart, writeStringEnd)
 if (writeStringStart < 0
 	|| writeStringEnd < 0
-	|| !writeStringBody.includes('raise (HxRuntime.Hx_return_void)')
+	|| !writeStringBody.includes('Stdlib.raise (HxRuntime.Hx_return_void)')
 	|| !writeStringBody.includes('| HxRuntime.Hx_return_void -> ()')
 	|| writeStringBody.includes('Hx_return (Obj.repr ())')) {
 	fail('ocamlstdiooutput_writeString__impl still packages its payloadless return as a value')
@@ -332,7 +333,7 @@ if (nestedThrows.length !== 1
 	|| nestedThrows[0].payload?.conversion !== 'repr-and-recover-exact-value'
 	|| nestedThrows[0].proofId !== 'exact-value-throw-control-v1'
 	|| nestedThrows[0].bodyRevision !== nestedThrowRoot.bodyRevision
-	|| nestedThrows[0].pipelineRevision !== 'ocaml-nested-function-plans-v33') {
+	|| nestedThrows[0].pipelineRevision !== 'ocaml-nested-function-plans-v37') {
 	fail('nestedThrowCatchClosure did not seal its exact Int throw under the freshly checked ordinary-root revision')
 }
 const nestedArrayThrows = report.controls.filter(control =>
@@ -538,7 +539,7 @@ const nestedCatches = report.controlCatches.filter(catchChain =>
 		|| catchChain.functionId.includes('|function|nestedThrowCatchClosure|')))
 if (nestedCatches.length !== 2
 	|| nestedCatches.some(catchChain =>
-		catchChain.pipelineRevision !== 'ocaml-nested-function-plans-v33'
+		catchChain.pipelineRevision !== 'ocaml-nested-function-plans-v37'
 		|| catchChain.privateControlPolicy !== 'propagate-private-control-signals'
 		|| catchChain.clauses.length !== 1)) {
 	fail('the two nested catch chains are missing or do not preserve private control signals')
@@ -566,7 +567,7 @@ if (nestedLoopTargets.length !== 1
 	|| nestedLoopReturns.length !== 1
 	|| nestedLoopTransfers.filter(control => control.kind === 'break').length !== 1
 	|| nestedLoopTransfers.filter(control => control.kind === 'continue').length !== 1
-	|| nestedLoopTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v33'
+	|| nestedLoopTargets[0].pipelineRevision !== 'ocaml-nested-function-plans-v37'
 	|| nestedLoopReturns[0].functionId !== nestedLoopTargets[0].functionId
 	|| nestedLoopReturns[0].pipelineRevision !== nestedLoopTargets[0].pipelineRevision
 	|| nestedLoopReturns[0].bodyRevision !== nestedLoopTargets[0].bodyRevision
@@ -602,7 +603,7 @@ for (const control of returnControls) {
 			|| control.source.max < control.source.min
 			|| !rawSha256.test(control.programRevision)
 			|| !bodyRevision.test(control.bodyRevision)
-			|| control.pipelineRevision !== 'ocaml-function-plans-v113') {
+			|| control.pipelineRevision !== 'ocaml-function-plans-v119') {
 			fail(`payloadless control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 		}
 		ids.add(control.id)
@@ -626,8 +627,8 @@ for (const control of returnControls) {
 		|| !rawSha256.test(control.programRevision)
 		|| !bodyRevision.test(control.bodyRevision)
 		|| (control.functionId.includes('|nested-function|')
-			? control.pipelineRevision !== 'ocaml-nested-function-plans-v33'
-			: control.pipelineRevision !== 'ocaml-function-plans-v113')) {
+			? control.pipelineRevision !== 'ocaml-nested-function-plans-v37'
+			: control.pipelineRevision !== 'ocaml-function-plans-v119')) {
 		fail(`control decision ${control.id} has incomplete identity, target, proof, profile, source, or revision`)
 	}
 	const payload = control.payload
@@ -726,13 +727,13 @@ for (const name of ['branch', 'loop', 'nestedBlock', 'throughTry', 'boolBranch',
 const tryStart = source.indexOf('let throughTry =')
 const tryEnd = source.indexOf('\nlet nestedClosure =', tryStart)
 const tryBody = source.slice(tryStart, tryEnd)
-if (!/HxRuntime\.Hx_return __ret_\d+ -> raise \(HxRuntime\.Hx_return __ret_\d+\)/.test(tryBody)) {
+if (!/HxRuntime\.Hx_return __ret_\d+ -> Stdlib\.raise \(HxRuntime\.Hx_return __ret_\d+\)/.test(tryBody)) {
 	fail('a source catch can intercept the private function-return signal')
 }
 const stringTryStart = source.indexOf('let stringThroughTry =')
 const stringTryEnd = source.indexOf('\nlet nestedClosure =', stringTryStart)
 const stringTryBody = source.slice(stringTryStart, stringTryEnd)
-if (!/HxRuntime\.Hx_return __ret_\d+ -> raise \(HxRuntime\.Hx_return __ret_\d+\)/.test(stringTryBody)
+if (!/HxRuntime\.Hx_return __ret_\d+ -> Stdlib\.raise \(HxRuntime\.Hx_return __ret_\d+\)/.test(stringTryBody)
 	|| !/Obj\.obj __ret_\d+ : string/.test(stringTryBody)) {
 	fail('the exact-String try boundary does not rethrow private control before recovering its sealed string carrier')
 }
@@ -754,7 +755,7 @@ if (!boxesNullString
 const closureStart = source.indexOf('let nestedClosure =')
 const closureEnd = source.indexOf('\nlet nestedBoolClosure =', closureStart)
 const closureBody = source.slice(closureStart, closureEnd)
-if (!closureBody.includes('let local = fun')
+if (!/let local = let __callback_input_\d+ = fun /.test(closureBody)
 	|| !closureBody.includes('HxRuntime.Hx_return')
 	|| !closureBody.includes('Obj.repr')
 	|| !closureBody.includes('Obj.obj')
@@ -779,7 +780,7 @@ for (const [functionName, expectedType] of [
 		|| !body.includes('HxRuntime.Hx_return')
 		|| body.includes('__fallback_result')
 		|| body.includes('Obj.magic')
-		|| (functionName === 'nestedZeroArgumentClosure' && !body.includes('let local = fun () ->'))
+		|| (functionName === 'nestedZeroArgumentClosure' && !/let local = let __callback_input_\d+ = fun \(\) ->/.test(body))
 		|| !body.includes(`: ${expectedType}`)) {
 		fail(`${functionName} did not consume its represented nested return plan`)
 	}
@@ -803,7 +804,7 @@ const dynamicBranchControl = returnControls.find(control =>
 const dynamicBranchStart = source.indexOf('let dynamicBranch =')
 const dynamicBranchEnd = source.indexOf('\nlet ', dynamicBranchStart + 1)
 const dynamicBranchBody = source.slice(dynamicBranchStart, dynamicBranchEnd)
-if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v113'
+if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v119'
 	|| dynamicBranchControl.proofId !== 'dynamic-carrier-return-control-v1'
 	|| dynamicBranchStart < 0
 	|| dynamicBranchEnd < 0
@@ -815,16 +816,20 @@ if (dynamicBranchControl?.pipelineRevision !== 'ocaml-function-plans-v113'
 	|| dynamicBranchBody.includes('__fallback_result')) {
 	fail('dynamicBranch did not preserve its existing Dynamic Obj.t carrier through the current root return plan')
 }
+// Inspect the original lambda separately from the identity token and invocation adapter.
+function callbackLambda(body, functionName) {
+	const match = body.match(/let local = let (__callback_input_\d+) = (fun [\s\S]*?) in let __callable_origin_\d+ = \1 in/)
+	const entries = report.callableViews.entries.filter(entry => entry.decision.binding.functionId.includes(`|function|${functionName}|`))
+	if (match == null || entries.length !== 1 || !/in Stdlib\.fst __call_callee_\d+ /.test(body))
+		fail(`${functionName} must retain one callback view and invoke its original lambda`)
+	return match[2]
+}
 const arrayThrowStart = source.indexOf('let nestedArrayThrowClosure =')
-const arrayThrowEnd = source.indexOf('\nlet nestedStringArrayLiteralThrowClosure =', arrayThrowStart)
+const arrayThrowEnd = source.indexOf('\nlet ', arrayThrowStart + 1)
 const arrayThrowBody = source.slice(arrayThrowStart, arrayThrowEnd)
-const arrayLocalStart = arrayThrowBody.indexOf('let local = fun')
-const arrayLocalEnd = arrayThrowBody.indexOf(' in let result =', arrayLocalStart)
-const arrayLocalBody = arrayThrowBody.slice(arrayLocalStart, arrayLocalEnd)
+const arrayLocalBody = callbackLambda(arrayThrowBody, 'nestedArrayThrowClosure')
 if (arrayThrowStart < 0
 	|| arrayThrowEnd < 0
-	|| arrayLocalStart < 0
-	|| arrayLocalEnd < 0
 	|| !arrayLocalBody.includes('HxRuntime.Hx_return')
 	|| !arrayLocalBody.includes('HxType.hx_throw_typed_rtti (Obj.repr expected) ["Dynamic"; "Array"]')
 	|| !/HxRuntime\.Hx_return __ret_\d+ -> \(Obj\.obj __ret_\d+ : int\)/.test(arrayLocalBody)
@@ -835,16 +840,12 @@ if (arrayThrowStart < 0
 const literalThrowStart = source.indexOf('let nestedArrayLiteralThrowClosure =')
 const literalThrowEnd = source.indexOf('\nlet nestedStringArrayLiteralThrowClosure =', literalThrowStart)
 const literalThrowBody = source.slice(literalThrowStart, literalThrowEnd)
-const literalLocalStart = literalThrowBody.indexOf('let local = fun')
-const literalLocalEnd = literalThrowBody.indexOf(' : int) in (', literalLocalStart)
-const literalLocalBody = literalThrowBody.slice(literalLocalStart, literalLocalEnd)
+const literalLocalBody = callbackLambda(literalThrowBody, 'nestedArrayLiteralThrowClosure')
 const createIndex = literalLocalBody.indexOf('HxArray.create ()')
 const firstElementIndex = literalLocalBody.indexOf('arrayLiteralThrowElement')
 const secondElementIndex = literalLocalBody.indexOf('arrayLiteralThrowElement', firstElementIndex + 1)
 if (literalThrowStart < 0
 	|| literalThrowEnd < 0
-	|| literalLocalStart < 0
-	|| literalLocalEnd < 0
 	|| (literalLocalBody.match(/HxArray\.create \(\)/g) ?? []).length !== 1
 	|| (literalLocalBody.match(/arrayLiteralThrowElement/g) ?? []).length !== 2
 	|| (literalLocalBody.match(/HxArray\.push/g) ?? []).length !== 2
@@ -861,16 +862,12 @@ if (literalThrowStart < 0
 const stringLiteralThrowStart = source.indexOf('let nestedStringArrayLiteralThrowClosure =')
 const stringLiteralThrowEnd = source.indexOf('\nlet nestedNominalClosure =', stringLiteralThrowStart)
 const stringLiteralThrowBody = source.slice(stringLiteralThrowStart, stringLiteralThrowEnd)
-const stringLiteralLocalStart = stringLiteralThrowBody.indexOf('let local = fun')
-const stringLiteralLocalEnd = stringLiteralThrowBody.indexOf(' : int) in let ordinaryResult', stringLiteralLocalStart)
-const stringLiteralLocalBody = stringLiteralThrowBody.slice(stringLiteralLocalStart, stringLiteralLocalEnd)
+const stringLiteralLocalBody = callbackLambda(stringLiteralThrowBody, 'nestedStringArrayLiteralThrowClosure')
 const stringCreateIndex = stringLiteralLocalBody.indexOf('HxArray.create ()')
 const firstStringElementIndex = stringLiteralLocalBody.indexOf('stringArrayLiteralThrowElement')
 const secondStringElementIndex = stringLiteralLocalBody.indexOf('stringArrayLiteralThrowElement', firstStringElementIndex + 1)
 if (stringLiteralThrowStart < 0
 	|| stringLiteralThrowEnd < 0
-	|| stringLiteralLocalStart < 0
-	|| stringLiteralLocalEnd < 0
 	|| (stringLiteralLocalBody.match(/HxArray\.create \(\)/g) ?? []).length !== 1
 	|| (stringLiteralLocalBody.match(/stringArrayLiteralThrowElement/g) ?? []).length !== 2
 	|| (stringLiteralLocalBody.match(/HxArray\.push/g) ?? []).length !== 2
@@ -915,7 +912,7 @@ for (const functionName of ['nestedCatchClosure', 'nestedThrowCatchClosure']) {
 		|| next < 0
 		|| !body.includes('HxRuntime.Hx_return')
 		|| !body.includes('HxRuntime.Hx_exception')
-		|| !body.includes('raise (HxRuntime.Hx_return')
+		|| !body.includes('Stdlib.raise (HxRuntime.Hx_return')
 		|| body.includes('__fallback_result')
 		|| body.includes('Obj.magic')) {
 		fail(`${functionName} did not consume its nested return and catch plan without legacy result recovery`)
@@ -932,9 +929,9 @@ if (!throwCatchBody.includes('HxType.hx_throw_typed_rtti (Obj.repr 21) ["Dynamic
 const loopClosureStart = source.indexOf('let nestedLoopClosure =')
 const loopClosureEnd = source.indexOf('\nlet main =', loopClosureStart)
 const loopClosureBody = source.slice(loopClosureStart, loopClosureEnd)
-if (!loopClosureBody.includes('raise (HxRuntime.Hx_break)')
+if (!loopClosureBody.includes('Stdlib.raise (HxRuntime.Hx_break)')
 	|| !loopClosureBody.includes('| HxRuntime.Hx_break -> ()')
-	|| !loopClosureBody.includes('raise (HxRuntime.Hx_continue)')
+	|| !loopClosureBody.includes('Stdlib.raise (HxRuntime.Hx_continue)')
 	|| !loopClosureBody.includes('| HxRuntime.Hx_continue -> ()')
 	|| !loopClosureBody.includes('HxRuntime.Hx_return')
 	|| loopClosureBody.includes('__fallback_result')
@@ -951,15 +948,24 @@ if ! cmp -s "$REPORT_COPY" "$REPORT_FILE"; then
 	exit 1
 fi
 
+# Compile the CLI once; each report still gets a fresh process and its own
+# exit-status and diagnostic checks. The bytecode is removed with this fixture.
 haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 	--macro 'nullSafety("reflaxe.ocaml")' \
-	--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	-D reflaxe_runtime -main reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	--neko "$INSPECTOR_DIR/inspect.n"
+# Resealing validates the full artifact inventory too. Neko uses the same
+# native SHA-256 primitive as inspection; each corruption gets a fresh process.
+haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" \
+	-D reflaxe_runtime -main RecomputeLoweringControlRevision \
+	--neko "$INSPECTOR_DIR/reseal.n"
+neko "$INSPECTOR_DIR/inspect.n" \
 	inspect --project "$PWD" --output out --require-lowering --json >"$INSPECTION_COPY"
 
 node - "$INSPECTION_COPY" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 47
+if (report.schemaVersion !== 53
 	|| report.summary.valid !== true
 	|| report.summary.controlCount !== report.lowering.controls.length
 	|| report.summary.controlTargetCount !== report.lowering.controlTargets.length
@@ -1130,6 +1136,7 @@ for mutation in duplicate missing stale-program carrier representation conversio
 	cp -R out "$invalid_output"
 	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const fs = require('fs')
 const path = process.argv[2]
 const mutation = process.argv[3]
@@ -1179,13 +1186,11 @@ switch (mutation) {
 		throw new Error(`unsupported corruption ${mutation}`)
 }
 report.functionResultBoundaryCount = report.functionResultBoundaries.length
-report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify(report.functionResultBoundaries)).digest('hex')}`
+report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').update(reportJson(report.functionResultBoundaries)).digest('hex')}`
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 	invalid_log="$INVALID_RESULT_ROOT/$mutation.log"
-	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	if neko "$INSPECTOR_DIR/inspect.n" \
 		inspect --project "$PWD" --output "$invalid_output" --require-lowering --json >"$invalid_log" 2>&1; then
 		echo "The public inspector accepted corrupted function-result $mutation evidence" >&2
 		exit 1
@@ -1197,11 +1202,14 @@ NODE
 	fi
 done
 
+echo "EARLY_RETURN_CORRUPTION_GROUP:PASS function-result cases=9"
+
 for mutation in duplicate missing-family edited-count stale-revision; do
 	invalid_output="$INVALID_ADMISSION_ROOT/$mutation"
 	cp -R out "$invalid_output"
 	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const fs = require('fs')
 const path = process.argv[2]
 const mutation = process.argv[3]
@@ -1229,13 +1237,11 @@ switch (mutation) {
 	default:
 		throw new Error(`unsupported corruption ${mutation}`)
 }
-report.controlAdmissionRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify(report.controlAdmissions)).digest('hex')}`
+report.controlAdmissionRevision = `sha256:${crypto.createHash('sha256').update(reportJson(report.controlAdmissions)).digest('hex')}`
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 	invalid_log="$INVALID_ADMISSION_ROOT/$mutation.log"
-	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	if neko "$INSPECTOR_DIR/inspect.n" \
 		inspect --project "$PWD" --output "$invalid_output" --require-lowering --json >"$invalid_log" 2>&1; then
 		echo "The public inspector accepted corrupted control-admission $mutation evidence" >&2
 		exit 1
@@ -1246,6 +1252,8 @@ NODE
 		exit 1
 	fi
 done
+
+echo "EARLY_RETURN_CORRUPTION_GROUP:PASS control-admission cases=4"
 
 for mutation in semantic carrier representation layout proof; do
 	invalid_output="$INVALID_NOMINAL_ROOT/$mutation"
@@ -1287,12 +1295,10 @@ switch (mutation) {
 }
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
-	haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision \
+	neko "$INSPECTOR_DIR/reseal.n" \
 		"$invalid_output/ocaml_lowering_report.json"
 	invalid_log="$INVALID_NOMINAL_ROOT/$mutation.log"
-	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	if neko "$INSPECTOR_DIR/inspect.n" \
 		inspect --project "$PWD" --output "$invalid_output" --require-lowering --json >"$invalid_log" 2>&1; then
 		echo "The public inspector accepted a nested nominal return with corrupted $mutation metadata" >&2
 		exit 1
@@ -1303,6 +1309,8 @@ NODE
 		exit 1
 	fi
 done
+
+echo "EARLY_RETURN_CORRUPTION_GROUP:PASS nominal-return cases=5"
 
 for mutation in semantic carrier representation representation-revision descriptor descriptor-revision conversion tags proof program body binding; do
 	invalid_output="$INVALID_ARRAY_ROOT/$mutation"
@@ -1365,12 +1373,10 @@ switch (mutation) {
 }
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
-	haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision \
+	neko "$INSPECTOR_DIR/reseal.n" \
 		"$invalid_output/ocaml_lowering_report.json"
 	invalid_log="$INVALID_ARRAY_ROOT/$mutation.log"
-	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	if neko "$INSPECTOR_DIR/inspect.n" \
 		inspect --project "$PWD" --output "$invalid_output" --require-lowering --json >"$invalid_log" 2>&1; then
 		echo "The public inspector accepted an exact Array<Int> throw with corrupted $mutation metadata" >&2
 		exit 1
@@ -1381,6 +1387,8 @@ NODE
 		exit 1
 	fi
 done
+
+echo "EARLY_RETURN_CORRUPTION_GROUP:PASS array-throw cases=12"
 
 for mutation in missing-producer producer-id reordered-elements duplicated-element reordered-schedule stale-binding control-plan-revision; do
 	invalid_output="$INVALID_LITERAL_ROOT/$mutation"
@@ -1430,13 +1438,11 @@ switch (mutation) {
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 	if [ "$mutation" = "control-plan-revision" ]; then
-		haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision \
+		neko "$INSPECTOR_DIR/reseal.n" \
 			"$invalid_output/ocaml_lowering_report.json"
 	fi
 	invalid_log="$INVALID_LITERAL_ROOT/$mutation.log"
-	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	if neko "$INSPECTOR_DIR/inspect.n" \
 		inspect --project "$PWD" --output "$invalid_output" --require-lowering --json >"$invalid_log" 2>&1; then
 		echo "The public inspector accepted a direct Array<Int> literal producer with corrupted $mutation metadata" >&2
 		exit 1
@@ -1447,6 +1453,8 @@ NODE
 		exit 1
 	fi
 done
+
+echo "EARLY_RETURN_CORRUPTION_GROUP:PASS int-literal-producer cases=7"
 
 for mutation in string-missing-producer string-control-plan-revision; do
 	invalid_output="$INVALID_LITERAL_ROOT/$mutation"
@@ -1477,13 +1485,11 @@ if (mutation === 'string-missing-producer') {
 fs.writeFileSync(path, JSON.stringify(report, null, 2) + '\n')
 NODE
 	if [ "$mutation" = "string-control-plan-revision" ]; then
-		haxe -cp "$ROOT/scripts/ci" -cp "$ROOT/packages/reflaxe.ocaml/src" --run RecomputeLoweringControlRevision \
+		neko "$INSPECTOR_DIR/reseal.n" \
 			"$invalid_output/ocaml_lowering_report.json"
 	fi
 	invalid_log="$INVALID_LITERAL_ROOT/$mutation.log"
-	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	if neko "$INSPECTOR_DIR/inspect.n" \
 		inspect --project "$PWD" --output "$invalid_output" --require-lowering --json >"$invalid_log" 2>&1; then
 		echo "The public inspector accepted a direct Array<String> literal producer with corrupted $mutation metadata" >&2
 		exit 1
@@ -1495,4 +1501,8 @@ NODE
 	fi
 done
 
-echo "REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=59 function_results=56 producers=4"
+node - "$REPORT_FILE" <<'NODE'
+const report = JSON.parse(require('fs').readFileSync(process.argv[2], 'utf8'))
+console.log('EARLY_RETURN_CORRUPTION_GROUP:PASS string-literal-producer cases=2')
+console.log(`REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=59 function_results=${report.functionResultBoundaryCount} producers=4`)
+NODE

@@ -1,0 +1,15 @@
+test/m14_cpp_math_constant_test.hxml
+--next
+test/m14_cpp_float_literal_integration_test.hxml
+--next
+test/m14_cpp_enum_constructor_ownership_test.hxml
+--next
+test/m14_cpp_enum_constructor_integration_test.hxml
+--next
+test/m14_cpp_enum_equality_test.hxml
+--next
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp test
+-main M14CppDynamicEqualityTest
+--interp

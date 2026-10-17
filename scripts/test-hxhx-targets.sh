@@ -1957,6 +1957,9 @@ out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmppkg_parent/src
 echo "$out" | grep -q "^hi-parent$"
 echo "$out" | grep -q "^run=ok$"
 
+echo "== Stage3 bring-up: imported optional call executes without standard-library dependencies"
+HXHX_BIN="$HXHX_BIN" bash "$ROOT/scripts/hxhx/test-imported-optional-call.sh"
+
 echo "== Stage3 bring-up: optional args can be skipped by type (runci install git)"
 tmpopt="$tmpdir/optional_arg_shift"
 mkdir -p "$tmpopt/src/runci/targets"

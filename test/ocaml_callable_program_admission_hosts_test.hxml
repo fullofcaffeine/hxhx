@@ -1,0 +1,12 @@
+-cp packages/reflaxe.ocaml/src
+-cp test
+-main OrdinaryCallableProgramAdmissionTest
+--macro nullSafety("reflaxe.ocaml")
+--interp
+--next
+-cp packages/reflaxe.ocaml/src
+-cp test
+-main OrdinaryCallableProgramAdmissionTest
+--macro nullSafety("reflaxe.ocaml")
+-neko .tmp/ordinary_callable_program_admission.n
+-cmd neko .tmp/ordinary_callable_program_admission.n

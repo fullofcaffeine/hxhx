@@ -52,7 +52,7 @@ class OcamlNullablePrimitiveFieldDefaultPlan {
 	public static function requireRepresentation(representation:OcamlRepresentationDecision, expectedDomain:OcamlRepresentationDomain):Void {
 		switch (expectedDomain) {
 			case InstanceField, StaticField:
-			case InternalValue, MutableLocalStorage, CapturedLocalStorage, ArrayElement:
+			case InternalValue, MutableLocalStorage, CapturedLocalStorage, ArrayElement, GenericCallValue:
 				throw 'reflaxe.ocaml [ocaml-nullable-field-default:unsupported-domain]: nullable primitive field defaults require instance-field or static-field, not $expectedDomain';
 		}
 		if (representation.domain != expectedDomain)

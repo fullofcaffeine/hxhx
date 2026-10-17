@@ -5,8 +5,8 @@ node <<'NODE'
 const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (report.schemaVersion !== 86
-	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v31') {
+if (report.schemaVersion !== 94
+	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v34') {
 	throw new Error('the IMap fixture did not produce the current sealed call-report schema')
 }
 const hasMapTextReturns = report.controls.filter(control =>
@@ -36,8 +36,8 @@ if (report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v6'
 const calls = report.iMapInterfaceCalls
 if (calls.some(call =>
 	call.pipelineRevision !== (call.functionId.includes('|nested-function|')
-		? 'ocaml-nested-function-plans-v33'
-		: 'ocaml-function-plans-v113')
+		? 'ocaml-nested-function-plans-v37'
+		: 'ocaml-function-plans-v119')
 	|| call.receiverCarrierTypeId !== 'Obj.t(haxe_Constraints.imap_t)'
 	|| call.receiverSemanticTypeId !== `haxe.IMap<${call.keySemanticTypeId}, ${call.valueSemanticTypeId}>`)) {
 	throw new Error('the IMap fixture did not seal all calls against the exact interface receiver')
@@ -45,7 +45,7 @@ if (calls.some(call =>
 const nestedCalls = calls.filter(call => call.functionId.includes('|nested-function|'))
 if (nestedCalls.length !== 1
 	|| nestedCalls[0].operation !== 'exists'
-	|| nestedCalls[0].pipelineRevision !== 'ocaml-nested-function-plans-v33') {
+	|| nestedCalls[0].pipelineRevision !== 'ocaml-nested-function-plans-v37') {
 	throw new Error('the nested function did not keep its exact IMap interface call plan')
 }
 const operations = new Set(calls.map(call => call.operation))
@@ -81,7 +81,7 @@ const nestedConversions = conversions.filter(conversion => conversion.functionId
 if (nestedConversions.length !== 1
 	|| nestedConversions[0].role !== 'local-initializer'
 	|| nestedConversions[0].sourceKind !== 'standard-string-map'
-	|| nestedConversions[0].pipelineRevision !== 'ocaml-nested-function-plans-v33') {
+	|| nestedConversions[0].pipelineRevision !== 'ocaml-nested-function-plans-v37') {
 	throw new Error('the nested function did not keep its exact concrete-to-IMap conversion plan')
 }
 const keyKinds = new Set(conversions.map(conversion => conversion.standardKeyKind))
@@ -110,14 +110,14 @@ const expectedAliases = [
 for (const expected of expectedAliases) {
 	const alias = storageAliases.find(candidate => candidate.functionId.includes('|nested-function|') === expected.nested
 		&& candidate.standardKeyKind === expected.kind)
-	const expectedPipeline = expected.nested ? 'ocaml-nested-function-plans-v33' : 'ocaml-function-plans-v113'
+	const expectedPipeline = expected.nested ? 'ocaml-nested-function-plans-v37' : 'ocaml-function-plans-v119'
 	if (!alias
 		|| alias.sourceSemanticTypeId !== `Map<${expected.key}, ${expected.value}>`
 		|| alias.targetSemanticTypeId !== `haxe.IMap<${expected.key}, ${expected.value}>`
 		|| alias.sourceCarrierTypeId !== expected.carrier
 		|| alias.preservedCarrierTypeId !== expected.carrier
 		|| alias.nullPolicy !== 'non-null-source'
-		|| alias.proofId !== 'typed-standard-map-storage-alias-v2'
+		|| alias.proofId !== 'typed-standard-map-storage-alias-v3'
 		|| alias.runtimeRequirementIds?.length !== 0
 		|| alias.runtimeUseOccurrences?.length !== 0
 		|| report.runtimeRequirements.some(requirement => requirement.decisionId === alias.id)
@@ -190,24 +190,45 @@ repo_root="$(cd ../../../.. && pwd)"
 fixture_root="$PWD"
 inspection_report="$(mktemp)"
 lowering_backup="$(mktemp)"
+manifest_backup="$(mktemp)"
+inspector_dir="$(mktemp -d)"
 cp out/ocaml_lowering_report.json "$lowering_backup"
-trap 'cp "$lowering_backup" out/ocaml_lowering_report.json; rm -f "$inspection_report" "$lowering_backup"' EXIT
+cp out/ocaml_artifact_manifest.json "$manifest_backup"
+# The corruption helper updates the report and manifest; restore both originals.
+trap 'cp "$lowering_backup" out/ocaml_lowering_report.json; cp "$manifest_backup" out/ocaml_artifact_manifest.json; rm -f "$inspection_report" "$lowering_backup" "$manifest_backup"; rm -rf "$inspector_dir"' EXIT
+
+# Compile the strict inspector once; each report still gets a fresh process.
+(
+	cd "$repo_root"
+	haxe -cp packages/reflaxe.ocaml/src \
+		--macro 'nullSafety("reflaxe.ocaml")' -D reflaxe_runtime \
+		-main reflaxe.ocaml.tooling.ReflaxeOcamlRun --neko "$inspector_dir/inspect.n"
+)
 
 inspect() {
 	(
 		cd "$repo_root"
-		haxe -cp packages/reflaxe.ocaml/src \
-			--macro 'nullSafety("reflaxe.ocaml")' \
-			--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		neko "$inspector_dir/inspect.n" \
 			inspect --project "$fixture_root" --output out --require-lowering --json
 	)
+}
+
+# Corruption must reach semantic validation after its aggregate hash is refreshed.
+expect_semantic_rejection() {
+	node - "$inspection_report" <<'NODE'
+const fs = require('fs')
+const assert = require('assert')
+const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
+assert.strictEqual(report.lowering.status, 'invalid')
+assert(!report.lowering.message.includes('revision does not match'), report.lowering.message)
+NODE
 }
 
 inspect >"$inspection_report"
 node - "$inspection_report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 47
+if (report.schemaVersion !== 53
 	|| !report.summary?.valid
 	|| report.summary.iMapInterfaceConversionCount !== 5
 	|| report.summary.iMapInterfaceCallCount !== 55
@@ -234,18 +255,20 @@ if inspect >"$inspection_report" 2>/dev/null; then
 	echo "reflaxe.ocaml inspection accepted a typed return borrowed from another function" >&2
 	exit 1
 fi
+expect_semantic_rejection
 cp "$lowering_backup" out/ocaml_lowering_report.json
 
 node <<'NODE'
 const fs = require('fs')
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const path = 'out/ocaml_lowering_report.json'
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const local = report.iMapInterfaceConversions.find(conversion => conversion.role === 'local-initializer')
 if (!local)
 	throw new Error('the IMap fixture has no local conversion identity to corrupt')
 local.roleIdentity = '67681'
-report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
+report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(reportJson({
 	conversions: report.iMapInterfaceConversions,
 	calls: report.iMapInterfaceCalls,
 	storageAliases: report.iMapStorageAliases
@@ -256,15 +279,17 @@ if inspect >"$inspection_report" 2>/dev/null; then
 	echo "reflaxe.ocaml inspection accepted a request-local numeric IMap role identity" >&2
 	exit 1
 fi
+expect_semantic_rejection
 cp "$lowering_backup" out/ocaml_lowering_report.json
 
 node <<'NODE'
 const fs = require('fs')
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const path = 'out/ocaml_lowering_report.json'
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 report.iMapInterfaceConversions[0].sourceCarrierTypeId = 'HxMap.wrong_map'
-report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
+report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(reportJson({
 	conversions: report.iMapInterfaceConversions,
 	calls: report.iMapInterfaceCalls,
 	storageAliases: report.iMapStorageAliases
@@ -275,6 +300,7 @@ if inspect >"$inspection_report" 2>/dev/null; then
 	echo "reflaxe.ocaml inspection accepted a corrupted standard IMap storage carrier" >&2
 	exit 1
 fi
+expect_semantic_rejection
 cp "$lowering_backup" out/ocaml_lowering_report.json
 
 node <<'NODE'
@@ -289,18 +315,20 @@ if inspect >"$inspection_report" 2>/dev/null; then
 	echo "reflaxe.ocaml inspection accepted a corrupted standard IMap runtime requirement" >&2
 	exit 1
 fi
+expect_semantic_rejection
 cp "$lowering_backup" out/ocaml_lowering_report.json
 
 node <<'NODE'
 const fs = require('fs')
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const path = 'out/ocaml_lowering_report.json'
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const nested = report.iMapInterfaceConversions.find(conversion => conversion.functionId.includes('|nested-function|'))
 if (!nested)
 	throw new Error('the IMap fixture has no nested conversion to corrupt')
-nested.pipelineRevision = 'ocaml-function-plans-v113'
-report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
+nested.pipelineRevision = 'ocaml-function-plans-v119'
+report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(reportJson({
 	conversions: report.iMapInterfaceConversions,
 	calls: report.iMapInterfaceCalls,
 	storageAliases: report.iMapStorageAliases
@@ -311,11 +339,13 @@ if inspect >"$inspection_report" 2>/dev/null; then
 	echo "reflaxe.ocaml inspection accepted a nested IMap conversion labeled as a root-function decision" >&2
 	exit 1
 fi
+expect_semantic_rejection
 cp "$lowering_backup" out/ocaml_lowering_report.json
 
 node <<'NODE'
 const fs = require('fs')
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const path = 'out/ocaml_lowering_report.json'
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 // Decision IDs include the plan revision, so their sorted order may change
@@ -327,7 +357,7 @@ const rootStringAlias = report.iMapStorageAliases.find(alias =>
 if (!rootStringAlias)
 	throw new Error('the IMap fixture has no root string-map alias to corrupt')
 rootStringAlias.preservedCarrierTypeId = 'HxMap.int_map'
-report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
+report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(reportJson({
 	conversions: report.iMapInterfaceConversions,
 	calls: report.iMapInterfaceCalls,
 	storageAliases: report.iMapStorageAliases
@@ -338,11 +368,13 @@ if inspect >"$inspection_report" 2>/dev/null; then
 	echo "reflaxe.ocaml inspection accepted a storage alias with the wrong raw carrier" >&2
 	exit 1
 fi
+expect_semantic_rejection
 cp "$lowering_backup" out/ocaml_lowering_report.json
 
 node <<'NODE'
 const fs = require('fs')
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const path = 'out/ocaml_lowering_report.json'
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const rootStringAlias = report.iMapStorageAliases.find(alias =>
@@ -351,7 +383,7 @@ const rootStringAlias = report.iMapStorageAliases.find(alias =>
 if (!rootStringAlias)
 	throw new Error('the IMap fixture has no root string-map alias to corrupt')
 rootStringAlias.uses[0].nativeOperation = 'exists_int'
-report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
+report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(reportJson({
 	conversions: report.iMapInterfaceConversions,
 	calls: report.iMapInterfaceCalls,
 	storageAliases: report.iMapStorageAliases
@@ -362,18 +394,20 @@ if inspect >"$inspection_report" 2>/dev/null; then
 	echo "reflaxe.ocaml inspection accepted a storage alias consumed by the wrong native Map operation" >&2
 	exit 1
 fi
+expect_semantic_rejection
 cp "$lowering_backup" out/ocaml_lowering_report.json
 
 node <<'NODE'
 const fs = require('fs')
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const path = 'out/ocaml_lowering_report.json'
 const report = JSON.parse(fs.readFileSync(path, 'utf8'))
 const nested = report.iMapStorageAliases.find(alias => alias.functionId.includes('|nested-function|'))
 if (!nested)
 	throw new Error('the IMap fixture has no nested storage alias to corrupt')
-nested.pipelineRevision = 'ocaml-function-plans-v113'
-report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
+nested.pipelineRevision = 'ocaml-function-plans-v119'
+report.iMapInterfaceRevision = `sha256:${crypto.createHash('sha256').update(reportJson({
 	conversions: report.iMapInterfaceConversions,
 	calls: report.iMapInterfaceCalls,
 	storageAliases: report.iMapStorageAliases
@@ -384,5 +418,6 @@ if inspect >"$inspection_report" 2>/dev/null; then
 	echo "reflaxe.ocaml inspection accepted a nested storage alias labeled as a root-function decision" >&2
 	exit 1
 fi
+expect_semantic_rejection
 
 echo "STANDARD_IMAP_TYPED_TARGET:PASS"

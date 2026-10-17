@@ -1,0 +1,6 @@
+-cp packages/hxhx-core/src
+-cp test
+-main M14NekoStackPrimitivesIntegrationTest
+--interp
+--next
+test/m14_neko_native_array_primitives_test.hxml

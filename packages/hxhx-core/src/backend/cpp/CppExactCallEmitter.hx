@@ -29,6 +29,9 @@ class CppExactCallEmitter {
 	public static function cppType(expression:HxExpr, scope:CppRenderScope, services:CppExactCallEmitterServices):String {
 		if (scope == null)
 			return "";
+		final staticCall = TypedExactStaticCallSource.decode(expression);
+		if (staticCall != null)
+			return services.cppTypeHint(staticCall.resultType, scope, services.lookupForScope(scope));
 		final exact = TypedExactCallSource.decodeInstance(expression);
 		return exact == null ? "" : services.cppTypeHint(exact.resultType, scope, services.lookupForScope(scope));
 	}
@@ -37,6 +40,9 @@ class CppExactCallEmitter {
 	public static function render(expression:HxExpr, scope:CppRenderScope, services:CppExactCallEmitterServices):Null<String> {
 		if (scope == null)
 			return null;
+		final staticCall = TypedExactStaticCallSource.decode(expression);
+		if (staticCall != null)
+			return services.renderExpression(TypedExactStaticCallSource.ordinaryCall(staticCall), scope);
 		final exact = TypedExactCallSource.decodeInstance(expression);
 		if (exact == null)
 			return null;

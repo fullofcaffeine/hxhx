@@ -11,8 +11,10 @@ class Main {
 	}
 
 	static function main():Void {
+		Sys.println("main");
 		final result:Dynamic = untyped GeneratedEntrypoint.init();
 		afterEntrypoint(result);
 		Sys.println(Std.isOfType(result, String) ? (cast result : String) : "ok");
+		Sys.println(StaticEntrypoint.status());
 	}
 }

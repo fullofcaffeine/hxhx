@@ -31,7 +31,12 @@ class OcamlNativeTargetCore implements ITargetCore {
 		final profile = context.ensureOcamlProfileDefine();
 		OcamlTargetProgramCore.requireProfile(OcamlProfile.toDefineValue(profile));
 		final request = HxhxOcamlTargetProgramAdapter.fromProgram(typedProgram, context.mainModule);
-		final plan = OcamlTargetProgramCore.lower(request);
+		final plan = OcamlTargetProgramCore.lower(request, () -> {
+			final runtimeDirectory = context.defineValue("reflaxe_ocaml_runtime_directory");
+			if (runtimeDirectory == null || StringTools.trim(runtimeDirectory).length == 0)
+				throw "The shared OCaml target requires -D reflaxe_ocaml_runtime_directory=<installed reflaxe.ocaml std/runtime directory>.";
+			return new reflaxe.ocaml.target.OcamlTargetRuntimeSources(runtimeDirectory);
+		});
 		final executable = OcamlTargetProgramPublisher.publish(plan, context.outputDir, "native-hxhx", context.buildExecutable);
 		final entryPath = context.buildExecutable ? executable : Path.join([context.outputDir, OcamlTargetProgramCore.REPORT_FILE]);
 		return new EmitResult(entryPath, [

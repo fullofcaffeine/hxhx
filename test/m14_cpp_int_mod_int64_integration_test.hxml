@@ -1,5 +1,7 @@
 -cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
 -cp test
+-cp packages/hxhx/src
 -main M14CppIntModInt64IntegrationTest
 --interp
 -D analyzer-optimize

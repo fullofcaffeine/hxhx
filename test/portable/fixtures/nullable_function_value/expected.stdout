@@ -1,0 +1,14 @@
+optional absent=absent
+optional present=5
+optional miss=absent
+field absent=absent
+field present=10
+field replaced=30
+field cleared=absent
+calls=3
+class=11
+static=ready
+absent invocation caught=true
+captured before replacement=41
+replacement retained=70
+absent argument effects=1

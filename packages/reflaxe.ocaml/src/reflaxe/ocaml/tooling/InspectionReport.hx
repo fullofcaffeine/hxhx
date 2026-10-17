@@ -3,6 +3,7 @@ package reflaxe.ocaml.tooling;
 import reflaxe.ocaml.lowered.OcamlArrayLiteralProducerModel.OcamlArrayLiteralProducerDecision;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionSnapshot;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseOccurrence;
+import reflaxe.ocaml.reports.OcamlGenericCallReport.GenericCallReportTarget;
 
 /** One runtime module and the current report's reasons for selecting it. **/
 typedef InspectionRuntimeReason = {
@@ -399,6 +400,8 @@ typedef InspectionUnsafeOperation = {
 
 /** One directional argument or result crossing selected by the typed call plan. **/
 typedef InspectionCallValue = {
+	final callableView:Null<reflaxe.ocaml.reports.OcamlCallableViewReport.CallableViewLayoutReport>;
+	final callbackArgument:Null<reflaxe.ocaml.reports.OcamlCallableCallReport.CallableArgumentReport>;
 	final index:Int;
 	final parameterOptional:Bool;
 	final inputSemanticTypeId:String;
@@ -410,6 +413,31 @@ typedef InspectionCallValue = {
 	final conversion:String;
 	final proofId:String;
 	final proofClaim:String;
+	final nullableEnumCarrier:Null<InspectionNullableEnumCarrierReference>;
+}
+
+/** Plain generated-name identity for one ordinary Haxe enum. */
+typedef InspectionNativeEnumDescriptor = {
+	final semanticTypeId:String;
+	final sourceModuleId:String;
+	final sourceTypeName:String;
+	final targetModuleName:String;
+	final targetTypeName:String;
+	final revision:String;
+}
+
+/** Revisioned join between a native enum and its nullable result carrier. */
+typedef InspectionNullableEnumCarrierReference = {
+	final modelRevision:String;
+	final revision:String;
+	final descriptor:InspectionNativeEnumDescriptor;
+	final inputRepresentationId:String;
+	final inputRepresentationRevision:String;
+	final outputRepresentationId:String;
+	final outputRepresentationRevision:String;
+	final programRevision:String;
+	final crossingModel:String;
+	final crossingRevision:String;
 }
 
 /** One validated source-order action in a sealed typed-call schedule. **/
@@ -633,6 +661,7 @@ typedef InspectionIMapStorageAlias = {
 
 /** One typed call occurrence whose target and evaluation order were sealed before syntax. **/
 typedef InspectionCall = {
+	final callbackInvocation:Null<reflaxe.ocaml.reports.OcamlCallableCallReport.CallableCalleeReport>;
 	final id:String;
 	final sourceFile:String;
 	final sourceMin:Int;
@@ -660,10 +689,13 @@ typedef InspectionCall = {
 	final standardArrayTarget:Null<InspectionStandardArrayCallTarget>;
 	final standardIMapTarget:Null<InspectionStandardIMapCallTarget>;
 	final structuralIteratorTarget:Null<InspectionStructuralIteratorCallTarget>;
+	final genericInstanceTarget:Null<GenericCallReportTarget>;
 }
 
 /** One callable definition independently sealed against its final body. **/
 typedef InspectionCallableBoundary = {
+	final callbackReturnCount:Null<Int>;
+	final callbackReturns:Null<Array<reflaxe.ocaml.reports.OcamlCallableCallReport.CallableReturnReport>>;
 	final id:String;
 	final calleeId:String;
 	final sourceModuleId:String;
@@ -780,6 +812,7 @@ typedef InspectionFunctionResultNullableEnumProof = {
 	final semanticTypeId:String;
 	final nullableSemanticTypeId:String;
 	final carrierTypeId:String;
+	final descriptor:InspectionNativeEnumDescriptor;
 	final sourceFile:String;
 	final sourceMin:Int;
 	final sourceMax:Int;
@@ -803,8 +836,24 @@ typedef InspectionControlNominalRepresentationProof = {
 	final representationProofId:String;
 }
 
+/** Exact catch producer for one admitted enum catch-binding rethrow. **/
+typedef InspectionControlEnumCatchOrigin = {
+	final chainId:String;
+	final clauseId:String;
+	final localId:String;
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final representationId:String;
+	final functionId:String;
+	final programRevision:String;
+	final bodyRevision:String;
+	final pipelineRevision:String;
+}
+
 /** The exact value crossing carried by one private compiler-control signal. **/
 typedef InspectionControlPayload = {
+	final callbackReturnId:Null<String>;
+	final callbackReturnRevision:Null<String>;
 	final inputSemanticTypeId:String;
 	final inputCarrierTypeId:String;
 	final inputRepresentationId:String;
@@ -817,6 +866,8 @@ typedef InspectionControlPayload = {
 	final arrayDescriptorRevision:Null<String>;
 	final arrayLiteralProducerId:Null<String>;
 	final arrayLiteralProducerPlanRevision:Null<String>;
+	final enumCatchOrigin:Null<InspectionControlEnumCatchOrigin>;
+	final nullableEnumCarrier:Null<InspectionNullableEnumCarrierReference>;
 	final conversion:String;
 	final nominalRepresentation:Null<InspectionControlNominalRepresentationProof>;
 	final proofId:String;
@@ -871,6 +922,7 @@ typedef InspectionControlCatchClause = {
 	final sourceMax:Int;
 	final order:Int;
 	final variableName:String;
+	final localId:String;
 	final semanticTypeId:String;
 	final signalCarrierTypeId:String;
 	final outputCarrierTypeId:String;
@@ -962,6 +1014,7 @@ typedef InspectionLowering = {
 	final iMapStorageAliases:Array<InspectionIMapStorageAlias>;
 	final localConversionRevision:Null<String>;
 	final localConversions:Array<InspectionLocalConversion>;
+	final callableViews:reflaxe.ocaml.reports.OcamlCallableViewInventory.CallableViewInventoryReport;
 	final containerElementRequiredConversionRevision:Null<String>;
 	final containerElementRequiredConversionIds:Array<String>;
 	final containerElementConversionRevision:Null<String>;
@@ -1021,6 +1074,14 @@ typedef InspectionSummary = {
 	final iMapInterfaceCallCount:Int;
 	final iMapStorageAliasCount:Int;
 	final localConversionCount:Int;
+	final callbackViewCount:Int;
+	final callbackParameterCount:Int;
+	final callbackComparisonCount:Int;
+	final callbackArgumentCount:Int;
+	final callbackReturnCount:Int;
+	final callbackInvocationCount:Int;
+	final callbackUnsafeOperationCount:Int;
+	final callbackRuntimeUseCount:Int;
 	final containerElementConversionCount:Int;
 	final unsafeOperationCount:Int;
 	final callCount:Int;

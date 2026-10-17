@@ -1,11 +1,10 @@
 import backend.BackendContext;
 import backend.BackendRegistry;
-import haxe.ds.StringMap;
 import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
 
-/** Builds and executes the repo-owned Int64 complement contract through C++. **/
+/** Builds and executes the repo-owned `Int64 complement` contract through C++. **/
 class M14CppInt64ComplementIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
@@ -24,8 +23,8 @@ class M14CppInt64ComplementIntegrationTest {
 		}
 	}
 
-	static function commandOutput(command:String):{code:Int, stdout:String, stderr:String} {
-		final process = new sys.io.Process(command, []);
+	static function commandOutput(command:String, ?arguments:Array<String>):{code:Int, stdout:String, stderr:String} {
+		final process = new sys.io.Process(command, arguments == null ? [] : arguments);
 		final stdout = process.stdout.readAll().toString();
 		final stderr = process.stderr.readAll().toString();
 		final code = process.exitCode();
@@ -33,48 +32,129 @@ class M14CppInt64ComplementIntegrationTest {
 		return {code: code, stdout: stdout, stderr: stderr};
 	}
 
+	/** Operator lowering must select the authored provider instead of a synthetic native carrier. */
+	static function assertProvider(program:MacroExpandedProgram):Void {
+		var provider = false;
+		var additions = 0;
+		var complements = 0;
+		function expression(value:TypedExpr):Void {
+			final declaration = value.getDeclaration();
+			if (value.getTag() == Call && declaration != null && declaration.getOwner().getCanonicalName() == "haxe.Int64")
+				switch declaration.getSignature().getName() {
+					case "add":
+						additions++;
+					case "complement":
+						complements++;
+					case _:
+				}
+			for (child in value.getExpressions())
+				expression(child);
+		}
+		function statement(value:TypedStmt):Void {
+			for (child in value.getExpressions())
+				expression(child);
+			for (child in value.getStatements())
+				statement(child);
+		}
+		for (module in program.getTypedModules()) {
+			final name = module.getSourceOrigin().sourceModulePath;
+			if (name == "haxe.Int64")
+				provider = new CompilerSourceProvider().isFile(module.getParsed().getFilePath());
+			if (name == "Main" || name == "Contract")
+				for (owner in module.getTypedClasses())
+					for (fn in owner.getFunctions())
+						for (body in fn.getBody().getStatements())
+							statement(body);
+		}
+		assertTrue(provider && additions == 2 && complements == 16,
+			"Int64 complement lost its real provider or selected calls: provider="
+			+ provider
+			+ ", add="
+			+ additions
+			+ ", complement="
+			+ complements);
+	}
+
+	/** Compare every output case under both sanitizer optimizations and forced collection. */
+	static function sanitizers(root:String, expected:String):Void {
+		File.copy("test/cpp_managed_heap/Int64OutputObserver.cpp", root + "/Observer.cpp");
+		final compiler = Sys.getEnv("CXX") == null ? "clang++" : Sys.getEnv("CXX");
+		final timeout = Sys.systemName() == "Mac" ? "gtimeout" : "timeout";
+		for (optimization in ["-O0", "-O2"]) {
+			final executable = root + "/observer" + optimization;
+			assertTrue(Sys.command(timeout, [
+				"90",
+				compiler,
+				"-std=c++17",
+				optimization,
+				"-g",
+				"-fno-omit-frame-pointer",
+				"-fsanitize=address,undefined",
+				"-fno-sanitize-recover=all",
+				'-DHXHX_LOCAL_PROGRAM="src/Contract.cpp"',
+				root + "/Observer.cpp",
+				"-o",
+				executable
+			]) == 0, "Int64 sanitizer compilation failed");
+			final observed = commandOutput(timeout, ["30", executable]);
+			assertTrue(observed.code == 0 && observed.stdout == expected && observed.stderr == "",
+				"Int64 sanitizer behavior differs: " + observed.stdout + observed.stderr);
+			Sys.println("CPP_INT64_COMPLEMENT:" + optimization + ":PASS");
+		}
+	}
+
+	/** Validate an emitted artifact without changing its generated source. */
+	static function validateArtifact(root:String, entryPath:String, expected:String):Void {
+		final generated = File.getContent(Path.join([root, "src", "Contract.cpp"]));
+		assertTrue(generated.indexOf("Int64::complement") < 0, "C++ emitted an unbound Int64.complement class helper");
+		assertTrue(generated.indexOf("__hxhx_int64_complement(") < 0, "C++ bypassed the authored Int64 provider with a legacy carrier helper");
+		final executed = commandOutput(entryPath);
+		assertTrue(executed.code == 0 && executed.stderr == "", "focused Int64 complement executable failed: " + executed.stderr);
+		assertTrue(executed.stdout == expected, "unexpected focused Int64 complement stdout:\n" + executed.stdout);
+		sanitizers(root, expected);
+	}
+
 	static function main():Void {
-		final sourcePath = "test/oracle/cpp_int64_complement_seed/src/Main.hx";
-		final source = HxConditionalCompilation.filterSource(File.getContent(sourcePath), new StringMap<String>());
-		final int64Source = [
-			"package haxe;",
-			"@:transitive abstract Int64(Int) from Int to Int {",
-			"  public static function ofInt(value:Int):Int64 return cast value;",
-			"  public static function make(high:Int, low:Int):Int64 return cast low;",
-			"  public static function toStr(value:Int64):String return '';",
-			"  public static function add(left:Int64, right:Int64):Int64 return left;",
-			"  @:op(~A) private static inline function complement(value:Int64):Int64 return value;",
-			"}",
-		].join("\n");
-		final int64Resolved = new ResolvedModule("haxe.Int64", "haxe/Int64.hx", ParserStage.parse(int64Source, "haxe/Int64.hx"));
-		final mainResolved = new ResolvedModule("Main", sourcePath, ParserStage.parse(source, sourcePath));
-		final resolved = [int64Resolved, mainResolved];
-		final index = TyperIndex.build(resolved);
-		final loader = new ModuleLoader(["."], new StringMap<String>(), index, function(_):Bool return false);
-		loader.markResolvedAlready(resolved);
-		final provisional = TyperStage.typeResolvedModule(mainResolved, index, loader, true);
-		final typed = TypedAbstractOperatorLowering.lowerModules([provisional], index)[0];
-		final program = new MacroExpandedProgram([typed], false);
+		final expected = File.getContent("test/oracle/cpp_int64_complement_seed/expected.stdout");
+		final upstream = commandOutput("haxe", [
+			"-cp",
+			"test/oracle/cpp_int64_complement_seed/src",
+			"-main",
+			"Contract",
+			"--interp"
+		]);
+		assertTrue(upstream.code == 0 && upstream.stdout == expected && upstream.stderr == "", "upstream Int64 complement contract differs");
+		final fixture = CppResolvedFixture.load({
+			sourceRoot: "test/oracle/cpp_int64_complement_seed/src",
+			mainModule: "Contract",
+			requiredModules: ["Main", "haxe.Int64", "Sys"]
+		});
+		final revisions = [
+			for (module in fixture.modules)
+				for (owner in module.getTypedClasses())
+					for (fn in owner.getFunctions())
+						CompilerTypedTreeRevision.functionBody(fn)
+		];
+		final program = CppResolvedFixture.prepare(fixture);
+		assertProvider(program);
 
 		final root = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_int64_complement"]);
 		deleteRecursive(root);
 		FileSystem.createDirectory(root);
-		final context = new BackendContext(root, null, "Main", true, true, new StringMap<String>());
+		final context = new BackendContext(root, null, "Contract", true, true, fixture.defines);
 		final result = BackendRegistry.createForTarget("cpp-native").emit(program, context);
 		assertTrue(result.builtExecutable, "focused Int64 complement C++ artifact did not build");
 
-		final generated = File.getContent(Path.join([root, "src", "Main.cpp"]));
-		assertTrue(generated.indexOf("Int64::complement") < 0, "C++ emitted the erased Int64.complement declaration as a class helper");
-		assertTrue(generated.split("__hxhx_int64_complement(").length > 15,
-			"C++ did not route every selected Int64 complement call through the carrier helper");
-		assertTrue(generated.indexOf("static long long __hxhx_int64_complement(long long value)") >= 0, "C++ did not emit a typed Int64 complement helper");
-		assertTrue(generated.indexOf("return -1 - value;") >= 0, "C++ Int64 complement does not use a defined full-range signed transformation");
-		assertTrue(generated.indexOf("return ~value;") < 0, "C++ used representation-dependent signed bitwise complement in the helper");
-
-		final executed = commandOutput(result.entryPath);
-		assertTrue(executed.code == 0, "focused Int64 complement executable failed: " + executed.stderr);
-		final expected = File.getContent("test/oracle/cpp_int64_complement_seed/expected.stdout");
-		assertTrue(executed.stdout == expected, "unexpected focused Int64 complement stdout:\n" + executed.stdout);
+		validateArtifact(root, result.entryPath, expected);
+		final after = [
+			for (module in fixture.modules)
+				for (owner in module.getTypedClasses())
+					for (fn in owner.getFunctions())
+						CompilerTypedTreeRevision.functionBody(fn)
+		];
+		assertTrue(revisions.join("\n") == after.join("\n"), "Int64 preparation or emission changed the authored source");
+		program.assertTypedBodyRevisionsCurrent();
 		deleteRecursive(root);
+		Sys.println("CPP_INT64_COMPLEMENT:PASS");
 	}
 }

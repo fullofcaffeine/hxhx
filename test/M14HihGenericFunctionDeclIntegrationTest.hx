@@ -1,3 +1,8 @@
+import backend.js.JsFunctionScope;
+import backend.js.JsStmtEmitter;
+import backend.js.JsWriter;
+
+/** Method generic signatures preserve names and nested constraints across both parser entry points. */
 class M14HihGenericFunctionDeclIntegrationTest {
 	static function fail(msg:String):Void {
 		throw msg;
@@ -104,5 +109,58 @@ class M14HihGenericFunctionDeclIntegrationTest {
 		assertArg(gf3, 0, "a", "A");
 		assertArg(gf3, 1, "b", "B");
 		assertMetadataContains(gf3, "__hxhx_fn_type_params=A,B", "constrained gf3 type params");
+		checkCommentsAndMalformedConstraints();
+		checkTypedGenericExecution();
+	}
+
+	/** Commas inside comments cannot manufacture generic declarations. */
+	static function checkCommentsAndMalformedConstraints():Void {
+		final source = "class Main { static function first<T /*, Phantom*/:Array<Int>>(value:T):Int { return value[0]; } }";
+		final method = findFunction(findClass(new HxParser(source).parseModule("Main"), "Main"), "first");
+		final scanned = ParserStageScanHelpers.scanClassBodyForStatics(source, source.indexOf("{") + 1).functions[0];
+		for (declaration in [method, scanned]) {
+			assertMetadataContains(declaration, "__hxhx_fn_type_params=T", "comment cannot create a generic binder");
+			assertMetadataContains(declaration, "__hxhx_fn_type_constraint=T:Array<Int>", "constraint belongs to the actual binder");
+		}
+		final intersection = HxFunctionSyntaxParser.parse("function pair<T:{x:Int} & {y:Int}>(value:T):Int { return value.x + value.y; }").typeParameters;
+		assertEqInt(intersection.length, 1, "intersection binder count");
+		assertEqInt(intersection[0].constraints.length, 2, "intersection constraints stay separate");
+		assertEqString(HxFunctionTypeParamMetadata.constraints(HxFunctionTypeParamMetadata.fromGenericText("<T:{x:Int} & {y:Int}>")).get("T"),
+			"{x:Int}&{y:Int}", "intersection projection keeps both constraints");
+		for (parameters in ["<T:>", "<T,,U>"]) {
+			var rejected = false;
+			try
+				new HxParser("class Invalid { static function reject" + parameters + "() {} }").parseModule("Invalid")
+			catch (_:HxParseError)
+				rejected = true;
+			assertTrue(rejected, "malformed generic declaration must fail: " + parameters);
+		}
+	}
+
+	/** The ordinary typer and JavaScript body emitter must consume the one real binder. */
+	static function checkTypedGenericExecution():Void {
+		final source = "class Main { static function echo<T /*, Phantom*/>(value:T):T { return value; } "
+			+ "static function run():Int { return Main.echo(7); } }";
+		final module = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
+		final index = TyperIndex.build([module]);
+		final owner = index.getByFullName("Main");
+		final declaration = owner.declarationForSignature(owner.staticMethod("echo"));
+		assertEqInt(declaration.getTypeParameterIds().length, 1, "typing must allocate only the authored binder");
+		final names = new haxe.ds.StringMap<String>();
+		names.set("Main", "Main");
+		final methods = new Array<String>();
+		for (fn in TyperStage.typeResolvedModule(module, index).getTypedClasses()[0].getFunctions()) {
+			final projection = TypedBodySource.functionProjection(fn);
+			final writer = new JsWriter();
+			JsStmtEmitter.emitFunctionBody(writer, projection.getBody(), new JsFunctionScope(names, null, null, projection.getLocalCatalog()));
+			final parameters = [for (parameter in fn.getEnvironment().getParams()) parameter.getName()];
+			methods.push(fn.getEnvironment().getName() + ":function(" + parameters.join(",") + "){" + writer.toString() + "}");
+		}
+		final process = new sys.io.Process("node", ["-e", "const Main={" + methods.join(",") + "};console.log(Main.run());"]);
+		final output = process.stdout.readAll().toString();
+		final errors = process.stderr.readAll().toString();
+		final code = process.exitCode();
+		process.close();
+		assertTrue(code == 0 && output == "7\n", "generic method execution differs: " + output + errors);
 	}
 }

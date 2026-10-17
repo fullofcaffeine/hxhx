@@ -65,7 +65,7 @@ enum OcamlExpr {
 	**/
 	EPos(pos:OcamlDebugPos, expr:OcamlExpr);
 
-	/** `raise (<exn>)` */
+	/** `Stdlib.raise (<exn>)`; qualification prevents capture by a user value named raise. **/
 	ERaise(exn:OcamlExpr);
 
 	/**

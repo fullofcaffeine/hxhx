@@ -114,7 +114,8 @@ class M14CppOptionalLambdaPrepBenchIntegrationTest {
 
 		final shadowed = fixture("ShadowedOwner", "shadowed", [
 			SVar("callback", "Int->Int", ELambda(["value"], EIdent("value")), HxPos.unknown()),
-			SBlock(optionalBody("callback"), HxPos.unknown())
+			// Production projection has already distinguished the inner binding before inference.
+			SBlock(optionalBody("callback_2"), HxPos.unknown())
 		]);
 		runComplete(shadowed);
 		assertTrue(!shadowed.scope.localTypeOverrides.exists("callback"), "nested inference should not overwrite a typed outer shadow");

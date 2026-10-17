@@ -2,10 +2,20 @@ import haxe.ds.StringMap;
 import sys.FileSystem;
 import sys.io.File;
 
+/** Static calls keep their declared arguments; instance and extension calls receive one real receiver. */
 class M14HihQualifiedCallReceiverPaddingIntegrationTest {
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
 			throw message;
+	}
+
+	static function observe(command:String, arguments:Array<String>):{code:Int, output:String, errors:String} {
+		final process = new sys.io.Process(command, arguments);
+		final output = process.stdout.readAll().toString();
+		final errors = process.stderr.readAll().toString();
+		final code = process.exitCode();
+		process.close();
+		return {code: code, output: output, errors: errors};
 	}
 
 	static function deleteRecursive(path:String):Void {
@@ -56,11 +66,11 @@ class M14HihQualifiedCallReceiverPaddingIntegrationTest {
 
 		final mainHx = haxe.io.Path.join([srcDir, 'Main.hx']);
 		final src = [
-			'using Syntax;',
+			'using Main.Syntax;',
 			'class Syntax {',
 			'  public function new() {}',
-			'  public function equal(left:Dynamic, right:Dynamic):Bool {',
-			'    return true;',
+			'  public static function equal(left:Dynamic, right:Dynamic):Bool {',
+			'    return left == right;',
 			'  }',
 			'  public function ping():Int {',
 			'    return 7;',
@@ -77,13 +87,23 @@ class M14HihQualifiedCallReceiverPaddingIntegrationTest {
 			'    return Syntax.equal(left, right);',
 			'  }',
 			'  static function main() {',
-			'    equal(1, 2);',
-			'    new Syntax().callPing();',
+			'    Sys.println(equal(1, 2));',
+			'    Sys.println(new Syntax().callPing());',
 			'    if (!"file.hx".hasSuffix("file.hx")) Sys.exit(9);',
 			'  }',
 			'}',
 		].join("\n");
 		File.saveContent(mainHx, src);
+		final expected = "false\n7\n";
+		final upstream = observe("haxe", ["-cp", srcDir, "--run", "Main"]);
+		assertTrue(upstream.code == 0 && upstream.output == expected, "Upstream qualified-call contract differs: " + upstream.errors);
+		// The retired fixture expected a fake null receiver for this invalid static access.
+		// Keep Haxe's rejection explicit instead of accepting that bootstrap behavior.
+		File.saveContent(haxe.io.Path.join([srcDir, "InvalidReceiver.hx"]),
+			'class InvalidReceiver {public function equal(left:Dynamic,right:Dynamic):Bool{return true;} static function main():Void{InvalidReceiver.equal(1,2);}}');
+		final invalid = observe("haxe", ["-cp", srcDir, "--run", "InvalidReceiver"]);
+		assertTrue(invalid.code != 0 && invalid.errors.indexOf("Static access to instance field equal is not allowed") >= 0,
+			"Upstream accepted the retired fake-receiver operation or rejected it for an unrelated reason: " + invalid.errors);
 
 		var thrown:Dynamic = null;
 		try {
@@ -113,7 +133,9 @@ class M14HihQualifiedCallReceiverPaddingIntegrationTest {
 			assertTrue(extensionCall.getExpressions().length == 2,
 				'Extension call should retain one callee plus one explicit source argument; the receiver remains in the callee field.');
 			final expanded = MacroStage.expandProgram([typed], []);
-			EmitterStage.emitToDir(expanded, outDir, true, false);
+			final mainExecutable = EmitterStage.emitToDir(expanded, outDir, true);
+			final native = observe(mainExecutable, []);
+			assertTrue(native.code == 0 && native.output == expected, "Native qualified or instance call behavior differs: " + native.errors);
 
 			var foundPaddedCall = false;
 			var foundUnpaddedCall = false;
@@ -137,8 +159,8 @@ class M14HihQualifiedCallReceiverPaddingIntegrationTest {
 					foundPaddedExtensionCall = true;
 			}
 
-			assertTrue(foundPaddedCall, 'Expected receiver-padded qualified call not found in emitted OCaml.');
-			assertTrue(!foundUnpaddedCall, 'Found unpadded qualified call shape `.equal (left) (right)` in emitted OCaml.');
+			assertTrue(!foundPaddedCall, 'Static qualified call gained a phantom null receiver.');
+			assertTrue(foundUnpaddedCall, 'Expected exact two-argument static qualified call not found in emitted OCaml.');
 			assertTrue(!foundDoubleReceiver, 'Found duplicated receiver call shape `ping (this_) (this_)` in emitted OCaml.');
 			assertTrue(foundExactExtensionCall, 'Expected exact two-argument extension-provider call not found in emitted OCaml.');
 			assertTrue(!foundPaddedExtensionCall, 'Extension-provider call gained a phantom null receiver argument.');

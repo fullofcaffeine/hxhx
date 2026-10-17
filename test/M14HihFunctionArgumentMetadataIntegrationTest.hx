@@ -56,5 +56,40 @@ class M14HihFunctionArgumentMetadataIntegrationTest {
 			malformedRejected = error.message.indexOf("Expected metadata name") >= 0;
 		}
 		assertTrue(malformedRejected, "malformed argument metadata must keep a stable parser diagnostic");
+		checkSharedSignatureReader();
+	}
+
+	/** Method declarations and function expressions must retain the same written argument facts. */
+	static function checkSharedSignatureReader():Void {
+		final signature = "(@:keep ?value:Null<Int> = null, callback:(Int, Int)->Int, ...items:String)";
+		final parsed = new HxParser("class Main { static function accept" + signature + " {} }").parseModule("Main");
+		final method = HxFunctionDecl.getArgs(HxClassDecl.getFunctions(HxModuleDecl.getMainClass(parsed))[0]);
+		final expression = HxFunctionSyntaxParser.parse("function" + signature + " {}").arguments;
+		assertTrue(method.length == 3 && expression.length == 3, "shared signature arity");
+		for (index in 0...method.length) {
+			final written = expression[index].declaration;
+			assertEquals(HxFunctionArg.getName(written), HxFunctionArg.getName(method[index]), "shared argument name");
+			assertEquals(HxFunctionArg.getMetadata(written).join("|"), HxFunctionArg.getMetadata(method[index]).join("|"), "shared metadata");
+			assertEquals(HxFunctionArg.getDefaultValueText(written), HxFunctionArg.getDefaultValueText(method[index]), "shared default text");
+			assertTrue(HxFunctionArg.getIsRest(written) == HxFunctionArg.getIsRest(method[index]), "shared rest marker");
+		}
+		assertTrue(HxFunctionArg.getIsOptional(method[0]), "written optional marker");
+		switch (HxFunctionArg.getDefaultValue(method[0])) {
+			case Default(ENull):
+			case _:
+				fail("explicit null default disappeared");
+		}
+		assertEquals("(Int,Int)->Int", HxFunctionArg.getTypeHint(method[1]), "nested function annotation");
+		assertEquals("String", HxFunctionArg.getTypeHint(expression[2].declaration), "written rest element hint");
+		assertEquals("Array<String>", HxFunctionArg.getTypeHint(method[2]), "method body rest container");
+		assertTrue(HxFunctionArg.getIsOptional(method[2]), "method rest omission contract");
+		for (parameters in ["(value:)", "(value=)"]) {
+			var rejected = false;
+			try
+				new HxParser("class Invalid { static function reject" + parameters + " {} }").parseModule("Invalid")
+			catch (_:HxParseError)
+				rejected = true;
+			assertTrue(rejected, "method must reject a missing annotation or default: " + parameters);
+		}
 	}
 }

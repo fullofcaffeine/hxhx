@@ -1,6 +1,5 @@
 import backend.BackendContext;
 import backend.BackendRegistry;
-import haxe.ds.StringMap;
 import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
@@ -12,8 +11,88 @@ class M14CppAbstractUnaryIntegrationTest {
 			throw message;
 	}
 
-	static function assertContains(content:String, needle:String, message:String):Void {
-		assertTrue(content.indexOf(needle) >= 0, message + " (missing `" + needle + "`)");
+	/** Inspect the prepared entry rather than incidental names assigned to C++ functions. */
+	static function mainExpressions(program:MacroExpandedProgram):Array<TypedExpr> {
+		final expressions = new Array<TypedExpr>();
+		function expression(value:TypedExpr):Void {
+			expressions.push(value);
+			for (child in value.getExpressions())
+				expression(child);
+		}
+		function statement(value:TypedStmt):Void {
+			for (child in value.getExpressions())
+				expression(child);
+			for (child in value.getStatements())
+				statement(child);
+		}
+		for (module in program.getTypedModules())
+			if (module.getSourceOrigin().sourceModulePath == "Main")
+				for (owner in module.getTypedClasses())
+					if (HxClassDecl.getName(owner.getSourceDeclaration()) == "Main")
+						for (fn in owner.getFunctions())
+							if (HxFunctionDecl.getName(fn.getSourceDeclaration()) == "main") {
+								for (child in fn.getBody().getStatements())
+									statement(child);
+								return expressions;
+							}
+		throw "abstract-unary fixture lost its exact Main.main body";
+	}
+
+	/** Keep the selected owner, helper, and source operand independent of native symbol numbering. */
+	static function selectedCalls(expressions:Array<TypedExpr>, owner:String, method:String, ?argumentLocal:String):Array<TypedExpr> {
+		final calls = new Array<TypedExpr>();
+		for (expression in expressions) {
+			final declaration = expression.getDeclaration();
+			if (expression.getTag() != Call
+				|| declaration == null
+				|| declaration.getModulePath() != "Main"
+				|| declaration.getOwner().getCanonicalName() != "Main." + owner
+				|| declaration.getSignature().getName() != method)
+				continue;
+			if (argumentLocal != null) {
+				final arguments = expression.getExpressions();
+				var argument:TypedExpr;
+				if (declaration.getIsStatic()) {
+					assertTrue(arguments.length == 2, "static unary helper lost its single argument: " + method);
+					argument = arguments[1];
+				} else {
+					assertTrue(arguments.length == 1 && arguments[0].getTag() == FieldRead && arguments[0].getExpressions().length == 1,
+						"instance unary helper lost its receiver: " + method);
+					argument = arguments[0].getExpressions()[0];
+				}
+				while (argument.getTag() == Cast && argument.isRepresentationPreservingCast())
+					argument = argument.getExpressions()[0];
+				assertTrue(argument.getTag() == LocalRead && argument.getTexts()[0] == argumentLocal, "unary helper changed its source operand: " + method);
+			}
+			calls.push(expression);
+		}
+		return calls;
+	}
+
+	/** Exact shared decisions plus native output preserve the old generated-call assertions. */
+	static function assertPreparedOperators(program:MacroExpandedProgram):Void {
+		final expressions = mainExpressions(program);
+		for (helper in [
+			{owner: "Boxed", method: "turnInsideOut", operand: "boxed"},
+			{owner: "Step", method: "reverseSign", operand: "step"},
+			{owner: "StaticStep", method: "surprising", operand: "staticStep"}
+		])
+			assertTrue(selectedCalls(expressions, helper.owner, helper.method, helper.operand).length == 1,
+				"unary operator lost its exact arbitrary-name helper: "
+				+ helper.owner
+				+ "."
+				+ helper.method);
+		assertTrue(selectedCalls(expressions, "PropertyHolder", "get_step").length == 2, "property updates lost their exact getters");
+		assertTrue(selectedCalls(expressions, "PropertyHolder", "set_step").length == 2, "property updates lost their exact setters");
+		assertTrue(selectedCalls(expressions, "Step", "get").length > 0, "primitive abstract results lost the exact get helper");
+		for (method in ["advanceBefore", "advanceAfter"])
+			assertTrue(selectedCalls(expressions, "Step", method).length == 0, "inline mutation helper survived for backend reinterpretation: " + method);
+		for (expression in expressions)
+			if (expression.getTag() == Unary) {
+				final identity = expression.getExpressions()[0].getType().getNominalIdentity();
+				assertTrue(identity == null
+					|| identity.getCanonicalName() != "Main.Boxed", "raw unary operator retained its class-backed operand");
+			}
 	}
 
 	static function deleteRecursive(path:String):Void {
@@ -28,13 +107,48 @@ class M14CppAbstractUnaryIntegrationTest {
 		}
 	}
 
-	static function commandOutput(command:String):{code:Int, stdout:String, stderr:String} {
-		final process = new sys.io.Process(command, []);
+	static function commandOutput(command:String, ?arguments:Array<String>):{code:Int, stdout:String, stderr:String} {
+		final process = new sys.io.Process(command, arguments == null ? [] : arguments);
 		final stdout = process.stdout.readAll().toString();
 		final stderr = process.stderr.readAll().toString();
 		final code = process.exitCode();
 		process.close();
 		return {code: code, stdout: stdout, stderr: stderr};
+	}
+
+	/** Compare every output value under collection at each allocation and both sanitizer build profiles. */
+	static function assertSanitized(root:String, expected:String):Void {
+		File.copy("test/cpp_managed_heap/StandardStringObserver.cpp", root + "/Observer.cpp");
+		final compiler = Sys.getEnv("CXX") == null ? "clang++" : Sys.getEnv("CXX");
+		final timeout = Sys.systemName() == "Mac" ? "gtimeout" : "timeout";
+		for (optimization in ["-O0", "-O2"]) {
+			final executable = root + "/observer" + optimization;
+			final compiled = Sys.command(timeout, [
+				"90",
+				compiler,
+				"-std=c++17",
+				optimization,
+				"-g1",
+				"-fno-omit-frame-pointer",
+				"-fsanitize=address,undefined",
+				"-fno-sanitize-recover=all",
+				'-DHXHX_LOCAL_PROGRAM="src/Main.cpp"',
+				root + "/Observer.cpp",
+				"-o",
+				executable
+			]);
+			assertTrue(compiled == 0, "abstract-unary sanitizer compilation failed: " + optimization + " exit=" + compiled);
+			final executed = commandOutput(timeout, ["30", executable]);
+			assertTrue(executed.code == 0 && executed.stderr == "" && executed.stdout == expected,
+				"abstract-unary sanitizer behavior differs: "
+				+ optimization
+				+ " exit="
+				+ executed.code
+				+ "\n"
+				+ executed.stdout
+				+ executed.stderr);
+			Sys.println("CPP_ABSTRACT_UNARY:SANITIZERS:" + optimization + ":PASS");
+		}
 	}
 
 	static function main():Void {
@@ -137,36 +251,39 @@ class M14CppAbstractUnaryIntegrationTest {
 			"  }",
 			"}",
 		].join("\n");
-		final parsed = ParserStage.parse(source, "Main.hx");
-		final resolved = new ResolvedModule("Main", "Main.hx", parsed);
-		final index = TyperIndex.build([resolved]);
-		final loader = new ModuleLoader(["."], new StringMap<String>(), index, function(_):Bool return false);
-		loader.markResolvedAlready([resolved]);
-		final typed = TyperStage.typeResolvedModule(resolved, index, loader);
-		final program = new MacroExpandedProgram([typed], false);
-
 		final root = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_abstract_unary"]);
 		deleteRecursive(root);
-		FileSystem.createDirectory(root);
-		final context = new BackendContext(root, null, "Main", true, true, new StringMap<String>());
+		final sourceRoot = Path.join([root, "input"]);
+		FileSystem.createDirectory(sourceRoot);
+		File.saveContent(Path.join([sourceRoot, "Main.hx"]), source);
+		final expected = "-7\n-12\n12\n22\n22\n22\n122\n11\n1\n14\n14\n114\n4\n15\n15\n115\n2\n10\n10\n11\n2\n2\n2\n9\n9\n10\n";
+		final upstream = commandOutput("haxe", ["-cp", sourceRoot, "--run", "Main"]);
+		assertTrue(upstream.code == 0 && upstream.stderr == "" && upstream.stdout == expected,
+			"upstream abstract-unary contract differs: " + upstream.stdout + upstream.stderr);
+		Sys.println("CPP_ABSTRACT_UNARY:UPSTREAM:PASS");
+		// Output and array calls need their real declarations before native emission.
+		// Retain every provider body through the same preparation used by other native fixtures.
+		final fixture = CppResolvedFixture.load({sourceRoot: sourceRoot, mainModule: "Main", requiredModules: ["Sys", "Array"]});
+		final revisions = [
+			for (module in fixture.modules)
+				CompilerTypedModuleRevision.fromTypedModule(module).getCanonicalIdentity()
+		];
+		Sys.println("CPP_ABSTRACT_UNARY:LOADED modules=" + fixture.modules.length);
+		final program = CppResolvedFixture.prepare(fixture);
+		assertPreparedOperators(program);
+		Sys.println("CPP_ABSTRACT_UNARY:PREPARED");
+		final context = new BackendContext(root, null, "Main", true, true, fixture.defines);
 		final result = BackendRegistry.createForTarget("cpp-native").emit(program, context);
 		assertTrue(result.builtExecutable, "focused abstract-unary C++ artifact did not build");
-		final sourcePath = Path.join([root, "src", "Main.cpp"]);
-		final generated = File.getContent(sourcePath);
-		assertContains(generated, "Boxed::turnInsideOut(boxed)", "class-backed unary minus did not call its arbitrary-name helper");
-		assertContains(generated, "Step::reverseSign(step)", "primitive-backed unary minus did not call its arbitrary-name helper");
-		assertContains(generated, "StaticStep::surprising(staticStep)", "static prefix helper was not emitted as a call");
-		assertContains(generated, "get_step()", "property increment did not call the exact getter");
-		assertContains(generated, "set_step(", "property increment did not call the exact setter");
-		assertContains(generated, "Step::get(", "primitive abstract results lost the exact get helper after carrier erasure");
-		assertTrue(generated.indexOf("advanceBefore(") < 0 && generated.indexOf("advanceAfter(") < 0,
-			"inline mutation helpers survived for backend reinterpretation");
-		assertTrue(generated.indexOf("(-boxed)") < 0, "C++ applied raw unary minus to the class-backed abstract wrapper");
+		for (index in 0...fixture.modules.length)
+			assertTrue(revisions[index] == CompilerTypedModuleRevision.fromTypedModule(fixture.modules[index]).getCanonicalIdentity(),
+				"abstract-unary preparation changed an authored typed module");
 
 		final executed = commandOutput(result.entryPath);
-		assertTrue(executed.code == 0, "focused abstract-unary executable failed: " + executed.stderr);
-		final expected = "-7\n-12\n12\n22\n22\n22\n122\n11\n1\n14\n14\n114\n4\n15\n15\n115\n2\n10\n10\n11\n2\n2\n2\n9\n9\n10\n";
+		assertTrue(executed.code == 0 && executed.stderr == "", "focused abstract-unary executable failed: " + executed.stderr);
 		assertTrue(executed.stdout == expected, "unexpected focused abstract-unary stdout:\n" + executed.stdout);
+		assertSanitized(root, expected);
+		Sys.println("CPP_ABSTRACT_UNARY:PASS");
 		deleteRecursive(root);
 	}
 }

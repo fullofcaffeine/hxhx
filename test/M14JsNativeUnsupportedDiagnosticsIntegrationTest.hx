@@ -48,7 +48,7 @@ class M14JsNativeUnsupportedDiagnosticsIntegrationTest {
 		assertContains(declarationError, "kind=EVars", "unexpanded variable declaration kind");
 		assertContains(declarationError, "macro expansion", "unexpanded variable declaration guidance");
 
-		final whileError = captureUnsupported(EWhile(EIdent("ready"), [], true, new HxPos(0, 1, 1)));
+		final whileError = captureUnsupported(EWhile(EIdent("ready"), [], true, new HxPos(0, 1, 1), HxWhileKind.Normal));
 		assertContains(whileError, "[js-native:unsupported_expr]", "unexpanded while prefix");
 		assertContains(whileError, "kind=EWhile", "unexpanded while kind");
 		assertContains(whileError, "macro expansion", "unexpanded while guidance");

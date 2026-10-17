@@ -23,6 +23,9 @@ class TargetDeclarationFixture {
 			{
 				canonicalIdentity: "unit.Child",
 				moduleIdentity: "unit.Child",
+				isInterface: false,
+				isExtern: false,
+				interfaceTypeDisplays: [],
 				typeParameters: [],
 				superClassIdentity: "unit.Base",
 				fields: [],
@@ -33,7 +36,47 @@ class TargetDeclarationFixture {
 		assertTrue(repeated.copyClasses().length == 1, "equivalent repeated class facts were not collapsed");
 		final conflictingClasses = classes(false, false).concat(classes(false, false, "unit.Other"));
 		assertThrows(() -> new OcamlTargetDeclarationRequest("host", conflictingClasses), "conflicting class facts were accepted");
+		assertClassHeaders();
 		Sys.println("OCAML_TARGET_DECLARATION_REQUEST:PASS");
+	}
+
+	/** A changed construction or dispatch contract must invalidate declaration identity. **/
+	static function assertClassHeaders():Void {
+		final plain = new OcamlTargetDeclarationRequest("host", [header(false, false, [])]);
+		for (input in [
+			header(true, false, []),
+			header(false, true, []),
+			header(false, false, ["Contract<Int>"])
+		]) {
+			final changed = new OcamlTargetDeclarationRequest("host", [input]);
+			assertTrue(plain.getCanonicalIdentity() != changed.getCanonicalIdentity(), "class header change did not affect identity");
+			assertThrows(() -> new OcamlTargetDeclarationRequest("host", [header(false, false, []), input]), "conflicting class headers were collapsed");
+			assertThrowsMessage(() -> new reflaxe.ocaml.target.OcamlTargetProgramRequest("host", "Main", changed, [], []),
+				"OCaml target program requires a generated class without interface relationships");
+		}
+		final interfaces = ["Contract<Int>"];
+		final applied = new OcamlTargetDeclarationRequest("host", [header(false, false, interfaces)]);
+		final before = applied.getCanonicalIdentity();
+		interfaces[0] = "Contract<String>";
+		applied.copyClasses()[0].copyInterfaceTypeDisplays().resize(0);
+		assertEquals(before, applied.getCanonicalIdentity(), "class retained mutable interface storage");
+		assertEquals("Contract<Int>", applied.copyClasses()[0].copyInterfaceTypeDisplays()[0], "interface copy mutation leaked");
+		assertTrue(before != new OcamlTargetDeclarationRequest("host", [header(false, false, interfaces)]).getCanonicalIdentity(),
+			"applied interface argument did not affect identity");
+		assertThrows(() -> new OcamlTargetDeclarationRequest("host", [header(false, false, [""])]), "empty interface type was accepted");
+	}
+
+	static function header(isInterface:Bool, isExtern:Bool, interfaces:Array<String>):OcamlTargetClassInput {
+		return {
+			canonicalIdentity: "Main",
+			moduleIdentity: "Main",
+			isInterface: isInterface,
+			isExtern: isExtern,
+			interfaceTypeDisplays: interfaces,
+			typeParameters: [],
+			fields: [],
+			methods: []
+		};
 	}
 
 	static function classes(reverse:Bool, optional:Bool, moduleIdentity:String = "unit.Sample"):Array<OcamlTargetClassInput> {
@@ -87,6 +130,9 @@ class TargetDeclarationFixture {
 			{
 				canonicalIdentity: owner,
 				moduleIdentity: moduleIdentity,
+				isInterface: false,
+				isExtern: false,
+				interfaceTypeDisplays: [],
 				typeParameters: ["T"],
 				fields: fields,
 				methods: methods
@@ -102,6 +148,16 @@ class TargetDeclarationFixture {
 			threw = true;
 		}
 		assertTrue(threw, message);
+	}
+
+	static function assertThrowsMessage(run:Void->Void, expected:String):Void {
+		try {
+			run();
+		} catch (message:String) {
+			assertEquals(expected, message, "unexpected class admission failure");
+			return;
+		}
+		throw "missing class admission failure: " + expected;
 	}
 
 	static function assertEquals(expected:String, actual:String, message:String):Void

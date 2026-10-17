@@ -29,11 +29,15 @@ typedef CsEnumConstructorCall = {
 class CsEnumConstructorCallLowering {
 	final constructors:haxe.ds.StringMap<CsExactEnumConstructorTarget>;
 	final noRoot:Bool;
+	final staticCalls:CsSourceStaticCallLowering;
+	final program:backend.GenIrProgram;
 
 	public function new(program:backend.GenIrProgram, noRoot:Bool) {
 		if (program == null)
 			throw "C# enum-constructor lowering requires a typed program";
 		this.noRoot = noRoot;
+		this.program = program;
+		this.staticCalls = new CsSourceStaticCallLowering(program, noRoot);
 		this.constructors = new haxe.ds.StringMap<CsExactEnumConstructorTarget>();
 		for (typedModule in program.getTypedModules()) {
 			final moduleDecl = typedModule.getBackendDeclaration();
@@ -105,8 +109,9 @@ class CsEnumConstructorCallLowering {
 	public function body(projection:TypedBackendFunctionProjection):Array<HxStmt> {
 		if (projection == null)
 			throw "C# enum-constructor lowering requires a typed function projection";
-		final dynamicCalls = CsDynamicLocalCallLowering.body(projection);
-		return SourceFunctionBodyRewriter.body(dynamicCalls, function(expression) {
+		final lambdas = CsLambdaLowering.body(projection, program, noRoot);
+		final dynamicCalls = staticCalls.body(CsDynamicLocalCallLowering.body(projection, lambdas));
+		final lowered = SourceFunctionBodyRewriter.body(dynamicCalls, function(expression) {
 			final exact = TypedExactEnumConstructorSource.decode(expression);
 			if (exact == null)
 				return expression;
@@ -123,5 +128,9 @@ class CsEnumConstructorCallLowering {
 				EArrayDecl(exact.arguments.copy())
 			]);
 		});
+		return switch lowered {
+			case [SExpr(region = ELoweredControl(FunctionBody, _, _, _), _)]: TypedControlStatements.functionBody(region);
+			case _: lowered;
+		};
 	}
 }

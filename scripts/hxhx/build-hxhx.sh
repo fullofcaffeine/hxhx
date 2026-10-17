@@ -41,6 +41,7 @@ HXHX_BOOTSTRAP_BUILD_RETAIN="${HXHX_BOOTSTRAP_BUILD_RETAIN:-2}"
 HXHX_BOOTSTRAP_BUILD_PRUNE_ONLY="${HXHX_BOOTSTRAP_BUILD_PRUNE_ONLY:-0}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT/scripts/hxhx/stage0-process-watchdog.sh"
 HXHX_DIR="$ROOT/packages/hxhx"
 BOOTSTRAP_DIR="$HXHX_DIR/bootstrap_out"
 DEFAULT_STAGE0_OUT_DIR="$HXHX_DIR/out"
@@ -269,6 +270,41 @@ cleanup_stage0_log_file() {
     rm -f "$path"
   fi
 }
+
+# Compiler warnings may be buffered until generation finishes. The target's
+# flushed progress file stays separate from stdout so concurrent file offsets
+# cannot overwrite either stream. Caller-owned logs are never removed here.
+cleanup_stage0_build_logs() {
+  local log_file="$1" progress_file="$2" progress_owned="$3"
+  if [ -n "$progress_file" ] && [ -s "$progress_file" ]; then
+    echo "== Stage0 progress tail:" >&2
+    tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$progress_file" >&2 || true
+  fi
+  cleanup_stage0_log_file "$log_file"
+  if [ "$progress_owned" = "1" ]; then
+    cleanup_stage0_log_file "$progress_file"
+  fi
+}
+
+# A Lix launcher can outlive or orphan its native compiler if only the launcher
+# is signalled. Stop the verified client tree before returning or retrying;
+# separately managed compilation servers remain owned by cleanup_repo_server.
+stop_stage0_client() {
+  local pid="$1"
+  local attempt
+  stage0_watchdog_terminate_process_tree "$pid"
+  wait "$pid" 2>/dev/null || true
+  for attempt in {1..20}; do
+    stage0_watchdog_record_cleanup_result
+    if [ "$STAGE0_WATCHDOG_CLEANUP" = "complete" ]; then
+      return 0
+    fi
+    sleep 0.1
+  done
+  echo "Stage0 client cleanup incomplete: $STAGE0_WATCHDOG_TERMINATED_TREE_PIDS" >&2
+  return 1
+}
+
 collect_process_tree_pids() {
   local root_pid="$1"
   local frontier="$root_pid"
@@ -514,11 +550,7 @@ run_bootstrap_dune_build() {
       if kill -0 "$pid" >/dev/null 2>&1; then
         echo "Bootstrap dune build timed out after ${timeout_sec}s (target=$target)." >&2
         printf 'timeout\n' >"$timeout_marker"
-        kill "$pid" >/dev/null 2>&1 || true
-        sleep 2
-        if kill -0 "$pid" >/dev/null 2>&1; then
-          kill -9 "$pid" >/dev/null 2>&1 || true
-        fi
+        stage0_watchdog_terminate_process_tree "$pid"
       fi
     ) &
     timeout_pid="$!"
@@ -530,12 +562,14 @@ run_bootstrap_dune_build() {
   set -e
 
   if [ -n "$heartbeat_pid" ]; then
-    kill "$heartbeat_pid" >/dev/null 2>&1 || true
+    # A monitor's sleep inherits the caller's output pipe. Killing only its
+    # shell leaves that pipe open and delays command substitution until expiry.
+    stage0_watchdog_terminate_process_tree "$heartbeat_pid"
     wait "$heartbeat_pid" >/dev/null 2>&1 || true
   fi
 
   if [ -n "$timeout_pid" ]; then
-    kill "$timeout_pid" >/dev/null 2>&1 || true
+    stage0_watchdog_terminate_process_tree "$timeout_pid"
     wait "$timeout_pid" >/dev/null 2>&1 || true
   fi
 
@@ -868,11 +902,14 @@ resolve_stage0_connect
 
   run_stage0_build() {
     if [ "$HXHX_STAGE0_HEARTBEAT" = "0" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" = "0" ]; then
-      "$HAXE_BIN" "${haxe_args[@]}"
+      REFLAXE_OCAML_PROGRESS_FILE="${REFLAXE_OCAML_PROGRESS_FILE:-/dev/stderr}" "$HAXE_BIN" "${haxe_args[@]}"
       return
     fi
 
     local log_file=""
+    local progress_file="${REFLAXE_OCAML_PROGRESS_FILE:-}"
+    local progress_owned=0
+    local progress_bytes=0
     local pid=""
     local interval=""
     local start_hb=""
@@ -912,6 +949,10 @@ resolve_stage0_connect
     local code=0
 
     log_file="$(create_stage0_log_file hxhx-stage0-build)"
+    if [ -z "$progress_file" ] && { [ "$HXHX_STAGE0_PROGRESS" = "1" ] || [ "$HXHX_STAGE0_TELEMETRY" = "1" ]; }; then
+      progress_file="$(create_stage0_log_file hxhx-stage0-progress)"
+      progress_owned=1
+    fi
     if [ "$HXHX_STAGE0_HEARTBEAT" = "0" ]; then
       interval=5
     else
@@ -921,7 +962,10 @@ resolve_stage0_connect
     echo "== Stage0 build watch: heartbeat=${HXHX_STAGE0_HEARTBEAT}s failfast=${HXHX_STAGE0_FAILFAST_SECS}s" >&2
     echo "== Stage0 build command: $HAXE_BIN ${haxe_args[*]}" >&2
     echo "== Stage0 build log: $log_file" >&2
-    "$HAXE_BIN" "${haxe_args[@]}" >"$log_file" 2>&1 &
+    if [ -n "$progress_file" ]; then
+      echo "== Stage0 progress log: $progress_file" >&2
+    fi
+    REFLAXE_OCAML_PROGRESS_FILE="$progress_file" "$HAXE_BIN" "${haxe_args[@]}" >"$log_file" 2>&1 &
     pid="$!"
 
     start_hb="$(date +%s)"
@@ -945,10 +989,10 @@ resolve_stage0_connect
       if [ -n "${HXHX_STAGE0_FAILFAST_SECS}" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" != "0" ]; then
         if [ "$elapsed" -ge "$HXHX_STAGE0_FAILFAST_SECS" ]; then
           echo "Stage0 build exceeded failfast limit (${HXHX_STAGE0_FAILFAST_SECS}s). Killing pid=$pid." >&2
-          kill -9 "$pid" >/dev/null 2>&1 || true
+          stop_stage0_client "$pid" || return 1
           echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
           tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
-          cleanup_stage0_log_file "$log_file"
+          cleanup_stage0_build_logs "$log_file" "$progress_file" "$progress_owned"
           return 1
         fi
       fi
@@ -960,6 +1004,10 @@ resolve_stage0_connect
 
       if [ "$connect_watch_enabled" = "1" ]; then
         log_bytes="$(wc -c <"$log_file" 2>/dev/null | tr -d ' ' || true)"
+        if [ -n "$progress_file" ] && [ -f "$progress_file" ]; then
+          progress_bytes="$(wc -c <"$progress_file" | tr -d ' ')"
+          log_bytes="$(( ${log_bytes:-0} + progress_bytes ))"
+        fi
         if [ -n "$log_bytes" ] && [ -n "$last_log_bytes" ] && [ "$log_bytes" = "$last_log_bytes" ]; then
           connect_log_static=1
         else
@@ -1032,14 +1080,10 @@ resolve_stage0_connect
           if [ "$connect_idle_elapsed" -ge "$HXHX_STAGE0_CONNECT_IDLE_SECS" ]; then
             echo "Stage0 build appears stalled on --connect handoff (idle ${connect_idle_elapsed}s; log static)." >&2
             echo "Retrying once without --connect (set HXHX_STAGE0_CONNECT_IDLE_SECS=0 to disable this detector)." >&2
-            kill "$pid" >/dev/null 2>&1 || true
-            sleep 2
-            if kill -0 "$pid" >/dev/null 2>&1; then
-              kill -9 "$pid" >/dev/null 2>&1 || true
-            fi
+            stop_stage0_client "$pid" || return 1
             echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines before retry:" >&2
             tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
-            cleanup_stage0_log_file "$log_file"
+            cleanup_stage0_build_logs "$log_file" "$progress_file" "$progress_owned"
             return "$stage0_connect_stall_code"
           fi
         else
@@ -1102,15 +1146,19 @@ resolve_stage0_connect
         rss_mb="$((rss_kb / 1024))"
         if [ "$HXHX_STAGE0_MAX_RSS_MB" != "0" ] && [ "$tree_rss_mb" -ge "$HXHX_STAGE0_MAX_RSS_MB" ]; then
           echo "Stage0 build exceeded RSS cap (${HXHX_STAGE0_MAX_RSS_MB}MB). Killing pid=$pid." >&2
-          kill -9 "$pid" >/dev/null 2>&1 || true
+          stop_stage0_client "$pid" || return 1
           echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
           tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
-          cleanup_stage0_log_file "$log_file"
+          cleanup_stage0_build_logs "$log_file" "$progress_file" "$progress_owned"
           return 1
         fi
         echo "== Stage0 build heartbeat: elapsed=${elapsed}s rss=${rss_mb}MB pid=$pid focus=$rss_probe_pid$heartbeat_suffix" >&2
       else
         echo "== Stage0 build heartbeat: elapsed=${elapsed}s pid=$pid$heartbeat_suffix" >&2
+      fi
+      if [ -n "$progress_file" ] && [ -s "$progress_file" ]; then
+        echo "== Stage0 latest progress:" >&2
+        tail -n 1 "$progress_file" >&2 || true
       fi
       if [ -n "${HXHX_STAGE0_HEARTBEAT_TAIL_LINES}" ] && [ "$HXHX_STAGE0_HEARTBEAT_TAIL_LINES" != "0" ]; then
         if [ -s "$log_file" ]; then
@@ -1129,10 +1177,10 @@ resolve_stage0_connect
     if [ "$code" != "0" ]; then
       echo "Stage0 build failed (exit=$code). Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
       tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
-      cleanup_stage0_log_file "$log_file"
+      cleanup_stage0_build_logs "$log_file" "$progress_file" "$progress_owned"
       return "$code"
     fi
-    cleanup_stage0_log_file "$log_file"
+    cleanup_stage0_build_logs "$log_file" "$progress_file" "$progress_owned"
   }
 
   sanitize_stage0_emit_dir() {

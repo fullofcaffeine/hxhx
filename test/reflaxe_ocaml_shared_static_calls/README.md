@@ -32,6 +32,7 @@ methods have no externally visible effects.
 
 The native-host fixture runs the Haxe-authored parser and typer under the Haxe
 interpreter. It does not rebuild the native compiler executable or prove full
-native workload acceptance. Arguments, returned values, cross-class calls,
-computed receivers, and calls in field initializers remain outside this contract.
+native workload acceptance. Arguments and returned values have separate coverage in
+`../reflaxe_ocaml_shared_function_values`. Cross-class calls, computed receivers,
+and calls in field initializers remain outside this fixture's contract.
 The native adapter currently admits bare method references only.

@@ -53,12 +53,12 @@ let writeBytes__impl = fun (self : t) (s : HxBytes.t) (pos : int) (len : int) ->
 
 let flush__impl = fun (self : t) () -> ignore ((
   ignore self;
-  ignore ()
+  (() : unit)
 ))
 
 let close__impl = fun (self : t) () -> ignore ((
   ignore self;
-  ignore ()
+  (() : unit)
 ))
 
 let write__impl = fun (self : t) (s : HxBytes.t) -> ignore (ignore (let l = ref (let __bytes_receiver_15 = s in HxBytes.length __bytes_receiver_15) in let p = ref 0 in while !l > 0 do ignore (let k = (Obj.magic self : t).writeBytes (Obj.magic self) (Obj.magic s) (!p) (!l) in (
@@ -76,7 +76,7 @@ let prepare__impl = fun (self : t) (_nbytes : int) -> ignore ((
   ignore self;
   (
     ignore _nbytes;
-    ignore ()
+    (() : unit)
   )
 ))
 
@@ -95,10 +95,10 @@ let writeInput__impl = fun (self : t) (i : Haxe_io_Input.t) (bufsize : Obj.t) ->
     ));
     __while_loop_24 ()
   ) in __while_loop_24 ()) with
-    | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-    | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-    | HxRuntime.Hx_return __ret_20 -> raise (HxRuntime.Hx_return __ret_20)
-    | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+    | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+    | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+    | HxRuntime.Hx_return __ret_20 -> Stdlib.raise (HxRuntime.Hx_return __ret_20)
+    | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
     | HxRuntime.Hx_exception (__exn_v_21, __exn_tags_22) -> if HxRuntime.tags_has __exn_tags_22 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_21 : Haxe_io_Eof.t) in (
       ignore _hx;
       ignore ()
@@ -106,7 +106,7 @@ let writeInput__impl = fun (self : t) (i : Haxe_io_Input.t) (bufsize : Obj.t) ->
     | __exn_23 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_23) : Haxe_io_Eof.t) in (
       ignore _hx;
       ignore ()
-    ) else raise (__exn_23)
+    ) else Stdlib.raise (__exn_23)
 )))
 
 let writeString__impl = fun (self : t) (s : string) (encoding : Obj.t) -> ignore ((

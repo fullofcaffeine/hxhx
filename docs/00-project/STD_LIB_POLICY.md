@@ -22,6 +22,7 @@ Upstream usage is intentionally narrow:
    - Only stdlib content from `vendor/haxe/std/**` is eligible for selective reuse/sync.
    - Checked-in stdlib sync destination is:
      - `packages/reflaxe.ocaml/std/ocaml/_std/**`
+     - `packages/hxhx-core/std/cpp/_std/**` for bundled standalone C++ providers.
 
 Important distinction:
 
@@ -49,11 +50,12 @@ The following upstream paths are never allowed to be vendored or copied into thi
   - upstream tag/commit
   - source path(s) in `vendor/haxe/std/**`
   - destination path(s) in `packages/reflaxe.ocaml/std/ocaml/_std/**`
+    or `packages/hxhx-core/std/cpp/_std/**`
 - Do not add copyleft license texts/headers to tracked source files.
 - Keep the required provenance artifacts current:
   - `THIRD_PARTY_NOTICES.md`
   - `docs/00-project/STDLIB_PROVENANCE_LEDGER.json`
-    - Every tracked file under `packages/reflaxe.ocaml/std/ocaml/_std/**` must have a ledger entry.
+    - Every tracked Haxe file under either approved stdlib destination must have a ledger entry.
 
 ## Sync workflow (upstream -> local stdlib overrides)
 
@@ -65,6 +67,7 @@ The following upstream paths are never allowed to be vendored or copied into thi
    - `vendor/haxe/std/**`
 3. Reimplement/sync into:
    - `packages/reflaxe.ocaml/std/ocaml/_std/**`
+   - `packages/hxhx-core/std/cpp/_std/**` for bundled standalone C++ providers.
 4. Run guardrails and tests:
    ```bash
    npm run ci:guards

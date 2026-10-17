@@ -51,9 +51,9 @@ class OcamlDynamicOperatorLowering {
 	/**
 		Returns a checked runtime call for one Dynamic unary expression.
 
-		The result stays in `Obj.t`. This keeps switch branches and Dynamic returns
-		monomorphic after logical-not, numeric negation, and bitwise complement use
-		different primitive representations.
+		Logical-not produces a native Boolean, matching its typed result even when
+		the operand is Dynamic. Numeric operations retain the runtime value carrier.
+		Storage and return boundaries own any conversion into Dynamic.
 	**/
 	public static function unary(op:HxUnaryOperator, operandIsDynamic:Bool, renderedOperand:String):Null<String> {
 		if (!operandIsDynamic)
@@ -64,7 +64,10 @@ class OcamlDynamicOperatorLowering {
 			case BitwiseNot: "bitwiseNot";
 			case Increment, Decrement: null;
 		};
-		return operation == null ? null : "HxDynamic." + operation + " (Obj.repr (" + renderedOperand + "))";
+		if (operation == null)
+			return null;
+		final result = "HxDynamic." + operation + " (Obj.repr (" + renderedOperand + "))";
+		return op == LogicalNot ? "HxRuntime.unbox_bool_or_obj (" + result + ")" : result;
 	}
 
 	/**

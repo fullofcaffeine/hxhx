@@ -44,6 +44,9 @@ typedef OcamlTargetMethodInput = {
 typedef OcamlTargetClassInput = {
 	final canonicalIdentity:String;
 	final moduleIdentity:String;
+	final isInterface:Bool;
+	final isExtern:Bool;
+	final interfaceTypeDisplays:Array<String>;
 	final typeParameters:Array<String>;
 	final ?superClassIdentity:String;
 	final ?superTypeIdentity:String;
@@ -203,6 +206,10 @@ class OcamlTargetMethodFact {
 class OcamlTargetClassFact {
 	public final canonicalIdentity:String;
 	public final moduleIdentity:String;
+	public final isInterface:Bool;
+	public final isExtern:Bool;
+
+	final interfaceTypeDisplays:Array<String>;
 
 	final typeParameters:Array<String>;
 
@@ -216,6 +223,14 @@ class OcamlTargetClassFact {
 	public function new(input:OcamlTargetClassInput) {
 		canonicalIdentity = OcamlTargetDeclarationCodec.required(input.canonicalIdentity, "class identity");
 		moduleIdentity = OcamlTargetDeclarationCodec.required(input.moduleIdentity, "module identity");
+		isInterface = input.isInterface;
+		isExtern = input.isExtern;
+		if (input.interfaceTypeDisplays == null)
+			throw "OCaml target class requires its complete interface type list";
+		interfaceTypeDisplays = [
+			for (type in input.interfaceTypeDisplays)
+				OcamlTargetDeclarationCodec.required(type, "applied interface type")
+		];
 		typeParameters = input.typeParameters == null ? [] : [
 			for (value in input.typeParameters)
 				OcamlTargetDeclarationCodec.required(value, "class type parameter")
@@ -238,6 +253,10 @@ class OcamlTargetClassFact {
 	public function copyTypeParameters():Array<String>
 		return typeParameters.copy();
 
+	/** Preserve applied interface arguments for identity and admission, not dispatch lookup. **/
+	public function copyInterfaceTypeDisplays():Array<String>
+		return interfaceTypeDisplays.copy();
+
 	public function copyFields():Array<OcamlTargetFieldFact>
 		return fields.copy();
 
@@ -254,6 +273,9 @@ class OcamlTargetClassFact {
 	public function addIdentity(out:Array<Null<String>>):Void {
 		out.push(canonicalIdentity);
 		out.push(moduleIdentity);
+		out.push(OcamlTargetDeclarationCodec.flag(isInterface));
+		out.push(OcamlTargetDeclarationCodec.flag(isExtern));
+		OcamlTargetDeclarationCodec.addStrings(out, interfaceTypeDisplays);
 		OcamlTargetDeclarationCodec.addStrings(out, typeParameters);
 		out.push(superClassIdentity);
 		out.push(superTypeIdentity);
@@ -316,7 +338,7 @@ class OcamlTargetClassFact {
 	host adapters prove that they supplied equivalent target facts.
 **/
 class OcamlTargetDeclarationRequest {
-	public static final SCHEMA_REVISION = "reflaxe-ocaml-target-declarations-v1";
+	public static final SCHEMA_REVISION = "reflaxe-ocaml-target-declarations-v2";
 
 	public final hostProgramRevision:String;
 

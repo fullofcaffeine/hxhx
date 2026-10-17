@@ -5,15 +5,6 @@ import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
 import reflaxe.ocaml.target.OcamlTargetLiteralRuntimeUse.OcamlTargetLiteralRuntimeAuthorization;
 
-/** Haxe carrier facts that can change the OCaml form of a literal value. **/
-enum OcamlTargetLiteralCarrier {
-	Direct;
-	NullableInt;
-	NullableFloat;
-	NullableBool;
-	DynamicOrTypeParameter;
-}
-
 /**
 	Builds OCaml syntax for host-neutral, non-null literal facts.
 

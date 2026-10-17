@@ -10,10 +10,10 @@ JSON_OUT="$TMP_DIR/heartbeat_summary.json"
 TEXT_OUT="$TMP_DIR/heartbeat_summary.txt"
 
 cat >"$TRACE" <<'JSONL'
-{"elapsed_sec":1,"pid":101,"focus_pid":101,"child_pid":201,"rss_mb":120,"tree_rss_mb":180,"cpu_pct":12.5,"state":"S","log_bytes":10}
-{"elapsed_sec":2,"pid":101,"focus_pid":101,"child_pid":202,"rss_mb":250,"tree_rss_mb":340,"cpu_pct":70.1,"state":"R","log_bytes":30}
+{"elapsed_sec":1,"pid":101,"focus_pid":101,"focus_role":"client-tree","owned_server_pids":"","child_pid":201,"rss_mb":120,"tree_rss_mb":180,"cpu_pct":12.5,"tree_cpu_pct":15.5,"state":"S","log_bytes":10}
+{"elapsed_sec":2,"pid":101,"focus_pid":101,"focus_role":"client-tree","owned_server_pids":"","child_pid":202,"rss_mb":250,"tree_rss_mb":340,"cpu_pct":70.1,"tree_cpu_pct":75.1,"state":"R","log_bytes":30}
 not-json
-{"elapsed_sec":4,"pid":101,"focus_pid":101,"child_pid":203,"rss_mb":210,"tree_rss_mb":420,"cpu_pct":66.6,"state":"R","log_bytes":55}
+{"elapsed_sec":4,"pid":101,"focus_pid":301,"focus_role":"server-worker","owned_server_pids":"300 301","child_pid":203,"rss_mb":210,"tree_rss_mb":420,"cpu_pct":66.6,"tree_cpu_pct":76.6,"state":"R","log_bytes":55}
 JSONL
 
 node "$ROOT/scripts/hxhx/summarize-stage0-heartbeat-trace.js" \
@@ -42,11 +42,18 @@ assert(summary.elapsed_seconds.last === 4, 'elapsed last mismatch');
 assert(summary.elapsed_seconds.duration === 3, 'elapsed duration mismatch');
 assert(summary.log_bytes.delta === 45, 'log delta mismatch');
 assert(summary.peak_rss_mb.rss_mb === 250, 'peak focus RSS mismatch');
+assert(summary.peak_rss_mb.focus_role === 'client-tree' && summary.peak_rss_mb.owned_server_pids.length === 0, 'direct process must not acquire server ownership');
 assert(summary.peak_tree_rss_mb.tree_rss_mb === 420, 'peak tree RSS mismatch');
 assert(summary.top_tree_rss_samples.length === 2, 'top sample count mismatch');
 assert(summary.top_tree_rss_samples[0].child_pid === 203, 'top sample ordering mismatch');
+assert(summary.peak_tree_rss_mb.pid === 101, 'the attached client must remain identified');
+assert(summary.peak_tree_rss_mb.focus_pid === 301, 'the server worker must remain identified');
+assert(summary.peak_tree_rss_mb.focus_role === 'server-worker', 'server ownership was lost from the summary');
+assert(JSON.stringify(summary.peak_tree_rss_mb.owned_server_pids) === '[300,301]', 'owned server PID set mismatch');
+assert(summary.peak_tree_cpu_pct.tree_cpu_pct === 76.6, 'combined CPU peak mismatch');
 assert(text.includes('heartbeat_trace_summary:'), 'missing text summary header');
 assert(text.includes('peak_tree_rss_mb=420'), 'missing peak tree RSS text');
+assert(text.includes('client_pid=101') && text.includes('server_pids=300,301'), 'text must distinguish client and server');
 NODE
 
 MISSING_JSON="$TMP_DIR/missing.json"

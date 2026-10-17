@@ -61,6 +61,8 @@ class CppPrepLocalInferenceGuard {
 		if (stmt == null)
 			return false;
 		return switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _): throw "backend guarded switch cannot reach source statement analysis";
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				stmtListHasLocalDeclEvidence(stmts, evidence);
 			case SIf(_, thenBranch, elseBranch, _): stmtHasLocalDeclEvidence(thenBranch,
@@ -203,6 +205,8 @@ class CppPrepLocalInferenceGuard {
 		if (stmt == null)
 			return false;
 		return switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _): throw "backend guarded switch cannot reach source statement analysis";
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				stmtListHasBindCallableEvidence(stmts);
 			case SIf(cond, thenBranch, elseBranch, _): exprHasBindCallableEvidence(cond) || stmtHasBindCallableEvidence(thenBranch) || (elseBranch != null
@@ -237,8 +241,9 @@ class CppPrepLocalInferenceGuard {
 			case ECall(EField(_, "bind"), _):
 				true;
 			case ECall(callee, args): exprHasBindCallableEvidence(callee) || exprListHasBindCallableEvidence(args);
-			case EBinop(_, left, right) | EArrayAccess(left, right): exprHasBindCallableEvidence(left) || exprHasBindCallableEvidence(right);
-			case EField(receiver, _) | EUnop(_, _, receiver) | ECast(receiver, _) | EUntyped(receiver) | EMacroExpr(receiver, _):
+			case EBinop(_, left, right) | EArrayAccess(left, right) | EDiscardThen(left, right): exprHasBindCallableEvidence(left) || exprHasBindCallableEvidence(right);
+			case EParenthesized(receiver, _) | EField(receiver, _) | EUnop(_, _, receiver) | ECast(receiver, _) | ECheckType(receiver, _) |
+				EUntyped(receiver) | EMacroExpr(receiver, _):
 				exprHasBindCallableEvidence(receiver);
 			case ETernary(cond, thenExpr, elseExpr): exprHasBindCallableEvidence(cond) || exprHasBindCallableEvidence(thenExpr) || exprHasBindCallableEvidence(elseExpr);
 			case EAnon(_, fieldValues) | EArrayDecl(fieldValues):
@@ -277,6 +282,8 @@ class CppPrepLocalInferenceGuard {
 		if (stmt == null)
 			return false;
 		return switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _): throw "backend guarded switch cannot reach source statement analysis";
+			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				stmtListHasHelperTypedAsEvidence(stmts);
 			case SIf(cond, thenBranch, elseBranch, _): exprHasHelperTypedAsEvidence(cond) || stmtHasHelperTypedAsEvidence(thenBranch) || (elseBranch != null
@@ -309,8 +316,9 @@ class CppPrepLocalInferenceGuard {
 			return false;
 		return switch (expr) {
 			case ECall(callee, args): isHelperTypedAsCallee(callee) || exprHasHelperTypedAsEvidence(callee) || exprListHasHelperTypedAsEvidence(args);
-			case EBinop(_, left, right) | EArrayAccess(left, right): exprHasHelperTypedAsEvidence(left) || exprHasHelperTypedAsEvidence(right);
-			case EField(receiver, _) | EUnop(_, _, receiver) | ECast(receiver, _) | EUntyped(receiver) | EMacroExpr(receiver, _):
+			case EBinop(_, left, right) | EArrayAccess(left, right) | EDiscardThen(left, right): exprHasHelperTypedAsEvidence(left) || exprHasHelperTypedAsEvidence(right);
+			case EParenthesized(receiver, _) | EField(receiver, _) | EUnop(_, _, receiver) | ECast(receiver, _) | ECheckType(receiver, _) |
+				EUntyped(receiver) | EMacroExpr(receiver, _):
 				exprHasHelperTypedAsEvidence(receiver);
 			case ETernary(cond, thenExpr, elseExpr): exprHasHelperTypedAsEvidence(cond) || exprHasHelperTypedAsEvidence(thenExpr) || exprHasHelperTypedAsEvidence(elseExpr);
 			case EAnon(_, fieldValues) | EArrayDecl(fieldValues):

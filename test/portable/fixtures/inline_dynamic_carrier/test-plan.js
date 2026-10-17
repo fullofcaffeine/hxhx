@@ -18,11 +18,11 @@ const generatedMain = fs.readFileSync('out/Main.ml', 'utf8')
 const generatedTypeRegistry = fs.readFileSync('out/HxTypeRegistry.ml', 'utf8')
 const repositoryRoot = path.resolve(__dirname, '../../../..')
 
-assert.equal(report.schemaVersion, 86)
-assert.equal(report.callModel, 'typed-ocaml-directional-call-boundary-v31')
+assert.equal(report.schemaVersion, 94)
+assert.equal(report.callModel, 'typed-ocaml-directional-call-boundary-v34')
 assert.equal(
 	report.representationScope,
-	'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15',
+	'exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-callback-locals-v17',
 )
 assert.equal(report.localConversionModel, 'typed-ocaml-local-carrier-conversions-v3')
 assert.equal(report.unsafeOperationCompleteness, 'exact-null-int-null-bool-inline-dynamic-and-enum-to-dynamic-local-and-container-slices')
@@ -92,7 +92,7 @@ for (const operation of dynamicUnsafeOperations) {
 	assert(expectedProof, `Unexpected Dynamic unsafe operation ${operation.operation}`)
 	assert.equal(operation.proofId, expectedProof)
 	assert.equal(operation.outputCarrierTypeId, 'Obj.t')
-	assert.equal(operation.pipelineRevision, 'ocaml-function-plans-v113')
+	assert.equal(operation.pipelineRevision, 'ocaml-function-plans-v119')
 }
 
 const dynamicCallableBoundaries = report.callableBoundaries.filter((boundary) =>
@@ -100,10 +100,13 @@ const dynamicCallableBoundaries = report.callableBoundaries.filter((boundary) =>
 )
 assert.equal(dynamicCallableBoundaries.length, 2)
 for (const boundary of dynamicCallableBoundaries) {
-	assert.equal(boundary.pipelineRevision, 'ocaml-function-plans-v113')
+	assert.equal(boundary.pipelineRevision, 'ocaml-function-plans-v119')
 	assert.equal(boundary.arguments.length, 1)
 	assert.deepEqual(boundary.arguments[0], {
 		parameterOptional: false,
+		nullableEnumCarrier: null,
+		callableView: null,
+		callbackArgument: null,
 		inputRepresentationId: 'representation:Dynamic:internal-value',
 		outputSemanticTypeId: 'Dynamic',
 		proofClaim: boundary.arguments[0].proofClaim,

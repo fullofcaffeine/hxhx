@@ -99,7 +99,7 @@ class M14LuaTypedLocalProjectionIntegrationTest {
 			assertContains(direct, "local value = 7", "outer Int binding should keep its readable projected name");
 			assertContains(direct, 'local value_1 = "inner"', "inner String binding should receive a distinct projected name");
 			assertContains(direct, "upper = function(value)", "helper parameters should use their own exact function catalog");
-			assertContains(direct, 'return __hxhx_string_to_upper_case((tostring(value) .. tostring("!")))',
+			assertContains(direct, 'return __hxhx_string_to_upper_case(((tostring(value) .. tostring("!"))))',
 				"helper String concatenation and method calls should lower from the exact parameter type");
 			assertContains(direct, "print(__hxhx_string_to_upper_case(value_1))", "inner String binding should select the Lua String helper");
 			assertNotContains(direct, "print(__hxhx_string_to_upper_case(value))", "outer Int binding must not borrow the shadowed String binding's type");

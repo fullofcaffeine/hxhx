@@ -18,11 +18,12 @@ class TyNominalInfo {
 	final declarations:Array<TyDeclarationInfo>;
 	final visibility:HxVisibility;
 	final isEnum:Bool;
+	final enumDeclaration:Null<HxEnumDeclaration>;
 
 	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyFieldInfo>,
 			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
 			staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>, instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>,
-			declarations:Array<TyDeclarationInfo>, visibility:HxVisibility = HxVisibility.Public, isEnum:Bool = false) {
+			declarations:Array<TyDeclarationInfo>, visibility:HxVisibility = HxVisibility.Public, isEnum:Bool = false, ?enumDeclaration:HxEnumDeclaration) {
 		this.identity = identity;
 		this.shortName = shortName;
 		this.modulePath = modulePath;
@@ -37,6 +38,9 @@ class TyNominalInfo {
 		this.declarations = declarations;
 		this.visibility = visibility;
 		this.isEnum = isEnum;
+		this.enumDeclaration = enumDeclaration;
+		if (isEnum != (enumDeclaration != null))
+			throw "semantic enum identity requires its exact constructor inventory";
 	}
 
 	public function getIdentity():TyNominalTypeId
@@ -61,6 +65,10 @@ class TyNominalInfo {
 	/** Whether this nominal declaration is a Haxe enum rather than an ordinary class. **/
 	public function getIsEnum():Bool
 		return isEnum;
+
+	/** The parser's immutable constructor inventory includes both singleton values and payload constructors. */
+	public function getEnumDeclaration():Null<HxEnumDeclaration>
+		return enumDeclaration;
 
 	/** Resolve the stable declaration record that owns one indexed signature. **/
 	public function declarationForSignature(signature:TyFunSig):Null<TyDeclarationInfo> {

@@ -4,6 +4,14 @@ import TypedStmt.TypedStmtTag;
 
 /** Focused contract for shared exact abstract-unary selection and lowering. **/
 class M14TypedAbstractUnaryIntegrationTest {
+	/** Every conversion in this property schedule is compiler-created from its selected Int backing. */
+	static function assertPropertyStorageProof(expression:TypedExpr):Void {
+		if (expression.getTag() == Cast)
+			assertTrue(expression.isRepresentationPreservingCast(), "property update lost its exact backing storage proof");
+		for (child in expression.getExpressions())
+			assertPropertyStorageProof(child);
+	}
+
 	/** Haxe 4.3.7 accepts this during ordinary typing before null-safety analysis. **/
 	static function hostNullablePostfix(value:Null<Int>):Null<Int> {
 		return value++;
@@ -152,7 +160,7 @@ class M14TypedAbstractUnaryIntegrationTest {
 			&& innerBindings[0].getType().getSemanticKey() == "primitive:String",
 			"inner helper local lost its exact temporary binding");
 		final implementationRevision = CompilerTypedModuleRevision.fromTypedModule(module).implementationRevision;
-		assertTrue(implementationRevision.indexOf("typed-abstract-unary-v1") >= 0
+		assertTrue(implementationRevision.indexOf("typed-abstract-unary-v3") >= 0
 			&& implementationRevision.indexOf(outerBindings[0].getCanonicalIdentity()) >= 0,
 			"typed-module implementation revision omitted the unary pass or generated binding identity");
 		assertTrue(!outerBindings[0].getIdentity().equals(innerBindings[0].getIdentity()), "shadowed helper locals received the same temporary identity");
@@ -169,7 +177,173 @@ class M14TypedAbstractUnaryIntegrationTest {
 			"read after the nested helper block did not return to the outer binding");
 	}
 
+	/** A selected operator's storage guarantee must not authorize unrelated result types or authored casts. */
+	static function storageGuaranteeTests():Void {
+		final source = [
+			"abstract Bits(Int) {",
+			"  public inline function new(value:Int) this = value;",
+			"  @:op(~A) private function complement():Bits;",
+			"}",
+			"abstract Other(String) {}",
+			"abstract DifferentResult(Int) {",
+			"  public inline function new(value:Int) this = value;",
+			"  @:op(~A) private function complement():Other;",
+			"}",
+			"class Main { static function main() {",
+			"  var value = new Bits(7);",
+			"  var selected = ~value;",
+			"  var checked = cast(value, Int);",
+			"  var unchecked:Int = cast value;",
+			"  var uncheckedBack:Bits = cast 7;",
+			"  var uncheckedSame:Bits = cast value;",
+			"  var different = ~new DifferentResult(7);",
+			"} }",
+		].join("\n");
+		final main = mainFunction(typedModule(source, "Main.hx"));
+		final selected = initializer(main, "selected");
+		final operandView = selected.getExpressions()[0].getExpressions()[0];
+		assertTrue(selected.isRepresentationPreservingCast() && operandView.isRepresentationPreservingCast(),
+			"bodyless operator without conversion headers lost its selected storage guarantee");
+		for (name in ["checked", "unchecked", "uncheckedBack", "uncheckedSame"])
+			assertTrue(initializer(main, name).getTag() == TypedExprTag.Cast && !initializer(main, name).isRepresentationPreservingCast(),
+				"authored cast acquired a selected operator's storage guarantee: " + name);
+		final different = initializer(main, "different");
+		assertTrue(different.getType().getSemanticKey() == "nominal:Main.Other" && !different.isRepresentationPreservingCast(),
+			"operator with a different result acquired an unsupported storage guarantee");
+		assertTrue(!selected.withType(TyType.fromHintText("String")).isRepresentationPreservingCast(),
+			"changing the result type retained an obsolete storage guarantee");
+		assertTrue(!operandView.withExpressions([operandView.getExpressions()[0].withType(TyType.fromHintText("String"))]).isRepresentationPreservingCast(),
+			"changing the operand type retained an obsolete storage guarantee");
+	}
+
+	/** Same backing types and same declaration names cannot replace the selected declaration's authority. */
+	static function inlineStorageAuthorityTests():Void {
+		final source = 'abstract Writer(Int) {
+@:op(++A) public inline function update():Writer { this += 1; return cast this; }
+}
+abstract Other(Int) {
+@:op(++A) public inline function update():Other { this += 1; return cast this; }
+}
+class Main { static function main():Void {} }';
+		function index():TyperIndex {
+			final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
+			return TyperIndex.build([resolved]);
+		}
+		final declarations = index();
+		final owner = declarations.getAbstractByFullName("Main.Writer");
+		final declaration = owner.getAllUnaryOperators()[0].getDeclaration();
+		final receiver = TyType.nominal(owner.getIdentity(), []);
+		final allocator = new TyCompilerTemporaryAllocator("inline-storage-test", "authority-v1", "__inline_storage_test_");
+		final binding = allocator.allocate("receiver", receiver);
+		final place:TypedAbstractUnaryInlinePlace.TypedUnaryPlace = {
+			prefix: [],
+			read: type -> TypedExpr.localRead(binding.getSourceName(), type, null, binding),
+			write: value -> TypedExpr.assign(TypedExpr.localRead(binding.getSourceName(), receiver, null, binding), value, value.getType(), null)
+		};
+		function prepare(selected:TyDeclarationInfo, actual:TyType):TypedAbstractUnaryInlinePlace.TypedInlineUnaryPlace {
+			return TypedAbstractUnaryInlinePlace.prepare({
+				place: place,
+				receiver: actual,
+				abstractInfo: owner,
+				declaration: selected,
+				allocator: allocator
+			});
+		}
+		function rejects(action:Void->Void, fragment:String):Void {
+			try {
+				action();
+			} catch (failure:haxe.Exception) {
+				if (failure.message.indexOf(fragment) >= 0)
+					return;
+				throw failure;
+			}
+			throw "inline unary storage accepted unrelated authority";
+		}
+		final selected = prepare(declaration, receiver);
+		final read = selected.read(TyType.fromHintText("Int"));
+		assertTrue(read.isRepresentationPreservingCast()
+			&& read.getExpressions()[0].getType().getSemanticKey() == receiver.getSemanticKey()
+			&& read.getExpressions()[0].getLocalBindings()[0] == binding,
+			"backing read changed the caller binding instead of making an explicit view");
+		final other = declarations.getAbstractByFullName("Main.Other");
+		rejects(() -> prepare(other.getAllUnaryOperators()[0].getDeclaration(), receiver), "exact abstract declaration");
+		rejects(() -> prepare(declaration, TyType.nominal(other.getIdentity(), [])), "exact abstract declaration");
+		rejects(() -> prepare(index().getAbstractByFullName("Main.Writer")
+			.getAllUnaryOperators()[0].getDeclaration(), receiver), "exact abstract declaration");
+		rejects(() -> selected.read(TyType.fromHintText("String")), "selected abstract backing");
+		rejects(() -> selected.write(TypedExpr.boolLiteral(true, TyType.fromHintText("Bool"), null)), "selected abstract backing");
+	}
+
+	/** Same-abstract method calls retain storage; methods on a backing object still receive that object. */
+	static function inlineMethodReceiverTests():Void {
+		final nested = mainFunction(typedModule('abstract Counter(Int) from Int to Int {
+public inline function bump():Int { this = this + 1; return this; }
+@:op(A++) public inline function post():Int { var old = this; bump(); return old; }
+}
+class Main { static function main():Void { var value:Counter = 8; var result = value++; } }', "Main.hx"));
+		assertTrue(declarationExpression(initializer(nested, "result"), "bump") == null,
+			"nested inline method did not consume the unary helper's writable receiver");
+		final backing = mainFunction(typedModule('class Payload {
+public function new() {}
+public function read():Int return 7;
+}
+abstract Wrapper(Payload) from Payload {
+@:op(-A) public inline function negate():Int return this.read();
+}
+class Main { static function main():Void { var value:Wrapper = new Payload(); var result = -value; } }', "Main.hx"));
+		final call = declarationExpression(initializer(backing, "result"), "read");
+		assertTrue(call != null && call.getTag() == Call && call.getDeclaration().getOwner().getCanonicalName() == "Main.Payload",
+			"backing object call changed its selected declaration");
+		final receiver = call.getExpressions()[0].getExpressions()[0];
+		assertTrue(receiver.getType().getSemanticKey() == "nominal:Main.Payload"
+			&& receiver.getTag() == Cast
+			&& receiver.getExpressions()[0].getType().getSemanticKey() == "nominal:Main.Wrapper",
+			"backing object method borrowed the abstract's writable receiver instead of its backing view");
+	}
+
+	/** The old backing value is saved before the RHS, while the read and write keep one source binding. */
+	static function assertInlineStorageUpdate(expression:TypedExpr, owner:String, amount:Int):Void {
+		final children = expression.getExpressions();
+		assertTrue(expression.getTag() == TypedExprTag.Block
+			&& children.length == 2
+			&& children[0].getTag() == TypedExprTag.Temporary
+			&& children[1].getTag() == TypedExprTag.Cast,
+			"inline update lost its old-value snapshot or completed write result");
+		final snapshot = children[0];
+		final before = snapshot.getExpressions()[0];
+		final original = before.getExpressions()[0];
+		final assignment = children[1].getExpressions()[0];
+		assertTrue(before.getTag() == TypedExprTag.Cast
+			&& before.isRepresentationPreservingCast()
+			&& before.getType().getSemanticKey() == "primitive:Int"
+			&& original.getTag() == TypedExprTag.LocalRead
+			&& original.getType().getSemanticKey() == owner
+			&& original.getLocalBindings()[0].getType().getSemanticKey() == owner
+			&& assignment.getTag() == TypedExprTag.Assign
+			&& assignment.getType().getSemanticKey() == owner,
+			"inline update erased the original abstract binding or lost its backing read");
+		final destination = assignment.getExpressions()[0];
+		final written = assignment.getExpressions()[1];
+		assertTrue(destination.getTag() == TypedExprTag.LocalRead
+			&& destination.getLocalBindings()[0].getIdentity().equals(original.getLocalBindings()[0].getIdentity())
+			&& written.getTag() == TypedExprTag.Cast
+			&& written.isRepresentationPreservingCast()
+			&& written.getType().getSemanticKey() == owner,
+			"inline update changed its caller destination or lost the completed storage conversion");
+		final operation = written.getExpressions()[0];
+		assertTrue(operation.getTag() == TypedExprTag.Binary
+			&& operation.getTexts()[0] == "+"
+			&& operation.getType().getSemanticKey() == "primitive:Int"
+			&& operation.getExpressions()[0].getLocalBindings()[0].getIdentity().equals(snapshot.getLocalBindings()[0].getIdentity())
+			&& operation.getExpressions()[1].getTag() == TypedExprTag.IntValue
+			&& operation.getExpressions()[1].getIntValue() == amount,
+			"inline update did not compute from the saved old value and the original RHS");
+	}
+
 	static function main():Void {
+		storageGuaranteeTests();
+		inlineStorageAuthorityTests();
+		inlineMethodReceiverTests();
 		final source = [
 			"class Carrier {",
 			"  public var value:Int;",
@@ -256,12 +430,14 @@ class M14TypedAbstractUnaryIntegrationTest {
 		final classCall = classResult.getExpressions()[0];
 		assertTrue(classResult.getTag() == TypedExprTag.Cast && classCall.getTag() == TypedExprTag.Call,
 			"class-backed unary minus did not become a carrier-preserving exact call");
+		assertTrue(classResult.isRepresentationPreservingCast(), "exact static operator result lost its unchanged storage");
 		assertTrue(classCall.getDeclaration() != null && classCall.getDeclaration().getSignature().getName() == "arbitraryClassNeg",
 			"class-backed helper was not selected by @:op metadata");
 		assertTrue(classResult.getType().getSemanticKey() == "nominal:Main.ClassNeg", "class-backed call lost its declared result type");
 
 		final primitiveResult = initializer(main, "primitiveResult");
 		final primitiveCall = primitiveResult.getExpressions()[0];
+		assertTrue(primitiveResult.isRepresentationPreservingCast(), "exact instance operator result lost its unchanged storage");
 		assertTrue(primitiveResult.getTag() == TypedExprTag.Cast && primitiveCall.getTag() == TypedExprTag.Call,
 			"primitive-backed unary minus did not become a carrier-preserving exact instance call");
 		assertTrue(primitiveCall.getDeclaration() != null
@@ -277,9 +453,10 @@ class M14TypedAbstractUnaryIntegrationTest {
 			"inline prefix helper was not completely lowered before backend emission");
 		final prefixChildren = prefixBlock.getExpressions();
 		assertTrue(prefixChildren.length == 2
-			&& prefixChildren[0].getTag() == TypedExprTag.CompoundAssign
+			&& prefixChildren[0].getTag() == TypedExprTag.Block
 			&& prefixChildren[1].getTag() == TypedExprTag.Cast,
 			"inline prefix mutation/result schedule was not explicit");
+		assertInlineStorageUpdate(prefixChildren[0], "nominal:Main.PrefixValue", 30);
 
 		final postfixResult = initializer(main, "postfixResult");
 		final postfixBlock = inlineBlock(postfixResult);
@@ -288,11 +465,15 @@ class M14TypedAbstractUnaryIntegrationTest {
 			&& postfixBlock.getTag() == TypedExprTag.Block
 			&& postfixChildren.length == 3
 			&& postfixChildren[0].getTag() == TypedExprTag.Temporary
-			&& postfixChildren[1].getTag() == TypedExprTag.CompoundAssign
+			&& postfixChildren[1].getTag() == TypedExprTag.Block
 			&& postfixChildren[2].getTag() == TypedExprTag.Cast,
 			"postfix result was inferred from spelling instead of the helper's saved-old-value body");
+		assertInlineStorageUpdate(postfixChildren[1], "nominal:Main.PrefixValue", 1);
+		assertTrue(postfixChildren[2].getExpressions()[0].getLocalBindings()[0].getIdentity().equals(postfixChildren[0].getLocalBindings()[0].getIdentity()),
+			"postfix result no longer reads the helper's saved old value");
 
 		final propertyPrefix = initializer(main, "propertyPrefix");
+		assertPropertyStorageProof(propertyPrefix);
 		final propertyPrefixBlock = inlineBlock(propertyPrefix);
 		final propertyGetterCall = declarationExpression(propertyPrefix, "get_value");
 		final propertySetterCall = declarationExpression(propertyPrefix, "set_value");
@@ -305,6 +486,7 @@ class M14TypedAbstractUnaryIntegrationTest {
 			&& !containsTag(propertyPrefix, TypedExprTag.Unary),
 			"property prefix update did not become an explicit getter/setter schedule");
 		final propertyPostfix = initializer(main, "propertyPostfix");
+		assertPropertyStorageProof(propertyPostfix);
 		final propertyPostfixBlock = inlineBlock(propertyPostfix);
 		assertTrue(propertyPostfixBlock.getTag() == TypedExprTag.Block
 			&& propertyPostfixBlock.getExpressions().length == 4
@@ -329,8 +511,11 @@ class M14TypedAbstractUnaryIntegrationTest {
 				if (expression.getTag() == TypedExprTag.Block && expression.getType().isVoid())
 					inferredVoidPrefix = expression;
 			}
-		assertTrue(inferredVoidPrefix != null && containsTag(inferredVoidPrefix, TypedExprTag.Unary),
+		assertTrue(inferredVoidPrefix != null
+			&& !containsTag(inferredVoidPrefix, TypedExprTag.Unary)
+			&& containsTag(inferredVoidPrefix, TypedExprTag.Assign),
 			"unannotated inline operator did not seal its inferred Void result and explicit mutation body");
+		assertInlineStorageUpdate(inferredVoidPrefix.getExpressions()[0], "nominal:Main.VoidPrefix", 1);
 
 		final nativeBitsResult = initializer(main, "nativeBitsResult");
 		final nativeBitsUnary = nativeBitsResult.getExpressions()[0];
@@ -341,11 +526,17 @@ class M14TypedAbstractUnaryIntegrationTest {
 			&& nativeBitsUnary.getExpressions()[0].getType().getSemanticKey() == "primitive:Int"
 			&& !containsTag(nativeBitsResult, TypedExprTag.Call),
 			"bodyless abstract operator did not become an explicitly authorized primitive-carrier unary operation");
+		assertTrue(nativeBitsResult.isRepresentationPreservingCast()
+			&& nativeBitsUnary.getExpressions()[0].isRepresentationPreservingCast(),
+			"selected bodyless operator lost the exact operand or result storage guarantee");
 		final nativeStaticBitsResult = initializer(main, "nativeStaticBitsResult");
 		assertTrue(nativeStaticBitsResult.getTag() == TypedExprTag.Cast
 			&& nativeStaticBitsResult.getExpressions()[0].getTag() == TypedExprTag.Unary
 			&& !containsTag(nativeStaticBitsResult, TypedExprTag.Call),
 			"bodyless static operator was emitted as a helper call instead of its authorized carrier unary operation");
+		assertTrue(nativeStaticBitsResult.isRepresentationPreservingCast()
+			&& nativeStaticBitsResult.getExpressions()[0].getExpressions()[0].isRepresentationPreservingCast(),
+			"selected static bodyless operator lost its storage guarantee");
 
 		assertTrue(initializer(main, "ordinaryNumber").getTag() == TypedExprTag.Unary,
 			"ordinary numeric unary behavior was routed through the abstract catalog");
@@ -430,6 +621,15 @@ class M14TypedAbstractUnaryIntegrationTest {
 		].join("\n"),
 			"Abstract property increment/decrement requires explicit get and set accessors");
 		typingFailure([
+			"abstract StaticReadOnly(Int) from Int {}",
+			"class StaticReadOnlyHolder {",
+			"  public static var value(get, never):StaticReadOnly;",
+			"  static function get_value():StaticReadOnly return 1;",
+			"}",
+			"class Main { static function main() { var result = ++StaticReadOnlyHolder.value; } }",
+		].join("\n"),
+			"Abstract property increment/decrement requires explicit get and set accessors");
+		final staticModule = typedModule([
 			"abstract StaticValue(Int) {",
 			"  public inline function new(value:Int) this = value;",
 			"  @:op(++A) public static function mustNotRun(value:StaticValue):StaticValue return value;",
@@ -440,8 +640,35 @@ class M14TypedAbstractUnaryIntegrationTest {
 			"  static function get_value():StaticValue return stored;",
 			"  static function set_value(value:StaticValue):StaticValue return stored = value;",
 			"}",
-			"class Main { static function main() { var result = ++StaticHolder.value; } }",
-		].join("\n"), "Static abstract property increment/decrement is not supported yet");
+			"class Main { static function main() {",
+			"  var prefixInc = ++StaticHolder.value;",
+			"  var postfixInc = StaticHolder.value++;",
+			"  var prefixDec = --StaticHolder.value;",
+			"  var postfixDec = StaticHolder.value--;",
+			"} }",
+		].join("\n"), "Main.hx");
+		final staticMain = mainFunction(staticModule);
+		for (name in ["prefixInc", "postfixInc", "prefixDec", "postfixDec"]) {
+			final result = initializer(staticMain, name);
+			final getter = declarationExpression(result, "get_value");
+			final setter = declarationExpression(result, "set_value");
+			assertTrue(getter != null
+				&& setter != null
+				&& getter.getDeclaration().getIsStatic()
+				&& setter.getDeclaration().getIsStatic()
+				&& getter.getDeclaration().getOwner().getCanonicalName() == "Main.StaticHolder"
+				&& setter.getDeclaration().getOwner().getCanonicalName() == "Main.StaticHolder"
+				&& containsTag(result, TypedExprTag.Binary)
+				&& !containsDeclaration(result, "mustNotRun")
+				&& !containsTag(result, TypedExprTag.Unary),
+				name
+				+ " lost the exact static accessors or selected an abstract operator");
+			final block = inlineBlock(result);
+			assertTrue(block.getTag() == TypedExprTag.Block
+				&& block.getExpressions().length == (StringTools.startsWith(name, "postfix") ? 3 : 1),
+				name + " lost the static property update schedule");
+		}
+
 		crossModuleInlineTest();
 		inlineHelperShadowingTest();
 	}

@@ -1,7 +1,12 @@
 package reflaxe.ocaml.lowered;
 
+import reflaxe.ocaml.lowered.OcamlCallableReturnControl;
 #if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
+import reflaxe.ocaml.reports.OcamlReportJson.encode as reportJson;
+import reflaxe.ocaml.reports.OcamlGenericCallReport.callToReport;
+import reflaxe.ocaml.reports.OcamlReportJson.hashUtf8;
+import reflaxe.ocaml.reports.OcamlReportJson.render as renderReportJson;
 import haxe.io.Path;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestBuilder;
 import reflaxe.ocaml.artifacts.OcamlArtifactManifestModel.OcamlArtifactKind;
@@ -41,6 +46,11 @@ import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentedArrayDescr
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
 import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationStorageMutationPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationNullPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationIdentityPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationAliasingPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationValueMutationPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationImplicitDefaultPolicy;
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan;
 import reflaxe.ocaml.lowered.OcamlReflectComparePlan.OcamlReflectCompareDecision;
 import reflaxe.ocaml.lowered.OcamlStdIsOfTypePlan;
@@ -74,14 +84,16 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 86;
-	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-v15";
+	public static inline final SCHEMA_VERSION = 94;
+	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-callback-locals-v17";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
 		final nominalCount = (decision.nominalTargetModuleName == null ? 0 : 1) + (decision.nominalTargetTypeName == null ? 0 : 1)
 			+ (decision.nominalLayoutRevision == null ? 0 : 1);
 		final isNominal = decision.boxingPolicy == OcamlRepresentationBoxingPolicy.NullableNominalRecordCarrier
-			|| decision.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectNominalValueCarrier;
+			|| decision.boxingPolicy == OcamlRepresentationBoxingPolicy.NullableNominalCallCarrier
+			|| decision.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectNominalValueCarrier
+			|| decision.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectNativeEnumCarrier;
 		if (isNominal != (nominalCount == 3))
 			throw 'Program representation "${decision.id}" has incomplete or unexpected nominal carrier metadata.';
 		if (!isNominal)
@@ -102,6 +114,27 @@ class OcamlLoweringReportWriter {
 				|| decision.storageMutationPolicy != OcamlRepresentationStorageMutationPolicy.ImmutableBinding) {
 				throw 'Program representation "${decision.id}" does not match the sealed exact Int64 nominal value carrier.';
 			}
+			return;
+		}
+		if (decision.boxingPolicy == OcamlRepresentationBoxingPolicy.DirectNativeEnumCarrier) {
+			if (decision.proof.id != OcamlNativeEnumRepresentation.MODEL_REVISION + ":" + decision.nominalLayoutRevision
+				|| decision.domain != OcamlRepresentationDomain.InternalValue
+				|| decision.storageMutationPolicy != OcamlRepresentationStorageMutationPolicy.ImmutableBinding) {
+				throw 'Program representation "${decision.id}" does not match its sealed native enum carrier.';
+			}
+			return;
+		}
+		if (decision.boxingPolicy == OcamlRepresentationBoxingPolicy.NullableNominalCallCarrier) {
+			if (decision.proof.id != OcamlGenericClassRepresentation.PROOF_ID + ":" + decision.nominalLayoutRevision
+				|| decision.proof.claim != OcamlGenericClassRepresentation.PROOF_CLAIM
+				|| decision.domain != OcamlRepresentationDomain.GenericCallValue
+				|| decision.nullPolicy != OcamlRepresentationNullPolicy.RuntimeSentinel
+				|| decision.identityPolicy != OcamlRepresentationIdentityPolicy.ReferenceIdentity
+				|| decision.aliasingPolicy != OcamlRepresentationAliasingPolicy.SharedReferenceAliases
+				|| decision.storageMutationPolicy != OcamlRepresentationStorageMutationPolicy.ImmutableBinding
+				|| decision.valueMutationPolicy != OcamlRepresentationValueMutationPolicy.MutableRuntimeContainer
+				|| decision.implicitDefaultPolicy != OcamlRepresentationImplicitDefaultPolicy.NotAdmitted)
+				throw 'Program representation "${decision.id}" does not match its generic class transport proof.';
 			return;
 		}
 		if (decision.proof.id != "whole-program-monomorphic-nominal-record-v1:" + decision.nominalLayoutRevision) {
@@ -156,7 +189,8 @@ class OcamlLoweringReportWriter {
 			functionResultBoundaries:Array<OcamlFunctionResultBoundaryPlan>, controls:Array<OcamlControlDecision>,
 			controlLoopTargets:Array<OcamlControlLoopTarget>, controlCatchChains:Array<OcamlCatchChainDecision>,
 			controlAdmissions:Array<OcamlControlAdmissionSnapshot>, staticStorage:Array<OcamlStaticStorageReportEntry>, staticStorageRevision:String,
-			artifacts:OcamlArtifactManifestBuilder):Void {
+			callableViews:reflaxe.ocaml.reports.OcamlCallableViewInventory.CallableViewInventoryReport, artifacts:OcamlArtifactManifestBuilder):Void {
+		final callbackInventory = reflaxe.ocaml.reports.OcamlCallableViewInventory.fromReport(callableViews);
 		final sorted = entries.copy();
 		sorted.sort((left, right) -> left.id < right.id ? -1 : (left.id > right.id ? 1 : 0));
 		final sortedRepresentations = representations.copy();
@@ -343,6 +377,17 @@ class OcamlLoweringReportWriter {
 			callableByCallee.set(boundary.calleeId, boundary);
 			callableById.set(boundary.id, boundary);
 		}
+		reflaxe.ocaml.reports.OcamlCallableViewInventory.requireParameterCoverage(callbackInventory, sortedCallableBoundaries.map(boundary -> {
+			id: boundary.id,
+			calleeId: boundary.calleeId,
+			binding: {
+				functionId: boundary.functionId,
+				programRevision: boundary.programRevision,
+				bodyRevision: boundary.bodyRevision,
+				pipelineRevision: boundary.pipelineRevision
+			},
+			arguments: boundary.arguments.map(argument -> argument.callableView)
+		}));
 		final sortedFunctionResultBoundaries = functionResultBoundaries.map(OcamlFunctionResultBoundary.copy);
 		sortedFunctionResultBoundaries.sort((left, right) -> Reflect.compare(left.id, right.id));
 		final functionResultByFunction:Map<String, OcamlFunctionResultBoundaryPlan> = [];
@@ -365,13 +410,33 @@ class OcamlLoweringReportWriter {
 		}
 		for (call in sortedCalls) {
 			OcamlCallPlan.requireCall(call);
+			if (call.genericInstanceTarget != null) {
+				final target = call.genericInstanceTarget;
+				final receiver = representationById.get(target.receiverRepresentationId);
+				if (receiver == null
+					|| receiver.semanticTypeId != target.receiverTypeId
+					|| receiver.boxingPolicy != OcamlRepresentationBoxingPolicy.NullableNominalCallCarrier
+					|| receiver.domain != OcamlRepresentationDomain.GenericCallValue
+					|| receiver.programRevision != call.programRevision)
+					throw 'Generic call "${call.id}" has no matching direct-record receiver representation.';
+				for (proof in reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.nominalProofs(target)) {
+					final value = representationById.get(proof.representationId);
+					if (value == null
+						|| value.semanticTypeId != proof.typeId
+						|| value.boxingPolicy != OcamlRepresentationBoxingPolicy.NullableNominalCallCarrier
+						|| value.domain != OcamlRepresentationDomain.GenericCallValue
+						|| value.programRevision != call.programRevision)
+						throw 'Generic call "${call.id}" has no matching class-value representation.';
+				}
+			}
 			if (call.receiver != null)
 				requireCallValue(representationById, call.receiver, 'Call "${call.id}" receiver');
 			for (index in 0...call.arguments.length)
 				requireCallValue(representationById, call.arguments[index], 'Call "${call.id}" argument $index');
 			if (call.result != null)
 				requireCallValue(representationById, call.result, 'Call "${call.id}" result');
-			if (call.kind == OcamlCallKind.DirectStaticGenericIdentity
+			if (call.kind == OcamlCallKind.GenericInstanceHaxeMethod
+				|| call.kind == OcamlCallKind.DirectStaticGenericIdentity
 				|| call.kind == OcamlCallKind.TypedFunctionValue
 				|| call.kind == OcamlCallKind.DynamicFunctionValue
 				|| call.kind == OcamlCallKind.StandardArrayMethod
@@ -438,6 +503,28 @@ class OcamlLoweringReportWriter {
 		final controlById:Map<String, Bool> = [];
 		for (control in sortedControls) {
 			OcamlControlPlan.requireDecision(control);
+			if (control.payload != null && control.payload.conversion == BoxAndRecoverCallableView) {
+				final payload = control.payload;
+				final returns = [
+					for (boundary in sortedCallableBoundaries)
+						if (boundary.callbackReturns != null) for (returned in boundary.callbackReturns)
+							returned
+				];
+				OcamlCallableReturnControl.requireJoin({
+					binding: {
+						functionId: control.functionId,
+						programRevision: control.programRevision,
+						bodyRevision: control.bodyRevision,
+						pipelineRevision: control.pipelineRevision
+					},
+					source: control.source,
+					returnId: payload.callbackReturnId,
+					returnRevision: payload.callbackReturnRevision,
+					semanticTypeId: payload.outputSemanticTypeId,
+					carrierTypeId: payload.outputCarrierTypeId,
+					representationId: payload.outputRepresentationId
+				}, returns);
+			}
 			if (controlById.exists(control.id))
 				throw 'Control decision identity "${control.id}" occurs more than once.';
 			if (!controlAdmissionByFunction.exists(control.functionId))
@@ -505,8 +592,9 @@ class OcamlLoweringReportWriter {
 							throw 'Control decision "${control.id}" has a Dynamic payload on unsupported transfer ${control.kind}.';
 					}
 				} else if (!OcamlControlPlan.isAdmittedHaxeExceptionThrowPayload(payload)
-					&& !OcamlControlPlan.isAdmittedEnumThrowPayload(payload)
-					&& !OcamlControlPlan.isAdmittedRuntimeClassThrowPayload(payload)) {
+					&& !OcamlControlPlan.isAdmittedEnumThrowFamily(payload)
+					&& !OcamlControlPlan.isAdmittedRuntimeClassThrowPayload(payload)
+					&& !(control.kind == Throw && OcamlControlPlan.isAdmittedOpaqueAnonymousThrowPayload(payload))) {
 					requireRepresentation(representationById, payload.inputRepresentationId, payload.inputSemanticTypeId, payload.inputCarrierTypeId,
 						OcamlRepresentationDomain.InternalValue, 'Control decision "${control.id}" input');
 					requireRepresentation(representationById, payload.outputRepresentationId, payload.outputSemanticTypeId, payload.outputCarrierTypeId,
@@ -632,6 +720,28 @@ class OcamlLoweringReportWriter {
 			requirementById.set(requirement.id, requirement);
 		}
 		final includedRequirementIds:Map<String, Bool> = [];
+		final callbackOperations = reflaxe.ocaml.reports.OcamlCallableViewInventory.decisions(callbackInventory)
+			.map(reflaxe.ocaml.lowered.OcamlCallableViewContract.operation);
+		for (comparison in reflaxe.ocaml.reports.OcamlCallableViewInventory.comparisonDecisions(callbackInventory)) {
+			callbackOperations.push(reflaxe.ocaml.lowered.OcamlCallableComparison.operation(comparison, true));
+			callbackOperations.push(reflaxe.ocaml.lowered.OcamlCallableComparison.operation(comparison, false));
+		}
+		for (call in sortedCalls)
+			for (argument in call.arguments)
+				if (argument.callbackArgument != null)
+					callbackOperations.push(argument.callbackArgument.operation);
+		for (boundary in sortedCallableBoundaries)
+			if (boundary.callbackReturns != null)
+				for (returned in boundary.callbackReturns)
+					callbackOperations.push(reflaxe.ocaml.lowered.OcamlCallableReturnContract.operation(returned));
+		for (decision in callbackOperations) {
+			for (expected in reflaxe.ocaml.lowered.OcamlCallableViewRuntime.valueRequirements(decision)) {
+				final recorded = requirementById.get(expected.id);
+				if (recorded == null || reportJson(recorded) != reportJson(expected))
+					throw 'Callback operation "${decision.id}" has missing or conflicting runtime requirement "${expected.id}".';
+				includedRequirementIds.set(expected.id, true);
+			}
+		}
 		for (decision in reflectCompare) {
 			OcamlReflectComparePlan.requireDecision(decision);
 			for (expected in OcamlReflectCompareRuntimeRequirementRecorder.requirementsFor(decision)) {
@@ -722,12 +832,12 @@ class OcamlLoweringReportWriter {
 			includedRequirementIds.set(expected.id, true);
 		}
 		for (conversion in sortedContainerElementConversions) {
-			final expected = OcamlEnumRuntimeRequirementRecorder.containerElementRequirement(conversion);
+			final expected = reflaxe.ocaml.runtimegen.OcamlContainerRuntimeRequirementRecorder.requirement(conversion);
 			final recorded = requirementById.get(expected.id);
 			if (recorded == null)
-				throw 'Enum container-element conversion "${conversion.id}" refers to missing runtime requirement "${expected.id}".';
+				throw 'Container-element conversion "${conversion.id}" refers to missing runtime requirement "${expected.id}".';
 			if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
-				throw 'Enum container-element conversion "${conversion.id}" disagrees with runtime requirement "${expected.id}".';
+				throw 'Container-element conversion "${conversion.id}" disagrees with runtime requirement "${expected.id}".';
 			includedRequirementIds.set(expected.id, true);
 		}
 		for (control in sortedControls) {
@@ -744,14 +854,14 @@ class OcamlLoweringReportWriter {
 		}
 		for (control in sortedControls) {
 			final payload = control.payload;
-			if (payload == null || !OcamlControlPlan.isAdmittedEnumThrowPayload(payload))
+			if (payload == null || !OcamlControlPlan.requiresEnumThrowRuntime(payload))
 				continue;
 			final expected = OcamlEnumRuntimeRequirementRecorder.throwRequirement(control);
 			final recorded = requirementById.get(expected.id);
 			if (recorded == null)
-				throw 'Direct enum throw "${control.id}" refers to missing runtime requirement "${expected.id}".';
+				throw 'Enum throw "${control.id}" refers to missing runtime requirement "${expected.id}".';
 			if (haxe.Json.stringify(recorded) != haxe.Json.stringify(expected))
-				throw 'Direct enum throw "${control.id}" disagrees with runtime requirement "${expected.id}".';
+				throw 'Enum throw "${control.id}" disagrees with runtime requirement "${expected.id}".';
 			includedRequirementIds.set(expected.id, true);
 		}
 		for (conversion in sortedIMapInterfaceConversions) {
@@ -835,14 +945,14 @@ class OcamlLoweringReportWriter {
 				if (includedRequirementIds.exists(requirement.id)) requirement
 		];
 		includedRequirements.sort((left, right) -> left.id < right.id ? -1 : (left.id > right.id ? 1 : 0));
-		final canonicalPlans = haxe.Json.stringify(sorted);
-		final canonicalRequirements = haxe.Json.stringify(includedRequirements);
-		final canonicalRepresentations = haxe.Json.stringify(sortedRepresentations);
-		final canonicalAnonymousStructures = haxe.Json.stringify({
+		final canonicalPlans = reportJson(sorted);
+		final canonicalRequirements = reportJson(includedRequirements);
+		final canonicalRepresentations = reportJson(sortedRepresentations);
+		final canonicalAnonymousStructures = reportJson({
 			structures: sortedAnonymousStructures,
 			operations: sortedAnonymousOperations
 		});
-		final canonicalStructuralFields = haxe.Json.stringify(sortedStructuralFields);
+		final canonicalStructuralFields = reportJson(sortedStructuralFields);
 		final sortedUnsafeOperations = unsafeOperations.copy();
 		sortedUnsafeOperations.sort((left, right) -> Reflect.compare(left.id, right.id));
 		final unsafeByConversionId:Map<String, OcamlUnsafeOperationRecord> = [];
@@ -867,20 +977,23 @@ class OcamlLoweringReportWriter {
 			+ sortedContainerElementConversions.length;
 		if (sortedUnsafeOperations.length != expectedUnsafeOperationCount)
 			throw "Unsafe-operation ledger contains a proof that is not owned by a sealed local or container-element conversion.";
-		final canonicalLocalConversions = haxe.Json.stringify(sortedLocalConversions);
-		final canonicalRepresentedArrays = haxe.Json.stringify(sortedRepresentedArrays);
+		final canonicalLocalConversions = reportJson(sortedLocalConversions);
+		final canonicalRepresentedArrays = reportJson(sortedRepresentedArrays);
 		final canonicalArrayLiteralProducerRevision = OcamlArrayLiteralProducerContract.planRevision(sortedArrayLiteralProducers);
-		final canonicalContainerElementRequiredConversionIds = haxe.Json.stringify(sortedContainerElementRequiredConversionIds);
-		final canonicalContainerElementConversions = haxe.Json.stringify(sortedContainerElementConversions);
-		final canonicalUnsafeOperations = haxe.Json.stringify(sortedUnsafeOperations);
-		final canonicalIMapInterfaces = haxe.Json.stringify({
+		final canonicalContainerElementRequiredConversionIds = reportJson(sortedContainerElementRequiredConversionIds);
+		final canonicalContainerElementConversions = reportJson(sortedContainerElementConversions);
+		final canonicalUnsafeOperations = reportJson(sortedUnsafeOperations);
+		final canonicalIMapInterfaces = reportJson({
 			conversions: sortedIMapInterfaceConversions,
 			calls: sortedIMapInterfaceCalls,
 			storageAliases: sortedIMapStorageAliases
 		});
-		final canonicalCalls = haxe.Json.stringify({
-			calls: sortedCalls,
-			callableBoundaries: sortedCallableBoundaries
+		final reportedCalls = sortedCalls.map(callToReport);
+		final reportedCallableBoundaries = sortedCallableBoundaries.map(reflaxe.ocaml.reports.OcamlCallableBoundaryReport.boundaryToReport);
+		final reportedFunctionResults = sortedFunctionResultBoundaries.map(reflaxe.ocaml.reports.OcamlCallableBoundaryReport.resultToReport);
+		final canonicalCalls = reportJson({
+			calls: reportedCalls,
+			callableBoundaries: reportedCallableBoundaries
 		});
 		final sortedReflectCompare = reflectCompare.copy();
 		sortedReflectCompare.sort((left, right) -> Reflect.compare(left.id, right.id));
@@ -891,28 +1004,28 @@ class OcamlLoweringReportWriter {
 				throw 'Reflect.compare decision identity "${decision.id}" occurs more than once.';
 			reflectCompareIds.set(decision.id, true);
 		}
-		final canonicalReflectCompare = haxe.Json.stringify(sortedReflectCompare);
-		final canonicalStdIsOfType = haxe.Json.stringify(sortedStdIsOfType);
-		final canonicalIntUnary = haxe.Json.stringify(sortedIntUnary);
-		final canonicalFunctionResultBoundaries = haxe.Json.stringify(sortedFunctionResultBoundaries);
-		final canonicalControlTargets = haxe.Json.stringify(sortedControlTargets);
-		final canonicalControls = haxe.Json.stringify({
+		final canonicalReflectCompare = reportJson(sortedReflectCompare);
+		final canonicalStdIsOfType = reportJson(sortedStdIsOfType);
+		final canonicalIntUnary = reportJson(sortedIntUnary);
+		final canonicalFunctionResultBoundaries = reportJson(reportedFunctionResults);
+		final canonicalControlTargets = reportJson(sortedControlTargets);
+		final canonicalControls = reportJson({
 			targets: sortedControlTargets,
 			decisions: sortedControls,
 			catchChains: sortedCatchChains
 		});
-		final canonicalCatchChains = haxe.Json.stringify(sortedCatchChains);
-		final canonicalControlAdmissions = haxe.Json.stringify(sortedControlAdmissions);
+		final canonicalCatchChains = reportJson(sortedCatchChains);
+		final canonicalControlAdmissions = reportJson(sortedControlAdmissions);
 		final report = {
 			schemaVersion: SCHEMA_VERSION,
 			model: "typed-ocaml-lowered-place",
 			representationModel: "typed-ocaml-program-representation",
 			representationScope: REPRESENTATION_SCOPE,
-			representationRevision: "sha256:" + Sha256.encode(canonicalRepresentations),
+			representationRevision: "sha256:" + hashUtf8(canonicalRepresentations),
 			representationCount: sortedRepresentations.length,
 			representations: sortedRepresentations,
 			representedArrayModel: OcamlRepresentationRegistry.ARRAY_DESCRIPTOR_MODEL_REVISION,
-			representedArrayRevision: "sha256:" + Sha256.encode(canonicalRepresentedArrays),
+			representedArrayRevision: "sha256:" + hashUtf8(canonicalRepresentedArrays),
 			representedArrayCount: sortedRepresentedArrays.length,
 			representedArrays: sortedRepresentedArrays,
 			arrayLiteralProducerModel: OcamlArrayLiteralProducerContract.MODEL_REVISION,
@@ -920,17 +1033,17 @@ class OcamlLoweringReportWriter {
 			arrayLiteralProducerCount: sortedArrayLiteralProducers.length,
 			arrayLiteralProducers: sortedArrayLiteralProducers,
 			anonymousStructureModel: OcamlAnonymousStructureContract.MODEL_REVISION,
-			anonymousStructureRevision: "sha256:" + Sha256.encode(canonicalAnonymousStructures),
+			anonymousStructureRevision: "sha256:" + hashUtf8(canonicalAnonymousStructures),
 			anonymousStructureCount: sortedAnonymousStructures.length,
 			anonymousStructures: sortedAnonymousStructures,
 			anonymousStructureOperationCount: sortedAnonymousOperations.length,
 			anonymousStructureOperations: sortedAnonymousOperations,
 			structuralFieldModel: OcamlStructuralFieldContract.MODEL,
-			structuralFieldRevision: "sha256:" + Sha256.encode(canonicalStructuralFields),
+			structuralFieldRevision: "sha256:" + hashUtf8(canonicalStructuralFields),
 			structuralFieldCount: sortedStructuralFields.length,
 			structuralFields: sortedStructuralFields,
 			iMapInterfaceModel: OcamlIMapInterfacePlan.MODEL,
-			iMapInterfaceRevision: "sha256:" + Sha256.encode(canonicalIMapInterfaces),
+			iMapInterfaceRevision: "sha256:" + hashUtf8(canonicalIMapInterfaces),
 			iMapInterfaceConversionCount: sortedIMapInterfaceConversions.length,
 			iMapInterfaceConversions: sortedIMapInterfaceConversions,
 			iMapInterfaceCallCount: sortedIMapInterfaceCalls.length,
@@ -938,73 +1051,74 @@ class OcamlLoweringReportWriter {
 			iMapStorageAliasCount: sortedIMapStorageAliases.length,
 			iMapStorageAliases: sortedIMapStorageAliases,
 			localConversionModel: "typed-ocaml-local-carrier-conversions-v3",
-			localConversionRevision: "sha256:" + Sha256.encode(canonicalLocalConversions),
+			localConversionRevision: "sha256:" + hashUtf8(canonicalLocalConversions),
 			localConversionCount: sortedLocalConversions.length,
 			localConversions: sortedLocalConversions,
+			callableViews: callbackInventory,
 			containerElementConversionModel: "typed-ocaml-container-element-conversions-v1",
 			containerElementRequiredConversionModel: "typed-ocaml-required-container-element-conversions-v1",
-			containerElementRequiredConversionRevision: "sha256:" + Sha256.encode(canonicalContainerElementRequiredConversionIds),
+			containerElementRequiredConversionRevision: "sha256:" + hashUtf8(canonicalContainerElementRequiredConversionIds),
 			containerElementRequiredConversionCount: sortedContainerElementRequiredConversionIds.length,
 			containerElementRequiredConversionIds: sortedContainerElementRequiredConversionIds,
-			containerElementConversionRevision: "sha256:" + Sha256.encode(canonicalContainerElementConversions),
+			containerElementConversionRevision: "sha256:" + hashUtf8(canonicalContainerElementConversions),
 			containerElementConversionCount: sortedContainerElementConversions.length,
 			containerElementConversions: sortedContainerElementConversions,
 			unsafeOperationModel: "proof-backed-admitted-unsafe-operations-v1",
 			unsafeOperationCompleteness: "exact-null-int-null-bool-inline-dynamic-and-enum-to-dynamic-local-and-container-slices",
-			unsafeOperationRevision: "sha256:" + Sha256.encode(canonicalUnsafeOperations),
+			unsafeOperationRevision: "sha256:" + hashUtf8(canonicalUnsafeOperations),
 			unsafeOperationCount: sortedUnsafeOperations.length,
 			unsafeOperations: sortedUnsafeOperations,
-			callModel: "typed-ocaml-directional-call-boundary-v31",
+			callModel: "typed-ocaml-directional-call-boundary-v34",
 			structuralIteratorConsumerModel: OcamlStructuralIteratorCallContract.MODEL,
-			callRevision: "sha256:" + Sha256.encode(canonicalCalls),
+			callRevision: "sha256:" + hashUtf8(canonicalCalls),
 			callCount: sortedCalls.length,
-			calls: sortedCalls,
+			calls: reportedCalls,
 			callableBoundaryCount: sortedCallableBoundaries.length,
-			callableBoundaries: sortedCallableBoundaries,
+			callableBoundaries: reportedCallableBoundaries,
 			reflectCompareModel: OcamlReflectComparePlan.MODEL_REVISION,
-			reflectCompareRevision: "sha256:" + Sha256.encode(canonicalReflectCompare),
+			reflectCompareRevision: "sha256:" + hashUtf8(canonicalReflectCompare),
 			reflectCompareCount: sortedReflectCompare.length,
 			reflectCompare: sortedReflectCompare,
 			stdIsOfTypeModel: OcamlStdIsOfTypePlan.MODEL_REVISION,
-			stdIsOfTypeRevision: "sha256:" + Sha256.encode(canonicalStdIsOfType),
+			stdIsOfTypeRevision: "sha256:" + hashUtf8(canonicalStdIsOfType),
 			stdIsOfTypeCount: sortedStdIsOfType.length,
 			stdIsOfType: sortedStdIsOfType,
 			intUnaryModel: OcamlIntUnaryPlan.MODEL_REVISION,
-			intUnaryRevision: "sha256:" + Sha256.encode(canonicalIntUnary),
+			intUnaryRevision: "sha256:" + hashUtf8(canonicalIntUnary),
 			intUnaryCount: sortedIntUnary.length,
 			intUnary: sortedIntUnary,
 			functionResultBoundaryModel: OcamlFunctionResultBoundary.MODEL,
-			functionResultBoundaryRevision: "sha256:" + Sha256.encode(canonicalFunctionResultBoundaries),
+			functionResultBoundaryRevision: "sha256:" + hashUtf8(canonicalFunctionResultBoundaries),
 			functionResultBoundaryCount: sortedFunctionResultBoundaries.length,
-			functionResultBoundaries: sortedFunctionResultBoundaries,
-			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v26",
-			controlRevision: "sha256:" + Sha256.encode(canonicalControls),
+			functionResultBoundaries: reportedFunctionResults,
+			controlModel: "typed-ocaml-function-loop-throw-and-catch-control-v28",
+			controlRevision: "sha256:" + hashUtf8(canonicalControls),
 			controlCount: sortedControls.length,
 			controls: sortedControls,
-			controlCatchModel: "typed-ocaml-represented-value-catch-chain-v6",
-			controlCatchRevision: "sha256:" + Sha256.encode(canonicalCatchChains),
+			controlCatchModel: "typed-ocaml-represented-value-catch-chain-v7",
+			controlCatchRevision: "sha256:" + hashUtf8(canonicalCatchChains),
 			controlCatchCount: sortedCatchChains.length,
 			controlCatches: sortedCatchChains,
 			controlTargetModel: "typed-ocaml-lexical-loop-target-v1",
-			controlTargetRevision: "sha256:" + Sha256.encode(canonicalControlTargets),
+			controlTargetRevision: "sha256:" + hashUtf8(canonicalControlTargets),
 			controlTargetCount: sortedControlTargets.length,
 			controlTargets: sortedControlTargets,
 			controlAdmissionModel: OcamlControlAdmissionContract.MODEL,
-			controlAdmissionRevision: "sha256:" + Sha256.encode(canonicalControlAdmissions),
+			controlAdmissionRevision: "sha256:" + hashUtf8(canonicalControlAdmissions),
 			controlAdmissionCount: sortedControlAdmissions.length,
 			controlAdmissions: sortedControlAdmissions,
 			staticStorageModel: "typed-ocaml-static-storage",
 			staticStorageRevision: staticStorageRevision,
 			staticStorageCount: sortedStaticStorage.length,
 			staticStorage: sortedStaticStorage,
-			admittedInputRevision: "sha256:" + Sha256.encode(canonicalPlans),
+			admittedInputRevision: "sha256:" + hashUtf8(canonicalPlans),
 			planCount: sorted.length,
 			plans: sorted,
-			runtimeRequirementRevision: "sha256:" + Sha256.encode(canonicalRequirements),
+			runtimeRequirementRevision: "sha256:" + hashUtf8(canonicalRequirements),
 			runtimeRequirementCount: includedRequirements.length,
 			runtimeRequirements: includedRequirements
 		};
-		sys.io.File.saveContent(Path.join([outputDirectory, FILE_NAME]), haxe.Json.stringify(report, null, "  ") + "\n");
+		sys.io.File.saveContent(Path.join([outputDirectory, FILE_NAME]), renderReportJson(report) + "\n");
 		artifacts.record({
 			path: FILE_NAME,
 			kind: OcamlArtifactKind.CompilerReport,

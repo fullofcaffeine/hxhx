@@ -117,6 +117,12 @@ jobs:
           set -euo pipefail
           REPORT_DIR="$RUNNER_TEMP/bootstrap_regen_bench"
           echo "report_dir=$REPORT_DIR" >> "$GITHUB_OUTPUT"
+          # Keep phase and process logs when generation fails before snapshot verification.
+          HXHX_STAGE0_PROGRESS=1 \
+          HXHX_STAGE0_TELEMETRY=1 \
+          REFLAXE_OCAML_PROGRESS_FILE="$REPORT_DIR/stage0-progress.log" \
+          HXHX_KEEP_LOGS=1 \
+          HXHX_LOG_DIR="$REPORT_DIR/stage0-logs" \
           HXHX_BOOTSTRAP_BENCH_SCENARIOS="${{ github.event.inputs.scenarios }}" \
           HXHX_BOOTSTRAP_BENCH_REPS="${{ github.event.inputs.reps }}" \
           HXHX_BOOTSTRAP_BENCH_VERIFY="${{ github.event.inputs.verify }}" \

@@ -1,7 +1,6 @@
 import HxExpr;
 import backend.BackendContext;
 import backend.BackendRegistry;
-import backend.GenIrProgram;
 import haxe.ds.StringMap;
 import haxe.io.Path;
 import sys.FileSystem;
@@ -26,20 +25,13 @@ class M14CppStringIndexOfExactIntegrationTest {
 		}
 	}
 
-	static function commandOutput(command:String):{code:Int, stdout:String, stderr:String} {
-		final process = new sys.io.Process(command, []);
+	static function commandOutput(command:String, ?arguments:Array<String>):{code:Int, stdout:String, stderr:String} {
+		final process = new sys.io.Process(command, arguments == null ? [] : arguments);
 		final stdout = process.stdout.readAll().toString();
 		final stderr = process.stderr.readAll().toString();
 		final code = process.exitCode();
 		process.close();
 		return {code: code, stdout: stdout, stderr: stderr};
-	}
-
-	static function program():GenIrProgram {
-		final source = HxConditionalCompilation.filterSource(File.getContent("test/oracle/cpp_string_index_of_exact_seed/src/Main.hx"),
-			new StringMap<String>());
-		final typed = TyperStage.typeModule(ParserStage.parse(source, "Main.hx"));
-		return MacroStage.expandProgram([typed], []);
 	}
 
 	static function exactCall(methodArgs:Array<HxExpr>):String {
@@ -57,6 +49,9 @@ class M14CppStringIndexOfExactIntegrationTest {
 	}
 
 	static function main():Void {
+		final expected = File.getContent("test/oracle/cpp_string_index_of_exact_seed/expected.stdout");
+		final upstream = commandOutput("haxe", ["-cp", "test/oracle/cpp_string_index_of_exact_seed/src", "--run", "Main"]);
+		assertTrue(upstream.code == 0 && upstream.stdout == expected && upstream.stderr == "", "upstream String.indexOf contract differs");
 		final exactDefault = exactCall([EString("target")]);
 		assertTrue(exactDefault == '__hxhx_index_of((std::string("native") + std::string("-target")), std::string("target"), 0)',
 			"exact typed String.indexOf did not use the native helper: " + exactDefault);
@@ -69,19 +64,23 @@ class M14CppStringIndexOfExactIntegrationTest {
 		final root = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_string_index_of_exact"]);
 		deleteRecursive(root);
 		FileSystem.createDirectory(root);
-		final context = new BackendContext(root, null, "Main", true, true, new StringMap<String>());
-		final result = BackendRegistry.createForTarget("cpp-native").emit(program(), context);
+		final fixture = CppResolvedFixture.load({
+			sourceRoot: "test/oracle/cpp_string_index_of_exact_seed/src",
+			mainModule: "Main",
+			requiredModules: ["String", "Sys"]
+		});
+		final context = new BackendContext(root, null, "Main", true, true, fixture.defines);
+		final result = BackendRegistry.createForTarget("cpp-native").emit(CppResolvedFixture.prepare(fixture), context);
 		assertTrue(result.builtExecutable, "focused C++ String.indexOf artifact did not build");
 
 		final generated = File.getContent(Path.join([root, "src", "Main.cpp"]));
-		assertTrue(generated.indexOf('__hxhx_index_of((std::string("native") + std::string("-target")), std::string("target"), 0)') >= 0,
-			"computed String receiver did not use the target-owned indexOf helper");
+		assertTrue(generated.indexOf("hxhx::managed::stringIndexOf(") >= 0, "typed String calls did not use the managed target-owned search operation");
 		assertTrue(generated.indexOf(".indexOf(") < 0, "generated C++ contains a nonexistent String.indexOf member call");
 
 		final executed = commandOutput(result.entryPath);
 		assertTrue(executed.code == 0, "focused C++ String.indexOf executable failed: " + executed.stderr);
-		final expected = File.getContent("test/oracle/cpp_string_index_of_exact_seed/expected.stdout");
 		assertTrue(executed.stdout == expected, "unexpected focused C++ String.indexOf stdout:\n" + executed.stdout);
 		deleteRecursive(root);
+		M14CppStringIndexOfContract.run();
 	}
 }

@@ -14,6 +14,15 @@ MACRO_HOST_BUILD_PID_SUFFIX=".hxhx-macro-host-build.pid"
 MACRO_HOST_GENERATED_INPUT_SUFFIX=".hxhx-macro-host-input"
 MACRO_HOST_LEASE_PID="${HXHX_MACRO_HOST_LEASE_PID:-$$}"
 
+# Only native build commands acquire the shared scheduling lease. Existing
+# outer owners are reused by the wrapper; source checks and artifact reuse do
+# not wait. Wrapper diagnostics stay on stderr, preserving executable stdout.
+run_native_build() {
+  node "$ROOT/scripts/hxhx/with-heavy-run-lease.js" \
+    --label macro-host-native-build \
+    --wait-seconds "${HAXE_FAMILY_HEAVY_RUN_WAIT_SECONDS:-1800}" -- "$@"
+}
+
 case "$MACRO_HOST_LEASE_PID" in
   ''|*[!0-9]*)
     echo "Invalid HXHX_MACRO_HOST_LEASE_PID: $MACRO_HOST_LEASE_PID (expected a live process id)." >&2
@@ -105,7 +114,7 @@ if [ -d "$BOOTSTRAP_DIR" ] \
   && [ -z "${HXHX_MACRO_HOST_EXTRA_CP:-}" ]; then
   (
     cd "$BOOTSTRAP_DIR"
-    dune build --display=quiet ./out.exe
+    run_native_build dune build --display=quiet ./out.exe
   )
   BIN="$BOOTSTRAP_DIR/_build/default/out.exe"
   if [ ! -f "$BIN" ]; then
@@ -135,7 +144,7 @@ fi
 PREFER_HXHX="${HXHX_MACRO_HOST_PREFER_HXHX:-0}"
 has_hxhx() {
   # `build-hxhx.sh` is stage0-free by default (uses packages/hxhx/bootstrap_out when available).
-  "$ROOT/scripts/hxhx/build-hxhx.sh" >/dev/null 2>&1
+  run_native_build "$ROOT/scripts/hxhx/build-hxhx.sh" >/dev/null 2>&1
 }
 
 normalize_cp() {
@@ -393,7 +402,7 @@ trim_ws() {
   fi
 
   if [ "$WANT_STAGE3" -eq 1 ]; then
-    HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+    HXHX_BIN="$(run_native_build "$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
     STD_ROOT="$(resolve_std_root)"
     if [ -z "$STD_ROOT" ]; then
       echo "hxhx(stage3) macro host build requires a Haxe std root." >&2
@@ -429,8 +438,14 @@ trim_ws() {
       cmd+=("${extra[@]}")
     fi
     echo "Building macro host via hxhx(stage3)..." >&2
-    if "${cmd[@]}" 1>&2; then
+    if run_native_build "${cmd[@]}" 1>&2; then
       exit 0
+    else
+      build_status=$?
+      # Scheduling timeouts and cancellation must not trigger another build.
+      case "$build_status" in
+        75|129|130|143) exit "$build_status" ;;
+      esac
     fi
     if is_true "$HXHX_FORBID_STAGE0"; then
       echo "hxhx macro host build: HXHX_FORBID_STAGE0=1 forbids stage0 fallback after stage3 failure." >&2
@@ -464,7 +479,7 @@ trim_ws() {
   if [ "${#extra[@]}" -gt 0 ]; then
     cmd+=("${extra[@]}")
   fi
-  "${cmd[@]}" 1>&2
+  run_native_build "${cmd[@]}" 1>&2
 )
 
 BIN_STAGE3="$OUT_DIR/out.exe"

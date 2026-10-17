@@ -89,7 +89,7 @@ for (const [label, source] of [
 	['CallStack.parseFileLine', callStackSource],
 	['NativeStackTrace.parseFileLine', nativeStackSource]
 ]) {
-	if (!source.includes('raise (HxRuntime.Hx_return (HxRuntime.hx_null))')
+	if (!source.includes('Stdlib.raise (HxRuntime.Hx_return (HxRuntime.hx_null))')
 		|| !source.includes('| HxRuntime.Hx_return __ret_')
 		|| source.includes('Hx_return (Obj.repr (HxRuntime.hx_null))')
 		|| source.includes('Hx_return (Obj.magic (HxRuntime.hx_null))')) {
@@ -114,18 +114,22 @@ cmp "$TMP_ROOT/NativeStackTrace.before.ml" "$NATIVE_STACK_SOURCE"
 # The public inspector is a second reader of the generated proof. It does not
 # share request-local typed expressions with the compiler, so a pass here shows
 # that another tool can verify the structure/result/control ownership chain.
+# Compile it once for this fixture, then start a fresh process for each report.
+# The temporary executable shares no inspection state and is removed on exit.
 VALID_INSPECTION="$TMP_ROOT/valid-inspection.json"
 haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
 	--macro 'nullSafety("reflaxe.ocaml")' \
-	--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	-D reflaxe_runtime -main reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	--neko "$TMP_ROOT/inspect.n"
+neko "$TMP_ROOT/inspect.n" \
 	inspect --project "$PWD" --output out --require-lowering --json >"$VALID_INSPECTION"
 node - "$VALID_INSPECTION" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 47
+if (report.schemaVersion !== 53
 	|| report.summary?.valid !== true
 	|| report.lowering?.status !== 'present'
-	|| report.lowering?.schemaVersion !== 86) {
+	|| report.lowering?.schemaVersion !== 94) {
 	throw new Error('public inspection did not validate the nullable anonymous return report')
 }
 const boundaries = report.lowering.functionResultBoundaries.filter(item =>
@@ -144,6 +148,7 @@ for mutation in wrong-shape stale-structure wrong-representation fake-callable v
 	cp -R out "$invalid_output"
 	node - "$invalid_output/ocaml_lowering_report.json" "$mutation" <<'NODE'
 const crypto = require('crypto')
+const reportJson = require('../../../../scripts/ci/ocaml-report-json')
 const fs = require('fs')
 const path = process.argv[2]
 const mutation = process.argv[3]
@@ -180,8 +185,8 @@ switch (mutation) {
 		throw new Error(`unsupported corruption ${mutation}`)
 }
 
-report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify(report.functionResultBoundaries)).digest('hex')}`
-report.controlRevision = `sha256:${crypto.createHash('sha256').update(JSON.stringify({
+report.functionResultBoundaryRevision = `sha256:${crypto.createHash('sha256').update(reportJson(report.functionResultBoundaries)).digest('hex')}`
+report.controlRevision = `sha256:${crypto.createHash('sha256').update(reportJson({
 	targets: report.controlTargets,
 	decisions: report.controls,
 	catchChains: report.controlCatches
@@ -189,9 +194,7 @@ report.controlRevision = `sha256:${crypto.createHash('sha256').update(JSON.strin
 fs.writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`)
 NODE
 	invalid_log="$TMP_ROOT/$mutation.log"
-	if haxe -cp "$ROOT/packages/reflaxe.ocaml/src" \
-		--macro 'nullSafety("reflaxe.ocaml")' \
-		--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+	if neko "$TMP_ROOT/inspect.n" \
 		inspect --project "$PWD" --output "$invalid_output" --require-lowering --json >"$invalid_log" 2>&1; then
 		echo "Public inspection accepted corrupted nullable anonymous return evidence: $mutation" >&2
 		exit 1

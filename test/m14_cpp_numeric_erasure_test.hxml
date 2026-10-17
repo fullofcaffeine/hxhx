@@ -1,0 +1,16 @@
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp test
+-main M14CppNumericErasureTest
+--interp
+--next
+test/m14_cpp_abstract_switch_test.hxml
+--next
+test/m14_cpp_integer_bitwise_test.hxml
+--next
+test/m14_cpp_parameter_write_test.hxml
+
+--next
+test/m14_cpp_integer_remainder_test.hxml
+--next
+test/m14_cpp_standard_int_test.hxml

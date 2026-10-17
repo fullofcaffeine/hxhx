@@ -1,0 +1,16 @@
+null:null
+plain:Plain
+custom:direct
+inherited:inherited
+override:child:override
+factory:factory
+null-result:<null>
+caught:conversion failed
+record:{ a => 1, b => text }
+record-method:record result
+array:[a,null,b]
+generic-int:[3]
+generic-string:[text]
+exception:wrapped
+nested-exception:nested
+calls:8

@@ -18,7 +18,7 @@ let flush__impl = fun (self : t) () -> ignore (ignore (HxFileStream.flush_out ((
 let writeByte__impl = fun (self : t) (c : int) -> ignore (ignore (HxFileStream.write_byte ((Obj.magic self : t).h) c))
 
 let writeBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -> (try (
-  ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
+  ignore (if len <= 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let _g = ref 0 in let _g1 = len in (
     ignore (while !_g < _g1 do ignore (let i = let __old_2 = !_g in let __new_3 = HxInt.add __old_2 1 in (
       ignore (_g := __new_3);

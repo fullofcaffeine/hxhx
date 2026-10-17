@@ -31,21 +31,21 @@ let exceptionStack = fun () -> let __anon_2 = HxAnon.create () in (
 )
 
 let parseFileLine = fun line -> (try let fileNeedle = "file \"" in let fileStart0 = let __string_receiver_3 = line in let __string_argument_0_4 = fileNeedle in HxString.indexOf __string_receiver_3 __string_argument_0_4 0 in (
-  ignore (if fileStart0 < 0 then raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
+  ignore (if fileStart0 < 0 then Stdlib.raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
   let fileStart = HxInt.add fileStart0 (let __string_receiver_5 = fileNeedle in HxString.length __string_receiver_5) in let fileEnd = let __string_receiver_6 = line in let __string_argument_0_7 = "\"" in let __string_argument_1_8 = fileStart in HxString.indexOf __string_receiver_6 __string_argument_0_7 __string_argument_1_8 in (
-    ignore (if fileEnd < 0 then raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
+    ignore (if fileEnd < 0 then Stdlib.raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
     let file = (let __string_receiver_9 = line in let __string_argument_0_10 = fileStart in let __string_argument_1_11 = HxInt.sub fileEnd fileStart in HxString.substr __string_receiver_9 __string_argument_0_10 __string_argument_1_11 : string) in let lineNeedle = "line " in let lineStart0 = let __string_receiver_12 = line in let __string_argument_0_13 = lineNeedle in let __string_argument_1_14 = fileEnd in HxString.indexOf __string_receiver_12 __string_argument_0_13 __string_argument_1_14 in (
-      ignore (if lineStart0 < 0 then raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
+      ignore (if lineStart0 < 0 then Stdlib.raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
       let i = HxInt.add lineStart0 (let __string_receiver_15 = lineNeedle in HxString.length __string_receiver_15) in let j = ref i in (
         ignore (try while !j < (let __string_receiver_16 = line in HxString.length __string_receiver_16) do ignore (let c = let __string_receiver_17 = line in let __string_argument_0_18 = !j in HxString.charCodeAt __string_receiver_17 __string_argument_0_18 in (
-          ignore (if (let __nullable_19 = c in let __nullable_20 = 48 in if __nullable_19 == HxRuntime.hx_null then false else Obj.obj __nullable_19 < __nullable_20) || (let __nullable_21 = c in let __nullable_22 = 57 in if __nullable_21 == HxRuntime.hx_null then false else Obj.obj __nullable_21 > __nullable_22) then raise (HxRuntime.Hx_break) else ());
+          ignore (if (let __nullable_19 = c in let __nullable_20 = 48 in if __nullable_19 == HxRuntime.hx_null then false else Obj.obj __nullable_19 < __nullable_20) || (let __nullable_21 = c in let __nullable_22 = 57 in if __nullable_21 == HxRuntime.hx_null then false else Obj.obj __nullable_21 > __nullable_22) then Stdlib.raise (HxRuntime.Hx_break) else ());
           let __old_23 = !j in let __new_24 = HxInt.add __old_23 1 in (
             ignore (j := __new_24);
             __old_23
           )
         )) done with
           | HxRuntime.Hx_break -> ());
-        ignore (if !j = i then raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
+        ignore (if !j = i then Stdlib.raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
         let ln = ref 0 in let _g = ref i in let _g1 = !j in (
           ignore (while !_g < _g1 do ignore (let k = let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
             ignore (_g := __new_26);
@@ -77,9 +77,9 @@ let toHaxe = fun nativeStackTrace skip -> let skip = if Obj.repr skip == HxRunti
         ignore (toSkip := __new_40);
         __old_39
       ));
-      raise (HxRuntime.Hx_continue)
+      Stdlib.raise (HxRuntime.Hx_continue)
     )) else ());
-    let loc = parseFileLine (line : string) in if loc != Obj.magic (HxRuntime.hx_null) then ignore (let __array_receiver_41 = out in let __array_arg_0_42 = Haxe_CallStack.FilePos (Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" (Obj.magic (HxRuntime.hx_null))), (Obj.obj (HxAnon.get loc "file") : string), Obj.obj (HxAnon.get loc "line"), HxRuntime.hx_null) in HxArray.push __array_receiver_41 __array_arg_0_42) else ignore (let __array_receiver_43 = out in let __array_arg_0_44 = Haxe_CallStack.Module (line : string) in HxArray.push __array_receiver_43 __array_arg_0_44)
+    let loc = parseFileLine (line : string) in if loc != Obj.magic (HxRuntime.hx_null) then ignore (let __array_receiver_41 = out in let __array_arg_0_42 = let __enum_arg_43 = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" (Obj.magic (HxRuntime.hx_null))) in let __enum_arg_44 = (Obj.obj (HxAnon.get loc "file") : string) in let __enum_arg_45 = Obj.obj (HxAnon.get loc "line") in let __enum_arg_46 = HxRuntime.hx_null in Haxe_CallStack.FilePos (Stdlib.Sys.opaque_identity __enum_arg_43, __enum_arg_44, __enum_arg_45, __enum_arg_46) in HxArray.push __array_receiver_41 __array_arg_0_42) else ignore (let __array_receiver_47 = out in let __array_arg_0_48 = let __enum_arg_49 = (line : string) in Haxe_CallStack.Module (Stdlib.Sys.opaque_identity __enum_arg_49) in HxArray.push __array_receiver_47 __array_arg_0_48)
   )) with
     | HxRuntime.Hx_continue -> () done);
   out

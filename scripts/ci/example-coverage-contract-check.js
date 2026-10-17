@@ -121,7 +121,12 @@ function validateWiring() {
     fail('package.json test:examples must run scripts/test-examples.sh')
   }
   requireIncludes(scripts.test || '', 'npm run test:examples', 'package.json scripts.test')
-  requireIncludes(scripts['ci:guards'] || '', 'example-coverage-contract-check.js', 'package.json scripts.ci:guards')
+  // The local aggregate delegates to the same core group that CI runs. Check
+  // both links so a present but unreachable coverage command cannot pass.
+  if (!(scripts['ci:guards'] || '').split(/\s*&&\s*/).includes('npm run ci:guards:core')) {
+    fail('package.json scripts.ci:guards must invoke npm run ci:guards:core')
+  }
+  requireIncludes(scripts['ci:guards:core'] || '', 'example-coverage-contract-check.js', 'package.json scripts.ci:guards:core')
 
   const shardManifest = JSON.parse(read('scripts/ci/core-test-shards.json'))
   if (!shardManifest.assignments || !shardManifest.assignments['test:examples']) {

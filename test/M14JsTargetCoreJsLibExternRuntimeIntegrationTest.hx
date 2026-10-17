@@ -4,6 +4,7 @@ import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
 
+/** Real JS providers must retain native constructor use and execute the same library calls as upstream. */
 class M14JsTargetCoreJsLibExternRuntimeIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
@@ -27,10 +28,19 @@ class M14JsTargetCoreJsLibExternRuntimeIntegrationTest {
 		FileSystem.deleteFile(path);
 	}
 
-	static function makeProgram(source:String, filePath:String):MacroExpandedProgram {
-		final parsed = ParserStage.parse(source, filePath);
-		final typed = TyperStage.typeModule(parsed);
-		return MacroStage.expandProgram([typed], []);
+	/** Load the real JS library closure instead of emitting unresolved type names. */
+	static function makeProgram(source:String):MacroExpandedProgram {
+		return JsSourceProgramFixture.build({
+			sources: [{path: "Main.hx", source: source}],
+			requiredModules: [
+				"Math",
+				"Std",
+				"haxe.io.FPHelper",
+				"js.lib.ArrayBuffer",
+				"js.lib.DataView",
+				"js.lib.intl.NumberFormat"
+			]
+		});
 	}
 
 	static function runNodeScript(jsPath:String):String {
@@ -54,12 +64,19 @@ class M14JsTargetCoreJsLibExternRuntimeIntegrationTest {
 			final source = [
 				"class Main {",
 				"  static function main() {",
-				'    Sys.println("fp=" + haxe.io.FPHelper.i32ToFloat(1065353216));',
-				'    Sys.println("intl=" + Std.string(new js.lib.intl.NumberFormat("en-US") != null));',
+				'    trace("fp=" + haxe.io.FPHelper.i32ToFloat(1065353216));',
+				'    trace("intl=" + Std.string(new js.lib.intl.NumberFormat("en-US") != null));',
 				"  }",
 				"}"
 			].join("\n");
-			final program = makeProgram(source, "JsLibExternRuntimeMain.hx");
+			File.saveContent(Path.join([tmpRoot, "Main.hx"]), source);
+			final upstreamJs = Path.join([tmpRoot, "upstream.js"]);
+			assertTrue(Sys.command("node_modules/.bin/haxe", ["-cp", tmpRoot, "-main", "Main", "-dce", "no", "-js", upstreamJs]) == 0,
+				"upstream library fixture must compile");
+			final upstreamOutput = runNodeScript(upstreamJs);
+			assertContains(upstreamOutput, "fp=1", "upstream FPHelper result");
+			assertContains(upstreamOutput, "intl=true", "upstream Intl.NumberFormat construction");
+			final program = makeProgram(source);
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
 			final context = new BackendContext(outDir, artifactPath, "Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"]));
@@ -69,18 +86,15 @@ class M14JsTargetCoreJsLibExternRuntimeIntegrationTest {
 			assertTrue(FileSystem.exists(artifactPath), "missing emitted JS artifact");
 
 			final js = File.getContent(artifactPath);
-			assertContains(js, 'globalThis["ArrayBuffer"]', "js.lib.ArrayBuffer should reference native global");
-			assertContains(js, 'globalThis["DataView"]', "js.lib.DataView should reference native global");
-			assertContains(js, 'globalThis["Intl"]["NumberFormat"]', "js.lib.intl.NumberFormat should reference globalThis.Intl.NumberFormat");
-			assertTrue(js.indexOf("var __hx_cls_js_lib_ArrayBuffer = {};") < 0, "js.lib.ArrayBuffer should not emit synthetic placeholder object");
-			assertTrue(js.indexOf("var __hx_cls_js_lib_DataView = {};") < 0, "js.lib.DataView should not emit synthetic placeholder object");
-			assertTrue(js.indexOf('var __hx_cls_js_lib_intl_NumberFormat = globalThis["intl"]["NumberFormat"];') < 0,
-				"js.lib.intl.NumberFormat should not alias lowercase intl namespace");
-			final arrayBufferAliasIndex = js.indexOf('__hx_cls_js_lib_ArrayBuffer = ');
+			// Upstream reads these authored native paths at use, without startup aliases.
+			assertContains(js, 'new DataView(new ArrayBuffer(8))', "FPHelper must initialize through native DataView and ArrayBuffer");
+			assertContains(js, 'new Intl["NumberFormat"](', "NumberFormat must use the authored uppercase native namespace");
+			for (name in ["ArrayBuffer", "DataView", "intl_NumberFormat"])
+				assertTrue(js.indexOf("var __hx_cls_js_lib_" + name + " = ") < 0, "native extern must not create an eager alias or a placeholder: " + name);
 			final fpHelperInitIndex = js.indexOf('__hx_cls_haxe_io_FPHelper.helper = ');
-			assertTrue(arrayBufferAliasIndex >= 0, "js.lib.ArrayBuffer alias should be emitted");
+			final mainCallIndex = js.indexOf('__hx_cls_Main.main();');
 			assertTrue(fpHelperInitIndex >= 0, "FPHelper helper initialization should be emitted");
-			assertTrue(arrayBufferAliasIndex < fpHelperInitIndex, "js.lib.ArrayBuffer alias should be emitted before FPHelper static initialization");
+			assertTrue(mainCallIndex > fpHelperInitIndex, "FPHelper must initialize before the program entry point runs");
 
 			final stdout = runNodeScript(artifactPath);
 			assertContains(stdout, "fp=1", "FPHelper should execute through native DataView/ArrayBuffer globals");
@@ -92,7 +106,7 @@ class M14JsTargetCoreJsLibExternRuntimeIntegrationTest {
 		}
 
 		if (failure != null) {
-			Sys.println("debug_out=" + tmpRoot);
+			trace("debug_out=" + tmpRoot);
 			throw failure;
 		}
 		deleteRecursive(tmpRoot);

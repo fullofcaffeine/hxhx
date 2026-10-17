@@ -1,0 +1,7 @@
+-cp test
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-main M14PythonStaticFieldsIntegrationTest
+--interp
+--next
+test/m14_python_initializer_regions_test.hxml
