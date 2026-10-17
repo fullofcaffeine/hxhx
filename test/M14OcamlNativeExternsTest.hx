@@ -36,6 +36,19 @@ class M14OcamlNativeExternsTest {
 			+ memberName
 			+ '") public static function count(value:String):Int; } class Main { static function main():Void { Sys.println(Host.count("abc")); } }';
 
+	/** Local typing needs no program index until an extern declaration requests a host binding. */
+	static function localTyping():Void {
+		final ordinary = TyperStage.typeModule(ParserStage.parse("class Main { static function main():Void { Sys.println(7); } }", "Main.hx"));
+		final owner = ordinary.getBackendProjection().getClasses()[0];
+		require(!owner.hasSemanticFacts(), "local typing fixture unexpectedly acquired a program index");
+		require(!new Stage3OcamlExternBindings([ordinary]).ownsClass(owner), "ordinary class entered native extern admission");
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([ordinary], []), ".tmp/ocaml_native_extern_local_typing", true);
+		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: "7\n"});
+		final unindexed = TyperStage.typeModule(ParserStage.parse(programSource("HxString", "length"), "Main.hx"));
+		reject(() -> new Stage3OcamlExternBindings([unindexed]), "has no exact semantic facts for Host");
+		Sys.println("OCAML_NATIVE_EXTERN_LOCAL_TYPING:PASS");
+	}
+
 	/** Metadata is frozen at indexing, while a new source version changes the derived semantic identity. */
 	static function ownership():Void {
 		final source = programSource("HxString", "length");
@@ -115,6 +128,7 @@ class M14OcamlNativeExternsTest {
 	}
 
 	static function main():Void {
+		localTyping();
 		ownership();
 		admission();
 		final root = "test/fixtures/ocaml_native_externs";

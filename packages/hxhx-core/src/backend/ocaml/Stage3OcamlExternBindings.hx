@@ -22,9 +22,10 @@ class Stage3OcamlExternBindings {
 	public function new(modules:Array<TypedModule>) {
 		for (module in modules)
 			for (owner in module.getBackendProjection().getClasses()) {
-				final facts = owner.requireSemanticFacts();
-				if (ownsClass(owner))
+				if (ownsClass(owner)) {
+					final facts = owner.requireSemanticFacts();
 					classes.set(facts.getClassIdentity(), facts);
+				}
 			}
 		if (!classes.iterator().hasNext())
 			return;
@@ -54,8 +55,14 @@ class Stage3OcamlExternBindings {
 		}
 	}
 
-	/** A host-owned class contributes declarations, never empty executable Haxe stubs. */
+	/**
+		Ordinary locally typed classes need no host-binding facts. The declaration
+		category can exclude them, but only indexed facts can authorize an extern.
+		A host-owned class contributes declarations, never executable Haxe stubs.
+	 */
 	public function ownsClass(owner:TypedBackendClassProjection):Bool {
+		if (!HxClassDecl.getIsExtern(owner.getDeclaration()))
+			return false;
 		final facts = owner.requireSemanticFacts();
 		return facts.getIsExtern() && facts.getNativeName() != null && facts.getNativeName().getName() != null;
 	}
