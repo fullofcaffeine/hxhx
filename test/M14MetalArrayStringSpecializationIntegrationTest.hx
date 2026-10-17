@@ -90,6 +90,26 @@ class M14MetalArrayStringSpecializationIntegrationTest {
 		return rendered[0];
 	}
 
+	/** Preserve the authored untyped key and its exact function-owned occurrence during emission. */
+	static function portableUntypedKey(typeHints:Array<TypeHintSpec>):String {
+		final source = 'class Main { static function read(payload:Dynamic, key:String):Dynamic { return payload[untyped key]; } }';
+		final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
+		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		final rendered = new Array<String>();
+		for (owner in typed.getBackendProjection().getClasses())
+			for (fn in owner.getFunctions())
+				for (statement in fn.getBody())
+					TypedBackendSourceWalk.statement(statement, expression -> {
+						switch expression {
+							case EArrayAccess(_, EUntyped(_)):
+								rendered.push(emitExpr(expression, OcamlProfile.Portable, typeHints, fn));
+							case _:
+						}
+					}, _ -> {});
+		assertTrue(rendered.length == 1, "expected exactly one authored untyped key access");
+		return rendered[0];
+	}
+
 	static function expectEmitFailure(expr:HxExpr, profile:OcamlProfile, expectedSnippet:String, ?typeHints:Array<TypeHintSpec>):Void {
 		var failure:Null<String> = null;
 		try {
@@ -137,7 +157,9 @@ class M14MetalArrayStringSpecializationIntegrationTest {
 		assertContains(portableCastStringKey, "HxAnon.get", "cast-wrapped String keys should use Dynamic field access");
 		assertTrue(portableCastStringKey.indexOf("HxBootArray.get") < 0, "cast-wrapped String keys should not use integer array access");
 
-		final portableUntypedStringKey = emitExpr(EArrayAccess(EIdent("payload"), EUntyped(EIdent("key"))), OcamlProfile.Portable, dynamicStringKeyHints);
+		expectEmitFailure(EArrayAccess(EIdent("payload"), EUntyped(EIdent("key"))), OcamlProfile.Portable,
+			"OCaml untyped value requires its exact typed occurrence", dynamicStringKeyHints);
+		final portableUntypedStringKey = portableUntypedKey(dynamicStringKeyHints);
 		assertContains(portableUntypedStringKey, "HxAnon.get", "untyped-wrapped String keys should use Dynamic field access");
 		assertTrue(portableUntypedStringKey.indexOf("HxBootArray.get") < 0, "untyped-wrapped String keys should not use integer array access");
 
