@@ -4699,8 +4699,9 @@ class EmitterStage {
 			case EParenthesized(inner, _):
 				"(" + exprToOcaml(inner, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
 			case EUntyped(expr):
-				// Bring-up: preserve shape by emitting the inner expression.
-				exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				final value = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findUntyped(e) : currentTypedFunction == null ? null : currentTypedFunction.findUntyped(e);
+				backend.ocaml.Stage3OcamlValueConversion.untypedValue(occurrence, value, currentFunctionLocalOcamlNames);
 		}
 	}
 

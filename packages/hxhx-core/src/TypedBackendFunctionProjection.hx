@@ -496,6 +496,15 @@ class TypedBackendFunctionProjection {
 
 	/** Return retained cast types only while the original cast still belongs to this current body. */
 	public function findCast(expression:HxExpr):Null<TypedBackendCastOccurrence> {
+		return expression.match(EUntyped(_)) ? null : findConversion(expression);
+	}
+
+	/** Untyped values retain exact conversion facts without becoming authored cast operations. */
+	public function findUntyped(expression:HxExpr):Null<TypedBackendCastOccurrence> {
+		return expression.match(EUntyped(_)) ? findConversion(expression) : null;
+	}
+
+	function findConversion(expression:HxExpr):Null<TypedBackendCastOccurrence> {
 		for (entry in casts)
 			if (entry.getExpression() == expression) {
 				requireExpression(expression);

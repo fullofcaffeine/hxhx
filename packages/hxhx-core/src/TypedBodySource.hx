@@ -785,7 +785,9 @@ class TypedBodySource {
 			case CheckType:
 				final operand = expression(expressions[0], catalog, projectionFacts);
 				projectionFacts == null ? ECheckType(operand, texts[0]) : projectionFacts.projectCast(typedExpression, operand);
-			case Untyped: EUntyped(expression(expressions[0], catalog, projectionFacts));
+			case Untyped:
+				final operand = expression(expressions[0], catalog, projectionFacts);
+				projectionFacts == null ? EUntyped(operand) : projectionFacts.projectCast(typedExpression, operand);
 			case Opaque:
 				switch (typedExpression.getOpaqueKind()) {
 					case TryCatch: ETryCatchRaw(texts[0]);

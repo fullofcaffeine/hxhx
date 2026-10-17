@@ -4,6 +4,8 @@ import backend.vm.NekoTargetCore;
 /** Recovered untyped blocks must replay the inferred occurrences and preserve executable behavior. */
 class M14UntypedBodyReplayTest {
 	static function main():Void {
+		M14UntypedRangeRecoveryTest.run();
+		M14OcamlUntypedValueTest.run();
 		@:privateAccess M14TypedBodyBoundaryIntegrationTest.assertStructuralUntypedStatementBlock();
 		final root = ".tmp/untyped_body_replay";
 		sys.FileSystem.createDirectory(root);

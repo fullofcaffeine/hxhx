@@ -398,7 +398,12 @@ class TypedBodyBuilder {
 					untypedWhenFalse = untypedStatement(whenFalse);
 				SIf(untypedExpression(condition), untypedStatement(whenTrue), untypedWhenFalse, position);
 			case SForIn(name, iterable, body, position):
-				SForIn(name, untypedExpression(iterable), untypedStatement(body), position);
+				// Counted loops keep their range shape; only bound values inherit unchecked typing.
+				final source:HxExpr = switch iterable {
+					case ERange(start, end): ERange(untypedExpression(start), untypedExpression(end));
+					case _: untypedExpression(iterable);
+				};
+				SForIn(name, source, untypedStatement(body), position);
 			case SForKeyValue(keyName, valueName, iterable, body, position):
 				SForKeyValue(keyName, valueName, untypedExpression(iterable), untypedStatement(body), position);
 			case SWhile(condition, body, position):

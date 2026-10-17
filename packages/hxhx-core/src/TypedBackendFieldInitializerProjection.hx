@@ -348,6 +348,19 @@ class TypedBackendFieldInitializerProjection {
 
 	/** Retained casts carry exact types only while their original expression belongs to this initializer. */
 	public function findCast(expression:HxExpr):Null<TypedBackendCastOccurrence> {
+		if (expression.match(EUntyped(_))) {
+			requireExpression(expression);
+			return null;
+		}
+		return findConversion(expression);
+	}
+
+	/** An unchecked initializer still needs its exact source and destination representations. */
+	public function findUntyped(expression:HxExpr):Null<TypedBackendCastOccurrence> {
+		return expression.match(EUntyped(_)) ? findConversion(expression) : null;
+	}
+
+	function findConversion(expression:HxExpr):Null<TypedBackendCastOccurrence> {
 		requireExpression(expression);
 		for (entry in casts)
 			if (entry.getExpression() == expression) {

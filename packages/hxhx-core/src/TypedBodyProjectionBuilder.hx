@@ -211,7 +211,7 @@ class TypedBodyProjectionBuilder {
 		return lambdas.copy();
 	}
 
-	/** Keep typed cast operands distinct from compiler-only callable annotations. */
+	/** Retain cast, annotation, and untyped operand types apart from compiler-only callable annotations. */
 	public function projectCast(source:TypedExpr, operand:HxExpr):HxExpr {
 		if (sealed)
 			throw "cannot add expression facts to a sealed body projection";

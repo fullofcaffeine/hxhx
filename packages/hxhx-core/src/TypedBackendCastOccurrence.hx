@@ -1,8 +1,10 @@
 /**
-	Retain exact source and destination types for a projected cast or type annotation.
+	Retain exact source and destination types for a cast, annotation, or untyped value.
 	A target must still choose the runtime operation; equal hint text cannot prove
 	that a cast preserves representation. An annotation retains its distinct syntax
-	and its already-selected operand conversion. Compiler callable ascriptions are separate.
+	and its already-selected operand conversion. Untyped values keep their syntax
+	and unchecked destination; targets still own representation conversion.
+	Compiler callable ascriptions are separate.
  */
 class TypedBackendCastOccurrence {
 	final ownerIdentity:String;
@@ -24,7 +26,7 @@ class TypedBackendCastOccurrence {
 			|| input.bodyRevision == null
 			|| input.source == null
 			|| input.operand == null
-			|| (input.source.getTag() != Cast && input.source.getTag() != CheckType)
+			|| (input.source.getTag() != Cast && input.source.getTag() != CheckType && input.source.getTag() != Untyped)
 			|| input.source.getExpressions().length != 1)
 			throw "cast occurrence requires its exact typed owner and operand";
 		ownerIdentity = input.ownerIdentity;
@@ -33,7 +35,11 @@ class TypedBackendCastOccurrence {
 		sourceType = input.source.getExpressions()[0].getType();
 		targetType = input.source.getType();
 		preservesRepresentation = input.source.isRepresentationPreservingCast();
-		expression = input.source.getTag() == CheckType ? ECheckType(operand, input.source.getTexts()[0]) : ECast(operand, input.source.getTexts()[0]);
+		expression = switch input.source.getTag() {
+			case CheckType: ECheckType(operand, input.source.getTexts()[0]);
+			case Untyped: EUntyped(operand);
+			case _: ECast(operand, input.source.getTexts()[0]);
+		};
 		fingerprint = TypedBodyFingerprint.exactExpression(expression);
 	}
 
@@ -71,7 +77,7 @@ class TypedBackendCastOccurrence {
 		if (owner != ownerIdentity || revision != bodyRevision)
 			throw "cast occurrence belongs to another executable or revision";
 		switch expression {
-			case ECast(child, _) | ECheckType(child, _) if (child == operand):
+			case ECast(child, _) | ECheckType(child, _) | EUntyped(child) if (child == operand):
 			case _:
 				throw "cast occurrence operand was replaced";
 		}
