@@ -21,6 +21,7 @@ class Main {
 		// Haxe 4.3.7 emits both startup declarations in one program scope.
 		if (CollisionFirst.read() != 11 || CollisionSecond.read() != 11)
 			throw "startup scope differs from upstream";
+		StartupLoops.verify();
 	}
 }
 
@@ -61,5 +62,38 @@ class Other {
 
 	public static function read():Int {
 		return captured();
+	}
+}
+
+/** Repeated startup declarations keep separate cells while callbacks from one iteration share writes. */
+class StartupLoops {
+	static var readers:Array<Void->Int>;
+	static var writers:Array<Void->Void>;
+	static var recursive:Array<Int->Int>;
+
+	static function __init__():Void {
+		readers = [];
+		writers = [];
+		recursive = [];
+		var cursor = 0;
+		while (cursor < 2) {
+			var local = cursor;
+			readers.push(() -> local);
+			writers.push(() -> {
+				local += 10;
+			});
+			function recurse(depth:Int):Int {
+				return depth == 0 ? local : recurse(depth - 1) + 1;
+			}
+			recursive.push(recurse);
+			local++;
+			cursor++;
+		}
+	}
+
+	public static function verify():Void {
+		writers[0]();
+		if (readers[0]() != 11 || readers[1]() != 2 || recursive[0](2) != 13 || recursive[1](2) != 4)
+			throw "startup loop capture storage differs";
 	}
 }

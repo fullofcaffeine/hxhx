@@ -19,12 +19,16 @@ class TypedCaptureBinding {
 	public final slot:Int;
 	public final creation:TypedCaptureCreation;
 
-	public function new(binding:TyLocalBinding, functionIdentity:String, occurrence:String, slot:Int, creation:TypedCaptureCreation) {
+	/** True when this binding can be created again before its enclosing invocation returns. */
+	public final isRepeated:Bool;
+
+	public function new(binding:TyLocalBinding, functionIdentity:String, occurrence:String, slot:Int, creation:TypedCaptureCreation, isRepeated:Bool) {
 		this.binding = binding;
 		this.functionIdentity = functionIdentity;
 		this.occurrence = occurrence;
 		this.slot = slot;
 		this.creation = creation;
+		this.isRepeated = isRepeated;
 	}
 
 	public function getCanonicalIdentity():String
@@ -33,6 +37,7 @@ class TypedCaptureBinding {
 			functionIdentity,
 			occurrence,
 			Std.string(slot),
-			Std.string(creation)
+			Std.string(creation),
+			Std.string(isRepeated)
 		]);
 }

@@ -47,7 +47,7 @@ class TypedCapturePlan {
 		receiverOwner = analysis.receiverOwner;
 		receiverType = analysis.receiverType;
 		final facts:Array<Null<String>> = [
-			"typed-capture-plan-v4",
+			"typed-capture-plan-v5",
 			ownerIdentity,
 			bodyRevision,
 			origin == null ? null : sourceBodyRevision,
@@ -220,6 +220,9 @@ private class CaptureAnalysis {
 
 	final declarations:StringMap<TypedCaptureBinding> = new StringMap();
 	var activeLoop:Null<TyControlTarget> = null;
+	// Execution repetition is separate from the exact lowered-loop identity:
+	// conditions can repeat too, while nested function bodies start a new invocation.
+	var repeating:Bool = false;
 
 	/** Lowered iteration declarations still allocate once per edge of their exact loop. */
 	function declarationCreation(target:Null<TyControlTarget>):TypedCaptureCreation {
@@ -273,6 +276,7 @@ private class CaptureAnalysis {
 	}
 
 	function declare(binding:TyLocalBinding, scope:CaptureFunctionState, path:String, slot:Int, creation:TypedCaptureCreation):Void {
+		final isRepeated = creation != FunctionEntry && (repeating || creation == LoopIteration);
 		if (binding.getIdentity().getOwnerIdentity() != owner)
 			throw "capture declaration belongs to another typed function";
 		final key = binding.getIdentity().getCanonicalKey();
@@ -283,6 +287,7 @@ private class CaptureAnalysis {
 					throw "lowered capture declaration has no authored binding";
 			} else if (source.binding.getCanonicalIdentity() != binding.getCanonicalIdentity()
 				|| source.functionIdentity != scope.identity
+				|| source.isRepeated != isRepeated
 				|| (source.creation != creation
 					&& !(source.creation == FunctionEntry && creation == Declaration && defaultedBodyBindings.exists(key)))) {
 				throw "lowering changed capture declaration ownership or creation";
@@ -299,7 +304,7 @@ private class CaptureAnalysis {
 				return;
 			throw "capture analysis found a repeated declaration identity";
 		}
-		final fact = new TypedCaptureBinding(binding, scope.identity, path, slot, creation);
+		final fact = new TypedCaptureBinding(binding, scope.identity, path, slot, creation, isRepeated);
 		declarations.set(key, fact);
 		bindings.push(fact);
 	}
@@ -349,10 +354,13 @@ private class CaptureAnalysis {
 				for (use in node.getCatchUses())
 					childScope.references.push(use.binding);
 				final previousLoop = activeLoop;
+				final previousRepetition = repeating;
 				activeLoop = null;
+				repeating = false;
 				for (index in 0...children.length)
 					expression(children[index], childScope, path + "/e" + index);
 				activeLoop = previousLoop;
+				repeating = previousRepetition;
 				return;
 			case Lambda:
 				if (origin == null)
@@ -382,9 +390,12 @@ private class CaptureAnalysis {
 				for (use in node.getCatchUses())
 					childScope.references.push(use.binding);
 				final previousLoop = activeLoop;
+				final previousRepetition = repeating;
 				activeLoop = null;
+				repeating = false;
 				expression(body, childScope, path + "/e0");
 				activeLoop = previousLoop;
+				repeating = previousRepetition;
 				return;
 			case LocalRead:
 				if (locals.length != 1)
@@ -463,11 +474,18 @@ private class CaptureAnalysis {
 		}
 		for (index in 0...children.length) {
 			final previousLoop = activeLoop;
+			final previousRepetition = repeating;
+			if (node.getTag() == WhileExpr
+				|| node.getTag() == ControlWhile
+				|| ((node.getTag() == SourceFor || node.getTag() == ControlFor) && index == 1)
+				|| (node.getTag() == ArrayComprehension && index > 0))
+				repeating = true;
 			if ((node.getTag() == WhileExpr && index >= 1)
 				|| ((node.getTag() == ControlWhile || node.getTag() == SourceFor || node.getTag() == ControlFor) && index == 1))
 				activeLoop = node.getControlTarget();
 			expression(children[index], scope, path + "/e" + index, node.getTag() == Call && index == 0 && node.getDeclaration() != null);
 			activeLoop = previousLoop;
+			repeating = previousRepetition;
 		}
 	}
 
@@ -483,15 +501,22 @@ private class CaptureAnalysis {
 		for (use in node.getCatchUses())
 			scope.references.push(use.binding);
 		final values = node.getExpressions();
+		final previousRepetition = repeating;
+		if (node.getTag() == While || node.getTag() == DoWhile)
+			repeating = true;
 		for (index in 0...values.length)
 			expression(values[index], scope, path + "/e" + index);
+		repeating = previousRepetition;
 		final children = node.getStatements();
 		for (index in 0...children.length) {
 			final previousLoop = activeLoop;
-			if (node.getTag() == While || node.getTag() == DoWhile || node.getTag() == ForIn || node.getTag() == ForKeyValue)
+			if (node.getTag() == While || node.getTag() == DoWhile || node.getTag() == ForIn || node.getTag() == ForKeyValue) {
 				activeLoop = node.getControlTarget();
+				repeating = true;
+			}
 			statement(children[index], scope, path + "/s" + index);
 			activeLoop = previousLoop;
+			repeating = previousRepetition;
 		}
 	}
 

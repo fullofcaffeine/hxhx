@@ -1,11 +1,12 @@
 package backend.js;
 
 /**
-	Select mutable cells for captured declarations, loop bindings, and patterns.
+	Select mutable cells for repeated captured declarations, loop bindings, and patterns.
 	A declaration inside a loop or guard can execute repeatedly, even when its
 	typed creation event is Declaration. Each execution creates a new cell;
 	closures from that execution share it and retain it after the next execution.
-	Function parameters retain native JavaScript sharing within their invocation.
+	Parameters and declarations that cannot repeat retain native JavaScript sharing.
+	This also preserves the shared program scope of class startup declarations.
  */
 class JsIterationCaptureStorage {
 	final catalog:Void->TypedBackendCaptureCatalog;
@@ -27,7 +28,7 @@ class JsIterationCaptureStorage {
 			for (binding in fn.getCaptures())
 				captured.set(binding.getCanonicalIdentity(), true);
 		for (fact in plan.getBindings())
-			if ((fact.creation == Declaration || fact.creation == LoopIteration || fact.creation == PatternMatch)
+			if (((fact.creation == Declaration && fact.isRepeated) || fact.creation == LoopIteration || fact.creation == PatternMatch)
 				&& captured.exists(fact.binding.getCanonicalIdentity()))
 				names.set(locals.projectedName(fact.binding), true);
 		prepared = true;
