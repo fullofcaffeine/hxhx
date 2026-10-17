@@ -66,6 +66,9 @@ class M14CompoundAssignmentControlTest {
 		];
 		final methods = 'static function receiver(value:{value:Int}):{value:Int}{Sys.println("receiver");return value;}'
 			+ 'static function arrayIndex():Int{Sys.println("index");return 0;}';
+		final nekoSources = new Array<{path:String, source:String}>();
+		final nekoCalls = new Array<String>();
+		final nekoExpected = new StringBuf();
 		for (entry in cases) {
 			final source = 'class Main{' + methods + 'static function main():Void{' + entry.body + '}}';
 			final root = '.tmp/compound_control_' + entry.name;
@@ -91,20 +94,45 @@ class M14CompoundAssignmentControlTest {
 			JsRuntimeFixture.assertRuntime(typed, 'Main', entry.expected);
 			assertSourceUnchanged(functions, revisions);
 			Sys.println('JS_COMPOUND_CONTROL:PASS ' + entry.name);
-			// Direct typing has no Neko exception provider. The throw case above
-			// proves JavaScript behavior; it does not claim Neko exception integration.
-			if (entry.catches)
-				continue;
-			final context = new backend.BackendContext(root, root + '/local.n', 'Main', true, false, HxDefineMap.fromRawDefines(['neko=1']));
-			final generated = @:privateAccess backend.vm.NekoTargetCore.renderProgram(new MacroExpandedProgram([typed], false), context);
-			sys.io.File.saveContent(root + '/local.neko', generated);
-			if (Sys.command('nekoc', [root + '/local.neko']) != 0)
-				throw 'generated assignment compilation failed';
-			assertOutput('neko', [root + '/local.n'], entry.expected);
-			assertSourceUnchanged(functions, revisions);
-			Sys.println('NEKO_COMPOUND_CONTROL:PASS ' + entry.name);
+			// Resolve the real Neko Array and exception providers once for all cases.
+			// Each original body remains a separate function, so return still exits it.
+			final owner = 'CompoundCase' + nekoSources.length;
+			nekoSources.push({
+				path: owner + '.hx',
+				source: 'class ' + owner + '{' + methods + 'public static function run():Void{' + entry.body + '}}'
+			});
+			nekoCalls.push('Sys.println("' + entry.name + '");' + owner + '.run();');
+			nekoExpected.add(entry.name + '\n' + entry.expected);
 		}
+		nekoSources.push({path: 'Main.hx', source: 'class Main{static function main():Void{' + nekoCalls.join('') + '}}'});
+		assertNeko(nekoSources, nekoExpected.toString());
 		M14CppCompoundControlTest.run();
+	}
+
+	/** A complete provider context executes every case, including throws, in both Neko layouts. */
+	static function assertNeko(sources:Array<{path:String, source:String}>, expected:String):Void {
+		final root = '.tmp/compound_control_neko';
+		sys.FileSystem.createDirectory(root);
+		final program = NekoSourceProgramFixture.build(sources);
+		final functions = [
+			for (module in program.getTypedModules())
+				for (owner in module.getTypedClasses())
+					for (fn in owner.getFunctions())
+						fn
+		];
+		final revisions = functions.map(CompilerTypedTreeRevision.functionBody);
+		Sys.println('NEKO_COMPOUND_CONTROL:TYPED cases=' + (sources.length - 1));
+		final context = new backend.BackendContext(root, root + '/main.n', 'Main', true, false, HxDefineMap.fromRawDefines(['neko=1']));
+		final result = backend.vm.NekoTargetCore.emit(program, context);
+		assertSourceUnchanged(functions, revisions);
+		assertOutput('neko', [result.entryPath], expected);
+		Sys.println('NEKO_COMPOUND_CONTROL:PASS split');
+		sys.io.File.saveContent(root + '/single.neko', @:privateAccess backend.vm.NekoTargetCore.renderProgram(program, context));
+		assertSourceUnchanged(functions, revisions);
+		if (Sys.command('nekoc', [root + '/single.neko']) != 0)
+			throw 'generated compound assignment compilation failed';
+		assertOutput('neko', [root + '/single.n'], expected);
+		Sys.println('NEKO_COMPOUND_CONTROL:PASS single');
 	}
 
 	/** Compare a real target process with the independently authored output. */

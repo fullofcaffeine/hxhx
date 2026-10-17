@@ -16,10 +16,7 @@
 -main M14ControlAssignmentTest
 --interp
 --next
--cp packages/hxhx-core/src
--cp test
--main M14UntypedCallControlTest
---interp
+test/m14_untyped_call_control_test.hxml
 --next
 -cp packages/hxhx-core/src
 -cp test
