@@ -98,9 +98,17 @@ class M14CsSyntaxScopeTest {
 				statement(child);
 		}
 		for (owner in module.getTypedClasses())
-			for (fn in owner.getFunctions())
+			for (fn in owner.getFunctions()) {
+				final sourceRevision = CompilerTypedTreeRevision.functionBody(fn);
+				final prepared = TypedControlLowering.functionBody(fn);
+				final repeated = TypedControlLowering.functionBody(prepared);
+				if (CompilerTypedTreeRevision.functionBody(prepared) != CompilerTypedTreeRevision.functionBody(repeated))
+					throw "repeated scope preparation changed the function body or its control destinations";
+				if (CompilerTypedTreeRevision.functionBody(fn) != sourceRevision)
+					throw "scope preparation changed the authored function";
 				for (entry in fn.getBody().getStatements())
 					statement(entry);
+			}
 		if (!found)
 			throw "fixture did not retain a typed syntax scope";
 	}

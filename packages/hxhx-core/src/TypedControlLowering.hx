@@ -138,10 +138,12 @@ class TypedControlLowering {
 				case ForIn: forIterable(expression, rootTarget);
 				// A previously lowered function body retains its exact return target.
 				// It is already a statement region, not a source value to discard again.
+				// Its no-normal-completion type describes exits inside that container;
+				// do not move the whole function region into the surrounding steps.
 				case Expression if (rootTarget != null
 					&& expression.getTag() == ControlRegion
 					&& expression.getControlTarget() == rootTarget):
-					value(expression, rootTarget);
+					plain(expression);
 				case Expression: discard(expression, rootTarget);
 				case _: value(expression, rootTarget);
 			};
