@@ -3305,7 +3305,10 @@ class TyperStage {
 						TyType.fromHintText("Bool");
 					case "??":
 						final ta = inferExprType(a, scope, ctx, pos);
-						final tb = inferExprType(b, scope, ctx, pos);
+						// The non-null left value supplies fallback context, including
+						// whether [] constructs a Map or Array and callback input types.
+						final tb = inferExprType(b, scope, ctx, pos, ta.isUnknown()
+							|| ta.isNullLiteral() ? expectedResult : ta.unwrapNull());
 						inferNullCoalesceType(ta, tb);
 					case "=":
 						assertWritableLocal(a, scope, ctx, pos);

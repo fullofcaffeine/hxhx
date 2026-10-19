@@ -581,8 +581,19 @@ class M14TypedBodyBoundaryIntegrationTest {
 			"  }",
 			"}",
 		].join("\n"), "FlashLike.hx");
-		final readUntil = findFunction(findClass(TyperStage.typeModule(parsed), "FlashLike"), "readUntil");
+		// Map.copy needs its actual declaration before the empty fallback can
+		// receive Map context. A module-only index cannot prove this contract.
+		final resolved = new ResolvedModule("FlashLike", "FlashLike.hx", parsed);
+		final args = hxhx.Stage1Compiler.Stage1Args.parse(["-main", "FlashLike"], true);
+		assertTrue(args != null, "null-safe fixture could not locate its standard library");
+		final index = TyperIndex.buildHeaders([resolved]);
+		final loader = new ModuleLoader([hxhx.Stage1Compiler.Stage1Args.getStandardLibraryRoot(args)], new StringMap<String>(), index, null, false);
+		loader.markResolvedAlready([resolved]);
+		final readUntil = findFunction(findClass(TyperStage.typeResolvedModule(resolved, index, loader), "FlashLike"), "readUntil");
 		final initializer = variableInitializer(readUntil.getBody(), "possibleStrings");
+		assertTrue(initializer.getType().getNominalIdentity() != null
+			&& initializer.getType().getNominalIdentity().getCanonicalName() == "haxe.ds.Map",
+			"null-safe fallback lost the declared Map result");
 		assertTrue(initializer.getTag() == TypedExprTag.Binary && initializer.getTexts()[0] == "??",
 			"null-safe copy fallback was not retained as a typed null-coalescing expression");
 		final copyCall = initializer.getExpressions()[0];
