@@ -116,6 +116,14 @@ class M14OcamlNativeExternsTest {
 			{
 				source: '@:native("HxString") extern class Host { public static function count(?value:String):Int; } class Main { static function main():Void { Host.count("abc"); } }',
 				diagnostic: "fixed native argument"
+			},
+			{
+				source: '@:native("Stdlib.Fun") extern class Host { @:native("id") public static function value(value:Null<Float>):Float; } class Main { static function main():Void { Host.value(1.25); } }',
+				diagnostic: "fixed native argument"
+			},
+			{
+				source: '@:native("Stdlib.Fun") extern class Host { @:native("id") public static function value(?value:Float):Float; } class Main { static function main():Void { Host.value(1.25); } }',
+				diagnostic: "fixed native argument"
 			}
 		]) {
 			reject(() -> new backend.ocaml.OcamlTargetCore().emit(MacroStage.expandProgram([typed(entry.source)], []),

@@ -8,7 +8,7 @@ The test compares native execution with the independent Haxe operations in
 It also tests declaration ownership, metadata revisions, rejection before output,
 and an intentionally incorrect host signature that OCaml must reject.
 
-This contract covers fixed static functions with Int, Bool, String, arrays of
+This contract covers fixed static functions with Int, Float, Bool, String, arrays of
 those values, and Void results. The OCaml export must implement that exact signature.
-Optional arguments, generics, Dynamic, callbacks, Float, native object instances,
+Optional arguments, generics, Dynamic, callbacks, native object instances,
 and production standard-library provider selection have separate contracts.

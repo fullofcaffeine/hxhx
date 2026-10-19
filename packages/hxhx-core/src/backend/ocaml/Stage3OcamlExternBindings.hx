@@ -9,7 +9,7 @@ private typedef NativeCall = {
 /**
 	Bind extern static functions to literal OCaml module exports in one request.
 	The shared index freezes metadata; exact executable occurrences select it.
-	Only fixed Int, Bool, String, array, and Void signatures are admitted here. Optional,
+	Only fixed Int, Float, Bool, String, array, and Void signatures are admitted here. Optional,
 	generic, callback, Dynamic, and instance representations need separate ABIs.
 	Admission runs before files are written, and no extern body is synthesized.
  */
@@ -94,6 +94,7 @@ class Stage3OcamlExternBindings {
 		}
 		return switch type.getSemanticKey() {
 			case "primitive:Int": "int";
+			case "primitive:Float": "float";
 			case "primitive:Bool": "bool";
 			case "primitive:String": "string";
 			case "primitive:Void" if (result): "unit";
