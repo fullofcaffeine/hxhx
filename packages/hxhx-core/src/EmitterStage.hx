@@ -3405,6 +3405,9 @@ class EmitterStage {
 					if (signature != null && signature.needsReceiver && argIndex == 0)
 						return rendered;
 					final argument = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(arg) : currentTypedFunction != null ? currentTypedFunction.findCallArgument(arg) : null;
+					final array = backend.ocaml.Stage3OcamlArrays.callArgument(argument, rendered);
+					if (array != null)
+						return array;
 					final callable = backend.ocaml.Stage3OcamlCallableConversion.adapt(argument, rendered, currentFunctionLocalOcamlNames);
 					if (callable != null)
 						return callable;

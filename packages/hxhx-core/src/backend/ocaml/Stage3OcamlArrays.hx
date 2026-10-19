@@ -1,5 +1,23 @@
 package backend.ocaml;
 
+/**
+	Restore an array parameter's native reference view from an erased argument.
+	The exact projected call owns both types. Obj.obj changes only the OCaml
+	view: aliases, null, element storage, and the stringifier remain unchanged.
+	Haxe does not check this implicit Dynamic conversion when entering a call,
+	so even an unused non-array argument must pass through. Array operations
+	own runtime storage checks; this boundary never reads a record or its slots.
+ */
+function callArgument(argument:Null<TypedBackendCallArgument>, value:String):Null<String> {
+	if (argument == null || argument.expectedType == null || !argument.type.isDynamic())
+		return null;
+	final expected = TyAliasExpansion.revealNonNullable(argument.expectedType);
+	final identity = expected.getNominalIdentity();
+	if (identity == null || identity.getCanonicalName() != "Array" || expected.getTypeArguments().length != 1)
+		return null;
+	return "(Obj.obj (" + value + ") : _ HxBootArray.t)";
+}
+
 /** Limit indexed lowering to the runtime array carrier and an exact integer index. */
 function supportsAccess(occurrence:TypedBackendArrayAccess):Bool {
 	final type = TyAliasExpansion.revealNonNullable(occurrence.receiverType);
