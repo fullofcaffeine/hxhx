@@ -93,6 +93,19 @@ class M14CallArgumentControlTest {
 			"class Main { static function main():Void { final sink=new Sink(); sink.calls=0; final call=sink.read; " +
 			"if(sink.calls!=0) throw 'eager method capture'; if(call()!=1 || call()!=2 || sink.calls!=2) throw 'captured receiver state'; } }",
 			true);
+		check("native_generic_capture",
+			"class State { public var order:Int; public function new() {} } "
+			+ "class Sink { var state:State; public function new(state:State) { this.state=state; } "
+			+ "public function echo<T>(value:T):T { state.order=state.order*10+3; return value; } } "
+			+ "class Main { static function receiver(state:State):Sink { state.order=state.order*10+1; return new Sink(state); } "
+			+ "static function main():Void { final state=new State(); state.order=0; "
+			+ "final text=receiver(state).echo({ state.order=state.order*10+2; true ? 'text' : 'wrong'; }); "
+			+ "if(text!='text' || state.order!=123) throw 'generic argument order'; "
+			+ "state.order=0; var number:Int->Int=receiver(state).echo; if(state.order!=1) throw 'eager generic invocation'; "
+			+ "if(number(7)!=7 || number(8)!=8 || state.order!=133) throw 'generic integer capture'; "
+			+ "var truth:Bool->Bool=receiver(state).echo; if(!truth(true) || truth(false)) throw 'generic boolean capture'; "
+			+ "var decimal:Float->Float=receiver(state).echo; if(decimal(1.5)!=1.5) throw 'generic float capture'; } }",
+			true);
 		for (selected in [true, false]) {
 			final source = "class Sink { public function new() {} public function run(first:Int, second:Null<Int>):Int { Main.mark(6); return first+(second==null ? 0 : second)+10; } } "
 				+ "class Main { static var order:Int=0; public static function mark(digit:Int):Int { order=order*10+digit; return digit; } "

@@ -18,8 +18,10 @@ typedef MethodValueInput = {
 	A zero-argument method needs a unit wrapper so capture does not invoke it.
 	Reject a null receiver before binding: nullable method-value transport is
 	not supported yet, and binding a stateless method would falsely succeed.
-	Dynamic replacement and generic/optional/rest adapters need their own checked
-	storage contracts; they must not fall back to reading a nonexistent field.
+	Shared typing instantiates each generic capture and checks its later uses.
+	The emitted ordinary body can retain OCaml polymorphism; declaration type
+	parameters alone do not require another callable adapter. Dynamic replacement
+	and optional/rest adapters still need their own checked storage contracts.
  */
 function render(input:MethodValueInput):String {
 	final occurrence = input.occurrence;
@@ -28,7 +30,7 @@ function render(input:MethodValueInput):String {
 	final declaration = occurrence.getDeclaration();
 	declaration.requireSupportedImplementation();
 	final signature = input.signature;
-	if (declaration.getIsDynamic() || declaration.getTypeParameters().length != 0 || !declaration.getHasBody())
+	if (declaration.getIsDynamic() || !declaration.getHasBody())
 		throw "OCaml method value requires an ordinary implemented method";
 	if (signature == null || !signature.needsReceiver || signature.expected < 1 || signature.hasRest || signature.paramFillable.contains(true))
 		throw "OCaml method value requires its fixed required receiver ABI";
