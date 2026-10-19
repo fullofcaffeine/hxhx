@@ -6943,6 +6943,7 @@ class EmitterStage {
 			+ "let setProperty o f v = HxAnon.set o f v\n"
 			+ "let hasField o f = HxAnon.has o f\n"
 			+ "let isFunction = HxReflect.isFunction\n"
+			+ "let isEnumValue = HxReflect.isEnumValue\n"
 			+ "let isObject = HxReflect.isObject\n"
 			+ "let compare = HxReflect.compare\n"
 			+ "let compareMethods a b = HxReflect.same_closure (Obj.repr a) (Obj.repr b)\n"
