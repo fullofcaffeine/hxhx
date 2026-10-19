@@ -255,11 +255,13 @@ class M14HxhxStage3DynamicCatchResultIntegrationTest {
 
 		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), outDir, true);
 		final output = File.getContent(haxe.io.Path.join([outDir, "DynamicCatchResult.ml"]));
-		final catchCast = "(Obj.obj (Obj.repr (fallback (error))) : string)";
+		final catchCast = "(Obj.obj (Obj.repr ((let __hx_call_function = (fallback) in let __hx_call_argument_0 = ((error)) in __hx_call_function __hx_call_argument_0))) : string)";
 		assertTrue(countOccurrences(output, catchCast) == 1, "OCaml emission did not convert exactly the concrete String catch result: " + output);
 		assertTrue(output.indexOf("inferredStatementResult (value : Obj.t) : string") >= 0,
 			"OCaml emission lost the inferred String function result: " + output);
 		assertNotContains(output, "Obj.obj (Obj.repr (inferredStatementResult", "the String caller gained an unchecked target-side result repair");
+		assertNotContains(output, "Obj.obj (Obj.repr ((let __hx_call_function = (inferredStatementResult)",
+			"the ordered String caller gained an unchecked target-side result repair");
 		final result = run(executable, []);
 		assertTrue(result.exitCode == 0, "Dynamic catch result executable failed: " + result.stderr);
 		assertTrue(result.stdout == upstream.stdout, "native try/catch output differs from upstream Haxe: " + result.stdout);
