@@ -12,7 +12,7 @@ import TypedExactEnumConstructorSource.TypedExactEnumConstructorCall;
 	owners. Haxe constructor indexes retain declaration order, while OCaml numbers
 	singletons and payload constructors separately.
 
-	The native payload contract covers Int, Bool, String, Dynamic, and boxed ordinary enums,
+	The native payload contract covers Int, Bool, String, Dynamic, runtime type values, and boxed ordinary enums,
 	including their optional and nullable forms. Other payload representations fail
 	explicitly until their typed conversion is implemented.
 **/
@@ -87,6 +87,7 @@ class Stage3OcamlEnums {
 			case NativeBool: "bool";
 			case NativeString: "string";
 			case DynamicValue: "Obj.t";
+			case RuntimeTypeValue: "Obj.t";
 			case EnumBox(identity):
 				if (!owners.exists(identity))
 					throw "OCaml enum payload representation is not implemented: " + declaration + " / " + identity;

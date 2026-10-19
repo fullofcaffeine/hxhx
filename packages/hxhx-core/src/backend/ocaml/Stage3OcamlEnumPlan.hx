@@ -9,6 +9,9 @@ enum Stage3OcamlEnumPayload {
 	/** Preserve the checked Dynamic runtime value, including its distinct Boolean box. */
 	DynamicValue;
 
+	/** Class<T> and Enum<T> retain the existing opaque HxType value, never an instance. */
+	RuntimeTypeValue;
+
 	EnumBox(owner:String);
 
 	/** Null and a present value share the runtime's Obj.t boundary without losing either value. */
@@ -116,6 +119,13 @@ class Stage3OcamlEnumPlan {
 		if (type.getSemanticKey() == TyType.fromHintText("String").getSemanticKey())
 			return NativeString;
 		final nominal = type.getNominalIdentity();
+		// These core generic declarations describe already-boxed runtime type values.
+		// Their instance parameter does not change the descriptor's storage.
+		if (nominal != null
+			&& (nominal.getCanonicalName() == "Class" || nominal.getCanonicalName() == "Enum")
+			&& type.getTypeArguments().length == 1
+			&& !type.hasUnknownComponent())
+			return RuntimeTypeValue;
 		// Enum values use HxEnum's existing boxed boundary.
 		// The request catalog must prove this exact nominal owner is an enum.
 		if (nominal != null && type.getTypeArguments().length == 0)

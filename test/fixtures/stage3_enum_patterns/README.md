@@ -45,4 +45,6 @@ It verifies payload types before emission and in the projected local catalog.
 Optional payload bindings must retain nullable types, including generic substitution.
 That test does not prove native enum construction or runtime matching.
 Optional payload integration is tracked by `haxe_ocaml-667p3`.
+The same command also runs `ocaml_enum_type_values` for Class and Enum descriptor
+payloads, including nulls, optional arguments, identity, and evaluation order.
 README Goals status remains unchanged; broad parity and release checks remain required.

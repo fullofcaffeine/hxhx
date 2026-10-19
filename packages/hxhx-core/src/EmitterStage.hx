@@ -2652,14 +2652,8 @@ class EmitterStage {
 				return "false";
 			case ECall(EField(EIdent("Reflect"), "isFunction"), [_obj]):
 				return "true";
-			case ECall(EField(EIdent("Type"), "getClass"), [_obj]):
-				return "(Obj.magic 0)";
 			case ECall(EField(EIdent("Type"), "getInstanceFields"), [_cls]):
 				return "(Obj.magic 0)";
-			case ECall(EField(EIdent("Type"), "getClassName"), [_cls]):
-				return escapeOcamlString("");
-			case ECall(EField(EIdent("Type"), "getEnumName"), [_enm]):
-				return escapeOcamlString("");
 			case ECall(EField(EIdent("Type"), "typeof"), [_v]):
 				return "(Obj.magic 0)";
 			case _:
@@ -3024,6 +3018,16 @@ class EmitterStage {
 
 	static function exprToOcaml(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
+		if (currentClassStorage != null) {
+			final query = backend.ocaml.Stage3OcamlTypeQueries.render({
+				expression: e,
+				lookup: currentTypedInitializer != null ? currentTypedInitializer.findCallableExpression : currentTypedFunction == null ? null : currentTypedFunction.findCallableExpression,
+				classes: currentClassStorage,
+				emit: value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+			});
+			if (query != null)
+				return query;
+		}
 		if (currentCallables != null) {
 			final native = currentCallables.externs.renderCall(e, currentTypedFunction, currentTypedInitializer,
 				value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
