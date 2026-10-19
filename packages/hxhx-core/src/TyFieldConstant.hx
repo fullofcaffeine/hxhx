@@ -2,6 +2,7 @@
 enum TyFieldConstantKind {
 	Ordinary;
 	Unresolved(reason:String);
+	NullValue;
 	IntValue(value:Int);
 	StringValue(value:String);
 	BoolValue(value:Bool);
@@ -30,6 +31,7 @@ class TyFieldConstant {
 		return CompilerCacheIdentity.encode(switch (kind) {
 			case Ordinary: ["ordinary-field"];
 			case Unresolved(reason): ["unresolved-enum-value", reason];
+			case NullValue: ["enum-null"];
 			case IntValue(value): ["enum-int", Std.string(value)];
 			case StringValue(value): ["enum-string", value];
 			case BoolValue(value): ["enum-bool", value ? "true" : "false"];
@@ -41,6 +43,7 @@ class TyFieldConstant {
 		return switch (kind) {
 			case Ordinary: null;
 			case Unresolved(reason): throw "unresolved enum-abstract constant: " + reason;
+			case NullValue: ENull;
 			case IntValue(value): EInt(value);
 			case StringValue(value): EString(value);
 			case BoolValue(value): EBool(value);

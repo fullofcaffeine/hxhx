@@ -485,7 +485,8 @@ class TyperStage {
 					return TyNamedPatternResolver.resolve(input, patterns, context, position);
 				},
 				enumSwitchCoverage: function(input, patterns, position, isCapture) {
-					return TyEnumSwitchCoverage.proves(input, patterns, context, position, isCapture);
+					return TyEnumSwitchCoverage.proves(input, patterns, context, position, isCapture)
+						|| TySwitchTyping.provesValueCoverage(input, patterns, context);
 				},
 				isDynamicMemberWrite: function(expression, position, environment) {
 					return dynamicMemberWriteName(expression, environment, context, position) != null;

@@ -1,4 +1,5 @@
 import TySwitchAnalysis.TySwitchCaseCoverage;
+import TySwitchAnalysis.TySwitchCoverageResult;
 
 /**
 	Resolve patterns against the exact scrutinee declaration before coverage analysis.
@@ -8,12 +9,45 @@ import TySwitchAnalysis.TySwitchCaseCoverage;
 function check(scrutinee:TyType, patterns:Array<HxSwitchPattern>, bodyCount:Int, ctx:TyperContext, pos:HxPos):Void {
 	if (patterns == null || patterns.length != bodyCount)
 		throw new TyperError(ctx.getFilePath(), pos, "switch pattern/body count differs");
-	final identity = scrutinee.getNominalIdentity();
-	if (identity == null || ctx.getIndex() == null)
+	final result = analyze(scrutinee, patterns, ctx, false);
+	if (result == null)
 		return;
+	switch (result) {
+		case Exhaustive:
+		case NonExhaustiveWildcard:
+			throw new TyperError(ctx.getFilePath(), pos, "Unmatched patterns: _");
+		case NonExhaustive(missing):
+			final names = [for (member in missing) member.getName()];
+			names.sort((a, b) -> a < b ? -1 : a > b ? 1 : 0);
+			throw new TyperError(ctx.getFilePath(), pos, "Unmatched patterns: " + names.join(" | "));
+		case Indeterminate(reason):
+			throw new TyperError(ctx.getFilePath(), pos, "Cannot analyze enum-abstract switch: " + reason);
+	}
+}
+
+/** Publish complete declared-value and null coverage; diagnostic permission to omit null does not initialize a result. */
+function provesValueCoverage(scrutinee:TyType, patterns:Array<HxSwitchPattern>, ctx:TyperContext):Bool {
+	final identity = scrutinee.getNominalIdentity();
+	final owner = identity == null || ctx.getIndex() == null ? null : ctx.getIndex().getAbstractByFullName(identity.getCanonicalName());
+	if (owner == null || owner.getImplicitFromTypes().length != 0)
+		return false;
+	// Constructors and declared input conversions can create backing values
+	// outside the constant domain. Diagnostics alone cannot prove those paths.
+	for (declaration in owner.getDeclarations())
+		if (declaration.getSignature().getName() == "new" || declaration.getMetadata().indexOf("from") >= 0)
+			return false;
+	final result = analyze(scrutinee, patterns, ctx, true);
+	return result != null && result.match(Exhaustive);
+}
+
+/** Both consumers resolve the same exact field declarations and constant identities. */
+private function analyze(scrutinee:TyType, patterns:Array<HxSwitchPattern>, ctx:TyperContext, requireNullCoverage:Bool):Null<TySwitchCoverageResult> {
+	final identity = scrutinee.getNominalIdentity();
+	if (identity == null || ctx.getIndex() == null || patterns == null)
+		return null;
 	final info = ctx.getIndex().getAbstractByFullName(identity.getCanonicalName());
 	if (info == null || info.getEnumDomain() == null)
-		return;
+		return null;
 	final domain = info.getEnumDomain();
 
 	function resolveMember(name:String):Null<TyFieldInfo> {
@@ -27,6 +61,7 @@ function check(scrutinee:TyType, patterns:Array<HxSwitchPattern>, bodyCount:Int,
 	}
 	function resolve(pattern:HxSwitchPattern):TySwitchCaseCoverage {
 		return switch (pattern) {
+			case PNull: NullOnly;
 			case PWildcard: CatchAll;
 			case PBind(name):
 				final field = resolveMember(name);
@@ -40,16 +75,5 @@ function check(scrutinee:TyType, patterns:Array<HxSwitchPattern>, bodyCount:Int,
 			case _: Unsupported("pattern form requires enum-abstract coverage support");
 		};
 	}
-	final result = new TySwitchAnalysis(domain).analyze([for (pattern in patterns) resolve(pattern)]);
-	switch (result) {
-		case Exhaustive:
-		case NonExhaustiveWildcard:
-			throw new TyperError(ctx.getFilePath(), pos, "Unmatched patterns: _");
-		case NonExhaustive(missing):
-			final names = [for (member in missing) member.getName()];
-			names.sort((a, b) -> a < b ? -1 : a > b ? 1 : 0);
-			throw new TyperError(ctx.getFilePath(), pos, "Unmatched patterns: " + names.join(" | "));
-		case Indeterminate(reason):
-			throw new TyperError(ctx.getFilePath(), pos, "Cannot analyze enum-abstract switch: " + reason);
-	}
+	return new TySwitchAnalysis(domain).analyze([for (pattern in patterns) resolve(pattern)], requireNullCoverage);
 }

@@ -1116,7 +1116,7 @@ class HxParser {
 			final atTop = parenDepth == 0 && bracketDepth == 0 && braceDepth == 0;
 			if (atTop
 				&& (cur.kind.match(TColon) || cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace) || cur.kind.match(TKeyword(KIf))
-					|| isOtherChar("|")))
+					|| isOtherChar("]") || isOtherChar("|")))
 				break;
 			if (atTop && cur.kind.match(TOther("=".code)) && peekKind().match(TOther(">".code))) {
 				final extractorText = StringTools.trim(sliceSource(start, currentIndex()));

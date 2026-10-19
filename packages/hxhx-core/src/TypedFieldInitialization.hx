@@ -26,7 +26,8 @@ function adapt(index:TyperIndex, field:TyFieldInfo, expression:TypedExpr, filePa
 		}
 		if (expression.getType().getSemanticKey() == field.getType().getSemanticKey())
 			return expression;
-		if (expression.getType().getSemanticKey() != owner.getUnderlyingType().getSemanticKey())
+		final declaredNull = field.getConstant().getKind().match(NullValue) && expression.getType().isNullLiteral();
+		if (!declaredNull && expression.getType().getSemanticKey() != owner.getUnderlyingType().getSemanticKey())
 			throw new TyperError(filePath, expression.getPosition(), "Enum constant initializer does not match its backing type");
 		return TypedExpr.castValue(expression, field.getType().getDisplay(), field.getType(), expression.getPosition(), true);
 	}

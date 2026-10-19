@@ -26,6 +26,7 @@ private typedef PatternContext = {
 /** Inputs belong to one projected switch and its enclosing local catalog. */
 typedef PatternSelection = {
 	final patterns:Array<HxSwitchPattern>;
+	final namedPattern:HxSwitchPattern->Null<TypedNamedPattern>;
 	final branches:Array<String>;
 	final value:String;
 	final fallback:String;
@@ -50,7 +51,7 @@ function select(input:PatternSelection):String {
 	var nextTemporary = 0;
 	final rows = [
 		for (i in 0...input.patterns.length)
-			{patterns: [input.patterns[i]], branch: input.branches[i], bindings: ""}
+			{patterns: [constantPattern(input.patterns[i], input.namedPattern)], branch: input.branches[i], bindings: ""}
 	];
 	return compileRows(rows, [{value: input.value, bound: true, nonNull: false}], {
 		dialect: input.dialect,
@@ -59,6 +60,48 @@ function select(input:PatternSelection):String {
 		names: input.names,
 		fallback: input.fallback
 	});
+}
+
+/**
+	Use selected enum-abstract values before constructing the decision matrix.
+	A null alias must participate in null ordering, just like a literal null case.
+	Lookup uses the original occurrence so another body's equal-looking case cannot
+	borrow its declaration. Ordinary enum constructors retain their payload shape.
+ */
+private function constantPattern(pattern:HxSwitchPattern, lookup:HxSwitchPattern->Null<TypedNamedPattern>):HxSwitchPattern {
+	function named(arguments:Array<HxSwitchPattern>):HxSwitchPattern {
+		final selected = lookup(pattern);
+		if (selected == null)
+			throw "OCaml named pattern requires its exact selected declaration";
+		return switch selected.getKind() {
+			case Constant(field):
+				if (arguments.length != 0)
+					throw "enum-abstract constant cannot have payload patterns";
+				switch field.getConstant().getKind() {
+					case NullValue: PNull;
+					case IntValue(value): PInt(value);
+					case StringValue(value): PString(value);
+					case BoolValue(value): PBool(value);
+					case _: throw "OCaml constant pattern requires a resolved constant";
+				}
+			case Constructor(_, _, _, arity):
+				if (arity != arguments.length)
+					throw "OCaml constructor pattern arity differs from typing";
+				switch pattern {
+					case PEnumExtract(name, _): PEnumExtract(name, [for (child in arguments) constantPattern(child, lookup)]);
+					case _: pattern;
+				}
+		};
+	}
+	return switch pattern {
+		case PEnumValue(_): named([]);
+		case PEnumExtract(_, arguments): named(arguments);
+		case PArray(items): PArray([for (child in items) constantPattern(child, lookup)]);
+		case PObject(names, items): PObject(names, [for (child in items) constantPattern(child, lookup)]);
+		case POr(items): POr([for (child in items) constantPattern(child, lookup)]);
+		case PCapture(name, inner): PCapture(name, constantPattern(inner, lookup));
+		case _: pattern;
+	};
 }
 
 /** Captures do not add a test; their exact binding remains in the selected branch. */

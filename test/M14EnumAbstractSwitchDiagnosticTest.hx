@@ -82,11 +82,16 @@ class M14EnumAbstractSwitchDiagnosticTest {
 	}
 
 	static function main():Void {
+		checkValueCoverage();
 		final alias = "enum abstract Original(Int) { var Red=10; var Blue=20; } typedef Signal=Original;";
 		check("typedef_complete", alias, "case Red: 1; case Blue: 2;", null);
 		check("typedef_default", alias, "case Red: 1; default: 2;", null);
 		check("typedef_missing", alias, "case Red: 1;", "Unmatched patterns: Blue");
 		Sys.putEnv("HXHX_TYPER_STRICT", "1");
+		final nullable = "enum abstract Signal(String) { var Ready='ready'; var Missing=null; var Alias=Missing; }";
+		check("named_null_complete", nullable, "case Alias: 2; case Ready: 1;", null);
+		check("null_not_required", nullable, "case Ready: 1;", null);
+		check("literal_null_complete", nullable, "case null: 2; case Ready: 1;", null);
 		final signal = "enum abstract Signal(Int) { var Red = 10; var Blue = 20; }";
 		check("missing", signal, "case Red: 1;", "Unmatched patterns: Blue");
 		check("independent", "enum abstract Signal(Int) { var Idle = 7; var Busy = 9; }", "case Idle: 1;", "Unmatched patterns: Busy");
@@ -124,5 +129,55 @@ class M14EnumAbstractSwitchDiagnosticTest {
 		checkDomainRevision();
 		checkForcedBindingRuntime();
 		Sys.println("ENUM_ABSTRACT_SWITCH_DIAGNOSTICS:PASS");
+	}
+
+	/** Diagnostic exhaustiveness must not grant result storage when a declared value can remain unmatched. */
+	static function checkValueCoverage():Void {
+		final members = " { var Ready='ready'; var Missing=null; var Alias=Missing; ";
+		final closed = "enum abstract Signal(String)" + members + "}";
+		final cases = [
+			{declaration: "enum abstract Signal(String) {var Ready='ready';}", patterns: "case Ready: 1;", expected: false},
+			{declaration: "enum abstract Signal(String) {var Ready='ready';}", patterns: "case Ready: 1; case null: 2;", expected: true},
+			{declaration: closed, patterns: "case Ready: 1; case Alias: 2;", expected: true},
+			{declaration: closed, patterns: "case Ready: 1; case null: 2;", expected: true},
+			{declaration: closed, patterns: "case Ready: 1;", expected: false},
+			{declaration: closed, patterns: "case Ready: 1; case Missing if(flag): 2;", expected: false},
+			{declaration: "enum abstract Signal(String) from String" + members + "}", patterns: "case Ready: 1; case Missing: 2;", expected: false},
+			{
+				declaration: "enum abstract Signal(String)" + members + "public function new(value:String){this=value;}}",
+				patterns: "case Ready: 1; case Missing: 2;",
+				expected: false
+			}
+		];
+		for (entry in cases) {
+			final source = entry.declaration
+				+ "class Main {static function select(value:Signal,flag:Bool):Int{return switch(value){"
+				+ entry.patterns
+				+ "};}}";
+			final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
+			final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+			var count = 0;
+			function expression(value:TypedExpr):Void {
+				if (value.getTag() == SwitchExpr) {
+					count++;
+					if (value.getSwitchHasExhaustiveCoverage() != entry.expected)
+						throw "enum-abstract result coverage differs from its declared values";
+				}
+				for (child in value.getExpressions())
+					expression(child);
+			}
+			function statement(value:TypedStmt):Void {
+				for (child in value.getExpressions())
+					expression(child);
+				for (child in value.getStatements())
+					statement(child);
+			}
+			for (owner in typed.getTypedClasses())
+				for (fn in owner.getFunctions())
+					for (body in fn.getBody().getStatements())
+						statement(body);
+			if (count != 1)
+				throw "coverage regression did not inspect its value switch";
+		}
 	}
 }

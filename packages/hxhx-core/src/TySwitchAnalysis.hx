@@ -4,6 +4,7 @@ import haxe.ds.StringMap;
 enum TySwitchCaseCoverage {
 	Member(field:TyFieldInfo);
 	CatchAll;
+	NullOnly;
 	Guarded(pattern:TySwitchCaseCoverage);
 	Alternatives(cases:Array<TySwitchCaseCoverage>);
 	Unsupported(reason:String);
@@ -29,7 +30,8 @@ class TySwitchAnalysis {
 		this.domain = domain;
 	}
 
-	public function analyze(cases:Array<TySwitchCaseCoverage>):TySwitchCoverageResult {
+	/** Value-result lowering also requires null coverage, including null without a named member. */
+	public function analyze(cases:Array<TySwitchCaseCoverage>, requireNullCoverage:Bool = false):TySwitchCoverageResult {
 		final covered = new StringMap<Bool>();
 		var catchAll = false;
 		var hasMemberPattern = false;
@@ -41,7 +43,7 @@ class TySwitchAnalysis {
 						unsupported = "pattern does not belong to the scrutinee enum abstract";
 					else
 						switch (field.getConstant().getKind()) {
-							case IntValue(_) | StringValue(_) | BoolValue(_):
+							case IntValue(_) | StringValue(_) | BoolValue(_) | NullValue:
 								hasMemberPattern = true;
 								if (contributes) covered.set(field.getConstant().getCanonicalIdentity(), true);
 							case Unresolved(reason): unsupported = reason;
@@ -50,6 +52,10 @@ class TySwitchAnalysis {
 				case CatchAll:
 					if (contributes)
 						catchAll = true;
+				case NullOnly:
+					// A null pattern covers no non-null member and is never a wildcard.
+					if (contributes)
+						covered.set(new TyFieldConstant(NullValue).getCanonicalIdentity(), true);
 				case Guarded(inner):
 					visit(inner, false);
 				case Alternatives(items):
@@ -65,11 +71,20 @@ class TySwitchAnalysis {
 			return Indeterminate(unsupported);
 		if (catchAll)
 			return Exhaustive;
+		// Haxe accepts null input even without a named null member. Diagnostic
+		// exhaustiveness cannot prove that such an input initializes a result.
+		if (requireNullCoverage && !covered.exists(new TyFieldConstant(NullValue).getCanonicalIdentity()))
+			return NonExhaustiveWildcard;
 		final seen = new StringMap<Bool>();
 		final missing = new Array<TyFieldInfo>();
 		for (member in domain.getMembers()) {
 			final constant = member.field.getConstant();
 			switch (constant.getKind()) {
+				case NullValue:
+					// Haxe excludes null from the values required for exhaustiveness,
+					// even when the enum abstract names that null value explicitly.
+					if (!requireNullCoverage)
+						continue;
 				case Unresolved(reason):
 					return Indeterminate(reason);
 				case Ordinary:

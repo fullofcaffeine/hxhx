@@ -64,6 +64,7 @@ class TyEnumAbstractConstants {
 			}
 		};
 		final checked = switch ([underlying.getSemanticKey(), value.getKind()]) {
+			case [_, NullValue]: value;
 			case ["primitive:String", StringValue(_)] | ["primitive:Int", IntValue(_)] | ["primitive:Bool", BoolValue(_)]: value;
 			case [_, Unresolved(_)]: value;
 			case _: unresolved(name, "initializer does not match the supported backing type " + underlying.getCanonicalDisplay());
@@ -76,6 +77,7 @@ class TyEnumAbstractConstants {
 	/** Evaluate literal and same-enum reference expressions without executing source code. */
 	function evaluate(name:String, expression:HxExpr):TyFieldConstant {
 		return switch (expression) {
+			case ENull: new TyFieldConstant(NullValue);
 			case EInt(value): new TyFieldConstant(IntValue(value));
 			case EString(value): new TyFieldConstant(StringValue(value));
 			case EBool(value): new TyFieldConstant(BoolValue(value));

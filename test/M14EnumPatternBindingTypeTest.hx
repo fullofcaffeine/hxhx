@@ -66,6 +66,16 @@ class M14EnumPatternBindingTypeTest {
 			case _:
 				throw "qualified patterns lost their constructor, constant, or extractor grammar";
 		}
+		final nested = HxParser.parseExprText('switch value { case [Box.Empty]: 1; case [Box.Item(flag)]: 2; case [Std.parseInt(_) => code]: 3; }');
+		switch (nested) {
+			case ESwitch(_, [
+				PArray([PEnumValue("Box.Empty")]),
+				PArray([PEnumExtract("Box.Item", [PBind("flag")])]),
+				PArray([PExtractor("Std.parseInt(_)", PBind("code"))])
+			], _):
+			case _:
+				throw "qualified pattern probe consumed the enclosing array delimiter";
+		}
 	}
 
 	static function main():Void {

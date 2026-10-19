@@ -9,14 +9,14 @@ class M14EnumAbstractInitializerTest {
 		return TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 	}
 
-	static function observe(command:String, arguments:Array<String>):Void {
+	static function observe(command:String, arguments:Array<String>, ?expected:String):Void {
 		final timeout = Sys.systemName() == "Mac" ? "gtimeout" : "timeout";
 		final process = new sys.io.Process(timeout, ["60", command].concat(arguments));
 		final stdout = process.stdout.readAll().toString();
 		final stderr = process.stderr.readAll().toString();
 		final code = process.exitCode();
 		process.close();
-		if (code != 0 || stdout != File.getContent(root + "/expected.stdout"))
+		if (code != 0 || stdout != (expected == null ? File.getContent(root + "/expected.stdout") : expected))
 			throw "enum initializer observer mismatch: " + stdout + stderr;
 	}
 
@@ -33,6 +33,7 @@ class M14EnumAbstractInitializerTest {
 
 	static function main():Void {
 		Sys.putEnv("HXHX_TYPER_STRICT", "1");
+		nullConstants();
 		final typed = program(File.getContent(root + "/Main.hx"));
 		var count = 0;
 		for (owner in typed.getTypedClasses())
@@ -56,5 +57,37 @@ class M14EnumAbstractInitializerTest {
 		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/enum-abstract-initializers", true);
 		observe(executable, []);
 		Sys.println("ENUM_ABSTRACT_INITIALIZER:PASS");
+	}
+
+	/** Null has resolved constant evidence, but each initializer still has its declared abstract type. */
+	static function nullConstants():Void {
+		final fixture = "test/fixtures/enum_abstract_null_constants";
+		final expected = File.getContent(fixture + "/expected.stdout");
+		observe("node_modules/.bin/haxe", ["-cp", fixture, "--run", "Main"], expected);
+		final typed = M14Stage3RuntimeFixture.typeMain({source: File.getContent(fixture + "/Main.hx"), path: fixture + "/Main.hx", root: fixture});
+		final nullIdentity = new TyFieldConstant(NullValue).getCanonicalIdentity();
+		if (nullIdentity == new TyFieldConstant(Ordinary).getCanonicalIdentity()
+			|| nullIdentity == new TyFieldConstant(StringValue("null")).getCanonicalIdentity()
+				|| nullIdentity == new TyFieldConstant(Unresolved("missing")).getCanonicalIdentity())
+			throw "null constant identity collides with absent or different evidence";
+		var count = 0;
+		for (owner in typed.getTypedClasses())
+			for (initializer in owner.getFieldInitializers()) {
+				final field = initializer.getField();
+				if (!field.getConstant().getKind().match(NullValue))
+					continue;
+				count++;
+				if (!field.getConstant().project().match(ENull) || field.getConstant().getCanonicalIdentity() != nullIdentity)
+					throw "null constant lost its projected value or alias identity";
+				if (initializer.getExpression().getType().getSemanticKey() != field.getType().getSemanticKey())
+					throw "null initializer erased its enum-abstract type";
+			}
+		if (count != 5)
+			throw "null constant inventory mismatch: " + count;
+		JsRuntimeFixture.assertRuntime(typed, "Main", expected);
+		Sys.println("ENUM_ABSTRACT_NULL_JS:PASS");
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/enum-abstract-null-constants", true);
+		observe(executable, [], expected);
+		Sys.println("ENUM_ABSTRACT_NULL_NATIVE:PASS");
 	}
 }

@@ -4655,6 +4655,8 @@ class EmitterStage {
 				}
 				final chain = backend.ocaml.Stage3OcamlPatternDecision.select({
 					patterns: patterns,
+					namedPattern: pattern ->
+						currentTypedInitializer != null ? currentTypedInitializer.findNamedPattern(pattern) : currentTypedFunction == null ? null : currentTypedFunction.findNamedPattern(pattern),
 					branches: branches,
 					value: switchName,
 					fallback: backendDialect.dynamicNullValue(),
@@ -6287,6 +6289,8 @@ class EmitterStage {
 					}
 					final chain = backend.ocaml.Stage3OcamlPatternDecision.select({
 						patterns: patterns,
+						namedPattern: pattern ->
+							currentTypedInitializer != null ? currentTypedInitializer.findNamedPattern(pattern) : currentTypedFunction == null ? null : currentTypedFunction.findNamedPattern(pattern),
 						branches: branches,
 						value: switchName,
 						fallback: "()",
