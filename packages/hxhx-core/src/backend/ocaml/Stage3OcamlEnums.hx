@@ -49,6 +49,16 @@ class Stage3OcamlEnums {
 				payloadTypes(constructor);
 	}
 
+	/** Exception boundaries may retain only enum boxes registered by this request. */
+	public function runtimeName(type:TyType):Null<String> {
+		final plain = type.unwrapNull();
+		final identity = plain.getNominalIdentity();
+		if (identity == null || plain.getTypeArguments().length != 0)
+			return null;
+		final owner = owners.get(identity.getCanonicalName());
+		return owner == null ? null : owner.runtimeName;
+	}
+
 	/** Match only the enum and constructor admitted from the selected typed declaration. */
 	public function patternCondition(selected:TypedNamedPattern, value:String):String {
 		return switch selected.getKind() {

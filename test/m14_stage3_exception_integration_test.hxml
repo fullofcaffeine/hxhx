@@ -3,3 +3,11 @@
 -cp test
 -main M14Stage3ExceptionIntegrationTest
 --interp
+
+--next
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp packages/hxhx/src
+-cp test
+-main M14Stage3EnumExceptionTest
+--interp

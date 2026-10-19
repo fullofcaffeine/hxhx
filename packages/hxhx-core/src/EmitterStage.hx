@@ -6181,14 +6181,15 @@ class EmitterStage {
 							mutable: mutable
 						});
 					}
-					backend.ocaml.Stage3OcamlExceptions.tryStatement(body, handlers, currentFunctionLocalOcamlNames, currentClassStorage, escapeOcamlString);
+					backend.ocaml.Stage3OcamlExceptions.tryStatement(body, handlers, currentFunctionLocalOcamlNames, currentClassStorage, currentEnums,
+						escapeOcamlString);
 				case SThrow(expr, _pos):
 					if (currentTypedFunction == null)
 						throw "OCaml throw requires its exact typed function projection";
 					final value = currentTypedFunction.requireThrownValue(expr);
 					backend.ocaml.Stage3OcamlExceptions.throwValue(value,
 						exprToOcaml(expr, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
-						currentClassStorage);
+						currentClassStorage, currentEnums);
 				case SSwitch(scrutinee, patterns, bodies, _pos):
 					if (currentFunctionLocalOcamlNames == null || patterns == null || bodies == null || patterns.length != bodies.length)
 						throw "OCaml switch statement requires aligned cases and its naming owner";
