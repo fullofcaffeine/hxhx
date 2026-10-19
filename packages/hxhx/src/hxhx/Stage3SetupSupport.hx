@@ -262,7 +262,7 @@ class Stage3SetupSupport {
 
 	/**
 		Selects project sources before standard-library providers. C++ and OCaml use the authored
-		providers embedded in this compiler. Neko and JavaScript use
+		providers embedded in this compiler. Neko, JavaScript, and Lua use
 		their target _std implementations before common declarations; missing overrides fall
 		through to the common root. Explicit user roots retain their original priority,
 		including an explicitly supplied common standard-library directory. Macro-host
@@ -305,7 +305,7 @@ class Stage3SetupSupport {
 		if (input.standardRoot.length > 0) {
 			final common = Stage3PathSupport.absFromCwd(cwd, input.standardRoot);
 			// Other targets retain their existing providers until their own promotion proof.
-			if (input.targetDefine == "neko" || input.targetDefine == "js") {
+			if (input.targetDefine == "neko" || input.targetDefine == "js" || input.targetDefine == "lua") {
 				final target = Path.join([common, input.targetDefine, "_std"]);
 				if (sys.FileSystem.exists(target) && sys.FileSystem.isDirectory(target))
 					appendUnique(target);
