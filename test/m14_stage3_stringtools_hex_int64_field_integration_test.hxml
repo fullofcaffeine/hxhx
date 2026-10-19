@@ -3,3 +3,11 @@
 -cp test
 -main M14Stage3StringToolsHexInt64FieldIntegrationTest
 --interp
+
+--next
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp packages/hxhx/src
+-cp test
+-main M14Stage3StringToolsFieldsTest
+--interp

@@ -20,6 +20,15 @@ class Main {
 		final unsafe = StringTools.unsafeCodeAt;
 		Sys.println(fast("AZ", 0));
 		Sys.println(unsafe("AZ", 1));
+		Sys.println(StringTools.isEof(fast("", 0)));
+		Sys.println(StringTools.isEof(fast("AZ", 2)));
+		Sys.println("".charCodeAt(0) == null);
+		Sys.println(text().charCodeAt(index()));
 		Sys.println(StringTools.fastCodeAt(text(), index()));
+		Sys.println(StringTools.winMetaCharacters.join(","));
+		final alias = StringTools.winMetaCharacters;
+		alias[0] = 99;
+		Sys.println(StringTools.winMetaCharacters[0]);
+		alias[0] = 32;
 	}
 }

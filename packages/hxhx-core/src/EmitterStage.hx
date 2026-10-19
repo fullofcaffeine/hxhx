@@ -7252,8 +7252,6 @@ class EmitterStage {
 	}
 
 	static function shouldEmitParsedStaticFields(moduleName:String):Bool {
-		if (moduleName == "StringTools")
-			return false;
 		if (StringTools.startsWith(moduleName, "Haxe_Int64"))
 			return false;
 		if (moduleName == "Haxe_ds_Vector")
@@ -8024,7 +8022,8 @@ class EmitterStage {
 					// Stage 3 bring-up: hxhx full output uses a narrow StringTools surface before
 					// Stage3 can reliably emit the full std module.
 					final hasStringToolsHex = moduleName == "StringTools";
-					final emitParsedStaticFields = shouldEmitParsedStaticFields(moduleName);
+					// A runtime stub owns its own data; authored methods retain their source fields.
+					final emitParsedStaticFields = !hasStringToolsHex && shouldEmitParsedStaticFields(moduleName);
 					if (hasStringToolsHex) {
 						for (line in stringToolsBootstrapShimSourceForStage3().split("\n"))
 							out.push(line);

@@ -1,9 +1,9 @@
 package backend.ocaml;
 
-/** String operations whose optional bound uses the shared runtime's null convention. */
+/** String operations whose bounds or nullable results use the shared runtime. */
 function supports(method:String):Bool {
 	return switch method {
-		case "indexOf" | "lastIndexOf" | "substr" | "substring": true;
+		case "indexOf" | "lastIndexOf" | "substr" | "substring" | "charCodeAt": true;
 		case _: false;
 	};
 }
@@ -29,6 +29,8 @@ function render(input:{
 		throw "selected OCaml string call requires its exact String receiver type";
 	if ((call.arguments.length != 1 && call.arguments.length != 2) || input.names == null)
 		throw "selected OCaml string call requires its argument and local naming owner";
+	if (call.method == "charCodeAt" && call.arguments.length != 1)
+		throw "selected OCaml character-code call requires one index";
 	final receiver = input.names.internalName("__hx_string_receiver");
 	final arguments = [
 		for (index in 0...call.arguments.length)
@@ -37,6 +39,12 @@ function render(input:{
 	final bindings = ["let " + receiver + " = (" + input.emit(call.receiver) + ") in "];
 	for (index in 0...arguments.length)
 		bindings.push("let " + arguments[index] + " = (" + input.emit(call.arguments[index]) + ") in ");
+	if (call.method == "charCodeAt") {
+		// The runtime produces an Int or the canonical null sentinel. Restore the
+		// Stage3 nullable value view without inspecting bits or unwrapping null;
+		// an authored null test must still run before any integer operation.
+		return "(" + bindings.join("") + "Obj.magic (HxString.charCodeAt " + receiver + " " + arguments[0] + "))";
+	}
 	// HxString's optional Int ABI recognizes this sentinel before integer use.
 	// This is a representation boundary, not an unchecked source-type conversion.
 	if (arguments.length == 1)

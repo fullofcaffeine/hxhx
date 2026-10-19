@@ -637,6 +637,11 @@ class StringTools {
 		#end
 	}
 
+	#if ocaml_output
+	// Initialize before the public alias: Haxe evaluates static fields in source order.
+	static final _winMetaCharactersOcaml:Array<Int> = [32, 40, 41, 37, 33, 94, 34, 60, 62, 38, 124, 10, 13, 44, 59];
+	#end
+
 	/**
 		Character codes of the characters that will be escaped by `quoteWinArg(_, true)`.
 	**/
@@ -767,8 +772,6 @@ class StringTools {
 		}
 		return quoted;
 	}
-
-	static final _winMetaCharactersOcaml:Array<Int> = [32, 40, 41, 37, 33, 94, 34, 60, 62, 38, 124, 10, 13, 44, 59];
 	#end
 
 	#if java
