@@ -8,6 +8,7 @@ class M14NestedGenericCallInferenceTest {
 		+ 'static function rest<U>(value:Box<U>,...tail:Box<U>):Box<U>{return value;}';
 
 	static function main():Void {
+		dynamicResultContexts();
 		nullableContexts();
 		final cases = [
 			{name: 'nested', body: 'var value=forward(create());return value;', calls: 2},
@@ -79,6 +80,70 @@ class M14NestedGenericCallInferenceTest {
 		if (diagnostic.indexOf('conflict') < 0 && diagnostic.indexOf('not compatible') < 0)
 			throw 'nested alias conflict was not rejected by typing: ' + diagnostic;
 		Sys.println('NESTED_GENERIC_CALL:PASS conflict');
+	}
+
+	/** A written Dynamic return stays Dynamic when an inferred generic call feeds a concrete argument. */
+	static function dynamicResultContexts():Void {
+		for (rest in [false, true]) {
+			final consume = rest ? 'static function consume(...values:Int):Int{return values[0]+1;}' : 'static function consume(value:Int):Int{return value+1;}';
+			// The authored untyped boundary models a native API input. Its unknown
+			// value parameter triggers direct-call inference without erasing read's
+			// explicitly declared Dynamic result or weakening later typed calls.
+			final source = 'class Box<K,V>{}class Main{static var calls:Int=0;'
+				+ 'static function read<K,V>(value:Box<K,V>,start:K):Dynamic{calls=calls+1;return 7;}'
+				+ consume
+				+ 'static function run(value:Int):Int{return consume(read(untyped value,0));}'
+				+ 'static function main():Void{Sys.println(run(1)==8 && calls==1);}}';
+			final path = writeSource(rest ? 'dynamic_result_rest' : 'dynamic_result', source);
+			assertUpstream(path, true);
+			final module = new ResolvedModule('Main', path, ParserStage.parse(source, path));
+			final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
+			var checked = 0;
+			function expression(value:TypedExpr):Void {
+				if (value.getTag() == Call && value.getDeclaration() != null) {
+					value.assertArgumentBinding();
+					if (value.getDeclaration().getSignature().getName() == 'read') {
+						if (!value.getType().isDynamic())
+							throw 'concrete destination changed the declared Dynamic result';
+						checked++;
+					}
+				}
+				for (child in value.getExpressions())
+					expression(child);
+			}
+			function statement(value:TypedStmt):Void {
+				for (child in value.getExpressions())
+					expression(child);
+				for (child in value.getStatements())
+					statement(child);
+			}
+			for (owner in typed.getTypedClasses())
+				for (fn in owner.getFunctions())
+					for (body in fn.getBody().getStatements())
+						statement(body);
+			if (checked != 1)
+				throw 'Dynamic result regression missed its exact generic call';
+			JsRuntimeFixture.assertRuntime(typed, 'Main', 'true\n');
+			final negative = StringTools.replace(source, ':Dynamic{calls=calls+1;return 7;}', ':String{calls=calls+1;return "wrong";}');
+			final negativePath = writeSource(rest ? 'concrete_result_rest_conflict' : 'concrete_result_conflict', negative);
+			final oracle = new sys.io.Process('node_modules/.bin/haxe', ['-cp', haxe.io.Path.directory(negativePath), '-main', 'Main', '--interp']);
+			final output = oracle.stdout.readAll().toString();
+			final errors = oracle.stderr.readAll().toString();
+			final code = oracle.exitCode();
+			oracle.close();
+			if (code == 0 || errors.indexOf('String should be Int') < 0)
+				throw 'upstream concrete call result did not reject: ' + output + errors;
+			var rejected = false;
+			try {
+				final invalid = new ResolvedModule('Main', negativePath, ParserStage.parse(negative, negativePath));
+				TyperStage.typeResolvedModule(invalid, TyperIndex.build([invalid])).getBackendProjection();
+			} catch (error:haxe.Exception) {
+				rejected = error.message.indexOf('No compatible method signature') >= 0 || error.message.indexOf('not compatible') >= 0;
+			}
+			if (!rejected)
+				throw 'declared concrete result bypassed its argument constraint';
+			Sys.println('NESTED_GENERIC_CALL:PASS declared Dynamic result ' + (rest ? 'rest' : 'ordinary'));
+		}
 	}
 
 	/** Matching nullable generic destinations accept T without accepting an unrelated concrete result. */
