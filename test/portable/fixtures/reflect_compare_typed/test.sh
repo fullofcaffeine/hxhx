@@ -18,7 +18,7 @@ node - "$report" <<'NODE'
 const fs = require('fs')
 const reportPath = process.argv[2]
 const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
-if (report.schemaVersion !== 94) {
+if (report.schemaVersion !== 95) {
 	throw new Error(`Expected lowering schema 84, received ${report.schemaVersion}`)
 }
 if (report.reflectCompareModel !== 'typed-ocaml-reflect-compare-intrinsic-v4') {

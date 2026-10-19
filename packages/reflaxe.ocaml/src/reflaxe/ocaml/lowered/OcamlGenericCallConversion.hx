@@ -26,6 +26,9 @@ enum OcamlGenericValueShape {
 	/** Exact registered record identity; null uses the same native reference carrier. */
 	NominalValue(typeId:String, representationId:String, nullable:Bool);
 
+	/** An exact native enum passed unchanged to a direct method parameter, never an erased result. */
+	NativeEnumArgument(typeId:String, representationId:String);
+
 	ArrayValue(element:OcamlGenericValueShape);
 	FunctionValue(arguments:Array<OcamlGenericValueShape>, result:OcamlGenericValueShape);
 	EffectOnly;
@@ -212,6 +215,10 @@ function crossing(source:OcamlGenericValueShape, destination:OcamlGenericValueSh
 	if (shapeId(source) == shapeId(destination))
 		return Identity;
 	return switch ([source, destination]) {
+		case [
+			NominalValue(sourceId, sourceProof, false),
+			NominalValue(destinationId, destinationProof, true)
+		] if (sourceId == destinationId && sourceProof == destinationProof): Identity;
 		case [Erased(_) | DynamicValue, Erased(_) | DynamicValue], [NullableInteger, Erased(_) | DynamicValue],
 			[Erased(_) | DynamicValue, NullableInteger]: Identity;
 		case [NullableBoolean, Erased(_) | DynamicValue]: BoxNullableBoolean;
@@ -260,6 +267,7 @@ function shapeId(value:OcamlGenericValueShape):String {
 		case NullableInteger: "Null<Int>";
 		case NullableBoolean: "Null<Bool>";
 		case NominalValue(typeId, representationId, nullable): 'class:${typeId}:${representationId}:${nullable}';
+		case NativeEnumArgument(typeId, representationId): 'enum-argument:${typeId}:${representationId}';
 		case ArrayValue(element): 'Array<${shapeId(element)}>';
 		case FunctionValue(arguments, result): '(${arguments.map(shapeId).join(",")})->${shapeId(result)}';
 		case EffectOnly: "Void";

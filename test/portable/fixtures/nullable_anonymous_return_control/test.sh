@@ -129,7 +129,7 @@ const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 if (report.schemaVersion !== 53
 	|| report.summary?.valid !== true
 	|| report.lowering?.status !== 'present'
-	|| report.lowering?.schemaVersion !== 94) {
+	|| report.lowering?.schemaVersion !== 95) {
 	throw new Error('public inspection did not validate the nullable anonymous return report')
 }
 const boundaries = report.lowering.functionResultBoundaries.filter(item =>

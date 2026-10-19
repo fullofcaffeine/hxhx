@@ -532,7 +532,7 @@ try {
 	const loweringPath = path.join(tempRoot, 'out/ocaml_lowering_report.json')
 	const loweringBytes = fs.readFileSync(loweringPath, 'utf8')
 	const lowering = JSON.parse(loweringBytes)
-	assert.strictEqual(lowering.schemaVersion, 94)
+	assert.strictEqual(lowering.schemaVersion, 95)
 	const oldSchemaValue = JSON.parse(loweringBytes)
 	oldSchemaValue.schemaVersion = 87
 	fs.writeFileSync(loweringPath, JSON.stringify(oldSchemaValue, null, 2) + '\n')

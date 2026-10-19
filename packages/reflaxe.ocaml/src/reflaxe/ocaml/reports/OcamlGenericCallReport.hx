@@ -18,6 +18,7 @@ private enum abstract NodeKind(String) to String {
 	final NullableBoolean = "nullable-bool";
 	final NominalValue = "class";
 	final NullableNominalValue = "nullable-class";
+	final NativeEnumArgument = "enum-argument";
 	final ArrayValue = "array";
 	final FunctionValue = "function";
 	final EffectOnly = "void";
@@ -31,13 +32,15 @@ private enum abstract NodeKind(String) to String {
 	final AdaptFunction = "adapt-function";
 }
 
-/** Only class nodes carry nominal proof fields; function children end with the result. */
+/** Nominal nodes carry kind-specific proof fields; function children end with the result. */
 typedef ReportNode = {
 	final kind:NodeKind;
 	final parameter:Null<String>;
 	final children:Array<ReportNode>;
 	final ?classTypeId:String;
 	final ?classRepresentationId:String;
+	final ?enumTypeId:String;
+	final ?enumRepresentationId:String;
 }
 
 /** JSON-safe projection; no compiler object or Haxe enum reaches the report writer. */
@@ -48,6 +51,7 @@ typedef GenericCallReportTarget = {
 	final receiverTypeId:String;
 	final receiverRepresentationId:String;
 	final ownedParameterIds:Array<String>;
+	final optionalParameterIndices:Array<Int>;
 	final declaration:ReportNode;
 	final instantiation:ReportNode;
 	final argumentShapes:Array<ReportNode>;
@@ -66,6 +70,7 @@ function targetToReport(target:OcamlGenericInstanceCallTarget):GenericCallReport
 		receiverTypeId: target.receiverTypeId,
 		receiverRepresentationId: target.receiverRepresentationId,
 		ownedParameterIds: target.ownedParameterIds.copy(),
+		optionalParameterIndices: target.optionalParameterIndices.copy(),
 		declaration: shapeToReport(target.declaration),
 		instantiation: shapeToReport(target.instantiation),
 		argumentShapes: target.argumentShapes.map(shapeToReport),
@@ -82,8 +87,19 @@ function targetToReport(target:OcamlGenericInstanceCallTarget):GenericCallReport
 **/
 function targetFromReport(value:Dynamic):OcamlGenericInstanceCallTarget {
 	requireFields(value, [
-		   "moduleId",      "typeName",      "fieldName", "receiverTypeId", "receiverRepresentationId", "ownedParameterIds",
-		"declaration", "instantiation", "argumentShapes",      "arguments",              "resultShape",            "result"
+		"moduleId",
+		"typeName",
+		"fieldName",
+		"receiverTypeId",
+		"receiverRepresentationId",
+		"ownedParameterIds",
+		"declaration",
+		"instantiation",
+		"argumentShapes",
+		"arguments",
+		"resultShape",
+		"result",
+		"optionalParameterIndices"
 	]);
 	final target:OcamlGenericInstanceCallTarget = {
 		moduleId: text(Reflect.field(value, "moduleId")),
@@ -92,6 +108,7 @@ function targetFromReport(value:Dynamic):OcamlGenericInstanceCallTarget {
 		receiverTypeId: text(Reflect.field(value, "receiverTypeId")),
 		receiverRepresentationId: text(Reflect.field(value, "receiverRepresentationId")),
 		ownedParameterIds: sequence(Reflect.field(value, "ownedParameterIds")).map(text),
+		optionalParameterIndices: sequence(Reflect.field(value, "optionalParameterIndices")).map(parameterIndex),
 		declaration: readShape(Reflect.field(value, "declaration"), 0),
 		instantiation: readShape(Reflect.field(value, "instantiation"), 0),
 		argumentShapes: sequence(Reflect.field(value, "argumentShapes")).map(entry -> readShape(entry, 0)),
@@ -105,6 +122,13 @@ function targetFromReport(value:Dynamic):OcamlGenericInstanceCallTarget {
 
 private function node(kind:NodeKind, ?children:Array<ReportNode>, ?parameter:String):ReportNode {
 	return {kind: kind, parameter: parameter, children: children == null ? [] : children};
+}
+
+/** Reject non-integer slot indices before they can authorize omitted arguments. */
+private function parameterIndex(value:Dynamic):Int {
+	if (!Std.isOfType(value, Int) || value < 0)
+		throw "Generic call report requires a non-negative parameter index.";
+	return value;
 }
 
 private function shapeToReport(shape:OcamlGenericValueShape):ReportNode {
@@ -143,6 +167,13 @@ private function encodeShape(shape:OcamlGenericValueShape, allowDynamic:Bool):Re
 				children: [],
 				classTypeId: typeId,
 				classRepresentationId: representationId
+			};
+		case NativeEnumArgument(typeId, representationId): {
+				kind: NodeKind.NativeEnumArgument,
+				parameter: null,
+				children: [],
+				enumTypeId: typeId,
+				enumRepresentationId: representationId
 			};
 		case ArrayValue(element): node(NodeKind.ArrayValue, [encodeShape(element, allowDynamic)]);
 		case FunctionValue(arguments, result):
@@ -185,6 +216,8 @@ private function readShape(value:Dynamic, depth:Int, allowDynamic:Bool = false):
 		case "nullable-bool" if (children.length == 0): NullableBoolean;
 		case "class", "nullable-class" if (children.length == 0):
 			NominalValue(text(Reflect.field(value, "classTypeId")), text(Reflect.field(value, "classRepresentationId")), decoded.kind == "nullable-class");
+		case "enum-argument" if (children.length == 0):
+			NativeEnumArgument(text(Reflect.field(value, "enumTypeId")), text(Reflect.field(value, "enumRepresentationId")));
 		case "void" if (children.length == 0): EffectOnly;
 		case "array" if (children.length == 1): ArrayValue(readShape(children[0], depth + 1, allowDynamic));
 		case "function" if (children.length > 0):
@@ -216,7 +249,11 @@ private function readNode(value:Dynamic, depth:Int):{kind:String, parameter:Null
 	if (depth > 64)
 		throw "Generic call report exceeds the supported type nesting depth.";
 	final kind = text(Reflect.field(value, "kind"));
-	requireFields(value, kind == "class" || kind == "nullable-class" ? ["kind", "parameter", "children", "classTypeId", "classRepresentationId"] : ["kind", "parameter", "children"]);
+	requireFields(value, switch (kind) {
+		case "class", "nullable-class": ["kind", "parameter", "children", "classTypeId", "classRepresentationId"];
+		case "enum-argument": ["kind", "parameter", "children", "enumTypeId", "enumRepresentationId"];
+		case _: ["kind", "parameter", "children"];
+	});
 	final rawParameter:Dynamic = Reflect.field(value, "parameter");
 	final parameter = rawParameter == null ? null : text(rawParameter);
 	if ((kind == "erased") != (parameter != null))

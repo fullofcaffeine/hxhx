@@ -57,7 +57,7 @@ for (const [name, view] of [['closureCase', true], ['methodValueCase', true], ['
 		assert.equal(call.callbackInvocation, null, `${name} must retain its raw factory result`)
 	}
 }
-if (report.schemaVersion !== 94 || report.callModel !== 'typed-ocaml-directional-call-boundary-v34') {
+if (report.schemaVersion !== 95 || report.callModel !== 'typed-ocaml-directional-call-boundary-v35') {
 	throw new Error('expected the function-value-aware typed-call report schema')
 }
 const calls = (report.calls ?? []).filter(call => call.kind === 'typed-function-value')

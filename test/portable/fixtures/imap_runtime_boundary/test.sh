@@ -5,8 +5,8 @@ node <<'NODE'
 const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (report.schemaVersion !== 94
-	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v34') {
+if (report.schemaVersion !== 95
+	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v35') {
 	throw new Error('the IMap fixture did not produce the current sealed call-report schema')
 }
 const hasMapTextReturns = report.controls.filter(control =>

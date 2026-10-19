@@ -1,6 +1,7 @@
 package reflaxe.ocaml.tooling;
 
 import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.runtimeHelpers as genericCallRuntimeHelpers;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.omittedIndices as genericCallOmittedIndices;
 import reflaxe.ocaml.tooling.ReflaxeOcamlGenericCallInspection.validate as genericInspectionValidate;
 import reflaxe.ocaml.reports.OcamlGenericCallReport.targetFromReport;
 import reflaxe.ocaml.reports.OcamlGenericCallReport.targetToReport;
@@ -491,8 +492,8 @@ class ReflaxeOcamlInspection {
 			case Loaded(value):
 				try {
 					final version = requiredInt(value, "schemaVersion");
-					if (version != 94) {
-						throw 'Unsupported lowering report schema $version; expected 94.';
+					if (version != 95) {
+						throw 'Unsupported lowering report schema $version; expected 95.';
 					}
 					final model = requiredString(value, "model");
 					if (model != "typed-ocaml-lowered-place") {
@@ -2203,7 +2204,7 @@ class ReflaxeOcamlInspection {
 
 	static function inspectCalls(value:Dynamic,
 			representation:InspectionRepresentation):{calls:Array<InspectionCall>, boundaries:Array<InspectionCallableBoundary>} {
-		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v34")
+		if (requiredString(value, "callModel") != "typed-ocaml-directional-call-boundary-v35")
 			throw "Unsupported call-boundary report model.";
 		if (requiredString(value, "structuralIteratorConsumerModel") != "typed-structural-iterator-consumer-v1")
 			throw "Unsupported structural Iterator consumer report model.";
@@ -3186,7 +3187,10 @@ class ReflaxeOcamlInspection {
 			|| kind == "standard-array-method"
 			|| kind == "standard-imap-method"
 			|| kind == "structural-iterator-method";
-		final argumentCount = genericTarget != null ? genericTarget.arguments.length : (dynamicFunctionTarget != null ? dynamicFunctionTarget.argumentSemanticTypeIds.length : (standardArrayTarget != null ? standardArrayTarget.argumentSemanticTypeIds.length : (standardIMapTarget == null ? arguments.length : standardIMapTarget.argumentSemanticTypeIds.length)));
+		// Omitted optional parameters still own native argument slots, but consume no source expression.
+		final genericOmitted = genericTarget == null ? [] : genericCallOmittedIndices(targetFromReport(genericTarget));
+		final argumentCount = genericTarget != null ? genericTarget.arguments.length +
+			genericOmitted.length : (dynamicFunctionTarget != null ? dynamicFunctionTarget.argumentSemanticTypeIds.length : (standardArrayTarget != null ? standardArrayTarget.argumentSemanticTypeIds.length : (standardIMapTarget == null ? arguments.length : standardIMapTarget.argumentSemanticTypeIds.length)));
 		if (structuralIteratorTarget != null && argumentCount != 0)
 			throw 'Structural Iterator call "$callId" unexpectedly owns source arguments.';
 		final scheduleOffset = (materializesCallee ? 1 : 0) + (materializesReceiver ? 1 : 0);
@@ -3211,8 +3215,7 @@ class ReflaxeOcamlInspection {
 		var sourceArgumentIndex = 0;
 		for (index in 0...argumentCount) {
 			final step = schedule[index + scheduleOffset];
-			final omitted = dynamicFunctionTarget == null
-				&& genericTarget == null
+			final omitted = genericTarget != null ? genericOmitted.contains(index) : dynamicFunctionTarget == null
 				&& standardArrayTarget == null
 				&& standardIMapTarget == null
 				&& isOmittedConversion(arguments[index].conversion);

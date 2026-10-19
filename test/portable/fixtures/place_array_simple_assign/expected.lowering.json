@@ -1318,7 +1318,7 @@
     }
   ],
   "callCount": 36,
-  "callModel": "typed-ocaml-directional-call-boundary-v34",
+  "callModel": "typed-ocaml-directional-call-boundary-v35",
   "callRevision": "sha256:4037e32a3ae3cf93cf65fc6f517ed9e2750fd74606771a13876313cb219ab128",
   "callableBoundaries": [
     {
@@ -19475,7 +19475,7 @@
       }
     }
   ],
-  "schemaVersion": 94,
+  "schemaVersion": 95,
   "staticStorage": [
     {
       "carrierTypeId": "int HxArray.t",

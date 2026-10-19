@@ -70,6 +70,7 @@ class CheckGenericCallPlans {
 			receiverTypeId: target.receiverTypeId,
 			receiverRepresentationId: target.receiverRepresentationId,
 			ownedParameterIds: target.ownedParameterIds.copy(),
+			optionalParameterIndices: [],
 			declaration: FunctionValue([], DynamicValue),
 			instantiation: FunctionValue([], DynamicValue),
 			argumentShapes: [],

@@ -35,7 +35,7 @@ if (!Array.isArray(report.controlAdmissions)) {
 	fail('the lowering report cannot distinguish a blocked control family from a function with no control transfer')
 }
 
-if (report.schemaVersion !== 94
+if (report.schemaVersion !== 95
 	|| report.controlModel !== 'typed-ocaml-function-loop-throw-and-catch-control-v28'
 	|| report.controlAdmissionModel !== 'typed-ocaml-control-admission-v1'
 	|| report.controlTargetModel !== 'typed-ocaml-lexical-loop-target-v1'

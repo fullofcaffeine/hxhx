@@ -23,7 +23,7 @@ function run(command, args) {
 
 async function main() {
 	try {
-		assert.equal(lowering.schemaVersion, 94)
+		assert.equal(lowering.schemaVersion, 95)
 		assert.equal(lowering.callableViews.requiredLocals.length, 7)
 		assert.equal(lowering.callableViews.entries.length, 7)
 		assert.equal(lowering.callableViews.entries.reduce((sum, entry) => sum + entry.unsafeOperations.length, 0), 8)

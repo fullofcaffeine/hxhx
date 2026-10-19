@@ -2,6 +2,8 @@ package reflaxe.ocaml.ast;
 
 import reflaxe.ocaml.ast.OcamlCallableViewSyntax.adapt as adaptView;
 import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.require as genericCallRequire;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.omittedIndices as genericOmittedIndices;
+import reflaxe.ocaml.lowered.OcamlGenericCallConversion.OcamlGenericValueShape;
 import reflaxe.ocaml.lowered.OcamlGenericCallConversion.OcamlGenericValueConversion;
 import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.OcamlGenericInstanceCallTarget;
 
@@ -25,7 +27,24 @@ function emit(target:OcamlGenericInstanceCallTarget, method:OcamlExpr, receiver:
 		bindings.push({name: name, value: convert(target.arguments[index], arguments[index], 'generic-call:argument:$index', fresh, runtime)});
 		converted.push(EIdent(name));
 	}
-	if (arguments.length == 0)
+	final omitted = genericOmittedIndices(target);
+	final parameters = switch (target.declaration) {
+		case FunctionValue(values, _): values;
+		case _: [];
+	};
+	for (index in omitted) {
+		final sentinel = runtime('generic-call:omitted:$index', "HxRuntime.hx_null");
+		// Nullable primitives already store Obj.t. Other admitted slots use the
+		// same sentinel as a native reference until the method applies its default.
+		final value:OcamlExpr = switch (parameters[index]) {
+			case NullableInteger, NullableBoolean: sentinel;
+			case _: EApp(EField(EIdent("Obj"), "obj"), [sentinel]);
+		};
+		final name = fresh("generic_omitted_argument");
+		bindings.push({name: name, value: value});
+		converted.push(EIdent(name));
+	}
+	if (arguments.length == 0 && omitted.length == 0)
 		converted.push(EConst(CUnit));
 	final result = fresh("generic_result");
 	var output:OcamlExpr = ELet(result, EApp(method, converted), convert(target.result, EIdent(result), "generic-call:result", fresh, runtime), false);

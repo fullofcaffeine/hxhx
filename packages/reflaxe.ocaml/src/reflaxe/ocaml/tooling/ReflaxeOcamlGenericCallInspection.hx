@@ -5,6 +5,7 @@ import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.PROOF_ID as generi
 import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.fingerprint as genericCallFingerprint;
 import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.require as genericCallRequire;
 import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.nominalProofs as genericCallNominalProofs;
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.OcamlGenericNominalKind;
 import haxe.crypto.Sha256;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionCall;
 import reflaxe.ocaml.tooling.InspectionReport.InspectionRepresentationDecision;
@@ -26,12 +27,13 @@ function validate(call:InspectionCall, representations:Map<String, InspectionRep
 		throw 'Generic call "${call.id}" has no matching direct-record receiver proof.';
 	for (proof in genericCallNominalProofs(target)) {
 		final value = representations.get(proof.representationId);
+		final enumArgument = proof.kind == OcamlGenericNominalKind.EnumArgument;
 		if (value == null
 			|| value.semanticTypeId != proof.typeId
-			|| value.boxingPolicy != "nullable-nominal-call-carrier"
+			|| value.boxingPolicy != (enumArgument ? "direct-native-enum-carrier" : "nullable-nominal-call-carrier")
 			|| value.programRevision != call.programRevision
-			|| value.domain != "generic-call-value")
-			throw 'Generic call "${call.id}" has no matching class-value representation proof.';
+			|| value.domain != (enumArgument ? "internal-value" : "generic-call-value"))
+			throw 'Generic call "${call.id}" has no matching ${enumArgument ? "enum-argument" : "class-value"} representation proof.';
 	}
 	final expectedId = "call:" + Sha256.encode([
 		call.functionId,

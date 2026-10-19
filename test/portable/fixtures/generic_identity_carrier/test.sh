@@ -19,8 +19,8 @@ fi
 
 node - <<'NODE'
 const report = require('./out/ocaml_lowering_report.json')
-if (report.schemaVersion !== 94
-	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v34') {
+if (report.schemaVersion !== 95
+	|| report.callModel !== 'typed-ocaml-directional-call-boundary-v35') {
 	throw new Error('The generic identity fixture uses a stale lowering contract')
 }
 const calls = report.calls.filter(call =>

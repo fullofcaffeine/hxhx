@@ -84,7 +84,7 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementModel.OcamlRuntimeRequire
 **/
 class OcamlLoweringReportWriter {
 	public static inline final FILE_NAME = "ocaml_lowering_report.json";
-	public static inline final SCHEMA_VERSION = 94;
+	public static inline final SCHEMA_VERSION = 95;
 	public static inline final REPRESENTATION_SCOPE = "exact-int-bool-int64-nullable-string-field-defaults-direct-simple-assignment-represented-array-locals-monomorphic-class-dynamic-internal-callback-locals-v17";
 
 	static function validateNominalRepresentation(decision:OcamlRepresentationDecision):Void {
@@ -421,12 +421,13 @@ class OcamlLoweringReportWriter {
 					throw 'Generic call "${call.id}" has no matching direct-record receiver representation.';
 				for (proof in reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.nominalProofs(target)) {
 					final value = representationById.get(proof.representationId);
+					final enumArgument = proof.kind == reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.OcamlGenericNominalKind.EnumArgument;
 					if (value == null
 						|| value.semanticTypeId != proof.typeId
-						|| value.boxingPolicy != OcamlRepresentationBoxingPolicy.NullableNominalCallCarrier
-						|| value.domain != OcamlRepresentationDomain.GenericCallValue
+						|| value.boxingPolicy != (enumArgument ? OcamlRepresentationBoxingPolicy.DirectNativeEnumCarrier : OcamlRepresentationBoxingPolicy.NullableNominalCallCarrier)
+						|| value.domain != (enumArgument ? OcamlRepresentationDomain.InternalValue : OcamlRepresentationDomain.GenericCallValue)
 						|| value.programRevision != call.programRevision)
-						throw 'Generic call "${call.id}" has no matching class-value representation.';
+						throw 'Generic call "${call.id}" has no matching ${enumArgument ? "enum-argument" : "class-value"} representation.';
 				}
 			}
 			if (call.receiver != null)
@@ -1068,7 +1069,7 @@ class OcamlLoweringReportWriter {
 			unsafeOperationRevision: "sha256:" + hashUtf8(canonicalUnsafeOperations),
 			unsafeOperationCount: sortedUnsafeOperations.length,
 			unsafeOperations: sortedUnsafeOperations,
-			callModel: "typed-ocaml-directional-call-boundary-v34",
+			callModel: "typed-ocaml-directional-call-boundary-v35",
 			structuralIteratorConsumerModel: OcamlStructuralIteratorCallContract.MODEL,
 			callRevision: "sha256:" + hashUtf8(canonicalCalls),
 			callCount: sortedCalls.length,
