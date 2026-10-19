@@ -1,6 +1,41 @@
 import TyCallAlignment.TyCallAlignmentResult;
 import TyCallAlignment.TyCallOperandKind;
 
+/**
+	A checked source function can retain an unconstrained, omitted input without
+	making arbitrary Unknown values assignable. Both callable shapes must match;
+	only whole input slots with no written annotation may remain unknown.
+ */
+private function sourceOmittedInputsMatch(expression:HxExpr, expected:TyType, actual:TyType):Bool {
+	if (!expected.isFunction()
+		|| !actual.isFunction()
+		|| expected.getSemanticKey() != actual.getSemanticKey()
+		|| actual.getFunctionReturn().hasUnknownComponent())
+		return false;
+	final source = switch expression {
+		case EParenthesized(inner, _) | EPrivateAccess(inner, _): return sourceOmittedInputsMatch(inner, expected, actual);
+		case ESourceFunction(facts, _, _, _): facts;
+		case _: null;
+	};
+	if (source == null)
+		return false;
+	final parameters = source.getSignature().getParameters();
+	final inputs = actual.getFunctionArguments();
+	if (parameters.length != inputs.length)
+		return false;
+	var found = false;
+	for (index in 0...inputs.length) {
+		if (inputs[index].isUnknown()) {
+			final hint = parameters[index].typeHint;
+			if (parameters[index].isRest || (hint != null && StringTools.trim(hint).length > 0))
+				return false;
+			found = true;
+		} else if (inputs[index].hasUnknownComponent())
+			return false;
+	}
+	return found;
+}
+
 /** Query source-aware assignment without changing inference or emitting conversions. */
 private function compatible(index:TyperIndex, expression:HxExpr, expected:TyType, actual:TyType, spread:Bool):TyCallArgumentCompatibility {
 	if (spread)
@@ -11,6 +46,8 @@ private function compatible(index:TyperIndex, expression:HxExpr, expected:TyType
 	if (structural != null)
 		return structural;
 	final basic = TyAssignmentCompatibility.classify(expected, actual, Unchecked);
+	if (basic == Unknown && sourceOmittedInputsMatch(expression, expected, actual))
+		return Compatible;
 	if (basic != Unknown || expected.hasUnknownComponent() || actual.hasUnknownComponent())
 		return basic;
 	// Selection can prove a caller's declared bound without erasing its type

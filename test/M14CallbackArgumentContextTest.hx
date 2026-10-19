@@ -3,6 +3,7 @@ import sys.io.File;
 /** Prove callback context solves the original argument without replaying either operand. */
 class M14CallbackArgumentContextTest {
 	static function main():Void {
+		omittedMethodCallback();
 		collectionContexts();
 		final root = "test/fixtures/callback_argument_context";
 		final expected = "receiver\noperand\ntrue\noperand\ntrue\n";
@@ -24,6 +25,150 @@ class M14CallbackArgumentContextTest {
 		sourceSignatureRetention();
 		conflictingArgument();
 		Sys.println("CALLBACK_ARGUMENT_CONTEXT:PASS");
+	}
+
+	/** All callers constrain one declaration before its immutable parameter facts are published. */
+	static function omittedMethodCallback():Void {
+		final integer = "function(value:Int):Int return value + 1";
+		final text = "function(value:String):String return value";
+		final failures = new Array<String>();
+		for (entry in [
+			{
+				name: "single",
+				parameter: "listener",
+				calls: [integer],
+				accepted: true,
+				reverse: false
+			},
+			{
+				name: "receiver_after_caller",
+				parameter: "listener",
+				calls: [integer],
+				accepted: true,
+				reverse: true
+			},
+			{
+				name: "repeated",
+				parameter: "listener",
+				calls: [integer, integer],
+				accepted: true,
+				reverse: false
+			},
+			{
+				name: "callback_conflict",
+				parameter: "listener",
+				calls: [integer, text],
+				accepted: false,
+				reverse: false
+			},
+			{
+				name: "scalar_conflict",
+				parameter: "listener",
+				calls: ["1", "\"text\""],
+				accepted: false,
+				reverse: false
+			},
+			{
+				name: "written_string",
+				parameter: "listener:String",
+				calls: [integer],
+				accepted: false,
+				reverse: false
+			},
+			{
+				name: "written_callback",
+				parameter: "listener:Int->Int",
+				calls: [text],
+				accepted: false,
+				reverse: false
+			},
+			{
+				name: "unused_callback_input",
+				parameter: "listener",
+				calls: ["function(value):Void {}"],
+				accepted: true,
+				reverse: false
+			},
+			{
+				name: "later_callback_input",
+				parameter: "listener",
+				calls: ["function(value):Int return 1", integer],
+				accepted: true,
+				reverse: false
+			},
+			{
+				name: "later_local_input",
+				parameter: "listener",
+				calls: ["callback"],
+				accepted: true,
+				reverse: false
+			},
+			{
+				name: "written_dynamic",
+				parameter: "listener:Dynamic",
+				calls: [integer, text],
+				accepted: true,
+				reverse: false
+			}
+		]) {
+			final receiver = "class Receiver { public function new() {} public function add(" + entry.parameter + ") {} } ";
+			final main = "class Main { static function main():Void { var receiver = new Receiver(); "
+				+ (entry.name == "later_local_input" ? "var callback = function(value):Int return 1; " : "")
+				+ entry.calls.map(callback -> "receiver.add(" + callback + ");").join(" ")
+				+ (entry.name == "later_local_input" ? "callback(2); " : "")
+				+ " Sys.println(\"accepted\"); } }";
+			final source = entry.reverse ? main + receiver : receiver + main;
+			final root = JsRuntimeFixture.reserveOutput();
+			final path = root + "/Main.hx";
+			File.saveContent(path, source);
+			final upstream = new sys.io.Process("node_modules/.bin/haxe", ["-cp", root, "--run", "Main"]);
+			final output = upstream.stdout.readAll().toString();
+			final errors = upstream.stderr.readAll().toString();
+			final code = upstream.exitCode();
+			upstream.close();
+			if (entry.accepted ? code != 0 || output != "accepted\n" : code == 0 || errors.length == 0)
+				throw "upstream omitted method callback contract differs: " + entry.name + output + errors;
+			Sys.println("OMITTED_CALLBACK_UPSTREAM:PASS " + entry.name);
+			final module = new ResolvedModule("Main", path, ParserStage.parse(source, path));
+			var typed:Null<TypedModule> = null;
+			var diagnostic = "";
+			try {
+				typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
+			} catch (error:TyperError) {
+				diagnostic = Std.string(error);
+			} catch (error:haxe.Exception) {
+				// An internal publication failure is not a valid source diagnostic.
+				failures.push(entry.name + ": internal failure: " + error.message);
+			}
+			if (entry.accepted) {
+				if (typed == null) {
+					failures.push(entry.name + ": " + diagnostic);
+				} else {
+					// Checking the declaration itself catches a per-call substitution
+					// that leaves an earlier published method with an Unknown input.
+					var found = false;
+					for (cls in typed.getTypedClasses())
+						for (fn in cls.getFunctions())
+							if (HxFunctionDecl.getName(fn.getSourceDeclaration()) == "add") {
+								found = true;
+								final actual = fn.getEnvironment().getParams()[0].getType();
+								final expected = entry.name == "unused_callback_input" ? TyType.fromHintText("Int->Void")
+									.withFunctionTypes([TyType.unknown()],
+										TyType.fromHintText("Void")) : TyType.fromHintText(entry.parameter == "listener:Dynamic" ? "Dynamic" : "Int->Int");
+								if (actual.getSemanticKey() != expected.getSemanticKey())
+									failures.push(entry.name + ": published input is " + actual.getDisplay());
+							}
+					if (!found)
+						throw "omitted callback observer lost the add declaration";
+					JsRuntimeFixture.assertRuntime(typed, "Main", "accepted\n");
+				}
+			} else if (typed != null) {
+				failures.push(entry.name + ": incompatible callers were accepted");
+			}
+			@:privateAccess JsRuntimeFixture.removeOutput(root);
+		}
+		if (failures.length > 0)
+			throw "omitted method callback failures:\n" + failures.join("\n");
 	}
 
 	/** Only complete collection contexts agreed by every candidate can guide first-pass typing. */

@@ -57,7 +57,7 @@ function load(input:{sources:Array<{path:String, source:String}>, requiredModule
 	final loader = new ModuleLoader(paths, defines, index, null, true, provider);
 	loader.markResolvedAlready(resolved);
 	final pending = resolved.copy();
-	final typed = new Array<TypedModule>();
+	var typed = new Array<TypedModule>();
 	var cursor = 0;
 	final loaded = new haxe.ds.StringMap<String>();
 	while (cursor < pending.length) {
@@ -67,6 +67,12 @@ function load(input:{sources:Array<{path:String, source:String}>, requiredModule
 		for (loaded in loader.drainNewModules())
 			pending.push(loaded);
 	}
+	typed = TyMethodInputPublication.finish({
+		modules: typed,
+		index: index,
+		loader: loader,
+		onDiscovered: source -> loaded.set(ResolvedModule.getModulePath(source), ResolvedModule.getFilePath(source))
+	});
 	for (required in input.requiredModules) {
 		final path = loaded.get(required);
 		if (path == null || files.exists(Path.normalize(path)) || !sys.FileSystem.exists(path))

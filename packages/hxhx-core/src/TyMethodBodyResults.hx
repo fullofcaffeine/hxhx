@@ -33,7 +33,12 @@ class TyMethodBodyResults {
 	final active = new haxe.ds.StringMap<MethodResultFrame>();
 	var infer:Null<TyDeclarationInfo->TyMethodBodyResult>;
 
-	public function new() {}
+	final methodInputs:TyMethodInputState;
+	var inputRevision:Int = -1;
+
+	public function new(?methodInputs:TyMethodInputState) {
+		this.methodInputs = methodInputs == null ? new TyMethodInputState() : methodInputs;
+	}
 
 	/** The typing request supplies its current loader; inference itself stays in the shared typer. */
 	public function configure(infer:TyDeclarationInfo->TyMethodBodyResult):Void {
@@ -73,6 +78,12 @@ class TyMethodBodyResults {
 	}
 
 	function checkedResult(declaration:TyDeclarationInfo, includeInputs:Bool):TyType {
+		// New caller evidence can change a callee result and its transitive users.
+		// Discard cached computations, never mutate a previously returned type.
+		if (inputRevision != methodInputs.getRevision()) {
+			checked.clear();
+			inputRevision = methodInputs.getRevision();
+		}
 		final written = declaration.getSignature().getReturnType();
 		if (!written.isUnknown() && !includeInputs)
 			return written;
@@ -103,7 +114,7 @@ class TyMethodBodyResults {
 					checked.remove(name);
 		}
 		var candidate = written;
-		var candidateParameters = declaration.getSignature().getArgs();
+		var candidateParameters = methodInputs.signature(declaration, declaration.getSignature()).getArgs();
 		function identity(type:TyType, arguments:Array<TyType>):String {
 			return CompilerCacheIdentity.encode([type.getSemanticKey()].concat(arguments.map(argument -> argument.getSemanticKey())));
 		}
@@ -116,6 +127,7 @@ class TyMethodBodyResults {
 				recursive: false
 			};
 			active.set(key, frame);
+			final beforeInputs = methodInputs.getRevision();
 			final selected = try {
 				infer(declaration);
 			} catch (error:haxe.Exception) {
@@ -124,6 +136,11 @@ class TyMethodBodyResults {
 				throw error;
 			}
 			active.remove(key);
+			if (beforeInputs != methodInputs.getRevision()) {
+				discardCandidateDependents();
+				candidateParameters = methodInputs.signature(declaration, declaration.getSignature()).getArgs();
+				continue;
+			}
 			final selectedType = written.isUnknown() ? selected.type : written;
 			final selectedParameters = parameters(declaration, selected.parameters);
 			final selectedIdentity = identity(selectedType, selectedParameters);
@@ -175,8 +192,9 @@ class TyMethodBodyResults {
 		if (selected.getSemanticKey() == source.getReturnType().getSemanticKey()
 			&& CompilerCacheIdentity.encode(inputs.map(argument -> argument.getSemanticKey())) == CompilerCacheIdentity.encode(source.getArgs()
 				.map(argument -> argument.getSemanticKey())))
-			return source;
-		return new TyFunSig(source.getName(), source.getIsStatic(), source.getArgNames(), inputs.copy(), source.getArgOptional(), source.getArgRest(),
-			selected, source.getPos());
+			return methodInputs.signature(declaration, source);
+		return methodInputs.signature(declaration,
+			new TyFunSig(source.getName(), source.getIsStatic(), source.getArgNames(), inputs.copy(), source.getArgOptional(), source.getArgRest(), selected,
+				source.getPos()));
 	}
 }

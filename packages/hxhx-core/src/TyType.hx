@@ -287,6 +287,10 @@ class TyType {
 	public function hasOpenMethodParameter():Bool
 		return containsComponent(type -> type.isOpenMethodParameter(), []);
 
+	/** A caller-owned binder cannot become a concrete input of another monomorphic declaration. */
+	public function hasTypeParameter():Bool
+		return containsComponent(type -> type.isTypeParameter(), []);
+
 	/** Walk each definition once; application arguments remain separate children. */
 	function containsComponent(predicate:TyType->Bool, visited:Array<TyAliasDefinition>):Bool {
 		if (predicate(this))

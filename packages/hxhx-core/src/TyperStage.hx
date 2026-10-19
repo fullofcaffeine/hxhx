@@ -429,6 +429,7 @@ class TyperStage {
 
 	static function buildTypedClasses(parsed:ParsedModule, index:TyperIndex, loader:ModuleLoader, modulePath:String,
 			deferProgramLowering:Bool = false):TypedClassBuildResult {
+		final inputRevision = index == null ? 0 : index.getMethodInputs().getRevision();
 		if (index != null) {
 			index.getMethodBodyResults().configure(declaration -> inferDeclaredMethodResult(declaration, index, loader));
 			index.getFieldInitializerTypes().configure((field, source) -> inferDeclaredFieldType(field, source, index, loader));
@@ -573,7 +574,16 @@ class TyperStage {
 						for (argument in supplied)
 							inferExprType(argument, inferenceEnvironment, context, position)
 					];
-					final signature = appliedCallSignature(declaration, callee, inferenceEnvironment, context, position);
+					var signature = appliedCallSignature(declaration, callee, inferenceEnvironment, context, position);
+					// Local callable inference can finish after its first use as an
+					// argument. Publish that final evidence from the selected source
+					// call, never from the speculative selection copy above.
+					if (signature.getArgRest().indexOf(true) < 0) {
+						final inputTrial = context.getIndex().getMethodInputs().trial(declaration, signature, selection.order.rankedTypes(actual));
+						if (!lexicalEnvironment.isSpeculative())
+							context.getIndex().getMethodInputs().commit(inputTrial);
+						signature = inputTrial.getSignature();
+					}
 					final parameters = TyMethodGenericBinding.specializeParameters(declaration, signature, selection.order.rankedTypes(actual),
 						context.getIndex());
 					if (inferredCall != null) {
@@ -676,6 +686,8 @@ class TyperStage {
 				// The initializer owns this traversal; only nested source functions accept returns.
 				inferExprType(initializer, fieldEnvironment, context, HxFieldDecl.getPos(field), initializerType);
 				fieldEnvironment.sealInference();
+				if (index != null && inputRevision != index.getMethodInputs().getRevision())
+					return {classes: [], mainFunctions: [], resolvedDirectives: resolvedDirectives};
 				final fieldReplay = fieldEnvironment.createBodyReplay();
 				final typedInitializer = TypedBodyBuilder.buildExpression(initializer, HxFieldDecl.getPos(field), fieldReplay, typeResolver, callResolver,
 					memberResolver, initializerType);
@@ -730,6 +742,10 @@ class TyperStage {
 				pendingReturnInference = stillPending;
 			}
 
+			// A later call may have solved an earlier callback input. Restart before
+			// immutable replay validates operands retained under the earlier context.
+			if (index != null && inputRevision != index.getMethodInputs().getRevision())
+				return {classes: [], mainFunctions: [], resolvedDirectives: resolvedDirectives};
 			for (functionIndex in 0...sourceFunctions.length) {
 				typedFunctions.push(TypedBodyBuilder.buildFunction(className, functionIndex, sourceFunctions[functionIndex],
 					semanticDeclarations[functionIndex], functionEnvironments[functionIndex], typeResolver, callResolver, memberResolver));
@@ -825,11 +841,20 @@ class TyperStage {
 		final pkg = HxModuleDecl.getPackagePath(decl);
 		final directives = HxModuleDecl.getDirectives(decl);
 		final cls = HxModuleDecl.getMainClass(decl);
-		final built = buildTypedClasses(pm, index, loader, ResolvedModule.getModulePath(m), deferProgramLowering);
+		// Calls later in this module can solve an earlier method's omitted input.
+		// Rebuild unpublished snapshots until the request-owned input evidence is stable.
+		var built:TypedClassBuildResult;
+		var beforeInputs:Int;
+		do {
+			beforeInputs = index.getMethodInputs().getRevision();
+			built = buildTypedClasses(pm, index, loader, ResolvedModule.getModulePath(m), deferProgramLowering);
+		} while (beforeInputs != index.getMethodInputs().getRevision());
 		final classEnv = new TyClassEnv(HxClassDecl.getName(cls), built.mainFunctions);
 		final env = new TyModuleEnv(pkg, directives, classEnv, built.resolvedDirectives);
-		return new TypedModule(pm, env, built.classes, 1, ResolvedModule.getSourceOrigin(m), ResolvedModule.getConditionalCompilation(m),
+		final typed = new TypedModule(pm, env, built.classes, 1, ResolvedModule.getSourceOrigin(m), ResolvedModule.getConditionalCompilation(m),
 			ResolvedModule.getGeneratedDeclarations(m));
+		index.recordTypedInputRevision(typed, m, deferProgramLowering);
+		return typed;
 	}
 
 	/** Infer storage from its own initializer under the declaring module's names and binders. */
@@ -880,7 +905,10 @@ class TyperStage {
 		// - locals (not parsed yet; reserved for later)
 		final params = new Array<TySymbol>();
 		final functionArgs = HxFunctionDecl.getArgs(fn);
-		final semanticArguments = semanticDeclaration == null ? [] : semanticDeclaration.getSignature().getArgs();
+		final semanticArguments = semanticDeclaration == null ? [] : ctx.getIndex()
+			.getMethodInputs()
+			.signature(semanticDeclaration, semanticDeclaration.getSignature())
+			.getArgs();
 		for (argumentIndex in 0...functionArgs.length) {
 			final arg = functionArgs[argumentIndex];
 			final name = HxFunctionArg.getName(arg);
@@ -1638,15 +1666,31 @@ class TyperStage {
 			if (declaring != null)
 				c = declaring;
 		}
+		function inputTrial(declaration:TyDeclarationInfo, signature:TyFunSig, actual:Array<TyType>):Null<TyMethodInputState.TyMethodInputTrial> {
+			// Positional evidence is unambiguous only after every fixed slot is supplied.
+			// Optional/rest alignment retains its ordinary call-policy owner.
+			return declaration == null
+				|| signature.getArgs().length != actual.length
+				|| signature.getArgRest()
+					.indexOf(true) >= 0 ? null : ctx.getIndex()
+					.getMethodInputs()
+					.trial(declaration, signature, actual);
+		}
 		function select(signature:TyFunSig, actual:Array<TyType>, order:TyMethodArgumentOrder):TyMethodCallResolution {
 			final inference = scope.getInference();
 			final ranked = order.rankedTypes(actual);
 			if (receiver != null
 				&& !inference.constrainMember(receiver.expression, c, signature, ranked, scope, ctx.getIndex(), {expressions: args, order: order}))
 				throw new TyperError(ctx.getFilePath(), pos, "selected member conflicts with generic constructor constraints");
-			final applied = TyNominalApplication.signature(ctx.getIndex(), c,
+			var applied = TyNominalApplication.signature(ctx.getIndex(), c,
 				receiver == null ? null : inference.expressionType(receiver.expression, receiver.type, scope), signature);
 			final declaration = c.declarationForSignature(signature);
+			final trial = inputTrial(declaration, applied, ranked);
+			if (trial != null) {
+				applied = trial.getSignature();
+				if (!scope.isSpeculative() && !inference.isSealed())
+					ctx.getIndex().getMethodInputs().commit(trial);
+			}
 			if (declaration != null) {
 				final expected = order.sourceContexts(TyMethodGenericBinding.specializeParameters(declaration, applied, ranked, ctx.getIndex()));
 				if (!scope.getInference().constrain(args, expected, scope, ctx.getIndex()))
@@ -1714,8 +1758,11 @@ class TyperStage {
 		for (candidate in candidates) {
 			final declaration = c.declarationForSignature(candidate);
 			final candidateInference = receiver == null ? scope.getInference() : scope.getInference().fork();
-			final initial = TyNominalApplication.signature(ctx.getIndex(), c,
+			var initial = TyNominalApplication.signature(ctx.getIndex(), c,
 				receiver == null ? null : candidateInference.expressionType(receiver.expression, receiver.type, scope), candidate);
+			final initialTrial = inputTrial(declaration, initial, argTypes);
+			if (initialTrial != null)
+				initial = initialTrial.getSignature();
 			final methodTypeParameters = TyMethodGenericBinding.inferableTypeParameters(declaration);
 			final order = methodArgumentOrder(initial, args, argTypes, methodTypeParameters, ctx.getIndex(), literalType);
 			if (order == null) {
@@ -1729,8 +1776,11 @@ class TyperStage {
 				rejectedReceiverConstraint = true;
 				continue;
 			}
-			final applied = TyNominalApplication.signature(ctx.getIndex(), c,
+			var applied = TyNominalApplication.signature(ctx.getIndex(), c,
 				receiver == null ? null : candidateInference.expressionType(receiver.expression, receiver.type, scope), candidate);
+			final rankedTrial = inputTrial(declaration, applied, ranked);
+			if (rankedTrial != null)
+				applied = rankedTrial.getSignature();
 			// Each candidate supplies its own collection and unchecked-cast context. Keep normal
 			// scoring and ambiguity checks when more than one accepts the literal.
 			final contextual = argTypes.copy();

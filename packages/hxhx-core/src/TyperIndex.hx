@@ -32,7 +32,13 @@ class TyperIndex {
 	final typeUseResolver:TyTypeUseResolver;
 	final registeredModules = new StringMap<ResolvedModule>();
 	final publishedModules = new StringMap<Bool>();
-	final methodBodyResults = new TyMethodBodyResults();
+	final methodInputs = new TyMethodInputState();
+	final typedInputRevisions = new ObjectMap<TypedModule, {
+		final source:ResolvedModule;
+		final revision:Int;
+		final deferProgramLowering:Bool;
+	}>();
+	final methodBodyResults:TyMethodBodyResults;
 	final fieldInitializerTypes = new TyFieldInitializerTypes();
 	final parameterBounds = new StringMap<Array<TyType>>();
 
@@ -46,11 +52,33 @@ class TyperIndex {
 	public function getFieldInitializerTypes():TyFieldInitializerTypes
 		return fieldInitializerTypes;
 
+	/** Track the input evidence used by this exact immutable module snapshot. */
+	public function recordTypedInputRevision(module:TypedModule, source:ResolvedModule, deferProgramLowering:Bool):Void {
+		typedInputRevisions.set(module, {source: source, revision: methodInputs.getRevision(), deferProgramLowering: deferProgramLowering});
+	}
+
+	/** A foreign snapshot cannot be silently refreshed under this request's declaration identities. */
+	public function getTypedInputRevision(module:TypedModule):{
+		final source:ResolvedModule;
+		final revision:Int;
+		final deferProgramLowering:Bool;
+	} {
+		final found = typedInputRevisions.get(module);
+		if (found == null)
+			throw "typed module does not belong to this method input request";
+		return found;
+	}
+
+	/** Caller input evidence shares this request and never rewrites declaration headers. */
+	public function getMethodInputs():TyMethodInputState
+		return methodInputs;
+
 	/** Checked body facts share this request lifetime without changing indexed declarations. */
 	public function getMethodBodyResults():TyMethodBodyResults
 		return methodBodyResults;
 
 	public function new() {
+		methodBodyResults = new TyMethodBodyResults(methodInputs);
 		byFullName = new StringMap();
 		byShortName = new StringMap();
 		identityByFullName = new StringMap();

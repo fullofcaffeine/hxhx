@@ -40,6 +40,12 @@ class TyFunctionEnv {
 	final controlScope:Null<TyControlScope>;
 	final inference:TyFunctionInference;
 	var untypedContext:Bool = false;
+	var speculative:Bool = false;
+
+	/** A copied candidate must not publish request-wide method input evidence. */
+	public function isSpeculative():Bool
+		return speculative;
+
 	var protocolSource:Null<{
 		final source:HxExpr;
 		final fingerprint:String;
@@ -218,6 +224,7 @@ class TyFunctionEnv {
 		final nested = new TyFunctionEnv(input.name, nestedParams, [], input.returnType, input.returnExprType, nestedOwner, null, false, 0, staticContext,
 			null, null, generics);
 		nested.untypedContext = untypedContext;
+		nested.speculative = speculative;
 		for (symbol in enclosingSymbols)
 			nested.enclosingSymbols.push(symbol);
 		for (parameter in params)
@@ -231,6 +238,7 @@ class TyFunctionEnv {
 	/** Preserve definition-time visibility when deriving a replay or sealed return environment. */
 	function withEnclosingSymbolsFrom(source:TyFunctionEnv):TyFunctionEnv {
 		untypedContext = source.untypedContext;
+		speculative = source.speculative;
 		retainedBody = source.retainedBody;
 		for (symbol in source.enclosingSymbols)
 			enclosingSymbols.push(symbol);
@@ -391,6 +399,7 @@ class TyFunctionEnv {
 		final copied = new TyFunctionEnv(name, copiedParams, copiedLocals, returnType, returnExprType, ownerIdentity, copiedScopes, false, 0, staticContext,
 			controlScope == null ? null : controlScope.copyForInference(), inference.fork(), typeParameters);
 		copied.untypedContext = untypedContext;
+		copied.speculative = true;
 		copied.protocolSource = protocolSource;
 		copied.retainedBody = retainedBody;
 		for (symbol in enclosingSymbols)
