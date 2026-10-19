@@ -9190,7 +9190,8 @@ class OcamlBuilder {
 			here before the surrounding callable boundary validates the result carrier.
 			Other fully admitted callables still apply their general result conversion
 			around the complete body later. Functions outside that call matrix retain
-			their nullable-primitive handling and convert exact maps to declared nullable storage.
+			their nullable-primitive handling, reuse the same-enum assignment conversion,
+			and convert exact maps to declared nullable storage.
 		**/
 	function buildDirectFunctionResult(value:TypedExpr):OcamlExpr {
 		final returns = currentCallableBoundary == null ? null : currentCallableBoundary.callbackReturns;
@@ -9225,6 +9226,19 @@ class OcamlBuilder {
 			return coerceForAssignment(returnType, value);
 		if (currentCallableBoundary != null)
 			return buildExpr(value);
+		// Haxe permits Null<Enum> at an Enum return boundary without inserting a
+		// cast. Reuse the assignment owner to recover the exact native enum from
+		// its nullable carrier, including the existing null sentinel behavior.
+		final sourceEnumType = unwrapNullType(value.t);
+		if (sourceEnumType != value.t && unwrapNullType(returnType) == returnType) {
+			switch ([TypeTools.follow(returnType), TypeTools.follow(sourceEnumType)]) {
+				case [TEnum(expected, _), TEnum(actual, _)]
+					if (expected.get().module == actual.get().module
+						&& fullNameOfEnumType(expected.get()) == fullNameOfEnumType(actual.get())):
+					return coerceForAssignment(returnType, value);
+				case _:
+			}
+		}
 		// Concrete map exports retain HxMap storage even when the receiving function
 		// declares Null<Map>. Preserve that same reference in its Obj.t result slot.
 		if (reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierContract.nullableResultNeedsBox(returnType, value.t)
