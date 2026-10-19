@@ -1,6 +1,5 @@
 import haxe.ds.StringMap;
 import TypedExpr.TypedExprTag;
-import TyCallAlignment.TyCallArgumentSlot;
 import TypedAbstractUnaryInlinePlace.TypedInlineUnaryPlace;
 
 /** Receiver writers retain caller storage; other required calls may save a receiver value. */

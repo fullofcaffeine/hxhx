@@ -40,7 +40,7 @@ private typedef InferredCapturedCall = {
 	final terms:Array<Null<TyInferenceTerm>>;
 	final types:Array<TyType>;
 	final index:TyperIndex;
-	final ?selectedSlots:Array<TyCallAlignment.TyCallArgumentSlot>;
+	final ?selectedSlots:Array<TyCallArgumentSlot>;
 }
 
 /**
@@ -270,7 +270,7 @@ class TyFunctionInference {
 	 */
 	@:allow(TyCallbackArgumentContext)
 	function recordCallbackAlignment(callee:HxExpr, signature:TyCallableSignature, arguments:Array<HxExpr>, types:Array<TyType>,
-			slots:Array<TyCallAlignment.TyCallArgumentSlot>, environment:TyFunctionEnv, index:TyperIndex):Void {
+			slots:Array<TyCallArgumentSlot>, environment:TyFunctionEnv, index:TyperIndex):Void {
 		if (solver.isSealed())
 			throw "callback alignment is absent from sealed inference";
 		// An untyped or hint-free cast callable shares its result variable with later uses.

@@ -1,4 +1,3 @@
-import TyCallAlignment.TyCallArgumentSlot;
 import TyCallAlignment.TyCallOperandKind;
 
 /**

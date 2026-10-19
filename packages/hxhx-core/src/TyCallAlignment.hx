@@ -4,14 +4,6 @@ enum TyCallOperandKind {
 	Spread;
 }
 
-/** Candidate parameter assignments; no target placeholders, arrays, or conversions are emitted. */
-enum TyCallArgumentSlot {
-	Omitted;
-	Supplied(sourceIndex:Int);
-	RestElements(sourceIndices:Array<Int>);
-	RestSpread(sourceIndex:Int);
-}
-
 /** Failures retain source and parameter indices for callable-specific diagnostics. */
 enum TyCallAlignmentFailure {
 	MissingRequired(parameterIndex:Int);

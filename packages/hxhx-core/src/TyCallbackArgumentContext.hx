@@ -105,7 +105,7 @@ function publishSelected(signature:TyCallableSignature, arguments:Array<HxExpr>,
 
 /** Final callback publication checks retained slots after inference, without selecting a different optional argument. */
 function publishSlots(signature:TyCallableSignature, arguments:Array<HxExpr>, types:Array<TyType>, index:TyperIndex,
-		slots:Array<TyCallAlignment.TyCallArgumentSlot>):TyCallArgumentBinding {
+		slots:Array<TyCallArgumentSlot>):TyCallArgumentBinding {
 	if (arguments.length != types.length)
 		throw "selected call requires one final type per source operand";
 	final parameters = signature.getParameters();
@@ -149,8 +149,7 @@ function publishSlots(signature:TyCallableSignature, arguments:Array<HxExpr>, ty
 }
 
 /** Project planned Dynamic value conversions at the retained plain-operand slots; spread containers need their own proof. */
-function dynamicInputTypes(signature:TyCallableSignature, slots:Array<TyCallAlignment.TyCallArgumentSlot>, types:Array<TyType>,
-		ownsInput:(Int) -> Bool):Array<TyType> {
+function dynamicInputTypes(signature:TyCallableSignature, slots:Array<TyCallArgumentSlot>, types:Array<TyType>, ownsInput:(Int) -> Bool):Array<TyType> {
 	final parameters = signature.getParameters();
 	if (parameters.length != slots.length)
 		throw "callback conversion contexts differ from selected parameters";
