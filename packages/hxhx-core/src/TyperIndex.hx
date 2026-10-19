@@ -865,6 +865,11 @@ class TyperIndex {
 		final raw = StringTools.trim(typePath);
 		if (raw.length == 0)
 			return null;
+		final rootPath = TyTypeDeclarationCatalog.rootQualifiedPath(raw);
+		if (rootPath != null) {
+			final selected = getByFullName(rootPath);
+			return typeVisibleFromModule(selected, currentModulePath) ? selected : null;
+		}
 		if (raw.indexOf(".") >= 0) {
 			final direct = getByFullName(raw);
 			if (typeVisibleFromModule(direct, currentModulePath))

@@ -292,6 +292,9 @@ class ModuleLoader extends LazyTypeLoader {
 		final raw = typePath == null ? "" : StringTools.trim(typePath);
 		if (raw.length == 0)
 			return out;
+		final rootPath = TyTypeDeclarationCatalog.rootQualifiedPath(raw);
+		if (rootPath != null)
+			return [rootPath];
 
 		// Fully-qualified candidate first.
 		if (raw.indexOf(".") >= 0)

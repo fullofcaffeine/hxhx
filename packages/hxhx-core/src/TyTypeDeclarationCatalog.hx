@@ -14,6 +14,14 @@ class TyTypeDeclarationCatalog {
 
 	public function new() {}
 
+	/**
+		Haxe's `std.` qualifier selects an exact path from the root package.
+		Remove one qualifier only. Callers must then bypass imports, enclosing
+		packages, and the implicit StdTypes scope, while retaining visibility checks.
+	 */
+	public static function rootQualifiedPath(path:String):Null<String>
+		return StringTools.startsWith(path, "std.") ? path.substr(4) : null;
+
 	public function get(canonicalName:String):Null<TyTypeDeclaration>
 		return byName.get(canonicalName);
 
@@ -54,6 +62,12 @@ class TyTypeDeclarationCatalog {
 		final raw = StringTools.trim(path);
 		if (raw.length == 0)
 			return null;
+		final rootPath = rootQualifiedPath(raw);
+		if (rootPath != null) {
+			load(rootPath);
+			final selected = get(rootPath);
+			return visible(selected, context.modulePath) ? selected : null;
+		}
 		if (raw.indexOf(".") >= 0) {
 			load(raw);
 			final exact = get(raw);
