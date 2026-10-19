@@ -10,7 +10,7 @@ typedef OcamlLetBinding = {
 	final name:String;
 	final expr:OcamlExpr;
 
-	/** Present only when function lowering supplied a complete represented signature. */
+	/** Present when declaration lowering supplied a complete function or checked static-cell type. */
 	final ?signature:OcamlTypeExpr;
 
 	/** Absence preserves ordinary exported binding behavior. */

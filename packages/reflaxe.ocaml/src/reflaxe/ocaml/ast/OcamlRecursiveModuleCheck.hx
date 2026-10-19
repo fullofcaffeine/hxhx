@@ -29,6 +29,9 @@ enum OcamlRecursiveModuleResult {
 	their existing bindings and types, but make the module unsafe as an OCaml
 	recursion anchor. Every dependency cycle must still pass through a module
 	containing only functions; the assembly owner checks that group-level rule.
+	A typed reference initialized to the checked runtime null sentinel is also
+	allowed, but never makes its module a safe recursion anchor. Its allocation
+	cannot call another recursive member or observe an uninitialized export.
 	A call returning a function is still an eager initializer and fails.
 	Compiler-internal bindings may contain only literal unit, so hiding an export
 	cannot conceal a call, allocation, or other unrepresented initialization effect.
@@ -66,6 +69,12 @@ function checkRecursiveModule(items:Array<OcamlModuleItem>):OcamlRecursiveModule
 						functionsOnly = false;
 						continue;
 					}
+					final cellType = checkedNullCellType(value, binding.signature);
+					if (cellType != null) {
+						signature.push(SValue(binding.name, cellType));
+						functionsOnly = false;
+						continue;
+					}
 					final arity = switch (value) {
 						case EFun(parameters, _) if (parameters.length > 0): parameters.length;
 						case _:
@@ -83,6 +92,27 @@ function checkRecursiveModule(items:Array<OcamlModuleItem>):OcamlRecursiveModule
 				}
 		}
 	return RecursiveModuleReady(signature, functionsOnly);
+}
+
+/** Admit only a typed cell containing the authorized null value, with no initializer computation. */
+private function checkedNullCellType(expression:OcamlExpr, signature:Null<OcamlTypeExpr>):Null<OcamlTypeExpr> {
+	return switch (signature) {
+		case cell = TApp("ref", [carrier]):
+			switch (expression) {
+				case EApp(EIdent("ref"), [EAnnot(initializer, annotated)]) if (Type.enumEq(carrier, annotated) && isCheckedNull(initializer)): cell;
+				case _: null;
+			}
+		case _: null;
+	};
+}
+
+/** A plain printed symbol or an arbitrary call is not evidence of a null-only initializer. */
+private function isCheckedNull(expression:OcamlExpr):Bool {
+	return switch (expression) {
+		case EPos(_, inner), EApp(EIdent("Obj.magic"), [inner]): isCheckedNull(inner);
+		case ERuntimeIdent(reference): reference.domain == reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain.ExpressionIdentifier && reference.exactSymbol == "HxRuntime.hx_null";
+		case _: false;
+	};
 }
 
 /** Only literal storage is inferred; annotations must preserve that exact type. */

@@ -49,6 +49,17 @@ class OcamlUnrepresentedFieldDefaultPlan {
 	public static inline final EXACT_SYMBOL = "HxRuntime.hx_null";
 	public static inline final RUNTIME_ROLE = "unrepresented-field-null-default";
 
+	/**
+		Reports whether an unrepresented field defaults to the runtime null sentinel.
+
+		Static declarations use this decision to share the checked default path for
+		explicit null. Primitive zero and false defaults must keep their own path.
+		The caller must first exclude fields with a registered representation.
+	**/
+	public static function usesRuntimeNullDefault(type:Type):Bool {
+		return usesRuntimeNull(classify(type));
+	}
+
 	/** Creates one immutable default decision from the current typed field. */
 	public static function seal(type:Type, ownerId:String, ownerRevision:String, source:OcamlLoweredSourceSpan):OcamlUnrepresentedFieldDefaultDecision {
 		requireOwner(ownerId, ownerRevision, source);

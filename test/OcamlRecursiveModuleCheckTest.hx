@@ -5,10 +5,14 @@ import reflaxe.ocaml.ast.OcamlModuleItem;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlRawInjection;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeRequirementLedger;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
+import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
 
 /** An exported function type must never hide eager recursive-module initialization. */
 class OcamlRecursiveModuleCheckTest {
 	public static function run():Void {
+		checkNullCells();
 		final callable = TArrow(TIdent("unit"), TIdent("int"));
 		final delayed = EFun([PConst(CUnit)], EApp(EIdent("Other.run"), [EConst(CUnit)]));
 		final accepted = checkRecursiveModule([
@@ -55,6 +59,60 @@ class OcamlRecursiveModuleCheckTest {
 			case PlanInvalid(message): throw message;
 		};
 		reject({name: "opaque", expr: EFun([PConst(CUnit)], ERawInjection(injection)), signature: callable}, OpaqueModule);
+	}
+
+	/** A checked null reference is still an unsafe module member, never a recursion anchor. */
+	static function checkNullCells():Void {
+		final binding = nullCell("cache", TIdent("Obj.t"));
+		switch (checkRecursiveModule([ILet([binding], false)])) {
+			case RecursiveModuleReady([SValue("cache", TApp("ref", [TIdent("Obj.t")]))], false):
+			case _:
+				throw "checked null cell lost its exact type or became a safe recursion anchor";
+		}
+		reject({name: "missing_cell_type", expr: binding.expr}, EagerInitializer("missing_cell_type"));
+		reject({name: "wrong_cell_type", expr: binding.expr, signature: TApp("ref", [TIdent("string")])}, EagerInitializer("wrong_cell_type"));
+		reject({
+			name: "hidden_cell",
+			expr: binding.expr,
+			signature: binding.signature,
+			visibility: CompilerInternal
+		}, UnsupportedInternalBinding("hidden_cell"));
+		for (initializer in [
+			EIdent("HxRuntime.hx_null"),
+			EField(EIdent("HxRuntime"), "hx_null"),
+			OcamlASTTraversalTest.runtimeIdentifierExpression(),
+			EApp(EIdent("Factory.make"), [EConst(CUnit)]),
+			EConst(CInt(0))
+		]) {
+			reject({name: "unproved_cell", expr: EApp(EIdent("ref"), [EAnnot(initializer, TIdent("Obj.t"))]), signature: binding.signature},
+				EagerInitializer("unproved_cell"));
+		}
+	}
+
+	/** Uses the real runtime authority so a printed null name cannot stand in for checked storage. */
+	public static function nullCell(name:String, carrier:OcamlTypeExpr):OcamlLetBinding {
+		final requirement = OcamlRuntimeRequirementLedger.requirementForCompilerInfrastructure(OcamlRuntimeRequirementLedger.CORE_RUNTIME);
+		final authority = new OcamlRuntimeUseAuthority("null-cell-test", "portable", [requirement], [
+			{
+				id: "null-cell-use",
+				planRevision: "null-cell-test",
+				ownerId: "null-cell",
+				requirementId: requirement.id,
+				domain: ExpressionIdentifier,
+				exactSymbol: "HxRuntime.hx_null",
+				role: "null-cell-default",
+				order: 0,
+				source: {
+					file: "NullCell.hx",
+					min: 0,
+					max: 1
+				},
+				profileEligibility: ["portable"],
+				cardinality: 1
+			}
+		]);
+		final value = ERuntimeIdent(authority.expressionIdentifier("null-cell-use", "null-cell-test", "HxRuntime.hx_null"));
+		return {name: name, expr: EApp(EIdent("ref"), [EAnnot(EApp(EIdent("Obj.magic"), [value]), carrier)]), signature: TApp("ref", [carrier])};
 	}
 
 	static function reject(binding:OcamlLetBinding, expected:OcamlRecursiveModuleProblem):Void {

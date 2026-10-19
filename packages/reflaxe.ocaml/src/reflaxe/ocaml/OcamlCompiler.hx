@@ -3074,6 +3074,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 				&& (init == null || isLiteralNullInitializer(init));
 			final compiledInitFromFieldType = if (consumesRepresentedNullDefault) {
 				staticFieldDefault(classType, v.field, storage, representedStatic).implicitDefault;
+			} else if (representedStatic == null
+				&& isLiteralNullInitializer(init)
+				&& OcamlUnrepresentedFieldDefaultPlan.usesRuntimeNullDefault(v.field.type)) {
+				// Explicit null in reference storage uses the same field-owned runtime
+				// reference as an implicit default. Preserve that authority through
+				// recursive-module checks instead of emitting an unchecked field name.
+				unrepresentedStaticFieldDefault(classType, v.field, storage);
 			} else if (init != null) {
 				buildStandaloneAssignment(builder, fieldInitializerOwner(classType, v.field, "static"), v.field.type, init);
 			} else {
@@ -3108,7 +3115,18 @@ class OcamlCompiler extends DirectToStringCompiler {
 			final bindingName = (storage != null
 				&& storage.declarationSite != OcamlStaticStorageDeclarationSite.OwnerBinding) ? OcamlNameTools.normalizeValueIdentifier("__init_" +
 					name) : name;
-			lets.push({name: bindingName, expr: compiled});
+			// A null-only reference cell can participate in a recursive module
+			// without running user code. Retain its existing declared carrier;
+			// assembly still checks the exact initializer and safe recursion anchors.
+			final nullCellDeclaration = storage != null
+				&& storage.declarationSite == OcamlStaticStorageDeclarationSite.OwnerBinding
+				&& (init == null || isLiteralNullInitializer(init)) ? projectDeclarationSignature([], v.field.type, representationRegistry,
+					ocamlTypeExprFromHaxeType, ctx) : null;
+			if (nullCellDeclaration != null) {
+				lets.push({name: bindingName, expr: compiled, signature: OcamlTypeExpr.TApp("ref", [nullCellDeclaration.result])});
+			} else {
+				lets.push({name: bindingName, expr: compiled});
+			}
 		}
 		for (entry in staticStoragePlan.entriesForModule(classType.module)) {
 			if (entry.declarationSite != OcamlStaticStorageDeclarationSite.TypePrelude || entry.declarationTypeName != classType.name)

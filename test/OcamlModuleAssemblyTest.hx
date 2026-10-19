@@ -48,6 +48,12 @@ class OcamlModuleAssemblyTest {
 		// A generated program module with a runtime-like name still owns its type.
 		assembleModules([module("HxUser", "HxUser", TIdent("HxUser.t"))], printer);
 		final literalLeft = withLiteral(module("Left", "Right", TIdent("int")));
+		final cellLeft = withNullCell(module("Left", "Right", TIdent("int")));
+		final cellOutput = assembleModules([cellLeft, right], printer).get("Left");
+		if (cellOutput == null || cellOutput.indexOf("val cache : Obj.t ref") < 0)
+			throw "null cell signature was not retained in the recursive module";
+		reject([cellLeft, withNullCell(module("Right", "Left", TIdent("int")))], "unsafe-literal-cycle");
+		reject([withNullCell(module("Self", "Self", TIdent("int")))], "unsafe-literal-cycle");
 		final literalOutput = assembleModules([literalLeft, right], printer).get("Left");
 		if (literalOutput == null || literalOutput.indexOf("val tag : string") < 0 || literalOutput.indexOf("let tag = \"ready\"") < 0)
 			throw "literal export or initialization changed";
@@ -95,6 +101,11 @@ class OcamlModuleAssemblyTest {
 
 	static function withLiteral(value:OcamlModuleAssemblyInput):OcamlModuleAssemblyInput {
 		value.parts.push(ModuleDeclarations("", [ILet([{name: "tag", expr: EConst(CString("ready"))}], false)]));
+		return value;
+	}
+
+	static function withNullCell(value:OcamlModuleAssemblyInput):OcamlModuleAssemblyInput {
+		value.parts.push(ModuleDeclarations("", [ILet([OcamlRecursiveModuleCheckTest.nullCell("cache", TIdent("Obj.t"))], false)]));
 		return value;
 	}
 
