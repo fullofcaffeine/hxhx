@@ -520,6 +520,21 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected literal interpolation to parse as an integer payload");
 		}
 
+		// The authored parser must handle the calls formerly supplied by a generated
+		// bootstrap patch. A literal fallback would compile but lose the call's effects.
+		final nestedCallInterpolation = HxParser.parseExprText("'${owner.render(\"a,b\", nested(value))}'");
+		switch (nestedCallInterpolation) {
+			case EBinop("+", EString(""), ECall(EField(EIdent("owner"), "render"), [EString("a,b"), ECall(EIdent("nested"), [EIdent("value")])])):
+			case _:
+				fail("interpolation must preserve quoted commas, nested calls, and argument order");
+		}
+		final thisCallInterpolation = HxParser.parseExprText("'${this.render(value.field)}'");
+		switch (thisCallInterpolation) {
+			case EBinop("+", EString(""), ECall(EField(EThis, "render"), [EField(EIdent("value"), "field")])):
+			case _:
+				fail("interpolation must preserve this receivers and field arguments");
+		}
+
 		final switchCaseSequenceStmts = HxParser.parseFunctionBodyText("var result = switch [ok, expected] { case [true, false]: true; case [false, false]: var detail = proc.stderr.readAll().toString(); Sys.print(detail); false; case _: false; };");
 		assertTrue(switchCaseSequenceStmts.length == 1, "expected switch expression case bodies to stay inside one var statement");
 		switch (switchCaseSequenceStmts[0]) {

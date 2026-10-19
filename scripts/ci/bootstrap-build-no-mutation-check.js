@@ -63,6 +63,11 @@ const retiredBootstrapPatchTokens = [
   'patch_bootstrap_stage1_std_root_termination',
   'patch-stage1-std-root-termination',
   'bootstrap Stage1 std-root repair',
+  // HxParser owns interpolation and generic declarations before OCaml generation.
+  'patch_bootstrap_hxparser_interpolated_exprs',
+  'patch-hxparser-interpolated-exprs',
+  'patch_bootstrap_hxparser_generic_function_decl',
+  'patch-hxparser-generic-function-decl',
 ]
 for (const token of retiredBootstrapPatchTokens) {
   if (finalize.includes(token) || bootstrapPatchHelper.includes(token)) {

@@ -283,37 +283,6 @@ patch_bootstrap_emitter_type_create_instance() {
   mv "$temp_path" "$emitter_path"
 }
 
-patch_bootstrap_hxparser_interpolated_exprs() {
-  local build_dir="$1"
-  local parser_path="$build_dir/HxParser.ml"
-  local marker='(* hxhx(stage3) bootstrap shim: HxParser interpolation expr repair *)'
-
-  if [ ! -f "$parser_path" ]; then
-    return 0
-  fi
-
-  if file_contains_literal "$marker" "$parser_path"; then
-    return 0
-  fi
-
-  run_bootstrap_patch_helper patch-hxparser-interpolated-exprs "$parser_path"
-}
-
-patch_bootstrap_hxparser_generic_function_decl() {
-  local build_dir="$1"
-  local parser_path="$build_dir/HxParser.ml"
-
-  if [ ! -f "$parser_path" ]; then
-    return 0
-  fi
-
-  if file_contains_literal '__enum_param_90001' "$parser_path"; then
-    return 0
-  fi
-
-  run_bootstrap_patch_helper patch-hxparser-generic-function-decl "$parser_path"
-}
-
 patch_bootstrap_emitter_allowed_ident_fallback() {
   local build_dir="$1"
   local emitter_path="$build_dir/EmitterStage.ml"
@@ -802,8 +771,6 @@ finalize_bootstrap_dir() {
   patch_bootstrap_emitter_haxe_io_eof_presence "$build_dir"
   patch_bootstrap_emitter_array_receiver_chain_lowering "$build_dir"
   patch_bootstrap_emitter_type_create_instance "$build_dir"
-  patch_bootstrap_hxparser_interpolated_exprs "$build_dir"
-  patch_bootstrap_hxparser_generic_function_decl "$build_dir"
   patch_bootstrap_emitter_allowed_ident_fallback "$build_dir"
   patch_bootstrap_emitter_typed_ty_map_copying "$build_dir"
   patch_bootstrap_emitter_typed_map_helper_obj_repr "$build_dir"
