@@ -597,7 +597,10 @@ jobs:
             label: C++ constructor and instance regressions
             timeout_minutes: 40
           - shard: compiler-focused-4
-            label: C++ inheritance and nullable regressions
+            label: C++ arithmetic and control regressions
+            timeout_minutes: 40
+          - shard: compiler-focused-cpp-closure-storage
+            label: C++ closures and inherited storage
             timeout_minutes: 40
           - shard: compiler-focused-5
             label: C++ runtime type and Map regressions

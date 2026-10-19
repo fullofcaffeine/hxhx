@@ -52,7 +52,13 @@
     },
     {
       "id": "compiler-focused-4",
-      "label": "C++ inheritance and nullable regressions",
+      "label": "C++ arithmetic and control regressions",
+      "minimumTier": "Q2",
+      "baselineSeconds": null
+    },
+    {
+      "id": "compiler-focused-cpp-closure-storage",
+      "label": "C++ closures and inherited storage",
       "minimumTier": "Q2",
       "baselineSeconds": null
     },
@@ -204,7 +210,7 @@
     "test:m14:cpp-executable-locals": "compiler-focused-5",
     "test:m14:runtime-type-catches": "compiler-focused-1",
     "test:m14:cpp-managed-heap": "compiler-focused-3",
-    "test:m14:cpp-managed-closure-abi": "compiler-focused-4",
+    "test:m14:cpp-managed-closure-abi": "compiler-focused-cpp-closure-storage",
     "test:m14:cpp-managed-runtime-packaging": "compiler-focused-3",
     "test:m14:typed-local-identity": "compiler-focused-1",
     "test:m14:js-typed-local-projection": "compiler-focused-1",
@@ -279,7 +285,7 @@
     "test:m14:python-entry-members": "compiler-focused-2",
     "test:m14:cpp-static-callable": "compiler-focused-3",
     "test:m14:cpp-constructor-applications": "compiler-focused-3",
-    "test:m14:cpp-inherited-storage": "compiler-focused-4",
+    "test:m14:cpp-inherited-storage": "compiler-focused-cpp-closure-storage",
     "test:m14:cpp-guarded-control": "compiler-focused-4",
     "test:m14:cpp-array-push-value": "compiler-focused-4",
     "test:m14:cpp-string-length": "compiler-focused-4",
