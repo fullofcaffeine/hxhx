@@ -12,6 +12,7 @@ import backend.TargetDescriptor;
 import backend.source.PhpFunctionLoweringPlan.PhpFunctionPlanEnumConstructorFact;
 import backend.source.PhpExecutableLowering.PhpClosureOperation;
 import backend.source.PhpLexicalRenderScope.PhpLexicalScopeKind;
+import backend.source.PhpRenderCallback.withPhpPreferredEnum;
 import backend.source.PhpProgramBodyRenderer.PhpProgramEnumAbstractValueFact;
 import backend.source.PhpProgramBodyRenderer.PhpProgramEnumConstructorFact;
 import backend.source.PhpProgramBodyRenderer.PhpProgramLegacyRenderFacts;
@@ -9457,10 +9458,6 @@ class SourceTargetCommon {
 
 	static function phpEnumCtorRef(name:String):Null<PhpEnumCtorRef> {
 		return null;
-	}
-
-	static function withPhpPreferredEnum<T>(enumName:Null<String>, f:() -> T):T {
-		return f();
 	}
 
 	static function phpEnumCtorValueExpr(name:String):Null<String> {
