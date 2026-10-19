@@ -530,6 +530,9 @@ class StringTools {
 		#else
 		return lua.lib.luautf8.Utf8.byte(s, index + 1);
 		#end
+		#elseif ocaml_output
+		final code = s.charCodeAt(index);
+		return code == null ? -1 : code;
 		#else
 		return untyped s.cca(index);
 		#end
@@ -569,6 +572,9 @@ class StringTools {
 		#else
 		return lua.lib.luautf8.Utf8.byte(s, index + 1);
 		#end
+		#elseif ocaml_output
+		final code = s.charCodeAt(index);
+		return code == null ? -1 : code;
 		#else
 		return untyped s.cca(index);
 		#end
@@ -600,7 +606,10 @@ class StringTools {
 		Tells if `c` represents the end-of-file (EOF) character.
 	**/
 	@:noUsing public static inline function isEof(c:Int):Bool {
-		#if (flash || cpp || hl)
+		// Eval owns its character-code builtins even when ocaml_output is defined.
+		#if (ocaml_output && !eval)
+		return c == -1;
+		#elseif (flash || cpp || hl)
 		return c == 0;
 		#elseif js
 		return c != c; // fast NaN
