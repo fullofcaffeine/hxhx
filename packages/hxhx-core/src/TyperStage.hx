@@ -3312,6 +3312,17 @@ class TyperStage {
 						// Assignment as expression.
 						final destination = inferExprType(a, scope, ctx, pos);
 						final rhs = inferExprType(b, scope, ctx, pos, destination);
+						if (a.match(EArrayAccess(_, _))
+							&& !scope.isUntypedContext()
+							&& !TyFieldAssignment.explicitlyUntyped(b)
+							&& !destination.hasUnknownComponent()
+							&& !rhs.hasUnknownComponent()
+							&& !TyValueCompatibility.accepts(ctx.getIndex(), destination, rhs, b))
+							throw new TyperError(ctx.getFilePath(), pos,
+								"assigned type "
+								+ rhs.getDisplay()
+								+ " is not compatible with indexed element "
+								+ destination.getDisplay());
 						final assignedField = resolveFieldDeclaration(a, scope, ctx, pos);
 						final fieldName = assignedField == null ? dynamicMemberWriteName(a, scope, ctx, pos) : assignedField.getCanonicalKey();
 						TyFieldAssignment.check({
@@ -3588,7 +3599,7 @@ class TyperStage {
 				resolveTypeInContext(TyType.unresolved("Array", [elem]), ctx);
 			case EArrayAccess(array, index):
 				final arrayType = inferExprType(array, scope, ctx, pos);
-				inferExprType(index, scope, ctx, pos);
+				final indexType = inferExprType(index, scope, ctx, pos);
 				var elementType = arrayElementType(arrayType.unwrapNull());
 				if (elementType == null) {
 					// Extern subclasses retain the element type of their applied Array
@@ -3596,8 +3607,18 @@ class TyperStage {
 					final ancestor = TyNominalAncestor.view(ctx.getIndex(), arrayType.unwrapNull(), new TyNominalTypeId("Array"));
 					elementType = ancestor == null ? null : arrayElementType(ancestor);
 				}
-				// Other indexed containers remain explicit Dynamic until their access
-				// contracts are represented in the shared semantic model.
+				if (elementType == null)
+					elementType = TyDeclaredArrayAccess.element(ctx.getIndex(), arrayType);
+				if (!scope.isUntypedContext()) {
+					if (elementType != null
+						&& !indexType.hasUnknownComponent()
+						&& !TyFieldAssignment.explicitlyUntyped(index)
+						&& !TyValueCompatibility.accepts(ctx.getIndex(), TyType.fromHintText("Int"), indexType, index))
+						throw new TyperError(ctx.getFilePath(), pos, indexType.getDisplay() + " should be Int for an array index");
+					if (elementType == null && TyDeclaredArrayAccess.isClass(ctx.getIndex(), arrayType))
+						throw new TyperError(ctx.getFilePath(), pos, "Array access is not allowed on " + arrayType.getDisplay());
+				}
+				// Abstract operators and explicit untyped access keep their existing boundary.
 				elementType == null ? TyType.fromHintText("Dynamic") : elementType;
 			case ERange(start, end):
 				for (bound in [start, end]) {

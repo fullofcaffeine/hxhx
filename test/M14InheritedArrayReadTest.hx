@@ -92,9 +92,9 @@ class M14InheritedArrayReadTest {
 			var rejected = false;
 			try {
 				type(source, path);
-			} catch (error:haxe.Exception) {
-				rejected = error.message.indexOf("No compatible method signature") >= 0
-					|| error.message.indexOf("selected call conversion does not satisfy") >= 0;
+			} catch (error:TyperError) {
+				final expected = entry.name == "unrelated" ? "Array access is not allowed on " : "No compatible method signature";
+				rejected = error.message.indexOf(expected) >= 0;
 			}
 			if (!rejected)
 				throw "invalid indexed input accepted: " + entry.name;
