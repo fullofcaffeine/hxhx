@@ -69,7 +69,7 @@
     {
       "module": "HxEnum",
       "scope": "application",
-      "files": [{ "path": "HxEnum.ml", "sha256": "6aeacc7c8cf155a9722b574881280ddff54dd640b7ead7447873fe1bb2756776" }],
+      "files": [{ "path": "HxEnum.ml", "sha256": "09105ff1f110b16ed5cc879b9ea4c7c5d9ba97eb9b6a89871f0dc007c031e019" }],
       "dependencies": ["HxRuntime"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],
@@ -249,7 +249,7 @@
     {
       "module": "HxType",
       "scope": "application",
-      "files": [{ "path": "HxType.ml", "sha256": "5c1ae57983921959d9ee0fd57b5e4ac15c8b498da14bdceace5d7b3cac9450fc" }],
+      "files": [{ "path": "HxType.ml", "sha256": "58eb24a42d06b63cfd99bc7dc38ecd146d21ba017418ed82366a1a10931202cb" }],
       "dependencies": ["HxAnon", "HxArray", "HxEnum", "HxRuntime"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],

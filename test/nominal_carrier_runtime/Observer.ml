@@ -2,6 +2,7 @@
    Haxe selects names and ancestry in production; this observer supplies fixed
    descriptors solely to exercise the native representation boundary. *)
 type native_record = { __hx_type : Obj.t; value : int }
+type equality_variant = Atom | Payload of int
 
 let require condition message = if not condition then failwith message
 let no_class value = HxRuntime.is_null (HxType.getClass value)
@@ -34,6 +35,16 @@ let () =
   require (HxArray.get constants 0 == HxArray.get repeated 0) "repeat query reboxed a singleton";
   require (HxArray.get constants 0 != HxArray.get (HxType.allEnums (HxType.enum_ "observer.Other")) 0)
     "different enum types shared a singleton box";
+  let left = HxEnum.box_if_needed "observer.Equality" (Obj.repr (Payload 7)) in
+  let right = HxEnum.box_if_needed "observer.Equality" (Obj.repr (Payload 7)) in
+  require (left != right && HxType.enumEq left right) "equal payloads required the same box";
+  require (not (HxType.enumEq left (HxEnum.box_if_needed "observer.Foreign" (Obj.repr (Payload 7)))))
+    "equal native tags erased enum identity";
+  require (not (HxType.enumEq left (Obj.repr (Payload 7)))) "unboxed data forged a named enum";
+  require (HxEnum.enum_eq (Obj.repr (Payload 7)) (Obj.repr (Payload 7)))
+    "existing raw variant equality changed";
+  require (not (HxEnum.enum_eq (Obj.repr Atom) (Obj.repr (Payload 7))))
+    "raw variant equality confused constants and payloads";
   let child = HxType.class_ "observer.Child" in
   let parent = HxType.class_ "observer.Base" in
   HxType.register_class_tags "observer.Child"

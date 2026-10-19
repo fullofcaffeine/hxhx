@@ -4208,7 +4208,11 @@ class EmitterStage {
 								(sig == null
 									&& StringTools.startsWith(c, "Php_Global.")) ? "(Obj.magic (" + renderedCall + "))" : renderedCall;
 						} else {
-							final renderedCall = c + " " + renderedArgs.join(" ");
+							final renderedCall = backend.ocaml.Stage3OcamlCallOrder.render({
+								callee: c,
+								arguments: renderedArgs,
+								names: currentFunctionLocalOcamlNames
+							});
 							(sig == null
 								&& StringTools.startsWith(c, "Php_Global.")) ? "(Obj.magic (" + renderedCall + "))" : renderedCall;
 						}

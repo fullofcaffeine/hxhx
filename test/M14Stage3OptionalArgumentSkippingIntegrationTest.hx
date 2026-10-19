@@ -67,16 +67,22 @@ class M14Stage3OptionalArgumentSkippingIntegrationTest {
 			final expanded = MacroStage.expandProgram([typed], []);
 			final executable = EmitterStage.emitToDir(expanded, outDir, true);
 			final generated = File.getContent(Path.join([outDir, "Main.ml"]));
-			final callStart = generated.indexOf("install (\"HaxeFoundation\") (\"hxjava\")");
+			// The selected function and aligned arguments now use ordered bindings.
+			// Keep checking the same skipped slots before observing the executable.
+			final callStart = generated.indexOf("let __hx_call_function = (install) in");
 			assertTrue(callStart >= 0, "Stage3 did not emit the focused install call");
 			final callEnd = generated.indexOf("\n", callStart);
 			final call = generated.substring(callStart, callEnd < 0 ? generated.length : callEnd);
+			final accountArg = call.indexOf('"HaxeFoundation"');
+			final repositoryArg = call.indexOf('"hxjava"');
 			final firstNull = call.indexOf("HxRuntime.hx_null");
 			final secondNull = firstNull < 0 ? -1 : call.indexOf("HxRuntime.hx_null", firstNull + 1);
 			final boolArg = call.indexOf("(true)");
 			final trailingNull = boolArg < 0 ? -1 : call.indexOf("HxRuntime.hx_null", boolArg + 1);
-			assertTrue(firstNull >= 0 && secondNull > firstNull && boolArg > secondNull && trailingNull > boolArg,
-				"Stage3 did not place the Bool argument after the two skipped String positions: " + call);
+			assertTrue(accountArg >= 0 && repositoryArg > accountArg && firstNull > repositoryArg && secondNull > firstNull && boolArg > secondNull
+				&& trailingNull > boolArg,
+				"Stage3 did not place the Bool argument after the two skipped String positions: "
+				+ call);
 
 			final executed = commandOutput(executable);
 			assertTrue(executed.code == 0, "Stage3 optional-skipping executable failed: " + executed.stderr);

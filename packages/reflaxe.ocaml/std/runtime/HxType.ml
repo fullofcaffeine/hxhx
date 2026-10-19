@@ -12,7 +12,7 @@
      populated lazily by generated code (`HxTypeRegistry.init()`).
 
    Non-goals (yet)
-   - Full reflection (fields, RTTI, `typeof`, `enumEq`, etc.). *)
+   - Full reflection (fields, RTTI, `typeof`, etc.). *)
 
 (* A "null String" is represented as `Obj.magic HxRuntime.hx_null`. *)
 let hx_null_string : string = Obj.magic HxRuntime.hx_null
@@ -414,6 +414,9 @@ let getEnum (o : Obj.t) : Obj.t =
     match HxEnum.name_opt o with
     | Some name -> enum_ name
     | None -> HxRuntime.hx_null
+
+(* Native compiler enum values retain their declared type in HxEnum boxes. *)
+let enumEq (a : Obj.t) (b : Obj.t) : bool = HxEnum.boxed_enum_eq a b
 
 let enumIndex (o : Obj.t) : int =
   if HxRuntime.is_null o then
