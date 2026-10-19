@@ -11,7 +11,12 @@ class CheckDeclarationCarriers {
 		final registry = new OcamlRepresentationRegistry();
 		final context = new CompilationContext();
 		final failures:Array<String> = [];
-		for (source in ["Null<{value:Int}>", "Null<First.Item>", "Float"]) {
+		for (source in [
+			"Null<{value:Int}>",
+			"Null<First.Item>",
+			"Null<{key:Int, value:Int, label:String}>",
+			"Float"
+		]) {
 			final type = Context.typeExpr(Context.parse("(null : " + source + ")", Context.currentPos())).t;
 			final expected = source == "Float" ? "float" : "Obj.t";
 			final signature = projectDeclarationSignature([type], type, registry, _ -> TIdent(expected), context);

@@ -74,6 +74,9 @@ class CheckSignatures {
 				throw "a dispatch declaration lost its existing named record type";
 		});
 		Context.onAfterGenerate(() -> {
+			check("First", "entries", "Obj.t HxArray.t -> Obj.t HxArray.t");
+			check("First", "entry", "Obj.t -> bool -> Obj.t");
+			check("Second", "entries", "Obj.t HxArray.t -> Obj.t HxArray.t");
 			check("First", "maybe", "Obj.t -> bool -> Obj.t");
 			check("Second", "maybe", "Obj.t -> bool -> Obj.t");
 			check("RecordHolder", "create", "Obj.t -> t");

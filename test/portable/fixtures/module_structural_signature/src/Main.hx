@@ -1,6 +1,14 @@
 /** Checks copied values, width subtyping, optional fields, and mutation through an alias. */
 class Main {
 	static function main():Void {
+		final entry = {key: 2, value: 3, label: "retained"};
+		final entries = [entry];
+		if (First.entries(entries) != entries || entries[0] != entry || First.entry(entry, false) != null)
+			throw "extended key/value record lost identity or null";
+		entries[0].value = 5;
+		if (entry.key != 2 || entry.value != 5 || entry.label != "retained")
+			throw "extended key/value record lost storage or aliases";
+		Sys.println("extended-records-ok");
 		final source = {value: 7, label: "kept", extra: true};
 		final copied = First.copy(source);
 		Sys.println(copied.value);

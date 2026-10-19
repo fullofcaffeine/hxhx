@@ -4,8 +4,24 @@ typedef Item = {
 	var ?label:String;
 };
 
+/** Extra fields make this an ordinary stored record, not a standard iterator pair. */
+typedef Entry = {
+	var key:Int;
+	var value:Int;
+	var label:String;
+};
+
 /** The recursive group must export the same carrier used by these function bodies. */
 class First {
+	/** Arrays and nullable results preserve all fields and the original record identity. */
+	public static function entries(values:Array<Entry>):Array<Entry> {
+		return Second.entries(values);
+	}
+
+	public static function entry(value:Entry, present:Bool):Null<Entry> {
+		return present ? value : null;
+	}
+
 	/** Nullable records keep the same reference across both recursive modules. */
 	public static function maybe(item:Item, present:Bool):Null<Item> {
 		return Second.maybe(item, present);

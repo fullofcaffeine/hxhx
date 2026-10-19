@@ -92,10 +92,11 @@ class OcamlDynamicCarrierModel {
 		}
 	}
 
+	/** Standard iterator pairs have no extra storage; wider records keep their ordinary HxAnon carrier. */
 	static function isKeyValueAnonymous(type:Type):Bool {
 		return switch (followNoAbstracts(type)) {
 			case TAnonymous(anonymousRef): final fields = anonymousRef.get()
-					.fields; Lambda.exists(fields, field -> field.name == "key") && Lambda.exists(fields, field -> field.name == "value");
+					.fields; fields.length == 2 && Lambda.exists(fields, field -> field.name == "key") && Lambda.exists(fields, field -> field.name == "value");
 			case _:
 				false;
 		}

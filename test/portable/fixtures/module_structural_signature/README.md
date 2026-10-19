@@ -26,7 +26,14 @@ record type but must not gain direct-field optimization permission. The separate
 Nullable records preserve null, identity, and shared mutation through recursive
 functions and an optional constructor argument. Omitted and explicit null
 arguments both select the constructor's default record. Unsupported iterator
-and key/value record layouts remain rejected.
+and two-field key/value record layouts remain rejected.
+
+Records with additional fields retain ordinary stored-record behavior, including
+when they contain fields named `key` and `value`. The fixture sends these records
+through arrays and nullable results in the recursive group. Identity, mutation,
+and the extra field survive. The retained signatures use the existing boxed
+record storage and checked array type. Field names alone cannot discard the
+extra storage or turn these records into standard iterator pairs.
 
 Ordinary Float parameters and results retain the existing native `float` type.
 Finite fractional values pass through both recursive modules unchanged. This
