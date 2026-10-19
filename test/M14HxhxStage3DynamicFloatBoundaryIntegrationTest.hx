@@ -218,16 +218,26 @@ class M14HxhxStage3DynamicFloatBoundaryIntegrationTest {
 
 		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), outDir, true);
 		final generated = File.getContent(haxe.io.Path.join([outDir, "DynamicFloatBoundary.ml"]));
-		assertTrue(countOccurrences(generated, "takeFloat (HxDynamic.floatValue (observed (value)))") == 1,
-			"the direct Dynamic argument lost its single checked conversion: " + generated);
+		// Match the complete ordered call, including the nested producer, so each
+		// checked conversion remains attached to the argument that requires it.
+		assertTrue(countOccurrences(generated,
+			"let __hx_call_function = (takeFloat) in let __hx_call_argument_0 = ((HxDynamic.floatValue ((let __hx_call_function = (observed) in let __hx_call_argument_0 = ((value)) in __hx_call_function __hx_call_argument_0)))) in __hx_call_function __hx_call_argument_0") == 1,
+			"the direct Dynamic argument lost its single checked conversion: "
+			+ generated);
 		// Switch decisions emit the TFloat and TInt alternatives as separate,
 		// mutually exclusive branches, each retaining the same checked call.
-		assertTrue(countOccurrences(generated, "takeFloat (HxDynamic.floatValue (value))") == 2,
-			"the guarded Dynamic argument lost a checked conversion in one of its two alternatives: " + generated);
+		assertTrue(countOccurrences(generated,
+			"let __hx_call_function = (takeFloat) in let __hx_call_argument_0 = ((HxDynamic.floatValue (value))) in __hx_call_function __hx_call_argument_0") == 2,
+			"the guarded Dynamic argument lost a checked conversion in one of its two alternatives: "
+			+ generated);
 		assertTrue(countOccurrences(generated, "HxDynamic.floatValue") == 3,
 			"Dynamic Float emission added a conversion outside the direct call and two guarded alternatives: " + generated);
-		assertTrue(generated.indexOf("takeFloat (float_of_int 2)") >= 0, "a concrete Int argument lost its ordinary Float widening: " + generated);
-		assertTrue(generated.indexOf("takeDynamic (value)") >= 0, "a Dynamic parameter call gained an unrelated Float conversion: " + generated);
+		assertTrue(generated.indexOf("let __hx_call_function = (takeFloat) in let __hx_call_argument_0 = ((float_of_int 2)) in __hx_call_function __hx_call_argument_0") >= 0,
+			"a concrete Int argument lost its ordinary Float widening: "
+			+ generated);
+		assertTrue(generated.indexOf("let __hx_call_function = (takeDynamic) in let __hx_call_argument_0 = ((value)) in __hx_call_function __hx_call_argument_0") >= 0,
+			"a Dynamic parameter call gained an unrelated Float conversion: "
+			+ generated);
 		final nativeResult = run(executable, []);
 		assertTrue(nativeResult.exitCode == 0, "native Dynamic Float executable failed: " + nativeResult.stderr);
 		assertTrue(nativeResult.stdout == expected, "native Dynamic Float output differs from Haxe 4.3.7: " + nativeResult.stdout);
