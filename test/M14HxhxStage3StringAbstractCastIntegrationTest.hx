@@ -140,7 +140,9 @@ class M14HxhxStage3StringAbstractCastIntegrationTest {
 		final output = File.getContent(haxe.io.Path.join([outDir, "StringAbstractCast.ml"]));
 		assertTrue(output.indexOf("HxString.toLowerCase (((Obj.obj (Obj.repr (value)) : string))) ()") >= 0,
 			"OCaml emission did not recover the concrete String carrier at the explicit cast");
-		assertTrue(output.indexOf("accept ((Obj.obj (Obj.repr (value)) : string))") >= 0,
+		// The call binds its selected function before converting the argument.
+		// Check the complete binding and application so a detached cast cannot pass.
+		assertTrue(output.indexOf("let __hx_call_function = (accept) in let __hx_call_argument_0 = (((Obj.obj (Obj.repr (value)) : string))) in __hx_call_function __hx_call_argument_0") >= 0,
 			"OCaml emission did not recover the concrete String carrier at the call boundary");
 		assertTrue(backend.ocaml.OcamlExplicitStringCast.render("Int", "value") == null, "String cast lowering changed an unrelated explicit cast");
 		final result = new sys.io.Process(executable, []);
