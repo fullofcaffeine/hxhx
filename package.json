@@ -712,7 +712,7 @@
     "test:m14:neko-boot-registry": "haxe test/m14_neko_named_type_registry_test.hxml && haxe test/m14_neko_boot_registry_test.hxml",
     "test:m14:runtime-class-field": "haxe test/m14_runtime_class_field_test.hxml",
     "test:m14:abstract-capture-temporary": "haxe test/m14_abstract_capture_temporary_test.hxml",
-    "test:m14:abstract-receiver": "haxe test/m14_extern_instance_inline_test.hxml && haxe test/m14_extern_inline_loops_test.hxml && haxe test/m14_inline_enum_value_test.hxml && haxe test/m14_abstract_receiver_upstream_test.hxml && haxe test/m14_abstract_receiver_writeback_test.hxml",
+    "test:m14:abstract-receiver": "haxe test/m14_extern_instance_inline_test.hxml && haxe test/m14_extern_inline_loops_test.hxml && haxe test/m14_required_inline_callable_test.hxml && haxe test/m14_inline_enum_value_test.hxml && haxe test/m14_abstract_receiver_upstream_test.hxml && haxe test/m14_abstract_receiver_writeback_test.hxml",
     "test:m14:cpp-root-loops": "haxe test/m14_cpp_root_loop_test.hxml && haxe test/m14_cpp_root_loop_program_test.hxml",
     "test:m14:constructor-argument-alignment": "haxe test/m14_constructor_abstract_argument_test.hxml && haxe test/m14_constructor_optional_skip_test.hxml",
     "test:m14:cpp-constructor-applications": "haxe test/m14_cpp_constructor_application_test.hxml && haxe test/m14_cpp_constructor_application_native_test.hxml && npm run test:m14:cpp-generic-abstract-storage && npm run test:m14:constructor-argument-alignment && npm run test:m14:cpp-nullable-boolean && npm run test:m14:cpp-constructor-defaults && npm run test:m14:cpp-instance-dispatch && npm run test:m14:cpp-native-stack-capture",

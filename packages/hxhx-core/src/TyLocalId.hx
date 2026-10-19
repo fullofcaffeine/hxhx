@@ -64,6 +64,13 @@ class TyLocalId {
 			CompilerTemporary, true);
 	}
 
+	/** Copy a source declaration into one lowering pass while preserving its declaration role. */
+	public static function forLoweredDeclaration(functionIdentity:String, passIdentity:String, ordinal:Int, name:String,
+			kind:TyLocalDeclarationKind):TyLocalId {
+		final generated = forCompilerTemporary(functionIdentity, passIdentity, ordinal, name);
+		return new TyLocalId(generated.canonicalKey + ":copied:" + TyLocalDeclarationKindTools.canonicalName(kind), generated.ownerIdentity, kind, true);
+	}
+
 	public function getCanonicalKey():String
 		return canonicalKey;
 

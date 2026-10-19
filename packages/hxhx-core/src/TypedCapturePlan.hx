@@ -14,8 +14,9 @@ private typedef CaptureAnalysisInput = {
 
 /**
 	Finds lexical capture dependencies before or after shared control lowering.
-	The pre-control body can already contain abstract-operator temporaries with
-	exact compiler bindings. Those declarations do not introduce callable scopes.
+	The pre-control body can already contain abstract-operator and required-inline
+	temporaries with exact compiler bindings. Copied inline closures may capture
+	those existing bindings; control lowering must not add capture dependencies.
 	Authored analysis establishes function origins. Lowered analysis checks those
 	origins and records executable declarations, including introduced temporaries.
 	Each plan binds one exact typed revision and owns no target storage.
@@ -540,7 +541,11 @@ private class CaptureAnalysis {
 					throw "capture reference lacks its exact frozen declaration";
 				if (binding.functionIdentity == scope.identity)
 					continue;
-				if (origin != null && binding.binding.getKind() == CompilerTemporary)
+				// Required-inline expansion precedes this analysis and may already
+				// capture an argument or local temporary. Declaration checks above
+				// preserve its exact binding; the dependency check below preserves
+				// which closures may capture it. Only new temporaries lack that proof.
+				if (origin != null && binding.binding.getKind() == CompilerTemporary && !sourceBindings.exists(key))
 					throw "control lowering introduced a captured temporary without an authored dependency";
 				scope.direct.set(key, true);
 				var cursor:Null<CaptureFunctionState> = scope;

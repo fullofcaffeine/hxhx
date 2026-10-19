@@ -28,6 +28,8 @@ private typedef RequiredInlineSelection = {
 	targets must never guess a receiver-reference convention.
 	Statement loops and comprehensions both receive fresh caller-owned iteration
 	bindings and loop destinations. Their iterable keeps the enclosing scope.
+	Nested authored functions keep separate return destinations and fresh parameter
+	bindings. Their captured reads use the enclosing expansion's saved storage.
  */
 class TypedRequiredInlineLowering {
 	final helpers:StringMap<TypedFunction>;
@@ -37,8 +39,8 @@ class TypedRequiredInlineLowering {
 	final active:Array<String> = [];
 	final semanticIndex:TyperIndex;
 	final ownerIdentity:String;
-	var loopOrdinal:Int = 0;
-	var loopTargets:StringMap<TyControlTarget> = new StringMap();
+	var controlOrdinal:Int = 0;
+	var controlTargets:StringMap<TyControlTarget> = new StringMap();
 	var typeBindings:StringMap<TyType> = new StringMap();
 	var receiverPlace:Null<TypedInlineUnaryPlace> = null;
 
@@ -194,8 +196,53 @@ class TypedRequiredInlineLowering {
 				return TypedExpr.sourceFor(HxForBinding.fromNames(fresh.map(binding -> binding.getSourceName())), iterable,
 					substitute(children[1], receiver, loopLocals), TyTypeSubstitution.apply(expression.getType(), typeBindings), expression.getPosition(),
 					fresh, target, children.length == 3 ? substitute(children[2], receiver, locals) : null);
-			case Lambda | SourceFunction | ReturnExpr:
-				throw "required inline requires explicit nested callable or expression return ownership";
+			case SourceFunction:
+				return TypedInlineCallable.copy({
+					source: expression,
+					locals: locals,
+					fresh: binding -> allocator.copy(binding, TyTypeSubstitution.apply(binding.getType(), typeBindings)),
+					substitute: (value, scope) -> substitute(value, receiver, scope),
+					applyType: type -> TyTypeSubstitution.apply(type, typeBindings),
+					target: introduceControl(expression.getControlTarget(), Function)
+				});
+			case ReturnExpr:
+				final source = expression.getControlTarget();
+				final target = source == null ? null : controlTargets.get(source.getCanonicalIdentity());
+				if (target == null || target.getKind() != Function)
+					throw "required inline expression return lacks its copied callable destination";
+				return TypedExpr.returnExpr(children.length == 0 ? null : substitute(children[0], receiver, locals), TyType.noNormalCompletion(),
+					expression.getPosition())
+					.withControlTarget(target);
+			case WhileExpr:
+				final target = introduceLoop(expression.getControlTarget());
+				final condition = substitute(children[0], receiver, locals);
+				final scope = locals.copy();
+				return TypedExpr.whileExpr(condition, [for (child in children.slice(1)) substitute(child, receiver, scope)], expression.getBoolValue(),
+					TyTypeSubstitution.apply(expression.getType(), typeBindings), expression.getPosition(), expression.getWhileKind())
+					.withControlTarget(target);
+			case BreakExpr | ContinueExpr:
+				final source = expression.getControlTarget();
+				final target = source == null ? null : controlTargets.get(source.getCanonicalIdentity());
+				if (target == null || target.getKind() != Loop)
+					throw "required inline expression jump lacks its copied loop destination";
+				return (expression.getTag() == BreakExpr ? TypedExpr.breakExpr(expression.getPosition()) : TypedExpr.continueExpr(expression.getPosition()))
+					.withControlTarget(target);
+			case SourceGroup:
+				final scope = locals.copy();
+				return TypedExpr.sourceGroup([for (child in children) substitute(child, receiver, scope)],
+					TyTypeSubstitution.apply(expression.getType(), typeBindings), expression.getPosition());
+			case VariableDeclaration:
+				final bindings = expression.getLocalBindings();
+				if (bindings.length != 1 || expression.getVariableIsStatic())
+					throw "required inline local declaration needs one non-static binding";
+				final initial = children.length == 0 ? null : storedValue(substitute(children[0], receiver, locals), bindings[0].getType());
+				final binding = allocator.copy(bindings[0], TyTypeSubstitution.apply(bindings[0].getType(), typeBindings));
+				locals.set(bindings[0].getIdentity().getCanonicalKey(), binding);
+				return TypedExpr.variableDeclaration(binding.getSourceName(),
+					expression.getTexts()[1].length == 0 ? "" : binding.getType().getCanonicalDisplay(), initial, expression.getVariableIsFinal(), false,
+					TyTypeSubstitution.apply(expression.getType(), typeBindings), expression.getPosition(), binding);
+			case Lambda:
+				throw "required inline requires authored callable ownership before legacy lambda lowering";
 			case _:
 		}
 		final rewritten = [for (child in children) substitute(child, receiver, locals)];
@@ -232,25 +279,29 @@ class TypedRequiredInlineLowering {
 	}
 
 	/** Each expansion gets caller-owned loop destinations; nested jumps retain the selected loop. */
-	function introduceLoop(source:Null<TyControlTarget>):TyControlTarget {
-		if (source == null || source.getKind() != Loop)
-			throw "required inline loop lacks its selected source destination";
+	function introduceLoop(source:Null<TyControlTarget>):TyControlTarget
+		return introduceControl(source, Loop);
+
+	/** Copied functions and loops share one ordered control tree owned by the caller. */
+	function introduceControl(source:Null<TyControlTarget>, kind:TyControlTarget.TyControlTargetKind):TyControlTarget {
+		if (source == null || source.getKind() != kind)
+			throw "required inline control lacks its selected source destination";
 		final parent = source.getParent();
 		final target = new TyControlTarget({
 			ownerIdentity: ownerIdentity,
-			sourceRevision: "required-inline-loops-v1",
-			ordinal: loopOrdinal++,
-			kind: Loop,
+			sourceRevision: "required-inline-control-v2",
+			ordinal: controlOrdinal++,
+			kind: kind,
 			sourceIdentity: source.getCanonicalIdentity(),
-			parent: parent == null ? null : loopTargets.get(parent.getCanonicalIdentity())
+			parent: parent == null ? null : controlTargets.get(parent.getCanonicalIdentity())
 		});
-		loopTargets.set(source.getCanonicalIdentity(), target);
+		controlTargets.set(source.getCanonicalIdentity(), target);
 		return target;
 	}
 
 	function selectedLoop(statement:TypedStmt):TyControlTarget {
 		final source = statement.getControlTarget();
-		final target = source == null ? null : loopTargets.get(source.getCanonicalIdentity());
+		final target = source == null ? null : controlTargets.get(source.getCanonicalIdentity());
 		if (target == null)
 			throw "required inline jump lost its selected loop destination";
 		return target;
@@ -428,7 +479,7 @@ class TypedRequiredInlineLowering {
 		if (named != null && expression.getExtensionProvider() != null)
 			selectedParameters.unshift(arguments[0].getType());
 		final previousBindings = typeBindings;
-		final previousLoops = loopTargets;
+		final previousLoops = controlTargets;
 		final previousPlace = receiverPlace;
 		receiverPlace = null;
 		if (receiver != null
@@ -452,7 +503,7 @@ class TypedRequiredInlineLowering {
 				allocator: allocator
 			});
 		}
-		loopTargets = new StringMap();
+		controlTargets = new StringMap();
 		typeBindings = TyMethodGenericBinding.inlineBindings(declaration, selectedParameters, expression.getType(), semanticIndex);
 		for (identity => type in ownerBindings)
 			typeBindings.set(identity, type);
@@ -494,7 +545,7 @@ class TypedRequiredInlineLowering {
 		prefix.push(body(helper.getBody().getStatements(), receiver, locals, expression.getType()));
 		active.pop();
 		typeBindings = previousBindings;
-		loopTargets = previousLoops;
+		controlTargets = previousLoops;
 		receiverPlace = previousPlace;
 		return TypedExpr.block(prefix, expression.getType(), expression.getPosition());
 	}

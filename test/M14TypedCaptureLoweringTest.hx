@@ -112,6 +112,17 @@ class M14TypedCaptureLoweringTest {
 		].concat(capturedTemporaryBody.getBody().getStatements()), capturedTemporaryBody.getBody().getSourceFingerprint()));
 		rejected(() -> TypedCapturePlan.afterLowering(noCapture, capturedTemporary), "captured temporary");
 		rejected(() -> noCapturePlan.assertCurrent(capturedTemporary), "another typed function revision");
+		// An existing temporary is not permission to add a new closure dependency.
+		// Required-inline captures are legal only when the original plan contains them.
+		final existingTemporary = noCapture.withBody(new TypedFunctionBody([
+			TypedStmt.variable("storage", "Int", TypedExpr.intLiteral(0, temporary.getType(), null), null, [], temporary)
+		].concat(noCapture.getBody().getStatements()), noCapture.getBody().getSourceFingerprint()));
+		final existingLowered = TypedControlLowering.functionBody(existingTemporary);
+		final existingPlan = TypedCapturePlan.afterLowering(existingTemporary, existingLowered);
+		final existingClosureBody = existingPlan.getFunctionExpressions()[0].getExpressions()[0];
+		final addedUse = existingClosureBody.withExpressions(existingClosureBody.getExpressions()
+			.concat([TypedExpr.localRead("storage", temporary.getType(), null, temporary)]));
+		rejected(() -> TypedCapturePlan.afterLowering(existingTemporary, replace(existingLowered, existingClosureBody, addedUse)), "new capture dependency");
 		final withReceiver = typed("class Main { var value:Int; function make():Void->Int { return function():Int { return this.value + value; }; } }");
 		final receiverPlan = TypedCapturePlan.afterLowering(withReceiver, TypedControlLowering.functionBody(withReceiver));
 		check(receiverPlan.receiverOwner.getCanonicalName() == "Main" && receiverPlan.getFunctions()[1].capturesReceiver,
