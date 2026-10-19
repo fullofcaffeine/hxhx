@@ -1897,7 +1897,7 @@
   ],
   "callCount": 94,
   "callModel": "typed-ocaml-directional-call-boundary-v34",
-  "callRevision": "sha256:d02ba5f2f8239940f92911f61081ec817b784272c6d370f2c65193b30c2440d1",
+  "callRevision": "sha256:6fa7848267fec850a0375482db39caf44c9c61d0e4506993b72ef0a983938bde",
   "callableBoundaries": [
     {
       "arguments": [
@@ -3752,85 +3752,6 @@
     },
     {
       "arguments": [],
-      "bodyRevision": "12:545f568681d73510690fb48122d90b8cb4a6f033c38fe8e8cd1f0bceaea51899",
-      "callbackInvocation": null,
-      "calleeId": "Array|Array::push",
-      "dynamicFunctionTarget": null,
-      "evaluationSchedule": [
-        {
-          "argumentIndex": null,
-          "kind": "materialize-receiver",
-          "slotId": "call-receiver-slot:98fdaadcea1f04e6a494afe7",
-          "sourceArgumentIndex": null
-        },
-        {
-          "argumentIndex": 0,
-          "kind": "materialize-argument",
-          "slotId": "call-argument-slot:630b4b27013c234678c55935",
-          "sourceArgumentIndex": 0
-        },
-        {
-          "argumentIndex": null,
-          "kind": "invoke-callee",
-          "slotId": null,
-          "sourceArgumentIndex": null
-        }
-      ],
-      "functionId": "StringTools|StringTools|static|function|_urlEncodeOcaml|generics:0|required:String->String",
-      "genericInstanceTarget": null,
-      "id": "call:1202bad7af1095ae6a08d226",
-      "kind": "standard-array-method",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
-      "proofId": "standard-array-typed-target-call-v8",
-      "reason": "The final typed Haxe expression calls standard Array<Int>.push. Its sealed target selects HxArray.push before syntax while preserving receiver-first and source-order argument evaluation.",
-      "receiver": null,
-      "result": null,
-      "resultKind": "value",
-      "resultMaterialization": null,
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 19680,
-        "min": 19659
-      },
-      "sourceFieldName": "push",
-      "sourceModuleId": "Array",
-      "sourceTypeName": "Array",
-      "standardArrayTarget": {
-        "argumentCompatibilityProofIds": [
-          "haxe-typed-array-argument-compatible-v1"
-        ],
-        "argumentSemanticTypeIds": [
-          "Int"
-        ],
-        "elementSemanticTypeId": "Int",
-        "operation": "push",
-        "parameterSemanticTypeIds": [
-          "Int"
-        ],
-        "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
-        "proofId": "standard-array-typed-target-call-v8",
-        "receiverSemanticTypeId": "Array<Int>",
-        "resultElementSemanticTypeId": null,
-        "resultKind": "value",
-        "resultSemanticTypeId": "Int",
-        "runtimeCapabilities": [
-          "haxe-array"
-        ],
-        "runtimeFunction": "push",
-        "runtimeModule": "HxArray",
-        "runtimeTakesUnitArgument": false
-      },
-      "standardIMapTarget": null,
-      "structuralIteratorTarget": null
-    },
-    {
-      "arguments": [],
       "bodyRevision": "12:3ec998aaa49daeb4f36ed1bfd2227b38b80df14bd8ec35b2b07b6fc8d49fe912",
       "callbackInvocation": null,
       "calleeId": "Array|Array::push",
@@ -3876,6 +3797,85 @@
         "file": "src/Main.hx",
         "max": 2476,
         "min": 2473
+      },
+      "sourceFieldName": "push",
+      "sourceModuleId": "Array",
+      "sourceTypeName": "Array",
+      "standardArrayTarget": {
+        "argumentCompatibilityProofIds": [
+          "haxe-typed-array-argument-compatible-v1"
+        ],
+        "argumentSemanticTypeIds": [
+          "Int"
+        ],
+        "elementSemanticTypeId": "Int",
+        "operation": "push",
+        "parameterSemanticTypeIds": [
+          "Int"
+        ],
+        "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
+        "proofId": "standard-array-typed-target-call-v8",
+        "receiverSemanticTypeId": "Array<Int>",
+        "resultElementSemanticTypeId": null,
+        "resultKind": "value",
+        "resultSemanticTypeId": "Int",
+        "runtimeCapabilities": [
+          "haxe-array"
+        ],
+        "runtimeFunction": "push",
+        "runtimeModule": "HxArray",
+        "runtimeTakesUnitArgument": false
+      },
+      "standardIMapTarget": null,
+      "structuralIteratorTarget": null
+    },
+    {
+      "arguments": [],
+      "bodyRevision": "12:545f568681d73510690fb48122d90b8cb4a6f033c38fe8e8cd1f0bceaea51899",
+      "callbackInvocation": null,
+      "calleeId": "Array|Array::push",
+      "dynamicFunctionTarget": null,
+      "evaluationSchedule": [
+        {
+          "argumentIndex": null,
+          "kind": "materialize-receiver",
+          "slotId": "call-receiver-slot:f1225376324ccd28ac346845",
+          "sourceArgumentIndex": null
+        },
+        {
+          "argumentIndex": 0,
+          "kind": "materialize-argument",
+          "slotId": "call-argument-slot:3a9ec3588558040380ca147b",
+          "sourceArgumentIndex": 0
+        },
+        {
+          "argumentIndex": null,
+          "kind": "invoke-callee",
+          "slotId": null,
+          "sourceArgumentIndex": null
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|_urlEncodeOcaml|generics:0|required:String->String",
+      "genericInstanceTarget": null,
+      "id": "call:19fe1ae97fb384879f9c6a3d",
+      "kind": "standard-array-method",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
+      "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
+      "proofId": "standard-array-typed-target-call-v8",
+      "reason": "The final typed Haxe expression calls standard Array<Int>.push. Its sealed target selects HxArray.push before syntax while preserving receiver-first and source-order argument evaluation.",
+      "receiver": null,
+      "result": null,
+      "resultKind": "value",
+      "resultMaterialization": null,
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 19866,
+        "min": 19849
       },
       "sourceFieldName": "push",
       "sourceModuleId": "Array",
@@ -3971,85 +3971,6 @@
       "sourceModuleId": "Main",
       "sourceTypeName": "Main",
       "standardArrayTarget": null,
-      "standardIMapTarget": null,
-      "structuralIteratorTarget": null
-    },
-    {
-      "arguments": [],
-      "bodyRevision": "12:545f568681d73510690fb48122d90b8cb4a6f033c38fe8e8cd1f0bceaea51899",
-      "callbackInvocation": null,
-      "calleeId": "Array|Array::push",
-      "dynamicFunctionTarget": null,
-      "evaluationSchedule": [
-        {
-          "argumentIndex": null,
-          "kind": "materialize-receiver",
-          "slotId": "call-receiver-slot:0744c598e9749830d1cb03ed",
-          "sourceArgumentIndex": null
-        },
-        {
-          "argumentIndex": 0,
-          "kind": "materialize-argument",
-          "slotId": "call-argument-slot:9d05934d9eae59cf110b6ea3",
-          "sourceArgumentIndex": 0
-        },
-        {
-          "argumentIndex": null,
-          "kind": "invoke-callee",
-          "slotId": null,
-          "sourceArgumentIndex": null
-        }
-      ],
-      "functionId": "StringTools|StringTools|static|function|_urlEncodeOcaml|generics:0|required:String->String",
-      "genericInstanceTarget": null,
-      "id": "call:22d68880e50dd7226fe25d74",
-      "kind": "standard-array-method",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
-      "proofId": "standard-array-typed-target-call-v8",
-      "reason": "The final typed Haxe expression calls standard Array<Int>.push. Its sealed target selects HxArray.push before syntax while preserving receiver-first and source-order argument evaluation.",
-      "receiver": null,
-      "result": null,
-      "resultKind": "value",
-      "resultMaterialization": null,
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 19641,
-        "min": 19624
-      },
-      "sourceFieldName": "push",
-      "sourceModuleId": "Array",
-      "sourceTypeName": "Array",
-      "standardArrayTarget": {
-        "argumentCompatibilityProofIds": [
-          "haxe-typed-array-argument-compatible-v1"
-        ],
-        "argumentSemanticTypeIds": [
-          "Int"
-        ],
-        "elementSemanticTypeId": "Int",
-        "operation": "push",
-        "parameterSemanticTypeIds": [
-          "Int"
-        ],
-        "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
-        "proofId": "standard-array-typed-target-call-v8",
-        "receiverSemanticTypeId": "Array<Int>",
-        "resultElementSemanticTypeId": null,
-        "resultKind": "value",
-        "resultSemanticTypeId": "Int",
-        "runtimeCapabilities": [
-          "haxe-array"
-        ],
-        "runtimeFunction": "push",
-        "runtimeModule": "HxArray",
-        "runtimeTakesUnitArgument": false
-      },
       "standardIMapTarget": null,
       "structuralIteratorTarget": null
     },
@@ -5355,6 +5276,85 @@
       "structuralIteratorTarget": null
     },
     {
+      "arguments": [],
+      "bodyRevision": "12:545f568681d73510690fb48122d90b8cb4a6f033c38fe8e8cd1f0bceaea51899",
+      "callbackInvocation": null,
+      "calleeId": "Array|Array::push",
+      "dynamicFunctionTarget": null,
+      "evaluationSchedule": [
+        {
+          "argumentIndex": null,
+          "kind": "materialize-receiver",
+          "slotId": "call-receiver-slot:80755aff91dc1c9099111032",
+          "sourceArgumentIndex": null
+        },
+        {
+          "argumentIndex": 0,
+          "kind": "materialize-argument",
+          "slotId": "call-argument-slot:c8848527a638c41ea58aa069",
+          "sourceArgumentIndex": 0
+        },
+        {
+          "argumentIndex": null,
+          "kind": "invoke-callee",
+          "slotId": null,
+          "sourceArgumentIndex": null
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|_urlEncodeOcaml|generics:0|required:String->String",
+      "genericInstanceTarget": null,
+      "id": "call:46dda47c18474670313fd09d",
+      "kind": "standard-array-method",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
+      "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
+      "proofId": "standard-array-typed-target-call-v8",
+      "reason": "The final typed Haxe expression calls standard Array<Int>.push. Its sealed target selects HxArray.push before syntax while preserving receiver-first and source-order argument evaluation.",
+      "receiver": null,
+      "result": null,
+      "resultKind": "value",
+      "resultMaterialization": null,
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 19905,
+        "min": 19884
+      },
+      "sourceFieldName": "push",
+      "sourceModuleId": "Array",
+      "sourceTypeName": "Array",
+      "standardArrayTarget": {
+        "argumentCompatibilityProofIds": [
+          "haxe-typed-array-argument-compatible-v1"
+        ],
+        "argumentSemanticTypeIds": [
+          "Int"
+        ],
+        "elementSemanticTypeId": "Int",
+        "operation": "push",
+        "parameterSemanticTypeIds": [
+          "Int"
+        ],
+        "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
+        "proofId": "standard-array-typed-target-call-v8",
+        "receiverSemanticTypeId": "Array<Int>",
+        "resultElementSemanticTypeId": null,
+        "resultKind": "value",
+        "resultSemanticTypeId": "Int",
+        "runtimeCapabilities": [
+          "haxe-array"
+        ],
+        "runtimeFunction": "push",
+        "runtimeModule": "HxArray",
+        "runtimeTakesUnitArgument": false
+      },
+      "standardIMapTarget": null,
+      "structuralIteratorTarget": null
+    },
+    {
       "arguments": [
         {
           "callableView": null,
@@ -5859,85 +5859,6 @@
     },
     {
       "arguments": [],
-      "bodyRevision": "12:4c4ee3f0deb85f65fedd5bc1c60b02d678fcc4a1caa2490042c73bdc4be47dfe",
-      "callbackInvocation": null,
-      "calleeId": "Array|Array::push",
-      "dynamicFunctionTarget": null,
-      "evaluationSchedule": [
-        {
-          "argumentIndex": null,
-          "kind": "materialize-receiver",
-          "slotId": "call-receiver-slot:76ae98da362338b9b01f24f0",
-          "sourceArgumentIndex": null
-        },
-        {
-          "argumentIndex": 0,
-          "kind": "materialize-argument",
-          "slotId": "call-argument-slot:40ab2ec550007ce1f3b8b8b7",
-          "sourceArgumentIndex": 0
-        },
-        {
-          "argumentIndex": null,
-          "kind": "invoke-callee",
-          "slotId": null,
-          "sourceArgumentIndex": null
-        }
-      ],
-      "functionId": "StringTools|StringTools|static|function|_urlDecodeOcaml|generics:0|required:String->String",
-      "genericInstanceTarget": null,
-      "id": "call:5b81c8e1583d61579f12e294",
-      "kind": "standard-array-method",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
-      "proofId": "standard-array-typed-target-call-v8",
-      "reason": "The final typed Haxe expression calls standard Array<Int>.push. Its sealed target selects HxArray.push before syntax while preserving receiver-first and source-order argument evaluation.",
-      "receiver": null,
-      "result": null,
-      "resultKind": "value",
-      "resultMaterialization": null,
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20074,
-        "min": 20053
-      },
-      "sourceFieldName": "push",
-      "sourceModuleId": "Array",
-      "sourceTypeName": "Array",
-      "standardArrayTarget": {
-        "argumentCompatibilityProofIds": [
-          "haxe-typed-array-argument-compatible-v1"
-        ],
-        "argumentSemanticTypeIds": [
-          "Int"
-        ],
-        "elementSemanticTypeId": "Int",
-        "operation": "push",
-        "parameterSemanticTypeIds": [
-          "Int"
-        ],
-        "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
-        "proofId": "standard-array-typed-target-call-v8",
-        "receiverSemanticTypeId": "Array<Int>",
-        "resultElementSemanticTypeId": null,
-        "resultKind": "value",
-        "resultSemanticTypeId": "Int",
-        "runtimeCapabilities": [
-          "haxe-array"
-        ],
-        "runtimeFunction": "push",
-        "runtimeModule": "HxArray",
-        "runtimeTakesUnitArgument": false
-      },
-      "standardIMapTarget": null,
-      "structuralIteratorTarget": null
-    },
-    {
-      "arguments": [],
       "bodyRevision": "12:3d5bafd628489407003f6dc978117378e16bc39ca91816f3bb224113ba16034e",
       "callbackInvocation": null,
       "calleeId": "Array|Array::push",
@@ -6141,6 +6062,85 @@
         "runtimeFunction": "hasNext",
         "runtimeModule": "HxIterator"
       }
+    },
+    {
+      "arguments": [],
+      "bodyRevision": "12:4c4ee3f0deb85f65fedd5bc1c60b02d678fcc4a1caa2490042c73bdc4be47dfe",
+      "callbackInvocation": null,
+      "calleeId": "Array|Array::push",
+      "dynamicFunctionTarget": null,
+      "evaluationSchedule": [
+        {
+          "argumentIndex": null,
+          "kind": "materialize-receiver",
+          "slotId": "call-receiver-slot:31d47d1238399c6662a616f3",
+          "sourceArgumentIndex": null
+        },
+        {
+          "argumentIndex": 0,
+          "kind": "materialize-argument",
+          "slotId": "call-argument-slot:9180955eed2672586588ca7c",
+          "sourceArgumentIndex": 0
+        },
+        {
+          "argumentIndex": null,
+          "kind": "invoke-callee",
+          "slotId": null,
+          "sourceArgumentIndex": null
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|_urlDecodeOcaml|generics:0|required:String->String",
+      "genericInstanceTarget": null,
+      "id": "call:674095c5221d739098c54a77",
+      "kind": "standard-array-method",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
+      "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
+      "proofId": "standard-array-typed-target-call-v8",
+      "reason": "The final typed Haxe expression calls standard Array<Int>.push. Its sealed target selects HxArray.push before syntax while preserving receiver-first and source-order argument evaluation.",
+      "receiver": null,
+      "result": null,
+      "resultKind": "value",
+      "resultMaterialization": null,
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 20546,
+        "min": 20519
+      },
+      "sourceFieldName": "push",
+      "sourceModuleId": "Array",
+      "sourceTypeName": "Array",
+      "standardArrayTarget": {
+        "argumentCompatibilityProofIds": [
+          "haxe-typed-array-argument-compatible-v1"
+        ],
+        "argumentSemanticTypeIds": [
+          "Int"
+        ],
+        "elementSemanticTypeId": "Int",
+        "operation": "push",
+        "parameterSemanticTypeIds": [
+          "Int"
+        ],
+        "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
+        "proofId": "standard-array-typed-target-call-v8",
+        "receiverSemanticTypeId": "Array<Int>",
+        "resultElementSemanticTypeId": null,
+        "resultKind": "value",
+        "resultSemanticTypeId": "Int",
+        "runtimeCapabilities": [
+          "haxe-array"
+        ],
+        "runtimeFunction": "push",
+        "runtimeModule": "HxArray",
+        "runtimeTakesUnitArgument": false
+      },
+      "standardIMapTarget": null,
+      "structuralIteratorTarget": null
     },
     {
       "arguments": [],
@@ -6350,6 +6350,85 @@
     },
     {
       "arguments": [],
+      "bodyRevision": "12:4c4ee3f0deb85f65fedd5bc1c60b02d678fcc4a1caa2490042c73bdc4be47dfe",
+      "callbackInvocation": null,
+      "calleeId": "Array|Array::push",
+      "dynamicFunctionTarget": null,
+      "evaluationSchedule": [
+        {
+          "argumentIndex": null,
+          "kind": "materialize-receiver",
+          "slotId": "call-receiver-slot:30059b895276a5ea4d0b1a59",
+          "sourceArgumentIndex": null
+        },
+        {
+          "argumentIndex": 0,
+          "kind": "materialize-argument",
+          "slotId": "call-argument-slot:373cc8f1a2cd8aebbad24634",
+          "sourceArgumentIndex": 0
+        },
+        {
+          "argumentIndex": null,
+          "kind": "invoke-callee",
+          "slotId": null,
+          "sourceArgumentIndex": null
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|_urlDecodeOcaml|generics:0|required:String->String",
+      "genericInstanceTarget": null,
+      "id": "call:7a5ba6350e351d46f13ba810",
+      "kind": "standard-array-method",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
+      "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
+      "proofId": "standard-array-typed-target-call-v8",
+      "reason": "The final typed Haxe expression calls standard Array<Int>.push. Its sealed target selects HxArray.push before syntax while preserving receiver-first and source-order argument evaluation.",
+      "receiver": null,
+      "result": null,
+      "resultKind": "value",
+      "resultMaterialization": null,
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 20299,
+        "min": 20278
+      },
+      "sourceFieldName": "push",
+      "sourceModuleId": "Array",
+      "sourceTypeName": "Array",
+      "standardArrayTarget": {
+        "argumentCompatibilityProofIds": [
+          "haxe-typed-array-argument-compatible-v1"
+        ],
+        "argumentSemanticTypeIds": [
+          "Int"
+        ],
+        "elementSemanticTypeId": "Int",
+        "operation": "push",
+        "parameterSemanticTypeIds": [
+          "Int"
+        ],
+        "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
+        "proofId": "standard-array-typed-target-call-v8",
+        "receiverSemanticTypeId": "Array<Int>",
+        "resultElementSemanticTypeId": null,
+        "resultKind": "value",
+        "resultSemanticTypeId": "Int",
+        "runtimeCapabilities": [
+          "haxe-array"
+        ],
+        "runtimeFunction": "push",
+        "runtimeModule": "HxArray",
+        "runtimeTakesUnitArgument": false
+      },
+      "standardIMapTarget": null,
+      "structuralIteratorTarget": null
+    },
+    {
+      "arguments": [],
       "bodyRevision": "12:b33af7e2e4c5ed3e7beb0c84c791041ed98a52b320bc13616b046dfc0048eba1",
       "callbackInvocation": null,
       "calleeId": "Array|Array::push",
@@ -6507,6 +6586,109 @@
       "structuralIteratorTarget": null
     },
     {
+      "arguments": [
+        {
+          "callableView": null,
+          "callbackArgument": null,
+          "conversion": "identity",
+          "index": 0,
+          "inputCarrierTypeId": "string",
+          "inputRepresentationId": "representation:String:internal-value",
+          "inputSemanticTypeId": "String",
+          "nullableEnumCarrier": null,
+          "outputCarrierTypeId": "string",
+          "outputRepresentationId": "representation:String:internal-value",
+          "outputSemanticTypeId": "String",
+          "parameterOptional": false,
+          "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+          "proofId": "identity-call-carrier-v1"
+        },
+        {
+          "callableView": null,
+          "callbackArgument": null,
+          "conversion": "identity",
+          "index": 1,
+          "inputCarrierTypeId": "bool",
+          "inputRepresentationId": "representation:Bool:internal-value",
+          "inputSemanticTypeId": "Bool",
+          "nullableEnumCarrier": null,
+          "outputCarrierTypeId": "bool",
+          "outputRepresentationId": "representation:Bool:internal-value",
+          "outputSemanticTypeId": "Bool",
+          "parameterOptional": false,
+          "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+          "proofId": "identity-call-carrier-v1"
+        }
+      ],
+      "bodyRevision": "13:35e6b86460ab9c30ba797995d61344c1fe823bd4a2ced13930cce613b34482be",
+      "callbackInvocation": null,
+      "calleeId": "StringTools|StringTools::_quoteWinArgOcaml",
+      "dynamicFunctionTarget": null,
+      "evaluationSchedule": [
+        {
+          "argumentIndex": 0,
+          "kind": "materialize-argument",
+          "slotId": "call-argument-slot:cca306b66870dec0c8ec0202",
+          "sourceArgumentIndex": 0
+        },
+        {
+          "argumentIndex": 1,
+          "kind": "materialize-argument",
+          "slotId": "call-argument-slot:1d737db7eef2e9d3add98e54",
+          "sourceArgumentIndex": 1
+        },
+        {
+          "argumentIndex": null,
+          "kind": "invoke-callee",
+          "slotId": null,
+          "sourceArgumentIndex": null
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|quoteWinArg|generics:0|required:String,required:Bool->String",
+      "genericInstanceTarget": null,
+      "id": "call:7f1875c2f037004a434aea80",
+      "kind": "direct-static-haxe-method",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
+      "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
+      "proofId": "direct-static-representation-signature-v3",
+      "reason": "The typed Haxe expression resolves to one ordinary static method. Its sealed argument crossings are [String -> String via identity, Bool -> Bool via identity], and its exact String result carrier is preserved.",
+      "receiver": null,
+      "result": {
+        "callableView": null,
+        "callbackArgument": null,
+        "conversion": "identity",
+        "index": -1,
+        "inputCarrierTypeId": "string",
+        "inputRepresentationId": "representation:String:internal-value",
+        "inputSemanticTypeId": "String",
+        "nullableEnumCarrier": null,
+        "outputCarrierTypeId": "string",
+        "outputRepresentationId": "representation:String:internal-value",
+        "outputSemanticTypeId": "String",
+        "parameterOptional": false,
+        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
+        "proofId": "identity-call-carrier-v1"
+      },
+      "resultKind": "value",
+      "resultMaterialization": null,
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 18796,
+        "min": 18747
+      },
+      "sourceFieldName": "_quoteWinArgOcaml",
+      "sourceModuleId": "StringTools",
+      "sourceTypeName": "StringTools",
+      "standardArrayTarget": null,
+      "standardIMapTarget": null,
+      "structuralIteratorTarget": null
+    },
+    {
       "arguments": [],
       "bodyRevision": "12:3ec998aaa49daeb4f36ed1bfd2227b38b80df14bd8ec35b2b07b6fc8d49fe912",
       "callbackInvocation": null,
@@ -6649,6 +6831,85 @@
           "haxe-array"
         ],
         "runtimeFunction": "slice",
+        "runtimeModule": "HxArray",
+        "runtimeTakesUnitArgument": false
+      },
+      "standardIMapTarget": null,
+      "structuralIteratorTarget": null
+    },
+    {
+      "arguments": [],
+      "bodyRevision": "12:545f568681d73510690fb48122d90b8cb4a6f033c38fe8e8cd1f0bceaea51899",
+      "callbackInvocation": null,
+      "calleeId": "Array|Array::push",
+      "dynamicFunctionTarget": null,
+      "evaluationSchedule": [
+        {
+          "argumentIndex": null,
+          "kind": "materialize-receiver",
+          "slotId": "call-receiver-slot:f885a3695fcf571ccf8a4aff",
+          "sourceArgumentIndex": null
+        },
+        {
+          "argumentIndex": 0,
+          "kind": "materialize-argument",
+          "slotId": "call-argument-slot:41693a30abb3da943869a0c1",
+          "sourceArgumentIndex": 0
+        },
+        {
+          "argumentIndex": null,
+          "kind": "invoke-callee",
+          "slotId": null,
+          "sourceArgumentIndex": null
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|_urlEncodeOcaml|generics:0|required:String->String",
+      "genericInstanceTarget": null,
+      "id": "call:807543bccd85c60e652474e8",
+      "kind": "standard-array-method",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
+      "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
+      "proofId": "standard-array-typed-target-call-v8",
+      "reason": "The final typed Haxe expression calls standard Array<Int>.push. Its sealed target selects HxArray.push before syntax while preserving receiver-first and source-order argument evaluation.",
+      "receiver": null,
+      "result": null,
+      "resultKind": "value",
+      "resultMaterialization": null,
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 19952,
+        "min": 19911
+      },
+      "sourceFieldName": "push",
+      "sourceModuleId": "Array",
+      "sourceTypeName": "Array",
+      "standardArrayTarget": {
+        "argumentCompatibilityProofIds": [
+          "haxe-typed-array-argument-compatible-v1"
+        ],
+        "argumentSemanticTypeIds": [
+          "Int"
+        ],
+        "elementSemanticTypeId": "Int",
+        "operation": "push",
+        "parameterSemanticTypeIds": [
+          "Int"
+        ],
+        "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
+        "proofId": "standard-array-typed-target-call-v8",
+        "receiverSemanticTypeId": "Array<Int>",
+        "resultElementSemanticTypeId": null,
+        "resultKind": "value",
+        "resultSemanticTypeId": "Int",
+        "runtimeCapabilities": [
+          "haxe-array"
+        ],
+        "runtimeFunction": "push",
         "runtimeModule": "HxArray",
         "runtimeTakesUnitArgument": false
       },
@@ -7629,85 +7890,6 @@
       "structuralIteratorTarget": null
     },
     {
-      "arguments": [],
-      "bodyRevision": "12:4c4ee3f0deb85f65fedd5bc1c60b02d678fcc4a1caa2490042c73bdc4be47dfe",
-      "callbackInvocation": null,
-      "calleeId": "Array|Array::push",
-      "dynamicFunctionTarget": null,
-      "evaluationSchedule": [
-        {
-          "argumentIndex": null,
-          "kind": "materialize-receiver",
-          "slotId": "call-receiver-slot:cae895d38c7f16d4bfe675b9",
-          "sourceArgumentIndex": null
-        },
-        {
-          "argumentIndex": 0,
-          "kind": "materialize-argument",
-          "slotId": "call-argument-slot:911cb9bba797642729df2b47",
-          "sourceArgumentIndex": 0
-        },
-        {
-          "argumentIndex": null,
-          "kind": "invoke-callee",
-          "slotId": null,
-          "sourceArgumentIndex": null
-        }
-      ],
-      "functionId": "StringTools|StringTools|static|function|_urlDecodeOcaml|generics:0|required:String->String",
-      "genericInstanceTarget": null,
-      "id": "call:a0bd508e1e3aba35dfb890c4",
-      "kind": "standard-array-method",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
-      "proofId": "standard-array-typed-target-call-v8",
-      "reason": "The final typed Haxe expression calls standard Array<Int>.push. Its sealed target selects HxArray.push before syntax while preserving receiver-first and source-order argument evaluation.",
-      "receiver": null,
-      "result": null,
-      "resultKind": "value",
-      "resultMaterialization": null,
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20321,
-        "min": 20294
-      },
-      "sourceFieldName": "push",
-      "sourceModuleId": "Array",
-      "sourceTypeName": "Array",
-      "standardArrayTarget": {
-        "argumentCompatibilityProofIds": [
-          "haxe-typed-array-argument-compatible-v1"
-        ],
-        "argumentSemanticTypeIds": [
-          "Int"
-        ],
-        "elementSemanticTypeId": "Int",
-        "operation": "push",
-        "parameterSemanticTypeIds": [
-          "Int"
-        ],
-        "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
-        "proofId": "standard-array-typed-target-call-v8",
-        "receiverSemanticTypeId": "Array<Int>",
-        "resultElementSemanticTypeId": null,
-        "resultKind": "value",
-        "resultSemanticTypeId": "Int",
-        "runtimeCapabilities": [
-          "haxe-array"
-        ],
-        "runtimeFunction": "push",
-        "runtimeModule": "HxArray",
-        "runtimeTakesUnitArgument": false
-      },
-      "standardIMapTarget": null,
-      "structuralIteratorTarget": null
-    },
-    {
       "arguments": [
         {
           "callableView": null,
@@ -8034,6 +8216,85 @@
     },
     {
       "arguments": [],
+      "bodyRevision": "12:545f568681d73510690fb48122d90b8cb4a6f033c38fe8e8cd1f0bceaea51899",
+      "callbackInvocation": null,
+      "calleeId": "Array|Array::push",
+      "dynamicFunctionTarget": null,
+      "evaluationSchedule": [
+        {
+          "argumentIndex": null,
+          "kind": "materialize-receiver",
+          "slotId": "call-receiver-slot:874d3d64ac961a6186dd749a",
+          "sourceArgumentIndex": null
+        },
+        {
+          "argumentIndex": 0,
+          "kind": "materialize-argument",
+          "slotId": "call-argument-slot:67d283c6daa92201008f9069",
+          "sourceArgumentIndex": 0
+        },
+        {
+          "argumentIndex": null,
+          "kind": "invoke-callee",
+          "slotId": null,
+          "sourceArgumentIndex": null
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|_urlEncodeOcaml|generics:0|required:String->String",
+      "genericInstanceTarget": null,
+      "id": "call:ac98a4761f0e57810936f551",
+      "kind": "standard-array-method",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
+      "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
+      "proofId": "standard-array-typed-target-call-v8",
+      "reason": "The final typed Haxe expression calls standard Array<Int>.push. Its sealed target selects HxArray.push before syntax while preserving receiver-first and source-order argument evaluation.",
+      "receiver": null,
+      "result": null,
+      "resultKind": "value",
+      "resultMaterialization": null,
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 19992,
+        "min": 19958
+      },
+      "sourceFieldName": "push",
+      "sourceModuleId": "Array",
+      "sourceTypeName": "Array",
+      "standardArrayTarget": {
+        "argumentCompatibilityProofIds": [
+          "haxe-typed-array-argument-compatible-v1"
+        ],
+        "argumentSemanticTypeIds": [
+          "Int"
+        ],
+        "elementSemanticTypeId": "Int",
+        "operation": "push",
+        "parameterSemanticTypeIds": [
+          "Int"
+        ],
+        "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
+        "proofId": "standard-array-typed-target-call-v8",
+        "receiverSemanticTypeId": "Array<Int>",
+        "resultElementSemanticTypeId": null,
+        "resultKind": "value",
+        "resultSemanticTypeId": "Int",
+        "runtimeCapabilities": [
+          "haxe-array"
+        ],
+        "runtimeFunction": "push",
+        "runtimeModule": "HxArray",
+        "runtimeTakesUnitArgument": false
+      },
+      "standardIMapTarget": null,
+      "structuralIteratorTarget": null
+    },
+    {
+      "arguments": [],
       "bodyRevision": "12:059fa49eda0b782c900e3563ed20bcedef98250f9b36b62bb598e041f3173508",
       "callbackInvocation": null,
       "calleeId": "Array|Array::copy",
@@ -8260,85 +8521,6 @@
       "sourceModuleId": "StringTools",
       "sourceTypeName": "StringTools",
       "standardArrayTarget": null,
-      "standardIMapTarget": null,
-      "structuralIteratorTarget": null
-    },
-    {
-      "arguments": [],
-      "bodyRevision": "12:545f568681d73510690fb48122d90b8cb4a6f033c38fe8e8cd1f0bceaea51899",
-      "callbackInvocation": null,
-      "calleeId": "Array|Array::push",
-      "dynamicFunctionTarget": null,
-      "evaluationSchedule": [
-        {
-          "argumentIndex": null,
-          "kind": "materialize-receiver",
-          "slotId": "call-receiver-slot:59cb36d3afbf7fd44c0575d2",
-          "sourceArgumentIndex": null
-        },
-        {
-          "argumentIndex": 0,
-          "kind": "materialize-argument",
-          "slotId": "call-argument-slot:367138ef638ac4db1437f980",
-          "sourceArgumentIndex": 0
-        },
-        {
-          "argumentIndex": null,
-          "kind": "invoke-callee",
-          "slotId": null,
-          "sourceArgumentIndex": null
-        }
-      ],
-      "functionId": "StringTools|StringTools|static|function|_urlEncodeOcaml|generics:0|required:String->String",
-      "genericInstanceTarget": null,
-      "id": "call:b2ae7b2b6194092880bc508d",
-      "kind": "standard-array-method",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
-      "proofId": "standard-array-typed-target-call-v8",
-      "reason": "The final typed Haxe expression calls standard Array<Int>.push. Its sealed target selects HxArray.push before syntax while preserving receiver-first and source-order argument evaluation.",
-      "receiver": null,
-      "result": null,
-      "resultKind": "value",
-      "resultMaterialization": null,
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 19727,
-        "min": 19686
-      },
-      "sourceFieldName": "push",
-      "sourceModuleId": "Array",
-      "sourceTypeName": "Array",
-      "standardArrayTarget": {
-        "argumentCompatibilityProofIds": [
-          "haxe-typed-array-argument-compatible-v1"
-        ],
-        "argumentSemanticTypeIds": [
-          "Int"
-        ],
-        "elementSemanticTypeId": "Int",
-        "operation": "push",
-        "parameterSemanticTypeIds": [
-          "Int"
-        ],
-        "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
-        "proofId": "standard-array-typed-target-call-v8",
-        "receiverSemanticTypeId": "Array<Int>",
-        "resultElementSemanticTypeId": null,
-        "resultKind": "value",
-        "resultSemanticTypeId": "Int",
-        "runtimeCapabilities": [
-          "haxe-array"
-        ],
-        "runtimeFunction": "push",
-        "runtimeModule": "HxArray",
-        "runtimeTakesUnitArgument": false
-      },
       "standardIMapTarget": null,
       "structuralIteratorTarget": null
     },
@@ -8650,85 +8832,6 @@
         "runtimeFunction": "next",
         "runtimeModule": "HxIterator"
       }
-    },
-    {
-      "arguments": [],
-      "bodyRevision": "12:545f568681d73510690fb48122d90b8cb4a6f033c38fe8e8cd1f0bceaea51899",
-      "callbackInvocation": null,
-      "calleeId": "Array|Array::push",
-      "dynamicFunctionTarget": null,
-      "evaluationSchedule": [
-        {
-          "argumentIndex": null,
-          "kind": "materialize-receiver",
-          "slotId": "call-receiver-slot:10fbbc614cbcdf7ad5410716",
-          "sourceArgumentIndex": null
-        },
-        {
-          "argumentIndex": 0,
-          "kind": "materialize-argument",
-          "slotId": "call-argument-slot:173910cb5b25c009f89d955e",
-          "sourceArgumentIndex": 0
-        },
-        {
-          "argumentIndex": null,
-          "kind": "invoke-callee",
-          "slotId": null,
-          "sourceArgumentIndex": null
-        }
-      ],
-      "functionId": "StringTools|StringTools|static|function|_urlEncodeOcaml|generics:0|required:String->String",
-      "genericInstanceTarget": null,
-      "id": "call:b87491d24cda068555451a98",
-      "kind": "standard-array-method",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
-      "proofId": "standard-array-typed-target-call-v8",
-      "reason": "The final typed Haxe expression calls standard Array<Int>.push. Its sealed target selects HxArray.push before syntax while preserving receiver-first and source-order argument evaluation.",
-      "receiver": null,
-      "result": null,
-      "resultKind": "value",
-      "resultMaterialization": null,
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 19767,
-        "min": 19733
-      },
-      "sourceFieldName": "push",
-      "sourceModuleId": "Array",
-      "sourceTypeName": "Array",
-      "standardArrayTarget": {
-        "argumentCompatibilityProofIds": [
-          "haxe-typed-array-argument-compatible-v1"
-        ],
-        "argumentSemanticTypeIds": [
-          "Int"
-        ],
-        "elementSemanticTypeId": "Int",
-        "operation": "push",
-        "parameterSemanticTypeIds": [
-          "Int"
-        ],
-        "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
-        "proofId": "standard-array-typed-target-call-v8",
-        "receiverSemanticTypeId": "Array<Int>",
-        "resultElementSemanticTypeId": null,
-        "resultKind": "value",
-        "resultSemanticTypeId": "Int",
-        "runtimeCapabilities": [
-          "haxe-array"
-        ],
-        "runtimeFunction": "push",
-        "runtimeModule": "HxArray",
-        "runtimeTakesUnitArgument": false
-      },
-      "standardIMapTarget": null,
-      "structuralIteratorTarget": null
     },
     {
       "arguments": [],
@@ -9288,109 +9391,6 @@
           "parameterOptional": false,
           "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
           "proofId": "identity-call-carrier-v1"
-        },
-        {
-          "callableView": null,
-          "callbackArgument": null,
-          "conversion": "identity",
-          "index": 1,
-          "inputCarrierTypeId": "bool",
-          "inputRepresentationId": "representation:Bool:internal-value",
-          "inputSemanticTypeId": "Bool",
-          "nullableEnumCarrier": null,
-          "outputCarrierTypeId": "bool",
-          "outputRepresentationId": "representation:Bool:internal-value",
-          "outputSemanticTypeId": "Bool",
-          "parameterOptional": false,
-          "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
-          "proofId": "identity-call-carrier-v1"
-        }
-      ],
-      "bodyRevision": "13:35e6b86460ab9c30ba797995d61344c1fe823bd4a2ced13930cce613b34482be",
-      "callbackInvocation": null,
-      "calleeId": "StringTools|StringTools::_quoteWinArgOcaml",
-      "dynamicFunctionTarget": null,
-      "evaluationSchedule": [
-        {
-          "argumentIndex": 0,
-          "kind": "materialize-argument",
-          "slotId": "call-argument-slot:aad078faad77e675a8abd0be",
-          "sourceArgumentIndex": 0
-        },
-        {
-          "argumentIndex": 1,
-          "kind": "materialize-argument",
-          "slotId": "call-argument-slot:802c5f8d7d0f109980a3c928",
-          "sourceArgumentIndex": 1
-        },
-        {
-          "argumentIndex": null,
-          "kind": "invoke-callee",
-          "slotId": null,
-          "sourceArgumentIndex": null
-        }
-      ],
-      "functionId": "StringTools|StringTools|static|function|quoteWinArg|generics:0|required:String,required:Bool->String",
-      "genericInstanceTarget": null,
-      "id": "call:c7cd21384dd09b7e6e7f9334",
-      "kind": "direct-static-haxe-method",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The closed direct-static signature matrix independently selects each declared argument representation and either a represented result or explicit effect-only Void. Every call occurrence must match that result shape and those callable carriers, then materialize its source arguments in index order before invocation.",
-      "proofId": "direct-static-representation-signature-v3",
-      "reason": "The typed Haxe expression resolves to one ordinary static method. Its sealed argument crossings are [String -> String via identity, Bool -> Bool via identity], and its exact String result carrier is preserved.",
-      "receiver": null,
-      "result": {
-        "callableView": null,
-        "callbackArgument": null,
-        "conversion": "identity",
-        "index": -1,
-        "inputCarrierTypeId": "string",
-        "inputRepresentationId": "representation:String:internal-value",
-        "inputSemanticTypeId": "String",
-        "nullableEnumCarrier": null,
-        "outputCarrierTypeId": "string",
-        "outputRepresentationId": "representation:String:internal-value",
-        "outputSemanticTypeId": "String",
-        "parameterOptional": false,
-        "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
-        "proofId": "identity-call-carrier-v1"
-      },
-      "resultKind": "value",
-      "resultMaterialization": null,
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 18571,
-        "min": 18522
-      },
-      "sourceFieldName": "_quoteWinArgOcaml",
-      "sourceModuleId": "StringTools",
-      "sourceTypeName": "StringTools",
-      "standardArrayTarget": null,
-      "standardIMapTarget": null,
-      "structuralIteratorTarget": null
-    },
-    {
-      "arguments": [
-        {
-          "callableView": null,
-          "callbackArgument": null,
-          "conversion": "identity",
-          "index": 0,
-          "inputCarrierTypeId": "string",
-          "inputRepresentationId": "representation:String:internal-value",
-          "inputSemanticTypeId": "String",
-          "nullableEnumCarrier": null,
-          "outputCarrierTypeId": "string",
-          "outputRepresentationId": "representation:String:internal-value",
-          "outputSemanticTypeId": "String",
-          "parameterOptional": false,
-          "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
-          "proofId": "identity-call-carrier-v1"
         }
       ],
       "bodyRevision": "12:e13b4f70c6135593d808c3435ab4e55c02f20b2b066a996f1c4393d9d0946806",
@@ -9653,85 +9653,6 @@
     },
     {
       "arguments": [],
-      "bodyRevision": "12:4c4ee3f0deb85f65fedd5bc1c60b02d678fcc4a1caa2490042c73bdc4be47dfe",
-      "callbackInvocation": null,
-      "calleeId": "Array|Array::push",
-      "dynamicFunctionTarget": null,
-      "evaluationSchedule": [
-        {
-          "argumentIndex": null,
-          "kind": "materialize-receiver",
-          "slotId": "call-receiver-slot:fd6bb046fd881289931710df",
-          "sourceArgumentIndex": null
-        },
-        {
-          "argumentIndex": 0,
-          "kind": "materialize-argument",
-          "slotId": "call-argument-slot:c1fc718dc69aac902c66b2c6",
-          "sourceArgumentIndex": 0
-        },
-        {
-          "argumentIndex": null,
-          "kind": "invoke-callee",
-          "slotId": null,
-          "sourceArgumentIndex": null
-        }
-      ],
-      "functionId": "StringTools|StringTools|static|function|_urlDecodeOcaml|generics:0|required:String->String",
-      "genericInstanceTarget": null,
-      "id": "call:d96d67f931b31619af490e4f",
-      "kind": "standard-array-method",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
-      "proofId": "standard-array-typed-target-call-v8",
-      "reason": "The final typed Haxe expression calls standard Array<Int>.push. Its sealed target selects HxArray.push before syntax while preserving receiver-first and source-order argument evaluation.",
-      "receiver": null,
-      "result": null,
-      "resultKind": "value",
-      "resultMaterialization": null,
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20386,
-        "min": 20369
-      },
-      "sourceFieldName": "push",
-      "sourceModuleId": "Array",
-      "sourceTypeName": "Array",
-      "standardArrayTarget": {
-        "argumentCompatibilityProofIds": [
-          "haxe-typed-array-argument-compatible-v1"
-        ],
-        "argumentSemanticTypeIds": [
-          "Int"
-        ],
-        "elementSemanticTypeId": "Int",
-        "operation": "push",
-        "parameterSemanticTypeIds": [
-          "Int"
-        ],
-        "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
-        "proofId": "standard-array-typed-target-call-v8",
-        "receiverSemanticTypeId": "Array<Int>",
-        "resultElementSemanticTypeId": null,
-        "resultKind": "value",
-        "resultSemanticTypeId": "Int",
-        "runtimeCapabilities": [
-          "haxe-array"
-        ],
-        "runtimeFunction": "push",
-        "runtimeModule": "HxArray",
-        "runtimeTakesUnitArgument": false
-      },
-      "standardIMapTarget": null,
-      "structuralIteratorTarget": null
-    },
-    {
-      "arguments": [],
       "bodyRevision": "12:5c594d317766445eb9c42c4002d4b609a29b2e57bb4d14a319037ae975aa9507",
       "callbackInvocation": null,
       "calleeId": "haxe.Iterator|Iterator::next",
@@ -9831,6 +9752,85 @@
       "sourceModuleId": "Main",
       "sourceTypeName": "Main",
       "standardArrayTarget": null,
+      "standardIMapTarget": null,
+      "structuralIteratorTarget": null
+    },
+    {
+      "arguments": [],
+      "bodyRevision": "12:4c4ee3f0deb85f65fedd5bc1c60b02d678fcc4a1caa2490042c73bdc4be47dfe",
+      "callbackInvocation": null,
+      "calleeId": "Array|Array::push",
+      "dynamicFunctionTarget": null,
+      "evaluationSchedule": [
+        {
+          "argumentIndex": null,
+          "kind": "materialize-receiver",
+          "slotId": "call-receiver-slot:efda3590cf1d9db8a13396d5",
+          "sourceArgumentIndex": null
+        },
+        {
+          "argumentIndex": 0,
+          "kind": "materialize-argument",
+          "slotId": "call-argument-slot:d886b5567a1ad723a9246137",
+          "sourceArgumentIndex": 0
+        },
+        {
+          "argumentIndex": null,
+          "kind": "invoke-callee",
+          "slotId": null,
+          "sourceArgumentIndex": null
+        }
+      ],
+      "functionId": "StringTools|StringTools|static|function|_urlDecodeOcaml|generics:0|required:String->String",
+      "genericInstanceTarget": null,
+      "id": "call:dfb6d6172e1ebb8cf04df880",
+      "kind": "standard-array-method",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
+      "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
+      "proofId": "standard-array-typed-target-call-v8",
+      "reason": "The final typed Haxe expression calls standard Array<Int>.push. Its sealed target selects HxArray.push before syntax while preserving receiver-first and source-order argument evaluation.",
+      "receiver": null,
+      "result": null,
+      "resultKind": "value",
+      "resultMaterialization": null,
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 20611,
+        "min": 20594
+      },
+      "sourceFieldName": "push",
+      "sourceModuleId": "Array",
+      "sourceTypeName": "Array",
+      "standardArrayTarget": {
+        "argumentCompatibilityProofIds": [
+          "haxe-typed-array-argument-compatible-v1"
+        ],
+        "argumentSemanticTypeIds": [
+          "Int"
+        ],
+        "elementSemanticTypeId": "Int",
+        "operation": "push",
+        "parameterSemanticTypeIds": [
+          "Int"
+        ],
+        "proofClaim": "The final typed Haxe call resolves to one admitted standard Array operation on one exact Array element type. The sealed target fixes its arguments, optional mapped result element, value-or-Void result, and matching HxArray operation before OCaml syntax. Its schedule evaluates the receiver once before every source argument. Callback identities exclude local parameter names. This proof does not admit other Array methods or user-defined classes with the same field names.",
+        "proofId": "standard-array-typed-target-call-v8",
+        "receiverSemanticTypeId": "Array<Int>",
+        "resultElementSemanticTypeId": null,
+        "resultKind": "value",
+        "resultSemanticTypeId": "Int",
+        "runtimeCapabilities": [
+          "haxe-array"
+        ],
+        "runtimeFunction": "push",
+        "runtimeModule": "HxArray",
+        "runtimeTakesUnitArgument": false
+      },
       "standardIMapTarget": null,
       "structuralIteratorTarget": null
     },
@@ -15729,10 +15729,10 @@
   ],
   "controlCount": 57,
   "controlModel": "typed-ocaml-function-loop-throw-and-catch-control-v28",
-  "controlRevision": "sha256:07c19143ee7eaf9e138d903a2e8833526b9c82aecddaf399230238ed07e68e76",
+  "controlRevision": "sha256:3297826297ee421af384368e671df554c2ad00df487130a9c3876f2db2008a60",
   "controlTargetCount": 47,
   "controlTargetModel": "typed-ocaml-lexical-loop-target-v1",
-  "controlTargetRevision": "sha256:3d5bbe8eba021105e7e4f5a09a084982dd6b5bd6493f8f2c613585f7bf37a874",
+  "controlTargetRevision": "sha256:2907317b83f5fbb23e59fc76a1203cf4bad1977e7a923608fac4d2564d555cea",
   "controlTargets": [
     {
       "bodyRevision": "12:16e8f680fbcc442b8ac7a4d79452be0222080fb5671a9b305e861d2b6a6395a8",
@@ -15790,8 +15790,8 @@
       "proofId": "lexical-loop-control-v1",
       "source": {
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20953,
-        "min": 20571
+        "max": 21178,
+        "min": 20796
       }
     },
     {
@@ -15895,8 +15895,8 @@
       "proofId": "lexical-loop-control-v1",
       "source": {
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 19777,
-        "min": 19519
+        "max": 20002,
+        "min": 19744
       }
     },
     {
@@ -16045,8 +16045,8 @@
       "proofId": "lexical-loop-control-v1",
       "source": {
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20403,
-        "min": 19957
+        "max": 20628,
+        "min": 20182
       }
     },
     {
@@ -16315,8 +16315,8 @@
       "proofId": "lexical-loop-control-v1",
       "source": {
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 21382,
-        "min": 21233
+        "max": 21607,
+        "min": 21458
       }
     },
     {
@@ -16631,8 +16631,8 @@
       "runtimeTags": [],
       "source": {
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20943,
-        "min": 20938
+        "max": 21168,
+        "min": 21163
       },
       "targetId": "control-target:loop:0e0e716ff77db32713bbc285",
       "targetKind": "loop"
@@ -16715,8 +16715,8 @@
       "runtimeTags": [],
       "source": {
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20101,
-        "min": 20093
+        "max": 20326,
+        "min": 20318
       },
       "targetId": "control-target:loop:70b9ae3a93176b653c8f714a",
       "targetKind": "loop"
@@ -16799,8 +16799,8 @@
       "runtimeTags": [],
       "source": {
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20353,
-        "min": 20345
+        "max": 20578,
+        "min": 20570
       },
       "targetId": "control-target:loop:70b9ae3a93176b653c8f714a",
       "targetKind": "loop"
@@ -16848,8 +16848,8 @@
       "runtimeTags": [],
       "source": {
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20548,
-        "min": 20537
+        "max": 20773,
+        "min": 20762
       },
       "targetId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
       "targetKind": "function"
@@ -16897,8 +16897,8 @@
       "runtimeTags": [],
       "source": {
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20984,
-        "min": 20969
+        "max": 21209,
+        "min": 21194
       },
       "targetId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
       "targetKind": "function"
@@ -17289,8 +17289,8 @@
       "runtimeTags": [],
       "source": {
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 19378,
-        "min": 19349
+        "max": 19603,
+        "min": 19574
       },
       "targetId": "StringTools|StringTools|static|function|_hexValue|generics:0|required:Int->Int",
       "targetKind": "function"
@@ -17485,8 +17485,8 @@
       "runtimeTags": [],
       "source": {
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 19222,
-        "min": 19200
+        "max": 19447,
+        "min": 19425
       },
       "targetId": "StringTools|StringTools|static|function|_hexValue|generics:0|required:Int->Int",
       "targetKind": "function"
@@ -17534,8 +17534,8 @@
       "runtimeTags": [],
       "source": {
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 19300,
-        "min": 19271
+        "max": 19525,
+        "min": 19496
       },
       "targetId": "StringTools|StringTools|static|function|_hexValue|generics:0|required:Int->Int",
       "targetKind": "function"
@@ -24252,7 +24252,7 @@
   "intUnaryRevision": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
   "localConversionCount": 54,
   "localConversionModel": "typed-ocaml-local-carrier-conversions-v3",
-  "localConversionRevision": "sha256:7e72f60f199bdafbb1a9fdd71c47eeb54ab2ab67cbba2ab749698ec936674b5b",
+  "localConversionRevision": "sha256:96e18bea5414d8a81747d01dc4f3c65bbee4f12ab62bb35744223ab9f02e9c6e",
   "localConversions": [
     {
       "bodyRevision": "12:69f5d02b922b1f084ef9f14a63ac4dce125d959309b5a19afb3fdcb16ea00624",
@@ -24285,7 +24285,7 @@
       "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
       "conversion": "preserve-nullable-int-carrier",
       "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "id": "local-conversion:075f54b6e6433e0e5f9c6d58bf1b8e7f",
+      "id": "local-conversion:0607a71d9b85c9ceec675dc08b3f78e7",
       "inputCarrierTypeId": "Obj.t",
       "inputSemanticTypeId": "Null<Int>",
       "localId": "lexical-local-v1:5e111e5405eb651da7ae47ed982575c85de36df61d402a7978639f89520ab613",
@@ -24303,8 +24303,35 @@
       "role": "read",
       "source": {
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20875,
-        "min": 20871
+        "max": 20983,
+        "min": 20979
+      },
+      "unsafeOperation": null
+    },
+    {
+      "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
+      "conversion": "preserve-nullable-int-carrier",
+      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
+      "id": "local-conversion:0a6c143462c3ac1fa7521e37d6da21fc",
+      "inputCarrierTypeId": "Obj.t",
+      "inputSemanticTypeId": "Null<Int>",
+      "localId": "lexical-local-v1:5e111e5405eb651da7ae47ed982575c85de36df61d402a7978639f89520ab613",
+      "outputCarrierTypeId": "Obj.t",
+      "outputSemanticTypeId": "Null<Int>",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "role": "read",
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 21076,
+        "min": 21072
       },
       "unsafeOperation": null
     },
@@ -24366,7 +24393,7 @@
       "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
       "conversion": "preserve-nullable-int-carrier",
       "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "id": "local-conversion:1143dae8bba78a859e7ed294e4ca3e89",
+      "id": "local-conversion:18203a12b86ec4303dd0df060eb3c8e3",
       "inputCarrierTypeId": "Obj.t",
       "inputSemanticTypeId": "Null<Int>",
       "localId": "lexical-local-v1:5e111e5405eb651da7ae47ed982575c85de36df61d402a7978639f89520ab613",
@@ -24384,8 +24411,8 @@
       "role": "read",
       "source": {
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20732,
-        "min": 20728
+        "max": 21124,
+        "min": 21120
       },
       "unsafeOperation": null
     },
@@ -24393,7 +24420,7 @@
       "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
       "conversion": "preserve-nullable-int-carrier",
       "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "id": "local-conversion:1320b4b56a50ac4c545e38481b4851fb",
+      "id": "local-conversion:21ccff2e5fafe6119ead18430c7ba2f7",
       "inputCarrierTypeId": "Obj.t",
       "inputSemanticTypeId": "Null<Int>",
       "localId": "lexical-local-v1:5e111e5405eb651da7ae47ed982575c85de36df61d402a7978639f89520ab613",
@@ -24411,35 +24438,8 @@
       "role": "read",
       "source": {
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20712,
-        "min": 20708
-      },
-      "unsafeOperation": null
-    },
-    {
-      "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
-      "conversion": "preserve-nullable-int-carrier",
-      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "id": "local-conversion:22a2c7647b6b580ba8943f1e37791be1",
-      "inputCarrierTypeId": "Obj.t",
-      "inputSemanticTypeId": "Null<Int>",
-      "localId": "lexical-local-v1:5e111e5405eb651da7ae47ed982575c85de36df61d402a7978639f89520ab613",
-      "outputCarrierTypeId": "Obj.t",
-      "outputSemanticTypeId": "Null<Int>",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "role": "read",
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20778,
-        "min": 20774
+        "max": 21003,
+        "min": 20999
       },
       "unsafeOperation": null
     },
@@ -24467,33 +24467,6 @@
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx",
         "max": 4636,
         "min": 4632
-      },
-      "unsafeOperation": null
-    },
-    {
-      "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
-      "conversion": "preserve-nullable-int-carrier",
-      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "id": "local-conversion:270c8816ffe1f49cbf688a4f0cbeb57f",
-      "inputCarrierTypeId": "Obj.t",
-      "inputSemanticTypeId": "Null<Int>",
-      "localId": "lexical-local-v1:5e111e5405eb651da7ae47ed982575c85de36df61d402a7978639f89520ab613",
-      "outputCarrierTypeId": "Obj.t",
-      "outputSemanticTypeId": "Null<Int>",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "role": "read",
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20666,
-        "min": 20662
       },
       "unsafeOperation": null
     },
@@ -24768,6 +24741,60 @@
       "unsafeOperation": null
     },
     {
+      "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
+      "conversion": "preserve-nullable-int-carrier",
+      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
+      "id": "local-conversion:3fb7e7cd3629011e611cb949e3215487",
+      "inputCarrierTypeId": "Obj.t",
+      "inputSemanticTypeId": "Null<Int>",
+      "localId": "lexical-local-v1:5e111e5405eb651da7ae47ed982575c85de36df61d402a7978639f89520ab613",
+      "outputCarrierTypeId": "Obj.t",
+      "outputSemanticTypeId": "Null<Int>",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "role": "read",
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 20891,
+        "min": 20887
+      },
+      "unsafeOperation": null
+    },
+    {
+      "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
+      "conversion": "preserve-nullable-int-carrier",
+      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
+      "id": "local-conversion:40cf8d3a8828b87d3af6aec6192bf09c",
+      "inputCarrierTypeId": "Obj.t",
+      "inputSemanticTypeId": "Null<Int>",
+      "localId": "lexical-local-v1:5e111e5405eb651da7ae47ed982575c85de36df61d402a7978639f89520ab613",
+      "outputCarrierTypeId": "Obj.t",
+      "outputSemanticTypeId": "Null<Int>",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "role": "read",
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 21052,
+        "min": 21048
+      },
+      "unsafeOperation": null
+    },
+    {
       "bodyRevision": "12:b92b1196d6976d540eab50b9560f39d9eaf8ce4cb498f764ccbab699b11aa572",
       "conversion": "preserve-nullable-int-carrier",
       "functionId": "haxe.NativeStackTrace|NativeStackTrace|static|function|parseFileLine|generics:0|required:String->Null<{ line : Int, file : String }>",
@@ -24818,33 +24845,6 @@
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
         "max": 9273,
         "min": 9272
-      },
-      "unsafeOperation": null
-    },
-    {
-      "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
-      "conversion": "preserve-nullable-int-carrier",
-      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "id": "local-conversion:48903019b74d00f125ca684e336d340e",
-      "inputCarrierTypeId": "Obj.t",
-      "inputSemanticTypeId": "Null<Int>",
-      "localId": "lexical-local-v1:5e111e5405eb651da7ae47ed982575c85de36df61d402a7978639f89520ab613",
-      "outputCarrierTypeId": "Obj.t",
-      "outputSemanticTypeId": "Null<Int>",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "role": "read",
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20827,
-        "min": 20823
       },
       "unsafeOperation": null
     },
@@ -24957,6 +24957,33 @@
       "unsafeOperation": null
     },
     {
+      "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
+      "conversion": "preserve-nullable-int-carrier",
+      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
+      "id": "local-conversion:559a64edbcbefb88366c271f224319f1",
+      "inputCarrierTypeId": "Obj.t",
+      "inputSemanticTypeId": "Null<Int>",
+      "localId": "lexical-local-v1:5e111e5405eb651da7ae47ed982575c85de36df61d402a7978639f89520ab613",
+      "outputCarrierTypeId": "Obj.t",
+      "outputSemanticTypeId": "Null<Int>",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "role": "read",
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 20937,
+        "min": 20933
+      },
+      "unsafeOperation": null
+    },
+    {
       "bodyRevision": "12:5c24cb866cf8e4bb74655d0770e45e08c8fa5f1f4034a978fd68b095b401b7bb",
       "conversion": "preserve-nullable-int-carrier",
       "functionId": "haxe.CallStack|CallStack_Impl_|static|function|equalItems|generics:0|required:Null<haxe.StackItem>,required:Null<haxe.StackItem>->Bool",
@@ -24980,6 +25007,33 @@
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx",
         "max": 4636,
         "min": 4632
+      },
+      "unsafeOperation": null
+    },
+    {
+      "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
+      "conversion": "preserve-nullable-int-carrier",
+      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
+      "id": "local-conversion:56b64f25806d0463f2debbde445e2e7e",
+      "inputCarrierTypeId": "Obj.t",
+      "inputSemanticTypeId": "Null<Int>",
+      "localId": "lexical-local-v1:5e111e5405eb651da7ae47ed982575c85de36df61d402a7978639f89520ab613",
+      "outputCarrierTypeId": "Obj.t",
+      "outputSemanticTypeId": "Null<Int>",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "role": "read",
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 20911,
+        "min": 20907
       },
       "unsafeOperation": null
     },
@@ -25068,7 +25122,7 @@
       "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
       "conversion": "preserve-nullable-int-carrier",
       "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "id": "local-conversion:6e8e28fba0f4d00f95b57392540b88ea",
+      "id": "local-conversion:65f80d66f29423f85043d01daaa6b41e",
       "inputCarrierTypeId": "Obj.t",
       "inputSemanticTypeId": "Null<Int>",
       "localId": "lexical-local-v1:5e111e5405eb651da7ae47ed982575c85de36df61d402a7978639f89520ab613",
@@ -25086,62 +25140,8 @@
       "role": "read",
       "source": {
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20686,
-        "min": 20682
-      },
-      "unsafeOperation": null
-    },
-    {
-      "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
-      "conversion": "preserve-nullable-int-carrier",
-      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "id": "local-conversion:72aaf2869b05024c9a045b5c02103cb3",
-      "inputCarrierTypeId": "Obj.t",
-      "inputSemanticTypeId": "Null<Int>",
-      "localId": "lexical-local-v1:5e111e5405eb651da7ae47ed982575c85de36df61d402a7978639f89520ab613",
-      "outputCarrierTypeId": "Obj.t",
-      "outputSemanticTypeId": "Null<Int>",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "role": "initializer",
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20650,
-        "min": 20624
-      },
-      "unsafeOperation": null
-    },
-    {
-      "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
-      "conversion": "preserve-nullable-int-carrier",
-      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "id": "local-conversion:744c3e76088060ff12e2d0801cd57a0b",
-      "inputCarrierTypeId": "Obj.t",
-      "inputSemanticTypeId": "Null<Int>",
-      "localId": "lexical-local-v1:5e111e5405eb651da7ae47ed982575c85de36df61d402a7978639f89520ab613",
-      "outputCarrierTypeId": "Obj.t",
-      "outputSemanticTypeId": "Null<Int>",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "role": "read",
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20851,
-        "min": 20847
+        "max": 20957,
+        "min": 20953
       },
       "unsafeOperation": null
     },
@@ -25308,6 +25308,33 @@
       "unsafeOperation": null
     },
     {
+      "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
+      "conversion": "preserve-nullable-int-carrier",
+      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
+      "id": "local-conversion:9b589297657c2b3cab138a3719fb6c23",
+      "inputCarrierTypeId": "Obj.t",
+      "inputSemanticTypeId": "Null<Int>",
+      "localId": "lexical-local-v1:5e111e5405eb651da7ae47ed982575c85de36df61d402a7978639f89520ab613",
+      "outputCarrierTypeId": "Obj.t",
+      "outputSemanticTypeId": "Null<Int>",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "role": "initializer",
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 20875,
+        "min": 20849
+      },
+      "unsafeOperation": null
+    },
+    {
       "bodyRevision": "12:106ef18c7db75bed01d85a26a5dbed78ef0a9363438396c2fcb50b364c48097e",
       "conversion": "preserve-nullable-int-carrier",
       "functionId": "StringTools|StringTools|static|function|isSpace|generics:0|required:String,required:Int->Bool",
@@ -25331,33 +25358,6 @@
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
         "max": 9251,
         "min": 9234
-      },
-      "unsafeOperation": null
-    },
-    {
-      "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
-      "conversion": "preserve-nullable-int-carrier",
-      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "id": "local-conversion:a82ca052bce4283a75a800bec7448cf2",
-      "inputCarrierTypeId": "Obj.t",
-      "inputSemanticTypeId": "Null<Int>",
-      "localId": "lexical-local-v1:5e111e5405eb651da7ae47ed982575c85de36df61d402a7978639f89520ab613",
-      "outputCarrierTypeId": "Obj.t",
-      "outputSemanticTypeId": "Null<Int>",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "role": "read",
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20758,
-        "min": 20754
       },
       "unsafeOperation": null
     },
@@ -25412,33 +25412,6 @@
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx",
         "max": 5527,
         "min": 5526
-      },
-      "unsafeOperation": null
-    },
-    {
-      "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
-      "conversion": "preserve-nullable-int-carrier",
-      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "id": "local-conversion:ad4eaca3b5bc7388297bac5639ed5e4c",
-      "inputCarrierTypeId": "Obj.t",
-      "inputSemanticTypeId": "Null<Int>",
-      "localId": "lexical-local-v1:5e111e5405eb651da7ae47ed982575c85de36df61d402a7978639f89520ab613",
-      "outputCarrierTypeId": "Obj.t",
-      "outputSemanticTypeId": "Null<Int>",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
-      "proofId": "nullable-int-carrier-preserve-v1",
-      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
-      "role": "read",
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20899,
-        "min": 20895
       },
       "unsafeOperation": null
     },
@@ -25527,7 +25500,7 @@
       "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
       "conversion": "preserve-nullable-int-carrier",
       "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
-      "id": "local-conversion:c1e8216ab725d1174f830668a10650a4",
+      "id": "local-conversion:cacff5c8c3095ffa09d4b06eeb3f4b4f",
       "inputCarrierTypeId": "Obj.t",
       "inputSemanticTypeId": "Null<Int>",
       "localId": "lexical-local-v1:5e111e5405eb651da7ae47ed982575c85de36df61d402a7978639f89520ab613",
@@ -25545,8 +25518,8 @@
       "role": "read",
       "source": {
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20803,
-        "min": 20799
+        "max": 21100,
+        "min": 21096
       },
       "unsafeOperation": null
     },
@@ -25574,6 +25547,33 @@
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/haxe/CallStack.hx",
         "max": 4877,
         "min": 4875
+      },
+      "unsafeOperation": null
+    },
+    {
+      "bodyRevision": "12:7cdf2bc6dabf873a95779d5ff981d5b6a2846396cd7e1aa348262f6402ba736d",
+      "conversion": "preserve-nullable-int-carrier",
+      "functionId": "StringTools|StringTools|static|function|_quoteUnixArgOcaml|generics:0|required:String->String",
+      "id": "local-conversion:e6d9679f685f5919335df22a295a412a",
+      "inputCarrierTypeId": "Obj.t",
+      "inputSemanticTypeId": "Null<Int>",
+      "localId": "lexical-local-v1:5e111e5405eb651da7ae47ed982575c85de36df61d402a7978639f89520ab613",
+      "outputCarrierTypeId": "Obj.t",
+      "outputSemanticTypeId": "Null<Int>",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
+      "proofClaim": "The typed occurrence is either the canonical Haxe null sentinel or an existing exact Null<Int> value, so copying its Obj.t carrier preserves the value without another box.",
+      "proofId": "nullable-int-carrier-preserve-v1",
+      "reason": "The source occurrence already produces the selected exact Null<Int> Obj.t carrier.",
+      "role": "read",
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 21028,
+        "min": 21024
       },
       "unsafeOperation": null
     },
@@ -26707,7 +26707,7 @@
     }
   ],
   "runtimeRequirementCount": 136,
-  "runtimeRequirementRevision": "sha256:eaf387bda6713ce5829e889fd9e97644d6a424afecb8e47244459a079e2698cd",
+  "runtimeRequirementRevision": "sha256:c96f3b90488a31492bd9bced97b9ad0039530f2a9a5264de32513c09e9313075",
   "runtimeRequirements": [
     {
       "cause": "lowering-decision",
@@ -27309,32 +27309,6 @@
     },
     {
       "cause": "lowering-decision",
-      "decisionId": "call:1202bad7af1095ae6a08d226",
-      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
-      "id": "call:1202bad7af1095ae6a08d226:runtime:haxe-array:push",
-      "implementationFeature": "haxe-array-v1",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "rootModules": [
-        "HxArray"
-      ],
-      "semanticCapability": "haxe-array",
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 19680,
-        "min": 19659
-      },
-      "sourceId": "call:1202bad7af1095ae6a08d226",
-      "sourceKind": "haxe-expression",
-      "subject": {
-        "id": "Array<Int>",
-        "kind": "haxe-type"
-      }
-    },
-    {
-      "cause": "lowering-decision",
       "decisionId": "call:18c144613cf59d21b37e3461",
       "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
       "id": "call:18c144613cf59d21b37e3461:runtime:haxe-array:push",
@@ -27361,9 +27335,9 @@
     },
     {
       "cause": "lowering-decision",
-      "decisionId": "call:22d68880e50dd7226fe25d74",
+      "decisionId": "call:19fe1ae97fb384879f9c6a3d",
       "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
-      "id": "call:22d68880e50dd7226fe25d74:runtime:haxe-array:push",
+      "id": "call:19fe1ae97fb384879f9c6a3d:runtime:haxe-array:push",
       "implementationFeature": "haxe-array-v1",
       "profileEligibility": [
         "metal",
@@ -27375,10 +27349,10 @@
       "semanticCapability": "haxe-array",
       "source": {
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 19641,
-        "min": 19624
+        "max": 19866,
+        "min": 19849
       },
-      "sourceId": "call:22d68880e50dd7226fe25d74",
+      "sourceId": "call:19fe1ae97fb384879f9c6a3d",
       "sourceKind": "haxe-expression",
       "subject": {
         "id": "Array<Int>",
@@ -27595,6 +27569,32 @@
     },
     {
       "cause": "lowering-decision",
+      "decisionId": "call:46dda47c18474670313fd09d",
+      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
+      "id": "call:46dda47c18474670313fd09d:runtime:haxe-array:push",
+      "implementationFeature": "haxe-array-v1",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "rootModules": [
+        "HxArray"
+      ],
+      "semanticCapability": "haxe-array",
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 19905,
+        "min": 19884
+      },
+      "sourceId": "call:46dda47c18474670313fd09d",
+      "sourceKind": "haxe-expression",
+      "subject": {
+        "id": "Array<Int>",
+        "kind": "haxe-type"
+      }
+    },
+    {
+      "cause": "lowering-decision",
       "decisionId": "call:4947c2d2ba2a53c01df95a5d",
       "explanation": "The sealed direct structural Iterator call uses HxIterator to invoke the selected hasNext or next operation after evaluating the receiver exactly once.",
       "id": "call:4947c2d2ba2a53c01df95a5d:runtime:haxe-iterator",
@@ -27725,32 +27725,6 @@
     },
     {
       "cause": "lowering-decision",
-      "decisionId": "call:5b81c8e1583d61579f12e294",
-      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
-      "id": "call:5b81c8e1583d61579f12e294:runtime:haxe-array:push",
-      "implementationFeature": "haxe-array-v1",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "rootModules": [
-        "HxArray"
-      ],
-      "semanticCapability": "haxe-array",
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20074,
-        "min": 20053
-      },
-      "sourceId": "call:5b81c8e1583d61579f12e294",
-      "sourceKind": "haxe-expression",
-      "subject": {
-        "id": "Array<Int>",
-        "kind": "haxe-type"
-      }
-    },
-    {
-      "cause": "lowering-decision",
       "decisionId": "call:5ce589123618c396b3629720",
       "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
       "id": "call:5ce589123618c396b3629720:runtime:haxe-array:push",
@@ -27803,6 +27777,32 @@
     },
     {
       "cause": "lowering-decision",
+      "decisionId": "call:674095c5221d739098c54a77",
+      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
+      "id": "call:674095c5221d739098c54a77:runtime:haxe-array:push",
+      "implementationFeature": "haxe-array-v1",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "rootModules": [
+        "HxArray"
+      ],
+      "semanticCapability": "haxe-array",
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 20546,
+        "min": 20519
+      },
+      "sourceId": "call:674095c5221d739098c54a77",
+      "sourceKind": "haxe-expression",
+      "subject": {
+        "id": "Array<Int>",
+        "kind": "haxe-type"
+      }
+    },
+    {
+      "cause": "lowering-decision",
       "decisionId": "call:6afd9a5a217a20f6b01e7e4d",
       "explanation": "The sealed direct structural Iterator call uses HxIterator to invoke the selected hasNext or next operation after evaluating the receiver exactly once.",
       "id": "call:6afd9a5a217a20f6b01e7e4d:runtime:haxe-iterator",
@@ -27847,6 +27847,32 @@
         "min": 2720
       },
       "sourceId": "call:7411c7c252028a8240315d2f",
+      "sourceKind": "haxe-expression",
+      "subject": {
+        "id": "Array<Int>",
+        "kind": "haxe-type"
+      }
+    },
+    {
+      "cause": "lowering-decision",
+      "decisionId": "call:7a5ba6350e351d46f13ba810",
+      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
+      "id": "call:7a5ba6350e351d46f13ba810:runtime:haxe-array:push",
+      "implementationFeature": "haxe-array-v1",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "rootModules": [
+        "HxArray"
+      ],
+      "semanticCapability": "haxe-array",
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 20299,
+        "min": 20278
+      },
+      "sourceId": "call:7a5ba6350e351d46f13ba810",
       "sourceKind": "haxe-expression",
       "subject": {
         "id": "Array<Int>",
@@ -27954,6 +27980,32 @@
       "sourceKind": "haxe-expression",
       "subject": {
         "id": "Array<haxe.StackItem>",
+        "kind": "haxe-type"
+      }
+    },
+    {
+      "cause": "lowering-decision",
+      "decisionId": "call:807543bccd85c60e652474e8",
+      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
+      "id": "call:807543bccd85c60e652474e8:runtime:haxe-array:push",
+      "implementationFeature": "haxe-array-v1",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "rootModules": [
+        "HxArray"
+      ],
+      "semanticCapability": "haxe-array",
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 19952,
+        "min": 19911
+      },
+      "sourceId": "call:807543bccd85c60e652474e8",
+      "sourceKind": "haxe-expression",
+      "subject": {
+        "id": "Array<Int>",
         "kind": "haxe-type"
       }
     },
@@ -28115,32 +28167,6 @@
     },
     {
       "cause": "lowering-decision",
-      "decisionId": "call:a0bd508e1e3aba35dfb890c4",
-      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
-      "id": "call:a0bd508e1e3aba35dfb890c4:runtime:haxe-array:push",
-      "implementationFeature": "haxe-array-v1",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "rootModules": [
-        "HxArray"
-      ],
-      "semanticCapability": "haxe-array",
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20321,
-        "min": 20294
-      },
-      "sourceId": "call:a0bd508e1e3aba35dfb890c4",
-      "sourceKind": "haxe-expression",
-      "subject": {
-        "id": "Array<Int>",
-        "kind": "haxe-type"
-      }
-    },
-    {
-      "cause": "lowering-decision",
       "decisionId": "call:a423da895a0f0997439bc3b6",
       "explanation": "The sealed direct structural Iterator call uses HxIterator to invoke the selected hasNext or next operation after evaluating the receiver exactly once.",
       "id": "call:a423da895a0f0997439bc3b6:runtime:haxe-iterator",
@@ -28162,6 +28188,32 @@
       "sourceKind": "haxe-expression",
       "subject": {
         "id": "Iterator<Int>",
+        "kind": "haxe-type"
+      }
+    },
+    {
+      "cause": "lowering-decision",
+      "decisionId": "call:ac98a4761f0e57810936f551",
+      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
+      "id": "call:ac98a4761f0e57810936f551:runtime:haxe-array:push",
+      "implementationFeature": "haxe-array-v1",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "rootModules": [
+        "HxArray"
+      ],
+      "semanticCapability": "haxe-array",
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 19992,
+        "min": 19958
+      },
+      "sourceId": "call:ac98a4761f0e57810936f551",
+      "sourceKind": "haxe-expression",
+      "subject": {
+        "id": "Array<Int>",
         "kind": "haxe-type"
       }
     },
@@ -28219,32 +28271,6 @@
     },
     {
       "cause": "lowering-decision",
-      "decisionId": "call:b2ae7b2b6194092880bc508d",
-      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
-      "id": "call:b2ae7b2b6194092880bc508d:runtime:haxe-array:push",
-      "implementationFeature": "haxe-array-v1",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "rootModules": [
-        "HxArray"
-      ],
-      "semanticCapability": "haxe-array",
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 19727,
-        "min": 19686
-      },
-      "sourceId": "call:b2ae7b2b6194092880bc508d",
-      "sourceKind": "haxe-expression",
-      "subject": {
-        "id": "Array<Int>",
-        "kind": "haxe-type"
-      }
-    },
-    {
-      "cause": "lowering-decision",
       "decisionId": "call:b6d0bc74aca87210b6031680",
       "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
       "id": "call:b6d0bc74aca87210b6031680:runtime:haxe-array:push",
@@ -28292,32 +28318,6 @@
       "sourceKind": "haxe-expression",
       "subject": {
         "id": "Iterator<String>",
-        "kind": "haxe-type"
-      }
-    },
-    {
-      "cause": "lowering-decision",
-      "decisionId": "call:b87491d24cda068555451a98",
-      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
-      "id": "call:b87491d24cda068555451a98:runtime:haxe-array:push",
-      "implementationFeature": "haxe-array-v1",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "rootModules": [
-        "HxArray"
-      ],
-      "semanticCapability": "haxe-array",
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 19767,
-        "min": 19733
-      },
-      "sourceId": "call:b87491d24cda068555451a98",
-      "sourceKind": "haxe-expression",
-      "subject": {
-        "id": "Array<Int>",
         "kind": "haxe-type"
       }
     },
@@ -28453,32 +28453,6 @@
     },
     {
       "cause": "lowering-decision",
-      "decisionId": "call:d96d67f931b31619af490e4f",
-      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
-      "id": "call:d96d67f931b31619af490e4f:runtime:haxe-array:push",
-      "implementationFeature": "haxe-array-v1",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "rootModules": [
-        "HxArray"
-      ],
-      "semanticCapability": "haxe-array",
-      "source": {
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
-        "max": 20386,
-        "min": 20369
-      },
-      "sourceId": "call:d96d67f931b31619af490e4f",
-      "sourceKind": "haxe-expression",
-      "subject": {
-        "id": "Array<Int>",
-        "kind": "haxe-type"
-      }
-    },
-    {
-      "cause": "lowering-decision",
       "decisionId": "call:dcbc702b47bf10ab5964c257",
       "explanation": "The sealed direct structural Iterator call uses HxIterator to invoke the selected hasNext or next operation after evaluating the receiver exactly once.",
       "id": "call:dcbc702b47bf10ab5964c257:runtime:haxe-iterator",
@@ -28500,6 +28474,32 @@
       "sourceKind": "haxe-expression",
       "subject": {
         "id": "KeyValueIterator<_Main.ObjectKey, Int>",
+        "kind": "haxe-type"
+      }
+    },
+    {
+      "cause": "lowering-decision",
+      "decisionId": "call:dfb6d6172e1ebb8cf04df880",
+      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
+      "id": "call:dfb6d6172e1ebb8cf04df880:runtime:haxe-array:push",
+      "implementationFeature": "haxe-array-v1",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "rootModules": [
+        "HxArray"
+      ],
+      "semanticCapability": "haxe-array",
+      "source": {
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx",
+        "max": 20611,
+        "min": 20594
+      },
+      "sourceId": "call:dfb6d6172e1ebb8cf04df880",
+      "sourceKind": "haxe-expression",
+      "subject": {
+        "id": "Array<Int>",
         "kind": "haxe-type"
       }
     },
