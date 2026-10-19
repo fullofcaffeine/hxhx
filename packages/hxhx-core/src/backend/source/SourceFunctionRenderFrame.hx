@@ -12,7 +12,8 @@ package backend.source;
 **/
 enum SourceFunctionRenderFrame {
 	Program(target:SourceNativeTarget);
-	TypedFunction(target:SourceNativeTarget, projection:TypedBackendFunctionProjection, names:SourceTemporaryNames, program:backend.GenIrProgram);
+	TypedFunction(target:SourceNativeTarget, projection:TypedBackendFunctionProjection, names:SourceTemporaryNames, program:backend.GenIrProgram,
+		?lua:LuaControlScope);
 	NativeFunction(locals:SourceNativeFunctionLocals, names:SourceTemporaryNames);
 	PhpFunction(renderer:PhpFunctionBodyRenderer, scope:PhpLexicalRenderScope, names:SourceTemporaryNames);
 }
@@ -89,8 +90,8 @@ class SourceFunctionRenderFrameTools {
 	}
 
 	/** Each function render starts a fresh name supply and retains its exact return destination. */
-	public static function forTypedFunction(target:SourceNativeTarget, projection:TypedBackendFunctionProjection,
-			program:backend.GenIrProgram):SourceFunctionRenderFrame {
+	public static function forTypedFunction(target:SourceNativeTarget, projection:TypedBackendFunctionProjection, program:backend.GenIrProgram,
+			?luaPlan:LuaClassPlan):SourceFunctionRenderFrame {
 		if (target != Python && target != Lua)
 			throw "typed source function frame requires Python or Lua";
 		projection.requireCaptureCatalog().assertCurrent();
@@ -98,12 +99,30 @@ class SourceFunctionRenderFrameTools {
 		for (module in program.getTypedModules())
 			for (owner in module.getBackendProjection().getClasses())
 				for (body in owner.getFunctions())
-					if (body == projection)
+					if (body == projection) {
+						if (luaPlan != null)
+							luaPlan.requireProjection(owner);
 						found = true;
+					}
 		if (!found)
 			throw "typed source frame requires the exact program function projection";
-		return TypedFunction(target, projection, new SourceTemporaryNames(name -> projection.getLocalCatalog().findByProjectedName(name) != null), program);
+		return TypedFunction(target, projection, new SourceTemporaryNames(name -> projection.getLocalCatalog().findByProjectedName(name) != null), program,
+			target == Lua ? new LuaControlScope(luaPlan == null ? new LuaClassPlan(program) : luaPlan) : null);
 	}
+
+	/** Lua protected calls derive a scope without changing the exact executable or name supply. */
+	public static function withLuaControl(frame:SourceFunctionRenderFrame, scope:LuaControlScope):SourceFunctionRenderFrame
+		return switch frame {
+			case TypedFunction(Lua, projection, names, program, previous) if (previous != null && previous.classPlan == scope.classPlan):
+				TypedFunction(Lua, projection, names, program, scope);
+			case _: throw "Lua control requires its exact function frame";
+		};
+
+	public static function requireLuaControl(frame:SourceFunctionRenderFrame):LuaControlScope
+		return switch frame {
+			case TypedFunction(Lua, _, _, _, scope) if (scope != null): scope;
+			case _: throw "Lua control requires its current protected-call scope";
+		};
 
 	/** Target spelling comes from the selected declaration, never from the case label. */
 	public static function requireEnumName(frame:SourceFunctionRenderFrame, owner:TyNominalTypeId):String

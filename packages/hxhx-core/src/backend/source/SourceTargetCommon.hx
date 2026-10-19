@@ -1460,24 +1460,30 @@ class SourceTargetCommon {
 				phpWhileExprWithFrame(frame, args[0], args[1], args[2]);
 			case ECall(EIdent("__hxhx_rest_lambda"), [ELambda(lambdaArgs, lambdaBody), EInt(restIndex)]):
 				if (target == Php) phpLambdaExprWithFrame(frame, lambdaArgs, lambdaBody, [], [], [],
-					restIndex); else lambdaExpr(target, lambdaArgs, lambdaBody);
+					restIndex); else if (target == Lua) LuaExpressionFunction.render(frame, lambdaArgs,
+					lambdaBody); else lambdaExpr(target, lambdaArgs, lambdaBody);
 			case ECall(EIdent("__hxhx_optional_lambda"), [ELambda(lambdaArgs, lambdaBody), EArrayDecl(optionalArgExprs)]):
 				final optionalArgNames = optionalLambdaArgNames(optionalArgExprs);
 				if (target == Php) phpLambdaExprWithFrame(frame, lambdaArgs, lambdaBody, [], [],
-					optionalArgNames); else lambdaExpr(target, lambdaArgs, lambdaBody);
+					optionalArgNames); else if (target == Lua) LuaExpressionFunction.render(frame, lambdaArgs,
+					lambdaBody); else lambdaExpr(target, lambdaArgs, lambdaBody);
 			case ECall(EIdent("__hxhx_optional_lambda"), [
 				ECall(EIdent("__hxhx_rest_lambda"), [ELambda(lambdaArgs, lambdaBody), EInt(restIndex)]),
 				EArrayDecl(optionalArgExprs)
 			]):
 				final optionalArgNames = optionalLambdaArgNames(optionalArgExprs);
 				if (target == Php) phpLambdaExprWithFrame(frame, lambdaArgs, lambdaBody, [], [], optionalArgNames,
-					restIndex); else lambdaExpr(target, lambdaArgs, lambdaBody);
+					restIndex); else if (target == Lua) LuaExpressionFunction.render(frame, lambdaArgs,
+					lambdaBody); else lambdaExpr(target, lambdaArgs, lambdaBody);
 			case ECall(ECast(ELambda(lambdaArgs, lambdaBody), typeHint), args) | ECall(ECheckType(ELambda(lambdaArgs, lambdaBody), typeHint), args)
 				if (isLambdaTypeAscription(ELambda(lambdaArgs, lambdaBody), typeHint)):
 				target == Php ? typedLambdaCallExprWithFrame(frame, lambdaArgs, lambdaBody, typeHint,
-					args) : typedLambdaCallExpr(target, lambdaArgs, lambdaBody, typeHint, args);
+					args) : target == Lua ? LuaExpressionFunction.call(frame, lambdaArgs, lambdaBody,
+						args) : typedLambdaCallExpr(target, lambdaArgs, lambdaBody, typeHint, args);
 			case ECall(ELambda(lambdaArgs, lambdaBody), args):
-				target == Php ? lambdaCallExprWithFrame(frame, lambdaArgs, lambdaBody, args) : lambdaCallExpr(target, lambdaArgs, lambdaBody, args);
+				target == Php ? lambdaCallExprWithFrame(frame, lambdaArgs, lambdaBody,
+					args) : target == Lua ? LuaExpressionFunction.call(frame, lambdaArgs, lambdaBody,
+						args) : lambdaCallExpr(target, lambdaArgs, lambdaBody, args);
 			case ECall(EThis, args) if (target == Php && SourceFunctionRenderFrameTools.requirePhpScope(frame).usesThisValueSlot()):
 				callExprWithFrame(frame, "(" + phpThisValueExprWithFrame(frame) + ")", args);
 			case ECall(ESuper, args):
@@ -1526,7 +1532,8 @@ class SourceTargetCommon {
 			case ERange(start, end):
 				rangeIterableWithFrame(frame, start, end);
 			case ELambda(args, body):
-				target == Php ? phpLambdaExprWithFrame(frame, args, body, [], [], []) : lambdaExpr(target, args, body);
+				target == Php ? phpLambdaExprWithFrame(frame, args, body, [], [],
+					[]) : target == Lua ? LuaExpressionFunction.render(frame, args, body) : lambdaExpr(target, args, body);
 			case ESwitch(scrutinee, patterns, exprs):
 				switchExprWithFrame(frame, scrutinee, patterns, exprs);
 			case ENew(typePath, args):
@@ -9134,14 +9141,22 @@ class SourceTargetCommon {
 				renderForKeyValueWithFrame(frame, keyName, valueName, iterable, body, indent);
 			case SWhile(cond, body, _):
 				renderWhileWithFrame(frame, cond, body, indent);
+			case SDoWhile(body, cond, _) if (target == Lua):
+				LuaControlRenderer.loop(frame, "repeat", body, indent, "not (" + renderExprWithFrame(frame, cond) + ")");
 			case SSwitch(scrutinee, patterns, bodies, _, exhaustive):
 				renderSwitchStmtWithFrame(frame, scrutinee, patterns, bodies, indent, exhaustive == true);
 			case STry(tryBody, catches, _):
 				renderTryWithFrame(frame, tryBody, catches, indent);
 			case SBreak(_):
-				[indent + breakStmt(target)];
+				[
+					indent + (target == Lua ? LuaControlRenderer.loopTransfer(frame, true) : breakStmt(target))
+				];
 			case SContinue(_):
-				[indent + continueStmt(target)];
+				[
+					indent + (target == Lua ? LuaControlRenderer.loopTransfer(frame, false) : continueStmt(target))
+				];
+			case SThrow(expr, _) if (target == Lua):
+				[indent + LuaControlRenderer.thrown(frame, expr)];
 			case SThrow(expr, pos):
 				final rendered = target == Java ? javaExprWithStmtTraceLine(expr, pos) : expr;
 					[indent + throwStmt(target, renderExprWithFrame(frame, rendered))];
@@ -9149,11 +9164,15 @@ class SourceTargetCommon {
 				[indent + returnStmt(target, pythonThisValueExpr())];
 			case SReturn(EThis, _) if (target == Php):
 				[indent + returnStmt(target, phpThisValueExprWithFrame(frame))];
+			case SReturn(expr, _) if (target == Lua):
+				[indent + LuaControlRenderer.returned(frame, expr)];
 			case SReturn(expr, pos):
 				final rendered = target == Java ? javaExprWithStmtTraceLine(expr, pos) : expr;
 					[indent + returnStmt(target, renderExprWithFrame(frame, rendered))];
 			case SReturnVoid(_):
-				[indent + returnVoidStmt(target)];
+				[
+					indent + (target == Lua ? LuaControlRenderer.returned(frame, null) : returnVoidStmt(target))
+				];
 			case _:
 				throw targetLabel(target) + " source backend MVP unsupported statement: " + stmtKind(stmt);
 		};
@@ -11029,6 +11048,9 @@ class SourceTargetCommon {
 	static function renderForInWithFrame(frame:SourceFunctionRenderFrame, name:String, iterable:HxExpr, body:HxStmt, indent:String,
 			knownPhpLocals:Null<haxe.ds.StringMap<String>> = null):Array<String> {
 		final target = SourceFunctionRenderFrameTools.target(frame);
+		if (target == Lua)
+			return LuaControlRenderer.loop(frame, "for _, " + valueName(Lua, name) + " in ipairs(" + renderExprWithFrame(frame, iterable) + ") do", body,
+				indent);
 		if (target != Php)
 			return renderForIn(target, name, iterable, body, indent, knownPhpLocals, frame);
 		final cleanName = PhpName.valueIdentifier(name);
@@ -11172,6 +11194,8 @@ class SourceTargetCommon {
 
 	static function renderWhileWithFrame(frame:SourceFunctionRenderFrame, cond:HxExpr, body:HxStmt, indent:String):Array<String> {
 		final target = SourceFunctionRenderFrameTools.target(frame);
+		if (target == Lua)
+			return LuaControlRenderer.loop(frame, "while " + renderExprWithFrame(frame, cond) + " do", body, indent);
 		if (target != Php)
 			return renderWhile(target, cond, body, indent, frame);
 		final renderedCond = renderExprWithFrame(frame, cond);
@@ -11780,7 +11804,7 @@ class SourceTargetCommon {
 				out.push(indent + "}");
 				renderPhpCatchChainWithFrame(out, indent, "\\Exception", catches, frame);
 			case Lua:
-				throw targetLabel(target) + " source backend MVP unsupported statement: STry";
+				return LuaControlRenderer.tryStatement(frame, tryBody, catches, indent);
 		}
 		return out;
 	}
@@ -12285,18 +12309,6 @@ class SourceTargetCommon {
 		appendSourceNativeTemplateLines(lines, "", "lua/runtime", "EReg.lua");
 		final seenPaths = new Map<String, Bool>();
 		final seenGlobals = new Map<String, Bool>();
-		for (typed in program.getTypedModules()) {
-			final moduleDecl = typed.getBackendDeclaration();
-			if (isStdSourceFile(typed.getParsed().getFilePath()))
-				continue;
-			final packagePath = HxModuleDecl.getPackagePath(moduleDecl);
-			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
-				final className = sanitizeTypeName(HxClassDecl.getName(cls));
-				if (className == mainClassName || isCompileTimeOnlySupportClass(cls))
-					continue;
-				appendLuaSupportClassBinding(lines, seenPaths, seenGlobals, packagePath, className);
-			}
-		}
 		appendLuaRunciHelperBindings(lines, seenPaths, seenGlobals);
 		return lines;
 	}
@@ -19582,95 +19594,6 @@ class SourceTargetCommon {
 		return PhpName.typeIdentifier(parts[parts.length - 1]);
 	}
 
-	static function luaFunctionArgs(args:Array<HxFunctionArg>):String {
-		return [for (arg in args) valueName(Lua, HxFunctionArg.getName(arg))].join(", ");
-	}
-
-	static function luaCollectDirectCallNames(stmts:Array<HxStmt>, out:Map<String, Bool>):Void {
-		final calls = new Array<{name:String, arity:Int}>();
-		for (stmt in stmts)
-			collectJavaEntryBodyDirectCalls(stmt, calls);
-		for (call in calls)
-			out.set(valueName(Lua, call.name), true);
-	}
-
-	static function appendLuaMainStaticHelpers(out:Array<String>, program:GenIrProgram, projection:TypedBackendModuleProjection, className:String,
-			entryBody:Array<HxStmt>):Void {
-		final helperNames = new Array<String>();
-		final helpersByName = new Map<String, TypedBackendFunctionProjection>();
-		for (projectedClass in projection.getClasses()) {
-			for (functionProjection in projectedClass.getFunctions()) {
-				final fn = functionProjection.getDeclaration();
-				final fnName = HxFunctionDecl.getName(fn);
-				if (fnName == "main"
-					|| fnName == "new"
-					|| !HxFunctionDecl.getIsStatic(fn)
-					|| HxFunctionDecl.getMetadata(fn).indexOf("macro") >= 0)
-					continue;
-				final methodName = valueName(Lua, fnName);
-				if (helpersByName.exists(methodName))
-					continue;
-				helperNames.push(methodName);
-				helpersByName.set(methodName, functionProjection);
-			}
-		}
-		if (helperNames.length == 0)
-			return;
-
-		final entryCalls = new Map<String, Bool>();
-		luaCollectDirectCallNames(entryBody, entryCalls);
-		final queue = new Array<String>();
-		for (methodName in helperNames)
-			if (entryCalls.exists(methodName))
-				queue.push(methodName);
-		if (queue.length == 0)
-			return;
-
-		final selected = new Map<String, Bool>();
-		final emitOrder = new Array<String>();
-		while (queue.length > 0) {
-			final methodName = queue.shift();
-			if (selected.exists(methodName) || !helpersByName.exists(methodName))
-				continue;
-			selected.set(methodName, true);
-			emitOrder.push(methodName);
-			final nestedCalls = new Map<String, Bool>();
-			luaCollectDirectCallNames(LuaStringLocalCallLowering.body(helpersByName.get(methodName)), nestedCalls);
-			for (nestedName in helperNames)
-				if (nestedCalls.exists(nestedName) && !selected.exists(nestedName))
-					queue.push(nestedName);
-		}
-
-		for (methodName in emitOrder)
-			out.push("local " + methodName);
-		for (methodName in emitOrder) {
-			final functionProjection = helpersByName.get(methodName);
-			final fn = functionProjection.getDeclaration();
-			final args = HxFunctionDecl.getArgs(fn);
-			out.push(methodName + " = function(" + luaFunctionArgs(args) + ")");
-			for (line in renderFunctionStmtsWithFrame(SourceFunctionRenderFrameTools.forTypedFunction(Lua, functionProjection, program),
-				LuaStringLocalCallLowering.body(functionProjection), "  ", className + "." + methodName))
-				out.push(line);
-			out.push("end");
-		}
-	}
-
-	static function appendLuaMainStaticFields(out:Array<String>, decl:HxModuleDecl, className:String):Void {
-		for (cls in HxModuleDecl.getClasses(decl)) {
-			if (sanitizeTypeName(HxClassDecl.getName(cls)) != className)
-				continue;
-			for (field in HxClassDecl.getFields(cls)) {
-				if (!HxFieldDecl.getIsStatic(field))
-					continue;
-				final init = HxFieldDecl.getInit(field);
-				if (init == null)
-					continue;
-				final name = sanitizeTypeName(HxFieldDecl.getName(field));
-				out.push("local " + name + " = " + assignedValueExpr(Lua, init, HxFieldDecl.getTypeHint(field)));
-			}
-		}
-	}
-
 	static function appendLuaUtilityProcessRuntime(out:Array<String>):Void {
 		appendSourceNativeTemplateLines(out, "", "lua/runtime", "UtilityProcess.lua");
 	}
@@ -19925,14 +19848,9 @@ class SourceTargetCommon {
 				if (className == "UtilityProcess") {
 					appendLuaUtilityProcessRuntime(lines);
 				} else {
-					appendLuaMainStaticFields(lines, decl, className);
-					appendLuaMainStaticHelpers(lines, program, strictProjection, className, body);
-					lines.push("local function main()");
-					final mainProjection = strictTypedMainProjection(program, findMainModule(program, context)).main;
-					for (line in renderFunctionStmtsWithFrame(SourceFunctionRenderFrameTools.forTypedFunction(Lua, mainProjection, program), body, "  ",
-						className + ".main"))
+					final mainProjection = strictTypedMainProjection(program, findMainModule(program, context));
+					for (line in new LuaSourceClassEmitter(program).render(mainProjection.cls))
 						lines.push(line);
-					lines.push("end");
 					lines.push("local __hxhx_traceback = (debug and debug.traceback) or tostring");
 					lines.push("local __hxhx_ok, __hxhx_error = xpcall(main, __hxhx_traceback)");
 					lines.push("if not __hxhx_ok then error(__hxhx_error, 0) end");

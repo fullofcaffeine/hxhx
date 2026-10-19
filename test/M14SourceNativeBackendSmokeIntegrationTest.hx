@@ -154,22 +154,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 	}
 
 	/**
-		Add exact program declaration facts to legacy PHP smoke fixtures.
+		Add exact program declaration facts to legacy PHP and Lua smoke fixtures.
 
 		Most source-target smokes predate program-indexed typing and deliberately
 		use `TyperStage.typeModule`. Real compiler requests use
-		`typeResolvedModule`, so PHP production rendering now correctly rejects
+		`typeResolvedModule`, so PHP and Lua production rendering correctly reject
 		those factless fixtures. This test-only adapter retypes only such legacy
 		fixtures through one shared nominal index. Retyping keeps the exact method
 		declaration, generic parameter types, local environment, and typed body
 		coherent; attaching declarations to an older permissive body would create
 		conflicting semantic facts.
 
-		Keeping the adapter at the PHP backend boundary avoids changing Java,
-		C#, Python, and Lua fixtures whose permissive bring-up behavior is not
-		part of the PHP render-session hard cut.
+		The adapter remains at these test backend boundaries. Java, C#, and Python
+		fixtures keep their existing setup. Production code never repairs a
+		factless program during rendering.
 	**/
-	static function withExactPhpDeclarationFacts(program:GenIrProgram):GenIrProgram {
+	static function withExactDeclarationFacts(program:GenIrProgram):GenIrProgram {
 		final sourceModules = program.getTypedModules();
 		var needsRetyping = false;
 		for (module in sourceModules)
@@ -199,7 +199,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 	static function exactPhpBackend():backend.IBackend {
 		final delegate = BackendRegistry.requireForTarget(backend.source.SourceNativeBackend.PHP_TARGET_ID);
 		return new backend.TargetCoreBackend(backend.source.SourceNativeBackend.phpDescriptor(),
-			(program, context) -> delegate.emit(withExactPhpDeclarationFacts(program), context));
+			(program, context) -> delegate.emit(withExactDeclarationFacts(program), context));
+	}
+
+	/** Lua class generation requires the same indexed declarations as a real compiler request. */
+	static function exactLuaBackend():backend.IBackend {
+		final delegate = BackendRegistry.requireForTarget(backend.source.SourceNativeBackend.LUA_TARGET_ID);
+		return new backend.TargetCoreBackend(backend.source.SourceNativeBackend.luaDescriptor(),
+			(program, context) -> delegate.emit(withExactDeclarationFacts(program), context));
 	}
 
 	static function assertPhpSyntaxUtilities():Void {
@@ -8559,7 +8566,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_" + targetId + "_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = targetId == backend.source.SourceNativeBackend.PHP_TARGET_ID ? exactPhpBackend() : BackendRegistry.requireForTarget(targetId);
+		final backend = targetId == backend.source.SourceNativeBackend.PHP_TARGET_ID ? exactPhpBackend() : targetId == backend.source.SourceNativeBackend.LUA_TARGET_ID ? exactLuaBackend() : BackendRegistry.requireForTarget(targetId);
 		final defines = new StringMap<String>();
 		defines.set(label, "1");
 		final result = backend.emit(program(label), new BackendContext(tmpRoot, null, "Main", true, false, defines));
@@ -9779,7 +9786,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_lambda_sequence_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
+		final backend = exactLuaBackend();
 		backend.emit(javaLambdaSequenceCallbackProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
@@ -9798,7 +9805,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_enum_extract_lambda_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
+		final backend = exactLuaBackend();
 		backend.emit(luaEnumExtractLambdaProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
@@ -9814,7 +9821,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_support_prelude_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
+		final backend = exactLuaBackend();
 		backend.emit(luaSupportPreludeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
@@ -9822,14 +9829,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"Lua output should emit the stable support prelude from the repo-owned runtime template");
 		assertContains(content, "local function hxhx_array(values)", "Lua output should define the array helper before main");
 		assertContains(content, "local function __hxhx_stub_class(_name)", "Lua output should define a small support-class helper before main");
-		assertContains(content, "Support = Support or __hxhx_stub_class(\"Support\")", "Lua support classes should be available as globals");
+		assertContains(content, "Support = __hx_lua_classes.c0", "Lua support classes should be available as globals");
 		assertContains(content, "unit.UnitBuilder = unit.UnitBuilder or __hxhx_stub_class(\"unit.UnitBuilder\")",
 			"Lua output should provide explicit unit helper globals skipped by compile-time-only filtering");
-		assertContains(content, "local cached = hxhx_array({})", "Lua static Array constructors should lower to the array helper");
+		assertContains(content, "__hx_lua_classes.c1.cached = hxhx_array({})", "Lua static Array constructors should lower to the array helper");
 		assertContains(content, "local empty = hxhx_array({})", "Lua local Array constructors should lower to the array helper");
-		assertContains(content, "local classes = hxhx_array({Support.new()})", "Lua array literals should be wrapped with push-capable tables");
+		assertContains(content, "local classes = hxhx_array({__hx_lua_classes.c0.new()})", "Lua array literals should be wrapped with push-capable tables");
 		assertContains(content, "empty.push(\"ok\")", "Lua constructed arrays should retain push support through the helper");
-		assertContains(content, "classes.push(Support.new())", "Lua generated push call should remain source-shaped");
+		assertContains(content, "classes.push(__hx_lua_classes.c0.new())", "Lua generated push call should use the exact declared constructor");
 		assertNotContains(content, "Array.new()", "Lua empty Array constructors should not require a global Array class");
 		assertContains(content, "local __hxhx_traceback = (debug and debug.traceback) or tostring",
 			"Lua entrypoints should install a traceback handler before running main");
@@ -9837,6 +9844,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"Lua entrypoints should preserve traceback text for pcall(require, ...) embedding");
 		assertContains(content, "if not __hxhx_ok then error(__hxhx_error, 0) end",
 			"Lua entrypoints should rethrow traceback text without adding an extra Lua error level");
+		assertContains(content, "__hxhx_lua_constructor(__hx_lua_classes.c0, function(", "Lua support classes should execute their authored constructor");
+		assertNotContains(content, "Support = Support or __hxhx_stub_class", "Ordinary Lua classes must not use nominal stubs");
+		if (commandExists("lua")) {
+			final run = commandOutput("lua", [outputPath]);
+			assertTrue(run.code == 0, "Lua arrays and stored callbacks should execute: " + run.stderr);
+			assertTrue(run.stdout == "ok\n", "Lua stored callback should read the first array element: " + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 
@@ -9844,7 +9858,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_reflect_string_method_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
+		final backend = exactLuaBackend();
 		backend.emit(luaReflectStringMethodProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
@@ -9879,7 +9893,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_sys_process_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
+		final backend = exactLuaBackend();
 		backend.emit(luaSysProcessProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
@@ -9913,7 +9927,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_string_substr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
+		final backend = exactLuaBackend();
 		backend.emit(luaStringSubstrProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
@@ -9944,20 +9958,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_issue9530_string_methods_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
+		final backend = exactLuaBackend();
 		backend.emit(luaIssue9530StringMethodProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "local function __hxhx_string_index_of(value, needle, start)", "Lua output should expose focused indexOf support");
 		assertContains(content, "local function __hxhx_string_to_upper_case(value)", "Lua output should expose focused toUpperCase support");
-		assertContains(content, "local f = \"field\"", "Lua same-class static string fields should initialize before main");
+		assertContains(content, "__hx_lua_classes.c0.f = \"field\"", "Lua same-class static string fields should initialize before main");
 		assertContains(content, "local sclass = tostring(\"foo\")", "Lua String.new should lower to a plain string value");
 		assertContains(content, "local scl = __hxhx_string_to_upper_case(sclass)", "Lua local string toUpperCase should use helper lowering");
-		assertContains(content, "local f2 = __hxhx_string_to_upper_case(f)", "Lua static string field toUpperCase should use helper lowering");
+		assertContains(content, "local f2 = __hxhx_string_to_upper_case(__hx_lua_classes.c0.f)",
+			"Lua static string field toUpperCase should use helper lowering");
 		assertContains(content, "local str = __hxhx_string_to_upper_case(\"str\")", "Lua literal toUpperCase should not emit invalid literal field syntax");
 		assertContains(content, "local isS = __hxhx_string_starts_with(\"sss\", \"s\")", "Lua literal startsWith should use helper lowering");
 		assertContains(content, "local i = __hxhx_string_index_of(\"foo\", \"\")", "Lua literal indexOf should use helper lowering");
-		assertContains(content, "print(__hxhx_string_to_upper_case(\"dyn\"))", "Lua dynamic-cast string toUpperCase should use helper lowering");
+		assertContains(content, "print(__hxhx_string_to_upper_case((\"dyn\")))", "Lua dynamic-cast string toUpperCase should use helper lowering");
 		assertNotContains(content, "\"str\".toUpperCase", "Lua should not emit invalid string-literal member calls");
 		assertNotContains(content, "\"sss\".startsWith", "Lua should not emit invalid string-literal startsWith calls");
 		assertNotContains(content, "\"foo\".indexOf", "Lua should not emit invalid string-literal indexOf calls");
@@ -9975,7 +9990,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_trace_line_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
+		final backend = exactLuaBackend();
 		backend.emit(luaTraceLineProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
@@ -9993,7 +10008,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_ereg_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
+		final backend = exactLuaBackend();
 		backend.emit(luaERegRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
@@ -10021,7 +10036,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_string_bool_concat_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
+		final backend = exactLuaBackend();
 		backend.emit(luaStringBoolConcatProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
@@ -10039,15 +10054,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_static_helper_call_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
+		final backend = exactLuaBackend();
 		backend.emit(luaStaticHelperCallProgram(), new BackendContext(tmpRoot, null, "RunScript", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "RunScript.lua"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "local matchesExpectedMessage", "Lua output should predeclare same-module static helpers before main");
-		assertContains(content, "matchesExpectedMessage = function(actual)", "Lua output should emit the static helper body");
+		assertContains(content, "RunScript = __hx_lua_classes.c0", "Lua module helpers should share their declared class table");
+		assertContains(content, "__hx_lua_classes.c0.matchesExpectedMessage = function(actual)", "Lua output should emit the static helper body");
 		assertContains(content, "return (actual == \"ok\")", "Lua static helper body should preserve its return expression");
-		assertContains(content, "local hasExpectedMessage = matchesExpectedMessage(\"ok\")",
-			"Lua main should call same-module static helpers through the emitted local function");
+		assertContains(content, "local hasExpectedMessage = __hx_lua_classes.c0.matchesExpectedMessage(\"ok\")",
+			"Lua main should call same-module static helpers through the exact class table");
 		assertNotContains(content, "unusedRunUtility = function", "Lua output should not force emission of unused static helpers with unsupported bodies");
 		if (commandExists("lua")) {
 			final run = commandOutput("lua", [outputPath]);
@@ -10061,7 +10076,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_utility_process_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
+		final backend = exactLuaBackend();
 		backend.emit(luaUtilityProcessRuntimeProgram(), new BackendContext(tmpRoot, null, "UtilityProcess", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "UtilityProcess.lua"]);
 		final content = File.getContent(outputPath);
@@ -14121,15 +14136,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_try_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
+		final backend = exactLuaBackend();
 		backend.emit(luaTryCatchRawExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "local function hxhx_throw(value)", "Lua try/catch expressions should emit the throw expression helper");
 		assertContains(content, "local function hxhx_try(try_fn, catch_fn)", "Lua try/catch expressions should emit the pcall expression helper");
-		assertContains(content, "local caught = hxhx_try(function() return hxhx_throw(\"boom\") end, function(e) return e end)",
-			"Lua raw try/catch expressions should lower through function-based pcall helpers");
+		assertContains(content, "__hx_lua_runtime.protect(function()", "Lua try regions should execute inside a protected call");
+		assertContains(content, "__hx_lua_runtime.raise(\"boom\", 0)", "Lua throw should retain its original value");
+		assertContains(content, "__hx_lua_runtime.valueType(_hx_pattern_1) == \"string\"", "Lua String catch should check its typed binding");
+		assertContains(content, "result = e", "Lua catch should assign the shared expression result");
+		assertContains(content, "local caught = result", "Lua try expressions should expose their result after the protected region");
 		assertContains(content, "print(caught)", "Lua try/catch expression results should remain usable by later statements");
+		if (commandExists("lua")) {
+			final run = commandOutput("lua", [outputPath]);
+			assertTrue(run.code == 0, "Lua try expression should execute: " + run.stderr);
+			assertTrue(run.stdout == "boom\n", "Lua try expression should preserve the caught value: " + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 
@@ -14780,7 +14803,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
 		final program = phpModuleLocalTypeCollisionProgram();
-		final facts = new backend.source.PhpTypedProgramProjection(withExactPhpDeclarationFacts(program)).getProgramRenderFacts();
+		final facts = new backend.source.PhpTypedProgramProjection(withExactDeclarationFacts(program)).getProgramRenderFacts();
 		assertTrue(facts.findEmittedTypeName("unit.Point") == null,
 			"PHP program facts should omit a package-local convenience alias shared by secondary types in different modules");
 		assertTrue(facts.findEmittedTypeName("unit.SupportOne.Point") == "SupportOne_Point",
@@ -17137,15 +17160,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_switch_stmt_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
+		final backend = exactLuaBackend();
 		backend.emit(switchStatementProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "local __hxhx_switch = \"python\"", "Lua switch statements should evaluate the scrutinee once");
+		assertContains(content, "local __hxhx_switch = (\"python\")", "Lua switch statements should evaluate the scrutinee once");
 		assertContains(content, "if (__hxhx_switch == \"python\") then", "Lua switch statements should lower the first pattern as an if");
 		assertContains(content, "print(\"py\")", "Lua switch statement branch bodies should render");
 		assertContains(content, "elseif true then", "Lua wildcard switch branches should lower as an elseif true catch-all");
 		assertContains(content, "print(\"other\")", "Lua later switch statement branches should still render");
+		if (commandExists("lua")) {
+			final run = commandOutput("lua", [outputPath]);
+			assertTrue(run.code == 0, "generated Lua switch should execute: " + run.stderr);
+			assertTrue(run.stdout == "py\n", "Lua switch should execute only the matching branch: " + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 
@@ -17153,7 +17181,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_array_switch_stmt_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
+		final backend = exactLuaBackend();
 		backend.emit(luaArraySwitchStatementProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
