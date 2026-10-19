@@ -28,7 +28,7 @@ typedef LoweredFieldInitializer = {
 	here instead of being hidden inside a newly created closure.
  */
 class TypedControlLowering {
-	static final passIdentity = "source-control-v38";
+	static final passIdentity = "source-control-v39";
 
 	final owner:String;
 	var nextTemporary:Int = 0;
@@ -681,17 +681,42 @@ class TypedControlLowering {
 				return destination;
 			case ArrayAccess:
 				final retained = new Array<TypedExpr>();
-				for (operand in children) {
-					if (operand.getType().isVoid() || operand.getType().hasUnknownComponent())
-						throw "control-valued assignment requires complete address operand types";
-					final binding = temporary(operand.getType());
-					steps.push(declaration(binding, operand, operand.getPosition()));
-					retained.push(TypedExpr.localRead(binding.getSourceName(), binding.getType(), operand.getPosition(), binding));
-				}
+				for (operand in children)
+					retained.push(retainAddressOperand(operand, steps));
 				return destination.withExpressions(retained);
 			case _:
 				throw "control-valued assignment requires a supported exact destination";
 		}
+	}
+
+	/**
+		Save an address value once without choosing a type for an unchecked use.
+		For an unresolved untyped wrapper, its checked child supplies storage while
+		the original wrapper remains around the saved read. Keep unchecked evaluation
+		on the initializer too; nested unchecked operations must retain their context.
+		An incomplete child still rejects rather than inventing a storage type.
+	 */
+	function retainAddressOperand(operand:TypedExpr, steps:Array<TypedExpr>, unchecked:Bool = false):TypedExpr {
+		if ((operand.getTag() == Untyped || operand.getTag() == Parenthesized) && operand.getType().hasUnknownComponent()) {
+			final children = operand.getExpressions();
+			if (children.length != 1)
+				throw "wrapped address requires exactly one enclosed value";
+			return operand.withExpressions([
+				retainAddressOperand(children[0], steps, unchecked || operand.getTag() == Untyped)
+			]);
+		}
+		if (operand.getType().isVoid() || operand.getType().hasUnknownComponent())
+			throw "control-valued assignment requires complete address operand types in "
+				+ owner
+				+ " ("
+				+ Std.string(operand.getTag())
+				+ ": "
+				+ operand.getType().getSemanticKey()
+				+ ")";
+		final binding = temporary(operand.getType());
+		final initial = unchecked ? TypedExpr.untypedValue(operand, binding.getType(), operand.getPosition()) : operand;
+		steps.push(declaration(binding, initial, operand.getPosition()));
+		return TypedExpr.localRead(binding.getSourceName(), binding.getType(), operand.getPosition(), binding);
 	}
 
 	/** Preserve address-side statement regions, then the right side; an abrupt exit never writes. */

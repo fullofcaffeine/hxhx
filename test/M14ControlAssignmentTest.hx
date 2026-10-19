@@ -52,6 +52,16 @@ class M14ControlAssignmentTest {
 				expected: 'array\nindex\nrhs\ncaught\n0\n'
 			},
 			{
+				name: 'unchecked_array_calls',
+				body: 'var items=[0];arrayReceiver(items)[untyped arrayIndex()]={Sys.println("rhs");7;};Sys.println(items[0]);',
+				expected: 'array\nindex\nrhs\n7\n'
+			},
+			{
+				name: 'unchecked_array_throw',
+				body: 'var items=[0];try{arrayReceiver(items)[untyped arrayIndex()]={Sys.println("rhs");throw "stop";7;};}catch(e:Dynamic){Sys.println("caught");}Sys.println(items[0]);',
+				expected: 'array\nindex\nrhs\ncaught\n0\n'
+			},
+			{
 				name: 'plain_calls',
 				body: 'var box={value:0};receiver(box).value=right();Sys.println(box.value);',
 				expected: 'receiver\nrhs\n7\n'
