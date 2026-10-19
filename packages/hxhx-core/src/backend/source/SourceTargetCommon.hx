@@ -348,8 +348,16 @@ class SourceTargetCommon {
 			program = PythonStaticMemberQualification.qualify(program);
 		if (target == Php)
 			return emitPhpTarget(program, context);
-		TypedBackendProgramValidation.assertRuntimeTypeOperandsAbsent(program.getTypedModules(), "source target backend");
-		final maybeMain = findMainModule(program, context);
+		if (target == Lua)
+			new LuaExternValues(program).validate();
+		else
+			TypedBackendProgramValidation.assertRuntimeTypeOperandsAbsent(program.getTypedModules(), "source target backend");
+		final luaMain = target == Lua ? LuaProgramEntry.find(program, context.mainModule) : null;
+		final maybeMain = target == Lua ? (luaMain == null ? null : {
+			decl: luaMain.module.getDeclaration(),
+			cls: luaMain.cls.getDeclaration(),
+			fn: luaMain.main.getDeclaration()
+		}) : findMainModule(program, context);
 		final buildTargetExecutable = context.buildExecutable && !context.hasDefine("no-compilation");
 		if (maybeMain == null) {
 			if (target == Java && buildTargetExecutable)
@@ -362,8 +370,7 @@ class SourceTargetCommon {
 		}
 		final main = maybeMain;
 		final className = sanitizeTypeNameForTarget(target, HxClassDecl.getName(main.cls));
-		final strictProjection = target == Lua
-			|| target == Cs
+		final strictProjection = target == Lua ? luaMain : target == Cs
 			|| target == Java
 			|| target == Python ? strictTypedMainProjection(program, main) : null;
 		final csEnumConstructors = target == Cs ? new CsEnumConstructorCallLowering(program, context.hasDefine("no_root")) : null;
@@ -1197,6 +1204,12 @@ class SourceTargetCommon {
 		if (staticCall != null)
 			return renderExprWithFrame(frame, TypedExactStaticCallSource.ordinaryCall(staticCall));
 		final target = SourceFunctionRenderFrameTools.target(frame);
+		final luaExternPath = LuaExternValues.decode(expr);
+		if (luaExternPath != null) {
+			if (target != Lua)
+				throw "Lua extern path reached a different target";
+			return luaExternPath.join(".");
+		}
 		final csLambda = CsLambdaLowering.decode(expr);
 		if (csLambda != null) {
 			if (target != Cs)
@@ -19848,8 +19861,9 @@ class SourceTargetCommon {
 				if (className == "UtilityProcess") {
 					appendLuaUtilityProcessRuntime(lines);
 				} else {
-					final mainProjection = strictTypedMainProjection(program, findMainModule(program, context));
-					for (line in new LuaSourceClassEmitter(program).render(mainProjection.cls))
+					if (strictMainClass == null)
+						throw "Lua source backend requires its exact main class";
+					for (line in new LuaSourceClassEmitter(program).render(strictMainClass))
 						lines.push(line);
 					lines.push("local __hxhx_traceback = (debug and debug.traceback) or tostring");
 					lines.push("local __hxhx_ok, __hxhx_error = xpcall(main, __hxhx_traceback)");

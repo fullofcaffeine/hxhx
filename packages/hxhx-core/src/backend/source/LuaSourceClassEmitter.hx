@@ -23,11 +23,13 @@ class LuaSourceClassEmitter {
 	final program:GenIrProgram;
 	final plan:LuaClassPlan;
 	final classes:Array<LuaClassOwner>;
+	final externs:LuaExternValues;
 
 	public function new(program:GenIrProgram) {
 		this.program = program;
 		plan = new LuaClassPlan(program);
 		classes = plan.copyClasses();
+		externs = new LuaExternValues(program);
 	}
 
 	function requireOwner(identity:String):LuaClassOwner
@@ -153,6 +155,23 @@ class LuaSourceClassEmitter {
 	}
 
 	function lower(owner:LuaClassOwner, executable:LuaExecutable, arrays:LuaArrayIndexLowering, original:HxExpr, rebuilt:HxExpr):HxExpr {
+		if (TypedRuntimeTypeSource.isMarker(original))
+			return switch executable {
+				case Function(projection): externs.functionValue(projection, original);
+				case Initializer(projection): externs.initializerValue(projection, original);
+			};
+		final callable = switch executable {
+			case Function(projection): projection.findCallableExpression(original);
+			case Initializer(projection): projection.findCallableExpression(original);
+		};
+		if (callable != null && (callable.getTag() == FieldRead || callable.getTag() == NameRead)) {
+			final declaration = callable.getDeclaration();
+			if (declaration != null && declaration.getIsStatic()) {
+				final external = externs.methodValue(declaration.getOwner().getCanonicalName(), declaration.getIdentity().getCanonicalKey());
+				if (external != null)
+					return external;
+			}
+		}
 		final locals = switch executable {
 			case Function(value): value.getLocalCatalog();
 			case Initializer(value): value.getLocalCatalog();
@@ -242,6 +261,11 @@ class LuaSourceClassEmitter {
 			return ECall(EField(instance.receiver, instance.method), instance.arguments);
 		}
 		final staticCall = TypedExactStaticCallSource.decode(rebuilt);
+		if (staticCall != null) {
+			final external = externs.staticCall(staticCall);
+			if (external != null)
+				return external;
+		}
 		if (staticCall != null && (plan.findOwner(staticCall.owner) != null))
 			return ECall(EField(ownerExpression(requireOwner(staticCall.owner)), staticCall.method), staticCall.arguments);
 		return arrays.expression(original, rebuilt);
