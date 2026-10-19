@@ -149,11 +149,12 @@ class M14HihQualifiedCallReceiverPaddingIntegrationTest {
 				final ocaml = File.getContent(mlPath);
 				if (ocaml.indexOf('.equal ((Obj.magic HxRuntime.hx_null)) (left) (right)') >= 0)
 					foundPaddedCall = true;
-				if (ocaml.indexOf('.equal (left) (right)') >= 0)
+				// Require the selected provider and exactly two ordered arguments.
+				if (ocaml.indexOf('let __hx_call_function = (Main_Syntax.equal) in let __hx_call_argument_0 = ((left)) in let __hx_call_argument_1 = ((right)) in __hx_call_function __hx_call_argument_0 __hx_call_argument_1') >= 0)
 					foundUnpaddedCall = true;
 				if (ocaml.indexOf('ping (this_) (this_)') >= 0)
 					foundDoubleReceiver = true;
-				if (ocaml.indexOf('Syntax.hasSuffix ("file.hx") ("file.hx")') >= 0)
+				if (ocaml.indexOf('let __hx_call_function = (Main_Syntax.hasSuffix) in let __hx_call_argument_0 = (("file.hx")) in let __hx_call_argument_1 = (("file.hx")) in __hx_call_function __hx_call_argument_0 __hx_call_argument_1') >= 0)
 					foundExactExtensionCall = true;
 				if (ocaml.indexOf('Syntax.hasSuffix ((Obj.magic HxRuntime.hx_null)) ("file.hx") ("file.hx")') >= 0)
 					foundPaddedExtensionCall = true;
