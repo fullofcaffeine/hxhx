@@ -1,5 +1,6 @@
 import sys.FileSystem;
 import sys.io.File;
+import hxhx.Stage3SetupSupport;
 
 /** Proves that native Stage3 preserves checked operations on Dynamic values. */
 class M14HxhxStage3DynamicOperatorIntegrationTest {
@@ -54,6 +55,40 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 			return localOracle;
 
 		throw 'Could not locate the Haxe $version standard library. Set HAXE_STD_PATH or install that version through Lix.';
+	}
+
+	/**
+		Keep DateTools and all its dependencies in the production OCaml typing context.
+		Raw source contains other targets' branches, and an isolated module lacks the
+		Date method declarations needed to prove that the inferred hour is an Int.
+	**/
+	static function prepareDateTools(source:String, path:String, standardRoot:String):MacroExpandedProgram {
+		final defines = Stage3SetupSupport.buildDefinesMap([], "ocaml", "ocaml-stage3");
+		final parsed = ParserStage.parseFilteredSource({
+			originalSource: source,
+			filteredSource: HxConditionalCompilation.filterSource(source, defines),
+			filePath: path
+		});
+		final module = new ResolvedModule("DateTools", path, parsed);
+		final paths = Stage3SetupSupport.projectClassPaths({
+			explicitPaths: [],
+			libraries: [],
+			cwd: Sys.getCwd(),
+			standardRoot: standardRoot,
+			targetDefine: "ocaml"
+		});
+		final index = TyperIndex.buildHeaders([module]);
+		final loader = new ModuleLoader(paths, defines, index);
+		loader.markResolvedAlready([module]);
+		final pending = [module];
+		final typed = new Array<TypedModule>();
+		var cursor = 0;
+		while (cursor < pending.length) {
+			typed.push(TyperStage.typeResolvedModule(pending[cursor++], index, loader, true));
+			for (provider in loader.drainNewModules())
+				pending.push(provider);
+		}
+		return MacroStage.expandProgram(TypedAbstractOperatorLowering.lowerModules(typed, index), []);
 	}
 
 	static function main():Void {
@@ -296,13 +331,11 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		assertTrue(stdout == expected, "Native Dynamic operators differed from Haxe 4.3.7:\n" + stdout);
 		Sys.println("M14_STAGE3_DYNAMIC_OPERATOR_RUNTIME:PASS");
 
-		// DateTools projects this inferred local as an untyped temporary. Lack of a
-		// temporary type is not evidence that the source value uses Dynamic.
+		// The real provider context must preserve Date.getHours() as Int through
+		// the switch-local temporary, while the Dynamic observer above stays checked.
 		final dateToolsPath = haxe.io.Path.join([stage0StdPath, "DateTools.hx"]);
 		final dateToolsSource = File.getContent(dateToolsPath);
-		final parsedDateTools = ParserStage.parse(dateToolsSource, dateToolsPath);
-		final typedDateTools = TyperStage.typeModule(parsedDateTools);
-		final expandedDateTools = MacroStage.expandProgram([typedDateTools], []);
+		final expandedDateTools = prepareDateTools(dateToolsSource, dateToolsPath, stage0StdPath);
 		EmitterStage.emitToDir(expandedDateTools, dateToolsOutputDir, true, false);
 		final generatedDateTools = File.getContent(haxe.io.Path.join([dateToolsOutputDir, "DateTools.ml"]));
 		assertTrue(generatedDateTools.indexOf("HxRuntime.dynamic_equals (hour)") < 0,
