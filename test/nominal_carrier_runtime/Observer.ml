@@ -1,4 +1,4 @@
-(* Independent observations of private class storage and ordinary OCaml GC.
+(* Independent observations of enum boxes, private class storage, and OCaml GC.
    Haxe selects names and ancestry in production; this observer supplies fixed
    descriptors solely to exercise the native representation boundary. *)
 type native_record = { __hx_type : Obj.t; value : int }
@@ -11,6 +11,29 @@ let[@inline never] install_dead weak descriptor =
   Weak.set weak 0 (Some value)
 
 let () =
+  (* Deliberately register out of order and initialize lazily. Native tags and
+     Haxe indexes differ; allEnums must keep the compiler-provided mapping. *)
+  let initialized = ref 0 in
+  HxType.set_registry_init_hook (fun () ->
+    incr initialized;
+    HxType.register_enum_ctor_layout "observer.Choice" "Last" 3 (HxType.EnumImmediate 1);
+    HxType.register_enum_ctor_layout "observer.Choice" "Payload" 0 (HxType.EnumBlock 0);
+    HxType.register_enum_ctor_layout "observer.Choice" "First" 1 (HxType.EnumImmediate 0);
+    HxType.register_enum_ctor_layout "observer.Choice" "More" 2 (HxType.EnumBlock 1);
+    HxType.register_enum_ctor_layout "observer.Other" "First" 0 (HxType.EnumImmediate 0));
+  let descriptor = HxType.enum_ "observer.Choice" in
+  let constants = HxType.allEnums descriptor in
+  let repeated = HxType.allEnums descriptor in
+  require (!initialized = 1) "enum query did not initialize once";
+  require (HxArray.length constants = 2) "enum query included payload constructors";
+  require (HxArray.get constants 0 == HxEnum.box_if_needed "observer.Choice" (Obj.repr 0))
+    "first constant lost physical singleton identity";
+  require (HxArray.get constants 1 == HxEnum.box_if_needed "observer.Choice" (Obj.repr 1))
+    "last constant lost physical singleton identity";
+  require (constants != repeated) "enum queries shared their mutable result array";
+  require (HxArray.get constants 0 == HxArray.get repeated 0) "repeat query reboxed a singleton";
+  require (HxArray.get constants 0 != HxArray.get (HxType.allEnums (HxType.enum_ "observer.Other")) 0)
+    "different enum types shared a singleton box";
   let child = HxType.class_ "observer.Child" in
   let parent = HxType.class_ "observer.Base" in
   HxType.register_class_tags "observer.Child"

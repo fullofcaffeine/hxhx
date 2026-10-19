@@ -358,6 +358,25 @@ let createEnumIndex (e : Obj.t) (idx : int) (params : Obj.t HxArray.t) : Obj.t =
   else
     HxRuntime.hx_null
 
+(* Return the constant constructors described by the compiler's layout rows.
+   Native immediate tags are not Haxe declaration indexes. Use the registered
+   tags only to recover native values, and retain Haxe order in the new array.
+   Boxing through HxEnum preserves the same interned singleton identities used
+   by generated constructors. Payload constructors require arguments and are
+   excluded; this boundary never calls or guesses constructor factories. *)
+let allEnums (e : Obj.t) : Obj.t HxArray.t =
+  ensure_registry_initialized ();
+  let values = HxArray.create () in
+  if is_type_value enum_marker e then (
+    let name = type_value_name enum_marker e in
+    enum_layout_in_haxe_order name
+    |> Stdlib.List.iter (fun layout ->
+           match layout.representation with
+           | EnumImmediate tag ->
+               ignore (HxArray.push values (HxEnum.box_if_needed name (Obj.repr tag)))
+           | EnumBlock _ -> ()));
+  values
+
 let getEnumConstructs (e : Obj.t) : string HxArray.t =
   ensure_registry_initialized ();
   if HxRuntime.is_null e then

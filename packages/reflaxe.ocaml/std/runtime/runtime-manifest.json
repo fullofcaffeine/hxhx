@@ -249,7 +249,7 @@
     {
       "module": "HxType",
       "scope": "application",
-      "files": [{ "path": "HxType.ml", "sha256": "e90a5a5de3f5f5718d5ee192d4c8a16b6f22ced53a8305c08d61d84b0ba2dffa" }],
+      "files": [{ "path": "HxType.ml", "sha256": "5c1ae57983921959d9ee0fd57b5e4ac15c8b498da14bdceace5d7b3cac9450fc" }],
       "dependencies": ["HxAnon", "HxArray", "HxEnum", "HxRuntime"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],
