@@ -1,0 +1,17 @@
+alias.value=Int
+bitsAnd.left=Int
+bitsAnd.right=Int
+bitsOr.left=Int
+bitsOr.right=Int
+bitsXor.left=Int
+bitsXor.right=Int
+dynamicPeer.other=Dynamic
+dynamicPeer.value=Int
+explicit.value=Dynamic
+shiftLeft.count=Int
+shiftLeft.value=Int
+shiftRight.count=Int
+shiftRight.value=Int
+shiftUnsigned.count=Int
+shiftUnsigned.value=Int
+unused.value=Unknown

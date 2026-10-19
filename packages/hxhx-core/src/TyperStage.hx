@@ -3393,9 +3393,19 @@ class TyperStage {
 						final ta = inferExprType(a, scope, ctx, pos);
 						final tb = inferExprType(b, scope, ctx, pos);
 						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), ta, tb, op, ctx.getFilePath(), pos);
-						if (bound != null) bound.getOperatorInfo()
-							.getResultType(); else // Best-effort: treat as Bool if both operands are Bool; otherwise Int.
+						if (bound != null) {
+							bound.getOperatorInfo().getResultType();
+						} else {
+							TyBitwiseOperandInference.constrain({
+								sources: [a, b],
+								types: [ta, tb],
+								scope: scope,
+								index: ctx.getIndex(),
+								filePath: ctx.getFilePath(),
+								position: pos
+							});
 							(ta.getDisplay() == "Bool" && tb.getDisplay() == "Bool") ? TyType.fromHintText("Bool") : TyType.fromHintText("Int");
+						}
 					case "+":
 						final operands = TyAdditionOperandInference.constrain({
 							left: a,
