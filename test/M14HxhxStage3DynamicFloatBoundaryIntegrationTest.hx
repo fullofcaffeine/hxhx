@@ -1,4 +1,3 @@
-import haxe.ds.StringMap;
 import sys.FileSystem;
 import sys.io.File;
 import TypedExpr.TypedExprTag;
@@ -209,10 +208,21 @@ class M14HxhxStage3DynamicFloatBoundaryIntegrationTest {
 
 		final parsed = ParserStage.parse(source, sourcePath);
 		final resolved = new ResolvedModule("DynamicFloatBoundary", sourcePath, parsed);
-		final index = TyperIndex.build([resolved]);
-		final loader = new ModuleLoader([sourceDir], new StringMap<String>(), index, function(_):Bool return false);
+		// Named switch cases require the real Type/ValueType declaration selected by production.
+		final arguments = hxhx.Stage1Compiler.Stage1Args.parse(["-cp", sourceDir, "-main", "DynamicFloatBoundary"], true);
+		final paths = hxhx.Stage3SetupSupport.projectClassPaths({
+			explicitPaths: [sourceDir],
+			libraries: [],
+			cwd: Sys.getCwd(),
+			standardRoot: hxhx.Stage1Compiler.Stage1Args.getStandardLibraryRoot(arguments),
+			targetDefine: "ocaml"
+		});
+		final index = TyperIndex.buildHeaders([resolved]);
+		final loader = new ModuleLoader(paths, hxhx.Stage3SetupSupport.buildDefinesMap([], "ocaml", "ocaml"), index);
 		loader.markResolvedAlready([resolved]);
-		final typed = TyperStage.typeResolvedModule(resolved, index, loader);
+		for (name in ["Type", "Std", "Sys"])
+			assertTrue(loader.ensureTypeAvailable(name, "", []) != null, "Dynamic Float fixture requires the real " + name + " provider");
+		final typed = TyperStage.typeResolvedModule(resolved, index, loader, true);
 		assertDynamicFloatCall(findFunctionCall(findFunction(typed, "DynamicFloatBoundary", "direct"), "takeFloat"), "direct");
 		assertDynamicFloatCall(findFunctionCall(findFunction(typed, "DynamicFloatBoundary", "guarded"), "takeFloat"), "guarded");
 

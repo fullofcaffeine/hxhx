@@ -1,5 +1,6 @@
 import backend.source.SourceNativeTarget;
 import backend.source.SourceTargetCommon;
+import backend.source.SourceFunctionRenderFrame.SourceFunctionRenderFrameTools;
 
 /** Execute projected sequence bodies through source-target expression and statement renderers. */
 class M14SourceSequenceObserver {
@@ -80,7 +81,10 @@ class M14SourceSequenceObserver {
 			+ python
 			+ "\nresult=run()\nprint(str(result)+':'+str(state[0]))\nstate[:]=[0,True]\ntry:\n run()"
 			+ "\n print('unexpected')\nexcept Exception as e:\n print(str(e)+':'+str(state[0]))\n");
-		final lua = @:privateAccess SourceTargetCommon.renderStmts(Lua, projection.getBody(), " ").join("\n");
+		// Production retains the exact function's return destination and protected-call scope.
+		final luaFrame = SourceFunctionRenderFrameTools.forTypedFunction(Lua, projection, program);
+		final lua = @:privateAccess SourceTargetCommon.renderFunctionStmtsWithFrame(luaFrame, projection.getBody(), " ", projection.getStableIdentity())
+			.join("\n");
 		check(root
 			+ "/sequence.lua", "lua", [],
 			"local n=0; local stop=false; local function "
