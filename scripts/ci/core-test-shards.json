@@ -21,6 +21,12 @@
       "baselineSeconds": null
     },
     {
+      "id": "compiler-focused-call-arguments",
+      "label": "Native call arguments and inference",
+      "minimumTier": "Q2",
+      "baselineSeconds": null
+    },
+    {
       "id": "compiler-focused-2",
       "label": "Focused compiler regressions (2/5)",
       "minimumTier": "Q2",
@@ -172,7 +178,7 @@
     "test:m14:ocaml-profile-contract": "compiler-focused-1",
     "test:m14:stage1-std-root-inference": "compiler-focused-2",
     "test:m14:neko-standard-library-paths": "compiler-focused-1",
-    "test:m14:stage3-call-argument-policy": "compiler-focused-1",
+    "test:m14:stage3-call-argument-policy": "compiler-focused-call-arguments",
     "test:m14:stage3-missing-required-call-argument": "compiler-focused-1",
     "test:m14:stage3-optional-argument-skipping": "compiler-focused-2",
     "test:m14:parser-stage-scan-expression-body": "compiler-focused-1",
