@@ -632,10 +632,13 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(!containsTag(result, TypedExprTag.Opaque), "expression-level try/catch retained an opaque source payload");
 		final projection = TypedBodySource.functionProjection(typedFunction);
 		// Supply the request tables that full emission creates. This case catches
-		// Dynamic and therefore needs no nominal class entries in the class table.
+		// Dynamic and therefore needs no nominal class or enum entries. Both empty
+		// catalogs are still required when the handler checks its runtime carrier.
 		@:privateAccess EmitterStage.currentFunctionLocalOcamlNames = new backend.ocaml.Stage3OcamlLocalNames(projection.getLocalCatalog(), false,
 			name -> @:privateAccess EmitterStage.ocamlValueIdent(name));
 		@:privateAccess EmitterStage.currentClassStorage = new backend.ocaml.Stage3OcamlClassStorage();
+		@:privateAccess EmitterStage.currentEnums = new backend.ocaml.Stage3OcamlEnums(name -> @:privateAccess EmitterStage.ocamlValueIdent(name),
+			text -> @:privateAccess EmitterStage.escapeOcamlString(text));
 		// Executable emission consumes the complete lowered statement projection.
 		// Rendering the authored initializer directly bypasses its result storage and control regions.
 		final localTypes = new Map<String, TyType>();
