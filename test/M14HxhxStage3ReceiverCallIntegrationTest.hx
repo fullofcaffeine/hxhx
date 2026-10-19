@@ -203,11 +203,13 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 			EmitterStage.emitToDir(MacroStage.expandProgram([inheritedBaseTyped, importedOpsTyped, inheritedCollisionTyped], []), inheritedOutDir, true, false);
 			final inheritedOcaml = File.getContent(haxe.io.Path.join([inheritedOutDir, 'InheritedCollision.ml']));
 			assertTrue(inheritedOcaml.indexOf('ImportedOps.eq ("a") ("b")') < 0, 'An imported static method displaced a same-name inherited instance method.');
-			assertTrue(inheritedOcaml.indexOf('InheritedBase.eq (this_) ("a") ("b")') >= 0,
+			// Bindings must retain the declaring owner, one receiver, and both arguments.
+			assertTrue(inheritedOcaml.indexOf('let __hx_call_function = (InheritedBase.eq) in let __hx_call_argument_0 = ((this_)) in let __hx_call_argument_1 = (("a")) in let __hx_call_argument_2 = (("b")) in __hx_call_function __hx_call_argument_0 __hx_call_argument_1 __hx_call_argument_2') >= 0,
 				'An inherited instance call lost its exact declaring owner or receiver.');
-			assertTrue(inheritedOcaml.indexOf('ImportedOps.onlyImported (7)') >= 0,
+			assertTrue(inheritedOcaml.indexOf('let __hx_call_function = (ImportedOps.onlyImported) in let __hx_call_argument_0 = ((7)) in __hx_call_function __hx_call_argument_0') >= 0,
 				'A bare imported static call without an instance-method collision lost its provider.');
-			assertTrue(inheritedOcaml.indexOf('ImportedOps.eq (1) (2)') >= 0, 'A static context should still select the imported static method.');
+			assertTrue(inheritedOcaml.indexOf('let __hx_call_function = (ImportedOps.eq) in let __hx_call_argument_0 = ((1)) in let __hx_call_argument_1 = ((2)) in __hx_call_function __hx_call_argument_0 __hx_call_argument_1') >= 0,
+				'A static context should still select the imported static method.');
 
 			final macroContextDir = haxe.io.Path.join([srcDir, 'haxe', 'macro']);
 			final macroContextOutDir = haxe.io.Path.join([tmpRoot, 'macro_context_out']);
@@ -230,14 +232,16 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 			final macroContextTyped = TyperStage.typeModule(macroContextParsed);
 			EmitterStage.emitToDir(MacroStage.expandProgram([macroContextTyped], []), macroContextOutDir, true, false);
 			final macroContextMl = File.getContent(haxe.io.Path.join([macroContextOutDir, 'Haxe_macro_Context.ml']));
-			assertTrue(macroContextMl.indexOf('Obj.magic (load ("render") (2)) : Obj.t -> Obj.t -> Obj.t') >= 0,
+			assertTrue(macroContextMl.indexOf('Obj.magic ((let __hx_call_function = (load) in let __hx_call_argument_0 = (("render")) in let __hx_call_argument_1 = ((2)) in __hx_call_function __hx_call_argument_0 __hx_call_argument_1)) : Obj.t -> Obj.t -> Obj.t') >= 0,
 				'An immediate local Context.load call should use its returned callable arity.');
 			assertNotContains(macroContextMl, 'load ("render") (2) (value) (pretty)',
 				'An immediate local Context.load call should not over-apply the load function itself.');
-			assertTrue(macroContextMl.indexOf('load ("shadow") (2) (value) (pretty)') >= 0,
+			assertTrue(macroContextMl.indexOf('let __hx_call_function = ((let __hx_call_function = (load) in let __hx_call_argument_0 = (("shadow")) in let __hx_call_argument_1 = ((2)) in __hx_call_function __hx_call_argument_0 __hx_call_argument_1)) in let __hx_call_argument_0 = ((value)) in let __hx_call_argument_1 = ((pretty)) in __hx_call_function __hx_call_argument_0 __hx_call_argument_1') >= 0,
 				'A parameter named load should keep shadowing the module function.');
 			assertNotContains(macroContextMl, 'Obj.magic (load ("shadow") (2)) : Obj.t -> Obj.t -> Obj.t',
 				'A shadowing load parameter should not acquire the module function identity.');
+			assertNotContains(macroContextMl, 'Obj.magic ((let __hx_call_function = (load) in let __hx_call_argument_0 = (("shadow"))',
+				'An ordered shadowing load call should not acquire the module function identity.');
 
 			final callableFactoryOutDir = haxe.io.Path.join([tmpRoot, 'callable_factory_out']);
 			final callableFactoryHx = haxe.io.Path.join([srcDir, 'CallableFactory.hx']);
@@ -257,11 +261,11 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 			final callableFactoryTyped = TyperStage.typeModule(callableFactoryParsed);
 			EmitterStage.emitToDir(MacroStage.expandProgram([callableFactoryTyped], []), callableFactoryOutDir, true, false);
 			final callableFactoryMl = File.getContent(haxe.io.Path.join([callableFactoryOutDir, 'CallableFactory.ml']));
-			assertTrue(callableFactoryMl.indexOf('Obj.magic (load ("get") (0)) : unit -> Obj.t') >= 0,
+			assertTrue(callableFactoryMl.indexOf('Obj.magic ((let __hx_call_function = (load) in let __hx_call_argument_0 = (("get")) in let __hx_call_argument_1 = ((0)) in __hx_call_function __hx_call_argument_0 __hx_call_argument_1)) : unit -> Obj.t') >= 0,
 				'A zero-argument returned callable should use a unit-call cast.');
 			assertNotContains(callableFactoryMl, 'load ("get") (0) ((Obj.magic HxRuntime.hx_null))',
 				'A returned callable should not reuse the inner factory signature.');
-			assertTrue(callableFactoryMl.indexOf('Obj.magic (load ("invoke") (2)) : Obj.t -> Obj.t -> Obj.t') >= 0,
+			assertTrue(callableFactoryMl.indexOf('Obj.magic ((let __hx_call_function = (load) in let __hx_call_argument_0 = (("invoke")) in let __hx_call_argument_1 = ((2)) in __hx_call_function __hx_call_argument_0 __hx_call_argument_1)) : Obj.t -> Obj.t -> Obj.t') >= 0,
 				'A positive-arity returned callable should keep its observed argument count.');
 
 			final resolvedOverloadHx = haxe.io.Path.join([srcDir, 'OverloadResolved.hx']);

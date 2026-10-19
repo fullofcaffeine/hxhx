@@ -3867,13 +3867,6 @@ class EmitterStage {
 					"(Obj.magic 0)";
 				} else {
 					final receiverPreApplied = c.indexOf(" (this_)") != -1;
-					final invokesReturnedCallable = switch (callee) {
-						case ECall(_, _): true;
-						case _: false;
-					};
-					final returnedCallableTarget = canonicalCallTargetForStage3(c, arityByIdentRaw);
-					final invokesModuleReturnedCallable = invokesReturnedCallable
-						&& (returnedCallableTarget != c || returnedCallableTarget.indexOf(".") >= 0);
 
 					function callSigForExpr(expr:HxExpr):Null<EmitterCallSig> {
 						return switch (expr) {
@@ -3995,6 +3988,16 @@ class EmitterStage {
 						return null;
 					}
 
+					// A factory's rendered call can contain ordered bindings. Its source
+					// occurrence and declaration tables, not that text, identify the factory.
+					// Lexical values must retain their own callable contract when shadowing it.
+					final invokesModuleReturnedCallable = TypedExactStaticCallSource.decode(callee) != null || switch (callee) {
+						case ECall(EIdent(name), _) if (!stage3HasLocalValueIdent(name)): stage3HasArity(name,
+								arityByIdentRaw) || fallbackLocalFunctionSig(name) != null;
+						case ECall(factory = EField(owner, _), _) if (isTypePathExpr(owner)):
+							callSigForExpr(factory) != null;
+						case _: false;
+					};
 					var sig = isLocalCall ? null : callSigForStage3(c, callSigByCalleeRaw);
 					// A pre-applied receiver changes how the final call is rendered, but it
 					// does not make the method signature known. Keep resolving the signature
@@ -4156,10 +4159,11 @@ class EmitterStage {
 								var fnTy = "Obj.t";
 								for (_ in 0...tailArgs.length)
 									fnTy = "Obj.t -> " + fnTy;
-								var renderedCall = "((Obj.magic (" + callable + ") : " + fnTy + ")";
-								for (argCode in tailArgs)
-									renderedCall += " (Obj.repr " + argCode + ")";
-								renderedCall += ")";
+								final renderedCall = backend.ocaml.Stage3OcamlCallOrder.render({
+									callee: "(Obj.magic (" + callable + ") : " + fnTy + ")",
+									arguments: [for (argument in tailArgs) "Obj.repr " + argument],
+									names: currentFunctionLocalOcamlNames
+								});
 								"(Obj.magic " + renderedCall + ")";
 							} else {
 								callable + " " + tailArgs.join(" ");
