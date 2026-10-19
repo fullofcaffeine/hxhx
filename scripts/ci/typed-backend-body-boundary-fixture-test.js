@@ -72,4 +72,13 @@ const enumRenderer = runGuard(
 );
 assert.equal(enumRenderer.status, 1, "enum rendering must not bypass its target plan");
 assert.match(enumRenderer.messages, /backend\/ocaml\/Stage3OcamlEnums\.hx: observation-only typed class facts/);
+// Admitting the extern-value plan does not authorize its neighboring Lua renderer.
+const luaRenderer = runGuard(
+  true,
+  path.resolve(__dirname, "../../packages/hxhx-core/src/backend/source/LuaSourceClassEmitter.hx"),
+  "class LuaSourceClassEmitter {",
+  "owner.requireSemanticFacts();",
+);
+assert.equal(luaRenderer.status, 1, "Lua rendering must obtain native bindings from its admitted plan");
+assert.match(luaRenderer.messages, /backend\/source\/LuaSourceClassEmitter\.hx: observation-only typed class facts/);
 console.log("TYPED_BACKEND_BODY_BOUNDARY_FIXTURE:PASS");

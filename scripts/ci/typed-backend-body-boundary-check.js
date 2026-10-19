@@ -25,6 +25,8 @@ const failures = [];
 const typedClassFactPlanCuts = new Set([
   // Lua binds exact parent identities and closes field defaults before rendering.
   "packages/hxhx-core/src/backend/source/LuaClassPlan.hx",
+  // Extern values bind owned occurrences and static declarations to validated native paths.
+  "packages/hxhx-core/src/backend/source/LuaExternValues.hx",
   // JavaScript binds exact superclass edges to admitted emitted providers before rendering.
   "packages/hxhx-core/src/backend/js/JsClassInheritancePlan.hx",
   "packages/hxhx-core/src/backend/source/PhpTypedProgramProjection.hx",
