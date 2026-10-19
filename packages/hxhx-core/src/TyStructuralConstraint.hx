@@ -61,6 +61,22 @@ function constrainTerms(index:TyperIndex, solver:TyInferenceSolver, actual:TyInf
 	return solver.constrain(actual, expected, (receiver, name) -> inferredMember(index, receiver, name));
 }
 
+/**
+	Expose a real member as generic-call evidence under the same access rules as assignment.
+	This view does not prove compatibility. The caller must check the complete structure after inference.
+ */
+function argumentMember(index:TyperIndex, receiver:TyType, wanted:TyAnonymousField):Null<TyType> {
+	final source = TyAliasExpansion.revealNonNullable(receiver);
+	var supplied:Null<TyAnonymousField> = null;
+	if (source.isAnonymous()) {
+		for (field in source.getAnonymousFields())
+			if (field.name == wanted.name)
+				supplied = field;
+	} else if (index != null)
+		supplied = member(index, source, wanted.name, []);
+	return supplied != null && memberRules(wanted, supplied) ? supplied.type : null;
+}
+
 /** Project declared member types through the receiver's existing variables, including inherited owner substitutions. */
 private function inferredMember(index:TyperIndex, receiver:TyInferenceTerm, name:String):Null<TyInferenceTerm> {
 	if (index == null)
@@ -118,8 +134,8 @@ private function value(index:TyperIndex, solver:TyInferenceSolver, actual:TyInfe
 		final wantedFields = expected.getAnonymousFields();
 		if (!preview.hasUnknownComponent() && !expected.hasUnknownComponent())
 			wantedFields.sort((left, right) -> {
-				final a = hasAlias(left.type);
-				final b = hasAlias(right.type);
+				final a = TyAliasExpansion.containsApplication(left.type);
+				final b = TyAliasExpansion.containsApplication(right.type);
 				return a != b ? (a ? 1 : -1) : left.name < right.name ? -1 : left.name > right.name ? 1 : 0;
 			});
 		return switch actual {
@@ -198,20 +214,6 @@ private function value(index:TyperIndex, solver:TyInferenceSolver, actual:TyInfe
 	return projected != null && constrainExact(index, solver, projected, expected);
 }
 
-/** Check concrete payloads before recursive member obligations; incomplete inference keeps its original order. */
-private function hasAlias(type:TyType):Bool {
-	if (type.getAliasDefinition() != null)
-		return true;
-	if (type.isNullable() && hasAlias(type.unwrapNull()))
-		return true;
-	if (type.isFunction() && hasAlias(type.getFunctionReturn()))
-		return true;
-	for (child in type.getTypeArguments().concat(type.getFunctionArguments()).concat(type.getAnonymousFieldTypes()))
-		if (hasAlias(child))
-			return true;
-	return false;
-}
-
 /** Mutable fields require exact value types; methods and read-only fields provide output values. */
 private function memberDirection(field:TyAnonymousField):StructuralDirection {
 	return switch field.kind {
@@ -229,6 +231,9 @@ private function memberRules(wanted:TyAnonymousField, supplied:TyAnonymousField)
 		return false;
 	return switch [wanted.kind, supplied.kind] {
 		case [Method(first), Method(second)]: first.length == 0 && second.length == 0;
+		// A public writable function value can supply a method contract. The
+		// reverse direction cannot grant write access to an ordinary method.
+		case [Method(parameters), Variable(false, getter, setter)]: parameters.length == 0 && supplied.type.isFunction() && access(getter) == "default" && access(setter) == "default";
 		case [
 			Variable(wantedFinal, wantedGet, wantedSet),
 			Variable(suppliedFinal, suppliedGet, suppliedSet)

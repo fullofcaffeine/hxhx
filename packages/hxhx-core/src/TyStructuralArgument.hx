@@ -27,14 +27,20 @@ function literalFits(expression:HxExpr, expected:TyType):Bool {
 	caller's unchecked null policy. Nullable wrappers do not change the underlying
 	field contract. Keep null literals and other categories with their normal checker.
  */
-function compatibility(index:TyperIndex, expected:TyType, actual:TyType):Null<TyCallArgumentCompatibility> {
-	final target = TyAliasExpansion.revealNonNullable(expected);
+function compatibility(index:TyperIndex, expected:TyType, actual:TyType, ?parameters:Array<TyTypeParameterId>):Null<TyCallArgumentCompatibility> {
+	var target = TyAliasExpansion.revealNonNullable(expected);
 	final source = TyAliasExpansion.revealNonNullable(actual);
 	if (!target.isAnonymous()
 		|| target.hasUnknownComponent()
 		|| source.hasUnknownComponent()
 		|| (!source.isAnonymous() && source.getNominalIdentity() == null))
 		return null;
+	if (parameters != null && parameters.length > 0) {
+		final inferred = TyMethodGenericBinding.structuralArgument(target, source, parameters, index);
+		if (inferred == null)
+			return Incompatible;
+		target = inferred;
+	}
 	final solver = new TyInferenceSolver('structural-call-argument');
 	return TyStructuralConstraint.constrain(index, solver, TyInferenceSolver.fromType(source), target) ? Compatible : Incompatible;
 }

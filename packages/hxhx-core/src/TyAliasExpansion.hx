@@ -23,6 +23,20 @@ function reveal(type:TyType):TyType {
 	return follow(type, new StringMap<AliasExpansionArgument>(), [], false, definition -> definition.getBody());
 }
 
+/** Find an alias reference without unfolding its body, so callers can visit finite payloads before recursive edges. */
+function containsApplication(type:TyType):Bool {
+	if (type.getAliasDefinition() != null)
+		return true;
+	if (type.isNullable() && containsApplication(type.unwrapNull()))
+		return true;
+	if (type.isFunction() && containsApplication(type.getFunctionReturn()))
+		return true;
+	for (child in type.getTypeArguments().concat(type.getFunctionArguments()).concat(type.getAnonymousFieldTypes()))
+		if (containsApplication(child))
+			return true;
+	return false;
+}
+
 /**
 	Resolve a structural base while its enclosing alias graph is under construction.
 	The resolver supplies bound bodies on demand and owns construction-cycle checks.

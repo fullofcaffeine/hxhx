@@ -2,8 +2,8 @@
 	Infers the bounded, unconstrained method-generic relationships that shared
 	call typing can currently prove.
 
-	Method parameters are bound from semantic argument types, including nested
-	nominal and function shapes. Indexed superclass and interface substitutions
+	Method parameters are bound from semantic argument types, including public
+	structural members and nested nominal and function shapes. Indexed superclass and interface substitutions
 	let a derived argument constrain the corresponding base-type parameters
 	without changing the argument's own type. A conflicting binding makes the candidate
 	inapplicable. A parameter that is still open in the selected return type
@@ -106,14 +106,40 @@ class TyMethodGenericBinding {
 		return left.isUnresolved() && right.isUnresolved() && left.getUnresolvedPath() == right.getUnresolvedPath();
 	}
 
+	/**
+		Gather evidence in a candidate-owned map. A recursive visit can stop discovery,
+		but callers must still prove the complete substituted structural contract.
+	 */
 	static function collect(expected:TyType, actual:TyType, methodTypeParameters:Array<TyTypeParameterId>, bindings:haxe.ds.StringMap<TyType>,
-			index:TyperIndex, selectedSignature:Bool = false):Bool {
-		if (expected == null || actual == null)
+			index:TyperIndex, selectedSignature:Bool = false, ?activeAliases:Array<String>):Bool {
+		if (expected == null || actual == null || methodTypeParameters.length == 0)
 			return true;
+		if (activeAliases == null)
+			activeAliases = [];
+		final alias = expected.getAliasDefinition();
+		if (alias != null) {
+			// Revisit a recursive definition when new bindings can expose another
+			// parameter, as in Link<A,B,C> whose next field is Link<B,C,A>.
+			// An unchanged set ends discovery, never the complete compatibility proof.
+			final sourceAlias = actual.getAliasDefinition();
+			final owner = actual.getNominalIdentity();
+			final key = alias.getDeclaration().getCanonicalName()
+				+ "|"
+				+ (sourceAlias != null ? sourceAlias.getDeclaration().getCanonicalName() : owner != null ? owner.getCanonicalName() : actual.getSemanticKey())
+				+ "|"
+				+ methodTypeParameters.filter(parameter -> !bindings.exists(parameter.getCanonicalKey()))
+					.map(parameter -> parameter.getCanonicalKey())
+					.join(";");
+			if (activeAliases.indexOf(key) >= 0)
+				return true;
+			activeAliases = activeAliases.concat([key]);
+		}
+		expected = TyAliasExpansion.reveal(expected);
+		actual = TyAliasExpansion.reveal(actual);
 		final scheme = actual.getClassValueScheme();
 		final context = expected.unwrapNull().getNominalIdentity();
 		if (scheme != null && context != null && context.getCanonicalName() == "Class")
-			return collect(expected, scheme.preview(), methodTypeParameters, bindings, index, selectedSignature);
+			return collect(expected, scheme.preview(), methodTypeParameters, bindings, index, selectedSignature, activeAliases);
 		// Null carries no concrete type evidence, even for a bare T parameter.
 		// Candidate legality is checked separately by overload selection.
 		if (actual.isNullLiteral())
@@ -137,7 +163,23 @@ class TyMethodGenericBinding {
 			return true;
 		}
 		if (expected.isNullable() || actual.isNullable())
-			return collect(expected.unwrapNull(), actual.unwrapNull(), methodTypeParameters, bindings, index, selectedSignature);
+			return collect(expected.unwrapNull(), actual.unwrapNull(), methodTypeParameters, bindings, index, selectedSignature, activeAliases);
+		if (expected.isAnonymous() && methodTypeParameters.length > 0) {
+			final fields = expected.getAnonymousFields();
+			// Payloads must contribute evidence before a recursive edge can stop.
+			fields.sort((left, right) -> {
+				final a = TyAliasExpansion.containsApplication(left.type);
+				final b = TyAliasExpansion.containsApplication(right.type);
+				return a != b ? (a ? 1 : -1) : left.name < right.name ? -1 : left.name > right.name ? 1 : 0;
+			});
+			for (field in fields) {
+				final supplied = TyStructuralConstraint.argumentMember(index, actual, field);
+				if (supplied != null
+					&& !collect(field.type, supplied, methodTypeParameters, bindings, index, selectedSignature, activeAliases))
+					return false;
+			}
+			return true;
+		}
 		if (expected.isFunction() || actual.isFunction()) {
 			if (!expected.isFunction() || !actual.isFunction())
 				return true;
@@ -146,13 +188,14 @@ class TyMethodGenericBinding {
 			if (expectedArguments.length != actualArguments.length)
 				return true;
 			for (argumentIndex in 0...expectedArguments.length)
-				if (!collect(expectedArguments[argumentIndex], actualArguments[argumentIndex], methodTypeParameters, bindings, index, selectedSignature))
+				if (!collect(expectedArguments[argumentIndex], actualArguments[argumentIndex], methodTypeParameters, bindings, index, selectedSignature,
+					activeAliases))
 					return false;
 			final expectedReturn = expected.getFunctionReturn();
 			final actualReturn = actual.getFunctionReturn();
 			return expectedReturn == null
 				|| actualReturn == null
-				|| collect(expectedReturn, actualReturn, methodTypeParameters, bindings, index, selectedSignature);
+				|| collect(expectedReturn, actualReturn, methodTypeParameters, bindings, index, selectedSignature, activeAliases);
 		}
 		final expectedArguments = expected.getTypeArguments();
 		// Inherited arguments are evidence from the declared edge, not a change
@@ -164,7 +207,8 @@ class TyMethodGenericBinding {
 		if (!sameTypeConstructor(expected, selected) || expectedArguments.length != actualArguments.length)
 			return true;
 		for (argumentIndex in 0...expectedArguments.length)
-			if (!collect(expectedArguments[argumentIndex], actualArguments[argumentIndex], methodTypeParameters, bindings, index, selectedSignature))
+			if (!collect(expectedArguments[argumentIndex], actualArguments[argumentIndex], methodTypeParameters, bindings, index, selectedSignature,
+				activeAliases))
 				return false;
 		return true;
 	}
@@ -189,7 +233,27 @@ class TyMethodGenericBinding {
 	/** Reject a candidate when repeated method parameters infer incompatible types. **/
 	public static function argumentsAreConsistent(sig:TyFunSig, argTypes:Array<TyType>, suppliedArity:Int, methodTypeParameters:Array<TyTypeParameterId>,
 			index:TyperIndex):Bool {
-		return bindings(sig, argTypes, suppliedArity, methodTypeParameters, index) != null;
+		if (methodTypeParameters.length == 0)
+			return true;
+		final inferred = bindings(sig, argTypes, suppliedArity, methodTypeParameters, index);
+		if (inferred == null)
+			return false;
+		// Each slot was ranked independently. Recheck structural slots using the
+		// shared bindings so two arguments cannot infer different values for T.
+		for (slot in 0...suppliedArity) {
+			final parameter = TyCallableSignature.argumentParameter(sig, slot);
+			if (parameter != null
+				&& slot < argTypes.length
+				&& TyStructuralArgument.compatibility(index, substitute(parameter.type, methodTypeParameters, inferred, true), argTypes[slot]) == Incompatible)
+				return false;
+		}
+		return true;
+	}
+
+	/** Infer a provisional structural slot without mutating the declaration or another candidate's bindings. */
+	public static function structuralArgument(expected:TyType, actual:TyType, parameters:Array<TyTypeParameterId>, index:TyperIndex):Null<TyType> {
+		final inferred = new haxe.ds.StringMap<TyType>();
+		return collect(expected, actual, parameters, inferred, index) ? substitute(expected, parameters, inferred, true) : null;
 	}
 
 	/**
@@ -279,6 +343,9 @@ class TyMethodGenericBinding {
 			for (argument in arguments)
 				substitute(argument, methodTypeParameters, inferred, retainOpen)
 		];
+		final alias = type.getAliasDefinition();
+		if (alias != null)
+			return TyType.aliasApplication(alias, substituted);
 		if (type.isAbstractMeta())
 			return TyType.abstractMeta(substituted[0]);
 		final identity = type.getNominalIdentity();

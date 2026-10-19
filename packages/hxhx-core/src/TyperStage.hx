@@ -1413,7 +1413,7 @@ class TyperStage {
 		// Selection owns a private solver; ranking must not mutate caller inference.
 		if (TyAbstractMethodConversion.select(semanticIndex, expected, actual) != null)
 			return 1;
-		final structural = TyStructuralArgument.compatibility(semanticIndex, expected, actual);
+		final structural = TyStructuralArgument.compatibility(semanticIndex, expected, actual, methodTypeParameters);
 		if (structural != null)
 			return structural == Compatible ? 3 : -1;
 		if (expected.isFunction() || actual.isFunction()) {
@@ -1516,7 +1516,13 @@ class TyperStage {
 				return Incompatible;
 			if ((TypedAnonymousLiteral.isLiteral(sources[source]) && parameter.type.unwrapNull().isAnonymous())
 				|| (TypedMapLiteral.isLiteral(sources[source]) && TypedMapLiteral.context(parameter.type, parameters) != null)) {
-				final literal = literalType(sources[source], parameter.type);
+				// Infer from the original field values before a generic destination
+				// supplies their storage types. Each candidate keeps its own context.
+				final context = TypedAnonymousLiteral.isLiteral(sources[source])
+					&& parameters.length > 0 ? TyMethodGenericBinding.structuralArgument(parameter.type, types[source], parameters, index) : parameter.type;
+				if (context == null)
+					return Incompatible;
+				final literal = literalType(sources[source], context);
 				return literal != null && overloadArgScore(parameter.type, literal, parameters, index) >= 0 ? Compatible : Incompatible;
 			}
 			if (parameter.isOptional && types[source].isNullLiteral())
