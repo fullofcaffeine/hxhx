@@ -30,7 +30,7 @@ class M14OcamlIntFieldUpdateIntegrationTest {
 		final header = ParserStage.parse("interface Parent {} interface Child extends Parent {} class Header {}", "Header.hx");
 		final headerModule = new ResolvedModule("Header", "Header.hx", header);
 		final typedHeader = TyperStage.typeResolvedModule(headerModule, TyperIndex.build([headerModule]));
-		final loweredHeader = backend.ocaml.OcamlIntFieldUpdateLowering.lowerModules([typedHeader])[0];
+		final loweredHeader = backend.ocaml.OcamlFieldUpdateLowering.lowerModules([typedHeader])[0];
 		var foundChild = false;
 		for (cls in loweredHeader.getTypedClasses())
 			if (HxClassDecl.getName(cls.getSourceDeclaration()) == "Child") {

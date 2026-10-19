@@ -14,6 +14,10 @@ enum OcamlGenericValueShape {
 	DynamicValue;
 
 	Integer;
+
+	/** A native floating value crosses erasure by identity-preserving Obj representation. */
+	Floating;
+
 	Boolean;
 	Text(nullable:Bool);
 	NullableInteger;
@@ -215,12 +219,12 @@ function crossing(source:OcamlGenericValueShape, destination:OcamlGenericValueSh
 		case [Boolean, Erased(_) | DynamicValue]: BoxBoolean;
 		case [Erased(_) | DynamicValue, Boolean]: UnboxBoolean;
 		case [
-			Integer | Text(_) | ArrayValue(_) | NominalValue(_, _, _),
+			Integer | Floating | Text(_) | ArrayValue(_) | NominalValue(_, _, _),
 			Erased(_) | DynamicValue
 		]: BoxValue;
 		case [
 			Erased(_) | DynamicValue,
-			Integer | Text(_) | ArrayValue(_) | NominalValue(_, _, _)
+			Integer | Floating | Text(_) | ArrayValue(_) | NominalValue(_, _, _)
 		]: UnboxValue;
 		case [
 			FunctionValue(sourceArguments, sourceResult),
@@ -250,6 +254,7 @@ function shapeId(value:OcamlGenericValueShape):String {
 		case Erased(parameter): 'parameter:$parameter';
 		case DynamicValue: "Dynamic";
 		case Integer: "Int";
+		case Floating: "Float";
 		case Boolean: "Bool";
 		case Text(nullable): nullable ? "Null<String>" : "String";
 		case NullableInteger: "Null<Int>";

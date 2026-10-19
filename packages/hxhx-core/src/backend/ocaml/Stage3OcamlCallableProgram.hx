@@ -24,10 +24,12 @@ class Stage3OcamlCallableProgram {
 	final selected:Map<String, TypedFunction> = [];
 
 	public final externs:Stage3OcamlExternBindings;
+	public final generics:Stage3OcamlGenericMethods;
 
 	public function new(modules:Array<TypedModule>) {
 		this.modules = modules.copy();
 		externs = new Stage3OcamlExternBindings(modules);
+		generics = new Stage3OcamlGenericMethods(modules);
 		revision = currentRevision();
 		registry = new OcamlRepresentationRegistry();
 		registry.beginProgram(revision);

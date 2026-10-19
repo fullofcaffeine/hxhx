@@ -363,6 +363,8 @@ class EmitterStage {
 	}
 
 	static function ocamlTypeFromTy(t:TyType):String {
+		if (currentCallables != null && currentTypedInitializer == null && currentCallables.generics.isErased(currentTypedFunction, t))
+			return "Obj.t";
 		if (currentCallableFunction != null && currentTypedInitializer == null && TyAliasExpansion.reveal(t).isFunction()) {
 			final selected = currentCallableFunction.type(t);
 			if (selected != null)
@@ -3053,6 +3055,17 @@ class EmitterStage {
 			if (predicate != null)
 				return predicate;
 		}
+		if (currentCallables != null) {
+			final generic = currentCallables.generics.render({
+				expression: e,
+				lookup: currentTypedInitializer != null ? currentTypedInitializer.findCallableExpression : currentTypedFunction == null ? null : currentTypedFunction.findCallableExpression,
+				emit: value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				reference: callableDeclarationReference,
+				names: currentFunctionLocalOcamlNames
+			});
+			if (generic != null)
+				return generic;
+		}
 		if (currentCallableFunction != null && currentTypedInitializer == null) {
 			final rendered = currentCallableFunction.render(e,
 				value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
@@ -4919,6 +4932,17 @@ class EmitterStage {
 						case "=":
 							switch (a) {
 								case EField(obj, _): hasBringupPoison(obj) || hasBringupPoison(b);
+								case EIdent(_):
+									// A lowered expression can write an implicit receiver field.
+									// Require its exact storage declaration before admitting the write.
+									final selected = currentTypedInitializer != null ? currentTypedInitializer.findField(a) : currentTypedFunction == null ? null : currentTypedFunction.findField(a);
+									selected == null
+									|| selected.getReceiver() != ImplicitOwner
+									|| selected.getField().getIsStatic()
+									|| selected.getField().getIsFinal()
+									|| !selected.getField().getHasStorage()
+									|| (selected.getField().getPropertySet() != "" && selected.getField().getPropertySet() != "default")
+									|| hasBringupPoison(b);
 								case _:
 									true;
 							}
@@ -7489,7 +7513,7 @@ class EmitterStage {
 			return out;
 		}
 
-		final typedModules = backend.ocaml.OcamlIntFieldUpdateLowering.lowerModules(uniqueTypedModules(typedModulesRaw));
+		final typedModules = backend.ocaml.OcamlFieldUpdateLowering.lowerModules(uniqueTypedModules(typedModulesRaw));
 		currentCallables = new backend.ocaml.Stage3OcamlCallableProgram(typedModules);
 		currentClassStorage = new backend.ocaml.Stage3OcamlClassStorage();
 		EmitterStageDebug.traceStage3Phase("after_typed_modules_unique:" + typedModules.length);

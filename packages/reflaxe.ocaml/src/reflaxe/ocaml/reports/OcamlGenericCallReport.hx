@@ -10,6 +10,7 @@ private enum abstract NodeKind(String) to String {
 	final Erased = "erased";
 	final DynamicValue = "dynamic";
 	final Integer = "int";
+	final Floating = "float";
 	final Boolean = "bool";
 	final Text = "string";
 	final NullableText = "nullable-string";
@@ -131,6 +132,7 @@ private function encodeShape(shape:OcamlGenericValueShape, allowDynamic:Bool):Re
 			node(NodeKind.DynamicValue);
 		case Erased(parameter): node(NodeKind.Erased, [], parameter);
 		case Integer: node(NodeKind.Integer);
+		case Floating: node(NodeKind.Floating);
 		case Boolean: node(NodeKind.Boolean);
 		case Text(nullable): node(nullable ? NodeKind.NullableText : NodeKind.Text);
 		case NullableInteger: node(NodeKind.NullableInteger);
@@ -175,6 +177,7 @@ private function readShape(value:Dynamic, depth:Int, allowDynamic:Bool = false):
 		case "dynamic" if (allowDynamic && children.length == 0): DynamicValue;
 		case "erased" if (children.length == 0 && decoded.parameter != null): Erased(decoded.parameter);
 		case "int" if (children.length == 0): Integer;
+		case "float" if (children.length == 0): Floating;
 		case "bool" if (children.length == 0): Boolean;
 		case "string" if (children.length == 0): Text(false);
 		case "nullable-string" if (children.length == 0): Text(true);

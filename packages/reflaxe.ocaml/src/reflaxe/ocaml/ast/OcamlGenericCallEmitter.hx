@@ -48,6 +48,12 @@ function convertView(conversion:OcamlGenericValueConversion, value:OcamlExpr, ro
 	return convert(conversion, value, role, fresh, runtime, true);
 }
 
+/** Native ordinary methods use arrows while sharing the same checked generic conversion policy. */
+function convertArrow(conversion:OcamlGenericValueConversion, value:OcamlExpr, role:String, fresh:String->String,
+		runtime:(String, String) -> OcamlExpr):OcamlExpr {
+	return convert(conversion, value, role, fresh, runtime, false);
+}
+
 /** The caller's representation domain fixes whether nested callbacks are arrows or views. */
 private function convert(conversion:OcamlGenericValueConversion, value:OcamlExpr, role:String, fresh:String->String, runtime:(String, String) -> OcamlExpr,
 		views:Bool = false):OcamlExpr {

@@ -19,8 +19,8 @@ typedef MethodValueInput = {
 	Reject a null receiver before binding: nullable method-value transport is
 	not supported yet, and binding a stateless method would falsely succeed.
 	Shared typing instantiates each generic capture and checks its later uses.
-	The emitted ordinary body can retain OCaml polymorphism; declaration type
-	parameters alone do not require another callable adapter. Dynamic replacement
+	Generic methods are handled first by Stage3OcamlGenericMethods, which adapts
+	their erased parameters and results at each typed use. Dynamic replacement
 	and optional/rest adapters still need their own checked storage contracts.
  */
 function render(input:MethodValueInput):String {
