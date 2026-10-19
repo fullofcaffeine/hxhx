@@ -229,10 +229,16 @@ class OcamlIMapInterfaceContract {
 		}
 		if (expectedKeyKind != null) {
 			final keyKind:OcamlStandardIMapKeyKind = expectedKeyKind;
+			final sourceMatches = switch (decision.sourceKind) {
+				case StandardStringMapAbstract, StandardIntMapAbstract, StandardObjectMapAbstract:
+					standardMapSourceMatches(decision.sourceSemanticTypeId, decision.keySemanticTypeId, decision.valueSemanticTypeId, false);
+				case _:
+					decision.sourceSemanticTypeId == standardSourceSemanticTypeId(decision.sourceKind, decision.keySemanticTypeId,
+						decision.valueSemanticTypeId);
+			};
 			if (!OcamlStandardIMapCallContract.keyKindMatchesSemanticType(keyKind, decision.keySemanticTypeId)
 				|| decision.sourceCarrierTypeId != OcamlStandardIMapCallContract.carrierId(keyKind)
-				|| decision.sourceSemanticTypeId != standardSourceSemanticTypeId(decision.sourceKind, decision.keySemanticTypeId,
-					decision.valueSemanticTypeId)) {
+				|| !sourceMatches) {
 				throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: conversion "${decision.id}" disagrees with its standard Map source and key carrier';
 			}
 		}
@@ -294,11 +300,11 @@ class OcamlIMapInterfaceContract {
 	public static function requireStorageAlias(decision:OcamlIMapStorageAliasDecision):Void {
 		if (decision == null)
 			throw "reflaxe.ocaml [ocaml-imap-interface:invalid-storage-alias]: storage alias is missing";
-		final mapSemanticTypeId = 'Map<${decision.keySemanticTypeId}, ${decision.valueSemanticTypeId}>';
-		final expectedSourceSemanticTypeId = switch (decision.nullPolicy) {
-			case NonNullableSource: mapSemanticTypeId;
-			case CheckNullAndUnbox: 'Null<$mapSemanticTypeId>';
-			case _: "";
+		final sourceMatches = switch (decision.nullPolicy) {
+			case NonNullableSource, CheckNullAndUnbox:
+				standardMapSourceMatches(decision.sourceSemanticTypeId, decision.keySemanticTypeId, decision.valueSemanticTypeId,
+					decision.nullPolicy == CheckNullAndUnbox);
+			case _: false;
 		};
 		final expectedCarrierTypeId = OcamlStandardIMapCallContract.carrierId(decision.standardKeyKind);
 		final expectedSourceCarrierTypeId = switch (decision.nullPolicy) {
@@ -312,7 +318,7 @@ class OcamlIMapInterfaceContract {
 			|| decision.source.max < decision.source.min
 			|| decision.keySemanticTypeId.length == 0
 			|| decision.valueSemanticTypeId.length == 0
-			|| decision.sourceSemanticTypeId != expectedSourceSemanticTypeId
+			|| !sourceMatches
 			|| decision.targetSemanticTypeId != 'haxe.IMap<${decision.keySemanticTypeId}, ${decision.valueSemanticTypeId}>'
 			|| decision.sourceCarrierTypeId != expectedSourceCarrierTypeId
 			|| decision.preservedCarrierTypeId != expectedCarrierTypeId
@@ -588,6 +594,17 @@ class OcamlIMapInterfaceContract {
 			case UserImplementation: null;
 			case _: throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: unsupported IMap conversion source kind "$sourceKind"';
 		}
+	}
+
+	/**
+		Haxe exposes both its global Map typedef and the exact haxe.ds.Map abstract.
+		Keep the recorded source identity; compare complete standard forms so an
+		unrelated owner, different argument, or different null policy cannot match.
+	 */
+	static function standardMapSourceMatches(source:String, key:String, value:String, nullable:Bool):Bool {
+		final alias = 'Map<$key, $value>';
+		final abstractType = 'haxe.ds.Map<$key, $value>';
+		return nullable ? source == 'Null<$alias>' || source == 'Null<$abstractType>' : source == alias || source == abstractType;
 	}
 
 	static function standardSourceSemanticTypeId(sourceKind:OcamlIMapInterfaceSourceKind, keySemanticTypeId:String, valueSemanticTypeId:String):String {
