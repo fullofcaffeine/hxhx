@@ -23,6 +23,7 @@ class TypedBodyProjectionBuilder {
 	final arrayAccesses:Array<TypedBackendArrayAccess> = [];
 	final collectionControls:Array<TypedBackendCollectionControl> = [];
 	final equalities:Array<TypedBackendEqualityOccurrence> = [];
+	final bitwiseOperations:Array<TypedBackendBitwiseOccurrence> = [];
 	final conditions:Array<TypedBackendCondition> = [];
 	final callArguments:Array<TypedBackendCallArgument> = [];
 	final lambdas:Array<TypedBackendLambdaOccurrence> = [];
@@ -139,9 +140,16 @@ class TypedBodyProjectionBuilder {
 	}
 
 	/** Preserve operand types before binary syntax loses them. */
-	public function projectEquality(source:TypedExpr, expression:HxExpr):HxExpr {
+	public function projectBinary(source:TypedExpr, expression:HxExpr):HxExpr {
 		if (sealed)
-			throw "cannot add equality facts to a sealed projection";
+			throw "cannot add binary facts to a sealed projection";
+		if (TypedBackendBitwiseOccurrence.supports(source.getTexts()[0]))
+			bitwiseOperations.push(new TypedBackendBitwiseOccurrence({
+				owner: ownerIdentity,
+				revision: bodyRevision,
+				source: source,
+				expression: expression
+			}));
 		if (source.getTexts()[0] == "==" || source.getTexts()[0] == "!=")
 			equalities.push(new TypedBackendEqualityOccurrence({
 				owner: ownerIdentity,
@@ -156,6 +164,12 @@ class TypedBodyProjectionBuilder {
 		if (!sealed)
 			throw "equality facts require a sealed projection";
 		return equalities.copy();
+	}
+
+	public function getBitwiseOperations():Array<TypedBackendBitwiseOccurrence> {
+		if (!sealed)
+			throw "bitwise facts require a sealed projection";
+		return bitwiseOperations.copy();
 	}
 
 	/** Retain typed callback producers, uses and comparisons before source projection loses their meaning. */

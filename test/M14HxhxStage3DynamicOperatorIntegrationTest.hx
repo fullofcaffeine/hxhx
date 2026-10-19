@@ -8,6 +8,18 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 			throw message;
 	}
 
+	/** Ordered call bindings must stay inside the one box at the concrete integer return boundary. */
+	static function assertIntegerReturnCarrier(generated:String, fullBody:Bool):Void {
+		final functions = generated.split("\n").filter(line -> StringTools.startsWith(line, "let rec combine ("));
+		assertTrue(functions.length == 1, "Expected one emitted nested integer combine function.");
+		final body = functions[0];
+		assertTrue(body.indexOf(fullBody ? "HxReturn_combine (Obj.repr ((let " : ": Obj.t = Obj.repr ((let ") >= 0,
+			"The concrete nested integer result did not cross its Dynamic return boundary after ordered call binding.");
+		assertTrue(body.split("Obj.repr").length == 2, "Nested integer calls must box only the final result, not their arguments or the result twice.");
+		assertTrue(body.indexOf("let __hx_call_function = (addBits (this_))") >= 0,
+			"The nested integer call lost its selected receiver before argument evaluation.");
+	}
+
 	static function deleteRecursive(path:String):Void {
 		if (!FileSystem.exists(path))
 			return;
@@ -203,20 +215,37 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		final numericCarrierExecutable = EmitterStage.emitToDir(numericCarrierProgram, numericCarrierOutputDir, false);
 		assertTrue(FileSystem.exists(numericCarrierExecutable), "Nested integer carrier fixture did not build its OCaml executable.");
 		final numericCarrierGenerated = File.getContent(haxe.io.Path.join([numericCarrierOutputDir, "NestedIntegerCarrier.ml"]));
-		assertTrue(numericCarrierGenerated.indexOf(": Obj.t = Obj.repr (addBits") >= 0,
-			"A concrete nested integer result did not cross its inferred Dynamic return boundary exactly once.");
-		assertTrue(numericCarrierGenerated.indexOf("addBits (this_) (Obj.repr") < 0, "Nested integer arguments were boxed before concrete integer parameters.");
+		assertIntegerReturnCarrier(numericCarrierGenerated, false);
 		// Full bodies carry a returned value through the function's return
 		// exception. Check the same conversion there without requiring the
 		// diagnostic mode's direct-return layout.
 		final fullCarrierOutputDir = haxe.io.Path.join([root, "out_numeric_carrier_full"]);
 		EmitterStage.emitToDir(numericCarrierProgram, fullCarrierOutputDir, true);
 		final fullCarrierGenerated = File.getContent(haxe.io.Path.join([fullCarrierOutputDir, "NestedIntegerCarrier.ml"]));
-		assertTrue(fullCarrierGenerated.indexOf("HxReturn_combine (Obj.repr (addBits") >= 0,
-			"A concrete nested integer result did not cross the full-body return boundary.");
-		assertTrue(fullCarrierGenerated.indexOf("Obj.repr (Obj.repr (addBits") < 0, "The full-body return boundary boxed the nested integer result twice.");
-		assertTrue(fullCarrierGenerated.indexOf("addBits (this_) (Obj.repr") < 0,
-			"Full-body nested integer arguments were boxed before concrete integer parameters.");
+		assertIntegerReturnCarrier(fullCarrierGenerated, true);
+		// The preceding root-only typing deliberately exercises the inferred
+		// Dynamic return layout. Runtime proof needs actual declarations for
+		// Sys.println and the constructor, rather than that diagnostic setup.
+		final runtimeCarrierRoot = haxe.io.Path.join([root, "numeric_carrier_runtime"]);
+		FileSystem.createDirectory(runtimeCarrierRoot);
+		final runtimeCarrierPath = haxe.io.Path.join([runtimeCarrierRoot, "Main.hx"]);
+		final bitwiseRoot = "test/fixtures/ocaml_int_bitwise";
+		final runtimeCarrierSource = numericCarrierSource + "\n" + File.getContent(bitwiseRoot + "/IntBitwiseChecks.hx") + "\n" + [
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(new NestedIntegerCarrier().combine(1, 2, 3, 4, 5, 6));",
+			"    IntBitwiseChecks.run();",
+			"  }",
+			"}"
+		].join("\n");
+		File.saveContent(runtimeCarrierPath, runtimeCarrierSource);
+		final runtimeExpected = numericOracleStdout + File.getContent(bitwiseRoot + "/expected.stdout");
+		M14Stage3RuntimeFixture.observe({command: "haxe", arguments: ["-cp", runtimeCarrierRoot, "--run", "Main"], expected: runtimeExpected});
+		final runtimeCarrier = M14Stage3RuntimeFixture.prepareMain({source: runtimeCarrierSource, path: runtimeCarrierPath, root: runtimeCarrierRoot});
+		M14IntBitwiseProjectionTest.verify(runtimeCarrier);
+		final runtimeCarrierExecutable = EmitterStage.emitToDir(MacroStage.expandProgram([runtimeCarrier], []), runtimeCarrierRoot + "/out", true);
+		M14Stage3RuntimeFixture.observe({command: runtimeCarrierExecutable, arguments: [], expected: runtimeExpected});
+		Sys.println("NATIVE_INT_BITWISE:PASS");
 
 		final exprToolsSource = File.getContent(haxe.io.Path.join([stage0StdPath, "haxe", "macro", "ExprTools.hx"]));
 		for (shape in [

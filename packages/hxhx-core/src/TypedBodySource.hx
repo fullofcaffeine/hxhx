@@ -749,7 +749,7 @@ class TypedBodySource {
 			case Binary:
 				final binary:HxExpr = EBinop(texts[0], expression(expressions[0], catalog, projectionFacts),
 					expression(expressions[1], catalog, projectionFacts));
-				projectionFacts == null ? binary : projectionFacts.projectEquality(typedExpression, binary);
+				projectionFacts == null ? binary : projectionFacts.projectBinary(typedExpression, binary);
 			case Assign | CompoundAssign:
 				final target = expression(expressions[0], catalog, projectionFacts, false, WriteTarget);
 				var value = expression(expressions[1], catalog, projectionFacts);
@@ -949,6 +949,7 @@ class TypedBodySource {
 				arrays: projectionFacts.getArrayAccesses(),
 				collectionControls: projectionFacts.getCollectionControls(),
 				equalities: projectionFacts.getEqualities(),
+				bitwiseOperations: projectionFacts.getBitwiseOperations(),
 				conditions: projectionFacts.getConditions(),
 				namedPatterns: projectionFacts.getNamedPatterns()
 			});
@@ -1004,6 +1005,7 @@ class TypedBodySource {
 				arrays: projectionFacts.getArrayAccesses(),
 				collectionControls: projectionFacts.getCollectionControls(),
 				equalities: projectionFacts.getEqualities(),
+				bitwiseOperations: projectionFacts.getBitwiseOperations(),
 				conditions: projectionFacts.getConditions(),
 				namedPatterns: projectionFacts.getNamedPatterns()
 			});

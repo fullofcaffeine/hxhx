@@ -1956,11 +1956,22 @@ class EmitterStage {
 			currentTypedInitializer != null ? currentTypedInitializer.requireConstructor(expr) : currentTypedFunction == null ? null : currentTypedFunction.requireConstructor(expr);
 	}
 
+	/** Select concrete bitwise operations from the exact typed executable projection. */
+	static function intBitwise(expr:HxExpr):Null<TypedBackendBitwiseOccurrence> {
+		if (!expr.match(EBinop(_, _, _)))
+			return null;
+		final facts = currentTypedInitializer != null ? currentTypedInitializer.findBitwise(expr) : currentTypedFunction == null ? null : currentTypedFunction.findBitwise(expr);
+		return facts != null && facts.isConcreteInt() ? facts : null;
+	}
+
 	static function stage3IsIntExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
 		final exact = objectAccessType(expr);
 		if (exact != null)
 			return exact.getSemanticKey() == "primitive:Int";
+		if (intBitwise(expr) != null)
+			return true;
 		return switch (expr) {
+			case EParenthesized(inner, _): stage3IsIntExpr(inner, tyByIdent);
 			case EDiscardThen(_, continuation): stage3IsIntExpr(continuation, tyByIdent);
 			case EInt(_):
 				true;
@@ -4300,6 +4311,14 @@ class EmitterStage {
 				}
 			case EBinop(op, a, b):
 				final equality = (op != "==" && op != "!=") ? null : currentTypedInitializer != null ? currentTypedInitializer.findEquality(e) : currentTypedFunction == null ? null : currentTypedFunction.findEquality(e);
+				final bitwise = intBitwise(e);
+				if (bitwise != null)
+					return backend.ocaml.Stage3OcamlIntBitwise.render({
+						facts: bitwise,
+						left: exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+						right: exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+						names: currentFunctionLocalOcamlNames
+					});
 				if (equality != null
 					&& currentClassStorage != null
 					&& (currentClassStorage.usesIdentity(equality.leftType) || currentClassStorage.usesIdentity(equality.rightType))) {
@@ -4905,8 +4924,9 @@ class EmitterStage {
 							}
 						case "==" | "!=" | "<" | ">" | "<=" | ">=" | "&&" | "||" | "+" | "-" | "*" | "/" | "%": hasBringupPoison(a) || hasBringupPoison(b);
 						case "&" | "|" | "^" | "<<" | ">>" | ">>>"
-							if (stage3IsDynamicExpr(a, emissionTyByIdent, callSigByCalleeRaw)
-								|| stage3IsDynamicExpr(b, emissionTyByIdent, callSigByCalleeRaw)): // The checked Dynamic operation already owns these results.
+							if (intBitwise(e) != null
+								|| stage3IsDynamicExpr(a, emissionTyByIdent, callSigByCalleeRaw)
+								|| stage3IsDynamicExpr(b, emissionTyByIdent, callSigByCalleeRaw)): // Checked Int or Dynamic operations own these results.
 							// Do not replace a supported operation with a bootstrap placeholder.
 							hasBringupPoison(a)
 							|| hasBringupPoison(b);

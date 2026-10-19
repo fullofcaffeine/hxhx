@@ -33,6 +33,7 @@ class TypedBackendFunctionProjection {
 	final arrayAccesses:Array<TypedBackendArrayAccess>;
 	final collectionControls:Array<TypedBackendCollectionControl>;
 	final equalities:Array<TypedBackendEqualityOccurrence>;
+	final bitwiseOperations:Array<TypedBackendBitwiseOccurrence>;
 	final conditions:Array<TypedBackendCondition>;
 	final namedPatterns:Array<TypedBackendNamedPattern>;
 	final callArguments:Array<TypedBackendCallArgument>;
@@ -50,6 +51,7 @@ class TypedBackendFunctionProjection {
 			arrays:Array<TypedBackendArrayAccess>,
 			?collectionControls:Array<TypedBackendCollectionControl>,
 			?equalities:Array<TypedBackendEqualityOccurrence>,
+			?bitwiseOperations:Array<TypedBackendBitwiseOccurrence>,
 			?conditions:Array<TypedBackendCondition>,
 			?namedPatterns:Array<TypedBackendNamedPattern>
 		}) {
@@ -107,6 +109,10 @@ class TypedBackendFunctionProjection {
 		for (entry in this.collectionControls)
 			entry.assertCurrent(stableIdentity, bodyRevision);
 		this.equalities = indexedAccesses == null || indexedAccesses.equalities == null ? [] : indexedAccesses.equalities.copy();
+		this.bitwiseOperations = indexedAccesses == null
+			|| indexedAccesses.bitwiseOperations == null ? [] : indexedAccesses.bitwiseOperations.copy();
+		for (entry in this.bitwiseOperations)
+			entry.assertCurrent(stableIdentity, bodyRevision);
 		this.conditions = indexedAccesses == null || indexedAccesses.conditions == null ? [] : indexedAccesses.conditions.copy();
 		this.namedPatterns = indexedAccesses == null || indexedAccesses.namedPatterns == null ? [] : indexedAccesses.namedPatterns.copy();
 		for (entry in this.namedPatterns)
@@ -445,6 +451,17 @@ class TypedBackendFunctionProjection {
 	/** Conditions retain their checked type only in the original executable revision. */
 	public function findCondition(expression:HxExpr):Null<TypedBackendCondition> {
 		for (entry in conditions)
+			if (entry.expression == expression) {
+				requireExpression(expression);
+				entry.assertCurrent(stableIdentity, bodyRevision);
+				return entry;
+			}
+		return null;
+	}
+
+	/** Bitwise facts require the original expression in the current function revision. */
+	public function findBitwise(expression:HxExpr):Null<TypedBackendBitwiseOccurrence> {
+		for (entry in bitwiseOperations)
 			if (entry.expression == expression) {
 				requireExpression(expression);
 				entry.assertCurrent(stableIdentity, bodyRevision);
