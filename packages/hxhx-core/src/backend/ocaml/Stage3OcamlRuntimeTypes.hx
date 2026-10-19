@@ -8,8 +8,9 @@ private typedef Stage3OcamlNominalCall = {
 
 /**
 	Check class predicates against the exact declarations and executable projections
-	of one native request. Only generated Haxe objects carry the private descriptor
-	used here. Runtime-owned classes and type values need separate representations.
+	of one native request. Generated Haxe objects carry a private descriptor;
+	Array uses the existing HxArray marker. Other runtime-owned classes and type
+	values need separate representations.
 	Validation precedes output so unsupported operations cannot replace an artifact.
  */
 class Stage3OcamlRuntimeTypes {
@@ -72,6 +73,8 @@ class Stage3OcamlRuntimeTypes {
 			throw "OCaml emitter does not support runtime type operands for first-class type values: " + entry.getTarget().getSemanticKey();
 		if (entry.getValueType() != null && entry.getValueType().hasUnknownComponent())
 			throw "OCaml class predicate requires its complete operand type";
+		if (entry.getTarget().getKind().match(ArrayCore))
+			return entry.getTarget().requireCoreReflectionName();
 		final name = switch entry.getTarget().getKind() {
 			case Nominal(identity): classes.nominalName(TyType.nominal(identity, []));
 			case _: throw "OCaml emitter does not support runtime type operands for " + entry.getTarget().getSemanticKey();
@@ -110,6 +113,14 @@ class Stage3OcamlRuntimeTypes {
 			switch target {
 				case EParenthesized(inner, _):
 					target = inner;
+				case ECast(_, _):
+					// Shared typing inserts a class-value conversion for core Array.
+					// Only its retained certificate permits removing that conversion;
+					// a matching annotation or an authored cast is not evidence.
+					final conversion = field != null ? field.findCast(target) : fn.findCast(target);
+					if (conversion == null || !conversion.isRepresentationPreserving())
+						throw "OCaml class predicate requires a certified type-value conversion";
+					target = conversion.getOperand();
 				case _:
 					break;
 			}
@@ -174,6 +185,8 @@ class Stage3OcamlRuntimeTypes {
 		if (names == null)
 			throw "OCaml class predicate requires exact local naming ownership";
 		final value = names.internalName("__hx_type_test_value");
+		if (entry.getTarget().getKind().match(ArrayCore))
+			return "(let " + value + " = Obj.repr (" + rendered + ") in HxArray.is_value " + value + ")";
 		return "(let " + value + " = Obj.repr (" + rendered + ") in HxAnon.is_anon " + value + " && HxType.isOfType " + value + " (HxType.class_ "
 			+ quote(target) + "))";
 	}

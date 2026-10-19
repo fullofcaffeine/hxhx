@@ -130,5 +130,47 @@ class M14OcamlNominalTypePredicatesTest {
 		require(result.builtExecutable, "native target did not build the predicate observer");
 		M14Stage3RuntimeFixture.observe({command: result.entryPath, arguments: [], expected: expected});
 		Sys.println("OCAML_NOMINAL_TYPE_RUNTIME:PASS");
+		arrayPredicates();
+	}
+
+	/** Real Array storage must remain distinct from null, primitives, and same-shaped objects. */
+	static function arrayPredicates():Void {
+		final root = "test/fixtures/ocaml_array_predicates";
+		final path = root + "/Main.hx";
+		final expected = File.getContent(root + "/expected.stdout");
+		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", root, "--run", "Main"], expected: expected});
+		final module = M14Stage3RuntimeFixture.prepareMain({source: File.getContent(path), path: path, root: root});
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([module], false), ".tmp/ocaml_array_predicates", true, true);
+		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
+		final storage = new Stage3OcamlClassStorage();
+		for (owner in module.getBackendProjection().getClasses())
+			storage.add(owner, false);
+		final plan = new Stage3OcamlRuntimeTypes([module], storage);
+		var tested = false;
+		for (owner in module.getBackendProjection().getClasses())
+			for (fn in owner.getFunctions())
+				TypedBackendSourceWalk.functionDeclaration(fn.getDeclaration(), expression -> {
+					final call = TypedExactStaticCallSource.decode(expression);
+					if (tested || call == null || call.owner != "Std" || call.method != "isOfType")
+						return;
+					final conversion = fn.findCast(call.arguments[1]);
+					require(conversion != null && conversion.isRepresentationPreserving(), "Array predicate lost its certified cast");
+					// A same-shaped replacement cast cannot borrow the original call.
+					switch call.arguments[1] {
+						case ECast(inner, hint):
+							call.arguments[1] = ECast(inner, hint);
+						case _: throw "Array predicate requires its projected cast";
+					}
+					// The decoded argument array is a copy; the original remains unchanged.
+					final copied = TypedExactStaticCallSource.encode(call.owner, call.declaration, call.method, call.resultType, call.callee, call.arguments);
+					reject(() -> plan.renderCall(copied, fn, null, _ -> "unused", null, value -> value), "exact typed call");
+					tested = true;
+				}, _ -> {});
+		require(tested, "Array predicate ownership observer found no call");
+		final literal = typed("class Main { static function main():Void { var target = Array; } }");
+		reject(() -> new Stage3OcamlRuntimeTypes([literal], new Stage3OcamlClassStorage()), "first-class type values");
+		final authoredCast = typed("class Main { static function main():Void { Std.isOfType([], cast Array); } }");
+		reject(() -> new Stage3OcamlRuntimeTypes([authoredCast], new Stage3OcamlClassStorage()), "certified type-value conversion");
+		Sys.println("OCAML_ARRAY_PREDICATE_RUNTIME:PASS");
 	}
 }
