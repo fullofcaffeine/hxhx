@@ -261,7 +261,7 @@ class Stage3SetupSupport {
 	}
 
 	/**
-		Selects project sources before standard-library providers. C++ uses the authored
+		Selects project sources before standard-library providers. C++ and OCaml use the authored
 		providers embedded in this compiler. Neko and JavaScript use
 		their target _std implementations before common declarations; missing overrides fall
 		through to the common root. Explicit user roots retain their original priority,
@@ -319,6 +319,10 @@ class Stage3SetupSupport {
 		final definesMap = HxDefineMap.fromRawDefines(allDefines);
 		definesMap.set("sys", "1");
 		definesMap.set(backendTargetDefine, "1");
+		// Native OCaml uses the authored provider branch even without a CLI output path.
+		// An explicit output value remains available to the normal routing owner.
+		if (backendTargetDefine == "ocaml" && !definesMap.exists("ocaml_output"))
+			definesMap.set("ocaml_output", "1");
 		for (n in hxhx.macro.MacroState.listDefineNames()) {
 			definesMap.set(n, hxhx.macro.MacroState.definedValue(n));
 		}

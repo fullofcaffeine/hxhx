@@ -4733,7 +4733,8 @@ class EmitterStage {
 				// a range in expression position, collapse to poison.
 				"(Obj.magic 0)";
 			case ECast(expr, hint) | ECheckType(expr, hint):
-				final value = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				// Wrappers retain call contracts even when the source exists only in memory.
+				final value = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 				final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findCast(e) : currentTypedFunction == null ? null : currentTypedFunction.findCast(e);
 				// A selected operand conversion already produced the annotation's
 				// destination. Keep its existing native view without wrapping it twice.
@@ -4744,9 +4745,9 @@ class EmitterStage {
 				final stringCast = backend.ocaml.OcamlExplicitStringCast.render(hint, value);
 				stringCast == null ? value : stringCast;
 			case EParenthesized(inner, _):
-				"(" + exprToOcaml(inner, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
+				"(" + exprToOcaml(inner, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")";
 			case EUntyped(expr):
-				final value = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				final value = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 				final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findUntyped(e) : currentTypedFunction == null ? null : currentTypedFunction.findUntyped(e);
 				backend.ocaml.Stage3OcamlValueConversion.untypedValue(occurrence, value, currentFunctionLocalOcamlNames);
 		}
@@ -6864,7 +6865,8 @@ class EmitterStage {
 	static function stage3RuntimePaths(runtimeSrcDir:String):Array<String> {
 		return [
 			for (name in sys.FileSystem.readDirectory(runtimeSrcDir))
-				if (name != null && StringTools.endsWith(name, ".ml")) "runtime/" + name
+				// CallStack is authored Haxe; only HxBacktrace owns native stack capture.
+				if (name != null && name != "haxe_CallStack.ml" && StringTools.endsWith(name, ".ml")) "runtime/" + name
 		];
 	}
 
@@ -9582,11 +9584,13 @@ class EmitterStage {
 		// Provide a tiny alias shim when needed. This is intentionally narrow: we add only the
 		// module required by Gate1/utest, and avoid a broad aliasing scheme that could shadow
 		// OCaml stdlib modules (e.g. `List`) during bring-up.
-		{
+		if (Lambda.exists(emittedModulePaths, path -> haxe.io.Path.withoutDirectory(path) == "Haxe_CallStack.ml")) {
 			final shimName = "CallStack";
 			final shimFile = shimName + ".ml";
 			final shimPath = haxe.io.Path.join([outAbs, shimFile]);
-			if (!sys.FileSystem.exists(shimPath)) {
+			// Only this compilation's emitted modules establish provider availability.
+			// A stale file in the output directory must not introduce a dependency.
+			if (!Lambda.exists(emittedModulePaths, path -> haxe.io.Path.withoutDirectory(path) == shimFile)) {
 				sys.io.File.saveContent(shimPath, "(* hxhx(stage3) bootstrap import shim: CallStack = haxe.CallStack *)\n" + "include Haxe_CallStack\n");
 				generatedPaths.push(shimFile);
 			}

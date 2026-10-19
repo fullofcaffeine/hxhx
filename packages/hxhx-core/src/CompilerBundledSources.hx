@@ -18,7 +18,7 @@ private final root = namespace + haxe.crypto.Sha256.encode(CompilerCacheIdentity
 	use these embedded bytes, never a build-machine path or the source checkout.
  */
 function targetRoot(target:String):Null<String> {
-	return target == "cpp" ? root + "/cpp/_std" : null;
+	return target == "cpp" || target == "ocaml" ? root + "/" + target + "/_std" : null;
 }
 
 /** Reserve the whole namespace so a stale bundle identity cannot fall back to disk. */

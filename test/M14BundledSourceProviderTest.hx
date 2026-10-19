@@ -81,6 +81,40 @@ class M14BundledSourceProviderTest {
 		final reset = cache.openRequest();
 		require(reset.readSource(path) == source && reset.report().sourceHits == 0, "reset must discard cache entries, not source assets");
 		reset.finish(false);
+		checkOcaml();
 		Sys.println("BUNDLED_SOURCE_PROVIDER:PASS");
+	}
+
+	/** Native OCaml ships the exact reviewed providers without checkout-dependent runtime reads. */
+	static function checkOcaml():Void {
+		final root = CompilerBundledSources.targetRoot("ocaml");
+		require(root != null, "OCaml requires its bundled source root");
+		final provider = new CompilerSourceProvider();
+		final paths = Stage3SetupSupport.projectClassPaths({
+			explicitPaths: [],
+			libraries: [],
+			cwd: Sys.getCwd(),
+			standardRoot: "",
+			targetDefine: "ocaml"
+		});
+		require(paths.indexOf(root) >= 0, "production OCaml setup must select bundled providers");
+		for (name in [
+			"Math",
+			"StringTools",
+			"haxe.io.FPHelper",
+			"haxe.Exception",
+			"haxe.ValueException",
+			"haxe.CallStack",
+			"haxe.NativeStackTrace"
+		]) {
+			final path = provider.resolveModuleFile(paths, name);
+			require(path != null && CompilerBundledSources.owns(path) && !sys.FileSystem.exists(path), "OCaml provider must be embedded: " + name);
+			final expected = sys.io.File.getContent("packages/reflaxe.ocaml/std/ocaml/_std/" + name.split(".").join("/") + ".hx");
+			require(provider.readSource(path) == expected, "OCaml provider bytes differ: " + name);
+		}
+		final defines = Stage3SetupSupport.buildDefinesMap([], "ocaml", "ocaml-stage3");
+		require(defines.exists("ocaml_output"), "native providers require their target implementation branch");
+		final explicit = Stage3SetupSupport.buildDefinesMap(["ocaml_output=chosen"], "ocaml", "ocaml-stage3");
+		require(explicit.get("ocaml_output") == "chosen", "provider selection must preserve an explicit output path");
 	}
 }

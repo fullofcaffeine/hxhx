@@ -26,3 +26,6 @@
 -cp test
 -main M14Stage3DynamicArrayArgumentTest
 --interp
+
+--next
+test/m14_stage3_virtual_optional_calls_test.hxml
