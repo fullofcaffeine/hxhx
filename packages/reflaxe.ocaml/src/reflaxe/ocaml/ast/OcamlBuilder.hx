@@ -5818,6 +5818,13 @@ class OcamlBuilder {
 			case TMeta(metadata, e1):
 				OcamlLoweredOrigin.readPlaceId(metadata) != null ? buildPreservedPlaceOperation(metadata, e1) : buildExpr(e1);
 			case TCast(e1, _):
+				// Inline expansion can wrap a concrete value in a Dynamic-typed cast.
+				// Convert the inner value before callers rely on that outer carrier.
+				switch (followNoAbstracts(e.t)) {
+					case TDynamic(_):
+						return coerceForAssignment(e.t, e1);
+					case _:
+				}
 				// Haxe uses casts for nullable primitive flows (boxing/unboxing + flow typing).
 				//
 				// We represent:
