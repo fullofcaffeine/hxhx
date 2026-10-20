@@ -2057,6 +2057,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 			case KAbstractImpl(_): true;
 			case _: false;
 		};
+		final isModuleFields = switch (classType.kind) {
+			case KModuleFields(_): true;
+			case _: false;
+		};
 		ctx.currentTypeFullName = fullName;
 		ctx.classTagsByFullName.set(fullName, classTagsForClassType(classType));
 		#if macro
@@ -2073,8 +2077,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 		// Some compiler paths expose `classType.constructor == null` for those, but `new C()`
 		// and `Type.createInstance(C, [])` must still work. Treat missing constructor info
 		// as an implicit `new():Void` for non-extern, non-interface classes.
+		// A module-field owner only groups top-level declarations; it is not an
+		// instantiable class and must not register a synthetic constructor.
 		final isOcamlNativeSurface = classType.pack != null && classType.pack.length > 0 && classType.pack[0] == "ocaml";
-		final hasCtor = (!classType.isInterface) && (!classType.isExtern) && (!isOcamlNativeSurface) && (!isAbstractImplementation);
+		final hasCtor = (!classType.isInterface) && (!classType.isExtern) && (!isOcamlNativeSurface) && (!isAbstractImplementation) && (!isModuleFields);
 		ctx.ctorPresentByFullName.set(fullName, hasCtor);
 		final ctorArgs:Null<Array<{name:String, opt:Bool, t:Type}>> = if (!hasCtor) {
 			null;
@@ -2299,7 +2305,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		// - `new C()` can work,
 		// - `Type.createInstance(C, [])` can work,
 		// - runtime class identity (`Type.getClass`) works consistently.
-		final hasImplicitCtor = (!classType.isInterface) && (!classType.isExtern) && (!isOcamlNativeSurface);
+		// Module functions such as `create` must not collide with an invented
+		// constructor for the compiler's synthetic module-field owner.
+		final hasImplicitCtor = (!classType.isInterface) && (!classType.isExtern) && (!isOcamlNativeSurface) && (!isModuleFields);
 		final hasInstanceSurface = hasInstanceVarsLocal || instanceMethods.length > 0 || ctorFunc != null || hasImplicitCtor;
 		if (hasInstanceSurface) {
 			final instanceTypeName = ctx.scopedInstanceTypeName(classType.module, classType.name);
