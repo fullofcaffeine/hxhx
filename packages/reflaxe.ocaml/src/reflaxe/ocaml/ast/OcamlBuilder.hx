@@ -7675,6 +7675,11 @@ class OcamlBuilder {
 	}
 
 	function coerceForAssignment(lhsType:Type, rhs:TypedExpr):OcamlExpr {
+		if (reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierContract.nullableValueNeedsUnbox(lhsType, rhs.t)) {
+			// Optional maps use Obj.t, while required maps use native storage.
+			// Exact type evidence permits recovery without copying or rejecting null.
+			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [buildExpr(rhs)]);
+		}
 		final nullableFunction = nullableCallableType(lhsType);
 		if (nullableFunction != null) {
 			// Present functions enter the same Obj.t storage used by absent callbacks.

@@ -128,6 +128,17 @@ class OcamlStandardMapCarrierContract {
 			&& semanticTypeId(expected.valueType) == semanticTypeId(actual.valueType);
 	}
 
+	/**
+		Selects nullable Map recovery into the same exact native Map type.
+
+		This is the inverse of result boxing. Recovery preserves the original map
+		and the null sentinel: a required Haxe reference parameter may still receive
+		null. Different key/value types and nonstandard declarations are excluded.
+	**/
+	public static function nullableValueNeedsUnbox(destination:Type, value:Type):Bool {
+		return nullableResultNeedsBox(value, destination);
+	}
+
 	/** Ordinary TypeTools.follow erases Null around references; this boundary must retain it. */
 	static function followAliases(type:Type):Type {
 		return switch type {
