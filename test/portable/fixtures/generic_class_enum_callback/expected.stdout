@@ -1,0 +1,9 @@
+7,9
+same=true,calls=1
+receiver
+callback
+invoke
+ordered-same=true
+repeat=2
+null=true
+callback-error

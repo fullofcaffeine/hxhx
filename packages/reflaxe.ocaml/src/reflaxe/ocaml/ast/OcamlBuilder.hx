@@ -1807,6 +1807,21 @@ class OcamlBuilder {
 		return output;
 	}
 
+	/** Materializes the checked enum callback crossing without changing source evaluation order. */
+	function buildGenericEnumCallbackCall(plan:reflaxe.ocaml.lowered.OcamlGenericEnumCallbackCall):OcamlExpr {
+		OcamlNativeEnumRepresentation.requireCurrent(plan.enumType, ctx);
+		final moduleName = moduleIdToOcamlModuleName(plan.moduleId);
+		final selfModule = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+		final name = ctx.scopedValueName(plan.moduleId, plan.typeName, plan.fieldName);
+		final method = selfModule == moduleName ? OcamlExpr.EIdent(name) : OcamlExpr.EField(OcamlExpr.EIdent(moduleName), name);
+		final receiver = freshTmp("enum_callback_receiver");
+		final callback = freshTmp("enum_callback_source");
+		final adapted = reflaxe.ocaml.ast.OcamlGenericCallEmitter.convertArrow(plan.conversion, OcamlExpr.EIdent(callback), "enum-callback", freshTmp,
+			(_, _) -> throw "native enum callback conversion cannot require a runtime helper");
+		return OcamlExpr.ELet(receiver, buildExpr(plan.receiver),
+			OcamlExpr.ELet(callback, buildExpr(plan.callback), OcamlExpr.EApp(method, [OcamlExpr.EIdent(receiver), adapted]), false), false);
+	}
+
 	/** Recognizes core Null<function> through aliases without following unrelated abstracts. */
 	static function nullableCallableType(type:Type):Null<Type> {
 		final declared = followNoAbstracts(type);
@@ -4233,6 +4248,7 @@ class OcamlBuilder {
 		final anonymousLiteralCandidate = OcamlAnonymousStructurePlan.isAdmittedLiteralCandidate(e);
 		final plannedAnonymousLiteral = currentAnonymousStructurePlan == null
 			|| !anonymousLiteralCandidate ? null : currentAnonymousStructurePlan.requireLiteral(e, representationRegistry);
+		final genericEnumCallbackCall = reflaxe.ocaml.lowered.OcamlGenericEnumCallbackCall.select(e, ctx);
 		final plannedAnonymousOperation = currentAnonymousStructurePlan == null ? null : currentAnonymousStructurePlan.operationFor(e, representationRegistry);
 		final structuralFieldCandidate = plannedAnonymousOperation == null && OcamlStructuralFieldPlanner.isCandidate(e);
 		final plannedStructuralField = currentStructuralFieldPlan == null
@@ -4362,6 +4378,8 @@ class OcamlBuilder {
 				buildPlannedCall(plannedCall, null, arguments, e.pos);
 			case TCall(callee, arguments) if (plannedCall != null):
 				buildPlannedCall(plannedCall, callee, arguments, e.pos);
+			case TCall(_, _) if (genericEnumCallbackCall != null):
+				buildGenericEnumCallbackCall(genericEnumCallbackCall);
 			case TCall(_, _) if (genericCallSelect(e, representationRegistry) != null):
 				callPlanInvariant("a generic instance call reached syntax without its sealed storage conversion plan", e.pos);
 			case TCall(_, _) if (OcamlCallPlanner.isDirectStaticGenericIdentityCall(e)):
