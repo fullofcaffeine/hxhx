@@ -2142,7 +2142,9 @@ class OcamlBuilder {
 			authority.reconcileExpression(runtimeFunction);
 			final materialized:Array<{name:String, value:OcamlExpr}> = [];
 			final receiverName = freshTmp("array_receiver");
-			materialized.push({name: receiverName, value: buildExpr(typedField.receiver)});
+			// Recover the selected native Array carrier for generic producers before
+			// calling its runtime operation. The typed contract above proves the Array.
+			materialized.push({name: receiverName, value: coerceForAssignment(typedField.receiver.t, typedField.receiver)});
 			final applicationArguments:Array<OcamlExpr> = [OcamlExpr.EIdent(receiverName)];
 			final elementArgumentIndex = OcamlStandardArrayCallContract.elementArgumentIndex(target.operation);
 			for (index in 0...arguments.length) {
@@ -2150,7 +2152,7 @@ class OcamlBuilder {
 				// Haxe can pass Null<Enum> into Array<Enum> without a cast. Use the
 				// same storage conversion as assignment before binding the argument once.
 				final argumentValue = elementArgumentIndex == index ? coerceForAssignment(typedField.parameters[0],
-					arguments[index]) : buildExpr(arguments[index]);
+					arguments[index]) : target.operation == Concat ? coerceForAssignment(typedField.receiver.t, arguments[index]) : buildExpr(arguments[index]);
 				materialized.push({name: argumentName, value: argumentValue});
 				applicationArguments.push(OcamlExpr.EIdent(argumentName));
 			}
