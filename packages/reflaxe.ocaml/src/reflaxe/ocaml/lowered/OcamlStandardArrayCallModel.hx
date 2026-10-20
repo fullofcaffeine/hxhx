@@ -318,6 +318,20 @@ class OcamlStandardArrayCallContract {
 		}
 	}
 
+	/**
+		Identifies the argument received as one Array element, rather than an index,
+		another array, or a callback. That value crosses the receiver's declared
+		element storage boundary even when Haxe accepts its source type without a cast.
+	**/
+	public static function elementArgumentIndex(operation:OcamlStandardArrayOperation):Null<Int> {
+		return switch (operation) {
+			case Push | Unshift | Remove | Contains | IndexOf | IndexOfDefault | LastIndexOf | LastIndexOfDefault: 0;
+			case Insert: 1;
+			case Concat | Copy | Pop | Shift | Reverse | Resize | Splice | Slice | SliceDefault | Sort | Map | Filter: null;
+			case _: throw 'reflaxe.ocaml [ocaml-array-call:invalid-operation]: unsupported standard Array operation "$operation"';
+		}
+	}
+
 	static function expectedParameterSemanticTypeIds(operation:OcamlStandardArrayOperation, elementSemanticTypeId:String,
 			resultElementSemanticTypeId:Null<String>):Array<String> {
 		return switch (operation) {

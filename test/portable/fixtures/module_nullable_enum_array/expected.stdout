@@ -1,0 +1,7 @@
+7,9
+length=1
+reads=1,1
+operations=3,true,0,1,2,1,true,2
+nullable=3,true
+payload=7,9
+effects=receiver,argument
