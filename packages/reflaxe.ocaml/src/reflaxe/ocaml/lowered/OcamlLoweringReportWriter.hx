@@ -25,6 +25,7 @@ import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallValuePlan;
 import reflaxe.ocaml.lowered.OcamlCallRuntimeUseModel.OcamlCallRuntimeUseContract;
 import reflaxe.ocaml.lowered.OcamlContainerElementPlan.OcamlContainerElementDecision;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionContract;
+import reflaxe.ocaml.lowered.OcamlControlPlan.OcamlControlTargetMechanism;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionFamily;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionSnapshot;
 import reflaxe.ocaml.lowered.OcamlControlAdmission.OcamlControlAdmissionStatus;
@@ -465,6 +466,15 @@ class OcamlLoweringReportWriter {
 		sortedControlAdmissions.sort((left, right) -> Reflect.compare(left.id, right.id));
 		final typedReturnCountByFunction:Map<String, Int> = [];
 		for (control in controls) {
+			// A typed Void function can own a payloadless return without a callable
+			// value-result record. Validate its complete control contract before counting it.
+			if (control.kind == OcamlControlTransferKind.Return
+				&& control.payload == null
+				&& control.mechanism == OcamlControlTargetMechanism.RuntimeVoidReturnSignal) {
+				OcamlControlPlan.requireDecision(control);
+				typedReturnCountByFunction.set(control.functionId, (typedReturnCountByFunction.get(control.functionId) ?? 0) + 1);
+				continue;
+			}
 			if (control.kind == OcamlControlTransferKind.Return
 				&& control.payload != null
 				&& OcamlControlPlan.isAdmittedTypedFunctionReturnPayload(control.payload, control.functionId)) {

@@ -2821,8 +2821,15 @@ class ReflaxeOcamlInspection {
 			byFunction.set(boundary.functionId, boundary);
 		for (control in controls) {
 			final payload = control.payload;
-			if (control.kind != "return" || payload == null)
+			if (control.kind != "return")
 				continue;
+			if (payload == null) {
+				// inspectControls already validates the exact function owner, proof,
+				// capability, and payloadless Void mechanism before coverage is checked.
+				if (control.mechanism == "runtime-void-return-signal")
+					typedReturnCountByFunction.set(control.functionId, (typedReturnCountByFunction.get(control.functionId) ?? 0) + 1);
+				continue;
+			}
 			if (payload.nullableEnumCarrier != null) {
 				final boundary = byFunction.get(control.functionId);
 				final resultCarrier = boundary == null || boundary.result == null ? null : boundary.result.nullableEnumCarrier;
