@@ -5925,6 +5925,8 @@ class OcamlBuilder {
 								final toConcrete = switch (followNoAbstracts(unwrapNullType(e.t))) {
 									case TInst(_, _), TEnum(_, _):
 										true;
+									case type = TAbstract(_, _):
+										reflaxe.ocaml.lowered.OcamlArrayCastCarrier.isArrayBackedAbstract(type);
 									case _:
 										false;
 								}
