@@ -10923,7 +10923,13 @@ class OcamlBuilder {
 										[OcamlExpr.EConst(OcamlConst.CString(enumName)), fieldObj]);
 									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [unboxed]);
 								} else {
-									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [fieldObj]);
+									final unboxed = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [fieldObj]);
+									// Retain the occurrence's function type when a record callback
+									// escapes into a captured local. An annotation preserves identity.
+									switch (followNoAbstracts(source.t)) {
+										case TFun(_, _): OcamlExpr.EAnnot(unboxed, typeExprFromHaxeType(source.t));
+										case _: unboxed;
+									}
 								}
 							}
 						}
