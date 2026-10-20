@@ -254,15 +254,14 @@ class OcamlFunctionResultBoundary {
 				proofClaim = "The followed instance-method result and the program representation registry independently select String -> string. This result-only record authorizes function completion and private return recovery, but no receiver, parameter, dispatch, or call occurrence.";
 				semanticTypeId = "String";
 			} else if (nullableEnumDescriptor != null) {
-				final completedEnum = directCompletedEnumValue(data.expr);
-				final completedDescriptor = completedEnum == null ? null : OcamlNativeEnumRepresentation.selectDirectConstructor(completedEnum, context);
-				if (completedDescriptor == null || completedDescriptor.revision != nullableEnumDescriptor.revision)
+				final completedEnum = completedExactEnumValue(data.expr, nullableEnumDescriptor, context);
+				if (completedEnum == null)
 					return null;
 				nullableEnum = nullableEnumProof(nullableEnumDescriptor, completedEnum);
 				source = OcamlFunctionResultBoundarySource.NonGenericInstanceNullableEnumDeclaration;
-				reason = "The concrete non-generic instance method declares Null<Enum> and its normal completion directly constructs that exact enum. The function boundary stores the native OCaml variant in Obj.t before it enters the nullable result carrier.";
+				reason = "The concrete non-generic instance method declares Null<Enum>, and its final typed normal-completion value has that exact enum identity. The function boundary stores the native OCaml variant in Obj.t before it enters the nullable result carrier.";
 				proofId = NON_GENERIC_INSTANCE_NULLABLE_ENUM_PROOF_ID;
-				proofClaim = "The final typed declaration and direct constructor agree on one ordinary Haxe enum identity. Obj.repr preserves that native variant for both normal completion and admitted early returns. The static nullable-enum type retains the enum identity, so this boundary does not create a Dynamic value or admit enum-valued calls, fields, locals, or unrelated constructors.";
+				proofClaim = "The declared core Null<Enum> result and final typed normal-completion value agree on one ordinary Haxe enum identity. Obj.repr preserves that native variant while typed null returns use the same Obj.t carrier. This result-only proof does not authorize receiver, parameter, dispatch, or call representations.";
 				semanticTypeId = nullableEnum.nullableSemanticTypeId;
 			} else {
 				return null;
