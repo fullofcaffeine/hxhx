@@ -286,7 +286,7 @@
     "HxString",
     "HxType"
   ],
-  "requirementRevision": "sha256:b80e68396f8a1fa01a4cedeaf45e9201cfaa7b53338bd16b6d060ee0a1dd7f67",
+  "requirementRevision": "sha256:07ae83948ef83fc6ca5a1fab979b955d723756d73caff594d5d455c695288f24",
   "schemaVersion": 5,
   "selectionMode": "full",
   "authorityStatus": "partial",
@@ -789,32 +789,6 @@
     {
       "implementationFeature": "haxe-array-v1",
       "subject": {
-        "id": "Array<Int>",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-array-index-read",
-      "explanation": "The sealed Array bracket read evaluates its receiver before its Int index and then reads the selected element once through HxArray.",
-      "rootModules": [
-        "HxArray"
-      ],
-      "id": "array-read:242fa0316eb6aa7ca760e13e6adfa50c:runtime:haxe-array-index-read",
-      "source": {
-        "min": 21233,
-        "max": 21382,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "array-read:242fa0316eb6aa7ca760e13e6adfa50c",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "array-read:242fa0316eb6aa7ca760e13e6adfa50c",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-array-v1",
-      "subject": {
         "id": "Array<String>",
         "kind": "haxe-type"
       },
@@ -836,6 +810,32 @@
         "portable"
       ],
       "decisionId": "array-read:3b7fb9b7faa1625b9ea92ccdfe61c1d7",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-array-v1",
+      "subject": {
+        "id": "Array<Int>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-array-index-read",
+      "explanation": "The sealed Array bracket read evaluates its receiver before its Int index and then reads the selected element once through HxArray.",
+      "rootModules": [
+        "HxArray"
+      ],
+      "id": "array-read:45f0de387ad5986005cac625488fdad5:runtime:haxe-array-index-read",
+      "source": {
+        "min": 21458,
+        "max": 21607,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "array-read:45f0de387ad5986005cac625488fdad5",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "array-read:45f0de387ad5986005cac625488fdad5",
       "sourceKind": "haxe-expression"
     },
     {
@@ -1006,6 +1006,58 @@
       "rootModules": [
         "HxBytes"
       ],
+      "id": "bytes-access:10d4067bfd5ee49deec0d4ca:runtime:haxe-bytes-access",
+      "source": {
+        "min": 20229,
+        "max": 20245,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "bytes-access:10d4067bfd5ee49deec0d4ca",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "bytes-access:10d4067bfd5ee49deec0d4ca",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-bytes-access-v5",
+      "subject": {
+        "id": "haxe.io.Bytes",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-bytes-access",
+      "explanation": "The sealed haxe.io.Bytes|haxe.io.Bytes::get get operation calls HxBytes after evaluating raw inputs once in source order and then applying identity conversions in argument order. It fixes declared-bytes-checked bounds, a 1-byte access, not-applicable ordering, unsigned-byte-read value behavior, read-only mutation, no-new-alias aliasing, and exact-int result behavior. Nullable Int multi-byte arguments preserve present values and fail null without mutation through the OCaml target's deterministic OutsideBounds policy. Float32 rounds through IEEE-754 binary32 while Float64 preserves the admitted binary64 value; NaN classification is preserved without claiming one cross-target payload. Other Bytes and BytesData operations require separate decisions.",
+      "rootModules": [
+        "HxBytes"
+      ],
+      "id": "bytes-access:2224b32e01b92523e002c9e6:runtime:haxe-bytes-access",
+      "source": {
+        "min": 20413,
+        "max": 20433,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "bytes-access:2224b32e01b92523e002c9e6",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "bytes-access:2224b32e01b92523e002c9e6",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-bytes-access-v5",
+      "subject": {
+        "id": "haxe.io.Bytes",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-bytes-access",
+      "explanation": "The sealed haxe.io.Bytes|haxe.io.Bytes::get get operation calls HxBytes after evaluating raw inputs once in source order and then applying identity conversions in argument order. It fixes declared-bytes-checked bounds, a 1-byte access, not-applicable ordering, unsigned-byte-read value behavior, read-only mutation, no-new-alias aliasing, and exact-int result behavior. Nullable Int multi-byte arguments preserve present values and fail null without mutation through the OCaml target's deterministic OutsideBounds policy. Float32 rounds through IEEE-754 binary32 while Float64 preserves the admitted binary64 value; NaN classification is preserved without claiming one cross-target payload. Other Bytes and BytesData operations require separate decisions.",
+      "rootModules": [
+        "HxBytes"
+      ],
       "id": "bytes-access:383268784f13307af27189f2:runtime:haxe-bytes-access",
       "source": {
         "min": 1783,
@@ -1070,32 +1122,6 @@
         "portable"
       ],
       "decisionId": "bytes-access:6734efae011b7d401b4d5f0d",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-bytes-access-v5",
-      "subject": {
-        "id": "haxe.io.Bytes",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-bytes-access",
-      "explanation": "The sealed haxe.io.Bytes|haxe.io.Bytes::get get operation calls HxBytes after evaluating raw inputs once in source order and then applying identity conversions in argument order. It fixes declared-bytes-checked bounds, a 1-byte access, not-applicable ordering, unsigned-byte-read value behavior, read-only mutation, no-new-alias aliasing, and exact-int result behavior. Nullable Int multi-byte arguments preserve present values and fail null without mutation through the OCaml target's deterministic OutsideBounds policy. Float32 rounds through IEEE-754 binary32 while Float64 preserves the admitted binary64 value; NaN classification is preserved without claiming one cross-target payload. Other Bytes and BytesData operations require separate decisions.",
-      "rootModules": [
-        "HxBytes"
-      ],
-      "id": "bytes-access:77b9a8039e80263cd0414c32:runtime:haxe-bytes-access",
-      "source": {
-        "min": 20236,
-        "max": 20256,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "bytes-access:77b9a8039e80263cd0414c32",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "bytes-access:77b9a8039e80263cd0414c32",
       "sourceKind": "haxe-expression"
     },
     {
@@ -1188,32 +1214,6 @@
       "rootModules": [
         "HxBytes"
       ],
-      "id": "bytes-access:96cc9298d23f31009595a9c8:runtime:haxe-bytes-access",
-      "source": {
-        "min": 19569,
-        "max": 19585,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "bytes-access:96cc9298d23f31009595a9c8",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "bytes-access:96cc9298d23f31009595a9c8",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-bytes-access-v5",
-      "subject": {
-        "id": "haxe.io.Bytes",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-bytes-access",
-      "explanation": "The sealed haxe.io.Bytes|haxe.io.Bytes::get get operation calls HxBytes after evaluating raw inputs once in source order and then applying identity conversions in argument order. It fixes declared-bytes-checked bounds, a 1-byte access, not-applicable ordering, unsigned-byte-read value behavior, read-only mutation, no-new-alias aliasing, and exact-int result behavior. Nullable Int multi-byte arguments preserve present values and fail null without mutation through the OCaml target's deterministic OutsideBounds policy. Float32 rounds through IEEE-754 binary32 while Float64 preserves the admitted binary64 value; NaN classification is preserved without claiming one cross-target payload. Other Bytes and BytesData operations require separate decisions.",
-      "rootModules": [
-        "HxBytes"
-      ],
       "id": "bytes-access:a29124780b06b98a48d0986f:runtime:haxe-bytes-access",
       "source": {
         "min": 1442,
@@ -1266,18 +1266,18 @@
       "rootModules": [
         "HxBytes"
       ],
-      "id": "bytes-access:b2f5f4f43222952a57745580:runtime:haxe-bytes-access",
+      "id": "bytes-access:d0ab444335cb0b8f0b04c77b:runtime:haxe-bytes-access",
       "source": {
-        "min": 20004,
-        "max": 20020,
+        "min": 20461,
+        "max": 20481,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
-      "sourceId": "bytes-access:b2f5f4f43222952a57745580",
+      "sourceId": "bytes-access:d0ab444335cb0b8f0b04c77b",
       "profileEligibility": [
         "metal",
         "portable"
       ],
-      "decisionId": "bytes-access:b2f5f4f43222952a57745580",
+      "decisionId": "bytes-access:d0ab444335cb0b8f0b04c77b",
       "sourceKind": "haxe-expression"
     },
     {
@@ -1292,18 +1292,70 @@
       "rootModules": [
         "HxBytes"
       ],
-      "id": "bytes-access:e2c3e98d4f5f2449df0e6341:runtime:haxe-bytes-access",
+      "id": "bytes-access:f936647d2a0e19f86f262a1f:runtime:haxe-bytes-access",
       "source": {
-        "min": 20188,
-        "max": 20208,
+        "min": 19794,
+        "max": 19810,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
-      "sourceId": "bytes-access:e2c3e98d4f5f2449df0e6341",
+      "sourceId": "bytes-access:f936647d2a0e19f86f262a1f",
       "profileEligibility": [
         "metal",
         "portable"
       ],
-      "decisionId": "bytes-access:e2c3e98d4f5f2449df0e6341",
+      "decisionId": "bytes-access:f936647d2a0e19f86f262a1f",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-bytes-producer-v3",
+      "subject": {
+        "id": "haxe.io.Bytes",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-bytes-producer",
+      "explanation": "The sealed haxe.io.Bytes|haxe.io.Bytes::ofString of-string operation creates a non-null haxe.io.Bytes value through HxBytes using derived-length-owned-data; nullable storage, receivers, indexing, and mutation require separate decisions.",
+      "rootModules": [
+        "HxBytes"
+      ],
+      "id": "bytes-producer:0d16bf5f4b5f135381985d2c:runtime:haxe-bytes-producer",
+      "source": {
+        "min": 19690,
+        "max": 19707,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "bytes-producer:0d16bf5f4b5f135381985d2c",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "bytes-producer:0d16bf5f4b5f135381985d2c",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-bytes-producer-v3",
+      "subject": {
+        "id": "haxe.io.Bytes",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-bytes-producer",
+      "explanation": "The sealed haxe.io.Bytes|haxe.io.Bytes::ofString of-string operation creates a non-null haxe.io.Bytes value through HxBytes using derived-length-owned-data; nullable storage, receivers, indexing, and mutation require separate decisions.",
+      "rootModules": [
+        "HxBytes"
+      ],
+      "id": "bytes-producer:0d3b3f498597c9f9772b7897:runtime:haxe-bytes-producer",
+      "source": {
+        "min": 20111,
+        "max": 20128,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "bytes-producer:0d3b3f498597c9f9772b7897",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "bytes-producer:0d3b3f498597c9f9772b7897",
       "sourceKind": "haxe-expression"
     },
     {
@@ -1330,32 +1382,6 @@
         "portable"
       ],
       "decisionId": "bytes-producer:0dc54334ecca843f6cdaae02",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-bytes-producer-v3",
-      "subject": {
-        "id": "haxe.io.Bytes",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-bytes-producer",
-      "explanation": "The sealed haxe.io.Bytes|haxe.io.Bytes::ofString of-string operation creates a non-null haxe.io.Bytes value through HxBytes using derived-length-owned-data; nullable storage, receivers, indexing, and mutation require separate decisions.",
-      "rootModules": [
-        "HxBytes"
-      ],
-      "id": "bytes-producer:26b82e739038596d0ce558a7:runtime:haxe-bytes-producer",
-      "source": {
-        "min": 19465,
-        "max": 19482,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "bytes-producer:26b82e739038596d0ce558a7",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "bytes-producer:26b82e739038596d0ce558a7",
       "sourceKind": "haxe-expression"
     },
     {
@@ -1470,32 +1496,6 @@
       },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-bytes-producer",
-      "explanation": "The sealed haxe.io.Bytes|haxe.io.Bytes::ofString of-string operation creates a non-null haxe.io.Bytes value through HxBytes using derived-length-owned-data; nullable storage, receivers, indexing, and mutation require separate decisions.",
-      "rootModules": [
-        "HxBytes"
-      ],
-      "id": "bytes-producer:c0941825431825b51dd206a3:runtime:haxe-bytes-producer",
-      "source": {
-        "min": 19886,
-        "max": 19903,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "bytes-producer:c0941825431825b51dd206a3",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "bytes-producer:c0941825431825b51dd206a3",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-bytes-producer-v3",
-      "subject": {
-        "id": "haxe.io.Bytes",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-bytes-producer",
       "explanation": "The sealed haxe.io.Bytes|haxe.io.Bytes::alloc alloc operation creates a non-null haxe.io.Bytes value through HxBytes using derived-length-owned-data; nullable storage, receivers, indexing, and mutation require separate decisions.",
       "rootModules": [
         "HxBytes"
@@ -1564,32 +1564,6 @@
         "portable"
       ],
       "decisionId": "bytes-read:107b3546f0f2e44c47a79311",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-bytes-read-v1",
-      "subject": {
-        "id": "haxe.io.Bytes",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-bytes-read",
-      "explanation": "The sealed haxe.io.Bytes|haxe.io.Bytes::length length operation reads an exact haxe.io.Bytes value through HxBytes after fixing the typed receiver input, its identity conversion, and argument evaluation order. Writes, indexed access, other nullable materialization, and Float results require separate decisions.",
-      "rootModules": [
-        "HxBytes"
-      ],
-      "id": "bytes-read:11ea52e4ed05b60a8f75b2e3:runtime:haxe-bytes-read",
-      "source": {
-        "min": 20147,
-        "max": 20159,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "bytes-read:11ea52e4ed05b60a8f75b2e3",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "bytes-read:11ea52e4ed05b60a8f75b2e3",
       "sourceKind": "haxe-expression"
     },
     {
@@ -1704,22 +1678,22 @@
       },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-bytes-read",
-      "explanation": "The sealed haxe.io.Bytes|haxe.io.Bytes::toString to-string operation reads an exact haxe.io.Bytes value through HxBytes after fixing the typed receiver input, its identity conversion, and argument evaluation order. Writes, indexed access, other nullable materialization, and Float results require separate decisions.",
+      "explanation": "The sealed haxe.io.Bytes|haxe.io.Bytes::length length operation reads an exact haxe.io.Bytes value through HxBytes after fixing the typed receiver input, its identity conversion, and argument evaluation order. Writes, indexed access, other nullable materialization, and Float results require separate decisions.",
       "rootModules": [
         "HxBytes"
       ],
-      "id": "bytes-read:439a26babee4210e3dc0ffce:runtime:haxe-bytes-read",
+      "id": "bytes-read:3eef191f704fce4c9216bed6:runtime:haxe-bytes-read",
       "source": {
-        "min": 19787,
-        "max": 19812,
+        "min": 19762,
+        "max": 19774,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
-      "sourceId": "bytes-read:439a26babee4210e3dc0ffce",
+      "sourceId": "bytes-read:3eef191f704fce4c9216bed6",
       "profileEligibility": [
         "metal",
         "portable"
       ],
-      "decisionId": "bytes-read:439a26babee4210e3dc0ffce",
+      "decisionId": "bytes-read:3eef191f704fce4c9216bed6",
       "sourceKind": "haxe-expression"
     },
     {
@@ -1734,44 +1708,18 @@
       "rootModules": [
         "HxBytes"
       ],
-      "id": "bytes-read:4bc95bc6077ca3eb71db1cbf:runtime:haxe-bytes-read",
+      "id": "bytes-read:5c2f8fd7de1897bbb6ad66d1:runtime:haxe-bytes-read",
       "source": {
-        "min": 19972,
-        "max": 19984,
+        "min": 20372,
+        "max": 20384,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
-      "sourceId": "bytes-read:4bc95bc6077ca3eb71db1cbf",
+      "sourceId": "bytes-read:5c2f8fd7de1897bbb6ad66d1",
       "profileEligibility": [
         "metal",
         "portable"
       ],
-      "decisionId": "bytes-read:4bc95bc6077ca3eb71db1cbf",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-bytes-read-v1",
-      "subject": {
-        "id": "haxe.io.Bytes",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-bytes-read",
-      "explanation": "The sealed haxe.io.Bytes|haxe.io.Bytes::length length operation reads an exact haxe.io.Bytes value through HxBytes after fixing the typed receiver input, its identity conversion, and argument evaluation order. Writes, indexed access, other nullable materialization, and Float results require separate decisions.",
-      "rootModules": [
-        "HxBytes"
-      ],
-      "id": "bytes-read:5f436f99413fafcc4d285173:runtime:haxe-bytes-read",
-      "source": {
-        "min": 19537,
-        "max": 19549,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "bytes-read:5f436f99413fafcc4d285173",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "bytes-read:5f436f99413fafcc4d285173",
+      "decisionId": "bytes-read:5c2f8fd7de1897bbb6ad66d1",
       "sourceKind": "haxe-expression"
     },
     {
@@ -1798,6 +1746,32 @@
         "portable"
       ],
       "decisionId": "bytes-read:63daee2c3ee8ec963a4fe467",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-bytes-read-v1",
+      "subject": {
+        "id": "haxe.io.Bytes",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-bytes-read",
+      "explanation": "The sealed haxe.io.Bytes|haxe.io.Bytes::toString to-string operation reads an exact haxe.io.Bytes value through HxBytes after fixing the typed receiver input, its identity conversion, and argument evaluation order. Writes, indexed access, other nullable materialization, and Float results require separate decisions.",
+      "rootModules": [
+        "HxBytes"
+      ],
+      "id": "bytes-read:70c7038325bcf9081b856751:runtime:haxe-bytes-read",
+      "source": {
+        "min": 20012,
+        "max": 20037,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "bytes-read:70c7038325bcf9081b856751",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "bytes-read:70c7038325bcf9081b856751",
       "sourceKind": "haxe-expression"
     },
     {
@@ -1860,6 +1834,32 @@
       },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-bytes-read",
+      "explanation": "The sealed haxe.io.Bytes|haxe.io.Bytes::toString to-string operation reads an exact haxe.io.Bytes value through HxBytes after fixing the typed receiver input, its identity conversion, and argument evaluation order. Writes, indexed access, other nullable materialization, and Float results require separate decisions.",
+      "rootModules": [
+        "HxBytes"
+      ],
+      "id": "bytes-read:a74d3f0e8479d9367853b74f:runtime:haxe-bytes-read",
+      "source": {
+        "min": 20638,
+        "max": 20663,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "bytes-read:a74d3f0e8479d9367853b74f",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "bytes-read:a74d3f0e8479d9367853b74f",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-bytes-read-v1",
+      "subject": {
+        "id": "haxe.io.Bytes",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-bytes-read",
       "explanation": "The sealed haxe.io.Bytes|haxe.io.Bytes::length length operation reads an exact haxe.io.Bytes value through HxBytes after fixing the typed receiver input, its identity conversion, and argument evaluation order. Writes, indexed access, other nullable materialization, and Float results require separate decisions.",
       "rootModules": [
         "HxBytes"
@@ -1886,22 +1886,22 @@
       },
       "cause": "lowering-decision",
       "semanticCapability": "haxe-bytes-read",
-      "explanation": "The sealed haxe.io.Bytes|haxe.io.Bytes::toString to-string operation reads an exact haxe.io.Bytes value through HxBytes after fixing the typed receiver input, its identity conversion, and argument evaluation order. Writes, indexed access, other nullable materialization, and Float results require separate decisions.",
+      "explanation": "The sealed haxe.io.Bytes|haxe.io.Bytes::length length operation reads an exact haxe.io.Bytes value through HxBytes after fixing the typed receiver input, its identity conversion, and argument evaluation order. Writes, indexed access, other nullable materialization, and Float results require separate decisions.",
       "rootModules": [
         "HxBytes"
       ],
-      "id": "bytes-read:ca559af7ea8822b808b36638:runtime:haxe-bytes-read",
+      "id": "bytes-read:cd81993d02b7919dd0bf828b:runtime:haxe-bytes-read",
       "source": {
-        "min": 20413,
-        "max": 20438,
+        "min": 20197,
+        "max": 20209,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
-      "sourceId": "bytes-read:ca559af7ea8822b808b36638",
+      "sourceId": "bytes-read:cd81993d02b7919dd0bf828b",
       "profileEligibility": [
         "metal",
         "portable"
       ],
-      "decisionId": "bytes-read:ca559af7ea8822b808b36638",
+      "decisionId": "bytes-read:cd81993d02b7919dd0bf828b",
       "sourceKind": "haxe-expression"
     },
     {
@@ -2020,18 +2020,18 @@
       "rootModules": [
         "HxArray"
       ],
-      "id": "call:10827656bb4d70b587f8340d:runtime:haxe-array:push",
+      "id": "call:1ce090850e8d3b86816e30b0:runtime:haxe-array:push",
       "source": {
-        "min": 20294,
-        "max": 20321,
+        "min": 20519,
+        "max": 20546,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
-      "sourceId": "call:10827656bb4d70b587f8340d",
+      "sourceId": "call:1ce090850e8d3b86816e30b0",
       "profileEligibility": [
         "metal",
         "portable"
       ],
-      "decisionId": "call:10827656bb4d70b587f8340d",
+      "decisionId": "call:1ce090850e8d3b86816e30b0",
       "sourceKind": "haxe-expression"
     },
     {
@@ -2115,6 +2115,32 @@
     {
       "implementationFeature": "haxe-array-v1",
       "subject": {
+        "id": "Array<Int>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-array",
+      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
+      "rootModules": [
+        "HxArray"
+      ],
+      "id": "call:44cb7bcf693de152e78645e5:runtime:haxe-array:push",
+      "source": {
+        "min": 20594,
+        "max": 20611,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "call:44cb7bcf693de152e78645e5",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "call:44cb7bcf693de152e78645e5",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-array-v1",
+      "subject": {
         "id": "Array<haxe.StackItem>",
         "kind": "haxe-type"
       },
@@ -2162,32 +2188,6 @@
         "portable"
       ],
       "decisionId": "call:4ffb41eab92c105dbeb73dfb",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-array-v1",
-      "subject": {
-        "id": "Array<Int>",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-array",
-      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
-      "rootModules": [
-        "HxArray"
-      ],
-      "id": "call:538d5f624795f69d4c187bee:runtime:haxe-array:push",
-      "source": {
-        "min": 19624,
-        "max": 19641,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "call:538d5f624795f69d4c187bee",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "call:538d5f624795f69d4c187bee",
       "sourceKind": "haxe-expression"
     },
     {
@@ -2245,32 +2245,6 @@
     {
       "implementationFeature": "haxe-array-v1",
       "subject": {
-        "id": "Array<Int>",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-array",
-      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
-      "rootModules": [
-        "HxArray"
-      ],
-      "id": "call:73de9255dd7cae1f9386d795:runtime:haxe-array:push",
-      "source": {
-        "min": 20369,
-        "max": 20386,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "call:73de9255dd7cae1f9386d795",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "call:73de9255dd7cae1f9386d795",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-array-v1",
-      "subject": {
         "id": "Array<haxe.StackItem>",
         "kind": "haxe-type"
       },
@@ -2306,18 +2280,44 @@
       "rootModules": [
         "HxArray"
       ],
-      "id": "call:95e27366ced8022c4b4cc48b:runtime:haxe-array:push",
+      "id": "call:86b2488e682ecc3eb1fac0f9:runtime:haxe-array:push",
       "source": {
-        "min": 19686,
-        "max": 19727,
+        "min": 19958,
+        "max": 19992,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
-      "sourceId": "call:95e27366ced8022c4b4cc48b",
+      "sourceId": "call:86b2488e682ecc3eb1fac0f9",
       "profileEligibility": [
         "metal",
         "portable"
       ],
-      "decisionId": "call:95e27366ced8022c4b4cc48b",
+      "decisionId": "call:86b2488e682ecc3eb1fac0f9",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-array-v1",
+      "subject": {
+        "id": "Array<Int>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-array",
+      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
+      "rootModules": [
+        "HxArray"
+      ],
+      "id": "call:a92913e42b8be0944e3d6585:runtime:haxe-array:push",
+      "source": {
+        "min": 19849,
+        "max": 19866,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "call:a92913e42b8be0944e3d6585",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "call:a92913e42b8be0944e3d6585",
       "sourceKind": "haxe-expression"
     },
     {
@@ -2384,70 +2384,18 @@
       "rootModules": [
         "HxArray"
       ],
-      "id": "call:c11d530d64de1314076920f6:runtime:haxe-array:push",
+      "id": "call:c0cdf46e5efde21d8b649640:runtime:haxe-array:push",
       "source": {
-        "min": 20053,
-        "max": 20074,
+        "min": 19911,
+        "max": 19952,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
-      "sourceId": "call:c11d530d64de1314076920f6",
+      "sourceId": "call:c0cdf46e5efde21d8b649640",
       "profileEligibility": [
         "metal",
         "portable"
       ],
-      "decisionId": "call:c11d530d64de1314076920f6",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-array-v1",
-      "subject": {
-        "id": "Array<Int>",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-array",
-      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
-      "rootModules": [
-        "HxArray"
-      ],
-      "id": "call:c93e010298dfdf87b5ccff22:runtime:haxe-array:push",
-      "source": {
-        "min": 19733,
-        "max": 19767,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "call:c93e010298dfdf87b5ccff22",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "call:c93e010298dfdf87b5ccff22",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-array-v1",
-      "subject": {
-        "id": "Array<Int>",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-array",
-      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
-      "rootModules": [
-        "HxArray"
-      ],
-      "id": "call:cb8f37d0fa67ef9447154af5:runtime:haxe-array:push",
-      "source": {
-        "min": 19659,
-        "max": 19680,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "call:cb8f37d0fa67ef9447154af5",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "call:cb8f37d0fa67ef9447154af5",
+      "decisionId": "call:c0cdf46e5efde21d8b649640",
       "sourceKind": "haxe-expression"
     },
     {
@@ -2479,6 +2427,32 @@
     {
       "implementationFeature": "haxe-array-v1",
       "subject": {
+        "id": "Array<Int>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-array",
+      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
+      "rootModules": [
+        "HxArray"
+      ],
+      "id": "call:def401f7d32ec8035bcb3431:runtime:haxe-array:push",
+      "source": {
+        "min": 19884,
+        "max": 19905,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "call:def401f7d32ec8035bcb3431",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "call:def401f7d32ec8035bcb3431",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-array-v1",
+      "subject": {
         "id": "Array<haxe.StackItem>",
         "kind": "haxe-type"
       },
@@ -2500,6 +2474,32 @@
         "portable"
       ],
       "decisionId": "call:df3ed0698ff228bfd208b0f5",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-array-v1",
+      "subject": {
+        "id": "Array<Int>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-array",
+      "explanation": "The sealed standard Array call evaluates its receiver before source arguments and then invokes the exact HxArray operation selected from the final typed call.",
+      "rootModules": [
+        "HxArray"
+      ],
+      "id": "call:f40e97c460b2880fd6a07c4f:runtime:haxe-array:push",
+      "source": {
+        "min": 20278,
+        "max": 20299,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "call:f40e97c460b2880fd6a07c4f",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "call:f40e97c460b2880fd6a07c4f",
       "sourceKind": "haxe-expression"
     },
     {
@@ -2921,6 +2921,32 @@
     {
       "implementationFeature": "haxe-class-identity-marker-v1",
       "subject": {
+        "id": "StringTools",
+        "kind": "haxe-type"
+      },
+      "cause": "representation-decision",
+      "semanticCapability": "haxe-class-identity-marker",
+      "explanation": "The generated constructor-record for StringTools stores the exact Haxe runtime class marker used by Type.getClass.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "class-identity-marker:5980e5690bc40777007a50ef:runtime:haxe-class-identity-marker",
+      "source": {
+        "min": 1590,
+        "max": 22269,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "StringTools",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "class-identity-marker:5980e5690bc40777007a50ef",
+      "sourceKind": "representation-decision"
+    },
+    {
+      "implementationFeature": "haxe-class-identity-marker-v1",
+      "subject": {
         "id": "haxe.iterators.StringKeyValueIterator",
         "kind": "haxe-type"
       },
@@ -3129,32 +3155,6 @@
     {
       "implementationFeature": "haxe-class-identity-marker-v1",
       "subject": {
-        "id": "StringTools",
-        "kind": "haxe-type"
-      },
-      "cause": "representation-decision",
-      "semanticCapability": "haxe-class-identity-marker",
-      "explanation": "The generated empty-instance-record for StringTools stores the exact Haxe runtime class marker used by Type.getClass.",
-      "rootModules": [
-        "HxType"
-      ],
-      "id": "class-identity-marker:9eb78e3ee7dad7a166471c8e:runtime:haxe-class-identity-marker",
-      "source": {
-        "min": 1590,
-        "max": 22159,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "StringTools",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "class-identity-marker:9eb78e3ee7dad7a166471c8e",
-      "sourceKind": "representation-decision"
-    },
-    {
-      "implementationFeature": "haxe-class-identity-marker-v1",
-      "subject": {
         "id": "haxe.Int64Helper",
         "kind": "haxe-type"
       },
@@ -3306,32 +3306,6 @@
         "portable"
       ],
       "decisionId": "class-identity-marker:c0ce4dbc1c5b82bb864e4f72",
-      "sourceKind": "representation-decision"
-    },
-    {
-      "implementationFeature": "haxe-class-identity-marker-v1",
-      "subject": {
-        "id": "StringTools",
-        "kind": "haxe-type"
-      },
-      "cause": "representation-decision",
-      "semanticCapability": "haxe-class-identity-marker",
-      "explanation": "The generated constructor-record for StringTools stores the exact Haxe runtime class marker used by Type.getClass.",
-      "rootModules": [
-        "HxType"
-      ],
-      "id": "class-identity-marker:d2a447f7cceb3145535c74b8:runtime:haxe-class-identity-marker",
-      "source": {
-        "min": 1590,
-        "max": 22159,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "StringTools",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "class-identity-marker:d2a447f7cceb3145535c74b8",
       "sourceKind": "representation-decision"
     },
     {
@@ -3592,6 +3566,32 @@
         "portable"
       ],
       "decisionId": "class-identity-marker:e601c7ad83117e251b7f69b3",
+      "sourceKind": "representation-decision"
+    },
+    {
+      "implementationFeature": "haxe-class-identity-marker-v1",
+      "subject": {
+        "id": "StringTools",
+        "kind": "haxe-type"
+      },
+      "cause": "representation-decision",
+      "semanticCapability": "haxe-class-identity-marker",
+      "explanation": "The generated empty-instance-record for StringTools stores the exact Haxe runtime class marker used by Type.getClass.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "class-identity-marker:e81783acf53a6b56440b86ed:runtime:haxe-class-identity-marker",
+      "source": {
+        "min": 1590,
+        "max": 22269,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "StringTools",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "class-identity-marker:e81783acf53a6b56440b86ed",
       "sourceKind": "representation-decision"
     },
     {
@@ -3998,8 +3998,8 @@
       ],
       "id": "control-target:loop:0e0e716ff77db32713bbc285:runtime:hxhx-runtime:loop-break-signal-v1:pattern",
       "source": {
-        "min": 20571,
-        "max": 20953,
+        "min": 20796,
+        "max": 21178,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
       "sourceId": "control-target:loop:0e0e716ff77db32713bbc285",
@@ -4154,8 +4154,8 @@
       ],
       "id": "control-target:loop:70b9ae3a93176b653c8f714a:runtime:hxhx-runtime:loop-continue-signal-v1:pattern",
       "source": {
-        "min": 19957,
-        "max": 20403,
+        "min": 20182,
+        "max": 20628,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
       "sourceId": "control-target:loop:70b9ae3a93176b653c8f714a",
@@ -4440,8 +4440,8 @@
       ],
       "id": "control:break:b111731225e0f0c959e24247:runtime:hxhx-runtime:loop-break-signal-v1",
       "source": {
-        "min": 20938,
-        "max": 20943,
+        "min": 21163,
+        "max": 21168,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
       "sourceId": "control:break:b111731225e0f0c959e24247",
@@ -4518,8 +4518,8 @@
       ],
       "id": "control:continue:2eac2d7b457c07550bbf0abc:runtime:hxhx-runtime:loop-continue-signal-v1",
       "source": {
-        "min": 20093,
-        "max": 20101,
+        "min": 20318,
+        "max": 20326,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
       "sourceId": "control:continue:2eac2d7b457c07550bbf0abc",
@@ -4596,8 +4596,8 @@
       ],
       "id": "control:continue:f0f4eeadd1661abb0b5f8962:runtime:hxhx-runtime:loop-continue-signal-v1",
       "source": {
-        "min": 20345,
-        "max": 20353,
+        "min": 20570,
+        "max": 20578,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
       "sourceId": "control:continue:f0f4eeadd1661abb0b5f8962",
@@ -4622,8 +4622,8 @@
       ],
       "id": "control:return:05e3c3d11e3291cbd3f06b14:runtime:hxhx-runtime:function-return-signal-v1",
       "source": {
-        "min": 20537,
-        "max": 20548,
+        "min": 20762,
+        "max": 20773,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
       "sourceId": "control:return:05e3c3d11e3291cbd3f06b14",
@@ -4648,8 +4648,8 @@
       ],
       "id": "control:return:128b4645f2ea02dfe197bf43:runtime:hxhx-runtime:function-return-signal-v1",
       "source": {
-        "min": 20969,
-        "max": 20984,
+        "min": 21194,
+        "max": 21209,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
       "sourceId": "control:return:128b4645f2ea02dfe197bf43",
@@ -4856,8 +4856,8 @@
       ],
       "id": "control:return:51dbf198c2431c8a28863937:runtime:hxhx-runtime:function-return-signal-v1",
       "source": {
-        "min": 19349,
-        "max": 19378,
+        "min": 19574,
+        "max": 19603,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
       "sourceId": "control:return:51dbf198c2431c8a28863937",
@@ -4934,8 +4934,8 @@
       ],
       "id": "control:return:71232a2a5a42950ad21de9e6:runtime:hxhx-runtime:function-return-signal-v1",
       "source": {
-        "min": 19200,
-        "max": 19222,
+        "min": 19425,
+        "max": 19447,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
       "sourceId": "control:return:71232a2a5a42950ad21de9e6",
@@ -4960,8 +4960,8 @@
       ],
       "id": "control:return:7e888b6212c5f54a0fa2de70:runtime:hxhx-runtime:function-return-signal-v1",
       "source": {
-        "min": 19271,
-        "max": 19300,
+        "min": 19496,
+        "max": 19525,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
       "sourceId": "control:return:7e888b6212c5f54a0fa2de70",
@@ -7094,6 +7094,32 @@
     {
       "implementationFeature": "haxe-array-carrier-v1",
       "subject": {
+        "id": "Array<Int>",
+        "kind": "haxe-type"
+      },
+      "cause": "representation-decision",
+      "semanticCapability": "haxe-array-carrier",
+      "explanation": "The sealed standard Haxe Array type uses HxArray as its concrete mutable OCaml carrier.",
+      "rootModules": [
+        "HxArray"
+      ],
+      "id": "standard-container-carrier:55845a50337112f3bf7f81d1:runtime:haxe-array-carrier",
+      "source": {
+        "min": 705,
+        "max": 2123,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/Array.hx"
+      },
+      "sourceId": "Array",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "standard-container-carrier:55845a50337112f3bf7f81d1",
+      "sourceKind": "representation-decision"
+    },
+    {
+      "implementationFeature": "haxe-array-carrier-v1",
+      "subject": {
         "id": "Array<haxe.StackItem>",
         "kind": "haxe-type"
       },
@@ -7297,32 +7323,6 @@
         "portable"
       ],
       "decisionId": "standard-container-carrier:914e2594fbad359dc8b9735c",
-      "sourceKind": "representation-decision"
-    },
-    {
-      "implementationFeature": "haxe-array-carrier-v1",
-      "subject": {
-        "id": "Array<Int>",
-        "kind": "haxe-type"
-      },
-      "cause": "representation-decision",
-      "semanticCapability": "haxe-array-carrier",
-      "explanation": "The sealed standard Haxe Array type uses HxArray as its concrete mutable OCaml carrier.",
-      "rootModules": [
-        "HxArray"
-      ],
-      "id": "standard-container-carrier:933557bdd945b6e8056f89d8:runtime:haxe-array-carrier",
-      "source": {
-        "min": 705,
-        "max": 2123,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/Array.hx"
-      },
-      "sourceId": "Array",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "standard-container-carrier:933557bdd945b6e8056f89d8",
       "sourceKind": "representation-decision"
     },
     {
@@ -7831,6 +7831,32 @@
       "rootModules": [
         "HxString"
       ],
+      "id": "static-string:1ef445008a810947eb1113aa:runtime:haxe-static-string-conversion",
+      "source": {
+        "min": 21595,
+        "max": 21600,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "static-string:1ef445008a810947eb1113aa",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "static-string:1ef445008a810947eb1113aa",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-static-string-conversion-v2",
+      "subject": {
+        "id": "String -> String",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-static-string-conversion",
+      "explanation": "The final typed string operation selects one null-aware helper from its exact Haxe input type before target syntax.",
+      "rootModules": [
+        "HxString"
+      ],
       "id": "static-string:234fc24505d5a856364198cb:runtime:haxe-static-string-conversion",
       "source": {
         "min": 3122,
@@ -7909,18 +7935,18 @@
       "rootModules": [
         "HxString"
       ],
-      "id": "static-string:370ad8d0cc4d8ccd93ad838a:runtime:haxe-static-string-conversion",
+      "id": "static-string:3695cb9c62c477b9395d4474:runtime:haxe-static-string-conversion",
       "source": {
-        "min": 669,
-        "max": 686,
-        "file": "haxe-stdlib/haxe/exceptions/PosException.hx"
+        "min": 21226,
+        "max": 21261,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
-      "sourceId": "static-string:370ad8d0cc4d8ccd93ad838a",
+      "sourceId": "static-string:3695cb9c62c477b9395d4474",
       "profileEligibility": [
         "metal",
         "portable"
       ],
-      "decisionId": "static-string:370ad8d0cc4d8ccd93ad838a",
+      "decisionId": "static-string:3695cb9c62c477b9395d4474",
       "sourceKind": "haxe-expression"
     },
     {
@@ -7935,18 +7961,18 @@
       "rootModules": [
         "HxString"
       ],
-      "id": "static-string:3a284de1f4bff5af47c3f216:runtime:haxe-static-string-conversion",
+      "id": "static-string:370ad8d0cc4d8ccd93ad838a:runtime:haxe-static-string-conversion",
       "source": {
-        "min": 21001,
-        "max": 21036,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+        "min": 669,
+        "max": 686,
+        "file": "haxe-stdlib/haxe/exceptions/PosException.hx"
       },
-      "sourceId": "static-string:3a284de1f4bff5af47c3f216",
+      "sourceId": "static-string:370ad8d0cc4d8ccd93ad838a",
       "profileEligibility": [
         "metal",
         "portable"
       ],
-      "decisionId": "static-string:3a284de1f4bff5af47c3f216",
+      "decisionId": "static-string:370ad8d0cc4d8ccd93ad838a",
       "sourceKind": "haxe-expression"
     },
     {
@@ -8091,32 +8117,6 @@
       "rootModules": [
         "HxString"
       ],
-      "id": "static-string:b614ec048cddaa14908e4ba4:runtime:haxe-static-string-conversion",
-      "source": {
-        "min": 21370,
-        "max": 21375,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "static-string:b614ec048cddaa14908e4ba4",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "static-string:b614ec048cddaa14908e4ba4",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-static-string-conversion-v2",
-      "subject": {
-        "id": "String -> String",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-static-string-conversion",
-      "explanation": "The final typed string operation selects one null-aware helper from its exact Haxe input type before target syntax.",
-      "rootModules": [
-        "HxString"
-      ],
       "id": "static-string:b6894377fbf6b92d69b4d8e7:runtime:haxe-static-string-conversion",
       "source": {
         "min": 2768,
@@ -8143,18 +8143,18 @@
       "rootModules": [
         "HxString"
       ],
-      "id": "static-string:c73b8dec3b2a9c5a0faa1aa5:runtime:haxe-static-string-conversion",
+      "id": "static-string:cc58349d8cb3bb535b5aafe3:runtime:haxe-static-string-conversion",
       "source": {
-        "min": 21158,
-        "max": 21191,
+        "min": 13156,
+        "max": 13157,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
-      "sourceId": "static-string:c73b8dec3b2a9c5a0faa1aa5",
+      "sourceId": "static-string:cc58349d8cb3bb535b5aafe3",
       "profileEligibility": [
         "metal",
         "portable"
       ],
-      "decisionId": "static-string:c73b8dec3b2a9c5a0faa1aa5",
+      "decisionId": "static-string:cc58349d8cb3bb535b5aafe3",
       "sourceKind": "haxe-expression"
     },
     {
@@ -8169,18 +8169,18 @@
       "rootModules": [
         "HxString"
       ],
-      "id": "static-string:cc58349d8cb3bb535b5aafe3:runtime:haxe-static-string-conversion",
+      "id": "static-string:e21d0051a8c79bf29600e5ff:runtime:haxe-static-string-conversion",
       "source": {
-        "min": 13156,
-        "max": 13157,
+        "min": 21383,
+        "max": 21416,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
-      "sourceId": "static-string:cc58349d8cb3bb535b5aafe3",
+      "sourceId": "static-string:e21d0051a8c79bf29600e5ff",
       "profileEligibility": [
         "metal",
         "portable"
       ],
-      "decisionId": "static-string:cc58349d8cb3bb535b5aafe3",
+      "decisionId": "static-string:e21d0051a8c79bf29600e5ff",
       "sourceKind": "haxe-expression"
     },
     {
@@ -8403,6 +8403,32 @@
       "rootModules": [
         "HxString"
       ],
+      "id": "string-field:1b09a0172a06f928833f4d3d:runtime:haxe-string-field-read",
+      "source": {
+        "min": 20814,
+        "max": 20829,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "string-field:1b09a0172a06f928833f4d3d",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "string-field:1b09a0172a06f928833f4d3d",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-string-field-v1",
+      "subject": {
+        "id": "String.length -> Int",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-string-field-read",
+      "explanation": "The final typed String.length field read selected one private length helper and a receiver-first evaluation schedule before target syntax.",
+      "rootModules": [
+        "HxString"
+      ],
       "id": "string-field:1f68e163a3ac5b534865ea5b:runtime:haxe-string-field-read",
       "source": {
         "min": 8684,
@@ -8533,18 +8559,18 @@
       "rootModules": [
         "HxString"
       ],
-      "id": "string-field:73d072edc738a06ac00c8738:runtime:haxe-string-field-read",
+      "id": "string-field:7eaab9901603db9db5e83666:runtime:haxe-string-field-read",
       "source": {
-        "min": 20589,
-        "max": 20604,
+        "min": 20737,
+        "max": 20752,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
-      "sourceId": "string-field:73d072edc738a06ac00c8738",
+      "sourceId": "string-field:7eaab9901603db9db5e83666",
       "profileEligibility": [
         "metal",
         "portable"
       ],
-      "decisionId": "string-field:73d072edc738a06ac00c8738",
+      "decisionId": "string-field:7eaab9901603db9db5e83666",
       "sourceKind": "haxe-expression"
     },
     {
@@ -8819,32 +8845,6 @@
       "rootModules": [
         "HxString"
       ],
-      "id": "string-field:e3edd7ad3c2f45787617d410:runtime:haxe-string-field-read",
-      "source": {
-        "min": 20512,
-        "max": 20527,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "string-field:e3edd7ad3c2f45787617d410",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "string-field:e3edd7ad3c2f45787617d410",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-string-field-v1",
-      "subject": {
-        "id": "String.length -> Int",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-string-field-read",
-      "explanation": "The final typed String.length field read selected one private length helper and a receiver-first evaluation schedule before target syntax.",
-      "rootModules": [
-        "HxString"
-      ],
       "id": "string-field:e77b02788d9aec125ef8dad4:runtime:haxe-string-field-read",
       "source": {
         "min": 11095,
@@ -9001,18 +9001,18 @@
       "rootModules": [
         "HxString"
       ],
-      "id": "string-from-char-code:e131de46dd90e9e604463df8:runtime:haxe-string-from-char-code",
+      "id": "string-from-char-code:c6a11ec9ffc8c8413b967a56:runtime:haxe-string-from-char-code",
       "source": {
-        "min": 21295,
-        "max": 21324,
+        "min": 21520,
+        "max": 21549,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
-      "sourceId": "string-from-char-code:e131de46dd90e9e604463df8",
+      "sourceId": "string-from-char-code:c6a11ec9ffc8c8413b967a56",
       "profileEligibility": [
         "metal",
         "portable"
       ],
-      "decisionId": "string-from-char-code:e131de46dd90e9e604463df8",
+      "decisionId": "string-from-char-code:c6a11ec9ffc8c8413b967a56",
       "sourceKind": "haxe-expression"
     },
     {
@@ -9148,6 +9148,58 @@
     {
       "implementationFeature": "haxe-string-method-v1",
       "subject": {
+        "id": "String.split(String) -> Array<String>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-string-method",
+      "explanation": "The final typed direct String call selected its method helper, optional-index behavior, result carrier, and receiver-first evaluation schedule before target syntax.",
+      "rootModules": [
+        "HxString"
+      ],
+      "id": "string-method:1584a55e12864a4d3279719a:runtime:haxe-string-method",
+      "source": {
+        "min": 21383,
+        "max": 21403,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "string-method:1584a55e12864a4d3279719a",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "string-method:1584a55e12864a4d3279719a",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-string-method-v1",
+      "subject": {
+        "id": "String.charCodeAt(Int) -> Null<Int>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-string-method",
+      "explanation": "The final typed direct String call selected its method helper, optional-index behavior, result carrier, and receiver-first evaluation schedule before target syntax.",
+      "rootModules": [
+        "HxString"
+      ],
+      "id": "string-method:1d941bcbdffba2cad1e5236b:runtime:haxe-string-method",
+      "source": {
+        "min": 20849,
+        "max": 20875,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "string-method:1d941bcbdffba2cad1e5236b",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "string-method:1d941bcbdffba2cad1e5236b",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-string-method-v1",
+      "subject": {
         "id": "String.lastIndexOf(String,Int) -> Int",
         "kind": "haxe-type"
       },
@@ -9252,6 +9304,58 @@
     {
       "implementationFeature": "haxe-string-method-v1",
       "subject": {
+        "id": "String.charCodeAt(Int) -> Null<Int>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-string-method",
+      "explanation": "The final typed direct String call selected its method helper, optional-index behavior, result carrier, and receiver-first evaluation schedule before target syntax.",
+      "rootModules": [
+        "HxString"
+      ],
+      "id": "string-method:48704d0153cabc14f43ad5f7:runtime:haxe-string-method",
+      "source": {
+        "min": 22095,
+        "max": 22127,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "string-method:48704d0153cabc14f43ad5f7",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "string-method:48704d0153cabc14f43ad5f7",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-string-method-v1",
+      "subject": {
+        "id": "String.split(String) -> Array<String>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-string-method",
+      "explanation": "The final typed direct String call selected its method helper, optional-index behavior, result carrier, and receiver-first evaluation schedule before target syntax.",
+      "rootModules": [
+        "HxString"
+      ],
+      "id": "string-method:4f9f54881cf00b6695538c85:runtime:haxe-string-method",
+      "source": {
+        "min": 21226,
+        "max": 21245,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "string-method:4f9f54881cf00b6695538c85",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "string-method:4f9f54881cf00b6695538c85",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-string-method-v1",
+      "subject": {
         "id": "String.split(String) -> Array<String>",
         "kind": "haxe-type"
       },
@@ -9339,44 +9443,18 @@
       "rootModules": [
         "HxString"
       ],
-      "id": "string-method:5f4b81ba6b7f4ce72522d8cc:runtime:haxe-string-method",
+      "id": "string-method:7ac7e8b087fbb963971e1126:runtime:haxe-string-method",
       "source": {
-        "min": 21985,
-        "max": 22017,
+        "min": 22196,
+        "max": 22232,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
-      "sourceId": "string-method:5f4b81ba6b7f4ce72522d8cc",
+      "sourceId": "string-method:7ac7e8b087fbb963971e1126",
       "profileEligibility": [
         "metal",
         "portable"
       ],
-      "decisionId": "string-method:5f4b81ba6b7f4ce72522d8cc",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-string-method-v1",
-      "subject": {
-        "id": "String.split(String) -> Array<String>",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-string-method",
-      "explanation": "The final typed direct String call selected its method helper, optional-index behavior, result carrier, and receiver-first evaluation schedule before target syntax.",
-      "rootModules": [
-        "HxString"
-      ],
-      "id": "string-method:7be812e203176d064bc40e93:runtime:haxe-string-method",
-      "source": {
-        "min": 21158,
-        "max": 21178,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "string-method:7be812e203176d064bc40e93",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "string-method:7be812e203176d064bc40e93",
+      "decisionId": "string-method:7ac7e8b087fbb963971e1126",
       "sourceKind": "haxe-expression"
     },
     {
@@ -9403,6 +9481,32 @@
         "portable"
       ],
       "decisionId": "string-method:7e2cc09c0149fae5b45e8fff",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-string-method-v1",
+      "subject": {
+        "id": "String.split(String) -> Array<String>",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-string-method",
+      "explanation": "The final typed direct String call selected its method helper, optional-index behavior, result carrier, and receiver-first evaluation schedule before target syntax.",
+      "rootModules": [
+        "HxString"
+      ],
+      "id": "string-method:81725c42e2fb2b2fdfa52536:runtime:haxe-string-method",
+      "source": {
+        "min": 21564,
+        "max": 21583,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+      },
+      "sourceId": "string-method:81725c42e2fb2b2fdfa52536",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "string-method:81725c42e2fb2b2fdfa52536",
       "sourceKind": "haxe-expression"
     },
     {
@@ -9564,58 +9668,6 @@
     {
       "implementationFeature": "haxe-string-method-v1",
       "subject": {
-        "id": "String.split(String) -> Array<String>",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-string-method",
-      "explanation": "The final typed direct String call selected its method helper, optional-index behavior, result carrier, and receiver-first evaluation schedule before target syntax.",
-      "rootModules": [
-        "HxString"
-      ],
-      "id": "string-method:a0fb09b736f804271b4e5674:runtime:haxe-string-method",
-      "source": {
-        "min": 21001,
-        "max": 21020,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "string-method:a0fb09b736f804271b4e5674",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "string-method:a0fb09b736f804271b4e5674",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-string-method-v1",
-      "subject": {
-        "id": "String.split(String) -> Array<String>",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-string-method",
-      "explanation": "The final typed direct String call selected its method helper, optional-index behavior, result carrier, and receiver-first evaluation schedule before target syntax.",
-      "rootModules": [
-        "HxString"
-      ],
-      "id": "string-method:a8d8c1a3c5596fd41c7c69e3:runtime:haxe-string-method",
-      "source": {
-        "min": 21339,
-        "max": 21358,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "string-method:a8d8c1a3c5596fd41c7c69e3",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "string-method:a8d8c1a3c5596fd41c7c69e3",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-string-method-v1",
-      "subject": {
         "id": "String.indexOf(String,Int) -> Int",
         "kind": "haxe-type"
       },
@@ -9637,32 +9689,6 @@
         "portable"
       ],
       "decisionId": "string-method:ae41aad7fc2efe6d46cf3bfa",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-string-method-v1",
-      "subject": {
-        "id": "String.charCodeAt(Int) -> Null<Int>",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-string-method",
-      "explanation": "The final typed direct String call selected its method helper, optional-index behavior, result carrier, and receiver-first evaluation schedule before target syntax.",
-      "rootModules": [
-        "HxString"
-      ],
-      "id": "string-method:b23c69cd3fec55d2179c2668:runtime:haxe-string-method",
-      "source": {
-        "min": 20624,
-        "max": 20650,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "string-method:b23c69cd3fec55d2179c2668",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "string-method:b23c69cd3fec55d2179c2668",
       "sourceKind": "haxe-expression"
     },
     {
@@ -9903,32 +9929,6 @@
     {
       "implementationFeature": "haxe-string-method-v1",
       "subject": {
-        "id": "String.charCodeAt(Int) -> Null<Int>",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-string-method",
-      "explanation": "The final typed direct String call selected its method helper, optional-index behavior, result carrier, and receiver-first evaluation schedule before target syntax.",
-      "rootModules": [
-        "HxString"
-      ],
-      "id": "string-method:e8390a0e155d1829acb1d2dc:runtime:haxe-string-method",
-      "source": {
-        "min": 22086,
-        "max": 22122,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
-      },
-      "sourceId": "string-method:e8390a0e155d1829acb1d2dc",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "string-method:e8390a0e155d1829acb1d2dc",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-string-method-v1",
-      "subject": {
         "id": "String.charAt(Int) -> String",
         "kind": "haxe-type"
       },
@@ -10115,7 +10115,7 @@
     "HxString",
     "HxType"
   ],
-  "reportRevision": "sha256:1378c187c9dcefe37ed44d1a7980261480c03ae9dbfd010b510943fa2625a1b9",
+  "reportRevision": "sha256:1e2414141742364a8b958a4e554cd01f1092f60299bccfe0dc0fd50123e85dcf",
   "runtimeMode": "full",
   "recordedRequirementSourceKinds": [
     "compiler-infrastructure",
@@ -10311,14 +10311,14 @@
         "HxArray",
         "HxRuntime"
       ],
-      "requirementId": "array-read:242fa0316eb6aa7ca760e13e6adfa50c:runtime:haxe-array-index-read"
+      "requirementId": "array-read:3b7fb9b7faa1625b9ea92ccdfe61c1d7:runtime:haxe-array-index-read"
     },
     {
       "resolvedModules": [
         "HxArray",
         "HxRuntime"
       ],
-      "requirementId": "array-read:3b7fb9b7faa1625b9ea92ccdfe61c1d7:runtime:haxe-array-index-read"
+      "requirementId": "array-read:45f0de387ad5986005cac625488fdad5:runtime:haxe-array-index-read"
     },
     {
       "resolvedModules": [
@@ -10367,6 +10367,20 @@
         "HxBytes",
         "HxRuntime"
       ],
+      "requirementId": "bytes-access:10d4067bfd5ee49deec0d4ca:runtime:haxe-bytes-access"
+    },
+    {
+      "resolvedModules": [
+        "HxBytes",
+        "HxRuntime"
+      ],
+      "requirementId": "bytes-access:2224b32e01b92523e002c9e6:runtime:haxe-bytes-access"
+    },
+    {
+      "resolvedModules": [
+        "HxBytes",
+        "HxRuntime"
+      ],
       "requirementId": "bytes-access:383268784f13307af27189f2:runtime:haxe-bytes-access"
     },
     {
@@ -10382,13 +10396,6 @@
         "HxRuntime"
       ],
       "requirementId": "bytes-access:6734efae011b7d401b4d5f0d:runtime:haxe-bytes-access"
-    },
-    {
-      "resolvedModules": [
-        "HxBytes",
-        "HxRuntime"
-      ],
-      "requirementId": "bytes-access:77b9a8039e80263cd0414c32:runtime:haxe-bytes-access"
     },
     {
       "resolvedModules": [
@@ -10416,13 +10423,6 @@
         "HxBytes",
         "HxRuntime"
       ],
-      "requirementId": "bytes-access:96cc9298d23f31009595a9c8:runtime:haxe-bytes-access"
-    },
-    {
-      "resolvedModules": [
-        "HxBytes",
-        "HxRuntime"
-      ],
       "requirementId": "bytes-access:a29124780b06b98a48d0986f:runtime:haxe-bytes-access"
     },
     {
@@ -10437,14 +10437,28 @@
         "HxBytes",
         "HxRuntime"
       ],
-      "requirementId": "bytes-access:b2f5f4f43222952a57745580:runtime:haxe-bytes-access"
+      "requirementId": "bytes-access:d0ab444335cb0b8f0b04c77b:runtime:haxe-bytes-access"
     },
     {
       "resolvedModules": [
         "HxBytes",
         "HxRuntime"
       ],
-      "requirementId": "bytes-access:e2c3e98d4f5f2449df0e6341:runtime:haxe-bytes-access"
+      "requirementId": "bytes-access:f936647d2a0e19f86f262a1f:runtime:haxe-bytes-access"
+    },
+    {
+      "resolvedModules": [
+        "HxBytes",
+        "HxRuntime"
+      ],
+      "requirementId": "bytes-producer:0d16bf5f4b5f135381985d2c:runtime:haxe-bytes-producer"
+    },
+    {
+      "resolvedModules": [
+        "HxBytes",
+        "HxRuntime"
+      ],
+      "requirementId": "bytes-producer:0d3b3f498597c9f9772b7897:runtime:haxe-bytes-producer"
     },
     {
       "resolvedModules": [
@@ -10452,13 +10466,6 @@
         "HxRuntime"
       ],
       "requirementId": "bytes-producer:0dc54334ecca843f6cdaae02:runtime:haxe-bytes-producer"
-    },
-    {
-      "resolvedModules": [
-        "HxBytes",
-        "HxRuntime"
-      ],
-      "requirementId": "bytes-producer:26b82e739038596d0ce558a7:runtime:haxe-bytes-producer"
     },
     {
       "resolvedModules": [
@@ -10493,13 +10500,6 @@
         "HxBytes",
         "HxRuntime"
       ],
-      "requirementId": "bytes-producer:c0941825431825b51dd206a3:runtime:haxe-bytes-producer"
-    },
-    {
-      "resolvedModules": [
-        "HxBytes",
-        "HxRuntime"
-      ],
       "requirementId": "bytes-producer:ee89d034fc983a115ebbab16:runtime:haxe-bytes-producer"
     },
     {
@@ -10515,13 +10515,6 @@
         "HxRuntime"
       ],
       "requirementId": "bytes-read:107b3546f0f2e44c47a79311:runtime:haxe-bytes-read"
-    },
-    {
-      "resolvedModules": [
-        "HxBytes",
-        "HxRuntime"
-      ],
-      "requirementId": "bytes-read:11ea52e4ed05b60a8f75b2e3:runtime:haxe-bytes-read"
     },
     {
       "resolvedModules": [
@@ -10556,21 +10549,14 @@
         "HxBytes",
         "HxRuntime"
       ],
-      "requirementId": "bytes-read:439a26babee4210e3dc0ffce:runtime:haxe-bytes-read"
+      "requirementId": "bytes-read:3eef191f704fce4c9216bed6:runtime:haxe-bytes-read"
     },
     {
       "resolvedModules": [
         "HxBytes",
         "HxRuntime"
       ],
-      "requirementId": "bytes-read:4bc95bc6077ca3eb71db1cbf:runtime:haxe-bytes-read"
-    },
-    {
-      "resolvedModules": [
-        "HxBytes",
-        "HxRuntime"
-      ],
-      "requirementId": "bytes-read:5f436f99413fafcc4d285173:runtime:haxe-bytes-read"
+      "requirementId": "bytes-read:5c2f8fd7de1897bbb6ad66d1:runtime:haxe-bytes-read"
     },
     {
       "resolvedModules": [
@@ -10578,6 +10564,13 @@
         "HxRuntime"
       ],
       "requirementId": "bytes-read:63daee2c3ee8ec963a4fe467:runtime:haxe-bytes-read"
+    },
+    {
+      "resolvedModules": [
+        "HxBytes",
+        "HxRuntime"
+      ],
+      "requirementId": "bytes-read:70c7038325bcf9081b856751:runtime:haxe-bytes-read"
     },
     {
       "resolvedModules": [
@@ -10598,6 +10591,13 @@
         "HxBytes",
         "HxRuntime"
       ],
+      "requirementId": "bytes-read:a74d3f0e8479d9367853b74f:runtime:haxe-bytes-read"
+    },
+    {
+      "resolvedModules": [
+        "HxBytes",
+        "HxRuntime"
+      ],
       "requirementId": "bytes-read:c7403836bd8ef53d5c4ff5de:runtime:haxe-bytes-read"
     },
     {
@@ -10605,7 +10605,7 @@
         "HxBytes",
         "HxRuntime"
       ],
-      "requirementId": "bytes-read:ca559af7ea8822b808b36638:runtime:haxe-bytes-read"
+      "requirementId": "bytes-read:cd81993d02b7919dd0bf828b:runtime:haxe-bytes-read"
     },
     {
       "resolvedModules": [
@@ -10640,7 +10640,7 @@
         "HxArray",
         "HxRuntime"
       ],
-      "requirementId": "call:10827656bb4d70b587f8340d:runtime:haxe-array:push"
+      "requirementId": "call:1ce090850e8d3b86816e30b0:runtime:haxe-array:push"
     },
     {
       "resolvedModules": [
@@ -10668,6 +10668,13 @@
         "HxArray",
         "HxRuntime"
       ],
+      "requirementId": "call:44cb7bcf693de152e78645e5:runtime:haxe-array:push"
+    },
+    {
+      "resolvedModules": [
+        "HxArray",
+        "HxRuntime"
+      ],
       "requirementId": "call:4df8e70031c40c6193d589ef:runtime:haxe-array:push"
     },
     {
@@ -10676,13 +10683,6 @@
         "HxRuntime"
       ],
       "requirementId": "call:4ffb41eab92c105dbeb73dfb:runtime:haxe-array:push"
-    },
-    {
-      "resolvedModules": [
-        "HxArray",
-        "HxRuntime"
-      ],
-      "requirementId": "call:538d5f624795f69d4c187bee:runtime:haxe-array:push"
     },
     {
       "resolvedModules": [
@@ -10703,13 +10703,6 @@
         "HxArray",
         "HxRuntime"
       ],
-      "requirementId": "call:73de9255dd7cae1f9386d795:runtime:haxe-array:push"
-    },
-    {
-      "resolvedModules": [
-        "HxArray",
-        "HxRuntime"
-      ],
       "requirementId": "call:8212b091810351054c26cc38:runtime:haxe-array:push"
     },
     {
@@ -10717,7 +10710,14 @@
         "HxArray",
         "HxRuntime"
       ],
-      "requirementId": "call:95e27366ced8022c4b4cc48b:runtime:haxe-array:push"
+      "requirementId": "call:86b2488e682ecc3eb1fac0f9:runtime:haxe-array:push"
+    },
+    {
+      "resolvedModules": [
+        "HxArray",
+        "HxRuntime"
+      ],
+      "requirementId": "call:a92913e42b8be0944e3d6585:runtime:haxe-array:push"
     },
     {
       "resolvedModules": [
@@ -10738,21 +10738,7 @@
         "HxArray",
         "HxRuntime"
       ],
-      "requirementId": "call:c11d530d64de1314076920f6:runtime:haxe-array:push"
-    },
-    {
-      "resolvedModules": [
-        "HxArray",
-        "HxRuntime"
-      ],
-      "requirementId": "call:c93e010298dfdf87b5ccff22:runtime:haxe-array:push"
-    },
-    {
-      "resolvedModules": [
-        "HxArray",
-        "HxRuntime"
-      ],
-      "requirementId": "call:cb8f37d0fa67ef9447154af5:runtime:haxe-array:push"
+      "requirementId": "call:c0cdf46e5efde21d8b649640:runtime:haxe-array:push"
     },
     {
       "resolvedModules": [
@@ -10766,7 +10752,21 @@
         "HxArray",
         "HxRuntime"
       ],
+      "requirementId": "call:def401f7d32ec8035bcb3431:runtime:haxe-array:push"
+    },
+    {
+      "resolvedModules": [
+        "HxArray",
+        "HxRuntime"
+      ],
       "requirementId": "call:df3ed0698ff228bfd208b0f5:runtime:haxe-array:copy"
+    },
+    {
+      "resolvedModules": [
+        "HxArray",
+        "HxRuntime"
+      ],
+      "requirementId": "call:f40e97c460b2880fd6a07c4f:runtime:haxe-array:push"
     },
     {
       "resolvedModules": [
@@ -10960,6 +10960,18 @@
         "HxString",
         "HxType"
       ],
+      "requirementId": "class-identity-marker:5980e5690bc40777007a50ef:runtime:haxe-class-identity-marker"
+    },
+    {
+      "resolvedModules": [
+        "HxAnon",
+        "HxArray",
+        "HxEnum",
+        "HxIterator",
+        "HxRuntime",
+        "HxString",
+        "HxType"
+      ],
       "requirementId": "class-identity-marker:5e4da39556152132e3c3f550:runtime:haxe-class-identity-marker"
     },
     {
@@ -11056,18 +11068,6 @@
         "HxString",
         "HxType"
       ],
-      "requirementId": "class-identity-marker:9eb78e3ee7dad7a166471c8e:runtime:haxe-class-identity-marker"
-    },
-    {
-      "resolvedModules": [
-        "HxAnon",
-        "HxArray",
-        "HxEnum",
-        "HxIterator",
-        "HxRuntime",
-        "HxString",
-        "HxType"
-      ],
       "requirementId": "class-identity-marker:a7007bb1d3931f6137c2e859:runtime:haxe-class-identity-marker"
     },
     {
@@ -11129,18 +11129,6 @@
         "HxType"
       ],
       "requirementId": "class-identity-marker:c0ce4dbc1c5b82bb864e4f72:runtime:haxe-class-identity-marker"
-    },
-    {
-      "resolvedModules": [
-        "HxAnon",
-        "HxArray",
-        "HxEnum",
-        "HxIterator",
-        "HxRuntime",
-        "HxString",
-        "HxType"
-      ],
-      "requirementId": "class-identity-marker:d2a447f7cceb3145535c74b8:runtime:haxe-class-identity-marker"
     },
     {
       "resolvedModules": [
@@ -11261,6 +11249,18 @@
         "HxType"
       ],
       "requirementId": "class-identity-marker:e601c7ad83117e251b7f69b3:runtime:haxe-class-identity-marker"
+    },
+    {
+      "resolvedModules": [
+        "HxAnon",
+        "HxArray",
+        "HxEnum",
+        "HxIterator",
+        "HxRuntime",
+        "HxString",
+        "HxType"
+      ],
+      "requirementId": "class-identity-marker:e81783acf53a6b56440b86ed:runtime:haxe-class-identity-marker"
     },
     {
       "resolvedModules": [
@@ -12311,6 +12311,13 @@
         "HxArray",
         "HxRuntime"
       ],
+      "requirementId": "standard-container-carrier:55845a50337112f3bf7f81d1:runtime:haxe-array-carrier"
+    },
+    {
+      "resolvedModules": [
+        "HxArray",
+        "HxRuntime"
+      ],
       "requirementId": "standard-container-carrier:55cb24c18cac4acb29a0163d:runtime:haxe-array-carrier"
     },
     {
@@ -12361,13 +12368,6 @@
         "HxRuntime"
       ],
       "requirementId": "standard-container-carrier:914e2594fbad359dc8b9735c:runtime:haxe-bytes-carrier"
-    },
-    {
-      "resolvedModules": [
-        "HxArray",
-        "HxRuntime"
-      ],
-      "requirementId": "standard-container-carrier:933557bdd945b6e8056f89d8:runtime:haxe-array-carrier"
     },
     {
       "resolvedModules": [
@@ -12511,6 +12511,14 @@
         "HxRuntime",
         "HxString"
       ],
+      "requirementId": "static-string:1ef445008a810947eb1113aa:runtime:haxe-static-string-conversion"
+    },
+    {
+      "resolvedModules": [
+        "HxArray",
+        "HxRuntime",
+        "HxString"
+      ],
       "requirementId": "static-string:234fc24505d5a856364198cb:runtime:haxe-static-string-conversion"
     },
     {
@@ -12535,7 +12543,7 @@
         "HxRuntime",
         "HxString"
       ],
-      "requirementId": "static-string:370ad8d0cc4d8ccd93ad838a:runtime:haxe-static-string-conversion"
+      "requirementId": "static-string:3695cb9c62c477b9395d4474:runtime:haxe-static-string-conversion"
     },
     {
       "resolvedModules": [
@@ -12543,7 +12551,7 @@
         "HxRuntime",
         "HxString"
       ],
-      "requirementId": "static-string:3a284de1f4bff5af47c3f216:runtime:haxe-static-string-conversion"
+      "requirementId": "static-string:370ad8d0cc4d8ccd93ad838a:runtime:haxe-static-string-conversion"
     },
     {
       "resolvedModules": [
@@ -12591,14 +12599,6 @@
         "HxRuntime",
         "HxString"
       ],
-      "requirementId": "static-string:b614ec048cddaa14908e4ba4:runtime:haxe-static-string-conversion"
-    },
-    {
-      "resolvedModules": [
-        "HxArray",
-        "HxRuntime",
-        "HxString"
-      ],
       "requirementId": "static-string:b6894377fbf6b92d69b4d8e7:runtime:haxe-static-string-conversion"
     },
     {
@@ -12607,7 +12607,7 @@
         "HxRuntime",
         "HxString"
       ],
-      "requirementId": "static-string:c73b8dec3b2a9c5a0faa1aa5:runtime:haxe-static-string-conversion"
+      "requirementId": "static-string:cc58349d8cb3bb535b5aafe3:runtime:haxe-static-string-conversion"
     },
     {
       "resolvedModules": [
@@ -12615,7 +12615,7 @@
         "HxRuntime",
         "HxString"
       ],
-      "requirementId": "static-string:cc58349d8cb3bb535b5aafe3:runtime:haxe-static-string-conversion"
+      "requirementId": "static-string:e21d0051a8c79bf29600e5ff:runtime:haxe-static-string-conversion"
     },
     {
       "resolvedModules": [
@@ -12695,6 +12695,14 @@
         "HxRuntime",
         "HxString"
       ],
+      "requirementId": "string-field:1b09a0172a06f928833f4d3d:runtime:haxe-string-field-read"
+    },
+    {
+      "resolvedModules": [
+        "HxArray",
+        "HxRuntime",
+        "HxString"
+      ],
       "requirementId": "string-field:1f68e163a3ac5b534865ea5b:runtime:haxe-string-field-read"
     },
     {
@@ -12735,7 +12743,7 @@
         "HxRuntime",
         "HxString"
       ],
-      "requirementId": "string-field:73d072edc738a06ac00c8738:runtime:haxe-string-field-read"
+      "requirementId": "string-field:7eaab9901603db9db5e83666:runtime:haxe-string-field-read"
     },
     {
       "resolvedModules": [
@@ -12823,14 +12831,6 @@
         "HxRuntime",
         "HxString"
       ],
-      "requirementId": "string-field:e3edd7ad3c2f45787617d410:runtime:haxe-string-field-read"
-    },
-    {
-      "resolvedModules": [
-        "HxArray",
-        "HxRuntime",
-        "HxString"
-      ],
       "requirementId": "string-field:e77b02788d9aec125ef8dad4:runtime:haxe-string-field-read"
     },
     {
@@ -12879,7 +12879,7 @@
         "HxRuntime",
         "HxString"
       ],
-      "requirementId": "string-from-char-code:e131de46dd90e9e604463df8:runtime:haxe-string-from-char-code"
+      "requirementId": "string-from-char-code:c6a11ec9ffc8c8413b967a56:runtime:haxe-string-from-char-code"
     },
     {
       "resolvedModules": [
@@ -12927,6 +12927,22 @@
         "HxRuntime",
         "HxString"
       ],
+      "requirementId": "string-method:1584a55e12864a4d3279719a:runtime:haxe-string-method"
+    },
+    {
+      "resolvedModules": [
+        "HxArray",
+        "HxRuntime",
+        "HxString"
+      ],
+      "requirementId": "string-method:1d941bcbdffba2cad1e5236b:runtime:haxe-string-method"
+    },
+    {
+      "resolvedModules": [
+        "HxArray",
+        "HxRuntime",
+        "HxString"
+      ],
       "requirementId": "string-method:27a7408d255ec97ae9aace55:runtime:haxe-string-method"
     },
     {
@@ -12959,6 +12975,22 @@
         "HxRuntime",
         "HxString"
       ],
+      "requirementId": "string-method:48704d0153cabc14f43ad5f7:runtime:haxe-string-method"
+    },
+    {
+      "resolvedModules": [
+        "HxArray",
+        "HxRuntime",
+        "HxString"
+      ],
+      "requirementId": "string-method:4f9f54881cf00b6695538c85:runtime:haxe-string-method"
+    },
+    {
+      "resolvedModules": [
+        "HxArray",
+        "HxRuntime",
+        "HxString"
+      ],
       "requirementId": "string-method:59cf8de2d4077528bdecb263:runtime:haxe-string-method"
     },
     {
@@ -12983,15 +13015,7 @@
         "HxRuntime",
         "HxString"
       ],
-      "requirementId": "string-method:5f4b81ba6b7f4ce72522d8cc:runtime:haxe-string-method"
-    },
-    {
-      "resolvedModules": [
-        "HxArray",
-        "HxRuntime",
-        "HxString"
-      ],
-      "requirementId": "string-method:7be812e203176d064bc40e93:runtime:haxe-string-method"
+      "requirementId": "string-method:7ac7e8b087fbb963971e1126:runtime:haxe-string-method"
     },
     {
       "resolvedModules": [
@@ -13000,6 +13024,14 @@
         "HxString"
       ],
       "requirementId": "string-method:7e2cc09c0149fae5b45e8fff:runtime:haxe-string-method"
+    },
+    {
+      "resolvedModules": [
+        "HxArray",
+        "HxRuntime",
+        "HxString"
+      ],
+      "requirementId": "string-method:81725c42e2fb2b2fdfa52536:runtime:haxe-string-method"
     },
     {
       "resolvedModules": [
@@ -13055,31 +13087,7 @@
         "HxRuntime",
         "HxString"
       ],
-      "requirementId": "string-method:a0fb09b736f804271b4e5674:runtime:haxe-string-method"
-    },
-    {
-      "resolvedModules": [
-        "HxArray",
-        "HxRuntime",
-        "HxString"
-      ],
-      "requirementId": "string-method:a8d8c1a3c5596fd41c7c69e3:runtime:haxe-string-method"
-    },
-    {
-      "resolvedModules": [
-        "HxArray",
-        "HxRuntime",
-        "HxString"
-      ],
       "requirementId": "string-method:ae41aad7fc2efe6d46cf3bfa:runtime:haxe-string-method"
-    },
-    {
-      "resolvedModules": [
-        "HxArray",
-        "HxRuntime",
-        "HxString"
-      ],
-      "requirementId": "string-method:b23c69cd3fec55d2179c2668:runtime:haxe-string-method"
     },
     {
       "resolvedModules": [
@@ -13152,14 +13160,6 @@
         "HxString"
       ],
       "requirementId": "string-method:e54fcde3e978000426e229c4:runtime:haxe-string-method"
-    },
-    {
-      "resolvedModules": [
-        "HxArray",
-        "HxRuntime",
-        "HxString"
-      ],
-      "requirementId": "string-method:e8390a0e155d1829acb1d2dc:runtime:haxe-string-method"
     },
     {
       "resolvedModules": [

@@ -1,7 +1,7 @@
 {
   "model": "requirements-only-runtime-selection-shadow",
   "runtimeSourceRevision": "sha256:33c6371d2095de153098118db7449cb8d482916df6cdfc215aca8b4d0a267156",
-  "requirementRevision": "sha256:8d3f72d22be361d7d2ecec0ea876014a89e1dc67f38bee3c8521f43ffaf54a99",
+  "requirementRevision": "sha256:a3cbb062653066f29081412b948d69dda094a78a77026eb9a10ad3a00c0eaeb1",
   "schemaVersion": 1,
   "selectionMode": "full",
   "exactComparisonStatus": "mismatch",
@@ -128,47 +128,47 @@
         "reasons": [
           "requirement:array-literal-producer:46a47691359ff2d67990be4969352fa9:runtime:haxe-array-literal-construction",
           "requirement:array-read:07569ed75c02b77e6081f8d078ae0452:runtime:haxe-array-index-read",
+          "requirement:array-read:19819b06d3578065304af992cbff1de6:runtime:haxe-array-index-read",
           "requirement:array-read:38eb1248817e4b84c4c3606a8855a7c2:runtime:haxe-array-index-read",
           "requirement:array-read:45c9172ab31daab8c7da8e7fde63f0da:runtime:haxe-array-index-read",
           "requirement:array-read:5b64b3322874cc19b878703641af85d3:runtime:haxe-array-index-read",
           "requirement:array-read:5cf6941a5bc75e5e436324fc86f542dc:runtime:haxe-array-index-read",
-          "requirement:array-read:68b374b19271319b901c6546229642ae:runtime:haxe-array-index-read",
           "requirement:array-read:cc9eb20b4b2b7f0b09712e514fec7156:runtime:haxe-array-index-read",
           "requirement:array-read:ce2e21eb5ad736e763a2908131ac5071:runtime:haxe-array-index-read",
           "requirement:array-read:d15e838920b0fdaf064c0114b90cf26d:runtime:haxe-array-index-read",
           "requirement:array-read:f76b3702c4854be5ed01fd7b49d961b1:runtime:haxe-array-index-read",
           "requirement:call:0635b225a6d306a7a8b1116e:runtime:haxe-array:push",
           "requirement:call:0b9ab366856b6206884a6541:runtime:haxe-array:push",
+          "requirement:call:11d82d084d5a69d9f79dfe17:runtime:haxe-array:push",
           "requirement:call:2c7a112ff74234729f9c1104:runtime:haxe-array:push",
           "requirement:call:4b4a2c41bd5a20ea19798a60:runtime:haxe-array:push",
           "requirement:call:4c5a5d791f4d63b7ac071e70:runtime:haxe-array:push",
           "requirement:call:623b1fcefd1b9e13da8b431f:runtime:haxe-array:push",
-          "requirement:call:631d965ac4193fd100edfa58:runtime:haxe-array:push",
           "requirement:call:6a47eac03e047e3a5a7a105b:runtime:haxe-array:push",
           "requirement:call:7223eaf883f15fcdc95a14e3:runtime:haxe-array:push",
+          "requirement:call:76e66405fe9013c0471b2ef3:runtime:haxe-array:push",
+          "requirement:call:7ad646db3ec534707fb6e58b:runtime:haxe-array:push",
+          "requirement:call:809c7d719ea687ddc6c415e1:runtime:haxe-array:push",
           "requirement:call:80f5bb0b743d99a25d9c9b55:runtime:haxe-array:copy",
-          "requirement:call:837b349dbd0aa79ed386d790:runtime:haxe-array:push",
+          "requirement:call:831b89ee1db6f63672892c1a:runtime:haxe-array:push",
           "requirement:call:89b076af1a55b4915e852102:runtime:haxe-array:push",
-          "requirement:call:8c13bea9cdc4303468635e28:runtime:haxe-array:push",
           "requirement:call:91b8e953fb887e190f9324cf:runtime:haxe-array:push",
-          "requirement:call:a62ad3c13d07a4c3c0248e3e:runtime:haxe-array:push",
           "requirement:call:c54218e62220774a9dc6aedc:runtime:haxe-array:slice",
-          "requirement:call:caee1c004245cc4143ed294e:runtime:haxe-array:push",
           "requirement:call:d1561b04e3ae2d2b9a25b995:runtime:haxe-array:push",
           "requirement:call:d45df829c60d6298358de443:runtime:haxe-array:push",
-          "requirement:call:d559da1ab5227b251d165821:runtime:haxe-array:push",
-          "requirement:call:d73f96bf72a84c6b9089bc22:runtime:haxe-array:push",
+          "requirement:call:e2c9db333a5045e3376b3cc1:runtime:haxe-array:push",
           "requirement:call:e46d871fe8e437925a696744:runtime:haxe-array:push",
+          "requirement:call:ec92de3b659c854b67bf8064:runtime:haxe-array:push",
           "requirement:call:eeec0a00cf4e3fc833d72b11:runtime:haxe-array:push",
           "requirement:compiler:generated:HxTypeRegistry:dynamic-arguments",
           "requirement:standard-container-carrier:0e8fc4de8a7c37905dadc37d:runtime:haxe-array-carrier",
           "requirement:standard-container-carrier:1a84feb4390500e6111ea9e0:runtime:haxe-array-carrier",
           "requirement:standard-container-carrier:1b7098a602b418ff00642eca:runtime:haxe-array-carrier",
           "requirement:standard-container-carrier:247406b67a98a9fc4bcec37a:runtime:haxe-array-carrier",
-          "requirement:standard-container-carrier:2694f31504873eee21d16bf2:runtime:haxe-array-carrier",
           "requirement:standard-container-carrier:2e248699e8f21704d826d4aa:runtime:haxe-array-carrier",
           "requirement:standard-container-carrier:3c705d677c6f330550ca1ae4:runtime:haxe-array-carrier",
           "requirement:standard-container-carrier:476b41a7656fd2327552b6fa:runtime:haxe-array-carrier",
+          "requirement:standard-container-carrier:5d1a5d0e6f57f7c1dc6772df:runtime:haxe-array-carrier",
           "requirement:standard-container-carrier:5d95cf7a5e3db31a03b2e1eb:runtime:haxe-array-carrier",
           "requirement:standard-container-carrier:5f1831c1281d189433e92ce7:runtime:haxe-array-carrier",
           "requirement:standard-container-carrier:8358405213a7af9340dbe6b5:runtime:haxe-array-carrier",
@@ -201,41 +201,41 @@
       {
         "module": "HxBytes",
         "reasons": [
+          "requirement:bytes-access:055e0d7084ac0d0f9b132ba2:runtime:haxe-bytes-access",
+          "requirement:bytes-access:08f23515e869124bb7896753:runtime:haxe-bytes-access",
           "requirement:bytes-access:199c2d9053b37e8673a98439:runtime:haxe-bytes-access",
           "requirement:bytes-access:1c01d8fdd60e023bbfeb5c79:runtime:haxe-bytes-access",
-          "requirement:bytes-access:2d89d503451222960c566a54:runtime:haxe-bytes-access",
           "requirement:bytes-access:2f0953f9ae736740baabce6e:runtime:haxe-bytes-access",
-          "requirement:bytes-access:73d2bc2264d3b3d8a28cb20e:runtime:haxe-bytes-access",
+          "requirement:bytes-access:3790bf28cb5907c65282c072:runtime:haxe-bytes-access",
           "requirement:bytes-access:849fc0401606da0917ecbfc5:runtime:haxe-bytes-access",
-          "requirement:bytes-access:8a170981710443628e2b3fc3:runtime:haxe-bytes-access",
           "requirement:bytes-access:a52d4b5883a67742d2f8cf7c:runtime:haxe-bytes-access",
           "requirement:bytes-access:a6222bfd60c78e2c8ab8064e:runtime:haxe-bytes-access",
           "requirement:bytes-access:aa5c071edf7b8b91c7009e3a:runtime:haxe-bytes-access",
           "requirement:bytes-access:aba6e115464a7f4dc2789034:runtime:haxe-bytes-access",
-          "requirement:bytes-access:db1771af1b8a165b22429e8c:runtime:haxe-bytes-access",
+          "requirement:bytes-access:afc42f268b2be990bd98636a:runtime:haxe-bytes-access",
           "requirement:bytes-producer:03187feb1c777707bdc140a6:runtime:haxe-bytes-producer",
           "requirement:bytes-producer:2a1a293dc78fe37dc464c256:runtime:haxe-bytes-producer",
           "requirement:bytes-producer:36f946709265332a176418b1:runtime:haxe-bytes-producer",
-          "requirement:bytes-producer:5e38de4d31de5cf8bd1f6d31:runtime:haxe-bytes-producer",
+          "requirement:bytes-producer:5db575e2ee96d26a335ddd0f:runtime:haxe-bytes-producer",
+          "requirement:bytes-producer:69036e98f7da38c4b8e80ef3:runtime:haxe-bytes-producer",
           "requirement:bytes-producer:7642e68d2ed1d2b020de15c0:runtime:haxe-bytes-producer",
           "requirement:bytes-producer:b0905f84cac3868c9c910688:runtime:haxe-bytes-producer",
           "requirement:bytes-producer:b232af757fa7ee584bfac288:runtime:haxe-bytes-producer",
           "requirement:bytes-producer:c8ce4630662adf6e719ba6e7:runtime:haxe-bytes-producer",
-          "requirement:bytes-producer:e5ffb22404d68f9d4d1f0a67:runtime:haxe-bytes-producer",
-          "requirement:bytes-read:066929311563e1caad02b823:runtime:haxe-bytes-read",
           "requirement:bytes-read:0b912f45e9763c298b1c6d1d:runtime:haxe-bytes-read",
           "requirement:bytes-read:0ec2bd7e6f41a0396992a2ca:runtime:haxe-bytes-read",
           "requirement:bytes-read:10a3d3179ef3f8eba8bd5dff:runtime:haxe-bytes-read",
           "requirement:bytes-read:17befa4810636dab0c7b0a00:runtime:haxe-bytes-read",
           "requirement:bytes-read:3bbba250cbbc216d0ddb09e4:runtime:haxe-bytes-read",
-          "requirement:bytes-read:442ad6ea7e158b82f4ae32d7:runtime:haxe-bytes-read",
+          "requirement:bytes-read:3d60d07f87496a040187acac:runtime:haxe-bytes-read",
           "requirement:bytes-read:5c2f122c52b89f34f801b08f:runtime:haxe-bytes-read",
-          "requirement:bytes-read:9f6912d48503600b513a384c:runtime:haxe-bytes-read",
+          "requirement:bytes-read:6b02c8fba6818cf060cecfd8:runtime:haxe-bytes-read",
+          "requirement:bytes-read:79a2df63dadd29d60d0ae352:runtime:haxe-bytes-read",
+          "requirement:bytes-read:912e76d05af558fa6318a1f6:runtime:haxe-bytes-read",
           "requirement:bytes-read:a82ed3d3e74e2774523841c3:runtime:haxe-bytes-read",
-          "requirement:bytes-read:aff680b19e84edaa21065ef3:runtime:haxe-bytes-read",
+          "requirement:bytes-read:bb4de88b3dcdee32ea1dd31b:runtime:haxe-bytes-read",
           "requirement:bytes-read:c711b806183eff3dcc00a637:runtime:haxe-bytes-read",
           "requirement:bytes-read:d9ad4b9bd833c638d33e6fff:runtime:haxe-bytes-read",
-          "requirement:bytes-read:dd65f6adb27fdc7b70108adf:runtime:haxe-bytes-read",
           "requirement:bytes-read:ddb1fcea4ed2391d5df419e9:runtime:haxe-bytes-read",
           "requirement:bytes-read:e8af949a206d8839f12cdfc2:runtime:haxe-bytes-read",
           "requirement:standard-container-carrier:0ad35d21283119444de8d695:runtime:haxe-bytes-carrier",
@@ -428,22 +428,22 @@
           "requirement:representation:String:instance-field:runtime:haxe-string-null-sentinel",
           "requirement:representation:String:internal-value:runtime:haxe-string-null-sentinel",
           "requirement:representation:String:mutable-local-storage:runtime:haxe-string-null-sentinel",
+          "requirement:static-string:0dfd4f7b72270b727ef0e93f:runtime:haxe-static-string-conversion",
           "requirement:static-string:16f02484127cfc58b2d86cd6:runtime:haxe-static-string-conversion",
           "requirement:static-string:36f5a6310cf290e6acfd3bec:runtime:haxe-static-string-conversion",
           "requirement:static-string:3bca424d0efc22bbbc8b021b:runtime:haxe-static-string-conversion",
           "requirement:static-string:3d78e8fa8d66a5065f8f5a30:runtime:haxe-static-string-conversion",
+          "requirement:static-string:3fd5b45859aa5387da1895a7:runtime:haxe-static-string-conversion",
           "requirement:static-string:53f17edb654b7cd44b982bfe:runtime:haxe-static-string-conversion",
           "requirement:static-string:60f40e53393d981a5fd80fde:runtime:haxe-static-string-conversion",
           "requirement:static-string:65adca2aa0a0460f516d9946:runtime:haxe-static-string-conversion",
           "requirement:static-string:71bccd0ccafe89a14fe18b48:runtime:haxe-static-string-conversion",
+          "requirement:static-string:796995b7995470743ab8f529:runtime:haxe-static-string-conversion",
           "requirement:static-string:7db7f60923870ddf4ac1b99b:runtime:haxe-static-string-conversion",
           "requirement:static-string:93f04f65ef2a5f24fa65d39d:runtime:haxe-static-string-conversion",
           "requirement:static-string:99d010b68c9d63431858d9e3:runtime:haxe-static-string-conversion",
-          "requirement:static-string:a7f7c0c064e4f3eaa493cba3:runtime:haxe-static-string-conversion",
           "requirement:static-string:aa5ab828e2c2bee5cf9187bf:runtime:haxe-static-string-conversion",
-          "requirement:static-string:c40393cb4b0af69e1a4a1417:runtime:haxe-static-string-conversion",
           "requirement:static-string:c543aae48276475c8cde460d:runtime:haxe-static-string-conversion",
-          "requirement:static-string:e073f5f05b533479be68627a:runtime:haxe-static-string-conversion",
           "requirement:static-string:e4a4743b4f54f51b7447c4d2:runtime:haxe-static-string-conversion",
           "requirement:static-string:e675f514469971ad98b5602c:runtime:haxe-static-string-conversion",
           "requirement:string-equality:4960189846553f9e63e844e4:runtime:haxe-string-equality",
@@ -452,6 +452,7 @@
           "requirement:string-equality:f1e45a7573f24be9cace05ec:runtime:haxe-string-equality",
           "requirement:string-field:04de12eb014e099d08781d9d:runtime:haxe-string-field-read",
           "requirement:string-field:0ce34f1d25772c1d4017ff15:runtime:haxe-string-field-read",
+          "requirement:string-field:20e617de884085a71b796076:runtime:haxe-string-field-read",
           "requirement:string-field:3146a2aea06c200957af41f9:runtime:haxe-string-field-read",
           "requirement:string-field:3365eb3ea656489c9952df2b:runtime:haxe-string-field-read",
           "requirement:string-field:33bb3a4716158527e4ccd91e:runtime:haxe-string-field-read",
@@ -468,51 +469,50 @@
           "requirement:string-field:a1d047e99dc1bf3225a75968:runtime:haxe-string-field-read",
           "requirement:string-field:b8f9fd77735c1aa8b46d0d00:runtime:haxe-string-field-read",
           "requirement:string-field:bc98c91a813e56187ca871a9:runtime:haxe-string-field-read",
-          "requirement:string-field:c2eb36b25642b56c6fc77d9d:runtime:haxe-string-field-read",
+          "requirement:string-field:bd0f8fb38123b8caa3ba3d0d:runtime:haxe-string-field-read",
           "requirement:string-field:c93a0f3db315a48dc5a2d6ac:runtime:haxe-string-field-read",
           "requirement:string-field:d3f820b4c0157fed563a5a94:runtime:haxe-string-field-read",
           "requirement:string-field:e2cca9c560e6a23611cd4577:runtime:haxe-string-field-read",
-          "requirement:string-field:e8969457d60010c26b4af20e:runtime:haxe-string-field-read",
-          "requirement:string-from-char-code:6ef9fad133fbb823b2e190f1:runtime:haxe-string-from-char-code",
+          "requirement:string-from-char-code:9486974d17c7859d5c11a037:runtime:haxe-string-from-char-code",
           "requirement:string-from-char-code:b0c27c5bfecd54713e9a96e7:runtime:haxe-string-from-char-code",
           "requirement:string-method:019fbbad5ad69630c3f0271c:runtime:haxe-string-method",
           "requirement:string-method:042b27ce76b4747b7bc56ee3:runtime:haxe-string-method",
           "requirement:string-method:0a5371a5b4d7d30bfb603017:runtime:haxe-string-method",
-          "requirement:string-method:17ea35e75607d192c56f1cfe:runtime:haxe-string-method",
           "requirement:string-method:1aafdba363ed79ebf8381e89:runtime:haxe-string-method",
+          "requirement:string-method:25b1fcd31362d0e71598bcf0:runtime:haxe-string-method",
           "requirement:string-method:3e2ee186676e088be69450a5:runtime:haxe-string-method",
           "requirement:string-method:3e4976f35d6b85df2ab667c7:runtime:haxe-string-method",
-          "requirement:string-method:3e6498a0ab1ed646ef4eb32d:runtime:haxe-string-method",
           "requirement:string-method:494cef75ee1e3cb8dcbc09d7:runtime:haxe-string-method",
           "requirement:string-method:4eb025655996dc0ef82e0888:runtime:haxe-string-method",
           "requirement:string-method:52fb88650d4c7a9186b8a368:runtime:haxe-string-method",
           "requirement:string-method:5539e985355b3fb19eecc00c:runtime:haxe-string-method",
           "requirement:string-method:60736681512aefd13ca61664:runtime:haxe-string-method",
           "requirement:string-method:6a1100af0cff82797aa814e0:runtime:haxe-string-method",
-          "requirement:string-method:6bf861e34515744e830cd5d6:runtime:haxe-string-method",
           "requirement:string-method:6c879c76a5be85ca82ed2500:runtime:haxe-string-method",
           "requirement:string-method:75926e5608073cc99bf44bcb:runtime:haxe-string-method",
           "requirement:string-method:773d81eaaf658388c482d4f3:runtime:haxe-string-method",
+          "requirement:string-method:7797e24243f4488fbb601ed8:runtime:haxe-string-method",
           "requirement:string-method:7949c48025297f9f1abb6de2:runtime:haxe-string-method",
-          "requirement:string-method:81aafa4d4294032980e8165d:runtime:haxe-string-method",
           "requirement:string-method:97e9fcb32f04f628bb235a0a:runtime:haxe-string-method",
           "requirement:string-method:a598e9af7f692396a2a04ece:runtime:haxe-string-method",
           "requirement:string-method:aa6272112d31270baf8746a3:runtime:haxe-string-method",
           "requirement:string-method:acaeaccaef69e4547e9901c5:runtime:haxe-string-method",
+          "requirement:string-method:ad89b4b781b2376c7e0702eb:runtime:haxe-string-method",
           "requirement:string-method:b56485214210253e6eba0f63:runtime:haxe-string-method",
           "requirement:string-method:b63b9db2f1452ae1b98e40e2:runtime:haxe-string-method",
+          "requirement:string-method:b9706cfa6709322616a1e5ac:runtime:haxe-string-method",
           "requirement:string-method:b9ec53e3f017cb1bbbb10425:runtime:haxe-string-method",
           "requirement:string-method:bc43c8c040c48cd52393da30:runtime:haxe-string-method",
           "requirement:string-method:c386ce8983bb2fdcf5debb77:runtime:haxe-string-method",
-          "requirement:string-method:c4e09f1e03030ae7f7c52fa2:runtime:haxe-string-method",
           "requirement:string-method:cb6683bc37f89d4a02d8eba0:runtime:haxe-string-method",
           "requirement:string-method:cc306ac37714766ce4217b7c:runtime:haxe-string-method",
           "requirement:string-method:ddf8b072162f78aec5755189:runtime:haxe-string-method",
           "requirement:string-method:df4d9f590543e0110270676a:runtime:haxe-string-method",
+          "requirement:string-method:e39d7a997c66ec73fa1a10e2:runtime:haxe-string-method",
           "requirement:string-method:e6da5d24dba03f0116a05503:runtime:haxe-string-method",
           "requirement:string-method:ed30031076c7bac03839b437:runtime:haxe-string-method",
+          "requirement:string-method:efb1cffcaa2daeddf309f246:runtime:haxe-string-method",
           "requirement:string-method:f8fb6c1b42fa40dcbfad5fae:runtime:haxe-string-method",
-          "requirement:string-method:fa8923a9b327af622309a0a4:runtime:haxe-string-method",
           "transitive:HxAnon"
         ]
       },
@@ -531,8 +531,8 @@
           "requirement:class-identity-marker:27c833753bd3fc8a6e2a6661:runtime:haxe-class-identity-marker",
           "requirement:class-identity-marker:2ef8530afa875f3eebd6ca47:runtime:haxe-class-identity-marker",
           "requirement:class-identity-marker:2f6a9a51400bb1a347011881:runtime:haxe-class-identity-marker",
-          "requirement:class-identity-marker:311c4887a3fc9f7028c86392:runtime:haxe-class-identity-marker",
           "requirement:class-identity-marker:3f27d0a4527e59285a982284:runtime:haxe-class-identity-marker",
+          "requirement:class-identity-marker:4576cabea9185d0dfdfb9cf2:runtime:haxe-class-identity-marker",
           "requirement:class-identity-marker:4868ebd1c873733f73b6d30c:runtime:haxe-class-identity-marker",
           "requirement:class-identity-marker:4d3f738bed65bce7f9b2d3d7:runtime:haxe-class-identity-marker",
           "requirement:class-identity-marker:4fc2da73a01e4fe5a6c42320:runtime:haxe-class-identity-marker",
@@ -552,8 +552,8 @@
           "requirement:class-identity-marker:8abdf6484a7ee378c8a9a5d4:runtime:haxe-class-identity-marker",
           "requirement:class-identity-marker:8df79b0dc87538702e89a4a4:runtime:haxe-class-identity-marker",
           "requirement:class-identity-marker:8f9d897404a4d2244e824c82:runtime:haxe-class-identity-marker",
+          "requirement:class-identity-marker:91b8dfb195a8ce092d44ef87:runtime:haxe-class-identity-marker",
           "requirement:class-identity-marker:931c1824f672051574571b83:runtime:haxe-class-identity-marker",
-          "requirement:class-identity-marker:98695b15a47cbf6db4196276:runtime:haxe-class-identity-marker",
           "requirement:class-identity-marker:98c1cc99e4a9fafebefc415a:runtime:haxe-class-identity-marker",
           "requirement:class-identity-marker:9b47ab6ff84b96e021774f21:runtime:haxe-class-identity-marker",
           "requirement:class-identity-marker:9c0e0d7fb349ce217ab3c7de:runtime:haxe-class-identity-marker",
@@ -640,7 +640,7 @@
       "HxSys",
       "HxType"
     ],
-    "revision": "sha256:2fc4c4af3d08c36131da6f00f6f4aa5a7050407b2e85799a72ebd803b255d7b3"
+    "revision": "sha256:ad2ef4064ddd7b0c5eb4140d7b9fa7c8075076b5029fc5cab5506644cd2c8817"
   },
   "profile": "portable",
   "message": "Explicit requirements do not yet select the same checked runtime source bytes. This mismatch blocks a hard cut, while the current compiler selection remains authoritative.",
@@ -1020,7 +1020,7 @@
     ],
     "revision": "sha256:8c857396b6567877ff454f89325ad1f5d900e3a7dc3d3f166908883d19058f06"
   },
-  "reportRevision": "sha256:23127ac2ba2307b4851477c5d602b64705a43157b12fd56a0e78e8d6db786b23",
+  "reportRevision": "sha256:452f9e6d70361844fcb37288b12f8c94fc1ed860e180c4d639104ecc3cd37bf9",
   "differences": {
     "currentOnlyRoots": [
       "Date",
@@ -1228,6 +1228,10 @@
       },
       {
         "module": "HxArray",
+        "reason": "requirement:array-read:19819b06d3578065304af992cbff1de6:runtime:haxe-array-index-read"
+      },
+      {
+        "module": "HxArray",
         "reason": "requirement:array-read:38eb1248817e4b84c4c3606a8855a7c2:runtime:haxe-array-index-read"
       },
       {
@@ -1241,10 +1245,6 @@
       {
         "module": "HxArray",
         "reason": "requirement:array-read:5cf6941a5bc75e5e436324fc86f542dc:runtime:haxe-array-index-read"
-      },
-      {
-        "module": "HxArray",
-        "reason": "requirement:array-read:68b374b19271319b901c6546229642ae:runtime:haxe-array-index-read"
       },
       {
         "module": "HxArray",
@@ -1272,6 +1272,10 @@
       },
       {
         "module": "HxArray",
+        "reason": "requirement:call:11d82d084d5a69d9f79dfe17:runtime:haxe-array:push"
+      },
+      {
+        "module": "HxArray",
         "reason": "requirement:call:2c7a112ff74234729f9c1104:runtime:haxe-array:push"
       },
       {
@@ -1288,10 +1292,6 @@
       },
       {
         "module": "HxArray",
-        "reason": "requirement:call:631d965ac4193fd100edfa58:runtime:haxe-array:push"
-      },
-      {
-        "module": "HxArray",
         "reason": "requirement:call:6a47eac03e047e3a5a7a105b:runtime:haxe-array:push"
       },
       {
@@ -1300,11 +1300,23 @@
       },
       {
         "module": "HxArray",
+        "reason": "requirement:call:76e66405fe9013c0471b2ef3:runtime:haxe-array:push"
+      },
+      {
+        "module": "HxArray",
+        "reason": "requirement:call:7ad646db3ec534707fb6e58b:runtime:haxe-array:push"
+      },
+      {
+        "module": "HxArray",
+        "reason": "requirement:call:809c7d719ea687ddc6c415e1:runtime:haxe-array:push"
+      },
+      {
+        "module": "HxArray",
         "reason": "requirement:call:80f5bb0b743d99a25d9c9b55:runtime:haxe-array:copy"
       },
       {
         "module": "HxArray",
-        "reason": "requirement:call:837b349dbd0aa79ed386d790:runtime:haxe-array:push"
+        "reason": "requirement:call:831b89ee1db6f63672892c1a:runtime:haxe-array:push"
       },
       {
         "module": "HxArray",
@@ -1312,23 +1324,11 @@
       },
       {
         "module": "HxArray",
-        "reason": "requirement:call:8c13bea9cdc4303468635e28:runtime:haxe-array:push"
-      },
-      {
-        "module": "HxArray",
         "reason": "requirement:call:91b8e953fb887e190f9324cf:runtime:haxe-array:push"
       },
       {
         "module": "HxArray",
-        "reason": "requirement:call:a62ad3c13d07a4c3c0248e3e:runtime:haxe-array:push"
-      },
-      {
-        "module": "HxArray",
         "reason": "requirement:call:c54218e62220774a9dc6aedc:runtime:haxe-array:slice"
-      },
-      {
-        "module": "HxArray",
-        "reason": "requirement:call:caee1c004245cc4143ed294e:runtime:haxe-array:push"
       },
       {
         "module": "HxArray",
@@ -1340,15 +1340,15 @@
       },
       {
         "module": "HxArray",
-        "reason": "requirement:call:d559da1ab5227b251d165821:runtime:haxe-array:push"
-      },
-      {
-        "module": "HxArray",
-        "reason": "requirement:call:d73f96bf72a84c6b9089bc22:runtime:haxe-array:push"
+        "reason": "requirement:call:e2c9db333a5045e3376b3cc1:runtime:haxe-array:push"
       },
       {
         "module": "HxArray",
         "reason": "requirement:call:e46d871fe8e437925a696744:runtime:haxe-array:push"
+      },
+      {
+        "module": "HxArray",
+        "reason": "requirement:call:ec92de3b659c854b67bf8064:runtime:haxe-array:push"
       },
       {
         "module": "HxArray",
@@ -1376,10 +1376,6 @@
       },
       {
         "module": "HxArray",
-        "reason": "requirement:standard-container-carrier:2694f31504873eee21d16bf2:runtime:haxe-array-carrier"
-      },
-      {
-        "module": "HxArray",
         "reason": "requirement:standard-container-carrier:2e248699e8f21704d826d4aa:runtime:haxe-array-carrier"
       },
       {
@@ -1389,6 +1385,10 @@
       {
         "module": "HxArray",
         "reason": "requirement:standard-container-carrier:476b41a7656fd2327552b6fa:runtime:haxe-array-carrier"
+      },
+      {
+        "module": "HxArray",
+        "reason": "requirement:standard-container-carrier:5d1a5d0e6f57f7c1dc6772df:runtime:haxe-array-carrier"
       },
       {
         "module": "HxArray",
@@ -1480,6 +1480,14 @@
       },
       {
         "module": "HxBytes",
+        "reason": "requirement:bytes-access:055e0d7084ac0d0f9b132ba2:runtime:haxe-bytes-access"
+      },
+      {
+        "module": "HxBytes",
+        "reason": "requirement:bytes-access:08f23515e869124bb7896753:runtime:haxe-bytes-access"
+      },
+      {
+        "module": "HxBytes",
         "reason": "requirement:bytes-access:199c2d9053b37e8673a98439:runtime:haxe-bytes-access"
       },
       {
@@ -1488,23 +1496,15 @@
       },
       {
         "module": "HxBytes",
-        "reason": "requirement:bytes-access:2d89d503451222960c566a54:runtime:haxe-bytes-access"
-      },
-      {
-        "module": "HxBytes",
         "reason": "requirement:bytes-access:2f0953f9ae736740baabce6e:runtime:haxe-bytes-access"
       },
       {
         "module": "HxBytes",
-        "reason": "requirement:bytes-access:73d2bc2264d3b3d8a28cb20e:runtime:haxe-bytes-access"
+        "reason": "requirement:bytes-access:3790bf28cb5907c65282c072:runtime:haxe-bytes-access"
       },
       {
         "module": "HxBytes",
         "reason": "requirement:bytes-access:849fc0401606da0917ecbfc5:runtime:haxe-bytes-access"
-      },
-      {
-        "module": "HxBytes",
-        "reason": "requirement:bytes-access:8a170981710443628e2b3fc3:runtime:haxe-bytes-access"
       },
       {
         "module": "HxBytes",
@@ -1524,7 +1524,7 @@
       },
       {
         "module": "HxBytes",
-        "reason": "requirement:bytes-access:db1771af1b8a165b22429e8c:runtime:haxe-bytes-access"
+        "reason": "requirement:bytes-access:afc42f268b2be990bd98636a:runtime:haxe-bytes-access"
       },
       {
         "module": "HxBytes",
@@ -1540,7 +1540,11 @@
       },
       {
         "module": "HxBytes",
-        "reason": "requirement:bytes-producer:5e38de4d31de5cf8bd1f6d31:runtime:haxe-bytes-producer"
+        "reason": "requirement:bytes-producer:5db575e2ee96d26a335ddd0f:runtime:haxe-bytes-producer"
+      },
+      {
+        "module": "HxBytes",
+        "reason": "requirement:bytes-producer:69036e98f7da38c4b8e80ef3:runtime:haxe-bytes-producer"
       },
       {
         "module": "HxBytes",
@@ -1557,14 +1561,6 @@
       {
         "module": "HxBytes",
         "reason": "requirement:bytes-producer:c8ce4630662adf6e719ba6e7:runtime:haxe-bytes-producer"
-      },
-      {
-        "module": "HxBytes",
-        "reason": "requirement:bytes-producer:e5ffb22404d68f9d4d1f0a67:runtime:haxe-bytes-producer"
-      },
-      {
-        "module": "HxBytes",
-        "reason": "requirement:bytes-read:066929311563e1caad02b823:runtime:haxe-bytes-read"
       },
       {
         "module": "HxBytes",
@@ -1588,7 +1584,7 @@
       },
       {
         "module": "HxBytes",
-        "reason": "requirement:bytes-read:442ad6ea7e158b82f4ae32d7:runtime:haxe-bytes-read"
+        "reason": "requirement:bytes-read:3d60d07f87496a040187acac:runtime:haxe-bytes-read"
       },
       {
         "module": "HxBytes",
@@ -1596,7 +1592,15 @@
       },
       {
         "module": "HxBytes",
-        "reason": "requirement:bytes-read:9f6912d48503600b513a384c:runtime:haxe-bytes-read"
+        "reason": "requirement:bytes-read:6b02c8fba6818cf060cecfd8:runtime:haxe-bytes-read"
+      },
+      {
+        "module": "HxBytes",
+        "reason": "requirement:bytes-read:79a2df63dadd29d60d0ae352:runtime:haxe-bytes-read"
+      },
+      {
+        "module": "HxBytes",
+        "reason": "requirement:bytes-read:912e76d05af558fa6318a1f6:runtime:haxe-bytes-read"
       },
       {
         "module": "HxBytes",
@@ -1604,7 +1608,7 @@
       },
       {
         "module": "HxBytes",
-        "reason": "requirement:bytes-read:aff680b19e84edaa21065ef3:runtime:haxe-bytes-read"
+        "reason": "requirement:bytes-read:bb4de88b3dcdee32ea1dd31b:runtime:haxe-bytes-read"
       },
       {
         "module": "HxBytes",
@@ -1613,10 +1617,6 @@
       {
         "module": "HxBytes",
         "reason": "requirement:bytes-read:d9ad4b9bd833c638d33e6fff:runtime:haxe-bytes-read"
-      },
-      {
-        "module": "HxBytes",
-        "reason": "requirement:bytes-read:dd65f6adb27fdc7b70108adf:runtime:haxe-bytes-read"
       },
       {
         "module": "HxBytes",
@@ -2208,6 +2208,10 @@
       },
       {
         "module": "HxString",
+        "reason": "requirement:static-string:0dfd4f7b72270b727ef0e93f:runtime:haxe-static-string-conversion"
+      },
+      {
+        "module": "HxString",
         "reason": "requirement:static-string:16f02484127cfc58b2d86cd6:runtime:haxe-static-string-conversion"
       },
       {
@@ -2221,6 +2225,10 @@
       {
         "module": "HxString",
         "reason": "requirement:static-string:3d78e8fa8d66a5065f8f5a30:runtime:haxe-static-string-conversion"
+      },
+      {
+        "module": "HxString",
+        "reason": "requirement:static-string:3fd5b45859aa5387da1895a7:runtime:haxe-static-string-conversion"
       },
       {
         "module": "HxString",
@@ -2240,6 +2248,10 @@
       },
       {
         "module": "HxString",
+        "reason": "requirement:static-string:796995b7995470743ab8f529:runtime:haxe-static-string-conversion"
+      },
+      {
+        "module": "HxString",
         "reason": "requirement:static-string:7db7f60923870ddf4ac1b99b:runtime:haxe-static-string-conversion"
       },
       {
@@ -2252,23 +2264,11 @@
       },
       {
         "module": "HxString",
-        "reason": "requirement:static-string:a7f7c0c064e4f3eaa493cba3:runtime:haxe-static-string-conversion"
-      },
-      {
-        "module": "HxString",
         "reason": "requirement:static-string:aa5ab828e2c2bee5cf9187bf:runtime:haxe-static-string-conversion"
       },
       {
         "module": "HxString",
-        "reason": "requirement:static-string:c40393cb4b0af69e1a4a1417:runtime:haxe-static-string-conversion"
-      },
-      {
-        "module": "HxString",
         "reason": "requirement:static-string:c543aae48276475c8cde460d:runtime:haxe-static-string-conversion"
-      },
-      {
-        "module": "HxString",
-        "reason": "requirement:static-string:e073f5f05b533479be68627a:runtime:haxe-static-string-conversion"
       },
       {
         "module": "HxString",
@@ -2301,6 +2301,10 @@
       {
         "module": "HxString",
         "reason": "requirement:string-field:0ce34f1d25772c1d4017ff15:runtime:haxe-string-field-read"
+      },
+      {
+        "module": "HxString",
+        "reason": "requirement:string-field:20e617de884085a71b796076:runtime:haxe-string-field-read"
       },
       {
         "module": "HxString",
@@ -2368,7 +2372,7 @@
       },
       {
         "module": "HxString",
-        "reason": "requirement:string-field:c2eb36b25642b56c6fc77d9d:runtime:haxe-string-field-read"
+        "reason": "requirement:string-field:bd0f8fb38123b8caa3ba3d0d:runtime:haxe-string-field-read"
       },
       {
         "module": "HxString",
@@ -2384,11 +2388,7 @@
       },
       {
         "module": "HxString",
-        "reason": "requirement:string-field:e8969457d60010c26b4af20e:runtime:haxe-string-field-read"
-      },
-      {
-        "module": "HxString",
-        "reason": "requirement:string-from-char-code:6ef9fad133fbb823b2e190f1:runtime:haxe-string-from-char-code"
+        "reason": "requirement:string-from-char-code:9486974d17c7859d5c11a037:runtime:haxe-string-from-char-code"
       },
       {
         "module": "HxString",
@@ -2408,11 +2408,11 @@
       },
       {
         "module": "HxString",
-        "reason": "requirement:string-method:17ea35e75607d192c56f1cfe:runtime:haxe-string-method"
+        "reason": "requirement:string-method:1aafdba363ed79ebf8381e89:runtime:haxe-string-method"
       },
       {
         "module": "HxString",
-        "reason": "requirement:string-method:1aafdba363ed79ebf8381e89:runtime:haxe-string-method"
+        "reason": "requirement:string-method:25b1fcd31362d0e71598bcf0:runtime:haxe-string-method"
       },
       {
         "module": "HxString",
@@ -2421,10 +2421,6 @@
       {
         "module": "HxString",
         "reason": "requirement:string-method:3e4976f35d6b85df2ab667c7:runtime:haxe-string-method"
-      },
-      {
-        "module": "HxString",
-        "reason": "requirement:string-method:3e6498a0ab1ed646ef4eb32d:runtime:haxe-string-method"
       },
       {
         "module": "HxString",
@@ -2452,10 +2448,6 @@
       },
       {
         "module": "HxString",
-        "reason": "requirement:string-method:6bf861e34515744e830cd5d6:runtime:haxe-string-method"
-      },
-      {
-        "module": "HxString",
         "reason": "requirement:string-method:6c879c76a5be85ca82ed2500:runtime:haxe-string-method"
       },
       {
@@ -2468,11 +2460,11 @@
       },
       {
         "module": "HxString",
-        "reason": "requirement:string-method:7949c48025297f9f1abb6de2:runtime:haxe-string-method"
+        "reason": "requirement:string-method:7797e24243f4488fbb601ed8:runtime:haxe-string-method"
       },
       {
         "module": "HxString",
-        "reason": "requirement:string-method:81aafa4d4294032980e8165d:runtime:haxe-string-method"
+        "reason": "requirement:string-method:7949c48025297f9f1abb6de2:runtime:haxe-string-method"
       },
       {
         "module": "HxString",
@@ -2492,11 +2484,19 @@
       },
       {
         "module": "HxString",
+        "reason": "requirement:string-method:ad89b4b781b2376c7e0702eb:runtime:haxe-string-method"
+      },
+      {
+        "module": "HxString",
         "reason": "requirement:string-method:b56485214210253e6eba0f63:runtime:haxe-string-method"
       },
       {
         "module": "HxString",
         "reason": "requirement:string-method:b63b9db2f1452ae1b98e40e2:runtime:haxe-string-method"
+      },
+      {
+        "module": "HxString",
+        "reason": "requirement:string-method:b9706cfa6709322616a1e5ac:runtime:haxe-string-method"
       },
       {
         "module": "HxString",
@@ -2509,10 +2509,6 @@
       {
         "module": "HxString",
         "reason": "requirement:string-method:c386ce8983bb2fdcf5debb77:runtime:haxe-string-method"
-      },
-      {
-        "module": "HxString",
-        "reason": "requirement:string-method:c4e09f1e03030ae7f7c52fa2:runtime:haxe-string-method"
       },
       {
         "module": "HxString",
@@ -2532,6 +2528,10 @@
       },
       {
         "module": "HxString",
+        "reason": "requirement:string-method:e39d7a997c66ec73fa1a10e2:runtime:haxe-string-method"
+      },
+      {
+        "module": "HxString",
         "reason": "requirement:string-method:e6da5d24dba03f0116a05503:runtime:haxe-string-method"
       },
       {
@@ -2540,11 +2540,11 @@
       },
       {
         "module": "HxString",
-        "reason": "requirement:string-method:f8fb6c1b42fa40dcbfad5fae:runtime:haxe-string-method"
+        "reason": "requirement:string-method:efb1cffcaa2daeddf309f246:runtime:haxe-string-method"
       },
       {
         "module": "HxString",
-        "reason": "requirement:string-method:fa8923a9b327af622309a0a4:runtime:haxe-string-method"
+        "reason": "requirement:string-method:f8fb6c1b42fa40dcbfad5fae:runtime:haxe-string-method"
       },
       {
         "module": "HxString",
@@ -2580,11 +2580,11 @@
       },
       {
         "module": "HxType",
-        "reason": "requirement:class-identity-marker:311c4887a3fc9f7028c86392:runtime:haxe-class-identity-marker"
+        "reason": "requirement:class-identity-marker:3f27d0a4527e59285a982284:runtime:haxe-class-identity-marker"
       },
       {
         "module": "HxType",
-        "reason": "requirement:class-identity-marker:3f27d0a4527e59285a982284:runtime:haxe-class-identity-marker"
+        "reason": "requirement:class-identity-marker:4576cabea9185d0dfdfb9cf2:runtime:haxe-class-identity-marker"
       },
       {
         "module": "HxType",
@@ -2664,11 +2664,11 @@
       },
       {
         "module": "HxType",
-        "reason": "requirement:class-identity-marker:931c1824f672051574571b83:runtime:haxe-class-identity-marker"
+        "reason": "requirement:class-identity-marker:91b8dfb195a8ce092d44ef87:runtime:haxe-class-identity-marker"
       },
       {
         "module": "HxType",
-        "reason": "requirement:class-identity-marker:98695b15a47cbf6db4196276:runtime:haxe-class-identity-marker"
+        "reason": "requirement:class-identity-marker:931c1824f672051574571b83:runtime:haxe-class-identity-marker"
       },
       {
         "module": "HxType",

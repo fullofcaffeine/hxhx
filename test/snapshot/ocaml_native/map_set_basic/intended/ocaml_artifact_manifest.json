@@ -6,7 +6,7 @@
       "model": "checked-runtime-source-selection-v1",
       "status": "complete",
       "message": "Every packaged runtime source is manifest-checked, and the selected runtime closure is revisioned for source replay.",
-      "revision": "sha256:8b91576654d8d476df45a984b65e81fc20086efdce43a292270d1cbd44023c83"
+      "revision": "sha256:f0dc8714070c31d6bbc09c2ff15f51cbed232d71db2076368834fa3992d723ae"
     },
     "nativeDependencies": {
       "model": "normalized-native-source-declarations-v2",
@@ -28,11 +28,11 @@
   "summary": {
     "entryCount": 73,
     "volatileEvidenceEntryCount": 0,
-    "sourceBundleRevision": "sha256:182cf6e0b71bc4a4ccb8f8250c95926a205766ec4a0e2a2209a255ac5354b054",
+    "sourceBundleRevision": "sha256:5634395c75133de35076463cd1b4097d84729c6c7347978759e376f3cc2d8555",
     "completeForSourceBundle": true,
     "sourceBundleEntryCount": 69,
     "blockers": [],
-    "artifactSetRevision": "sha256:90703dffc5e796ab4a3495cb534901c8409a6fff7301aeda890e056e2e2eacf6"
+    "artifactSetRevision": "sha256:9175c4f3af3a24ab3723f156cc5e7dfc957fa782d87dbb6166115ffeccc0149d"
   },
   "entries": [
     {
@@ -272,13 +272,13 @@
       "sourcePath": null,
       "stability": "stable",
       "path": "haxe_CallStack.ml",
-      "sha256": "sha256:e05d9634f8e5ab57da32859b020ab491bdba8885862d630993e618f6e8472aee",
+      "sha256": "sha256:993ad06298d922c7c877fbf3faca19982ff168f152b366b71620961058a0dce8",
       "kind": "haxe-module-source",
       "profileEligibility": [
         "portable"
       ],
       "owner": "reflaxe-framework",
-      "bytes": 22044,
+      "bytes": 22068,
       "sourceKind": "generated",
       "license": "generated-output",
       "includeInSourceBundle": true
@@ -347,13 +347,13 @@
       "sourcePath": null,
       "stability": "stable",
       "path": "haxe_NativeStackTrace.ml",
-      "sha256": "sha256:4bd3dcccb5ca0c13498acfb98d575d9e221bce7b4ba8082836eee9fccdbbe741",
+      "sha256": "sha256:baec6ffe661ff691e42b0c6090e1c5a0648c214e1a6993fb0c8cfb4ec785e256",
       "kind": "haxe-module-source",
       "profileEligibility": [
         "portable"
       ],
       "owner": "reflaxe-framework",
-      "bytes": 6236,
+      "bytes": 6260,
       "sourceKind": "generated",
       "license": "generated-output",
       "includeInSourceBundle": true
@@ -679,7 +679,7 @@
       "sourcePath": null,
       "stability": "stable",
       "path": "ocaml_runtime_requirement_report.json",
-      "sha256": "sha256:f011012e8bc97eea978fbcc1abc7f434ae6e434802017bcc435a545b276ca419",
+      "sha256": "sha256:4894dc4d2e0896ad65369bf91f48bef29452f3c94128db9309bf684ca8503970",
       "kind": "compiler-report",
       "profileEligibility": [
         "metal",
@@ -695,7 +695,7 @@
       "sourcePath": null,
       "stability": "stable",
       "path": "ocaml_runtime_selection_shadow_report.json",
-      "sha256": "sha256:f33298c697995dcce50fb167d65ea6416f06ef741d3a00615c3bdbbc59e29ec1",
+      "sha256": "sha256:e05e6d35c0820730cbe92df96b4fd64ac366d7bf3a436c956eadee20cd482332",
       "kind": "compiler-report",
       "profileEligibility": [
         "metal",
