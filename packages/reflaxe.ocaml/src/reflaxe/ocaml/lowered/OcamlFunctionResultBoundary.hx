@@ -131,11 +131,6 @@ class OcamlFunctionResultBoundary {
 			|| data.field.params.length > 0 || data.field.overloads.get().length > 0) {
 			return null;
 		}
-		switch (data.classType.kind) {
-			case KNormal, KAbstractImpl(_):
-			case _:
-				return null;
-		}
 		final followedResult = switch (TypeTools.follow(data.field.type)) {
 			case TFun(_, result): result;
 			case _: null;
@@ -149,6 +144,14 @@ class OcamlFunctionResultBoundary {
 		final completedNullableBool = nullableBoolResult ? directCompletedValue(data.expr) : null;
 		final anonymousSemanticTypeId = nullableAnonymousSemanticTypeId(followedResult);
 		final nullableEnumDescriptor = nullableEnumDescriptor(followedResult, context);
+		switch (data.classType.kind) {
+			case KNormal, KAbstractImpl(_):
+			case KModuleFields(_) if (data.isStatic && nullableEnumDescriptor != null):
+				// Haxe stores module-level functions in a synthetic class. Their exact
+				// nullable-enum results use the same declaration proof as static methods.
+			case _:
+				return null;
+		}
 
 		var source:OcamlFunctionResultBoundarySource;
 		var reason:String;
