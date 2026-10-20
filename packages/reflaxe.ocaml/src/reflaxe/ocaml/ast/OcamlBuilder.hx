@@ -10929,10 +10929,20 @@ class OcamlBuilder {
 									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [unboxed]);
 								} else {
 									final unboxed = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [fieldObj]);
-									// Retain the occurrence's function type when a record callback
-									// escapes into a captured local. An annotation preserves identity.
+									// Preserve callable arity through capture without choosing argument
+									// or result carriers: structural iterators and generic callbacks can
+									// use representations that differ from their ordinary type spelling.
+									// OCaml infers those carriers at use sites; no wrapper changes identity.
 									switch (followNoAbstracts(source.t)) {
-										case TFun(_, _): OcamlExpr.EAnnot(unboxed, typeExprFromHaxeType(source.t));
+										case TFun(arguments, _):
+											var signature:OcamlTypeExpr = OcamlTypeExpr.TIdent("_");
+											if (arguments.length == 0) {
+												signature = OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent("unit"), signature);
+											} else {
+												for (_ in arguments)
+													signature = OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent("_"), signature);
+											}
+											OcamlExpr.EAnnot(unboxed, signature);
 										case _: unboxed;
 									}
 								}
