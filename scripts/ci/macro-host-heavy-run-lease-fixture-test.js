@@ -49,6 +49,7 @@ if (process.env.MACRO_HOST_STUB_HOLD === '1') {
 const requestedExit = stage3 ? process.env.MACRO_HOST_STUB_STAGE3_EXIT : process.env.MACRO_HOST_STUB_EXIT
 if (requestedExit !== '0') process.exit(Number(requestedExit))
 const output = stage3 ? process.argv[process.argv.indexOf('--hxhx-out') + 1] : process.argv.find(arg => arg.startsWith('ocaml_output=')).slice('ocaml_output='.length)
+require('assert').strictEqual(output, path.normalize(output), 'compiler output directory must not contain parent segments')
 fs.mkdirSync(path.join(output, '_build/default'), { recursive: true })
 fs.writeFileSync(path.join(output, '_build/default/out.exe'), '#!/bin/sh\\nexit 0\\n', { mode: 0o755 })
 `, { mode: 0o755 })
@@ -180,6 +181,15 @@ printf '%s\\n' "$MACRO_HOST_STUB_HXHX"
     HXHX_MACRO_HOST_FORCE_STAGE0: '',
     HXHX_MACRO_HOST_PREFER_HXHX: '1',
     HAXE_STD_PATH: path.join(fixtureRoot, 'std'),
+  }
+  // The framework derives receipt paths from the exact directory passed here.
+  // Exercise both supported override forms without invoking a real compiler.
+  for (const override of [`${fixtureRoot}/.tmp/unused/../dynamic-host`, '.tmp/unused/../dynamic-host']) {
+    const normalized = run({ ...dynamicEnv, HXHX_MACRO_HOST_OUT_DIR: override })
+    assert.strictEqual(normalized.status, 0, normalized.stderr)
+    assert.strictEqual(normalized.stdout, `${dynamicOutput}/_build/default/out.exe\n`)
+    assert.strictEqual(fs.existsSync(`${dynamicOutput}.hxhx-macro-host-input`), false)
+    assert.strictEqual(readLeaseSnapshot(leasePath).status, 'missing')
   }
   for (const status of [75, 129, 130, 143]) {
     fs.rmSync(marker)

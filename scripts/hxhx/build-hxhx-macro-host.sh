@@ -162,11 +162,9 @@ normalize_cp() {
 
 resolve_out_dir() {
   if [ -n "$MACRO_HOST_OUT_DIR" ]; then
-    if [[ "$MACRO_HOST_OUT_DIR" != /* ]]; then
-      echo "$ROOT/$MACRO_HOST_OUT_DIR"
-    else
-      echo "$MACRO_HOST_OUT_DIR"
-    fi
+    # Reflaxe removes this exact prefix from normalized generated filenames.
+    # Normalize parent segments first so its receipt keeps relative paths.
+    node -e 'process.stdout.write(require("path").resolve(process.argv[1], process.argv[2]) + "\n")' "$ROOT" "$MACRO_HOST_OUT_DIR"
     return 0
   fi
 
