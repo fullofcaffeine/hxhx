@@ -1,6 +1,6 @@
 {
   "model": "requirements-only-runtime-selection-shadow",
-  "runtimeSourceRevision": "sha256:33c6371d2095de153098118db7449cb8d482916df6cdfc215aca8b4d0a267156",
+  "runtimeSourceRevision": "sha256:8dfae27e9208f77cea7a92962aafeca7bb709f311e425c323c7d7ad37485fdf7",
   "requirementRevision": "sha256:a3cbb062653066f29081412b948d69dda094a78a77026eb9a10ad3a00c0eaeb1",
   "schemaVersion": 1,
   "selectionMode": "full",
@@ -738,6 +738,12 @@
         "bytes": 4835
       },
       {
+        "module": "HxMethodDispatch",
+        "path": "HxMethodDispatch.ml",
+        "sha256": "sha256:d6930ec96df42362bdffc3d086dccb557c954c097905dfdd0502c766b06a9551",
+        "bytes": 4616
+      },
+      {
         "module": "HxProcess",
         "path": "HxProcess.ml",
         "sha256": "sha256:9a52750b7946ac9ee947f1006e014fcc43b3f4fe879085274f6b21e8d0529119",
@@ -896,6 +902,12 @@
         ]
       },
       {
+        "module": "HxMethodDispatch",
+        "reasons": [
+          "full_runtime_mode"
+        ]
+      },
+      {
         "module": "HxProcess",
         "reasons": [
           "full_runtime_mode"
@@ -978,6 +990,7 @@
       "HxInt",
       "HxIterator",
       "HxMap",
+      "HxMethodDispatch",
       "HxProcess",
       "HxReflect",
       "HxRuntime",
@@ -1006,6 +1019,7 @@
       "HxInt",
       "HxIterator",
       "HxMap",
+      "HxMethodDispatch",
       "HxProcess",
       "HxReflect",
       "HxRuntime",
@@ -1018,9 +1032,9 @@
       "Std",
       "haxe_CallStack"
     ],
-    "revision": "sha256:8c857396b6567877ff454f89325ad1f5d900e3a7dc3d3f166908883d19058f06"
+    "revision": "sha256:6422d95b0ea2bf316b9c20a3efc0213b2b867d70ea4c2959aad02d6ba54c3d35"
   },
-  "reportRevision": "sha256:452f9e6d70361844fcb37288b12f8c94fc1ed860e180c4d639104ecc3cd37bf9",
+  "reportRevision": "sha256:9eab022d99e0978229411597d82b06136bbf4977741d51ae53c89ae97022d7df",
   "differences": {
     "currentOnlyRoots": [
       "Date",
@@ -1030,6 +1044,7 @@
       "HxFileSystem",
       "HxIterator",
       "HxMap",
+      "HxMethodDispatch",
       "HxProcess",
       "HxReflect",
       "HxThread",
@@ -1098,6 +1113,10 @@
       },
       {
         "module": "HxMap",
+        "reason": "full_runtime_mode"
+      },
+      {
+        "module": "HxMethodDispatch",
         "reason": "full_runtime_mode"
       },
       {
@@ -2881,6 +2900,7 @@
       "HxFile",
       "HxFileStream",
       "HxFileSystem",
+      "HxMethodDispatch",
       "HxProcess",
       "HxReflect",
       "HxThread",
@@ -2918,6 +2938,12 @@
         "path": "HxFileSystem.ml",
         "sha256": "sha256:359dd208b48b1b24276c201b51aa3ebed11cf15f9f88ae8c9f3c8df1f46e5247",
         "bytes": 2987
+      },
+      {
+        "module": "HxMethodDispatch",
+        "path": "HxMethodDispatch.ml",
+        "sha256": "sha256:d6930ec96df42362bdffc3d086dccb557c954c097905dfdd0502c766b06a9551",
+        "bytes": 4616
       },
       {
         "module": "HxProcess",

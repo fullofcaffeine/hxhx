@@ -1,7 +1,7 @@
 {
   "model": "recorded-ocaml-runtime-requirements",
   "runtimeVersion": "1",
-  "runtimeSourceRevision": "sha256:33c6371d2095de153098118db7449cb8d482916df6cdfc215aca8b4d0a267156",
+  "runtimeSourceRevision": "sha256:8dfae27e9208f77cea7a92962aafeca7bb709f311e425c323c7d7ad37485fdf7",
   "compilerObservationGranularity": "module-name-only",
   "runtimeSources": [
     {
@@ -10105,6 +10105,7 @@
     "HxInt",
     "HxIterator",
     "HxMap",
+    "HxMethodDispatch",
     "HxProcess",
     "HxReflect",
     "HxRuntime",
@@ -10167,7 +10168,7 @@
     "HxString",
     "HxType"
   ],
-  "reportRevision": "sha256:fac53774945db8264f10733d0096d97690d2964d2a6cc9662554c9fcea3f8cb0",
+  "reportRevision": "sha256:c746a9232cb464a2f493ff97ce64fcbfa8fc48f59cf822cd2856128e7ee28ae4",
   "runtimeMode": "full",
   "recordedRequirementSourceKinds": [
     "compiler-infrastructure",
