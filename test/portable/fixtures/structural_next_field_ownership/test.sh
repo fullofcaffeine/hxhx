@@ -163,15 +163,22 @@ repo_root="$(cd ../../../.. && pwd)"
 fixture_root="$PWD"
 inspection_report="$(mktemp)"
 lowering_backup="$(mktemp)"
+inspector_dir="$(mktemp -d)"
 cp out/ocaml_lowering_report.json "$lowering_backup"
-trap 'cp "$lowering_backup" out/ocaml_lowering_report.json; rm -f "$inspection_report" "$lowering_backup"' EXIT
+trap 'cp "$lowering_backup" out/ocaml_lowering_report.json; rm -f "$inspection_report" "$lowering_backup"; rm -rf "$inspector_dir"' EXIT
+
+# Compile the strict inspector once; each report still gets a fresh process.
+(
+	cd "$repo_root"
+	haxe -cp packages/reflaxe.ocaml/src \
+		--macro 'nullSafety("reflaxe.ocaml")' -D reflaxe_runtime \
+		-main reflaxe.ocaml.tooling.ReflaxeOcamlRun --neko "$inspector_dir/inspect.n"
+)
 
 inspect() {
 	(
 		cd "$repo_root"
-		haxe -cp packages/reflaxe.ocaml/src \
-			--macro 'nullSafety("reflaxe.ocaml")' \
-			--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		neko "$inspector_dir/inspect.n" \
 			inspect --project "$fixture_root" --output out --require-lowering --json
 	)
 }
