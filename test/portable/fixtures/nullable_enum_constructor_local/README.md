@@ -5,7 +5,9 @@ known enum constructor. Constant folding must not change that contract.
 
 This fixture passes four nullable values to a recursive enum constructor:
 null, a conditional payload, an always-present payload, and a typedef-backed
-nullable payload. Upstream Haxe 4.3.7 establishes the expected output. The
+nullable payload. The typedef must preserve the same native enum value when
+passed to another constructor, without adding a Dynamic enum box.
+Upstream Haxe 4.3.7 establishes the expected output. The
 portable runner generates OCaml, builds it, and compares the executable output.
 
 Before the repair, the always-present local used concrete enum storage. Its

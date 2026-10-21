@@ -7820,10 +7820,13 @@ class OcamlBuilder {
 		// nullable results. Select this before generic abstract storage can add
 		// a Dynamic enum box that typed constructor matches cannot consume.
 		final nullableEnumName = isNullableEnumType(lhsType);
+		// Resolve a nullable source through typedefs before comparing identities.
+		// Its value already has nullable storage and must not gain a Dynamic box.
+		final nullableSourceEnumName = isNullableEnumType(rhs.t);
 		if (nullableEnumName != null
 			&& OcamlEnumDynamicCarrier.fromType(unwrapNullType(lhsType)) != null
-			&& nullableEnumName == fullNameOfTypeEnum(rhs.t))
-			return isNullableEnumType(rhs.t) != null ? buildExpr(rhs) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
+			&& nullableEnumName == (nullableSourceEnumName ?? fullNameOfTypeEnum(rhs.t)))
+			return nullableSourceEnumName != null ? buildExpr(rhs) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
 		final rhsDynamicCarrier = switch (followNoAbstracts(unwrapNullType(rhs.t))) {
 			case TDynamic(_):
 				true;
