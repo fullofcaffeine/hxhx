@@ -177,9 +177,15 @@ class OcamlMethodViewConversionPlan {
 		};
 	}
 
+	/** Rejects impossible class sources before inspecting a potentially large anonymous type. */
 	public static function select(value:TypedExpr, target:Type):Null<OcamlMethodViewConversion> {
-		final fields = methodFields(target);
-		final source = fields == null ? null : sourceClass(value);
+		switch (TypeTools.follow(target)) {
+			case TAnonymous(_):
+			case _:
+				return null;
+		}
+		final source = sourceClass(value);
+		final fields = source == null ? null : methodFields(target);
 		return source == null || fields == null ? null : {
 			source: source,
 			sourceType: TypeTools.toString(value.t),

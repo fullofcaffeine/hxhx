@@ -33,6 +33,23 @@ class CheckSignatures {
 				Context.fatalError(message, Context.currentPos());
 		}
 		require(OcamlMethodViewConversionPlan.methodFields(Context.getType("SignatureCases.ClosedView")) != null, "closed ordinary method view was rejected");
+		final viewType = Context.getType("SignatureCases.ClosedView");
+		final classValue = Context.typeExpr(macro new SignatureCases.ViewSource());
+		final selectedView = OcamlMethodViewConversionPlan.select(classValue, viewType);
+		require(selectedView != null
+			&& selectedView.source.name == "ViewSource"
+			&& selectedView.fields.length == 1
+			&& selectedView.fields[0].name == "read",
+			"real class source lost its exact method view");
+		for (value in [
+			Context.typeExpr(macro 7),
+			Context.typeExpr(macro(null : SignatureCases.ClosedView)),
+			Context.typeExpr(macro {read: () -> 7})
+		])
+			require(OcamlMethodViewConversionPlan.select(value, viewType) == null, "non-class source acquired a class conversion");
+		require(OcamlMethodViewConversionPlan.select(classValue, Context.typeExpr(macro {
+			read: 7
+		}).t) == null, "ordinary data fields acquired method-view semantics");
 		for (name in ["IteratorView", "IterableView", "PairIteratorView"])
 			require(OcamlMethodViewConversionPlan.methodFields(Context.getType("SignatureCases." + name)) == null,
 				"specialized iterator view was intercepted: " + name);

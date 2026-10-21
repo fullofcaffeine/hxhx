@@ -36,6 +36,14 @@ typedef ClosedView = {
 	function read():Int;
 }
 
+/** A real class source remains eligible after cheap impossible-source rejection. */
+class ViewSource {
+	public function new() {}
+
+	public function read():Int
+		return 7;
+}
+
 /** Specialized iterator representations must retain their existing runtime owner. */
 typedef IteratorView = Iterator<Int>;
 
