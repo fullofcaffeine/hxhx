@@ -3,6 +3,7 @@ import sys.io.File;
 /** Test branch rewriting with explicit decisions; discovery and DCE remain separate acceptance work. */
 class M14TypedFeatureSelectionTest {
 	static function main():Void {
+		metadataOnly();
 		check("Main", ["probe.enabled"], "enabled\nbranch\nabsent\n");
 		check("FeatureContract", [
 			"probe.late",
@@ -23,6 +24,26 @@ class M14TypedFeatureSelectionTest {
 		rejectAbsentValue();
 		check("FeatureFields", ["probe.field"], "field:effect\nselected\n");
 		Sys.println("TYPED_FEATURE_SELECTION:PASS");
+	}
+
+	/** Runtime setup changes without body rewrites, but equal feature sets retain their program owner. */
+	static function metadataOnly():Void {
+		final source = new MacroExpandedProgram([], false);
+		final names = ["runtime.second", "runtime.first", "runtime.second"];
+		final selected = TypedFeatureSelection.lower(source, names);
+		if (selected == source
+			|| source.getSelectedRuntimeFeatures().length != 0
+			|| selected.getSelectedRuntimeFeatures().join(",") != "runtime.first,runtime.second")
+			throw "metadata-only selection lost its immutable runtime decisions";
+		names.push("runtime.later");
+		if (TypedFeatureSelection.lower(selected, ["runtime.first", "runtime.second"]) != selected)
+			throw "equivalent feature order or duplicate names changed the program owner";
+		final removed = TypedFeatureSelection.lower(selected, []);
+		if (removed == selected
+			|| removed.getSelectedRuntimeFeatures().length != 0
+			|| selected.getSelectedRuntimeFeatures().join(",") != "runtime.first,runtime.second"
+			|| TypedFeatureSelection.lower(removed, []) != removed)
+			throw "feature removal mutated or reused the wrong program";
 	}
 
 	/** No value is fabricated for a two-argument selection whose feature is absent. */

@@ -14,6 +14,14 @@ function lower(program:MacroExpandedProgram, activeFeatures:Array<String>):Macro
 			throw "feature selection requires literal feature names";
 		active.set(name, true);
 	}
+	final selectedFeatures = [for (name in active.keys()) name];
+	selectedFeatures.sort((a, b) -> a < b ? -1 : a > b ? 1 : 0);
+	final previousFeatures = program.getSelectedRuntimeFeatures();
+	var changedProgram = previousFeatures.length != selectedFeatures.length;
+	if (!changedProgram)
+		for (index in 0...selectedFeatures.length)
+			if (previousFeatures[index] != selectedFeatures[index])
+				changedProgram = true;
 	function expression(node:TypedExpr):TypedExpr {
 		final children = node.getExpressions();
 		switch node.getTag() {
@@ -76,9 +84,10 @@ function lower(program:MacroExpandedProgram, activeFeatures:Array<String>):Macro
 					changedClass ? owner.withMembers({functions: functions, fields: owner.getFields(), initializers: fields}) : owner;
 				}
 			];
+			if (changedModule) changedProgram = true;
 			changedModule ? module.withTypedClasses(classes) : module;
 		}
 	];
-	// Runtime setup can depend on a selected feature even when no expression changed.
-	return new MacroExpandedProgram(modules, program.macroMode, program.getGeneratedOcamlModules(), activeFeatures);
+	// Metadata-only changes still need a new program; a repeated selection preserves its exact owner.
+	return changedProgram ? new MacroExpandedProgram(modules, program.macroMode, program.getGeneratedOcamlModules(), selectedFeatures) : program;
 }

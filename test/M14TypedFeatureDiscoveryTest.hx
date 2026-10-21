@@ -12,8 +12,14 @@ class M14TypedFeatureDiscoveryTest {
 		final source = load(module);
 		final discovered = TypedFeatureDiscovery.allRetained(source);
 		final lowered = TypedFeatureSelection.lower(source, discovered.namesFor(source));
-		if (module == "FeatureShadowing" && lowered != source)
-			throw "discovery or selection rewrote ordinary shadowing declarations";
+		if (module == "FeatureShadowing") {
+			if (lowered.getTypedModules()[0] != source.getTypedModules()[0]
+				|| lowered.getTypedProgramRevision().getCanonicalIdentity() != source.getTypedProgramRevision().getCanonicalIdentity())
+				throw "discovery or selection rewrote ordinary shadowing declarations";
+			if (source.getSelectedRuntimeFeatures().length != 0
+				|| lowered.getSelectedRuntimeFeatures().join(",") != discovered.namesFor(source).join(","))
+				throw "shadowing selection lost immutable runtime metadata";
+		}
 		M14GenericConstructorArgumentTest.assertRuntime(lowered.getTypedModules()[0], module, expected);
 		Sys.println("TYPED_FEATURE_DISCOVERY:" + module + ":PASS");
 	}
