@@ -5805,18 +5805,6 @@ class OcamlBuilder {
 														[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
 											}
 
-											inline function coerceEnumCtorArg(ea:{name:String, opt:Bool, t:Type}, arg:TypedExpr):OcamlExpr {
-												// Optional enum args behave like `Null<Enum>` and are represented as `Obj.t`.
-												// Box when present so they can safely carry `hx_null` when omitted.
-												final enumName = ea.opt ? fullNameOfTypeEnum(ea.t) : null;
-												if (enumName != null) {
-													final asObj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(arg)]);
-													return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
-														[OcamlExpr.EConst(OcamlConst.CString(enumName)), asObj]);
-												}
-												return coerceForAssignment(ea.t, arg);
-											}
-
 											final builtArgs:Array<OcamlExpr> = [];
 											if (expectedArgs != null) {
 												for (i in 0...args.length) {
@@ -5824,7 +5812,9 @@ class OcamlBuilder {
 														builtArgs.push(buildExpr(args[i]));
 														continue;
 													}
-													builtArgs.push(coerceEnumCtorArg(expectedArgs[i], args[i]));
+													// Optional enum parameters already carry Null<Enum> in their
+													// signature. Use its native nullable storage, not a Dynamic box.
+													builtArgs.push(coerceForAssignment(expectedArgs[i].t, args[i]));
 												}
 												if (args.length < expectedArgs.length) {
 													for (i in args.length...expectedArgs.length) {
