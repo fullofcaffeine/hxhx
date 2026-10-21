@@ -5858,6 +5858,15 @@ class OcamlBuilder {
 				switch (followNoAbstracts(e.t)) {
 					case TDynamic(_):
 						return coerceForAssignment(e.t, e1);
+					case TAnonymous(_) if (shouldAnonUseHxAnon(e.t)):
+						// Contextual object fields can insert a class-to-structure cast.
+						// Materialize the same bound-member view as an assignment before
+						// the outer field relies on the structural HxAnon representation.
+						switch (followNoAbstracts(unwrapNullType(e1.t))) {
+							case TInst(_, _) if (!isDynamicLike(e1.t)):
+								return coerceForAssignment(e.t, e1);
+							case _:
+						}
 					case _:
 				}
 				// Haxe uses casts for nullable primitive flows (boxing/unboxing + flow typing).
