@@ -35,6 +35,10 @@ on:
         description: "Absolute Stage0 emit timeout in seconds"
         required: true
         default: "3600"
+      stage0_telemetry_class:
+        description: "Optional exact Haxe class for detailed preparation and generation diagnostics"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -113,6 +117,9 @@ jobs:
 
       - name: Run bootstrap regen benchmark
         id: bench
+        env:
+          HXHX_STAGE0_TELEMETRY_CLASS: ${{ github.event.inputs.stage0_telemetry_class }}
+          HXHX_STAGE0_TELEMETRY_DETAIL: ${{ github.event.inputs.stage0_telemetry_class != '' && '1' || '0' }}
         run: |
           set -euo pipefail
           REPORT_DIR="$RUNNER_TEMP/bootstrap_regen_bench"

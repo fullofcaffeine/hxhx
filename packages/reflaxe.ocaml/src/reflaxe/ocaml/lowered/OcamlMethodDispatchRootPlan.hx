@@ -36,9 +36,14 @@ class OcamlMethodDispatchRootPlan {
 
 	var ordinal:Int = 0;
 
-	public function new(expression:TypedExpr, binding:OcamlFunctionPlanBinding, ?result:Type, ?expected:Type) {
+	public function new(expression:TypedExpr, binding:OcamlFunctionPlanBinding, ?result:Type, ?expected:Type,
+			?progress:reflaxe.ocaml.lowered.OcamlFunctionPreparationTelemetry.OcamlFunctionSyntaxPhase->Void) {
 		this.binding = binding;
+		if (progress != null)
+			progress(MethodViews);
 		views = new OcamlMethodViewConversionPlan(expression, expected, result);
+		if (progress != null)
+			progress(MethodOccurrences);
 		visit(expression);
 	}
 

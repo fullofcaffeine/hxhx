@@ -1185,18 +1185,30 @@ class OcamlFunctionPlanRegistry {
 		observation as a reusable cache entry while removing duplicate observations
 		from adjacent plan and identity lookups.
 	**/
-	public function functionSyntaxInputFor(data:ClassFuncData):OcamlFunctionSyntaxInput {
+	public function functionSyntaxInputFor(data:ClassFuncData,
+			?progress:reflaxe.ocaml.lowered.OcamlFunctionPreparationTelemetry.OcamlFunctionSyntaxPhase->Void):OcamlFunctionSyntaxInput {
+		if (progress != null)
+			progress(ObserveBody);
 		final sealed = requiredSealedFunctionRecord(data);
 		final result = switch (haxe.macro.TypeTools.follow(data.field.type)) {
 			case TFun(_, result): result;
 			case _: null;
 		};
+		if (progress != null)
+			progress(ConstructionBoundary);
+		final constructionBoundary = constructionBoundaryForPlan(data, sealed.plan);
+		if (progress != null)
+			progress(GenericTransport);
+		final genericTransport = genericTransports.plan(data);
+		final methodDispatch = new OcamlMethodDispatchRootPlan(data.expr, sealed.plan.binding, result, null, progress);
+		if (progress != null)
+			progress(Ready);
 		return {
 			plan: sealed.plan,
 			localIdentities: sealed.localIdentities,
-			constructionBoundary: constructionBoundaryForPlan(data, sealed.plan),
-			genericTransport: genericTransports.plan(data),
-			methodDispatch: new OcamlMethodDispatchRootPlan(data.expr, sealed.plan.binding, result)
+			constructionBoundary: constructionBoundary,
+			genericTransport: genericTransport,
+			methodDispatch: methodDispatch
 		};
 	}
 

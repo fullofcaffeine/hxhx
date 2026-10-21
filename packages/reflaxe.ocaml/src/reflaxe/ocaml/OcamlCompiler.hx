@@ -531,8 +531,18 @@ class OcamlCompiler extends DirectToStringCompiler {
 				for (owner in moduleToClasses.get(moduleId) ?? [])
 					owner
 		];
+		#if macro
+		profileLogLine("reflaxe.ocaml: generic_transport_selection_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		#end
 		functionPlanRegistry.genericTransports.select(classes);
+		#if macro
+		profileLogLine("reflaxe.ocaml: generic_transport_selection_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		profileLogLine("reflaxe.ocaml: method_view_selection_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		#end
 		functionPlanRegistry.methodDispatch.select(classes);
+		#if macro
+		profileLogLine("reflaxe.ocaml: method_view_selection_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		#end
 		#if macro
 		profileLogLine("reflaxe.ocaml: callable_selection_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
 		#end
@@ -2560,7 +2570,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 					case TFun(_, ret): ret;
 					case _: ctorFunc.expr.t;
 				};
-				final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(ctorFunc);
+				final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(ctorFunc,
+					functionPreparationTelemetry == null ? null : functionPreparationTelemetry.syntaxProgressFor(ctorFunc));
 				constructionBoundary = syntaxInput.constructionBoundary;
 				constructorDeclaration = projectDeclarationSignature(argInfo.map(argument -> argument.t), ctorReturnType, representationRegistry,
 					ocamlTypeExprFromHaxeType, ctx);
@@ -2782,7 +2793,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 						case TFun(_, ret): ret;
 						case _: f.expr.t;
 					};
-					final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(f);
+					final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(f,
+						functionPreparationTelemetry == null ? null : functionPreparationTelemetry.syntaxProgressFor(f));
 					final sharedMethod = targetFunctionCatalog.find(f.id);
 					#if macro
 					if (Context.definedValue("reflaxe_ocaml_target_function_test_require_shared") == classType.module
@@ -2911,7 +2923,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				case TFun(_, ret): ret;
 				case _: f.expr.t;
 			};
-			final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(f);
+			final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(f,
+				functionPreparationTelemetry == null ? null : functionPreparationTelemetry.syntaxProgressFor(f));
 			final sharedFunction = targetFunctionCatalog.find(f.id);
 			#if macro
 			final requiredSharedFunction = Context.definedValue("reflaxe_ocaml_target_function_test_require_shared");
