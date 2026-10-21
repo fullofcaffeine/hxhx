@@ -179,6 +179,12 @@
   ],
   "testFixtures": [
     {
+      "path": "test/method_dispatch_runtime/Observer.ml",
+      "kind": "native-target-test-observer",
+      "productionModule": "HxMethodDispatch",
+      "whyOcaml": "An independent native consumer checks opaque method-entry storage, concrete receiver layout validation, closure lifetime, concurrent registration, and rejection paths. Haxe owns method selection, signatures, and generated binders; this file owns assertions only."
+    },
+    {
       "path": "test/reflaxe_ocaml_shared_construction/Observer.ml",
       "kind": "native-target-test-observer",
       "productionModule": "reflaxe.ocaml.target.OcamlTargetConstructionLowerer",

@@ -184,6 +184,15 @@
       "license": "MIT"
     },
     {
+      "module": "HxMethodDispatch",
+      "scope": "application",
+      "files": [{ "path": "HxMethodDispatch.ml", "sha256": "d6930ec96df42362bdffc3d086dccb557c954c097905dfdd0502c766b06a9551" }],
+      "dependencies": ["HxAnon", "HxRuntime", "HxType"],
+      "duneLibraries": ["threads"],
+      "profiles": ["metal", "portable"],
+      "license": "MIT"
+    },
+    {
       "module": "HxProcess",
       "scope": "application",
       "files": [{ "path": "HxProcess.ml", "sha256": "9a52750b7946ac9ee947f1006e014fcc43b3f4fe879085274f6b21e8d0529119" }],
