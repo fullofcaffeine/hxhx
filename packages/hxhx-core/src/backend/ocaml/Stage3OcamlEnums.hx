@@ -12,7 +12,7 @@ import TypedExactEnumConstructorSource.TypedExactEnumConstructorCall;
 	owners. Haxe constructor indexes retain declaration order, while OCaml numbers
 	singletons and payload constructors separately.
 
-	The native payload contract covers Int, Bool, String, Dynamic, runtime type values, and boxed ordinary enums,
+	The native payload contract covers Int, Bool, String, Dynamic, anonymous records, runtime type values, and boxed ordinary enums,
 	including their optional and nullable forms. Other payload representations fail
 	explicitly until their typed conversion is implemented.
 **/
@@ -98,6 +98,7 @@ class Stage3OcamlEnums {
 			case NativeString: "string";
 			case DynamicValue: "Obj.t";
 			case RuntimeTypeValue: "Obj.t";
+			case AnonymousRecord(_): "Obj.t";
 			case EnumBox(identity):
 				if (!owners.exists(identity))
 					throw "OCaml enum payload representation is not implemented: " + declaration + " / " + identity;
@@ -147,8 +148,9 @@ class Stage3OcamlEnums {
 		Validate the selected constructor, then evaluate its arguments once in Haxe
 		order. Native variants need every payload slot, so omitted optional arguments
 		receive null. Nested lets preserve Haxe's argument evaluation order.
-		The active executable must supply each Dynamic operand's retained type;
-		the exact constructor plan owns its destination and selects the conversion.
+		The active executable supplies each Dynamic operand's retained source type
+		and each record operand's source and expected destination. The exact
+		constructor plan owns the destination and selects the conversion.
 	**/
 	public function call(selected:TypedExactEnumConstructorCall, emit:HxExpr->String, names:Stage3OcamlLocalNames,
 			argumentFacts:HxExpr->Null<TypedBackendCallArgument>):String {
@@ -177,6 +179,22 @@ class Stage3OcamlEnums {
 				for (index in 0...args.length) {
 					final rendered = emit(operands[index]);
 					final stored = switch (constructor.payloads[index].storage) {
+						case AnonymousRecord(key), NullableValue(AnonymousRecord(key)):
+							if (index >= selected.arguments.length || operands[index].match(ENull)) {
+								"Obj.repr (" + rendered + ")";
+							} else {
+								final fact = argumentFacts(operands[index]);
+								if (fact == null
+									|| fact.expression != operands[index]
+									|| fact.expectedType == null
+									|| TyAliasExpansion.revealNonNullable(fact.expectedType).getSemanticKey() != key
+									|| !TyAliasExpansion.revealNonNullable(fact.type).isAnonymous()
+									|| fact.type.hasUnknownComponent())
+									throw "OCaml record enum argument requires its exact typed record operand and destination";
+								// The typed object owner already stores fields, including Bool,
+								// inside this carrier. Preserve the object instead of rebuilding it.
+								rendered;
+							}
 						case DynamicValue, NullableValue(DynamicValue):
 							// Literal or omitted null has one runtime carrier. Other values
 							// need their source type so Bool cannot become integer 0 or 1.

@@ -12,6 +12,9 @@ enum Stage3OcamlEnumPayload {
 	/** Class<T> and Enum<T> retain the existing opaque HxType value, never an instance. */
 	RuntimeTypeValue;
 
+	/** Preserve one exact anonymous-record contract in its existing HxAnon carrier. */
+	AnonymousRecord(semanticKey:String);
+
 	EnumBox(owner:String);
 
 	/** Null and a present value share the runtime's Obj.t boundary without losing either value. */
@@ -110,6 +113,9 @@ class Stage3OcamlEnumPlan {
 	}
 
 	static function requiredPayload(type:TyType, declaration:String):Stage3OcamlEnumPayload {
+		final record = TyAliasExpansion.reveal(type);
+		if (record.isAnonymous() && !record.hasUnknownComponent())
+			return AnonymousRecord(record.getSemanticKey());
 		if (type.isDynamic())
 			return DynamicValue;
 		if (type.getSemanticKey() == TyType.fromHintText("Int").getSemanticKey())
