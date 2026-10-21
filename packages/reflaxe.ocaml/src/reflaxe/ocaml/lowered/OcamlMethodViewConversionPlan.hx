@@ -5,6 +5,7 @@ import haxe.ds.ObjectMap;
 import haxe.macro.Type;
 import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
+import reflaxe.ocaml.lowered.OcamlMethodDispatchSignature.hasClosedDispatchSourceType;
 
 /** An exact final expression that preserves a class object under a method-only view. */
 typedef OcamlMethodViewConversion = {
@@ -148,7 +149,7 @@ class OcamlMethodViewConversionPlan {
 						case _: return null;
 					}
 				}
-				definition.fields.copy();
+				hasClosedDispatchSourceType(type) ? definition.fields.copy() : null;
 			case _: null;
 		};
 	}

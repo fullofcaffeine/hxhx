@@ -6,8 +6,9 @@ import reflaxe.ocaml.lowered.OcamlMethodDispatchSignature;
 import reflaxe.ocaml.lowered.OcamlMethodDispatchSignature.selectMethodSignature;
 import reflaxe.ocaml.lowered.OcamlMethodDispatchSignature.requireMethodSignature;
 import reflaxe.ocaml.lowered.OcamlMethodDispatchSignature.requireMethodNativeSignature;
+import reflaxe.ocaml.lowered.OcamlMethodViewConversionPlan;
 
-/** Tests signature identity separately from method admission and native generation. */
+/** Checks method-view admission and signature identity before native generation. */
 class CheckSignatures {
 	public static function run():Void {
 		final declarations:Map<String, ClassType> = [];
@@ -31,6 +32,10 @@ class CheckSignatures {
 			if (!condition)
 				Context.fatalError(message, Context.currentPos());
 		}
+		require(OcamlMethodViewConversionPlan.methodFields(Context.getType("SignatureCases.ClosedView")) != null, "closed ordinary method view was rejected");
+		for (name in ["IteratorView", "IterableView", "PairIteratorView"])
+			require(OcamlMethodViewConversionPlan.methodFields(Context.getType("SignatureCases." + name)) == null,
+				"specialized iterator view was intercepted: " + name);
 		final first = select("First", "convert", [TIdent("int")], TIdent("string"));
 		final second = select("Second", "convert", [TIdent("int")], TIdent("string"));
 		require(first != null && second != null, "closed signatures were rejected");

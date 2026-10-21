@@ -30,3 +30,17 @@ class Payload {
 interface Nominal {
 	function payload():Payload;
 }
+
+/** A closed ordinary method view remains eligible for checked class dispatch. */
+typedef ClosedView = {
+	function read():Int;
+}
+
+/** Specialized iterator representations must retain their existing runtime owner. */
+typedef IteratorView = Iterator<Int>;
+
+/** Iterable factories return the specialized iterator representation too. */
+typedef IterableView = Iterable<Int>;
+
+/** Mirrors the macro host's map iterator without depending on compiler types. */
+typedef PairIteratorView = Iterator<{key:String, value:Array<Payload>}>;

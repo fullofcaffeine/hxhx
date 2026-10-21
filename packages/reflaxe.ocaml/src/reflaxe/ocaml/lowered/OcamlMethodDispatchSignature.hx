@@ -98,6 +98,17 @@ function requireMethodNativeSignature(signature:OcamlMethodDispatchSignature, na
 			throw "reflaxe.ocaml [ocaml-method-dispatch:changed-native-signature]: method argument carrier changed";
 }
 
+/**
+	Checks source eligibility without authorizing a native method binding.
+
+	Structural dispatch uses this before selecting a view. Specialized iterator
+	storage and methods with unresolved types remain with their existing owners.
+	A selected method still needs an independently proved native signature.
+**/
+function hasClosedDispatchSourceType(type:Type):Bool {
+	return closedTypeId(type) != null;
+}
+
 private function signatureKey(signature:OcamlMethodDispatchSignature):String {
 	return "method-dispatch:" + Sha256.encode(frame([
 		"ocaml-method-dispatch-signature-v1",
