@@ -94,7 +94,12 @@ class OcamlMethodDispatchRootPlan {
 		TypedExprTools.iter(expression, visit);
 	}
 
-	/** Recognizes the source operation only; native signature selection is separate. */
+	/**
+		Recognizes method calls and captures; native signature selection is separate.
+
+		Ordinary data fields, including function-valued fields, cannot select this
+		dispatch path. Reject them before inspecting a potentially large receiver type.
+	**/
 	public static function occurrence(expression:TypedExpr):Null<{
 		receiver:TypedExpr,
 		contract:Null<ClassType>,
@@ -121,21 +126,24 @@ class OcamlMethodDispatchRootPlan {
 			}
 		return switch (callee.expr) {
 			case TField(receiver, access):
-				final contract = interfaceClass(receiver.t);
 				final field = switch (access) {
 					case FInstance(_, _, field) | FClosure(_, field) | FAnon(field): field.get();
 					case _: null;
 				};
-				final structural = contract == null && OcamlMethodViewConversionPlan.methodFields(receiver.t) != null;
-				if ((!structural && contract == null) || field == null) null else switch (field.kind) {
-					case FMethod(_): {
-							receiver: receiver,
-							contract: contract,
-							field: field,
-							arguments: arguments
-						};
-					case _: null;
+				if (field == null)
+					return null;
+				switch (field.kind) {
+					case FMethod(_):
+					case _: return null;
 				}
+				final contract = interfaceClass(receiver.t);
+				final structural = contract == null && OcamlMethodViewConversionPlan.methodFields(receiver.t) != null;
+				if (!structural && contract == null) null else {
+					receiver: receiver,
+					contract: contract,
+					field: field,
+					arguments: arguments
+				};
 			case _: null;
 		};
 	}

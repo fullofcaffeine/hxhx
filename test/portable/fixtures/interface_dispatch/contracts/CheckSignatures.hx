@@ -11,6 +11,7 @@ import reflaxe.ocaml.lowered.OcamlMethodViewConversionPlan;
 /** Checks method-view admission and signature identity before native generation. */
 class CheckSignatures {
 	public static function run():Void {
+		CheckMethodOccurrences.run();
 		final declarations:Map<String, ClassType> = [];
 		for (type in Context.getModule("SignatureCases"))
 			switch (type) {
