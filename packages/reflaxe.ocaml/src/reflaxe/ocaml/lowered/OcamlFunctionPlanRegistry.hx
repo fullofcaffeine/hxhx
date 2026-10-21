@@ -160,6 +160,7 @@ typedef OcamlFunctionSyntaxInput = {
 	final localIdentities:LexicalLocalIdentityPlan;
 	final constructionBoundary:Null<OcamlCallableBoundaryPlan>;
 	final genericTransport:OcamlGenericTransportProgram.OcamlGenericTransportFunction;
+	final methodDispatch:OcamlMethodDispatchRootPlan;
 }
 
 /**
@@ -367,6 +368,7 @@ class OcamlFunctionPlanRegistry {
 	var currentProgramRevision:Null<String> = null;
 
 	public var genericTransports(default, null) = new OcamlGenericTransportProgram();
+	public var methodDispatch(default, null) = new OcamlMethodDispatchProgram();
 
 	final nativeEnumResults = new OcamlNativeEnumResultAdmission();
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
@@ -404,6 +406,7 @@ class OcamlFunctionPlanRegistry {
 			throw "reflaxe.ocaml [ocaml-lowering:missing-program-revision]: the target-selected program revision is empty";
 		currentProgramRevision = programRevision;
 		genericTransports = new OcamlGenericTransportProgram();
+		methodDispatch = new OcamlMethodDispatchProgram();
 		nativeEnumResults.beginProgram(programRevision);
 		plansByOrigin.clear();
 		originsByFunction.clear();
@@ -1188,7 +1191,8 @@ class OcamlFunctionPlanRegistry {
 			plan: sealed.plan,
 			localIdentities: sealed.localIdentities,
 			constructionBoundary: constructionBoundaryForPlan(data, sealed.plan),
-			genericTransport: genericTransports.plan(data)
+			genericTransport: genericTransports.plan(data),
+			methodDispatch: new OcamlMethodDispatchRootPlan(data.expr, sealed.plan.binding)
 		};
 	}
 
@@ -1928,6 +1932,7 @@ class OcamlFunctionPlanRegistry {
 	**/
 	public function validateCallGraph():Void {
 		genericTransports.validate();
+		methodDispatch.validate();
 		for (call in callDecisions()) {
 			if (requiresDeclaredCallable(call))
 				requireCallableBoundary(call);

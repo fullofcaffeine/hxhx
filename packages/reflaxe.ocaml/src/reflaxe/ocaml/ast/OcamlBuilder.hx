@@ -6,6 +6,8 @@ import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.representationsMat
 import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromParameters;
 import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromTypes;
 import reflaxe.ocaml.ast.OcamlDeclarationSignature.projectDeclarationSignature;
+import reflaxe.ocaml.lowered.OcamlMethodDispatchRootPlan;
+import reflaxe.ocaml.ast.OcamlMethodDispatchUseSyntax.buildMethodDispatchUse;
 #if (macro || reflaxe_runtime)
 import haxe.macro.Expr.Binop;
 import haxe.macro.Expr;
@@ -347,6 +349,7 @@ class OcamlBuilder {
 	final objRefLocals:Map<Int, Bool> = [];
 
 	var tmpId:Int = 0;
+	var currentMethodDispatchRoot:Null<OcamlMethodDispatchRootPlan> = null;
 	final targetLiteralRuntimeUseCountBySource:Map<String, Int> = [];
 
 	// Tracks the exact lexical loop targets active while syntax builds one sealed
@@ -4289,6 +4292,9 @@ class OcamlBuilder {
 	}
 
 	public function buildExpr(e:TypedExpr):OcamlExpr {
+		final methodUse = currentMethodDispatchRoot == null ? null : currentMethodDispatchRoot.useFor(e);
+		if (methodUse == null && OcamlMethodDispatchRootPlan.occurrence(e) != null)
+			throw "reflaxe.ocaml [ocaml-method-dispatch:missing-use]: interface method requires its final root plan";
 		final transportCall = currentGenericTransportFunction == null ? null : currentGenericTransportFunction.calls.get(e);
 		final anonymousLiteralCandidate = OcamlAnonymousStructurePlan.isAdmittedLiteralCandidate(e);
 		final plannedAnonymousLiteral = currentAnonymousStructurePlan == null
@@ -4336,6 +4342,9 @@ class OcamlBuilder {
 			case _: null;
 		};
 		final built:OcamlExpr = switch (e.expr) {
+			case _ if (methodUse != null):
+				buildMethodDispatchUse(methodUse, ctx, representationRegistry, functionPlanRegistry.methodDispatch, typeExprFromHaxeType, buildExpr,
+					coerceForAssignment, freshTmp, OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile));
 			case TConst(_) if (targetLiteral != null):
 				buildTargetLiteral(targetLiteral, e.t, e.pos);
 			case TCall(_, _) if (plannedStringFromCharCode != null):
@@ -9408,6 +9417,8 @@ class OcamlBuilder {
 		currentLocalStoragePlan = storagePlan;
 		currentLocalIdentities = localIdentities;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(expression, expressionPlan, representationRegistry);
+		final previousMethodDispatchRoot = currentMethodDispatchRoot;
+		currentMethodDispatchRoot = new OcamlMethodDispatchRootPlan(expression, validatedPlan.binding);
 		currentCallPlan = validatedPlan.calls;
 		currentFunctionPlanBinding = validatedPlan.binding;
 		currentContainerElementPlan = validatedPlan.containerElements;
@@ -9436,6 +9447,7 @@ class OcamlBuilder {
 		currentControlPlan = validatedPlan.controls;
 		currentLoopTargetIds = [];
 		final result = buildExpr(expression);
+		currentMethodDispatchRoot = previousMethodDispatchRoot;
 		currentCallPlan = previousCallPlan;
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalIdentities = previousLocalIdentities;
@@ -9508,6 +9520,8 @@ class OcamlBuilder {
 		currentLocalStoragePlan = storagePlan;
 		currentLocalIdentities = localIdentities;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(rhs, expressionPlan, representationRegistry);
+		final previousMethodDispatchRoot = currentMethodDispatchRoot;
+		currentMethodDispatchRoot = new OcamlMethodDispatchRootPlan(rhs, validatedPlan.binding);
 		currentCallPlan = validatedPlan.calls;
 		currentFunctionPlanBinding = validatedPlan.binding;
 		currentContainerElementPlan = validatedPlan.containerElements;
@@ -9536,6 +9550,7 @@ class OcamlBuilder {
 		currentControlPlan = validatedPlan.controls;
 		currentLoopTargetIds = [];
 		final result = coerceForAssignment(lhsType, rhs);
+		currentMethodDispatchRoot = previousMethodDispatchRoot;
 		currentCallPlan = previousCallPlan;
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalIdentities = previousLocalIdentities;
@@ -9707,8 +9722,10 @@ class OcamlBuilder {
 		value:Null<TypedExpr>
 	}>,
 			bodyExpr:TypedExpr, functionPlan:OcamlSealedFunctionPlan, localIdentities:LexicalLocalIdentityPlan, ?expectedReturnType:Null<Type>,
-			preserveDeclarationSignature:Bool = false,
-			?genericTransport:reflaxe.ocaml.lowered.OcamlGenericTransportProgram.OcamlGenericTransportFunction):OcamlBuiltFunction {
+			preserveDeclarationSignature:Bool = false, ?genericTransport:reflaxe.ocaml.lowered.OcamlGenericTransportProgram.OcamlGenericTransportFunction,
+			?methodDispatch:OcamlMethodDispatchRootPlan):OcamlBuiltFunction {
+		final previousMethodDispatchRoot = currentMethodDispatchRoot;
+		currentMethodDispatchRoot = methodDispatch;
 		final previousGenericTransport = currentGenericTransport;
 		final previousGenericTransportFunction = currentGenericTransportFunction;
 		currentGenericTransportFunction = genericTransport;
@@ -9985,6 +10002,7 @@ class OcamlBuilder {
 
 		currentGenericTransport = previousGenericTransport;
 		currentGenericTransportFunction = previousGenericTransportFunction;
+		currentMethodDispatchRoot = previousMethodDispatchRoot;
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalRepresentationPlan = previousLocalRepresentationPlan;
 		currentContainerElementPlan = previousContainerElementPlan;

@@ -22,6 +22,7 @@ class Child extends Base {
 
 class Main {
 	static function main() {
+		StatefulDispatch.check();
 		final i:IFoo = new Child();
 		Sys.println("foo=" + i.foo());
 		Sys.println("OK interface_dispatch");

@@ -124,6 +124,9 @@ import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlMonomorphicClassPlanner;
 import reflaxe.ocaml.lowered.OcamlInstanceMethodCatalog.collectInstanceMethods;
 import reflaxe.ocaml.lowered.OcamlInstanceMethodCatalog.declaredInstanceMethods;
+import reflaxe.ocaml.lowered.OcamlMethodDispatchClassPlan.selectClassMethodEntries;
+import reflaxe.ocaml.lowered.OcamlMethodDispatchClassPlan.sealClassMethodRegistration;
+import reflaxe.ocaml.ast.OcamlMethodDispatchClassSyntax.buildClassMethodRegistration;
 import reflaxe.ocaml.lowered.OcamlNullablePrimitiveFieldDefaultPlan;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlUnrepresentedFieldDefaultPlan;
@@ -529,6 +532,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 					owner
 		];
 		functionPlanRegistry.genericTransports.select(classes);
+		functionPlanRegistry.methodDispatch.select(classes);
 		#if macro
 		profileLogLine("reflaxe.ocaml: callable_selection_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
 		#end
@@ -2231,71 +2235,17 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 		}
 
-		// Interface dispatch surface (M10 strict portable):
-		//
-		// We do not emit constructors/implementations for interfaces, but we do emit a
-		// record type carrying method fields so interface-typed callsites can annotate
-		// receivers with a concrete OCaml type (`ifoo_t`) instead of failing with
-		// "unbound type constructor".
+		// Ordinary interfaces preserve the original class object. Calls recover a
+		// checked method closure, so an interface must not invent a record layout.
+		// The standard IMap carrier has its own specialized declaration and calls.
 		if (classType.isInterface && !isOcamlNativeSurface) {
-			function buildDispatchMethodType(haxeMethodType:Type):OcamlTypeExpr {
-				final selfT = OcamlTypeExpr.TIdent("Obj.t");
-				return switch (haxeMethodType) {
-					case TFun(args, ret):
-						var outT = ocamlTypeExprFromHaxeType(ret);
-						if (args.length == 0) {
-							outT = OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent("unit"), outT);
-						} else {
-							for (i in 0...args.length) {
-								final a = args[args.length - 1 - i];
-								outT = OcamlTypeExpr.TArrow(ocamlTypeExprFromHaxeType(a.t), outT);
-							}
-						}
-						OcamlTypeExpr.TArrow(selfT, outT);
-					case _:
-						OcamlTypeExpr.TIdent("Obj.t");
-				}
-			}
-
-			function collectInterfaceMethodFields(iface:ClassType, order:Array<String>, byName:Map<String, ClassField>, seen:Map<String, Bool>):Void {
-				for (edge in iface.interfaces) {
-					collectInterfaceMethodFields(edge.t.get(), order, byName, seen);
-				}
-				for (field in iface.fields.get()) {
-					if (field == null)
-						continue;
-					switch (field.kind) {
-						case FMethod(_):
-							if (!seen.exists(field.name)) {
-								seen.set(field.name, true);
-								order.push(field.name);
-							}
-							byName.set(field.name, field);
-						case _:
-					}
-				}
-			}
-
-			final interfaceMethodOrder:Array<String> = [];
-			final interfaceMethodByName:Map<String, ClassField> = [];
-			final interfaceSeen:Map<String, Bool> = [];
-			collectInterfaceMethodFields(classType, interfaceMethodOrder, interfaceMethodByName, interfaceSeen);
-
-			if (interfaceMethodOrder.length > 0) {
-				final interfaceTypeFields:Array<OcamlTypeRecordField> = [];
-				for (methodName in interfaceMethodOrder) {
-					final methodField = interfaceMethodByName.get(methodName);
-					if (methodField == null)
-						continue;
-					interfaceTypeFields.push({
-						name: ctx.ocamlRecordLabel(methodName),
-						isMutable: false,
-						typ: buildDispatchMethodType(methodField.type)
-					});
-				}
-				final instanceTypeName = ctx.scopedInstanceTypeName(classType.module, classType.name);
-				registerTypeDeclaration(classType.module, declareInstanceRecord({typeName: instanceTypeName, fields: interfaceTypeFields}));
-			}
+			final declaration:OcamlTypeDecl = if (reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract.isIMapClass(classType)) {
+				reflaxe.ocaml.ast.OcamlIMapInterfaceSyntax.buildDeclaration(classType, ctx.scopedInstanceTypeName(classType.module, classType.name),
+					ctx.ocamlRecordLabel, ocamlTypeExprFromHaxeType);
+			} else {
+				{name: ctx.scopedInstanceTypeName(classType.module, classType.name), params: [], kind: OcamlTypeDeclKind.Alias(OcamlTypeExpr.TIdent("Obj.t"))};
+			};
+			registerTypeDeclaration(classType.module, declaration);
 		}
 
 		// Any concrete (non-interface) Haxe class is instantiable, even if it only
@@ -2614,7 +2564,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				constructorDeclaration = projectDeclarationSignature(argInfo.map(argument -> argument.t), ctorReturnType, representationRegistry,
 					ocamlTypeExprFromHaxeType, ctx);
 				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, syntaxInput.plan, syntaxInput.localIdentities, ctorReturnType, false,
-					syntaxInput.genericTransport)
+					syntaxInput.genericTransport, syntaxInput.methodDispatch)
 					.expression) {
 					case OcamlExpr.EFun(params, body):
 						createParams = params;
@@ -2632,8 +2582,12 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 
 			function buildSelfInit(emissionRole:String):OcamlExpr {
-				final classMarker = classIdentityMarker(classType, fullName, emissionRole);
-				return if (hasInstanceVarsLocal || isDispatch) {
+				final markerValue = classIdentityMarker(classType, fullName, emissionRole);
+				final methodEntries = methodCatalog == null ? [] : selectClassMethodEntries(classType, methodCatalog,
+					(parameters, result) -> projectDeclarationSignature(parameters, result, representationRegistry, ocamlTypeExprFromHaxeType, ctx),
+					moduleIdToOcamlModuleName(classType.module));
+				final classMarker = methodEntries.length == 0 ? markerValue : OcamlExpr.EIdent("__hx_method_class");
+				final record = if (hasInstanceVarsLocal || isDispatch) {
 					final fields:Array<OcamlRecordField> = [];
 					if (isDispatch && dispatchLayoutFields != null) {
 						function wrapperFor(owner:ClassType, methodType:Type, ownerBindingName:String):OcamlExpr {
@@ -2734,6 +2688,22 @@ class OcamlCompiler extends DirectToStringCompiler {
 				} else {
 					initializeInstanceRecord({declaration: typeDecl, classMarker: classMarker, fields: []});
 				}
+				if (methodEntries.length == 0)
+					return record;
+				final revision = programRevision;
+				if (revision == null)
+					throw "reflaxe.ocaml [ocaml-method-dispatch:missing-program]: allocation registration requires an active program";
+				final markerPlan = OcamlClassIdentityMarkerPlan.seal(classType, fullName, emissionRole, revision.id,
+					OcamlFunctionPlanRegistry.PIPELINE_REVISION);
+				final recordSize = switch (typeDecl.kind) {
+					case Record(fields): fields.length;
+					case _: throw "reflaxe.ocaml [ocaml-method-dispatch:missing-record]: allocation registration requires a native record";
+				};
+				final registration = sealClassMethodRegistration(markerPlan, recordSize, methodEntries);
+				functionPlanRegistry.methodDispatch.recordClass(classType, registration);
+				final install = buildClassMethodRegistration(registration, classMarker, ctx,
+					OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile));
+				return OcamlExpr.ELet("__hx_method_class", markerValue, OcamlExpr.ESeq([install, record]), false);
 			}
 
 			if (!isAbstractImplementation) {
@@ -2822,7 +2792,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 					#end
 					final builtMethod:reflaxe.ocaml.ast.OcamlBuiltFunction = if (sharedMethod == null) {
 						builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, methodReturnType,
-							preserveInstanceSignature, syntaxInput.genericTransport);
+							preserveInstanceSignature, syntaxInput.genericTransport, syntaxInput.methodDispatch);
 					} else {
 						if (sharedMethod.role != InstanceMethod || !HaxeOcamlTargetFunctionAdapter.hasFinalMarker(f, sharedMethod))
 							throw 'reflaxe.ocaml: shared instance method "${f.id}" lost its role or preprocessor envelope';
@@ -2949,7 +2919,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			#end
 			final builtFunction:reflaxe.ocaml.ast.OcamlBuiltFunction = if (sharedFunction == null) {
 				builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, staticReturnType, true,
-					syntaxInput.genericTransport);
+					syntaxInput.genericTransport, syntaxInput.methodDispatch);
 			} else {
 				if (!HaxeOcamlTargetFunctionAdapter.hasFinalMarker(f, sharedFunction))
 					throw 'reflaxe.ocaml: shared target function "${f.id}" lost its preprocessor envelope';
