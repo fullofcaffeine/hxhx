@@ -122,6 +122,8 @@ import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer.OcamlFieldRepr
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlMonomorphicClassPlanner;
+import reflaxe.ocaml.lowered.OcamlInstanceMethodCatalog.collectInstanceMethods;
+import reflaxe.ocaml.lowered.OcamlInstanceMethodCatalog.declaredInstanceMethods;
 import reflaxe.ocaml.lowered.OcamlNullablePrimitiveFieldDefaultPlan;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlUnrepresentedFieldDefaultPlan;
@@ -2321,54 +2323,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 			// For dynamic dispatch we need a list of all visible instance methods (including inherited)
 			// so `obj.foo()` can be lowered to `obj.foo obj ...` regardless of where `foo` was declared.
-			final dispatchMethodOrder:Array<String> = [];
-			final dispatchMethodDecl:Map<String, {owner:ClassType, field:ClassField}> = [];
+			final methodCatalog = isDispatch ? collectInstanceMethods(classType) : null;
+			final dispatchMethodOrder:Array<String> = methodCatalog == null ? [] : methodCatalog.order;
+			final dispatchMethodDecl:Map<String,
+				reflaxe.ocaml.lowered.OcamlInstanceMethodCatalog.OcamlInstanceMethodDeclaration> = methodCatalog == null ? [] : methodCatalog.declarations;
 			var dispatchLayoutFields:Null<Array<{name:String, kind:String, field:ClassField}>> = null;
 			if (isDispatch) {
-				function chainFromRoot(c:ClassType):Array<ClassType> {
-					final chain:Array<ClassType> = [];
-					var cur:Null<ClassType> = c;
-					var guard = 0;
-					while (cur != null && guard++ < 64) {
-						chain.push(cur);
-						cur = cur.superClass != null ? cur.superClass.t.get() : null;
-					}
-					chain.reverse();
-					return chain;
-				}
-
-				function declaredInstanceMethodFields(c:ClassType):Array<ClassField> {
-					final out:Array<ClassField> = [];
-					for (cf in c.fields.get()) {
-						if (cf == null)
-							continue;
-						if (cf.name == "new")
-							continue;
-						switch (cf.kind) {
-							case FMethod(_):
-								out.push(cf);
-							case _:
-						}
-					}
-					return out;
-				}
-
-				final chain = chainFromRoot(classType);
-				final seen:Map<String, Bool> = [];
-				for (c in chain) {
-					for (cf in declaredInstanceMethodFields(c)) {
-						if (seen.exists(cf.name))
-							continue;
-						seen.set(cf.name, true);
-						dispatchMethodOrder.push(cf.name);
-					}
-				}
-				// Most-derived declaration wins (override).
-				for (c in chain) {
-					for (cf in declaredInstanceMethodFields(c)) {
-						dispatchMethodDecl.set(cf.name, {owner: c, field: cf});
-					}
-				}
+				final chain = methodCatalog.chain;
 
 				// Record layout for dispatch instances: preserve a base-prefix layout across
 				// the inheritance chain by emitting fields in per-level segments:
@@ -2395,7 +2356,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 						}
 					}
 
-					for (cf in declaredInstanceMethodFields(c)) {
+					for (cf in declaredInstanceMethods(c)) {
 						if (seenMethods2.exists(cf.name))
 							continue;
 						seenMethods2.set(cf.name, true);
