@@ -18,12 +18,15 @@ import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority;
 
 /**
-	Recovers a method only after its class and complete signature pass runtime checks.
+	Recovers a class method after its class and complete signature pass runtime checks.
 
 	The declaration projection supplies the same native carriers used by the
 	class registration. A capture binds its receiver immediately. A direct call
 	evaluates that receiver and then its arguments once, in source order. No
 	interface record layout or unchecked virtual slot participates in recovery.
+	A method-only structural consumer also accepts an ordinary anonymous table,
+	whose required field must contain a callable value. Class-backed tables cannot
+	masquerade as native records at this boundary.
 **/
 function buildMethodDispatchUse(use:OcamlMethodDispatchUse, context:CompilationContext, representations:OcamlRepresentationRegistry,
 		program:OcamlMethodDispatchProgram, nominalType:Type->OcamlTypeExpr, build:TypedExpr->OcamlExpr, coerce:Type->TypedExpr->OcamlExpr,
@@ -35,10 +38,11 @@ function buildMethodDispatchUse(use:OcamlMethodDispatchUse, context:CompilationC
 	final native = projectDeclarationSignature(method.arguments.map(argument -> argument.t), method.result, representations, nominalType, context);
 	final signature = native == null ? null : selectMethodSignature(use.field, native, context.ocamlModuleNameForModuleId(context.currentModuleId));
 	if (native == null || signature == null)
-		throw 'reflaxe.ocaml [ocaml-method-dispatch:unsupported-signature]: ${use.contract.module}.${use.contract.name}.${use.field.name} requires a closed native method signature';
+		throw 'reflaxe.ocaml [ocaml-method-dispatch:unsupported-signature]: ${use.receiverType}.${use.field.name} requires a closed native method signature';
 	if (use.arguments != null && use.arguments.length != native.parameters.length)
 		throw "reflaxe.ocaml [ocaml-method-dispatch:wrong-arity]: method call arguments differ from its declaration";
-	program.recordUse(use.contract, signature);
+	if (use.contract != null)
+		program.recordUse(use.contract, signature);
 	final revision = "sha256:" + Sha256.encode([
 		use.binding.programRevision,
 		use.binding.bodyRevision,
@@ -56,12 +60,12 @@ function buildMethodDispatchUse(use:OcamlMethodDispatchUse, context:CompilationC
 		decisionId: use.id,
 		subject: {
 			kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
-			id: use.contract.module + ":" + use.contract.name
+			id: use.receiverType
 		},
 		implementationFeature: "haxe-native-method-dispatch-v1",
 		rootModules: ["HxMethodDispatch"],
 		profileEligibility: ["metal", "portable"],
-		explanation: "An interface call checks the original class object and exact method signature before recovering its native closure."
+		explanation: "A method call checks the original class object and exact signature, or the callable field of an ordinary anonymous object."
 	};
 	final occurrence:OcamlRuntimeUseOccurrence = {
 		id: use.id + ":bind",
@@ -69,7 +73,7 @@ function buildMethodDispatchUse(use:OcamlMethodDispatchUse, context:CompilationC
 		ownerId: use.id,
 		requirementId: requirement.id,
 		domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
-		exactSymbol: "HxMethodDispatch.bind",
+		exactSymbol: use.contract == null ? "HxMethodDispatch.bind_structural" : "HxMethodDispatch.bind",
 		role: "interface-method-binding",
 		order: 0,
 		source: use.source,
@@ -88,9 +92,11 @@ function buildMethodDispatchUse(use:OcamlMethodDispatchUse, context:CompilationC
 			functionType = TArrow(native.parameters[native.parameters.length - 1 - index], functionType);
 	final receiver = fresh("method_receiver");
 	final callable = fresh("method_callable");
-	final bound = EAnnot(EApp(EIdent("Obj.obj"), [
-		EApp(identifier, [EApp(EIdent("Obj.repr"), [EIdent(receiver)]), EConst(CString(signature.key))])
-	]), functionType);
+	final lookupArguments:Array<OcamlExpr> = [EApp(EIdent("Obj.repr"), [EIdent(receiver)])];
+	if (use.contract == null)
+		lookupArguments.push(EConst(CString(use.field.name)));
+	lookupArguments.push(EConst(CString(signature.key)));
+	final bound = EAnnot(EApp(EIdent("Obj.obj"), [EApp(identifier, lookupArguments)]), functionType);
 	var result:OcamlExpr = EIdent(callable);
 	if (use.arguments != null) {
 		final names = use.arguments.map(_ -> fresh("method_argument"));

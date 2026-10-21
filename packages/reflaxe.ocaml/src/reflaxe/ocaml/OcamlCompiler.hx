@@ -2273,7 +2273,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 			// For dynamic dispatch we need a list of all visible instance methods (including inherited)
 			// so `obj.foo()` can be lowered to `obj.foo obj ...` regardless of where `foo` was declared.
-			final methodCatalog = isDispatch ? collectInstanceMethods(classType) : null;
+			final needsMethodRegistration = functionPlanRegistry.methodDispatch.requiresRegistration(classType);
+			final methodCatalog = isDispatch || needsMethodRegistration ? collectInstanceMethods(classType) : null;
 			final dispatchMethodOrder:Array<String> = methodCatalog == null ? [] : methodCatalog.order;
 			final dispatchMethodDecl:Map<String,
 				reflaxe.ocaml.lowered.OcamlInstanceMethodCatalog.OcamlInstanceMethodDeclaration> = methodCatalog == null ? [] : methodCatalog.declarations;
@@ -2583,9 +2584,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 			function buildSelfInit(emissionRole:String):OcamlExpr {
 				final markerValue = classIdentityMarker(classType, fullName, emissionRole);
-				final methodEntries = methodCatalog == null ? [] : selectClassMethodEntries(classType, methodCatalog,
-					(parameters, result) -> projectDeclarationSignature(parameters, result, representationRegistry, ocamlTypeExprFromHaxeType, ctx),
-					moduleIdToOcamlModuleName(classType.module));
+				final methodEntries = methodCatalog == null
+					|| !needsMethodRegistration ? [] : selectClassMethodEntries(classType, methodCatalog,
+						(parameters, result) -> projectDeclarationSignature(parameters, result, representationRegistry, ocamlTypeExprFromHaxeType, ctx),
+						moduleIdToOcamlModuleName(classType.module));
 				final classMarker = methodEntries.length == 0 ? markerValue : OcamlExpr.EIdent("__hx_method_class");
 				final record = if (hasInstanceVarsLocal || isDispatch) {
 					final fields:Array<OcamlRecordField> = [];

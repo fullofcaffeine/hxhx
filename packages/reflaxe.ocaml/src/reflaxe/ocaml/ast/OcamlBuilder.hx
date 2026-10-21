@@ -8,6 +8,8 @@ import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromTypes;
 import reflaxe.ocaml.ast.OcamlDeclarationSignature.projectDeclarationSignature;
 import reflaxe.ocaml.lowered.OcamlMethodDispatchRootPlan;
 import reflaxe.ocaml.ast.OcamlMethodDispatchUseSyntax.buildMethodDispatchUse;
+import reflaxe.ocaml.lowered.OcamlMethodViewConversionPlan;
+import reflaxe.ocaml.ast.OcamlMethodViewConversionSyntax.buildMethodViewConversion;
 #if (macro || reflaxe_runtime)
 import haxe.macro.Expr.Binop;
 import haxe.macro.Expr;
@@ -7757,6 +7759,13 @@ class OcamlBuilder {
 	}
 
 	function coerceForAssignment(lhsType:Type, rhs:TypedExpr):OcamlExpr {
+		if (OcamlMethodViewConversionPlan.select(rhs, lhsType) != null) {
+			if (currentMethodDispatchRoot == null)
+				throw "reflaxe.ocaml [ocaml-method-view:missing-root]: structural conversion requires its final expression root";
+			final conversion = currentMethodDispatchRoot.views.requireConversion(rhs, lhsType);
+			return buildMethodViewConversion(conversion, rhs, ctx, representationRegistry, functionPlanRegistry.methodDispatch, typeExprFromHaxeType,
+				buildExpr);
+		}
 		if (reflaxe.ocaml.lowered.OcamlStandardMapCarrierModel.OcamlStandardMapCarrierContract.nullableValueNeedsUnbox(lhsType, rhs.t)) {
 			// Optional maps use Obj.t, while required maps use native storage.
 			// Exact type evidence permits recovery without copying or rejecting null.
@@ -9521,7 +9530,7 @@ class OcamlBuilder {
 		currentLocalIdentities = localIdentities;
 		final validatedPlan = functionPlanRegistry.requireStandaloneExpressionPlan(rhs, expressionPlan, representationRegistry);
 		final previousMethodDispatchRoot = currentMethodDispatchRoot;
-		currentMethodDispatchRoot = new OcamlMethodDispatchRootPlan(rhs, validatedPlan.binding);
+		currentMethodDispatchRoot = new OcamlMethodDispatchRootPlan(rhs, validatedPlan.binding, null, lhsType);
 		currentCallPlan = validatedPlan.calls;
 		currentFunctionPlanBinding = validatedPlan.binding;
 		currentContainerElementPlan = validatedPlan.containerElements;

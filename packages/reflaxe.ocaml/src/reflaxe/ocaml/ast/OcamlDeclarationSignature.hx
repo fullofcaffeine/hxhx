@@ -31,6 +31,9 @@ typedef OcamlDeclarationSignature = {
 	inheritance check; this does not admit new field optimizations. Ordinary
 	inherited classes can name their existing dispatch records after that check.
 	Their methods and base-prefix layout remain owned by ordinary class emission.
+	Ordinary interface values retain their original class object as Obj.t.
+	Method lookup still requires checked dispatch; the specialized IMap adapter
+	keeps its existing declaration and is excluded from this interface carrier.
 	The recursive
 	interface may name an ordinary non-generic enum's existing variant type even
 	when no optimized enum-returning function registered a result-carrier proof.
@@ -212,6 +215,10 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 						}
 					}
 				case _ if (definition.pack.length == 0 && definition.name == "String"): TIdent("string");
+				case _ if (reflaxe.ocaml.lowered.OcamlMethodDispatchRootPlan.interfaceClass(type) != null):
+					// Ordinary interface declarations now own opaque original-object storage.
+					// Method recovery still requires its independently checked signature.
+					TIdent("Obj.t");
 				case _ if (representations.monomorphicClassForType(type) != null): nominalType(type);
 				case _
 					if (context.virtualTypesComputed

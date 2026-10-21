@@ -27,7 +27,7 @@ typedef OcamlMethodDispatchClassPlan = {
 }
 
 /**
-	Selects ordinary interface implementers without changing their concrete layout.
+	Selects methods for a program-admitted class without changing its concrete layout.
 
 	Every ancestor must use the ordinary non-generic record emitter. The shared
 	catalog supplies effective overrides; native types come from the existing
@@ -36,7 +36,6 @@ typedef OcamlMethodDispatchClassPlan = {
 **/
 function selectClassMethodEntries(owner:ClassType, catalog:OcamlInstanceMethodCatalog, project:Array<Type>->Type->Null<OcamlDeclarationSignature>,
 		nativeModule:String):Array<OcamlMethodDispatchClassEntry> {
-	var hasInterface = false;
 	for (ancestor in catalog.chain) {
 		if (ancestor.isInterface || ancestor.isExtern || ancestor.params.length != 0 || ancestor.meta.has(":native"))
 			return [];
@@ -45,10 +44,8 @@ function selectClassMethodEntries(owner:ClassType, catalog:OcamlInstanceMethodCa
 			case _:
 				return [];
 		}
-		if (ancestor.interfaces.length > 0)
-			hasInterface = true;
 	}
-	if (!hasInterface || catalog.chain.length == 0 || catalog.chain[catalog.chain.length - 1] != owner)
+	if (catalog.chain.length == 0 || catalog.chain[catalog.chain.length - 1] != owner)
 		return [];
 	final entries:Array<OcamlMethodDispatchClassEntry> = [];
 	for (name in catalog.order) {

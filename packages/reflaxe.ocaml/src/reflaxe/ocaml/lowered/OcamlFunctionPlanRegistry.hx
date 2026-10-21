@@ -1187,12 +1187,16 @@ class OcamlFunctionPlanRegistry {
 	**/
 	public function functionSyntaxInputFor(data:ClassFuncData):OcamlFunctionSyntaxInput {
 		final sealed = requiredSealedFunctionRecord(data);
+		final result = switch (haxe.macro.TypeTools.follow(data.field.type)) {
+			case TFun(_, result): result;
+			case _: null;
+		};
 		return {
 			plan: sealed.plan,
 			localIdentities: sealed.localIdentities,
 			constructionBoundary: constructionBoundaryForPlan(data, sealed.plan),
 			genericTransport: genericTransports.plan(data),
-			methodDispatch: new OcamlMethodDispatchRootPlan(data.expr, sealed.plan.binding)
+			methodDispatch: new OcamlMethodDispatchRootPlan(data.expr, sealed.plan.binding, result)
 		};
 	}
 

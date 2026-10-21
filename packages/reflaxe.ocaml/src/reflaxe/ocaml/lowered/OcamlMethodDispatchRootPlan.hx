@@ -7,13 +7,14 @@ import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
 import reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract;
 
-/** One direct interface call or capture in an already validated final root. */
+/** One interface or method-only structural call/capture in a validated final root. */
 typedef OcamlMethodDispatchUse = {
 	final id:String;
 	final binding:OcamlFunctionPlanBinding;
 	final source:OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 	final receiver:TypedExpr;
-	final contract:ClassType;
+	final contract:Null<ClassType>;
+	final receiverType:String;
 	final field:ClassField;
 	final fieldType:String;
 	final arguments:Null<Array<TypedExpr>>;
@@ -30,10 +31,14 @@ typedef OcamlMethodDispatchUse = {
 class OcamlMethodDispatchRootPlan {
 	final uses:ObjectMap<TypedExpr, OcamlMethodDispatchUse> = new ObjectMap();
 	final binding:OcamlFunctionPlanBinding;
+
+	public final views:OcamlMethodViewConversionPlan;
+
 	var ordinal:Int = 0;
 
-	public function new(expression:TypedExpr, binding:OcamlFunctionPlanBinding) {
+	public function new(expression:TypedExpr, binding:OcamlFunctionPlanBinding, ?result:Type, ?expected:Type) {
 		this.binding = binding;
+		views = new OcamlMethodViewConversionPlan(expression, expected, result);
 		visit(expression);
 	}
 
@@ -45,7 +50,8 @@ class OcamlMethodDispatchRootPlan {
 		final selected = occurrence(expression);
 		if (selected == null
 			|| selected.receiver != use.receiver
-			|| fullName(selected.contract) != fullName(use.contract)
+			|| contractId(selected.contract) != contractId(use.contract)
+			|| TypeTools.toString(selected.receiver.t) != use.receiverType
 			|| selected.field.name != use.field.name
 			|| TypeTools.toString(selected.field.type) != use.fieldType
 			|| (selected.arguments == null) != (use.arguments == null))
@@ -69,6 +75,7 @@ class OcamlMethodDispatchRootPlan {
 				source: OcamlLoweredOrigin.sourceSpan(expression.pos),
 				receiver: selected.receiver,
 				contract: selected.contract,
+				receiverType: TypeTools.toString(selected.receiver.t),
 				field: selected.field,
 				fieldType: TypeTools.toString(selected.field.type),
 				arguments: selected.arguments == null ? null : selected.arguments.copy()
@@ -85,7 +92,7 @@ class OcamlMethodDispatchRootPlan {
 	/** Recognizes the source operation only; native signature selection is separate. */
 	public static function occurrence(expression:TypedExpr):Null<{
 		receiver:TypedExpr,
-		contract:ClassType,
+		contract:Null<ClassType>,
 		field:ClassField,
 		arguments:Null<Array<TypedExpr>>
 	}> {
@@ -111,10 +118,11 @@ class OcamlMethodDispatchRootPlan {
 			case TField(receiver, access):
 				final contract = interfaceClass(receiver.t);
 				final field = switch (access) {
-					case FInstance(_, _, field) | FClosure(_, field): field.get();
+					case FInstance(_, _, field) | FClosure(_, field) | FAnon(field): field.get();
 					case _: null;
 				};
-				if (contract == null || field == null) null else switch (field.kind) {
+				final structural = contract == null && OcamlMethodViewConversionPlan.methodFields(receiver.t) != null;
+				if ((!structural && contract == null) || field == null) null else switch (field.kind) {
 					case FMethod(_): {
 							receiver: receiver,
 							contract: contract,
@@ -143,5 +151,8 @@ class OcamlMethodDispatchRootPlan {
 
 	public static function fullName(owner:ClassType):String
 		return owner.pack.concat([owner.name]).join(".");
+
+	static function contractId(owner:Null<ClassType>):String
+		return owner == null ? "structural" : fullName(owner);
 }
 #end

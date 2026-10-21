@@ -24,6 +24,9 @@ class Main {
 	}
 
 	function run():Void {
+		final view:CounterView = counter;
+		if (view != counter || Type.getClass(view) != Counter || Std.downcast(view, Counter) != counter)
+			throw "plain class structural view lost identity";
 		observe({counter: counter});
 		observe({counter: selected()});
 		Sys.println(evaluations);
