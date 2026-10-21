@@ -26,7 +26,7 @@ if (!hasMapTextSource
 	|| !/HxRuntime\.Hx_return __ret_\d+ -> \(Obj\.obj __ret_\d+ : bool\)\s*: bool\)/.test(hasMapTextSource)) {
 	throw new Error('the Boolean helper did not type its complete early-return boundary as an OCaml bool')
 }
-if (report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v6'
+if (report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v7'
 	|| report.iMapInterfaceConversionCount !== 5
 	|| report.iMapInterfaceCallCount !== 55
 	|| report.iMapStorageAliasCount !== 6

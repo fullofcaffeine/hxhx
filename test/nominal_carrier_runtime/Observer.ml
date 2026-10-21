@@ -66,7 +66,9 @@ let () =
     "invalid descriptor became a class";
   require (no_class (HxAnon.create_with_class (HxType.enum_ "observer.Enum")))
     "enum descriptor became a class";
-  let record = { __hx_type = child; value = 7 } in
+  let record = { __hx_type = HxType.instance_marker "observer.Child"; value = 7 } in
+  require (HxRuntime.is_identity_header record.__hx_type) "native record lacks identity header";
+  require (HxRuntime.identity_payload record.__hx_type == child) "native header changed class descriptor";
   require (HxType.getClass (Obj.repr record) == child) "native record lost identity";
 
   let weak = Weak.create 1 in

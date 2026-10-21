@@ -336,7 +336,7 @@ class RuntimeRequirementLedgerFixture {
 			&& userBoolRequirements[1].rootModules.join(",") == "HxRuntime",
 			"a user IMap adapter with a Bool argument should own its type marker and checked Boolean unbox helper");
 		assertTrue(userBoolConversion.runtimeUseOccurrences.length == 2
-			&& userBoolConversion.runtimeUseOccurrences[0].exactSymbol == "HxType.class_"
+			&& userBoolConversion.runtimeUseOccurrences[0].exactSymbol == "HxType.instance_marker"
 			&& userBoolConversion.runtimeUseOccurrences[1].exactSymbol == "HxRuntime.unbox_bool_or_obj",
 			"the user IMap adapter should record the private names in the order syntax consumes them");
 		final rejectedIMapLedger = new OcamlRuntimeRequirementLedger();

@@ -38,20 +38,21 @@ typedef OcamlClassIdentityMarkerDecision = {
 /**
 	Authorizes the private runtime class marker in one generated class record.
 
-	Every class instance stores a marker that lets `Type.getClass` recover its
-	Haxe class. The ordinary constructor and `Type.createEmptyInstance` each emit
-	their own record, so each output location receives a separate permission.
+	Every allocation stores a fresh private identity header containing its shared
+	Haxe class descriptor. The stamp keeps ObjectMap lookup stable after mutation;
+	`Type.getClass` recovers the shared descriptor. Constructors and empty-instance
+	factories each own a separate runtime call, evaluated for every new instance.
 **/
 class OcamlClassIdentityMarkerPlan {
-	public static inline final MODEL_REVISION = "ocaml-class-identity-marker-v1";
+	public static inline final MODEL_REVISION = "ocaml-class-identity-marker-v2";
 	public static inline final CONSTRUCTOR_ROLE = "constructor-record";
 	public static inline final EMPTY_INSTANCE_ROLE = "empty-instance-record";
-	public static inline final EXACT_SYMBOL = "HxType.class_";
+	public static inline final EXACT_SYMBOL = "HxType.instance_marker";
 	public static inline final RUNTIME_CAPABILITY = "haxe-class-identity-marker";
-	public static inline final IMPLEMENTATION_FEATURE = "haxe-class-identity-marker-v1";
+	public static inline final IMPLEMENTATION_FEATURE = "haxe-class-identity-marker-v2";
 	public static inline final RUNTIME_ROLE = "class-identity-marker";
-	public static inline final PROOF_ID = "typed-class-identity-marker-runtime-use-v1";
-	public static inline final PROOF_CLAIM = "The final typed Haxe class and one exact generated record role authorize one HxType.class_ marker. The constructor record and empty-instance record do not share an occurrence identity.";
+	public static inline final PROOF_ID = "typed-class-identity-marker-runtime-use-v2";
+	public static inline final PROOF_CLAIM = "The final typed Haxe class and one exact generated record role authorize one HxType.instance_marker call. Each allocation receives a fresh identity header containing the shared class descriptor. The constructor record and empty-instance record do not share an occurrence identity.";
 
 	#if macro
 	/** Seals one class-marker occurrence from an exact typed class declaration. */

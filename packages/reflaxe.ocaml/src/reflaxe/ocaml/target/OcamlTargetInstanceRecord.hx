@@ -22,8 +22,9 @@ typedef OcamlTargetInstanceRecordValues = {
 /**
 	Declare the common Haxe instance representation with its runtime marker first.
 
-	Every class uses the same first slot so runtime reflection and checked upcasts
-	can recover its most-derived class. Remaining slots retain the class owner's
+	Every class uses the same first slot for a fresh identity header. Runtime
+	reflection recovers its shared most-derived class descriptor from that header.
+	Remaining slots retain the class owner's
 	order and represented types, including inherited fields and dispatch methods.
 	This operation does not choose field defaults or execute authored initializers.
 **/

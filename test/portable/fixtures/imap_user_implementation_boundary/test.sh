@@ -6,7 +6,7 @@ const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
 if (report.schemaVersion !== 95
-	|| report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v6'
+	|| report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v7'
 	|| report.iMapInterfaceConversionCount !== report.iMapInterfaceConversions?.length
 	|| report.iMapInterfaceCallCount !== report.iMapInterfaceCalls?.length
 	|| report.iMapInterfaceConversionCount !== 6
@@ -39,7 +39,7 @@ for (const conversion of userConversions) {
 		|| conversion.runtimeCapabilities.join(',') !== 'haxe-type-reflection'
 		|| conversion.runtimeUseOccurrences?.length !== 1
 		|| conversion.runtimeUseOccurrences[0].role !== 'type-marker'
-		|| conversion.runtimeUseOccurrences[0].exactSymbol !== 'HxType.class_'
+		|| conversion.runtimeUseOccurrences[0].exactSymbol !== 'HxType.instance_marker'
 		|| conversion.methods.length !== Object.keys(expectedMethods).length) {
 		throw new Error(`user conversion ${conversion.id} does not preserve the checked interface surface`)
 	}
@@ -96,7 +96,7 @@ for (const call of report.iMapInterfaceCalls) {
 const generated = fs.readFileSync('out/Main.ml', 'utf8')
 if (!generated.includes('taggedstringmap_get__impl __imap_user_receiver_')
 	|| !generated.includes('taggedstringmap_toString__impl __imap_user_receiver_')
-	|| !generated.includes('({ __hx_type = HxType.class_ "haxe.IMap";')
+	|| !generated.includes('({ __hx_type = HxType.instance_marker "haxe.IMap";')
 	|| !generated.includes('HxMap.get_string __standard_imap_receiver_')
 	|| !generated.includes('HxMap.get_int __standard_imap_receiver_')
 	|| !generated.includes('HxMap.get_object __standard_imap_receiver_')) {

@@ -21454,7 +21454,7 @@
         {
           "cardinality": 1,
           "domain": "expression-identifier",
-          "exactSymbol": "HxType.class_",
+          "exactSymbol": "HxType.instance_marker",
           "id": "imap-interface-conversion:6dd0d60321b0593467f90765:runtime-use:0:type-marker",
           "order": 0,
           "ownerId": "imap-interface-conversion:6dd0d60321b0593467f90765",
@@ -21990,7 +21990,7 @@
         {
           "cardinality": 1,
           "domain": "expression-identifier",
-          "exactSymbol": "HxType.class_",
+          "exactSymbol": "HxType.instance_marker",
           "id": "imap-interface-conversion:9b0469942c0a324e01e18e6f:runtime-use:0:type-marker",
           "order": 0,
           "ownerId": "imap-interface-conversion:9b0469942c0a324e01e18e6f",
@@ -22526,7 +22526,7 @@
         {
           "cardinality": 1,
           "domain": "expression-identifier",
-          "exactSymbol": "HxType.class_",
+          "exactSymbol": "HxType.instance_marker",
           "id": "imap-interface-conversion:bd82e2190dddbbed0d036c23:runtime-use:0:type-marker",
           "order": 0,
           "ownerId": "imap-interface-conversion:bd82e2190dddbbed0d036c23",
@@ -23062,7 +23062,7 @@
         {
           "cardinality": 1,
           "domain": "expression-identifier",
-          "exactSymbol": "HxType.class_",
+          "exactSymbol": "HxType.instance_marker",
           "id": "imap-interface-conversion:c25b6e31e6b6433330e4e211:runtime-use:0:type-marker",
           "order": 0,
           "ownerId": "imap-interface-conversion:c25b6e31e6b6433330e4e211",
@@ -23598,7 +23598,7 @@
         {
           "cardinality": 1,
           "domain": "expression-identifier",
-          "exactSymbol": "HxType.class_",
+          "exactSymbol": "HxType.instance_marker",
           "id": "imap-interface-conversion:e7b006bba20d65824239666b:runtime-use:0:type-marker",
           "order": 0,
           "ownerId": "imap-interface-conversion:e7b006bba20d65824239666b",
@@ -24031,8 +24031,8 @@
       "valueStringifier": "exact-int"
     }
   ],
-  "iMapInterfaceModel": "typed-imap-interface-adapter-v6",
-  "iMapInterfaceRevision": "sha256:32e0ab7226ad9caca9ed50795231270cd97f91ebba9f160946d8de6ac8a3d469",
+  "iMapInterfaceModel": "typed-imap-interface-adapter-v7",
+  "iMapInterfaceRevision": "sha256:52bdf3b9fb43d692629943ab7a8184c90600e04d4881d1434edb4f8c022dff98",
   "iMapStorageAliasCount": 6,
   "iMapStorageAliases": [
     {

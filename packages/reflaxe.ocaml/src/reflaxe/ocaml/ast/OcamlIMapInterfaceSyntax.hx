@@ -293,7 +293,7 @@ class OcamlIMapInterfaceSyntax {
 		};
 	}
 
-	/** Produces the runtime type marker shared by every dispatch record. */
+	/** Allocates a fresh identity header containing the shared IMap descriptor. */
 	static function typeMarkerField(decision:reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision,
 			runtimeAuthority:OcamlRuntimeUseAuthority, runtimeReferences:Array<OcamlExpr>):{
 		name:String,
@@ -301,7 +301,7 @@ class OcamlIMapInterfaceSyntax {
 	} {
 		return {
 			name: "__hx_type",
-			value: OcamlExpr.EApp(runtimeIdentifier(decision, "type-marker", "HxType.class_", runtimeAuthority, runtimeReferences),
+			value: OcamlExpr.EApp(runtimeIdentifier(decision, "type-marker", "HxType.instance_marker", runtimeAuthority, runtimeReferences),
 				[OcamlExpr.EConst(OcamlConst.CString("haxe.IMap"))])
 		};
 	}

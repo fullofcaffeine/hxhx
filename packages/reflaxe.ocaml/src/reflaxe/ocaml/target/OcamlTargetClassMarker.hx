@@ -19,9 +19,10 @@ typedef OcamlTargetLoweredClassMarker = {
 }
 
 /**
-	Emit the existing Haxe class marker from one sealed class and allocation role.
+	Emit a fresh instance header from one sealed class and allocation role.
 
-	Each constructor or empty allocation owns a separate occurrence of HxType.class_.
+	Each constructor or empty allocation owns a call to HxType.instance_marker.
+	The call remains inside the allocation body so instances never share a stamp.
 	The shared authority checks its symbol, revision and profile, and observes that
 	occurrence in the final output. Hosts supply actual class decisions; this module
 	does not infer a class from generated text or invent a replacement marker value.

@@ -164,7 +164,7 @@ typedef OcamlIMapStorageAliasDecision = {
 	and runtime rules that the compiler used before emitting OCaml.
 **/
 class OcamlIMapInterfaceContract {
-	public static inline final MODEL = "typed-imap-interface-adapter-v6";
+	public static inline final MODEL = "typed-imap-interface-adapter-v7";
 	static inline final LEXICAL_LOCAL_ID_PREFIX = "lexical-local-v1:";
 	public static inline final CONVERSION_PROOF_ID = "typed-imap-interface-conversion-v1";
 	public static inline final CALL_PROOF_ID = "typed-imap-interface-dispatch-v1";
@@ -431,7 +431,7 @@ class OcamlIMapInterfaceContract {
 
 	/** Recomputes the ordered private names inserted by one adapter conversion. */
 	public static function runtimeUseOccurrencesFor(decision:OcamlIMapInterfaceConversionDecision):Array<OcamlRuntimeUseOccurrence> {
-		final planned:Array<{role:String, symbol:String}> = [{role: "type-marker", symbol: "HxType.class_"}];
+		final planned:Array<{role:String, symbol:String}> = [{role: "type-marker", symbol: "HxType.instance_marker"}];
 		final keyKind = standardKeyKind(decision.sourceKind);
 		for (method in decision.methods) {
 			final operation = operationForMethod(method.name);

@@ -6941,11 +6941,11 @@ class EmitterStage {
 			"(* hxhx(stage3) bootstrap shim: haxe.io.FPHelper *)\n"
 			+ "let __reflaxe_ocaml__ = ()\n\n"
 			+ "type t = { __hx_type : Obj.t }\n\n"
-			+ "let create = fun () -> let self = ({ __hx_type = HxType.class_ \"haxe.io.FPHelper\" } : t) in (\n"
+			+ "let create = fun () -> let self = ({ __hx_type = HxType.instance_marker \"haxe.io.FPHelper\" } : t) in (\n"
 			+ "  ignore ();\n"
 			+ "  self\n"
 			+ ")\n\n"
-			+ "let __empty = fun () -> ({ __hx_type = HxType.class_ \"haxe.io.FPHelper\" } : t)\n\n"
+			+ "let __empty = fun () -> ({ __hx_type = HxType.instance_marker \"haxe.io.FPHelper\" } : t)\n\n"
 			+ "let i32ToFloat = fun i -> HxFPHelper.i32ToFloat i\n\n"
 			+ "let floatToI32 = fun f -> HxFPHelper.floatToI32 f\n\n"
 			+ "let i64ToDouble = fun low high -> HxFPHelper.i64ToDouble low high\n\n"
@@ -6982,8 +6982,8 @@ class EmitterStage {
 			+ "type t = { __hx_type : Obj.t }\n"
 			+ "type ocamlstdioinput_t = int\n"
 			+ "type ocamlstdiooutput_t = int\n"
-			+ "let create () = { __hx_type = HxType.class_ \"sys.io.Stdio\" }\n"
-			+ "let __empty () = { __hx_type = HxType.class_ \"sys.io.Stdio\" }\n"
+			+ "let create () = { __hx_type = HxType.instance_marker \"sys.io.Stdio\" }\n"
+			+ "let __empty () = { __hx_type = HxType.instance_marker \"sys.io.Stdio\" }\n"
 			+ "let ocamlstdioinput_create stream = stream\n"
 			+ "let ocamlstdioinput___empty () = ocamlstdioinput_create HxStdio.stdin_stream\n"
 			+ "let ocamlstdiooutput_create stream = stream\n"
@@ -7231,8 +7231,8 @@ class EmitterStage {
 			"[@@@warning \"-20-27-32\"]",
 			"let __reflaxe_ocaml__ = ()",
 			"type t = { __hx_type : Obj.t }",
-			"let create = fun () -> let self = ({ __hx_type = HxType.class_ \"StringTools\" } : t) in (ignore (); self)",
-			"let __empty = fun () -> ({ __hx_type = HxType.class_ \"StringTools\" } : t)",
+			"let create = fun () -> let self = ({ __hx_type = HxType.instance_marker \"StringTools\" } : t) in (ignore (); self)",
+			"let __empty = fun () -> ({ __hx_type = HxType.instance_marker \"StringTools\" } : t)",
 			"let contains (s : string) (value : string) : bool = HxString.indexOf s value 0 <> -1",
 			"let startsWith (s : string) (start : string) : bool =",
 			"  HxString.length s >= HxString.length start && HxString.lastIndexOf s start 0 = 0",

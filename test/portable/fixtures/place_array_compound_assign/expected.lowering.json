@@ -15424,7 +15424,7 @@
   "iMapInterfaceCalls": [],
   "iMapInterfaceConversionCount": 0,
   "iMapInterfaceConversions": [],
-  "iMapInterfaceModel": "typed-imap-interface-adapter-v6",
+  "iMapInterfaceModel": "typed-imap-interface-adapter-v7",
   "iMapInterfaceRevision": "sha256:7f124d06bdfacb341c9591b3501f3a8255379e406fbff853fcea0a5048c230f7",
   "iMapStorageAliasCount": 0,
   "iMapStorageAliases": [],

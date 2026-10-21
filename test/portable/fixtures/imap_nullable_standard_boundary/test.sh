@@ -6,7 +6,7 @@ const fs = require('fs')
 
 const report = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
 if (report.schemaVersion !== 95
-	|| report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v6'
+	|| report.iMapInterfaceModel !== 'typed-imap-interface-adapter-v7'
 	|| report.iMapInterfaceConversionCount !== 0
 	|| report.iMapInterfaceCallCount !== 0
 	|| report.iMapStorageAliasCount !== 4) {

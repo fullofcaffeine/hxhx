@@ -20,10 +20,15 @@ let () =
         let self : counter = Obj.obj receiver in
         Obj.repr (fun () -> self.value))]
   in
-  HxMethodDispatch.ensure descriptor "layout-a" 3 make;
-  HxMethodDispatch.ensure descriptor "layout-a" 3 make;
+  let header = HxType.instance_marker "Observer.Counter" in
+  let second_header = HxType.instance_marker "Observer.Counter" in
+  check (header != second_header
+         && HxRuntime.identity_payload header == descriptor
+         && HxRuntime.identity_payload second_header == descriptor) "headers lost fresh or shared class identity";
+  HxMethodDispatch.ensure header "layout-a" 3 make;
+  HxMethodDispatch.ensure second_header "layout-a" 3 make;
   check (!builds = 1) "allocation rebuilt class binders";
-  let instance : counter = { marker = descriptor; value = 10; padding = "padding" } in
+  let instance : counter = { marker = header; value = 10; padding = "padding" } in
   let receiver = Obj.repr instance in
   let add : int -> int = Obj.obj (HxMethodDispatch.bind receiver "add:int->int") in
   let read : unit -> int = Obj.obj (HxMethodDispatch.bind receiver "read:unit->int") in
@@ -31,23 +36,24 @@ let () =
   Gc.full_major (); Gc.compact ();
   check (add 3 = 15 && read () = 15) "bound receiver survived GC";
 
-  let other_descriptor = HxType.class_ "Observer.Other" in
-  HxMethodDispatch.ensure other_descriptor "layout-b" 4 (fun () ->
+  let other_header = HxType.instance_marker "Observer.Other" in
+  HxMethodDispatch.ensure other_header "layout-b" 4 (fun () ->
       ["read:unit->int", (fun receiver ->
           let self : other = Obj.obj receiver in
           Obj.repr (fun () -> self.value))]);
-  let other_instance : other = { marker = other_descriptor; padding = "other"; value = 27; extra = true } in
+  let other_instance : other = { marker = other_header; padding = "other"; value = 27; extra = true } in
   let other_read : unit -> int = Obj.obj (HxMethodDispatch.bind (Obj.repr other_instance) "read:unit->int") in
   check (other_read () = 27) "different concrete method layout";
   check (rejected (fun () -> ignore (HxMethodDispatch.bind receiver "read:unit->string"))) "signature mismatch accepted";
-  check (rejected (fun () -> HxMethodDispatch.ensure descriptor "changed" 3 make)) "changed revision accepted";
-  check (rejected (fun () -> HxMethodDispatch.ensure descriptor "layout-a" 4 make)) "changed size accepted";
+  check (rejected (fun () -> HxMethodDispatch.ensure header "changed" 3 make)) "changed revision accepted";
+  check (rejected (fun () -> HxMethodDispatch.ensure header "layout-a" 4 make)) "changed size accepted";
+  check (rejected (fun () -> HxMethodDispatch.ensure descriptor "layout-a" 3 make)) "descriptor-only registration accepted";
   check (rejected (fun () -> ignore (HxMethodDispatch.bind HxRuntime.hx_null "read:unit->int"))) "null receiver accepted";
   check (rejected (fun () -> ignore (HxMethodDispatch.bind (Obj.repr 2) "read:unit->int"))) "integer receiver accepted";
   check (rejected (fun () -> ignore (HxMethodDispatch.bind (Obj.repr "text") "read:unit->int"))) "string receiver accepted";
-  let wrong_size = Obj.repr (descriptor, 1) in
+  let wrong_size = Obj.repr (header, 1) in
   check (rejected (fun () -> ignore (HxMethodDispatch.bind wrong_size "read:unit->int"))) "wrong record size accepted";
-  let unregistered : counter = { marker = HxType.class_ "Observer.Unregistered"; value = 0; padding = "" } in
+  let unregistered : counter = { marker = HxType.instance_marker "Observer.Unregistered"; value = 0; padding = "" } in
   check (rejected (fun () -> ignore (HxMethodDispatch.bind (Obj.repr unregistered) "read:unit->int"))) "unregistered class accepted";
   check (rejected (fun () -> HxMethodDispatch.ensure HxRuntime.hx_null "layout" 3 make)) "invalid descriptor accepted";
 
@@ -64,23 +70,27 @@ let () =
   ignore (HxAnon.set class_backed "read" (Obj.repr (fun () -> 99)));
   check (rejected (fun () -> ignore (HxMethodDispatch.bind_structural class_backed "read" "read:unit->int"))) "class-backed table reached native binder";
 
-  let failed_descriptor = HxType.class_ "Observer.Failed" in
+  let failed_header = HxType.instance_marker "Observer.Failed" in
   let binder _ = Obj.repr (fun () -> 8) in
-  check (rejected (fun () -> HxMethodDispatch.ensure failed_descriptor "layout-f" 3
+  check (rejected (fun () -> HxMethodDispatch.ensure failed_header "layout-f" 3
       (fun () -> ["same", binder; "same", binder]))) "duplicate contracts accepted";
-  HxMethodDispatch.ensure failed_descriptor "layout-f" 3 (fun () -> ["valid", binder]);
-  let failed_instance : counter = { marker = failed_descriptor; value = 0; padding = "" } in
+  let retry_header = HxType.instance_marker "Observer.Failed" in
+  HxMethodDispatch.ensure retry_header "layout-f" 3 (fun () -> ["valid", binder]);
+  let failed_instance : counter = { marker = retry_header; value = 0; padding = "" } in
   let recovered : unit -> int = Obj.obj (HxMethodDispatch.bind (Obj.repr failed_instance) "valid") in
   check (recovered () = 8) "failed registration published partial entries";
-  let bad_descriptor = HxType.class_ "Observer.BadBinder" in
-  HxMethodDispatch.ensure bad_descriptor "layout-bad" 3 (fun () -> ["bad", (fun _ -> Obj.repr 1)]);
-  let bad_instance : counter = { marker = bad_descriptor; value = 0; padding = "" } in
+  let bad_header = HxType.instance_marker "Observer.BadBinder" in
+  HxMethodDispatch.ensure bad_header "layout-bad" 3 (fun () -> ["bad", (fun _ -> Obj.repr 1)]);
+  let bad_instance : counter = { marker = bad_header; value = 0; padding = "" } in
   check (rejected (fun () -> ignore (HxMethodDispatch.bind (Obj.repr bad_instance) "bad"))) "non-callable binder result accepted";
 
   let concurrent_descriptor = HxType.class_ "Observer.Concurrent" in
   let concurrent_builds = ref 0 in
-  let allocate () = HxMethodDispatch.ensure concurrent_descriptor "layout-c" 3 (fun () ->
-      incr concurrent_builds; ["valid", binder]) in
+  let allocate () =
+    let concurrent_header = HxType.instance_marker "Observer.Concurrent" in
+    check (HxRuntime.identity_payload concurrent_header == concurrent_descriptor) "concurrent descriptor changed";
+    HxMethodDispatch.ensure concurrent_header "layout-c" 3 (fun () ->
+        incr concurrent_builds; ["valid", binder]) in
   let threads = List.init 8 (fun _ -> Thread.create allocate ()) in
   List.iter Thread.join threads;
   check (!concurrent_builds = 1) "concurrent allocation rebuilt entries";

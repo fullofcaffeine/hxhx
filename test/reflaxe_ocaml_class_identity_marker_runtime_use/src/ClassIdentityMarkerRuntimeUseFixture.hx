@@ -27,8 +27,8 @@ using StringTools;
 /**
 	Checks that each generated class record owns its private class marker.
 
-	A class marker is the hidden `HxType.class_ "package.Class"` value stored in
-	every generated instance. It lets `Type.getClass` recover the Haxe class. This
+	A class marker is a fresh private header with a stable allocation stamp.
+	It also retains the shared descriptor used by `Type.getClass`. This
 	fixture proves that the constructor and empty-instance records get separate,
 	typed permissions for that same private runtime call.
 **/
@@ -128,7 +128,7 @@ class ClassIdentityMarkerRuntimeUseFixture {
 		final marker = checkedMarker(decision, finalOutput);
 		final record = initializeInstanceRecord({declaration: declaration, classMarker: marker, fields: values});
 		final syntax = new OcamlASTPrinter().printExpr(record);
-		if (syntax != '({ __hx_type = HxType.class_ "fixture.Marker"; zeta = 0; alpha = false } : marker_t)')
+		if (syntax != '({ __hx_type = HxType.instance_marker "fixture.Marker"; zeta = 0; alpha = false } : marker_t)')
 			throw "Shared instance initializer changed its marker, field order or nominal type: " + syntax;
 		finalOutput.observeExpression(record, "fixture.Marker::create");
 		finalOutput.finishProgram();
@@ -171,9 +171,9 @@ class ClassIdentityMarkerRuntimeUseFixture {
 		expectFailure("missing marker", "missing runtime use",
 			() -> new OcamlRuntimeUseAuthority(decision.revision, PROFILE, requirements,
 				decision.runtimeUseOccurrences).reconcileExpression(OcamlExpr.EConst(OcamlConst.CUnit)));
-		expectFailure("plain marker", "plain private runtime reference HxType.class_",
+		expectFailure("plain marker", "plain private runtime reference HxType.instance_marker",
 			() -> new OcamlRuntimeUseAuthority(decision.revision, PROFILE, requirements,
-				decision.runtimeUseOccurrences).reconcileExpression(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "class_")));
+				decision.runtimeUseOccurrences).reconcileExpression(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "instance_marker")));
 		expectFailure("stale marker", "stale runtime use",
 			() -> new OcamlRuntimeUseAuthority(decision.revision, PROFILE, requirements,
 				decision.runtimeUseOccurrences).expressionIdentifier(occurrence.id, occurrence.planRevision + ":stale", occurrence.exactSymbol));

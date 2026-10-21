@@ -28,15 +28,18 @@
         "packages/reflaxe.ocaml/src/reflaxe/ocaml/runtimegen/OcamlRuntimeRequirementLedger.hx",
         "packages/reflaxe.ocaml/src/reflaxe/ocaml/runtimegen/OcamlNativeRuntimeBoundary.hx",
         "packages/reflaxe.ocaml/src/reflaxe/ocaml/runtimegen/RuntimeCopier.hx",
+        "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlClassIdentityMarkerPlan.hx",
+        "packages/reflaxe.ocaml/src/reflaxe/ocaml/target/OcamlTargetClassMarker.hx",
         "packages/hxhx-core/src/backend/ocaml/Stage3OcamlClassStorage.hx",
         "packages/hxhx-core/src/backend/ocaml/Stage3OcamlExceptions.hx"
       ],
       "ownerBeads": [
         "haxe_ocaml-0uwin",
         "haxe_ocaml-s7jry",
-        "haxe_ocaml-k93zp"
+        "haxe_ocaml-k93zp",
+        "haxe_ocaml-eu7fj.22"
       ],
-      "whyOcaml": "The compiler has already selected a checked Haxe runtime capability. These modules implement its OCaml carrier or host primitive and are copied through the locked, hashed runtime manifest.",
+      "whyOcaml": "The compiler has already selected a checked Haxe runtime capability. These modules implement its OCaml carrier or host primitive and are copied through the locked, hashed runtime manifest. Private allocation stamps preserve native ObjectMap lookup across mutation and moving GC. Haxe selects each allocation and class descriptor; OCaml supplies atomic stamps and checked native representation access without interpreting compiler facts.",
       "readinessRule": "A manifest entry proves source ownership and integrity, not full Haxe parity. Missing, stale, unknown, profile-illegal, or semantically unexplained runtime requirements remain fail-closed work under haxe_ocaml-0uwin.",
       "focusedEvidence": [
         "npm run test:reflaxe-ocaml:runtime-manifest",
@@ -178,6 +181,12 @@
     }
   ],
   "testFixtures": [
+    {
+      "path": "test/object_map_identity_runtime/Observer.ml",
+      "kind": "native-target-test-observer",
+      "productionModule": "HxRuntime / HxMap / HxAnon / HxType",
+      "whyOcaml": "An independent native consumer verifies physical identity, mutation, lookup after requested garbage collections, hash collisions, opaque native keys, and allocation stamps. It does not prove that a particular object moved. Haxe owns allocation selection; this file owns representation assertions only."
+    },
     {
       "path": "test/method_dispatch_runtime/Observer.ml",
       "kind": "native-target-test-observer",
