@@ -85,8 +85,9 @@ function localInitializerSources(body:TypedExpr):ObjectMap<TypedExpr, TypedExpr>
 	return result;
 }
 
+/** Typedef spelling can differ after inlining; follow aliases without erasing nominal abstract identity. */
 private function sameType(left:Type, right:Type):Bool {
-	return TypeTools.toString(left) == TypeTools.toString(right);
+	return TypeTools.toString(TypeTools.follow(left)) == TypeTools.toString(TypeTools.follow(right));
 }
 
 private function transparent(expression:TypedExpr):TypedExpr {

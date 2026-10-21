@@ -15,6 +15,15 @@ class SingleWriteSourceFixture {
 			value = "value";
 			final copy = value;
 		}, 1);
+		check("iterator typedef preserves the same producer type", macro {
+			var value:KeyValueIterator<String, Int>;
+			value = TypedPairProducer.make();
+			final copy = value;
+		}, 1);
+		check("a type-changing cast does not preserve the producer", macro {
+			final value:KeyValueIterator<String, Int> = TypedPairProducer.make();
+			final copy:KeyValueIterator<String, String> = cast value;
+		}, 0);
 		check("conditional write does not dominate", macro {
 			var value:String;
 			if (Sys.args().length == 0)

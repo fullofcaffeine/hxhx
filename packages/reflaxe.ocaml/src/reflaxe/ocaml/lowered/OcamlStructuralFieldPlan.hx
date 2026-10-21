@@ -829,10 +829,11 @@ class OcamlStructuralFieldPlanner {
 	/**
 		Finds pair locals whose tuple representation is proven by existing calls.
 
-		The target intentionally accepts only direct compiler-typed local
-		initializers. It does not follow aliases, assignments, field names, or
-		anonymous-object shape. A future broader data-flow model must extend this
-		proof explicitly rather than making the syntax renderer guess.
+		Direct compiler-typed producers establish the tuple representation. The
+		shared single-write analysis also retains a producer through a temporary
+		initialized before this local in the same block. Inlining an instance Map's
+		iterator introduces that shape. Field names and anonymous-object shape
+		alone never establish a tuple proof.
 	**/
 	function discoverTuplePairLocals(root:TypedExpr):Map<Int, OcamlTuplePairLocalProof> {
 		final initializers:Array<OcamlLocalInitializer> = [];
@@ -862,11 +863,12 @@ class OcamlStructuralFieldPlanner {
 		}
 
 		visit(root);
+		final localSources = OcamlSingleWriteSource.localInitializerSources(root);
 		final iterators:Map<Int, OcamlTupleIteratorLocalProof> = [];
 		for (initializer in initializers) {
 			if (reassigned.exists(initializer.hostLocalId))
 				continue;
-			final expression = transparentExpression(initializer.expression);
+			final expression = transparentExpression(provenLocalSource(localSources, initializer.expression));
 			final interfaceCall = iMapInterfaces.callFor(expression);
 			final call = calls.decisionFor(expression);
 			final target = call == null ? null : call.standardIMapTarget;
@@ -965,6 +967,18 @@ class OcamlStructuralFieldPlanner {
 			proofId: OcamlStructuralFieldContract.KEY_VALUE_TUPLE_PROOF_ID,
 			proofClaim: OcamlStructuralFieldContract.KEY_VALUE_TUPLE_PROOF_CLAIM
 		};
+	}
+
+	/**
+		Uses the proven producer for this exact read, or retains the original expression.
+		Keep the nullable lookup outside the discovery loop: combining its branch
+		with the loop's proof checks makes Haxe 4.3.7 null-safety analysis grow sharply.
+	**/
+	static function provenLocalSource(sources:ObjectMap<TypedExpr, TypedExpr>, expression:TypedExpr):TypedExpr {
+		final source = sources.get(expression);
+		if (source == null)
+			return expression;
+		return source;
 	}
 
 	static function transparentExpression(expression:TypedExpr):TypedExpr {
