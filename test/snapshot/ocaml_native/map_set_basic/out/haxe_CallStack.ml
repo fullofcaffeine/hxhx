@@ -68,7 +68,7 @@ let nativeToHaxe = fun native skip -> let skip = if Obj.repr skip == HxRuntime.h
       ));
       Stdlib.raise (HxRuntime.Hx_continue)
     )) else ());
-    let loc = parseFileLine (line : string) in if loc != Obj.magic (HxRuntime.hx_null) then ignore (let __array_receiver_39 = out in let __array_arg_0_40 = Obj.magic (let __enum_arg_41 = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" (Obj.magic (HxRuntime.hx_null))) in let __enum_arg_42 = (Obj.obj (HxAnon.get loc "file") : string) in let __enum_arg_43 = Obj.obj (HxAnon.get loc "line") in let __enum_arg_44 = HxRuntime.hx_null in FilePos (Stdlib.Sys.opaque_identity __enum_arg_41, __enum_arg_42, __enum_arg_43, __enum_arg_44)) in HxArray.push __array_receiver_39 __array_arg_0_40) else ignore (let __array_receiver_45 = out in let __array_arg_0_46 = Obj.magic (let __enum_arg_47 = (line : string) in Module (Stdlib.Sys.opaque_identity __enum_arg_47)) in HxArray.push __array_receiver_45 __array_arg_0_46)
+    let loc = parseFileLine (line : string) in if loc != Obj.magic (HxRuntime.hx_null) then ignore (let __array_receiver_39 = Obj.magic out in let __array_arg_0_40 = Obj.magic (let __enum_arg_41 = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" (Obj.magic (HxRuntime.hx_null))) in let __enum_arg_42 = (Obj.obj (HxAnon.get loc "file") : string) in let __enum_arg_43 = Obj.obj (HxAnon.get loc "line") in let __enum_arg_44 = HxRuntime.hx_null in FilePos (Stdlib.Sys.opaque_identity __enum_arg_41, __enum_arg_42, __enum_arg_43, __enum_arg_44)) in HxArray.push __array_receiver_39 __array_arg_0_40) else ignore (let __array_receiver_45 = Obj.magic out in let __array_arg_0_46 = Obj.magic (let __enum_arg_47 = (line : string) in Module (Stdlib.Sys.opaque_identity __enum_arg_47)) in HxArray.push __array_receiver_45 __array_arg_0_46)
   )) with
     | HxRuntime.Hx_continue -> () done);
   out
@@ -80,7 +80,7 @@ let callStack = fun () -> nativeToHaxe (let __anon_48 = HxAnon.create () in (
   __anon_48
 )) (Obj.magic (HxRuntime.hx_null))
 
-let copy = fun this1 -> let __array_receiver_73 = this1 in HxArray.copy __array_receiver_73
+let copy = fun this1 -> let __array_receiver_73 = Obj.magic this1 in HxArray.copy __array_receiver_73
 
 let get = fun this1 index -> let __array_read_receiver_74 = this1 in let __array_read_index_75 = index in HxArray.get (Obj.magic __array_read_receiver_74) __array_read_index_75
 
@@ -240,7 +240,7 @@ let subtract = fun this1 stack -> let startIndex = ref (-1) in let i = ref (-1) 
   )) done with
     | HxRuntime.Hx_break -> ());
   let tempResult = ref (Obj.magic (HxRuntime.hx_null) : stackitem HxArray.t) in (
-    ignore (if !startIndex >= 0 then let __assign_68 = let __array_receiver_69 = this1 in let __array_arg_0_70 = 0 in let __array_arg_1_71 = !startIndex in HxArray.slice __array_receiver_69 __array_arg_0_70 __array_arg_1_71 in (
+    ignore (if !startIndex >= 0 then let __assign_68 = let __array_receiver_69 = Obj.magic this1 in let __array_arg_0_70 = 0 in let __array_arg_1_71 = !startIndex in HxArray.slice __array_receiver_69 __array_arg_0_70 __array_arg_1_71 in (
       tempResult := __assign_68;
       __assign_68
     ) else let __assign_72 = this1 in (

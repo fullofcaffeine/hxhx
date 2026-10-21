@@ -18,26 +18,26 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.io.BytesBuffer"; b = 
 
 let get_length = fun self () -> HxArray.length ((Obj.magic self : t).b)
 
-let addByte = fun self (byte : int) -> ignore (ignore (let __array_receiver_3 = (Obj.magic self : t).b in let __array_arg_0_4 = byte in HxArray.push __array_receiver_3 __array_arg_0_4))
+let addByte = fun self (byte : int) -> ignore (ignore (let __array_receiver_3 = Obj.magic ((Obj.magic self : t).b) in let __array_arg_0_4 = byte in HxArray.push __array_receiver_3 __array_arg_0_4))
 
 let add = fun self (src : HxBytes.t) -> ignore (ignore (let _g = ref 0 in let _g1 = let __bytes_receiver_5 = src in HxBytes.length __bytes_receiver_5 in while !_g < _g1 do ignore (let i = let __old_6 = !_g in let __new_7 = HxInt.add __old_6 1 in (
   ignore (_g := __new_7);
   __old_6
-) in let __array_receiver_8 = (Obj.magic self : t).b in let __array_arg_0_9 = let __bytes_access_receiver_10 = src in let __bytes_access_arg_0_11 = i in HxBytes.get __bytes_access_receiver_10 __bytes_access_arg_0_11 in HxArray.push __array_receiver_8 __array_arg_0_9) done))
+) in let __array_receiver_8 = Obj.magic ((Obj.magic self : t).b) in let __array_arg_0_9 = let __bytes_access_receiver_10 = src in let __bytes_access_arg_0_11 = i in HxBytes.get __bytes_access_receiver_10 __bytes_access_arg_0_11 in HxArray.push __array_receiver_8 __array_arg_0_9) done))
 
 let addString = fun self (v : string) (encoding : Obj.t) -> ignore ((
   ignore encoding;
   ignore (let src = Obj.magic (let __bytes_producer_arg_0_12 = v in HxBytes.ofString __bytes_producer_arg_0_12 ()) in let _g = ref 0 in let _g1 = let __bytes_receiver_13 = src in HxBytes.length __bytes_receiver_13 in while !_g < _g1 do ignore (let i = let __old_14 = !_g in let __new_15 = HxInt.add __old_14 1 in (
     ignore (_g := __new_15);
     __old_14
-  ) in let __array_receiver_16 = (Obj.magic self : t).b in let __array_arg_0_17 = let __bytes_access_receiver_18 = src in let __bytes_access_arg_0_19 = i in HxBytes.get __bytes_access_receiver_18 __bytes_access_arg_0_19 in HxArray.push __array_receiver_16 __array_arg_0_17) done)
+  ) in let __array_receiver_16 = Obj.magic ((Obj.magic self : t).b) in let __array_arg_0_17 = let __bytes_access_receiver_18 = src in let __bytes_access_arg_0_19 = i in HxBytes.get __bytes_access_receiver_18 __bytes_access_arg_0_19 in HxArray.push __array_receiver_16 __array_arg_0_17) done)
 ))
 
 let addInt32 = fun self (v : int) -> ignore (ignore ((
-  ignore (let __array_receiver_20 = (Obj.magic self : t).b in let __array_arg_0_21 = HxInt.logand v 255 in HxArray.push __array_receiver_20 __array_arg_0_21);
-  ignore (let __array_receiver_22 = (Obj.magic self : t).b in let __array_arg_0_23 = HxInt.logand (HxInt.shr v 8) 255 in HxArray.push __array_receiver_22 __array_arg_0_23);
-  ignore (let __array_receiver_24 = (Obj.magic self : t).b in let __array_arg_0_25 = HxInt.logand (HxInt.shr v 16) 255 in HxArray.push __array_receiver_24 __array_arg_0_25);
-  let __array_receiver_26 = (Obj.magic self : t).b in let __array_arg_0_27 = HxInt.ushr v 24 in HxArray.push __array_receiver_26 __array_arg_0_27
+  ignore (let __array_receiver_20 = Obj.magic ((Obj.magic self : t).b) in let __array_arg_0_21 = HxInt.logand v 255 in HxArray.push __array_receiver_20 __array_arg_0_21);
+  ignore (let __array_receiver_22 = Obj.magic ((Obj.magic self : t).b) in let __array_arg_0_23 = HxInt.logand (HxInt.shr v 8) 255 in HxArray.push __array_receiver_22 __array_arg_0_23);
+  ignore (let __array_receiver_24 = Obj.magic ((Obj.magic self : t).b) in let __array_arg_0_25 = HxInt.logand (HxInt.shr v 16) 255 in HxArray.push __array_receiver_24 __array_arg_0_25);
+  let __array_receiver_26 = Obj.magic ((Obj.magic self : t).b) in let __array_arg_0_27 = HxInt.ushr v 24 in HxArray.push __array_receiver_26 __array_arg_0_27
 )))
 
 let addInt64 = fun self (v : Haxe_Int64.___int64_t) -> ignore (ignore ((
@@ -55,7 +55,7 @@ let addBytes = fun self (src : HxBytes.t) (pos : int) (len : int) -> ignore (ign
   let _g = ref pos in let _g1 = HxInt.add pos len in while !_g < _g1 do ignore (let i = let __old_29 = !_g in let __new_30 = HxInt.add __old_29 1 in (
     ignore (_g := __new_30);
     __old_29
-  ) in let __array_receiver_31 = (Obj.magic self : t).b in let __array_arg_0_32 = let __bytes_access_receiver_33 = src in let __bytes_access_arg_0_34 = i in HxBytes.get __bytes_access_receiver_33 __bytes_access_arg_0_34 in HxArray.push __array_receiver_31 __array_arg_0_32) done
+  ) in let __array_receiver_31 = Obj.magic ((Obj.magic self : t).b) in let __array_arg_0_32 = let __bytes_access_receiver_33 = src in let __bytes_access_arg_0_34 = i in HxBytes.get __bytes_access_receiver_33 __bytes_access_arg_0_34 in HxArray.push __array_receiver_31 __array_arg_0_32) done
 )))
 
 let getBytes = fun self () -> let out = Obj.magic (let __bytes_producer_arg_0_35 = HxArray.length ((Obj.magic self : t).b) in HxBytes.alloc __bytes_producer_arg_0_35) in let _g = ref 0 in let _g1 = HxArray.length ((Obj.magic self : t).b) in (

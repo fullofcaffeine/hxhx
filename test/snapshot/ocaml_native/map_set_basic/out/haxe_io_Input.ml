@@ -105,7 +105,7 @@ let readUntil__impl = fun (self : t) (hx_end : int) -> let buf = Obj.magic (Haxe
       __assign_25
     ));
     ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not (!last <> hx_end))) then Stdlib.raise (HxRuntime.Hx_break) else ());
-    let __array_receiver_26 = (Obj.magic buf : Haxe_io_BytesBuffer.t).b in let __array_arg_0_27 = !last in HxArray.push __array_receiver_26 __array_arg_0_27
+    let __array_receiver_26 = Obj.magic ((Obj.magic buf : Haxe_io_BytesBuffer.t).b) in let __array_arg_0_27 = !last in HxArray.push __array_receiver_26 __array_arg_0_27
   )) done with
     | HxRuntime.Hx_break -> ());
   let __bytes_receiver_28 = Haxe_io_BytesBuffer.getBytes (Obj.magic buf) () in HxBytes.toString __bytes_receiver_28 ()
@@ -119,7 +119,7 @@ let readLine__impl = fun (self : t) () -> let buf = Obj.magic (Haxe_io_BytesBuff
         __assign_36
       ));
       ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not (!last <> 10))) then Stdlib.raise (HxRuntime.Hx_break) else ());
-      let __array_receiver_37 = (Obj.magic buf : Haxe_io_BytesBuffer.t).b in let __array_arg_0_38 = !last in HxArray.push __array_receiver_37 __array_arg_0_38
+      let __array_receiver_37 = Obj.magic ((Obj.magic buf : Haxe_io_BytesBuffer.t).b) in let __array_arg_0_38 = !last in HxArray.push __array_receiver_37 __array_arg_0_38
     )) done with
       | HxRuntime.Hx_break -> ());
     ignore (let __assign_39 = (let __bytes_receiver_40 = Haxe_io_BytesBuffer.getBytes (Obj.magic buf) () in HxBytes.toString __bytes_receiver_40 () : string) in (

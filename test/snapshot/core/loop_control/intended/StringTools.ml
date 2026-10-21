@@ -154,8 +154,8 @@ let _urlEncodeOcaml = fun (s : string) -> (let bytes = Obj.magic (let __bytes_pr
   ignore (while !_g < _g1 do ignore (let index = let __old_96 = !_g in let __new_97 = HxInt.add __old_96 1 in (
     ignore (_g := __new_97);
     __old_96
-  ) in let code = let __bytes_access_receiver_98 = bytes in let __bytes_access_arg_0_99 = index in HxBytes.get __bytes_access_receiver_98 __bytes_access_arg_0_99 in if code >= 65 && code <= 90 || code >= 97 && code <= 122 || code >= 48 && code <= 57 || code = 45 || code = 95 || code = 46 || code = 126 then ignore (let __array_receiver_100 = (Obj.magic out : Haxe_io_BytesBuffer.t).b in let __array_arg_0_101 = code in HxArray.push __array_receiver_100 __array_arg_0_101) else ignore ((
-    ignore (let __array_receiver_102 = (Obj.magic out : Haxe_io_BytesBuffer.t).b in let __array_arg_0_103 = 37 in HxArray.push __array_receiver_102 __array_arg_0_103);
+  ) in let code = let __bytes_access_receiver_98 = bytes in let __bytes_access_arg_0_99 = index in HxBytes.get __bytes_access_receiver_98 __bytes_access_arg_0_99 in if code >= 65 && code <= 90 || code >= 97 && code <= 122 || code >= 48 && code <= 57 || code = 45 || code = 95 || code = 46 || code = 126 then ignore (let __array_receiver_100 = Obj.magic ((Obj.magic out : Haxe_io_BytesBuffer.t).b) in let __array_arg_0_101 = code in HxArray.push __array_receiver_100 __array_arg_0_101) else ignore ((
+    ignore (let __array_receiver_102 = Obj.magic ((Obj.magic out : Haxe_io_BytesBuffer.t).b) in let __array_arg_0_103 = 37 in HxArray.push __array_receiver_102 __array_arg_0_103);
     let tempNumber = ref (0 : int) in let value = HxInt.logand (HxInt.shr code 4) 15 in (
       ignore (if value < 10 then let __assign_104 = HxInt.add 48 value in (
         tempNumber := __assign_104;
@@ -164,7 +164,7 @@ let _urlEncodeOcaml = fun (s : string) -> (let bytes = Obj.magic (let __bytes_pr
         tempNumber := __assign_105;
         __assign_105
       ));
-      ignore (let __array_receiver_106 = (Obj.magic out : Haxe_io_BytesBuffer.t).b in let __array_arg_0_107 = !tempNumber in HxArray.push __array_receiver_106 __array_arg_0_107);
+      ignore (let __array_receiver_106 = Obj.magic ((Obj.magic out : Haxe_io_BytesBuffer.t).b) in let __array_arg_0_107 = !tempNumber in HxArray.push __array_receiver_106 __array_arg_0_107);
       let tempNumber1 = ref (0 : int) in let value = HxInt.logand code 15 in (
         ignore (if value < 10 then let __assign_108 = HxInt.add 48 value in (
           tempNumber1 := __assign_108;
@@ -173,7 +173,7 @@ let _urlEncodeOcaml = fun (s : string) -> (let bytes = Obj.magic (let __bytes_pr
           tempNumber1 := __assign_109;
           __assign_109
         ));
-        let __array_receiver_110 = (Obj.magic out : Haxe_io_BytesBuffer.t).b in let __array_arg_0_111 = !tempNumber1 in HxArray.push __array_receiver_110 __array_arg_0_111
+        let __array_receiver_110 = Obj.magic ((Obj.magic out : Haxe_io_BytesBuffer.t).b) in let __array_arg_0_111 = !tempNumber1 in HxArray.push __array_receiver_110 __array_arg_0_111
       )
     )
   ))) done);
@@ -185,7 +185,7 @@ let urlEncode = fun (s : string) -> (let hx_arg = s in _urlEncodeOcaml hx_arg : 
 let _urlDecodeOcaml = fun (s : string) -> (let bytes = Obj.magic (let __bytes_producer_arg_0_113 = s in HxBytes.ofString __bytes_producer_arg_0_113 ()) in let out = Obj.magic (Haxe_io_BytesBuffer.create ()) in let index = ref 0 in (
   ignore (while !index < (let __bytes_receiver_114 = bytes in HxBytes.length __bytes_receiver_114) do try ignore (let code = let __bytes_access_receiver_115 = bytes in let __bytes_access_arg_0_116 = !index in HxBytes.get __bytes_access_receiver_115 __bytes_access_arg_0_116 in (
     ignore (if code = 43 then ignore ((
-      ignore (let __array_receiver_117 = (Obj.magic out : Haxe_io_BytesBuffer.t).b in let __array_arg_0_118 = 32 in HxArray.push __array_receiver_117 __array_arg_0_118);
+      ignore (let __array_receiver_117 = Obj.magic ((Obj.magic out : Haxe_io_BytesBuffer.t).b) in let __array_arg_0_118 = 32 in HxArray.push __array_receiver_117 __array_arg_0_118);
       ignore (let __old_119 = !index in let __new_120 = HxInt.add __old_119 1 in (
         ignore (index := __new_120);
         __old_119
@@ -221,13 +221,13 @@ let _urlDecodeOcaml = fun (s : string) -> (let bytes = Obj.magic (let __bytes_pr
           __assign_133
         ));
         let lo = !tempNumber1 in if hi >= 0 && lo >= 0 then ignore ((
-          ignore (let __array_receiver_134 = (Obj.magic out : Haxe_io_BytesBuffer.t).b in let __array_arg_0_135 = HxInt.logor (HxInt.shl hi 4) lo in HxArray.push __array_receiver_134 __array_arg_0_135);
+          ignore (let __array_receiver_134 = Obj.magic ((Obj.magic out : Haxe_io_BytesBuffer.t).b) in let __array_arg_0_135 = HxInt.logor (HxInt.shl hi 4) lo in HxArray.push __array_receiver_134 __array_arg_0_135);
           ignore (index := HxInt.add (!index) 3);
           Stdlib.raise (HxRuntime.Hx_continue)
         )) else ()
       )
     )) else ());
-    ignore (let __array_receiver_136 = (Obj.magic out : Haxe_io_BytesBuffer.t).b in let __array_arg_0_137 = code in HxArray.push __array_receiver_136 __array_arg_0_137);
+    ignore (let __array_receiver_136 = Obj.magic ((Obj.magic out : Haxe_io_BytesBuffer.t).b) in let __array_arg_0_137 = code in HxArray.push __array_receiver_136 __array_arg_0_137);
     let __old_138 = !index in let __new_139 = HxInt.add __old_138 1 in (
       ignore (index := __new_139);
       __old_138
