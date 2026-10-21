@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable b : int HxArray.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.io.BytesBuffer"; b = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "haxe.io.BytesBuffer"; b = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let __assign_1 = Obj.magic (let __represented_array_2 = HxArray.create () in __represented_array_2) in (
     (Obj.magic self : t).b <- __assign_1;
     __assign_1
@@ -14,7 +14,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.io.BytesBuf
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.io.BytesBuffer"; b = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "haxe.io.BytesBuffer"; b = Obj.magic HxRuntime.hx_null } : t)
 
 let get_length = fun self () -> HxArray.length ((Obj.magic self : t).b)
 

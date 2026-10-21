@@ -96,6 +96,11 @@ let class_ (name : string) : Obj.t =
       Hashtbl.add classes name v;
       v
 
+(* One generated allocation owns this fresh header. Class values remain interned;
+   registration and reflection recover that descriptor without sharing stamps. *)
+let instance_marker (name : string) : Obj.t =
+  HxRuntime.identity_header (class_ name)
+
 let enum_ (name : string) : Obj.t =
   match Hashtbl.find_opt enums name with
   | Some v -> v
@@ -491,7 +496,8 @@ let merge_tags (a : string list) (b : string list) : string list =
    Invariants enforced by codegen:
    - Native class records have a first field named `__hx_type : Obj.t`.
    - HxAnon instances retain the descriptor outside their public field map.
-   - Both store the interned class value created by `class_ "<pack.Type>"`.
+   - Native records retain that descriptor inside a fresh identity header.
+   - HxAnon retains the interned descriptor separately from its public fields.
    - This primitive validates the descriptor; Haxe owns class/tag selection.
 *)
 let getClass (o : Obj.t) : Obj.t =
@@ -512,7 +518,7 @@ let getClass (o : Obj.t) : Obj.t =
     HxRuntime.hx_null
   else
     try
-      let c = Obj.field o 0 in
+      let c = HxRuntime.identity_payload (Obj.field o 0) in
       if is_type_value class_marker c then c else HxRuntime.hx_null
     with _ ->
       HxRuntime.hx_null

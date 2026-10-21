@@ -35,8 +35,11 @@ let descriptor_name descriptor =
 (* The generated factory contains only typed binders and contract constants.
    It must not call user code or recursively register another class. Building
    under the lock makes concurrent first allocations publish one complete set.
-   Failure leaves the table unchanged. Repeated allocations do not rebuild it. *)
-let ensure descriptor revision record_size make_entries =
+   Failure leaves the table unchanged. Repeated allocations do not rebuild it.
+   Each allocation presents a fresh header; only its shared class descriptor
+   remains in the registry, so distinct instances reuse the same entries. *)
+let ensure header revision record_size make_entries =
+  let descriptor = HxRuntime.identity_payload header in
   let name = descriptor_name descriptor in
   if revision = "" || record_size < 1 then fail "invalid class layout contract";
   synchronized (fun () ->

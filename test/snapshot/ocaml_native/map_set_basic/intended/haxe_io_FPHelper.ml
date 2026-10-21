@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.io.FPHelper" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "haxe.io.FPHelper" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.io.FPHelper" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "haxe.io.FPHelper" } : t)
 
 let i32ToFloat = fun i -> HxFPHelper.i32ToFloat i
 

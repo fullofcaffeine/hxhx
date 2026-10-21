@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "StringTools" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "StringTools" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "StringTools" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "StringTools" } : t)
 
 let htmlEscape = fun (s : string) (quotes : Obj.t) -> (let buf = Obj.magic (StringBuf.create ()) in let index = ref 0 in (
   ignore (while !index < (let __string_receiver_1 = s in HxString.length __string_receiver_1) do ignore (let code = let __string_receiver_2 = s in let __string_argument_0_3 = !index in HxString.charCodeAt __string_receiver_2 __string_argument_0_3 in (

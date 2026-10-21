@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable x : int; mutable y : int }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun x2 y2 -> let self = ({ __hx_type = HxType.class_ "Point"; x = 0; y = 0 } : t) in (
+let create = fun x2 y2 -> let self = ({ __hx_type = HxType.instance_marker "Point"; x = 0; y = 0 } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = x2 in (
       (__place_receiver_1 : t).x <- __place_rhs_2;
@@ -20,7 +20,7 @@ let create = fun x2 y2 -> let self = ({ __hx_type = HxType.class_ "Point"; x = 0
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "Point"; x = 0; y = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "Point"; x = 0; y = 0 } : t)
 
 let incX = fun self () -> ignore (ignore (let __place_receiver_5 = self in let __place_rhs_6 = HxInt.add ((self : t).x) 1 in (
   (__place_receiver_5 : t).x <- __place_rhs_6;

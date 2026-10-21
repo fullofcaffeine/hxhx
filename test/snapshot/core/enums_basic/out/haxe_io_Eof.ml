@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.io.Eof" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "haxe.io.Eof" } : t) in (
   ignore (ignore ());
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.io.Eof" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "haxe.io.Eof" } : t)
 
 let toString = fun self () -> (
   ignore self;

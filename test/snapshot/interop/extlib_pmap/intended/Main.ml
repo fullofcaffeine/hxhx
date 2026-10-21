@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "Main" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "Main" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "Main" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "Main" } : t)
 
 let main = fun () -> ignore (let m = PMap.empty in let m = PMap.add 1 "one" m in let v = Obj.repr (PMap.find 1 m) in (
   ignore (HxSys.printlnValue v);

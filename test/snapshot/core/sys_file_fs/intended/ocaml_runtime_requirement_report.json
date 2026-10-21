@@ -1,7 +1,7 @@
 {
   "model": "recorded-ocaml-runtime-requirements",
   "runtimeVersion": "1",
-  "runtimeSourceRevision": "sha256:8dfae27e9208f77cea7a92962aafeca7bb709f311e425c323c7d7ad37485fdf7",
+  "runtimeSourceRevision": "sha256:c099397c99e5e5cb9a77a658adecad82bee726155c08b43b714bb04e4efe47fe",
   "compilerObservationGranularity": "module-name-only",
   "runtimeSources": [
     {
@@ -39,8 +39,8 @@
       "files": [
         {
           "path": "HxAnon.ml",
-          "sha256": "sha256:5ba346efbb70007eec9168ca59d45f097bed4e45b55fba7052c26468b92f2ad4",
-          "bytes": 8862
+          "sha256": "sha256:d3e4bf7c5e907e0f3e96d4b4a58fb5324278ed78033d984414b39e748852afe4",
+          "bytes": 8969
         }
       ],
       "profiles": [
@@ -284,8 +284,8 @@
       "files": [
         {
           "path": "HxMap.ml",
-          "sha256": "sha256:06dcd946134ee3c3a8ac4ee724c3efa643e89c7047560b18be7ade71dbac75c2",
-          "bytes": 4835
+          "sha256": "sha256:6aac9ef71fbb39694550b3c75e84aa69ebf3fc1665a77fb5dd6ec2590fa52b4c",
+          "bytes": 5002
         }
       ],
       "profiles": [
@@ -302,8 +302,8 @@
       "files": [
         {
           "path": "HxRuntime.ml",
-          "sha256": "sha256:12d7d500fd3d858228025d7b58d29e9bff38cb87faba7e2b1de014ee05652037",
-          "bytes": 6391
+          "sha256": "sha256:f8127f365c9a1b09e802c0a63827aeac42572438fea6c3480c1138db91687103",
+          "bytes": 7684
         }
       ],
       "profiles": [
@@ -391,8 +391,8 @@
       "files": [
         {
           "path": "HxType.ml",
-          "sha256": "sha256:58eb24a42d06b63cfd99bc7dc38ecd146d21ba017418ed82366a1a10931202cb",
-          "bytes": 21507
+          "sha256": "sha256:561fce326d31b2d2fc1d1a28c5488377b51d18d739ba6dcd76b787997f1b94ac",
+          "bytes": 21867
         }
       ],
       "profiles": [
@@ -421,7 +421,7 @@
     "HxSys",
     "HxType"
   ],
-  "requirementRevision": "sha256:eefa83266cfe1145b768b3421863077ec26d20786b034c27a3f0dd3cd8eba06e",
+  "requirementRevision": "sha256:4f8525e36bf16c39cea5b004b384335a80d62e14c0fa05ea74eb8d8ca53f213f",
   "schemaVersion": 5,
   "selectionMode": "full",
   "authorityStatus": "partial",
@@ -2794,7 +2794,7 @@
       "sourceKind": "haxe-expression"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "StringBuf",
         "kind": "haxe-type"
@@ -2820,7 +2820,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe._Int64.___Int64",
         "kind": "haxe-type"
@@ -2846,7 +2846,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "sys.io._Stdio.OcamlStdioInput",
         "kind": "haxe-type"
@@ -2872,7 +2872,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.Int64Helper",
         "kind": "haxe-type"
@@ -2898,7 +2898,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.io.Output",
         "kind": "haxe-type"
@@ -2924,7 +2924,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.io.BytesBuffer",
         "kind": "haxe-type"
@@ -2950,7 +2950,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "sys.io.File",
         "kind": "haxe-type"
@@ -2976,7 +2976,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "Main",
         "kind": "haxe-type"
@@ -3002,7 +3002,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.iterators.ArrayKeyValueIterator",
         "kind": "haxe-type"
@@ -3028,7 +3028,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "IntIterator",
         "kind": "haxe-type"
@@ -3054,7 +3054,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "sys.io._Stdio.OcamlStdioInput",
         "kind": "haxe-type"
@@ -3080,7 +3080,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.ValueException",
         "kind": "haxe-type"
@@ -3106,7 +3106,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.io.Input",
         "kind": "haxe-type"
@@ -3132,7 +3132,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe._Int64.___Int64",
         "kind": "haxe-type"
@@ -3158,7 +3158,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.iterators.MapKeyValueIterator",
         "kind": "haxe-type"
@@ -3184,7 +3184,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.iterators.StringIterator",
         "kind": "haxe-type"
@@ -3210,7 +3210,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.Exception",
         "kind": "haxe-type"
@@ -3236,7 +3236,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "sys.io._Stdio.OcamlStdioOutput",
         "kind": "haxe-type"
@@ -3262,7 +3262,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.iterators.StringKeyValueIterator",
         "kind": "haxe-type"
@@ -3288,7 +3288,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.io.FPHelper",
         "kind": "haxe-type"
@@ -3314,7 +3314,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.Int64Helper",
         "kind": "haxe-type"
@@ -3340,7 +3340,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "IntIterator",
         "kind": "haxe-type"
@@ -3366,7 +3366,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.io.Eof",
         "kind": "haxe-type"
@@ -3392,7 +3392,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.ds.TreeNode",
         "kind": "haxe-type"
@@ -3418,7 +3418,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.io.Input",
         "kind": "haxe-type"
@@ -3444,7 +3444,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.NativeStackTrace",
         "kind": "haxe-type"
@@ -3470,7 +3470,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.ds.BalancedTree",
         "kind": "haxe-type"
@@ -3496,7 +3496,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.Exception",
         "kind": "haxe-type"
@@ -3522,7 +3522,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "sys.io.FileOutput",
         "kind": "haxe-type"
@@ -3548,7 +3548,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "StringBuf",
         "kind": "haxe-type"
@@ -3574,7 +3574,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "StringTools",
         "kind": "haxe-type"
@@ -3600,7 +3600,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "sys.io._Stdio.OcamlStdioOutput",
         "kind": "haxe-type"
@@ -3626,7 +3626,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.iterators.MapKeyValueIterator",
         "kind": "haxe-type"
@@ -3652,7 +3652,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.iterators.ArrayKeyValueIterator",
         "kind": "haxe-type"
@@ -3678,7 +3678,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "sys.io.FileInput",
         "kind": "haxe-type"
@@ -3704,7 +3704,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "sys.io.Stdio",
         "kind": "haxe-type"
@@ -3730,7 +3730,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.io.Eof",
         "kind": "haxe-type"
@@ -3756,7 +3756,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.iterators.StringIterator",
         "kind": "haxe-type"
@@ -3782,7 +3782,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.ds.EnumValueMap",
         "kind": "haxe-type"
@@ -3808,7 +3808,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.iterators.StringKeyValueIterator",
         "kind": "haxe-type"
@@ -3834,7 +3834,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.io.Output",
         "kind": "haxe-type"
@@ -3860,7 +3860,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.io.FPHelper",
         "kind": "haxe-type"
@@ -3886,7 +3886,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.ds.TreeNode",
         "kind": "haxe-type"
@@ -3912,7 +3912,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "sys.io.FileInput",
         "kind": "haxe-type"
@@ -3938,7 +3938,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.exceptions.NotImplementedException",
         "kind": "haxe-type"
@@ -3964,7 +3964,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.ds.EnumValueMap",
         "kind": "haxe-type"
@@ -3990,7 +3990,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.iterators.ArrayIterator",
         "kind": "haxe-type"
@@ -4016,7 +4016,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.exceptions.PosException",
         "kind": "haxe-type"
@@ -4042,7 +4042,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.exceptions.PosException",
         "kind": "haxe-type"
@@ -4068,7 +4068,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "StringTools",
         "kind": "haxe-type"
@@ -4094,7 +4094,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.ds.BalancedTree",
         "kind": "haxe-type"
@@ -4120,7 +4120,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.NativeStackTrace",
         "kind": "haxe-type"
@@ -4146,7 +4146,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "Main",
         "kind": "haxe-type"
@@ -4172,7 +4172,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "sys.io.Stdio",
         "kind": "haxe-type"
@@ -4198,7 +4198,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.exceptions.NotImplementedException",
         "kind": "haxe-type"
@@ -4224,7 +4224,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "sys.io.File",
         "kind": "haxe-type"
@@ -4250,7 +4250,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.ValueException",
         "kind": "haxe-type"
@@ -4276,7 +4276,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "sys.io.FileOutput",
         "kind": "haxe-type"
@@ -4302,7 +4302,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.iterators.ArrayIterator",
         "kind": "haxe-type"
@@ -4328,7 +4328,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-class-identity-marker-v1",
+      "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
         "id": "haxe.io.BytesBuffer",
         "kind": "haxe-type"
@@ -11699,7 +11699,7 @@
     "HxSys",
     "HxType"
   ],
-  "reportRevision": "sha256:69b2649de06db4debccfc6b6cda230da78b8c093d7b7eddb987f8fe6245717a0",
+  "reportRevision": "sha256:e0c44c6d279f1ed1d4405e1af4cb33adeffdd4066f696c57afd28f97229f5e22",
   "runtimeMode": "full",
   "recordedRequirementSourceKinds": [
     "compiler-infrastructure",

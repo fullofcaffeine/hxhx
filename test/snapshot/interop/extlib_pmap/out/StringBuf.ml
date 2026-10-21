@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable buf : Stdlib.Buffer.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "StringBuf"; buf = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "StringBuf"; buf = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let __assign_1 = Stdlib.Buffer.create 16 in (
     (Obj.magic self : t).buf <- __assign_1;
     __assign_1
@@ -14,7 +14,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "StringBuf"; buf 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "StringBuf"; buf = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "StringBuf"; buf = Obj.magic HxRuntime.hx_null } : t)
 
 let get_length = fun self () -> let b = (Obj.magic self : t).buf in let tempResult = Stdlib.Buffer.length b in tempResult
 

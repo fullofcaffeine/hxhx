@@ -17,7 +17,7 @@
    ---------------------
    We wrap the internal object record in a small marker block:
 
-     block[0] = marker
+     block[0] = fresh identity header carrying marker
      block[1] = Obj.repr <t>
 
    This allows `get/set/has/...` to validate arbitrary `Obj.t` safely before cast. *)
@@ -107,7 +107,8 @@ let add_slot (obj : t) (field : string) : int =
   idx
 
 let is_anon (o : Obj.t) : bool =
-  Obj.is_block o && Obj.size o = 2 && Obj.field o 0 == marker
+  Obj.is_block o && Obj.tag o = 0 && Obj.size o = 2
+  && HxRuntime.identity_payload (Obj.field o 0) == marker
 
 let create_with_class (class_value : Obj.t) : Obj.t =
   let obj : t =
@@ -123,7 +124,7 @@ let create_with_class (class_value : Obj.t) : Obj.t =
     }
   in
   let b = Obj.new_block 0 2 in
-  Obj.set_field b 0 marker;
+  Obj.set_field b 0 (HxRuntime.identity_header marker);
   Obj.set_field b 1 (Obj.repr obj);
   b
 
