@@ -4875,6 +4875,7 @@ class OcamlBuilder {
 																final en = eRef.get();
 
 																final tmp = freshTmp("enum_ctor");
+																final isSameModule = ctx.currentModuleId != null && en.module == ctx.currentModuleId;
 																final repr = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(a0)]);
 																final isNull = OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EIdent(tmp),
 																	OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null"));
@@ -4886,18 +4887,32 @@ class OcamlBuilder {
 																		continue;
 																	final native = extractNativeString(ef.meta);
 																	final outName = native != null ? native : ef.name;
-																	final hasArgs = switch (TypeTools.follow(ef.type)) {
-																		case TFun(fargs, _): fargs != null && fargs.length > 0;
-																		case _: false;
+																	// Reflection matches the same qualified constructors and payload shape as ordinary switches.
+																	final ctorName = if (isOcamlNativeEnumType(en, "Option")
+																		|| isOcamlNativeEnumType(en, "Result")) {
+																		ef.name;
+																	} else if (isOcamlNativeEnumType(en, "List")) {
+																		ef.name == "Nil" ? "[]" : (ef.name == "Cons" ? "::" : ef.name);
+																	} else {
+																		isSameModule ? ef.name : (moduleIdToOcamlModuleName(en.module) + "." + ef.name);
 																	}
-																	final patArgs = hasArgs ? [OcamlPat.PAny] : [];
+																	final argCount = switch (TypeTools.follow(ef.type)) {
+																		case TFun(fargs, _): fargs.length;
+																		case _: 0;
+																	}
+																	final patArgs:Array<OcamlPat> = [];
+																	for (_ in 0...argCount)
+																		patArgs.push(OcamlPat.PAny);
 																	cases.push({
-																		pat: OcamlPat.PConstructor(ef.name, patArgs),
+																		pat: OcamlPat.PConstructor(ctorName, patArgs),
 																		guard: null,
 																		expr: OcamlExpr.EConst(OcamlConst.CString(outName))
 																	});
 																}
-																final m = OcamlExpr.EMatch(buildExpr(a0), cases);
+																// Recover the already evaluated enum after the null check; producers must run only once.
+																final value = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+																	[OcamlExpr.EIdent(tmp)]);
+																final m = OcamlExpr.EMatch(value, cases);
 
 																OcamlExpr.ELet(tmp, repr, OcamlExpr.EIf(isNull, nullString, m), false);
 															case _:
