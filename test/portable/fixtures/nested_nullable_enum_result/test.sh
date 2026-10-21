@@ -34,13 +34,15 @@ if (report.functionResultBoundaryModel !== 'typed-ocaml-function-result-boundary
 const start = source.indexOf('let wrap =')
 const end = source.indexOf('\n\nlet describe =', start)
 const body = source.slice(start, end)
+// choose already returns the Obj.t storage required by Wrapped. Preserve that
+// value and evaluate the selected callable once, without another enum unwrap.
 if (start < 0
 	|| end < 0
 	|| !body.includes('let choose = fun () -> (try Obj.repr ((')
 	|| !body.includes('HxRuntime.Hx_return (HxRuntime.hx_null)')
 	|| !body.includes('HxRuntime.Hx_return (Obj.repr value)')
 	|| !body.includes('| HxRuntime.Hx_return __ret_')
-	|| !/: Obj\.t\) in let (__enum_arg_\d+) = Obj\.obj \(HxEnum\.unbox_or_obj "Choice" \(let (__call_callee_\d+) = choose in \2 \(\)\)\) in Wrapped \(Stdlib\.Sys\.opaque_identity \1\)/.test(body)
+	|| !/: Obj\.t\) in let (__enum_arg_\d+) = let (__call_callee_\d+) = choose in \2 \(\) in Wrapped \(Stdlib\.Sys\.opaque_identity \1\)/.test(body)
 	|| body.includes('Obj.magic (HxRuntime.hx_null)')) {
 	throw new Error('generated choose did not convert each nullable-enum result exactly once')
 }
