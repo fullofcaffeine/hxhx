@@ -25,6 +25,20 @@ class M14TypedFeatureRootsTest {
 		if (entries.length != 1)
 			throw "feature roots fixture requires one entry point";
 		for (mode in ["full", "std", "no"]) {
+			final libraryRoots = TypedFeatureRoots.select({
+				program: program,
+				sources: catalog,
+				entryPoint: null,
+				mode: mode
+			});
+			if ((libraryRoots.functions.indexOf(entries[0]) >= 0) != (mode != "full"))
+				throw "absent entry changed project retention policy";
+			reject(() -> TypedFeatureRoots.select({
+				program: program,
+				sources: catalog,
+				entryPoint: entries[0].withBody(entries[0].getBody()),
+				mode: mode
+			}), "feature roots require an owned entry function");
 			final roots = TypedFeatureRoots.select({
 				program: program,
 				sources: catalog,

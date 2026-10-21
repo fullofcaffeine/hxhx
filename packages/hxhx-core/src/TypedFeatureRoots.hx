@@ -18,7 +18,7 @@ typedef TypedFeatureRootSet = {
 function select(input:{
 	program:MacroExpandedProgram,
 	sources:TypedFeatureSourceCatalog,
-	entryPoint:TypedFunction,
+	entryPoint:Null<TypedFunction>,
 	mode:String
 }):TypedFeatureRootSet {
 	final retainProject = switch (input.mode) {
@@ -38,7 +38,8 @@ function select(input:{
 	final classes = new Array<TypedClass>();
 	final functions = new Array<TypedFunction>();
 	final fields = new Array<TyFieldInfo>();
-	var entryFound = false;
+	// A library request has no entry; its project/keep roots still use the same policy.
+	var entryFound = input.entryPoint == null;
 	for (module in input.program.getTypedModules()) {
 		final project = !input.sources.isStandardLibrary(input.program, module);
 		for (owner in module.getTypedClasses()) {

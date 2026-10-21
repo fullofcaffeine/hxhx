@@ -905,7 +905,15 @@ class Stage3Compiler {
 		if (!requestContext.checkpoint("emission"))
 			return CompilationRequestContext.CANCELLED_EXIT_CODE;
 		final stagedEmitted = try {
-			Stage3EmitSupport.emitWithBackend(backend, expanded, backendId, typedModules.length, outputPaths.workingBackendOutputDir,
+			final prepared = backendTargetDefine == "js" ? Stage3JsPreparation.prepare({
+				program: expanded,
+				classPaths: classPaths,
+				standardRoot: Stage1Args.getStandardLibraryRoot(parsed)
+					.length == 0 ? "" : Stage3PathSupport.absFromCwd(cwd, Stage1Args.getStandardLibraryRoot(parsed)),
+				main: parsedMain,
+				defines: definesMap
+			}) : expanded;
+			Stage3EmitSupport.emitWithBackend(backend, prepared, backendId, typedModules.length, outputPaths.workingBackendOutputDir,
 				outputPaths.workingOutputFileHint, outputPaths.finalBackendOutputDir, parsedMain, emitFullBodies, supportsCustomOutputFile,
 				supportsBuildExecutable, definesMap, backendResources, nekoNdllPaths, requestOutput);
 		} catch (e:String) {
