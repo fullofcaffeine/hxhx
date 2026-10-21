@@ -7816,6 +7816,14 @@ class OcamlBuilder {
 		// the generic abstract branch, which uses tagged Dynamic Boolean storage.
 		if (lhsKind == "bool" && rhsKind == null && isBoolType(rhs.t))
 			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
+		// Null<Enum> keeps the native variant behind Obj.t, just like sealed
+		// nullable results. Select this before generic abstract storage can add
+		// a Dynamic enum box that typed constructor matches cannot consume.
+		final nullableEnumName = isNullableEnumType(lhsType);
+		if (nullableEnumName != null
+			&& OcamlEnumDynamicCarrier.fromType(unwrapNullType(lhsType)) != null
+			&& nullableEnumName == fullNameOfTypeEnum(rhs.t))
+			return isNullableEnumType(rhs.t) != null ? buildExpr(rhs) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
 		final rhsDynamicCarrier = switch (followNoAbstracts(unwrapNullType(rhs.t))) {
 			case TDynamic(_):
 				true;
