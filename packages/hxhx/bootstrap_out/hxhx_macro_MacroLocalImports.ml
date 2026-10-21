@@ -14,7 +14,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.Macro
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.MacroLocalImports" } : t)
 
 let readScope = fun sourceFile -> (try let imports = Obj.magic (HxArray.create ()) in let usings = Obj.magic (HxArray.create ()) in (
-  ignore (if sourceFile == HxString.hx_null_string || (let __string_receiver_57 = sourceFile in HxString.length __string_receiver_57) = 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_58 = HxAnon.create () in (
+  ignore (if sourceFile == HxString.hx_null_string || (let __string_receiver_57 = sourceFile in HxString.length __string_receiver_57) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __anon_58 = HxAnon.create () in (
     ignore (HxAnon.set __anon_58 "imports" (Obj.repr imports));
     ignore (HxAnon.set __anon_58 "usings" (Obj.repr usings));
     __anon_58
@@ -24,10 +24,10 @@ let readScope = fun sourceFile -> (try let imports = Obj.magic (HxArray.create (
       tempMaybeString := __assign_64;
       __assign_64
     ) with
-      | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-      | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_60 -> raise (HxRuntime.Hx_return __ret_60)
-      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+      | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+      | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+      | HxRuntime.Hx_return __ret_60 -> Stdlib.raise (HxRuntime.Hx_return __ret_60)
+      | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
       | HxRuntime.Hx_exception (__exn_v_61, __exn_tags_62) -> if HxRuntime.tags_has __exn_tags_62 "String" then let _hx = (Obj.obj __exn_v_61 : string) in (
         ignore _hx;
         let __assign_59 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -41,9 +41,9 @@ let readScope = fun sourceFile -> (try let imports = Obj.magic (HxArray.create (
           tempMaybeString := __assign_59;
           __assign_59
         )
-      ) else raise (__exn_63));
+      ) else Stdlib.raise (__exn_63));
     let source = (!tempMaybeString : string) in (
-      ignore (if source == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_65 = HxAnon.create () in (
+      ignore (if source == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __anon_65 = HxAnon.create () in (
         ignore (HxAnon.set __anon_65 "imports" (Obj.repr imports));
         ignore (HxAnon.set __anon_65 "usings" (Obj.repr usings));
         __anon_65
@@ -67,21 +67,21 @@ let readScope = fun sourceFile -> (try let imports = Obj.magic (HxArray.create (
           | HxTokenKind.TComma -> 14
           | HxTokenKind.TOther _ -> 15) = 6 then let _g2 = Obj.magic (match _g with
           | HxTokenKind.TKeyword __enum_param_66 -> __enum_param_66
-          | _ -> failwith "Unexpected enum parameter") in let actual = Obj.magic _g2 in if actual = expected then (
-          ignore (let __assign_67 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
-            cur := __assign_67;
-            __assign_67
+          | _ -> failwith "Unexpected enum parameter") in let actual = Obj.magic _g2 in if let __enum_eq_left_67 = actual in let __enum_eq_right_68 = expected in HxEnum.unbox_or_obj "HxKeyword" (Obj.repr __enum_eq_left_67) == HxEnum.unbox_or_obj "HxKeyword" (Obj.repr __enum_eq_right_68) then (
+          ignore (let __assign_69 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
+            cur := __assign_69;
+            __assign_69
           ));
-          let __assign_68 = true in (
-            tempResult := __assign_68;
-            __assign_68
+          let __assign_70 = true in (
+            tempResult := __assign_70;
+            __assign_70
           )
-        ) else let __assign_69 = false in (
-          tempResult := __assign_69;
-          __assign_69
-        ) else let __assign_70 = false in (
-          tempResult := __assign_70;
-          __assign_70
+        ) else let __assign_71 = false in (
+          tempResult := __assign_71;
+          __assign_71
+        ) else let __assign_72 = false in (
+          tempResult := __assign_72;
+          __assign_72
         ));
         !tempResult
       ) in let readIdentToken = fun () -> let tempResult1 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
@@ -102,49 +102,49 @@ let readScope = fun sourceFile -> (try let imports = Obj.magic (HxArray.create (
           | HxTokenKind.TDot -> 13
           | HxTokenKind.TComma -> 14
           | HxTokenKind.TOther _ -> 15) = 1 then let _g2 = (match _g with
-          | HxTokenKind.TIdent __enum_param_71 -> __enum_param_71
-          | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in let token = let __anon_72 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_72 "name" (Obj.repr name));
-          ignore (HxAnon.set __anon_72 "pos" (Obj.repr ((Obj.magic (!cur) : HxToken.t).pos)));
-          __anon_72
+          | HxTokenKind.TIdent __enum_param_73 -> __enum_param_73
+          | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in let token = let __anon_74 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_74 "name" (Obj.repr name));
+          ignore (HxAnon.set __anon_74 "pos" (Obj.repr ((Obj.magic (!cur) : HxToken.t).pos)));
+          __anon_74
         ) in (
-          ignore (let __assign_73 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
-            cur := __assign_73;
-            __assign_73
+          ignore (let __assign_75 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
+            cur := __assign_75;
+            __assign_75
           ));
-          let __assign_74 = Obj.magic token in (
-            tempResult1 := __assign_74;
-            __assign_74
+          let __assign_76 = Obj.magic token in (
+            tempResult1 := __assign_76;
+            __assign_76
           )
-        ) else let __assign_75 = Obj.magic (HxRuntime.hx_null) in (
-          tempResult1 := __assign_75;
-          __assign_75
+        ) else let __assign_77 = Obj.magic (HxRuntime.hx_null) in (
+          tempResult1 := __assign_77;
+          __assign_77
         ));
         Obj.magic (!tempResult1)
-      ) in let skipToSemicolon = fun () -> ignore (try ignore (let rec __while_loop_78 = fun () -> (
+      ) in let skipToSemicolon = fun () -> ignore (try ignore (let rec __while_loop_80 = fun () -> (
         ignore (let _g = Obj.magic ((Obj.magic (!cur) : HxToken.t).kind) in match _g with
-          | HxTokenKind.TEof -> raise (HxRuntime.Hx_return_void)
+          | HxTokenKind.TEof -> Stdlib.raise (HxRuntime.Hx_return_void)
           | HxTokenKind.TSemicolon -> (
-            ignore (let __assign_77 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
-              cur := __assign_77;
-              __assign_77
+            ignore (let __assign_79 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
+              cur := __assign_79;
+              __assign_79
             ));
-            raise (HxRuntime.Hx_return_void)
+            Stdlib.raise (HxRuntime.Hx_return_void)
           )
-          | _ -> ignore (let __assign_76 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
-            cur := __assign_76;
-            __assign_76
+          | _ -> ignore (let __assign_78 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
+            cur := __assign_78;
+            __assign_78
           )));
-        __while_loop_78 ()
-      ) in __while_loop_78 ()) with
-        | HxRuntime.Hx_return_void -> ()) in let consumeImportEntry = fun isUsing -> ignore (try ignore (let first = readIdentToken () in (
+        __while_loop_80 ()
+      ) in __while_loop_80 ()) with
+        | HxRuntime.Hx_return_void -> ()) in let consumeImportEntry = let __callback_input_132 = fun isUsing -> ignore (try ignore (let first = readIdentToken () in (
         ignore (if first == Obj.magic (HxRuntime.hx_null) then (
-          ignore (let __call_callee_80 = skipToSemicolon in __call_callee_80 ());
-          raise (HxRuntime.Hx_return_void)
+          ignore (let __call_callee_82 = skipToSemicolon in __call_callee_82 ());
+          Stdlib.raise (HxRuntime.Hx_return_void)
         ) else ());
         let names = Obj.magic (HxArray.create ()) in (
-          ignore (let __array_receiver_81 = names in let __array_arg_0_82 = Obj.obj (HxAnon.get first "name") in HxArray.push __array_receiver_81 __array_arg_0_82);
-          let wildcard = ref false in let alias = ref (Obj.magic (HxRuntime.hx_null) : string) in let min = (Obj.magic (Obj.obj (HxAnon.get first "pos")) : HxPos.t).index in let max = ref (HxInt.add ((Obj.magic (Obj.obj (HxAnon.get first "pos")) : HxPos.t).index) (let __string_receiver_83 = Obj.obj (HxAnon.get first "name") in HxString.length __string_receiver_83)) in let scanningPath = ref true in (
+          ignore (let __array_receiver_83 = Obj.magic names in let __array_arg_0_84 = (Obj.obj (HxAnon.get first "name") : string) in HxArray.push __array_receiver_83 __array_arg_0_84);
+          let wildcard = ref false in let alias = ref (Obj.magic (HxRuntime.hx_null) : string) in let min = (Obj.magic (Obj.obj (HxAnon.get first "pos")) : HxPos.t).index in let max = ref (HxInt.add ((Obj.magic (Obj.obj (HxAnon.get first "pos")) : HxPos.t).index) (let __string_receiver_85 = Obj.obj (HxAnon.get first "name") in HxString.length __string_receiver_85)) in let scanningPath = ref true in (
             ignore (while !scanningPath do ignore (let _g = Obj.magic ((Obj.magic (!cur) : HxToken.t).kind) in if (match _g with
               | HxTokenKind.TEof -> 0
               | HxTokenKind.TIdent _ -> 1
@@ -162,59 +162,59 @@ let readScope = fun sourceFile -> (try let imports = Obj.magic (HxArray.create (
               | HxTokenKind.TDot -> 13
               | HxTokenKind.TComma -> 14
               | HxTokenKind.TOther _ -> 15) = 13 then ignore ((
-              ignore (let __assign_84 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
-                cur := __assign_84;
-                __assign_84
+              ignore (let __assign_86 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
+                cur := __assign_86;
+                __assign_86
               ));
               let _g2 = Obj.magic ((Obj.magic (!cur) : HxToken.t).kind) in match _g2 with
                 | HxTokenKind.TIdent _p0 -> ignore (let _g3 = (_p0 : string) in let name = (_g3 : string) in (
-                  ignore (let __array_receiver_86 = names in let __array_arg_0_87 = name in HxArray.push __array_receiver_86 __array_arg_0_87);
-                  ignore (let __assign_88 = HxInt.add ((Obj.magic ((Obj.magic (!cur) : HxToken.t).pos) : HxPos.t).index) (let __string_receiver_89 = name in HxString.length __string_receiver_89) in (
-                    max := __assign_88;
-                    __assign_88
-                  ));
-                  let __assign_90 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
-                    cur := __assign_90;
+                  ignore (let __array_receiver_88 = Obj.magic names in let __array_arg_0_89 = (name : string) in HxArray.push __array_receiver_88 __array_arg_0_89);
+                  ignore (let __assign_90 = HxInt.add ((Obj.magic ((Obj.magic (!cur) : HxToken.t).pos) : HxPos.t).index) (let __string_receiver_91 = name in HxString.length __string_receiver_91) in (
+                    max := __assign_90;
                     __assign_90
+                  ));
+                  let __assign_92 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
+                    cur := __assign_92;
+                    __assign_92
                   )
                 ))
                 | HxTokenKind.TOther _p0 -> ignore (let _g3 = _p0 in let code = _g3 in if code = 42 then ignore ((
-                  ignore (let __assign_91 = true in (
-                    wildcard := __assign_91;
-                    __assign_91
-                  ));
-                  ignore (let __assign_92 = HxInt.add ((Obj.magic ((Obj.magic (!cur) : HxToken.t).pos) : HxPos.t).index) 1 in (
-                    max := __assign_92;
-                    __assign_92
-                  ));
-                  ignore (let __assign_93 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
-                    cur := __assign_93;
+                  ignore (let __assign_93 = true in (
+                    wildcard := __assign_93;
                     __assign_93
                   ));
-                  let __assign_94 = false in (
-                    scanningPath := __assign_94;
+                  ignore (let __assign_94 = HxInt.add ((Obj.magic ((Obj.magic (!cur) : HxToken.t).pos) : HxPos.t).index) 1 in (
+                    max := __assign_94;
                     __assign_94
+                  ));
+                  ignore (let __assign_95 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
+                    cur := __assign_95;
+                    __assign_95
+                  ));
+                  let __assign_96 = false in (
+                    scanningPath := __assign_96;
+                    __assign_96
                   )
                 )) else (
-                  ignore (let __call_callee_95 = skipToSemicolon in __call_callee_95 ());
-                  raise (HxRuntime.Hx_return_void)
+                  ignore (let __call_callee_97 = skipToSemicolon in __call_callee_97 ());
+                  Stdlib.raise (HxRuntime.Hx_return_void)
                 ))
                 | _ -> (
-                  ignore (let __call_callee_85 = skipToSemicolon in __call_callee_85 ());
-                  raise (HxRuntime.Hx_return_void)
+                  ignore (let __call_callee_87 = skipToSemicolon in __call_callee_87 ());
+                  Stdlib.raise (HxRuntime.Hx_return_void)
                 )
-            )) else ignore (let __assign_96 = false in (
-              scanningPath := __assign_96;
-              __assign_96
+            )) else ignore (let __assign_98 = false in (
+              scanningPath := __assign_98;
+              __assign_98
             ))) done);
             ignore (if not (isUsing) && (acceptKeyword (Obj.magic (HxKeyword.KAs)) || acceptKeyword (Obj.magic (HxKeyword.KIn))) then ignore (let aliasToken = readIdentToken () in if aliasToken != Obj.magic (HxRuntime.hx_null) then ignore ((
-              ignore (let __assign_97 = Obj.magic (Obj.obj (HxAnon.get aliasToken "name") : string) in (
-                alias := __assign_97;
-                __assign_97
+              ignore (let __assign_99 = Obj.magic (Obj.obj (HxAnon.get aliasToken "name") : string) in (
+                alias := __assign_99;
+                __assign_99
               ));
-              let __assign_98 = HxInt.add ((Obj.magic (Obj.obj (HxAnon.get aliasToken "pos")) : HxPos.t).index) (let __string_receiver_99 = Obj.obj (HxAnon.get aliasToken "name") in HxString.length __string_receiver_99) in (
-                max := __assign_98;
-                __assign_98
+              let __assign_100 = HxInt.add ((Obj.magic (Obj.obj (HxAnon.get aliasToken "pos")) : HxPos.t).index) (let __string_receiver_101 = Obj.obj (HxAnon.get aliasToken "name") in HxString.length __string_receiver_101) in (
+                max := __assign_100;
+                __assign_100
               )
             )) else ()) else ());
             ignore (let _g = Obj.magic ((Obj.magic (!cur) : HxToken.t).kind) in if (match _g with
@@ -233,98 +233,98 @@ let readScope = fun sourceFile -> (try let imports = Obj.magic (HxArray.create (
               | HxTokenKind.TColon -> 12
               | HxTokenKind.TDot -> 13
               | HxTokenKind.TComma -> 14
-              | HxTokenKind.TOther _ -> 15) = 11 then ignore (let __assign_100 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
-              cur := __assign_100;
-              __assign_100
-            )) else ignore (let __call_callee_101 = skipToSemicolon in __call_callee_101 ()));
+              | HxTokenKind.TOther _ -> 15) = 11 then ignore (let __assign_102 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
+              cur := __assign_102;
+              __assign_102
+            )) else ignore (let __call_callee_103 = skipToSemicolon in __call_callee_103 ()));
             if isUsing then ignore (let tempNumber = ref (0 : int) in (
-              ignore (if min < 0 then let __assign_102 = 0 in (
-                tempNumber := __assign_102;
-                __assign_102
-              ) else let __assign_103 = min in (
-                tempNumber := __assign_103;
-                __assign_103
+              ignore (if min < 0 then let __assign_104 = 0 in (
+                tempNumber := __assign_104;
+                __assign_104
+              ) else let __assign_105 = min in (
+                tempNumber := __assign_105;
+                __assign_105
               ));
               let tempNumber1 = ref (0 : int) in (
-                ignore (if !max < min then let __assign_104 = min in (
-                  tempNumber1 := __assign_104;
-                  __assign_104
-                ) else let __assign_105 = !max in (
-                  tempNumber1 := __assign_105;
-                  __assign_105
+                ignore (if !max < min then let __assign_106 = min in (
+                  tempNumber1 := __assign_106;
+                  __assign_106
+                ) else let __assign_107 = !max in (
+                  tempNumber1 := __assign_107;
+                  __assign_107
                 ));
-                let __array_receiver_106 = usings in let __array_arg_0_107 = let __anonymous_value_108 = HxAnon.create () in (
-                  let __anonymous_field_value_109 = HxArray.join names "." (fun x -> x) in ignore (HxAnon.set __anonymous_value_108 "path" (Obj.repr __anonymous_field_value_109));
-                  let __anonymous_field_value_110 = sourceFile in ignore (HxAnon.set __anonymous_value_108 "file" (Obj.repr __anonymous_field_value_110));
-                  let __anonymous_field_value_111 = !tempNumber in ignore (HxAnon.set __anonymous_value_108 "min" (Obj.repr __anonymous_field_value_111));
-                  let __anonymous_field_value_112 = !tempNumber1 in ignore (HxAnon.set __anonymous_value_108 "max" (Obj.repr __anonymous_field_value_112));
-                  __anonymous_value_108
-                ) in HxArray.push __array_receiver_106 __array_arg_0_107
+                let __array_receiver_108 = Obj.magic usings in let __array_arg_0_109 = let __anonymous_value_110 = HxAnon.create () in (
+                  let __anonymous_field_value_111 = HxArray.join names "." (fun x -> x) in ignore (HxAnon.set __anonymous_value_110 "path" (Obj.repr __anonymous_field_value_111));
+                  let __anonymous_field_value_112 = sourceFile in ignore (HxAnon.set __anonymous_value_110 "file" (Obj.repr __anonymous_field_value_112));
+                  let __anonymous_field_value_113 = !tempNumber in ignore (HxAnon.set __anonymous_value_110 "min" (Obj.repr __anonymous_field_value_113));
+                  let __anonymous_field_value_114 = !tempNumber1 in ignore (HxAnon.set __anonymous_value_110 "max" (Obj.repr __anonymous_field_value_114));
+                  __anonymous_value_110
+                ) in HxArray.push __array_receiver_108 __array_arg_0_109
               )
             )) else ignore (let tempString = ref (HxString.hx_null_string : string) in (
-              ignore (if !wildcard then let __assign_113 = "all" in (
-                tempString := __assign_113;
-                __assign_113
-              ) else if !alias == Obj.magic (HxRuntime.hx_null) then let __assign_114 = "normal" in (
-                tempString := __assign_114;
-                __assign_114
-              ) else let __assign_115 = "alias" in (
+              ignore (if !wildcard then let __assign_115 = "all" in (
                 tempString := __assign_115;
                 __assign_115
+              ) else if !alias == Obj.magic (HxRuntime.hx_null) then let __assign_116 = "normal" in (
+                tempString := __assign_116;
+                __assign_116
+              ) else let __assign_117 = "alias" in (
+                tempString := __assign_117;
+                __assign_117
               ));
               let tempNumber2 = ref (0 : int) in (
-                ignore (if min < 0 then let __assign_116 = 0 in (
-                  tempNumber2 := __assign_116;
-                  __assign_116
-                ) else let __assign_117 = min in (
-                  tempNumber2 := __assign_117;
-                  __assign_117
+                ignore (if min < 0 then let __assign_118 = 0 in (
+                  tempNumber2 := __assign_118;
+                  __assign_118
+                ) else let __assign_119 = min in (
+                  tempNumber2 := __assign_119;
+                  __assign_119
                 ));
                 let tempNumber3 = ref (0 : int) in (
-                  ignore (if !max < min then let __assign_118 = min in (
-                    tempNumber3 := __assign_118;
-                    __assign_118
-                  ) else let __assign_119 = !max in (
-                    tempNumber3 := __assign_119;
-                    __assign_119
+                  ignore (if !max < min then let __assign_120 = min in (
+                    tempNumber3 := __assign_120;
+                    __assign_120
+                  ) else let __assign_121 = !max in (
+                    tempNumber3 := __assign_121;
+                    __assign_121
                   ));
-                  let __array_receiver_120 = imports in let __array_arg_0_121 = let __anonymous_value_122 = HxAnon.create () in (
-                    let __anonymous_field_value_123 = HxArray.join names "." (fun x -> x) in ignore (HxAnon.set __anonymous_value_122 "path" (Obj.repr __anonymous_field_value_123));
-                    let __anonymous_field_value_124 = !tempString in ignore (HxAnon.set __anonymous_value_122 "mode" (Obj.repr __anonymous_field_value_124));
-                    let __anonymous_field_value_125 = !alias in ignore (HxAnon.set __anonymous_value_122 "alias" (Obj.repr __anonymous_field_value_125));
-                    let __anonymous_field_value_126 = sourceFile in ignore (HxAnon.set __anonymous_value_122 "file" (Obj.repr __anonymous_field_value_126));
-                    let __anonymous_field_value_127 = !tempNumber2 in ignore (HxAnon.set __anonymous_value_122 "min" (Obj.repr __anonymous_field_value_127));
-                    let __anonymous_field_value_128 = !tempNumber3 in ignore (HxAnon.set __anonymous_value_122 "max" (Obj.repr __anonymous_field_value_128));
-                    __anonymous_value_122
-                  ) in HxArray.push __array_receiver_120 __array_arg_0_121
+                  let __array_receiver_122 = Obj.magic imports in let __array_arg_0_123 = let __anonymous_value_124 = HxAnon.create () in (
+                    let __anonymous_field_value_125 = HxArray.join names "." (fun x -> x) in ignore (HxAnon.set __anonymous_value_124 "path" (Obj.repr __anonymous_field_value_125));
+                    let __anonymous_field_value_126 = !tempString in ignore (HxAnon.set __anonymous_value_124 "mode" (Obj.repr __anonymous_field_value_126));
+                    let __anonymous_field_value_127 = !alias in ignore (HxAnon.set __anonymous_value_124 "alias" (Obj.repr __anonymous_field_value_127));
+                    let __anonymous_field_value_128 = sourceFile in ignore (HxAnon.set __anonymous_value_124 "file" (Obj.repr __anonymous_field_value_128));
+                    let __anonymous_field_value_129 = !tempNumber2 in ignore (HxAnon.set __anonymous_value_124 "min" (Obj.repr __anonymous_field_value_129));
+                    let __anonymous_field_value_130 = !tempNumber3 in ignore (HxAnon.set __anonymous_value_124 "max" (Obj.repr __anonymous_field_value_130));
+                    __anonymous_value_124
+                  ) in HxArray.push __array_receiver_122 __array_arg_0_123
                 )
               )
             ))
           )
         )
       )) with
-        | HxRuntime.Hx_return_void -> ()) in (
+        | HxRuntime.Hx_return_void -> ()) in let __callable_origin_133 = __callback_input_132 in (__callable_origin_133, Obj.repr (ref ())) in (
         ignore (if acceptKeyword (Obj.magic (HxKeyword.KPackage)) then ignore (let packageDone = ref false in while not (!packageDone) do ignore (let _g = Obj.magic ((Obj.magic (!cur) : HxToken.t).kind) in match _g with
-          | HxTokenKind.TEof -> raise (HxRuntime.Hx_return (Obj.repr (let __anon_131 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_131 "imports" (Obj.repr imports));
-            ignore (HxAnon.set __anon_131 "usings" (Obj.repr usings));
-            __anon_131
+          | HxTokenKind.TEof -> Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __anon_135 = HxAnon.create () in (
+            ignore (HxAnon.set __anon_135 "imports" (Obj.repr imports));
+            ignore (HxAnon.set __anon_135 "usings" (Obj.repr usings));
+            __anon_135
           ))))
           | HxTokenKind.TSemicolon -> ignore ((
-            ignore (let __assign_132 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
-              cur := __assign_132;
-              __assign_132
+            ignore (let __assign_136 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
+              cur := __assign_136;
+              __assign_136
             ));
-            let __assign_133 = true in (
-              packageDone := __assign_133;
-              __assign_133
+            let __assign_137 = true in (
+              packageDone := __assign_137;
+              __assign_137
             )
           ))
-          | _ -> ignore (let __assign_130 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
-            cur := __assign_130;
-            __assign_130
+          | _ -> ignore (let __assign_134 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
+            cur := __assign_134;
+            __assign_134
           ))) done) else ());
-        let rec __while_loop_143 = fun () -> (
+        let rec __while_loop_147 = fun () -> (
           ignore (let _g = Obj.magic ((Obj.magic (!cur) : HxToken.t).kind) in if (match _g with
             | HxTokenKind.TEof -> 0
             | HxTokenKind.TIdent _ -> 1
@@ -342,68 +342,68 @@ let readScope = fun sourceFile -> (try let imports = Obj.magic (HxArray.create (
             | HxTokenKind.TDot -> 13
             | HxTokenKind.TComma -> 14
             | HxTokenKind.TOther _ -> 15) = 6 then ignore (let _g2 = Obj.magic (match _g with
-            | HxTokenKind.TKeyword __enum_param_134 -> __enum_param_134
+            | HxTokenKind.TKeyword __enum_param_138 -> __enum_param_138
             | _ -> failwith "Unexpected enum parameter") in match _g2 with
             | HxKeyword.KImport -> ignore ((
-              ignore (let __assign_136 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
-                cur := __assign_136;
-                __assign_136
+              ignore (let __assign_140 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
+                cur := __assign_140;
+                __assign_140
               ));
-              let __call_callee_137 = consumeImportEntry in let __call_arg_0_138 = false in __call_callee_137 __call_arg_0_138
+              let __call_callee_141 = consumeImportEntry in let __call_arg_0_142 = false in Stdlib.fst __call_callee_141 __call_arg_0_142
             ))
             | HxKeyword.KUsing -> ignore ((
-              ignore (let __assign_139 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
-                cur := __assign_139;
-                __assign_139
+              ignore (let __assign_143 = Obj.magic (HxLexer.next (Obj.magic lexer) ()) in (
+                cur := __assign_143;
+                __assign_143
               ));
-              let __call_callee_140 = consumeImportEntry in let __call_arg_0_141 = true in __call_callee_140 __call_arg_0_141
+              let __call_callee_144 = consumeImportEntry in let __call_arg_0_145 = true in Stdlib.fst __call_callee_144 __call_arg_0_145
             ))
-            | _ -> raise (HxRuntime.Hx_return (Obj.repr (let __anon_135 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_135 "imports" (Obj.repr imports));
-              ignore (HxAnon.set __anon_135 "usings" (Obj.repr usings));
-              __anon_135
-            ))))) else raise (HxRuntime.Hx_return (Obj.repr (let __anon_142 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_142 "imports" (Obj.repr imports));
-            ignore (HxAnon.set __anon_142 "usings" (Obj.repr usings));
-            __anon_142
+            | _ -> Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __anon_139 = HxAnon.create () in (
+              ignore (HxAnon.set __anon_139 "imports" (Obj.repr imports));
+              ignore (HxAnon.set __anon_139 "usings" (Obj.repr usings));
+              __anon_139
+            ))))) else Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __anon_146 = HxAnon.create () in (
+            ignore (HxAnon.set __anon_146 "imports" (Obj.repr imports));
+            ignore (HxAnon.set __anon_146 "usings" (Obj.repr usings));
+            __anon_146
           )))));
-          __while_loop_143 ()
-        ) in __while_loop_143 ()
+          __while_loop_147 ()
+        ) in __while_loop_147 ()
       )
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_144 -> (Obj.obj __ret_144 : Obj.t) : Obj.t)
+  | HxRuntime.Hx_return __ret_148 -> (Obj.obj __ret_148 : Obj.t) : Obj.t)
 
 let encodePayloadFromSourceFile = fun (sourceFile : string) -> (let scope = readScope (sourceFile : string) in let imports = Obj.magic (Obj.obj (HxAnon.get scope "imports")) in let parts = Obj.magic (HxArray.create ()) in (
-  ignore (let __array_receiver_1 = parts in let __array_arg_0_2 = let __call_arg_0_3 = "c" in let __call_arg_1_4 = string_of_int (HxArray.length imports) in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_3 __call_arg_1_4 in HxArray.push __array_receiver_1 __array_arg_0_2);
+  ignore (let __array_receiver_1 = Obj.magic parts in let __array_arg_0_2 = (let __call_arg_0_3 = "c" in let __call_arg_1_4 = string_of_int (HxArray.length imports) in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_3 __call_arg_1_4 : string) in HxArray.push __array_receiver_1 __array_arg_0_2);
   let _g = ref 0 in let _g1 = HxArray.length imports in (
     ignore (while !_g < _g1 do ignore (let i = let __old_5 = !_g in let __new_6 = HxInt.add __old_5 1 in (
       ignore (_g := __new_6);
       __old_5
     ) in let entry = let __array_read_receiver_7 = imports in let __array_read_index_8 = i in HxArray.get (Obj.magic __array_read_receiver_7) __array_read_index_8 in (
-      ignore (let __array_receiver_9 = parts in let __array_arg_0_10 = let __call_arg_0_11 = "p" ^ string_of_int i in let __call_arg_1_12 = Obj.obj (HxAnon.get entry "path") in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_11 __call_arg_1_12 in HxArray.push __array_receiver_9 __array_arg_0_10);
-      ignore (let __array_receiver_13 = parts in let __array_arg_0_14 = let __call_arg_0_15 = "m" ^ string_of_int i in let __call_arg_1_16 = Obj.obj (HxAnon.get entry "mode") in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_15 __call_arg_1_16 in HxArray.push __array_receiver_13 __array_arg_0_14);
-      ignore (let __array_receiver_17 = parts in let __array_arg_0_18 = let __call_arg_0_19 = "f" ^ string_of_int i in let __call_arg_1_20 = Obj.obj (HxAnon.get entry "file") in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_19 __call_arg_1_20 in HxArray.push __array_receiver_17 __array_arg_0_18);
-      ignore (let __array_receiver_21 = parts in let __array_arg_0_22 = let __call_arg_0_23 = "mi" ^ string_of_int i in let __call_arg_1_24 = string_of_int (Obj.obj (HxAnon.get entry "min")) in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_23 __call_arg_1_24 in HxArray.push __array_receiver_21 __array_arg_0_22);
-      ignore (let __array_receiver_25 = parts in let __array_arg_0_26 = let __call_arg_0_27 = "ma" ^ string_of_int i in let __call_arg_1_28 = string_of_int (Obj.obj (HxAnon.get entry "max")) in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_27 __call_arg_1_28 in HxArray.push __array_receiver_25 __array_arg_0_26);
-      if Obj.obj (HxAnon.get entry "alias") != Obj.magic (HxRuntime.hx_null) then ignore (let __array_receiver_29 = parts in let __array_arg_0_30 = let __call_arg_0_31 = "a" ^ string_of_int i in let __call_arg_1_32 = Obj.obj (HxAnon.get entry "alias") in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_31 __call_arg_1_32 in HxArray.push __array_receiver_29 __array_arg_0_30) else ()
+      ignore (let __array_receiver_9 = Obj.magic parts in let __array_arg_0_10 = (let __call_arg_0_11 = "p" ^ string_of_int i in let __call_arg_1_12 = Obj.obj (HxAnon.get entry "path") in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_11 __call_arg_1_12 : string) in HxArray.push __array_receiver_9 __array_arg_0_10);
+      ignore (let __array_receiver_13 = Obj.magic parts in let __array_arg_0_14 = (let __call_arg_0_15 = "m" ^ string_of_int i in let __call_arg_1_16 = Obj.obj (HxAnon.get entry "mode") in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_15 __call_arg_1_16 : string) in HxArray.push __array_receiver_13 __array_arg_0_14);
+      ignore (let __array_receiver_17 = Obj.magic parts in let __array_arg_0_18 = (let __call_arg_0_19 = "f" ^ string_of_int i in let __call_arg_1_20 = Obj.obj (HxAnon.get entry "file") in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_19 __call_arg_1_20 : string) in HxArray.push __array_receiver_17 __array_arg_0_18);
+      ignore (let __array_receiver_21 = Obj.magic parts in let __array_arg_0_22 = (let __call_arg_0_23 = "mi" ^ string_of_int i in let __call_arg_1_24 = string_of_int (Obj.obj (HxAnon.get entry "min")) in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_23 __call_arg_1_24 : string) in HxArray.push __array_receiver_21 __array_arg_0_22);
+      ignore (let __array_receiver_25 = Obj.magic parts in let __array_arg_0_26 = (let __call_arg_0_27 = "ma" ^ string_of_int i in let __call_arg_1_28 = string_of_int (Obj.obj (HxAnon.get entry "max")) in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_27 __call_arg_1_28 : string) in HxArray.push __array_receiver_25 __array_arg_0_26);
+      if Obj.obj (HxAnon.get entry "alias") != Obj.magic (HxRuntime.hx_null) then ignore (let __array_receiver_29 = Obj.magic parts in let __array_arg_0_30 = (let __call_arg_0_31 = "a" ^ string_of_int i in let __call_arg_1_32 = Obj.obj (HxAnon.get entry "alias") in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_31 __call_arg_1_32 : string) in HxArray.push __array_receiver_29 __array_arg_0_30) else ()
     )) done);
     HxArray.join parts " " (fun x -> x)
   )
 ) : string)
 
 let encodeUsingsPayloadFromSourceFile = fun (sourceFile : string) -> (let scope = readScope (sourceFile : string) in let usings = Obj.magic (Obj.obj (HxAnon.get scope "usings")) in let parts = Obj.magic (HxArray.create ()) in (
-  ignore (let __array_receiver_33 = parts in let __array_arg_0_34 = let __call_arg_0_35 = "c" in let __call_arg_1_36 = string_of_int (HxArray.length usings) in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_35 __call_arg_1_36 in HxArray.push __array_receiver_33 __array_arg_0_34);
+  ignore (let __array_receiver_33 = Obj.magic parts in let __array_arg_0_34 = (let __call_arg_0_35 = "c" in let __call_arg_1_36 = string_of_int (HxArray.length usings) in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_35 __call_arg_1_36 : string) in HxArray.push __array_receiver_33 __array_arg_0_34);
   let _g = ref 0 in let _g1 = HxArray.length usings in (
     ignore (while !_g < _g1 do ignore (let i = let __old_37 = !_g in let __new_38 = HxInt.add __old_37 1 in (
       ignore (_g := __new_38);
       __old_37
     ) in let entry = let __array_read_receiver_39 = usings in let __array_read_index_40 = i in HxArray.get (Obj.magic __array_read_receiver_39) __array_read_index_40 in (
-      ignore (let __array_receiver_41 = parts in let __array_arg_0_42 = let __call_arg_0_43 = "p" ^ string_of_int i in let __call_arg_1_44 = Obj.obj (HxAnon.get entry "path") in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_43 __call_arg_1_44 in HxArray.push __array_receiver_41 __array_arg_0_42);
-      ignore (let __array_receiver_45 = parts in let __array_arg_0_46 = let __call_arg_0_47 = "f" ^ string_of_int i in let __call_arg_1_48 = Obj.obj (HxAnon.get entry "file") in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_47 __call_arg_1_48 in HxArray.push __array_receiver_45 __array_arg_0_46);
-      ignore (let __array_receiver_49 = parts in let __array_arg_0_50 = let __call_arg_0_51 = "mi" ^ string_of_int i in let __call_arg_1_52 = string_of_int (Obj.obj (HxAnon.get entry "min")) in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_51 __call_arg_1_52 in HxArray.push __array_receiver_49 __array_arg_0_50);
-      let __array_receiver_53 = parts in let __array_arg_0_54 = let __call_arg_0_55 = "ma" ^ string_of_int i in let __call_arg_1_56 = string_of_int (Obj.obj (HxAnon.get entry "max")) in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_55 __call_arg_1_56 in HxArray.push __array_receiver_53 __array_arg_0_54
+      ignore (let __array_receiver_41 = Obj.magic parts in let __array_arg_0_42 = (let __call_arg_0_43 = "p" ^ string_of_int i in let __call_arg_1_44 = Obj.obj (HxAnon.get entry "path") in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_43 __call_arg_1_44 : string) in HxArray.push __array_receiver_41 __array_arg_0_42);
+      ignore (let __array_receiver_45 = Obj.magic parts in let __array_arg_0_46 = (let __call_arg_0_47 = "f" ^ string_of_int i in let __call_arg_1_48 = Obj.obj (HxAnon.get entry "file") in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_47 __call_arg_1_48 : string) in HxArray.push __array_receiver_45 __array_arg_0_46);
+      ignore (let __array_receiver_49 = Obj.magic parts in let __array_arg_0_50 = (let __call_arg_0_51 = "mi" ^ string_of_int i in let __call_arg_1_52 = string_of_int (Obj.obj (HxAnon.get entry "min")) in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_51 __call_arg_1_52 : string) in HxArray.push __array_receiver_49 __array_arg_0_50);
+      let __array_receiver_53 = Obj.magic parts in let __array_arg_0_54 = (let __call_arg_0_55 = "ma" ^ string_of_int i in let __call_arg_1_56 = string_of_int (Obj.obj (HxAnon.get entry "max")) in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_55 __call_arg_1_56 : string) in HxArray.push __array_receiver_53 __array_arg_0_54
     )) done);
     HxArray.join parts " " (fun x -> x)
   )

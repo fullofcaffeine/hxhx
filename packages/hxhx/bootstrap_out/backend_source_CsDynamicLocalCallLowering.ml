@@ -13,142 +13,187 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.C
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.CsDynamicLocalCallLowering" } : t)
 
-let marker = fun () -> "$hxhx:cs-dynamic-field-call"
+let marker = fun () -> ("$hxhx:cs-dynamic-field-call" : string)
 
 let isMarker = fun value -> let __string_eq_left_1 = value in let __string_eq_right_2 = "$hxhx:cs-dynamic-field-call" in HxString.equals __string_eq_left_1 __string_eq_right_2
 
 let rec dependsOnExactDynamicLocal = fun expression locals -> let tempResult = ref (false : bool) in (
   ignore (match expression with
-    | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let local = Obj.magic (TypedBackendLocalCatalog.findByProjectedName (Obj.magic locals) (name : string)) in let __assign_13 = local != Obj.magic (HxRuntime.hx_null) && TyType.isDynamic (Obj.magic (TyType.unwrapNull (Obj.magic (TyLocalBinding.getType (Obj.magic (TypedBackendLocalProjection.getBinding (Obj.magic local) ())) ())) ())) () in (
-      tempResult := __assign_13;
-      __assign_13
+    | HxExpr.EParenthesized (_p0, _p1) -> let _g = Obj.magic _p0 in (
+      ignore _p1;
+      let inner = Obj.magic _g in let __assign_20 = dependsOnExactDynamicLocal (Obj.magic inner) (Obj.magic locals) in (
+        tempResult := __assign_20;
+        __assign_20
+      )
+    )
+    | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let local = Obj.magic (TypedBackendLocalCatalog.findByProjectedName (Obj.magic locals) (name : string)) in let __assign_21 = local != Obj.magic (HxRuntime.hx_null) && TyType.isDynamic (Obj.magic (TyType.unwrapNull (Obj.magic (TyLocalBinding.getType (Obj.magic (TypedBackendLocalProjection.getBinding (Obj.magic local) ())) ())) ())) () in (
+      tempResult := __assign_21;
+      __assign_21
     )
     | HxExpr.EMacroExpr (_p0, _p1) -> let _g = Obj.magic _p0 in (
       ignore _p1;
-      let inner = Obj.magic _g in let __assign_14 = dependsOnExactDynamicLocal (Obj.magic inner) (Obj.magic locals) in (
-        tempResult := __assign_14;
-        __assign_14
+      let inner = Obj.magic _g in let __assign_22 = dependsOnExactDynamicLocal (Obj.magic inner) (Obj.magic locals) in (
+        tempResult := __assign_22;
+        __assign_22
       )
     )
     | HxExpr.ECast (_p0, _p1) -> let _g = Obj.magic _p0 in (
       ignore _p1;
-      let inner = Obj.magic _g in let __assign_15 = dependsOnExactDynamicLocal (Obj.magic inner) (Obj.magic locals) in (
-        tempResult := __assign_15;
-        __assign_15
+      let inner = Obj.magic _g in let __assign_23 = dependsOnExactDynamicLocal (Obj.magic inner) (Obj.magic locals) in (
+        tempResult := __assign_23;
+        __assign_23
       )
     )
-    | HxExpr.EUntyped _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_16 = dependsOnExactDynamicLocal (Obj.magic inner) (Obj.magic locals) in (
-      tempResult := __assign_16;
-      __assign_16
+    | HxExpr.ECheckType (_p0, _p1) -> let _g = Obj.magic _p0 in (
+      ignore _p1;
+      let inner = Obj.magic _g in let __assign_24 = dependsOnExactDynamicLocal (Obj.magic inner) (Obj.magic locals) in (
+        tempResult := __assign_24;
+        __assign_24
+      )
     )
-    | _ -> let __assign_12 = false in (
-      tempResult := __assign_12;
-      __assign_12
+    | HxExpr.EUntyped _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_25 = dependsOnExactDynamicLocal (Obj.magic inner) (Obj.magic locals) in (
+      tempResult := __assign_25;
+      __assign_25
+    )
+    | _ -> let __assign_19 = false in (
+      tempResult := __assign_19;
+      __assign_19
     ));
   !tempResult
 )
 
-let body = fun projection -> (
+let body = fun projection statements -> (
   ignore (if projection == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "C# Dynamic local-call lowering requires a typed function projection") ["Dynamic"] else ());
-  let locals = Obj.magic (TypedBackendFunctionProjection.getLocalCatalog (Obj.magic projection) ()) in Backend_source_SourceFunctionBodyRewriter.body (Obj.magic (HxFunctionDecl.getBody (Obj.magic (TypedBackendFunctionProjection.getDeclaration (Obj.magic projection) ())))) (fun expression -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
-    ignore (if (match expression with
-      | HxExpr.ENull -> 0
-      | HxExpr.EBool _ -> 1
-      | HxExpr.EString _ -> 2
-      | HxExpr.EInt _ -> 3
-      | HxExpr.EFloat _ -> 4
-      | HxExpr.EEnumValue _ -> 5
-      | HxExpr.EThis -> 6
-      | HxExpr.ESuper -> 7
-      | HxExpr.EIdent _ -> 8
-      | HxExpr.EField (_, _) -> 9
-      | HxExpr.ENullSafeField (_, _) -> 10
-      | HxExpr.ECall (_, _) -> 11
-      | HxExpr.EMacroExpr (_, _) -> 12
-      | HxExpr.EMacroType _ -> 13
-      | HxExpr.ELambda (_, _) -> 14
-      | HxExpr.ETryCatchRaw _ -> 15
-      | HxExpr.ESwitchRaw _ -> 16
-      | HxExpr.ESwitch (_, _, _) -> 17
-      | HxExpr.ENew (_, _) -> 18
-      | HxExpr.EUnop (_, _, _) -> 19
-      | HxExpr.EBinop (_, _, _) -> 20
-      | HxExpr.ETernary (_, _, _) -> 21
-      | HxExpr.EAnon (_, _) -> 22
-      | HxExpr.EArrayComprehension (_, _, _, _) -> 23
-      | HxExpr.EArrayDecl _ -> 24
-      | HxExpr.EArrayAccess (_, _) -> 25
-      | HxExpr.ERange (_, _) -> 26
-      | HxExpr.ECast (_, _) -> 27
-      | HxExpr.EUntyped _ -> 28
-      | HxExpr.EUnsupported _ -> 29
-      | HxExpr.EReturn _ -> 30
-      | HxExpr.EVars _ -> 31
-      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33
-      | HxExpr.EBreak _ -> 34
-      | HxExpr.EContinue _ -> 35) = 11 then let _g = Obj.magic (match expression with
-      | HxExpr.ECall (__enum_param_3, _) -> __enum_param_3
-      | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expression with
-      | HxExpr.ECall (_, __enum_param_4) -> __enum_param_4
-      | _ -> failwith "Unexpected enum parameter") in if (match _g with
-      | HxExpr.ENull -> 0
-      | HxExpr.EBool _ -> 1
-      | HxExpr.EString _ -> 2
-      | HxExpr.EInt _ -> 3
-      | HxExpr.EFloat _ -> 4
-      | HxExpr.EEnumValue _ -> 5
-      | HxExpr.EThis -> 6
-      | HxExpr.ESuper -> 7
-      | HxExpr.EIdent _ -> 8
-      | HxExpr.EField (_, _) -> 9
-      | HxExpr.ENullSafeField (_, _) -> 10
-      | HxExpr.ECall (_, _) -> 11
-      | HxExpr.EMacroExpr (_, _) -> 12
-      | HxExpr.EMacroType _ -> 13
-      | HxExpr.ELambda (_, _) -> 14
-      | HxExpr.ETryCatchRaw _ -> 15
-      | HxExpr.ESwitchRaw _ -> 16
-      | HxExpr.ESwitch (_, _, _) -> 17
-      | HxExpr.ENew (_, _) -> 18
-      | HxExpr.EUnop (_, _, _) -> 19
-      | HxExpr.EBinop (_, _, _) -> 20
-      | HxExpr.ETernary (_, _, _) -> 21
-      | HxExpr.EAnon (_, _) -> 22
-      | HxExpr.EArrayComprehension (_, _, _, _) -> 23
-      | HxExpr.EArrayDecl _ -> 24
-      | HxExpr.EArrayAccess (_, _) -> 25
-      | HxExpr.ERange (_, _) -> 26
-      | HxExpr.ECast (_, _) -> 27
-      | HxExpr.EUntyped _ -> 28
-      | HxExpr.EUnsupported _ -> 29
-      | HxExpr.EReturn _ -> 30
-      | HxExpr.EVars _ -> 31
-      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33
-      | HxExpr.EBreak _ -> 34
-      | HxExpr.EContinue _ -> 35) = 9 then let _g2 = Obj.magic (match _g with
-      | HxExpr.EField (__enum_param_5, _) -> __enum_param_5
-      | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
-      | HxExpr.EField (_, __enum_param_6) -> __enum_param_6
-      | _ -> failwith "Unexpected enum parameter" : string) in let receiver = Obj.magic _g2 in let field = (_g3 : string) in let arguments = Obj.magic _g1 in if dependsOnExactDynamicLocal (Obj.magic receiver) (Obj.magic locals) then let __assign_7 = Obj.magic (HxExpr.ECall (Obj.magic (HxExpr.EUnsupported ("$hxhx:cs-dynamic-field-call" : string)), Obj.magic (let __arr_8 = HxArray.create () in (
-      ignore (HxArray.push __arr_8 receiver);
-      ignore (HxArray.push __arr_8 (HxExpr.EString (field : string)));
-      ignore (HxArray.push __arr_8 (HxExpr.EArrayDecl (Obj.magic arguments)));
-      __arr_8
-    )))) in (
-      tempResult := __assign_7;
-      __assign_7
-    ) else let __assign_9 = Obj.magic expression in (
-      tempResult := __assign_9;
-      __assign_9
-    ) else let __assign_10 = Obj.magic expression in (
-      tempResult := __assign_10;
-      __assign_10
-    ) else let __assign_11 = Obj.magic expression in (
-      tempResult := __assign_11;
-      __assign_11
+  let locals = Obj.magic (TypedBackendFunctionProjection.getLocalCatalog (Obj.magic projection) ()) in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt HxArray.t) in (
+    ignore (if statements == Obj.magic (HxRuntime.hx_null) then let __assign_3 = Obj.magic (TypedBackendFunctionProjection.getBody (Obj.magic projection) ()) in (
+      tempArray := __assign_3;
+      __assign_3
+    ) else let __assign_4 = Obj.magic statements in (
+      tempArray := __assign_4;
+      __assign_4
     ));
-    !tempResult
-  ))
+    Backend_source_SourceFunctionBodyRewriter.body (Obj.magic (!tempArray)) (fun expression -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
+      ignore (if (match expression with
+        | HxExpr.EParenthesized (_, _) -> 0
+        | HxExpr.ESourceTry (_, _, _) -> 1
+        | HxExpr.ESourceFor (_, _, _, _) -> 2
+        | HxExpr.ELoweredControl (_, _, _, _) -> 3
+        | HxExpr.ENull -> 4
+        | HxExpr.EBool _ -> 5
+        | HxExpr.EString _ -> 6
+        | HxExpr.EInt _ -> 7
+        | HxExpr.EFloat _ -> 8
+        | HxExpr.EEnumValue _ -> 9
+        | HxExpr.EThis -> 10
+        | HxExpr.ESuper -> 11
+        | HxExpr.EIdent _ -> 12
+        | HxExpr.EField (_, _) -> 13
+        | HxExpr.ENullSafeField (_, _) -> 14
+        | HxExpr.ECall (_, _) -> 15
+        | HxExpr.EMacroExpr (_, _) -> 16
+        | HxExpr.EMacroType _ -> 17
+        | HxExpr.ELambda (_, _, _) -> 18
+        | HxExpr.ETryCatchRaw _ -> 19
+        | HxExpr.ESwitchRaw _ -> 20
+        | HxExpr.ESwitch (_, _, _) -> 21
+        | HxExpr.ENew (_, _) -> 22
+        | HxExpr.EUnop (_, _, _) -> 23
+        | HxExpr.EBinop (_, _, _) -> 24
+        | HxExpr.ETernary (_, _, _) -> 25
+        | HxExpr.ESourceIf (_, _, _, _) -> 26
+        | HxExpr.EThrow (_, _) -> 27
+        | HxExpr.EAnon (_, _) -> 28
+        | HxExpr.EArrayComprehension (_, _, _, _) -> 29
+        | HxExpr.EArrayDecl _ -> 30
+        | HxExpr.EArrayAccess (_, _) -> 31
+        | HxExpr.ERange (_, _) -> 32
+        | HxExpr.ECast (_, _) -> 33
+        | HxExpr.ECheckType (_, _) -> 34
+        | HxExpr.EUntyped _ -> 35
+        | HxExpr.EUnsupported _ -> 36
+        | HxExpr.EReturn _ -> 37
+        | HxExpr.EVars _ -> 38
+        | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 39
+        | HxExpr.EWhile (_, _, _, _, _) -> 40
+        | HxExpr.EBreak _ -> 41
+        | HxExpr.EContinue _ -> 42
+        | HxExpr.EDiscardThen (_, _) -> 43
+        | HxExpr.ESourceGroup (_, _) -> 44
+        | HxExpr.ESourceFunction (_, _, _, _) -> 45
+        | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (match expression with
+        | HxExpr.ECall (__enum_param_5, _) -> __enum_param_5
+        | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expression with
+        | HxExpr.ECall (_, __enum_param_6) -> __enum_param_6
+        | _ -> failwith "Unexpected enum parameter") in if (match _g with
+        | HxExpr.EParenthesized (_, _) -> 0
+        | HxExpr.ESourceTry (_, _, _) -> 1
+        | HxExpr.ESourceFor (_, _, _, _) -> 2
+        | HxExpr.ELoweredControl (_, _, _, _) -> 3
+        | HxExpr.ENull -> 4
+        | HxExpr.EBool _ -> 5
+        | HxExpr.EString _ -> 6
+        | HxExpr.EInt _ -> 7
+        | HxExpr.EFloat _ -> 8
+        | HxExpr.EEnumValue _ -> 9
+        | HxExpr.EThis -> 10
+        | HxExpr.ESuper -> 11
+        | HxExpr.EIdent _ -> 12
+        | HxExpr.EField (_, _) -> 13
+        | HxExpr.ENullSafeField (_, _) -> 14
+        | HxExpr.ECall (_, _) -> 15
+        | HxExpr.EMacroExpr (_, _) -> 16
+        | HxExpr.EMacroType _ -> 17
+        | HxExpr.ELambda (_, _, _) -> 18
+        | HxExpr.ETryCatchRaw _ -> 19
+        | HxExpr.ESwitchRaw _ -> 20
+        | HxExpr.ESwitch (_, _, _) -> 21
+        | HxExpr.ENew (_, _) -> 22
+        | HxExpr.EUnop (_, _, _) -> 23
+        | HxExpr.EBinop (_, _, _) -> 24
+        | HxExpr.ETernary (_, _, _) -> 25
+        | HxExpr.ESourceIf (_, _, _, _) -> 26
+        | HxExpr.EThrow (_, _) -> 27
+        | HxExpr.EAnon (_, _) -> 28
+        | HxExpr.EArrayComprehension (_, _, _, _) -> 29
+        | HxExpr.EArrayDecl _ -> 30
+        | HxExpr.EArrayAccess (_, _) -> 31
+        | HxExpr.ERange (_, _) -> 32
+        | HxExpr.ECast (_, _) -> 33
+        | HxExpr.ECheckType (_, _) -> 34
+        | HxExpr.EUntyped _ -> 35
+        | HxExpr.EUnsupported _ -> 36
+        | HxExpr.EReturn _ -> 37
+        | HxExpr.EVars _ -> 38
+        | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 39
+        | HxExpr.EWhile (_, _, _, _, _) -> 40
+        | HxExpr.EBreak _ -> 41
+        | HxExpr.EContinue _ -> 42
+        | HxExpr.EDiscardThen (_, _) -> 43
+        | HxExpr.ESourceGroup (_, _) -> 44
+        | HxExpr.ESourceFunction (_, _, _, _) -> 45
+        | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+        | HxExpr.EField (__enum_param_7, _) -> __enum_param_7
+        | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
+        | HxExpr.EField (_, __enum_param_8) -> __enum_param_8
+        | _ -> failwith "Unexpected enum parameter" : string) in let receiver = Obj.magic _g2 in let field = (_g3 : string) in let arguments = Obj.magic _g1 in if dependsOnExactDynamicLocal (Obj.magic receiver) (Obj.magic locals) then let __assign_9 = Obj.magic (let __enum_arg_14 = Obj.magic (let __enum_arg_10 = ("$hxhx:cs-dynamic-field-call" : string) in HxExpr.EUnsupported (Stdlib.Sys.opaque_identity __enum_arg_10)) in let __enum_arg_15 = Obj.magic (let __arr_11 = HxArray.create () in (
+        ignore (HxArray.push __arr_11 receiver);
+        ignore (HxArray.push __arr_11 (let __enum_arg_12 = (field : string) in HxExpr.EString (Stdlib.Sys.opaque_identity __enum_arg_12)));
+        ignore (HxArray.push __arr_11 (let __enum_arg_13 = Obj.magic arguments in HxExpr.EArrayDecl (Stdlib.Sys.opaque_identity __enum_arg_13)));
+        __arr_11
+      )) in HxExpr.ECall (Stdlib.Sys.opaque_identity __enum_arg_14, __enum_arg_15)) in (
+        tempResult := __assign_9;
+        __assign_9
+      ) else let __assign_16 = Obj.magic expression in (
+        tempResult := __assign_16;
+        __assign_16
+      ) else let __assign_17 = Obj.magic expression in (
+        tempResult := __assign_17;
+        __assign_17
+      ) else let __assign_18 = Obj.magic expression in (
+        tempResult := __assign_18;
+        __assign_18
+      ));
+      !tempResult
+    ))
+  )
 )

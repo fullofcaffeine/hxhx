@@ -32,7 +32,7 @@ let qualifiedName = fun (path : string) -> (try let tempString = ref (HxString.h
         __assign_4
       ));
     let supported = !tempBool in (
-      ignore (if not (supported) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+      ignore (if not (supported) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
       let qualified = let __call_arg_0_6 = clean in Backend_source_PhpName.typePath __call_arg_0_6 in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
         ignore (if (let __string_receiver_7 = qualified in let __string_argument_0_8 = "\\" in HxString.indexOf __string_receiver_7 __string_argument_0_8 0) < 0 then let __assign_9 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
           tempResult := __assign_9;

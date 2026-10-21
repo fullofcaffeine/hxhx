@@ -14,12 +14,12 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage3Build
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage3BuildMacroSupport" } : t)
 
 let parseGeneratedMembers = fun members -> (try (
-  ignore (if members == Obj.magic (HxRuntime.hx_null) || HxArray.length members = 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_1 = HxAnon.create () in (
+  ignore (if members == Obj.magic (HxRuntime.hx_null) || HxArray.length members = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __anon_1 = HxAnon.create () in (
     ignore (HxAnon.set __anon_1 "functions" (Obj.repr (let __arr_2 = HxArray.create () in __arr_2)));
     ignore (HxAnon.set __anon_1 "fields" (Obj.repr (let __arr_3 = HxArray.create () in __arr_3)));
     __anon_1
   )))) else ());
-  let combined = (HxArray.join members "\n" (fun x -> x) : string) in let fake = ("class __HxHxBuildFields {\n" ^ HxString.toStdString combined) ^ "\n}\n" in let parser = Obj.magic (HxParser.create (fake : string) (Obj.magic (HxRuntime.hx_null))) in let decl = Obj.magic (HxParser.parseModule (Obj.magic parser) (Obj.magic (HxRuntime.hx_null))) in let cls = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in let __anon_4 = HxAnon.create () in (
+  let combined = (HxArray.join members "\n" (fun x -> x) : string) in let fake = ("class __HxHxBuildFields {\n" ^ HxString.toStdString combined) ^ "\n}\n" in let parser = Obj.magic (HxParser.create (fake : string)) in let decl = Obj.magic (HxParser.parseModule (Obj.magic parser) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in let cls = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in let __anon_4 = HxAnon.create () in (
     ignore (HxAnon.set __anon_4 "functions" (Obj.repr (HxClassDecl.getFunctions (Obj.magic cls))));
     ignore (HxAnon.set __anon_4 "fields" (Obj.repr (HxClassDecl.getFields (Obj.magic cls))));
     __anon_4
@@ -29,7 +29,7 @@ let parseGeneratedMembers = fun members -> (try (
 
 let applyGeneratedMembers = fun hx_module members -> (try (
   ignore (if hx_module == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "build-macro generated members require a resolved module") ["Dynamic"] else ());
-  ignore (if members == Obj.magic (HxRuntime.hx_null) || HxArray.length members = 0 then raise (HxRuntime.Hx_return (Obj.repr hx_module)) else ());
+  ignore (if members == Obj.magic (HxRuntime.hx_null) || HxArray.length members = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr hx_module)) else ());
   let generated = parseGeneratedMembers (Obj.magic members) in let parsed = Obj.magic (ResolvedModule.getParsed (Obj.magic hx_module)) in let oldDeclaration = Obj.magic (ParsedModule.getDecl (Obj.magic parsed) ()) in let oldClass = Obj.magic (HxModuleDecl.getMainClass (Obj.magic oldDeclaration)) in let generatedFunctionNames = HxMap.create_string () in let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get generated "functions")) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (let __array_read_receiver_6 = _g1 in let __array_read_index_7 = !_g in HxArray.get (Obj.magic __array_read_receiver_6) __array_read_index_7) in (
       ignore (let __old_8 = !_g in let __new_9 = HxInt.add __old_8 1 in (
@@ -57,7 +57,7 @@ let applyGeneratedMembers = fun hx_module members -> (try (
               tempBool := __assign_18;
               __assign_18
             ));
-            if not (!tempBool) then ignore (let __array_receiver_19 = mergedFunctions in let __array_arg_0_20 = fn in HxArray.push __array_receiver_19 __array_arg_0_20) else ()
+            if not (!tempBool) then ignore (let __array_receiver_19 = Obj.magic mergedFunctions in let __array_arg_0_20 = Obj.magic fn in HxArray.push __array_receiver_19 __array_arg_0_20) else ()
           )
         )) done);
         let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get generated "functions")) in (
@@ -66,7 +66,7 @@ let applyGeneratedMembers = fun hx_module members -> (try (
               ignore (_g := __new_24);
               __new_24
             ));
-            let __array_receiver_25 = mergedFunctions in let __array_arg_0_26 = fn in HxArray.push __array_receiver_25 __array_arg_0_26
+            let __array_receiver_25 = Obj.magic mergedFunctions in let __array_arg_0_26 = Obj.magic fn in HxArray.push __array_receiver_25 __array_arg_0_26
           )) done);
           let mergedFields = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic oldClass)) in (
             ignore (while !_g < HxArray.length _g1 do ignore (let field = Obj.magic (let __array_read_receiver_27 = _g1 in let __array_read_index_28 = !_g in HxArray.get (Obj.magic __array_read_receiver_27) __array_read_index_28) in (
@@ -79,7 +79,7 @@ let applyGeneratedMembers = fun hx_module members -> (try (
                   tempBool1 := __assign_31;
                   __assign_31
                 ));
-                if not (!tempBool1) then ignore (let __array_receiver_32 = mergedFields in let __array_arg_0_33 = field in HxArray.push __array_receiver_32 __array_arg_0_33) else ()
+                if not (!tempBool1) then ignore (let __array_receiver_32 = Obj.magic mergedFields in let __array_arg_0_33 = Obj.magic field in HxArray.push __array_receiver_32 __array_arg_0_33) else ()
               )
             )) done);
             let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get generated "fields")) in (
@@ -88,9 +88,9 @@ let applyGeneratedMembers = fun hx_module members -> (try (
                   ignore (_g := __new_37);
                   __new_37
                 ));
-                let __array_receiver_38 = mergedFields in let __array_arg_0_39 = field in HxArray.push __array_receiver_38 __array_arg_0_39
+                let __array_receiver_38 = Obj.magic mergedFields in let __array_arg_0_39 = Obj.magic field in HxArray.push __array_receiver_38 __array_arg_0_39
               )) done);
-              let newClass = Obj.magic (HxClassDecl.create (HxClassDecl.getName (Obj.magic oldClass) : string) (HxClassDecl.getHasStaticMain (Obj.magic oldClass)) (Obj.magic mergedFunctions) (Obj.magic mergedFields) (HxClassDecl.getExtendsPath (Obj.magic oldClass) : string) (Obj.magic (HxClassDecl.getMetadata (Obj.magic oldClass))) (HxRuntime.box_bool (HxClassDecl.getIsInterface (Obj.magic oldClass))) (Obj.magic (HxClassDecl.getImplementsPaths (Obj.magic oldClass))) (HxEnum.box_if_needed "HxVisibility" (Obj.repr (HxClassDecl.getVisibility (Obj.magic oldClass))))) in let newClasses = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getClasses (Obj.magic oldDeclaration)) in (
+              let newClass = Obj.magic (HxClassDecl.create (HxClassDecl.getName (Obj.magic oldClass) : string) (HxClassDecl.getHasStaticMain (Obj.magic oldClass)) (Obj.magic mergedFunctions) (Obj.magic mergedFields) (HxClassDecl.getExtendsPath (Obj.magic oldClass) : string) (Obj.magic (HxClassDecl.getMetadata (Obj.magic oldClass))) (Obj.repr (HxClassDecl.getIsInterface (Obj.magic oldClass))) (Obj.magic (HxClassDecl.getImplementsPaths (Obj.magic oldClass))) (Obj.repr (HxClassDecl.getVisibility (Obj.magic oldClass))) (Obj.magic (HxClassDecl.getInterfaceExtendsPaths (Obj.magic oldClass))) (HxClassDecl.getIsExtern (Obj.magic oldClass)) (Obj.magic (HxClassDecl.getEnumDeclaration (Obj.magic oldClass))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in let newClasses = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getClasses (Obj.magic oldDeclaration)) in (
                 ignore (while !_g < HxArray.length _g1 do ignore (let candidate = Obj.magic (let __array_read_receiver_40 = _g1 in let __array_read_index_41 = !_g in HxArray.get (Obj.magic __array_read_receiver_40) __array_read_index_41) in (
                   ignore (let __old_42 = !_g in let __new_43 = HxInt.add __old_42 1 in (
                     ignore (_g := __new_43);
@@ -104,10 +104,10 @@ let applyGeneratedMembers = fun hx_module members -> (try (
                       tempHxClassDecl := __assign_47;
                       __assign_47
                     ));
-                    let __array_receiver_48 = newClasses in let __array_arg_0_49 = !tempHxClassDecl in HxArray.push __array_receiver_48 __array_arg_0_49
+                    let __array_receiver_48 = Obj.magic newClasses in let __array_arg_0_49 = Obj.magic (!tempHxClassDecl) in HxArray.push __array_receiver_48 __array_arg_0_49
                   )
                 )) done);
-                let newDeclaration = Obj.magic (HxModuleDecl.create (HxModuleDecl.getPackagePath (Obj.magic oldDeclaration) : string) (Obj.magic (HxModuleDecl.getDirectives (Obj.magic oldDeclaration))) (Obj.magic newClass) (Obj.magic newClasses) (HxModuleDecl.getHeaderOnly (Obj.magic oldDeclaration)) (HxModuleDecl.getHasToplevelMain (Obj.magic oldDeclaration))) in let newParsed = Obj.magic (ParsedModule.create (ParsedModule.getSource (Obj.magic parsed) () : string) (Obj.magic newDeclaration) (ParsedModule.getFilePath (Obj.magic parsed) () : string)) in ResolvedModule.create (ResolvedModule.getModulePath (Obj.magic hx_module) : string) (ResolvedModule.getFilePath (Obj.magic hx_module) : string) (Obj.magic newParsed) (Obj.magic (ResolvedModule.getSourceOrigin (Obj.magic hx_module))) (Obj.magic (ResolvedModule.getConditionalCompilation (Obj.magic hx_module))) (Obj.magic (CompilerGeneratedDeclarationObservation.fromGeneratedMemberSnippets (Obj.magic members)))
+                let newDeclaration = Obj.magic (HxModuleDecl.create (HxModuleDecl.getPackagePath (Obj.magic oldDeclaration) : string) (Obj.magic (HxModuleDecl.getDirectives (Obj.magic oldDeclaration))) (Obj.magic newClass) (Obj.magic newClasses) (HxModuleDecl.getHeaderOnly (Obj.magic oldDeclaration)) (HxModuleDecl.getHasToplevelMain (Obj.magic oldDeclaration)) (Obj.magic (HxRuntime.hx_null))) in let newParsed = Obj.magic (ParsedModule.create (ParsedModule.getSource (Obj.magic parsed) () : string) (Obj.magic newDeclaration) (ParsedModule.getFilePath (Obj.magic parsed) () : string)) in ResolvedModule.create (ResolvedModule.getModulePath (Obj.magic hx_module) : string) (ResolvedModule.getFilePath (Obj.magic hx_module) : string) (Obj.magic newParsed) (Obj.magic (ResolvedModule.getSourceOrigin (Obj.magic hx_module))) (Obj.magic (ResolvedModule.getConditionalCompilation (Obj.magic hx_module))) (Obj.magic (CompilerGeneratedDeclarationObservation.fromGeneratedMemberSnippets (Obj.magic members)))
               )
             )
           )
@@ -123,19 +123,19 @@ let buildFieldsPayloadForParsed = fun pm -> Hxhx_macro_BuildFieldSnapshotPayload
 let collectBuildMacroExprs = fun source modulePath -> Hxhx_BuildMetadataCollector.collectBuildMacroExprs (source : string) (modulePath : string)
 
 let dispatchOnTypeNotFoundHooks = fun macroSession typePath output -> (try (
-  ignore (if macroSession == Obj.magic (HxRuntime.hx_null) || typePath == HxString.hx_null_string || (let __string_receiver_51 = typePath in HxString.length __string_receiver_51) = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if macroSession == Obj.magic (HxRuntime.hx_null) || typePath == HxString.hx_null_string || (let __string_receiver_51 = typePath in HxString.length __string_receiver_51) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let hooks = Hxhx_macro_MacroState.listOnTypeNotFoundHookIds () in (
-    ignore (if HxArray.length hooks = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (if HxArray.length hooks = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     let _g = ref 0 in let _g1 = HxArray.length hooks in (
       ignore (while !_g < _g1 do ignore (let i = let __old_52 = !_g in let __new_53 = HxInt.add __old_52 1 in (
         ignore (_g := __new_53);
         __old_52
-      ) in if Obj.obj (HxAnon.get macroSession "runTypeNotFoundHook") (let __array_read_receiver_54 = hooks in let __array_read_index_55 = i in HxArray.get __array_read_receiver_54 __array_read_index_55) (typePath : string) then (
+      ) in if let __method_receiver_54 = macroSession in let __method_callable_55 = (Obj.obj (HxMethodDispatch.bind_structural (Obj.repr __method_receiver_54) "runTypeNotFoundHook" "method-dispatch:087126a8c85829d906c1804b2481f2b9970991d968b17b4dc3e2dc28afa1b4e7") : int -> string -> bool) in let __method_argument_56 = let __array_read_receiver_58 = hooks in let __array_read_index_59 = i in HxArray.get __array_read_receiver_58 __array_read_index_59 in let __method_argument_57 = (typePath : string) in __method_callable_55 __method_argument_56 __method_argument_57 then (
         ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((("hook_onTypeNotFound[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString typePath : string));
-        raise (HxRuntime.Hx_return (Obj.repr true))
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr true))
       ) else ()) done);
       false
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_56 -> (Obj.obj __ret_56 : bool) : bool)
+  | HxRuntime.Hx_return __ret_60 -> (Obj.obj __ret_60 : bool) : bool)

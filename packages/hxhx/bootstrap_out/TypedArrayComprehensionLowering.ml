@@ -1,0 +1,2 @@
+# 1 "TypedArrayComprehensionLowering.ml"
+include CompilerDiagnosticProbe.TypedArrayComprehensionLowering

@@ -8,38 +8,38 @@ let __reflaxe_ocaml__ = ()
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerRequest"; requestId = 0; baseArgsValue = Obj.magic HxRuntime.hx_null; requestArgsValue = Obj.magic HxRuntime.hx_null; stdinBytesValue = Obj.magic HxRuntime.hx_null } : t)
 
-let requestArgs = fun self () -> let __array_receiver_8 = (Obj.magic self : t).requestArgsValue in HxArray.copy __array_receiver_8
+let requestArgs = fun self () -> let __array_receiver_8 = Obj.magic ((Obj.magic self : t).requestArgsValue) in HxArray.copy __array_receiver_8
 
-let invocationArgs = fun self () -> let __array_receiver_9 = (Obj.magic self : t).baseArgsValue in let __array_arg_0_10 = (Obj.magic self : t).requestArgsValue in HxArray.concat __array_receiver_9 __array_arg_0_10
+let invocationArgs = fun self () -> let __array_receiver_9 = Obj.magic ((Obj.magic self : t).baseArgsValue) in let __array_arg_0_10 = Obj.magic ((Obj.magic self : t).requestArgsValue) in HxArray.concat __array_receiver_9 __array_arg_0_10
 
 let compilerArgs = fun self () -> let filteredRequestArgs = Obj.magic (HxArray.create ()) in let index = ref 0 in (
   ignore (while !index < HxArray.length ((Obj.magic self : t).requestArgsValue) do try ignore ((
     ignore (if let __string_eq_left_11 = let __array_read_receiver_13 = (Obj.magic self : t).requestArgsValue in let __array_read_index_14 = !index in HxArray.get (Obj.magic __array_read_receiver_13) __array_read_index_14 in let __string_eq_right_12 = "--hxhx-server-timeout-ms" in HxString.equals __string_eq_left_11 __string_eq_right_12 then ignore ((
       ignore (index := HxInt.add (!index) 2);
-      raise (HxRuntime.Hx_continue)
+      Stdlib.raise (HxRuntime.Hx_continue)
     )) else ());
-    ignore (let __array_receiver_15 = filteredRequestArgs in let __array_arg_0_16 = let __array_read_receiver_17 = (Obj.magic self : t).requestArgsValue in let __array_read_index_18 = !index in HxArray.get (Obj.magic __array_read_receiver_17) __array_read_index_18 in HxArray.push __array_receiver_15 __array_arg_0_16);
+    ignore (let __array_receiver_15 = Obj.magic filteredRequestArgs in let __array_arg_0_16 = (let __array_read_receiver_17 = (Obj.magic self : t).requestArgsValue in let __array_read_index_18 = !index in HxArray.get (Obj.magic __array_read_receiver_17) __array_read_index_18 : string) in HxArray.push __array_receiver_15 __array_arg_0_16);
     index := HxInt.add (!index) 1
   )) with
     | HxRuntime.Hx_continue -> () done);
-  let __array_receiver_19 = (Obj.magic self : t).baseArgsValue in let __array_arg_0_20 = filteredRequestArgs in HxArray.concat __array_receiver_19 __array_arg_0_20
+  let __array_receiver_19 = Obj.magic ((Obj.magic self : t).baseArgsValue) in let __array_arg_0_20 = Obj.magic filteredRequestArgs in HxArray.concat __array_receiver_19 __array_arg_0_20
 )
 
 let findFlagValue = fun self (flag : string) -> (try let i = ref 0 in (
   ignore (while !i < HxArray.length ((Obj.magic self : t).requestArgsValue) do ignore ((
-    ignore (if (let __string_eq_left_21 = let __array_read_receiver_23 = (Obj.magic self : t).requestArgsValue in let __array_read_index_24 = !i in HxArray.get (Obj.magic __array_read_receiver_23) __array_read_index_24 in let __string_eq_right_22 = flag in HxString.equals __string_eq_left_21 __string_eq_right_22) && HxInt.add (!i) 1 < HxArray.length ((Obj.magic self : t).requestArgsValue) then raise (HxRuntime.Hx_return (Obj.repr (let __array_read_receiver_25 = (Obj.magic self : t).requestArgsValue in let __array_read_index_26 = HxInt.add (!i) 1 in HxArray.get (Obj.magic __array_read_receiver_25) __array_read_index_26))) else ());
+    ignore (if (let __string_eq_left_21 = let __array_read_receiver_23 = (Obj.magic self : t).requestArgsValue in let __array_read_index_24 = !i in HxArray.get (Obj.magic __array_read_receiver_23) __array_read_index_24 in let __string_eq_right_22 = flag in HxString.equals __string_eq_left_21 __string_eq_right_22) && HxInt.add (!i) 1 < HxArray.length ((Obj.magic self : t).requestArgsValue) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __array_read_receiver_25 = (Obj.magic self : t).requestArgsValue in let __array_read_index_26 = HxInt.add (!i) 1 in HxArray.get (Obj.magic __array_read_receiver_25) __array_read_index_26))) else ());
     i := HxInt.add (!i) 1
   )) done);
   Obj.magic (HxRuntime.hx_null)
 ) with
   | HxRuntime.Hx_return __ret_27 -> (Obj.obj __ret_27 : string) : string)
 
-let hasInvocationFlag = fun self (flag : string) -> (let __array_receiver_28 = (Obj.magic self : t).baseArgsValue in let __array_arg_0_29 = flag in HxArray.indexOf_default __array_receiver_28 __array_arg_0_29) >= 0 || (let __array_receiver_30 = (Obj.magic self : t).requestArgsValue in let __array_arg_0_31 = flag in HxArray.indexOf_default __array_receiver_30 __array_arg_0_31) >= 0
+let hasInvocationFlag = fun self (flag : string) -> (let __array_receiver_28 = Obj.magic ((Obj.magic self : t).baseArgsValue) in let __array_arg_0_29 = (flag : string) in HxArray.indexOf_default __array_receiver_28 __array_arg_0_29) >= 0 || (let __array_receiver_30 = Obj.magic ((Obj.magic self : t).requestArgsValue) in let __array_arg_0_31 = (flag : string) in HxArray.indexOf_default __array_receiver_30 __array_arg_0_31) >= 0
 
-let hasRequestFlag = fun self (flag : string) -> (let __array_receiver_32 = (Obj.magic self : t).requestArgsValue in let __array_arg_0_33 = flag in HxArray.indexOf_default __array_receiver_32 __array_arg_0_33) >= 0
+let hasRequestFlag = fun self (flag : string) -> (let __array_receiver_32 = Obj.magic ((Obj.magic self : t).requestArgsValue) in let __array_arg_0_33 = (flag : string) in HxArray.indexOf_default __array_receiver_32 __array_arg_0_33) >= 0
 
 let copyBytes = fun value -> (try (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if value == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let __bytes_receiver_input_34 = value in let __bytes_receiver_35 = if HxRuntime.is_null (Obj.repr __bytes_receiver_input_34) then HxRuntime.hx_throw_typed (Obj.repr "Null Access") ["String"; "Dynamic"] else __bytes_receiver_input_34 in let __bytes_arg_0_36 = 0 in let __bytes_arg_1_37 = let __bytes_receiver_input_38 = value in let __bytes_receiver_39 = if HxRuntime.is_null (Obj.repr __bytes_receiver_input_38) then HxRuntime.hx_throw_typed (Obj.repr "Null Access") ["String"; "Dynamic"] else __bytes_receiver_input_38 in HxBytes.length __bytes_receiver_39 in HxBytes.sub __bytes_receiver_35 __bytes_arg_0_36 __bytes_arg_1_37
 ) with
   | HxRuntime.Hx_return __ret_40 -> (Obj.obj __ret_40 : HxBytes.t) : HxBytes.t)
@@ -50,11 +50,11 @@ let create = fun requestId2 baseArgs requestArgs__local stdinBytes__local -> let
       (__place_receiver_1 : t).requestId <- __place_rhs_2;
       __place_rhs_2
     ));
-    ignore (let __assign_3 = Obj.magic (let __array_receiver_4 = baseArgs in HxArray.copy __array_receiver_4) in (
+    ignore (let __assign_3 = Obj.magic (let __array_receiver_4 = Obj.magic baseArgs in HxArray.copy __array_receiver_4) in (
       (Obj.magic self : t).baseArgsValue <- __assign_3;
       __assign_3
     ));
-    ignore (let __assign_5 = Obj.magic (let __array_receiver_6 = requestArgs__local in HxArray.copy __array_receiver_6) in (
+    ignore (let __assign_5 = Obj.magic (let __array_receiver_6 = Obj.magic requestArgs__local in HxArray.copy __array_receiver_6) in (
       (Obj.magic self : t).requestArgsValue <- __assign_5;
       __assign_5
     ));

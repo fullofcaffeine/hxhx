@@ -14,8 +14,8 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.runtime.Nul
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.runtime.NullableRuntimeString" } : t)
 
 let normalize = fun s -> (try (
-  ignore (if s == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  ignore (if HxString.isNull (s : string) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if s == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if HxString.isNull (s : string) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   s
 ) with
   | HxRuntime.Hx_return __ret_1 -> (Obj.obj __ret_1 : string) : string)

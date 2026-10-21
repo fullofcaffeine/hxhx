@@ -10,7 +10,7 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerTypedProgramRevisi
 
 let getMacroMode = fun self () -> (Obj.magic self : t).macroMode
 
-let getModules = fun self () -> let __array_receiver_41 = (Obj.magic self : t).modules in HxArray.copy __array_receiver_41
+let getModules = fun self () -> let __array_receiver_41 = Obj.magic ((Obj.magic self : t).modules) in HxArray.copy __array_receiver_41
 
 let getCanonicalIdentity = fun self () -> (Obj.magic self : t).canonicalIdentity
 
@@ -49,20 +49,20 @@ let create = fun moduleContributions macroMode2 -> let self = ({ __hx_type = HxT
           let existing = Obj.magic (!tempMaybeArray) in if existing == Obj.magic (HxRuntime.hx_null) then ignore (let key = ((Obj.magic contribution : CompilerTypedModuleRevision.t).modulePath : string) in HxMap.set_string (Obj.magic contributionsByModule) (key : string) (let __arr_8 = HxArray.create () in (
             ignore (HxArray.push __arr_8 contribution);
             __arr_8
-          ))) else ignore (let __array_receiver_9 = existing in let __array_arg_0_10 = contribution in HxArray.push __array_receiver_9 __array_arg_0_10)
+          ))) else ignore (let __array_receiver_9 = Obj.magic existing in let __array_arg_0_10 = Obj.magic contribution in HxArray.push __array_receiver_9 __array_arg_0_10)
         )
       )) done) else ());
       let _g = Obj.magic (let __represented_array_11 = HxArray.create () in __represented_array_11) in let modulePath = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic contributionsByModule))) in (
-        ignore (while let __iterator_receiver_12 = modulePath in HxIterator.hasNext __iterator_receiver_12 do ignore (let modulePath2 = (let __iterator_receiver_13 = modulePath in HxIterator.next __iterator_receiver_13 : string) in let __array_receiver_14 = _g in let __array_arg_0_15 = modulePath2 in HxArray.push __array_receiver_14 __array_arg_0_15) done);
+        ignore (while let __iterator_receiver_12 = modulePath in HxIterator.hasNext __iterator_receiver_12 do ignore (let modulePath2 = (let __iterator_receiver_13 = modulePath in HxIterator.next __iterator_receiver_13 : string) in let __array_receiver_14 = Obj.magic _g in let __array_arg_0_15 = (modulePath2 : string) in HxArray.push __array_receiver_14 __array_arg_0_15) done);
         let tempArray = Obj.magic _g in let modulePaths = Obj.magic tempArray in (
-          ignore (let __array_receiver_16 = modulePaths in let __array_arg_0_17 = compareText in HxArray.sort __array_receiver_16 __array_arg_0_17);
+          ignore (let __array_receiver_16 = Obj.magic modulePaths in let __array_arg_0_17 = compareText in HxArray.sort __array_receiver_16 __array_arg_0_17);
           let _g = Obj.magic (let __arr_18 = HxArray.create () in __arr_18) in let _g1 = ref 0 in (
             ignore (while !_g1 < HxArray.length modulePaths do ignore (let modulePath = (let __array_read_receiver_19 = modulePaths in let __array_read_index_20 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_19) __array_read_index_20 : string) in (
               ignore (let __old_21 = !_g1 in let __new_22 = HxInt.add __old_21 1 in (
                 ignore (_g1 := __new_22);
                 __new_22
               ));
-              let __array_receiver_23 = _g in let __array_arg_0_24 = CompilerTypedModuleRevision.mergeContributions (modulePath : string) (Obj.magic (HxMap.get_string (Obj.magic contributionsByModule) (modulePath : string))) in HxArray.push __array_receiver_23 __array_arg_0_24
+              let __array_receiver_23 = Obj.magic _g in let __array_arg_0_24 = Obj.magic (CompilerTypedModuleRevision.mergeContributions (modulePath : string) (Obj.magic (HxMap.get_string (Obj.magic contributionsByModule) (modulePath : string)))) in HxArray.push __array_receiver_23 __array_arg_0_24
             )) done);
             let tempRight = Obj.magic _g in (
               ignore (let __assign_25 = Obj.magic tempRight in (
@@ -70,7 +70,7 @@ let create = fun moduleContributions macroMode2 -> let self = ({ __hx_type = HxT
                 __assign_25
               ));
               let facts = Obj.magic (HxArray.create ()) in (
-                ignore (let __array_receiver_26 = facts in let __array_arg_0_27 = "compiler-typed-program-revision-v1" in HxArray.push __array_receiver_26 __array_arg_0_27);
+                ignore (let __array_receiver_26 = Obj.magic facts in let __array_arg_0_27 = ("compiler-typed-program-revision-v1" : string) in HxArray.push __array_receiver_26 __array_arg_0_27);
                 let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
                   ignore (if macroMode2 then let __assign_28 = Obj.magic ("macro" : string) in (
                     tempMaybeString := __assign_28;
@@ -79,15 +79,15 @@ let create = fun moduleContributions macroMode2 -> let self = ({ __hx_type = HxT
                     tempMaybeString := __assign_29;
                     __assign_29
                   ));
-                  ignore (let __array_receiver_30 = facts in let __array_arg_0_31 = !tempMaybeString in HxArray.push __array_receiver_30 __array_arg_0_31);
-                  ignore (let __array_receiver_32 = facts in let __array_arg_0_33 = string_of_int (HxArray.length ((Obj.magic self : t).modules)) in HxArray.push __array_receiver_32 __array_arg_0_33);
+                  ignore (let __array_receiver_30 = Obj.magic facts in let __array_arg_0_31 = (!tempMaybeString : string) in HxArray.push __array_receiver_30 __array_arg_0_31);
+                  ignore (let __array_receiver_32 = Obj.magic facts in let __array_arg_0_33 = (string_of_int (HxArray.length ((Obj.magic self : t).modules)) : string) in HxArray.push __array_receiver_32 __array_arg_0_33);
                   let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).modules) in (
                     ignore (while !_g < HxArray.length _g1 do ignore (let hx_module = Obj.magic (let __array_read_receiver_34 = _g1 in let __array_read_index_35 = !_g in HxArray.get (Obj.magic __array_read_receiver_34) __array_read_index_35) in (
                       ignore (let __old_36 = !_g in let __new_37 = HxInt.add __old_36 1 in (
                         ignore (_g := __new_37);
                         __new_37
                       ));
-                      let __array_receiver_38 = facts in let __array_arg_0_39 = CompilerTypedModuleRevision.getCanonicalIdentity (Obj.magic hx_module) () in HxArray.push __array_receiver_38 __array_arg_0_39
+                      let __array_receiver_38 = Obj.magic facts in let __array_arg_0_39 = (CompilerTypedModuleRevision.getCanonicalIdentity (Obj.magic hx_module) () : string) in HxArray.push __array_receiver_38 __array_arg_0_39
                     )) done);
                     let __assign_40 = (CompilerCacheIdentity.encode (Obj.magic facts) : string) in (
                       (Obj.magic self : t).canonicalIdentity <- __assign_40;
@@ -113,7 +113,7 @@ let fromTypedModules = fun typedModules macroMode2 -> let contributions = Obj.ma
     ));
     ignore (if typedModule == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "typed program revision contains a null typed module") ["Dynamic"] else ());
     ignore (TypedModule.assertBodyRevisionCurrent (Obj.magic typedModule) ());
-    let __array_receiver_46 = contributions in let __array_arg_0_47 = CompilerTypedModuleRevision.fromTypedModule (Obj.magic typedModule) (Obj.magic (HxRuntime.hx_null)) in HxArray.push __array_receiver_46 __array_arg_0_47
+    let __array_receiver_46 = Obj.magic contributions in let __array_arg_0_47 = Obj.magic (CompilerTypedModuleRevision.fromTypedModule (Obj.magic typedModule) (Obj.magic (HxRuntime.hx_null))) in HxArray.push __array_receiver_46 __array_arg_0_47
   )) done) else ());
   create (Obj.magic contributions) macroMode2
 )

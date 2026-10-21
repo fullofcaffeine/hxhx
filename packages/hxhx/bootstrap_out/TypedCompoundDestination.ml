@@ -1,0 +1,2 @@
+# 1 "TypedCompoundDestination.ml"
+include CompilerDiagnosticProbe.TypedCompoundDestination

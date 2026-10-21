@@ -59,7 +59,7 @@ let create = fun program -> let self = ({ __hx_type = HxType.class_ "backend.sou
         __new_16
       ));
       let projection = Obj.magic (TypedModule.getBackendProjection (Obj.magic typed) ()) in let moduleIdentity = ((Obj.magic (TypedModule.getSourceOrigin (Obj.magic typed) ()) : CompilerModuleOrigin.t).sourceModulePath : string) in (
-        ignore (let __array_receiver_17 = (Obj.magic self : t).modules in let __array_arg_0_18 = let __anon_19 = HxAnon.create () in (
+        ignore (let __array_receiver_17 = Obj.magic ((Obj.magic self : t).modules) in let __array_arg_0_18 = let __anon_19 = HxAnon.create () in (
           ignore (HxAnon.set __anon_19 "typed" (Obj.repr typed));
           ignore (HxAnon.set __anon_19 "projection" (Obj.repr projection));
           ignore (HxAnon.set __anon_19 "moduleIdentity" (Obj.repr moduleIdentity));
@@ -166,12 +166,57 @@ let create = fun program -> let self = ({ __hx_type = HxType.class_ "backend.sou
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpTypedProgramProjection"; modules = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; functionOwners = Obj.magic HxRuntime.hx_null; fieldInitializers = Obj.magic HxRuntime.hx_null; fieldInitializerOwners = Obj.magic HxRuntime.hx_null; functionsByStableIdentity = Obj.magic HxRuntime.hx_null; ownersByStableIdentity = Obj.magic HxRuntime.hx_null; classOwners = Obj.magic HxRuntime.hx_null; classModuleOwners = Obj.magic HxRuntime.hx_null; stableFunctions = Obj.magic HxRuntime.hx_null; typedProgramRevision = Obj.magic HxRuntime.hx_null } : t)
 
-let getModules = fun self () -> let __array_receiver_57 = (Obj.magic self : t).modules in HxArray.copy __array_receiver_57
+let requireMain = fun self (wanted : string) -> (try let fallback = ref (HxRuntime.hx_null : Obj.t) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).modules) in (
+  ignore (while !_g < HxArray.length _g1 do ignore (let hx_module = let __array_read_receiver_57 = _g1 in let __array_read_index_58 = !_g in HxArray.get (Obj.magic __array_read_receiver_57) __array_read_index_58 in (
+    ignore (let __old_59 = !_g in let __new_60 = HxInt.add __old_59 1 in (
+      ignore (_g := __new_60);
+      __new_60
+    ));
+    let packagePath = (HxModuleDecl.getPackagePath (Obj.magic (TypedBackendModuleProjection.getDeclaration (Obj.magic (Obj.obj (HxAnon.get hx_module "projection"))) ())) : string) in let _g2 = ref 0 in let _g3 = Obj.magic (TypedBackendModuleProjection.getClasses (Obj.magic (Obj.obj (HxAnon.get hx_module "projection"))) ()) in while !_g2 < HxArray.length _g3 do ignore (let cls = Obj.magic (let __array_read_receiver_61 = _g3 in let __array_read_index_62 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_61) __array_read_index_62) in (
+      ignore (let __old_63 = !_g2 in let __new_64 = HxInt.add __old_63 1 in (
+        ignore (_g2 := __new_64);
+        __new_64
+      ));
+      let name = (HxClassDecl.getName (Obj.magic (TypedBackendClassProjection.getDeclaration (Obj.magic cls) ())) : string) in let tempString = ref (HxString.hx_null_string : string) in (
+        ignore (if (let __string_receiver_65 = packagePath in HxString.length __string_receiver_65) = 0 then let __assign_66 = (name : string) in (
+          tempString := __assign_66;
+          __assign_66
+        ) else let __assign_67 = ((HxString.toStdString packagePath ^ ".") ^ HxString.toStdString name : string) in (
+          tempString := __assign_67;
+          __assign_67
+        ));
+        let fullName = (!tempString : string) in let _g4 = ref 0 in let _g5 = Obj.magic (TypedBackendClassProjection.getFunctions (Obj.magic cls) ()) in while !_g4 < HxArray.length _g5 do ignore (let fn = Obj.magic (let __array_read_receiver_68 = _g5 in let __array_read_index_69 = !_g4 in HxArray.get (Obj.magic __array_read_receiver_68) __array_read_index_69) in (
+          ignore (let __old_70 = !_g4 in let __new_71 = HxInt.add __old_70 1 in (
+            ignore (_g4 := __new_71);
+            __new_71
+          ));
+          let declaration = Obj.magic (TypedBackendFunctionProjection.getDeclaration (Obj.magic fn) ()) in if HxFunctionDecl.getIsStatic (Obj.magic declaration) && (let __string_eq_left_72 = HxFunctionDecl.getName (Obj.magic declaration) in let __string_eq_right_73 = "main" in HxString.equals __string_eq_left_72 __string_eq_right_73) then ignore (let selected = let __anon_74 = HxAnon.create () in (
+            ignore (HxAnon.set __anon_74 "module" (Obj.repr (Obj.obj (HxAnon.get hx_module "projection"))));
+            ignore (HxAnon.set __anon_74 "cls" (Obj.repr cls));
+            ignore (HxAnon.set __anon_74 "main" (Obj.repr fn));
+            __anon_74
+          ) in (
+            ignore (if Obj.magic (!fallback) == Obj.magic (HxRuntime.hx_null) then ignore (let __assign_75 = Obj.magic selected in (
+              fallback := __assign_75;
+              __assign_75
+            )) else ());
+            if wanted == HxString.hx_null_string || (let __string_receiver_76 = wanted in HxString.length __string_receiver_76) = 0 || (let __string_eq_left_77 = wanted in let __string_eq_right_78 = name in HxString.equals __string_eq_left_77 __string_eq_right_78) || (let __string_eq_left_79 = wanted in let __string_eq_right_80 = fullName in HxString.equals __string_eq_left_79 __string_eq_right_80) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr selected)) else ()
+          )) else ()
+        )) done
+      )
+    )) done
+  )) done);
+  ignore (if Obj.magic (!fallback) == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "PHP source target requires a static main entrypoint") ["Dynamic"] else ());
+  Obj.magic (!fallback)
+) with
+  | HxRuntime.Hx_return __ret_81 -> (Obj.obj __ret_81 : Obj.t) : Obj.t)
+
+let getModules = fun self () -> let __array_receiver_82 = Obj.magic ((Obj.magic self : t).modules) in HxArray.copy __array_receiver_82
 
 let requireClassModuleIdentity = fun self (declaration : HxClassDecl.t) -> (
   ignore (if declaration == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "PHP typed program projection received a null class ownership request") ["Dynamic"] else ());
   let _this = Obj.magic ((Obj.magic self : t).classModuleOwners) in let tempMaybeString = (HxMap.get_object (Obj.magic _this) declaration : string) in (
-    ignore (if tempMaybeString == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_58 = "PHP typed program projection cannot find module ownership for " in let __string_part_59 = HxString.toStdString (HxClassDecl.getName (Obj.magic declaration)) in __string_part_58 ^ __string_part_59)) ["Dynamic"] else ());
+    ignore (if tempMaybeString == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_83 = "PHP typed program projection cannot find module ownership for " in let __string_part_84 = HxString.toStdString (HxClassDecl.getName (Obj.magic declaration)) in __string_part_83 ^ __string_part_84)) ["Dynamic"] else ());
     tempMaybeString
   )
 )
@@ -179,71 +224,71 @@ let requireClassModuleIdentity = fun self (declaration : HxClassDecl.t) -> (
 let getProgramRevision = fun self () -> CompilerTypedProgramRevision.getCanonicalIdentity (Obj.magic ((Obj.magic self : t).typedProgramRevision)) ()
 
 let getClassGraph = fun self () -> let facts = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).modules) in (
-  ignore (while !_g < HxArray.length _g1 do ignore (let hx_module = let __array_read_receiver_60 = _g1 in let __array_read_index_61 = !_g in HxArray.get (Obj.magic __array_read_receiver_60) __array_read_index_61 in (
-    ignore (let __old_62 = !_g in let __new_63 = HxInt.add __old_62 1 in (
-      ignore (_g := __new_63);
-      __new_63
+  ignore (while !_g < HxArray.length _g1 do ignore (let hx_module = let __array_read_receiver_85 = _g1 in let __array_read_index_86 = !_g in HxArray.get (Obj.magic __array_read_receiver_85) __array_read_index_86 in (
+    ignore (let __old_87 = !_g in let __new_88 = HxInt.add __old_87 1 in (
+      ignore (_g := __new_88);
+      __new_88
     ));
-    let _g2 = ref 0 in let _g3 = Obj.magic (TypedBackendModuleProjection.getClasses (Obj.magic (Obj.obj (HxAnon.get hx_module "projection"))) ()) in while !_g2 < HxArray.length _g3 do ignore (let projectedClass = Obj.magic (let __array_read_receiver_64 = _g3 in let __array_read_index_65 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_64) __array_read_index_65) in (
-      ignore (let __old_66 = !_g2 in let __new_67 = HxInt.add __old_66 1 in (
-        ignore (_g2 := __new_67);
-        __new_67
+    let _g2 = ref 0 in let _g3 = Obj.magic (TypedBackendModuleProjection.getClasses (Obj.magic (Obj.obj (HxAnon.get hx_module "projection"))) ()) in while !_g2 < HxArray.length _g3 do ignore (let projectedClass = Obj.magic (let __array_read_receiver_89 = _g3 in let __array_read_index_90 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_89) __array_read_index_90) in (
+      ignore (let __old_91 = !_g2 in let __new_92 = HxInt.add __old_91 1 in (
+        ignore (_g2 := __new_92);
+        __new_92
       ));
-      let __array_receiver_68 = facts in let __array_arg_0_69 = TypedBackendClassProjection.requireSemanticFacts (Obj.magic projectedClass) () in HxArray.push __array_receiver_68 __array_arg_0_69
+      let __array_receiver_93 = Obj.magic facts in let __array_arg_0_94 = Obj.magic (TypedBackendClassProjection.requireSemanticFacts (Obj.magic projectedClass) ()) in HxArray.push __array_receiver_93 __array_arg_0_94
     )) done
   )) done);
   TypedBackendClassGraph.create (getProgramRevision (Obj.magic self) () : string) (Obj.magic facts)
 )
 
-let getProgramRenderFacts = fun self () -> let _g = Obj.magic (let __arr_70 = HxArray.create () in __arr_70) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).modules) in (
-  ignore (while !_g1 < HxArray.length _g2 do ignore (let hx_module = let __array_read_receiver_71 = _g2 in let __array_read_index_72 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_71) __array_read_index_72 in (
-    ignore (let __old_73 = !_g1 in let __new_74 = HxInt.add __old_73 1 in (
-      ignore (_g1 := __new_74);
-      __new_74
+let getProgramRenderFacts = fun self () -> let _g = Obj.magic (let __arr_95 = HxArray.create () in __arr_95) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).modules) in (
+  ignore (while !_g1 < HxArray.length _g2 do ignore (let hx_module = let __array_read_receiver_96 = _g2 in let __array_read_index_97 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_96) __array_read_index_97 in (
+    ignore (let __old_98 = !_g1 in let __new_99 = HxInt.add __old_98 1 in (
+      ignore (_g1 := __new_99);
+      __new_99
     ));
-    let __array_receiver_75 = _g in let __array_arg_0_76 = let __anon_77 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_77 "moduleIdentity" (Obj.repr (Obj.obj (HxAnon.get hx_module "moduleIdentity"))));
-      ignore (HxAnon.set __anon_77 "projection" (Obj.repr (Obj.obj (HxAnon.get hx_module "projection"))));
-      __anon_77
-    ) in HxArray.push __array_receiver_75 __array_arg_0_76
+    let __array_receiver_100 = Obj.magic _g in let __array_arg_0_101 = let __anon_102 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_102 "moduleIdentity" (Obj.repr (Obj.obj (HxAnon.get hx_module "moduleIdentity"))));
+      ignore (HxAnon.set __anon_102 "projection" (Obj.repr (Obj.obj (HxAnon.get hx_module "projection"))));
+      __anon_102
+    ) in HxArray.push __array_receiver_100 __array_arg_0_101
   )) done);
   Backend_source_PhpProgramRenderFacts.create (getProgramRevision (Obj.magic self) () : string) (Obj.magic _g)
 )
 
 let getModuleRenderFacts = fun self (moduleIdentity : string) -> let tempString = ref (HxString.hx_null_string : string) in (
-  ignore (if moduleIdentity == HxString.hx_null_string then let __assign_78 = "" in (
-    tempString := __assign_78;
-    __assign_78
-  ) else let __assign_79 = let __call_arg_0_80 = moduleIdentity in StringTools.trim __call_arg_0_80 in (
-    tempString := __assign_79;
-    __assign_79
+  ignore (if moduleIdentity == HxString.hx_null_string then let __assign_103 = "" in (
+    tempString := __assign_103;
+    __assign_103
+  ) else let __assign_104 = let __call_arg_0_105 = moduleIdentity in StringTools.trim __call_arg_0_105 in (
+    tempString := __assign_104;
+    __assign_104
   ));
   let normalizedIdentity = !tempString in (
-    ignore (if (let __string_receiver_81 = normalizedIdentity in HxString.length __string_receiver_81) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "PHP module render facts require an exact source-module identity") ["Dynamic"] else ());
+    ignore (if (let __string_receiver_106 = normalizedIdentity in HxString.length __string_receiver_106) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "PHP module render facts require an exact source-module identity") ["Dynamic"] else ());
     let contributions = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).modules) in (
-      ignore (while !_g < HxArray.length _g1 do ignore (let hx_module = let __array_read_receiver_82 = _g1 in let __array_read_index_83 = !_g in HxArray.get (Obj.magic __array_read_receiver_82) __array_read_index_83 in (
-        ignore (let __old_84 = !_g in let __new_85 = HxInt.add __old_84 1 in (
-          ignore (_g := __new_85);
-          __new_85
+      ignore (while !_g < HxArray.length _g1 do ignore (let hx_module = let __array_read_receiver_107 = _g1 in let __array_read_index_108 = !_g in HxArray.get (Obj.magic __array_read_receiver_107) __array_read_index_108 in (
+        ignore (let __old_109 = !_g in let __new_110 = HxInt.add __old_109 1 in (
+          ignore (_g := __new_110);
+          __new_110
         ));
-        if let __string_eq_left_86 = Obj.obj (HxAnon.get hx_module "moduleIdentity") in let __string_eq_right_87 = normalizedIdentity in HxString.equals __string_eq_left_86 __string_eq_right_87 then ignore (let __array_receiver_88 = contributions in let __array_arg_0_89 = let __anon_90 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_90 "projection" (Obj.repr (Obj.obj (HxAnon.get hx_module "projection"))));
-          ignore (HxAnon.set __anon_90 "resolvedDirectives" (Obj.repr (TyModuleEnv.getResolvedDirectives (Obj.magic (TypedModule.getEnv (Obj.magic (Obj.obj (HxAnon.get hx_module "typed"))) ())) ())));
-          __anon_90
-        ) in HxArray.push __array_receiver_88 __array_arg_0_89) else ()
+        if let __string_eq_left_111 = Obj.obj (HxAnon.get hx_module "moduleIdentity") in let __string_eq_right_112 = normalizedIdentity in HxString.equals __string_eq_left_111 __string_eq_right_112 then ignore (let __array_receiver_113 = Obj.magic contributions in let __array_arg_0_114 = let __anon_115 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_115 "projection" (Obj.repr (Obj.obj (HxAnon.get hx_module "projection"))));
+          ignore (HxAnon.set __anon_115 "resolvedDirectives" (Obj.repr (TyModuleEnv.getResolvedDirectives (Obj.magic (TypedModule.getEnv (Obj.magic (Obj.obj (HxAnon.get hx_module "typed"))) ())) ())));
+          __anon_115
+        ) in HxArray.push __array_receiver_113 __array_arg_0_114) else ()
       )) done);
       ignore (if HxArray.length contributions = 0 then HxType.hx_throw_typed_rtti (Obj.repr ("PHP typed program projection does not contain source module " ^ HxString.toStdString normalizedIdentity)) ["Dynamic"] else ());
       let selectedRevision = ref (Obj.magic (Obj.magic (HxRuntime.hx_null)) : CompilerTypedModuleRevision.t) in let _g = ref 0 in let _g1 = Obj.magic (CompilerTypedProgramRevision.getModules (Obj.magic ((Obj.magic self : t).typedProgramRevision)) ()) in (
-        ignore (while !_g < HxArray.length _g1 do ignore (let revision = Obj.magic (let __array_read_receiver_91 = _g1 in let __array_read_index_92 = !_g in HxArray.get (Obj.magic __array_read_receiver_91) __array_read_index_92) in (
-          ignore (let __old_93 = !_g in let __new_94 = HxInt.add __old_93 1 in (
-            ignore (_g := __new_94);
-            __new_94
+        ignore (while !_g < HxArray.length _g1 do ignore (let revision = Obj.magic (let __array_read_receiver_116 = _g1 in let __array_read_index_117 = !_g in HxArray.get (Obj.magic __array_read_receiver_116) __array_read_index_117) in (
+          ignore (let __old_118 = !_g in let __new_119 = HxInt.add __old_118 1 in (
+            ignore (_g := __new_119);
+            __new_119
           ));
-          if let __string_eq_left_95 = (Obj.magic revision : CompilerTypedModuleRevision.t).modulePath in let __string_eq_right_96 = normalizedIdentity in HxString.equals __string_eq_left_95 __string_eq_right_96 then ignore ((
+          if let __string_eq_left_120 = (Obj.magic revision : CompilerTypedModuleRevision.t).modulePath in let __string_eq_right_121 = normalizedIdentity in HxString.equals __string_eq_left_120 __string_eq_right_121 then ignore ((
             ignore (if !selectedRevision != Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr ("PHP typed program projection contains duplicate module revision " ^ HxString.toStdString normalizedIdentity)) ["Dynamic"] else ());
-            let __assign_97 = Obj.magic (Obj.magic revision) in (
-              selectedRevision := __assign_97;
-              __assign_97
+            let __assign_122 = Obj.magic (Obj.magic revision) in (
+              selectedRevision := __assign_122;
+              __assign_122
             )
           )) else ()
         )) done);
@@ -255,25 +300,25 @@ let getModuleRenderFacts = fun self (moduleIdentity : string) -> let tempString 
 )
 
 let requireFunction = fun self (declaration : HxFunctionDecl.t) (ownerClass : HxClassDecl.t) -> let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (if ownerClass == Obj.magic (HxRuntime.hx_null) then let __assign_98 = Obj.magic ("<unknown-module>.<unknown-class>" : string) in (
-    tempMaybeString := __assign_98;
-    __assign_98
-  ) else let _this = Obj.magic ((Obj.magic self : t).classOwners) in let __assign_99 = Obj.magic (HxMap.get_object (Obj.magic _this) ownerClass : string) in (
-    tempMaybeString := __assign_99;
-    __assign_99
+  ignore (if ownerClass == Obj.magic (HxRuntime.hx_null) then let __assign_123 = Obj.magic ("<unknown-module>.<unknown-class>" : string) in (
+    tempMaybeString := __assign_123;
+    __assign_123
+  ) else let _this = Obj.magic ((Obj.magic self : t).classOwners) in let __assign_124 = Obj.magic (HxMap.get_object (Obj.magic _this) ownerClass : string) in (
+    tempMaybeString := __assign_124;
+    __assign_124
   ));
   let owner = (!tempMaybeString : string) in let tempMaybeString1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-    ignore (if owner == Obj.magic (HxRuntime.hx_null) then let __assign_100 = Obj.magic (let __string_part_101 = "<unknown-module>." in let __string_part_102 = HxString.toStdString (HxClassDecl.getName (Obj.magic ownerClass)) in __string_part_101 ^ __string_part_102 : string) in (
-      tempMaybeString1 := __assign_100;
-      __assign_100
-    ) else let __assign_103 = Obj.magic (owner : string) in (
-      tempMaybeString1 := __assign_103;
-      __assign_103
+    ignore (if owner == Obj.magic (HxRuntime.hx_null) then let __assign_125 = Obj.magic (let __string_part_126 = "<unknown-module>." in let __string_part_127 = HxString.toStdString (HxClassDecl.getName (Obj.magic ownerClass)) in __string_part_126 ^ __string_part_127 : string) in (
+      tempMaybeString1 := __assign_125;
+      __assign_125
+    ) else let __assign_128 = Obj.magic (owner : string) in (
+      tempMaybeString1 := __assign_128;
+      __assign_128
     ));
     let ownerIdentity = (!tempMaybeString1 : string) in (
       ignore (if declaration == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr ("PHP typed program projection received a null function for " ^ HxString.toStdString ownerIdentity)) ["Dynamic"] else ());
       let _this = Obj.magic ((Obj.magic self : t).functions) in let tempMaybeTypedBackendFunctionProjection = Obj.magic (HxMap.get_object (Obj.magic _this) declaration) in let projection = Obj.magic tempMaybeTypedBackendFunctionProjection in (
-        ignore (if projection == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_104 = "PHP typed program projection is missing " in let __string_part_105 = HxString.toStdString ownerIdentity in let __string_part_106 = "." in let __string_part_107 = HxString.toStdString (HxFunctionDecl.getName (Obj.magic declaration)) in ((__string_part_104 ^ __string_part_105) ^ __string_part_106) ^ __string_part_107)) ["Dynamic"] else ());
+        ignore (if projection == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_129 = "PHP typed program projection is missing " in let __string_part_130 = HxString.toStdString ownerIdentity in let __string_part_131 = "." in let __string_part_132 = HxString.toStdString (HxFunctionDecl.getName (Obj.magic declaration)) in ((__string_part_129 ^ __string_part_130) ^ __string_part_131) ^ __string_part_132)) ["Dynamic"] else ());
         projection
       )
     )
@@ -283,18 +328,18 @@ let requireFunction = fun self (declaration : HxFunctionDecl.t) (ownerClass : Hx
 let requireFunctionLoweringPlan = fun self (declaration : HxFunctionDecl.t) (renderClassUsesThisValueSlot : Obj.t) -> (
   ignore (if declaration == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "PHP typed program projection received a null function plan request") ["Dynamic"] else ());
   let _this = Obj.magic ((Obj.magic self : t).functions) in let tempMaybeTypedBackendFunctionProjection = Obj.magic (HxMap.get_object (Obj.magic _this) declaration) in let projection = Obj.magic tempMaybeTypedBackendFunctionProjection in let _this = Obj.magic ((Obj.magic self : t).functionOwners) in let tempMaybePhpTypedFunctionOwner = HxMap.get_object (Obj.magic _this) declaration in let owner = tempMaybePhpTypedFunctionOwner in (
-    ignore (if projection == Obj.magic (HxRuntime.hx_null) || owner == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_108 = "PHP typed program projection cannot plan unknown function " in let __string_part_109 = HxString.toStdString (HxFunctionDecl.getName (Obj.magic declaration)) in __string_part_108 ^ __string_part_109)) ["Dynamic"] else ());
+    ignore (if projection == Obj.magic (HxRuntime.hx_null) || owner == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_133 = "PHP typed program projection cannot plan unknown function " in let __string_part_134 = HxString.toStdString (HxFunctionDecl.getName (Obj.magic declaration)) in __string_part_133 ^ __string_part_134)) ["Dynamic"] else ());
     let classFacts = Obj.magic (TypedBackendClassProjection.requireSemanticFacts (Obj.magic (Obj.obj (HxAnon.get owner "projectedClass"))) ()) in (
-      ignore (if let __string_eq_left_110 = TypedBackendClassSemanticFacts.getModuleIdentity (Obj.magic classFacts) () in let __string_eq_right_111 = Obj.obj (HxAnon.get owner "moduleIdentity") in not (HxString.equals __string_eq_left_110 __string_eq_right_111) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_112 = "PHP typed program projection contains conflicting module ownership for " in let __string_part_113 = HxString.toStdString (TypedBackendFunctionProjection.getStableIdentity (Obj.magic projection) ()) in __string_part_112 ^ __string_part_113)) ["Dynamic"] else ());
+      ignore (if let __string_eq_left_135 = TypedBackendClassSemanticFacts.getModuleIdentity (Obj.magic classFacts) () in let __string_eq_right_136 = Obj.obj (HxAnon.get owner "moduleIdentity") in not (HxString.equals __string_eq_left_135 __string_eq_right_136) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_137 = "PHP typed program projection contains conflicting module ownership for " in let __string_part_138 = HxString.toStdString (TypedBackendFunctionProjection.getStableIdentity (Obj.magic projection) ()) in __string_part_137 ^ __string_part_138)) ["Dynamic"] else ());
       let tempMaybeBool = ref (HxRuntime.hx_null : Obj.t) in (
-        ignore (if renderClassUsesThisValueSlot == HxRuntime.hx_null then let __assign_114 = Obj.magic (HxRuntime.box_bool (Backend_source_PhpThisValueSlotFacts.classNeedsValueSlot (Obj.magic (TypedBackendClassProjection.getFunctions (Obj.magic (Obj.obj (HxAnon.get owner "projectedClass"))) ())))) in (
-          tempMaybeBool := __assign_114;
-          __assign_114
-        ) else let __assign_115 = Obj.magic renderClassUsesThisValueSlot in (
-          tempMaybeBool := __assign_115;
-          __assign_115
+        ignore (if renderClassUsesThisValueSlot == HxRuntime.hx_null then let __assign_139 = Obj.magic (Obj.repr (Backend_source_PhpThisValueSlotFacts.classNeedsValueSlot (Obj.magic (TypedBackendClassProjection.getFunctions (Obj.magic (Obj.obj (HxAnon.get owner "projectedClass"))) ())))) in (
+          tempMaybeBool := __assign_139;
+          __assign_139
+        ) else let __assign_140 = Obj.magic renderClassUsesThisValueSlot in (
+          tempMaybeBool := __assign_140;
+          __assign_140
         ));
-        let usesThisValueSlot = Obj.magic (!tempMaybeBool) in Backend_source_PhpFunctionLoweringPlan.create (Obj.magic (getProgramRenderFacts (Obj.magic self) ())) (Obj.magic (getModuleRenderFacts (Obj.magic self) (Obj.obj (HxAnon.get owner "moduleIdentity") : string))) (Obj.magic (getClassGraph (Obj.magic self) ())) (Obj.magic classFacts) (let __nullable_bool_116 = usesThisValueSlot in if __nullable_bool_116 == HxRuntime.hx_null then false else HxRuntime.unbox_bool_or_obj __nullable_bool_116) (Obj.magic projection) (Obj.magic (HxRuntime.hx_null))
+        let usesThisValueSlot = Obj.magic (!tempMaybeBool) in Backend_source_PhpFunctionLoweringPlan.create (Obj.magic (getProgramRenderFacts (Obj.magic self) ())) (Obj.magic (getModuleRenderFacts (Obj.magic self) (Obj.obj (HxAnon.get owner "moduleIdentity") : string))) (Obj.magic (getClassGraph (Obj.magic self) ())) (Obj.magic classFacts) (let __nullable_bool_141 = usesThisValueSlot in if __nullable_bool_141 == HxRuntime.hx_null then false else HxRuntime.unbox_bool_or_obj __nullable_bool_141) (Obj.magic projection) (Obj.magic (HxRuntime.hx_null))
       )
     )
   )
@@ -304,7 +349,7 @@ let requireFunctionBodyRenderer = fun self (programRenderer : Backend_source_Php
   ignore (if programRenderer == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "PHP typed program projection requires a request-owned program renderer") ["Dynamic"] else ());
   ignore (if declaration == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "PHP typed program projection received a null function renderer request") ["Dynamic"] else ());
   let _this = Obj.magic ((Obj.magic self : t).functionOwners) in let tempMaybePhpTypedFunctionOwner = HxMap.get_object (Obj.magic _this) declaration in let owner = tempMaybePhpTypedFunctionOwner in (
-    ignore (if owner == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_117 = "PHP typed program projection cannot render unknown function " in let __string_part_118 = HxString.toStdString (HxFunctionDecl.getName (Obj.magic declaration)) in __string_part_117 ^ __string_part_118)) ["Dynamic"] else ());
+    ignore (if owner == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_142 = "PHP typed program projection cannot render unknown function " in let __string_part_143 = HxString.toStdString (HxFunctionDecl.getName (Obj.magic declaration)) in __string_part_142 ^ __string_part_143)) ["Dynamic"] else ());
     let programFacts = Obj.magic (getProgramRenderFacts (Obj.magic self) ()) in let moduleFacts = Obj.magic (getModuleRenderFacts (Obj.magic self) (Obj.obj (HxAnon.get owner "moduleIdentity") : string)) in let plan = Obj.magic (requireFunctionLoweringPlan (Obj.magic self) (Obj.magic declaration) renderClassUsesThisValueSlot) in Backend_source_PhpFunctionBodyRenderer.create (Obj.magic programRenderer) (Obj.magic programFacts) (Obj.magic moduleFacts) (Obj.magic plan)
   )
 )
@@ -313,7 +358,7 @@ let requireFieldInitializerRenderer = fun self (programRenderer : Backend_source
   ignore (if programRenderer == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "PHP typed program projection requires a request-owned program renderer") ["Dynamic"] else ());
   ignore (if declaration == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "PHP typed program projection received a null field initializer renderer request") ["Dynamic"] else ());
   let _this = Obj.magic ((Obj.magic self : t).fieldInitializers) in let tempMaybeTypedBackendFieldInitializerProjection = Obj.magic (HxMap.get_object (Obj.magic _this) declaration) in let projection = Obj.magic tempMaybeTypedBackendFieldInitializerProjection in let _this = Obj.magic ((Obj.magic self : t).fieldInitializerOwners) in let tempMaybePhpTypedFunctionOwner = HxMap.get_object (Obj.magic _this) declaration in let owner = tempMaybePhpTypedFunctionOwner in (
-    ignore (if projection == Obj.magic (HxRuntime.hx_null) || owner == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_119 = "PHP typed program projection cannot render unknown field initializer " in let __string_part_120 = HxString.toStdString (HxFieldDecl.getName (Obj.magic declaration)) in __string_part_119 ^ __string_part_120)) ["Dynamic"] else ());
+    ignore (if projection == Obj.magic (HxRuntime.hx_null) || owner == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_144 = "PHP typed program projection cannot render unknown field initializer " in let __string_part_145 = HxString.toStdString (HxFieldDecl.getName (Obj.magic declaration)) in __string_part_144 ^ __string_part_145)) ["Dynamic"] else ());
     let classFacts = Obj.magic (TypedBackendClassProjection.requireSemanticFacts (Obj.magic (Obj.obj (HxAnon.get owner "projectedClass"))) ()) in let programFacts = Obj.magic (getProgramRenderFacts (Obj.magic self) ()) in let moduleFacts = Obj.magic (getModuleRenderFacts (Obj.magic self) (Obj.obj (HxAnon.get owner "moduleIdentity") : string)) in let plan = Obj.magic (Backend_source_PhpFunctionLoweringPlan.create (Obj.magic programFacts) (Obj.magic moduleFacts) (Obj.magic (getClassGraph (Obj.magic self) ())) (Obj.magic classFacts) false (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.magic projection)) in Backend_source_PhpFunctionBodyRenderer.create (Obj.magic programRenderer) (Obj.magic programFacts) (Obj.magic moduleFacts) (Obj.magic plan)
   )
 )
@@ -323,7 +368,7 @@ let requireProjectedFunctionBodyRenderer = fun self (programRenderer : Backend_s
   ignore (if projection == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "PHP typed program projection received a null strict function renderer request") ["Dynamic"] else ());
   let identity = (TypedBackendFunctionProjection.getStableIdentity (Obj.magic projection) () : string) in let _this = Obj.magic ((Obj.magic self : t).functionsByStableIdentity) in let tempMaybeTypedBackendFunctionProjection = Obj.magic (HxMap.get_string (Obj.magic _this) (identity : string)) in let canonicalProjection = Obj.magic tempMaybeTypedBackendFunctionProjection in let _this = Obj.magic ((Obj.magic self : t).ownersByStableIdentity) in let tempMaybePhpTypedFunctionOwner = HxMap.get_string (Obj.magic _this) (identity : string) in let owner = tempMaybePhpTypedFunctionOwner in (
     ignore (if canonicalProjection == Obj.magic (HxRuntime.hx_null) || owner == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr ("PHP typed program projection cannot render unknown strict function " ^ HxString.toStdString identity)) ["Dynamic"] else ());
-    ignore (if let __string_eq_left_121 = TypedBackendFunctionProjection.getBodyRevision (Obj.magic canonicalProjection) () in let __string_eq_right_122 = TypedBackendFunctionProjection.getBodyRevision (Obj.magic projection) () in not (HxString.equals __string_eq_left_121 __string_eq_right_122) then HxType.hx_throw_typed_rtti (Obj.repr ("PHP typed program projection received conflicting body revisions for " ^ HxString.toStdString identity)) ["Dynamic"] else ());
+    ignore (if let __string_eq_left_146 = TypedBackendFunctionProjection.getBodyRevision (Obj.magic canonicalProjection) () in let __string_eq_right_147 = TypedBackendFunctionProjection.getBodyRevision (Obj.magic projection) () in not (HxString.equals __string_eq_left_146 __string_eq_right_147) then HxType.hx_throw_typed_rtti (Obj.repr ("PHP typed program projection received conflicting body revisions for " ^ HxString.toStdString identity)) ["Dynamic"] else ());
     let programFacts = Obj.magic (getProgramRenderFacts (Obj.magic self) ()) in let moduleFacts = Obj.magic (getModuleRenderFacts (Obj.magic self) (Obj.obj (HxAnon.get owner "moduleIdentity") : string)) in let plan = Obj.magic (Backend_source_PhpFunctionLoweringPlan.create (Obj.magic programFacts) (Obj.magic moduleFacts) (Obj.magic (getClassGraph (Obj.magic self) ())) (Obj.magic (TypedBackendClassProjection.requireSemanticFacts (Obj.magic (Obj.obj (HxAnon.get owner "projectedClass"))) ())) (Backend_source_PhpThisValueSlotFacts.classNeedsValueSlot (Obj.magic (TypedBackendClassProjection.getFunctions (Obj.magic (Obj.obj (HxAnon.get owner "projectedClass"))) ()))) (Obj.magic projection) (Obj.magic (HxRuntime.hx_null))) in Backend_source_PhpFunctionBodyRenderer.create (Obj.magic programRenderer) (Obj.magic programFacts) (Obj.magic moduleFacts) (Obj.magic plan)
   )
 )

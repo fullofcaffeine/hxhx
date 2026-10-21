@@ -42,7 +42,7 @@ let resolveLibraries = fun parsedLibs cwd -> let seen = HxMap.create_string () i
       ignore (_g := __new_10);
       __new_10
     ));
-    let __array_receiver_11 = out in let __array_arg_0_12 = Hxhx_LibraryResolver.resolve (lib : string) (cwd : string) seen 0 in HxArray.push __array_receiver_11 __array_arg_0_12
+    let __array_receiver_11 = Obj.magic out in let __array_arg_0_12 = Hxhx_LibraryResolver.resolve (lib : string) (cwd : string) seen 0 in HxArray.push __array_receiver_11 __array_arg_0_12
   )) done);
   out
 )
@@ -58,7 +58,7 @@ let collectLibraryDefines = fun libsResolved -> let out = Obj.magic (HxArray.cre
         ignore (_g2 := __new_20);
         __new_20
       ));
-      if (let __array_receiver_21 = out in let __array_arg_0_22 = d in HxArray.indexOf_default __array_receiver_21 __array_arg_0_22) = -1 then ignore (let __array_receiver_23 = out in let __array_arg_0_24 = d in HxArray.push __array_receiver_23 __array_arg_0_24) else ()
+      if (let __array_receiver_21 = Obj.magic out in let __array_arg_0_22 = (d : string) in HxArray.indexOf_default __array_receiver_21 __array_arg_0_22) = -1 then ignore (let __array_receiver_23 = Obj.magic out in let __array_arg_0_24 = (d : string) in HxArray.push __array_receiver_23 __array_arg_0_24) else ()
     )) done
   )) done);
   out
@@ -75,66 +75,66 @@ let collectLibraryMacros = fun libsResolved -> let out = Obj.magic (HxArray.crea
         ignore (_g2 := __new_32);
         __new_32
       ));
-      if (let __array_receiver_33 = out in let __array_arg_0_34 = m in HxArray.indexOf_default __array_receiver_33 __array_arg_0_34) = -1 then ignore (let __array_receiver_35 = out in let __array_arg_0_36 = m in HxArray.push __array_receiver_35 __array_arg_0_36) else ()
+      if (let __array_receiver_33 = Obj.magic out in let __array_arg_0_34 = (m : string) in HxArray.indexOf_default __array_receiver_33 __array_arg_0_34) = -1 then ignore (let __array_receiver_35 = Obj.magic out in let __array_arg_0_36 = (m : string) in HxArray.push __array_receiver_35 __array_arg_0_36) else ()
     )) done
   )) done);
   out
 )
 
 let nekoNdllHostSuffixForArchitecture = fun (architecture : string) -> (try let tempString = ref (HxString.hx_null_string : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (if architecture == Obj.magic (HxRuntime.hx_null) then let __assign_127 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempMaybeString := __assign_127;
-    __assign_127
-  ) else if HxString.isNull (architecture : string) then let __assign_128 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempMaybeString := __assign_128;
-    __assign_128
-  ) else let __assign_129 = Obj.magic (architecture : string) in (
+  ignore (if architecture == Obj.magic (HxRuntime.hx_null) then let __assign_129 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
     tempMaybeString := __assign_129;
     __assign_129
+  ) else if HxString.isNull (architecture : string) then let __assign_130 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempMaybeString := __assign_130;
+    __assign_130
+  ) else let __assign_131 = Obj.magic (architecture : string) in (
+    tempMaybeString := __assign_131;
+    __assign_131
   ));
   let normalized = (!tempMaybeString : string) in (
-    ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_130 = "" in (
-      tempString := __assign_130;
-      __assign_130
-    ) else let __assign_131 = let __call_arg_0_132 = normalized in StringTools.trim __call_arg_0_132 in (
-      tempString := __assign_131;
-      __assign_131
+    ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_132 = "" in (
+      tempString := __assign_132;
+      __assign_132
+    ) else let __assign_133 = let __call_arg_0_134 = normalized in StringTools.trim __call_arg_0_134 in (
+      tempString := __assign_133;
+      __assign_133
     ));
-    let arch = (let __string_receiver_133 = !tempString in HxString.toLowerCase __string_receiver_133 () : string) in (
-      ignore (if (let __string_eq_left_134 = arch in let __string_eq_right_135 = "aarch64" in HxString.equals __string_eq_left_134 __string_eq_right_135) || (let __string_eq_left_136 = arch in let __string_eq_right_137 = "arm64" in HxString.equals __string_eq_left_136 __string_eq_right_137) then raise (HxRuntime.Hx_return (Obj.repr "Arm64")) else ());
-      ignore (if (let __string_receiver_138 = arch in let __string_argument_0_139 = "64" in HxString.indexOf __string_receiver_138 __string_argument_0_139 0) >= 0 then raise (HxRuntime.Hx_return (Obj.repr "64")) else ());
+    let arch = (let __string_receiver_135 = !tempString in HxString.toLowerCase __string_receiver_135 () : string) in (
+      ignore (if (let __string_eq_left_136 = arch in let __string_eq_right_137 = "aarch64" in HxString.equals __string_eq_left_136 __string_eq_right_137) || (let __string_eq_left_138 = arch in let __string_eq_right_139 = "arm64" in HxString.equals __string_eq_left_138 __string_eq_right_139) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "Arm64")) else ());
+      ignore (if (let __string_receiver_140 = arch in let __string_argument_0_141 = "64" in HxString.indexOf __string_receiver_140 __string_argument_0_141 0) >= 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "64")) else ());
       ""
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_140 -> (Obj.obj __ret_140 : string) : string)
+  | HxRuntime.Hx_return __ret_142 -> (Obj.obj __ret_142 : string) : string)
 
 let nekoNdllPlatformForHost = fun (system : string) (architecture : string) -> (let tempString = ref (HxString.hx_null_string : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (if system == Obj.magic (HxRuntime.hx_null) then let __assign_117 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempMaybeString := __assign_117;
-    __assign_117
-  ) else if HxString.isNull (system : string) then let __assign_118 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempMaybeString := __assign_118;
-    __assign_118
-  ) else let __assign_119 = Obj.magic (system : string) in (
+  ignore (if system == Obj.magic (HxRuntime.hx_null) then let __assign_119 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
     tempMaybeString := __assign_119;
     __assign_119
+  ) else if HxString.isNull (system : string) then let __assign_120 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempMaybeString := __assign_120;
+    __assign_120
+  ) else let __assign_121 = Obj.magic (system : string) in (
+    tempMaybeString := __assign_121;
+    __assign_121
   ));
   let normalized = (!tempMaybeString : string) in (
-    ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_120 = "" in (
-      tempString := __assign_120;
-      __assign_120
-    ) else let __assign_121 = let __call_arg_0_122 = normalized in StringTools.trim __call_arg_0_122 in (
-      tempString := __assign_121;
-      __assign_121
+    ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_122 = "" in (
+      tempString := __assign_122;
+      __assign_122
+    ) else let __assign_123 = let __call_arg_0_124 = normalized in StringTools.trim __call_arg_0_124 in (
+      tempString := __assign_123;
+      __assign_123
     ));
-    let normalizedSystem = !tempString in let suffix = let __call_arg_0_123 = architecture in nekoNdllHostSuffixForArchitecture __call_arg_0_123 in let tempString1 = ref (HxString.hx_null_string : string) in (
-      ignore (if (let __string_receiver_124 = suffix in HxString.length __string_receiver_124) > 0 then let __assign_125 = suffix in (
-        tempString1 := __assign_125;
-        __assign_125
-      ) else let __assign_126 = "64" in (
-        tempString1 := __assign_126;
-        __assign_126
+    let normalizedSystem = !tempString in let suffix = let __call_arg_0_125 = architecture in nekoNdllHostSuffixForArchitecture __call_arg_0_125 in let tempString1 = ref (HxString.hx_null_string : string) in (
+      ignore (if (let __string_receiver_126 = suffix in HxString.length __string_receiver_126) > 0 then let __assign_127 = suffix in (
+        tempString1 := __assign_127;
+        __assign_127
+      ) else let __assign_128 = "64" in (
+        tempString1 := __assign_128;
+        __assign_128
       ));
       HxString.toStdString normalizedSystem ^ HxString.toStdString (!tempString1)
     )
@@ -142,132 +142,132 @@ let nekoNdllPlatformForHost = fun (system : string) (architecture : string) -> (
 ) : string)
 
 let hostArchitecture = fun () -> (try let name = "PROCESSOR_ARCHITECTURE" in let tempString = ref (HxString.hx_null_string : string) in let value = (HxSys.getEnv (name : string) : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_141 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempMaybeString := __assign_141;
-    __assign_141
-  ) else if HxString.isNull (value : string) then let __assign_142 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempMaybeString := __assign_142;
-    __assign_142
-  ) else let __assign_143 = Obj.magic (value : string) in (
+  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_143 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
     tempMaybeString := __assign_143;
     __assign_143
+  ) else if HxString.isNull (value : string) then let __assign_144 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempMaybeString := __assign_144;
+    __assign_144
+  ) else let __assign_145 = Obj.magic (value : string) in (
+    tempMaybeString := __assign_145;
+    __assign_145
   ));
   let normalized = (!tempMaybeString : string) in (
-    ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_144 = "" in (
-      tempString := __assign_144;
-      __assign_144
-    ) else let __assign_145 = let __call_arg_0_146 = normalized in StringTools.trim __call_arg_0_146 in (
-      tempString := __assign_145;
-      __assign_145
+    ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_146 = "" in (
+      tempString := __assign_146;
+      __assign_146
+    ) else let __assign_147 = let __call_arg_0_148 = normalized in StringTools.trim __call_arg_0_148 in (
+      tempString := __assign_147;
+      __assign_147
     ));
     let value = !tempString in (
-      ignore (if (let __string_receiver_147 = value in HxString.length __string_receiver_147) > 0 then raise (HxRuntime.Hx_return (Obj.repr value)) else ());
+      ignore (if (let __string_receiver_149 = value in HxString.length __string_receiver_149) > 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr value)) else ());
       let name = "PROCESSOR_ARCHITEW6432" in let tempString1 = ref (HxString.hx_null_string : string) in let value = (HxSys.getEnv (name : string) : string) in let tempMaybeString1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-        ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_148 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-          tempMaybeString1 := __assign_148;
-          __assign_148
-        ) else if HxString.isNull (value : string) then let __assign_149 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-          tempMaybeString1 := __assign_149;
-          __assign_149
-        ) else let __assign_150 = Obj.magic (value : string) in (
+        ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_150 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
           tempMaybeString1 := __assign_150;
           __assign_150
+        ) else if HxString.isNull (value : string) then let __assign_151 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempMaybeString1 := __assign_151;
+          __assign_151
+        ) else let __assign_152 = Obj.magic (value : string) in (
+          tempMaybeString1 := __assign_152;
+          __assign_152
         ));
         let normalized = (!tempMaybeString1 : string) in (
-          ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_151 = "" in (
-            tempString1 := __assign_151;
-            __assign_151
-          ) else let __assign_152 = let __call_arg_0_153 = normalized in StringTools.trim __call_arg_0_153 in (
-            tempString1 := __assign_152;
-            __assign_152
+          ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_153 = "" in (
+            tempString1 := __assign_153;
+            __assign_153
+          ) else let __assign_154 = let __call_arg_0_155 = normalized in StringTools.trim __call_arg_0_155 in (
+            tempString1 := __assign_154;
+            __assign_154
           ));
           let value = !tempString1 in (
-            ignore (if (let __string_receiver_154 = value in HxString.length __string_receiver_154) > 0 then raise (HxRuntime.Hx_return (Obj.repr value)) else ());
+            ignore (if (let __string_receiver_156 = value in HxString.length __string_receiver_156) > 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr value)) else ());
             let name = "HOSTTYPE" in let tempString2 = ref (HxString.hx_null_string : string) in let value = (HxSys.getEnv (name : string) : string) in let tempMaybeString2 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-              ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_155 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-                tempMaybeString2 := __assign_155;
-                __assign_155
-              ) else if HxString.isNull (value : string) then let __assign_156 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-                tempMaybeString2 := __assign_156;
-                __assign_156
-              ) else let __assign_157 = Obj.magic (value : string) in (
+              ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_157 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
                 tempMaybeString2 := __assign_157;
                 __assign_157
+              ) else if HxString.isNull (value : string) then let __assign_158 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+                tempMaybeString2 := __assign_158;
+                __assign_158
+              ) else let __assign_159 = Obj.magic (value : string) in (
+                tempMaybeString2 := __assign_159;
+                __assign_159
               ));
               let normalized = (!tempMaybeString2 : string) in (
-                ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_158 = "" in (
-                  tempString2 := __assign_158;
-                  __assign_158
-                ) else let __assign_159 = let __call_arg_0_160 = normalized in StringTools.trim __call_arg_0_160 in (
-                  tempString2 := __assign_159;
-                  __assign_159
+                ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_160 = "" in (
+                  tempString2 := __assign_160;
+                  __assign_160
+                ) else let __assign_161 = let __call_arg_0_162 = normalized in StringTools.trim __call_arg_0_162 in (
+                  tempString2 := __assign_161;
+                  __assign_161
                 ));
                 let value = !tempString2 in (
-                  ignore (if (let __string_receiver_161 = value in HxString.length __string_receiver_161) > 0 then raise (HxRuntime.Hx_return (Obj.repr value)) else ());
-                  ignore (try ignore (let p = Obj.magic (Sys_io_Process.create ("uname" : string) (Obj.magic (let __represented_array_166 = HxArray.create () in let __represented_array_element_0_167 = "-m" in (
-                    ignore (HxArray.push __represented_array_166 __represented_array_element_0_167);
-                    __represented_array_166
+                  ignore (if (let __string_receiver_163 = value in HxString.length __string_receiver_163) > 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr value)) else ());
+                  ignore (try ignore (let p = Obj.magic (Sys_io_Process.create ("uname" : string) (Obj.magic (let __represented_array_168 = HxArray.create () in let __represented_array_element_0_169 = "-m" in (
+                    ignore (HxArray.push __represented_array_168 __represented_array_element_0_169);
+                    __represented_array_168
                   ))) (HxRuntime.hx_null)) in let tempString3 = ref (HxString.hx_null_string : string) in (
-                    ignore (try let value = (let __obj_173 = (Obj.magic p : Sys_io_Process.t).stdout in (Obj.magic __obj_173 : Haxe_io_Input.t).readLine (Obj.magic __obj_173) () : string) in let tempMaybeString3 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-                      ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_174 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-                        tempMaybeString3 := __assign_174;
-                        __assign_174
-                      ) else if HxString.isNull (value : string) then let __assign_175 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-                        tempMaybeString3 := __assign_175;
-                        __assign_175
-                      ) else let __assign_176 = Obj.magic (value : string) in (
+                    ignore (try let value = (let __obj_175 = (Obj.magic p : Sys_io_Process.t).stdout in (Obj.magic __obj_175 : Haxe_io_Input.t).readLine (Obj.magic __obj_175) () : string) in let tempMaybeString3 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+                      ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_176 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
                         tempMaybeString3 := __assign_176;
                         __assign_176
-                      ));
-                      let normalized = (!tempMaybeString3 : string) in if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_177 = "" in (
-                        tempString3 := __assign_177;
+                      ) else if HxString.isNull (value : string) then let __assign_177 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+                        tempMaybeString3 := __assign_177;
                         __assign_177
-                      ) else let __assign_178 = let __call_arg_0_179 = normalized in StringTools.trim __call_arg_0_179 in (
-                        tempString3 := __assign_178;
+                      ) else let __assign_178 = Obj.magic (value : string) in (
+                        tempMaybeString3 := __assign_178;
                         __assign_178
+                      ));
+                      let normalized = (!tempMaybeString3 : string) in if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_179 = "" in (
+                        tempString3 := __assign_179;
+                        __assign_179
+                      ) else let __assign_180 = let __call_arg_0_181 = normalized in StringTools.trim __call_arg_0_181 in (
+                        tempString3 := __assign_180;
+                        __assign_180
                       )
                     ) with
-                      | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-                      | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                      | HxRuntime.Hx_return __ret_169 -> raise (HxRuntime.Hx_return __ret_169)
-                      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
-                      | HxRuntime.Hx_exception (__exn_v_170, __exn_tags_171) -> if HxRuntime.tags_has __exn_tags_171 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_170 : Haxe_io_Eof.t) in (
+                      | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+                      | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+                      | HxRuntime.Hx_return __ret_171 -> Stdlib.raise (HxRuntime.Hx_return __ret_171)
+                      | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
+                      | HxRuntime.Hx_exception (__exn_v_172, __exn_tags_173) -> if HxRuntime.tags_has __exn_tags_173 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_172 : Haxe_io_Eof.t) in (
                         ignore _hx;
-                        let __assign_168 = "" in (
-                          tempString3 := __assign_168;
-                          __assign_168
+                        let __assign_170 = "" in (
+                          tempString3 := __assign_170;
+                          __assign_170
                         )
-                      ) else HxRuntime.hx_throw_typed __exn_v_170 __exn_tags_171
-                      | __exn_172 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_172) : Haxe_io_Eof.t) in (
+                      ) else HxRuntime.hx_throw_typed __exn_v_172 __exn_tags_173
+                      | __exn_174 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_174) : Haxe_io_Eof.t) in (
                         ignore _hx;
-                        let __assign_168 = "" in (
-                          tempString3 := __assign_168;
-                          __assign_168
+                        let __assign_170 = "" in (
+                          tempString3 := __assign_170;
+                          __assign_170
                         )
-                      ) else raise (__exn_172));
+                      ) else Stdlib.raise (__exn_174));
                     let stdout = !tempString3 in let code = Sys_io_Process.exitCode (Obj.magic p) () in (
                       ignore (Sys_io_Process.close (Obj.magic p) ());
-                      if code = 0 && (let __string_receiver_180 = stdout in HxString.length __string_receiver_180) > 0 then raise (HxRuntime.Hx_return (Obj.repr stdout)) else ()
+                      if code = 0 && (let __string_receiver_182 = stdout in HxString.length __string_receiver_182) > 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr stdout)) else ()
                     )
                   )) with
-                    | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-                    | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                    | HxRuntime.Hx_return __ret_162 -> raise (HxRuntime.Hx_return __ret_162)
-                    | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
-                    | HxRuntime.Hx_exception (__exn_v_163, __exn_tags_164) -> if true then let _hx = (if HxRuntime.tags_has __exn_tags_164 "haxe.Exception" then Obj.obj __exn_v_163 else Obj.magic (Haxe_ValueException.create __exn_v_163 (Obj.magic (HxRuntime.hx_null)) __exn_v_163) : Haxe_Exception.t) in (
+                    | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+                    | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+                    | HxRuntime.Hx_return __ret_164 -> Stdlib.raise (HxRuntime.Hx_return __ret_164)
+                    | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
+                    | HxRuntime.Hx_exception (__exn_v_165, __exn_tags_166) -> if true then let _hx = (if HxRuntime.tags_has __exn_tags_166 "haxe.Exception" then Obj.obj __exn_v_165 else Obj.magic (Haxe_ValueException.create __exn_v_165 (Obj.magic (HxRuntime.hx_null)) __exn_v_165) : Haxe_Exception.t) in (
                       ignore _hx;
                       ignore ()
-                    ) else if HxRuntime.tags_has __exn_tags_164 "String" then let _hx = (Obj.obj __exn_v_163 : string) in (
+                    ) else if HxRuntime.tags_has __exn_tags_166 "String" then let _hx = (Obj.obj __exn_v_165 : string) in (
                       ignore _hx;
                       ignore ()
-                    ) else HxRuntime.hx_throw_typed __exn_v_163 __exn_tags_164
-                    | __exn_165 -> if true then let _hx = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_165) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_165) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_165)) : Haxe_Exception.t) in (
+                    ) else HxRuntime.hx_throw_typed __exn_v_165 __exn_tags_166
+                    | __exn_167 -> if true then let _hx = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_167) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_167) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_167)) : Haxe_Exception.t) in (
                       ignore _hx;
                       ignore ()
-                    ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_165) : string) in (
+                    ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_167) : string) in (
                       ignore _hx;
                       ignore ()
-                    ) else raise (__exn_165));
+                    ) else Stdlib.raise (__exn_167));
                   ""
                 )
               )
@@ -278,86 +278,86 @@ let hostArchitecture = fun () -> (try let name = "PROCESSOR_ARCHITECTURE" in let
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_181 -> (Obj.obj __ret_181 : string) : string)
+  | HxRuntime.Hx_return __ret_183 -> (Obj.obj __ret_183 : string) : string)
 
-let nekoNdllHostPlatforms = fun () -> let system = (HxSys.systemName () : string) in let out = Obj.magic (HxArray.create ()) in let push = fun value -> ignore (if value != HxString.hx_null_string && (let __string_receiver_106 = value in HxString.length __string_receiver_106) > 0 && (let __array_receiver_107 = out in let __array_arg_0_108 = value in HxArray.indexOf_default __array_receiver_107 __array_arg_0_108) = -1 then ignore (let __array_receiver_109 = out in let __array_arg_0_110 = value in HxArray.push __array_receiver_109 __array_arg_0_110) else ()) in (
-  ignore (let __call_callee_111 = push in let __call_arg_0_112 = let __call_arg_0_113 = system in let __call_arg_1_114 = hostArchitecture () in nekoNdllPlatformForHost __call_arg_0_113 __call_arg_1_114 in __call_callee_111 __call_arg_0_112);
-  ignore (let __call_callee_115 = push in let __call_arg_0_116 = system in __call_callee_115 __call_arg_0_116);
+let nekoNdllHostPlatforms = fun () -> let system = (HxSys.systemName () : string) in let out = Obj.magic (HxArray.create ()) in let push = let __callback_input_111 = fun value -> ignore (if value != HxString.hx_null_string && (let __string_receiver_106 = value in HxString.length __string_receiver_106) > 0 && (let __array_receiver_107 = Obj.magic out in let __array_arg_0_108 = (value : string) in HxArray.indexOf_default __array_receiver_107 __array_arg_0_108) = -1 then ignore (let __array_receiver_109 = Obj.magic out in let __array_arg_0_110 = (value : string) in HxArray.push __array_receiver_109 __array_arg_0_110) else ()) in let __callable_origin_112 = __callback_input_111 in (__callable_origin_112, Obj.repr (ref ())) in (
+  ignore (let __call_callee_113 = push in let __call_arg_0_114 = let __call_arg_0_115 = system in let __call_arg_1_116 = hostArchitecture () in nekoNdllPlatformForHost __call_arg_0_115 __call_arg_1_116 in Stdlib.fst __call_callee_113 __call_arg_0_114);
+  ignore (let __call_callee_117 = push in let __call_arg_0_118 = system in Stdlib.fst __call_callee_117 __call_arg_0_118);
   out
 )
 
 let nekoNdllHostPlatform = fun () -> (let __array_read_receiver_104 = nekoNdllHostPlatforms () in let __array_read_index_105 = 0 in HxArray.get (Obj.magic __array_read_receiver_104) __array_read_index_105 : string)
 
 let nekoNativeLinkPath = fun (arg : string) -> (try (
-  ignore (if arg == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  ignore (if not (let __call_arg_0_197 = arg in let __call_arg_1_198 = "-L " in StringTools.startsWith __call_arg_0_197 __call_arg_1_198) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let tempString = ref (HxString.hx_null_string : string) in let value = (let __string_receiver_199 = arg in let __string_argument_0_200 = 3 in HxString.substr __string_receiver_199 __string_argument_0_200 (-1) : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-    ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_201 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempMaybeString := __assign_201;
-      __assign_201
-    ) else if HxString.isNull (value : string) then let __assign_202 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempMaybeString := __assign_202;
-      __assign_202
-    ) else let __assign_203 = Obj.magic (value : string) in (
-      tempMaybeString := __assign_203;
-      __assign_203
+  ignore (if arg == HxString.hx_null_string then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if not (let __call_arg_0_201 = arg in let __call_arg_1_202 = "-L " in StringTools.startsWith __call_arg_0_201 __call_arg_1_202) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  let tempString = ref (HxString.hx_null_string : string) in let value = (let __string_receiver_203 = arg in let __string_argument_0_204 = 3 in HxString.substr __string_receiver_203 __string_argument_0_204 (-1) : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+    ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_205 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempMaybeString := __assign_205;
+      __assign_205
+    ) else if HxString.isNull (value : string) then let __assign_206 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempMaybeString := __assign_206;
+      __assign_206
+    ) else let __assign_207 = Obj.magic (value : string) in (
+      tempMaybeString := __assign_207;
+      __assign_207
     ));
     let normalized = (!tempMaybeString : string) in (
-      ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_204 = "" in (
-        tempString := __assign_204;
-        __assign_204
-      ) else let __assign_205 = let __call_arg_0_206 = normalized in StringTools.trim __call_arg_0_206 in (
-        tempString := __assign_205;
-        __assign_205
+      ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_208 = "" in (
+        tempString := __assign_208;
+        __assign_208
+      ) else let __assign_209 = let __call_arg_0_210 = normalized in StringTools.trim __call_arg_0_210 in (
+        tempString := __assign_209;
+        __assign_209
       ));
       let path = !tempString in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-        ignore (if (let __string_receiver_207 = path in HxString.length __string_receiver_207) = 0 then let __assign_208 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-          tempResult := __assign_208;
-          __assign_208
-        ) else let __assign_209 = Obj.magic (path : string) in (
-          tempResult := __assign_209;
-          __assign_209
+        ignore (if (let __string_receiver_211 = path in HxString.length __string_receiver_211) = 0 then let __assign_212 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempResult := __assign_212;
+          __assign_212
+        ) else let __assign_213 = Obj.magic (path : string) in (
+          tempResult := __assign_213;
+          __assign_213
         ));
         !tempResult
       )
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_210 -> (Obj.obj __ret_210 : string) : string)
+  | HxRuntime.Hx_return __ret_214 -> (Obj.obj __ret_214 : string) : string)
 
 let stripTrailingSlashes = fun (path : string) -> (try (
-  ignore (if path == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+  ignore (if path == HxString.hx_null_string then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   let out = ref (path : string) in (
-    ignore (while (let __string_receiver_216 = !out in HxString.length __string_receiver_216) > 1 && ((let __call_arg_0_217 = !out in let __call_arg_1_218 = "/" in StringTools.endsWith __call_arg_0_217 __call_arg_1_218) || (let __call_arg_0_219 = !out in let __call_arg_1_220 = "\\" in StringTools.endsWith __call_arg_0_219 __call_arg_1_220)) do ignore (let __assign_221 = (let __string_receiver_222 = !out in let __string_argument_0_223 = 0 in let __string_argument_1_224 = HxInt.sub (let __string_receiver_225 = !out in HxString.length __string_receiver_225) 1 in HxString.substr __string_receiver_222 __string_argument_0_223 __string_argument_1_224 : string) in (
-      out := __assign_221;
-      __assign_221
+    ignore (while (let __string_receiver_220 = !out in HxString.length __string_receiver_220) > 1 && ((let __call_arg_0_221 = !out in let __call_arg_1_222 = "/" in StringTools.endsWith __call_arg_0_221 __call_arg_1_222) || (let __call_arg_0_223 = !out in let __call_arg_1_224 = "\\" in StringTools.endsWith __call_arg_0_223 __call_arg_1_224)) do ignore (let __assign_225 = (let __string_receiver_226 = !out in let __string_argument_0_227 = 0 in let __string_argument_1_228 = HxInt.sub (let __string_receiver_229 = !out in HxString.length __string_receiver_229) 1 in HxString.substr __string_receiver_226 __string_argument_0_227 __string_argument_1_228 : string) in (
+      out := __assign_225;
+      __assign_225
     )) done);
     !out
   )
 ) with
-  | HxRuntime.Hx_return __ret_226 -> (Obj.obj __ret_226 : string) : string)
+  | HxRuntime.Hx_return __ret_230 -> (Obj.obj __ret_230 : string) : string)
 
-let nekoCandidateLibraryRoots = fun classPath -> let out = Obj.magic (HxArray.create ()) in let push = fun path -> ignore (try ignore ((
-  ignore (if path == HxString.hx_null_string || (let __string_receiver_182 = path in HxString.length __string_receiver_182) = 0 then raise (HxRuntime.Hx_return_void) else ());
-  let normalized = let __call_arg_0_183 = let __call_arg_0_184 = path in stripTrailingSlashes __call_arg_0_184 in Haxe_io_Path.normalize __call_arg_0_183 in if (let __array_receiver_185 = out in let __array_arg_0_186 = normalized in HxArray.indexOf_default __array_receiver_185 __array_arg_0_186) = -1 then ignore (let __array_receiver_187 = out in let __array_arg_0_188 = normalized in HxArray.push __array_receiver_187 __array_arg_0_188) else ()
+let nekoCandidateLibraryRoots = fun classPath -> let out = Obj.magic (HxArray.create ()) in let push = let __callback_input_192 = fun path -> ignore (try ignore ((
+  ignore (if path == HxString.hx_null_string || (let __string_receiver_184 = path in HxString.length __string_receiver_184) = 0 then Stdlib.raise (HxRuntime.Hx_return_void) else ());
+  let normalized = let __call_arg_0_185 = let __call_arg_0_186 = path in stripTrailingSlashes __call_arg_0_186 in Haxe_io_Path.normalize __call_arg_0_185 in if (let __array_receiver_187 = Obj.magic out in let __array_arg_0_188 = (normalized : string) in HxArray.indexOf_default __array_receiver_187 __array_arg_0_188) = -1 then ignore (let __array_receiver_189 = Obj.magic out in let __array_arg_0_190 = (normalized : string) in HxArray.push __array_receiver_189 __array_arg_0_190) else ()
 )) with
-  | HxRuntime.Hx_return_void -> ()) in (
-  ignore (let __call_callee_190 = push in let __call_arg_0_191 = classPath in __call_callee_190 __call_arg_0_191);
-  let parent = let __call_arg_0_192 = let __call_arg_0_193 = classPath in stripTrailingSlashes __call_arg_0_193 in Haxe_io_Path.directory __call_arg_0_192 in (
-    ignore (if parent != HxString.hx_null_string && (let __string_receiver_194 = parent in HxString.length __string_receiver_194) > 0 then ignore (let __call_callee_195 = push in let __call_arg_0_196 = parent in __call_callee_195 __call_arg_0_196) else ());
+  | HxRuntime.Hx_return_void -> ()) in let __callable_origin_193 = __callback_input_192 in (__callable_origin_193, Obj.repr (ref ())) in (
+  ignore (let __call_callee_194 = push in let __call_arg_0_195 = classPath in Stdlib.fst __call_callee_194 __call_arg_0_195);
+  let parent = let __call_arg_0_196 = let __call_arg_0_197 = classPath in stripTrailingSlashes __call_arg_0_197 in Haxe_io_Path.directory __call_arg_0_196 in (
+    ignore (if parent != HxString.hx_null_string && (let __string_receiver_198 = parent in HxString.length __string_receiver_198) > 0 then ignore (let __call_callee_199 = push in let __call_arg_0_200 = parent in Stdlib.fst __call_callee_199 __call_arg_0_200) else ());
     out
   )
 )
 
-let isNekoPlatformPath = fun path platforms -> let normalized = let __call_arg_0_211 = let __call_arg_0_212 = path in Haxe_io_Path.normalize __call_arg_0_212 in stripTrailingSlashes __call_arg_0_211 in let base = let __call_arg_0_213 = normalized in Haxe_io_Path.withoutDirectory __call_arg_0_213 in (let __array_receiver_214 = platforms in let __array_arg_0_215 = base in HxArray.indexOf_default __array_receiver_214 __array_arg_0_215) <> -1
+let isNekoPlatformPath = fun path platforms -> let normalized = let __call_arg_0_215 = let __call_arg_0_216 = path in Haxe_io_Path.normalize __call_arg_0_216 in stripTrailingSlashes __call_arg_0_215 in let base = let __call_arg_0_217 = normalized in Haxe_io_Path.withoutDirectory __call_arg_0_217 in (let __array_receiver_218 = Obj.magic platforms in let __array_arg_0_219 = (base : string) in HxArray.indexOf_default __array_receiver_218 __array_arg_0_219) <> -1
 
 let trailingSlash = fun (path : string) -> (let tempResult = ref (HxString.hx_null_string : string) in (
-  ignore (if let __call_arg_0_227 = path in let __call_arg_1_228 = "/" in StringTools.endsWith __call_arg_0_227 __call_arg_1_228 then let __assign_229 = (path : string) in (
-    tempResult := __assign_229;
-    __assign_229
-  ) else let __assign_230 = (HxString.toStdString path ^ "/" : string) in (
-    tempResult := __assign_230;
-    __assign_230
+  ignore (if let __call_arg_0_231 = path in let __call_arg_1_232 = "/" in StringTools.endsWith __call_arg_0_231 __call_arg_1_232 then let __assign_233 = (path : string) in (
+    tempResult := __assign_233;
+    __assign_233
+  ) else let __assign_234 = (HxString.toStdString path ^ "/" : string) in (
+    tempResult := __assign_234;
+    __assign_234
   ));
   !tempResult
 ) : string)
@@ -393,7 +393,7 @@ let collectNekoNdllPaths = fun libsResolved cwd -> let platforms = Obj.magic (ne
                   __represented_array_57
                 )
               )
-            ))) in Haxe_io_Path.normalize __call_arg_0_56 in trailingSlash __call_arg_0_55 in if HxFileSystem.exists (ndll : string) && HxFileSystem.isDirectory (ndll : string) && (let __array_receiver_61 = out in let __array_arg_0_62 = ndll in HxArray.indexOf_default __array_receiver_61 __array_arg_0_62) = -1 then ignore (let __array_receiver_63 = out in let __array_arg_0_64 = ndll in HxArray.push __array_receiver_63 __array_arg_0_64) else ()
+            ))) in Haxe_io_Path.normalize __call_arg_0_56 in trailingSlash __call_arg_0_55 in if HxFileSystem.exists (ndll : string) && HxFileSystem.isDirectory (ndll : string) && (let __array_receiver_61 = Obj.magic out in let __array_arg_0_62 = (ndll : string) in HxArray.indexOf_default __array_receiver_61 __array_arg_0_62) = -1 then ignore (let __array_receiver_63 = Obj.magic out in let __array_arg_0_64 = (ndll : string) in HxArray.push __array_receiver_63 __array_arg_0_64) else ()
           )) done
         )) done
       )) done);
@@ -403,7 +403,7 @@ let collectNekoNdllPaths = fun libsResolved cwd -> let platforms = Obj.magic (ne
           __new_68
         ));
         let nativeRoot = (let __call_arg_0_69 = arg in nekoNativeLinkPath __call_arg_0_69 : string) in (
-          ignore (if nativeRoot == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
+          ignore (if nativeRoot == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_continue) else ());
           let nativeRootAbs = let __call_arg_0_70 = cwd in let __call_arg_1_71 = nativeRoot in Hxhx_Stage3PathSupport.absFromCwd __call_arg_0_70 __call_arg_1_71 in let addedNativeRoot = ref false in let _g3 = ref 0 in (
             ignore (while !_g3 < HxArray.length platforms do ignore (let platform = (let __array_read_receiver_72 = platforms in let __array_read_index_73 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_72) __array_read_index_73 : string) in (
               ignore (let __old_74 = !_g3 in let __new_75 = HxInt.add __old_74 1 in (
@@ -421,7 +421,7 @@ let collectNekoNdllPaths = fun libsResolved cwd -> let platforms = Obj.magic (ne
                   addedNativeRoot := __assign_81;
                   __assign_81
                 ));
-                if (let __array_receiver_82 = out in let __array_arg_0_83 = ndll in HxArray.indexOf_default __array_receiver_82 __array_arg_0_83) = -1 then ignore (let __array_receiver_84 = out in let __array_arg_0_85 = ndll in HxArray.push __array_receiver_84 __array_arg_0_85) else ()
+                if (let __array_receiver_82 = Obj.magic out in let __array_arg_0_83 = (ndll : string) in HxArray.indexOf_default __array_receiver_82 __array_arg_0_83) = -1 then ignore (let __array_receiver_84 = Obj.magic out in let __array_arg_0_85 = (ndll : string) in HxArray.push __array_receiver_84 __array_arg_0_85) else ()
               )) else ()
             )) done);
             let direct = let __call_arg_0_86 = let __call_arg_0_87 = nativeRootAbs in Haxe_io_Path.normalize __call_arg_0_87 in trailingSlash __call_arg_0_86 in (
@@ -430,7 +430,7 @@ let collectNekoNdllPaths = fun libsResolved cwd -> let platforms = Obj.magic (ne
                   addedNativeRoot := __assign_88;
                   __assign_88
                 ));
-                if (let __array_receiver_89 = out in let __array_arg_0_90 = direct in HxArray.indexOf_default __array_receiver_89 __array_arg_0_90) = -1 then ignore (let __array_receiver_91 = out in let __array_arg_0_92 = direct in HxArray.push __array_receiver_91 __array_arg_0_92) else ()
+                if (let __array_receiver_89 = Obj.magic out in let __array_arg_0_90 = (direct : string) in HxArray.indexOf_default __array_receiver_89 __array_arg_0_90) = -1 then ignore (let __array_receiver_91 = Obj.magic out in let __array_arg_0_92 = (direct : string) in HxArray.push __array_receiver_91 __array_arg_0_92) else ()
               )) else ());
               if not (!addedNativeRoot) && not (isNekoPlatformPath (direct : string) (Obj.magic platforms)) && HxFileSystem.exists (direct : string) && HxFileSystem.isDirectory (direct : string) && HxArray.length platforms > 0 then ignore (let synthesized = let __call_arg_0_93 = let __call_arg_0_94 = Haxe_io_Path.join (Obj.magic (let __represented_array_95 = HxArray.create () in let __represented_array_element_0_96 = nativeRootAbs in (
                 ignore (HxArray.push __represented_array_95 __represented_array_element_0_96);
@@ -438,7 +438,7 @@ let collectNekoNdllPaths = fun libsResolved cwd -> let platforms = Obj.magic (ne
                   ignore (HxArray.push __represented_array_95 __represented_array_element_1_97);
                   __represented_array_95
                 )
-              ))) in Haxe_io_Path.normalize __call_arg_0_94 in trailingSlash __call_arg_0_93 in if (let __array_receiver_100 = out in let __array_arg_0_101 = synthesized in HxArray.indexOf_default __array_receiver_100 __array_arg_0_101) = -1 then ignore (let __array_receiver_102 = out in let __array_arg_0_103 = synthesized in HxArray.push __array_receiver_102 __array_arg_0_103) else ()) else ()
+              ))) in Haxe_io_Path.normalize __call_arg_0_94 in trailingSlash __call_arg_0_93 in if (let __array_receiver_100 = Obj.magic out in let __array_arg_0_101 = (synthesized : string) in HxArray.indexOf_default __array_receiver_100 __array_arg_0_101) = -1 then ignore (let __array_receiver_102 = Obj.magic out in let __array_arg_0_103 = (synthesized : string) in HxArray.push __array_receiver_102 __array_arg_0_103) else ()) else ()
             )
           )
         )
@@ -450,43 +450,43 @@ let collectNekoNdllPaths = fun libsResolved cwd -> let platforms = Obj.magic (ne
 )
 
 let collectMacroStdPaths = fun cwd -> let out = Obj.magic (HxArray.create ()) in let tempString = ref (HxString.hx_null_string : string) in let value = (HxSys.getEnv ("HAXE_STD_PATH" : string) : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_231 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempMaybeString := __assign_231;
-    __assign_231
-  ) else if HxString.isNull (value : string) then let __assign_232 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempMaybeString := __assign_232;
-    __assign_232
-  ) else let __assign_233 = Obj.magic (value : string) in (
-    tempMaybeString := __assign_233;
-    __assign_233
+  ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_235 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempMaybeString := __assign_235;
+    __assign_235
+  ) else if HxString.isNull (value : string) then let __assign_236 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempMaybeString := __assign_236;
+    __assign_236
+  ) else let __assign_237 = Obj.magic (value : string) in (
+    tempMaybeString := __assign_237;
+    __assign_237
   ));
   let normalized = (!tempMaybeString : string) in (
-    ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_234 = "" in (
-      tempString := __assign_234;
-      __assign_234
-    ) else let __assign_235 = let __call_arg_0_236 = normalized in StringTools.trim __call_arg_0_236 in (
-      tempString := __assign_235;
-      __assign_235
+    ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_238 = "" in (
+      tempString := __assign_238;
+      __assign_238
+    ) else let __assign_239 = let __call_arg_0_240 = normalized in StringTools.trim __call_arg_0_240 in (
+      tempString := __assign_239;
+      __assign_239
     ));
     let envStd = !tempString in (
-      ignore (if (let __string_receiver_237 = envStd in HxString.length __string_receiver_237) > 0 then ignore (let __array_receiver_238 = out in let __array_arg_0_239 = let __call_arg_0_240 = envStd in Haxe_io_Path.normalize __call_arg_0_240 in HxArray.push __array_receiver_238 __array_arg_0_239) else ());
-      let inferredStd = let __call_arg_0_241 = cwd in Hxhx_Stage1Compiler.stage1args_inferStdRootForCwd __call_arg_0_241 in (
-        ignore (if (let __string_receiver_242 = inferredStd in HxString.length __string_receiver_242) > 0 then ignore (let normalized = let __call_arg_0_243 = inferredStd in Haxe_io_Path.normalize __call_arg_0_243 in let seen = ref false in let _g = ref 0 in (
-          ignore (try while !_g < HxArray.length out do ignore (let cp = (let __array_read_receiver_244 = out in let __array_read_index_245 = !_g in HxArray.get (Obj.magic __array_read_receiver_244) __array_read_index_245 : string) in (
-            ignore (let __old_246 = !_g in let __new_247 = HxInt.add __old_246 1 in (
-              ignore (_g := __new_247);
-              __new_247
+      ignore (if (let __string_receiver_241 = envStd in HxString.length __string_receiver_241) > 0 then ignore (let __array_receiver_242 = Obj.magic out in let __array_arg_0_243 = (let __call_arg_0_244 = envStd in Haxe_io_Path.normalize __call_arg_0_244 : string) in HxArray.push __array_receiver_242 __array_arg_0_243) else ());
+      let inferredStd = let __call_arg_0_245 = cwd in Hxhx_Stage1Compiler.stage1args_inferStdRootForCwd __call_arg_0_245 in (
+        ignore (if (let __string_receiver_246 = inferredStd in HxString.length __string_receiver_246) > 0 then ignore (let normalized = let __call_arg_0_247 = inferredStd in Haxe_io_Path.normalize __call_arg_0_247 in let seen = ref false in let _g = ref 0 in (
+          ignore (try while !_g < HxArray.length out do ignore (let cp = (let __array_read_receiver_248 = out in let __array_read_index_249 = !_g in HxArray.get (Obj.magic __array_read_receiver_248) __array_read_index_249 : string) in (
+            ignore (let __old_250 = !_g in let __new_251 = HxInt.add __old_250 1 in (
+              ignore (_g := __new_251);
+              __new_251
             ));
-            if let __string_eq_left_248 = let __call_arg_0_250 = cp in Haxe_io_Path.normalize __call_arg_0_250 in let __string_eq_right_249 = normalized in HxString.equals __string_eq_left_248 __string_eq_right_249 then ignore ((
-              ignore (let __assign_251 = true in (
-                seen := __assign_251;
-                __assign_251
+            if let __string_eq_left_252 = let __call_arg_0_254 = cp in Haxe_io_Path.normalize __call_arg_0_254 in let __string_eq_right_253 = normalized in HxString.equals __string_eq_left_252 __string_eq_right_253 then ignore ((
+              ignore (let __assign_255 = true in (
+                seen := __assign_255;
+                __assign_255
               ));
-              raise (HxRuntime.Hx_break)
+              Stdlib.raise (HxRuntime.Hx_break)
             )) else ()
           )) done with
             | HxRuntime.Hx_break -> ());
-          if not (!seen) then ignore (let __array_receiver_252 = out in let __array_arg_0_253 = inferredStd in HxArray.push __array_receiver_252 __array_arg_0_253) else ()
+          if not (!seen) then ignore (let __array_receiver_256 = Obj.magic out in let __array_arg_0_257 = (inferredStd : string) in HxArray.push __array_receiver_256 __array_arg_0_257) else ()
         )) else ());
         out
       )
@@ -494,48 +494,48 @@ let collectMacroStdPaths = fun cwd -> let out = Obj.magic (HxArray.create ()) in
   )
 )
 
-let macroHostClassPaths = fun parsedClassPaths libsResolved cwd -> (try let base = Obj.magic (let __array_receiver_254 = parsedClassPaths in let __array_arg_0_255 = fun cp -> let __call_arg_0_256 = cwd in let __call_arg_1_257 = cp in Hxhx_Stage3PathSupport.absFromCwd __call_arg_0_256 __call_arg_1_257 in HxArray.map __array_receiver_254 __array_arg_0_255) in let libs = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
-  ignore (while !_g < HxArray.length libsResolved do ignore (let s = let __array_read_receiver_258 = libsResolved in let __array_read_index_259 = !_g in HxArray.get (Obj.magic __array_read_receiver_258) __array_read_index_259 in (
-    ignore (let __old_260 = !_g in let __new_261 = HxInt.add __old_260 1 in (
-      ignore (_g := __new_261);
-      __new_261
+let macroHostClassPaths = fun parsedClassPaths libsResolved cwd -> (try let base = Obj.magic (let __array_receiver_258 = Obj.magic parsedClassPaths in let __array_arg_0_259 = fun cp -> let __call_arg_0_260 = cwd in let __call_arg_1_261 = cp in Hxhx_Stage3PathSupport.absFromCwd __call_arg_0_260 __call_arg_1_261 in HxArray.map __array_receiver_258 __array_arg_0_259) in let libs = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
+  ignore (while !_g < HxArray.length libsResolved do ignore (let s = let __array_read_receiver_262 = libsResolved in let __array_read_index_263 = !_g in HxArray.get (Obj.magic __array_read_receiver_262) __array_read_index_263 in (
+    ignore (let __old_264 = !_g in let __new_265 = HxInt.add __old_264 1 in (
+      ignore (_g := __new_265);
+      __new_265
     ));
-    let _g2 = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get s "classPaths")) in while !_g2 < HxArray.length _g1 do ignore (let p = (let __array_read_receiver_262 = _g1 in let __array_read_index_263 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_262) __array_read_index_263 : string) in (
-      ignore (let __old_264 = !_g2 in let __new_265 = HxInt.add __old_264 1 in (
-        ignore (_g2 := __new_265);
-        __new_265
+    let _g2 = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get s "classPaths")) in while !_g2 < HxArray.length _g1 do ignore (let p = (let __array_read_receiver_266 = _g1 in let __array_read_index_267 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_266) __array_read_index_267 : string) in (
+      ignore (let __old_268 = !_g2 in let __new_269 = HxInt.add __old_268 1 in (
+        ignore (_g2 := __new_269);
+        __new_269
       ));
-      let __array_receiver_266 = libs in let __array_arg_0_267 = let __call_arg_0_268 = cwd in let __call_arg_1_269 = p in Hxhx_Stage3PathSupport.absFromCwd __call_arg_0_268 __call_arg_1_269 in HxArray.push __array_receiver_266 __array_arg_0_267
+      let __array_receiver_270 = Obj.magic libs in let __array_arg_0_271 = (let __call_arg_0_272 = cwd in let __call_arg_1_273 = p in Hxhx_Stage3PathSupport.absFromCwd __call_arg_0_272 __call_arg_1_273 : string) in HxArray.push __array_receiver_270 __array_arg_0_271
     )) done
   )) done);
-  let outAll = Obj.magic (let __array_receiver_270 = base in let __array_arg_0_271 = libs in HxArray.concat __array_receiver_270 __array_arg_0_271) in let tempString = ref (HxString.hx_null_string : string) in let value = (HxSys.getEnv ("HAXE_STD_PATH" : string) : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-    ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_272 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempMaybeString := __assign_272;
-      __assign_272
-    ) else if HxString.isNull (value : string) then let __assign_273 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempMaybeString := __assign_273;
-      __assign_273
-    ) else let __assign_274 = Obj.magic (value : string) in (
-      tempMaybeString := __assign_274;
-      __assign_274
+  let outAll = Obj.magic (let __array_receiver_274 = Obj.magic base in let __array_arg_0_275 = Obj.magic libs in HxArray.concat __array_receiver_274 __array_arg_0_275) in let tempString = ref (HxString.hx_null_string : string) in let value = (HxSys.getEnv ("HAXE_STD_PATH" : string) : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+    ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_276 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempMaybeString := __assign_276;
+      __assign_276
+    ) else if HxString.isNull (value : string) then let __assign_277 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempMaybeString := __assign_277;
+      __assign_277
+    ) else let __assign_278 = Obj.magic (value : string) in (
+      tempMaybeString := __assign_278;
+      __assign_278
     ));
     let normalized = (!tempMaybeString : string) in (
-      ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_275 = "" in (
-        tempString := __assign_275;
-        __assign_275
-      ) else let __assign_276 = let __call_arg_0_277 = normalized in StringTools.trim __call_arg_0_277 in (
-        tempString := __assign_276;
-        __assign_276
+      ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_279 = "" in (
+        tempString := __assign_279;
+        __assign_279
+      ) else let __assign_280 = let __call_arg_0_281 = normalized in StringTools.trim __call_arg_0_281 in (
+        tempString := __assign_280;
+        __assign_280
       ));
       let stdCp = !tempString in (
-        ignore (if (let __string_receiver_278 = stdCp in HxString.length __string_receiver_278) = 0 then raise (HxRuntime.Hx_return (Obj.repr outAll)) else ());
-        let stdAbs = let __call_arg_0_279 = stdCp in Haxe_io_Path.normalize __call_arg_0_279 in let filtered = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
-          ignore (while !_g < HxArray.length outAll do ignore (let cp = (let __array_read_receiver_280 = outAll in let __array_read_index_281 = !_g in HxArray.get (Obj.magic __array_read_receiver_280) __array_read_index_281 : string) in (
-            ignore (let __old_282 = !_g in let __new_283 = HxInt.add __old_282 1 in (
-              ignore (_g := __new_283);
-              __new_283
+        ignore (if (let __string_receiver_282 = stdCp in HxString.length __string_receiver_282) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr outAll)) else ());
+        let stdAbs = let __call_arg_0_283 = stdCp in Haxe_io_Path.normalize __call_arg_0_283 in let filtered = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
+          ignore (while !_g < HxArray.length outAll do ignore (let cp = (let __array_read_receiver_284 = outAll in let __array_read_index_285 = !_g in HxArray.get (Obj.magic __array_read_receiver_284) __array_read_index_285 : string) in (
+            ignore (let __old_286 = !_g in let __new_287 = HxInt.add __old_286 1 in (
+              ignore (_g := __new_287);
+              __new_287
             ));
-            if let __string_eq_left_284 = let __call_arg_0_286 = cp in Haxe_io_Path.normalize __call_arg_0_286 in let __string_eq_right_285 = stdAbs in not (HxString.equals __string_eq_left_284 __string_eq_right_285) then ignore (let __array_receiver_287 = filtered in let __array_arg_0_288 = cp in HxArray.push __array_receiver_287 __array_arg_0_288) else ()
+            if let __string_eq_left_288 = let __call_arg_0_290 = cp in Haxe_io_Path.normalize __call_arg_0_290 in let __string_eq_right_289 = stdAbs in not (HxString.equals __string_eq_left_288 __string_eq_right_289) then ignore (let __array_receiver_291 = Obj.magic filtered in let __array_arg_0_292 = (cp : string) in HxArray.push __array_receiver_291 __array_arg_0_292) else ()
           )) done);
           filtered
         )
@@ -543,59 +543,66 @@ let macroHostClassPaths = fun parsedClassPaths libsResolved cwd -> (try let base
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_289 -> (Obj.obj __ret_289 : string HxArray.t) : string HxArray.t)
+  | HxRuntime.Hx_return __ret_293 -> (Obj.obj __ret_293 : string HxArray.t) : string HxArray.t)
 
-let projectClassPaths = fun parsedClassPaths libsResolved cwd -> let base = Obj.magic (let __array_receiver_290 = parsedClassPaths in let __array_arg_0_291 = fun cp -> let __call_arg_0_292 = cwd in let __call_arg_1_293 = cp in Hxhx_Stage3PathSupport.absFromCwd __call_arg_0_292 __call_arg_1_293 in HxArray.map __array_receiver_290 __array_arg_0_291) in let libs = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
-  ignore (while !_g < HxArray.length libsResolved do ignore (let s = let __array_read_receiver_294 = libsResolved in let __array_read_index_295 = !_g in HxArray.get (Obj.magic __array_read_receiver_294) __array_read_index_295 in (
-    ignore (let __old_296 = !_g in let __new_297 = HxInt.add __old_296 1 in (
-      ignore (_g := __new_297);
-      __new_297
+let projectClassPaths = fun input -> let cwd = (Obj.obj (HxAnon.get input "cwd") : string) in let base = Obj.magic (let __array_receiver_294 = Obj.magic (Obj.obj (HxAnon.get input "explicitPaths")) in let __array_arg_0_295 = fun cp -> let __call_arg_0_296 = cwd in let __call_arg_1_297 = cp in Hxhx_Stage3PathSupport.absFromCwd __call_arg_0_296 __call_arg_1_297 in HxArray.map __array_receiver_294 __array_arg_0_295) in let libs = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get input "libraries")) in (
+  ignore (while !_g < HxArray.length _g1 do ignore (let s = let __array_read_receiver_298 = _g1 in let __array_read_index_299 = !_g in HxArray.get (Obj.magic __array_read_receiver_298) __array_read_index_299 in (
+    ignore (let __old_300 = !_g in let __new_301 = HxInt.add __old_300 1 in (
+      ignore (_g := __new_301);
+      __new_301
     ));
-    let _g2 = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get s "classPaths")) in while !_g2 < HxArray.length _g1 do ignore (let p = (let __array_read_receiver_298 = _g1 in let __array_read_index_299 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_298) __array_read_index_299 : string) in (
-      ignore (let __old_300 = !_g2 in let __new_301 = HxInt.add __old_300 1 in (
-        ignore (_g2 := __new_301);
-        __new_301
+    let _g2 = ref 0 in let _g3 = Obj.magic (Obj.obj (HxAnon.get s "classPaths")) in while !_g2 < HxArray.length _g3 do ignore (let p = (let __array_read_receiver_302 = _g3 in let __array_read_index_303 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_302) __array_read_index_303 : string) in (
+      ignore (let __old_304 = !_g2 in let __new_305 = HxInt.add __old_304 1 in (
+        ignore (_g2 := __new_305);
+        __new_305
       ));
-      let __array_receiver_302 = libs in let __array_arg_0_303 = let __call_arg_0_304 = cwd in let __call_arg_1_305 = p in Hxhx_Stage3PathSupport.absFromCwd __call_arg_0_304 __call_arg_1_305 in HxArray.push __array_receiver_302 __array_arg_0_303
+      let __array_receiver_306 = Obj.magic libs in let __array_arg_0_307 = (let __call_arg_0_308 = cwd in let __call_arg_1_309 = p in Hxhx_Stage3PathSupport.absFromCwd __call_arg_0_308 __call_arg_1_309 : string) in HxArray.push __array_receiver_306 __array_arg_0_307
     )) done
   )) done);
-  let extra = Obj.magic (let __array_receiver_306 = Hxhx_macro_MacroState.listClassPaths () in let __array_arg_0_307 = fun cp -> let __call_arg_0_308 = cwd in let __call_arg_1_309 = cp in Hxhx_Stage3PathSupport.absFromCwd __call_arg_0_308 __call_arg_1_309 in HxArray.map __array_receiver_306 __array_arg_0_307) in let out = Obj.magic (let __array_receiver_310 = let __array_receiver_311 = base in let __array_arg_0_312 = libs in HxArray.concat __array_receiver_311 __array_arg_0_312 in let __array_arg_0_313 = extra in HxArray.concat __array_receiver_310 __array_arg_0_313) in let generatedHxDir = Hxhx_macro_MacroState.getGeneratedHxDir () in (
-    ignore (if generatedHxDir != HxString.hx_null_string && (let __string_receiver_314 = generatedHxDir in HxString.length __string_receiver_314) > 0 then ignore (let generatedNorm = let __call_arg_0_315 = generatedHxDir in Haxe_io_Path.normalize __call_arg_0_315 in let hasGeneratedDir = ref false in let _g = ref 0 in (
-      ignore (try while !_g < HxArray.length out do ignore (let cp = (let __array_read_receiver_316 = out in let __array_read_index_317 = !_g in HxArray.get (Obj.magic __array_read_receiver_316) __array_read_index_317 : string) in (
-        ignore (let __old_318 = !_g in let __new_319 = HxInt.add __old_318 1 in (
-          ignore (_g := __new_319);
-          __new_319
+  let extra = Obj.magic (let __array_receiver_310 = Obj.magic (Hxhx_macro_MacroState.listClassPaths ()) in let __array_arg_0_311 = fun cp -> let __call_arg_0_312 = cwd in let __call_arg_1_313 = cp in Hxhx_Stage3PathSupport.absFromCwd __call_arg_0_312 __call_arg_1_313 in HxArray.map __array_receiver_310 __array_arg_0_311) in let out = Obj.magic (let __array_receiver_314 = Obj.magic (let __array_receiver_315 = Obj.magic base in let __array_arg_0_316 = Obj.magic libs in HxArray.concat __array_receiver_315 __array_arg_0_316) in let __array_arg_0_317 = Obj.magic extra in HxArray.concat __array_receiver_314 __array_arg_0_317) in let generatedHxDir = Hxhx_macro_MacroState.getGeneratedHxDir () in (
+    ignore (if generatedHxDir != HxString.hx_null_string && (let __string_receiver_318 = generatedHxDir in HxString.length __string_receiver_318) > 0 then ignore (let generatedNorm = let __call_arg_0_319 = generatedHxDir in Haxe_io_Path.normalize __call_arg_0_319 in let hasGeneratedDir = ref false in let _g = ref 0 in (
+      ignore (try while !_g < HxArray.length out do ignore (let cp = (let __array_read_receiver_320 = out in let __array_read_index_321 = !_g in HxArray.get (Obj.magic __array_read_receiver_320) __array_read_index_321 : string) in (
+        ignore (let __old_322 = !_g in let __new_323 = HxInt.add __old_322 1 in (
+          ignore (_g := __new_323);
+          __new_323
         ));
-        if let __string_eq_left_320 = let __call_arg_0_322 = cp in Haxe_io_Path.normalize __call_arg_0_322 in let __string_eq_right_321 = generatedNorm in HxString.equals __string_eq_left_320 __string_eq_right_321 then ignore ((
-          ignore (let __assign_323 = true in (
-            hasGeneratedDir := __assign_323;
-            __assign_323
+        if let __string_eq_left_324 = let __call_arg_0_326 = cp in Haxe_io_Path.normalize __call_arg_0_326 in let __string_eq_right_325 = generatedNorm in HxString.equals __string_eq_left_324 __string_eq_right_325 then ignore ((
+          ignore (let __assign_327 = true in (
+            hasGeneratedDir := __assign_327;
+            __assign_327
           ));
-          raise (HxRuntime.Hx_break)
+          Stdlib.raise (HxRuntime.Hx_break)
         )) else ()
       )) done with
         | HxRuntime.Hx_break -> ());
-      if not (!hasGeneratedDir) then ignore (let __array_receiver_324 = out in let __array_arg_0_325 = generatedHxDir in HxArray.push __array_receiver_324 __array_arg_0_325) else ()
+      if not (!hasGeneratedDir) then ignore (let __array_receiver_328 = Obj.magic out in let __array_arg_0_329 = (generatedHxDir : string) in HxArray.push __array_receiver_328 __array_arg_0_329) else ()
     )) else ());
-    let inferredStd = let __call_arg_0_326 = cwd in Hxhx_Stage1Compiler.stage1args_inferStdRootForCwd __call_arg_0_326 in (
-      ignore (if (let __string_receiver_327 = inferredStd in HxString.length __string_receiver_327) > 0 then ignore (let inferredNorm = let __call_arg_0_328 = inferredStd in Haxe_io_Path.normalize __call_arg_0_328 in let hasStd = ref false in let _g = ref 0 in (
-        ignore (try while !_g < HxArray.length out do ignore (let cp = (let __array_read_receiver_329 = out in let __array_read_index_330 = !_g in HxArray.get (Obj.magic __array_read_receiver_329) __array_read_index_330 : string) in (
-          ignore (let __old_331 = !_g in let __new_332 = HxInt.add __old_331 1 in (
-            ignore (_g := __new_332);
-            __new_332
-          ));
-          if let __string_eq_left_333 = let __call_arg_0_335 = cp in Haxe_io_Path.normalize __call_arg_0_335 in let __string_eq_right_334 = inferredNorm in HxString.equals __string_eq_left_333 __string_eq_right_334 then ignore ((
-            ignore (let __assign_336 = true in (
-              hasStd := __assign_336;
-              __assign_336
-            ));
-            raise (HxRuntime.Hx_break)
-          )) else ()
-        )) done with
-          | HxRuntime.Hx_break -> ());
-        if not (!hasStd) then ignore (let __array_receiver_337 = out in let __array_arg_0_338 = inferredStd in HxArray.push __array_receiver_337 __array_arg_0_338) else ()
+    let withCwd = Obj.magic (ResolverStage.withImplicitCwdClassPath (Obj.magic out) (cwd : string)) in let appendUnique = let __callback_input_341 = fun path -> ignore (try ignore (let normalized = let __call_arg_0_330 = path in Haxe_io_Path.normalize __call_arg_0_330 in let _g = ref 0 in (
+      ignore (while !_g < HxArray.length withCwd do ignore (let existing = (let __array_read_receiver_331 = withCwd in let __array_read_index_332 = !_g in HxArray.get (Obj.magic __array_read_receiver_331) __array_read_index_332 : string) in (
+        ignore (let __old_333 = !_g in let __new_334 = HxInt.add __old_333 1 in (
+          ignore (_g := __new_334);
+          __new_334
+        ));
+        if let __string_eq_left_335 = let __call_arg_0_337 = existing in Haxe_io_Path.normalize __call_arg_0_337 in let __string_eq_right_336 = normalized in HxString.equals __string_eq_left_335 __string_eq_right_336 then Stdlib.raise (HxRuntime.Hx_return_void) else ()
+      )) done);
+      let __array_receiver_338 = Obj.magic withCwd in let __array_arg_0_339 = (normalized : string) in HxArray.push __array_receiver_338 __array_arg_0_339
+    )) with
+      | HxRuntime.Hx_return_void -> ()) in let __callable_origin_342 = __callback_input_341 in (__callable_origin_342, Obj.repr (ref ())) in let bundledRoot = (CompilerBundledSources.targetRoot (Obj.obj (HxAnon.get input "targetDefine") : string) : string) in (
+      ignore (if bundledRoot != Obj.magic (HxRuntime.hx_null) then ignore (let __call_callee_343 = appendUnique in let __call_arg_0_344 = bundledRoot in Stdlib.fst __call_callee_343 __call_arg_0_344) else ());
+      ignore (if (let __string_receiver_345 = Obj.obj (HxAnon.get input "standardRoot") in HxString.length __string_receiver_345) > 0 then ignore (let common = let __call_arg_0_346 = cwd in let __call_arg_1_347 = Obj.obj (HxAnon.get input "standardRoot") in Hxhx_Stage3PathSupport.absFromCwd __call_arg_0_346 __call_arg_1_347 in (
+        ignore (if (let __string_eq_left_348 = Obj.obj (HxAnon.get input "targetDefine") in let __string_eq_right_349 = "neko" in HxString.equals __string_eq_left_348 __string_eq_right_349) || (let __string_eq_left_350 = Obj.obj (HxAnon.get input "targetDefine") in let __string_eq_right_351 = "js" in HxString.equals __string_eq_left_350 __string_eq_right_351) || (let __string_eq_left_352 = Obj.obj (HxAnon.get input "targetDefine") in let __string_eq_right_353 = "lua" in HxString.equals __string_eq_left_352 __string_eq_right_353) then ignore (let target = (Haxe_io_Path.join (Obj.magic (let __represented_array_354 = HxArray.create () in let __represented_array_element_0_355 = common in (
+          ignore (HxArray.push __represented_array_354 __represented_array_element_0_355);
+          let __represented_array_element_1_356 = Obj.obj (HxAnon.get input "targetDefine") in (
+            ignore (HxArray.push __represented_array_354 __represented_array_element_1_356);
+            let __represented_array_element_2_357 = "_std" in (
+              ignore (HxArray.push __represented_array_354 __represented_array_element_2_357);
+              __represented_array_354
+            )
+          )
+        ))) : string) in if HxFileSystem.exists (target : string) && HxFileSystem.isDirectory (target : string) then ignore (let __call_callee_358 = appendUnique in let __call_arg_0_359 = target in Stdlib.fst __call_callee_358 __call_arg_0_359) else ()) else ());
+        let __call_callee_360 = appendUnique in let __call_arg_0_361 = common in Stdlib.fst __call_callee_360 __call_arg_0_361
       )) else ());
-      ResolverStage.withImplicitCwdClassPath (Obj.magic out) (cwd : string)
+      withCwd
     )
   )
 )
@@ -603,15 +610,16 @@ let projectClassPaths = fun parsedClassPaths libsResolved cwd -> let base = Obj.
 let buildDefinesMap = fun allDefines backendTargetDefine backendId -> let definesMap = Obj.magic (HxDefineMap.fromRawDefines (Obj.magic allDefines)) in (
   ignore (HxMap.set_string (Obj.magic definesMap) ("sys" : string) "1");
   ignore (HxMap.set_string (Obj.magic definesMap) (backendTargetDefine : string) "1");
+  ignore (if (let __string_eq_left_362 = backendTargetDefine in let __string_eq_right_363 = "ocaml" in HxString.equals __string_eq_left_362 __string_eq_right_363) && not (HxMap.exists_string (Obj.magic definesMap) ("ocaml_output" : string)) then ignore (HxMap.set_string (Obj.magic definesMap) ("ocaml_output" : string) "1") else ());
   let _g = ref 0 in let _g1 = Obj.magic (Hxhx_macro_MacroState.listDefineNames ()) in (
-    ignore (while !_g < HxArray.length _g1 do ignore (let n = (let __array_read_receiver_339 = _g1 in let __array_read_index_340 = !_g in HxArray.get (Obj.magic __array_read_receiver_339) __array_read_index_340 : string) in (
-      ignore (let __old_341 = !_g in let __new_342 = HxInt.add __old_341 1 in (
-        ignore (_g := __new_342);
-        __new_342
+    ignore (while !_g < HxArray.length _g1 do ignore (let n = (let __array_read_receiver_364 = _g1 in let __array_read_index_365 = !_g in HxArray.get (Obj.magic __array_read_receiver_364) __array_read_index_365 : string) in (
+      ignore (let __old_366 = !_g in let __new_367 = HxInt.add __old_366 1 in (
+        ignore (_g := __new_367);
+        __new_367
       ));
-      let value = let __call_arg_0_343 = n in Hxhx_macro_MacroState.definedValue __call_arg_0_343 in HxMap.set_string (Obj.magic definesMap) (n : string) value
+      let value = let __call_arg_0_368 = n in Hxhx_macro_MacroState.definedValue __call_arg_0_368 in HxMap.set_string (Obj.magic definesMap) (n : string) value
     )) done);
-    ignore (if let __string_eq_left_344 = backendId in let __string_eq_right_345 = "ocaml-stage3" in HxString.equals __string_eq_left_344 __string_eq_right_345 then ignore (let profile = (Backend_OcamlProfile.fromDefineValue (HxMap.get_string (Obj.magic definesMap) ("ocaml_profile" : string) : string) : string) in HxMap.set_string (Obj.magic definesMap) ("ocaml_profile" : string) profile) else ());
+    ignore (if (let __string_eq_left_369 = backendId in let __string_eq_right_370 = "ocaml-stage3" in HxString.equals __string_eq_left_369 __string_eq_right_370) || (let __string_eq_left_371 = backendId in let __string_eq_right_372 = "ocaml-native" in HxString.equals __string_eq_left_371 __string_eq_right_372) then ignore (let profile = (Backend_OcamlProfile.fromDefineValue (HxMap.get_string (Obj.magic definesMap) ("ocaml_profile" : string) : string) : string) in HxMap.set_string (Obj.magic definesMap) ("ocaml_profile" : string) profile) else ());
     definesMap
   )
 )

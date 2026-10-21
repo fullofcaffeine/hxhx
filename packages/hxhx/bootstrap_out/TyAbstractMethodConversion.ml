@@ -1,0 +1,2 @@
+# 1 "TyAbstractMethodConversion.ml"
+include CompilerDiagnosticProbe.TyAbstractMethodConversion

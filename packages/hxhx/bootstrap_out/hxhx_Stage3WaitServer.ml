@@ -23,9 +23,9 @@ let parseWaitMode = fun args -> let rest = Obj.magic (HxArray.create ()) in let 
         __assign_5
       ));
       ignore (i := HxInt.add (!i) 2);
-      raise (HxRuntime.Hx_continue)
+      Stdlib.raise (HxRuntime.Hx_continue)
     )) else ());
-    ignore (let __array_receiver_8 = rest in let __array_arg_0_9 = a in HxArray.push __array_receiver_8 __array_arg_0_9);
+    ignore (let __array_receiver_8 = Obj.magic rest in let __array_arg_0_9 = (a : string) in HxArray.push __array_receiver_8 __array_arg_0_9);
     i := HxInt.add (!i) 1
   )) with
     | HxRuntime.Hx_continue -> () done);
@@ -46,9 +46,9 @@ let parseConnectMode = fun args -> let rest = Obj.magic (HxArray.create ()) in l
         __assign_15
       ));
       ignore (i := HxInt.add (!i) 2);
-      raise (HxRuntime.Hx_continue)
+      Stdlib.raise (HxRuntime.Hx_continue)
     )) else ());
-    ignore (let __array_receiver_18 = rest in let __array_arg_0_19 = a in HxArray.push __array_receiver_18 __array_arg_0_19);
+    ignore (let __array_receiver_18 = Obj.magic rest in let __array_arg_0_19 = (a : string) in HxArray.push __array_receiver_18 __array_arg_0_19);
     i := HxInt.add (!i) 1
   )) with
     | HxRuntime.Hx_continue -> () done);
@@ -62,9 +62,9 @@ let parseConnectMode = fun args -> let rest = Obj.magic (HxArray.create ()) in l
 let hasDefineFlag = fun args name -> (try let i = ref 0 in (
   ignore (while !i < HxArray.length args do try ignore ((
     ignore (if (let __string_eq_left_21 = let __array_read_receiver_23 = args in let __array_read_index_24 = !i in HxArray.get (Obj.magic __array_read_receiver_23) __array_read_index_24 in let __string_eq_right_22 = "-D" in HxString.equals __string_eq_left_21 __string_eq_right_22) && HxInt.add (!i) 1 < HxArray.length args then ignore (let d = (let __array_read_receiver_25 = args in let __array_read_index_26 = HxInt.add (!i) 1 in HxArray.get (Obj.magic __array_read_receiver_25) __array_read_index_26 : string) in (
-      ignore (if (let __string_eq_left_27 = d in let __string_eq_right_28 = name in HxString.equals __string_eq_left_27 __string_eq_right_28) || (let __call_arg_0_29 = d in let __call_arg_1_30 = HxString.toStdString name ^ "=" in StringTools.startsWith __call_arg_0_29 __call_arg_1_30) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+      ignore (if (let __string_eq_left_27 = d in let __string_eq_right_28 = name in HxString.equals __string_eq_left_27 __string_eq_right_28) || (let __call_arg_0_29 = d in let __call_arg_1_30 = HxString.toStdString name ^ "=" in StringTools.startsWith __call_arg_0_29 __call_arg_1_30) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr true)) else ());
       ignore (i := HxInt.add (!i) 2);
-      raise (HxRuntime.Hx_continue)
+      Stdlib.raise (HxRuntime.Hx_continue)
     )) else ());
     i := HxInt.add (!i) 1
   )) with
@@ -90,57 +90,57 @@ let runWaitStdio = fun baseArgs runOne error -> (try let input = Obj.magic (Sys_
         frameLen := __assign_43;
         __assign_43
       )) with
-        | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-        | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-        | HxRuntime.Hx_return __ret_39 -> raise (HxRuntime.Hx_return __ret_39)
-        | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+        | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+        | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+        | HxRuntime.Hx_return __ret_39 -> Stdlib.raise (HxRuntime.Hx_return __ret_39)
+        | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
         | HxRuntime.Hx_exception (__exn_v_40, __exn_tags_41) -> if HxRuntime.tags_has __exn_tags_41 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_40 : Haxe_io_Eof.t) in (
           ignore _hx;
-          raise (HxRuntime.Hx_return (Obj.repr 0))
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr 0))
         ) else if HxRuntime.tags_has __exn_tags_41 "haxe.io.Error" then let e = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_40) : Haxe_io_Error.error) in (
           ignore e;
-          raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_33 = error in let __call_arg_0_34 = let __string_part_35 = "wait-stdio failed to read frame length: " in let __string_part_36 = HxString.toStdString (HxDynamic.toStdString (Obj.repr e)) in __string_part_35 ^ __string_part_36 in __call_callee_33 __call_arg_0_34)))
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_33 = error in let __call_arg_0_34 = let __string_part_35 = "wait-stdio failed to read frame length: " in let __string_part_36 = HxString.toStdString (HxDynamic.toStdString (Obj.repr e)) in __string_part_35 ^ __string_part_36 in __call_callee_33 __call_arg_0_34)))
         ) else if HxRuntime.tags_has __exn_tags_41 "String" then let e = (Obj.obj __exn_v_40 : string) in (
           ignore e;
-          raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_37 = error in let __call_arg_0_38 = "wait-stdio failed to read frame length: " ^ HxString.toStdString e in __call_callee_37 __call_arg_0_38)))
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_37 = error in let __call_arg_0_38 = "wait-stdio failed to read frame length: " ^ HxString.toStdString e in __call_callee_37 __call_arg_0_38)))
         ) else HxRuntime.hx_throw_typed __exn_v_40 __exn_tags_41
         | __exn_42 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_42) : Haxe_io_Eof.t) in (
           ignore _hx;
-          raise (HxRuntime.Hx_return (Obj.repr 0))
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr 0))
         ) else if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let e = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_42)) : Haxe_io_Error.error) in (
           ignore e;
-          raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_33 = error in let __call_arg_0_34 = let __string_part_35 = "wait-stdio failed to read frame length: " in let __string_part_36 = HxString.toStdString (HxDynamic.toStdString (Obj.repr e)) in __string_part_35 ^ __string_part_36 in __call_callee_33 __call_arg_0_34)))
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_33 = error in let __call_arg_0_34 = let __string_part_35 = "wait-stdio failed to read frame length: " in let __string_part_36 = HxString.toStdString (HxDynamic.toStdString (Obj.repr e)) in __string_part_35 ^ __string_part_36 in __call_callee_33 __call_arg_0_34)))
         ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_42) : string) in (
           ignore e;
-          raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_37 = error in let __call_arg_0_38 = "wait-stdio failed to read frame length: " ^ HxString.toStdString e in __call_callee_37 __call_arg_0_38)))
-        ) else raise (__exn_42));
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_37 = error in let __call_arg_0_38 = "wait-stdio failed to read frame length: " ^ HxString.toStdString e in __call_callee_37 __call_arg_0_38)))
+        ) else Stdlib.raise (__exn_42));
       let lengthProblem = (let __call_arg_0_44 = !frameLen in Hxhx_CompilationServerProtocol.requestLengthProblem __call_arg_0_44 : string) in (
         ignore (if lengthProblem != Obj.magic (HxRuntime.hx_null) then (
           ignore (writeWaitStdioReply (Obj.magic (Hxhx_CompilationServerReply.message ("hxhx(stage3): wait-stdio rejected " ^ HxString.toStdString lengthProblem : string) true (Obj.magic (HxRuntime.hx_null)))));
-          raise (HxRuntime.Hx_return (Obj.repr 2))
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr 2))
         ) else ());
         let tempBytes = ref (Obj.magic (HxRuntime.hx_null) : HxBytes.t) in (
           ignore (try let __assign_51 = Obj.magic ((Obj.magic input : Haxe_io_Input.t).read (Obj.magic input) (!frameLen)) in (
             tempBytes := __assign_51;
             __assign_51
           ) with
-            | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-            | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-            | HxRuntime.Hx_return __ret_47 -> raise (HxRuntime.Hx_return __ret_47)
-            | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+            | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+            | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+            | HxRuntime.Hx_return __ret_47 -> Stdlib.raise (HxRuntime.Hx_return __ret_47)
+            | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
             | HxRuntime.Hx_exception (__exn_v_48, __exn_tags_49) -> if HxRuntime.tags_has __exn_tags_49 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_48 : Haxe_io_Eof.t) in (
               ignore _hx;
-              raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_45 = error in let __call_arg_0_46 = "wait-stdio request frame truncated" in __call_callee_45 __call_arg_0_46)))
+              Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_45 = error in let __call_arg_0_46 = "wait-stdio request frame truncated" in __call_callee_45 __call_arg_0_46)))
             ) else HxRuntime.hx_throw_typed __exn_v_48 __exn_tags_49
             | __exn_50 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_50) : Haxe_io_Eof.t) in (
               ignore _hx;
-              raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_45 = error in let __call_arg_0_46 = "wait-stdio request frame truncated" in __call_callee_45 __call_arg_0_46)))
-            ) else raise (__exn_50));
+              Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_45 = error in let __call_arg_0_46 = "wait-stdio request frame truncated" in __call_callee_45 __call_arg_0_46)))
+            ) else Stdlib.raise (__exn_50));
           let frame = Obj.magic (!tempBytes) in (
             ignore (requestId := HxInt.add (!requestId) 1);
             let request = Obj.magic (Hxhx_CompilationServerRequestCodec.decode (!requestId) (Obj.magic baseArgs) (Obj.magic frame)) in let reply = Obj.magic (Hxhx_CompilationServerRequestDispatcher.dispatch (Obj.magic request) runOne (Obj.magic serverCache) (Obj.magic dependencyCatalog)) in (
               ignore (writeWaitStdioReply (Obj.magic reply));
-              if (Obj.magic reply : Hxhx_CompilationServerReply.t).stopServer then raise (HxRuntime.Hx_return (Obj.repr 0)) else ()
+              if (Obj.magic reply : Hxhx_CompilationServerReply.t).stopServer then Stdlib.raise (HxRuntime.Hx_return (Obj.repr 0)) else ()
             )
           )
         )
@@ -162,10 +162,10 @@ let runWaitSocket = fun mode baseArgs runOne error -> let requestId = ref 0 in l
     tempResult := __assign_64;
     __assign_64
   ) with
-    | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-    | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-    | HxRuntime.Hx_return __ret_60 -> raise (HxRuntime.Hx_return __ret_60)
-    | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+    | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+    | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+    | HxRuntime.Hx_return __ret_60 -> Stdlib.raise (HxRuntime.Hx_return __ret_60)
+    | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
     | HxRuntime.Hx_exception (__exn_v_61, __exn_tags_62) -> if HxRuntime.tags_has __exn_tags_62 "String" then let e = (Obj.obj __exn_v_61 : string) in (
       ignore e;
       let __assign_57 = let __call_callee_58 = error in let __call_arg_0_59 = "wait socket failed: " ^ HxString.toStdString e in __call_callee_58 __call_arg_0_59 in (
@@ -179,12 +179,12 @@ let runWaitSocket = fun mode baseArgs runOne error -> let requestId = ref 0 in l
         tempResult := __assign_57;
         __assign_57
       )
-    ) else raise (__exn_63));
+    ) else Stdlib.raise (__exn_63));
   !tempResult
 )
 
 let readConnectDisplayStdin = fun args -> (try (
-  ignore (if not (hasDefineFlag (Obj.magic args) ("display-stdin" : string)) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if not (hasDefineFlag (Obj.magic args) ("display-stdin" : string)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let input = Obj.magic (Sys_io_Stdio.stdin ()) in (
     ignore ((Obj.magic input : Haxe_io_Input.t).set_bigEndian (Obj.magic input) false);
     let tempNumber = ref (0 : int) in (
@@ -192,13 +192,13 @@ let readConnectDisplayStdin = fun args -> (try (
         tempNumber := __assign_71;
         __assign_71
       ) with
-        | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-        | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-        | HxRuntime.Hx_return __ret_67 -> raise (HxRuntime.Hx_return __ret_67)
-        | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+        | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+        | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+        | HxRuntime.Hx_return __ret_67 -> Stdlib.raise (HxRuntime.Hx_return __ret_67)
+        | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
         | HxRuntime.Hx_exception (__exn_v_68, __exn_tags_69) -> if HxRuntime.tags_has __exn_tags_69 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_68 : Haxe_io_Eof.t) in (
           ignore _hx;
-          raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
         ) else if HxRuntime.tags_has __exn_tags_69 "haxe.io.Error" then let e = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_68) : Haxe_io_Error.error) in (
           ignore e;
           HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_65 = "connect failed to read display-stdin frame length: " in let __string_part_66 = HxString.toStdString (HxDynamic.toStdString (Obj.repr e)) in __string_part_65 ^ __string_part_66)) ["Dynamic"]
@@ -208,16 +208,16 @@ let readConnectDisplayStdin = fun args -> (try (
         ) else HxRuntime.hx_throw_typed __exn_v_68 __exn_tags_69
         | __exn_70 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_70) : Haxe_io_Eof.t) in (
           ignore _hx;
-          raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
         ) else if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let e = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_70)) : Haxe_io_Error.error) in (
           ignore e;
           HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_65 = "connect failed to read display-stdin frame length: " in let __string_part_66 = HxString.toStdString (HxDynamic.toStdString (Obj.repr e)) in __string_part_65 ^ __string_part_66)) ["Dynamic"]
         ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_70) : string) in (
           ignore e;
           HxType.hx_throw_typed_rtti (Obj.repr ("connect failed to read display-stdin frame length: " ^ HxString.toStdString e)) ["Dynamic"]
-        ) else raise (__exn_70));
+        ) else Stdlib.raise (__exn_70));
       let frameLen = !tempNumber in (
-        ignore (if frameLen <= 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+        ignore (if frameLen <= 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
         let lengthProblem = (let __call_arg_0_72 = frameLen in Hxhx_CompilationServerProtocol.requestLengthProblem __call_arg_0_72 : string) in (
           ignore (if lengthProblem != Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr ("connect rejected display-stdin " ^ HxString.toStdString lengthProblem)) ["Dynamic"] else ());
           let tempBytes = ref (Obj.magic (HxRuntime.hx_null) : HxBytes.t) in (
@@ -225,10 +225,10 @@ let readConnectDisplayStdin = fun args -> (try (
               tempBytes := __assign_77;
               __assign_77
             ) with
-              | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-              | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-              | HxRuntime.Hx_return __ret_73 -> raise (HxRuntime.Hx_return __ret_73)
-              | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+              | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+              | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+              | HxRuntime.Hx_return __ret_73 -> Stdlib.raise (HxRuntime.Hx_return __ret_73)
+              | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
               | HxRuntime.Hx_exception (__exn_v_74, __exn_tags_75) -> if HxRuntime.tags_has __exn_tags_75 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_74 : Haxe_io_Eof.t) in (
                 ignore _hx;
                 HxType.hx_throw_typed_rtti (Obj.repr "connect display-stdin frame truncated") ["Dynamic"]
@@ -236,10 +236,10 @@ let readConnectDisplayStdin = fun args -> (try (
               | __exn_76 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_76) : Haxe_io_Eof.t) in (
                 ignore _hx;
                 HxType.hx_throw_typed_rtti (Obj.repr "connect display-stdin frame truncated") ["Dynamic"]
-              ) else raise (__exn_76));
+              ) else Stdlib.raise (__exn_76));
             let frame = Obj.magic (!tempBytes) in (
-              ignore (if (let __bytes_receiver_78 = frame in HxBytes.length __bytes_receiver_78) = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-              ignore (if (let __bytes_access_receiver_79 = frame in let __bytes_access_arg_0_80 = 0 in HxBytes.get __bytes_access_receiver_79 __bytes_access_arg_0_80) = 1 then raise (HxRuntime.Hx_return (Obj.repr (let __bytes_receiver_81 = frame in let __bytes_arg_0_82 = 1 in let __bytes_arg_1_83 = HxInt.sub (let __bytes_receiver_84 = frame in HxBytes.length __bytes_receiver_84) 1 in HxBytes.sub __bytes_receiver_81 __bytes_arg_0_82 __bytes_arg_1_83))) else ());
+              ignore (if (let __bytes_receiver_78 = frame in HxBytes.length __bytes_receiver_78) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+              ignore (if (let __bytes_access_receiver_79 = frame in let __bytes_access_arg_0_80 = 0 in HxBytes.get __bytes_access_receiver_79 __bytes_access_arg_0_80) = 1 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __bytes_receiver_81 = frame in let __bytes_arg_0_82 = 1 in let __bytes_arg_1_83 = HxInt.sub (let __bytes_receiver_84 = frame in HxBytes.length __bytes_receiver_84) 1 in HxBytes.sub __bytes_receiver_81 __bytes_arg_0_82 __bytes_arg_1_83))) else ());
               frame
             )
           )
@@ -267,16 +267,16 @@ let encodeConnectRequest = fun args stdinBytes -> let out = Obj.magic (StringBuf
 )
 
 let processConnectResponse = fun (response : string) -> (try (
-  ignore (if response == HxString.hx_null_string || (let __string_receiver_96 = response in HxString.length __string_receiver_96) = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if response == HxString.hx_null_string || (let __string_receiver_96 = response in HxString.length __string_receiver_96) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let hasError = ref false in let _g = ref 0 in let _g1 = Obj.magic (let __string_receiver_97 = response in let __string_argument_0_98 = "\n" in HxString.split __string_receiver_97 __string_argument_0_98) in (
     ignore (while !_g < HxArray.length _g1 do try ignore (let line = (let __array_read_receiver_99 = _g1 in let __array_read_index_100 = !_g in HxArray.get (Obj.magic __array_read_receiver_99) __array_read_index_100 : string) in (
       ignore (let __old_101 = !_g in let __new_102 = HxInt.add __old_101 1 in (
         ignore (_g := __new_102);
         __new_102
       ));
-      ignore (if (let __string_receiver_103 = line in HxString.length __string_receiver_103) = 0 then raise (HxRuntime.Hx_continue) else ());
+      ignore (if (let __string_receiver_103 = line in HxString.length __string_receiver_103) = 0 then Stdlib.raise (HxRuntime.Hx_continue) else ());
       let _g2 = let __string_receiver_104 = line in let __string_argument_0_105 = 0 in HxString.charCodeAt __string_receiver_104 __string_argument_0_105 in if _g2 == HxRuntime.hx_null then ignore (let __obj_106 = Sys_io_Stdio.stderr () in (Obj.magic __obj_106 : Haxe_io_Output.t).writeString (Obj.magic __obj_106) (HxString.toStdString line ^ "\n" : string) (Obj.magic (HxRuntime.hx_null))) else ignore (let __switch_116 = _g2 in if __switch_116 == HxRuntime.hx_null then ignore (let __obj_107 = Sys_io_Stdio.stderr () in (Obj.magic __obj_107 : Haxe_io_Output.t).writeString (Obj.magic __obj_107) (HxString.toStdString line ^ "\n" : string) (Obj.magic (HxRuntime.hx_null))) else match Obj.obj __switch_116 with
-        | 1 -> ignore (let parts = Obj.magic (let __string_receiver_117 = line in let __string_argument_0_118 = "" in HxString.split __string_receiver_117 __string_argument_0_118) in if HxArray.length parts > 1 then ignore (let printed = (HxArray.join (let __array_receiver_119 = parts in let __array_arg_0_120 = 1 in HxArray.slice_default __array_receiver_119 __array_arg_0_120) "\n" (fun x -> x) : string) in if (let __string_receiver_121 = printed in HxString.length __string_receiver_121) > 0 then ignore (let value = Obj.repr printed in (
+        | 1 -> ignore (let parts = Obj.magic (let __string_receiver_117 = line in let __string_argument_0_118 = "" in HxString.split __string_receiver_117 __string_argument_0_118) in if HxArray.length parts > 1 then ignore (let printed = (HxArray.join (let __array_receiver_119 = Obj.magic parts in let __array_arg_0_120 = 1 in HxArray.slice_default __array_receiver_119 __array_arg_0_120) "\n" (fun x -> x) : string) in if (let __string_receiver_121 = printed in HxString.length __string_receiver_121) > 0 then ignore (let value = Obj.repr printed in (
           ignore (HxSys.printValue value);
           if not (let __call_arg_0_122 = printed in let __call_arg_1_123 = "\n" in StringTools.endsWith __call_arg_0_122 __call_arg_1_123) then ignore (let value = Obj.repr "\n" in HxSys.printValue value) else ()
         )) else ()) else ())
@@ -299,31 +299,31 @@ let runConnect = fun connectMode requestArgs error -> (try let tempMaybeBytes = 
     tempMaybeBytes := __assign_134;
     __assign_134
   ) with
-    | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-    | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-    | HxRuntime.Hx_return __ret_130 -> raise (HxRuntime.Hx_return __ret_130)
-    | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+    | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+    | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+    | HxRuntime.Hx_return __ret_130 -> Stdlib.raise (HxRuntime.Hx_return __ret_130)
+    | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
     | HxRuntime.Hx_exception (__exn_v_131, __exn_tags_132) -> if HxRuntime.tags_has __exn_tags_132 "String" then let e = (Obj.obj __exn_v_131 : string) in (
       ignore e;
-      raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_128 = error in let __call_arg_0_129 = e in __call_callee_128 __call_arg_0_129)))
+      Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_128 = error in let __call_arg_0_129 = e in __call_callee_128 __call_arg_0_129)))
     ) else HxRuntime.hx_throw_typed __exn_v_131 __exn_tags_132
     | __exn_133 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_133) : string) in (
       ignore e;
-      raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_128 = error in let __call_arg_0_129 = e in __call_callee_128 __call_arg_0_129)))
-    ) else raise (__exn_133));
+      Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_128 = error in let __call_arg_0_129 = e in __call_callee_128 __call_arg_0_129)))
+    ) else Stdlib.raise (__exn_133));
   let stdinBytes = Obj.magic (!tempMaybeBytes) in let argsWithCwd = Obj.magic (HxArray.create ()) in (
-    ignore (let __array_receiver_135 = argsWithCwd in let __array_arg_0_136 = "--cwd" in HxArray.push __array_receiver_135 __array_arg_0_136);
-    ignore (let __array_receiver_137 = argsWithCwd in let __array_arg_0_138 = HxSys.getCwd () in HxArray.push __array_receiver_137 __array_arg_0_138);
+    ignore (let __array_receiver_135 = Obj.magic argsWithCwd in let __array_arg_0_136 = ("--cwd" : string) in HxArray.push __array_receiver_135 __array_arg_0_136);
+    ignore (let __array_receiver_137 = Obj.magic argsWithCwd in let __array_arg_0_138 = (HxSys.getCwd () : string) in HxArray.push __array_receiver_137 __array_arg_0_138);
     let _g = ref 0 in (
       ignore (while !_g < HxArray.length requestArgs do ignore (let arg = (let __array_read_receiver_139 = requestArgs in let __array_read_index_140 = !_g in HxArray.get (Obj.magic __array_read_receiver_139) __array_read_index_140 : string) in (
         ignore (let __old_141 = !_g in let __new_142 = HxInt.add __old_141 1 in (
           ignore (_g := __new_142);
           __new_142
         ));
-        let __array_receiver_143 = argsWithCwd in let __array_arg_0_144 = arg in HxArray.push __array_receiver_143 __array_arg_0_144
+        let __array_receiver_143 = Obj.magic argsWithCwd in let __array_arg_0_144 = (arg : string) in HxArray.push __array_receiver_143 __array_arg_0_144
       )) done);
       let payload = (encodeConnectRequest (Obj.magic argsWithCwd) (Obj.magic stdinBytes) : string) in let payloadBytes = let __bytes_receiver_145 = let __bytes_producer_arg_0_146 = payload in HxBytes.ofString __bytes_producer_arg_0_146 () in HxBytes.length __bytes_receiver_145 in let lengthProblem = (let __call_arg_0_147 = payloadBytes in Hxhx_CompilationServerProtocol.requestLengthProblem __call_arg_0_147 : string) in (
-        ignore (if lengthProblem != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_148 = error in let __call_arg_0_149 = "connect rejected " ^ HxString.toStdString lengthProblem in __call_callee_148 __call_arg_0_149))) else ());
+        ignore (if lengthProblem != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_148 = error in let __call_arg_0_149 = "connect rejected " ^ HxString.toStdString lengthProblem in __call_callee_148 __call_arg_0_149))) else ());
         try let response = (HxHxCompilerServer.connect (connectMode : string) (payload : string) : string) in let tempResult = ref (0 : int) in (
           ignore (if let __call_arg_0_156 = response in processConnectResponse __call_arg_0_156 then let __assign_157 = 1 in (
             tempResult := __assign_157;
@@ -332,20 +332,20 @@ let runConnect = fun connectMode requestArgs error -> (try let tempMaybeBytes = 
             tempResult := __assign_158;
             __assign_158
           ));
-          raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
         ) with
-          | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-          | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-          | HxRuntime.Hx_return __ret_152 -> raise (HxRuntime.Hx_return __ret_152)
-          | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+          | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+          | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+          | HxRuntime.Hx_return __ret_152 -> Stdlib.raise (HxRuntime.Hx_return __ret_152)
+          | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
           | HxRuntime.Hx_exception (__exn_v_153, __exn_tags_154) -> if HxRuntime.tags_has __exn_tags_154 "String" then let e = (Obj.obj __exn_v_153 : string) in (
             ignore e;
-            raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_150 = error in let __call_arg_0_151 = ((("connect failed on " ^ HxString.toStdString connectMode) ^ " (") ^ HxString.toStdString e) ^ ")" in __call_callee_150 __call_arg_0_151)))
+            Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_150 = error in let __call_arg_0_151 = ((("connect failed on " ^ HxString.toStdString connectMode) ^ " (") ^ HxString.toStdString e) ^ ")" in __call_callee_150 __call_arg_0_151)))
           ) else HxRuntime.hx_throw_typed __exn_v_153 __exn_tags_154
           | __exn_155 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_155) : string) in (
             ignore e;
-            raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_150 = error in let __call_arg_0_151 = ((("connect failed on " ^ HxString.toStdString connectMode) ^ " (") ^ HxString.toStdString e) ^ ")" in __call_callee_150 __call_arg_0_151)))
-          ) else raise (__exn_155)
+            Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_150 = error in let __call_arg_0_151 = ((("connect failed on " ^ HxString.toStdString connectMode) ^ " (") ^ HxString.toStdString e) ^ ")" in __call_callee_150 __call_arg_0_151)))
+          ) else Stdlib.raise (__exn_155)
       )
     )
   )

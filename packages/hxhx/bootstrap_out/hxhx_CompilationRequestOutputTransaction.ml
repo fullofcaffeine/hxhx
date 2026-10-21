@@ -15,42 +15,42 @@ let status = fun self () -> (Obj.magic self : t).state
 let removeEmptyFileBundle = fun self () -> ignore (ignore (if (Obj.magic self : t).fileBundleRoot != Obj.magic (HxRuntime.hx_null) && HxFileSystem.exists (Obj.obj (HxAnon.get ((Obj.magic self : t).fileBundleRoot) "stagedPath") : string) then ignore (HxFileSystem.deleteDirectory (Obj.obj (HxAnon.get ((Obj.magic self : t).fileBundleRoot) "stagedPath") : string)) else ()))
 
 let captureProblem = fun label action problems -> ignore (try ignore (let __call_callee_223 = action in __call_callee_223 ()) with
-  | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-  | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-  | HxRuntime.Hx_return __ret_219 -> raise (HxRuntime.Hx_return __ret_219)
-  | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+  | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+  | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+  | HxRuntime.Hx_return __ret_219 -> Stdlib.raise (HxRuntime.Hx_return __ret_219)
+  | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
   | HxRuntime.Hx_exception (__exn_v_220, __exn_tags_221) -> if HxRuntime.tags_has __exn_tags_221 "haxe.io.Error" then let error = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_220) : Haxe_io_Error.error) in (
     ignore error;
-    ignore (let __array_receiver_207 = problems in let __array_arg_0_208 = let __string_part_209 = HxString.toStdString label in let __string_part_210 = ": " in let __string_part_211 = HxString.toStdString (HxDynamic.toStdString (Obj.repr error)) in (__string_part_209 ^ __string_part_210) ^ __string_part_211 in HxArray.push __array_receiver_207 __array_arg_0_208)
+    ignore (let __array_receiver_207 = Obj.magic problems in let __array_arg_0_208 = (let __string_part_209 = HxString.toStdString label in let __string_part_210 = ": " in let __string_part_211 = HxString.toStdString (HxDynamic.toStdString (Obj.repr error)) in (__string_part_209 ^ __string_part_210) ^ __string_part_211 : string) in HxArray.push __array_receiver_207 __array_arg_0_208)
   ) else if true then let error = (if HxRuntime.tags_has __exn_tags_221 "haxe.Exception" then Obj.obj __exn_v_220 else Obj.magic (Haxe_ValueException.create __exn_v_220 (Obj.magic (HxRuntime.hx_null)) __exn_v_220) : Haxe_Exception.t) in (
     ignore error;
-    ignore (let __array_receiver_212 = problems in let __array_arg_0_213 = let __string_part_214 = HxString.toStdString label in let __string_part_215 = ": " in let __string_part_216 = HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) in (__string_part_214 ^ __string_part_215) ^ __string_part_216 in HxArray.push __array_receiver_212 __array_arg_0_213)
+    ignore (let __array_receiver_212 = Obj.magic problems in let __array_arg_0_213 = (let __string_part_214 = HxString.toStdString label in let __string_part_215 = ": " in let __string_part_216 = HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) in (__string_part_214 ^ __string_part_215) ^ __string_part_216 : string) in HxArray.push __array_receiver_212 __array_arg_0_213)
   ) else if HxRuntime.tags_has __exn_tags_221 "String" then let error = (Obj.obj __exn_v_220 : string) in (
     ignore error;
-    ignore (let __array_receiver_217 = problems in let __array_arg_0_218 = (HxString.toStdString label ^ ": ") ^ HxString.toStdString error in HxArray.push __array_receiver_217 __array_arg_0_218)
+    ignore (let __array_receiver_217 = Obj.magic problems in let __array_arg_0_218 = ((HxString.toStdString label ^ ": ") ^ HxString.toStdString error : string) in HxArray.push __array_receiver_217 __array_arg_0_218)
   ) else HxRuntime.hx_throw_typed __exn_v_220 __exn_tags_221
   | __exn_222 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let error = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_222)) : Haxe_io_Error.error) in (
     ignore error;
-    ignore (let __array_receiver_207 = problems in let __array_arg_0_208 = let __string_part_209 = HxString.toStdString label in let __string_part_210 = ": " in let __string_part_211 = HxString.toStdString (HxDynamic.toStdString (Obj.repr error)) in (__string_part_209 ^ __string_part_210) ^ __string_part_211 in HxArray.push __array_receiver_207 __array_arg_0_208)
+    ignore (let __array_receiver_207 = Obj.magic problems in let __array_arg_0_208 = (let __string_part_209 = HxString.toStdString label in let __string_part_210 = ": " in let __string_part_211 = HxString.toStdString (HxDynamic.toStdString (Obj.repr error)) in (__string_part_209 ^ __string_part_210) ^ __string_part_211 : string) in HxArray.push __array_receiver_207 __array_arg_0_208)
   ) else if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_222) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_222) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_222)) : Haxe_Exception.t) in (
     ignore error;
-    ignore (let __array_receiver_212 = problems in let __array_arg_0_213 = let __string_part_214 = HxString.toStdString label in let __string_part_215 = ": " in let __string_part_216 = HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) in (__string_part_214 ^ __string_part_215) ^ __string_part_216 in HxArray.push __array_receiver_212 __array_arg_0_213)
+    ignore (let __array_receiver_212 = Obj.magic problems in let __array_arg_0_213 = (let __string_part_214 = HxString.toStdString label in let __string_part_215 = ": " in let __string_part_216 = HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) in (__string_part_214 ^ __string_part_215) ^ __string_part_216 : string) in HxArray.push __array_receiver_212 __array_arg_0_213)
   ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let error = (Obj.obj (Obj.repr __exn_222) : string) in (
     ignore error;
-    ignore (let __array_receiver_217 = problems in let __array_arg_0_218 = (HxString.toStdString label ^ ": ") ^ HxString.toStdString error in HxArray.push __array_receiver_217 __array_arg_0_218)
-  ) else raise (__exn_222))
+    ignore (let __array_receiver_217 = Obj.magic problems in let __array_arg_0_218 = ((HxString.toStdString label ^ ": ") ^ HxString.toStdString error : string) in HxArray.push __array_receiver_217 __array_arg_0_218)
+  ) else Stdlib.raise (__exn_222))
 
 let removeCreatedParents = fun created problems -> ignore (let index = ref (HxArray.length created) in while !index > 0 do try ignore ((
   ignore (index := HxInt.sub (!index) 1);
   let directory = (let __array_read_receiver_238 = created in let __array_read_index_239 = !index in HxArray.get (Obj.magic __array_read_receiver_238) __array_read_index_239 : string) in (
-    ignore (if not (HxFileSystem.exists (directory : string)) || not (HxFileSystem.isDirectory (directory : string)) || HxArray.length (HxFileSystem.readDirectory (directory : string)) > 0 then raise (HxRuntime.Hx_continue) else ());
+    ignore (if not (HxFileSystem.exists (directory : string)) || not (HxFileSystem.isDirectory (directory : string)) || HxArray.length (HxFileSystem.readDirectory (directory : string)) > 0 then Stdlib.raise (HxRuntime.Hx_continue) else ());
     captureProblem ("delete transaction-created directory " ^ HxString.toStdString directory : string) (fun () -> ignore (HxFileSystem.deleteDirectory (directory : string))) (Obj.magic problems)
   )
 )) with
   | HxRuntime.Hx_continue -> () done)
 
 let rec deleteTree = fun (path : string) -> ignore (try ignore ((
-  ignore (if not (HxFileSystem.exists (path : string)) then raise (HxRuntime.Hx_return_void) else ());
+  ignore (if not (HxFileSystem.exists (path : string)) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   if HxFileSystem.isDirectory (path : string) then ignore (let _g = ref 0 in let _g1 = Obj.magic (HxFileSystem.readDirectory (path : string)) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let entry = (let __array_read_receiver_240 = _g1 in let __array_read_index_241 = !_g in HxArray.get (Obj.magic __array_read_receiver_240) __array_read_index_241 : string) in (
       ignore (let __old_242 = !_g in let __new_243 = HxInt.add __old_242 1 in (
@@ -77,7 +77,7 @@ let rollback = fun self (publications : Obj.t HxArray.t) (createdParents : strin
       ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get publication__local "published") && HxFileSystem.exists (Obj.obj (HxAnon.get publication__local "finalPath") : string) then ignore (captureProblem (let __string_part_182 = "delete partial output " in let __string_part_183 = HxString.toStdString (Obj.obj (HxAnon.get publication__local "finalPath")) in __string_part_182 ^ __string_part_183 : string) (fun () -> ignore (let __call_arg_0_184 = Obj.obj (HxAnon.get publication__local "finalPath") in deleteTree __call_arg_0_184)) (Obj.magic problems)) else ());
       if HxRuntime.unbox_bool_or_obj (HxAnon.get publication__local "backedUp") && HxFileSystem.exists (Obj.obj (HxAnon.get publication__local "backupPath") : string) then ignore ((
         ignore (captureProblem (let __string_part_185 = "restore previous output " in let __string_part_186 = HxString.toStdString (Obj.obj (HxAnon.get publication__local "finalPath")) in __string_part_185 ^ __string_part_186 : string) (fun () -> ignore (HxFileSystem.rename (Obj.obj (HxAnon.get publication__local "backupPath") : string) (Obj.obj (HxAnon.get publication__local "finalPath") : string))) (Obj.magic problems));
-        let __array_receiver_187 = (Obj.magic self : t).retainedBackups in let __array_arg_0_188 = Obj.obj (HxAnon.get publication__local "backupPath") in HxArray.remove __array_receiver_187 __array_arg_0_188
+        let __array_receiver_187 = Obj.magic ((Obj.magic self : t).retainedBackups) in let __array_arg_0_188 = (Obj.obj (HxAnon.get publication__local "backupPath") : string) in HxArray.remove __array_receiver_187 __array_arg_0_188
       )) else ()
     )
   )) done);
@@ -95,13 +95,13 @@ let rollback = fun self (publications : Obj.t HxArray.t) (createdParents : strin
   )
 )
 
-let cleanupRetainedBackups = fun self () -> ignore (ignore (let _g = ref 0 in let _g1 = Obj.magic (let __array_receiver_199 = (Obj.magic self : t).retainedBackups in HxArray.copy __array_receiver_199) in while !_g < HxArray.length _g1 do ignore (let backup = (let __array_read_receiver_200 = _g1 in let __array_read_index_201 = !_g in HxArray.get (Obj.magic __array_read_receiver_200) __array_read_index_201 : string) in (
+let cleanupRetainedBackups = fun self () -> ignore (ignore (let _g = ref 0 in let _g1 = Obj.magic (let __array_receiver_199 = Obj.magic ((Obj.magic self : t).retainedBackups) in HxArray.copy __array_receiver_199) in while !_g < HxArray.length _g1 do ignore (let backup = (let __array_read_receiver_200 = _g1 in let __array_read_index_201 = !_g in HxArray.get (Obj.magic __array_read_receiver_200) __array_read_index_201 : string) in (
   ignore (let __old_202 = !_g in let __new_203 = HxInt.add __old_202 1 in (
     ignore (_g := __new_203);
     __new_203
   ));
   ignore (if HxFileSystem.exists (backup : string) then ignore (let __call_arg_0_204 = backup in deleteTree __call_arg_0_204) else ());
-  let __array_receiver_205 = (Obj.magic self : t).retainedBackups in let __array_arg_0_206 = backup in HxArray.remove __array_receiver_205 __array_arg_0_206
+  let __array_receiver_205 = Obj.magic ((Obj.magic self : t).retainedBackups) in let __array_arg_0_206 = (backup : string) in HxArray.remove __array_receiver_205 __array_arg_0_206
 )) done))
 
 let close = fun self () -> ignore (ignore ((
@@ -138,11 +138,11 @@ let normalizedParent = fun (path : string) -> (let parent = let __call_arg_0_254
 let ensureDirectory = fun path created -> ignore (try ignore ((
   ignore (if HxFileSystem.exists (path : string) then (
     ignore (if not (HxFileSystem.isDirectory (path : string)) then HxType.hx_throw_typed_rtti (Obj.repr ("compiler output parent is not a directory: " ^ HxString.toStdString path)) ["Dynamic"] else ());
-    raise (HxRuntime.Hx_return_void)
+    Stdlib.raise (HxRuntime.Hx_return_void)
   ) else ());
   let missing = Obj.magic (HxArray.create ()) in let cursor = ref (path : string) in (
     ignore (while not (HxFileSystem.exists (!cursor : string)) do ignore ((
-      ignore (let __array_receiver_224 = missing in let __array_arg_0_225 = !cursor in HxArray.push __array_receiver_224 __array_arg_0_225);
+      ignore (let __array_receiver_224 = Obj.magic missing in let __array_arg_0_225 = (!cursor : string) in HxArray.push __array_receiver_224 __array_arg_0_225);
       let parent = let __call_arg_0_226 = !cursor in normalizedParent __call_arg_0_226 in (
         ignore (if let __string_eq_left_227 = parent in let __string_eq_right_228 = !cursor in HxString.equals __string_eq_left_227 __string_eq_right_228 then HxType.hx_throw_typed_rtti (Obj.repr ("compiler output path has no existing directory ancestor: " ^ HxString.toStdString path)) ["Dynamic"] else ());
         let __assign_229 = (parent : string) in (
@@ -152,14 +152,14 @@ let ensureDirectory = fun path created -> ignore (try ignore ((
       )
     )) done);
     ignore (if not (HxFileSystem.isDirectory (!cursor : string)) then HxType.hx_throw_typed_rtti (Obj.repr ("compiler output ancestor is not a directory: " ^ HxString.toStdString (!cursor))) ["Dynamic"] else ());
-    ignore (let __array_receiver_230 = missing in HxArray.reverse __array_receiver_230 ());
+    ignore (let __array_receiver_230 = Obj.magic missing in HxArray.reverse __array_receiver_230 ());
     let _g = ref 0 in while !_g < HxArray.length missing do ignore (let directory = (let __array_read_receiver_231 = missing in let __array_read_index_232 = !_g in HxArray.get (Obj.magic __array_read_receiver_231) __array_read_index_232 : string) in (
       ignore (let __old_233 = !_g in let __new_234 = HxInt.add __old_233 1 in (
         ignore (_g := __new_234);
         __new_234
       ));
       ignore (HxFileSystem.createDirectory (directory : string));
-      let __array_receiver_235 = created in let __array_arg_0_236 = directory in HxArray.push __array_receiver_235 __array_arg_0_236
+      let __array_receiver_235 = Obj.magic created in let __array_arg_0_236 = (directory : string) in HxArray.push __array_receiver_235 __array_arg_0_236
     )) done
   )
 )) with
@@ -195,14 +195,14 @@ let findContainingRoot = fun self (path : string) -> (try let _g = ref 0 in let 
       ignore (_g := __new_122);
       __new_122
     ));
-    if let __call_arg_0_123 = path in let __call_arg_1_124 = Obj.obj (HxAnon.get root "finalPath") in isWithin __call_arg_0_123 __call_arg_1_124 then raise (HxRuntime.Hx_return (Obj.repr root)) else ()
+    if let __call_arg_0_123 = path in let __call_arg_1_124 = Obj.obj (HxAnon.get root "finalPath") in isWithin __call_arg_0_123 __call_arg_1_124 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr root)) else ()
   )) done);
   Obj.magic (HxRuntime.hx_null)
 ) with
   | HxRuntime.Hx_return __ret_125 -> (Obj.obj __ret_125 : Obj.t) : Obj.t)
 
 let relativeTo = fun (path : string) (parent : string) -> (try let childValue = let __call_arg_0_288 = path in comparisonPath __call_arg_0_288 in let parentValue = let __call_arg_0_289 = parent in comparisonPath __call_arg_0_289 in (
-  ignore (if let __string_eq_left_290 = childValue in let __string_eq_right_291 = parentValue in HxString.equals __string_eq_left_290 __string_eq_right_291 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+  ignore (if let __string_eq_left_290 = childValue in let __string_eq_right_291 = parentValue in HxString.equals __string_eq_left_290 __string_eq_right_291 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   ignore (if not (let __call_arg_0_292 = childValue in let __call_arg_1_293 = HxString.toStdString parentValue ^ "/" in StringTools.startsWith __call_arg_0_292 __call_arg_1_293) then HxType.hx_throw_typed_rtti (Obj.repr ((("" ^ HxString.toStdString path) ^ " is not inside ") ^ HxString.toStdString parent)) ["Dynamic"] else ());
   let __string_receiver_294 = childValue in let __string_argument_0_295 = HxInt.add (let __string_receiver_296 = parentValue in HxString.length __string_receiver_296) 1 in HxString.substr __string_receiver_294 __string_argument_0_295 (-1)
 ) with
@@ -233,9 +233,9 @@ let toFinalPath = fun self (path : string) -> (try (
         ignore (_g := __new_92);
         __new_92
       ));
-      if let __call_arg_0_93 = normalized in let __call_arg_1_94 = Obj.obj (HxAnon.get root "stagedPath") in isWithin __call_arg_0_93 __call_arg_1_94 then raise (HxRuntime.Hx_return (Obj.repr (let __call_arg_0_95 = Obj.obj (HxAnon.get root "finalPath") in let __call_arg_1_96 = let __call_arg_0_97 = normalized in let __call_arg_1_98 = Obj.obj (HxAnon.get root "stagedPath") in relativeTo __call_arg_0_97 __call_arg_1_98 in appendRelative __call_arg_0_95 __call_arg_1_96))) else ()
+      if let __call_arg_0_93 = normalized in let __call_arg_1_94 = Obj.obj (HxAnon.get root "stagedPath") in isWithin __call_arg_0_93 __call_arg_1_94 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_arg_0_95 = Obj.obj (HxAnon.get root "finalPath") in let __call_arg_1_96 = let __call_arg_0_97 = normalized in let __call_arg_1_98 = Obj.obj (HxAnon.get root "stagedPath") in relativeTo __call_arg_0_97 __call_arg_1_98 in appendRelative __call_arg_0_95 __call_arg_1_96))) else ()
     )) done);
-    ignore (if (Obj.magic self : t).fileBundleRoot != Obj.magic (HxRuntime.hx_null) && (let __call_arg_0_99 = normalized in let __call_arg_1_100 = Obj.obj (HxAnon.get ((Obj.magic self : t).fileBundleRoot) "stagedPath") in isWithin __call_arg_0_99 __call_arg_1_100) then raise (HxRuntime.Hx_return (Obj.repr (let __call_arg_0_101 = Obj.obj (HxAnon.get ((Obj.magic self : t).fileBundleRoot) "finalPath") in let __call_arg_1_102 = let __call_arg_0_103 = normalized in let __call_arg_1_104 = Obj.obj (HxAnon.get ((Obj.magic self : t).fileBundleRoot) "stagedPath") in relativeTo __call_arg_0_103 __call_arg_1_104 in appendRelative __call_arg_0_101 __call_arg_1_102))) else ());
+    ignore (if (Obj.magic self : t).fileBundleRoot != Obj.magic (HxRuntime.hx_null) && (let __call_arg_0_99 = normalized in let __call_arg_1_100 = Obj.obj (HxAnon.get ((Obj.magic self : t).fileBundleRoot) "stagedPath") in isWithin __call_arg_0_99 __call_arg_1_100) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_arg_0_101 = Obj.obj (HxAnon.get ((Obj.magic self : t).fileBundleRoot) "finalPath") in let __call_arg_1_102 = let __call_arg_0_103 = normalized in let __call_arg_1_104 = Obj.obj (HxAnon.get ((Obj.magic self : t).fileBundleRoot) "stagedPath") in relativeTo __call_arg_0_103 __call_arg_1_104 in appendRelative __call_arg_0_101 __call_arg_1_102))) else ());
     HxType.hx_throw_typed_rtti (Obj.repr ("compiler backend returned output outside request staging: " ^ HxString.toStdString normalized)) ["Dynamic"]
   )
 ) with
@@ -249,7 +249,7 @@ let finalEmitResult = fun self (result : Backend_EmitResult.t) -> (
         ignore (_g1 := __new_84);
         __new_84
       ));
-      let __array_receiver_85 = _g in let __array_arg_0_86 = Backend_EmitArtifact.create ((Obj.magic artifact : Backend_EmitArtifact.t).kind : string) (toFinalPath (Obj.magic self) ((Obj.magic artifact : Backend_EmitArtifact.t).path : string) : string) in HxArray.push __array_receiver_85 __array_arg_0_86
+      let __array_receiver_85 = Obj.magic _g in let __array_arg_0_86 = Obj.magic (Backend_EmitArtifact.create ((Obj.magic artifact : Backend_EmitArtifact.t).kind : string) (toFinalPath (Obj.magic self) ((Obj.magic artifact : Backend_EmitArtifact.t).path : string) : string)) in HxArray.push __array_receiver_85 __array_arg_0_86
     )) done);
     Backend_EmitResult.create (toFinalPath (Obj.magic self) ((Obj.magic result : Backend_EmitResult.t).entryPath : string) : string) (Obj.magic _g) ((Obj.magic result : Backend_EmitResult.t).builtExecutable)
   )
@@ -261,7 +261,7 @@ let mapDirectory = fun self (finalPath : string) -> let root = findContainingRoo
 )
 
 let mapFile = fun self (finalPath : string) -> (try let root = findContainingRoot (Obj.magic self) (finalPath : string) in (
-  ignore (if root != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (let __call_arg_0_110 = Obj.obj (HxAnon.get root "stagedPath") in let __call_arg_1_111 = let __call_arg_0_112 = finalPath in let __call_arg_1_113 = Obj.obj (HxAnon.get root "finalPath") in relativeTo __call_arg_0_112 __call_arg_1_113 in appendRelative __call_arg_0_110 __call_arg_1_111))) else ());
+  ignore (if root != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_arg_0_110 = Obj.obj (HxAnon.get root "stagedPath") in let __call_arg_1_111 = let __call_arg_0_112 = finalPath in let __call_arg_1_113 = Obj.obj (HxAnon.get root "finalPath") in relativeTo __call_arg_0_112 __call_arg_1_113 in appendRelative __call_arg_0_110 __call_arg_1_111))) else ());
   ignore (if (Obj.magic self : t).fileBundleRoot == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr ("compiler output file has no transaction bundle: " ^ HxString.toStdString finalPath)) ["Dynamic"] else ());
   Haxe_io_Path.join (Obj.magic (let __represented_array_114 = HxArray.create () in let __represented_array_element_0_115 = Obj.obj (HxAnon.get ((Obj.magic self : t).fileBundleRoot) "stagedPath") in (
     ignore (HxArray.push __represented_array_114 __represented_array_element_0_115);
@@ -288,7 +288,7 @@ let comparePathNames = fun (left : string) (right : string) -> (let tempResult =
 ) : int)
 
 let compareShortestPathFirst = fun (left : string) (right : string) -> (try let leftValue = let __call_arg_0_304 = left in comparisonPath __call_arg_0_304 in let rightValue = let __call_arg_0_305 = right in comparisonPath __call_arg_0_305 in (
-  ignore (if (let __string_receiver_306 = leftValue in HxString.length __string_receiver_306) <> (let __string_receiver_307 = rightValue in HxString.length __string_receiver_307) then raise (HxRuntime.Hx_return (Obj.repr (HxInt.sub (let __string_receiver_308 = leftValue in HxString.length __string_receiver_308) (let __string_receiver_309 = rightValue in HxString.length __string_receiver_309)))) else ());
+  ignore (if (let __string_receiver_306 = leftValue in HxString.length __string_receiver_306) <> (let __string_receiver_307 = rightValue in HxString.length __string_receiver_307) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (HxInt.sub (let __string_receiver_308 = leftValue in HxString.length __string_receiver_308) (let __string_receiver_309 = rightValue in HxString.length __string_receiver_309)))) else ());
   let __call_arg_0_310 = leftValue in let __call_arg_1_311 = rightValue in comparePathNames __call_arg_0_310 __call_arg_1_311
 ) with
   | HxRuntime.Hx_return __ret_312 -> (Obj.obj __ret_312 : int) : int)
@@ -310,7 +310,7 @@ let pathToken = fun (value : string) -> (let out = Obj.magic (StringBuf.create (
   StringBuf.toString (Obj.magic out) ()
 ) : string)
 
-let hx_PROCESS_TOKEN = (pathToken (let __string_part_336 = HxString.toStdString (string_of_float (Date.getTime (Obj.magic (Date.now ())) ())) in let __string_part_337 = "-" in let __string_part_338 = HxString.toStdString (string_of_float (HxSys.time ())) in (__string_part_336 ^ __string_part_337) ^ __string_part_338 : string) : string)
+let hx_PROCESS_TOKEN = (let __call_arg_0_336 = let __string_part_337 = HxString.toStdString (string_of_float (Date.getTime (Obj.magic (Date.now ())) ())) in let __string_part_338 = "-" in let __string_part_339 = HxString.toStdString (string_of_float (HxSys.time ())) in (__string_part_337 ^ __string_part_338) ^ __string_part_339 in pathToken __call_arg_0_336 : string)
 
 let createStagingPath = fun self (preferredParent : string) (index : int) -> let stagingParent = let __call_arg_0_130 = preferredParent in nearestExistingDirectory __call_arg_0_130 in let stagedPath = (Haxe_io_Path.join (Obj.magic (let __represented_array_131 = HxArray.create () in let __represented_array_element_0_132 = stagingParent in (
   ignore (HxArray.push __represented_array_131 __represented_array_element_0_132);
@@ -362,15 +362,15 @@ let create = fun requestId2 outDir backendOutputDir outputFileHint -> let self =
           __represented_array_14
         )
       )) in (
-        ignore (let __array_receiver_17 = directoryCandidates in let __array_arg_0_18 = compareShortestPathFirst in HxArray.sort __array_receiver_17 __array_arg_0_18);
+        ignore (let __array_receiver_17 = Obj.magic directoryCandidates in let __array_arg_0_18 = compareShortestPathFirst in HxArray.sort __array_receiver_17 __array_arg_0_18);
         let rootIndex = ref 0 in let _g = ref 0 in (
           ignore (while !_g < HxArray.length directoryCandidates do try ignore (let candidate = (let __array_read_receiver_19 = directoryCandidates in let __array_read_index_20 = !_g in HxArray.get (Obj.magic __array_read_receiver_19) __array_read_index_20 : string) in (
             ignore (let __old_21 = !_g in let __new_22 = HxInt.add __old_21 1 in (
               ignore (_g := __new_22);
               __new_22
             ));
-            ignore (if findContainingRoot (Obj.magic self) (candidate : string) != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
-            ignore (let __array_receiver_23 = (Obj.magic self : t).directoryRoots in let __array_arg_0_24 = createRoot (Obj.magic self) (candidate : string) (!rootIndex) in HxArray.push __array_receiver_23 __array_arg_0_24);
+            ignore (if findContainingRoot (Obj.magic self) (candidate : string) != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_continue) else ());
+            ignore (let __array_receiver_23 = Obj.magic ((Obj.magic self : t).directoryRoots) in let __array_arg_0_24 = createRoot (Obj.magic self) (candidate : string) (!rootIndex) in HxArray.push __array_receiver_23 __array_arg_0_24);
             rootIndex := HxInt.add (!rootIndex) 1
           )) with
             | HxRuntime.Hx_continue -> () done);
@@ -432,21 +432,21 @@ let collectPublications = fun self () -> let publications = Obj.magic (HxArray.c
       ignore (_g := __new_143);
       __new_143
     ));
-    ignore (if not (HxFileSystem.exists (Obj.obj (HxAnon.get root "stagedPath") : string)) then raise (HxRuntime.Hx_continue) else ());
+    ignore (if not (HxFileSystem.exists (Obj.obj (HxAnon.get root "stagedPath") : string)) then Stdlib.raise (HxRuntime.Hx_continue) else ());
     ignore (if not (HxFileSystem.isDirectory (Obj.obj (HxAnon.get root "stagedPath") : string)) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_144 = "compiler directory staging path is not a directory: " in let __string_part_145 = HxString.toStdString (Obj.obj (HxAnon.get root "stagedPath")) in __string_part_144 ^ __string_part_145)) ["Dynamic"] else ());
-    let __array_receiver_146 = publications in let __array_arg_0_147 = publication (Obj.magic self) (Obj.obj (HxAnon.get root "stagedPath") : string) (Obj.obj (HxAnon.get root "finalPath") : string) (HxArray.length publications) in HxArray.push __array_receiver_146 __array_arg_0_147
+    let __array_receiver_146 = Obj.magic publications in let __array_arg_0_147 = publication (Obj.magic self) (Obj.obj (HxAnon.get root "stagedPath") : string) (Obj.obj (HxAnon.get root "finalPath") : string) (HxArray.length publications) in HxArray.push __array_receiver_146 __array_arg_0_147
   )) with
     | HxRuntime.Hx_continue -> () done);
   ignore (if (Obj.magic self : t).fileBundleRoot != Obj.magic (HxRuntime.hx_null) && HxFileSystem.exists (Obj.obj (HxAnon.get ((Obj.magic self : t).fileBundleRoot) "stagedPath") : string) then ignore ((
     ignore (if not (HxFileSystem.isDirectory (Obj.obj (HxAnon.get ((Obj.magic self : t).fileBundleRoot) "stagedPath") : string)) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_148 = "compiler file staging path is not a directory: " in let __string_part_149 = HxString.toStdString (Obj.obj (HxAnon.get ((Obj.magic self : t).fileBundleRoot) "stagedPath")) in __string_part_148 ^ __string_part_149)) ["Dynamic"] else ());
     let entries = Obj.magic (HxFileSystem.readDirectory (Obj.obj (HxAnon.get ((Obj.magic self : t).fileBundleRoot) "stagedPath") : string)) in (
-      ignore (let __array_receiver_150 = entries in let __array_arg_0_151 = comparePathNames in HxArray.sort __array_receiver_150 __array_arg_0_151);
+      ignore (let __array_receiver_150 = Obj.magic entries in let __array_arg_0_151 = comparePathNames in HxArray.sort __array_receiver_150 __array_arg_0_151);
       let _g = ref 0 in while !_g < HxArray.length entries do ignore (let entry = (let __array_read_receiver_152 = entries in let __array_read_index_153 = !_g in HxArray.get (Obj.magic __array_read_receiver_152) __array_read_index_153 : string) in (
         ignore (let __old_154 = !_g in let __new_155 = HxInt.add __old_154 1 in (
           ignore (_g := __new_155);
           __new_155
         ));
-        let __array_receiver_156 = publications in let __array_arg_0_157 = publication (Obj.magic self) (Haxe_io_Path.join (Obj.magic (let __represented_array_158 = HxArray.create () in let __represented_array_element_0_159 = Obj.obj (HxAnon.get ((Obj.magic self : t).fileBundleRoot) "stagedPath") in (
+        let __array_receiver_156 = Obj.magic publications in let __array_arg_0_157 = publication (Obj.magic self) (Haxe_io_Path.join (Obj.magic (let __represented_array_158 = HxArray.create () in let __represented_array_element_0_159 = Obj.obj (HxAnon.get ((Obj.magic self : t).fileBundleRoot) "stagedPath") in (
           ignore (HxArray.push __represented_array_158 __represented_array_element_0_159);
           let __represented_array_element_1_160 = entry in (
             ignore (HxArray.push __represented_array_158 __represented_array_element_1_160);
@@ -482,7 +482,7 @@ let publish = fun self () -> ignore (ignore ((
             HxAnon.set publication__local "backedUp" (HxRuntime.box_bool __assign_54);
             __assign_54
           ));
-          let __array_receiver_55 = (Obj.magic self : t).retainedBackups in let __array_arg_0_56 = Obj.obj (HxAnon.get publication__local "backupPath") in HxArray.push __array_receiver_55 __array_arg_0_56
+          let __array_receiver_55 = Obj.magic ((Obj.magic self : t).retainedBackups) in let __array_arg_0_56 = (Obj.obj (HxAnon.get publication__local "backupPath") : string) in HxArray.push __array_receiver_55 __array_arg_0_56
         )) else ()
       )) done);
       let _g = ref 0 in (
@@ -504,10 +504,10 @@ let publish = fun self () -> ignore (ignore ((
         )
       )
     )) with
-      | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-      | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_43 -> raise (HxRuntime.Hx_return __ret_43)
-      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+      | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+      | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+      | HxRuntime.Hx_return __ret_43 -> Stdlib.raise (HxRuntime.Hx_return __ret_43)
+      | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
       | HxRuntime.Hx_exception (__exn_v_44, __exn_tags_45) -> if HxRuntime.tags_has __exn_tags_45 "haxe.io.Error" then let error = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_44) : Haxe_io_Error.error) in (
         ignore error;
         ignore (let __assign_40 = Obj.magic (HxDynamic.toStdString (Obj.repr error) : string) in (
@@ -545,7 +545,7 @@ let publish = fun self () -> ignore (ignore ((
           failure := __assign_42;
           __assign_42
         ))
-      ) else raise (__exn_46));
+      ) else Stdlib.raise (__exn_46));
     ignore (if !failure != Obj.magic (HxRuntime.hx_null) then let rollbackProblems = Obj.magic (rollback (Obj.magic self) (Obj.magic publications) (Obj.magic createdParents)) in (
       ignore (let __place_receiver_64 = self in let __place_rhs_65 = "aborted" in (
         (__place_receiver_64 : t).state <- __place_rhs_65;

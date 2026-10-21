@@ -1,0 +1,2 @@
+# 1 "TyIteratorProtocolSource.ml"
+include CompilerDiagnosticProbe.TyIteratorProtocolSource

@@ -36,25 +36,25 @@ let dispatch = fun request runOne serverCache dependencyCatalog -> (try let repo
       ignore (if Hxhx_CompilationServerRequest.hasRequestFlag (Obj.magic request) ("--hxhx-server-timeout-ms" : string) then ignore (let timeoutText = (Hxhx_CompilationServerRequest.findFlagValue (Obj.magic request) ("--hxhx-server-timeout-ms" : string) : string) in let timeoutMs = let __call_arg_0_5 = timeoutText in Hxhx_CompilationServerProtocol.parseRequestTimeoutMs __call_arg_0_5 in (
         ignore (if timeoutMs == HxRuntime.hx_null then (
           ignore (Hxhx_CompilationRequestOutput.stderrLine (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ((("hxhx(stage3): " ^ "--hxhx-server-timeout-ms") ^ " must be a decimal integer from 0 to ") ^ string_of_int 86400000 : string));
-          raise (HxRuntime.Hx_return (Obj.repr (finish (Obj.magic context) true (Obj.magic (HxRuntime.hx_null)))))
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (finish (Obj.magic context) true (Obj.magic (HxRuntime.hx_null)))))
         ) else ());
         Hxhx_CompilationRequestContext.configureTimeoutMs (Obj.magic context) (let __nullable_int_6 = timeoutMs in if __nullable_int_6 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_6)
       )) else ());
-      ignore (if not (Hxhx_CompilationRequestContext.checkpoint (Obj.magic context) ("request-dispatch" : string)) then raise (HxRuntime.Hx_return (Obj.repr (finish (Obj.magic context) true (Obj.magic (HxRuntime.hx_null))))) else ());
+      ignore (if not (Hxhx_CompilationRequestContext.checkpoint (Obj.magic context) ("request-dispatch" : string)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (finish (Obj.magic context) true (Obj.magic (HxRuntime.hx_null))))) else ());
       ignore (if Hxhx_CompilationServerRequest.hasRequestFlag (Obj.magic request) ("--hxhx-server-control" : string) then let control = (Hxhx_CompilationServerRequest.findFlagValue (Obj.magic request) ("--hxhx-server-control" : string) : string) in (
         ignore (if let __string_eq_left_7 = control in let __string_eq_right_8 = "shutdown" in HxString.equals __string_eq_left_7 __string_eq_right_8 then (
           ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ("hxhx_server_control.shutdown=ok" : string));
-          raise (HxRuntime.Hx_return (Obj.repr (finish (Obj.magic context) false true)))
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (finish (Obj.magic context) false true)))
         ) else ());
         ignore (if let __string_eq_left_9 = control in let __string_eq_right_10 = "reset" in HxString.equals __string_eq_left_9 __string_eq_right_10 then (
           ignore (if serverCache == Obj.magic (HxRuntime.hx_null) && dependencyCatalog == Obj.magic (HxRuntime.hx_null) then (
             ignore (Hxhx_CompilationRequestOutput.stderrLine (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ("hxhx(stage3): cache reset is unavailable because this server has no reusable compiler state" : string));
-            raise (HxRuntime.Hx_return (Obj.repr (finish (Obj.magic context) true (Obj.magic (HxRuntime.hx_null)))))
+            Stdlib.raise (HxRuntime.Hx_return (Obj.repr (finish (Obj.magic context) true (Obj.magic (HxRuntime.hx_null)))))
           ) else ());
           ignore (if serverCache != Obj.magic (HxRuntime.hx_null) then ignore (Hxhx_CompilationServerSourceCache.reset (Obj.magic serverCache) ()) else ());
           ignore (if dependencyCatalog != Obj.magic (HxRuntime.hx_null) then ignore (Hxhx_CompilationServerDependencyCatalog.reset (Obj.magic dependencyCatalog) ()) else ());
           ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ("hxhx_server_control.reset=ok" : string));
-          raise (HxRuntime.Hx_return (Obj.repr (finish (Obj.magic context) false (Obj.magic (HxRuntime.hx_null)))))
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (finish (Obj.magic context) false (Obj.magic (HxRuntime.hx_null)))))
         ) else ());
         let tempString = ref (HxString.hx_null_string : string) in (
           ignore (if control == Obj.magic (HxRuntime.hx_null) then let __assign_11 = "hxhx(stage3): missing value after --hxhx-server-control" in (
@@ -65,23 +65,23 @@ let dispatch = fun request runOne serverCache dependencyCatalog -> (try let repo
             __assign_12
           ));
           ignore (Hxhx_CompilationRequestOutput.stderrLine (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) (!tempString : string));
-          raise (HxRuntime.Hx_return (Obj.repr (finish (Obj.magic context) true (Obj.magic (HxRuntime.hx_null)))))
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (finish (Obj.magic context) true (Obj.magic (HxRuntime.hx_null)))))
         )
       ) else ());
       let displayRequest = (Hxhx_CompilationServerRequest.findFlagValue (Obj.magic request) ("--display" : string) : string) in (
         ignore (if displayRequest != Obj.magic (HxRuntime.hx_null) then let displaySource = (Hxhx_DisplayResponseSynthesizer.readDisplaySource (displayRequest : string) (Obj.magic (Hxhx_CompilationServerRequest.stdinBytes (Obj.magic request) ())) : string) in (
           ignore (Hxhx_CompilationRequestOutput.stderrLine (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) (let __call_arg_0_13 = displayRequest in let __call_arg_1_14 = displaySource in Hxhx_DisplayResponseSynthesizer.synthesize __call_arg_0_13 __call_arg_1_14 : string));
-          raise (HxRuntime.Hx_return (Obj.repr (finish (Obj.magic context) false (Obj.magic (HxRuntime.hx_null)))))
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (finish (Obj.magic context) false (Obj.magic (HxRuntime.hx_null)))))
         ) else ());
         let tempNumber = ref (0 : int) in (
           ignore (try let __assign_23 = runOne (Obj.magic (Hxhx_CompilationServerRequest.compilerArgs (Obj.magic request) ())) (Obj.magic context) in (
             tempNumber := __assign_23;
             __assign_23
           ) with
-            | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-            | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-            | HxRuntime.Hx_return __ret_19 -> raise (HxRuntime.Hx_return __ret_19)
-            | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+            | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+            | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+            | HxRuntime.Hx_return __ret_19 -> Stdlib.raise (HxRuntime.Hx_return __ret_19)
+            | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
             | HxRuntime.Hx_exception (__exn_v_20, __exn_tags_21) -> if true then let error = (if HxRuntime.tags_has __exn_tags_21 "haxe.Exception" then Obj.obj __exn_v_20 else Obj.magic (Haxe_ValueException.create __exn_v_20 (Obj.magic (HxRuntime.hx_null)) __exn_v_20) : Haxe_Exception.t) in (
               ignore error;
               (
@@ -119,7 +119,7 @@ let dispatch = fun request runOne serverCache dependencyCatalog -> (try let repo
                   __assign_18
                 )
               )
-            ) else raise (__exn_22));
+            ) else Stdlib.raise (__exn_22));
           let code = !tempNumber in let completedWithinDeadline = Hxhx_CompilationRequestContext.checkpoint (Obj.magic context) ("request-complete" : string) in (
             ignore (if code <> 0 && HxArray.length (Hxhx_CompilationRequestOutput.events (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ()) = 0 then ignore (Hxhx_CompilationRequestOutput.stderrLine (Obj.magic ((Obj.magic context : Hxhx_CompilationRequestContext.t).output)) ("hxhx(stage3): server request failed" : string)) else ());
             finish (Obj.magic context) (code <> 0 || not (completedWithinDeadline)) (Obj.magic (HxRuntime.hx_null))

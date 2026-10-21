@@ -14,7 +14,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage3PathS
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage3PathSupport" } : t)
 
 let absFromCwd = fun (cwd : string) (path : string) -> (try (
-  ignore (if path == HxString.hx_null_string || (let __string_receiver_1 = path in HxString.length __string_receiver_1) = 0 then raise (HxRuntime.Hx_return (Obj.repr cwd)) else ());
+  ignore (if path == HxString.hx_null_string || (let __string_receiver_1 = path in HxString.length __string_receiver_1) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr cwd)) else ());
   let tempResult = ref (HxString.hx_null_string : string) in (
     ignore (if let __call_arg_0_2 = path in Haxe_io_Path.isAbsolute __call_arg_0_2 then let __assign_3 = let __call_arg_0_4 = path in Haxe_io_Path.normalize __call_arg_0_4 in (
       tempResult := __assign_3;
@@ -35,16 +35,16 @@ let absFromCwd = fun (cwd : string) (path : string) -> (try (
   | HxRuntime.Hx_return __ret_10 -> (Obj.obj __ret_10 : string) : string)
 
 let inferMainFromMacroExpr = fun (expr : string) -> (try (
-  ignore (if expr == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+  ignore (if expr == HxString.hx_null_string then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   let value = ref (let __call_arg_0_11 = expr in StringTools.trim __call_arg_0_11) in (
-    ignore (if (let __string_receiver_12 = !value in HxString.length __string_receiver_12) = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+    ignore (if (let __string_receiver_12 = !value in HxString.length __string_receiver_12) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "")) else ());
     let paren = let __string_receiver_13 = !value in let __string_argument_0_14 = "(" in HxString.indexOf __string_receiver_13 __string_argument_0_14 0 in (
       ignore (if paren <> -1 then ignore (let __assign_15 = let __call_arg_0_16 = let __string_receiver_17 = !value in let __string_argument_0_18 = 0 in let __string_argument_1_19 = paren in HxString.substr __string_receiver_17 __string_argument_0_18 __string_argument_1_19 in StringTools.trim __call_arg_0_16 in (
         value := __assign_15;
         __assign_15
       )) else ());
       let lastDot = let __string_receiver_20 = !value in let __string_argument_0_21 = "." in HxString.lastIndexOf __string_receiver_20 __string_argument_0_21 (HxString.length __string_receiver_20) in (
-        ignore (if lastDot = -1 then raise (HxRuntime.Hx_return (Obj.repr (!value))) else ());
+        ignore (if lastDot = -1 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!value))) else ());
         let __call_arg_0_22 = let __string_receiver_23 = !value in let __string_argument_0_24 = 0 in let __string_argument_1_25 = lastDot in HxString.substr __string_receiver_23 __string_argument_0_24 __string_argument_1_25 in StringTools.trim __call_arg_0_22
       )
     )
@@ -53,18 +53,18 @@ let inferMainFromMacroExpr = fun (expr : string) -> (try (
   | HxRuntime.Hx_return __ret_26 -> (Obj.obj __ret_26 : string) : string)
 
 let inferRepoRootForScripts = fun () -> (try let env = (HxSys.getEnv ("HXHX_REPO_ROOT" : string) : string) in (
-  ignore (if env != HxString.hx_null_string && (let __string_receiver_27 = env in HxString.length __string_receiver_27) > 0 && HxFileSystem.exists (env : string) && HxFileSystem.isDirectory (env : string) then raise (HxRuntime.Hx_return (Obj.repr env)) else ());
+  ignore (if env != HxString.hx_null_string && (let __string_receiver_27 = env in HxString.length __string_receiver_27) > 0 && HxFileSystem.exists (env : string) && HxFileSystem.isDirectory (env : string) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr env)) else ());
   let prog = (HxSys.programPath () : string) in (
-    ignore (if prog == HxString.hx_null_string || (let __string_receiver_28 = prog in HxString.length __string_receiver_28) = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+    ignore (if prog == HxString.hx_null_string || (let __string_receiver_28 = prog in HxString.length __string_receiver_28) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "")) else ());
     let tempString = ref (HxString.hx_null_string : string) in (
       ignore (try let __assign_34 = (HxFileSystem.fullPath (prog : string) : string) in (
         tempString := __assign_34;
         __assign_34
       ) with
-        | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-        | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-        | HxRuntime.Hx_return __ret_30 -> raise (HxRuntime.Hx_return __ret_30)
-        | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+        | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+        | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+        | HxRuntime.Hx_return __ret_30 -> Stdlib.raise (HxRuntime.Hx_return __ret_30)
+        | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
         | HxRuntime.Hx_exception (__exn_v_31, __exn_tags_32) -> if HxRuntime.tags_has __exn_tags_32 "String" then let _hx = (Obj.obj __exn_v_31 : string) in (
           ignore _hx;
           let __assign_29 = (prog : string) in (
@@ -78,16 +78,16 @@ let inferRepoRootForScripts = fun () -> (try let env = (HxSys.getEnv ("HXHX_REPO
             tempString := __assign_29;
             __assign_29
           )
-        ) else raise (__exn_33));
+        ) else Stdlib.raise (__exn_33));
       let abs = (!tempString : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
         ignore (try let __assign_40 = let __call_arg_0_41 = abs in Haxe_io_Path.directory __call_arg_0_41 in (
           tempString1 := __assign_40;
           __assign_40
         ) with
-          | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-          | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-          | HxRuntime.Hx_return __ret_36 -> raise (HxRuntime.Hx_return __ret_36)
-          | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+          | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+          | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+          | HxRuntime.Hx_return __ret_36 -> Stdlib.raise (HxRuntime.Hx_return __ret_36)
+          | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
           | HxRuntime.Hx_exception (__exn_v_37, __exn_tags_38) -> if HxRuntime.tags_has __exn_tags_38 "String" then let _hx = (Obj.obj __exn_v_37 : string) in (
             ignore _hx;
             let __assign_35 = "" in (
@@ -101,9 +101,9 @@ let inferRepoRootForScripts = fun () -> (try let env = (HxSys.getEnv ("HXHX_REPO
               tempString1 := __assign_35;
               __assign_35
             )
-          ) else raise (__exn_39));
+          ) else Stdlib.raise (__exn_39));
         let dir = ref (!tempString1 : string) in (
-          ignore (if !dir == HxString.hx_null_string || (let __string_receiver_42 = !dir in HxString.length __string_receiver_42) = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+          ignore (if !dir == HxString.hx_null_string || (let __string_receiver_42 = !dir in HxString.length __string_receiver_42) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "")) else ());
           ignore (let __assign_43 = (HxFileSystem.absolutePath (!dir : string) : string) in (
             dir := __assign_43;
             __assign_43
@@ -126,7 +126,7 @@ let inferRepoRootForScripts = fun () -> (try let env = (HxSys.getEnv ("HXHX_REPO
                   __assign_51
                 ));
                 let candidate = !tempString2 in (
-                  ignore (if HxFileSystem.exists (candidate : string) && not (HxFileSystem.isDirectory (candidate : string)) then raise (HxRuntime.Hx_return (Obj.repr (!dir))) else ());
+                  ignore (if HxFileSystem.exists (candidate : string) && not (HxFileSystem.isDirectory (candidate : string)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!dir))) else ());
                   let tempString3 = ref (HxString.hx_null_string : string) in (
                     ignore (if (let __string_receiver_52 = !dir in HxString.length __string_receiver_52) = 0 then let __assign_53 = ".." in (
                       tempString3 := __assign_53;
@@ -139,7 +139,7 @@ let inferRepoRootForScripts = fun () -> (try let env = (HxSys.getEnv ("HXHX_REPO
                       __assign_57
                     ));
                     let parent = (HxFileSystem.absolutePath (!tempString3 : string) : string) in (
-                      ignore (if let __string_eq_left_58 = parent in let __string_eq_right_59 = !dir in HxString.equals __string_eq_left_58 __string_eq_right_59 then raise (HxRuntime.Hx_break) else ());
+                      ignore (if let __string_eq_left_58 = parent in let __string_eq_right_59 = !dir in HxString.equals __string_eq_left_58 __string_eq_right_59 then Stdlib.raise (HxRuntime.Hx_break) else ());
                       let __assign_60 = (parent : string) in (
                         dir := __assign_60;
                         __assign_60
@@ -160,9 +160,9 @@ let inferRepoRootForScripts = fun () -> (try let env = (HxSys.getEnv ("HXHX_REPO
   | HxRuntime.Hx_return __ret_61 -> (Obj.obj __ret_61 : string) : string)
 
 let inferMainFromDisplayRequest = fun displayRequest classPaths cwd -> (try (
-  ignore (if displayRequest == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+  ignore (if displayRequest == HxString.hx_null_string then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   let trimmed = let __call_arg_0_62 = displayRequest in StringTools.trim __call_arg_0_62 in (
-    ignore (if (let __string_receiver_63 = trimmed in HxString.length __string_receiver_63) = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+    ignore (if (let __string_receiver_63 = trimmed in HxString.length __string_receiver_63) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "")) else ());
     let at = let __string_receiver_64 = trimmed in let __string_argument_0_65 = "@" in HxString.indexOf __string_receiver_64 __string_argument_0_65 0 in let tempString = ref (HxString.hx_null_string : string) in (
       ignore (if at = -1 then let __assign_66 = (trimmed : string) in (
         tempString := __assign_66;
@@ -172,7 +172,7 @@ let inferMainFromDisplayRequest = fun displayRequest classPaths cwd -> (try (
         __assign_67
       ));
       let rawPath = (!tempString : string) in (
-        ignore (if (let __string_receiver_71 = rawPath in HxString.length __string_receiver_71) = 0 || not (let __call_arg_0_72 = rawPath in let __call_arg_1_73 = ".hx" in StringTools.endsWith __call_arg_0_72 __call_arg_1_73) then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+        ignore (if (let __string_receiver_71 = rawPath in HxString.length __string_receiver_71) = 0 || not (let __call_arg_0_72 = rawPath in let __call_arg_1_73 = ".hx" in StringTools.endsWith __call_arg_0_72 __call_arg_1_73) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "")) else ());
         let displayAbs = let __call_arg_0_74 = cwd in let __call_arg_1_75 = rawPath in absFromCwd __call_arg_0_74 __call_arg_1_75 in let displayNorm = let __call_arg_0_76 = displayAbs in Haxe_io_Path.normalize __call_arg_0_76 in let _g = ref 0 in (
           ignore (while !_g < HxArray.length classPaths do try ignore (let cp = (let __array_read_receiver_77 = classPaths in let __array_read_index_78 = !_g in HxArray.get (Obj.magic __array_read_receiver_77) __array_read_index_78 : string) in (
             ignore (let __old_79 = !_g in let __new_80 = HxInt.add __old_79 1 in (
@@ -181,7 +181,7 @@ let inferMainFromDisplayRequest = fun displayRequest classPaths cwd -> (try (
             ));
             let cpAbs = let __call_arg_0_81 = cwd in let __call_arg_1_82 = cp in absFromCwd __call_arg_0_81 __call_arg_1_82 in let cpNorm = ref (let __call_arg_0_83 = cpAbs in Haxe_io_Path.normalize __call_arg_0_83) in (
               ignore (if not (let __call_arg_0_84 = !cpNorm in let __call_arg_1_85 = "/" in StringTools.endsWith __call_arg_0_84 __call_arg_1_85) then ignore (cpNorm := (let __string_left_86 = HxString.toStdString (!cpNorm) in let __string_right_87 = "/" in __string_left_86 ^ __string_right_87)) else ());
-              ignore (if not (let __call_arg_0_88 = displayNorm in let __call_arg_1_89 = !cpNorm in StringTools.startsWith __call_arg_0_88 __call_arg_1_89) then raise (HxRuntime.Hx_continue) else ());
+              ignore (if not (let __call_arg_0_88 = displayNorm in let __call_arg_1_89 = !cpNorm in StringTools.startsWith __call_arg_0_88 __call_arg_1_89) then Stdlib.raise (HxRuntime.Hx_continue) else ());
               let rel = ref (let __string_receiver_90 = displayNorm in let __string_argument_0_91 = let __string_receiver_92 = !cpNorm in HxString.length __string_receiver_92 in HxString.substr __string_receiver_90 __string_argument_0_91 (-1) : string) in (
                 ignore (if let __call_arg_0_93 = !rel in let __call_arg_1_94 = ".hx" in StringTools.endsWith __call_arg_0_93 __call_arg_1_94 then ignore (let __assign_95 = (let __string_receiver_96 = !rel in let __string_argument_0_97 = 0 in let __string_argument_1_98 = HxInt.sub (let __string_receiver_99 = !rel in HxString.length __string_receiver_99) 3 in HxString.substr __string_receiver_96 __string_argument_0_97 __string_argument_1_98 : string) in (
                   rel := __assign_95;
@@ -195,7 +195,7 @@ let inferMainFromDisplayRequest = fun displayRequest classPaths cwd -> (try (
                   rel := __assign_104;
                   __assign_104
                 ));
-                if (let __string_receiver_108 = !rel in HxString.length __string_receiver_108) > 0 then raise (HxRuntime.Hx_return (Obj.repr (!rel))) else ()
+                if (let __string_receiver_108 = !rel in HxString.length __string_receiver_108) > 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!rel))) else ()
               )
             )
           )) with

@@ -18,33 +18,33 @@ let runHookPhase = fun session phase hookIds output -> (try let _g = ref 0 in le
     ignore (_g := __new_2);
     __old_1
   ) in (
-    ignore (try ignore (Obj.obj (HxAnon.get session "runHook") (phase : string) (let __array_read_receiver_7 = hookIds in let __array_read_index_8 = i in HxArray.get (Obj.magic __array_read_receiver_7) __array_read_index_8)) with
-      | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-      | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_3 -> raise (HxRuntime.Hx_return __ret_3)
-      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+    ignore (try ignore (let __method_receiver_7 = session in let __method_callable_8 = (Obj.obj (HxMethodDispatch.bind_structural (Obj.repr __method_receiver_7) "runHook" "method-dispatch:757fbc78f91aa12c8bb35436f58da126fcc36e72ec865ee275ead6a8b511cce5") : string -> int -> unit) in let __method_argument_9 = (phase : string) in let __method_argument_10 = let __array_read_receiver_11 = hookIds in let __array_read_index_12 = i in HxArray.get (Obj.magic __array_read_receiver_11) __array_read_index_12 in __method_callable_8 __method_argument_9 __method_argument_10) with
+      | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+      | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+      | HxRuntime.Hx_return __ret_3 -> Stdlib.raise (HxRuntime.Hx_return __ret_3)
+      | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
       | HxRuntime.Hx_exception (__exn_v_4, __exn_tags_5) -> if HxRuntime.tags_has __exn_tags_5 "String" then let e = (Obj.obj __exn_v_4 : string) in (
         ignore e;
-        raise (HxRuntime.Hx_return (Obj.repr ((HxString.toStdString phase ^ " hook failed: ") ^ HxString.toStdString e)))
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr ((HxString.toStdString phase ^ " hook failed: ") ^ HxString.toStdString e)))
       ) else HxRuntime.hx_throw_typed __exn_v_4 __exn_tags_5
       | __exn_6 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_6) : string) in (
         ignore e;
-        raise (HxRuntime.Hx_return (Obj.repr ((HxString.toStdString phase ^ " hook failed: ") ^ HxString.toStdString e)))
-      ) else raise (__exn_6));
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr ((HxString.toStdString phase ^ " hook failed: ") ^ HxString.toStdString e)))
+      ) else Stdlib.raise (__exn_6));
     Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) (((("hook_" ^ HxString.toStdString phase) ^ "[") ^ string_of_int i) ^ "]=ok" : string)
   )) done);
   Obj.magic (HxRuntime.hx_null)
 ) with
-  | HxRuntime.Hx_return __ret_9 -> (Obj.obj __ret_9 : string) : string)
+  | HxRuntime.Hx_return __ret_13 -> (Obj.obj __ret_13 : string) : string)
 
 let runStandardMacroHooks = fun session output -> (try (
-  ignore (if session == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if session == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let afterTypingError = (runHookPhase session ("afterTyping" : string) (Obj.magic (Hxhx_macro_MacroState.listAfterTypingHookIds ())) (Obj.magic output) : string) in (
-    ignore (if afterTypingError != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr afterTypingError)) else ());
+    ignore (if afterTypingError != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr afterTypingError)) else ());
     let onGenerateError = (runHookPhase session ("onGenerate" : string) (Obj.magic (Hxhx_macro_MacroState.listOnGenerateHookIds ())) (Obj.magic output) : string) in (
-      ignore (if onGenerateError != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr onGenerateError)) else ());
+      ignore (if onGenerateError != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr onGenerateError)) else ());
       runHookPhase session ("afterGenerate" : string) (Obj.magic (Hxhx_macro_MacroState.listAfterGenerateHookIds ())) (Obj.magic output)
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_10 -> (Obj.obj __ret_10 : string) : string)
+  | HxRuntime.Hx_return __ret_14 -> (Obj.obj __ret_14 : string) : string)

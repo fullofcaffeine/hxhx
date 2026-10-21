@@ -16,10 +16,10 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.MacroRuntimeMod
 let openSession = fun mode -> (try match mode with
   | "external-host" -> let impl = Obj.magic (Hxhx_macro_MacroHostClient.openSession ()) in (
     ignore (try ignore (Hxhx_macro_NativeMacroModuleRuntimeLoader.loadConfigured ("native" : string) (fun a0 a1 -> Hxhx_macro_MacroHostClient.macrohostsession_loadNativeModule impl a0 a1)) with
-      | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-      | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_6 -> raise (HxRuntime.Hx_return __ret_6)
-      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+      | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+      | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+      | HxRuntime.Hx_return __ret_6 -> Stdlib.raise (HxRuntime.Hx_return __ret_6)
+      | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
       | HxRuntime.Hx_exception (__exn_v_7, __exn_tags_8) -> if HxRuntime.tags_has __exn_tags_8 "String" then let error = (Obj.obj __exn_v_7 : string) in (
         ignore error;
         (
@@ -45,8 +45,8 @@ let openSession = fun mode -> (try match mode with
           ignore (Hxhx_macro_MacroHostClient.macrohostsession_close (Obj.magic impl) ());
           HxType.hx_throw_typed_rtti (Obj.repr ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ())) ["Dynamic"]
         )
-      ) else raise (__exn_9));
-    raise (HxRuntime.Hx_return (Obj.repr (let __anon_10 = HxAnon.create () in (
+      ) else Stdlib.raise (__exn_9));
+    Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __anon_10 = HxAnon.create () in (
       ignore (HxAnon.set __anon_10 "run" (Obj.repr (fun a0 -> Hxhx_macro_MacroHostClient.macrohostsession_run impl a0)));
       ignore (HxAnon.set __anon_10 "runHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_MacroHostClient.macrohostsession_runHook impl a0 a1)));
       ignore (HxAnon.set __anon_10 "runTypeNotFoundHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_MacroHostClient.macrohostsession_runTypeNotFoundHook impl a0 a1)));
@@ -55,7 +55,7 @@ let openSession = fun mode -> (try match mode with
       __anon_10
     ))))
   )
-  | "inproc" -> raise (HxRuntime.Hx_return (Obj.repr (Hxhx_macro_InProcMacroRuntime.openSession ())))
+  | "inproc" -> Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Hxhx_macro_InProcMacroRuntime.openSession ())))
   | _ -> HxType.hx_throw_typed_rtti (Obj.repr (("invalid macro runtime mode `" ^ HxString.toStdString mode) ^ "` (expected inproc|external-host)")) ["Dynamic"] with
   | HxRuntime.Hx_return __ret_11 -> (Obj.obj __ret_11 : Obj.t) : Obj.t)
 
@@ -73,9 +73,9 @@ let normalize = fun (raw : string) -> (try let tempMaybeString = ref (Obj.magic 
     __assign_14
   ));
   let normalized = (!tempMaybeString : string) in (
-    ignore (if normalized == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+    ignore (if normalized == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     let trimmed = let __call_arg_0_15 = normalized in StringTools.trim __call_arg_0_15 in (
-      ignore (if (let __string_receiver_16 = trimmed in HxString.length __string_receiver_16) = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+      ignore (if (let __string_receiver_16 = trimmed in HxString.length __string_receiver_16) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
       let lower = (let __string_receiver_17 = trimmed in HxString.toLowerCase __string_receiver_17 () : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
         ignore (match lower with
           | "external-host" -> let __assign_18 = Obj.magic ("external-host" : string) in (
@@ -95,7 +95,7 @@ let normalize = fun (raw : string) -> (try let tempMaybeString = ref (Obj.magic 
   | HxRuntime.Hx_return __ret_20 -> (Obj.obj __ret_20 : string) : string)
 
 let resolve = fun (explicitMode : string) -> (try let fromFlag = (let __call_arg_0_1 = explicitMode in normalize __call_arg_0_1 : string) in (
-  ignore (if fromFlag != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr fromFlag)) else ());
+  ignore (if fromFlag != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr fromFlag)) else ());
   let fromEnv = (let __call_arg_0_2 = HxSys.getEnv ("HXHX_MACRO_RUNTIME_MODE" : string) in normalize __call_arg_0_2 : string) in let tempResult = ref (HxString.hx_null_string : string) in (
     ignore (if fromEnv == Obj.magic (HxRuntime.hx_null) then let __assign_3 = ("inproc" : string) in (
       tempResult := __assign_3;

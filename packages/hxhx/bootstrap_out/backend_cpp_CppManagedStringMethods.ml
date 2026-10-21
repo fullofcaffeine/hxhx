@@ -1,0 +1,2 @@
+# 1 "backend_cpp_CppManagedStringMethods.ml"
+include Backend_cpp_CppManagedBoundMethods.Backend_cpp_CppManagedStringMethods

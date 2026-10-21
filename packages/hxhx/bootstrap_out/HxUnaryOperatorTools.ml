@@ -63,6 +63,6 @@ let macroConstructor = fun op -> let tempResult = ref (HxString.hx_null_string :
   !tempResult
 )
 
-let supportsPostfix = fun op -> op = HxUnaryOperator.Increment || op = HxUnaryOperator.Decrement
+let supportsPostfix = fun op -> (let __enum_eq_left_11 = op in let __enum_eq_right_12 = HxUnaryOperator.Increment in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_11) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_12)) || (let __enum_eq_left_13 = op in let __enum_eq_right_14 = HxUnaryOperator.Decrement in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_13) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_14))
 
-let requireValidFixity = fun op fixity -> ignore (if fixity = HxUnaryFixity.Postfix && not (supportsPostfix (Obj.magic op)) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_11 = "invalid postfix unary operator " in let __string_part_12 = HxString.toStdString (sourceToken (Obj.magic op)) in __string_part_11 ^ __string_part_12)) ["Dynamic"] else ())
+let requireValidFixity = fun op fixity -> ignore (if (let __enum_eq_left_15 = fixity in let __enum_eq_right_16 = HxUnaryFixity.Postfix in HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.repr __enum_eq_left_15) == HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.repr __enum_eq_right_16)) && not (supportsPostfix (Obj.magic op)) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_17 = "invalid postfix unary operator " in let __string_part_18 = HxString.toStdString (sourceToken (Obj.magic op)) in __string_part_17 ^ __string_part_18)) ["Dynamic"] else ())

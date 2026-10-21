@@ -14,14 +14,14 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage3Macro
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage3MacroFileDependencySupport" } : t)
 
 let observe = fun (modulePath : string) (resolvedPath : string) -> (try try (
-  ignore (if not (HxFileSystem.exists (resolvedPath : string)) then raise (HxRuntime.Hx_return (Obj.repr (CompilerMacroFileDependencyInput.fromObservedPath (resolvedPath : string) ("missing" : string) (Obj.magic (Obj.magic (HxRuntime.hx_null)))))) else ());
-  ignore (if HxFileSystem.isDirectory (resolvedPath : string) then raise (HxRuntime.Hx_return (Obj.repr (CompilerMacroFileDependencyInput.fromObservedPath (resolvedPath : string) ("not-file" : string) (Obj.magic (Obj.magic (HxRuntime.hx_null)))))) else ());
-  raise (HxRuntime.Hx_return (Obj.repr (CompilerMacroFileDependencyInput.fromObservedPath (resolvedPath : string) ("file" : string) (Obj.magic (let __bytes_producer_arg_0_26 = HxFile.getBytes (resolvedPath : string) in HxBytes.ofData __bytes_producer_arg_0_26 ())))))
+  ignore (if not (HxFileSystem.exists (resolvedPath : string)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (CompilerMacroFileDependencyInput.fromObservedPath (resolvedPath : string) ("missing" : string) (Obj.magic (Obj.magic (HxRuntime.hx_null)))))) else ());
+  ignore (if HxFileSystem.isDirectory (resolvedPath : string) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (CompilerMacroFileDependencyInput.fromObservedPath (resolvedPath : string) ("not-file" : string) (Obj.magic (Obj.magic (HxRuntime.hx_null)))))) else ());
+  Stdlib.raise (HxRuntime.Hx_return (Obj.repr (CompilerMacroFileDependencyInput.fromObservedPath (resolvedPath : string) ("file" : string) (Obj.magic (let __bytes_producer_arg_0_26 = HxFile.getBytes (resolvedPath : string) in HxBytes.ofData __bytes_producer_arg_0_26 ())))))
 ) with
-  | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-  | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-  | HxRuntime.Hx_return __ret_22 -> raise (HxRuntime.Hx_return __ret_22)
-  | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+  | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+  | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+  | HxRuntime.Hx_return __ret_22 -> Stdlib.raise (HxRuntime.Hx_return __ret_22)
+  | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
   | HxRuntime.Hx_exception (__exn_v_23, __exn_tags_24) -> if HxRuntime.tags_has __exn_tags_24 "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_23) : Haxe_io_Error.error) in (
     ignore _hx;
     HxType.hx_throw_typed_rtti (Obj.repr ("could not observe a macro-registered file dependency for module: " ^ HxString.toStdString modulePath)) ["Dynamic"]
@@ -41,7 +41,7 @@ let observe = fun (modulePath : string) (resolvedPath : string) -> (try try (
   ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_25) : string) in (
     ignore _hx;
     HxType.hx_throw_typed_rtti (Obj.repr ("could not observe a macro-registered file dependency for module: " ^ HxString.toStdString modulePath)) ["Dynamic"]
-  ) else raise (__exn_25) with
+  ) else Stdlib.raise (__exn_25) with
   | HxRuntime.Hx_return __ret_27 -> (Obj.obj __ret_27 : CompilerMacroFileDependencyInput.t) : CompilerMacroFileDependencyInput.t)
 
 let collect = fun cwd -> let inputsByModule = Obj.magic (HxMap.create_string ()) in let _g = ref 0 in let _g1 = Obj.magic (Hxhx_macro_MacroState.listModuleDependencies ()) in (
@@ -67,11 +67,11 @@ let collect = fun cwd -> let inputsByModule = Obj.magic (HxMap.create_string ())
           __assign_9
         ));
         let rawPath = let __call_arg_0_10 = !tempString1 in StringTools.trim __call_arg_0_10 in (
-          ignore (if (let __string_receiver_11 = modulePath in HxString.length __string_receiver_11) = 0 || (let __string_receiver_12 = rawPath in HxString.length __string_receiver_12) = 0 then raise (HxRuntime.Hx_continue) else ());
+          ignore (if (let __string_receiver_11 = modulePath in HxString.length __string_receiver_11) = 0 || (let __string_receiver_12 = rawPath in HxString.length __string_receiver_12) = 0 then Stdlib.raise (HxRuntime.Hx_continue) else ());
           let resolvedPath = let __call_arg_0_13 = cwd in let __call_arg_1_14 = rawPath in Hxhx_Stage3PathSupport.absFromCwd __call_arg_0_13 __call_arg_1_14 in let input = Obj.magic (let __call_arg_0_15 = modulePath in let __call_arg_1_16 = resolvedPath in observe __call_arg_0_15 __call_arg_1_16) in let inputs = Obj.magic (HxMap.get_string (Obj.magic inputsByModule) (modulePath : string)) in if inputs == Obj.magic (HxRuntime.hx_null) then ignore (HxMap.set_string (Obj.magic inputsByModule) (modulePath : string) (let __arr_17 = HxArray.create () in (
             ignore (HxArray.push __arr_17 input);
             __arr_17
-          ))) else ignore (let __array_receiver_18 = inputs in let __array_arg_0_19 = input in HxArray.push __array_receiver_18 __array_arg_0_19)
+          ))) else ignore (let __array_receiver_18 = Obj.magic inputs in let __array_arg_0_19 = Obj.magic input in HxArray.push __array_receiver_18 __array_arg_0_19)
         )
       )
     )

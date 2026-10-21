@@ -14,7 +14,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppA
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppAbstractProjection" } : t)
 
 let hasFunctionMetadataMarker = fun fn marker -> (try (
-  ignore (if fn == Obj.magic (HxRuntime.hx_null) || marker == HxString.hx_null_string || (let __string_receiver_46 = marker in HxString.length __string_receiver_46) = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if fn == Obj.magic (HxRuntime.hx_null) || marker == HxString.hx_null_string || (let __string_receiver_46 = marker in HxString.length __string_receiver_46) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let _g = ref 0 in let _g1 = Obj.magic (HxFunctionDecl.getMetadata (Obj.magic fn)) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let raw = (let __array_read_receiver_47 = _g1 in let __array_read_index_48 = !_g in HxArray.get (Obj.magic __array_read_receiver_47) __array_read_index_48 : string) in (
       ignore (let __old_49 = !_g in let __new_50 = HxInt.add __old_49 1 in (
@@ -29,7 +29,7 @@ let hasFunctionMetadataMarker = fun fn marker -> (try (
           tempString := __assign_52;
           __assign_52
         ));
-        let compact = let __call_arg_0_53 = let __call_arg_0_54 = !tempString in StringTools.trim __call_arg_0_54 in Backend_cpp_CppTypeModel.removeTypeHintWhitespace __call_arg_0_53 in if (let __string_eq_left_55 = compact in let __string_eq_right_56 = marker in HxString.equals __string_eq_left_55 __string_eq_right_56) || (let __string_eq_left_57 = compact in let __string_eq_right_58 = "@:" ^ HxString.toStdString marker in HxString.equals __string_eq_left_57 __string_eq_right_58) || (let __string_eq_left_59 = compact in let __string_eq_right_60 = "@" ^ HxString.toStdString marker in HxString.equals __string_eq_left_59 __string_eq_right_60) || (let __call_arg_0_61 = compact in let __call_arg_1_62 = ("@:" ^ HxString.toStdString marker) ^ "(" in StringTools.startsWith __call_arg_0_61 __call_arg_1_62) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
+        let compact = let __call_arg_0_53 = let __call_arg_0_54 = !tempString in StringTools.trim __call_arg_0_54 in Backend_cpp_CppTypeModel.removeTypeHintWhitespace __call_arg_0_53 in if (let __string_eq_left_55 = compact in let __string_eq_right_56 = marker in HxString.equals __string_eq_left_55 __string_eq_right_56) || (let __string_eq_left_57 = compact in let __string_eq_right_58 = "@:" ^ HxString.toStdString marker in HxString.equals __string_eq_left_57 __string_eq_right_58) || (let __string_eq_left_59 = compact in let __string_eq_right_60 = "@" ^ HxString.toStdString marker in HxString.equals __string_eq_left_59 __string_eq_right_60) || (let __call_arg_0_61 = compact in let __call_arg_1_62 = ("@:" ^ HxString.toStdString marker) ^ "(" in StringTools.startsWith __call_arg_0_61 __call_arg_1_62) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr true)) else ()
       )
     )) done);
     false
@@ -38,14 +38,14 @@ let hasFunctionMetadataMarker = fun fn marker -> (try (
   | HxRuntime.Hx_return __ret_63 -> (Obj.obj __ret_63 : bool) : bool)
 
 let isHxhxAbstractClass = fun cls -> (try (
-  ignore (if cls == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if cls == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getMetadata (Obj.magic cls)) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let meta = (let __array_read_receiver_64 = _g1 in let __array_read_index_65 = !_g in HxArray.get (Obj.magic __array_read_receiver_64) __array_read_index_65 : string) in (
       ignore (let __old_66 = !_g in let __new_67 = HxInt.add __old_66 1 in (
         ignore (_g := __new_67);
         __new_67
       ));
-      if let __string_eq_left_68 = let __call_arg_0_70 = meta in StringTools.trim __call_arg_0_70 in let __string_eq_right_69 = "__hxhx_abstract" in HxString.equals __string_eq_left_68 __string_eq_right_69 then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
+      if let __string_eq_left_68 = let __call_arg_0_70 = meta in StringTools.trim __call_arg_0_70 in let __string_eq_right_69 = "__hxhx_abstract" in HxString.equals __string_eq_left_68 __string_eq_right_69 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr true)) else ()
     )) done);
     false
   )
@@ -53,18 +53,18 @@ let isHxhxAbstractClass = fun cls -> (try (
   | HxRuntime.Hx_return __ret_71 -> (Obj.obj __ret_71 : bool) : bool)
 
 let isEligible = fun cls typeParams -> (try (
-  ignore (if cls == Obj.magic (HxRuntime.hx_null) || typeParams == Obj.magic (HxRuntime.hx_null) || HxArray.length typeParams = 0 || not (isHxhxAbstractClass (Obj.magic cls)) || Backend_cpp_CppTypeModel.isPrimitiveBackedAbstractClass (Obj.magic cls) || Backend_cpp_CppTypeModel.isArrayBackedAbstractClass (Obj.magic cls) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if cls == Obj.magic (HxRuntime.hx_null) || typeParams == Obj.magic (HxRuntime.hx_null) || HxArray.length typeParams = 0 || not (isHxhxAbstractClass (Obj.magic cls)) || Backend_cpp_CppTypeModel.isPrimitiveBackedAbstractClass (Obj.magic cls) || Backend_cpp_CppTypeModel.isArrayBackedAbstractClass (Obj.magic cls) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let rawUnderlying = (Backend_cpp_CppTypeModel.abstractUnderlyingTypeHint (Obj.magic cls) : string) in (
-    ignore (if rawUnderlying == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (if rawUnderlying == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     let underlying = let __call_arg_0_1 = rawUnderlying in Backend_cpp_CppTypeModel.removeTypeHintWhitespace __call_arg_0_1 in (
-      ignore (if (let __string_receiver_2 = underlying in HxString.length __string_receiver_2) = 0 || HxArray.length (Backend_cpp_CppTypeModel.genericTypeHintArgs (underlying : string)) = 0 || not (let __call_arg_0_3 = underlying in Backend_cpp_CppTypeModel.isClassLikeTypeHint __call_arg_0_3) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+      ignore (if (let __string_receiver_2 = underlying in HxString.length __string_receiver_2) = 0 || HxArray.length (Backend_cpp_CppTypeModel.genericTypeHintArgs (underlying : string)) = 0 || not (let __call_arg_0_3 = underlying in Backend_cpp_CppTypeModel.isClassLikeTypeHint __call_arg_0_3) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
       let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFields (Obj.magic cls)) in (
         ignore (while !_g < HxArray.length _g1 do ignore (let field = Obj.magic (let __array_read_receiver_4 = _g1 in let __array_read_index_5 = !_g in HxArray.get (Obj.magic __array_read_receiver_4) __array_read_index_5) in (
           ignore (let __old_6 = !_g in let __new_7 = HxInt.add __old_6 1 in (
             ignore (_g := __new_7);
             __new_7
           ));
-          if not (HxFieldDecl.getIsStatic (Obj.magic field)) then raise (HxRuntime.Hx_return (Obj.repr false)) else ()
+          if not (HxFieldDecl.getIsStatic (Obj.magic field)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ()
         )) done);
         let hasProjection = ref false in let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in (
           ignore (while !_g < HxArray.length _g1 do ignore (let fn = Obj.magic (let __array_read_receiver_8 = _g1 in let __array_read_index_9 = !_g in HxArray.get (Obj.magic __array_read_receiver_8) __array_read_index_9) in (
@@ -72,7 +72,7 @@ let isEligible = fun cls typeParams -> (try (
               ignore (_g := __new_11);
               __new_11
             ));
-            ignore (if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+            ignore (if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
             if hasFunctionMetadataMarker (Obj.magic fn) ("to" : string) then ignore (let __assign_12 = true in (
               hasProjection := __assign_12;
               __assign_12
@@ -87,7 +87,7 @@ let isEligible = fun cls typeParams -> (try (
   | HxRuntime.Hx_return __ret_13 -> (Obj.obj __ret_13 : bool) : bool)
 
 let isIdentifierChar = fun (ch : string) -> (try (
-  ignore (if ch == HxString.hx_null_string || (let __string_receiver_111 = ch in HxString.length __string_receiver_111) = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if ch == HxString.hx_null_string || (let __string_receiver_111 = ch in HxString.length __string_receiver_111) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let code = let __string_receiver_112 = ch in let __string_argument_0_113 = 0 in HxString.charCodeAt __string_receiver_112 __string_argument_0_113 in (let __nullable_114 = code in let __nullable_115 = 65 in if __nullable_114 == HxRuntime.hx_null then false else Obj.obj __nullable_114 >= __nullable_115) && (let __nullable_116 = code in let __nullable_117 = 90 in if __nullable_116 == HxRuntime.hx_null then false else Obj.obj __nullable_116 <= __nullable_117) || (let __nullable_118 = code in let __nullable_119 = 97 in if __nullable_118 == HxRuntime.hx_null then false else Obj.obj __nullable_118 >= __nullable_119) && (let __nullable_120 = code in let __nullable_121 = 122 in if __nullable_120 == HxRuntime.hx_null then false else Obj.obj __nullable_120 <= __nullable_121) || (let __nullable_122 = code in let __nullable_123 = 48 in if __nullable_122 == HxRuntime.hx_null then false else Obj.obj __nullable_122 >= __nullable_123) && (let __nullable_124 = code in let __nullable_125 = 57 in if __nullable_124 == HxRuntime.hx_null then false else Obj.obj __nullable_124 <= __nullable_125) || (let __string_eq_left_126 = ch in let __string_eq_right_127 = "_" in HxString.equals __string_eq_left_126 __string_eq_right_127)
 ) with
   | HxRuntime.Hx_return __ret_128 -> (Obj.obj __ret_128 : bool) : bool)
@@ -101,7 +101,7 @@ let replaceTypeParamToken = fun (typeHint : string) (param : string) (replacemen
     __assign_87
   ));
   let clean = let __call_arg_0_88 = !tempString in StringTools.trim __call_arg_0_88 in (
-    ignore (if (let __string_receiver_89 = clean in HxString.length __string_receiver_89) = 0 || replacement == HxString.hx_null_string || (let __string_receiver_90 = replacement in HxString.length __string_receiver_90) = 0 then raise (HxRuntime.Hx_return (Obj.repr typeHint)) else ());
+    ignore (if (let __string_receiver_89 = clean in HxString.length __string_receiver_89) = 0 || replacement == HxString.hx_null_string || (let __string_receiver_90 = replacement in HxString.length __string_receiver_90) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr typeHint)) else ());
     let out = Obj.magic (StringBuf.create ()) in let i = ref 0 in (
       ignore (while !i < (let __string_receiver_91 = typeHint in HxString.length __string_receiver_91) do ignore (if (let __string_eq_left_92 = let __string_receiver_94 = typeHint in let __string_argument_0_95 = !i in let __string_argument_1_96 = let __string_receiver_97 = clean in HxString.length __string_receiver_97 in HxString.substr __string_receiver_94 __string_argument_0_95 __string_argument_1_96 in let __string_eq_right_93 = clean in HxString.equals __string_eq_left_92 __string_eq_right_93) && not (let __call_arg_0_98 = let __string_receiver_99 = typeHint in let __string_argument_0_100 = HxInt.sub (!i) 1 in HxString.charAt __string_receiver_99 __string_argument_0_100 in isIdentifierChar __call_arg_0_98) && not (let __call_arg_0_101 = let __string_receiver_102 = typeHint in let __string_argument_0_103 = HxInt.add (!i) (let __string_receiver_104 = clean in HxString.length __string_receiver_104) in HxString.charAt __string_receiver_102 __string_argument_0_103 in isIdentifierChar __call_arg_0_101) then ignore ((
         ignore (StringBuf.add (Obj.magic out) (Obj.repr replacement));
@@ -149,7 +149,7 @@ let substituteTypeParams = fun typeHint typeParams typeArgs -> let tempString = 
 )
 
 let specializedUnderlyingTypeHint = fun cls sourceTypeHint typeParams -> (try (
-  ignore (if not (isEligible (Obj.magic cls) (Obj.magic typeParams)) then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+  ignore (if not (isEligible (Obj.magic cls) (Obj.magic typeParams)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   let tempString = ref (HxString.hx_null_string : string) in (
     ignore (if sourceTypeHint == HxString.hx_null_string then let __assign_14 = ("" : string) in (
       tempString := __assign_14;
@@ -159,9 +159,9 @@ let specializedUnderlyingTypeHint = fun cls sourceTypeHint typeParams -> (try (
       __assign_15
     ));
     let source = let __call_arg_0_16 = let __call_arg_0_17 = !tempString in StringTools.trim __call_arg_0_17 in Backend_cpp_CppTypeModel.removeTypeHintWhitespace __call_arg_0_16 in let sourceArgs = Obj.magic (Backend_cpp_CppTypeModel.genericTypeHintArgs (source : string)) in (
-      ignore (if typeParams == Obj.magic (HxRuntime.hx_null) || HxArray.length typeParams = 0 || HxArray.length sourceArgs <> HxArray.length typeParams then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+      ignore (if typeParams == Obj.magic (HxRuntime.hx_null) || HxArray.length typeParams = 0 || HxArray.length sourceArgs <> HxArray.length typeParams then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "")) else ());
       let underlying = (Backend_cpp_CppTypeModel.abstractUnderlyingTypeHint (Obj.magic cls) : string) in (
-        ignore (if underlying == Obj.magic (HxRuntime.hx_null) || (let __string_eq_left_18 = let __call_arg_0_20 = underlying in Backend_cpp_CppTypeModel.typeBaseName __call_arg_0_20 in let __string_eq_right_19 = let __call_arg_0_21 = source in Backend_cpp_CppTypeModel.typeBaseName __call_arg_0_21 in HxString.equals __string_eq_left_18 __string_eq_right_19) then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+        ignore (if underlying == Obj.magic (HxRuntime.hx_null) || (let __string_eq_left_18 = let __call_arg_0_20 = underlying in Backend_cpp_CppTypeModel.typeBaseName __call_arg_0_20 in let __string_eq_right_19 = let __call_arg_0_21 = source in Backend_cpp_CppTypeModel.typeBaseName __call_arg_0_21 in HxString.equals __string_eq_left_18 __string_eq_right_19) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "")) else ());
         substituteTypeParams (underlying : string) (Obj.magic typeParams) (Obj.magic sourceArgs)
       )
     )
@@ -170,21 +170,21 @@ let specializedUnderlyingTypeHint = fun cls sourceTypeHint typeParams -> (try (
   | HxRuntime.Hx_return __ret_22 -> (Obj.obj __ret_22 : string) : string)
 
 let select = fun cls sourceTypeHint typeParams expectedCppType renderValueType renderReturnType -> (try (
-  ignore (if expectedCppType == HxString.hx_null_string || (let __string_receiver_23 = expectedCppType in HxString.length __string_receiver_23) = 0 || renderValueType == Obj.magic (HxRuntime.hx_null) || renderReturnType == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if expectedCppType == HxString.hx_null_string || (let __string_receiver_23 = expectedCppType in HxString.length __string_receiver_23) = 0 || renderValueType == Obj.magic (HxRuntime.hx_null) || renderReturnType == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let underlying = (specializedUnderlyingTypeHint (Obj.magic cls) (sourceTypeHint : string) (Obj.magic typeParams) : string) in (
-    ignore (if (let __string_receiver_24 = underlying in HxString.length __string_receiver_24) = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+    ignore (if (let __string_receiver_24 = underlying in HxString.length __string_receiver_24) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     let sourceArgs = Obj.magic (Backend_cpp_CppTypeModel.genericTypeHintArgs (sourceTypeHint : string)) in let underlyingCppType = let __call_callee_25 = renderValueType in let __call_arg_0_26 = underlying in __call_callee_25 __call_arg_0_26 in let selected = ref (Obj.magic (Obj.magic (HxRuntime.hx_null)) : HxFunctionDecl.t) in let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in (
       ignore (while !_g < HxArray.length _g1 do try ignore (let fn = Obj.magic (let __array_read_receiver_27 = _g1 in let __array_read_index_28 = !_g in HxArray.get (Obj.magic __array_read_receiver_27) __array_read_index_28) in (
         ignore (let __old_29 = !_g in let __new_30 = HxInt.add __old_29 1 in (
           ignore (_g := __new_30);
           __new_30
         ));
-        ignore (if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) || not (hasFunctionMetadataMarker (Obj.magic fn) ("to" : string)) then raise (HxRuntime.Hx_continue) else ());
+        ignore (if not (HxFunctionDecl.getIsStatic (Obj.magic fn)) || not (hasFunctionMetadataMarker (Obj.magic fn) ("to" : string)) then Stdlib.raise (HxRuntime.Hx_continue) else ());
         let args = Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn)) in (
-          ignore (if HxArray.length args <> 1 then raise (HxRuntime.Hx_continue) else ());
+          ignore (if HxArray.length args <> 1 then Stdlib.raise (HxRuntime.Hx_continue) else ());
           let returnHint = (substituteTypeParams (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) (Obj.magic typeParams) (Obj.magic sourceArgs) : string) in let paramHint = (substituteTypeParams (HxFunctionArg.getTypeHint (Obj.magic (let __array_read_receiver_31 = args in let __array_read_index_32 = 0 in HxArray.get (Obj.magic __array_read_receiver_31) __array_read_index_32)) : string) (Obj.magic typeParams) (Obj.magic sourceArgs) : string) in (
-            ignore (if (let __string_eq_left_33 = let __call_callee_35 = renderReturnType in let __call_arg_0_36 = returnHint in __call_callee_35 __call_arg_0_36 in let __string_eq_right_34 = expectedCppType in not (HxString.equals __string_eq_left_33 __string_eq_right_34)) || (let __string_eq_left_37 = let __call_callee_39 = renderValueType in let __call_arg_0_40 = paramHint in __call_callee_39 __call_arg_0_40 in let __string_eq_right_38 = underlyingCppType in not (HxString.equals __string_eq_left_37 __string_eq_right_38)) then raise (HxRuntime.Hx_continue) else ());
-            ignore (if !selected != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+            ignore (if (let __string_eq_left_33 = let __call_callee_35 = renderReturnType in let __call_arg_0_36 = returnHint in __call_callee_35 __call_arg_0_36 in let __string_eq_right_34 = expectedCppType in not (HxString.equals __string_eq_left_33 __string_eq_right_34)) || (let __string_eq_left_37 = let __call_callee_39 = renderValueType in let __call_arg_0_40 = paramHint in __call_callee_39 __call_arg_0_40 in let __string_eq_right_38 = underlyingCppType in not (HxString.equals __string_eq_left_37 __string_eq_right_38)) then Stdlib.raise (HxRuntime.Hx_continue) else ());
+            ignore (if !selected != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
             let __assign_41 = Obj.magic (Obj.magic fn) in (
               selected := __assign_41;
               __assign_41

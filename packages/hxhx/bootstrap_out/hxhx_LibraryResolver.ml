@@ -93,7 +93,7 @@ let findScopedHxml = fun (lib : string) (cwd : string) -> (try let tempString = 
           __assign_32
         ));
         let candidate = (HxFileSystem.absolutePath (!tempString1 : string) : string) in (
-          ignore (if HxFileSystem.exists (candidate : string) && not (HxFileSystem.isDirectory (candidate : string)) then raise (HxRuntime.Hx_return (Obj.repr candidate)) else ());
+          ignore (if HxFileSystem.exists (candidate : string) && not (HxFileSystem.isDirectory (candidate : string)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr candidate)) else ());
           let tempString2 = ref (HxString.hx_null_string : string) in (
             ignore (if (let __string_receiver_33 = !dir in HxString.length __string_receiver_33) = 0 then let __assign_34 = ".." in (
               tempString2 := __assign_34;
@@ -106,7 +106,7 @@ let findScopedHxml = fun (lib : string) (cwd : string) -> (try let tempString = 
               __assign_38
             ));
             let parent = (HxFileSystem.absolutePath (!tempString2 : string) : string) in (
-              ignore (if let __string_eq_left_39 = parent in let __string_eq_right_40 = !dir in HxString.equals __string_eq_left_39 __string_eq_right_40 then raise (HxRuntime.Hx_break) else ());
+              ignore (if let __string_eq_left_39 = parent in let __string_eq_right_40 = !dir in HxString.equals __string_eq_left_39 __string_eq_right_40 then Stdlib.raise (HxRuntime.Hx_break) else ());
               let __assign_41 = (parent : string) in (
                 dir := __assign_41;
                 __assign_41
@@ -125,14 +125,14 @@ let findScopedHxml = fun (lib : string) (cwd : string) -> (try let tempString = 
 let isEmptySpec = fun spec -> HxArray.length (Obj.obj (HxAnon.get spec "classPaths")) = 0 && HxArray.length (Obj.obj (HxAnon.get spec "defines")) = 0 && HxArray.length (Obj.obj (HxAnon.get spec "macros")) = 0 && HxArray.length (Obj.obj (HxAnon.get spec "unknownArgs")) = 0
 
 let isScopedMetadataMiss = fun lib spec -> (try (
-  ignore (if HxArray.length (Obj.obj (HxAnon.get spec "classPaths")) > 0 || HxArray.length (Obj.obj (HxAnon.get spec "defines")) > 0 || HxArray.length (Obj.obj (HxAnon.get spec "macros")) > 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if HxArray.length (Obj.obj (HxAnon.get spec "classPaths")) > 0 || HxArray.length (Obj.obj (HxAnon.get spec "defines")) > 0 || HxArray.length (Obj.obj (HxAnon.get spec "macros")) > 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let prefix = ("-lib " ^ HxString.toStdString lib) ^ " is missing " in let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get spec "unknownArgs")) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let arg = (let __array_read_receiver_55 = _g1 in let __array_read_index_56 = !_g in HxArray.get (Obj.magic __array_read_receiver_55) __array_read_index_56 : string) in (
       ignore (let __old_57 = !_g in let __new_58 = HxInt.add __old_57 1 in (
         ignore (_g := __new_58);
         __new_58
       ));
-      if (let __call_arg_0_59 = arg in let __call_arg_1_60 = prefix in StringTools.startsWith __call_arg_0_59 __call_arg_1_60) && (let __string_receiver_61 = arg in let __string_argument_0_62 = "haxe_libraries/" in HxString.indexOf __string_receiver_61 __string_argument_0_62 0) >= 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
+      if (let __call_arg_0_59 = arg in let __call_arg_1_60 = prefix in StringTools.startsWith __call_arg_0_59 __call_arg_1_60) && (let __string_receiver_61 = arg in let __string_argument_0_62 = "haxe_libraries/" in HxString.indexOf __string_receiver_61 __string_argument_0_62 0) >= 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr true)) else ()
     )) done);
     false
   )
@@ -146,51 +146,51 @@ let tryResolveViaCommand = fun bin args -> (try let p = ref (Obj.magic (Obj.magi
     p := __assign_68;
     __assign_68
   )) with
-    | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-    | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-    | HxRuntime.Hx_return __ret_64 -> raise (HxRuntime.Hx_return __ret_64)
-    | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+    | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+    | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+    | HxRuntime.Hx_return __ret_64 -> Stdlib.raise (HxRuntime.Hx_return __ret_64)
+    | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
     | HxRuntime.Hx_exception (__exn_v_65, __exn_tags_66) -> if HxRuntime.tags_has __exn_tags_66 "String" then let _hx = (Obj.obj __exn_v_65 : string) in (
       ignore _hx;
-      raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+      Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
     ) else HxRuntime.hx_throw_typed __exn_v_65 __exn_tags_66
     | __exn_67 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_67) : string) in (
       ignore _hx;
-      raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
-    ) else raise (__exn_67));
+      Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+    ) else Stdlib.raise (__exn_67));
   let classPaths = Obj.magic (HxArray.create ()) in let defines = Obj.magic (HxArray.create ()) in let macros = Obj.magic (HxArray.create ()) in let unknownArgs = Obj.magic (HxArray.create ()) in (
     ignore (try ignore (let rec __while_loop_114 = fun () -> (
       ignore (try ignore (let raw = (let __obj_73 = (Obj.magic (!p) : Sys_io_Process.t).stdout in (Obj.magic __obj_73 : Haxe_io_Input.t).readLine (Obj.magic __obj_73) () : string) in let line = let __call_arg_0_74 = raw in StringTools.trim __call_arg_0_74 in (
-        ignore (if (let __string_receiver_75 = line in HxString.length __string_receiver_75) = 0 then raise (HxRuntime.Hx_continue) else ());
+        ignore (if (let __string_receiver_75 = line in HxString.length __string_receiver_75) = 0 then Stdlib.raise (HxRuntime.Hx_continue) else ());
         ignore (if not (let __call_arg_0_76 = line in let __call_arg_1_77 = "-" in StringTools.startsWith __call_arg_0_76 __call_arg_1_77) then ignore ((
-          ignore (let __array_receiver_78 = classPaths in let __array_arg_0_79 = line in HxArray.push __array_receiver_78 __array_arg_0_79);
-          raise (HxRuntime.Hx_continue)
+          ignore (let __array_receiver_78 = Obj.magic classPaths in let __array_arg_0_79 = (line : string) in HxArray.push __array_receiver_78 __array_arg_0_79);
+          Stdlib.raise (HxRuntime.Hx_continue)
         )) else ());
         ignore (if let __call_arg_0_80 = line in let __call_arg_1_81 = "-D " in StringTools.startsWith __call_arg_0_80 __call_arg_1_81 then ignore (let def = let __call_arg_0_82 = let __string_receiver_83 = line in let __string_argument_0_84 = 3 in HxString.substr __string_receiver_83 __string_argument_0_84 (-1) in StringTools.trim __call_arg_0_82 in (
-          ignore (if (let __string_receiver_85 = def in HxString.length __string_receiver_85) > 0 then ignore (let __array_receiver_86 = defines in let __array_arg_0_87 = def in HxArray.push __array_receiver_86 __array_arg_0_87) else ());
-          raise (HxRuntime.Hx_continue)
+          ignore (if (let __string_receiver_85 = def in HxString.length __string_receiver_85) > 0 then ignore (let __array_receiver_86 = Obj.magic defines in let __array_arg_0_87 = (def : string) in HxArray.push __array_receiver_86 __array_arg_0_87) else ());
+          Stdlib.raise (HxRuntime.Hx_continue)
         )) else ());
         ignore (if let __call_arg_0_88 = line in let __call_arg_1_89 = "--macro " in StringTools.startsWith __call_arg_0_88 __call_arg_1_89 then ignore (let expr = let __call_arg_0_90 = let __string_receiver_91 = line in let __string_argument_0_92 = 8 in HxString.substr __string_receiver_91 __string_argument_0_92 (-1) in StringTools.trim __call_arg_0_90 in (
-          ignore (if (let __string_receiver_93 = expr in HxString.length __string_receiver_93) > 0 then ignore (let __array_receiver_94 = macros in let __array_arg_0_95 = expr in HxArray.push __array_receiver_94 __array_arg_0_95) else ());
-          raise (HxRuntime.Hx_continue)
+          ignore (if (let __string_receiver_93 = expr in HxString.length __string_receiver_93) > 0 then ignore (let __array_receiver_94 = Obj.magic macros in let __array_arg_0_95 = (expr : string) in HxArray.push __array_receiver_94 __array_arg_0_95) else ());
+          Stdlib.raise (HxRuntime.Hx_continue)
         )) else ());
         ignore (if let __call_arg_0_96 = line in let __call_arg_1_97 = "-cp " in StringTools.startsWith __call_arg_0_96 __call_arg_1_97 then ignore (let cp = let __call_arg_0_98 = let __string_receiver_99 = line in let __string_argument_0_100 = 4 in HxString.substr __string_receiver_99 __string_argument_0_100 (-1) in StringTools.trim __call_arg_0_98 in (
-          ignore (if (let __string_receiver_101 = cp in HxString.length __string_receiver_101) > 0 then ignore (let __array_receiver_102 = classPaths in let __array_arg_0_103 = cp in HxArray.push __array_receiver_102 __array_arg_0_103) else ());
-          raise (HxRuntime.Hx_continue)
+          ignore (if (let __string_receiver_101 = cp in HxString.length __string_receiver_101) > 0 then ignore (let __array_receiver_102 = Obj.magic classPaths in let __array_arg_0_103 = (cp : string) in HxArray.push __array_receiver_102 __array_arg_0_103) else ());
+          Stdlib.raise (HxRuntime.Hx_continue)
         )) else ());
         ignore (if let __call_arg_0_104 = line in let __call_arg_1_105 = "--class-path " in StringTools.startsWith __call_arg_0_104 __call_arg_1_105 then ignore (let cp = let __call_arg_0_106 = let __string_receiver_107 = line in let __string_argument_0_108 = 13 in HxString.substr __string_receiver_107 __string_argument_0_108 (-1) in StringTools.trim __call_arg_0_106 in (
-          ignore (if (let __string_receiver_109 = cp in HxString.length __string_receiver_109) > 0 then ignore (let __array_receiver_110 = classPaths in let __array_arg_0_111 = cp in HxArray.push __array_receiver_110 __array_arg_0_111) else ());
-          raise (HxRuntime.Hx_continue)
+          ignore (if (let __string_receiver_109 = cp in HxString.length __string_receiver_109) > 0 then ignore (let __array_receiver_110 = Obj.magic classPaths in let __array_arg_0_111 = (cp : string) in HxArray.push __array_receiver_110 __array_arg_0_111) else ());
+          Stdlib.raise (HxRuntime.Hx_continue)
         )) else ());
-        let __array_receiver_112 = unknownArgs in let __array_arg_0_113 = line in HxArray.push __array_receiver_112 __array_arg_0_113
+        let __array_receiver_112 = Obj.magic unknownArgs in let __array_arg_0_113 = (line : string) in HxArray.push __array_receiver_112 __array_arg_0_113
       )) with
         | HxRuntime.Hx_continue -> ());
       __while_loop_114 ()
     ) in __while_loop_114 ()) with
-      | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-      | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_69 -> raise (HxRuntime.Hx_return __ret_69)
-      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+      | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+      | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+      | HxRuntime.Hx_return __ret_69 -> Stdlib.raise (HxRuntime.Hx_return __ret_69)
+      | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
       | HxRuntime.Hx_exception (__exn_v_70, __exn_tags_71) -> if HxRuntime.tags_has __exn_tags_71 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_70 : Haxe_io_Eof.t) in (
         ignore _hx;
         ignore ()
@@ -198,9 +198,9 @@ let tryResolveViaCommand = fun bin args -> (try let p = ref (Obj.magic (Obj.magi
       | __exn_72 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_72) : Haxe_io_Eof.t) in (
         ignore _hx;
         ignore ()
-      ) else raise (__exn_72));
+      ) else Stdlib.raise (__exn_72));
     let code = Sys_io_Process.exitCode (Obj.magic (!p)) () in (
-      ignore (if code <> 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+      ignore (if code <> 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
       let __anon_115 = HxAnon.create () in (
         ignore (HxAnon.set __anon_115 "classPaths" (Obj.repr classPaths));
         ignore (HxAnon.set __anon_115 "defines" (Obj.repr defines));
@@ -223,7 +223,7 @@ let resolveViaProcess = fun lib -> (try let lixSpec = tryResolveViaCommand (lixB
     )
   )
 ))) in (
-  ignore (if lixSpec != Obj.magic (HxRuntime.hx_null) && not (isProcessResolutionMiss (lib : string) lixSpec) then raise (HxRuntime.Hx_return (Obj.repr lixSpec)) else ());
+  ignore (if lixSpec != Obj.magic (HxRuntime.hx_null) && not (isProcessResolutionMiss (lib : string) lixSpec) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr lixSpec)) else ());
   let haxelibSpec = tryResolveViaCommand (haxelibBin () : string) (Obj.magic (let __represented_array_47 = HxArray.create () in let __represented_array_element_0_48 = "path" in (
     ignore (HxArray.push __represented_array_47 __represented_array_element_0_48);
     let __represented_array_element_1_49 = lib in (
@@ -231,7 +231,7 @@ let resolveViaProcess = fun lib -> (try let lixSpec = tryResolveViaCommand (lixB
       __represented_array_47
     )
   ))) in (
-    ignore (if haxelibSpec != Obj.magic (HxRuntime.hx_null) && not (isProcessResolutionMiss (lib : string) haxelibSpec) then raise (HxRuntime.Hx_return (Obj.repr haxelibSpec)) else ());
+    ignore (if haxelibSpec != Obj.magic (HxRuntime.hx_null) && not (isProcessResolutionMiss (lib : string) haxelibSpec) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr haxelibSpec)) else ());
     let haxelibAlwaysSpec = tryResolveViaCommand (haxelibBin () : string) (Obj.magic (let __represented_array_50 = HxArray.create () in let __represented_array_element_0_51 = "--always" in (
       ignore (HxArray.push __represented_array_50 __represented_array_element_0_51);
       let __represented_array_element_1_52 = "path" in (
@@ -242,7 +242,7 @@ let resolveViaProcess = fun lib -> (try let lixSpec = tryResolveViaCommand (lixB
         )
       )
     ))) in (
-      ignore (if haxelibAlwaysSpec != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr haxelibAlwaysSpec)) else ());
+      ignore (if haxelibAlwaysSpec != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr haxelibAlwaysSpec)) else ());
       HxType.hx_throw_typed_rtti (Obj.repr (("failed to resolve -lib " ^ HxString.toStdString lib) ^ " via lix or haxelib")) ["Dynamic"]
     )
   )
@@ -251,10 +251,10 @@ let resolveViaProcess = fun lib -> (try let lixSpec = tryResolveViaCommand (lixB
 
 let rec resolve = fun lib cwd seen depth -> (try (
   ignore (if depth > 25 then HxType.hx_throw_typed_rtti (Obj.repr ("library resolution depth exceeded while resolving: " ^ HxString.toStdString lib)) ["Dynamic"] else ());
-  ignore (if HxMap.exists_string (Obj.magic seen) (lib : string) then raise (HxRuntime.Hx_return (Obj.repr (emptySpec ()))) else ());
+  ignore (if HxMap.exists_string (Obj.magic seen) (lib : string) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (emptySpec ()))) else ());
   ignore (HxMap.set_string (Obj.magic seen) (lib : string) true);
   let hxmlPath = let __call_arg_0_18 = lib in let __call_arg_1_19 = cwd in findScopedHxml __call_arg_0_18 __call_arg_1_19 in (
-    ignore (if (let __string_receiver_20 = hxmlPath in HxString.length __string_receiver_20) > 0 then raise (HxRuntime.Hx_return (Obj.repr (resolveFromHxml (hxmlPath : string) (cwd : string) seen depth))) else ());
+    ignore (if (let __string_receiver_20 = hxmlPath in HxString.length __string_receiver_20) > 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (resolveFromHxml (hxmlPath : string) (cwd : string) seen depth))) else ());
     resolveViaProcess (lib : string)
   )
 ) with
@@ -264,7 +264,7 @@ and resolveFromHxml = fun hxmlPath cwd seen depth -> let args = Obj.magic (Hxhx_
   let classPaths = Obj.magic (HxArray.create ()) in let defines = Obj.magic (HxArray.create ()) in let macros = Obj.magic (HxArray.create ()) in let unknownArgs = Obj.magic (HxArray.create ()) in let i = ref 0 in (
     ignore (while !i < HxArray.length args do ignore (let a = (let __array_read_receiver_117 = args in let __array_read_index_118 = !i in HxArray.get (Obj.magic __array_read_receiver_117) __array_read_index_118 : string) in match a with
       | "--class-path" | "-cp" | "-p" -> ignore ((
-        ignore (if HxInt.add (!i) 1 < HxArray.length args then ignore (let v = (let __array_read_receiver_127 = args in let __array_read_index_128 = HxInt.add (!i) 1 in HxArray.get (Obj.magic __array_read_receiver_127) __array_read_index_128 : string) in if v == HxString.hx_null_string || (let __string_receiver_129 = v in HxString.length __string_receiver_129) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (if (let __array_receiver_130 = classPaths in let __array_arg_0_131 = v in HxArray.indexOf_default __array_receiver_130 __array_arg_0_131) = -1 then ignore (let __array_receiver_132 = classPaths in let __array_arg_0_133 = v in HxArray.push __array_receiver_132 __array_arg_0_133) else ())) else ());
+        ignore (if HxInt.add (!i) 1 < HxArray.length args then ignore (let v = (let __array_read_receiver_127 = args in let __array_read_index_128 = HxInt.add (!i) 1 in HxArray.get (Obj.magic __array_read_receiver_127) __array_read_index_128 : string) in if v == HxString.hx_null_string || (let __string_receiver_129 = v in HxString.length __string_receiver_129) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (if (let __array_receiver_130 = Obj.magic classPaths in let __array_arg_0_131 = (v : string) in HxArray.indexOf_default __array_receiver_130 __array_arg_0_131) = -1 then ignore (let __array_receiver_132 = Obj.magic classPaths in let __array_arg_0_133 = (v : string) in HxArray.push __array_receiver_132 __array_arg_0_133) else ())) else ());
         i := HxInt.add (!i) 2
       ))
       | "--library" | "-lib" -> ignore ((
@@ -275,7 +275,7 @@ and resolveFromHxml = fun hxmlPath cwd seen depth -> let args = Obj.magic (Hxhx_
               ignore (_g := __new_139);
               __new_139
             ));
-            if cp == HxString.hx_null_string || (let __string_receiver_140 = cp in HxString.length __string_receiver_140) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (if (let __array_receiver_141 = classPaths in let __array_arg_0_142 = cp in HxArray.indexOf_default __array_receiver_141 __array_arg_0_142) = -1 then ignore (let __array_receiver_143 = classPaths in let __array_arg_0_144 = cp in HxArray.push __array_receiver_143 __array_arg_0_144) else ())
+            if cp == HxString.hx_null_string || (let __string_receiver_140 = cp in HxString.length __string_receiver_140) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (if (let __array_receiver_141 = Obj.magic classPaths in let __array_arg_0_142 = (cp : string) in HxArray.indexOf_default __array_receiver_141 __array_arg_0_142) = -1 then ignore (let __array_receiver_143 = Obj.magic classPaths in let __array_arg_0_144 = (cp : string) in HxArray.push __array_receiver_143 __array_arg_0_144) else ())
           )) done);
           let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get depSpec "defines")) in (
             ignore (while !_g < HxArray.length _g1 do ignore (let d = (let __array_read_receiver_145 = _g1 in let __array_read_index_146 = !_g in HxArray.get (Obj.magic __array_read_receiver_145) __array_read_index_146 : string) in (
@@ -283,7 +283,7 @@ and resolveFromHxml = fun hxmlPath cwd seen depth -> let args = Obj.magic (Hxhx_
                 ignore (_g := __new_148);
                 __new_148
               ));
-              if d == HxString.hx_null_string || (let __string_receiver_149 = d in HxString.length __string_receiver_149) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (if (let __array_receiver_150 = defines in let __array_arg_0_151 = d in HxArray.indexOf_default __array_receiver_150 __array_arg_0_151) = -1 then ignore (let __array_receiver_152 = defines in let __array_arg_0_153 = d in HxArray.push __array_receiver_152 __array_arg_0_153) else ())
+              if d == HxString.hx_null_string || (let __string_receiver_149 = d in HxString.length __string_receiver_149) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (if (let __array_receiver_150 = Obj.magic defines in let __array_arg_0_151 = (d : string) in HxArray.indexOf_default __array_receiver_150 __array_arg_0_151) = -1 then ignore (let __array_receiver_152 = Obj.magic defines in let __array_arg_0_153 = (d : string) in HxArray.push __array_receiver_152 __array_arg_0_153) else ())
             )) done);
             let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get depSpec "macros")) in (
               ignore (while !_g < HxArray.length _g1 do ignore (let m = (let __array_read_receiver_154 = _g1 in let __array_read_index_155 = !_g in HxArray.get (Obj.magic __array_read_receiver_154) __array_read_index_155 : string) in (
@@ -291,7 +291,7 @@ and resolveFromHxml = fun hxmlPath cwd seen depth -> let args = Obj.magic (Hxhx_
                   ignore (_g := __new_157);
                   __new_157
                 ));
-                if m == HxString.hx_null_string || (let __string_receiver_158 = m in HxString.length __string_receiver_158) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (if (let __array_receiver_159 = macros in let __array_arg_0_160 = m in HxArray.indexOf_default __array_receiver_159 __array_arg_0_160) = -1 then ignore (let __array_receiver_161 = macros in let __array_arg_0_162 = m in HxArray.push __array_receiver_161 __array_arg_0_162) else ())
+                if m == HxString.hx_null_string || (let __string_receiver_158 = m in HxString.length __string_receiver_158) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (if (let __array_receiver_159 = Obj.magic macros in let __array_arg_0_160 = (m : string) in HxArray.indexOf_default __array_receiver_159 __array_arg_0_160) = -1 then ignore (let __array_receiver_161 = Obj.magic macros in let __array_arg_0_162 = (m : string) in HxArray.push __array_receiver_161 __array_arg_0_162) else ())
               )) done);
               let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get depSpec "unknownArgs")) in (
                 ignore (while !_g < HxArray.length _g1 do ignore (let u = (let __array_read_receiver_163 = _g1 in let __array_read_index_164 = !_g in HxArray.get (Obj.magic __array_read_receiver_163) __array_read_index_164 : string) in (
@@ -299,7 +299,7 @@ and resolveFromHxml = fun hxmlPath cwd seen depth -> let args = Obj.magic (Hxhx_
                     ignore (_g := __new_166);
                     __new_166
                   ));
-                  if u == HxString.hx_null_string || (let __string_receiver_167 = u in HxString.length __string_receiver_167) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (if (let __array_receiver_168 = unknownArgs in let __array_arg_0_169 = u in HxArray.indexOf_default __array_receiver_168 __array_arg_0_169) = -1 then ignore (let __array_receiver_170 = unknownArgs in let __array_arg_0_171 = u in HxArray.push __array_receiver_170 __array_arg_0_171) else ())
+                  if u == HxString.hx_null_string || (let __string_receiver_167 = u in HxString.length __string_receiver_167) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (if (let __array_receiver_168 = Obj.magic unknownArgs in let __array_arg_0_169 = (u : string) in HxArray.indexOf_default __array_receiver_168 __array_arg_0_169) = -1 then ignore (let __array_receiver_170 = Obj.magic unknownArgs in let __array_arg_0_171 = (u : string) in HxArray.push __array_receiver_170 __array_arg_0_171) else ())
                 )) done);
                 i := HxInt.add (!i) 2
               )
@@ -308,15 +308,15 @@ and resolveFromHxml = fun hxmlPath cwd seen depth -> let args = Obj.magic (Hxhx_
         )
       ))
       | "--macro" -> ignore ((
-        ignore (if HxInt.add (!i) 1 < HxArray.length args then ignore (let v = (let __array_read_receiver_172 = args in let __array_read_index_173 = HxInt.add (!i) 1 in HxArray.get (Obj.magic __array_read_receiver_172) __array_read_index_173 : string) in if v == HxString.hx_null_string || (let __string_receiver_174 = v in HxString.length __string_receiver_174) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (if (let __array_receiver_175 = macros in let __array_arg_0_176 = v in HxArray.indexOf_default __array_receiver_175 __array_arg_0_176) = -1 then ignore (let __array_receiver_177 = macros in let __array_arg_0_178 = v in HxArray.push __array_receiver_177 __array_arg_0_178) else ())) else ());
+        ignore (if HxInt.add (!i) 1 < HxArray.length args then ignore (let v = (let __array_read_receiver_172 = args in let __array_read_index_173 = HxInt.add (!i) 1 in HxArray.get (Obj.magic __array_read_receiver_172) __array_read_index_173 : string) in if v == HxString.hx_null_string || (let __string_receiver_174 = v in HxString.length __string_receiver_174) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (if (let __array_receiver_175 = Obj.magic macros in let __array_arg_0_176 = (v : string) in HxArray.indexOf_default __array_receiver_175 __array_arg_0_176) = -1 then ignore (let __array_receiver_177 = Obj.magic macros in let __array_arg_0_178 = (v : string) in HxArray.push __array_receiver_177 __array_arg_0_178) else ())) else ());
         i := HxInt.add (!i) 2
       ))
       | "-D" -> ignore ((
-        ignore (if HxInt.add (!i) 1 < HxArray.length args then ignore (let v = (let __array_read_receiver_179 = args in let __array_read_index_180 = HxInt.add (!i) 1 in HxArray.get (Obj.magic __array_read_receiver_179) __array_read_index_180 : string) in if v == HxString.hx_null_string || (let __string_receiver_181 = v in HxString.length __string_receiver_181) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (if (let __array_receiver_182 = defines in let __array_arg_0_183 = v in HxArray.indexOf_default __array_receiver_182 __array_arg_0_183) = -1 then ignore (let __array_receiver_184 = defines in let __array_arg_0_185 = v in HxArray.push __array_receiver_184 __array_arg_0_185) else ())) else ());
+        ignore (if HxInt.add (!i) 1 < HxArray.length args then ignore (let v = (let __array_read_receiver_179 = args in let __array_read_index_180 = HxInt.add (!i) 1 in HxArray.get (Obj.magic __array_read_receiver_179) __array_read_index_180 : string) in if v == HxString.hx_null_string || (let __string_receiver_181 = v in HxString.length __string_receiver_181) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (if (let __array_receiver_182 = Obj.magic defines in let __array_arg_0_183 = (v : string) in HxArray.indexOf_default __array_receiver_182 __array_arg_0_183) = -1 then ignore (let __array_receiver_184 = Obj.magic defines in let __array_arg_0_185 = (v : string) in HxArray.push __array_receiver_184 __array_arg_0_185) else ())) else ());
         i := HxInt.add (!i) 2
       ))
       | _ -> ignore ((
-        ignore (if a != HxString.hx_null_string && (let __string_receiver_119 = a in HxString.length __string_receiver_119) > 0 && (let __call_arg_0_120 = a in let __call_arg_1_121 = "-" in StringTools.startsWith __call_arg_0_120 __call_arg_1_121) then ignore (if a == HxString.hx_null_string || (let __string_receiver_122 = a in HxString.length __string_receiver_122) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (if (let __array_receiver_123 = unknownArgs in let __array_arg_0_124 = a in HxArray.indexOf_default __array_receiver_123 __array_arg_0_124) = -1 then ignore (let __array_receiver_125 = unknownArgs in let __array_arg_0_126 = a in HxArray.push __array_receiver_125 __array_arg_0_126) else ())) else ());
+        ignore (if a != HxString.hx_null_string && (let __string_receiver_119 = a in HxString.length __string_receiver_119) > 0 && (let __call_arg_0_120 = a in let __call_arg_1_121 = "-" in StringTools.startsWith __call_arg_0_120 __call_arg_1_121) then ignore (if a == HxString.hx_null_string || (let __string_receiver_122 = a in HxString.length __string_receiver_122) = 0 then ignore (Obj.magic (HxRuntime.hx_null)) else ignore (if (let __array_receiver_123 = Obj.magic unknownArgs in let __array_arg_0_124 = (a : string) in HxArray.indexOf_default __array_receiver_123 __array_arg_0_124) = -1 then ignore (let __array_receiver_125 = Obj.magic unknownArgs in let __array_arg_0_126 = (a : string) in HxArray.push __array_receiver_125 __array_arg_0_126) else ())) else ());
         i := HxInt.add (!i) 1
       ))) done);
     let __anon_186 = HxAnon.create () in (

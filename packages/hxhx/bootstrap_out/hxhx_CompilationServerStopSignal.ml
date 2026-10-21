@@ -22,7 +22,7 @@ let record = fun self (value : bool) -> ignore (ignore (let __place_receiver_3 =
 )))
 
 let take = fun self () -> (try (
-  ignore (if not ((self : t).requested) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if not ((self : t).requested) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   ignore (let __place_receiver_5 = self in let __place_rhs_6 = false in (
     (__place_receiver_5 : t).requested <- __place_rhs_6;
     __place_rhs_6

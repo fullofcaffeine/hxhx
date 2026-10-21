@@ -15,4 +15,4 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "MacroStage" } : t)
 
 let expand = fun m generatedOcamlModules -> MacroExpandedModule.create (Obj.magic m) true (Obj.magic generatedOcamlModules)
 
-let expandProgram = fun modules generatedOcamlModules -> MacroExpandedProgram.create (Obj.magic modules) true (Obj.magic generatedOcamlModules)
+let expandProgram = fun modules generatedOcamlModules -> MacroExpandedProgram.create (Obj.magic modules) true (Obj.magic generatedOcamlModules) (Obj.magic (HxRuntime.hx_null))

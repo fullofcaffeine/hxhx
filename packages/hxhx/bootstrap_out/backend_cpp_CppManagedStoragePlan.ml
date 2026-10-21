@@ -1,0 +1,2 @@
+# 1 "backend_cpp_CppManagedStoragePlan.ml"
+include Backend_cpp_CppManagedCaptureStorage.Backend_cpp_CppManagedStoragePlan

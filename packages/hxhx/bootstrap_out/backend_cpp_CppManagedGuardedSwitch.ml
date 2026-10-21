@@ -1,0 +1,2 @@
+# 1 "backend_cpp_CppManagedGuardedSwitch.ml"
+include Backend_cpp_CppManagedCatchRegion.Backend_cpp_CppManagedGuardedSwitch

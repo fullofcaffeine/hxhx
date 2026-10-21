@@ -1,0 +1,2 @@
+# 1 "TypedBackendCallArgument.ml"
+include CompilerDiagnosticProbe.TypedBackendCallArgument

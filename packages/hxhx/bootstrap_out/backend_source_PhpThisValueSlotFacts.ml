@@ -15,263 +15,317 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpThisValu
 
 let isAssignmentOperator = fun (op : string) -> (let tempResult = ref (false : bool) in (
   ignore (match op with
-    | "%=" | "&=" | "*=" | "+=" | "-=" | "/=" | "<<=" | "=" | ">>=" | "^=" | "|=" -> let __assign_65 = true in (
-      tempResult := __assign_65;
-      __assign_65
+    | "%=" | "&=" | "*=" | "+=" | "-=" | "/=" | "<<=" | "=" | ">>=" | "^=" | "|=" -> let __assign_73 = true in (
+      tempResult := __assign_73;
+      __assign_73
     )
-    | _ -> let __assign_64 = false in (
-      tempResult := __assign_64;
-      __assign_64
+    | _ -> let __assign_72 = false in (
+      tempResult := __assign_72;
+      __assign_72
     ));
   !tempResult
 ) : bool)
 
 let rec expressionNeedsValueSlot = fun expression -> let tempResult = ref (false : bool) in (
   ignore (match expression with
-    | HxExpr.EThis -> let __assign_33 = false in (
-      tempResult := __assign_33;
-      __assign_33
-    )
-    | HxExpr.EField (_p0, _p1) -> let _g = Obj.magic _p0 in (
+    | HxExpr.EParenthesized (_p0, _p1) -> let _g = Obj.magic _p0 in (
       ignore _p1;
-      let receiver = Obj.magic _g in let __assign_34 = expressionNeedsValueSlot (Obj.magic receiver) in (
+      let inner = Obj.magic _g in let __assign_34 = expressionNeedsValueSlot (Obj.magic inner) in (
         tempResult := __assign_34;
         __assign_34
       )
     )
-    | HxExpr.ECall (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in if (match _g with
-      | HxExpr.ENull -> 0
-      | HxExpr.EBool _ -> 1
-      | HxExpr.EString _ -> 2
-      | HxExpr.EInt _ -> 3
-      | HxExpr.EFloat _ -> 4
-      | HxExpr.EEnumValue _ -> 5
-      | HxExpr.EThis -> 6
-      | HxExpr.ESuper -> 7
-      | HxExpr.EIdent _ -> 8
-      | HxExpr.EField (_, _) -> 9
-      | HxExpr.ENullSafeField (_, _) -> 10
-      | HxExpr.ECall (_, _) -> 11
-      | HxExpr.EMacroExpr (_, _) -> 12
-      | HxExpr.EMacroType _ -> 13
-      | HxExpr.ELambda (_, _) -> 14
-      | HxExpr.ETryCatchRaw _ -> 15
-      | HxExpr.ESwitchRaw _ -> 16
-      | HxExpr.ESwitch (_, _, _) -> 17
-      | HxExpr.ENew (_, _) -> 18
-      | HxExpr.EUnop (_, _, _) -> 19
-      | HxExpr.EBinop (_, _, _) -> 20
-      | HxExpr.ETernary (_, _, _) -> 21
-      | HxExpr.EAnon (_, _) -> 22
-      | HxExpr.EArrayComprehension (_, _, _, _) -> 23
-      | HxExpr.EArrayDecl _ -> 24
-      | HxExpr.EArrayAccess (_, _) -> 25
-      | HxExpr.ERange (_, _) -> 26
-      | HxExpr.ECast (_, _) -> 27
-      | HxExpr.EUntyped _ -> 28
-      | HxExpr.EUnsupported _ -> 29
-      | HxExpr.EReturn _ -> 30
-      | HxExpr.EVars _ -> 31
-      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33
-      | HxExpr.EBreak _ -> 34
-      | HxExpr.EContinue _ -> 35) = 6 then let __assign_35 = true in (
+    | HxExpr.EThis -> let __assign_35 = false in (
       tempResult := __assign_35;
       __assign_35
-    ) else let callee = Obj.magic _g in let arguments = Obj.magic _g1 in let __assign_36 = expressionNeedsValueSlot (Obj.magic callee) || expressionListNeedsValueSlot (Obj.magic arguments) in (
-      tempResult := __assign_36;
-      __assign_36
+    )
+    | HxExpr.EField (_p0, _p1) -> let _g = Obj.magic _p0 in (
+      ignore _p1;
+      let receiver = Obj.magic _g in let __assign_36 = expressionNeedsValueSlot (Obj.magic receiver) in (
+        tempResult := __assign_36;
+        __assign_36
+      )
+    )
+    | HxExpr.ECall (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in if (match _g with
+      | HxExpr.EParenthesized (_, _) -> 0
+      | HxExpr.ESourceTry (_, _, _) -> 1
+      | HxExpr.ESourceFor (_, _, _, _) -> 2
+      | HxExpr.ELoweredControl (_, _, _, _) -> 3
+      | HxExpr.ENull -> 4
+      | HxExpr.EBool _ -> 5
+      | HxExpr.EString _ -> 6
+      | HxExpr.EInt _ -> 7
+      | HxExpr.EFloat _ -> 8
+      | HxExpr.EEnumValue _ -> 9
+      | HxExpr.EThis -> 10
+      | HxExpr.ESuper -> 11
+      | HxExpr.EIdent _ -> 12
+      | HxExpr.EField (_, _) -> 13
+      | HxExpr.ENullSafeField (_, _) -> 14
+      | HxExpr.ECall (_, _) -> 15
+      | HxExpr.EMacroExpr (_, _) -> 16
+      | HxExpr.EMacroType _ -> 17
+      | HxExpr.ELambda (_, _, _) -> 18
+      | HxExpr.ETryCatchRaw _ -> 19
+      | HxExpr.ESwitchRaw _ -> 20
+      | HxExpr.ESwitch (_, _, _) -> 21
+      | HxExpr.ENew (_, _) -> 22
+      | HxExpr.EUnop (_, _, _) -> 23
+      | HxExpr.EBinop (_, _, _) -> 24
+      | HxExpr.ETernary (_, _, _) -> 25
+      | HxExpr.ESourceIf (_, _, _, _) -> 26
+      | HxExpr.EThrow (_, _) -> 27
+      | HxExpr.EAnon (_, _) -> 28
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 29
+      | HxExpr.EArrayDecl _ -> 30
+      | HxExpr.EArrayAccess (_, _) -> 31
+      | HxExpr.ERange (_, _) -> 32
+      | HxExpr.ECast (_, _) -> 33
+      | HxExpr.ECheckType (_, _) -> 34
+      | HxExpr.EUntyped _ -> 35
+      | HxExpr.EUnsupported _ -> 36
+      | HxExpr.EReturn _ -> 37
+      | HxExpr.EVars _ -> 38
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 39
+      | HxExpr.EWhile (_, _, _, _, _) -> 40
+      | HxExpr.EBreak _ -> 41
+      | HxExpr.EContinue _ -> 42
+      | HxExpr.EDiscardThen (_, _) -> 43
+      | HxExpr.ESourceGroup (_, _) -> 44
+      | HxExpr.ESourceFunction (_, _, _, _) -> 45
+      | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let __assign_37 = true in (
+      tempResult := __assign_37;
+      __assign_37
+    ) else let callee = Obj.magic _g in let arguments = Obj.magic _g1 in let __assign_38 = expressionNeedsValueSlot (Obj.magic callee) || expressionListNeedsValueSlot (Obj.magic arguments) in (
+      tempResult := __assign_38;
+      __assign_38
     )
     | HxExpr.EMacroExpr (_p0, _p1) -> let _g = Obj.magic _p0 in (
       ignore _p1;
-      let inner = Obj.magic _g in let __assign_37 = expressionNeedsValueSlot (Obj.magic inner) in (
-        tempResult := __assign_37;
-        __assign_37
-      )
-    )
-    | HxExpr.ELambda (_p0, _p1) -> (
-      ignore _p0;
-      let _g2 = Obj.magic _p1 in let body = Obj.magic _g2 in let __assign_38 = expressionNeedsValueSlot (Obj.magic body) in (
-        tempResult := __assign_38;
-        __assign_38
-      )
-    )
-    | HxExpr.ESwitch (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in (
-      ignore _p1;
-      let _g2 = Obj.magic _p2 in let scrutinee = Obj.magic _g in let expressions = Obj.magic _g2 in let __assign_39 = expressionNeedsValueSlot (Obj.magic scrutinee) || expressionListNeedsValueSlot (Obj.magic expressions) in (
+      let inner = Obj.magic _g in let __assign_39 = expressionNeedsValueSlot (Obj.magic inner) in (
         tempResult := __assign_39;
         __assign_39
       )
     )
+    | HxExpr.ELambda (_p0, _p1, _p2) -> (
+      ignore _p0;
+      let _g2 = Obj.magic _p1 in (
+        ignore _p2;
+        let body = Obj.magic _g2 in let __assign_40 = expressionNeedsValueSlot (Obj.magic body) in (
+          tempResult := __assign_40;
+          __assign_40
+        )
+      )
+    )
+    | HxExpr.ESwitch (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in (
+      ignore _p1;
+      let _g2 = Obj.magic _p2 in let scrutinee = Obj.magic _g in let expressions = Obj.magic _g2 in let __assign_41 = expressionNeedsValueSlot (Obj.magic scrutinee) || expressionListNeedsValueSlot (Obj.magic expressions) in (
+        tempResult := __assign_41;
+        __assign_41
+      )
+    )
     | HxExpr.ENew (_p0, _p1) -> (
       ignore _p0;
-      let _g2 = Obj.magic _p1 in let arguments = Obj.magic _g2 in let __assign_40 = expressionListNeedsValueSlot (Obj.magic arguments) in (
-        tempResult := __assign_40;
-        __assign_40
+      let _g2 = Obj.magic _p1 in let arguments = Obj.magic _g2 in let __assign_42 = expressionListNeedsValueSlot (Obj.magic arguments) in (
+        tempResult := __assign_42;
+        __assign_42
       )
     )
     | HxExpr.EUnop (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in (
       ignore _p1;
       let _g2 = Obj.magic _p2 in if (match _g2 with
-        | HxExpr.ENull -> 0
-        | HxExpr.EBool _ -> 1
-        | HxExpr.EString _ -> 2
-        | HxExpr.EInt _ -> 3
-        | HxExpr.EFloat _ -> 4
-        | HxExpr.EEnumValue _ -> 5
-        | HxExpr.EThis -> 6
-        | HxExpr.ESuper -> 7
-        | HxExpr.EIdent _ -> 8
-        | HxExpr.EField (_, _) -> 9
-        | HxExpr.ENullSafeField (_, _) -> 10
-        | HxExpr.ECall (_, _) -> 11
-        | HxExpr.EMacroExpr (_, _) -> 12
-        | HxExpr.EMacroType _ -> 13
-        | HxExpr.ELambda (_, _) -> 14
-        | HxExpr.ETryCatchRaw _ -> 15
-        | HxExpr.ESwitchRaw _ -> 16
-        | HxExpr.ESwitch (_, _, _) -> 17
-        | HxExpr.ENew (_, _) -> 18
-        | HxExpr.EUnop (_, _, _) -> 19
-        | HxExpr.EBinop (_, _, _) -> 20
-        | HxExpr.ETernary (_, _, _) -> 21
-        | HxExpr.EAnon (_, _) -> 22
-        | HxExpr.EArrayComprehension (_, _, _, _) -> 23
-        | HxExpr.EArrayDecl _ -> 24
-        | HxExpr.EArrayAccess (_, _) -> 25
-        | HxExpr.ERange (_, _) -> 26
-        | HxExpr.ECast (_, _) -> 27
-        | HxExpr.EUntyped _ -> 28
-        | HxExpr.EUnsupported _ -> 29
-        | HxExpr.EReturn _ -> 30
-        | HxExpr.EVars _ -> 31
-        | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-        | HxExpr.EWhile (_, _, _, _) -> 33
-        | HxExpr.EBreak _ -> 34
-        | HxExpr.EContinue _ -> 35) = 6 then let op = Obj.magic _g in if op = HxUnaryOperator.Increment || op = HxUnaryOperator.Decrement then let __assign_41 = true in (
-        tempResult := __assign_41;
-        __assign_41
-      ) else let inner = Obj.magic _g2 in let __assign_42 = expressionNeedsValueSlot (Obj.magic inner) in (
-        tempResult := __assign_42;
-        __assign_42
-      ) else let inner = Obj.magic _g2 in let __assign_43 = expressionNeedsValueSlot (Obj.magic inner) in (
-        tempResult := __assign_43;
-        __assign_43
+        | HxExpr.EParenthesized (_, _) -> 0
+        | HxExpr.ESourceTry (_, _, _) -> 1
+        | HxExpr.ESourceFor (_, _, _, _) -> 2
+        | HxExpr.ELoweredControl (_, _, _, _) -> 3
+        | HxExpr.ENull -> 4
+        | HxExpr.EBool _ -> 5
+        | HxExpr.EString _ -> 6
+        | HxExpr.EInt _ -> 7
+        | HxExpr.EFloat _ -> 8
+        | HxExpr.EEnumValue _ -> 9
+        | HxExpr.EThis -> 10
+        | HxExpr.ESuper -> 11
+        | HxExpr.EIdent _ -> 12
+        | HxExpr.EField (_, _) -> 13
+        | HxExpr.ENullSafeField (_, _) -> 14
+        | HxExpr.ECall (_, _) -> 15
+        | HxExpr.EMacroExpr (_, _) -> 16
+        | HxExpr.EMacroType _ -> 17
+        | HxExpr.ELambda (_, _, _) -> 18
+        | HxExpr.ETryCatchRaw _ -> 19
+        | HxExpr.ESwitchRaw _ -> 20
+        | HxExpr.ESwitch (_, _, _) -> 21
+        | HxExpr.ENew (_, _) -> 22
+        | HxExpr.EUnop (_, _, _) -> 23
+        | HxExpr.EBinop (_, _, _) -> 24
+        | HxExpr.ETernary (_, _, _) -> 25
+        | HxExpr.ESourceIf (_, _, _, _) -> 26
+        | HxExpr.EThrow (_, _) -> 27
+        | HxExpr.EAnon (_, _) -> 28
+        | HxExpr.EArrayComprehension (_, _, _, _) -> 29
+        | HxExpr.EArrayDecl _ -> 30
+        | HxExpr.EArrayAccess (_, _) -> 31
+        | HxExpr.ERange (_, _) -> 32
+        | HxExpr.ECast (_, _) -> 33
+        | HxExpr.ECheckType (_, _) -> 34
+        | HxExpr.EUntyped _ -> 35
+        | HxExpr.EUnsupported _ -> 36
+        | HxExpr.EReturn _ -> 37
+        | HxExpr.EVars _ -> 38
+        | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 39
+        | HxExpr.EWhile (_, _, _, _, _) -> 40
+        | HxExpr.EBreak _ -> 41
+        | HxExpr.EContinue _ -> 42
+        | HxExpr.EDiscardThen (_, _) -> 43
+        | HxExpr.ESourceGroup (_, _) -> 44
+        | HxExpr.ESourceFunction (_, _, _, _) -> 45
+        | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let op = Obj.magic _g in if (let __enum_eq_left_43 = op in let __enum_eq_right_44 = HxUnaryOperator.Increment in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_43) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_44)) || (let __enum_eq_left_45 = op in let __enum_eq_right_46 = HxUnaryOperator.Decrement in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_45) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_46)) then let __assign_47 = true in (
+        tempResult := __assign_47;
+        __assign_47
+      ) else let inner = Obj.magic _g2 in let __assign_48 = expressionNeedsValueSlot (Obj.magic inner) in (
+        tempResult := __assign_48;
+        __assign_48
+      ) else let inner = Obj.magic _g2 in let __assign_49 = expressionNeedsValueSlot (Obj.magic inner) in (
+        tempResult := __assign_49;
+        __assign_49
       )
     )
     | HxExpr.EBinop (_p0, _p1, _p2) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in if (match _g1 with
-      | HxExpr.ENull -> 0
-      | HxExpr.EBool _ -> 1
-      | HxExpr.EString _ -> 2
-      | HxExpr.EInt _ -> 3
-      | HxExpr.EFloat _ -> 4
-      | HxExpr.EEnumValue _ -> 5
-      | HxExpr.EThis -> 6
-      | HxExpr.ESuper -> 7
-      | HxExpr.EIdent _ -> 8
-      | HxExpr.EField (_, _) -> 9
-      | HxExpr.ENullSafeField (_, _) -> 10
-      | HxExpr.ECall (_, _) -> 11
-      | HxExpr.EMacroExpr (_, _) -> 12
-      | HxExpr.EMacroType _ -> 13
-      | HxExpr.ELambda (_, _) -> 14
-      | HxExpr.ETryCatchRaw _ -> 15
-      | HxExpr.ESwitchRaw _ -> 16
-      | HxExpr.ESwitch (_, _, _) -> 17
-      | HxExpr.ENew (_, _) -> 18
-      | HxExpr.EUnop (_, _, _) -> 19
-      | HxExpr.EBinop (_, _, _) -> 20
-      | HxExpr.ETernary (_, _, _) -> 21
-      | HxExpr.EAnon (_, _) -> 22
-      | HxExpr.EArrayComprehension (_, _, _, _) -> 23
-      | HxExpr.EArrayDecl _ -> 24
-      | HxExpr.EArrayAccess (_, _) -> 25
-      | HxExpr.ERange (_, _) -> 26
-      | HxExpr.ECast (_, _) -> 27
-      | HxExpr.EUntyped _ -> 28
-      | HxExpr.EUnsupported _ -> 29
-      | HxExpr.EReturn _ -> 30
-      | HxExpr.EVars _ -> 31
-      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33
-      | HxExpr.EBreak _ -> 34
-      | HxExpr.EContinue _ -> 35) = 6 then let op = (_g : string) in if (let __call_arg_0_44 = op in isAssignmentOperator __call_arg_0_44) || (let __string_eq_left_45 = op in let __string_eq_right_46 = "??=" in HxString.equals __string_eq_left_45 __string_eq_right_46) || (let __string_eq_left_47 = op in let __string_eq_right_48 = ">>>=" in HxString.equals __string_eq_left_47 __string_eq_right_48) then let __assign_49 = true in (
-      tempResult := __assign_49;
-      __assign_49
-    ) else let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_50 = expressionNeedsValueSlot (Obj.magic left) || expressionNeedsValueSlot (Obj.magic right) in (
-      tempResult := __assign_50;
-      __assign_50
-    ) else let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_51 = expressionNeedsValueSlot (Obj.magic left) || expressionNeedsValueSlot (Obj.magic right) in (
-      tempResult := __assign_51;
-      __assign_51
+      | HxExpr.EParenthesized (_, _) -> 0
+      | HxExpr.ESourceTry (_, _, _) -> 1
+      | HxExpr.ESourceFor (_, _, _, _) -> 2
+      | HxExpr.ELoweredControl (_, _, _, _) -> 3
+      | HxExpr.ENull -> 4
+      | HxExpr.EBool _ -> 5
+      | HxExpr.EString _ -> 6
+      | HxExpr.EInt _ -> 7
+      | HxExpr.EFloat _ -> 8
+      | HxExpr.EEnumValue _ -> 9
+      | HxExpr.EThis -> 10
+      | HxExpr.ESuper -> 11
+      | HxExpr.EIdent _ -> 12
+      | HxExpr.EField (_, _) -> 13
+      | HxExpr.ENullSafeField (_, _) -> 14
+      | HxExpr.ECall (_, _) -> 15
+      | HxExpr.EMacroExpr (_, _) -> 16
+      | HxExpr.EMacroType _ -> 17
+      | HxExpr.ELambda (_, _, _) -> 18
+      | HxExpr.ETryCatchRaw _ -> 19
+      | HxExpr.ESwitchRaw _ -> 20
+      | HxExpr.ESwitch (_, _, _) -> 21
+      | HxExpr.ENew (_, _) -> 22
+      | HxExpr.EUnop (_, _, _) -> 23
+      | HxExpr.EBinop (_, _, _) -> 24
+      | HxExpr.ETernary (_, _, _) -> 25
+      | HxExpr.ESourceIf (_, _, _, _) -> 26
+      | HxExpr.EThrow (_, _) -> 27
+      | HxExpr.EAnon (_, _) -> 28
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 29
+      | HxExpr.EArrayDecl _ -> 30
+      | HxExpr.EArrayAccess (_, _) -> 31
+      | HxExpr.ERange (_, _) -> 32
+      | HxExpr.ECast (_, _) -> 33
+      | HxExpr.ECheckType (_, _) -> 34
+      | HxExpr.EUntyped _ -> 35
+      | HxExpr.EUnsupported _ -> 36
+      | HxExpr.EReturn _ -> 37
+      | HxExpr.EVars _ -> 38
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 39
+      | HxExpr.EWhile (_, _, _, _, _) -> 40
+      | HxExpr.EBreak _ -> 41
+      | HxExpr.EContinue _ -> 42
+      | HxExpr.EDiscardThen (_, _) -> 43
+      | HxExpr.ESourceGroup (_, _) -> 44
+      | HxExpr.ESourceFunction (_, _, _, _) -> 45
+      | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let op = (_g : string) in if (let __call_arg_0_50 = op in isAssignmentOperator __call_arg_0_50) || (let __string_eq_left_51 = op in let __string_eq_right_52 = "??=" in HxString.equals __string_eq_left_51 __string_eq_right_52) || (let __string_eq_left_53 = op in let __string_eq_right_54 = ">>>=" in HxString.equals __string_eq_left_53 __string_eq_right_54) then let __assign_55 = true in (
+      tempResult := __assign_55;
+      __assign_55
+    ) else let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_56 = expressionNeedsValueSlot (Obj.magic left) || expressionNeedsValueSlot (Obj.magic right) in (
+      tempResult := __assign_56;
+      __assign_56
+    ) else let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_57 = expressionNeedsValueSlot (Obj.magic left) || expressionNeedsValueSlot (Obj.magic right) in (
+      tempResult := __assign_57;
+      __assign_57
     )
-    | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let condition = Obj.magic _g in let thenExpression = Obj.magic _g1 in let elseExpression = Obj.magic _g2 in let __assign_52 = expressionNeedsValueSlot (Obj.magic condition) || expressionNeedsValueSlot (Obj.magic thenExpression) || expressionNeedsValueSlot (Obj.magic elseExpression) in (
-      tempResult := __assign_52;
-      __assign_52
+    | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let condition = Obj.magic _g in let thenExpression = Obj.magic _g1 in let elseExpression = Obj.magic _g2 in let __assign_58 = expressionNeedsValueSlot (Obj.magic condition) || expressionNeedsValueSlot (Obj.magic thenExpression) || expressionNeedsValueSlot (Obj.magic elseExpression) in (
+      tempResult := __assign_58;
+      __assign_58
     )
     | HxExpr.EAnon (_p0, _p1) -> (
       ignore _p0;
-      let _g2 = Obj.magic _p1 in let fieldValues = Obj.magic _g2 in let __assign_53 = expressionListNeedsValueSlot (Obj.magic fieldValues) in (
-        tempResult := __assign_53;
-        __assign_53
+      let _g2 = Obj.magic _p1 in let fieldValues = Obj.magic _g2 in let __assign_59 = expressionListNeedsValueSlot (Obj.magic fieldValues) in (
+        tempResult := __assign_59;
+        __assign_59
       )
     )
     | HxExpr.EArrayComprehension (_p0, _p1, _p2, _p3) -> (
       ignore _p0;
-      let _g2 = Obj.magic _p1 in let _g1 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in let iterable = Obj.magic _g2 in let guardExpression = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g1) in let yieldExpression = Obj.magic _g3 in let __assign_54 = expressionNeedsValueSlot (Obj.magic iterable) || guardExpression != Obj.magic (HxRuntime.hx_null) && expressionNeedsValueSlot (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpression)) || expressionNeedsValueSlot (Obj.magic yieldExpression) in (
-        tempResult := __assign_54;
-        __assign_54
+      let _g2 = Obj.magic _p1 in let _g1 = _p2 in let _g3 = Obj.magic _p3 in let iterable = Obj.magic _g2 in let guardExpression = _g1 in let yieldExpression = Obj.magic _g3 in let __assign_60 = expressionNeedsValueSlot (Obj.magic iterable) || guardExpression != Obj.magic (HxRuntime.hx_null) && expressionNeedsValueSlot (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpression)) || expressionNeedsValueSlot (Obj.magic yieldExpression) in (
+        tempResult := __assign_60;
+        __assign_60
       )
     )
-    | HxExpr.EArrayDecl _p0 -> let _g = Obj.magic _p0 in let values = Obj.magic _g in let __assign_55 = expressionListNeedsValueSlot (Obj.magic values) in (
-      tempResult := __assign_55;
-      __assign_55
+    | HxExpr.EArrayDecl _p0 -> let _g = Obj.magic _p0 in let values = Obj.magic _g in let __assign_61 = expressionListNeedsValueSlot (Obj.magic values) in (
+      tempResult := __assign_61;
+      __assign_61
     )
-    | HxExpr.EArrayAccess (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let receiver = Obj.magic _g in let index = Obj.magic _g1 in let __assign_56 = expressionNeedsValueSlot (Obj.magic receiver) || expressionNeedsValueSlot (Obj.magic index) in (
-      tempResult := __assign_56;
-      __assign_56
+    | HxExpr.EArrayAccess (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let receiver = Obj.magic _g in let index = Obj.magic _g1 in let __assign_62 = expressionNeedsValueSlot (Obj.magic receiver) || expressionNeedsValueSlot (Obj.magic index) in (
+      tempResult := __assign_62;
+      __assign_62
     )
     | HxExpr.ECast (_p0, _p1) -> let _g = Obj.magic _p0 in (
       ignore _p1;
-      let inner = Obj.magic _g in let __assign_57 = expressionNeedsValueSlot (Obj.magic inner) in (
-        tempResult := __assign_57;
-        __assign_57
+      let inner = Obj.magic _g in let __assign_63 = expressionNeedsValueSlot (Obj.magic inner) in (
+        tempResult := __assign_63;
+        __assign_63
       )
     )
-    | HxExpr.EUntyped _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_58 = expressionNeedsValueSlot (Obj.magic inner) in (
-      tempResult := __assign_58;
-      __assign_58
+    | HxExpr.ECheckType (_p0, _p1) -> let _g = Obj.magic _p0 in (
+      ignore _p1;
+      let inner = Obj.magic _g in let __assign_64 = expressionNeedsValueSlot (Obj.magic inner) in (
+        tempResult := __assign_64;
+        __assign_64
+      )
     )
-    | _ -> let __assign_32 = false in (
-      tempResult := __assign_32;
-      __assign_32
+    | HxExpr.EUntyped _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_65 = expressionNeedsValueSlot (Obj.magic inner) in (
+      tempResult := __assign_65;
+      __assign_65
+    )
+    | HxExpr.EDiscardThen (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let left = Obj.magic _g in let right = Obj.magic _g1 in let __assign_66 = expressionNeedsValueSlot (Obj.magic left) || expressionNeedsValueSlot (Obj.magic right) in (
+      tempResult := __assign_66;
+      __assign_66
+    )
+    | _ -> let __assign_33 = false in (
+      tempResult := __assign_33;
+      __assign_33
     ));
   !tempResult
 )
 and expressionListNeedsValueSlot = fun expressions -> (try (
-  ignore (if expressions == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if expressions == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let _g = ref 0 in (
-    ignore (while !_g < HxArray.length expressions do ignore (let expression = Obj.magic (let __array_read_receiver_59 = expressions in let __array_read_index_60 = !_g in HxArray.get (Obj.magic __array_read_receiver_59) __array_read_index_60) in (
-      ignore (let __old_61 = !_g in let __new_62 = HxInt.add __old_61 1 in (
-        ignore (_g := __new_62);
-        __new_62
+    ignore (while !_g < HxArray.length expressions do ignore (let expression = Obj.magic (let __array_read_receiver_67 = expressions in let __array_read_index_68 = !_g in HxArray.get (Obj.magic __array_read_receiver_67) __array_read_index_68) in (
+      ignore (let __old_69 = !_g in let __new_70 = HxInt.add __old_69 1 in (
+        ignore (_g := __new_70);
+        __new_70
       ));
-      if expressionNeedsValueSlot (Obj.magic expression) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
+      if expressionNeedsValueSlot (Obj.magic expression) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr true)) else ()
     )) done);
     false
   )
 ) with
-  | HxRuntime.Hx_return __ret_63 -> (Obj.obj __ret_63 : bool) : bool)
+  | HxRuntime.Hx_return __ret_71 -> (Obj.obj __ret_71 : bool) : bool)
 
 let rec statementListNeedsValueSlot = fun statements -> (try (
-  ignore (if statements == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if statements == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length statements do ignore (let statement = Obj.magic (let __array_read_receiver_6 = statements in let __array_read_index_7 = !_g in HxArray.get (Obj.magic __array_read_receiver_6) __array_read_index_7) in (
       ignore (let __old_8 = !_g in let __new_9 = HxInt.add __old_8 1 in (
         ignore (_g := __new_9);
         __new_9
       ));
-      if statementNeedsValueSlot (Obj.magic statement) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
+      if statementNeedsValueSlot (Obj.magic statement) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr true)) else ()
     )) done);
     false
   )
@@ -289,18 +343,18 @@ and statementNeedsValueSlot = fun statement -> let tempResult = ref (false : boo
     | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> (
       ignore _p0;
       ignore _p1;
-      let _g3 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+      let _g3 = _p2 in (
         ignore _p3;
         ignore _p4;
-        let hx_initializer = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g3) in let __assign_12 = hx_initializer != Obj.magic (HxRuntime.hx_null) && expressionNeedsValueSlot (Obj.obj (HxEnum.unbox_or_obj "HxExpr" hx_initializer)) in (
+        let hx_initializer = _g3 in let __assign_12 = hx_initializer != Obj.magic (HxRuntime.hx_null) && expressionNeedsValueSlot (Obj.obj (HxEnum.unbox_or_obj "HxExpr" hx_initializer)) in (
           tempResult := __assign_12;
           __assign_12
         )
       )
     )
-    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in (
+    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
       ignore _p3;
-      let condition = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let __assign_13 = expressionNeedsValueSlot (Obj.magic condition) || statementNeedsValueSlot (Obj.magic thenBranch) || elseBranch != Obj.magic (HxRuntime.hx_null) && statementNeedsValueSlot (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
+      let condition = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in let __assign_13 = expressionNeedsValueSlot (Obj.magic condition) || statementNeedsValueSlot (Obj.magic thenBranch) || elseBranch != Obj.magic (HxRuntime.hx_null) && statementNeedsValueSlot (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
         tempResult := __assign_13;
         __assign_13
       )
@@ -340,92 +394,109 @@ and statementNeedsValueSlot = fun statement -> let tempResult = ref (false : boo
         __assign_17
       )
     )
-    | HxStmt.SSwitch (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in (
+    | HxStmt.SSwitch (_p0, _p1, _p2, _p3, _p4) -> let _g = Obj.magic _p0 in (
       ignore _p1;
       let _g2 = Obj.magic _p2 in (
         ignore _p3;
+        ignore _p4;
         let scrutinee = Obj.magic _g in let bodies = Obj.magic _g2 in let __assign_18 = expressionNeedsValueSlot (Obj.magic scrutinee) || statementListNeedsValueSlot (Obj.magic bodies) in (
           tempResult := __assign_18;
           __assign_18
         )
       )
     )
+    | HxStmt.SGuardedSwitch (_p0, _p1, _p2, _p3, _p4) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
+      ignore _p2;
+      let _g3 = Obj.magic _p3 in (
+        ignore _p4;
+        let value = Obj.magic _g in let enabled = Obj.magic _g1 in let bodies = Obj.magic _g3 in let __assign_19 = expressionNeedsValueSlot (Obj.magic value) || expressionNeedsValueSlot (Obj.magic enabled) || statementListNeedsValueSlot (Obj.magic bodies) in (
+          tempResult := __assign_19;
+          __assign_19
+        )
+      )
+    )
     | HxStmt.STry (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
       ignore _p2;
-      let tryBody = Obj.magic _g in let catches = Obj.magic _g1 in if statementNeedsValueSlot (Obj.magic tryBody) then let __assign_19 = true in (
-        tempResult := __assign_19;
-        __assign_19
+      let tryBody = Obj.magic _g in let catches = Obj.magic _g1 in if statementNeedsValueSlot (Obj.magic tryBody) then let __assign_20 = true in (
+        tempResult := __assign_20;
+        __assign_20
       ) else let found = ref false in (
-        ignore (if catches != Obj.magic (HxRuntime.hx_null) then ignore (let _g3 = ref 0 in while !_g3 < HxArray.length catches do ignore (let catchClause = let __array_read_receiver_20 = catches in let __array_read_index_21 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_20) __array_read_index_21 in (
-          ignore (let __old_22 = !_g3 in let __new_23 = HxInt.add __old_22 1 in (
-            ignore (_g3 := __new_23);
-            __new_23
+        ignore (if catches != Obj.magic (HxRuntime.hx_null) then ignore (let _g3 = ref 0 in while !_g3 < HxArray.length catches do ignore (let catchClause = let __array_read_receiver_21 = catches in let __array_read_index_22 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_21) __array_read_index_22 in (
+          ignore (let __old_23 = !_g3 in let __new_24 = HxInt.add __old_23 1 in (
+            ignore (_g3 := __new_24);
+            __new_24
           ));
-          if statementNeedsValueSlot (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get catchClause "body")))) then ignore (let __assign_24 = true in (
-            found := __assign_24;
-            __assign_24
+          if statementNeedsValueSlot (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get catchClause "body")))) then ignore (let __assign_25 = true in (
+            found := __assign_25;
+            __assign_25
           )) else ()
         )) done) else ());
-        let __assign_25 = !found in (
-          tempResult := __assign_25;
-          __assign_25
+        let __assign_26 = !found in (
+          tempResult := __assign_26;
+          __assign_26
         )
       )
     )
     | HxStmt.SBreak _p0 -> (
-      ignore _p0;
-      let __assign_26 = false in (
-        tempResult := __assign_26;
-        __assign_26
-      )
-    )
-    | HxStmt.SContinue _p0 -> (
       ignore _p0;
       let __assign_27 = false in (
         tempResult := __assign_27;
         __assign_27
       )
     )
-    | HxStmt.SThrow (_p0, _p1) -> let _g = Obj.magic _p0 in (
-      ignore _p1;
-      let expression = Obj.magic _g in let __assign_28 = expressionNeedsValueSlot (Obj.magic expression) in (
+    | HxStmt.SContinue _p0 -> (
+      ignore _p0;
+      let __assign_28 = false in (
         tempResult := __assign_28;
         __assign_28
       )
     )
-    | HxStmt.SReturnVoid _p0 -> (
-      ignore _p0;
-      let __assign_29 = false in (
+    | HxStmt.SThrow (_p0, _p1) -> let _g = Obj.magic _p0 in (
+      ignore _p1;
+      let expression = Obj.magic _g in let __assign_29 = expressionNeedsValueSlot (Obj.magic expression) in (
         tempResult := __assign_29;
         __assign_29
       )
     )
-    | HxStmt.SReturn (_p0, _p1) -> let _g = Obj.magic _p0 in (
-      ignore _p1;
-      let expression = Obj.magic _g in let __assign_30 = expressionNeedsValueSlot (Obj.magic expression) in (
+    | HxStmt.SReturnVoid _p0 -> (
+      ignore _p0;
+      let __assign_30 = false in (
         tempResult := __assign_30;
         __assign_30
       )
     )
-    | HxStmt.SExpr (_p0, _p1) -> let _g = Obj.magic _p0 in (
+    | HxStmt.SReturn (_p0, _p1) -> let _g = Obj.magic _p0 in (
       ignore _p1;
       let expression = Obj.magic _g in let __assign_31 = expressionNeedsValueSlot (Obj.magic expression) in (
         tempResult := __assign_31;
         __assign_31
       )
+    )
+    | HxStmt.SExpr (_p0, _p1) -> let _g = Obj.magic _p0 in (
+      ignore _p1;
+      let expression = Obj.magic _g in let __assign_32 = expressionNeedsValueSlot (Obj.magic expression) in (
+        tempResult := __assign_32;
+        __assign_32
+      )
+    )
+    | HxStmt.STargetScope (_p0, _p1, _p2) -> (
+      ignore _p0;
+      ignore _p1;
+      ignore _p2;
+      HxType.hx_throw_typed_rtti (Obj.repr "native target scope is not valid in this source or target phase") ["Dynamic"]
     ));
   !tempResult
 )
 
 let classNeedsValueSlot = fun functions -> (try (
-  ignore (if functions == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if functions == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length functions do ignore (let fn = Obj.magic (let __array_read_receiver_1 = functions in let __array_read_index_2 = !_g in HxArray.get (Obj.magic __array_read_receiver_1) __array_read_index_2) in (
       ignore (let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
         ignore (_g := __new_4);
         __new_4
       ));
-      if statementListNeedsValueSlot (Obj.magic (TypedBackendFunctionProjection.getBody (Obj.magic fn) ())) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
+      if statementListNeedsValueSlot (Obj.magic (TypedBackendFunctionProjection.getBody (Obj.magic fn) ())) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr true)) else ()
     )) done);
     false
   )

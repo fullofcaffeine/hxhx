@@ -14,378 +14,501 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.Me
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.MetalProfileVerifier" } : t)
 
 let normalizeTypeHint = fun (rawTypeHint : string) -> (try (
-  ignore (if rawTypeHint == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
-  let __call_arg_0_105 = let __call_arg_0_106 = let __call_arg_0_107 = let __call_arg_0_108 = rawTypeHint in StringTools.trim __call_arg_0_108 in let __call_arg_1_109 = " " in let __call_arg_2_110 = "" in StringTools.replace __call_arg_0_107 __call_arg_1_109 __call_arg_2_110 in let __call_arg_1_111 = "\t" in let __call_arg_2_112 = "" in StringTools.replace __call_arg_0_106 __call_arg_1_111 __call_arg_2_112 in let __call_arg_1_113 = "\n" in let __call_arg_2_114 = "" in StringTools.replace __call_arg_0_105 __call_arg_1_113 __call_arg_2_114
+  ignore (if rawTypeHint == HxString.hx_null_string then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+  let __call_arg_0_131 = let __call_arg_0_132 = let __call_arg_0_133 = let __call_arg_0_134 = rawTypeHint in StringTools.trim __call_arg_0_134 in let __call_arg_1_135 = " " in let __call_arg_2_136 = "" in StringTools.replace __call_arg_0_133 __call_arg_1_135 __call_arg_2_136 in let __call_arg_1_137 = "\t" in let __call_arg_2_138 = "" in StringTools.replace __call_arg_0_132 __call_arg_1_137 __call_arg_2_138 in let __call_arg_1_139 = "\n" in let __call_arg_2_140 = "" in StringTools.replace __call_arg_0_131 __call_arg_1_139 __call_arg_2_140
 ) with
-  | HxRuntime.Hx_return __ret_115 -> (Obj.obj __ret_115 : string) : string)
+  | HxRuntime.Hx_return __ret_141 -> (Obj.obj __ret_141 : string) : string)
 
-let isDynamicTypeHint = fun (rawTypeHint : string) -> (let normalized = (let __string_receiver_97 = let __call_arg_0_98 = rawTypeHint in normalizeTypeHint __call_arg_0_98 in HxString.toLowerCase __string_receiver_97 () : string) in (let __string_eq_left_99 = normalized in let __string_eq_right_100 = "dynamic" in HxString.equals __string_eq_left_99 __string_eq_right_100) || (let __string_eq_left_101 = normalized in let __string_eq_right_102 = "null<dynamic>" in HxString.equals __string_eq_left_101 __string_eq_right_102) || (let __string_eq_left_103 = normalized in let __string_eq_right_104 = "array<dynamic>" in HxString.equals __string_eq_left_103 __string_eq_right_104) : bool)
+let isDynamicTypeHint = fun (rawTypeHint : string) -> (let normalized = (let __string_receiver_123 = let __call_arg_0_124 = rawTypeHint in normalizeTypeHint __call_arg_0_124 in HxString.toLowerCase __string_receiver_123 () : string) in (let __string_eq_left_125 = normalized in let __string_eq_right_126 = "dynamic" in HxString.equals __string_eq_left_125 __string_eq_right_126) || (let __string_eq_left_127 = normalized in let __string_eq_right_128 = "null<dynamic>" in HxString.equals __string_eq_left_127 __string_eq_right_128) || (let __string_eq_left_129 = normalized in let __string_eq_right_130 = "array<dynamic>" in HxString.equals __string_eq_left_129 __string_eq_right_130) : bool)
 
 let reflectionCallName = fun callee -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (if (match callee with
-    | HxExpr.ENull -> 0
-    | HxExpr.EBool _ -> 1
-    | HxExpr.EString _ -> 2
-    | HxExpr.EInt _ -> 3
-    | HxExpr.EFloat _ -> 4
-    | HxExpr.EEnumValue _ -> 5
-    | HxExpr.EThis -> 6
-    | HxExpr.ESuper -> 7
-    | HxExpr.EIdent _ -> 8
-    | HxExpr.EField (_, _) -> 9
-    | HxExpr.ENullSafeField (_, _) -> 10
-    | HxExpr.ECall (_, _) -> 11
-    | HxExpr.EMacroExpr (_, _) -> 12
-    | HxExpr.EMacroType _ -> 13
-    | HxExpr.ELambda (_, _) -> 14
-    | HxExpr.ETryCatchRaw _ -> 15
-    | HxExpr.ESwitchRaw _ -> 16
-    | HxExpr.ESwitch (_, _, _) -> 17
-    | HxExpr.ENew (_, _) -> 18
-    | HxExpr.EUnop (_, _, _) -> 19
-    | HxExpr.EBinop (_, _, _) -> 20
-    | HxExpr.ETernary (_, _, _) -> 21
-    | HxExpr.EAnon (_, _) -> 22
-    | HxExpr.EArrayComprehension (_, _, _, _) -> 23
-    | HxExpr.EArrayDecl _ -> 24
-    | HxExpr.EArrayAccess (_, _) -> 25
-    | HxExpr.ERange (_, _) -> 26
-    | HxExpr.ECast (_, _) -> 27
-    | HxExpr.EUntyped _ -> 28
-    | HxExpr.EUnsupported _ -> 29
-    | HxExpr.EReturn _ -> 30
-    | HxExpr.EVars _ -> 31
-    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33
-    | HxExpr.EBreak _ -> 34
-    | HxExpr.EContinue _ -> 35) = 9 then let _g = Obj.magic (match callee with
-    | HxExpr.EField (__enum_param_116, _) -> __enum_param_116
+    | HxExpr.EParenthesized (_, _) -> 0
+    | HxExpr.ESourceTry (_, _, _) -> 1
+    | HxExpr.ESourceFor (_, _, _, _) -> 2
+    | HxExpr.ELoweredControl (_, _, _, _) -> 3
+    | HxExpr.ENull -> 4
+    | HxExpr.EBool _ -> 5
+    | HxExpr.EString _ -> 6
+    | HxExpr.EInt _ -> 7
+    | HxExpr.EFloat _ -> 8
+    | HxExpr.EEnumValue _ -> 9
+    | HxExpr.EThis -> 10
+    | HxExpr.ESuper -> 11
+    | HxExpr.EIdent _ -> 12
+    | HxExpr.EField (_, _) -> 13
+    | HxExpr.ENullSafeField (_, _) -> 14
+    | HxExpr.ECall (_, _) -> 15
+    | HxExpr.EMacroExpr (_, _) -> 16
+    | HxExpr.EMacroType _ -> 17
+    | HxExpr.ELambda (_, _, _) -> 18
+    | HxExpr.ETryCatchRaw _ -> 19
+    | HxExpr.ESwitchRaw _ -> 20
+    | HxExpr.ESwitch (_, _, _) -> 21
+    | HxExpr.ENew (_, _) -> 22
+    | HxExpr.EUnop (_, _, _) -> 23
+    | HxExpr.EBinop (_, _, _) -> 24
+    | HxExpr.ETernary (_, _, _) -> 25
+    | HxExpr.ESourceIf (_, _, _, _) -> 26
+    | HxExpr.EThrow (_, _) -> 27
+    | HxExpr.EAnon (_, _) -> 28
+    | HxExpr.EArrayComprehension (_, _, _, _) -> 29
+    | HxExpr.EArrayDecl _ -> 30
+    | HxExpr.EArrayAccess (_, _) -> 31
+    | HxExpr.ERange (_, _) -> 32
+    | HxExpr.ECast (_, _) -> 33
+    | HxExpr.ECheckType (_, _) -> 34
+    | HxExpr.EUntyped _ -> 35
+    | HxExpr.EUnsupported _ -> 36
+    | HxExpr.EReturn _ -> 37
+    | HxExpr.EVars _ -> 38
+    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 39
+    | HxExpr.EWhile (_, _, _, _, _) -> 40
+    | HxExpr.EBreak _ -> 41
+    | HxExpr.EContinue _ -> 42
+    | HxExpr.EDiscardThen (_, _) -> 43
+    | HxExpr.ESourceGroup (_, _) -> 44
+    | HxExpr.ESourceFunction (_, _, _, _) -> 45
+    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g = Obj.magic (match callee with
+    | HxExpr.EField (__enum_param_142, _) -> __enum_param_142
     | _ -> failwith "Unexpected enum parameter") in let _g1 = (match callee with
-    | HxExpr.EField (_, __enum_param_117) -> __enum_param_117
+    | HxExpr.EField (_, __enum_param_143) -> __enum_param_143
     | _ -> failwith "Unexpected enum parameter" : string) in if (match _g with
-    | HxExpr.ENull -> 0
-    | HxExpr.EBool _ -> 1
-    | HxExpr.EString _ -> 2
-    | HxExpr.EInt _ -> 3
-    | HxExpr.EFloat _ -> 4
-    | HxExpr.EEnumValue _ -> 5
-    | HxExpr.EThis -> 6
-    | HxExpr.ESuper -> 7
-    | HxExpr.EIdent _ -> 8
-    | HxExpr.EField (_, _) -> 9
-    | HxExpr.ENullSafeField (_, _) -> 10
-    | HxExpr.ECall (_, _) -> 11
-    | HxExpr.EMacroExpr (_, _) -> 12
-    | HxExpr.EMacroType _ -> 13
-    | HxExpr.ELambda (_, _) -> 14
-    | HxExpr.ETryCatchRaw _ -> 15
-    | HxExpr.ESwitchRaw _ -> 16
-    | HxExpr.ESwitch (_, _, _) -> 17
-    | HxExpr.ENew (_, _) -> 18
-    | HxExpr.EUnop (_, _, _) -> 19
-    | HxExpr.EBinop (_, _, _) -> 20
-    | HxExpr.ETernary (_, _, _) -> 21
-    | HxExpr.EAnon (_, _) -> 22
-    | HxExpr.EArrayComprehension (_, _, _, _) -> 23
-    | HxExpr.EArrayDecl _ -> 24
-    | HxExpr.EArrayAccess (_, _) -> 25
-    | HxExpr.ERange (_, _) -> 26
-    | HxExpr.ECast (_, _) -> 27
-    | HxExpr.EUntyped _ -> 28
-    | HxExpr.EUnsupported _ -> 29
-    | HxExpr.EReturn _ -> 30
-    | HxExpr.EVars _ -> 31
-    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-    | HxExpr.EWhile (_, _, _, _) -> 33
-    | HxExpr.EBreak _ -> 34
-    | HxExpr.EContinue _ -> 35) = 8 then let _g2 = (match _g with
-    | HxExpr.EIdent __enum_param_118 -> __enum_param_118
+    | HxExpr.EParenthesized (_, _) -> 0
+    | HxExpr.ESourceTry (_, _, _) -> 1
+    | HxExpr.ESourceFor (_, _, _, _) -> 2
+    | HxExpr.ELoweredControl (_, _, _, _) -> 3
+    | HxExpr.ENull -> 4
+    | HxExpr.EBool _ -> 5
+    | HxExpr.EString _ -> 6
+    | HxExpr.EInt _ -> 7
+    | HxExpr.EFloat _ -> 8
+    | HxExpr.EEnumValue _ -> 9
+    | HxExpr.EThis -> 10
+    | HxExpr.ESuper -> 11
+    | HxExpr.EIdent _ -> 12
+    | HxExpr.EField (_, _) -> 13
+    | HxExpr.ENullSafeField (_, _) -> 14
+    | HxExpr.ECall (_, _) -> 15
+    | HxExpr.EMacroExpr (_, _) -> 16
+    | HxExpr.EMacroType _ -> 17
+    | HxExpr.ELambda (_, _, _) -> 18
+    | HxExpr.ETryCatchRaw _ -> 19
+    | HxExpr.ESwitchRaw _ -> 20
+    | HxExpr.ESwitch (_, _, _) -> 21
+    | HxExpr.ENew (_, _) -> 22
+    | HxExpr.EUnop (_, _, _) -> 23
+    | HxExpr.EBinop (_, _, _) -> 24
+    | HxExpr.ETernary (_, _, _) -> 25
+    | HxExpr.ESourceIf (_, _, _, _) -> 26
+    | HxExpr.EThrow (_, _) -> 27
+    | HxExpr.EAnon (_, _) -> 28
+    | HxExpr.EArrayComprehension (_, _, _, _) -> 29
+    | HxExpr.EArrayDecl _ -> 30
+    | HxExpr.EArrayAccess (_, _) -> 31
+    | HxExpr.ERange (_, _) -> 32
+    | HxExpr.ECast (_, _) -> 33
+    | HxExpr.ECheckType (_, _) -> 34
+    | HxExpr.EUntyped _ -> 35
+    | HxExpr.EUnsupported _ -> 36
+    | HxExpr.EReturn _ -> 37
+    | HxExpr.EVars _ -> 38
+    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 39
+    | HxExpr.EWhile (_, _, _, _, _) -> 40
+    | HxExpr.EBreak _ -> 41
+    | HxExpr.EContinue _ -> 42
+    | HxExpr.EDiscardThen (_, _) -> 43
+    | HxExpr.ESourceGroup (_, _) -> 44
+    | HxExpr.ESourceFunction (_, _, _, _) -> 45
+    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+    | HxExpr.EIdent __enum_param_144 -> __enum_param_144
     | _ -> failwith "Unexpected enum parameter" : string) in match _g2 with
-    | "Reflect" -> let field = (_g1 : string) in let __assign_120 = Obj.magic ("Reflect." ^ HxString.toStdString field : string) in (
-      tempResult := __assign_120;
-      __assign_120
+    | "Reflect" -> let field = (_g1 : string) in let __assign_146 = Obj.magic ("Reflect." ^ HxString.toStdString field : string) in (
+      tempResult := __assign_146;
+      __assign_146
     )
-    | "Type" -> let field = (_g1 : string) in let __assign_121 = Obj.magic ("Type." ^ HxString.toStdString field : string) in (
-      tempResult := __assign_121;
-      __assign_121
+    | "Type" -> let field = (_g1 : string) in let __assign_147 = Obj.magic ("Type." ^ HxString.toStdString field : string) in (
+      tempResult := __assign_147;
+      __assign_147
     )
-    | _ -> let __assign_119 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempResult := __assign_119;
-      __assign_119
-    ) else let __assign_122 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempResult := __assign_122;
-    __assign_122
-  ) else let __assign_123 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempResult := __assign_123;
-    __assign_123
+    | _ -> let __assign_145 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempResult := __assign_145;
+      __assign_145
+    ) else let __assign_148 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempResult := __assign_148;
+    __assign_148
+  ) else let __assign_149 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempResult := __assign_149;
+    __assign_149
   ));
   !tempResult
 )
 
 let summarizeRaw = fun (raw : string) -> (try (
-  ignore (if raw == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr "<unknown>")) else ());
-  let oneLine = let __call_arg_0_124 = let __call_arg_0_125 = let __call_arg_0_126 = raw in let __call_arg_1_127 = "\r" in let __call_arg_2_128 = " " in StringTools.replace __call_arg_0_126 __call_arg_1_127 __call_arg_2_128 in let __call_arg_1_129 = "\n" in let __call_arg_2_130 = " " in StringTools.replace __call_arg_0_125 __call_arg_1_129 __call_arg_2_130 in let __call_arg_1_131 = "\t" in let __call_arg_2_132 = " " in StringTools.replace __call_arg_0_124 __call_arg_1_131 __call_arg_2_132 in let trimmed = let __call_arg_0_133 = oneLine in StringTools.trim __call_arg_0_133 in let tempResult = ref (HxString.hx_null_string : string) in (
-    ignore (if (let __string_receiver_134 = trimmed in HxString.length __string_receiver_134) > 80 then let __assign_135 = let __string_part_139 = HxString.toStdString (let __string_receiver_136 = trimmed in let __string_argument_0_137 = 0 in let __string_argument_1_138 = 80 in HxString.substr __string_receiver_136 __string_argument_0_137 __string_argument_1_138) in let __string_part_140 = "..." in __string_part_139 ^ __string_part_140 in (
-      tempResult := __assign_135;
-      __assign_135
-    ) else let __assign_141 = trimmed in (
-      tempResult := __assign_141;
-      __assign_141
+  ignore (if raw == HxString.hx_null_string then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "<unknown>")) else ());
+  let oneLine = let __call_arg_0_150 = let __call_arg_0_151 = let __call_arg_0_152 = raw in let __call_arg_1_153 = "\r" in let __call_arg_2_154 = " " in StringTools.replace __call_arg_0_152 __call_arg_1_153 __call_arg_2_154 in let __call_arg_1_155 = "\n" in let __call_arg_2_156 = " " in StringTools.replace __call_arg_0_151 __call_arg_1_155 __call_arg_2_156 in let __call_arg_1_157 = "\t" in let __call_arg_2_158 = " " in StringTools.replace __call_arg_0_150 __call_arg_1_157 __call_arg_2_158 in let trimmed = let __call_arg_0_159 = oneLine in StringTools.trim __call_arg_0_159 in let tempResult = ref (HxString.hx_null_string : string) in (
+    ignore (if (let __string_receiver_160 = trimmed in HxString.length __string_receiver_160) > 80 then let __assign_161 = let __string_part_165 = HxString.toStdString (let __string_receiver_162 = trimmed in let __string_argument_0_163 = 0 in let __string_argument_1_164 = 80 in HxString.substr __string_receiver_162 __string_argument_0_163 __string_argument_1_164) in let __string_part_166 = "..." in __string_part_165 ^ __string_part_166 in (
+      tempResult := __assign_161;
+      __assign_161
+    ) else let __assign_167 = trimmed in (
+      tempResult := __assign_167;
+      __assign_167
     ));
     !tempResult
   )
 ) with
-  | HxRuntime.Hx_return __ret_142 -> (Obj.obj __ret_142 : string) : string)
+  | HxRuntime.Hx_return __ret_168 -> (Obj.obj __ret_168 : string) : string)
 
 let formatContext = fun (className : string) (fnName : string) -> (let tempResult = ref (HxString.hx_null_string : string) in (
-  ignore (if fnName == Obj.magic (HxRuntime.hx_null) then let __assign_143 = (className : string) in (
-    tempResult := __assign_143;
-    __assign_143
-  ) else let __assign_144 = ((HxString.toStdString className ^ ".") ^ HxString.toStdString fnName : string) in (
-    tempResult := __assign_144;
-    __assign_144
+  ignore (if fnName == Obj.magic (HxRuntime.hx_null) then let __assign_169 = (className : string) in (
+    tempResult := __assign_169;
+    __assign_169
+  ) else let __assign_170 = ((HxString.toStdString className ^ ".") ^ HxString.toStdString fnName : string) in (
+    tempResult := __assign_170;
+    __assign_170
   ));
   !tempResult
 ) : string)
 
 let addViolation = fun violations filePath className fnName pos code construct reason migrationHint -> ignore (let tempNumber = ref (0 : int) in (
-  ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_145 = 0 in (
-    tempNumber := __assign_145;
-    __assign_145
-  ) else let __assign_146 = HxPos.getLine (Obj.magic pos) () in (
-    tempNumber := __assign_146;
-    __assign_146
+  ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_171 = 0 in (
+    tempNumber := __assign_171;
+    __assign_171
+  ) else let __assign_172 = HxPos.getLine (Obj.magic pos) () in (
+    tempNumber := __assign_172;
+    __assign_172
   ));
   let line = !tempNumber in let tempNumber1 = ref (0 : int) in (
-    ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_147 = 0 in (
-      tempNumber1 := __assign_147;
-      __assign_147
-    ) else let __assign_148 = HxPos.getColumn (Obj.magic pos) () in (
-      tempNumber1 := __assign_148;
-      __assign_148
+    ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_173 = 0 in (
+      tempNumber1 := __assign_173;
+      __assign_173
+    ) else let __assign_174 = HxPos.getColumn (Obj.magic pos) () in (
+      tempNumber1 := __assign_174;
+      __assign_174
     ));
     let column = !tempNumber1 in let tempString = ref (HxString.hx_null_string : string) in (
-      ignore (if filePath == HxString.hx_null_string || (let __string_receiver_149 = filePath in HxString.length __string_receiver_149) = 0 then let __assign_150 = ("<unknown>" : string) in (
-        tempString := __assign_150;
-        __assign_150
-      ) else let __assign_151 = (filePath : string) in (
-        tempString := __assign_151;
-        __assign_151
+      ignore (if filePath == HxString.hx_null_string || (let __string_receiver_175 = filePath in HxString.length __string_receiver_175) = 0 then let __assign_176 = ("<unknown>" : string) in (
+        tempString := __assign_176;
+        __assign_176
+      ) else let __assign_177 = (filePath : string) in (
+        tempString := __assign_177;
+        __assign_177
       ));
-      let __array_receiver_152 = violations in let __array_arg_0_153 = let __anonymous_value_154 = HxAnon.create () in (
-        let __anonymous_field_value_155 = !tempString in ignore (HxAnon.set __anonymous_value_154 "filePath" (Obj.repr __anonymous_field_value_155));
-        let __anonymous_field_value_156 = line in ignore (HxAnon.set __anonymous_value_154 "line" (Obj.repr __anonymous_field_value_156));
-        let __anonymous_field_value_157 = column in ignore (HxAnon.set __anonymous_value_154 "column" (Obj.repr __anonymous_field_value_157));
-        let __anonymous_field_value_158 = code in ignore (HxAnon.set __anonymous_value_154 "code" (Obj.repr __anonymous_field_value_158));
-        let __anonymous_field_value_159 = construct in ignore (HxAnon.set __anonymous_value_154 "construct" (Obj.repr __anonymous_field_value_159));
-        let __anonymous_field_value_160 = let __call_arg_0_161 = className in let __call_arg_1_162 = fnName in formatContext __call_arg_0_161 __call_arg_1_162 in ignore (HxAnon.set __anonymous_value_154 "context" (Obj.repr __anonymous_field_value_160));
-        let __anonymous_field_value_163 = reason in ignore (HxAnon.set __anonymous_value_154 "reason" (Obj.repr __anonymous_field_value_163));
-        let __anonymous_field_value_164 = migrationHint in ignore (HxAnon.set __anonymous_value_154 "migrationHint" (Obj.repr __anonymous_field_value_164));
-        __anonymous_value_154
-      ) in HxArray.push __array_receiver_152 __array_arg_0_153
+      let __array_receiver_178 = Obj.magic violations in let __array_arg_0_179 = let __anonymous_value_180 = HxAnon.create () in (
+        let __anonymous_field_value_181 = !tempString in ignore (HxAnon.set __anonymous_value_180 "filePath" (Obj.repr __anonymous_field_value_181));
+        let __anonymous_field_value_182 = line in ignore (HxAnon.set __anonymous_value_180 "line" (Obj.repr __anonymous_field_value_182));
+        let __anonymous_field_value_183 = column in ignore (HxAnon.set __anonymous_value_180 "column" (Obj.repr __anonymous_field_value_183));
+        let __anonymous_field_value_184 = code in ignore (HxAnon.set __anonymous_value_180 "code" (Obj.repr __anonymous_field_value_184));
+        let __anonymous_field_value_185 = construct in ignore (HxAnon.set __anonymous_value_180 "construct" (Obj.repr __anonymous_field_value_185));
+        let __anonymous_field_value_186 = let __call_arg_0_187 = className in let __call_arg_1_188 = fnName in formatContext __call_arg_0_187 __call_arg_1_188 in ignore (HxAnon.set __anonymous_value_180 "context" (Obj.repr __anonymous_field_value_186));
+        let __anonymous_field_value_189 = reason in ignore (HxAnon.set __anonymous_value_180 "reason" (Obj.repr __anonymous_field_value_189));
+        let __anonymous_field_value_190 = migrationHint in ignore (HxAnon.set __anonymous_value_180 "migrationHint" (Obj.repr __anonymous_field_value_190));
+        __anonymous_value_180
+      ) in HxArray.push __array_receiver_178 __array_arg_0_179
     )
   )
 ))
 
 let verifyExplicitDynamicTypeHint = fun filePath className fnName pos label rawTypeHint violations -> ignore (try ignore ((
-  ignore (if not (let __call_arg_0_95 = rawTypeHint in isDynamicTypeHint __call_arg_0_95) then raise (HxRuntime.Hx_return_void) else ());
+  ignore (if not (let __call_arg_0_121 = rawTypeHint in isDynamicTypeHint __call_arg_0_121) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic pos) ("dynamic_type_hint" : string) (label : string) ("`Dynamic` type hints disable metal-profile specialization and deterministic native typing" : string) ("replace `Dynamic` with a concrete type" : string)
 )) with
   | HxRuntime.Hx_return_void -> ())
 
-let rec verifyExpr = fun filePath className fnName stmtPos expr violations -> ignore (match expr with
-  | HxExpr.ENull -> ignore ()
-  | HxExpr.EBool _p0 -> ignore ((
-    ignore _p0;
-    ()
-  ))
-  | HxExpr.EString _p0 -> ignore ((
-    ignore _p0;
-    ()
-  ))
-  | HxExpr.EInt _p0 -> ignore ((
-    ignore _p0;
-    ()
-  ))
-  | HxExpr.EFloat _p0 -> ignore ((
-    ignore _p0;
-    ()
-  ))
-  | HxExpr.EEnumValue _p0 -> ignore ((
-    ignore _p0;
-    ()
-  ))
-  | HxExpr.EThis -> ignore ()
-  | HxExpr.ESuper -> ignore ()
-  | HxExpr.EIdent _p0 -> ignore ((
-    ignore _p0;
-    ()
-  ))
-  | HxExpr.EField (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
-    ignore _p1;
-    let obj = Obj.magic _g in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic obj) (Obj.magic violations)
-  ))
-  | HxExpr.ENullSafeField (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
-    ignore _p1;
-    let obj = Obj.magic _g in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic obj) (Obj.magic violations)
-  ))
-  | HxExpr.ECall (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let callee = Obj.magic _g in let args = Obj.magic _g1 in let reflectionCall = (reflectionCallName (Obj.magic callee) : string) in (
-    ignore (if reflectionCall != Obj.magic (HxRuntime.hx_null) then ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("reflection_call" : string) (reflectionCall : string) ("reflection-driven calls prevent static specialization in metal mode" : string) ("replace reflection calls with static/typed APIs" : string)) else ());
-    ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic callee) (Obj.magic violations));
-    let _g2 = ref 0 in while !_g2 < HxArray.length args do ignore (let arg = Obj.magic (let __array_read_receiver_55 = args in let __array_read_index_56 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_55) __array_read_index_56) in (
-      ignore (let __old_57 = !_g2 in let __new_58 = HxInt.add __old_57 1 in (
-        ignore (_g2 := __new_58);
-        __new_58
-      ));
-      verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic arg) (Obj.magic violations)
-    )) done
-  ))
-  | HxExpr.EMacroExpr (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let inner = Obj.magic _g in (
-    ignore _g1;
-    verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic inner) (Obj.magic violations)
-  ))
-  | HxExpr.EMacroType _p0 -> ignore ((
-    ignore _p0;
-    ()
-  ))
-  | HxExpr.ELambda (_p0, _p1) -> ignore ((
-    ignore _p0;
-    let _g2 = Obj.magic _p1 in let body = Obj.magic _g2 in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic body) (Obj.magic violations)
-  ))
-  | HxExpr.ETryCatchRaw _p0 -> ignore (let _g = (_p0 : string) in let raw = (_g : string) in addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) (let __string_part_60 = "ETryCatchRaw(" in let __string_part_61 = HxString.toStdString (let __call_arg_0_59 = raw in summarizeRaw __call_arg_0_59) in let __string_part_62 = ")" in (__string_part_60 ^ __string_part_61) ^ __string_part_62 : string) ("raw try/catch fallback nodes cannot guarantee native metal semantics" : string) ("use statement-level try/catch with concrete catch types" : string))
-  | HxExpr.ESwitchRaw _p0 -> ignore (let _g = (_p0 : string) in let raw = (_g : string) in addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) (let __string_part_64 = "ESwitchRaw(" in let __string_part_65 = HxString.toStdString (let __call_arg_0_63 = raw in summarizeRaw __call_arg_0_63) in let __string_part_66 = ")" in (__string_part_64 ^ __string_part_65) ^ __string_part_66 : string) ("raw switch fallback nodes cannot guarantee native metal semantics" : string) ("use structured switch forms that type-check without fallback nodes" : string))
-  | HxExpr.ESwitch (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let scrutinee = Obj.magic _g in (
-    ignore _g1;
-    let exprs = Obj.magic _g2 in (
-      ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic scrutinee) (Obj.magic violations));
-      let _g3 = ref 0 in while !_g3 < HxArray.length exprs do ignore (let branchExpr = Obj.magic (let __array_read_receiver_67 = exprs in let __array_read_index_68 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_67) __array_read_index_68) in (
-        ignore (let __old_69 = !_g3 in let __new_70 = HxInt.add __old_69 1 in (
-          ignore (_g3 := __new_70);
-          __new_70
+let rec verifyExpr = fun filePath className fnName stmtPos expr violations -> ignore ((
+  ignore (if TypedRuntimeTypeSource.isMarker (Obj.magic expr) then ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("reflection_call" : string) ("runtime type operation" : string) ("runtime class identity needs the portable object representation" : string) ("use the portable profile for runtime class predicates" : string)) else ());
+  match expr with
+    | HxExpr.EParenthesized (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let inner = Obj.magic _g in let position = Obj.magic _g1 in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic position) (Obj.magic inner) (Obj.magic violations))
+    | HxExpr.ESourceTry (_p0, _p1, _p2) -> ignore ((
+      ignore _p0;
+      let _g2 = Obj.magic _p1 in let _g1 = Obj.magic _p2 in let bodies = Obj.magic _g2 in let position = Obj.magic _g1 in let _g3 = ref 0 in while !_g3 < HxArray.length bodies do ignore (let body = Obj.magic (let __array_read_receiver_55 = bodies in let __array_read_index_56 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_55) __array_read_index_56) in (
+        ignore (let __old_57 = !_g3 in let __new_58 = HxInt.add __old_57 1 in (
+          ignore (_g3 := __new_58);
+          __new_58
         ));
-        verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic branchExpr) (Obj.magic violations)
+        verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic position) (Obj.magic body) (Obj.magic violations)
       )) done
-    )
-  ))
-  | HxExpr.ENew (_p0, _p1) -> ignore ((
-    ignore _p0;
-    let _g2 = Obj.magic _p1 in let args = Obj.magic _g2 in let _g3 = ref 0 in while !_g3 < HxArray.length args do ignore (let arg = Obj.magic (let __array_read_receiver_71 = args in let __array_read_index_72 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_71) __array_read_index_72) in (
-      ignore (let __old_73 = !_g3 in let __new_74 = HxInt.add __old_73 1 in (
-        ignore (_g3 := __new_74);
-        __new_74
+    ))
+    | HxExpr.ESourceFor (_p0, _p1, _p2, _p3) -> ignore ((
+      ignore _p0;
+      let _g2 = Obj.magic _p1 in let _g1 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let iterable = Obj.magic _g2 in let body = Obj.magic _g1 in let position = Obj.magic _g3 in (
+        ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic position) (Obj.magic iterable) (Obj.magic violations));
+        verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic position) (Obj.magic body) (Obj.magic violations)
+      )
+    ))
+    | HxExpr.ELoweredControl (_p0, _p1, _p2, _p3) -> ignore ((
+      ignore _p0;
+      ignore _p1;
+      let _g3 = Obj.magic _p2 in let _g1 = Obj.magic _p3 in let children = Obj.magic _g3 in let position = Obj.magic _g1 in let _g4 = ref 0 in while !_g4 < HxArray.length children do ignore (let child = Obj.magic (let __array_read_receiver_59 = children in let __array_read_index_60 = !_g4 in HxArray.get (Obj.magic __array_read_receiver_59) __array_read_index_60) in (
+        ignore (let __old_61 = !_g4 in let __new_62 = HxInt.add __old_61 1 in (
+          ignore (_g4 := __new_62);
+          __new_62
+        ));
+        verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic position) (Obj.magic child) (Obj.magic violations)
+      )) done
+    ))
+    | HxExpr.ENull -> ignore ()
+    | HxExpr.EBool _p0 -> ignore ((
+      ignore _p0;
+      ()
+    ))
+    | HxExpr.EString _p0 -> ignore ((
+      ignore _p0;
+      ()
+    ))
+    | HxExpr.EInt _p0 -> ignore ((
+      ignore _p0;
+      ()
+    ))
+    | HxExpr.EFloat _p0 -> ignore ((
+      ignore _p0;
+      ()
+    ))
+    | HxExpr.EEnumValue _p0 -> ignore ((
+      ignore _p0;
+      ()
+    ))
+    | HxExpr.EThis -> ignore ()
+    | HxExpr.ESuper -> ignore ()
+    | HxExpr.EIdent _p0 -> ignore ((
+      ignore _p0;
+      ()
+    ))
+    | HxExpr.EField (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
+      ignore _p1;
+      let obj = Obj.magic _g in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic obj) (Obj.magic violations)
+    ))
+    | HxExpr.ENullSafeField (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
+      ignore _p1;
+      let obj = Obj.magic _g in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic obj) (Obj.magic violations)
+    ))
+    | HxExpr.ECall (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let callee = Obj.magic _g in let args = Obj.magic _g1 in let selected = TypedExactStaticCallSource.decode (Obj.magic expr) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+      ignore (if selected == Obj.magic (HxRuntime.hx_null) then let __assign_63 = Obj.magic (reflectionCallName (Obj.magic callee) : string) in (
+        tempMaybeString := __assign_63;
+        __assign_63
+      ) else let _g2 = (Obj.obj (HxAnon.get selected "owner") : string) in match _g2 with
+        | "Reflect" | "Type" -> let __assign_65 = Obj.magic (let __string_part_66 = HxString.toStdString (Obj.obj (HxAnon.get selected "owner")) in let __string_part_67 = "." in let __string_part_68 = HxString.toStdString (Obj.obj (HxAnon.get selected "method")) in (__string_part_66 ^ __string_part_67) ^ __string_part_68 : string) in (
+          tempMaybeString := __assign_65;
+          __assign_65
+        )
+        | _ -> let __assign_64 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempMaybeString := __assign_64;
+          __assign_64
+        ));
+      let reflectionCall = (!tempMaybeString : string) in (
+        ignore (if reflectionCall != Obj.magic (HxRuntime.hx_null) then ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("reflection_call" : string) (reflectionCall : string) ("reflection-driven calls prevent static specialization in metal mode" : string) ("replace reflection calls with static/typed APIs" : string)) else ());
+        let tempHxExpr = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
+          ignore (if selected == Obj.magic (HxRuntime.hx_null) then let __assign_69 = Obj.magic callee in (
+            tempHxExpr := __assign_69;
+            __assign_69
+          ) else let __assign_70 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get selected "callee"))) in (
+            tempHxExpr := __assign_70;
+            __assign_70
+          ));
+          ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic (!tempHxExpr)) (Obj.magic violations));
+          let _g2 = ref 0 in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr HxArray.t) in (
+            ignore (if selected == Obj.magic (HxRuntime.hx_null) then let __assign_71 = Obj.magic args in (
+              tempArray := __assign_71;
+              __assign_71
+            ) else let __assign_72 = Obj.magic (Obj.obj (HxAnon.get selected "arguments")) in (
+              tempArray := __assign_72;
+              __assign_72
+            ));
+            let _g3 = Obj.magic (!tempArray) in while !_g2 < HxArray.length _g3 do ignore (let arg = Obj.magic (let __array_read_receiver_73 = _g3 in let __array_read_index_74 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_73) __array_read_index_74) in (
+              ignore (let __old_75 = !_g2 in let __new_76 = HxInt.add __old_75 1 in (
+                ignore (_g2 := __new_76);
+                __new_76
+              ));
+              verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic arg) (Obj.magic violations)
+            )) done
+          )
+        )
+      )
+    ))
+    | HxExpr.EMacroExpr (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let inner = Obj.magic _g in (
+      ignore _g1;
+      verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic inner) (Obj.magic violations)
+    ))
+    | HxExpr.EMacroType _p0 -> ignore ((
+      ignore _p0;
+      ()
+    ))
+    | HxExpr.ELambda (_p0, _p1, _p2) -> ignore ((
+      ignore _p0;
+      let _g2 = Obj.magic _p1 in (
+        ignore _p2;
+        let body = Obj.magic _g2 in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic body) (Obj.magic violations)
+      )
+    ))
+    | HxExpr.ETryCatchRaw _p0 -> ignore (let _g = (_p0 : string) in let raw = (_g : string) in addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) (let __string_part_78 = "ETryCatchRaw(" in let __string_part_79 = HxString.toStdString (let __call_arg_0_77 = raw in summarizeRaw __call_arg_0_77) in let __string_part_80 = ")" in (__string_part_78 ^ __string_part_79) ^ __string_part_80 : string) ("raw try/catch fallback nodes cannot guarantee native metal semantics" : string) ("use statement-level try/catch with concrete catch types" : string))
+    | HxExpr.ESwitchRaw _p0 -> ignore (let _g = (_p0 : string) in let raw = (_g : string) in addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) (let __string_part_82 = "ESwitchRaw(" in let __string_part_83 = HxString.toStdString (let __call_arg_0_81 = raw in summarizeRaw __call_arg_0_81) in let __string_part_84 = ")" in (__string_part_82 ^ __string_part_83) ^ __string_part_84 : string) ("raw switch fallback nodes cannot guarantee native metal semantics" : string) ("use structured switch forms that type-check without fallback nodes" : string))
+    | HxExpr.ESwitch (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let scrutinee = Obj.magic _g in (
+      ignore _g1;
+      let exprs = Obj.magic _g2 in (
+        ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic scrutinee) (Obj.magic violations));
+        let _g3 = ref 0 in while !_g3 < HxArray.length exprs do ignore (let branchExpr = Obj.magic (let __array_read_receiver_85 = exprs in let __array_read_index_86 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_85) __array_read_index_86) in (
+          ignore (let __old_87 = !_g3 in let __new_88 = HxInt.add __old_87 1 in (
+            ignore (_g3 := __new_88);
+            __new_88
+          ));
+          verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic branchExpr) (Obj.magic violations)
+        )) done
+      )
+    ))
+    | HxExpr.ENew (_p0, _p1) -> ignore ((
+      ignore _p0;
+      let _g2 = Obj.magic _p1 in let args = Obj.magic _g2 in let _g3 = ref 0 in while !_g3 < HxArray.length args do ignore (let arg = Obj.magic (let __array_read_receiver_89 = args in let __array_read_index_90 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_89) __array_read_index_90) in (
+        ignore (let __old_91 = !_g3 in let __new_92 = HxInt.add __old_91 1 in (
+          ignore (_g3 := __new_92);
+          __new_92
+        ));
+        verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic arg) (Obj.magic violations)
+      )) done
+    ))
+    | HxExpr.EUnop (_p0, _p1, _p2) -> ignore ((
+      ignore _p0;
+      ignore _p1;
+      let _g3 = Obj.magic _p2 in let inner = Obj.magic _g3 in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic inner) (Obj.magic violations)
+    ))
+    | HxExpr.EBinop (_p0, _p1, _p2) -> ignore ((
+      ignore _p0;
+      let _g2 = Obj.magic _p1 in let _g1 = Obj.magic _p2 in let left = Obj.magic _g2 in let right = Obj.magic _g1 in (
+        ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic left) (Obj.magic violations));
+        verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic right) (Obj.magic violations)
+      )
+    ))
+    | HxExpr.ETernary (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let cond = Obj.magic _g in let thenExpr = Obj.magic _g1 in let elseExpr = Obj.magic _g2 in (
+      ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic cond) (Obj.magic violations));
+      ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic thenExpr) (Obj.magic violations));
+      verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic elseExpr) (Obj.magic violations)
+    ))
+    | HxExpr.ESourceIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in let _g3 = Obj.magic _p3 in let condition = Obj.magic _g in let whenTrue = Obj.magic _g1 in let whenFalse = _g2 in let position = Obj.magic _g3 in (
+      ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic position) (Obj.magic condition) (Obj.magic violations));
+      ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic position) (Obj.magic whenTrue) (Obj.magic violations));
+      if whenFalse != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic position) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" whenFalse)) (Obj.magic violations)) else ()
+    ))
+    | HxExpr.EThrow (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let value = Obj.magic _g in let position = Obj.magic _g1 in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic position) (Obj.magic value) (Obj.magic violations))
+    | HxExpr.EAnon (_p0, _p1) -> ignore ((
+      ignore _p0;
+      let _g2 = Obj.magic _p1 in let fieldValues = Obj.magic _g2 in let _g3 = ref 0 in while !_g3 < HxArray.length fieldValues do ignore (let fieldExpr = Obj.magic (let __array_read_receiver_93 = fieldValues in let __array_read_index_94 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_93) __array_read_index_94) in (
+        ignore (let __old_95 = !_g3 in let __new_96 = HxInt.add __old_95 1 in (
+          ignore (_g3 := __new_96);
+          __new_96
+        ));
+        verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic fieldExpr) (Obj.magic violations)
+      )) done
+    ))
+    | HxExpr.EArrayComprehension (_p0, _p1, _p2, _p3) -> ignore ((
+      ignore _p0;
+      let _g2 = Obj.magic _p1 in let _g1 = _p2 in let _g3 = Obj.magic _p3 in let iterable = Obj.magic _g2 in let guardExpr = _g1 in let yieldExpr = Obj.magic _g3 in (
+        ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic iterable) (Obj.magic violations));
+        ignore (if guardExpr != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpr)) (Obj.magic violations)) else ());
+        verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic yieldExpr) (Obj.magic violations)
+      )
+    ))
+    | HxExpr.EArrayDecl _p0 -> ignore (let _g = Obj.magic _p0 in let values = Obj.magic _g in let _g2 = ref 0 in while !_g2 < HxArray.length values do ignore (let valueExpr = Obj.magic (let __array_read_receiver_97 = values in let __array_read_index_98 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_97) __array_read_index_98) in (
+      ignore (let __old_99 = !_g2 in let __new_100 = HxInt.add __old_99 1 in (
+        ignore (_g2 := __new_100);
+        __new_100
       ));
-      verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic arg) (Obj.magic violations)
-    )) done
-  ))
-  | HxExpr.EUnop (_p0, _p1, _p2) -> ignore ((
-    ignore _p0;
-    ignore _p1;
-    let _g3 = Obj.magic _p2 in let inner = Obj.magic _g3 in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic inner) (Obj.magic violations)
-  ))
-  | HxExpr.EBinop (_p0, _p1, _p2) -> ignore ((
-    ignore _p0;
-    let _g2 = Obj.magic _p1 in let _g1 = Obj.magic _p2 in let left = Obj.magic _g2 in let right = Obj.magic _g1 in (
+      verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic valueExpr) (Obj.magic violations)
+    )) done)
+    | HxExpr.EArrayAccess (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let array = Obj.magic _g in let index = Obj.magic _g1 in (
+      ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic array) (Obj.magic violations));
+      verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic index) (Obj.magic violations)
+    ))
+    | HxExpr.ERange (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let start = Obj.magic _g in let hx_end = Obj.magic _g1 in (
+      ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic start) (Obj.magic violations));
+      verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic hx_end) (Obj.magic violations)
+    ))
+    | HxExpr.ECast (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let inner = Obj.magic _g in let typeHint = (_g1 : string) in (
+      ignore (verifyExplicitDynamicTypeHint (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("cast target type" : string) (typeHint : string) (Obj.magic violations));
+      verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic inner) (Obj.magic violations)
+    ))
+    | HxExpr.ECheckType (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let inner = Obj.magic _g in let typeHint = (_g1 : string) in (
+      ignore (verifyExplicitDynamicTypeHint (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("annotation type" : string) (typeHint : string) (Obj.magic violations));
+      verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic inner) (Obj.magic violations)
+    ))
+    | HxExpr.EUntyped _p0 -> ignore (let _g = Obj.magic _p0 in let inner = Obj.magic _g in (
+      ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("untyped_expr" : string) ("`untyped` expression" : string) ("metal profile forbids `untyped` because it bypasses typed lowering and native guarantees" : string) ("replace `untyped` with typed target abstractions or portable equivalents" : string));
+      verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic inner) (Obj.magic violations)
+    ))
+    | HxExpr.EUnsupported _p0 -> ignore (let _g = (_p0 : string) in let raw = (_g : string) in addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_expr" : string) (let __string_part_102 = "EUnsupported(" in let __string_part_103 = HxString.toStdString (let __call_arg_0_101 = raw in summarizeRaw __call_arg_0_101) in let __string_part_104 = ")" in (__string_part_102 ^ __string_part_103) ^ __string_part_104 : string) ("bootstrap fallback nodes are not valid in metal mode" : string) ("rewrite the expression to a supported typed form before using metal profile" : string))
+    | HxExpr.EReturn _p0 -> ignore (let _g = _p0 in let value = _g in (
+      ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) ("expression-position return" : string) ("a return nested inside another expression must be handled by macro expansion before metal emission" : string) ("expand the macro or move the return to statement position before selecting metal profile" : string));
+      if value != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" value)) (Obj.magic violations)) else ()
+    ))
+    | HxExpr.EVars _p0 -> ignore (let _g = Obj.magic _p0 in let declarations = Obj.magic _g in (
+      ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) ("expression-position variable declaration" : string) ("a variable declaration passed as source syntax must be handled by macro expansion before metal emission" : string) ("expand the macro or move the declaration to statement position before selecting metal profile" : string));
+      let _g2 = ref 0 in while !_g2 < HxArray.length declarations do ignore (let declaration = Obj.magic (let __array_read_receiver_105 = declarations in let __array_read_index_106 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_105) __array_read_index_106) in (
+        ignore (let __old_107 = !_g2 in let __new_108 = HxInt.add __old_107 1 in (
+          ignore (_g2 := __new_108);
+          __new_108
+        ));
+        let hx_initializer = HxExprVarDecl.getInitializer (Obj.magic declaration) in if hx_initializer != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" hx_initializer)) (Obj.magic violations)) else ()
+      )) done
+    ))
+    | HxExpr.EVariableDeclaration (_p0, _p1, _p2, _p3, _p4, _p5) -> ignore ((
+      ignore _p0;
+      ignore _p1;
+      let _g3 = _p2 in (
+        ignore _p3;
+        ignore _p4;
+        ignore _p5;
+        let hx_initializer = _g3 in (
+          ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) ("detached expression variable declaration" : string) ("an expression variable declaration must remain inside its declaration list" : string) ("report the compiler invariant failure before selecting metal profile" : string));
+          if hx_initializer != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" hx_initializer)) (Obj.magic violations)) else ()
+        )
+      )
+    ))
+    | HxExpr.EWhile (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
+      ignore _p2;
+      ignore _p3;
+      let _g4 = Obj.magic _p4 in let condition = Obj.magic _g in let body = Obj.magic _g1 in (
+        ignore _g4;
+        ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) ("expression-position while" : string) ("a while loop nested inside another expression must be handled by macro expansion before metal emission" : string) ("expand the macro or move the loop to statement position before selecting metal profile" : string));
+        ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic condition) (Obj.magic violations));
+        let _g5 = ref 0 in while !_g5 < HxArray.length body do ignore (let entry = Obj.magic (let __array_read_receiver_109 = body in let __array_read_index_110 = !_g5 in HxArray.get (Obj.magic __array_read_receiver_109) __array_read_index_110) in (
+          ignore (let __old_111 = !_g5 in let __new_112 = HxInt.add __old_111 1 in (
+            ignore (_g5 := __new_112);
+            __new_112
+          ));
+          verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic entry) (Obj.magic violations)
+        )) done
+      )
+    ))
+    | HxExpr.EBreak _p0 -> ignore ((
+      ignore _p0;
+      addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) ("expression-position break" : string) ("a nested break needs shared loop-control lowering before metal emission" : string) ("rewrite the source so break is a statement, or use a target profile that supports the completed shared lowering" : string)
+    ))
+    | HxExpr.EContinue _p0 -> ignore ((
+      ignore _p0;
+      addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) ("expression-position continue" : string) ("a nested continue needs shared loop-control lowering before metal emission" : string) ("rewrite the source so continue is a statement, or use a target profile that supports the completed shared lowering" : string)
+    ))
+    | HxExpr.EDiscardThen (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let left = Obj.magic _g in let right = Obj.magic _g1 in (
       ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic left) (Obj.magic violations));
       verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic right) (Obj.magic violations)
-    )
-  ))
-  | HxExpr.ETernary (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let cond = Obj.magic _g in let thenExpr = Obj.magic _g1 in let elseExpr = Obj.magic _g2 in (
-    ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic cond) (Obj.magic violations));
-    ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic thenExpr) (Obj.magic violations));
-    verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic elseExpr) (Obj.magic violations)
-  ))
-  | HxExpr.EAnon (_p0, _p1) -> ignore ((
-    ignore _p0;
-    let _g2 = Obj.magic _p1 in let fieldValues = Obj.magic _g2 in let _g3 = ref 0 in while !_g3 < HxArray.length fieldValues do ignore (let fieldExpr = Obj.magic (let __array_read_receiver_75 = fieldValues in let __array_read_index_76 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_75) __array_read_index_76) in (
-      ignore (let __old_77 = !_g3 in let __new_78 = HxInt.add __old_77 1 in (
-        ignore (_g3 := __new_78);
-        __new_78
+    ))
+    | HxExpr.ESourceGroup (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let children = Obj.magic _g in let position = Obj.magic _g1 in let _g2 = ref 0 in while !_g2 < HxArray.length children do ignore (let child = Obj.magic (let __array_read_receiver_113 = children in let __array_read_index_114 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_113) __array_read_index_114) in (
+      ignore (let __old_115 = !_g2 in let __new_116 = HxInt.add __old_115 1 in (
+        ignore (_g2 := __new_116);
+        __new_116
       ));
-      verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic fieldExpr) (Obj.magic violations)
-    )) done
-  ))
-  | HxExpr.EArrayComprehension (_p0, _p1, _p2, _p3) -> ignore ((
-    ignore _p0;
-    let _g2 = Obj.magic _p1 in let _g1 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in let iterable = Obj.magic _g2 in let guardExpr = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g1) in let yieldExpr = Obj.magic _g3 in (
-      ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic iterable) (Obj.magic violations));
-      ignore (if guardExpr != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" guardExpr)) (Obj.magic violations)) else ());
-      verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic yieldExpr) (Obj.magic violations)
-    )
-  ))
-  | HxExpr.EArrayDecl _p0 -> ignore (let _g = Obj.magic _p0 in let values = Obj.magic _g in let _g2 = ref 0 in while !_g2 < HxArray.length values do ignore (let valueExpr = Obj.magic (let __array_read_receiver_79 = values in let __array_read_index_80 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_79) __array_read_index_80) in (
-    ignore (let __old_81 = !_g2 in let __new_82 = HxInt.add __old_81 1 in (
-      ignore (_g2 := __new_82);
-      __new_82
-    ));
-    verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic valueExpr) (Obj.magic violations)
-  )) done)
-  | HxExpr.EArrayAccess (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let array = Obj.magic _g in let index = Obj.magic _g1 in (
-    ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic array) (Obj.magic violations));
-    verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic index) (Obj.magic violations)
-  ))
-  | HxExpr.ERange (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let start = Obj.magic _g in let hx_end = Obj.magic _g1 in (
-    ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic start) (Obj.magic violations));
-    verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic hx_end) (Obj.magic violations)
-  ))
-  | HxExpr.ECast (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let inner = Obj.magic _g in let typeHint = (_g1 : string) in (
-    ignore (verifyExplicitDynamicTypeHint (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("cast target type" : string) (typeHint : string) (Obj.magic violations));
-    verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic inner) (Obj.magic violations)
-  ))
-  | HxExpr.EUntyped _p0 -> ignore (let _g = Obj.magic _p0 in let inner = Obj.magic _g in (
-    ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("untyped_expr" : string) ("`untyped` expression" : string) ("metal profile forbids `untyped` because it bypasses typed lowering and native guarantees" : string) ("replace `untyped` with typed target abstractions or portable equivalents" : string));
-    verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic inner) (Obj.magic violations)
-  ))
-  | HxExpr.EUnsupported _p0 -> ignore (let _g = (_p0 : string) in let raw = (_g : string) in addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_expr" : string) (let __string_part_84 = "EUnsupported(" in let __string_part_85 = HxString.toStdString (let __call_arg_0_83 = raw in summarizeRaw __call_arg_0_83) in let __string_part_86 = ")" in (__string_part_84 ^ __string_part_85) ^ __string_part_86 : string) ("bootstrap fallback nodes are not valid in metal mode" : string) ("rewrite the expression to a supported typed form before using metal profile" : string))
-  | HxExpr.EReturn _p0 -> ignore (let _g = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p0) in let value = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g) in (
-    ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) ("expression-position return" : string) ("a return nested inside another expression must be handled by macro expansion before metal emission" : string) ("expand the macro or move the return to statement position before selecting metal profile" : string));
-    if value != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" value)) (Obj.magic violations)) else ()
-  ))
-  | HxExpr.EVars _p0 -> ignore (let _g = Obj.magic _p0 in let declarations = Obj.magic _g in (
-    ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) ("expression-position variable declaration" : string) ("a variable declaration passed as source syntax must be handled by macro expansion before metal emission" : string) ("expand the macro or move the declaration to statement position before selecting metal profile" : string));
-    let _g2 = ref 0 in while !_g2 < HxArray.length declarations do ignore (let declaration = Obj.magic (let __array_read_receiver_87 = declarations in let __array_read_index_88 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_87) __array_read_index_88) in (
-      ignore (let __old_89 = !_g2 in let __new_90 = HxInt.add __old_89 1 in (
-        ignore (_g2 := __new_90);
-        __new_90
-      ));
-      let hx_initializer = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxExprVarDecl.getInitializer (Obj.magic declaration))) in if hx_initializer != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" hx_initializer)) (Obj.magic violations)) else ()
-    )) done
-  ))
-  | HxExpr.EVariableDeclaration (_p0, _p1, _p2, _p3, _p4, _p5) -> ignore ((
-    ignore _p0;
-    ignore _p1;
-    let _g3 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
-      ignore _p3;
-      ignore _p4;
-      ignore _p5;
-      let hx_initializer = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g3) in (
-        ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) ("detached expression variable declaration" : string) ("an expression variable declaration must remain inside its declaration list" : string) ("report the compiler invariant failure before selecting metal profile" : string));
-        if hx_initializer != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" hx_initializer)) (Obj.magic violations)) else ()
-      )
-    )
-  ))
-  | HxExpr.EWhile (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
-    ignore _p2;
-    ignore _p3;
-    let condition = Obj.magic _g in let body = Obj.magic _g1 in (
-      ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) ("expression-position while" : string) ("a while loop nested inside another expression must be handled by macro expansion before metal emission" : string) ("expand the macro or move the loop to statement position before selecting metal profile" : string));
-      ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic condition) (Obj.magic violations));
-      let _g4 = ref 0 in while !_g4 < HxArray.length body do ignore (let entry = Obj.magic (let __array_read_receiver_91 = body in let __array_read_index_92 = !_g4 in HxArray.get (Obj.magic __array_read_receiver_91) __array_read_index_92) in (
-        ignore (let __old_93 = !_g4 in let __new_94 = HxInt.add __old_93 1 in (
-          ignore (_g4 := __new_94);
-          __new_94
+      verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic position) (Obj.magic child) (Obj.magic violations)
+    )) done)
+    | HxExpr.ESourceFunction (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let facts = Obj.magic _g in let body = Obj.magic _g1 in let defaults = Obj.magic _g2 in let position = Obj.magic _g3 in (
+      ignore (HxSourceFunction.assertDefaultCount (Obj.magic facts) (HxArray.length defaults));
+      ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic position) (Obj.magic body) (Obj.magic violations));
+      let _g4 = ref 0 in while !_g4 < HxArray.length defaults do ignore (let value = Obj.magic (let __array_read_receiver_117 = defaults in let __array_read_index_118 = !_g4 in HxArray.get (Obj.magic __array_read_receiver_117) __array_read_index_118) in (
+        ignore (let __old_119 = !_g4 in let __new_120 = HxInt.add __old_119 1 in (
+          ignore (_g4 := __new_120);
+          __new_120
         ));
-        verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) (Obj.magic entry) (Obj.magic violations)
+        verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic position) (Obj.magic value) (Obj.magic violations)
       )) done
-    )
-  ))
-  | HxExpr.EBreak _p0 -> ignore ((
-    ignore _p0;
-    addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) ("expression-position break" : string) ("a nested break needs shared loop-control lowering before metal emission" : string) ("rewrite the source so break is a statement, or use a target profile that supports the completed shared lowering" : string)
-  ))
-  | HxExpr.EContinue _p0 -> ignore ((
-    ignore _p0;
-    addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic stmtPos) ("unsupported_semantic" : string) ("expression-position continue" : string) ("a nested continue needs shared loop-control lowering before metal emission" : string) ("rewrite the source so continue is a statement, or use a target profile that supports the completed shared lowering" : string)
-  )))
+    ))
+    | HxExpr.EPrivateAccess (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let inner = Obj.magic _g in let position = Obj.magic _g1 in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic position) (Obj.magic inner) (Obj.magic violations))
+))
 
 let rec verifyStmt = fun filePath className fnName stmt violations -> ignore (match stmt with
   | HxStmt.SBlock (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
@@ -398,14 +521,14 @@ let rec verifyStmt = fun filePath className fnName stmt violations -> ignore (ma
       verifyStmt (filePath : string) (className : string) (fnName : string) (Obj.magic inner) (Obj.magic violations)
     )) done
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = Obj.magic _p3 in (
+  | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = _p2 in let _g3 = Obj.magic _p3 in (
     ignore _p4;
-    let name = (_g : string) in let typeHint = (_g1 : string) in let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let pos = Obj.magic _g3 in (
+    let name = (_g : string) in let typeHint = (_g1 : string) in let init = _g2 in let pos = Obj.magic _g3 in (
       ignore (verifyExplicitDynamicTypeHint (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (("local `" ^ HxString.toStdString name) ^ "` type" : string) (typeHint : string) (Obj.magic violations));
       if init != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) (Obj.magic violations)) else ()
     )
   ))
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in let _g3 = Obj.magic _p3 in let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let pos = Obj.magic _g3 in (
+  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in let _g3 = Obj.magic _p3 in let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in let pos = Obj.magic _g3 in (
     ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (Obj.magic cond) (Obj.magic violations));
     ignore (verifyStmt (filePath : string) (className : string) (fnName : string) (Obj.magic thenBranch) (Obj.magic violations));
     if elseBranch != Obj.magic (HxRuntime.hx_null) then ignore (verifyStmt (filePath : string) (className : string) (fnName : string) (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) (Obj.magic violations)) else ()
@@ -433,19 +556,30 @@ let rec verifyStmt = fun filePath className fnName stmt violations -> ignore (ma
     ignore (verifyStmt (filePath : string) (className : string) (fnName : string) (Obj.magic body) (Obj.magic violations));
     verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (Obj.magic cond) (Obj.magic violations)
   ))
-  | HxStmt.SSwitch (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let scrutinee = Obj.magic _g in (
-    ignore _g1;
-    let bodies = Obj.magic _g2 in let pos = Obj.magic _g3 in (
-      ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (Obj.magic scrutinee) (Obj.magic violations));
-      let _g4 = ref 0 in while !_g4 < HxArray.length bodies do ignore (let body = Obj.magic (let __array_read_receiver_41 = bodies in let __array_read_index_42 = !_g4 in HxArray.get (Obj.magic __array_read_receiver_41) __array_read_index_42) in (
-        ignore (let __old_43 = !_g4 in let __new_44 = HxInt.add __old_43 1 in (
-          ignore (_g4 := __new_44);
-          __new_44
-        ));
-        verifyStmt (filePath : string) (className : string) (fnName : string) (Obj.magic body) (Obj.magic violations)
-      )) done
+  | HxStmt.SSwitch (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in (
+    ignore _p4;
+    let scrutinee = Obj.magic _g in (
+      ignore _g1;
+      let bodies = Obj.magic _g2 in let pos = Obj.magic _g3 in (
+        ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (Obj.magic scrutinee) (Obj.magic violations));
+        let _g5 = ref 0 in while !_g5 < HxArray.length bodies do ignore (let body = Obj.magic (let __array_read_receiver_41 = bodies in let __array_read_index_42 = !_g5 in HxArray.get (Obj.magic __array_read_receiver_41) __array_read_index_42) in (
+          ignore (let __old_43 = !_g5 in let __new_44 = HxInt.add __old_43 1 in (
+            ignore (_g5 := __new_44);
+            __new_44
+          ));
+          verifyStmt (filePath : string) (className : string) (fnName : string) (Obj.magic body) (Obj.magic violations)
+        )) done
+      )
     )
   ))
+  | HxStmt.SGuardedSwitch (_p0, _p1, _p2, _p3, _p4) -> (
+    ignore _p0;
+    ignore _p1;
+    ignore _p2;
+    ignore _p3;
+    ignore _p4;
+    HxType.hx_throw_typed_rtti (Obj.repr "backend guarded switch cannot reach source statement analysis") ["Dynamic"]
+  )
   | HxStmt.STry (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
     ignore _p2;
     let tryBody = Obj.magic _g in let catches = Obj.magic _g1 in (
@@ -476,9 +610,15 @@ let rec verifyStmt = fun filePath className fnName stmt violations -> ignore (ma
     ()
   ))
   | HxStmt.SReturn (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (Obj.magic expr) (Obj.magic violations))
-  | HxStmt.SExpr (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (Obj.magic expr) (Obj.magic violations)))
+  | HxStmt.SExpr (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let expr = Obj.magic _g in let pos = Obj.magic _g1 in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (Obj.magic expr) (Obj.magic violations))
+  | HxStmt.STargetScope (_p0, _p1, _p2) -> (
+    ignore _p0;
+    ignore _p1;
+    ignore _p2;
+    HxType.hx_throw_typed_rtti (Obj.repr "native target scope is not valid in this source or target phase") ["Dynamic"]
+  ))
 
-let verifyTypedModule = fun typedModule violations -> ignore (let parsed = Obj.magic (TypedModule.getParsed (Obj.magic typedModule) ()) in let filePath = (ParsedModule.getFilePath (Obj.magic parsed) () : string) in let moduleDecl = Obj.magic (TypedModule.getBackendDeclaration (Obj.magic typedModule) ()) in let _g = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getClasses (Obj.magic moduleDecl)) in while !_g < HxArray.length _g1 do ignore (let cls = Obj.magic (let __array_read_receiver_17 = _g1 in let __array_read_index_18 = !_g in HxArray.get (Obj.magic __array_read_receiver_17) __array_read_index_18) in (
+let verifyTypedModule = fun typedModule violations -> ignore (let parsed = Obj.magic (TypedModule.getParsed (Obj.magic typedModule) ()) in let filePath = (ParsedModule.getFilePath (Obj.magic parsed) () : string) in let moduleDecl = Obj.magic (TypedBackendModuleProjection.getDeclaration (Obj.magic (TypedModule.getBackendProjection (Obj.magic typedModule) ())) ()) in let _g = ref 0 in let _g1 = Obj.magic (HxModuleDecl.getClasses (Obj.magic moduleDecl)) in while !_g < HxArray.length _g1 do ignore (let cls = Obj.magic (let __array_read_receiver_17 = _g1 in let __array_read_index_18 = !_g in HxArray.get (Obj.magic __array_read_receiver_17) __array_read_index_18) in (
   ignore (let __old_19 = !_g in let __new_20 = HxInt.add __old_19 1 in (
     ignore (_g := __new_20);
     __new_20
@@ -491,7 +631,7 @@ let verifyTypedModule = fun typedModule violations -> ignore (let parsed = Obj.m
       ));
       let fieldName = (HxFieldDecl.getName (Obj.magic field) : string) in (
         ignore (verifyExplicitDynamicTypeHint (filePath : string) (className : string) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (Obj.magic (HxRuntime.hx_null))) (("field `" ^ HxString.toStdString fieldName) ^ "` type" : string) (HxFieldDecl.getTypeHint (Obj.magic field) : string) (Obj.magic violations));
-        let fieldInit = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxFieldDecl.getInit (Obj.magic field))) in if fieldInit != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) HxString.hx_null_string (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" fieldInit)) (Obj.magic violations)) else ()
+        let fieldInit = HxFieldDecl.getInit (Obj.magic field) in if fieldInit != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) HxString.hx_null_string (Obj.magic (Obj.magic (HxRuntime.hx_null))) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" fieldInit)) (Obj.magic violations)) else ()
       )
     )) done);
     let _g2 = ref 0 in let _g3 = Obj.magic (HxClassDecl.getFunctions (Obj.magic cls)) in while !_g2 < HxArray.length _g3 do ignore (let fn = Obj.magic (let __array_read_receiver_25 = _g3 in let __array_read_index_26 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_25) __array_read_index_26) in (
@@ -539,7 +679,7 @@ let collectViolationSummaries = fun program -> let summaries = Obj.magic (HxArra
       ignore (_g := __new_4);
       __new_4
     ));
-    let __array_receiver_5 = summaries in let __array_arg_0_6 = let __anonymous_value_7 = HxAnon.create () in (
+    let __array_receiver_5 = Obj.magic summaries in let __array_arg_0_6 = let __anonymous_value_7 = HxAnon.create () in (
       let __anonymous_field_value_8 = Obj.obj (HxAnon.get violation "filePath") in ignore (HxAnon.set __anonymous_value_7 "filePath" (Obj.repr __anonymous_field_value_8));
       let __anonymous_field_value_9 = Obj.obj (HxAnon.get violation "context") in ignore (HxAnon.set __anonymous_value_7 "context" (Obj.repr __anonymous_field_value_9));
       let __anonymous_field_value_10 = Obj.obj (HxAnon.get violation "code") in ignore (HxAnon.set __anonymous_value_7 "code" (Obj.repr __anonymous_field_value_10));
@@ -552,30 +692,30 @@ let collectViolationSummaries = fun program -> let summaries = Obj.magic (HxArra
 )
 
 let formatViolations = fun violations -> let lines = Obj.magic (HxArray.create ()) in (
-  ignore (let __array_receiver_165 = lines in let __array_arg_0_166 = let __string_part_167 = "metal profile verification failed: " in let __string_part_168 = string_of_int (HxArray.length violations) in let __string_part_169 = " issue(s)" in (__string_part_167 ^ __string_part_168) ^ __string_part_169 in HxArray.push __array_receiver_165 __array_arg_0_166);
+  ignore (let __array_receiver_191 = Obj.magic lines in let __array_arg_0_192 = (let __string_part_193 = "metal profile verification failed: " in let __string_part_194 = string_of_int (HxArray.length violations) in let __string_part_195 = " issue(s)" in (__string_part_193 ^ __string_part_194) ^ __string_part_195 : string) in HxArray.push __array_receiver_191 __array_arg_0_192);
   let _g = ref 0 in (
-    ignore (while !_g < HxArray.length violations do ignore (let v = let __array_read_receiver_170 = violations in let __array_read_index_171 = !_g in HxArray.get (Obj.magic __array_read_receiver_170) __array_read_index_171 in (
-      ignore (let __old_172 = !_g in let __new_173 = HxInt.add __old_172 1 in (
-        ignore (_g := __new_173);
-        __new_173
+    ignore (while !_g < HxArray.length violations do ignore (let v = let __array_read_receiver_196 = violations in let __array_read_index_197 = !_g in HxArray.get (Obj.magic __array_read_receiver_196) __array_read_index_197 in (
+      ignore (let __old_198 = !_g in let __new_199 = HxInt.add __old_198 1 in (
+        ignore (_g := __new_199);
+        __new_199
       ));
       let tempString = ref (HxString.hx_null_string : string) in (
-        ignore (if Obj.obj (HxAnon.get v "line") > 0 && Obj.obj (HxAnon.get v "column") > 0 then let __assign_174 = let __string_part_175 = ":" in let __string_part_176 = string_of_int (Obj.obj (HxAnon.get v "line")) in let __string_part_177 = ":" in let __string_part_178 = string_of_int (Obj.obj (HxAnon.get v "column")) in ((__string_part_175 ^ __string_part_176) ^ __string_part_177) ^ __string_part_178 in (
-          tempString := __assign_174;
-          __assign_174
-        ) else let __assign_179 = "" in (
-          tempString := __assign_179;
-          __assign_179
+        ignore (if Obj.obj (HxAnon.get v "line") > 0 && Obj.obj (HxAnon.get v "column") > 0 then let __assign_200 = let __string_part_201 = ":" in let __string_part_202 = string_of_int (Obj.obj (HxAnon.get v "line")) in let __string_part_203 = ":" in let __string_part_204 = string_of_int (Obj.obj (HxAnon.get v "column")) in ((__string_part_201 ^ __string_part_202) ^ __string_part_203) ^ __string_part_204 in (
+          tempString := __assign_200;
+          __assign_200
+        ) else let __assign_205 = "" in (
+          tempString := __assign_205;
+          __assign_205
         ));
         let lineCol = !tempString in (
-          ignore (let __array_receiver_180 = lines in let __array_arg_0_181 = let __string_part_182 = "- " in let __string_part_183 = HxString.toStdString (Obj.obj (HxAnon.get v "filePath")) in let __string_part_184 = HxString.toStdString lineCol in let __string_part_185 = " [" in let __string_part_186 = HxString.toStdString (Obj.obj (HxAnon.get v "code")) in let __string_part_187 = "] construct: " in let __string_part_188 = HxString.toStdString (Obj.obj (HxAnon.get v "construct")) in let __string_part_189 = " (context: " in let __string_part_190 = HxString.toStdString (Obj.obj (HxAnon.get v "context")) in let __string_part_191 = ")" in ((((((((__string_part_182 ^ __string_part_183) ^ __string_part_184) ^ __string_part_185) ^ __string_part_186) ^ __string_part_187) ^ __string_part_188) ^ __string_part_189) ^ __string_part_190) ^ __string_part_191 in HxArray.push __array_receiver_180 __array_arg_0_181);
-          ignore (let __array_receiver_192 = lines in let __array_arg_0_193 = let __string_part_194 = "  reason: " in let __string_part_195 = HxString.toStdString (Obj.obj (HxAnon.get v "reason")) in __string_part_194 ^ __string_part_195 in HxArray.push __array_receiver_192 __array_arg_0_193);
-          let __array_receiver_196 = lines in let __array_arg_0_197 = let __string_part_198 = "  migration: " in let __string_part_199 = HxString.toStdString (Obj.obj (HxAnon.get v "migrationHint")) in __string_part_198 ^ __string_part_199 in HxArray.push __array_receiver_196 __array_arg_0_197
+          ignore (let __array_receiver_206 = Obj.magic lines in let __array_arg_0_207 = (let __string_part_208 = "- " in let __string_part_209 = HxString.toStdString (Obj.obj (HxAnon.get v "filePath")) in let __string_part_210 = HxString.toStdString lineCol in let __string_part_211 = " [" in let __string_part_212 = HxString.toStdString (Obj.obj (HxAnon.get v "code")) in let __string_part_213 = "] construct: " in let __string_part_214 = HxString.toStdString (Obj.obj (HxAnon.get v "construct")) in let __string_part_215 = " (context: " in let __string_part_216 = HxString.toStdString (Obj.obj (HxAnon.get v "context")) in let __string_part_217 = ")" in ((((((((__string_part_208 ^ __string_part_209) ^ __string_part_210) ^ __string_part_211) ^ __string_part_212) ^ __string_part_213) ^ __string_part_214) ^ __string_part_215) ^ __string_part_216) ^ __string_part_217 : string) in HxArray.push __array_receiver_206 __array_arg_0_207);
+          ignore (let __array_receiver_218 = Obj.magic lines in let __array_arg_0_219 = (let __string_part_220 = "  reason: " in let __string_part_221 = HxString.toStdString (Obj.obj (HxAnon.get v "reason")) in __string_part_220 ^ __string_part_221 : string) in HxArray.push __array_receiver_218 __array_arg_0_219);
+          let __array_receiver_222 = Obj.magic lines in let __array_arg_0_223 = (let __string_part_224 = "  migration: " in let __string_part_225 = HxString.toStdString (Obj.obj (HxAnon.get v "migrationHint")) in __string_part_224 ^ __string_part_225 : string) in HxArray.push __array_receiver_222 __array_arg_0_223
         )
       )
     )) done);
-    ignore (let __array_receiver_200 = lines in let __array_arg_0_201 = "next: keep metal by applying the migrations above, or explicitly switch lanes with -D ocaml_profile=portable." in HxArray.push __array_receiver_200 __array_arg_0_201);
-    ignore (let __array_receiver_202 = lines in let __array_arg_0_203 = "policy: no implicit metal->portable fallback is performed." in HxArray.push __array_receiver_202 __array_arg_0_203);
+    ignore (let __array_receiver_226 = Obj.magic lines in let __array_arg_0_227 = ("next: keep metal by applying the migrations above, or explicitly switch lanes with -D ocaml_profile=portable." : string) in HxArray.push __array_receiver_226 __array_arg_0_227);
+    ignore (let __array_receiver_228 = Obj.magic lines in let __array_arg_0_229 = ("policy: no implicit metal->portable fallback is performed." : string) in HxArray.push __array_receiver_228 __array_arg_0_229);
     HxArray.join lines "\n" (fun x -> x)
   )
 )

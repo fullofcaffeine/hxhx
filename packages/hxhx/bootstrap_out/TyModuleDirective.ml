@@ -14,7 +14,7 @@ let create = fun source2 kind2 providers2 -> let self = ({ __hx_type = HxType.cl
       ignore (if providers2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
         tempArray := __assign_1;
         __assign_1
-      ) else let __assign_3 = Obj.magic (let __array_receiver_4 = providers2 in HxArray.copy __array_receiver_4) in (
+      ) else let __assign_3 = Obj.magic (let __array_receiver_4 = Obj.magic providers2 in HxArray.copy __array_receiver_4) in (
         tempArray := __assign_3;
         __assign_3
       ));
@@ -130,7 +130,7 @@ let getSource = fun self () -> (Obj.magic self : t).source
 
 let getKind = fun self () -> (Obj.magic self : t).kind
 
-let getProviders = fun self () -> let __array_receiver_26 = (Obj.magic self : t).providers in HxArray.copy __array_receiver_26
+let getProviders = fun self () -> let __array_receiver_26 = Obj.magic ((Obj.magic self : t).providers) in HxArray.copy __array_receiver_26
 
 let getSingleProvider = fun self () -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyNominalTypeId.t) in (
   ignore (if HxArray.length ((Obj.magic self : t).providers) = 1 then let __assign_27 = Obj.magic (Obj.magic (let __array_read_receiver_28 = (Obj.magic self : t).providers in let __array_read_index_29 = 0 in HxArray.get (Obj.magic __array_read_receiver_28) __array_read_index_29)) in (
@@ -157,7 +157,7 @@ let getImportedTypeLocalName = fun self (provider : TyNominalTypeId.t) -> (try l
     tempBool := __assign_32;
     __assign_32
   ));
-  ignore (if not (!tempBool) || provider == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if not (!tempBool) || provider == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let selected = ref false in let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).providers) in (
     ignore (try while !_g < HxArray.length _g1 do ignore (let candidate = Obj.magic (let __array_read_receiver_33 = _g1 in let __array_read_index_34 = !_g in HxArray.get (Obj.magic __array_read_receiver_33) __array_read_index_34) in (
       ignore (let __old_35 = !_g in let __new_36 = HxInt.add __old_35 1 in (
@@ -169,11 +169,11 @@ let getImportedTypeLocalName = fun self (provider : TyNominalTypeId.t) -> (try l
           selected := __assign_37;
           __assign_37
         ));
-        raise (HxRuntime.Hx_break)
+        Stdlib.raise (HxRuntime.Hx_break)
       )) else ()
     )) done with
       | HxRuntime.Hx_break -> ());
-    ignore (if not (!selected) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+    ignore (if not (!selected) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
       ignore (let _g = Obj.magic (HxModuleDirective.getKind (Obj.magic ((Obj.magic self : t).source))) in match _g with
         | HxModuleDirectiveKind.ImportNormal -> let canonical = (TyNominalTypeId.getCanonicalName (Obj.magic provider) () : string) in let dot = let __string_receiver_38 = canonical in let __string_argument_0_39 = "." in HxString.lastIndexOf __string_receiver_38 __string_argument_0_39 (HxString.length __string_receiver_38) in if dot < 0 then let __assign_40 = Obj.magic (canonical : string) in (
@@ -225,7 +225,7 @@ let canonicalIdentity = fun self () -> let _g = Obj.magic (let __represented_arr
       ignore (_g1 := __new_54);
       __new_54
     ));
-    let __array_receiver_55 = _g in let __array_arg_0_56 = TyNominalTypeId.getCanonicalName (Obj.magic provider) () in HxArray.push __array_receiver_55 __array_arg_0_56
+    let __array_receiver_55 = Obj.magic _g in let __array_arg_0_56 = (TyNominalTypeId.getCanonicalName (Obj.magic provider) () : string) in HxArray.push __array_receiver_55 __array_arg_0_56
   )) done);
   let tempArray = Obj.magic _g in let providerNames = Obj.magic tempArray in let providerSet = (HxArray.join providerNames "," (fun x -> x) : string) in let tempString = ref (HxString.hx_null_string : string) in (
     ignore (let _g = Obj.magic ((Obj.magic self : t).kind) in match _g with

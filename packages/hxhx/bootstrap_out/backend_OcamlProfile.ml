@@ -6,14 +6,7 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend._OcamlProfile.OcamlProfile_Impl_" } : t) in (
-  ignore ();
-  self
-)
-
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend._OcamlProfile.OcamlProfile_Impl_" } : t)
-
-let isTrimCode = fun code -> code = 32 || code = 9 || code = 13 || code = 10
+let isTrimCode = fun (code : int) -> (if if if let hx_left = code in let hx_right = 32 in hx_left = hx_right then true else let hx_left_2 = code in let hx_right_2 = 9 in hx_left_2 = hx_right_2 then true else let hx_left_3 = code in let hx_right_3 = 13 in hx_left_3 = hx_right_3 then true else let hx_left_4 = code in let hx_right_4 = 10 in hx_left_4 = hx_right_4 : bool)
 
 let trimAscii = fun value -> let start = ref 0 in let hx_end = ref (let __string_receiver_1 = value in HxString.length __string_receiver_1) in (
   ignore (while !start < !hx_end && isTrimCode (let __nullable_int_4 = let __string_receiver_2 = value in let __string_argument_0_3 = !start in HxString.charCodeAt __string_receiver_2 __string_argument_0_3 in if __nullable_int_4 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_4) do ignore (let __old_5 = !start in let __new_6 = HxInt.add __old_5 1 in (
@@ -28,9 +21,9 @@ let trimAscii = fun value -> let start = ref 0 in let hx_end = ref (let __string
 )
 
 let fromDefineValue = fun raw -> (try (
-  ignore (if raw == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr "portable")) else ());
+  ignore (if raw == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "portable")) else ());
   let trimmed = (trimAscii (raw : string) : string) in (
-    ignore (if (let __string_receiver_15 = trimmed in HxString.length __string_receiver_15) = 0 then raise (HxRuntime.Hx_return (Obj.repr "portable")) else ());
+    ignore (if (let __string_receiver_15 = trimmed in HxString.length __string_receiver_15) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "portable")) else ());
     let normalized = (let __string_receiver_16 = trimmed in HxString.toLowerCase __string_receiver_16 () : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
       ignore (match normalized with
         | "metal" -> let __assign_17 = ("metal" : string) in (

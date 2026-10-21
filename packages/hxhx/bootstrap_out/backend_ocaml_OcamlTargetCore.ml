@@ -13,7 +13,7 @@ let __ctor = fun (self : t) () -> ignore ((
 
 let coreId__impl = fun (self : t) () -> (
   ignore self;
-  "reflaxe.ocaml.target-core"
+  ("hxhx.stage3.ocaml-emitter" : string)
 )
 
 let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Backend_BackendContext.t) -> (
@@ -95,7 +95,7 @@ let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Ba
                   __assign_94
                 ));
                 ignore (if !tempBool7 then ignore (let value = Obj.repr "stage3_driver=ocaml_target_core_before_emitToDir_direct" in HxSys.printlnValue value) else ());
-                let emitTypedProgram = Obj.magic program in let tempBool8 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+                let emitTypedProgram = Obj.magic (Backend_ocaml_OcamlEntryPointSelection.rootFirst (Obj.magic program) ((Obj.magic context : Backend_BackendContext.t).mainModule : string)) in let tempBool8 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
                   ignore (if raw == HxString.hx_null_string then let __assign_103 = false in (
                     tempBool8 := __assign_103;
                     __assign_103
@@ -160,10 +160,10 @@ let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Ba
                   )
                 )
               ) with
-                | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-                | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                | HxRuntime.Hx_return __ret_87 -> raise (HxRuntime.Hx_return __ret_87)
-                | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+                | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+                | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+                | HxRuntime.Hx_return __ret_87 -> Stdlib.raise (HxRuntime.Hx_return __ret_87)
+                | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
                 | HxRuntime.Hx_exception (__exn_v_88, __exn_tags_89) -> if true then let error = (if HxRuntime.tags_has __exn_tags_89 "haxe.Exception" then Obj.obj __exn_v_88 else Obj.magic (Haxe_ValueException.create __exn_v_88 (Obj.magic (HxRuntime.hx_null)) __exn_v_88) : Haxe_Exception.t) in (
                   ignore error;
                   (
@@ -177,7 +177,7 @@ let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Ba
                     ignore (EmitterStage.restorePortableMetalizationPlan (Obj.magic planScope));
                     HxType.hx_throw_typed_rtti (Obj.repr error) ["Dynamic"]
                   )
-                ) else raise (__exn_90));
+                ) else Stdlib.raise (__exn_90));
               let entryPath = (!tempString : string) in (
                 ignore (EmitterStage.restorePortableMetalizationPlan (Obj.magic planScope));
                 let tempBool14 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
@@ -233,7 +233,10 @@ let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Ba
   )
 )
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.OcamlTargetCore"; coreId = (fun o () -> Obj.magic (coreId__impl (Obj.magic o) (Obj.magic ()))); emit = (fun o a0 a1 -> Obj.magic (emit__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))) } : t) in (
+let create = fun () -> let self = let __hx_method_class = HxType.class_ "backend.ocaml.OcamlTargetCore" in (
+  HxMethodDispatch.ensure __hx_method_class "sha256:8fa7ae87ca6c6c17c1db69aa83cfff7048cf13c29e68d71b8efde31fd057c0a2" 3 (fun () -> [("method-dispatch:50f8134b774ad2926900a788fcfff9019ad6a74911e81d4d7fa5065ed15b8b17", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun (__hx_method_arg0 : MacroExpandedProgram.t) (__hx_method_arg1 : Backend_BackendContext.t) -> (emit__impl __hx_method_self __hx_method_arg0 __hx_method_arg1 : Backend_EmitResult.t)))); ("method-dispatch:dca89f8bbb4b28a8436b5ed3d72fbbf16aa71a8474c8e84e31845713bee1eba0", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun () -> (coreId__impl __hx_method_self () : string))))]);
+  ({ __hx_type = __hx_method_class; coreId = (fun o () -> Obj.magic (coreId__impl (Obj.magic o) (Obj.magic ()))); emit = (fun o a0 a1 -> Obj.magic (emit__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))) } : t)
+) in (
   ignore ((
     ignore self;
     ignore ()
@@ -241,10 +244,13 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.Oc
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.OcamlTargetCore"; coreId = (fun o () -> Obj.magic (coreId__impl (Obj.magic o) (Obj.magic ()))); emit = (fun o a0 a1 -> Obj.magic (emit__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))) } : t)
+let __empty = fun () -> let __hx_method_class = HxType.class_ "backend.ocaml.OcamlTargetCore" in (
+  HxMethodDispatch.ensure __hx_method_class "sha256:8fa7ae87ca6c6c17c1db69aa83cfff7048cf13c29e68d71b8efde31fd057c0a2" 3 (fun () -> [("method-dispatch:50f8134b774ad2926900a788fcfff9019ad6a74911e81d4d7fa5065ed15b8b17", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun (__hx_method_arg0 : MacroExpandedProgram.t) (__hx_method_arg1 : Backend_BackendContext.t) -> (emit__impl __hx_method_self __hx_method_arg0 __hx_method_arg1 : Backend_EmitResult.t)))); ("method-dispatch:dca89f8bbb4b28a8436b5ed3d72fbbf16aa71a8474c8e84e31845713bee1eba0", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun () -> (coreId__impl __hx_method_self () : string))))]);
+  ({ __hx_type = __hx_method_class; coreId = (fun o () -> Obj.magic (coreId__impl (Obj.magic o) (Obj.magic ()))); emit = (fun o a0 a1 -> Obj.magic (emit__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))) } : t)
+)
 
 let traceEnabled = fun () -> (try let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
-  ignore (if raw == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if raw == HxString.hx_null_string then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let s = (let __string_receiver_223 = let __call_arg_0_224 = raw in StringTools.trim __call_arg_0_224 in HxString.toLowerCase __string_receiver_223 () : string) in (let __string_eq_left_225 = s in let __string_eq_right_226 = "1" in HxString.equals __string_eq_left_225 __string_eq_right_226) || (let __string_eq_left_227 = s in let __string_eq_right_228 = "true" in HxString.equals __string_eq_left_227 __string_eq_right_228) || (let __string_eq_left_229 = s in let __string_eq_right_230 = "yes" in HxString.equals __string_eq_left_229 __string_eq_right_230) || (let __string_eq_left_231 = s in let __string_eq_right_232 = "on" in HxString.equals __string_eq_left_231 __string_eq_right_232)
 ) with
   | HxRuntime.Hx_return __ret_233 -> (Obj.obj __ret_233 : bool) : bool)

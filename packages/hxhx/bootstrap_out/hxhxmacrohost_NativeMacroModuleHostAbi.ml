@@ -65,9 +65,9 @@ let fail = fun (sourceLabel : string) (message : string) -> ignore (let tempRigh
 ))
 
 let trimTrailingCr = fun line -> (try (
-  ignore (if line == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+  ignore (if line == HxString.hx_null_string then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   let len = let __string_receiver_16 = line in HxString.length __string_receiver_16 in (
-    ignore (if len = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+    ignore (if len = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "")) else ());
     let tempResult = ref (HxString.hx_null_string : string) in (
       ignore (if let __nullable_19 = let __string_receiver_17 = line in let __string_argument_0_18 = HxInt.sub len 1 in HxString.charCodeAt __string_receiver_17 __string_argument_0_18 in if __nullable_19 == HxRuntime.hx_null then false else Obj.obj __nullable_19 = 13 then let __assign_20 = (let __string_receiver_21 = line in let __string_argument_0_22 = 0 in let __string_argument_1_23 = HxInt.sub len 1 in HxString.substr __string_receiver_21 __string_argument_0_22 __string_argument_1_23 : string) in (
         tempResult := __assign_20;
@@ -165,14 +165,14 @@ let decodeSnapshot = fun snapshot sourceLabel -> let tempString = ref (HxString.
             __assign_104
           ));
           let normalized = !tempString1 in (
-            ignore (if (let __string_receiver_106 = normalized in HxString.length __string_receiver_106) = 0 then raise (HxRuntime.Hx_continue) else ());
+            ignore (if (let __string_receiver_106 = normalized in HxString.length __string_receiver_106) = 0 then Stdlib.raise (HxRuntime.Hx_continue) else ());
             ignore (if !headerState = 0 then ignore ((
               ignore (if let __string_eq_left_107 = normalized in let __string_eq_right_108 = "v2" in not (HxString.equals __string_eq_left_107 __string_eq_right_108) then ignore (let __call_arg_0_109 = sourceLabel in let __call_arg_1_110 = ((("invalid snapshot version `" ^ HxString.toStdString normalized) ^ "` (expected `") ^ "v2") ^ "`)" in fail __call_arg_0_109 __call_arg_1_110) else ());
               ignore (let __assign_111 = 1 in (
                 headerState := __assign_111;
                 __assign_111
               ));
-              raise (HxRuntime.Hx_continue)
+              Stdlib.raise (HxRuntime.Hx_continue)
             )) else ());
             ignore (if !headerState = 1 then ignore ((
               ignore (let __call_arg_0_112 = normalized in let __call_arg_1_113 = "abiVersion=" in let __call_arg_2_114 = "abiVersion" in let __call_arg_3_115 = 1 in let __call_arg_4_116 = !lineNumber in let __call_arg_5_117 = sourceLabel in requireHeaderInt __call_arg_0_112 __call_arg_1_113 __call_arg_2_114 __call_arg_3_115 __call_arg_4_116 __call_arg_5_117);
@@ -180,7 +180,7 @@ let decodeSnapshot = fun snapshot sourceLabel -> let tempString = ref (HxString.
                 headerState := __assign_118;
                 __assign_118
               ));
-              raise (HxRuntime.Hx_continue)
+              Stdlib.raise (HxRuntime.Hx_continue)
             )) else ());
             ignore (if !headerState = 2 then ignore ((
               ignore (let __call_arg_0_119 = normalized in let __call_arg_1_120 = "macroApiVersion=" in let __call_arg_2_121 = "macroApiVersion" in let __call_arg_3_122 = 1 in let __call_arg_4_123 = !lineNumber in let __call_arg_5_124 = sourceLabel in requireHeaderInt __call_arg_0_119 __call_arg_1_120 __call_arg_2_121 __call_arg_3_122 __call_arg_4_123 __call_arg_5_124);
@@ -188,9 +188,9 @@ let decodeSnapshot = fun snapshot sourceLabel -> let tempString = ref (HxString.
                 headerState := __assign_125;
                 __assign_125
               ));
-              raise (HxRuntime.Hx_continue)
+              Stdlib.raise (HxRuntime.Hx_continue)
             )) else ());
-            let __array_receiver_126 = rows in let __array_arg_0_127 = decodeRow (normalized : string) (!lineNumber) (sourceLabel : string) in HxArray.push __array_receiver_126 __array_arg_0_127
+            let __array_receiver_126 = Obj.magic rows in let __array_arg_0_127 = decodeRow (normalized : string) (!lineNumber) (sourceLabel : string) in HxArray.push __array_receiver_126 __array_arg_0_127
           )
         )
       )
@@ -218,7 +218,7 @@ let exprsForPluginInternal = fun snapshot pluginId sourceLabel allowEmpty -> let
       ignore (if !tempBool then ignore (let __call_arg_0_153 = sourceLabel in let __call_arg_1_154 = let __string_part_155 = "duplicate expr registration `" in let __string_part_156 = HxString.toStdString (Obj.obj (HxAnon.get row "expr")) in let __string_part_157 = "` for plugin `" in let __string_part_158 = HxString.toStdString expectedPluginId in let __string_part_159 = "`" in (((__string_part_155 ^ __string_part_156) ^ __string_part_157) ^ __string_part_158) ^ __string_part_159 in fail __call_arg_0_153 __call_arg_1_154) else ());
       let key = (Obj.obj (HxAnon.get row "expr") : string) in (
         ignore (HxMap.set_string (Obj.magic seenExprs) (key : string) true);
-        let __array_receiver_160 = out in let __array_arg_0_161 = Obj.obj (HxAnon.get row "expr") in HxArray.push __array_receiver_160 __array_arg_0_161
+        let __array_receiver_160 = Obj.magic out in let __array_arg_0_161 = (Obj.obj (HxAnon.get row "expr") : string) in HxArray.push __array_receiver_160 __array_arg_0_161
       )
     )
   )) done);

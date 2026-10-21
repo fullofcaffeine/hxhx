@@ -23,7 +23,7 @@ let create = fun modulePath2 reasonPath2 -> let self = ({ __hx_type = HxType.cla
       ignore (if reasonPath2 == Obj.magic (HxRuntime.hx_null) then let __assign_5 = Obj.magic (let __represented_array_6 = HxArray.create () in __represented_array_6) in (
         tempRight1 := __assign_5;
         __assign_5
-      ) else let __assign_7 = Obj.magic (let __array_receiver_8 = reasonPath2 in HxArray.copy __array_receiver_8) in (
+      ) else let __assign_7 = Obj.magic (let __array_receiver_8 = Obj.magic reasonPath2 in HxArray.copy __array_receiver_8) in (
         tempRight1 := __assign_7;
         __assign_7
       ));

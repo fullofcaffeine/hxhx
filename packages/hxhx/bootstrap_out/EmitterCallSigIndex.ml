@@ -14,7 +14,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "EmitterCallSigIn
 let __empty = fun () -> ({ __hx_type = HxType.class_ "EmitterCallSigIndex" } : t)
 
 let get = fun index callee -> (try (
-  ignore (if index == Obj.magic (HxRuntime.hx_null) || callee == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if index == Obj.magic (HxRuntime.hx_null) || callee == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let signatures = Obj.obj index in HxMap.get_string signatures (callee : string)
 ) with
   | HxRuntime.Hx_return __ret_1 -> (Obj.obj __ret_1 : Obj.t) : Obj.t)

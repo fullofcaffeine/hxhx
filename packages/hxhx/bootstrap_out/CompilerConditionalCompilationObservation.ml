@@ -11,13 +11,13 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerConditionalCompila
 let getCanonicalIdentity = fun self () -> (Obj.magic self : t).canonicalIdentity
 
 let sameIdentities = fun left right -> (try (
-  ignore (if left == Obj.magic (HxRuntime.hx_null) || right == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.repr left == Obj.repr right))) else ());
-  ignore (if HxArray.length left <> HxArray.length right then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if left == Obj.magic (HxRuntime.hx_null) || right == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.repr left == Obj.repr right))) else ());
+  ignore (if HxArray.length left <> HxArray.length right then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let _g = ref 0 in let _g1 = HxArray.length left in (
     ignore (while !_g < _g1 do ignore (let index = let __old_57 = !_g in let __new_58 = HxInt.add __old_57 1 in (
       ignore (_g := __new_58);
       __old_57
-    ) in if let __string_eq_left_59 = let __array_read_receiver_61 = left in let __array_read_index_62 = index in HxArray.get (Obj.magic __array_read_receiver_61) __array_read_index_62 in let __string_eq_right_60 = let __array_read_receiver_63 = right in let __array_read_index_64 = index in HxArray.get (Obj.magic __array_read_receiver_63) __array_read_index_64 in not (HxString.equals __string_eq_left_59 __string_eq_right_60) then raise (HxRuntime.Hx_return (Obj.repr false)) else ()) done);
+    ) in if let __string_eq_left_59 = let __array_read_receiver_61 = left in let __array_read_index_62 = index in HxArray.get (Obj.magic __array_read_receiver_61) __array_read_index_62 in let __string_eq_right_60 = let __array_read_receiver_63 = right in let __array_read_index_64 = index in HxArray.get (Obj.magic __array_read_receiver_63) __array_read_index_64 in not (HxString.equals __string_eq_left_59 __string_eq_right_60) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ()) done);
     true
   )
 ) with
@@ -42,7 +42,7 @@ let create = fun decisions2 -> let self = ({ __hx_type = HxType.class_ "Compiler
     ignore (if decisions2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       tempRight := __assign_1;
       __assign_1
-    ) else let __assign_3 = Obj.magic (let __array_receiver_4 = decisions2 in HxArray.copy __array_receiver_4) in (
+    ) else let __assign_3 = Obj.magic (let __array_receiver_4 = Obj.magic decisions2 in HxArray.copy __array_receiver_4) in (
       tempRight := __assign_3;
       __assign_3
     ));
@@ -55,7 +55,7 @@ let create = fun decisions2 -> let self = ({ __hx_type = HxType.class_ "Compiler
       __assign_6
     ));
     let revisionByAccess = Obj.magic (HxMap.create_string ()) in let values = Obj.magic (HxArray.create ()) in (
-      ignore (let __array_receiver_7 = values in let __array_arg_0_8 = "conditional-compilation-observation-v1" in HxArray.push __array_receiver_7 __array_arg_0_8);
+      ignore (let __array_receiver_7 = Obj.magic values in let __array_arg_0_8 = ("conditional-compilation-observation-v1" : string) in HxArray.push __array_receiver_7 __array_arg_0_8);
       let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).decisions) in (
         ignore (while !_g < HxArray.length _g1 do ignore (let decision = Obj.magic (let __array_read_receiver_9 = _g1 in let __array_read_index_10 = !_g in HxArray.get (Obj.magic __array_read_receiver_9) __array_read_index_10) in (
           ignore (let __old_11 = !_g in let __new_12 = HxInt.add __old_11 1 in (
@@ -63,7 +63,7 @@ let create = fun decisions2 -> let self = ({ __hx_type = HxType.class_ "Compiler
             __new_12
           ));
           ignore (if decision == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "conditional-compilation observation contains a null decision") ["Dynamic"] else ());
-          ignore (let __array_receiver_13 = values in let __array_arg_0_14 = CompilerConditionalDecision.getCanonicalIdentity (Obj.magic decision) () in HxArray.push __array_receiver_13 __array_arg_0_14);
+          ignore (let __array_receiver_13 = Obj.magic values in let __array_arg_0_14 = (CompilerConditionalDecision.getCanonicalIdentity (Obj.magic decision) () : string) in HxArray.push __array_receiver_13 __array_arg_0_14);
           let _g2 = ref 0 in let _g3 = Obj.magic (CompilerConditionalDecision.getInputs (Obj.magic decision) ()) in while !_g2 < HxArray.length _g3 do ignore (let input = Obj.magic (let __array_read_receiver_15 = _g3 in let __array_read_index_16 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_15) __array_read_index_16) in (
             ignore (let __old_17 = !_g2 in let __new_18 = HxInt.add __old_17 1 in (
               ignore (_g2 := __new_18);
@@ -91,7 +91,7 @@ let create = fun decisions2 -> let self = ({ __hx_type = HxType.class_ "Compiler
                         ));
                         let _this = Obj.magic ((Obj.magic self : t).inputIdentitiesByName) in let key = ((Obj.magic input : CompilerConditionalDefineInput.t).name : string) in HxMap.set_string (Obj.magic _this) (key : string) (!identities)
                       )) else ());
-                      if (let __array_receiver_27 = !identities in let __array_arg_0_28 = CompilerConditionalDefineInput.canonicalKey (Obj.magic input) () in HxArray.indexOf_default __array_receiver_27 __array_arg_0_28) < 0 then ignore (let __array_receiver_29 = !identities in let __array_arg_0_30 = CompilerConditionalDefineInput.canonicalKey (Obj.magic input) () in HxArray.push __array_receiver_29 __array_arg_0_30) else ()
+                      if (let __array_receiver_27 = Obj.magic (!identities) in let __array_arg_0_28 = (CompilerConditionalDefineInput.canonicalKey (Obj.magic input) () : string) in HxArray.indexOf_default __array_receiver_27 __array_arg_0_28) < 0 then ignore (let __array_receiver_29 = Obj.magic (!identities) in let __array_arg_0_30 = (CompilerConditionalDefineInput.canonicalKey (Obj.magic input) () : string) in HxArray.push __array_receiver_29 __array_arg_0_30) else ()
                     )
                   )
                 )
@@ -100,7 +100,7 @@ let create = fun decisions2 -> let self = ({ __hx_type = HxType.class_ "Compiler
           )) done
         )) done);
         let _this = Obj.magic ((Obj.magic self : t).inputIdentitiesByName) in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.values_string (Obj.magic _this))) in let identities = tempIterator in (
-          ignore (while let __iterator_receiver_31 = identities in HxIterator.hasNext __iterator_receiver_31 do ignore (let identities2 = Obj.magic (let __iterator_receiver_32 = identities in HxIterator.next __iterator_receiver_32) in let __array_receiver_33 = identities2 in let __array_arg_0_34 = compareText in HxArray.sort __array_receiver_33 __array_arg_0_34) done);
+          ignore (while let __iterator_receiver_31 = identities in HxIterator.hasNext __iterator_receiver_31 do ignore (let identities2 = Obj.magic (let __iterator_receiver_32 = identities in HxIterator.next __iterator_receiver_32) in let __array_receiver_33 = Obj.magic identities2 in let __array_arg_0_34 = compareText in HxArray.sort __array_receiver_33 __array_arg_0_34) done);
           let __assign_35 = (CompilerCacheIdentity.encode (Obj.magic values) : string) in (
             (Obj.magic self : t).canonicalIdentity <- __assign_35;
             __assign_35
@@ -113,8 +113,8 @@ let create = fun decisions2 -> let self = ({ __hx_type = HxType.class_ "Compiler
 )
 
 let getObservedDefineNames = fun self () -> let _g = Obj.magic (let __represented_array_36 = HxArray.create () in __represented_array_36) in let _this = Obj.magic ((Obj.magic self : t).inputIdentitiesByName) in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic _this))) in (
-  ignore (while let __iterator_receiver_37 = tempIterator in HxIterator.hasNext __iterator_receiver_37 do ignore (let name2 = (let __iterator_receiver_38 = tempIterator in HxIterator.next __iterator_receiver_38 : string) in let __array_receiver_39 = _g in let __array_arg_0_40 = name2 in HxArray.push __array_receiver_39 __array_arg_0_40) done);
-  ignore (let __array_receiver_41 = _g in let __array_arg_0_42 = compareText in HxArray.sort __array_receiver_41 __array_arg_0_42);
+  ignore (while let __iterator_receiver_37 = tempIterator in HxIterator.hasNext __iterator_receiver_37 do ignore (let name2 = (let __iterator_receiver_38 = tempIterator in HxIterator.next __iterator_receiver_38 : string) in let __array_receiver_39 = Obj.magic _g in let __array_arg_0_40 = (name2 : string) in HxArray.push __array_receiver_39 __array_arg_0_40) done);
+  ignore (let __array_receiver_41 = Obj.magic _g in let __array_arg_0_42 = compareText in HxArray.sort __array_receiver_41 __array_arg_0_42);
   _g
 )
 
@@ -135,10 +135,10 @@ let changedDefineNames = fun self (previous : t) -> let names = Obj.magic (HxMap
           tempMaybeArray1 := __assign_51;
           __assign_51
         ));
-        let after = Obj.magic (!tempMaybeArray1) in if not (sameIdentities (Obj.magic before) (Obj.magic after)) then ignore (let __array_receiver_52 = changed in let __array_arg_0_53 = name2 in HxArray.push __array_receiver_52 __array_arg_0_53) else ()
+        let after = Obj.magic (!tempMaybeArray1) in if not (sameIdentities (Obj.magic before) (Obj.magic after)) then ignore (let __array_receiver_52 = Obj.magic changed in let __array_arg_0_53 = (name2 : string) in HxArray.push __array_receiver_52 __array_arg_0_53) else ()
       )
     )) done);
-    ignore (let __array_receiver_54 = changed in let __array_arg_0_55 = compareText in HxArray.sort __array_receiver_54 __array_arg_0_55);
+    ignore (let __array_receiver_54 = Obj.magic changed in let __array_arg_0_55 = compareText in HxArray.sort __array_receiver_54 __array_arg_0_55);
     changed
   )
 )

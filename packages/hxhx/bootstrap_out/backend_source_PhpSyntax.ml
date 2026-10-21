@@ -26,8 +26,8 @@ let quoteString = fun (value : string) -> (let tempString = ref (HxString.hx_nul
 
 let assocEntry = fun (key : string) (valueExpr : string) -> (let __string_part_22 = HxString.toStdString (let __call_arg_0_21 = key in quoteString __call_arg_0_21) in let __string_part_23 = " => " in let __string_part_24 = HxString.toStdString valueExpr in (__string_part_22 ^ __string_part_23) ^ __string_part_24 : string)
 
-let sortedAssocEntries = fun entries -> let sorted = Obj.magic (let __array_receiver_25 = entries in HxArray.copy __array_receiver_25) in (
-  ignore (let __array_receiver_26 = sorted in let __array_arg_0_27 = fun left right -> let tempResult = ref (0 : int) in (
+let sortedAssocEntries = fun entries -> let sorted = Obj.magic (let __array_receiver_25 = Obj.magic entries in HxArray.copy __array_receiver_25) in (
+  ignore (let __array_receiver_26 = Obj.magic sorted in let __array_arg_0_27 = fun left right -> let tempResult = ref (0 : int) in (
     ignore (if left < right then let __assign_28 = -1 in (
       tempResult := __assign_28;
       __assign_28
@@ -46,15 +46,15 @@ let sortedAssocEntries = fun entries -> let sorted = Obj.magic (let __array_rece
 let assocArrayExpr = fun entries -> let __string_part_31 = "[" in let __string_part_32 = HxString.toStdString (HxArray.join (sortedAssocEntries (Obj.magic entries)) ", " (fun x -> x)) in let __string_part_33 = "]" in (__string_part_31 ^ __string_part_32) ^ __string_part_33
 
 let appendStaticAssocMap = fun lines indent variableName entries -> ignore ((
-  ignore (let __array_receiver_34 = lines in let __array_arg_0_35 = ((HxString.toStdString indent ^ "static $") ^ HxString.toStdString variableName) ^ " = [" in HxArray.push __array_receiver_34 __array_arg_0_35);
+  ignore (let __array_receiver_34 = Obj.magic lines in let __array_arg_0_35 = (((HxString.toStdString indent ^ "static $") ^ HxString.toStdString variableName) ^ " = [" : string) in HxArray.push __array_receiver_34 __array_arg_0_35);
   let _g = ref 0 in let _g1 = Obj.magic (sortedAssocEntries (Obj.magic entries)) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let entry = (let __array_read_receiver_36 = _g1 in let __array_read_index_37 = !_g in HxArray.get (Obj.magic __array_read_receiver_36) __array_read_index_37 : string) in (
       ignore (let __old_38 = !_g in let __new_39 = HxInt.add __old_38 1 in (
         ignore (_g := __new_39);
         __new_39
       ));
-      let __array_receiver_40 = lines in let __array_arg_0_41 = ((HxString.toStdString indent ^ "  ") ^ HxString.toStdString entry) ^ "," in HxArray.push __array_receiver_40 __array_arg_0_41
+      let __array_receiver_40 = Obj.magic lines in let __array_arg_0_41 = (((HxString.toStdString indent ^ "  ") ^ HxString.toStdString entry) ^ "," : string) in HxArray.push __array_receiver_40 __array_arg_0_41
     )) done);
-    let __array_receiver_42 = lines in let __array_arg_0_43 = HxString.toStdString indent ^ "];" in HxArray.push __array_receiver_42 __array_arg_0_43
+    let __array_receiver_42 = Obj.magic lines in let __array_arg_0_43 = (HxString.toStdString indent ^ "];" : string) in HxArray.push __array_receiver_42 __array_arg_0_43
   )
 ))

@@ -15,7 +15,7 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhxmacrohost.NativeMacroM
 
 let loadAndCapture = fun (modulePath : string) (pluginId : string) -> (try let response = (HxHxMacroModuleDynlink.load_and_capture_safe (modulePath : string) (pluginId : string) : string) in (
   ignore (if response == HxString.hx_null_string then HxType.hx_throw_typed_rtti (Obj.repr "native macro module loader returned no response") ["Dynamic"] else ());
-  ignore (if let __call_arg_0_1 = response in let __call_arg_1_2 = "ok\n" in StringTools.startsWith __call_arg_0_1 __call_arg_1_2 then raise (HxRuntime.Hx_return (Obj.repr (let __string_receiver_3 = response in let __string_argument_0_4 = 3 in HxString.substr __string_receiver_3 __string_argument_0_4 (-1)))) else ());
+  ignore (if let __call_arg_0_1 = response in let __call_arg_1_2 = "ok\n" in StringTools.startsWith __call_arg_0_1 __call_arg_1_2 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_receiver_3 = response in let __string_argument_0_4 = 3 in HxString.substr __string_receiver_3 __string_argument_0_4 (-1)))) else ());
   ignore (if let __call_arg_0_5 = response in let __call_arg_1_6 = "err\n" in StringTools.startsWith __call_arg_0_5 __call_arg_1_6 then HxType.hx_throw_typed_rtti (Obj.repr (let __string_receiver_7 = response in let __string_argument_0_8 = 4 in HxString.substr __string_receiver_7 __string_argument_0_8 (-1))) ["Dynamic"] else ());
   HxType.hx_throw_typed_rtti (Obj.repr "native macro module loader returned malformed response") ["Dynamic"]
 ) with

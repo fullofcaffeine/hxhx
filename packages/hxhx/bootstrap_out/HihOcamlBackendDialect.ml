@@ -23,10 +23,13 @@ let runtimeDynamicEquals__impl = fun (self : t) (lhsExpr : string) (rhsExpr : st
 
 let dynamicNullValue__impl = fun (self : t) () -> (
   ignore self;
-  "(Obj.magic HxRuntime.hx_null)"
+  ("(Obj.magic HxRuntime.hx_null)" : string)
 )
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "HihOcamlBackendDialect"; runtimeIsNull = (fun o a0 -> Obj.magic (runtimeIsNull__impl (Obj.magic o) (Obj.magic a0))); runtimeDynamicEquals = (fun o a0 a1 -> Obj.magic (runtimeDynamicEquals__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); dynamicNullValue = (fun o () -> Obj.magic (dynamicNullValue__impl (Obj.magic o) (Obj.magic ()))) } : t) in (
+let create = fun () -> let self = let __hx_method_class = HxType.class_ "HihOcamlBackendDialect" in (
+  HxMethodDispatch.ensure __hx_method_class "sha256:a3802c1f42ecb4f075cd7331367c2fa0195adf55e53973ee53773b81abf718c4" 4 (fun () -> [("method-dispatch:7f1acc37b9c353e578c053b0dc74b18058d6b5f6d9c55e8705d9cd666a9bb8a3", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun (__hx_method_arg0 : string) -> (runtimeIsNull__impl __hx_method_self __hx_method_arg0 : string)))); ("method-dispatch:f865bd3087290d3ca64dfef45347fbe4fb79c24cdfbd629858ba3fc6955f4b2a", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun (__hx_method_arg0 : string) (__hx_method_arg1 : string) -> (runtimeDynamicEquals__impl __hx_method_self __hx_method_arg0 __hx_method_arg1 : string)))); ("method-dispatch:fdf666cad151ef19c97a06e8e0289a2aa224bcb5480d0dfdd2ae1449709c9623", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun () -> (dynamicNullValue__impl __hx_method_self () : string))))]);
+  ({ __hx_type = __hx_method_class; runtimeIsNull = (fun o a0 -> Obj.magic (runtimeIsNull__impl (Obj.magic o) (Obj.magic a0))); runtimeDynamicEquals = (fun o a0 a1 -> Obj.magic (runtimeDynamicEquals__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); dynamicNullValue = (fun o () -> Obj.magic (dynamicNullValue__impl (Obj.magic o) (Obj.magic ()))) } : t)
+) in (
   ignore ((
     ignore self;
     ignore ()
@@ -34,4 +37,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "HihOcamlBackendD
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HihOcamlBackendDialect"; runtimeIsNull = (fun o a0 -> Obj.magic (runtimeIsNull__impl (Obj.magic o) (Obj.magic a0))); runtimeDynamicEquals = (fun o a0 a1 -> Obj.magic (runtimeDynamicEquals__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); dynamicNullValue = (fun o () -> Obj.magic (dynamicNullValue__impl (Obj.magic o) (Obj.magic ()))) } : t)
+let __empty = fun () -> let __hx_method_class = HxType.class_ "HihOcamlBackendDialect" in (
+  HxMethodDispatch.ensure __hx_method_class "sha256:a3802c1f42ecb4f075cd7331367c2fa0195adf55e53973ee53773b81abf718c4" 4 (fun () -> [("method-dispatch:7f1acc37b9c353e578c053b0dc74b18058d6b5f6d9c55e8705d9cd666a9bb8a3", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun (__hx_method_arg0 : string) -> (runtimeIsNull__impl __hx_method_self __hx_method_arg0 : string)))); ("method-dispatch:f865bd3087290d3ca64dfef45347fbe4fb79c24cdfbd629858ba3fc6955f4b2a", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun (__hx_method_arg0 : string) (__hx_method_arg1 : string) -> (runtimeDynamicEquals__impl __hx_method_self __hx_method_arg0 __hx_method_arg1 : string)))); ("method-dispatch:fdf666cad151ef19c97a06e8e0289a2aa224bcb5480d0dfdd2ae1449709c9623", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun () -> (dynamicNullValue__impl __hx_method_self () : string))))]);
+  ({ __hx_type = __hx_method_class; runtimeIsNull = (fun o a0 -> Obj.magic (runtimeIsNull__impl (Obj.magic o) (Obj.magic a0))); runtimeDynamicEquals = (fun o a0 a1 -> Obj.magic (runtimeDynamicEquals__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); dynamicNullValue = (fun o () -> Obj.magic (dynamicNullValue__impl (Obj.magic o) (Obj.magic ()))) } : t)
+)

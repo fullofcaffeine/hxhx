@@ -1,0 +1,2 @@
+# 1 "TyDiagnosticProbeOutcome.ml"
+include CompilerDiagnosticProbe.TyDiagnosticProbeOutcome

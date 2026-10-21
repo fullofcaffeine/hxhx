@@ -14,17 +14,17 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "HxDefineMap" } :
 let __empty = fun () -> ({ __hx_type = HxType.class_ "HxDefineMap" } : t)
 
 let addRawDefine = fun dst raw -> ignore (try ignore ((
-  ignore (if dst == Obj.magic (HxRuntime.hx_null) || raw == HxString.hx_null_string then raise (HxRuntime.Hx_return_void) else ());
-  let s = let __call_arg_0_1 = raw in StringTools.trim __call_arg_0_1 in (
-    ignore (if (let __string_receiver_2 = s in HxString.length __string_receiver_2) = 0 then raise (HxRuntime.Hx_return_void) else ());
-    let eq = let __string_receiver_3 = s in let __string_argument_0_4 = "=" in HxString.indexOf __string_receiver_3 __string_argument_0_4 0 in (
+  ignore (if (let __map_eq_left_1 = dst in let __map_eq_right_2 = Obj.magic (HxRuntime.hx_null) in Obj.repr __map_eq_left_1 == Obj.repr __map_eq_right_2) || raw == HxString.hx_null_string then Stdlib.raise (HxRuntime.Hx_return_void) else ());
+  let s = let __call_arg_0_3 = raw in StringTools.trim __call_arg_0_3 in (
+    ignore (if (let __string_receiver_4 = s in HxString.length __string_receiver_4) = 0 then Stdlib.raise (HxRuntime.Hx_return_void) else ());
+    let eq = let __string_receiver_5 = s in let __string_argument_0_6 = "=" in HxString.indexOf __string_receiver_5 __string_argument_0_6 0 in (
       ignore (if eq = -1 then (
         ignore (HxMap.set_string (Obj.magic dst) (s : string) "1");
-        raise (HxRuntime.Hx_return_void)
+        Stdlib.raise (HxRuntime.Hx_return_void)
       ) else ());
-      let name = let __call_arg_0_5 = let __string_receiver_6 = s in let __string_argument_0_7 = 0 in let __string_argument_1_8 = eq in HxString.substr __string_receiver_6 __string_argument_0_7 __string_argument_1_8 in StringTools.trim __call_arg_0_5 in (
-        ignore (if (let __string_receiver_9 = name in HxString.length __string_receiver_9) = 0 then raise (HxRuntime.Hx_return_void) else ());
-        let value = (let __string_receiver_10 = s in let __string_argument_0_11 = HxInt.add eq 1 in HxString.substr __string_receiver_10 __string_argument_0_11 (-1) : string) in HxMap.set_string (Obj.magic dst) (name : string) value
+      let name = let __call_arg_0_7 = let __string_receiver_8 = s in let __string_argument_0_9 = 0 in let __string_argument_1_10 = eq in HxString.substr __string_receiver_8 __string_argument_0_9 __string_argument_1_10 in StringTools.trim __call_arg_0_7 in (
+        ignore (if (let __string_receiver_11 = name in HxString.length __string_receiver_11) = 0 then Stdlib.raise (HxRuntime.Hx_return_void) else ());
+        let value = (let __string_receiver_12 = s in let __string_argument_0_13 = HxInt.add eq 1 in HxString.substr __string_receiver_12 __string_argument_0_13 (-1) : string) in HxMap.set_string (Obj.magic dst) (name : string) value
       )
     )
   )
@@ -32,22 +32,22 @@ let addRawDefine = fun dst raw -> ignore (try ignore ((
   | HxRuntime.Hx_return_void -> ())
 
 let fromRawDefines = fun rawDefines -> (try let out = Obj.magic (HxMap.create_string ()) in (
-  ignore (if rawDefines == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr out)) else ());
+  ignore (if rawDefines == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr out)) else ());
   let _g = ref 0 in (
-    ignore (while !_g < HxArray.length rawDefines do ignore (let raw = (let __array_read_receiver_13 = rawDefines in let __array_read_index_14 = !_g in HxArray.get (Obj.magic __array_read_receiver_13) __array_read_index_14 : string) in (
-      ignore (let __old_15 = !_g in let __new_16 = HxInt.add __old_15 1 in (
-        ignore (_g := __new_16);
-        __new_16
+    ignore (while !_g < HxArray.length rawDefines do ignore (let raw = (let __array_read_receiver_15 = rawDefines in let __array_read_index_16 = !_g in HxArray.get (Obj.magic __array_read_receiver_15) __array_read_index_16 : string) in (
+      ignore (let __old_17 = !_g in let __new_18 = HxInt.add __old_17 1 in (
+        ignore (_g := __new_18);
+        __new_18
       ));
       addRawDefine (Obj.magic out) (raw : string)
     )) done);
     out
   )
 ) with
-  | HxRuntime.Hx_return __ret_17 -> (Obj.obj __ret_17 : string HxMap.string_map) : string HxMap.string_map)
+  | HxRuntime.Hx_return __ret_19 -> (Obj.obj __ret_19 : string HxMap.string_map) : string HxMap.string_map)
 
 let mergeInto = fun dst src -> ignore (try ignore ((
-  ignore (if dst == Obj.magic (HxRuntime.hx_null) || src == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return_void) else ());
-  let k = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic src))) in while let __iterator_receiver_18 = k in HxIterator.hasNext __iterator_receiver_18 do ignore (let k2 = (let __iterator_receiver_19 = k in HxIterator.next __iterator_receiver_19 : string) in let value = (HxMap.get_string (Obj.magic src) (k2 : string) : string) in HxMap.set_string (Obj.magic dst) (k2 : string) value) done
+  ignore (if (let __map_eq_left_20 = dst in let __map_eq_right_21 = Obj.magic (HxRuntime.hx_null) in Obj.repr __map_eq_left_20 == Obj.repr __map_eq_right_21) || (let __map_eq_left_22 = src in let __map_eq_right_23 = Obj.magic (HxRuntime.hx_null) in Obj.repr __map_eq_left_22 == Obj.repr __map_eq_right_23) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
+  let k = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic src))) in while let __iterator_receiver_24 = k in HxIterator.hasNext __iterator_receiver_24 do ignore (let k2 = (let __iterator_receiver_25 = k in HxIterator.next __iterator_receiver_25 : string) in let value = (HxMap.get_string (Obj.magic src) (k2 : string) : string) in HxMap.set_string (Obj.magic dst) (k2 : string) value) done
 )) with
   | HxRuntime.Hx_return_void -> ())

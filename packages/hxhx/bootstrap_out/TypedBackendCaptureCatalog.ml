@@ -1,0 +1,2 @@
+# 1 "TypedBackendCaptureCatalog.ml"
+include CompilerDiagnosticProbe.TypedBackendCaptureCatalog

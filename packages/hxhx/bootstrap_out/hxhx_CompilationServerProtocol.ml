@@ -14,21 +14,21 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Compilation
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerProtocol" } : t)
 
 let requestLengthProblem = fun (length : int) -> (try (
-  ignore (if length < 0 then raise (HxRuntime.Hx_return (Obj.repr ("negative request frame length " ^ string_of_int length))) else ());
-  ignore (if length > 67108864 then raise (HxRuntime.Hx_return (Obj.repr ((("request frame is " ^ string_of_int length) ^ " bytes; maximum is ") ^ string_of_int 67108864))) else ());
+  ignore (if length < 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr ("negative request frame length " ^ string_of_int length))) else ());
+  ignore (if length > 67108864 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr ((("request frame is " ^ string_of_int length) ^ " bytes; maximum is ") ^ string_of_int 67108864))) else ());
   Obj.magic (HxRuntime.hx_null)
 ) with
   | HxRuntime.Hx_return __ret_1 -> (Obj.obj __ret_1 : string) : string)
 
 let parseRequestTimeoutMs = fun (value : string) -> (try Obj.repr ((
-  ignore (if value == Obj.magic (HxRuntime.hx_null) || (let __string_receiver_2 = value in HxString.length __string_receiver_2) = 0 then raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
+  ignore (if value == Obj.magic (HxRuntime.hx_null) || (let __string_receiver_2 = value in HxString.length __string_receiver_2) = 0 then Stdlib.raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
   let result = ref 0 in let _g = ref 0 in let _g1 = let __string_receiver_3 = value in HxString.length __string_receiver_3 in (
     ignore (while !_g < _g1 do ignore (let index = let __old_4 = !_g in let __new_5 = HxInt.add __old_4 1 in (
       ignore (_g := __new_5);
       __old_4
     ) in let digit = HxInt.sub (let __nullable_int_8 = let __string_receiver_6 = value in let __string_argument_0_7 = index in HxString.charCodeAt __string_receiver_6 __string_argument_0_7 in if __nullable_int_8 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_8) 48 in (
-      ignore (if digit < 0 || digit > 9 then raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
-      ignore (if !result > HxInt.sub 86400000 digit / 10 then raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
+      ignore (if digit < 0 || digit > 9 then Stdlib.raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
+      ignore (if !result > HxInt.sub 86400000 digit / 10 then Stdlib.raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
       let __assign_9 = HxInt.add (HxInt.mul (!result) 10) digit in (
         result := __assign_9;
         __assign_9

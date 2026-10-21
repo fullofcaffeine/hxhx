@@ -8,20 +8,20 @@ let __reflaxe_ocaml__ = ()
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerProgramConfigurationObservation"; inputs = Obj.magic HxRuntime.hx_null; inputRevisionByName = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
 
-let getInputs = fun self () -> let __array_receiver_30 = (Obj.magic self : t).inputs in HxArray.copy __array_receiver_30
+let getInputs = fun self () -> let __array_receiver_30 = Obj.magic ((Obj.magic self : t).inputs) in HxArray.copy __array_receiver_30
 
 let getCanonicalIdentity = fun self () -> (Obj.magic self : t).canonicalIdentity
 
 let compareText = fun (left : string) (right : string) -> (let tempResult = ref (0 : int) in (
-  ignore (if left < right then let __assign_58 = -1 in (
-    tempResult := __assign_58;
-    __assign_58
-  ) else if left > right then let __assign_59 = 1 in (
-    tempResult := __assign_59;
-    __assign_59
-  ) else let __assign_60 = 0 in (
+  ignore (if left < right then let __assign_60 = -1 in (
     tempResult := __assign_60;
     __assign_60
+  ) else if left > right then let __assign_61 = 1 in (
+    tempResult := __assign_61;
+    __assign_61
+  ) else let __assign_62 = 0 in (
+    tempResult := __assign_62;
+    __assign_62
   ));
   !tempResult
 ) : int)
@@ -43,27 +43,27 @@ let changedInputNames = fun self (previous : t) -> let names = Obj.magic (HxMap.
           tempMaybeString1 := __assign_39;
           __assign_39
         ));
-        let after = (!tempMaybeString1 : string) in if let __string_eq_left_40 = before in let __string_eq_right_41 = after in not (HxString.equals __string_eq_left_40 __string_eq_right_41) then ignore (let __array_receiver_42 = changed in let __array_arg_0_43 = name2 in HxArray.push __array_receiver_42 __array_arg_0_43) else ()
+        let after = (!tempMaybeString1 : string) in if let __string_eq_left_40 = before in let __string_eq_right_41 = after in not (HxString.equals __string_eq_left_40 __string_eq_right_41) then ignore (let __array_receiver_42 = Obj.magic changed in let __array_arg_0_43 = (name2 : string) in HxArray.push __array_receiver_42 __array_arg_0_43) else ()
       )
     )) done);
-    ignore (let __array_receiver_44 = changed in let __array_arg_0_45 = compareText in HxArray.sort __array_receiver_44 __array_arg_0_45);
+    ignore (let __array_receiver_44 = Obj.magic changed in let __array_arg_0_45 = compareText in HxArray.sort __array_receiver_44 __array_arg_0_45);
     changed
   )
 )
 
-let compareInputs = fun left right -> let __call_arg_0_56 = (Obj.magic left : CompilerProgramConfigurationInput.t).name in let __call_arg_1_57 = (Obj.magic right : CompilerProgramConfigurationInput.t).name in compareText __call_arg_0_56 __call_arg_1_57
+let compareInputs = fun left right -> let __call_arg_0_58 = (Obj.magic left : CompilerProgramConfigurationInput.t).name in let __call_arg_1_59 = (Obj.magic right : CompilerProgramConfigurationInput.t).name in compareText __call_arg_0_58 __call_arg_1_59
 
 let create = fun inputs2 -> let self = ({ __hx_type = HxType.class_ "CompilerProgramConfigurationObservation"; inputs = Obj.magic HxRuntime.hx_null; inputRevisionByName = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore (let tempArray = ref (Obj.magic (HxRuntime.hx_null) : CompilerProgramConfigurationInput.t HxArray.t) in (
     ignore (if inputs2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       tempArray := __assign_1;
       __assign_1
-    ) else let __assign_3 = Obj.magic (let __array_receiver_4 = inputs2 in HxArray.copy __array_receiver_4) in (
+    ) else let __assign_3 = Obj.magic (let __array_receiver_4 = Obj.magic inputs2 in HxArray.copy __array_receiver_4) in (
       tempArray := __assign_3;
       __assign_3
     ));
     let sorted = Obj.magic (!tempArray) in (
-      ignore (let __array_receiver_5 = sorted in let __array_arg_0_6 = compareInputs in HxArray.sort __array_receiver_5 __array_arg_0_6);
+      ignore (let __array_receiver_5 = Obj.magic sorted in let __array_arg_0_6 = compareInputs in HxArray.sort __array_receiver_5 __array_arg_0_6);
       ignore (let __assign_7 = Obj.magic (let __arr_8 = HxArray.create () in __arr_8) in (
         (Obj.magic self : t).inputs <- __assign_7;
         __assign_7
@@ -87,25 +87,25 @@ let create = fun inputs2 -> let self = ({ __hx_type = HxType.class_ "CompilerPro
             let previous = (!tempMaybeString : string) in (
               ignore (if previous != Obj.magic (HxRuntime.hx_null) then ignore ((
                 ignore (if let __string_eq_left_15 = previous in let __string_eq_right_16 = CompilerProgramConfigurationInput.getObservedInputRevision (Obj.magic input) () in not (HxString.equals __string_eq_left_15 __string_eq_right_16) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_17 = "compiler configuration observation contains conflicting revisions for input: " in let __string_part_18 = HxString.toStdString ((Obj.magic input : CompilerProgramConfigurationInput.t).name) in __string_part_17 ^ __string_part_18)) ["Dynamic"] else ());
-                raise (HxRuntime.Hx_continue)
+                Stdlib.raise (HxRuntime.Hx_continue)
               )) else ());
               let _this = Obj.magic ((Obj.magic self : t).inputRevisionByName) in let key = ((Obj.magic input : CompilerProgramConfigurationInput.t).name : string) in let value = (CompilerProgramConfigurationInput.getObservedInputRevision (Obj.magic input) () : string) in (
                 ignore (HxMap.set_string (Obj.magic _this) (key : string) value);
-                let __array_receiver_19 = (Obj.magic self : t).inputs in let __array_arg_0_20 = input in HxArray.push __array_receiver_19 __array_arg_0_20
+                let __array_receiver_19 = Obj.magic ((Obj.magic self : t).inputs) in let __array_arg_0_20 = Obj.magic input in HxArray.push __array_receiver_19 __array_arg_0_20
               )
             )
           )
         )) with
           | HxRuntime.Hx_continue -> () done);
         let values = Obj.magic (HxArray.create ()) in (
-          ignore (let __array_receiver_21 = values in let __array_arg_0_22 = "compiler-program-configuration-observation-v1" in HxArray.push __array_receiver_21 __array_arg_0_22);
+          ignore (let __array_receiver_21 = Obj.magic values in let __array_arg_0_22 = ("compiler-program-configuration-observation-v1" : string) in HxArray.push __array_receiver_21 __array_arg_0_22);
           let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).inputs) in (
             ignore (while !_g < HxArray.length _g1 do ignore (let input = Obj.magic (let __array_read_receiver_23 = _g1 in let __array_read_index_24 = !_g in HxArray.get (Obj.magic __array_read_receiver_23) __array_read_index_24) in (
               ignore (let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
                 ignore (_g := __new_26);
                 __new_26
               ));
-              let __array_receiver_27 = values in let __array_arg_0_28 = CompilerProgramConfigurationInput.canonicalKey (Obj.magic input) () in HxArray.push __array_receiver_27 __array_arg_0_28
+              let __array_receiver_27 = Obj.magic values in let __array_arg_0_28 = (CompilerProgramConfigurationInput.canonicalKey (Obj.magic input) () : string) in HxArray.push __array_receiver_27 __array_arg_0_28
             )) done);
             let __assign_29 = (CompilerCacheIdentity.encode (Obj.magic values) : string) in (
               (Obj.magic self : t).canonicalIdentity <- __assign_29;
@@ -125,6 +125,6 @@ let fromTargetAndDefines = fun targetId defines -> let inputs2 = Obj.magic (let 
   ignore (HxArray.push __arr_47 (let __call_arg_0_48 = "target" in let __call_arg_1_49 = targetId in CompilerProgramConfigurationInput.fromValue __call_arg_0_48 __call_arg_1_49));
   __arr_47
 )) in (
-  ignore (if defines != Obj.magic (HxRuntime.hx_null) then ignore (let name = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic defines))) in while let __iterator_receiver_50 = name in HxIterator.hasNext __iterator_receiver_50 do ignore (let name2 = (let __iterator_receiver_51 = name in HxIterator.next __iterator_receiver_51 : string) in let __array_receiver_52 = inputs2 in let __array_arg_0_53 = let __call_arg_0_54 = "define:" ^ HxString.toStdString name2 in let __call_arg_1_55 = HxMap.get_string (Obj.magic defines) (name2 : string) in CompilerProgramConfigurationInput.fromValue __call_arg_0_54 __call_arg_1_55 in HxArray.push __array_receiver_52 __array_arg_0_53) done) else ());
+  ignore (if let __map_eq_left_50 = defines in let __map_eq_right_51 = Obj.magic (HxRuntime.hx_null) in Obj.repr __map_eq_left_50 != Obj.repr __map_eq_right_51 then ignore (let name = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic defines))) in while let __iterator_receiver_52 = name in HxIterator.hasNext __iterator_receiver_52 do ignore (let name2 = (let __iterator_receiver_53 = name in HxIterator.next __iterator_receiver_53 : string) in let __array_receiver_54 = Obj.magic inputs2 in let __array_arg_0_55 = Obj.magic (let __call_arg_0_56 = "define:" ^ HxString.toStdString name2 in let __call_arg_1_57 = HxMap.get_string (Obj.magic defines) (name2 : string) in CompilerProgramConfigurationInput.fromValue __call_arg_0_56 __call_arg_1_57) in HxArray.push __array_receiver_54 __array_arg_0_55) done) else ());
   create (Obj.magic inputs2)
 )

@@ -22,7 +22,7 @@ let decode = fun requestId baseArgs payload -> let sep = ref (-1) in let _g = re
       sep := __assign_6;
       __assign_6
     ));
-    raise (HxRuntime.Hx_break)
+    Stdlib.raise (HxRuntime.Hx_break)
   )) else ()) done with
     | HxRuntime.Hx_break -> ());
   let tempBytes = ref (Obj.magic (HxRuntime.hx_null) : HxBytes.t) in (
@@ -48,12 +48,12 @@ let decode = fun requestId baseArgs payload -> let sep = ref (-1) in let _g = re
             __new_27
           ));
           let line = ref (line0 : string) in (
-            ignore (if (let __string_receiver_28 = !line in HxString.length __string_receiver_28) = 0 then raise (HxRuntime.Hx_continue) else ());
+            ignore (if (let __string_receiver_28 = !line in HxString.length __string_receiver_28) = 0 then Stdlib.raise (HxRuntime.Hx_continue) else ());
             ignore (if let __nullable_32 = let __string_receiver_29 = !line in let __string_argument_0_30 = HxInt.sub (let __string_receiver_31 = !line in HxString.length __string_receiver_31) 1 in HxString.charCodeAt __string_receiver_29 __string_argument_0_30 in if __nullable_32 == HxRuntime.hx_null then false else Obj.obj __nullable_32 = 13 then ignore (let __assign_33 = (let __string_receiver_34 = !line in let __string_argument_0_35 = 0 in let __string_argument_1_36 = HxInt.sub (let __string_receiver_37 = !line in HxString.length __string_receiver_37) 1 in HxString.substr __string_receiver_34 __string_argument_0_35 __string_argument_1_36 : string) in (
               line := __assign_33;
               __assign_33
             )) else ());
-            if (let __string_receiver_38 = !line in HxString.length __string_receiver_38) > 0 then ignore (let __array_receiver_39 = args in let __array_arg_0_40 = !line in HxArray.push __array_receiver_39 __array_arg_0_40) else ()
+            if (let __string_receiver_38 = !line in HxString.length __string_receiver_38) > 0 then ignore (let __array_receiver_39 = Obj.magic args in let __array_arg_0_40 = (!line : string) in HxArray.push __array_receiver_39 __array_arg_0_40) else ()
           )
         )) with
           | HxRuntime.Hx_continue -> () done);

@@ -14,7 +14,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "EmitterStageDebu
 let __empty = fun () -> ({ __hx_type = HxType.class_ "EmitterStageDebug" } : t)
 
 let traceCallSig = fun modName fnName args required fixed hasRest needsReceiver -> ignore (try ignore (let enabled = (HxSys.getEnv ("HXHX_TRACE_CALLSIG" : string) : string) in (
-  ignore (if (let __string_eq_left_1 = enabled in let __string_eq_right_2 = "1" in not (HxString.equals __string_eq_left_1 __string_eq_right_2)) && (let __string_eq_left_3 = enabled in let __string_eq_right_4 = "true" in not (HxString.equals __string_eq_left_3 __string_eq_right_4)) && (let __string_eq_left_5 = enabled in let __string_eq_right_6 = "yes" in not (HxString.equals __string_eq_left_5 __string_eq_right_6)) then raise (HxRuntime.Hx_return_void) else ());
+  ignore (if (let __string_eq_left_1 = enabled in let __string_eq_right_2 = "1" in not (HxString.equals __string_eq_left_1 __string_eq_right_2)) && (let __string_eq_left_3 = enabled in let __string_eq_right_4 = "true" in not (HxString.equals __string_eq_left_3 __string_eq_right_4)) && (let __string_eq_left_5 = enabled in let __string_eq_right_6 = "yes" in not (HxString.equals __string_eq_left_5 __string_eq_right_6)) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   try ignore (let parts = Obj.magic (HxArray.create ()) in (
     ignore (if args != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in while !_g < HxArray.length args do ignore (let a = Obj.magic (let __array_read_receiver_11 = args in let __array_read_index_12 = !_g in HxArray.get (Obj.magic __array_read_receiver_11) __array_read_index_12) in (
       ignore (let __old_13 = !_g in let __new_14 = HxInt.add __old_13 1 in (
@@ -37,7 +37,7 @@ let traceCallSig = fun modName fnName args required fixed hasRest needsReceiver 
             tempString1 := __assign_20;
             __assign_20
           ));
-          let __array_receiver_21 = parts in let __array_arg_0_22 = ((HxString.toStdString nm ^ ":") ^ HxString.toStdString kind) ^ HxString.toStdString (!tempString1) in HxArray.push __array_receiver_21 __array_arg_0_22
+          let __array_receiver_21 = Obj.magic parts in let __array_arg_0_22 = (((HxString.toStdString nm ^ ":") ^ HxString.toStdString kind) ^ HxString.toStdString (!tempString1) : string) in HxArray.push __array_receiver_21 __array_arg_0_22
         )
       )
     )) done) else ());
@@ -61,10 +61,10 @@ let traceCallSig = fun modName fnName args required fixed hasRest needsReceiver 
       )
     )
   )) with
-    | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-    | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-    | HxRuntime.Hx_return __ret_7 -> raise (HxRuntime.Hx_return __ret_7)
-    | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+    | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+    | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+    | HxRuntime.Hx_return __ret_7 -> Stdlib.raise (HxRuntime.Hx_return __ret_7)
+    | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
     | HxRuntime.Hx_exception (__exn_v_8, __exn_tags_9) -> if HxRuntime.tags_has __exn_tags_9 "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_8) : Haxe_io_Error.error) in (
       ignore _hx;
       ignore ()
@@ -78,22 +78,22 @@ let traceCallSig = fun modName fnName args required fixed hasRest needsReceiver 
     ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_10) : string) in (
       ignore _hx;
       ignore ()
-    ) else raise (__exn_10)
+    ) else Stdlib.raise (__exn_10)
 )) with
   | HxRuntime.Hx_return_void -> ())
 
 let traceStage3Enabled = fun () -> let enabled = (HxSys.getEnv ("HXHX_TRACE_STAGE3_MODULE_EMIT" : string) : string) in (let __string_eq_left_44 = enabled in let __string_eq_right_45 = "1" in HxString.equals __string_eq_left_44 __string_eq_right_45) || (let __string_eq_left_46 = enabled in let __string_eq_right_47 = "true" in HxString.equals __string_eq_left_46 __string_eq_right_47) || (let __string_eq_left_48 = enabled in let __string_eq_right_49 = "yes" in HxString.equals __string_eq_left_48 __string_eq_right_49)
 
 let traceStage3Phase = fun (label : string) -> ignore (try ignore (let enabled = (HxSys.getEnv ("HXHX_TRACE_STAGE3_MODULE_EMIT" : string) : string) in let tempBool = (let __string_eq_left_50 = enabled in let __string_eq_right_51 = "1" in HxString.equals __string_eq_left_50 __string_eq_right_51) || (let __string_eq_left_52 = enabled in let __string_eq_right_53 = "true" in HxString.equals __string_eq_left_52 __string_eq_right_53) || (let __string_eq_left_54 = enabled in let __string_eq_right_55 = "yes" in HxString.equals __string_eq_left_54 __string_eq_right_55) in (
-  ignore (if not (tempBool) then raise (HxRuntime.Hx_return_void) else ());
+  ignore (if not (tempBool) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   try ignore (let stderr = Obj.magic (Sys_io_Stdio.stderr ()) in (
     ignore ((Obj.magic stderr : Haxe_io_Output.t).writeString (Obj.magic stderr) (("stage3_emit_phase=" ^ HxString.toStdString label) ^ "\n" : string) (Obj.magic (HxRuntime.hx_null)));
     (Obj.magic stderr : Haxe_io_Output.t).flush (Obj.magic stderr) ()
   )) with
-    | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-    | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-    | HxRuntime.Hx_return __ret_56 -> raise (HxRuntime.Hx_return __ret_56)
-    | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+    | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+    | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+    | HxRuntime.Hx_return __ret_56 -> Stdlib.raise (HxRuntime.Hx_return __ret_56)
+    | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
     | HxRuntime.Hx_exception (__exn_v_57, __exn_tags_58) -> if HxRuntime.tags_has __exn_tags_58 "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_57) : Haxe_io_Error.error) in (
       ignore _hx;
       ignore ()
@@ -107,12 +107,12 @@ let traceStage3Phase = fun (label : string) -> ignore (try ignore (let enabled =
     ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_59) : string) in (
       ignore _hx;
       ignore ()
-    ) else raise (__exn_59)
+    ) else Stdlib.raise (__exn_59)
 )) with
   | HxRuntime.Hx_return_void -> ())
 
 let traceStage3Module = fun (label : string) (moduleName : string) (filePath : string) -> ignore (try ignore (let enabled = (HxSys.getEnv ("HXHX_TRACE_STAGE3_MODULE_EMIT" : string) : string) in let tempBool = (let __string_eq_left_61 = enabled in let __string_eq_right_62 = "1" in HxString.equals __string_eq_left_61 __string_eq_right_62) || (let __string_eq_left_63 = enabled in let __string_eq_right_64 = "true" in HxString.equals __string_eq_left_63 __string_eq_right_64) || (let __string_eq_left_65 = enabled in let __string_eq_right_66 = "yes" in HxString.equals __string_eq_left_65 __string_eq_right_66) in (
-  ignore (if not (tempBool) then raise (HxRuntime.Hx_return_void) else ());
+  ignore (if not (tempBool) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   try ignore (let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
     ignore (if filePath == Obj.magic (HxRuntime.hx_null) then let __assign_71 = Obj.magic ("<unknown>" : string) in (
       tempMaybeString := __assign_71;
@@ -126,10 +126,10 @@ let traceStage3Module = fun (label : string) (moduleName : string) (filePath : s
       (Obj.magic stderr : Haxe_io_Output.t).flush (Obj.magic stderr) ()
     )
   )) with
-    | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-    | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-    | HxRuntime.Hx_return __ret_67 -> raise (HxRuntime.Hx_return __ret_67)
-    | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+    | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+    | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+    | HxRuntime.Hx_return __ret_67 -> Stdlib.raise (HxRuntime.Hx_return __ret_67)
+    | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
     | HxRuntime.Hx_exception (__exn_v_68, __exn_tags_69) -> if HxRuntime.tags_has __exn_tags_69 "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_68) : Haxe_io_Error.error) in (
       ignore _hx;
       ignore ()
@@ -143,12 +143,12 @@ let traceStage3Module = fun (label : string) (moduleName : string) (filePath : s
     ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_70) : string) in (
       ignore _hx;
       ignore ()
-    ) else raise (__exn_70)
+    ) else Stdlib.raise (__exn_70)
 )) with
   | HxRuntime.Hx_return_void -> ())
 
 let traceStage3StmtList = fun phase functionName idx total stmt -> ignore (try ignore (let enabled = (HxSys.getEnv ("HXHX_TRACE_STAGE3_MODULE_EMIT" : string) : string) in let tempBool = (let __string_eq_left_74 = enabled in let __string_eq_right_75 = "1" in HxString.equals __string_eq_left_74 __string_eq_right_75) || (let __string_eq_left_76 = enabled in let __string_eq_right_77 = "true" in HxString.equals __string_eq_left_76 __string_eq_right_77) || (let __string_eq_left_78 = enabled in let __string_eq_right_79 = "yes" in HxString.equals __string_eq_left_78 __string_eq_right_79) in (
-  ignore (if not (tempBool) then raise (HxRuntime.Hx_return_void) else ());
+  ignore (if not (tempBool) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
     ignore (if functionName == Obj.magic (HxRuntime.hx_null) then let __assign_80 = Obj.magic ("" : string) in (
       tempMaybeString := __assign_80;
@@ -158,7 +158,7 @@ let traceStage3StmtList = fun phase functionName idx total stmt -> ignore (try i
       __assign_81
     ));
     let fn = (!tempMaybeString : string) in let traceEnv = (HxSys.getEnv ("HXHX_TRACE_STAGE3_STMT_LIST" : string) : string) in let traceAll = (let __string_eq_left_82 = traceEnv in let __string_eq_right_83 = "1" in HxString.equals __string_eq_left_82 __string_eq_right_83) || (let __string_eq_left_84 = traceEnv in let __string_eq_right_85 = "true" in HxString.equals __string_eq_left_84 __string_eq_right_85) || (let __string_eq_left_86 = traceEnv in let __string_eq_right_87 = "yes" in HxString.equals __string_eq_left_86 __string_eq_right_87) in (
-      ignore (if not (traceAll) && (let __string_eq_left_88 = fn in let __string_eq_right_89 = "emitToDir" in not (HxString.equals __string_eq_left_88 __string_eq_right_89)) then raise (HxRuntime.Hx_return_void) else ());
+      ignore (if not (traceAll) && (let __string_eq_left_88 = fn in let __string_eq_right_89 = "emitToDir" in not (HxString.equals __string_eq_left_88 __string_eq_right_89)) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
       let tempStruct = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
         ignore (match stmt with
           | HxStmt.SBlock (_p0, _p1) -> (
@@ -252,24 +252,29 @@ let traceStage3StmtList = fun phase functionName idx total stmt -> ignore (try i
               __assign_102
             )
           )
-          | HxStmt.SSwitch (_p0, _p1, _p2, _p3) -> (
+          | HxStmt.SSwitch (_p0, _p1, _p2, _p3, _p4) -> (
             ignore _p0;
             ignore _p1;
             ignore _p2;
-            let _g4 = Obj.magic _p3 in let pos = Obj.magic _g4 in let __assign_104 = Obj.magic (let __anon_105 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_105 "kind" (Obj.repr "SSwitch"));
-              ignore (HxAnon.set __anon_105 "pos" (Obj.repr pos));
-              __anon_105
-            )) in (
-              tempStruct := __assign_104;
-              __assign_104
+            let _g4 = Obj.magic _p3 in (
+              ignore _p4;
+              let pos = Obj.magic _g4 in let __assign_104 = Obj.magic (let __anon_105 = HxAnon.create () in (
+                ignore (HxAnon.set __anon_105 "kind" (Obj.repr "SSwitch"));
+                ignore (HxAnon.set __anon_105 "pos" (Obj.repr pos));
+                __anon_105
+              )) in (
+                tempStruct := __assign_104;
+                __assign_104
+              )
             )
           )
-          | HxStmt.STry (_p0, _p1, _p2) -> (
+          | HxStmt.SGuardedSwitch (_p0, _p1, _p2, _p3, _p4) -> (
             ignore _p0;
             ignore _p1;
-            let _g3 = Obj.magic _p2 in let pos = Obj.magic _g3 in let __assign_106 = Obj.magic (let __anon_107 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_107 "kind" (Obj.repr "STry"));
+            ignore _p2;
+            ignore _p3;
+            let _g5 = Obj.magic _p4 in let pos = Obj.magic _g5 in let __assign_106 = Obj.magic (let __anon_107 = HxAnon.create () in (
+              ignore (HxAnon.set __anon_107 "kind" (Obj.repr "SGuardedSwitch"));
               ignore (HxAnon.set __anon_107 "pos" (Obj.repr pos));
               __anon_107
             )) in (
@@ -277,140 +282,158 @@ let traceStage3StmtList = fun phase functionName idx total stmt -> ignore (try i
               __assign_106
             )
           )
-          | HxStmt.SBreak _p0 -> let _g = Obj.magic _p0 in let pos = Obj.magic _g in let __assign_108 = Obj.magic (let __anon_109 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_109 "kind" (Obj.repr "SBreak"));
-            ignore (HxAnon.set __anon_109 "pos" (Obj.repr pos));
-            __anon_109
-          )) in (
-            tempStruct := __assign_108;
-            __assign_108
+          | HxStmt.STry (_p0, _p1, _p2) -> (
+            ignore _p0;
+            ignore _p1;
+            let _g3 = Obj.magic _p2 in let pos = Obj.magic _g3 in let __assign_108 = Obj.magic (let __anon_109 = HxAnon.create () in (
+              ignore (HxAnon.set __anon_109 "kind" (Obj.repr "STry"));
+              ignore (HxAnon.set __anon_109 "pos" (Obj.repr pos));
+              __anon_109
+            )) in (
+              tempStruct := __assign_108;
+              __assign_108
+            )
           )
-          | HxStmt.SContinue _p0 -> let _g = Obj.magic _p0 in let pos = Obj.magic _g in let __assign_110 = Obj.magic (let __anon_111 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_111 "kind" (Obj.repr "SContinue"));
+          | HxStmt.SBreak _p0 -> let _g = Obj.magic _p0 in let pos = Obj.magic _g in let __assign_110 = Obj.magic (let __anon_111 = HxAnon.create () in (
+            ignore (HxAnon.set __anon_111 "kind" (Obj.repr "SBreak"));
             ignore (HxAnon.set __anon_111 "pos" (Obj.repr pos));
             __anon_111
           )) in (
             tempStruct := __assign_110;
             __assign_110
           )
+          | HxStmt.SContinue _p0 -> let _g = Obj.magic _p0 in let pos = Obj.magic _g in let __assign_112 = Obj.magic (let __anon_113 = HxAnon.create () in (
+            ignore (HxAnon.set __anon_113 "kind" (Obj.repr "SContinue"));
+            ignore (HxAnon.set __anon_113 "pos" (Obj.repr pos));
+            __anon_113
+          )) in (
+            tempStruct := __assign_112;
+            __assign_112
+          )
           | HxStmt.SThrow (_p0, _p1) -> (
             ignore _p0;
-            let _g2 = Obj.magic _p1 in let pos = Obj.magic _g2 in let __assign_112 = Obj.magic (let __anon_113 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_113 "kind" (Obj.repr "SThrow"));
-              ignore (HxAnon.set __anon_113 "pos" (Obj.repr pos));
-              __anon_113
+            let _g2 = Obj.magic _p1 in let pos = Obj.magic _g2 in let __assign_114 = Obj.magic (let __anon_115 = HxAnon.create () in (
+              ignore (HxAnon.set __anon_115 "kind" (Obj.repr "SThrow"));
+              ignore (HxAnon.set __anon_115 "pos" (Obj.repr pos));
+              __anon_115
             )) in (
-              tempStruct := __assign_112;
-              __assign_112
+              tempStruct := __assign_114;
+              __assign_114
             )
           )
-          | HxStmt.SReturnVoid _p0 -> let _g = Obj.magic _p0 in let pos = Obj.magic _g in let __assign_114 = Obj.magic (let __anon_115 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_115 "kind" (Obj.repr "SReturnVoid"));
-            ignore (HxAnon.set __anon_115 "pos" (Obj.repr pos));
-            __anon_115
+          | HxStmt.SReturnVoid _p0 -> let _g = Obj.magic _p0 in let pos = Obj.magic _g in let __assign_116 = Obj.magic (let __anon_117 = HxAnon.create () in (
+            ignore (HxAnon.set __anon_117 "kind" (Obj.repr "SReturnVoid"));
+            ignore (HxAnon.set __anon_117 "pos" (Obj.repr pos));
+            __anon_117
           )) in (
-            tempStruct := __assign_114;
-            __assign_114
+            tempStruct := __assign_116;
+            __assign_116
           )
           | HxStmt.SReturn (_p0, _p1) -> (
             ignore _p0;
-            let _g2 = Obj.magic _p1 in let pos = Obj.magic _g2 in let __assign_116 = Obj.magic (let __anon_117 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_117 "kind" (Obj.repr "SReturn"));
-              ignore (HxAnon.set __anon_117 "pos" (Obj.repr pos));
-              __anon_117
-            )) in (
-              tempStruct := __assign_116;
-              __assign_116
-            )
-          )
-          | HxStmt.SExpr (_p0, _p1) -> (
-            ignore _p0;
             let _g2 = Obj.magic _p1 in let pos = Obj.magic _g2 in let __assign_118 = Obj.magic (let __anon_119 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_119 "kind" (Obj.repr "SExpr"));
+              ignore (HxAnon.set __anon_119 "kind" (Obj.repr "SReturn"));
               ignore (HxAnon.set __anon_119 "pos" (Obj.repr pos));
               __anon_119
             )) in (
               tempStruct := __assign_118;
               __assign_118
             )
+          )
+          | HxStmt.SExpr (_p0, _p1) -> (
+            ignore _p0;
+            let _g2 = Obj.magic _p1 in let pos = Obj.magic _g2 in let __assign_120 = Obj.magic (let __anon_121 = HxAnon.create () in (
+              ignore (HxAnon.set __anon_121 "kind" (Obj.repr "SExpr"));
+              ignore (HxAnon.set __anon_121 "pos" (Obj.repr pos));
+              __anon_121
+            )) in (
+              tempStruct := __assign_120;
+              __assign_120
+            )
+          )
+          | HxStmt.STargetScope (_p0, _p1, _p2) -> (
+            ignore _p0;
+            ignore _p1;
+            ignore _p2;
+            HxType.hx_throw_typed_rtti (Obj.repr "native target scope is not valid in this source or target phase") ["Dynamic"]
           ));
         let kindAndPos = Obj.magic (!tempStruct) in let pos = Obj.magic (Obj.obj (HxAnon.get kindAndPos "pos")) in let tempNumber = ref (0 : int) in (
-          ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_120 = 0 in (
-            tempNumber := __assign_120;
-            __assign_120
-          ) else let __assign_121 = HxPos.getLine (Obj.magic pos) () in (
-            tempNumber := __assign_121;
-            __assign_121
+          ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_122 = 0 in (
+            tempNumber := __assign_122;
+            __assign_122
+          ) else let __assign_123 = HxPos.getLine (Obj.magic pos) () in (
+            tempNumber := __assign_123;
+            __assign_123
           ));
           let line = !tempNumber in let tempNumber1 = ref (0 : int) in (
-            ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_122 = 0 in (
-              tempNumber1 := __assign_122;
-              __assign_122
-            ) else let __assign_123 = HxPos.getColumn (Obj.magic pos) () in (
-              tempNumber1 := __assign_123;
-              __assign_123
+            ignore (if pos == Obj.magic (HxRuntime.hx_null) then let __assign_124 = 0 in (
+              tempNumber1 := __assign_124;
+              __assign_124
+            ) else let __assign_125 = HxPos.getColumn (Obj.magic pos) () in (
+              tempNumber1 := __assign_125;
+              __assign_125
             ));
             let col = !tempNumber1 in let tempString = ref (HxString.hx_null_string : string) in (
               ignore (match stmt with
                 | HxStmt.SBlock (_p0, _p1) -> let _g = Obj.magic _p0 in (
                   ignore _p1;
                   let stmts = Obj.magic _g in let tempString1 = ref (HxString.hx_null_string : string) in (
-                    ignore (if stmts == Obj.magic (HxRuntime.hx_null) then let __assign_125 = ("0" : string) in (
-                      tempString1 := __assign_125;
-                      __assign_125
-                    ) else let __assign_126 = (string_of_int (HxArray.length stmts) : string) in (
-                      tempString1 := __assign_126;
-                      __assign_126
-                    ));
-                    let __assign_127 = ":stmts=" ^ HxString.toStdString (!tempString1) in (
-                      tempString := __assign_127;
+                    ignore (if stmts == Obj.magic (HxRuntime.hx_null) then let __assign_127 = ("0" : string) in (
+                      tempString1 := __assign_127;
                       __assign_127
+                    ) else let __assign_128 = (string_of_int (HxArray.length stmts) : string) in (
+                      tempString1 := __assign_128;
+                      __assign_128
+                    ));
+                    let __assign_129 = ":stmts=" ^ HxString.toStdString (!tempString1) in (
+                      tempString := __assign_129;
+                      __assign_129
                     )
                   )
                 )
-                | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+                | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = _p2 in (
                   ignore _p3;
                   let _g4 = Obj.magic _p4 in let name = (_g : string) in let typeHint = (_g1 : string) in (
                     ignore _g2;
                     let metadata = Obj.magic _g4 in let tempString2 = ref (HxString.hx_null_string : string) in (
-                      ignore (if typeHint == HxString.hx_null_string then let __assign_128 = ("" : string) in (
-                        tempString2 := __assign_128;
-                        __assign_128
-                      ) else let __assign_129 = (typeHint : string) in (
-                        tempString2 := __assign_129;
-                        __assign_129
+                      ignore (if typeHint == HxString.hx_null_string then let __assign_130 = ("" : string) in (
+                        tempString2 := __assign_130;
+                        __assign_130
+                      ) else let __assign_131 = (typeHint : string) in (
+                        tempString2 := __assign_131;
+                        __assign_131
                       ));
                       let tempString3 = ref (HxString.hx_null_string : string) in (
-                        ignore (if metadata == Obj.magic (HxRuntime.hx_null) then let __assign_130 = ("" : string) in (
-                          tempString3 := __assign_130;
-                          __assign_130
-                        ) else let __assign_131 = (HxArray.join metadata "|" (fun x -> Std.string (Obj.repr x)) : string) in (
-                          tempString3 := __assign_131;
-                          __assign_131
-                        ));
-                        let __assign_132 = ((((":name=" ^ HxString.toStdString name) ^ ":type=") ^ HxString.toStdString (!tempString2)) ^ ":metadata=") ^ HxString.toStdString (!tempString3) in (
-                          tempString := __assign_132;
+                        ignore (if metadata == Obj.magic (HxRuntime.hx_null) then let __assign_132 = ("" : string) in (
+                          tempString3 := __assign_132;
                           __assign_132
+                        ) else let __assign_133 = (HxArray.join metadata "|" (fun x -> Std.string (Obj.repr x)) : string) in (
+                          tempString3 := __assign_133;
+                          __assign_133
+                        ));
+                        let __assign_134 = ((((":name=" ^ HxString.toStdString name) ^ ":type=") ^ HxString.toStdString (!tempString2)) ^ ":metadata=") ^ HxString.toStdString (!tempString3) in (
+                          tempString := __assign_134;
+                          __assign_134
                         )
                       )
                     )
                   )
                 )
-                | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in (
+                | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
                   ignore _p3;
                   ignore _g;
                   ignore _g1;
-                  let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let tempString4 = ref (HxString.hx_null_string : string) in (
-                    ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then let __assign_133 = "0" in (
-                      tempString4 := __assign_133;
-                      __assign_133
-                    ) else let __assign_134 = "1" in (
-                      tempString4 := __assign_134;
-                      __assign_134
-                    ));
-                    let __assign_135 = ":hasElse=" ^ HxString.toStdString (!tempString4) in (
-                      tempString := __assign_135;
+                  let elseBranch = _g2 in let tempString4 = ref (HxString.hx_null_string : string) in (
+                    ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then let __assign_135 = "0" in (
+                      tempString4 := __assign_135;
                       __assign_135
+                    ) else let __assign_136 = "1" in (
+                      tempString4 := __assign_136;
+                      __assign_136
+                    ));
+                    let __assign_137 = ":hasElse=" ^ HxString.toStdString (!tempString4) in (
+                      tempString := __assign_137;
+                      __assign_137
                     )
                   )
                 )
@@ -419,9 +442,9 @@ let traceStage3StmtList = fun phase functionName idx total stmt -> ignore (try i
                   let name = (_g : string) in (
                     ignore _g1;
                     ignore _g2;
-                    let __assign_136 = ":name=" ^ HxString.toStdString name in (
-                      tempString := __assign_136;
-                      __assign_136
+                    let __assign_138 = ":name=" ^ HxString.toStdString name in (
+                      tempString := __assign_138;
+                      __assign_138
                     )
                   )
                 )
@@ -430,43 +453,44 @@ let traceStage3StmtList = fun phase functionName idx total stmt -> ignore (try i
                   let keyName = (_g : string) in let valueName = (_g1 : string) in (
                     ignore _g2;
                     ignore _g3;
-                    let __assign_137 = ((":key=" ^ HxString.toStdString keyName) ^ ":value=") ^ HxString.toStdString valueName in (
-                      tempString := __assign_137;
-                      __assign_137
+                    let __assign_139 = ((":key=" ^ HxString.toStdString keyName) ^ ":value=") ^ HxString.toStdString valueName in (
+                      tempString := __assign_139;
+                      __assign_139
                     )
                   )
                 )
-                | HxStmt.SSwitch (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in (
+                | HxStmt.SSwitch (_p0, _p1, _p2, _p3, _p4) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in (
                   ignore _p3;
+                  ignore _p4;
                   ignore _g;
                   let patterns = Obj.magic _g1 in let bodies = Obj.magic _g2 in let tempString5 = ref (HxString.hx_null_string : string) in (
-                    ignore (if patterns == Obj.magic (HxRuntime.hx_null) then let __assign_138 = ("0" : string) in (
-                      tempString5 := __assign_138;
-                      __assign_138
-                    ) else let __assign_139 = (string_of_int (HxArray.length patterns) : string) in (
-                      tempString5 := __assign_139;
-                      __assign_139
+                    ignore (if patterns == Obj.magic (HxRuntime.hx_null) then let __assign_140 = ("0" : string) in (
+                      tempString5 := __assign_140;
+                      __assign_140
+                    ) else let __assign_141 = (string_of_int (HxArray.length patterns) : string) in (
+                      tempString5 := __assign_141;
+                      __assign_141
                     ));
                     let tempString6 = ref (HxString.hx_null_string : string) in (
-                      ignore (if bodies == Obj.magic (HxRuntime.hx_null) then let __assign_140 = ("0" : string) in (
-                        tempString6 := __assign_140;
-                        __assign_140
-                      ) else let __assign_141 = (string_of_int (HxArray.length bodies) : string) in (
-                        tempString6 := __assign_141;
-                        __assign_141
-                      ));
-                      let __assign_142 = ((":patterns=" ^ HxString.toStdString (!tempString5)) ^ ":bodies=") ^ HxString.toStdString (!tempString6) in (
-                        tempString := __assign_142;
+                      ignore (if bodies == Obj.magic (HxRuntime.hx_null) then let __assign_142 = ("0" : string) in (
+                        tempString6 := __assign_142;
                         __assign_142
+                      ) else let __assign_143 = (string_of_int (HxArray.length bodies) : string) in (
+                        tempString6 := __assign_143;
+                        __assign_143
+                      ));
+                      let __assign_144 = ((":patterns=" ^ HxString.toStdString (!tempString5)) ^ ":bodies=") ^ HxString.toStdString (!tempString6) in (
+                        tempString := __assign_144;
+                        __assign_144
                       )
                     )
                   )
                 )
-                | _ -> let __assign_124 = "" in (
-                  tempString := __assign_124;
-                  __assign_124
+                | _ -> let __assign_126 = "" in (
+                  tempString := __assign_126;
+                  __assign_126
                 ));
-              let detail = !tempString in let __call_arg_0_143 = let __string_part_144 = "stmt_list_" in let __string_part_145 = HxString.toStdString phase in let __string_part_146 = ":" in let __string_part_147 = HxString.toStdString fn in let __string_part_148 = ":" in let __string_part_149 = string_of_int idx in let __string_part_150 = "/" in let __string_part_151 = string_of_int total in let __string_part_152 = ":" in let __string_part_153 = HxString.toStdString (Obj.obj (HxAnon.get kindAndPos "kind")) in let __string_part_154 = ":line=" in let __string_part_155 = string_of_int line in let __string_part_156 = ":col=" in let __string_part_157 = string_of_int col in let __string_part_158 = HxString.toStdString detail in (((((((((((((__string_part_144 ^ __string_part_145) ^ __string_part_146) ^ __string_part_147) ^ __string_part_148) ^ __string_part_149) ^ __string_part_150) ^ __string_part_151) ^ __string_part_152) ^ __string_part_153) ^ __string_part_154) ^ __string_part_155) ^ __string_part_156) ^ __string_part_157) ^ __string_part_158 in traceStage3Phase __call_arg_0_143
+              let detail = !tempString in let __call_arg_0_145 = let __string_part_146 = "stmt_list_" in let __string_part_147 = HxString.toStdString phase in let __string_part_148 = ":" in let __string_part_149 = HxString.toStdString fn in let __string_part_150 = ":" in let __string_part_151 = string_of_int idx in let __string_part_152 = "/" in let __string_part_153 = string_of_int total in let __string_part_154 = ":" in let __string_part_155 = HxString.toStdString (Obj.obj (HxAnon.get kindAndPos "kind")) in let __string_part_156 = ":line=" in let __string_part_157 = string_of_int line in let __string_part_158 = ":col=" in let __string_part_159 = string_of_int col in let __string_part_160 = HxString.toStdString detail in (((((((((((((__string_part_146 ^ __string_part_147) ^ __string_part_148) ^ __string_part_149) ^ __string_part_150) ^ __string_part_151) ^ __string_part_152) ^ __string_part_153) ^ __string_part_154) ^ __string_part_155) ^ __string_part_156) ^ __string_part_157) ^ __string_part_158) ^ __string_part_159) ^ __string_part_160 in traceStage3Phase __call_arg_0_145
             )
           )
         )

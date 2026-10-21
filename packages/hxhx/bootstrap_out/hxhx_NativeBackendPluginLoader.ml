@@ -55,7 +55,7 @@ let resolvedSpecsForProviders = fun providerTypes -> let specs = Obj.magic (HxAr
         ignore (_g2 := __new_17);
         __new_17
       ));
-      let __array_receiver_18 = specs in let __array_arg_0_19 = spec in HxArray.push __array_receiver_18 __array_arg_0_19
+      let __array_receiver_18 = Obj.magic specs in let __array_arg_0_19 = spec in HxArray.push __array_receiver_18 __array_arg_0_19
     )) done
   )) done);
   specs
@@ -78,26 +78,26 @@ let providerTypeNamesForNativeManifest = fun manifest manifestPath -> (try (
           HxType.hx_throw_typed_rtti (Obj.repr "native plugin loader returned malformed response") ["Dynamic"]
         )
       ) with
-        | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-        | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-        | HxRuntime.Hx_return __ret_39 -> raise (HxRuntime.Hx_return __ret_39)
-        | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+        | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+        | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+        | HxRuntime.Hx_return __ret_39 -> Stdlib.raise (HxRuntime.Hx_return __ret_39)
+        | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
         | HxRuntime.Hx_exception (__exn_v_40, __exn_tags_41) -> if true then let error = (if HxRuntime.tags_has __exn_tags_41 "haxe.Exception" then Obj.obj __exn_v_40 else Obj.magic (Haxe_ValueException.create __exn_v_40 (Obj.magic (HxRuntime.hx_null)) __exn_v_40) : Haxe_Exception.t) in (
           ignore error;
           (
             ignore (let __call_arg_0_34 = manifestPath in let __call_arg_1_35 = let __string_part_36 = "native plugin load failed: " in let __string_part_37 = HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) in __string_part_36 ^ __string_part_37 in fail __call_arg_0_34 __call_arg_1_35);
-            raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_38 = HxArray.create () in __represented_array_38)))
+            Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_38 = HxArray.create () in __represented_array_38)))
           )
         ) else HxRuntime.hx_throw_typed __exn_v_40 __exn_tags_41
         | __exn_42 -> if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_42) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_42) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_42)) : Haxe_Exception.t) in (
           ignore error;
           (
             ignore (let __call_arg_0_34 = manifestPath in let __call_arg_1_35 = let __string_part_36 = "native plugin load failed: " in let __string_part_37 = HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) in __string_part_36 ^ __string_part_37 in fail __call_arg_0_34 __call_arg_1_35);
-            raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_38 = HxArray.create () in __represented_array_38)))
+            Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_38 = HxArray.create () in __represented_array_38)))
           )
-        ) else raise (__exn_42));
+        ) else Stdlib.raise (__exn_42));
       let snapshot = (!tempString : string) in let providerTypes = Obj.magic (Hxhx_NativeBackendPluginHostAbi.providerTypesForPluginAllowEmpty (snapshot : string) (Obj.obj (HxAnon.get manifest "pluginId") : string) (manifestPath : string)) in (
-        ignore (if HxArray.length providerTypes = 0 then raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_52 = HxArray.create () in __represented_array_52))) else ());
+        ignore (if HxArray.length providerTypes = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_52 = HxArray.create () in __represented_array_52))) else ());
         let specs = Obj.magic (resolvedSpecsForProviders (Obj.magic providerTypes)) in (
           ignore (Hxhx_NativeBackendPluginHostAbi.assertNoDescriptorConflicts (Obj.obj (HxAnon.get manifest "pluginId") : string) (Obj.magic specs) (manifestPath : string));
           providerTypes

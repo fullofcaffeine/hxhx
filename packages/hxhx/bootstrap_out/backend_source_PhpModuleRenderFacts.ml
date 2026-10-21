@@ -16,19 +16,19 @@ let getModuleIdentity = fun self () -> (Obj.magic self : t).moduleIdentity
 
 let getSchemaRevision = fun self () -> (
   ignore self;
-  "php-module-render-facts-v2"
+  ("php-module-render-facts-v2" : string)
 )
 
 let getCanonicalIdentity = fun self () -> (Obj.magic self : t).canonicalIdentity
 
 let findLocalTypeName = fun self (name : string) -> (try (
-  ignore (if name == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if name == HxString.hx_null_string then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let _this = Obj.magic ((Obj.magic self : t).localTypeNameIndex) in let key = let __call_arg_0_145 = name in Backend_source_PhpName.typeIdentifier __call_arg_0_145 in let tempResult = (HxMap.get_string (Obj.magic _this) (key : string) : string) in tempResult
 ) with
   | HxRuntime.Hx_return __ret_146 -> (Obj.obj __ret_146 : string) : string)
 
 let findImportedTypeAlias = fun self (name : string) -> (try (
-  ignore (if name == HxString.hx_null_string then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if name == HxString.hx_null_string then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let _this = Obj.magic ((Obj.magic self : t).importedTypeAliasIndex) in let key = let __call_arg_0_147 = name in Backend_source_PhpName.typeIdentifier __call_arg_0_147 in let tempResult = (HxMap.get_string (Obj.magic _this) (key : string) : string) in tempResult
 ) with
   | HxRuntime.Hx_return __ret_148 -> (Obj.obj __ret_148 : string) : string)
@@ -39,7 +39,7 @@ let copyLocalTypeNames = fun self () -> let _g = Obj.magic (let __arr_149 = HxAr
       ignore (_g1 := __new_153);
       __new_153
     ));
-    let __array_receiver_154 = _g in let __array_arg_0_155 = let __anonymous_value_156 = HxAnon.create () in (
+    let __array_receiver_154 = Obj.magic _g in let __array_arg_0_155 = let __anonymous_value_156 = HxAnon.create () in (
       let __anonymous_field_value_157 = Obj.obj (HxAnon.get fact "source") in ignore (HxAnon.set __anonymous_value_156 "source" (Obj.repr __anonymous_field_value_157));
       let __anonymous_field_value_158 = Obj.obj (HxAnon.get fact "emitted") in ignore (HxAnon.set __anonymous_value_156 "emitted" (Obj.repr __anonymous_field_value_158));
       __anonymous_value_156
@@ -54,7 +54,7 @@ let copyImportedTypeAliases = fun self () -> let _g = Obj.magic (let __arr_159 =
       ignore (_g1 := __new_163);
       __new_163
     ));
-    let __array_receiver_164 = _g in let __array_arg_0_165 = let __anonymous_value_166 = HxAnon.create () in (
+    let __array_receiver_164 = Obj.magic _g in let __array_arg_0_165 = let __anonymous_value_166 = HxAnon.create () in (
       let __anonymous_field_value_167 = Obj.obj (HxAnon.get fact "local") in ignore (HxAnon.set __anonymous_value_166 "local" (Obj.repr __anonymous_field_value_167));
       let __anonymous_field_value_168 = Obj.obj (HxAnon.get fact "qualified") in ignore (HxAnon.set __anonymous_value_166 "qualified" (Obj.repr __anonymous_field_value_168));
       __anonymous_value_166
@@ -63,7 +63,7 @@ let copyImportedTypeAliases = fun self () -> let _g = Obj.magic (let __arr_159 =
   _g
 )
 
-let copyUsingTypeIdentities = fun self () -> let __array_receiver_169 = (Obj.magic self : t).usingTypeIdentities in HxArray.copy __array_receiver_169
+let copyUsingTypeIdentities = fun self () -> let __array_receiver_169 = Obj.magic ((Obj.magic self : t).usingTypeIdentities) in HxArray.copy __array_receiver_169
 
 let normalize = fun (value : string) -> (let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (if value == HxString.hx_null_string then let __assign_201 = "" in (
@@ -122,14 +122,14 @@ let addResolvedImport = fun self (directive : TyModuleDirective.t) -> ignore (ig
       __assign_173
     )
   ));
-  ignore (if !tempShortCircuit then raise (HxRuntime.Hx_return_void) else ());
+  ignore (if !tempShortCircuit then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   let _g = ref 0 in let _g1 = Obj.magic (TyModuleDirective.getProviders (Obj.magic directive) ()) in while !_g < HxArray.length _g1 do try ignore (let provider = Obj.magic (let __array_read_receiver_174 = _g1 in let __array_read_index_175 = !_g in HxArray.get (Obj.magic __array_read_receiver_174) __array_read_index_175) in (
     ignore (let __old_176 = !_g in let __new_177 = HxInt.add __old_176 1 in (
       ignore (_g := __new_177);
       __new_177
     ));
     let rawImport = let __call_arg_0_178 = TyNominalTypeId.getCanonicalName (Obj.magic provider) () in normalize __call_arg_0_178 in let localName = (TyModuleDirective.getImportedTypeLocalName (Obj.magic directive) (Obj.magic provider) : string) in (
-      ignore (if localName == Obj.magic (HxRuntime.hx_null) || (let __string_receiver_179 = rawImport in HxString.length __string_receiver_179) = 0 then raise (HxRuntime.Hx_continue) else ());
+      ignore (if localName == Obj.magic (HxRuntime.hx_null) || (let __string_receiver_179 = rawImport in HxString.length __string_receiver_179) = 0 then Stdlib.raise (HxRuntime.Hx_continue) else ());
       let qualified = (let __call_arg_0_180 = rawImport in Backend_source_PhpRuntimeSupportTypeAlias.qualifiedName __call_arg_0_180 : string) in if qualified != Obj.magic (HxRuntime.hx_null) then ignore (addExact (Obj.magic ((Obj.magic self : t).importedTypeAliasIndex)) (let __call_arg_0_181 = localName in Backend_source_PhpName.typeIdentifier __call_arg_0_181 : string) (qualified : string) ("imported alias" : string) ((Obj.magic self : t).moduleIdentity : string)) else ()
     )
   )) with
@@ -230,7 +230,7 @@ let create = fun programFacts moduleRevision2 moduleIdentity2 contributions -> l
                   ));
                   let identity = (TyNominalTypeId.getCanonicalName (Obj.magic provider) () : string) in if not (HxMap.exists_string (Obj.magic usingTypeIdentityIndex) (identity : string)) then ignore ((
                     ignore (HxMap.set_string (Obj.magic usingTypeIdentityIndex) (identity : string) true);
-                    let __array_receiver_49 = orderedUsingTypeIdentities in let __array_arg_0_50 = identity in HxArray.push __array_receiver_49 __array_arg_0_50
+                    let __array_receiver_49 = Obj.magic orderedUsingTypeIdentities in let __array_arg_0_50 = (identity : string) in HxArray.push __array_receiver_49 __array_arg_0_50
                   )) else ()
                 )) done) else ()
               )
@@ -238,9 +238,9 @@ let create = fun programFacts moduleRevision2 moduleIdentity2 contributions -> l
           )
         )) done);
         let _g = Obj.magic (let __represented_array_51 = HxArray.create () in __represented_array_51) in let _this = Obj.magic ((Obj.magic self : t).localTypeNameIndex) in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic _this))) in let name = tempIterator in (
-          ignore (while let __iterator_receiver_52 = name in HxIterator.hasNext __iterator_receiver_52 do ignore (let name2 = (let __iterator_receiver_53 = name in HxIterator.next __iterator_receiver_53 : string) in let __array_receiver_54 = _g in let __array_arg_0_55 = name2 in HxArray.push __array_receiver_54 __array_arg_0_55) done);
+          ignore (while let __iterator_receiver_52 = name in HxIterator.hasNext __iterator_receiver_52 do ignore (let name2 = (let __iterator_receiver_53 = name in HxIterator.next __iterator_receiver_53 : string) in let __array_receiver_54 = Obj.magic _g in let __array_arg_0_55 = (name2 : string) in HxArray.push __array_receiver_54 __array_arg_0_55) done);
           let tempArray = Obj.magic _g in let localNames = Obj.magic tempArray in (
-            ignore (let __array_receiver_56 = localNames in let __array_arg_0_57 = fun left right -> let __reflect_arg_0_58 = left in let __reflect_arg_1_59 = right in (fun (__reflect_left_60 : string) (__reflect_right_61 : string) -> let __reflect_left_null_62 = HxString.isNull __reflect_left_60 in let __reflect_right_null_63 = HxString.isNull __reflect_right_61 in if __reflect_left_null_62 && __reflect_right_null_63 then 0 else if __reflect_left_null_62 || __reflect_right_null_63 then HxRuntime.hx_throw (Obj.repr "reflaxe.ocaml [ocaml-reflect-compare:null-mismatch]") else if __reflect_left_60 < __reflect_right_61 then -1 else if __reflect_left_60 > __reflect_right_61 then 1 else 0) __reflect_arg_0_58 __reflect_arg_1_59 in HxArray.sort __array_receiver_56 __array_arg_0_57);
+            ignore (let __array_receiver_56 = Obj.magic localNames in let __array_arg_0_57 = fun left right -> let __reflect_arg_0_58 = left in let __reflect_arg_1_59 = right in (fun (__reflect_left_60 : string) (__reflect_right_61 : string) -> let __reflect_left_null_62 = HxString.isNull __reflect_left_60 in let __reflect_right_null_63 = HxString.isNull __reflect_right_61 in if __reflect_left_null_62 && __reflect_right_null_63 then 0 else if __reflect_left_null_62 || __reflect_right_null_63 then HxRuntime.hx_throw (Obj.repr "reflaxe.ocaml [ocaml-reflect-compare:null-mismatch]") else if __reflect_left_60 < __reflect_right_61 then -1 else if __reflect_left_60 > __reflect_right_61 then 1 else 0) __reflect_arg_0_58 __reflect_arg_1_59 in HxArray.sort __array_receiver_56 __array_arg_0_57);
             let _g = Obj.magic (let __arr_64 = HxArray.create () in __arr_64) in let _g1 = ref 0 in (
               ignore (while !_g1 < HxArray.length localNames do ignore (let name = (let __array_read_receiver_65 = localNames in let __array_read_index_66 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_65) __array_read_index_66 : string) in (
                 ignore (let __old_67 = !_g1 in let __new_68 = HxInt.add __old_67 1 in (
@@ -252,7 +252,7 @@ let create = fun programFacts moduleRevision2 moduleIdentity2 contributions -> l
                     tempMaybeString := __assign_69;
                     __assign_69
                   ));
-                  let __array_receiver_70 = _g in let __array_arg_0_71 = let __anonymous_value_72 = HxAnon.create () in (
+                  let __array_receiver_70 = Obj.magic _g in let __array_arg_0_71 = let __anonymous_value_72 = HxAnon.create () in (
                     let __anonymous_field_value_73 = name in ignore (HxAnon.set __anonymous_value_72 "source" (Obj.repr __anonymous_field_value_73));
                     let __anonymous_field_value_74 = !tempMaybeString in ignore (HxAnon.set __anonymous_value_72 "emitted" (Obj.repr __anonymous_field_value_74));
                     __anonymous_value_72
@@ -265,9 +265,9 @@ let create = fun programFacts moduleRevision2 moduleIdentity2 contributions -> l
                   __assign_75
                 ));
                 let _g = Obj.magic (let __represented_array_76 = HxArray.create () in __represented_array_76) in let _this = Obj.magic ((Obj.magic self : t).importedTypeAliasIndex) in let tempIterator1 = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic _this))) in let name = tempIterator1 in (
-                  ignore (while let __iterator_receiver_77 = name in HxIterator.hasNext __iterator_receiver_77 do ignore (let name2 = (let __iterator_receiver_78 = name in HxIterator.next __iterator_receiver_78 : string) in let __array_receiver_79 = _g in let __array_arg_0_80 = name2 in HxArray.push __array_receiver_79 __array_arg_0_80) done);
+                  ignore (while let __iterator_receiver_77 = name in HxIterator.hasNext __iterator_receiver_77 do ignore (let name2 = (let __iterator_receiver_78 = name in HxIterator.next __iterator_receiver_78 : string) in let __array_receiver_79 = Obj.magic _g in let __array_arg_0_80 = (name2 : string) in HxArray.push __array_receiver_79 __array_arg_0_80) done);
                   let tempArray1 = Obj.magic _g in let aliasNames = Obj.magic tempArray1 in (
-                    ignore (let __array_receiver_81 = aliasNames in let __array_arg_0_82 = fun left right -> let __reflect_arg_0_83 = left in let __reflect_arg_1_84 = right in (fun (__reflect_left_85 : string) (__reflect_right_86 : string) -> let __reflect_left_null_87 = HxString.isNull __reflect_left_85 in let __reflect_right_null_88 = HxString.isNull __reflect_right_86 in if __reflect_left_null_87 && __reflect_right_null_88 then 0 else if __reflect_left_null_87 || __reflect_right_null_88 then HxRuntime.hx_throw (Obj.repr "reflaxe.ocaml [ocaml-reflect-compare:null-mismatch]") else if __reflect_left_85 < __reflect_right_86 then -1 else if __reflect_left_85 > __reflect_right_86 then 1 else 0) __reflect_arg_0_83 __reflect_arg_1_84 in HxArray.sort __array_receiver_81 __array_arg_0_82);
+                    ignore (let __array_receiver_81 = Obj.magic aliasNames in let __array_arg_0_82 = fun left right -> let __reflect_arg_0_83 = left in let __reflect_arg_1_84 = right in (fun (__reflect_left_85 : string) (__reflect_right_86 : string) -> let __reflect_left_null_87 = HxString.isNull __reflect_left_85 in let __reflect_right_null_88 = HxString.isNull __reflect_right_86 in if __reflect_left_null_87 && __reflect_right_null_88 then 0 else if __reflect_left_null_87 || __reflect_right_null_88 then HxRuntime.hx_throw (Obj.repr "reflaxe.ocaml [ocaml-reflect-compare:null-mismatch]") else if __reflect_left_85 < __reflect_right_86 then -1 else if __reflect_left_85 > __reflect_right_86 then 1 else 0) __reflect_arg_0_83 __reflect_arg_1_84 in HxArray.sort __array_receiver_81 __array_arg_0_82);
                     let _g = Obj.magic (let __arr_89 = HxArray.create () in __arr_89) in let _g1 = ref 0 in (
                       ignore (while !_g1 < HxArray.length aliasNames do ignore (let name = (let __array_read_receiver_90 = aliasNames in let __array_read_index_91 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_90) __array_read_index_91 : string) in (
                         ignore (let __old_92 = !_g1 in let __new_93 = HxInt.add __old_92 1 in (
@@ -279,7 +279,7 @@ let create = fun programFacts moduleRevision2 moduleIdentity2 contributions -> l
                             tempMaybeString1 := __assign_94;
                             __assign_94
                           ));
-                          let __array_receiver_95 = _g in let __array_arg_0_96 = let __anonymous_value_97 = HxAnon.create () in (
+                          let __array_receiver_95 = Obj.magic _g in let __array_arg_0_96 = let __anonymous_value_97 = HxAnon.create () in (
                             let __anonymous_field_value_98 = name in ignore (HxAnon.set __anonymous_value_97 "local" (Obj.repr __anonymous_field_value_98));
                             let __anonymous_field_value_99 = !tempMaybeString1 in ignore (HxAnon.set __anonymous_value_97 "qualified" (Obj.repr __anonymous_field_value_99));
                             __anonymous_value_97
@@ -296,41 +296,41 @@ let create = fun programFacts moduleRevision2 moduleIdentity2 contributions -> l
                           __assign_101
                         ));
                         let identityFacts = Obj.magic (HxArray.create ()) in (
-                          ignore (let __array_receiver_102 = identityFacts in let __array_arg_0_103 = getSchemaRevision (Obj.magic self) () in HxArray.push __array_receiver_102 __array_arg_0_103);
-                          ignore (let __array_receiver_104 = identityFacts in let __array_arg_0_105 = (Obj.magic self : t).programRevision in HxArray.push __array_receiver_104 __array_arg_0_105);
-                          ignore (let __array_receiver_106 = identityFacts in let __array_arg_0_107 = (Obj.magic self : t).moduleRevision in HxArray.push __array_receiver_106 __array_arg_0_107);
-                          ignore (let __array_receiver_108 = identityFacts in let __array_arg_0_109 = (Obj.magic self : t).moduleIdentity in HxArray.push __array_receiver_108 __array_arg_0_109);
-                          ignore (let __array_receiver_110 = identityFacts in let __array_arg_0_111 = "local-types" in HxArray.push __array_receiver_110 __array_arg_0_111);
-                          ignore (let __array_receiver_112 = identityFacts in let __array_arg_0_113 = string_of_int (HxArray.length ((Obj.magic self : t).localTypeNames)) in HxArray.push __array_receiver_112 __array_arg_0_113);
+                          ignore (let __array_receiver_102 = Obj.magic identityFacts in let __array_arg_0_103 = (getSchemaRevision (Obj.magic self) () : string) in HxArray.push __array_receiver_102 __array_arg_0_103);
+                          ignore (let __array_receiver_104 = Obj.magic identityFacts in let __array_arg_0_105 = ((Obj.magic self : t).programRevision : string) in HxArray.push __array_receiver_104 __array_arg_0_105);
+                          ignore (let __array_receiver_106 = Obj.magic identityFacts in let __array_arg_0_107 = ((Obj.magic self : t).moduleRevision : string) in HxArray.push __array_receiver_106 __array_arg_0_107);
+                          ignore (let __array_receiver_108 = Obj.magic identityFacts in let __array_arg_0_109 = ((Obj.magic self : t).moduleIdentity : string) in HxArray.push __array_receiver_108 __array_arg_0_109);
+                          ignore (let __array_receiver_110 = Obj.magic identityFacts in let __array_arg_0_111 = ("local-types" : string) in HxArray.push __array_receiver_110 __array_arg_0_111);
+                          ignore (let __array_receiver_112 = Obj.magic identityFacts in let __array_arg_0_113 = (string_of_int (HxArray.length ((Obj.magic self : t).localTypeNames)) : string) in HxArray.push __array_receiver_112 __array_arg_0_113);
                           let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).localTypeNames) in (
                             ignore (while !_g < HxArray.length _g1 do ignore (let fact = let __array_read_receiver_114 = _g1 in let __array_read_index_115 = !_g in HxArray.get (Obj.magic __array_read_receiver_114) __array_read_index_115 in (
                               ignore (let __old_116 = !_g in let __new_117 = HxInt.add __old_116 1 in (
                                 ignore (_g := __new_117);
                                 __new_117
                               ));
-                              ignore (let __array_receiver_118 = identityFacts in let __array_arg_0_119 = Obj.obj (HxAnon.get fact "source") in HxArray.push __array_receiver_118 __array_arg_0_119);
-                              let __array_receiver_120 = identityFacts in let __array_arg_0_121 = Obj.obj (HxAnon.get fact "emitted") in HxArray.push __array_receiver_120 __array_arg_0_121
+                              ignore (let __array_receiver_118 = Obj.magic identityFacts in let __array_arg_0_119 = (Obj.obj (HxAnon.get fact "source") : string) in HxArray.push __array_receiver_118 __array_arg_0_119);
+                              let __array_receiver_120 = Obj.magic identityFacts in let __array_arg_0_121 = (Obj.obj (HxAnon.get fact "emitted") : string) in HxArray.push __array_receiver_120 __array_arg_0_121
                             )) done);
-                            ignore (let __array_receiver_122 = identityFacts in let __array_arg_0_123 = "imported-type-aliases" in HxArray.push __array_receiver_122 __array_arg_0_123);
-                            ignore (let __array_receiver_124 = identityFacts in let __array_arg_0_125 = string_of_int (HxArray.length ((Obj.magic self : t).importedTypeAliases)) in HxArray.push __array_receiver_124 __array_arg_0_125);
+                            ignore (let __array_receiver_122 = Obj.magic identityFacts in let __array_arg_0_123 = ("imported-type-aliases" : string) in HxArray.push __array_receiver_122 __array_arg_0_123);
+                            ignore (let __array_receiver_124 = Obj.magic identityFacts in let __array_arg_0_125 = (string_of_int (HxArray.length ((Obj.magic self : t).importedTypeAliases)) : string) in HxArray.push __array_receiver_124 __array_arg_0_125);
                             let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).importedTypeAliases) in (
                               ignore (while !_g < HxArray.length _g1 do ignore (let fact = let __array_read_receiver_126 = _g1 in let __array_read_index_127 = !_g in HxArray.get (Obj.magic __array_read_receiver_126) __array_read_index_127 in (
                                 ignore (let __old_128 = !_g in let __new_129 = HxInt.add __old_128 1 in (
                                   ignore (_g := __new_129);
                                   __new_129
                                 ));
-                                ignore (let __array_receiver_130 = identityFacts in let __array_arg_0_131 = Obj.obj (HxAnon.get fact "local") in HxArray.push __array_receiver_130 __array_arg_0_131);
-                                let __array_receiver_132 = identityFacts in let __array_arg_0_133 = Obj.obj (HxAnon.get fact "qualified") in HxArray.push __array_receiver_132 __array_arg_0_133
+                                ignore (let __array_receiver_130 = Obj.magic identityFacts in let __array_arg_0_131 = (Obj.obj (HxAnon.get fact "local") : string) in HxArray.push __array_receiver_130 __array_arg_0_131);
+                                let __array_receiver_132 = Obj.magic identityFacts in let __array_arg_0_133 = (Obj.obj (HxAnon.get fact "qualified") : string) in HxArray.push __array_receiver_132 __array_arg_0_133
                               )) done);
-                              ignore (let __array_receiver_134 = identityFacts in let __array_arg_0_135 = "using-types" in HxArray.push __array_receiver_134 __array_arg_0_135);
-                              ignore (let __array_receiver_136 = identityFacts in let __array_arg_0_137 = string_of_int (HxArray.length ((Obj.magic self : t).usingTypeIdentities)) in HxArray.push __array_receiver_136 __array_arg_0_137);
+                              ignore (let __array_receiver_134 = Obj.magic identityFacts in let __array_arg_0_135 = ("using-types" : string) in HxArray.push __array_receiver_134 __array_arg_0_135);
+                              ignore (let __array_receiver_136 = Obj.magic identityFacts in let __array_arg_0_137 = (string_of_int (HxArray.length ((Obj.magic self : t).usingTypeIdentities)) : string) in HxArray.push __array_receiver_136 __array_arg_0_137);
                               let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).usingTypeIdentities) in (
                                 ignore (while !_g < HxArray.length _g1 do ignore (let identity = (let __array_read_receiver_138 = _g1 in let __array_read_index_139 = !_g in HxArray.get (Obj.magic __array_read_receiver_138) __array_read_index_139 : string) in (
                                   ignore (let __old_140 = !_g in let __new_141 = HxInt.add __old_140 1 in (
                                     ignore (_g := __new_141);
                                     __new_141
                                   ));
-                                  let __array_receiver_142 = identityFacts in let __array_arg_0_143 = identity in HxArray.push __array_receiver_142 __array_arg_0_143
+                                  let __array_receiver_142 = Obj.magic identityFacts in let __array_arg_0_143 = (identity : string) in HxArray.push __array_receiver_142 __array_arg_0_143
                                 )) done);
                                 let __assign_144 = (CompilerCacheIdentity.encode (Obj.magic identityFacts) : string) in (
                                   (Obj.magic self : t).canonicalIdentity <- __assign_144;

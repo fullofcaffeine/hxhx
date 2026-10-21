@@ -1,0 +1,2 @@
+# 1 "TypedBackendConstructorCatalog.ml"
+include CompilerDiagnosticProbe.TypedBackendConstructorCatalog

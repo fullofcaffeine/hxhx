@@ -1,0 +1,2 @@
+# 1 "TypedCaptureProjectionOwner.ml"
+include CompilerDiagnosticProbe.TypedCaptureProjectionOwner

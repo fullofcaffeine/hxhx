@@ -1,0 +1,2 @@
+# 1 "backend_js_JsLambdaEmitter.ml"
+include Backend_js_JsArrayAppendSupport.Backend_js_JsLambdaEmitter

@@ -37,7 +37,7 @@ let trim = fun (value : string) -> (let tempResult = ref (HxString.hx_null_strin
 ) : string)
 
 let splitRawValue = fun raw -> (try let out = Obj.magic (HxArray.create ()) in let value = let __call_arg_0_7 = raw in trim __call_arg_0_7 in (
-  ignore (if (let __string_receiver_8 = value in HxString.length __string_receiver_8) = 0 then raise (HxRuntime.Hx_return (Obj.repr out)) else ());
+  ignore (if (let __string_receiver_8 = value in HxString.length __string_receiver_8) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr out)) else ());
   let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
     ignore (if (let __string_receiver_9 = value in let __string_argument_0_10 = ";" in HxString.indexOf __string_receiver_9 __string_argument_0_10 0) <> -1 then let __assign_11 = Obj.magic (let __string_receiver_12 = value in let __string_argument_0_13 = ";" in HxString.split __string_receiver_12 __string_argument_0_13) in (
       tempArray := __assign_11;
@@ -52,7 +52,7 @@ let splitRawValue = fun raw -> (try let out = Obj.magic (HxArray.create ()) in l
           ignore (_g := __new_20);
           __new_20
         ));
-        let normalized = let __call_arg_0_21 = part in trim __call_arg_0_21 in if (let __string_receiver_22 = normalized in HxString.length __string_receiver_22) > 0 && (let __array_receiver_23 = out in let __array_arg_0_24 = normalized in HxArray.indexOf_default __array_receiver_23 __array_arg_0_24) = -1 then ignore (let __array_receiver_25 = out in let __array_arg_0_26 = normalized in HxArray.push __array_receiver_25 __array_arg_0_26) else ()
+        let normalized = let __call_arg_0_21 = part in trim __call_arg_0_21 in if (let __string_receiver_22 = normalized in HxString.length __string_receiver_22) > 0 && (let __array_receiver_23 = Obj.magic out in let __array_arg_0_24 = (normalized : string) in HxArray.indexOf_default __array_receiver_23 __array_arg_0_24) = -1 then ignore (let __array_receiver_25 = Obj.magic out in let __array_arg_0_26 = (normalized : string) in HxArray.push __array_receiver_25 __array_arg_0_26) else ()
       )) done);
       out
     )
@@ -61,7 +61,7 @@ let splitRawValue = fun raw -> (try let out = Obj.magic (HxArray.create ()) in l
   | HxRuntime.Hx_return __ret_27 -> (Obj.obj __ret_27 : string HxArray.t) : string HxArray.t)
 
 let normalize = fun raw -> (try let out = Obj.magic (HxArray.create ()) in (
-  ignore (if raw == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr out)) else ());
+  ignore (if raw == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr out)) else ());
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length raw do ignore (let entry = (let __array_read_receiver_28 = raw in let __array_read_index_29 = !_g in HxArray.get (Obj.magic __array_read_receiver_28) __array_read_index_29 : string) in (
       ignore (let __old_30 = !_g in let __new_31 = HxInt.add __old_30 1 in (
@@ -73,7 +73,7 @@ let normalize = fun raw -> (try let out = Obj.magic (HxArray.create ()) in (
           ignore (_g2 := __new_35);
           __new_35
         ));
-        if let __string_eq_left_36 = id in let __string_eq_right_37 = "report-typed-summary" in HxString.equals __string_eq_left_36 __string_eq_right_37 then ignore (if (let __array_receiver_38 = out in let __array_arg_0_39 = id in HxArray.indexOf_default __array_receiver_38 __array_arg_0_39) = -1 then ignore (let __array_receiver_40 = out in let __array_arg_0_41 = id in HxArray.push __array_receiver_40 __array_arg_0_41) else ()) else HxType.hx_throw_typed_rtti (Obj.repr (((("unsupported --hxhx-customization: " ^ HxString.toStdString id) ^ " (supported: ") ^ "report-typed-summary") ^ ")")) ["Dynamic"]
+        if let __string_eq_left_36 = id in let __string_eq_right_37 = "report-typed-summary" in HxString.equals __string_eq_left_36 __string_eq_right_37 then ignore (if (let __array_receiver_38 = Obj.magic out in let __array_arg_0_39 = (id : string) in HxArray.indexOf_default __array_receiver_38 __array_arg_0_39) = -1 then ignore (let __array_receiver_40 = Obj.magic out in let __array_arg_0_41 = (id : string) in HxArray.push __array_receiver_40 __array_arg_0_41) else ()) else HxType.hx_throw_typed_rtti (Obj.repr (((("unsupported --hxhx-customization: " ^ HxString.toStdString id) ^ " (supported: ") ^ "report-typed-summary") ^ ")")) ["Dynamic"]
       )) done
     )) done);
     out
@@ -81,10 +81,10 @@ let normalize = fun raw -> (try let out = Obj.magic (HxArray.create ()) in (
 ) with
   | HxRuntime.Hx_return __ret_42 -> (Obj.obj __ret_42 : string HxArray.t) : string HxArray.t)
 
-let has = fun customizations id -> customizations != Obj.magic (HxRuntime.hx_null) && (let __array_receiver_43 = customizations in let __array_arg_0_44 = id in HxArray.indexOf_default __array_receiver_43 __array_arg_0_44) <> -1
+let has = fun customizations id -> customizations != Obj.magic (HxRuntime.hx_null) && (let __array_receiver_43 = Obj.magic customizations in let __array_arg_0_44 = (id : string) in HxArray.indexOf_default __array_receiver_43 __array_arg_0_44) <> -1
 
 let emitTypedSummaryReport = fun customizations phase backendId typedModules headerOnlyModules unsupportedExprsTotal unsupportedFiles output -> ignore (try ignore ((
-  ignore (if not (has (Obj.magic customizations) ("report-typed-summary" : string)) then raise (HxRuntime.Hx_return_void) else ());
+  ignore (if not (has (Obj.magic customizations) ("report-typed-summary" : string)) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) (("hxhx_customization[" ^ "report-typed-summary") ^ "]=enabled" : string));
   ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((("hxhx_customization_report[" ^ "report-typed-summary") ^ "].phase=") ^ HxString.toStdString phase : string));
   ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((("hxhx_customization_report[" ^ "report-typed-summary") ^ "].backend=") ^ HxString.toStdString backendId : string));

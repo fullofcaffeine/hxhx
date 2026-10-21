@@ -32,7 +32,7 @@ let create = fun name2 visibility2 isStatic2 typeHint2 init2 metadata2 pos2 endP
         (Obj.magic self : t).typeHint <- __assign_7;
         __assign_7
       ));
-      ignore (let __assign_8 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init2)) in (
+      ignore (let __assign_8 = Obj.magic init2 in (
         (Obj.magic self : t).init <- __assign_8;
         __assign_8
       ));

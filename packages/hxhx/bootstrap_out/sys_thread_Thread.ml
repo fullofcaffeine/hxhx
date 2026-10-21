@@ -30,7 +30,7 @@ let spawn = fun job -> create (HxThread.thread_create job)
 let runWithEventLoop = fun job -> ignore (try ignore (let thread = Obj.magic (current ()) in let existingLoop = Obj.magic (Obj.obj (HxThread.thread_get_events ((Obj.magic thread : t).handle))) in (
   ignore (if existingLoop != Obj.magic (HxRuntime.hx_null) then (
     ignore (let __call_callee_3 = job in __call_callee_3 ());
-    raise (HxRuntime.Hx_return_void)
+    Stdlib.raise (HxRuntime.Hx_return_void)
   ) else ());
   let created = Obj.magic (Sys_thread_EventLoop.create ()) in (
     ignore (HxThread.thread_set_events ((Obj.magic thread : t).handle) (Obj.repr created));
