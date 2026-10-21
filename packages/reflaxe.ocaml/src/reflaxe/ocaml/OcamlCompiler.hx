@@ -526,6 +526,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				for (owner in moduleToClasses.get(moduleId) ?? [])
 					owner
 		];
+		functionPlanRegistry.genericTransports.select(classes);
 		#if macro
 		profileLogLine("reflaxe.ocaml: callable_selection_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
 		#end
@@ -2651,7 +2652,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				constructionBoundary = syntaxInput.constructionBoundary;
 				constructorDeclaration = projectDeclarationSignature(argInfo.map(argument -> argument.t), ctorReturnType, representationRegistry,
 					ocamlTypeExprFromHaxeType, ctx);
-				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, syntaxInput.plan, syntaxInput.localIdentities, ctorReturnType)
+				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, syntaxInput.plan, syntaxInput.localIdentities, ctorReturnType, false,
+					syntaxInput.genericTransport)
 					.expression) {
 					case OcamlExpr.EFun(params, body):
 						createParams = params;
@@ -2859,7 +2861,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 					#end
 					final builtMethod:reflaxe.ocaml.ast.OcamlBuiltFunction = if (sharedMethod == null) {
 						builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, methodReturnType,
-							preserveInstanceSignature);
+							preserveInstanceSignature, syntaxInput.genericTransport);
 					} else {
 						if (sharedMethod.role != InstanceMethod || !HaxeOcamlTargetFunctionAdapter.hasFinalMarker(f, sharedMethod))
 							throw 'reflaxe.ocaml: shared instance method "${f.id}" lost its role or preprocessor envelope';
@@ -2985,7 +2987,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				Context.error("reflaxe.ocaml: required function did not enter the shared target route", f.field.pos);
 			#end
 			final builtFunction:reflaxe.ocaml.ast.OcamlBuiltFunction = if (sharedFunction == null) {
-				builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, staticReturnType, true);
+				builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, staticReturnType, true,
+					syntaxInput.genericTransport);
 			} else {
 				if (!HaxeOcamlTargetFunctionAdapter.hasFinalMarker(f, sharedFunction))
 					throw 'reflaxe.ocaml: shared target function "${f.id}" lost its preprocessor envelope';

@@ -221,6 +221,10 @@ private typedef OcamlLoopControlCases = {
 class OcamlBuilder {
 	public final ctx:CompilationContext;
 	public final typeExprFromHaxeType:Type->OcamlTypeExpr;
+
+	var currentGenericTransport:Null<reflaxe.ocaml.lowered.OcamlGenericTransportDeclaration> = null;
+	var currentGenericTransportFunction:Null<reflaxe.ocaml.lowered.OcamlGenericTransportProgram.OcamlGenericTransportFunction> = null;
+
 	public final emitSourceMap:Bool;
 
 	final placeAssignmentLowerer:OcamlPlaceAssignmentLowerer;
@@ -389,12 +393,26 @@ class OcamlBuilder {
 	public function new(ctx:CompilationContext, typeExprFromHaxeType:Type->OcamlTypeExpr, functionPlanRegistry:OcamlFunctionPlanRegistry,
 			representationRegistry:OcamlRepresentationRegistry, staticStoragePlan:OcamlStaticStoragePlan, emitSourceMap:Bool = false) {
 		this.ctx = ctx;
-		this.typeExprFromHaxeType = typeExprFromHaxeType;
+		this.typeExprFromHaxeType = type -> genericTransportType(type) ?? typeExprFromHaxeType(type);
 		this.functionPlanRegistry = functionPlanRegistry;
 		this.representationRegistry = representationRegistry;
 		this.staticStoragePlan = staticStoragePlan;
 		this.emitSourceMap = emitSourceMap;
 		this.placeAssignmentLowerer = new OcamlPlaceAssignmentLowerer(ctx, functionPlanRegistry);
+	}
+
+	/** The checked forwarding declaration shares one type variable across its private return recovery. */
+	function genericTransportType(type:Type):Null<OcamlTypeExpr> {
+		final selected = currentGenericTransport;
+		if (selected == null)
+			return null;
+		if (reflaxe.ocaml.lowered.OcamlGenericTransportDeclaration.parameterId(type) == selected.parameterId)
+			return OcamlTypeExpr.TVar("hx_result");
+		return switch (TypeTools.follow(type)) {
+			case TFun([], result) if (reflaxe.ocaml.lowered.OcamlGenericTransportDeclaration.parameterId(result) == selected.parameterId):
+				OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent("unit"), OcamlTypeExpr.TVar("hx_result"));
+			case _: null;
+		};
 	}
 
 	inline function freshTmp(prefix:String):String {
@@ -1822,6 +1840,27 @@ class OcamlBuilder {
 			OcamlExpr.ELet(callback, buildExpr(plan.callback), OcamlExpr.EApp(method, [OcamlExpr.EIdent(receiver), adapted]), false), false);
 	}
 
+	/** Passes the callback's invocation function once while preserving left-to-right arguments. */
+	function buildGenericTransportCall(plan:reflaxe.ocaml.lowered.OcamlGenericTransportProgram.OcamlGenericTransportCall, callee:TypedExpr,
+			arguments:Array<TypedExpr>):OcamlExpr {
+		final inputs:Array<{name:String, value:OcamlExpr}> = [];
+		for (index in 0...arguments.length) {
+			final argument = arguments[index];
+			final value = if (index == plan.callbackIndex) {
+				final callback = buildExpr(argument);
+				isCallableViewLocal(argument) ? reflaxe.ocaml.ast.OcamlCallableViewSyntax.invocation(callback) : callback;
+			} else {
+				coerceForAssignment(plan.argumentTypes[index], argument);
+			};
+			inputs.push({name: freshTmp("transport_arg"), value: value});
+		}
+		var result = OcamlExpr.EApp(buildExpr(callee), inputs.map(input -> OcamlExpr.EIdent(input.name)));
+		var index = inputs.length;
+		while (index-- > 0)
+			result = OcamlExpr.ELet(inputs[index].name, inputs[index].value, result, false);
+		return result;
+	}
+
 	/** Recognizes core Null<function> through aliases without following unrelated abstracts. */
 	static function nullableCallableType(type:Type):Null<Type> {
 		final declared = followNoAbstracts(type);
@@ -2589,6 +2628,9 @@ class OcamlBuilder {
 
 	/** Resolves an admitted local carrier without repeating target type policy. */
 	function localCarrierType(localId:Int, type:Type, position:Position):OcamlTypeExpr {
+		final transportType = genericTransportType(type);
+		if (transportType != null)
+			return transportType;
 		final decision = plannedLocalRepresentation(localId, position);
 		if (decision == null)
 			return typeExprFromHaxeType(type);
@@ -4247,6 +4289,7 @@ class OcamlBuilder {
 	}
 
 	public function buildExpr(e:TypedExpr):OcamlExpr {
+		final transportCall = currentGenericTransportFunction == null ? null : currentGenericTransportFunction.calls.get(e);
 		final anonymousLiteralCandidate = OcamlAnonymousStructurePlan.isAdmittedLiteralCandidate(e);
 		final plannedAnonymousLiteral = currentAnonymousStructurePlan == null
 			|| !anonymousLiteralCandidate ? null : currentAnonymousStructurePlan.requireLiteral(e, representationRegistry);
@@ -4376,6 +4419,10 @@ class OcamlBuilder {
 				buildPlannedReflectCompareCall(plannedReflectCompareCall, arguments, e.pos);
 			case TCall(callee, _) if (OcamlReflectComparePlan.isResolvedStandardCompare(callee)):
 				callPlanInvariant("a resolved Reflect.compare call reached syntax without its sealed comparison-domain plan", e.pos);
+			case TCall(callee, arguments) if (transportCall != null):
+				buildGenericTransportCall(transportCall, callee, arguments);
+			case TCall(callee, _) if (functionPlanRegistry.genericTransports.isSelectedCallee(callee)):
+				callPlanInvariant("a generic callback transport reached syntax without its final call evidence", e.pos);
 			case TNew(_, _, arguments) if (plannedCall != null):
 				buildPlannedCall(plannedCall, null, arguments, e.pos);
 			case TCall(callee, arguments) if (plannedCall != null):
@@ -9660,7 +9707,12 @@ class OcamlBuilder {
 		value:Null<TypedExpr>
 	}>,
 			bodyExpr:TypedExpr, functionPlan:OcamlSealedFunctionPlan, localIdentities:LexicalLocalIdentityPlan, ?expectedReturnType:Null<Type>,
-			preserveDeclarationSignature:Bool = false):OcamlBuiltFunction {
+			preserveDeclarationSignature:Bool = false,
+			?genericTransport:reflaxe.ocaml.lowered.OcamlGenericTransportProgram.OcamlGenericTransportFunction):OcamlBuiltFunction {
+		final previousGenericTransport = currentGenericTransport;
+		final previousGenericTransportFunction = currentGenericTransportFunction;
+		currentGenericTransportFunction = genericTransport;
+		currentGenericTransport = genericTransport == null ? null : genericTransport.declaration;
 		#if macro
 		final log = ctx.profileLogLine;
 		final profClass = Context.definedValue("reflaxe_ocaml_telemetry_class");
@@ -9763,13 +9815,18 @@ class OcamlBuilder {
 		// describe these same parameters, while its instance result must not become
 		// the result of the effect-only Haxe constructor body.
 		final parameterBoundary = callableBoundary == null ? functionPlan.constructionBoundary : callableBoundary;
-		final declarationSignature:Null<reflaxe.ocaml.ast.OcamlDeclarationSignature.OcamlDeclarationSignature> = !preserveDeclarationSignature ? null : callableBoundary != null
+		final declarationSignature:Null<reflaxe.ocaml.ast.OcamlDeclarationSignature.OcamlDeclarationSignature> = currentGenericTransport != null ? {
+			parameters: args.map(argument -> typeExprFromHaxeType(argument.t)),
+			result: OcamlTypeExpr.TVar("hx_result")
+		} : !preserveDeclarationSignature ? null : callableBoundary != null
 			&& callableBoundary.proofId == reflaxe.ocaml.lowered.OcamlCallableDeclarationCarrier.SIGNATURE_PROOF ? {
 				parameters: callableBoundary.arguments.map(value -> callableOutputType(value, bodyExpr.pos)),
 				result: callableBoundary.result == null ? OcamlTypeExpr.TIdent("unit") : callableOutputType(callableBoundary.result, bodyExpr.pos)
 			} : projectDeclarationSignature(args.map(argument -> argument.t), expectedReturnType ?? bodyExpr.t, representationRegistry, typeExprFromHaxeType,
 				ctx);
-		final params = if (parameterBoundary == null) {
+		final params = if (currentGenericTransport != null) {
+			args.map(argument -> OcamlPat.PAnnot(OcamlPat.PVar(renameVar(argument.name)), typeExprFromHaxeType(argument.t)));
+		} else if (parameterBoundary == null) {
 			args.length == 0 ? [OcamlPat.PConst(OcamlConst.CUnit)] : args.map(a -> OcamlPat.PVar(renameVar(a.name)));
 		} else {
 			if (args.length != parameterBoundary.arguments.length) {
@@ -9926,6 +9983,8 @@ class OcamlBuilder {
 			null;
 		};
 
+		currentGenericTransport = previousGenericTransport;
+		currentGenericTransportFunction = previousGenericTransportFunction;
 		currentLocalStoragePlan = previousStoragePlan;
 		currentLocalRepresentationPlan = previousLocalRepresentationPlan;
 		currentContainerElementPlan = previousContainerElementPlan;
@@ -9981,6 +10040,8 @@ class OcamlBuilder {
 			Syntax must not decide eligibility from the expression on its own.
 		**/
 	public function buildFunction(expression:TypedExpr, tfunc:haxe.macro.Type.TFunc):OcamlExpr {
+		final previousGenericTransport = currentGenericTransport;
+		currentGenericTransport = null;
 		final storagePlan = currentLocalStoragePlan;
 		if (storagePlan == null)
 			return localStorageInvariant("a function expression reached syntax construction without a selected local-storage plan", tfunc.expr.pos);
@@ -10160,6 +10221,7 @@ class OcamlBuilder {
 				ctx.activateStagedTypeRuntimeUse);
 
 		currentFunctionReturnType = prevFunctionReturnType;
+		currentGenericTransport = previousGenericTransport;
 		currentCallableBoundary = previousCallableBoundary;
 		currentFunctionPlanBinding = previousFunctionPlanBinding;
 		currentControlPlan = previousControlPlan;

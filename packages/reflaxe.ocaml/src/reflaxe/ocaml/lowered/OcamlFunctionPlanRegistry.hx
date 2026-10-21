@@ -159,6 +159,7 @@ typedef OcamlFunctionSyntaxInput = {
 	final plan:OcamlSealedFunctionPlan;
 	final localIdentities:LexicalLocalIdentityPlan;
 	final constructionBoundary:Null<OcamlCallableBoundaryPlan>;
+	final genericTransport:OcamlGenericTransportProgram.OcamlGenericTransportFunction;
 }
 
 /**
@@ -364,6 +365,9 @@ class OcamlFunctionPlanRegistry {
 	}
 
 	var currentProgramRevision:Null<String> = null;
+
+	public var genericTransports(default, null) = new OcamlGenericTransportProgram();
+
 	final nativeEnumResults = new OcamlNativeEnumResultAdmission();
 	final plansByOrigin:StringMap<OcamlSealedPlacePlan> = new StringMap();
 	final originsByFunction:StringMap<Array<String>> = new StringMap();
@@ -399,6 +403,7 @@ class OcamlFunctionPlanRegistry {
 		if (programRevision.length == 0)
 			throw "reflaxe.ocaml [ocaml-lowering:missing-program-revision]: the target-selected program revision is empty";
 		currentProgramRevision = programRevision;
+		genericTransports = new OcamlGenericTransportProgram();
 		nativeEnumResults.beginProgram(programRevision);
 		plansByOrigin.clear();
 		originsByFunction.clear();
@@ -1182,7 +1187,8 @@ class OcamlFunctionPlanRegistry {
 		return {
 			plan: sealed.plan,
 			localIdentities: sealed.localIdentities,
-			constructionBoundary: constructionBoundaryForPlan(data, sealed.plan)
+			constructionBoundary: constructionBoundaryForPlan(data, sealed.plan),
+			genericTransport: genericTransports.plan(data)
 		};
 	}
 
@@ -1921,6 +1927,7 @@ class OcamlFunctionPlanRegistry {
 		generation, then repeats it before artifact sealing as a lifecycle guard.
 	**/
 	public function validateCallGraph():Void {
+		genericTransports.validate();
 		for (call in callDecisions()) {
 			if (requiresDeclaredCallable(call))
 				requireCallableBoundary(call);
