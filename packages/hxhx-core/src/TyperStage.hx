@@ -3683,8 +3683,10 @@ class TyperStage {
 					if (TyAssignmentCompatibility.classify(TyType.fromHintText("Int"), actual, Unchecked) == Incompatible)
 						throw new TyperError(ctx.getFilePath(), pos, actual.getDisplay() + " should be Int for a range bound");
 				}
-				// Bring-up: `start...end` is primarily used as a loop iterable; model it as Dynamic.
-				TyType.fromHintText("Dynamic");
+				final provider = ctx.resolveCoreProvider("IntIterator");
+				if (provider == null)
+					throw new TyperError(ctx.getFilePath(), pos, "interval requires its core IntIterator declaration");
+				TyType.nominal(new TyNominalTypeId(provider.getFullName()), []);
 			case ECheckType(operand, typeHint):
 				final hinted = typeFromHintInContext(typeHint, ctx, scope);
 				final inner = inferExprType(operand, scope, ctx, pos, hinted);

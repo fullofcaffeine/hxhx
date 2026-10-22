@@ -97,6 +97,15 @@ class TyperContext {
 	public function resolvePrimitiveProvider(type:TyType):Null<TyNominalInfo> {
 		if (!type.isPrimitive())
 			throw "primitive member lookup requires an exact primitive value type";
+		return resolveCoreProvider(type.getDisplay());
+	}
+
+	/**
+		Resolve a syntax-owned standard declaration independently of source imports.
+		Primitive members and interval construction use the request's ordinary loader,
+		but cannot borrow a same-named declaration from the caller's package or aliases.
+	**/
+	public function resolveCoreProvider(typePath:String):Null<TyNominalInfo> {
 		if (index == null)
 			return null;
 		final context:TyTypeDeclaration.TyTypeResolutionContext = {
@@ -108,8 +117,8 @@ class TyperContext {
 			parameters: []
 		};
 		if (loader != null)
-			loader.ensureDeclarationAvailable(type.getDisplay(), context);
-		return index.resolveNominalProvider(type.getDisplay(), context);
+			loader.ensureDeclarationAvailable(typePath, context);
+		return index.resolveNominalProvider(typePath, context);
 	}
 
 	/** Resolve a value type separately from operations that require a nominal provider. */

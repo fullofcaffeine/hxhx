@@ -742,7 +742,9 @@ class TypedBodySource {
 					]);
 			case NewValue:
 				final identity = typedExpression.getType().getNominalIdentity();
-				final path = resolvedNameWhenAliased(texts[0], identity);
+				// Construction must retain the selected owner even when another retained
+				// class has the same simple name. Source spelling is not a lookup key.
+				final path = identity == null ? texts[0] : canonicalTypeHint(typedExpression.getType());
 				final arguments = expressionTail(expressions, 0, catalog, projectionFacts);
 				projectionFacts == null ? ENew(path, arguments) : projectionFacts.projectConstructor(typedExpression, path, arguments);
 			case Unary: EUnop(typedExpression.getUnaryOperator(), typedExpression.getUnaryFixity(), expression(expressions[0], catalog, projectionFacts));

@@ -181,7 +181,7 @@ class JsExprEmitter {
 			case ETryCatchRaw(raw):
 				emitTryCatchRaw(raw, scope);
 			case ERange(startExpr, endExpr):
-				emitRangeExpr(startExpr, endExpr, scope);
+				unsupported("ERange", "unlowered interval value");
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
 				emitArrayComprehension(name, iterable, guardExpr, yieldExpr, scope);
 			case ENew(typePath, args):
@@ -1826,20 +1826,6 @@ class JsExprEmitter {
 			pairs.push(key + ": " + value);
 		}
 		return "{" + pairs.join(", ") + "}";
-	}
-
-	static function emitRangeExpr(startExpr:HxExpr, endExpr:HxExpr, scope:JsEmitScope):String {
-		final out = new Array<String>();
-		out.push("(function () {");
-		out.push("var __range_out = [];");
-		out.push("var __range_start = " + emit(startExpr, scope) + ";");
-		out.push("var __range_end = " + emit(endExpr, scope) + ";");
-		out.push("for (var __range_i = __range_start; __range_i < __range_end; __range_i++) {");
-		out.push("__range_out.push(__range_i);");
-		out.push("}");
-		out.push("return __range_out;");
-		out.push("})()");
-		return out.join(" ");
 	}
 
 	static function emitArrayComprehension(name:String, iterable:HxExpr, guardExpr:Null<HxExpr>, yieldExpr:HxExpr, scope:JsEmitScope):String {

@@ -19,7 +19,7 @@ class M14DynamicRangeBoundTest {
 				throw 'upstream range behavior differs: ' + output + errors;
 			Sys.println('UPSTREAM_RANGE:PASS dynamic=' + dynamicBound);
 			final module = new ResolvedModule('Main', root + '/Main.hx', ParserStage.parse(source, root + '/Main.hx'));
-			final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
+			final typed = M14Stage3RuntimeFixture.typeResolved({module: module, root: root});
 			JsRuntimeFixture.assertRuntime(typed, 'Main', '3\n');
 			assertNeko(typed, root, '3\n');
 			assertOcaml(typed, root, '3\n');
@@ -51,7 +51,7 @@ class M14DynamicRangeBoundTest {
 		if (code != 0 || output != expected)
 			throw 'upstream range order differs: ' + output + errors;
 		final module = new ResolvedModule('Main', root + '/Main.hx', ParserStage.parse(source, root + '/Main.hx'));
-		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
+		final typed = M14Stage3RuntimeFixture.typeResolved({module: module, root: root});
 		JsRuntimeFixture.assertRuntime(typed, 'Main', expected);
 		assertNeko(typed, root, expected);
 		assertOcaml(typed, root, expected);
@@ -78,7 +78,7 @@ class M14DynamicRangeBoundTest {
 			final module = new ResolvedModule('Main', root + '/Main.hx', ParserStage.parse(source, root + '/Main.hx'));
 			var rejected = false;
 			try
-				TyperStage.typeResolvedModule(module, TyperIndex.build([module]))
+				M14Stage3RuntimeFixture.typeResolved({module: module, root: root})
 			catch (error:TyperError) {
 				if (error.message.indexOf('should be Int for a range bound') < 0)
 					throw error;
@@ -99,7 +99,7 @@ class M14DynamicRangeBoundTest {
 		final root = '.tmp/dynamic_range_native_payloads';
 		sys.FileSystem.createDirectory(root);
 		final module = new ResolvedModule('Main', root + '/Main.hx', ParserStage.parse(source, root + '/Main.hx'));
-		assertOcaml(TyperStage.typeResolvedModule(module, TyperIndex.build([module])), root, 'string\nbool\nnull\n');
+		assertOcaml(M14Stage3RuntimeFixture.typeResolved({module: module, root: root}), root, 'string\nbool\nnull\n');
 	}
 
 	/** Exercise boxed bounds through native compilation and actual execution. */

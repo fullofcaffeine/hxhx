@@ -22,7 +22,7 @@ class M14UntypedRangeInferenceTest {
 			assertOutput(root + '/upstream.n');
 			Sys.println('UPSTREAM_UNTYPED_RANGE:PASS ' + entry.name);
 			final module = new ResolvedModule('Main', path, ParserStage.parse(source, path));
-			final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
+			final typed = M14Stage3RuntimeFixture.typeResolved({module: module, root: root});
 			final functions = [for (owner in typed.getTypedClasses()) for (fn in owner.getFunctions()) fn];
 			final revisions = functions.map(CompilerTypedTreeRevision.functionBody);
 			final context = new backend.BackendContext(root, root + '/local.n', 'Main', true, false, HxDefineMap.fromRawDefines(['neko=1']));
@@ -59,7 +59,7 @@ class M14UntypedRangeInferenceTest {
 		var diagnostic = '';
 		try {
 			final module = new ResolvedModule('Main', path, ParserStage.parse(source, path));
-			TyperStage.typeResolvedModule(module, TyperIndex.build([module])).getBackendProjection();
+			M14Stage3RuntimeFixture.typeResolved({module: module, root: root}).getBackendProjection();
 		} catch (error:haxe.Exception) {
 			diagnostic = error.message;
 		}

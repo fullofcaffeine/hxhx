@@ -34,6 +34,27 @@ class M14Stage3RuntimeFixture {
 	}
 
 	/**
+		Retain a root-only range observer and its already parsed source.
+		Load the real interval provider before typing, without resolving unrelated
+		standard calls whose modules this low-level observer does not emit.
+	 */
+	public static function typeResolved(input:{module:ResolvedModule, root:String}):TypedModule {
+		final context = loadResolvedContext(input);
+		final provider = context.loader.ensureDeclarationAvailable("IntIterator", {
+			packagePath: "",
+			modulePath: "",
+			directives: [],
+			filePath: ResolvedModule.getFilePath(input.module),
+			position: HxPos.unknown(),
+			parameters: []
+		});
+		if (provider == null)
+			throw "range observer requires the real core IntIterator provider";
+		final modules = [input.module].concat(context.loader.drainNewModules());
+		return TyperStage.typeResolvedModule(input.module, TyperIndex.build(modules));
+	}
+
+	/**
 		Prepare the original root observer with real provider bodies, including
 		required extern-inline expansion. These focused tests emit only their root;
 		they do not establish native support for the entire standard-library closure.
@@ -62,7 +83,16 @@ class M14Stage3RuntimeFixture {
 		loader:ModuleLoader
 	} {
 		final module = new ResolvedModule("Main", input.path, ParserStage.parse(input.source, input.path));
-		final arguments = Stage1Args.parse(["-cp", input.root, "-main", "Main"], true);
+		return loadResolvedContext({module: module, root: input.root});
+	}
+
+	static function loadResolvedContext(input:{module:ResolvedModule, root:String}):{
+		main:ResolvedModule,
+		index:TyperIndex,
+		loader:ModuleLoader
+	} {
+		final module = input.module;
+		final arguments = Stage1Args.parse(["-cp", input.root, "-main", ResolvedModule.getModulePath(module)], true);
 		final paths = Stage3SetupSupport.projectClassPaths({
 			explicitPaths: [input.root],
 			libraries: [],

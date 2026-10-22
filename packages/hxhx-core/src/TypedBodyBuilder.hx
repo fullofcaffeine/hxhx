@@ -775,7 +775,7 @@ class TypedBodyBuilder {
 				final alignedBodies = typeResolver == null ? typedBodies : [for (body in typedBodies) TySourceTryResult.convertBranch(body, nodeType)];
 				TypedExpr.sourceTry(catches, alignedBodies, nodeType, exactPosition(sourcePosition), bindings).withCatchUses(uses);
 			case ESourceFor(binding, iterable, body, sourcePosition):
-				final typedIterable = buildExpr(iterable, null, sourcePosition, environment, typeResolver, callResolver, memberResolver);
+				final typedIterable = buildIterable(iterable, null, sourcePosition, environment, typeResolver, callResolver, memberResolver);
 				// Quoted syntax has no executing environment and must not select runtime iterator declarations.
 				final directBindings = TySourceFor.bindingTypes(binding, iterable, typedIterable.getType());
 				final types = environment == null ? [] : TySourceFor.bindingTypes(binding, iterable, typedIterable.getType(),
@@ -1160,8 +1160,9 @@ class TypedBodyBuilder {
 				];
 				TypedExpr.anonymous(fieldNames == null ? [] : fieldNames.copy(), converted, nodeType, position);
 			case EArrayComprehension(name, iterable, guard, value):
-				final typedIterable = buildExpr(iterable, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
-				final elementType = switch (typedIterable.getType().getTypeArguments()) {
+				final typedIterable = buildIterable(iterable, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				final directBindings = TySourceFor.bindingTypes(Value(name), iterable, typedIterable.getType());
+				final elementType = directBindings != null ? directBindings[0] : switch (typedIterable.getType().getTypeArguments()) {
 					case [element]: element;
 					case _: TyType.fromHintText("Dynamic");
 				};
@@ -1207,7 +1208,17 @@ class TypedBodyBuilder {
 			case ERange(start, end):
 				final typedStart = buildExpr(start, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				final typedEnd = buildExpr(end, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
-				TypedExpr.range(typedStart, typedEnd, nodeType, position);
+				if (typeResolver == null) {
+					// Quotation retains the authored interval rather than selecting executable declarations.
+					TypedExpr.range(typedStart, typedEnd, nodeType, position);
+				} else {
+					final arguments = [typedStart, typedEnd];
+					final constructor = typeResolver.constructorApplication(nodeType, TypedExpr.operandTypes(arguments, TypedExpr.operandKinds(arguments)),
+						[start, end]);
+					if (constructor == null || nodeType.getNominalIdentity() == null)
+						throw new TyperError("<typed-body>", diagnosticPosition, "interval requires its exact core constructor application");
+					TypedExpr.newValue(nodeType.getNominalIdentity().getCanonicalName(), arguments, nodeType, position, constructor);
+				}
 			case ECheckType(inner, typeHint):
 				final operand = buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, nodeType);
 				// Quotation preserves syntax without applying executable conversions.
@@ -1244,6 +1255,20 @@ class TypedBodyBuilder {
 			throw "cannot build a null typed expression";
 		final position = diagnosticPosition == null ? HxPos.unknown() : diagnosticPosition;
 		return buildExpr(expression, exactPosition(position), position, environment, typeResolver, callResolver, memberResolver, expected);
+	}
+
+	/** Literal interval loops retain their bound nodes for the shared once-only loop lowering. */
+	static function buildIterable(expression:HxExpr, position:Null<HxPos>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
+			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
+			memberResolver:Null<TypedMemberDeclarationResolver>):TypedExpr {
+		return switch expression {
+			case ERange(start, end):
+				final type = expressionType(expression, diagnosticPosition, environment, typeResolver);
+				final first = buildExpr(start, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				final last = buildExpr(end, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				TypedExpr.range(first, last, type, position);
+			case _: buildExpr(expression, position, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+		};
 	}
 
 	static function buildStmt(statement:HxStmt, environment:Null<TyFunctionEnv>, typeResolver:Null<TypedExprTypeResolver>,
@@ -1303,7 +1328,7 @@ class TypedBodyBuilder {
 				}
 				TypedStmt.ifStmt(typedCondition, typedWhenTrue, typedWhenFalse, storedPosition);
 			case SForIn(name, iterable, body, _):
-				final typedIterable = buildExpr(iterable, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				final typedIterable = buildIterable(iterable, storedPosition, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				final directBindings = TySourceFor.bindingTypes(Value(name), iterable, typedIterable.getType());
 				final bindingTypes = TySourceFor.bindingTypes(Value(name), iterable, typedIterable.getType(),
 					typeResolver == null ? null : expression -> typeResolver.expressionType(expression, diagnosticPosition, environment, null),

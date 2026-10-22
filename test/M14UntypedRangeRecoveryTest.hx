@@ -27,7 +27,7 @@ class M14UntypedRangeRecoveryTest {
 		final owner = new HxClassDecl("Main", true, methods, []);
 		final parsed = new ParsedModule(source, new HxModuleDecl("", [], owner, [owner], false, false), path);
 		final resolved = new ResolvedModule("Main", path, parsed);
-		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		final typed = M14Stage3RuntimeFixture.typeResolved({module: resolved, root: root});
 		JsRuntimeFixture.assertRuntime(typed, "Main", expected);
 		Sys.println("UNTYPED_RANGE_JS:PASS");
 		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml", true, true);
