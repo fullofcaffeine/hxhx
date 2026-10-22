@@ -21,6 +21,15 @@ expansion requires an explicit list of exact expression strings.
 The parser already retains the `macro` modifier in function metadata.
 The expansion pass does not use that metadata to select real macro declarations.
 
+`ExprMacroDeclarationSelector` now provides a separate query for one public static
+macro declaration. It uses shared import resolution and retains original argument
+nodes without typing or expanding them. Its focused test covers aliases, ordinary
+calls, caller-supplied visible names, and outer-call syntax retention.
+Production expansion does not call this query yet. Production lexical traversal
+must supply and verify visible names before integration. Mixed imported fields and
+methods produce an explicit unsupported diagnostic until shared lookup returns one
+ordered member. This query does not prove execution of a project's macro body.
+
 `MacroRuntimeSession.expandExpr` sends a string and receives expression text.
 Both runtime modes reach native handlers through `NativeMacroModuleHost`.
 The native registration stores a `unit -> string` callback. It cannot receive

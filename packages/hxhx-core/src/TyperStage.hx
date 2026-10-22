@@ -257,8 +257,12 @@ class TyperStage {
 		return providers == null ? [] : [for (provider in providers) provider.getIdentity()];
 	}
 
-	/** Resolve parsed directives once so every target consumes the same Haxe meaning. **/
-	static function resolveModuleDirectives(sourceDirectives:Array<HxModuleDirective>, packagePath:String, modulePath:String, index:TyperIndex,
+	/**
+		Resolve parsed imports through the shared declaration owner before body typing.
+		Pre-typing macro selection needs these same provider identities and precedence;
+		this query never resolves a call's argument expressions.
+	**/
+	public static function resolveModuleDirectives(sourceDirectives:Array<HxModuleDirective>, packagePath:String, modulePath:String, index:TyperIndex,
 			loader:ModuleLoader):Array<TyModuleDirective> {
 		final out = new Array<TyModuleDirective>();
 		for (source in sourceDirectives) {

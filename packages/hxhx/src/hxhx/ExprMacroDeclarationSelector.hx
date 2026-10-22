@@ -1,0 +1,102 @@
+package hxhx;
+
+/** Names visible at one source point; production lexical traversal must supply this contract. */
+typedef ExprMacroSelectionScope = {
+	final visibleNames:Array<String>;
+	final isStaticContext:Bool;
+}
+
+/**
+	Find an unambiguous public static macro through existing declaration lookup.
+	Only a callee is inspected: receiver values and syntax arguments are never
+	inferred or executed. Null leaves ordinary/unresolved calls to normal typing.
+	The caller owns module preparation and exact lexical visibility. This service
+	is not yet wired into production expansion or the native macro runtime.
+	Mixed field/method imports fail explicitly until their shared lookup owner
+	provides one ordered member result; independent queries cannot prove a winner.
+**/
+function select(callee:HxExpr, context:TyperContext, scope:ExprMacroSelectionScope):Null<TyDeclarationInfo> {
+	return switch callee {
+		case EParenthesized(inner, _): select(inner, context, scope);
+		case EIdent(name):
+			if (scope.visibleNames.indexOf(name) >= 0) {
+				null;
+			} else {
+				final owner = context.currentClass();
+				final field = owner == null ? null : owner.fieldInfo(name);
+				if ((!scope.isStaticContext && (context.instanceMethodOwner(name) != null || context.instanceField(name, owner) != null))
+					|| (field != null && (field.getIsStatic() || !scope.isStaticContext))) {
+					null;
+				} else if (owner != null && owner.staticMethodCandidates(name).length > 0) {
+					declaration(owner, owner.staticMethodCandidates(name));
+				} else if (context.moduleEnumConstructorMethod(name) != null) {
+					null;
+				} else {
+					final imported = context.importedStaticMethod(name);
+					final selected = imported == null ? null : declaration(imported.getProvider(), imported.getCandidates());
+					if (selected != null && context.importedStaticField(name) != null)
+						throw "expression macro selection does not yet resolve mixed field and method imports";
+					selected;
+				}
+			}
+		case EField(receiver, name):
+			final path = typePath(receiver);
+			if (path == null || valueRoot(path.split(".")[0], context, scope)) {
+				null;
+			} else {
+				final owner = context.resolveType(path);
+				owner == null
+				|| owner.fieldInfo(name) != null ? null : declaration(owner, owner.staticMethodCandidates(name));
+			}
+		case _: null;
+	};
+}
+
+/** A value-bound root must stay on ordinary typing, without inferring its receiver. */
+private function valueRoot(name:String, context:TyperContext, scope:ExprMacroSelectionScope):Bool {
+	if (scope.visibleNames.indexOf(name) >= 0)
+		return true;
+	final owner = context.currentClass();
+	final field = owner == null ? null : owner.fieldInfo(name);
+	return (field != null && (field.getIsStatic() || !scope.isStaticContext))
+		|| (owner != null && owner.staticMethodCandidates(name).length > 0)
+		|| (!scope.isStaticContext && (context.instanceField(name, owner) != null || context.instanceMethodOwner(name) != null))
+		|| context.importedStaticField(name) != null
+		|| context.importedStaticMethod(name) != null
+		|| context.moduleEnumConstructorMethod(name) != null;
+}
+
+/** Capture before recursion; parameter matching and runtime dispatch are later owners. */
+function capture(call:HxExpr, context:TyperContext, scope:ExprMacroSelectionScope):Null<SelectedExprMacroCall> {
+	return switch call {
+		case ECall(callee, arguments):
+			final selected = select(callee, context, scope);
+			selected == null ? null : new SelectedExprMacroCall(selected, call, arguments);
+		case _: null;
+	};
+}
+
+private function declaration(owner:TyNominalInfo, candidates:Array<TyFunSig>):Null<TyDeclarationInfo> {
+	final declarations = [for (candidate in candidates) owner.declarationForSignature(candidate)];
+	final macros = declarations.filter(value -> value != null && value.getMetadata().indexOf("macro") >= 0);
+	if (macros.length == 0)
+		return null;
+	if (declarations.length != 1)
+		throw "expression macro selection requires one exact declaration before argument typing";
+	final selected = macros[0];
+	if (!selected.getIsStatic() || !selected.getIsPublic())
+		throw "expression macro selection requires a public static declaration";
+	return selected;
+}
+
+/** Resolve only source type paths; a receiver-producing expression is never evaluated. */
+private function typePath(value:HxExpr):Null<String> {
+	return switch value {
+		case EIdent(name): name;
+		case EField(parent, name):
+			final prefix = typePath(parent);
+			prefix == null ? null : prefix + "." + name;
+		case EParenthesized(inner, _): typePath(inner);
+		case _: null;
+	};
+}
