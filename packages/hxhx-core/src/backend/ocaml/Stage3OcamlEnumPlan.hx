@@ -15,6 +15,9 @@ enum Stage3OcamlEnumPayload {
 	/** Preserve one exact anonymous-record contract in its existing HxAnon carrier. */
 	AnonymousRecord(semanticKey:String);
 
+	/** Preserve the resolved Array element contract in its existing HxArray object. */
+	ArrayValue(storageType:TyType);
+
 	EnumBox(owner:String);
 
 	/** Null and a present value share the runtime's Obj.t boundary without losing either value. */
@@ -39,7 +42,9 @@ typedef Stage3OcamlEnumArgument = {
 	Copies exact compiler declarations into the native enum representation plan.
 
 	This is the Stage3 enum boundary for reading semantic facts. The resulting
-	plan retains only target-owned storage choices, names, and declaration keys.
+	plan retains target-owned storage choices, names, and declaration keys.
+	Array storage also retains its resolved type for transparent-alias equivalence;
+	that proof cannot grant element conversions or generic variance.
 	It keeps Haxe constructor indexes separate from OCaml tags. Named payloads
 	must subsequently resolve to another enum in the same request before rendering.
 **/
@@ -108,6 +113,15 @@ class Stage3OcamlEnumPlan {
 
 	/** Optional arguments store null when omitted, even when their declared type is a primitive. */
 	static function payload(type:TyType, declaration:String, optional:Bool):Stage3OcamlEnumPayload {
+		final concrete = TyAliasExpansion.revealNonNullable(type);
+		final nominal = concrete.getNominalIdentity();
+		if (nominal != null
+			&& nominal.getCanonicalName() == "Array"
+			&& concrete.getTypeArguments().length == 1
+			&& !concrete.hasUnknownComponent()) {
+			final value = ArrayValue(concrete);
+			return optional || TyAliasExpansion.reveal(type).isNullWrapped() ? NullableValue(value) : value;
+		}
 		final value = requiredPayload(type.unwrapNull(), declaration);
 		return optional || type.isNullWrapped() ? NullableValue(value) : value;
 	}

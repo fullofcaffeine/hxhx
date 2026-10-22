@@ -100,11 +100,11 @@ class M14Stage3EnumPatternsTest {
 		final path = Path.join([root, "Main.hx"]);
 		final typed = program(File.getContent(path), path);
 		checkSelection(typed);
-		final unsupported = negativeProgram("enum Choice { Values(values:Array<Int>); } class Main { static function main():Void {} }", "array");
+		final unsupported = negativeProgram("enum Choice { Values(value:Float); } class Main { static function main():Void {} }", "float");
 		rejects(() -> EmitterStage.emitToDir(new MacroExpandedProgram([unsupported], false), ".tmp/stage3-enum-unsupported", true, false),
 			"enum payload representation is not implemented");
-		final optionalArray = negativeProgram("enum Choice { Values(?values:Array<Int>); } class Main { static function main():Void {} }", "optional-array");
-		rejects(() -> EmitterStage.emitToDir(new MacroExpandedProgram([optionalArray], false), ".tmp/stage3-enum-optional-unsupported", true, false),
+		final optionalFloat = negativeProgram("enum Choice { Values(?value:Float); } class Main { static function main():Void {} }", "optional-float");
+		rejects(() -> EmitterStage.emitToDir(new MacroExpandedProgram([optionalFloat], false), ".tmp/stage3-enum-optional-unsupported", true, false),
 			"enum payload representation is not implemented");
 		// A failed request must not retain its different Choice declaration.
 		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/stage3-enum-patterns", true);

@@ -12,7 +12,8 @@ import TypedExactEnumConstructorSource.TypedExactEnumConstructorCall;
 	owners. Haxe constructor indexes retain declaration order, while OCaml numbers
 	singletons and payload constructors separately.
 
-	The native payload contract covers Int, Bool, String, Dynamic, anonymous records, runtime type values, and boxed ordinary enums,
+	The native payload contract covers Int, Bool, String, Dynamic, anonymous records,
+	typed arrays, runtime type values, and boxed ordinary enums,
 	including their optional and nullable forms. Other payload representations fail
 	explicitly until their typed conversion is implemented.
 **/
@@ -99,6 +100,7 @@ class Stage3OcamlEnums {
 			case DynamicValue: "Obj.t";
 			case RuntimeTypeValue: "Obj.t";
 			case AnonymousRecord(_): "Obj.t";
+			case ArrayValue(_): "Obj.t";
 			case EnumBox(identity):
 				if (!owners.exists(identity))
 					throw "OCaml enum payload representation is not implemented: " + declaration + " / " + identity;
@@ -149,7 +151,7 @@ class Stage3OcamlEnums {
 		order. Native variants need every payload slot, so omitted optional arguments
 		receive null. Nested lets preserve Haxe's argument evaluation order.
 		The active executable supplies each Dynamic operand's retained source type
-		and each record operand's source and expected destination. The exact
+		and each record or array operand's source and expected destination. The exact
 		constructor plan owns the destination and selects the conversion.
 	**/
 	public function call(selected:TypedExactEnumConstructorCall, emit:HxExpr->String, names:Stage3OcamlLocalNames,
@@ -179,6 +181,23 @@ class Stage3OcamlEnums {
 				for (index in 0...args.length) {
 					final rendered = emit(operands[index]);
 					final stored = switch (constructor.payloads[index].storage) {
+						case ArrayValue(storageType), NullableValue(ArrayValue(storageType)):
+							if (index >= selected.arguments.length || operands[index].match(ENull)) {
+								"Obj.repr (" + rendered + ")";
+							} else {
+								final fact = argumentFacts(operands[index]);
+								if (fact == null
+									|| fact.expression != operands[index]
+									|| fact.expectedType == null
+									|| !TyAliasEquivalence.equivalentTypes(TyAliasExpansion.revealNonNullable(fact.expectedType), storageType)
+									|| !TyAliasEquivalence.equivalentTypes(TyAliasExpansion.revealNonNullable(fact.type), storageType)
+									|| fact.type.hasUnknownComponent())
+									throw "OCaml array enum argument requires its exact typed array operand and destination";
+								// Box the existing array object, not its elements. Matching the
+								// complete storage type preserves their selected representation;
+								// transparent aliases do not add a conversion or copy.
+								"Obj.repr (" + rendered + ")";
+							}
 						case AnonymousRecord(key), NullableValue(AnonymousRecord(key)):
 							if (index >= selected.arguments.length || operands[index].match(ENull)) {
 								"Obj.repr (" + rendered + ")";
