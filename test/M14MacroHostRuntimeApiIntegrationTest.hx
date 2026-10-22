@@ -188,6 +188,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 	}
 
 	static function main():Void {
+		M14SourceTargetScopeBoundaryTest.run();
 		final originalHostExe = Sys.getEnv("HXHX_MACRO_HOST_EXE");
 		final generatedHxDir = ".tmp/m14-runtime-generated-hx";
 		MacroState.reset();

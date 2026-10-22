@@ -17,7 +17,7 @@
    ---------------------
    We wrap the internal object record in a small marker block:
 
-     block[0] = marker
+     block[0] = fresh identity header carrying marker
      block[1] = Obj.repr <t>
 
    This allows `get/set/has/...` to validate arbitrary `Obj.t` safely before cast. *)
@@ -29,6 +29,10 @@ type shape = {
 }
 
 type t = {
+  (* Native representation only: generated Haxe selects this opaque descriptor.
+     It is immutable and separate from the public field map. HxType validates
+     its class marker before using it; ordinary anonymous objects carry null. *)
+  class_value : Obj.t;
   mutable shape : shape;
   mutable values : Obj.t array;
   mutable present : bool array;
@@ -103,11 +107,13 @@ let add_slot (obj : t) (field : string) : int =
   idx
 
 let is_anon (o : Obj.t) : bool =
-  Obj.is_block o && Obj.size o = 2 && Obj.field o 0 == marker
+  Obj.is_block o && Obj.tag o = 0 && Obj.size o = 2
+  && HxRuntime.identity_payload (Obj.field o 0) == marker
 
-let create () : Obj.t =
+let create_with_class (class_value : Obj.t) : Obj.t =
   let obj : t =
     {
+      class_value;
       shape = create_shape ();
       values = [||];
       present = [||];
@@ -118,12 +124,20 @@ let create () : Obj.t =
     }
   in
   let b = Obj.new_block 0 2 in
-  Obj.set_field b 0 marker;
+  Obj.set_field b 0 (HxRuntime.identity_header marker);
   Obj.set_field b 1 (Obj.repr obj);
   b
 
+let create () : Obj.t =
+  create_with_class HxRuntime.hx_null
+
 let anon_of_obj (o : Obj.t) : t =
   Obj.obj (Obj.field o 1)
+
+(* Public fields, deletion, and copying cannot install or replace this value.
+   Retaining it in the object gives it the same ordinary GC lifetime. *)
+let class_value (o : Obj.t) : Obj.t =
+  if is_anon o then (anon_of_obj o).class_value else HxRuntime.hx_null
 
 let get (o : Obj.t) (field : string) : Obj.t =
   if is_anon o then

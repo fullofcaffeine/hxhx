@@ -1,6 +1,5 @@
 package reflaxe.ocaml.lowered;
 
-#if (macro || reflaxe_runtime || eval)
 /**
 	Defines the exact internal carrier admitted for one non-null Haxe `Float`.
 
@@ -18,4 +17,3 @@ class OcamlFloatRepresentationContract {
 	public static inline final PROOF_ID = "direct-exact-float-internal-value-v1";
 	public static inline final PROOF_CLAIM = "Exact non-null Haxe Float uses OCaml float only as an immutable internal value passed to or returned from a sealed Bytes binary32 or binary64 operation. OCaml float carries the source binary64 finite value, signed zero, infinities, subnormals, and NaN classification. Binary32 rounding and byte layout remain operation policies. This proof does not admit nullable Float, fields, mutable or captured locals, arrays, arbitrary calls, arithmetic, comparisons, formatting, parsing, Math, JSON, Serializer, Dynamic, or native ABI boundaries.";
 }
-#end

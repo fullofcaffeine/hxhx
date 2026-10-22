@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppAbstractHelperEmitter" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppAbstractHelperEmitter" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppAbstractHelperEmitter" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppAbstractHelperEmitter" } : t)
 
 let configureReceiver = fun scope representation ownerHaxeName -> ignore ((
   ignore (let __assign_1 = ("__hxhx_abstract_this" : string) in (
@@ -34,7 +34,7 @@ let renderInstanceHelper = fun representation returnType helperName sourceParame
   ignore (HxArray.push __represented_array_2 __represented_array_element_0_3);
   __represented_array_2
 )) in (
-  ignore (if (let __string_receiver_4 = sourceParameters in HxString.length __string_receiver_4) > 0 then ignore (let __array_receiver_5 = parameters in let __array_arg_0_6 = sourceParameters in HxArray.push __array_receiver_5 __array_arg_0_6) else ());
+  ignore (if (let __string_receiver_4 = sourceParameters in HxString.length __string_receiver_4) > 0 then ignore (let __array_receiver_5 = Obj.magic parameters in let __array_arg_0_6 = (sourceParameters : string) in HxArray.push __array_receiver_5 __array_arg_0_6) else ());
   let out = Obj.magic (let __represented_array_7 = HxArray.create () in let __represented_array_element_0_8 = let __string_part_9 = "  static " in let __string_part_10 = HxString.toStdString returnType in let __string_part_11 = " " in let __string_part_12 = HxString.toStdString helperName in let __string_part_13 = "(" in let __string_part_14 = HxString.toStdString (HxArray.join parameters ", " (fun x -> x)) in let __string_part_15 = ") {" in (((((__string_part_9 ^ __string_part_10) ^ __string_part_11) ^ __string_part_12) ^ __string_part_13) ^ __string_part_14) ^ __string_part_15 in (
     ignore (HxArray.push __represented_array_7 __represented_array_element_0_8);
     __represented_array_7
@@ -44,25 +44,25 @@ let renderInstanceHelper = fun representation returnType helperName sourceParame
         ignore (_g := __new_19);
         __new_19
       ));
-      let __array_receiver_20 = out in let __array_arg_0_21 = line in HxArray.push __array_receiver_20 __array_arg_0_21
+      let __array_receiver_20 = Obj.magic out in let __array_arg_0_21 = (line : string) in HxArray.push __array_receiver_20 __array_arg_0_21
     )) done);
-    ignore (let __array_receiver_22 = out in let __array_arg_0_23 = "  }" in HxArray.push __array_receiver_22 __array_arg_0_23);
+    ignore (let __array_receiver_22 = Obj.magic out in let __array_arg_0_23 = ("  }" : string) in HxArray.push __array_receiver_22 __array_arg_0_23);
     out
   )
 )
 
-let renderPreparedInstanceHelper = fun fn owner classLookup services -> (try let representation = Obj.magic (Obj.obj (HxAnon.get services "representation") (Obj.magic owner) classLookup) in (
-  ignore (if representation == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_24 = HxArray.create () in __represented_array_24))) else ());
-  let returnType = (Obj.obj (HxAnon.get services "returnType") (Obj.magic fn) (Obj.magic owner) classLookup : string) in let scope = Obj.obj (HxAnon.get services "renderScope") (Obj.magic owner) classLookup (returnType : string) in (
+let renderPreparedInstanceHelper = fun fn owner classLookup services -> (try let representation = Obj.magic ((Obj.obj (HxAnon.get services "representation") : _ -> _ -> _) (Obj.magic owner) classLookup) in (
+  ignore (if representation == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_24 = HxArray.create () in __represented_array_24))) else ());
+  let returnType = ((Obj.obj (HxAnon.get services "returnType") : _ -> _ -> _ -> _) (Obj.magic fn) (Obj.magic owner) classLookup : string) in let scope = (Obj.obj (HxAnon.get services "renderScope") : _ -> _ -> _ -> _) (Obj.magic owner) classLookup (returnType : string) in (
     ignore (configureReceiver scope (Obj.magic representation) (HxClassDecl.getName (Obj.magic owner) : string));
-    ignore (Obj.obj (HxAnon.get services "prepareScope") scope (Obj.magic fn));
-    let parameters = (Obj.obj (HxAnon.get services "renderArguments") (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) scope : string) in let body = Obj.magic (Obj.obj (HxAnon.get services "renderBody") (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) ("    " : string) scope) in renderInstanceHelper (Obj.magic representation) (returnType : string) (Obj.obj (HxAnon.get services "sanitizeIdentifier") (HxFunctionDecl.getName (Obj.magic fn) : string) : string) (parameters : string) (Obj.magic body)
+    ignore ((Obj.obj (HxAnon.get services "prepareScope") : _ -> _ -> _) scope (Obj.magic fn));
+    let parameters = ((Obj.obj (HxAnon.get services "renderArguments") : _ -> _ -> _) (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) scope : string) in let body = Obj.magic ((Obj.obj (HxAnon.get services "renderBody") : _ -> _ -> _ -> _) (Obj.magic (HxFunctionDecl.getBody (Obj.magic fn))) ("    " : string) scope) in renderInstanceHelper (Obj.magic representation) (returnType : string) ((Obj.obj (HxAnon.get services "sanitizeIdentifier") : _ -> _) (HxFunctionDecl.getName (Obj.magic fn) : string) : string) (parameters : string) (Obj.magic body)
   )
 ) with
   | HxRuntime.Hx_return __ret_25 -> (Obj.obj __ret_25 : string HxArray.t) : string HxArray.t)
 
 let renderMethodCall = fun receiver hx_method args scope services -> (try let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (if let __string_eq_left_26 = hx_method in let __string_eq_right_27 = "toFloat" in HxString.equals __string_eq_left_26 __string_eq_right_27 then let __assign_28 = Obj.magic (Obj.obj (HxAnon.get services "primitiveIntLike") (Obj.magic receiver) (hx_method : string) scope : string) in (
+  ignore (if let __string_eq_left_26 = hx_method in let __string_eq_right_27 = "toFloat" in HxString.equals __string_eq_left_26 __string_eq_right_27 then let __assign_28 = Obj.magic ((Obj.obj (HxAnon.get services "primitiveIntLike") : _ -> _ -> _ -> _) (Obj.magic receiver) (hx_method : string) scope : string) in (
     tempMaybeString := __assign_28;
     __assign_28
   ) else let __assign_29 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -70,23 +70,23 @@ let renderMethodCall = fun receiver hx_method args scope services -> (try let te
     __assign_29
   ));
   let intLikeFloat = (!tempMaybeString : string) in (
-    ignore (if intLikeFloat != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr intLikeFloat)) else ());
-    let cls = ref (Obj.magic (Obj.obj (HxAnon.get services "classForExpression") (Obj.magic receiver) scope)) in (
-      ignore (if !cls == Obj.magic (HxRuntime.hx_null) then ignore (let __assign_30 = Obj.magic (Obj.magic (Obj.obj (HxAnon.get services "classForReceiverMethod") (Obj.magic receiver) (hx_method : string) scope)) in (
+    ignore (if intLikeFloat != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr intLikeFloat)) else ());
+    let cls = ref (Obj.magic ((Obj.obj (HxAnon.get services "classForExpression") : _ -> _ -> _) (Obj.magic receiver) scope)) in (
+      ignore (if !cls == Obj.magic (HxRuntime.hx_null) then ignore (let __assign_30 = Obj.magic (Obj.magic ((Obj.obj (HxAnon.get services "classForReceiverMethod") : _ -> _ -> _ -> _) (Obj.magic receiver) (hx_method : string) scope)) in (
         cls := __assign_30;
         __assign_30
       )) else ());
-      ignore (if !cls == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxAnon.get services "primitiveIntLike") (Obj.magic receiver) (hx_method : string) scope))) else ());
-      let fn = Obj.magic (Obj.obj (HxAnon.get services "classMethod") (Obj.obj (HxAnon.get services "sanitizeTypePath") (HxClassDecl.getName (Obj.magic (!cls)) : string) : string) (hx_method : string) false scope) in (
-        ignore (if fn == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-        let underlying = (Obj.obj (HxAnon.get services "primitiveUnderlying") (Obj.magic (!cls)) : string) in (
-          ignore (if underlying == Obj.magic (HxRuntime.hx_null) || (let __string_receiver_31 = underlying in HxString.length __string_receiver_31) = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-          ignore (if not (Obj.obj (HxAnon.get services "hasMetadata") (Obj.magic fn) ("inline" : string)) then let representation = Obj.magic (Obj.obj (HxAnon.get services "representation") (Obj.magic (!cls)) (Obj.obj (HxAnon.get services "lookupForScope") scope)) in (
-            ignore (if representation == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-            let renderedReceiver = (Obj.obj (HxAnon.get services "valueForExpectedType") (Obj.magic receiver) (Backend_cpp_CppAbstractRepresentation.getCarrierCppType (Obj.magic representation) () : string) scope : string) in let parameterTypes = Obj.magic (Obj.obj (HxAnon.get services "inferredArgumentTypes") (Obj.magic fn) (Obj.magic (!cls)) scope) in let renderedArguments = Obj.magic (Obj.obj (HxAnon.get services "renderCallArguments") (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) (Obj.magic args) scope (Obj.magic parameterTypes)) in raise (HxRuntime.Hx_return (Obj.repr (Backend_cpp_CppAbstractRepresentation.instanceHelperCall (Obj.magic representation) (Obj.obj (HxAnon.get services "sanitizeIdentifier") (hx_method : string) : string) (renderedReceiver : string) (Obj.magic renderedArguments))))
+      ignore (if !cls == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr ((Obj.obj (HxAnon.get services "primitiveIntLike") : _ -> _ -> _ -> _) (Obj.magic receiver) (hx_method : string) scope))) else ());
+      let fn = Obj.magic ((Obj.obj (HxAnon.get services "classMethod") : _ -> _ -> _ -> _ -> _) ((Obj.obj (HxAnon.get services "sanitizeTypePath") : _ -> _) (HxClassDecl.getName (Obj.magic (!cls)) : string) : string) (hx_method : string) false scope) in (
+        ignore (if fn == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+        let underlying = ((Obj.obj (HxAnon.get services "primitiveUnderlying") : _ -> _) (Obj.magic (!cls)) : string) in (
+          ignore (if underlying == Obj.magic (HxRuntime.hx_null) || (let __string_receiver_31 = underlying in HxString.length __string_receiver_31) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+          ignore (if not ((Obj.obj (HxAnon.get services "hasMetadata") : _ -> _ -> _) (Obj.magic fn) ("inline" : string)) then let representation = Obj.magic ((Obj.obj (HxAnon.get services "representation") : _ -> _ -> _) (Obj.magic (!cls)) ((Obj.obj (HxAnon.get services "lookupForScope") : _ -> _) scope)) in (
+            ignore (if representation == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+            let renderedReceiver = ((Obj.obj (HxAnon.get services "valueForExpectedType") : _ -> _ -> _ -> _) (Obj.magic receiver) (Backend_cpp_CppAbstractRepresentation.getCarrierCppType (Obj.magic representation) () : string) scope : string) in let parameterTypes = Obj.magic ((Obj.obj (HxAnon.get services "inferredArgumentTypes") : _ -> _ -> _ -> _) (Obj.magic fn) (Obj.magic (!cls)) scope) in let renderedArguments = Obj.magic ((Obj.obj (HxAnon.get services "renderCallArguments") : _ -> _ -> _ -> _ -> _) (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) (Obj.magic args) scope (Obj.magic parameterTypes)) in Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Backend_cpp_CppAbstractRepresentation.instanceHelperCall (Obj.magic representation) ((Obj.obj (HxAnon.get services "sanitizeIdentifier") : _ -> _) (hx_method : string) : string) (renderedReceiver : string) (Obj.magic renderedArguments))))
           ) else ());
-          ignore (if HxArray.length args <> 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-          Obj.obj (HxAnon.get services "inlineBody") (Obj.magic receiver) (Obj.magic fn) scope
+          ignore (if HxArray.length args <> 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+          (Obj.obj (HxAnon.get services "inlineBody") : _ -> _ -> _ -> _) (Obj.magic receiver) (Obj.magic fn) scope
         )
       )
     )
@@ -96,13 +96,13 @@ let renderMethodCall = fun receiver hx_method args scope services -> (try let te
 
 let isInlineBinaryOperator = fun (op : string) -> (let tempResult = ref (false : bool) in (
   ignore (match op with
-    | "%" | "*" | "+" | "-" | "/" -> let __assign_69 = true in (
-      tempResult := __assign_69;
-      __assign_69
+    | "%" | "*" | "+" | "-" | "/" -> let __assign_77 = true in (
+      tempResult := __assign_77;
+      __assign_77
     )
-    | _ -> let __assign_68 = false in (
-      tempResult := __assign_68;
-      __assign_68
+    | _ -> let __assign_76 = false in (
+      tempResult := __assign_76;
+      __assign_76
     ));
   !tempResult
 ) : bool)
@@ -117,42 +117,53 @@ let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult 
           __assign_37
         )
         | HxExpr.EBinop (_p0, _p1, _p2) -> let _g4 = (_p0 : string) in let _g5 = Obj.magic _p1 in let _g6 = Obj.magic _p2 in if (match _g5 with
-          | HxExpr.ENull -> 0
-          | HxExpr.EBool _ -> 1
-          | HxExpr.EString _ -> 2
-          | HxExpr.EInt _ -> 3
-          | HxExpr.EFloat _ -> 4
-          | HxExpr.EEnumValue _ -> 5
-          | HxExpr.EThis -> 6
-          | HxExpr.ESuper -> 7
-          | HxExpr.EIdent _ -> 8
-          | HxExpr.EField (_, _) -> 9
-          | HxExpr.ENullSafeField (_, _) -> 10
-          | HxExpr.ECall (_, _) -> 11
-          | HxExpr.EMacroExpr (_, _) -> 12
-          | HxExpr.EMacroType _ -> 13
-          | HxExpr.ELambda (_, _) -> 14
-          | HxExpr.ETryCatchRaw _ -> 15
-          | HxExpr.ESwitchRaw _ -> 16
-          | HxExpr.ESwitch (_, _, _) -> 17
-          | HxExpr.ENew (_, _) -> 18
-          | HxExpr.EUnop (_, _, _) -> 19
-          | HxExpr.EBinop (_, _, _) -> 20
-          | HxExpr.ETernary (_, _, _) -> 21
-          | HxExpr.EAnon (_, _) -> 22
-          | HxExpr.EArrayComprehension (_, _, _, _) -> 23
-          | HxExpr.EArrayDecl _ -> 24
-          | HxExpr.EArrayAccess (_, _) -> 25
-          | HxExpr.ERange (_, _) -> 26
-          | HxExpr.ECast (_, _) -> 27
-          | HxExpr.EUntyped _ -> 28
-          | HxExpr.EUnsupported _ -> 29
-          | HxExpr.EReturn _ -> 30
-          | HxExpr.EVars _ -> 31
-          | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-          | HxExpr.EWhile (_, _, _, _) -> 33
-          | HxExpr.EBreak _ -> 34
-          | HxExpr.EContinue _ -> 35) = 6 then let op = (_g4 : string) in let right = Obj.magic _g6 in if let __call_arg_0_38 = op in isInlineBinaryOperator __call_arg_0_38 then let __assign_39 = Obj.magic (let __string_part_40 = "(" in let __string_part_41 = HxString.toStdString receiver in let __string_part_42 = " " in let __string_part_43 = HxString.toStdString op in let __string_part_44 = " " in let __string_part_45 = HxString.toStdString (renderExpression (Obj.magic right)) in let __string_part_46 = ")" in (((((__string_part_40 ^ __string_part_41) ^ __string_part_42) ^ __string_part_43) ^ __string_part_44) ^ __string_part_45) ^ __string_part_46 : string) in (
+          | HxExpr.EParenthesized (_, _) -> 0
+          | HxExpr.ESourceTry (_, _, _) -> 1
+          | HxExpr.ESourceFor (_, _, _, _) -> 2
+          | HxExpr.ELoweredControl (_, _, _, _) -> 3
+          | HxExpr.ENull -> 4
+          | HxExpr.EBool _ -> 5
+          | HxExpr.EString _ -> 6
+          | HxExpr.EInt _ -> 7
+          | HxExpr.EFloat _ -> 8
+          | HxExpr.EEnumValue _ -> 9
+          | HxExpr.EThis -> 10
+          | HxExpr.ESuper -> 11
+          | HxExpr.EIdent _ -> 12
+          | HxExpr.EField (_, _) -> 13
+          | HxExpr.ENullSafeField (_, _) -> 14
+          | HxExpr.ECall (_, _) -> 15
+          | HxExpr.EMacroExpr (_, _) -> 16
+          | HxExpr.EMacroType _ -> 17
+          | HxExpr.ELambda (_, _, _) -> 18
+          | HxExpr.ETryCatchRaw _ -> 19
+          | HxExpr.ESwitchRaw _ -> 20
+          | HxExpr.ESwitch (_, _, _) -> 21
+          | HxExpr.ENew (_, _) -> 22
+          | HxExpr.EUnop (_, _, _) -> 23
+          | HxExpr.EBinop (_, _, _) -> 24
+          | HxExpr.ETernary (_, _, _) -> 25
+          | HxExpr.ESourceIf (_, _, _, _) -> 26
+          | HxExpr.EThrow (_, _) -> 27
+          | HxExpr.EAnon (_, _) -> 28
+          | HxExpr.EArrayComprehension (_, _, _, _) -> 29
+          | HxExpr.EArrayDecl _ -> 30
+          | HxExpr.EArrayAccess (_, _) -> 31
+          | HxExpr.ERange (_, _) -> 32
+          | HxExpr.ECast (_, _) -> 33
+          | HxExpr.ECheckType (_, _) -> 34
+          | HxExpr.EUntyped _ -> 35
+          | HxExpr.EUnsupported _ -> 36
+          | HxExpr.EReturn _ -> 37
+          | HxExpr.EVars _ -> 38
+          | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 39
+          | HxExpr.EWhile (_, _, _, _, _) -> 40
+          | HxExpr.EBreak _ -> 41
+          | HxExpr.EContinue _ -> 42
+          | HxExpr.EDiscardThen (_, _) -> 43
+          | HxExpr.ESourceGroup (_, _) -> 44
+          | HxExpr.ESourceFunction (_, _, _, _) -> 45
+          | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let op = (_g4 : string) in let right = Obj.magic _g6 in if let __call_arg_0_38 = op in isInlineBinaryOperator __call_arg_0_38 then let __assign_39 = Obj.magic (let __string_part_40 = "(" in let __string_part_41 = HxString.toStdString receiver in let __string_part_42 = " " in let __string_part_43 = HxString.toStdString op in let __string_part_44 = " " in let __string_part_45 = HxString.toStdString (renderExpression (Obj.magic right)) in let __string_part_46 = ")" in (((((__string_part_40 ^ __string_part_41) ^ __string_part_42) ^ __string_part_43) ^ __string_part_44) ^ __string_part_45) ^ __string_part_46 : string) in (
           tempResult := __assign_39;
           __assign_39
         ) else let __assign_47 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -165,47 +176,115 @@ let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult 
         | HxExpr.ECast (_p0, _p1) -> let _g4 = Obj.magic _p0 in (
           ignore _p1;
           if (match _g4 with
-            | HxExpr.ENull -> 0
-            | HxExpr.EBool _ -> 1
-            | HxExpr.EString _ -> 2
-            | HxExpr.EInt _ -> 3
-            | HxExpr.EFloat _ -> 4
-            | HxExpr.EEnumValue _ -> 5
-            | HxExpr.EThis -> 6
-            | HxExpr.ESuper -> 7
-            | HxExpr.EIdent _ -> 8
-            | HxExpr.EField (_, _) -> 9
-            | HxExpr.ENullSafeField (_, _) -> 10
-            | HxExpr.ECall (_, _) -> 11
-            | HxExpr.EMacroExpr (_, _) -> 12
-            | HxExpr.EMacroType _ -> 13
-            | HxExpr.ELambda (_, _) -> 14
-            | HxExpr.ETryCatchRaw _ -> 15
-            | HxExpr.ESwitchRaw _ -> 16
-            | HxExpr.ESwitch (_, _, _) -> 17
-            | HxExpr.ENew (_, _) -> 18
-            | HxExpr.EUnop (_, _, _) -> 19
-            | HxExpr.EBinop (_, _, _) -> 20
-            | HxExpr.ETernary (_, _, _) -> 21
-            | HxExpr.EAnon (_, _) -> 22
-            | HxExpr.EArrayComprehension (_, _, _, _) -> 23
-            | HxExpr.EArrayDecl _ -> 24
-            | HxExpr.EArrayAccess (_, _) -> 25
-            | HxExpr.ERange (_, _) -> 26
-            | HxExpr.ECast (_, _) -> 27
-            | HxExpr.EUntyped _ -> 28
-            | HxExpr.EUnsupported _ -> 29
-            | HxExpr.EReturn _ -> 30
-            | HxExpr.EVars _ -> 31
-            | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-            | HxExpr.EWhile (_, _, _, _) -> 33
-            | HxExpr.EBreak _ -> 34
-            | HxExpr.EContinue _ -> 35) = 6 then let __assign_49 = Obj.magic (receiver : string) in (
+            | HxExpr.EParenthesized (_, _) -> 0
+            | HxExpr.ESourceTry (_, _, _) -> 1
+            | HxExpr.ESourceFor (_, _, _, _) -> 2
+            | HxExpr.ELoweredControl (_, _, _, _) -> 3
+            | HxExpr.ENull -> 4
+            | HxExpr.EBool _ -> 5
+            | HxExpr.EString _ -> 6
+            | HxExpr.EInt _ -> 7
+            | HxExpr.EFloat _ -> 8
+            | HxExpr.EEnumValue _ -> 9
+            | HxExpr.EThis -> 10
+            | HxExpr.ESuper -> 11
+            | HxExpr.EIdent _ -> 12
+            | HxExpr.EField (_, _) -> 13
+            | HxExpr.ENullSafeField (_, _) -> 14
+            | HxExpr.ECall (_, _) -> 15
+            | HxExpr.EMacroExpr (_, _) -> 16
+            | HxExpr.EMacroType _ -> 17
+            | HxExpr.ELambda (_, _, _) -> 18
+            | HxExpr.ETryCatchRaw _ -> 19
+            | HxExpr.ESwitchRaw _ -> 20
+            | HxExpr.ESwitch (_, _, _) -> 21
+            | HxExpr.ENew (_, _) -> 22
+            | HxExpr.EUnop (_, _, _) -> 23
+            | HxExpr.EBinop (_, _, _) -> 24
+            | HxExpr.ETernary (_, _, _) -> 25
+            | HxExpr.ESourceIf (_, _, _, _) -> 26
+            | HxExpr.EThrow (_, _) -> 27
+            | HxExpr.EAnon (_, _) -> 28
+            | HxExpr.EArrayComprehension (_, _, _, _) -> 29
+            | HxExpr.EArrayDecl _ -> 30
+            | HxExpr.EArrayAccess (_, _) -> 31
+            | HxExpr.ERange (_, _) -> 32
+            | HxExpr.ECast (_, _) -> 33
+            | HxExpr.ECheckType (_, _) -> 34
+            | HxExpr.EUntyped _ -> 35
+            | HxExpr.EUnsupported _ -> 36
+            | HxExpr.EReturn _ -> 37
+            | HxExpr.EVars _ -> 38
+            | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 39
+            | HxExpr.EWhile (_, _, _, _, _) -> 40
+            | HxExpr.EBreak _ -> 41
+            | HxExpr.EContinue _ -> 42
+            | HxExpr.EDiscardThen (_, _) -> 43
+            | HxExpr.ESourceGroup (_, _) -> 44
+            | HxExpr.ESourceFunction (_, _, _, _) -> 45
+            | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let __assign_49 = Obj.magic (receiver : string) in (
             tempResult := __assign_49;
             __assign_49
           ) else let __assign_50 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
             tempResult := __assign_50;
             __assign_50
+          )
+        )
+        | HxExpr.ECheckType (_p0, _p1) -> let _g4 = Obj.magic _p0 in (
+          ignore _p1;
+          if (match _g4 with
+            | HxExpr.EParenthesized (_, _) -> 0
+            | HxExpr.ESourceTry (_, _, _) -> 1
+            | HxExpr.ESourceFor (_, _, _, _) -> 2
+            | HxExpr.ELoweredControl (_, _, _, _) -> 3
+            | HxExpr.ENull -> 4
+            | HxExpr.EBool _ -> 5
+            | HxExpr.EString _ -> 6
+            | HxExpr.EInt _ -> 7
+            | HxExpr.EFloat _ -> 8
+            | HxExpr.EEnumValue _ -> 9
+            | HxExpr.EThis -> 10
+            | HxExpr.ESuper -> 11
+            | HxExpr.EIdent _ -> 12
+            | HxExpr.EField (_, _) -> 13
+            | HxExpr.ENullSafeField (_, _) -> 14
+            | HxExpr.ECall (_, _) -> 15
+            | HxExpr.EMacroExpr (_, _) -> 16
+            | HxExpr.EMacroType _ -> 17
+            | HxExpr.ELambda (_, _, _) -> 18
+            | HxExpr.ETryCatchRaw _ -> 19
+            | HxExpr.ESwitchRaw _ -> 20
+            | HxExpr.ESwitch (_, _, _) -> 21
+            | HxExpr.ENew (_, _) -> 22
+            | HxExpr.EUnop (_, _, _) -> 23
+            | HxExpr.EBinop (_, _, _) -> 24
+            | HxExpr.ETernary (_, _, _) -> 25
+            | HxExpr.ESourceIf (_, _, _, _) -> 26
+            | HxExpr.EThrow (_, _) -> 27
+            | HxExpr.EAnon (_, _) -> 28
+            | HxExpr.EArrayComprehension (_, _, _, _) -> 29
+            | HxExpr.EArrayDecl _ -> 30
+            | HxExpr.EArrayAccess (_, _) -> 31
+            | HxExpr.ERange (_, _) -> 32
+            | HxExpr.ECast (_, _) -> 33
+            | HxExpr.ECheckType (_, _) -> 34
+            | HxExpr.EUntyped _ -> 35
+            | HxExpr.EUnsupported _ -> 36
+            | HxExpr.EReturn _ -> 37
+            | HxExpr.EVars _ -> 38
+            | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 39
+            | HxExpr.EWhile (_, _, _, _, _) -> 40
+            | HxExpr.EBreak _ -> 41
+            | HxExpr.EContinue _ -> 42
+            | HxExpr.EDiscardThen (_, _) -> 43
+            | HxExpr.ESourceGroup (_, _) -> 44
+            | HxExpr.ESourceFunction (_, _, _, _) -> 45
+            | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let __assign_51 = Obj.magic (receiver : string) in (
+            tempResult := __assign_51;
+            __assign_51
+          ) else let __assign_52 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+            tempResult := __assign_52;
+            __assign_52
           )
         )
         | _ -> let __assign_36 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -217,181 +296,214 @@ let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult 
       ignore _p1;
       match _g1 with
         | HxExpr.EUnop (_p0, _p1, _p2) -> let _g4 = Obj.magic _p0 in let _g5 = Obj.magic _p1 in let _g6 = Obj.magic _p2 in if (match _g6 with
-          | HxExpr.ENull -> 0
-          | HxExpr.EBool _ -> 1
-          | HxExpr.EString _ -> 2
-          | HxExpr.EInt _ -> 3
-          | HxExpr.EFloat _ -> 4
-          | HxExpr.EEnumValue _ -> 5
-          | HxExpr.EThis -> 6
-          | HxExpr.ESuper -> 7
-          | HxExpr.EIdent _ -> 8
-          | HxExpr.EField (_, _) -> 9
-          | HxExpr.ENullSafeField (_, _) -> 10
-          | HxExpr.ECall (_, _) -> 11
-          | HxExpr.EMacroExpr (_, _) -> 12
-          | HxExpr.EMacroType _ -> 13
-          | HxExpr.ELambda (_, _) -> 14
-          | HxExpr.ETryCatchRaw _ -> 15
-          | HxExpr.ESwitchRaw _ -> 16
-          | HxExpr.ESwitch (_, _, _) -> 17
-          | HxExpr.ENew (_, _) -> 18
-          | HxExpr.EUnop (_, _, _) -> 19
-          | HxExpr.EBinop (_, _, _) -> 20
-          | HxExpr.ETernary (_, _, _) -> 21
-          | HxExpr.EAnon (_, _) -> 22
-          | HxExpr.EArrayComprehension (_, _, _, _) -> 23
-          | HxExpr.EArrayDecl _ -> 24
-          | HxExpr.EArrayAccess (_, _) -> 25
-          | HxExpr.ERange (_, _) -> 26
-          | HxExpr.ECast (_, _) -> 27
-          | HxExpr.EUntyped _ -> 28
-          | HxExpr.EUnsupported _ -> 29
-          | HxExpr.EReturn _ -> 30
-          | HxExpr.EVars _ -> 31
-          | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-          | HxExpr.EWhile (_, _, _, _) -> 33
-          | HxExpr.EBreak _ -> 34
-          | HxExpr.EContinue _ -> 35) = 6 then let fixity = Obj.magic _g5 in let op = Obj.magic _g4 in if op = HxUnaryOperator.Increment || op = HxUnaryOperator.Decrement then let token = (HxUnaryOperatorTools.sourceToken (Obj.magic op) : string) in if fixity = HxUnaryFixity.Postfix then let __assign_52 = Obj.magic ((("(" ^ HxString.toStdString receiver) ^ HxString.toStdString token) ^ ")" : string) in (
-          tempResult := __assign_52;
-          __assign_52
-        ) else let __assign_53 = Obj.magic ((("(" ^ HxString.toStdString token) ^ HxString.toStdString receiver) ^ ")" : string) in (
-          tempResult := __assign_53;
-          __assign_53
-        ) else let __assign_54 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-          tempResult := __assign_54;
-          __assign_54
-        ) else let __assign_55 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-          tempResult := __assign_55;
-          __assign_55
+          | HxExpr.EParenthesized (_, _) -> 0
+          | HxExpr.ESourceTry (_, _, _) -> 1
+          | HxExpr.ESourceFor (_, _, _, _) -> 2
+          | HxExpr.ELoweredControl (_, _, _, _) -> 3
+          | HxExpr.ENull -> 4
+          | HxExpr.EBool _ -> 5
+          | HxExpr.EString _ -> 6
+          | HxExpr.EInt _ -> 7
+          | HxExpr.EFloat _ -> 8
+          | HxExpr.EEnumValue _ -> 9
+          | HxExpr.EThis -> 10
+          | HxExpr.ESuper -> 11
+          | HxExpr.EIdent _ -> 12
+          | HxExpr.EField (_, _) -> 13
+          | HxExpr.ENullSafeField (_, _) -> 14
+          | HxExpr.ECall (_, _) -> 15
+          | HxExpr.EMacroExpr (_, _) -> 16
+          | HxExpr.EMacroType _ -> 17
+          | HxExpr.ELambda (_, _, _) -> 18
+          | HxExpr.ETryCatchRaw _ -> 19
+          | HxExpr.ESwitchRaw _ -> 20
+          | HxExpr.ESwitch (_, _, _) -> 21
+          | HxExpr.ENew (_, _) -> 22
+          | HxExpr.EUnop (_, _, _) -> 23
+          | HxExpr.EBinop (_, _, _) -> 24
+          | HxExpr.ETernary (_, _, _) -> 25
+          | HxExpr.ESourceIf (_, _, _, _) -> 26
+          | HxExpr.EThrow (_, _) -> 27
+          | HxExpr.EAnon (_, _) -> 28
+          | HxExpr.EArrayComprehension (_, _, _, _) -> 29
+          | HxExpr.EArrayDecl _ -> 30
+          | HxExpr.EArrayAccess (_, _) -> 31
+          | HxExpr.ERange (_, _) -> 32
+          | HxExpr.ECast (_, _) -> 33
+          | HxExpr.ECheckType (_, _) -> 34
+          | HxExpr.EUntyped _ -> 35
+          | HxExpr.EUnsupported _ -> 36
+          | HxExpr.EReturn _ -> 37
+          | HxExpr.EVars _ -> 38
+          | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 39
+          | HxExpr.EWhile (_, _, _, _, _) -> 40
+          | HxExpr.EBreak _ -> 41
+          | HxExpr.EContinue _ -> 42
+          | HxExpr.EDiscardThen (_, _) -> 43
+          | HxExpr.ESourceGroup (_, _) -> 44
+          | HxExpr.ESourceFunction (_, _, _, _) -> 45
+          | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let fixity = Obj.magic _g5 in let op = Obj.magic _g4 in if (let __enum_eq_left_54 = op in let __enum_eq_right_55 = HxUnaryOperator.Increment in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_54) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_55)) || (let __enum_eq_left_56 = op in let __enum_eq_right_57 = HxUnaryOperator.Decrement in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_56) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_57)) then let token = (HxUnaryOperatorTools.sourceToken (Obj.magic op) : string) in if let __enum_eq_left_58 = fixity in let __enum_eq_right_59 = HxUnaryFixity.Postfix in HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.repr __enum_eq_left_58) == HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.repr __enum_eq_right_59) then let __assign_60 = Obj.magic ((("(" ^ HxString.toStdString receiver) ^ HxString.toStdString token) ^ ")" : string) in (
+          tempResult := __assign_60;
+          __assign_60
+        ) else let __assign_61 = Obj.magic ((("(" ^ HxString.toStdString token) ^ HxString.toStdString receiver) ^ ")" : string) in (
+          tempResult := __assign_61;
+          __assign_61
+        ) else let __assign_62 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempResult := __assign_62;
+          __assign_62
+        ) else let __assign_63 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempResult := __assign_63;
+          __assign_63
         )
         | HxExpr.EBinop (_p0, _p1, _p2) -> (let _g4 = (_p0 : string) in let _g5 = Obj.magic _p1 in let _g6 = Obj.magic _p2 in match _g4 with
           | "+=" -> if (match _g5 with
-            | HxExpr.ENull -> 0
-            | HxExpr.EBool _ -> 1
-            | HxExpr.EString _ -> 2
-            | HxExpr.EInt _ -> 3
-            | HxExpr.EFloat _ -> 4
-            | HxExpr.EEnumValue _ -> 5
-            | HxExpr.EThis -> 6
-            | HxExpr.ESuper -> 7
-            | HxExpr.EIdent _ -> 8
-            | HxExpr.EField (_, _) -> 9
-            | HxExpr.ENullSafeField (_, _) -> 10
-            | HxExpr.ECall (_, _) -> 11
-            | HxExpr.EMacroExpr (_, _) -> 12
-            | HxExpr.EMacroType _ -> 13
-            | HxExpr.ELambda (_, _) -> 14
-            | HxExpr.ETryCatchRaw _ -> 15
-            | HxExpr.ESwitchRaw _ -> 16
-            | HxExpr.ESwitch (_, _, _) -> 17
-            | HxExpr.ENew (_, _) -> 18
-            | HxExpr.EUnop (_, _, _) -> 19
-            | HxExpr.EBinop (_, _, _) -> 20
-            | HxExpr.ETernary (_, _, _) -> 21
-            | HxExpr.EAnon (_, _) -> 22
-            | HxExpr.EArrayComprehension (_, _, _, _) -> 23
-            | HxExpr.EArrayDecl _ -> 24
-            | HxExpr.EArrayAccess (_, _) -> 25
-            | HxExpr.ERange (_, _) -> 26
-            | HxExpr.ECast (_, _) -> 27
-            | HxExpr.EUntyped _ -> 28
-            | HxExpr.EUnsupported _ -> 29
-            | HxExpr.EReturn _ -> 30
-            | HxExpr.EVars _ -> 31
-            | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-            | HxExpr.EWhile (_, _, _, _) -> 33
-            | HxExpr.EBreak _ -> 34
-            | HxExpr.EContinue _ -> 35) = 6 then let right = Obj.magic _g6 in let __assign_57 = Obj.magic (let __string_part_58 = HxString.toStdString receiver in let __string_part_59 = " += " in let __string_part_60 = HxString.toStdString (renderExpression (Obj.magic right)) in (__string_part_58 ^ __string_part_59) ^ __string_part_60 : string) in (
-            tempResult := __assign_57;
-            __assign_57
-          ) else let __assign_61 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-            tempResult := __assign_61;
-            __assign_61
+            | HxExpr.EParenthesized (_, _) -> 0
+            | HxExpr.ESourceTry (_, _, _) -> 1
+            | HxExpr.ESourceFor (_, _, _, _) -> 2
+            | HxExpr.ELoweredControl (_, _, _, _) -> 3
+            | HxExpr.ENull -> 4
+            | HxExpr.EBool _ -> 5
+            | HxExpr.EString _ -> 6
+            | HxExpr.EInt _ -> 7
+            | HxExpr.EFloat _ -> 8
+            | HxExpr.EEnumValue _ -> 9
+            | HxExpr.EThis -> 10
+            | HxExpr.ESuper -> 11
+            | HxExpr.EIdent _ -> 12
+            | HxExpr.EField (_, _) -> 13
+            | HxExpr.ENullSafeField (_, _) -> 14
+            | HxExpr.ECall (_, _) -> 15
+            | HxExpr.EMacroExpr (_, _) -> 16
+            | HxExpr.EMacroType _ -> 17
+            | HxExpr.ELambda (_, _, _) -> 18
+            | HxExpr.ETryCatchRaw _ -> 19
+            | HxExpr.ESwitchRaw _ -> 20
+            | HxExpr.ESwitch (_, _, _) -> 21
+            | HxExpr.ENew (_, _) -> 22
+            | HxExpr.EUnop (_, _, _) -> 23
+            | HxExpr.EBinop (_, _, _) -> 24
+            | HxExpr.ETernary (_, _, _) -> 25
+            | HxExpr.ESourceIf (_, _, _, _) -> 26
+            | HxExpr.EThrow (_, _) -> 27
+            | HxExpr.EAnon (_, _) -> 28
+            | HxExpr.EArrayComprehension (_, _, _, _) -> 29
+            | HxExpr.EArrayDecl _ -> 30
+            | HxExpr.EArrayAccess (_, _) -> 31
+            | HxExpr.ERange (_, _) -> 32
+            | HxExpr.ECast (_, _) -> 33
+            | HxExpr.ECheckType (_, _) -> 34
+            | HxExpr.EUntyped _ -> 35
+            | HxExpr.EUnsupported _ -> 36
+            | HxExpr.EReturn _ -> 37
+            | HxExpr.EVars _ -> 38
+            | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 39
+            | HxExpr.EWhile (_, _, _, _, _) -> 40
+            | HxExpr.EBreak _ -> 41
+            | HxExpr.EContinue _ -> 42
+            | HxExpr.EDiscardThen (_, _) -> 43
+            | HxExpr.ESourceGroup (_, _) -> 44
+            | HxExpr.ESourceFunction (_, _, _, _) -> 45
+            | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let right = Obj.magic _g6 in let __assign_65 = Obj.magic (let __string_part_66 = HxString.toStdString receiver in let __string_part_67 = " += " in let __string_part_68 = HxString.toStdString (renderExpression (Obj.magic right)) in (__string_part_66 ^ __string_part_67) ^ __string_part_68 : string) in (
+            tempResult := __assign_65;
+            __assign_65
+          ) else let __assign_69 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+            tempResult := __assign_69;
+            __assign_69
           )
           | "-=" -> if (match _g5 with
-            | HxExpr.ENull -> 0
-            | HxExpr.EBool _ -> 1
-            | HxExpr.EString _ -> 2
-            | HxExpr.EInt _ -> 3
-            | HxExpr.EFloat _ -> 4
-            | HxExpr.EEnumValue _ -> 5
-            | HxExpr.EThis -> 6
-            | HxExpr.ESuper -> 7
-            | HxExpr.EIdent _ -> 8
-            | HxExpr.EField (_, _) -> 9
-            | HxExpr.ENullSafeField (_, _) -> 10
-            | HxExpr.ECall (_, _) -> 11
-            | HxExpr.EMacroExpr (_, _) -> 12
-            | HxExpr.EMacroType _ -> 13
-            | HxExpr.ELambda (_, _) -> 14
-            | HxExpr.ETryCatchRaw _ -> 15
-            | HxExpr.ESwitchRaw _ -> 16
-            | HxExpr.ESwitch (_, _, _) -> 17
-            | HxExpr.ENew (_, _) -> 18
-            | HxExpr.EUnop (_, _, _) -> 19
-            | HxExpr.EBinop (_, _, _) -> 20
-            | HxExpr.ETernary (_, _, _) -> 21
-            | HxExpr.EAnon (_, _) -> 22
-            | HxExpr.EArrayComprehension (_, _, _, _) -> 23
-            | HxExpr.EArrayDecl _ -> 24
-            | HxExpr.EArrayAccess (_, _) -> 25
-            | HxExpr.ERange (_, _) -> 26
-            | HxExpr.ECast (_, _) -> 27
-            | HxExpr.EUntyped _ -> 28
-            | HxExpr.EUnsupported _ -> 29
-            | HxExpr.EReturn _ -> 30
-            | HxExpr.EVars _ -> 31
-            | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-            | HxExpr.EWhile (_, _, _, _) -> 33
-            | HxExpr.EBreak _ -> 34
-            | HxExpr.EContinue _ -> 35) = 6 then let right = Obj.magic _g6 in let __assign_62 = Obj.magic (let __string_part_63 = HxString.toStdString receiver in let __string_part_64 = " -= " in let __string_part_65 = HxString.toStdString (renderExpression (Obj.magic right)) in (__string_part_63 ^ __string_part_64) ^ __string_part_65 : string) in (
-            tempResult := __assign_62;
-            __assign_62
-          ) else let __assign_66 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-            tempResult := __assign_66;
-            __assign_66
+            | HxExpr.EParenthesized (_, _) -> 0
+            | HxExpr.ESourceTry (_, _, _) -> 1
+            | HxExpr.ESourceFor (_, _, _, _) -> 2
+            | HxExpr.ELoweredControl (_, _, _, _) -> 3
+            | HxExpr.ENull -> 4
+            | HxExpr.EBool _ -> 5
+            | HxExpr.EString _ -> 6
+            | HxExpr.EInt _ -> 7
+            | HxExpr.EFloat _ -> 8
+            | HxExpr.EEnumValue _ -> 9
+            | HxExpr.EThis -> 10
+            | HxExpr.ESuper -> 11
+            | HxExpr.EIdent _ -> 12
+            | HxExpr.EField (_, _) -> 13
+            | HxExpr.ENullSafeField (_, _) -> 14
+            | HxExpr.ECall (_, _) -> 15
+            | HxExpr.EMacroExpr (_, _) -> 16
+            | HxExpr.EMacroType _ -> 17
+            | HxExpr.ELambda (_, _, _) -> 18
+            | HxExpr.ETryCatchRaw _ -> 19
+            | HxExpr.ESwitchRaw _ -> 20
+            | HxExpr.ESwitch (_, _, _) -> 21
+            | HxExpr.ENew (_, _) -> 22
+            | HxExpr.EUnop (_, _, _) -> 23
+            | HxExpr.EBinop (_, _, _) -> 24
+            | HxExpr.ETernary (_, _, _) -> 25
+            | HxExpr.ESourceIf (_, _, _, _) -> 26
+            | HxExpr.EThrow (_, _) -> 27
+            | HxExpr.EAnon (_, _) -> 28
+            | HxExpr.EArrayComprehension (_, _, _, _) -> 29
+            | HxExpr.EArrayDecl _ -> 30
+            | HxExpr.EArrayAccess (_, _) -> 31
+            | HxExpr.ERange (_, _) -> 32
+            | HxExpr.ECast (_, _) -> 33
+            | HxExpr.ECheckType (_, _) -> 34
+            | HxExpr.EUntyped _ -> 35
+            | HxExpr.EUnsupported _ -> 36
+            | HxExpr.EReturn _ -> 37
+            | HxExpr.EVars _ -> 38
+            | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 39
+            | HxExpr.EWhile (_, _, _, _, _) -> 40
+            | HxExpr.EBreak _ -> 41
+            | HxExpr.EContinue _ -> 42
+            | HxExpr.EDiscardThen (_, _) -> 43
+            | HxExpr.ESourceGroup (_, _) -> 44
+            | HxExpr.ESourceFunction (_, _, _, _) -> 45
+            | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let right = Obj.magic _g6 in let __assign_70 = Obj.magic (let __string_part_71 = HxString.toStdString receiver in let __string_part_72 = " -= " in let __string_part_73 = HxString.toStdString (renderExpression (Obj.magic right)) in (__string_part_71 ^ __string_part_72) ^ __string_part_73 : string) in (
+            tempResult := __assign_70;
+            __assign_70
+          ) else let __assign_74 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+            tempResult := __assign_74;
+            __assign_74
           )
-          | _ -> let __assign_56 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-            tempResult := __assign_56;
-            __assign_56
+          | _ -> let __assign_64 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+            tempResult := __assign_64;
+            __assign_64
           ))
-        | _ -> let __assign_51 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-          tempResult := __assign_51;
-          __assign_51
+        | _ -> let __assign_53 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          tempResult := __assign_53;
+          __assign_53
         )
     )
     | _ -> let __assign_35 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
       tempResult := __assign_35;
       __assign_35
-    ) else let __assign_67 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempResult := __assign_67;
-    __assign_67
+    ) else let __assign_75 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempResult := __assign_75;
+    __assign_75
   ));
   !tempResult
 )
 
 let renderPrimitiveIntLike = fun (hx_method : string) (receiverIsIntLike : bool) (receiver : string) -> (try (
-  ignore (if not (receiverIsIntLike) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if not (receiverIsIntLike) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
     ignore (match hx_method with
-      | "incr" -> let __assign_71 = Obj.magic (("(" ^ HxString.toStdString receiver) ^ "++)" : string) in (
-        tempResult := __assign_71;
-        __assign_71
+      | "incr" -> let __assign_79 = Obj.magic (("(" ^ HxString.toStdString receiver) ^ "++)" : string) in (
+        tempResult := __assign_79;
+        __assign_79
       )
-      | "toFloat" -> let __assign_72 = Obj.magic (("static_cast<double>(" ^ HxString.toStdString receiver) ^ ")" : string) in (
-        tempResult := __assign_72;
-        __assign_72
+      | "toFloat" -> let __assign_80 = Obj.magic (("static_cast<double>(" ^ HxString.toStdString receiver) ^ ")" : string) in (
+        tempResult := __assign_80;
+        __assign_80
       )
-      | "toInt" -> let __assign_73 = Obj.magic (receiver : string) in (
-        tempResult := __assign_73;
-        __assign_73
+      | "toInt" -> let __assign_81 = Obj.magic (receiver : string) in (
+        tempResult := __assign_81;
+        __assign_81
       )
-      | _ -> let __assign_70 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-        tempResult := __assign_70;
-        __assign_70
+      | _ -> let __assign_78 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+        tempResult := __assign_78;
+        __assign_78
       ));
     !tempResult
   )
 ) with
-  | HxRuntime.Hx_return __ret_74 -> (Obj.obj __ret_74 : string) : string)
+  | HxRuntime.Hx_return __ret_82 -> (Obj.obj __ret_82 : string) : string)

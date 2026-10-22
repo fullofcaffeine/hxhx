@@ -1,0 +1,8 @@
+-cp src
+-cp ../../../../packages/hxhx-core/src
+-main PhpRenderCallbackFixture
+--no-output
+-lib reflaxe.ocaml
+-D no-traces
+-D no_traces
+-D ocaml_output=out

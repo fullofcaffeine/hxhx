@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable cacheEnabled : bool; mutable sourceHits : 
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun cacheEnabled2 -> let self = ({ __hx_type = HxType.class_ "CompilerSourceProviderReport"; cacheEnabled = false; sourceHits = 0; sourceMisses = 0; sourceBytesRead = 0; resolutionHits = 0; resolutionMisses = 0; parserHits = 0; parserMisses = 0; evictions = 0; retainedEntries = 0; retainedBytesEstimate = 0; missReasons = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun cacheEnabled2 -> let self = ({ __hx_type = HxType.instance_marker "CompilerSourceProviderReport"; cacheEnabled = false; sourceHits = 0; sourceMisses = 0; sourceBytesRead = 0; resolutionHits = 0; resolutionMisses = 0; parserHits = 0; parserMisses = 0; evictions = 0; retainedEntries = 0; retainedBytesEstimate = 0; missReasons = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = cacheEnabled2 in (
       (__place_receiver_1 : t).cacheEnabled <- __place_rhs_2;
@@ -60,7 +60,7 @@ let create = fun cacheEnabled2 -> let self = ({ __hx_type = HxType.class_ "Compi
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerSourceProviderReport"; cacheEnabled = false; sourceHits = 0; sourceMisses = 0; sourceBytesRead = 0; resolutionHits = 0; resolutionMisses = 0; parserHits = 0; parserMisses = 0; evictions = 0; retainedEntries = 0; retainedBytesEstimate = 0; missReasons = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerSourceProviderReport"; cacheEnabled = false; sourceHits = 0; sourceMisses = 0; sourceBytesRead = 0; resolutionHits = 0; resolutionMisses = 0; parserHits = 0; parserMisses = 0; evictions = 0; retainedEntries = 0; retainedBytesEstimate = 0; missReasons = Obj.magic HxRuntime.hx_null } : t)
 
 let recordSourceHit = fun self () -> ignore (ignore (let __place_receiver_24 = self in let __place_old_25 = (__place_receiver_24 : t).sourceHits in let __place_rhs_26 = 1 in let __place_new_27 = HxInt.add __place_old_25 __place_rhs_26 in (
   (__place_receiver_24 : t).sourceHits <- __place_new_27;
@@ -205,7 +205,7 @@ let compareStrings = fun (left : string) (right : string) -> (let tempResult = r
 ) : int)
 
 let sortedMissReasons = fun self () -> let reasons = Obj.magic (HxArray.create ()) in let _this = Obj.magic ((Obj.magic self : t).missReasons) in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic _this))) in (
-  ignore (while let __iterator_receiver_66 = tempIterator in HxIterator.hasNext __iterator_receiver_66 do ignore (let reason2 = (let __iterator_receiver_67 = tempIterator in HxIterator.next __iterator_receiver_67 : string) in let __array_receiver_68 = reasons in let __array_arg_0_69 = reason2 in HxArray.push __array_receiver_68 __array_arg_0_69) done);
-  ignore (let __array_receiver_70 = reasons in let __array_arg_0_71 = compareStrings in HxArray.sort __array_receiver_70 __array_arg_0_71);
+  ignore (while let __iterator_receiver_66 = tempIterator in HxIterator.hasNext __iterator_receiver_66 do ignore (let reason2 = (let __iterator_receiver_67 = tempIterator in HxIterator.next __iterator_receiver_67 : string) in let __array_receiver_68 = Obj.magic reasons in let __array_arg_0_69 = (reason2 : string) in HxArray.push __array_receiver_68 __array_arg_0_69) done);
+  ignore (let __array_receiver_70 = Obj.magic reasons in let __array_arg_0_71 = compareStrings in HxArray.sort __array_receiver_70 __array_arg_0_71);
   reasons
 )

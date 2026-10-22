@@ -1,0 +1,2 @@
+# 1 "TyInferenceAbstractInput.ml"
+include CompilerDiagnosticProbe.TyInferenceAbstractInput

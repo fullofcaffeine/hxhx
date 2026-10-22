@@ -1,6 +1,5 @@
 import backend.BackendContext;
 import backend.BackendRegistry;
-import haxe.ds.StringMap;
 import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
@@ -24,8 +23,8 @@ class M14CppInt64EqualityIntegrationTest {
 		}
 	}
 
-	static function commandOutput(command:String):{code:Int, stdout:String, stderr:String} {
-		final process = new sys.io.Process(command, []);
+	static function commandOutput(command:String, ?arguments:Array<String>):{code:Int, stdout:String, stderr:String} {
+		final process = new sys.io.Process(command, arguments == null ? [] : arguments);
 		final stdout = process.stdout.readAll().toString();
 		final stderr = process.stderr.readAll().toString();
 		final code = process.exitCode();
@@ -34,16 +33,20 @@ class M14CppInt64EqualityIntegrationTest {
 	}
 
 	static function main():Void {
-		final sourcePath = "test/oracle/cpp_int64_equality_seed/src/Main.hx";
-		final source = HxConditionalCompilation.filterSource(File.getContent(sourcePath), new StringMap<String>());
-		final parsed = ParserStage.parse(source, sourcePath);
-		final typed = TyperStage.typeModule(parsed);
-		final program = new MacroExpandedProgram([typed], false);
+		final expected = File.getContent("test/oracle/cpp_int64_equality_seed/expected.stdout");
+		final upstream = commandOutput("haxe", ["-cp", "test/oracle/cpp_int64_equality_seed/src", "--run", "Main"]);
+		assertTrue(upstream.code == 0 && upstream.stdout == expected && upstream.stderr == "", "upstream Int64 equality contract differs");
+		final fixture = CppResolvedFixture.load({
+			sourceRoot: "test/oracle/cpp_int64_equality_seed/src",
+			mainModule: "Main",
+			requiredModules: ["haxe.Int64", "Sys"]
+		});
+		final program = CppResolvedFixture.prepare(fixture);
 
 		final root = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_int64_equality"]);
 		deleteRecursive(root);
 		FileSystem.createDirectory(root);
-		final context = new BackendContext(root, null, "Main", true, true, new StringMap<String>());
+		final context = new BackendContext(root, null, "Main", true, true, fixture.defines);
 		final result = BackendRegistry.createForTarget("cpp-native").emit(program, context);
 		assertTrue(result.builtExecutable, "focused Int64 equality C++ artifact did not build");
 
@@ -55,7 +58,6 @@ class M14CppInt64EqualityIntegrationTest {
 
 		final executed = commandOutput(result.entryPath);
 		assertTrue(executed.code == 0, "focused Int64 equality executable failed: " + executed.stderr);
-		final expected = File.getContent("test/oracle/cpp_int64_equality_seed/expected.stdout");
 		assertTrue(executed.stdout == expected, "unexpected focused Int64 equality stdout:\n" + executed.stdout);
 		deleteRecursive(root);
 	}

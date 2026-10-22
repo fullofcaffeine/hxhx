@@ -1,0 +1,2 @@
+# 1 "TypedConstructorApplication.ml"
+include CompilerDiagnosticProbe.TypedConstructorApplication

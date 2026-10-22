@@ -159,7 +159,7 @@ class M14Stage3Int64AddIntIntegrationTest {
 				"Stage3 did not convert a negative Int before storing it in an Int64 local.");
 			assertTrue(generatedMain.indexOf("Haxe_Int64.ofInt (Haxe_Int64.ofInt (5))") < 0,
 				"Stage3 converted an expression that was already represented as Int64.");
-			assertTrue(generatedMain.indexOf("Haxe_Int64.mul ((!value)) (Haxe_Int64.ofInt (2))") >= 0,
+			assertTrue(generatedMain.indexOf("let __hx_call_function = (Haxe_Int64.mul) in let __hx_call_argument_0 = (((!value))) in let __hx_call_argument_1 = ((Haxe_Int64.ofInt (2))) in __hx_call_function __hx_call_argument_0 __hx_call_argument_1") >= 0,
 				"Stage3 did not convert an Int supplied to an Int64 function parameter.");
 			assertTrue(generatedMain.indexOf("Haxe_Int64.add __hx_old (Haxe_Int64.ofInt (1))") >= 0,
 				"Stage3 used ordinary Int addition for an Int64 increment.");

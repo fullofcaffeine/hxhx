@@ -40,7 +40,20 @@ import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlRawInjection.OcamlRawPart;
 import reflaxe.ocaml.ast.OcamlSourcePositionMapper;
 import reflaxe.ocaml.ast.OcamlModuleItem;
+import reflaxe.ocaml.ast.OcamlModuleChunks;
 import reflaxe.ocaml.ast.OcamlLetBinding;
+import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromParameters;
+import reflaxe.ocaml.ast.OcamlBuiltFunction.signatureFromTypes;
+import reflaxe.ocaml.target.OcamlTargetConstructionLowerer.buildAllocation;
+import reflaxe.ocaml.target.OcamlTargetInstanceRecord.declareInstanceRecord;
+import reflaxe.ocaml.target.OcamlTargetInstanceRecord.initializeInstanceRecord;
+import reflaxe.ocaml.target.OcamlTargetClassMarker.lowerClassMarker;
+import reflaxe.ocaml.ast.OcamlDeclarationSignature;
+import reflaxe.ocaml.ast.OcamlDeclarationSignature.projectDeclarationSignature;
+import reflaxe.ocaml.ast.OcamlDeclarationSignature.hasInheritedDeclarationRecord;
+import reflaxe.ocaml.ast.OcamlModuleAssembly;
+import reflaxe.ocaml.ast.OcamlFreeValues.collect as collectFreeIdents;
+import reflaxe.ocaml.ast.OcamlModuleAssembly.assembleModules;
 import reflaxe.ocaml.ast.OcamlAssignOp;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlPat;
@@ -82,10 +95,8 @@ import reflaxe.ocaml.target.HaxeOcamlTargetExpressionAdapter;
 import reflaxe.ocaml.target.HaxeOcamlTargetFieldInitializerAdapter;
 import reflaxe.ocaml.target.HaxeOcamlTargetFunctionAdapter;
 import reflaxe.ocaml.target.OcamlTargetDeclarationRequest;
-import reflaxe.ocaml.target.OcamlTargetExpressionLowerer;
 import reflaxe.ocaml.target.OcamlTargetFieldInitializerCatalog;
 import reflaxe.ocaml.target.OcamlTargetFunctionCatalog;
-import reflaxe.ocaml.target.OcamlTargetFunctionLowerer;
 import reflaxe.ocaml.target.OcamlTargetProgramCore;
 import reflaxe.ocaml.target.OcamlTargetProgramCore.OcamlTargetProgramPublisher;
 import reflaxe.ocaml.target.OcamlTargetProgramRequest;
@@ -111,6 +122,11 @@ import reflaxe.ocaml.lowered.OcamlFieldRepresentationMaterializer.OcamlFieldRepr
 import reflaxe.ocaml.lowered.OcamlLocalStoragePlanner;
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin;
 import reflaxe.ocaml.lowered.OcamlMonomorphicClassPlanner;
+import reflaxe.ocaml.lowered.OcamlInstanceMethodCatalog.collectInstanceMethods;
+import reflaxe.ocaml.lowered.OcamlInstanceMethodCatalog.declaredInstanceMethods;
+import reflaxe.ocaml.lowered.OcamlMethodDispatchClassPlan.selectClassMethodEntries;
+import reflaxe.ocaml.lowered.OcamlMethodDispatchClassPlan.sealClassMethodRegistration;
+import reflaxe.ocaml.ast.OcamlMethodDispatchClassSyntax.buildClassMethodRegistration;
 import reflaxe.ocaml.lowered.OcamlNullablePrimitiveFieldDefaultPlan;
 import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlUnrepresentedFieldDefaultPlan;
@@ -172,8 +188,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 	final staticMainCandidateModules:Array<String> = [];
 	final staticMainCandidateFileIdByModule = new haxe.ds.StringMap<String>();
 	final staticMainCandidateClassNameByModule = new haxe.ds.StringMap<String>();
-	final classCarrierDeclarationsByModule:Map<String, Array<OcamlTypeDecl>> = [];
-	final classCarrierOwnerKeys:Map<String, Bool> = [];
+	final typeDeclarationsByModule:Map<String, Array<OcamlTypeDecl>> = [];
+	final moduleChunks:OcamlModuleChunks = new OcamlModuleChunks();
 	var checkedOutputCollisions:Bool = false;
 	var pendingPublishedOutputBuild:Null<PendingPublishedOutputBuild>;
 	var targetReuseObservation:Null<OcamlTargetReuseObservation>;
@@ -261,6 +277,16 @@ class OcamlCompiler extends DirectToStringCompiler {
 	function profileLogLine(msg:String):Void {
 		if (!profileEnabled)
 			return;
+		// A captured stderr descriptor can be a socket on Linux. Reopening its
+		// /dev path fails there; use the inherited stream and never close it.
+		if (Sys.getEnv("REFLAXE_OCAML_PROGRESS_FILE") == "/dev/stderr") {
+			try {
+				final output = Sys.stderr();
+				output.writeString(msg + "\n");
+				output.flush();
+			} catch (_:haxe.Exception) {}
+			return;
+		}
 		profileTryOpenLog();
 		if (profileLog == null)
 			return;
@@ -463,8 +489,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 		profileLogLine("reflaxe.ocaml: program_revision_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
 		#end
 		super.beginProgramRevision(revision);
-		classCarrierDeclarationsByModule.clear();
-		classCarrierOwnerKeys.clear();
+		typeDeclarationsByModule.clear();
+		moduleChunks.clear();
 		compilerExpressionOrdinals.clear();
 		nextCompilerExpressionOrdinal = 0;
 		nextStandardMapCarrierOrdinal = 0;
@@ -500,6 +526,85 @@ class OcamlCompiler extends DirectToStringCompiler {
 		callable boundary before the target command succeeds.
 	**/
 	function planCallableDeclarations(moduleOrder:Array<String>, moduleToClasses:Map<String, Array<ClassType>>, programRevision:String):Void {
+		final classes = [
+			for (moduleId in moduleOrder)
+				for (owner in moduleToClasses.get(moduleId) ?? [])
+					owner
+		];
+		#if macro
+		profileLogLine("reflaxe.ocaml: generic_transport_selection_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		#end
+		functionPlanRegistry.genericTransports.select(classes);
+		#if macro
+		profileLogLine("reflaxe.ocaml: generic_transport_selection_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		profileLogLine("reflaxe.ocaml: method_view_selection_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		#end
+		functionPlanRegistry.methodDispatch.select(classes);
+		#if macro
+		profileLogLine("reflaxe.ocaml: method_view_selection_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		#end
+		#if macro
+		profileLogLine("reflaxe.ocaml: callable_selection_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		#end
+		final callbacks = reflaxe.ocaml.lowered.OcamlCallableProgramSelection.select(classes, #if macro profileEnabled && Context.defined("reflaxe_ocaml_telemetry_detail") ? (message:String) ->
+			profileLogLine("reflaxe.ocaml: callable_selection_"
+			+ message + " elapsed_ms=" + Std.string(profileElapsedMilliseconds())) : null #else null #end);
+		#if macro
+		profileLogLine("reflaxe.ocaml: callable_selection_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		#end
+		final callbacksById = [for (selected in callbacks) selected.calleeId => selected];
+		// A shared enum carrier describes a type. Only the exact method's producer
+		// evidence can authorize exporting that carrier as its function result.
+		function registerMethod(classType:ClassType, field:ClassField, isStatic:Bool):Void {
+			final callback = isStatic ? callbacksById.get(OcamlCallPlanner.calleeId(classType, field)) : null;
+			if (callback != null && reflaxe.ocaml.lowered.OcamlCallableDeclarationCarrier.changesInterface(callback.signature)) {
+				functionPlanRegistry.registerCallableDeclaration(reflaxe.ocaml.lowered.OcamlCallableDeclarationCarrier.declaration(classType, field, callback,
+					representationRegistry, programRevision, OcamlFunctionPlanRegistry.PIPELINE_REVISION));
+				return;
+			}
+			final candidate = functionPlanRegistry.nativeEnumResultCandidate(OcamlCallPlanner.calleeId(classType, field));
+			if (candidate != null)
+				representationRegistry.selectNativeEnum(candidate.descriptor);
+			final declaration = OcamlCallPlanner.declarationFor(classType, field, isStatic, representationRegistry, programRevision,
+				OcamlFunctionPlanRegistry.PIPELINE_REVISION);
+			if (declaration == null)
+				return;
+			if (declaration.result != null
+				&& representationRegistry.nativeEnumValue(declaration.result.outputSemanticTypeId) != null
+				&& candidate == null)
+				return;
+			functionPlanRegistry.registerCallableDeclaration(declaration);
+		}
+		#if macro
+		profileLogLine("reflaxe.ocaml: callable_enum_observation_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		#end
+		final observedEnumCallees:Map<String, Bool> = [];
+		for (moduleId in moduleOrder) {
+			final classes = moduleToClasses.get(moduleId);
+			if (classes == null)
+				continue;
+			for (classType in classes) {
+				for (field in classType.statics.get()) {
+					final calleeId = OcamlCallPlanner.calleeId(classType, field);
+					if (!observedEnumCallees.exists(calleeId)) {
+						observedEnumCallees.set(calleeId, true);
+						functionPlanRegistry.observeNativeEnumResult(classType, field, true, ctx);
+					}
+				}
+				for (field in classType.fields.get()) {
+					final calleeId = OcamlCallPlanner.calleeId(classType, field);
+					if (!observedEnumCallees.exists(calleeId)) {
+						observedEnumCallees.set(calleeId, true);
+						functionPlanRegistry.observeNativeEnumResult(classType, field, false, ctx);
+					}
+				}
+			}
+		}
+		functionPlanRegistry.finishNativeEnumResults();
+		#if macro
+		profileLogLine("reflaxe.ocaml: callable_enum_observation_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		profileLogLine("reflaxe.ocaml: callable_registration_begin elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		#end
 		for (moduleId in moduleOrder) {
 			final classes = moduleToClasses.get(moduleId);
 			if (classes == null)
@@ -511,20 +616,15 @@ class OcamlCompiler extends DirectToStringCompiler {
 					if (declaration != null)
 						functionPlanRegistry.registerCallableDeclaration(declaration);
 				}
-				for (field in classType.statics.get()) {
-					final declaration = OcamlCallPlanner.declarationFor(classType, field, true, representationRegistry, programRevision,
-						OcamlFunctionPlanRegistry.PIPELINE_REVISION);
-					if (declaration != null)
-						functionPlanRegistry.registerCallableDeclaration(declaration);
-				}
-				for (field in classType.fields.get()) {
-					final declaration = OcamlCallPlanner.declarationFor(classType, field, false, representationRegistry, programRevision,
-						OcamlFunctionPlanRegistry.PIPELINE_REVISION);
-					if (declaration != null)
-						functionPlanRegistry.registerCallableDeclaration(declaration);
-				}
+				for (field in classType.statics.get())
+					registerMethod(classType, field, true);
+				for (field in classType.fields.get())
+					registerMethod(classType, field, false);
 			}
 		}
+		#if macro
+		profileLogLine("reflaxe.ocaml: callable_registration_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
+		#end
 	}
 
 	/** Builds and validates every admitted plan for one final typed function body. */
@@ -595,13 +695,14 @@ class OcamlCompiler extends DirectToStringCompiler {
 		if (Context.defined("reflaxe_ocaml_shared_program_report")) {
 			sharedTargetDeclarationRequest = HaxeOcamlTargetDeclarationAdapter.fromModuleTypes("stock-haxe-filter-types", moduleTypes);
 			final sharedFieldCount = HaxeOcamlTargetFieldInitializerAdapter.captureModuleTypes(moduleTypes, targetFieldInitializerCatalog);
-			final sharedFunctionCount = HaxeOcamlTargetFunctionAdapter.captureModuleTypes(moduleTypes, targetFunctionCatalog);
 			profileLogLine("reflaxe.ocaml: shared_target_fields count=" + Std.string(sharedFieldCount));
-			profileLogLine("reflaxe.ocaml: shared_target_functions count=" + Std.string(sharedFunctionCount));
 		} else {
 			targetFieldInitializerCatalog.beginRequest();
-			targetFunctionCatalog.beginRequest();
 		}
+		// Admitted bodies use the shared lowerer during ordinary compilation too.
+		// The optional whole-program comparison report must not select semantics.
+		final sharedFunctionCount = HaxeOcamlTargetFunctionAdapter.captureModuleTypes(moduleTypes, targetFunctionCatalog);
+		profileLogLine("reflaxe.ocaml: shared_target_functions count=" + Std.string(sharedFunctionCount));
 		profileLogLine("reflaxe.ocaml: filter_types_end elapsed_ms=" + Std.string(profileElapsedMilliseconds()));
 		return moduleTypes;
 	}
@@ -1018,6 +1119,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 						final dependencyClass = classReference.get();
 						final dependencyField = fieldReference.get();
 						final isMutableStorage = switch (dependencyField.kind) {
+							case FVar(AccInline, _): false;
 							case FVar(_, _): !dependencyField.isFinal;
 							case FMethod(MethDynamic): true;
 							case _: false;
@@ -1096,6 +1198,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 					case FMethod(MethDynamic): true;
 					case _: false;
 				}).concat(fields.filter(field -> switch (field.kind) {
+					// Reflaxe omits inline constants: Haxe substitutes their values.
+					// A module prelude must not invent a mutable cell for that field.
+					case FVar(AccInline, _): false;
 					case FVar(_, _): !field.isFinal;
 					case _: false;
 				}));
@@ -1153,8 +1258,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 	}
 	#end
 
-	/** Emits only cells whose proven carrier may safely precede generated class types. */
-	function staticStoragePrelude(moduleId:String, emittedOwnerTypes:Map<String, Bool>):String {
+	/** Retains and observes cells whose proven carrier may precede generated class types. */
+	function staticStoragePrelude(moduleId:String, emittedOwnerTypes:Map<String, Bool>):Array<OcamlModuleItem> {
 		final items:Array<OcamlModuleItem> = [];
 		for (entry in staticStoragePlan.entriesForModule(moduleId)) {
 			if (entry.declarationSite != OcamlStaticStorageDeclarationSite.ModulePrelude || !emittedOwnerTypes.exists(entry.ownerTypeName))
@@ -1174,44 +1279,35 @@ class OcamlCompiler extends DirectToStringCompiler {
 			], false));
 		}
 		RuntimeUsageCollector.collectFromModuleItems(items, moduleName -> ctx.markRuntimeModule(moduleName));
-		return printFinalModule(items, "static-storage-prelude:" + moduleId);
+		ctx.finalRuntimeUses.observeModuleItems(items, "static-storage-prelude:" + moduleId, ctx.activateStagedTypeRuntimeUse);
+		return items;
 	}
 
 	/**
-		Checks one complete structured output chunk before OCaml text loses hidden IDs.
+		Retains and observes enum and class record declarations for one generated OCaml module.
 
-		The printer still owns formatting only. Permission for a private runtime
-		helper comes from its lowering plan and is counted here before rendering.
+		Compilation retains these declarations until all local dependencies are
+		known. Recursive enum/class types share a declaration group before any
+		values, without changing constructor or static-initializer execution order.
 	**/
-	function printFinalModule(items:Array<OcamlModuleItem>, outputUnitId:String):String {
-		ctx.finalRuntimeUses.observeModuleItems(items, outputUnitId, ctx.activateStagedTypeRuntimeUse);
-		return printer.printModule(items);
-	}
-
-	/**
-		Prints all class record declarations for one generated OCaml module.
-
-		Class compilation records these declarations without printing them beside
-		constructors or static initializers. Module assembly can then place the types
-		before every class value without changing executable Haxe declaration order.
-	**/
-	function classCarrierPrelude(moduleId:String):String {
-		final declarations = classCarrierDeclarationsByModule.get(moduleId);
+	function typeDeclarationPrelude(moduleId:String):Array<OcamlModuleItem> {
+		final declarations = typeDeclarationsByModule.get(moduleId);
 		if (declarations == null || declarations.length == 0)
-			return "";
-		final items = OcamlTypeDeclarationPlanner.plan(declarations).map(declaration -> OcamlModuleItem.IType([declaration], false));
-		return printFinalModule(items, "class-carrier-prelude:" + moduleId);
+			return [];
+		// OCaml uses `type ... and ...`, never `type rec`, for recursive types.
+		final items = OcamlTypeDeclarationPlanner.plan(declarations).map(group -> OcamlModuleItem.IType(group, false));
+		ctx.finalRuntimeUses.observeModuleItems(items, "type-declaration-prelude:" + moduleId, ctx.activateStagedTypeRuntimeUse);
+		return items;
 	}
 
-	/** Records one structured class carrier for later module-level declaration. */
-	function registerClassCarrier(moduleId:String, ownerTypeName:String, declaration:OcamlTypeDecl):Void {
-		var declarations = classCarrierDeclarationsByModule.get(moduleId);
+	/** Retain a structured type and its runtime references until module assembly. */
+	function registerTypeDeclaration(moduleId:String, declaration:OcamlTypeDecl):Void {
+		var declarations = typeDeclarationsByModule.get(moduleId);
 		if (declarations == null) {
 			declarations = [];
-			classCarrierDeclarationsByModule.set(moduleId, declarations);
+			typeDeclarationsByModule.set(moduleId, declarations);
 		}
 		declarations.push(declaration);
-		classCarrierOwnerKeys.set(moduleId + "\n" + ownerTypeName, true);
 		RuntimeUsageCollector.collectFromModuleItems([OcamlModuleItem.IType([declaration], false)], (moduleName) -> ctx.markRuntimeModule(moduleName));
 	}
 
@@ -1286,7 +1382,12 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final useLineDirectives = #if macro !Context.defined("ocaml_no_line_directives") #else false #end;
 		final ext = options.fileOutputExtension != null ? options.fileOutputExtension : "";
 
-		final buckets:Map<String, {rep:DataAndFileInfo<String>, parts:Array<String>, ownerTypeNames:Map<String, Bool>}> = [];
+		final buckets:Map<String, {
+			rep:DataAndFileInfo<String>,
+			name:String,
+			parts:Array<OcamlModulePart>,
+			ownerTypeNames:Map<String, Bool>
+		}> = [];
 		final fileOrder:Array<String> = [];
 
 		inline function outputKey(info:DataAndFileInfo<String>):String {
@@ -1297,23 +1398,45 @@ class OcamlCompiler extends DirectToStringCompiler {
 		for (info in all) {
 			final key = outputKey(info);
 			if (!buckets.exists(key)) {
-				buckets.set(key, {rep: info, parts: [], ownerTypeNames: []});
+				buckets.set(key, {
+					rep: info,
+					name: moduleIdToOcamlModuleName(info.baseType.module),
+					parts: [],
+					ownerTypeNames: []
+				});
 				fileOrder.push(key);
 			}
 			final b = buckets.get(key);
 			if (b != null) {
-				if (classCarrierOwnerKeys.exists(info.baseType.module + "\n" + info.baseType.name)
-					&& !b.ownerTypeNames.exists("__class_carrier_prelude__")) {
-					final prelude = classCarrierPrelude(info.baseType.module);
+				// All module types are collected before assembly. Emit them before the
+				// first value chunk, even when that chunk contains only module functions.
+				// Otherwise later class types split mutually dependent value declarations.
+				if (!b.ownerTypeNames.exists("__type_declaration_prelude__")) {
+					final prelude = typeDeclarationPrelude(info.baseType.module);
 					if (prelude.length > 0)
-						b.parts.push(prelude);
-					b.ownerTypeNames.set("__class_carrier_prelude__", true);
+						b.parts.push(ModuleDeclarations("", prelude));
+					b.ownerTypeNames.set("__type_declaration_prelude__", true);
 				}
-				b.parts.push(info.data);
+				final items = moduleChunks.itemsForOutput(info.baseType.module, info.baseType.name, info.data);
+				b.parts.push(items == null ? OpaqueModuleText(moduleChunks.render(info.baseType.module, info.baseType.name, info.data,
+					printer)) : ModuleDeclarations(info.data, items));
 				b.ownerTypeNames.set(info.baseType.name, true);
 			}
 		}
 
+		// Plan every unit before exposing the first file to the framework publisher.
+		final assembly:Array<OcamlModuleAssemblyInput> = [];
+		for (key in fileOrder) {
+			final bucket = buckets.get(key);
+			if (bucket == null)
+				throw "Missing output bucket for: " + key;
+			final staticPrelude = staticStoragePrelude(bucket.rep.baseType.module, bucket.ownerTypeNames);
+			if (staticPrelude.length > 0)
+				bucket.parts.unshift(ModuleDeclarations("", staticPrelude));
+			assembly.push({name: bucket.name, parts: bucket.parts});
+		}
+		final plannedOutput = assembleModules(assembly, printer,
+			(type, role) -> ctx.finalRuntimeUses.signatureTypeForOutput(type, role, ctx.activateStagedTypeRuntimeUse));
 		var index = 0;
 		return {
 			hasNext: () -> index < fileOrder.length,
@@ -1322,8 +1445,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 				final bucket = buckets.get(key);
 				if (bucket == null)
 					throw "Missing output bucket for: " + key;
-				final staticPrelude = staticStoragePrelude(bucket.rep.baseType.module, bucket.ownerTypeNames);
-				final joined = (staticPrelude.length == 0 ? [] : [staticPrelude]).concat(bucket.parts).join("\n\n");
+				final joined = plannedOutput.get(bucket.name);
+				if (joined == null)
+					throw "Missing planned output for: " + bucket.name;
 
 				final out = if (!useLineDirectives || joined.length == 0) {
 					joined;
@@ -1794,8 +1918,17 @@ class OcamlCompiler extends DirectToStringCompiler {
 	**/
 	function sealStandaloneExpression(ownerId:String, expression:TypedExpr):OcamlSealedStandaloneExpressionPlan {
 		final plan = functionPlanRegistry.sealStandaloneExpression(ownerId, expression, representationRegistry);
+		for (call in plan.calls.decisions()) {
+			final runtimeUsePlan = plan.calls.runtimeUsePlanFor(call.id);
+			if (runtimeUsePlan != null)
+				ctx.recordCallRuntimeRequirements(call, runtimeUsePlan);
+			if (call.standardIMapTarget != null)
+				ctx.recordStandardIMapRuntimeRequirements(call);
+			if (call.structuralIteratorTarget != null)
+				ctx.recordStructuralIteratorRuntimeRequirements(call);
+		}
 		for (conversion in plan.containerElements.decisions())
-			ctx.recordEnumDynamicContainerRuntimeRequirement(conversion);
+			ctx.recordContainerRuntimeRequirement(conversion);
 		for (decision in plan.anonymousStructures.operations())
 			ctx.recordAnonymousStructureRuntimeRequirement(decision);
 		for (decision in plan.structuralFields.decisions())
@@ -1834,6 +1967,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			ctx.recordStringFromCharCodeRuntimeRequirement(decision);
 		for (decision in plan.stringEquality.decisions())
 			ctx.recordStringEqualityRuntimeRequirement(decision);
+		plan.enumIdentity.recordRequirements(ctx.runtimeRequirements);
 		for (decision in plan.stringMethods.decisions())
 			ctx.recordStringMethodRuntimeRequirement(decision);
 		for (decision in plan.stringFields.decisions())
@@ -1852,7 +1986,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				case OcamlControlTransferKind.Throw:
 					ctx.recordThrowRuntimeRequirement(decision);
 					final payload = decision.payload;
-					if (payload != null && OcamlControlPlan.isAdmittedEnumThrowPayload(payload))
+					if (payload != null && OcamlControlPlan.requiresEnumThrowRuntime(payload))
 						ctx.recordEnumThrowRuntimeRequirement(decision);
 				case Break, Continue:
 			}
@@ -1876,7 +2010,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	function buildStandaloneAssignment(builder:OcamlBuilder, ownerId:String, fieldType:Type, expression:TypedExpr):OcamlExpr {
 		final sharedExpression = HaxeOcamlTargetExpressionAdapter.fromSourceBeforePreprocessing("standalone:" + ownerId, expression);
 		if (sharedExpression != null && sharedExpression.semanticTypeDisplay == TypeTools.toString(fieldType))
-			return OcamlTargetExpressionLowerer.build(sharedExpression);
+			return ctx.lowerSharedTargetExpression(sharedExpression, "standalone:" + ownerId);
 		#if macro
 		if (Context.definedValue("reflaxe_ocaml_target_expression_test_require_shared") == ownerId)
 			Context.error("reflaxe.ocaml: required field initializer did not enter the shared target expression route", expression.pos);
@@ -1939,6 +2073,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 			case KAbstractImpl(_): true;
 			case _: false;
 		};
+		final isModuleFields = switch (classType.kind) {
+			case KModuleFields(_): true;
+			case _: false;
+		};
 		ctx.currentTypeFullName = fullName;
 		ctx.classTagsByFullName.set(fullName, classTagsForClassType(classType));
 		#if macro
@@ -1955,8 +2093,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 		// Some compiler paths expose `classType.constructor == null` for those, but `new C()`
 		// and `Type.createInstance(C, [])` must still work. Treat missing constructor info
 		// as an implicit `new():Void` for non-extern, non-interface classes.
+		// A module-field owner only groups top-level declarations; it is not an
+		// instantiable class and must not register a synthetic constructor.
 		final isOcamlNativeSurface = classType.pack != null && classType.pack.length > 0 && classType.pack[0] == "ocaml";
-		final hasCtor = (!classType.isInterface) && (!classType.isExtern) && (!isOcamlNativeSurface) && (!isAbstractImplementation);
+		final hasCtor = (!classType.isInterface) && (!classType.isExtern) && (!isOcamlNativeSurface) && (!isAbstractImplementation) && (!isModuleFields);
 		ctx.ctorPresentByFullName.set(fullName, hasCtor);
 		final ctorArgs:Null<Array<{name:String, opt:Bool, t:Type}>> = if (!hasCtor) {
 			null;
@@ -2066,7 +2206,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 		items.push(OcamlModuleItem.ILet([
 			{
 				name: "__reflaxe_ocaml__",
-				expr: OcamlExpr.EConst(OcamlConst.CUnit)
+				expr: OcamlExpr.EConst(OcamlConst.CUnit),
+				visibility: CompilerInternal
 			}
 		], false));
 
@@ -2075,15 +2216,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 		// Instance surface (M5): record type + create + instance methods.
 		final instanceVarsLocal = varFields.filter(v -> !v.isStatic);
 		final hasInstanceVarsLocal = instanceVarsLocal.length > 0;
-
-		// Default expressions are only available through `ClassVarData` for the class being compiled.
-		// Inherited fields therefore use their owner-bound implicit default decision.
-		final localVarInitByName:Map<String, TypedExpr> = [];
-		for (v in instanceVarsLocal) {
-			final init = v.findDefaultExpr();
-			if (init != null)
-				localVarInitByName.set(v.field.name, init);
-		}
 
 		var ctorFunc:Null<ClassFuncData> = null;
 		final instanceMethods:Array<ClassFuncData> = [];
@@ -2113,80 +2245,17 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 		}
 
-		// Interface dispatch surface (M10 strict portable):
-		//
-		// We do not emit constructors/implementations for interfaces, but we do emit a
-		// record type carrying method fields so interface-typed callsites can annotate
-		// receivers with a concrete OCaml type (`ifoo_t`) instead of failing with
-		// "unbound type constructor".
+		// Ordinary interfaces preserve the original class object. Calls recover a
+		// checked method closure, so an interface must not invent a record layout.
+		// The standard IMap carrier has its own specialized declaration and calls.
 		if (classType.isInterface && !isOcamlNativeSurface) {
-			function buildDispatchMethodType(haxeMethodType:Type):OcamlTypeExpr {
-				final selfT = OcamlTypeExpr.TIdent("Obj.t");
-				return switch (haxeMethodType) {
-					case TFun(args, ret):
-						var outT = ocamlTypeExprFromHaxeType(ret);
-						if (args.length == 0) {
-							outT = OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent("unit"), outT);
-						} else {
-							for (i in 0...args.length) {
-								final a = args[args.length - 1 - i];
-								outT = OcamlTypeExpr.TArrow(ocamlTypeExprFromHaxeType(a.t), outT);
-							}
-						}
-						OcamlTypeExpr.TArrow(selfT, outT);
-					case _:
-						OcamlTypeExpr.TIdent("Obj.t");
-				}
-			}
-
-			function collectInterfaceMethodFields(iface:ClassType, order:Array<String>, byName:Map<String, ClassField>, seen:Map<String, Bool>):Void {
-				for (edge in iface.interfaces) {
-					collectInterfaceMethodFields(edge.t.get(), order, byName, seen);
-				}
-				for (field in iface.fields.get()) {
-					if (field == null)
-						continue;
-					switch (field.kind) {
-						case FMethod(_):
-							if (!seen.exists(field.name)) {
-								seen.set(field.name, true);
-								order.push(field.name);
-							}
-							byName.set(field.name, field);
-						case _:
-					}
-				}
-			}
-
-			final interfaceMethodOrder:Array<String> = [];
-			final interfaceMethodByName:Map<String, ClassField> = [];
-			final interfaceSeen:Map<String, Bool> = [];
-			collectInterfaceMethodFields(classType, interfaceMethodOrder, interfaceMethodByName, interfaceSeen);
-
-			if (interfaceMethodOrder.length > 0) {
-				final interfaceTypeFields:Array<OcamlTypeRecordField> = [];
-				interfaceTypeFields.push({
-					name: "__hx_type",
-					isMutable: false,
-					typ: OcamlTypeExpr.TIdent("Obj.t")
-				});
-				for (methodName in interfaceMethodOrder) {
-					final methodField = interfaceMethodByName.get(methodName);
-					if (methodField == null)
-						continue;
-					interfaceTypeFields.push({
-						name: ctx.ocamlRecordLabel(methodName),
-						isMutable: false,
-						typ: buildDispatchMethodType(methodField.type)
-					});
-				}
-				final instanceTypeName = ctx.scopedInstanceTypeName(classType.module, classType.name);
-				registerClassCarrier(classType.module, classType.name, {
-					name: instanceTypeName,
-					params: [],
-					kind: OcamlTypeDeclKind.Record(interfaceTypeFields)
-				});
-			}
+			final declaration:OcamlTypeDecl = if (reflaxe.ocaml.lowered.OcamlStandardIMapCallModel.OcamlStandardIMapCallContract.isIMapClass(classType)) {
+				reflaxe.ocaml.ast.OcamlIMapInterfaceSyntax.buildDeclaration(classType, ctx.scopedInstanceTypeName(classType.module, classType.name),
+					ctx.ocamlRecordLabel, ocamlTypeExprFromHaxeType);
+			} else {
+				{name: ctx.scopedInstanceTypeName(classType.module, classType.name), params: [], kind: OcamlTypeDeclKind.Alias(OcamlTypeExpr.TIdent("Obj.t"))};
+			};
+			registerTypeDeclaration(classType.module, declaration);
 		}
 
 		// Any concrete (non-interface) Haxe class is instantiable, even if it only
@@ -2198,7 +2267,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		// - `new C()` can work,
 		// - `Type.createInstance(C, [])` can work,
 		// - runtime class identity (`Type.getClass`) works consistently.
-		final hasImplicitCtor = (!classType.isInterface) && (!classType.isExtern) && (!isOcamlNativeSurface);
+		// Module functions such as `create` must not collide with an invented
+		// constructor for the compiler's synthetic module-field owner.
+		final hasImplicitCtor = (!classType.isInterface) && (!classType.isExtern) && (!isOcamlNativeSurface) && (!isModuleFields);
 		final hasInstanceSurface = hasInstanceVarsLocal || instanceMethods.length > 0 || ctorFunc != null || hasImplicitCtor;
 		if (hasInstanceSurface) {
 			final instanceTypeName = ctx.scopedInstanceTypeName(classType.module, classType.name);
@@ -2206,57 +2277,20 @@ class OcamlCompiler extends DirectToStringCompiler {
 			final ctorName = ctx.scopedValueName(classType.module, classType.name, "__ctor");
 
 			final isDispatch = !classType.isInterface && ctx.dispatchTypes.exists(fullName);
+			final preserveInstanceSignature = !isOcamlNativeSurface
+				&& ctx.virtualTypesComputed
+				&& (OcamlMonomorphicClassPlanner.hasDirectRecordLayout(classType, ctx) || hasInheritedDeclarationRecord(classType, ctx));
 
 			// For dynamic dispatch we need a list of all visible instance methods (including inherited)
 			// so `obj.foo()` can be lowered to `obj.foo obj ...` regardless of where `foo` was declared.
-			final dispatchMethodOrder:Array<String> = [];
-			final dispatchMethodDecl:Map<String, {owner:ClassType, field:ClassField}> = [];
+			final needsMethodRegistration = functionPlanRegistry.methodDispatch.requiresRegistration(classType);
+			final methodCatalog = isDispatch || needsMethodRegistration ? collectInstanceMethods(classType) : null;
+			final dispatchMethodOrder:Array<String> = methodCatalog == null ? [] : methodCatalog.order;
+			final dispatchMethodDecl:Map<String,
+				reflaxe.ocaml.lowered.OcamlInstanceMethodCatalog.OcamlInstanceMethodDeclaration> = methodCatalog == null ? [] : methodCatalog.declarations;
 			var dispatchLayoutFields:Null<Array<{name:String, kind:String, field:ClassField}>> = null;
 			if (isDispatch) {
-				function chainFromRoot(c:ClassType):Array<ClassType> {
-					final chain:Array<ClassType> = [];
-					var cur:Null<ClassType> = c;
-					var guard = 0;
-					while (cur != null && guard++ < 64) {
-						chain.push(cur);
-						cur = cur.superClass != null ? cur.superClass.t.get() : null;
-					}
-					chain.reverse();
-					return chain;
-				}
-
-				function declaredInstanceMethodFields(c:ClassType):Array<ClassField> {
-					final out:Array<ClassField> = [];
-					for (cf in c.fields.get()) {
-						if (cf == null)
-							continue;
-						if (cf.name == "new")
-							continue;
-						switch (cf.kind) {
-							case FMethod(_):
-								out.push(cf);
-							case _:
-						}
-					}
-					return out;
-				}
-
-				final chain = chainFromRoot(classType);
-				final seen:Map<String, Bool> = [];
-				for (c in chain) {
-					for (cf in declaredInstanceMethodFields(c)) {
-						if (seen.exists(cf.name))
-							continue;
-						seen.set(cf.name, true);
-						dispatchMethodOrder.push(cf.name);
-					}
-				}
-				// Most-derived declaration wins (override).
-				for (c in chain) {
-					for (cf in declaredInstanceMethodFields(c)) {
-						dispatchMethodDecl.set(cf.name, {owner: c, field: cf});
-					}
-				}
+				final chain = methodCatalog.chain;
 
 				// Record layout for dispatch instances: preserve a base-prefix layout across
 				// the inheritance chain by emitting fields in per-level segments:
@@ -2283,7 +2317,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 						}
 					}
 
-					for (cf in declaredInstanceMethodFields(c)) {
+					for (cf in declaredInstanceMethods(c)) {
 						if (seenMethods2.exists(cf.name))
 							continue;
 						seenMethods2.set(cf.name, true);
@@ -2413,13 +2447,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 			final typeFields:Array<OcamlTypeRecordField> = [];
 
-			// Runtime class identity (M10): all class instances carry their most-derived class value
-			// in the first record slot so `Type.getClass` can work even through `Obj.magic` upcasts.
-			typeFields.push({
-				name: "__hx_type",
-				isMutable: false,
-				typ: OcamlTypeExpr.TIdent("Obj.t")
-			});
 			// Every inheritance or interface-dispatch record needs the shared layout,
 			// even when it contains no method slots. Otherwise a field-only subclass
 			// contains only its local fields, so a base constructor or field access
@@ -2513,18 +2540,20 @@ class OcamlCompiler extends DirectToStringCompiler {
 				}
 			}
 
-			final typeDecl:OcamlTypeDecl = {
-				name: instanceTypeName,
-				params: [],
-				kind: OcamlTypeDeclKind.Record(typeFields)
-			};
-			validateMonomorphicClassLayout(classType, instanceTypeName, typeFields);
-			registerClassCarrier(classType.module, classType.name, typeDecl);
+			final typeDecl = declareInstanceRecord({typeName: instanceTypeName, fields: typeFields});
+			switch (typeDecl.kind) {
+				case Record(fields):
+					validateMonomorphicClassLayout(classType, instanceTypeName, fields);
+				case _:
+					throw "OCaml instance layout did not produce its record declaration";
+			}
+			registerTypeDeclaration(classType.module, typeDecl);
 
 			// create: allocate record, run ctor body, return self
 			var createParams:Array<OcamlPat> = [OcamlPat.PConst(OcamlConst.CUnit)];
 			var ctorBody:OcamlExpr = OcamlExpr.EConst(OcamlConst.CUnit);
 			var constructionBoundary:Null<OcamlCallableBoundaryPlan> = null;
+			var constructorDeclaration:Null<OcamlDeclarationSignature> = null;
 			if (ctorFunc != null && ctorFunc.expr != null) {
 				final argInfo:Array<{
 					id:Int,
@@ -2541,9 +2570,14 @@ class OcamlCompiler extends DirectToStringCompiler {
 					case TFun(_, ret): ret;
 					case _: ctorFunc.expr.t;
 				};
-				final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(ctorFunc);
+				final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(ctorFunc,
+					functionPreparationTelemetry == null ? null : functionPreparationTelemetry.syntaxProgressFor(ctorFunc));
 				constructionBoundary = syntaxInput.constructionBoundary;
-				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, syntaxInput.plan, syntaxInput.localIdentities, ctorReturnType)) {
+				constructorDeclaration = projectDeclarationSignature(argInfo.map(argument -> argument.t), ctorReturnType, representationRegistry,
+					ocamlTypeExprFromHaxeType, ctx);
+				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, syntaxInput.plan, syntaxInput.localIdentities, ctorReturnType, false,
+					syntaxInput.genericTransport, syntaxInput.methodDispatch)
+					.expression) {
 					case OcamlExpr.EFun(params, body):
 						createParams = params;
 						ctorBody = body;
@@ -2560,13 +2594,14 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 
 			function buildSelfInit(emissionRole:String):OcamlExpr {
-				final classMarker = classIdentityMarker(classType, fullName, emissionRole);
-				return if (hasInstanceVarsLocal || isDispatch) {
+				final markerValue = classIdentityMarker(classType, fullName, emissionRole);
+				final methodEntries = methodCatalog == null
+					|| !needsMethodRegistration ? [] : selectClassMethodEntries(classType, methodCatalog,
+						(parameters, result) -> projectDeclarationSignature(parameters, result, representationRegistry, ocamlTypeExprFromHaxeType, ctx),
+						moduleIdToOcamlModuleName(classType.module));
+				final classMarker = methodEntries.length == 0 ? markerValue : OcamlExpr.EIdent("__hx_method_class");
+				final record = if (hasInstanceVarsLocal || isDispatch) {
 					final fields:Array<OcamlRecordField> = [];
-					fields.push({
-						name: "__hx_type",
-						value: classMarker
-					});
 					if (isDispatch && dispatchLayoutFields != null) {
 						function wrapperFor(owner:ClassType, methodType:Type, ownerBindingName:String):OcamlExpr {
 							final ownerExpr = owner.module == classType.module ? OcamlExpr.EIdent(ownerBindingName) : OcamlExpr.EField(OcamlExpr.EIdent(moduleIdToOcamlModuleName(owner.module)),
@@ -2598,10 +2633,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 						for (entry in dispatchLayoutFields) {
 							switch (entry.kind) {
 								case "var":
-									final init = localVarInitByName.exists(entry.name) ? localVarInitByName.get(entry.name) : null;
-									final value = init != null ? buildStandaloneExpression(builder,
-										fieldInitializerOwner(classType, entry.field, "instance") + ":" + emissionRole,
-										init) : instanceFieldDefault(classType, entry.field, emissionRole);
+									final value = instanceFieldDefault(classType, entry.field, emissionRole);
 									fields.push({name: ctx.ocamlRecordLabel(entry.name), value: value});
 								case "method":
 									final info = dispatchMethodDecl.get(entry.name);
@@ -2616,10 +2648,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 						}
 					} else {
 						for (v in instanceVarsLocal) {
-							final init = v.findDefaultExpr();
-							final value = init != null ? buildStandaloneExpression(builder,
-								fieldInitializerOwner(classType, v.field, "instance") + ":" + emissionRole,
-								init) : instanceFieldDefault(classType, v.field, emissionRole);
+							// Haxe already places authored field initializers in the typed
+							// constructor body. Allocate storage here without replaying them.
+							final value = instanceFieldDefault(classType, v.field, emissionRole);
 							fields.push({name: ctx.ocamlRecordLabel(v.field.name), value: value});
 						}
 						if (isDispatchInstance) {
@@ -2666,25 +2697,42 @@ class OcamlCompiler extends DirectToStringCompiler {
 					if (isDispatch) {
 						ctorBody = ensureParamUsage(ctorBody, [OcamlPat.PVar("self")]);
 					}
-					final recordExpr = OcamlExpr.ERecord(fields);
-					// Always annotate: `__hx_type` is a shared label across many records, and
-					// some classes may otherwise become ambiguous for OCaml's record inference.
-					OcamlExpr.EAnnot(recordExpr, OcamlTypeExpr.TIdent(instanceTypeName));
+					initializeInstanceRecord({declaration: typeDecl, classMarker: classMarker, fields: fields});
 				} else {
-					final recordExpr = OcamlExpr.ERecord([
-						{
-							name: "__hx_type",
-							value: classMarker
-						}
-					]);
-					OcamlExpr.EAnnot(recordExpr, OcamlTypeExpr.TIdent(instanceTypeName));
+					initializeInstanceRecord({declaration: typeDecl, classMarker: classMarker, fields: []});
 				}
+				if (methodEntries.length == 0)
+					return record;
+				final revision = programRevision;
+				if (revision == null)
+					throw "reflaxe.ocaml [ocaml-method-dispatch:missing-program]: allocation registration requires an active program";
+				final markerPlan = OcamlClassIdentityMarkerPlan.seal(classType, fullName, emissionRole, revision.id,
+					OcamlFunctionPlanRegistry.PIPELINE_REVISION);
+				final recordSize = switch (typeDecl.kind) {
+					case Record(fields): fields.length;
+					case _: throw "reflaxe.ocaml [ocaml-method-dispatch:missing-record]: allocation registration requires a native record";
+				};
+				final registration = sealClassMethodRegistration(markerPlan, recordSize, methodEntries);
+				functionPlanRegistry.methodDispatch.recordClass(classType, registration);
+				final install = buildClassMethodRegistration(registration, classMarker, ctx,
+					OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile));
+				return OcamlExpr.ELet("__hx_method_class", markerValue, OcamlExpr.ESeq([install, record]), false);
 			}
 
 			if (!isAbstractImplementation) {
-				final createBody = OcamlExpr.ELet("self", buildSelfInit("constructor-record"),
-					OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [ctorBody]), OcamlExpr.EIdent("self")]), false);
-				lets.push({name: createName, expr: OcamlExpr.EFun(createParams, createBody)});
+				final selfInitializer = buildSelfInit("constructor-record");
+				// Keep checked call conversions authoritative. Other constructors may
+				// retain known declaration carriers; the recursive interface checks them
+				// against the allocator body and its selected instance record.
+				final createExpr = buildAllocation({parameters: createParams, initializer: selfInitializer, body: ctorBody});
+				final annotatedSignature = signatureFromParameters(createParams, OcamlTypeExpr.TIdent(instanceTypeName));
+				final createSignature = annotatedSignature != null ? annotatedSignature : (constructorDeclaration == null ? null : signatureFromTypes(constructorDeclaration.parameters,
+					OcamlTypeExpr.TIdent(instanceTypeName)));
+				lets.push(createSignature == null ? {name: createName, expr: createExpr} : {
+					name: createName,
+					expr: createExpr,
+					signature: createSignature
+				});
 
 				// `Type.createEmptyInstance` support (M10): allocate an instance without running
 				// the constructor body. Abstract implementation carriers are excluded because
@@ -2692,7 +2740,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				final emptyName = ctx.scopedValueName(classType.module, classType.name, "__empty");
 				lets.push({
 					name: emptyName,
-					expr: OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], buildSelfInit("empty-instance-record"))
+					expr: OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], buildSelfInit("empty-instance-record")),
+					signature: OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent("unit"), OcamlTypeExpr.TIdent(instanceTypeName))
 				});
 			}
 
@@ -2702,9 +2751,16 @@ class OcamlCompiler extends DirectToStringCompiler {
 				final selfPat = OcamlPat.PAnnot(OcamlPat.PVar("self"), OcamlTypeExpr.TIdent(instanceTypeName));
 				final copiedCtorBody = ctx.finalRuntimeUses.copyExpressionForOutput(ctorBody, "dispatch-constructor-body", ctx.activateStagedTypeRuntimeUse);
 				final ctorBodyForCtor = ensureParamUsage(copiedCtorBody, [selfPat].concat(createParams));
-				lets.push({
+				final constructorExpression = OcamlExpr.EFun([selfPat].concat(createParams), OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [ctorBodyForCtor]));
+				// A super-constructor initializes an existing record and returns unit.
+				// Reuse allocator parameter types without borrowing its record result.
+				final annotatedBodySignature = signatureFromParameters(createParams, OcamlTypeExpr.TIdent("unit"));
+				final bodySignature = annotatedBodySignature != null ? annotatedBodySignature : (constructorDeclaration == null ? null : signatureFromTypes(constructorDeclaration.parameters,
+					OcamlTypeExpr.TIdent("unit")));
+				lets.push(!preserveInstanceSignature || bodySignature == null ? {name: ctorName, expr: constructorExpression} : {
 					name: ctorName,
-					expr: OcamlExpr.EFun([selfPat].concat(createParams), OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [ctorBodyForCtor]))
+					expr: constructorExpression,
+					signature: OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent(instanceTypeName), bodySignature)
 				});
 			}
 
@@ -2716,6 +2772,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 					}
 				}
 				#end
+				var methodSignature:Null<OcamlTypeExpr> = null;
 				final compiled = {
 					final expectedArgs:Null<Array<{name:String, opt:Bool, t:Type}>> = switch (TypeTools.follow(f.field.type)) {
 						case TFun(fargs, _): fargs;
@@ -2736,8 +2793,39 @@ class OcamlCompiler extends DirectToStringCompiler {
 						case TFun(_, ret): ret;
 						case _: f.expr.t;
 					};
-					final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(f);
-					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, methodReturnType)) {
+					final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(f,
+						functionPreparationTelemetry == null ? null : functionPreparationTelemetry.syntaxProgressFor(f));
+					final sharedMethod = targetFunctionCatalog.find(f.id);
+					#if macro
+					if (Context.definedValue("reflaxe_ocaml_target_function_test_require_shared") == classType.module
+						+ "|"
+						+ classType.name
+						+ "::"
+						+ f.field.name && sharedMethod == null)
+						Context.error("reflaxe.ocaml: required instance method did not enter the shared target route", f.field.pos);
+					#end
+					final builtMethod:reflaxe.ocaml.ast.OcamlBuiltFunction = if (sharedMethod == null) {
+						builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, methodReturnType,
+							preserveInstanceSignature, syntaxInput.genericTransport, syntaxInput.methodDispatch);
+					} else {
+						if (sharedMethod.role != InstanceMethod || !HaxeOcamlTargetFunctionAdapter.hasFinalMarker(f, sharedMethod))
+							throw 'reflaxe.ocaml: shared instance method "${f.id}" lost its role or preprocessor envelope';
+						ctx.lowerSharedTargetFunction(sharedMethod);
+					};
+					// Instance calls pass the selected record before the source arguments.
+					// Keep the builder's unit parameter for a zero-argument Haxe method.
+					if (preserveInstanceSignature && builtMethod.signature != null)
+						methodSignature = OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent(instanceTypeName), builtMethod.signature);
+					if (preserveInstanceSignature && methodSignature == null && f.field.params.length > 0) {
+						// Ordinary generic instance calls already use erased method storage.
+						// Only this method's declared parameters may select that boundary.
+						final declaration = projectDeclarationSignature(argInfo.map(argument -> argument.t), methodReturnType, representationRegistry,
+							ocamlTypeExprFromHaxeType, ctx, f.field.params.map(parameter -> parameter.t));
+						if (declaration != null)
+							methodSignature = OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent(instanceTypeName),
+								signatureFromTypes(declaration.parameters, declaration.result));
+					}
+					switch (builtMethod.expression) {
 						case OcamlExpr.EFun(params, b):
 							final annotatedParams = if (expectedArgs != null && params.length == expectedArgs.length) {
 								final out:Array<OcamlPat> = [];
@@ -2793,7 +2881,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 				} else {
 					compiled;
 				}
-				lets.push({name: methodName, expr: adjusted});
+				lets.push(methodSignature == null ? {name: methodName, expr: adjusted} : {
+					name: methodName,
+					expr: adjusted,
+					signature: methodSignature
+				});
 			}
 		}
 
@@ -2831,7 +2923,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				case TFun(_, ret): ret;
 				case _: f.expr.t;
 			};
-			final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(f);
+			final syntaxInput = functionPlanRegistry.functionSyntaxInputFor(f,
+				functionPreparationTelemetry == null ? null : functionPreparationTelemetry.syntaxProgressFor(f));
 			final sharedFunction = targetFunctionCatalog.find(f.id);
 			#if macro
 			final requiredSharedFunction = Context.definedValue("reflaxe_ocaml_target_function_test_require_shared");
@@ -2839,12 +2932,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 			if (requiredSharedFunction == sharedFunctionSelector && sharedFunction == null)
 				Context.error("reflaxe.ocaml: required function did not enter the shared target route", f.field.pos);
 			#end
-			final compiled = if (sharedFunction == null) {
-				builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, staticReturnType);
+			final builtFunction:reflaxe.ocaml.ast.OcamlBuiltFunction = if (sharedFunction == null) {
+				builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, syntaxInput.plan, syntaxInput.localIdentities, staticReturnType, true,
+					syntaxInput.genericTransport, syntaxInput.methodDispatch);
 			} else {
 				if (!HaxeOcamlTargetFunctionAdapter.hasFinalMarker(f, sharedFunction))
 					throw 'reflaxe.ocaml: shared target function "${f.id}" lost its preprocessor envelope';
-				OcamlTargetFunctionLowerer.build(sharedFunction);
+				ctx.lowerSharedTargetFunction(sharedFunction);
 			};
 			#if macro
 			if (profileVerbose && profClassMatch && profileDetail) {
@@ -2855,6 +2949,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				}
 			}
 			#end
+
+			final compiled = builtFunction.expression;
 
 			// `dynamic function` fields are mutable in Haxe: they can be reassigned at runtime
 			// (including statics, see upstream Issue5556). Model them like mutable statics:
@@ -2875,7 +2971,19 @@ class OcamlCompiler extends DirectToStringCompiler {
 			};
 			final bindingName = storage != null
 				&& storage.declarationSite != OcamlStaticStorageDeclarationSite.OwnerBinding ? OcamlNameTools.normalizeValueIdentifier("__init_" + name) : name;
-			lets.push({name: bindingName, expr: expr});
+			var staticSignature = builtFunction.signature;
+			if (!isDynamicMethod && staticSignature == null && f.field.params.length > 0) {
+				final declaration = reflaxe.ocaml.ast.OcamlDeclarationSignature.projectStaticMapDeclarationSignature(argInfo.map(argument -> argument.t),
+					staticReturnType, representationRegistry, ocamlTypeExprFromHaxeType, ctx, f.field.params.map(parameter -> parameter.t));
+				if (declaration != null)
+					staticSignature = signatureFromTypes(declaration.parameters, declaration.result);
+			}
+			final binding:OcamlLetBinding = if (!isDynamicMethod && staticSignature != null) {
+				{name: bindingName, expr: expr, signature: staticSignature};
+			} else {
+				{name: bindingName, expr: expr};
+			};
+			lets.push(binding);
 		}
 
 		// Static vars (M6+)
@@ -2922,6 +3030,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 				&& (init == null || isLiteralNullInitializer(init));
 			final compiledInitFromFieldType = if (consumesRepresentedNullDefault) {
 				staticFieldDefault(classType, v.field, storage, representedStatic).implicitDefault;
+			} else if (representedStatic == null
+				&& isLiteralNullInitializer(init)
+				&& OcamlUnrepresentedFieldDefaultPlan.usesRuntimeNullDefault(v.field.type)) {
+				// Explicit null in reference storage uses the same field-owned runtime
+				// reference as an implicit default. Preserve that authority through
+				// recursive-module checks instead of emitting an unchecked field name.
+				unrepresentedStaticFieldDefault(classType, v.field, storage);
 			} else if (init != null) {
 				buildStandaloneAssignment(builder, fieldInitializerOwner(classType, v.field, "static"), v.field.type, init);
 			} else {
@@ -2956,7 +3071,18 @@ class OcamlCompiler extends DirectToStringCompiler {
 			final bindingName = (storage != null
 				&& storage.declarationSite != OcamlStaticStorageDeclarationSite.OwnerBinding) ? OcamlNameTools.normalizeValueIdentifier("__init_" +
 					name) : name;
-			lets.push({name: bindingName, expr: compiled});
+			// A null-only reference cell can participate in a recursive module
+			// without running user code. Retain its existing declared carrier;
+			// assembly still checks the exact initializer and safe recursion anchors.
+			final nullCellDeclaration = storage != null
+				&& storage.declarationSite == OcamlStaticStorageDeclarationSite.OwnerBinding
+				&& (init == null || isLiteralNullInitializer(init)) ? projectDeclarationSignature([], v.field.type, representationRegistry,
+					ocamlTypeExprFromHaxeType, ctx) : null;
+			if (nullCellDeclaration != null) {
+				lets.push({name: bindingName, expr: compiled, signature: OcamlTypeExpr.TApp("ref", [nullCellDeclaration.result])});
+			} else {
+				lets.push({name: bindingName, expr: compiled});
+			}
 		}
 		for (entry in staticStoragePlan.entriesForModule(classType.module)) {
 			if (entry.declarationSite != OcamlStaticStorageDeclarationSite.TypePrelude || entry.declarationTypeName != classType.name)
@@ -3001,22 +3127,26 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final printStartS = #if macro (profileVerbose && profClassMatch) ? profileNowS() : 0.0 #else 0.0 #end;
 		#if macro
 		if (profileVerbose && profClassMatch)
-			profileLogLine("reflaxe.ocaml: class_print_begin class=" + profClassName);
+			profileLogLine("reflaxe.ocaml: class_syntax_record_begin class=" + profClassName);
 		#end
-		final printed = printFinalModule(items, "class:" + fullName);
+		ctx.finalRuntimeUses.observeModuleItems(items, "class:" + fullName, ctx.activateStagedTypeRuntimeUse);
+		moduleChunks.record(classType.module, classType.name, items, out);
 		final printEndS = #if macro (profileVerbose && profClassMatch) ? profileNowS() : 0.0 #else 0.0 #end;
-		out += printed;
 		#if macro
 		if (profileVerbose && profClassMatch) {
 			final dtMs = Std.int((printEndS - printStartS) * 1000);
-			profileLogLine("reflaxe.ocaml: class_print class=" + profClassName + " dt_ms=" + Std.string(dtMs) + " chars="
-				+ Std.string(printed != null ? printed.length : 0));
+			profileLogLine("reflaxe.ocaml: class_syntax_record class="
+				+ profClassName
+				+ " dt_ms="
+				+ Std.string(dtMs)
+				+ " items="
+				+ Std.string(items.length));
 		}
 		if (profileVerbose) {
 			final classEndS = profileNowS();
 			final dtMs = Std.int((classEndS - profClassStartS) * 1000);
 			profileLogLine("reflaxe.ocaml: class_end count=" + Std.string(profClassCount) + " name=" + profClassName + " dt_ms=" + Std.string(dtMs)
-				+ " chars=" + Std.string(out.length));
+				+ " header_chars=" + Std.string(out.length));
 		}
 		#end
 
@@ -3188,7 +3318,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 				throw "reflaxe.ocaml: shared target report requires one main module";
 			final request = new OcamlTargetProgramRequest(revision.id, sharedMain, declarations, targetFieldInitializerCatalog.copyFacts(),
 				targetFunctionCatalog.copyFacts());
-			final plan = OcamlTargetProgramCore.lower(request);
+			final plan = OcamlTargetProgramCore.lower(request,
+				() -> new reflaxe.ocaml.target.OcamlTargetRuntimeSources(RuntimeCopier.resolveRuntimeSourceDirectory()));
 			File.saveContent(Path.join([outDir, OcamlTargetProgramCore.REPORT_FILE]), plan.reportJson("stock-haxe"));
 			final sharedOutput = Context.definedValue("reflaxe_ocaml_shared_program_output");
 			if (sharedOutput != null && StringTools.trim(sharedOutput).length > 0)
@@ -3222,7 +3353,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				functionPlanRegistry.reflectCompareDecisions(), functionPlanRegistry.stdIsOfTypeDecisions(), functionPlanRegistry.intUnaryDecisions(),
 				functionPlanRegistry.functionResultBoundaries(), functionPlanRegistry.controlDecisions(), functionPlanRegistry.controlLoopTargets(),
 				functionPlanRegistry.controlCatchChains(), functionPlanRegistry.controlAdmissionSnapshots(), staticStoragePlan.reportEntries(),
-				staticStoragePlan.revision(), artifacts);
+				staticStoragePlan.revision(), functionPlanRegistry.callableViewInventory(representationRegistry), artifacts);
 		}
 		if (Context.defined("reflaxe_ocaml_semantic_lifecycle_trace")) {
 			if (semanticLifecycle == null)
@@ -3734,9 +3865,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 		reorderMlSegmentsByLocalTypeDeps("haxe.macro.Expr");
 		// Stage4 macro-host bring-up also requires compiling `haxe.macro.Type` (many mutually-referencing enums).
 		reorderMlSegmentsByLocalTypeDeps("haxe.macro.Type");
-		// Portable stdlib closure: `haxe.io.ArrayBufferView` mixes helper/value segments that can
-		// reference class values emitted later in the same unit (`create`), so reorder by local deps.
-		reorderMlSegmentsByLocalTypeDeps("haxe.io.ArrayBufferView");
 
 		final excludedModuleIds:Map<String, Bool> = [];
 		final excludedFrameworkPaths:Map<String, Bool> = [];
@@ -4567,11 +4695,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 			kind: OcamlTypeDeclKind.Variant(ctors)
 		};
 
-		final items:Array<OcamlModuleItem> = [OcamlModuleItem.IType([decl], false)];
-		RuntimeUsageCollector.collectFromModuleItems(items, (moduleName) -> ctx.markRuntimeModule(moduleName));
-
-		var out = "(* Generated by reflaxe.ocaml (WIP) *)\n(* Haxe enum: " + fullName + " *)\n\n";
-		out += printFinalModule(items, "enum:" + fullName);
+		registerTypeDeclaration(enumType.module, decl);
+		final out = "(* Generated by reflaxe.ocaml (WIP) *)\n(* Haxe enum: " + fullName + " *)\n";
+		// The module's type prelude owns the declaration. Retain this empty chunk
+		// so its header cannot be mistaken for unstructured framework output.
+		moduleChunks.record(enumType.module, enumType.name, [], out);
 		return out;
 	}
 
@@ -4607,17 +4735,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	}
 
 	static function ocamlTypeName(haxeName:String):String {
-		if (haxeName == null || haxeName.length == 0)
-			return "t";
-		final first = haxeName.charCodeAt(0);
-		final isUpper = first >= 65 && first <= 90;
-		var s = (isUpper ? String.fromCharCode(first + 32) : haxeName.substr(0, 1)) + haxeName.substr(1);
-		s = sanitizeLowerIdent(s);
-		if (s.length == 0)
-			return "t";
-		// OCaml keywords are not valid identifiers in type declarations (`type type = ...` is a syntax error).
-		// Keep emission deterministic by prefixing reserved names.
-		return OcamlNameTools.isOcamlReservedValueName(s) ? ("hx_" + s) : s;
+		return OcamlNameTools.enumTypeName(haxeName);
 	}
 
 	static function ocamlTypeParam(haxeName:String):String {
@@ -4924,16 +5042,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 		if (revision == null)
 			throw "reflaxe.ocaml [ocaml-class-marker:missing-program]: class identity marker requires an active program revision";
 		final decision = OcamlClassIdentityMarkerPlan.seal(classType, runtimeClassName, emissionRole, revision.id, OcamlFunctionPlanRegistry.PIPELINE_REVISION);
-		OcamlClassIdentityMarkerPlan.requireDecision(decision);
-		ctx.runtimeRequirements.recordClassIdentityMarker(decision);
 		final activeProfile = OcamlProfileContract.toDefineValue(OcamlBuildContext.resolve().profile);
-		final authority = new OcamlRuntimeUseAuthority(decision.revision, activeProfile, ctx.runtimeRequirementsByIds(decision.runtimeRequirementIds),
-			decision.runtimeUseOccurrences, ctx.finalRuntimeUses);
-		final occurrence = decision.runtimeUseOccurrences[0];
-		final reference = authority.expressionIdentifier(occurrence.id, occurrence.planRevision, occurrence.exactSymbol);
-		final marker = OcamlExpr.EApp(OcamlExpr.ERuntimeIdent(reference), [OcamlExpr.EConst(OcamlConst.CString(decision.runtimeClassName))]);
-		authority.reconcileExpression(marker);
-		return marker;
+		final lowered = lowerClassMarker(decision, activeProfile, ctx.finalRuntimeUses);
+		for (requirement in lowered.runtimeRequirements)
+			ctx.runtimeRequirements.record(requirement);
+		return lowered.expression;
 	}
 
 	/**
@@ -5228,164 +5341,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 		want.set(name, true);
 		final deps = collectFreeIdents(expr, want);
 		return deps.exists(name);
-	}
-
-	static function collectFreeIdents(expr:OcamlExpr, want:Map<String, Bool>):Map<String, Bool> {
-		final out:Map<String, Bool> = [];
-		final bound:Map<String, Int> = [];
-
-		function boundAdd(n:String):Void {
-			final c = bound.exists(n) ? bound.get(n) : 0;
-			bound.set(n, c + 1);
-		}
-
-		function boundRemove(n:String):Void {
-			if (!bound.exists(n))
-				return;
-			final c = bound.get(n);
-			if (c <= 1)
-				bound.remove(n)
-			else
-				bound.set(n, c - 1);
-		}
-
-		function isBound(n:String):Bool
-			return bound.exists(n);
-
-		function collectPatNames(p:OcamlPat, acc:Array<String>):Void {
-			switch (p) {
-				case PAny:
-				case PVar(n):
-					acc.push(n);
-				case PTuple(items):
-					for (i in items)
-						collectPatNames(i, acc);
-				case PRecord(fields):
-					for (f in fields)
-						collectPatNames(f.pat, acc);
-				case PConstructor(_, args), PRuntimeConstructor(_, args):
-					for (a in args)
-						collectPatNames(a, acc);
-				case POr(items):
-					for (i in items)
-						collectPatNames(i, acc);
-				case PAnnot(pat, _):
-					collectPatNames(pat, acc);
-				case PConst(_):
-			}
-		}
-
-		function visit(e:OcamlExpr):Void {
-			switch (e) {
-				case EPos(_, inner):
-					visit(inner);
-				case EConst(_):
-				case ERawInjection(injection):
-					for (part in injection.segments())
-						switch (part) {
-							case RawText(_):
-							case RawExpression(child):
-								visit(child);
-						}
-				case EAnnot(expr, _):
-					visit(expr);
-				case ERaise(exn):
-					visit(exn);
-				case EIdent(n):
-					if (!isBound(n) && want.exists(n))
-						out.set(n, true);
-				case ERuntimeIdent(reference):
-					if (!isBound(reference.exactSymbol) && want.exists(reference.exactSymbol))
-						out.set(reference.exactSymbol, true);
-				case ELet(n, value, body, isRec):
-					if (isRec) {
-						boundAdd(n);
-						visit(value);
-						visit(body);
-						boundRemove(n);
-					} else {
-						visit(value);
-						boundAdd(n);
-						visit(body);
-						boundRemove(n);
-					}
-				case EFun(params, body):
-					final names:Array<String> = [];
-					for (p in params)
-						collectPatNames(p, names);
-					for (n in names)
-						boundAdd(n);
-					visit(body);
-					for (n in names)
-						boundRemove(n);
-				case EApp(fn, args):
-					visit(fn);
-					for (a in args)
-						visit(a);
-				case EAppArgs(fn, args):
-					visit(fn);
-					for (a in args)
-						visit(a.expr);
-				case EBinop(_, l, r):
-					visit(l);
-					visit(r);
-				case EUnop(_, e1):
-					visit(e1);
-				case EIf(c, t, f):
-					visit(c);
-					visit(t);
-					visit(f);
-				case EMatch(scrutinee, cases):
-					visit(scrutinee);
-					for (c in cases) {
-						final names:Array<String> = [];
-						collectPatNames(c.pat, names);
-						for (n in names)
-							boundAdd(n);
-						if (c.guard != null)
-							visit(c.guard);
-						visit(c.expr);
-						for (n in names)
-							boundRemove(n);
-					}
-				case ETry(body, cases):
-					visit(body);
-					for (c in cases) {
-						final names:Array<String> = [];
-						collectPatNames(c.pat, names);
-						for (n in names)
-							boundAdd(n);
-						if (c.guard != null)
-							visit(c.guard);
-						visit(c.expr);
-						for (n in names)
-							boundRemove(n);
-					}
-				case ESeq(items):
-					for (i in items)
-						visit(i);
-				case EWhile(c, b):
-					visit(c);
-					visit(b);
-				case EList(items):
-					for (i in items)
-						visit(i);
-				case ERecord(fields):
-					for (f in fields)
-						visit(f.value);
-				case EField(e1, _):
-					visit(e1);
-				case EAssign(_, l, r):
-					visit(l);
-					visit(r);
-				case ETuple(items):
-					for (i in items)
-						visit(i);
-			}
-		}
-
-		visit(expr);
-		return out;
 	}
 }
 #end

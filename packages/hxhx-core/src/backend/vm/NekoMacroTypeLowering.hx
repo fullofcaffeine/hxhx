@@ -16,18 +16,22 @@ package backend.vm;
 	  as `X -> Y`, which is the observed Neko Gate3 blocker.
 **/
 class NekoMacroTypeLowering {
-	public static function render(raw:String):String {
+	/** Public path and argument lists use Array; only enum parameter vectors use raw VM storage. */
+	public static function render(raw:String, arrayFactory:NekoArrayProvider.NekoArrayFactory):String {
 		final text = trimLeadingTypeColon(raw);
 		final arrow = findTopLevelArrow(text);
 		if (arrow >= 0) {
 			final left = text.substring(0, arrow);
 			final right = text.substr(arrow + 2);
-			return macroEnum("TFunction", ["$array(" + render(left) + ")", render(right)]);
+			return macroEnum("TFunction", [
+				NekoArrayProvider.fromValues(arrayFactory, [render(left, arrayFactory)]),
+				render(right, arrayFactory)
+			]);
 		}
-		return macroTypePath(text);
+		return macroTypePath(text, arrayFactory);
 	}
 
-	static function macroTypePath(raw:String):String {
+	static function macroTypePath(raw:String, arrayFactory:NekoArrayProvider.NekoArrayFactory):String {
 		final path = StringTools.trim(stripGenericTypeParams(raw));
 		final parts = path.length == 0 ? [""] : path.split(".");
 		final name = parts[parts.length - 1];
@@ -37,7 +41,12 @@ class NekoMacroTypeLowering {
 				pack.push(quote(parts[i]));
 		}
 		return macroEnum("TPath", [
-			anonObject(["pack", "name", "params", "sub"], ["$array(" + pack.join(", ") + ")", quote(name), "$array()", "null"])
+			anonObject(["pack", "name", "params", "sub"], [
+				NekoArrayProvider.fromValues(arrayFactory, pack),
+				quote(name),
+				NekoArrayProvider.fromValues(arrayFactory, []),
+				"null"
+			])
 		]);
 	}
 

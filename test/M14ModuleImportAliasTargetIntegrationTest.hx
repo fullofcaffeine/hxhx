@@ -255,12 +255,24 @@ class M14ModuleImportAliasTargetIntegrationTest {
 			.emit(program(), new BackendContext(outputRoot, null, "Main", true, false, new StringMap<String>()));
 		assertTrue(FileSystem.exists(result.entryPath), targetId + " did not produce its entry source file");
 		final content = File.getContent(result.entryPath);
-		assertTrue(content.indexOf("Service") < 0, targetId + " leaked the Haxe-only alias instead of consuming the resolved model.Api identity");
-		assertTrue(content.indexOf("Role") < 0, targetId + " leaked the Haxe-only interface alias instead of consuming the resolved model.Contract identity");
+		// C# may declare exact aliases in its header. Calls and class declarations
+		// must still consume the resolved identities checked by this fixture.
+		var resolvedContent = content;
+		if (targetId == "cs-native")
+			for (alias in [
+				"Service = global::model.Api",
+				"Role = global::model.Contract",
+				"Parent = global::model.Base"
+			])
+				resolvedContent = StringTools.replace(resolvedContent, "using " + alias + ";", "");
+		assertTrue(resolvedContent.indexOf("Service") < 0, targetId + " leaked the Haxe-only alias instead of consuming the resolved model.Api identity");
+		assertTrue(resolvedContent.indexOf("Role") < 0,
+			targetId + " leaked the Haxe-only interface alias instead of consuming the resolved model.Contract identity");
 		if (targetId == "php-native")
 			assertTrue(content.indexOf("class Main extends Base") >= 0, "PHP did not render Main with the resolved Base parent")
 		else
-			assertTrue(content.indexOf("Parent") < 0, targetId + " leaked the Haxe-only parent alias instead of consuming the resolved model.Base identity");
+			assertTrue(resolvedContent.indexOf("Parent") < 0,
+				targetId + " leaked the Haxe-only parent alias instead of consuming the resolved model.Base identity");
 		assertTrue(content.indexOf("Api") >= 0, targetId + " output did not reference the selected Api provider");
 		if (targetId != "cs-native")
 			assertTrue(content.indexOf("Base") >= 0, targetId + " output did not reference the selected Base parent");

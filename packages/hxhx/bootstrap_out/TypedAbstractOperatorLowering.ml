@@ -6,13 +6,13 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TypedAbstractOperatorLowering" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TypedAbstractOperatorLowering" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedAbstractOperatorLowering" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedAbstractOperatorLowering" } : t)
 
-let lowerClasses = fun classes index filePath -> let unary = Obj.magic (TypedAbstractUnaryLowering.lowerClasses (Obj.magic classes) (Obj.magic index) (filePath : string)) in TypedAbstractBinaryLowering.lowerClasses (Obj.magic unary) (Obj.magic index) (filePath : string)
+let lowerClasses = fun classes index filePath retainNativeCall -> let unary = Obj.magic (TypedAbstractUnaryLowering.lowerClasses (Obj.magic classes) (Obj.magic index) (filePath : string)) in let properties = Obj.magic (TypedPropertyLowering.lowerClasses (Obj.magic (TypedAbstractBinaryLowering.lowerClasses (Obj.magic unary) (Obj.magic index) (filePath : string))) (Obj.magic index) (filePath : string)) in TypedRequiredInlineLowering.lowerClasses (Obj.magic properties) (Obj.magic index) retainNativeCall
 
-let lowerModules = fun modules index -> let unary = Obj.magic (TypedAbstractUnaryLowering.lowerModules (Obj.magic modules) (Obj.magic index)) in TypedAbstractBinaryLowering.lowerModules (Obj.magic unary) (Obj.magic index)
+let lowerModules = fun modules index retainNativeCall -> let unary = Obj.magic (TypedAbstractUnaryLowering.lowerModules (Obj.magic modules) (Obj.magic index)) in let properties = Obj.magic (TypedPropertyLowering.lowerModules (Obj.magic (TypedAbstractBinaryLowering.lowerModules (Obj.magic unary) (Obj.magic index))) (Obj.magic index)) in TypedRequiredInlineLowering.lowerModules (Obj.magic properties) (Obj.magic index) retainNativeCall

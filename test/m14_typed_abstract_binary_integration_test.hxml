@@ -3,3 +3,6 @@
 
 -main M14TypedAbstractBinaryIntegrationTest
 --interp
+
+--next
+test/m14_abstract_binary_selection_order_test.hxml

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable invocationIdentity : string; mutable previ
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun invocationIdentity2 previousSnapshot2 publish -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerDependencyRequest"; invocationIdentity = HxString.hx_null_string; previousSnapshot = Obj.magic HxRuntime.hx_null; publishCallback = Obj.magic HxRuntime.hx_null; reportState = Obj.magic HxRuntime.hx_null; stagedSnapshot = Obj.magic HxRuntime.hx_null; snapshotRequired = false; preparedForSuccess = false; finished = false } : t) in (
+let create = fun invocationIdentity2 previousSnapshot2 publish -> let self = ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerDependencyRequest"; invocationIdentity = HxString.hx_null_string; previousSnapshot = Obj.magic HxRuntime.hx_null; publishCallback = Obj.magic HxRuntime.hx_null; reportState = Obj.magic HxRuntime.hx_null; stagedSnapshot = Obj.magic HxRuntime.hx_null; snapshotRequired = false; preparedForSuccess = false; finished = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (invocationIdentity2 : string) in (
       (Obj.magic self : t).invocationIdentity <- __assign_1;
@@ -44,7 +44,7 @@ let create = fun invocationIdentity2 previousSnapshot2 publish -> let self = ({ 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerDependencyRequest"; invocationIdentity = HxString.hx_null_string; previousSnapshot = Obj.magic HxRuntime.hx_null; publishCallback = Obj.magic HxRuntime.hx_null; reportState = Obj.magic HxRuntime.hx_null; stagedSnapshot = Obj.magic HxRuntime.hx_null; snapshotRequired = false; preparedForSuccess = false; finished = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerDependencyRequest"; invocationIdentity = HxString.hx_null_string; previousSnapshot = Obj.magic HxRuntime.hx_null; publishCallback = Obj.magic HxRuntime.hx_null; reportState = Obj.magic HxRuntime.hx_null; stagedSnapshot = Obj.magic HxRuntime.hx_null; snapshotRequired = false; preparedForSuccess = false; finished = false } : t)
 
 let report = fun self () -> (Obj.magic self : t).reportState
 
@@ -71,7 +71,7 @@ let record = fun self (snapshot : CompilerDependencySnapshot.t) -> ignore (ignor
 
 let prepareFinish = fun self (requestSucceeded : bool) -> ignore (ignore (try ignore ((
   ignore (ensureOpen (Obj.magic self) ());
-  ignore (if not (requestSucceeded) || (Obj.magic self : t).preparedForSuccess then raise (HxRuntime.Hx_return_void) else ());
+  ignore (if not (requestSucceeded) || (Obj.magic self : t).preparedForSuccess then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   ignore (if (Obj.magic self : t).snapshotRequired && (Obj.magic self : t).stagedSnapshot == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "successful dependency observation request did not record the complete typed program") ["Dynamic"] else ());
   ignore (if (Obj.magic self : t).stagedSnapshot != Obj.magic (HxRuntime.hx_null) && (let __string_receiver_15 = CompilerDependencySnapshot.getCanonicalIdentity (Obj.magic ((Obj.magic self : t).stagedSnapshot)) () in HxString.length __string_receiver_15) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "dependency observation produced an empty snapshot identity") ["Dynamic"] else ());
   let __place_receiver_16 = self in let __place_rhs_17 = true in (
@@ -82,7 +82,7 @@ let prepareFinish = fun self (requestSucceeded : bool) -> ignore (ignore (try ig
   | HxRuntime.Hx_return_void -> ()))
 
 let finish = fun self (requestSucceeded : bool) -> ignore (ignore (try ignore ((
-  ignore (if (Obj.magic self : t).finished then raise (HxRuntime.Hx_return_void) else ());
+  ignore (if (Obj.magic self : t).finished then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   ignore (if requestSucceeded then ignore ((
     ignore (prepareFinish (Obj.magic self) true);
     if (Obj.magic self : t).stagedSnapshot != Obj.magic (HxRuntime.hx_null) then ignore ((Obj.magic self : t).publishCallback ((Obj.magic self : t).invocationIdentity : string) (Obj.magic ((Obj.magic self : t).stagedSnapshot))) else ()

@@ -10,17 +10,20 @@
 	What:
 	- Optional package path (as dotted string, e.g. "a.b.c").
 	- Ordered import/using directives with their source-language meaning intact.
-	- One or more top-level class declarations.
+	- Zero or more top-level class declarations.
 
 	Note
-	- Haxe modules may contain multiple types. For bootstrap we only model `class`
-	  declarations, but we keep *all* of them so Stage3 emission can resolve
-	  module-local helper types (common in upstream unit tests).
+	- The class-shaped catalog contains real declarations, including parser-modeled
+	  abstracts and module-level functions. Typedefs have a separate catalog.
+	- `mainClass` can hold parser fallback metadata or a removed primary header.
+	  The exact `classes` array decides which declarations belong to the module.
+	  A header outside that array is not a runtime class.
 **/
 class HxModuleDecl {
 	public final packagePath:String;
 
 	final directives:Array<HxModuleDirective>;
+	final typedefs:Array<HxTypedefDecl>;
 
 	public final mainClass:HxClassDecl;
 	public final classes:Array<HxClassDecl>;
@@ -28,23 +31,14 @@ class HxModuleDecl {
 	public final hasToplevelMain:Bool;
 
 	public function new(packagePath:String, directives:Array<HxModuleDirective>, mainClass:HxClassDecl, classes:Array<HxClassDecl>, headerOnly:Bool,
-			hasToplevelMain:Bool) {
+			hasToplevelMain:Bool, ?typedefs:Array<HxTypedefDecl>) {
 		this.packagePath = packagePath;
 		this.directives = directives == null ? [] : directives.copy();
+		this.typedefs = typedefs == null ? [] : typedefs.copy();
 		this.mainClass = mainClass;
-		// Keep `classes` non-empty and consistent with `mainClass` for downstream stages.
-		if (classes == null || classes.length == 0) {
-			this.classes = [mainClass];
-		} else {
-			var hasMain = false;
-			for (c in classes) {
-				if (c == mainClass) {
-					hasMain = true;
-					break;
-				}
-			}
-			this.classes = hasMain ? classes : ([mainClass].concat(classes));
-		}
+		// The caller owns this exact inventory. A primary header can survive
+		// removal of its class when an emitted secondary type still needs its name.
+		this.classes = classes == null ? [] : classes.copy();
 		this.headerOnly = headerOnly;
 		this.hasToplevelMain = hasToplevelMain;
 	}
@@ -85,6 +79,11 @@ class HxModuleDecl {
 	**/
 	public static function getClasses(m:HxModuleDecl):Array<HxClassDecl> {
 		return m.classes;
+	}
+
+	/** Source aliases retain their target syntax and never enter the runtime class catalog. */
+	public static function getTypedefs(m:HxModuleDecl):Array<HxTypedefDecl> {
+		return m.typedefs.copy();
 	}
 
 	/**

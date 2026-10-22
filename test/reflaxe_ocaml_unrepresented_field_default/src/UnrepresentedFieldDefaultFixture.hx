@@ -31,6 +31,7 @@ class UnrepresentedFieldDefaultFixture {
 
 	/** Proves that one reference-like Haxe type receives one checked null default. */
 	static function proveCastNullDefault(type:Type, ownerId:String, source:OcamlLoweredSourceSpan):Void {
+		assertTrue(OcamlUnrepresentedFieldDefaultPlan.usesRuntimeNullDefault(type), ownerId + " should share its implicit and explicit null path");
 		final plan = OcamlUnrepresentedFieldDefaultPlan.seal(type, ownerId, "program:fixture", source);
 		final authority = new OcamlRuntimeUseAuthority(plan.revision, "portable", plan.runtimeRequirements, plan.runtimeUseOccurrences);
 		final materialized = OcamlUnrepresentedFieldDefaultPlan.materialize(plan, type, authority);
@@ -46,6 +47,13 @@ class UnrepresentedFieldDefaultFixture {
 
 	public static function run():Void {
 		final source:OcamlLoweredSourceSpan = {file: "UnrepresentedFieldDefaultFixture.hx", min: 10, max: 20};
+		for (primitive in [
+			Context.typeof(macro(0 : Int)),
+			Context.typeof(macro(0.0 : Float)),
+			Context.typeof(macro(false : Bool))
+		]) {
+			assertTrue(!OcamlUnrepresentedFieldDefaultPlan.usesRuntimeNullDefault(primitive), "primitive zero and false must not become runtime null");
+		}
 		final intPlan = OcamlUnrepresentedFieldDefaultPlan.seal(Context.typeof(macro(0 : Int)), "fixture:field:int", "program:fixture", source);
 		assertTrue(intPlan.kind == OcamlUnrepresentedFieldDefaultKind.IntZero
 			&& intPlan.runtimeRequirements.length == 0

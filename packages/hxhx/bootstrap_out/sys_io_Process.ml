@@ -27,7 +27,7 @@ let ocamlprocessinput_readByte__impl = fun (self : ocamlprocessinput_t) () -> le
 )
 
 let ocamlprocessinput_readBytes__impl = fun (self : ocamlprocessinput_t) (buf : HxBytes.t) (pos : int) (len : int) -> (try (
-  ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
+  ignore (if len <= 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let i = ref 0 in (
     ignore (try ignore (while !i < len do ignore ((
       ignore (let __bytes_access_receiver_9 = buf in let __bytes_access_arg_0_10 = HxInt.add pos (!i) in let __bytes_access_arg_1_11 = (Obj.magic self : ocamlprocessinput_t).readByte (Obj.magic self) () in HxBytes.set __bytes_access_receiver_9 __bytes_access_arg_0_10 __bytes_access_arg_1_11);
@@ -36,10 +36,10 @@ let ocamlprocessinput_readBytes__impl = fun (self : ocamlprocessinput_t) (buf : 
         __old_12
       )
     )) done) with
-      | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-      | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_5 -> raise (HxRuntime.Hx_return __ret_5)
-      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+      | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+      | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+      | HxRuntime.Hx_return __ret_5 -> Stdlib.raise (HxRuntime.Hx_return __ret_5)
+      | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
       | HxRuntime.Hx_exception (__exn_v_6, __exn_tags_7) -> if HxRuntime.tags_has __exn_tags_7 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_6 : Haxe_io_Eof.t) in (
         ignore _hx;
         ignore (if !i = 0 then HxType.hx_throw_typed_rtti (Obj.repr (Haxe_io_Eof.create ())) ["Dynamic"] else ())
@@ -47,7 +47,7 @@ let ocamlprocessinput_readBytes__impl = fun (self : ocamlprocessinput_t) (buf : 
       | __exn_8 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_8) : Haxe_io_Eof.t) in (
         ignore _hx;
         ignore (if !i = 0 then HxType.hx_throw_typed_rtti (Obj.repr (Haxe_io_Eof.create ())) ["Dynamic"] else ())
-      ) else raise (__exn_8));
+      ) else Stdlib.raise (__exn_8));
     !i
   )
 ) with
@@ -58,7 +58,7 @@ let ocamlprocessinput_readLine__impl = fun (self : ocamlprocessinput_t) () -> le
   s
 )
 
-let ocamlprocessinput_create = fun handle2 stream2 -> let self = ({ __hx_type = HxType.class_ "sys.io._Process.OcamlProcessInput"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (Haxe_io_Input.set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); readByte = (fun o () -> Obj.magic (ocamlprocessinput_readByte__impl (Obj.magic o) (Obj.magic ()))); readBytes = (fun o a0 a1 a2 -> Obj.magic (ocamlprocessinput_readBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); close = (fun o () -> Obj.magic (Haxe_io_Input.close__impl (Obj.magic o) (Obj.magic ()))); readAll = (fun o a0 -> Obj.magic (Haxe_io_Input.readAll__impl (Obj.magic o) (Obj.magic a0))); readFullBytes = (fun o a0 a1 a2 -> Obj.magic (Haxe_io_Input.readFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); read = (fun o a0 -> Obj.magic (Haxe_io_Input.read__impl (Obj.magic o) (Obj.magic a0))); readUntil = (fun o a0 -> Obj.magic (Haxe_io_Input.readUntil__impl (Obj.magic o) (Obj.magic a0))); readLine = (fun o () -> Obj.magic (ocamlprocessinput_readLine__impl (Obj.magic o) (Obj.magic ()))); readFloat = (fun o () -> Obj.magic (Haxe_io_Input.readFloat__impl (Obj.magic o) (Obj.magic ()))); readDouble = (fun o () -> Obj.magic (Haxe_io_Input.readDouble__impl (Obj.magic o) (Obj.magic ()))); readInt8 = (fun o () -> Obj.magic (Haxe_io_Input.readInt8__impl (Obj.magic o) (Obj.magic ()))); readInt16 = (fun o () -> Obj.magic (Haxe_io_Input.readInt16__impl (Obj.magic o) (Obj.magic ()))); readUInt16 = (fun o () -> Obj.magic (Haxe_io_Input.readUInt16__impl (Obj.magic o) (Obj.magic ()))); readInt24 = (fun o () -> Obj.magic (Haxe_io_Input.readInt24__impl (Obj.magic o) (Obj.magic ()))); readUInt24 = (fun o () -> Obj.magic (Haxe_io_Input.readUInt24__impl (Obj.magic o) (Obj.magic ()))); readInt32 = (fun o () -> Obj.magic (Haxe_io_Input.readInt32__impl (Obj.magic o) (Obj.magic ()))); readString = (fun o a0 a1 -> Obj.magic (Haxe_io_Input.readString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); handle = 0; stream = 0 } : ocamlprocessinput_t) in (
+let ocamlprocessinput_create = fun handle2 stream2 -> let self = ({ __hx_type = HxType.instance_marker "sys.io._Process.OcamlProcessInput"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (Haxe_io_Input.set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); readByte = (fun o () -> Obj.magic (ocamlprocessinput_readByte__impl (Obj.magic o) (Obj.magic ()))); readBytes = (fun o a0 a1 a2 -> Obj.magic (ocamlprocessinput_readBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); close = (fun o () -> Obj.magic (Haxe_io_Input.close__impl (Obj.magic o) (Obj.magic ()))); readAll = (fun o a0 -> Obj.magic (Haxe_io_Input.readAll__impl (Obj.magic o) (Obj.magic a0))); readFullBytes = (fun o a0 a1 a2 -> Obj.magic (Haxe_io_Input.readFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); read = (fun o a0 -> Obj.magic (Haxe_io_Input.read__impl (Obj.magic o) (Obj.magic a0))); readUntil = (fun o a0 -> Obj.magic (Haxe_io_Input.readUntil__impl (Obj.magic o) (Obj.magic a0))); readLine = (fun o () -> Obj.magic (ocamlprocessinput_readLine__impl (Obj.magic o) (Obj.magic ()))); readFloat = (fun o () -> Obj.magic (Haxe_io_Input.readFloat__impl (Obj.magic o) (Obj.magic ()))); readDouble = (fun o () -> Obj.magic (Haxe_io_Input.readDouble__impl (Obj.magic o) (Obj.magic ()))); readInt8 = (fun o () -> Obj.magic (Haxe_io_Input.readInt8__impl (Obj.magic o) (Obj.magic ()))); readInt16 = (fun o () -> Obj.magic (Haxe_io_Input.readInt16__impl (Obj.magic o) (Obj.magic ()))); readUInt16 = (fun o () -> Obj.magic (Haxe_io_Input.readUInt16__impl (Obj.magic o) (Obj.magic ()))); readInt24 = (fun o () -> Obj.magic (Haxe_io_Input.readInt24__impl (Obj.magic o) (Obj.magic ()))); readUInt24 = (fun o () -> Obj.magic (Haxe_io_Input.readUInt24__impl (Obj.magic o) (Obj.magic ()))); readInt32 = (fun o () -> Obj.magic (Haxe_io_Input.readInt32__impl (Obj.magic o) (Obj.magic ()))); readString = (fun o a0 a1 -> Obj.magic (Haxe_io_Input.readString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); handle = 0; stream = 0 } : ocamlprocessinput_t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = handle2 in (
       (__place_receiver_1 : ocamlprocessinput_t).handle <- __place_rhs_2;
@@ -72,7 +72,7 @@ let ocamlprocessinput_create = fun handle2 stream2 -> let self = ({ __hx_type = 
   self
 )
 
-let ocamlprocessinput___empty = fun () -> ({ __hx_type = HxType.class_ "sys.io._Process.OcamlProcessInput"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (Haxe_io_Input.set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); readByte = (fun o () -> Obj.magic (ocamlprocessinput_readByte__impl (Obj.magic o) (Obj.magic ()))); readBytes = (fun o a0 a1 a2 -> Obj.magic (ocamlprocessinput_readBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); close = (fun o () -> Obj.magic (Haxe_io_Input.close__impl (Obj.magic o) (Obj.magic ()))); readAll = (fun o a0 -> Obj.magic (Haxe_io_Input.readAll__impl (Obj.magic o) (Obj.magic a0))); readFullBytes = (fun o a0 a1 a2 -> Obj.magic (Haxe_io_Input.readFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); read = (fun o a0 -> Obj.magic (Haxe_io_Input.read__impl (Obj.magic o) (Obj.magic a0))); readUntil = (fun o a0 -> Obj.magic (Haxe_io_Input.readUntil__impl (Obj.magic o) (Obj.magic a0))); readLine = (fun o () -> Obj.magic (ocamlprocessinput_readLine__impl (Obj.magic o) (Obj.magic ()))); readFloat = (fun o () -> Obj.magic (Haxe_io_Input.readFloat__impl (Obj.magic o) (Obj.magic ()))); readDouble = (fun o () -> Obj.magic (Haxe_io_Input.readDouble__impl (Obj.magic o) (Obj.magic ()))); readInt8 = (fun o () -> Obj.magic (Haxe_io_Input.readInt8__impl (Obj.magic o) (Obj.magic ()))); readInt16 = (fun o () -> Obj.magic (Haxe_io_Input.readInt16__impl (Obj.magic o) (Obj.magic ()))); readUInt16 = (fun o () -> Obj.magic (Haxe_io_Input.readUInt16__impl (Obj.magic o) (Obj.magic ()))); readInt24 = (fun o () -> Obj.magic (Haxe_io_Input.readInt24__impl (Obj.magic o) (Obj.magic ()))); readUInt24 = (fun o () -> Obj.magic (Haxe_io_Input.readUInt24__impl (Obj.magic o) (Obj.magic ()))); readInt32 = (fun o () -> Obj.magic (Haxe_io_Input.readInt32__impl (Obj.magic o) (Obj.magic ()))); readString = (fun o a0 a1 -> Obj.magic (Haxe_io_Input.readString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); handle = 0; stream = 0 } : ocamlprocessinput_t)
+let ocamlprocessinput___empty = fun () -> ({ __hx_type = HxType.instance_marker "sys.io._Process.OcamlProcessInput"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (Haxe_io_Input.set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); readByte = (fun o () -> Obj.magic (ocamlprocessinput_readByte__impl (Obj.magic o) (Obj.magic ()))); readBytes = (fun o a0 a1 a2 -> Obj.magic (ocamlprocessinput_readBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); close = (fun o () -> Obj.magic (Haxe_io_Input.close__impl (Obj.magic o) (Obj.magic ()))); readAll = (fun o a0 -> Obj.magic (Haxe_io_Input.readAll__impl (Obj.magic o) (Obj.magic a0))); readFullBytes = (fun o a0 a1 a2 -> Obj.magic (Haxe_io_Input.readFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); read = (fun o a0 -> Obj.magic (Haxe_io_Input.read__impl (Obj.magic o) (Obj.magic a0))); readUntil = (fun o a0 -> Obj.magic (Haxe_io_Input.readUntil__impl (Obj.magic o) (Obj.magic a0))); readLine = (fun o () -> Obj.magic (ocamlprocessinput_readLine__impl (Obj.magic o) (Obj.magic ()))); readFloat = (fun o () -> Obj.magic (Haxe_io_Input.readFloat__impl (Obj.magic o) (Obj.magic ()))); readDouble = (fun o () -> Obj.magic (Haxe_io_Input.readDouble__impl (Obj.magic o) (Obj.magic ()))); readInt8 = (fun o () -> Obj.magic (Haxe_io_Input.readInt8__impl (Obj.magic o) (Obj.magic ()))); readInt16 = (fun o () -> Obj.magic (Haxe_io_Input.readInt16__impl (Obj.magic o) (Obj.magic ()))); readUInt16 = (fun o () -> Obj.magic (Haxe_io_Input.readUInt16__impl (Obj.magic o) (Obj.magic ()))); readInt24 = (fun o () -> Obj.magic (Haxe_io_Input.readInt24__impl (Obj.magic o) (Obj.magic ()))); readUInt24 = (fun o () -> Obj.magic (Haxe_io_Input.readUInt24__impl (Obj.magic o) (Obj.magic ()))); readInt32 = (fun o () -> Obj.magic (Haxe_io_Input.readInt32__impl (Obj.magic o) (Obj.magic ()))); readString = (fun o a0 a1 -> Obj.magic (Haxe_io_Input.readString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); handle = 0; stream = 0 } : ocamlprocessinput_t)
 
 (* Generated by reflaxe.ocaml (WIP) *)
 (* Haxe type: sys.io._Process.OcamlProcessOutput *)
@@ -87,7 +87,7 @@ let ocamlprocessoutput___ctor = fun (self : ocamlprocessoutput_t) handle2 -> ign
 let ocamlprocessoutput_writeByte__impl = fun (self : ocamlprocessoutput_t) (c : int) -> ignore (ignore (HxProcess.write_byte ((Obj.magic self : ocamlprocessoutput_t).handle) c))
 
 let ocamlprocessoutput_writeBytes__impl = fun (self : ocamlprocessoutput_t) (buf : HxBytes.t) (pos : int) (len : int) -> (try (
-  ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
+  ignore (if len <= 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let _g = ref 0 in let _g1 = len in (
     ignore (while !_g < _g1 do ignore (let i = let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
       ignore (_g := __new_4);
@@ -101,7 +101,7 @@ let ocamlprocessoutput_writeBytes__impl = fun (self : ocamlprocessoutput_t) (buf
 let ocamlprocessoutput_writeString__impl = fun (self : ocamlprocessoutput_t) (s : string) (encoding : Obj.t) -> ignore ((
   ignore encoding;
   ignore (try ignore ((
-    ignore (if s == HxString.hx_null_string || (let __string_receiver_8 = s in HxString.length __string_receiver_8) = 0 then raise (HxRuntime.Hx_return_void) else ());
+    ignore (if s == HxString.hx_null_string || (let __string_receiver_8 = s in HxString.length __string_receiver_8) = 0 then Stdlib.raise (HxRuntime.Hx_return_void) else ());
     HxProcess.write_string ((Obj.magic self : ocamlprocessoutput_t).handle) (s : string)
   )) with
     | HxRuntime.Hx_return_void -> ())
@@ -109,7 +109,7 @@ let ocamlprocessoutput_writeString__impl = fun (self : ocamlprocessoutput_t) (s 
 
 let ocamlprocessoutput_flush__impl = fun (self : ocamlprocessoutput_t) () -> ignore (ignore (HxProcess.flush_stdin ((Obj.magic self : ocamlprocessoutput_t).handle)))
 
-let ocamlprocessoutput_create = fun handle2 -> let self = ({ __hx_type = HxType.class_ "sys.io._Process.OcamlProcessOutput"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (Haxe_io_Output.set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); writeByte = (fun o a0 -> Obj.magic (ocamlprocessoutput_writeByte__impl (Obj.magic o) (Obj.magic a0))); writeBytes = (fun o a0 a1 a2 -> Obj.magic (ocamlprocessoutput_writeBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); flush = (fun o () -> Obj.magic (ocamlprocessoutput_flush__impl (Obj.magic o) (Obj.magic ()))); close = (fun o () -> Obj.magic (Haxe_io_Output.close__impl (Obj.magic o) (Obj.magic ()))); write = (fun o a0 -> Obj.magic (Haxe_io_Output.write__impl (Obj.magic o) (Obj.magic a0))); writeFullBytes = (fun o a0 a1 a2 -> Obj.magic (Haxe_io_Output.writeFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); prepare = (fun o a0 -> Obj.magic (Haxe_io_Output.prepare__impl (Obj.magic o) (Obj.magic a0))); writeInput = (fun o a0 a1 -> Obj.magic (Haxe_io_Output.writeInput__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeString = (fun o a0 a1 -> Obj.magic (ocamlprocessoutput_writeString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeFloat = (fun o a0 -> Obj.magic (Haxe_io_Output.writeFloat__impl (Obj.magic o) (Obj.magic a0))); writeDouble = (fun o a0 -> Obj.magic (Haxe_io_Output.writeDouble__impl (Obj.magic o) (Obj.magic a0))); writeInt8 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt8__impl (Obj.magic o) (Obj.magic a0))); writeUInt8 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt8__impl (Obj.magic o) (Obj.magic a0))); writeInt16 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt16__impl (Obj.magic o) (Obj.magic a0))); writeUInt16 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt16__impl (Obj.magic o) (Obj.magic a0))); writeInt24 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt24__impl (Obj.magic o) (Obj.magic a0))); writeUInt24 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt24__impl (Obj.magic o) (Obj.magic a0))); writeInt32 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt32__impl (Obj.magic o) (Obj.magic a0))); handle = 0 } : ocamlprocessoutput_t) in (
+let ocamlprocessoutput_create = fun handle2 -> let self = ({ __hx_type = HxType.instance_marker "sys.io._Process.OcamlProcessOutput"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (Haxe_io_Output.set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); writeByte = (fun o a0 -> Obj.magic (ocamlprocessoutput_writeByte__impl (Obj.magic o) (Obj.magic a0))); writeBytes = (fun o a0 a1 a2 -> Obj.magic (ocamlprocessoutput_writeBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); flush = (fun o () -> Obj.magic (ocamlprocessoutput_flush__impl (Obj.magic o) (Obj.magic ()))); close = (fun o () -> Obj.magic (Haxe_io_Output.close__impl (Obj.magic o) (Obj.magic ()))); write = (fun o a0 -> Obj.magic (Haxe_io_Output.write__impl (Obj.magic o) (Obj.magic a0))); writeFullBytes = (fun o a0 a1 a2 -> Obj.magic (Haxe_io_Output.writeFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); prepare = (fun o a0 -> Obj.magic (Haxe_io_Output.prepare__impl (Obj.magic o) (Obj.magic a0))); writeInput = (fun o a0 a1 -> Obj.magic (Haxe_io_Output.writeInput__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeString = (fun o a0 a1 -> Obj.magic (ocamlprocessoutput_writeString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeFloat = (fun o a0 -> Obj.magic (Haxe_io_Output.writeFloat__impl (Obj.magic o) (Obj.magic a0))); writeDouble = (fun o a0 -> Obj.magic (Haxe_io_Output.writeDouble__impl (Obj.magic o) (Obj.magic a0))); writeInt8 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt8__impl (Obj.magic o) (Obj.magic a0))); writeUInt8 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt8__impl (Obj.magic o) (Obj.magic a0))); writeInt16 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt16__impl (Obj.magic o) (Obj.magic a0))); writeUInt16 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt16__impl (Obj.magic o) (Obj.magic a0))); writeInt24 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt24__impl (Obj.magic o) (Obj.magic a0))); writeUInt24 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt24__impl (Obj.magic o) (Obj.magic a0))); writeInt32 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt32__impl (Obj.magic o) (Obj.magic a0))); handle = 0 } : ocamlprocessoutput_t) in (
   ignore (ignore (let __place_receiver_1 = self in let __place_rhs_2 = handle2 in (
     (__place_receiver_1 : ocamlprocessoutput_t).handle <- __place_rhs_2;
     __place_rhs_2
@@ -117,14 +117,14 @@ let ocamlprocessoutput_create = fun handle2 -> let self = ({ __hx_type = HxType.
   self
 )
 
-let ocamlprocessoutput___empty = fun () -> ({ __hx_type = HxType.class_ "sys.io._Process.OcamlProcessOutput"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (Haxe_io_Output.set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); writeByte = (fun o a0 -> Obj.magic (ocamlprocessoutput_writeByte__impl (Obj.magic o) (Obj.magic a0))); writeBytes = (fun o a0 a1 a2 -> Obj.magic (ocamlprocessoutput_writeBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); flush = (fun o () -> Obj.magic (ocamlprocessoutput_flush__impl (Obj.magic o) (Obj.magic ()))); close = (fun o () -> Obj.magic (Haxe_io_Output.close__impl (Obj.magic o) (Obj.magic ()))); write = (fun o a0 -> Obj.magic (Haxe_io_Output.write__impl (Obj.magic o) (Obj.magic a0))); writeFullBytes = (fun o a0 a1 a2 -> Obj.magic (Haxe_io_Output.writeFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); prepare = (fun o a0 -> Obj.magic (Haxe_io_Output.prepare__impl (Obj.magic o) (Obj.magic a0))); writeInput = (fun o a0 a1 -> Obj.magic (Haxe_io_Output.writeInput__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeString = (fun o a0 a1 -> Obj.magic (ocamlprocessoutput_writeString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeFloat = (fun o a0 -> Obj.magic (Haxe_io_Output.writeFloat__impl (Obj.magic o) (Obj.magic a0))); writeDouble = (fun o a0 -> Obj.magic (Haxe_io_Output.writeDouble__impl (Obj.magic o) (Obj.magic a0))); writeInt8 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt8__impl (Obj.magic o) (Obj.magic a0))); writeUInt8 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt8__impl (Obj.magic o) (Obj.magic a0))); writeInt16 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt16__impl (Obj.magic o) (Obj.magic a0))); writeUInt16 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt16__impl (Obj.magic o) (Obj.magic a0))); writeInt24 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt24__impl (Obj.magic o) (Obj.magic a0))); writeUInt24 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt24__impl (Obj.magic o) (Obj.magic a0))); writeInt32 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt32__impl (Obj.magic o) (Obj.magic a0))); handle = 0 } : ocamlprocessoutput_t)
+let ocamlprocessoutput___empty = fun () -> ({ __hx_type = HxType.instance_marker "sys.io._Process.OcamlProcessOutput"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (Haxe_io_Output.set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); writeByte = (fun o a0 -> Obj.magic (ocamlprocessoutput_writeByte__impl (Obj.magic o) (Obj.magic a0))); writeBytes = (fun o a0 a1 a2 -> Obj.magic (ocamlprocessoutput_writeBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); flush = (fun o () -> Obj.magic (ocamlprocessoutput_flush__impl (Obj.magic o) (Obj.magic ()))); close = (fun o () -> Obj.magic (Haxe_io_Output.close__impl (Obj.magic o) (Obj.magic ()))); write = (fun o a0 -> Obj.magic (Haxe_io_Output.write__impl (Obj.magic o) (Obj.magic a0))); writeFullBytes = (fun o a0 a1 a2 -> Obj.magic (Haxe_io_Output.writeFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); prepare = (fun o a0 -> Obj.magic (Haxe_io_Output.prepare__impl (Obj.magic o) (Obj.magic a0))); writeInput = (fun o a0 a1 -> Obj.magic (Haxe_io_Output.writeInput__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeString = (fun o a0 a1 -> Obj.magic (ocamlprocessoutput_writeString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeFloat = (fun o a0 -> Obj.magic (Haxe_io_Output.writeFloat__impl (Obj.magic o) (Obj.magic a0))); writeDouble = (fun o a0 -> Obj.magic (Haxe_io_Output.writeDouble__impl (Obj.magic o) (Obj.magic a0))); writeInt8 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt8__impl (Obj.magic o) (Obj.magic a0))); writeUInt8 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt8__impl (Obj.magic o) (Obj.magic a0))); writeInt16 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt16__impl (Obj.magic o) (Obj.magic a0))); writeUInt16 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt16__impl (Obj.magic o) (Obj.magic a0))); writeInt24 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt24__impl (Obj.magic o) (Obj.magic a0))); writeUInt24 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt24__impl (Obj.magic o) (Obj.magic a0))); writeInt32 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt32__impl (Obj.magic o) (Obj.magic a0))); handle = 0 } : ocamlprocessoutput_t)
 
 (* Generated by reflaxe.ocaml (WIP) *)
 (* Haxe type: sys.io.Process *)
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun cmd args detached -> let self = ({ __hx_type = HxType.class_ "sys.io.Process"; stdout = Obj.magic HxRuntime.hx_null; stderr = Obj.magic HxRuntime.hx_null; stdin = Obj.magic HxRuntime.hx_null; handle = 0; closed = false; cachedExitCode = HxRuntime.hx_null } : t) in (
+let create = fun cmd args detached -> let self = ({ __hx_type = HxType.instance_marker "sys.io.Process"; stdout = Obj.magic HxRuntime.hx_null; stderr = Obj.magic HxRuntime.hx_null; stdin = Obj.magic HxRuntime.hx_null; handle = 0; closed = false; cachedExitCode = HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxRuntime.hx_null) in (
       (Obj.magic self : t).cachedExitCode <- __assign_1;
@@ -166,21 +166,21 @@ let create = fun cmd args detached -> let self = ({ __hx_type = HxType.class_ "s
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "sys.io.Process"; stdout = Obj.magic HxRuntime.hx_null; stderr = Obj.magic HxRuntime.hx_null; stdin = Obj.magic HxRuntime.hx_null; handle = 0; closed = false; cachedExitCode = HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "sys.io.Process"; stdout = Obj.magic HxRuntime.hx_null; stderr = Obj.magic HxRuntime.hx_null; stdin = Obj.magic HxRuntime.hx_null; handle = 0; closed = false; cachedExitCode = HxRuntime.hx_null } : t)
 
 let getPid = fun self () -> (
   ignore self;
-  -1
+  (-1 : int)
 )
 
 let kill = fun self () -> ignore (ignore (try ignore ((
-  ignore (if (Obj.magic self : t).closed then raise (HxRuntime.Hx_return_void) else ());
+  ignore (if (Obj.magic self : t).closed then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   HxProcess.kill ((Obj.magic self : t).handle)
 )) with
   | HxRuntime.Hx_return_void -> ()))
 
 let close = fun self () -> ignore (ignore (try ignore ((
-  ignore (if (Obj.magic self : t).closed then raise (HxRuntime.Hx_return_void) else ());
+  ignore (if (Obj.magic self : t).closed then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   ignore (let __assign_13 = Obj.magic (Obj.repr (HxProcess.close ((Obj.magic self : t).handle))) in (
     (Obj.magic self : t).cachedExitCode <- __assign_13;
     __assign_13
@@ -193,7 +193,7 @@ let close = fun self () -> ignore (ignore (try ignore ((
   | HxRuntime.Hx_return_void -> ()))
 
 let exitCode = fun self () -> (try (
-  ignore (if (Obj.magic self : t).cachedExitCode != HxRuntime.hx_null then raise (HxRuntime.Hx_return (Obj.repr ((Obj.magic self : t).cachedExitCode))) else ());
+  ignore (if (Obj.magic self : t).cachedExitCode != HxRuntime.hx_null then Stdlib.raise (HxRuntime.Hx_return (Obj.repr ((Obj.magic self : t).cachedExitCode))) else ());
   ignore (close (Obj.magic self) ());
   let tempResult = ref (0 : int) in (
     ignore (if (Obj.magic self : t).cachedExitCode == HxRuntime.hx_null then let __assign_17 = 0 in (

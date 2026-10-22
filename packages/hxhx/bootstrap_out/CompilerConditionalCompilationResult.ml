@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable filteredSource : string; mutable observati
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun filteredSource2 observation2 -> let self = ({ __hx_type = HxType.class_ "CompilerConditionalCompilationResult"; filteredSource = HxString.hx_null_string; observation = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun filteredSource2 observation2 -> let self = ({ __hx_type = HxType.instance_marker "CompilerConditionalCompilationResult"; filteredSource = HxString.hx_null_string; observation = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (filteredSource2 : string) in (
       (Obj.magic self : t).filteredSource <- __assign_1;
@@ -29,7 +29,7 @@ let create = fun filteredSource2 observation2 -> let self = ({ __hx_type = HxTyp
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerConditionalCompilationResult"; filteredSource = HxString.hx_null_string; observation = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerConditionalCompilationResult"; filteredSource = HxString.hx_null_string; observation = Obj.magic HxRuntime.hx_null } : t)
 
 let getFilteredSource = fun self () -> (Obj.magic self : t).filteredSource
 

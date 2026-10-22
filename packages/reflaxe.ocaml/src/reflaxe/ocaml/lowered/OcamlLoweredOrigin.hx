@@ -1,12 +1,13 @@
 package reflaxe.ocaml.lowered;
 
-#if (macro || reflaxe_runtime || eval)
 import haxe.crypto.Sha256;
+#if (macro || reflaxe_runtime || eval)
 import haxe.macro.Expr;
 import haxe.macro.Expr.MetadataEntry;
 import haxe.macro.Expr.Position;
 #if macro
 import haxe.macro.Context;
+#end
 #end
 
 /** Stable source information carried from target input into lowered nodes. */
@@ -73,6 +74,7 @@ class OcamlLoweredOrigin {
 		return normalized;
 	}
 
+	#if (macro || reflaxe_runtime || eval)
 	/** Returns a path-stable source span when the host exposes one. */
 	public static function sourceSpan(position:Position):OcamlLoweredSourceSpan {
 		#if macro
@@ -86,6 +88,7 @@ class OcamlLoweredOrigin {
 		return {file: "", min: 0, max: 0};
 		#end
 	}
+	#end
 
 	/** Whether a source belongs to the target compatibility library, not user code. */
 	public static function isTargetLibrarySource(span:OcamlLoweredSourceSpan):Bool {
@@ -105,6 +108,7 @@ class OcamlLoweredOrigin {
 		return "place:" + Sha256.encode(seed).substr(0, 24);
 	}
 
+	#if (macro || reflaxe_runtime || eval)
 	/** Wraps a typed expression with the stable place identity metadata. */
 	public static function metadata(id:String, position:Position):MetadataEntry {
 		final value:Expr = {expr: EConst(CString(id)), pos: position};
@@ -141,5 +145,5 @@ class OcamlLoweredOrigin {
 			case _: null;
 		}
 	}
+	#end
 }
-#end

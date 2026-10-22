@@ -373,8 +373,10 @@ PORTABLE_FIXTURE_ALLOWLIST=place_instance_field_assign,place_static_field_assign
 PORTABLE_UPDATE_LOWERING_GOLDENS=1 bash scripts/test-portable.sh
 ```
 
-Update mode runs sequentially, compiles every selected fixture twice, and writes
-an expected file only after both generated reports have the same SHA-256 digest.
+Update mode uses the bounded `PORTABLE_JOBS` worker pool for independent fixtures.
+Each fixture owns its output directory and runs its two compilations sequentially.
+It replaces its expected report only after both reports have the same SHA-256 digest.
+Runtime and fixture-specific checks must also pass before you accept the updated files.
 Run the same command again without `PORTABLE_UPDATE_LOWERING_GOLDENS=1` to prove
 the checked files and normal validation path agree.
 

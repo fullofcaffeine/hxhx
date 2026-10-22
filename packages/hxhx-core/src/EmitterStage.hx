@@ -104,11 +104,21 @@ class EmitterStage {
 	**/
 	static var currentOcamlModuleName:Null<String> = null;
 
+	/** Exact ordinary-enum declarations, scoped to one emission request. */
+	static var currentEnums:Null<backend.ocaml.Stage3OcamlEnums> = null;
+
+	static var currentCallables:Null<backend.ocaml.Stage3OcamlCallableProgram> = null;
+	static var currentClassStorage:Null<backend.ocaml.Stage3OcamlClassStorage> = null;
+	static var currentRuntimeTypes:Null<backend.ocaml.Stage3OcamlRuntimeTypes> = null;
+	static var currentCallableFunction:Null<backend.ocaml.Stage3OcamlCallableProgram.Stage3OcamlCallableFunction> = null;
+
 	static var currentModuleFilePath:Null<String> = null;
 	static var currentFunctionName:Null<String> = null;
 	static var currentFunctionLocalTypeHints:Null<Map<String, TyType>> = null;
 	static var currentFunctionShadowingValueNames:Null<Map<String, Bool>> = null;
 	static var currentFunctionLocalOcamlNames:Null<backend.ocaml.Stage3OcamlLocalNames> = null;
+	static var currentTypedFunction:Null<TypedBackendFunctionProjection> = null;
+	static var currentTypedInitializer:Null<TypedBackendFieldInitializerProjection> = null;
 	static var currentStmtTyEntries:Array<_LocalTyEntry> = [];
 	static var currentLocalCallSigCache:Null<Map<String, EmitterCallSig>> = null;
 
@@ -353,6 +363,13 @@ class EmitterStage {
 	}
 
 	static function ocamlTypeFromTy(t:TyType):String {
+		if (currentCallables != null && currentTypedInitializer == null && currentCallables.generics.isErased(currentTypedFunction, t))
+			return "Obj.t";
+		if (currentCallableFunction != null && currentTypedInitializer == null && TyAliasExpansion.reveal(t).isFunction()) {
+			final selected = currentCallableFunction.type(t);
+			if (selected != null)
+				return selected;
+		}
 		final dynamicCarrier = backend.ocaml.OcamlDynamicOperatorLowering.carrierType(t);
 		if (dynamicCarrier != null)
 			return dynamicCarrier;
@@ -438,10 +455,10 @@ class EmitterStage {
 		if (name == null)
 			return false;
 		return switch (name) {
-			case "and" | "as" | "assert" | "begin" | "class" | "constraint" | "do" | "done" | "downto" | "else" | "end" | "exception" | "external" | "false" |
-				"for" | "fun" | "function" | "functor" | "if" | "in" | "include" | "inherit" | "initializer" | "lazy" | "let" | "match" | "method" |
-				"module" | "mutable" | "mod" | "new" | "nonrec" | "object" | "of" | "open" | "or" | "private" | "rec" | "sig" | "struct" | "then" | "to" |
-				"true" | "try" | "type" | "val" | "virtual" | "when" | "while" | "with":
+			case "and" | "as" | "assert" | "begin" | "class" | "constraint" | "do" | "done" | "downto" | "effect" | "else" | "end" | "exception" |
+				"external" | "false" | "for" | "fun" | "function" | "functor" | "if" | "in" | "include" | "inherit" | "initializer" | "lazy" | "let" |
+				"match" | "method" | "module" | "mutable" | "mod" | "new" | "nonrec" | "object" | "of" | "open" | "or" | "private" | "rec" | "sig" |
+				"struct" | "then" | "to" | "true" | "try" | "type" | "val" | "virtual" | "when" | "while" | "with":
 				true;
 			case _:
 				false;
@@ -452,6 +469,10 @@ class EmitterStage {
 		final base = lowerFirst(raw);
 		if (base == "_" || base.length == 0)
 			return "_";
+		// OCaml's effect keyword needs an escape that cannot collide with a Haxe
+		// method named effect_. OCaml permits apostrophes in identifiers; Haxe does not.
+		if (base == "effect")
+			return "effect'";
 		return isOcamlKeyword(base) ? (base + "_") : base;
 	}
 
@@ -476,6 +497,38 @@ class EmitterStage {
 	static function exactFunctionLocalType(name:String):Null<TyType> {
 		final names = currentFunctionLocalOcamlNames;
 		return names == null ? null : names.findType(name);
+	}
+
+	/** Resolve storage only in the active executable, including static initializer blocks. */
+	static function requireLocalStorageWrite(name:String, operand:HxExpr):TypedBackendLocalWrite {
+		if (currentTypedInitializer != null)
+			return currentTypedInitializer.requireLocalWrite(name, operand);
+		if (currentTypedFunction != null)
+			return currentTypedFunction.requireLocalWrite(name, operand);
+		throw "OCaml local storage requires its exact executable projection";
+	}
+
+	/** Local storage uses declared types, including generated control-result bindings. */
+	static function localStorageValue(name:String, operand:HxExpr, rendered:String):String {
+		if (currentCallableFunction != null && currentTypedInitializer == null) {
+			final converted = currentCallableFunction.local(name, operand, rendered);
+			if (converted != null)
+				return converted;
+		}
+		final destination = exactFunctionLocalType(name);
+		if (destination == null || (!destination.isDynamic() && destination.getSemanticKey() != "primitive:Bool"))
+			return rendered;
+		return backend.ocaml.Stage3OcamlLocalStorage.store(requireLocalStorageWrite(name, operand), rendered);
+	}
+
+	/** Convert an exact condition once, without replacing unsupported values with true. */
+	static function conditionValue(expression:HxExpr, rendered:String):String {
+		final fact = currentTypedInitializer != null ? currentTypedInitializer.findCondition(expression) : currentTypedFunction != null ? currentTypedFunction.findCondition(expression) : null;
+		if (rendered == "(Obj.magic 0)")
+			throw "OCaml condition has no supported value emission";
+		if (fact != null && fact.type.isDynamic())
+			return "HxDynamic.booleanValue (" + rendered + ")";
+		return rendered;
 	}
 
 	static function isMutableLocalRefIdent(name:String):Bool {
@@ -863,9 +916,9 @@ class EmitterStage {
 					final sb = constFoldString(b);
 					sb == null ? null : (sa + sb);
 				}
-			case ECast(expr, _hint):
+			case ECast(expr, _hint) | ECheckType(expr, _hint):
 				constFoldString(expr);
-			case EUntyped(expr):
+			case EParenthesized(expr, _) | EUntyped(expr):
 				constFoldString(expr);
 			case _:
 				null;
@@ -873,19 +926,16 @@ class EmitterStage {
 	}
 
 	/**
-		Read a value from a map-like object (`Map` or lowered `Obj.t`) at emission boundaries.
+		Read an emission-context map through its typed API, preserving missing keys as null.
 
-		This is an intentionally scoped dynamic boundary for Stage3 recursive emitter helpers.
+		Native OCaml maps are hash tables, so reflecting on a `get` object field loses
+		valid import and local-type bindings. The map type must survive this helper boundary.
+		Inlining keeps each caller's concrete value type in generated OCaml.
 	**/
-	static function mapGetRaw<TMap, TValue>(mapLike:Null<TMap>, key:String):Null<TValue> {
+	static inline function mapGetRaw<TValue>(mapLike:Null<Map<String, TValue>>, key:String):Null<TValue> {
 		if (mapLike == null || key == null)
 			return null;
-		final mapLikeObj:{} = cast mapLike;
-		final getFn = Reflect.field(mapLikeObj, "get");
-		if (getFn == null)
-			return null;
-		final value = Reflect.callMethod(mapLikeObj, getFn, [key]);
-		return value == null ? null : cast value;
+		return mapLike.get(key);
 	}
 
 	/** Force a value through an erased boundary where Stage3 helper signatures are still Obj.t-based. */
@@ -928,6 +978,13 @@ class EmitterStage {
 
 	static function exprToOcamlString(e:HxExpr, ?tyByIdent:Map<String, TyType>, ?arityByIdent:Map<String, Int>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
+		// Preserve checked scalar results before rendering them as text. Boolean
+		// bits must not become 1, and integer addition must not become concatenation.
+		final operand = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(e) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(e);
+		if (operand != null && (operand.type.getSemanticKey() == "primitive:Bool" || operand.type.getSemanticKey() == "primitive:Int"))
+			return backend.ocaml.Stage3OcamlStringConversion.convert(operand.type,
+				exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				currentFunctionLocalOcamlNames);
 		final tyByIdentRaw = tyByIdent;
 
 		function tyLookup(name:String):Null<TyType> {
@@ -992,26 +1049,8 @@ class EmitterStage {
 		}
 
 		inline function condToOcamlBoolForString(cond:HxExpr):String {
-			// Keep the Stage3 “full bodies” rung resilient: a string expression can contain a ternary
-			// like `colorSupported ? "..." + msg : msg`, but we do not yet type/emit arbitrary bool
-			// conditions.
-			//
-			// In bring-up, prefer "always true" over emitting a non-bool expression that would fail
-			// OCaml compilation.
-			return switch (cond) {
-				case EBool(v):
-					v ? "true" : "false";
-				case EUnop(op, fixity, inner) if (op == HxUnaryOperator.LogicalNot && fixity == HxUnaryFixity.Prefix):
-					final s = exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
-					final checked = stage3IsDynamicExpr(inner, tyByIdent, callSigByCallee) ? "HxRuntime.unbox_bool_or_obj (" + s + ")" : s;
-					checked == "(Obj.magic 0)" ? "true" : checked;
-				case EBinop("==", _, _), EBinop("!=", _, _), EBinop("<", _, _), EBinop(">", _, _), EBinop("<=", _, _), EBinop(">=", _, _), EBinop("&&", _, _),
-					EBinop("||", _, _):
-					final s = exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
-					s == "(Obj.magic 0)" ? "true" : s;
-				case _:
-					"true";
-			};
+			return conditionValue(cond,
+				exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
 		}
 
 		var emitStringExpr:HxExpr->String = null;
@@ -1030,8 +1069,9 @@ class EmitterStage {
 					// - Do not inline this as `emitStringExpr(arg)`:
 					//   - it would degrade complex values (arrays, tagged values) to `<unsupported>`,
 					//   - and it would diverge from the target runtime’s own stringification behavior.
-					"HxDynamic.toStdString (Obj.repr (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
-						moduleNameByPkgAndClass, callSigByCallee) + "))";
+					backend.ocaml.Stage3OcamlStringConversion.convert(callArgumentType(arg),
+						exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+						currentFunctionLocalOcamlNames);
 				case ECall(EField(_obj, "join"), [_sep]):
 					// Bring-up: join returns a string; delegate to normal expression lowering when available.
 					exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
@@ -1055,6 +1095,10 @@ class EmitterStage {
 					"HxDynamic.toStdString (Obj.repr (" + ocamlReadValueIdent(name) + "))";
 				case EIdent(name) if (tyForIdent(name) == "Float"):
 					"HxDynamic.toStdString (Obj.repr (" + ocamlReadValueIdent(name) + "))";
+				case EIdent(name) if (exactFunctionLocalType(name) != null
+					&& exactFunctionLocalType(name).getSemanticKey() == "primitive:Bool"):
+					// Exact local facts authorize a native Boolean read, including typed catches.
+					"string_of_bool (" + ocamlReadValueIdent(name) + ")";
 				case EIdent(name) if (tyForIdent(name) == "Bool"):
 					// Keep stringification resilient when best-effort inference mislabels a non-bool
 					// value as `Bool` (for example, some stage0-fed static-final shapes during bring-up).
@@ -1082,18 +1126,7 @@ class EmitterStage {
 				case _ if (stage3IsBoolExpr(expr, tyByIdent, callSigByCallee)):
 					final rendered = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 						callSigByCallee);
-					final boolValue = switch (expr) {
-						case EUnop(op, fixity, inner)
-							if (op == HxUnaryOperator.LogicalNot
-								&& fixity == HxUnaryFixity.Prefix
-								&& stage3IsDynamicExpr(inner, tyByIdent, callSigByCallee)):
-							"HxRuntime.unbox_bool_or_obj ("
-							+ rendered
-							+ ")";
-						case _:
-							rendered;
-					}
-					"string_of_bool (" + boolValue + ")";
+					"string_of_bool (" + rendered + ")";
 				case _:
 					// Bring-up default: prefer *some* stringification over `<unsupported>` so
 					// upstream harness logs remain readable (and don't change meaning).
@@ -1414,8 +1447,7 @@ class EmitterStage {
 							walk(item);
 				case PExtractor(_extractorText, resultPattern):
 					walk(resultPattern);
-				case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PIntCompareGuard(inner, _, _, _),
-					PParsedIntSwitchGuard(inner, _, _, _), PUnsupportedGuard(inner):
+				case PGuard(inner, _), PUnsupportedPattern(inner):
 					walk(inner);
 				case POr(patterns):
 					if (patterns != null)
@@ -1426,53 +1458,6 @@ class EmitterStage {
 		}
 		walk(pattern);
 		return out;
-	}
-
-	static function stage3PatternBindingLets(pattern:HxSwitchPattern, valueExpr:String):String {
-		final parts = new Array<String>();
-		var paramCounter = 0;
-		function walk(p:HxSwitchPattern, value:String):Void {
-			if (p == null)
-				return;
-			switch (p) {
-				case PBind(name):
-					if (name != null && name.length > 0 && name != "_")
-						parts.push("let " + requireOcamlFunctionLocalValueIdent(name) + " = Obj.magic (" + value + ") in ");
-				case PCapture(name, inner):
-					if (name != null && name.length > 0 && name != "_")
-						parts.push("let " + requireOcamlFunctionLocalValueIdent(name) + " = Obj.magic (" + value + ") in ");
-					walk(inner, value);
-				case PEnumExtract(_name, args):
-					if (args != null && args.length > 0) {
-						final paramsName = "__hx_sw_params_" + Std.string(paramCounter++);
-						parts.push("let " + paramsName + " = Type.enumParameters (" + value + ") in ");
-						for (i in 0...args.length)
-							walk(args[i], "(HxArray.get (Obj.magic " + paramsName + ") " + Std.string(i) + ")");
-					}
-				case PObject(_fieldNames, fieldPatterns):
-					if (fieldPatterns != null)
-						for (fieldPattern in fieldPatterns)
-							walk(fieldPattern, value);
-				case PArray(items):
-					if (items != null)
-						for (i in 0...items.length)
-							walk(items[i], "(HxArray.get (Obj.magic " + value + ") " + Std.string(i) + ")");
-				case PExtractor(_extractorText, resultPattern):
-					walk(resultPattern, value);
-				case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PIntCompareGuard(inner, _, _, _),
-					PParsedIntSwitchGuard(inner, _, _, _), PUnsupportedGuard(inner):
-					walk(inner, value);
-				case POr(patterns):
-					// Stage3 bring-up supports the common upstream shape where all alternatives bind
-					// the same names from the same constructor-argument positions, e.g.
-					// `case A(s) | B(s): s`.
-					if (patterns != null && patterns.length > 0)
-						walk(patterns[0], value);
-				case _:
-			}
-		}
-		walk(pattern, valueExpr);
-		return parts.join("");
 	}
 
 	/**
@@ -1657,10 +1642,10 @@ class EmitterStage {
 				+ out
 				+ " = HxBootArray.create () in "
 				+ "let __start = ("
-				+ start
+				+ rangeBoundCarrier(startExpr, start)
 				+ ") in "
 				+ "let __end = ("
-				+ end
+				+ rangeBoundCarrier(endExpr, end)
 				+ ") in "
 				+ "(if (__end <= __start) then () else (for "
 				+ v
@@ -1887,6 +1872,7 @@ class EmitterStage {
 
 	static function stage3IsInt64Expr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
 		return switch (expr) {
+			case EDiscardThen(_, continuation): stage3IsInt64Expr(continuation, tyByIdent);
 			case EIdent(name):
 				stage3IsInt64TypeName(stage3TyForIdent(name, tyByIdent));
 			case EUnop(op, fixity, inner) if ((op == HxUnaryOperator.Negate || op == HxUnaryOperator.BitwiseNot)
@@ -1900,9 +1886,9 @@ class EmitterStage {
 				if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "&" || op == "|" || op == "^" || op == "<<" || op == ">>"
 					|| op == ">>>"): stage3IsInt64Expr(a, tyByIdent) || stage3IsInt64Expr(b, tyByIdent);
 			case ETernary(_cond, thenExpr, elseExpr): stage3IsInt64Expr(thenExpr, tyByIdent) && stage3IsInt64Expr(elseExpr, tyByIdent);
-			case ECast(inner, _):
+			case ECast(inner, _) | ECheckType(inner, _):
 				stage3IsInt64Expr(inner, tyByIdent);
-			case EUntyped(inner):
+			case EParenthesized(inner, _) | EUntyped(inner):
 				stage3IsInt64Expr(inner, tyByIdent);
 			case _:
 				false;
@@ -1912,9 +1898,9 @@ class EmitterStage {
 	static function stage3IsInfNanFieldExpr(expr:HxExpr):Bool {
 		return switch (expr) {
 			case EField(_, field): field == "iNF" || field == "INF" || field == "inf" || field == "nAN" || field == "NAN" || field == "NaN";
-			case ECast(inner, _):
+			case ECast(inner, _) | ECheckType(inner, _):
 				stage3IsInfNanFieldExpr(inner);
-			case EUntyped(inner):
+			case EParenthesized(inner, _) | EUntyped(inner):
 				stage3IsInfNanFieldExpr(inner);
 			case _:
 				false;
@@ -1924,17 +1910,71 @@ class EmitterStage {
 	static function stage3IsPositiveInfinityFieldExpr(expr:HxExpr):Bool {
 		return switch (expr) {
 			case EField(_, field): field == "iNF" || field == "INF" || field == "inf";
-			case ECast(inner, _):
+			case ECast(inner, _) | ECheckType(inner, _):
 				stage3IsPositiveInfinityFieldExpr(inner);
-			case EUntyped(inner):
+			case EParenthesized(inner, _) | EUntyped(inner):
 				stage3IsPositiveInfinityFieldExpr(inner);
 			case _:
 				false;
 		}
 	}
 
+	/** Select structural storage facts from the currently executing typed owner. */
+	static function objectAccess(expr:HxExpr):Null<TypedBackendObjectAccess> {
+		return
+			currentTypedFunction != null ? currentTypedFunction.findObjectAccess(expr) : currentTypedInitializer == null ? null : currentTypedInitializer.findObjectAccess(expr);
+	}
+
+	/** Indexed storage facts must belong to the currently executing typed body. */
+	static function arrayAccess(expr:HxExpr):Null<TypedBackendArrayAccess> {
+		return
+			currentTypedInitializer != null ? currentTypedInitializer.findArrayAccess(expr) : currentTypedFunction == null ? null : currentTypedFunction.findArrayAccess(expr);
+	}
+
+	/** Lowered range temporaries retain their source types in the active body's local catalog. */
+	static function rangeBoundCarrier(expression:HxExpr, value:String):String {
+		final locals = currentTypedFunction != null ? currentTypedFunction.getLocalCatalog() : currentTypedInitializer == null ? null : currentTypedInitializer.getLocalCatalog();
+		return backend.ocaml.Stage3OcamlRangeBound.adapt(expression, value, locals, currentFunctionLocalOcamlNames);
+	}
+
+	/** Conversion facts belong to the active initializer or function, never another body. */
+	static function callArgumentType(expression:HxExpr):TyType {
+		final type = currentTypedInitializer != null ? currentTypedInitializer.findCallArgumentType(expression) : currentTypedFunction != null ? currentTypedFunction.findCallArgumentType(expression) : null;
+		if (type == null)
+			throw "OCaml string conversion is missing its typed call argument";
+		return type;
+	}
+
+	static function objectAccessType(expr:HxExpr):Null<TyType> {
+		final access = objectAccess(expr);
+		return access == null ? null : access.resultType;
+	}
+
+	/** Allocation and parent calls retain their original typed occurrence through emission. */
+	static function exactConstructor(expr:HxExpr):Null<TypedBackendConstructorOccurrence> {
+		if (!expr.match(ENew(_, _)) && !expr.match(ECall(ESuper, _)))
+			return null;
+		return
+			currentTypedInitializer != null ? currentTypedInitializer.requireConstructor(expr) : currentTypedFunction == null ? null : currentTypedFunction.requireConstructor(expr);
+	}
+
+	/** Select concrete bitwise operations from the exact typed executable projection. */
+	static function intBitwise(expr:HxExpr):Null<TypedBackendBitwiseOccurrence> {
+		if (!expr.match(EBinop(_, _, _)))
+			return null;
+		final facts = currentTypedInitializer != null ? currentTypedInitializer.findBitwise(expr) : currentTypedFunction == null ? null : currentTypedFunction.findBitwise(expr);
+		return facts != null && facts.isConcreteInt() ? facts : null;
+	}
+
 	static function stage3IsIntExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
+		final exact = objectAccessType(expr);
+		if (exact != null)
+			return exact.getSemanticKey() == "primitive:Int";
+		if (intBitwise(expr) != null)
+			return true;
 		return switch (expr) {
+			case EParenthesized(inner, _): stage3IsIntExpr(inner, tyByIdent);
+			case EDiscardThen(_, continuation): stage3IsIntExpr(continuation, tyByIdent);
 			case EInt(_):
 				true;
 			case EIdent(name): final t = stage3TyForIdent(name,
@@ -1954,13 +1994,25 @@ class EmitterStage {
 	/**
 		Reports whether Stage3 can rely on an expression producing a Float.
 
-		A call's result type belongs to its selected declaration, not to its syntax.
-		Use the existing call-signature index so mixed arithmetic can retain that
-		Float result while it recursively classifies both operands.
+		Selected calls and fields retain their typed results through the backend
+		adapter. Use those facts before the ordinary call-signature lookup, and
+		preserve them through parentheses, so mixed arithmetic selects Float
+		operators even when the other operand is an Int.
 	**/
 	static function stage3IsFloatExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>, ?callSigByCallee:Map<String, EmitterCallSig>,
 			?staticImportByIdent:Map<String, String>):Bool {
+		final exact = objectAccessType(expr);
+		if (exact != null)
+			return exact.getSemanticKey() == "primitive:Float";
+		final staticCall = TypedExactStaticCallSource.decode(expr);
+		if (staticCall != null)
+			return staticCall.resultType == "Float";
+		final instanceCall = TypedExactCallSource.decodeInstance(expr);
+		if (instanceCall != null)
+			return instanceCall.resultType == "Float";
 		return switch (expr) {
+			case EParenthesized(inner, _): stage3IsFloatExpr(inner, tyByIdent, callSigByCallee, staticImportByIdent);
+			case EDiscardThen(_, continuation): stage3IsFloatExpr(continuation, tyByIdent, callSigByCallee, staticImportByIdent);
 			case EFloat(_):
 				true;
 			case _ if (stage3IsInfNanFieldExpr(expr)):
@@ -1989,7 +2041,11 @@ class EmitterStage {
 	}
 
 	static function stage3IsStringExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
+		final exact = objectAccessType(expr);
+		if (exact != null)
+			return exact.getSemanticKey() == "primitive:String";
 		return switch (expr) {
+			case EDiscardThen(_, continuation): stage3IsStringExpr(continuation, tyByIdent);
 			case EString(_):
 				true;
 			case ECall(EField(EIdent("Std"), "string"), _):
@@ -2000,9 +2056,9 @@ class EmitterStage {
 				true;
 			case EIdent(name):
 				stage3TyForIdent(name, tyByIdent) == "String";
-			case ECast(inner, _):
+			case ECast(inner, _) | ECheckType(inner, _):
 				stage3IsStringExpr(inner, tyByIdent);
-			case EUntyped(inner):
+			case EParenthesized(inner, _) | EUntyped(inner):
 				stage3IsStringExpr(inner, tyByIdent);
 			case EBinop("+", a, b): stage3IsStringExpr(a, tyByIdent) || stage3IsStringExpr(b, tyByIdent);
 			case ETernary(_cond, thenExpr, elseExpr): stage3IsStringExpr(thenExpr, tyByIdent) && stage3IsStringExpr(elseExpr, tyByIdent);
@@ -2012,7 +2068,20 @@ class EmitterStage {
 	}
 
 	static function stage3IsBoolExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>, ?callSigByCallee:Map<String, EmitterCallSig>):Bool {
+		final exact = objectAccessType(expr);
+		if (exact != null)
+			return exact.getSemanticKey() == "primitive:Bool";
+		// Declaration-owned calls carry their selected result through the source
+		// adapter. Their reserved marker name is not a method-signature lookup key.
+		final staticCall = TypedExactStaticCallSource.decode(expr);
+		if (staticCall != null)
+			return staticCall.resultType == "Bool";
+		final instanceCall = TypedExactCallSource.decodeInstance(expr);
+		if (instanceCall != null)
+			return instanceCall.resultType == "Bool";
 		return switch (expr) {
+			case EParenthesized(inner, _): stage3IsBoolExpr(inner, tyByIdent, callSigByCallee);
+			case EDiscardThen(_, continuation): stage3IsBoolExpr(continuation, tyByIdent, callSigByCallee);
 			case EBool(_):
 				true;
 			case EIdent(name):
@@ -2034,7 +2103,19 @@ class EmitterStage {
 
 	/** Reports whether an expression produces the reviewed `Obj.t` Dynamic carrier. */
 	static function stage3IsDynamicExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>, ?callSigByCallee:Map<String, EmitterCallSig>):Bool {
+		final exact = objectAccessType(expr);
+		if (exact != null)
+			return exact.isDynamic();
+		// Selected calls retain their result type inside the shared projection.
+		// Looking up the wrapper's name would lose the callee's Dynamic carrier.
+		final staticCall = TypedExactStaticCallSource.decode(expr);
+		if (staticCall != null)
+			return backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(staticCall.resultType);
+		final instanceCall = TypedExactCallSource.decodeInstance(expr);
+		if (instanceCall != null)
+			return backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(instanceCall.resultType);
 		return switch (expr) {
+			case EDiscardThen(_, continuation): stage3IsDynamicExpr(continuation, tyByIdent, callSigByCallee);
 			case EIdent(name):
 				backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(stage3TyForIdent(name, tyByIdent));
 			case ECall(EIdent(name), _): final signature = callSigForStage3(name,
@@ -2042,9 +2123,9 @@ class EmitterStage {
 			case ECall(EField(_, name), _): var signature = callSigForStage3(name,
 					callSigByCallee); if (signature == null) signature = callSigForStage3(ocamlValueIdent(name),
 					callSigByCallee); signature != null && backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(signature.resultTypeHint);
-			case ECast(_, typeHint):
+			case ECast(_, typeHint) | ECheckType(_, typeHint):
 				backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(typeHint);
-			case EUntyped(inner):
+			case EParenthesized(inner, _) | EUntyped(inner):
 				stage3IsDynamicExpr(inner, tyByIdent, callSigByCallee);
 			case _:
 				false;
@@ -2061,6 +2142,11 @@ class EmitterStage {
 	**/
 	static function stage3CallArgumentType(expr:HxExpr, ?tyByIdent:Map<String, TyType>, ?callSigByCallee:Map<String, EmitterCallSig>,
 			?staticImportByIdent:Map<String, String>):TyType {
+		switch (expr) {
+			case EDiscardThen(_, continuation):
+				return stage3CallArgumentType(continuation, tyByIdent, callSigByCallee, staticImportByIdent);
+			case _:
+		}
 		if (expr == null)
 			return TyType.unknown();
 		return switch (expr) {
@@ -2077,7 +2163,7 @@ class EmitterStage {
 			case EIdent(name):
 				final hint = StringTools.trim(stage3TyForIdent(name, tyByIdent));
 				(hint.length == 0 || hint == "Unknown" || hint == "Dynamic") ? TyType.unknown() : TyType.fromHintText(hint);
-			case ECast(inner, typeHint):
+			case ECast(inner, typeHint) | ECheckType(inner, typeHint):
 				final hint = StringTools.trim(typeHint == null ? "" : typeHint);
 				hint.length == 0 ? stage3CallArgumentType(inner, tyByIdent, callSigByCallee, staticImportByIdent) : TyType.fromHintText(hint);
 			case ENew(typePath, _):
@@ -2116,12 +2202,12 @@ class EmitterStage {
 
 	/** Compare one source argument with a declared parameter without treating incomplete typing as proof. **/
 	static function stage3CallArgumentCompatibility(expr:HxExpr, paramTypeHint:String, paramFillable:Bool, ?tyByIdent:Map<String, TyType>,
-			?callSigByCallee:Map<String, EmitterCallSig>, ?staticImportByIdent:Map<String, String>):EmitterCallArgCompatibility {
+			?callSigByCallee:Map<String, EmitterCallSig>, ?staticImportByIdent:Map<String, String>):TyCallArgumentCompatibility {
 		var expected = TyType.fromHintText(paramTypeHint);
-		if (expected.isUnknown() || expected.isDynamic() || expected.isTypeParameter())
+		if (expected.isUnknown() || expected.isDynamic() || expected.isTypeParameter() || expected.hasOpenMethodParameter())
 			return Unknown;
 		final actual = stage3CallArgumentType(expr, tyByIdent, callSigByCallee, staticImportByIdent);
-		if (actual.isUnknown() || actual.isDynamic() || actual.isTypeParameter())
+		if (actual.isUnknown() || actual.isDynamic() || actual.isTypeParameter() || actual.hasOpenMethodParameter())
 			return Unknown;
 		if (actual.getDisplay() == "Null")
 			return (paramFillable || expected.isNullable()) ? Compatible : Incompatible;
@@ -2172,6 +2258,7 @@ class EmitterStage {
 
 	static function stage3IsNullableIntExpr(expr:HxExpr):Bool {
 		return switch (expr) {
+			case EDiscardThen(_, continuation): stage3IsNullableIntExpr(continuation);
 			case ENull:
 				true;
 			case ECall(EField(EIdent("Std"), "parseInt"), [_]):
@@ -2209,7 +2296,7 @@ class EmitterStage {
 	static function stage3IsSysIoProcessExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
 		return switch (expr) {
 			case EIdent(name): final t = stage3TyForIdent(name, tyByIdent); t == "sys.io.Process" || t == "sys.io.Process.Process";
-			case ECast(inner, _hint):
+			case ECast(inner, _hint) | ECheckType(inner, _hint):
 				stage3IsSysIoProcessExpr(inner, tyByIdent);
 			case _:
 				false;
@@ -2250,6 +2337,7 @@ class EmitterStage {
 
 	static function stage3IsLikelyArrayExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
 		return switch (expr) {
+			case EDiscardThen(_, continuation): stage3IsLikelyArrayExpr(continuation, tyByIdent);
 			case EArrayDecl(_):
 				true;
 			case EIdent(name): final t = stage3TyForIdent(name, tyByIdent); t == "Array" || StringTools.startsWith(t, "Array<");
@@ -2275,6 +2363,7 @@ class EmitterStage {
 
 	static function stage3IsLikelyStringArrayExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
 		return switch (expr) {
+			case EDiscardThen(_, continuation): stage3IsLikelyStringArrayExpr(continuation, tyByIdent);
 			case EArrayDecl(values):
 				if (values == null || values.length == 0) {
 					true;
@@ -2294,9 +2383,9 @@ class EmitterStage {
 			case ECall(EField(inner, "copy"), []):
 				stage3IsLikelyStringArrayExpr(inner, tyByIdent);
 			case ECall(EField(inner, "concat"), [other]): stage3IsLikelyStringArrayExpr(inner, tyByIdent) && stage3IsLikelyStringArrayExpr(other, tyByIdent);
-			case ECast(inner, _):
+			case ECast(inner, _) | ECheckType(inner, _):
 				stage3IsLikelyStringArrayExpr(inner, tyByIdent);
-			case EUntyped(inner):
+			case EParenthesized(inner, _) | EUntyped(inner):
 				stage3IsLikelyStringArrayExpr(inner, tyByIdent);
 			case _:
 				false;
@@ -2319,6 +2408,13 @@ class EmitterStage {
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
 			?callSigByCallee:Map<String, EmitterCallSig>):String {
 		return switch (expr) {
+			case EDiscardThen(effect, continuation):
+				"(let _ = "
+				+ exprToOcaml(effect, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+				+ " in "
+				+ exprToOcamlAsFloatValueStage3(continuation, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+					callSigByCallee)
+				+ ")";
 			case EInt(v):
 				"float_of_int " + Std.string(v);
 			case EUnop(op, fixity, inner) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
@@ -2517,7 +2613,7 @@ class EmitterStage {
 				throw "stage3 emitter: malformed structural __hxhx_try expression";
 			case ECall(EIdent("__hxhx_throw"), _):
 				throw "stage3 emitter: malformed structural __hxhx_throw expression";
-			case ECast(ELambda(args, body), typeHint):
+			case ECast(lambda = ELambda(args, body), typeHint) | ECheckType(lambda = ELambda(args, body), typeHint):
 				final argumentTypes = stage3TypedLambdaArgumentTypes(typeHint, args.length);
 				if (argumentTypes != null) {
 					final ocamlArgs = args.map(requireOcamlFunctionLocalValueIdent).join(" ");
@@ -2526,7 +2622,7 @@ class EmitterStage {
 						ty2.set(args[index], argumentTypes[index]);
 					final bodyCode = withStage3TemporaryTypeEntries(args, argumentTypes,
 						() -> exprToOcaml(body, arityByIdent, ty2, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
-					return "(fun " + (ocamlArgs.length == 0 ? "_" : ocamlArgs) + " -> " + bodyCode + ")";
+					return "(fun " + (ocamlArgs.length == 0 ? "_" : ocamlArgs) + " -> " + stage3LambdaReturn(lambda, bodyCode) + ")";
 				}
 			case ELambda(args, body):
 				final ocamlArgs = args.map(requireOcamlFunctionLocalValueIdent).join(" ");
@@ -2537,13 +2633,20 @@ class EmitterStage {
 				return "(fun "
 					+ (ocamlArgs.length == 0 ? "_" : ocamlArgs)
 					+ " -> "
-					+ exprToOcaml(body, arityByIdent, ty2, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+					+ stage3LambdaReturn(e,
+						exprToOcaml(body, arityByIdent, ty2, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee))
 					+ ")";
 			case ETryCatchRaw(_raw):
 				return "(Obj.magic 0)";
 			case _:
 		}
 		return null;
+	}
+
+	/** Authored lambda return conversions consume occurrence facts, never rendered annotations. */
+	static function stage3LambdaReturn(expression:HxExpr, value:String):String {
+		final facts = currentTypedInitializer != null ? currentTypedInitializer.findLambda(expression) : currentTypedFunction == null ? null : currentTypedFunction.findLambda(expression);
+		return backend.ocaml.Stage3OcamlCallableConversion.lambdaResult(facts, value, currentFunctionLocalOcamlNames);
 	}
 
 	static function tryExprToOcamlStage3ReflectTypeIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
@@ -2562,14 +2665,8 @@ class EmitterStage {
 				return "false";
 			case ECall(EField(EIdent("Reflect"), "isFunction"), [_obj]):
 				return "true";
-			case ECall(EField(EIdent("Type"), "getClass"), [_obj]):
-				return "(Obj.magic 0)";
 			case ECall(EField(EIdent("Type"), "getInstanceFields"), [_cls]):
 				return "(Obj.magic 0)";
-			case ECall(EField(EIdent("Type"), "getClassName"), [_cls]):
-				return escapeOcamlString("");
-			case ECall(EField(EIdent("Type"), "getEnumName"), [_enm]):
-				return escapeOcamlString("");
 			case ECall(EField(EIdent("Type"), "typeof"), [_v]):
 				return "(Obj.magic 0)";
 			case _:
@@ -2581,12 +2678,6 @@ class EmitterStage {
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
 			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
 		switch (e) {
-			case ECall(EField(EIdent("Std"), "isOfType"), [valueExpr, typeExpr]):
-				return "Std.isOfType ("
-					+ exprToOcaml(valueExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ") (Obj.repr ("
-					+ exprToOcaml(typeExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ "))";
 			case ECall(EField(EIdent("Array"), "wrap"), [arg]):
 				return "(Obj.magic (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + "))";
 			case EField(EIdent("String"), "fromCharCode"):
@@ -2626,9 +2717,9 @@ class EmitterStage {
 			case ECall(EField(EIdent("Std"), "is"), [_v, _t]):
 				return "true";
 			case ECall(EField(EIdent("Std"), "string"), [arg]):
-				return "Std.string (Obj.repr ("
-					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-					+ "))";
+				return backend.ocaml.Stage3OcamlStringConversion.convert(callArgumentType(arg),
+					exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+					currentFunctionLocalOcamlNames);
 			case ECall(EField(EIdent("Std"), "downcast"), [_value, _cls]):
 				return "(Obj.magic HxRuntime.hx_null)";
 			case _:
@@ -2917,26 +3008,276 @@ class EmitterStage {
 		return null;
 	}
 
+	/** Direct calls and stored callback origins resolve the same exact typed declaration name. */
+	static function callableDeclarationReference(declaration:TyDeclarationInfo):String {
+		final native = currentCallables == null ? null : currentCallables.externs.reference(declaration);
+		if (native != null)
+			return native;
+		final intrinsic = backend.ocaml.Stage3OcamlIntrinsicCallable.reference(declaration);
+		if (intrinsic != null)
+			return intrinsic;
+		final owner = ocamlModuleNameFromTypePath(declaration.getOwner().getCanonicalName());
+		final name = ocamlValueIdent(declaration.getSignature().getName());
+		return owner == currentOcamlModuleName ? name : owner + "." + name;
+	}
+
+	/** Convert a direct method return through its typed owner when callback layout selection applies. */
+	static function callableDirectReturn(expression:HxExpr, rendered:String):String {
+		if (currentCallableFunction == null || currentTypedInitializer != null)
+			return rendered;
+		final converted = currentCallableFunction.returnedExpression(expression, rendered);
+		return converted == null ? rendered : converted;
+	}
+
 	static function exprToOcaml(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
+		if (currentClassStorage != null) {
+			final query = backend.ocaml.Stage3OcamlTypeQueries.render({
+				expression: e,
+				lookup: currentTypedInitializer != null ? currentTypedInitializer.findCallableExpression : currentTypedFunction == null ? null : currentTypedFunction.findCallableExpression,
+				classes: currentClassStorage,
+				emit: value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+			});
+			if (query != null)
+				return query;
+		}
+		if (currentCallables != null) {
+			final native = currentCallables.externs.renderCall(e, currentTypedFunction, currentTypedInitializer,
+				value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				currentFunctionLocalOcamlNames);
+			if (native != null)
+				return native;
+		}
+		if (currentRuntimeTypes != null) {
+			final predicate = currentRuntimeTypes.renderCall(e, currentTypedFunction, currentTypedInitializer,
+				value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				currentFunctionLocalOcamlNames, escapeOcamlString);
+			if (predicate != null)
+				return predicate;
+		}
+		if (currentCallables != null) {
+			final generic = currentCallables.generics.render({
+				expression: e,
+				lookup: currentTypedInitializer != null ? currentTypedInitializer.findCallableExpression : currentTypedFunction == null ? null : currentTypedFunction.findCallableExpression,
+				emit: value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				reference: callableDeclarationReference,
+				names: currentFunctionLocalOcamlNames
+			});
+			if (generic != null)
+				return generic;
+		}
+		if (currentCallableFunction != null && currentTypedInitializer == null) {
+			final rendered = currentCallableFunction.render(e,
+				value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				value -> exprToOcamlRaw(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				callableDeclarationReference);
+			if (rendered != null)
+				return rendered;
+		}
+		return exprToOcamlRaw(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+	}
+
+	/** Callback plans consume exact projected occurrences before legacy call adaptation rebuilds them. */
+	static function exprToOcamlRaw(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>,
+			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
+		if (currentCallables != null && (currentTypedFunction != null || currentTypedInitializer != null)) {
+			final native = currentCallables.externs.value(e, currentTypedFunction, currentTypedInitializer);
+			if (native != null)
+				return native;
+		}
+		if (TypedRuntimeTypeSource.isMarker(e)) {
+			if (currentRuntimeTypes == null)
+				throw "OCaml runtime type operation requires its exact program plan";
+			final entry = currentRuntimeTypes.occurrence(e, currentTypedFunction, currentTypedInitializer);
+			return currentRuntimeTypes.render(entry,
+				exprToOcaml(entry.getValue(), arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				currentFunctionLocalOcamlNames, escapeOcamlString);
+		}
+		if (e.match(EField(_, "println"))) {
+			final intrinsic = backend.ocaml.Stage3OcamlIntrinsicCallable.emitValue(e,
+				currentTypedInitializer != null ? currentTypedInitializer.findCallableExpression : currentTypedFunction == null ? null : currentTypedFunction.findCallableExpression);
+			if (intrinsic != null)
+				return intrinsic;
+		}
+		switch e {
+			case ECast(lambda = ELambda(_, body), _) | ECheckType(lambda = ELambda(_, body), _) if (body.match(ELoweredControl(FunctionBody, _, _, _))):
+				return exprToOcaml(lambda, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+			case ELambda(arguments, body) if (body.match(ELoweredControl(FunctionBody, _, _, _))):
+				final facts = currentTypedInitializer != null ? currentTypedInitializer.findLambda(e) : currentTypedFunction == null ? null : currentTypedFunction.findLambda(e);
+				if (facts == null)
+					throw "OCaml block function requires its exact lambda facts";
+				final locals = currentTypedInitializer != null ? currentTypedInitializer.getLocalCatalog() : currentTypedFunction.getLocalCatalog();
+				// A closure remains in its creator's lexical receiver context. Exact
+				// local bindings below refine this copy without dropping the receiver.
+				final hints = tyByIdent == null ? new Map<String, TyType>() : tyByIdent.copy();
+				final allowed = new Map<String, Bool>();
+				if (stage3HasThisBinding(hints))
+					allowed.set("this", true);
+				if (arityByIdent != null)
+					for (name in arityByIdent.keys())
+						allowed.set(name, true);
+				for (entry in locals.getEntries()) {
+					hints.set(entry.getProjectedName(), entry.getBinding().getType());
+					allowed.set(entry.getProjectedName(), true);
+				}
+				return backend.ocaml.Stage3OcamlFunctionBody.render({
+					facts: facts,
+					body: body,
+					names: currentFunctionLocalOcamlNames,
+					renderType: ocamlTypeFromTy,
+					renderStatements: (statements,
+						renderReturn) -> stmtListToOcaml(statements, allowed, "HxBlockReturn", arityByIdent, hints, staticImportByIdent, currentPackagePath,
+							moduleNameByPkgAndClass, callSigByCallee, hints, new Map(), null, arguments, renderReturn)
+				});
+			case _:
+		}
+		if (e.match(ELoweredControl(Initializer(_), _, _, _))) {
+			final plan = backend.ocaml.Stage3OcamlInitializer.plan(currentTypedInitializer, e);
+			final hints = new Map<String, TyType>();
+			for (entry in currentTypedInitializer.getLocalCatalog().getEntries())
+				hints.set(entry.getProjectedName(), entry.getBinding().getType());
+			final allowed = new Map<String, Bool>();
+			if (arityByIdent != null)
+				for (name in arityByIdent.keys())
+					allowed.set(name, true);
+			return "("
+				+ stmtListToOcaml(plan.statements, allowed, "", arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+					callSigByCallee, hints, new Map(), plan.value)
+				+ ")";
+		}
+		final enumCall = TypedExactEnumConstructorSource.decode(e);
+		if (enumCall != null) {
+			if (currentEnums == null || currentFunctionLocalOcamlNames == null)
+				throw "OCaml enum call requires its request and local naming owners";
+			return currentEnums.call(enumCall,
+				value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				currentFunctionLocalOcamlNames,
+				value ->
+					currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(value) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(value));
+		}
+		final methodValue = currentTypedInitializer != null ? currentTypedInitializer.findMethodUse(e) : currentTypedFunction == null ? null : currentTypedFunction.findMethodUse(e);
+		if (methodValue != null && methodValue.getUse() == ValueRead) {
+			final arrayMethod = backend.ocaml.Stage3OcamlArrayCalls.renderMethodValue({
+				occurrence: methodValue,
+				metal: isMetalProfileActive(),
+				emit: value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				names: currentFunctionLocalOcamlNames
+			});
+			if (arrayMethod != null)
+				return arrayMethod;
+			final declaration = methodValue.getDeclaration();
+			final ownerModule = ocamlModuleNameFromTypePath(declaration.getOwner().getCanonicalName());
+			final methodName = ocamlValueIdent(declaration.getSignature().getName());
+			final qualified = ownerModule + "." + methodName;
+			return backend.ocaml.Stage3OcamlMethodValue.render({
+				occurrence: methodValue,
+				reference: ownerModule == currentOcamlModuleName ? methodName : qualified,
+				signature: callSigForStage3(qualified, callSigByCallee),
+				emit: value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				names: currentFunctionLocalOcamlNames
+			});
+		}
+		final structuralAccess = objectAccess(e);
+		final construction = exactConstructor(e);
+		if (construction != null && currentClassStorage != null) {
+			final rendered = currentClassStorage.construct({
+				occurrence: construction,
+				currentModule: currentOcamlModuleName,
+				names: currentFunctionLocalOcamlNames,
+				emitArgument: (expression, actual, expected) -> {
+					final value = stage3IsFloatParamHint(expected.getDisplay()) ? exprToOcamlAsFloatValueStage3(expression, arityByIdent, tyByIdent,
+						staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+						callSigByCallee) : exprToOcaml(expression, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+							callSigByCallee);
+					final argument = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(expression) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(expression);
+					final callable = backend.ocaml.Stage3OcamlCallableConversion.adapt(argument, value, currentFunctionLocalOcamlNames);
+					if (callable != null)
+						return callable;
+					final carrier = actual.getSemanticKey() == "primitive:Bool" ? backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ExactBool : actual.isDynamic() ? backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.DynamicValue : backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ConcreteValue;
+					return backend.ocaml.OcamlDynamicOperatorLowering.callArgument(expected.getDisplay(), carrier, value);
+				},
+				quote: escapeOcamlString
+			});
+			if (rendered != null)
+				return rendered;
+		}
+		if (currentClassStorage != null && (e.match(EField(_, _)) || e.match(EIdent(_)))) {
+			final field = currentTypedInitializer != null ? currentTypedInitializer.findField(e) : currentTypedFunction == null ? null : currentTypedFunction.findField(e);
+			if (field != null) {
+				final rendered = currentClassStorage.read(field,
+					value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+					"this_", escapeOcamlString);
+				if (rendered != null)
+					return rendered;
+			}
+		}
+		final indexedAccess = arrayAccess(e);
+		if (indexedAccess != null && !isMetalProfileActive()) {
+			final rendered = backend.ocaml.Stage3OcamlArrays.access(indexedAccess,
+				value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				currentFunctionLocalOcamlNames);
+			if (rendered != null)
+				return rendered;
+		}
+		if (structuralAccess != null) {
+			if (currentFunctionLocalOcamlNames == null)
+				throw "object access requires its exact local naming owner";
+			return backend.ocaml.Stage3OcamlObjects.access(structuralAccess,
+				value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				currentFunctionLocalOcamlNames, escapeOcamlString);
+		}
 		final tyByIdentRaw = tyByIdent;
 		final arityByIdentRaw = arityByIdent;
 		final staticImportByIdentRaw = staticImportByIdent;
 		final moduleNameByPkgAndClassRaw = moduleNameByPkgAndClass;
 		final callSigByCalleeRaw = callSigByCallee;
+		final staticCall = TypedExactStaticCallSource.decode(e);
+		if (staticCall != null)
+			e = TypedExactStaticCallSource.ordinaryCall(staticCall);
 		final exactCall = TypedExactCallSource.decodeInstance(e);
 		if (exactCall != null) {
+			if (exactCall.owner == "String" && backend.ocaml.Stage3OcamlStringCalls.supports(exactCall.method)) {
+				final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findInstanceCall(e) : currentTypedFunction == null ? null : currentTypedFunction.findInstanceCall(e);
+				if (occurrence == null)
+					throw "selected OCaml string call requires its exact executable occurrence";
+				final rendered = backend.ocaml.Stage3OcamlStringCalls.render({
+					occurrence: occurrence,
+					emit: value -> exprToOcaml(value, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+						callSigByCalleeRaw),
+					names: currentFunctionLocalOcamlNames
+				});
+				if (rendered != null)
+					return rendered;
+			}
+			if (exactCall.owner == "Array" && backend.ocaml.Stage3OcamlArrayCalls.supports(exactCall.method)) {
+				final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findInstanceCall(e) : currentTypedFunction == null ? null : currentTypedFunction.findInstanceCall(e);
+				if (occurrence == null)
+					throw "selected OCaml array call requires its exact executable occurrence";
+				final rendered = backend.ocaml.Stage3OcamlArrayCalls.render({
+					occurrence: occurrence,
+					metal: isMetalProfileActive(),
+					autoMetal: isPortableAutoMetalizedRegionActive(),
+					emit: value -> exprToOcaml(value, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+						callSigByCalleeRaw),
+					names: currentFunctionLocalOcamlNames,
+					mark: markPortableAutoMetalizedLoweringUse
+				});
+				if (rendered != null)
+					return rendered;
+			}
 			final ownerModule = ocamlModuleNameFromTypePath(exactCall.owner);
-			if (exactCall.receiver.match(EThis) && ownerModule.length > 0 && ownerModule != currentOcamlModuleName) {
+			if (ownerModule.length > 0 && ownerModule != currentOcamlModuleName) {
 				final ownerParts = exactCall.owner.split(".");
 				var ownerExpression:HxExpr = EIdent(ownerParts[0]);
 				for (partIndex in 1...ownerParts.length)
 					ownerExpression = EField(ownerExpression, ownerParts[partIndex]);
-				return exprToOcaml(ECall(EField(ownerExpression, exactCall.method), [exactCall.receiver].concat(exactCall.arguments)), arityByIdentRaw,
-					tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
+				// Keep the typed owner and explicit receiver together through call
+				// planning. Rebuilding receiver.method would rediscover it by name.
+				e = ECall(EField(ownerExpression, exactCall.method), [exactCall.receiver].concat(exactCall.arguments));
+			} else {
+				return exprToOcaml(TypedExactCallSource.ordinaryInstanceCall(exactCall), arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw,
+					currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 			}
-			return exprToOcaml(TypedExactCallSource.ordinaryInstanceCall(exactCall), arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw,
-				currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
 		}
 
 		final coreIntrinsic = tryExprToOcamlStage3CoreIntrinsic(e, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
@@ -2950,12 +3291,29 @@ class EmitterStage {
 			return numericStringIntrinsic;
 
 		return switch (e) {
-			case ELambda(_, _), EMacroExpr(_, _), EMacroType(_), ETryCatchRaw(_):
+			case EMacroExpr(inner, _):
+				TypedBackendSourceWalk.expression(inner, node -> {
+					if (node.match(EDiscardThen(_, _)))
+						throw HxMacroBlockBoundary.missingSourceGroup;
+				});
+				throw "stage3 emitter: macro expressions must be expanded before OCaml emission";
+			case EPrivateAccess(_, _):
+				throw "source access permission must be consumed before OCaml emission";
+			case ESourceTry(_, _, _) | ESourceGroup(_, _) | ESourceFunction(_, _, _, _) | ESourceIf(_, _, _, _) | ESourceFor(_, _, _, _) | EThrow(_, _) |
+				ELoweredControl(_, _, _, _):
+				throw "source control must be lowered before OCaml emission (haxe_ocaml-o25kr)";
+			case ELambda(_, _), EMacroType(_), ETryCatchRaw(_):
 				// Exhaustiveness fallback; normal handling returns from the pre-switch intrinsic helper.
 				"(Obj.magic 0)";
+			case EDiscardThen(effect, continuation):
+				"(let _ = "
+				+ exprToOcaml(effect, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+				+ " in "
+				+ exprToOcaml(continuation, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+				+ ")";
 			case EReturn(_):
 				throw "stage3 emitter: expression-position return must be consumed by macro expansion before OCaml emission";
-			case EWhile(_, _, _, _):
+			case EWhile(_, _, _, _, loopKind):
 				throw "stage3 emitter: expression-position while must be consumed by macro expansion before OCaml emission";
 			case EBreak(_):
 				throw "stage3 emitter: expression-position break needs shared loop-control lowering before OCaml emission";
@@ -2988,8 +3346,14 @@ class EmitterStage {
 				// Bring-up: lower enum-like value tags (e.g. `Macro`) to a stable string.
 				escapeOcamlString(name);
 			case ENew(typePath, args):
-				exprToOcamlNewStage3(typePath, args, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
-					callSigByCalleeRaw);
+				final rendered = exprToOcamlNewStage3(typePath, args, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
+					moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
+				if (!isMetalProfileActive() && isStage3StdArrayCtorTypePath(typePath) && args.length == 0) {
+					final occurrence = currentTypedInitializer != null ? currentTypedInitializer.requireConstructor(e) : currentTypedFunction == null ? null : currentTypedFunction.requireConstructor(e);
+					if (occurrence == null)
+						throw "OCaml array construction requires its exact typed occurrence";
+					backend.ocaml.Stage3OcamlArrays.retainStringifier(occurrence.getConstructedType(), rendered, currentFunctionLocalOcamlNames);
+				} else rendered;
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
 				exprToOcamlArrayComprehension(name, iterable, guardExpr, yieldExpr, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
 					moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
@@ -3064,8 +3428,20 @@ class EmitterStage {
 					};
 					if (signature != null && signature.needsReceiver && argIndex == 0)
 						return rendered;
+					final argument = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(arg) : currentTypedFunction != null ? currentTypedFunction.findCallArgument(arg) : null;
+					final array = backend.ocaml.Stage3OcamlArrays.callArgument(argument, rendered);
+					if (array != null)
+						return array;
+					final callable = backend.ocaml.Stage3OcamlCallableConversion.adapt(argument, rendered, currentFunctionLocalOcamlNames);
+					if (callable != null)
+						return callable;
 					final carrier = stage3DynamicArgumentCarrier(arg, tyByIdentRaw, callSigByCalleeRaw);
-					return backend.ocaml.OcamlDynamicOperatorLowering.callArgument(hint, carrier, rendered);
+					// Stored callbacks have checked argument destinations even without a
+					// method signature. Preserve Dynamic boxing at that exact call boundary.
+					final destination = argument != null
+						&& argument.expectedType != null
+						&& argument.expectedType.isDynamic() ? "Dynamic" : hint;
+					return backend.ocaml.OcamlDynamicOperatorLowering.callArgument(destination, carrier, rendered);
 				}
 
 				final runtimeIntrinsic = tryExprToOcamlStage3RuntimeIntrinsic(callee, args, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw,
@@ -3382,9 +3758,11 @@ class EmitterStage {
 				// - the member is known as an instance method in the current module, and
 				// - the receiver is not a type-path/static reference.
 				switch (callee) {
-					case EField(obj, field) if (stage3HasArity(field, arityByIdentRaw)
-						&& hasCurrentInstanceMethod(field)
-						&& !isTypePathExpr(obj)):
+					case EField(obj, field)
+						if (staticCall == null
+							&& stage3HasArity(field, arityByIdentRaw)
+							&& hasCurrentInstanceMethod(field)
+							&& !isTypePathExpr(obj)):
 						final loweredField = ocamlValueIdent(field);
 						var signature = callSigForStage3(loweredField, callSigByCalleeRaw);
 						if (signature == null)
@@ -3402,7 +3780,7 @@ class EmitterStage {
 							return loweredField + " " + rendered.join(" ");
 						}
 
-						final planned = EmitterCallArgPolicy.plan(signature, args.length, 1, (sourceIndex, paramIndex) -> {
+						final planned = TyCallArgumentPolicy.plan(signature, args.length, 1, (sourceIndex, paramIndex) -> {
 							final fillable = signature.paramFillable != null
 								&& paramIndex >= 0
 								&& paramIndex < signature.paramFillable.length
@@ -3417,7 +3795,7 @@ class EmitterStage {
 							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 							+ ")");
 						switch (planned) {
-							case MissingRequired(paramIndex, paramName):
+							case MissingRequired(paramIndex, paramName, _):
 								throw stage3MissingCallArgumentDiagnostic(field, signature, paramIndex, paramName);
 							case Planned(plan):
 								final sourceIndices = plan.getFixedSourceIndices();
@@ -3442,10 +3820,10 @@ class EmitterStage {
 				// Method receiver, arity, and argument-recovery facts belong to that method
 				// and must never change a call through the selected local binding.
 				final isLocalCall = switch (callee) {
-					case EIdent(name): stage3HasLocalValueIdent(name);
+					case EIdent(name): staticCall == null && stage3HasLocalValueIdent(name);
 					case _: false;
 				};
-				final instanceCallName = switch (callee) {
+				final instanceCallName = staticCall != null ? null : switch (callee) {
 					case EIdent(name) if (!isLocalCall && hasCurrentInstanceMethod(name)):
 						name;
 					case EField(EThis, name) if (hasCurrentInstanceMethod(name)):
@@ -3478,6 +3856,17 @@ class EmitterStage {
 						// null argument.
 						ocamlValueIdent(instanceCallName) + " (this_)";
 					}
+				} else if (currentCallableFunction != null
+					&& currentTypedInitializer == null
+					&& currentCallableFunction.staticCallee(callee) != null) {
+					callableDeclarationReference(currentCallableFunction.staticCallee(callee));
+				} else if (staticCall != null) {
+					// A nested type is not a value field of its containing module.
+					// Use the declaration selected by typing after builtin handling,
+					// then retain the ordinary argument conversion and arity plan.
+					final ownerModule = ocamlModuleNameFromTypePath(staticCall.owner);
+					final method = ocamlValueIdent(staticCall.method);
+					ownerModule == currentOcamlModuleName ? method : ownerModule + "." + method;
 				} else {
 					exprToOcaml(callee, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 				};
@@ -3505,13 +3894,6 @@ class EmitterStage {
 					"(Obj.magic 0)";
 				} else {
 					final receiverPreApplied = c.indexOf(" (this_)") != -1;
-					final invokesReturnedCallable = switch (callee) {
-						case ECall(_, _): true;
-						case _: false;
-					};
-					final returnedCallableTarget = canonicalCallTargetForStage3(c, arityByIdentRaw);
-					final invokesModuleReturnedCallable = invokesReturnedCallable
-						&& (returnedCallableTarget != c || returnedCallableTarget.indexOf(".") >= 0);
 
 					function callSigForExpr(expr:HxExpr):Null<EmitterCallSig> {
 						return switch (expr) {
@@ -3633,6 +4015,16 @@ class EmitterStage {
 						return null;
 					}
 
+					// A factory's rendered call can contain ordered bindings. Its source
+					// occurrence and declaration tables, not that text, identify the factory.
+					// Lexical values must retain their own callable contract when shadowing it.
+					final invokesModuleReturnedCallable = TypedExactStaticCallSource.decode(callee) != null || switch (callee) {
+						case ECall(EIdent(name), _) if (!stage3HasLocalValueIdent(name)): stage3HasArity(name,
+								arityByIdentRaw) || fallbackLocalFunctionSig(name) != null;
+						case ECall(factory = EField(owner, _), _) if (isTypePathExpr(owner)):
+							callSigForExpr(factory) != null;
+						case _: false;
+					};
 					var sig = isLocalCall ? null : callSigForStage3(c, callSigByCalleeRaw);
 					// A pre-applied receiver changes how the final call is rendered, but it
 					// does not make the method signature known. Keep resolving the signature
@@ -3688,10 +4080,10 @@ class EmitterStage {
 					}
 
 					var fullArgs = args.copy();
-					final sourceAlreadyCarriesThis = fullArgs.length > 0 && switch (fullArgs[0]) {
+					final sourceAlreadyCarriesThis = exactCall != null || (fullArgs.length > 0 && switch (fullArgs[0]) {
 						case EThis: true;
 						case _: false;
-					};
+					});
 					final needsRecoveredQualifiedReceiver = sig != null && sig.needsReceiver && !receiverPreApplied && !sourceAlreadyCarriesThis
 						&& fullArgs.length < sig.required && switch (callee) {
 							case EField(obj, _) if (isTypePathExpr(obj)):
@@ -3720,7 +4112,7 @@ class EmitterStage {
 					var firstRenderedParam = 0;
 					var restSourceStart = fullArgs.length;
 					if (sig != null) {
-						final planned = EmitterCallArgPolicy.plan(sig, fullArgs.length, preAppliedReceiverCount, (sourceIndex, paramIndex) -> {
+						final planned = TyCallArgumentPolicy.plan(sig, fullArgs.length, preAppliedReceiverCount, (sourceIndex, paramIndex) -> {
 							final fillable = sig.paramFillable != null
 								&& paramIndex >= 0
 								&& paramIndex < sig.paramFillable.length
@@ -3732,7 +4124,7 @@ class EmitterStage {
 								staticImportByIdentRaw);
 						});
 						switch (planned) {
-							case MissingRequired(paramIndex, paramName):
+							case MissingRequired(paramIndex, paramName, _):
 								final callName = stage3CallDiagnosticName(callee, c);
 								throw stage3MissingCallArgumentDiagnostic(callName, sig, paramIndex, paramName);
 							case Planned(plan):
@@ -3794,10 +4186,11 @@ class EmitterStage {
 								var fnTy = "Obj.t";
 								for (_ in 0...tailArgs.length)
 									fnTy = "Obj.t -> " + fnTy;
-								var renderedCall = "((Obj.magic (" + callable + ") : " + fnTy + ")";
-								for (argCode in tailArgs)
-									renderedCall += " (Obj.repr " + argCode + ")";
-								renderedCall += ")";
+								final renderedCall = backend.ocaml.Stage3OcamlCallOrder.render({
+									callee: "(Obj.magic (" + callable + ") : " + fnTy + ")",
+									arguments: [for (argument in tailArgs) "Obj.repr " + argument],
+									names: currentFunctionLocalOcamlNames
+								});
 								"(Obj.magic " + renderedCall + ")";
 							} else {
 								callable + " " + tailArgs.join(" ");
@@ -3846,7 +4239,11 @@ class EmitterStage {
 								(sig == null
 									&& StringTools.startsWith(c, "Php_Global.")) ? "(Obj.magic (" + renderedCall + "))" : renderedCall;
 						} else {
-							final renderedCall = c + " " + renderedArgs.join(" ");
+							final renderedCall = backend.ocaml.Stage3OcamlCallOrder.render({
+								callee: c,
+								arguments: renderedArgs,
+								names: currentFunctionLocalOcamlNames
+							});
 							(sig == null
 								&& StringTools.startsWith(c, "Php_Global.")) ? "(Obj.magic (" + renderedCall + "))" : renderedCall;
 						}
@@ -3926,6 +4323,24 @@ class EmitterStage {
 					"(Obj.magic 0)";
 				}
 			case EBinop(op, a, b):
+				final equality = (op != "==" && op != "!=") ? null : currentTypedInitializer != null ? currentTypedInitializer.findEquality(e) : currentTypedFunction == null ? null : currentTypedFunction.findEquality(e);
+				final bitwise = intBitwise(e);
+				if (bitwise != null)
+					return backend.ocaml.Stage3OcamlIntBitwise.render({
+						facts: bitwise,
+						left: exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+						right: exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+						names: currentFunctionLocalOcamlNames
+					});
+				if (equality != null
+					&& currentClassStorage != null
+					&& (currentClassStorage.usesIdentity(equality.leftType) || currentClassStorage.usesIdentity(equality.rightType))) {
+					final left = exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+					final right = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+					if (currentFunctionLocalOcamlNames == null)
+						throw "object equality requires its exact local naming owner";
+					return backend.ocaml.Stage3OcamlObjects.equality(op == "==", left, right, currentFunctionLocalOcamlNames);
+				}
 				final dynamicLeft = stage3IsDynamicExpr(a, tyByIdentRaw, callSigByCalleeRaw);
 				final dynamicRight = stage3IsDynamicExpr(b, tyByIdentRaw, callSigByCalleeRaw);
 				function dynamicCarrier(value:HxExpr, isDynamic:Bool):backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier {
@@ -3934,10 +4349,13 @@ class EmitterStage {
 					return
 						isDynamic ? backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.DynamicValue : backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ConcreteValue;
 				}
-				final dynamicBinary = backend.ocaml.OcamlDynamicOperatorLowering.binary(op, dynamicCarrier(a, dynamicLeft), dynamicCarrier(b, dynamicRight),
-					dynamicLeft, dynamicRight,
+				// The Dynamic helper rejects concrete operands without using their
+				// rendered text. Do not traverse those subtrees for a discarded result:
+				// repeating that work at each nested operator grows exponentially.
+				final dynamicBinary = (dynamicLeft || dynamicRight) ? backend.ocaml.OcamlDynamicOperatorLowering.binary(op, dynamicCarrier(a, dynamicLeft),
+					dynamicCarrier(b, dynamicRight), dynamicLeft, dynamicRight,
 					exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
-					exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
+					exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)) : null;
 				if (dynamicBinary != null) {
 					// A String-led Haxe addition stays String even when a Dynamic operand
 					// selects runtime dispatch. Restore that concrete result before a
@@ -4167,7 +4585,8 @@ class EmitterStage {
 				// progress to the next missing semantic, not to be correct yet.
 				"(Obj.magic 0)";
 			case ETernary(cond, thenExpr, elseExpr):
-				final condCode = exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				final condCode = conditionValue(cond,
+					exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
 				// Haxe `Std.parseInt` returns `Null<Int>`. In the OCaml runtime that is an
 				// `Obj.t` sentinel-or-boxed-int, so integer fallback branches in ternaries must
 				// be boxed too (e.g. `parts.length > 1 ? Std.parseInt(parts[1]) : 0`).
@@ -4189,54 +4608,16 @@ class EmitterStage {
 					+ "))";
 				}
 			case ESwitch(scrutinee, patterns, exprs):
-				// Stage 3 bring-up: lower a small structured switch expression subset to nested `if`.
-				//
-				// We intentionally implement matching in terms of `Obj.repr` + `HxRuntime.dynamic_equals`
-				// so we don't need to commit to concrete OCaml types for the scrutinee.
+				// Decide across compatible cases before accessing nested values.
+				if (currentFunctionLocalOcamlNames == null || patterns == null || exprs == null || patterns.length != exprs.length)
+					throw "OCaml switch expression requires aligned cases and its naming owner";
+				final switchName = currentFunctionLocalOcamlNames.internalName("__hx_switch");
 				final sw = exprToOcaml(scrutinee, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
-				function patternCond(p:HxSwitchPattern):String {
-					return switch (p) {
-						case POr(patterns):
-							if (patterns == null || patterns.length == 0) {
-								"false";
-							} else {
-								final parts = new Array<String>();
-								for (pp in patterns)
-									parts.push("(" + patternCond(pp) + ")");
-								"(" + parts.join(" || ") + ")";
-							}
-						case PNull:
-							backendDialect.runtimeIsNull("__sw");
-						case PWildcard, PBind(_):
-							"true";
-						case PBool(v):
-							backendDialect.runtimeDynamicEquals("__sw", v ? "true" : "false");
-						case PString(v):
-							backendDialect.runtimeDynamicEquals("__sw", escapeOcamlString(v));
-						case PInt(v):
-							backendDialect.runtimeDynamicEquals("__sw", Std.string(v));
-						case PEnumValue(name):
-							backendDialect.runtimeDynamicEquals("__sw", escapeOcamlString(name));
-						case PEnumExtract(name, _args):
-							backendDialect.runtimeDynamicEquals("(Type.enumConstructor __sw)", escapeOcamlString(name));
-						case PObject(_fieldNames, _fieldPatterns):
-							"false";
-						case PCapture(_name, inner):
-							patternCond(inner);
-						case PArray(_items):
-							"false";
-						case PExtractor(_extractorText, _resultPattern):
-							"false";
-						case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PIntCompareGuard(inner, _, _, _),
-							PParsedIntSwitchGuard(inner, _, _, _), PUnsupportedGuard(inner):
-							patternCond(inner);
-					};
-				}
-				var chain = backendDialect.dynamicNullValue();
+				final branches = new Array<String>();
 				if (patterns != null && exprs != null) {
 					final count = patterns.length < exprs.length ? patterns.length : exprs.length;
 					for (i in 0...count) {
-						final idx = count - 1 - i;
+						final idx = i;
 						final pattern = patterns[idx];
 						final branchExpr = exprs[idx];
 						final localTy = switch (pattern) {
@@ -4246,8 +4627,7 @@ class EmitterStage {
 								extendTyByIdentForStage3(tyByIdent, name, TyType.fromHintText("Dynamic"));
 							case PArray(_items):
 								extendTyByIdentManyForStage3(tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
-							case PExtractor(_, _), PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PIntEqualsGuard(_, _, _), PIntCompareGuard(_, _, _, _),
-								PParsedIntSwitchGuard(_, _, _, _), PUnsupportedGuard(_):
+							case PExtractor(_, _), PGuard(_, _), PUnsupportedPattern(_):
 								extendTyByIdentManyForStage3(tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 							case PEnumExtract(_name, _args):
 								extendTyByIdentManyForStage3(tyByIdent, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
@@ -4268,27 +4648,36 @@ class EmitterStage {
 						final bodyAsDynamic = "(Obj.magic (" + body + "))";
 						final thenExpr = switch (pattern) {
 							case _:
-								"(" + stage3PatternBindingLets(pattern, "__sw") + "(" + bodyAsDynamic + "))";
+								bodyAsDynamic;
 						};
-						final cond = patternCond(pattern);
-						chain = "(if " + cond + " then " + thenExpr + " else (" + chain + "))";
+						branches.push(thenExpr);
 					}
 				}
-				"(let __sw = (" + sw + ") in " + chain + ")";
+				final chain = backend.ocaml.Stage3OcamlPatternDecision.select({
+					patterns: patterns,
+					namedPattern: pattern ->
+						currentTypedInitializer != null ? currentTypedInitializer.findNamedPattern(pattern) : currentTypedFunction == null ? null : currentTypedFunction.findNamedPattern(pattern),
+					branches: branches,
+					value: switchName,
+					fallback: backendDialect.dynamicNullValue(),
+					dialect: backendDialect,
+					quote: escapeOcamlString,
+					names: currentFunctionLocalOcamlNames
+				});
+				"(let " + switchName + " = (" + sw + ") in " + chain + ")";
 			case ESwitchRaw(_raw):
 				// Stage 3 bring-up: preserve switch shape during parsing/typing, but do not attempt to
 				// lower it in the bootstrap emitter yet.
 				"(Obj.magic 0)";
-			case EAnon(_names, _values):
-				// Stage 3 bring-up: anonymous structures are represented in the real backend/runtime.
-				// The Stage 3 bootstrap emitter does not model them yet.
-				"(Obj.magic 0)";
+			case EAnon(_, _):
+				if (currentFunctionLocalOcamlNames == null || (currentTypedFunction == null && currentTypedInitializer == null))
+					throw "object literal requires its exact executable projection";
+				final aggregate = currentTypedFunction != null ? currentTypedFunction.requireAggregate(e) : currentTypedInitializer.requireAggregate(e);
+				backend.ocaml.Stage3OcamlObjects.literal(aggregate,
+					value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+					currentFunctionLocalOcamlNames, escapeOcamlString);
 			case EArrayDecl(values):
-				// Stage 3 bring-up: lower array literals to the local bootstrap shim container.
-				//
-				// Important
-				// - This intentionally does *not* use the real reflaxe.ocaml runtime Array.
-				// - The Stage3 bootstrap emitter output is "plain OCaml" and should stay standalone.
+				// Portable arrays use HxArray through the bootstrap naming adapter.
 				if (isMetalProfileActive()) {
 					if (values == null || values.length == 0) {
 						"HxBootArray.of_list []";
@@ -4310,13 +4699,12 @@ class EmitterStage {
 						"HxBootArray.of_list [" + elems.join("; ") + "]";
 					}
 				} else {
-					final elems = values == null
-						|| values.length == 0 ? "" : values // Use `Obj.magic` per element so mixed-type array literals (common in upstream tests,
-							// e.g. `[1, "hello"]`) remain OCaml-typecheckable during bring-up.
-							.map(v -> "(Obj.magic ("
-								+ exprToOcaml(v, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-								+ "))").join("; ");
-					"HxBootArray.of_list [" + elems + "]";
+					if (currentFunctionLocalOcamlNames == null || (currentTypedFunction == null && currentTypedInitializer == null))
+						throw "array literal requires its exact executable projection";
+					final aggregate = currentTypedFunction != null ? currentTypedFunction.requireAggregate(e) : currentTypedInitializer.requireAggregate(e);
+					backend.ocaml.Stage3OcamlArrays.literal(aggregate,
+						value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+						currentFunctionLocalOcamlNames);
 				}
 			case EArrayAccess(arr, idx):
 				// Stage 3 bring-up: Haxe `obj[key]` is used both for array indexing and dynamic
@@ -4346,13 +4734,24 @@ class EmitterStage {
 				// Bring-up: ranges are emitted only as iterables in `for-in` lowering. If we see
 				// a range in expression position, collapse to poison.
 				"(Obj.magic 0)";
-			case ECast(expr, hint):
-				final value = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+			case ECast(expr, hint) | ECheckType(expr, hint):
+				// Wrappers retain call contracts even when the source exists only in memory.
+				final value = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findCast(e) : currentTypedFunction == null ? null : currentTypedFunction.findCast(e);
+				// A selected operand conversion already produced the annotation's
+				// destination. Keep its existing native view without wrapping it twice.
+				if (occurrence != null
+					&& occurrence.isAnnotation()
+					&& occurrence.getSourceType().getSemanticKey() == occurrence.getTargetType().getSemanticKey())
+					return value;
 				final stringCast = backend.ocaml.OcamlExplicitStringCast.render(hint, value);
 				stringCast == null ? value : stringCast;
+			case EParenthesized(inner, _):
+				"(" + exprToOcaml(inner, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")";
 			case EUntyped(expr):
-				// Bring-up: preserve shape by emitting the inner expression.
-				exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				final value = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findUntyped(e) : currentTypedFunction == null ? null : currentTypedFunction.findUntyped(e);
+				backend.ocaml.Stage3OcamlValueConversion.untypedValue(occurrence, value, currentFunctionLocalOcamlNames);
 		}
 	}
 
@@ -4435,6 +4834,42 @@ class EmitterStage {
 		//   upstream-shaped code without having to implement full typing/emission yet.
 		// - it is *not* semantically correct; it is only for bring-up.
 		function hasBringupPoison(e:HxExpr):Bool {
+			if (TypedRuntimeTypeSource.isMarker(e)) {
+				if (currentRuntimeTypes == null)
+					throw "OCaml runtime type validation requires its exact program plan";
+				final value = currentRuntimeTypes.checkedValue(e, currentTypedFunction, currentTypedInitializer);
+				return value != null && hasBringupPoison(value);
+			}
+			final construction = exactConstructor(e);
+			if (construction != null && currentClassStorage != null && currentClassStorage.ownsConstruction(construction)) {
+				for (argument in currentClassStorage.argumentValues(construction))
+					if (hasBringupPoison(argument))
+						return true;
+				return false;
+			}
+			final indexedAccess = arrayAccess(e);
+			if (!isMetalProfileActive() && indexedAccess != null && backend.ocaml.Stage3OcamlArrays.supportsAccess(indexedAccess)) {
+				// The typed renderer owns this operation; retain unsupported-operand checks
+				// without replacing supported mutations with a bootstrap placeholder.
+				return hasBringupPoison(indexedAccess.receiver)
+					|| hasBringupPoison(indexedAccess.index)
+					|| (indexedAccess.value != null && hasBringupPoison(indexedAccess.value));
+			}
+			final enumCall = TypedExactEnumConstructorSource.decode(e);
+			if (enumCall != null) {
+				for (argument in enumCall.arguments)
+					if (hasBringupPoison(argument))
+						throw "OCaml enum constructor has an unsupported argument expression";
+				return false;
+			}
+			switch (e) {
+				case EDiscardThen(effect, continuation):
+					return hasBringupPoison(effect) || hasBringupPoison(continuation);
+				case _:
+			}
+			final staticCall = TypedExactStaticCallSource.decode(e);
+			if (staticCall != null)
+				return hasBringupPoison(TypedExactStaticCallSource.ordinaryCall(staticCall));
 			final exactCall = TypedExactCallSource.decodeInstance(e);
 			if (exactCall != null) {
 				if (hasBringupPoison(exactCall.receiver))
@@ -4500,10 +4935,28 @@ class EmitterStage {
 						case "=":
 							switch (a) {
 								case EField(obj, _): hasBringupPoison(obj) || hasBringupPoison(b);
+								case EIdent(_):
+									// A lowered expression can write an implicit receiver field.
+									// Require its exact storage declaration before admitting the write.
+									final selected = currentTypedInitializer != null ? currentTypedInitializer.findField(a) : currentTypedFunction == null ? null : currentTypedFunction.findField(a);
+									selected == null
+									|| selected.getReceiver() != ImplicitOwner
+									|| selected.getField().getIsStatic()
+									|| selected.getField().getIsFinal()
+									|| !selected.getField().getHasStorage()
+									|| (selected.getField().getPropertySet() != "" && selected.getField().getPropertySet() != "default")
+									|| hasBringupPoison(b);
 								case _:
 									true;
 							}
 						case "==" | "!=" | "<" | ">" | "<=" | ">=" | "&&" | "||" | "+" | "-" | "*" | "/" | "%": hasBringupPoison(a) || hasBringupPoison(b);
+						case "&" | "|" | "^" | "<<" | ">>" | ">>>"
+							if (intBitwise(e) != null
+								|| stage3IsDynamicExpr(a, emissionTyByIdent, callSigByCalleeRaw)
+								|| stage3IsDynamicExpr(b, emissionTyByIdent, callSigByCalleeRaw)): // Checked Int or Dynamic operations own these results.
+							// Do not replace a supported operation with a bootstrap placeholder.
+							hasBringupPoison(a)
+							|| hasBringupPoison(b);
 						case _:
 							true;
 					}
@@ -4619,9 +5072,9 @@ class EmitterStage {
 					// into `(Obj.magic 0)`.
 					hasBringupPoison(iterable);
 				case EArrayAccess(arr, idx): hasBringupPoison(arr) || hasBringupPoison(idx);
-				case ECast(expr, _hint):
+				case ECast(expr, _hint) | ECheckType(expr, _hint):
 					hasBringupPoison(expr);
-				case EUntyped(expr):
+				case EParenthesized(expr, _) | EUntyped(expr):
 					hasBringupPoison(expr);
 				case _:
 					false;
@@ -4639,8 +5092,9 @@ class EmitterStage {
 		if (expectedReturnType != null && stage3ReturnTypeNeedsObjBranches(expectedReturnType)) {
 			switch (expr) {
 				case ETernary(cond, thenExpr, elseExpr):
-					final condCode = exprToOcaml(cond, arityByIdentRaw, emissionTyByIdent, staticImportByIdentRaw, currentPackagePath,
-						moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
+					final condCode = conditionValue(cond,
+						exprToOcaml(cond, arityByIdentRaw, emissionTyByIdent, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+							callSigByCalleeRaw));
 					function objBranch(e:HxExpr):String {
 						return "(Obj.magic ("
 							+ exprToOcaml(e, arityByIdentRaw, emissionTyByIdent, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
@@ -4713,6 +5167,18 @@ class EmitterStage {
 		if (e == null)
 			return;
 		switch (e) {
+			// Projected names identify bindings, so a shadowing local cannot mark its
+			// outer namesake. A write in an escaping closure still needs shared storage.
+			case ELambda(_, body):
+				collectAssignedNamesInExprRec(body, out);
+			case ELoweredControl(_, _, entries, _) | EVars(entries):
+				for (entry in entries)
+					collectAssignedNamesInExprRec(entry, out);
+			case EVariableDeclaration(_, _, initializer, _, _, _):
+				collectAssignedNamesInExprRec(initializer, out);
+			case EDiscardThen(effect, continuation):
+				collectAssignedNamesInExprRec(effect, out);
+				collectAssignedNamesInExprRec(continuation, out);
 			case EBinop(op, EIdent(name), rhs):
 				if (isAssignmentOpToken(op) && name != null && name.length > 0)
 					out.set(name, true);
@@ -4753,9 +5219,9 @@ class EmitterStage {
 				if (exprs != null)
 					for (branchExpr in exprs)
 						collectAssignedNamesInExprRec(branchExpr, out);
-			case ECast(inner, _hint):
+			case ECast(inner, _hint) | ECheckType(inner, _hint):
 				collectAssignedNamesInExprRec(inner, out);
-			case EUntyped(inner):
+			case EParenthesized(inner, _) | EUntyped(inner):
 				collectAssignedNamesInExprRec(inner, out);
 			case ENew(_typePath, args):
 				if (args != null)
@@ -4799,6 +5265,11 @@ class EmitterStage {
 				if (catches != null)
 					for (c in catches)
 						collectAssignedNamesInStmtRec(c.body, out);
+			case SGuardedSwitch(scrutinee, enabled, _, bodies, _):
+				collectAssignedNamesInExprRec(scrutinee, out);
+				collectAssignedNamesInExprRec(enabled, out);
+				for (body in bodies)
+					collectAssignedNamesInStmtRec(body, out);
 			case SSwitch(scrutinee, _patterns, bodies, _pos):
 				collectAssignedNamesInExprRec(scrutinee, out);
 				if (bodies != null)
@@ -4815,7 +5286,21 @@ class EmitterStage {
 	static function scanExprForPreludeDepsRec(e:Null<HxExpr>, locals:Map<String, Bool>, calls:Map<String, Bool>, idents:Map<String, Bool>):Void {
 		if (e == null)
 			return;
+		final enumCall = TypedExactEnumConstructorSource.decode(e);
+		if (enumCall != null) {
+			for (argument in enumCall.arguments)
+				scanExprForPreludeDepsRec(argument, locals, calls, idents);
+			return;
+		}
+		final exactCall = TypedExactStaticCallSource.decode(e);
+		if (exactCall != null) {
+			scanExprForPreludeDepsRec(TypedExactStaticCallSource.ordinaryCall(exactCall), locals, calls, idents);
+			return;
+		}
 		switch (e) {
+			case EDiscardThen(effect, continuation):
+				scanExprForPreludeDepsRec(effect, locals, calls, idents);
+				scanExprForPreludeDepsRec(continuation, locals, calls, idents);
 			case EIdent(name):
 				if (name != null && name.length > 0 && !locals.exists(name))
 					idents.set(name, true);
@@ -4884,10 +5369,16 @@ class EmitterStage {
 			case ERange(start, end):
 				scanExprForPreludeDepsRec(start, locals, calls, idents);
 				scanExprForPreludeDepsRec(end, locals, calls, idents);
-			case ECast(expr, _):
+			case ECast(expr, _) | ECheckType(expr, _):
 				scanExprForPreludeDepsRec(expr, locals, calls, idents);
-			case EUntyped(expr):
+			case EParenthesized(expr, _) | EUntyped(expr):
 				scanExprForPreludeDepsRec(expr, locals, calls, idents);
+			case EVars(values) | ELoweredControl(_, _, values, _):
+				for (value in values)
+					scanExprForPreludeDepsRec(value, locals, calls, idents);
+			case EVariableDeclaration(name, _, value, _, _, _):
+				scanExprForPreludeDepsRec(value, locals, calls, idents);
+				locals.set(name, true);
 			case _:
 		}
 	}
@@ -4926,6 +5417,11 @@ class EmitterStage {
 					nestedLocals.set(valueName, true);
 				scanExprForPreludeDepsRec(iterable, locals, calls, idents);
 				scanStmtForPreludeDepsRec(body, nestedLocals, calls, idents);
+			case SGuardedSwitch(scrutinee, enabled, _, bodies, _):
+				scanExprForPreludeDepsRec(scrutinee, locals, calls, idents);
+				scanExprForPreludeDepsRec(enabled, locals, calls, idents);
+				for (body in bodies)
+					scanStmtForPreludeDepsRec(body, locals, calls, idents);
 			case SSwitch(scrutinee, _patterns, bodies, _):
 				scanExprForPreludeDepsRec(scrutinee, locals, calls, idents);
 				if (bodies != null)
@@ -4941,8 +5437,9 @@ class EmitterStage {
 
 	static function stmtListToOcaml(stmts:Array<HxStmt>, allowedValueIdents:Map<String, Bool>, returnExc:String, arityByIdent:Map<String, Int>,
 			tyByIdent:Map<String, TyType>, staticImportByIdent:Map<String, String>, currentPackagePath:String, moduleNameByPkgAndClass:Map<String, String>,
-			callSigByCallee:Map<String, EmitterCallSig>, localTypeHints:Map<String, TyType>, fnReturnTypes:Map<String, TyType>):String {
-		if (stmts == null || stmts.length == 0)
+			callSigByCallee:Map<String, EmitterCallSig>, localTypeHints:Map<String, TyType>, fnReturnTypes:Map<String, TyType>, ?finalValue:HxExpr,
+			?parameterNames:Array<String>, ?renderReturn:(HxStmt, String) -> String):String {
+		if ((stmts == null || stmts.length == 0) && finalValue == null)
 			return "()";
 
 		final localTypeHintsMap = localTypeHints;
@@ -4988,6 +5485,10 @@ class EmitterStage {
 			if (assignedNamesDeep.get(name) == true)
 				mutableLocalsInScope.set(name, true);
 		}
+		final entryParameters = parameterNames == null ? [] : parameterNames;
+		for (name in entryParameters)
+			if (assignedNamesDeep.get(name) == true)
+				mutableLocalsInScope.set(name, true);
 		currentMutableLocalRefNames = mergeMutableLocalRefNames(prevMutableLocalRefNames, mutableLocalsInScope);
 
 		// The strict function projection supplies every local type, including Unknown.
@@ -5041,12 +5542,12 @@ class EmitterStage {
 			if (hinted != null)
 				return hinted;
 			var key = name;
-			if (mapGetRaw(cast tyByIdent, key) == null) {
+			if (mapGetRaw(tyByIdent, key) == null) {
 				final lowered = ocamlValueIdent(name);
-				if (lowered != name && mapGetRaw(cast tyByIdent, lowered) != null)
+				if (lowered != name && mapGetRaw(tyByIdent, lowered) != null)
 					key = lowered;
 			}
-			final resolved = mapGetRaw(cast tyByIdent, key);
+			final resolved = mapGetRaw(tyByIdent, key);
 			if (resolved == null)
 				return TyType.unknown();
 			final typed:TyType = cast resolved;
@@ -5057,6 +5558,7 @@ class EmitterStage {
 			if (e == null)
 				return TyType.unknown();
 			return switch (e) {
+				case EDiscardThen(_, continuation): inferInitType(continuation, boundName, boundTy);
 				case EFloat(_):
 					TyType.fromHintText("Float");
 				case EInt(_):
@@ -5306,6 +5808,9 @@ class EmitterStage {
 					false;
 				case SDoWhile(_body, _cond, _):
 					false;
+				case SGuardedSwitch(_, _, _, _, _):
+					// A rejected guard can fall through even when every selected body returns.
+					false;
 				case SSwitch(_scrutinee, _patterns, bodies, _):
 					// Bring-up: treat switches as non-returning unless every case body returns.
 					if (bodies == null || bodies.length == 0) {
@@ -5332,34 +5837,12 @@ class EmitterStage {
 		}
 
 		inline function tyCtxGet(value:Map<String, TyType>, name:String):Null<TyType> {
-			final resolved = mapGetRaw(cast value, name);
+			final resolved = mapGetRaw(value, name);
 			return resolved == null ? null : cast resolved;
 		}
 
 		function condToOcamlBool(e:HxExpr, tyCtx:Map<String, TyType>):String {
-			final erasedReturnTyCtx = cast tyCtx;
-			inline function boolOrTrue(s:String):String {
-				// `returnExprToOcaml` collapses unsupported/unknown subtrees to `(Obj.magic 0)`.
-				// In a condition position we prefer "always true" over emitting an unbound identifier
-				// that would abort OCaml compilation.
-				return s == "(Obj.magic 0)" ? "true" : s;
-			}
-
-			return switch (e) {
-				case EBool(v):
-					v ? "true" : "false";
-				case EUnop(op, fixity, inner) if (op == HxUnaryOperator.LogicalNot && fixity == HxUnaryFixity.Prefix):
-					final rendered = returnExprToOcaml(e, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
-						moduleNameByPkgAndClass, callSigByCallee);
-					boolOrTrue(stage3IsDynamicExpr(inner, tyCtx, callSigByCallee) ? "HxRuntime.unbox_bool_or_obj (" + rendered + ")" : rendered);
-				case EBinop(op, _, _) if (op == "==" || op == "!=" || op == "<" || op == ">" || op == "<=" || op == ">=" || op == "&&" || op == "||"):
-					boolOrTrue(returnExprToOcaml(e, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
-						moduleNameByPkgAndClass, callSigByCallee));
-				case _:
-					// Conservative default: we do not have real typing for conditions yet.
-					// Keep bring-up resilient by treating unknown conditions as true.
-					"true";
-			};
+			return conditionValue(e, exprToOcaml(e, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
 		}
 
 		function mutableAssignmentStmtToUnit(op:String, name:String, rhs:HxExpr, tyCtx:Null<Map<String, TyType>>):Null<String> {
@@ -5425,6 +5908,13 @@ class EmitterStage {
 			}
 			final lhsCode = localReadIdent(name);
 			final lhsTy = localTyForIdent(name);
+			final destination = exactFunctionLocalType(name);
+			if (op != "=" && destination != null && destination.isDynamic()) {
+				final write = requireLocalStorageWrite(name, rhs);
+				final rendered = exprToOcaml(rhs, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				final value = backend.ocaml.Stage3OcamlLocalStorage.compound(write, op, lhsCode, rendered, currentFunctionLocalOcamlNames);
+				return "(let __hx_v = (" + value + ") in (" + requireOcamlFunctionLocalValueIdent(name) + " := __hx_v; ()))";
+			}
 			var rhsRaw = exprToOcaml(rhs, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 			if (rhsRaw == "(Obj.magic 0)")
 				switch (rhs) {
@@ -5479,10 +5969,11 @@ class EmitterStage {
 			}
 			var rhsCode:Null<String> = switch (op) {
 				case "=":
-					stage3Int64CarrierValue(lhsTy, rhs,
-						returnExprToOcaml(rhs, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
-							moduleNameByPkgAndClass, callSigByCallee),
-						cast tyCtx);
+					localStorageValue(name, rhs,
+						stage3Int64CarrierValue(lhsTy, rhs,
+							returnExprToOcaml(rhs, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
+								moduleNameByPkgAndClass, callSigByCallee),
+							cast tyCtx));
 				case "+=":
 					returnExprToOcaml(EBinop("+", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
 						currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
@@ -5543,6 +6034,7 @@ class EmitterStage {
 				if (e == null || needle == null || needle.length == 0)
 					return false;
 				return switch (e) {
+					case EDiscardThen(effect, continuation): exprContainsIdent(effect, needle) || exprContainsIdent(continuation, needle);
 					case EIdent(name):
 						name == needle;
 					case EUnop(_, _, inner):
@@ -5579,9 +6071,9 @@ class EmitterStage {
 					case ERange(startExpr, endExpr): exprContainsIdent(startExpr, needle) || exprContainsIdent(endExpr, needle);
 					case ETernary(cond, thenExpr, elseExpr): exprContainsIdent(cond,
 							needle) || exprContainsIdent(thenExpr, needle) || exprContainsIdent(elseExpr, needle);
-					case ECast(inner, _):
+					case ECast(inner, _) | ECheckType(inner, _):
 						exprContainsIdent(inner, needle);
-					case EUntyped(inner):
+					case EParenthesized(inner, _) | EUntyped(inner):
 						exprContainsIdent(inner, needle);
 					case ESwitch(scrutinee, _patterns, exprs):
 						if (exprContainsIdent(scrutinee, needle)) true; else {
@@ -5603,6 +6095,7 @@ class EmitterStage {
 				if (e == null || needle == null || needle.length == 0)
 					return false;
 				return switch (e) {
+					case EDiscardThen(effect, continuation): exprHintsInt(effect, needle) || exprHintsInt(continuation, needle);
 					case EBinop(op, left, right): final numericOp = op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "+="
 							|| op == "-=" || op == "*=" || op == "/=" || op == "%="; (numericOp
 							&& (exprContainsIdent(left,
@@ -5639,9 +6132,9 @@ class EmitterStage {
 					case EArrayAccess(arrayExpr, indexExpr): exprHintsInt(arrayExpr, needle) || exprHintsInt(indexExpr, needle);
 					case ERange(startExpr, endExpr): exprHintsInt(startExpr, needle) || exprHintsInt(endExpr, needle);
 					case ETernary(cond, thenExpr, elseExpr): exprHintsInt(cond, needle) || exprHintsInt(thenExpr, needle) || exprHintsInt(elseExpr, needle);
-					case ECast(inner, _):
+					case ECast(inner, _) | ECheckType(inner, _):
 						exprHintsInt(inner, needle);
-					case EUntyped(inner):
+					case EParenthesized(inner, _) | EUntyped(inner):
 						exprHintsInt(inner, needle);
 					case ESwitch(scrutinee, _patterns, exprs):
 						if (exprHintsInt(scrutinee, needle)) true; else {
@@ -5684,7 +6177,7 @@ class EmitterStage {
 					bodyHintsIntLoopVar(body, loopVarName);
 				case SForKeyValue(_keyName, _valueName, _iterable, body, _):
 					bodyHintsIntLoopVar(body, loopVarName);
-				case SSwitch(_scrutinee, _patterns, bodies, _):
+				case SSwitch(_, _, bodies, _) | SGuardedSwitch(_, _, _, bodies, _):
 					if (bodies == null) {
 						false;
 					} else {
@@ -5705,62 +6198,67 @@ class EmitterStage {
 			final erasedTyCtx = cast tyCtx;
 			final erasedReturnTyCtx = cast tyCtx;
 			return switch (s) {
+				case SGuardedSwitch(scrutinee, enabled, plan, bodies, _):
+					backend.ocaml.Stage3OcamlGuardedSwitch.render({
+						plan: plan,
+						value: exprToOcaml(scrutinee, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+						enabled: condToOcamlBool(enabled, erasedTyCtx),
+						names: currentFunctionLocalOcamlNames,
+						dialect: backendDialect,
+						quote: escapeOcamlString,
+						enums: currentEnums,
+						body: index -> stmtToUnit(bodies[index], tyCtx),
+						mutable: name -> currentMutableLocalRefNames.indexOf(name) >= 0
+					});
+				case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
 				case SBlock(ss, _pos):
 					stmtListToOcaml(ss, allowedValueIdents, returnExc, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-						callSigByCallee, localTypeHintsMap, fnReturnTypesMap);
+						callSigByCallee, localTypeHintsMap, fnReturnTypesMap, null, null, renderReturn);
 				case SVar(_name, _typeHint, _init, _pos):
 					// Handled at the list level because it needs to wrap the remainder with `let ... in`.
 					"()";
-				case STry(tryBody, _catches, _pos):
-					stmtToUnit(tryBody, tyCtx);
-				case SThrow(_expr, _pos):
-					"()";
+				case STry(tryBody, catches, _pos):
+					final body = stmtToUnit(tryBody, tyCtx);
+					final handlers = new Array<backend.ocaml.Stage3OcamlExceptions.Stage3OcamlCatch>();
+					for (entry in catches) {
+						final type = exactFunctionLocalType(entry.name);
+						if (type == null)
+							throw "OCaml catch lacks its exact typed binding";
+						final assigned = new Map<String, Bool>();
+						collectAssignedNamesInStmtRec(entry.body, assigned);
+						final mutable = assigned.get(entry.name) == true;
+						final previous = currentMutableLocalRefNames.copy();
+						if (mutable)
+							currentMutableLocalRefNames.push(entry.name);
+						final catchBody = stmtToUnit(entry.body, extendTyByIdentLocal(tyCtx, entry.name, type));
+						currentMutableLocalRefNames = previous;
+						handlers.push({
+							targetName: requireOcamlFunctionLocalValueIdent(entry.name),
+							type: type,
+							body: catchBody,
+							mutable: mutable
+						});
+					}
+					backend.ocaml.Stage3OcamlExceptions.tryStatement(body, handlers, currentFunctionLocalOcamlNames, currentClassStorage, currentEnums,
+						escapeOcamlString);
+				case SThrow(expr, _pos):
+					if (currentTypedFunction == null)
+						throw "OCaml throw requires its exact typed function projection";
+					final value = currentTypedFunction.requireThrownValue(expr);
+					backend.ocaml.Stage3OcamlExceptions.throwValue(value,
+						exprToOcaml(expr, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+						currentClassStorage, currentEnums);
 				case SSwitch(scrutinee, patterns, bodies, _pos):
+					if (currentFunctionLocalOcamlNames == null || patterns == null || bodies == null || patterns.length != bodies.length)
+						throw "OCaml switch statement requires aligned cases and its naming owner";
+					final switchName = currentFunctionLocalOcamlNames.internalName("__hx_switch");
 					final sw = exprToOcaml(scrutinee, arityByIdent, erasedTyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 						callSigByCallee);
-					function patternCond(p:HxSwitchPattern):String {
-						return switch (p) {
-							case POr(patterns):
-								if (patterns == null || patterns.length == 0) {
-									"false";
-								} else {
-									final parts = new Array<String>();
-									for (pp in patterns)
-										parts.push("(" + patternCond(pp) + ")");
-									"(" + parts.join(" || ") + ")";
-								}
-							case PNull:
-								backendDialect.runtimeIsNull("__sw");
-							case PWildcard, PBind(_):
-								"true";
-							case PBool(v):
-								backendDialect.runtimeDynamicEquals("__sw", v ? "true" : "false");
-							case PString(v):
-								backendDialect.runtimeDynamicEquals("__sw", escapeOcamlString(v));
-							case PInt(v):
-								backendDialect.runtimeDynamicEquals("__sw", Std.string(v));
-							case PEnumValue(name):
-								backendDialect.runtimeDynamicEquals("__sw", escapeOcamlString(name));
-							case PEnumExtract(name, _args):
-								backendDialect.runtimeDynamicEquals("(Type.enumConstructor __sw)", escapeOcamlString(name));
-							case PObject(_fieldNames, _fieldPatterns):
-								"false";
-							case PCapture(_name, inner):
-								patternCond(inner);
-							case PArray(_items):
-								"false";
-							case PExtractor(_extractorText, _resultPattern):
-								"false";
-							case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PIntCompareGuard(inner, _, _, _),
-								PParsedIntSwitchGuard(inner, _, _, _), PUnsupportedGuard(inner):
-								patternCond(inner);
-						};
-					}
-					var chain = "()";
+					final branches = new Array<String>();
 					if (patterns != null && bodies != null) {
 						final count = patterns.length < bodies.length ? patterns.length : bodies.length;
 						for (i in 0...count) {
-							final idx = count - 1 - i;
+							final idx = i;
 							final pattern = patterns[idx];
 							final body = bodies[idx];
 							final caseTy = switch (pattern) {
@@ -5770,8 +6268,7 @@ class EmitterStage {
 									extendTyByIdentLocal(tyCtx, name, TyType.fromHintText("Dynamic"));
 								case PArray(_items):
 									extendTyByIdentManyForStage3(tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
-								case PExtractor(_, _), PLengthGuard(_, _, _), PStartsWithGuard(_, _, _), PIntEqualsGuard(_, _, _),
-									PIntCompareGuard(_, _, _, _), PParsedIntSwitchGuard(_, _, _, _), PUnsupportedGuard(_):
+								case PExtractor(_, _), PGuard(_, _), PUnsupportedPattern(_):
 									extendTyByIdentManyForStage3(tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
 								case PEnumExtract(_name, _args):
 									extendTyByIdentManyForStage3(tyCtx, collectStage3PatternBindingNames(pattern), TyType.fromHintText("Dynamic"));
@@ -5785,21 +6282,28 @@ class EmitterStage {
 							final bodyUnit = stmtToUnit(body, cast caseTy);
 							final thenUnit = switch (pattern) {
 								case _:
-									"(" + stage3PatternBindingLets(pattern, "__sw") + "(" + bodyUnit + "))";
+									"(" + bodyUnit + ")";
 							};
-							final cond = patternCond(pattern);
-							chain = "(if " + cond + " then " + thenUnit + " else (" + chain + "))";
+							branches.push(thenUnit);
 						}
 					}
-					"(let __sw = (" + sw + ") in " + chain + ")";
+					final chain = backend.ocaml.Stage3OcamlPatternDecision.select({
+						patterns: patterns,
+						namedPattern: pattern ->
+							currentTypedInitializer != null ? currentTypedInitializer.findNamedPattern(pattern) : currentTypedFunction == null ? null : currentTypedFunction.findNamedPattern(pattern),
+						branches: branches,
+						value: switchName,
+						fallback: "()",
+						dialect: backendDialect,
+						quote: escapeOcamlString,
+						names: currentFunctionLocalOcamlNames
+					});
+					"(let " + switchName + " = (" + sw + ") in " + chain + ")";
 				case SIf(cond, thenBranch, elseBranch, _pos):
 					final thenUnit = stmtToUnit(thenBranch, tyCtx);
 					final elseUnit = elseBranch == null ? "()" : stmtToUnit(elseBranch, tyCtx);
 					final condS = condToOcamlBool(cond, erasedTyCtx);
-					// Avoid typechecking dead branches in bring-up:
-					// - Unknown conditions are lowered as `true` by default.
-					// - Keeping the unused branch can still constrain types and break compilation
-					//   (e.g. forcing a param to `Obj.t` due to a dead `Std.string` call).
+					// Only literal conditions can remove a branch; typed values remain runtime decisions.
 					if (condS == "true") {
 						"(" + thenUnit + ")";
 					} else if (condS == "false") {
@@ -5809,27 +6313,21 @@ class EmitterStage {
 					}
 				case SWhile(cond, body, _pos):
 					final condS = condToOcamlBool(cond, erasedTyCtx);
-					final bodyUnit = stmtToUnit(body, tyCtx);
+					final bodyUnit = backend.ocaml.Stage3OcamlExceptions.loopBody(stmtToUnit(body, tyCtx));
 					if (condS == "false") {
 						"()";
 					} else {
-						"(while " + condS + " do " + bodyUnit + " done)";
+						backend.ocaml.Stage3OcamlExceptions.loop("while " + condS + " do " + bodyUnit + " done");
 					}
 				case SDoWhile(body, cond, _pos):
-					final bodyUnit = stmtToUnit(body, tyCtx);
+					final bodyUnit = backend.ocaml.Stage3OcamlExceptions.loopBody(stmtToUnit(body, tyCtx));
 					final condS = condToOcamlBool(cond, erasedTyCtx);
-					"(let __hx_do_continue = ref true in "
-					+ "while !__hx_do_continue do "
-					+ "__hx_do_continue := false; "
-					+ bodyUnit
-					+ "; if "
-					+ condS
-					+ " then __hx_do_continue := true else () "
-					+ "done)";
+					backend.ocaml.Stage3OcamlExceptions.loop("(let __hx_do_continue = ref true in " + "while !__hx_do_continue do "
+						+ "__hx_do_continue := false; " + bodyUnit + "; if " + condS + " then __hx_do_continue := true else () " + "done)");
 				case SBreak(_pos):
-					"()";
+					"raise HxRuntime.Hx_break";
 				case SContinue(_pos):
-					"()";
+					"raise HxRuntime.Hx_continue";
 				case SForIn(name, iterable, body, _pos):
 					final ident = requireOcamlFunctionLocalValueIdent(name);
 					final defaultLoopTy = (tyCtxGet(tyCtx,
@@ -5856,24 +6354,24 @@ class EmitterStage {
 					final bodyTy = extendTyByIdentLocal(tyCtx, name, loopVarTy);
 					final loopAllowed = cloneAllowedValueIdents(allowedValueIdents);
 					loopAllowed.set(name, true);
-					final bodyUnit = switch (body) {
+					final bodyUnit = backend.ocaml.Stage3OcamlExceptions.loopBody(switch (body) {
 						case SBlock(ss, _):
 							stmtListToOcaml(ss, loopAllowed, returnExc, arityByIdent, bodyTy, staticImportByIdent, currentPackagePath,
-								moduleNameByPkgAndClass, callSigByCallee, localTypeHintsMap, fnReturnTypesMap);
+								moduleNameByPkgAndClass, callSigByCallee, localTypeHintsMap, fnReturnTypesMap, null, null, renderReturn);
 						case _:
 							stmtToUnit(body, cast bodyTy);
-					};
-					switch (iterable) {
+					});
+					backend.ocaml.Stage3OcamlExceptions.loop(switch (iterable) {
 						case ERange(startExpr, endExpr):
 							final start = exprToOcaml(startExpr, arityByIdent, erasedTyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee);
 							final end = exprToOcaml(endExpr, arityByIdent, erasedTyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee);
 							"(let __start = ("
-							+ start
+							+ rangeBoundCarrier(startExpr, start)
 							+ ") in "
 							+ "let __end = ("
-							+ end
+							+ rangeBoundCarrier(endExpr, end)
 							+ ") in "
 							+ "if (__end <= __start) then () else ("
 							+ "for "
@@ -5889,21 +6387,28 @@ class EmitterStage {
 							+ " -> "
 							+ bodyUnit
 							+ ")";
-					}
+					});
 				case SForKeyValue(_keyName, _valueName, _iterable, _body, _pos):
 					// Stage3 OCaml bootstrap lowering does not yet model map/key iterators.
 					// Keep the non-JS path compiling while js-native handles this syntax precisely.
 					"()";
 				case SReturnVoid(_pos):
-					"raise (" + returnExc + " (Obj.repr ()))";
+					"raise (" + returnExc + " (" + (renderReturn == null ? "Obj.repr ()" : renderReturn(s, "()")) + "))";
 				case SReturn(expr, _pos):
-					final rendered = returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
-						currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+					var rendered = returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
+						moduleNameByPkgAndClass, callSigByCallee);
+					if (renderReturn == null && currentCallableFunction != null && currentTypedInitializer == null) {
+						final converted = currentCallableFunction.returned(s, rendered);
+						if (converted != null)
+							rendered = converted;
+					}
 					final declaredReturn = currentFunctionName == null
 						|| fnReturnTypesMap == null ? null : fnReturnTypesMap.get(currentFunctionName);
 					final dynamicReturn = declaredReturn != null
 						&& backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(declaredReturn.toString());
-					final payload = if (dynamicReturn) {
+					final payload = if (renderReturn != null) {
+						renderReturn(s, rendered);
+					} else if (dynamicReturn) {
 						final carrier = if (stage3IsBoolExpr(expr, cast tyCtx, callSigByCallee)) {
 							backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ExactBool;
 						} else if (stage3IsDynamicExpr(expr, cast tyCtx, callSigByCallee)) {
@@ -5917,6 +6422,16 @@ class EmitterStage {
 					}
 					"raise (" + returnExc + " (" + payload + "))";
 				case SExpr(expr, _pos):
+					if (expr.match(ELoweredControl(ArrayAppend, _, _, _))) {
+						final occurrence = currentTypedInitializer != null ? currentTypedInitializer.requireCollectionControl(expr) : currentTypedFunction == null ? null : currentTypedFunction.requireCollectionControl(expr);
+						if (occurrence == null)
+							throw "OCaml append requires its exact executable projection";
+						return backend.ocaml.Stage3OcamlCollectionControl.append(occurrence,
+							value -> exprToOcaml(value, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+							currentFunctionLocalOcamlNames);
+					}
+					if (expr.match(ELoweredControl(_, _, _, _)))
+						return stmtToUnit(backend.ocaml.Stage3OcamlCollectionControl.statement(expr, currentTypedFunction), tyCtx);
 					// Avoid emitting invalid OCaml for unsupported assignment lvalues while still
 					// allowing modeled instance-field assignment side effects.
 					switch (expr) {
@@ -5939,7 +6454,7 @@ class EmitterStage {
 										currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")";
 								}
 							}
-						case EBinop("=", EField(_, _), _):
+						case EBinop("=", EField(_, _), _) | EBinop("=", EArrayAccess(_, _), _):
 							"ignore (" + returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
 								currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")";
 						case EBinop("=", _l, _r):
@@ -5963,7 +6478,10 @@ class EmitterStage {
 		// - If a statement definitely returns, reset the base and discard wrappers for unreachable
 		//   statements to its right, matching the old lowering.
 		// - Materialize the final OCaml string once at the end with `StringBuf`.
-		var base = "()";
+		// An initializer's final value remains inside the lets created by this list.
+		// Render it while mutable-local and exact-type context are still installed.
+		var base = finalValue == null ? "()" : returnExprToOcaml(finalValue, allowedValueIdents, null, arityByIdent,
+			extendTyWithLocals(tyByIdent, declaredTopLevelLocals), staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 		final prefixes = new Array<String>();
 		final suffixes = new Array<String>();
 		inline function wrapStatement(prefix:String, suffix:String):Void {
@@ -5994,8 +6512,9 @@ class EmitterStage {
 							case EIdent(n) if (n == name):
 								"(Obj.magic 0)";
 							case _:
-								returnExprToOcaml(init, allowedValueIdents, null, arityByIdent, cast tyCtx, staticImportByIdent, currentPackagePath,
-									moduleNameByPkgAndClass, callSigByCallee);
+								localStorageValue(name, init,
+									returnExprToOcaml(init, allowedValueIdents, null, arityByIdent, cast tyCtx, staticImportByIdent, currentPackagePath,
+										moduleNameByPkgAndClass, callSigByCallee));
 						}
 					};
 					final ident = requireOcamlFunctionLocalValueIdent(name);
@@ -6087,6 +6606,13 @@ class EmitterStage {
 		currentMutableLocalRefNames = prevMutableLocalRefNames;
 		currentFunctionLocalTypeHints = previousStmtLocalTypeHints;
 		final out = new StringBuf();
+		// Only the function-entry caller supplies parameters. Nested statement lists
+		// inherit these cells, and each new invocation allocates its own locations.
+		for (name in entryParameters)
+			if (mutableLocalsInScope.get(name) == true) {
+				final ident = requireOcamlFunctionLocalValueIdent(name);
+				out.add("let " + ident + " = ref (" + ident + ") in ");
+			}
 		for (i in 0...prefixes.length) {
 			final idx = prefixes.length - 1 - i;
 			out.add(prefixes[idx]);
@@ -6177,7 +6703,7 @@ class EmitterStage {
 			return fromFile;
 
 		// Fallback (in-memory modules): use the parsed main class name when available.
-		final decl = tm == null ? null : tm.getBackendDeclaration();
+		final decl = tm == null ? null : tm.getBackendProjection().getDeclaration();
 		final main = decl == null ? null : HxModuleDecl.getMainClass(decl);
 		final nm0 = main == null ? null : HxClassDecl.getName(main);
 		final nm = nm0 == null ? "" : StringTools.trim(nm0);
@@ -6318,8 +6844,7 @@ class EmitterStage {
 		- Prefer `packages/reflaxe.ocaml/std/runtime`.
 		- Keep the historical `std/runtime` lookup only as a repo-layout fallback.
 	**/
-	static function copyStage3RuntimeForStage3(outAbs:String):Array<String> {
-		final runtimePaths = new Array<String>();
+	static function stage3RuntimeSourceDirectory():String {
 		final root = inferRepoRootForStage3Shims();
 		if (root == null || root.length == 0)
 			throw "stage3 emitter: cannot locate repo root for runtime templates (set HXHX_REPO_ROOT)";
@@ -6337,19 +6862,30 @@ class EmitterStage {
 		if (runtimeSrcDir == null)
 			throw "stage3 emitter: missing runtime directory (expected one of):\n- " + runtimeCandidates.join("\n- ");
 
+		return runtimeSrcDir;
+	}
+
+	/** Select the exact runtime modules before admitting operations or writing output. */
+	static function stage3RuntimePaths(runtimeSrcDir:String):Array<String> {
+		return [
+			for (name in sys.FileSystem.readDirectory(runtimeSrcDir))
+				// CallStack is authored Haxe; only HxBacktrace owns native stack capture.
+				if (name != null && name != "haxe_CallStack.ml" && StringTools.endsWith(name, ".ml")) "runtime/" + name
+		];
+	}
+
+	/** Copy only the runtime files whose identities selected this request's representations. */
+	static function copyStage3RuntimeForStage3(outAbs:String, runtimeSrcDir:String, runtimePaths:Array<String>):Void {
 		final runtimeOutDir = haxe.io.Path.join([outAbs, "runtime"]);
 		if (!sys.FileSystem.exists(runtimeOutDir))
 			sys.FileSystem.createDirectory(runtimeOutDir);
 
-		for (name in sys.FileSystem.readDirectory(runtimeSrcDir)) {
-			if (name == null || !StringTools.endsWith(name, ".ml"))
-				continue;
+		for (path in runtimePaths) {
+			final name = haxe.io.Path.withoutDirectory(path);
 			final srcPath = haxe.io.Path.join([runtimeSrcDir, name]);
 			final dstPath = haxe.io.Path.join([runtimeOutDir, name]);
 			sys.io.File.copy(srcPath, dstPath);
-			runtimePaths.push("runtime/" + name);
 		}
-		return runtimePaths;
 	}
 
 	static function writeStage3ShimIfMissing(outAbs:String, shimName:String, source:String):String {
@@ -6405,11 +6941,11 @@ class EmitterStage {
 			"(* hxhx(stage3) bootstrap shim: haxe.io.FPHelper *)\n"
 			+ "let __reflaxe_ocaml__ = ()\n\n"
 			+ "type t = { __hx_type : Obj.t }\n\n"
-			+ "let create = fun () -> let self = ({ __hx_type = HxType.class_ \"haxe.io.FPHelper\" } : t) in (\n"
+			+ "let create = fun () -> let self = ({ __hx_type = HxType.instance_marker \"haxe.io.FPHelper\" } : t) in (\n"
 			+ "  ignore ();\n"
 			+ "  self\n"
 			+ ")\n\n"
-			+ "let __empty = fun () -> ({ __hx_type = HxType.class_ \"haxe.io.FPHelper\" } : t)\n\n"
+			+ "let __empty = fun () -> ({ __hx_type = HxType.instance_marker \"haxe.io.FPHelper\" } : t)\n\n"
 			+ "let i32ToFloat = fun i -> HxFPHelper.i32ToFloat i\n\n"
 			+ "let floatToI32 = fun f -> HxFPHelper.floatToI32 f\n\n"
 			+ "let i64ToDouble = fun low high -> HxFPHelper.i64ToDouble low high\n\n"
@@ -6446,8 +6982,8 @@ class EmitterStage {
 			+ "type t = { __hx_type : Obj.t }\n"
 			+ "type ocamlstdioinput_t = int\n"
 			+ "type ocamlstdiooutput_t = int\n"
-			+ "let create () = { __hx_type = HxType.class_ \"sys.io.Stdio\" }\n"
-			+ "let __empty () = { __hx_type = HxType.class_ \"sys.io.Stdio\" }\n"
+			+ "let create () = { __hx_type = HxType.instance_marker \"sys.io.Stdio\" }\n"
+			+ "let __empty () = { __hx_type = HxType.instance_marker \"sys.io.Stdio\" }\n"
 			+ "let ocamlstdioinput_create stream = stream\n"
 			+ "let ocamlstdioinput___empty () = ocamlstdioinput_create HxStdio.stdin_stream\n"
 			+ "let ocamlstdiooutput_create stream = stream\n"
@@ -6464,6 +7000,7 @@ class EmitterStage {
 			+ "let setProperty o f v = HxAnon.set o f v\n"
 			+ "let hasField o f = HxAnon.has o f\n"
 			+ "let isFunction = HxReflect.isFunction\n"
+			+ "let isEnumValue = HxReflect.isEnumValue\n"
 			+ "let isObject = HxReflect.isObject\n"
 			+ "let compare = HxReflect.compare\n"
 			+ "let compareMethods a b = HxReflect.same_closure (Obj.repr a) (Obj.repr b)\n"
@@ -6694,8 +7231,8 @@ class EmitterStage {
 			"[@@@warning \"-20-27-32\"]",
 			"let __reflaxe_ocaml__ = ()",
 			"type t = { __hx_type : Obj.t }",
-			"let create = fun () -> let self = ({ __hx_type = HxType.class_ \"StringTools\" } : t) in (ignore (); self)",
-			"let __empty = fun () -> ({ __hx_type = HxType.class_ \"StringTools\" } : t)",
+			"let create = fun () -> let self = ({ __hx_type = HxType.instance_marker \"StringTools\" } : t) in (ignore (); self)",
+			"let __empty = fun () -> ({ __hx_type = HxType.instance_marker \"StringTools\" } : t)",
 			"let contains (s : string) (value : string) : bool = HxString.indexOf s value 0 <> -1",
 			"let startsWith (s : string) (start : string) : bool =",
 			"  HxString.length s >= HxString.length start && HxString.lastIndexOf s start 0 = 0",
@@ -6765,8 +7302,6 @@ class EmitterStage {
 	}
 
 	static function shouldEmitParsedStaticFields(moduleName:String):Bool {
-		if (moduleName == "StringTools")
-			return false;
 		if (StringTools.startsWith(moduleName, "Haxe_Int64"))
 			return false;
 		if (moduleName == "Haxe_ds_Vector")
@@ -6909,21 +7444,53 @@ class EmitterStage {
 
 	public static function emitToDir(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false, buildExecutable:Bool = true,
 			ocamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable):String {
-		traceEmitToDirEntry("emitToDir_enter");
-		final outAbs = requireEmitToDirOutAbs(outDir);
-		installEmitToDirProfile(ocamlProfile);
-		ensureEmitToDirOutDir(outAbs);
+		final previous = currentEnums;
+		final previousCallables = currentCallables;
+		final previousCallableFunction = currentCallableFunction;
+		final previousRuntimeTypes = currentRuntimeTypes;
+		final previousClassStorage = currentClassStorage;
+		currentRuntimeTypes = null;
+		currentClassStorage = null;
+		currentCallables = null;
+		currentCallableFunction = null;
+		currentEnums = new backend.ocaml.Stage3OcamlEnums(ocamlValueIdent, escapeOcamlString);
+		var result:String;
+		try {
+			result = emitToDirWithEnumOwner(p, outDir, emitFullBodies, buildExecutable, ocamlProfile);
+		} catch (error:haxe.io.Error) {
+			currentEnums = previous;
+			currentCallables = previousCallables;
+			currentCallableFunction = previousCallableFunction;
+			currentRuntimeTypes = previousRuntimeTypes;
+			currentClassStorage = previousClassStorage;
+			throw error;
+		} catch (error:String) {
+			currentEnums = previous;
+			currentCallables = previousCallables;
+			currentCallableFunction = previousCallableFunction;
+			currentRuntimeTypes = previousRuntimeTypes;
+			currentClassStorage = previousClassStorage;
+			throw error;
+		} catch (error:haxe.Exception) {
+			currentEnums = previous;
+			currentCallables = previousCallables;
+			currentCallableFunction = previousCallableFunction;
+			currentRuntimeTypes = previousRuntimeTypes;
+			currentClassStorage = previousClassStorage;
+			throw error;
+		}
+		currentEnums = previous;
+		currentCallables = previousCallables;
+		currentCallableFunction = previousCallableFunction;
+		currentRuntimeTypes = previousRuntimeTypes;
+		currentClassStorage = previousClassStorage;
+		return result;
+	}
 
-		EmitterStageDebug.traceStage3Phase("emitToDir_before_generated_modules");
-		final generatedPaths = emitGeneratedOcamlModulesForStage3(p, outAbs);
-		EmitterStageDebug.traceStage3Phase("emitToDir_after_generated_modules:" + generatedPaths.length);
-		EmitterStageDebug.traceStage3Phase("emitToDir_before_runtime_copy");
-		final runtimePaths = copyStage3RuntimeForStage3(outAbs);
-		EmitterStageDebug.traceStage3Phase("emitToDir_after_runtime_copy:" + runtimePaths.length);
-		EmitterStageDebug.traceStage3Phase("emitToDir_before_bootstrap_shims");
-		for (shimPath in emitStage3BootstrapShimsForStage3(outAbs))
-			generatedPaths.push(shimPath);
-		EmitterStageDebug.traceStage3Phase("emitToDir_after_bootstrap_shims:" + generatedPaths.length);
+	static function emitToDirWithEnumOwner(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool, buildExecutable:Bool,
+			ocamlProfile:backend.OcamlProfile):String {
+		final runtimeSrcDir = stage3RuntimeSourceDirectory();
+		final runtimePaths = stage3RuntimePaths(runtimeSrcDir);
 
 		EmitterStageDebug.traceStage3Phase("before_typed_modules");
 		final typedModulesRaw = p.getTypedModules();
@@ -6952,7 +7519,9 @@ class EmitterStage {
 			return out;
 		}
 
-		final typedModules = uniqueTypedModules(typedModulesRaw);
+		final typedModules = backend.ocaml.OcamlFieldUpdateLowering.lowerModules(uniqueTypedModules(typedModulesRaw));
+		currentCallables = new backend.ocaml.Stage3OcamlCallableProgram(typedModules);
+		currentClassStorage = new backend.ocaml.Stage3OcamlClassStorage();
 		EmitterStageDebug.traceStage3Phase("after_typed_modules_unique:" + typedModules.length);
 
 		inline function moduleNameForDecl(decl:HxModuleDecl, moduleTypeName:String, typeName:String):String {
@@ -6971,6 +7540,44 @@ class EmitterStage {
 			return ocamlModuleNameFromTypePathParts(parts);
 		}
 
+		for (tm in typedModules) {
+			final projection = tm.getBackendProjection();
+			final decl = projection.getDeclaration();
+			for (cls in projection.getClasses()) {
+				final outputModule = moduleNameForDecl(decl, moduleTypeNameFor(tm), HxClassDecl.getName(cls.getDeclaration()));
+				currentEnums.add(cls, outputModule, HxModuleDecl.getPackagePath(decl));
+				if (cls.hasSemanticFacts())
+					currentClassStorage.add(cls, runtimeModuleNames.exists(outputModule), outputModule);
+			}
+		}
+		currentEnums.validate();
+		currentRuntimeTypes = new backend.ocaml.Stage3OcamlRuntimeTypes(typedModules, currentClassStorage);
+
+		traceEmitToDirEntry("emitToDir_enter");
+		final outAbs = requireEmitToDirOutAbs(outDir);
+		installEmitToDirProfile(ocamlProfile);
+		ensureEmitToDirOutDir(outAbs);
+
+		EmitterStageDebug.traceStage3Phase("emitToDir_before_generated_modules");
+		final generatedPaths = emitGeneratedOcamlModulesForStage3(p, outAbs);
+		EmitterStageDebug.traceStage3Phase("emitToDir_after_generated_modules:" + generatedPaths.length);
+		EmitterStageDebug.traceStage3Phase("emitToDir_before_runtime_copy");
+		copyStage3RuntimeForStage3(outAbs, runtimeSrcDir, runtimePaths);
+		EmitterStageDebug.traceStage3Phase("emitToDir_after_runtime_copy:" + runtimePaths.length);
+		EmitterStageDebug.traceStage3Phase("emitToDir_before_bootstrap_shims");
+		for (shimPath in emitStage3BootstrapShimsForStage3(outAbs))
+			generatedPaths.push(shimPath);
+		EmitterStageDebug.traceStage3Phase("emitToDir_after_bootstrap_shims:" + generatedPaths.length);
+
+		function emitEnum(classProjection:TypedBackendClassProjection, moduleName:String):Null<String> {
+			final source = currentEnums.render(classProjection);
+			if (source == null)
+				return null;
+			final path = haxe.io.Path.join([outAbs, moduleName + ".ml"]);
+			sys.io.File.saveContent(path, source);
+			return moduleName + ".ml";
+		}
+
 		// Map `<packagePath>:<ClassName>` to the OCaml module name we will emit.
 		//
 		// Why
@@ -6980,7 +7587,7 @@ class EmitterStage {
 		//   qualify those unqualified references during emission.
 		final moduleNameByPkgAndClass:Map<String, String> = new Map();
 		for (tm in typedModules) {
-			final decl = tm.getBackendDeclaration();
+			final decl = tm.getBackendProjection().getDeclaration();
 			final moduleTypeName = moduleTypeNameFor(tm);
 			final pkgRaw = decl == null ? "" : HxModuleDecl.getPackagePath(decl);
 			final pkg = pkgRaw == null ? "" : StringTools.trim(pkgRaw);
@@ -7102,7 +7709,7 @@ class EmitterStage {
 			for (k in runtimeModuleNames.keys())
 				existingMods.set(k, true);
 			for (tm in typedModules) {
-				final decl = tm.getBackendDeclaration();
+				final decl = tm.getBackendProjection().getDeclaration();
 				final moduleTypeName = moduleTypeNameFor(tm);
 				for (cls in HxModuleDecl.getClasses(decl)) {
 					final className = HxClassDecl.getName(cls);
@@ -7225,7 +7832,7 @@ class EmitterStage {
 			}
 		}
 		for (tm in typedModules) {
-			final decl = tm.getBackendDeclaration();
+			final decl = tm.getBackendProjection().getDeclaration();
 			final moduleTypeName = moduleTypeNameFor(tm);
 			for (typedClass in tm.getTypedClasses()) {
 				final cls = typedClass.getSourceDeclaration();
@@ -7294,40 +7901,25 @@ class EmitterStage {
 		}
 
 		function emitModule(tm:TypedModule, isRoot:Bool):{files:Array<String>, rootMain:Null<String>} {
-			// Stage 3 bring-up: `--hxhx-emit-full-bodies` exists so we can compile+run
-			// upstream-style harness code (RunCi, macro host, etc).
-			//
-			// However, the Haxe standard library contains many constructs we do not model yet
-			// (regex literals, abstracts, complex typing), and attempting to emit full bodies
-			// for `std/` quickly explodes the surface area.
-			//
-			// Pragmatic rule:
-			// - When `emitFullBodies=true`, still skip full-body emission for modules under `std/`.
-			function allowFullBodiesForFile(filePath:String, isRoot:Bool):Bool {
-				if (isRoot)
-					return true;
-				if (filePath == null || filePath.length == 0)
-					return false;
-				final p = filePath;
-				final isStd = p.indexOf("/std/") != -1 || p.indexOf("\\std\\") != -1;
-				return !isStd;
-			}
-			final moduleEmitBodies = emitFullBodies && allowFullBodiesForFile(tm.getParsed().getFilePath(), isRoot);
+			// The caller selects full-body emission for the whole program. Directory
+			// names must not discard declarations and effects needed by its returns.
+			final moduleEmitBodies = emitFullBodies;
 
 			final moduleProjection = tm.getBackendProjection();
+			// The request plan admitted exact runtime type occurrences before output.
+			// Each rendered predicate still resolves through its owning projection.
 			final decl = moduleProjection.getDeclaration();
+			final classes = moduleProjection.getClasses();
+			// A typedef or imports-only module keeps its type facts without an
+			// invented runtime class. The fallback main header is not an inventory.
+			if (classes.length == 0)
+				return {files: [], rootMain: null};
 			final mainClass = HxModuleDecl.getMainClass(decl);
-			final mainClassProjection = moduleProjection.findClass(mainClass);
-			if (mainClassProjection == null)
-				throw "Stage3 emitter cannot find the exact main-class projection for " + tm.getParsed().getFilePath();
 			final parsedMainName = HxClassDecl.getName(mainClass);
 			final moduleTypeName = moduleTypeNameFor(tm);
 			final className = moduleTypeName.length > 0 ? moduleTypeName : parsedMainName;
-			if (className == null || className.length == 0 || className == "Unknown")
-				return {files: [], rootMain: null};
 			final mainModuleName = moduleNameForDecl(decl, moduleTypeName, className);
 			EmitterStageDebug.traceStage3Module("module", mainModuleName, tm.getParsed().getFilePath());
-			final isRuntimeProvided = runtimeModuleNames.exists(mainModuleName);
 
 			// Import-driven resolution for `Int64.<field>` (Haxe `haxe.Int64` vs OCaml stdlib `Int64`).
 			// A normal type import introduces the local name `Int64`. A static wildcard
@@ -7368,6 +7960,11 @@ class EmitterStage {
 				Best-effort expression type inference for static-field initializers.
 			**/
 			function inferExprTypeForStaticInit(expr:Null<HxExpr>, knownByIdent:Map<String, TyType>):TyType {
+				switch (expr) {
+					case EDiscardThen(_, continuation):
+						return inferExprTypeForStaticInit(continuation, knownByIdent);
+					case _:
+				}
 				inline function inferStaticAtom(e:Null<HxExpr>):TyType {
 					if (e == null)
 						return TyType.unknown();
@@ -7439,9 +8036,12 @@ class EmitterStage {
 			/** Install only the catalog paired with this exact initializer declaration. **/
 			function installFieldLocalNames(cls:TypedBackendClassProjection, field:HxFieldDecl):Void {
 				currentFunctionLocalOcamlNames = null;
+				currentTypedInitializer = null;
 				for (initializer in cls.getFieldInitializers())
 					if (initializer.getDeclaration() == field) {
-						currentFunctionLocalOcamlNames = new backend.ocaml.Stage3OcamlLocalNames(initializer.getLocalCatalog(), false, ocamlValueIdent);
+						currentTypedInitializer = initializer;
+						currentFunctionLocalOcamlNames = new backend.ocaml.Stage3OcamlLocalNames(initializer.getLocalCatalog(),
+							!HxFieldDecl.getIsStatic(field), ocamlValueIdent);
 						return;
 					}
 			}
@@ -7454,6 +8054,9 @@ class EmitterStage {
 				if (nm == null || nm.length == 0 || nm == "Unknown")
 					return null;
 				final moduleName = moduleNameForDecl(decl, moduleTypeName, nm);
+				final enumPath = emitEnum(classProjection, moduleName);
+				if (enumPath != null)
+					return enumPath;
 				EmitterStageDebug.traceStage3Phase("emit_stub_begin:" + moduleName);
 
 				final prevInt64 = currentImportInt64;
@@ -7469,7 +8072,8 @@ class EmitterStage {
 					// Stage 3 bring-up: hxhx full output uses a narrow StringTools surface before
 					// Stage3 can reliably emit the full std module.
 					final hasStringToolsHex = moduleName == "StringTools";
-					final emitParsedStaticFields = shouldEmitParsedStaticFields(moduleName);
+					// A runtime stub owns its own data; authored methods retain their source fields.
+					final emitParsedStaticFields = !hasStringToolsHex && shouldEmitParsedStaticFields(moduleName);
 					if (hasStringToolsHex) {
 						for (line in stringToolsBootstrapShimSourceForStage3().split("\n"))
 							out.push(line);
@@ -7493,6 +8097,7 @@ class EmitterStage {
 						final initOcaml = init == null ? "(Obj.magic HxRuntime.hx_null)" : exprToOcaml(init, null, staticTyByIdent, null,
 							HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, globalCallSigByCallee);
 						currentFunctionLocalOcamlNames = null;
+						currentTypedInitializer = null;
 						out.push("let " + ocamlValueIdent(nameRaw) + " = " + initOcaml);
 						out.push("");
 						final knownType = staticTyByIdent.get(nameRaw);
@@ -7542,7 +8147,16 @@ class EmitterStage {
 				}
 			}
 
-			function emitMainClass():Null<String> {
+			/**
+				Emit one class from its own typed projection, including module-local helpers.
+				The projection keeps bodies paired with their exact parameters and locals.
+				Only the selected root class may add the program's main invocation.
+			**/
+			function emitClass(classProjection:TypedBackendClassProjection, outputModuleName:String, isEntryPoint:Bool):Null<String> {
+				final enumPath = emitEnum(classProjection, outputModuleName);
+				if (enumPath != null)
+					return enumPath;
+				final emittedClass = classProjection.getDeclaration();
 				final prevOcamlModule = currentOcamlModuleName;
 				final prevModuleFilePath = currentModuleFilePath;
 				final prevLocalCallSigCache = currentLocalCallSigCache;
@@ -7550,13 +8164,13 @@ class EmitterStage {
 				final prevInstanceFieldsByTypePath = currentInstanceFieldsByTypePath;
 				final prevInstanceMethodsByTypePath = currentInstanceMethodsByTypePath;
 				final moduleFilePath = tm.getParsed().getFilePath();
-				final mainClassName = HxClassDecl.getName(mainClass);
-				currentOcamlModuleName = mainModuleName;
+				final emittedClassName = HxClassDecl.getName(emittedClass);
+				currentOcamlModuleName = outputModuleName;
 				currentModuleFilePath = moduleFilePath;
 				currentLocalCallSigCache = null;
 				currentImportInt64 = importInt64;
 				try {
-					final typedFns = mainClassProjection.getFunctions();
+					final typedFns = classProjection.getFunctions();
 					final parsedFns = [for (projection in typedFns) projection.getDeclaration()];
 					final projectionByName = new Map<String, TypedBackendFunctionProjection>();
 					for (projection in typedFns) {
@@ -7620,7 +8234,7 @@ class EmitterStage {
 							continue;
 						final fnArgs = HxFunctionDecl.getArgs(fn);
 						final sig = callSigFromFunction(fn);
-						EmitterStageDebug.traceCallSig(mainModuleName, ocamlValueIdent(fnNameRaw), fnArgs, sig.required, sig.fixed, sig.hasRest,
+						EmitterStageDebug.traceCallSig(outputModuleName, ocamlValueIdent(fnNameRaw), fnArgs, sig.required, sig.fixed, sig.hasRest,
 							sig.needsReceiver);
 						callSigByCallee.set(ocamlValueIdent(fnNameRaw), sig);
 					}
@@ -7642,7 +8256,7 @@ class EmitterStage {
 						final localName = HxClassDecl.getName(localCls);
 						if (localName == null || localName.length == 0 || localName == "Unknown")
 							continue;
-						if (localName == className)
+						if (localName == emittedClassName)
 							continue;
 						staticImportByIdent.set(localName, moduleNameForDecl(decl, moduleTypeName, localName));
 					}
@@ -7689,8 +8303,14 @@ class EmitterStage {
 					out.push("[@@@warning \"-21-26\"]");
 					out.push("");
 
-					final parsedFields = HxClassDecl.getFields(mainClass);
-					final emitParsedStaticFields = shouldEmitParsedStaticFields(mainModuleName);
+					if (classProjection.hasSemanticFacts()) {
+						final registration = currentClassStorage.classRegistration(classProjection, escapeOcamlString);
+						if (registration != null)
+							out.push(registration);
+					}
+					final parsedFields = HxClassDecl.getFields(emittedClass);
+					final instanceInitializers = classProjection.hasSemanticFacts() ? currentClassStorage.instanceInitializers(classProjection) : null;
+					final emitParsedStaticFields = shouldEmitParsedStaticFields(outputModuleName);
 					final staticFieldTypeByName:Map<String, TyType> = new Map();
 					for (f in parsedFields) {
 						if (!emitParsedStaticFields)
@@ -7751,6 +8371,17 @@ class EmitterStage {
 						final e = staticInitWorklist.pop();
 						if (e == null)
 							continue;
+						final enumCall = TypedExactEnumConstructorSource.decode(e);
+						if (enumCall != null) {
+							for (argument in enumCall.arguments)
+								staticInitWorklist.push(argument);
+							continue;
+						}
+						final exactCall = TypedExactStaticCallSource.decode(e);
+						if (exactCall != null) {
+							staticInitWorklist.push(TypedExactStaticCallSource.ordinaryCall(exactCall));
+							continue;
+						}
 						switch (e) {
 							case ECall(callee, args):
 								switch (callee) {
@@ -7799,7 +8430,7 @@ class EmitterStage {
 							case EUnop(_, _, expr):
 								if (expr != null)
 									staticInitWorklist.push(expr);
-							case EBinop(_, left, right):
+							case EBinop(_, left, right) | EDiscardThen(left, right):
 								if (left != null)
 									staticInitWorklist.push(left);
 								if (right != null)
@@ -7826,12 +8457,17 @@ class EmitterStage {
 									staticInitWorklist.push(start);
 								if (end != null)
 									staticInitWorklist.push(end);
-							case ECast(expr, _):
+							case ECast(expr, _) | ECheckType(expr, _):
 								if (expr != null)
 									staticInitWorklist.push(expr);
-							case EUntyped(expr):
+							case EParenthesized(expr, _) | EUntyped(expr):
 								if (expr != null)
 									staticInitWorklist.push(expr);
+							case EVars(values) | ELoweredControl(_, _, values, _):
+								for (value in values)
+									staticInitWorklist.push(value);
+							case EVariableDeclaration(_, _, value, _, _, _) if (value != null):
+								staticInitWorklist.push(value);
 							case _:
 						}
 					}
@@ -7844,6 +8480,13 @@ class EmitterStage {
 					}
 
 					final preludeFnNames:Map<String, Bool> = new Map();
+					if (instanceInitializers != null) {
+						fnNames.set(instanceInitializers.getName(), true);
+						for (initializer in classProjection.getFieldInitializers())
+							if (initializer.getField().getIsStatic())
+								for (dependency in currentClassStorage.constructorDependencies(initializer.getConstructorCatalog(), outputModuleName))
+									staticInitCalls.set(dependency, true);
+					}
 					for (name in staticInitCalls.keys()) {
 						if (!fnNames.exists(name))
 							continue;
@@ -7861,7 +8504,18 @@ class EmitterStage {
 						final parsedFn = tf == null ? null : tf.getDeclaration();
 						final calls:Map<String, Bool> = new Map();
 						var refsStatic = false;
+						if (instanceInitializers != null && nameRaw == instanceInitializers.getName()) {
+							for (dependency in instanceInitializers.methodDependencies())
+								calls.set(dependency, true);
+							for (initializer in instanceInitializers.getFields())
+								for (dependency in currentClassStorage.constructorDependencies(initializer.getConstructorCatalog(), outputModuleName))
+									calls.set(dependency, true);
+							refsStatic = instanceInitializers.referencesOwnStatics();
+						}
 						if (tf != null && parsedFn != null) {
+							if (instanceInitializers != null)
+								for (dependency in currentClassStorage.constructorDependencies(tf.getConstructorCatalog(), outputModuleName))
+									calls.set(dependency, true);
 							final locals:Map<String, Bool> = new Map();
 							for (local in tf.getLocalCatalog().getEntries())
 								locals.set(local.getProjectedName(), true);
@@ -7915,13 +8569,18 @@ class EmitterStage {
 
 					var sawMain = false;
 					final exceptions = new Array<String>();
-					final returnExceptionNameCounts:Map<String, Int> = new Map();
+					final returnExceptionNames = new Array<String>();
 
 					function uniqueReturnExceptionName(nameRaw:String):String {
 						final base = "HxReturn_" + escapeOcamlIdentPart(nameRaw);
-						final count = returnExceptionNameCounts.exists(base) ? returnExceptionNameCounts.get(base) : 0;
-						returnExceptionNameCounts.set(base, count + 1);
-						return count == 0 ? base : base + "_" + Std.string(count);
+						var suffix = 0;
+						var candidate = base;
+						while (returnExceptionNames.indexOf(candidate) >= 0) {
+							suffix++;
+							candidate = base + "_" + Std.string(suffix);
+						}
+						returnExceptionNames.push(candidate);
+						return candidate;
 					}
 
 					// OCaml limitation (mutual recursion + polymorphism):
@@ -7942,7 +8601,7 @@ class EmitterStage {
 					//
 					// Note: This must apply in both "stub body" and "full body" emission modes. The failure mode
 					// (monomorphic `load` inside the recursive group) appears in both configurations.
-					final shouldHoistLoad = StringTools.startsWith(mainModuleName, "Haxe_macro_");
+					final shouldHoistLoad = StringTools.startsWith(outputModuleName, "Haxe_macro_");
 					if (shouldHoistLoad) {
 						for (tf in typedFns) {
 							final parsedFn = tf.getDeclaration();
@@ -7954,6 +8613,10 @@ class EmitterStage {
 							final previousFunctionShadowingValueNames = currentFunctionShadowingValueNames;
 							final previousFunctionLocalOcamlNames = currentFunctionLocalOcamlNames;
 							currentFunctionLocalOcamlNames = new backend.ocaml.Stage3OcamlLocalNames(tf.getLocalCatalog(), false, ocamlValueIdent);
+							final previousTypedFunction = currentTypedFunction;
+							currentTypedFunction = tf;
+							final previousCallable = currentCallableFunction;
+							currentCallableFunction = currentCallables.bind(tf, currentFunctionLocalOcamlNames);
 							final exactLocalTypes:Map<String, TyType> = new Map();
 							final exactShadowingNames:Map<String, Bool> = new Map();
 							for (local in tf.getLocalCatalog().getEntries()) {
@@ -7969,7 +8632,7 @@ class EmitterStage {
 								+ ")")
 								.join(" ");
 							var retTy = ocamlTypeFromTy(tf.getReturnType());
-							retTy = stage3ReturnTypeOverride(mainModuleName, nameRaw, retTy);
+							retTy = stage3ReturnTypeOverride(outputModuleName, nameRaw, retTy);
 							final allowed:Map<String, Bool> = new Map();
 							final tyByIdent:Map<String, TyType> = new Map();
 							for (a in args)
@@ -7979,14 +8642,17 @@ class EmitterStage {
 							for (name in allowed.keys())
 								if (tyByIdent.get(name) == null)
 									tyByIdent.set(name, TyType.unknown());
-							final body = returnExprToOcaml(parsedFn.getFirstReturnExpr(), allowed, tf.getReturnType(), arityByName, tyByIdent,
-								staticImportByIdent, HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
+							final body = callableDirectReturn(parsedFn.getFirstReturnExpr(),
+								returnExprToOcaml(parsedFn.getFirstReturnExpr(), allowed, tf.getReturnType(), arityByName, tyByIdent, staticImportByIdent,
+									HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee));
 
 							out.push("let " + ocamlValueIdent(nameRaw) + " " + ocamlArgs + " : " + retTy + " = " + body);
 							out.push("");
 							currentFunctionLocalTypeHints = previousFunctionLocalTypeHints;
 							currentFunctionShadowingValueNames = previousFunctionShadowingValueNames;
 							currentFunctionLocalOcamlNames = previousFunctionLocalOcamlNames;
+							currentTypedFunction = previousTypedFunction;
+							currentCallableFunction = previousCallable;
 							break;
 						}
 					}
@@ -8003,27 +8669,72 @@ class EmitterStage {
 						typedFnsPrelude.push(tf);
 					}
 
-					function emitFnGroup(group:Array<TypedBackendFunctionProjection>):Void {
+					/** Render every field with its own catalogs, then restore the surrounding executable context. */
+					function emitInstanceFields():String {
+						return instanceInitializers.render(initializer -> {
+							final previousFunction = currentTypedFunction;
+							final previousInitializer = currentTypedInitializer;
+							final previousNames = currentFunctionLocalOcamlNames;
+							final previousTypes = currentFunctionLocalTypeHints;
+							final previousShadows = currentFunctionShadowingValueNames;
+							final previousCallable = currentCallableFunction;
+							currentTypedFunction = null;
+							currentCallableFunction = null;
+							installFieldLocalNames(classProjection, initializer.getDeclaration());
+							final types = staticFieldTypeByName.copy();
+							currentFunctionLocalTypeHints = new Map();
+							currentFunctionShadowingValueNames = new Map();
+							for (local in initializer.getLocalCatalog().getEntries()) {
+								final name = local.getProjectedName();
+								final type = local.getBinding().getType();
+								types.set(name, type);
+								currentFunctionLocalTypeHints.set(name, type);
+								currentFunctionShadowingValueNames.set(name, true);
+							}
+							final expected = initializer.getField().getType();
+							final floating = stage3IsFloatParamHint(expected.getDisplay());
+							final value = floating ? exprToOcamlAsFloatValueStage3(initializer.getExpression(), arityByName, types, staticImportByIdent,
+								HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass,
+								callSigByCallee) : exprToOcaml(initializer.getExpression(), arityByName, types, staticImportByIdent,
+									HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
+							final stored = backend.ocaml.Stage3OcamlObjects.store(floating ? expected : initializer.getResultType(), value);
+							currentTypedFunction = previousFunction;
+							currentTypedInitializer = previousInitializer;
+							currentFunctionLocalOcamlNames = previousNames;
+							currentFunctionLocalTypeHints = previousTypes;
+							currentFunctionShadowingValueNames = previousShadows;
+							currentCallableFunction = previousCallable;
+							return stored;
+						}, escapeOcamlString);
+					}
+
+					function emitFnGroup(group:Array<TypedBackendFunctionProjection>, includeInitializers:Bool = false):Void {
+						if (includeInitializers)
+							out.push("let rec " + instanceInitializers.getName() + " (this_ : _) : unit = " + emitInstanceFields());
 						for (i in 0...group.length) {
 							final tf = group[i];
 							final parsedFn = tf.getDeclaration();
 							final nameRaw = HxFunctionDecl.getName(parsedFn);
 							final name = ocamlValueIdent(nameRaw);
-							EmitterStageDebug.traceStage3Phase("emit_fn_begin:" + mainModuleName + ":" + nameRaw);
+							EmitterStageDebug.traceStage3Phase("emit_fn_begin:" + outputModuleName + ":" + nameRaw);
 							final previousFunctionName = currentFunctionName;
 							currentFunctionName = nameRaw;
 							final previousFunctionLocalTypeHints = currentFunctionLocalTypeHints;
 							final previousFunctionShadowingValueNames = currentFunctionShadowingValueNames;
 							final previousFunctionLocalOcamlNames = currentFunctionLocalOcamlNames;
 							final previousRegionKey = currentPortableMetalizationRegionKey;
-							currentPortableMetalizationRegionKey = backend.ocaml.PortableMetalizationPlanner.functionRegionKey(moduleFilePath, mainClassName,
-								nameRaw);
+							currentPortableMetalizationRegionKey = backend.ocaml.PortableMetalizationPlanner.functionRegionKey(moduleFilePath,
+								emittedClassName, nameRaw);
 							if (name == "main")
 								sawMain = true;
 
 							final args = tf.getParameters();
 							final isStaticFn = HxFunctionDecl.getIsStatic(parsedFn);
 							currentFunctionLocalOcamlNames = new backend.ocaml.Stage3OcamlLocalNames(tf.getLocalCatalog(), !isStaticFn, ocamlValueIdent);
+							final previousTypedFunction = currentTypedFunction;
+							currentTypedFunction = tf;
+							final previousCallable = currentCallableFunction;
+							currentCallableFunction = currentCallables.bind(tf, currentFunctionLocalOcamlNames);
 							final headArgs = new Array<String>();
 							if (!isStaticFn)
 								headArgs.push("(this_ : _)");
@@ -8036,7 +8747,7 @@ class EmitterStage {
 							final ocamlArgs = headArgs.length == 0 ? "()" : headArgs.join(" ");
 
 							var retTy = ocamlTypeFromTy(tf.getReturnType());
-							retTy = stage3ReturnTypeOverride(mainModuleName, nameRaw, retTy);
+							retTy = stage3ReturnTypeOverride(outputModuleName, nameRaw, retTy);
 							final allowed:Map<String, Bool> = new Map();
 							final tyByIdent:Map<String, TyType> = new Map();
 							for (a in args)
@@ -8083,15 +8794,15 @@ class EmitterStage {
 								if (tyByIdent.get(name) == null)
 									tyByIdent.set(name, TyType.unknown());
 
-							final useStage3ModuleTypeNameBody = mainModuleName == "EmitterStage" && nameRaw == "moduleTypeNameFor";
-							final useStage3HxhxMainJsRouteBody = mainModuleName == "Hxhx_Main"
+							final useStage3ModuleTypeNameBody = outputModuleName == "EmitterStage" && nameRaw == "moduleTypeNameFor";
+							final useStage3HxhxMainJsRouteBody = outputModuleName == "Hxhx_Main"
 								&& nameRaw == "shouldRouteStandardJsToNative";
-							final useStage3WriteWaitStdioReplyBody = mainModuleName == "Hxhx_Stage3Compiler"
+							final useStage3WriteWaitStdioReplyBody = outputModuleName == "Hxhx_Stage3Compiler"
 								&& nameRaw == "writeWaitStdioReply";
-							final useStage3ReadConnectDisplayStdinBody = mainModuleName == "Hxhx_Stage3Compiler"
+							final useStage3ReadConnectDisplayStdinBody = outputModuleName == "Hxhx_Stage3Compiler"
 								&& nameRaw == "readConnectDisplayStdin";
-							final useStage3RunWaitStdioBody = mainModuleName == "Hxhx_Stage3Compiler" && nameRaw == "runWaitStdio";
-							final durationBody = args.length == 1 ? stage3DateToolsDurationBody(mainModuleName, nameRaw, args[0].getProjectedName()) : null;
+							final useStage3RunWaitStdioBody = outputModuleName == "Hxhx_Stage3Compiler" && nameRaw == "runWaitStdio";
+							final durationBody = args.length == 1 ? stage3DateToolsDurationBody(outputModuleName, nameRaw, args[0].getProjectedName()) : null;
 							var body = if (useStage3ModuleTypeNameBody) {
 								moduleTypeNameForStage3OcamlBody();
 							} else if (useStage3HxhxMainJsRouteBody) {
@@ -8105,8 +8816,9 @@ class EmitterStage {
 							} else if (durationBody != null) {
 								durationBody;
 							} else if (!moduleEmitBodies) {
-								returnExprToOcaml(parsedFn.getFirstReturnExpr(), allowed, tf.getReturnType(), arityByName, tyByIdent, staticImportByIdent,
-									HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
+								callableDirectReturn(parsedFn.getFirstReturnExpr(),
+									returnExprToOcaml(parsedFn.getFirstReturnExpr(), allowed, tf.getReturnType(), arityByName, tyByIdent, staticImportByIdent,
+										HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee));
 							} else {final exc = uniqueReturnExceptionName(nameRaw);
 								exceptions.push("exception " + exc + " of Obj.t");
 								final stmts = HxFunctionDecl.getBody(parsedFn);
@@ -8114,7 +8826,7 @@ class EmitterStage {
 								+ "try (let _ = "
 								+ stmtListToOcaml(stmts, allowed, exc, eraseBoundary(arityByName), tyByIdent, eraseBoundary(staticImportByIdent),
 									HxModuleDecl.getPackagePath(decl), eraseBoundary(moduleNameByPkgAndClass), eraseBoundary(callSigByCallee), localTypeHints,
-									fnReturnTypesByName)
+									fnReturnTypesByName, null, [for (argument in args) argument.getProjectedName()])
 								+ " in (Obj.magic 0)) "
 								+ "with "
 								+ exc
@@ -8123,22 +8835,37 @@ class EmitterStage {
 								+ retTy
 								+ ")";
 							};
-							EmitterStageDebug.traceStage3Phase("emit_fn_after_body:" + mainModuleName + ":" + nameRaw);
+							EmitterStageDebug.traceStage3Phase("emit_fn_after_body:" + outputModuleName + ":" + nameRaw);
+							body = backend.ocaml.Stage3OcamlFunctionDefaults.render({
+								projection: tf,
+								names: currentFunctionLocalOcamlNames,
+								body: body,
+								emit: (expression, actual, expected) -> {
+									final value = stage3IsFloatParamHint(expected.getDisplay()) ? exprToOcamlAsFloatValueStage3(expression, arityByName,
+										tyByIdent, staticImportByIdent, HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass,
+										callSigByCallee) : exprToOcaml(expression, arityByName, tyByIdent, staticImportByIdent,
+											HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
+									return expected.isDynamic() ? backend.ocaml.Stage3OcamlObjects.store(actual, value) : value;
+								}
+							});
 
-							final kw = i == 0 ? "let rec" : "and";
+							final kw = i == 0 && !includeInitializers ? "let rec" : "and";
 							out.push(kw + " " + name + " " + ocamlArgs + " : " + retTy + " = " + body);
 							out.push("");
-							EmitterStageDebug.traceStage3Phase("emit_fn_done:" + mainModuleName + ":" + nameRaw);
+							EmitterStageDebug.traceStage3Phase("emit_fn_done:" + outputModuleName + ":" + nameRaw);
 							currentFunctionName = previousFunctionName;
 							currentFunctionLocalTypeHints = previousFunctionLocalTypeHints;
 							currentFunctionShadowingValueNames = previousFunctionShadowingValueNames;
 							currentFunctionLocalOcamlNames = previousFunctionLocalOcamlNames;
 							currentPortableMetalizationRegionKey = previousRegionKey;
+							currentTypedFunction = previousTypedFunction;
+							currentCallableFunction = previousCallable;
 						}
 					}
 
-					if (typedFnsPrelude.length > 0) {
-						emitFnGroup(typedFnsPrelude);
+					final initializerPrelude = instanceInitializers != null && preludeFnNames.exists(instanceInitializers.getName());
+					if (typedFnsPrelude.length > 0 || initializerPrelude) {
+						emitFnGroup(typedFnsPrelude, initializerPrelude);
 					}
 
 					// Emit class-scope static values (bootstrap subset).
@@ -8161,10 +8888,11 @@ class EmitterStage {
 						if (inferredType != null && staticTyByIdent.get(nameRaw) == null)
 							staticTyByIdent.set(nameRaw, inferredType);
 						final init = HxFieldDecl.getInit(f);
-						installFieldLocalNames(mainClassProjection, f);
+						installFieldLocalNames(classProjection, f);
 						final initOcaml = init == null ? "(Obj.magic 0)" : exprToOcaml(init, arityByName, staticTyByIdent, staticImportByIdent,
 							HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
 						currentFunctionLocalOcamlNames = null;
+						currentTypedInitializer = null;
 						out.push("let " + ocamlValueIdent(nameRaw) + " = " + initOcaml);
 						if (staticTyByIdent.get(nameRaw) == null)
 							staticTyByIdent.set(nameRaw, TyType.unknown());
@@ -8182,7 +8910,8 @@ class EmitterStage {
 						typedFnsRest.push(tf);
 					}
 
-					if (typedFnsRest.length > 0) {
+					final initializerRest = instanceInitializers != null && !initializerPrelude;
+					if (typedFnsRest.length > 0 || initializerRest) {
 						// Stage 3 bring-up: avoid putting *every* function in a single `let rec ... and ...` group.
 						//
 						// Why
@@ -8201,13 +8930,16 @@ class EmitterStage {
 						//
 						// This keeps output deterministic and matches OCaml scoping rules:
 						// callers must come *after* callees unless they share a recursive group.
-						final nRest = typedFnsRest.length;
+						final initializerIndex = initializerRest ? typedFnsRest.length : -1;
+						final nRest = typedFnsRest.length + (initializerRest ? 1 : 0);
 						final restIndexByName = new haxe.ds.StringMap<Int>();
-						for (i in 0...nRest) {
+						for (i in 0...typedFnsRest.length) {
 							final nm = HxFunctionDecl.getName(typedFnsRest[i].getDeclaration());
 							if (nm != null && nm.length > 0)
 								restIndexByName.set(nm, i);
 						}
+						if (initializerRest)
+							restIndexByName.set(instanceInitializers.getName(), initializerIndex);
 
 						final edges = new Array<Array<Int>>();
 						final revEdges = new Array<Array<Int>>();
@@ -8223,6 +8955,21 @@ class EmitterStage {
 							seenStamp[i] = 0;
 
 						for (i in 0...nRest) {
+							// Field helpers are real initializer executables, not fabricated Haxe methods.
+							if (instanceInitializers != null) {
+								final name = i == initializerIndex ? instanceInitializers.getName() : HxFunctionDecl.getName(typedFnsRest[i].getDeclaration());
+								analyzeFn(name);
+								for (dependency in fnCallsByName.get(name).keys()) {
+									final target = restIndexByName.get(dependency);
+									if (target != null && target != i && edges[i].indexOf(target) < 0) {
+										seenStamp[target] = i + 1;
+										edges[i].push(target);
+										revEdges[target].push(i);
+									}
+								}
+								if (i == initializerIndex)
+									continue;
+							}
 							final parsedFn = typedFnsRest[i].getDeclaration();
 							final localCatalog = typedFnsRest[i].getLocalCatalog();
 
@@ -8238,6 +8985,8 @@ class EmitterStage {
 								if (s == null)
 									continue;
 								switch (s) {
+									case STargetScope(_, _, _):
+										throw "native target scope is not valid in this source or target phase";
 									case SBlock(stmts, _):
 										if (stmts != null)
 											for (ss in stmts)
@@ -8286,6 +9035,11 @@ class EmitterStage {
 											exprWorklist.push(expr);
 									case SBreak(_):
 									case SContinue(_):
+									case SGuardedSwitch(scrutinee, enabled, _, bodies, _):
+										exprWorklist.push(scrutinee);
+										exprWorklist.push(enabled);
+										for (body in bodies)
+											stmtWorklist.push(body);
 									case SSwitch(scrutinee, _patterns, bodies, _):
 										if (scrutinee != null)
 											exprWorklist.push(scrutinee);
@@ -8308,6 +9062,10 @@ class EmitterStage {
 								if (e == null)
 									continue;
 								switch (e) {
+									case EVars(values) | ELoweredControl(_, _, values, _):
+										// Calls inside shared control still order their module-local providers.
+										for (value in values)
+											exprWorklist.push(value);
 									case EIdent(name):
 										// Function values (e.g. `map(printField)`) also create ordering
 										// dependencies between module-local functions.
@@ -8391,7 +9149,7 @@ class EmitterStage {
 									case EUnop(_op, _fixity, expr):
 										if (expr != null)
 											exprWorklist.push(expr);
-									case EBinop(_op, left, right):
+									case EBinop(_, left, right) | EDiscardThen(left, right):
 										if (left != null)
 											exprWorklist.push(left);
 										if (right != null)
@@ -8418,10 +9176,10 @@ class EmitterStage {
 											exprWorklist.push(start);
 										if (end != null)
 											exprWorklist.push(end);
-									case ECast(expr, _hint):
+									case ECast(expr, _hint) | ECheckType(expr, _hint):
 										if (expr != null)
 											exprWorklist.push(expr);
-									case EUntyped(expr):
+									case EParenthesized(expr, _) | EUntyped(expr):
 										if (expr != null)
 											exprWorklist.push(expr);
 									case _:
@@ -8562,7 +9320,7 @@ class EmitterStage {
 						// Safety fallback: if something went wrong, emit everything in one group.
 						// (Don't emit partial SCC order and then re-emit; that would duplicate definitions.)
 						if (compOrder.length != nComp) {
-							emitFnGroup(typedFnsRest);
+							emitFnGroup(typedFnsRest, initializerRest);
 						} else {
 							for (c in compOrder) {
 								final nodes = comps[c];
@@ -8584,9 +9342,11 @@ class EmitterStage {
 								final group = new Array<TypedBackendFunctionProjection>();
 								if (nodes != null)
 									for (idx in nodes)
-										group.push(typedFnsRest[idx]);
-								if (group.length > 0)
-									emitFnGroup(group);
+										if (idx != initializerIndex)
+											group.push(typedFnsRest[idx]);
+								final includeInitializers = nodes != null && nodes.indexOf(initializerIndex) >= 0;
+								if (group.length > 0 || includeInitializers)
+									emitFnGroup(group, includeInitializers);
 							}
 						}
 					}
@@ -8596,12 +9356,12 @@ class EmitterStage {
 						out.insert(2, exceptions.join("\n") + "\n");
 					}
 
-					if (isRoot && sawMain) {
+					if (isEntryPoint && sawMain) {
 						out.push("let () = ignore (main ())");
 						out.push("");
 					}
 
-					final mlPath = haxe.io.Path.join([outAbs, mainModuleName + ".ml"]);
+					final mlPath = haxe.io.Path.join([outAbs, outputModuleName + ".ml"]);
 					sys.io.File.saveContent(mlPath, out.join("\n"));
 					currentOcamlModuleName = prevOcamlModule;
 					currentModuleFilePath = prevModuleFilePath;
@@ -8609,7 +9369,7 @@ class EmitterStage {
 					currentImportInt64 = prevInt64;
 					currentInstanceFieldsByTypePath = prevInstanceFieldsByTypePath;
 					currentInstanceMethodsByTypePath = prevInstanceMethodsByTypePath;
-					return mainModuleName + ".ml";
+					return outputModuleName + ".ml";
 				} catch (e:TyperError) {
 					currentOcamlModuleName = prevOcamlModule;
 					currentModuleFilePath = prevModuleFilePath;
@@ -8633,31 +9393,31 @@ class EmitterStage {
 			var rootMain:Null<String> = null;
 			EmitterStageDebug.traceStage3Phase("emit_module_begin:" + className);
 
-			// Emit the main class first (typed, optional full bodies).
-			final mainPath = isRuntimeProvided ? null : emitMainClass();
-			EmitterStageDebug.traceStage3Phase("emit_module_after_main:" + className);
-			if (mainPath != null) {
-				files.push(mainPath);
-				if (isRoot)
-					rootMain = mainPath;
+			// Preserve primary-first emission when a real primary class exists.
+			// A typedef can instead own the module name while executable helpers
+			// retain their exact declarations and module-qualified native names.
+			final primary = classes.filter(projection -> HxClassDecl.getName(projection.getDeclaration()) == className);
+			if (primary.length > 1)
+				throw "Stage3 emitter has duplicate primary class projections";
+			if (primary.length == 1) {
+				classes.remove(primary[0]);
+				classes.unshift(primary[0]);
 			}
-
-			// Emit any additional module-local class declarations as separate compilation units.
-			//
-			// Why
-			// - Upstream Haxe modules can declare helper types in the same file (often `private class Foo`).
-			// - Stage3 typing currently models only the chosen `mainClass`, but codegen still needs
-			//   providers for referenced static members like `Foo.bar`.
-			for (c in HxModuleDecl.getClasses(decl)) {
-				final nm = HxClassDecl.getName(c);
-				if (nm == null || nm.length == 0 || nm == "Unknown")
+			for (projection in classes) {
+				final declaration = projection.getDeclaration();
+				final name = HxClassDecl.getName(declaration);
+				final isPrimary = name == className;
+				final outputModule = moduleNameForDecl(decl, moduleTypeName, name);
+				if (runtimeModuleNames.exists(outputModule) || currentCallables.externs.ownsClass(projection))
 					continue;
-				if (nm == className)
-					continue;
-				EmitterStageDebug.traceStage3Module("stub", moduleNameForDecl(decl, moduleTypeName, nm), tm.getParsed().getFilePath());
-				final p = emitStubClass(c);
-				if (p != null)
-					files.push(p);
+				EmitterStageDebug.traceStage3Module(isPrimary ? "main" : moduleEmitBodies ? "helper" : "stub", outputModule, tm.getParsed().getFilePath());
+				final path = isPrimary
+					|| moduleEmitBodies ? emitClass(projection, outputModule, isPrimary && isRoot) : emitStubClass(declaration);
+				if (path != null) {
+					files.push(path);
+					if (isPrimary && isRoot)
+						rootMain = path;
+				}
 			}
 			EmitterStageDebug.traceStage3Phase("emit_module_done:" + className + ":" + files.length);
 
@@ -8828,11 +9588,13 @@ class EmitterStage {
 		// Provide a tiny alias shim when needed. This is intentionally narrow: we add only the
 		// module required by Gate1/utest, and avoid a broad aliasing scheme that could shadow
 		// OCaml stdlib modules (e.g. `List`) during bring-up.
-		{
+		if (Lambda.exists(emittedModulePaths, path -> haxe.io.Path.withoutDirectory(path) == "Haxe_CallStack.ml")) {
 			final shimName = "CallStack";
 			final shimFile = shimName + ".ml";
 			final shimPath = haxe.io.Path.join([outAbs, shimFile]);
-			if (!sys.FileSystem.exists(shimPath)) {
+			// Only this compilation's emitted modules establish provider availability.
+			// A stale file in the output directory must not introduce a dependency.
+			if (!Lambda.exists(emittedModulePaths, path -> haxe.io.Path.withoutDirectory(path) == shimFile)) {
 				sys.io.File.saveContent(shimPath, "(* hxhx(stage3) bootstrap import shim: CallStack = haxe.CallStack *)\n" + "include Haxe_CallStack\n");
 				generatedPaths.push(shimFile);
 			}
@@ -9019,6 +9781,13 @@ class EmitterStage {
 		stops early because of an error or cancellation.
 	**/
 	public static function resetRequestState():Void {
+		currentEnums = null;
+		currentCallables = null;
+		currentClassStorage = null;
+		currentRuntimeTypes = null;
+		currentCallableFunction = null;
+		currentTypedFunction = null;
+		currentTypedInitializer = null;
 		currentOcamlModuleName = null;
 		currentModuleFilePath = null;
 		currentFunctionName = null;

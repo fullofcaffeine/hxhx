@@ -1,4 +1,3 @@
-import haxe.ds.StringMap;
 import sys.FileSystem;
 import sys.io.File;
 import TypedExpr.TypedExprTag;
@@ -11,6 +10,10 @@ import TypedExpr.TypedExprTag;
 	Float contract. Native OCaml must therefore validate and convert the runtime
 	carrier at the call instead of pretending the source value was statically
 	Float.
+
+	The guarded form checks typing and emitted conversions. Runtime checks cover
+	direct Int/Float inputs and rejection of a non-numeric value; this fixture
+	does not establish native `Type.typeof` parity.
 **/
 class M14HxhxStage3DynamicFloatBoundaryIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
@@ -205,19 +208,46 @@ class M14HxhxStage3DynamicFloatBoundaryIntegrationTest {
 
 		final parsed = ParserStage.parse(source, sourcePath);
 		final resolved = new ResolvedModule("DynamicFloatBoundary", sourcePath, parsed);
-		final index = TyperIndex.build([resolved]);
-		final loader = new ModuleLoader([sourceDir], new StringMap<String>(), index, function(_):Bool return false);
+		// Named switch cases require the real Type/ValueType declaration selected by production.
+		final arguments = hxhx.Stage1Compiler.Stage1Args.parse(["-cp", sourceDir, "-main", "DynamicFloatBoundary"], true);
+		final paths = hxhx.Stage3SetupSupport.projectClassPaths({
+			explicitPaths: [sourceDir],
+			libraries: [],
+			cwd: Sys.getCwd(),
+			standardRoot: hxhx.Stage1Compiler.Stage1Args.getStandardLibraryRoot(arguments),
+			targetDefine: "ocaml"
+		});
+		final index = TyperIndex.buildHeaders([resolved]);
+		final loader = new ModuleLoader(paths, hxhx.Stage3SetupSupport.buildDefinesMap([], "ocaml", "ocaml"), index);
 		loader.markResolvedAlready([resolved]);
-		final typed = TyperStage.typeResolvedModule(resolved, index, loader);
+		for (name in ["Type", "Std", "Sys"])
+			assertTrue(loader.ensureTypeAvailable(name, "", []) != null, "Dynamic Float fixture requires the real " + name + " provider");
+		final typed = TyperStage.typeResolvedModule(resolved, index, loader, true);
 		assertDynamicFloatCall(findFunctionCall(findFunction(typed, "DynamicFloatBoundary", "direct"), "takeFloat"), "direct");
 		assertDynamicFloatCall(findFunctionCall(findFunction(typed, "DynamicFloatBoundary", "guarded"), "takeFloat"), "guarded");
 
 		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), outDir, true);
 		final generated = File.getContent(haxe.io.Path.join([outDir, "DynamicFloatBoundary.ml"]));
-		assertTrue(countOccurrences(generated, "HxDynamic.floatValue") == 2,
-			"Dynamic Float arguments did not use exactly the two checked call boundaries: " + generated);
-		assertTrue(generated.indexOf("takeFloat (float_of_int 2)") >= 0, "a concrete Int argument lost its ordinary Float widening: " + generated);
-		assertTrue(generated.indexOf("takeDynamic (value)") >= 0, "a Dynamic parameter call gained an unrelated Float conversion: " + generated);
+		// Match the complete ordered call, including the nested producer, so each
+		// checked conversion remains attached to the argument that requires it.
+		assertTrue(countOccurrences(generated,
+			"let __hx_call_function = (takeFloat) in let __hx_call_argument_0 = ((HxDynamic.floatValue ((let __hx_call_function = (observed) in let __hx_call_argument_0 = ((value)) in __hx_call_function __hx_call_argument_0)))) in __hx_call_function __hx_call_argument_0") == 1,
+			"the direct Dynamic argument lost its single checked conversion: "
+			+ generated);
+		// Switch decisions emit the TFloat and TInt alternatives as separate,
+		// mutually exclusive branches, each retaining the same checked call.
+		assertTrue(countOccurrences(generated,
+			"let __hx_call_function = (takeFloat) in let __hx_call_argument_0 = ((HxDynamic.floatValue (value))) in __hx_call_function __hx_call_argument_0") == 2,
+			"the guarded Dynamic argument lost a checked conversion in one of its two alternatives: "
+			+ generated);
+		assertTrue(countOccurrences(generated, "HxDynamic.floatValue") == 3,
+			"Dynamic Float emission added a conversion outside the direct call and two guarded alternatives: " + generated);
+		assertTrue(generated.indexOf("let __hx_call_function = (takeFloat) in let __hx_call_argument_0 = ((float_of_int 2)) in __hx_call_function __hx_call_argument_0") >= 0,
+			"a concrete Int argument lost its ordinary Float widening: "
+			+ generated);
+		assertTrue(generated.indexOf("let __hx_call_function = (takeDynamic) in let __hx_call_argument_0 = ((value)) in __hx_call_function __hx_call_argument_0") >= 0,
+			"a Dynamic parameter call gained an unrelated Float conversion: "
+			+ generated);
 		final nativeResult = run(executable, []);
 		assertTrue(nativeResult.exitCode == 0, "native Dynamic Float executable failed: " + nativeResult.stderr);
 		assertTrue(nativeResult.stdout == expected, "native Dynamic Float output differs from Haxe 4.3.7: " + nativeResult.stdout);

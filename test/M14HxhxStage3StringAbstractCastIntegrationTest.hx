@@ -4,10 +4,10 @@ import sys.io.File;
 import TypedExpr.TypedExprTag;
 
 /**
-	Verifies that explicit and call-required String abstract casts reach OCaml.
+	Verifies that annotated and call-required String abstract conversions reach OCaml.
 
 	The typed tree must retain the concrete String destination while preserving
-	the source abstract on the cast child. Generated OCaml can then recover a
+	the source abstract on the conversion child. Generated OCaml can then recover a
 	concrete `string` only at the operation that requires it.
 **/
 class M14HxhxStage3StringAbstractCastIntegrationTest {
@@ -88,7 +88,9 @@ class M14HxhxStage3StringAbstractCastIntegrationTest {
 		final normalize = findFunction(typed, "StringAbstractCast", "normalize");
 		final returnExpression = normalize.getBody().getStatements()[0].getExpressions()[0];
 		final typedCast = findTag(returnExpression, TypedExprTag.Cast);
-		assertTrue(typedCast != null, "typed String method receiver lost its explicit cast");
+		final annotation = findTag(returnExpression, TypedExprTag.CheckType);
+		assertTrue(annotation != null && annotation.getExpressions()[0] == typedCast && typedCast.isRepresentationPreservingCast(),
+			"String receiver annotation lost its selected abstract header conversion");
 		assertTrue(typedCast.getTexts().length == 1
 			&& typedCast.getTexts()[0] == "String"
 			&& typedCast.getType().getSemanticKey() == "primitive:String",
@@ -96,9 +98,10 @@ class M14HxhxStage3StringAbstractCastIntegrationTest {
 
 		final projectedCall = TypedBodySource.expression(returnExpression);
 		switch (projectedCall) {
-			case ECall(EField(ECast(EIdent("value"), "String"), "toLowerCase"), []):
+			case ECall(EField(EParenthesized(ECheckType(ECast(EIdent("value"), "String"), "String"), position), "toLowerCase"), []):
+				assertTrue(position.getLine() == 6, "typed source projection lost the authored receiver parentheses position");
 			case _:
-				throw "typed source projection lost the explicit String receiver cast";
+				throw "typed source projection lost the String annotation or its header conversion";
 		}
 
 		final normalizeArgument = findFunction(typed, "StringAbstractCast", "normalizeArgument");
@@ -120,7 +123,10 @@ class M14HxhxStage3StringAbstractCastIntegrationTest {
 		final argumentSource = argumentCast.getExpressions()[0].getType().getNominalIdentity();
 		assertTrue(argumentSource != null && argumentSource.getCanonicalName() == "StringAbstractCast.TextPosition",
 			"typed abstract argument lost its source abstract type");
-		switch (TypedBodySource.expression(argumentCall)) {
+		final exactCall = TypedExactStaticCallSource.decode(TypedBodySource.expression(argumentCall));
+		assertTrue(exactCall != null && exactCall.declaration == argumentCall.getDeclaration().getIdentity().getCanonicalKey(),
+			"projected String conversion lost its selected static declaration");
+		switch (TypedExactStaticCallSource.ordinaryCall(exactCall)) {
 			case ECall(EIdent("accept"), [ECast(EIdent("value"), "String")]):
 			case _:
 				throw "typed source projection lost the call-required String cast";
@@ -132,9 +138,11 @@ class M14HxhxStage3StringAbstractCastIntegrationTest {
 		FileSystem.createDirectory(tmpRoot);
 		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), outDir, true);
 		final output = File.getContent(haxe.io.Path.join([outDir, "StringAbstractCast.ml"]));
-		assertTrue(output.indexOf("HxString.toLowerCase ((Obj.obj (Obj.repr (value)) : string)) ()") >= 0,
+		assertTrue(output.indexOf("HxString.toLowerCase (((Obj.obj (Obj.repr (value)) : string))) ()") >= 0,
 			"OCaml emission did not recover the concrete String carrier at the explicit cast");
-		assertTrue(output.indexOf("accept ((Obj.obj (Obj.repr (value)) : string))") >= 0,
+		// The call binds its selected function before converting the argument.
+		// Check the complete binding and application so a detached cast cannot pass.
+		assertTrue(output.indexOf("let __hx_call_function = (accept) in let __hx_call_argument_0 = (((Obj.obj (Obj.repr (value)) : string))) in __hx_call_function __hx_call_argument_0") >= 0,
 			"OCaml emission did not recover the concrete String carrier at the call boundary");
 		assertTrue(backend.ocaml.OcamlExplicitStringCast.render("Int", "value") == null, "String cast lowering changed an unrelated explicit cast");
 		final result = new sys.io.Process(executable, []);

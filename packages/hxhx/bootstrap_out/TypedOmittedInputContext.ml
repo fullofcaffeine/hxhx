@@ -1,0 +1,2 @@
+# 1 "TypedOmittedInputContext.ml"
+include CompilerDiagnosticProbe.TypedOmittedInputContext

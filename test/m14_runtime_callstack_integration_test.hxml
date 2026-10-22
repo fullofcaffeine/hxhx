@@ -1,3 +1,6 @@
 -cp test
 -main M14RuntimeCallStackIntegrationTest
 --interp
+
+--next
+test/m14_stage3_exception_providers_test.hxml

@@ -1,0 +1,2 @@
+# 1 "TypedBackendLambdaOccurrence.ml"
+include CompilerDiagnosticProbe.TypedBackendLambdaOccurrence

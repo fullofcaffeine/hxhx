@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable label : string; mutable source : string; m
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun label2 source2 expectPackagePath2 expectMainClassName2 expectHasStaticMain2 -> let self = ({ __hx_type = HxType.class_ "FrontendFixture"; label = HxString.hx_null_string; source = HxString.hx_null_string; expectPackagePath = HxString.hx_null_string; expectMainClassName = HxString.hx_null_string; expectHasStaticMain = false } : t) in (
+let create = fun label2 source2 expectPackagePath2 expectMainClassName2 expectHasStaticMain2 -> let self = ({ __hx_type = HxType.instance_marker "FrontendFixture"; label = HxString.hx_null_string; source = HxString.hx_null_string; expectPackagePath = HxString.hx_null_string; expectMainClassName = HxString.hx_null_string; expectHasStaticMain = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (label2 : string) in (
       (Obj.magic self : t).label <- __assign_1;
@@ -32,7 +32,7 @@ let create = fun label2 source2 expectPackagePath2 expectMainClassName2 expectHa
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "FrontendFixture"; label = HxString.hx_null_string; source = HxString.hx_null_string; expectPackagePath = HxString.hx_null_string; expectMainClassName = HxString.hx_null_string; expectHasStaticMain = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "FrontendFixture"; label = HxString.hx_null_string; source = HxString.hx_null_string; expectPackagePath = HxString.hx_null_string; expectMainClassName = HxString.hx_null_string; expectHasStaticMain = false } : t)
 
 let getLabel = fun self () -> ((self : t).label : string)
 

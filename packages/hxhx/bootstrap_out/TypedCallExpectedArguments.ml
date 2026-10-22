@@ -1,0 +1,2 @@
+# 1 "TypedCallExpectedArguments.ml"
+include CompilerDiagnosticProbe.TypedCallExpectedArguments

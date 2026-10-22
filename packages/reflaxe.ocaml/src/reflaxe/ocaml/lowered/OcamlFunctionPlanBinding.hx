@@ -1,6 +1,5 @@
 package reflaxe.ocaml.lowered;
 
-#if (macro || reflaxe_runtime || eval)
 /**
 	Exact function/body context shared by planning and syntax construction.
 
@@ -14,4 +13,3 @@ typedef OcamlFunctionPlanBinding = {
 	final bodyRevision:String;
 	final pipelineRevision:String;
 }
-#end

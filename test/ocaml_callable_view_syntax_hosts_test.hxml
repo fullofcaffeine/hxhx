@@ -1,0 +1,12 @@
+-cp packages/reflaxe.ocaml/src
+-cp test
+-main OrdinaryCallableViewSyntaxTest
+--macro nullSafety("reflaxe.ocaml")
+--interp
+--next
+-cp packages/reflaxe.ocaml/src
+-cp test
+-main OrdinaryCallableViewSyntaxTest
+--macro nullSafety("reflaxe.ocaml")
+-neko .tmp/ordinary_callable_view_syntax.n
+-cmd neko .tmp/ordinary_callable_view_syntax.n

@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerDependencyPhaseTools" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "CompilerDependencyPhaseTools" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencyPhaseTools" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerDependencyPhaseTools" } : t)
 
 let name = fun phase -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (match phase with

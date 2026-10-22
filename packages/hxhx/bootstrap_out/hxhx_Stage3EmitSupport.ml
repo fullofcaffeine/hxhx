@@ -6,80 +6,71 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage3EmitSupport" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.Stage3EmitSupport" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage3EmitSupport" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.Stage3EmitSupport" } : t)
 
-let bool01 = fun (v : bool) -> (let tempResult = ref (HxString.hx_null_string : string) in (
-  ignore (if v then let __assign_1 = "1" in (
-    tempResult := __assign_1;
-    __assign_1
-  ) else let __assign_2 = "0" in (
-    tempResult := __assign_2;
-    __assign_2
-  ));
-  !tempResult
-) : string)
+let bool01 = fun (v : bool) -> (if v then "1" else "0" : string)
 
 let isTrueEnv = fun (name : string) -> (let tempString = ref (HxString.hx_null_string : string) in let s = (HxSys.getEnv (name : string) : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (if s == Obj.magic (HxRuntime.hx_null) then let __assign_3 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+  ignore (if s == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempMaybeString := __assign_1;
+    __assign_1
+  ) else if HxString.isNull (s : string) then let __assign_2 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempMaybeString := __assign_2;
+    __assign_2
+  ) else let __assign_3 = Obj.magic (s : string) in (
     tempMaybeString := __assign_3;
     __assign_3
-  ) else if HxString.isNull (s : string) then let __assign_4 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempMaybeString := __assign_4;
-    __assign_4
-  ) else let __assign_5 = Obj.magic (s : string) in (
-    tempMaybeString := __assign_5;
-    __assign_5
   ));
   let normalized = (!tempMaybeString : string) in (
-    ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_6 = "" in (
-      tempString := __assign_6;
-      __assign_6
-    ) else let __assign_7 = let __call_arg_0_8 = normalized in StringTools.trim __call_arg_0_8 in (
-      tempString := __assign_7;
-      __assign_7
+    ignore (if normalized == Obj.magic (HxRuntime.hx_null) then let __assign_4 = "" in (
+      tempString := __assign_4;
+      __assign_4
+    ) else let __assign_5 = let __call_arg_0_6 = normalized in StringTools.trim __call_arg_0_6 in (
+      tempString := __assign_5;
+      __assign_5
     ));
-    let value = !tempString in (let __string_eq_left_9 = value in let __string_eq_right_10 = "1" in HxString.equals __string_eq_left_9 __string_eq_right_10) || (let __string_eq_left_11 = value in let __string_eq_right_12 = "true" in HxString.equals __string_eq_left_11 __string_eq_right_12) || (let __string_eq_left_13 = value in let __string_eq_right_14 = "yes" in HxString.equals __string_eq_left_13 __string_eq_right_14)
+    let value = !tempString in (let __string_eq_left_7 = value in let __string_eq_right_8 = "1" in HxString.equals __string_eq_left_7 __string_eq_right_8) || (let __string_eq_left_9 = value in let __string_eq_right_10 = "true" in HxString.equals __string_eq_left_9 __string_eq_right_10) || (let __string_eq_left_11 = value in let __string_eq_right_12 = "yes" in HxString.equals __string_eq_left_11 __string_eq_right_12)
   )
 ) : bool)
 
 let emitWithBackend = fun backend expanded backendId typedModuleCount outputDirAbs outputFileHint reportedOutputDir parsedMain emitFullBodies supportsCustomOutputFile supportsBuildExecutable definesMap resources nativeLibraryPaths output -> (
-  ignore (if let __call_arg_0_15 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_15 then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=before_output_file_hint" : string)) else ());
+  ignore (if let __call_arg_0_13 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_13 then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=before_output_file_hint" : string)) else ());
   let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-    ignore (if supportsCustomOutputFile then let __assign_16 = Obj.magic (outputFileHint : string) in (
-      tempMaybeString := __assign_16;
-      __assign_16
-    ) else let __assign_17 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempMaybeString := __assign_17;
-      __assign_17
+    ignore (if supportsCustomOutputFile then let __assign_14 = Obj.magic (outputFileHint : string) in (
+      tempMaybeString := __assign_14;
+      __assign_14
+    ) else let __assign_15 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempMaybeString := __assign_15;
+      __assign_15
     ));
     let admittedOutputFileHint = (!tempMaybeString : string) in (
-      ignore (if let __call_arg_0_18 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_18 then ignore ((
+      ignore (if let __call_arg_0_16 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_16 then ignore ((
         ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=after_output_file_hint" : string));
         Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=before_backend_context" : string)
       )) else ());
       let context = Obj.magic (Backend_BackendContext.create (outputDirAbs : string) (admittedOutputFileHint : string) (parsedMain : string) emitFullBodies supportsBuildExecutable (Obj.magic definesMap) (Obj.magic resources) (Obj.magic nativeLibraryPaths)) in (
-        ignore (if let __call_arg_0_19 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_19 then ignore ((
+        ignore (if let __call_arg_0_17 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_17 then ignore ((
           ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=after_backend_context" : string));
           Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=before_emit_trace_backend_id" : string)
         )) else ());
-        ignore (if let __call_arg_0_20 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_20 then ignore ((
+        ignore (if let __call_arg_0_18 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_18 then ignore ((
           ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=after_emit_trace_backend_id" : string));
           Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ((((("stage3_driver=before_emit backend=" ^ HxString.toStdString backendId) ^ " typed_modules=") ^ string_of_int typedModuleCount) ^ " out=") ^ HxString.toStdString reportedOutputDir : string)
         )) else ());
-        ignore (if let __call_arg_0_21 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_21 then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=emitWithBackend_before_genir_boundary" : string)) else ());
-        let expandedProgram = Obj.magic (Obj.obj expanded) in (
-          ignore (if let __call_arg_0_22 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_22 then ignore ((
+        ignore (if let __call_arg_0_19 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_19 then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=emitWithBackend_before_genir_boundary" : string)) else ());
+        let expandedProgram = Obj.magic (Obj.obj (Obj.repr expanded)) in (
+          ignore (if let __call_arg_0_20 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_20 then ignore ((
             ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=emitWithBackend_after_genir_boundary" : string));
             Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=emitWithBackend_before_dispatch_boundary" : string)
           )) else ());
           let emitted = Obj.magic (Backend_BackendDispatchBoundary.emit (Obj.magic backend) (Obj.magic expandedProgram) (Obj.magic context)) in (
-            ignore (if let __call_arg_0_23 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_23 then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=emitWithBackend_after_dispatch_boundary" : string)) else ());
-            ignore (if let __call_arg_0_24 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_24 then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) (let __string_part_26 = "stage3_driver=after_emit artifacts=" in let __string_part_27 = string_of_int (HxArray.length ((Obj.magic emitted : Backend_EmitResult.t).artifacts)) in let __string_part_28 = " built_executable=" in let __string_part_29 = HxString.toStdString (let __call_arg_0_25 = (Obj.magic emitted : Backend_EmitResult.t).builtExecutable in bool01 __call_arg_0_25) in ((__string_part_26 ^ __string_part_27) ^ __string_part_28) ^ __string_part_29 : string)) else ());
+            ignore (if let __call_arg_0_21 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_21 then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=emitWithBackend_after_dispatch_boundary" : string)) else ());
+            ignore (if let __call_arg_0_22 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_22 then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) (let __string_part_24 = "stage3_driver=after_emit artifacts=" in let __string_part_25 = string_of_int (HxArray.length ((Obj.magic emitted : Backend_EmitResult.t).artifacts)) in let __string_part_26 = " built_executable=" in let __string_part_27 = HxString.toStdString (let __call_arg_0_23 = (Obj.magic emitted : Backend_EmitResult.t).builtExecutable in bool01 __call_arg_0_23) in ((__string_part_24 ^ __string_part_25) ^ __string_part_26) ^ __string_part_27 : string)) else ());
             emitted
           )
         )

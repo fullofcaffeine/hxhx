@@ -1,0 +1,2 @@
+# 1 "TypedBackendMethodOccurrence.ml"
+include CompilerDiagnosticProbe.TypedBackendMethodOccurrence

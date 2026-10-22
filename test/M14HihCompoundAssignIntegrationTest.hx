@@ -1,3 +1,11 @@
+import sys.FileSystem;
+import sys.io.File;
+
+/**
+	Checks compound-assignment syntax and prefix/postfix increment behavior.
+	Runtime assertions use the complete typed-module emission path, which supplies
+	the local identities needed to select the correct OCaml variable.
+**/
 class M14HihCompoundAssignIntegrationTest {
 	static function assertTrue(ok:Bool, label:String):Void {
 		if (!ok)
@@ -20,6 +28,39 @@ class M14HihCompoundAssignIntegrationTest {
 			if (p.getName() == name)
 				return p.getType().getDisplay();
 		return "<missing>";
+	}
+
+	static function deleteRecursive(path:String):Void {
+		if (FileSystem.isDirectory(path)) {
+			for (entry in FileSystem.readDirectory(path))
+				deleteRecursive(haxe.io.Path.join([path, entry]));
+			FileSystem.deleteDirectory(path);
+		} else {
+			FileSystem.deleteFile(path);
+		}
+	}
+
+	/** The expected values distinguish updated prefix results from original postfix results. */
+	static function assertIncrementRuntime():Void {
+		final root = '.tmp/m14_increment_runtime_' + Std.string(Date.now().getTime());
+		FileSystem.createDirectory(root);
+		final sourcePath = haxe.io.Path.join([root, "Main.hx"]);
+		final source = [
+			"class Main {",
+			"  static function main() {",
+			"    var acc:Int = 1;",
+			"    var prefix = ++acc;",
+			"    var postfix = acc++;",
+			"    if (prefix != 2 || postfix != 2 || acc != 3) throw \"wrong increment values\";",
+			"  }",
+			"}"
+		].join("\n");
+		File.saveContent(sourcePath, source);
+		final resolved = new ResolvedModule("Main", sourcePath, ParserStage.parse(source, sourcePath));
+		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), haxe.io.Path.join([root, "out"]), true);
+		assertTrue(Sys.command(executable, []) == 0, "native prefix/postfix increment returned the wrong values");
+		deleteRecursive(root);
 	}
 
 	static function main() {
@@ -101,19 +142,6 @@ class M14HihCompoundAssignIntegrationTest {
 		final typedMain = findTypedMain(tm);
 		assertTrue(findLocalType(typedMain, "acc") == "Int", "compound assignment keeps local type stable");
 
-		final previousMutableRefs = @:privateAccess EmitterStage.currentMutableLocalRefNames;
-		@:privateAccess EmitterStage.currentMutableLocalRefNames = ["acc"];
-		var prefixOcaml = "";
-		var postfixOcaml = "";
-		try {
-			prefixOcaml = @:privateAccess EmitterStage.exprToOcaml(EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Prefix, EIdent("acc")));
-			postfixOcaml = @:privateAccess EmitterStage.exprToOcaml(EUnop(HxUnaryOperator.Increment, HxUnaryFixity.Postfix, EIdent("acc")));
-		} catch (error:Dynamic) {
-			@:privateAccess EmitterStage.currentMutableLocalRefNames = previousMutableRefs;
-			throw error;
-		}
-		@:privateAccess EmitterStage.currentMutableLocalRefNames = previousMutableRefs;
-		assertTrue(prefixOcaml.indexOf(":= __hx_next; __hx_next") >= 0, "OCaml prefix increment should return the updated value");
-		assertTrue(postfixOcaml.indexOf(":= __hx_next; __hx_old") >= 0, "OCaml postfix increment should return the old value");
+		assertIncrementRuntime();
 	}
 }

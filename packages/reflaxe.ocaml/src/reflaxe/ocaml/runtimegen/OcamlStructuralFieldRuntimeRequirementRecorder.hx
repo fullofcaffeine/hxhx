@@ -29,6 +29,8 @@ class OcamlStructuralFieldRuntimeRequirementRecorder {
 		final result = [requirement(decision)];
 		if (decision.loadConversion == UnboxBool || decision.storeConversion == BoxBool)
 			result.push(boolCarrierRequirement(decision));
+		if (decision.loadConversion == UnboxEnum)
+			result.push(enumCarrierRequirement(decision));
 		return result;
 	}
 
@@ -84,6 +86,31 @@ class OcamlStructuralFieldRuntimeRequirementRecorder {
 			rootModules: ["HxRuntime"],
 			profileEligibility: ["metal", "portable"],
 			explanation: decision.loadConversion == UnboxBool ? "The sealed structural Boolean read uses HxRuntime to recover the typed Bool from universal field storage." : "The sealed structural Boolean write uses HxRuntime to place the typed Bool in universal field storage."
+		};
+	}
+
+	/** Names the exact enum whose box is removed before the typed field result escapes. */
+	public static function enumCarrierRequirement(decision:OcamlStructuralFieldDecision):OcamlRuntimeRequirement {
+		OcamlStructuralFieldContract.require(decision);
+		final target = decision.enumLoadTarget;
+		if (decision.loadConversion != UnboxEnum || target == null)
+			throw 'reflaxe.ocaml [ocaml-structural-field:unexpected-enum-runtime]: decision "${decision.id}" has no enum recovery';
+		return {
+			id: OcamlStructuralFieldContract.enumCarrierRuntimeRequirementId(decision.id),
+			sourceKind: OcamlRuntimeRequirementSourceKind.HaxeExpression,
+			sourceId: decision.id,
+			source: decision.source,
+			semanticCapability: OcamlStructuralFieldContract.HAXE_ENUM_CARRIER_CAPABILITY,
+			cause: OcamlRuntimeRequirementCause.LoweringDecision,
+			decisionId: decision.id,
+			subject: {
+				kind: OcamlRuntimeRequirementSubjectKind.HaxeType,
+				id: target.semanticTypeId
+			},
+			implementationFeature: "haxe-enum-field-recovery-v1",
+			rootModules: ["HxEnum"],
+			profileEligibility: ["metal", "portable"],
+			explanation: 'The sealed structural field read recovers ${target.semanticTypeId} from a named enum box or an already native value, preserving null and payload identity.'
 		};
 	}
 

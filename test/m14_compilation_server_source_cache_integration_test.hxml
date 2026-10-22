@@ -1,6 +1,7 @@
 -cp test
 -cp packages/hxhx/src
 -cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
 
 -main M14CompilationServerSourceCacheIntegrationTest
 --interp

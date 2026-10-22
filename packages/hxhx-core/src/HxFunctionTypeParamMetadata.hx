@@ -1,16 +1,14 @@
-/** One method-level type parameter constraint recovered from Haxe source. **/
-typedef HxFunctionTypeParamConstraint = {
-	var name:String;
-	var typeHint:String;
-}
+import HxTypeSyntax.HxTypeSyntaxParameter;
 
 /**
 	Canonical metadata bridge for method-level generic parameters.
 
 	The bootstrap AST currently stores generic declarations in metadata instead
 	of a full typed constraint graph. This helper keeps every parser path on one
-	encoding and preserves constraint text such as `B:Array<A>` for target type
-	flow without asking emitters to rescan Haxe source.
+	encoding and preserves constraint text such as `B:Array<A>` for current
+	consumers. The shared structured grammar selects binders and constraints;
+	this projection never discovers declarations by splitting source strings.
+	It is not the complete generic syntax record used by the function migration.
 **/
 class HxFunctionTypeParamMetadata {
 	public static inline final TYPE_PARAMS_PREFIX = "__hxhx_fn_type_params=";
@@ -18,29 +16,25 @@ class HxFunctionTypeParamMetadata {
 
 	/** Parse one raw `<...>` declaration into stable AST metadata entries. **/
 	public static function fromGenericText(text:String):Array<String> {
+		if (text == null || StringTools.trim(text).length == 0)
+			return [];
+		return fromParameters(HxTypedefParser.parseParameters(text), text);
+	}
+
+	/** Project already parsed binders; source ranges retain constraint spelling for the existing hint consumers. */
+	public static function fromParameters(parameters:Array<HxTypeSyntaxParameter>, source:String):Array<String> {
 		final out = new Array<String>();
-		final names = new Array<String>();
-		final constraints = new Array<HxFunctionTypeParamConstraint>();
-		final trimmed = StringTools.trim(text == null ? "" : text);
-		if (!StringTools.startsWith(trimmed, "<") || !StringTools.endsWith(trimmed, ">"))
-			return out;
-		final inner = trimmed.substr(1, trimmed.length - 2);
-		for (segment in splitTopLevelComma(inner)) {
-			final colon = topLevelColon(segment);
-			final name = typeParamName(colon < 0 ? segment : segment.substr(0, colon));
-			if (name.length == 0)
-				continue;
-			names.push(name);
-			if (colon >= 0) {
-				final typeHint = compactTypeHint(segment.substr(colon + 1));
-				if (typeHint.length > 0)
-					constraints.push({name: name, typeHint: typeHint});
-			}
-		}
+		final names = [for (parameter in parameters) parameter.name];
 		if (names.length > 0)
 			out.push(TYPE_PARAMS_PREFIX + names.join(","));
-		for (constraint in constraints)
-			out.push(CONSTRAINT_PREFIX + constraint.name + ":" + constraint.typeHint);
+		for (parameter in parameters) {
+			final hints = [
+				for (constraint in parameter.constraints)
+					compactTypeHint(source.substring(constraint.getPos().getIndex(), constraint.getEndPos().getIndex()))
+			];
+			if (hints.length > 0)
+				out.push(CONSTRAINT_PREFIX + parameter.name + ":" + hints.join("&"));
+		}
 		return out;
 	}
 
@@ -81,11 +75,6 @@ class HxFunctionTypeParamMetadata {
 		return out;
 	}
 
-	static function typeParamName(text:String):String {
-		final matcher = ~/^[ \t\r\n]*([A-Za-z_][A-Za-z0-9_]*)/;
-		return matcher.match(text == null ? "" : text) ? matcher.matched(1) : "";
-	}
-
 	static function compactTypeHint(text:String):String {
 		var out = StringTools.trim(text == null ? "" : text);
 		for (whitespace in [" ", "\t", "\r", "\n"])
@@ -93,7 +82,16 @@ class HxFunctionTypeParamMetadata {
 		return out;
 	}
 
+	/** Split compound bounds without splitting type arguments, function groups, or anonymous fields. */
+	public static function constraintHints(text:String):Array<String> {
+		return [for (part in splitTopLevel(text, "&")) StringTools.trim(part)];
+	}
+
 	static function splitTopLevelComma(text:String):Array<String> {
+		return splitTopLevel(text, ",");
+	}
+
+	static function splitTopLevel(text:String, separator:String):Array<String> {
 		final out = new Array<String>();
 		var start = 0;
 		var angle = 0;
@@ -123,7 +121,7 @@ class HxFunctionTypeParamMetadata {
 				case "]":
 					if (bracket > 0)
 						bracket--;
-				case "," if (angle == 0 && paren == 0 && brace == 0 && bracket == 0):
+				case ch if (ch == separator && angle == 0 && paren == 0 && brace == 0 && bracket == 0):
 					out.push(text.substring(start, i));
 					start = i + 1;
 				case _:

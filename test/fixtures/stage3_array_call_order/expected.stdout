@@ -1,0 +1,6 @@
+receiver
+mapper
+element:a
+element:b
+separator
+a!,b!

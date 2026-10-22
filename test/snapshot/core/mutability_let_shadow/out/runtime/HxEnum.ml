@@ -90,7 +90,11 @@ let unbox_or_obj (expected : string) (v : 'a) : 'a =
      When enum values are carried as `Obj.t` in Dynamic contexts, they may be
      boxed via `box_if_needed`; those callsites should unbox first if needed. *)
 
-let enum_eq (a : Obj.t) (b : Obj.t) : bool =
+(* Compare native constructor tags and arity before delegating payload equality.
+   The caller selects the payload representation contract; this helper never
+   guesses whether an arbitrary native block is an enum or an ordinary object. *)
+let equal_variant (equal_argument : Obj.t -> Obj.t -> bool)
+    (a : Obj.t) (b : Obj.t) : bool =
   if HxRuntime.is_null a || HxRuntime.is_null b then
     HxRuntime.is_null a && HxRuntime.is_null b
   else if Obj.is_int a then
@@ -107,7 +111,27 @@ let enum_eq (a : Obj.t) (b : Obj.t) : bool =
     else (
       let rec loop i =
         if i >= sa then true
-        else if HxRuntime.dynamic_equals (Obj.field a i) (Obj.field b i) then loop (i + 1)
+        else if equal_argument (Obj.field a i) (Obj.field b i) then loop (i + 1)
         else false
       in
       loop 0)
+
+let enum_eq (a : Obj.t) (b : Obj.t) : bool =
+  equal_variant HxRuntime.dynamic_equals a b
+
+(* The native compiler carries enums in named boxes, including nested payloads.
+   Compare names before inspecting raw variants so equal native tags from
+   different enum types cannot compare equal. Recurse only through recognized
+   enum boxes. Ordinary object payloads retain Dynamic identity semantics. *)
+let rec boxed_enum_eq (a : Obj.t) (b : Obj.t) : bool =
+  if HxRuntime.is_null a || HxRuntime.is_null b then
+    HxRuntime.is_null a && HxRuntime.is_null b
+  else
+    match name_opt a, name_opt b with
+    | Some left, Some right when left = right ->
+        equal_variant
+          (fun x y ->
+            if is_box x || is_box y then boxed_enum_eq x y
+            else HxRuntime.dynamic_equals x y)
+          (Obj.field a 2) (Obj.field b 2)
+    | _ -> false

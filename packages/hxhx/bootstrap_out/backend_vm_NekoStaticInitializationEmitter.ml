@@ -1,0 +1,2 @@
+# 1 "backend_vm_NekoStaticInitializationEmitter.ml"
+include Backend_vm_NekoArrayProvider.Backend_vm_NekoStaticInitializationEmitter

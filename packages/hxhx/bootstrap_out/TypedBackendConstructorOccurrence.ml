@@ -1,0 +1,2 @@
+# 1 "TypedBackendConstructorOccurrence.ml"
+include CompilerDiagnosticProbe.TypedBackendConstructorOccurrence

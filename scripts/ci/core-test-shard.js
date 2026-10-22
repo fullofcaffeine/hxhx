@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Runs one validated Core Tests shard in canonical `npm test` order. */
+/** Runs one validated Core Tests shard in order and reports independent failures together. */
 
 const childProcess = require('child_process')
 const { loadPlan } = require('./core-test-shards')
@@ -47,6 +47,7 @@ function main() {
   const shardStartedAt = Date.now()
   let sharedArtifact = null
   let failure = null
+  const commandFailures = []
   try {
     console.log(`[core-test-shard] START shard=${shard.id} commands=${shard.commands.length}`)
     sharedArtifact = maybePrepareSharedArtifact(process.cwd(), shard)
@@ -78,7 +79,13 @@ function main() {
       if (result.status !== 0) {
         const outcome = result.signal ? `signal ${result.signal}` : `exit ${result.status}`
         if (sharedArtifact) sharedArtifact.failConsumer(command, elapsedSeconds, outcome)
-        fail(`${command} failed with ${outcome} after ${elapsedSeconds.toFixed(3)}s`)
+        const message = `${command} failed with ${outcome} after ${elapsedSeconds.toFixed(3)}s`
+        // A signal or shared preparation failure ends this execution boundary.
+        // Ordinary independent test failures must not hide the rest of the shard.
+        if (result.signal || result.status === null || sharedArtifact) fail(message)
+        commandFailures.push(message)
+        console.error(`[core-test-shard] COMMAND ${index + 1}/${shard.commands.length} FAIL ${message}`)
+        continue
       }
       if (sharedArtifact) {
         try {
@@ -89,6 +96,9 @@ function main() {
         }
       }
       console.log(`[core-test-shard] COMMAND ${index + 1}/${shard.commands.length} PASS ${command} elapsed=${elapsedSeconds.toFixed(3)}s`)
+    }
+    if (commandFailures.length > 0) {
+      fail(`${commandFailures.length}/${shard.commands.length} commands failed in shard=${shard.id}:\n${commandFailures.join('\n')}`)
     }
     console.log(`[core-test-shard] PASS shard=${shard.id} elapsed=${((Date.now() - shardStartedAt) / 1000).toFixed(3)}s`)
   } catch (error) {

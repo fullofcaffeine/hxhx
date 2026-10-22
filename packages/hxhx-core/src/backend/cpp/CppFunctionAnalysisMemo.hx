@@ -10,6 +10,12 @@ package backend.cpp;
 	the corresponding analysis finishes or throws.
 **/
 class CppFunctionAnalysisMemo {
+	/** Completed emitted signatures belong to exact declaration objects in this request. */
+	public final emittedCallableContracts:haxe.ds.ObjectMap<HxFunctionDecl, CppEmittedCallableContract>;
+
+	/** Recursive selection can read immutable header facts without publishing them as complete. */
+	public final emittedCallableSelectionsInProgress:haxe.ds.ObjectMap<HxFunctionDecl, CppEmittedCallableContract>;
+
 	/** Function signatures currently being prepared recursively. **/
 	public final functionPreparationsInProgress:haxe.ds.StringMap<Bool>;
 
@@ -25,19 +31,17 @@ class CppFunctionAnalysisMemo {
 	/** Function signatures currently inferring argument or return C++ types. **/
 	public final inferredSignaturesInProgress:haxe.ds.StringMap<Bool>;
 
-	/** Completed inferred C++ argument types by declaration shape. **/
-	public final functionArgumentTypes:haxe.ds.StringMap<Array<String>>;
-
 	/** Completed inferred C++ return types by declaration shape. **/
 	public final functionReturnTypes:haxe.ds.StringMap<String>;
 
 	public function new() {
+		emittedCallableContracts = new haxe.ds.ObjectMap<HxFunctionDecl, CppEmittedCallableContract>();
+		emittedCallableSelectionsInProgress = new haxe.ds.ObjectMap<HxFunctionDecl, CppEmittedCallableContract>();
 		functionPreparationsInProgress = new haxe.ds.StringMap<Bool>();
 		functionPreparations = new haxe.ds.StringMap<CppFunctionScopePrep>();
 		erasedDynamicReturnScansInProgress = new haxe.ds.StringMap<Bool>();
 		erasedDynamicReturnResults = new haxe.ds.StringMap<Bool>();
 		inferredSignaturesInProgress = new haxe.ds.StringMap<Bool>();
-		functionArgumentTypes = new haxe.ds.StringMap<Array<String>>();
 		functionReturnTypes = new haxe.ds.StringMap<String>();
 	}
 }

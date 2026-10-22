@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable ownerCppName : string; mutable carrierCppT
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun ownerCppName2 carrierCppType2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppAbstractRepresentation"; ownerCppName = HxString.hx_null_string; carrierCppType = HxString.hx_null_string } : t) in (
+let create = fun ownerCppName2 carrierCppType2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppAbstractRepresentation"; ownerCppName = HxString.hx_null_string; carrierCppType = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (ownerCppName2 : string) in (
       (Obj.magic self : t).ownerCppName <- __assign_1;
@@ -20,7 +20,7 @@ let create = fun ownerCppName2 carrierCppType2 -> let self = ({ __hx_type = HxTy
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppAbstractRepresentation"; ownerCppName = HxString.hx_null_string; carrierCppType = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppAbstractRepresentation"; ownerCppName = HxString.hx_null_string; carrierCppType = HxString.hx_null_string } : t)
 
 let getOwnerCppName = fun self () -> ((self : t).ownerCppName : string)
 
@@ -41,19 +41,19 @@ let instanceHelperCall = fun self (methodName : string) (renderedReceiver : stri
     tempArray := __assign_8;
     __assign_8
   ));
-  let arguments = Obj.magic (let __array_receiver_9 = let __represented_array_10 = HxArray.create () in let __represented_array_element_0_11 = renderedReceiver in (
+  let arguments = Obj.magic (let __array_receiver_9 = Obj.magic (let __represented_array_10 = HxArray.create () in let __represented_array_element_0_11 = renderedReceiver in (
     ignore (HxArray.push __represented_array_10 __represented_array_element_0_11);
     __represented_array_10
-  ) in let __array_arg_0_12 = !tempArray in HxArray.concat __array_receiver_9 __array_arg_0_12) in let __string_part_13 = HxString.toStdString ((self : t).ownerCppName) in let __string_part_14 = "::" in let __string_part_15 = HxString.toStdString methodName in let __string_part_16 = "(" in let __string_part_17 = HxString.toStdString (HxArray.join arguments ", " (fun x -> x)) in let __string_part_18 = ")" in ((((__string_part_13 ^ __string_part_14) ^ __string_part_15) ^ __string_part_16) ^ __string_part_17) ^ __string_part_18
+  )) in let __array_arg_0_12 = Obj.magic (!tempArray) in HxArray.concat __array_receiver_9 __array_arg_0_12) in let __string_part_13 = HxString.toStdString ((self : t).ownerCppName) in let __string_part_14 = "::" in let __string_part_15 = HxString.toStdString methodName in let __string_part_16 = "(" in let __string_part_17 = HxString.toStdString (HxArray.join arguments ", " (fun x -> x)) in let __string_part_18 = ")" in ((((__string_part_13 ^ __string_part_14) ^ __string_part_15) ^ __string_part_16) ^ __string_part_17) ^ __string_part_18
 )
 
 let forPrimitiveClass = fun cls classLookup services -> (try (
-  ignore (if cls == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let carrier = (Obj.obj (HxAnon.get services "primitiveUnderlying") (Obj.magic cls) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : t) in (
+  ignore (if cls == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  let carrier = ((Obj.obj (HxAnon.get services "primitiveUnderlying") : _ -> _) (Obj.magic cls) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : t) in (
     ignore (if carrier == Obj.magic (HxRuntime.hx_null) then let __assign_19 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
       tempResult := __assign_19;
       __assign_19
-    ) else let __assign_20 = Obj.magic (Obj.magic (create (Obj.obj (HxAnon.get services "renderedClassName") (Obj.magic cls) classLookup : string) (carrier : string))) in (
+    ) else let __assign_20 = Obj.magic (Obj.magic (create ((Obj.obj (HxAnon.get services "renderedClassName") : _ -> _ -> _) (Obj.magic cls) classLookup : string) (carrier : string))) in (
       tempResult := __assign_20;
       __assign_20
     ));
@@ -63,58 +63,69 @@ let forPrimitiveClass = fun cls classLookup services -> (try (
   | HxRuntime.Hx_return __ret_21 -> (Obj.obj __ret_21 : t) : t)
 
 let classBackedCastExpression = fun inner typeHint scope services -> (try (
-  ignore (if scope == Obj.magic (HxRuntime.hx_null) || typeHint == HxString.hx_null_string || (let __string_receiver_22 = typeHint in HxString.length __string_receiver_22) = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let lookup = Obj.obj (HxAnon.get services "lookupForScope") scope in let cls = Obj.magic (Obj.obj (HxAnon.get services "lookupClassForTypeHint") (typeHint : string) scope lookup) in (
-    ignore (if cls == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get services "abstractUnderlying") (Obj.magic cls) == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get services "primitiveUnderlying") (Obj.magic cls) != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-    Obj.obj (HxAnon.get services "wrapUnderlying") (Obj.magic cls) (Obj.obj (HxAnon.get services "renderExpression") (Obj.magic inner) scope : string) scope
+  ignore (if scope == Obj.magic (HxRuntime.hx_null) || typeHint == HxString.hx_null_string || (let __string_receiver_22 = typeHint in HxString.length __string_receiver_22) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  let lookup = (Obj.obj (HxAnon.get services "lookupForScope") : _ -> _) scope in let cls = Obj.magic ((Obj.obj (HxAnon.get services "lookupClassForTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope lookup) in (
+    ignore (if cls == Obj.magic (HxRuntime.hx_null) || (Obj.obj (HxAnon.get services "abstractUnderlying") : _ -> _) (Obj.magic cls) == Obj.magic (HxRuntime.hx_null) || (Obj.obj (HxAnon.get services "primitiveUnderlying") : _ -> _) (Obj.magic cls) != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+    (Obj.obj (HxAnon.get services "wrapUnderlying") : _ -> _ -> _ -> _) (Obj.magic cls) ((Obj.obj (HxAnon.get services "renderExpression") : _ -> _ -> _) (Obj.magic inner) scope : string) scope
   )
 ) with
   | HxRuntime.Hx_return __ret_23 -> (Obj.obj __ret_23 : string) : string)
 
 let classBackedCastForExpectedType = fun expr expectedType scope services -> (try (
-  ignore (if scope == Obj.magic (HxRuntime.hx_null) || expectedType == HxString.hx_null_string || (let __string_receiver_24 = expectedType in HxString.length __string_receiver_24) = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if scope == Obj.magic (HxRuntime.hx_null) || expectedType == HxString.hx_null_string || (let __string_receiver_24 = expectedType in HxString.length __string_receiver_24) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
     ignore (if (match expr with
-      | HxExpr.ENull -> 0
-      | HxExpr.EBool _ -> 1
-      | HxExpr.EString _ -> 2
-      | HxExpr.EInt _ -> 3
-      | HxExpr.EFloat _ -> 4
-      | HxExpr.EEnumValue _ -> 5
-      | HxExpr.EThis -> 6
-      | HxExpr.ESuper -> 7
-      | HxExpr.EIdent _ -> 8
-      | HxExpr.EField (_, _) -> 9
-      | HxExpr.ENullSafeField (_, _) -> 10
-      | HxExpr.ECall (_, _) -> 11
-      | HxExpr.EMacroExpr (_, _) -> 12
-      | HxExpr.EMacroType _ -> 13
-      | HxExpr.ELambda (_, _) -> 14
-      | HxExpr.ETryCatchRaw _ -> 15
-      | HxExpr.ESwitchRaw _ -> 16
-      | HxExpr.ESwitch (_, _, _) -> 17
-      | HxExpr.ENew (_, _) -> 18
-      | HxExpr.EUnop (_, _, _) -> 19
-      | HxExpr.EBinop (_, _, _) -> 20
-      | HxExpr.ETernary (_, _, _) -> 21
-      | HxExpr.EAnon (_, _) -> 22
-      | HxExpr.EArrayComprehension (_, _, _, _) -> 23
-      | HxExpr.EArrayDecl _ -> 24
-      | HxExpr.EArrayAccess (_, _) -> 25
-      | HxExpr.ERange (_, _) -> 26
-      | HxExpr.ECast (_, _) -> 27
-      | HxExpr.EUntyped _ -> 28
-      | HxExpr.EUnsupported _ -> 29
-      | HxExpr.EReturn _ -> 30
-      | HxExpr.EVars _ -> 31
-      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 32
-      | HxExpr.EWhile (_, _, _, _) -> 33
-      | HxExpr.EBreak _ -> 34
-      | HxExpr.EContinue _ -> 35) = 27 then let _g = Obj.magic (match expr with
+      | HxExpr.EParenthesized (_, _) -> 0
+      | HxExpr.ESourceTry (_, _, _) -> 1
+      | HxExpr.ESourceFor (_, _, _, _) -> 2
+      | HxExpr.ELoweredControl (_, _, _, _) -> 3
+      | HxExpr.ENull -> 4
+      | HxExpr.EBool _ -> 5
+      | HxExpr.EString _ -> 6
+      | HxExpr.EInt _ -> 7
+      | HxExpr.EFloat _ -> 8
+      | HxExpr.EEnumValue _ -> 9
+      | HxExpr.EThis -> 10
+      | HxExpr.ESuper -> 11
+      | HxExpr.EIdent _ -> 12
+      | HxExpr.EField (_, _) -> 13
+      | HxExpr.ENullSafeField (_, _) -> 14
+      | HxExpr.ECall (_, _) -> 15
+      | HxExpr.EMacroExpr (_, _) -> 16
+      | HxExpr.EMacroType _ -> 17
+      | HxExpr.ELambda (_, _, _) -> 18
+      | HxExpr.ETryCatchRaw _ -> 19
+      | HxExpr.ESwitchRaw _ -> 20
+      | HxExpr.ESwitch (_, _, _) -> 21
+      | HxExpr.ENew (_, _) -> 22
+      | HxExpr.EUnop (_, _, _) -> 23
+      | HxExpr.EBinop (_, _, _) -> 24
+      | HxExpr.ETernary (_, _, _) -> 25
+      | HxExpr.ESourceIf (_, _, _, _) -> 26
+      | HxExpr.EThrow (_, _) -> 27
+      | HxExpr.EAnon (_, _) -> 28
+      | HxExpr.EArrayComprehension (_, _, _, _) -> 29
+      | HxExpr.EArrayDecl _ -> 30
+      | HxExpr.EArrayAccess (_, _) -> 31
+      | HxExpr.ERange (_, _) -> 32
+      | HxExpr.ECast (_, _) -> 33
+      | HxExpr.ECheckType (_, _) -> 34
+      | HxExpr.EUntyped _ -> 35
+      | HxExpr.EUnsupported _ -> 36
+      | HxExpr.EReturn _ -> 37
+      | HxExpr.EVars _ -> 38
+      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 39
+      | HxExpr.EWhile (_, _, _, _, _) -> 40
+      | HxExpr.EBreak _ -> 41
+      | HxExpr.EContinue _ -> 42
+      | HxExpr.EDiscardThen (_, _) -> 43
+      | HxExpr.ESourceGroup (_, _) -> 44
+      | HxExpr.ESourceFunction (_, _, _, _) -> 45
+      | HxExpr.EPrivateAccess (_, _) -> 46) = 33 then let _g = Obj.magic (match expr with
       | HxExpr.ECast (__enum_param_25, _) -> __enum_param_25
       | _ -> failwith "Unexpected enum parameter") in let _g1 = (match expr with
       | HxExpr.ECast (_, __enum_param_26) -> __enum_param_26
-      | _ -> failwith "Unexpected enum parameter" : string) in let inner = Obj.magic _g in let typeHint = (_g1 : string) in let lookup = Obj.obj (HxAnon.get services "lookupForScope") scope in let cls = Obj.magic (Obj.obj (HxAnon.get services "lookupClassForTypeHint") (typeHint : string) scope lookup) in let expectedClass = (Obj.obj (HxAnon.get services "classNameFromCppType") (expectedType : string) : string) in if cls == Obj.magic (HxRuntime.hx_null) || expectedClass == Obj.magic (HxRuntime.hx_null) || (let __string_eq_left_27 = Obj.obj (HxAnon.get services "renderedClassName") (Obj.magic cls) lookup in let __string_eq_right_28 = Obj.obj (HxAnon.get services "sanitizeTypePath") (Obj.obj (HxAnon.get services "typeBaseName") (expectedClass : string) : string) in not (HxString.equals __string_eq_left_27 __string_eq_right_28)) then let __assign_29 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      | _ -> failwith "Unexpected enum parameter" : string) in let inner = Obj.magic _g in let typeHint = (_g1 : string) in let lookup = (Obj.obj (HxAnon.get services "lookupForScope") : _ -> _) scope in let cls = Obj.magic ((Obj.obj (HxAnon.get services "lookupClassForTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope lookup) in let expectedClass = ((Obj.obj (HxAnon.get services "classNameFromCppType") : _ -> _) (expectedType : string) : string) in if cls == Obj.magic (HxRuntime.hx_null) || expectedClass == Obj.magic (HxRuntime.hx_null) || (let __string_eq_left_27 = (Obj.obj (HxAnon.get services "renderedClassName") : _ -> _ -> _) (Obj.magic cls) lookup in let __string_eq_right_28 = (Obj.obj (HxAnon.get services "sanitizeTypePath") : _ -> _) ((Obj.obj (HxAnon.get services "typeBaseName") : _ -> _) (expectedClass : string) : string) in not (HxString.equals __string_eq_left_27 __string_eq_right_28)) then let __assign_29 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
       tempResult := __assign_29;
       __assign_29
     ) else let __assign_30 = Obj.magic (classBackedCastExpression (Obj.magic inner) (typeHint : string) scope services : string) in (
@@ -130,7 +141,7 @@ let classBackedCastForExpectedType = fun expr expectedType scope services -> (tr
   | HxRuntime.Hx_return __ret_32 -> (Obj.obj __ret_32 : string) : string)
 
 let wrapClassBackedValue = fun (className : string) (underlyingClass : string) (valueExpression : string) -> (try (
-  ignore (if (let __string_receiver_33 = underlyingClass in HxString.length __string_receiver_33) = 0 then raise (HxRuntime.Hx_return (Obj.repr valueExpression)) else ());
+  ignore (if (let __string_receiver_33 = underlyingClass in HxString.length __string_receiver_33) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr valueExpression)) else ());
   ((("std::make_shared<" ^ HxString.toStdString className) ^ ">(") ^ HxString.toStdString valueExpression) ^ ")"
 ) with
   | HxRuntime.Hx_return __ret_34 -> (Obj.obj __ret_34 : string) : string)

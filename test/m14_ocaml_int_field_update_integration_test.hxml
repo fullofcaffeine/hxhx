@@ -1,0 +1,12 @@
+-cp test
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp packages/reflaxe.ocaml/src
+-main M14OcamlIntFieldUpdateIntegrationTest
+--interp
+
+--next
+test/m14_ocaml_string_field_update_integration_test.hxml
+
+--next
+test/m14_ocaml_generic_values_integration_test.hxml

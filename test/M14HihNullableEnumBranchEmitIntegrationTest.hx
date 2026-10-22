@@ -57,7 +57,8 @@ class M14HihNullableEnumBranchEmitIntegrationTest {
 		File.saveContent(mainHx, src);
 
 		final parsed = ParserStage.parse(src, mainHx);
-		final typed = TyperStage.typeModule(parsed);
+		final resolved = new ResolvedModule("Main", mainHx, parsed);
+		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		final expanded = MacroStage.expandProgram([typed], []);
 		final exePath = EmitterStage.emitToDir(expanded, outDir, true);
 		assertTrue(FileSystem.exists(exePath), "Emitter did not produce executable: " + exePath);
@@ -66,6 +67,15 @@ class M14HihNullableEnumBranchEmitIntegrationTest {
 		final ocaml = File.getContent(mainMl);
 		assertTrue(ocaml.indexOf('Obj.obj (HxEnum.unbox_or_obj "HxStmt"') < 0,
 			'Nullable enum branch regression: found `Obj.obj (HxEnum.unbox_or_obj "HxStmt"` in emitted OCaml.');
+		final timeout = Sys.systemName() == "Mac" ? "gtimeout" : "timeout";
+		for (command in [["node_modules/.bin/haxe", "-cp", srcDir, "--run", "Main"], [exePath]]) {
+			final process = new sys.io.Process(timeout, ["60"].concat(command));
+			final stdout = process.stdout.readAll().toString();
+			final stderr = process.stderr.readAll().toString();
+			final code = process.exitCode();
+			process.close();
+			assertTrue(code == 0 && stdout == "true\n", "Nullable enum branch runtime mismatch: " + stdout + stderr);
+		}
 
 		deleteRecursive(tmpRoot);
 	}

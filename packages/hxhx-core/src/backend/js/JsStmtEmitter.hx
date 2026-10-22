@@ -27,6 +27,10 @@ class JsStmtEmitter {
 
 	public static function emitStmt(writer:JsWriter, stmt:HxStmt, scope:JsFunctionScope):Void {
 		switch (stmt) {
+			case SGuardedSwitch(input, enabled, plan, bodies, _):
+				JsGuardedSwitch.emit(writer, input, enabled, plan, bodies, scope);
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				writer.writeln("{");
 				writer.pushIndent();
@@ -36,7 +40,13 @@ class JsStmtEmitter {
 				writer.writeln("}");
 			case SVar(name, _typeHint, init, _):
 				final local = scope.declareLocal(name);
-				if (init != null) {
+				if (scope.isIterationCapture(name)) {
+					// Recursive functions must capture the new cell before their
+					// initializer runs, and a later assignment must update that cell.
+					writer.writeln("var " + local + " = {value: null};");
+					if (init != null)
+						writer.writeln(local + ".value = " + JsExprEmitter.emit(init, scope.exprScope()) + ";");
+				} else if (init != null) {
 					writer.writeln("var " + local + " = " + JsExprEmitter.emit(init, scope.exprScope()) + ";");
 				} else {
 					writer.writeln("var " + local + ";");
@@ -81,15 +91,21 @@ class JsStmtEmitter {
 				writer.writeln("return " + JsExprEmitter.emit(expr, scope.exprScope()) + ";");
 			case SThrow(expr, _):
 				writer.writeln("throw " + JsExprEmitter.emit(expr, scope.exprScope()) + ";");
-			case SExpr(ECall(ESuper, _), _):
-				// Stage3 does not retain class hierarchy metadata yet; keep emitted JS parseable.
-				writer.writeln("/* base constructor call omitted */");
+
 			case SBreak(_):
 				writer.writeln("break;");
 			case SContinue(_):
 				writer.writeln("continue;");
 			case SExpr(expr, _):
-				writer.writeln(JsExprEmitter.emit(expr, scope.exprScope()) + ";");
+				switch expr {
+					case ELoweredControl(ArrayAppend, _, _, _):
+						writer.writeln(JsArrayAppendSupport.emit(expr, scope.exprScope()) + ";");
+					case ELoweredControl(_, _, _, _):
+						emitStmt(writer,
+							TypedControlStatements.methodStatement(expr, scope.requireControlIdentity(), null, scope.exprScope().requireExpression), scope);
+					case _:
+						writer.writeln(JsExprEmitter.emit(expr, scope.exprScope()) + ";");
+				}
 		}
 	}
 
@@ -112,14 +128,8 @@ class JsStmtEmitter {
 		return hint;
 	}
 
-	static function simpleTypeName(fullName:String):String {
-		if (fullName == null || fullName.length == 0)
-			return "";
-		final parts = fullName.split(".");
-		return parts[parts.length - 1];
-	}
-
-	static function emitCatchCondition(typeHint:String, errRef:String):String {
+	/** Canonical projected types select actual class constructors, including their prototype ancestry. */
+	static function emitCatchCondition(typeHint:String, errRef:String, scope:JsFunctionScope):String {
 		final normalized = normalizeCatchType(typeHint);
 		if (normalized.length == 0 || normalized == "Dynamic" || normalized == "Any")
 			return "true";
@@ -136,32 +146,10 @@ class JsStmtEmitter {
 			case "Array" | "StdTypes.Array":
 				"Array.isArray(" + errRef + ")";
 			default:
-				final simple = simpleTypeName(normalized);
-				final normalizedQuoted = JsNameMangler.quoteString(normalized);
-				final simpleQuoted = JsNameMangler.quoteString(simple);
-				"("
-				+ errRef
-				+ " != null && typeof "
-				+ errRef
-				+ " === \"object\" && ("
-				+ errRef
-				+ ".__hx_name === "
-				+ normalizedQuoted
-				+ " || "
-				+ errRef
-				+ ".__hx_name === "
-				+ simpleQuoted
-				+ " || ("
-				+ errRef
-				+ ".constructor != null && ("
-				+ errRef
-				+ ".constructor.__hx_name === "
-				+ normalizedQuoted
-				+ " || "
-				+ errRef
-				+ ".constructor.__hx_name === "
-				+ simpleQuoted
-				+ "))))";
+				final reference = scope.resolveClassRef(normalized);
+				if (reference == null)
+					throw "JavaScript catch requires its resolved class owner: " + normalized;
+				"(" + errRef + " instanceof " + reference + ")";
 		}
 	}
 
@@ -179,7 +167,7 @@ class JsStmtEmitter {
 			for (i in 0...catches.length) {
 				final c = catches[i];
 				final head = i == 0 ? "if" : "else if";
-				final condition = emitCatchCondition(c.typeHint, "__hx_err");
+				final condition = emitCatchCondition(c.typeHint, "__hx_err", scope);
 				writer.writeln(head + " (" + condition + ") {");
 				writer.pushIndent();
 				final bind = scope.declareLocal(c.name);
@@ -203,9 +191,13 @@ class JsStmtEmitter {
 		switch (iterable) {
 			case ERange(start, end):
 				final local = scope.declareLocal(name);
-				writer.writeln("for (var " + local + " = " + JsExprEmitter.emit(start, scope.exprScope()) + "; " + local + " < "
-					+ JsExprEmitter.emit(end, scope.exprScope()) + "; " + local + "++) {");
+				final captured = scope.isIterationCapture(name);
+				final counter = captured ? scope.freshTemp("__index") : local;
+				writer.writeln("for (var " + counter + " = " + JsExprEmitter.emit(start, scope.exprScope()) + "; " + counter + " < "
+					+ JsExprEmitter.emit(end, scope.exprScope()) + "; " + counter + "++) {");
 				writer.pushIndent();
+				if (captured)
+					writer.writeln("var " + local + " = {value: " + counter + "};");
 				emitStmtBlockContent(writer, body, scope);
 				writer.popIndent();
 				writer.writeln("}");
@@ -216,7 +208,8 @@ class JsStmtEmitter {
 				writer.writeln("var " + sourceVar + " = " + JsExprEmitter.emit(iterable, scope.exprScope()) + ";");
 				writer.writeln("for (var " + indexVar + " = 0; " + indexVar + " < " + sourceVar + ".length; " + indexVar + "++) {");
 				writer.pushIndent();
-				writer.writeln("var " + local + " = " + sourceVar + "[" + indexVar + "];");
+				final initial = sourceVar + "[" + indexVar + "]";
+				writer.writeln("var " + local + " = " + (scope.isIterationCapture(name) ? "{value: " + initial + "}" : initial) + ";");
 				emitStmtBlockContent(writer, body, scope);
 				writer.popIndent();
 				writer.writeln("}");
@@ -225,19 +218,19 @@ class JsStmtEmitter {
 
 	static function emitForKeyValue(writer:JsWriter, keyName:String, valueName:String, iterable:HxExpr, body:HxStmt, scope:JsFunctionScope):Void {
 		final sourceVar = scope.freshTemp("__iter");
-		final keysVar = scope.freshTemp("__keys");
-		final indexVar = scope.freshTemp("__i");
 		final keyLocal = scope.declareLocal(keyName);
 		final valueLocal = scope.declareLocal(valueName);
 		writer.writeln("var " + sourceVar + " = " + JsExprEmitter.emit(iterable, scope.exprScope()) + ";");
-		writer.writeln("var " + keysVar + " = Object.keys(" + sourceVar + ");");
-		writer.writeln("for (var " + indexVar + " = 0; " + indexVar + " < " + keysVar + ".length; " + indexVar + "++) {");
-		writer.pushIndent();
-		writer.writeln("var " + keyLocal + " = " + keysVar + "[" + indexVar + "];");
-		writer.writeln("var " + valueLocal + " = " + sourceVar + "[" + keyLocal + "];");
-		emitStmtBlockContent(writer, body, scope);
-		writer.popIndent();
-		writer.writeln("}");
+		JsKeyValueIteration.emit({
+			writer: writer,
+			source: sourceVar,
+			key: keyLocal,
+			value: valueLocal,
+			keyCell: scope.isIterationCapture(keyName),
+			valueCell: scope.isIterationCapture(valueName),
+			fresh: scope.freshTemp,
+			body: () -> emitStmtBlockContent(writer, body, scope)
+		});
 	}
 
 	static function emitSwitch(writer:JsWriter, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>, scope:JsFunctionScope):Void {
@@ -249,13 +242,13 @@ class JsStmtEmitter {
 		for (i in 0...count) {
 			final pattern = patterns[i];
 			final body = bodies[i];
-			final lowered = JsSwitchPatternLowering.lower(pattern, scrutineeVar);
+			final lowered = JsSwitchPatternLowering.lower(pattern, scrutineeVar, scope.exprScope());
 			final head = isFirst ? "if" : "else if";
 			writer.writeln(head + " (" + lowered.cond + ") {");
 			writer.pushIndent();
 			for (binding in lowered.bindings) {
 				final bind = scope.declareLocal(binding.name);
-				writer.writeln("var " + bind + " = " + binding.expr + ";");
+				writer.writeln("var " + bind + " = " + (scope.isIterationCapture(binding.name) ? "{value: " + binding.expr + "}" : binding.expr) + ";");
 			}
 			emitStmtBlockContent(writer, body, scope);
 			writer.popIndent();

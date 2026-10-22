@@ -5,7 +5,7 @@ import reflaxe.ocaml.target.OcamlTargetFunctionFact.OcamlTargetFunctionRole;
 import reflaxe.ocaml.target.OcamlTargetFunctionFact.OcamlTargetFunctionSignature;
 
 /**
-	Copies static zero-argument Void functions into the shared target contract.
+	Copies static functions and instance-method bodies with exact value types.
 
 	The body may contain the same locals, reads, and lexical blocks as the stock
 	Haxe adapter. Missing or unsupported facts reject the whole function; this
@@ -21,21 +21,41 @@ class HxhxOcamlTargetFunctionAdapter {
 			|| declaration.getModulePath() != owner.getModulePath())
 			return null;
 		final signature = declaration.getSignature();
-		if (!signature.getIsStatic() || signature.getArgs().length != 0 || signature.getReturnType().getCanonicalDisplay() != "Void")
+		final returnType = signature.getReturnType().getCanonicalDisplay();
+		if (signature.getName() == "new"
+			|| !OcamlTargetFunctionFact.admitsResult(returnType)
+			|| declaration.getTypeParameterIds().length != 0
+			|| fn.getDefaults().length != 0)
 			return null;
+		final argumentTypes = [for (type in signature.getArgs()) type.getCanonicalDisplay()];
+		for (index in 0...argumentTypes.length)
+			if (!OcamlTargetFunctionFact.admitsValue(argumentTypes[index])
+				|| signature.getArgOptional()[index]
+				|| signature.getArgRest()[index])
+				return null;
 		fn.assertParsedBodyCurrent();
 		final targetSignature:OcamlTargetFunctionSignature = {
 			moduleId: owner.getModulePath(),
 			sourceTypeName: owner.getShortName(),
 			sourceFunctionName: signature.getName(),
-			role: OcamlTargetFunctionRole.StaticFunction,
-			argumentTypeDisplays: [],
-			returnTypeDisplay: "Void"
+			role: signature.getIsStatic() ? OcamlTargetFunctionRole.StaticFunction : OcamlTargetFunctionRole.InstanceMethod,
+			argumentTypeDisplays: argumentTypes,
+			returnTypeDisplay: returnType
 		};
-		final body = HxhxOcamlTargetExpressionAdapter.fromFunctionBody(OcamlTargetFunctionFact.identityFor(targetSignature), fn.getStableIdentity(),
-			fn.getBody(), owner);
-		if (body == null || body.semanticTypeDisplay != "Void")
+		final identity = OcamlTargetFunctionFact.identityFor(targetSignature);
+		final nativeParameters = [
+			for (parameter in TypedBodySource.functionProjection(fn).getParameters())
+				parameter.getBinding()
+		];
+		final parameters = [
+			for (index in 0...nativeParameters.length)
+				HxhxOcamlTargetBindingAdapter.fromBinding(identity, nativeParameters[index],
+					reflaxe.ocaml.target.OcamlTargetExpressionPath.indexed("root", "parameter", index))
+		];
+		final body = HxhxOcamlTargetExpressionAdapter.fromFunctionBody(identity, fn.getStableIdentity(), fn.getBody(), owner, nativeParameters, parameters,
+			returnType);
+		if (body == null || !body.admitsFunctionResult(returnType))
 			return null;
-		return new OcamlTargetFunctionFact(targetSignature, body);
+		return new OcamlTargetFunctionFact(targetSignature, body, parameters);
 	}
 }

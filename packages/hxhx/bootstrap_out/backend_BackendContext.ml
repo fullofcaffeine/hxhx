@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable outputDir : string; mutable outputFileHint
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun outputDir2 outputFileHint2 mainModule2 emitFullBodies2 buildExecutable2 defines2 resources2 nativeLibraryPaths2 -> let self = ({ __hx_type = HxType.class_ "backend.BackendContext"; outputDir = HxString.hx_null_string; outputFileHint = Obj.magic HxRuntime.hx_null; mainModule = HxString.hx_null_string; emitFullBodies = false; buildExecutable = false; defines = Obj.magic HxRuntime.hx_null; resources = Obj.magic HxRuntime.hx_null; nativeLibraryPaths = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun outputDir2 outputFileHint2 mainModule2 emitFullBodies2 buildExecutable2 defines2 resources2 nativeLibraryPaths2 -> let self = ({ __hx_type = HxType.instance_marker "backend.BackendContext"; outputDir = HxString.hx_null_string; outputFileHint = Obj.magic HxRuntime.hx_null; mainModule = HxString.hx_null_string; emitFullBodies = false; buildExecutable = false; defines = Obj.magic HxRuntime.hx_null; resources = Obj.magic HxRuntime.hx_null; nativeLibraryPaths = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (outputDir2 : string) in (
       (Obj.magic self : t).outputDir <- __assign_1;
@@ -37,40 +37,40 @@ let create = fun outputDir2 outputFileHint2 mainModule2 emitFullBodies2 buildExe
         __place_rhs_9
       ));
       let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : string HxMap.string_map) in (
-        ignore (if defines2 == Obj.magic (HxRuntime.hx_null) then let __assign_10 = Obj.magic (HxMap.create_string ()) in (
-          tempRight1 := __assign_10;
-          __assign_10
-        ) else let __assign_11 = Obj.magic defines2 in (
-          tempRight1 := __assign_11;
-          __assign_11
-        ));
-        ignore (let __assign_12 = Obj.magic (!tempRight1) in (
-          (Obj.magic self : t).defines <- __assign_12;
+        ignore (if let __map_eq_left_10 = defines2 in let __map_eq_right_11 = Obj.magic (HxRuntime.hx_null) in Obj.repr __map_eq_left_10 == Obj.repr __map_eq_right_11 then let __assign_12 = Obj.magic (HxMap.create_string ()) in (
+          tempRight1 := __assign_12;
           __assign_12
+        ) else let __assign_13 = Obj.magic defines2 in (
+          tempRight1 := __assign_13;
+          __assign_13
+        ));
+        ignore (let __assign_14 = Obj.magic (!tempRight1) in (
+          (Obj.magic self : t).defines <- __assign_14;
+          __assign_14
         ));
         let tempRight2 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
-          ignore (if resources2 == Obj.magic (HxRuntime.hx_null) then let __assign_13 = Obj.magic (let __arr_14 = HxArray.create () in __arr_14) in (
-            tempRight2 := __assign_13;
-            __assign_13
-          ) else let __assign_15 = Obj.magic resources2 in (
+          ignore (if resources2 == Obj.magic (HxRuntime.hx_null) then let __assign_15 = Obj.magic (let __arr_16 = HxArray.create () in __arr_16) in (
             tempRight2 := __assign_15;
             __assign_15
+          ) else let __assign_17 = Obj.magic resources2 in (
+            tempRight2 := __assign_17;
+            __assign_17
           ));
-          ignore (let __assign_16 = Obj.magic (!tempRight2) in (
-            (Obj.magic self : t).resources <- __assign_16;
-            __assign_16
+          ignore (let __assign_18 = Obj.magic (!tempRight2) in (
+            (Obj.magic self : t).resources <- __assign_18;
+            __assign_18
           ));
           let tempRight3 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-            ignore (if nativeLibraryPaths2 == Obj.magic (HxRuntime.hx_null) then let __assign_17 = Obj.magic (let __represented_array_18 = HxArray.create () in __represented_array_18) in (
-              tempRight3 := __assign_17;
-              __assign_17
-            ) else let __assign_19 = Obj.magic nativeLibraryPaths2 in (
+            ignore (if nativeLibraryPaths2 == Obj.magic (HxRuntime.hx_null) then let __assign_19 = Obj.magic (let __represented_array_20 = HxArray.create () in __represented_array_20) in (
               tempRight3 := __assign_19;
               __assign_19
+            ) else let __assign_21 = Obj.magic nativeLibraryPaths2 in (
+              tempRight3 := __assign_21;
+              __assign_21
             ));
-            let __assign_20 = Obj.magic (!tempRight3) in (
-              (Obj.magic self : t).nativeLibraryPaths <- __assign_20;
-              __assign_20
+            let __assign_22 = Obj.magic (!tempRight3) in (
+              (Obj.magic self : t).nativeLibraryPaths <- __assign_22;
+              __assign_22
             )
           )
         )
@@ -80,24 +80,24 @@ let create = fun outputDir2 outputFileHint2 mainModule2 emitFullBodies2 buildExe
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.BackendContext"; outputDir = HxString.hx_null_string; outputFileHint = Obj.magic HxRuntime.hx_null; mainModule = HxString.hx_null_string; emitFullBodies = false; buildExecutable = false; defines = Obj.magic HxRuntime.hx_null; resources = Obj.magic HxRuntime.hx_null; nativeLibraryPaths = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.BackendContext"; outputDir = HxString.hx_null_string; outputFileHint = Obj.magic HxRuntime.hx_null; mainModule = HxString.hx_null_string; emitFullBodies = false; buildExecutable = false; defines = Obj.magic HxRuntime.hx_null; resources = Obj.magic HxRuntime.hx_null; nativeLibraryPaths = Obj.magic HxRuntime.hx_null } : t)
 
 let hasDefine = fun self (name : string) -> let tempShortCircuit = ref (false : bool) in (
-  ignore (if name != HxString.hx_null_string && (let __string_receiver_21 = name in HxString.length __string_receiver_21) > 0 then let _this = Obj.magic ((Obj.magic self : t).defines) in let __assign_22 = HxMap.exists_string (Obj.magic _this) (name : string) in (
-    tempShortCircuit := __assign_22;
-    __assign_22
-  ) else let __assign_23 = false in (
-    tempShortCircuit := __assign_23;
-    __assign_23
+  ignore (if name != HxString.hx_null_string && (let __string_receiver_23 = name in HxString.length __string_receiver_23) > 0 then let _this = Obj.magic ((Obj.magic self : t).defines) in let __assign_24 = HxMap.exists_string (Obj.magic _this) (name : string) in (
+    tempShortCircuit := __assign_24;
+    __assign_24
+  ) else let __assign_25 = false in (
+    tempShortCircuit := __assign_25;
+    __assign_25
   ));
   !tempShortCircuit
 )
 
 let defineValue = fun self (name : string) -> (try (
-  ignore (if name == HxString.hx_null_string || (let __string_receiver_24 = name in HxString.length __string_receiver_24) = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if name == HxString.hx_null_string || (let __string_receiver_26 = name in HxString.length __string_receiver_26) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let _this = Obj.magic ((Obj.magic self : t).defines) in let tempResult = (HxMap.get_string (Obj.magic _this) (name : string) : string) in tempResult
 ) with
-  | HxRuntime.Hx_return __ret_25 -> (Obj.obj __ret_25 : string) : string)
+  | HxRuntime.Hx_return __ret_27 -> (Obj.obj __ret_27 : string) : string)
 
 let ensureOcamlProfileDefine = fun self () -> let profile = (Backend_OcamlProfile.fromDefineValue (defineValue (Obj.magic self) ("ocaml_profile" : string) : string) : string) in let _this = Obj.magic ((Obj.magic self : t).defines) in (
   ignore (HxMap.set_string (Obj.magic _this) ("ocaml_profile" : string) profile);

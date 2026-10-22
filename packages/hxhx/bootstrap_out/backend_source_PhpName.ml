@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.PhpName" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.source.PhpName" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpName" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.PhpName" } : t)
 
 let globalFunction = fun (name : string) -> (let __call_arg_0_9 = name in Backend_source_SourceIdentifier.sanitize __call_arg_0_9 : string)
 
@@ -82,18 +82,18 @@ let typeIdentifier = fun (name : string) -> (let clean = let __call_arg_0_1 = na
 ) : string)
 
 let rec typePath = fun (path : string) -> (try (
-  ignore (if path == HxString.hx_null_string || (let __string_receiver_10 = path in HxString.length __string_receiver_10) = 0 then raise (HxRuntime.Hx_return (Obj.repr "Unknown")) else ());
-  ignore (if let __call_arg_0_11 = path in let __call_arg_1_12 = "std." in StringTools.startsWith __call_arg_0_11 __call_arg_1_12 then raise (HxRuntime.Hx_return (Obj.repr (let __call_arg_0_13 = let __string_receiver_14 = path in let __string_argument_0_15 = 4 in HxString.substr __string_receiver_14 __string_argument_0_15 (-1) in typePath __call_arg_0_13))) else ());
-  ignore (if let __string_eq_left_16 = path in let __string_eq_right_17 = "haxe.io.Error" in HxString.equals __string_eq_left_16 __string_eq_right_17 then raise (HxRuntime.Hx_return (Obj.repr (let __call_arg_0_18 = "Error" in typeIdentifier __call_arg_0_18))) else ());
+  ignore (if path == HxString.hx_null_string || (let __string_receiver_10 = path in HxString.length __string_receiver_10) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "Unknown")) else ());
+  ignore (if let __call_arg_0_11 = path in let __call_arg_1_12 = "std." in StringTools.startsWith __call_arg_0_11 __call_arg_1_12 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_arg_0_13 = let __string_receiver_14 = path in let __string_argument_0_15 = 4 in HxString.substr __string_receiver_14 __string_argument_0_15 (-1) in typePath __call_arg_0_13))) else ());
+  ignore (if let __string_eq_left_16 = path in let __string_eq_right_17 = "haxe.io.Error" in HxString.equals __string_eq_left_16 __string_eq_right_17 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_arg_0_18 = "Error" in typeIdentifier __call_arg_0_18))) else ());
   ignore (if (let __call_arg_0_19 = path in let __call_arg_1_20 = "php." in StringTools.startsWith __call_arg_0_19 __call_arg_1_20) || (let __call_arg_0_21 = path in let __call_arg_1_22 = "haxe." in StringTools.startsWith __call_arg_0_21 __call_arg_1_22) then let _g = Obj.magic (let __represented_array_23 = HxArray.create () in __represented_array_23) in let _g1 = ref 0 in let _g2 = Obj.magic (let __string_receiver_24 = path in let __string_argument_0_25 = "." in HxString.split __string_receiver_24 __string_argument_0_25) in (
     ignore (while !_g1 < HxArray.length _g2 do ignore (let part = (let __array_read_receiver_26 = _g2 in let __array_read_index_27 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_26) __array_read_index_27 : string) in (
       ignore (let __old_28 = !_g1 in let __new_29 = HxInt.add __old_28 1 in (
         ignore (_g1 := __new_29);
         __new_29
       ));
-      let __array_receiver_30 = _g in let __array_arg_0_31 = let __call_arg_0_32 = part in typeIdentifier __call_arg_0_32 in HxArray.push __array_receiver_30 __array_arg_0_31
+      let __array_receiver_30 = Obj.magic _g in let __array_arg_0_31 = (let __call_arg_0_32 = part in typeIdentifier __call_arg_0_32 : string) in HxArray.push __array_receiver_30 __array_arg_0_31
     )) done);
-    let tempArray = Obj.magic _g in raise (HxRuntime.Hx_return (Obj.repr (HxArray.join tempArray "\\" (fun x -> x))))
+    let tempArray = Obj.magic _g in Stdlib.raise (HxRuntime.Hx_return (Obj.repr (HxArray.join tempArray "\\" (fun x -> x))))
   ) else ());
   let parts = Obj.magic (let __string_receiver_33 = path in let __string_argument_0_34 = "." in HxString.split __string_receiver_33 __string_argument_0_34) in let __call_arg_0_35 = let __array_read_receiver_36 = parts in let __array_read_index_37 = HxInt.sub (HxArray.length parts) 1 in HxArray.get (Obj.magic __array_read_receiver_36) __array_read_index_37 in typeIdentifier __call_arg_0_35
 ) with

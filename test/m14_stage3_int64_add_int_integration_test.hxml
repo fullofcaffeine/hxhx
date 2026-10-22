@@ -1,5 +1,14 @@
 -cp test
 -cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
 
 -main M14Stage3Int64AddIntIntegrationTest
+--interp
+
+--next
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp packages/hxhx/src
+-cp test
+-main M14Stage3Int64WordAccessorsTest
 --interp

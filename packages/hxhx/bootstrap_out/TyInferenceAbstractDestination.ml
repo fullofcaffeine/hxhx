@@ -1,0 +1,2 @@
+# 1 "TyInferenceAbstractDestination.ml"
+include CompilerDiagnosticProbe.TyInferenceAbstractDestination

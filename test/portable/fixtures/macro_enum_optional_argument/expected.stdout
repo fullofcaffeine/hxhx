@@ -1,0 +1,6 @@
+constant=safe
+normal=normal
+explicit=null
+omitted=null
+alias=safe
+produced=safe:calls=1

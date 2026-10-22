@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable canonicalKey : string }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun canonicalKey2 -> let self = ({ __hx_type = HxType.class_ "TyDeclarationId"; canonicalKey = HxString.hx_null_string } : t) in (
+let create = fun canonicalKey2 -> let self = ({ __hx_type = HxType.instance_marker "TyDeclarationId"; canonicalKey = HxString.hx_null_string } : t) in (
   ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
     ignore (if canonicalKey2 == HxString.hx_null_string then let __assign_1 = ("" : string) in (
       tempRight := __assign_1;
@@ -23,7 +23,7 @@ let create = fun canonicalKey2 -> let self = ({ __hx_type = HxType.class_ "TyDec
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyDeclarationId"; canonicalKey = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyDeclarationId"; canonicalKey = HxString.hx_null_string } : t)
 
 let getCanonicalKey = fun self () -> ((self : t).canonicalKey : string)
 

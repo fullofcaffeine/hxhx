@@ -1,0 +1,2 @@
+test/m14_call_method_conversion_test.hxml
+-D call_conversion_native

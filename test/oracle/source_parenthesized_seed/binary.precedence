@@ -1,0 +1,20 @@
+left in middle = right
+left = middle in right
+left => middle = right
+left = middle => right
+left in middle => right
+left => middle in right
+left in middle in right
+left => middle => right
+left in middle + right
+left + middle in right
+left => middle + right
+left + middle => right
+left in middle || right
+left || middle in right
+left => middle ?? right
+left ?? middle => right
+left in flag ? yes : no
+flag ? yes : no in right
+left => flag ? yes : no
+flag ? yes : no => right

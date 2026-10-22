@@ -10,6 +10,8 @@
    - Values are stored as `Obj.t` so we can support generic `'v` maps.
    - For ObjectMap we use physical equality (`==`) to approximate Haxe object
      identity semantics.
+   - Managed keys hash their allocation stamp. Opaque keys share one bucket;
+     their mutable contents never affect lookup, but operations can be linear.
    - `get` returns a "null-like" value when the key is missing. This matches
      Haxe's `Null<T>` behavior where `get` returns null for missing keys.
 *)
@@ -22,7 +24,7 @@ type 'v int_map = (int, Obj.t) Hashtbl.t
 module ObjKey = struct
   type t = Obj.t
   let equal (a : t) (b : t) : bool = a == b
-  let hash (x : t) : int = Hashtbl.hash x
+  let hash (x : t) : int = HxRuntime.identity_hash x
 end
 
 module ObjTbl = Hashtbl.Make (ObjKey)

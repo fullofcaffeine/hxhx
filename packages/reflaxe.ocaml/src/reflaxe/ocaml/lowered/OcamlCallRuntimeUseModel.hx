@@ -1,6 +1,7 @@
 package reflaxe.ocaml.lowered;
 
 #if (macro || reflaxe_runtime)
+import reflaxe.ocaml.lowered.OcamlGenericInstanceCallContract.runtimeHelpers as genericCallRuntimeHelpers;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallCarrierConversion;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallDecision;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallResultMaterialization;
@@ -75,11 +76,13 @@ class OcamlCallRuntimeUseContract {
 		therefore cannot accidentally acquire a broad runtime permission.
 	**/
 	public static function forCall(call:OcamlCallDecision):Null<OcamlCallRuntimeUsePlan> {
+		final genericHelpers = call.genericInstanceTarget == null ? [] : genericCallRuntimeHelpers(call.genericInstanceTarget);
 		final boxedBoolArguments = call.arguments.filter(argument -> argument.conversion == OcamlCallCarrierConversion.BoxExactBoolToDynamic);
 		final standardArrayTarget = call.standardArrayTarget;
 		final dynamicFunctionTarget = call.dynamicFunctionTarget;
 		final materializesUntypedVoidResult = call.resultMaterialization == OcamlCallResultMaterialization.UntypedVoidAsDynamicNull;
-		if (boxedBoolArguments.length == 0 && standardArrayTarget == null && dynamicFunctionTarget == null && !materializesUntypedVoidResult)
+		if (boxedBoolArguments.length == 0 && standardArrayTarget == null && dynamicFunctionTarget == null && !materializesUntypedVoidResult
+			&& genericHelpers.length == 0)
 			return null;
 		OcamlCallPlan.requireCall(call);
 		final binding:OcamlFunctionPlanBinding = {
@@ -91,6 +94,27 @@ class OcamlCallRuntimeUseContract {
 		final planRevision = OcamlRuntimeUseModel.planRevision(binding);
 		final requirementIds:Array<String> = [];
 		final occurrences:Array<OcamlRuntimeUseOccurrence> = [];
+		for (helper in genericHelpers) {
+			final requirement = '${call.id}:runtime:$HAXE_BOOL_CARRIER_CAPABILITY:${helper.role}';
+			requirementIds.push(requirement);
+			occurrences.push({
+				id: '${call.id}:runtime-use:${helper.role}',
+				planRevision: planRevision,
+				ownerId: call.id,
+				requirementId: requirement,
+				domain: OcamlRuntimeUseDomain.ExpressionIdentifier,
+				exactSymbol: helper.symbol,
+				role: helper.role,
+				order: occurrences.length,
+				source: {
+					file: call.source.file,
+					min: call.source.min,
+					max: call.source.max
+				},
+				profileEligibility: call.profileEligibility.copy(),
+				cardinality: 1
+			});
+		}
 		if (dynamicFunctionTarget != null) {
 			final roles = ["dynamic-call-argument-array-create"];
 			for (index in 0...dynamicFunctionTarget.argumentSemanticTypeIds.length)

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable locals : Obj.t HxArray.t; mutable typeHint
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun projection normalizeName initializerCatalog -> let self = ({ __hx_type = HxType.class_ "backend.source.PhpFunctionLocalFacts"; locals = Obj.magic HxRuntime.hx_null; typeHints = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun projection normalizeName initializerCatalog -> let self = ({ __hx_type = HxType.instance_marker "backend.source.PhpFunctionLocalFacts"; locals = Obj.magic HxRuntime.hx_null; typeHints = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if projection == Obj.magic (HxRuntime.hx_null) && initializerCatalog == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "PHP local facts require an exact typed executable projection") ["Dynamic"] else ());
     ignore (if projection != Obj.magic (HxRuntime.hx_null) && initializerCatalog != Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "PHP local facts cannot combine function and field-initializer catalogs") ["Dynamic"] else ());
@@ -71,7 +71,7 @@ let create = fun projection normalizeName initializerCatalog -> let self = ({ __
                       ));
                       if (let __string_eq_left_25 = Obj.obj (HxAnon.get fact "targetName") in let __string_eq_right_26 = targetName in HxString.equals __string_eq_left_25 __string_eq_right_26) && (let __string_eq_left_27 = Obj.obj (HxAnon.get fact "bindingIdentity") in let __string_eq_right_28 = TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic binding) ())) () in not (HxString.equals __string_eq_left_27 __string_eq_right_28)) then HxType.hx_throw_typed_rtti (Obj.repr ("PHP local facts contain conflicting exact locals for target name " ^ HxString.toStdString targetName)) ["Dynamic"] else ()
                     )) done);
-                    ignore (let __array_receiver_29 = (Obj.magic self : t).locals in let __array_arg_0_30 = let __anon_31 = HxAnon.create () in (
+                    ignore (let __array_receiver_29 = Obj.magic ((Obj.magic self : t).locals) in let __array_arg_0_30 = let __anon_31 = HxAnon.create () in (
                       ignore (HxAnon.set __anon_31 "projectedName" (Obj.repr projectedName));
                       ignore (HxAnon.set __anon_31 "targetName" (Obj.repr targetName));
                       ignore (HxAnon.set __anon_31 "bindingIdentity" (Obj.repr (TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic binding) ())) ())));
@@ -88,7 +88,7 @@ let create = fun projection normalizeName initializerCatalog -> let self = ({ __
               )
             )
           )) done);
-          let __array_receiver_32 = (Obj.magic self : t).locals in let __array_arg_0_33 = fun left right -> let __reflect_arg_0_34 = Obj.obj (HxAnon.get left "bindingIdentity") in let __reflect_arg_1_35 = Obj.obj (HxAnon.get right "bindingIdentity") in (fun (__reflect_left_36 : string) (__reflect_right_37 : string) -> let __reflect_left_null_38 = HxString.isNull __reflect_left_36 in let __reflect_right_null_39 = HxString.isNull __reflect_right_37 in if __reflect_left_null_38 && __reflect_right_null_39 then 0 else if __reflect_left_null_38 || __reflect_right_null_39 then HxRuntime.hx_throw (Obj.repr "reflaxe.ocaml [ocaml-reflect-compare:null-mismatch]") else if __reflect_left_36 < __reflect_right_37 then -1 else if __reflect_left_36 > __reflect_right_37 then 1 else 0) __reflect_arg_0_34 __reflect_arg_1_35 in HxArray.sort __array_receiver_32 __array_arg_0_33
+          let __array_receiver_32 = Obj.magic ((Obj.magic self : t).locals) in let __array_arg_0_33 = fun left right -> let __reflect_arg_0_34 = Obj.obj (HxAnon.get left "bindingIdentity") in let __reflect_arg_1_35 = Obj.obj (HxAnon.get right "bindingIdentity") in (fun (__reflect_left_36 : string) (__reflect_right_37 : string) -> let __reflect_left_null_38 = HxString.isNull __reflect_left_36 in let __reflect_right_null_39 = HxString.isNull __reflect_right_37 in if __reflect_left_null_38 && __reflect_right_null_39 then 0 else if __reflect_left_null_38 || __reflect_right_null_39 then HxRuntime.hx_throw (Obj.repr "reflaxe.ocaml [ocaml-reflect-compare:null-mismatch]") else if __reflect_left_36 < __reflect_right_37 then -1 else if __reflect_left_36 > __reflect_right_37 then 1 else 0) __reflect_arg_0_34 __reflect_arg_1_35 in HxArray.sort __array_receiver_32 __array_arg_0_33
         )
       )
     )
@@ -96,10 +96,10 @@ let create = fun projection normalizeName initializerCatalog -> let self = ({ __
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpFunctionLocalFacts"; locals = Obj.magic HxRuntime.hx_null; typeHints = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.PhpFunctionLocalFacts"; locals = Obj.magic HxRuntime.hx_null; typeHints = Obj.magic HxRuntime.hx_null } : t)
 
 let copyTypeHints = fun self () -> let copy = Obj.magic (HxMap.create_string ()) in let _this = Obj.magic ((Obj.magic self : t).typeHints) in let tempKeyValueIterator = HxIterator.of_array (Obj.magic (HxMap.pairs_string (Obj.magic _this))) in let _g = tempKeyValueIterator in (
-  ignore (while let __iterator_receiver_47 = _g in HxIterator.hasNext __iterator_receiver_47 do ignore (let _g2 = let __iterator_receiver_48 = _g in HxIterator.next __iterator_receiver_48 in let name = (let __structural_receiver_49 = _g2 in Obj.obj (HxAnon.get __structural_receiver_49 "key") : string) in let typeHint = (let __structural_receiver_50 = _g2 in Obj.obj (HxAnon.get __structural_receiver_50 "value") : string) in HxMap.set_string (Obj.magic copy) (name : string) typeHint) done);
+  ignore (while let __iterator_receiver_47 = _g in HxIterator.hasNext __iterator_receiver_47 do ignore (let _g2 = let __iterator_receiver_48 = _g in HxIterator.next __iterator_receiver_48 in let name = (let __structural_receiver_49 = _g2 in Stdlib.fst __structural_receiver_49 : string) in let typeHint = (let __structural_receiver_50 = _g2 in Stdlib.snd __structural_receiver_50 : string) in HxMap.set_string (Obj.magic copy) (name : string) typeHint) done);
   copy
 )
 
@@ -123,7 +123,7 @@ let copyLocals = fun self () -> let _g = Obj.magic (let __arr_40 = HxArray.creat
       ignore (_g1 := __new_44);
       __new_44
     ));
-    let __array_receiver_45 = _g in let __array_arg_0_46 = copyLocal fact in HxArray.push __array_receiver_45 __array_arg_0_46
+    let __array_receiver_45 = Obj.magic _g in let __array_arg_0_46 = copyLocal fact in HxArray.push __array_receiver_45 __array_arg_0_46
   )) done);
   _g
 )

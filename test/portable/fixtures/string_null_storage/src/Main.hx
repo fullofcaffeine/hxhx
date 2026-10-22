@@ -1,3 +1,4 @@
+/** Separate allocation defaults from the String initializers run by ordinary construction. */
 class StringState {
 	public var omitted:String;
 	public var empty:String = "";
@@ -6,6 +7,7 @@ class StringState {
 	public function new() {}
 }
 
+/** Compare exact String storage with upstream behavior, including construction without initializers. */
 class Main {
 	static var omitted:String;
 	static var empty:String = "";
@@ -25,6 +27,9 @@ class Main {
 
 	static function main():Void {
 		final state = new StringState();
+		final emptyState = Type.createEmptyInstance(StringState);
+		if (emptyState.omitted != null || emptyState.empty != null || emptyState.explicitNull != null)
+			throw "empty String allocation ran authored initializers";
 		var local:String;
 		local = "local";
 		var readableBeforeWrite:String = null;

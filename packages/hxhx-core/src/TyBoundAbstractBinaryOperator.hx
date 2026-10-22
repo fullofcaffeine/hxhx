@@ -17,12 +17,13 @@ class TyBoundAbstractBinaryOperator {
 	final operatorInfo:TyAbstractBinaryOperatorInfo;
 	final reverseArguments:Bool;
 	final requiresWriteback:Bool;
-	final sourceLeftConversion:TyImplicitConversionPlan;
-	final sourceRightConversion:TyImplicitConversionPlan;
-	final resultConversion:Null<TyImplicitConversionPlan>;
+	final sourceLeftConversion:TyAbstractBinaryConversion;
+	final sourceRightConversion:TyAbstractBinaryConversion;
+	final resultConversion:Null<TyAbstractBinaryConversion>;
 
 	public function new(sourceOperator:String, operatorInfo:TyAbstractBinaryOperatorInfo, reverseArguments:Bool, requiresWriteback:Bool,
-			sourceLeftConversion:TyImplicitConversionPlan, sourceRightConversion:TyImplicitConversionPlan, resultConversion:Null<TyImplicitConversionPlan>) {
+			sourceLeftConversion:TyAbstractBinaryConversion, sourceRightConversion:TyAbstractBinaryConversion,
+			resultConversion:Null<TyAbstractBinaryConversion>) {
 		this.sourceOperator = sourceOperator;
 		this.operatorInfo = operatorInfo;
 		this.reverseArguments = reverseArguments;
@@ -44,13 +45,13 @@ class TyBoundAbstractBinaryOperator {
 	public function getRequiresWriteback():Bool
 		return requiresWriteback;
 
-	public function getSourceLeftConversion():TyImplicitConversionPlan
+	public function getSourceLeftConversion():TyAbstractBinaryConversion
 		return sourceLeftConversion;
 
-	public function getSourceRightConversion():TyImplicitConversionPlan
+	public function getSourceRightConversion():TyAbstractBinaryConversion
 		return sourceRightConversion;
 
-	public function getResultConversion():Null<TyImplicitConversionPlan>
+	public function getResultConversion():Null<TyAbstractBinaryConversion>
 		return resultConversion;
 
 	public function getSourceLeftParameterType():TyType

@@ -3,6 +3,7 @@ package hxhx;
 import backend.BackendRegistry;
 import backend.IBackend;
 import backend.TargetDescriptor;
+import backend.cpp.CppNativeCallPolicy.forBackend;
 import hxhx.runtime.NullableRuntimeString;
 
 typedef Stage3BackendSelection = {
@@ -10,6 +11,7 @@ typedef Stage3BackendSelection = {
 	final descriptor:TargetDescriptor;
 	final supportsCustomOutputFile:Bool;
 	final supportsBuildExecutable:Bool;
+	final retainNativeCall:Null<TyDeclarationInfo->Bool>;
 }
 
 /**
@@ -238,6 +240,7 @@ class Stage3BackendPluginSupport {
 		return {
 			backend: backend,
 			descriptor: selected,
+			retainNativeCall: forBackend(selected),
 			supportsCustomOutputFile: backendCaps.supportsCustomOutputFile == true,
 			supportsBuildExecutable: backendCaps.supportsBuildExecutable == true
 		};

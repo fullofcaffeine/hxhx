@@ -6,9 +6,9 @@ type t = { __hx_type : Obj.t; mutable inputs : CompilerMacroFileDependencyInput.
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerMacroFileDependencyObservation"; inputs = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerMacroFileDependencyObservation"; inputs = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
 
-let getInputs = fun self () -> let __array_receiver_31 = (Obj.magic self : t).inputs in HxArray.copy __array_receiver_31
+let getInputs = fun self () -> let __array_receiver_31 = Obj.magic ((Obj.magic self : t).inputs) in HxArray.copy __array_receiver_31
 
 let getCanonicalIdentity = fun self () -> (Obj.magic self : t).canonicalIdentity
 
@@ -26,17 +26,17 @@ let compareInputs = fun left right -> let leftKey = (CompilerMacroFileDependency
   !tempResult
 )
 
-let create = fun inputs2 -> let self = ({ __hx_type = HxType.class_ "CompilerMacroFileDependencyObservation"; inputs = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun inputs2 -> let self = ({ __hx_type = HxType.instance_marker "CompilerMacroFileDependencyObservation"; inputs = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore (let tempArray = ref (Obj.magic (HxRuntime.hx_null) : CompilerMacroFileDependencyInput.t HxArray.t) in (
     ignore (if inputs2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       tempArray := __assign_1;
       __assign_1
-    ) else let __assign_3 = Obj.magic (let __array_receiver_4 = inputs2 in HxArray.copy __array_receiver_4) in (
+    ) else let __assign_3 = Obj.magic (let __array_receiver_4 = Obj.magic inputs2 in HxArray.copy __array_receiver_4) in (
       tempArray := __assign_3;
       __assign_3
     ));
     let sorted = Obj.magic (!tempArray) in (
-      ignore (let __array_receiver_5 = sorted in let __array_arg_0_6 = compareInputs in HxArray.sort __array_receiver_5 __array_arg_0_6);
+      ignore (let __array_receiver_5 = Obj.magic sorted in let __array_arg_0_6 = compareInputs in HxArray.sort __array_receiver_5 __array_arg_0_6);
       ignore (let __assign_7 = Obj.magic (let __arr_8 = HxArray.create () in __arr_8) in (
         (Obj.magic self : t).inputs <- __assign_7;
         __assign_7
@@ -50,9 +50,9 @@ let create = fun inputs2 -> let self = ({ __hx_type = HxType.class_ "CompilerMac
           ignore (if input == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "macro file dependency observation contains a null input") ["Dynamic"] else ());
           ignore (if !previous != Obj.magic (HxRuntime.hx_null) && (let __string_eq_left_13 = CompilerMacroFileDependencyInput.getPathIdentityRevision (Obj.magic (!previous)) () in let __string_eq_right_14 = CompilerMacroFileDependencyInput.getPathIdentityRevision (Obj.magic input) () in HxString.equals __string_eq_left_13 __string_eq_right_14) then ignore ((
             ignore (if let __string_eq_left_15 = CompilerMacroFileDependencyInput.getCanonicalIdentity (Obj.magic (!previous)) () in let __string_eq_right_16 = CompilerMacroFileDependencyInput.getCanonicalIdentity (Obj.magic input) () in not (HxString.equals __string_eq_left_15 __string_eq_right_16) then HxType.hx_throw_typed_rtti (Obj.repr "macro file dependency observation contains conflicting observations for one path identity") ["Dynamic"] else ());
-            raise (HxRuntime.Hx_continue)
+            Stdlib.raise (HxRuntime.Hx_continue)
           )) else ());
-          ignore (let __array_receiver_17 = (Obj.magic self : t).inputs in let __array_arg_0_18 = input in HxArray.push __array_receiver_17 __array_arg_0_18);
+          ignore (let __array_receiver_17 = Obj.magic ((Obj.magic self : t).inputs) in let __array_arg_0_18 = Obj.magic input in HxArray.push __array_receiver_17 __array_arg_0_18);
           let __assign_19 = Obj.magic (Obj.magic input) in (
             previous := __assign_19;
             __assign_19
@@ -60,15 +60,15 @@ let create = fun inputs2 -> let self = ({ __hx_type = HxType.class_ "CompilerMac
         )) with
           | HxRuntime.Hx_continue -> () done);
         let values = Obj.magic (HxArray.create ()) in (
-          ignore (let __array_receiver_20 = values in let __array_arg_0_21 = "macro-file-dependency-observation-v1" in HxArray.push __array_receiver_20 __array_arg_0_21);
-          ignore (let __array_receiver_22 = values in let __array_arg_0_23 = string_of_int (HxArray.length ((Obj.magic self : t).inputs)) in HxArray.push __array_receiver_22 __array_arg_0_23);
+          ignore (let __array_receiver_20 = Obj.magic values in let __array_arg_0_21 = ("macro-file-dependency-observation-v1" : string) in HxArray.push __array_receiver_20 __array_arg_0_21);
+          ignore (let __array_receiver_22 = Obj.magic values in let __array_arg_0_23 = (string_of_int (HxArray.length ((Obj.magic self : t).inputs)) : string) in HxArray.push __array_receiver_22 __array_arg_0_23);
           let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).inputs) in (
             ignore (while !_g < HxArray.length _g1 do ignore (let input = Obj.magic (let __array_read_receiver_24 = _g1 in let __array_read_index_25 = !_g in HxArray.get (Obj.magic __array_read_receiver_24) __array_read_index_25) in (
               ignore (let __old_26 = !_g in let __new_27 = HxInt.add __old_26 1 in (
                 ignore (_g := __new_27);
                 __new_27
               ));
-              let __array_receiver_28 = values in let __array_arg_0_29 = CompilerMacroFileDependencyInput.getCanonicalIdentity (Obj.magic input) () in HxArray.push __array_receiver_28 __array_arg_0_29
+              let __array_receiver_28 = Obj.magic values in let __array_arg_0_29 = (CompilerMacroFileDependencyInput.getCanonicalIdentity (Obj.magic input) () : string) in HxArray.push __array_receiver_28 __array_arg_0_29
             )) done);
             let __assign_30 = (CompilerCacheIdentity.encode (Obj.magic values) : string) in (
               (Obj.magic self : t).canonicalIdentity <- __assign_30;

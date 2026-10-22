@@ -4,6 +4,7 @@ import backend.ocaml.OcamlTargetCore;
 import haxe.io.Path;
 import sys.FileSystem;
 
+/** Metal admission must retain reflection exclusions after exact typed call selection. */
 class M14MetalProfileVerifierIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
@@ -61,6 +62,7 @@ class M14MetalProfileVerifierIntegrationTest {
 	}
 
 	static function main():Void {
+		assertSelectedReflectionCalls();
 		final passingSource = [
 			"class Main {",
 			"  static function main() {",
@@ -117,5 +119,42 @@ class M14MetalProfileVerifierIntegrationTest {
 		assertContains(dynamicFailureMessage, "[dynamic_type_hint]", "verifier should report dynamic type hints");
 		assertContains(dynamicFailureMessage, "construct: argument `value` type", "verifier should report argument type construct");
 		assertContains(dynamicFailureMessage, "replace `Dynamic` with a concrete type", "verifier should include migration guidance for dynamic types");
+	}
+
+	/** Aliases and nested calls use real declaration identities; an ordinary method named field is not reflection. */
+	static function assertSelectedReflectionCalls():Void {
+		final source = 'import Reflect as Mirror;
+class Main { static function main():Void {
+Mirror.hasField(Mirror.field({nested:{value:1}}, "nested"), "value");
+Helper.field(1);
+}}
+class Helper { public static function field(value:Int):Int return value; }';
+		final resolved = new ResolvedModule("Main", "SelectedReflection.hx", ParserStage.parse(source, "SelectedReflection.hx"));
+		final arguments = hxhx.Stage1Compiler.Stage1Args.parse(["-main", "Main"], true);
+		final paths = hxhx.Stage3SetupSupport.projectClassPaths({
+			explicitPaths: [],
+			libraries: [],
+			cwd: Sys.getCwd(),
+			standardRoot: hxhx.Stage1Compiler.Stage1Args.getStandardLibraryRoot(arguments),
+			targetDefine: "ocaml"
+		});
+		final index = TyperIndex.buildHeaders([resolved]);
+		final loader = new ModuleLoader(paths, hxhx.Stage3SetupSupport.buildDefinesMap([], "ocaml", "ocaml"), index);
+		loader.markResolvedAlready([resolved]);
+		final typed = TyperStage.typeResolvedModule(resolved, index, loader, true);
+		final program = new MacroExpandedProgram([typed], false);
+		final violations = MetalProfileVerifier.collectViolationSummaries(program);
+		assertTrue(violations.length == 2, "expected exactly two selected reflection calls, without classifying Helper.field");
+		assertTrue(violations[0].code == "reflection_call" && violations[0].construct == "Reflect.hasField",
+			"selected alias lost its canonical reflection owner");
+		assertTrue(violations[1].code == "reflection_call"
+			&& violations[1].construct == "Reflect.field", "selected call traversal lost nested reflection");
+		var rejected = false;
+		try {
+			MetalProfileVerifier.verifyProgram(program);
+		} catch (error:String) {
+			rejected = error.indexOf("[reflection_call]") >= 0;
+		}
+		assertTrue(rejected, "metal verifier admitted selected reflection calls");
 	}
 }

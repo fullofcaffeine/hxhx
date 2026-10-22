@@ -1,0 +1,8 @@
+none:RKV:true
+receiver:R:receiver:false
+key:RK:key:false
+value:RKV:value:false
+integer:value
+number:2
+widening:5
+object:true:true

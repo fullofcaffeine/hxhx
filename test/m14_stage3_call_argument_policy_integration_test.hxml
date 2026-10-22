@@ -2,3 +2,30 @@
 -cp test
 -main M14Stage3CallArgumentPolicyIntegrationTest
 --interp
+
+--next
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp packages/hxhx/src
+-cp test
+-main M14Stage3FixedCallOrderTest
+--interp
+
+--next
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp packages/hxhx/src
+-cp test
+-main M14Stage3ReturnedCallOrderTest
+--interp
+
+--next
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp packages/hxhx/src
+-cp test
+-main M14Stage3DynamicArrayArgumentTest
+--interp
+
+--next
+test/m14_stage3_virtual_optional_calls_test.hxml

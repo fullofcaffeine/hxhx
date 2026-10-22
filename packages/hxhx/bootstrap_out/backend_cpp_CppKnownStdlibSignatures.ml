@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable services : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun services2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppKnownStdlibSignatures"; services = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun services2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppKnownStdlibSignatures"; services = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let __assign_1 = Obj.magic services2 in (
     (Obj.magic self : t).services <- __assign_1;
     __assign_1
@@ -14,7 +14,7 @@ let create = fun services2 -> let self = ({ __hx_type = HxType.class_ "backend.c
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppKnownStdlibSignatures"; services = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppKnownStdlibSignatures"; services = Obj.magic HxRuntime.hx_null } : t)
 
 let preludeMethodReturnType = fun self (className : string) (methodName : string) -> (try let tempString = ref (HxString.hx_null_string : string) in (
   ignore (if className == HxString.hx_null_string then let __assign_236 = ("" : string) in (
@@ -24,7 +24,7 @@ let preludeMethodReturnType = fun self (className : string) (methodName : string
     tempString := __assign_237;
     __assign_237
   ));
-  let owner = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") (!tempString : string) : string) : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
+  let owner = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") : _ -> _) ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") : _ -> _) (!tempString : string) : string) : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
     ignore (if methodName == HxString.hx_null_string then let __assign_238 = ("" : string) in (
       tempString1 := __assign_238;
       __assign_238
@@ -32,33 +32,33 @@ let preludeMethodReturnType = fun self (className : string) (methodName : string
       tempString1 := __assign_239;
       __assign_239
     ));
-    let hx_method = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeIdentifier") (!tempString1 : string) : string) in (
-      ignore (if (let __string_eq_left_240 = owner in let __string_eq_right_241 = "Timer" in HxString.equals __string_eq_left_240 __string_eq_right_241) && (let __string_eq_left_242 = hx_method in let __string_eq_right_243 = "stamp" in HxString.equals __string_eq_left_242 __string_eq_right_243) then raise (HxRuntime.Hx_return (Obj.repr "double")) else ());
-      ignore (if (let __string_eq_left_244 = owner in let __string_eq_right_245 = "Timer" in HxString.equals __string_eq_left_244 __string_eq_right_245) && (let __string_eq_left_246 = hx_method in let __string_eq_right_247 = "delay" in HxString.equals __string_eq_left_246 __string_eq_right_247) then raise (HxRuntime.Hx_return (Obj.repr "std::shared_ptr<Timer>")) else ());
-      ignore (if (let __string_eq_left_248 = owner in let __string_eq_right_249 = "Timer" in HxString.equals __string_eq_left_248 __string_eq_right_249) && (let __string_eq_left_250 = hx_method in let __string_eq_right_251 = "stop" in HxString.equals __string_eq_left_250 __string_eq_right_251) then raise (HxRuntime.Hx_return (Obj.repr "void")) else ());
-      ignore (if (let __string_eq_left_252 = owner in let __string_eq_right_253 = "Http" in HxString.equals __string_eq_left_252 __string_eq_right_253) && ((let __string_eq_left_254 = hx_method in let __string_eq_right_255 = "setPostData" in HxString.equals __string_eq_left_254 __string_eq_right_255) || (let __string_eq_left_256 = hx_method in let __string_eq_right_257 = "setPostBytes" in HxString.equals __string_eq_left_256 __string_eq_right_257) || (let __string_eq_left_258 = hx_method in let __string_eq_right_259 = "request" in HxString.equals __string_eq_left_258 __string_eq_right_259)) then raise (HxRuntime.Hx_return (Obj.repr "void")) else ());
-      ignore (if (let __string_eq_left_260 = owner in let __string_eq_right_261 = "Lock" in HxString.equals __string_eq_left_260 __string_eq_right_261) && ((let __string_eq_left_262 = hx_method in let __string_eq_right_263 = "acquire" in HxString.equals __string_eq_left_262 __string_eq_right_263) || (let __string_eq_left_264 = hx_method in let __string_eq_right_265 = "release" in HxString.equals __string_eq_left_264 __string_eq_right_265)) then raise (HxRuntime.Hx_return (Obj.repr "void")) else ());
-      ignore (if (let __string_eq_left_266 = owner in let __string_eq_right_267 = "Lock" in HxString.equals __string_eq_left_266 __string_eq_right_267) && (let __string_eq_left_268 = hx_method in let __string_eq_right_269 = "wait" in HxString.equals __string_eq_left_268 __string_eq_right_269) then raise (HxRuntime.Hx_return (Obj.repr "bool")) else ());
-      ignore (if (let __string_eq_left_270 = owner in let __string_eq_right_271 = "Mutex" in HxString.equals __string_eq_left_270 __string_eq_right_271) && ((let __string_eq_left_272 = hx_method in let __string_eq_right_273 = "acquire" in HxString.equals __string_eq_left_272 __string_eq_right_273) || (let __string_eq_left_274 = hx_method in let __string_eq_right_275 = "release" in HxString.equals __string_eq_left_274 __string_eq_right_275)) then raise (HxRuntime.Hx_return (Obj.repr "void")) else ());
-      ignore (if (let __string_eq_left_276 = owner in let __string_eq_right_277 = "Mutex" in HxString.equals __string_eq_left_276 __string_eq_right_277) && (let __string_eq_left_278 = hx_method in let __string_eq_right_279 = "tryAcquire" in HxString.equals __string_eq_left_278 __string_eq_right_279) then raise (HxRuntime.Hx_return (Obj.repr "bool")) else ());
-      ignore (if (let __string_eq_left_280 = owner in let __string_eq_right_281 = "MainLoop" in HxString.equals __string_eq_left_280 __string_eq_right_281) && (let __string_eq_left_282 = hx_method in let __string_eq_right_283 = "add" in HxString.equals __string_eq_left_282 __string_eq_right_283) then raise (HxRuntime.Hx_return (Obj.repr "std::shared_ptr<MainEvent>")) else ());
-      ignore (if (let __string_eq_left_284 = owner in let __string_eq_right_285 = "MainLoop" in HxString.equals __string_eq_left_284 __string_eq_right_285) && (let __string_eq_left_286 = hx_method in let __string_eq_right_287 = "hasEvents" in HxString.equals __string_eq_left_286 __string_eq_right_287) then raise (HxRuntime.Hx_return (Obj.repr "bool")) else ());
-      ignore (if (let __string_eq_left_288 = owner in let __string_eq_right_289 = "MainLoop" in HxString.equals __string_eq_left_288 __string_eq_right_289) && (let __string_eq_left_290 = hx_method in let __string_eq_right_291 = "tick" in HxString.equals __string_eq_left_290 __string_eq_right_291) then raise (HxRuntime.Hx_return (Obj.repr "double")) else ());
-      ignore (if (let __string_eq_left_292 = owner in let __string_eq_right_293 = "MainLoop" in HxString.equals __string_eq_left_292 __string_eq_right_293) && (let __string_eq_left_294 = hx_method in let __string_eq_right_295 = "sortEvents" in HxString.equals __string_eq_left_294 __string_eq_right_295) then raise (HxRuntime.Hx_return (Obj.repr "void")) else ());
-      ignore (if (let __string_eq_left_296 = owner in let __string_eq_right_297 = "MainEvent" in HxString.equals __string_eq_left_296 __string_eq_right_297) && ((let __string_eq_left_298 = hx_method in let __string_eq_right_299 = "delay" in HxString.equals __string_eq_left_298 __string_eq_right_299) || (let __string_eq_left_300 = hx_method in let __string_eq_right_301 = "stop" in HxString.equals __string_eq_left_300 __string_eq_right_301) || (let __string_eq_left_302 = hx_method in let __string_eq_right_303 = "wakeup" in HxString.equals __string_eq_left_302 __string_eq_right_303)) then raise (HxRuntime.Hx_return (Obj.repr "void")) else ());
-      ignore (if (let __string_eq_left_304 = owner in let __string_eq_right_305 = "EntryPoint" in HxString.equals __string_eq_left_304 __string_eq_right_305) && ((let __string_eq_left_306 = hx_method in let __string_eq_right_307 = "wakeup" in HxString.equals __string_eq_left_306 __string_eq_right_307) || (let __string_eq_left_308 = hx_method in let __string_eq_right_309 = "runInMainThread" in HxString.equals __string_eq_left_308 __string_eq_right_309) || (let __string_eq_left_310 = hx_method in let __string_eq_right_311 = "addThread" in HxString.equals __string_eq_left_310 __string_eq_right_311)) then raise (HxRuntime.Hx_return (Obj.repr "void")) else ());
-      ignore (if (let __string_eq_left_312 = owner in let __string_eq_right_313 = "EntryPoint" in HxString.equals __string_eq_left_312 __string_eq_right_313) && (let __string_eq_left_314 = hx_method in let __string_eq_right_315 = "processEvents" in HxString.equals __string_eq_left_314 __string_eq_right_315) then raise (HxRuntime.Hx_return (Obj.repr "double")) else ());
+    let hx_method = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeIdentifier") : _ -> _) (!tempString1 : string) : string) in (
+      ignore (if (let __string_eq_left_240 = owner in let __string_eq_right_241 = "Timer" in HxString.equals __string_eq_left_240 __string_eq_right_241) && (let __string_eq_left_242 = hx_method in let __string_eq_right_243 = "stamp" in HxString.equals __string_eq_left_242 __string_eq_right_243) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "double")) else ());
+      ignore (if (let __string_eq_left_244 = owner in let __string_eq_right_245 = "Timer" in HxString.equals __string_eq_left_244 __string_eq_right_245) && (let __string_eq_left_246 = hx_method in let __string_eq_right_247 = "delay" in HxString.equals __string_eq_left_246 __string_eq_right_247) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "std::shared_ptr<Timer>")) else ());
+      ignore (if (let __string_eq_left_248 = owner in let __string_eq_right_249 = "Timer" in HxString.equals __string_eq_left_248 __string_eq_right_249) && (let __string_eq_left_250 = hx_method in let __string_eq_right_251 = "stop" in HxString.equals __string_eq_left_250 __string_eq_right_251) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "void")) else ());
+      ignore (if (let __string_eq_left_252 = owner in let __string_eq_right_253 = "Http" in HxString.equals __string_eq_left_252 __string_eq_right_253) && ((let __string_eq_left_254 = hx_method in let __string_eq_right_255 = "setPostData" in HxString.equals __string_eq_left_254 __string_eq_right_255) || (let __string_eq_left_256 = hx_method in let __string_eq_right_257 = "setPostBytes" in HxString.equals __string_eq_left_256 __string_eq_right_257) || (let __string_eq_left_258 = hx_method in let __string_eq_right_259 = "request" in HxString.equals __string_eq_left_258 __string_eq_right_259)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "void")) else ());
+      ignore (if (let __string_eq_left_260 = owner in let __string_eq_right_261 = "Lock" in HxString.equals __string_eq_left_260 __string_eq_right_261) && ((let __string_eq_left_262 = hx_method in let __string_eq_right_263 = "acquire" in HxString.equals __string_eq_left_262 __string_eq_right_263) || (let __string_eq_left_264 = hx_method in let __string_eq_right_265 = "release" in HxString.equals __string_eq_left_264 __string_eq_right_265)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "void")) else ());
+      ignore (if (let __string_eq_left_266 = owner in let __string_eq_right_267 = "Lock" in HxString.equals __string_eq_left_266 __string_eq_right_267) && (let __string_eq_left_268 = hx_method in let __string_eq_right_269 = "wait" in HxString.equals __string_eq_left_268 __string_eq_right_269) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "bool")) else ());
+      ignore (if (let __string_eq_left_270 = owner in let __string_eq_right_271 = "Mutex" in HxString.equals __string_eq_left_270 __string_eq_right_271) && ((let __string_eq_left_272 = hx_method in let __string_eq_right_273 = "acquire" in HxString.equals __string_eq_left_272 __string_eq_right_273) || (let __string_eq_left_274 = hx_method in let __string_eq_right_275 = "release" in HxString.equals __string_eq_left_274 __string_eq_right_275)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "void")) else ());
+      ignore (if (let __string_eq_left_276 = owner in let __string_eq_right_277 = "Mutex" in HxString.equals __string_eq_left_276 __string_eq_right_277) && (let __string_eq_left_278 = hx_method in let __string_eq_right_279 = "tryAcquire" in HxString.equals __string_eq_left_278 __string_eq_right_279) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "bool")) else ());
+      ignore (if (let __string_eq_left_280 = owner in let __string_eq_right_281 = "MainLoop" in HxString.equals __string_eq_left_280 __string_eq_right_281) && (let __string_eq_left_282 = hx_method in let __string_eq_right_283 = "add" in HxString.equals __string_eq_left_282 __string_eq_right_283) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "std::shared_ptr<MainEvent>")) else ());
+      ignore (if (let __string_eq_left_284 = owner in let __string_eq_right_285 = "MainLoop" in HxString.equals __string_eq_left_284 __string_eq_right_285) && (let __string_eq_left_286 = hx_method in let __string_eq_right_287 = "hasEvents" in HxString.equals __string_eq_left_286 __string_eq_right_287) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "bool")) else ());
+      ignore (if (let __string_eq_left_288 = owner in let __string_eq_right_289 = "MainLoop" in HxString.equals __string_eq_left_288 __string_eq_right_289) && (let __string_eq_left_290 = hx_method in let __string_eq_right_291 = "tick" in HxString.equals __string_eq_left_290 __string_eq_right_291) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "double")) else ());
+      ignore (if (let __string_eq_left_292 = owner in let __string_eq_right_293 = "MainLoop" in HxString.equals __string_eq_left_292 __string_eq_right_293) && (let __string_eq_left_294 = hx_method in let __string_eq_right_295 = "sortEvents" in HxString.equals __string_eq_left_294 __string_eq_right_295) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "void")) else ());
+      ignore (if (let __string_eq_left_296 = owner in let __string_eq_right_297 = "MainEvent" in HxString.equals __string_eq_left_296 __string_eq_right_297) && ((let __string_eq_left_298 = hx_method in let __string_eq_right_299 = "delay" in HxString.equals __string_eq_left_298 __string_eq_right_299) || (let __string_eq_left_300 = hx_method in let __string_eq_right_301 = "stop" in HxString.equals __string_eq_left_300 __string_eq_right_301) || (let __string_eq_left_302 = hx_method in let __string_eq_right_303 = "wakeup" in HxString.equals __string_eq_left_302 __string_eq_right_303)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "void")) else ());
+      ignore (if (let __string_eq_left_304 = owner in let __string_eq_right_305 = "EntryPoint" in HxString.equals __string_eq_left_304 __string_eq_right_305) && ((let __string_eq_left_306 = hx_method in let __string_eq_right_307 = "wakeup" in HxString.equals __string_eq_left_306 __string_eq_right_307) || (let __string_eq_left_308 = hx_method in let __string_eq_right_309 = "runInMainThread" in HxString.equals __string_eq_left_308 __string_eq_right_309) || (let __string_eq_left_310 = hx_method in let __string_eq_right_311 = "addThread" in HxString.equals __string_eq_left_310 __string_eq_right_311)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "void")) else ());
+      ignore (if (let __string_eq_left_312 = owner in let __string_eq_right_313 = "EntryPoint" in HxString.equals __string_eq_left_312 __string_eq_right_313) && (let __string_eq_left_314 = hx_method in let __string_eq_right_315 = "processEvents" in HxString.equals __string_eq_left_314 __string_eq_right_315) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "double")) else ());
       ""
     )
   )
 ) with
   | HxRuntime.Hx_return __ret_316 -> (Obj.obj __ret_316 : string) : string)
 
-let concreteClassReferenceCppType = fun self (typeHint : string) (scope : Obj.t) (classLookup : Obj.t) -> let lookup = Obj.obj (HxAnon.get ((Obj.magic self : t).services) "lookupForScope") scope classLookup in let cls = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "lookupClassForTypeHint") (typeHint : string) scope lookup) in let tempString = ref (HxString.hx_null_string : string) in (
-  ignore (if cls == Obj.magic (HxRuntime.hx_null) then let __assign_317 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") (typeHint : string) : string) : string) in (
+let concreteClassReferenceCppType = fun self (typeHint : string) (scope : Obj.t) (classLookup : Obj.t) -> let lookup = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "lookupForScope") : _ -> _ -> _) scope classLookup in let cls = Obj.magic ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "lookupClassForTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope lookup) in let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if cls == Obj.magic (HxRuntime.hx_null) then let __assign_317 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") : _ -> _) ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") : _ -> _) (typeHint : string) : string) : string) in (
     tempString := __assign_317;
     __assign_317
-  ) else let __assign_318 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "renderedClassName") (Obj.magic cls) lookup : string) in (
+  ) else let __assign_318 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "renderedClassName") : _ -> _ -> _) (Obj.magic cls) lookup : string) in (
     tempString := __assign_318;
     __assign_318
   ));
@@ -73,7 +73,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
     tempString := __assign_3;
     __assign_3
   ));
-  let owner = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") (!tempString : string) : string) : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
+  let owner = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") : _ -> _) ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") : _ -> _) (!tempString : string) : string) : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
     ignore (if methodName == HxString.hx_null_string then let __assign_4 = ("" : string) in (
       tempString1 := __assign_4;
       __assign_4
@@ -81,11 +81,11 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
       tempString1 := __assign_5;
       __assign_5
     ));
-    let hx_method = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeIdentifier") (!tempString1 : string) : string) in let preludeReturn = (preludeMethodReturnType (Obj.magic self) (owner : string) (hx_method : string) : string) in (
-      ignore (if (let __string_receiver_6 = preludeReturn in HxString.length __string_receiver_6) > 0 then raise (HxRuntime.Hx_return (Obj.repr preludeReturn)) else ());
-      ignore (if Obj.obj (HxAnon.get ((Obj.magic self : t).services) "isStringIteratorHelper") (owner : string) then ignore ((
-        ignore (if (let __string_eq_left_7 = owner in let __string_eq_right_8 = "StringIteratorUnicode" in HxString.equals __string_eq_left_7 __string_eq_right_8) && (let __string_eq_left_9 = hx_method in let __string_eq_right_10 = "unicodeIterator" in HxString.equals __string_eq_left_9 __string_eq_right_10) || (let __string_eq_left_11 = owner in let __string_eq_right_12 = "StringKeyValueIteratorUnicode" in HxString.equals __string_eq_left_11 __string_eq_right_12) && (let __string_eq_left_13 = hx_method in let __string_eq_right_14 = "unicodeKeyValueIterator" in HxString.equals __string_eq_left_13 __string_eq_right_14) then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") (owner : string) scope classLookup))) else ());
-        ignore (if let __string_eq_left_15 = hx_method in let __string_eq_right_16 = "hasNext" in HxString.equals __string_eq_left_15 __string_eq_right_16 then raise (HxRuntime.Hx_return (Obj.repr "bool")) else ());
+    let hx_method = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeIdentifier") : _ -> _) (!tempString1 : string) : string) in let preludeReturn = (preludeMethodReturnType (Obj.magic self) (owner : string) (hx_method : string) : string) in (
+      ignore (if (let __string_receiver_6 = preludeReturn in HxString.length __string_receiver_6) > 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr preludeReturn)) else ());
+      ignore (if (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "isStringIteratorHelper") : _ -> _) (owner : string) then ignore ((
+        ignore (if (let __string_eq_left_7 = owner in let __string_eq_right_8 = "StringIteratorUnicode" in HxString.equals __string_eq_left_7 __string_eq_right_8) && (let __string_eq_left_9 = hx_method in let __string_eq_right_10 = "unicodeIterator" in HxString.equals __string_eq_left_9 __string_eq_right_10) || (let __string_eq_left_11 = owner in let __string_eq_right_12 = "StringKeyValueIteratorUnicode" in HxString.equals __string_eq_left_11 __string_eq_right_12) && (let __string_eq_left_13 = hx_method in let __string_eq_right_14 = "unicodeKeyValueIterator" in HxString.equals __string_eq_left_13 __string_eq_right_14) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) (owner : string) scope classLookup))) else ());
+        ignore (if let __string_eq_left_15 = hx_method in let __string_eq_right_16 = "hasNext" in HxString.equals __string_eq_left_15 __string_eq_right_16 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "bool")) else ());
         if let __string_eq_left_17 = hx_method in let __string_eq_right_18 = "next" in HxString.equals __string_eq_left_17 __string_eq_right_18 then let tempResult = ref (HxString.hx_null_string : string) in (
           ignore (if (let __string_eq_left_19 = owner in let __string_eq_right_20 = "StringIterator" in HxString.equals __string_eq_left_19 __string_eq_right_20) || (let __string_eq_left_21 = owner in let __string_eq_right_22 = "StringIteratorUnicode" in HxString.equals __string_eq_left_21 __string_eq_right_22) then let __assign_23 = "int" in (
             tempResult := __assign_23;
@@ -94,10 +94,10 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
             tempResult := __assign_24;
             __assign_24
           ));
-          raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
         ) else ()
       )) else ());
-      ignore (if let __string_eq_left_25 = owner in let __string_eq_right_26 = "BalancedTree" in HxString.equals __string_eq_left_25 __string_eq_right_26 then let treeNode = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("TreeNode<K,V>" : string) scope classLookup : string) in let tempResult1 = ref (HxString.hx_null_string : string) in (
+      ignore (if let __string_eq_left_25 = owner in let __string_eq_right_26 = "BalancedTree" in HxString.equals __string_eq_left_25 __string_eq_right_26 then let treeNode = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("TreeNode<K,V>" : string) scope classLookup : string) in let tempResult1 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
           | "balance" | "merge" | "minBinding" | "removeLoop" | "removeMinBinding" | "setLoop" -> let __assign_33 = (treeNode : string) in (
             tempResult1 := __assign_33;
@@ -115,7 +115,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               tempString2 := __assign_28;
               __assign_28
             ));
-            if (let __string_receiver_29 = let __call_arg_0_30 = !tempString2 in StringTools.trim __call_arg_0_30 in HxString.length __string_receiver_29) > 0 then let __assign_31 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+            if (let __string_receiver_29 = let __call_arg_0_30 = !tempString2 in StringTools.trim __call_arg_0_30 in HxString.length __string_receiver_29) > 0 then let __assign_31 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope classLookup : string) in (
               tempResult1 := __assign_31;
               __assign_31
             ) else let __assign_32 = ("" : string) in (
@@ -123,19 +123,19 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               __assign_32
             )
           ));
-        raise (HxRuntime.Hx_return (Obj.repr (!tempResult1)))
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult1)))
       ) else ());
       ignore (if let __string_eq_left_35 = owner in let __string_eq_right_36 = "Template" in HxString.equals __string_eq_left_35 __string_eq_right_36 then let tempResult2 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "parse" | "parseBlock" -> let __assign_43 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("TemplateExpr" : string) scope classLookup : string) in (
+          | "parse" | "parseBlock" -> let __assign_43 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("TemplateExpr" : string) scope classLookup : string) in (
             tempResult2 := __assign_43;
             __assign_43
           )
-          | "parseExpr" -> let __assign_44 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Void->Dynamic" : string) scope classLookup : string) in (
+          | "parseExpr" -> let __assign_44 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Void->Dynamic" : string) scope classLookup : string) in (
             tempResult2 := __assign_44;
             __assign_44
           )
-          | "parseTokens" -> let __assign_45 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("List<Token>" : string) scope classLookup : string) in (
+          | "parseTokens" -> let __assign_45 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("List<Token>" : string) scope classLookup : string) in (
             tempResult2 := __assign_45;
             __assign_45
           )
@@ -147,7 +147,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               tempString3 := __assign_38;
               __assign_38
             ));
-            if (let __string_receiver_39 = let __call_arg_0_40 = !tempString3 in StringTools.trim __call_arg_0_40 in HxString.length __string_receiver_39) > 0 then let __assign_41 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+            if (let __string_receiver_39 = let __call_arg_0_40 = !tempString3 in StringTools.trim __call_arg_0_40 in HxString.length __string_receiver_39) > 0 then let __assign_41 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope classLookup : string) in (
               tempResult2 := __assign_41;
               __assign_41
             ) else let __assign_42 = ("" : string) in (
@@ -155,7 +155,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               __assign_42
             )
           ));
-        raise (HxRuntime.Hx_return (Obj.repr (!tempResult2)))
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult2)))
       ) else ());
       ignore (if let __string_eq_left_46 = owner in let __string_eq_right_47 = "Bytes" in HxString.equals __string_eq_left_46 __string_eq_right_47 then let tempResult3 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
@@ -195,7 +195,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               tempString4 := __assign_49;
               __assign_49
             ));
-            if (let __string_receiver_50 = let __call_arg_0_51 = !tempString4 in StringTools.trim __call_arg_0_51 in HxString.length __string_receiver_50) > 0 then let __assign_52 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+            if (let __string_receiver_50 = let __call_arg_0_51 = !tempString4 in StringTools.trim __call_arg_0_51 in HxString.length __string_receiver_50) > 0 then let __assign_52 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope classLookup : string) in (
               tempResult3 := __assign_52;
               __assign_52
             ) else let __assign_53 = ("" : string) in (
@@ -203,7 +203,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               __assign_53
             )
           ));
-        raise (HxRuntime.Hx_return (Obj.repr (!tempResult3)))
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult3)))
       ) else ());
       ignore (if let __string_eq_left_61 = owner in let __string_eq_right_62 = "BytesBuffer" in HxString.equals __string_eq_left_61 __string_eq_right_62 then let tempResult4 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
@@ -211,7 +211,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
             tempResult4 := __assign_69;
             __assign_69
           )
-          | "getBytes" -> let __assign_70 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in (
+          | "getBytes" -> let __assign_70 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Bytes" : string) scope classLookup : string) in (
             tempResult4 := __assign_70;
             __assign_70
           )
@@ -227,7 +227,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               tempString5 := __assign_64;
               __assign_64
             ));
-            if (let __string_receiver_65 = let __call_arg_0_66 = !tempString5 in StringTools.trim __call_arg_0_66 in HxString.length __string_receiver_65) > 0 then let __assign_67 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+            if (let __string_receiver_65 = let __call_arg_0_66 = !tempString5 in StringTools.trim __call_arg_0_66 in HxString.length __string_receiver_65) > 0 then let __assign_67 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope classLookup : string) in (
               tempResult4 := __assign_67;
               __assign_67
             ) else let __assign_68 = ("" : string) in (
@@ -235,11 +235,11 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               __assign_68
             )
           ));
-        raise (HxRuntime.Hx_return (Obj.repr (!tempResult4)))
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult4)))
       ) else ());
       ignore (if let __string_eq_left_72 = owner in let __string_eq_right_73 = "Input" in HxString.equals __string_eq_left_72 __string_eq_right_73 then let tempResult5 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "read" | "readAll" -> let __assign_80 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in (
+          | "read" | "readAll" -> let __assign_80 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Bytes" : string) scope classLookup : string) in (
             tempResult5 := __assign_80;
             __assign_80
           )
@@ -271,7 +271,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               tempString6 := __assign_75;
               __assign_75
             ));
-            if (let __string_receiver_76 = let __call_arg_0_77 = !tempString6 in StringTools.trim __call_arg_0_77 in HxString.length __string_receiver_76) > 0 then let __assign_78 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+            if (let __string_receiver_76 = let __call_arg_0_77 = !tempString6 in StringTools.trim __call_arg_0_77 in HxString.length __string_receiver_76) > 0 then let __assign_78 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope classLookup : string) in (
               tempResult5 := __assign_78;
               __assign_78
             ) else let __assign_79 = ("" : string) in (
@@ -279,7 +279,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               __assign_79
             )
           ));
-        raise (HxRuntime.Hx_return (Obj.repr (!tempResult5)))
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult5)))
       ) else ());
       ignore (if let __string_eq_left_86 = owner in let __string_eq_right_87 = "Output" in HxString.equals __string_eq_left_86 __string_eq_right_87 then let tempResult6 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
@@ -303,7 +303,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               tempString7 := __assign_89;
               __assign_89
             ));
-            if (let __string_receiver_90 = let __call_arg_0_91 = !tempString7 in StringTools.trim __call_arg_0_91 in HxString.length __string_receiver_90) > 0 then let __assign_92 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+            if (let __string_receiver_90 = let __call_arg_0_91 = !tempString7 in StringTools.trim __call_arg_0_91 in HxString.length __string_receiver_90) > 0 then let __assign_92 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope classLookup : string) in (
               tempResult6 := __assign_92;
               __assign_92
             ) else let __assign_93 = ("" : string) in (
@@ -311,9 +311,9 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               __assign_93
             )
           ));
-        raise (HxRuntime.Hx_return (Obj.repr (!tempResult6)))
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult6)))
       ) else ());
-      ignore (if Obj.obj (HxAnon.get ((Obj.magic self : t).services) "isTypeResolverHelper") (owner : string) then let tempResult7 = ref (HxString.hx_null_string : string) in (
+      ignore (if (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "isTypeResolverHelper") : _ -> _) (owner : string) then let tempResult7 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
           | "resolveClass" -> let __assign_103 = ("std::shared_ptr<Class>" : string) in (
             tempResult7 := __assign_103;
@@ -331,7 +331,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               tempString8 := __assign_98;
               __assign_98
             ));
-            if (let __string_receiver_99 = let __call_arg_0_100 = !tempString8 in StringTools.trim __call_arg_0_100 in HxString.length __string_receiver_99) > 0 then let __assign_101 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+            if (let __string_receiver_99 = let __call_arg_0_100 = !tempString8 in StringTools.trim __call_arg_0_100 in HxString.length __string_receiver_99) > 0 then let __assign_101 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope classLookup : string) in (
               tempResult7 := __assign_101;
               __assign_101
             ) else let __assign_102 = ("" : string) in (
@@ -339,7 +339,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               __assign_102
             )
           ));
-        raise (HxRuntime.Hx_return (Obj.repr (!tempResult7)))
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult7)))
       ) else ());
       ignore (if let __string_eq_left_105 = owner in let __string_eq_right_106 = "BaseCode" in HxString.equals __string_eq_left_105 __string_eq_right_106 then let tempResult8 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
@@ -347,7 +347,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
             tempResult8 := __assign_113;
             __assign_113
           )
-          | "decodeBytes" | "encodeBytes" -> let __assign_114 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in (
+          | "decodeBytes" | "encodeBytes" -> let __assign_114 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Bytes" : string) scope classLookup : string) in (
             tempResult8 := __assign_114;
             __assign_114
           )
@@ -363,7 +363,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               tempString9 := __assign_108;
               __assign_108
             ));
-            if (let __string_receiver_109 = let __call_arg_0_110 = !tempString9 in StringTools.trim __call_arg_0_110 in HxString.length __string_receiver_109) > 0 then let __assign_111 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+            if (let __string_receiver_109 = let __call_arg_0_110 = !tempString9 in StringTools.trim __call_arg_0_110 in HxString.length __string_receiver_109) > 0 then let __assign_111 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope classLookup : string) in (
               tempResult8 := __assign_111;
               __assign_111
             ) else let __assign_112 = ("" : string) in (
@@ -371,11 +371,11 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               __assign_112
             )
           ));
-        raise (HxRuntime.Hx_return (Obj.repr (!tempResult8)))
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult8)))
       ) else ());
       ignore (if let __string_eq_left_116 = owner in let __string_eq_right_117 = "Base64" in HxString.equals __string_eq_left_116 __string_eq_right_117 then let tempResult9 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "decode" | "urlDecode" -> let __assign_124 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in (
+          | "decode" | "urlDecode" -> let __assign_124 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Bytes" : string) scope classLookup : string) in (
             tempResult9 := __assign_124;
             __assign_124
           )
@@ -391,7 +391,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               tempString10 := __assign_119;
               __assign_119
             ));
-            if (let __string_receiver_120 = let __call_arg_0_121 = !tempString10 in StringTools.trim __call_arg_0_121 in HxString.length __string_receiver_120) > 0 then let __assign_122 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+            if (let __string_receiver_120 = let __call_arg_0_121 = !tempString10 in StringTools.trim __call_arg_0_121 in HxString.length __string_receiver_120) > 0 then let __assign_122 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope classLookup : string) in (
               tempResult9 := __assign_122;
               __assign_122
             ) else let __assign_123 = ("" : string) in (
@@ -399,7 +399,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               __assign_123
             )
           ));
-        raise (HxRuntime.Hx_return (Obj.repr (!tempResult9)))
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult9)))
       ) else ());
       ignore (if let __string_eq_left_126 = owner in let __string_eq_right_127 = "Resource" in HxString.equals __string_eq_left_126 __string_eq_right_127 then let tempResult10 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
@@ -407,7 +407,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
             tempResult10 := __assign_134;
             __assign_134
           )
-          | "getBytes" -> let __assign_135 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in (
+          | "getBytes" -> let __assign_135 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Bytes" : string) scope classLookup : string) in (
             tempResult10 := __assign_135;
             __assign_135
           )
@@ -415,7 +415,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
             tempResult10 := __assign_136;
             __assign_136
           )
-          | "listNames" -> let __assign_137 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Array<String>" : string) scope classLookup : string) in (
+          | "listNames" -> let __assign_137 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Array<String>" : string) scope classLookup : string) in (
             tempResult10 := __assign_137;
             __assign_137
           )
@@ -427,7 +427,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               tempString11 := __assign_129;
               __assign_129
             ));
-            if (let __string_receiver_130 = let __call_arg_0_131 = !tempString11 in StringTools.trim __call_arg_0_131 in HxString.length __string_receiver_130) > 0 then let __assign_132 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+            if (let __string_receiver_130 = let __call_arg_0_131 = !tempString11 in StringTools.trim __call_arg_0_131 in HxString.length __string_receiver_130) > 0 then let __assign_132 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope classLookup : string) in (
               tempResult10 := __assign_132;
               __assign_132
             ) else let __assign_133 = ("" : string) in (
@@ -435,7 +435,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               __assign_133
             )
           ));
-        raise (HxRuntime.Hx_return (Obj.repr (!tempResult10)))
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult10)))
       ) else ());
       ignore (if let __string_eq_left_138 = owner in let __string_eq_right_139 = "Json" in HxString.equals __string_eq_left_138 __string_eq_right_139 then let tempResult11 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
@@ -455,7 +455,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               tempString12 := __assign_141;
               __assign_141
             ));
-            if (let __string_receiver_142 = let __call_arg_0_143 = !tempString12 in StringTools.trim __call_arg_0_143 in HxString.length __string_receiver_142) > 0 then let __assign_144 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+            if (let __string_receiver_142 = let __call_arg_0_143 = !tempString12 in StringTools.trim __call_arg_0_143 in HxString.length __string_receiver_142) > 0 then let __assign_144 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope classLookup : string) in (
               tempResult11 := __assign_144;
               __assign_144
             ) else let __assign_145 = ("" : string) in (
@@ -463,7 +463,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               __assign_145
             )
           ));
-        raise (HxRuntime.Hx_return (Obj.repr (!tempResult11)))
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult11)))
       ) else ());
       ignore (if let __string_eq_left_148 = owner in let __string_eq_right_149 = "JsonParser" in HxString.equals __string_eq_left_148 __string_eq_right_149 then let tempResult12 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
@@ -491,7 +491,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               tempString13 := __assign_151;
               __assign_151
             ));
-            if (let __string_receiver_152 = let __call_arg_0_153 = !tempString13 in StringTools.trim __call_arg_0_153 in HxString.length __string_receiver_152) > 0 then let __assign_154 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+            if (let __string_receiver_152 = let __call_arg_0_153 = !tempString13 in StringTools.trim __call_arg_0_153 in HxString.length __string_receiver_152) > 0 then let __assign_154 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope classLookup : string) in (
               tempResult12 := __assign_154;
               __assign_154
             ) else let __assign_155 = ("" : string) in (
@@ -499,7 +499,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               __assign_155
             )
           ));
-        raise (HxRuntime.Hx_return (Obj.repr (!tempResult12)))
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult12)))
       ) else ());
       ignore (if let __string_eq_left_160 = owner in let __string_eq_right_161 = "JsonPrinter" in HxString.equals __string_eq_left_160 __string_eq_right_161 then let tempResult13 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
@@ -519,7 +519,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               tempString14 := __assign_163;
               __assign_163
             ));
-            if (let __string_receiver_164 = let __call_arg_0_165 = !tempString14 in StringTools.trim __call_arg_0_165 in HxString.length __string_receiver_164) > 0 then let __assign_166 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+            if (let __string_receiver_164 = let __call_arg_0_165 = !tempString14 in StringTools.trim __call_arg_0_165 in HxString.length __string_receiver_164) > 0 then let __assign_166 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope classLookup : string) in (
               tempResult13 := __assign_166;
               __assign_166
             ) else let __assign_167 = ("" : string) in (
@@ -527,7 +527,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               __assign_167
             )
           ));
-        raise (HxRuntime.Hx_return (Obj.repr (!tempResult13)))
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult13)))
       ) else ());
       ignore (if let __string_eq_left_170 = owner in let __string_eq_right_171 = "Unserializer" in HxString.equals __string_eq_left_170 __string_eq_right_171 then let tempResult14 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
@@ -555,7 +555,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               tempString15 := __assign_173;
               __assign_173
             ));
-            if (let __string_receiver_174 = let __call_arg_0_175 = !tempString15 in StringTools.trim __call_arg_0_175 in HxString.length __string_receiver_174) > 0 then let __assign_176 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+            if (let __string_receiver_174 = let __call_arg_0_175 = !tempString15 in StringTools.trim __call_arg_0_175 in HxString.length __string_receiver_174) > 0 then let __assign_176 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope classLookup : string) in (
               tempResult14 := __assign_176;
               __assign_176
             ) else let __assign_177 = ("" : string) in (
@@ -563,10 +563,10 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               __assign_177
             )
           ));
-        raise (HxRuntime.Hx_return (Obj.repr (!tempResult14)))
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult14)))
       ) else ());
-      ignore (if (let __string_eq_left_182 = owner in let __string_eq_right_183 = "Parser" in HxString.equals __string_eq_left_182 __string_eq_right_183) && Obj.obj (HxAnon.get ((Obj.magic self : t).services) "isXmlParserSupportClass") (className : string) scope classLookup then let tempResult15 = ref (HxString.hx_null_string : string) in (
-        ignore (if let __string_eq_left_184 = hx_method in let __string_eq_right_185 = "parse" in HxString.equals __string_eq_left_184 __string_eq_right_185 then let __assign_186 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Xml" : string) scope classLookup : string) in (
+      ignore (if (let __string_eq_left_182 = owner in let __string_eq_right_183 = "Parser" in HxString.equals __string_eq_left_182 __string_eq_right_183) && (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "isXmlParserSupportClass") : _ -> _ -> _ -> _) (className : string) scope classLookup then let tempResult15 = ref (HxString.hx_null_string : string) in (
+        ignore (if let __string_eq_left_184 = hx_method in let __string_eq_right_185 = "parse" in HxString.equals __string_eq_left_184 __string_eq_right_185 then let __assign_186 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Xml" : string) scope classLookup : string) in (
           tempResult15 := __assign_186;
           __assign_186
         ) else let tempString16 = ref (HxString.hx_null_string : string) in (
@@ -577,7 +577,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
             tempString16 := __assign_188;
             __assign_188
           ));
-          if (let __string_receiver_189 = let __call_arg_0_190 = !tempString16 in StringTools.trim __call_arg_0_190 in HxString.length __string_receiver_189) > 0 then let __assign_191 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+          if (let __string_receiver_189 = let __call_arg_0_190 = !tempString16 in StringTools.trim __call_arg_0_190 in HxString.length __string_receiver_189) > 0 then let __assign_191 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope classLookup : string) in (
             tempResult15 := __assign_191;
             __assign_191
           ) else let __assign_192 = ("" : string) in (
@@ -585,15 +585,15 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
             __assign_192
           )
         ));
-        raise (HxRuntime.Hx_return (Obj.repr (!tempResult15)))
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult15)))
       ) else ());
       ignore (if let __string_eq_left_193 = owner in let __string_eq_right_194 = "Xml" in HxString.equals __string_eq_left_193 __string_eq_right_194 then let tempResult16 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
-          | "attributes" -> let __assign_201 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Iterator<String>" : string) scope classLookup : string) in (
+          | "attributes" -> let __assign_201 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Iterator<String>" : string) scope classLookup : string) in (
             tempResult16 := __assign_201;
             __assign_201
           )
-          | "elements" | "elementsNamed" | "iterator" -> let __assign_202 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Iterator<Xml>" : string) scope classLookup : string) in (
+          | "elements" | "elementsNamed" | "iterator" -> let __assign_202 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Iterator<Xml>" : string) scope classLookup : string) in (
             tempResult16 := __assign_202;
             __assign_202
           )
@@ -601,7 +601,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
             tempResult16 := __assign_203;
             __assign_203
           )
-          | "createCData" | "createComment" | "createDocType" | "createDocument" | "createElement" | "createPCData" | "createProcessingInstruction" | "firstChild" | "firstElement" | "parse" -> let __assign_204 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Xml" : string) scope classLookup : string) in (
+          | "createCData" | "createComment" | "createDocType" | "createDocument" | "createElement" | "createPCData" | "createProcessingInstruction" | "firstChild" | "firstElement" | "parse" -> let __assign_204 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Xml" : string) scope classLookup : string) in (
             tempResult16 := __assign_204;
             __assign_204
           )
@@ -621,7 +621,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               tempString17 := __assign_196;
               __assign_196
             ));
-            if (let __string_receiver_197 = let __call_arg_0_198 = !tempString17 in StringTools.trim __call_arg_0_198 in HxString.length __string_receiver_197) > 0 then let __assign_199 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+            if (let __string_receiver_197 = let __call_arg_0_198 = !tempString17 in StringTools.trim __call_arg_0_198 in HxString.length __string_receiver_197) > 0 then let __assign_199 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope classLookup : string) in (
               tempResult16 := __assign_199;
               __assign_199
             ) else let __assign_200 = ("" : string) in (
@@ -629,7 +629,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               __assign_200
             )
           ));
-        raise (HxRuntime.Hx_return (Obj.repr (!tempResult16)))
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult16)))
       ) else ());
       ignore (if let __string_eq_left_207 = owner in let __string_eq_right_208 = "Md5" in HxString.equals __string_eq_left_207 __string_eq_right_208 then let tempResult17 = ref (HxString.hx_null_string : string) in (
         ignore (match hx_method with
@@ -645,7 +645,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
             tempResult17 := __assign_217;
             __assign_217
           )
-          | "make" -> let __assign_218 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in (
+          | "make" -> let __assign_218 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Bytes" : string) scope classLookup : string) in (
             tempResult17 := __assign_218;
             __assign_218
           )
@@ -657,7 +657,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               tempString18 := __assign_210;
               __assign_210
             ));
-            if (let __string_receiver_211 = let __call_arg_0_212 = !tempString18 in StringTools.trim __call_arg_0_212 in HxString.length __string_receiver_211) > 0 then let __assign_213 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+            if (let __string_receiver_211 = let __call_arg_0_212 = !tempString18 in StringTools.trim __call_arg_0_212 in HxString.length __string_receiver_211) > 0 then let __assign_213 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope classLookup : string) in (
               tempResult17 := __assign_213;
               __assign_213
             ) else let __assign_214 = ("" : string) in (
@@ -665,10 +665,10 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
               __assign_214
             )
           ));
-        raise (HxRuntime.Hx_return (Obj.repr (!tempResult17)))
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult17)))
       ) else ());
-      ignore (if (let __string_eq_left_219 = owner in let __string_eq_right_220 = "EReg" in HxString.equals __string_eq_left_219 __string_eq_right_220) && (let __string_eq_left_221 = hx_method in let __string_eq_right_222 = "matchedPos" in HxString.equals __string_eq_left_221 __string_eq_right_222) then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("{pos:Int,len:Int}" : string) scope classLookup))) else ());
-      ignore (if (let __string_eq_left_223 = owner in let __string_eq_right_224 = "Exception" in HxString.equals __string_eq_left_223 __string_eq_right_224) && ((let __string_eq_left_225 = hx_method in let __string_eq_right_226 = "caught" in HxString.equals __string_eq_left_225 __string_eq_right_226) || (let __string_eq_left_227 = hx_method in let __string_eq_right_228 = "thrown" in HxString.equals __string_eq_left_227 __string_eq_right_228)) then raise (HxRuntime.Hx_return (Obj.repr "std::shared_ptr<Exception>")) else ());
+      ignore (if (let __string_eq_left_219 = owner in let __string_eq_right_220 = "EReg" in HxString.equals __string_eq_left_219 __string_eq_right_220) && (let __string_eq_left_221 = hx_method in let __string_eq_right_222 = "matchedPos" in HxString.equals __string_eq_left_221 __string_eq_right_222) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("{pos:Int,len:Int}" : string) scope classLookup))) else ());
+      ignore (if (let __string_eq_left_223 = owner in let __string_eq_right_224 = "Exception" in HxString.equals __string_eq_left_223 __string_eq_right_224) && ((let __string_eq_left_225 = hx_method in let __string_eq_right_226 = "caught" in HxString.equals __string_eq_left_225 __string_eq_right_226) || (let __string_eq_left_227 = hx_method in let __string_eq_right_228 = "thrown" in HxString.equals __string_eq_left_227 __string_eq_right_228)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "std::shared_ptr<Exception>")) else ());
       let tempResult18 = ref (HxString.hx_null_string : string) in let tempString19 = ref (HxString.hx_null_string : string) in (
         ignore (if typeHint == HxString.hx_null_string then let __assign_229 = ("" : string) in (
           tempString19 := __assign_229;
@@ -677,7 +677,7 @@ let methodReturnCppType = fun self (className : string) (methodName : string) (t
           tempString19 := __assign_230;
           __assign_230
         ));
-        ignore (if (let __string_receiver_231 = let __call_arg_0_232 = !tempString19 in StringTools.trim __call_arg_0_232 in HxString.length __string_receiver_231) > 0 then let __assign_233 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") (typeHint : string) scope classLookup : string) in (
+        ignore (if (let __string_receiver_231 = let __call_arg_0_232 = !tempString19 in StringTools.trim __call_arg_0_232 in HxString.length __string_receiver_231) > 0 then let __assign_233 = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppReturnTypeHint") : _ -> _ -> _ -> _) (typeHint : string) scope classLookup : string) in (
           tempResult18 := __assign_233;
           __assign_233
         ) else let __assign_234 = ("" : string) in (
@@ -699,7 +699,7 @@ let preludeMethodParamTypes = fun self (className : string) (methodName : string
     tempString := __assign_320;
     __assign_320
   ));
-  let owner = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") (!tempString : string) : string) : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
+  let owner = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") : _ -> _) ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") : _ -> _) (!tempString : string) : string) : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
     ignore (if methodName == HxString.hx_null_string then let __assign_321 = ("" : string) in (
       tempString1 := __assign_321;
       __assign_321
@@ -707,26 +707,26 @@ let preludeMethodParamTypes = fun self (className : string) (methodName : string
       tempString1 := __assign_322;
       __assign_322
     ));
-    let hx_method = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeIdentifier") (!tempString1 : string) : string) in (
-      ignore (if (let __string_eq_left_323 = owner in let __string_eq_right_324 = "Timer" in HxString.equals __string_eq_left_323 __string_eq_right_324) && (let __string_eq_left_325 = hx_method in let __string_eq_right_326 = "delay" in HxString.equals __string_eq_left_325 __string_eq_right_326) then raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_327 = HxArray.create () in let __represented_array_element_0_328 = "std::function<void()>" in (
+    let hx_method = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeIdentifier") : _ -> _) (!tempString1 : string) : string) in (
+      ignore (if (let __string_eq_left_323 = owner in let __string_eq_right_324 = "Timer" in HxString.equals __string_eq_left_323 __string_eq_right_324) && (let __string_eq_left_325 = hx_method in let __string_eq_right_326 = "delay" in HxString.equals __string_eq_left_325 __string_eq_right_326) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_327 = HxArray.create () in let __represented_array_element_0_328 = "std::function<void()>" in (
         ignore (HxArray.push __represented_array_327 __represented_array_element_0_328);
         let __represented_array_element_1_329 = "double" in (
           ignore (HxArray.push __represented_array_327 __represented_array_element_1_329);
           __represented_array_327
         )
       )))) else ());
-      ignore (if (let __string_eq_left_330 = owner in let __string_eq_right_331 = "MainLoop" in HxString.equals __string_eq_left_330 __string_eq_right_331) && (let __string_eq_left_332 = hx_method in let __string_eq_right_333 = "add" in HxString.equals __string_eq_left_332 __string_eq_right_333) then raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_334 = HxArray.create () in let __represented_array_element_0_335 = "std::function<void()>" in (
+      ignore (if (let __string_eq_left_330 = owner in let __string_eq_right_331 = "MainLoop" in HxString.equals __string_eq_left_330 __string_eq_right_331) && (let __string_eq_left_332 = hx_method in let __string_eq_right_333 = "add" in HxString.equals __string_eq_left_332 __string_eq_right_333) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_334 = HxArray.create () in let __represented_array_element_0_335 = "std::function<void()>" in (
         ignore (HxArray.push __represented_array_334 __represented_array_element_0_335);
         let __represented_array_element_1_336 = "int" in (
           ignore (HxArray.push __represented_array_334 __represented_array_element_1_336);
           __represented_array_334
         )
       )))) else ());
-      ignore (if (let __string_eq_left_337 = owner in let __string_eq_right_338 = "EntryPoint" in HxString.equals __string_eq_left_337 __string_eq_right_338) && ((let __string_eq_left_339 = hx_method in let __string_eq_right_340 = "runInMainThread" in HxString.equals __string_eq_left_339 __string_eq_right_340) || (let __string_eq_left_341 = hx_method in let __string_eq_right_342 = "addThread" in HxString.equals __string_eq_left_341 __string_eq_right_342)) then raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_343 = HxArray.create () in let __represented_array_element_0_344 = "std::function<void()>" in (
+      ignore (if (let __string_eq_left_337 = owner in let __string_eq_right_338 = "EntryPoint" in HxString.equals __string_eq_left_337 __string_eq_right_338) && ((let __string_eq_left_339 = hx_method in let __string_eq_right_340 = "runInMainThread" in HxString.equals __string_eq_left_339 __string_eq_right_340) || (let __string_eq_left_341 = hx_method in let __string_eq_right_342 = "addThread" in HxString.equals __string_eq_left_341 __string_eq_right_342)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_343 = HxArray.create () in let __represented_array_element_0_344 = "std::function<void()>" in (
         ignore (HxArray.push __represented_array_343 __represented_array_element_0_344);
         __represented_array_343
       )))) else ());
-      ignore (if (let __string_eq_left_345 = owner in let __string_eq_right_346 = "Http" in HxString.equals __string_eq_left_345 __string_eq_right_346) && (let __string_eq_left_347 = hx_method in let __string_eq_right_348 = "setPostData" in HxString.equals __string_eq_left_347 __string_eq_right_348) then raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_349 = HxArray.create () in let __represented_array_element_0_350 = "std::string" in (
+      ignore (if (let __string_eq_left_345 = owner in let __string_eq_right_346 = "Http" in HxString.equals __string_eq_left_345 __string_eq_right_346) && (let __string_eq_left_347 = hx_method in let __string_eq_right_348 = "setPostData" in HxString.equals __string_eq_left_347 __string_eq_right_348) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_349 = HxArray.create () in let __represented_array_element_0_350 = "std::string" in (
         ignore (HxArray.push __represented_array_349 __represented_array_element_0_350);
         __represented_array_349
       )))) else ());
@@ -744,7 +744,7 @@ let methodParamCppTypes = fun self (className : string) (methodName : string) (s
     tempString := __assign_354;
     __assign_354
   ));
-  let owner = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") (!tempString : string) : string) : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
+  let owner = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeTypePath") : _ -> _) ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "typeBaseName") : _ -> _) (!tempString : string) : string) : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
     ignore (if methodName == HxString.hx_null_string then let __assign_355 = ("" : string) in (
       tempString1 := __assign_355;
       __assign_355
@@ -752,9 +752,9 @@ let methodParamCppTypes = fun self (className : string) (methodName : string) (s
       tempString1 := __assign_356;
       __assign_356
     ));
-    let hx_method = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeIdentifier") (!tempString1 : string) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+    let hx_method = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "sanitizeIdentifier") : _ -> _) (!tempString1 : string) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
       ignore (match owner with
-        | "Base64" -> (let bytesType = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in match hx_method with
+        | "Base64" -> (let bytesType = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Bytes" : string) scope classLookup : string) in match hx_method with
           | "decode" | "urlDecode" -> let __assign_361 = Obj.magic (let __represented_array_362 = HxArray.create () in let __represented_array_element_0_363 = "std::string" in (
             ignore (HxArray.push __represented_array_362 __represented_array_element_0_363);
             let __represented_array_element_1_364 = "bool" in (
@@ -779,7 +779,7 @@ let methodParamCppTypes = fun self (className : string) (methodName : string) (s
             tempResult := __assign_359;
             __assign_359
           ))
-        | "BaseCode" -> (let bytesType = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in match hx_method with
+        | "BaseCode" -> (let bytesType = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Bytes" : string) scope classLookup : string) in match hx_method with
           | "decode" | "encode" -> let __assign_371 = Obj.magic (let __represented_array_372 = HxArray.create () in let __represented_array_element_0_373 = "std::string" in (
             ignore (HxArray.push __represented_array_372 __represented_array_element_0_373);
             let __represented_array_element_1_374 = "std::string" in (
@@ -873,7 +873,7 @@ let methodParamCppTypes = fun self (className : string) (methodName : string) (s
             ignore (HxArray.push __represented_array_408 __represented_array_element_0_409);
             let __represented_array_element_1_410 = "int" in (
               ignore (HxArray.push __represented_array_408 __represented_array_element_1_410);
-              let __represented_array_element_2_411 = Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Encoding" : string) scope classLookup in (
+              let __represented_array_element_2_411 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Encoding" : string) scope classLookup in (
                 ignore (HxArray.push __represented_array_408 __represented_array_element_2_411);
                 __represented_array_408
               )
@@ -904,7 +904,7 @@ let methodParamCppTypes = fun self (className : string) (methodName : string) (s
             __assign_418
           ) else let __assign_421 = Obj.magic (let __represented_array_422 = HxArray.create () in let __represented_array_element_0_423 = "std::string" in (
             ignore (HxArray.push __represented_array_422 __represented_array_element_0_423);
-            let __represented_array_element_1_424 = Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Encoding" : string) scope classLookup in (
+            let __represented_array_element_1_424 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Encoding" : string) scope classLookup in (
               ignore (HxArray.push __represented_array_422 __represented_array_element_1_424);
               __represented_array_422
             )
@@ -967,14 +967,14 @@ let methodParamCppTypes = fun self (className : string) (methodName : string) (s
             __assign_381
           ))
         | "BytesBuffer" -> (match hx_method with
-          | "add" -> let __assign_447 = Obj.magic (let __represented_array_448 = HxArray.create () in let __represented_array_element_0_449 = Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup in (
+          | "add" -> let __assign_447 = Obj.magic (let __represented_array_448 = HxArray.create () in let __represented_array_element_0_449 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Bytes" : string) scope classLookup in (
             ignore (HxArray.push __represented_array_448 __represented_array_element_0_449);
             __represented_array_448
           )) in (
             tempResult := __assign_447;
             __assign_447
           )
-          | "addBytes" -> let __assign_450 = Obj.magic (let __represented_array_451 = HxArray.create () in let __represented_array_element_0_452 = Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup in (
+          | "addBytes" -> let __assign_450 = Obj.magic (let __represented_array_451 = HxArray.create () in let __represented_array_element_0_452 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Bytes" : string) scope classLookup in (
             ignore (HxArray.push __represented_array_451 __represented_array_element_0_452);
             let __represented_array_element_1_453 = "int" in (
               ignore (HxArray.push __represented_array_451 __represented_array_element_1_453);
@@ -1010,7 +1010,7 @@ let methodParamCppTypes = fun self (className : string) (methodName : string) (s
           )
           | "addString" -> let __assign_464 = Obj.magic (let __represented_array_465 = HxArray.create () in let __represented_array_element_0_466 = "std::string" in (
             ignore (HxArray.push __represented_array_465 __represented_array_element_0_466);
-            let __represented_array_element_1_467 = Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Encoding" : string) scope classLookup in (
+            let __represented_array_element_1_467 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Encoding" : string) scope classLookup in (
               ignore (HxArray.push __represented_array_465 __represented_array_element_1_467);
               __represented_array_465
             )
@@ -1030,7 +1030,7 @@ let methodParamCppTypes = fun self (className : string) (methodName : string) (s
             tempResult := __assign_470;
             __assign_470
           )
-          | "readBytes" | "readFullBytes" -> let __assign_473 = Obj.magic (let __represented_array_474 = HxArray.create () in let __represented_array_element_0_475 = Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup in (
+          | "readBytes" | "readFullBytes" -> let __assign_473 = Obj.magic (let __represented_array_474 = HxArray.create () in let __represented_array_element_0_475 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Bytes" : string) scope classLookup in (
             ignore (HxArray.push __represented_array_474 __represented_array_element_0_475);
             let __represented_array_element_1_476 = "int" in (
               ignore (HxArray.push __represented_array_474 __represented_array_element_1_476);
@@ -1045,7 +1045,7 @@ let methodParamCppTypes = fun self (className : string) (methodName : string) (s
           )
           | "readString" -> let __assign_478 = Obj.magic (let __represented_array_479 = HxArray.create () in let __represented_array_element_0_480 = "int" in (
             ignore (HxArray.push __represented_array_479 __represented_array_element_0_480);
-            let __represented_array_element_1_481 = Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Encoding" : string) scope classLookup in (
+            let __represented_array_element_1_481 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Encoding" : string) scope classLookup in (
               ignore (HxArray.push __represented_array_479 __represented_array_element_1_481);
               __represented_array_479
             )
@@ -1149,7 +1149,7 @@ let methodParamCppTypes = fun self (className : string) (methodName : string) (s
             tempResult := __assign_496;
             __assign_496
           ))
-        | "Md5" -> (let bytesType = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup : string) in match hx_method with
+        | "Md5" -> (let bytesType = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Bytes" : string) scope classLookup : string) in match hx_method with
           | "encode" -> let __assign_522 = Obj.magic (let __represented_array_523 = HxArray.create () in let __represented_array_element_0_524 = "std::string" in (
             ignore (HxArray.push __represented_array_523 __represented_array_element_0_524);
             __represented_array_523
@@ -1195,7 +1195,7 @@ let methodParamCppTypes = fun self (className : string) (methodName : string) (s
             tempResult := __assign_538;
             __assign_538
           )
-          | "write" -> let __assign_541 = Obj.magic (let __represented_array_542 = HxArray.create () in let __represented_array_element_0_543 = Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup in (
+          | "write" -> let __assign_541 = Obj.magic (let __represented_array_542 = HxArray.create () in let __represented_array_element_0_543 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Bytes" : string) scope classLookup in (
             ignore (HxArray.push __represented_array_542 __represented_array_element_0_543);
             __represented_array_542
           )) in (
@@ -1209,7 +1209,7 @@ let methodParamCppTypes = fun self (className : string) (methodName : string) (s
             tempResult := __assign_544;
             __assign_544
           )
-          | "writeBytes" | "writeFullBytes" -> let __assign_547 = Obj.magic (let __represented_array_548 = HxArray.create () in let __represented_array_element_0_549 = Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Bytes" : string) scope classLookup in (
+          | "writeBytes" | "writeFullBytes" -> let __assign_547 = Obj.magic (let __represented_array_548 = HxArray.create () in let __represented_array_element_0_549 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Bytes" : string) scope classLookup in (
             ignore (HxArray.push __represented_array_548 __represented_array_element_0_549);
             let __represented_array_element_1_550 = "int" in (
               ignore (HxArray.push __represented_array_548 __represented_array_element_1_550);
@@ -1222,7 +1222,7 @@ let methodParamCppTypes = fun self (className : string) (methodName : string) (s
             tempResult := __assign_547;
             __assign_547
           )
-          | "writeInput" -> let __assign_552 = Obj.magic (let __represented_array_553 = HxArray.create () in let __represented_array_element_0_554 = Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Input" : string) scope classLookup in (
+          | "writeInput" -> let __assign_552 = Obj.magic (let __represented_array_553 = HxArray.create () in let __represented_array_element_0_554 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Input" : string) scope classLookup in (
             ignore (HxArray.push __represented_array_553 __represented_array_element_0_554);
             let __represented_array_element_1_555 = "std::optional<int>" in (
               ignore (HxArray.push __represented_array_553 __represented_array_element_1_555);
@@ -1234,7 +1234,7 @@ let methodParamCppTypes = fun self (className : string) (methodName : string) (s
           )
           | "writeString" -> let __assign_556 = Obj.magic (let __represented_array_557 = HxArray.create () in let __represented_array_element_0_558 = "std::string" in (
             ignore (HxArray.push __represented_array_557 __represented_array_element_0_558);
-            let __represented_array_element_1_559 = Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Encoding" : string) scope classLookup in (
+            let __represented_array_element_1_559 = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Encoding" : string) scope classLookup in (
               ignore (HxArray.push __represented_array_557 __represented_array_element_1_559);
               __represented_array_557
             )
@@ -1258,7 +1258,7 @@ let methodParamCppTypes = fun self (className : string) (methodName : string) (s
             tempResult := __assign_560;
             __assign_560
           ))
-        | "Runner" -> (let utestTargetType = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "utestTestObjectCppType") scope classLookup : string) in if (let __string_receiver_565 = utestTargetType in HxString.length __string_receiver_565) = 0 then let __assign_566 = Obj.magic (let __represented_array_567 = HxArray.create () in __represented_array_567) in (
+        | "Runner" -> (let utestTargetType = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "utestTestObjectCppType") : _ -> _ -> _) scope classLookup : string) in if (let __string_receiver_565 = utestTargetType in HxString.length __string_receiver_565) = 0 then let __assign_566 = Obj.magic (let __represented_array_567 = HxArray.create () in __represented_array_567) in (
           tempResult := __assign_566;
           __assign_566
         ) else match hx_method with
@@ -1372,7 +1372,7 @@ let methodParamCppTypes = fun self (className : string) (methodName : string) (s
             tempResult := __assign_596;
             __assign_596
           ))
-        | "Xml" -> (let xmlType = (Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") ("Xml" : string) scope classLookup : string) in match hx_method with
+        | "Xml" -> (let xmlType = ((Obj.obj (HxAnon.get ((Obj.magic self : t).services) "cppTypeHint") : _ -> _ -> _ -> _) ("Xml" : string) scope classLookup : string) in match hx_method with
           | "createCData" | "createComment" | "createDocType" | "createElement" | "createPCData" | "createProcessingInstruction" | "elementsNamed" | "exists" | "get" | "parse" | "remove" | "set_nodeName" | "set_nodeValue" -> let __assign_615 = Obj.magic (let __represented_array_616 = HxArray.create () in let __represented_array_element_0_617 = "std::string" in (
             ignore (HxArray.push __represented_array_616 __represented_array_element_0_617);
             __represented_array_616

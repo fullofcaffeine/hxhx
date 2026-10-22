@@ -1,5 +1,7 @@
 import haxe.Json;
-import haxe.crypto.Sha256;
+import reflaxe.ocaml.reports.OcamlReportJson.encode as reportJson;
+import reflaxe.ocaml.reports.OcamlReportJson.hashUtf8;
+import reflaxe.ocaml.reports.OcamlReportJson.render as renderReportJson;
 import sys.io.File;
 
 /**
@@ -9,8 +11,8 @@ import sys.io.File;
  * Corruption fixtures remove or alter one semantic record and then ask the
  * public inspector to reject the deeper ownership error. Refreshing the three
  * surrounding section hashes prevents the test from stopping at a generic
- * stale-hash diagnostic. This helper uses the same Haxe JSON serializer as the
- * report writer and inspector.
+ * stale-hash diagnostic. This helper uses the portable report encoding shared by the
+ * writer and inspector.
  */
 class RecomputeLoweringContainerRevisions {
 	/** Updates the single lowering-report path supplied on the command line. */
@@ -23,12 +25,12 @@ class RecomputeLoweringContainerRevisions {
 		recompute(report, "containerElementConversionRevision", "containerElementConversions");
 		recompute(report, "unsafeOperationRevision", "unsafeOperations");
 		recompute(report, "runtimeRequirementRevision", "runtimeRequirements");
-		File.saveContent(arguments[0], Json.stringify(report, null, "  ") + "\n");
+		File.saveContent(arguments[0], renderReportJson(report) + "\n");
 	}
 
 	/** Hashes one report array with the compiler's canonical serializer. */
 	static function recompute(report:Dynamic, revisionField:String, inventoryField:String):Void {
 		final inventory = Reflect.field(report, inventoryField);
-		Reflect.setField(report, revisionField, "sha256:" + Sha256.encode(Json.stringify(inventory)));
+		Reflect.setField(report, revisionField, "sha256:" + hashUtf8(reportJson(inventory)));
 	}
 }

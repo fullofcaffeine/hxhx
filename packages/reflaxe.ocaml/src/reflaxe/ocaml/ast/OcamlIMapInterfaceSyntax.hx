@@ -50,6 +50,46 @@ typedef OcamlIMapInterfaceConversionSyntax = {
 	from a key type, class name, or generated text.
 **/
 class OcamlIMapInterfaceSyntax {
+	/**
+		Keeps the existing IMap adapter record independent of ordinary interfaces.
+		Its conversions construct this exact class marker and method field layout.
+	**/
+	public static function buildDeclaration(owner:ClassType, typeName:String, label:String->String, typeExpression:Type->OcamlTypeExpr):OcamlTypeDecl {
+		if (!OcamlStandardIMapCallContract.isIMapClass(owner))
+			throw "reflaxe.ocaml [ocaml-imap-interface:wrong-declaration]: only the standard IMap owns this adapter record";
+		final order:Array<String> = [];
+		final declarations:Map<String, ClassField> = [];
+		function collect(current:ClassType):Void {
+			for (edge in current.interfaces)
+				collect(edge.t.get());
+			for (field in current.fields.get())
+				switch (field.kind) {
+					case FMethod(_):
+						if (!declarations.exists(field.name))
+							order.push(field.name);
+						declarations.set(field.name, field);
+					case _:
+				}
+		}
+		collect(owner);
+		final fields:Array<OcamlTypeRecordField> = [];
+		for (name in order) {
+			final methodType = switch (declarations.get(name).type) {
+				case TFun(arguments, result):
+					var signature = typeExpression(result);
+					if (arguments.length == 0)
+						signature = OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent("unit"), signature);
+					else
+						for (index in 0...arguments.length)
+							signature = OcamlTypeExpr.TArrow(typeExpression(arguments[arguments.length - 1 - index].t), signature);
+					OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent("Obj.t"), signature);
+				case _: OcamlTypeExpr.TIdent("Obj.t");
+			};
+			fields.push({name: label(name), isMutable: false, typ: methodType});
+		}
+		return reflaxe.ocaml.target.OcamlTargetInstanceRecord.declareInstanceRecord({typeName: typeName, fields: fields});
+	}
+
 	/** Evaluates the receiver and arguments once, then invokes the sealed dispatch field. */
 	public static function buildCall(decision:OcamlIMapInterfaceCallDecision, callee:TypedExpr, arguments:Array<TypedExpr>,
 			services:OcamlIMapInterfaceSyntaxServices):OcamlExpr {
@@ -253,7 +293,7 @@ class OcamlIMapInterfaceSyntax {
 		};
 	}
 
-	/** Produces the runtime type marker shared by every dispatch record. */
+	/** Allocates a fresh identity header containing the shared IMap descriptor. */
 	static function typeMarkerField(decision:reflaxe.ocaml.lowered.OcamlIMapInterfaceModel.OcamlIMapInterfaceConversionDecision,
 			runtimeAuthority:OcamlRuntimeUseAuthority, runtimeReferences:Array<OcamlExpr>):{
 		name:String,
@@ -261,7 +301,7 @@ class OcamlIMapInterfaceSyntax {
 	} {
 		return {
 			name: "__hx_type",
-			value: OcamlExpr.EApp(runtimeIdentifier(decision, "type-marker", "HxType.class_", runtimeAuthority, runtimeReferences),
+			value: OcamlExpr.EApp(runtimeIdentifier(decision, "type-marker", "HxType.instance_marker", runtimeAuthority, runtimeReferences),
 				[OcamlExpr.EConst(OcamlConst.CString("haxe.IMap"))])
 		};
 	}

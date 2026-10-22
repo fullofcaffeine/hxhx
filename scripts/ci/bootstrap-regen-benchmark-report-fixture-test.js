@@ -112,7 +112,7 @@ function validReport() {
       raw_runs_embedded: true,
       per_run_reports_retained: true,
       stage0_policy_meaning: 'wrapper uses the upstream-Haxe launcher; native uses the direct upstream-Haxe executable. Neither label means native hxhx.',
-      peak_rss_scope: 'focused stage0 client process only; the repository Haxe server and total job memory are not included',
+      peak_rss_scope: 'sampled focus-process RSS; the focus is an owned repository-server worker when observed, otherwise the largest client-tree process; this is not total job memory',
       scenario_definitions: {
         cold: 'full regeneration after removing prior generated output',
         warm: 'reserved historical scenario; new warm measurements are blocked until Reflaxe reconstructs the complete target program from cached Haxe requests',

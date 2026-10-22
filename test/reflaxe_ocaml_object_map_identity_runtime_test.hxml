@@ -1,0 +1,3 @@
+-cp packages/reflaxe.ocaml/src
+-cp test
+--run ObjectMapIdentityRuntimeTest

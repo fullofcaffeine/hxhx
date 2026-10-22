@@ -1,0 +1,14 @@
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp test
+-main M14OcamlCallableOwnershipTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp test
+-main M14OcamlCallableOwnershipTest
+-neko .tmp/m14_ocaml_callable_ownership_test.n
+# Keep the reset assertion without generating unrelated emitter methods.
+--dce full
+-cmd neko .tmp/m14_ocaml_callable_ownership_test.n

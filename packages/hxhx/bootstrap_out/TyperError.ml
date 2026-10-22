@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable filePath : string; mutable pos : HxPos.t; 
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun filePath2 pos2 message2 -> let self = ({ __hx_type = HxType.class_ "TyperError"; filePath = HxString.hx_null_string; pos = Obj.magic HxRuntime.hx_null; message = HxString.hx_null_string } : t) in (
+let create = fun filePath2 pos2 message2 -> let self = ({ __hx_type = HxType.instance_marker "TyperError"; filePath = HxString.hx_null_string; pos = Obj.magic HxRuntime.hx_null; message = HxString.hx_null_string } : t) in (
   ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
     ignore (if filePath2 == HxString.hx_null_string || (let __string_receiver_1 = filePath2 in HxString.length __string_receiver_1) = 0 then let __assign_2 = ("<unknown>" : string) in (
       tempRight := __assign_2;
@@ -49,7 +49,7 @@ let create = fun filePath2 pos2 message2 -> let self = ({ __hx_type = HxType.cla
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyperError"; filePath = HxString.hx_null_string; pos = Obj.magic HxRuntime.hx_null; message = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyperError"; filePath = HxString.hx_null_string; pos = Obj.magic HxRuntime.hx_null; message = HxString.hx_null_string } : t)
 
 let toString = fun self () -> let __string_part_11 = HxString.toStdString ((Obj.magic self : t).filePath) in let __string_part_12 = ":" in let __string_part_13 = string_of_int ((Obj.magic ((Obj.magic self : t).pos) : HxPos.t).line) in let __string_part_14 = ":" in let __string_part_15 = string_of_int ((Obj.magic ((Obj.magic self : t).pos) : HxPos.t).column) in let __string_part_16 = ": " in let __string_part_17 = HxString.toStdString ((Obj.magic self : t).message) in (((((__string_part_11 ^ __string_part_12) ^ __string_part_13) ^ __string_part_14) ^ __string_part_15) ^ __string_part_16) ^ __string_part_17
 

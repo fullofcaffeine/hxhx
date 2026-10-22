@@ -29,8 +29,19 @@ class M14TypedLocalIdentityIntegrationTest {
 		return bindings[0];
 	}
 
-	static function typedFunction():TypedFunction {
+	static function typedFunction(includeExhaustiveDefault:Bool = false):TypedFunction {
 		final position = new HxPos(0, 1, 1);
+		final orPatterns:Array<HxSwitchPattern> = [
+			POr([
+				PArray([PBind("orExpressionValue"), PInt(1)]),
+				PArray([PInt(1), PBind("orExpressionValue")])
+			])
+		];
+		final orBranches:Array<HxExpr> = [EIdent("orExpressionValue")];
+		if (includeExhaustiveDefault) {
+			orPatterns.push(PWildcard);
+			orBranches.push(ENull);
+		}
 		final body = [
 			SVar("value", "Int", EInt(1), position),
 			SVar("before", "Int", EIdent("value"), position),
@@ -64,12 +75,7 @@ class M14TypedLocalIdentityIntegrationTest {
 				position),
 			SSwitch(EArrayDecl([EInt(9), EInt(1)]), [POr([PArray([PBind("orValue"), PInt(1)]), PArray([PInt(1), PBind("orValue")])])],
 				[SBlock([SVar("orCopy", "Dynamic", EIdent("orValue"), position)], position)], position),
-			SVar("orExpressionResult", "Dynamic", ESwitch(EArrayDecl([EInt(9), EInt(1)]), [
-				POr([
-					PArray([PBind("orExpressionValue"), PInt(1)]),
-					PArray([PInt(1), PBind("orExpressionValue")])
-				])
-			], [EIdent("orExpressionValue")]), position)
+			SVar("orExpressionResult", "Dynamic", ESwitch(EArrayDecl([EInt(9), EInt(1)]), orPatterns, orBranches), position)
 		];
 		final sourceFunction = new HxFunctionDecl("check", Public, true, [], "Void", body, "", [], position);
 		final sourceClass = new HxClassDecl("LocalIdentity", true, [sourceFunction], []);
@@ -119,7 +125,9 @@ class M14TypedLocalIdentityIntegrationTest {
 			SExpr(EBinop("=", EIdent("dynamicAssignment"), EUntyped(EInt(2))), position),
 			SVar("dynamicCompound", "Int", EInt(3), position),
 			SExpr(EBinop("+=", EIdent("dynamicCompound"), EUntyped(EInt(4))), position),
-			SVar("inferredDynamic", "", EUntyped(EInt(5)), position)
+			// An untyped expression owns inference variables; a written Dynamic cast
+			// supplies the explicit Dynamic value this assignment contract exercises.
+			SVar("inferredDynamic", "", ECast(EInt(5), "Dynamic"), position)
 		], "", [], position);
 		final sourceClass = new HxClassDecl("AssignmentContract", true, [sourceFunction], []);
 		final parsed = new ParsedModule("", new HxModuleDecl("", [], sourceClass, [sourceClass], false, false), "AssignmentContract.hx");
@@ -174,7 +182,16 @@ class M14TypedLocalIdentityIntegrationTest {
 		assertCompilerTemporaryIdentity();
 		assertIncompatibleAssignmentKeepsLocalContract();
 		assertPatternAfterComprehensionReceiverReplay();
-		final typed = typedFunction();
+		// Upstream rejects the original value switch without a default. Retain
+		// that negative contract before projecting the complete identity fixture.
+		var rejected = false;
+		try {
+			TypedBodySource.functionProjection(typedFunction());
+		} catch (error:haxe.Exception) {
+			rejected = error.message.indexOf("exact exhaustive coverage") >= 0;
+		}
+		assertTrue(rejected, "non-exhaustive value switch acquired a projected result");
+		final typed = typedFunction(true);
 		final statements = typed.getBody().getStatements();
 		final outer = bindingOfStatement(statements[0]);
 		assertTrue(outer.getType().getSemanticKey() == "primitive:Int", "outer local lost its semantic Int type");

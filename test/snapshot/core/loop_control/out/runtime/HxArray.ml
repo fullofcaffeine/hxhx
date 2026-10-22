@@ -28,9 +28,21 @@ type 'a t = {
   (* Number of hx_null slots in [0, length) while in ObjStore mode.
      For typed stores this stays at 0. *)
   mutable null_slots : int;
+  marker : Obj.t;
+  (* The compiler selects this callback from the actual element carrier.
+     Keeping it on the array preserves identity and observes later mutations. *)
+  mutable element_stringifier : (Obj.t -> string) option;
 }
 
 let hx_null : Obj.t = HxRuntime.hx_null
+let array_marker : Obj.t = Obj.repr (ref 0)
+
+(* Reports whether a boxed value is one of this runtime's Haxe arrays.
+
+   The marker gives Type.getClass a stable representation test without
+   inspecting array contents or relying on a generated source name. *)
+let is_value (value : Obj.t) : bool =
+  (not (Obj.is_int value)) && Obj.tag value = 0 && Obj.size value = 5 && Obj.field value 3 == array_marker
 
 type raw_kind =
   | KindObj
@@ -55,17 +67,17 @@ let unwrap_or_empty (a : 'a t) : 'a t option =
     None
   else if Obj.is_int o then
     None
-  else if Obj.size o <> 3 then
+  else if not (is_value o) then
     None
   else
     Some (Obj.obj o)
 
-let unwrap_optional_int (v : int) (default : int) : int =
-  let raw : Obj.t = Obj.magic v in
+let unwrap_optional_int (v : 'a) (default : int) : int =
+  let raw = Obj.repr v in
   if raw == hx_null then
     default
   else
-    v
+    (Obj.obj raw : int)
 
 let raw_kind_of (raw : Obj.t) : raw_kind =
   if raw == hx_null then
@@ -79,6 +91,12 @@ let raw_kind_of (raw : Obj.t) : raw_kind =
 let is_non_null_raw (raw : Obj.t) : bool =
   raw != hx_null
 
+(* Haxe compares primitive and string values by value, but class instances and
+   other objects by identity. OCaml's generic [=] is structural, so using it
+   here would make two separate same-shaped Haxe objects look equal. *)
+let haxe_equals (left : 'a) (right : 'a) : bool =
+  HxRuntime.dynamic_equals (Obj.repr left) (Obj.repr right)
+
 let storage_capacity (store : storage) : int =
   match store with
   | ObjStore data -> Stdlib.Array.length data
@@ -87,7 +105,20 @@ let storage_capacity (store : storage) : int =
   | StringStore data -> Stdlib.Array.length data
 
 let create () : 'a t =
-  { store = ObjStore [||]; length = 0; null_slots = 0 }
+  { store = ObjStore [||]; length = 0; null_slots = 0; marker = array_marker; element_stringifier = None }
+
+(* This does not inspect elements or change their storage. The caller must supply
+   the converter for this array's element carrier, including nullable values. *)
+let with_element_stringifier (a : 'a t) (to_string : 'a -> string) : 'a t =
+  a.element_stringifier <- Some (fun value -> to_string (Obj.obj value));
+  a
+
+(* Operations that retain the element type also retain its conversion contract,
+   even when their result is initially empty. Map intentionally uses create. *)
+let create_like (a : 'a t) : 'a t =
+  let out = create () in
+  out.element_stringifier <- a.element_stringifier;
+  out
 
 let length (a : 'a t) : int =
   match unwrap_or_empty a with
@@ -537,7 +568,7 @@ let remove (a : 'a t) (x : 'a) : bool =
     let rec find i =
       if i >= a.length then
         -1
-      else if Obj.obj (Stdlib.Array.get data i) = x then
+      else if haxe_equals (Obj.obj (Stdlib.Array.get data i)) x then
         i
       else
         find (i + 1)
@@ -562,7 +593,7 @@ let normalize_slice_pos (len : int) (pos : int) : int =
   else
     pos
 
-let slice (a : 'a t) (pos : int) (end_ : int) : 'a t =
+let slice (a : 'a t) (pos : int) (end_ : 'b) : 'a t =
   match unwrap_or_empty a with
   | None -> create ()
   | Some a ->
@@ -576,10 +607,10 @@ let slice (a : 'a t) (pos : int) (end_ : int) : 'a t =
       if clamped < 0 then 0 else clamped
     in
     if p >= len || e <= p then
-      create ()
+      create_like a
     else (
       let out_len = e - p in
-      let out = create () in
+      let out = create_like a in
       ensure_capacity out out_len;
       (match out.store with
       | ObjStore out_data ->
@@ -594,22 +625,28 @@ let slice (a : 'a t) (pos : int) (end_ : int) : 'a t =
       out
     )
 
+(* The typed Haxe plan selects this entry only when the optional end was
+   omitted. Reading the received Array's length here prevents generated syntax
+   from evaluating a side-effecting receiver expression a second time. *)
+let slice_default (a : 'a t) (pos : int) : 'a t =
+  slice a pos (length a)
+
 let splice (a : 'a t) (pos : int) (len : int) : 'a t =
   match unwrap_or_empty a with
   | None -> create ()
   | Some a ->
     let data = ensure_obj_store a in
     if len < 0 then
-      create ()
+      create_like a
     else (
       let total = a.length in
       let p0 = normalize_slice_pos total pos in
       let p = if p0 > total then total else p0 in
       let l = if p + len > total then total - p else len in
       if l <= 0 then
-        create ()
+        create_like a
       else (
-        let removed = create () in
+        let removed = create_like a in
         ensure_capacity removed l;
         (match removed.store with
         | ObjStore removed_data ->
@@ -647,7 +684,7 @@ let copy (a : 'a t) : 'a t =
   match unwrap_or_empty a with
   | None -> create ()
   | Some a ->
-    let out = create () in
+    let out = create_like a in
     out.length <- a.length;
     out.null_slots <- a.null_slots;
     out.store <-
@@ -664,7 +701,7 @@ let concat (a : 'a t) (b : 'a t) : 'a t =
   | Some a, None -> copy a
   | None, Some b -> copy b
   | Some a, Some b ->
-    let out = create () in
+    let out = create_like a in
     let len_a = a.length in
     let len_b = b.length in
     let total = len_a + len_b in
@@ -722,7 +759,7 @@ let normalize_index_of_from (len : int) (fromIndex : int) : int =
   else
     fromIndex
 
-let indexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
+let indexOf (a : 'a t) (x : 'a) (fromIndex : 'b) : int =
   match unwrap_or_empty a with
   | None -> -1
   | Some a ->
@@ -735,7 +772,7 @@ let indexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
       let rec loop i =
         if i >= len then
           -1
-        else if get a i = x then
+        else if haxe_equals (get a i) x then
           i
         else
           loop (i + 1)
@@ -743,16 +780,22 @@ let indexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
       loop start
     )
 
+(* The typed Haxe plan selects this entry only when the optional start was
+   omitted. Keeping the default beside Array storage/search behavior lets the
+   generated call pass its already-evaluated receiver exactly once. *)
+let indexOf_default (a : 'a t) (x : 'a) : int =
+  indexOf a x 0
+
 let normalize_last_index_of_from (len : int) (fromIndex : int) : int =
   if fromIndex < 0 then
     let start = len + fromIndex in
-    if start < 0 then -1 else start
+    if start < 0 then 0 else start
   else if fromIndex >= len then
     len - 1
   else
     fromIndex
 
-let lastIndexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
+let lastIndexOf (a : 'a t) (x : 'a) (fromIndex : 'b) : int =
   match unwrap_or_empty a with
   | None -> -1
   | Some a ->
@@ -768,7 +811,7 @@ let lastIndexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
         let rec loop i =
           if i < 0 then
             -1
-          else if get a i = x then
+          else if haxe_equals (get a i) x then
             i
           else
             loop (i - 1)
@@ -776,6 +819,11 @@ let lastIndexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
         loop start
       )
     )
+
+(* See indexOf_default. The length is read from the received Array value, not
+   by evaluating the Haxe receiver expression again in generated syntax. *)
+let lastIndexOf_default (a : 'a t) (x : 'a) : int =
+  lastIndexOf a x (length a - 1)
 
 let contains (a : 'a t) (x : 'a) : bool =
   indexOf a x 0 >= 0
@@ -801,6 +849,12 @@ let join (a : 'a t) (sep : string) (to_string : 'a -> string) : string =
 let toString (a : 'a t) (to_string : 'a -> string) : string =
   "[" ^ join a "," to_string ^ "]"
 
+(* The callback belongs to this array, not to the global Array class. The
+   fallback handles arrays whose elements already use Dynamic representation. *)
+let to_dynamic_string (a : 'a t) (fallback : Obj.t -> string) : string =
+  let convert = match a.element_stringifier with Some f -> f | None -> fallback in
+  toString a (fun value -> convert (Obj.repr value))
+
 let map (a : 'a t) (f : 'a -> 'b) : 'b t =
   match unwrap_or_empty a with
   | None -> create ()
@@ -820,7 +874,7 @@ let filter (a : 'a t) (f : 'a -> bool) : 'a t =
   match unwrap_or_empty a with
   | None -> create ()
   | Some a ->
-    let out = create () in
+    let out = create_like a in
     if a.length = 0 then
       out
     else (
@@ -868,6 +922,12 @@ let resize (a : 'a t) (new_len : int) : unit =
       | IntStore _ | FloatStore _ | StringStore _ -> failwith "HxArray invariant: expected ObjStore during grow-resize")
     )
 
+(** Sorts the live values without changing their OCaml array representation.
+
+    OCaml stores float arrays in a different memory layout from object arrays.
+    Copying raw values between those layouts can corrupt the OCaml heap.
+    Each branch therefore sorts and copies values within one storage layout.
+    The selected branch also proves the concrete type used by its comparator cast. *)
 let sort (a : 'a t) (cmp : 'a -> 'a -> int) : unit =
   match unwrap_or_empty a with
   | None -> ()
@@ -875,13 +935,12 @@ let sort (a : 'a t) (cmp : 'a -> 'a -> int) : unit =
     if a.length < 2 then
       ()
     else (
-      let slice = Stdlib.Array.init a.length (fun i -> Obj.repr (get a i)) in
-      Stdlib.Array.sort
-        (fun x y -> cmp (Obj.obj x) (Obj.obj y))
-        slice;
-      ensure_obj_store a |> ignore;
-      (match a.store with
+      match a.store with
       | ObjStore data ->
+        let slice = Stdlib.Array.sub data 0 a.length in
+        Stdlib.Array.sort
+          (fun x y -> cmp (Obj.obj x) (Obj.obj y))
+          slice;
         Stdlib.Array.blit slice 0 data 0 a.length;
         let nulls = ref 0 in
         for i = 0 to a.length - 1 do
@@ -889,5 +948,19 @@ let sort (a : 'a t) (cmp : 'a -> 'a -> int) : unit =
         done;
         a.null_slots <- !nulls;
         promote_obj_store_if_possible a
-      | IntStore _ | FloatStore _ | StringStore _ -> failwith "HxArray invariant: expected ObjStore after ensure_obj_store")
+      | IntStore data ->
+        let slice = Stdlib.Array.sub data 0 a.length in
+        let compare_ints : int -> int -> int = Obj.magic cmp in
+        Stdlib.Array.sort compare_ints slice;
+        Stdlib.Array.blit slice 0 data 0 a.length
+      | FloatStore data ->
+        let slice = Stdlib.Array.sub data 0 a.length in
+        let compare_floats : float -> float -> int = Obj.magic cmp in
+        Stdlib.Array.sort compare_floats slice;
+        Stdlib.Array.blit slice 0 data 0 a.length
+      | StringStore data ->
+        let slice = Stdlib.Array.sub data 0 a.length in
+        let compare_strings : string -> string -> int = Obj.magic cmp in
+        Stdlib.Array.sort compare_strings slice;
+        Stdlib.Array.blit slice 0 data 0 a.length
     )

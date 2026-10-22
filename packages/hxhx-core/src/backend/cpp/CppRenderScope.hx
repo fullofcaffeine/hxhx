@@ -7,11 +7,23 @@ typedef CppScopeAnonStruct = {
 }
 
 typedef CppRenderScope = {
+	/** The declaration-owned signature selected before parameter symbols are installed. */
+	var ?emittedCallable:CppEmittedCallableContract;
+
 	var owner:Null<HxClassDecl>;
 	var classNames:haxe.ds.StringMap<Bool>;
 	var classByName:haxe.ds.StringMap<HxClassDecl>;
 	var allClasses:Array<HxClassDecl>;
 	@:optional var classLookup:CppClassLookup;
+
+	/** Immutable local identities and output symbols for the executable being analyzed. */
+	var ?executableLocals:CppExecutableLocals;
+
+	/** Exact typed catalogs available during analysis before C++ symbols are allocated. */
+	var ?functionProjection:TypedBackendFunctionProjection;
+
+	/** Target-only storage names allocated around the immutable authored symbols. */
+	var ?temporarySymbols:CppTemporarySymbols;
 
 	/** Declared-type results owned by this scope's one program render. **/
 	var declaredTypeMemo:CppDeclaredTypeMemo;
@@ -59,7 +71,10 @@ typedef CppRenderScope = {
 	var localNameCounts:haxe.ds.StringMap<Int>;
 	var argTypeOverrides:haxe.ds.StringMap<String>;
 	var localTypeOverrides:haxe.ds.StringMap<String>;
+
+	/** Request-owned aggregate definitions shared with cached declared type names. */
 	var anonStructs:haxe.ds.StringMap<CppScopeAnonStruct>;
+
 	var returnType:String;
 	var returnOnlyTypeParamAuto:Bool;
 

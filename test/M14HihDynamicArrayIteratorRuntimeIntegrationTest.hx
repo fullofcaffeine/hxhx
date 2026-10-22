@@ -1,6 +1,11 @@
 import sys.FileSystem;
 import sys.io.File;
 
+/**
+	Checks that an array iterator in a static initializer survives OCaml emission.
+	The production declaration loader supplies Array identity and typed locals for
+	the initializer's closure before the ordinary OCaml emitter receives it.
+**/
 class M14HihDynamicArrayIteratorRuntimeIntegrationTest {
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
@@ -44,13 +49,12 @@ class M14HihDynamicArrayIteratorRuntimeIntegrationTest {
 
 		var thrown:Dynamic = null;
 		try {
-			final parsed = ParserStage.parse(src, mainHx);
-			final typed = TyperStage.typeModule(parsed);
+			M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", srcDir, "--run", "Main"], expected: "ok\n"});
+			final typed = M14Stage3RuntimeFixture.typeMain({source: src, path: mainHx, root: srcDir});
 			final expanded = MacroStage.expandProgram([typed], []);
 			final exePath = EmitterStage.emitToDir(expanded, outDir, true);
 			assertTrue(FileSystem.exists(exePath), 'Emitter did not produce executable: ' + exePath);
-			final code = Sys.command(exePath, []);
-			assertTrue(code == 0, 'Executable failed for dynamic array iterator keepalive with exit code ' + code + '.');
+			M14Stage3RuntimeFixture.observe({command: exePath, arguments: [], expected: "ok\n"});
 		} catch (e:Dynamic) {
 			thrown = e;
 		}

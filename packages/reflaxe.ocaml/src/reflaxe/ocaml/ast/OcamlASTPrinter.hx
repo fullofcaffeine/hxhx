@@ -173,10 +173,11 @@ class OcamlASTPrinter {
 			case ERaise(exception):
 				work.push(EmitText(")"));
 				pushExpression(work, exception, PREC_TOP, indentation);
-				work.push(EmitText("raise ("));
+				// This node owns the OCaml primitive, not a source-level function call.
+				work.push(EmitText("Stdlib.raise ("));
 			case ETuple(items):
 				work.push(EmitText(")"));
-				pushExpressionArray(work, items, ", ", PREC_TOP, indentation, needsTupleElementParens);
+				pushExpressionArray(work, items, ", ", PREC_TOP, indentation, needsDelimitedElementParens);
 				work.push(EmitText("("));
 			case EAnnot(inner, type):
 				work.push(EmitText(")"));
@@ -195,7 +196,7 @@ class OcamlASTPrinter {
 						if (index < fields.length - 1)
 							work.push(EmitText("; "));
 						final field = fields[index];
-						pushExpression(work, field.value, PREC_TOP, indentation, recordFunctionValueNeedsParens(field.value));
+						pushExpression(work, field.value, PREC_TOP, indentation, needsDelimitedElementParens(field.value));
 						work.push(EmitText(field.name + " = "));
 					}
 					work.push(EmitText("{ "));
@@ -384,7 +385,8 @@ class OcamlASTPrinter {
 		}
 	}
 
-	static function needsTupleElementParens(expression:OcamlExpr):Bool {
+	/** Keep tuple and record separators outside a value's binding, branch, or sequence body. */
+	static function needsDelimitedElementParens(expression:OcamlExpr):Bool {
 		var current = expression;
 		while (true) {
 			switch (current) {
@@ -397,18 +399,6 @@ class OcamlASTPrinter {
 			}
 		}
 		return false;
-	}
-
-	static function recordFunctionValueNeedsParens(expression:OcamlExpr):Bool {
-		return switch (expression) {
-			case EPos(_, inner):
-				switch (inner) {
-					case EFun(_, _): true;
-					case _: false;
-				}
-			case EFun(_, _): true;
-			case _: false;
-		}
 	}
 
 	static function labelledArgumentNeedsParens(expression:OcamlExpr):Bool {

@@ -16,7 +16,7 @@
 class CompilerSourceProvider {
 	var resolveModuleCallback:(classPaths:Array<String>, modulePath:String) -> CompilerModuleResolution;
 	var readSourceCallback:(filePath:String) -> Null<String>;
-	var parseFilteredSourceCallback:(filteredSource:String, filePath:String) -> ParsedModule;
+	var parseFilteredSourceCallback:(input:CompilerParseInput) -> ParsedModule;
 	var readDirectoryCallback:(path:String) -> Array<String>;
 	var isFileCallback:(path:String) -> Bool;
 	var prepareFinishCallback:(requestSucceeded:Bool) -> Void;
@@ -43,7 +43,7 @@ class CompilerSourceProvider {
 		They may reuse values only after their identities and lifetimes are checked.
 	**/
 	public static function fromCallbacks(resolveModule:(classPaths:Array<String>, modulePath:String) -> CompilerModuleResolution,
-			readSource:(filePath:String) -> Null<String>, parseFilteredSource:(filteredSource:String, filePath:String) -> ParsedModule,
+			readSource:(filePath:String) -> Null<String>, parseFilteredSource:(input:CompilerParseInput) -> ParsedModule,
 			readDirectory:(path:String) -> Array<String>, isFile:(path:String) -> Bool, prepareFinish:(requestSucceeded:Bool) -> Void,
 			finish:(requestSucceeded:Bool) -> Void, report:() -> CompilerSourceProviderReport):CompilerSourceProvider {
 		if (resolveModule == null || readSource == null || parseFilteredSource == null || readDirectory == null || isFile == null || finish == null
@@ -76,9 +76,9 @@ class CompilerSourceProvider {
 		return readSourceCallback(filePath);
 	}
 
-	/** Parse source after the caller has applied the effective conditional defines. **/
-	public function parseFilteredSource(filteredSource:String, filePath:String):ParsedModule {
-		return parseFilteredSourceCallback(filteredSource, filePath);
+	/** Parse selected branches while retaining positions in the original source. **/
+	public function parseFilteredSource(input:CompilerParseInput):ParsedModule {
+		return parseFilteredSourceCallback(input);
 	}
 
 	/** Read the directory entries visible at this point in the request. **/

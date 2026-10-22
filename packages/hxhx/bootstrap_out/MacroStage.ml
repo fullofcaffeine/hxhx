@@ -6,13 +6,13 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "MacroStage" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "MacroStage" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "MacroStage" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "MacroStage" } : t)
 
 let expand = fun m generatedOcamlModules -> MacroExpandedModule.create (Obj.magic m) true (Obj.magic generatedOcamlModules)
 
-let expandProgram = fun modules generatedOcamlModules -> MacroExpandedProgram.create (Obj.magic modules) true (Obj.magic generatedOcamlModules)
+let expandProgram = fun modules generatedOcamlModules -> MacroExpandedProgram.create (Obj.magic modules) true (Obj.magic generatedOcamlModules) (Obj.magic (HxRuntime.hx_null))

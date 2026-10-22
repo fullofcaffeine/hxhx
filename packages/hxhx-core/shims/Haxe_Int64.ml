@@ -64,6 +64,12 @@ let getHigh (value : t) : int =
 let getLow (value : t) : int =
   Stdlib.Int32.to_int (Stdlib.Int64.to_int32 value)
 
+(* Shared Haxe typing selects these declarations for .high and .low.
+   They expose the same signed words as the public helpers above; no source
+   property lookup or numeric policy is inferred by this native boundary. *)
+let get_high = getHigh
+let get_low = getLow
+
 let isNeg (value : t) : bool =
   Stdlib.Int64.compare value 0L < 0
 

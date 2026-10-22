@@ -97,13 +97,18 @@ class RuntimeCopier {
 		catalog revision deterministically select the same runtime closure later.
 	**/
 	public static function loadCheckedSourceManifest():RuntimeSourceManifestSnapshot {
+		return RuntimeSourceManifest.load(resolveRuntimeSourceDirectory());
+	}
+
+	/** Resolve the installed package's runtime; shared target packaging verifies its bytes. **/
+	public static function resolveRuntimeSourceDirectory():String {
 		final stdDir = tryResolveStdDir();
 		if (stdDir == null)
 			throw "Cannot locate the reflaxe.ocaml standard library, so the checked OCaml runtime cannot be identified.";
 		final runtimeDir = Path.join([stdDir, "runtime"]);
 		if (!sys.FileSystem.exists(runtimeDir) || !sys.FileSystem.isDirectory(runtimeDir))
 			throw 'The reflaxe.ocaml runtime source directory "$runtimeDir" is missing.';
-		return RuntimeSourceManifest.load(runtimeDir);
+		return runtimeDir;
 	}
 
 	static function requestedProfile():Null<String> {

@@ -1,12 +1,24 @@
 {
   "schemaVersion": 1,
-  "description": "Provenance ledger for tracked OCaml stdlib override files.",
+  "description": "Provenance ledger for tracked OCaml and bundled C++ stdlib override files.",
   "baselineUpstream": {
     "repository": "https://github.com/HaxeFoundation/haxe",
     "tag": "4.3.7",
     "license": "MIT"
   },
   "entries": [
+    {
+      "path": "packages/hxhx-core/std/cpp/_std/haxe/Exception.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/Exception.hx",
+      "notes": "Bundled Haxe-authored C++ exception policy with an explicit native stack boundary."
+    },
+    {
+      "path": "packages/hxhx-core/std/cpp/_std/haxe/Int64.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/Int64.hx",
+      "notes": "Haxe 4.3.7 common Int64 arithmetic, preserving its MIT notice; adds standalone C++ Dynamic word boxing, checked recovery, and native storage membership. Source SHA256: 12b22ad027e626a7960461d22e433d76e5b178eb0d87437c4b005c5c18e3b99b."
+    },
     {
       "path": "packages/reflaxe.ocaml/std/ocaml/_std/Array.hx",
       "provenanceKind": "upstream_std_sync",

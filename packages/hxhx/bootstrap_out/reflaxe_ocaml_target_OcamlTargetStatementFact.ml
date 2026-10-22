@@ -1,0 +1,2 @@
+# 1 "reflaxe_ocaml_target_OcamlTargetStatementFact.ml"
+include Reflaxe_ocaml_target_OcamlTargetExpressionFact.Reflaxe_ocaml_target_OcamlTargetStatementFact

@@ -62,7 +62,8 @@ class OcamlTargetCore implements ITargetCore {
 		final entryPath = try {
 			if (traceEnabled())
 				Sys.println("stage3_driver=ocaml_target_core_before_emitToDir_direct");
-			final emitTypedProgram = typedProgram;
+			// Preserve policy diagnostics before selecting the executable's module order.
+			final emitTypedProgram = OcamlEntryPointSelection.rootFirst(typedProgram, context.mainModule);
 			if (traceEnabled())
 				Sys.println("stage3_driver=ocaml_target_core_after_emit_arg_typedProgram modules=" + emitTypedProgram.getTypedModules().length);
 			final emitOutDir = context.outputDir;

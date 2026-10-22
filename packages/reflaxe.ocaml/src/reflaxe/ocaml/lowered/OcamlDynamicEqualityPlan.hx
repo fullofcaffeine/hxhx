@@ -6,8 +6,8 @@ import haxe.ds.ObjectMap;
 import haxe.macro.Expr.Binop;
 import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
-#if macro
 import haxe.macro.TypeTools;
+#if macro
 import haxe.macro.TypedExprTools;
 #end
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
@@ -42,6 +42,7 @@ typedef OcamlDynamicEqualityDecision = {
 	final pipelineRevision:String;
 }
 
+#if macro
 /**
 	Classifies Haxe values stored in the target's general-purpose OCaml container.
 
@@ -49,7 +50,6 @@ typedef OcamlDynamicEqualityDecision = {
 	that container. Planning and code generation share this model. Thus, both
 	phases make the same choice for `Dynamic`, `Any`, and `HxAnon` values.
 **/
-#if macro
 class OcamlDynamicCarrierModel {
 	/** Returns whether this exact type uses the general-purpose Dynamic container. */
 	public static function usesDynamicCarrier(type:Type):Bool {
@@ -92,10 +92,11 @@ class OcamlDynamicCarrierModel {
 		}
 	}
 
+	/** Standard iterator pairs have no extra storage; wider records keep their ordinary HxAnon carrier. */
 	static function isKeyValueAnonymous(type:Type):Bool {
 		return switch (followNoAbstracts(type)) {
 			case TAnonymous(anonymousRef): final fields = anonymousRef.get()
-					.fields; Lambda.exists(fields, field -> field.name == "key") && Lambda.exists(fields, field -> field.name == "value");
+					.fields; fields.length == 2 && Lambda.exists(fields, field -> field.name == "key") && Lambda.exists(fields, field -> field.name == "value");
 			case _:
 				false;
 		}

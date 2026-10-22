@@ -1,5 +1,6 @@
 import haxe.ds.StringMap;
 import TypedExpr.TypedExprTag;
+import TypedAbstractUnaryInlinePlace.TypedInlineUnaryPlace;
 
 private typedef TypedBinaryPlace = {
 	final prefix:Array<TypedExpr>;
@@ -54,9 +55,10 @@ class TypedAbstractBinaryLowering {
 			+ declaration.getIdentity().getCanonicalKey());
 	}
 
-	static function semanticResult(expression:TypedExpr, resultType:TyType):TypedExpr {
+	/** Exact helper results retain their type; a native operation must separately prove its primitive storage view. */
+	static function semanticResult(expression:TypedExpr, resultType:TyType, preservesNativeStorage:Bool = false):TypedExpr {
 		return resultType.getNominalIdentity() == null ? expression : TypedExpr.castValue(expression, resultType.getDisplay(), resultType,
-			expression.getPosition());
+			expression.getPosition(), preservesNativeStorage || expression.getType().getSemanticKey() == resultType.getSemanticKey());
 	}
 
 	static function orderedValues(left:TypedExpr, right:TypedExpr, allocator:TyCompilerTemporaryAllocator):TypedOrderedBinaryValues {
@@ -200,16 +202,14 @@ class TypedAbstractBinaryLowering {
 	}
 
 	static function callArguments(binding:TyBoundAbstractBinaryOperator, sourceLeft:TypedExpr, sourceRight:TypedExpr):Array<TypedExpr> {
-		final convertedLeft = binding.getSourceLeftConversion().apply(sourceLeft);
-		final convertedRight = binding.getSourceRightConversion().apply(sourceRight);
-		return binding.getReverseArguments() ? [convertedRight, convertedLeft] : [convertedLeft, convertedRight];
+		return binding.getReverseArguments() ? [sourceRight, sourceLeft] : [sourceLeft, sourceRight];
 	}
 
 	static function staticCall(binding:TyBoundAbstractBinaryOperator, left:TypedExpr, right:TypedExpr, index:TyperIndex, filePath:String,
 			allocator:TyCompilerTemporaryAllocator):TypedExpr {
 		final info = binding.getOperatorInfo();
 		final declaration = info.getDeclaration();
-		final ordered = orderedValues(left, right, allocator);
+		final ordered = orderedValues(binding.getSourceLeftConversion().apply(left), binding.getSourceRightConversion().apply(right), allocator);
 		final owner = index.getByFullName(declaration.getOwner().getCanonicalName());
 		final ownerName = owner == null ? declaration.getOwner().getCanonicalName() : owner.getShortName();
 		final calleeOwner = TypedExpr.nameRead(ownerName, TyType.nominal(declaration.getOwner(), [], ownerName), left.getPosition());
@@ -224,7 +224,7 @@ class TypedAbstractBinaryLowering {
 			allocator:TyCompilerTemporaryAllocator):TypedExpr {
 		final info = binding.getOperatorInfo();
 		final declaration = info.getDeclaration();
-		final ordered = orderedValues(left, right, allocator);
+		final ordered = orderedValues(binding.getSourceLeftConversion().apply(left), binding.getSourceRightConversion().apply(right), allocator);
 		final callArgs = callArguments(binding, ordered.left, ordered.right);
 		// callArguments has already restored declaration order after any
 		// commutative source reversal. An instance declaration always receives its
@@ -244,8 +244,21 @@ class TypedAbstractBinaryLowering {
 
 	static function carrierValue(expression:TypedExpr, declaredType:TyType, index:TyperIndex):TypedExpr {
 		final carrier = carrierType(declaredType, index);
+		// The binding has already applied and ordered the declaration's operand
+		// conversions. Only its exact Int/Bool-backed value receives this proof.
+		final preserves = expression.getType().getSemanticKey() == declaredType.getSemanticKey()
+			&& (carrier.getSemanticKey() == "primitive:Int" || carrier.getSemanticKey() == "primitive:Bool");
 		return carrier.getSemanticKey() == expression.getType()
-			.getSemanticKey() ? expression.withType(carrier) : TypedExpr.castValue(expression, carrier.getDisplay(), carrier, expression.getPosition());
+			.getSemanticKey() ? expression.withType(carrier) : TypedExpr.castValue(expression, carrier.getDisplay(), carrier, expression.getPosition(), preserves);
+	}
+
+	/** Both ordinary and compound operations use the selected result's validated primitive storage. */
+	static function nativeResult(operation:TypedExpr, resultType:TyType, index:TyperIndex, filePath:String, declaration:TyDeclarationInfo):TypedExpr {
+		final carrier = carrierType(resultType, index);
+		final converted = convert(operation, carrier, filePath, declaration);
+		final preserves = (carrier.getSemanticKey() == "primitive:Int" || carrier.getSemanticKey() == "primitive:Bool")
+			&& converted.getType().getSemanticKey() == carrier.getSemanticKey();
+		return semanticResult(converted, resultType, preserves);
 	}
 
 	/** Make Haxe string-concatenation conversion explicit before target emission. **/
@@ -263,15 +276,14 @@ class TypedAbstractBinaryLowering {
 			allocator:TyCompilerTemporaryAllocator):TypedExpr {
 		final info = binding.getOperatorInfo();
 		final declaration = info.getDeclaration();
-		final ordered = orderedValues(left, right, allocator);
+		final ordered = orderedValues(binding.getSourceLeftConversion().apply(left), binding.getSourceRightConversion().apply(right), allocator);
 		final arguments = callArguments(binding, ordered.left, ordered.right);
 		final carrierLeft = carrierValue(arguments[0], info.getLeftType(), index);
 		final carrierRight = carrierValue(arguments[1], info.getRightType(), index);
-		final resultCarrier = carrierType(info.getResultType(), index);
 		final nativeType = TyAbstractNativeBinaryOperation.validate(info, index, filePath);
 		final operation = TypedExpr.binary(info.getOperator(), nativeOperand(carrierLeft, nativeType), nativeOperand(carrierRight, nativeType), nativeType,
 			left.getPosition());
-		final result = semanticResult(convert(operation, resultCarrier, filePath, declaration), info.getResultType());
+		final result = nativeResult(operation, info.getResultType(), index, filePath, declaration);
 		final expressions = ordered.prefix.copy();
 		expressions.push(result);
 		return TypedExpr.block(expressions, info.getResultType(), left.getPosition());
@@ -283,18 +295,13 @@ class TypedAbstractBinaryLowering {
 		final declaration = info.getDeclaration();
 		final place = placeFor(left, index, filePath, left.getPosition() == null ? HxPos.unknown() : left.getPosition(), allocator);
 		final expressions = place.prefix.copy();
-		final currentBinding = allocator.allocate("current", left.getType());
-		final currentName = currentBinding.getSourceName();
-		expressions.push(TypedExpr.temporary(currentName, left.getType().getDisplay(), place.read(left.getType()), voidType(), left.getPosition(),
-			currentBinding));
-		final rightBinding = allocator.allocate("right", right.getType());
-		final rightName = rightBinding.getSourceName();
-		expressions.push(TypedExpr.temporary(rightName, right.getType().getDisplay(), right, voidType(), right.getPosition(), rightBinding));
-		final currentRead = TypedExpr.localRead(currentName, left.getType(), left.getPosition(), currentBinding);
-		final rightRead = TypedExpr.localRead(rightName, right.getType(), right.getPosition(), rightBinding);
+		final ordered = orderedValues(binding.getSourceLeftConversion().apply(place.read(left.getType())), binding.getSourceRightConversion().apply(right),
+			allocator);
+		for (entry in ordered.prefix)
+			expressions.push(entry);
 		final owner = index.getByFullName(declaration.getOwner().getCanonicalName());
 		final ownerName = owner == null ? declaration.getOwner().getCanonicalName() : owner.getShortName();
-		final callArgs = callArguments(binding, currentRead, rightRead);
+		final callArgs = callArguments(binding, ordered.left, ordered.right);
 		final call = if (declaration.getIsStatic()) {
 			final calleeOwner = TypedExpr.nameRead(ownerName, TyType.nominal(declaration.getOwner(), [], ownerName), left.getPosition());
 			final callee = TypedExpr.fieldRead(calleeOwner, declaration.getSignature().getName(), TyType.unknown(), left.getPosition());
@@ -327,25 +334,20 @@ class TypedAbstractBinaryLowering {
 			return nativeBodylessValue(binding, left, right, index, filePath, allocator);
 		final place = placeFor(left, index, filePath, left.getPosition() == null ? HxPos.unknown() : left.getPosition(), allocator);
 		final expressions = place.prefix.copy();
-		final currentBinding = allocator.allocate("native_current", left.getType());
-		final currentName = currentBinding.getSourceName();
-		expressions.push(TypedExpr.temporary(currentName, left.getType().getDisplay(), place.read(left.getType()), voidType(), left.getPosition(),
-			currentBinding));
-		final rightBinding = allocator.allocate("native_right", right.getType());
-		final rightName = rightBinding.getSourceName();
-		expressions.push(TypedExpr.temporary(rightName, right.getType().getDisplay(), right, voidType(), right.getPosition(), rightBinding));
-		final callArgs = callArguments(binding, TypedExpr.localRead(currentName, left.getType(), left.getPosition(), currentBinding),
-			TypedExpr.localRead(rightName, right.getType(), right.getPosition(), rightBinding));
+		final ordered = orderedValues(binding.getSourceLeftConversion().apply(place.read(left.getType())), binding.getSourceRightConversion().apply(right),
+			allocator);
+		for (entry in ordered.prefix)
+			expressions.push(entry);
+		final callArgs = callArguments(binding, ordered.left, ordered.right);
 		final carrierLeft = carrierValue(callArgs[0], info.getLeftType(), index);
 		final carrierRight = carrierValue(callArgs[1], info.getRightType(), index);
-		final resultCarrier = carrierType(info.getResultType(), index);
 		final nativeType = TyAbstractNativeBinaryOperation.validate(info, index, filePath);
 		final operation = TypedExpr.binary(baseOp, nativeOperand(carrierLeft, nativeType), nativeOperand(carrierRight, nativeType), nativeType,
 			left.getPosition());
 		final resultConversion = binding.getResultConversion();
 		if (resultConversion == null)
 			throw "bodyless abstract compound fallback lost its selected result conversion";
-		final semanticValue = resultConversion.apply(semanticResult(convert(operation, resultCarrier, filePath, declaration), info.getResultType()));
+		final semanticValue = resultConversion.apply(nativeResult(operation, info.getResultType(), index, filePath, declaration));
 		final resultBinding = allocator.allocate("native_result", left.getType());
 		final resultName = resultBinding.getSourceName();
 		expressions.push(TypedExpr.temporary(resultName, left.getType().getDisplay(), semanticValue, voidType(), left.getPosition(), resultBinding));
@@ -355,12 +357,22 @@ class TypedAbstractBinaryLowering {
 		return TypedExpr.block(expressions, left.getType(), left.getPosition());
 	}
 
-	static function substituteExpression(expression:TypedExpr, place:TypedBinaryPlace, parameters:StringMap<TypedExpr>,
+	static function substituteExpression(expression:TypedExpr, place:TypedInlineUnaryPlace, parameters:StringMap<TypedExpr>,
 			renamedLocals:StringMap<TyLocalBinding>):TypedExpr {
 		final children = expression.getExpressions();
 		return switch (expression.getTag()) {
 			case ThisValue:
 				place.read(expression.getType());
+			case Call if (expression.getDeclaration() != null
+				&& !expression.getDeclaration().getIsStatic()
+				&& children[0].getTag() == NameRead):
+				final declaration = expression.getDeclaration();
+				final receiver = place.read(TyType.nominal(declaration.getOwner(), [], declaration.getOwner().getCanonicalName()));
+				final callee = TypedExpr.fieldRead(receiver, declaration.getSignature().getName(), children[0].getType(), expression.getPosition());
+				expression.withExpressions([callee].concat([
+					for (child in children.slice(1))
+						substituteExpression(child, place, parameters, renamedLocals)
+				]));
 			case LocalRead:
 				final sourceBindings = expression.getLocalBindings();
 				if (sourceBindings.length != 1)
@@ -375,8 +387,7 @@ class TypedAbstractBinaryLowering {
 				place.write(substituteExpression(children[1], place, parameters, renamedLocals));
 			case CompoundAssign if (children.length == 2 && children[0].getTag() == TypedExprTag.ThisValue):
 				final texts = expression.getTexts();
-				TypedExpr.compoundAssign(texts[0], place.read(children[0].getType()), substituteExpression(children[1], place, parameters, renamedLocals),
-					children[0].getType(), expression.getPosition());
+				place.compound(texts[0], substituteExpression(children[1], place, parameters, renamedLocals), children[0].getType(), expression.getPosition());
 			case _:
 				expression.withExpressions([
 					for (child in children)
@@ -385,7 +396,7 @@ class TypedAbstractBinaryLowering {
 		};
 	}
 
-	static function lowerInlineStatements(statements:Array<TypedStmt>, place:TypedBinaryPlace, parameters:StringMap<TypedExpr>,
+	static function lowerInlineStatements(statements:Array<TypedStmt>, place:TypedInlineUnaryPlace, parameters:StringMap<TypedExpr>,
 			renamedLocals:StringMap<TyLocalBinding>, state:TypedBinaryInlineBodyState, helpers:StringMap<TypedFunction>, index:TyperIndex, filePath:String,
 			allocator:TyCompilerTemporaryAllocator, declaration:TyDeclarationInfo):Void {
 		for (statement in statements) {
@@ -450,7 +461,13 @@ class TypedAbstractBinaryLowering {
 
 		final receiver = binding.getReverseArguments() ? right : left;
 		final argument = binding.getReverseArguments() ? left : right;
-		final place = placeFor(receiver, index, filePath, receiver.getPosition() == null ? HxPos.unknown() : receiver.getPosition(), allocator);
+		final place = TypedAbstractUnaryInlinePlace.prepare({
+			place: placeFor(receiver, index, filePath, receiver.getPosition() == null ? HxPos.unknown() : receiver.getPosition(), allocator),
+			receiver: receiver.getType(),
+			abstractInfo: index.getAbstractByFullName(declaration.getOwner().getCanonicalName()),
+			declaration: declaration,
+			allocator: allocator
+		});
 		final prefix = new Array<TypedExpr>();
 		final argumentConversion = binding.getReverseArguments() ? binding.getSourceLeftConversion() : binding.getSourceRightConversion();
 		final expectedArgumentType = argumentConversion.getExpectedType();
@@ -504,11 +521,22 @@ class TypedAbstractBinaryLowering {
 		final right = loweredChildren[1];
 		final selected = TyAbstractBinaryBinding.select(index, left.getType(), right.getType(), texts[0], filePath,
 			rebuilt.getPosition() == null ? HxPos.unknown() : rebuilt.getPosition());
-		if (selected == null)
+		if (selected == null) {
+			// Only the ordinary concatenation fallback may expose a declared
+			// primitive view. An authored operator keeps its selected operands.
+			if ((texts[0] == "+" || texts[0] == "+=")
+				&& (left.getType().getSemanticKey() == "primitive:String" || right.getType().getSemanticKey() == "primitive:String"))
+				return rebuilt.withExpressions([
+					rebuilt.getTag() == TypedExprTag.CompoundAssign ? left : TypedStringOperand.lower(left, index),
+					TypedStringOperand.lower(right, index)
+				]);
 			return rebuilt;
-		if (selected.getRequiresWriteback())
-			return fallbackWriteback(selected, left, right, index, filePath, allocator);
+		}
 		final declaration = selected.getOperatorInfo().getDeclaration();
+		// A bodyless fallback still owns a primitive operation plus writeback;
+		// it cannot become a call to a helper with no implementation.
+		if (selected.getRequiresWriteback() && declaration.getHasBody())
+			return fallbackWriteback(selected, left, right, index, filePath, allocator);
 		if (!declaration.getHasBody())
 			return HxBinaryOperatorTools.isCompoundAssignment(selected.getSourceOperator()) ? nativeBodylessCompound(selected, left, right, index, filePath,
 				allocator) : nativeBodylessValue(selected, left, right, index, filePath, allocator);
@@ -569,6 +597,8 @@ class TypedAbstractBinaryLowering {
 		for (typedClass in classes)
 			for (typedFunction in typedClass.getFunctions()) {
 				final owner = typedFunction.getStableIdentity();
+				for (value in typedFunction.getDefaults())
+					assertNoAbstractBinaryExpression(value.getExpression(), index, owner);
 				for (statement in typedFunction.getBody().getStatements()) {
 					for (expression in statement.getExpressions())
 						assertNoAbstractBinaryExpression(expression, index, owner);
@@ -596,13 +626,16 @@ class TypedAbstractBinaryLowering {
 				typedClass.withFunctions([
 					for (typedFunction in typedClass.getFunctions()) {
 						final body = typedFunction.getBody();
-						final allocator = new TyCompilerTemporaryAllocator(typedFunction.getStableIdentity(), "typed-abstract-binary-v1",
+						final allocator = new TyCompilerTemporaryAllocator(typedFunction.getStableIdentity(), "typed-abstract-binary-v3",
 							"__hxhx_abstract_binary_");
 						final statements = [
 							for (statement in body.getStatements())
 								lowerStatement(statement, helpers, index, filePath, allocator)
 						];
-						typedFunction.withBody(new TypedFunctionBody(statements, body.getSourceFingerprint()));
+						typedFunction.withBody(new TypedFunctionBody(statements, body.getSourceFingerprint()), [
+							for (value in typedFunction.getDefaults())
+								new TypedFunctionDefault(value.getParameterIndex(), lowerExpression(value.getExpression(), helpers, index, filePath, allocator))
+						]);
 					}
 				])
 		];

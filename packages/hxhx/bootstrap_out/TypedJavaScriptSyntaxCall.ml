@@ -1,0 +1,2 @@
+# 1 "TypedJavaScriptSyntaxCall.ml"
+include CompilerDiagnosticProbe.TypedJavaScriptSyntaxCall

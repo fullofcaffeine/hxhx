@@ -1,0 +1,2 @@
+# 1 "TypedBackendRuntimeTypeCatalog.ml"
+include CompilerDiagnosticProbe.TypedBackendRuntimeTypeCatalog

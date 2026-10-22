@@ -1,0 +1,12 @@
+stored=item:37
+renamed=item:39
+key=item:41
+next=item:43
+constant=empty
+alias=item:45
+written=item:47
+receiver=item:47:1
+nullable=absent
+nullable-written=item:49
+nullable-present=item:53
+tuple=entry:item:51

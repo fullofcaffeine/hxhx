@@ -8,6 +8,10 @@
 enum TyLocalDeclarationKind {
 	Parameter;
 	Variable;
+
+	/** A named function introduces a readable callable binding that source code cannot overwrite. */
+	NamedFunction;
+
 	LoopVariable;
 	CatchVariable;
 	PatternVariable;
@@ -22,6 +26,7 @@ class TyLocalDeclarationKindTools {
 		return switch (kind) {
 			case Parameter: "parameter";
 			case Variable: "variable";
+			case NamedFunction: "named-function";
 			case LoopVariable: "loop-variable";
 			case CatchVariable: "catch-variable";
 			case PatternVariable: "pattern-variable";

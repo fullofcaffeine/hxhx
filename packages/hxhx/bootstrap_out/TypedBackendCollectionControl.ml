@@ -1,0 +1,2 @@
+# 1 "TypedBackendCollectionControl.ml"
+include CompilerDiagnosticProbe.TypedBackendCollectionControl

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable modulePath : string; mutable reasonPath : 
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun modulePath2 reasonPath2 -> let self = ({ __hx_type = HxType.class_ "CompilerDependencyInvalidation"; modulePath = HxString.hx_null_string; reasonPath = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun modulePath2 reasonPath2 -> let self = ({ __hx_type = HxType.instance_marker "CompilerDependencyInvalidation"; modulePath = HxString.hx_null_string; reasonPath = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
     ignore (if modulePath2 == HxString.hx_null_string then let __assign_1 = "" in (
       tempRight := __assign_1;
@@ -23,7 +23,7 @@ let create = fun modulePath2 reasonPath2 -> let self = ({ __hx_type = HxType.cla
       ignore (if reasonPath2 == Obj.magic (HxRuntime.hx_null) then let __assign_5 = Obj.magic (let __represented_array_6 = HxArray.create () in __represented_array_6) in (
         tempRight1 := __assign_5;
         __assign_5
-      ) else let __assign_7 = Obj.magic (let __array_receiver_8 = reasonPath2 in HxArray.copy __array_receiver_8) in (
+      ) else let __assign_7 = Obj.magic (let __array_receiver_8 = Obj.magic reasonPath2 in HxArray.copy __array_receiver_8) in (
         tempRight1 := __assign_7;
         __assign_7
       ));
@@ -37,6 +37,6 @@ let create = fun modulePath2 reasonPath2 -> let self = ({ __hx_type = HxType.cla
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencyInvalidation"; modulePath = HxString.hx_null_string; reasonPath = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerDependencyInvalidation"; modulePath = HxString.hx_null_string; reasonPath = Obj.magic HxRuntime.hx_null } : t)
 
 let describe = fun self () -> let __string_part_11 = HxString.toStdString ((Obj.magic self : t).modulePath) in let __string_part_12 = ": " in let __string_part_13 = HxString.toStdString (HxArray.join ((Obj.magic self : t).reasonPath) " -> " (fun x -> x)) in (__string_part_11 ^ __string_part_12) ^ __string_part_13

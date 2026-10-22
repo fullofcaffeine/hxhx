@@ -27,17 +27,25 @@
       "haxeDecisionOwners": [
         "packages/reflaxe.ocaml/src/reflaxe/ocaml/runtimegen/OcamlRuntimeRequirementLedger.hx",
         "packages/reflaxe.ocaml/src/reflaxe/ocaml/runtimegen/OcamlNativeRuntimeBoundary.hx",
-        "packages/reflaxe.ocaml/src/reflaxe/ocaml/runtimegen/RuntimeCopier.hx"
+        "packages/reflaxe.ocaml/src/reflaxe/ocaml/runtimegen/RuntimeCopier.hx",
+        "packages/reflaxe.ocaml/src/reflaxe/ocaml/lowered/OcamlClassIdentityMarkerPlan.hx",
+        "packages/reflaxe.ocaml/src/reflaxe/ocaml/target/OcamlTargetClassMarker.hx",
+        "packages/hxhx-core/src/backend/ocaml/Stage3OcamlClassStorage.hx",
+        "packages/hxhx-core/src/backend/ocaml/Stage3OcamlExceptions.hx"
       ],
       "ownerBeads": [
         "haxe_ocaml-0uwin",
-        "haxe_ocaml-s7jry"
+        "haxe_ocaml-s7jry",
+        "haxe_ocaml-k93zp",
+        "haxe_ocaml-eu7fj.22"
       ],
-      "whyOcaml": "The compiler has already selected a checked Haxe runtime capability. These modules implement its OCaml carrier or host primitive and are copied through the locked, hashed runtime manifest.",
+      "whyOcaml": "The compiler has already selected a checked Haxe runtime capability. These modules implement its OCaml carrier or host primitive and are copied through the locked, hashed runtime manifest. Private allocation stamps preserve native ObjectMap lookup across mutation and moving GC. Haxe selects each allocation and class descriptor; OCaml supplies atomic stamps and checked native representation access without interpreting compiler facts.",
       "readinessRule": "A manifest entry proves source ownership and integrity, not full Haxe parity. Missing, stale, unknown, profile-illegal, or semantically unexplained runtime requirements remain fail-closed work under haxe_ocaml-0uwin.",
       "focusedEvidence": [
         "npm run test:reflaxe-ocaml:runtime-manifest",
-        "npm run test:reflaxe-ocaml:runtime-requirements"
+        "npm run test:reflaxe-ocaml:runtime-requirements",
+        "haxe test/m14_stage3_nominal_exception_integration_test.hxml",
+        "haxe test/m14_nominal_carrier_runtime_test.hxml"
       ]
     },
     "toolingClassifications": [
@@ -174,6 +182,30 @@
   ],
   "testFixtures": [
     {
+      "path": "test/object_map_identity_runtime/Observer.ml",
+      "kind": "native-target-test-observer",
+      "productionModule": "HxRuntime / HxMap / HxAnon / HxType",
+      "whyOcaml": "An independent native consumer verifies physical identity, mutation, lookup after requested garbage collections, hash collisions, opaque native keys, and allocation stamps. It does not prove that a particular object moved. Haxe owns allocation selection; this file owns representation assertions only."
+    },
+    {
+      "path": "test/method_dispatch_runtime/Observer.ml",
+      "kind": "native-target-test-observer",
+      "productionModule": "HxMethodDispatch",
+      "whyOcaml": "An independent native consumer checks opaque method-entry storage, concrete receiver layout validation, closure lifetime, concurrent registration, and rejection paths. Haxe owns method selection, signatures, and generated binders; this file owns assertions only."
+    },
+    {
+      "path": "test/reflaxe_ocaml_shared_construction/Observer.ml",
+      "kind": "native-target-test-observer",
+      "productionModule": "reflaxe.ocaml.target.OcamlTargetConstructionLowerer",
+      "whyOcaml": "An independent OCaml consumer verifies allocation order, instance identity, and effects retained when construction throws. It owns assertions only, not compiler behavior."
+    },
+    {
+      "path": "test/reflaxe_ocaml_shared_nullable_values/Observer.ml",
+      "kind": "native-target-test-observer",
+      "productionModule": "reflaxe.ocaml.target.OcamlTargetFunctionLowerer",
+      "whyOcaml": "An independent OCaml consumer verifies nullable integer inputs, results, and the established runtime representation. It owns assertions only, not compiler behavior."
+    },
+    {
       "path": "test/fixtures/hxhx_compiler_server_runtime/Fixture.ml",
       "kind": "native-adapter-test-fixture",
       "productionModule": "HxHxCompilerServer"
@@ -182,6 +214,18 @@
       "path": "test/fixtures/native_backend_plugin/hxhx_backend_plugin_fixture.ml",
       "kind": "native-adapter-test-fixture",
       "productionModule": "HxHxBackendPluginHost"
+    },
+    {
+      "path": "test/reflaxe_ocaml_shared_function_values/Observer.ml",
+      "kind": "native-target-test-observer",
+      "productionModule": "reflaxe.ocaml.target.OcamlTargetFunctionLowerer",
+      "whyOcaml": "An independent OCaml consumer checks the emitted parameter and result contract. It contains test assertions only and owns no compiler behavior."
+    },
+    {
+      "path": "test/nominal_carrier_runtime/Observer.ml",
+      "kind": "native-target-test-observer",
+      "productionModule": "HxAnon / HxType",
+      "whyOcaml": "An independent native consumer verifies private class descriptors, public-field forgery rejection, record representation, and GC lifetime. Haxe owns class selection and ancestry; this file owns assertions only."
     }
   ],
   "retiredHandwrittenModules": [

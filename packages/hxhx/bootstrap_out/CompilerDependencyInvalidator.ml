@@ -6,19 +6,19 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerDependencyInvalidator" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "CompilerDependencyInvalidator" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencyInvalidator" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerDependencyInvalidator" } : t)
 
 let mark = fun modulePath strength reason strengthByModule reasonByModule queue -> ignore (try ignore (let previousStrength = HxMap.get_string (Obj.magic strengthByModule) (modulePath : string) in (
-  ignore (if previousStrength != HxRuntime.hx_null && (let __nullable_118 = previousStrength in let __nullable_119 = strength in if __nullable_118 == HxRuntime.hx_null then false else Obj.obj __nullable_118 >= __nullable_119) then raise (HxRuntime.Hx_return_void) else ());
+  ignore (if previousStrength != HxRuntime.hx_null && (let __nullable_118 = previousStrength in let __nullable_119 = strength in if __nullable_118 == HxRuntime.hx_null then false else Obj.obj __nullable_118 >= __nullable_119) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   ignore (HxMap.set_string (Obj.magic strengthByModule) (modulePath : string) strength);
-  let value = Obj.magic (let __array_receiver_120 = reason in HxArray.copy __array_receiver_120) in (
+  let value = Obj.magic (let __array_receiver_120 = Obj.magic reason in HxArray.copy __array_receiver_120) in (
     ignore (HxMap.set_string (Obj.magic reasonByModule) (modulePath : string) value);
-    let __array_receiver_121 = queue in let __array_arg_0_122 = modulePath in HxArray.push __array_receiver_121 __array_arg_0_122
+    let __array_receiver_121 = Obj.magic queue in let __array_arg_0_122 = (modulePath : string) in HxArray.push __array_receiver_121 __array_arg_0_122
   )
 )) with
   | HxRuntime.Hx_return_void -> ())
@@ -53,8 +53,8 @@ let unionModuleNames = fun previous current -> let names = Obj.magic (HxMap.crea
   let name = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic current))) in (
     ignore (while let __iterator_receiver_130 = name in HxIterator.hasNext __iterator_receiver_130 do ignore (let name2 = (let __iterator_receiver_131 = name in HxIterator.next __iterator_receiver_131 : string) in HxMap.set_string (Obj.magic names) (name2 : string) true) done);
     let out = Obj.magic (HxArray.create ()) in let name = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic names))) in (
-      ignore (while let __iterator_receiver_132 = name in HxIterator.hasNext __iterator_receiver_132 do ignore (let name2 = (let __iterator_receiver_133 = name in HxIterator.next __iterator_receiver_133 : string) in let __array_receiver_134 = out in let __array_arg_0_135 = name2 in HxArray.push __array_receiver_134 __array_arg_0_135) done);
-      ignore (let __array_receiver_136 = out in let __array_arg_0_137 = compareText in HxArray.sort __array_receiver_136 __array_arg_0_137);
+      ignore (while let __iterator_receiver_132 = name in HxIterator.hasNext __iterator_receiver_132 do ignore (let name2 = (let __iterator_receiver_133 = name in HxIterator.next __iterator_receiver_133 : string) in let __array_receiver_134 = Obj.magic out in let __array_arg_0_135 = (name2 : string) in HxArray.push __array_receiver_134 __array_arg_0_135) done);
+      ignore (let __array_receiver_136 = Obj.magic out in let __array_arg_0_137 = compareText in HxArray.sort __array_receiver_136 __array_arg_0_137);
       out
     )
   )
@@ -77,8 +77,8 @@ let compareEdges = fun left right -> (try let tempNumber = ref (0 : int) in (
       __assign_160
     ));
     let rightPriority = !tempNumber1 in (
-      ignore (if leftPriority < rightPriority then raise (HxRuntime.Hx_return (Obj.repr (-1))) else ());
-      ignore (if leftPriority > rightPriority then raise (HxRuntime.Hx_return (Obj.repr 1)) else ());
+      ignore (if leftPriority < rightPriority then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (-1))) else ());
+      ignore (if leftPriority > rightPriority then Stdlib.raise (HxRuntime.Hx_return (Obj.repr 1)) else ());
       let __call_arg_0_161 = CompilerDependencyEdge.canonicalKey (Obj.magic left) () in let __call_arg_1_162 = CompilerDependencyEdge.canonicalKey (Obj.magic right) () in compareText __call_arg_0_161 __call_arg_1_162
     )
   )
@@ -108,12 +108,12 @@ let reverseEdgeMap = fun previous current -> let byKey = Obj.magic (HxMap.create
           __assign_148
         ));
         let edges = Obj.magic (!tempMaybeArray) in if edges == Obj.magic (HxRuntime.hx_null) then ignore (let created = Obj.magic (HxArray.create ()) in (
-          ignore (let __array_receiver_149 = created in let __array_arg_0_150 = edge2 in HxArray.push __array_receiver_149 __array_arg_0_150);
+          ignore (let __array_receiver_149 = Obj.magic created in let __array_arg_0_150 = Obj.magic edge2 in HxArray.push __array_receiver_149 __array_arg_0_150);
           let key = ((Obj.magic edge2 : CompilerDependencyEdge.t).providerModule : string) in HxMap.set_string (Obj.magic reverse) (key : string) created
-        )) else ignore (let __array_receiver_151 = edges in let __array_arg_0_152 = edge2 in HxArray.push __array_receiver_151 __array_arg_0_152)
+        )) else ignore (let __array_receiver_151 = Obj.magic edges in let __array_arg_0_152 = Obj.magic edge2 in HxArray.push __array_receiver_151 __array_arg_0_152)
       )) done);
       let edges = HxIterator.of_array (Obj.magic (HxMap.values_string (Obj.magic reverse))) in (
-        ignore (while let __iterator_receiver_153 = edges in HxIterator.hasNext __iterator_receiver_153 do ignore (let edges2 = Obj.magic (let __iterator_receiver_154 = edges in HxIterator.next __iterator_receiver_154) in let __array_receiver_155 = edges2 in let __array_arg_0_156 = compareEdges in HxArray.sort __array_receiver_155 __array_arg_0_156) done);
+        ignore (while let __iterator_receiver_153 = edges in HxIterator.hasNext __iterator_receiver_153 do ignore (let edges2 = Obj.magic (let __iterator_receiver_154 = edges in HxIterator.next __iterator_receiver_154) in let __array_receiver_155 = Obj.magic edges2 in let __array_arg_0_156 = compareEdges in HxArray.sort __array_receiver_155 __array_arg_0_156) done);
         reverse
       )
     )
@@ -130,27 +130,27 @@ let compare = fun previous current -> (
       ));
       let before = Obj.magic (HxMap.get_string (Obj.magic previousModules) (modulePath : string)) in let after = Obj.magic (HxMap.get_string (Obj.magic currentModules) (modulePath : string)) in (
         ignore (if before == Obj.magic (HxRuntime.hx_null) || after == Obj.magic (HxRuntime.hx_null) || (let __string_eq_left_5 = (Obj.magic before : CompilerTypedModuleRevision.t).sourceOriginRevision in let __string_eq_right_6 = (Obj.magic after : CompilerTypedModuleRevision.t).sourceOriginRevision in not (HxString.equals __string_eq_left_5 __string_eq_right_6)) then ignore ((
-          ignore (let __array_receiver_7 = sourceOriginChanges in let __array_arg_0_8 = modulePath in HxArray.push __array_receiver_7 __array_arg_0_8);
+          ignore (let __array_receiver_7 = Obj.magic sourceOriginChanges in let __array_arg_0_8 = (modulePath : string) in HxArray.push __array_receiver_7 __array_arg_0_8);
           HxMap.set_string (Obj.magic sourceOriginChanged) (modulePath : string) true
         )) else ());
         ignore (if before != Obj.magic (HxRuntime.hx_null) && after != Obj.magic (HxRuntime.hx_null) && (let __string_eq_left_9 = CompilerConditionalCompilationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic before : CompilerTypedModuleRevision.t).conditionalCompilation)) () in let __string_eq_right_10 = CompilerConditionalCompilationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic after : CompilerTypedModuleRevision.t).conditionalCompilation)) () in not (HxString.equals __string_eq_left_9 __string_eq_right_10)) then ignore ((
-          ignore (let __array_receiver_11 = conditionalCompilationChanges in let __array_arg_0_12 = modulePath in HxArray.push __array_receiver_11 __array_arg_0_12);
+          ignore (let __array_receiver_11 = Obj.magic conditionalCompilationChanges in let __array_arg_0_12 = (modulePath : string) in HxArray.push __array_receiver_11 __array_arg_0_12);
           HxMap.set_string (Obj.magic conditionalCompilationChanged) (modulePath : string) true
         )) else ());
         ignore (if before != Obj.magic (HxRuntime.hx_null) && after != Obj.magic (HxRuntime.hx_null) && (let __string_eq_left_13 = CompilerGeneratedDeclarationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic before : CompilerTypedModuleRevision.t).generatedDeclarations)) () in let __string_eq_right_14 = CompilerGeneratedDeclarationObservation.getCanonicalIdentity (Obj.magic ((Obj.magic after : CompilerTypedModuleRevision.t).generatedDeclarations)) () in not (HxString.equals __string_eq_left_13 __string_eq_right_14)) then ignore ((
-          ignore (let __array_receiver_15 = generatedDeclarationChanges in let __array_arg_0_16 = modulePath in HxArray.push __array_receiver_15 __array_arg_0_16);
+          ignore (let __array_receiver_15 = Obj.magic generatedDeclarationChanges in let __array_arg_0_16 = (modulePath : string) in HxArray.push __array_receiver_15 __array_arg_0_16);
           HxMap.set_string (Obj.magic generatedDeclarationsChanged) (modulePath : string) true
         )) else ());
         ignore (if before != Obj.magic (HxRuntime.hx_null) && after != Obj.magic (HxRuntime.hx_null) && (let __string_eq_left_17 = CompilerMacroFileDependencyObservation.getCanonicalIdentity (Obj.magic ((Obj.magic before : CompilerTypedModuleRevision.t).macroFileDependencies)) () in let __string_eq_right_18 = CompilerMacroFileDependencyObservation.getCanonicalIdentity (Obj.magic ((Obj.magic after : CompilerTypedModuleRevision.t).macroFileDependencies)) () in not (HxString.equals __string_eq_left_17 __string_eq_right_18)) then ignore ((
-          ignore (let __array_receiver_19 = macroFileDependencyChanges in let __array_arg_0_20 = modulePath in HxArray.push __array_receiver_19 __array_arg_0_20);
+          ignore (let __array_receiver_19 = Obj.magic macroFileDependencyChanges in let __array_arg_0_20 = (modulePath : string) in HxArray.push __array_receiver_19 __array_arg_0_20);
           HxMap.set_string (Obj.magic macroFileDependenciesChanged) (modulePath : string) true
         )) else ());
         ignore (if before == Obj.magic (HxRuntime.hx_null) || after == Obj.magic (HxRuntime.hx_null) || (let __string_eq_left_21 = (Obj.magic before : CompilerTypedModuleRevision.t).publicInterfaceRevision in let __string_eq_right_22 = (Obj.magic after : CompilerTypedModuleRevision.t).publicInterfaceRevision in not (HxString.equals __string_eq_left_21 __string_eq_right_22)) then ignore ((
-          ignore (let __array_receiver_23 = publicChanges in let __array_arg_0_24 = modulePath in HxArray.push __array_receiver_23 __array_arg_0_24);
+          ignore (let __array_receiver_23 = Obj.magic publicChanges in let __array_arg_0_24 = (modulePath : string) in HxArray.push __array_receiver_23 __array_arg_0_24);
           HxMap.set_string (Obj.magic publicChanged) (modulePath : string) true
         )) else ());
         ignore (if before == Obj.magic (HxRuntime.hx_null) || after == Obj.magic (HxRuntime.hx_null) || (let __string_eq_left_25 = (Obj.magic before : CompilerTypedModuleRevision.t).implementationRevision in let __string_eq_right_26 = (Obj.magic after : CompilerTypedModuleRevision.t).implementationRevision in not (HxString.equals __string_eq_left_25 __string_eq_right_26)) then ignore ((
-          ignore (let __array_receiver_27 = implementationChanges in let __array_arg_0_28 = modulePath in HxArray.push __array_receiver_27 __array_arg_0_28);
+          ignore (let __array_receiver_27 = Obj.magic implementationChanges in let __array_arg_0_28 = (modulePath : string) in HxArray.push __array_receiver_27 __array_arg_0_28);
           HxMap.set_string (Obj.magic implementationChanged) (modulePath : string) true
         )) else ());
         ignore (if before == Obj.magic (HxRuntime.hx_null) || after == Obj.magic (HxRuntime.hx_null) || (let __string_eq_left_29 = (Obj.magic before : CompilerTypedModuleRevision.t).sourceRevision in let __string_eq_right_30 = (Obj.magic after : CompilerTypedModuleRevision.t).sourceRevision in not (HxString.equals __string_eq_left_29 __string_eq_right_30)) then ignore (HxMap.set_string (Obj.magic sourceContentChanged) (modulePath : string) true) else ());
@@ -163,7 +163,7 @@ let compare = fun previous current -> (
           ignore (_g := __new_36);
           __new_36
         ));
-        ignore (if not (HxMap.exists_string (Obj.magic directSourceChanged) (modulePath : string)) then raise (HxRuntime.Hx_continue) else ());
+        ignore (if not (HxMap.exists_string (Obj.magic directSourceChanged) (modulePath : string)) then Stdlib.raise (HxRuntime.Hx_continue) else ());
         if HxMap.exists_string (Obj.magic sourceOriginChanged) (modulePath : string) then ignore (let before = Obj.magic (HxMap.get_string (Obj.magic previousModules) (modulePath : string)) in let after = Obj.magic (HxMap.get_string (Obj.magic currentModules) (modulePath : string)) in let tempNumber = ref (0 : int) in (
           ignore (if HxMap.exists_string (Obj.magic publicChanged) (modulePath : string) then let __assign_37 = 2 in (
             tempNumber := __assign_37;
@@ -320,14 +320,14 @@ let compare = fun previous current -> (
           ignore (cursor := __new_91);
           __old_90
         ) in HxArray.get (Obj.magic __array_read_receiver_88) __array_read_index_89 : string) in let providerStrength = HxMap.get_string (Obj.magic strengthByModule) (providerModule : string) in let providerReason = Obj.magic (HxMap.get_string (Obj.magic reasonByModule) (providerModule : string)) in let edges = Obj.magic (HxMap.get_string (Obj.magic reverseEdges) (providerModule : string)) in (
-          ignore (if providerStrength == HxRuntime.hx_null || providerReason == Obj.magic (HxRuntime.hx_null) || edges == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
-          ignore (if let __nullable_92 = providerStrength in if __nullable_92 == HxRuntime.hx_null then false else Obj.obj __nullable_92 = 0 then raise (HxRuntime.Hx_continue) else ());
+          ignore (if providerStrength == HxRuntime.hx_null || providerReason == Obj.magic (HxRuntime.hx_null) || edges == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_continue) else ());
+          ignore (if let __nullable_92 = providerStrength in if __nullable_92 == HxRuntime.hx_null then false else Obj.obj __nullable_92 = 0 then Stdlib.raise (HxRuntime.Hx_continue) else ());
           let _g = ref 0 in while !_g < HxArray.length edges do try ignore (let edge = Obj.magic (let __array_read_receiver_93 = edges in let __array_read_index_94 = !_g in HxArray.get (Obj.magic __array_read_receiver_93) __array_read_index_94) in (
             ignore (let __old_95 = !_g in let __new_96 = HxInt.add __old_95 1 in (
               ignore (_g := __new_96);
               __new_96
             ));
-            ignore (if (let __nullable_97 = providerStrength in if __nullable_97 == HxRuntime.hx_null then false else Obj.obj __nullable_97 = 1) && not (CompilerDependencyKindTools.consumesImplementation (Obj.magic ((Obj.magic edge : CompilerDependencyEdge.t).kind))) then raise (HxRuntime.Hx_continue) else ());
+            ignore (if (let __nullable_97 = providerStrength in if __nullable_97 == HxRuntime.hx_null then false else Obj.obj __nullable_97 = 1) && not (CompilerDependencyKindTools.consumesImplementation (Obj.magic ((Obj.magic edge : CompilerDependencyEdge.t).kind))) then Stdlib.raise (HxRuntime.Hx_continue) else ());
             let tempNumber5 = ref (0 : int) in let tempBool = ref (false : bool) in let key = ((Obj.magic edge : CompilerDependencyEdge.t).consumerModule : string) in (
               ignore (let __assign_98 = HxMap.exists_string (Obj.magic publicChanged) (key : string) in (
                 tempBool := __assign_98;
@@ -340,17 +340,17 @@ let compare = fun previous current -> (
                 tempNumber5 := __assign_100;
                 __assign_100
               ));
-              let consumerStrength = !tempNumber5 in let nextReason = Obj.magic (let __array_receiver_101 = providerReason in let __array_arg_0_102 = let __represented_array_103 = HxArray.create () in let __represented_array_element_0_104 = let __string_part_105 = HxString.toStdString (CompilerDependencyKindTools.name (Obj.magic ((Obj.magic edge : CompilerDependencyEdge.t).kind))) in let __string_part_106 = ":" in let __string_part_107 = HxString.toStdString ((Obj.magic edge : CompilerDependencyEdge.t).consumerModule) in let __string_part_108 = "->" in let __string_part_109 = HxString.toStdString ((Obj.magic edge : CompilerDependencyEdge.t).providerModule) in let __string_part_110 = ":" in let __string_part_111 = HxString.toStdString ((Obj.magic edge : CompilerDependencyEdge.t).factIdentity) in let __string_part_112 = "@" in let __string_part_113 = HxString.toStdString (CompilerDependencyPhaseTools.name (Obj.magic ((Obj.magic edge : CompilerDependencyEdge.t).phase))) in (((((((__string_part_105 ^ __string_part_106) ^ __string_part_107) ^ __string_part_108) ^ __string_part_109) ^ __string_part_110) ^ __string_part_111) ^ __string_part_112) ^ __string_part_113 in (
+              let consumerStrength = !tempNumber5 in let nextReason = Obj.magic (let __array_receiver_101 = Obj.magic providerReason in let __array_arg_0_102 = Obj.magic (let __represented_array_103 = HxArray.create () in let __represented_array_element_0_104 = let __string_part_105 = HxString.toStdString (CompilerDependencyKindTools.name (Obj.magic ((Obj.magic edge : CompilerDependencyEdge.t).kind))) in let __string_part_106 = ":" in let __string_part_107 = HxString.toStdString ((Obj.magic edge : CompilerDependencyEdge.t).consumerModule) in let __string_part_108 = "->" in let __string_part_109 = HxString.toStdString ((Obj.magic edge : CompilerDependencyEdge.t).providerModule) in let __string_part_110 = ":" in let __string_part_111 = HxString.toStdString ((Obj.magic edge : CompilerDependencyEdge.t).factIdentity) in let __string_part_112 = "@" in let __string_part_113 = HxString.toStdString (CompilerDependencyPhaseTools.name (Obj.magic ((Obj.magic edge : CompilerDependencyEdge.t).phase))) in (((((((__string_part_105 ^ __string_part_106) ^ __string_part_107) ^ __string_part_108) ^ __string_part_109) ^ __string_part_110) ^ __string_part_111) ^ __string_part_112) ^ __string_part_113 in (
                 ignore (HxArray.push __represented_array_103 __represented_array_element_0_104);
                 __represented_array_103
-              ) in HxArray.concat __array_receiver_101 __array_arg_0_102) in mark ((Obj.magic edge : CompilerDependencyEdge.t).consumerModule : string) consumerStrength (Obj.magic nextReason) (Obj.magic strengthByModule) (Obj.magic reasonByModule) (Obj.magic queue)
+              )) in HxArray.concat __array_receiver_101 __array_arg_0_102) in mark ((Obj.magic edge : CompilerDependencyEdge.t).consumerModule : string) consumerStrength (Obj.magic nextReason) (Obj.magic strengthByModule) (Obj.magic reasonByModule) (Obj.magic queue)
             )
           )) with
             | HxRuntime.Hx_continue -> () done
         )) with
           | HxRuntime.Hx_continue -> () done);
         let invalidations = Obj.magic (HxArray.create ()) in let modulePath = HxIterator.of_array (Obj.magic (HxMap.keys_string (Obj.magic strengthByModule))) in (
-          ignore (while let __iterator_receiver_114 = modulePath in HxIterator.hasNext __iterator_receiver_114 do ignore (let modulePath2 = (let __iterator_receiver_115 = modulePath in HxIterator.next __iterator_receiver_115 : string) in let __array_receiver_116 = invalidations in let __array_arg_0_117 = CompilerDependencyInvalidation.create (modulePath2 : string) (Obj.magic (HxMap.get_string (Obj.magic reasonByModule) (modulePath2 : string))) in HxArray.push __array_receiver_116 __array_arg_0_117) done);
+          ignore (while let __iterator_receiver_114 = modulePath in HxIterator.hasNext __iterator_receiver_114 do ignore (let modulePath2 = (let __iterator_receiver_115 = modulePath in HxIterator.next __iterator_receiver_115 : string) in let __array_receiver_116 = Obj.magic invalidations in let __array_arg_0_117 = Obj.magic (CompilerDependencyInvalidation.create (modulePath2 : string) (Obj.magic (HxMap.get_string (Obj.magic reasonByModule) (modulePath2 : string)))) in HxArray.push __array_receiver_116 __array_arg_0_117) done);
           CompilerDependencyComparison.create (Obj.magic programConfigurationChanges) (Obj.magic sourceOriginChanges) (Obj.magic conditionalCompilationChanges) (Obj.magic generatedDeclarationChanges) (Obj.magic macroFileDependencyChanges) (Obj.magic publicChanges) (Obj.magic implementationChanges) (Obj.magic invalidations)
         )
       )

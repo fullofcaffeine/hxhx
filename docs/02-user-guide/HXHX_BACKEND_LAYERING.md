@@ -86,6 +86,26 @@ This registry is now the source of truth for:
 
 `Stage3Compiler` resolves backends through `BackendRegistry.requireForTarget(...)` rather than hardcoded switch branches.
 
+### Native operations and inline bodies
+
+The selected built-in C++ backend keeps standard `Map.get` and `Map.set` calls
+for its native Map storage. Shared preparation otherwise expands the authored
+inline bodies. For example, expanding `Map.get` exposes an `IMap.get` interface
+call, which ordinary class dispatch cannot execute on C++'s native Map payload.
+
+Backend selection therefore precedes shared preparation on the emission path.
+Macro hooks run first, so their provider changes participate in selection.
+`CppNativeCallPolicy` selects only the built-in implementation and its exact
+standard Map declarations. C++ still validates each call's occurrence, signature,
+key/value types, and result before emission. A plugin overriding the same target
+ID receives normal body expansion; it does not inherit the built-in policy.
+
+Shared preparation rejects retention of abstract methods that replace caller
+storage. Those bodies must preserve their writes through shared expansion.
+This internal policy does not change the plugin registration ABI or establish
+complete native Map support. `test:m14:backend-registry` checks the override path
+and runs the original Map program through the production C++ driver.
+
 ### Backend ABI v1 policy (frozen contract)
 
 `hxhx` now treats backend descriptor compatibility as a strict load-time contract:

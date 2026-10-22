@@ -463,7 +463,13 @@ class Stage3Compiler {
 		}
 		requestContext.registerCleanup("macro-session", closeMacroSession);
 
-		final classPaths = Stage3SetupSupport.projectClassPaths(parsedClassPaths, libsResolved, cwd);
+		final classPaths = Stage3SetupSupport.projectClassPaths({
+			explicitPaths: Stage1Args.getExplicitClassPaths(parsed),
+			libraries: libsResolved,
+			cwd: cwd,
+			standardRoot: Stage1Args.getStandardLibraryRoot(parsed),
+			targetDefine: backendTargetDefine
+		});
 
 		// Defines available for conditional compilation filtering.
 		//
@@ -545,7 +551,7 @@ class Stage3Compiler {
 			#end
 		}
 
-		final typerIndex = TyperIndex.build(resolvedForTyping);
+		final typerIndex = TyperIndex.buildHeaders(resolvedForTyping);
 		final moduleLoader = new ModuleLoader(classPaths, definesMap, typerIndex, function(typePath:String):Bool {
 			return dispatchOnTypeNotFoundHooks(buildMacroPreparer.getSession(), typePath, requestOutput);
 		}, !noEmit, requestContext.sourceProvider, buildMacroPreparer.prepare);
@@ -619,7 +625,34 @@ class Stage3Compiler {
 				}
 			}
 			final sealedTypedModules = try {
-				TypedAbstractOperatorLowering.lowerModules(typedModulesForProgram, typerIndex);
+				final finalized = TyMethodInputPublication.finish({
+					modules: typedModulesForProgram,
+					index: typerIndex,
+					loader: moduleLoader,
+					beforeModule: () -> {
+						if (!requestContext.checkpoint("typing"))
+							throw new Stage3BuildMacroPreparationError("typing cancelled", true);
+					},
+					onDiscovered: source -> {
+						resolvedForTyping.push(source);
+						final parsed = ResolvedModule.getParsed(source);
+						parsedMethodsTotal += Stage3DiagnosticsSupport.parsedMethodCount(parsed);
+						if (HxModuleDecl.getHeaderOnly(parsed.getDecl()))
+							headerOnlyCount++;
+						final unsupported = Stage3DiagnosticsSupport.reportUnsupportedForParsedModule(parsed, ResolvedModule.getFilePath(source),
+							unsupportedFilesCount, traceUnsupported, unsupportedTraceCounters, requestOutput);
+						unsupportedExprsTotal += unsupported;
+						if (unsupported > 0)
+							unsupportedFilesCount++;
+					}
+				});
+				typedCount = finalized.length;
+				TypedAbstractOperatorLowering.lowerModules(finalized, typerIndex);
+			} catch (failure:Stage3BuildMacroPreparationError) {
+				closeMacroSession();
+				if (failure.cancelled)
+					return CompilationRequestContext.CANCELLED_EXIT_CODE;
+				return error(failure.message);
 			} catch (e:TyperError) {
 				closeMacroSession();
 				final rawDiagnostic = rawTyperDiagnostic(e);
@@ -722,19 +755,34 @@ class Stage3Compiler {
 				toType.push(nm);
 			}
 		}
+		// Caller inference is request-owned; refresh earlier modules before hooks
+		// and target lowering consume their immutable parameter and result facts.
 		typedModules = try {
-			TypedAbstractOperatorLowering.lowerModules(typedModules, typerIndex);
+			TyMethodInputPublication.finish({
+				modules: typedModules,
+				index: typerIndex,
+				loader: moduleLoader,
+				beforeModule: () -> {
+					if (!requestContext.checkpoint("typing"))
+						throw new Stage3BuildMacroPreparationError("typing cancelled", true);
+				},
+				onDiscovered: source -> resolvedForTyping.push(source)
+			});
+		} catch (failure:Stage3BuildMacroPreparationError) {
+			closeMacroSession();
+			if (failure.cancelled)
+				return CompilationRequestContext.CANCELLED_EXIT_CODE;
+			return error(failure.message);
 		} catch (e:TyperError) {
 			closeMacroSession();
 			final rawDiagnostic = rawTyperDiagnostic(e);
 			if (rawDiagnostic != null)
 				return haxeDiagnosticError(rawDiagnostic);
-			return error("type failed during shared operator lowering: " + formatException(e));
+			return error("type failed during method input finalization: " + formatException(e));
 		} catch (e:String) {
 			closeMacroSession();
-			return error("type failed during shared operator lowering: " + e);
+			return error("type failed during method input finalization: " + e);
 		}
-
 		if (!requestContext.checkpoint("hooks"))
 			return CompilationRequestContext.CANCELLED_EXIT_CODE;
 		final hookError = Stage3HookSupport.runStandardMacroHooks(buildMacroPreparer.getSession(), requestOutput);
@@ -742,12 +790,6 @@ class Stage3Compiler {
 			closeMacroSession();
 			return error(hookError);
 		}
-		final dependencyError = recordDependencySnapshot(requestContext, typedModules, typerIndex, backendId, definesMap, cwd);
-		if (dependencyError != null) {
-			closeMacroSession();
-			return error("dependency observation failed: " + dependencyError);
-		}
-
 		final providerDefines = Stage3BackendPluginSupport.buildProviderDefines(allDefines);
 		final backendSelection = try {
 			Stage3BackendPluginSupport.selectBackend(backendId, providerDefines, requestOutput);
@@ -759,6 +801,26 @@ class Stage3Compiler {
 		final backendCaps = backendSelection.descriptor.capabilities;
 		final supportsCustomOutputFile = backendSelection.supportsCustomOutputFile;
 		final supportsBuildExecutable = backendSelection.supportsBuildExecutable;
+
+		// Hooks can change provider selection. Expand required bodies only after
+		// the winning backend supplies its exact native-operation contract.
+		typedModules = try {
+			TypedAbstractOperatorLowering.lowerModules(typedModules, typerIndex, backendSelection.retainNativeCall);
+		} catch (e:TyperError) {
+			closeMacroSession();
+			final rawDiagnostic = rawTyperDiagnostic(e);
+			if (rawDiagnostic != null)
+				return haxeDiagnosticError(rawDiagnostic);
+			return error("type failed during shared operator lowering: " + formatException(e));
+		} catch (e:String) {
+			closeMacroSession();
+			return error("type failed during shared operator lowering: " + e);
+		}
+		final dependencyError = recordDependencySnapshot(requestContext, typedModules, typerIndex, backendId, definesMap, cwd);
+		if (dependencyError != null) {
+			closeMacroSession();
+			return error("dependency observation failed: " + dependencyError);
+		}
 
 		// Diagnostic rung: stop after macros, typing, and backend selection so we can iterate Stage4
 		// macro model and Stage3 typer coverage without paying IR expansion or backend emit costs.
@@ -843,7 +905,15 @@ class Stage3Compiler {
 		if (!requestContext.checkpoint("emission"))
 			return CompilationRequestContext.CANCELLED_EXIT_CODE;
 		final stagedEmitted = try {
-			Stage3EmitSupport.emitWithBackend(backend, expanded, backendId, typedModules.length, outputPaths.workingBackendOutputDir,
+			final prepared = backendTargetDefine == "js" ? Stage3JsPreparation.prepare({
+				program: expanded,
+				classPaths: classPaths,
+				standardRoot: Stage1Args.getStandardLibraryRoot(parsed)
+					.length == 0 ? "" : Stage3PathSupport.absFromCwd(cwd, Stage1Args.getStandardLibraryRoot(parsed)),
+				main: parsedMain,
+				defines: definesMap
+			}) : expanded;
+			Stage3EmitSupport.emitWithBackend(backend, prepared, backendId, typedModules.length, outputPaths.workingBackendOutputDir,
 				outputPaths.workingOutputFileHint, outputPaths.finalBackendOutputDir, parsedMain, emitFullBodies, supportsCustomOutputFile,
 				supportsBuildExecutable, definesMap, backendResources, nekoNdllPaths, requestOutput);
 		} catch (e:String) {

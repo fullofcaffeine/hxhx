@@ -29,7 +29,7 @@ class OcamlFieldRepresentationMaterializer {
 	static function requireFieldDomain(decision:OcamlRepresentationDecision, expectedDomain:OcamlRepresentationDomain):Void {
 		switch (expectedDomain) {
 			case InstanceField, StaticField:
-			case InternalValue, MutableLocalStorage, CapturedLocalStorage, ArrayElement:
+			case InternalValue, MutableLocalStorage, CapturedLocalStorage, ArrayElement, GenericCallValue:
 				throw 'reflaxe.ocaml [ocaml-field-representation:unsupported-domain]: field materialization requires instance-field or static-field, not $expectedDomain';
 		}
 		if (decision.domain != expectedDomain) {

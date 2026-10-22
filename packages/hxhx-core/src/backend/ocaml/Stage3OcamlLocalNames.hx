@@ -41,6 +41,12 @@ class Stage3OcamlLocalNames {
 		}
 	}
 
+	/** Reject names borrowed from an equal-looking but separately projected body. */
+	public function requireOwner(catalog:TypedBackendLocalCatalog):Void {
+		if (localCatalog != catalog)
+			throw "Native callback names belong to another local catalog";
+	}
+
 	/** Return the target name only when the projected identifier is an exact local. **/
 	public function findTargetName(projectedName:String):Null<String>
 		return projectedName == null ? null : byProjectedName.get(projectedName);
@@ -49,6 +55,16 @@ class Stage3OcamlLocalNames {
 	public function findType(projectedName:String):Null<TyType> {
 		final local = localCatalog.findByProjectedName(projectedName);
 		return local == null ? null : local.getBinding().getType();
+	}
+
+	/** A generated lexical binder must never shadow an authored local after normalization. */
+	public function internalName(base:String):String {
+		var selected = base;
+		var suffix = 0;
+		final used = [for (name in byProjectedName) name];
+		while (used.indexOf(selected) >= 0)
+			selected = base + "_" + (++suffix);
+		return selected;
 	}
 
 	/** Fail when a caller asks for a binding outside the sealed function catalog. **/

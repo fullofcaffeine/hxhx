@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable generatedMemberCount : int; mutable result
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun generatedMemberCount2 resultRevision2 -> let self = ({ __hx_type = HxType.class_ "CompilerGeneratedDeclarationObservation"; generatedMemberCount = 0; resultRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun generatedMemberCount2 resultRevision2 -> let self = ({ __hx_type = HxType.instance_marker "CompilerGeneratedDeclarationObservation"; generatedMemberCount = 0; resultRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = generatedMemberCount2 in (
       (__place_receiver_1 : t).generatedMemberCount <- __place_rhs_2;
@@ -40,7 +40,7 @@ let create = fun generatedMemberCount2 resultRevision2 -> let self = ({ __hx_typ
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerGeneratedDeclarationObservation"; generatedMemberCount = 0; resultRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerGeneratedDeclarationObservation"; generatedMemberCount = 0; resultRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t)
 
 let getGeneratedMemberCount = fun self () -> ((self : t).generatedMemberCount : int)
 
@@ -51,10 +51,10 @@ let hx_EMPTY = Obj.magic (create 0 ("generated-declaration-empty-v1" : string))
 let empty = fun () -> (hx_EMPTY : t)
 
 let fromGeneratedMemberSnippets = fun members -> (try (
-  ignore (if members == Obj.magic (HxRuntime.hx_null) || HxArray.length members = 0 then raise (HxRuntime.Hx_return (Obj.repr (empty ()))) else ());
+  ignore (if members == Obj.magic (HxRuntime.hx_null) || HxArray.length members = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (empty ()))) else ());
   let values = Obj.magic (HxArray.create ()) in (
-    ignore (let __array_receiver_9 = values in let __array_arg_0_10 = "generated-declaration-result-v1" in HxArray.push __array_receiver_9 __array_arg_0_10);
-    ignore (let __array_receiver_11 = values in let __array_arg_0_12 = string_of_int (HxArray.length members) in HxArray.push __array_receiver_11 __array_arg_0_12);
+    ignore (let __array_receiver_9 = Obj.magic values in let __array_arg_0_10 = ("generated-declaration-result-v1" : string) in HxArray.push __array_receiver_9 __array_arg_0_10);
+    ignore (let __array_receiver_11 = Obj.magic values in let __array_arg_0_12 = (string_of_int (HxArray.length members) : string) in HxArray.push __array_receiver_11 __array_arg_0_12);
     let _g = ref 0 in (
       ignore (while !_g < HxArray.length members do ignore (let member = (let __array_read_receiver_13 = members in let __array_read_index_14 = !_g in HxArray.get (Obj.magic __array_read_receiver_13) __array_read_index_14 : string) in (
         ignore (let __old_15 = !_g in let __new_16 = HxInt.add __old_15 1 in (
@@ -69,7 +69,7 @@ let fromGeneratedMemberSnippets = fun members -> (try (
             tempMaybeString := __assign_18;
             __assign_18
           ));
-          let __array_receiver_19 = values in let __array_arg_0_20 = !tempMaybeString in HxArray.push __array_receiver_19 __array_arg_0_20
+          let __array_receiver_19 = Obj.magic values in let __array_arg_0_20 = (!tempMaybeString : string) in HxArray.push __array_receiver_19 __array_arg_0_20
         )
       )) done);
       create (HxArray.length members) (let __call_arg_0_21 = CompilerCacheIdentity.encode (Obj.magic values) in Haxe_crypto_Sha256.encode __call_arg_0_21 : string)

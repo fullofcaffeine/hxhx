@@ -1,0 +1,2 @@
+# 1 "TyTypeDeclarationCatalog.ml"
+include CompilerDiagnosticProbe.TyTypeDeclarationCatalog

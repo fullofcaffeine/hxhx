@@ -1,0 +1,17 @@
+null:assigned:true
+record:assigned:true
+scalar:assigned:true
+bool:assigned:false
+bool:first:true
+int:assigned:false
+int:first:true
+alias:false
+int-values:false:true:true
+int-alias:0
+mixed-alias:false
+empty-bool:1
+empty-int:0
+empty-dynamic:1
+heterogeneous-values:true:true
+heterogeneous-alias:false:3
+widening:2:2:true

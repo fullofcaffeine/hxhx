@@ -114,10 +114,11 @@ case "$SCOPE" in
         --hxhx-no-run
       )
     fi
-    SOURCE_INPUTS="$ROOT/packages/hxhx/src,$ROOT/packages/hxhx-core/src:hxhx.Main"
+    SOURCE_INPUTS="$ROOT/packages/hxhx/src,$ROOT/packages/hxhx-core/src,$ROOT/packages/reflaxe.ocaml/src:hxhx.Main"
     STAGE3_ARGS+=(
       -cp "$ROOT/packages/hxhx/src"
       -cp "$ROOT/packages/hxhx-core/src"
+      -cp "$ROOT/packages/reflaxe.ocaml/src"
       -main hxhx.Main
       -D reflaxe_ocaml
       -D no_traces

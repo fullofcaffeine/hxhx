@@ -39,6 +39,28 @@ ensure_state_dir() {
 	mkdir -p "$STATE_DIR"
 }
 
+# Ownership snapshots and stop must be serialized: an observer cannot publish
+# a late child after stop has already read and removed the saved identities.
+# The kernel releases this lock when the helper exits. Keep its file in place
+# so concurrent helpers always lock the same inode, even after server cleanup.
+lock_server_state() {
+	ensure_state_dir
+	exec 9>"$STATE_DIR/haxe-server.lock"
+	local code=0
+	if command -v flock >/dev/null 2>&1; then
+		flock -w 15 9 || code="$?"
+	elif command -v lockf >/dev/null 2>&1; then
+		lockf -s -t 15 9 || code="$?"
+	else
+		echo "haxe-server: missing file-lock tool (need flock or lockf)." >&2
+		return 1
+	fi
+	if [ "$code" -ne 0 ]; then
+		echo "haxe-server: could not acquire the state lock (15-second limit)." >&2
+	fi
+	return "$code"
+}
+
 resolve_haxe_identity() {
 	local resolved
 	resolved="$(command -v "$HAXE_BIN" 2>/dev/null || true)"
@@ -72,7 +94,7 @@ resolve_default_port() {
 resolve_port() {
 	if [ -n "$HXHX_HAXE_SERVER_PORT" ]; then
 		echo "$HXHX_HAXE_SERVER_PORT"
-		return
+		return 0
 	fi
 	if [ -f "$PORT_FILE" ]; then
 		local file_port
@@ -82,7 +104,7 @@ resolve_port() {
 				;;
 			*)
 				echo "$file_port"
-				return
+				return 0
 				;;
 		esac
 	fi
@@ -142,7 +164,7 @@ process_start_identity() {
 read_recorded_processes() {
 	if [ -s "$PIDS_FILE" ]; then
 		cat "$PIDS_FILE"
-		return
+		return "$?"
 	fi
 	if [ -s "$PID_FILE" ]; then
 		awk '/^[0-9]+$/ { print $1 }' "$PID_FILE"
@@ -182,17 +204,25 @@ collect_process_tree_pids() {
 	printf '%s\n' "$collected" | tr ' ' '\n' | awk '/^[0-9]+$/ && !seen[$1]++ { print $1 }'
 }
 
-record_server_processes() {
-	local root_pid="$1"
+# Snapshot caller-verified PIDs while holding the state lock. A later stop
+# compares these start identities before treating orphaned children as owned.
+record_process_pids() {
+	local pids="$1"
 	local temporary="$PIDS_FILE.tmp.$$"
 	local pid=""
 	local start_identity=""
 	while IFS= read -r pid; do
 		[ -n "$pid" ] || continue
-		start_identity="$(process_start_identity "$pid")"
+		# A short-lived descendant can exit between discovery and this snapshot.
+		start_identity="$(process_start_identity "$pid" || true)"
+		[ -n "$start_identity" ] || continue
 		printf '%s\t%s\n' "$pid" "$start_identity"
-	done < <(collect_process_tree_pids "$root_pid") >"$temporary"
+	done <<<"$pids" >"$temporary"
 	mv "$temporary" "$PIDS_FILE"
+}
+
+record_server_processes() {
+	record_process_pids "$(collect_process_tree_pids "$1")"
 }
 
 recorded_process_is_owned() {
@@ -203,10 +233,12 @@ recorded_process_is_owned() {
 		return 1
 	fi
 	if [ -z "$expected_start_identity" ]; then
-		# Legacy numeric-only state may identify only the public launcher. Keep
-		# that fallback restricted to the exact requested port.
+		# Before the first process-tree snapshot, only the public launcher's PID
+		# is saved. Restrict that ownership check to the exact requested port.
+		# During EXIT cleanup, a bare return can reuse the interrupted status
+		# instead of this check's result. Preserve the classifier result explicitly.
 		pid_looks_like_haxe_wait "$pid" "$port"
-		return
+		return "$?"
 	fi
 	local current_start_identity
 	current_start_identity="$(process_start_identity "$pid")"
@@ -298,11 +330,25 @@ start_server() {
 	fi
 
 	echo "haxe-server: starting port=$port haxe_bin=$requested_identity" >&2
-	nohup "$HAXE_BIN" --wait "$port" >"$LOG_FILE" 2>&1 &
+	# A signal can arrive as soon as the child starts, before its PID is saved.
+	# Remember it across this short registration window so EXIT cleanup can use
+	# the same recorded ownership as an interruption during the readiness wait.
+	local startup_signal=0
+	trap 'startup_signal=129' HUP
+	trap 'startup_signal=130' INT
+	trap 'startup_signal=143' TERM
+	# The long-lived server must not inherit the helper's state lock.
+	nohup "$HAXE_BIN" --wait "$port" >"$LOG_FILE" 2>&1 9>&- &
 	local pid="$!"
 	printf '%s\n' "$pid" >"$PID_FILE"
 	printf '%s\n' "$requested_identity" >"$BIN_FILE"
 	START_IN_PROGRESS=1
+	trap 'exit 129' HUP
+	trap 'exit 130' INT
+	trap 'exit 143' TERM
+	if [ "$startup_signal" -ne 0 ]; then
+		exit "$startup_signal"
+	fi
 	record_server_processes "$pid"
 
 	if ! wait_for_server_ready "$port"; then
@@ -368,6 +414,9 @@ print_owned_pids() {
 	if [ -z "$pids" ]; then
 		return 1
 	fi
+	# Retain late descendants while their verified ancestry is still available.
+	# A later stop can then identify them even if the launcher exits first.
+	record_process_pids "$pids"
 	printf '%s\n' "$pids"
 }
 
@@ -402,15 +451,18 @@ fi
 
 case "$1" in
 	start)
+		lock_server_state
 		start_server
 		;;
 	stop)
+		lock_server_state
 		stop_server
 		;;
 	status)
 		status_server
 		;;
 	owned-pids)
+		lock_server_state
 		print_owned_pids
 		;;
 	port)

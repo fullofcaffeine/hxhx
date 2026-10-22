@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.BackendAbi" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.BackendAbi" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.BackendAbi" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.BackendAbi" } : t)
 
 let normalizePluginLabel = fun (pluginId : string) -> (let tempString = ref (HxString.hx_null_string : string) in (
   ignore (if pluginId == HxString.hx_null_string then let __assign_1 = "" in (
@@ -34,28 +34,28 @@ let normalizePluginLabel = fun (pluginId : string) -> (let tempString = ref (HxS
 ) : string)
 
 let validateManifestRequires = fun (pluginId : string) (abiVersion : int) (genIrVersion : int) (macroApiVersion : int) -> (try let label = let __call_arg_0_7 = pluginId in normalizePluginLabel __call_arg_0_7 in (
-  ignore (if abiVersion <> 1 then raise (HxRuntime.Hx_return (Obj.repr ((((("backend ABI mismatch for plugin " ^ HxString.toStdString label) ^ ": expected abiVersion=") ^ string_of_int 1) ^ ", got ") ^ string_of_int abiVersion))) else ());
-  ignore (if genIrVersion <> 1 then raise (HxRuntime.Hx_return (Obj.repr ((((("backend GenIR mismatch for plugin " ^ HxString.toStdString label) ^ ": expected genIrVersion=") ^ string_of_int 1) ^ ", got ") ^ string_of_int genIrVersion))) else ());
-  ignore (if macroApiVersion <> 1 then raise (HxRuntime.Hx_return (Obj.repr ((((("backend macro API mismatch for plugin " ^ HxString.toStdString label) ^ ": expected macroApiVersion=") ^ string_of_int 1) ^ ", got ") ^ string_of_int macroApiVersion))) else ());
+  ignore (if abiVersion <> 1 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr ((((("backend ABI mismatch for plugin " ^ HxString.toStdString label) ^ ": expected abiVersion=") ^ string_of_int 1) ^ ", got ") ^ string_of_int abiVersion))) else ());
+  ignore (if genIrVersion <> 1 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr ((((("backend GenIR mismatch for plugin " ^ HxString.toStdString label) ^ ": expected genIrVersion=") ^ string_of_int 1) ^ ", got ") ^ string_of_int genIrVersion))) else ());
+  ignore (if macroApiVersion <> 1 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr ((((("backend macro API mismatch for plugin " ^ HxString.toStdString label) ^ ": expected macroApiVersion=") ^ string_of_int 1) ^ ", got ") ^ string_of_int macroApiVersion))) else ());
   Obj.magic (HxRuntime.hx_null)
 ) with
   | HxRuntime.Hx_return __ret_8 -> (Obj.obj __ret_8 : string) : string)
 
 let descriptorLabel = fun descriptor -> (try (
-  ignore (if Obj.obj (HxAnon.get descriptor "implId") != HxString.hx_null_string && (let __string_receiver_9 = Obj.obj (HxAnon.get descriptor "implId") in HxString.length __string_receiver_9) > 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxAnon.get descriptor "implId")))) else ());
-  ignore (if Obj.obj (HxAnon.get descriptor "id") != HxString.hx_null_string && (let __string_receiver_10 = Obj.obj (HxAnon.get descriptor "id") in HxString.length __string_receiver_10) > 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxAnon.get descriptor "id")))) else ());
+  ignore (if Obj.obj (HxAnon.get descriptor "implId") != HxString.hx_null_string && (let __string_receiver_9 = Obj.obj (HxAnon.get descriptor "implId") in HxString.length __string_receiver_9) > 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxAnon.get descriptor "implId")))) else ());
+  ignore (if Obj.obj (HxAnon.get descriptor "id") != HxString.hx_null_string && (let __string_receiver_10 = Obj.obj (HxAnon.get descriptor "id") in HxString.length __string_receiver_10) > 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxAnon.get descriptor "id")))) else ());
   "<unknown-backend>"
 ) with
   | HxRuntime.Hx_return __ret_11 -> (Obj.obj __ret_11 : string) : string)
 
 let validateDescriptor = fun descriptor -> (try (
-  ignore (if descriptor == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr "invalid backend registration: descriptor is required")) else ());
-  ignore (if Obj.obj (HxAnon.get descriptor "requires") == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr "invalid backend registration: descriptor.requires is required")) else ());
+  ignore (if descriptor == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "invalid backend registration: descriptor is required")) else ());
+  ignore (if Obj.obj (HxAnon.get descriptor "requires") == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "invalid backend registration: descriptor.requires is required")) else ());
   let label = (descriptorLabel descriptor : string) in (
-    ignore (if Obj.obj (HxAnon.get descriptor "abiVersion") <> 1 then raise (HxRuntime.Hx_return (Obj.repr (let __string_part_12 = "backend ABI mismatch for " in let __string_part_13 = HxString.toStdString label in let __string_part_14 = ": expected abiVersion=" in let __string_part_15 = string_of_int 1 in let __string_part_16 = ", got " in let __string_part_17 = string_of_int (Obj.obj (HxAnon.get descriptor "abiVersion")) in ((((__string_part_12 ^ __string_part_13) ^ __string_part_14) ^ __string_part_15) ^ __string_part_16) ^ __string_part_17))) else ());
-    ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get descriptor "requires")) "genIrVersion") <> 1 then raise (HxRuntime.Hx_return (Obj.repr (let __string_part_18 = "backend GenIR mismatch for " in let __string_part_19 = HxString.toStdString label in let __string_part_20 = ": expected genIrVersion=" in let __string_part_21 = string_of_int 1 in let __string_part_22 = ", got " in let __string_part_23 = string_of_int (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get descriptor "requires")) "genIrVersion")) in ((((__string_part_18 ^ __string_part_19) ^ __string_part_20) ^ __string_part_21) ^ __string_part_22) ^ __string_part_23))) else ());
-    ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get descriptor "requires")) "macroApiVersion") <> 1 then raise (HxRuntime.Hx_return (Obj.repr (let __string_part_24 = "backend macro API mismatch for " in let __string_part_25 = HxString.toStdString label in let __string_part_26 = ": expected macroApiVersion=" in let __string_part_27 = string_of_int 1 in let __string_part_28 = ", got " in let __string_part_29 = string_of_int (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get descriptor "requires")) "macroApiVersion")) in ((((__string_part_24 ^ __string_part_25) ^ __string_part_26) ^ __string_part_27) ^ __string_part_28) ^ __string_part_29))) else ());
-    ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get descriptor "requires")) "hostCaps") == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("invalid backend registration: requires.hostCaps is required for " ^ HxString.toStdString label))) else ());
+    ignore (if Obj.obj (HxAnon.get descriptor "abiVersion") <> 1 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_part_12 = "backend ABI mismatch for " in let __string_part_13 = HxString.toStdString label in let __string_part_14 = ": expected abiVersion=" in let __string_part_15 = string_of_int 1 in let __string_part_16 = ", got " in let __string_part_17 = string_of_int (Obj.obj (HxAnon.get descriptor "abiVersion")) in ((((__string_part_12 ^ __string_part_13) ^ __string_part_14) ^ __string_part_15) ^ __string_part_16) ^ __string_part_17))) else ());
+    ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get descriptor "requires")) "genIrVersion") <> 1 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_part_18 = "backend GenIR mismatch for " in let __string_part_19 = HxString.toStdString label in let __string_part_20 = ": expected genIrVersion=" in let __string_part_21 = string_of_int 1 in let __string_part_22 = ", got " in let __string_part_23 = string_of_int (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get descriptor "requires")) "genIrVersion")) in ((((__string_part_18 ^ __string_part_19) ^ __string_part_20) ^ __string_part_21) ^ __string_part_22) ^ __string_part_23))) else ());
+    ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get descriptor "requires")) "macroApiVersion") <> 1 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_part_24 = "backend macro API mismatch for " in let __string_part_25 = HxString.toStdString label in let __string_part_26 = ": expected macroApiVersion=" in let __string_part_27 = string_of_int 1 in let __string_part_28 = ", got " in let __string_part_29 = string_of_int (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get descriptor "requires")) "macroApiVersion")) in ((((__string_part_24 ^ __string_part_25) ^ __string_part_26) ^ __string_part_27) ^ __string_part_28) ^ __string_part_29))) else ());
+    ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get descriptor "requires")) "hostCaps") == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr ("invalid backend registration: requires.hostCaps is required for " ^ HxString.toStdString label))) else ());
     let index = ref 0 in let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get descriptor "requires")) "hostCaps")) in (
       ignore (while !_g < HxArray.length _g1 do ignore (let hostCap = (let __array_read_receiver_30 = _g1 in let __array_read_index_31 = !_g in HxArray.get (Obj.magic __array_read_receiver_30) __array_read_index_31 : string) in (
         ignore (let __old_32 = !_g in let __new_33 = HxInt.add __old_32 1 in (
@@ -71,7 +71,7 @@ let validateDescriptor = fun descriptor -> (try (
             __assign_35
           ));
           let normalized = !tempString in (
-            ignore (if (let __string_receiver_37 = normalized in HxString.length __string_receiver_37) = 0 then raise (HxRuntime.Hx_return (Obj.repr (((("invalid backend host capability for " ^ HxString.toStdString label) ^ " at index ") ^ string_of_int (!index)) ^ ": value must be non-empty"))) else ());
+            ignore (if (let __string_receiver_37 = normalized in HxString.length __string_receiver_37) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (((("invalid backend host capability for " ^ HxString.toStdString label) ^ " at index ") ^ string_of_int (!index)) ^ ": value must be non-empty"))) else ());
             let __old_38 = !index in let __new_39 = HxInt.add __old_38 1 in (
               ignore (index := __new_39);
               __old_38

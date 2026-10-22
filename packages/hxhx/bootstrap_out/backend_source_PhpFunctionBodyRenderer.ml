@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable programRenderer : Backend_source_PhpProgra
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun programRenderer2 programFacts2 moduleFacts2 plan2 -> let self = ({ __hx_type = HxType.class_ "backend.source.PhpFunctionBodyRenderer"; programRenderer = Obj.magic HxRuntime.hx_null; programFacts = Obj.magic HxRuntime.hx_null; moduleFacts = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun programRenderer2 programFacts2 moduleFacts2 plan2 -> let self = ({ __hx_type = HxType.instance_marker "backend.source.PhpFunctionBodyRenderer"; programRenderer = Obj.magic HxRuntime.hx_null; programFacts = Obj.magic HxRuntime.hx_null; moduleFacts = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if programRenderer2 == Obj.magic (HxRuntime.hx_null) || programFacts2 == Obj.magic (HxRuntime.hx_null) || moduleFacts2 == Obj.magic (HxRuntime.hx_null) || plan2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "PHP function body renderer requires complete immutable facts") ["Dynamic"] else ());
     ignore (if (let __string_eq_left_1 = Backend_source_PhpProgramRenderFacts.getProgramRevision (Obj.magic programFacts2) () in let __string_eq_right_2 = Backend_source_PhpFunctionLoweringPlan.getProgramRevision (Obj.magic plan2) () in not (HxString.equals __string_eq_left_1 __string_eq_right_2)) || (let __string_eq_left_3 = Backend_source_PhpModuleRenderFacts.getProgramRevision (Obj.magic moduleFacts2) () in let __string_eq_right_4 = Backend_source_PhpFunctionLoweringPlan.getProgramRevision (Obj.magic plan2) () in not (HxString.equals __string_eq_left_3 __string_eq_right_4)) || (let __string_eq_left_5 = Backend_source_PhpModuleRenderFacts.getModuleRevision (Obj.magic moduleFacts2) () in let __string_eq_right_6 = Backend_source_PhpFunctionLoweringPlan.getModuleRevision (Obj.magic plan2) () in not (HxString.equals __string_eq_left_5 __string_eq_right_6)) || (let __string_eq_left_7 = Backend_source_PhpModuleRenderFacts.getModuleIdentity (Obj.magic moduleFacts2) () in let __string_eq_right_8 = Backend_source_PhpFunctionLoweringPlan.getModuleIdentity (Obj.magic plan2) () in not (HxString.equals __string_eq_left_7 __string_eq_right_8)) then HxType.hx_throw_typed_rtti (Obj.repr "PHP function body renderer received facts from different program or module revisions") ["Dynamic"] else ());
@@ -31,7 +31,7 @@ let create = fun programRenderer2 programFacts2 moduleFacts2 plan2 -> let self =
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpFunctionBodyRenderer"; programRenderer = Obj.magic HxRuntime.hx_null; programFacts = Obj.magic HxRuntime.hx_null; moduleFacts = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.PhpFunctionBodyRenderer"; programRenderer = Obj.magic HxRuntime.hx_null; programFacts = Obj.magic HxRuntime.hx_null; moduleFacts = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null } : t)
 
 let getProgramRenderer = fun self () -> (Obj.magic self : t).programRenderer
 

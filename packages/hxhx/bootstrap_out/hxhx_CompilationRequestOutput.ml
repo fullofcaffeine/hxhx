@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable buffered : bool; mutable captured : Hxhx_C
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun buffered2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationRequestOutput"; buffered = false; captured = Obj.magic HxRuntime.hx_null; closed = false } : t) in (
+let create = fun buffered2 -> let self = ({ __hx_type = HxType.instance_marker "hxhx.CompilationRequestOutput"; buffered = false; captured = Obj.magic HxRuntime.hx_null; closed = false } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = buffered2 in (
       (__place_receiver_1 : t).buffered <- __place_rhs_2;
@@ -24,9 +24,9 @@ let create = fun buffered2 -> let self = ({ __hx_type = HxType.class_ "hxhx.Comp
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationRequestOutput"; buffered = false; captured = Obj.magic HxRuntime.hx_null; closed = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.CompilationRequestOutput"; buffered = false; captured = Obj.magic HxRuntime.hx_null; closed = false } : t)
 
-let events = fun self () -> let __array_receiver_7 = (Obj.magic self : t).captured in HxArray.copy __array_receiver_7
+let events = fun self () -> let __array_receiver_7 = Obj.magic ((Obj.magic self : t).captured) in HxArray.copy __array_receiver_7
 
 let close = fun self () -> ignore (ignore (let __place_receiver_8 = self in let __place_rhs_9 = true in (
   (__place_receiver_8 : t).closed <- __place_rhs_9;
@@ -52,8 +52,8 @@ let write = fun self (text : string) (isErrorStream : bool) (newline : bool) -> 
           tempString1 := __assign_13;
           __assign_13
         ));
-        ignore (let __array_receiver_14 = (Obj.magic self : t).captured in let __array_arg_0_15 = Hxhx_CompilationRequestOutputEvent.create (HxString.toStdString value ^ HxString.toStdString (!tempString1) : string) isErrorStream in HxArray.push __array_receiver_14 __array_arg_0_15);
-        raise (HxRuntime.Hx_return_void)
+        ignore (let __array_receiver_14 = Obj.magic ((Obj.magic self : t).captured) in let __array_arg_0_15 = Obj.magic (Hxhx_CompilationRequestOutputEvent.create (HxString.toStdString value ^ HxString.toStdString (!tempString1) : string) isErrorStream) in HxArray.push __array_receiver_14 __array_arg_0_15);
+        Stdlib.raise (HxRuntime.Hx_return_void)
       ) else ());
       if isErrorStream then ignore (let stream = Obj.magic (Sys_io_Stdio.stderr ()) in (
         ignore ((Obj.magic stream : Haxe_io_Output.t).writeString (Obj.magic stream) (value : string) (Obj.magic (HxRuntime.hx_null)));
