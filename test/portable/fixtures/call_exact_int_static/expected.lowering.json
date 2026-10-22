@@ -36131,7 +36131,7 @@
   "stdIsOfTypeModel": "typed-ocaml-std-is-of-type-v1",
   "stdIsOfTypeRevision": "sha256:be2e944028c65b6b639a50037c7cb1dae447e066039bff00e95bc352c5bc2850",
   "structuralFieldCount": 0,
-  "structuralFieldModel": "typed-structural-field-overlap-v4",
+  "structuralFieldModel": "typed-structural-field-overlap-v5",
   "structuralFieldRevision": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
   "structuralFields": [],
   "structuralIteratorConsumerModel": "typed-structural-iterator-consumer-v1",
