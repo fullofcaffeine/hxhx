@@ -387,9 +387,14 @@ class JsNativeImportAliasMain extends Parent {
 HX
 
 cat >"$tmpdir/src/JsNativeEnumReflectionMain.hx" <<'HX'
+enum JsNativeMode {
+  Build;
+  Run;
+}
+
 class JsNativeEnumReflectionMain {
   static function main() {
-    var mode = Run;
+    var mode:JsNativeMode = Run;
     var label = "none";
     switch (mode) {
       case Build:
