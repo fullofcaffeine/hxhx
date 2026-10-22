@@ -11,11 +11,15 @@ class HxToken {
 	public final numericText:Null<String>;
 	public final numericSuffix:Null<String>;
 
-	public function new(kind:HxTokenKind, pos:HxPos, ?numericText:String, ?numericSuffix:String) {
+	/** Exclusive original-source host string index; synthetic tokens can lack this fact. */
+	public final endIndex:Null<Int>;
+
+	public function new(kind:HxTokenKind, pos:HxPos, ?numericText:String, ?numericSuffix:String, ?endIndex:Int) {
 		this.kind = kind;
 		this.pos = pos;
 		this.numericText = numericText;
 		this.numericSuffix = numericSuffix;
+		this.endIndex = endIndex;
 	}
 
 	public function getKind():HxTokenKind {

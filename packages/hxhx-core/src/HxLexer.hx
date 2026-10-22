@@ -30,6 +30,11 @@ class HxLexer {
 		this.src = src;
 	}
 
+	/** Capture the consumed spelling before lookahead skips trivia; allocate each token once. */
+	inline function token(kind:HxTokenKind, start:HxPos, ?numericText:String, ?numericSuffix:String):HxToken {
+		return new HxToken(kind, start, numericText, numericSuffix, index);
+	}
+
 	/** Lookahead shares immutable source bytes but advances its own token cursor. */
 	public function fork():HxLexer {
 		final copy = new HxLexer(src);
@@ -167,42 +172,42 @@ class HxLexer {
 			bump();
 		final text = src.substring(start, index);
 		return switch (text) {
-			case "package": new HxToken(TKeyword(KPackage), startPos);
-			case "import": new HxToken(TKeyword(KImport), startPos);
-			case "using": new HxToken(TKeyword(KUsing), startPos);
-			case "as": new HxToken(TKeyword(KAs), startPos);
-			case "class": new HxToken(TKeyword(KClass), startPos);
-			case "public": new HxToken(TKeyword(KPublic), startPos);
-			case "private": new HxToken(TKeyword(KPrivate), startPos);
-			case "static": new HxToken(TKeyword(KStatic), startPos);
-			case "inline": new HxToken(TKeyword(KInline), startPos);
-			case "function": new HxToken(TKeyword(KFunction), startPos);
-			case "return": new HxToken(TKeyword(KReturn), startPos);
-			case "if": new HxToken(TKeyword(KIf), startPos);
-			case "else": new HxToken(TKeyword(KElse), startPos);
-			case "switch": new HxToken(TKeyword(KSwitch), startPos);
-			case "case": new HxToken(TKeyword(KCase), startPos);
-			case "default": new HxToken(TKeyword(KDefault), startPos);
-			case "try": new HxToken(TKeyword(KTry), startPos);
-			case "catch": new HxToken(TKeyword(KCatch), startPos);
-			case "throw": new HxToken(TKeyword(KThrow), startPos);
-			case "while": new HxToken(TKeyword(KWhile), startPos);
-			case "do": new HxToken(TKeyword(KDo), startPos);
-			case "for": new HxToken(TKeyword(KFor), startPos);
-			case "in": new HxToken(TKeyword(KIn), startPos);
-			case "break": new HxToken(TKeyword(KBreak), startPos);
-			case "continue": new HxToken(TKeyword(KContinue), startPos);
-			case "untyped": new HxToken(TKeyword(KUntyped), startPos);
-			case "cast": new HxToken(TKeyword(KCast), startPos);
-			case "var": new HxToken(TKeyword(KVar), startPos);
-			case "final": new HxToken(TKeyword(KFinal), startPos);
-			case "new": new HxToken(TKeyword(KNew), startPos);
-			case "this": new HxToken(TKeyword(KThis), startPos);
-			case "super": new HxToken(TKeyword(KSuper), startPos);
-			case "true": new HxToken(TKeyword(KTrue), startPos);
-			case "false": new HxToken(TKeyword(KFalse), startPos);
-			case "null": new HxToken(TKeyword(KNull), startPos);
-			case _: new HxToken(TIdent(text), startPos);
+			case "package": token(TKeyword(KPackage), startPos);
+			case "import": token(TKeyword(KImport), startPos);
+			case "using": token(TKeyword(KUsing), startPos);
+			case "as": token(TKeyword(KAs), startPos);
+			case "class": token(TKeyword(KClass), startPos);
+			case "public": token(TKeyword(KPublic), startPos);
+			case "private": token(TKeyword(KPrivate), startPos);
+			case "static": token(TKeyword(KStatic), startPos);
+			case "inline": token(TKeyword(KInline), startPos);
+			case "function": token(TKeyword(KFunction), startPos);
+			case "return": token(TKeyword(KReturn), startPos);
+			case "if": token(TKeyword(KIf), startPos);
+			case "else": token(TKeyword(KElse), startPos);
+			case "switch": token(TKeyword(KSwitch), startPos);
+			case "case": token(TKeyword(KCase), startPos);
+			case "default": token(TKeyword(KDefault), startPos);
+			case "try": token(TKeyword(KTry), startPos);
+			case "catch": token(TKeyword(KCatch), startPos);
+			case "throw": token(TKeyword(KThrow), startPos);
+			case "while": token(TKeyword(KWhile), startPos);
+			case "do": token(TKeyword(KDo), startPos);
+			case "for": token(TKeyword(KFor), startPos);
+			case "in": token(TKeyword(KIn), startPos);
+			case "break": token(TKeyword(KBreak), startPos);
+			case "continue": token(TKeyword(KContinue), startPos);
+			case "untyped": token(TKeyword(KUntyped), startPos);
+			case "cast": token(TKeyword(KCast), startPos);
+			case "var": token(TKeyword(KVar), startPos);
+			case "final": token(TKeyword(KFinal), startPos);
+			case "new": token(TKeyword(KNew), startPos);
+			case "this": token(TKeyword(KThis), startPos);
+			case "super": token(TKeyword(KSuper), startPos);
+			case "true": token(TKeyword(KTrue), startPos);
+			case "false": token(TKeyword(KFalse), startPos);
+			case "null": token(TKeyword(KNull), startPos);
+			case _: token(TIdent(text), startPos);
 		}
 	}
 
@@ -229,7 +234,7 @@ class HxLexer {
 			final suffix = consumeNumericSuffix();
 			final text = normalizeNumberText(src.substring(start, numericEnd));
 			final value = Std.parseInt(text);
-			return new HxToken(TInt(value == null ? 0 : value), startPos, text, suffix);
+			return token(TInt(value == null ? 0 : value), startPos, text, suffix);
 		}
 
 		var isFloat = false;
@@ -266,10 +271,10 @@ class HxLexer {
 		final text = normalizeNumberText(src.substring(start, numericEnd));
 		if (isFloat || StringTools.startsWith(suffix.toLowerCase(), "f")) {
 			final value = Std.parseFloat(text);
-			return new HxToken(TFloat(value), startPos);
+			return token(TFloat(value), startPos);
 		}
 		final value = Std.parseInt(text);
-		return new HxToken(TInt(value == null ? 0 : value), startPos, text, suffix);
+		return token(TInt(value == null ? 0 : value), startPos, text, suffix);
 	}
 
 	function readLeadingDotNumber(startPos:HxPos):HxToken {
@@ -295,7 +300,7 @@ class HxLexer {
 		final numericEnd = index;
 		consumeNumericSuffix();
 		final text = normalizeNumberText(src.substring(start, numericEnd));
-		return new HxToken(TFloat(Std.parseFloat(text)), startPos);
+		return token(TFloat(Std.parseFloat(text)), startPos);
 	}
 
 	function consumeNumericSuffix():String {
@@ -360,7 +365,7 @@ class HxLexer {
 		while (!eof()) {
 			final c = bump();
 			if (c == 34) { // "
-				return new HxToken(TString(buf.toString(), false), startPos);
+				return token(TString(buf.toString(), false), startPos);
 			}
 			if (c == 92) { // backslash
 				final decoded = HxStringEscape.read({source: src, offset: index, position: pos()});
@@ -388,7 +393,7 @@ class HxLexer {
 				continue;
 			}
 			if (c == "'".code) {
-				return new HxToken(TString(buf.toString(), true), startPos);
+				return token(TString(buf.toString(), true), startPos);
 			}
 			if (c == 92) { // backslash
 				final decoded = HxStringEscape.read({source: src, offset: index, position: pos()});
@@ -437,7 +442,7 @@ class HxLexer {
 						break;
 					flags.addChar(bump());
 				}
-				return new HxToken(TRegex(pattern.toString(), flags.toString()), startPos);
+				return token(TRegex(pattern.toString(), flags.toString()), startPos);
 			}
 			pattern.addChar(c);
 		}
@@ -448,36 +453,36 @@ class HxLexer {
 		skipWhitespaceAndComments();
 		final p = pos();
 		if (eof())
-			return new HxToken(TEof, p);
+			return token(TEof, p);
 
 		final c = peek(0);
 		return switch (c) {
 			case 123:
 				bump();
-				new HxToken(TLBrace, p); // {
+				token(TLBrace, p); // {
 			case 125:
 				bump();
-				new HxToken(TRBrace, p); // }
+				token(TRBrace, p); // }
 			case 40:
 				bump();
-				new HxToken(TLParen, p); // (
+				token(TLParen, p); // (
 			case 41:
 				bump();
-				new HxToken(TRParen, p); // )
+				token(TRParen, p); // )
 			case 59:
 				bump();
-				new HxToken(TSemicolon, p); // ;
+				token(TSemicolon, p); // ;
 			case 58:
 				bump();
-				new HxToken(TColon, p); // :
+				token(TColon, p); // :
 			case 46 if (isLeadingDotNumberStart()):
 				readLeadingDotNumber(p);
 			case 46:
 				bump();
-				new HxToken(TDot, p); // .
+				token(TDot, p); // .
 			case 44:
 				bump();
-				new HxToken(TComma, p); // ,
+				token(TComma, p); // ,
 			case 34: readString(p); // "
 			case 39: readSingleQuotedString(p); // '
 			case _ if (isDigit(c)): readNumber(p);
@@ -488,7 +493,7 @@ class HxLexer {
 				// We only need enough tokenization to skip bodies and find top-level
 				// declarations; full expression/type lexing comes later.
 				bump();
-				new HxToken(TOther(c), p);
+				token(TOther(c), p);
 		}
 	}
 }
