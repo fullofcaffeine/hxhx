@@ -1,6 +1,8 @@
 import hxhx.ExprMacroExpander;
 import hxhx.ExprMacroCallRewrite;
 import hxhx.ExprMacroDeclarationSelector.capture;
+import hxhx.ExprMacroDeclarationSelector.ExprMacroSelectionScope;
+import hxhx.ExprMacroLexicalScope.ExprMacroLexicalGap;
 import hxhx.macro.MacroRuntimeSession;
 
 /**
@@ -16,6 +18,22 @@ class M14ExprMacroLexicalTraversalTest {
 
 	static function module(name:String, source:String):ResolvedModule
 		return new ResolvedModule(name, name + ".hx", ParserStage.parse(source, name + ".hx"));
+
+	/** These complete fixtures prepare declarations outside the syntax walker, like a request loader. */
+	static function selectingRewrite(modules:Array<ResolvedModule>,
+			rewriter:(HxExpr, TyperContext,
+			ExprMacroSelectionScope) -> ExprMacroCallRewrite):{modules:Array<ResolvedModule>, lexicalGaps:Array<ExprMacroLexicalGap>} {
+		final index = TyperIndex.build(modules);
+		return ExprMacroExpander.rewriteResolvedModules(modules, (call, source, scope) -> {
+			final owner = index.getForSourceClass(source.sourceClass);
+			if (owner == null)
+				throw "selection fixture lost exact source class ownership";
+			final directives = TyperStage.resolveModuleDirectives(source.directives, source.packagePath, source.modulePath, index, null);
+			final context = new TyperContext(index, source.filePath, source.modulePath, source.packagePath, source.directives, owner.getFullName(), null,
+				directives);
+			return rewriter(call, context, scope);
+		});
+	}
 
 	static function main():Void {
 		final provider = module("Provider",
@@ -68,7 +86,7 @@ class M14ExprMacroLexicalTraversalTest {
 		final selected = new Array<String>();
 		final ordinary = new Array<String>();
 		final visited = new Array<String>();
-		final unchanged = ExprMacroExpander.rewriteResolvedModules([provider, caller], (call, context, scope) -> {
+		final unchanged = selectingRewrite([provider, caller], (call, context, scope) -> {
 			final label = switch call {
 				case ECall(_, [EString(value)]): value;
 				case _: "";
@@ -141,7 +159,7 @@ class M14ExprMacroLexicalTraversalTest {
 		require(unchanged.modules[0] == provider && unchanged.modules[1] == caller, "consuming unchanged source lost module identity");
 		final rebuiltSource = module("Rebuilt",
 			'typedef Alias = { final name:String; } @:keep class Rebuilt<T> { static var field = Provider.keep("replace"); static function run():Void { Provider.keep("replace-body"); } }');
-		final rebuilt = ExprMacroExpander.rewriteResolvedModules([provider, rebuiltSource], (call, context, scope) -> {
+		final rebuilt = selectingRewrite([provider, rebuiltSource], (call, context, scope) -> {
 			return capture(call, context, scope) == null ? Recurse(value -> value) : Consume(EString("replaced"));
 		}).modules[1];
 		final originalDecl = ResolvedModule.getParsed(rebuiltSource).getDecl();
@@ -165,7 +183,7 @@ class M14ExprMacroLexicalTraversalTest {
 		final genericValue = module("GenericValue",
 			'import Provider.keep as T; class GenericValue<T> { public function run():String return T("generic-value"); }');
 		final genericCalls = new Array<String>();
-		final generics = ExprMacroExpander.rewriteResolvedModules([provider, nominal, genericQualifier, genericValue], (call, context, scope) -> {
+		final generics = selectingRewrite([provider, nominal, genericQualifier, genericValue], (call, context, scope) -> {
 			final selected = capture(call, context, scope);
 			if (selected == null)
 				return Recurse(value -> value);
@@ -187,7 +205,7 @@ class M14ExprMacroLexicalTraversalTest {
 			"opaque syntax without visited calls masqueraded as complete lexical coverage");
 		var diagnostic = "";
 		try
-			ExprMacroExpander.rewriteResolvedModules([unsupported], (call, context, scope) -> {
+			selectingRewrite([unsupported], (call, context, scope) -> {
 				capture(call, context, scope);
 				return Recurse(value -> value);
 			})
@@ -221,6 +239,18 @@ class M14ExprMacroLexicalTraversalTest {
 			case _:
 				throw "existing nested adapter did not preserve the ordinary enclosing call";
 		}
+		final early = module("Early", 'class Early<T:Pending> { static function main():Void { First.expand(); } }');
+		var sourceCalls = 0;
+		final sourceOnly = ExprMacroExpander.rewriteResolvedModules([early], (_, context, _) -> {
+			sourceCalls++;
+			require(context.sourceClass == HxModuleDecl.getMainClass(early.parsed.getDecl()), "source callback lost its original class identity");
+			require(context.filePath == "Early.hx" && context.modulePath == "Early" && context.packagePath == "", "source callback lost module ownership");
+			return Recurse(value -> value);
+		});
+		require(sourceCalls == 1 && sourceOnly.modules[0] == early, "syntax traversal required premature generic-bound resolution");
+		final earlyExpansion = ExprMacroExpander.expandResolvedModules([early], session, ["First.expand()"]);
+		require(earlyExpansion.expandedCount == 1
+			&& calls[calls.length - 1] == "First.expand()", "existing text adapter resolved a not-yet-loaded bound");
 		Sys.println("M14_EXPR_MACRO_LEXICAL_TRAVERSAL:PASS");
 	}
 }

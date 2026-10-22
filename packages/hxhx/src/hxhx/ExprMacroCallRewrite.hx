@@ -11,5 +11,5 @@ enum ExprMacroCallRewrite {
 	Recurse(afterChildren:HxExpr->HxExpr);
 }
 
-/** A future dispatcher can consume a declaration-selected call without typing its syntax arguments. */
-typedef ExprMacroCallRewriter = (call:HxExpr, context:TyperContext, scope:ExprMacroSelectionScope) -> ExprMacroCallRewrite;
+/** Callers prepare semantic context themselves when selecting declarations; traversal supplies syntax ownership only. */
+typedef ExprMacroCallRewriter = (call:HxExpr, context:ExprMacroSourceContext, scope:ExprMacroSelectionScope) -> ExprMacroCallRewrite;

@@ -33,9 +33,9 @@ class ExprMacroLexicalScope {
 		return new ExprMacroLexicalScope(isStaticContext, names.concat(bindings == null ? [] : bindings), gaps, unavailableReason);
 
 	/** Preserve old syntax traversal while preventing a declaration caller from trusting partial names. */
-	public function markUnavailable(context:TyperContext, reason:String):Void {
+	public function markUnavailable(filePath:String, reason:String):Void {
 		unavailableReason = reason;
-		gaps.push({filePath: context.getFilePath(), reason: reason});
+		gaps.push({filePath: filePath, reason: reason});
 	}
 
 	public function declare(name:String):Void

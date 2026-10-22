@@ -41,8 +41,8 @@ class ExprMacroExpander {
 					final candidate = renderSimpleCall(callee, arguments);
 					if (trace && candidate != null)
 						Sys.println("expr_macro_candidate raw=" + candidate);
-					final imports = buildImportMap(context.getDirectives(), context.getPackagePath());
-					final matched = candidate == null ? null : matchAllowlistedCall(candidate, allowed, keys, imports, context.getPackagePath());
+					final imports = buildImportMap(context.directives, context.packagePath);
+					final matched = candidate == null ? null : matchAllowlistedCall(candidate, allowed, keys, imports, context.packagePath);
 					if (matched == null) call else {
 						if (trace)
 							Sys.println("expr_macro_expand call=" + matched);
@@ -57,17 +57,17 @@ class ExprMacroExpander {
 	}
 
 	/**
-		Visit every source class with request-local declaration headers and visibility.
+		Visit every source class using source-owned scope without publishing types.
 		Consume skips all original call children; Recurse applies its continuation
 		once after receiver and arguments. Replacement syntax is visited separately.
-		The header index belongs to this original graph and never escapes the pass.
+		Declaration preparation belongs to callers that select macro declarations;
+		the existing text adapter needs only source directives and package names.
 		Declaration-aware callers must reject nonempty lexicalGaps before claiming
 		complete selection, even when an opaque subtree contains no visited calls.
 		The text adapter uses only its prior syntax contract.
 	**/
 	public static function rewriteResolvedModules(modules:Array<ResolvedModule>,
 			rewriter:ExprMacroCallRewriter):{modules:Array<ResolvedModule>, lexicalGaps:Array<ExprMacroLexicalGap>} {
-		final index = TyperIndex.build(modules);
 		final lexicalGaps = new Array<ExprMacroLexicalGap>();
 		final out = new Array<ResolvedModule>();
 		for (module in modules) {
@@ -76,15 +76,17 @@ class ExprMacroExpander {
 			final packagePath = HxModuleDecl.getPackagePath(declaration);
 			final modulePath = ResolvedModule.getModulePath(module);
 			final directives = HxModuleDecl.getDirectives(declaration);
-			final resolved = TyperStage.resolveModuleDirectives(directives, packagePath, modulePath, index, null);
 			var changed = false;
 			var main = HxModuleDecl.getMainClass(declaration);
 			final classes = new Array<HxClassDecl>();
 			for (source in HxModuleDecl.getClasses(declaration)) {
-				final owner = index.getForSourceClass(source);
-				if (owner == null)
-					throw "macro traversal source class has no declaration identity";
-				final context = new TyperContext(index, parsed.getFilePath(), modulePath, packagePath, directives, owner.getFullName(), null, resolved);
+				final context:ExprMacroSourceContext = {
+					filePath: parsed.getFilePath(),
+					modulePath: modulePath,
+					packagePath: packagePath,
+					directives: directives.copy(),
+					sourceClass: source
+				};
 				var classChanged = false;
 				final fields = new Array<HxFieldDecl>();
 				for (field in HxClassDecl.getFields(source)) {
@@ -178,7 +180,7 @@ class ExprMacroExpander {
 		return value == "1" || value == "true" || value == "yes";
 	}
 
-	static function rewriteStmt(s:HxStmt, rewriter:ExprMacroCallRewriter, context:TyperContext, scope:ExprMacroLexicalScope):HxStmt {
+	static function rewriteStmt(s:HxStmt, rewriter:ExprMacroCallRewriter, context:ExprMacroSourceContext, scope:ExprMacroLexicalScope):HxStmt {
 		return switch (s) {
 			// Typed match decisions belong to emission, after source macro expansion.
 			case SGuardedSwitch(_, _, _, _, _):
@@ -250,7 +252,7 @@ class ExprMacroExpander {
 					final names = TySwitchPatternBindings.sourceNames(patterns[index]);
 					final caseScope = scope.child(names == null ? [] : names);
 					if (names == null)
-						caseScope.markUnavailable(context, "source macro traversal cannot prove this switch pattern scope");
+						caseScope.markUnavailable(context.filePath, "source macro traversal cannot prove this switch pattern scope");
 					final rewritten = rewriteStmt(bodies[index], rewriter, context, caseScope);
 					if (rewritten != bodies[index])
 						changed = true;
@@ -276,7 +278,7 @@ class ExprMacroExpander {
 		Unchanged children retain node identity; changed containers retain source facts
 		and positions. This traversal does not make syntax arguments ordinary values.
 	 */
-	static function rewriteExpr(e:HxExpr, rewriter:ExprMacroCallRewriter, context:TyperContext, scope:ExprMacroLexicalScope, depth:Int):HxExpr {
+	static function rewriteExpr(e:HxExpr, rewriter:ExprMacroCallRewriter, context:ExprMacroSourceContext, scope:ExprMacroLexicalScope, depth:Int):HxExpr {
 		if (depth > 4)
 			throw "expression macro replacement exceeded expansion depth";
 
@@ -441,7 +443,7 @@ class ExprMacroExpander {
 				final re = rewriteExpr(elseExpr, rewriter, context, scope.child(), depth);
 				(rc != cond || rt != thenExpr || re != elseExpr) ? ETernary(rc, rt, re) : e;
 			case ETryCatchRaw(_raw):
-				scope.markUnavailable(context, "source macro traversal requires structured catch bindings");
+				scope.markUnavailable(context.filePath, "source macro traversal requires structured catch bindings");
 				e;
 			case EAnon(fieldNames, fieldValues):
 				var changed = false;
@@ -495,10 +497,10 @@ class ExprMacroExpander {
 			case EMacroType(_):
 				e;
 			case ESwitch(_, _, _) | ESwitchRaw(_):
-				scope.markUnavailable(context, "source macro traversal cannot prove this switch syntax");
+				scope.markUnavailable(context.filePath, "source macro traversal cannot prove this switch syntax");
 				e;
 			case EUnsupported(_):
-				scope.markUnavailable(context, "source macro traversal requires represented source syntax");
+				scope.markUnavailable(context.filePath, "source macro traversal requires represented source syntax");
 				e;
 			case ENull | EThis | ESuper | EBool(_) | EString(_) | EInt(_) | EFloat(_) | EEnumValue(_) | EIdent(_):
 				e;
