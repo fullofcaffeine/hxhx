@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable planRevision : string; mutable activeProfi
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun planRevision2 activeProfile2 requirements occurrences finalOutputAuthority2 -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority"; planRevision = HxString.hx_null_string; activeProfile = HxString.hx_null_string; occurrencesById = Obj.magic HxRuntime.hx_null; occurrencesInOrder = Obj.magic HxRuntime.hx_null; requirementsById = Obj.magic HxRuntime.hx_null; constructed = Obj.magic HxRuntime.hx_null; receipts = Obj.magic HxRuntime.hx_null; finalOutputAuthority = Obj.magic HxRuntime.hx_null; sealed = false } : t) in (
+let create = fun planRevision2 activeProfile2 requirements occurrences finalOutputAuthority2 -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority"; planRevision = HxString.hx_null_string; activeProfile = HxString.hx_null_string; occurrencesById = Obj.magic HxRuntime.hx_null; occurrencesInOrder = Obj.magic HxRuntime.hx_null; requirementsById = Obj.magic HxRuntime.hx_null; constructed = Obj.magic HxRuntime.hx_null; receipts = Obj.magic HxRuntime.hx_null; finalOutputAuthority = Obj.magic HxRuntime.hx_null; sealed = false } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = false in (
       (__place_receiver_1 : t).sealed <- __place_rhs_2;
@@ -80,7 +80,7 @@ let create = fun planRevision2 activeProfile2 requirements occurrences finalOutp
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority"; planRevision = HxString.hx_null_string; activeProfile = HxString.hx_null_string; occurrencesById = Obj.magic HxRuntime.hx_null; occurrencesInOrder = Obj.magic HxRuntime.hx_null; requirementsById = Obj.magic HxRuntime.hx_null; constructed = Obj.magic HxRuntime.hx_null; receipts = Obj.magic HxRuntime.hx_null; finalOutputAuthority = Obj.magic HxRuntime.hx_null; sealed = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.runtimegen.OcamlRuntimeUseAuthority"; planRevision = HxString.hx_null_string; activeProfile = HxString.hx_null_string; occurrencesById = Obj.magic HxRuntime.hx_null; occurrencesInOrder = Obj.magic HxRuntime.hx_null; requirementsById = Obj.magic HxRuntime.hx_null; constructed = Obj.magic HxRuntime.hx_null; receipts = Obj.magic HxRuntime.hx_null; finalOutputAuthority = Obj.magic HxRuntime.hx_null; sealed = false } : t)
 
 let validateRequirement = fun self (occurrence : Obj.t) -> ignore (ignore (let this1 = (Obj.magic self : t).requirementsById in let key = (Obj.obj (HxAnon.get occurrence "requirementId") : string) in let tempMaybeOcamlRuntimeRequirement = HxMap.get_string this1 (key : string) in let requirement = tempMaybeOcamlRuntimeRequirement in (
   ignore (if requirement == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_107 = "Runtime use " in let __string_part_108 = HxString.toStdString (Obj.obj (HxAnon.get occurrence "id")) in let __string_part_109 = " has no exact requirement " in let __string_part_110 = HxString.toStdString (Obj.obj (HxAnon.get occurrence "requirementId")) in let __string_part_111 = "." in (((__string_part_107 ^ __string_part_108) ^ __string_part_109) ^ __string_part_110) ^ __string_part_111)) ["Dynamic"] else ());

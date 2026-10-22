@@ -15,7 +15,7 @@ type t = { __hx_type : Obj.t; mutable constructors : Obj.t HxMap.string_map; mut
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program2 noRoot2 -> let self = ({ __hx_type = HxType.class_ "backend.source.CsEnumConstructorCallLowering"; constructors = Obj.magic HxRuntime.hx_null; noRoot = false; staticCalls = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun program2 noRoot2 -> let self = ({ __hx_type = HxType.instance_marker "backend.source.CsEnumConstructorCallLowering"; constructors = Obj.magic HxRuntime.hx_null; noRoot = false; staticCalls = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if program2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "C# enum-constructor lowering requires a typed program") ["Dynamic"] else ());
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = noRoot2 in (
@@ -84,7 +84,7 @@ let create = fun program2 noRoot2 -> let self = ({ __hx_type = HxType.class_ "ba
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.CsEnumConstructorCallLowering"; constructors = Obj.magic HxRuntime.hx_null; noRoot = false; staticCalls = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.CsEnumConstructorCallLowering"; constructors = Obj.magic HxRuntime.hx_null; noRoot = false; staticCalls = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null } : t)
 
 let body = fun self (projection : TypedBackendFunctionProjection.t) -> let _gthis = Obj.magic self in (
   ignore (if projection == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "C# enum-constructor lowering requires a typed function projection") ["Dynamic"] else ());
@@ -1155,7 +1155,7 @@ type t = { __hx_type : Obj.t; mutable targets : Obj.t HxMap.string_map; mutable 
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program noRoot2 -> let self = ({ __hx_type = HxType.class_ "backend.source.CsSourceStaticCallLowering"; targets = Obj.magic HxRuntime.hx_null; noRoot = false } : t) in (
+let create = fun program noRoot2 -> let self = ({ __hx_type = HxType.instance_marker "backend.source.CsSourceStaticCallLowering"; targets = Obj.magic HxRuntime.hx_null; noRoot = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_string ()) in (
       (Obj.magic self : t).targets <- __assign_1;
@@ -1204,7 +1204,7 @@ let create = fun program noRoot2 -> let self = ({ __hx_type = HxType.class_ "bac
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.CsSourceStaticCallLowering"; targets = Obj.magic HxRuntime.hx_null; noRoot = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.CsSourceStaticCallLowering"; targets = Obj.magic HxRuntime.hx_null; noRoot = false } : t)
 
 let body = fun self (statements : HxStmt.hxstmt HxArray.t) -> let _gthis = Obj.magic self in Backend_source_SourceFunctionBodyRewriter.body (Obj.magic statements) (fun expression -> (try let call = TypedExactStaticCallSource.decode (Obj.magic expression) in (
   ignore (if call == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr expression)) else ());
@@ -1767,7 +1767,7 @@ type luafielddefault =
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.LuaClassPlan"; tableName = HxString.hx_null_string; receiverName = HxString.hx_null_string; runtimeName = HxString.hx_null_string; classes = Obj.magic HxRuntime.hx_null; byIdentity = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.LuaClassPlan"; tableName = HxString.hx_null_string; receiverName = HxString.hx_null_string; runtimeName = HxString.hx_null_string; classes = Obj.magic HxRuntime.hx_null; byIdentity = Obj.magic HxRuntime.hx_null } : t)
 
 let copyClasses = fun self () -> let __array_receiver_46 = Obj.magic ((Obj.magic self : t).classes) in HxArray.copy __array_receiver_46
 
@@ -1849,7 +1849,7 @@ let freshName = fun program base -> (try let suffix = ref 0 in let rec __while_l
 ) in __while_loop_77 () with
   | HxRuntime.Hx_return __ret_78 -> (Obj.obj __ret_78 : string) : string)
 
-let create = fun program -> let self = ({ __hx_type = HxType.class_ "backend.source.LuaClassPlan"; tableName = HxString.hx_null_string; receiverName = HxString.hx_null_string; runtimeName = HxString.hx_null_string; classes = Obj.magic HxRuntime.hx_null; byIdentity = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun program -> let self = ({ __hx_type = HxType.instance_marker "backend.source.LuaClassPlan"; tableName = HxString.hx_null_string; receiverName = HxString.hx_null_string; runtimeName = HxString.hx_null_string; classes = Obj.magic HxRuntime.hx_null; byIdentity = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_string ()) in (
       (Obj.magic self : t).byIdentity <- __assign_1;
@@ -2231,7 +2231,7 @@ type t = { __hx_type : Obj.t; mutable classPlan : Backend_source_LuaClassPlan.t;
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun classPlan2 depth2 loop2 -> let self = ({ __hx_type = HxType.class_ "backend.source.LuaControlScope"; classPlan = Obj.magic HxRuntime.hx_null; depth = 0; loop = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun classPlan2 depth2 loop2 -> let self = ({ __hx_type = HxType.instance_marker "backend.source.LuaControlScope"; classPlan = Obj.magic HxRuntime.hx_null; depth = 0; loop = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (let depth2 = if Obj.repr depth2 == HxRuntime.hx_null then 0 else depth2 in ignore ((
     ignore (let __assign_1 = Obj.magic classPlan2 in (
       (Obj.magic self : t).classPlan <- __assign_1;
@@ -2249,7 +2249,7 @@ let create = fun classPlan2 depth2 loop2 -> let self = ({ __hx_type = HxType.cla
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.LuaControlScope"; classPlan = Obj.magic HxRuntime.hx_null; depth = 0; loop = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.LuaControlScope"; classPlan = Obj.magic HxRuntime.hx_null; depth = 0; loop = Obj.magic HxRuntime.hx_null } : t)
 
 let protectedCall = fun self () -> create (Obj.magic ((Obj.magic self : t).classPlan)) (HxInt.add ((Obj.magic self : t).depth) 1) ((Obj.magic self : t).loop)
 
@@ -2425,7 +2425,7 @@ type luaexecutable =
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program2 -> let self = ({ __hx_type = HxType.class_ "backend.source.LuaSourceClassEmitter"; program = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; externs = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun program2 -> let self = ({ __hx_type = HxType.instance_marker "backend.source.LuaSourceClassEmitter"; program = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; externs = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic program2 in (
       (Obj.magic self : t).program <- __assign_1;
@@ -2447,7 +2447,7 @@ let create = fun program2 -> let self = ({ __hx_type = HxType.class_ "backend.so
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.LuaSourceClassEmitter"; program = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; externs = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.LuaSourceClassEmitter"; program = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; externs = Obj.magic HxRuntime.hx_null } : t)
 
 let requireOwner = fun self (identity : string) -> Backend_source_LuaClassPlan.requireOwner (Obj.magic ((Obj.magic self : t).plan)) (identity : string)
 
@@ -2962,7 +2962,7 @@ let renderInitializer = fun self (out : string HxArray.t) (owner : Obj.t) (proje
     ignore (TypedBackendSourceWalk.expression (Obj.repr (TypedBackendFieldInitializerProjection.getExpression (Obj.magic projection) ())) (fun expression -> ignore (Backend_source_LuaArrayIndexLowering.add (Obj.magic arrays) (Obj.magic (TypedBackendFieldInitializerProjection.findArrayAccess (Obj.magic projection) (Obj.magic expression))))));
     let expression = Obj.magic (Backend_source_SourceFunctionBodyRewriter.expressionWithOriginal (Obj.magic (TypedBackendFieldInitializerProjection.getExpression (Obj.magic projection) ())) (fun original rebuilt -> lower (Obj.magic _gthis) owner (Obj.magic (let __enum_arg_191 = Obj.magic projection in Initializer (Stdlib.Sys.opaque_identity __enum_arg_191))) (Obj.magic arrays) (Obj.magic original) (Obj.magic rebuilt))) in let body = TypedControlStatements.initializerBody (Obj.magic expression) (TypedBackendFieldInitializerProjection.getStableIdentity (Obj.magic projection) () : string) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) in (
       ignore (if HxArray.length (Obj.obj (HxAnon.get body "statements")) <> 0 then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_192 = "Lua field initializer requires statement-region rendering: " in let __string_part_193 = HxString.toStdString (TypedBackendFieldInitializerProjection.getStableIdentity (Obj.magic projection) ()) in __string_part_192 ^ __string_part_193)) ["Dynamic"] else ());
-      if (let __structural_receiver_194 = body in Obj.obj (HxAnon.get __structural_receiver_194 "value")) != Obj.magic (HxRuntime.hx_null) then ignore (let __array_receiver_195 = Obj.magic out in let __array_arg_0_196 = (let __string_part_198 = HxString.toStdString indent in let __string_part_199 = HxString.toStdString destination in let __string_part_200 = " = " in let __string_part_201 = HxString.toStdString (Backend_source_SourceTargetCommon.renderExpr (Obj.magic (Backend_source_SourceNativeTarget.Lua)) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (let __structural_receiver_197 = body in Obj.obj (HxAnon.get __structural_receiver_197 "value"))))) in ((__string_part_198 ^ __string_part_199) ^ __string_part_200) ^ __string_part_201 : string) in HxArray.push __array_receiver_195 __array_arg_0_196) else ()
+      if (let __structural_receiver_194 = body in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_194 "value"))) != Obj.magic (HxRuntime.hx_null) then ignore (let __array_receiver_195 = Obj.magic out in let __array_arg_0_196 = (let __string_part_198 = HxString.toStdString indent in let __string_part_199 = HxString.toStdString destination in let __string_part_200 = " = " in let __string_part_201 = HxString.toStdString (Backend_source_SourceTargetCommon.renderExpr (Obj.magic (Backend_source_SourceNativeTarget.Lua)) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (let __structural_receiver_197 = body in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_197 "value")))))) in ((__string_part_198 ^ __string_part_199) ^ __string_part_200) ^ __string_part_201 : string) in HxArray.push __array_receiver_195 __array_arg_0_196) else ()
     )
   )
 )))
@@ -3244,12 +3244,12 @@ type sourcefunctionrenderframe =
 
 let __reflaxe_ocaml__ = ()
 
-let sourcefunctionrenderframetools_create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.SourceFunctionRenderFrameTools" } : sourcefunctionrenderframetools_t) in (
+let sourcefunctionrenderframetools_create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.source.SourceFunctionRenderFrameTools" } : sourcefunctionrenderframetools_t) in (
   ignore ();
   self
 )
 
-let sourcefunctionrenderframetools___empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.SourceFunctionRenderFrameTools" } : sourcefunctionrenderframetools_t)
+let sourcefunctionrenderframetools___empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.SourceFunctionRenderFrameTools" } : sourcefunctionrenderframetools_t)
 
 let sourcefunctionrenderframetools_target = fun frame -> (
   ignore (if frame == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "source function rendering requires an explicit render frame") ["Dynamic"] else ());
@@ -3570,7 +3570,7 @@ let sourcefunctionrenderframetools_withPhpScope = fun frame scope -> (
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun reserved2 -> let self = ({ __hx_type = HxType.class_ "backend.source.SourceTemporaryNames"; reserved = Obj.magic HxRuntime.hx_null; next = 0 } : t) in (
+let create = fun reserved2 -> let self = ({ __hx_type = HxType.instance_marker "backend.source.SourceTemporaryNames"; reserved = Obj.magic HxRuntime.hx_null; next = 0 } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = 0 in (
       (__place_receiver_1 : t).next <- __place_rhs_2;
@@ -3658,7 +3658,7 @@ let sourcefunctionrenderframetools_forNativeFunction = fun locals -> let __enum_
 (* Generated by reflaxe.ocaml (WIP) *)
 (* Haxe type: backend.source.SourceTemporaryNames *)
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.SourceTemporaryNames"; reserved = Obj.magic HxRuntime.hx_null; next = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.SourceTemporaryNames"; reserved = Obj.magic HxRuntime.hx_null; next = 0 } : t)
 
 let fresh = fun self () -> let name = ref (HxString.hx_null_string : string) in (
   ignore (let rec __do_while_loop_10 = fun () -> (
@@ -4394,7 +4394,7 @@ type t = { __hx_type : Obj.t; mutable target : Backend_source_SourceNativeTarget
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "backend.source.SourceNativeFunctionLocals"; target = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null; projection = Obj.magic HxRuntime.hx_null; noRoot = false } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "backend.source.SourceNativeFunctionLocals"; target = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null; projection = Obj.magic HxRuntime.hx_null; noRoot = false } : t) in (
   ignore (ignore ((
     ignore (if (let __enum_eq_left_1 = Obj.obj (HxEnum.unbox_or_obj "backend.source.SourceNativeTarget" (HxAnon.get input "target")) in let __enum_eq_right_2 = Backend_source_SourceNativeTarget.Java in HxEnum.unbox_or_obj "backend.source.SourceNativeTarget" (Obj.repr __enum_eq_left_1) != HxEnum.unbox_or_obj "backend.source.SourceNativeTarget" (Obj.repr __enum_eq_right_2)) && (let __enum_eq_left_3 = Obj.obj (HxEnum.unbox_or_obj "backend.source.SourceNativeTarget" (HxAnon.get input "target")) in let __enum_eq_right_4 = Backend_source_SourceNativeTarget.Cs in HxEnum.unbox_or_obj "backend.source.SourceNativeTarget" (Obj.repr __enum_eq_left_3) != HxEnum.unbox_or_obj "backend.source.SourceNativeTarget" (Obj.repr __enum_eq_right_4)) then HxType.hx_throw_typed_rtti (Obj.repr "native local declarations require Java or C#") ["Dynamic"] else ());
     let found = ref false in let _g = ref 0 in let _g1 = Obj.magic (MacroExpandedProgram.getTypedModules (Obj.magic (Obj.obj (HxAnon.get input "program"))) ()) in (
@@ -4442,7 +4442,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "backend.sourc
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.SourceNativeFunctionLocals"; target = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null; projection = Obj.magic HxRuntime.hx_null; noRoot = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.SourceNativeFunctionLocals"; target = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null; projection = Obj.magic HxRuntime.hx_null; noRoot = false } : t)
 
 let hasLocal = fun self (name : string) -> TypedBackendLocalCatalog.findByProjectedName (Obj.magic (TypedBackendFunctionProjection.getLocalCatalog (Obj.magic ((Obj.magic self : t).projection)) ())) (name : string) != Obj.magic (HxRuntime.hx_null)
 
@@ -5650,7 +5650,7 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let phpmetadataobjectfield_create = fun name2 value2 -> let self = ({ __hx_type = HxType.class_ "backend.source._SourceTargetCommon.PhpMetadataObjectField"; name = HxString.hx_null_string; value = HxString.hx_null_string } : phpmetadataobjectfield_t) in (
+let phpmetadataobjectfield_create = fun name2 value2 -> let self = ({ __hx_type = HxType.instance_marker "backend.source._SourceTargetCommon.PhpMetadataObjectField"; name = HxString.hx_null_string; value = HxString.hx_null_string } : phpmetadataobjectfield_t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
       (Obj.magic self : phpmetadataobjectfield_t).name <- __assign_1;
@@ -5664,7 +5664,7 @@ let phpmetadataobjectfield_create = fun name2 value2 -> let self = ({ __hx_type 
   self
 )
 
-let phpmetadataobjectfield___empty = fun () -> ({ __hx_type = HxType.class_ "backend.source._SourceTargetCommon.PhpMetadataObjectField"; name = HxString.hx_null_string; value = HxString.hx_null_string } : phpmetadataobjectfield_t)
+let phpmetadataobjectfield___empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source._SourceTargetCommon.PhpMetadataObjectField"; name = HxString.hx_null_string; value = HxString.hx_null_string } : phpmetadataobjectfield_t)
 
 let phpmetadataobjectfield_getName = fun field -> (Obj.magic field : phpmetadataobjectfield_t).name
 
@@ -5675,12 +5675,12 @@ let phpmetadataobjectfield_getValue = fun field -> (Obj.magic field : phpmetadat
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.SourceTargetCommon" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.source.SourceTargetCommon" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.SourceTargetCommon" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.SourceTargetCommon" } : t)
 
 let capabilitiesStatic = fun () -> let __anonymous_value_1 = HxAnon.create () in (
   let __anonymous_field_value_2 = true in ignore (HxAnon.set __anonymous_value_1 "supportsNoEmit" (HxRuntime.box_bool __anonymous_field_value_2));

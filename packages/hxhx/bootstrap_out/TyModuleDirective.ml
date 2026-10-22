@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable source : HxModuleDirective.t; mutable kind
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun source2 kind2 providers2 -> let self = ({ __hx_type = HxType.class_ "TyModuleDirective"; source = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; providers = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun source2 kind2 providers2 -> let self = ({ __hx_type = HxType.instance_marker "TyModuleDirective"; source = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; providers = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if source2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "typed module directive requires its parsed source") ["Dynamic"] else ());
     ignore (if kind2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "typed module directive requires a resolved kind") ["Dynamic"] else ());
@@ -124,7 +124,7 @@ let create = fun source2 kind2 providers2 -> let self = ({ __hx_type = HxType.cl
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyModuleDirective"; source = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; providers = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyModuleDirective"; source = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; providers = Obj.magic HxRuntime.hx_null } : t)
 
 let getSource = fun self () -> (Obj.magic self : t).source
 

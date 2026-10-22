@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerDependencyCollector" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "CompilerDependencyCollector" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencyCollector" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerDependencyCollector" } : t)
 
 let resolvedFieldRead = fun index currentOwner expression -> (try let selectedField = Obj.magic (TypedExpr.getFieldInfo (Obj.magic expression) ()) in (
   ignore (if selectedField != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr selectedField)) else ());
@@ -516,7 +516,7 @@ let collectModuleEdges = fun hx_module consumerModule index edgeByKey -> ignore 
                   tempKeyValueIterator := __assign_69;
                   __assign_69
                 ));
-                let _g4 = Obj.magic (!tempKeyValueIterator) in while let __iterator_receiver_70 = _g4 in HxIterator.hasNext __iterator_receiver_70 do ignore (let _g5 = let __iterator_receiver_71 = _g4 in HxIterator.next __iterator_receiver_71 in let key = (let __structural_receiver_72 = _g5 in Obj.obj (HxAnon.get __structural_receiver_72 "key") : string) in let constraints = Obj.magic (let __structural_receiver_73 = _g5 in Obj.obj (HxAnon.get __structural_receiver_73 "value")) in let _g6 = ref 0 in while !_g6 < HxArray.length constraints do ignore (let hx_constraint = Obj.magic (let __array_read_receiver_74 = constraints in let __array_read_index_75 = !_g6 in HxArray.get (Obj.magic __array_read_receiver_74) __array_read_index_75) in (
+                let _g4 = Obj.magic (!tempKeyValueIterator) in while let __iterator_receiver_70 = _g4 in HxIterator.hasNext __iterator_receiver_70 do ignore (let _g5 = let __iterator_receiver_71 = _g4 in HxIterator.next __iterator_receiver_71 in let key = (let __structural_receiver_72 = _g5 in Stdlib.fst __structural_receiver_72 : string) in let constraints = Obj.magic (let __structural_receiver_73 = _g5 in Stdlib.snd __structural_receiver_73) in let _g6 = ref 0 in while !_g6 < HxArray.length constraints do ignore (let hx_constraint = Obj.magic (let __array_read_receiver_74 = constraints in let __array_read_index_75 = !_g6 in HxArray.get (Obj.magic __array_read_receiver_74) __array_read_index_75) in (
                   ignore (let __old_76 = !_g6 in let __new_77 = HxInt.add __old_76 1 in (
                     ignore (_g6 := __new_77);
                     __new_77

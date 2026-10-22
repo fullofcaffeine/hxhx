@@ -192,12 +192,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.js.JsExprEmitter" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.js.JsExprEmitter" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsExprEmitter" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.js.JsExprEmitter" } : t)
 
 let unsupported = fun (kind : string) (detail : string) -> (let hasDetail = detail != Obj.magic (HxRuntime.hx_null) && (let __string_receiver_1 = detail in HxString.length __string_receiver_1) > 0 in let tempString = ref (HxString.hx_null_string : string) in (
   ignore (if hasDetail then let __assign_2 = " detail=" ^ HxString.toStdString detail in (
@@ -4429,7 +4429,7 @@ type t = { __hx_type : Obj.t; mutable scope : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun scope2 -> let self = ({ __hx_type = HxType.class_ "backend.js.JsMacroQuotation"; scope = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun scope2 -> let self = ({ __hx_type = HxType.instance_marker "backend.js.JsMacroQuotation"; scope = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let __assign_1 = Obj.magic scope2 in (
     (Obj.magic self : t).scope <- __assign_1;
     __assign_1
@@ -4437,7 +4437,7 @@ let create = fun scope2 -> let self = ({ __hx_type = HxType.class_ "backend.js.J
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsMacroQuotation"; scope = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.js.JsMacroQuotation"; scope = Obj.magic HxRuntime.hx_null } : t)
 
 let macroExprObject = fun self (exprDef : string) -> (
   ignore self;
@@ -5430,12 +5430,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.js.JsStmtEmitter" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.js.JsStmtEmitter" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsStmtEmitter" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.js.JsStmtEmitter" } : t)
 
 let normalizeCatchType = fun (typeHint : string) -> (try (
   ignore (if typeHint == HxString.hx_null_string then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "")) else ());
@@ -5953,12 +5953,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.js.JsSwitchPatternLowering" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.js.JsSwitchPatternLowering" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsSwitchPatternLowering" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.js.JsSwitchPatternLowering" } : t)
 
 let constructor = fun pattern scope -> let tempMaybeTypedNamedPattern = ref (Obj.magic (HxRuntime.hx_null) : TypedNamedPattern.t) in (
   ignore (if scope == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get scope "namedPatterns") == Obj.magic (HxRuntime.hx_null) then let __assign_61 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (

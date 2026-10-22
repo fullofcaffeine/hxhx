@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable localNames : string HxMap.string_map; muta
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetExpressionLowerer"; localNames = Obj.magic HxRuntime.hx_null; occupied = Obj.magic HxRuntime.hx_null; runtimePlan = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetExpressionLowerer"; localNames = Obj.magic HxRuntime.hx_null; occupied = Obj.magic HxRuntime.hx_null; runtimePlan = Obj.magic HxRuntime.hx_null } : t)
 
 let allocateName = fun self (base : string) -> let name = ref (base : string) in let suffix = ref 2 in (
   ignore (try while true do ignore (let tempBool = ref (false : bool) in let this1 = (Obj.magic self : t).occupied in (
@@ -378,7 +378,7 @@ let rec readsBinding = fun expression identity -> (try (
 ) with
   | HxRuntime.Hx_return __ret_223 -> (Obj.obj __ret_223 : bool) : bool)
 
-let create = fun expressions parameters runtimePlan2 -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetExpressionLowerer"; localNames = Obj.magic HxRuntime.hx_null; occupied = Obj.magic HxRuntime.hx_null; runtimePlan = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun expressions parameters runtimePlan2 -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetExpressionLowerer"; localNames = Obj.magic HxRuntime.hx_null; occupied = Obj.magic HxRuntime.hx_null; runtimePlan = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic runtimePlan2 in (
       (Obj.magic self : t).runtimePlan <- __assign_1;

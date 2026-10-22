@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable input : string; mutable length : int; muta
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input2 -> let self = ({ __hx_type = HxType.class_ "haxe.format.JsonParser"; input = HxString.hx_null_string; length = 0; index = 0 } : t) in (
+let create = fun input2 -> let self = ({ __hx_type = HxType.instance_marker "haxe.format.JsonParser"; input = HxString.hx_null_string; length = 0; index = 0 } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (input2 : string) in (
       (Obj.magic self : t).input <- __assign_1;
@@ -24,7 +24,7 @@ let create = fun input2 -> let self = ({ __hx_type = HxType.class_ "haxe.format.
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.format.JsonParser"; input = HxString.hx_null_string; length = 0; index = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "haxe.format.JsonParser"; input = HxString.hx_null_string; length = 0; index = 0 } : t)
 
 let skipWhitespace = fun self () -> ignore (ignore (try ignore (while (Obj.magic self : t).index < (Obj.magic self : t).length do ignore (let tempNumber = ref (0 : int) in let s = ((Obj.magic self : t).input : string) in let index2 = (Obj.magic self : t).index in let code = let __string_receiver_140 = s in let __string_argument_0_141 = index2 in HxString.charCodeAt __string_receiver_140 __string_argument_0_141 in (
   ignore (if code == HxRuntime.hx_null then let __assign_142 = -1 in (

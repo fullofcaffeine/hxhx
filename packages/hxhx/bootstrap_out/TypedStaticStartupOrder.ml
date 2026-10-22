@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable assertCurrent : unit -> unit; mutable clas
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedStaticStartupOrder"; assertCurrent = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; moduleClasses = Obj.magic HxRuntime.hx_null; moduleDependencies = Obj.magic HxRuntime.hx_null; ordered = Obj.magic HxRuntime.hx_null; visitedClasses = Obj.magic HxRuntime.hx_null; visitedMethods = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedStaticStartupOrder"; assertCurrent = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; moduleClasses = Obj.magic HxRuntime.hx_null; moduleDependencies = Obj.magic HxRuntime.hx_null; ordered = Obj.magic HxRuntime.hx_null; visitedClasses = Obj.magic HxRuntime.hx_null; visitedMethods = Obj.magic HxRuntime.hx_null } : t)
 
 let getClasses = fun self () -> (
   ignore ((Obj.magic self : t).assertCurrent ());
@@ -165,7 +165,7 @@ let catalogDependencies = fun locals runtime constructors dependency -> ignore (
   )
 ))
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedStaticStartupOrder"; assertCurrent = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; moduleClasses = Obj.magic HxRuntime.hx_null; moduleDependencies = Obj.magic HxRuntime.hx_null; ordered = Obj.magic HxRuntime.hx_null; visitedClasses = Obj.magic HxRuntime.hx_null; visitedMethods = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TypedStaticStartupOrder"; assertCurrent = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; moduleClasses = Obj.magic HxRuntime.hx_null; moduleDependencies = Obj.magic HxRuntime.hx_null; ordered = Obj.magic HxRuntime.hx_null; visitedClasses = Obj.magic HxRuntime.hx_null; visitedMethods = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_string ()) in (
       (Obj.magic self : t).visitedMethods <- __assign_1;

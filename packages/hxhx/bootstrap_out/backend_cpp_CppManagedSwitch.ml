@@ -94,7 +94,7 @@ let render = fun input indent -> let tempTyType = ref (Obj.magic (HxRuntime.hx_n
           ignore (HxArray.push __represented_array_29 __represented_array_element_1_31);
           __represented_array_29
         )
-      )) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.obj (HxAnon.get input "renderValue") : _ -> _ -> _ -> _) (Obj.magic (let __structural_receiver_38 = input in Obj.obj (HxAnon.get __structural_receiver_38 "value"))) (selected : string) (HxString.toStdString indent ^ "  " : string)) in (
+      )) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.obj (HxAnon.get input "renderValue") : _ -> _ -> _ -> _) (Obj.magic (let __structural_receiver_38 = input in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_38 "value")))) (selected : string) (HxString.toStdString indent ^ "  " : string)) in (
         ignore (while !_g < HxArray.length _g1 do ignore (let line = (let __array_read_receiver_39 = _g1 in let __array_read_index_40 = !_g in HxArray.get (Obj.magic __array_read_receiver_39) __array_read_index_40 : string) in (
           ignore (let __old_41 = !_g in let __new_42 = HxInt.add __old_41 1 in (
             ignore (_g := __new_42);

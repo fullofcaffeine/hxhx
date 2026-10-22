@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable generatedMemberCount : int; mutable result
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun generatedMemberCount2 resultRevision2 -> let self = ({ __hx_type = HxType.class_ "CompilerGeneratedDeclarationObservation"; generatedMemberCount = 0; resultRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun generatedMemberCount2 resultRevision2 -> let self = ({ __hx_type = HxType.instance_marker "CompilerGeneratedDeclarationObservation"; generatedMemberCount = 0; resultRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = generatedMemberCount2 in (
       (__place_receiver_1 : t).generatedMemberCount <- __place_rhs_2;
@@ -40,7 +40,7 @@ let create = fun generatedMemberCount2 resultRevision2 -> let self = ({ __hx_typ
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerGeneratedDeclarationObservation"; generatedMemberCount = 0; resultRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerGeneratedDeclarationObservation"; generatedMemberCount = 0; resultRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t)
 
 let getGeneratedMemberCount = fun self () -> ((self : t).generatedMemberCount : int)
 

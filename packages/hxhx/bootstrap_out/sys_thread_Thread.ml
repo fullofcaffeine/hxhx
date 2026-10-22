@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable handle : int }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun handle2 -> let self = ({ __hx_type = HxType.class_ "sys.thread.Thread"; handle = 0 } : t) in (
+let create = fun handle2 -> let self = ({ __hx_type = HxType.instance_marker "sys.thread.Thread"; handle = 0 } : t) in (
   ignore (ignore (let __place_receiver_1 = self in let __place_rhs_2 = handle2 in (
     (__place_receiver_1 : t).handle <- __place_rhs_2;
     __place_rhs_2
@@ -14,7 +14,7 @@ let create = fun handle2 -> let self = ({ __hx_type = HxType.class_ "sys.thread.
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "sys.thread.Thread"; handle = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "sys.thread.Thread"; handle = 0 } : t)
 
 let get_events = fun self () -> let currentLoop = Obj.magic (Obj.obj (HxThread.thread_get_events ((Obj.magic self : t).handle))) in (
   ignore (if currentLoop == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (Sys_thread_NoEventLoopException.create HxString.hx_null_string (Obj.magic (HxRuntime.hx_null)))) ["Dynamic"] else ());

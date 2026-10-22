@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable program : Backend_cpp_CppTypedProgramProje
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedEnumDescriptors"; program = Obj.magic HxRuntime.hx_null; owners = Obj.magic HxRuntime.hx_null; symbols = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun program2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedEnumDescriptors"; program = Obj.magic HxRuntime.hx_null; owners = Obj.magic HxRuntime.hx_null; symbols = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_object ()) in (
       (Obj.magic self : t).symbols <- __assign_1;
@@ -50,7 +50,7 @@ let create = fun program2 -> let self = ({ __hx_type = HxType.class_ "backend.cp
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedEnumDescriptors"; program = Obj.magic HxRuntime.hx_null; owners = Obj.magic HxRuntime.hx_null; symbols = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedEnumDescriptors"; program = Obj.magic HxRuntime.hx_null; owners = Obj.magic HxRuntime.hx_null; symbols = Obj.magic HxRuntime.hx_null } : t)
 
 let requireSymbol = fun self (owner : TypedBackendClassProjection.t) -> (
   ignore (Backend_cpp_CppTypedProgramProjection.assertPlanningCurrent (Obj.magic ((Obj.magic self : t).program)) ());

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable sourceEntries : Hxhx_CompilationServerCach
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerSourceCache"; sourceEntries = Obj.magic HxRuntime.hx_null; parsedEntries = Obj.magic HxRuntime.hx_null; resolutionEntries = Obj.magic HxRuntime.hx_null; accessTicks = Obj.magic HxRuntime.hx_null; latestSourceRevisionByPath = Obj.magic HxRuntime.hx_null; latestParserInputByPath = Obj.magic HxRuntime.hx_null; latestResolutionKeyByLookup = Obj.magic HxRuntime.hx_null; latestResolutionPathByLookup = Obj.magic HxRuntime.hx_null; maxBytes = 0; retainedBytesEstimate = 0; accessTick = 0; totalEvictions = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerSourceCache"; sourceEntries = Obj.magic HxRuntime.hx_null; parsedEntries = Obj.magic HxRuntime.hx_null; resolutionEntries = Obj.magic HxRuntime.hx_null; accessTicks = Obj.magic HxRuntime.hx_null; latestSourceRevisionByPath = Obj.magic HxRuntime.hx_null; latestParserInputByPath = Obj.magic HxRuntime.hx_null; latestResolutionKeyByLookup = Obj.magic HxRuntime.hx_null; latestResolutionPathByLookup = Obj.magic HxRuntime.hx_null; maxBytes = 0; retainedBytesEstimate = 0; accessTick = 0; totalEvictions = 0 } : t)
 
 let reset = fun self () -> ignore (ignore (let _this = Obj.magic ((Obj.magic self : t).sourceEntries) in (
   ignore (HxMap.clear_string (Obj.magic _this));
@@ -380,7 +380,7 @@ let normalizedMaxBytes = fun (explicit : Obj.t) -> (try (
 ) with
   | HxRuntime.Hx_return __ret_167 -> (Obj.obj __ret_167 : int) : int)
 
-let create = fun maxBytes2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerSourceCache"; sourceEntries = Obj.magic HxRuntime.hx_null; parsedEntries = Obj.magic HxRuntime.hx_null; resolutionEntries = Obj.magic HxRuntime.hx_null; accessTicks = Obj.magic HxRuntime.hx_null; latestSourceRevisionByPath = Obj.magic HxRuntime.hx_null; latestParserInputByPath = Obj.magic HxRuntime.hx_null; latestResolutionKeyByLookup = Obj.magic HxRuntime.hx_null; latestResolutionPathByLookup = Obj.magic HxRuntime.hx_null; maxBytes = 0; retainedBytesEstimate = 0; accessTick = 0; totalEvictions = 0 } : t) in (
+let create = fun maxBytes2 -> let self = ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerSourceCache"; sourceEntries = Obj.magic HxRuntime.hx_null; parsedEntries = Obj.magic HxRuntime.hx_null; resolutionEntries = Obj.magic HxRuntime.hx_null; accessTicks = Obj.magic HxRuntime.hx_null; latestSourceRevisionByPath = Obj.magic HxRuntime.hx_null; latestParserInputByPath = Obj.magic HxRuntime.hx_null; latestResolutionKeyByLookup = Obj.magic HxRuntime.hx_null; latestResolutionPathByLookup = Obj.magic HxRuntime.hx_null; maxBytes = 0; retainedBytesEstimate = 0; accessTick = 0; totalEvictions = 0 } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = let __call_arg_0_3 = maxBytes2 in normalizedMaxBytes __call_arg_0_3 in (
       (__place_receiver_1 : t).maxBytes <- __place_rhs_2;

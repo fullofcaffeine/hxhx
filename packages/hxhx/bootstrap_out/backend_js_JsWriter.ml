@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable out : StringBuf.t; mutable indent : int; m
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun indentUnit -> let self = ({ __hx_type = HxType.class_ "backend.js.JsWriter"; out = Obj.magic HxRuntime.hx_null; indent = 0; unit = HxString.hx_null_string } : t) in (
+let create = fun indentUnit -> let self = ({ __hx_type = HxType.instance_marker "backend.js.JsWriter"; out = Obj.magic HxRuntime.hx_null; indent = 0; unit = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = 0 in (
       (__place_receiver_1 : t).indent <- __place_rhs_2;
@@ -33,7 +33,7 @@ let create = fun indentUnit -> let self = ({ __hx_type = HxType.class_ "backend.
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsWriter"; out = Obj.magic HxRuntime.hx_null; indent = 0; unit = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.js.JsWriter"; out = Obj.magic HxRuntime.hx_null; indent = 0; unit = HxString.hx_null_string } : t)
 
 let pushIndent = fun self () -> ignore (ignore (let __place_receiver_7 = self in let __place_old_8 = (__place_receiver_7 : t).indent in let __place_rhs_9 = 1 in let __place_new_10 = HxInt.add __place_old_8 __place_rhs_9 in (
   (__place_receiver_7 : t).indent <- __place_new_10;

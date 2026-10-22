@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage3WaitServer" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.Stage3WaitServer" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage3WaitServer" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.Stage3WaitServer" } : t)
 
 let parseWaitMode = fun args -> let rest = Obj.magic (HxArray.create ()) in let waitMode = ref (Obj.magic (HxRuntime.hx_null) : string) in let i = ref 0 in (
   ignore (while !i < HxArray.length args do try ignore (let a = (let __array_read_receiver_1 = args in let __array_read_index_2 = !i in HxArray.get (Obj.magic __array_read_receiver_1) __array_read_index_2 : string) in (

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable decisions : CompilerConditionalDecision.t 
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerConditionalCompilationObservation"; decisions = Obj.magic HxRuntime.hx_null; inputIdentitiesByName = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerConditionalCompilationObservation"; decisions = Obj.magic HxRuntime.hx_null; inputIdentitiesByName = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
 
 let getCanonicalIdentity = fun self () -> (Obj.magic self : t).canonicalIdentity
 
@@ -37,7 +37,7 @@ let compareText = fun (left : string) (right : string) -> (let tempResult = ref 
   !tempResult
 ) : int)
 
-let create = fun decisions2 -> let self = ({ __hx_type = HxType.class_ "CompilerConditionalCompilationObservation"; decisions = Obj.magic HxRuntime.hx_null; inputIdentitiesByName = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun decisions2 -> let self = ({ __hx_type = HxType.instance_marker "CompilerConditionalCompilationObservation"; decisions = Obj.magic HxRuntime.hx_null; inputIdentitiesByName = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore (let tempRight = ref (Obj.magic (HxRuntime.hx_null) : CompilerConditionalDecision.t HxArray.t) in (
     ignore (if decisions2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       tempRight := __assign_1;

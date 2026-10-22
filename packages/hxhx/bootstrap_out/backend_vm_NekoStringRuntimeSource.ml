@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoStringRuntimeSource" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.vm.NekoStringRuntimeSource" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoStringRuntimeSource" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.NekoStringRuntimeSource" } : t)
 
 let render = fun out -> ignore ((
   ignore (let __array_receiver_1 = Obj.magic out in let __array_arg_0_2 = ("var __hxhx_string_runtime = $new(null);" : string) in HxArray.push __array_receiver_1 __array_arg_0_2);

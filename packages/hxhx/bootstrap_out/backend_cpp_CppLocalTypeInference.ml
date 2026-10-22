@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable api : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun api2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppLocalTypeInference"; api = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun api2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppLocalTypeInference"; api = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let __assign_1 = Obj.magic api2 in (
     (Obj.magic self : t).api <- __assign_1;
     __assign_1
@@ -14,7 +14,7 @@ let create = fun api2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.Cp
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppLocalTypeInference"; api = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppLocalTypeInference"; api = Obj.magic HxRuntime.hx_null } : t)
 
 let markErasedDynamicArgIdent = fun self (expr : HxExpr.hxexpr) (dynamicArgs : bool HxMap.string_map) (used : bool HxMap.string_map) -> ignore ((
   ignore self;

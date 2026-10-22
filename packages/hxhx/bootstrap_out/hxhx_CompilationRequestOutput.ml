@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable buffered : bool; mutable captured : Hxhx_C
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun buffered2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationRequestOutput"; buffered = false; captured = Obj.magic HxRuntime.hx_null; closed = false } : t) in (
+let create = fun buffered2 -> let self = ({ __hx_type = HxType.instance_marker "hxhx.CompilationRequestOutput"; buffered = false; captured = Obj.magic HxRuntime.hx_null; closed = false } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = buffered2 in (
       (__place_receiver_1 : t).buffered <- __place_rhs_2;
@@ -24,7 +24,7 @@ let create = fun buffered2 -> let self = ({ __hx_type = HxType.class_ "hxhx.Comp
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationRequestOutput"; buffered = false; captured = Obj.magic HxRuntime.hx_null; closed = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.CompilationRequestOutput"; buffered = false; captured = Obj.magic HxRuntime.hx_null; closed = false } : t)
 
 let events = fun self () -> let __array_receiver_7 = Obj.magic ((Obj.magic self : t).captured) in HxArray.copy __array_receiver_7
 

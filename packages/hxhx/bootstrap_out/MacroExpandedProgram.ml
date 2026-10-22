@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable macroMode : bool; mutable typedModules : T
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun typedModules2 macroMode2 generatedOcamlModules2 selectedRuntimeFeatures2 -> let self = ({ __hx_type = HxType.class_ "MacroExpandedProgram"; macroMode = false; typedModules = Obj.magic HxRuntime.hx_null; typedProgramRevision = Obj.magic HxRuntime.hx_null; selectedRuntimeFeatures = Obj.magic HxRuntime.hx_null; generatedOcamlModules = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun typedModules2 macroMode2 generatedOcamlModules2 selectedRuntimeFeatures2 -> let self = ({ __hx_type = HxType.instance_marker "MacroExpandedProgram"; macroMode = false; typedModules = Obj.magic HxRuntime.hx_null; typedProgramRevision = Obj.magic HxRuntime.hx_null; selectedRuntimeFeatures = Obj.magic HxRuntime.hx_null; generatedOcamlModules = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let tempRight = ref (Obj.magic (HxRuntime.hx_null) : TypedModule.t HxArray.t) in (
     ignore (if typedModules2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       tempRight := __assign_1;
@@ -69,7 +69,7 @@ let create = fun typedModules2 macroMode2 generatedOcamlModules2 selectedRuntime
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "MacroExpandedProgram"; macroMode = false; typedModules = Obj.magic HxRuntime.hx_null; typedProgramRevision = Obj.magic HxRuntime.hx_null; selectedRuntimeFeatures = Obj.magic HxRuntime.hx_null; generatedOcamlModules = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "MacroExpandedProgram"; macroMode = false; typedModules = Obj.magic HxRuntime.hx_null; typedProgramRevision = Obj.magic HxRuntime.hx_null; selectedRuntimeFeatures = Obj.magic HxRuntime.hx_null; generatedOcamlModules = Obj.magic HxRuntime.hx_null } : t)
 
 let getSelectedRuntimeFeatures = fun self () -> let __array_receiver_29 = Obj.magic ((Obj.magic self : t).selectedRuntimeFeatures) in HxArray.copy __array_receiver_29
 

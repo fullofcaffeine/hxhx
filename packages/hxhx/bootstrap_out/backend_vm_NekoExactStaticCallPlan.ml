@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable selected : Obj.t; mutable call : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun selected2 call2 -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoExactStaticCallPlan"; selected = Obj.magic HxRuntime.hx_null; call = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun selected2 call2 -> let self = ({ __hx_type = HxType.instance_marker "backend.vm.NekoExactStaticCallPlan"; selected = Obj.magic HxRuntime.hx_null; call = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic selected2 in (
       (Obj.magic self : t).selected <- __assign_1;
@@ -20,7 +20,7 @@ let create = fun selected2 call2 -> let self = ({ __hx_type = HxType.class_ "bac
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoExactStaticCallPlan"; selected = Obj.magic HxRuntime.hx_null; call = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.NekoExactStaticCallPlan"; selected = Obj.magic HxRuntime.hx_null; call = Obj.magic HxRuntime.hx_null } : t)
 
 let fromExpression = fun program expression -> (try let call2 = TypedExactStaticCallSource.decode (Obj.magic expression) in (
   ignore (if call2 == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());

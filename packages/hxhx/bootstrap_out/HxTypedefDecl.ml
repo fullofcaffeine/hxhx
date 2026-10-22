@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable name : string; mutable visibility : HxVisi
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "HxTypedefDecl"; name = HxString.hx_null_string; visibility = Obj.magic HxRuntime.hx_null; isExtern = false; metadata = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; target = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null; endPos = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "HxTypedefDecl"; name = HxString.hx_null_string; visibility = Obj.magic HxRuntime.hx_null; isExtern = false; metadata = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; target = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null; endPos = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (Obj.obj (HxAnon.get input "name") : string) in (
       (Obj.magic self : t).name <- __assign_1;
@@ -44,7 +44,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "HxTypedefDecl
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxTypedefDecl"; name = HxString.hx_null_string; visibility = Obj.magic HxRuntime.hx_null; isExtern = false; metadata = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; target = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null; endPos = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxTypedefDecl"; name = HxString.hx_null_string; visibility = Obj.magic HxRuntime.hx_null; isExtern = false; metadata = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; target = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null; endPos = Obj.magic HxRuntime.hx_null } : t)
 
 let getName = fun self () -> (Obj.magic self : t).name
 

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable projection : TypedBackendFunctionProjectio
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedFunctionApplication"; projection = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; backingType = Obj.magic HxRuntime.hx_null; storedBackingType = Obj.magic HxRuntime.hx_null; identity = HxString.hx_null_string; bindings = Obj.magic HxRuntime.hx_null; validate = Obj.magic HxRuntime.hx_null; forwardedTypes = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedFunctionApplication"; projection = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; backingType = Obj.magic HxRuntime.hx_null; storedBackingType = Obj.magic HxRuntime.hx_null; identity = HxString.hx_null_string; bindings = Obj.magic HxRuntime.hx_null; validate = Obj.magic HxRuntime.hx_null; forwardedTypes = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null } : t)
 
 let assertCurrent = fun self () -> ignore (ignore ((
   ignore ((Obj.magic self : t).validate ());
@@ -42,7 +42,7 @@ let resultType = fun self () -> resolveType (Obj.magic self) (Obj.magic (TypedBa
 
 let resolveStorageType = fun self (hx_type : TyType.t) -> Backend_cpp_CppManagedAppliedStorage.resolve (Obj.magic hx_type) (fun a0 -> resolveType self a0) (Obj.magic ((Obj.magic self : t).casts))
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedFunctionApplication"; projection = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; backingType = Obj.magic HxRuntime.hx_null; storedBackingType = Obj.magic HxRuntime.hx_null; identity = HxString.hx_null_string; bindings = Obj.magic HxRuntime.hx_null; validate = Obj.magic HxRuntime.hx_null; forwardedTypes = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedFunctionApplication"; projection = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; backingType = Obj.magic HxRuntime.hx_null; storedBackingType = Obj.magic HxRuntime.hx_null; identity = HxString.hx_null_string; bindings = Obj.magic HxRuntime.hx_null; validate = Obj.magic HxRuntime.hx_null; forwardedTypes = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (Obj.obj (HxAnon.get input "projection")) in (
       (Obj.magic self : t).projection <- __assign_1;

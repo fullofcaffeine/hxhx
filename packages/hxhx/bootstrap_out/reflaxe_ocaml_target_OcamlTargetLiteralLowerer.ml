@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetLiteralLowerer" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetLiteralLowerer" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetLiteralLowerer" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetLiteralLowerer" } : t)
 
 let authorizedBoolBox = fun fact carrier authorization -> (
   ignore (if authorization == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_33 = "OCaml target literal " in let __string_part_34 = HxString.toStdString (Reflaxe_ocaml_target_OcamlTargetLiteralFact.getCanonicalIdentity (Obj.magic fact) ()) in let __string_part_35 = " requires checked Dynamic Boolean runtime authority" in (__string_part_33 ^ __string_part_34) ^ __string_part_35)) ["Dynamic"] else ());

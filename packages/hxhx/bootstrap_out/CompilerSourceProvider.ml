@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable resolveModuleCallback : string HxArray.t -
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerSourceProvider"; resolveModuleCallback = Obj.magic HxRuntime.hx_null; readSourceCallback = Obj.magic HxRuntime.hx_null; parseFilteredSourceCallback = Obj.magic HxRuntime.hx_null; readDirectoryCallback = Obj.magic HxRuntime.hx_null; isFileCallback = Obj.magic HxRuntime.hx_null; prepareFinishCallback = Obj.magic HxRuntime.hx_null; finishCallback = Obj.magic HxRuntime.hx_null; reportCallback = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "CompilerSourceProvider"; resolveModuleCallback = Obj.magic HxRuntime.hx_null; readSourceCallback = Obj.magic HxRuntime.hx_null; parseFilteredSourceCallback = Obj.magic HxRuntime.hx_null; readDirectoryCallback = Obj.magic HxRuntime.hx_null; isFileCallback = Obj.magic HxRuntime.hx_null; prepareFinishCallback = Obj.magic HxRuntime.hx_null; finishCallback = Obj.magic HxRuntime.hx_null; reportCallback = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let _gthis = Obj.magic self in let filesystem = Obj.magic (FilesystemCompilerSourceProvider.create ()) in (
     ignore (let __assign_1 = fun a0 -> FilesystemCompilerSourceProvider.readSource filesystem a0 in (
       (Obj.magic self : t).readSourceCallback <- __assign_1;
@@ -44,7 +44,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerSourcePr
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerSourceProvider"; resolveModuleCallback = Obj.magic HxRuntime.hx_null; readSourceCallback = Obj.magic HxRuntime.hx_null; parseFilteredSourceCallback = Obj.magic HxRuntime.hx_null; readDirectoryCallback = Obj.magic HxRuntime.hx_null; isFileCallback = Obj.magic HxRuntime.hx_null; prepareFinishCallback = Obj.magic HxRuntime.hx_null; finishCallback = Obj.magic HxRuntime.hx_null; reportCallback = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerSourceProvider"; resolveModuleCallback = Obj.magic HxRuntime.hx_null; readSourceCallback = Obj.magic HxRuntime.hx_null; parseFilteredSourceCallback = Obj.magic HxRuntime.hx_null; readDirectoryCallback = Obj.magic HxRuntime.hx_null; isFileCallback = Obj.magic HxRuntime.hx_null; prepareFinishCallback = Obj.magic HxRuntime.hx_null; finishCallback = Obj.magic HxRuntime.hx_null; reportCallback = Obj.magic HxRuntime.hx_null } : t)
 
 let resolveModule = fun self (classPaths : string HxArray.t) (modulePath : string) -> (Obj.magic self : t).resolveModuleCallback (Obj.magic classPaths) (modulePath : string)
 

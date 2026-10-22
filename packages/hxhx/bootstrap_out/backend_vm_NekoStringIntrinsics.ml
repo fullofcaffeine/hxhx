@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoStringIntrinsics" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.vm.NekoStringIntrinsics" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoStringIntrinsics" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.NekoStringIntrinsics" } : t)
 
 let ownsConstructor = fun (typePath : string) -> (let __string_eq_left_1 = typePath in let __string_eq_right_2 = "String" in HxString.equals __string_eq_left_1 __string_eq_right_2 : bool)
 

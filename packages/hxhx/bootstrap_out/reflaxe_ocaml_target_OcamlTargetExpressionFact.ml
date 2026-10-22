@@ -81,7 +81,7 @@ type t = { __hx_type : Obj.t; mutable path : string; mutable kind : ocamltargete
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetExpressionFact"; path = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null; semanticTypeDisplay = HxString.hx_null_string; literal = Obj.magic HxRuntime.hx_null; binding = Obj.magic HxRuntime.hx_null; staticCall = Obj.magic HxRuntime.hx_null; children = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetExpressionFact"; path = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null; semanticTypeDisplay = HxString.hx_null_string; literal = Obj.magic HxRuntime.hx_null; binding = Obj.magic HxRuntime.hx_null; staticCall = Obj.magic HxRuntime.hx_null; children = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
 
 let rec copyStaticCalls = fun self () -> let result = Obj.magic (HxArray.create ()) in (
   ignore (if (Obj.magic self : t).staticCall != Obj.magic (HxRuntime.hx_null) then ignore (let __array_receiver_19 = Obj.magic result in let __array_arg_0_20 = Obj.magic ((Obj.magic self : t).staticCall) in HxArray.push __array_receiver_19 __array_arg_0_20) else ());
@@ -473,7 +473,7 @@ let identityParts = fun path2 kind2 semanticTypeDisplay2 literal2 binding2 child
   )
 )
 
-let create = fun path2 kind2 semanticTypeDisplay2 literal2 binding2 children2 staticCall2 -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetExpressionFact"; path = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null; semanticTypeDisplay = HxString.hx_null_string; literal = Obj.magic HxRuntime.hx_null; binding = Obj.magic HxRuntime.hx_null; staticCall = Obj.magic HxRuntime.hx_null; children = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun path2 kind2 semanticTypeDisplay2 literal2 binding2 children2 staticCall2 -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetExpressionFact"; path = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null; semanticTypeDisplay = HxString.hx_null_string; literal = Obj.magic HxRuntime.hx_null; binding = Obj.magic HxRuntime.hx_null; staticCall = Obj.magic HxRuntime.hx_null; children = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (let __call_arg_0_2 = path2 in Reflaxe_ocaml_target_OcamlTargetExpressionPath.require __call_arg_0_2 : string) in (
       (Obj.magic self : t).path <- __assign_1;
@@ -622,7 +622,7 @@ type t = { __hx_type : Obj.t; mutable moduleId : string; mutable sourceTypeName 
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetFunctionFact"; moduleId = HxString.hx_null_string; sourceTypeName = HxString.hx_null_string; sourceFunctionName = HxString.hx_null_string; role = Obj.magic HxRuntime.hx_null; returnTypeDisplay = HxString.hx_null_string; body = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; argumentTypeDisplays = Obj.magic HxRuntime.hx_null; targetIdentity = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetFunctionFact"; moduleId = HxString.hx_null_string; sourceTypeName = HxString.hx_null_string; sourceFunctionName = HxString.hx_null_string; role = Obj.magic HxRuntime.hx_null; returnTypeDisplay = HxString.hx_null_string; body = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; argumentTypeDisplays = Obj.magic HxRuntime.hx_null; targetIdentity = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t)
 
 let copyArgumentTypeDisplays = fun self () -> let __array_receiver_69 = Obj.magic ((Obj.magic self : t).argumentTypeDisplays) in HxArray.copy __array_receiver_69
 
@@ -695,7 +695,7 @@ let identityFor = fun signature -> (
   )
 )
 
-let create = fun signature body2 parameters2 -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetFunctionFact"; moduleId = HxString.hx_null_string; sourceTypeName = HxString.hx_null_string; sourceFunctionName = HxString.hx_null_string; role = Obj.magic HxRuntime.hx_null; returnTypeDisplay = HxString.hx_null_string; body = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; argumentTypeDisplays = Obj.magic HxRuntime.hx_null; targetIdentity = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun signature body2 parameters2 -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetFunctionFact"; moduleId = HxString.hx_null_string; sourceTypeName = HxString.hx_null_string; sourceFunctionName = HxString.hx_null_string; role = Obj.magic HxRuntime.hx_null; returnTypeDisplay = HxString.hx_null_string; body = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; argumentTypeDisplays = Obj.magic HxRuntime.hx_null; targetIdentity = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (if signature == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml target function requires a source signature") ["Dynamic"] else ());
     ignore (let __assign_1 = (let __call_arg_0_2 = Obj.obj (HxAnon.get signature "moduleId") in let __call_arg_1_3 = "module ID" in required __call_arg_0_2 __call_arg_1_3 : string) in (
@@ -841,13 +841,13 @@ type t = { __hx_type : Obj.t; mutable path : string; mutable kind : ocamltargets
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetStatementFact"; path = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null; expression = Obj.magic HxRuntime.hx_null; children = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetStatementFact"; path = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null; expression = Obj.magic HxRuntime.hx_null; children = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
 
 let copyChildren = fun self () -> let __array_receiver_26 = Obj.magic ((Obj.magic self : t).children) in HxArray.copy __array_receiver_26
 
 let getCanonicalIdentity = fun self () -> (Obj.magic self : t).canonicalIdentity
 
-let create = fun path2 kind2 expression2 children2 -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetStatementFact"; path = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null; expression = Obj.magic HxRuntime.hx_null; children = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun path2 kind2 expression2 children2 -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetStatementFact"; path = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null; expression = Obj.magic HxRuntime.hx_null; children = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (let __call_arg_0_2 = path2 in Reflaxe_ocaml_target_OcamlTargetExpressionPath.require __call_arg_0_2 : string) in (
       (Obj.magic self : t).path <- __assign_1;
@@ -1074,7 +1074,7 @@ type t = { __hx_type : Obj.t; mutable moduleId : string; mutable sourceTypeName 
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetStaticCallFact"; moduleId = HxString.hx_null_string; sourceTypeName = HxString.hx_null_string; sourceFunctionName = HxString.hx_null_string; returnTypeDisplay = HxString.hx_null_string; argumentTypeDisplays = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetStaticCallFact"; moduleId = HxString.hx_null_string; sourceTypeName = HxString.hx_null_string; sourceFunctionName = HxString.hx_null_string; returnTypeDisplay = HxString.hx_null_string; argumentTypeDisplays = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
 
 let copyArgumentTypeDisplays = fun self () -> let __array_receiver_21 = Obj.magic ((Obj.magic self : t).argumentTypeDisplays) in HxArray.copy __array_receiver_21
 
@@ -1111,7 +1111,7 @@ let required = fun (value : string) -> (let tempString = ref (HxString.hx_null_s
   )
 ) : string)
 
-let create = fun reference -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetStaticCallFact"; moduleId = HxString.hx_null_string; sourceTypeName = HxString.hx_null_string; sourceFunctionName = HxString.hx_null_string; returnTypeDisplay = HxString.hx_null_string; argumentTypeDisplays = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun reference -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetStaticCallFact"; moduleId = HxString.hx_null_string; sourceTypeName = HxString.hx_null_string; sourceFunctionName = HxString.hx_null_string; returnTypeDisplay = HxString.hx_null_string; argumentTypeDisplays = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (if reference == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml static call requires a resolved declaration reference") ["Dynamic"] else ());
     ignore (let __assign_1 = (let __call_arg_0_2 = Obj.obj (HxAnon.get reference "moduleId") in required __call_arg_0_2 : string) in (

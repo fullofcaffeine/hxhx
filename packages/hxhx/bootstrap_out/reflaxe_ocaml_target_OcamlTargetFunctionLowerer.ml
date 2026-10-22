@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetFunctionLowerer" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetFunctionLowerer" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetFunctionLowerer" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetFunctionLowerer" } : t)
 
 let lower = fun fact profile finalOutput -> (
   ignore (if fact == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml target function lowering requires a normalized function") ["Dynamic"] else ());

@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.crypto.Sha256" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "haxe.crypto.Sha256" } : t) in (
   ignore (ignore ());
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.crypto.Sha256" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "haxe.crypto.Sha256" } : t)
 
 let doEncode = fun self (m : int HxArray.t) (l : int) -> (
   ignore self;

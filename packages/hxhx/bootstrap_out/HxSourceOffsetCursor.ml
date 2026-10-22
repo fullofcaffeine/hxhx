@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable source : string; mutable stringOffset : in
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun source2 -> let self = ({ __hx_type = HxType.class_ "HxSourceOffsetCursor"; source = HxString.hx_null_string; stringOffset = 0; unicodeOffset = 0 } : t) in (
+let create = fun source2 -> let self = ({ __hx_type = HxType.instance_marker "HxSourceOffsetCursor"; source = HxString.hx_null_string; stringOffset = 0; unicodeOffset = 0 } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = 0 in (
       (__place_receiver_1 : t).unicodeOffset <- __place_rhs_2;
@@ -25,7 +25,7 @@ let create = fun source2 -> let self = ({ __hx_type = HxType.class_ "HxSourceOff
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxSourceOffsetCursor"; source = HxString.hx_null_string; stringOffset = 0; unicodeOffset = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxSourceOffsetCursor"; source = HxString.hx_null_string; stringOffset = 0; unicodeOffset = 0 } : t)
 
 let advance = fun self (index : int) -> ((
   ignore (if index < (self : t).stringOffset || index > (let __string_receiver_6 = (self : t).source in HxString.length __string_receiver_6) then HxType.hx_throw_typed_rtti (Obj.repr "source offset cursor requires increasing boundaries within its source") ["Dynamic"] else ());

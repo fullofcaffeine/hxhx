@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "HxDefineMap" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "HxDefineMap" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxDefineMap" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxDefineMap" } : t)
 
 let addRawDefine = fun dst raw -> ignore (try ignore ((
   ignore (if (let __map_eq_left_1 = dst in let __map_eq_right_2 = Obj.magic (HxRuntime.hx_null) in Obj.repr __map_eq_left_1 == Obj.repr __map_eq_right_2) || raw == HxString.hx_null_string then Stdlib.raise (HxRuntime.Hx_return_void) else ());

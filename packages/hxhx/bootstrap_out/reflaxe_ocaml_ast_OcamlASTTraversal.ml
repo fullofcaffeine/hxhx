@@ -36,12 +36,12 @@ type ocamlastmapresult =
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.ast.OcamlASTTraversal" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.ast.OcamlASTTraversal" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.ast.OcamlASTTraversal" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.ast.OcamlASTTraversal" } : t)
 
 let pushMapChildren = fun work children -> ignore (let index = ref (HxArray.length children) in while !index > 0 do ignore ((
   ignore (let __old_335 = !index in let __new_336 = HxInt.add __old_335 (-1) in (
@@ -481,8 +481,8 @@ let mapExprImmediate = fun expression mapExpression mapPattern mapType -> let te
       tempResult := __assign_107;
       __assign_107
     )
-    | Reflaxe_ocaml_ast_OcamlExpr.ERecord _p0 -> let _g = Obj.magic _p0 in let fields = Obj.magic _g in let mappedFields = Obj.magic (mapArrayPreservingIdentity (Obj.magic fields) (fun field -> let tempResult3 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let mappedValue = Obj.magic (mapExpression (Obj.magic (let __structural_receiver_109 = field in Obj.obj (HxAnon.get __structural_receiver_109 "value")))) in (
-      ignore (if let __enum_eq_left_110 = mappedValue in let __enum_eq_right_111 = let __structural_receiver_112 = field in Obj.obj (HxAnon.get __structural_receiver_112 "value") in HxEnum.unbox_or_obj "reflaxe.ocaml.ast.OcamlExpr" (Obj.repr __enum_eq_left_110) == HxEnum.unbox_or_obj "reflaxe.ocaml.ast.OcamlExpr" (Obj.repr __enum_eq_right_111) then let __assign_113 = Obj.magic field in (
+    | Reflaxe_ocaml_ast_OcamlExpr.ERecord _p0 -> let _g = Obj.magic _p0 in let fields = Obj.magic _g in let mappedFields = Obj.magic (mapArrayPreservingIdentity (Obj.magic fields) (fun field -> let tempResult3 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let mappedValue = Obj.magic (mapExpression (Obj.magic (let __structural_receiver_109 = field in Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.ast.OcamlExpr" (HxAnon.get __structural_receiver_109 "value"))))) in (
+      ignore (if let __enum_eq_left_110 = mappedValue in let __enum_eq_right_111 = let __structural_receiver_112 = field in Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.ast.OcamlExpr" (HxAnon.get __structural_receiver_112 "value")) in HxEnum.unbox_or_obj "reflaxe.ocaml.ast.OcamlExpr" (Obj.repr __enum_eq_left_110) == HxEnum.unbox_or_obj "reflaxe.ocaml.ast.OcamlExpr" (Obj.repr __enum_eq_right_111) then let __assign_113 = Obj.magic field in (
         tempResult3 := __assign_113;
         __assign_113
       ) else let __assign_114 = Obj.magic (let __anon_115 = HxAnon.create () in (

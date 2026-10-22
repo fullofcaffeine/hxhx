@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable classes : TypedBackendClassSemanticFacts.t
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.Stage3OcamlExternBindings"; classes = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; values = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.ocaml.Stage3OcamlExternBindings"; classes = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; values = Obj.magic HxRuntime.hx_null } : t)
 
 let ownsClass = fun self (owner : TypedBackendClassProjection.t) -> (
   ignore self;
@@ -241,7 +241,7 @@ let admit = fun self (entry : Obj.t) (fn : TypedBackendFunctionProjection.t) (fi
   )) else ()) else ()
 )))
 
-let create = fun modules -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.Stage3OcamlExternBindings"; classes = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; values = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun modules -> let self = ({ __hx_type = HxType.instance_marker "backend.ocaml.Stage3OcamlExternBindings"; classes = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; values = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (try ignore ((
     ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       (Obj.magic self : t).values <- __assign_1;

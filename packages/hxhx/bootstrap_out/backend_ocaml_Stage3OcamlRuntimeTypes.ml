@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable classes : Backend_ocaml_Stage3OcamlClassSt
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.Stage3OcamlRuntimeTypes"; classes = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; predicateArguments = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.ocaml.Stage3OcamlRuntimeTypes"; classes = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; predicateArguments = Obj.magic HxRuntime.hx_null } : t)
 
 let reference = fun self (entry : TypedBackendRuntimeTypeOccurrence.t) -> (try (
   ignore (TypedBackendRuntimeTypeOccurrence.assertCurrent (Obj.magic entry) ());
@@ -188,7 +188,7 @@ let selectCall = fun self (expression : HxExpr.hxexpr) (fn : TypedBackendFunctio
 ) with
   | HxRuntime.Hx_return __ret_86 -> (Obj.obj __ret_86 : Obj.t) : Obj.t)
 
-let create = fun modules classes2 -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.Stage3OcamlRuntimeTypes"; classes = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; predicateArguments = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun modules classes2 -> let self = ({ __hx_type = HxType.instance_marker "backend.ocaml.Stage3OcamlRuntimeTypes"; classes = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; predicateArguments = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_object ()) in (
       (Obj.magic self : t).predicateArguments <- __assign_1;
@@ -326,7 +326,7 @@ let renderCall = fun self (expression : HxExpr.hxexpr) (fn : TypedBackendFunctio
   ignore (if call == Obj.magic (HxRuntime.hx_null) then let __assign_87 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
     tempResult := __assign_87;
     __assign_87
-  ) else let __assign_88 = Obj.magic (predicate (Obj.magic self) (Obj.magic (Obj.obj (HxAnon.get call "target"))) (emit (Obj.magic (let __structural_receiver_89 = call in Obj.obj (HxAnon.get __structural_receiver_89 "value"))) : string) (Obj.magic names) quote : string) in (
+  ) else let __assign_88 = Obj.magic (predicate (Obj.magic self) (Obj.magic (Obj.obj (HxAnon.get call "target"))) (emit (Obj.magic (let __structural_receiver_89 = call in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_89 "value")))) : string) (Obj.magic names) quote : string) in (
     tempResult := __assign_88;
     __assign_88
   ));

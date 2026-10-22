@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable plan : Obj.t; mutable owner : Backend_cpp_
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun plan2 owner2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedFunctionBody"; plan = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun plan2 owner2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedFunctionBody"; plan = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if plan2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "managed function body requires an exact storage plan") ["Dynamic"] else ());
     ignore (let __assign_1 = Obj.magic plan2 in (
@@ -22,7 +22,7 @@ let create = fun plan2 owner2 -> let self = ({ __hx_type = HxType.class_ "backen
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedFunctionBody"; plan = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedFunctionBody"; plan = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null } : t)
 
 let render = fun self (destination : string) (scope : Obj.t) (services : Obj.t) -> let closure = Obj.magic (let __method_receiver_6 = (Obj.magic self : t).plan in let __method_callable_7 = (Obj.obj (HxMethodDispatch.bind_structural (Obj.repr __method_receiver_6) "requireFunction" "method-dispatch:1e566c2552d4ad023babded5eadd949f2d2794d9da25d109570bf58eaa3515be") : Backend_cpp_CppManagedFunctionOwner.cppmanagedfunctionowner -> Backend_cpp_CppManagedStoragePlan.cppmanagedfunctionplan_t) in let __method_argument_8 = Obj.magic ((Obj.magic self : t).owner) in __method_callable_7 __method_argument_8) in let tempCppControlFunctionResult = ref (Obj.magic (HxRuntime.hx_null) : Backend_cpp_CppControlRegion.cppcontrolfunctionresult) in (
   ignore (let _g = Obj.magic ((Obj.magic ((Obj.magic closure : Backend_cpp_CppManagedStoragePlan.cppmanagedfunctionplan_t).abi) : Backend_cpp_CppManagedClosureAbi.t).result) in match _g with

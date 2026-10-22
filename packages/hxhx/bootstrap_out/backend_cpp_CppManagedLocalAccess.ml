@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable projection : TypedBackendFunctionProjectio
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedLocalAccess"; projection = Obj.magic HxRuntime.hx_null; hx_initializer = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; environment = Obj.magic HxRuntime.hx_null; environmentSymbol = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedLocalAccess"; projection = Obj.magic HxRuntime.hx_null; hx_initializer = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; environment = Obj.magic HxRuntime.hx_null; environmentSymbol = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null } : t)
 
 let requireMethod = fun self () -> (
   ignore (if (Obj.magic self : t).projection == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "initializer closure has no method receiver or constructor authority") ["Dynamic"] else ());
@@ -24,7 +24,7 @@ let captureCatalog = fun self () -> let tempResult = ref (Obj.magic (HxRuntime.h
   !tempResult
 )
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedLocalAccess"; projection = Obj.magic HxRuntime.hx_null; hx_initializer = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; environment = Obj.magic HxRuntime.hx_null; environmentSymbol = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedLocalAccess"; projection = Obj.magic HxRuntime.hx_null; hx_initializer = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; environment = Obj.magic HxRuntime.hx_null; environmentSymbol = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if input == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get input "projection") == Obj.magic (HxRuntime.hx_null) = (Obj.obj (HxAnon.get input "initializer") == Obj.magic (HxRuntime.hx_null)) || Obj.obj (HxAnon.get input "plan") == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "managed local access requires exact projection and storage owners") ["Dynamic"] else ());
     ignore ((Obj.obj (HxAnon.get (Obj.obj (HxAnon.get input "plan")) "requireFunction") : _ -> _) (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "backend.cpp.CppManagedFunctionOwner" (HxAnon.get input "owner")))));

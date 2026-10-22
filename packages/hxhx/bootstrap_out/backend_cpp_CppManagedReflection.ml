@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable program : Backend_cpp_CppTypedProgramProje
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program2 classes2 enums2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedReflection"; program = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; enums = Obj.magic HxRuntime.hx_null; enabled = false; requiresCoreClasses = false } : t) in (
+let create = fun program2 classes2 enums2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedReflection"; program = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; enums = Obj.magic HxRuntime.hx_null; enabled = false; requiresCoreClasses = false } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = false in (
       (__place_receiver_1 : t).requiresCoreClasses <- __place_rhs_2;
@@ -33,7 +33,7 @@ let create = fun program2 classes2 enums2 -> let self = ({ __hx_type = HxType.cl
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedReflection"; program = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; enums = Obj.magic HxRuntime.hx_null; enabled = false; requiresCoreClasses = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedReflection"; program = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; enums = Obj.magic HxRuntime.hx_null; enabled = false; requiresCoreClasses = false } : t)
 
 let operation = fun name -> let opaque = Obj.magic (TyType.fromHintText ("Dynamic" : string)) in let text = Obj.magic (TyType.fromHintText ("String" : string)) in let classType = Obj.magic (TyType.nominal (Obj.magic (TyNominalTypeId.create ("Class" : string))) (Obj.magic (let __arr_135 = HxArray.create () in (
   ignore (HxArray.push __arr_135 opaque);

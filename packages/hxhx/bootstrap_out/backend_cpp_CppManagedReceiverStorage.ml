@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable plan : Obj.t; mutable input : string; muta
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedReceiverStorage"; plan = Obj.magic HxRuntime.hx_null; input = HxString.hx_null_string; prefix = HxString.hx_null_string; captured = false; writable = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedReceiverStorage"; plan = Obj.magic HxRuntime.hx_null; input = HxString.hx_null_string; prefix = HxString.hx_null_string; captured = false; writable = false } : t)
 
 let reference = fun self () -> (
   ignore ((Obj.obj (HxAnon.get ((Obj.magic self : t).plan) "assertCurrent") : unit -> _) ());
@@ -30,7 +30,7 @@ let value = fun self () -> (
 
 let identifier = fun (value__local : string) -> (value__local != Obj.magic (HxRuntime.hx_null) && EReg.hx_match (Obj.magic (EReg.create ("^[A-Za-z_][A-Za-z0-9_]*$" : string) ("" : string))) (value__local : string) : bool)
 
-let create = fun projection plan2 input2 prefix2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedReceiverStorage"; plan = Obj.magic HxRuntime.hx_null; input = HxString.hx_null_string; prefix = HxString.hx_null_string; captured = false; writable = false } : t) in (
+let create = fun projection plan2 input2 prefix2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedReceiverStorage"; plan = Obj.magic HxRuntime.hx_null; input = HxString.hx_null_string; prefix = HxString.hx_null_string; captured = false; writable = false } : t) in (
   ignore (ignore ((
     ignore (if projection == Obj.magic (HxRuntime.hx_null) || plan2 == Obj.magic (HxRuntime.hx_null) || not (let __call_arg_0_1 = input2 in identifier __call_arg_0_1) || not (let __call_arg_0_2 = prefix2 in identifier __call_arg_0_2) then HxType.hx_throw_typed_rtti (Obj.repr "managed receiver requires an exact entry and allocated symbols") ["Dynamic"] else ());
     let hidden = Obj.magic (Backend_cpp_CppManagedClosureAbi.getHiddenParameters (Obj.magic ((Obj.magic ((Obj.obj (HxAnon.get plan2 "requireFunction") : _ -> _) (Obj.magic (let __enum_arg_3 = Obj.magic projection in Backend_cpp_CppManagedFunctionOwner.Root (Stdlib.Sys.opaque_identity __enum_arg_3)))) : Backend_cpp_CppManagedStoragePlan.cppmanagedfunctionplan_t).abi)) ()) in (

@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.HxhxOcamlTargetFunctionAdapter" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.ocaml.HxhxOcamlTargetFunctionAdapter" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.HxhxOcamlTargetFunctionAdapter" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.ocaml.HxhxOcamlTargetFunctionAdapter" } : t)
 
 let fromFunction = fun owner fn -> (try (
   ignore (if owner == Obj.magic (HxRuntime.hx_null) || fn == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "native OCaml target function adapter requires complete typed facts") ["Dynamic"] else ());

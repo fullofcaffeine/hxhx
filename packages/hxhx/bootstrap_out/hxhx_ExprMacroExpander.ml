@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.ExprMacroExpander" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.ExprMacroExpander" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.ExprMacroExpander" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.ExprMacroExpander" } : t)
 
 let isTrueEnv = fun (name : string) -> (let tempString = ref (HxString.hx_null_string : string) in let s = (HxSys.getEnv (name : string) : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (if s == Obj.magic (HxRuntime.hx_null) then let __assign_74 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (

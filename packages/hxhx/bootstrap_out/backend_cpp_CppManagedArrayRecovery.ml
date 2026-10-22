@@ -26,7 +26,7 @@ let render = fun input indent -> (
         ignore (HxArray.push __represented_array_21 __represented_array_element_1_23);
         __represented_array_21
       )
-    )) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.obj (HxAnon.get input "renderValue") : _ -> _ -> _ -> _) (Obj.magic (let __structural_receiver_30 = input in Obj.obj (HxAnon.get __structural_receiver_30 "value"))) (root : string) (HxString.toStdString indent ^ "  " : string)) in (
+    )) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.obj (HxAnon.get input "renderValue") : _ -> _ -> _ -> _) (Obj.magic (let __structural_receiver_30 = input in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_30 "value")))) (root : string) (HxString.toStdString indent ^ "  " : string)) in (
       ignore (while !_g < HxArray.length _g1 do ignore (let line = (let __array_read_receiver_31 = _g1 in let __array_read_index_32 = !_g in HxArray.get (Obj.magic __array_read_receiver_31) __array_read_index_32 : string) in (
         ignore (let __old_33 = !_g in let __new_34 = HxInt.add __old_33 1 in (
           ignore (_g := __new_34);

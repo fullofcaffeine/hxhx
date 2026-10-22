@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable outputDir : string; mutable outputFileHint
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun outputDir2 outputFileHint2 mainModule2 emitFullBodies2 buildExecutable2 defines2 resources2 nativeLibraryPaths2 -> let self = ({ __hx_type = HxType.class_ "backend.BackendContext"; outputDir = HxString.hx_null_string; outputFileHint = Obj.magic HxRuntime.hx_null; mainModule = HxString.hx_null_string; emitFullBodies = false; buildExecutable = false; defines = Obj.magic HxRuntime.hx_null; resources = Obj.magic HxRuntime.hx_null; nativeLibraryPaths = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun outputDir2 outputFileHint2 mainModule2 emitFullBodies2 buildExecutable2 defines2 resources2 nativeLibraryPaths2 -> let self = ({ __hx_type = HxType.instance_marker "backend.BackendContext"; outputDir = HxString.hx_null_string; outputFileHint = Obj.magic HxRuntime.hx_null; mainModule = HxString.hx_null_string; emitFullBodies = false; buildExecutable = false; defines = Obj.magic HxRuntime.hx_null; resources = Obj.magic HxRuntime.hx_null; nativeLibraryPaths = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (outputDir2 : string) in (
       (Obj.magic self : t).outputDir <- __assign_1;
@@ -80,7 +80,7 @@ let create = fun outputDir2 outputFileHint2 mainModule2 emitFullBodies2 buildExe
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.BackendContext"; outputDir = HxString.hx_null_string; outputFileHint = Obj.magic HxRuntime.hx_null; mainModule = HxString.hx_null_string; emitFullBodies = false; buildExecutable = false; defines = Obj.magic HxRuntime.hx_null; resources = Obj.magic HxRuntime.hx_null; nativeLibraryPaths = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.BackendContext"; outputDir = HxString.hx_null_string; outputFileHint = Obj.magic HxRuntime.hx_null; mainModule = HxString.hx_null_string; emitFullBodies = false; buildExecutable = false; defines = Obj.magic HxRuntime.hx_null; resources = Obj.magic HxRuntime.hx_null; nativeLibraryPaths = Obj.magic HxRuntime.hx_null } : t)
 
 let hasDefine = fun self (name : string) -> let tempShortCircuit = ref (false : bool) in (
   ignore (if name != HxString.hx_null_string && (let __string_receiver_23 = name in HxString.length __string_receiver_23) > 0 then let _this = Obj.magic ((Obj.magic self : t).defines) in let __assign_24 = HxMap.exists_string (Obj.magic _this) (name : string) in (

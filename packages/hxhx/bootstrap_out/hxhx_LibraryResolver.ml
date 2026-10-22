@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.LibraryResolver" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.LibraryResolver" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.LibraryResolver" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.LibraryResolver" } : t)
 
 let emptySpec = fun () -> let __anon_1 = HxAnon.create () in (
   ignore (HxAnon.set __anon_1 "classPaths" (Obj.repr (let __represented_array_2 = HxArray.create () in __represented_array_2)));

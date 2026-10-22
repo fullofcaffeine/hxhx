@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable program : Backend_cpp_CppTypedProgramProje
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program2 requestedMain recordStack -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedProgramPlan"; program = Obj.magic HxRuntime.hx_null; emitter = Obj.magic HxRuntime.hx_null; entrySymbol = HxString.hx_null_string; statics = Obj.magic HxRuntime.hx_null; enums = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; reflection = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; startupSymbols = Obj.magic HxRuntime.hx_null; hasRuntimePredicate = false } : t) in (
+let create = fun program2 requestedMain recordStack -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedProgramPlan"; program = Obj.magic HxRuntime.hx_null; emitter = Obj.magic HxRuntime.hx_null; entrySymbol = HxString.hx_null_string; statics = Obj.magic HxRuntime.hx_null; enums = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; reflection = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; startupSymbols = Obj.magic HxRuntime.hx_null; hasRuntimePredicate = false } : t) in (
   ignore (let recordStack = if Obj.repr recordStack == HxRuntime.hx_null then false else recordStack in ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = false in (
       (__place_receiver_1 : t).hasRuntimePredicate <- __place_rhs_2;
@@ -468,7 +468,7 @@ let create = fun program2 requestedMain recordStack -> let self = ({ __hx_type =
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedProgramPlan"; program = Obj.magic HxRuntime.hx_null; emitter = Obj.magic HxRuntime.hx_null; entrySymbol = HxString.hx_null_string; statics = Obj.magic HxRuntime.hx_null; enums = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; reflection = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; startupSymbols = Obj.magic HxRuntime.hx_null; hasRuntimePredicate = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedProgramPlan"; program = Obj.magic HxRuntime.hx_null; emitter = Obj.magic HxRuntime.hx_null; entrySymbol = HxString.hx_null_string; statics = Obj.magic HxRuntime.hx_null; enums = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; reflection = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; startupSymbols = Obj.magic HxRuntime.hx_null; hasRuntimePredicate = false } : t)
 
 let renderChecked = fun self () -> (
   ignore (Backend_cpp_CppTypedProgramProjection.assertCurrent (Obj.magic ((Obj.magic self : t).program)) ());

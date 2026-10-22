@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable dir : string; mutable file : string; mutab
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun path -> let self = ({ __hx_type = HxType.class_ "haxe.io.Path"; dir = Obj.magic HxRuntime.hx_null; file = HxString.hx_null_string; ext = Obj.magic HxRuntime.hx_null; backslash = false } : t) in (
+let create = fun path -> let self = ({ __hx_type = HxType.instance_marker "haxe.io.Path"; dir = Obj.magic HxRuntime.hx_null; file = HxString.hx_null_string; ext = Obj.magic HxRuntime.hx_null; backslash = false } : t) in (
   ignore (let path = ref path in ignore (try ignore ((
     ignore (match !path with
       | "." | ".." -> (
@@ -73,7 +73,7 @@ let create = fun path -> let self = ({ __hx_type = HxType.class_ "haxe.io.Path";
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.io.Path"; dir = Obj.magic HxRuntime.hx_null; file = HxString.hx_null_string; ext = Obj.magic HxRuntime.hx_null; backslash = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "haxe.io.Path"; dir = Obj.magic HxRuntime.hx_null; file = HxString.hx_null_string; ext = Obj.magic HxRuntime.hx_null; backslash = false } : t)
 
 let toString = fun self () -> let tempString = ref (HxString.hx_null_string : string) in (
   ignore (if (Obj.magic self : t).dir == Obj.magic (HxRuntime.hx_null) then let __assign_37 = "" in (

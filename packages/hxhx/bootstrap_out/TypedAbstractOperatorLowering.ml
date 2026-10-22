@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TypedAbstractOperatorLowering" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TypedAbstractOperatorLowering" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedAbstractOperatorLowering" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedAbstractOperatorLowering" } : t)
 
 let lowerClasses = fun classes index filePath retainNativeCall -> let unary = Obj.magic (TypedAbstractUnaryLowering.lowerClasses (Obj.magic classes) (Obj.magic index) (filePath : string)) in let properties = Obj.magic (TypedPropertyLowering.lowerClasses (Obj.magic (TypedAbstractBinaryLowering.lowerClasses (Obj.magic unary) (Obj.magic index) (filePath : string))) (Obj.magic index) (filePath : string)) in TypedRequiredInlineLowering.lowerClasses (Obj.magic properties) (Obj.magic index) retainNativeCall
 

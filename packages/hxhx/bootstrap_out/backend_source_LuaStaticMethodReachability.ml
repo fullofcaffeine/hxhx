@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable functions : TypedBackendFunctionProjection
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.LuaStaticMethodReachability"; functions = Obj.magic HxRuntime.hx_null; selected = Obj.magic HxRuntime.hx_null; queue = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.LuaStaticMethodReachability"; functions = Obj.magic HxRuntime.hx_null; selected = Obj.magic HxRuntime.hx_null; queue = Obj.magic HxRuntime.hx_null } : t)
 
 let retain = fun self (identity : string) -> ignore (ignore (try ignore (let _this = Obj.magic ((Obj.magic self : t).selected) in let tempBool = HxMap.exists_string (Obj.magic _this) (identity : string) in (
   ignore (if tempBool then Stdlib.raise (HxRuntime.Hx_return_void) else ());
@@ -31,7 +31,7 @@ let observe = fun self (expression : HxExpr.hxexpr) (callable : TypedExpr.t) -> 
   )
 )))
 
-let create = fun classes main -> let self = ({ __hx_type = HxType.class_ "backend.source.LuaStaticMethodReachability"; functions = Obj.magic HxRuntime.hx_null; selected = Obj.magic HxRuntime.hx_null; queue = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun classes main -> let self = ({ __hx_type = HxType.instance_marker "backend.source.LuaStaticMethodReachability"; functions = Obj.magic HxRuntime.hx_null; selected = Obj.magic HxRuntime.hx_null; queue = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       (Obj.magic self : t).queue <- __assign_1;

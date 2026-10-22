@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhxmacrohost.NativeMacroModuleDynlink" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhxmacrohost.NativeMacroModuleDynlink" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhxmacrohost.NativeMacroModuleDynlink" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhxmacrohost.NativeMacroModuleDynlink" } : t)
 
 let loadAndCapture = fun (modulePath : string) (pluginId : string) -> (try let response = (HxHxMacroModuleDynlink.load_and_capture_safe (modulePath : string) (pluginId : string) : string) in (
   ignore (if response == HxString.hx_null_string then HxType.hx_throw_typed_rtti (Obj.repr "native macro module loader returned no response") ["Dynamic"] else ());

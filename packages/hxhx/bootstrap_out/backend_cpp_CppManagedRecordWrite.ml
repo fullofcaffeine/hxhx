@@ -50,7 +50,7 @@ let render = fun input indent -> let selected = field (Obj.magic (Obj.obj (HxAno
       ));
       let __array_receiver_40 = Obj.magic lines in let __array_arg_0_41 = (line : string) in HxArray.push __array_receiver_40 __array_arg_0_41
     )) done);
-    let _g = ref 0 in let _g1 = Obj.magic ((Obj.obj (HxAnon.get input "renderValue") : _ -> _ -> _ -> _) (Obj.magic (let __structural_receiver_42 = input in Obj.obj (HxAnon.get __structural_receiver_42 "value"))) (value : string) (HxString.toStdString indent ^ "  " : string)) in (
+    let _g = ref 0 in let _g1 = Obj.magic ((Obj.obj (HxAnon.get input "renderValue") : _ -> _ -> _ -> _) (Obj.magic (let __structural_receiver_42 = input in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_42 "value")))) (value : string) (HxString.toStdString indent ^ "  " : string)) in (
       ignore (while !_g < HxArray.length _g1 do ignore (let line = (let __array_read_receiver_43 = _g1 in let __array_read_index_44 = !_g in HxArray.get (Obj.magic __array_read_receiver_43) __array_read_index_44 : string) in (
         ignore (let __old_45 = !_g in let __new_46 = HxInt.add __old_45 1 in (
           ignore (_g := __new_46);

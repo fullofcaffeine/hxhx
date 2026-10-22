@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable index : int; mutable line : int; mutable c
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun index2 line2 column2 -> let self = ({ __hx_type = HxType.class_ "HxPos"; index = 0; line = 0; column = 0 } : t) in (
+let create = fun index2 line2 column2 -> let self = ({ __hx_type = HxType.instance_marker "HxPos"; index = 0; line = 0; column = 0 } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = index2 in (
       (__place_receiver_1 : t).index <- __place_rhs_2;
@@ -24,7 +24,7 @@ let create = fun index2 line2 column2 -> let self = ({ __hx_type = HxType.class_
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxPos"; index = 0; line = 0; column = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxPos"; index = 0; line = 0; column = 0 } : t)
 
 let toString = fun self () -> (let __string_part_7 = "line " in let __string_part_8 = string_of_int ((self : t).line) in let __string_part_9 = ", col " in let __string_part_10 = string_of_int ((self : t).column) in ((__string_part_7 ^ __string_part_8) ^ __string_part_9) ^ __string_part_10 : string)
 

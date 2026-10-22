@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable parameters : Obj.t HxArray.t; mutable retu
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxLambdaSignature"; parameters = Obj.magic HxRuntime.hx_null; returnTypeHint = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxLambdaSignature"; parameters = Obj.magic HxRuntime.hx_null; returnTypeHint = Obj.magic HxRuntime.hx_null } : t)
 
 let getReturnTypeHint = fun self () -> (Obj.magic self : t).returnTypeHint
 
@@ -63,7 +63,7 @@ let copyParameter = fun parameter -> let __anonymous_value_36 = HxAnon.create ()
   __anonymous_value_36
 )
 
-let create = fun parameters2 returnTypeHint2 -> let self = ({ __hx_type = HxType.class_ "HxLambdaSignature"; parameters = Obj.magic HxRuntime.hx_null; returnTypeHint = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun parameters2 returnTypeHint2 -> let self = ({ __hx_type = HxType.instance_marker "HxLambdaSignature"; parameters = Obj.magic HxRuntime.hx_null; returnTypeHint = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let _g = Obj.magic (let __arr_1 = HxArray.create () in __arr_1) in let _g1 = ref 0 in (
     ignore (while !_g1 < HxArray.length parameters2 do ignore (let parameter = let __array_read_receiver_2 = parameters2 in let __array_read_index_3 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_2) __array_read_index_3 in (
       ignore (let __old_4 = !_g1 in let __new_5 = HxInt.add __old_4 1 in (

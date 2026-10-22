@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable requestId : int; mutable directoryRoots : 
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationRequestOutputTransaction"; requestId = 0; directoryRoots = Obj.magic HxRuntime.hx_null; fileBundleRoot = Obj.magic HxRuntime.hx_null; outputPathsValue = Obj.magic HxRuntime.hx_null; retainedBackups = Obj.magic HxRuntime.hx_null; state = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.CompilationRequestOutputTransaction"; requestId = 0; directoryRoots = Obj.magic HxRuntime.hx_null; fileBundleRoot = Obj.magic HxRuntime.hx_null; outputPathsValue = Obj.magic HxRuntime.hx_null; retainedBackups = Obj.magic HxRuntime.hx_null; state = HxString.hx_null_string } : t)
 
 let outputPaths = fun self () -> (Obj.magic self : t).outputPathsValue
 
@@ -329,7 +329,7 @@ let createRoot = fun self (finalPath : string) (index : int) -> let __anonymous_
   __anonymous_value_126
 )
 
-let create = fun requestId2 outDir backendOutputDir outputFileHint -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationRequestOutputTransaction"; requestId = 0; directoryRoots = Obj.magic HxRuntime.hx_null; fileBundleRoot = Obj.magic HxRuntime.hx_null; outputPathsValue = Obj.magic HxRuntime.hx_null; retainedBackups = Obj.magic HxRuntime.hx_null; state = HxString.hx_null_string } : t) in (
+let create = fun requestId2 outDir backendOutputDir outputFileHint -> let self = ({ __hx_type = HxType.instance_marker "hxhx.CompilationRequestOutputTransaction"; requestId = 0; directoryRoots = Obj.magic HxRuntime.hx_null; fileBundleRoot = Obj.magic HxRuntime.hx_null; outputPathsValue = Obj.magic HxRuntime.hx_null; retainedBackups = Obj.magic HxRuntime.hx_null; state = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = requestId2 in (
       (__place_receiver_1 : t).requestId <- __place_rhs_2;

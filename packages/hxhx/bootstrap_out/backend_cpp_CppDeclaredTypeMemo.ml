@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable anonymousStructures : Obj.t HxMap.string_m
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppDeclaredTypeMemo"; anonymousStructures = Obj.magic HxRuntime.hx_null; functionArgTypesByShape = Obj.magic HxRuntime.hx_null; fieldTypesByShape = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppDeclaredTypeMemo"; anonymousStructures = Obj.magic HxRuntime.hx_null; functionArgTypesByShape = Obj.magic HxRuntime.hx_null; fieldTypesByShape = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_string ()) in (
       (Obj.magic self : t).anonymousStructures <- __assign_1;
@@ -24,4 +24,4 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppD
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppDeclaredTypeMemo"; anonymousStructures = Obj.magic HxRuntime.hx_null; functionArgTypesByShape = Obj.magic HxRuntime.hx_null; fieldTypesByShape = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppDeclaredTypeMemo"; anonymousStructures = Obj.magic HxRuntime.hx_null; functionArgTypesByShape = Obj.magic HxRuntime.hx_null; fieldTypesByShape = Obj.magic HxRuntime.hx_null } : t)

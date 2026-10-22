@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable decisionId : string; mutable literalIdenti
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun decisionId2 literalIdentity2 carrier2 reference2 -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetLiteralRuntimeAuthorization"; decisionId = HxString.hx_null_string; literalIdentity = HxString.hx_null_string; carrier = Obj.magic HxRuntime.hx_null; reference = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun decisionId2 literalIdentity2 carrier2 reference2 -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetLiteralRuntimeAuthorization"; decisionId = HxString.hx_null_string; literalIdentity = HxString.hx_null_string; carrier = Obj.magic HxRuntime.hx_null; reference = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (decisionId2 : string) in (
       (Obj.magic self : t).decisionId <- __assign_1;
@@ -28,4 +28,4 @@ let create = fun decisionId2 literalIdentity2 carrier2 reference2 -> let self = 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetLiteralRuntimeAuthorization"; decisionId = HxString.hx_null_string; literalIdentity = HxString.hx_null_string; carrier = Obj.magic HxRuntime.hx_null; reference = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetLiteralRuntimeAuthorization"; decisionId = HxString.hx_null_string; literalIdentity = HxString.hx_null_string; carrier = Obj.magic HxRuntime.hx_null; reference = Obj.magic HxRuntime.hx_null } : t)

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable index : TyperIndex.t; mutable filePath : s
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun index2 filePath2 owner2 declaration identity -> let self = ({ __hx_type = HxType.class_ "TypedPropertyLowering"; index = Obj.magic HxRuntime.hx_null; filePath = HxString.hx_null_string; owner = Obj.magic HxRuntime.hx_null; functionDeclaration = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; allocator = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun index2 filePath2 owner2 declaration identity -> let self = ({ __hx_type = HxType.instance_marker "TypedPropertyLowering"; index = Obj.magic HxRuntime.hx_null; filePath = HxString.hx_null_string; owner = Obj.magic HxRuntime.hx_null; functionDeclaration = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; allocator = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic index2 in (
       (Obj.magic self : t).index <- __assign_1;
@@ -45,7 +45,7 @@ let create = fun index2 filePath2 owner2 declaration identity -> let self = ({ _
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedPropertyLowering"; index = Obj.magic HxRuntime.hx_null; filePath = HxString.hx_null_string; owner = Obj.magic HxRuntime.hx_null; functionDeclaration = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; allocator = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedPropertyLowering"; index = Obj.magic HxRuntime.hx_null; filePath = HxString.hx_null_string; owner = Obj.magic HxRuntime.hx_null; functionDeclaration = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; allocator = Obj.magic HxRuntime.hx_null } : t)
 
 let error = fun self (expression : TypedExpr.t) (message : string) -> let tempHxPos = ref (Obj.magic (HxRuntime.hx_null) : HxPos.t) in (
   ignore (if TypedExpr.getPosition (Obj.magic expression) () == Obj.magic (HxRuntime.hx_null) then let __assign_14 = Obj.magic (HxPos.unknown ()) in (

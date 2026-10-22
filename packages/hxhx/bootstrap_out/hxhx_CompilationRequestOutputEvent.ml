@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable text : string; mutable isErrorStream : boo
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun text2 isErrorStream2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationRequestOutputEvent"; text = HxString.hx_null_string; isErrorStream = false } : t) in (
+let create = fun text2 isErrorStream2 -> let self = ({ __hx_type = HxType.instance_marker "hxhx.CompilationRequestOutputEvent"; text = HxString.hx_null_string; isErrorStream = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (text2 : string) in (
       (Obj.magic self : t).text <- __assign_1;
@@ -20,4 +20,4 @@ let create = fun text2 isErrorStream2 -> let self = ({ __hx_type = HxType.class_
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationRequestOutputEvent"; text = HxString.hx_null_string; isErrorStream = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.CompilationRequestOutputEvent"; text = HxString.hx_null_string; isErrorStream = false } : t)

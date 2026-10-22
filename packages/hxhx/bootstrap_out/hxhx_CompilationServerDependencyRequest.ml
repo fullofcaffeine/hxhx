@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable invocationIdentity : string; mutable previ
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun invocationIdentity2 previousSnapshot2 publish -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerDependencyRequest"; invocationIdentity = HxString.hx_null_string; previousSnapshot = Obj.magic HxRuntime.hx_null; publishCallback = Obj.magic HxRuntime.hx_null; reportState = Obj.magic HxRuntime.hx_null; stagedSnapshot = Obj.magic HxRuntime.hx_null; snapshotRequired = false; preparedForSuccess = false; finished = false } : t) in (
+let create = fun invocationIdentity2 previousSnapshot2 publish -> let self = ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerDependencyRequest"; invocationIdentity = HxString.hx_null_string; previousSnapshot = Obj.magic HxRuntime.hx_null; publishCallback = Obj.magic HxRuntime.hx_null; reportState = Obj.magic HxRuntime.hx_null; stagedSnapshot = Obj.magic HxRuntime.hx_null; snapshotRequired = false; preparedForSuccess = false; finished = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (invocationIdentity2 : string) in (
       (Obj.magic self : t).invocationIdentity <- __assign_1;
@@ -44,7 +44,7 @@ let create = fun invocationIdentity2 previousSnapshot2 publish -> let self = ({ 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerDependencyRequest"; invocationIdentity = HxString.hx_null_string; previousSnapshot = Obj.magic HxRuntime.hx_null; publishCallback = Obj.magic HxRuntime.hx_null; reportState = Obj.magic HxRuntime.hx_null; stagedSnapshot = Obj.magic HxRuntime.hx_null; snapshotRequired = false; preparedForSuccess = false; finished = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerDependencyRequest"; invocationIdentity = HxString.hx_null_string; previousSnapshot = Obj.magic HxRuntime.hx_null; publishCallback = Obj.magic HxRuntime.hx_null; reportState = Obj.magic HxRuntime.hx_null; stagedSnapshot = Obj.magic HxRuntime.hx_null; snapshotRequired = false; preparedForSuccess = false; finished = false } : t)
 
 let report = fun self () -> (Obj.magic self : t).reportState
 

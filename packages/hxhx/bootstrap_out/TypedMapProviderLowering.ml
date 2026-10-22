@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable index : TyperIndex.t; mutable allocator : 
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun index2 owner -> let self = ({ __hx_type = HxType.class_ "TypedMapProviderLowering"; index = Obj.magic HxRuntime.hx_null; allocator = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun index2 owner -> let self = ({ __hx_type = HxType.instance_marker "TypedMapProviderLowering"; index = Obj.magic HxRuntime.hx_null; allocator = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic index2 in (
       (Obj.magic self : t).index <- __assign_1;
@@ -20,7 +20,7 @@ let create = fun index2 owner -> let self = ({ __hx_type = HxType.class_ "TypedM
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedMapProviderLowering"; index = Obj.magic HxRuntime.hx_null; allocator = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedMapProviderLowering"; index = Obj.magic HxRuntime.hx_null; allocator = Obj.magic HxRuntime.hx_null } : t)
 
 let convert = fun self (value : TypedExpr.t) (expected : TyType.t) -> (try (
   ignore (if let __string_eq_left_16 = TyType.getSemanticKey (Obj.magic (TypedExpr.getType (Obj.magic value) ())) () in let __string_eq_right_17 = TyType.getSemanticKey (Obj.magic expected) () in HxString.equals __string_eq_left_16 __string_eq_right_17 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr value)) else ());

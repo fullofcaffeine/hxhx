@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable catalog : TypedBackendCaptureCatalog.t; mu
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun catalog2 locals2 -> let self = ({ __hx_type = HxType.class_ "backend.source.PhpCaptureStorage"; catalog = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; captured = Obj.magic HxRuntime.hx_null; carriers = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun catalog2 locals2 -> let self = ({ __hx_type = HxType.instance_marker "backend.source.PhpCaptureStorage"; catalog = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; captured = Obj.magic HxRuntime.hx_null; carriers = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (try ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_string ()) in (
       (Obj.magic self : t).carriers <- __assign_1;
@@ -78,7 +78,7 @@ let create = fun catalog2 locals2 -> let self = ({ __hx_type = HxType.class_ "ba
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpCaptureStorage"; catalog = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; captured = Obj.magic HxRuntime.hx_null; carriers = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.PhpCaptureStorage"; catalog = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; captured = Obj.magic HxRuntime.hx_null; carriers = Obj.magic HxRuntime.hx_null } : t)
 
 let requireClosure = fun self (expression : HxExpr.hxexpr) -> (
   ignore (if (Obj.magic self : t).catalog == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "PHP closure lacks an exact capture catalog") ["Dynamic"] else ());

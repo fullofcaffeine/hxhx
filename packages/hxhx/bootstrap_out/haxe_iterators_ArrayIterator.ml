@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable array : Obj.t HxArray.t; mutable current :
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun array2 -> let self = ({ __hx_type = HxType.class_ "haxe.iterators.ArrayIterator"; array = Obj.magic HxRuntime.hx_null; current = 0 } : t) in (
+let create = fun array2 -> let self = ({ __hx_type = HxType.instance_marker "haxe.iterators.ArrayIterator"; array = Obj.magic HxRuntime.hx_null; current = 0 } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = 0 in (
       (__place_receiver_1 : t).current <- __place_rhs_2;
@@ -20,7 +20,7 @@ let create = fun array2 -> let self = ({ __hx_type = HxType.class_ "haxe.iterato
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.iterators.ArrayIterator"; array = Obj.magic HxRuntime.hx_null; current = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "haxe.iterators.ArrayIterator"; array = Obj.magic HxRuntime.hx_null; current = 0 } : t)
 
 let hasNext = fun self () -> (Obj.magic self : t).current < HxArray.length ((Obj.magic self : t).array)
 

@@ -28,7 +28,7 @@ type tyswitchcoverageresult =
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun domain2 -> let self = ({ __hx_type = HxType.class_ "TySwitchAnalysis"; domain = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun domain2 -> let self = ({ __hx_type = HxType.instance_marker "TySwitchAnalysis"; domain = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let __assign_1 = Obj.magic domain2 in (
     (Obj.magic self : t).domain <- __assign_1;
     __assign_1
@@ -36,7 +36,7 @@ let create = fun domain2 -> let self = ({ __hx_type = HxType.class_ "TySwitchAna
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TySwitchAnalysis"; domain = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TySwitchAnalysis"; domain = Obj.magic HxRuntime.hx_null } : t)
 
 let analyze = fun self (cases : tyswitchcasecoverage HxArray.t) (requireNullCoverage : bool) -> let requireNullCoverage = if Obj.repr requireNullCoverage == HxRuntime.hx_null then false else requireNullCoverage in (try let _gthis = Obj.magic self in let covered = Obj.magic (HxMap.create_string ()) in let catchAll = ref false in let hasMemberPattern = ref false in let unsupported = ref (Obj.magic (HxRuntime.hx_null) : string) in let visit = ref (Obj.magic (HxRuntime.hx_null) : tyswitchcasecoverage -> bool -> unit) in (
   ignore (let __assign_2 = Obj.magic (fun pattern contributes -> ignore (match pattern with

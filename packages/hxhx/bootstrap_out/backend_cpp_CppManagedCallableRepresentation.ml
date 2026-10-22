@@ -107,7 +107,7 @@ type cppmanagedparameterstorage =
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedClosureAbi"; signature = Obj.magic HxRuntime.hx_null; result = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; hiddenParameters = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedClosureAbi"; signature = Obj.magic HxRuntime.hx_null; result = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; hiddenParameters = Obj.magic HxRuntime.hx_null } : t)
 
 let getParameters = fun self () -> let __array_receiver_33 = Obj.magic ((Obj.magic self : t).parameters) in HxArray.copy __array_receiver_33
 
@@ -142,7 +142,7 @@ let rec assertComplete = fun hx_type -> ignore ((
   )) done
 ))
 
-let create = fun signature2 hasEnvironment receiver -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedClosureAbi"; signature = Obj.magic HxRuntime.hx_null; result = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; hiddenParameters = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun signature2 hasEnvironment receiver -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedClosureAbi"; signature = Obj.magic HxRuntime.hx_null; result = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; hiddenParameters = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (let hasEnvironment = if Obj.repr hasEnvironment == HxRuntime.hx_null then true else hasEnvironment in ignore ((
     ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in (
       ignore (HxArray.push __arr_2 HeapContext);

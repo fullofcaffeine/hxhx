@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.ast.OcamlCodeIdentifierScanner" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.ast.OcamlCodeIdentifierScanner" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.ast.OcamlCodeIdentifierScanner" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.ast.OcamlCodeIdentifierScanner" } : t)
 
 let isPrivateRuntimeIdentifier = fun (identifier : string) -> (try (
   ignore (if (let __string_receiver_49 = identifier in HxString.length __string_receiver_49) < 3 || not (let __call_arg_0_50 = identifier in let __call_arg_1_51 = "Hx" in StringTools.startsWith __call_arg_0_50 __call_arg_1_51) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());

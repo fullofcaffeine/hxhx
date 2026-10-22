@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable programRevision : string; mutable moduleRe
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpModuleRenderFacts"; programRevision = HxString.hx_null_string; moduleRevision = HxString.hx_null_string; moduleIdentity = HxString.hx_null_string; localTypeNames = Obj.magic HxRuntime.hx_null; importedTypeAliases = Obj.magic HxRuntime.hx_null; usingTypeIdentities = Obj.magic HxRuntime.hx_null; localTypeNameIndex = Obj.magic HxRuntime.hx_null; importedTypeAliasIndex = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.PhpModuleRenderFacts"; programRevision = HxString.hx_null_string; moduleRevision = HxString.hx_null_string; moduleIdentity = HxString.hx_null_string; localTypeNames = Obj.magic HxRuntime.hx_null; importedTypeAliases = Obj.magic HxRuntime.hx_null; usingTypeIdentities = Obj.magic HxRuntime.hx_null; localTypeNameIndex = Obj.magic HxRuntime.hx_null; importedTypeAliasIndex = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
 
 let getProgramRevision = fun self () -> (Obj.magic self : t).programRevision
 
@@ -137,7 +137,7 @@ let addResolvedImport = fun self (directive : TyModuleDirective.t) -> ignore (ig
 )) with
   | HxRuntime.Hx_return_void -> ()))
 
-let create = fun programFacts moduleRevision2 moduleIdentity2 contributions -> let self = ({ __hx_type = HxType.class_ "backend.source.PhpModuleRenderFacts"; programRevision = HxString.hx_null_string; moduleRevision = HxString.hx_null_string; moduleIdentity = HxString.hx_null_string; localTypeNames = Obj.magic HxRuntime.hx_null; importedTypeAliases = Obj.magic HxRuntime.hx_null; usingTypeIdentities = Obj.magic HxRuntime.hx_null; localTypeNameIndex = Obj.magic HxRuntime.hx_null; importedTypeAliasIndex = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun programFacts moduleRevision2 moduleIdentity2 contributions -> let self = ({ __hx_type = HxType.instance_marker "backend.source.PhpModuleRenderFacts"; programRevision = HxString.hx_null_string; moduleRevision = HxString.hx_null_string; moduleIdentity = HxString.hx_null_string; localTypeNames = Obj.magic HxRuntime.hx_null; importedTypeAliases = Obj.magic HxRuntime.hx_null; usingTypeIdentities = Obj.magic HxRuntime.hx_null; localTypeNameIndex = Obj.magic HxRuntime.hx_null; importedTypeAliasIndex = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (if programFacts == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "PHP module render facts require exact program facts") ["Dynamic"] else ());
     ignore (let __assign_1 = (let __call_arg_0_2 = Backend_source_PhpProgramRenderFacts.getProgramRevision (Obj.magic programFacts) () in normalize __call_arg_0_2 : string) in (

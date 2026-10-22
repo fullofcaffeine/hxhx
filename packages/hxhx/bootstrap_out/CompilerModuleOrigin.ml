@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable requestedModulePath : string; mutable sour
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerModuleOrigin"; requestedModulePath = HxString.hx_null_string; sourceModulePath = HxString.hx_null_string; selectedClassPathIndex = 0; usedSecondaryTypeFallback = false; isSynthetic = false; sourceIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerModuleOrigin"; requestedModulePath = HxString.hx_null_string; sourceModulePath = HxString.hx_null_string; selectedClassPathIndex = 0; usedSecondaryTypeFallback = false; isSynthetic = false; sourceIdentity = HxString.hx_null_string } : t)
 
 let getSourceIdentity = fun self () -> ((self : t).sourceIdentity : string)
 
@@ -57,7 +57,7 @@ let normalize = fun (value : string) -> (let tempResult = ref (HxString.hx_null_
   !tempResult
 ) : string)
 
-let create = fun requestedModulePath2 selectedClassPathIndex2 usedSecondaryTypeFallback2 isSynthetic2 -> let self = ({ __hx_type = HxType.class_ "CompilerModuleOrigin"; requestedModulePath = HxString.hx_null_string; sourceModulePath = HxString.hx_null_string; selectedClassPathIndex = 0; usedSecondaryTypeFallback = false; isSynthetic = false; sourceIdentity = HxString.hx_null_string } : t) in (
+let create = fun requestedModulePath2 selectedClassPathIndex2 usedSecondaryTypeFallback2 isSynthetic2 -> let self = ({ __hx_type = HxType.instance_marker "CompilerModuleOrigin"; requestedModulePath = HxString.hx_null_string; sourceModulePath = HxString.hx_null_string; selectedClassPathIndex = 0; usedSecondaryTypeFallback = false; isSynthetic = false; sourceIdentity = HxString.hx_null_string } : t) in (
   ignore (let isSynthetic2 = if Obj.repr isSynthetic2 == HxRuntime.hx_null then false else isSynthetic2 in ignore ((
     ignore (let __assign_1 = (let __call_arg_0_2 = requestedModulePath2 in normalize __call_arg_0_2 : string) in (
       (Obj.magic self : t).requestedModulePath <- __assign_1;

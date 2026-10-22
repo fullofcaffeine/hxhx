@@ -15,7 +15,7 @@ type t = { __hx_type : Obj.t; mutable ownerIdentity : string; mutable sourceRevi
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TyControlTarget"; ownerIdentity = HxString.hx_null_string; sourceRevision = HxString.hx_null_string; ordinal = 0; kind = Obj.magic HxRuntime.hx_null; sourceIdentity = HxString.hx_null_string; parent = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TyControlTarget"; ownerIdentity = HxString.hx_null_string; sourceRevision = HxString.hx_null_string; ordinal = 0; kind = Obj.magic HxRuntime.hx_null; sourceIdentity = HxString.hx_null_string; parent = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if (let __string_receiver_1 = Obj.obj (HxAnon.get input "ownerIdentity") in HxString.length __string_receiver_1) = 0 || (let __string_receiver_2 = Obj.obj (HxAnon.get input "sourceRevision") in HxString.length __string_receiver_2) = 0 || (let __string_receiver_3 = Obj.obj (HxAnon.get input "sourceIdentity") in HxString.length __string_receiver_3) = 0 || Obj.obj (HxAnon.get input "ordinal") < 0 then HxType.hx_throw_typed_rtti (Obj.repr "control target requires an owner, source revision, and source identity") ["Dynamic"] else ());
     ignore (let __assign_4 = (Obj.obj (HxAnon.get input "ownerIdentity") : string) in (
@@ -47,7 +47,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "TyControlTarg
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyControlTarget"; ownerIdentity = HxString.hx_null_string; sourceRevision = HxString.hx_null_string; ordinal = 0; kind = Obj.magic HxRuntime.hx_null; sourceIdentity = HxString.hx_null_string; parent = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyControlTarget"; ownerIdentity = HxString.hx_null_string; sourceRevision = HxString.hx_null_string; ordinal = 0; kind = Obj.magic HxRuntime.hx_null; sourceIdentity = HxString.hx_null_string; parent = Obj.magic HxRuntime.hx_null } : t)
 
 let getKind = fun self () -> (Obj.magic self : t).kind
 

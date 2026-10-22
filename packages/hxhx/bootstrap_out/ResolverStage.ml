@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "ResolverStage" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "ResolverStage" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "ResolverStage" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "ResolverStage" } : t)
 
 let withImplicitCwdClassPath = fun classPaths cwd -> (try let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
   ignore (if classPaths == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (let __represented_array_2 = HxArray.create () in __represented_array_2) in (

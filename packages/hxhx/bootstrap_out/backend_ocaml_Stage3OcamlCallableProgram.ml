@@ -8,7 +8,7 @@ type stage3ocamlcallablefunction_t = { __hx_type : Obj.t; mutable program : t; m
 
 let __reflaxe_ocaml__ = ()
 
-let stage3ocamlcallablefunction_create = fun program2 projection2 names2 -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.Stage3OcamlCallableFunction"; program = Obj.magic HxRuntime.hx_null; projection = Obj.magic HxRuntime.hx_null; catalog = Obj.magic HxRuntime.hx_null; names = Obj.magic HxRuntime.hx_null; printer = Obj.magic HxRuntime.hx_null; generated = Obj.magic HxRuntime.hx_null; next = 0 } : stage3ocamlcallablefunction_t) in (
+let stage3ocamlcallablefunction_create = fun program2 projection2 names2 -> let self = ({ __hx_type = HxType.instance_marker "backend.ocaml.Stage3OcamlCallableFunction"; program = Obj.magic HxRuntime.hx_null; projection = Obj.magic HxRuntime.hx_null; catalog = Obj.magic HxRuntime.hx_null; names = Obj.magic HxRuntime.hx_null; printer = Obj.magic HxRuntime.hx_null; generated = Obj.magic HxRuntime.hx_null; next = 0 } : stage3ocamlcallablefunction_t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = 0 in (
       (__place_receiver_1 : stage3ocamlcallablefunction_t).next <- __place_rhs_2;
@@ -42,7 +42,7 @@ let stage3ocamlcallablefunction_create = fun program2 projection2 names2 -> let 
   self
 )
 
-let stage3ocamlcallablefunction___empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.Stage3OcamlCallableFunction"; program = Obj.magic HxRuntime.hx_null; projection = Obj.magic HxRuntime.hx_null; catalog = Obj.magic HxRuntime.hx_null; names = Obj.magic HxRuntime.hx_null; printer = Obj.magic HxRuntime.hx_null; generated = Obj.magic HxRuntime.hx_null; next = 0 } : stage3ocamlcallablefunction_t)
+let stage3ocamlcallablefunction___empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.ocaml.Stage3OcamlCallableFunction"; program = Obj.magic HxRuntime.hx_null; projection = Obj.magic HxRuntime.hx_null; catalog = Obj.magic HxRuntime.hx_null; names = Obj.magic HxRuntime.hx_null; printer = Obj.magic HxRuntime.hx_null; generated = Obj.magic HxRuntime.hx_null; next = 0 } : stage3ocamlcallablefunction_t)
 
 let stage3ocamlcallablefunction_fresh = fun self (role : string) -> let name = ref (HxString.hx_null_string : string) in (
   ignore (try let rec __do_while_loop_18 = fun () -> (
@@ -110,7 +110,7 @@ let stage3ocamlcallablefunction_bindValues = fun self (values : string HxArray.t
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.Stage3OcamlCallableProgram"; modules = Obj.magic HxRuntime.hx_null; revision = HxString.hx_null_string; registry = Obj.magic HxRuntime.hx_null; selected = Obj.magic HxRuntime.hx_null; externs = Obj.magic HxRuntime.hx_null; generics = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.ocaml.Stage3OcamlCallableProgram"; modules = Obj.magic HxRuntime.hx_null; revision = HxString.hx_null_string; registry = Obj.magic HxRuntime.hx_null; selected = Obj.magic HxRuntime.hx_null; externs = Obj.magic HxRuntime.hx_null; generics = Obj.magic HxRuntime.hx_null } : t)
 
 let currentRevision = fun self () -> let _g = Obj.magic (let __arr_26 = HxArray.create () in __arr_26) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).modules) in (
   ignore (while !_g1 < HxArray.length _g2 do ignore (let hx_module = Obj.magic (let __array_read_receiver_27 = _g2 in let __array_read_index_28 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_27) __array_read_index_28) in (
@@ -123,7 +123,7 @@ let currentRevision = fun self () -> let _g = Obj.magic (let __arr_26 = HxArray.
   CompilerCacheIdentity.encode (Obj.magic _g)
 )
 
-let create = fun modules2 -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.Stage3OcamlCallableProgram"; modules = Obj.magic HxRuntime.hx_null; revision = HxString.hx_null_string; registry = Obj.magic HxRuntime.hx_null; selected = Obj.magic HxRuntime.hx_null; externs = Obj.magic HxRuntime.hx_null; generics = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun modules2 -> let self = ({ __hx_type = HxType.instance_marker "backend.ocaml.Stage3OcamlCallableProgram"; modules = Obj.magic HxRuntime.hx_null; revision = HxString.hx_null_string; registry = Obj.magic HxRuntime.hx_null; selected = Obj.magic HxRuntime.hx_null; externs = Obj.magic HxRuntime.hx_null; generics = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = HxMap.create_string () in (
       (Obj.magic self : t).selected <- __assign_1;

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable locals : Obj.t HxArray.t; mutable typeHint
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun projection normalizeName initializerCatalog -> let self = ({ __hx_type = HxType.class_ "backend.source.PhpFunctionLocalFacts"; locals = Obj.magic HxRuntime.hx_null; typeHints = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun projection normalizeName initializerCatalog -> let self = ({ __hx_type = HxType.instance_marker "backend.source.PhpFunctionLocalFacts"; locals = Obj.magic HxRuntime.hx_null; typeHints = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if projection == Obj.magic (HxRuntime.hx_null) && initializerCatalog == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "PHP local facts require an exact typed executable projection") ["Dynamic"] else ());
     ignore (if projection != Obj.magic (HxRuntime.hx_null) && initializerCatalog != Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "PHP local facts cannot combine function and field-initializer catalogs") ["Dynamic"] else ());
@@ -96,10 +96,10 @@ let create = fun projection normalizeName initializerCatalog -> let self = ({ __
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpFunctionLocalFacts"; locals = Obj.magic HxRuntime.hx_null; typeHints = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.PhpFunctionLocalFacts"; locals = Obj.magic HxRuntime.hx_null; typeHints = Obj.magic HxRuntime.hx_null } : t)
 
 let copyTypeHints = fun self () -> let copy = Obj.magic (HxMap.create_string ()) in let _this = Obj.magic ((Obj.magic self : t).typeHints) in let tempKeyValueIterator = HxIterator.of_array (Obj.magic (HxMap.pairs_string (Obj.magic _this))) in let _g = tempKeyValueIterator in (
-  ignore (while let __iterator_receiver_47 = _g in HxIterator.hasNext __iterator_receiver_47 do ignore (let _g2 = let __iterator_receiver_48 = _g in HxIterator.next __iterator_receiver_48 in let name = (let __structural_receiver_49 = _g2 in Obj.obj (HxAnon.get __structural_receiver_49 "key") : string) in let typeHint = (let __structural_receiver_50 = _g2 in Obj.obj (HxAnon.get __structural_receiver_50 "value") : string) in HxMap.set_string (Obj.magic copy) (name : string) typeHint) done);
+  ignore (while let __iterator_receiver_47 = _g in HxIterator.hasNext __iterator_receiver_47 do ignore (let _g2 = let __iterator_receiver_48 = _g in HxIterator.next __iterator_receiver_48 in let name = (let __structural_receiver_49 = _g2 in Stdlib.fst __structural_receiver_49 : string) in let typeHint = (let __structural_receiver_50 = _g2 in Stdlib.snd __structural_receiver_50 : string) in HxMap.set_string (Obj.magic copy) (name : string) typeHint) done);
   copy
 )
 

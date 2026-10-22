@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable source : MacroExpandedProgram.t; mutable m
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppTypedProgramProjection"; source = Obj.magic HxRuntime.hx_null; modules = Obj.magic HxRuntime.hx_null; importedClasses = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; functionOwners = Obj.magic HxRuntime.hx_null; argumentOwners = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; initializerOwners = Obj.magic HxRuntime.hx_null; programRevision = HxString.hx_null_string; planning = false; classesByIdentity = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun program -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppTypedProgramProjection"; source = Obj.magic HxRuntime.hx_null; modules = Obj.magic HxRuntime.hx_null; importedClasses = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; functionOwners = Obj.magic HxRuntime.hx_null; argumentOwners = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; initializerOwners = Obj.magic HxRuntime.hx_null; programRevision = HxString.hx_null_string; planning = false; classesByIdentity = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = false in (
       (__place_receiver_1 : t).planning <- __place_rhs_2;
@@ -135,7 +135,7 @@ let create = fun program -> let self = ({ __hx_type = HxType.class_ "backend.cpp
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppTypedProgramProjection"; source = Obj.magic HxRuntime.hx_null; modules = Obj.magic HxRuntime.hx_null; importedClasses = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; functionOwners = Obj.magic HxRuntime.hx_null; argumentOwners = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; initializerOwners = Obj.magic HxRuntime.hx_null; programRevision = HxString.hx_null_string; planning = false; classesByIdentity = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppTypedProgramProjection"; source = Obj.magic HxRuntime.hx_null; modules = Obj.magic HxRuntime.hx_null; importedClasses = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; functionOwners = Obj.magic HxRuntime.hx_null; argumentOwners = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; initializerOwners = Obj.magic HxRuntime.hx_null; programRevision = HxString.hx_null_string; planning = false; classesByIdentity = Obj.magic HxRuntime.hx_null } : t)
 
 let getModules = fun self () -> let __array_receiver_49 = Obj.magic ((Obj.magic self : t).modules) in HxArray.copy __array_receiver_49
 

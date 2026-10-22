@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "EmitterStageDebug" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "EmitterStageDebug" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "EmitterStageDebug" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "EmitterStageDebug" } : t)
 
 let traceCallSig = fun modName fnName args required fixed hasRest needsReceiver -> ignore (try ignore (let enabled = (HxSys.getEnv ("HXHX_TRACE_CALLSIG" : string) : string) in (
   ignore (if (let __string_eq_left_1 = enabled in let __string_eq_right_2 = "1" in not (HxString.equals __string_eq_left_1 __string_eq_right_2)) && (let __string_eq_left_3 = enabled in let __string_eq_right_4 = "true" in not (HxString.equals __string_eq_left_3 __string_eq_right_4)) && (let __string_eq_left_5 = enabled in let __string_eq_right_6 = "yes" in not (HxString.equals __string_eq_left_5 __string_eq_right_6)) then Stdlib.raise (HxRuntime.Hx_return_void) else ());

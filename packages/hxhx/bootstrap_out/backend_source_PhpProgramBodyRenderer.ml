@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable programFacts : Backend_source_PhpProgramRe
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpProgramBodyRenderer"; programFacts = Obj.magic HxRuntime.hx_null; moduleFactsByIdentity = Obj.magic HxRuntime.hx_null; classGraph = Obj.magic HxRuntime.hx_null; legacy = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.PhpProgramBodyRenderer"; programFacts = Obj.magic HxRuntime.hx_null; moduleFactsByIdentity = Obj.magic HxRuntime.hx_null; classGraph = Obj.magic HxRuntime.hx_null; legacy = Obj.magic HxRuntime.hx_null } : t)
 
 let getProgramFacts = fun self () -> (Obj.magic self : t).programFacts
 
@@ -258,7 +258,7 @@ let normalize = fun (value : string) -> (let tempResult = ref (HxString.hx_null_
   !tempResult
 ) : string)
 
-let create = fun programFacts2 modules classGraph2 legacy2 -> let self = ({ __hx_type = HxType.class_ "backend.source.PhpProgramBodyRenderer"; programFacts = Obj.magic HxRuntime.hx_null; moduleFactsByIdentity = Obj.magic HxRuntime.hx_null; classGraph = Obj.magic HxRuntime.hx_null; legacy = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun programFacts2 modules classGraph2 legacy2 -> let self = ({ __hx_type = HxType.instance_marker "backend.source.PhpProgramBodyRenderer"; programFacts = Obj.magic HxRuntime.hx_null; moduleFactsByIdentity = Obj.magic HxRuntime.hx_null; classGraph = Obj.magic HxRuntime.hx_null; legacy = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if programFacts2 == Obj.magic (HxRuntime.hx_null) || classGraph2 == Obj.magic (HxRuntime.hx_null) || legacy2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "PHP program renderer requires complete program facts") ["Dynamic"] else ());
     ignore (if let __string_eq_left_1 = Backend_source_PhpProgramRenderFacts.getProgramRevision (Obj.magic programFacts2) () in let __string_eq_right_2 = TypedBackendClassGraph.getProgramRevision (Obj.magic classGraph2) () in not (HxString.equals __string_eq_left_1 __string_eq_right_2) then HxType.hx_throw_typed_rtti (Obj.repr "PHP program renderer received facts from different typed-program revisions") ["Dynamic"] else ());

@@ -17,7 +17,7 @@ type t = { __hx_type : Obj.t; mutable program : Backend_cpp_CppTypedProgramProje
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program2 classes2 methods2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedBoundMethods"; program = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; owners = Obj.magic HxRuntime.hx_null; sealed = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun program2 classes2 methods2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedBoundMethods"; program = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; owners = Obj.magic HxRuntime.hx_null; sealed = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_object ()) in (
       (Obj.magic self : t).owners <- __assign_1;
@@ -39,7 +39,7 @@ let create = fun program2 classes2 methods2 -> let self = ({ __hx_type = HxType.
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedBoundMethods"; program = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; owners = Obj.magic HxRuntime.hx_null; sealed = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedBoundMethods"; program = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; owners = Obj.magic HxRuntime.hx_null; sealed = Obj.magic HxRuntime.hx_null } : t)
 
 let functionValue = fun self (projection : TypedBackendFunctionProjection.t) (expression : HxExpr.hxexpr) -> (try let tempBool = ref (false : bool) in (
   ignore (if (match expression with
@@ -344,7 +344,7 @@ type t = { __hx_type : Obj.t; mutable program : Backend_cpp_CppTypedProgramProje
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedClassStorage"; program = Obj.magic HxRuntime.hx_null; descriptors = Obj.magic HxRuntime.hx_null; layouts = Obj.magic HxRuntime.hx_null; hasInstanceTypeTests = false; methods = Obj.magic HxRuntime.hx_null; strings = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; runtimeOwners = Obj.magic HxRuntime.hx_null; constructorOwners = Obj.magic HxRuntime.hx_null; catchOwners = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedClassStorage"; program = Obj.magic HxRuntime.hx_null; descriptors = Obj.magic HxRuntime.hx_null; layouts = Obj.magic HxRuntime.hx_null; hasInstanceTypeTests = false; methods = Obj.magic HxRuntime.hx_null; strings = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; runtimeOwners = Obj.magic HxRuntime.hx_null; constructorOwners = Obj.magic HxRuntime.hx_null; catchOwners = Obj.magic HxRuntime.hx_null } : t)
 
 let registerCatches = fun self (catalog : TypedBackendLocalCatalog.t) (validate : unit -> unit) -> ignore (ignore (let _g = ref 0 in let _g1 = Obj.magic (TypedBackendLocalCatalog.getEntries (Obj.magic catalog) ()) in while !_g < HxArray.length _g1 do ignore (let local = Obj.magic (let __array_read_receiver_53 = _g1 in let __array_read_index_54 = !_g in HxArray.get (Obj.magic __array_read_receiver_53) __array_read_index_54) in (
   ignore (let __old_55 = !_g in let __new_56 = HxInt.add __old_55 1 in (
@@ -647,7 +647,7 @@ let publishLayout = fun self (layout : Obj.t) -> ignore (ignore (let entry = des
   __assign_123
 ))))
 
-let create = fun program2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedClassStorage"; program = Obj.magic HxRuntime.hx_null; descriptors = Obj.magic HxRuntime.hx_null; layouts = Obj.magic HxRuntime.hx_null; hasInstanceTypeTests = false; methods = Obj.magic HxRuntime.hx_null; strings = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; runtimeOwners = Obj.magic HxRuntime.hx_null; constructorOwners = Obj.magic HxRuntime.hx_null; catchOwners = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun program2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedClassStorage"; program = Obj.magic HxRuntime.hx_null; descriptors = Obj.magic HxRuntime.hx_null; layouts = Obj.magic HxRuntime.hx_null; hasInstanceTypeTests = false; methods = Obj.magic HxRuntime.hx_null; strings = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; runtimeOwners = Obj.magic HxRuntime.hx_null; constructorOwners = Obj.magic HxRuntime.hx_null; catchOwners = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_object ()) in (
       (Obj.magic self : t).catchOwners <- __assign_1;
@@ -1324,7 +1324,7 @@ type t = { __hx_type : Obj.t; mutable bound : Backend_cpp_CppManagedBoundMethods
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program2 classes2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedMethods"; bound = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; instanceOwners = Obj.magic HxRuntime.hx_null; allocations = Obj.magic HxRuntime.hx_null; sealedDispatch = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun program2 classes2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedMethods"; bound = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; instanceOwners = Obj.magic HxRuntime.hx_null; allocations = Obj.magic HxRuntime.hx_null; sealedDispatch = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
       (Obj.magic self : t).sealedDispatch <- __assign_1;
@@ -1354,7 +1354,7 @@ let create = fun program2 classes2 -> let self = ({ __hx_type = HxType.class_ "b
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedMethods"; bound = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; instanceOwners = Obj.magic HxRuntime.hx_null; allocations = Obj.magic HxRuntime.hx_null; sealedDispatch = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedMethods"; bound = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; instanceOwners = Obj.magic HxRuntime.hx_null; allocations = Obj.magic HxRuntime.hx_null; sealedDispatch = Obj.magic HxRuntime.hx_null } : t)
 
 let registerAllocation = fun self (hx_type : TyType.t) -> ignore (ignore (let identity = (TyType.getSemanticKey (Obj.magic hx_type) () : string) in let _this = Obj.magic ((Obj.magic self : t).allocations) in let tempMaybeTyType = Obj.magic (HxMap.get_string (Obj.magic _this) (identity : string)) in let previous = Obj.magic tempMaybeTyType in (
   ignore (if (let __map_eq_left_7 = (Obj.magic self : t).sealedDispatch in let __map_eq_right_8 = Obj.magic (HxRuntime.hx_null) in Obj.repr __map_eq_left_7 != Obj.repr __map_eq_right_8) && previous == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "managed allocation discovered after dispatch was sealed") ["Dynamic"] else ());
@@ -1833,7 +1833,7 @@ type t = { __hx_type : Obj.t; mutable program : Backend_cpp_CppTypedProgramProje
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program2 classes2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedStringMethods"; program = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; enabled = false; sealed = false; cases = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun program2 classes2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedStringMethods"; program = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; enabled = false; sealed = false; cases = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       (Obj.magic self : t).cases <- __assign_1;
@@ -1859,7 +1859,7 @@ let create = fun program2 classes2 -> let self = ({ __hx_type = HxType.class_ "b
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedStringMethods"; program = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; enabled = false; sealed = false; cases = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedStringMethods"; program = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; enabled = false; sealed = false; cases = Obj.magic HxRuntime.hx_null } : t)
 
 let enable = fun self () -> ignore (ignore ((
   ignore (if (Obj.magic self : t).sealed then HxType.hx_throw_typed_rtti (Obj.repr "managed string conversion discovered after reachability was sealed") ["Dynamic"] else ());

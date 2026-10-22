@@ -477,7 +477,7 @@ type t = { __hx_type : Obj.t; mutable owner : Backend_cpp_CppManagedRootedExpres
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun owner2 prefix2 application2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedExpressionLocals"; owner = Obj.magic HxRuntime.hx_null; prefix = HxString.hx_null_string; application = Obj.magic HxRuntime.hx_null; initializerLocals = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun owner2 prefix2 application2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedExpressionLocals"; owner = Obj.magic HxRuntime.hx_null; prefix = HxString.hx_null_string; application = Obj.magic HxRuntime.hx_null; initializerLocals = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if owner2 == Obj.magic (HxRuntime.hx_null) || prefix2 == HxString.hx_null_string || not (EReg.hx_match (Obj.magic (EReg.create ("^[A-Za-z_][A-Za-z0-9_]*$" : string) ("" : string))) (prefix2 : string)) then HxType.hx_throw_typed_rtti (Obj.repr "managed local access requires an owner and allocated prefix") ["Dynamic"] else ());
     ignore (let __assign_1 = Obj.magic owner2 in (
@@ -501,7 +501,7 @@ let create = fun owner2 prefix2 application2 -> let self = ({ __hx_type = HxType
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedExpressionLocals"; owner = Obj.magic HxRuntime.hx_null; prefix = HxString.hx_null_string; application = Obj.magic HxRuntime.hx_null; initializerLocals = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedExpressionLocals"; owner = Obj.magic HxRuntime.hx_null; prefix = HxString.hx_null_string; application = Obj.magic HxRuntime.hx_null; initializerLocals = Obj.magic HxRuntime.hx_null } : t)
 
 let fieldLocals = fun self () -> (
   ignore (if (Obj.magic self : t).initializerLocals == Obj.magic (HxRuntime.hx_null) then ignore (let _g = Obj.magic ((Obj.magic self : t).owner) in if (match _g with
@@ -866,7 +866,7 @@ let render = fun input indent -> (
     ) else HxType.hx_throw_typed_rtti (Obj.repr "managed guarded switch requires its exact lowered plan and case layout") ["Dynamic"]);
     let selected = Obj.magic (!tempStruct) in let root = let __string_part_14 = HxString.toStdString (Obj.obj (HxAnon.get input "prefix")) in let __string_part_15 = "input" in __string_part_14 ^ __string_part_15 in let observations = Obj.magic (Backend_cpp_CppManagedPatternObservations.create (let __anon_16 = HxAnon.create () in (
       ignore (HxAnon.set __anon_16 "plan" (Obj.repr (Obj.obj (HxAnon.get selected "plan"))));
-      ignore (HxAnon.set __anon_16 "type" (Obj.repr ((Obj.obj (HxAnon.get input "valueType") : _ -> _) (Obj.magic (let __structural_receiver_17 = selected in Obj.obj (HxAnon.get __structural_receiver_17 "value"))))));
+      ignore (HxAnon.set __anon_16 "type" (Obj.repr ((Obj.obj (HxAnon.get input "valueType") : _ -> _) (Obj.magic (let __structural_receiver_17 = selected in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_17 "value")))))));
       ignore (HxAnon.set __anon_16 "named" (Obj.repr (Obj.obj (HxAnon.get input "namedPattern") : _ -> _)));
       ignore (HxAnon.set __anon_16 "casts" (Obj.repr (Obj.obj (HxAnon.get input "casts"))));
       ignore (HxAnon.set __anon_16 "enums" (Obj.repr (Obj.obj (HxAnon.get input "enums"))));
@@ -929,7 +929,7 @@ let render = fun input indent -> (
         ignore (HxArray.push __represented_array_68 __represented_array_element_1_70);
         __represented_array_68
       )
-    )) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.obj (HxAnon.get input "renderValue") : _ -> _ -> _ -> _) (Obj.magic (let __structural_receiver_77 = selected in Obj.obj (HxAnon.get __structural_receiver_77 "value"))) (root : string) (HxString.toStdString indent ^ "  " : string)) in (
+    )) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.obj (HxAnon.get input "renderValue") : _ -> _ -> _ -> _) (Obj.magic (let __structural_receiver_77 = selected in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_77 "value")))) (root : string) (HxString.toStdString indent ^ "  " : string)) in (
       ignore (while !_g < HxArray.length _g1 do ignore (let line = (let __array_read_receiver_78 = _g1 in let __array_read_index_79 = !_g in HxArray.get (Obj.magic __array_read_receiver_78) __array_read_index_79 : string) in (
         ignore (let __old_80 = !_g in let __new_81 = HxInt.add __old_80 1 in (
           ignore (_g := __new_81);
@@ -1067,7 +1067,7 @@ type cppmanagedexpressionowner =
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedRootedExpression"; input = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedRootedExpression"; input = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null } : t)
 
 let get_access = fun self () -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Backend_cpp_CppManagedLocalAccess.t) in (
   ignore (let _g = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "backend.cpp.CppManagedExpressionOwner" (HxAnon.get ((Obj.magic self : t).input) "owner"))) in match _g with
@@ -2323,7 +2323,7 @@ let acceptsStoredTransfer = fun self (value : HxExpr.hxexpr) (target : TyType.t)
 
 let identifier = fun (value : string) -> (value != Obj.magic (HxRuntime.hx_null) && EReg.hx_match (Obj.magic (EReg.create ("^[A-Za-z_][A-Za-z0-9_]*$" : string) ("" : string))) (value : string) : bool)
 
-let create = fun input2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedRootedExpression"; input = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun input2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedRootedExpression"; input = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if input2 == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxEnum.unbox_or_obj "backend.cpp.CppManagedExpressionOwner" (HxAnon.get input2 "owner")) == Obj.magic (HxRuntime.hx_null) || (Obj.obj (HxAnon.get input2 "resolve") : _ -> _) == Obj.magic (HxRuntime.hx_null) || not (let __call_arg_0_1 = Obj.obj (HxAnon.get input2 "heap") in identifier __call_arg_0_1) || not (let __call_arg_0_2 = Obj.obj (HxAnon.get input2 "temporaryPrefix") in identifier __call_arg_0_2) || not (let __call_arg_0_3 = Obj.obj (HxAnon.get input2 "temporaryPrefix") in let __call_arg_1_4 = "hxhx_value_" in StringTools.startsWith __call_arg_0_3 __call_arg_1_4) then HxType.hx_throw_typed_rtti (Obj.repr "managed value emission requires an owner and allocated native symbols") ["Dynamic"] else ());
     ignore (if Obj.obj (HxAnon.get input2 "initializerApplication") != Obj.magic (HxRuntime.hx_null) then ignore ((

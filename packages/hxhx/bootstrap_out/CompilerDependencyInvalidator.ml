@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerDependencyInvalidator" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "CompilerDependencyInvalidator" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencyInvalidator" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerDependencyInvalidator" } : t)
 
 let mark = fun modulePath strength reason strengthByModule reasonByModule queue -> ignore (try ignore (let previousStrength = HxMap.get_string (Obj.magic strengthByModule) (modulePath : string) in (
   ignore (if previousStrength != HxRuntime.hx_null && (let __nullable_118 = previousStrength in let __nullable_119 = strength in if __nullable_118 == HxRuntime.hx_null then false else Obj.obj __nullable_118 >= __nullable_119) then Stdlib.raise (HxRuntime.Hx_return_void) else ());

@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage3RunSupport" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.Stage3RunSupport" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage3RunSupport" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.Stage3RunSupport" } : t)
 
 let canRunNode = fun () -> (try try let p = Obj.magic (Sys_io_Process.create ("node" : string) (Obj.magic (let __represented_array_5 = HxArray.create () in let __represented_array_element_0_6 = "--version" in (
   ignore (HxArray.push __represented_array_5 __represented_array_element_0_6);

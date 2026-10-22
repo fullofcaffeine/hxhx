@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable profile : string; mutable plannerEnabled :
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun profile2 plannerEnabled2 orderedSeeds2 autoMetalizedRegionKeys2 exclusionsByRegionKey2 -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.PortableMetalizationPlan"; profile = Obj.magic HxRuntime.hx_null; plannerEnabled = false; orderedSeeds = Obj.magic HxRuntime.hx_null; autoMetalizedRegionKeys = Obj.magic HxRuntime.hx_null; exclusionsByRegionKey = Obj.magic HxRuntime.hx_null; usedLoweringsByRegionKey = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun profile2 plannerEnabled2 orderedSeeds2 autoMetalizedRegionKeys2 exclusionsByRegionKey2 -> let self = ({ __hx_type = HxType.instance_marker "backend.ocaml.PortableMetalizationPlan"; profile = Obj.magic HxRuntime.hx_null; plannerEnabled = false; orderedSeeds = Obj.magic HxRuntime.hx_null; autoMetalizedRegionKeys = Obj.magic HxRuntime.hx_null; exclusionsByRegionKey = Obj.magic HxRuntime.hx_null; usedLoweringsByRegionKey = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (profile2 : string) in (
       (Obj.magic self : t).profile <- __assign_1;
@@ -63,7 +63,7 @@ let create = fun profile2 plannerEnabled2 orderedSeeds2 autoMetalizedRegionKeys2
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.PortableMetalizationPlan"; profile = Obj.magic HxRuntime.hx_null; plannerEnabled = false; orderedSeeds = Obj.magic HxRuntime.hx_null; autoMetalizedRegionKeys = Obj.magic HxRuntime.hx_null; exclusionsByRegionKey = Obj.magic HxRuntime.hx_null; usedLoweringsByRegionKey = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.ocaml.PortableMetalizationPlan"; profile = Obj.magic HxRuntime.hx_null; plannerEnabled = false; orderedSeeds = Obj.magic HxRuntime.hx_null; autoMetalizedRegionKeys = Obj.magic HxRuntime.hx_null; exclusionsByRegionKey = Obj.magic HxRuntime.hx_null; usedLoweringsByRegionKey = Obj.magic HxRuntime.hx_null } : t)
 
 let isAutoMetalized = fun self (regionKey : string) -> let tempShortCircuit = ref (false : bool) in (
   ignore (if (Obj.magic self : t).plannerEnabled && regionKey != HxString.hx_null_string then let _this = Obj.magic ((Obj.magic self : t).autoMetalizedRegionKeys) in let __assign_19 = HxMap.exists_string (Obj.magic _this) (regionKey : string) in (

@@ -19,7 +19,7 @@ type macrohostreadresult =
 
 let __reflaxe_ocaml__ = ()
 
-let macroclient___empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro._MacroHostClient.MacroClient"; proc = Obj.magic HxRuntime.hx_null; hostIdleTimeoutSecs = 0; hostTotalTimeoutSecs = 0; nextId = 0; timeoutTriggered = false } : macroclient_t)
+let macroclient___empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.macro._MacroHostClient.MacroClient"; proc = Obj.magic HxRuntime.hx_null; hostIdleTimeoutSecs = 0; hostTotalTimeoutSecs = 0; nextId = 0; timeoutTriggered = false } : macroclient_t)
 
 let macroclient_failTimeout = fun self (reason : string) (hx_method : string) (phase : string) (totalElapsed : float) (idleElapsed : float) -> ignore (ignore (let _gthis = Obj.magic self in (
   ignore (let __place_receiver_82 = self in let __place_rhs_83 = true in (
@@ -287,7 +287,7 @@ let macroclient_parseTimeoutSeconds = fun (name : string) (defaultValue : int) -
 )) with
   | HxRuntime.Hx_return __ret_1211 -> (Obj.obj __ret_1211 : int) : int)
 
-let macroclient_create = fun proc2 -> let self = ({ __hx_type = HxType.class_ "hxhx.macro._MacroHostClient.MacroClient"; proc = Obj.magic HxRuntime.hx_null; hostIdleTimeoutSecs = 0; hostTotalTimeoutSecs = 0; nextId = 0; timeoutTriggered = false } : macroclient_t) in (
+let macroclient_create = fun proc2 -> let self = ({ __hx_type = HxType.instance_marker "hxhx.macro._MacroHostClient.MacroClient"; proc = Obj.magic HxRuntime.hx_null; hostIdleTimeoutSecs = 0; hostTotalTimeoutSecs = 0; nextId = 0; timeoutTriggered = false } : macroclient_t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = false in (
       (__place_receiver_1 : macroclient_t).timeoutTriggered <- __place_rhs_2;
@@ -1469,7 +1469,7 @@ let macroclient_close = fun self () -> ignore (ignore (try ignore ((
 
 let __reflaxe_ocaml__ = ()
 
-let macrohostsession_create = fun client2 -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.MacroHostSession"; client = Obj.magic HxRuntime.hx_null } : macrohostsession_t) in (
+let macrohostsession_create = fun client2 -> let self = ({ __hx_type = HxType.instance_marker "hxhx.macro.MacroHostSession"; client = Obj.magic HxRuntime.hx_null } : macrohostsession_t) in (
   ignore (ignore (let __assign_1 = Obj.magic client2 in (
     (Obj.magic self : macrohostsession_t).client <- __assign_1;
     __assign_1
@@ -1477,7 +1477,7 @@ let macrohostsession_create = fun client2 -> let self = ({ __hx_type = HxType.cl
   self
 )
 
-let macrohostsession___empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.MacroHostSession"; client = Obj.magic HxRuntime.hx_null } : macrohostsession_t)
+let macrohostsession___empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.macro.MacroHostSession"; client = Obj.magic HxRuntime.hx_null } : macrohostsession_t)
 
 let macrohostsession_run = fun self (expr : string) -> macroclient_call (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ("macro.run" : string) (let __call_arg_0_2 = "e" in let __call_arg_1_3 = expr in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_2 __call_arg_1_3 : string)
 
@@ -1546,12 +1546,12 @@ let macrohostsession_close = fun self () -> ignore (ignore (macroclient_close (O
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.MacroHostClient" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.macro.MacroHostClient" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.MacroHostClient" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.macro.MacroHostClient" } : t)
 
 let decodeNativeExprListPayload = fun payload -> let tempString = ref (HxString.hx_null_string : string) in (
   ignore (if payload == HxString.hx_null_string then let __assign_57 = ("" : string) in (

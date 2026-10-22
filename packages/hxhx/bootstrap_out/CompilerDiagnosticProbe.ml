@@ -40,12 +40,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerDiagnosticProbe" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "CompilerDiagnosticProbe" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDiagnosticProbe" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerDiagnosticProbe" } : t)
 
 let rec diagnosticScrutineeExpr = fun expression localInitializer -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
   ignore (match expression with
@@ -1010,12 +1010,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerTypedTreeRevision" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "CompilerTypedTreeRevision" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerTypedTreeRevision" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerTypedTreeRevision" } : t)
 
 let addLocalBindings = fun out bindings -> ignore (let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (if bindings == Obj.magic (HxRuntime.hx_null) then let __assign_187 = Obj.magic ("-1" : string) in (
@@ -1961,7 +1961,7 @@ type t = { __hx_type : Obj.t; mutable name : string; mutable hasStaticMain : boo
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun name2 hasStaticMain2 functions2 fields2 extendsPath2 metadata2 isInterface2 implementsPaths2 visibility2 interfaceExtendsPaths2 isExtern2 enumDeclaration2 typeParameters2 sourceRange2 -> let self = ({ __hx_type = HxType.class_ "HxClassDecl"; name = HxString.hx_null_string; hasStaticMain = false; functions = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; extendsPath = HxString.hx_null_string; metadata = Obj.magic HxRuntime.hx_null; isInterface = false; isExtern = false; implementsPaths = Obj.magic HxRuntime.hx_null; interfaceExtendsPaths = Obj.magic HxRuntime.hx_null; visibility = Obj.magic HxRuntime.hx_null; enumDeclaration = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; sourceRange = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun name2 hasStaticMain2 functions2 fields2 extendsPath2 metadata2 isInterface2 implementsPaths2 visibility2 interfaceExtendsPaths2 isExtern2 enumDeclaration2 typeParameters2 sourceRange2 -> let self = ({ __hx_type = HxType.instance_marker "HxClassDecl"; name = HxString.hx_null_string; hasStaticMain = false; functions = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; extendsPath = HxString.hx_null_string; metadata = Obj.magic HxRuntime.hx_null; isInterface = false; isExtern = false; implementsPaths = Obj.magic HxRuntime.hx_null; interfaceExtendsPaths = Obj.magic HxRuntime.hx_null; visibility = Obj.magic HxRuntime.hx_null; enumDeclaration = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; sourceRange = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (let isExtern2 = if Obj.repr isExtern2 == HxRuntime.hx_null then false else isExtern2 in ignore ((
     ignore (let __assign_1 = (name2 : string) in (
       (Obj.magic self : t).name <- __assign_1;
@@ -2120,7 +2120,7 @@ let create = fun name2 hasStaticMain2 functions2 fields2 extendsPath2 metadata2 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxClassDecl"; name = HxString.hx_null_string; hasStaticMain = false; functions = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; extendsPath = HxString.hx_null_string; metadata = Obj.magic HxRuntime.hx_null; isInterface = false; isExtern = false; implementsPaths = Obj.magic HxRuntime.hx_null; interfaceExtendsPaths = Obj.magic HxRuntime.hx_null; visibility = Obj.magic HxRuntime.hx_null; enumDeclaration = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; sourceRange = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxClassDecl"; name = HxString.hx_null_string; hasStaticMain = false; functions = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; extendsPath = HxString.hx_null_string; metadata = Obj.magic HxRuntime.hx_null; isInterface = false; isExtern = false; implementsPaths = Obj.magic HxRuntime.hx_null; interfaceExtendsPaths = Obj.magic HxRuntime.hx_null; visibility = Obj.magic HxRuntime.hx_null; enumDeclaration = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; sourceRange = Obj.magic HxRuntime.hx_null } : t)
 
 let getName = fun c -> (Obj.magic c : t).name
 
@@ -2786,7 +2786,7 @@ type t = { __hx_type : Obj.t; mutable name : string; mutable typeHint : string; 
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun name2 typeHint2 defaultValue2 isOptional2 isRest2 defaultValueText2 metadata2 -> let self = ({ __hx_type = HxType.class_ "HxFunctionArg"; name = HxString.hx_null_string; typeHint = HxString.hx_null_string; defaultValue = Obj.magic HxRuntime.hx_null; isOptional = false; isRest = false; defaultValueText = HxString.hx_null_string; metadata = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun name2 typeHint2 defaultValue2 isOptional2 isRest2 defaultValueText2 metadata2 -> let self = ({ __hx_type = HxType.instance_marker "HxFunctionArg"; name = HxString.hx_null_string; typeHint = HxString.hx_null_string; defaultValue = Obj.magic HxRuntime.hx_null; isOptional = false; isRest = false; defaultValueText = HxString.hx_null_string; metadata = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (let isOptional2 = if Obj.repr isOptional2 == HxRuntime.hx_null then false else isOptional2 in let isRest2 = if Obj.repr isRest2 == HxRuntime.hx_null then false else isRest2 in ignore ((
     ignore (let __assign_1 = (name2 : string) in (
       (Obj.magic self : t).name <- __assign_1;
@@ -2838,7 +2838,7 @@ let create = fun name2 typeHint2 defaultValue2 isOptional2 isRest2 defaultValueT
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFunctionArg"; name = HxString.hx_null_string; typeHint = HxString.hx_null_string; defaultValue = Obj.magic HxRuntime.hx_null; isOptional = false; isRest = false; defaultValueText = HxString.hx_null_string; metadata = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxFunctionArg"; name = HxString.hx_null_string; typeHint = HxString.hx_null_string; defaultValue = Obj.magic HxRuntime.hx_null; isOptional = false; isRest = false; defaultValueText = HxString.hx_null_string; metadata = Obj.magic HxRuntime.hx_null } : t)
 
 let getName = fun a -> (Obj.magic a : t).name
 
@@ -2880,7 +2880,7 @@ type t = { __hx_type : Obj.t; mutable name : string; mutable visibility : HxVisi
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFunctionDecl"; name = HxString.hx_null_string; visibility = Obj.magic HxRuntime.hx_null; isStatic = false; args = Obj.magic HxRuntime.hx_null; returnTypeHint = HxString.hx_null_string; body = Obj.magic HxRuntime.hx_null; returnStringLiteral = HxString.hx_null_string; metadata = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null; endPos = Obj.magic HxRuntime.hx_null; bodyText = HxString.hx_null_string; hasBody = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxFunctionDecl"; name = HxString.hx_null_string; visibility = Obj.magic HxRuntime.hx_null; isStatic = false; args = Obj.magic HxRuntime.hx_null; returnTypeHint = HxString.hx_null_string; body = Obj.magic HxRuntime.hx_null; returnStringLiteral = HxString.hx_null_string; metadata = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null; endPos = Obj.magic HxRuntime.hx_null; bodyText = HxString.hx_null_string; hasBody = false } : t)
 
 let getFirstReturnExpr = fun self () -> (
   ignore self;
@@ -3000,7 +3000,7 @@ let normalizeReturnTypeHint = fun (typeHint : string) -> (let tempString = ref (
   let text = let __call_arg_0_51 = !tempString in StringTools.trim __call_arg_0_51 in EReg.replace (Obj.magic (EReg.create ("[\r\n\t ]+untyped$" : string) ("" : string))) (text : string) ("" : string)
 ) : string)
 
-let create = fun name2 visibility2 isStatic2 args2 returnTypeHint2 body2 returnStringLiteral2 metadata2 pos2 endPos2 bodyText2 hasBody2 -> let self = ({ __hx_type = HxType.class_ "HxFunctionDecl"; name = HxString.hx_null_string; visibility = Obj.magic HxRuntime.hx_null; isStatic = false; args = Obj.magic HxRuntime.hx_null; returnTypeHint = HxString.hx_null_string; body = Obj.magic HxRuntime.hx_null; returnStringLiteral = HxString.hx_null_string; metadata = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null; endPos = Obj.magic HxRuntime.hx_null; bodyText = HxString.hx_null_string; hasBody = false } : t) in (
+let create = fun name2 visibility2 isStatic2 args2 returnTypeHint2 body2 returnStringLiteral2 metadata2 pos2 endPos2 bodyText2 hasBody2 -> let self = ({ __hx_type = HxType.instance_marker "HxFunctionDecl"; name = HxString.hx_null_string; visibility = Obj.magic HxRuntime.hx_null; isStatic = false; args = Obj.magic HxRuntime.hx_null; returnTypeHint = HxString.hx_null_string; body = Obj.magic HxRuntime.hx_null; returnStringLiteral = HxString.hx_null_string; metadata = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null; endPos = Obj.magic HxRuntime.hx_null; bodyText = HxString.hx_null_string; hasBody = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
       (Obj.magic self : t).name <- __assign_1;
@@ -3144,7 +3144,7 @@ type t = { __hx_type : Obj.t; mutable parser : HxParser.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun parser2 -> let self = ({ __hx_type = HxType.class_ "HxFunctionSyntaxParser"; parser = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun parser2 -> let self = ({ __hx_type = HxType.instance_marker "HxFunctionSyntaxParser"; parser = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let __assign_1 = Obj.magic parser2 in (
     (Obj.magic self : t).parser <- __assign_1;
     __assign_1
@@ -3152,7 +3152,7 @@ let create = fun parser2 -> let self = ({ __hx_type = HxType.class_ "HxFunctionS
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFunctionSyntaxParser"; parser = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxFunctionSyntaxParser"; parser = Obj.magic HxRuntime.hx_null } : t)
 
 let readBlock = fun self () -> let _gthis = Obj.magic self in (
   ignore (HxParser.expect (Obj.magic ((Obj.magic self : t).parser)) (Obj.magic (HxTokenKind.TLBrace)) ("'{'" : string));
@@ -5121,12 +5121,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "HxFunctionTypeParamMetadata" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "HxFunctionTypeParamMetadata" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFunctionTypeParamMetadata" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxFunctionTypeParamMetadata" } : t)
 
 let typeParamNames = fun metadata -> (try let out = Obj.magic (HxArray.create ()) in (
   ignore (if metadata == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr out)) else ());
@@ -5587,7 +5587,7 @@ type t = { __hx_type : Obj.t; mutable packagePath : string; mutable directives :
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun packagePath2 directives2 mainClass2 classes2 headerOnly2 hasToplevelMain2 typedefs2 -> let self = ({ __hx_type = HxType.class_ "HxModuleDecl"; packagePath = HxString.hx_null_string; directives = Obj.magic HxRuntime.hx_null; typedefs = Obj.magic HxRuntime.hx_null; mainClass = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; headerOnly = false; hasToplevelMain = false } : t) in (
+let create = fun packagePath2 directives2 mainClass2 classes2 headerOnly2 hasToplevelMain2 typedefs2 -> let self = ({ __hx_type = HxType.instance_marker "HxModuleDecl"; packagePath = HxString.hx_null_string; directives = Obj.magic HxRuntime.hx_null; typedefs = Obj.magic HxRuntime.hx_null; mainClass = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; headerOnly = false; hasToplevelMain = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (packagePath2 : string) in (
       (Obj.magic self : t).packagePath <- __assign_1;
@@ -5648,7 +5648,7 @@ let create = fun packagePath2 directives2 mainClass2 classes2 headerOnly2 hasTop
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxModuleDecl"; packagePath = HxString.hx_null_string; directives = Obj.magic HxRuntime.hx_null; typedefs = Obj.magic HxRuntime.hx_null; mainClass = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; headerOnly = false; hasToplevelMain = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxModuleDecl"; packagePath = HxString.hx_null_string; directives = Obj.magic HxRuntime.hx_null; typedefs = Obj.magic HxRuntime.hx_null; mainClass = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; headerOnly = false; hasToplevelMain = false } : t)
 
 let getPackagePath = fun m -> (Obj.magic m : t).packagePath
 
@@ -5931,7 +5931,7 @@ type t = { __hx_type : Obj.t; mutable source : string; mutable lex : HxLexer.t; 
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun source2 -> let self = ({ __hx_type = HxType.class_ "HxParser"; source = HxString.hx_null_string; lex = Obj.magic HxRuntime.hx_null; cur = Obj.magic HxRuntime.hx_null; peeked1 = Obj.magic HxRuntime.hx_null; peeked2 = Obj.magic HxRuntime.hx_null; peeked3 = Obj.magic HxRuntime.hx_null; capturedReturnStringLiteral = HxString.hx_null_string; inMacroQuote = false } : t) in (
+let create = fun source2 -> let self = ({ __hx_type = HxType.instance_marker "HxParser"; source = HxString.hx_null_string; lex = Obj.magic HxRuntime.hx_null; cur = Obj.magic HxRuntime.hx_null; peeked1 = Obj.magic HxRuntime.hx_null; peeked2 = Obj.magic HxRuntime.hx_null; peeked3 = Obj.magic HxRuntime.hx_null; capturedReturnStringLiteral = HxString.hx_null_string; inMacroQuote = false } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = false in (
       (__place_receiver_1 : t).inMacroQuote <- __place_rhs_2;
@@ -5978,7 +5978,7 @@ let create = fun source2 -> let self = ({ __hx_type = HxType.class_ "HxParser"; 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxParser"; source = HxString.hx_null_string; lex = Obj.magic HxRuntime.hx_null; cur = Obj.magic HxRuntime.hx_null; peeked1 = Obj.magic HxRuntime.hx_null; peeked2 = Obj.magic HxRuntime.hx_null; peeked3 = Obj.magic HxRuntime.hx_null; capturedReturnStringLiteral = HxString.hx_null_string; inMacroQuote = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxParser"; source = HxString.hx_null_string; lex = Obj.magic HxRuntime.hx_null; cur = Obj.magic HxRuntime.hx_null; peeked1 = Obj.magic HxRuntime.hx_null; peeked2 = Obj.magic HxRuntime.hx_null; peeked3 = Obj.magic HxRuntime.hx_null; capturedReturnStringLiteral = HxString.hx_null_string; inMacroQuote = false } : t)
 
 let posIndex = fun self (pos : HxPos.t) -> (
   ignore self;
@@ -43347,7 +43347,7 @@ type t = { __hx_type : Obj.t; mutable parser : HxParser.t; mutable hx_end : HxPo
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun parser2 -> let self = ({ __hx_type = HxType.class_ "HxTypedefParser"; parser = Obj.magic HxRuntime.hx_null; hx_end = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun parser2 -> let self = ({ __hx_type = HxType.instance_marker "HxTypedefParser"; parser = Obj.magic HxRuntime.hx_null; hx_end = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic parser2 in (
       (Obj.magic self : t).parser <- __assign_1;
@@ -43361,7 +43361,7 @@ let create = fun parser2 -> let self = ({ __hx_type = HxType.class_ "HxTypedefPa
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxTypedefParser"; parser = Obj.magic HxRuntime.hx_null; hx_end = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxTypedefParser"; parser = Obj.magic HxRuntime.hx_null; hx_end = Obj.magic HxRuntime.hx_null } : t)
 
 let advance = fun self () -> ignore (ignore (let start = Obj.magic (HxToken.getPos (Obj.magic ((Obj.magic ((Obj.magic self : t).parser) : HxParser.t).cur)) ()) in let tempNumber = ref (0 : int) in (
   ignore (let _g = Obj.magic ((Obj.magic ((Obj.magic ((Obj.magic self : t).parser) : HxParser.t).cur) : HxToken.t).kind) in match _g with
@@ -44454,7 +44454,7 @@ let ensureTypeAvailable__impl = fun (self : t) (typePath : string) (packagePath 
     | HxRuntime.Hx_return __ret_5 -> (Obj.obj __ret_5 : TyNominalInfo.t) : TyNominalInfo.t)
 )
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "LazyTypeLoader"; hasDefine = (fun o a0 -> Obj.magic (hasDefine__impl (Obj.magic o) (Obj.magic a0))); ensureDeclarationAvailable = (fun o a0 a1 -> Obj.magic (ensureDeclarationAvailable__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); ensureTypeAvailable = (fun o a0 a1 a2 a3 -> Obj.magic (ensureTypeAvailable__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2) (Obj.magic a3))) } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "LazyTypeLoader"; hasDefine = (fun o a0 -> Obj.magic (hasDefine__impl (Obj.magic o) (Obj.magic a0))); ensureDeclarationAvailable = (fun o a0 a1 -> Obj.magic (ensureDeclarationAvailable__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); ensureTypeAvailable = (fun o a0 a1 a2 a3 -> Obj.magic (ensureTypeAvailable__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2) (Obj.magic a3))) } : t) in (
   ignore ((
     ignore self;
     ignore ()
@@ -44462,7 +44462,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "LazyTypeLoader";
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "LazyTypeLoader"; hasDefine = (fun o a0 -> Obj.magic (hasDefine__impl (Obj.magic o) (Obj.magic a0))); ensureDeclarationAvailable = (fun o a0 a1 -> Obj.magic (ensureDeclarationAvailable__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); ensureTypeAvailable = (fun o a0 a1 a2 a3 -> Obj.magic (ensureTypeAvailable__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2) (Obj.magic a3))) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "LazyTypeLoader"; hasDefine = (fun o a0 -> Obj.magic (hasDefine__impl (Obj.magic o) (Obj.magic a0))); ensureDeclarationAvailable = (fun o a0 a1 -> Obj.magic (ensureDeclarationAvailable__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); ensureTypeAvailable = (fun o a0 a1 a2 a3 -> Obj.magic (ensureTypeAvailable__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2) (Obj.magic a3))) } : t)
 end
 and ParsedModule : sig
 type t = { __hx_type : Obj.t; mutable source : string; mutable filePath : string; mutable decl : HxModuleDecl.t }
@@ -44479,7 +44479,7 @@ type t = { __hx_type : Obj.t; mutable source : string; mutable filePath : string
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun source2 decl2 filePath2 -> let self = ({ __hx_type = HxType.class_ "ParsedModule"; source = HxString.hx_null_string; filePath = HxString.hx_null_string; decl = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun source2 decl2 filePath2 -> let self = ({ __hx_type = HxType.instance_marker "ParsedModule"; source = HxString.hx_null_string; filePath = HxString.hx_null_string; decl = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (source2 : string) in (
       (Obj.magic self : t).source <- __assign_1;
@@ -44497,7 +44497,7 @@ let create = fun source2 decl2 filePath2 -> let self = ({ __hx_type = HxType.cla
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "ParsedModule"; source = HxString.hx_null_string; filePath = HxString.hx_null_string; decl = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "ParsedModule"; source = HxString.hx_null_string; filePath = HxString.hx_null_string; decl = Obj.magic HxRuntime.hx_null } : t)
 
 let getSource = fun self () -> (Obj.magic self : t).source
 
@@ -44523,7 +44523,7 @@ type t = { __hx_type : Obj.t; mutable modulePath : string; mutable filePath : st
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun modulePath2 filePath2 parsed2 sourceOrigin2 conditionalCompilation2 generatedDeclarations2 -> let self = ({ __hx_type = HxType.class_ "ResolvedModule"; modulePath = HxString.hx_null_string; filePath = HxString.hx_null_string; parsed = Obj.magic HxRuntime.hx_null; sourceOrigin = Obj.magic HxRuntime.hx_null; conditionalCompilation = Obj.magic HxRuntime.hx_null; generatedDeclarations = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun modulePath2 filePath2 parsed2 sourceOrigin2 conditionalCompilation2 generatedDeclarations2 -> let self = ({ __hx_type = HxType.instance_marker "ResolvedModule"; modulePath = HxString.hx_null_string; filePath = HxString.hx_null_string; parsed = Obj.magic HxRuntime.hx_null; sourceOrigin = Obj.magic HxRuntime.hx_null; conditionalCompilation = Obj.magic HxRuntime.hx_null; generatedDeclarations = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (modulePath2 : string) in (
       (Obj.magic self : t).modulePath <- __assign_1;
@@ -44580,7 +44580,7 @@ let create = fun modulePath2 filePath2 parsed2 sourceOrigin2 conditionalCompilat
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "ResolvedModule"; modulePath = HxString.hx_null_string; filePath = HxString.hx_null_string; parsed = Obj.magic HxRuntime.hx_null; sourceOrigin = Obj.magic HxRuntime.hx_null; conditionalCompilation = Obj.magic HxRuntime.hx_null; generatedDeclarations = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "ResolvedModule"; modulePath = HxString.hx_null_string; filePath = HxString.hx_null_string; parsed = Obj.magic HxRuntime.hx_null; sourceOrigin = Obj.magic HxRuntime.hx_null; conditionalCompilation = Obj.magic HxRuntime.hx_null; generatedDeclarations = Obj.magic HxRuntime.hx_null } : t)
 
 let getParsed = fun m -> (Obj.magic m : t).parsed
 
@@ -44612,7 +44612,7 @@ type t = { __hx_type : Obj.t; mutable op : string; mutable declaration : TyDecla
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun op2 declaration2 leftType2 rightType2 resultType2 commutative2 -> let self = ({ __hx_type = HxType.class_ "TyAbstractBinaryOperatorInfo"; op = HxString.hx_null_string; declaration = Obj.magic HxRuntime.hx_null; leftType = Obj.magic HxRuntime.hx_null; rightType = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; commutative = false } : t) in (
+let create = fun op2 declaration2 leftType2 rightType2 resultType2 commutative2 -> let self = ({ __hx_type = HxType.instance_marker "TyAbstractBinaryOperatorInfo"; op = HxString.hx_null_string; declaration = Obj.magic HxRuntime.hx_null; leftType = Obj.magic HxRuntime.hx_null; rightType = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; commutative = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (op2 : string) in (
       (Obj.magic self : t).op <- __assign_1;
@@ -44642,7 +44642,7 @@ let create = fun op2 declaration2 leftType2 rightType2 resultType2 commutative2 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyAbstractBinaryOperatorInfo"; op = HxString.hx_null_string; declaration = Obj.magic HxRuntime.hx_null; leftType = Obj.magic HxRuntime.hx_null; rightType = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; commutative = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyAbstractBinaryOperatorInfo"; op = HxString.hx_null_string; declaration = Obj.magic HxRuntime.hx_null; leftType = Obj.magic HxRuntime.hx_null; rightType = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; commutative = false } : t)
 
 let getOperator = fun self () -> (Obj.magic self : t).op
 
@@ -44852,7 +44852,7 @@ let getUnaryOperators__impl = fun (self : t) (op : HxUnaryOperator.hxunaryoperat
   !tempResult
 )
 
-let create = fun identity shortName modulePath fields properties staticMethods instanceMethods staticMethodLists instanceMethodLists declarations underlyingType2 typeParameters2 implicitFromTypes2 implicitToTypes2 visibility policies -> let self = ({ __hx_type = HxType.class_ "TyAbstractInfo"; identity = Obj.magic HxRuntime.hx_null; shortName = HxString.hx_null_string; modulePath = HxString.hx_null_string; fields = Obj.magic HxRuntime.hx_null; properties = Obj.magic HxRuntime.hx_null; staticMethods = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null; staticMethodLists = Obj.magic HxRuntime.hx_null; instanceMethodLists = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; visibility = Obj.magic HxRuntime.hx_null; isEnum = false; enumDeclaration = Obj.magic HxRuntime.hx_null; getIdentity = (fun o () -> Obj.magic (TyNominalInfo.getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (TyNominalInfo.getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (TyNominalInfo.getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (TyNominalInfo.getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (TyNominalInfo.getDeclarations__impl (Obj.magic o) (Obj.magic ()))); getVisibility = (fun o () -> Obj.magic (TyNominalInfo.getVisibility__impl (Obj.magic o) (Obj.magic ()))); getIsEnum = (fun o () -> Obj.magic (TyNominalInfo.getIsEnum__impl (Obj.magic o) (Obj.magic ()))); getEnumDeclaration = (fun o () -> Obj.magic (TyNominalInfo.getEnumDeclaration__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (TyNominalInfo.hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (TyNominalInfo.fieldType__impl (Obj.magic o) (Obj.magic a0))); fieldInfo = (fun o a0 -> Obj.magic (TyNominalInfo.fieldInfo__impl (Obj.magic o) (Obj.magic a0))); getFieldInfos = (fun o () -> Obj.magic (TyNominalInfo.getFieldInfos__impl (Obj.magic o) (Obj.magic ()))); propertyInfo = (fun o a0 -> Obj.magic (TyNominalInfo.propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); underlyingType = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; implicitFromTypes = Obj.magic HxRuntime.hx_null; implicitToTypes = Obj.magic HxRuntime.hx_null; unaryOperators = Obj.magic HxRuntime.hx_null; binaryOperators = Obj.magic HxRuntime.hx_null; enumDomain = Obj.magic HxRuntime.hx_null; multiTypePolicy = Obj.magic HxRuntime.hx_null; getMultiTypePolicy = (fun o () -> Obj.magic (getMultiTypePolicy__impl (Obj.magic o) (Obj.magic ()))); getEnumDomain = (fun o () -> Obj.magic (getEnumDomain__impl (Obj.magic o) (Obj.magic ()))); getUnderlyingType = (fun o () -> Obj.magic (getUnderlyingType__impl (Obj.magic o) (Obj.magic ()))); getTypeParameters = (fun o () -> Obj.magic (getTypeParameters__impl (Obj.magic o) (Obj.magic ()))); getTypeParameterIds = (fun o () -> Obj.magic (getTypeParameterIds__impl (Obj.magic o) (Obj.magic ()))); getImplicitFromTypes = (fun o () -> Obj.magic (getImplicitFromTypes__impl (Obj.magic o) (Obj.magic ()))); getImplicitToTypes = (fun o () -> Obj.magic (getImplicitToTypes__impl (Obj.magic o) (Obj.magic ()))); addUnaryOperator = (fun o a0 -> Obj.magic (addUnaryOperator__impl (Obj.magic o) (Obj.magic a0))); getUnaryOperators = (fun o a0 a1 -> Obj.magic (getUnaryOperators__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); getAllUnaryOperators = (fun o () -> Obj.magic (getAllUnaryOperators__impl (Obj.magic o) (Obj.magic ()))); addBinaryOperator = (fun o a0 -> Obj.magic (addBinaryOperator__impl (Obj.magic o) (Obj.magic a0))); getBinaryOperators = (fun o a0 -> Obj.magic (getBinaryOperators__impl (Obj.magic o) (Obj.magic a0))); getAllBinaryOperators = (fun o () -> Obj.magic (getAllBinaryOperators__impl (Obj.magic o) (Obj.magic ()))) } : t) in (
+let create = fun identity shortName modulePath fields properties staticMethods instanceMethods staticMethodLists instanceMethodLists declarations underlyingType2 typeParameters2 implicitFromTypes2 implicitToTypes2 visibility policies -> let self = ({ __hx_type = HxType.instance_marker "TyAbstractInfo"; identity = Obj.magic HxRuntime.hx_null; shortName = HxString.hx_null_string; modulePath = HxString.hx_null_string; fields = Obj.magic HxRuntime.hx_null; properties = Obj.magic HxRuntime.hx_null; staticMethods = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null; staticMethodLists = Obj.magic HxRuntime.hx_null; instanceMethodLists = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; visibility = Obj.magic HxRuntime.hx_null; isEnum = false; enumDeclaration = Obj.magic HxRuntime.hx_null; getIdentity = (fun o () -> Obj.magic (TyNominalInfo.getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (TyNominalInfo.getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (TyNominalInfo.getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (TyNominalInfo.getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (TyNominalInfo.getDeclarations__impl (Obj.magic o) (Obj.magic ()))); getVisibility = (fun o () -> Obj.magic (TyNominalInfo.getVisibility__impl (Obj.magic o) (Obj.magic ()))); getIsEnum = (fun o () -> Obj.magic (TyNominalInfo.getIsEnum__impl (Obj.magic o) (Obj.magic ()))); getEnumDeclaration = (fun o () -> Obj.magic (TyNominalInfo.getEnumDeclaration__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (TyNominalInfo.hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (TyNominalInfo.fieldType__impl (Obj.magic o) (Obj.magic a0))); fieldInfo = (fun o a0 -> Obj.magic (TyNominalInfo.fieldInfo__impl (Obj.magic o) (Obj.magic a0))); getFieldInfos = (fun o () -> Obj.magic (TyNominalInfo.getFieldInfos__impl (Obj.magic o) (Obj.magic ()))); propertyInfo = (fun o a0 -> Obj.magic (TyNominalInfo.propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); underlyingType = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; implicitFromTypes = Obj.magic HxRuntime.hx_null; implicitToTypes = Obj.magic HxRuntime.hx_null; unaryOperators = Obj.magic HxRuntime.hx_null; binaryOperators = Obj.magic HxRuntime.hx_null; enumDomain = Obj.magic HxRuntime.hx_null; multiTypePolicy = Obj.magic HxRuntime.hx_null; getMultiTypePolicy = (fun o () -> Obj.magic (getMultiTypePolicy__impl (Obj.magic o) (Obj.magic ()))); getEnumDomain = (fun o () -> Obj.magic (getEnumDomain__impl (Obj.magic o) (Obj.magic ()))); getUnderlyingType = (fun o () -> Obj.magic (getUnderlyingType__impl (Obj.magic o) (Obj.magic ()))); getTypeParameters = (fun o () -> Obj.magic (getTypeParameters__impl (Obj.magic o) (Obj.magic ()))); getTypeParameterIds = (fun o () -> Obj.magic (getTypeParameterIds__impl (Obj.magic o) (Obj.magic ()))); getImplicitFromTypes = (fun o () -> Obj.magic (getImplicitFromTypes__impl (Obj.magic o) (Obj.magic ()))); getImplicitToTypes = (fun o () -> Obj.magic (getImplicitToTypes__impl (Obj.magic o) (Obj.magic ()))); addUnaryOperator = (fun o a0 -> Obj.magic (addUnaryOperator__impl (Obj.magic o) (Obj.magic a0))); getUnaryOperators = (fun o a0 a1 -> Obj.magic (getUnaryOperators__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); getAllUnaryOperators = (fun o () -> Obj.magic (getAllUnaryOperators__impl (Obj.magic o) (Obj.magic ()))); addBinaryOperator = (fun o a0 -> Obj.magic (addBinaryOperator__impl (Obj.magic o) (Obj.magic a0))); getBinaryOperators = (fun o a0 -> Obj.magic (getBinaryOperators__impl (Obj.magic o) (Obj.magic a0))); getAllBinaryOperators = (fun o () -> Obj.magic (getAllBinaryOperators__impl (Obj.magic o) (Obj.magic ()))) } : t) in (
   ignore (ignore ((
     ignore (TyNominalInfo.__ctor (Obj.magic self) identity shortName modulePath fields properties staticMethods instanceMethods staticMethodLists instanceMethodLists declarations visibility (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)));
     ignore (let __assign_1 = Obj.magic underlyingType2 in (
@@ -44918,7 +44918,7 @@ let create = fun identity shortName modulePath fields properties staticMethods i
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyAbstractInfo"; identity = Obj.magic HxRuntime.hx_null; shortName = HxString.hx_null_string; modulePath = HxString.hx_null_string; fields = Obj.magic HxRuntime.hx_null; properties = Obj.magic HxRuntime.hx_null; staticMethods = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null; staticMethodLists = Obj.magic HxRuntime.hx_null; instanceMethodLists = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; visibility = Obj.magic HxRuntime.hx_null; isEnum = false; enumDeclaration = Obj.magic HxRuntime.hx_null; getIdentity = (fun o () -> Obj.magic (TyNominalInfo.getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (TyNominalInfo.getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (TyNominalInfo.getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (TyNominalInfo.getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (TyNominalInfo.getDeclarations__impl (Obj.magic o) (Obj.magic ()))); getVisibility = (fun o () -> Obj.magic (TyNominalInfo.getVisibility__impl (Obj.magic o) (Obj.magic ()))); getIsEnum = (fun o () -> Obj.magic (TyNominalInfo.getIsEnum__impl (Obj.magic o) (Obj.magic ()))); getEnumDeclaration = (fun o () -> Obj.magic (TyNominalInfo.getEnumDeclaration__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (TyNominalInfo.hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (TyNominalInfo.fieldType__impl (Obj.magic o) (Obj.magic a0))); fieldInfo = (fun o a0 -> Obj.magic (TyNominalInfo.fieldInfo__impl (Obj.magic o) (Obj.magic a0))); getFieldInfos = (fun o () -> Obj.magic (TyNominalInfo.getFieldInfos__impl (Obj.magic o) (Obj.magic ()))); propertyInfo = (fun o a0 -> Obj.magic (TyNominalInfo.propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); underlyingType = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; implicitFromTypes = Obj.magic HxRuntime.hx_null; implicitToTypes = Obj.magic HxRuntime.hx_null; unaryOperators = Obj.magic HxRuntime.hx_null; binaryOperators = Obj.magic HxRuntime.hx_null; enumDomain = Obj.magic HxRuntime.hx_null; multiTypePolicy = Obj.magic HxRuntime.hx_null; getMultiTypePolicy = (fun o () -> Obj.magic (getMultiTypePolicy__impl (Obj.magic o) (Obj.magic ()))); getEnumDomain = (fun o () -> Obj.magic (getEnumDomain__impl (Obj.magic o) (Obj.magic ()))); getUnderlyingType = (fun o () -> Obj.magic (getUnderlyingType__impl (Obj.magic o) (Obj.magic ()))); getTypeParameters = (fun o () -> Obj.magic (getTypeParameters__impl (Obj.magic o) (Obj.magic ()))); getTypeParameterIds = (fun o () -> Obj.magic (getTypeParameterIds__impl (Obj.magic o) (Obj.magic ()))); getImplicitFromTypes = (fun o () -> Obj.magic (getImplicitFromTypes__impl (Obj.magic o) (Obj.magic ()))); getImplicitToTypes = (fun o () -> Obj.magic (getImplicitToTypes__impl (Obj.magic o) (Obj.magic ()))); addUnaryOperator = (fun o a0 -> Obj.magic (addUnaryOperator__impl (Obj.magic o) (Obj.magic a0))); getUnaryOperators = (fun o a0 a1 -> Obj.magic (getUnaryOperators__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); getAllUnaryOperators = (fun o () -> Obj.magic (getAllUnaryOperators__impl (Obj.magic o) (Obj.magic ()))); addBinaryOperator = (fun o a0 -> Obj.magic (addBinaryOperator__impl (Obj.magic o) (Obj.magic a0))); getBinaryOperators = (fun o a0 -> Obj.magic (getBinaryOperators__impl (Obj.magic o) (Obj.magic a0))); getAllBinaryOperators = (fun o () -> Obj.magic (getAllBinaryOperators__impl (Obj.magic o) (Obj.magic ()))) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyAbstractInfo"; identity = Obj.magic HxRuntime.hx_null; shortName = HxString.hx_null_string; modulePath = HxString.hx_null_string; fields = Obj.magic HxRuntime.hx_null; properties = Obj.magic HxRuntime.hx_null; staticMethods = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null; staticMethodLists = Obj.magic HxRuntime.hx_null; instanceMethodLists = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; visibility = Obj.magic HxRuntime.hx_null; isEnum = false; enumDeclaration = Obj.magic HxRuntime.hx_null; getIdentity = (fun o () -> Obj.magic (TyNominalInfo.getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (TyNominalInfo.getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (TyNominalInfo.getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (TyNominalInfo.getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (TyNominalInfo.getDeclarations__impl (Obj.magic o) (Obj.magic ()))); getVisibility = (fun o () -> Obj.magic (TyNominalInfo.getVisibility__impl (Obj.magic o) (Obj.magic ()))); getIsEnum = (fun o () -> Obj.magic (TyNominalInfo.getIsEnum__impl (Obj.magic o) (Obj.magic ()))); getEnumDeclaration = (fun o () -> Obj.magic (TyNominalInfo.getEnumDeclaration__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (TyNominalInfo.hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (TyNominalInfo.fieldType__impl (Obj.magic o) (Obj.magic a0))); fieldInfo = (fun o a0 -> Obj.magic (TyNominalInfo.fieldInfo__impl (Obj.magic o) (Obj.magic a0))); getFieldInfos = (fun o () -> Obj.magic (TyNominalInfo.getFieldInfos__impl (Obj.magic o) (Obj.magic ()))); propertyInfo = (fun o a0 -> Obj.magic (TyNominalInfo.propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); underlyingType = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; implicitFromTypes = Obj.magic HxRuntime.hx_null; implicitToTypes = Obj.magic HxRuntime.hx_null; unaryOperators = Obj.magic HxRuntime.hx_null; binaryOperators = Obj.magic HxRuntime.hx_null; enumDomain = Obj.magic HxRuntime.hx_null; multiTypePolicy = Obj.magic HxRuntime.hx_null; getMultiTypePolicy = (fun o () -> Obj.magic (getMultiTypePolicy__impl (Obj.magic o) (Obj.magic ()))); getEnumDomain = (fun o () -> Obj.magic (getEnumDomain__impl (Obj.magic o) (Obj.magic ()))); getUnderlyingType = (fun o () -> Obj.magic (getUnderlyingType__impl (Obj.magic o) (Obj.magic ()))); getTypeParameters = (fun o () -> Obj.magic (getTypeParameters__impl (Obj.magic o) (Obj.magic ()))); getTypeParameterIds = (fun o () -> Obj.magic (getTypeParameterIds__impl (Obj.magic o) (Obj.magic ()))); getImplicitFromTypes = (fun o () -> Obj.magic (getImplicitFromTypes__impl (Obj.magic o) (Obj.magic ()))); getImplicitToTypes = (fun o () -> Obj.magic (getImplicitToTypes__impl (Obj.magic o) (Obj.magic ()))); addUnaryOperator = (fun o a0 -> Obj.magic (addUnaryOperator__impl (Obj.magic o) (Obj.magic a0))); getUnaryOperators = (fun o a0 a1 -> Obj.magic (getUnaryOperators__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); getAllUnaryOperators = (fun o () -> Obj.magic (getAllUnaryOperators__impl (Obj.magic o) (Obj.magic ()))); addBinaryOperator = (fun o a0 -> Obj.magic (addBinaryOperator__impl (Obj.magic o) (Obj.magic a0))); getBinaryOperators = (fun o a0 -> Obj.magic (getBinaryOperators__impl (Obj.magic o) (Obj.magic a0))); getAllBinaryOperators = (fun o () -> Obj.magic (getAllBinaryOperators__impl (Obj.magic o) (Obj.magic ()))) } : t)
 end
 and TyAbstractMethodConversion : sig
 type t = { __hx_type : Obj.t; mutable declaration : TyDeclarationInfo.t; mutable actual : TyType.t; mutable callable : TyType.t; mutable index : TyperIndex.t }
@@ -44943,7 +44943,7 @@ type t = { __hx_type : Obj.t; mutable declaration : TyDeclarationInfo.t; mutable
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun declaration2 actual2 callable2 index2 -> let self = ({ __hx_type = HxType.class_ "TyAbstractMethodConversion"; declaration = Obj.magic HxRuntime.hx_null; actual = Obj.magic HxRuntime.hx_null; callable = Obj.magic HxRuntime.hx_null; index = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun declaration2 actual2 callable2 index2 -> let self = ({ __hx_type = HxType.instance_marker "TyAbstractMethodConversion"; declaration = Obj.magic HxRuntime.hx_null; actual = Obj.magic HxRuntime.hx_null; callable = Obj.magic HxRuntime.hx_null; index = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic declaration2 in (
       (Obj.magic self : t).declaration <- __assign_1;
@@ -44965,7 +44965,7 @@ let create = fun declaration2 actual2 callable2 index2 -> let self = ({ __hx_typ
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyAbstractMethodConversion"; declaration = Obj.magic HxRuntime.hx_null; actual = Obj.magic HxRuntime.hx_null; callable = Obj.magic HxRuntime.hx_null; index = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyAbstractMethodConversion"; declaration = Obj.magic HxRuntime.hx_null; actual = Obj.magic HxRuntime.hx_null; callable = Obj.magic HxRuntime.hx_null; index = Obj.magic HxRuntime.hx_null } : t)
 
 let getDeclaration = fun self () -> (Obj.magic self : t).declaration
 
@@ -45264,7 +45264,7 @@ type t = { __hx_type : Obj.t; mutable unaryOperator : HxUnaryOperator.hxunaryope
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun unaryOperator2 fixity2 declaration2 operandType2 resultType2 -> let self = ({ __hx_type = HxType.class_ "TyAbstractOperatorInfo"; unaryOperator = Obj.magic HxRuntime.hx_null; fixity = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; operandType = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun unaryOperator2 fixity2 declaration2 operandType2 resultType2 -> let self = ({ __hx_type = HxType.instance_marker "TyAbstractOperatorInfo"; unaryOperator = Obj.magic HxRuntime.hx_null; fixity = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; operandType = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic unaryOperator2 in (
       (Obj.magic self : t).unaryOperator <- __assign_1;
@@ -45290,7 +45290,7 @@ let create = fun unaryOperator2 fixity2 declaration2 operandType2 resultType2 ->
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyAbstractOperatorInfo"; unaryOperator = Obj.magic HxRuntime.hx_null; fixity = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; operandType = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyAbstractOperatorInfo"; unaryOperator = Obj.magic HxRuntime.hx_null; fixity = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; operandType = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null } : t)
 
 let getOperator = fun self () -> (Obj.magic self : t).unaryOperator
 
@@ -45323,7 +45323,7 @@ type t = { __hx_type : Obj.t; mutable declaration : TyTypeDeclaration.t; mutable
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun declaration2 defaultIndex2 -> let self = ({ __hx_type = HxType.class_ "TyAliasDefinition"; declaration = Obj.magic HxRuntime.hx_null; defaultIndex = 0; body = Obj.magic HxRuntime.hx_null; sealed = false } : t) in (
+let create = fun declaration2 defaultIndex2 -> let self = ({ __hx_type = HxType.instance_marker "TyAliasDefinition"; declaration = Obj.magic HxRuntime.hx_null; defaultIndex = 0; body = Obj.magic HxRuntime.hx_null; sealed = false } : t) in (
   ignore (let defaultIndex2 = if defaultIndex2 == HxRuntime.hx_null then Obj.repr (-1) else defaultIndex2 in ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = false in (
       (__place_receiver_1 : t).sealed <- __place_rhs_2;
@@ -45349,7 +45349,7 @@ let create = fun declaration2 defaultIndex2 -> let self = ({ __hx_type = HxType.
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyAliasDefinition"; declaration = Obj.magic HxRuntime.hx_null; defaultIndex = 0; body = Obj.magic HxRuntime.hx_null; sealed = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyAliasDefinition"; declaration = Obj.magic HxRuntime.hx_null; defaultIndex = 0; body = Obj.magic HxRuntime.hx_null; sealed = false } : t)
 
 let getDeclaration = fun self () -> (Obj.magic self : t).declaration
 
@@ -45481,7 +45481,7 @@ type aliasequivalenceproof_t = { __hx_type : Obj.t; mutable definitions : TyAlia
 
 let __reflaxe_ocaml__ = ()
 
-let aliasequivalenceproof___empty = fun () -> ({ __hx_type = HxType.class_ "_TyAliasEquivalence.AliasEquivalenceProof"; definitions = Obj.magic HxRuntime.hx_null; used = Obj.magic HxRuntime.hx_null } : aliasequivalenceproof_t)
+let aliasequivalenceproof___empty = fun () -> ({ __hx_type = HxType.instance_marker "_TyAliasEquivalence.AliasEquivalenceProof"; definitions = Obj.magic HxRuntime.hx_null; used = Obj.magic HxRuntime.hx_null } : aliasequivalenceproof_t)
 
 let rec aliasequivalenceproof_compare = fun self (left : TyType.t) (right : TyType.t) (leftScopes : TyTypeParameterId.t HxArray.t HxArray.t) (rightScopes : TyTypeParameterId.t HxArray.t HxArray.t) (active : Obj.t HxArray.t) -> (try let first = Obj.magic (TyType.getAliasDefinition (Obj.magic left) ()) in let second = Obj.magic (TyType.getAliasDefinition (Obj.magic right) ()) in (
   ignore (if first != Obj.magic (HxRuntime.hx_null) && second != Obj.magic (HxRuntime.hx_null) then let leftArguments = Obj.magic (TyType.getTypeArguments (Obj.magic left) ()) in let rightArguments = Obj.magic (TyType.getTypeArguments (Obj.magic right) ()) in let firstUsed = Obj.magic (let __array_read_receiver_56 = (Obj.magic self : aliasequivalenceproof_t).used in let __array_read_index_57 = let __array_receiver_58 = Obj.magic ((Obj.magic self : aliasequivalenceproof_t).definitions) in let __array_arg_0_59 = Obj.magic first in HxArray.indexOf_default __array_receiver_58 __array_arg_0_59 in HxArray.get (Obj.magic __array_read_receiver_56) __array_read_index_57) in let secondUsed = Obj.magic (let __array_read_receiver_60 = (Obj.magic self : aliasequivalenceproof_t).used in let __array_read_index_61 = let __array_receiver_62 = Obj.magic ((Obj.magic self : aliasequivalenceproof_t).definitions) in let __array_arg_0_63 = Obj.magic second in HxArray.indexOf_default __array_receiver_62 __array_arg_0_63 in HxArray.get (Obj.magic __array_read_receiver_60) __array_read_index_61) in let _g = let __represented_array_64 = HxArray.create () in __represented_array_64 in let _g1 = ref 0 in let _g2 = HxArray.length firstUsed in (
@@ -45647,7 +45647,7 @@ let rec aliasequivalenceproof_collect = fun self (hx_type : TyType.t) -> ignore 
   )) done
 )))
 
-let aliasequivalenceproof_create = fun left right -> let self = ({ __hx_type = HxType.class_ "_TyAliasEquivalence.AliasEquivalenceProof"; definitions = Obj.magic HxRuntime.hx_null; used = Obj.magic HxRuntime.hx_null } : aliasequivalenceproof_t) in (
+let aliasequivalenceproof_create = fun left right -> let self = ({ __hx_type = HxType.instance_marker "_TyAliasEquivalence.AliasEquivalenceProof"; definitions = Obj.magic HxRuntime.hx_null; used = Obj.magic HxRuntime.hx_null } : aliasequivalenceproof_t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxArray.create ()) in (
       (Obj.magic self : aliasequivalenceproof_t).used <- __assign_1;
@@ -46591,7 +46591,7 @@ type t = { __hx_type : Obj.t; mutable functionType : TyType.t; mutable operandTy
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyCallArgumentBinding"; functionType = Obj.magic HxRuntime.hx_null; operandTypes = Obj.magic HxRuntime.hx_null; operandKinds = Obj.magic HxRuntime.hx_null; slots = Obj.magic HxRuntime.hx_null; nullPolicy = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyCallArgumentBinding"; functionType = Obj.magic HxRuntime.hx_null; operandTypes = Obj.magic HxRuntime.hx_null; operandKinds = Obj.magic HxRuntime.hx_null; slots = Obj.magic HxRuntime.hx_null; nullPolicy = Obj.magic HxRuntime.hx_null } : t)
 
 let getFunctionType = fun self () -> (Obj.magic self : t).functionType
 
@@ -46730,7 +46730,7 @@ let copySlots = fun values -> let _g = Obj.magic (let __arr_102 = HxArray.create
   _g
 )
 
-let create = fun signature types kinds slots2 policy -> let self = ({ __hx_type = HxType.class_ "TyCallArgumentBinding"; functionType = Obj.magic HxRuntime.hx_null; operandTypes = Obj.magic HxRuntime.hx_null; operandKinds = Obj.magic HxRuntime.hx_null; slots = Obj.magic HxRuntime.hx_null; nullPolicy = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun signature types kinds slots2 policy -> let self = ({ __hx_type = HxType.instance_marker "TyCallArgumentBinding"; functionType = Obj.magic HxRuntime.hx_null; operandTypes = Obj.magic HxRuntime.hx_null; operandKinds = Obj.magic HxRuntime.hx_null; slots = Obj.magic HxRuntime.hx_null; nullPolicy = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (TyCallableSignature.getFunctionType (Obj.magic signature) ()) in (
       (Obj.magic self : t).functionType <- __assign_1;
@@ -46888,7 +46888,7 @@ type t = { __hx_type : Obj.t; mutable declaration : TyDeclarationInfo.t; mutable
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun functionType2 declaration2 -> let self = ({ __hx_type = HxType.class_ "TyCallableSignature"; declaration = Obj.magic HxRuntime.hx_null; functionType = Obj.magic HxRuntime.hx_null; methodTypeParameters = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun functionType2 declaration2 -> let self = ({ __hx_type = HxType.instance_marker "TyCallableSignature"; declaration = Obj.magic HxRuntime.hx_null; functionType = Obj.magic HxRuntime.hx_null; methodTypeParameters = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if functionType2 == Obj.magic (HxRuntime.hx_null) || not (TyType.isFunction (Obj.magic functionType2) ()) || TyType.getFunctionReturn (Obj.magic functionType2) () == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "callable signature requires a function type with a result") ["Dynamic"] else ());
     ignore (let __assign_1 = Obj.magic functionType2 in (
@@ -46916,7 +46916,7 @@ let create = fun functionType2 declaration2 -> let self = ({ __hx_type = HxType.
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyCallableSignature"; declaration = Obj.magic HxRuntime.hx_null; functionType = Obj.magic HxRuntime.hx_null; methodTypeParameters = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyCallableSignature"; declaration = Obj.magic HxRuntime.hx_null; functionType = Obj.magic HxRuntime.hx_null; methodTypeParameters = Obj.magic HxRuntime.hx_null } : t)
 
 let getDeclaration = fun self () -> (Obj.magic self : t).declaration
 
@@ -48051,7 +48051,7 @@ type t = { __hx_type : Obj.t; mutable name : string; mutable functions : TyFunct
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun name2 functions2 -> let self = ({ __hx_type = HxType.class_ "TyClassEnv"; name = HxString.hx_null_string; functions = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun name2 functions2 -> let self = ({ __hx_type = HxType.instance_marker "TyClassEnv"; name = HxString.hx_null_string; functions = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
       (Obj.magic self : t).name <- __assign_1;
@@ -48065,7 +48065,7 @@ let create = fun name2 functions2 -> let self = ({ __hx_type = HxType.class_ "Ty
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyClassEnv"; name = HxString.hx_null_string; functions = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyClassEnv"; name = HxString.hx_null_string; functions = Obj.magic HxRuntime.hx_null } : t)
 
 let getName = fun self () -> (Obj.magic self : t).name
 
@@ -48193,7 +48193,7 @@ let getTypeParameters__impl = fun (self : t) () -> let _g = Obj.magic (let __rep
 
 let getTypeParameterIds__impl = fun (self : t) () -> let __array_receiver_32 = Obj.magic ((Obj.magic self : t).typeParameters) in HxArray.copy __array_receiver_32
 
-let create = fun identity shortName modulePath fields properties staticMethods instanceMethods staticMethodLists instanceMethodLists declarations visibility isEnum superType2 typeParameters2 interfaces isExtern2 enumDeclaration metadata -> let self = ({ __hx_type = HxType.class_ "TyClassInfo"; identity = Obj.magic HxRuntime.hx_null; shortName = HxString.hx_null_string; modulePath = HxString.hx_null_string; fields = Obj.magic HxRuntime.hx_null; properties = Obj.magic HxRuntime.hx_null; staticMethods = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null; staticMethodLists = Obj.magic HxRuntime.hx_null; instanceMethodLists = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; visibility = Obj.magic HxRuntime.hx_null; isEnum = false; enumDeclaration = Obj.magic HxRuntime.hx_null; getIdentity = (fun o () -> Obj.magic (TyNominalInfo.getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (TyNominalInfo.getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (TyNominalInfo.getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (TyNominalInfo.getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (TyNominalInfo.getDeclarations__impl (Obj.magic o) (Obj.magic ()))); getVisibility = (fun o () -> Obj.magic (TyNominalInfo.getVisibility__impl (Obj.magic o) (Obj.magic ()))); getIsEnum = (fun o () -> Obj.magic (TyNominalInfo.getIsEnum__impl (Obj.magic o) (Obj.magic ()))); getEnumDeclaration = (fun o () -> Obj.magic (TyNominalInfo.getEnumDeclaration__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (TyNominalInfo.hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (TyNominalInfo.fieldType__impl (Obj.magic o) (Obj.magic a0))); fieldInfo = (fun o a0 -> Obj.magic (TyNominalInfo.fieldInfo__impl (Obj.magic o) (Obj.magic a0))); getFieldInfos = (fun o () -> Obj.magic (TyNominalInfo.getFieldInfos__impl (Obj.magic o) (Obj.magic ()))); propertyInfo = (fun o a0 -> Obj.magic (TyNominalInfo.propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); superType = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; isInterface = false; isExtern = false; interfaceTypes = Obj.magic HxRuntime.hx_null; declaredInterfaceTypes = Obj.magic HxRuntime.hx_null; dynamicMemberType = Obj.magic HxRuntime.hx_null; publicReflectionName = Obj.magic HxRuntime.hx_null; nativeName = Obj.magic HxRuntime.hx_null; getNativeName = (fun o () -> Obj.magic (getNativeName__impl (Obj.magic o) (Obj.magic ()))); getPublicReflectionName = (fun o () -> Obj.magic (getPublicReflectionName__impl (Obj.magic o) (Obj.magic ()))); getIsExtern = (fun o () -> Obj.magic (getIsExtern__impl (Obj.magic o) (Obj.magic ()))); getIsInterface = (fun o () -> Obj.magic (getIsInterface__impl (Obj.magic o) (Obj.magic ()))); getInterfaceTypes = (fun o () -> Obj.magic (getInterfaceTypes__impl (Obj.magic o) (Obj.magic ()))); getDeclaredInterfaceTypes = (fun o () -> Obj.magic (getDeclaredInterfaceTypes__impl (Obj.magic o) (Obj.magic ()))); getDynamicMemberType = (fun o () -> Obj.magic (getDynamicMemberType__impl (Obj.magic o) (Obj.magic ()))); getSuperType = (fun o () -> Obj.magic (getSuperType__impl (Obj.magic o) (Obj.magic ()))); getTypeParameters = (fun o () -> Obj.magic (getTypeParameters__impl (Obj.magic o) (Obj.magic ()))); getTypeParameterIds = (fun o () -> Obj.magic (getTypeParameterIds__impl (Obj.magic o) (Obj.magic ()))) } : t) in (
+let create = fun identity shortName modulePath fields properties staticMethods instanceMethods staticMethodLists instanceMethodLists declarations visibility isEnum superType2 typeParameters2 interfaces isExtern2 enumDeclaration metadata -> let self = ({ __hx_type = HxType.instance_marker "TyClassInfo"; identity = Obj.magic HxRuntime.hx_null; shortName = HxString.hx_null_string; modulePath = HxString.hx_null_string; fields = Obj.magic HxRuntime.hx_null; properties = Obj.magic HxRuntime.hx_null; staticMethods = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null; staticMethodLists = Obj.magic HxRuntime.hx_null; instanceMethodLists = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; visibility = Obj.magic HxRuntime.hx_null; isEnum = false; enumDeclaration = Obj.magic HxRuntime.hx_null; getIdentity = (fun o () -> Obj.magic (TyNominalInfo.getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (TyNominalInfo.getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (TyNominalInfo.getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (TyNominalInfo.getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (TyNominalInfo.getDeclarations__impl (Obj.magic o) (Obj.magic ()))); getVisibility = (fun o () -> Obj.magic (TyNominalInfo.getVisibility__impl (Obj.magic o) (Obj.magic ()))); getIsEnum = (fun o () -> Obj.magic (TyNominalInfo.getIsEnum__impl (Obj.magic o) (Obj.magic ()))); getEnumDeclaration = (fun o () -> Obj.magic (TyNominalInfo.getEnumDeclaration__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (TyNominalInfo.hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (TyNominalInfo.fieldType__impl (Obj.magic o) (Obj.magic a0))); fieldInfo = (fun o a0 -> Obj.magic (TyNominalInfo.fieldInfo__impl (Obj.magic o) (Obj.magic a0))); getFieldInfos = (fun o () -> Obj.magic (TyNominalInfo.getFieldInfos__impl (Obj.magic o) (Obj.magic ()))); propertyInfo = (fun o a0 -> Obj.magic (TyNominalInfo.propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); superType = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; isInterface = false; isExtern = false; interfaceTypes = Obj.magic HxRuntime.hx_null; declaredInterfaceTypes = Obj.magic HxRuntime.hx_null; dynamicMemberType = Obj.magic HxRuntime.hx_null; publicReflectionName = Obj.magic HxRuntime.hx_null; nativeName = Obj.magic HxRuntime.hx_null; getNativeName = (fun o () -> Obj.magic (getNativeName__impl (Obj.magic o) (Obj.magic ()))); getPublicReflectionName = (fun o () -> Obj.magic (getPublicReflectionName__impl (Obj.magic o) (Obj.magic ()))); getIsExtern = (fun o () -> Obj.magic (getIsExtern__impl (Obj.magic o) (Obj.magic ()))); getIsInterface = (fun o () -> Obj.magic (getIsInterface__impl (Obj.magic o) (Obj.magic ()))); getInterfaceTypes = (fun o () -> Obj.magic (getInterfaceTypes__impl (Obj.magic o) (Obj.magic ()))); getDeclaredInterfaceTypes = (fun o () -> Obj.magic (getDeclaredInterfaceTypes__impl (Obj.magic o) (Obj.magic ()))); getDynamicMemberType = (fun o () -> Obj.magic (getDynamicMemberType__impl (Obj.magic o) (Obj.magic ()))); getSuperType = (fun o () -> Obj.magic (getSuperType__impl (Obj.magic o) (Obj.magic ()))); getTypeParameters = (fun o () -> Obj.magic (getTypeParameters__impl (Obj.magic o) (Obj.magic ()))); getTypeParameterIds = (fun o () -> Obj.magic (getTypeParameterIds__impl (Obj.magic o) (Obj.magic ()))) } : t) in (
   ignore (let visibility = if Obj.repr visibility == HxRuntime.hx_null then Obj.magic (HxVisibility.Public) else visibility in let isEnum = if Obj.repr isEnum == HxRuntime.hx_null then false else isEnum in let isExtern2 = if Obj.repr isExtern2 == HxRuntime.hx_null then false else isExtern2 in ignore ((
     ignore (TyNominalInfo.__ctor (Obj.magic self) identity shortName modulePath fields properties staticMethods instanceMethods staticMethodLists instanceMethodLists declarations visibility isEnum enumDeclaration);
     ignore (let __assign_1 = Obj.magic superType2 in (
@@ -48266,7 +48266,7 @@ let create = fun identity shortName modulePath fields properties staticMethods i
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyClassInfo"; identity = Obj.magic HxRuntime.hx_null; shortName = HxString.hx_null_string; modulePath = HxString.hx_null_string; fields = Obj.magic HxRuntime.hx_null; properties = Obj.magic HxRuntime.hx_null; staticMethods = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null; staticMethodLists = Obj.magic HxRuntime.hx_null; instanceMethodLists = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; visibility = Obj.magic HxRuntime.hx_null; isEnum = false; enumDeclaration = Obj.magic HxRuntime.hx_null; getIdentity = (fun o () -> Obj.magic (TyNominalInfo.getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (TyNominalInfo.getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (TyNominalInfo.getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (TyNominalInfo.getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (TyNominalInfo.getDeclarations__impl (Obj.magic o) (Obj.magic ()))); getVisibility = (fun o () -> Obj.magic (TyNominalInfo.getVisibility__impl (Obj.magic o) (Obj.magic ()))); getIsEnum = (fun o () -> Obj.magic (TyNominalInfo.getIsEnum__impl (Obj.magic o) (Obj.magic ()))); getEnumDeclaration = (fun o () -> Obj.magic (TyNominalInfo.getEnumDeclaration__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (TyNominalInfo.hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (TyNominalInfo.fieldType__impl (Obj.magic o) (Obj.magic a0))); fieldInfo = (fun o a0 -> Obj.magic (TyNominalInfo.fieldInfo__impl (Obj.magic o) (Obj.magic a0))); getFieldInfos = (fun o () -> Obj.magic (TyNominalInfo.getFieldInfos__impl (Obj.magic o) (Obj.magic ()))); propertyInfo = (fun o a0 -> Obj.magic (TyNominalInfo.propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); superType = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; isInterface = false; isExtern = false; interfaceTypes = Obj.magic HxRuntime.hx_null; declaredInterfaceTypes = Obj.magic HxRuntime.hx_null; dynamicMemberType = Obj.magic HxRuntime.hx_null; publicReflectionName = Obj.magic HxRuntime.hx_null; nativeName = Obj.magic HxRuntime.hx_null; getNativeName = (fun o () -> Obj.magic (getNativeName__impl (Obj.magic o) (Obj.magic ()))); getPublicReflectionName = (fun o () -> Obj.magic (getPublicReflectionName__impl (Obj.magic o) (Obj.magic ()))); getIsExtern = (fun o () -> Obj.magic (getIsExtern__impl (Obj.magic o) (Obj.magic ()))); getIsInterface = (fun o () -> Obj.magic (getIsInterface__impl (Obj.magic o) (Obj.magic ()))); getInterfaceTypes = (fun o () -> Obj.magic (getInterfaceTypes__impl (Obj.magic o) (Obj.magic ()))); getDeclaredInterfaceTypes = (fun o () -> Obj.magic (getDeclaredInterfaceTypes__impl (Obj.magic o) (Obj.magic ()))); getDynamicMemberType = (fun o () -> Obj.magic (getDynamicMemberType__impl (Obj.magic o) (Obj.magic ()))); getSuperType = (fun o () -> Obj.magic (getSuperType__impl (Obj.magic o) (Obj.magic ()))); getTypeParameters = (fun o () -> Obj.magic (getTypeParameters__impl (Obj.magic o) (Obj.magic ()))); getTypeParameterIds = (fun o () -> Obj.magic (getTypeParameterIds__impl (Obj.magic o) (Obj.magic ()))) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyClassInfo"; identity = Obj.magic HxRuntime.hx_null; shortName = HxString.hx_null_string; modulePath = HxString.hx_null_string; fields = Obj.magic HxRuntime.hx_null; properties = Obj.magic HxRuntime.hx_null; staticMethods = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null; staticMethodLists = Obj.magic HxRuntime.hx_null; instanceMethodLists = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; visibility = Obj.magic HxRuntime.hx_null; isEnum = false; enumDeclaration = Obj.magic HxRuntime.hx_null; getIdentity = (fun o () -> Obj.magic (TyNominalInfo.getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (TyNominalInfo.getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (TyNominalInfo.getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (TyNominalInfo.getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (TyNominalInfo.getDeclarations__impl (Obj.magic o) (Obj.magic ()))); getVisibility = (fun o () -> Obj.magic (TyNominalInfo.getVisibility__impl (Obj.magic o) (Obj.magic ()))); getIsEnum = (fun o () -> Obj.magic (TyNominalInfo.getIsEnum__impl (Obj.magic o) (Obj.magic ()))); getEnumDeclaration = (fun o () -> Obj.magic (TyNominalInfo.getEnumDeclaration__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (TyNominalInfo.declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (TyNominalInfo.hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (TyNominalInfo.fieldType__impl (Obj.magic o) (Obj.magic a0))); fieldInfo = (fun o a0 -> Obj.magic (TyNominalInfo.fieldInfo__impl (Obj.magic o) (Obj.magic a0))); getFieldInfos = (fun o () -> Obj.magic (TyNominalInfo.getFieldInfos__impl (Obj.magic o) (Obj.magic ()))); propertyInfo = (fun o a0 -> Obj.magic (TyNominalInfo.propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (TyNominalInfo.instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); superType = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; isInterface = false; isExtern = false; interfaceTypes = Obj.magic HxRuntime.hx_null; declaredInterfaceTypes = Obj.magic HxRuntime.hx_null; dynamicMemberType = Obj.magic HxRuntime.hx_null; publicReflectionName = Obj.magic HxRuntime.hx_null; nativeName = Obj.magic HxRuntime.hx_null; getNativeName = (fun o () -> Obj.magic (getNativeName__impl (Obj.magic o) (Obj.magic ()))); getPublicReflectionName = (fun o () -> Obj.magic (getPublicReflectionName__impl (Obj.magic o) (Obj.magic ()))); getIsExtern = (fun o () -> Obj.magic (getIsExtern__impl (Obj.magic o) (Obj.magic ()))); getIsInterface = (fun o () -> Obj.magic (getIsInterface__impl (Obj.magic o) (Obj.magic ()))); getInterfaceTypes = (fun o () -> Obj.magic (getInterfaceTypes__impl (Obj.magic o) (Obj.magic ()))); getDeclaredInterfaceTypes = (fun o () -> Obj.magic (getDeclaredInterfaceTypes__impl (Obj.magic o) (Obj.magic ()))); getDynamicMemberType = (fun o () -> Obj.magic (getDynamicMemberType__impl (Obj.magic o) (Obj.magic ()))); getSuperType = (fun o () -> Obj.magic (getSuperType__impl (Obj.magic o) (Obj.magic ()))); getTypeParameters = (fun o () -> Obj.magic (getTypeParameters__impl (Obj.magic o) (Obj.magic ()))); getTypeParameterIds = (fun o () -> Obj.magic (getTypeParameterIds__impl (Obj.magic o) (Obj.magic ()))) } : t)
 end
 and TyClassRelationships : sig
 val resolve : TyType.t HxArray.t -> bool -> bool -> Obj.t
@@ -48342,7 +48342,7 @@ type t = { __hx_type : Obj.t; mutable target : TypedRuntimeTypeTarget.t; mutable
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun target2 parameters2 -> let self = ({ __hx_type = HxType.class_ "TyClassValueScheme"; target = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun target2 parameters2 -> let self = ({ __hx_type = HxType.instance_marker "TyClassValueScheme"; target = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic target2 in (
       (Obj.magic self : t).target <- __assign_1;
@@ -48356,7 +48356,7 @@ let create = fun target2 parameters2 -> let self = ({ __hx_type = HxType.class_ 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyClassValueScheme"; target = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyClassValueScheme"; target = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null } : t)
 
 let getParameters = fun self () -> let __array_receiver_4 = Obj.magic ((Obj.magic self : t).parameters) in HxArray.copy __array_receiver_4
 
@@ -48489,7 +48489,7 @@ type t = { __hx_type : Obj.t; mutable functionIdentity : string; mutable passIde
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun functionIdentity2 passIdentity2 generatedNamePrefix2 -> let self = ({ __hx_type = HxType.class_ "TyCompilerTemporaryAllocator"; functionIdentity = HxString.hx_null_string; passIdentity = HxString.hx_null_string; generatedNamePrefix = HxString.hx_null_string; nextOrdinal = 0 } : t) in (
+let create = fun functionIdentity2 passIdentity2 generatedNamePrefix2 -> let self = ({ __hx_type = HxType.instance_marker "TyCompilerTemporaryAllocator"; functionIdentity = HxString.hx_null_string; passIdentity = HxString.hx_null_string; generatedNamePrefix = HxString.hx_null_string; nextOrdinal = 0 } : t) in (
   ignore (ignore ((
     ignore (if functionIdentity2 == HxString.hx_null_string || (let __string_receiver_1 = functionIdentity2 in HxString.length __string_receiver_1) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "compiler temporary allocator requires a function owner") ["Dynamic"] else ());
     ignore (if passIdentity2 == HxString.hx_null_string || (let __string_receiver_2 = passIdentity2 in HxString.length __string_receiver_2) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "compiler temporary allocator requires a lowering pass") ["Dynamic"] else ());
@@ -48514,7 +48514,7 @@ let create = fun functionIdentity2 passIdentity2 generatedNamePrefix2 -> let sel
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyCompilerTemporaryAllocator"; functionIdentity = HxString.hx_null_string; passIdentity = HxString.hx_null_string; generatedNamePrefix = HxString.hx_null_string; nextOrdinal = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyCompilerTemporaryAllocator"; functionIdentity = HxString.hx_null_string; passIdentity = HxString.hx_null_string; generatedNamePrefix = HxString.hx_null_string; nextOrdinal = 0 } : t)
 
 let allocate = fun self (role : string) (hx_type : TyType.t) -> (
   ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "compiler temporary allocator requires a semantic type") ["Dynamic"] else ());
@@ -48563,7 +48563,7 @@ type t = { __hx_type : Obj.t; mutable ownerIdentity : string; mutable sourceRevi
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun ownerIdentity2 sourceRevision2 rootKind -> let self = ({ __hx_type = HxType.class_ "TyControlScope"; ownerIdentity = HxString.hx_null_string; sourceRevision = HxString.hx_null_string; targets = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null; replay = false; cursor = 0; returnStates = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun ownerIdentity2 sourceRevision2 rootKind -> let self = ({ __hx_type = HxType.instance_marker "TyControlScope"; ownerIdentity = HxString.hx_null_string; sourceRevision = HxString.hx_null_string; targets = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null; replay = false; cursor = 0; returnStates = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (let rootKind = if Obj.repr rootKind == HxRuntime.hx_null then Obj.magic (TyControlTarget.Function) else rootKind in ignore ((
     ignore (if let __enum_eq_left_1 = rootKind in let __enum_eq_right_2 = TyControlTarget.Loop in HxEnum.unbox_or_obj "TyControlTargetKind" (Obj.repr __enum_eq_left_1) == HxEnum.unbox_or_obj "TyControlTargetKind" (Obj.repr __enum_eq_right_2) then HxType.hx_throw_typed_rtti (Obj.repr "control scope root must be a function or initializer") ["Dynamic"] else ());
     ignore (let __assign_3 = (ownerIdentity2 : string) in (
@@ -48611,7 +48611,7 @@ let create = fun ownerIdentity2 sourceRevision2 rootKind -> let self = ({ __hx_t
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyControlScope"; ownerIdentity = HxString.hx_null_string; sourceRevision = HxString.hx_null_string; targets = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null; replay = false; cursor = 0; returnStates = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyControlScope"; ownerIdentity = HxString.hx_null_string; sourceRevision = HxString.hx_null_string; targets = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null; replay = false; cursor = 0; returnStates = Obj.magic HxRuntime.hx_null } : t)
 
 let getRoot = fun self () -> let __array_read_receiver_18 = (Obj.magic self : t).targets in let __array_read_index_19 = 0 in HxArray.get (Obj.magic __array_read_receiver_18) __array_read_index_19
 
@@ -48805,7 +48805,7 @@ type t = { __hx_type : Obj.t; mutable identity : TyDeclarationId.t; mutable owne
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyDeclarationInfo"; identity = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; signature = Obj.magic HxRuntime.hx_null; metadata = Obj.magic HxRuntime.hx_null; nativeName = Obj.magic HxRuntime.hx_null; sourceDeclaration = Obj.magic HxRuntime.hx_null; implementation = Obj.magic HxRuntime.hx_null; position = Obj.magic HxRuntime.hx_null; isInline = false; isPublic = false; modulePath = HxString.hx_null_string; isEnumConstructor = false; typeParameters = Obj.magic HxRuntime.hx_null; resolvedConstraints = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyDeclarationInfo"; identity = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; signature = Obj.magic HxRuntime.hx_null; metadata = Obj.magic HxRuntime.hx_null; nativeName = Obj.magic HxRuntime.hx_null; sourceDeclaration = Obj.magic HxRuntime.hx_null; implementation = Obj.magic HxRuntime.hx_null; position = Obj.magic HxRuntime.hx_null; isInline = false; isPublic = false; modulePath = HxString.hx_null_string; isEnumConstructor = false; typeParameters = Obj.magic HxRuntime.hx_null; resolvedConstraints = Obj.magic HxRuntime.hx_null } : t)
 
 let getIdentity = fun self () -> (Obj.magic self : t).identity
 
@@ -48834,7 +48834,7 @@ let getPosition = fun self () -> (Obj.magic self : t).position
 
 let getIsStatic = fun self () -> TyFunSig.getIsStatic (Obj.magic ((Obj.magic self : t).signature)) ()
 
-let create = fun identity2 owner2 signature2 metadata2 sourceDeclaration2 position2 isInline2 isPublic2 modulePath2 resolvedConstraints2 isEnumConstructor2 typeParameters2 implementation2 -> let self = ({ __hx_type = HxType.class_ "TyDeclarationInfo"; identity = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; signature = Obj.magic HxRuntime.hx_null; metadata = Obj.magic HxRuntime.hx_null; nativeName = Obj.magic HxRuntime.hx_null; sourceDeclaration = Obj.magic HxRuntime.hx_null; implementation = Obj.magic HxRuntime.hx_null; position = Obj.magic HxRuntime.hx_null; isInline = false; isPublic = false; modulePath = HxString.hx_null_string; isEnumConstructor = false; typeParameters = Obj.magic HxRuntime.hx_null; resolvedConstraints = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun identity2 owner2 signature2 metadata2 sourceDeclaration2 position2 isInline2 isPublic2 modulePath2 resolvedConstraints2 isEnumConstructor2 typeParameters2 implementation2 -> let self = ({ __hx_type = HxType.instance_marker "TyDeclarationInfo"; identity = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; signature = Obj.magic HxRuntime.hx_null; metadata = Obj.magic HxRuntime.hx_null; nativeName = Obj.magic HxRuntime.hx_null; sourceDeclaration = Obj.magic HxRuntime.hx_null; implementation = Obj.magic HxRuntime.hx_null; position = Obj.magic HxRuntime.hx_null; isInline = false; isPublic = false; modulePath = HxString.hx_null_string; isEnumConstructor = false; typeParameters = Obj.magic HxRuntime.hx_null; resolvedConstraints = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (let isEnumConstructor2 = if Obj.repr isEnumConstructor2 == HxRuntime.hx_null then false else isEnumConstructor2 in ignore ((
     ignore (let __assign_1 = Obj.magic identity2 in (
       (Obj.magic self : t).identity <- __assign_1;
@@ -49047,7 +49047,7 @@ let getTypeParameterIds = fun self () -> let __array_receiver_102 = Obj.magic ((
 let getTypeParameterConstraints = fun self () -> HxFunctionTypeParamMetadata.constraints (Obj.magic ((Obj.magic self : t).metadata))
 
 let getResolvedTypeParameterConstraints = fun self () -> let _g = HxMap.create_string () in let _this = Obj.magic ((Obj.magic self : t).resolvedConstraints) in let tempKeyValueIterator = HxIterator.of_array (Obj.magic (HxMap.pairs_string (Obj.magic _this))) in let _g1 = tempKeyValueIterator in (
-  ignore (while let __iterator_receiver_103 = _g1 in HxIterator.hasNext __iterator_receiver_103 do ignore (let _g2 = let __iterator_receiver_104 = _g1 in HxIterator.next __iterator_receiver_104 in let key = (let __structural_receiver_105 = _g2 in Obj.obj (HxAnon.get __structural_receiver_105 "key") : string) in let bounds = Obj.magic (let __structural_receiver_106 = _g2 in Obj.obj (HxAnon.get __structural_receiver_106 "value")) in let value = Obj.magic (let __array_receiver_107 = Obj.magic bounds in HxArray.copy __array_receiver_107) in HxMap.set_string (Obj.magic _g) (key : string) value) done);
+  ignore (while let __iterator_receiver_103 = _g1 in HxIterator.hasNext __iterator_receiver_103 do ignore (let _g2 = let __iterator_receiver_104 = _g1 in HxIterator.next __iterator_receiver_104 in let key = (let __structural_receiver_105 = _g2 in Stdlib.fst __structural_receiver_105 : string) in let bounds = Obj.magic (let __structural_receiver_106 = _g2 in Stdlib.snd __structural_receiver_106) in let value = Obj.magic (let __array_receiver_107 = Obj.magic bounds in HxArray.copy __array_receiver_107) in HxMap.set_string (Obj.magic _g) (key : string) value) done);
   _g
 )
 end
@@ -49456,7 +49456,7 @@ type t = { __hx_type : Obj.t; mutable owner : TyNominalTypeId.t; mutable underly
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun owner2 underlying2 fields -> let self = ({ __hx_type = HxType.class_ "TyEnumAbstractConstants"; owner = Obj.magic HxRuntime.hx_null; underlying = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; previous = Obj.magic HxRuntime.hx_null; resolved = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun owner2 underlying2 fields -> let self = ({ __hx_type = HxType.instance_marker "TyEnumAbstractConstants"; owner = Obj.magic HxRuntime.hx_null; underlying = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; previous = Obj.magic HxRuntime.hx_null; resolved = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_string ()) in (
       (Obj.magic self : t).active <- __assign_1;
@@ -49503,7 +49503,7 @@ let create = fun owner2 underlying2 fields -> let self = ({ __hx_type = HxType.c
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyEnumAbstractConstants"; owner = Obj.magic HxRuntime.hx_null; underlying = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; previous = Obj.magic HxRuntime.hx_null; resolved = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyEnumAbstractConstants"; owner = Obj.magic HxRuntime.hx_null; underlying = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; previous = Obj.magic HxRuntime.hx_null; resolved = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null } : t)
 
 let unresolved = fun self (name : string) (reason : string) -> TyFieldConstant.create (Obj.magic (let __enum_arg_23 = (let __string_part_18 = HxString.toStdString (TyNominalTypeId.getCanonicalName (Obj.magic ((Obj.magic self : t).owner)) ()) in let __string_part_19 = "." in let __string_part_20 = HxString.toStdString name in let __string_part_21 = ": " in let __string_part_22 = HxString.toStdString reason in (((__string_part_18 ^ __string_part_19) ^ __string_part_20) ^ __string_part_21) ^ __string_part_22 : string) in TyFieldConstant.Unresolved (Stdlib.Sys.opaque_identity __enum_arg_23)))
 
@@ -49685,7 +49685,7 @@ type t = { __hx_type : Obj.t; mutable owner : TyNominalTypeId.t; mutable members
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun owner2 members2 -> let self = ({ __hx_type = HxType.class_ "TyEnumAbstractDomain"; owner = Obj.magic HxRuntime.hx_null; members = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun owner2 members2 -> let self = ({ __hx_type = HxType.instance_marker "TyEnumAbstractDomain"; owner = Obj.magic HxRuntime.hx_null; members = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic owner2 in (
       (Obj.magic self : t).owner <- __assign_1;
@@ -49706,7 +49706,7 @@ let create = fun owner2 members2 -> let self = ({ __hx_type = HxType.class_ "TyE
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyEnumAbstractDomain"; owner = Obj.magic HxRuntime.hx_null; members = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyEnumAbstractDomain"; owner = Obj.magic HxRuntime.hx_null; members = Obj.magic HxRuntime.hx_null } : t)
 
 let getOwner = fun self () -> (Obj.magic self : t).owner
 
@@ -49757,7 +49757,7 @@ type t = { __hx_type : Obj.t; mutable usingProvider : TyNominalTypeId.t; mutable
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun usingProvider2 declaringProvider2 memberName2 candidates2 -> let self = ({ __hx_type = HxType.class_ "TyExtensionMethod"; usingProvider = Obj.magic HxRuntime.hx_null; declaringProvider = Obj.magic HxRuntime.hx_null; memberName = HxString.hx_null_string; candidates = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun usingProvider2 declaringProvider2 memberName2 candidates2 -> let self = ({ __hx_type = HxType.instance_marker "TyExtensionMethod"; usingProvider = Obj.magic HxRuntime.hx_null; declaringProvider = Obj.magic HxRuntime.hx_null; memberName = HxString.hx_null_string; candidates = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if usingProvider2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "extension method requires its exact using provider") ["Dynamic"] else ());
     ignore (if declaringProvider2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "extension method requires its exact declaring provider") ["Dynamic"] else ());
@@ -49783,7 +49783,7 @@ let create = fun usingProvider2 declaringProvider2 memberName2 candidates2 -> le
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyExtensionMethod"; usingProvider = Obj.magic HxRuntime.hx_null; declaringProvider = Obj.magic HxRuntime.hx_null; memberName = HxString.hx_null_string; candidates = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyExtensionMethod"; usingProvider = Obj.magic HxRuntime.hx_null; declaringProvider = Obj.magic HxRuntime.hx_null; memberName = HxString.hx_null_string; candidates = Obj.magic HxRuntime.hx_null } : t)
 
 let getUsingProvider = fun self () -> (Obj.magic self : t).usingProvider
 
@@ -49868,7 +49868,7 @@ type t = { __hx_type : Obj.t; mutable kind : tyfieldconstantkind }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun kind2 -> let self = ({ __hx_type = HxType.class_ "TyFieldConstant"; kind = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun kind2 -> let self = ({ __hx_type = HxType.instance_marker "TyFieldConstant"; kind = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let __assign_1 = Obj.magic kind2 in (
     (Obj.magic self : t).kind <- __assign_1;
     __assign_1
@@ -49876,7 +49876,7 @@ let create = fun kind2 -> let self = ({ __hx_type = HxType.class_ "TyFieldConsta
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyFieldConstant"; kind = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyFieldConstant"; kind = Obj.magic HxRuntime.hx_null } : t)
 
 let getKind = fun self () -> (Obj.magic self : t).kind
 
@@ -50012,7 +50012,7 @@ type t = { __hx_type : Obj.t; mutable owner : TyNominalTypeId.t; mutable moduleP
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyFieldInfo"; owner = Obj.magic HxRuntime.hx_null; modulePath = HxString.hx_null_string; name = HxString.hx_null_string; hx_type = Obj.magic HxRuntime.hx_null; isStatic = false; isPublic = false; isFinal = false; isInline = false; hasInitializer = false; propertyGet = HxString.hx_null_string; propertySet = HxString.hx_null_string; hasStorage = false; noImportGlobal = false; canonicalKey = HxString.hx_null_string; constant = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyFieldInfo"; owner = Obj.magic HxRuntime.hx_null; modulePath = HxString.hx_null_string; name = HxString.hx_null_string; hx_type = Obj.magic HxRuntime.hx_null; isStatic = false; isPublic = false; isFinal = false; isInline = false; hasInitializer = false; propertyGet = HxString.hx_null_string; propertySet = HxString.hx_null_string; hasStorage = false; noImportGlobal = false; canonicalKey = HxString.hx_null_string; constant = Obj.magic HxRuntime.hx_null } : t)
 
 let getOwner = fun self () -> (Obj.magic self : t).owner
 
@@ -50048,7 +50048,7 @@ let canEmbedCrossModuleValue = fun self () -> (Obj.magic self : t).isPublic && (
 
 let directMode = fun (mode : string) -> ((let __string_eq_left_59 = mode in let __string_eq_right_60 = "" in HxString.equals __string_eq_left_59 __string_eq_right_60) || (let __string_eq_left_61 = mode in let __string_eq_right_62 = "default" in HxString.equals __string_eq_left_61 __string_eq_right_62) || (let __string_eq_left_63 = mode in let __string_eq_right_64 = "null" in HxString.equals __string_eq_left_63 __string_eq_right_64) : bool)
 
-let create = fun owner2 modulePath2 name2 hx_type isStatic2 isPublic2 isFinal2 isInline2 hasInitializer2 noImportGlobal2 propertyGet2 propertySet2 constant2 isVar -> let self = ({ __hx_type = HxType.class_ "TyFieldInfo"; owner = Obj.magic HxRuntime.hx_null; modulePath = HxString.hx_null_string; name = HxString.hx_null_string; hx_type = Obj.magic HxRuntime.hx_null; isStatic = false; isPublic = false; isFinal = false; isInline = false; hasInitializer = false; propertyGet = HxString.hx_null_string; propertySet = HxString.hx_null_string; hasStorage = false; noImportGlobal = false; canonicalKey = HxString.hx_null_string; constant = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun owner2 modulePath2 name2 hx_type isStatic2 isPublic2 isFinal2 isInline2 hasInitializer2 noImportGlobal2 propertyGet2 propertySet2 constant2 isVar -> let self = ({ __hx_type = HxType.instance_marker "TyFieldInfo"; owner = Obj.magic HxRuntime.hx_null; modulePath = HxString.hx_null_string; name = HxString.hx_null_string; hx_type = Obj.magic HxRuntime.hx_null; isStatic = false; isPublic = false; isFinal = false; isInline = false; hasInitializer = false; propertyGet = HxString.hx_null_string; propertySet = HxString.hx_null_string; hasStorage = false; noImportGlobal = false; canonicalKey = HxString.hx_null_string; constant = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (let noImportGlobal2 = if Obj.repr noImportGlobal2 == HxRuntime.hx_null then false else noImportGlobal2 in let propertyGet2 = if Obj.repr propertyGet2 == HxRuntime.hx_null then ("" : string) else propertyGet2 in let propertySet2 = if Obj.repr propertySet2 == HxRuntime.hx_null then ("" : string) else propertySet2 in let isVar = if Obj.repr isVar == HxRuntime.hx_null then false else isVar in ignore ((
     ignore (let __assign_1 = Obj.magic owner2 in (
       (Obj.magic self : t).owner <- __assign_1;
@@ -50204,7 +50204,7 @@ type t = { __hx_type : Obj.t; mutable sources : (TyFieldInfo.t, HxFieldDecl.t) H
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TyFieldInitializerTypes"; sources = Obj.magic HxRuntime.hx_null; checked = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null; infer = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TyFieldInitializerTypes"; sources = Obj.magic HxRuntime.hx_null; checked = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null; infer = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_object ()) in (
       (Obj.magic self : t).active <- __assign_1;
@@ -50222,7 +50222,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "TyFieldInitializ
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyFieldInitializerTypes"; sources = Obj.magic HxRuntime.hx_null; checked = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null; infer = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyFieldInitializerTypes"; sources = Obj.magic HxRuntime.hx_null; checked = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null; infer = Obj.magic HxRuntime.hx_null } : t)
 
 let register = fun self (field : TyFieldInfo.t) (source : HxFieldDecl.t) -> ignore (ignore (let _this = Obj.magic ((Obj.magic self : t).sources) in HxMap.set_object (Obj.magic _this) field source))
 
@@ -50353,7 +50353,7 @@ type t = { __hx_type : Obj.t; mutable name : string; mutable isStatic : bool; mu
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun name2 isStatic2 argNames2 args2 argOptional2 argRest2 returnType2 pos2 -> let self = ({ __hx_type = HxType.class_ "TyFunSig"; name = HxString.hx_null_string; isStatic = false; argNames = Obj.magic HxRuntime.hx_null; args = Obj.magic HxRuntime.hx_null; argOptional = Obj.magic HxRuntime.hx_null; argRest = Obj.magic HxRuntime.hx_null; returnType = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun name2 isStatic2 argNames2 args2 argOptional2 argRest2 returnType2 pos2 -> let self = ({ __hx_type = HxType.instance_marker "TyFunSig"; name = HxString.hx_null_string; isStatic = false; argNames = Obj.magic HxRuntime.hx_null; args = Obj.magic HxRuntime.hx_null; argOptional = Obj.magic HxRuntime.hx_null; argRest = Obj.magic HxRuntime.hx_null; returnType = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
       (Obj.magic self : t).name <- __assign_1;
@@ -50458,7 +50458,7 @@ let create = fun name2 isStatic2 argNames2 args2 argOptional2 argRest2 returnTyp
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyFunSig"; name = HxString.hx_null_string; isStatic = false; argNames = Obj.magic HxRuntime.hx_null; args = Obj.magic HxRuntime.hx_null; argOptional = Obj.magic HxRuntime.hx_null; argRest = Obj.magic HxRuntime.hx_null; returnType = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyFunSig"; name = HxString.hx_null_string; isStatic = false; argNames = Obj.magic HxRuntime.hx_null; args = Obj.magic HxRuntime.hx_null; argOptional = Obj.magic HxRuntime.hx_null; argRest = Obj.magic HxRuntime.hx_null; returnType = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null } : t)
 
 let getName = fun self () -> (Obj.magic self : t).name
 
@@ -50545,7 +50545,7 @@ type t = { __hx_type : Obj.t; mutable name : string; mutable ownerIdentity : str
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun name2 params2 locals2 returnType2 returnExprType2 ownerIdentity2 activeScopes replayMode2 replayCursor2 staticContext2 controlScope2 inference2 typeParameters2 -> let self = ({ __hx_type = HxType.class_ "TyFunctionEnv"; name = HxString.hx_null_string; ownerIdentity = HxString.hx_null_string; params = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; scopes = Obj.magic HxRuntime.hx_null; returnType = Obj.magic HxRuntime.hx_null; returnExprType = Obj.magic HxRuntime.hx_null; staticContext = false; typeParameters = Obj.magic HxRuntime.hx_null; enclosingSymbols = Obj.magic HxRuntime.hx_null; replayMode = false; replayCursor = 0; controlScope = Obj.magic HxRuntime.hx_null; inference = Obj.magic HxRuntime.hx_null; untypedContext = false; speculative = false; protocolSource = Obj.magic HxRuntime.hx_null; retainedBody = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun name2 params2 locals2 returnType2 returnExprType2 ownerIdentity2 activeScopes replayMode2 replayCursor2 staticContext2 controlScope2 inference2 typeParameters2 -> let self = ({ __hx_type = HxType.instance_marker "TyFunctionEnv"; name = HxString.hx_null_string; ownerIdentity = HxString.hx_null_string; params = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; scopes = Obj.magic HxRuntime.hx_null; returnType = Obj.magic HxRuntime.hx_null; returnExprType = Obj.magic HxRuntime.hx_null; staticContext = false; typeParameters = Obj.magic HxRuntime.hx_null; enclosingSymbols = Obj.magic HxRuntime.hx_null; replayMode = false; replayCursor = 0; controlScope = Obj.magic HxRuntime.hx_null; inference = Obj.magic HxRuntime.hx_null; untypedContext = false; speculative = false; protocolSource = Obj.magic HxRuntime.hx_null; retainedBody = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (let replayMode2 = if Obj.repr replayMode2 == HxRuntime.hx_null then false else replayMode2 in let replayCursor2 = if Obj.repr replayCursor2 == HxRuntime.hx_null then 0 else replayCursor2 in let staticContext2 = if Obj.repr staticContext2 == HxRuntime.hx_null then false else staticContext2 in ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = false in (
       (__place_receiver_1 : t).speculative <- __place_rhs_2;
@@ -50704,7 +50704,7 @@ let create = fun name2 params2 locals2 returnType2 returnExprType2 ownerIdentity
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyFunctionEnv"; name = HxString.hx_null_string; ownerIdentity = HxString.hx_null_string; params = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; scopes = Obj.magic HxRuntime.hx_null; returnType = Obj.magic HxRuntime.hx_null; returnExprType = Obj.magic HxRuntime.hx_null; staticContext = false; typeParameters = Obj.magic HxRuntime.hx_null; enclosingSymbols = Obj.magic HxRuntime.hx_null; replayMode = false; replayCursor = 0; controlScope = Obj.magic HxRuntime.hx_null; inference = Obj.magic HxRuntime.hx_null; untypedContext = false; speculative = false; protocolSource = Obj.magic HxRuntime.hx_null; retainedBody = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyFunctionEnv"; name = HxString.hx_null_string; ownerIdentity = HxString.hx_null_string; params = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; scopes = Obj.magic HxRuntime.hx_null; returnType = Obj.magic HxRuntime.hx_null; returnExprType = Obj.magic HxRuntime.hx_null; staticContext = false; typeParameters = Obj.magic HxRuntime.hx_null; enclosingSymbols = Obj.magic HxRuntime.hx_null; replayMode = false; replayCursor = 0; controlScope = Obj.magic HxRuntime.hx_null; inference = Obj.magic HxRuntime.hx_null; untypedContext = false; speculative = false; protocolSource = Obj.magic HxRuntime.hx_null; retainedBody = Obj.magic HxRuntime.hx_null } : t)
 
 let isSpeculative = fun self () -> (Obj.magic self : t).speculative
 
@@ -51228,7 +51228,7 @@ type t = { __hx_type : Obj.t; mutable owner : string; mutable solver : TyInferen
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun owner2 -> let self = ({ __hx_type = HxType.class_ "TyFunctionInference"; owner = HxString.hx_null_string; solver = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; classValueUses = Obj.magic HxRuntime.hx_null; directCalls = Obj.magic HxRuntime.hx_null; receiverCalls = Obj.magic HxRuntime.hx_null; capturedCalls = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; speculativeReplay = false; iteratorProtocols = Obj.magic HxRuntime.hx_null; diagnosticProbes = Obj.magic HxRuntime.hx_null; callbackArguments = Obj.magic HxRuntime.hx_null; sourceFunctions = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun owner2 -> let self = ({ __hx_type = HxType.instance_marker "TyFunctionInference"; owner = HxString.hx_null_string; solver = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; classValueUses = Obj.magic HxRuntime.hx_null; directCalls = Obj.magic HxRuntime.hx_null; receiverCalls = Obj.magic HxRuntime.hx_null; capturedCalls = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; speculativeReplay = false; iteratorProtocols = Obj.magic HxRuntime.hx_null; diagnosticProbes = Obj.magic HxRuntime.hx_null; callbackArguments = Obj.magic HxRuntime.hx_null; sourceFunctions = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       (Obj.magic self : t).sourceFunctions <- __assign_1;
@@ -51286,7 +51286,7 @@ let create = fun owner2 -> let self = ({ __hx_type = HxType.class_ "TyFunctionIn
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyFunctionInference"; owner = HxString.hx_null_string; solver = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; classValueUses = Obj.magic HxRuntime.hx_null; directCalls = Obj.magic HxRuntime.hx_null; receiverCalls = Obj.magic HxRuntime.hx_null; capturedCalls = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; speculativeReplay = false; iteratorProtocols = Obj.magic HxRuntime.hx_null; diagnosticProbes = Obj.magic HxRuntime.hx_null; callbackArguments = Obj.magic HxRuntime.hx_null; sourceFunctions = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyFunctionInference"; owner = HxString.hx_null_string; solver = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; classValueUses = Obj.magic HxRuntime.hx_null; directCalls = Obj.magic HxRuntime.hx_null; receiverCalls = Obj.magic HxRuntime.hx_null; capturedCalls = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; speculativeReplay = false; iteratorProtocols = Obj.magic HxRuntime.hx_null; diagnosticProbes = Obj.magic HxRuntime.hx_null; callbackArguments = Obj.magic HxRuntime.hx_null; sourceFunctions = Obj.magic HxRuntime.hx_null } : t)
 
 let requireDiagnosticProbe = fun self (expression : HxExpr.hxexpr) -> (try let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).diagnosticProbes) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let entry = let __array_read_receiver_38 = _g1 in let __array_read_index_39 = !_g in HxArray.get (Obj.magic __array_read_receiver_38) __array_read_index_39 in (
@@ -51635,7 +51635,7 @@ let fork = fun self () -> let candidate = Obj.magic (create ((Obj.magic self : t
     __assign_230
   ));
   let _this = Obj.magic ((Obj.magic self : t).locals) in let tempKeyValueIterator = HxIterator.of_array (Obj.magic (HxMap.pairs_string (Obj.magic _this))) in let _g = tempKeyValueIterator in (
-    ignore (while let __iterator_receiver_232 = _g in HxIterator.hasNext __iterator_receiver_232 do ignore (let _g2 = let __iterator_receiver_233 = _g in HxIterator.next __iterator_receiver_233 in let key = (let __structural_receiver_234 = _g2 in Obj.obj (HxAnon.get __structural_receiver_234 "key") : string) in let value = Obj.magic (let __structural_receiver_235 = _g2 in Obj.obj (HxAnon.get __structural_receiver_235 "value")) in let _this = Obj.magic ((Obj.magic candidate : t).locals) in HxMap.set_string (Obj.magic _this) (key : string) value) done);
+    ignore (while let __iterator_receiver_232 = _g in HxIterator.hasNext __iterator_receiver_232 do ignore (let _g2 = let __iterator_receiver_233 = _g in HxIterator.next __iterator_receiver_233 in let key = (let __structural_receiver_234 = _g2 in Stdlib.fst __structural_receiver_234 : string) in let value = Obj.magic (let __structural_receiver_235 = _g2 in Stdlib.snd __structural_receiver_235) in let _this = Obj.magic ((Obj.magic candidate : t).locals) in HxMap.set_string (Obj.magic _this) (key : string) value) done);
     candidate
   )
 )
@@ -53540,7 +53540,7 @@ type t = { __hx_type : Obj.t; mutable target : TyControlTarget.t; mutable expect
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun target2 expected2 -> let self = ({ __hx_type = HxType.class_ "TyFunctionReturnState"; target = Obj.magic HxRuntime.hx_null; expected = Obj.magic HxRuntime.hx_null; values = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun target2 expected2 -> let self = ({ __hx_type = HxType.instance_marker "TyFunctionReturnState"; target = Obj.magic HxRuntime.hx_null; expected = Obj.magic HxRuntime.hx_null; values = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic target2 in (
       (Obj.magic self : t).target <- __assign_1;
@@ -53558,7 +53558,7 @@ let create = fun target2 expected2 -> let self = ({ __hx_type = HxType.class_ "T
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyFunctionReturnState"; target = Obj.magic HxRuntime.hx_null; expected = Obj.magic HxRuntime.hx_null; values = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyFunctionReturnState"; target = Obj.magic HxRuntime.hx_null; expected = Obj.magic HxRuntime.hx_null; values = Obj.magic HxRuntime.hx_null } : t)
 
 let record = fun self (term : TyInferenceTerm.tyinferenceterm) (position : HxPos.t) -> ignore (ignore (let __array_receiver_5 = Obj.magic ((Obj.magic self : t).values) in let __array_arg_0_6 = let __anon_7 = HxAnon.create () in (
   ignore (HxAnon.set __anon_7 "term" (HxEnum.box_if_needed "TyInferenceTerm" (Obj.repr term)));
@@ -53603,7 +53603,7 @@ type t = { __hx_type : Obj.t; mutable kind : string; mutable actualType : TyType
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun kind2 actualType2 expectedType2 viaType2 score2 backingType2 -> let self = ({ __hx_type = HxType.class_ "TyImplicitConversionPlan"; kind = HxString.hx_null_string; actualType = Obj.magic HxRuntime.hx_null; expectedType = Obj.magic HxRuntime.hx_null; viaType = Obj.magic HxRuntime.hx_null; score = 0; backingType = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun kind2 actualType2 expectedType2 viaType2 score2 backingType2 -> let self = ({ __hx_type = HxType.instance_marker "TyImplicitConversionPlan"; kind = HxString.hx_null_string; actualType = Obj.magic HxRuntime.hx_null; expectedType = Obj.magic HxRuntime.hx_null; viaType = Obj.magic HxRuntime.hx_null; score = 0; backingType = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (kind2 : string) in (
       (Obj.magic self : t).kind <- __assign_1;
@@ -53633,7 +53633,7 @@ let create = fun kind2 actualType2 expectedType2 viaType2 score2 backingType2 ->
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyImplicitConversionPlan"; kind = HxString.hx_null_string; actualType = Obj.magic HxRuntime.hx_null; expectedType = Obj.magic HxRuntime.hx_null; viaType = Obj.magic HxRuntime.hx_null; score = 0; backingType = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyImplicitConversionPlan"; kind = HxString.hx_null_string; actualType = Obj.magic HxRuntime.hx_null; expectedType = Obj.magic HxRuntime.hx_null; viaType = Obj.magic HxRuntime.hx_null; score = 0; backingType = Obj.magic HxRuntime.hx_null } : t)
 
 let getScore = fun self () -> (Obj.magic self : t).score
 
@@ -53783,7 +53783,7 @@ type t = { __hx_type : Obj.t; mutable provider : TyNominalInfo.t; mutable member
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun provider2 memberName2 candidates2 -> let self = ({ __hx_type = HxType.class_ "TyImportedStaticMethod"; provider = Obj.magic HxRuntime.hx_null; memberName = HxString.hx_null_string; candidates = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun provider2 memberName2 candidates2 -> let self = ({ __hx_type = HxType.instance_marker "TyImportedStaticMethod"; provider = Obj.magic HxRuntime.hx_null; memberName = HxString.hx_null_string; candidates = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if provider2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "imported static method requires its exact provider") ["Dynamic"] else ());
     ignore (if memberName2 == HxString.hx_null_string || (let __string_receiver_1 = memberName2 in HxString.length __string_receiver_1) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "imported static method requires its original member name") ["Dynamic"] else ());
@@ -53804,7 +53804,7 @@ let create = fun provider2 memberName2 candidates2 -> let self = ({ __hx_type = 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyImportedStaticMethod"; provider = Obj.magic HxRuntime.hx_null; memberName = HxString.hx_null_string; candidates = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyImportedStaticMethod"; provider = Obj.magic HxRuntime.hx_null; memberName = HxString.hx_null_string; candidates = Obj.magic HxRuntime.hx_null } : t)
 
 let getProvider = fun self () -> (Obj.magic self : t).provider
 
@@ -54063,7 +54063,7 @@ type t = { __hx_type : Obj.t; mutable owner : string; mutable variables : TyInfe
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun owner2 -> let self = ({ __hx_type = HxType.class_ "TyInferenceSolver"; owner = HxString.hx_null_string; variables = Obj.magic HxRuntime.hx_null; solutions = Obj.magic HxRuntime.hx_null; dynamicUses = Obj.magic HxRuntime.hx_null; fieldRequirements = Obj.magic HxRuntime.hx_null; parent = Obj.magic HxRuntime.hx_null; baseRevision = 0; revision = 0; sealed = false } : t) in (
+let create = fun owner2 -> let self = ({ __hx_type = HxType.instance_marker "TyInferenceSolver"; owner = HxString.hx_null_string; variables = Obj.magic HxRuntime.hx_null; solutions = Obj.magic HxRuntime.hx_null; dynamicUses = Obj.magic HxRuntime.hx_null; fieldRequirements = Obj.magic HxRuntime.hx_null; parent = Obj.magic HxRuntime.hx_null; baseRevision = 0; revision = 0; sealed = false } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = false in (
       (__place_receiver_1 : t).sealed <- __place_rhs_2;
@@ -54106,7 +54106,7 @@ let create = fun owner2 -> let self = ({ __hx_type = HxType.class_ "TyInferenceS
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyInferenceSolver"; owner = HxString.hx_null_string; variables = Obj.magic HxRuntime.hx_null; solutions = Obj.magic HxRuntime.hx_null; dynamicUses = Obj.magic HxRuntime.hx_null; fieldRequirements = Obj.magic HxRuntime.hx_null; parent = Obj.magic HxRuntime.hx_null; baseRevision = 0; revision = 0; sealed = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyInferenceSolver"; owner = HxString.hx_null_string; variables = Obj.magic HxRuntime.hx_null; solutions = Obj.magic HxRuntime.hx_null; dynamicUses = Obj.magic HxRuntime.hx_null; fieldRequirements = Obj.magic HxRuntime.hx_null; parent = Obj.magic HxRuntime.hx_null; baseRevision = 0; revision = 0; sealed = false } : t)
 
 let requireMutable = fun self () -> ignore (ignore (if (Obj.magic self : t).sealed then HxType.hx_throw_typed_rtti (Obj.repr "inference owner is already sealed") ["Dynamic"] else ()))
 
@@ -55284,7 +55284,7 @@ type tyinferenceterm =
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun owner2 ordinal2 openMethodParameter2 kind2 -> let self = ({ __hx_type = HxType.class_ "TyInferenceVariable"; owner = HxString.hx_null_string; ordinal = 0; openMethodParameter = Obj.magic HxRuntime.hx_null; allowsUnknown = false; kind = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun owner2 ordinal2 openMethodParameter2 kind2 -> let self = ({ __hx_type = HxType.instance_marker "TyInferenceVariable"; owner = HxString.hx_null_string; ordinal = 0; openMethodParameter = Obj.magic HxRuntime.hx_null; allowsUnknown = false; kind = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (let kind2 = if Obj.repr kind2 == HxRuntime.hx_null then Obj.magic Required else kind2 in ignore ((
     ignore (let __assign_1 = (owner2 : string) in (
       (Obj.magic self : t).owner <- __assign_1;
@@ -55310,7 +55310,7 @@ let create = fun owner2 ordinal2 openMethodParameter2 kind2 -> let self = ({ __h
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyInferenceVariable"; owner = HxString.hx_null_string; ordinal = 0; openMethodParameter = Obj.magic HxRuntime.hx_null; allowsUnknown = false; kind = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyInferenceVariable"; owner = HxString.hx_null_string; ordinal = 0; openMethodParameter = Obj.magic HxRuntime.hx_null; allowsUnknown = false; kind = Obj.magic HxRuntime.hx_null } : t)
 end
 and TyIteratorProtocolSource : sig
 type tyiteratorprotocolkind =
@@ -55338,7 +55338,7 @@ type t = { __hx_type : Obj.t; mutable source : HxExpr.hxexpr; mutable owner : st
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyIteratorProtocolSource"; source = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; fingerprint = HxString.hx_null_string; acquire = Obj.magic HxRuntime.hx_null; factory = Obj.magic HxRuntime.hx_null; condition = Obj.magic HxRuntime.hx_null; next = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; key = Obj.magic HxRuntime.hx_null; value = Obj.magic HxRuntime.hx_null; queryFingerprint = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyIteratorProtocolSource"; source = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; fingerprint = HxString.hx_null_string; acquire = Obj.magic HxRuntime.hx_null; factory = Obj.magic HxRuntime.hx_null; condition = Obj.magic HxRuntime.hx_null; next = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; key = Obj.magic HxRuntime.hx_null; value = Obj.magic HxRuntime.hx_null; queryFingerprint = HxString.hx_null_string } : t)
 
 let assertOwner = fun self (candidate : string) -> ignore (ignore (if (Obj.magic self : t).owner == HxString.hx_null_string || (let __string_receiver_47 = (Obj.magic self : t).owner in HxString.length __string_receiver_47) = 0 || (let __string_eq_left_48 = candidate in let __string_eq_right_49 = (Obj.magic self : t).owner in not (HxString.equals __string_eq_left_48 __string_eq_right_49)) then HxType.hx_throw_typed_rtti (Obj.repr "iterator protocol belongs to another inference owner") ["Dynamic"] else ()))
 
@@ -55371,7 +55371,7 @@ let queries = fun self () -> let _g = Obj.magic (let __represented_array_50 = Hx
   )
 )
 
-let create = fun source2 owner2 kind2 direct -> let self = ({ __hx_type = HxType.class_ "TyIteratorProtocolSource"; source = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; fingerprint = HxString.hx_null_string; acquire = Obj.magic HxRuntime.hx_null; factory = Obj.magic HxRuntime.hx_null; condition = Obj.magic HxRuntime.hx_null; next = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; key = Obj.magic HxRuntime.hx_null; value = Obj.magic HxRuntime.hx_null; queryFingerprint = HxString.hx_null_string } : t) in (
+let create = fun source2 owner2 kind2 direct -> let self = ({ __hx_type = HxType.instance_marker "TyIteratorProtocolSource"; source = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; fingerprint = HxString.hx_null_string; acquire = Obj.magic HxRuntime.hx_null; factory = Obj.magic HxRuntime.hx_null; condition = Obj.magic HxRuntime.hx_null; next = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; key = Obj.magic HxRuntime.hx_null; value = Obj.magic HxRuntime.hx_null; queryFingerprint = HxString.hx_null_string } : t) in (
   ignore (let direct = if Obj.repr direct == HxRuntime.hx_null then false else direct in ignore ((
     ignore (let __assign_1 = Obj.magic source2 in (
       (Obj.magic self : t).source <- __assign_1;
@@ -55490,7 +55490,7 @@ type t = { __hx_type : Obj.t; mutable identity : TyLocalId.t; mutable sourceName
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun identity2 sourceName2 hx_type kind2 -> let self = ({ __hx_type = HxType.class_ "TyLocalBinding"; identity = Obj.magic HxRuntime.hx_null; sourceName = HxString.hx_null_string; hx_type = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun identity2 sourceName2 hx_type kind2 -> let self = ({ __hx_type = HxType.instance_marker "TyLocalBinding"; identity = Obj.magic HxRuntime.hx_null; sourceName = HxString.hx_null_string; hx_type = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if identity2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "typed local binding requires an identity") ["Dynamic"] else ());
     ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "typed local binding requires a semantic type") ["Dynamic"] else ());
@@ -55523,7 +55523,7 @@ let create = fun identity2 sourceName2 hx_type kind2 -> let self = ({ __hx_type 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyLocalBinding"; identity = Obj.magic HxRuntime.hx_null; sourceName = HxString.hx_null_string; hx_type = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyLocalBinding"; identity = Obj.magic HxRuntime.hx_null; sourceName = HxString.hx_null_string; hx_type = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null } : t)
 
 let getIdentity = fun self () -> (Obj.magic self : t).identity
 
@@ -55572,7 +55572,7 @@ type t = { __hx_type : Obj.t; mutable slots : TyCallArgumentSlot.tycallarguments
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun slots2 sourceCount2 -> let self = ({ __hx_type = HxType.class_ "TyMethodArgumentOrder"; slots = Obj.magic HxRuntime.hx_null; sourceCount = 0 } : t) in (
+let create = fun slots2 sourceCount2 -> let self = ({ __hx_type = HxType.instance_marker "TyMethodArgumentOrder"; slots = Obj.magic HxRuntime.hx_null; sourceCount = 0 } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic slots2 in (
       (Obj.magic self : t).slots <- __assign_1;
@@ -55586,7 +55586,7 @@ let create = fun slots2 sourceCount2 -> let self = ({ __hx_type = HxType.class_ 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyMethodArgumentOrder"; slots = Obj.magic HxRuntime.hx_null; sourceCount = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyMethodArgumentOrder"; slots = Obj.magic HxRuntime.hx_null; sourceCount = 0 } : t)
 
 let getSlots = fun self () -> let _g = Obj.magic (let __arr_4 = HxArray.create () in __arr_4) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).slots) in (
   ignore (while !_g1 < HxArray.length _g2 do ignore (let slot = Obj.magic (let __array_read_receiver_5 = _g2 in let __array_read_index_6 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_5) __array_read_index_6) in (
@@ -55959,7 +55959,7 @@ type t = { __hx_type : Obj.t; mutable checked : Obj.t HxMap.string_map; mutable 
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun methodInputs2 -> let self = ({ __hx_type = HxType.class_ "TyMethodBodyResults"; checked = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null; infer = Obj.magic HxRuntime.hx_null; methodInputs = Obj.magic HxRuntime.hx_null; inputRevision = 0 } : t) in (
+let create = fun methodInputs2 -> let self = ({ __hx_type = HxType.instance_marker "TyMethodBodyResults"; checked = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null; infer = Obj.magic HxRuntime.hx_null; methodInputs = Obj.magic HxRuntime.hx_null; inputRevision = 0 } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = -1 in (
       (__place_receiver_1 : t).inputRevision <- __place_rhs_2;
@@ -55990,7 +55990,7 @@ let create = fun methodInputs2 -> let self = ({ __hx_type = HxType.class_ "TyMet
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyMethodBodyResults"; checked = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null; infer = Obj.magic HxRuntime.hx_null; methodInputs = Obj.magic HxRuntime.hx_null; inputRevision = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyMethodBodyResults"; checked = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null; infer = Obj.magic HxRuntime.hx_null; methodInputs = Obj.magic HxRuntime.hx_null; inputRevision = 0 } : t)
 
 let configure = fun self (infer2 : TyDeclarationInfo.t -> Obj.t) -> ignore (ignore (let __assign_8 = Obj.magic (Obj.repr infer2) in (
   (Obj.magic self : t).infer <- __assign_8;
@@ -56292,12 +56292,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TyMethodGenericBinding" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TyMethodGenericBinding" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyMethodGenericBinding" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyMethodGenericBinding" } : t)
 
 let parameterIdentity = fun hx_type methodTypeParameters -> (try (
   ignore (if hx_type == Obj.magic (HxRuntime.hx_null) || not (TyType.isTypeParameter (Obj.magic hx_type) ()) || methodTypeParameters == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
@@ -56822,7 +56822,7 @@ type tymethodinputtrial_t = { __hx_type : Obj.t; mutable owner : t; mutable revi
 
 let __reflaxe_ocaml__ = ()
 
-let tymethodinputtrial_create = fun owner2 revision2 declaration2 sourceIdentity2 signature2 changed2 -> let self = ({ __hx_type = HxType.class_ "TyMethodInputTrial"; owner = Obj.magic HxRuntime.hx_null; revision = 0; declaration = Obj.magic HxRuntime.hx_null; sourceIdentity = HxString.hx_null_string; inputs = Obj.magic HxRuntime.hx_null; signature = Obj.magic HxRuntime.hx_null; changed = false } : tymethodinputtrial_t) in (
+let tymethodinputtrial_create = fun owner2 revision2 declaration2 sourceIdentity2 signature2 changed2 -> let self = ({ __hx_type = HxType.instance_marker "TyMethodInputTrial"; owner = Obj.magic HxRuntime.hx_null; revision = 0; declaration = Obj.magic HxRuntime.hx_null; sourceIdentity = HxString.hx_null_string; inputs = Obj.magic HxRuntime.hx_null; signature = Obj.magic HxRuntime.hx_null; changed = false } : tymethodinputtrial_t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic owner2 in (
       (Obj.magic self : tymethodinputtrial_t).owner <- __assign_1;
@@ -56856,7 +56856,7 @@ let tymethodinputtrial_create = fun owner2 revision2 declaration2 sourceIdentity
   self
 )
 
-let tymethodinputtrial___empty = fun () -> ({ __hx_type = HxType.class_ "TyMethodInputTrial"; owner = Obj.magic HxRuntime.hx_null; revision = 0; declaration = Obj.magic HxRuntime.hx_null; sourceIdentity = HxString.hx_null_string; inputs = Obj.magic HxRuntime.hx_null; signature = Obj.magic HxRuntime.hx_null; changed = false } : tymethodinputtrial_t)
+let tymethodinputtrial___empty = fun () -> ({ __hx_type = HxType.instance_marker "TyMethodInputTrial"; owner = Obj.magic HxRuntime.hx_null; revision = 0; declaration = Obj.magic HxRuntime.hx_null; sourceIdentity = HxString.hx_null_string; inputs = Obj.magic HxRuntime.hx_null; signature = Obj.magic HxRuntime.hx_null; changed = false } : tymethodinputtrial_t)
 
 let tymethodinputtrial_getSignature = fun self () -> TyFunSig.create (TyFunSig.getName (Obj.magic ((Obj.magic self : tymethodinputtrial_t).signature)) () : string) (TyFunSig.getIsStatic (Obj.magic ((Obj.magic self : tymethodinputtrial_t).signature)) ()) (Obj.magic (let __array_receiver_11 = Obj.magic (TyFunSig.getArgNames (Obj.magic ((Obj.magic self : tymethodinputtrial_t).signature)) ()) in HxArray.copy __array_receiver_11)) (Obj.magic (let __array_receiver_12 = Obj.magic ((Obj.magic self : tymethodinputtrial_t).inputs) in HxArray.copy __array_receiver_12)) (Obj.magic (let __array_receiver_13 = Obj.magic (TyFunSig.getArgOptional (Obj.magic ((Obj.magic self : tymethodinputtrial_t).signature)) ()) in HxArray.copy __array_receiver_13)) (Obj.magic (let __array_receiver_14 = Obj.magic (TyFunSig.getArgRest (Obj.magic ((Obj.magic self : tymethodinputtrial_t).signature)) ()) in HxArray.copy __array_receiver_14)) (Obj.magic (TyFunSig.getReturnType (Obj.magic ((Obj.magic self : tymethodinputtrial_t).signature)) ())) (Obj.magic (TyFunSig.getPos (Obj.magic ((Obj.magic self : tymethodinputtrial_t).signature)) ()))
 
@@ -56865,7 +56865,7 @@ let tymethodinputtrial_getSignature = fun self () -> TyFunSig.create (TyFunSig.g
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TyMethodInputState"; solutions = Obj.magic HxRuntime.hx_null; revision = 0 } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TyMethodInputState"; solutions = Obj.magic HxRuntime.hx_null; revision = 0 } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = 0 in (
       (__place_receiver_1 : t).revision <- __place_rhs_2;
@@ -56879,7 +56879,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "TyMethodInputSta
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyMethodInputState"; solutions = Obj.magic HxRuntime.hx_null; revision = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyMethodInputState"; solutions = Obj.magic HxRuntime.hx_null; revision = 0 } : t)
 
 let getRevision = fun self () -> (Obj.magic self : t).revision
 
@@ -57005,7 +57005,7 @@ type t = { __hx_type : Obj.t; mutable packagePath : string; mutable directives :
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun packagePath2 directives2 mainClass2 resolvedDirectives2 -> let self = ({ __hx_type = HxType.class_ "TyModuleEnv"; packagePath = HxString.hx_null_string; directives = Obj.magic HxRuntime.hx_null; resolvedDirectives = Obj.magic HxRuntime.hx_null; mainClass = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun packagePath2 directives2 mainClass2 resolvedDirectives2 -> let self = ({ __hx_type = HxType.instance_marker "TyModuleEnv"; packagePath = HxString.hx_null_string; directives = Obj.magic HxRuntime.hx_null; resolvedDirectives = Obj.magic HxRuntime.hx_null; mainClass = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (packagePath2 : string) in (
       (Obj.magic self : t).packagePath <- __assign_1;
@@ -57045,7 +57045,7 @@ let create = fun packagePath2 directives2 mainClass2 resolvedDirectives2 -> let 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyModuleEnv"; packagePath = HxString.hx_null_string; directives = Obj.magic HxRuntime.hx_null; resolvedDirectives = Obj.magic HxRuntime.hx_null; mainClass = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyModuleEnv"; packagePath = HxString.hx_null_string; directives = Obj.magic HxRuntime.hx_null; resolvedDirectives = Obj.magic HxRuntime.hx_null; mainClass = Obj.magic HxRuntime.hx_null } : t)
 
 let getPackagePath = fun self () -> (Obj.magic self : t).packagePath
 
@@ -57069,7 +57069,7 @@ type t = { __hx_type : Obj.t; mutable parameters : Obj.t HxArray.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun parameters2 -> let self = ({ __hx_type = HxType.class_ "TyMultiTypePolicy"; parameters = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun parameters2 -> let self = ({ __hx_type = HxType.instance_marker "TyMultiTypePolicy"; parameters = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let __assign_1 = Obj.magic (let __array_receiver_2 = Obj.magic parameters2 in HxArray.copy __array_receiver_2) in (
     (Obj.magic self : t).parameters <- __assign_1;
     __assign_1
@@ -57077,7 +57077,7 @@ let create = fun parameters2 -> let self = ({ __hx_type = HxType.class_ "TyMulti
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyMultiTypePolicy"; parameters = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyMultiTypePolicy"; parameters = Obj.magic HxRuntime.hx_null } : t)
 
 let getParameters = fun self () -> let __array_receiver_3 = Obj.magic ((Obj.magic self : t).parameters) in HxArray.copy __array_receiver_3
 
@@ -57416,7 +57416,7 @@ type tymultitypeselectionresult =
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun owner2 constructed2 declaration2 callable2 -> let self = ({ __hx_type = HxType.class_ "TyMultiTypeSelection"; owner = Obj.magic HxRuntime.hx_null; constructed = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; callable = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun owner2 constructed2 declaration2 callable2 -> let self = ({ __hx_type = HxType.instance_marker "TyMultiTypeSelection"; owner = Obj.magic HxRuntime.hx_null; constructed = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; callable = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic owner2 in (
       (Obj.magic self : t).owner <- __assign_1;
@@ -57438,7 +57438,7 @@ let create = fun owner2 constructed2 declaration2 callable2 -> let self = ({ __h
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyMultiTypeSelection"; owner = Obj.magic HxRuntime.hx_null; constructed = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; callable = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyMultiTypeSelection"; owner = Obj.magic HxRuntime.hx_null; constructed = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; callable = Obj.magic HxRuntime.hx_null } : t)
 
 let getDeclaration = fun self () -> (Obj.magic self : t).declaration
 
@@ -57578,7 +57578,7 @@ type t = { __hx_type : Obj.t; mutable name : string; mutable conflict : bool; mu
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun metadata -> let self = ({ __hx_type = HxType.class_ "TyNativeName"; name = Obj.magic HxRuntime.hx_null; conflict = false; identity = HxString.hx_null_string } : t) in (
+let create = fun metadata -> let self = ({ __hx_type = HxType.instance_marker "TyNativeName"; name = Obj.magic HxRuntime.hx_null; conflict = false; identity = HxString.hx_null_string } : t) in (
   ignore (ignore (let selected = ref (Obj.magic (HxRuntime.hx_null) : string) in let conflicting = ref false in let _g = ref 0 in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
     ignore (if metadata == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (let __represented_array_2 = HxArray.create () in __represented_array_2) in (
       tempArray := __assign_1;
@@ -57807,7 +57807,7 @@ let create = fun metadata -> let self = ({ __hx_type = HxType.class_ "TyNativeNa
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyNativeName"; name = Obj.magic HxRuntime.hx_null; conflict = false; identity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyNativeName"; name = Obj.magic HxRuntime.hx_null; conflict = false; identity = HxString.hx_null_string } : t)
 
 let getName = fun self () -> (
   ignore (if (Obj.magic self : t).conflict then HxType.hx_throw_typed_rtti (Obj.repr "conflicting native names") ["Dynamic"] else ());
@@ -57844,7 +57844,7 @@ type tynestedfunctionkind =
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TyNestedFunctionId"; canonicalKey = HxString.hx_null_string; ownerIdentity = HxString.hx_null_string } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TyNestedFunctionId"; canonicalKey = HxString.hx_null_string; ownerIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (if Obj.obj (HxAnon.get input "ownerIdentity") == HxString.hx_null_string || (let __string_receiver_1 = let __call_arg_0_2 = Obj.obj (HxAnon.get input "ownerIdentity") in StringTools.trim __call_arg_0_2 in HxString.length __string_receiver_1) = 0 || Obj.obj (HxAnon.get input "sourceOrdinal") < 0 then HxType.hx_throw_typed_rtti (Obj.repr "nested function identity requires an owner and non-negative source ordinal") ["Dynamic"] else ());
     ignore (let __assign_3 = (Obj.obj (HxAnon.get input "ownerIdentity") : string) in (
@@ -57900,7 +57900,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "TyNestedFunct
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyNestedFunctionId"; canonicalKey = HxString.hx_null_string; ownerIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyNestedFunctionId"; canonicalKey = HxString.hx_null_string; ownerIdentity = HxString.hx_null_string } : t)
 
 let getCanonicalKey = fun self () -> ((self : t).canonicalKey : string)
 
@@ -58356,7 +58356,7 @@ let instanceMethodCandidates__impl = fun (self : t) (name : string) -> let tempR
   !tempResult
 )
 
-let create = fun identity2 shortName2 modulePath2 fields2 properties2 staticMethods2 instanceMethods2 staticMethodLists2 instanceMethodLists2 declarations2 visibility2 isEnum2 enumDeclaration2 -> let self = ({ __hx_type = HxType.class_ "TyNominalInfo"; identity = Obj.magic HxRuntime.hx_null; shortName = HxString.hx_null_string; modulePath = HxString.hx_null_string; fields = Obj.magic HxRuntime.hx_null; properties = Obj.magic HxRuntime.hx_null; staticMethods = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null; staticMethodLists = Obj.magic HxRuntime.hx_null; instanceMethodLists = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; visibility = Obj.magic HxRuntime.hx_null; isEnum = false; enumDeclaration = Obj.magic HxRuntime.hx_null; getIdentity = (fun o () -> Obj.magic (getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (getDeclarations__impl (Obj.magic o) (Obj.magic ()))); getVisibility = (fun o () -> Obj.magic (getVisibility__impl (Obj.magic o) (Obj.magic ()))); getIsEnum = (fun o () -> Obj.magic (getIsEnum__impl (Obj.magic o) (Obj.magic ()))); getEnumDeclaration = (fun o () -> Obj.magic (getEnumDeclaration__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (fieldType__impl (Obj.magic o) (Obj.magic a0))); fieldInfo = (fun o a0 -> Obj.magic (fieldInfo__impl (Obj.magic o) (Obj.magic a0))); getFieldInfos = (fun o () -> Obj.magic (getFieldInfos__impl (Obj.magic o) (Obj.magic ()))); propertyInfo = (fun o a0 -> Obj.magic (propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))) } : t) in (
+let create = fun identity2 shortName2 modulePath2 fields2 properties2 staticMethods2 instanceMethods2 staticMethodLists2 instanceMethodLists2 declarations2 visibility2 isEnum2 enumDeclaration2 -> let self = ({ __hx_type = HxType.instance_marker "TyNominalInfo"; identity = Obj.magic HxRuntime.hx_null; shortName = HxString.hx_null_string; modulePath = HxString.hx_null_string; fields = Obj.magic HxRuntime.hx_null; properties = Obj.magic HxRuntime.hx_null; staticMethods = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null; staticMethodLists = Obj.magic HxRuntime.hx_null; instanceMethodLists = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; visibility = Obj.magic HxRuntime.hx_null; isEnum = false; enumDeclaration = Obj.magic HxRuntime.hx_null; getIdentity = (fun o () -> Obj.magic (getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (getDeclarations__impl (Obj.magic o) (Obj.magic ()))); getVisibility = (fun o () -> Obj.magic (getVisibility__impl (Obj.magic o) (Obj.magic ()))); getIsEnum = (fun o () -> Obj.magic (getIsEnum__impl (Obj.magic o) (Obj.magic ()))); getEnumDeclaration = (fun o () -> Obj.magic (getEnumDeclaration__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (fieldType__impl (Obj.magic o) (Obj.magic a0))); fieldInfo = (fun o a0 -> Obj.magic (fieldInfo__impl (Obj.magic o) (Obj.magic a0))); getFieldInfos = (fun o () -> Obj.magic (getFieldInfos__impl (Obj.magic o) (Obj.magic ()))); propertyInfo = (fun o a0 -> Obj.magic (propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))) } : t) in (
   ignore (let visibility2 = if Obj.repr visibility2 == HxRuntime.hx_null then Obj.magic (HxVisibility.Public) else visibility2 in let isEnum2 = if Obj.repr isEnum2 == HxRuntime.hx_null then false else isEnum2 in ignore ((
     ignore (let __assign_1 = Obj.magic identity2 in (
       (Obj.magic self : t).identity <- __assign_1;
@@ -58415,7 +58415,7 @@ let create = fun identity2 shortName2 modulePath2 fields2 properties2 staticMeth
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyNominalInfo"; identity = Obj.magic HxRuntime.hx_null; shortName = HxString.hx_null_string; modulePath = HxString.hx_null_string; fields = Obj.magic HxRuntime.hx_null; properties = Obj.magic HxRuntime.hx_null; staticMethods = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null; staticMethodLists = Obj.magic HxRuntime.hx_null; instanceMethodLists = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; visibility = Obj.magic HxRuntime.hx_null; isEnum = false; enumDeclaration = Obj.magic HxRuntime.hx_null; getIdentity = (fun o () -> Obj.magic (getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (getDeclarations__impl (Obj.magic o) (Obj.magic ()))); getVisibility = (fun o () -> Obj.magic (getVisibility__impl (Obj.magic o) (Obj.magic ()))); getIsEnum = (fun o () -> Obj.magic (getIsEnum__impl (Obj.magic o) (Obj.magic ()))); getEnumDeclaration = (fun o () -> Obj.magic (getEnumDeclaration__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (fieldType__impl (Obj.magic o) (Obj.magic a0))); fieldInfo = (fun o a0 -> Obj.magic (fieldInfo__impl (Obj.magic o) (Obj.magic a0))); getFieldInfos = (fun o () -> Obj.magic (getFieldInfos__impl (Obj.magic o) (Obj.magic ()))); propertyInfo = (fun o a0 -> Obj.magic (propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyNominalInfo"; identity = Obj.magic HxRuntime.hx_null; shortName = HxString.hx_null_string; modulePath = HxString.hx_null_string; fields = Obj.magic HxRuntime.hx_null; properties = Obj.magic HxRuntime.hx_null; staticMethods = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null; staticMethodLists = Obj.magic HxRuntime.hx_null; instanceMethodLists = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; visibility = Obj.magic HxRuntime.hx_null; isEnum = false; enumDeclaration = Obj.magic HxRuntime.hx_null; getIdentity = (fun o () -> Obj.magic (getIdentity__impl (Obj.magic o) (Obj.magic ()))); getFullName = (fun o () -> Obj.magic (getFullName__impl (Obj.magic o) (Obj.magic ()))); getShortName = (fun o () -> Obj.magic (getShortName__impl (Obj.magic o) (Obj.magic ()))); getModulePath = (fun o () -> Obj.magic (getModulePath__impl (Obj.magic o) (Obj.magic ()))); getDeclarations = (fun o () -> Obj.magic (getDeclarations__impl (Obj.magic o) (Obj.magic ()))); getVisibility = (fun o () -> Obj.magic (getVisibility__impl (Obj.magic o) (Obj.magic ()))); getIsEnum = (fun o () -> Obj.magic (getIsEnum__impl (Obj.magic o) (Obj.magic ()))); getEnumDeclaration = (fun o () -> Obj.magic (getEnumDeclaration__impl (Obj.magic o) (Obj.magic ()))); declarationForSignature = (fun o a0 -> Obj.magic (declarationForSignature__impl (Obj.magic o) (Obj.magic a0))); declarationForSource = (fun o a0 -> Obj.magic (declarationForSource__impl (Obj.magic o) (Obj.magic a0))); hasField = (fun o a0 -> Obj.magic (hasField__impl (Obj.magic o) (Obj.magic a0))); fieldType = (fun o a0 -> Obj.magic (fieldType__impl (Obj.magic o) (Obj.magic a0))); fieldInfo = (fun o a0 -> Obj.magic (fieldInfo__impl (Obj.magic o) (Obj.magic a0))); getFieldInfos = (fun o () -> Obj.magic (getFieldInfos__impl (Obj.magic o) (Obj.magic ()))); propertyInfo = (fun o a0 -> Obj.magic (propertyInfo__impl (Obj.magic o) (Obj.magic a0))); staticMethod = (fun o a0 -> Obj.magic (staticMethod__impl (Obj.magic o) (Obj.magic a0))); instanceMethod = (fun o a0 -> Obj.magic (instanceMethod__impl (Obj.magic o) (Obj.magic a0))); staticMethodCandidates = (fun o a0 -> Obj.magic (staticMethodCandidates__impl (Obj.magic o) (Obj.magic a0))); instanceMethodCandidates = (fun o a0 -> Obj.magic (instanceMethodCandidates__impl (Obj.magic o) (Obj.magic a0))) } : t)
 end
 and TyOpenMethodParameterId : sig
 type t = { __hx_type : Obj.t; mutable key : string; mutable name : string }
@@ -58431,7 +58431,7 @@ type t = { __hx_type : Obj.t; mutable key : string; mutable name : string }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun executable occurrence declaration -> let self = ({ __hx_type = HxType.class_ "TyOpenMethodParameterId"; key = HxString.hx_null_string; name = HxString.hx_null_string } : t) in (
+let create = fun executable occurrence declaration -> let self = ({ __hx_type = HxType.instance_marker "TyOpenMethodParameterId"; key = HxString.hx_null_string; name = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (if executable == HxString.hx_null_string || (let __string_receiver_1 = executable in HxString.length __string_receiver_1) = 0 || occurrence < 0 || declaration == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "open method parameter requires executable, occurrence, and declaration identities") ["Dynamic"] else ());
     ignore (let __assign_2 = (TyTypeParameterId.getName (Obj.magic declaration) () : string) in (
@@ -58452,7 +58452,7 @@ let create = fun executable occurrence declaration -> let self = ({ __hx_type = 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyOpenMethodParameterId"; key = HxString.hx_null_string; name = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyOpenMethodParameterId"; key = HxString.hx_null_string; name = HxString.hx_null_string } : t)
 
 let getCanonicalKey = fun self () -> ((self : t).key : string)
 
@@ -58478,7 +58478,7 @@ type t = { __hx_type : Obj.t; mutable name : string; mutable hx_type : TyType.t;
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun name2 hx_type isStatic2 getterAccess2 setterAccess2 -> let self = ({ __hx_type = HxType.class_ "TyPropertyInfo"; name = HxString.hx_null_string; hx_type = Obj.magic HxRuntime.hx_null; isStatic = false; getterAccess = HxString.hx_null_string; setterAccess = HxString.hx_null_string } : t) in (
+let create = fun name2 hx_type isStatic2 getterAccess2 setterAccess2 -> let self = ({ __hx_type = HxType.instance_marker "TyPropertyInfo"; name = HxString.hx_null_string; hx_type = Obj.magic HxRuntime.hx_null; isStatic = false; getterAccess = HxString.hx_null_string; setterAccess = HxString.hx_null_string } : t) in (
   ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
     ignore (if name2 == HxString.hx_null_string then let __assign_1 = ("" : string) in (
       tempRight := __assign_1;
@@ -58538,7 +58538,7 @@ let create = fun name2 hx_type isStatic2 getterAccess2 setterAccess2 -> let self
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyPropertyInfo"; name = HxString.hx_null_string; hx_type = Obj.magic HxRuntime.hx_null; isStatic = false; getterAccess = HxString.hx_null_string; setterAccess = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyPropertyInfo"; name = HxString.hx_null_string; hx_type = Obj.magic HxRuntime.hx_null; isStatic = false; getterAccess = HxString.hx_null_string; setterAccess = HxString.hx_null_string } : t)
 
 let getName = fun self () -> (Obj.magic self : t).name
 
@@ -58570,7 +58570,7 @@ type t = { __hx_type : Obj.t; mutable owner : string; mutable name : string; mut
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun info metadata -> let self = ({ __hx_type = HxType.class_ "TyPublicReflectionName"; owner = HxString.hx_null_string; name = HxString.hx_null_string; unavailableReason = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun info metadata -> let self = ({ __hx_type = HxType.instance_marker "TyPublicReflectionName"; owner = HxString.hx_null_string; name = HxString.hx_null_string; unavailableReason = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (TyNominalTypeId.getCanonicalName (Obj.magic ((Obj.magic info : TyNominalInfo.t).getIdentity (Obj.magic info) ())) () : string) in (
       (Obj.magic self : t).owner <- __assign_1;
@@ -58674,7 +58674,7 @@ let create = fun info metadata -> let self = ({ __hx_type = HxType.class_ "TyPub
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyPublicReflectionName"; owner = HxString.hx_null_string; name = HxString.hx_null_string; unavailableReason = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyPublicReflectionName"; owner = HxString.hx_null_string; name = HxString.hx_null_string; unavailableReason = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
 
 let requireName = fun self () -> (
   ignore (if (Obj.magic self : t).unavailableReason != Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_50 = HxString.toStdString ((Obj.magic self : t).unavailableReason) in let __string_part_51 = ": " in let __string_part_52 = HxString.toStdString ((Obj.magic self : t).owner) in (__string_part_50 ^ __string_part_51) ^ __string_part_52)) ["Dynamic"] else ());
@@ -58699,7 +58699,7 @@ type t = { __hx_type : Obj.t; mutable source : HxExpr.hxexpr; mutable fingerprin
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun source2 declaration parameters2 -> let self = ({ __hx_type = HxType.class_ "TyReceiverCallContext"; source = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string; declarationKey = HxString.hx_null_string; parameters = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun source2 declaration parameters2 -> let self = ({ __hx_type = HxType.instance_marker "TyReceiverCallContext"; source = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string; declarationKey = HxString.hx_null_string; parameters = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic source2 in (
       (Obj.magic self : t).source <- __assign_1;
@@ -58721,7 +58721,7 @@ let create = fun source2 declaration parameters2 -> let self = ({ __hx_type = Hx
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyReceiverCallContext"; source = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string; declarationKey = HxString.hx_null_string; parameters = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyReceiverCallContext"; source = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string; declarationKey = HxString.hx_null_string; parameters = Obj.magic HxRuntime.hx_null } : t)
 
 let owns = fun self (expression : HxExpr.hxexpr) -> let __enum_eq_left_6 = (Obj.magic self : t).source in let __enum_eq_right_7 = expression in HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_left_6) == HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_right_7)
 
@@ -58855,7 +58855,7 @@ type t = { __hx_type : Obj.t; mutable hx_type : TyType.t; mutable declarations :
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun hx_type declarations2 position2 -> let self = ({ __hx_type = HxType.class_ "TyResolvedTypeUse"; hx_type = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; position = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun hx_type declarations2 position2 -> let self = ({ __hx_type = HxType.instance_marker "TyResolvedTypeUse"; hx_type = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; position = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic hx_type in (
       (Obj.magic self : t).hx_type <- __assign_1;
@@ -58873,7 +58873,7 @@ let create = fun hx_type declarations2 position2 -> let self = ({ __hx_type = Hx
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyResolvedTypeUse"; hx_type = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; position = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyResolvedTypeUse"; hx_type = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; position = Obj.magic HxRuntime.hx_null } : t)
 
 let getType = fun self () -> (Obj.magic self : t).hx_type
 
@@ -59957,12 +59957,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TySwitchPatternBindings" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TySwitchPatternBindings" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TySwitchPatternBindings" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TySwitchPatternBindings" } : t)
 
 let effectiveType = fun hx_type -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
   ignore (if hx_type == Obj.magic (HxRuntime.hx_null) || TyType.isUnknown (Obj.magic hx_type) () then let __assign_1 = Obj.magic (TyType.fromHintText ("Dynamic" : string)) in (
@@ -60337,7 +60337,7 @@ type t = { __hx_type : Obj.t; mutable name : string; mutable identity : TyLocalI
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun name2 ty2 identity2 kind2 -> let self = ({ __hx_type = HxType.class_ "TySymbol"; name = HxString.hx_null_string; identity = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; ty = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun name2 ty2 identity2 kind2 -> let self = ({ __hx_type = HxType.instance_marker "TySymbol"; name = HxString.hx_null_string; identity = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; ty = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if identity2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "typed local symbol requires a stable identity") ["Dynamic"] else ());
     let tempRight = ref (HxString.hx_null_string : string) in (
@@ -60378,7 +60378,7 @@ let create = fun name2 ty2 identity2 kind2 -> let self = ({ __hx_type = HxType.c
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TySymbol"; name = HxString.hx_null_string; identity = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; ty = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TySymbol"; name = HxString.hx_null_string; identity = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; ty = Obj.magic HxRuntime.hx_null } : t)
 
 let getName = fun self () -> (Obj.magic self : t).name
 
@@ -60618,7 +60618,7 @@ type t = { __hx_type : Obj.t; mutable display : string; mutable kind : string; m
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TyType"; display = HxString.hx_null_string; kind = HxString.hx_null_string; nominalIdentity = Obj.magic HxRuntime.hx_null; typeArguments = Obj.magic HxRuntime.hx_null; nullableInner = Obj.magic HxRuntime.hx_null; unresolvedPath = HxString.hx_null_string; functionParameters = Obj.magic HxRuntime.hx_null; functionReturn = Obj.magic HxRuntime.hx_null; anonymousFields = Obj.magic HxRuntime.hx_null; typeParameterIdentity = Obj.magic HxRuntime.hx_null; openMethodParameterIdentity = Obj.magic HxRuntime.hx_null; classValueScheme = Obj.magic HxRuntime.hx_null; aliasDefinition = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TyType"; display = HxString.hx_null_string; kind = HxString.hx_null_string; nominalIdentity = Obj.magic HxRuntime.hx_null; typeArguments = Obj.magic HxRuntime.hx_null; nullableInner = Obj.magic HxRuntime.hx_null; unresolvedPath = HxString.hx_null_string; functionParameters = Obj.magic HxRuntime.hx_null; functionReturn = Obj.magic HxRuntime.hx_null; anonymousFields = Obj.magic HxRuntime.hx_null; typeParameterIdentity = Obj.magic HxRuntime.hx_null; openMethodParameterIdentity = Obj.magic HxRuntime.hx_null; classValueScheme = Obj.magic HxRuntime.hx_null; aliasDefinition = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (Obj.obj (HxAnon.get input "display") : string) in (
       (Obj.magic self : t).display <- __assign_1;
@@ -60730,7 +60730,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "TyType"; disp
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyType"; display = HxString.hx_null_string; kind = HxString.hx_null_string; nominalIdentity = Obj.magic HxRuntime.hx_null; typeArguments = Obj.magic HxRuntime.hx_null; nullableInner = Obj.magic HxRuntime.hx_null; unresolvedPath = HxString.hx_null_string; functionParameters = Obj.magic HxRuntime.hx_null; functionReturn = Obj.magic HxRuntime.hx_null; anonymousFields = Obj.magic HxRuntime.hx_null; typeParameterIdentity = Obj.magic HxRuntime.hx_null; openMethodParameterIdentity = Obj.magic HxRuntime.hx_null; classValueScheme = Obj.magic HxRuntime.hx_null; aliasDefinition = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyType"; display = HxString.hx_null_string; kind = HxString.hx_null_string; nominalIdentity = Obj.magic HxRuntime.hx_null; typeArguments = Obj.magic HxRuntime.hx_null; nullableInner = Obj.magic HxRuntime.hx_null; unresolvedPath = HxString.hx_null_string; functionParameters = Obj.magic HxRuntime.hx_null; functionReturn = Obj.magic HxRuntime.hx_null; anonymousFields = Obj.magic HxRuntime.hx_null; typeParameterIdentity = Obj.magic HxRuntime.hx_null; openMethodParameterIdentity = Obj.magic HxRuntime.hx_null; classValueScheme = Obj.magic HxRuntime.hx_null; aliasDefinition = Obj.magic HxRuntime.hx_null } : t)
 
 let getAliasDefinition = fun self () -> (Obj.magic self : t).aliasDefinition
 
@@ -62187,7 +62187,7 @@ type t = { __hx_type : Obj.t; mutable canonicalName : string; mutable visibility
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyTypeDeclaration"; canonicalName = HxString.hx_null_string; visibility = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; context = Obj.magic HxRuntime.hx_null; parameterIds = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyTypeDeclaration"; canonicalName = HxString.hx_null_string; visibility = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; context = Obj.magic HxRuntime.hx_null; parameterIds = Obj.magic HxRuntime.hx_null } : t)
 
 let getCanonicalName = fun self () -> (Obj.magic self : t).canonicalName
 
@@ -62211,7 +62211,7 @@ let copyContext = fun value -> let __anon_25 = HxAnon.create () in (
   __anon_25
 )
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TyTypeDeclaration"; canonicalName = HxString.hx_null_string; visibility = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; context = Obj.magic HxRuntime.hx_null; parameterIds = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TyTypeDeclaration"; canonicalName = HxString.hx_null_string; visibility = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; context = Obj.magic HxRuntime.hx_null; parameterIds = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (Obj.obj (HxAnon.get input "canonicalName") : string) in (
       (Obj.magic self : t).canonicalName <- __assign_1;
@@ -62290,7 +62290,7 @@ type t = { __hx_type : Obj.t; mutable byName : TyTypeDeclaration.t HxMap.string_
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TyTypeDeclarationCatalog"; byName = Obj.magic HxRuntime.hx_null; byModule = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TyTypeDeclarationCatalog"; byName = Obj.magic HxRuntime.hx_null; byModule = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_string ()) in (
       (Obj.magic self : t).byModule <- __assign_1;
@@ -62304,7 +62304,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "TyTypeDeclaratio
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyTypeDeclarationCatalog"; byName = Obj.magic HxRuntime.hx_null; byModule = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyTypeDeclarationCatalog"; byName = Obj.magic HxRuntime.hx_null; byModule = Obj.magic HxRuntime.hx_null } : t)
 
 let get = fun self (canonicalName : string) -> let _this = Obj.magic ((Obj.magic self : t).byName) in let tempResult = Obj.magic (HxMap.get_string (Obj.magic _this) (canonicalName : string)) in tempResult
 
@@ -62481,7 +62481,7 @@ type t = { __hx_type : Obj.t; mutable scopeIdentity : string; mutable ordinal : 
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyTypeParameterId"; scopeIdentity = HxString.hx_null_string; ordinal = 0; name = HxString.hx_null_string; canonicalKey = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyTypeParameterId"; scopeIdentity = HxString.hx_null_string; ordinal = 0; name = HxString.hx_null_string; canonicalKey = HxString.hx_null_string } : t)
 
 let getScopeIdentity = fun self () -> ((self : t).scopeIdentity : string)
 
@@ -62506,7 +62506,7 @@ let normalize = fun (value : string) -> (let tempResult = ref (HxString.hx_null_
   !tempResult
 ) : string)
 
-let create = fun scopeIdentity2 ordinal2 name2 -> let self = ({ __hx_type = HxType.class_ "TyTypeParameterId"; scopeIdentity = HxString.hx_null_string; ordinal = 0; name = HxString.hx_null_string; canonicalKey = HxString.hx_null_string } : t) in (
+let create = fun scopeIdentity2 ordinal2 name2 -> let self = ({ __hx_type = HxType.instance_marker "TyTypeParameterId"; scopeIdentity = HxString.hx_null_string; ordinal = 0; name = HxString.hx_null_string; canonicalKey = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (let __call_arg_0_2 = scopeIdentity2 in normalize __call_arg_0_2 : string) in (
       (Obj.magic self : t).scopeIdentity <- __assign_1;
@@ -62582,12 +62582,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TyTypeSubstitution" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TyTypeSubstitution" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyTypeSubstitution" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyTypeSubstitution" } : t)
 
 let collectParameters = fun hx_type freeOnly -> (
   ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "semantic type parameter scan received a null type") ["Dynamic"] else ());
@@ -62856,7 +62856,7 @@ type t = { __hx_type : Obj.t; mutable catalog : TyTypeDeclarationCatalog.t; muta
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun catalog2 -> let self = ({ __hx_type = HxType.class_ "TyTypeUseResolution"; catalog = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; definitions = Obj.magic HxRuntime.hx_null; pending = Obj.magic HxRuntime.hx_null; constructing = Obj.magic HxRuntime.hx_null; comparisons = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun catalog2 -> let self = ({ __hx_type = HxType.instance_marker "TyTypeUseResolution"; catalog = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; definitions = Obj.magic HxRuntime.hx_null; pending = Obj.magic HxRuntime.hx_null; constructing = Obj.magic HxRuntime.hx_null; comparisons = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxArray.create ()) in (
       (Obj.magic self : t).comparisons <- __assign_1;
@@ -62886,7 +62886,7 @@ let create = fun catalog2 -> let self = ({ __hx_type = HxType.class_ "TyTypeUseR
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyTypeUseResolution"; catalog = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; definitions = Obj.magic HxRuntime.hx_null; pending = Obj.magic HxRuntime.hx_null; constructing = Obj.magic HxRuntime.hx_null; comparisons = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyTypeUseResolution"; catalog = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; definitions = Obj.magic HxRuntime.hx_null; pending = Obj.magic HxRuntime.hx_null; constructing = Obj.magic HxRuntime.hx_null; comparisons = Obj.magic HxRuntime.hx_null } : t)
 
 let rec definitionFor = fun self (declaration : TyTypeDeclaration.t) (defaultIndex : Obj.t) -> let defaultIndex = if defaultIndex == HxRuntime.hx_null then Obj.repr (-1) else defaultIndex in (try let tempString = ref (HxString.hx_null_string : string) in (
   ignore (if let __nullable_14 = defaultIndex in let __nullable_15 = 0 in if __nullable_14 == HxRuntime.hx_null then false else Obj.obj __nullable_14 < __nullable_15 then let __assign_16 = "" in (
@@ -63349,7 +63349,7 @@ type t = { __hx_type : Obj.t; mutable catalog : TyTypeDeclarationCatalog.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun catalog2 -> let self = ({ __hx_type = HxType.class_ "TyTypeUseResolver"; catalog = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun catalog2 -> let self = ({ __hx_type = HxType.instance_marker "TyTypeUseResolver"; catalog = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let __assign_1 = Obj.magic catalog2 in (
     (Obj.magic self : t).catalog <- __assign_1;
     __assign_1
@@ -63357,7 +63357,7 @@ let create = fun catalog2 -> let self = ({ __hx_type = HxType.class_ "TyTypeUseR
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyTypeUseResolver"; catalog = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyTypeUseResolver"; catalog = Obj.magic HxRuntime.hx_null } : t)
 
 let resolve = fun self (hx_type : TyType.t) (context : Obj.t) -> TyTypeUseResolution.resolve (Obj.magic (TyTypeUseResolution.create (Obj.magic ((Obj.magic self : t).catalog)))) (Obj.magic hx_type) context
 
@@ -63711,7 +63711,7 @@ type t = { __hx_type : Obj.t; mutable ownerIdentity : string; mutable bodyRevisi
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendAggregateOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; children = Obj.magic HxRuntime.hx_null; childTypes = Obj.magic HxRuntime.hx_null; mapEntries = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendAggregateOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; children = Obj.magic HxRuntime.hx_null; childTypes = Obj.magic HxRuntime.hx_null; mapEntries = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       (Obj.magic self : t).mapEntries <- __assign_1;
@@ -63842,7 +63842,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendA
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendAggregateOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; children = Obj.magic HxRuntime.hx_null; childTypes = Obj.magic HxRuntime.hx_null; mapEntries = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendAggregateOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; children = Obj.magic HxRuntime.hx_null; childTypes = Obj.magic HxRuntime.hx_null; mapEntries = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string } : t)
 
 let getExpression = fun self () -> (Obj.magic self : t).expression
 
@@ -63910,7 +63910,7 @@ type t = { __hx_type : Obj.t; mutable expression : HxExpr.hxexpr; mutable receiv
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendArrayAccess"; expression = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null; index = Obj.magic HxRuntime.hx_null; value = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; indexType = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; valueType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendArrayAccess"; expression = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null; index = Obj.magic HxRuntime.hx_null; value = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; indexType = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; valueType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
 
 let assertCurrent = fun self (owner2 : string) (revision2 : string) -> ignore (ignore ((
   ignore (if (let __string_eq_left_56 = (Obj.magic self : t).owner in let __string_eq_right_57 = owner2 in not (HxString.equals __string_eq_left_56 __string_eq_right_57)) || (let __string_eq_left_58 = (Obj.magic self : t).revision in let __string_eq_right_59 = revision2 in not (HxString.equals __string_eq_left_58 __string_eq_right_59)) || (let __string_eq_left_60 = (Obj.magic self : t).fingerprint in let __string_eq_right_61 = TypedBodyFingerprint.exactExpression (Obj.magic ((Obj.magic self : t).expression)) in not (HxString.equals __string_eq_left_60 __string_eq_right_61)) then HxType.hx_throw_typed_rtti (Obj.repr "array access belongs to another executable or changed after projection") ["Dynamic"] else ());
@@ -64006,7 +64006,7 @@ let supports = fun source -> let tempResult = ref (false : bool) in (
   !tempResult
 )
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendArrayAccess"; expression = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null; index = Obj.magic HxRuntime.hx_null; value = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; indexType = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; valueType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendArrayAccess"; expression = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null; index = Obj.magic HxRuntime.hx_null; value = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; indexType = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; valueType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (if Obj.obj (HxAnon.get input "owner") == HxString.hx_null_string || (let __string_receiver_1 = Obj.obj (HxAnon.get input "owner") in HxString.length __string_receiver_1) = 0 || Obj.obj (HxAnon.get input "revision") == HxString.hx_null_string || (let __string_receiver_2 = Obj.obj (HxAnon.get input "revision") in HxString.length __string_receiver_2) = 0 || Obj.obj (HxAnon.get input "source") == Obj.magic (HxRuntime.hx_null) || not (supports (Obj.magic (Obj.obj (HxAnon.get input "source")))) then HxType.hx_throw_typed_rtti (Obj.repr "array access requires an exact typed indexed operation") ["Dynamic"] else ());
     ignore (let __assign_3 = (Obj.obj (HxAnon.get input "owner") : string) in (
@@ -64124,7 +64124,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendA
             (Obj.magic self : t).index <- __assign_20;
             __assign_20
           ));
-          ignore (let __assign_21 = Obj.magic (let __structural_receiver_22 = parts in Obj.obj (HxAnon.get __structural_receiver_22 "value")) in (
+          ignore (let __assign_21 = Obj.magic (let __structural_receiver_22 = parts in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_22 "value"))) in (
             (Obj.magic self : t).value <- __assign_21;
             __assign_21
           ));
@@ -64363,7 +64363,7 @@ type t = { __hx_type : Obj.t; mutable expression : HxExpr.hxexpr; mutable left :
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendBitwiseOccurrence"; expression = Obj.magic HxRuntime.hx_null; left = Obj.magic HxRuntime.hx_null; right = Obj.magic HxRuntime.hx_null; operation = HxString.hx_null_string; leftType = Obj.magic HxRuntime.hx_null; rightType = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendBitwiseOccurrence"; expression = Obj.magic HxRuntime.hx_null; left = Obj.magic HxRuntime.hx_null; right = Obj.magic HxRuntime.hx_null; operation = HxString.hx_null_string; leftType = Obj.magic HxRuntime.hx_null; rightType = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
 
 let isConcreteInt = fun self () -> (let __string_eq_left_27 = TyType.getSemanticKey (Obj.magic ((Obj.magic self : t).leftType)) () in let __string_eq_right_28 = "primitive:Int" in HxString.equals __string_eq_left_27 __string_eq_right_28) && (let __string_eq_left_29 = TyType.getSemanticKey (Obj.magic ((Obj.magic self : t).rightType)) () in let __string_eq_right_30 = "primitive:Int" in HxString.equals __string_eq_left_29 __string_eq_right_30) && (let __string_eq_left_31 = TyType.getSemanticKey (Obj.magic ((Obj.magic self : t).resultType)) () in let __string_eq_right_32 = "primitive:Int" in HxString.equals __string_eq_left_31 __string_eq_right_32)
 
@@ -64438,7 +64438,7 @@ let supports = fun (operation2 : string) -> (let tempResult = ref (false : bool)
   !tempResult
 ) : bool)
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendBitwiseOccurrence"; expression = Obj.magic HxRuntime.hx_null; left = Obj.magic HxRuntime.hx_null; right = Obj.magic HxRuntime.hx_null; operation = HxString.hx_null_string; leftType = Obj.magic HxRuntime.hx_null; rightType = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendBitwiseOccurrence"; expression = Obj.magic HxRuntime.hx_null; left = Obj.magic HxRuntime.hx_null; right = Obj.magic HxRuntime.hx_null; operation = HxString.hx_null_string; leftType = Obj.magic HxRuntime.hx_null; rightType = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (if (let __enum_eq_left_1 = TypedExpr.getTag (Obj.magic (Obj.obj (HxAnon.get input "source"))) () in let __enum_eq_right_2 = TypedExpr.Binary in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_1) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_2)) || HxArray.length (TypedExpr.getExpressions (Obj.magic (Obj.obj (HxAnon.get input "source"))) ()) <> 2 then HxType.hx_throw_typed_rtti (Obj.repr "bitwise occurrence requires two checked operands") ["Dynamic"] else ());
     ignore (let __assign_3 = (let __array_read_receiver_4 = TypedExpr.getTexts (Obj.magic (Obj.obj (HxAnon.get input "source"))) () in let __array_read_index_5 = 0 in HxArray.get (Obj.magic __array_read_receiver_4) __array_read_index_5 : string) in (
@@ -64564,7 +64564,7 @@ type t = { __hx_type : Obj.t; mutable expression : HxExpr.hxexpr; mutable hx_typ
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun owner2 revision2 source expression2 expectedType2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendCallArgument"; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; expectedType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
+let create = fun owner2 revision2 source expression2 expectedType2 -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendCallArgument"; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; expectedType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (if owner2 == HxString.hx_null_string || (let __string_receiver_1 = owner2 in HxString.length __string_receiver_1) = 0 || revision2 == HxString.hx_null_string || (let __string_receiver_2 = revision2 in HxString.length __string_receiver_2) = 0 || source == Obj.magic (HxRuntime.hx_null) || expression2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "call argument requires its exact executable and typed operand") ["Dynamic"] else ());
     ignore (let __assign_3 = (owner2 : string) in (
@@ -64595,7 +64595,7 @@ let create = fun owner2 revision2 source expression2 expectedType2 -> let self =
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendCallArgument"; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; expectedType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendCallArgument"; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; expectedType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
 
 let assertCurrent = fun self (owner2 : string) (revision2 : string) -> ignore (ignore (if (let __string_eq_left_9 = owner2 in let __string_eq_right_10 = (Obj.magic self : t).owner in not (HxString.equals __string_eq_left_9 __string_eq_right_10)) || (let __string_eq_left_11 = revision2 in let __string_eq_right_12 = (Obj.magic self : t).revision in not (HxString.equals __string_eq_left_11 __string_eq_right_12)) || (let __string_eq_left_13 = (Obj.magic self : t).fingerprint in let __string_eq_right_14 = TypedBodyFingerprint.exactExpression (Obj.magic ((Obj.magic self : t).expression)) in not (HxString.equals __string_eq_left_13 __string_eq_right_14)) then HxType.hx_throw_typed_rtti (Obj.repr "call argument belongs to another body or changed after projection") ["Dynamic"] else ()))
 end
@@ -64628,7 +64628,7 @@ type t = { __hx_type : Obj.t; mutable owner : TypedCaptureProjectionOwner.typedc
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendCaptureCatalog"; owner = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; bodyIdentity = HxString.hx_null_string; entries = Obj.magic HxRuntime.hx_null; byTarget = Obj.magic HxRuntime.hx_null; callableTypes = Obj.magic HxRuntime.hx_null; ascriptions = Obj.magic HxRuntime.hx_null; callableExpressions = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendCaptureCatalog"; owner = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; bodyIdentity = HxString.hx_null_string; entries = Obj.magic HxRuntime.hx_null; byTarget = Obj.magic HxRuntime.hx_null; callableTypes = Obj.magic HxRuntime.hx_null; ascriptions = Obj.magic HxRuntime.hx_null; callableExpressions = Obj.magic HxRuntime.hx_null } : t)
 
 let expressionOrder = fun self () -> let expressions = Obj.magic (HxArray.create ()) in (
   ignore (let _g = Obj.magic ((Obj.magic self : t).owner) in match _g with
@@ -64855,7 +64855,7 @@ let projectedFingerprint = fun self () -> let tempResult = ref (HxString.hx_null
   !tempResult
 )
 
-let create = fun owner2 locals -> let self = ({ __hx_type = HxType.class_ "TypedBackendCaptureCatalog"; owner = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; bodyIdentity = HxString.hx_null_string; entries = Obj.magic HxRuntime.hx_null; byTarget = Obj.magic HxRuntime.hx_null; callableTypes = Obj.magic HxRuntime.hx_null; ascriptions = Obj.magic HxRuntime.hx_null; callableExpressions = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun owner2 locals -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendCaptureCatalog"; owner = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; bodyIdentity = HxString.hx_null_string; entries = Obj.magic HxRuntime.hx_null; byTarget = Obj.magic HxRuntime.hx_null; callableTypes = Obj.magic HxRuntime.hx_null; ascriptions = Obj.magic HxRuntime.hx_null; callableExpressions = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       (Obj.magic self : t).callableExpressions <- __assign_1;
@@ -65254,8 +65254,8 @@ let requireAscribedClosure = fun self (expression : HxExpr.hxexpr) -> (try (
         __new_214
       ));
       if let __enum_eq_left_215 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get annotation "expression")) in let __enum_eq_right_216 = expression in HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_left_215) == HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_right_216) then (
-        ignore (require (Obj.magic self) (Obj.magic (let __structural_receiver_217 = annotation in Obj.obj (HxAnon.get __structural_receiver_217 "value"))));
-        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __structural_receiver_218 = annotation in Obj.obj (HxAnon.get __structural_receiver_218 "value"))))
+        ignore (require (Obj.magic self) (Obj.magic (let __structural_receiver_217 = annotation in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_217 "value")))));
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __structural_receiver_218 = annotation in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_218 "value")))))
       ) else ()
     )) done);
     HxType.hx_throw_typed_rtti (Obj.repr "expression is not an exact compiler-added callable annotation") ["Dynamic"]
@@ -65284,7 +65284,7 @@ type t = { __hx_type : Obj.t; mutable ownerIdentity : string; mutable bodyRevisi
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendCastOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; operand = Obj.magic HxRuntime.hx_null; sourceType = Obj.magic HxRuntime.hx_null; targetType = Obj.magic HxRuntime.hx_null; preservesRepresentation = false; fingerprint = HxString.hx_null_string } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendCastOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; operand = Obj.magic HxRuntime.hx_null; sourceType = Obj.magic HxRuntime.hx_null; targetType = Obj.magic HxRuntime.hx_null; preservesRepresentation = false; fingerprint = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (if Obj.obj (HxAnon.get input "ownerIdentity") == HxString.hx_null_string || Obj.obj (HxAnon.get input "bodyRevision") == HxString.hx_null_string || Obj.obj (HxAnon.get input "source") == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get input "operand")) == Obj.magic (HxRuntime.hx_null) || (let __enum_eq_left_1 = TypedExpr.getTag (Obj.magic (Obj.obj (HxAnon.get input "source"))) () in let __enum_eq_right_2 = TypedExpr.Cast in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_1) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_2)) && (let __enum_eq_left_3 = TypedExpr.getTag (Obj.magic (Obj.obj (HxAnon.get input "source"))) () in let __enum_eq_right_4 = TypedExpr.CheckType in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_3) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_4)) && (let __enum_eq_left_5 = TypedExpr.getTag (Obj.magic (Obj.obj (HxAnon.get input "source"))) () in let __enum_eq_right_6 = TypedExpr.Untyped in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_5) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_6)) || HxArray.length (TypedExpr.getExpressions (Obj.magic (Obj.obj (HxAnon.get input "source"))) ()) <> 1 then HxType.hx_throw_typed_rtti (Obj.repr "cast occurrence requires its exact typed owner and operand") ["Dynamic"] else ());
     ignore (let __assign_7 = (Obj.obj (HxAnon.get input "ownerIdentity") : string) in (
@@ -65338,7 +65338,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendC
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendCastOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; operand = Obj.magic HxRuntime.hx_null; sourceType = Obj.magic HxRuntime.hx_null; targetType = Obj.magic HxRuntime.hx_null; preservesRepresentation = false; fingerprint = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendCastOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; operand = Obj.magic HxRuntime.hx_null; sourceType = Obj.magic HxRuntime.hx_null; targetType = Obj.magic HxRuntime.hx_null; preservesRepresentation = false; fingerprint = HxString.hx_null_string } : t)
 
 let getExpression = fun self () -> (Obj.magic self : t).expression
 
@@ -65517,7 +65517,7 @@ type t = { __hx_type : Obj.t; mutable declaration : HxClassDecl.t; mutable funct
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun declaration2 functions2 fieldInitializers2 semanticFacts2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendClassProjection"; declaration = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; fieldInitializers = Obj.magic HxRuntime.hx_null; semanticFacts = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun declaration2 functions2 fieldInitializers2 semanticFacts2 -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendClassProjection"; declaration = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; fieldInitializers = Obj.magic HxRuntime.hx_null; semanticFacts = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if declaration2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "typed backend class projection requires a declaration") ["Dynamic"] else ());
     ignore (let __assign_1 = Obj.magic declaration2 in (
@@ -65591,7 +65591,7 @@ let create = fun declaration2 functions2 fieldInitializers2 semanticFacts2 -> le
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendClassProjection"; declaration = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; fieldInitializers = Obj.magic HxRuntime.hx_null; semanticFacts = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendClassProjection"; declaration = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; fieldInitializers = Obj.magic HxRuntime.hx_null; semanticFacts = Obj.magic HxRuntime.hx_null } : t)
 
 let getDeclaration = fun self () -> (Obj.magic self : t).declaration
 
@@ -65692,7 +65692,7 @@ type typedbackendenumconstructormember =
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendClassSemanticFacts"; classIdentity = HxString.hx_null_string; declarationOwner = Obj.magic HxRuntime.hx_null; declaredFieldTypes = Obj.magic HxRuntime.hx_null; nominalKind = Obj.magic HxRuntime.hx_null; moduleIdentity = HxString.hx_null_string; declaredName = HxString.hx_null_string; publicReflectionName = Obj.magic HxRuntime.hx_null; nativeName = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; superType = Obj.magic HxRuntime.hx_null; superClassIdentity = Obj.magic HxRuntime.hx_null; superTypeIdentity = Obj.magic HxRuntime.hx_null; superTypeDisplay = Obj.magic HxRuntime.hx_null; isInterface = false; isExtern = false; interfaceTypes = Obj.magic HxRuntime.hx_null; dynamicMemberType = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; fieldIndex = Obj.magic HxRuntime.hx_null; methodIndex = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string; enumConstructors = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendClassSemanticFacts"; classIdentity = HxString.hx_null_string; declarationOwner = Obj.magic HxRuntime.hx_null; declaredFieldTypes = Obj.magic HxRuntime.hx_null; nominalKind = Obj.magic HxRuntime.hx_null; moduleIdentity = HxString.hx_null_string; declaredName = HxString.hx_null_string; publicReflectionName = Obj.magic HxRuntime.hx_null; nativeName = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; superType = Obj.magic HxRuntime.hx_null; superClassIdentity = Obj.magic HxRuntime.hx_null; superTypeIdentity = Obj.magic HxRuntime.hx_null; superTypeDisplay = Obj.magic HxRuntime.hx_null; isInterface = false; isExtern = false; interfaceTypes = Obj.magic HxRuntime.hx_null; dynamicMemberType = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; fieldIndex = Obj.magic HxRuntime.hx_null; methodIndex = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string; enumConstructors = Obj.magic HxRuntime.hx_null } : t)
 
 let getClassIdentity = fun self () -> (Obj.magic self : t).classIdentity
 
@@ -65996,7 +65996,7 @@ let addMethod = fun self (fact : Obj.t) -> ignore (ignore ((
   let _this = Obj.magic ((Obj.magic self : t).methodIndex) in let key = (Obj.obj (HxAnon.get fact "canonicalIdentity") : string) in let tempMaybeTypedBackendClassMethodFact = HxMap.get_string (Obj.magic _this) (key : string) in let previous = tempMaybeTypedBackendClassMethodFact in if previous == Obj.magic (HxRuntime.hx_null) then ignore (let _this = Obj.magic ((Obj.magic self : t).methodIndex) in let key = (Obj.obj (HxAnon.get fact "canonicalIdentity") : string) in let value = copyMethod fact in HxMap.set_string (Obj.magic _this) (key : string) value) else ignore (if not (sameMethod previous fact) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_521 = "typed backend class semantic facts contain conflicting method " in let __string_part_522 = HxString.toStdString (Obj.obj (HxAnon.get fact "canonicalIdentity")) in __string_part_521 ^ __string_part_522)) ["Dynamic"] else ())
 )))
 
-let create = fun info resolvedSuperType typedFunctions resolvedInterfaces enumDeclaration declaredFieldTypes2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendClassSemanticFacts"; classIdentity = HxString.hx_null_string; declarationOwner = Obj.magic HxRuntime.hx_null; declaredFieldTypes = Obj.magic HxRuntime.hx_null; nominalKind = Obj.magic HxRuntime.hx_null; moduleIdentity = HxString.hx_null_string; declaredName = HxString.hx_null_string; publicReflectionName = Obj.magic HxRuntime.hx_null; nativeName = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; superType = Obj.magic HxRuntime.hx_null; superClassIdentity = Obj.magic HxRuntime.hx_null; superTypeIdentity = Obj.magic HxRuntime.hx_null; superTypeDisplay = Obj.magic HxRuntime.hx_null; isInterface = false; isExtern = false; interfaceTypes = Obj.magic HxRuntime.hx_null; dynamicMemberType = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; fieldIndex = Obj.magic HxRuntime.hx_null; methodIndex = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string; enumConstructors = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun info resolvedSuperType typedFunctions resolvedInterfaces enumDeclaration declaredFieldTypes2 -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendClassSemanticFacts"; classIdentity = HxString.hx_null_string; declarationOwner = Obj.magic HxRuntime.hx_null; declaredFieldTypes = Obj.magic HxRuntime.hx_null; nominalKind = Obj.magic HxRuntime.hx_null; moduleIdentity = HxString.hx_null_string; declaredName = HxString.hx_null_string; publicReflectionName = Obj.magic HxRuntime.hx_null; nativeName = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; superType = Obj.magic HxRuntime.hx_null; superClassIdentity = Obj.magic HxRuntime.hx_null; superTypeIdentity = Obj.magic HxRuntime.hx_null; superTypeDisplay = Obj.magic HxRuntime.hx_null; isInterface = false; isExtern = false; interfaceTypes = Obj.magic HxRuntime.hx_null; dynamicMemberType = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; fieldIndex = Obj.magic HxRuntime.hx_null; methodIndex = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string; enumConstructors = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       (Obj.magic self : t).enumConstructors <- __assign_1;
@@ -66660,7 +66660,7 @@ type t = { __hx_type : Obj.t; mutable expression : HxExpr.hxexpr; mutable operat
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendCollectionControl"; expression = Obj.magic HxRuntime.hx_null; operation = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string; operands = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendCollectionControl"; expression = Obj.magic HxRuntime.hx_null; operation = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string; operands = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if (let __string_receiver_1 = Obj.obj (HxAnon.get input "owner") in HxString.length __string_receiver_1) = 0 || (let __string_receiver_2 = Obj.obj (HxAnon.get input "revision") in HxString.length __string_receiver_2) = 0 || Obj.obj (HxAnon.get input "source") == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "collection control requires its typed executable owner") ["Dynamic"] else ());
     ignore (let __assign_3 = (Obj.obj (HxAnon.get input "owner") : string) in (
@@ -66930,7 +66930,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendC
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendCollectionControl"; expression = Obj.magic HxRuntime.hx_null; operation = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string; operands = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendCollectionControl"; expression = Obj.magic HxRuntime.hx_null; operation = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string; operands = Obj.magic HxRuntime.hx_null } : t)
 
 let assertCurrent = fun self (owner2 : string) (revision2 : string) -> ignore (ignore ((
   ignore (if (let __string_eq_left_44 = (Obj.magic self : t).owner in let __string_eq_right_45 = owner2 in not (HxString.equals __string_eq_left_44 __string_eq_right_45)) || (let __string_eq_left_46 = (Obj.magic self : t).revision in let __string_eq_right_47 = revision2 in not (HxString.equals __string_eq_left_46 __string_eq_right_47)) || (let __string_eq_left_48 = (Obj.magic self : t).fingerprint in let __string_eq_right_49 = TypedBodyFingerprint.exactExpression (Obj.magic ((Obj.magic self : t).expression)) in not (HxString.equals __string_eq_left_48 __string_eq_right_49)) then HxType.hx_throw_typed_rtti (Obj.repr "collection control belongs to another executable or changed after projection") ["Dynamic"] else ());
@@ -67015,7 +67015,7 @@ type t = { __hx_type : Obj.t; mutable expression : HxExpr.hxexpr; mutable hx_typ
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendCondition"; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendCondition"; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (Obj.obj (HxAnon.get input "owner") : string) in (
       (Obj.magic self : t).owner <- __assign_1;
@@ -67041,7 +67041,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendC
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendCondition"; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendCondition"; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
 
 let assertCurrent = fun self (expectedOwner : string) (expectedRevision : string) -> ignore (ignore (if (let __string_eq_left_6 = (Obj.magic self : t).owner in let __string_eq_right_7 = expectedOwner in not (HxString.equals __string_eq_left_6 __string_eq_right_7)) || (let __string_eq_left_8 = (Obj.magic self : t).revision in let __string_eq_right_9 = expectedRevision in not (HxString.equals __string_eq_left_8 __string_eq_right_9)) || (let __string_eq_left_10 = (Obj.magic self : t).fingerprint in let __string_eq_right_11 = TypedBodyFingerprint.exactExpression (Obj.magic ((Obj.magic self : t).expression)) in not (HxString.equals __string_eq_left_10 __string_eq_right_11)) then HxType.hx_throw_typed_rtti (Obj.repr "condition belongs to another executable or changed after projection") ["Dynamic"] else ()))
 end
@@ -67062,7 +67062,7 @@ type t = { __hx_type : Obj.t; mutable ownerIdentity : string; mutable bodyRevisi
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun ownerIdentity2 bodyRevision2 entries2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendConstructorCatalog"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; entries = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun ownerIdentity2 bodyRevision2 entries2 -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendConstructorCatalog"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; entries = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if ownerIdentity2 == HxString.hx_null_string || (let __string_receiver_1 = ownerIdentity2 in HxString.length __string_receiver_1) = 0 || bodyRevision2 == HxString.hx_null_string || (let __string_receiver_2 = bodyRevision2 in HxString.length __string_receiver_2) = 0 || entries2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "constructor catalog requires an exact executable revision and occurrences") ["Dynamic"] else ());
     ignore (let __assign_3 = (ownerIdentity2 : string) in (
@@ -67093,7 +67093,7 @@ let create = fun ownerIdentity2 bodyRevision2 entries2 -> let self = ({ __hx_typ
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendConstructorCatalog"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; entries = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendConstructorCatalog"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; entries = Obj.magic HxRuntime.hx_null } : t)
 
 let getEntries = fun self () -> let __array_receiver_17 = Obj.magic ((Obj.magic self : t).entries) in HxArray.copy __array_receiver_17
 
@@ -67156,7 +67156,7 @@ type t = { __hx_type : Obj.t; mutable ownerIdentity : string; mutable bodyRevisi
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendConstructorOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null; projectedArguments = Obj.magic HxRuntime.hx_null; sourceIdentity = HxString.hx_null_string; constructedType = Obj.magic HxRuntime.hx_null; application = Obj.magic HxRuntime.hx_null; superCall = false; operandTypes = Obj.magic HxRuntime.hx_null; operandKinds = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendConstructorOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null; projectedArguments = Obj.magic HxRuntime.hx_null; sourceIdentity = HxString.hx_null_string; constructedType = Obj.magic HxRuntime.hx_null; application = Obj.magic HxRuntime.hx_null; superCall = false; operandTypes = Obj.magic HxRuntime.hx_null; operandKinds = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if Obj.obj (HxAnon.get input "ownerIdentity") == HxString.hx_null_string || (let __string_receiver_1 = Obj.obj (HxAnon.get input "ownerIdentity") in HxString.length __string_receiver_1) = 0 || Obj.obj (HxAnon.get input "bodyRevision") == HxString.hx_null_string || (let __string_receiver_2 = Obj.obj (HxAnon.get input "bodyRevision") in HxString.length __string_receiver_2) = 0 || Obj.obj (HxAnon.get input "source") == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get input "arguments") == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "constructor occurrence requires an exact typed construction and executable revision") ["Dynamic"] else ());
     let children = Obj.magic (TypedExpr.getExpressions (Obj.magic (Obj.obj (HxAnon.get input "source"))) ()) in (
@@ -67259,7 +67259,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendC
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendConstructorOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null; projectedArguments = Obj.magic HxRuntime.hx_null; sourceIdentity = HxString.hx_null_string; constructedType = Obj.magic HxRuntime.hx_null; application = Obj.magic HxRuntime.hx_null; superCall = false; operandTypes = Obj.magic HxRuntime.hx_null; operandKinds = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendConstructorOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null; projectedArguments = Obj.magic HxRuntime.hx_null; sourceIdentity = HxString.hx_null_string; constructedType = Obj.magic HxRuntime.hx_null; application = Obj.magic HxRuntime.hx_null; superCall = false; operandTypes = Obj.magic HxRuntime.hx_null; operandKinds = Obj.magic HxRuntime.hx_null } : t)
 
 let getExpression = fun self () -> (Obj.magic self : t).expression
 
@@ -67370,7 +67370,7 @@ type t = { __hx_type : Obj.t; mutable declaration : HxModuleDecl.t; mutable runt
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendDeclarationCatalog"; declaration = Obj.magic HxRuntime.hx_null; runtimeTypeCatalogs = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendDeclarationCatalog"; declaration = Obj.magic HxRuntime.hx_null; runtimeTypeCatalogs = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null } : t)
 
 let getDeclaration = fun self () -> (Obj.magic self : t).declaration
 
@@ -67469,7 +67469,7 @@ let constructorExpressions = fun self () -> let out = Obj.magic (HxArray.create 
   out
 )
 
-let create = fun declaration2 functions2 runtimeTypeCatalogs2 initializers2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendDeclarationCatalog"; declaration = Obj.magic HxRuntime.hx_null; runtimeTypeCatalogs = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun declaration2 functions2 runtimeTypeCatalogs2 initializers2 -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendDeclarationCatalog"; declaration = Obj.magic HxRuntime.hx_null; runtimeTypeCatalogs = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if declaration2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "typed backend declaration catalog requires a module declaration") ["Dynamic"] else ());
     ignore (let __assign_1 = Obj.magic declaration2 in (
@@ -67590,7 +67590,7 @@ type t = { __hx_type : Obj.t; mutable expression : HxExpr.hxexpr; mutable left :
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendEqualityOccurrence"; expression = Obj.magic HxRuntime.hx_null; left = Obj.magic HxRuntime.hx_null; right = Obj.magic HxRuntime.hx_null; leftType = Obj.magic HxRuntime.hx_null; rightType = Obj.magic HxRuntime.hx_null; equal = false; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendEqualityOccurrence"; expression = Obj.magic HxRuntime.hx_null; left = Obj.magic HxRuntime.hx_null; right = Obj.magic HxRuntime.hx_null; leftType = Obj.magic HxRuntime.hx_null; rightType = Obj.magic HxRuntime.hx_null; equal = false; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (if (let __enum_eq_left_1 = TypedExpr.getTag (Obj.magic (Obj.obj (HxAnon.get input "source"))) () in let __enum_eq_right_2 = TypedExpr.Binary in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_1) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_2)) || HxArray.length (TypedExpr.getExpressions (Obj.magic (Obj.obj (HxAnon.get input "source"))) ()) <> 2 then HxType.hx_throw_typed_rtti (Obj.repr "equality occurrence requires a checked binary expression") ["Dynamic"] else ());
     let operation = (let __array_read_receiver_3 = TypedExpr.getTexts (Obj.magic (Obj.obj (HxAnon.get input "source"))) () in let __array_read_index_4 = 0 in HxArray.get (Obj.magic __array_read_receiver_3) __array_read_index_4 : string) in (
@@ -67701,7 +67701,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendE
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendEqualityOccurrence"; expression = Obj.magic HxRuntime.hx_null; left = Obj.magic HxRuntime.hx_null; right = Obj.magic HxRuntime.hx_null; leftType = Obj.magic HxRuntime.hx_null; rightType = Obj.magic HxRuntime.hx_null; equal = false; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendEqualityOccurrence"; expression = Obj.magic HxRuntime.hx_null; left = Obj.magic HxRuntime.hx_null; right = Obj.magic HxRuntime.hx_null; leftType = Obj.magic HxRuntime.hx_null; rightType = Obj.magic HxRuntime.hx_null; equal = false; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
 
 let assertCurrent = fun self (expectedOwner : string) (expectedRevision : string) -> ignore (ignore ((
   ignore (if (let __string_eq_left_32 = (Obj.magic self : t).owner in let __string_eq_right_33 = expectedOwner in not (HxString.equals __string_eq_left_32 __string_eq_right_33)) || (let __string_eq_left_34 = (Obj.magic self : t).revision in let __string_eq_right_35 = expectedRevision in not (HxString.equals __string_eq_left_34 __string_eq_right_35)) || (let __string_eq_left_36 = (Obj.magic self : t).fingerprint in let __string_eq_right_37 = TypedBodyFingerprint.exactExpression (Obj.magic ((Obj.magic self : t).expression)) in not (HxString.equals __string_eq_left_36 __string_eq_right_37)) then HxType.hx_throw_typed_rtti (Obj.repr "equality occurrence belongs to another executable or changed after projection") ["Dynamic"] else ());
@@ -67827,7 +67827,7 @@ type t = { __hx_type : Obj.t; mutable stableIdentity : string; mutable bodyRevis
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun source2 lowered2 stableIdentity2 bodyRevision2 field2 declaration2 localCatalog2 fieldReadCatalog2 runtimeTypeCatalog2 constructorCatalog2 fields2 aggregates2 casts2 objectAccesses2 localWrites2 callArguments2 methods2 lambdas2 instanceCalls2 indexedAccesses -> let self = ({ __hx_type = HxType.class_ "TypedBackendFieldInitializerProjection"; stableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; field = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; localCatalog = Obj.magic HxRuntime.hx_null; fieldReadCatalog = Obj.magic HxRuntime.hx_null; runtimeTypeCatalog = Obj.magic HxRuntime.hx_null; constructorCatalog = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; instanceCalls = Obj.magic HxRuntime.hx_null; aggregates = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; objectAccesses = Obj.magic HxRuntime.hx_null; arrayAccesses = Obj.magic HxRuntime.hx_null; collectionControls = Obj.magic HxRuntime.hx_null; equalities = Obj.magic HxRuntime.hx_null; bitwiseOperations = Obj.magic HxRuntime.hx_null; conditions = Obj.magic HxRuntime.hx_null; namedPatterns = Obj.magic HxRuntime.hx_null; localWrites = Obj.magic HxRuntime.hx_null; callArguments = Obj.magic HxRuntime.hx_null; lambdas = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string; source = Obj.magic HxRuntime.hx_null; lowered = Obj.magic HxRuntime.hx_null; captureCatalog = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun source2 lowered2 stableIdentity2 bodyRevision2 field2 declaration2 localCatalog2 fieldReadCatalog2 runtimeTypeCatalog2 constructorCatalog2 fields2 aggregates2 casts2 objectAccesses2 localWrites2 callArguments2 methods2 lambdas2 instanceCalls2 indexedAccesses -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendFieldInitializerProjection"; stableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; field = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; localCatalog = Obj.magic HxRuntime.hx_null; fieldReadCatalog = Obj.magic HxRuntime.hx_null; runtimeTypeCatalog = Obj.magic HxRuntime.hx_null; constructorCatalog = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; instanceCalls = Obj.magic HxRuntime.hx_null; aggregates = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; objectAccesses = Obj.magic HxRuntime.hx_null; arrayAccesses = Obj.magic HxRuntime.hx_null; collectionControls = Obj.magic HxRuntime.hx_null; equalities = Obj.magic HxRuntime.hx_null; bitwiseOperations = Obj.magic HxRuntime.hx_null; conditions = Obj.magic HxRuntime.hx_null; namedPatterns = Obj.magic HxRuntime.hx_null; localWrites = Obj.magic HxRuntime.hx_null; callArguments = Obj.magic HxRuntime.hx_null; lambdas = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string; source = Obj.magic HxRuntime.hx_null; lowered = Obj.magic HxRuntime.hx_null; captureCatalog = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
       (Obj.magic self : t).captureCatalog <- __assign_1;
@@ -68326,7 +68326,7 @@ let create = fun source2 lowered2 stableIdentity2 bodyRevision2 field2 declarati
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendFieldInitializerProjection"; stableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; field = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; localCatalog = Obj.magic HxRuntime.hx_null; fieldReadCatalog = Obj.magic HxRuntime.hx_null; runtimeTypeCatalog = Obj.magic HxRuntime.hx_null; constructorCatalog = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; instanceCalls = Obj.magic HxRuntime.hx_null; aggregates = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; objectAccesses = Obj.magic HxRuntime.hx_null; arrayAccesses = Obj.magic HxRuntime.hx_null; collectionControls = Obj.magic HxRuntime.hx_null; equalities = Obj.magic HxRuntime.hx_null; bitwiseOperations = Obj.magic HxRuntime.hx_null; conditions = Obj.magic HxRuntime.hx_null; namedPatterns = Obj.magic HxRuntime.hx_null; localWrites = Obj.magic HxRuntime.hx_null; callArguments = Obj.magic HxRuntime.hx_null; lambdas = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string; source = Obj.magic HxRuntime.hx_null; lowered = Obj.magic HxRuntime.hx_null; captureCatalog = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendFieldInitializerProjection"; stableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; field = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; localCatalog = Obj.magic HxRuntime.hx_null; fieldReadCatalog = Obj.magic HxRuntime.hx_null; runtimeTypeCatalog = Obj.magic HxRuntime.hx_null; constructorCatalog = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; instanceCalls = Obj.magic HxRuntime.hx_null; aggregates = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; objectAccesses = Obj.magic HxRuntime.hx_null; arrayAccesses = Obj.magic HxRuntime.hx_null; collectionControls = Obj.magic HxRuntime.hx_null; equalities = Obj.magic HxRuntime.hx_null; bitwiseOperations = Obj.magic HxRuntime.hx_null; conditions = Obj.magic HxRuntime.hx_null; namedPatterns = Obj.magic HxRuntime.hx_null; localWrites = Obj.magic HxRuntime.hx_null; callArguments = Obj.magic HxRuntime.hx_null; lambdas = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string; source = Obj.magic HxRuntime.hx_null; lowered = Obj.magic HxRuntime.hx_null; captureCatalog = Obj.magic HxRuntime.hx_null } : t)
 
 let captureCatalogForLookup = fun self () -> (
   ignore (if (Obj.magic self : t).captureCatalog == Obj.magic (HxRuntime.hx_null) then ignore (let __assign_173 = Obj.magic (TypedBackendCaptureCatalog.create (Obj.magic (let __enum_arg_174 = Obj.magic ((Obj.magic self : t).source) in let __enum_arg_175 = (Obj.magic self : t).lowered in let __enum_arg_176 = Obj.magic ((Obj.magic self : t).declaration) in TypedCaptureProjectionOwner.FieldInitializer (Stdlib.Sys.opaque_identity __enum_arg_174, __enum_arg_175, __enum_arg_176))) (Obj.magic ((Obj.magic self : t).localCatalog))) in (
@@ -68924,7 +68924,7 @@ type t = { __hx_type : Obj.t; mutable ownerIdentity : string; mutable bodyRevisi
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendFieldOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; field = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string; propertyStorageAccess = false } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendFieldOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; field = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string; propertyStorageAccess = false } : t) in (
   ignore (ignore ((
     ignore (if Obj.obj (HxAnon.get input "ownerIdentity") == HxString.hx_null_string || (let __string_receiver_1 = Obj.obj (HxAnon.get input "ownerIdentity") in HxString.length __string_receiver_1) = 0 || Obj.obj (HxAnon.get input "bodyRevision") == HxString.hx_null_string || (let __string_receiver_2 = Obj.obj (HxAnon.get input "bodyRevision") in HxString.length __string_receiver_2) = 0 || Obj.obj (HxAnon.get input "source") == Obj.magic (HxRuntime.hx_null) || TypedExpr.getFieldInfo (Obj.magic (Obj.obj (HxAnon.get input "source"))) () == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get input "expression")) == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxEnum.unbox_or_obj "TypedBackendFieldReceiver" (HxAnon.get input "receiver")) == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "field occurrence requires exact typed ownership") ["Dynamic"] else ());
     ignore (let _g = Obj.magic (TypedExpr.getTag (Obj.magic (Obj.obj (HxAnon.get input "source"))) ()) in match _g with
@@ -68977,7 +68977,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendF
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendFieldOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; field = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string; propertyStorageAccess = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendFieldOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; field = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string; propertyStorageAccess = false } : t)
 
 let getExpression = fun self () -> (Obj.magic self : t).expression
 
@@ -69009,7 +69009,7 @@ type t = { __hx_type : Obj.t; mutable entries : TypedBackendFieldReadProjection.
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun reads -> let self = ({ __hx_type = HxType.class_ "TypedBackendFieldReadCatalog"; entries = Obj.magic HxRuntime.hx_null; byProjectedName = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun reads -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendFieldReadCatalog"; entries = Obj.magic HxRuntime.hx_null; byProjectedName = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let exactReads = Obj.magic (HxMap.create_string ()) in let names = Obj.magic (HxArray.create ()) in (
     ignore (if reads != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in while !_g < HxArray.length reads do ignore (let read = Obj.magic (let __array_read_receiver_1 = reads in let __array_read_index_2 = !_g in HxArray.get (Obj.magic __array_read_receiver_1) __array_read_index_2) in (
       ignore (let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
@@ -69046,7 +69046,7 @@ let create = fun reads -> let self = ({ __hx_type = HxType.class_ "TypedBackendF
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendFieldReadCatalog"; entries = Obj.magic HxRuntime.hx_null; byProjectedName = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendFieldReadCatalog"; entries = Obj.magic HxRuntime.hx_null; byProjectedName = Obj.magic HxRuntime.hx_null } : t)
 
 let getEntries = fun self () -> let __array_receiver_26 = Obj.magic ((Obj.magic self : t).entries) in HxArray.copy __array_receiver_26
 
@@ -69087,7 +69087,7 @@ type t = { __hx_type : Obj.t; mutable projectedName : string; mutable field : Ty
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun projectedName2 field2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendFieldReadProjection"; projectedName = HxString.hx_null_string; field = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun projectedName2 field2 -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendFieldReadProjection"; projectedName = HxString.hx_null_string; field = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (if projectedName2 == HxString.hx_null_string || (let __string_receiver_1 = projectedName2 in HxString.length __string_receiver_1) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "typed backend field-read projection requires a transport name") ["Dynamic"] else ());
     ignore (if field2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "typed backend field-read projection requires exact field information") ["Dynamic"] else ());
@@ -69131,7 +69131,7 @@ let create = fun projectedName2 field2 -> let self = ({ __hx_type = HxType.class
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendFieldReadProjection"; projectedName = HxString.hx_null_string; field = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendFieldReadProjection"; projectedName = HxString.hx_null_string; field = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
 
 let getProjectedName = fun self () -> (Obj.magic self : t).projectedName
 
@@ -69193,7 +69193,7 @@ type t = { __hx_type : Obj.t; mutable source : TypedFunction.t; mutable lowered 
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun source2 lowered2 declaration2 localCatalog2 returnType2 fieldReadCatalog2 parameterBindingIdentities2 runtimeTypeCatalog2 constructorCatalog2 aggregates2 fields2 casts2 thrownValues2 localWrites2 objectAccesses2 callArguments2 methods2 lambdas2 instanceCalls2 statementControls2 indexedAccesses -> let self = ({ __hx_type = HxType.class_ "TypedBackendFunctionProjection"; source = Obj.magic HxRuntime.hx_null; lowered = Obj.magic HxRuntime.hx_null; captureCatalog = Obj.magic HxRuntime.hx_null; stableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; declaration = Obj.magic HxRuntime.hx_null; localCatalog = Obj.magic HxRuntime.hx_null; fieldReadCatalog = Obj.magic HxRuntime.hx_null; parameterBindingIdentities = Obj.magic HxRuntime.hx_null; returnType = Obj.magic HxRuntime.hx_null; runtimeTypeCatalog = Obj.magic HxRuntime.hx_null; constructorCatalog = Obj.magic HxRuntime.hx_null; aggregates = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; instanceCalls = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; thrownValues = Obj.magic HxRuntime.hx_null; localWrites = Obj.magic HxRuntime.hx_null; objectAccesses = Obj.magic HxRuntime.hx_null; arrayAccesses = Obj.magic HxRuntime.hx_null; collectionControls = Obj.magic HxRuntime.hx_null; equalities = Obj.magic HxRuntime.hx_null; bitwiseOperations = Obj.magic HxRuntime.hx_null; conditions = Obj.magic HxRuntime.hx_null; namedPatterns = Obj.magic HxRuntime.hx_null; callArguments = Obj.magic HxRuntime.hx_null; lambdas = Obj.magic HxRuntime.hx_null; statementControls = Obj.magic HxRuntime.hx_null; defaults = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun source2 lowered2 declaration2 localCatalog2 returnType2 fieldReadCatalog2 parameterBindingIdentities2 runtimeTypeCatalog2 constructorCatalog2 aggregates2 fields2 casts2 thrownValues2 localWrites2 objectAccesses2 callArguments2 methods2 lambdas2 instanceCalls2 statementControls2 indexedAccesses -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendFunctionProjection"; source = Obj.magic HxRuntime.hx_null; lowered = Obj.magic HxRuntime.hx_null; captureCatalog = Obj.magic HxRuntime.hx_null; stableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; declaration = Obj.magic HxRuntime.hx_null; localCatalog = Obj.magic HxRuntime.hx_null; fieldReadCatalog = Obj.magic HxRuntime.hx_null; parameterBindingIdentities = Obj.magic HxRuntime.hx_null; returnType = Obj.magic HxRuntime.hx_null; runtimeTypeCatalog = Obj.magic HxRuntime.hx_null; constructorCatalog = Obj.magic HxRuntime.hx_null; aggregates = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; instanceCalls = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; thrownValues = Obj.magic HxRuntime.hx_null; localWrites = Obj.magic HxRuntime.hx_null; objectAccesses = Obj.magic HxRuntime.hx_null; arrayAccesses = Obj.magic HxRuntime.hx_null; collectionControls = Obj.magic HxRuntime.hx_null; equalities = Obj.magic HxRuntime.hx_null; bitwiseOperations = Obj.magic HxRuntime.hx_null; conditions = Obj.magic HxRuntime.hx_null; namedPatterns = Obj.magic HxRuntime.hx_null; callArguments = Obj.magic HxRuntime.hx_null; lambdas = Obj.magic HxRuntime.hx_null; statementControls = Obj.magic HxRuntime.hx_null; defaults = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
       (Obj.magic self : t).captureCatalog <- __assign_1;
@@ -69726,7 +69726,7 @@ let create = fun source2 lowered2 declaration2 localCatalog2 returnType2 fieldRe
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendFunctionProjection"; source = Obj.magic HxRuntime.hx_null; lowered = Obj.magic HxRuntime.hx_null; captureCatalog = Obj.magic HxRuntime.hx_null; stableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; declaration = Obj.magic HxRuntime.hx_null; localCatalog = Obj.magic HxRuntime.hx_null; fieldReadCatalog = Obj.magic HxRuntime.hx_null; parameterBindingIdentities = Obj.magic HxRuntime.hx_null; returnType = Obj.magic HxRuntime.hx_null; runtimeTypeCatalog = Obj.magic HxRuntime.hx_null; constructorCatalog = Obj.magic HxRuntime.hx_null; aggregates = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; instanceCalls = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; thrownValues = Obj.magic HxRuntime.hx_null; localWrites = Obj.magic HxRuntime.hx_null; objectAccesses = Obj.magic HxRuntime.hx_null; arrayAccesses = Obj.magic HxRuntime.hx_null; collectionControls = Obj.magic HxRuntime.hx_null; equalities = Obj.magic HxRuntime.hx_null; bitwiseOperations = Obj.magic HxRuntime.hx_null; conditions = Obj.magic HxRuntime.hx_null; namedPatterns = Obj.magic HxRuntime.hx_null; callArguments = Obj.magic HxRuntime.hx_null; lambdas = Obj.magic HxRuntime.hx_null; statementControls = Obj.magic HxRuntime.hx_null; defaults = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendFunctionProjection"; source = Obj.magic HxRuntime.hx_null; lowered = Obj.magic HxRuntime.hx_null; captureCatalog = Obj.magic HxRuntime.hx_null; stableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; declaration = Obj.magic HxRuntime.hx_null; localCatalog = Obj.magic HxRuntime.hx_null; fieldReadCatalog = Obj.magic HxRuntime.hx_null; parameterBindingIdentities = Obj.magic HxRuntime.hx_null; returnType = Obj.magic HxRuntime.hx_null; runtimeTypeCatalog = Obj.magic HxRuntime.hx_null; constructorCatalog = Obj.magic HxRuntime.hx_null; aggregates = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; instanceCalls = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; thrownValues = Obj.magic HxRuntime.hx_null; localWrites = Obj.magic HxRuntime.hx_null; objectAccesses = Obj.magic HxRuntime.hx_null; arrayAccesses = Obj.magic HxRuntime.hx_null; collectionControls = Obj.magic HxRuntime.hx_null; equalities = Obj.magic HxRuntime.hx_null; bitwiseOperations = Obj.magic HxRuntime.hx_null; conditions = Obj.magic HxRuntime.hx_null; namedPatterns = Obj.magic HxRuntime.hx_null; callArguments = Obj.magic HxRuntime.hx_null; lambdas = Obj.magic HxRuntime.hx_null; statementControls = Obj.magic HxRuntime.hx_null; defaults = Obj.magic HxRuntime.hx_null } : t)
 
 let getDeclaration = fun self () -> (Obj.magic self : t).declaration
 
@@ -70665,7 +70665,7 @@ type t = { __hx_type : Obj.t; mutable owner : string; mutable revision : string;
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendInstanceCallOccurrence"; owner = HxString.hx_null_string; revision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; argumentTypes = Obj.magic HxRuntime.hx_null; projectedArgumentTypes = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendInstanceCallOccurrence"; owner = HxString.hx_null_string; revision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; argumentTypes = Obj.magic HxRuntime.hx_null; projectedArgumentTypes = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string } : t) in (
   ignore (ignore (let tempMaybeTyDeclarationInfo = ref (Obj.magic (HxRuntime.hx_null) : TyDeclarationInfo.t) in (
     ignore (if Obj.obj (HxAnon.get input "source") == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
       tempMaybeTyDeclarationInfo := __assign_1;
@@ -70743,7 +70743,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendI
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendInstanceCallOccurrence"; owner = HxString.hx_null_string; revision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; argumentTypes = Obj.magic HxRuntime.hx_null; projectedArgumentTypes = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendInstanceCallOccurrence"; owner = HxString.hx_null_string; revision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; argumentTypes = Obj.magic HxRuntime.hx_null; projectedArgumentTypes = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string } : t)
 
 let getExpression = fun self () -> (Obj.magic self : t).expression
 
@@ -70786,7 +70786,7 @@ type t = { __hx_type : Obj.t; mutable expression : HxExpr.hxexpr; mutable callab
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendLambdaOccurrence"; expression = Obj.magic HxRuntime.hx_null; callableType = Obj.magic HxRuntime.hx_null; bodyType = Obj.magic HxRuntime.hx_null; body = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string; returnTypes = Obj.magic HxRuntime.hx_null; returns = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendLambdaOccurrence"; expression = Obj.magic HxRuntime.hx_null; callableType = Obj.magic HxRuntime.hx_null; bodyType = Obj.magic HxRuntime.hx_null; body = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string; returnTypes = Obj.magic HxRuntime.hx_null; returns = Obj.magic HxRuntime.hx_null } : t)
 
 let rec collectReturns = fun self (value : TypedExpr.t) (candidates : TypedBackendReturnOccurrence.t HxArray.t) -> ignore (ignore (try ignore ((
   ignore (if let __enum_eq_left_22 = TypedExpr.getTag (Obj.magic value) () in let __enum_eq_right_23 = TypedExpr.Lambda in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_22) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_23) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
@@ -70828,7 +70828,7 @@ let rec collectReturns = fun self (value : TypedExpr.t) (candidates : TypedBacke
 )) with
   | HxRuntime.Hx_return_void -> ()))
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendLambdaOccurrence"; expression = Obj.magic HxRuntime.hx_null; callableType = Obj.magic HxRuntime.hx_null; bodyType = Obj.magic HxRuntime.hx_null; body = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string; returnTypes = Obj.magic HxRuntime.hx_null; returns = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendLambdaOccurrence"; expression = Obj.magic HxRuntime.hx_null; callableType = Obj.magic HxRuntime.hx_null; bodyType = Obj.magic HxRuntime.hx_null; body = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string; returnTypes = Obj.magic HxRuntime.hx_null; returns = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       (Obj.magic self : t).returns <- __assign_1;
@@ -71037,7 +71037,7 @@ type t = { __hx_type : Obj.t; mutable entries : TypedBackendLocalProjection.t Hx
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun bindings reservedProjectedNames catchUses2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendLocalCatalog"; entries = Obj.magic HxRuntime.hx_null; byIdentity = Obj.magic HxRuntime.hx_null; byProjectedName = Obj.magic HxRuntime.hx_null; catchUses = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun bindings reservedProjectedNames catchUses2 -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendLocalCatalog"; entries = Obj.magic HxRuntime.hx_null; byIdentity = Obj.magic HxRuntime.hx_null; byProjectedName = Obj.magic HxRuntime.hx_null; catchUses = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let exactBindings = Obj.magic (HxMap.create_string ()) in let identities = Obj.magic (HxArray.create ()) in let sourceNames = Obj.magic (HxMap.create_string ()) in let reservedNames = Obj.magic (HxMap.create_string ()) in (
     ignore (if reservedProjectedNames != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in while !_g < HxArray.length reservedProjectedNames do ignore (let name = (let __array_read_receiver_1 = reservedProjectedNames in let __array_read_index_2 = !_g in HxArray.get (Obj.magic __array_read_receiver_1) __array_read_index_2 : string) in (
       ignore (let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
@@ -71182,7 +71182,7 @@ let create = fun bindings reservedProjectedNames catchUses2 -> let self = ({ __h
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendLocalCatalog"; entries = Obj.magic HxRuntime.hx_null; byIdentity = Obj.magic HxRuntime.hx_null; byProjectedName = Obj.magic HxRuntime.hx_null; catchUses = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendLocalCatalog"; entries = Obj.magic HxRuntime.hx_null; byIdentity = Obj.magic HxRuntime.hx_null; byProjectedName = Obj.magic HxRuntime.hx_null; catchUses = Obj.magic HxRuntime.hx_null } : t)
 
 let getEntries = fun self () -> let __array_receiver_57 = Obj.magic ((Obj.magic self : t).entries) in HxArray.copy __array_receiver_57
 
@@ -71242,7 +71242,7 @@ type t = { __hx_type : Obj.t; mutable projectedName : string; mutable binding : 
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun projectedName2 binding2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendLocalProjection"; projectedName = HxString.hx_null_string; binding = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun projectedName2 binding2 -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendLocalProjection"; projectedName = HxString.hx_null_string; binding = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if projectedName2 == HxString.hx_null_string || (let __string_receiver_1 = projectedName2 in HxString.length __string_receiver_1) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "typed backend local projection requires a transport name") ["Dynamic"] else ());
     ignore (if binding2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "typed backend local projection requires an exact binding") ["Dynamic"] else ());
@@ -71258,7 +71258,7 @@ let create = fun projectedName2 binding2 -> let self = ({ __hx_type = HxType.cla
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendLocalProjection"; projectedName = HxString.hx_null_string; binding = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendLocalProjection"; projectedName = HxString.hx_null_string; binding = Obj.magic HxRuntime.hx_null } : t)
 
 let getProjectedName = fun self () -> (Obj.magic self : t).projectedName
 
@@ -71278,7 +71278,7 @@ type t = { __hx_type : Obj.t; mutable expression : HxExpr.hxexpr; mutable projec
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendLocalWrite"; expression = Obj.magic HxRuntime.hx_null; projectedName = HxString.hx_null_string; binding = Obj.magic HxRuntime.hx_null; sourceType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendLocalWrite"; expression = Obj.magic HxRuntime.hx_null; projectedName = HxString.hx_null_string; binding = Obj.magic HxRuntime.hx_null; sourceType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (if Obj.obj (HxAnon.get input "binding") == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get input "source") == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get input "expression")) == Obj.magic (HxRuntime.hx_null) || (let __string_eq_left_1 = TyLocalId.getOwnerIdentity (Obj.magic (TyLocalBinding.getIdentity (Obj.magic (Obj.obj (HxAnon.get input "binding"))) ())) () in let __string_eq_right_2 = Obj.obj (HxAnon.get input "owner") in not (HxString.equals __string_eq_left_1 __string_eq_right_2)) then HxType.hx_throw_typed_rtti (Obj.repr "local write requires its exact typed owner and operand") ["Dynamic"] else ());
     ignore (let __assign_3 = (Obj.obj (HxAnon.get input "owner") : string) in (
@@ -71313,7 +71313,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendL
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendLocalWrite"; expression = Obj.magic HxRuntime.hx_null; projectedName = HxString.hx_null_string; binding = Obj.magic HxRuntime.hx_null; sourceType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendLocalWrite"; expression = Obj.magic HxRuntime.hx_null; projectedName = HxString.hx_null_string; binding = Obj.magic HxRuntime.hx_null; sourceType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
 
 let assertCurrent = fun self (owner2 : string) (revision2 : string) -> ignore (ignore (if (let __string_eq_left_10 = (Obj.magic self : t).owner in let __string_eq_right_11 = owner2 in not (HxString.equals __string_eq_left_10 __string_eq_right_11)) || (let __string_eq_left_12 = (Obj.magic self : t).revision in let __string_eq_right_13 = revision2 in not (HxString.equals __string_eq_left_12 __string_eq_right_13)) || (let __string_eq_left_14 = (Obj.magic self : t).fingerprint in let __string_eq_right_15 = TypedBodyFingerprint.exactExpression (Obj.magic ((Obj.magic self : t).expression)) in not (HxString.equals __string_eq_left_14 __string_eq_right_15)) then HxType.hx_throw_typed_rtti (Obj.repr "local write belongs to another body or was changed after projection") ["Dynamic"] else ()))
 
@@ -71461,7 +71461,7 @@ type t = { __hx_type : Obj.t; mutable owner : string; mutable revision : string;
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendMethodOccurrence"; owner = HxString.hx_null_string; revision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; use = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; callableType = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendMethodOccurrence"; owner = HxString.hx_null_string; revision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; use = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; callableType = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string } : t) in (
   ignore (ignore (let tempMaybeTyDeclarationInfo = ref (Obj.magic (HxRuntime.hx_null) : TyDeclarationInfo.t) in (
     ignore (if Obj.obj (HxAnon.get input "source") == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
       tempMaybeTyDeclarationInfo := __assign_1;
@@ -71564,7 +71564,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendM
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendMethodOccurrence"; owner = HxString.hx_null_string; revision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; use = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; callableType = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendMethodOccurrence"; owner = HxString.hx_null_string; revision = HxString.hx_null_string; expression = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null; use = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; callableType = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string } : t)
 
 let getExpression = fun self () -> (Obj.magic self : t).expression
 
@@ -71597,7 +71597,7 @@ type t = { __hx_type : Obj.t; mutable declaration : HxModuleDecl.t; mutable clas
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun declaration2 classes2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendModuleProjection"; declaration = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun declaration2 classes2 -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendModuleProjection"; declaration = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if declaration2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "typed backend module projection requires a declaration") ["Dynamic"] else ());
     ignore (let __assign_1 = Obj.magic declaration2 in (
@@ -71628,7 +71628,7 @@ let create = fun declaration2 classes2 -> let self = ({ __hx_type = HxType.class
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendModuleProjection"; declaration = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendModuleProjection"; declaration = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null } : t)
 
 let getDeclaration = fun self () -> (Obj.magic self : t).declaration
 
@@ -71684,7 +71684,7 @@ type t = { __hx_type : Obj.t; mutable pattern : HxSwitchPattern.hxswitchpattern;
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendNamedPattern"; pattern = Obj.magic HxRuntime.hx_null; selection = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; identity = HxString.hx_null_string } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendNamedPattern"; pattern = Obj.magic HxRuntime.hx_null; selection = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; identity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (Obj.obj (HxAnon.get input "owner") : string) in (
       (Obj.magic self : t).owner <- __assign_1;
@@ -71713,7 +71713,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendN
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendNamedPattern"; pattern = Obj.magic HxRuntime.hx_null; selection = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; identity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendNamedPattern"; pattern = Obj.magic HxRuntime.hx_null; selection = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; identity = HxString.hx_null_string } : t)
 
 let assertCurrent = fun self (owner2 : string) (revision2 : string) -> ignore (ignore (if (let __string_eq_left_11 = (Obj.magic self : t).owner in let __string_eq_right_12 = owner2 in not (HxString.equals __string_eq_left_11 __string_eq_right_12)) || (let __string_eq_left_13 = (Obj.magic self : t).revision in let __string_eq_right_14 = revision2 in not (HxString.equals __string_eq_left_13 __string_eq_right_14)) || (let __string_eq_left_15 = (Obj.magic self : t).identity in let __string_eq_right_16 = TypedBodyFingerprint.exactExpression (Obj.magic (let __enum_arg_19 = Obj.magic (HxExpr.ENull) in let __enum_arg_20 = Obj.magic (let __arr_17 = HxArray.create () in (
   ignore (HxArray.push __arr_17 ((Obj.magic self : t).pattern));
@@ -71820,7 +71820,7 @@ type t = { __hx_type : Obj.t; mutable expression : HxExpr.hxexpr; mutable receiv
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendObjectAccess"; expression = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null; value = Obj.magic HxRuntime.hx_null; field = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; valueType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendObjectAccess"; expression = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null; value = Obj.magic HxRuntime.hx_null; field = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; valueType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
 
 let assertCurrent = fun self (owner2 : string) (revision2 : string) -> ignore (ignore ((
   ignore (if (let __string_eq_left_56 = (Obj.magic self : t).owner in let __string_eq_right_57 = owner2 in not (HxString.equals __string_eq_left_56 __string_eq_right_57)) || (let __string_eq_left_58 = (Obj.magic self : t).revision in let __string_eq_right_59 = revision2 in not (HxString.equals __string_eq_left_58 __string_eq_right_59)) || (let __string_eq_left_60 = (Obj.magic self : t).fingerprint in let __string_eq_right_61 = TypedBodyFingerprint.exactExpression (Obj.magic ((Obj.magic self : t).expression)) in not (HxString.equals __string_eq_left_60 __string_eq_right_61)) then HxType.hx_throw_typed_rtti (Obj.repr "object access belongs to another executable or changed after projection") ["Dynamic"] else ());
@@ -71917,7 +71917,7 @@ let supports = fun source -> (try let tempTypedExpr = ref (Obj.magic (HxRuntime.
 ) with
   | HxRuntime.Hx_return __ret_86 -> (Obj.obj __ret_86 : bool) : bool)
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendObjectAccess"; expression = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null; value = Obj.magic HxRuntime.hx_null; field = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; valueType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendObjectAccess"; expression = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null; value = Obj.magic HxRuntime.hx_null; field = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null; resultType = Obj.magic HxRuntime.hx_null; valueType = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (if Obj.obj (HxAnon.get input "owner") == HxString.hx_null_string || (let __string_receiver_1 = Obj.obj (HxAnon.get input "owner") in HxString.length __string_receiver_1) = 0 || Obj.obj (HxAnon.get input "revision") == HxString.hx_null_string || (let __string_receiver_2 = Obj.obj (HxAnon.get input "revision") in HxString.length __string_receiver_2) = 0 || Obj.obj (HxAnon.get input "source") == Obj.magic (HxRuntime.hx_null) || not (supports (Obj.magic (Obj.obj (HxAnon.get input "source")))) then HxType.hx_throw_typed_rtti (Obj.repr "object access requires a structural or Dynamic receiver") ["Dynamic"] else ());
     ignore (let __assign_3 = (Obj.obj (HxAnon.get input "owner") : string) in (
@@ -72039,7 +72039,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedBackendO
             (Obj.magic self : t).field <- __assign_21;
             __assign_21
           ));
-          ignore (let __assign_22 = Obj.magic (let __structural_receiver_23 = parts in Obj.obj (HxAnon.get __structural_receiver_23 "value")) in (
+          ignore (let __assign_22 = Obj.magic (let __structural_receiver_23 = parts in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_23 "value"))) in (
             (Obj.magic self : t).value <- __assign_22;
             __assign_22
           ));
@@ -72266,7 +72266,7 @@ type t = { __hx_type : Obj.t; mutable expression : HxExpr.hxexpr; mutable hx_typ
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun owner2 revision2 source2 expression2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendReturnOccurrence"; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; source = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
+let create = fun owner2 revision2 source2 expression2 -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendReturnOccurrence"; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; source = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (if source2 == Obj.magic (HxRuntime.hx_null) || (let __enum_eq_left_1 = TypedExpr.getTag (Obj.magic source2) () in let __enum_eq_right_2 = TypedExpr.ReturnExpr in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_1) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_2)) || HxArray.length (TypedExpr.getExpressions (Obj.magic source2) ()) > 1 || TypedExpr.getControlTarget (Obj.magic source2) () == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "return occurrence requires its checked return and destination") ["Dynamic"] else ());
     ignore (if (match expression2 with
@@ -72381,7 +72381,7 @@ let create = fun owner2 revision2 source2 expression2 -> let self = ({ __hx_type
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendReturnOccurrence"; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; source = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendReturnOccurrence"; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; source = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
 
 let belongsTo = fun self (value : TypedExpr.t) -> Obj.repr ((Obj.magic self : t).source) == Obj.repr value
 
@@ -72407,7 +72407,7 @@ type t = { __hx_type : Obj.t; mutable ownerIdentity : string; mutable bodyRevisi
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun ownerIdentity2 bodyRevision2 entries2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendRuntimeTypeCatalog"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; entries = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun ownerIdentity2 bodyRevision2 entries2 -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendRuntimeTypeCatalog"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; entries = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if ownerIdentity2 == HxString.hx_null_string || (let __string_receiver_1 = ownerIdentity2 in HxString.length __string_receiver_1) = 0 || bodyRevision2 == HxString.hx_null_string || (let __string_receiver_2 = bodyRevision2 in HxString.length __string_receiver_2) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "runtime type catalog requires an exact executable revision") ["Dynamic"] else ());
     ignore (let __assign_3 = (ownerIdentity2 : string) in (
@@ -72447,7 +72447,7 @@ let create = fun ownerIdentity2 bodyRevision2 entries2 -> let self = ({ __hx_typ
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendRuntimeTypeCatalog"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; entries = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendRuntimeTypeCatalog"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; entries = Obj.magic HxRuntime.hx_null } : t)
 
 let getEntries = fun self () -> let __array_receiver_20 = Obj.magic ((Obj.magic self : t).entries) in HxArray.copy __array_receiver_20
 
@@ -72505,7 +72505,7 @@ type t = { __hx_type : Obj.t; mutable ownerIdentity : string; mutable bodyRevisi
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun ownerIdentity2 bodyRevision2 target2 value2 valueType2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendRuntimeTypeOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; target = Obj.magic HxRuntime.hx_null; expression = Obj.magic HxRuntime.hx_null; value = Obj.magic HxRuntime.hx_null; valueType = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun ownerIdentity2 bodyRevision2 target2 value2 valueType2 -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendRuntimeTypeOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; target = Obj.magic HxRuntime.hx_null; expression = Obj.magic HxRuntime.hx_null; value = Obj.magic HxRuntime.hx_null; valueType = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if ownerIdentity2 == HxString.hx_null_string || (let __string_receiver_1 = ownerIdentity2 in HxString.length __string_receiver_1) = 0 || bodyRevision2 == HxString.hx_null_string || (let __string_receiver_2 = bodyRevision2 in HxString.length __string_receiver_2) = 0 || target2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "runtime type occurrence requires exact owner, revision, and target") ["Dynamic"] else ());
     ignore (if value2 == Obj.magic (HxRuntime.hx_null) <> (valueType2 == Obj.magic (HxRuntime.hx_null)) then HxType.hx_throw_typed_rtti (Obj.repr "runtime type test requires its evaluated value and exact source type together") ["Dynamic"] else ());
@@ -72549,7 +72549,7 @@ let create = fun ownerIdentity2 bodyRevision2 target2 value2 valueType2 -> let s
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendRuntimeTypeOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; target = Obj.magic HxRuntime.hx_null; expression = Obj.magic HxRuntime.hx_null; value = Obj.magic HxRuntime.hx_null; valueType = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendRuntimeTypeOccurrence"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; target = Obj.magic HxRuntime.hx_null; expression = Obj.magic HxRuntime.hx_null; value = Obj.magic HxRuntime.hx_null; valueType = Obj.magic HxRuntime.hx_null } : t)
 
 let getExpression = fun self () -> (Obj.magic self : t).expression
 
@@ -72701,12 +72701,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TypedBackendSourceWalk" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendSourceWalk" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendSourceWalk" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendSourceWalk" } : t)
 
 let expressionChildren = fun node onChild -> ignore (let visit = fun child -> ignore (if child != Obj.magic (HxRuntime.hx_null) then ignore (onChild (Obj.obj (HxEnum.unbox_or_obj "HxExpr" child))) else ()) in match node with
   | HxExpr.EParenthesized (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
@@ -73186,7 +73186,7 @@ type t = { __hx_type : Obj.t; mutable statement : HxStmt.hxstmt; mutable destina
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun owner2 revision2 source statement2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendStatementControl"; statement = Obj.magic HxRuntime.hx_null; destination = HxString.hx_null_string; binding = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
+let create = fun owner2 revision2 source statement2 -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendStatementControl"; statement = Obj.magic HxRuntime.hx_null; destination = HxString.hx_null_string; binding = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
   ignore (ignore (let target = Obj.magic (TypedStmt.getControlTarget (Obj.magic source) ()) in (
     ignore (if target == Obj.magic (HxRuntime.hx_null) || (let __enum_eq_left_1 = TyControlTarget.getKind (Obj.magic target) () in let __enum_eq_right_2 = TyControlTarget.Loop in HxEnum.unbox_or_obj "TyControlTargetKind" (Obj.repr __enum_eq_left_1) != HxEnum.unbox_or_obj "TyControlTargetKind" (Obj.repr __enum_eq_right_2)) || (let __string_eq_left_3 = TyControlTarget.getOwnerIdentity (Obj.magic target) () in let __string_eq_right_4 = owner2 in not (HxString.equals __string_eq_left_3 __string_eq_right_4)) then HxType.hx_throw_typed_rtti (Obj.repr "statement control requires its exact typed loop destination") ["Dynamic"] else ());
     ignore (let __assign_5 = (owner2 : string) in (
@@ -73274,7 +73274,7 @@ let create = fun owner2 revision2 source statement2 -> let self = ({ __hx_type =
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendStatementControl"; statement = Obj.magic HxRuntime.hx_null; destination = HxString.hx_null_string; binding = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendStatementControl"; statement = Obj.magic HxRuntime.hx_null; destination = HxString.hx_null_string; binding = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
 
 let assertCurrent = fun self (owner2 : string) (revision2 : string) -> ignore (ignore ((
   ignore (if (let __string_eq_left_33 = (Obj.magic self : t).owner in let __string_eq_right_34 = owner2 in not (HxString.equals __string_eq_left_33 __string_eq_right_34)) || (let __string_eq_left_35 = (Obj.magic self : t).revision in let __string_eq_right_36 = revision2 in not (HxString.equals __string_eq_left_35 __string_eq_right_36)) then HxType.hx_throw_typed_rtti (Obj.repr "statement control belongs to another executable or revision") ["Dynamic"] else ());
@@ -73297,7 +73297,7 @@ type t = { __hx_type : Obj.t; mutable expression : HxExpr.hxexpr; mutable hx_typ
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun owner2 revision2 source expression2 -> let self = ({ __hx_type = HxType.class_ "TypedBackendThrownValue"; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
+let create = fun owner2 revision2 source expression2 -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendThrownValue"; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (if owner2 == HxString.hx_null_string || revision2 == HxString.hx_null_string || source == Obj.magic (HxRuntime.hx_null) || expression2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "thrown value requires its exact typed owner and operand") ["Dynamic"] else ());
     ignore (let __assign_1 = (owner2 : string) in (
@@ -73324,7 +73324,7 @@ let create = fun owner2 revision2 source expression2 -> let self = ({ __hx_type 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendThrownValue"; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendThrownValue"; expression = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; revision = HxString.hx_null_string; fingerprint = HxString.hx_null_string } : t)
 
 let assertCurrent = fun self (owner2 : string) (revision2 : string) -> ignore (ignore (if (let __string_eq_left_6 = owner2 in let __string_eq_right_7 = (Obj.magic self : t).owner in not (HxString.equals __string_eq_left_6 __string_eq_right_7)) || (let __string_eq_left_8 = revision2 in let __string_eq_right_9 = (Obj.magic self : t).revision in not (HxString.equals __string_eq_left_8 __string_eq_right_9)) || (let __string_eq_left_10 = (Obj.magic self : t).fingerprint in let __string_eq_right_11 = TypedBodyFingerprint.exactExpression (Obj.magic ((Obj.magic self : t).expression)) in not (HxString.equals __string_eq_left_10 __string_eq_right_11)) then HxType.hx_throw_typed_rtti (Obj.repr "thrown value belongs to another body or was changed after projection") ["Dynamic"] else ()))
 end
@@ -73374,12 +73374,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TypedBodyBuilder" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TypedBodyBuilder" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBodyBuilder" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBodyBuilder" } : t)
 
 let convertCallValues = fun arguments resolution typeResolver -> (try let declaration = Obj.magic (TypedCallResolution.getDeclaration (Obj.magic resolution) ()) in (
   ignore (if declaration == Obj.magic (HxRuntime.hx_null) || typeResolver == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr arguments)) else ());
@@ -79363,7 +79363,7 @@ type bodyidentitystate_t = { __hx_type : Obj.t; mutable hash : int; mutable coun
 
 let __reflaxe_ocaml__ = ()
 
-let bodyidentitystate_create = fun exact -> let self = ({ __hx_type = HxType.class_ "_TypedBodyFingerprint.BodyIdentityState"; hash = 0; count = 0; tokens = Obj.magic HxRuntime.hx_null } : bodyidentitystate_t) in (
+let bodyidentitystate_create = fun exact -> let self = ({ __hx_type = HxType.instance_marker "_TypedBodyFingerprint.BodyIdentityState"; hash = 0; count = 0; tokens = Obj.magic HxRuntime.hx_null } : bodyidentitystate_t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = 0 in (
       (__place_receiver_1 : bodyidentitystate_t).count <- __place_rhs_2;
@@ -79393,7 +79393,7 @@ let bodyidentitystate_create = fun exact -> let self = ({ __hx_type = HxType.cla
   self
 )
 
-let bodyidentitystate___empty = fun () -> ({ __hx_type = HxType.class_ "_TypedBodyFingerprint.BodyIdentityState"; hash = 0; count = 0; tokens = Obj.magic HxRuntime.hx_null } : bodyidentitystate_t)
+let bodyidentitystate___empty = fun () -> ({ __hx_type = HxType.instance_marker "_TypedBodyFingerprint.BodyIdentityState"; hash = 0; count = 0; tokens = Obj.magic HxRuntime.hx_null } : bodyidentitystate_t)
 
 let bodyidentitystate_isExact = fun self () -> (Obj.magic self : bodyidentitystate_t).tokens != Obj.magic (HxRuntime.hx_null)
 
@@ -79443,12 +79443,12 @@ let bodyidentitystate_identity = fun self () -> (
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TypedBodyFingerprint" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TypedBodyFingerprint" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBodyFingerprint" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBodyFingerprint" } : t)
 
 let addInt = fun state value -> ignore (bodyidentitystate_addInt (Obj.magic state) value)
 
@@ -80327,12 +80327,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TypedBodyInvariant" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TypedBodyInvariant" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBodyInvariant" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBodyInvariant" } : t)
 
 let assertBinding = fun binding owner -> ignore ((
   ignore (if binding == Obj.magic (HxRuntime.hx_null) || TyLocalBinding.getIdentity (Obj.magic binding) () == Obj.magic (HxRuntime.hx_null) || (let __string_receiver_1 = TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic binding) ())) () in HxString.length __string_receiver_1) = 0 then HxType.hx_throw_typed_rtti (Obj.repr ("typed local binding has an empty identity in " ^ HxString.toStdString owner)) ["Dynamic"] else ());
@@ -81174,7 +81174,7 @@ type t = { __hx_type : Obj.t; mutable ownerIdentity : string; mutable bodyRevisi
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun ownerIdentity2 bodyRevision2 -> let self = ({ __hx_type = HxType.class_ "TypedBodyProjectionBuilder"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; runtimeTypes = Obj.magic HxRuntime.hx_null; constructors = Obj.magic HxRuntime.hx_null; callableAscriptions = Obj.magic HxRuntime.hx_null; callableExpressions = Obj.magic HxRuntime.hx_null; aggregates = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; instanceCalls = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; thrownValues = Obj.magic HxRuntime.hx_null; localWrites = Obj.magic HxRuntime.hx_null; objectAccesses = Obj.magic HxRuntime.hx_null; arrayAccesses = Obj.magic HxRuntime.hx_null; collectionControls = Obj.magic HxRuntime.hx_null; equalities = Obj.magic HxRuntime.hx_null; bitwiseOperations = Obj.magic HxRuntime.hx_null; conditions = Obj.magic HxRuntime.hx_null; callArguments = Obj.magic HxRuntime.hx_null; lambdas = Obj.magic HxRuntime.hx_null; returns = Obj.magic HxRuntime.hx_null; statementControls = Obj.magic HxRuntime.hx_null; namedPatterns = Obj.magic HxRuntime.hx_null; sealed = false } : t) in (
+let create = fun ownerIdentity2 bodyRevision2 -> let self = ({ __hx_type = HxType.instance_marker "TypedBodyProjectionBuilder"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; runtimeTypes = Obj.magic HxRuntime.hx_null; constructors = Obj.magic HxRuntime.hx_null; callableAscriptions = Obj.magic HxRuntime.hx_null; callableExpressions = Obj.magic HxRuntime.hx_null; aggregates = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; instanceCalls = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; thrownValues = Obj.magic HxRuntime.hx_null; localWrites = Obj.magic HxRuntime.hx_null; objectAccesses = Obj.magic HxRuntime.hx_null; arrayAccesses = Obj.magic HxRuntime.hx_null; collectionControls = Obj.magic HxRuntime.hx_null; equalities = Obj.magic HxRuntime.hx_null; bitwiseOperations = Obj.magic HxRuntime.hx_null; conditions = Obj.magic HxRuntime.hx_null; callArguments = Obj.magic HxRuntime.hx_null; lambdas = Obj.magic HxRuntime.hx_null; returns = Obj.magic HxRuntime.hx_null; statementControls = Obj.magic HxRuntime.hx_null; namedPatterns = Obj.magic HxRuntime.hx_null; sealed = false } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = false in (
       (__place_receiver_1 : t).sealed <- __place_rhs_2;
@@ -81280,7 +81280,7 @@ let create = fun ownerIdentity2 bodyRevision2 -> let self = ({ __hx_type = HxTyp
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBodyProjectionBuilder"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; runtimeTypes = Obj.magic HxRuntime.hx_null; constructors = Obj.magic HxRuntime.hx_null; callableAscriptions = Obj.magic HxRuntime.hx_null; callableExpressions = Obj.magic HxRuntime.hx_null; aggregates = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; instanceCalls = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; thrownValues = Obj.magic HxRuntime.hx_null; localWrites = Obj.magic HxRuntime.hx_null; objectAccesses = Obj.magic HxRuntime.hx_null; arrayAccesses = Obj.magic HxRuntime.hx_null; collectionControls = Obj.magic HxRuntime.hx_null; equalities = Obj.magic HxRuntime.hx_null; bitwiseOperations = Obj.magic HxRuntime.hx_null; conditions = Obj.magic HxRuntime.hx_null; callArguments = Obj.magic HxRuntime.hx_null; lambdas = Obj.magic HxRuntime.hx_null; returns = Obj.magic HxRuntime.hx_null; statementControls = Obj.magic HxRuntime.hx_null; namedPatterns = Obj.magic HxRuntime.hx_null; sealed = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBodyProjectionBuilder"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; runtimeTypes = Obj.magic HxRuntime.hx_null; constructors = Obj.magic HxRuntime.hx_null; callableAscriptions = Obj.magic HxRuntime.hx_null; callableExpressions = Obj.magic HxRuntime.hx_null; aggregates = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; instanceCalls = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; thrownValues = Obj.magic HxRuntime.hx_null; localWrites = Obj.magic HxRuntime.hx_null; objectAccesses = Obj.magic HxRuntime.hx_null; arrayAccesses = Obj.magic HxRuntime.hx_null; collectionControls = Obj.magic HxRuntime.hx_null; equalities = Obj.magic HxRuntime.hx_null; bitwiseOperations = Obj.magic HxRuntime.hx_null; conditions = Obj.magic HxRuntime.hx_null; callArguments = Obj.magic HxRuntime.hx_null; lambdas = Obj.magic HxRuntime.hx_null; returns = Obj.magic HxRuntime.hx_null; statementControls = Obj.magic HxRuntime.hx_null; namedPatterns = Obj.magic HxRuntime.hx_null; sealed = false } : t)
 
 let projectNamedPatterns = fun self (facts : TypedSwitchPatterns.t) (patterns : HxSwitchPattern.hxswitchpattern HxArray.t) -> ignore (ignore (try ignore ((
   ignore (if (Obj.magic self : t).sealed then HxType.hx_throw_typed_rtti (Obj.repr "cannot add named patterns to a sealed projection") ["Dynamic"] else ());
@@ -81753,12 +81753,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TypedBodySource" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TypedBodySource" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBodySource" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBodySource" } : t)
 
 let sourcePosition = fun position -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxPos.t) in (
   ignore (if position == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (HxPos.unknown ()) in (
@@ -84215,7 +84215,7 @@ type t = { __hx_type : Obj.t; mutable declaration : TyDeclarationInfo.t; mutable
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun declaration2 requiresOwnerQualification2 extensionProvider2 argumentConversions2 expectedArguments2 namedArguments2 targetScope2 -> let self = ({ __hx_type = HxType.class_ "TypedCallResolution"; declaration = Obj.magic HxRuntime.hx_null; requiresOwnerQualification = false; extensionProvider = Obj.magic HxRuntime.hx_null; argumentConversions = Obj.magic HxRuntime.hx_null; expectedArguments = Obj.magic HxRuntime.hx_null; namedArguments = Obj.magic HxRuntime.hx_null; targetScope = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun declaration2 requiresOwnerQualification2 extensionProvider2 argumentConversions2 expectedArguments2 namedArguments2 targetScope2 -> let self = ({ __hx_type = HxType.instance_marker "TypedCallResolution"; declaration = Obj.magic HxRuntime.hx_null; requiresOwnerQualification = false; extensionProvider = Obj.magic HxRuntime.hx_null; argumentConversions = Obj.magic HxRuntime.hx_null; expectedArguments = Obj.magic HxRuntime.hx_null; namedArguments = Obj.magic HxRuntime.hx_null; targetScope = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (let requiresOwnerQualification2 = if Obj.repr requiresOwnerQualification2 == HxRuntime.hx_null then false else requiresOwnerQualification2 in ignore ((
     ignore (let __assign_1 = Obj.magic declaration2 in (
       (Obj.magic self : t).declaration <- __assign_1;
@@ -84272,7 +84272,7 @@ let create = fun declaration2 requiresOwnerQualification2 extensionProvider2 arg
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedCallResolution"; declaration = Obj.magic HxRuntime.hx_null; requiresOwnerQualification = false; extensionProvider = Obj.magic HxRuntime.hx_null; argumentConversions = Obj.magic HxRuntime.hx_null; expectedArguments = Obj.magic HxRuntime.hx_null; namedArguments = Obj.magic HxRuntime.hx_null; targetScope = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedCallResolution"; declaration = Obj.magic HxRuntime.hx_null; requiresOwnerQualification = false; extensionProvider = Obj.magic HxRuntime.hx_null; argumentConversions = Obj.magic HxRuntime.hx_null; expectedArguments = Obj.magic HxRuntime.hx_null; namedArguments = Obj.magic HxRuntime.hx_null; targetScope = Obj.magic HxRuntime.hx_null } : t)
 
 let getDeclaration = fun self () -> (Obj.magic self : t).declaration
 
@@ -84318,7 +84318,7 @@ type t = { __hx_type : Obj.t; mutable binding : TyLocalBinding.t; mutable functi
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun binding2 functionIdentity2 occurrence2 slot2 creation2 isRepeated2 -> let self = ({ __hx_type = HxType.class_ "TypedCaptureBinding"; binding = Obj.magic HxRuntime.hx_null; functionIdentity = HxString.hx_null_string; occurrence = HxString.hx_null_string; slot = 0; creation = Obj.magic HxRuntime.hx_null; isRepeated = false } : t) in (
+let create = fun binding2 functionIdentity2 occurrence2 slot2 creation2 isRepeated2 -> let self = ({ __hx_type = HxType.instance_marker "TypedCaptureBinding"; binding = Obj.magic HxRuntime.hx_null; functionIdentity = HxString.hx_null_string; occurrence = HxString.hx_null_string; slot = 0; creation = Obj.magic HxRuntime.hx_null; isRepeated = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic binding2 in (
       (Obj.magic self : t).binding <- __assign_1;
@@ -84348,7 +84348,7 @@ let create = fun binding2 functionIdentity2 occurrence2 slot2 creation2 isRepeat
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedCaptureBinding"; binding = Obj.magic HxRuntime.hx_null; functionIdentity = HxString.hx_null_string; occurrence = HxString.hx_null_string; slot = 0; creation = Obj.magic HxRuntime.hx_null; isRepeated = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedCaptureBinding"; binding = Obj.magic HxRuntime.hx_null; functionIdentity = HxString.hx_null_string; occurrence = HxString.hx_null_string; slot = 0; creation = Obj.magic HxRuntime.hx_null; isRepeated = false } : t)
 
 let getCanonicalIdentity = fun self () -> CompilerCacheIdentity.encode (Obj.magic (let __arr_9 = HxArray.create () in (
   ignore (HxArray.push __arr_9 (TyLocalBinding.getCanonicalIdentity (Obj.magic ((Obj.magic self : t).binding)) ()));
@@ -84374,7 +84374,7 @@ type t = { __hx_type : Obj.t; mutable identity : string; mutable parentIdentity 
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedCaptureFunction"; identity = HxString.hx_null_string; parentIdentity = Obj.magic HxRuntime.hx_null; occurrence = HxString.hx_null_string; controlTargetIdentity = Obj.magic HxRuntime.hx_null; namedBinding = Obj.magic HxRuntime.hx_null; directReceiver = false; capturesReceiver = false; directCaptures = Obj.magic HxRuntime.hx_null; captures = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TypedCaptureFunction"; identity = HxString.hx_null_string; parentIdentity = Obj.magic HxRuntime.hx_null; occurrence = HxString.hx_null_string; controlTargetIdentity = Obj.magic HxRuntime.hx_null; namedBinding = Obj.magic HxRuntime.hx_null; directReceiver = false; capturesReceiver = false; directCaptures = Obj.magic HxRuntime.hx_null; captures = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (Obj.obj (HxAnon.get input "identity") : string) in (
       (Obj.magic self : t).identity <- __assign_1;
@@ -84416,7 +84416,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedCaptureF
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedCaptureFunction"; identity = HxString.hx_null_string; parentIdentity = Obj.magic HxRuntime.hx_null; occurrence = HxString.hx_null_string; controlTargetIdentity = Obj.magic HxRuntime.hx_null; namedBinding = Obj.magic HxRuntime.hx_null; directReceiver = false; capturesReceiver = false; directCaptures = Obj.magic HxRuntime.hx_null; captures = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedCaptureFunction"; identity = HxString.hx_null_string; parentIdentity = Obj.magic HxRuntime.hx_null; occurrence = HxString.hx_null_string; controlTargetIdentity = Obj.magic HxRuntime.hx_null; namedBinding = Obj.magic HxRuntime.hx_null; directReceiver = false; capturesReceiver = false; directCaptures = Obj.magic HxRuntime.hx_null; captures = Obj.magic HxRuntime.hx_null } : t)
 
 let getDirectCaptures = fun self () -> let __array_receiver_14 = Obj.magic ((Obj.magic self : t).directCaptures) in HxArray.copy __array_receiver_14
 
@@ -84466,7 +84466,7 @@ type captureanalysis_t = { __hx_type : Obj.t; mutable input : Obj.t; mutable own
 
 let __reflaxe_ocaml__ = ()
 
-let capturefunctionstate_create = fun identity2 parent2 occurrence2 namedBinding2 controlTargetIdentity2 -> let self = ({ __hx_type = HxType.class_ "_TypedCapturePlan.CaptureFunctionState"; identity = HxString.hx_null_string; parent = Obj.magic HxRuntime.hx_null; occurrence = HxString.hx_null_string; controlTargetIdentity = Obj.magic HxRuntime.hx_null; namedBinding = Obj.magic HxRuntime.hx_null; references = Obj.magic HxRuntime.hx_null; direct = Obj.magic HxRuntime.hx_null; captures = Obj.magic HxRuntime.hx_null; directReceiver = false; capturesReceiver = false } : capturefunctionstate_t) in (
+let capturefunctionstate_create = fun identity2 parent2 occurrence2 namedBinding2 controlTargetIdentity2 -> let self = ({ __hx_type = HxType.instance_marker "_TypedCapturePlan.CaptureFunctionState"; identity = HxString.hx_null_string; parent = Obj.magic HxRuntime.hx_null; occurrence = HxString.hx_null_string; controlTargetIdentity = Obj.magic HxRuntime.hx_null; namedBinding = Obj.magic HxRuntime.hx_null; references = Obj.magic HxRuntime.hx_null; direct = Obj.magic HxRuntime.hx_null; captures = Obj.magic HxRuntime.hx_null; directReceiver = false; capturesReceiver = false } : capturefunctionstate_t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = false in (
       (__place_receiver_1 : capturefunctionstate_t).capturesReceiver <- __place_rhs_2;
@@ -84512,14 +84512,14 @@ let capturefunctionstate_create = fun identity2 parent2 occurrence2 namedBinding
   self
 )
 
-let capturefunctionstate___empty = fun () -> ({ __hx_type = HxType.class_ "_TypedCapturePlan.CaptureFunctionState"; identity = HxString.hx_null_string; parent = Obj.magic HxRuntime.hx_null; occurrence = HxString.hx_null_string; controlTargetIdentity = Obj.magic HxRuntime.hx_null; namedBinding = Obj.magic HxRuntime.hx_null; references = Obj.magic HxRuntime.hx_null; direct = Obj.magic HxRuntime.hx_null; captures = Obj.magic HxRuntime.hx_null; directReceiver = false; capturesReceiver = false } : capturefunctionstate_t)
+let capturefunctionstate___empty = fun () -> ({ __hx_type = HxType.instance_marker "_TypedCapturePlan.CaptureFunctionState"; identity = HxString.hx_null_string; parent = Obj.magic HxRuntime.hx_null; occurrence = HxString.hx_null_string; controlTargetIdentity = Obj.magic HxRuntime.hx_null; namedBinding = Obj.magic HxRuntime.hx_null; references = Obj.magic HxRuntime.hx_null; direct = Obj.magic HxRuntime.hx_null; captures = Obj.magic HxRuntime.hx_null; directReceiver = false; capturesReceiver = false } : capturefunctionstate_t)
 
 (* Generated by reflaxe.ocaml (WIP) *)
 (* Haxe type: _TypedCapturePlan.CaptureAnalysis *)
 
 let __reflaxe_ocaml__ = ()
 
-let captureanalysis___empty = fun () -> ({ __hx_type = HxType.class_ "_TypedCapturePlan.CaptureAnalysis"; input = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; origin = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; sourceFunctions = Obj.magic HxRuntime.hx_null; sourceExpressions = Obj.magic HxRuntime.hx_null; sourceBindings = Obj.magic HxRuntime.hx_null; defaultedBodyBindings = Obj.magic HxRuntime.hx_null; seenFunctions = Obj.magic HxRuntime.hx_null; seenTargets = Obj.magic HxRuntime.hx_null; bindings = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; receiverOwner = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; activeLoop = Obj.magic HxRuntime.hx_null; repeating = false } : captureanalysis_t)
+let captureanalysis___empty = fun () -> ({ __hx_type = HxType.instance_marker "_TypedCapturePlan.CaptureAnalysis"; input = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; origin = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; sourceFunctions = Obj.magic HxRuntime.hx_null; sourceExpressions = Obj.magic HxRuntime.hx_null; sourceBindings = Obj.magic HxRuntime.hx_null; defaultedBodyBindings = Obj.magic HxRuntime.hx_null; seenFunctions = Obj.magic HxRuntime.hx_null; seenTargets = Obj.magic HxRuntime.hx_null; bindings = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; receiverOwner = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; activeLoop = Obj.magic HxRuntime.hx_null; repeating = false } : captureanalysis_t)
 
 let captureanalysis_declarationCreation = fun self (target : TyControlTarget.t) -> (try (
   ignore (if target == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (TypedCaptureBinding.Declaration))) else ());
@@ -84674,7 +84674,7 @@ let captureanalysis_freezeFunctions = fun self () -> let _g = Obj.magic (let __a
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedCapturePlan"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; sourceBodyRevision = HxString.hx_null_string; receiverOwner = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; bindings = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedCapturePlan"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; sourceBodyRevision = HxString.hx_null_string; receiverOwner = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; bindings = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
 
 let getFunctionExpressions = fun self () -> let _g = Obj.magic (let __arr_71 = HxArray.create () in __arr_71) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).occurrences) in (
   ignore (while !_g1 < HxArray.length _g2 do ignore (let entry = let __array_read_receiver_72 = _g2 in let __array_read_index_73 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_72) __array_read_index_73 in (
@@ -85219,7 +85219,7 @@ let getBindings = fun self () -> let __array_receiver_94 = Obj.magic ((Obj.magic
 (* Generated by reflaxe.ocaml (WIP) *)
 (* Haxe type: _TypedCapturePlan.CaptureAnalysis *)
 
-let captureanalysis_create = fun input2 origin2 -> let self = ({ __hx_type = HxType.class_ "_TypedCapturePlan.CaptureAnalysis"; input = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; origin = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; sourceFunctions = Obj.magic HxRuntime.hx_null; sourceExpressions = Obj.magic HxRuntime.hx_null; sourceBindings = Obj.magic HxRuntime.hx_null; defaultedBodyBindings = Obj.magic HxRuntime.hx_null; seenFunctions = Obj.magic HxRuntime.hx_null; seenTargets = Obj.magic HxRuntime.hx_null; bindings = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; receiverOwner = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; activeLoop = Obj.magic HxRuntime.hx_null; repeating = false } : captureanalysis_t) in (
+let captureanalysis_create = fun input2 origin2 -> let self = ({ __hx_type = HxType.instance_marker "_TypedCapturePlan.CaptureAnalysis"; input = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; origin = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; sourceFunctions = Obj.magic HxRuntime.hx_null; sourceExpressions = Obj.magic HxRuntime.hx_null; sourceBindings = Obj.magic HxRuntime.hx_null; defaultedBodyBindings = Obj.magic HxRuntime.hx_null; seenFunctions = Obj.magic HxRuntime.hx_null; seenTargets = Obj.magic HxRuntime.hx_null; bindings = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; receiverOwner = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; activeLoop = Obj.magic HxRuntime.hx_null; repeating = false } : captureanalysis_t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = false in (
       (__place_receiver_1 : captureanalysis_t).repeating <- __place_rhs_2;
@@ -85321,7 +85321,7 @@ let captureanalysis_create = fun input2 origin2 -> let self = ({ __hx_type = HxT
 (* Generated by reflaxe.ocaml (WIP) *)
 (* Haxe type: TypedCapturePlan *)
 
-let create = fun input origin -> let self = ({ __hx_type = HxType.class_ "TypedCapturePlan"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; sourceBodyRevision = HxString.hx_null_string; receiverOwner = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; bindings = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun input origin -> let self = ({ __hx_type = HxType.instance_marker "TypedCapturePlan"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; sourceBodyRevision = HxString.hx_null_string; receiverOwner = Obj.magic HxRuntime.hx_null; receiverType = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; bindings = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (Obj.obj (HxAnon.get input "owner") : string) in (
       (Obj.magic self : t).ownerIdentity <- __assign_1;
@@ -85677,7 +85677,7 @@ type t = { __hx_type : Obj.t; mutable binding : TyLocalBinding.t; mutable view :
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun binding2 view2 target2 conversion2 payload2 -> let self = ({ __hx_type = HxType.class_ "TypedCatchUse"; binding = Obj.magic HxRuntime.hx_null; view = Obj.magic HxRuntime.hx_null; target = Obj.magic HxRuntime.hx_null; conversion = Obj.magic HxRuntime.hx_null; payload = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun binding2 view2 target2 conversion2 payload2 -> let self = ({ __hx_type = HxType.instance_marker "TypedCatchUse"; binding = Obj.magic HxRuntime.hx_null; view = Obj.magic HxRuntime.hx_null; target = Obj.magic HxRuntime.hx_null; conversion = Obj.magic HxRuntime.hx_null; payload = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic binding2 in (
       (Obj.magic self : t).binding <- __assign_1;
@@ -85703,7 +85703,7 @@ let create = fun binding2 view2 target2 conversion2 payload2 -> let self = ({ __
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedCatchUse"; binding = Obj.magic HxRuntime.hx_null; view = Obj.magic HxRuntime.hx_null; target = Obj.magic HxRuntime.hx_null; conversion = Obj.magic HxRuntime.hx_null; payload = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedCatchUse"; binding = Obj.magic HxRuntime.hx_null; view = Obj.magic HxRuntime.hx_null; target = Obj.magic HxRuntime.hx_null; conversion = Obj.magic HxRuntime.hx_null; payload = Obj.magic HxRuntime.hx_null } : t)
 
 let getCanonicalIdentity = fun self () -> let tempString = ref (HxString.hx_null_string : string) in (
   ignore (let _g = Obj.magic ((Obj.magic self : t).view) in match _g with
@@ -85924,7 +85924,7 @@ type t = { __hx_type : Obj.t; mutable sourceDeclaration : HxClassDecl.t; mutable
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun sourceDeclaration2 semanticInfo2 functions2 fieldInitializers2 resolvedExtends2 resolvedImplements2 resolvedInterfaceExtends2 fields2 declaredFieldTypes2 -> let self = ({ __hx_type = HxType.class_ "TypedClass"; sourceDeclaration = Obj.magic HxRuntime.hx_null; semanticInfo = Obj.magic HxRuntime.hx_null; resolvedExtends = Obj.magic HxRuntime.hx_null; resolvedImplements = Obj.magic HxRuntime.hx_null; resolvedInterfaceExtends = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; fieldInitializers = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; declaredFieldTypes = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun sourceDeclaration2 semanticInfo2 functions2 fieldInitializers2 resolvedExtends2 resolvedImplements2 resolvedInterfaceExtends2 fields2 declaredFieldTypes2 -> let self = ({ __hx_type = HxType.instance_marker "TypedClass"; sourceDeclaration = Obj.magic HxRuntime.hx_null; semanticInfo = Obj.magic HxRuntime.hx_null; resolvedExtends = Obj.magic HxRuntime.hx_null; resolvedImplements = Obj.magic HxRuntime.hx_null; resolvedInterfaceExtends = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; fieldInitializers = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; declaredFieldTypes = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic declaredFieldTypes2 in (
       (Obj.magic self : t).declaredFieldTypes <- __assign_1;
@@ -86041,7 +86041,7 @@ let create = fun sourceDeclaration2 semanticInfo2 functions2 fieldInitializers2 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedClass"; sourceDeclaration = Obj.magic HxRuntime.hx_null; semanticInfo = Obj.magic HxRuntime.hx_null; resolvedExtends = Obj.magic HxRuntime.hx_null; resolvedImplements = Obj.magic HxRuntime.hx_null; resolvedInterfaceExtends = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; fieldInitializers = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; declaredFieldTypes = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedClass"; sourceDeclaration = Obj.magic HxRuntime.hx_null; semanticInfo = Obj.magic HxRuntime.hx_null; resolvedExtends = Obj.magic HxRuntime.hx_null; resolvedImplements = Obj.magic HxRuntime.hx_null; resolvedInterfaceExtends = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; fieldInitializers = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; declaredFieldTypes = Obj.magic HxRuntime.hx_null } : t)
 
 let getSourceDeclaration = fun self () -> (Obj.magic self : t).sourceDeclaration
 
@@ -86216,7 +86216,7 @@ type t = { __hx_type : Obj.t; mutable declaration : TyDeclarationInfo.t; mutable
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun owner declaration2 constructedType2 operands path -> let self = ({ __hx_type = HxType.class_ "TypedConstructorApplication"; declaration = Obj.magic HxRuntime.hx_null; constructedType = Obj.magic HxRuntime.hx_null; ownerType = Obj.magic HxRuntime.hx_null; forwardedTypes = Obj.magic HxRuntime.hx_null; ownerArguments = Obj.magic HxRuntime.hx_null; parameterTypes = Obj.magic HxRuntime.hx_null; callableSignature = Obj.magic HxRuntime.hx_null; argumentBinding = Obj.magic HxRuntime.hx_null; underlyingType = Obj.magic HxRuntime.hx_null; multiType = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun owner declaration2 constructedType2 operands path -> let self = ({ __hx_type = HxType.instance_marker "TypedConstructorApplication"; declaration = Obj.magic HxRuntime.hx_null; constructedType = Obj.magic HxRuntime.hx_null; ownerType = Obj.magic HxRuntime.hx_null; forwardedTypes = Obj.magic HxRuntime.hx_null; ownerArguments = Obj.magic HxRuntime.hx_null; parameterTypes = Obj.magic HxRuntime.hx_null; callableSignature = Obj.magic HxRuntime.hx_null; argumentBinding = Obj.magic HxRuntime.hx_null; underlyingType = Obj.magic HxRuntime.hx_null; multiType = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if path != Obj.magic (HxRuntime.hx_null) then ignore (TypedConstructorPath.assertOwner (Obj.magic path) (Obj.magic owner) (Obj.magic constructedType2)) else ());
     ignore (if owner == Obj.magic (HxRuntime.hx_null) || declaration2 == Obj.magic (HxRuntime.hx_null) || constructedType2 == Obj.magic (HxRuntime.hx_null) || TyType.getNominalIdentity (Obj.magic constructedType2) () == Obj.magic (HxRuntime.hx_null) || path == Obj.magic (HxRuntime.hx_null) && not (TyNominalTypeId.equals (Obj.magic ((Obj.magic owner : TyNominalInfo.t).getIdentity (Obj.magic owner) ())) (Obj.magic (TyType.getNominalIdentity (Obj.magic constructedType2) ()))) || not (TyNominalTypeId.equals (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration2) ())) (Obj.magic ((Obj.magic owner : TyNominalInfo.t).getIdentity (Obj.magic owner) ()))) || TyDeclarationInfo.getIsStatic (Obj.magic declaration2) () || (let __string_eq_left_1 = TyFunSig.getName (Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration2) ())) () in let __string_eq_right_2 = "new" in not (HxString.equals __string_eq_left_1 __string_eq_right_2)) || Obj.repr ((Obj.magic owner : TyNominalInfo.t).declarationForSignature (Obj.magic owner) (Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration2) ()))) != Obj.repr declaration2 then HxType.hx_throw_typed_rtti (Obj.repr "constructor application requires its exact nominal constructor") ["Dynamic"] else ());
@@ -86358,7 +86358,7 @@ let create = fun owner declaration2 constructedType2 operands path -> let self =
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedConstructorApplication"; declaration = Obj.magic HxRuntime.hx_null; constructedType = Obj.magic HxRuntime.hx_null; ownerType = Obj.magic HxRuntime.hx_null; forwardedTypes = Obj.magic HxRuntime.hx_null; ownerArguments = Obj.magic HxRuntime.hx_null; parameterTypes = Obj.magic HxRuntime.hx_null; callableSignature = Obj.magic HxRuntime.hx_null; argumentBinding = Obj.magic HxRuntime.hx_null; underlyingType = Obj.magic HxRuntime.hx_null; multiType = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedConstructorApplication"; declaration = Obj.magic HxRuntime.hx_null; constructedType = Obj.magic HxRuntime.hx_null; ownerType = Obj.magic HxRuntime.hx_null; forwardedTypes = Obj.magic HxRuntime.hx_null; ownerArguments = Obj.magic HxRuntime.hx_null; parameterTypes = Obj.magic HxRuntime.hx_null; callableSignature = Obj.magic HxRuntime.hx_null; argumentBinding = Obj.magic HxRuntime.hx_null; underlyingType = Obj.magic HxRuntime.hx_null; multiType = Obj.magic HxRuntime.hx_null } : t)
 
 let getMultiTypeConstruction = fun self () -> (Obj.magic self : t).multiType
 
@@ -86514,7 +86514,7 @@ type t = { __hx_type : Obj.t; mutable constructed : TyType.t; mutable owner : Ty
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun constructed2 owner2 ownerType2 forwarded2 -> let self = ({ __hx_type = HxType.class_ "TypedConstructorPath"; constructed = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; ownerType = Obj.magic HxRuntime.hx_null; forwarded = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun constructed2 owner2 ownerType2 forwarded2 -> let self = ({ __hx_type = HxType.instance_marker "TypedConstructorPath"; constructed = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; ownerType = Obj.magic HxRuntime.hx_null; forwarded = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic constructed2 in (
       (Obj.magic self : t).constructed <- __assign_1;
@@ -86536,7 +86536,7 @@ let create = fun constructed2 owner2 ownerType2 forwarded2 -> let self = ({ __hx
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedConstructorPath"; constructed = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; ownerType = Obj.magic HxRuntime.hx_null; forwarded = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedConstructorPath"; constructed = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; ownerType = Obj.magic HxRuntime.hx_null; forwarded = Obj.magic HxRuntime.hx_null } : t)
 
 let getOwner = fun self () -> (Obj.magic self : t).owner
 
@@ -87123,7 +87123,7 @@ type t = { __hx_type : Obj.t; mutable owner : string; mutable nextTemporary : in
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun owner2 rootTarget2 -> let self = ({ __hx_type = HxType.class_ "TypedControlLowering"; owner = HxString.hx_null_string; nextTemporary = 0; didLower = false; activeLoop = Obj.magic HxRuntime.hx_null; untypedContext = false; hasTargetScope = false; patternLoopTargets = Obj.magic HxRuntime.hx_null; rootTarget = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun owner2 rootTarget2 -> let self = ({ __hx_type = HxType.instance_marker "TypedControlLowering"; owner = HxString.hx_null_string; nextTemporary = 0; didLower = false; activeLoop = Obj.magic HxRuntime.hx_null; untypedContext = false; hasTargetScope = false; patternLoopTargets = Obj.magic HxRuntime.hx_null; rootTarget = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxArray.create ()) in (
       (Obj.magic self : t).patternLoopTargets <- __assign_1;
@@ -87161,7 +87161,7 @@ let create = fun owner2 rootTarget2 -> let self = ({ __hx_type = HxType.class_ "
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedControlLowering"; owner = HxString.hx_null_string; nextTemporary = 0; didLower = false; activeLoop = Obj.magic HxRuntime.hx_null; untypedContext = false; hasTargetScope = false; patternLoopTargets = Obj.magic HxRuntime.hx_null; rootTarget = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedControlLowering"; owner = HxString.hx_null_string; nextTemporary = 0; didLower = false; activeLoop = Obj.magic HxRuntime.hx_null; untypedContext = false; hasTargetScope = false; patternLoopTargets = Obj.magic HxRuntime.hx_null; rootTarget = Obj.magic HxRuntime.hx_null } : t)
 
 let rec stepStatements = fun self (step : TypedExpr.t) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TypedStmt.t HxArray.t) in (
   ignore (let _g = Obj.magic (TypedExpr.getTag (Obj.magic step) ()) in match _g with
@@ -89071,7 +89071,7 @@ type t = { __hx_type : Obj.t; mutable owner : TyNominalInfo.t; mutable entries :
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun owner2 entries2 -> let self = ({ __hx_type = HxType.class_ "TypedDeclaredFieldTypes"; owner = Obj.magic HxRuntime.hx_null; entries = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun owner2 entries2 -> let self = ({ __hx_type = HxType.instance_marker "TypedDeclaredFieldTypes"; owner = Obj.magic HxRuntime.hx_null; entries = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic owner2 in (
       (Obj.magic self : t).owner <- __assign_1;
@@ -89085,7 +89085,7 @@ let create = fun owner2 entries2 -> let self = ({ __hx_type = HxType.class_ "Typ
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedDeclaredFieldTypes"; owner = Obj.magic HxRuntime.hx_null; entries = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedDeclaredFieldTypes"; owner = Obj.magic HxRuntime.hx_null; entries = Obj.magic HxRuntime.hx_null } : t)
 
 let assertCurrent = fun self () -> ignore (ignore (let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).entries) in while !_g < HxArray.length _g1 do ignore (let entry = let __array_read_receiver_4 = _g1 in let __array_read_index_5 = !_g in HxArray.get (Obj.magic __array_read_receiver_4) __array_read_index_5 in (
   ignore (let __old_6 = !_g in let __new_7 = HxInt.add __old_6 1 in (
@@ -89131,12 +89131,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TypedExactCallSource" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TypedExactCallSource" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedExactCallSource" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedExactCallSource" } : t)
 
 let encodeInstance = fun owner declaration hx_method resultType receiver arguments -> let tempString = ref (HxString.hx_null_string : string) in (
   ignore (if owner == HxString.hx_null_string then let __assign_1 = ("" : string) in (
@@ -90629,12 +90629,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TypedExactEnumConstructorSource" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TypedExactEnumConstructorSource" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedExactEnumConstructorSource" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedExactEnumConstructorSource" } : t)
 
 let marker = fun () -> ("$hxhx:exact-enum-constructor" : string)
 
@@ -91104,12 +91104,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TypedExactStaticCallSource" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TypedExactStaticCallSource" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedExactStaticCallSource" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedExactStaticCallSource" } : t)
 
 let encode = fun owner declaration hx_method resultType callee arguments -> let payload = Obj.magic (let __arr_1 = HxArray.create () in (
   ignore (HxArray.push __arr_1 (let __enum_arg_2 = (owner : string) in HxExpr.EString (Stdlib.Sys.opaque_identity __enum_arg_2)));
@@ -91716,7 +91716,7 @@ type t = { __hx_type : Obj.t; mutable tag : typedexprtag; mutable hx_type : TyTy
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedExpr"; tag = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; position = Obj.magic HxRuntime.hx_null; texts = Obj.magic HxRuntime.hx_null; expressions = Obj.magic HxRuntime.hx_null; patterns = Obj.magic HxRuntime.hx_null; boolValue = false; intValue = 0; floatValue = 0.; declaration = Obj.magic HxRuntime.hx_null; unaryOperator = Obj.magic HxRuntime.hx_null; unaryFixity = Obj.magic HxRuntime.hx_null; opaqueKind = Obj.magic HxRuntime.hx_null; fieldInfo = Obj.magic HxRuntime.hx_null; localBindings = Obj.magic HxRuntime.hx_null; extensionProvider = Obj.magic HxRuntime.hx_null; runtimeTypeTarget = Obj.magic HxRuntime.hx_null; catchUses = Obj.magic HxRuntime.hx_null; lambdaSignature = Obj.magic HxRuntime.hx_null; sourceFunction = Obj.magic HxRuntime.hx_null; controlTarget = Obj.magic HxRuntime.hx_null; sourceCatches = Obj.magic HxRuntime.hx_null; constructorApplication = Obj.magic HxRuntime.hx_null; argumentBinding = Obj.magic HxRuntime.hx_null; namedArguments = Obj.magic HxRuntime.hx_null; switchPatterns = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedExpr"; tag = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; position = Obj.magic HxRuntime.hx_null; texts = Obj.magic HxRuntime.hx_null; expressions = Obj.magic HxRuntime.hx_null; patterns = Obj.magic HxRuntime.hx_null; boolValue = false; intValue = 0; floatValue = 0.; declaration = Obj.magic HxRuntime.hx_null; unaryOperator = Obj.magic HxRuntime.hx_null; unaryFixity = Obj.magic HxRuntime.hx_null; opaqueKind = Obj.magic HxRuntime.hx_null; fieldInfo = Obj.magic HxRuntime.hx_null; localBindings = Obj.magic HxRuntime.hx_null; extensionProvider = Obj.magic HxRuntime.hx_null; runtimeTypeTarget = Obj.magic HxRuntime.hx_null; catchUses = Obj.magic HxRuntime.hx_null; lambdaSignature = Obj.magic HxRuntime.hx_null; sourceFunction = Obj.magic HxRuntime.hx_null; controlTarget = Obj.magic HxRuntime.hx_null; sourceCatches = Obj.magic HxRuntime.hx_null; constructorApplication = Obj.magic HxRuntime.hx_null; argumentBinding = Obj.magic HxRuntime.hx_null; namedArguments = Obj.magic HxRuntime.hx_null; switchPatterns = Obj.magic HxRuntime.hx_null } : t)
 
 let getRuntimeTypeTarget = fun self () -> (Obj.magic self : t).runtimeTypeTarget
 
@@ -91886,7 +91886,7 @@ let assertArgumentBinding = fun self () -> ignore (ignore (try ignore ((
 )) with
   | HxRuntime.Hx_return_void -> ()))
 
-let create = fun tag2 hx_type position2 texts2 expressions2 patterns2 boolValue2 intValue2 floatValue2 declaration2 unaryOperator2 unaryFixity2 opaqueKind2 fieldInfo2 localBindings2 extensionProvider2 runtimeTypeTarget2 catchUses2 lambdaSignature2 sourceFunction2 controlTarget2 sourceCatches2 constructorApplication2 argumentBinding2 namedArguments2 switchPatterns2 -> let self = ({ __hx_type = HxType.class_ "TypedExpr"; tag = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; position = Obj.magic HxRuntime.hx_null; texts = Obj.magic HxRuntime.hx_null; expressions = Obj.magic HxRuntime.hx_null; patterns = Obj.magic HxRuntime.hx_null; boolValue = false; intValue = 0; floatValue = 0.; declaration = Obj.magic HxRuntime.hx_null; unaryOperator = Obj.magic HxRuntime.hx_null; unaryFixity = Obj.magic HxRuntime.hx_null; opaqueKind = Obj.magic HxRuntime.hx_null; fieldInfo = Obj.magic HxRuntime.hx_null; localBindings = Obj.magic HxRuntime.hx_null; extensionProvider = Obj.magic HxRuntime.hx_null; runtimeTypeTarget = Obj.magic HxRuntime.hx_null; catchUses = Obj.magic HxRuntime.hx_null; lambdaSignature = Obj.magic HxRuntime.hx_null; sourceFunction = Obj.magic HxRuntime.hx_null; controlTarget = Obj.magic HxRuntime.hx_null; sourceCatches = Obj.magic HxRuntime.hx_null; constructorApplication = Obj.magic HxRuntime.hx_null; argumentBinding = Obj.magic HxRuntime.hx_null; namedArguments = Obj.magic HxRuntime.hx_null; switchPatterns = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun tag2 hx_type position2 texts2 expressions2 patterns2 boolValue2 intValue2 floatValue2 declaration2 unaryOperator2 unaryFixity2 opaqueKind2 fieldInfo2 localBindings2 extensionProvider2 runtimeTypeTarget2 catchUses2 lambdaSignature2 sourceFunction2 controlTarget2 sourceCatches2 constructorApplication2 argumentBinding2 namedArguments2 switchPatterns2 -> let self = ({ __hx_type = HxType.instance_marker "TypedExpr"; tag = Obj.magic HxRuntime.hx_null; hx_type = Obj.magic HxRuntime.hx_null; position = Obj.magic HxRuntime.hx_null; texts = Obj.magic HxRuntime.hx_null; expressions = Obj.magic HxRuntime.hx_null; patterns = Obj.magic HxRuntime.hx_null; boolValue = false; intValue = 0; floatValue = 0.; declaration = Obj.magic HxRuntime.hx_null; unaryOperator = Obj.magic HxRuntime.hx_null; unaryFixity = Obj.magic HxRuntime.hx_null; opaqueKind = Obj.magic HxRuntime.hx_null; fieldInfo = Obj.magic HxRuntime.hx_null; localBindings = Obj.magic HxRuntime.hx_null; extensionProvider = Obj.magic HxRuntime.hx_null; runtimeTypeTarget = Obj.magic HxRuntime.hx_null; catchUses = Obj.magic HxRuntime.hx_null; lambdaSignature = Obj.magic HxRuntime.hx_null; sourceFunction = Obj.magic HxRuntime.hx_null; controlTarget = Obj.magic HxRuntime.hx_null; sourceCatches = Obj.magic HxRuntime.hx_null; constructorApplication = Obj.magic HxRuntime.hx_null; argumentBinding = Obj.magic HxRuntime.hx_null; namedArguments = Obj.magic HxRuntime.hx_null; switchPatterns = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (let boolValue2 = if Obj.repr boolValue2 == HxRuntime.hx_null then false else boolValue2 in let intValue2 = if Obj.repr intValue2 == HxRuntime.hx_null then 0 else intValue2 in let floatValue2 = if Obj.repr floatValue2 == HxRuntime.hx_null then 0.0 else floatValue2 in ignore ((
     ignore (if declaration2 != Obj.magic (HxRuntime.hx_null) then ignore (TyDeclarationInfo.requireSupportedImplementation (Obj.magic declaration2) ()) else ());
     ignore (if constructorApplication2 != Obj.magic (HxRuntime.hx_null) then ignore ((
@@ -92920,7 +92920,7 @@ type t = { __hx_type : Obj.t; mutable field : TyFieldInfo.t; mutable expression 
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun field2 expression2 -> let self = ({ __hx_type = HxType.class_ "TypedFieldInitializer"; field = Obj.magic HxRuntime.hx_null; expression = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun field2 expression2 -> let self = ({ __hx_type = HxType.instance_marker "TypedFieldInitializer"; field = Obj.magic HxRuntime.hx_null; expression = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if field2 == Obj.magic (HxRuntime.hx_null) || expression2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "typed field initializer requires field information and an expression") ["Dynamic"] else ());
     ignore (let __assign_1 = Obj.magic field2 in (
@@ -92935,7 +92935,7 @@ let create = fun field2 expression2 -> let self = ({ __hx_type = HxType.class_ "
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedFieldInitializer"; field = Obj.magic HxRuntime.hx_null; expression = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedFieldInitializer"; field = Obj.magic HxRuntime.hx_null; expression = Obj.magic HxRuntime.hx_null } : t)
 
 let getField = fun self () -> (Obj.magic self : t).field
 
@@ -92964,7 +92964,7 @@ type t = { __hx_type : Obj.t; mutable ownerName : string; mutable sourceOrdinal 
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun ownerName2 sourceOrdinal2 sourceDeclaration2 declaration2 environment2 body2 defaults2 -> let self = ({ __hx_type = HxType.class_ "TypedFunction"; ownerName = HxString.hx_null_string; sourceOrdinal = 0; sourceDeclaration = Obj.magic HxRuntime.hx_null; sourceBodyIdentity = HxString.hx_null_string; sourceArgumentsIdentity = HxString.hx_null_string; declaration = Obj.magic HxRuntime.hx_null; environment = Obj.magic HxRuntime.hx_null; body = Obj.magic HxRuntime.hx_null; defaults = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun ownerName2 sourceOrdinal2 sourceDeclaration2 declaration2 environment2 body2 defaults2 -> let self = ({ __hx_type = HxType.instance_marker "TypedFunction"; ownerName = HxString.hx_null_string; sourceOrdinal = 0; sourceDeclaration = Obj.magic HxRuntime.hx_null; sourceBodyIdentity = HxString.hx_null_string; sourceArgumentsIdentity = HxString.hx_null_string; declaration = Obj.magic HxRuntime.hx_null; environment = Obj.magic HxRuntime.hx_null; body = Obj.magic HxRuntime.hx_null; defaults = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
     ignore (if ownerName2 == HxString.hx_null_string then let __assign_1 = ("" : string) in (
       tempRight := __assign_1;
@@ -93035,7 +93035,7 @@ let create = fun ownerName2 sourceOrdinal2 sourceDeclaration2 declaration2 envir
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedFunction"; ownerName = HxString.hx_null_string; sourceOrdinal = 0; sourceDeclaration = Obj.magic HxRuntime.hx_null; sourceBodyIdentity = HxString.hx_null_string; sourceArgumentsIdentity = HxString.hx_null_string; declaration = Obj.magic HxRuntime.hx_null; environment = Obj.magic HxRuntime.hx_null; body = Obj.magic HxRuntime.hx_null; defaults = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedFunction"; ownerName = HxString.hx_null_string; sourceOrdinal = 0; sourceDeclaration = Obj.magic HxRuntime.hx_null; sourceBodyIdentity = HxString.hx_null_string; sourceArgumentsIdentity = HxString.hx_null_string; declaration = Obj.magic HxRuntime.hx_null; environment = Obj.magic HxRuntime.hx_null; body = Obj.magic HxRuntime.hx_null; defaults = Obj.magic HxRuntime.hx_null } : t)
 
 let getOwnerName = fun self () -> (Obj.magic self : t).ownerName
 
@@ -93107,7 +93107,7 @@ type t = { __hx_type : Obj.t; mutable statements : TypedStmt.t HxArray.t; mutabl
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun statements2 sourceFingerprint2 -> let self = ({ __hx_type = HxType.class_ "TypedFunctionBody"; statements = Obj.magic HxRuntime.hx_null; sourceFingerprint = HxString.hx_null_string } : t) in (
+let create = fun statements2 sourceFingerprint2 -> let self = ({ __hx_type = HxType.instance_marker "TypedFunctionBody"; statements = Obj.magic HxRuntime.hx_null; sourceFingerprint = HxString.hx_null_string } : t) in (
   ignore (ignore (let tempRight = ref (Obj.magic (HxRuntime.hx_null) : TypedStmt.t HxArray.t) in (
     ignore (if statements2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       tempRight := __assign_1;
@@ -93137,7 +93137,7 @@ let create = fun statements2 sourceFingerprint2 -> let self = ({ __hx_type = HxT
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedFunctionBody"; statements = Obj.magic HxRuntime.hx_null; sourceFingerprint = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedFunctionBody"; statements = Obj.magic HxRuntime.hx_null; sourceFingerprint = HxString.hx_null_string } : t)
 
 let getStatements = fun self () -> let __array_receiver_9 = Obj.magic ((Obj.magic self : t).statements) in HxArray.copy __array_receiver_9
 
@@ -93191,7 +93191,7 @@ let typedfunctiondefault_fields__sourceIdentity = fun arguments -> let facts = O
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun parameterIndex2 expression2 -> let self = ({ __hx_type = HxType.class_ "TypedFunctionDefault"; parameterIndex = 0; expression = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun parameterIndex2 expression2 -> let self = ({ __hx_type = HxType.instance_marker "TypedFunctionDefault"; parameterIndex = 0; expression = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if parameterIndex2 < 0 || expression2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "typed function default requires a parameter slot and expression") ["Dynamic"] else ());
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = parameterIndex2 in (
@@ -93206,7 +93206,7 @@ let create = fun parameterIndex2 expression2 -> let self = ({ __hx_type = HxType
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedFunctionDefault"; parameterIndex = 0; expression = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedFunctionDefault"; parameterIndex = 0; expression = Obj.magic HxRuntime.hx_null } : t)
 
 let getParameterIndex = fun self () -> (Obj.magic self : t).parameterIndex
 
@@ -93293,7 +93293,7 @@ type t = { __hx_type : Obj.t; mutable patterns : HxSwitchPattern.hxswitchpattern
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedGuardedPatternPlan"; patterns = Obj.magic HxRuntime.hx_null; columns = Obj.magic HxRuntime.hx_null; namedPatterns = Obj.magic HxRuntime.hx_null; namedSelections = Obj.magic HxRuntime.hx_null; root = Obj.magic HxRuntime.hx_null; canCompleteNormally = false; exhaustive = false; caseCompletion = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedGuardedPatternPlan"; patterns = Obj.magic HxRuntime.hx_null; columns = Obj.magic HxRuntime.hx_null; namedPatterns = Obj.magic HxRuntime.hx_null; namedSelections = Obj.magic HxRuntime.hx_null; root = Obj.magic HxRuntime.hx_null; canCompleteNormally = false; exhaustive = false; caseCompletion = Obj.magic HxRuntime.hx_null } : t)
 
 let getRoot = fun self () -> (Obj.magic self : t).root
 
@@ -94638,7 +94638,7 @@ and compile = fun self (input : Obj.t HxArray.t) (values : Obj.t HxArray.t) -> (
 ) with
   | HxRuntime.Hx_return __ret_481 -> (Obj.obj __ret_481 : guardedpatterndecision) : guardedpatterndecision)
 
-let create = fun patterns2 named canCompleteNormally2 exhaustive2 caseCompletion2 -> let self = ({ __hx_type = HxType.class_ "TypedGuardedPatternPlan"; patterns = Obj.magic HxRuntime.hx_null; columns = Obj.magic HxRuntime.hx_null; namedPatterns = Obj.magic HxRuntime.hx_null; namedSelections = Obj.magic HxRuntime.hx_null; root = Obj.magic HxRuntime.hx_null; canCompleteNormally = false; exhaustive = false; caseCompletion = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun patterns2 named canCompleteNormally2 exhaustive2 caseCompletion2 -> let self = ({ __hx_type = HxType.instance_marker "TypedGuardedPatternPlan"; patterns = Obj.magic HxRuntime.hx_null; columns = Obj.magic HxRuntime.hx_null; namedPatterns = Obj.magic HxRuntime.hx_null; namedSelections = Obj.magic HxRuntime.hx_null; root = Obj.magic HxRuntime.hx_null; canCompleteNormally = false; exhaustive = false; caseCompletion = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in (
       ignore (HxArray.push __arr_2 Input);
@@ -94807,12 +94807,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TypedIteratorProtocol" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TypedIteratorProtocol" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedIteratorProtocol" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedIteratorProtocol" } : t)
 
 let protocol = fun source selected build -> (
   ignore (if not (TyIteratorProtocolSource.owns (Obj.magic selected) (Obj.magic source)) then HxType.hx_throw_typed_rtti (Obj.repr "iterator protocol belongs to another authored source occurrence") ["Dynamic"] else ());
@@ -95486,7 +95486,7 @@ type t = { __hx_type : Obj.t; mutable value : membervalue }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun value2 -> let self = ({ __hx_type = HxType.class_ "TypedMemberResolution"; value = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun value2 -> let self = ({ __hx_type = HxType.instance_marker "TypedMemberResolution"; value = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let __assign_1 = Obj.magic value2 in (
     (Obj.magic self : t).value <- __assign_1;
     __assign_1
@@ -95494,7 +95494,7 @@ let create = fun value2 -> let self = ({ __hx_type = HxType.class_ "TypedMemberR
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedMemberResolution"; value = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedMemberResolution"; value = Obj.magic HxRuntime.hx_null } : t)
 
 let nameRead = fun self (name : string) (hx_type : TyType.t) (position : HxPos.t) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t) in (
   ignore (let _g = Obj.magic ((Obj.magic self : t).value) in match _g with
@@ -95591,7 +95591,7 @@ type t = { __hx_type : Obj.t; mutable parsed : ParsedModule.t; mutable env : TyM
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedModule"; parsed = Obj.magic HxRuntime.hx_null; env = Obj.magic HxRuntime.hx_null; typedClasses = Obj.magic HxRuntime.hx_null; revision = 0; sourceOrigin = Obj.magic HxRuntime.hx_null; conditionalCompilation = Obj.magic HxRuntime.hx_null; generatedDeclarations = Obj.magic HxRuntime.hx_null; backendDeclarationCatalog = Obj.magic HxRuntime.hx_null; backendProjection = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedModule"; parsed = Obj.magic HxRuntime.hx_null; env = Obj.magic HxRuntime.hx_null; typedClasses = Obj.magic HxRuntime.hx_null; revision = 0; sourceOrigin = Obj.magic HxRuntime.hx_null; conditionalCompilation = Obj.magic HxRuntime.hx_null; generatedDeclarations = Obj.magic HxRuntime.hx_null; backendDeclarationCatalog = Obj.magic HxRuntime.hx_null; backendProjection = Obj.magic HxRuntime.hx_null } : t)
 
 let getParsed = fun self () -> (Obj.magic self : t).parsed
 
@@ -95698,7 +95698,7 @@ let syntheticSourceOrigin = fun parsed2 -> let declaration = Obj.magic (ParsedMo
   let __call_arg_0_53 = !tempString in CompilerModuleOrigin.synthetic __call_arg_0_53
 )
 
-let create = fun parsed2 env2 typedClasses2 revision2 sourceOrigin2 conditionalCompilation2 generatedDeclarations2 -> let self = ({ __hx_type = HxType.class_ "TypedModule"; parsed = Obj.magic HxRuntime.hx_null; env = Obj.magic HxRuntime.hx_null; typedClasses = Obj.magic HxRuntime.hx_null; revision = 0; sourceOrigin = Obj.magic HxRuntime.hx_null; conditionalCompilation = Obj.magic HxRuntime.hx_null; generatedDeclarations = Obj.magic HxRuntime.hx_null; backendDeclarationCatalog = Obj.magic HxRuntime.hx_null; backendProjection = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun parsed2 env2 typedClasses2 revision2 sourceOrigin2 conditionalCompilation2 generatedDeclarations2 -> let self = ({ __hx_type = HxType.instance_marker "TypedModule"; parsed = Obj.magic HxRuntime.hx_null; env = Obj.magic HxRuntime.hx_null; typedClasses = Obj.magic HxRuntime.hx_null; revision = 0; sourceOrigin = Obj.magic HxRuntime.hx_null; conditionalCompilation = Obj.magic HxRuntime.hx_null; generatedDeclarations = Obj.magic HxRuntime.hx_null; backendDeclarationCatalog = Obj.magic HxRuntime.hx_null; backendProjection = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (let revision2 = if Obj.repr revision2 == HxRuntime.hx_null then 1 else revision2 in ignore ((
     ignore (let __assign_1 = Obj.magic parsed2 in (
       (Obj.magic self : t).parsed <- __assign_1;
@@ -95802,7 +95802,7 @@ type t = { __hx_type : Obj.t; mutable selection : TyMultiTypeSelection.t; mutabl
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun selection2 index sources types -> let self = ({ __hx_type = HxType.class_ "TypedMultiTypeConstruction"; selection = Obj.magic HxRuntime.hx_null; binding = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun selection2 index sources types -> let self = ({ __hx_type = HxType.instance_marker "TypedMultiTypeConstruction"; selection = Obj.magic HxRuntime.hx_null; binding = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (TyMultiTypeSelection.assertCurrent (Obj.magic selection2) (Obj.magic index) (Obj.magic (TyMultiTypeSelection.getConstructedType (Obj.magic selection2) ())));
     ignore (let __assign_1 = Obj.magic selection2 in (
@@ -95823,7 +95823,7 @@ let create = fun selection2 index sources types -> let self = ({ __hx_type = HxT
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedMultiTypeConstruction"; selection = Obj.magic HxRuntime.hx_null; binding = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedMultiTypeConstruction"; selection = Obj.magic HxRuntime.hx_null; binding = Obj.magic HxRuntime.hx_null } : t)
 
 let apply = fun self (arguments : TypedExpr.t HxArray.t) (result : TyType.t) (position : HxPos.t) -> (
   ignore (if let __string_eq_left_11 = TyType.getSemanticKey (Obj.magic result) () in let __string_eq_right_12 = TyType.getSemanticKey (Obj.magic (TyMultiTypeSelection.getConstructedType (Obj.magic ((Obj.magic self : t).selection)) ())) () in not (HxString.equals __string_eq_left_11 __string_eq_right_12) then HxType.hx_throw_typed_rtti (Obj.repr "multi-type construction belongs to another applied result") ["Dynamic"] else ());
@@ -95858,7 +95858,7 @@ type t = { __hx_type : Obj.t; mutable declaration : TyDeclarationInfo.t; mutable
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun declaration2 extensionProvider2 arguments2 -> let self = ({ __hx_type = HxType.class_ "TypedNamedCallBinding"; declaration = Obj.magic HxRuntime.hx_null; declarationSignature = HxString.hx_null_string; extensionProvider = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun declaration2 extensionProvider2 arguments2 -> let self = ({ __hx_type = HxType.instance_marker "TypedNamedCallBinding"; declaration = Obj.magic HxRuntime.hx_null; declarationSignature = HxString.hx_null_string; extensionProvider = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic declaration2 in (
       (Obj.magic self : t).declaration <- __assign_1;
@@ -95880,7 +95880,7 @@ let create = fun declaration2 extensionProvider2 arguments2 -> let self = ({ __h
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedNamedCallBinding"; declaration = Obj.magic HxRuntime.hx_null; declarationSignature = HxString.hx_null_string; extensionProvider = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedNamedCallBinding"; declaration = Obj.magic HxRuntime.hx_null; declarationSignature = HxString.hx_null_string; extensionProvider = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null } : t)
 
 let getArguments = fun self () -> (Obj.magic self : t).arguments
 
@@ -95923,7 +95923,7 @@ type t = { __hx_type : Obj.t; mutable declaration : TyDeclarationInfo.t; mutable
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedNamedCallPlan"; declaration = Obj.magic HxRuntime.hx_null; signature = Obj.magic HxRuntime.hx_null; order = Obj.magic HxRuntime.hx_null; parameterTypes = Obj.magic HxRuntime.hx_null; sources = Obj.magic HxRuntime.hx_null; index = Obj.magic HxRuntime.hx_null; extensionProvider = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TypedNamedCallPlan"; declaration = Obj.magic HxRuntime.hx_null; signature = Obj.magic HxRuntime.hx_null; order = Obj.magic HxRuntime.hx_null; parameterTypes = Obj.magic HxRuntime.hx_null; sources = Obj.magic HxRuntime.hx_null; index = Obj.magic HxRuntime.hx_null; extensionProvider = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (Obj.obj (HxAnon.get input "declaration")) in (
       (Obj.magic self : t).declaration <- __assign_1;
@@ -95975,7 +95975,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "TypedNamedCal
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedNamedCallPlan"; declaration = Obj.magic HxRuntime.hx_null; signature = Obj.magic HxRuntime.hx_null; order = Obj.magic HxRuntime.hx_null; parameterTypes = Obj.magic HxRuntime.hx_null; sources = Obj.magic HxRuntime.hx_null; index = Obj.magic HxRuntime.hx_null; extensionProvider = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedNamedCallPlan"; declaration = Obj.magic HxRuntime.hx_null; signature = Obj.magic HxRuntime.hx_null; order = Obj.magic HxRuntime.hx_null; parameterTypes = Obj.magic HxRuntime.hx_null; sources = Obj.magic HxRuntime.hx_null; index = Obj.magic HxRuntime.hx_null; extensionProvider = Obj.magic HxRuntime.hx_null } : t)
 
 let getExpectedArguments = fun self () -> TyMethodArgumentOrder.sourceContexts (Obj.magic ((Obj.magic self : t).order)) (Obj.magic ((Obj.magic self : t).parameterTypes))
 
@@ -96064,7 +96064,7 @@ type t = { __hx_type : Obj.t; mutable kind : typednamedpatternkind }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun kind2 -> let self = ({ __hx_type = HxType.class_ "TypedNamedPattern"; kind = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun kind2 -> let self = ({ __hx_type = HxType.instance_marker "TypedNamedPattern"; kind = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let __assign_1 = Obj.magic kind2 in (
     (Obj.magic self : t).kind <- __assign_1;
     __assign_1
@@ -96072,7 +96072,7 @@ let create = fun kind2 -> let self = ({ __hx_type = HxType.class_ "TypedNamedPat
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedNamedPattern"; kind = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedNamedPattern"; kind = Obj.magic HxRuntime.hx_null } : t)
 
 let getKind = fun self () -> (Obj.magic self : t).kind
 
@@ -96129,12 +96129,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TypedRepeatedCondition" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TypedRepeatedCondition" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedRepeatedCondition" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedRepeatedCondition" } : t)
 
 let build = fun input -> (try let position = Obj.magic (Obj.obj (HxAnon.get input "position")) in let voidType = Obj.magic (TyType.fromHintText ("Void" : string)) in let checks = Obj.magic (let __array_receiver_1 = Obj.magic (Obj.obj (HxAnon.get input "steps")) in HxArray.copy __array_receiver_1) in (
   ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get input "completes") then ignore ((
@@ -96200,7 +96200,7 @@ type t = { __hx_type : Obj.t; mutable ownerIdentity : string; mutable bodyRevisi
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun ownerIdentity2 bodyRevision2 -> let self = ({ __hx_type = HxType.class_ "TypedRuntimeTypeProjectionBuilder"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; entries = Obj.magic HxRuntime.hx_null; sealed = false } : t) in (
+let create = fun ownerIdentity2 bodyRevision2 -> let self = ({ __hx_type = HxType.instance_marker "TypedRuntimeTypeProjectionBuilder"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; entries = Obj.magic HxRuntime.hx_null; sealed = false } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = false in (
       (__place_receiver_1 : t).sealed <- __place_rhs_2;
@@ -96222,7 +96222,7 @@ let create = fun ownerIdentity2 bodyRevision2 -> let self = ({ __hx_type = HxTyp
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedRuntimeTypeProjectionBuilder"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; entries = Obj.magic HxRuntime.hx_null; sealed = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedRuntimeTypeProjectionBuilder"; ownerIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; entries = Obj.magic HxRuntime.hx_null; sealed = false } : t)
 
 let project = fun self (target : TypedRuntimeTypeTarget.t) (value : Obj.t) (valueType : TyType.t) -> (
   ignore (if (Obj.magic self : t).sealed then HxType.hx_throw_typed_rtti (Obj.repr "cannot add a runtime type operand to a sealed projection") ["Dynamic"] else ());
@@ -96283,12 +96283,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TypedRuntimeTypeSource" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TypedRuntimeTypeSource" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedRuntimeTypeSource" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedRuntimeTypeSource" } : t)
 
 let isMarker = fun expression -> let tempResult = ref (false : bool) in (
   ignore (if (match expression with
@@ -96459,7 +96459,7 @@ type t = { __hx_type : Obj.t; mutable kind : TypedRuntimeTypeKind.typedruntimety
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedRuntimeTypeTarget"; kind = Obj.magic HxRuntime.hx_null; sourceSpelling = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedRuntimeTypeTarget"; kind = Obj.magic HxRuntime.hx_null; sourceSpelling = HxString.hx_null_string } : t)
 
 let getKind = fun self () -> (Obj.magic self : t).kind
 
@@ -96554,7 +96554,7 @@ let requireDeclarationIdentity = fun self () -> let identity = Obj.magic (getDec
   identity
 )
 
-let create = fun kind2 sourceSpelling2 -> let self = ({ __hx_type = HxType.class_ "TypedRuntimeTypeTarget"; kind = Obj.magic HxRuntime.hx_null; sourceSpelling = HxString.hx_null_string } : t) in (
+let create = fun kind2 sourceSpelling2 -> let self = ({ __hx_type = HxType.instance_marker "TypedRuntimeTypeTarget"; kind = Obj.magic HxRuntime.hx_null; sourceSpelling = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (if kind2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "runtime type target requires an admitted kind") ["Dynamic"] else ());
     ignore (match kind2 with
@@ -97015,12 +97015,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TypedStatementControl" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TypedStatementControl" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedStatementControl" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedStatementControl" } : t)
 
 let loopTarget = fun statement -> let target = Obj.magic (TypedStmt.getControlTarget (Obj.magic statement) ()) in (
   ignore (if target == Obj.magic (HxRuntime.hx_null) || (let __enum_eq_left_13 = TyControlTarget.getKind (Obj.magic target) () in let __enum_eq_right_14 = TyControlTarget.Loop in HxEnum.unbox_or_obj "TyControlTargetKind" (Obj.repr __enum_eq_left_13) != HxEnum.unbox_or_obj "TyControlTargetKind" (Obj.repr __enum_eq_right_14)) then HxType.hx_throw_typed_rtti (Obj.repr "statement control requires its selected loop destination") ["Dynamic"] else ());
@@ -97359,7 +97359,7 @@ type t = { __hx_type : Obj.t; mutable tag : typedstmttag; mutable position : HxP
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun tag2 position2 names2 expressions2 statements2 patterns2 catchNames2 catchTypeHints2 metadata2 localBindings2 catchUses2 controlTarget2 switchHasExhaustiveCoverage2 switchPatterns2 -> let self = ({ __hx_type = HxType.class_ "TypedStmt"; tag = Obj.magic HxRuntime.hx_null; position = Obj.magic HxRuntime.hx_null; names = Obj.magic HxRuntime.hx_null; expressions = Obj.magic HxRuntime.hx_null; statements = Obj.magic HxRuntime.hx_null; patterns = Obj.magic HxRuntime.hx_null; catchNames = Obj.magic HxRuntime.hx_null; catchTypeHints = Obj.magic HxRuntime.hx_null; metadata = Obj.magic HxRuntime.hx_null; localBindings = Obj.magic HxRuntime.hx_null; catchUses = Obj.magic HxRuntime.hx_null; controlTarget = Obj.magic HxRuntime.hx_null; switchHasExhaustiveCoverage = false; switchPatterns = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun tag2 position2 names2 expressions2 statements2 patterns2 catchNames2 catchTypeHints2 metadata2 localBindings2 catchUses2 controlTarget2 switchHasExhaustiveCoverage2 switchPatterns2 -> let self = ({ __hx_type = HxType.instance_marker "TypedStmt"; tag = Obj.magic HxRuntime.hx_null; position = Obj.magic HxRuntime.hx_null; names = Obj.magic HxRuntime.hx_null; expressions = Obj.magic HxRuntime.hx_null; statements = Obj.magic HxRuntime.hx_null; patterns = Obj.magic HxRuntime.hx_null; catchNames = Obj.magic HxRuntime.hx_null; catchTypeHints = Obj.magic HxRuntime.hx_null; metadata = Obj.magic HxRuntime.hx_null; localBindings = Obj.magic HxRuntime.hx_null; catchUses = Obj.magic HxRuntime.hx_null; controlTarget = Obj.magic HxRuntime.hx_null; switchHasExhaustiveCoverage = false; switchPatterns = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (let switchHasExhaustiveCoverage2 = if Obj.repr switchHasExhaustiveCoverage2 == HxRuntime.hx_null then false else switchHasExhaustiveCoverage2 in ignore ((
     ignore (if controlTarget2 != Obj.magic (HxRuntime.hx_null) then ignore (match tag2 with
       | Var | ForIn | ForKeyValue | While | DoWhile | Break | Continue -> ignore (if let __enum_eq_left_1 = TyControlTarget.getKind (Obj.magic controlTarget2) () in let __enum_eq_right_2 = TyControlTarget.Loop in HxEnum.unbox_or_obj "TyControlTargetKind" (Obj.repr __enum_eq_left_1) != HxEnum.unbox_or_obj "TyControlTargetKind" (Obj.repr __enum_eq_right_2) then HxType.hx_throw_typed_rtti (Obj.repr "typed loop statement requires a loop target") ["Dynamic"] else ())
@@ -97511,7 +97511,7 @@ let create = fun tag2 position2 names2 expressions2 statements2 patterns2 catchN
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedStmt"; tag = Obj.magic HxRuntime.hx_null; position = Obj.magic HxRuntime.hx_null; names = Obj.magic HxRuntime.hx_null; expressions = Obj.magic HxRuntime.hx_null; statements = Obj.magic HxRuntime.hx_null; patterns = Obj.magic HxRuntime.hx_null; catchNames = Obj.magic HxRuntime.hx_null; catchTypeHints = Obj.magic HxRuntime.hx_null; metadata = Obj.magic HxRuntime.hx_null; localBindings = Obj.magic HxRuntime.hx_null; catchUses = Obj.magic HxRuntime.hx_null; controlTarget = Obj.magic HxRuntime.hx_null; switchHasExhaustiveCoverage = false; switchPatterns = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedStmt"; tag = Obj.magic HxRuntime.hx_null; position = Obj.magic HxRuntime.hx_null; names = Obj.magic HxRuntime.hx_null; expressions = Obj.magic HxRuntime.hx_null; statements = Obj.magic HxRuntime.hx_null; patterns = Obj.magic HxRuntime.hx_null; catchNames = Obj.magic HxRuntime.hx_null; catchTypeHints = Obj.magic HxRuntime.hx_null; metadata = Obj.magic HxRuntime.hx_null; localBindings = Obj.magic HxRuntime.hx_null; catchUses = Obj.magic HxRuntime.hx_null; controlTarget = Obj.magic HxRuntime.hx_null; switchHasExhaustiveCoverage = false; switchPatterns = Obj.magic HxRuntime.hx_null } : t)
 
 let getTag = fun self () -> (Obj.magic self : t).tag
 
@@ -97908,7 +97908,7 @@ type t = { __hx_type : Obj.t; mutable input : TyType.t; mutable inputKey : strin
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedSwitchPatterns"; input = Obj.magic HxRuntime.hx_null; inputKey = HxString.hx_null_string; sourceIdentity = HxString.hx_null_string; selections = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedSwitchPatterns"; input = Obj.magic HxRuntime.hx_null; inputKey = HxString.hx_null_string; sourceIdentity = HxString.hx_null_string; selections = Obj.magic HxRuntime.hx_null } : t)
 
 let getSelections = fun self () -> let __array_receiver_10 = Obj.magic ((Obj.magic self : t).selections) in HxArray.copy __array_receiver_10
 
@@ -98030,7 +98030,7 @@ let named = fun patterns -> let result = Obj.magic (HxArray.create ()) in let vi
   )
 )
 
-let create = fun input2 patterns selections2 -> let self = ({ __hx_type = HxType.class_ "TypedSwitchPatterns"; input = Obj.magic HxRuntime.hx_null; inputKey = HxString.hx_null_string; sourceIdentity = HxString.hx_null_string; selections = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun input2 patterns selections2 -> let self = ({ __hx_type = HxType.instance_marker "TypedSwitchPatterns"; input = Obj.magic HxRuntime.hx_null; inputKey = HxString.hx_null_string; sourceIdentity = HxString.hx_null_string; selections = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic input2 in (
       (Obj.magic self : t).input <- __assign_1;
@@ -98128,7 +98128,7 @@ type t = { __hx_type : Obj.t; mutable index : TyperIndex.t; mutable loader : Laz
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun index2 filePath2 modulePath2 packagePath2 directives2 classFullName2 loader2 resolvedDirectives2 -> let self = ({ __hx_type = HxType.class_ "TyperContext"; index = Obj.magic HxRuntime.hx_null; loader = Obj.magic HxRuntime.hx_null; filePath = HxString.hx_null_string; modulePath = HxString.hx_null_string; packagePath = HxString.hx_null_string; directives = Obj.magic HxRuntime.hx_null; resolvedDirectives = Obj.magic HxRuntime.hx_null; classFullName = HxString.hx_null_string; inferredReturnTypes = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun index2 filePath2 modulePath2 packagePath2 directives2 classFullName2 loader2 resolvedDirectives2 -> let self = ({ __hx_type = HxType.instance_marker "TyperContext"; index = Obj.magic HxRuntime.hx_null; loader = Obj.magic HxRuntime.hx_null; filePath = HxString.hx_null_string; modulePath = HxString.hx_null_string; packagePath = HxString.hx_null_string; directives = Obj.magic HxRuntime.hx_null; resolvedDirectives = Obj.magic HxRuntime.hx_null; classFullName = HxString.hx_null_string; inferredReturnTypes = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic index2 in (
       (Obj.magic self : t).index <- __assign_1;
@@ -98224,7 +98224,7 @@ let create = fun index2 filePath2 modulePath2 packagePath2 directives2 classFull
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyperContext"; index = Obj.magic HxRuntime.hx_null; loader = Obj.magic HxRuntime.hx_null; filePath = HxString.hx_null_string; modulePath = HxString.hx_null_string; packagePath = HxString.hx_null_string; directives = Obj.magic HxRuntime.hx_null; resolvedDirectives = Obj.magic HxRuntime.hx_null; classFullName = HxString.hx_null_string; inferredReturnTypes = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyperContext"; index = Obj.magic HxRuntime.hx_null; loader = Obj.magic HxRuntime.hx_null; filePath = HxString.hx_null_string; modulePath = HxString.hx_null_string; packagePath = HxString.hx_null_string; directives = Obj.magic HxRuntime.hx_null; resolvedDirectives = Obj.magic HxRuntime.hx_null; classFullName = HxString.hx_null_string; inferredReturnTypes = Obj.magic HxRuntime.hx_null } : t)
 
 let getIndex = fun self () -> (Obj.magic self : t).index
 
@@ -98909,7 +98909,7 @@ type t = { __hx_type : Obj.t; mutable byFullName : TyNominalInfo.t HxMap.string_
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TyperIndex"; byFullName = Obj.magic HxRuntime.hx_null; byShortName = Obj.magic HxRuntime.hx_null; identityByFullName = Obj.magic HxRuntime.hx_null; identitiesByModulePath = Obj.magic HxRuntime.hx_null; visibilityByFullName = Obj.magic HxRuntime.hx_null; bySourceClass = Obj.magic HxRuntime.hx_null; typeDeclarations = Obj.magic HxRuntime.hx_null; typeUseResolver = Obj.magic HxRuntime.hx_null; registeredModules = Obj.magic HxRuntime.hx_null; publishedModules = Obj.magic HxRuntime.hx_null; methodInputs = Obj.magic HxRuntime.hx_null; typedInputRevisions = Obj.magic HxRuntime.hx_null; methodBodyResults = Obj.magic HxRuntime.hx_null; fieldInitializerTypes = Obj.magic HxRuntime.hx_null; parameterBounds = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TyperIndex"; byFullName = Obj.magic HxRuntime.hx_null; byShortName = Obj.magic HxRuntime.hx_null; identityByFullName = Obj.magic HxRuntime.hx_null; identitiesByModulePath = Obj.magic HxRuntime.hx_null; visibilityByFullName = Obj.magic HxRuntime.hx_null; bySourceClass = Obj.magic HxRuntime.hx_null; typeDeclarations = Obj.magic HxRuntime.hx_null; typeUseResolver = Obj.magic HxRuntime.hx_null; registeredModules = Obj.magic HxRuntime.hx_null; publishedModules = Obj.magic HxRuntime.hx_null; methodInputs = Obj.magic HxRuntime.hx_null; typedInputRevisions = Obj.magic HxRuntime.hx_null; methodBodyResults = Obj.magic HxRuntime.hx_null; fieldInitializerTypes = Obj.magic HxRuntime.hx_null; parameterBounds = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_string ()) in (
       (Obj.magic self : t).parameterBounds <- __assign_1;
@@ -98975,7 +98975,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "TyperIndex"; byF
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyperIndex"; byFullName = Obj.magic HxRuntime.hx_null; byShortName = Obj.magic HxRuntime.hx_null; identityByFullName = Obj.magic HxRuntime.hx_null; identitiesByModulePath = Obj.magic HxRuntime.hx_null; visibilityByFullName = Obj.magic HxRuntime.hx_null; bySourceClass = Obj.magic HxRuntime.hx_null; typeDeclarations = Obj.magic HxRuntime.hx_null; typeUseResolver = Obj.magic HxRuntime.hx_null; registeredModules = Obj.magic HxRuntime.hx_null; publishedModules = Obj.magic HxRuntime.hx_null; methodInputs = Obj.magic HxRuntime.hx_null; typedInputRevisions = Obj.magic HxRuntime.hx_null; methodBodyResults = Obj.magic HxRuntime.hx_null; fieldInitializerTypes = Obj.magic HxRuntime.hx_null; parameterBounds = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyperIndex"; byFullName = Obj.magic HxRuntime.hx_null; byShortName = Obj.magic HxRuntime.hx_null; identityByFullName = Obj.magic HxRuntime.hx_null; identitiesByModulePath = Obj.magic HxRuntime.hx_null; visibilityByFullName = Obj.magic HxRuntime.hx_null; bySourceClass = Obj.magic HxRuntime.hx_null; typeDeclarations = Obj.magic HxRuntime.hx_null; typeUseResolver = Obj.magic HxRuntime.hx_null; registeredModules = Obj.magic HxRuntime.hx_null; publishedModules = Obj.magic HxRuntime.hx_null; methodInputs = Obj.magic HxRuntime.hx_null; typedInputRevisions = Obj.magic HxRuntime.hx_null; methodBodyResults = Obj.magic HxRuntime.hx_null; fieldInitializerTypes = Obj.magic HxRuntime.hx_null; parameterBounds = Obj.magic HxRuntime.hx_null } : t)
 
 let getParameterBounds = fun self (parameter : TyTypeParameterId.t) -> let _this = Obj.magic ((Obj.magic self : t).parameterBounds) in let key = (TyTypeParameterId.getCanonicalKey (Obj.magic parameter) () : string) in let tempMaybeArray = Obj.magic (HxMap.get_string (Obj.magic _this) (key : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t HxArray.t) in (
   ignore (if tempMaybeArray == Obj.magic (HxRuntime.hx_null) then let __assign_16 = Obj.magic (let __arr_17 = HxArray.create () in __arr_17) in (

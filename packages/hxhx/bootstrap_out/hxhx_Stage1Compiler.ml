@@ -10,7 +10,7 @@ type stage1resolver_t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let stage1args_create = fun classPathInput main2 noOutput2 roots2 defines2 libs2 macros2 resourceSpecs2 displayRequest2 cwd2 hadCmd2 cmdCommands2 hadRun2 runArgs2 -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage1Args"; classPaths = Obj.magic HxRuntime.hx_null; explicitClassPaths = Obj.magic HxRuntime.hx_null; standardLibraryRoot = HxString.hx_null_string; main = HxString.hx_null_string; noOutput = false; roots = Obj.magic HxRuntime.hx_null; defines = Obj.magic HxRuntime.hx_null; libs = Obj.magic HxRuntime.hx_null; macros = Obj.magic HxRuntime.hx_null; resourceSpecs = Obj.magic HxRuntime.hx_null; displayRequest = Obj.magic HxRuntime.hx_null; cwd = HxString.hx_null_string; hadCmd = false; cmdCommands = Obj.magic HxRuntime.hx_null; hadRun = false; runArgs = Obj.magic HxRuntime.hx_null } : stage1args_t) in (
+let stage1args_create = fun classPathInput main2 noOutput2 roots2 defines2 libs2 macros2 resourceSpecs2 displayRequest2 cwd2 hadCmd2 cmdCommands2 hadRun2 runArgs2 -> let self = ({ __hx_type = HxType.instance_marker "hxhx.Stage1Args"; classPaths = Obj.magic HxRuntime.hx_null; explicitClassPaths = Obj.magic HxRuntime.hx_null; standardLibraryRoot = HxString.hx_null_string; main = HxString.hx_null_string; noOutput = false; roots = Obj.magic HxRuntime.hx_null; defines = Obj.magic HxRuntime.hx_null; libs = Obj.magic HxRuntime.hx_null; macros = Obj.magic HxRuntime.hx_null; resourceSpecs = Obj.magic HxRuntime.hx_null; displayRequest = Obj.magic HxRuntime.hx_null; cwd = HxString.hx_null_string; hadCmd = false; cmdCommands = Obj.magic HxRuntime.hx_null; hadRun = false; runArgs = Obj.magic HxRuntime.hx_null } : stage1args_t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (let __array_receiver_2 = Obj.magic (Obj.obj (HxAnon.get classPathInput "explicitPaths")) in HxArray.copy __array_receiver_2) in (
       (Obj.magic self : stage1args_t).explicitClassPaths <- __assign_1;
@@ -109,7 +109,7 @@ let stage1args_create = fun classPathInput main2 noOutput2 roots2 defines2 libs2
   self
 )
 
-let stage1args___empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage1Args"; classPaths = Obj.magic HxRuntime.hx_null; explicitClassPaths = Obj.magic HxRuntime.hx_null; standardLibraryRoot = HxString.hx_null_string; main = HxString.hx_null_string; noOutput = false; roots = Obj.magic HxRuntime.hx_null; defines = Obj.magic HxRuntime.hx_null; libs = Obj.magic HxRuntime.hx_null; macros = Obj.magic HxRuntime.hx_null; resourceSpecs = Obj.magic HxRuntime.hx_null; displayRequest = Obj.magic HxRuntime.hx_null; cwd = HxString.hx_null_string; hadCmd = false; cmdCommands = Obj.magic HxRuntime.hx_null; hadRun = false; runArgs = Obj.magic HxRuntime.hx_null } : stage1args_t)
+let stage1args___empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.Stage1Args"; classPaths = Obj.magic HxRuntime.hx_null; explicitClassPaths = Obj.magic HxRuntime.hx_null; standardLibraryRoot = HxString.hx_null_string; main = HxString.hx_null_string; noOutput = false; roots = Obj.magic HxRuntime.hx_null; defines = Obj.magic HxRuntime.hx_null; libs = Obj.magic HxRuntime.hx_null; macros = Obj.magic HxRuntime.hx_null; resourceSpecs = Obj.magic HxRuntime.hx_null; displayRequest = Obj.magic HxRuntime.hx_null; cwd = HxString.hx_null_string; hadCmd = false; cmdCommands = Obj.magic HxRuntime.hx_null; hadRun = false; runArgs = Obj.magic HxRuntime.hx_null } : stage1args_t)
 
 let stage1args_readHaxercVersion = fun (path : string) -> (try (
   ignore (try ignore (let content = (HxFile.getContent (path : string) : string) in let versionPattern = Obj.magic (EReg.create ("\"version\"\\s*:\\s*\"([^\"]+)\"" : string) ("" : string)) in if EReg.hx_match (Obj.magic versionPattern) (content : string) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_arg_0_237 = EReg.matched (Obj.magic versionPattern) 1 in StringTools.trim __call_arg_0_237))) else ()) with
@@ -910,12 +910,12 @@ let stage1args_getRunArgs = fun a -> (Obj.magic a : stage1args_t).runArgs
 
 let __reflaxe_ocaml__ = ()
 
-let stage1resolver_create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage1Resolver" } : stage1resolver_t) in (
+let stage1resolver_create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.Stage1Resolver" } : stage1resolver_t) in (
   ignore ();
   self
 )
 
-let stage1resolver___empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage1Resolver" } : stage1resolver_t)
+let stage1resolver___empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.Stage1Resolver" } : stage1resolver_t)
 
 let stage1resolver_normalizeSep = fun s -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (if s == HxString.hx_null_string then let __assign_1 = "" in (
@@ -1040,12 +1040,12 @@ let stage1resolver_resolveModule = fun classPaths modulePath cwd -> (try let par
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage1Compiler" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.Stage1Compiler" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage1Compiler" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.Stage1Compiler" } : t)
 
 let error = fun (msg : string) -> (let value = Obj.repr ("hxhx(stage1): " ^ HxString.toStdString msg) in (
   ignore (HxSys.printlnValue value);

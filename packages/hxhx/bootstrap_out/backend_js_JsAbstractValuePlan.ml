@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable functions : (TypedBackendFunctionProjectio
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program inheritance -> let self = ({ __hx_type = HxType.class_ "backend.js.JsAbstractValuePlan"; functions = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; abstracts = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun program inheritance -> let self = ({ __hx_type = HxType.instance_marker "backend.js.JsAbstractValuePlan"; functions = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; abstracts = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_object ()) in (
       (Obj.magic self : t).methods <- __assign_1;
@@ -61,7 +61,7 @@ let create = fun program inheritance -> let self = ({ __hx_type = HxType.class_ 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsAbstractValuePlan"; functions = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; abstracts = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.js.JsAbstractValuePlan"; functions = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; abstracts = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null } : t)
 
 let methodReference = fun self (declaration : TyDeclarationInfo.t) -> (try let _this = Obj.magic ((Obj.magic self : t).abstracts) in let key = (TyNominalTypeId.getCanonicalName (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) () : string) in let tempMaybeJsClassInheritanceNode = HxMap.get_string (Obj.magic _this) (key : string) in let node = tempMaybeJsClassInheritanceNode in (
   ignore (if node == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());

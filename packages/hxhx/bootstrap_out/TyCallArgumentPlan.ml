@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable fixedSourceIndices : Obj.t HxArray.t; muta
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun fixedSourceIndices2 firstRenderedParam2 restSourceStart2 -> let self = ({ __hx_type = HxType.class_ "TyCallArgumentPlan"; fixedSourceIndices = Obj.magic HxRuntime.hx_null; firstRenderedParam = 0; restSourceStart = 0 } : t) in (
+let create = fun fixedSourceIndices2 firstRenderedParam2 restSourceStart2 -> let self = ({ __hx_type = HxType.instance_marker "TyCallArgumentPlan"; fixedSourceIndices = Obj.magic HxRuntime.hx_null; firstRenderedParam = 0; restSourceStart = 0 } : t) in (
   ignore (ignore (let tempRight = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
     ignore (if fixedSourceIndices2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       tempRight := __assign_1;
@@ -31,7 +31,7 @@ let create = fun fixedSourceIndices2 firstRenderedParam2 restSourceStart2 -> let
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyCallArgumentPlan"; fixedSourceIndices = Obj.magic HxRuntime.hx_null; firstRenderedParam = 0; restSourceStart = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyCallArgumentPlan"; fixedSourceIndices = Obj.magic HxRuntime.hx_null; firstRenderedParam = 0; restSourceStart = 0 } : t)
 
 let getFixedSourceIndices = fun self () -> let __array_receiver_10 = Obj.magic ((Obj.magic self : t).fixedSourceIndices) in HxArray.copy __array_receiver_10
 

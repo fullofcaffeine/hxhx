@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable plan : Obj.t; mutable owner : Backend_cpp_
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedLocalStorage"; plan = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; prefix = HxString.hx_null_string; declarations = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedLocalStorage"; plan = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; prefix = HxString.hx_null_string; declarations = Obj.magic HxRuntime.hx_null } : t)
 
 let indexOf = fun self (binding : TyLocalBinding.t) -> (try (
   ignore (if binding != Obj.magic (HxRuntime.hx_null) then ignore (let _g = ref 0 in let _g1 = HxArray.length ((Obj.magic self : t).declarations) in while !_g < _g1 do ignore (let index = let __old_8 = !_g in let __new_9 = HxInt.add __old_8 1 in (
@@ -133,7 +133,7 @@ let initialize = fun self (binding : TyLocalBinding.t) (heap : string) (indent :
 
 let identifier = fun (value__local : string) -> (value__local != Obj.magic (HxRuntime.hx_null) && EReg.hx_match (Obj.magic (EReg.create ("^[A-Za-z_][A-Za-z0-9_]*$" : string) ("" : string))) (value__local : string) : bool)
 
-let create = fun plan2 owner2 prefix2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedLocalStorage"; plan = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; prefix = HxString.hx_null_string; declarations = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun plan2 owner2 prefix2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedLocalStorage"; plan = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; prefix = HxString.hx_null_string; declarations = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if plan2 == Obj.magic (HxRuntime.hx_null) || not (let __call_arg_0_1 = prefix2 in identifier __call_arg_0_1) || not (let __call_arg_0_2 = prefix2 in let __call_arg_1_3 = "hxhx_locals_" in StringTools.startsWith __call_arg_0_2 __call_arg_1_3) then HxType.hx_throw_typed_rtti (Obj.repr "managed locals require a plan and allocated symbol prefix") ["Dynamic"] else ());
     ignore (let __assign_4 = Obj.magic plan2 in (

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable program : MacroExpandedProgram.t; mutable 
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program2 -> let self = ({ __hx_type = HxType.class_ "backend.js.JsClassInheritancePlan"; program = Obj.magic HxRuntime.hx_null; nodes = Obj.magic HxRuntime.hx_null; declarationRanks = Obj.magic HxRuntime.hx_null; byIdentity = Obj.magic HxRuntime.hx_null; graph = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun program2 -> let self = ({ __hx_type = HxType.instance_marker "backend.js.JsClassInheritancePlan"; program = Obj.magic HxRuntime.hx_null; nodes = Obj.magic HxRuntime.hx_null; declarationRanks = Obj.magic HxRuntime.hx_null; byIdentity = Obj.magic HxRuntime.hx_null; graph = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_string ()) in (
       (Obj.magic self : t).byIdentity <- __assign_1;
@@ -210,7 +210,7 @@ let create = fun program2 -> let self = ({ __hx_type = HxType.class_ "backend.js
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsClassInheritancePlan"; program = Obj.magic HxRuntime.hx_null; nodes = Obj.magic HxRuntime.hx_null; declarationRanks = Obj.magic HxRuntime.hx_null; byIdentity = Obj.magic HxRuntime.hx_null; graph = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.js.JsClassInheritancePlan"; program = Obj.magic HxRuntime.hx_null; nodes = Obj.magic HxRuntime.hx_null; declarationRanks = Obj.magic HxRuntime.hx_null; byIdentity = Obj.magic HxRuntime.hx_null; graph = Obj.magic HxRuntime.hx_null } : t)
 
 let assertProgram = fun self (candidate : MacroExpandedProgram.t) -> ignore (ignore ((
   ignore (if Obj.repr candidate != Obj.repr ((Obj.magic self : t).program) then HxType.hx_throw_typed_rtti (Obj.repr "JavaScript inheritance plan belongs to another typed program") ["Dynamic"] else ());

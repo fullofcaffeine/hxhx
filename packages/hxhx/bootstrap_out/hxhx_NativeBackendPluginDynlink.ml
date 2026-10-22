@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.NativeBackendPluginDynlink" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.NativeBackendPluginDynlink" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.NativeBackendPluginDynlink" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.NativeBackendPluginDynlink" } : t)
 
 let loadAndCapture = fun manifestPath entryPath pluginId -> (try let response = (HxHxBackendPluginDynlink.load_and_capture_safe (manifestPath : string) (entryPath : string) (pluginId : string) : string) in (
   ignore (if response == HxString.hx_null_string then HxType.hx_throw_typed_rtti (Obj.repr "native plugin loader returned no response") ["Dynamic"] else ());

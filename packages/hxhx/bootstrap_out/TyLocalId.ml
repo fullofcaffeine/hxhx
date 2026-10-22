@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable canonicalKey : string; mutable ownerIdenti
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun canonicalKey2 ownerIdentity2 declarationKind2 compilerTemporary2 -> let self = ({ __hx_type = HxType.class_ "TyLocalId"; canonicalKey = HxString.hx_null_string; ownerIdentity = HxString.hx_null_string; declarationKind = Obj.magic HxRuntime.hx_null; compilerTemporary = false } : t) in (
+let create = fun canonicalKey2 ownerIdentity2 declarationKind2 compilerTemporary2 -> let self = ({ __hx_type = HxType.instance_marker "TyLocalId"; canonicalKey = HxString.hx_null_string; ownerIdentity = HxString.hx_null_string; declarationKind = Obj.magic HxRuntime.hx_null; compilerTemporary = false } : t) in (
   ignore (ignore ((
     ignore (if canonicalKey2 == HxString.hx_null_string || (let __string_receiver_1 = canonicalKey2 in HxString.length __string_receiver_1) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "local declaration identity requires a canonical key") ["Dynamic"] else ());
     ignore (let __assign_2 = (canonicalKey2 : string) in (
@@ -29,7 +29,7 @@ let create = fun canonicalKey2 ownerIdentity2 declarationKind2 compilerTemporary
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyLocalId"; canonicalKey = HxString.hx_null_string; ownerIdentity = HxString.hx_null_string; declarationKind = Obj.magic HxRuntime.hx_null; compilerTemporary = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyLocalId"; canonicalKey = HxString.hx_null_string; ownerIdentity = HxString.hx_null_string; declarationKind = Obj.magic HxRuntime.hx_null; compilerTemporary = false } : t)
 
 let getCanonicalKey = fun self () -> (Obj.magic self : t).canonicalKey
 

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable selected : Obj.t; mutable receiver : HxExp
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun selected2 call -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoExactCallPlan"; selected = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun selected2 call -> let self = ({ __hx_type = HxType.instance_marker "backend.vm.NekoExactCallPlan"; selected = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic selected2 in (
       (Obj.magic self : t).selected <- __assign_1;
@@ -24,7 +24,7 @@ let create = fun selected2 call -> let self = ({ __hx_type = HxType.class_ "back
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoExactCallPlan"; selected = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.NekoExactCallPlan"; selected = Obj.magic HxRuntime.hx_null; receiver = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null } : t)
 
 let getArguments = fun self () -> let __array_receiver_5 = Obj.magic ((Obj.magic self : t).arguments) in HxArray.copy __array_receiver_5
 

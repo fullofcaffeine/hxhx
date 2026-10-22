@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable methods : Obj.t HxMap.string_map; mutable 
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.Stage3OcamlGenericMethods"; methods = Obj.magic HxRuntime.hx_null; printer = Obj.magic HxRuntime.hx_null; nextName = 0; methodCount = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.ocaml.Stage3OcamlGenericMethods"; methods = Obj.magic HxRuntime.hx_null; printer = Obj.magic HxRuntime.hx_null; nextName = 0; methodCount = 0 } : t)
 
 let convert = fun self (source : Reflaxe_ocaml_lowered_OcamlGenericCallConversion.ocamlgenericvalueshape) (destination : Reflaxe_ocaml_lowered_OcamlGenericCallConversion.ocamlgenericvalueshape) (value : string) (names : Backend_ocaml_Stage3OcamlLocalNames.t) -> let _gthis = Obj.magic self in let conversion = Reflaxe_ocaml_lowered_OcamlGenericCallConversion.crossing (Obj.magic source) (Obj.magic destination) in (
   ignore (if conversion == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "native generic use lacks a shared storage conversion") ["Dynamic"] else ());
@@ -87,7 +87,7 @@ let rec shape = fun input -> (try let hx_type = Obj.magic (TyAliasExpansion.reve
 ) with
   | HxRuntime.Hx_return __ret_155 -> (Obj.obj __ret_155 : Obj.t) : Obj.t)
 
-let create = fun modules -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.Stage3OcamlGenericMethods"; methods = Obj.magic HxRuntime.hx_null; printer = Obj.magic HxRuntime.hx_null; nextName = 0; methodCount = 0 } : t) in (
+let create = fun modules -> let self = ({ __hx_type = HxType.instance_marker "backend.ocaml.Stage3OcamlGenericMethods"; methods = Obj.magic HxRuntime.hx_null; printer = Obj.magic HxRuntime.hx_null; nextName = 0; methodCount = 0 } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = 0 in (
       (__place_receiver_1 : t).methodCount <- __place_rhs_2;

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable plan : Obj.t; mutable owner : Backend_cpp_
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedParameterEmitter"; plan = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; prefix = HxString.hx_null_string; inputs = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedParameterEmitter"; plan = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; prefix = HxString.hx_null_string; inputs = Obj.magic HxRuntime.hx_null } : t)
 
 let requireSlot = fun self (binding : TyLocalBinding.t) -> (try let _g = ref 0 in let _g1 = Obj.magic (Backend_cpp_CppManagedStoragePlan.cppmanagedfunctionplan_getParameters (Obj.magic (let __method_receiver_103 = (Obj.magic self : t).plan in let __method_callable_104 = (Obj.obj (HxMethodDispatch.bind_structural (Obj.repr __method_receiver_103) "requireFunction" "method-dispatch:1e566c2552d4ad023babded5eadd949f2d2794d9da25d109570bf58eaa3515be") : Backend_cpp_CppManagedFunctionOwner.cppmanagedfunctionowner -> Backend_cpp_CppManagedStoragePlan.cppmanagedfunctionplan_t) in let __method_argument_105 = Obj.magic ((Obj.magic self : t).owner) in __method_callable_104 __method_argument_105)) ()) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let parameter = Obj.magic (let __array_read_receiver_106 = _g1 in let __array_read_index_107 = !_g in HxArray.get (Obj.magic __array_read_receiver_106) __array_read_index_107) in (
@@ -65,7 +65,7 @@ let value = fun self (binding : TyLocalBinding.t) -> let slot = requireSlot (Obj
 
 let identifier = fun (value__local : string) -> (value__local != Obj.magic (HxRuntime.hx_null) && EReg.hx_match (Obj.magic (EReg.create ("^[A-Za-z_][A-Za-z0-9_]*$" : string) ("" : string))) (value__local : string) : bool)
 
-let create = fun plan2 owner2 inputs2 prefix2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedParameterEmitter"; plan = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; prefix = HxString.hx_null_string; inputs = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun plan2 owner2 inputs2 prefix2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedParameterEmitter"; plan = Obj.magic HxRuntime.hx_null; owner = Obj.magic HxRuntime.hx_null; prefix = HxString.hx_null_string; inputs = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if plan2 == Obj.magic (HxRuntime.hx_null) || inputs2 == Obj.magic (HxRuntime.hx_null) || not (let __call_arg_0_1 = prefix2 in identifier __call_arg_0_1) || not (let __call_arg_0_2 = prefix2 in let __call_arg_1_3 = "hxhx_parameters_" in StringTools.startsWith __call_arg_0_2 __call_arg_1_3) then HxType.hx_throw_typed_rtti (Obj.repr "managed parameters require a plan and allocated temporary prefix") ["Dynamic"] else ());
     let closure = Obj.magic (let __method_receiver_4 = plan2 in let __method_callable_5 = (Obj.obj (HxMethodDispatch.bind_structural (Obj.repr __method_receiver_4) "requireFunction" "method-dispatch:1e566c2552d4ad023babded5eadd949f2d2794d9da25d109570bf58eaa3515be") : Backend_cpp_CppManagedFunctionOwner.cppmanagedfunctionowner -> Backend_cpp_CppManagedStoragePlan.cppmanagedfunctionplan_t) in let __method_argument_6 = Obj.magic owner2 in __method_callable_5 __method_argument_6) in (

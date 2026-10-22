@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable requestId : int; mutable baseArgsValue : s
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerRequest"; requestId = 0; baseArgsValue = Obj.magic HxRuntime.hx_null; requestArgsValue = Obj.magic HxRuntime.hx_null; stdinBytesValue = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerRequest"; requestId = 0; baseArgsValue = Obj.magic HxRuntime.hx_null; requestArgsValue = Obj.magic HxRuntime.hx_null; stdinBytesValue = Obj.magic HxRuntime.hx_null } : t)
 
 let requestArgs = fun self () -> let __array_receiver_8 = Obj.magic ((Obj.magic self : t).requestArgsValue) in HxArray.copy __array_receiver_8
 
@@ -44,7 +44,7 @@ let copyBytes = fun value -> (try (
 ) with
   | HxRuntime.Hx_return __ret_40 -> (Obj.obj __ret_40 : HxBytes.t) : HxBytes.t)
 
-let create = fun requestId2 baseArgs requestArgs__local stdinBytes__local -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerRequest"; requestId = 0; baseArgsValue = Obj.magic HxRuntime.hx_null; requestArgsValue = Obj.magic HxRuntime.hx_null; stdinBytesValue = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun requestId2 baseArgs requestArgs__local stdinBytes__local -> let self = ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerRequest"; requestId = 0; baseArgsValue = Obj.magic HxRuntime.hx_null; requestArgsValue = Obj.magic HxRuntime.hx_null; stdinBytesValue = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = requestId2 in (
       (__place_receiver_1 : t).requestId <- __place_rhs_2;

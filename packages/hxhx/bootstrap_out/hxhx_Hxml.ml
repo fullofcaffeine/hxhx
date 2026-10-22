@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Hxml" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.Hxml" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Hxml" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.Hxml" } : t)
 
 let joinPath = fun base tail -> (try (
   ignore (if base == HxString.hx_null_string || (let __string_receiver_1 = base in HxString.length __string_receiver_1) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr tail)) else ());

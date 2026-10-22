@@ -18,7 +18,7 @@ type t = { __hx_type : Obj.t; mutable kind : ocamltargetliteralkind; mutable sem
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetLiteralFact"; kind = Obj.magic HxRuntime.hx_null; semanticTypeDisplay = HxString.hx_null_string; boolValue = false; intValue = 0; stringValue = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetLiteralFact"; kind = Obj.magic HxRuntime.hx_null; semanticTypeDisplay = HxString.hx_null_string; boolValue = false; intValue = 0; stringValue = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t)
 
 let getCanonicalIdentity = fun self () -> (Obj.magic self : t).canonicalIdentity
 
@@ -67,7 +67,7 @@ let required = fun (value : string) -> (let tempString = ref (HxString.hx_null_s
 
 let hx_SCHEMA_REVISION = "reflaxe-ocaml-target-literal-v1"
 
-let create = fun kind2 semanticTypeDisplay2 boolValue2 intValue2 stringValue2 -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetLiteralFact"; kind = Obj.magic HxRuntime.hx_null; semanticTypeDisplay = HxString.hx_null_string; boolValue = false; intValue = 0; stringValue = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun kind2 semanticTypeDisplay2 boolValue2 intValue2 stringValue2 -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetLiteralFact"; kind = Obj.magic HxRuntime.hx_null; semanticTypeDisplay = HxString.hx_null_string; boolValue = false; intValue = 0; stringValue = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (let boolValue2 = if Obj.repr boolValue2 == HxRuntime.hx_null then false else boolValue2 in let intValue2 = if Obj.repr intValue2 == HxRuntime.hx_null then 0 else intValue2 in let stringValue2 = if Obj.repr stringValue2 == HxRuntime.hx_null then ("" : string) else stringValue2 in ignore ((
     ignore (let __assign_1 = Obj.magic kind2 in (
       (Obj.magic self : t).kind <- __assign_1;

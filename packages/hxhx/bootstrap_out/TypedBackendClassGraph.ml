@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable programRevision : string; mutable factsByC
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedBackendClassGraph"; programRevision = HxString.hx_null_string; factsByClass = Obj.magic HxRuntime.hx_null; nodesByClass = Obj.magic HxRuntime.hx_null; nodes = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedBackendClassGraph"; programRevision = HxString.hx_null_string; factsByClass = Obj.magic HxRuntime.hx_null; nodesByClass = Obj.magic HxRuntime.hx_null; nodes = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
 
 let getProgramRevision = fun self () -> (Obj.magic self : t).programRevision
 
@@ -600,7 +600,7 @@ let addFacts = fun self (classFacts : TypedBackendClassSemanticFacts.t) -> ignor
   )
 )))
 
-let create = fun programRevision2 facts -> let self = ({ __hx_type = HxType.class_ "TypedBackendClassGraph"; programRevision = HxString.hx_null_string; factsByClass = Obj.magic HxRuntime.hx_null; nodesByClass = Obj.magic HxRuntime.hx_null; nodes = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun programRevision2 facts -> let self = ({ __hx_type = HxType.instance_marker "TypedBackendClassGraph"; programRevision = HxString.hx_null_string; factsByClass = Obj.magic HxRuntime.hx_null; nodesByClass = Obj.magic HxRuntime.hx_null; nodes = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (let __call_arg_0_2 = programRevision2 in normalize __call_arg_0_2 : string) in (
       (Obj.magic self : t).programRevision <- __assign_1;

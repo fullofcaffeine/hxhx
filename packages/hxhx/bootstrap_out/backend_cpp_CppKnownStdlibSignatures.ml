@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable services : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun services2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppKnownStdlibSignatures"; services = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun services2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppKnownStdlibSignatures"; services = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let __assign_1 = Obj.magic services2 in (
     (Obj.magic self : t).services <- __assign_1;
     __assign_1
@@ -14,7 +14,7 @@ let create = fun services2 -> let self = ({ __hx_type = HxType.class_ "backend.c
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppKnownStdlibSignatures"; services = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppKnownStdlibSignatures"; services = Obj.magic HxRuntime.hx_null } : t)
 
 let preludeMethodReturnType = fun self (className : string) (methodName : string) -> (try let tempString = ref (HxString.hx_null_string : string) in (
   ignore (if className == HxString.hx_null_string then let __assign_236 = ("" : string) in (

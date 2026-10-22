@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable program : Backend_cpp_CppTypedProgramProje
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program2 nativeName2 hasStack2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedStaticStorage"; program = Obj.magic HxRuntime.hx_null; nativeName = HxString.hx_null_string; hasStack = false; fields = Obj.magic HxRuntime.hx_null; slots = Obj.magic HxRuntime.hx_null; callables = Obj.magic HxRuntime.hx_null; layoutPublished = false } : t) in (
+let create = fun program2 nativeName2 hasStack2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedStaticStorage"; program = Obj.magic HxRuntime.hx_null; nativeName = HxString.hx_null_string; hasStack = false; fields = Obj.magic HxRuntime.hx_null; slots = Obj.magic HxRuntime.hx_null; callables = Obj.magic HxRuntime.hx_null; layoutPublished = false } : t) in (
   ignore (let hasStack2 = if Obj.repr hasStack2 == HxRuntime.hx_null then false else hasStack2 in ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = false in (
       (__place_receiver_1 : t).layoutPublished <- __place_rhs_2;
@@ -87,7 +87,7 @@ let create = fun program2 nativeName2 hasStack2 -> let self = ({ __hx_type = HxT
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedStaticStorage"; program = Obj.magic HxRuntime.hx_null; nativeName = HxString.hx_null_string; hasStack = false; fields = Obj.magic HxRuntime.hx_null; slots = Obj.magic HxRuntime.hx_null; callables = Obj.magic HxRuntime.hx_null; layoutPublished = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedStaticStorage"; program = Obj.magic HxRuntime.hx_null; nativeName = HxString.hx_null_string; hasStack = false; fields = Obj.magic HxRuntime.hx_null; slots = Obj.magic HxRuntime.hx_null; callables = Obj.magic HxRuntime.hx_null; layoutPublished = false } : t)
 
 let singletonMember = fun self (owner : TypedBackendClassProjection.t) (constructorIndex : int) -> (try (
   ignore (Backend_cpp_CppTypedProgramProjection.assertPlanningCurrent (Obj.magic ((Obj.magic self : t).program)) ());

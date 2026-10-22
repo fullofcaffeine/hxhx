@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TyCallArgumentPolicy" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TyCallArgumentPolicy" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyCallArgumentPolicy" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyCallArgumentPolicy" } : t)
 
 let isFillable = fun signature paramIndex -> Obj.obj (HxAnon.get signature "paramFillable") != Obj.magic (HxRuntime.hx_null) && paramIndex >= 0 && paramIndex < HxArray.length (Obj.obj (HxAnon.get signature "paramFillable")) && (let __array_read_receiver_19 = Obj.obj (HxAnon.get signature "paramFillable") in let __array_read_index_20 = paramIndex in HxArray.get (Obj.magic __array_read_receiver_19) __array_read_index_20)
 

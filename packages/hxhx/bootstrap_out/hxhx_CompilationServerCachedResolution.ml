@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable key : string; mutable lookupIdentity : str
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun key2 lookupIdentity2 observationRevision2 filePath2 selectedClassPathIndex2 usedSecondaryTypeFallback2 retainedBytesEstimate2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerCachedResolution"; key = HxString.hx_null_string; lookupIdentity = HxString.hx_null_string; observationRevision = HxString.hx_null_string; filePath = Obj.magic HxRuntime.hx_null; selectedClassPathIndex = 0; usedSecondaryTypeFallback = false; retainedBytesEstimate = 0 } : t) in (
+let create = fun key2 lookupIdentity2 observationRevision2 filePath2 selectedClassPathIndex2 usedSecondaryTypeFallback2 retainedBytesEstimate2 -> let self = ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerCachedResolution"; key = HxString.hx_null_string; lookupIdentity = HxString.hx_null_string; observationRevision = HxString.hx_null_string; filePath = Obj.magic HxRuntime.hx_null; selectedClassPathIndex = 0; usedSecondaryTypeFallback = false; retainedBytesEstimate = 0 } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (key2 : string) in (
       (Obj.magic self : t).key <- __assign_1;
@@ -40,4 +40,4 @@ let create = fun key2 lookupIdentity2 observationRevision2 filePath2 selectedCla
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerCachedResolution"; key = HxString.hx_null_string; lookupIdentity = HxString.hx_null_string; observationRevision = HxString.hx_null_string; filePath = Obj.magic HxRuntime.hx_null; selectedClassPathIndex = 0; usedSecondaryTypeFallback = false; retainedBytesEstimate = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerCachedResolution"; key = HxString.hx_null_string; lookupIdentity = HxString.hx_null_string; observationRevision = HxString.hx_null_string; filePath = Obj.magic HxRuntime.hx_null; selectedClassPathIndex = 0; usedSecondaryTypeFallback = false; retainedBytesEstimate = 0 } : t)

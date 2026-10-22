@@ -10,7 +10,7 @@ type ocamltargetprogrampublisher_t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let ocamltargetprogramplan_create = fun hostProgramRevision2 mainModuleId2 normalizedInputIdentity2 normalizedClassIdentity2 normalizedClassIdentityFacts2 normalizedFieldIdentities2 normalizedFunctionIdentities2 loweredPlanIdentity2 runtimeReasonIdentity2 outputManifestIdentity2 files2 runtimeReasons2 -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetProgramPlan"; hostProgramRevision = HxString.hx_null_string; mainModuleId = HxString.hx_null_string; normalizedInputIdentity = HxString.hx_null_string; normalizedClassIdentity = HxString.hx_null_string; loweredPlanIdentity = HxString.hx_null_string; runtimeReasonIdentity = HxString.hx_null_string; outputManifestIdentity = HxString.hx_null_string; files = Obj.magic HxRuntime.hx_null; runtimeReasons = Obj.magic HxRuntime.hx_null; normalizedClassIdentityFacts = Obj.magic HxRuntime.hx_null; normalizedFieldIdentities = Obj.magic HxRuntime.hx_null; normalizedFunctionIdentities = Obj.magic HxRuntime.hx_null } : ocamltargetprogramplan_t) in (
+let ocamltargetprogramplan_create = fun hostProgramRevision2 mainModuleId2 normalizedInputIdentity2 normalizedClassIdentity2 normalizedClassIdentityFacts2 normalizedFieldIdentities2 normalizedFunctionIdentities2 loweredPlanIdentity2 runtimeReasonIdentity2 outputManifestIdentity2 files2 runtimeReasons2 -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetProgramPlan"; hostProgramRevision = HxString.hx_null_string; mainModuleId = HxString.hx_null_string; normalizedInputIdentity = HxString.hx_null_string; normalizedClassIdentity = HxString.hx_null_string; loweredPlanIdentity = HxString.hx_null_string; runtimeReasonIdentity = HxString.hx_null_string; outputManifestIdentity = HxString.hx_null_string; files = Obj.magic HxRuntime.hx_null; runtimeReasons = Obj.magic HxRuntime.hx_null; normalizedClassIdentityFacts = Obj.magic HxRuntime.hx_null; normalizedFieldIdentities = Obj.magic HxRuntime.hx_null; normalizedFunctionIdentities = Obj.magic HxRuntime.hx_null } : ocamltargetprogramplan_t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (hostProgramRevision2 : string) in (
       (Obj.magic self : ocamltargetprogramplan_t).hostProgramRevision <- __assign_1;
@@ -64,7 +64,7 @@ let ocamltargetprogramplan_create = fun hostProgramRevision2 mainModuleId2 norma
   self
 )
 
-let ocamltargetprogramplan___empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetProgramPlan"; hostProgramRevision = HxString.hx_null_string; mainModuleId = HxString.hx_null_string; normalizedInputIdentity = HxString.hx_null_string; normalizedClassIdentity = HxString.hx_null_string; loweredPlanIdentity = HxString.hx_null_string; runtimeReasonIdentity = HxString.hx_null_string; outputManifestIdentity = HxString.hx_null_string; files = Obj.magic HxRuntime.hx_null; runtimeReasons = Obj.magic HxRuntime.hx_null; normalizedClassIdentityFacts = Obj.magic HxRuntime.hx_null; normalizedFieldIdentities = Obj.magic HxRuntime.hx_null; normalizedFunctionIdentities = Obj.magic HxRuntime.hx_null } : ocamltargetprogramplan_t)
+let ocamltargetprogramplan___empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetProgramPlan"; hostProgramRevision = HxString.hx_null_string; mainModuleId = HxString.hx_null_string; normalizedInputIdentity = HxString.hx_null_string; normalizedClassIdentity = HxString.hx_null_string; loweredPlanIdentity = HxString.hx_null_string; runtimeReasonIdentity = HxString.hx_null_string; outputManifestIdentity = HxString.hx_null_string; files = Obj.magic HxRuntime.hx_null; runtimeReasons = Obj.magic HxRuntime.hx_null; normalizedClassIdentityFacts = Obj.magic HxRuntime.hx_null; normalizedFieldIdentities = Obj.magic HxRuntime.hx_null; normalizedFunctionIdentities = Obj.magic HxRuntime.hx_null } : ocamltargetprogramplan_t)
 
 let ocamltargetprogramplan_copyFiles = fun self () -> let __array_receiver_18 = Obj.magic ((Obj.magic self : ocamltargetprogramplan_t).files) in HxArray.copy __array_receiver_18
 
@@ -121,12 +121,12 @@ let ocamltargetprogramplan_reportJson = fun self (route : string) -> let value =
 
 let __reflaxe_ocaml__ = ()
 
-let ocamltargetprogrampublisher_create = fun () -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetProgramPublisher" } : ocamltargetprogrampublisher_t) in (
+let ocamltargetprogrampublisher_create = fun () -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetProgramPublisher" } : ocamltargetprogrampublisher_t) in (
   ignore ();
   self
 )
 
-let ocamltargetprogrampublisher___empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetProgramPublisher" } : ocamltargetprogrampublisher_t)
+let ocamltargetprogrampublisher___empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetProgramPublisher" } : ocamltargetprogrampublisher_t)
 
 let ocamltargetprogrampublisher_manifestJson = fun plan -> let _g = Obj.magic (let __arr_35 = HxArray.create () in __arr_35) in let _g1 = ref 0 in let _g2 = Obj.magic (ocamltargetprogramplan_copyFiles (Obj.magic plan) ()) in (
   ignore (while !_g1 < HxArray.length _g2 do ignore (let file__local = let __array_read_receiver_36 = _g2 in let __array_read_index_37 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_36) __array_read_index_37 in (
@@ -315,12 +315,12 @@ let ocamltargetprogrampublisher_publish = fun plan outputDirectory route build -
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetProgramCore" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetProgramCore" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetProgramCore" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetProgramCore" } : t)
 
 let requireProfile = fun (profile : string) -> ignore (if let __string_eq_left_1 = profile in let __string_eq_right_2 = "portable" in not (HxString.equals __string_eq_left_1 __string_eq_right_2) then HxType.hx_throw_typed_rtti (Obj.repr (("OCaml target program core does not support profile \"" ^ HxString.toStdString profile) ^ "\"")) ["Dynamic"] else ())
 

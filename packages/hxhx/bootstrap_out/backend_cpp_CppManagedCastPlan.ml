@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable program : Backend_cpp_CppTypedProgramProje
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedCastPlan"; program = Obj.magic HxRuntime.hx_null; owners = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun program2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedCastPlan"; program = Obj.magic HxRuntime.hx_null; owners = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_string ()) in (
       (Obj.magic self : t).owners <- __assign_1;
@@ -49,7 +49,7 @@ let create = fun program2 -> let self = ({ __hx_type = HxType.class_ "backend.cp
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedCastPlan"; program = Obj.magic HxRuntime.hx_null; owners = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedCastPlan"; program = Obj.magic HxRuntime.hx_null; owners = Obj.magic HxRuntime.hx_null } : t)
 
 let permitsArrayClassErasure = fun self (target : TyType.t) (source : TyType.t) -> Backend_cpp_CppManagedClassValueType.permitsArrayErasure (Obj.magic ((Obj.magic self : t).program)) (Obj.magic target) (Obj.magic source)
 

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable input : Obj.t; mutable plan : Backend_cpp_
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedFunctionEmitter"; input = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; entries = Obj.magic HxRuntime.hx_null; links = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedFunctionEmitter"; input = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; entries = Obj.magic HxRuntime.hx_null; links = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null } : t)
 
 let requireLink = fun self (expression : HxExpr.hxexpr) -> (try (
   ignore (Backend_cpp_CppManagedStoragePlan.requireClosure (Obj.magic ((Obj.magic self : t).plan)) (Obj.magic expression));
@@ -258,7 +258,7 @@ let render = fun self () -> (
 
 let identifier = fun (value : string) -> (value != Obj.magic (HxRuntime.hx_null) && EReg.hx_match (Obj.magic (EReg.create ("^[A-Za-z_][A-Za-z0-9_]*$" : string) ("" : string))) (value : string) : bool)
 
-let create = fun input2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedFunctionEmitter"; input = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; entries = Obj.magic HxRuntime.hx_null; links = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun input2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedFunctionEmitter"; input = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; entries = Obj.magic HxRuntime.hx_null; links = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if input2 == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get input2 "projection") == Obj.magic (HxRuntime.hx_null) || not (let __call_arg_0_1 = Obj.obj (HxAnon.get input2 "rootSymbol") in identifier __call_arg_0_1) || not (let __call_arg_0_2 = Obj.obj (HxAnon.get input2 "symbolPrefix") in identifier __call_arg_0_2) || not (let __call_arg_0_3 = Obj.obj (HxAnon.get input2 "symbolPrefix") in let __call_arg_1_4 = "hxhx_function_" in StringTools.startsWith __call_arg_0_3 __call_arg_1_4) then HxType.hx_throw_typed_rtti (Obj.repr "managed function emission requires an exact projection and allocated symbols") ["Dynamic"] else ());
     ignore (let __assign_5 = Obj.magic input2 in (

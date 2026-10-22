@@ -205,10 +205,13 @@ let init () : unit =
   ignore (HxType.class_ "TypedConstructorPath");
   ignore (HxType.class_ "TypedControlLowering");
   ignore (HxType.class_ "TypedDeclaredFieldTypes");
+  ignore (HxType.class_ "TypedEmissionRetention");
   ignore (HxType.class_ "TypedExactCallSource");
   ignore (HxType.class_ "TypedExactEnumConstructorSource");
   ignore (HxType.class_ "TypedExactStaticCallSource");
   ignore (HxType.class_ "TypedExpr");
+  ignore (HxType.class_ "TypedFeatureDiscovery");
+  ignore (HxType.class_ "TypedFeatureSourceCatalog");
   ignore (HxType.class_ "TypedFieldInitializer");
   ignore (HxType.class_ "TypedFunction");
   ignore (HxType.class_ "TypedFunctionBody");
@@ -232,6 +235,7 @@ let init () : unit =
   ignore (HxType.class_ "TypedStatementControl");
   ignore (HxType.class_ "TypedStaticStartupOrder");
   ignore (HxType.class_ "TypedStmt");
+  ignore (HxType.class_ "TypedStructuralRetention");
   ignore (HxType.class_ "TypedSwitchPatterns");
   ignore (HxType.class_ "TyperContext");
   ignore (HxType.class_ "TyperError");
@@ -328,7 +332,11 @@ let init () : unit =
   ignore (HxType.class_ "_TypedConstructorSource.TypedConstructorSource_Fields_");
   ignore (HxType.class_ "_TypedControlBodySource.TypedControlBodySource_Fields_");
   ignore (HxType.class_ "_TypedControlStatements.TypedControlStatements_Fields_");
+  ignore (HxType.class_ "_TypedFeatureDispatch.TypedFeatureDispatch_Fields_");
   ignore (HxType.class_ "_TypedFeatureIntrinsic.TypedFeatureIntrinsic_Fields_");
+  ignore (HxType.class_ "_TypedFeatureMemberClosure.TypedFeatureMemberClosure_Fields_");
+  ignore (HxType.class_ "_TypedFeatureRoots.TypedFeatureRoots_Fields_");
+  ignore (HxType.class_ "_TypedFeatureSelection.TypedFeatureSelection_Fields_");
   ignore (HxType.class_ "_TypedFieldInitialization.TypedFieldInitialization_Fields_");
   ignore (HxType.class_ "_TypedFunctionDefault.TypedFunctionDefault_Fields_");
   ignore (HxType.class_ "_TypedGuardedSwitch.TypedGuardedSwitch_Fields_");
@@ -337,6 +345,7 @@ let init () : unit =
   ignore (HxType.class_ "_TypedMapComprehensionLowering.TypedMapComprehensionLowering_Fields_");
   ignore (HxType.class_ "_TypedMapLiteral.TypedMapLiteral_Fields_");
   ignore (HxType.class_ "_TypedOmittedInputContext.TypedOmittedInputContext_Fields_");
+  ignore (HxType.class_ "_TypedQuotationEnumDependencies.TypedQuotationEnumDependencies_Fields_");
   ignore (HxType.class_ "_TypedSourceParameterEntry.TypedSourceParameterEntry_Fields_");
   ignore (HxType.class_ "_TypedSourceSyntax.TypedSourceSyntax_Fields_");
   ignore (HxType.class_ "_TypedStringOperand.TypedStringOperand_Fields_");
@@ -743,6 +752,7 @@ let init () : unit =
   ignore (HxType.class_ "hxhx.Stage3DiagnosticsSupport");
   ignore (HxType.class_ "hxhx.Stage3EmitSupport");
   ignore (HxType.class_ "hxhx.Stage3HookSupport");
+  ignore (HxType.class_ "hxhx.Stage3JsPreparation");
   ignore (HxType.class_ "hxhx.Stage3MacroFileDependencySupport");
   ignore (HxType.class_ "hxhx.Stage3MacroHostSupport");
   ignore (HxType.class_ "hxhx.Stage3PathSupport");
@@ -1501,8 +1511,9 @@ let init () : unit =
   HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlEnumPayload" "NativeString" 2 (HxType.EnumImmediate 2);
   HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlEnumPayload" "DynamicValue" 3 (HxType.EnumImmediate 3);
   HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlEnumPayload" "RuntimeTypeValue" 4 (HxType.EnumImmediate 4);
-  HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlEnumPayload" "EnumBox" 5 (HxType.EnumBlock 0);
-  HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlEnumPayload" "NullableValue" 6 (HxType.EnumBlock 1);
+  HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlEnumPayload" "AnonymousRecord" 5 (HxType.EnumBlock 0);
+  HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlEnumPayload" "EnumBox" 6 (HxType.EnumBlock 1);
+  HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlEnumPayload" "NullableValue" 7 (HxType.EnumBlock 2);
   HxType.register_enum_ctor_layout "backend.source.LuaFieldDefault" "Zero" 0 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "backend.source.LuaFieldDefault" "False" 1 (HxType.EnumImmediate 1);
   HxType.register_enum_ctor_layout "backend.source.LuaFieldDefault" "Nil" 2 (HxType.EnumImmediate 2);
@@ -3868,6 +3879,11 @@ let init () : unit =
   HxType.register_enum_ctor "backend.ocaml.Stage3OcamlEnumPayload" "RuntimeTypeValue" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_ocaml_Stage3OcamlEnumPlan.RuntimeTypeValue)
   );
+  HxType.register_enum_ctor "backend.ocaml.Stage3OcamlEnumPayload" "AnonymousRecord" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'semanticKey' for backend.ocaml.Stage3OcamlEnumPayload.AnonymousRecord" in
+    Obj.repr (Backend_ocaml_Stage3OcamlEnumPlan.AnonymousRecord a0)
+  );
   HxType.register_enum_ctor "backend.ocaml.Stage3OcamlEnumPayload" "EnumBox" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'owner' for backend.ocaml.Stage3OcamlEnumPayload.EnumBox" in
@@ -6056,6 +6072,11 @@ let init () : unit =
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'entries' for TypedDeclaredFieldTypes" in
     Obj.repr (TypedDeclaredFieldTypes.create a0 a1)
   );
+  HxType.register_class_ctor "TypedEmissionRetention" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createInstance: missing ctor arg 'input' for TypedEmissionRetention" in
+    Obj.repr (TypedEmissionRetention.create a0)
+  );
   HxType.register_class_ctor "TypedExactCallSource" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (TypedExactCallSource.create ())
   );
@@ -6094,6 +6115,16 @@ let init () : unit =
     let a24 = if len > 24 then Obj.magic ((HxArray.get args 24)) else Obj.magic HxRuntime.hx_null in
     let a25 = if len > 25 then Obj.magic ((HxArray.get args 25)) else Obj.magic HxRuntime.hx_null in
     Obj.repr (TypedExpr.create a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19 a20 a21 a22 a23 a24 a25)
+  );
+  HxType.register_class_ctor "TypedFeatureDiscovery" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createInstance: missing ctor arg 'input' for TypedFeatureDiscovery" in
+    Obj.repr (TypedFeatureDiscovery.create a0)
+  );
+  HxType.register_class_ctor "TypedFeatureSourceCatalog" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createInstance: missing ctor arg 'input' for TypedFeatureSourceCatalog" in
+    Obj.repr (TypedFeatureSourceCatalog.create a0)
   );
   HxType.register_class_ctor "TypedFieldInitializer" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -6246,6 +6277,13 @@ let init () : unit =
     let a12 = if len > 12 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 12)) else Obj.magic HxRuntime.hx_null in
     let a13 = if len > 13 then Obj.magic ((HxArray.get args 13)) else Obj.magic HxRuntime.hx_null in
     Obj.repr (TypedStmt.create a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13)
+  );
+  HxType.register_class_ctor "TypedStructuralRetention" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'providers' for TypedStructuralRetention" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'retainMethod' for TypedStructuralRetention" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'retainField' for TypedStructuralRetention" in
+    Obj.repr (TypedStructuralRetention.create a0 a1 a2)
   );
   HxType.register_class_ctor "TypedSwitchPatterns" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -7515,6 +7553,9 @@ let init () : unit =
   HxType.register_class_ctor "hxhx.Stage3HookSupport" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_Stage3HookSupport.create ())
   );
+  HxType.register_class_ctor "hxhx.Stage3JsPreparation" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhx_Stage3JsPreparation.create ())
+  );
   HxType.register_class_ctor "hxhx.Stage3MacroFileDependencySupport" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_Stage3MacroFileDependencySupport.create ())
   );
@@ -8108,10 +8149,13 @@ let init () : unit =
   HxType.register_class_empty_ctor "TypedConstructorPath" (fun () -> Obj.repr (TypedConstructorPath.__empty ()));
   HxType.register_class_empty_ctor "TypedControlLowering" (fun () -> Obj.repr (TypedControlLowering.__empty ()));
   HxType.register_class_empty_ctor "TypedDeclaredFieldTypes" (fun () -> Obj.repr (TypedDeclaredFieldTypes.__empty ()));
+  HxType.register_class_empty_ctor "TypedEmissionRetention" (fun () -> Obj.repr (TypedEmissionRetention.__empty ()));
   HxType.register_class_empty_ctor "TypedExactCallSource" (fun () -> Obj.repr (TypedExactCallSource.__empty ()));
   HxType.register_class_empty_ctor "TypedExactEnumConstructorSource" (fun () -> Obj.repr (TypedExactEnumConstructorSource.__empty ()));
   HxType.register_class_empty_ctor "TypedExactStaticCallSource" (fun () -> Obj.repr (TypedExactStaticCallSource.__empty ()));
   HxType.register_class_empty_ctor "TypedExpr" (fun () -> Obj.repr (TypedExpr.__empty ()));
+  HxType.register_class_empty_ctor "TypedFeatureDiscovery" (fun () -> Obj.repr (TypedFeatureDiscovery.__empty ()));
+  HxType.register_class_empty_ctor "TypedFeatureSourceCatalog" (fun () -> Obj.repr (TypedFeatureSourceCatalog.__empty ()));
   HxType.register_class_empty_ctor "TypedFieldInitializer" (fun () -> Obj.repr (TypedFieldInitializer.__empty ()));
   HxType.register_class_empty_ctor "TypedFunction" (fun () -> Obj.repr (TypedFunction.__empty ()));
   HxType.register_class_empty_ctor "TypedFunctionBody" (fun () -> Obj.repr (TypedFunctionBody.__empty ()));
@@ -8135,6 +8179,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "TypedStatementControl" (fun () -> Obj.repr (TypedStatementControl.__empty ()));
   HxType.register_class_empty_ctor "TypedStaticStartupOrder" (fun () -> Obj.repr (TypedStaticStartupOrder.__empty ()));
   HxType.register_class_empty_ctor "TypedStmt" (fun () -> Obj.repr (TypedStmt.__empty ()));
+  HxType.register_class_empty_ctor "TypedStructuralRetention" (fun () -> Obj.repr (TypedStructuralRetention.__empty ()));
   HxType.register_class_empty_ctor "TypedSwitchPatterns" (fun () -> Obj.repr (TypedSwitchPatterns.__empty ()));
   HxType.register_class_empty_ctor "TyperContext" (fun () -> Obj.repr (TyperContext.__empty ()));
   HxType.register_class_empty_ctor "TyperError" (fun () -> Obj.repr (TyperError.__empty ()));
@@ -8385,6 +8430,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "hxhx.Stage3DiagnosticsSupport" (fun () -> Obj.repr (Hxhx_Stage3DiagnosticsSupport.__empty ()));
   HxType.register_class_empty_ctor "hxhx.Stage3EmitSupport" (fun () -> Obj.repr (Hxhx_Stage3EmitSupport.__empty ()));
   HxType.register_class_empty_ctor "hxhx.Stage3HookSupport" (fun () -> Obj.repr (Hxhx_Stage3HookSupport.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.Stage3JsPreparation" (fun () -> Obj.repr (Hxhx_Stage3JsPreparation.__empty ()));
   HxType.register_class_empty_ctor "hxhx.Stage3MacroFileDependencySupport" (fun () -> Obj.repr (Hxhx_Stage3MacroFileDependencySupport.__empty ()));
   HxType.register_class_empty_ctor "hxhx.Stage3MacroHostSupport" (fun () -> Obj.repr (Hxhx_Stage3MacroHostSupport.__empty ()));
   HxType.register_class_empty_ctor "hxhx.Stage3PathSupport" (fun () -> Obj.repr (Hxhx_Stage3PathSupport.__empty ()));
@@ -8871,6 +8917,8 @@ let init () : unit =
   HxType.register_class_static_fields "TypedControlLowering" [ "fieldInitializer"; "functionBody"; "passIdentity"; "statementCompletes" ];
   HxType.register_class_instance_fields "TypedDeclaredFieldTypes" [ "assertCurrent"; "assertOwner"; "entries"; "owner"; "typeFor" ];
   HxType.register_class_static_fields "TypedDeclaredFieldTypes" [];
+  HxType.register_class_instance_fields "TypedEmissionRetention" [ "apply"; "classes"; "fields"; "functions"; "keepAll"; "program" ];
+  HxType.register_class_static_fields "TypedEmissionRetention" [];
   HxType.register_class_instance_fields "TypedExactCallSource" [];
   HxType.register_class_static_fields "TypedExactCallSource" [ "decodeInstance"; "encodeInstance"; "ordinaryInstanceCall" ];
   HxType.register_class_instance_fields "TypedExactEnumConstructorSource" [];
@@ -8879,6 +8927,10 @@ let init () : unit =
   HxType.register_class_static_fields "TypedExactStaticCallSource" [ "decode"; "encode"; "ordinaryCall" ];
   HxType.register_class_instance_fields "TypedExpr" [ "argumentBinding"; "assertArgumentBinding"; "boolValue"; "catchUses"; "constructorApplication"; "controlTarget"; "declaration"; "expressions"; "extensionProvider"; "fieldInfo"; "floatValue"; "getArgumentBinding"; "getBoolValue"; "getCatchUses"; "getConstructorApplication"; "getControlTarget"; "getDeclaration"; "getExpressions"; "getExtensionProvider"; "getFieldInfo"; "getFloatValue"; "getHasPropertyStorageAccess"; "getIntValue"; "getLambdaSignature"; "getLocalBindings"; "getNamedArguments"; "getOpaqueKind"; "getPatterns"; "getPosition"; "getRequiresOwnerQualification"; "getRuntimeTypeTarget"; "getSourceCatches"; "getSourceFunction"; "getSwitchBranches"; "getSwitchGuards"; "getSwitchHasExhaustiveCoverage"; "getSwitchPatterns"; "getTag"; "getTexts"; "getType"; "getUnaryFixity"; "getUnaryOperator"; "getVariableIsFinal"; "getVariableIsStatic"; "getWhileKind"; "hasUnresolvedAbstractReceiver"; "intValue"; "isRepresentationPreservingCast"; "lambdaSignature"; "localBindings"; "namedArguments"; "opaqueKind"; "patterns"; "position"; "runtimeTypeTarget"; "sourceCatches"; "sourceFunction"; "switchPatterns"; "tag"; "texts"; "type"; "unaryFixity"; "unaryOperator"; "withCatchUses"; "withControlTarget"; "withExpressions"; "withInlineTypes"; "withNamedArguments"; "withPropertyStorageAccess"; "withSwitchPatterns"; "withType" ];
   HxType.register_class_static_fields "TypedExpr" [ "anonymous"; "arrayAccess"; "arrayAppend"; "arrayComprehension"; "arrayDecl"; "assign"; "binary"; "block"; "boolLiteral"; "breakExpr"; "call"; "castValue"; "checkType"; "compoundAssign"; "continueExpr"; "controlBranch"; "controlFor"; "controlPatternAttempts"; "controlRegion"; "controlSwitch"; "controlTry"; "controlWhile"; "enumValue"; "featureDefinition"; "featureSelection"; "fieldRead"; "fixedRange"; "floatLiteral"; "functionValueCall"; "instanceMethodRead"; "intLiteral"; "iteratorProtocol"; "lambda"; "localRead"; "macroExpr"; "macroType"; "mapInsert"; "metadata"; "nameRead"; "newValue"; "nullSafeFieldRead"; "nullValue"; "opaque"; "operandKinds"; "operandTypes"; "parenthesized"; "privateAccess"; "range"; "returnExpr"; "runtimeTypeTest"; "runtimeTypeValue"; "sourceFor"; "sourceFunctionExpr"; "sourceGroup"; "sourceIf"; "sourceTry"; "staticMethodRead"; "stringLiteral"; "superConstructorCall"; "superValue"; "switchExpr"; "targetScope"; "temporary"; "ternary"; "thisValue"; "throwExpr"; "traceCall"; "unary"; "unresolvedAbstractFieldRead"; "untypedValue"; "variableDeclaration"; "variableDeclarations"; "whileExpr" ];
+  HxType.register_class_instance_fields "TypedFeatureDiscovery" [ "names"; "namesFor"; "program" ];
+  HxType.register_class_static_fields "TypedFeatureDiscovery" [ "allRetained" ];
+  HxType.register_class_instance_fields "TypedFeatureSourceCatalog" [ "isStandardLibrary"; "program"; "standardModules" ];
+  HxType.register_class_static_fields "TypedFeatureSourceCatalog" [ "absolute" ];
   HxType.register_class_instance_fields "TypedFieldInitializer" [ "expression"; "field"; "getExpression"; "getField" ];
   HxType.register_class_static_fields "TypedFieldInitializer" [];
   HxType.register_class_instance_fields "TypedFunction" [ "assertParsedBodyCurrent"; "body"; "declaration"; "defaults"; "environment"; "getBody"; "getDeclaration"; "getDefaults"; "getEnvironment"; "getOwnerName"; "getSourceDeclaration"; "getSourceOrdinal"; "getStableIdentity"; "ownerName"; "sourceArgumentsIdentity"; "sourceBodyIdentity"; "sourceDeclaration"; "sourceOrdinal"; "withBody" ];
@@ -8925,6 +8977,8 @@ let init () : unit =
   HxType.register_class_static_fields "TypedStaticStartupOrder" [ "catalogDependencies"; "typeDependencies" ];
   HxType.register_class_instance_fields "TypedStmt" [ "catchNames"; "catchTypeHints"; "catchUses"; "controlTarget"; "expressions"; "getCatchNames"; "getCatchTypeHints"; "getCatchUses"; "getControlTarget"; "getExpressions"; "getLocalBindings"; "getMetadata"; "getNames"; "getPatterns"; "getPosition"; "getStatements"; "getSwitchGuards"; "getSwitchHasExhaustiveCoverage"; "getSwitchPatterns"; "getTag"; "localBindings"; "metadata"; "names"; "patterns"; "position"; "statements"; "switchHasExhaustiveCoverage"; "switchPatterns"; "tag"; "withCatchUses"; "withChildren"; "withControlTarget"; "withSwitchPatterns" ];
   HxType.register_class_static_fields "TypedStmt" [ "block"; "breakStmt"; "continueStmt"; "doWhile"; "expressionStmt"; "forIn"; "forKeyValue"; "ifStmt"; "returnValue"; "returnVoid"; "switchStmt"; "throwStmt"; "tryStmt"; "variable"; "whileStmt" ];
+  HxType.register_class_instance_fields "TypedStructuralRetention" [ "boundary"; "member"; "providers"; "retainField"; "retainMethod"; "seen" ];
+  HxType.register_class_static_fields "TypedStructuralRetention" [];
   HxType.register_class_instance_fields "TypedSwitchPatterns" [ "assertInput"; "getSelections"; "getSemanticKey"; "input"; "inputKey"; "selections"; "sourceIdentity"; "substituteTypes" ];
   HxType.register_class_static_fields "TypedSwitchPatterns" [ "identity"; "named" ];
   HxType.register_class_instance_fields "TyperContext" [ "classFullName"; "classIsOrExtends"; "currentClass"; "directives"; "extensionMethods"; "filePath"; "getClassFullName"; "getDirectives"; "getFilePath"; "getIndex"; "getModulePath"; "getPackagePath"; "getResolvedDirectives"; "hasDefine"; "importedEnums"; "importedStaticField"; "importedStaticMethod"; "index"; "inferredReturnTypes"; "instanceField"; "instanceMethodOwner"; "loader"; "moduleEnumConstructorField"; "moduleEnumConstructorMethod"; "modulePath"; "packagePath"; "recordInferredReturnType"; "refinedMethodReturnType"; "resolvePrimitiveProvider"; "resolveType"; "resolveTypeUse"; "resolvedDirectives"; "resolvedProvider"; "superclass" ];
@@ -9117,8 +9171,16 @@ let init () : unit =
   HxType.register_class_static_fields "_TypedControlBodySource.TypedControlBodySource_Fields_" [ "arguments"; "body" ];
   HxType.register_class_instance_fields "_TypedControlStatements.TypedControlStatements_Fields_" [];
   HxType.register_class_static_fields "_TypedControlStatements.TypedControlStatements_Fields_" [ "block"; "functionBody"; "initializerBody"; "methodStatement"; "statement"; "statements" ];
+  HxType.register_class_instance_fields "_TypedFeatureDispatch.TypedFeatureDispatch_Fields_" [];
+  HxType.register_class_static_fields "_TypedFeatureDispatch.TypedFeatureDispatch_Fields_" [ "implementsReference" ];
   HxType.register_class_instance_fields "_TypedFeatureIntrinsic.TypedFeatureIntrinsic_Fields_" [];
   HxType.register_class_static_fields "_TypedFeatureIntrinsic.TypedFeatureIntrinsic_Fields_" [ "capture" ];
+  HxType.register_class_instance_fields "_TypedFeatureMemberClosure.TypedFeatureMemberClosure_Fields_" [];
+  HxType.register_class_static_fields "_TypedFeatureMemberClosure.TypedFeatureMemberClosure_Fields_" [ "discover"; "isRecordCallback"; "retain" ];
+  HxType.register_class_instance_fields "_TypedFeatureRoots.TypedFeatureRoots_Fields_" [];
+  HxType.register_class_static_fields "_TypedFeatureRoots.TypedFeatureRoots_Fields_" [ "has"; "inheritsKeepSub"; "select" ];
+  HxType.register_class_instance_fields "_TypedFeatureSelection.TypedFeatureSelection_Fields_" [];
+  HxType.register_class_static_fields "_TypedFeatureSelection.TypedFeatureSelection_Fields_" [ "lower" ];
   HxType.register_class_instance_fields "_TypedFieldInitialization.TypedFieldInitialization_Fields_" [];
   HxType.register_class_static_fields "_TypedFieldInitialization.TypedFieldInitialization_Fields_" [ "adapt"; "expectedType"; "rejectInstanceReceiver" ];
   HxType.register_class_instance_fields "_TypedFunctionDefault.TypedFunctionDefault_Fields_" [];
@@ -9135,6 +9197,8 @@ let init () : unit =
   HxType.register_class_static_fields "_TypedMapLiteral.TypedMapLiteral_Fields_" [ "context"; "infer"; "isLiteral" ];
   HxType.register_class_instance_fields "_TypedOmittedInputContext.TypedOmittedInputContext_Fields_" [];
   HxType.register_class_static_fields "_TypedOmittedInputContext.TypedOmittedInputContext_Fields_" [ "convert" ];
+  HxType.register_class_instance_fields "_TypedQuotationEnumDependencies.TypedQuotationEnumDependencies_Fields_" [];
+  HxType.register_class_static_fields "_TypedQuotationEnumDependencies.TypedQuotationEnumDependencies_Fields_" [ "find" ];
   HxType.register_class_instance_fields "_TypedSourceParameterEntry.TypedSourceParameterEntry_Fields_" [];
   HxType.register_class_static_fields "_TypedSourceParameterEntry.TypedSourceParameterEntry_Fields_" [ "binding" ];
   HxType.register_class_instance_fields "_TypedSourceSyntax.TypedSourceSyntax_Fields_" [];
@@ -9947,6 +10011,8 @@ let init () : unit =
   HxType.register_class_static_fields "hxhx.Stage3EmitSupport" [ "bool01"; "emitWithBackend"; "isTrueEnv" ];
   HxType.register_class_instance_fields "hxhx.Stage3HookSupport" [];
   HxType.register_class_static_fields "hxhx.Stage3HookSupport" [ "runHookPhase"; "runStandardMacroHooks" ];
+  HxType.register_class_instance_fields "hxhx.Stage3JsPreparation" [];
+  HxType.register_class_static_fields "hxhx.Stage3JsPreparation" [ "prepare" ];
   HxType.register_class_instance_fields "hxhx.Stage3MacroFileDependencySupport" [];
   HxType.register_class_static_fields "hxhx.Stage3MacroFileDependencySupport" [ "collect"; "observe" ];
   HxType.register_class_instance_fields "hxhx.Stage3MacroHostSupport" [];
@@ -10360,10 +10426,13 @@ let init () : unit =
   HxType.register_class_tags "TypedConstructorPath" [ "TypedConstructorPath" ];
   HxType.register_class_tags "TypedControlLowering" [ "TypedControlLowering" ];
   HxType.register_class_tags "TypedDeclaredFieldTypes" [ "TypedDeclaredFieldTypes" ];
+  HxType.register_class_tags "TypedEmissionRetention" [ "TypedEmissionRetention" ];
   HxType.register_class_tags "TypedExactCallSource" [ "TypedExactCallSource" ];
   HxType.register_class_tags "TypedExactEnumConstructorSource" [ "TypedExactEnumConstructorSource" ];
   HxType.register_class_tags "TypedExactStaticCallSource" [ "TypedExactStaticCallSource" ];
   HxType.register_class_tags "TypedExpr" [ "TypedExpr" ];
+  HxType.register_class_tags "TypedFeatureDiscovery" [ "TypedFeatureDiscovery" ];
+  HxType.register_class_tags "TypedFeatureSourceCatalog" [ "TypedFeatureSourceCatalog" ];
   HxType.register_class_tags "TypedFieldInitializer" [ "TypedFieldInitializer" ];
   HxType.register_class_tags "TypedFunction" [ "TypedFunction" ];
   HxType.register_class_tags "TypedFunctionBody" [ "TypedFunctionBody" ];
@@ -10387,6 +10456,7 @@ let init () : unit =
   HxType.register_class_tags "TypedStatementControl" [ "TypedStatementControl" ];
   HxType.register_class_tags "TypedStaticStartupOrder" [ "TypedStaticStartupOrder" ];
   HxType.register_class_tags "TypedStmt" [ "TypedStmt" ];
+  HxType.register_class_tags "TypedStructuralRetention" [ "TypedStructuralRetention" ];
   HxType.register_class_tags "TypedSwitchPatterns" [ "TypedSwitchPatterns" ];
   HxType.register_class_tags "TyperContext" [ "TyperContext" ];
   HxType.register_class_tags "TyperError" [ "TyperError" ];
@@ -10485,7 +10555,11 @@ let init () : unit =
   HxType.register_class_tags "_TypedConstructorSource.TypedConstructorSource_Fields_" [ "_TypedConstructorSource.TypedConstructorSource_Fields_" ];
   HxType.register_class_tags "_TypedControlBodySource.TypedControlBodySource_Fields_" [ "_TypedControlBodySource.TypedControlBodySource_Fields_" ];
   HxType.register_class_tags "_TypedControlStatements.TypedControlStatements_Fields_" [ "_TypedControlStatements.TypedControlStatements_Fields_" ];
+  HxType.register_class_tags "_TypedFeatureDispatch.TypedFeatureDispatch_Fields_" [ "_TypedFeatureDispatch.TypedFeatureDispatch_Fields_" ];
   HxType.register_class_tags "_TypedFeatureIntrinsic.TypedFeatureIntrinsic_Fields_" [ "_TypedFeatureIntrinsic.TypedFeatureIntrinsic_Fields_" ];
+  HxType.register_class_tags "_TypedFeatureMemberClosure.TypedFeatureMemberClosure_Fields_" [ "_TypedFeatureMemberClosure.TypedFeatureMemberClosure_Fields_" ];
+  HxType.register_class_tags "_TypedFeatureRoots.TypedFeatureRoots_Fields_" [ "_TypedFeatureRoots.TypedFeatureRoots_Fields_" ];
+  HxType.register_class_tags "_TypedFeatureSelection.TypedFeatureSelection_Fields_" [ "_TypedFeatureSelection.TypedFeatureSelection_Fields_" ];
   HxType.register_class_tags "_TypedFieldInitialization.TypedFieldInitialization_Fields_" [ "_TypedFieldInitialization.TypedFieldInitialization_Fields_" ];
   HxType.register_class_tags "_TypedFunctionDefault.TypedFunctionDefault_Fields_" [ "_TypedFunctionDefault.TypedFunctionDefault_Fields_" ];
   HxType.register_class_tags "_TypedGuardedSwitch.TypedGuardedSwitch_Fields_" [ "_TypedGuardedSwitch.TypedGuardedSwitch_Fields_" ];
@@ -10494,6 +10568,7 @@ let init () : unit =
   HxType.register_class_tags "_TypedMapComprehensionLowering.TypedMapComprehensionLowering_Fields_" [ "_TypedMapComprehensionLowering.TypedMapComprehensionLowering_Fields_" ];
   HxType.register_class_tags "_TypedMapLiteral.TypedMapLiteral_Fields_" [ "_TypedMapLiteral.TypedMapLiteral_Fields_" ];
   HxType.register_class_tags "_TypedOmittedInputContext.TypedOmittedInputContext_Fields_" [ "_TypedOmittedInputContext.TypedOmittedInputContext_Fields_" ];
+  HxType.register_class_tags "_TypedQuotationEnumDependencies.TypedQuotationEnumDependencies_Fields_" [ "_TypedQuotationEnumDependencies.TypedQuotationEnumDependencies_Fields_" ];
   HxType.register_class_tags "_TypedSourceParameterEntry.TypedSourceParameterEntry_Fields_" [ "_TypedSourceParameterEntry.TypedSourceParameterEntry_Fields_" ];
   HxType.register_class_tags "_TypedSourceSyntax.TypedSourceSyntax_Fields_" [ "_TypedSourceSyntax.TypedSourceSyntax_Fields_" ];
   HxType.register_class_tags "_TypedStringOperand.TypedStringOperand_Fields_" [ "_TypedStringOperand.TypedStringOperand_Fields_" ];
@@ -10932,6 +11007,7 @@ let init () : unit =
   HxType.register_class_tags "hxhx.Stage3DiagnosticsSupport" [ "hxhx.Stage3DiagnosticsSupport" ];
   HxType.register_class_tags "hxhx.Stage3EmitSupport" [ "hxhx.Stage3EmitSupport" ];
   HxType.register_class_tags "hxhx.Stage3HookSupport" [ "hxhx.Stage3HookSupport" ];
+  HxType.register_class_tags "hxhx.Stage3JsPreparation" [ "hxhx.Stage3JsPreparation" ];
   HxType.register_class_tags "hxhx.Stage3MacroFileDependencySupport" [ "hxhx.Stage3MacroFileDependencySupport" ];
   HxType.register_class_tags "hxhx.Stage3MacroHostSupport" [ "hxhx.Stage3MacroHostSupport" ];
   HxType.register_class_tags "hxhx.Stage3PathSupport" [ "hxhx.Stage3PathSupport" ];

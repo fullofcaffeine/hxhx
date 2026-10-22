@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.lowered.OcamlInt64RepresentationContract" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.lowered.OcamlInt64RepresentationContract" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.lowered.OcamlInt64RepresentationContract" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.lowered.OcamlInt64RepresentationContract" } : t)
 
 let hx_LAYOUT_REVISION = (let __string_part_3 = "sha256:" in let __string_part_4 = HxString.toStdString (let __call_arg_0_1 = HxArray.join (let __arr_2 = HxArray.create () in (
   ignore (HxArray.push __arr_2 "reflaxe.ocaml-int64-layout-v1");

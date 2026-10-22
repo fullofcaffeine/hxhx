@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable currentProgramRevision : string; mutable d
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.lowered.OcamlRepresentationRegistry"; currentProgramRevision = Obj.magic HxRuntime.hx_null; decisionsByKey = Obj.magic HxRuntime.hx_null; decisionsById = Obj.magic HxRuntime.hx_null; representedArraysByKey = Obj.magic HxRuntime.hx_null; representedArraysById = Obj.magic HxRuntime.hx_null; monomorphicClassesBySemanticType = Obj.magic HxRuntime.hx_null; monomorphicClassesById = Obj.magic HxRuntime.hx_null; callableViewsByRepresentationId = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.lowered.OcamlRepresentationRegistry"; currentProgramRevision = Obj.magic HxRuntime.hx_null; decisionsByKey = Obj.magic HxRuntime.hx_null; decisionsById = Obj.magic HxRuntime.hx_null; representedArraysByKey = Obj.magic HxRuntime.hx_null; representedArraysById = Obj.magic HxRuntime.hx_null; monomorphicClassesBySemanticType = Obj.magic HxRuntime.hx_null; monomorphicClassesById = Obj.magic HxRuntime.hx_null; callableViewsByRepresentationId = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_string ()) in (
       (Obj.magic self : t).callableViewsByRepresentationId <- __assign_1;
@@ -44,7 +44,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.lo
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.lowered.OcamlRepresentationRegistry"; currentProgramRevision = Obj.magic HxRuntime.hx_null; decisionsByKey = Obj.magic HxRuntime.hx_null; decisionsById = Obj.magic HxRuntime.hx_null; representedArraysByKey = Obj.magic HxRuntime.hx_null; representedArraysById = Obj.magic HxRuntime.hx_null; monomorphicClassesBySemanticType = Obj.magic HxRuntime.hx_null; monomorphicClassesById = Obj.magic HxRuntime.hx_null; callableViewsByRepresentationId = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.lowered.OcamlRepresentationRegistry"; currentProgramRevision = Obj.magic HxRuntime.hx_null; decisionsByKey = Obj.magic HxRuntime.hx_null; decisionsById = Obj.magic HxRuntime.hx_null; representedArraysByKey = Obj.magic HxRuntime.hx_null; representedArraysById = Obj.magic HxRuntime.hx_null; monomorphicClassesBySemanticType = Obj.magic HxRuntime.hx_null; monomorphicClassesById = Obj.magic HxRuntime.hx_null; callableViewsByRepresentationId = Obj.magic HxRuntime.hx_null } : t)
 
 let beginProgram = fun self (programRevision : string) -> ignore (ignore ((
   ignore (if (let __string_receiver_75 = programRevision in HxString.length __string_receiver_75) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "reflaxe.ocaml [ocaml-representation:missing-program-revision]: the target-selected program revision is empty") ["Dynamic"] else ());

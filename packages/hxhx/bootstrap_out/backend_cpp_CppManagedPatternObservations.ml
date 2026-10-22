@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable columns : TypedGuardedPatternPlan.guardedp
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedPatternObservations"; columns = Obj.magic HxRuntime.hx_null; input = Obj.magic HxRuntime.hx_null; types = Obj.magic HxRuntime.hx_null; named = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; enums = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun input2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedPatternObservations"; columns = Obj.magic HxRuntime.hx_null; input = Obj.magic HxRuntime.hx_null; types = Obj.magic HxRuntime.hx_null; named = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; enums = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = HxMap.create_int () in (
       (Obj.magic self : t).types <- __assign_1;
@@ -36,7 +36,7 @@ let create = fun input2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedPatternObservations"; columns = Obj.magic HxRuntime.hx_null; input = Obj.magic HxRuntime.hx_null; types = Obj.magic HxRuntime.hx_null; named = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; enums = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedPatternObservations"; columns = Obj.magic HxRuntime.hx_null; input = Obj.magic HxRuntime.hx_null; types = Obj.magic HxRuntime.hx_null; named = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; enums = Obj.magic HxRuntime.hx_null } : t)
 
 let stored = fun self (hx_type__local : TyType.t) -> let tempTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
   ignore (if (Obj.magic self : t).casts == Obj.magic (HxRuntime.hx_null) then let __assign_7 = Obj.magic hx_type__local in (

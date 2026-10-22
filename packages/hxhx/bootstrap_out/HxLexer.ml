@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable src : string; mutable index : int; mutable
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun src2 -> let self = ({ __hx_type = HxType.class_ "HxLexer"; src = HxString.hx_null_string; index = 0; line = 0; column = 0 } : t) in (
+let create = fun src2 -> let self = ({ __hx_type = HxType.instance_marker "HxLexer"; src = HxString.hx_null_string; index = 0; line = 0; column = 0 } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = 1 in (
       (__place_receiver_1 : t).column <- __place_rhs_2;
@@ -28,7 +28,7 @@ let create = fun src2 -> let self = ({ __hx_type = HxType.class_ "HxLexer"; src 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxLexer"; src = HxString.hx_null_string; index = 0; line = 0; column = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxLexer"; src = HxString.hx_null_string; index = 0; line = 0; column = 0 } : t)
 
 let fork = fun self () -> (let copy = create ((self : t).src : string) in (
   ignore (let __place_receiver_8 = copy in let __place_rhs_9 = (self : t).index in (

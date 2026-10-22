@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable modules : CompilerTypedModuleRevision.t Hx
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencySnapshot"; modules = Obj.magic HxRuntime.hx_null; edges = Obj.magic HxRuntime.hx_null; programConfiguration = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerDependencySnapshot"; modules = Obj.magic HxRuntime.hx_null; edges = Obj.magic HxRuntime.hx_null; programConfiguration = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
 
 let getModules = fun self () -> let __array_receiver_13 = Obj.magic ((Obj.magic self : t).modules) in HxArray.copy __array_receiver_13
 
@@ -112,7 +112,7 @@ let normalizeModules = fun values -> let tempArray = ref (Obj.magic (HxRuntime.h
 
 let compareEdges = fun left right -> let __call_arg_0_80 = CompilerDependencyEdge.canonicalKey (Obj.magic left) () in let __call_arg_1_81 = CompilerDependencyEdge.canonicalKey (Obj.magic right) () in compareText __call_arg_0_80 __call_arg_1_81
 
-let create = fun modules2 edges2 programConfiguration2 -> let self = ({ __hx_type = HxType.class_ "CompilerDependencySnapshot"; modules = Obj.magic HxRuntime.hx_null; edges = Obj.magic HxRuntime.hx_null; programConfiguration = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun modules2 edges2 programConfiguration2 -> let self = ({ __hx_type = HxType.instance_marker "CompilerDependencySnapshot"; modules = Obj.magic HxRuntime.hx_null; edges = Obj.magic HxRuntime.hx_null; programConfiguration = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (normalizeModules (Obj.magic modules2)) in (
       (Obj.magic self : t).modules <- __assign_1;

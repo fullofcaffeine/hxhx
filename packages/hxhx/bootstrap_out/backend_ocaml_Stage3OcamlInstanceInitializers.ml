@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable projection : TypedBackendClassProjection.t
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.Stage3OcamlInstanceInitializers"; projection = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; fields = Obj.magic HxRuntime.hx_null; name = HxString.hx_null_string } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "backend.ocaml.Stage3OcamlInstanceInitializers"; projection = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; fields = Obj.magic HxRuntime.hx_null; name = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (Obj.obj (HxAnon.get input "projection")) in (
       (Obj.magic self : t).projection <- __assign_1;
@@ -50,7 +50,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "backend.ocaml
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.Stage3OcamlInstanceInitializers"; projection = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; fields = Obj.magic HxRuntime.hx_null; name = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.ocaml.Stage3OcamlInstanceInitializers"; projection = Obj.magic HxRuntime.hx_null; owner = HxString.hx_null_string; fields = Obj.magic HxRuntime.hx_null; name = HxString.hx_null_string } : t)
 
 let getName = fun self () -> (Obj.magic self : t).name
 

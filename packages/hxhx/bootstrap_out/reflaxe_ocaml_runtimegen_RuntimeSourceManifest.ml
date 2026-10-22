@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.runtimegen.RuntimeSourceManifest" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.runtimegen.RuntimeSourceManifest" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.runtimegen.RuntimeSourceManifest" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.runtimegen.RuntimeSourceManifest" } : t)
 
 let moduleNameFromFile = fun (path : string) -> (let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (if let __call_arg_0_135 = path in let __call_arg_1_136 = ".mli" in StringTools.endsWith __call_arg_0_135 __call_arg_1_136 then let __assign_137 = (let __string_receiver_138 = path in let __string_argument_0_139 = 0 in let __string_argument_1_140 = HxInt.sub (let __string_receiver_141 = path in HxString.length __string_receiver_141) 4 in HxString.substr __string_receiver_138 __string_argument_0_139 __string_argument_1_140 : string) in (

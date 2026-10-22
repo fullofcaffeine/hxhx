@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerRequestCodec" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerRequestCodec" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerRequestCodec" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerRequestCodec" } : t)
 
 let decode = fun requestId baseArgs payload -> let sep = ref (-1) in let _g = ref 0 in let _g1 = let __bytes_receiver_1 = payload in HxBytes.length __bytes_receiver_1 in (
   ignore (try while !_g < _g1 do ignore (let i = let __old_2 = !_g in let __new_3 = HxInt.add __old_2 1 in (

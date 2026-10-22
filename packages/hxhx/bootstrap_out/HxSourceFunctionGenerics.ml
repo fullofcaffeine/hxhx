@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable parameters : Obj.t HxArray.t; mutable cano
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun parameters2 -> let self = ({ __hx_type = HxType.class_ "HxSourceFunctionGenerics"; parameters = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun parameters2 -> let self = ({ __hx_type = HxType.instance_marker "HxSourceFunctionGenerics"; parameters = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxTypeSyntax.copyParameters (Obj.magic parameters2)) in (
       (Obj.magic self : t).parameters <- __assign_1;
@@ -27,7 +27,7 @@ let create = fun parameters2 -> let self = ({ __hx_type = HxType.class_ "HxSourc
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxSourceFunctionGenerics"; parameters = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxSourceFunctionGenerics"; parameters = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
 
 let getParameters = fun self () -> HxTypeSyntax.copyParameters (Obj.magic ((Obj.magic self : t).parameters))
 

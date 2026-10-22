@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable entryPath : string; mutable artifacts : Ba
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun entryPath2 artifacts2 builtExecutable2 -> let self = ({ __hx_type = HxType.class_ "backend.EmitResult"; entryPath = HxString.hx_null_string; artifacts = Obj.magic HxRuntime.hx_null; builtExecutable = false } : t) in (
+let create = fun entryPath2 artifacts2 builtExecutable2 -> let self = ({ __hx_type = HxType.instance_marker "backend.EmitResult"; entryPath = HxString.hx_null_string; artifacts = Obj.magic HxRuntime.hx_null; builtExecutable = false } : t) in (
   ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
     ignore (if entryPath2 == HxString.hx_null_string then let __assign_1 = ("" : string) in (
       tempRight := __assign_1;
@@ -40,4 +40,4 @@ let create = fun entryPath2 artifacts2 builtExecutable2 -> let self = ({ __hx_ty
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.EmitResult"; entryPath = HxString.hx_null_string; artifacts = Obj.magic HxRuntime.hx_null; builtExecutable = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.EmitResult"; entryPath = HxString.hx_null_string; artifacts = Obj.magic HxRuntime.hx_null; builtExecutable = false } : t)

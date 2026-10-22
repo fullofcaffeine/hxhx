@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable modules : (HxClassDecl.t, TypedModule.t) H
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program -> let self = ({ __hx_type = HxType.class_ "backend.source.PythonFieldAccessLowering"; modules = Obj.magic HxRuntime.hx_null; ownerNames = Obj.magic HxRuntime.hx_null; moduleNames = Obj.magic HxRuntime.hx_null; nextInitializer = 0 } : t) in (
+let create = fun program -> let self = ({ __hx_type = HxType.instance_marker "backend.source.PythonFieldAccessLowering"; modules = Obj.magic HxRuntime.hx_null; ownerNames = Obj.magic HxRuntime.hx_null; moduleNames = Obj.magic HxRuntime.hx_null; nextInitializer = 0 } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = 0 in (
       (__place_receiver_1 : t).nextInitializer <- __place_rhs_2;
@@ -51,7 +51,7 @@ let create = fun program -> let self = ({ __hx_type = HxType.class_ "backend.sou
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PythonFieldAccessLowering"; modules = Obj.magic HxRuntime.hx_null; ownerNames = Obj.magic HxRuntime.hx_null; moduleNames = Obj.magic HxRuntime.hx_null; nextInitializer = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.PythonFieldAccessLowering"; modules = Obj.magic HxRuntime.hx_null; ownerNames = Obj.magic HxRuntime.hx_null; moduleNames = Obj.magic HxRuntime.hx_null; nextInitializer = 0 } : t)
 
 let initializerName = fun self () -> let name = ref (HxString.hx_null_string : string) in (
   ignore (try let rec __do_while_loop_25 = fun () -> (

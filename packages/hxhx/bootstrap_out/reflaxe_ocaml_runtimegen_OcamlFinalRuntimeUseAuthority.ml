@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable programRevision : string; mutable activePr
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority"; programRevision = Obj.magic HxRuntime.hx_null; activeProfile = Obj.magic HxRuntime.hx_null; sealed = false; expectedByKey = Obj.magic HxRuntime.hx_null; expectedByOwner = Obj.magic HxRuntime.hx_null; expectedOrderByOwner = Obj.magic HxRuntime.hx_null; observedCounts = Obj.magic HxRuntime.hx_null; observedIdsByOwner = Obj.magic HxRuntime.hx_null; firstObservationByKey = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority"; programRevision = Obj.magic HxRuntime.hx_null; activeProfile = Obj.magic HxRuntime.hx_null; sealed = false; expectedByKey = Obj.magic HxRuntime.hx_null; expectedByOwner = Obj.magic HxRuntime.hx_null; expectedOrderByOwner = Obj.magic HxRuntime.hx_null; observedCounts = Obj.magic HxRuntime.hx_null; observedIdsByOwner = Obj.magic HxRuntime.hx_null; firstObservationByKey = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = HxMap.create_string () in (
       (Obj.magic self : t).firstObservationByKey <- __assign_1;
@@ -40,7 +40,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.ru
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority"; programRevision = Obj.magic HxRuntime.hx_null; activeProfile = Obj.magic HxRuntime.hx_null; sealed = false; expectedByKey = Obj.magic HxRuntime.hx_null; expectedByOwner = Obj.magic HxRuntime.hx_null; expectedOrderByOwner = Obj.magic HxRuntime.hx_null; observedCounts = Obj.magic HxRuntime.hx_null; observedIdsByOwner = Obj.magic HxRuntime.hx_null; firstObservationByKey = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.runtimegen.OcamlFinalRuntimeUseAuthority"; programRevision = Obj.magic HxRuntime.hx_null; activeProfile = Obj.magic HxRuntime.hx_null; sealed = false; expectedByKey = Obj.magic HxRuntime.hx_null; expectedByOwner = Obj.magic HxRuntime.hx_null; expectedOrderByOwner = Obj.magic HxRuntime.hx_null; observedCounts = Obj.magic HxRuntime.hx_null; observedIdsByOwner = Obj.magic HxRuntime.hx_null; firstObservationByKey = Obj.magic HxRuntime.hx_null } : t)
 
 let beginProgram = fun self (programRevision2 : string) (activeProfile2 : string) -> ignore (ignore ((
   ignore (if programRevision2 == HxString.hx_null_string || (let __string_receiver_9 = programRevision2 in HxString.length __string_receiver_9) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "Final runtime-use authority requires a non-empty program revision.") ["Dynamic"] else ());
@@ -318,7 +318,7 @@ let finishProgram = fun self () -> ignore (ignore ((
       let count = !tempMaybeNumber in if count == HxRuntime.hx_null || (let __nullable_275 = count in let __nullable_276 = Obj.obj (HxAnon.get occurrence "cardinality") in if __nullable_275 == HxRuntime.hx_null then false else Obj.obj __nullable_275 < __nullable_276) then ignore (let __array_receiver_277 = Obj.magic errors in let __array_arg_0_278 = (let __string_part_279 = "missing final runtime use " in let __string_part_280 = HxString.toStdString (Obj.obj (HxAnon.get occurrence "id")) in __string_part_279 ^ __string_part_280 : string) in HxArray.push __array_receiver_277 __array_arg_0_278) else ()
     )) done);
     let this1 = (Obj.magic self : t).expectedByOwner in let tempKeyValueIterator = HxIterator.of_array (Obj.magic (HxMap.pairs_string this1)) in let _g = tempKeyValueIterator in (
-      ignore (while let __iterator_receiver_281 = _g in HxIterator.hasNext __iterator_receiver_281 do ignore (let _g2 = let __iterator_receiver_282 = _g in HxIterator.next __iterator_receiver_282 in let ownerKey = (let __structural_receiver_283 = _g2 in Obj.obj (HxAnon.get __structural_receiver_283 "key") : string) in let expected = Obj.magic (let __structural_receiver_284 = _g2 in Obj.obj (HxAnon.get __structural_receiver_284 "value")) in (
+      ignore (while let __iterator_receiver_281 = _g in HxIterator.hasNext __iterator_receiver_281 do ignore (let _g2 = let __iterator_receiver_282 = _g in HxIterator.next __iterator_receiver_282 in let ownerKey = (let __structural_receiver_283 = _g2 in Stdlib.fst __structural_receiver_283 : string) in let expected = Obj.magic (let __structural_receiver_284 = _g2 in Stdlib.snd __structural_receiver_284) in (
         ignore (let __array_receiver_285 = Obj.magic expected in let __array_arg_0_286 = compareOccurrenceOrder in HxArray.sort __array_receiver_285 __array_arg_0_286);
         let expectedIds = Obj.magic (let __array_receiver_287 = Obj.magic expected in let __array_arg_0_288 = fun occurrence -> Obj.obj (HxAnon.get occurrence "id") in HxArray.map __array_receiver_287 __array_arg_0_288) in let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in let this1 = (Obj.magic self : t).observedIdsByOwner in (
           ignore (let __assign_289 = Obj.magic (Obj.magic (HxMap.get_string this1 (ownerKey : string))) in (

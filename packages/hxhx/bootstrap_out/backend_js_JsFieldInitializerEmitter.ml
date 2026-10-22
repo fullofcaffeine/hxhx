@@ -15,10 +15,10 @@ let emit = fun writer owner field parent types -> (try let _g = ref 0 in let _g1
       let plan = TypedControlStatements.initializerBody (Obj.magic (TypedBackendFieldInitializerProjection.getExpression (Obj.magic projection) ())) (TypedBackendFieldInitializerProjection.getStableIdentity (Obj.magic projection) () : string) (Obj.magic (HxRuntime.hx_null)) (Obj.repr (fun a0 -> TypedBackendFieldInitializerProjection.requireExpression projection a0)) (Obj.magic (HxRuntime.hx_null)) in let scope = Obj.magic (Backend_js_JsFunctionScope.hx_initializer (Obj.magic parent) (Obj.magic projection) types) in let statements = Obj.magic (Backend_js_JsWriter.create (Obj.magic (HxRuntime.hx_null))) in (
         ignore (Backend_js_JsStmtEmitter.emitFunctionBody (Obj.magic statements) (Obj.magic (Obj.obj (HxAnon.get plan "statements"))) (Obj.magic scope));
         let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-          ignore (if (let __structural_receiver_5 = plan in Obj.obj (HxAnon.get __structural_receiver_5 "value")) == Obj.magic (HxRuntime.hx_null) then let __assign_6 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          ignore (if (let __structural_receiver_5 = plan in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_5 "value"))) == Obj.magic (HxRuntime.hx_null) then let __assign_6 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
             tempMaybeString := __assign_6;
             __assign_6
-          ) else let __assign_7 = Obj.magic (Backend_js_JsExprEmitter.emit (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (let __structural_receiver_8 = plan in Obj.obj (HxAnon.get __structural_receiver_8 "value")))) (Backend_js_JsFunctionScope.exprScope (Obj.magic scope) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) : string) in (
+          ) else let __assign_7 = Obj.magic (Backend_js_JsExprEmitter.emit (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (let __structural_receiver_8 = plan in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_8 "value"))))) (Backend_js_JsFunctionScope.exprScope (Obj.magic scope) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) : string) in (
             tempMaybeString := __assign_7;
             __assign_7
           ));

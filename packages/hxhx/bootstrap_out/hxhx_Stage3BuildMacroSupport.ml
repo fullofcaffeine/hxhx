@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage3BuildMacroSupport" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.Stage3BuildMacroSupport" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage3BuildMacroSupport" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.Stage3BuildMacroSupport" } : t)
 
 let parseGeneratedMembers = fun members -> (try (
   ignore (if members == Obj.magic (HxRuntime.hx_null) || HxArray.length members = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __anon_1 = HxAnon.create () in (

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable helpers : TypedFunction.t HxMap.string_map
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun helpers2 selected2 owner index -> let self = ({ __hx_type = HxType.class_ "TypedRequiredInlineLowering"; helpers = Obj.magic HxRuntime.hx_null; selected = Obj.magic HxRuntime.hx_null; writers = Obj.magic HxRuntime.hx_null; allocator = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null; semanticIndex = Obj.magic HxRuntime.hx_null; ownerIdentity = HxString.hx_null_string; controlOrdinal = 0; controlTargets = Obj.magic HxRuntime.hx_null; typeBindings = Obj.magic HxRuntime.hx_null; receiverPlace = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun helpers2 selected2 owner index -> let self = ({ __hx_type = HxType.instance_marker "TypedRequiredInlineLowering"; helpers = Obj.magic HxRuntime.hx_null; selected = Obj.magic HxRuntime.hx_null; writers = Obj.magic HxRuntime.hx_null; allocator = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null; semanticIndex = Obj.magic HxRuntime.hx_null; ownerIdentity = HxString.hx_null_string; controlOrdinal = 0; controlTargets = Obj.magic HxRuntime.hx_null; typeBindings = Obj.magic HxRuntime.hx_null; receiverPlace = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxRuntime.hx_null) in (
       (Obj.magic self : t).receiverPlace <- __assign_1;
@@ -56,7 +56,7 @@ let create = fun helpers2 selected2 owner index -> let self = ({ __hx_type = HxT
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedRequiredInlineLowering"; helpers = Obj.magic HxRuntime.hx_null; selected = Obj.magic HxRuntime.hx_null; writers = Obj.magic HxRuntime.hx_null; allocator = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null; semanticIndex = Obj.magic HxRuntime.hx_null; ownerIdentity = HxString.hx_null_string; controlOrdinal = 0; controlTargets = Obj.magic HxRuntime.hx_null; typeBindings = Obj.magic HxRuntime.hx_null; receiverPlace = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedRequiredInlineLowering"; helpers = Obj.magic HxRuntime.hx_null; selected = Obj.magic HxRuntime.hx_null; writers = Obj.magic HxRuntime.hx_null; allocator = Obj.magic HxRuntime.hx_null; active = Obj.magic HxRuntime.hx_null; semanticIndex = Obj.magic HxRuntime.hx_null; ownerIdentity = HxString.hx_null_string; controlOrdinal = 0; controlTargets = Obj.magic HxRuntime.hx_null; typeBindings = Obj.magic HxRuntime.hx_null; receiverPlace = Obj.magic HxRuntime.hx_null } : t)
 
 let usesImplicitReceiver = fun self (callee : TypedExpr.t) (declaration : TyDeclarationInfo.t) -> (try (
   ignore (if let __enum_eq_left_14 = TypedExpr.getTag (Obj.magic callee) () in let __enum_eq_right_15 = TypedExpr.NameRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_14) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_15) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr true)) else ());

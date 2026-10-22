@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable requested : bool }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerStopSignal"; requested = false } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerStopSignal"; requested = false } : t) in (
   ignore (ignore (let __place_receiver_1 = self in let __place_rhs_2 = false in (
     (__place_receiver_1 : t).requested <- __place_rhs_2;
     __place_rhs_2
@@ -14,7 +14,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Compilation
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerStopSignal"; requested = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerStopSignal"; requested = false } : t)
 
 let record = fun self (value : bool) -> ignore (ignore (let __place_receiver_3 = self in let __place_rhs_4 = value in (
   (__place_receiver_3 : t).requested <- __place_rhs_4;

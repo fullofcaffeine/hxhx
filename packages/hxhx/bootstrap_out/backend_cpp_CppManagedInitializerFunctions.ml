@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable projection : TypedBackendFieldInitializerP
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input2 application2 prefix -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedInitializerFunctions"; projection = Obj.magic HxRuntime.hx_null; application = Obj.magic HxRuntime.hx_null; input = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; links = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun input2 application2 prefix -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedInitializerFunctions"; projection = Obj.magic HxRuntime.hx_null; application = Obj.magic HxRuntime.hx_null; input = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; links = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if input2 == Obj.magic (HxRuntime.hx_null) || application2 == Obj.magic (HxRuntime.hx_null) || not (EReg.hx_match (Obj.magic (EReg.create ("^hxhx_function_[A-Za-z0-9_]+$" : string) ("" : string))) (prefix : string)) then HxType.hx_throw_typed_rtti (Obj.repr "initializer functions require exact field ownership and allocated symbols") ["Dynamic"] else ());
     let tempShortCircuit = ref (false : bool) in (
@@ -57,7 +57,7 @@ let create = fun input2 application2 prefix -> let self = ({ __hx_type = HxType.
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedInitializerFunctions"; projection = Obj.magic HxRuntime.hx_null; application = Obj.magic HxRuntime.hx_null; input = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; links = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedInitializerFunctions"; projection = Obj.magic HxRuntime.hx_null; application = Obj.magic HxRuntime.hx_null; input = Obj.magic HxRuntime.hx_null; plan = Obj.magic HxRuntime.hx_null; links = Obj.magic HxRuntime.hx_null } : t)
 
 let requireLink = fun self (expression : HxExpr.hxexpr) -> (try (
   ignore (let __obj_21 = (Obj.magic self : t).plan in (Obj.magic __obj_21 : Backend_cpp_CppManagedCaptureStorage.t).requireClosure (Obj.magic __obj_21) (Obj.magic expression));

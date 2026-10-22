@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerDriver" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "CompilerDriver" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDriver" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerDriver" } : t)
 
 let run = fun () -> ignore (let preferredFixtureRoot = "workloads/hih-compiler/fixtures/src" in let legacyFixtureRoot = "examples/hih-compiler/fixtures/src" in let tempString = ref (HxString.hx_null_string : string) in (
   ignore (if HxFileSystem.exists (preferredFixtureRoot : string) then let __assign_1 = preferredFixtureRoot in (

@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "CSharpNoEmitDiagnostics" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "CSharpNoEmitDiagnostics" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CSharpNoEmitDiagnostics" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CSharpNoEmitDiagnostics" } : t)
 
 let hasNamedPackage = fun lines -> (try let _g = ref 0 in (
   ignore (while !_g < HxArray.length lines do try ignore (let line = (let __array_read_receiver_75 = lines in let __array_read_index_76 = !_g in HxArray.get (Obj.magic __array_read_receiver_75) __array_read_index_76 : string) in (

@@ -26,7 +26,7 @@ type exprparser_t = { __hx_type : Obj.t; mutable lex : exprlexer_t; mutable defi
 
 let __reflaxe_ocaml__ = ()
 
-let exprlexer_create = fun s2 -> let self = ({ __hx_type = HxType.class_ "_HxConditionalCompilation.ExprLexer"; s = HxString.hx_null_string; i = 0 } : exprlexer_t) in (
+let exprlexer_create = fun s2 -> let self = ({ __hx_type = HxType.instance_marker "_HxConditionalCompilation.ExprLexer"; s = HxString.hx_null_string; i = 0 } : exprlexer_t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = 0 in (
       (__place_receiver_1 : exprlexer_t).i <- __place_rhs_2;
@@ -49,7 +49,7 @@ let exprlexer_create = fun s2 -> let self = ({ __hx_type = HxType.class_ "_HxCon
   self
 )
 
-let exprlexer___empty = fun () -> ({ __hx_type = HxType.class_ "_HxConditionalCompilation.ExprLexer"; s = HxString.hx_null_string; i = 0 } : exprlexer_t)
+let exprlexer___empty = fun () -> ({ __hx_type = HxType.instance_marker "_HxConditionalCompilation.ExprLexer"; s = HxString.hx_null_string; i = 0 } : exprlexer_t)
 
 let exprlexer_eof = fun self () -> (self : exprlexer_t).i >= (let __string_receiver_6 = (self : exprlexer_t).s in HxString.length __string_receiver_6)
 
@@ -383,7 +383,7 @@ let rec exprlexer_next = fun self () -> (try (
 
 let __reflaxe_ocaml__ = ()
 
-let exprparser_create = fun expr defines2 observedAccessByName2 -> let self = ({ __hx_type = HxType.class_ "_HxConditionalCompilation.ExprParser"; lex = Obj.magic HxRuntime.hx_null; defines = Obj.magic HxRuntime.hx_null; observedAccessByName = Obj.magic HxRuntime.hx_null; cur = Obj.magic HxRuntime.hx_null } : exprparser_t) in (
+let exprparser_create = fun expr defines2 observedAccessByName2 -> let self = ({ __hx_type = HxType.instance_marker "_HxConditionalCompilation.ExprParser"; lex = Obj.magic HxRuntime.hx_null; defines = Obj.magic HxRuntime.hx_null; observedAccessByName = Obj.magic HxRuntime.hx_null; cur = Obj.magic HxRuntime.hx_null } : exprparser_t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (exprlexer_create (expr : string)) in (
       (Obj.magic self : exprparser_t).lex <- __assign_1;
@@ -414,7 +414,7 @@ let exprparser_create = fun expr defines2 observedAccessByName2 -> let self = ({
   self
 )
 
-let exprparser___empty = fun () -> ({ __hx_type = HxType.class_ "_HxConditionalCompilation.ExprParser"; lex = Obj.magic HxRuntime.hx_null; defines = Obj.magic HxRuntime.hx_null; observedAccessByName = Obj.magic HxRuntime.hx_null; cur = Obj.magic HxRuntime.hx_null } : exprparser_t)
+let exprparser___empty = fun () -> ({ __hx_type = HxType.instance_marker "_HxConditionalCompilation.ExprParser"; lex = Obj.magic HxRuntime.hx_null; defines = Obj.magic HxRuntime.hx_null; observedAccessByName = Obj.magic HxRuntime.hx_null; cur = Obj.magic HxRuntime.hx_null } : exprparser_t)
 
 let exprparser_bump = fun self () -> ignore (ignore (let __assign_9 = Obj.magic (exprlexer_next (Obj.magic ((Obj.magic self : exprparser_t).lex)) ()) in (
   (Obj.magic self : exprparser_t).cur <- __assign_9;
@@ -734,12 +734,12 @@ let exprparser_observe = fun self (name : string) (access : CompilerConditionalD
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "HxConditionalCompilation" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "HxConditionalCompilation" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxConditionalCompilation" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxConditionalCompilation" } : t)
 
 let isSpace = fun (c : int) -> (if let hx_left = c in let hx_right = 9 in hx_left = hx_right then true else let hx_left_2 = c in let hx_right_2 = 32 in hx_left_2 = hx_right_2 : bool)
 

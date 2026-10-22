@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable revision : string; mutable requirements : 
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetRuntimePlan"; revision = HxString.hx_null_string; requirements = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; usesByPath = Obj.magic HxRuntime.hx_null; authority = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetRuntimePlan"; revision = HxString.hx_null_string; requirements = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; usesByPath = Obj.magic HxRuntime.hx_null; authority = Obj.magic HxRuntime.hx_null } : t)
 
 let reference = fun self (expression : Reflaxe_ocaml_target_OcamlTargetExpressionFact.t) (symbol : string) -> let this1 = (Obj.magic self : t).usesByPath in let key = ((Obj.magic expression : Reflaxe_ocaml_target_OcamlTargetExpressionFact.t).path : string) in let tempMaybeOcamlRuntimeUseOccurrence = HxMap.get_string this1 (key : string) in let use = tempMaybeOcamlRuntimeUseOccurrence in (
   ignore (if use == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "Shared target expression has no planned runtime use") ["Dynamic"] else ());
@@ -148,7 +148,7 @@ let rec collect = fun collection expression -> ignore (let ownerIdentity = (Obj.
   )
 ))
 
-let create = fun ownerIdentity bodyIdentity expressions profile finalOutput -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetRuntimePlan"; revision = HxString.hx_null_string; requirements = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; usesByPath = Obj.magic HxRuntime.hx_null; authority = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun ownerIdentity bodyIdentity expressions profile finalOutput -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetRuntimePlan"; revision = HxString.hx_null_string; requirements = Obj.magic HxRuntime.hx_null; occurrences = Obj.magic HxRuntime.hx_null; usesByPath = Obj.magic HxRuntime.hx_null; authority = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = HxMap.create_string () in (
       (Obj.magic self : t).usesByPath <- __assign_1;

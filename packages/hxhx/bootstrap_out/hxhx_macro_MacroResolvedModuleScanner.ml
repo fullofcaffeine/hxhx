@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.MacroResolvedModuleScanner" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.macro.MacroResolvedModuleScanner" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.MacroResolvedModuleScanner" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.macro.MacroResolvedModuleScanner" } : t)
 
 let gatherCurrentDefines = fun () -> let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (Hxhx_macro_MacroState.listDefinesPairsSorted ()) in (
   ignore (while !_g < HxArray.length _g1 do try ignore (let pair = Obj.magic (let __array_read_receiver_1 = _g1 in let __array_read_index_2 = !_g in HxArray.get (Obj.magic __array_read_receiver_1) __array_read_index_2) in (

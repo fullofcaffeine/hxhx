@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable constructors : Obj.t HxArray.t; mutable id
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun constructors2 -> let self = ({ __hx_type = HxType.class_ "HxEnumDeclaration"; constructors = Obj.magic HxRuntime.hx_null; identity = HxString.hx_null_string } : t) in (
+let create = fun constructors2 -> let self = ({ __hx_type = HxType.instance_marker "HxEnumDeclaration"; constructors = Obj.magic HxRuntime.hx_null; identity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (if constructors2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "enum declaration requires its constructor inventory") ["Dynamic"] else ());
     ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
@@ -52,7 +52,7 @@ let create = fun constructors2 -> let self = ({ __hx_type = HxType.class_ "HxEnu
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxEnumDeclaration"; constructors = Obj.magic HxRuntime.hx_null; identity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxEnumDeclaration"; constructors = Obj.magic HxRuntime.hx_null; identity = HxString.hx_null_string } : t)
 
 let getConstructors = fun self () -> let _g = Obj.magic (let __arr_22 = HxArray.create () in __arr_22) in let _g1 = ref 0 in let _g2 = Obj.magic ((Obj.magic self : t).constructors) in (
   ignore (while !_g1 < HxArray.length _g2 do ignore (let constructor = let __array_read_receiver_23 = _g2 in let __array_read_index_24 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_23) __array_read_index_24 in (

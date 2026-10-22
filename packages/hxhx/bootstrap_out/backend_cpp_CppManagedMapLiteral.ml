@@ -34,7 +34,7 @@ let render = fun input indent -> let storage = Backend_cpp_CppManagedMapStorage.
             ignore (_g := __new_50);
             __new_50
           ));
-          let _g2 = ref 0 in let _g1 = Obj.magic ((Obj.obj (HxAnon.get input "renderValue") : _ -> _ -> _ -> _) (Obj.magic (let __structural_receiver_51 = entry in Obj.obj (HxAnon.get __structural_receiver_51 "key"))) (key : string) (HxString.toStdString indent ^ "  " : string)) in (
+          let _g2 = ref 0 in let _g1 = Obj.magic ((Obj.obj (HxAnon.get input "renderValue") : _ -> _ -> _ -> _) (Obj.magic (let __structural_receiver_51 = entry in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_51 "key")))) (key : string) (HxString.toStdString indent ^ "  " : string)) in (
             ignore (while !_g2 < HxArray.length _g1 do ignore (let line = (let __array_read_receiver_52 = _g1 in let __array_read_index_53 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_52) __array_read_index_53 : string) in (
               ignore (let __old_54 = !_g2 in let __new_55 = HxInt.add __old_54 1 in (
                 ignore (_g2 := __new_55);
@@ -42,7 +42,7 @@ let render = fun input indent -> let storage = Backend_cpp_CppManagedMapStorage.
               ));
               let __array_receiver_56 = Obj.magic lines in let __array_arg_0_57 = (line : string) in HxArray.push __array_receiver_56 __array_arg_0_57
             )) done);
-            let _g2 = ref 0 in let _g1 = Obj.magic ((Obj.obj (HxAnon.get input "renderValue") : _ -> _ -> _ -> _) (Obj.magic (let __structural_receiver_58 = entry in Obj.obj (HxAnon.get __structural_receiver_58 "value"))) (value : string) (HxString.toStdString indent ^ "  " : string)) in (
+            let _g2 = ref 0 in let _g1 = Obj.magic ((Obj.obj (HxAnon.get input "renderValue") : _ -> _ -> _ -> _) (Obj.magic (let __structural_receiver_58 = entry in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_58 "value")))) (value : string) (HxString.toStdString indent ^ "  " : string)) in (
               ignore (while !_g2 < HxArray.length _g1 do ignore (let line = (let __array_read_receiver_59 = _g1 in let __array_read_index_60 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_59) __array_read_index_60 : string) in (
                 ignore (let __old_61 = !_g2 in let __new_62 = HxInt.add __old_61 1 in (
                   ignore (_g2 := __new_62);

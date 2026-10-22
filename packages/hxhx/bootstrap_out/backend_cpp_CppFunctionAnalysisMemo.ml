@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable emittedCallableContracts : (HxFunctionDecl
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppFunctionAnalysisMemo"; emittedCallableContracts = Obj.magic HxRuntime.hx_null; emittedCallableSelectionsInProgress = Obj.magic HxRuntime.hx_null; functionPreparationsInProgress = Obj.magic HxRuntime.hx_null; functionPreparations = Obj.magic HxRuntime.hx_null; erasedDynamicReturnScansInProgress = Obj.magic HxRuntime.hx_null; erasedDynamicReturnResults = Obj.magic HxRuntime.hx_null; inferredSignaturesInProgress = Obj.magic HxRuntime.hx_null; functionReturnTypes = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppFunctionAnalysisMemo"; emittedCallableContracts = Obj.magic HxRuntime.hx_null; emittedCallableSelectionsInProgress = Obj.magic HxRuntime.hx_null; functionPreparationsInProgress = Obj.magic HxRuntime.hx_null; functionPreparations = Obj.magic HxRuntime.hx_null; erasedDynamicReturnScansInProgress = Obj.magic HxRuntime.hx_null; erasedDynamicReturnResults = Obj.magic HxRuntime.hx_null; inferredSignaturesInProgress = Obj.magic HxRuntime.hx_null; functionReturnTypes = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_object ()) in (
       (Obj.magic self : t).emittedCallableContracts <- __assign_1;
@@ -44,4 +44,4 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppF
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppFunctionAnalysisMemo"; emittedCallableContracts = Obj.magic HxRuntime.hx_null; emittedCallableSelectionsInProgress = Obj.magic HxRuntime.hx_null; functionPreparationsInProgress = Obj.magic HxRuntime.hx_null; functionPreparations = Obj.magic HxRuntime.hx_null; erasedDynamicReturnScansInProgress = Obj.magic HxRuntime.hx_null; erasedDynamicReturnResults = Obj.magic HxRuntime.hx_null; inferredSignaturesInProgress = Obj.magic HxRuntime.hx_null; functionReturnTypes = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppFunctionAnalysisMemo"; emittedCallableContracts = Obj.magic HxRuntime.hx_null; emittedCallableSelectionsInProgress = Obj.magic HxRuntime.hx_null; functionPreparationsInProgress = Obj.magic HxRuntime.hx_null; functionPreparations = Obj.magic HxRuntime.hx_null; erasedDynamicReturnScansInProgress = Obj.magic HxRuntime.hx_null; erasedDynamicReturnResults = Obj.magic HxRuntime.hx_null; inferredSignaturesInProgress = Obj.magic HxRuntime.hx_null; functionReturnTypes = Obj.magic HxRuntime.hx_null } : t)

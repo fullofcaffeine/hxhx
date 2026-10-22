@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.PhpAbstractFacadeSupport" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.source.PhpAbstractFacadeSupport" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpAbstractFacadeSupport" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.PhpAbstractFacadeSupport" } : t)
 
 let hasAbstractMarker = fun cls -> (try let _g = ref 0 in let _g1 = Obj.magic (HxClassDecl.getMetadata (Obj.magic cls)) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let meta = (let __array_read_receiver_35 = _g1 in let __array_read_index_36 = !_g in HxArray.get (Obj.magic __array_read_receiver_35) __array_read_index_36 : string) in (

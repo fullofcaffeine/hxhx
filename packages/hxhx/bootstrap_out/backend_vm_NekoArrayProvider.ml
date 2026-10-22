@@ -112,12 +112,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoConstructionEmitter" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.vm.NekoConstructionEmitter" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoConstructionEmitter" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.NekoConstructionEmitter" } : t)
 
 let renderClassInitializer = fun out context info plan ctor -> ignore (let selfName = (Backend_vm_NekoTypedProgramProjection.constructionReceiverName (Obj.magic (Obj.obj (HxAnon.get context "typedProgram"))) () : string) in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
   ignore (if ctor == Obj.magic (HxRuntime.hx_null) then let __assign_192 = Obj.magic (let __represented_array_193 = HxArray.create () in __represented_array_193) in (
@@ -179,7 +179,7 @@ let renderClassInitializer = fun out context info plan ctor -> ignore (let selfN
                 ));
                 Backend_vm_NekoTargetCore.renderStmt (Obj.magic out) fieldContext (Obj.magic statement) ("  " : string)
               )) done);
-              if (let __structural_receiver_231 = body in Obj.obj (HxAnon.get __structural_receiver_231 "value")) != Obj.magic (HxRuntime.hx_null) then ignore (let __array_receiver_232 = Obj.magic out in let __array_arg_0_233 = (let __string_part_236 = "  " in let __string_part_237 = HxString.toStdString selfName in let __string_part_238 = "." in let __string_part_239 = HxString.toStdString (let __call_arg_0_234 = HxFieldDecl.getName (Obj.magic field) in Backend_vm_NekoTargetCore.safeIdent __call_arg_0_234) in let __string_part_240 = " = " in let __string_part_241 = HxString.toStdString (Backend_vm_NekoTargetCore.renderExpr fieldContext (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (let __structural_receiver_235 = body in Obj.obj (HxAnon.get __structural_receiver_235 "value"))))) in let __string_part_242 = ";" in (((((__string_part_236 ^ __string_part_237) ^ __string_part_238) ^ __string_part_239) ^ __string_part_240) ^ __string_part_241) ^ __string_part_242 : string) in HxArray.push __array_receiver_232 __array_arg_0_233) else ()
+              if (let __structural_receiver_231 = body in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_231 "value"))) != Obj.magic (HxRuntime.hx_null) then ignore (let __array_receiver_232 = Obj.magic out in let __array_arg_0_233 = (let __string_part_236 = "  " in let __string_part_237 = HxString.toStdString selfName in let __string_part_238 = "." in let __string_part_239 = HxString.toStdString (let __call_arg_0_234 = HxFieldDecl.getName (Obj.magic field) in Backend_vm_NekoTargetCore.safeIdent __call_arg_0_234) in let __string_part_240 = " = " in let __string_part_241 = HxString.toStdString (Backend_vm_NekoTargetCore.renderExpr fieldContext (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (let __structural_receiver_235 = body in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_235 "value")))))) in let __string_part_242 = ";" in (((((__string_part_236 ^ __string_part_237) ^ __string_part_238) ^ __string_part_239) ^ __string_part_240) ^ __string_part_241) ^ __string_part_242 : string) in HxArray.push __array_receiver_232 __array_arg_0_233) else ()
             )
           )) else ()
         )) done);
@@ -488,7 +488,7 @@ type nekomacroexprbuilder_t = { __hx_type : Obj.t; mutable fallback : HxExpr.hxe
 
 let __reflaxe_ocaml__ = ()
 
-let nekomacroexprbuilder_create = fun fallback2 arrayFactory2 -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoMacroExprBuilder"; fallback = Obj.magic HxRuntime.hx_null; arrayFactory = Obj.magic HxRuntime.hx_null; statements = Obj.magic HxRuntime.hx_null; nextObjectId = 0 } : nekomacroexprbuilder_t) in (
+let nekomacroexprbuilder_create = fun fallback2 arrayFactory2 -> let self = ({ __hx_type = HxType.instance_marker "backend.vm.NekoMacroExprBuilder"; fallback = Obj.magic HxRuntime.hx_null; arrayFactory = Obj.magic HxRuntime.hx_null; statements = Obj.magic HxRuntime.hx_null; nextObjectId = 0 } : nekomacroexprbuilder_t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = 0 in (
       (__place_receiver_1 : nekomacroexprbuilder_t).nextObjectId <- __place_rhs_2;
@@ -510,7 +510,7 @@ let nekomacroexprbuilder_create = fun fallback2 arrayFactory2 -> let self = ({ _
   self
 )
 
-let nekomacroexprbuilder___empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoMacroExprBuilder"; fallback = Obj.magic HxRuntime.hx_null; arrayFactory = Obj.magic HxRuntime.hx_null; statements = Obj.magic HxRuntime.hx_null; nextObjectId = 0 } : nekomacroexprbuilder_t)
+let nekomacroexprbuilder___empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.NekoMacroExprBuilder"; fallback = Obj.magic HxRuntime.hx_null; arrayFactory = Obj.magic HxRuntime.hx_null; statements = Obj.magic HxRuntime.hx_null; nextObjectId = 0 } : nekomacroexprbuilder_t)
 
 let nekomacroexprbuilder_render = fun self (root : string) -> let parts = Obj.magic (let __represented_array_7 = HxArray.create () in let __represented_array_element_0_8 = "(function() {" in (
   ignore (HxArray.push __represented_array_7 __represented_array_element_0_8);
@@ -1071,12 +1071,12 @@ let rec nekomacroexprbuilder_macroExprDef = fun self (expr : HxExpr.hxexpr) -> l
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoMacroExprLowering" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.vm.NekoMacroExprLowering" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoMacroExprLowering" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.NekoMacroExprLowering" } : t)
 
 let rec requiresArrayProvider = fun expr -> let tempResult = ref (false : bool) in (
   ignore (match expr with
@@ -1260,12 +1260,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoMacroTypeLowering" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.vm.NekoMacroTypeLowering" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoMacroTypeLowering" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.NekoMacroTypeLowering" } : t)
 
 let trimLeadingTypeColon = fun (raw : string) -> (let tempString = ref (HxString.hx_null_string : string) in (
   ignore (if raw == HxString.hx_null_string then let __assign_69 = ("" : string) in (
@@ -1524,7 +1524,7 @@ type t = { __hx_type : Obj.t; mutable binding : TyCallArgumentBinding.t; mutable
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun binding2 projected prefix2 -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoRestArguments"; binding = Obj.magic HxRuntime.hx_null; operands = Obj.magic HxRuntime.hx_null; prefix = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun binding2 projected prefix2 -> let self = ({ __hx_type = HxType.instance_marker "backend.vm.NekoRestArguments"; binding = Obj.magic HxRuntime.hx_null; operands = Obj.magic HxRuntime.hx_null; prefix = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let _gthis = Obj.magic self in (
     ignore (let __assign_1 = Obj.magic binding2 in (
       (Obj.magic self : t).binding <- __assign_1;
@@ -1669,7 +1669,7 @@ let create = fun binding2 projected prefix2 -> let self = ({ __hx_type = HxType.
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoRestArguments"; binding = Obj.magic HxRuntime.hx_null; operands = Obj.magic HxRuntime.hx_null; prefix = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.NekoRestArguments"; binding = Obj.magic HxRuntime.hx_null; operands = Obj.magic HxRuntime.hx_null; prefix = Obj.magic HxRuntime.hx_null } : t)
 
 let needsArrayFactory = fun self () -> Lambda.exists (let __struct_obj_51 = TyCallArgumentBinding.getSlots (Obj.magic ((Obj.magic self : t).binding)) () in let __struct_anon_52 = HxAnon.create () in (
   ignore (HxAnon.set __struct_anon_52 "iterator" (Obj.repr (fun () -> HxIterator.of_array __struct_obj_51)));
@@ -2050,12 +2050,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoStaticInitializationEmitter" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.vm.NekoStaticInitializationEmitter" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoStaticInitializationEmitter" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.NekoStaticInitializationEmitter" } : t)
 
 let renderInitializer = fun out context hx_initializer -> ignore ((
   ignore (TypedBackendFieldInitializerProjection.assertCurrent (Obj.magic hx_initializer) ());
@@ -2067,7 +2067,7 @@ let renderInitializer = fun out context hx_initializer -> ignore ((
       ));
       Backend_vm_NekoTargetCore.renderStmt (Obj.magic out) local (Obj.magic statement) ("" : string)
     )) done);
-    if (let __structural_receiver_51 = body in Obj.obj (HxAnon.get __structural_receiver_51 "value")) != Obj.magic (HxRuntime.hx_null) then ignore (let __array_receiver_52 = Obj.magic out in let __array_arg_0_53 = (let __string_part_57 = HxString.toStdString (let __call_arg_0_54 = TyNominalTypeId.getCanonicalName (Obj.magic (TyFieldInfo.getOwner (Obj.magic field) ())) () in Backend_vm_NekoTargetCore.renderStaticObjectRef __call_arg_0_54) in let __string_part_58 = "." in let __string_part_59 = HxString.toStdString (let __call_arg_0_55 = TyFieldInfo.getName (Obj.magic field) () in Backend_vm_NekoTargetCore.safeIdent __call_arg_0_55) in let __string_part_60 = " = " in let __string_part_61 = HxString.toStdString (Backend_vm_NekoEnumRuntimeType.tagValue local (Backend_vm_NekoTargetCore.renderExpr local (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (let __structural_receiver_56 = body in Obj.obj (HxAnon.get __structural_receiver_56 "value")))) : string)) in let __string_part_62 = ";" in ((((__string_part_57 ^ __string_part_58) ^ __string_part_59) ^ __string_part_60) ^ __string_part_61) ^ __string_part_62 : string) in HxArray.push __array_receiver_52 __array_arg_0_53) else ()
+    if (let __structural_receiver_51 = body in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_51 "value"))) != Obj.magic (HxRuntime.hx_null) then ignore (let __array_receiver_52 = Obj.magic out in let __array_arg_0_53 = (let __string_part_57 = HxString.toStdString (let __call_arg_0_54 = TyNominalTypeId.getCanonicalName (Obj.magic (TyFieldInfo.getOwner (Obj.magic field) ())) () in Backend_vm_NekoTargetCore.renderStaticObjectRef __call_arg_0_54) in let __string_part_58 = "." in let __string_part_59 = HxString.toStdString (let __call_arg_0_55 = TyFieldInfo.getName (Obj.magic field) () in Backend_vm_NekoTargetCore.safeIdent __call_arg_0_55) in let __string_part_60 = " = " in let __string_part_61 = HxString.toStdString (Backend_vm_NekoEnumRuntimeType.tagValue local (Backend_vm_NekoTargetCore.renderExpr local (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (let __structural_receiver_56 = body in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_56 "value"))))) : string)) in let __string_part_62 = ";" in ((((__string_part_57 ^ __string_part_58) ^ __string_part_59) ^ __string_part_60) ^ __string_part_61) ^ __string_part_62 : string) in HxArray.push __array_receiver_52 __array_arg_0_53) else ()
   )
 ))
 
@@ -2308,12 +2308,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoTargetCore" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.vm.NekoTargetCore" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoTargetCore" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.NekoTargetCore" } : t)
 
 let compileNekoSource = fun (nekoc : string) (sourcePath : string) -> ignore (let tempNumber = ref (0 : int) in let args = Obj.magic (let __represented_array_27 = HxArray.create () in let __represented_array_element_0_28 = sourcePath in (
   ignore (HxArray.push __represented_array_27 __represented_array_element_0_28);

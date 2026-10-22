@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable expressionRevision : string; mutable resul
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerConditionalDecision"; expressionRevision = HxString.hx_null_string; result = false; inputs = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerConditionalDecision"; expressionRevision = HxString.hx_null_string; result = false; inputs = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
 
 let getInputs = fun self () -> let __array_receiver_23 = Obj.magic ((Obj.magic self : t).inputs) in HxArray.copy __array_receiver_23
 
@@ -56,7 +56,7 @@ let normalizeInputs = fun values -> let byAccess = Obj.magic (HxMap.create_strin
   )
 )
 
-let create = fun expressionRevision2 result2 inputs2 -> let self = ({ __hx_type = HxType.class_ "CompilerConditionalDecision"; expressionRevision = HxString.hx_null_string; result = false; inputs = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun expressionRevision2 result2 inputs2 -> let self = ({ __hx_type = HxType.instance_marker "CompilerConditionalDecision"; expressionRevision = HxString.hx_null_string; result = false; inputs = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
     ignore (if expressionRevision2 == HxString.hx_null_string then let __assign_1 = ("" : string) in (
       tempRight := __assign_1;

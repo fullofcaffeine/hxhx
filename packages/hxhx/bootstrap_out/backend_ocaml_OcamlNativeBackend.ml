@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.OcamlNativeBackend" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.ocaml.OcamlNativeBackend" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.OcamlNativeBackend" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.ocaml.OcamlNativeBackend" } : t)
 
 let capabilities = fun () -> let __anonymous_value_8 = HxAnon.create () in (
   let __anonymous_field_value_9 = true in ignore (HxAnon.set __anonymous_value_8 "supportsNoEmit" (HxRuntime.box_bool __anonymous_field_value_9));

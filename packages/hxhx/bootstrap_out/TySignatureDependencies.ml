@@ -11,7 +11,7 @@ let __reflaxe_ocaml__ = ()
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "_TySignatureDependencies.SignatureDependencyPaths"; seen = Obj.magic HxRuntime.hx_null; ordered = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "_TySignatureDependencies.SignatureDependencyPaths"; seen = Obj.magic HxRuntime.hx_null; ordered = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxArray.create ()) in (
       (Obj.magic self : t).ordered <- __assign_1;
@@ -25,7 +25,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "_TySignatureDepe
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "_TySignatureDependencies.SignatureDependencyPaths"; seen = Obj.magic HxRuntime.hx_null; ordered = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "_TySignatureDependencies.SignatureDependencyPaths"; seen = Obj.magic HxRuntime.hx_null; ordered = Obj.magic HxRuntime.hx_null } : t)
 
 let add = fun self (path : string) -> ignore (ignore (let _this = Obj.magic ((Obj.magic self : t).seen) in let tempBool = HxMap.exists_string (Obj.magic _this) (path : string) in if not (tempBool) then ignore (let _this = Obj.magic ((Obj.magic self : t).seen) in (
   ignore (HxMap.set_string (Obj.magic _this) (path : string) true);

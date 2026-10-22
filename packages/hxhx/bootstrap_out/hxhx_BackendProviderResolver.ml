@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.BackendProviderResolver" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.BackendProviderResolver" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.BackendProviderResolver" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.BackendProviderResolver" } : t)
 
 let providerRegistrations = fun provider -> let __method_receiver_1 = provider in let __method_callable_2 = (Obj.obj (HxMethodDispatch.bind_structural (Obj.repr __method_receiver_1) "registrations" "method-dispatch:b2efe095f6e72953f741e64104b550d54f8bb658c93f4a9c04140c28bf6145b1") : unit -> Obj.t HxArray.t) in __method_callable_2 ()
 

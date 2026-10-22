@@ -21,7 +21,7 @@ let render = fun input indent -> let storage = Backend_cpp_CppManagedMapStorage.
         ));
         let __array_receiver_39 = Obj.magic lines in let __array_arg_0_40 = (line : string) in HxArray.push __array_receiver_39 __array_arg_0_40
       )) done);
-      let operand_expression = Obj.magic (let __structural_receiver_41 = input in Obj.obj (HxAnon.get __structural_receiver_41 "key")) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.obj (HxAnon.get input "renderValue") : _ -> _ -> _ -> _) (Obj.magic operand_expression) (key : string) (HxString.toStdString indent ^ "  " : string)) in (
+      let operand_expression = Obj.magic (let __structural_receiver_41 = input in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_41 "key"))) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.obj (HxAnon.get input "renderValue") : _ -> _ -> _ -> _) (Obj.magic operand_expression) (key : string) (HxString.toStdString indent ^ "  " : string)) in (
         ignore (while !_g < HxArray.length _g1 do ignore (let line = (let __array_read_receiver_42 = _g1 in let __array_read_index_43 = !_g in HxArray.get (Obj.magic __array_read_receiver_42) __array_read_index_43 : string) in (
           ignore (let __old_44 = !_g in let __new_45 = HxInt.add __old_44 1 in (
             ignore (_g := __new_45);
@@ -29,7 +29,7 @@ let render = fun input indent -> let storage = Backend_cpp_CppManagedMapStorage.
           ));
           let __array_receiver_46 = Obj.magic lines in let __array_arg_0_47 = (line : string) in HxArray.push __array_receiver_46 __array_arg_0_47
         )) done);
-        let operand_expression = Obj.magic (let __structural_receiver_48 = input in Obj.obj (HxAnon.get __structural_receiver_48 "value")) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.obj (HxAnon.get input "renderValue") : _ -> _ -> _ -> _) (Obj.magic operand_expression) (value : string) (HxString.toStdString indent ^ "  " : string)) in (
+        let operand_expression = Obj.magic (let __structural_receiver_48 = input in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_48 "value"))) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.obj (HxAnon.get input "renderValue") : _ -> _ -> _ -> _) (Obj.magic operand_expression) (value : string) (HxString.toStdString indent ^ "  " : string)) in (
           ignore (while !_g < HxArray.length _g1 do ignore (let line = (let __array_read_receiver_49 = _g1 in let __array_read_index_50 = !_g in HxArray.get (Obj.magic __array_read_receiver_49) __array_read_index_50 : string) in (
             ignore (let __old_51 = !_g in let __new_52 = HxInt.add __old_51 1 in (
               ignore (_g := __new_52);

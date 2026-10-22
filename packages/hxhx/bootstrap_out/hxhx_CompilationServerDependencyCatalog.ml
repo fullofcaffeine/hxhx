@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable snapshotByInvocation : CompilerDependencyS
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun maxInvocations2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerDependencyCatalog"; snapshotByInvocation = Obj.magic HxRuntime.hx_null; invocationOrder = Obj.magic HxRuntime.hx_null; maxInvocations = 0 } : t) in (
+let create = fun maxInvocations2 -> let self = ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerDependencyCatalog"; snapshotByInvocation = Obj.magic HxRuntime.hx_null; invocationOrder = Obj.magic HxRuntime.hx_null; maxInvocations = 0 } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_string ()) in (
       (Obj.magic self : t).snapshotByInvocation <- __assign_1;
@@ -34,7 +34,7 @@ let create = fun maxInvocations2 -> let self = ({ __hx_type = HxType.class_ "hxh
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerDependencyCatalog"; snapshotByInvocation = Obj.magic HxRuntime.hx_null; invocationOrder = Obj.magic HxRuntime.hx_null; maxInvocations = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerDependencyCatalog"; snapshotByInvocation = Obj.magic HxRuntime.hx_null; invocationOrder = Obj.magic HxRuntime.hx_null; maxInvocations = 0 } : t)
 
 let reset = fun self () -> ignore (ignore (let _this = Obj.magic ((Obj.magic self : t).snapshotByInvocation) in (
   ignore (HxMap.clear_string (Obj.magic _this));

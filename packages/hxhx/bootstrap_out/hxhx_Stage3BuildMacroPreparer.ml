@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable runtimeMode : string; mutable typeOnly : b
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun runtimeMode2 typeOnly2 hadConfiguredExternalHost2 macroHostClassPaths2 requestContext2 initialSession -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage3BuildMacroPreparer"; runtimeMode = HxString.hx_null_string; typeOnly = false; hadConfiguredExternalHost = false; macroHostClassPaths = Obj.magic HxRuntime.hx_null; requestContext = Obj.magic HxRuntime.hx_null; output = Obj.magic HxRuntime.hx_null; prepared = Obj.magic HxRuntime.hx_null; autoBuiltEntrypoints = Obj.magic HxRuntime.hx_null; session = Obj.magic HxRuntime.hx_null; autoBuiltExternalHost = false; skippedIndex = 0; closed = false } : t) in (
+let create = fun runtimeMode2 typeOnly2 hadConfiguredExternalHost2 macroHostClassPaths2 requestContext2 initialSession -> let self = ({ __hx_type = HxType.instance_marker "hxhx.Stage3BuildMacroPreparer"; runtimeMode = HxString.hx_null_string; typeOnly = false; hadConfiguredExternalHost = false; macroHostClassPaths = Obj.magic HxRuntime.hx_null; requestContext = Obj.magic HxRuntime.hx_null; output = Obj.magic HxRuntime.hx_null; prepared = Obj.magic HxRuntime.hx_null; autoBuiltEntrypoints = Obj.magic HxRuntime.hx_null; session = Obj.magic HxRuntime.hx_null; autoBuiltExternalHost = false; skippedIndex = 0; closed = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (runtimeMode2 : string) in (
       (Obj.magic self : t).runtimeMode <- __assign_1;
@@ -69,7 +69,7 @@ let create = fun runtimeMode2 typeOnly2 hadConfiguredExternalHost2 macroHostClas
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage3BuildMacroPreparer"; runtimeMode = HxString.hx_null_string; typeOnly = false; hadConfiguredExternalHost = false; macroHostClassPaths = Obj.magic HxRuntime.hx_null; requestContext = Obj.magic HxRuntime.hx_null; output = Obj.magic HxRuntime.hx_null; prepared = Obj.magic HxRuntime.hx_null; autoBuiltEntrypoints = Obj.magic HxRuntime.hx_null; session = Obj.magic HxRuntime.hx_null; autoBuiltExternalHost = false; skippedIndex = 0; closed = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.Stage3BuildMacroPreparer"; runtimeMode = HxString.hx_null_string; typeOnly = false; hadConfiguredExternalHost = false; macroHostClassPaths = Obj.magic HxRuntime.hx_null; requestContext = Obj.magic HxRuntime.hx_null; output = Obj.magic HxRuntime.hx_null; prepared = Obj.magic HxRuntime.hx_null; autoBuiltEntrypoints = Obj.magic HxRuntime.hx_null; session = Obj.magic HxRuntime.hx_null; autoBuiltExternalHost = false; skippedIndex = 0; closed = false } : t)
 
 let getSession = fun self () -> (Obj.magic self : t).session
 

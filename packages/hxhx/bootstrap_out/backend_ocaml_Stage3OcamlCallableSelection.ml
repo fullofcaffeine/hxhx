@@ -6,7 +6,7 @@ type callableusescan_t = { __hx_type : Obj.t; mutable candidate : Obj.t; mutable
 
 let __reflaxe_ocaml__ = ()
 
-let callableusescan_create = fun candidate2 candidates2 -> let self = ({ __hx_type = HxType.class_ "backend.ocaml._Stage3OcamlCallableSelection.CallableUseScan"; candidate = Obj.magic HxRuntime.hx_null; candidates = Obj.magic HxRuntime.hx_null; unresolvedClassValue = false } : callableusescan_t) in (
+let callableusescan_create = fun candidate2 candidates2 -> let self = ({ __hx_type = HxType.instance_marker "backend.ocaml._Stage3OcamlCallableSelection.CallableUseScan"; candidate = Obj.magic HxRuntime.hx_null; candidates = Obj.magic HxRuntime.hx_null; unresolvedClassValue = false } : callableusescan_t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = false in (
       (__place_receiver_1 : callableusescan_t).unresolvedClassValue <- __place_rhs_2;
@@ -24,7 +24,7 @@ let callableusescan_create = fun candidate2 candidates2 -> let self = ({ __hx_ty
   self
 )
 
-let callableusescan___empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml._Stage3OcamlCallableSelection.CallableUseScan"; candidate = Obj.magic HxRuntime.hx_null; candidates = Obj.magic HxRuntime.hx_null; unresolvedClassValue = false } : callableusescan_t)
+let callableusescan___empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.ocaml._Stage3OcamlCallableSelection.CallableUseScan"; candidate = Obj.magic HxRuntime.hx_null; candidates = Obj.magic HxRuntime.hx_null; unresolvedClassValue = false } : callableusescan_t)
 
 let callableusescan_connect = fun self (id : string) -> ignore (ignore (if not (let __array_receiver_27 = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : callableusescan_t).candidate) "dependencies")) in let __array_arg_0_28 = (id : string) in HxArray.contains __array_receiver_27 __array_arg_0_28) then ignore (let __array_receiver_29 = Obj.magic (Obj.obj (HxAnon.get ((Obj.magic self : callableusescan_t).candidate) "dependencies")) in let __array_arg_0_30 = (id : string) in HxArray.push __array_receiver_29 __array_arg_0_30) else ()))
 

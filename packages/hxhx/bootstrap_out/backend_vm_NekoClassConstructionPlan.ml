@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable returnsBackingValue : bool; mutable lineag
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun graph program identity -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoClassConstructionPlan"; returnsBackingValue = false; lineage = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; instanceFields = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun graph program identity -> let self = ({ __hx_type = HxType.instance_marker "backend.vm.NekoClassConstructionPlan"; returnsBackingValue = false; lineage = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; instanceFields = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_string ()) in (
       (Obj.magic self : t).instanceMethods <- __assign_1;
@@ -83,7 +83,7 @@ let create = fun graph program identity -> let self = ({ __hx_type = HxType.clas
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoClassConstructionPlan"; returnsBackingValue = false; lineage = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; instanceFields = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.NekoClassConstructionPlan"; returnsBackingValue = false; lineage = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null; instanceFields = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null } : t)
 
 let hasOwnStringConversion = fun self () -> (try let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).methods) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let hx_method = let __array_read_receiver_40 = _g1 in let __array_read_index_41 = !_g in HxArray.get (Obj.magic __array_read_receiver_40) __array_read_index_41 in (

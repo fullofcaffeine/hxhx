@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "ParserStage" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "ParserStage" } : t) in (
   ignore (ignore ());
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "ParserStage" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "ParserStage" } : t)
 
 let expectedMainClassFromFile = fun (filePath : string) -> (try (
   ignore (if filePath == Obj.magic (HxRuntime.hx_null) || (let __string_receiver_1 = filePath in HxString.length __string_receiver_1) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());

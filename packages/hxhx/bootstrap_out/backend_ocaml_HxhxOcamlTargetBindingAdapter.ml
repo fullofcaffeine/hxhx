@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.HxhxOcamlTargetBindingAdapter" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.ocaml.HxhxOcamlTargetBindingAdapter" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.HxhxOcamlTargetBindingAdapter" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.ocaml.HxhxOcamlTargetBindingAdapter" } : t)
 
 let role = fun kind -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Reflaxe_ocaml_target_OcamlTargetBindingFact.ocamltargetbindingrole) in (
   ignore (match kind with

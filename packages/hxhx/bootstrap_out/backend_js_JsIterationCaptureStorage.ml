@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable catalog : unit -> TypedBackendCaptureCatal
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun catalog2 locals2 -> let self = ({ __hx_type = HxType.class_ "backend.js.JsIterationCaptureStorage"; catalog = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; names = Obj.magic HxRuntime.hx_null; prepared = false } : t) in (
+let create = fun catalog2 locals2 -> let self = ({ __hx_type = HxType.instance_marker "backend.js.JsIterationCaptureStorage"; catalog = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; names = Obj.magic HxRuntime.hx_null; prepared = false } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = false in (
       (__place_receiver_1 : t).prepared <- __place_rhs_2;
@@ -28,7 +28,7 @@ let create = fun catalog2 locals2 -> let self = ({ __hx_type = HxType.class_ "ba
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsIterationCaptureStorage"; catalog = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; names = Obj.magic HxRuntime.hx_null; prepared = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.js.JsIterationCaptureStorage"; catalog = Obj.magic HxRuntime.hx_null; locals = Obj.magic HxRuntime.hx_null; names = Obj.magic HxRuntime.hx_null; prepared = false } : t)
 
 let prepare = fun self () -> ignore (ignore (try ignore ((
   ignore (if (Obj.magic self : t).prepared then Stdlib.raise (HxRuntime.Hx_return_void) else ());

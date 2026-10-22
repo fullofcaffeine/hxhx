@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable plan : Obj.t; mutable expression : HxExpr.
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun plan2 expression2 nativeName2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedEnvironmentEmitter"; plan = Obj.magic HxRuntime.hx_null; expression = Obj.magic HxRuntime.hx_null; nativeName = HxString.hx_null_string } : t) in (
+let create = fun plan2 expression2 nativeName2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedEnvironmentEmitter"; plan = Obj.magic HxRuntime.hx_null; expression = Obj.magic HxRuntime.hx_null; nativeName = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (if plan2 == Obj.magic (HxRuntime.hx_null) || expression2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "managed environment requires an exact closure plan") ["Dynamic"] else ());
     ignore (if nativeName2 == HxString.hx_null_string || not (EReg.hx_match (Obj.magic (EReg.create ("^hxhx_env_[A-Za-z0-9_]+$" : string) ("" : string))) (nativeName2 : string)) then HxType.hx_throw_typed_rtti (Obj.repr "managed environment requires a generated C++ identifier") ["Dynamic"] else ());
@@ -27,7 +27,7 @@ let create = fun plan2 expression2 nativeName2 -> let self = ({ __hx_type = HxTy
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedEnvironmentEmitter"; plan = Obj.magic HxRuntime.hx_null; expression = Obj.magic HxRuntime.hx_null; nativeName = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedEnvironmentEmitter"; plan = Obj.magic HxRuntime.hx_null; expression = Obj.magic HxRuntime.hx_null; nativeName = HxString.hx_null_string } : t)
 
 let cellField = fun self (binding : TyLocalBinding.t) -> (try let cells = Obj.magic (Backend_cpp_CppManagedStoragePlan.cppmanagedfunctionplan_getCells (Obj.magic (let __method_receiver_7 = (Obj.magic self : t).plan in let __method_callable_8 = (Obj.obj (HxMethodDispatch.bind_structural (Obj.repr __method_receiver_7) "requireClosure" "method-dispatch:04af31523576da49f5ff81aeb908de1ebda48843a24452d9accae8937d007565") : HxExpr.hxexpr -> Backend_cpp_CppManagedStoragePlan.cppmanagedfunctionplan_t) in let __method_argument_9 = Obj.magic ((Obj.magic self : t).expression) in __method_callable_8 __method_argument_9)) ()) in let _g = ref 0 in let _g1 = HxArray.length cells in (
   ignore (while !_g < _g1 do ignore (let index = let __old_10 = !_g in let __new_11 = HxInt.add __old_10 1 in (

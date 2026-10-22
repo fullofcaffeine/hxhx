@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable byProjectedName : string HxMap.string_map;
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun localCatalog2 hasInstanceReceiver normalize -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.Stage3OcamlLocalNames"; byProjectedName = Obj.magic HxRuntime.hx_null; localCatalog = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun localCatalog2 hasInstanceReceiver normalize -> let self = ({ __hx_type = HxType.instance_marker "backend.ocaml.Stage3OcamlLocalNames"; byProjectedName = Obj.magic HxRuntime.hx_null; localCatalog = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if localCatalog2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "Stage3 OCaml local naming requires a typed local catalog") ["Dynamic"] else ());
     ignore (if normalize == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "Stage3 OCaml local naming requires a target normalizer") ["Dynamic"] else ());
@@ -48,7 +48,7 @@ let create = fun localCatalog2 hasInstanceReceiver normalize -> let self = ({ __
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.Stage3OcamlLocalNames"; byProjectedName = Obj.magic HxRuntime.hx_null; localCatalog = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.ocaml.Stage3OcamlLocalNames"; byProjectedName = Obj.magic HxRuntime.hx_null; localCatalog = Obj.magic HxRuntime.hx_null } : t)
 
 let requireOwner = fun self (catalog : TypedBackendLocalCatalog.t) -> ignore (ignore (if Obj.repr ((Obj.magic self : t).localCatalog) != Obj.repr catalog then HxType.hx_throw_typed_rtti (Obj.repr "Native callback names belong to another local catalog") ["Dynamic"] else ()))
 

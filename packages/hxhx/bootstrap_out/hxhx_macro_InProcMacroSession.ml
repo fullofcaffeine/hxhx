@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable afterTypingHooks : (unit -> unit) HxArray.
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.InProcMacroSession"; afterTypingHooks = Obj.magic HxRuntime.hx_null; onGenerateHooks = Obj.magic HxRuntime.hx_null; afterGenerateHooks = Obj.magic HxRuntime.hx_null; effectSink = Obj.magic HxRuntime.hx_null; nativeExpressions = Obj.magic HxRuntime.hx_null; nativeModuleTouched = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.macro.InProcMacroSession"; afterTypingHooks = Obj.magic HxRuntime.hx_null; onGenerateHooks = Obj.magic HxRuntime.hx_null; afterGenerateHooks = Obj.magic HxRuntime.hx_null; effectSink = Obj.magic HxRuntime.hx_null; nativeExpressions = Obj.magic HxRuntime.hx_null; nativeModuleTouched = false } : t)
 
 let runHook = fun self (kind : string) (id : int) -> ignore (ignore (let tempString = ref (HxString.hx_null_string : string) in (
   ignore (if kind == HxString.hx_null_string then let __assign_111 = ("" : string) in (
@@ -110,7 +110,7 @@ let registerAfterGenerateHook = fun self (cb : unit -> unit) -> ignore (ignore (
   let __call_arg_0_159 = "afterGenerate" in let __call_arg_1_160 = id in Hxhx_macro_MacroState.registerHook __call_arg_0_159 __call_arg_1_160
 )))
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.InProcMacroSession"; afterTypingHooks = Obj.magic HxRuntime.hx_null; onGenerateHooks = Obj.magic HxRuntime.hx_null; afterGenerateHooks = Obj.magic HxRuntime.hx_null; effectSink = Obj.magic HxRuntime.hx_null; nativeExpressions = Obj.magic HxRuntime.hx_null; nativeModuleTouched = false } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.macro.InProcMacroSession"; afterTypingHooks = Obj.magic HxRuntime.hx_null; onGenerateHooks = Obj.magic HxRuntime.hx_null; afterGenerateHooks = Obj.magic HxRuntime.hx_null; effectSink = Obj.magic HxRuntime.hx_null; nativeExpressions = Obj.magic HxRuntime.hx_null; nativeModuleTouched = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       (Obj.magic self : t).afterTypingHooks <- __assign_1;

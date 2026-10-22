@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TyperStage" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TyperStage" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyperStage" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyperStage" } : t)
 
 let isStrict = fun () -> let v = (HxSys.getEnv ("HXHX_TYPER_STRICT" : string) : string) in (let __string_eq_left_1 = v in let __string_eq_right_2 = "1" in HxString.equals __string_eq_left_1 __string_eq_right_2) || (let __string_eq_left_3 = v in let __string_eq_right_4 = "true" in HxString.equals __string_eq_left_3 __string_eq_right_4) || (let __string_eq_left_5 = v in let __string_eq_right_6 = "yes" in HxString.equals __string_eq_left_5 __string_eq_right_6)
 

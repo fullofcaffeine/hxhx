@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable name : string; mutable typeHint : string; 
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun name2 typeHint2 position2 -> let self = ({ __hx_type = HxType.class_ "HxSourceCatch"; name = HxString.hx_null_string; typeHint = HxString.hx_null_string; position = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun name2 typeHint2 position2 -> let self = ({ __hx_type = HxType.instance_marker "HxSourceCatch"; name = HxString.hx_null_string; typeHint = HxString.hx_null_string; position = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if name2 == HxString.hx_null_string || (let __string_receiver_1 = name2 in HxString.length __string_receiver_1) = 0 || position2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "source catch requires a name and source position") ["Dynamic"] else ());
     ignore (let __assign_2 = (name2 : string) in (
@@ -34,7 +34,7 @@ let create = fun name2 typeHint2 position2 -> let self = ({ __hx_type = HxType.c
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxSourceCatch"; name = HxString.hx_null_string; typeHint = HxString.hx_null_string; position = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxSourceCatch"; name = HxString.hx_null_string; typeHint = HxString.hx_null_string; position = Obj.magic HxRuntime.hx_null } : t)
 
 let getName = fun self () -> (Obj.magic self : t).name
 

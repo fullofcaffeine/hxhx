@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable catalog : Obj.t; mutable contents : string
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun runtimeDirectory -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetRuntimeSources"; catalog = Obj.magic HxRuntime.hx_null; contents = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun runtimeDirectory -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetRuntimeSources"; catalog = Obj.magic HxRuntime.hx_null; contents = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = HxMap.create_string () in (
       (Obj.magic self : t).contents <- __assign_1;
@@ -45,7 +45,7 @@ let create = fun runtimeDirectory -> let self = ({ __hx_type = HxType.class_ "re
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetRuntimeSources"; catalog = Obj.magic HxRuntime.hx_null; contents = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetRuntimeSources"; catalog = Obj.magic HxRuntime.hx_null; contents = Obj.magic HxRuntime.hx_null } : t)
 
 let select = fun self (roots : string HxArray.t) (profile : string) -> let modules = Obj.magic (Reflaxe_ocaml_runtimegen_RuntimeSourceManifest.resolveClosure ((Obj.magic self : t).catalog) (Obj.magic roots) (profile : string) false) in let files = Obj.magic (HxArray.create ()) in let libraries = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
   ignore (while !_g < HxArray.length modules do ignore (let entry = let __array_read_receiver_33 = modules in let __array_read_index_34 = !_g in HxArray.get (Obj.magic __array_read_receiver_33) __array_read_index_34 in (

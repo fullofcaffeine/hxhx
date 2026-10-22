@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable path : string; mutable kind : HxModuleDire
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxModuleDirective"; path = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxModuleDirective"; path = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null } : t)
 
 let getPath = fun directive -> (Obj.magic directive : t).path
 
@@ -68,7 +68,7 @@ let isBootstrapIdentifier = fun (value : string) -> (try (
 ) with
   | HxRuntime.Hx_return __ret_76 -> (Obj.obj __ret_76 : bool) : bool)
 
-let create = fun path2 kind2 -> let self = ({ __hx_type = HxType.class_ "HxModuleDirective"; path = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun path2 kind2 -> let self = ({ __hx_type = HxType.instance_marker "HxModuleDirective"; path = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let tempString = ref (HxString.hx_null_string : string) in (
     ignore (if path2 == HxString.hx_null_string then let __assign_1 = "" in (
       tempString := __assign_1;

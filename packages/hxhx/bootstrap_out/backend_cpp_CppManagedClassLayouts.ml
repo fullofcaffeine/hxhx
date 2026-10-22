@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable program : Backend_cpp_CppTypedProgramProje
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program2 symbol2 publish2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedClassLayouts"; program = Obj.magic HxRuntime.hx_null; symbol = Obj.magic HxRuntime.hx_null; publish = Obj.magic HxRuntime.hx_null; applications = Obj.magic HxRuntime.hx_null; nextInstanceSymbol = 0 } : t) in (
+let create = fun program2 symbol2 publish2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedClassLayouts"; program = Obj.magic HxRuntime.hx_null; symbol = Obj.magic HxRuntime.hx_null; publish = Obj.magic HxRuntime.hx_null; applications = Obj.magic HxRuntime.hx_null; nextInstanceSymbol = 0 } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = 0 in (
       (__place_receiver_1 : t).nextInstanceSymbol <- __place_rhs_2;
@@ -32,7 +32,7 @@ let create = fun program2 symbol2 publish2 -> let self = ({ __hx_type = HxType.c
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedClassLayouts"; program = Obj.magic HxRuntime.hx_null; symbol = Obj.magic HxRuntime.hx_null; publish = Obj.magic HxRuntime.hx_null; applications = Obj.magic HxRuntime.hx_null; nextInstanceSymbol = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedClassLayouts"; program = Obj.magic HxRuntime.hx_null; symbol = Obj.magic HxRuntime.hx_null; publish = Obj.magic HxRuntime.hx_null; applications = Obj.magic HxRuntime.hx_null; nextInstanceSymbol = 0 } : t)
 
 let renderInstances = fun self () -> (
   ignore (Backend_cpp_CppTypedProgramProjection.assertPlanningCurrent (Obj.magic ((Obj.magic self : t).program)) ());

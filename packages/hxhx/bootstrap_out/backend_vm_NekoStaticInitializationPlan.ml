@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable order : TypedStaticStartupOrder.t; mutable
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun source program2 -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoStaticInitializationPlan"; order = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun source program2 -> let self = ({ __hx_type = HxType.instance_marker "backend.vm.NekoStaticInitializationPlan"; order = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic program2 in (
       (Obj.magic self : t).program <- __assign_1;
@@ -53,7 +53,7 @@ let create = fun source program2 -> let self = ({ __hx_type = HxType.class_ "bac
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoStaticInitializationPlan"; order = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.NekoStaticInitializationPlan"; order = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null } : t)
 
 let getClasses = fun self () -> let result = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (TypedStaticStartupOrder.getClasses (Obj.magic ((Obj.magic self : t).order)) ()) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let owner = Obj.magic (let __array_read_receiver_21 = _g1 in let __array_read_index_22 = !_g in HxArray.get (Obj.magic __array_read_receiver_21) __array_read_index_22) in (
@@ -74,8 +74,8 @@ let isEarlyFunction = fun self (hx_initializer : TypedBackendFieldInitializerPro
   ignore (if Obj.repr (Backend_vm_NekoTypedProgramProjection.requireDeclaredInitializer (Obj.magic ((Obj.magic self : t).program)) (Obj.magic (TypedBackendFieldInitializerProjection.getDeclaration (Obj.magic hx_initializer) ()))) != Obj.repr hx_initializer then HxType.hx_throw_typed_rtti (Obj.repr "Neko early initializer belongs to another program projection") ["Dynamic"] else ());
   ignore (if not (TyFieldInfo.getIsStatic (Obj.magic (TypedBackendFieldInitializerProjection.getField (Obj.magic hx_initializer) ())) ()) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let body = TypedControlStatements.initializerBody (Obj.magic (TypedBackendFieldInitializerProjection.getExpression (Obj.magic hx_initializer) ())) (TypedBackendFieldInitializerProjection.getStableIdentity (Obj.magic hx_initializer) () : string) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) in (
-    ignore (if HxArray.length (Obj.obj (HxAnon.get body "statements")) <> 0 || (let __structural_receiver_27 = body in Obj.obj (HxAnon.get __structural_receiver_27 "value")) == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-    let value = ref (let __structural_receiver_28 = body in Obj.obj (HxAnon.get __structural_receiver_28 "value")) in (
+    ignore (if HxArray.length (Obj.obj (HxAnon.get body "statements")) <> 0 || (let __structural_receiver_27 = body in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_27 "value"))) == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    let value = ref (let __structural_receiver_28 = body in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_28 "value"))) in (
       ignore (if Obj.magic (!value) == Obj.magic (HxRuntime.hx_null) then ignore () else ignore (match let __enum_idx_38 = Obj.magic (!value) in if __enum_idx_38 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_38 with
         | HxExpr.EParenthesized (_, _) -> 0
         | HxExpr.ESourceTry (_, _, _) -> 1
@@ -160,8 +160,8 @@ let earlyNativeBinding = fun self (hx_initializer : TypedBackendFieldInitializer
   let field = Obj.magic (TypedBackendFieldInitializerProjection.getField (Obj.magic hx_initializer) ()) in let owner = Obj.magic (Backend_vm_NekoTypedProgramProjection.requireClass (Obj.magic ((Obj.magic self : t).program)) (TyNominalTypeId.getCanonicalName (Obj.magic (TyFieldInfo.getOwner (Obj.magic field) ())) () : string)) in let fieldType = Obj.magic (Obj.obj (HxAnon.get (TypedBackendClassSemanticFacts.requireField (Obj.magic (TypedBackendClassProjection.requireSemanticFacts (Obj.magic owner) ())) (Obj.magic field)) "semanticType")) in (
     ignore (if not (TyType.isDynamic (Obj.magic fieldType) ()) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     let body = TypedControlStatements.initializerBody (Obj.magic (TypedBackendFieldInitializerProjection.getExpression (Obj.magic hx_initializer) ())) (TypedBackendFieldInitializerProjection.getStableIdentity (Obj.magic hx_initializer) () : string) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) in (
-      ignore (if HxArray.length (Obj.obj (HxAnon.get body "statements")) <> 0 || (let __structural_receiver_40 = body in Obj.obj (HxAnon.get __structural_receiver_40 "value")) == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-      let selected = Obj.magic (Backend_vm_NekoExactStaticCallPlan.fromExpression (Obj.magic ((Obj.magic self : t).program)) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (let __structural_receiver_41 = body in Obj.obj (HxAnon.get __structural_receiver_41 "value"))))) in (
+      ignore (if HxArray.length (Obj.obj (HxAnon.get body "statements")) <> 0 || (let __structural_receiver_40 = body in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_40 "value"))) == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+      let selected = Obj.magic (Backend_vm_NekoExactStaticCallPlan.fromExpression (Obj.magic ((Obj.magic self : t).program)) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (let __structural_receiver_41 = body in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_41 "value")))))) in (
         ignore (if selected == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
         let declaration = Obj.magic (TypedBackendFunctionProjection.requireSemanticDeclaration (Obj.magic (Obj.obj (HxAnon.get ((Obj.magic selected : Backend_vm_NekoExactStaticCallPlan.t).selected) "body"))) ()) in (
           ignore (if (let __string_eq_left_42 = TyNominalTypeId.getCanonicalName (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) () in let __string_eq_right_43 = "neko.Lib" in not (HxString.equals __string_eq_left_42 __string_eq_right_43)) || (let __string_eq_left_44 = TyFunSig.getName (Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration) ())) () in let __string_eq_right_45 = "load" in not (HxString.equals __string_eq_left_44 __string_eq_right_45)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());

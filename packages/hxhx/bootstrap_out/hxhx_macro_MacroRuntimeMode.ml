@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.MacroRuntimeMode" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.macro.MacroRuntimeMode" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.MacroRuntimeMode" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.macro.MacroRuntimeMode" } : t)
 
 let openSession = fun mode -> (try match mode with
   | "external-host" -> let impl = Obj.magic (Hxhx_macro_MacroHostClient.openSession ()) in (

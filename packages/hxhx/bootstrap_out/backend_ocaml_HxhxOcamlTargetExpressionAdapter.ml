@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable ownerIdentity : string; mutable nativeFunc
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.HxhxOcamlTargetExpressionAdapter"; ownerIdentity = HxString.hx_null_string; nativeFunctionIdentity = Obj.magic HxRuntime.hx_null; sourceOwner = Obj.magic HxRuntime.hx_null; functionResultType = Obj.magic HxRuntime.hx_null; bindingsByNativeKey = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.ocaml.HxhxOcamlTargetExpressionAdapter"; ownerIdentity = HxString.hx_null_string; nativeFunctionIdentity = Obj.magic HxRuntime.hx_null; sourceOwner = Obj.magic HxRuntime.hx_null; functionResultType = Obj.magic HxRuntime.hx_null; bindingsByNativeKey = Obj.magic HxRuntime.hx_null } : t)
 
 let isDirectLiteral = fun literal -> let tempResult = ref (false : bool) in (
   ignore (let _g = Obj.magic ((Obj.magic literal : Reflaxe_ocaml_target_OcamlTargetLiteralFact.t).kind) in match _g with
@@ -43,7 +43,7 @@ let requiredOwner = fun (value : string) -> (let tempString = ref (HxString.hx_n
   )
 ) : string)
 
-let create = fun ownerIdentity2 nativeFunctionIdentity2 sourceOwner2 functionResultType2 -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.HxhxOcamlTargetExpressionAdapter"; ownerIdentity = HxString.hx_null_string; nativeFunctionIdentity = Obj.magic HxRuntime.hx_null; sourceOwner = Obj.magic HxRuntime.hx_null; functionResultType = Obj.magic HxRuntime.hx_null; bindingsByNativeKey = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun ownerIdentity2 nativeFunctionIdentity2 sourceOwner2 functionResultType2 -> let self = ({ __hx_type = HxType.instance_marker "backend.ocaml.HxhxOcamlTargetExpressionAdapter"; ownerIdentity = HxString.hx_null_string; nativeFunctionIdentity = Obj.magic HxRuntime.hx_null; sourceOwner = Obj.magic HxRuntime.hx_null; functionResultType = Obj.magic HxRuntime.hx_null; bindingsByNativeKey = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (let __call_arg_0_2 = ownerIdentity2 in requiredOwner __call_arg_0_2 : string) in (
       (Obj.magic self : t).ownerIdentity <- __assign_1;

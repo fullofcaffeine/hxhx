@@ -14,7 +14,7 @@ type t = { __hx_type : Obj.t; mutable hostProgramRevision : string; mutable clas
 
 let __reflaxe_ocaml__ = ()
 
-let ocamltargetargumentfact_create = fun input -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetArgumentFact"; name = HxString.hx_null_string; typeIdentity = HxString.hx_null_string; typeDisplay = HxString.hx_null_string; isOptional = false; isRest = false } : ocamltargetargumentfact_t) in (
+let ocamltargetargumentfact_create = fun input -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetArgumentFact"; name = HxString.hx_null_string; typeIdentity = HxString.hx_null_string; typeDisplay = HxString.hx_null_string; isOptional = false; isRest = false } : ocamltargetargumentfact_t) in (
   ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
     ignore (if Obj.obj (HxAnon.get input "name") == HxString.hx_null_string then let __assign_1 = ("" : string) in (
       tempRight := __assign_1;
@@ -47,7 +47,7 @@ let ocamltargetargumentfact_create = fun input -> let self = ({ __hx_type = HxTy
   self
 )
 
-let ocamltargetargumentfact___empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetArgumentFact"; name = HxString.hx_null_string; typeIdentity = HxString.hx_null_string; typeDisplay = HxString.hx_null_string; isOptional = false; isRest = false } : ocamltargetargumentfact_t)
+let ocamltargetargumentfact___empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetArgumentFact"; name = HxString.hx_null_string; typeIdentity = HxString.hx_null_string; typeDisplay = HxString.hx_null_string; isOptional = false; isRest = false } : ocamltargetargumentfact_t)
 
 let ocamltargetargumentfact_addIdentity = fun self (out : string HxArray.t) -> ignore (ignore ((
   ignore (let __array_receiver_10 = Obj.magic out in let __array_arg_0_11 = ((Obj.magic self : ocamltargetargumentfact_t).name : string) in HxArray.push __array_receiver_10 __array_arg_0_11);
@@ -62,7 +62,7 @@ let ocamltargetargumentfact_addIdentity = fun self (out : string HxArray.t) -> i
 
 let __reflaxe_ocaml__ = ()
 
-let ocamltargetfieldfact_create = fun input -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetFieldFact"; canonicalIdentity = HxString.hx_null_string; name = HxString.hx_null_string; typeIdentity = HxString.hx_null_string; typeDisplay = HxString.hx_null_string; isStatic = false; isPublic = false; isFinal = false; isInline = false; hasInitializer = false; propertyGet = HxString.hx_null_string; propertySet = HxString.hx_null_string; noImportGlobal = false } : ocamltargetfieldfact_t) in (
+let ocamltargetfieldfact_create = fun input -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetFieldFact"; canonicalIdentity = HxString.hx_null_string; name = HxString.hx_null_string; typeIdentity = HxString.hx_null_string; typeDisplay = HxString.hx_null_string; isStatic = false; isPublic = false; isFinal = false; isInline = false; hasInitializer = false; propertyGet = HxString.hx_null_string; propertySet = HxString.hx_null_string; noImportGlobal = false } : ocamltargetfieldfact_t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (Reflaxe_ocaml_target_OcamlTargetDeclarationCodec.required (Obj.obj (HxAnon.get input "canonicalIdentity") : string) ("field identity" : string) : string) in (
       (Obj.magic self : ocamltargetfieldfact_t).canonicalIdentity <- __assign_1;
@@ -134,7 +134,7 @@ let ocamltargetfieldfact_create = fun input -> let self = ({ __hx_type = HxType.
   self
 )
 
-let ocamltargetfieldfact___empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetFieldFact"; canonicalIdentity = HxString.hx_null_string; name = HxString.hx_null_string; typeIdentity = HxString.hx_null_string; typeDisplay = HxString.hx_null_string; isStatic = false; isPublic = false; isFinal = false; isInline = false; hasInitializer = false; propertyGet = HxString.hx_null_string; propertySet = HxString.hx_null_string; noImportGlobal = false } : ocamltargetfieldfact_t)
+let ocamltargetfieldfact___empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetFieldFact"; canonicalIdentity = HxString.hx_null_string; name = HxString.hx_null_string; typeIdentity = HxString.hx_null_string; typeDisplay = HxString.hx_null_string; isStatic = false; isPublic = false; isFinal = false; isInline = false; hasInitializer = false; propertyGet = HxString.hx_null_string; propertySet = HxString.hx_null_string; noImportGlobal = false } : ocamltargetfieldfact_t)
 
 let ocamltargetfieldfact_addIdentity = fun self (out : string HxArray.t) -> ignore (ignore ((
   ignore (let __array_receiver_23 = Obj.magic out in let __array_arg_0_24 = ((Obj.magic self : ocamltargetfieldfact_t).canonicalIdentity : string) in HxArray.push __array_receiver_23 __array_arg_0_24);
@@ -156,7 +156,7 @@ let ocamltargetfieldfact_addIdentity = fun self (out : string HxArray.t) -> igno
 
 let __reflaxe_ocaml__ = ()
 
-let ocamltargetmethodfact___empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetMethodFact"; canonicalIdentity = HxString.hx_null_string; name = HxString.hx_null_string; typeParameters = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null; returnTypeIdentity = HxString.hx_null_string; returnTypeDisplay = HxString.hx_null_string; isStatic = false; isPublic = false; isInline = false; isDynamic = false; hasBody = false; isEnumConstructor = false; noImportGlobal = false } : ocamltargetmethodfact_t)
+let ocamltargetmethodfact___empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetMethodFact"; canonicalIdentity = HxString.hx_null_string; name = HxString.hx_null_string; typeParameters = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null; returnTypeIdentity = HxString.hx_null_string; returnTypeDisplay = HxString.hx_null_string; isStatic = false; isPublic = false; isInline = false; isDynamic = false; hasBody = false; isEnumConstructor = false; noImportGlobal = false } : ocamltargetmethodfact_t)
 
 let ocamltargetmethodfact_copyTypeParameters = fun self () -> let __array_receiver_31 = Obj.magic ((Obj.magic self : ocamltargetmethodfact_t).typeParameters) in HxArray.copy __array_receiver_31
 
@@ -200,7 +200,7 @@ let ocamltargetmethodfact_copyRequired = fun values label -> (try (
 ) with
   | HxRuntime.Hx_return __ret_69 -> (Obj.obj __ret_69 : string HxArray.t) : string HxArray.t)
 
-let ocamltargetmethodfact_create = fun input -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetMethodFact"; canonicalIdentity = HxString.hx_null_string; name = HxString.hx_null_string; typeParameters = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null; returnTypeIdentity = HxString.hx_null_string; returnTypeDisplay = HxString.hx_null_string; isStatic = false; isPublic = false; isInline = false; isDynamic = false; hasBody = false; isEnumConstructor = false; noImportGlobal = false } : ocamltargetmethodfact_t) in (
+let ocamltargetmethodfact_create = fun input -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetMethodFact"; canonicalIdentity = HxString.hx_null_string; name = HxString.hx_null_string; typeParameters = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null; returnTypeIdentity = HxString.hx_null_string; returnTypeDisplay = HxString.hx_null_string; isStatic = false; isPublic = false; isInline = false; isDynamic = false; hasBody = false; isEnumConstructor = false; noImportGlobal = false } : ocamltargetmethodfact_t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (Reflaxe_ocaml_target_OcamlTargetDeclarationCodec.required (Obj.obj (HxAnon.get input "canonicalIdentity") : string) ("method identity" : string) : string) in (
       (Obj.magic self : ocamltargetmethodfact_t).canonicalIdentity <- __assign_1;
@@ -281,7 +281,7 @@ let ocamltargetmethodfact_create = fun input -> let self = ({ __hx_type = HxType
 
 let __reflaxe_ocaml__ = ()
 
-let ocamltargetclassfact___empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetClassFact"; canonicalIdentity = HxString.hx_null_string; moduleIdentity = HxString.hx_null_string; isInterface = false; isExtern = false; interfaceTypeDisplays = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; superClassIdentity = Obj.magic HxRuntime.hx_null; superTypeIdentity = Obj.magic HxRuntime.hx_null; superTypeDisplay = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null } : ocamltargetclassfact_t)
+let ocamltargetclassfact___empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetClassFact"; canonicalIdentity = HxString.hx_null_string; moduleIdentity = HxString.hx_null_string; isInterface = false; isExtern = false; interfaceTypeDisplays = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; superClassIdentity = Obj.magic HxRuntime.hx_null; superTypeIdentity = Obj.magic HxRuntime.hx_null; superTypeDisplay = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null } : ocamltargetclassfact_t)
 
 let ocamltargetclassfact_copyTypeParameters = fun self () -> let __array_receiver_67 = Obj.magic ((Obj.magic self : ocamltargetclassfact_t).typeParameters) in HxArray.copy __array_receiver_67
 
@@ -370,7 +370,7 @@ let ocamltargetclassfact_uniqueMethods = fun values ownerIdentity -> let result 
   result
 )
 
-let ocamltargetclassfact_create = fun input -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetClassFact"; canonicalIdentity = HxString.hx_null_string; moduleIdentity = HxString.hx_null_string; isInterface = false; isExtern = false; interfaceTypeDisplays = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; superClassIdentity = Obj.magic HxRuntime.hx_null; superTypeIdentity = Obj.magic HxRuntime.hx_null; superTypeDisplay = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null } : ocamltargetclassfact_t) in (
+let ocamltargetclassfact_create = fun input -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetClassFact"; canonicalIdentity = HxString.hx_null_string; moduleIdentity = HxString.hx_null_string; isInterface = false; isExtern = false; interfaceTypeDisplays = Obj.magic HxRuntime.hx_null; typeParameters = Obj.magic HxRuntime.hx_null; superClassIdentity = Obj.magic HxRuntime.hx_null; superTypeIdentity = Obj.magic HxRuntime.hx_null; superTypeDisplay = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; methods = Obj.magic HxRuntime.hx_null } : ocamltargetclassfact_t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (Reflaxe_ocaml_target_OcamlTargetDeclarationCodec.required (Obj.obj (HxAnon.get input "canonicalIdentity") : string) ("class identity" : string) : string) in (
       (Obj.magic self : ocamltargetclassfact_t).canonicalIdentity <- __assign_1;
@@ -498,7 +498,7 @@ let ocamltargetclassfact_create = fun input -> let self = ({ __hx_type = HxType.
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetDeclarationRequest"; hostProgramRevision = HxString.hx_null_string; classes = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetDeclarationRequest"; hostProgramRevision = HxString.hx_null_string; classes = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
 
 let getCanonicalIdentity = fun self () -> (Obj.magic self : t).canonicalIdentity
 
@@ -577,7 +577,7 @@ let methodIdentity = fun owner name isStatic argumentTypes returnType -> let val
 
 let hx_SCHEMA_REVISION = "reflaxe-ocaml-target-declarations-v2"
 
-let create = fun hostProgramRevision2 inputs -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetDeclarationRequest"; hostProgramRevision = HxString.hx_null_string; classes = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun hostProgramRevision2 inputs -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetDeclarationRequest"; hostProgramRevision = HxString.hx_null_string; classes = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (Reflaxe_ocaml_target_OcamlTargetDeclarationCodec.required (hostProgramRevision2 : string) ("host program revision" : string) : string) in (
       (Obj.magic self : t).hostProgramRevision <- __assign_1;

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable plan : Backend_cpp_CppManagedStoragePlan.t
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun plan2 closure2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedCallEmitter"; plan = Obj.magic HxRuntime.hx_null; closure = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun plan2 closure2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedCallEmitter"; plan = Obj.magic HxRuntime.hx_null; closure = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if plan2 == Obj.magic (HxRuntime.hx_null) || closure2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "managed call requires an exact closure plan") ["Dynamic"] else ());
     ignore (let __assign_1 = Obj.magic plan2 in (
@@ -22,7 +22,7 @@ let create = fun plan2 closure2 -> let self = ({ __hx_type = HxType.class_ "back
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedCallEmitter"; plan = Obj.magic HxRuntime.hx_null; closure = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedCallEmitter"; plan = Obj.magic HxRuntime.hx_null; closure = Obj.magic HxRuntime.hx_null } : t)
 
 let identifier = fun (value : string) -> (value != Obj.magic (HxRuntime.hx_null) && EReg.hx_match (Obj.magic (EReg.create ("^[A-Za-z_][A-Za-z0-9_]*$" : string) ("" : string))) (value : string) : bool)
 

@@ -16,7 +16,7 @@ type cppruntimetypeoperationkind =
 
 let __reflaxe_ocaml__ = ()
 
-let cppruntimetypedescriptor_create = fun target2 program -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppRuntimeTypeDescriptor"; target = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null } : cppruntimetypedescriptor_t) in (
+let cppruntimetypedescriptor_create = fun target2 program -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppRuntimeTypeDescriptor"; target = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null } : cppruntimetypedescriptor_t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic target2 in (
       (Obj.magic self : cppruntimetypedescriptor_t).target <- __assign_1;
@@ -39,7 +39,7 @@ let cppruntimetypedescriptor_create = fun target2 program -> let self = ({ __hx_
   self
 )
 
-let cppruntimetypedescriptor___empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppRuntimeTypeDescriptor"; target = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null } : cppruntimetypedescriptor_t)
+let cppruntimetypedescriptor___empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppRuntimeTypeDescriptor"; target = Obj.magic HxRuntime.hx_null; declaration = Obj.magic HxRuntime.hx_null } : cppruntimetypedescriptor_t)
 
 let cppruntimetypedescriptor_getTarget = fun self () -> (Obj.magic self : cppruntimetypedescriptor_t).target
 
@@ -50,7 +50,7 @@ let cppruntimetypedescriptor_getDeclaration = fun self () -> (Obj.magic self : c
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppRuntimeTypePlan"; program = Obj.magic HxRuntime.hx_null; descriptors = Obj.magic HxRuntime.hx_null; operations = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun program2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppRuntimeTypePlan"; program = Obj.magic HxRuntime.hx_null; descriptors = Obj.magic HxRuntime.hx_null; operations = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       (Obj.magic self : t).operations <- __assign_1;
@@ -154,7 +154,7 @@ let create = fun program2 -> let self = ({ __hx_type = HxType.class_ "backend.cp
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppRuntimeTypePlan"; program = Obj.magic HxRuntime.hx_null; descriptors = Obj.magic HxRuntime.hx_null; operations = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppRuntimeTypePlan"; program = Obj.magic HxRuntime.hx_null; descriptors = Obj.magic HxRuntime.hx_null; operations = Obj.magic HxRuntime.hx_null } : t)
 
 let assertCurrent = fun self () -> ignore (ignore ((
   ignore (Backend_cpp_CppTypedProgramProjection.assertCurrent (Obj.magic ((Obj.magic self : t).program)) ());

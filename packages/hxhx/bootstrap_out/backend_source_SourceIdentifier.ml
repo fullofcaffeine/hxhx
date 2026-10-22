@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.SourceIdentifier" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.source.SourceIdentifier" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.SourceIdentifier" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.SourceIdentifier" } : t)
 
 let sanitize = fun (name : string) -> (let tempString = ref (HxString.hx_null_string : string) in (
   ignore (if name == HxString.hx_null_string || (let __string_receiver_1 = name in HxString.length __string_receiver_1) = 0 then let __assign_2 = ("Main" : string) in (

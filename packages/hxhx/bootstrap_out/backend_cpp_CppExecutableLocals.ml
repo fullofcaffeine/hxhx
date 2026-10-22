@@ -14,7 +14,7 @@ type t = { __hx_type : Obj.t; mutable owner : cppexecutableowner; mutable stable
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppExecutableLocals"; owner = Obj.magic HxRuntime.hx_null; stableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; catalog = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; symbols = Obj.magic HxRuntime.hx_null; occupied = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppExecutableLocals"; owner = Obj.magic HxRuntime.hx_null; stableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; catalog = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; symbols = Obj.magic HxRuntime.hx_null; occupied = Obj.magic HxRuntime.hx_null } : t)
 
 let getStableIdentity = fun self () -> (Obj.magic self : t).stableIdentity
 
@@ -155,7 +155,7 @@ let candidate = fun (name : string) -> (let buffer = Obj.magic (StringBuf.create
   )
 ) : string)
 
-let create = fun owner2 fixedSymbols -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppExecutableLocals"; owner = Obj.magic HxRuntime.hx_null; stableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; catalog = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; symbols = Obj.magic HxRuntime.hx_null; occupied = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun owner2 fixedSymbols -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppExecutableLocals"; owner = Obj.magic HxRuntime.hx_null; stableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; catalog = Obj.magic HxRuntime.hx_null; fields = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; symbols = Obj.magic HxRuntime.hx_null; occupied = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_string ()) in (
       (Obj.magic self : t).occupied <- __assign_1;

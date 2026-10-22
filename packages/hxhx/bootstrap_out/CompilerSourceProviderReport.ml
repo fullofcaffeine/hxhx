@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable cacheEnabled : bool; mutable sourceHits : 
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun cacheEnabled2 -> let self = ({ __hx_type = HxType.class_ "CompilerSourceProviderReport"; cacheEnabled = false; sourceHits = 0; sourceMisses = 0; sourceBytesRead = 0; resolutionHits = 0; resolutionMisses = 0; parserHits = 0; parserMisses = 0; evictions = 0; retainedEntries = 0; retainedBytesEstimate = 0; missReasons = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun cacheEnabled2 -> let self = ({ __hx_type = HxType.instance_marker "CompilerSourceProviderReport"; cacheEnabled = false; sourceHits = 0; sourceMisses = 0; sourceBytesRead = 0; resolutionHits = 0; resolutionMisses = 0; parserHits = 0; parserMisses = 0; evictions = 0; retainedEntries = 0; retainedBytesEstimate = 0; missReasons = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = cacheEnabled2 in (
       (__place_receiver_1 : t).cacheEnabled <- __place_rhs_2;
@@ -60,7 +60,7 @@ let create = fun cacheEnabled2 -> let self = ({ __hx_type = HxType.class_ "Compi
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerSourceProviderReport"; cacheEnabled = false; sourceHits = 0; sourceMisses = 0; sourceBytesRead = 0; resolutionHits = 0; resolutionMisses = 0; parserHits = 0; parserMisses = 0; evictions = 0; retainedEntries = 0; retainedBytesEstimate = 0; missReasons = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerSourceProviderReport"; cacheEnabled = false; sourceHits = 0; sourceMisses = 0; sourceBytesRead = 0; resolutionHits = 0; resolutionMisses = 0; parserHits = 0; parserMisses = 0; evictions = 0; retainedEntries = 0; retainedBytesEstimate = 0; missReasons = Obj.magic HxRuntime.hx_null } : t)
 
 let recordSourceHit = fun self () -> ignore (ignore (let __place_receiver_24 = self in let __place_old_25 = (__place_receiver_24 : t).sourceHits in let __place_rhs_26 = 1 in let __place_new_27 = HxInt.add __place_old_25 __place_rhs_26 in (
   (__place_receiver_24 : t).sourceHits <- __place_new_27;

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable accesses : TypedBackendArrayAccess.t HxArr
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.LuaArrayIndexLowering"; accesses = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.source.LuaArrayIndexLowering"; accesses = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
     (Obj.magic self : t).accesses <- __assign_1;
     __assign_1
@@ -14,7 +14,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.L
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.LuaArrayIndexLowering"; accesses = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.LuaArrayIndexLowering"; accesses = Obj.magic HxRuntime.hx_null } : t)
 
 let add = fun self (access : TypedBackendArrayAccess.t) -> ignore (ignore (try ignore ((
   ignore (if access == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return_void) else ());

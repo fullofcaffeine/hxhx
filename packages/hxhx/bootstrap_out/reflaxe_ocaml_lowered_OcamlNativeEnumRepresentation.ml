@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.lowered.OcamlNativeEnumRepresentation" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.lowered.OcamlNativeEnumRepresentation" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.lowered.OcamlNativeEnumRepresentation" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.lowered.OcamlNativeEnumRepresentation" } : t)
 
 let typeExpr = fun decision currentTargetModuleName -> (
   ignore (if (let __string_eq_left_1 = Obj.obj (HxAnon.get decision "boxingPolicy") in let __string_eq_right_2 = "direct-native-enum-carrier" in not (HxString.equals __string_eq_left_1 __string_eq_right_2)) || Obj.obj (HxAnon.get decision "nominalTargetModuleName") == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get decision "nominalTargetTypeName") == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get decision "nominalLayoutRevision") == Obj.magic (HxRuntime.hx_null) || (let __string_receiver_3 = currentTargetModuleName in HxString.length __string_receiver_3) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "reflaxe.ocaml [ocaml-native-enum:invalid-materialization]: expected a complete native variant decision and current module") ["Dynamic"] else ());

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable resultType : TyType.t; mutable target : Ob
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedEnumConstructor"; resultType = Obj.magic HxRuntime.hx_null; target = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null; argumentTypes = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedEnumConstructor"; resultType = Obj.magic HxRuntime.hx_null; target = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null; argumentTypes = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null } : t)
 
 let render = fun self (heap : string) (destination : string) (renderValue : HxExpr.hxexpr -> string -> string -> string HxArray.t) (indent : string) -> let lines = Obj.magic (let __represented_array_60 = HxArray.create () in let __represented_array_element_0_61 = HxString.toStdString indent ^ "{" in (
   ignore (HxArray.push __represented_array_60 __represented_array_element_0_61);
@@ -65,7 +65,7 @@ let rec typeQualifier = fun source -> let tempResult = ref (false : bool) in (
   !tempResult
 )
 
-let create = fun expression source enums resolveType casts2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedEnumConstructor"; resultType = Obj.magic HxRuntime.hx_null; target = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null; argumentTypes = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun expression source enums resolveType casts2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedEnumConstructor"; resultType = Obj.magic HxRuntime.hx_null; target = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null; argumentTypes = Obj.magic HxRuntime.hx_null; parameters = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let call = TypedExactEnumConstructorSource.decode (Obj.magic expression) in let tempMaybeTyDeclarationInfo = ref (Obj.magic (HxRuntime.hx_null) : TyDeclarationInfo.t) in (
     ignore (if source == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
       tempMaybeTyDeclarationInfo := __assign_1;

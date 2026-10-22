@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable buffer : StringBuf.t; mutable replacer : O
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun replacer2 space -> let self = ({ __hx_type = HxType.class_ "haxe.format.JsonPrinter"; buffer = Obj.magic HxRuntime.hx_null; replacer = Obj.magic HxRuntime.hx_null; indentUnit = HxString.hx_null_string; pretty = false; depth = 0 } : t) in (
+let create = fun replacer2 space -> let self = ({ __hx_type = HxType.instance_marker "haxe.format.JsonPrinter"; buffer = Obj.magic HxRuntime.hx_null; replacer = Obj.magic HxRuntime.hx_null; indentUnit = HxString.hx_null_string; pretty = false; depth = 0 } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (StringBuf.create ()) in (
       (Obj.magic self : t).buffer <- __assign_1;
@@ -41,7 +41,7 @@ let create = fun replacer2 space -> let self = ({ __hx_type = HxType.class_ "hax
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.format.JsonPrinter"; buffer = Obj.magic HxRuntime.hx_null; replacer = Obj.magic HxRuntime.hx_null; indentUnit = HxString.hx_null_string; pretty = false; depth = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "haxe.format.JsonPrinter"; buffer = Obj.magic HxRuntime.hx_null; replacer = Obj.magic HxRuntime.hx_null; indentUnit = HxString.hx_null_string; pretty = false; depth = 0 } : t)
 
 let appendIndent = fun self () -> ignore (ignore (try ignore ((
   ignore (if not ((Obj.magic self : t).pretty) then Stdlib.raise (HxRuntime.Hx_return_void) else ());

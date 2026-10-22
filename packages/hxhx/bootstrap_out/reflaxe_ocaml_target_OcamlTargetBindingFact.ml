@@ -19,7 +19,7 @@ type t = { __hx_type : Obj.t; mutable ownerIdentity : string; mutable declaratio
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetBindingFact"; ownerIdentity = HxString.hx_null_string; declarationPath = HxString.hx_null_string; role = Obj.magic HxRuntime.hx_null; sourceName = HxString.hx_null_string; semanticTypeDisplay = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetBindingFact"; ownerIdentity = HxString.hx_null_string; declarationPath = HxString.hx_null_string; role = Obj.magic HxRuntime.hx_null; sourceName = HxString.hx_null_string; semanticTypeDisplay = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t)
 
 let getCanonicalIdentity = fun self () -> (Obj.magic self : t).canonicalIdentity
 
@@ -72,7 +72,7 @@ let required = fun (value : string) (label : string) -> (let tempString = ref (H
 
 let hx_SCHEMA_REVISION = "reflaxe-ocaml-target-binding-v1"
 
-let create = fun ownerIdentity2 declarationPath2 role2 sourceName2 semanticTypeDisplay2 -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetBindingFact"; ownerIdentity = HxString.hx_null_string; declarationPath = HxString.hx_null_string; role = Obj.magic HxRuntime.hx_null; sourceName = HxString.hx_null_string; semanticTypeDisplay = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun ownerIdentity2 declarationPath2 role2 sourceName2 semanticTypeDisplay2 -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetBindingFact"; ownerIdentity = HxString.hx_null_string; declarationPath = HxString.hx_null_string; role = Obj.magic HxRuntime.hx_null; sourceName = HxString.hx_null_string; semanticTypeDisplay = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (let __call_arg_0_2 = ownerIdentity2 in let __call_arg_1_3 = "owner identity" in required __call_arg_0_2 __call_arg_1_3 : string) in (
       (Obj.magic self : t).ownerIdentity <- __assign_1;

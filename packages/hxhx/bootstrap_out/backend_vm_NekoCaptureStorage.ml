@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable cells : TypedCaptureBinding.t HxMap.string
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun catalog2 locals -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoCaptureStorage"; cells = Obj.magic HxRuntime.hx_null; catalog = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun catalog2 locals -> let self = ({ __hx_type = HxType.instance_marker "backend.vm.NekoCaptureStorage"; cells = Obj.magic HxRuntime.hx_null; catalog = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (try ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_string ()) in (
       (Obj.magic self : t).cells <- __assign_1;
@@ -47,7 +47,7 @@ let create = fun catalog2 locals -> let self = ({ __hx_type = HxType.class_ "bac
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoCaptureStorage"; cells = Obj.magic HxRuntime.hx_null; catalog = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.NekoCaptureStorage"; cells = Obj.magic HxRuntime.hx_null; catalog = Obj.magic HxRuntime.hx_null } : t)
 
 let requireClosure = fun self (expression : HxExpr.hxexpr) -> ignore (ignore ((
   ignore (if (Obj.magic self : t).catalog == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "Neko closure lacks its exact capture catalog") ["Dynamic"] else ());

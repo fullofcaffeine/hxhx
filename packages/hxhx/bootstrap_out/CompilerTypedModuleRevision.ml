@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable modulePath : string; mutable sourceRevisio
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerTypedModuleRevision"; modulePath = HxString.hx_null_string; sourceRevision = HxString.hx_null_string; sourceOriginRevision = HxString.hx_null_string; sourceOriginDescription = HxString.hx_null_string; conditionalCompilation = Obj.magic HxRuntime.hx_null; generatedDeclarations = Obj.magic HxRuntime.hx_null; macroFileDependencies = Obj.magic HxRuntime.hx_null; publicInterfaceRevision = HxString.hx_null_string; implementationRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerTypedModuleRevision"; modulePath = HxString.hx_null_string; sourceRevision = HxString.hx_null_string; sourceOriginRevision = HxString.hx_null_string; sourceOriginDescription = HxString.hx_null_string; conditionalCompilation = Obj.magic HxRuntime.hx_null; generatedDeclarations = Obj.magic HxRuntime.hx_null; macroFileDependencies = Obj.magic HxRuntime.hx_null; publicInterfaceRevision = HxString.hx_null_string; implementationRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t)
 
 let getCanonicalIdentity = fun self () -> (Obj.magic self : t).canonicalIdentity
 
@@ -446,7 +446,7 @@ let normalize = fun (value : string) -> (let tempResult = ref (HxString.hx_null_
   !tempResult
 ) : string)
 
-let create = fun modulePath2 publicInterfaceRevision2 implementationRevision2 sourceRevision2 sourceOriginRevision2 sourceOriginDescription2 conditionalCompilation2 generatedDeclarations2 macroFileDependencies2 -> let self = ({ __hx_type = HxType.class_ "CompilerTypedModuleRevision"; modulePath = HxString.hx_null_string; sourceRevision = HxString.hx_null_string; sourceOriginRevision = HxString.hx_null_string; sourceOriginDescription = HxString.hx_null_string; conditionalCompilation = Obj.magic HxRuntime.hx_null; generatedDeclarations = Obj.magic HxRuntime.hx_null; macroFileDependencies = Obj.magic HxRuntime.hx_null; publicInterfaceRevision = HxString.hx_null_string; implementationRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun modulePath2 publicInterfaceRevision2 implementationRevision2 sourceRevision2 sourceOriginRevision2 sourceOriginDescription2 conditionalCompilation2 generatedDeclarations2 macroFileDependencies2 -> let self = ({ __hx_type = HxType.instance_marker "CompilerTypedModuleRevision"; modulePath = HxString.hx_null_string; sourceRevision = HxString.hx_null_string; sourceOriginRevision = HxString.hx_null_string; sourceOriginDescription = HxString.hx_null_string; conditionalCompilation = Obj.magic HxRuntime.hx_null; generatedDeclarations = Obj.magic HxRuntime.hx_null; macroFileDependencies = Obj.magic HxRuntime.hx_null; publicInterfaceRevision = HxString.hx_null_string; implementationRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (let __call_arg_0_2 = modulePath2 in normalize __call_arg_0_2 : string) in (
       (Obj.magic self : t).modulePath <- __assign_1;

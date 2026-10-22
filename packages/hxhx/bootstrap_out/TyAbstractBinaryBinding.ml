@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TyAbstractBinaryBinding" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TyAbstractBinaryBinding" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyAbstractBinaryBinding" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyAbstractBinaryBinding" } : t)
 
 let validateBodyless = fun index binding filePath -> let info = Obj.magic (TyBoundAbstractBinaryOperator.getOperatorInfo (Obj.magic binding) ()) in (
   ignore (if not (TyDeclarationInfo.getHasBody (Obj.magic (TyAbstractBinaryOperatorInfo.getDeclaration (Obj.magic info) ())) ()) then ignore (TyAbstractNativeBinaryOperation.validate (Obj.magic info) (Obj.magic index) (filePath : string)) else ());

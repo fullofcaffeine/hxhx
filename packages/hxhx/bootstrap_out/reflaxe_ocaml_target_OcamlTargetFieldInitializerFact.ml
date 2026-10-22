@@ -13,7 +13,7 @@ type t = { __hx_type : Obj.t; mutable moduleId : string; mutable sourceTypeName 
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetFieldInitializerFact"; moduleId = HxString.hx_null_string; sourceTypeName = HxString.hx_null_string; sourceFieldName = HxString.hx_null_string; role = Obj.magic HxRuntime.hx_null; semanticTypeDisplay = HxString.hx_null_string; hx_initializer = Obj.magic HxRuntime.hx_null; targetIdentity = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetFieldInitializerFact"; moduleId = HxString.hx_null_string; sourceTypeName = HxString.hx_null_string; sourceFieldName = HxString.hx_null_string; role = Obj.magic HxRuntime.hx_null; semanticTypeDisplay = HxString.hx_null_string; hx_initializer = Obj.magic HxRuntime.hx_null; targetIdentity = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t)
 
 let getTargetIdentity = fun self () -> (Obj.magic self : t).targetIdentity
 
@@ -53,7 +53,7 @@ let identityFor = fun signature -> (
   ))) in Haxe_crypto_Sha256.encode __call_arg_0_19) in __string_part_29 ^ __string_part_30
 )
 
-let create = fun signature hx_initializer -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetFieldInitializerFact"; moduleId = HxString.hx_null_string; sourceTypeName = HxString.hx_null_string; sourceFieldName = HxString.hx_null_string; role = Obj.magic HxRuntime.hx_null; semanticTypeDisplay = HxString.hx_null_string; hx_initializer = Obj.magic HxRuntime.hx_null; targetIdentity = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun signature hx_initializer -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetFieldInitializerFact"; moduleId = HxString.hx_null_string; sourceTypeName = HxString.hx_null_string; sourceFieldName = HxString.hx_null_string; role = Obj.magic HxRuntime.hx_null; semanticTypeDisplay = HxString.hx_null_string; hx_initializer = Obj.magic HxRuntime.hx_null; targetIdentity = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (if signature == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml target field initializer requires a source signature") ["Dynamic"] else ());
     ignore (let __assign_1 = (let __call_arg_0_2 = Obj.obj (HxAnon.get signature "moduleId") in let __call_arg_1_3 = "module ID" in required __call_arg_0_2 __call_arg_1_3 : string) in (

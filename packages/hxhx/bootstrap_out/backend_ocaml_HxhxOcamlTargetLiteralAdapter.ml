@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.HxhxOcamlTargetLiteralAdapter" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.ocaml.HxhxOcamlTargetLiteralAdapter" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.HxhxOcamlTargetLiteralAdapter" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.ocaml.HxhxOcamlTargetLiteralAdapter" } : t)
 
 let rec fromExpression = fun expression -> (
   ignore (if expression == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "native OCaml literal adapter requires a typed expression") ["Dynamic"] else ());

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable methods : Backend_cpp_CppManagedBoundMetho
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun classes2 resolve2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedBoundCallable"; methods = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; resolve = Obj.magic HxRuntime.hx_null; entries = Obj.magic HxRuntime.hx_null; ordered = Obj.magic HxRuntime.hx_null; arrayPush = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun classes2 resolve2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedBoundCallable"; methods = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; resolve = Obj.magic HxRuntime.hx_null; entries = Obj.magic HxRuntime.hx_null; ordered = Obj.magic HxRuntime.hx_null; arrayPush = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       (Obj.magic self : t).ordered <- __assign_1;
@@ -36,7 +36,7 @@ let create = fun classes2 resolve2 -> let self = ({ __hx_type = HxType.class_ "b
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedBoundCallable"; methods = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; resolve = Obj.magic HxRuntime.hx_null; entries = Obj.magic HxRuntime.hx_null; ordered = Obj.magic HxRuntime.hx_null; arrayPush = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedBoundCallable"; methods = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; resolve = Obj.magic HxRuntime.hx_null; entries = Obj.magic HxRuntime.hx_null; ordered = Obj.magic HxRuntime.hx_null; arrayPush = Obj.magic HxRuntime.hx_null } : t)
 
 let select = fun self (application : Backend_cpp_CppManagedFunctionApplication.t) (signature : TyType.t) -> (
   ignore (Backend_cpp_CppManagedFunctionApplication.assertCurrent (Obj.magic application) ());

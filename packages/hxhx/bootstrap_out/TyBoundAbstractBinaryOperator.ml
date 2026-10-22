@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable sourceOperator : string; mutable operatorI
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun sourceOperator2 operatorInfo2 reverseArguments2 requiresWriteback2 sourceLeftConversion2 sourceRightConversion2 resultConversion2 -> let self = ({ __hx_type = HxType.class_ "TyBoundAbstractBinaryOperator"; sourceOperator = HxString.hx_null_string; operatorInfo = Obj.magic HxRuntime.hx_null; reverseArguments = false; requiresWriteback = false; sourceLeftConversion = Obj.magic HxRuntime.hx_null; sourceRightConversion = Obj.magic HxRuntime.hx_null; resultConversion = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun sourceOperator2 operatorInfo2 reverseArguments2 requiresWriteback2 sourceLeftConversion2 sourceRightConversion2 resultConversion2 -> let self = ({ __hx_type = HxType.instance_marker "TyBoundAbstractBinaryOperator"; sourceOperator = HxString.hx_null_string; operatorInfo = Obj.magic HxRuntime.hx_null; reverseArguments = false; requiresWriteback = false; sourceLeftConversion = Obj.magic HxRuntime.hx_null; sourceRightConversion = Obj.magic HxRuntime.hx_null; resultConversion = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (sourceOperator2 : string) in (
       (Obj.magic self : t).sourceOperator <- __assign_1;
@@ -40,7 +40,7 @@ let create = fun sourceOperator2 operatorInfo2 reverseArguments2 requiresWriteba
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyBoundAbstractBinaryOperator"; sourceOperator = HxString.hx_null_string; operatorInfo = Obj.magic HxRuntime.hx_null; reverseArguments = false; requiresWriteback = false; sourceLeftConversion = Obj.magic HxRuntime.hx_null; sourceRightConversion = Obj.magic HxRuntime.hx_null; resultConversion = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyBoundAbstractBinaryOperator"; sourceOperator = HxString.hx_null_string; operatorInfo = Obj.magic HxRuntime.hx_null; reverseArguments = false; requiresWriteback = false; sourceLeftConversion = Obj.magic HxRuntime.hx_null; sourceRightConversion = Obj.magic HxRuntime.hx_null; resultConversion = Obj.magic HxRuntime.hx_null } : t)
 
 let getSourceOperator = fun self () -> (Obj.magic self : t).sourceOperator
 

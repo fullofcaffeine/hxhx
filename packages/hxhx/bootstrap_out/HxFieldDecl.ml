@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable name : string; mutable visibility : HxVisi
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun name2 visibility2 isStatic2 typeHint2 init2 metadata2 pos2 endPos2 isFinal2 propertyGet2 propertySet2 initText2 -> let self = ({ __hx_type = HxType.class_ "HxFieldDecl"; name = HxString.hx_null_string; visibility = Obj.magic HxRuntime.hx_null; isStatic = false; typeHint = HxString.hx_null_string; init = Obj.magic HxRuntime.hx_null; metadata = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null; endPos = Obj.magic HxRuntime.hx_null; isFinal = false; propertyGet = HxString.hx_null_string; propertySet = HxString.hx_null_string; initText = HxString.hx_null_string } : t) in (
+let create = fun name2 visibility2 isStatic2 typeHint2 init2 metadata2 pos2 endPos2 isFinal2 propertyGet2 propertySet2 initText2 -> let self = ({ __hx_type = HxType.instance_marker "HxFieldDecl"; name = HxString.hx_null_string; visibility = Obj.magic HxRuntime.hx_null; isStatic = false; typeHint = HxString.hx_null_string; init = Obj.magic HxRuntime.hx_null; metadata = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null; endPos = Obj.magic HxRuntime.hx_null; isFinal = false; propertyGet = HxString.hx_null_string; propertySet = HxString.hx_null_string; initText = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
       (Obj.magic self : t).name <- __assign_1;
@@ -132,7 +132,7 @@ let create = fun name2 visibility2 isStatic2 typeHint2 init2 metadata2 pos2 endP
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFieldDecl"; name = HxString.hx_null_string; visibility = Obj.magic HxRuntime.hx_null; isStatic = false; typeHint = HxString.hx_null_string; init = Obj.magic HxRuntime.hx_null; metadata = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null; endPos = Obj.magic HxRuntime.hx_null; isFinal = false; propertyGet = HxString.hx_null_string; propertySet = HxString.hx_null_string; initText = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxFieldDecl"; name = HxString.hx_null_string; visibility = Obj.magic HxRuntime.hx_null; isStatic = false; typeHint = HxString.hx_null_string; init = Obj.magic HxRuntime.hx_null; metadata = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null; endPos = Obj.magic HxRuntime.hx_null; isFinal = false; propertyGet = HxString.hx_null_string; propertySet = HxString.hx_null_string; initText = HxString.hx_null_string } : t)
 
 let getName = fun f -> (Obj.magic f : t).name
 

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable files : Obj.t HxArray.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedRuntime"; files = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedRuntime"; files = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in (
     ignore (HxArray.push __arr_2 (let __anonymous_value_3 = HxAnon.create () in (
       let __anonymous_field_value_4 = "ManagedHeap.hpp" in ignore (HxAnon.set __anonymous_value_3 "name" (Obj.repr __anonymous_field_value_4));
@@ -82,7 +82,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppM
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedRuntime"; files = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedRuntime"; files = Obj.magic HxRuntime.hx_null } : t)
 
 let getFiles = fun self () -> let __array_receiver_47 = Obj.magic ((Obj.magic self : t).files) in HxArray.copy __array_receiver_47
 

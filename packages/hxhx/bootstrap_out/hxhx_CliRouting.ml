@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.CliRouting" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.CliRouting" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CliRouting" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.CliRouting" } : t)
 
 let listLaneSelectors = fun () -> let __represented_array_1 = HxArray.create () in let __represented_array_element_0_2 = "ocaml" in (
   ignore (HxArray.push __represented_array_1 __represented_array_element_0_2);

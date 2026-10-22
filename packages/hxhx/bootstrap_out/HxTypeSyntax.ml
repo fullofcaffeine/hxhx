@@ -25,7 +25,7 @@ type hxtypesyntaxfieldkind =
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxTypeSyntax"; kind = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null; endPos = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxTypeSyntax"; kind = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null; endPos = Obj.magic HxRuntime.hx_null } : t)
 
 let getPos = fun self () -> (Obj.magic self : t).pos
 
@@ -131,7 +131,7 @@ let copyKind = fun kind2 -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) 
   !tempResult
 )
 
-let create = fun kind2 pos2 endPos2 -> let self = ({ __hx_type = HxType.class_ "HxTypeSyntax"; kind = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null; endPos = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun kind2 pos2 endPos2 -> let self = ({ __hx_type = HxType.instance_marker "HxTypeSyntax"; kind = Obj.magic HxRuntime.hx_null; pos = Obj.magic HxRuntime.hx_null; endPos = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (copyKind (Obj.magic kind2)) in (
       (Obj.magic self : t).kind <- __assign_1;

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable ownerCppName : string; mutable carrierCppT
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun ownerCppName2 carrierCppType2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppAbstractRepresentation"; ownerCppName = HxString.hx_null_string; carrierCppType = HxString.hx_null_string } : t) in (
+let create = fun ownerCppName2 carrierCppType2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppAbstractRepresentation"; ownerCppName = HxString.hx_null_string; carrierCppType = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (ownerCppName2 : string) in (
       (Obj.magic self : t).ownerCppName <- __assign_1;
@@ -20,7 +20,7 @@ let create = fun ownerCppName2 carrierCppType2 -> let self = ({ __hx_type = HxTy
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppAbstractRepresentation"; ownerCppName = HxString.hx_null_string; carrierCppType = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppAbstractRepresentation"; ownerCppName = HxString.hx_null_string; carrierCppType = HxString.hx_null_string } : t)
 
 let getOwnerCppName = fun self () -> ((self : t).ownerCppName : string)
 

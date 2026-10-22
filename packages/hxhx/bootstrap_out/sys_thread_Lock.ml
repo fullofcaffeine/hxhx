@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable handle : int }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "sys.thread.Lock"; handle = 0 } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "sys.thread.Lock"; handle = 0 } : t) in (
   ignore (ignore (let __place_receiver_1 = self in let __place_rhs_2 = HxThread.lock_create () in (
     (__place_receiver_1 : t).handle <- __place_rhs_2;
     __place_rhs_2
@@ -14,7 +14,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "sys.thread.Lock"
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "sys.thread.Lock"; handle = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "sys.thread.Lock"; handle = 0 } : t)
 
 let wait = fun self (timeout : Obj.t) -> let tempResult = ref (false : bool) in (
   ignore (if timeout == HxRuntime.hx_null then let __assign_3 = HxThread.lock_wait ((Obj.magic self : t).handle) in (

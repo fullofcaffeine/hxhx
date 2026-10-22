@@ -32,7 +32,7 @@ type 't ocamlrawinjectionmaterializationresult =
 
 let __reflaxe_ocaml__ = ()
 
-let ocamlrawinjectionplan_create = fun argumentCount2 plannedParts2 -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.ast.OcamlRawInjectionPlan"; argumentCount = 0; plannedParts = Obj.magic HxRuntime.hx_null } : ocamlrawinjectionplan_t) in (
+let ocamlrawinjectionplan_create = fun argumentCount2 plannedParts2 -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.ast.OcamlRawInjectionPlan"; argumentCount = 0; plannedParts = Obj.magic HxRuntime.hx_null } : ocamlrawinjectionplan_t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = argumentCount2 in (
       (__place_receiver_1 : ocamlrawinjectionplan_t).argumentCount <- __place_rhs_2;
@@ -46,7 +46,7 @@ let ocamlrawinjectionplan_create = fun argumentCount2 plannedParts2 -> let self 
   self
 )
 
-let ocamlrawinjectionplan___empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.ast.OcamlRawInjectionPlan"; argumentCount = 0; plannedParts = Obj.magic HxRuntime.hx_null } : ocamlrawinjectionplan_t)
+let ocamlrawinjectionplan___empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.ast.OcamlRawInjectionPlan"; argumentCount = 0; plannedParts = Obj.magic HxRuntime.hx_null } : ocamlrawinjectionplan_t)
 
 let ocamlrawinjectionplan_parts = fun self () -> let __array_receiver_5 = Obj.magic ((Obj.magic self : ocamlrawinjectionplan_t).plannedParts) in HxArray.copy __array_receiver_5
 
@@ -146,7 +146,7 @@ let ocamlrawinjectionplan_validate = fun template argumentCount2 -> let template
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun segments__local -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.ast.OcamlRawInjection"; storedSegments = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun segments__local -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.ast.OcamlRawInjection"; storedSegments = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let __assign_1 = Obj.magic (let __array_receiver_2 = Obj.magic segments__local in HxArray.copy __array_receiver_2) in (
     (Obj.magic self : t).storedSegments <- __assign_1;
     __assign_1
@@ -154,7 +154,7 @@ let create = fun segments__local -> let self = ({ __hx_type = HxType.class_ "ref
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.ast.OcamlRawInjection"; storedSegments = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.ast.OcamlRawInjection"; storedSegments = Obj.magic HxRuntime.hx_null } : t)
 
 let segments = fun self () -> let __array_receiver_3 = Obj.magic ((Obj.magic self : t).storedSegments) in HxArray.copy __array_receiver_3
 

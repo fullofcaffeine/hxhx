@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable ancestry : TypedBackendClassSemanticFacts.
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.Stage3OcamlClassStorage"; ancestry = Obj.magic HxRuntime.hx_null; nominals = Obj.magic HxRuntime.hx_null; owners = Obj.magic HxRuntime.hx_null; projections = Obj.magic HxRuntime.hx_null; modules = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.ocaml.Stage3OcamlClassStorage"; ancestry = Obj.magic HxRuntime.hx_null; nominals = Obj.magic HxRuntime.hx_null; owners = Obj.magic HxRuntime.hx_null; projections = Obj.magic HxRuntime.hx_null; modules = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = HxMap.create_string () in (
       (Obj.magic self : t).initializers <- __assign_1;
@@ -36,7 +36,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.St
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.Stage3OcamlClassStorage"; ancestry = Obj.magic HxRuntime.hx_null; nominals = Obj.magic HxRuntime.hx_null; owners = Obj.magic HxRuntime.hx_null; projections = Obj.magic HxRuntime.hx_null; modules = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.ocaml.Stage3OcamlClassStorage"; ancestry = Obj.magic HxRuntime.hx_null; nominals = Obj.magic HxRuntime.hx_null; owners = Obj.magic HxRuntime.hx_null; projections = Obj.magic HxRuntime.hx_null; modules = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null } : t)
 
 let add = fun self (projection : TypedBackendClassProjection.t) (runtimeProvided : bool) (outputModule : string) -> ignore (ignore (try ignore (let facts = Obj.magic (TypedBackendClassProjection.requireSemanticFacts (Obj.magic projection) ()) in let tempBool = ref (false : bool) in let _g = Obj.magic (TypedBackendClassSemanticFacts.getNominalKind (Obj.magic facts) ()) in (
   ignore (if (match _g with

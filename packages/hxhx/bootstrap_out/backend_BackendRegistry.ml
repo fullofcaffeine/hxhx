@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.BackendRegistry" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.BackendRegistry" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.BackendRegistry" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.BackendRegistry" } : t)
 
 let buildBuiltinRegistrations = fun () -> let registrations = Obj.magic (HxArray.create ()) in (
   ignore (let __array_receiver_1 = Obj.magic registrations in let __array_arg_0_2 = Backend_ocaml_OcamlNativeBackend.registration () in HxArray.push __array_receiver_1 __array_arg_0_2);

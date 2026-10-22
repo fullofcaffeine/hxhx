@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage3HookSupport" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.Stage3HookSupport" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage3HookSupport" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.Stage3HookSupport" } : t)
 
 let runHookPhase = fun session phase hookIds output -> (try let _g = ref 0 in let _g1 = HxArray.length hookIds in (
   ignore (while !_g < _g1 do ignore (let i = let __old_1 = !_g in let __new_2 = HxInt.add __old_1 1 in (

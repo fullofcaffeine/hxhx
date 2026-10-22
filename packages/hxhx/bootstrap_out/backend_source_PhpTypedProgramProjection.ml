@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable modules : Obj.t HxArray.t; mutable functio
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program -> let self = ({ __hx_type = HxType.class_ "backend.source.PhpTypedProgramProjection"; modules = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; functionOwners = Obj.magic HxRuntime.hx_null; fieldInitializers = Obj.magic HxRuntime.hx_null; fieldInitializerOwners = Obj.magic HxRuntime.hx_null; functionsByStableIdentity = Obj.magic HxRuntime.hx_null; ownersByStableIdentity = Obj.magic HxRuntime.hx_null; classOwners = Obj.magic HxRuntime.hx_null; classModuleOwners = Obj.magic HxRuntime.hx_null; stableFunctions = Obj.magic HxRuntime.hx_null; typedProgramRevision = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun program -> let self = ({ __hx_type = HxType.instance_marker "backend.source.PhpTypedProgramProjection"; modules = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; functionOwners = Obj.magic HxRuntime.hx_null; fieldInitializers = Obj.magic HxRuntime.hx_null; fieldInitializerOwners = Obj.magic HxRuntime.hx_null; functionsByStableIdentity = Obj.magic HxRuntime.hx_null; ownersByStableIdentity = Obj.magic HxRuntime.hx_null; classOwners = Obj.magic HxRuntime.hx_null; classModuleOwners = Obj.magic HxRuntime.hx_null; stableFunctions = Obj.magic HxRuntime.hx_null; typedProgramRevision = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if program == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "PHP typed program projection requires a program") ["Dynamic"] else ());
     ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
@@ -164,7 +164,7 @@ let create = fun program -> let self = ({ __hx_type = HxType.class_ "backend.sou
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpTypedProgramProjection"; modules = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; functionOwners = Obj.magic HxRuntime.hx_null; fieldInitializers = Obj.magic HxRuntime.hx_null; fieldInitializerOwners = Obj.magic HxRuntime.hx_null; functionsByStableIdentity = Obj.magic HxRuntime.hx_null; ownersByStableIdentity = Obj.magic HxRuntime.hx_null; classOwners = Obj.magic HxRuntime.hx_null; classModuleOwners = Obj.magic HxRuntime.hx_null; stableFunctions = Obj.magic HxRuntime.hx_null; typedProgramRevision = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.PhpTypedProgramProjection"; modules = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; functionOwners = Obj.magic HxRuntime.hx_null; fieldInitializers = Obj.magic HxRuntime.hx_null; fieldInitializerOwners = Obj.magic HxRuntime.hx_null; functionsByStableIdentity = Obj.magic HxRuntime.hx_null; ownersByStableIdentity = Obj.magic HxRuntime.hx_null; classOwners = Obj.magic HxRuntime.hx_null; classModuleOwners = Obj.magic HxRuntime.hx_null; stableFunctions = Obj.magic HxRuntime.hx_null; typedProgramRevision = Obj.magic HxRuntime.hx_null } : t)
 
 let requireMain = fun self (wanted : string) -> (try let fallback = ref (HxRuntime.hx_null : Obj.t) in let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).modules) in (
   ignore (while !_g < HxArray.length _g1 do ignore (let hx_module = let __array_read_receiver_57 = _g1 in let __array_read_index_58 = !_g in HxArray.get (Obj.magic __array_read_receiver_57) __array_read_index_58 in (

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable hostProgramRevision : string; mutable main
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetProgramRequest"; hostProgramRevision = HxString.hx_null_string; mainModuleId = HxString.hx_null_string; mainClass = Obj.magic HxRuntime.hx_null; fieldInitializers = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetProgramRequest"; hostProgramRevision = HxString.hx_null_string; mainModuleId = HxString.hx_null_string; mainClass = Obj.magic HxRuntime.hx_null; fieldInitializers = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
 
 let copyFieldInitializers = fun self () -> let __array_receiver_34 = Obj.magic ((Obj.magic self : t).fieldInitializers) in HxArray.copy __array_receiver_34
 
@@ -270,7 +270,7 @@ let selectFunctions = fun values mainModuleId2 mainClassName__local -> let selec
   uniqueFunctions (Obj.magic selected)
 )
 
-let create = fun hostProgramRevision2 mainModuleId2 declarations fieldInitializers2 functions2 -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.target.OcamlTargetProgramRequest"; hostProgramRevision = HxString.hx_null_string; mainModuleId = HxString.hx_null_string; mainClass = Obj.magic HxRuntime.hx_null; fieldInitializers = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun hostProgramRevision2 mainModuleId2 declarations fieldInitializers2 functions2 -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.target.OcamlTargetProgramRequest"; hostProgramRevision = HxString.hx_null_string; mainModuleId = HxString.hx_null_string; mainClass = Obj.magic HxRuntime.hx_null; fieldInitializers = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore (let normalizedHostRevision = let __call_arg_0_1 = hostProgramRevision2 in let __call_arg_1_2 = "host program revision" in required __call_arg_0_1 __call_arg_1_2 in let normalizedMainModuleId = let __call_arg_0_3 = mainModuleId2 in let __call_arg_1_4 = "main module ID" in required __call_arg_0_3 __call_arg_1_4 in (
     ignore (if declarations == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml target program requires declaration facts") ["Dynamic"] else ());
     let selectedMainClass = Obj.magic (selectMainClass (Obj.magic (Reflaxe_ocaml_target_OcamlTargetDeclarationRequest.copyClasses (Obj.magic declarations) ())) (normalizedMainModuleId : string)) in let selectedClassName = (mainClassName (Obj.magic selectedMainClass) : string) in let selectedFieldInitializers = Obj.magic (selectFieldInitializers (Obj.magic fieldInitializers2) (normalizedMainModuleId : string) (selectedClassName : string)) in let selectedFunctions = Obj.magic (selectFunctions (Obj.magic functions2) (normalizedMainModuleId : string) (selectedClassName : string)) in (

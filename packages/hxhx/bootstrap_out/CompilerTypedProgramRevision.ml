@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable macroMode : bool; mutable modules : Compil
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerTypedProgramRevision"; macroMode = false; modules = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerTypedProgramRevision"; macroMode = false; modules = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
 
 let getMacroMode = fun self () -> (Obj.magic self : t).macroMode
 
@@ -28,7 +28,7 @@ let compareText = fun (left : string) (right : string) -> (let tempResult = ref 
   !tempResult
 ) : int)
 
-let create = fun moduleContributions macroMode2 -> let self = ({ __hx_type = HxType.class_ "CompilerTypedProgramRevision"; macroMode = false; modules = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun moduleContributions macroMode2 -> let self = ({ __hx_type = HxType.instance_marker "CompilerTypedProgramRevision"; macroMode = false; modules = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = macroMode2 in (
       (__place_receiver_1 : t).macroMode <- __place_rhs_2;

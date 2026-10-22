@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable inputs : CompilerProgramConfigurationInput
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerProgramConfigurationObservation"; inputs = Obj.magic HxRuntime.hx_null; inputRevisionByName = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerProgramConfigurationObservation"; inputs = Obj.magic HxRuntime.hx_null; inputRevisionByName = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t)
 
 let getInputs = fun self () -> let __array_receiver_30 = Obj.magic ((Obj.magic self : t).inputs) in HxArray.copy __array_receiver_30
 
@@ -53,7 +53,7 @@ let changedInputNames = fun self (previous : t) -> let names = Obj.magic (HxMap.
 
 let compareInputs = fun left right -> let __call_arg_0_58 = (Obj.magic left : CompilerProgramConfigurationInput.t).name in let __call_arg_1_59 = (Obj.magic right : CompilerProgramConfigurationInput.t).name in compareText __call_arg_0_58 __call_arg_1_59
 
-let create = fun inputs2 -> let self = ({ __hx_type = HxType.class_ "CompilerProgramConfigurationObservation"; inputs = Obj.magic HxRuntime.hx_null; inputRevisionByName = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun inputs2 -> let self = ({ __hx_type = HxType.instance_marker "CompilerProgramConfigurationObservation"; inputs = Obj.magic HxRuntime.hx_null; inputRevisionByName = Obj.magic HxRuntime.hx_null; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore (let tempArray = ref (Obj.magic (HxRuntime.hx_null) : CompilerProgramConfigurationInput.t HxArray.t) in (
     ignore (if inputs2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       tempArray := __assign_1;

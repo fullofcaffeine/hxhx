@@ -23,7 +23,7 @@ type t = { __hx_type : Obj.t; mutable kind : hxsourcefunctionkind; mutable place
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun input -> let self = ({ __hx_type = HxType.class_ "HxSourceFunction"; kind = Obj.magic HxRuntime.hx_null; placement = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null; signature = Obj.magic HxRuntime.hx_null; defaultParameterIndexes = Obj.magic HxRuntime.hx_null; generics = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "HxSourceFunction"; kind = Obj.magic HxRuntime.hx_null; placement = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null; signature = Obj.magic HxRuntime.hx_null; defaultParameterIndexes = Obj.magic HxRuntime.hx_null; generics = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if Obj.obj (HxAnon.get input "signature") == Obj.magic (HxRuntime.hx_null) || HxArray.length (Obj.obj (HxAnon.get input "arguments")) <> HxArray.length (HxLambdaSignature.getParameters (Obj.magic (Obj.obj (HxAnon.get input "signature"))) ()) then HxType.hx_throw_typed_rtti (Obj.repr "source function parameter facts differ from its arguments") ["Dynamic"] else ());
     ignore (let _g = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxSourceFunctionKind" (HxAnon.get input "kind"))) in let _g1 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxSourceFunctionPlacement" (HxAnon.get input "placement"))) in if (match _g with
@@ -80,7 +80,7 @@ let create = fun input -> let self = ({ __hx_type = HxType.class_ "HxSourceFunct
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxSourceFunction"; kind = Obj.magic HxRuntime.hx_null; placement = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null; signature = Obj.magic HxRuntime.hx_null; defaultParameterIndexes = Obj.magic HxRuntime.hx_null; generics = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxSourceFunction"; kind = Obj.magic HxRuntime.hx_null; placement = Obj.magic HxRuntime.hx_null; arguments = Obj.magic HxRuntime.hx_null; signature = Obj.magic HxRuntime.hx_null; defaultParameterIndexes = Obj.magic HxRuntime.hx_null; generics = Obj.magic HxRuntime.hx_null } : t)
 
 let getKind = fun self () -> (Obj.magic self : t).kind
 

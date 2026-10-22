@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.SourceFunctionBodyRewriter" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.source.SourceFunctionBodyRewriter" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.SourceFunctionBodyRewriter" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.SourceFunctionBodyRewriter" } : t)
 
 let rec nullableExpression = fun value transform -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
   ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_11 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (

@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerDependencyKindTools" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "CompilerDependencyKindTools" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencyKindTools" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerDependencyKindTools" } : t)
 
 let name = fun kind -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (match kind with

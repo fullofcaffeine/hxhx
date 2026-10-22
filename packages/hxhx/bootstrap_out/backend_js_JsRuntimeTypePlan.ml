@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable inheritance : Backend_js_JsClassInheritanc
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsRuntimeTypePlan"; inheritance = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.js.JsRuntimeTypePlan"; inheritance = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null } : t)
 
 let reference = fun self (target : TypedRuntimeTypeTarget.t) -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (let _g = Obj.magic (TypedRuntimeTypeTarget.getKind (Obj.magic target) ()) in match _g with
@@ -26,7 +26,7 @@ let reference = fun self (target : TypedRuntimeTypeTarget.t) -> let tempResult =
   !tempResult
 )
 
-let create = fun program inheritance2 -> let self = ({ __hx_type = HxType.class_ "backend.js.JsRuntimeTypePlan"; inheritance = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun program inheritance2 -> let self = ({ __hx_type = HxType.instance_marker "backend.js.JsRuntimeTypePlan"; inheritance = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_object ()) in (
       (Obj.magic self : t).initializers <- __assign_1;

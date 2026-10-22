@@ -18,7 +18,7 @@ type t = { __hx_type : Obj.t; mutable plan : Backend_source_PhpFunctionLoweringP
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.PhpLexicalRenderScope"; plan = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; depth = 0; locals = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; referenceCaptures = Obj.magic HxRuntime.hx_null; optionalLambdaArguments = Obj.magic HxRuntime.hx_null; thisValueSlot = false; thisCaptureName = Obj.magic HxRuntime.hx_null; preferredEnumOwnerIdentity = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.PhpLexicalRenderScope"; plan = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; depth = 0; locals = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; referenceCaptures = Obj.magic HxRuntime.hx_null; optionalLambdaArguments = Obj.magic HxRuntime.hx_null; thisValueSlot = false; thisCaptureName = Obj.magic HxRuntime.hx_null; preferredEnumOwnerIdentity = Obj.magic HxRuntime.hx_null } : t)
 
 let getPlan = fun self () -> (Obj.magic self : t).plan
 
@@ -212,7 +212,7 @@ let normalizeNullable = fun (value : string) -> (let normalized = let __call_arg
   !tempResult
 ) : string)
 
-let create = fun plan2 kind2 depth2 locals2 initializers2 referenceCaptures2 optionalLambdaArguments2 thisValueSlot2 thisCaptureName2 preferredEnumOwnerIdentity2 -> let self = ({ __hx_type = HxType.class_ "backend.source.PhpLexicalRenderScope"; plan = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; depth = 0; locals = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; referenceCaptures = Obj.magic HxRuntime.hx_null; optionalLambdaArguments = Obj.magic HxRuntime.hx_null; thisValueSlot = false; thisCaptureName = Obj.magic HxRuntime.hx_null; preferredEnumOwnerIdentity = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun plan2 kind2 depth2 locals2 initializers2 referenceCaptures2 optionalLambdaArguments2 thisValueSlot2 thisCaptureName2 preferredEnumOwnerIdentity2 -> let self = ({ __hx_type = HxType.instance_marker "backend.source.PhpLexicalRenderScope"; plan = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; depth = 0; locals = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; referenceCaptures = Obj.magic HxRuntime.hx_null; optionalLambdaArguments = Obj.magic HxRuntime.hx_null; thisValueSlot = false; thisCaptureName = Obj.magic HxRuntime.hx_null; preferredEnumOwnerIdentity = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if plan2 == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "PHP lexical render scope requires an exact function plan") ["Dynamic"] else ());
     ignore (let __assign_1 = Obj.magic plan2 in (

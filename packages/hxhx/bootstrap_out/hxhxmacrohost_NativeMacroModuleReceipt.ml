@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhxmacrohost.NativeMacroModuleReceipt" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhxmacrohost.NativeMacroModuleReceipt" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhxmacrohost.NativeMacroModuleReceipt" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhxmacrohost.NativeMacroModuleReceipt" } : t)
 
 let failureMessage = fun (message : string) -> ("native macro module receipt: " ^ HxString.toStdString message : string)
 

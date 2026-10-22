@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable classes : Backend_cpp_CppManagedClassStora
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun classes2 -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedArrayPushValue"; classes = Obj.magic HxRuntime.hx_null; entries = Obj.magic HxRuntime.hx_null; ordered = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun classes2 -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedArrayPushValue"; classes = Obj.magic HxRuntime.hx_null; entries = Obj.magic HxRuntime.hx_null; ordered = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       (Obj.magic self : t).ordered <- __assign_1;
@@ -24,7 +24,7 @@ let create = fun classes2 -> let self = ({ __hx_type = HxType.class_ "backend.cp
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedArrayPushValue"; classes = Obj.magic HxRuntime.hx_null; entries = Obj.magic HxRuntime.hx_null; ordered = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedArrayPushValue"; classes = Obj.magic HxRuntime.hx_null; entries = Obj.magic HxRuntime.hx_null; ordered = Obj.magic HxRuntime.hx_null } : t)
 
 let renderEntry = fun self (entry : Obj.t) -> let abi = Obj.magic (Backend_cpp_CppManagedClosureAbi.create (Obj.magic (Obj.obj (HxAnon.get entry "signature"))) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in let parameter = let __array_read_receiver_52 = Backend_cpp_CppManagedClosureAbi.getParameters (Obj.magic abi) () in let __array_read_index_53 = 0 in HxArray.get (Obj.magic __array_read_receiver_52) __array_read_index_53 in (
   ignore (if let __enum_eq_left_54 = (Obj.magic abi : Backend_cpp_CppManagedClosureAbi.t).result in let __enum_eq_right_55 = Backend_cpp_CppManagedClosureAbi.RootedResult in HxEnum.unbox_or_obj "backend.cpp.CppManagedResultStorage" (Obj.repr __enum_eq_left_54) != HxEnum.unbox_or_obj "backend.cpp.CppManagedResultStorage" (Obj.repr __enum_eq_right_55) then HxType.hx_throw_typed_rtti (Obj.repr "managed Array.push value requires the ordinary callable Int result transport") ["Dynamic"] else ());

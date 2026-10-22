@@ -14,12 +14,12 @@ type ocamlexpressionprintwork =
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "reflaxe.ocaml.ast.OcamlASTPrinter" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.ast.OcamlASTPrinter" } : t) in (
   ignore (ignore ());
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "reflaxe.ocaml.ast.OcamlASTPrinter" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "reflaxe.ocaml.ast.OcamlASTPrinter" } : t)
 
 let exprPrec = fun self (e : Reflaxe_ocaml_ast_OcamlExpr.ocamlexpr) -> (
   ignore self;
@@ -1118,7 +1118,7 @@ let pushExpressionContent = fun self (work : ocamlexpressionprintwork HxArray.t)
         ));
         ignore (if !index < HxInt.sub (HxArray.length fields) 1 then ignore (let __array_receiver_219 = Obj.magic work in let __array_arg_0_220 = Obj.magic (let __enum_arg_221 = ("; " : string) in EmitText (Stdlib.Sys.opaque_identity __enum_arg_221)) in HxArray.push __array_receiver_219 __array_arg_0_220) else ());
         let field = let __array_read_receiver_222 = fields in let __array_read_index_223 = !index in HxArray.get (Obj.magic __array_read_receiver_222) __array_read_index_223 in (
-          ignore (pushExpression (Obj.magic work) (Obj.magic (let __structural_receiver_224 = field in Obj.obj (HxAnon.get __structural_receiver_224 "value"))) 0 indentation (needsDelimitedElementParens (Obj.magic (let __structural_receiver_225 = field in Obj.obj (HxAnon.get __structural_receiver_225 "value")))));
+          ignore (pushExpression (Obj.magic work) (Obj.magic (let __structural_receiver_224 = field in Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.ast.OcamlExpr" (HxAnon.get __structural_receiver_224 "value")))) 0 indentation (needsDelimitedElementParens (Obj.magic (let __structural_receiver_225 = field in Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.ast.OcamlExpr" (HxAnon.get __structural_receiver_225 "value"))))));
           let __array_receiver_226 = Obj.magic work in let __array_arg_0_227 = Obj.magic (let __enum_arg_230 = (let __string_part_228 = HxString.toStdString (Obj.obj (HxAnon.get field "name")) in let __string_part_229 = " = " in __string_part_228 ^ __string_part_229 : string) in EmitText (Stdlib.Sys.opaque_identity __enum_arg_230)) in HxArray.push __array_receiver_226 __array_arg_0_227
         )
       )) done);

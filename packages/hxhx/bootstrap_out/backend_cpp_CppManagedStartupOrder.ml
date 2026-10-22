@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable order : TypedStaticStartupOrder.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedStartupOrder"; order = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun program -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedStartupOrder"; order = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let _g = Obj.magic (let __arr_1 = HxArray.create () in __arr_1) in let _g1 = ref 0 in let _g2 = Obj.magic (Backend_cpp_CppTypedProgramProjection.getModules (Obj.magic program) ()) in (
     ignore (while !_g1 < HxArray.length _g2 do ignore (let hx_module = let __array_read_receiver_2 = _g2 in let __array_read_index_3 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_2) __array_read_index_3 in (
       ignore (let __old_4 = !_g1 in let __new_5 = HxInt.add __old_4 1 in (
@@ -32,6 +32,6 @@ let create = fun program -> let self = ({ __hx_type = HxType.class_ "backend.cpp
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedStartupOrder"; order = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedStartupOrder"; order = Obj.magic HxRuntime.hx_null } : t)
 
 let getClasses = fun self () -> TypedStaticStartupOrder.getClasses (Obj.magic ((Obj.magic self : t).order)) ()

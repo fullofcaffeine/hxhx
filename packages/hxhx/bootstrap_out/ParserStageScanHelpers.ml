@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "ParserStageScanHelpers" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "ParserStageScanHelpers" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "ParserStageScanHelpers" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "ParserStageScanHelpers" } : t)
 
 let typeParamsMetadata = fun params -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
   ignore (if params == Obj.magic (HxRuntime.hx_null) || HxArray.length params = 0 then let __assign_175 = Obj.magic (let __represented_array_176 = HxArray.create () in __represented_array_176) in (

@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.LuaStringLocalCallLowering" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.source.LuaStringLocalCallLowering" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.LuaStringLocalCallLowering" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.LuaStringLocalCallLowering" } : t)
 
 let stringHelper = fun (field : string) (argumentCount : int) -> (let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (match field with

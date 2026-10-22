@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "CompilerCacheIdentity" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "CompilerCacheIdentity" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerCacheIdentity" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerCacheIdentity" } : t)
 
 let encode = fun values -> (try let out = Obj.magic (StringBuf.create ()) in (
   ignore (if values == Obj.magic (HxRuntime.hx_null) then (

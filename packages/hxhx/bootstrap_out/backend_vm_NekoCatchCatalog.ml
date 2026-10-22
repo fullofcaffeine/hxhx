@@ -16,7 +16,7 @@ type t = { __hx_type : Obj.t; mutable statements : Obj.t HxArray.t; mutable prog
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program2 selected2 -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoCatchCatalog"; statements = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null; selected = Obj.magic HxRuntime.hx_null; expressions = Obj.magic HxRuntime.hx_null; plans = Obj.magic HxRuntime.hx_null; executableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string } : t) in (
+let create = fun program2 selected2 -> let self = ({ __hx_type = HxType.instance_marker "backend.vm.NekoCatchCatalog"; statements = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null; selected = Obj.magic HxRuntime.hx_null; expressions = Obj.magic HxRuntime.hx_null; plans = Obj.magic HxRuntime.hx_null; executableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxArray.create ()) in (
       (Obj.magic self : t).plans <- __assign_1;
@@ -330,7 +330,7 @@ let create = fun program2 selected2 -> let self = ({ __hx_type = HxType.class_ "
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoCatchCatalog"; statements = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null; selected = Obj.magic HxRuntime.hx_null; expressions = Obj.magic HxRuntime.hx_null; plans = Obj.magic HxRuntime.hx_null; executableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.NekoCatchCatalog"; statements = Obj.magic HxRuntime.hx_null; program = Obj.magic HxRuntime.hx_null; selected = Obj.magic HxRuntime.hx_null; expressions = Obj.magic HxRuntime.hx_null; plans = Obj.magic HxRuntime.hx_null; executableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string } : t)
 
 let getPlans = fun self () -> let __array_receiver_76 = Obj.magic ((Obj.magic self : t).plans) in HxArray.copy __array_receiver_76
 
@@ -452,7 +452,7 @@ type nekocatchbody =
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun program selected clauses ordinal -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoCatchPlan"; executableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; occurrenceIdentity = HxString.hx_null_string; cases = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun program selected clauses ordinal -> let self = ({ __hx_type = HxType.instance_marker "backend.vm.NekoCatchPlan"; executableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; occurrenceIdentity = HxString.hx_null_string; cases = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if selected == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "Neko catch planning requires an exact current executable") ["Dynamic"] else ());
     let tempStruct = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
@@ -564,7 +564,7 @@ let create = fun program selected clauses ordinal -> let self = ({ __hx_type = H
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoCatchPlan"; executableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; occurrenceIdentity = HxString.hx_null_string; cases = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.NekoCatchPlan"; executableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; occurrenceIdentity = HxString.hx_null_string; cases = Obj.magic HxRuntime.hx_null } : t)
 
 let assertStatement = fun self (node : HxStmt.hxstmt) -> ignore (ignore (if (match node with
   | HxStmt.SBlock (_, _) -> 0
@@ -1361,7 +1361,7 @@ type t = { __hx_type : Obj.t; mutable selected : Obj.t; mutable source : HxExpr.
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun selected2 source2 arguments2 -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoEnumConstructorPlan"; selected = Obj.magic HxRuntime.hx_null; source = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string; arguments = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun selected2 source2 arguments2 -> let self = ({ __hx_type = HxType.instance_marker "backend.vm.NekoEnumConstructorPlan"; selected = Obj.magic HxRuntime.hx_null; source = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string; arguments = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic selected2 in (
       (Obj.magic self : t).selected <- __assign_1;
@@ -1383,7 +1383,7 @@ let create = fun selected2 source2 arguments2 -> let self = ({ __hx_type = HxTyp
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoEnumConstructorPlan"; selected = Obj.magic HxRuntime.hx_null; source = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string; arguments = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.NekoEnumConstructorPlan"; selected = Obj.magic HxRuntime.hx_null; source = Obj.magic HxRuntime.hx_null; fingerprint = HxString.hx_null_string; arguments = Obj.magic HxRuntime.hx_null } : t)
 
 let getArguments = fun self () -> (
   ignore (if let __string_eq_left_6 = TypedBodyFingerprint.exactExpression (Obj.magic ((Obj.magic self : t).source)) in let __string_eq_right_7 = (Obj.magic self : t).fingerprint in not (HxString.equals __string_eq_left_6 __string_eq_right_7) then HxType.hx_throw_typed_rtti (Obj.repr "Neko enum constructor call changed after selection") ["Dynamic"] else ());
@@ -2198,7 +2198,7 @@ type t = { __hx_type : Obj.t; mutable classGraph : TypedBackendClassGraph.t; mut
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.NekoTypedProgramProjection"; classGraph = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; classIdentities = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; functionDeclarations = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; symbols = Obj.magic HxRuntime.hx_null; occupiedNames = Obj.magic HxRuntime.hx_null; catchCatalogs = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.NekoTypedProgramProjection"; classGraph = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; classIdentities = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; functionDeclarations = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; symbols = Obj.magic HxRuntime.hx_null; occupiedNames = Obj.magic HxRuntime.hx_null; catchCatalogs = Obj.magic HxRuntime.hx_null } : t)
 
 let requireClassIdentity = fun self (declaration : HxClassDecl.t) -> let _this = Obj.magic ((Obj.magic self : t).classIdentities) in let tempMaybeString = (HxMap.get_object (Obj.magic _this) declaration : string) in (
   ignore (if tempMaybeString == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_99 = "Neko typed program cannot identify projected class " in let __string_part_100 = HxString.toStdString (HxClassDecl.getName (Obj.magic declaration)) in __string_part_99 ^ __string_part_100)) ["Dynamic"] else ());
@@ -2338,7 +2338,7 @@ let requireDeclaredFunction = fun self (declaration : HxFunctionDecl.t) -> (
   )
 )
 
-let create = fun programRevision modules -> let self = ({ __hx_type = HxType.class_ "backend.vm.NekoTypedProgramProjection"; classGraph = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; classIdentities = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; functionDeclarations = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; symbols = Obj.magic HxRuntime.hx_null; occupiedNames = Obj.magic HxRuntime.hx_null; catchCatalogs = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun programRevision modules -> let self = ({ __hx_type = HxType.instance_marker "backend.vm.NekoTypedProgramProjection"; classGraph = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; classIdentities = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; functionDeclarations = Obj.magic HxRuntime.hx_null; initializers = Obj.magic HxRuntime.hx_null; symbols = Obj.magic HxRuntime.hx_null; occupiedNames = Obj.magic HxRuntime.hx_null; catchCatalogs = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_string ()) in (
       (Obj.magic self : t).catchCatalogs <- __assign_1;

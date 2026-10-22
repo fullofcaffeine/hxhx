@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable providerReport : CompilerSourceProviderRep
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "FilesystemCompilerSourceProvider"; providerReport = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "FilesystemCompilerSourceProvider"; providerReport = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let __assign_1 = Obj.magic (CompilerSourceProviderReport.create false) in (
     (Obj.magic self : t).providerReport <- __assign_1;
     __assign_1
@@ -14,7 +14,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "FilesystemCompil
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "FilesystemCompilerSourceProvider"; providerReport = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "FilesystemCompilerSourceProvider"; providerReport = Obj.magic HxRuntime.hx_null } : t)
 
 let readBytes = fun self (filePath : string) -> (
   ignore self;

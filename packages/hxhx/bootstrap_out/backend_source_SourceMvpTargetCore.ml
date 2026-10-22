@@ -6,11 +6,11 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.SourceMvpTargetCore" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.source.SourceMvpTargetCore" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.SourceMvpTargetCore" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.SourceMvpTargetCore" } : t)
 
 let emit = fun target program context -> Backend_source_SourceTargetCommon.emitTarget (Obj.magic target) (Obj.magic program) (Obj.magic context)

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable targets : Backend_cpp_CppManagedStaticTarg
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedProgramEmitter"; targets = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; statics = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; enums = Obj.magic HxRuntime.hx_null; defaultValue = Obj.magic HxRuntime.hx_null; constructors = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null; boundCallables = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedProgramEmitter"; targets = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; statics = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; enums = Obj.magic HxRuntime.hx_null; defaultValue = Obj.magic HxRuntime.hx_null; constructors = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null; boundCallables = Obj.magic HxRuntime.hx_null } : t)
 
 let resolve = fun self (identity : string) -> let _this = Obj.magic ((Obj.magic self : t).targets) in let tempMaybeCppManagedStaticTarget = HxMap.get_string (Obj.magic _this) (identity : string) in let selected = tempMaybeCppManagedStaticTarget in (
   ignore (if selected == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr ("managed program lacks the selected static declaration: " ^ HxString.toStdString identity)) ["Dynamic"] else ());
@@ -64,7 +64,7 @@ let resolveInstance = fun self (call : TypedBackendInstanceCallOccurrence.t) (co
   )
 )
 
-let create = fun program -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedProgramEmitter"; targets = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; statics = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; enums = Obj.magic HxRuntime.hx_null; defaultValue = Obj.magic HxRuntime.hx_null; constructors = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null; boundCallables = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun program -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedProgramEmitter"; targets = Obj.magic HxRuntime.hx_null; functions = Obj.magic HxRuntime.hx_null; statics = Obj.magic HxRuntime.hx_null; casts = Obj.magic HxRuntime.hx_null; classes = Obj.magic HxRuntime.hx_null; enums = Obj.magic HxRuntime.hx_null; defaultValue = Obj.magic HxRuntime.hx_null; constructors = Obj.magic HxRuntime.hx_null; instanceMethods = Obj.magic HxRuntime.hx_null; boundCallables = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (HxMap.create_string ()) in (
       (Obj.magic self : t).instanceMethods <- __assign_1;

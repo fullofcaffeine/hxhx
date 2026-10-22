@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "TyAbstractNativeBinaryOperation" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TyAbstractNativeBinaryOperation" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyAbstractNativeBinaryOperation" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyAbstractNativeBinaryOperation" } : t)
 
 let carrierType = fun hx_type index -> let tempMaybeTyNominalTypeId = ref (Obj.magic (HxRuntime.hx_null) : TyNominalTypeId.t) in (
   ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (

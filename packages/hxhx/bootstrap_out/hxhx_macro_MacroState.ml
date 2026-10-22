@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.MacroState" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.macro.MacroState" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.MacroState" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.macro.MacroState" } : t)
 
 let sortStringsInPlace = fun arr -> ignore (try ignore ((
   ignore (if arr == Obj.magic (HxRuntime.hx_null) || HxArray.length arr <= 1 then Stdlib.raise (HxRuntime.Hx_return_void) else ());

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable projection : TypedBackendFieldInitializerP
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun projection2 prefix2 application -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppManagedInitializerLocals"; projection = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; prefix = HxString.hx_null_string; captures = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun projection2 prefix2 application -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedInitializerLocals"; projection = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; prefix = HxString.hx_null_string; captures = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (if projection2 == Obj.magic (HxRuntime.hx_null) || not (EReg.hx_match (Obj.magic (EReg.create ("^[A-Za-z_][A-Za-z0-9_]*$" : string) ("" : string))) (prefix2 : string)) then HxType.hx_throw_typed_rtti (Obj.repr "initializer locals require an exact owner and allocated symbols") ["Dynamic"] else ());
     ignore (let __assign_1 = Obj.magic projection2 in (
@@ -40,7 +40,7 @@ let create = fun projection2 prefix2 application -> let self = ({ __hx_type = Hx
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppManagedInitializerLocals"; projection = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; prefix = HxString.hx_null_string; captures = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppManagedInitializerLocals"; projection = Obj.magic HxRuntime.hx_null; declarations = Obj.magic HxRuntime.hx_null; prefix = HxString.hx_null_string; captures = Obj.magic HxRuntime.hx_null } : t)
 
 let root = fun self (binding__local : TyLocalBinding.t) -> (try (
   ignore (TypedBackendFieldInitializerProjection.assertCurrent (Obj.magic ((Obj.magic self : t).projection)) ());

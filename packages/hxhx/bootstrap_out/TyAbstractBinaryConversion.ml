@@ -14,7 +14,7 @@ type t = { __hx_type : Obj.t; mutable expected : TyType.t; mutable evidence : bi
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun expected2 evidence2 -> let self = ({ __hx_type = HxType.class_ "TyAbstractBinaryConversion"; expected = Obj.magic HxRuntime.hx_null; evidence = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun expected2 evidence2 -> let self = ({ __hx_type = HxType.instance_marker "TyAbstractBinaryConversion"; expected = Obj.magic HxRuntime.hx_null; evidence = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic expected2 in (
       (Obj.magic self : t).expected <- __assign_1;
@@ -28,7 +28,7 @@ let create = fun expected2 evidence2 -> let self = ({ __hx_type = HxType.class_ 
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyAbstractBinaryConversion"; expected = Obj.magic HxRuntime.hx_null; evidence = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TyAbstractBinaryConversion"; expected = Obj.magic HxRuntime.hx_null; evidence = Obj.magic HxRuntime.hx_null } : t)
 
 let getScore = fun self () -> let tempResult = ref (0 : int) in (
   ignore (let _g = Obj.magic ((Obj.magic self : t).evidence) in match _g with
