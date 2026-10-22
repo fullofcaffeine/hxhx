@@ -83,6 +83,7 @@ class ReflaxeOcamlStructuralFieldInspection {
 			fieldSemanticTypeId: requiredString(value, "fieldSemanticTypeId"),
 			resultSemanticTypeId: requiredString(value, "resultSemanticTypeId"),
 			loadConversion: cast optionalString(value, "loadConversion"),
+			enumLoadTarget: enumLoadTarget(value),
 			storeConversion: cast optionalString(value, "storeConversion"),
 			runtimeModule: requiredString(value, "runtimeModule"),
 			runtimeOperation: requiredString(value, "runtimeOperation"),
@@ -98,6 +99,18 @@ class ReflaxeOcamlStructuralFieldInspection {
 			bodyRevision: requiredString(value, "bodyRevision"),
 			pipelineRevision: requiredString(value, "pipelineRevision")
 		};
+	}
+
+	static function enumLoadTarget(value:Dynamic):Null<reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralEnumLoadTarget> {
+		if (!Reflect.hasField(value, "enumLoadTarget"))
+			throw 'Expected structural-field field "enumLoadTarget".';
+		if (Reflect.field(value, "enumLoadTarget") == null)
+			return null;
+		final target = requiredObject(value, "enumLoadTarget");
+		final nullable:Dynamic = Reflect.field(target, "nullable");
+		if (!Std.isOfType(nullable, Bool))
+			throw 'Expected structural enum target Boolean "nullable".';
+		return {semanticTypeId: requiredString(target, "semanticTypeId"), carrierTypeId: requiredString(target, "carrierTypeId"), nullable: cast nullable};
 	}
 
 	static function runtimeUseOccurrences(value:Dynamic):Array<OcamlRuntimeUseOccurrence> {
@@ -171,6 +184,7 @@ class ReflaxeOcamlStructuralFieldInspection {
 			fieldSemanticTypeId: decision.fieldSemanticTypeId,
 			resultSemanticTypeId: decision.resultSemanticTypeId,
 			loadConversion: decision.loadConversion,
+			enumLoadTarget: OcamlStructuralFieldContract.copyEnumLoadTarget(decision.enumLoadTarget),
 			storeConversion: decision.storeConversion,
 			runtimeModule: decision.runtimeModule,
 			runtimeOperation: decision.runtimeOperation,

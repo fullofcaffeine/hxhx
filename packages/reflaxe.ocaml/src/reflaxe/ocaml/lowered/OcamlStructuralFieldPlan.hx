@@ -45,6 +45,14 @@ enum abstract OcamlStructuralFieldOperation(String) from String to String {
 enum abstract OcamlStructuralFieldLoadConversion(String) from String to String {
 	final ObjObj = "obj-obj";
 	final UnboxBool = "unbox-bool";
+	final UnboxEnum = "unbox-enum";
+}
+
+/** Exact ordinary enum recovered from universal field storage; null retains its sentinel. */
+typedef OcamlStructuralEnumLoadTarget = {
+	final semanticTypeId:String;
+	final carrierTypeId:String;
+	final nullable:Bool;
 }
 
 /** How an assigned Haxe value enters the universal `HxAnon` field slot. */
@@ -100,6 +108,7 @@ typedef OcamlStructuralFieldDecision = {
 	final fieldSemanticTypeId:String;
 	final resultSemanticTypeId:String;
 	final loadConversion:Null<OcamlStructuralFieldLoadConversion>;
+	final enumLoadTarget:Null<OcamlStructuralEnumLoadTarget>;
 	final storeConversion:Null<OcamlStructuralFieldStoreConversion>;
 	final runtimeModule:String;
 	final runtimeOperation:String;
@@ -118,9 +127,10 @@ typedef OcamlStructuralFieldDecision = {
 
 /** Pure identity and validation rules shared by planning, syntax, and reports. */
 class OcamlStructuralFieldContract {
-	public static inline final MODEL = "typed-structural-field-overlap-v4";
+	public static inline final MODEL = "typed-structural-field-overlap-v5";
 	public static inline final HAXE_ANON_CAPABILITY = "haxe-structural-field";
 	public static inline final HAXE_BOOL_CARRIER_CAPABILITY = "haxe-structural-bool-carrier";
+	public static inline final HAXE_ENUM_CARRIER_CAPABILITY = "haxe-structural-enum-carrier";
 	public static inline final HAXE_ITERATOR_CAPABILITY = "haxe-iterator";
 	public static inline final STORED_PROOF_ID = "structural-stored-field-v1";
 	public static inline final ITERATOR_PROOF_ID = "structural-iterator-method-value-v1";
@@ -146,6 +156,11 @@ class OcamlStructuralFieldContract {
 		return decisionId + ":runtime:" + HAXE_BOOL_CARRIER_CAPABILITY;
 	}
 
+	/** The enum recovery helper belongs to this exact stored-field read. */
+	public static function enumCarrierRuntimeRequirementId(decisionId:String):String {
+		return decisionId + ":runtime:" + HAXE_ENUM_CARRIER_CAPABILITY;
+	}
+
 	/** Returns every direct runtime root selected by one structural-field decision. */
 	public static function runtimeRequirementIdsFor(decision:OcamlStructuralFieldDecision):Array<String> {
 		if (isTupleProjection(decision.operation))
@@ -153,6 +168,8 @@ class OcamlStructuralFieldContract {
 		final result = [runtimeRequirementId(decision.id, decision.operation)];
 		if (decision.loadConversion == UnboxBool || decision.storeConversion == BoxBool)
 			result.push(boolCarrierRuntimeRequirementId(decision.id));
+		if (decision.loadConversion == UnboxEnum)
+			result.push(enumCarrierRuntimeRequirementId(decision.id));
 		return result;
 	}
 
@@ -200,6 +217,8 @@ class OcamlStructuralFieldContract {
 			case ReadStoredField:
 				if (decision.loadConversion == UnboxBool)
 					add(boolCarrierRuntimeRequirementId(decision.id), "HxRuntime.unbox_bool_or_obj", "unbox-bool");
+				if (decision.loadConversion == UnboxEnum)
+					add(enumCarrierRuntimeRequirementId(decision.id), "HxEnum.unbox_or_obj", "unbox-enum");
 				add(operationRequirement, decision.runtimeModule + "." + decision.runtimeOperation, "read-field");
 			case WriteStoredField:
 				add(operationRequirement, decision.runtimeModule + "." + decision.runtimeOperation, "write-field");
@@ -242,6 +261,16 @@ class OcamlStructuralFieldContract {
 			throw 'reflaxe.ocaml [ocaml-structural-field:invalid]: structural field decision "${decision.id}" has incomplete source, type, or revision facts';
 		}
 
+		if (decision.enumLoadTarget != null) {
+			final target = decision.enumLoadTarget;
+			if (decision.operation != ReadStoredField
+				|| decision.loadConversion != UnboxEnum
+				|| target.semanticTypeId.length == 0
+				|| target.carrierTypeId != "haxe-enum-native-variant-carrier-v1:" + target.semanticTypeId)
+				throw 'reflaxe.ocaml [ocaml-structural-field:invalid-enum]: field "${decision.id}" has conflicting enum recovery facts';
+		} else if (decision.loadConversion == UnboxEnum) {
+			throw 'reflaxe.ocaml [ocaml-structural-field:missing-enum]: field "${decision.id}" has no exact enum recovery target';
+		}
 		switch (decision.operation) {
 			case ReadStoredField:
 				requireStored(decision, "get", ["materialize-receiver", "read-field"], true);
@@ -315,7 +344,7 @@ class OcamlStructuralFieldContract {
 			|| decision.proofClaim != STORED_PROOF_CLAIM
 			|| (read && decision.storeConversion != null)
 			|| (!read && decision.loadConversion != null)
-			|| (read && decision.loadConversion != (boolField ? UnboxBool : ObjObj))
+			|| (read && decision.loadConversion != (decision.enumLoadTarget != null ? UnboxEnum : boolField ? UnboxBool : ObjObj))
 			|| (!read && decision.storeConversion != (boolField ? BoxBool : ObjRepr))) {
 			throw 'reflaxe.ocaml [ocaml-structural-field:invalid-stored]: stored field decision "${decision.id}" disagrees with its HxAnon operation';
 		}
@@ -391,6 +420,7 @@ class OcamlStructuralFieldContract {
 			fieldSemanticTypeId: decision.fieldSemanticTypeId,
 			resultSemanticTypeId: decision.resultSemanticTypeId,
 			loadConversion: decision.loadConversion,
+			enumLoadTarget: copyEnumLoadTarget(decision.enumLoadTarget),
 			storeConversion: decision.storeConversion,
 			runtimeModule: decision.runtimeModule,
 			runtimeOperation: decision.runtimeOperation,
@@ -422,6 +452,16 @@ class OcamlStructuralFieldContract {
 			bodyRevision: decision.bodyRevision,
 			pipelineRevision: decision.pipelineRevision
 		};
+	}
+
+	/** Detaches the enum proof when a plan or report crosses ownership boundaries. */
+	public static function copyEnumLoadTarget(target:Null<OcamlStructuralEnumLoadTarget>):Null<OcamlStructuralEnumLoadTarget> {
+		return target == null ? null : {semanticTypeId: target.semanticTypeId, carrierTypeId: target.carrierTypeId, nullable: target.nullable};
+	}
+
+	/** Includes both native identity and null storage in stale-plan detection. */
+	public static function enumLoadFingerprint(target:Null<OcamlStructuralEnumLoadTarget>):String {
+		return target == null ? "" : [target.semanticTypeId, target.carrierTypeId, Std.string(target.nullable)].join("|");
 	}
 
 	/** Returns a detached copy of a tuple-projection producer proof. */
@@ -476,6 +516,7 @@ class OcamlStructuralFieldContract {
 			decision.fieldSemanticTypeId,
 			decision.resultSemanticTypeId,
 			decision.loadConversion == null ? "" : (decision.loadConversion : String),
+			enumLoadFingerprint(decision.enumLoadTarget),
 			decision.storeConversion == null ? "" : (decision.storeConversion : String),
 			decision.runtimeModule + "." + decision.runtimeOperation,
 			decision.evaluationSchedule.join(","),
@@ -749,7 +790,8 @@ class OcamlStructuralFieldPlanner {
 			decision.proofClaim = OcamlStructuralFieldContract.KEY_VALUE_TUPLE_PROOF_CLAIM;
 		} else if (iteratorTarget == null) {
 			decision.receiverCarrierTypeId = "Obj.t";
-			decision.loadConversion = fieldSemanticTypeId == "Bool" ? UnboxBool : ObjObj;
+			decision.enumLoadTarget = enumLoadTarget(field.type);
+			decision.loadConversion = decision.enumLoadTarget != null ? UnboxEnum : fieldSemanticTypeId == "Bool" ? UnboxBool : ObjObj;
 			decision.runtimeModule = "HxAnon";
 			decision.runtimeOperation = "get";
 			decision.evaluationSchedule = ["materialize-receiver", "read-field"];
@@ -797,6 +839,7 @@ class OcamlStructuralFieldPlanner {
 			fieldSemanticTypeId: TypeTools.toString(field.type),
 			resultSemanticTypeId: resultSemanticTypeId,
 			loadConversion: null,
+			enumLoadTarget: null,
 			storeConversion: null,
 			runtimeModule: "",
 			runtimeOperation: "",
@@ -1041,7 +1084,29 @@ class OcamlStructuralFieldPlanner {
 		}
 		if (!storedFieldAllowed)
 			return "the final field shape no longer permits a stored anonymous field";
+		if (decision.operation == ReadStoredField
+			&& OcamlStructuralFieldContract.enumLoadFingerprint(decision.enumLoadTarget) != OcamlStructuralFieldContract.enumLoadFingerprint(enumLoadTarget(field.type)))
+			return "the exact stored enum recovery target changed";
 		return iteratorTarget == null ? null : "the stored field is now classified as an Iterator method";
+	}
+
+	/** Follows aliases while retaining Null and excluding target-native interop enums. */
+	static function enumLoadTarget(type:Type, nullable:Bool = false):Null<OcamlStructuralEnumLoadTarget> {
+		return switch (type) {
+			case TLazy(resolve): enumLoadTarget(resolve(), nullable);
+			case TMono(reference):
+				final resolved = reference.get();
+				resolved == null ? null : enumLoadTarget(resolved, nullable);
+			case TType(reference, parameters):
+				final declaration = reference.get();
+				enumLoadTarget(TypeTools.applyTypeParameters(declaration.type, declaration.params, parameters), nullable);
+			case TAbstract(reference, [inner]) if (reference.get().pack.length == 0 && reference.get().name == "Null"):
+				enumLoadTarget(inner, true);
+			case TEnum(_, _):
+				final identity = OcamlEnumDynamicCarrier.fromType(type);
+				identity == null ? null : {semanticTypeId: identity.semanticTypeId, carrierTypeId: identity.carrierTypeId, nullable: nullable};
+			case _: null;
+		}
 	}
 
 	static function writeMismatch(decision:OcamlStructuralFieldDecision, receiver:TypedExpr, field:ClassField, resultType:Type):Null<String> {

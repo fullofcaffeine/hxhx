@@ -545,6 +545,7 @@ typedef InspectionStructuralField = {
 	final fieldSemanticTypeId:String;
 	final resultSemanticTypeId:String;
 	final loadConversion:Null<String>;
+	final enumLoadTarget:Null<reflaxe.ocaml.lowered.OcamlStructuralFieldPlan.OcamlStructuralEnumLoadTarget>;
 	final storeConversion:Null<String>;
 	final runtimeModule:String;
 	final runtimeOperation:String;

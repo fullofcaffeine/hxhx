@@ -43,6 +43,13 @@ class OcamlStructuralFieldSyntax {
 					case ObjObj: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [raw]);
 					case UnboxBool:
 						OcamlExpr.EApp(runtimeIdentifier(decision, runtimeAuthority, "unbox-bool", "HxRuntime.unbox_bool_or_obj"), [raw]);
+					case UnboxEnum:
+						final target = decision.enumLoadTarget;
+						if (target == null)
+							throw 'reflaxe.ocaml [ocaml-structural-field:syntax]: read "${decision.id}" has no enum target';
+						final recovered = OcamlExpr.EApp(runtimeIdentifier(decision, runtimeAuthority, "unbox-enum", "HxEnum.unbox_or_obj"),
+							[OcamlExpr.EConst(OcamlConst.CString(target.semanticTypeId)), raw]);
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [recovered]);
 					case null: throw 'reflaxe.ocaml [ocaml-structural-field:syntax]: read "${decision.id}" has no load conversion';
 				}
 				{

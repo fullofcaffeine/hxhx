@@ -4974,7 +4974,9 @@ class ReflaxeOcamlInspection {
 			final requirementId = field.id + ":runtime:" + capability;
 			final boolCarrier = field.loadConversion == "unbox-bool" || field.storeConversion == "box-bool";
 			final boolRequirementId = field.id + ":runtime:haxe-structural-bool-carrier";
-			final expectedRequirementIds = boolCarrier ? [requirementId, boolRequirementId] : [requirementId];
+			final enumCarrier = field.loadConversion == "unbox-enum";
+			final enumRequirementId = field.id + ":runtime:haxe-structural-enum-carrier";
+			final expectedRequirementIds = boolCarrier ? [requirementId, boolRequirementId] : enumCarrier ? [requirementId, enumRequirementId] : [requirementId];
 			if (field.runtimeRequirementIds.join(",") != expectedRequirementIds.join(","))
 				throw 'Structural field decision "${field.id}" has the wrong runtime requirement identity.';
 			final requirement = requirements.get(requirementId);
@@ -5024,6 +5026,29 @@ class ReflaxeOcamlInspection {
 					throw 'Structural field decision "${field.id}" Boolean carrier requirement "$boolRequirementId" disagrees with its sealed conversion.';
 				}
 				referenced.set(boolRequirementId, true);
+			}
+			if (enumCarrier) {
+				final target = field.enumLoadTarget;
+				final enumRequirement = requirements.get(enumRequirementId);
+				if (target == null || enumRequirement == null)
+					throw 'Structural field decision "${field.id}" has no enum target or runtime requirement.';
+				final enumSource = requiredObject(enumRequirement, "source");
+				final enumSubject = requiredObject(enumRequirement, "subject");
+				if (requiredString(enumRequirement, "sourceKind") != "haxe-expression"
+					|| requiredString(enumRequirement, "sourceId") != field.id
+					|| requiredString(enumSource, "file") != field.sourceFile
+					|| requiredInt(enumSource, "min") != field.sourceMin
+					|| requiredInt(enumSource, "max") != field.sourceMax
+					|| requiredString(enumRequirement, "semanticCapability") != "haxe-structural-enum-carrier"
+					|| requiredString(enumRequirement, "cause") != "lowering-decision"
+					|| requiredString(enumRequirement, "decisionId") != field.id
+					|| requiredString(enumSubject, "kind") != "haxe-type"
+					|| requiredString(enumSubject, "id") != target.semanticTypeId
+					|| requiredString(enumRequirement, "implementationFeature") != "haxe-enum-field-recovery-v1"
+					|| requiredStringArray(enumRequirement, "rootModules").join(",") != "HxEnum"
+					|| requiredStringArray(enumRequirement, "profileEligibility").join(",") != "metal,portable")
+					throw 'Structural field decision "${field.id}" enum carrier requirement disagrees with its sealed recovery.';
+				referenced.set(enumRequirementId, true);
 			}
 		}
 		for (conversion in iMapInterfaceConversions) {
