@@ -23,6 +23,24 @@ private typedef TySwitchPatternBindingAnalysis = {
 	arithmetic must not become Dynamic merely because a pattern introduced a local.
 **/
 class TySwitchPatternBindings {
+	/**
+		Return syntax-owned names without inferring the switch input or payload types.
+		Guards, extractors, and unsupported syntax need a separate source traversal;
+		null prevents a caller from treating partial names as complete visibility.
+	**/
+	public static function sourceNames(pattern:HxSwitchPattern):Null<Array<String>> {
+		function supported(value:HxSwitchPattern):Bool {
+			return switch value {
+				case PGuard(_, _) | PExtractor(_, _) | PUnsupportedPattern(_): false;
+				case PCapture(_, inner): supported(inner);
+				case PEnumExtract(_, children) | PArray(children) | POr(children): children.filter(child -> !supported(child)).length == 0;
+				case PObject(_, children): children.filter(child -> !supported(child)).length == 0;
+				case _: true;
+			};
+		}
+		return supported(pattern) ? analyze(pattern, TyType.unknown(), null).declarations.map(fact -> fact.name) : null;
+	}
+
 	/** Count source occurrences without allocating replacement local identities during lowering. */
 	public static function occurrenceCount(pattern:HxSwitchPattern):Int
 		return analyze(pattern, TyType.unknown(), null).occurrences.length;

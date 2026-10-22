@@ -2,151 +2,183 @@ package hxhx;
 
 import hxhx.macro.MacroRuntimeSession;
 import hxhx.runtime.NullableRuntimeString;
+import hxhx.ExprMacroCallRewrite.ExprMacroCallRewriter;
+import hxhx.ExprMacroLexicalScope.ExprMacroLexicalGap;
 
 /**
-	Expression macro expansion (Gate1 bring-up).
-
-	Why
-	- Upstream Haxe supports “expression macros”: a call in normal code (e.g. `Foo.bar()`) can be a macro
-	  call which is executed at compile time, and its returned expression AST is spliced into the program.
-	- During `hxhx` Stage3/Stage4 bring-up we do not have a full upstream macro/typer integration yet, but
-	  we still want an incremental rung that proves the *pipeline shape*:
-	  - detect eligible call sites
-	  - ask the macro host to expand them
-	  - parse the returned expression text into `HxExpr`
-	  - continue typing/emitting on the expanded program
-
-	What
-	- This stage rewrites the bootstrap AST in-place (via replacement of nodes):
-	  - Supports only a conservative call subset:
-		- `pack.Class.meth()` / `Class.meth()`
-		- `pack.Class.meth("literal")` (single String literal arg)
-	  - Only expands expressions explicitly allowlisted by exact call text.
-
-	How
-	- The macro host implements `macro.expandExpr`, which returns a Haxe expression text snippet.
-	- We parse that snippet with `HxParser.parseExprText` (small grammar) and splice it into the AST.
-
-	Gotchas
-	- This is **not** full upstream semantics:
-	  - We do not detect real `macro function` declarations yet.
-	  - The returned expression grammar is limited to what `HxParser.parseExprText` can parse.
-	- This rung exists to unblock Gate bring-up; extend only when a gate/test requires it.
+	Rewrite source macro calls before ordinary body typing.
+	One syntax walker owns lexical visibility and ordered children. A typed call
+	decision either consumes original syntax or visits children before one final
+	transformation. The existing text adapter remains a limited runtime caller;
+	declaration selection and structured native dispatch are not wired here yet.
 **/
 class ExprMacroExpander {
 	public static function expandResolvedModules(modules:Array<ResolvedModule>, session:MacroRuntimeSession,
 			allowlist:Array<String>):{modules:Array<ResolvedModule>, expandedCount:Int} {
-		if (modules == null || modules.length == 0)
+		if (modules == null || modules.length == 0 || session == null || allowlist == null || allowlist.length == 0)
 			return {modules: modules == null ? [] : modules, expandedCount: 0};
-		if (session == null)
-			return {modules: modules, expandedCount: 0};
-		if (allowlist == null || allowlist.length == 0)
-			return {modules: modules, expandedCount: 0};
-
-		final allowed:haxe.ds.StringMap<Bool> = new haxe.ds.StringMap();
-		final allowKeys = new Array<String>();
-		var anyAllowed = false;
+		final allowed = new haxe.ds.StringMap<Bool>();
+		final keys = new Array<String>();
 		for (raw in allowlist) {
-			if (raw == null)
+			if (raw == null || StringTools.trim(raw).length == 0)
 				continue;
-			final s = StringTools.trim(raw);
-			if (s.length == 0)
-				continue;
-			allowed.set(s, true);
-			allowKeys.push(s);
-			anyAllowed = true;
+			final key = StringTools.trim(raw);
+			allowed.set(key, true);
+			keys.push(key);
 		}
-		if (!anyAllowed)
+		if (keys.length == 0)
 			return {modules: modules, expandedCount: 0};
-
-		var expandedCount = 0;
-		final out = new Array<ResolvedModule>();
-
+		var count = 0;
 		final trace = isTrueEnv("HXHX_TRACE_EXPR_MACROS");
+		final rewritten = rewriteResolvedModules(modules, (_, context, _) -> Recurse(call -> {
+			return switch call {
+				case ECall(callee, arguments):
+					if (trace) {
+						final path = renderCalleePath(callee);
+						Sys.println("expr_macro_visit callee=" + (path.length == 0 ? exprKind(callee) : path) + " args=["
+							+ arguments.map(exprKind).join(",") + "]");
+					}
+					final candidate = renderSimpleCall(callee, arguments);
+					if (trace && candidate != null)
+						Sys.println("expr_macro_candidate raw=" + candidate);
+					final imports = buildImportMap(context.getDirectives(), context.getPackagePath());
+					final matched = candidate == null ? null : matchAllowlistedCall(candidate, allowed, keys, imports, context.getPackagePath());
+					if (matched == null) call else {
+						if (trace)
+							Sys.println("expr_macro_expand call=" + matched);
+						final replacement = HxParser.parseExprText(session.expandExpr(matched));
+						count++;
+						replacement;
+					}
+				case _: throw "source call continuation received a non-call";
+			};
+		}));
+		return {modules: rewritten.modules, expandedCount: count};
+	}
 
-		for (m in modules) {
-			final pm = ResolvedModule.getParsed(m);
-			final decl = pm.getDecl();
-			final modulePkg = HxModuleDecl.getPackagePath(decl);
-			final importMap = buildImportMap(HxModuleDecl.getDirectives(decl), modulePkg);
-			final cls = HxModuleDecl.getMainClass(decl);
-
+	/**
+		Visit every source class with request-local declaration headers and visibility.
+		Consume skips all original call children; Recurse applies its continuation
+		once after receiver and arguments. Replacement syntax is visited separately.
+		The header index belongs to this original graph and never escapes the pass.
+		Declaration-aware callers must reject nonempty lexicalGaps before claiming
+		complete selection, even when an opaque subtree contains no visited calls.
+		The text adapter uses only its prior syntax contract.
+	**/
+	public static function rewriteResolvedModules(modules:Array<ResolvedModule>,
+			rewriter:ExprMacroCallRewriter):{modules:Array<ResolvedModule>, lexicalGaps:Array<ExprMacroLexicalGap>} {
+		final index = TyperIndex.build(modules);
+		final lexicalGaps = new Array<ExprMacroLexicalGap>();
+		final out = new Array<ResolvedModule>();
+		for (module in modules) {
+			final parsed = ResolvedModule.getParsed(module);
+			final declaration = parsed.getDecl();
+			final packagePath = HxModuleDecl.getPackagePath(declaration);
+			final modulePath = ResolvedModule.getModulePath(module);
+			final directives = HxModuleDecl.getDirectives(declaration);
+			final resolved = TyperStage.resolveModuleDirectives(directives, packagePath, modulePath, index, null);
 			var changed = false;
-
-			// Rewrite fields.
-			final newFields = new Array<HxFieldDecl>();
-			for (f in HxClassDecl.getFields(cls)) {
-				final init = HxFieldDecl.getInit(f);
-				var rewritten:Null<HxExpr> = init;
-				if (init != null) {
-					final rewrittenExpr = rewriteExpr(init, session, allowed, allowKeys, importMap, modulePkg, trace, 0, () -> expandedCount++);
-					if (rewrittenExpr != init)
-						rewritten = true ? rewrittenExpr : null;
+			var main = HxModuleDecl.getMainClass(declaration);
+			final classes = new Array<HxClassDecl>();
+			for (source in HxModuleDecl.getClasses(declaration)) {
+				final owner = index.getForSourceClass(source);
+				if (owner == null)
+					throw "macro traversal source class has no declaration identity";
+				final context = new TyperContext(index, parsed.getFilePath(), modulePath, packagePath, directives, owner.getFullName(), null, resolved);
+				var classChanged = false;
+				final fields = new Array<HxFieldDecl>();
+				for (field in HxClassDecl.getFields(source)) {
+					final init = HxFieldDecl.getInit(field);
+					final value = init == null ? null : rewriteExpr(init, rewriter, context,
+						new ExprMacroLexicalScope(HxFieldDecl.getIsStatic(field), [], lexicalGaps), 0);
+					if (value == init)
+						fields.push(field)
+					else {
+						classChanged = true;
+						fields.push(new HxFieldDecl(HxFieldDecl.getName(field), HxFieldDecl.getVisibility(field), HxFieldDecl.getIsStatic(field),
+							HxFieldDecl.getTypeHint(field), value, HxFieldDecl.getMetadata(field), HxFieldDecl.getPos(field), HxFieldDecl.getEndPos(field),
+							HxFieldDecl.getIsFinal(field), HxFieldDecl.getPropertyGet(field), HxFieldDecl.getPropertySet(field),
+							HxFieldDecl.getInitText(field)));
+					}
 				}
-				if (rewritten != init)
-					changed = true;
-				newFields.push(new HxFieldDecl(HxFieldDecl.getName(f), HxFieldDecl.getVisibility(f), HxFieldDecl.getIsStatic(f), HxFieldDecl.getTypeHint(f),
-					rewritten, HxFieldDecl.getMetadata(f), HxFieldDecl.getPos(f), HxFieldDecl.getEndPos(f), HxFieldDecl.getIsFinal(f),
-					HxFieldDecl.getPropertyGet(f), HxFieldDecl.getPropertySet(f), HxFieldDecl.getInitText(f)));
-			}
-
-			// Rewrite function bodies.
-			final newFns = new Array<HxFunctionDecl>();
-			for (fn in HxClassDecl.getFunctions(cls)) {
-				final body = HxFunctionDecl.getBody(fn);
-				final newBody = new Array<HxStmt>();
-				var bodyChanged = false;
-				for (s in body) {
-					final rs = rewriteStmt(s, session, allowed, allowKeys, importMap, modulePkg, trace, () -> expandedCount++);
-					if (rs != s)
-						bodyChanged = true;
-					newBody.push(rs);
+				final functions = new Array<HxFunctionDecl>();
+				for (functionDecl in HxClassDecl.getFunctions(source)) {
+					// Macro bodies belong to their separate compilation domain, not target-code expansion.
+					if (HxFunctionDecl.getMetadata(functionDecl).indexOf("macro") >= 0) {
+						functions.push(functionDecl);
+						continue;
+					}
+					final scope = new ExprMacroLexicalScope(HxFunctionDecl.getIsStatic(functionDecl), [], lexicalGaps);
+					final arguments = new Array<HxFunctionArg>();
+					var functionChanged = false;
+					for (argument in HxFunctionDecl.getArgs(functionDecl)) {
+						final defaultValue = HxFunctionArg.getDefaultValue(argument);
+						final rewrittenDefault = switch defaultValue {
+							case NoDefault: defaultValue;
+							case Default(value):
+								final rewritten = rewriteExpr(value, rewriter, context, scope.child(), 0);
+								rewritten == value ? defaultValue : HxDefaultValue.Default(rewritten);
+						};
+						if (rewrittenDefault == defaultValue)
+							arguments.push(argument)
+						else {
+							functionChanged = true;
+							arguments.push(new HxFunctionArg(HxFunctionArg.getName(argument), HxFunctionArg.getTypeHint(argument), rewrittenDefault,
+								HxFunctionArg.getIsOptional(argument), HxFunctionArg.getIsRest(argument), HxFunctionArg.getDefaultValueText(argument),
+								HxFunctionArg.getMetadata(argument)));
+						}
+					}
+					for (argument in arguments)
+						scope.declare(HxFunctionArg.getName(argument));
+					final body = new Array<HxStmt>();
+					for (statement in HxFunctionDecl.getBody(functionDecl)) {
+						final value = rewriteStmt(statement, rewriter, context, scope);
+						if (value != statement)
+							functionChanged = true;
+						body.push(value);
+					}
+					if (!functionChanged)
+						functions.push(functionDecl)
+					else {
+						classChanged = true;
+						functions.push(new HxFunctionDecl(HxFunctionDecl.getName(functionDecl), HxFunctionDecl.getVisibility(functionDecl),
+							HxFunctionDecl.getIsStatic(functionDecl), arguments, HxFunctionDecl.getReturnTypeHint(functionDecl), body,
+							HxFunctionDecl.getReturnStringLiteral(functionDecl), HxFunctionDecl.getMetadata(functionDecl),
+							HxFunctionDecl.getPos(functionDecl), HxFunctionDecl.getEndPos(functionDecl), HxFunctionDecl.getBodyText(functionDecl),
+							HxFunctionDecl.getHasBody(functionDecl)));
+					}
 				}
-				if (bodyChanged)
+				var rewritten = source;
+				if (classChanged) {
 					changed = true;
-				newFns.push(new HxFunctionDecl(HxFunctionDecl.getName(fn), HxFunctionDecl.getVisibility(fn), HxFunctionDecl.getIsStatic(fn),
-					HxFunctionDecl.getArgs(fn), HxFunctionDecl.getReturnTypeHint(fn), newBody, HxFunctionDecl.getReturnStringLiteral(fn),
-					HxFunctionDecl.getMetadata(fn), HxFunctionDecl.getPos(fn), HxFunctionDecl.getEndPos(fn), HxFunctionDecl.getBodyText(fn)));
+					rewritten = new HxClassDecl(HxClassDecl.getName(source), HxClassDecl.getHasStaticMain(source), functions, fields,
+						HxClassDecl.getExtendsPath(source), HxClassDecl.getMetadata(source), HxClassDecl.getIsInterface(source),
+						HxClassDecl.getImplementsPaths(source), HxClassDecl.getVisibility(source), HxClassDecl.getInterfaceExtendsPaths(source),
+						HxClassDecl.getIsExtern(source), HxClassDecl.getEnumDeclaration(source), HxClassDecl.getTypeParameters(source),
+						HxClassDecl.getSourceRange(source));
+				}
+				classes.push(rewritten);
+				if (source == main)
+					main = rewritten;
 			}
-
 			if (!changed) {
-				out.push(m);
+				out.push(module);
 				continue;
 			}
-
-			final newCls = new HxClassDecl(HxClassDecl.getName(cls), HxClassDecl.getHasStaticMain(cls), newFns, newFields, HxClassDecl.getExtendsPath(cls),
-				HxClassDecl.getMetadata(cls), HxClassDecl.getIsInterface(cls), HxClassDecl.getImplementsPaths(cls), HxClassDecl.getVisibility(cls),
-				HxClassDecl.getInterfaceExtendsPaths(cls), HxClassDecl.getIsExtern(cls), HxClassDecl.getEnumDeclaration(cls));
-			final newClasses = new Array<HxClassDecl>();
-			for (c in HxModuleDecl.getClasses(decl)) {
-				if (HxClassDecl.getName(c) == HxClassDecl.getName(cls)) {
-					newClasses.push(newCls);
-				} else {
-					newClasses.push(c);
-				}
-			}
-			final newDecl = new HxModuleDecl(HxModuleDecl.getPackagePath(decl), HxModuleDecl.getDirectives(decl), newCls, newClasses,
-				HxModuleDecl.getHeaderOnly(decl), HxModuleDecl.getHasToplevelMain(decl));
-			final newParsed = new ParsedModule(pm.getSource(), newDecl, pm.getFilePath());
-			final updated = new ResolvedModule(ResolvedModule.getModulePath(m), ResolvedModule.getFilePath(m), newParsed, ResolvedModule.getSourceOrigin(m),
-				ResolvedModule.getConditionalCompilation(m), ResolvedModule.getGeneratedDeclarations(m));
-			out.push(updated);
-
-			if (trace) {
-				Sys.println("expr_macro_module=" + ResolvedModule.getModulePath(m) + " file=" + ResolvedModule.getFilePath(m));
-			}
+			final rewritten = new HxModuleDecl(packagePath, directives, main, classes, HxModuleDecl.getHeaderOnly(declaration),
+				HxModuleDecl.getHasToplevelMain(declaration), HxModuleDecl.getTypedefs(declaration));
+			out.push(new ResolvedModule(modulePath, ResolvedModule.getFilePath(module), new ParsedModule(parsed.getSource(), rewritten, parsed.getFilePath()),
+				ResolvedModule.getSourceOrigin(module), ResolvedModule.getConditionalCompilation(module), ResolvedModule.getGeneratedDeclarations(module)));
 		}
-
-		return {modules: out, expandedCount: expandedCount};
+		return {modules: out, lexicalGaps: lexicalGaps.copy()};
 	}
 
 	static function isTrueEnv(name:String):Bool {
-		final t = NullableRuntimeString.trimToEmpty(Sys.getEnv(name));
-		return t == "1" || t == "true" || t == "yes";
+		final value = NullableRuntimeString.trimToEmpty(Sys.getEnv(name));
+		return value == "1" || value == "true" || value == "yes";
 	}
 
-	static function rewriteStmt(s:HxStmt, session:MacroRuntimeSession, allowed:haxe.ds.StringMap<Bool>, allowKeys:Array<String>,
-			importMap:haxe.ds.StringMap<String>, modulePkg:String, trace:Bool, onExpand:() -> Void):HxStmt {
+	static function rewriteStmt(s:HxStmt, rewriter:ExprMacroCallRewriter, context:TyperContext, scope:ExprMacroLexicalScope):HxStmt {
 		return switch (s) {
 			// Typed match decisions belong to emission, after source macro expansion.
 			case SGuardedSwitch(_, _, _, _, _):
@@ -154,10 +186,11 @@ class ExprMacroExpander {
 			case STargetScope(_, _, _):
 				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, pos):
+				scope = scope.child();
 				final out = new Array<HxStmt>();
 				var changed = false;
 				for (ss in stmts) {
-					final rs = rewriteStmt(ss, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+					final rs = rewriteStmt(ss, rewriter, context, scope);
 					if (rs != ss)
 						changed = true;
 					out.push(rs);
@@ -166,39 +199,40 @@ class ExprMacroExpander {
 			case SVar(name, typeHint, init, pos, metadata):
 				var rInit:Null<HxExpr> = init;
 				if (init != null) {
-					final rewrittenInit = rewriteExpr(init, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
+					final rewrittenInit = rewriteExpr(init, rewriter, context, scope, 0);
 					if (rewrittenInit != init)
 						rInit = true ? rewrittenInit : null;
 				}
+				scope.declare(name);
 				rInit != init ? SVar(name, typeHint, rInit, pos, metadata == null ? [] : metadata.copy()) : s;
 			case SIf(cond, thenBranch, elseBranch, pos):
-				final rCond = rewriteExpr(cond, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
-				final rThen = rewriteStmt(thenBranch, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+				final rCond = rewriteExpr(cond, rewriter, context, scope, 0);
+				final rThen = rewriteStmt(thenBranch, rewriter, context, scope.child());
 				var rElse:Null<HxStmt> = null;
-				if (elseBranch != null) rElse = true ? rewriteStmt(elseBranch, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand) : null;
+				if (elseBranch != null) rElse = true ? rewriteStmt(elseBranch, rewriter, context, scope.child()) : null;
 					(rCond != cond || rThen != thenBranch || rElse != elseBranch) ? SIf(rCond, rThen, rElse, pos) : s;
 			case SWhile(cond, body, pos):
-				final rCond = rewriteExpr(cond, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
-				final rBody = rewriteStmt(body, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+				final rCond = rewriteExpr(cond, rewriter, context, scope, 0);
+				final rBody = rewriteStmt(body, rewriter, context, scope.child());
 				(rCond != cond || rBody != body) ? SWhile(rCond, rBody, pos) : s;
 			case SDoWhile(body, cond, pos):
-				final rBody = rewriteStmt(body, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
-				final rCond = rewriteExpr(cond, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
+				final rBody = rewriteStmt(body, rewriter, context, scope.child());
+				final rCond = rewriteExpr(cond, rewriter, context, scope, 0);
 				(rBody != body || rCond != cond) ? SDoWhile(rBody, rCond, pos) : s;
 			case SForIn(name, iterable, body, pos):
-				final rIt = rewriteExpr(iterable, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
-				final rBody = rewriteStmt(body, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+				final rIt = rewriteExpr(iterable, rewriter, context, scope, 0);
+				final rBody = rewriteStmt(body, rewriter, context, scope.child([name]));
 				(rIt != iterable || rBody != body) ? SForIn(name, rIt, rBody, pos) : s;
 			case SForKeyValue(keyName, valueName, iterable, body, pos):
-				final rIt = rewriteExpr(iterable, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
-				final rBody = rewriteStmt(body, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+				final rIt = rewriteExpr(iterable, rewriter, context, scope, 0);
+				final rBody = rewriteStmt(body, rewriter, context, scope.child([keyName, valueName]));
 				(rIt != iterable || rBody != body) ? SForKeyValue(keyName, valueName, rIt, rBody, pos) : s;
 			case STry(tryBody, catches, pos):
-				final rTry = rewriteStmt(tryBody, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+				final rTry = rewriteStmt(tryBody, rewriter, context, scope.child());
 				var changed = rTry != tryBody;
 				final outCatches = new Array<{name:String, typeHint:String, body:HxStmt}>();
 				for (c in catches) {
-					final rBody = rewriteStmt(c.body, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+					final rBody = rewriteStmt(c.body, rewriter, context, scope.child([c.name]));
 					if (rBody != c.body)
 						changed = true;
 					outCatches.push({name: c.name, typeHint: c.typeHint, body: rBody});
@@ -208,28 +242,31 @@ class ExprMacroExpander {
 				s;
 			case SContinue(_):
 				s;
-			case SSwitch(scrutinee, patterns, bodies, pos):
-				final rScrutinee = rewriteExpr(scrutinee, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
-				var changed = rScrutinee != scrutinee;
-				final outBodies = new Array<HxStmt>();
-				for (i in 0...bodies.length) {
-					final body = bodies[i];
-					final rBody = rewriteStmt(body, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
-					if (rBody != body)
+			case SSwitch(scrutinee, patterns, bodies, pos, exhaustive):
+				final rewrittenScrutinee = rewriteExpr(scrutinee, rewriter, context, scope, 0);
+				var changed = rewrittenScrutinee != scrutinee;
+				final rewrittenBodies = new Array<HxStmt>();
+				for (index in 0...bodies.length) {
+					final names = TySwitchPatternBindings.sourceNames(patterns[index]);
+					final caseScope = scope.child(names == null ? [] : names);
+					if (names == null)
+						caseScope.markUnavailable(context, "source macro traversal cannot prove this switch pattern scope");
+					final rewritten = rewriteStmt(bodies[index], rewriter, context, caseScope);
+					if (rewritten != bodies[index])
 						changed = true;
-					outBodies.push(rBody);
+					rewrittenBodies.push(rewritten);
 				}
-				changed ? SSwitch(rScrutinee, patterns.copy(), outBodies, pos) : s;
+				changed ? SSwitch(rewrittenScrutinee, patterns.copy(), rewrittenBodies, pos, exhaustive) : s;
 			case SReturnVoid(_):
 				s;
 			case SReturn(e, pos):
-				final re = rewriteExpr(e, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
+				final re = rewriteExpr(e, rewriter, context, scope, 0);
 				re != e ? SReturn(re, pos) : s;
 			case SThrow(e, pos):
-				final re = rewriteExpr(e, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
+				final re = rewriteExpr(e, rewriter, context, scope, 0);
 				re != e ? SThrow(re, pos) : s;
 			case SExpr(e, pos):
-				final re = rewriteExpr(e, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
+				final re = rewriteExpr(e, rewriter, context, scope, 0);
 				re != e ? SExpr(re, pos) : s;
 		}
 	}
@@ -239,71 +276,82 @@ class ExprMacroExpander {
 		Unchanged children retain node identity; changed containers retain source facts
 		and positions. This traversal does not make syntax arguments ordinary values.
 	 */
-	static function rewriteExpr(e:HxExpr, session:MacroRuntimeSession, allowed:haxe.ds.StringMap<Bool>, allowKeys:Array<String>,
-			importMap:haxe.ds.StringMap<String>, modulePkg:String, trace:Bool, depth:Int, onExpand:() -> Void):HxExpr {
+	static function rewriteExpr(e:HxExpr, rewriter:ExprMacroCallRewriter, context:TyperContext, scope:ExprMacroLexicalScope, depth:Int):HxExpr {
 		if (depth > 4)
-			return e; // prevent runaway recursion in bring-up
+			throw "expression macro replacement exceeded expansion depth";
 
 		return switch (e) {
 			case ELoweredControl(_, _, _, _):
 				throw "executable control cannot re-enter source macro expansion";
 			case EParenthesized(inner, position):
-				final rewritten = rewriteExpr(inner, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final rewritten = rewriteExpr(inner, rewriter, context, scope, depth);
 				rewritten != inner ? EParenthesized(rewritten, position) : e;
 			case EPrivateAccess(inner, position):
-				final rewritten = rewriteExpr(inner, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final rewritten = rewriteExpr(inner, rewriter, context, scope, depth);
 				rewritten != inner ? EPrivateAccess(rewritten, position) : e;
 			case ESourceTry(catches, bodies, position):
-				// Catch declarations remain source facts; expansion only replaces their bodies.
+				if (bodies.length != catches.length + 1)
+					throw "source catch body layout differs from its declarations";
 				var changed = false;
-				final rewritten = [
-					for (body in bodies) {
-						final value = rewriteExpr(body, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-						if (value != body) changed = true;
-						value;
-					}
-				];
+				final rewritten = new Array<HxExpr>();
+				for (index in 0...bodies.length) {
+					final body = bodies[index];
+					final bindings = index == 0 ? [] : [catches[index - 1].getName()];
+					final value = rewriteExpr(body, rewriter, context, scope.child(bindings), depth);
+					if (value != body)
+						changed = true;
+					rewritten.push(value);
+				}
 				changed ? ESourceTry(catches.copy(), rewritten, position) : e;
 			case ESourceFor(binding, iterable, body, position):
-				final rewrittenIterable = rewriteExpr(iterable, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-				final rewrittenBody = rewriteExpr(body, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final rewrittenIterable = rewriteExpr(iterable, rewriter, context, scope, depth);
+				final rewrittenBody = rewriteExpr(body, rewriter, context, scope.child(HxForBinding.names(binding)), depth);
 				(rewrittenIterable != iterable || rewrittenBody != body) ? ESourceFor(binding, rewrittenIterable, rewrittenBody, position) : e;
 			case ESourceGroup(children, position):
+				scope = scope.child();
 				var changed = false;
 				final rewritten = [
 					for (child in children) {
-						final value = rewriteExpr(child, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+						final value = rewriteExpr(child, rewriter, context, scope, depth);
 						if (value != child) changed = true;
 						value;
 					}
 				];
 				changed ? ESourceGroup(rewritten, position) : e;
 			case ESourceFunction(facts, body, defaults, position):
-				final rewrittenBody = rewriteExpr(body, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-				var changed = rewrittenBody != body;
+				facts.assertDefaultCount(defaults.length);
+				final name = facts.getDeclaredName();
+				if (name != null)
+					scope.declare(name);
+				var changed = false;
 				final rewrittenDefaults = [
 					for (entry in defaults) {
-						final value = rewriteExpr(entry, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+						final value = rewriteExpr(entry, rewriter, context, scope.child(), depth);
 						if (value != entry) changed = true;
 						value;
 					}
 				];
+				final rewrittenBody = rewriteExpr(body, rewriter, context, scope.child(facts.getArguments()), depth);
+				if (rewrittenBody != body)
+					changed = true;
 				changed ? ESourceFunction(facts, rewrittenBody, rewrittenDefaults, position) : e;
+			case ELambda(arguments, body, signature):
+				final rewritten = rewriteExpr(body, rewriter, context, scope.child(arguments), depth);
+				rewritten == body ? e : ELambda(arguments.copy(), rewritten, signature);
 			case ESourceIf(condition, whenTrue, whenFalse, position):
-				final rewrittenCondition = rewriteExpr(condition, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-				final rewrittenTrue = rewriteExpr(whenTrue, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-				final rewrittenFalse = whenFalse == null ? null : rewriteExpr(whenFalse, session, allowed, allowKeys, importMap, modulePkg, trace, depth,
-					onExpand);
+				final rewrittenCondition = rewriteExpr(condition, rewriter, context, scope, depth);
+				final rewrittenTrue = rewriteExpr(whenTrue, rewriter, context, scope.child(), depth);
+				final rewrittenFalse = whenFalse == null ? null : rewriteExpr(whenFalse, rewriter, context, scope.child(), depth);
 					(rewrittenCondition != condition || rewrittenTrue != whenTrue || rewrittenFalse != whenFalse) ? ESourceIf(rewrittenCondition,
 						rewrittenTrue, rewrittenFalse, position) : e;
 			case EThrow(value, position):
-				final rewritten = rewriteExpr(value, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final rewritten = rewriteExpr(value, rewriter, context, scope, depth);
 				rewritten != value ? EThrow(rewritten, position) : e;
 			case EReturn(value):
 				if (value == null) {
 					e;
 				} else {
-					final rewritten = rewriteExpr(value, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+					final rewritten = rewriteExpr(value, rewriter, context, scope, depth);
 					rewritten != value ? EReturn(rewritten) : e;
 				}
 			case EVars(declarations):
@@ -311,100 +359,89 @@ class ExprMacroExpander {
 				final rewrittenDeclarations = new Array<HxExpr>();
 				for (declaration in declarations) {
 					final initializer = HxExprVarDecl.getInitializer(declaration);
-					final rewritten = initializer == null ? null : rewriteExpr(initializer, session, allowed, allowKeys, importMap, modulePkg, trace, depth,
-						onExpand);
+					final rewritten = initializer == null ? null : rewriteExpr(initializer, rewriter, context, scope, depth);
 					if (rewritten != initializer)
 						changed = true;
 					rewrittenDeclarations.push(HxExprVarDecl.make(HxExprVarDecl.getName(declaration), HxExprVarDecl.getTypeHint(declaration), rewritten,
 						HxExprVarDecl.getPosition(declaration), HxExprVarDecl.getIsFinal(declaration), HxExprVarDecl.getIsStatic(declaration)));
+					scope.declare(HxExprVarDecl.getName(declaration));
 				}
 				changed ? EVars(rewrittenDeclarations) : e;
 			case EVariableDeclaration(name, typeHint, initializer, position, isFinal, isStatic):
-				final rewritten = initializer == null ? null : rewriteExpr(initializer, session, allowed, allowKeys, importMap, modulePkg, trace, depth,
-					onExpand);
+				final rewritten = initializer == null ? null : rewriteExpr(initializer, rewriter, context, scope, depth);
+				scope.declare(name);
 				rewritten != initializer ? HxExprVarDecl.make(name, typeHint, rewritten, position, isFinal, isStatic) : e;
 			case EWhile(condition, body, bodyIsBlock, position, loopKind):
-				final rewrittenCondition = rewriteExpr(condition, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				var rewrittenCondition = condition;
+				if (loopKind == Normal)
+					rewrittenCondition = rewriteExpr(condition, rewriter, context, scope, depth);
 				var changed = rewrittenCondition != condition;
+				final bodyScope = scope.child();
 				final rewrittenBody = new Array<HxExpr>();
 				for (entry in body) {
-					final rewritten = rewriteExpr(entry, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+					final rewritten = rewriteExpr(entry, rewriter, context, bodyScope, depth);
 					if (rewritten != entry)
 						changed = true;
 					rewrittenBody.push(rewritten);
 				}
+				if (loopKind == DoWhile)
+					rewrittenCondition = rewriteExpr(condition, rewriter, context, scope, depth);
+				if (rewrittenCondition != condition)
+					changed = true;
 				changed ? EWhile(rewrittenCondition, rewrittenBody, bodyIsBlock, position, loopKind) : e;
 			case EBreak(_) | EContinue(_): e;
 			case EField(obj, field):
-				final ro = rewriteExpr(obj, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final ro = rewriteExpr(obj, rewriter, context, scope, depth);
 				ro != obj ? EField(ro, field) : e;
 			case ENullSafeField(obj, field):
-				final ro = rewriteExpr(obj, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final ro = rewriteExpr(obj, rewriter, context, scope, depth);
 				ro != obj ? ENullSafeField(ro, field) : e;
 			case ECall(callee, args):
-				final rc = rewriteExpr(callee, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-				final rargs = new Array<HxExpr>();
-				var argsChanged = false;
-				for (a in args) {
-					final ra = rewriteExpr(a, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-					if (ra != a)
-						argsChanged = true;
-					rargs.push(ra);
-				}
-
-				if (trace) {
-					final calleePath = renderCalleePath(rc);
-					final argKinds = rargs.map(a -> exprKind(a)).join(",");
-					Sys.println("expr_macro_visit callee=" + (calleePath.length == 0 ? exprKind(rc) : calleePath) + " args=[" + argKinds + "]");
-				}
-
-				final candidate = renderSimpleCall(rc, rargs);
-				if (trace && candidate != null) {
-					Sys.println("expr_macro_candidate raw=" + candidate);
-				}
-				final matched = candidate == null ? null : matchAllowlistedCall(candidate, allowed, allowKeys, importMap, modulePkg);
-				if (matched != null) {
-					if (trace)
-						Sys.println("expr_macro_expand call=" + matched);
-					final expandedText = session.expandExpr(matched);
-					final parsed = HxParser.parseExprText(expandedText);
-					onExpand();
-					// Allow nested expansions in the returned expression (bounded).
-					final nested = rewriteExpr(parsed, session, allowed, allowKeys, importMap, modulePkg, trace, depth + 1, onExpand);
-					nested;
-				} else {
-					(argsChanged || rc != callee) ? ECall(rc, rargs) : e;
+				switch rewriter(e, context, scope.snapshot()) {
+					case Consume(replacement):
+						replacement == e ? e : rewriteExpr(replacement, rewriter, context, scope, depth + 1);
+					case Recurse(afterChildren):
+						final receiver = rewriteExpr(callee, rewriter, context, scope, depth);
+						final arguments = new Array<HxExpr>();
+						var changed = receiver != callee;
+						for (argument in args) {
+							final rewritten = rewriteExpr(argument, rewriter, context, scope, depth);
+							if (rewritten != argument)
+								changed = true;
+							arguments.push(rewritten);
+						}
+						final call:HxExpr = changed ? ECall(receiver, arguments) : e;
+						final replacement = afterChildren(call);
+						replacement == call ? call : rewriteExpr(replacement, rewriter, context, scope, depth + 1);
 				}
 			case ENew(typePath, args):
 				final out = new Array<HxExpr>();
 				var changed = false;
 				for (a in args) {
-					final ra = rewriteExpr(a, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+					final ra = rewriteExpr(a, rewriter, context, scope, depth);
 					if (ra != a)
 						changed = true;
 					out.push(ra);
 				}
 				changed ? ENew(typePath, out) : e;
 			case EUnop(op, fixity, expr):
-				final re = rewriteExpr(expr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final re = rewriteExpr(expr, rewriter, context, scope, depth);
 				re != expr ? EUnop(op, fixity, re) : e;
 			case EBinop(op, left, right):
-				final rl = rewriteExpr(left, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-				final rr = rewriteExpr(right, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final rl = rewriteExpr(left, rewriter, context, scope, depth);
+				final rr = rewriteExpr(right, rewriter, context, scope, depth);
 				(rl != left || rr != right) ? EBinop(op, rl, rr) : e;
 			case EDiscardThen(effect, continuation):
-				final rewrittenEffect = rewriteExpr(effect, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-				final rewrittenContinuation = rewriteExpr(continuation, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final rewrittenEffect = rewriteExpr(effect, rewriter, context, scope, depth);
+				final rewrittenContinuation = rewriteExpr(continuation, rewriter, context, scope, depth);
 				(rewrittenEffect != effect || rewrittenContinuation != continuation) ? EDiscardThen(rewrittenEffect, rewrittenContinuation) : e;
 			case ETernary(cond, thenExpr, elseExpr):
-				final rc = rewriteExpr(cond, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-				final rt = rewriteExpr(thenExpr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-				final re = rewriteExpr(elseExpr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final rc = rewriteExpr(cond, rewriter, context, scope, depth);
+				final rt = rewriteExpr(thenExpr, rewriter, context, scope.child(), depth);
+				final re = rewriteExpr(elseExpr, rewriter, context, scope.child(), depth);
 				(rc != cond || rt != thenExpr || re != elseExpr) ? ETernary(rc, rt, re) : e;
 			case ETryCatchRaw(_raw):
-				// Bring-up: expression macro expansion currently only rewrites `HxExpr` nodes.
-				// `ETryCatchRaw` is a token-rendered placeholder; keep it unchanged for now.
-				// Keep this node unchanged for now.
+				scope.markUnavailable(context, "source macro traversal requires structured catch bindings");
 				e;
 			case EAnon(fieldNames, fieldValues):
 				var changed = false;
@@ -412,7 +449,7 @@ class ExprMacroExpander {
 				final outValues = new Array<HxExpr>();
 				for (i in 0...fieldValues.length) {
 					final v = fieldValues[i];
-					final rv = rewriteExpr(v, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+					final rv = rewriteExpr(v, rewriter, context, scope, depth);
 					if (rv != v)
 						changed = true;
 					outNames.push(fieldNames[i]);
@@ -423,40 +460,47 @@ class ExprMacroExpander {
 				final out = new Array<HxExpr>();
 				var changed = false;
 				for (v in values) {
-					final rv = rewriteExpr(v, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+					final rv = rewriteExpr(v, rewriter, context, scope, depth);
 					if (rv != v)
 						changed = true;
 					out.push(rv);
 				}
 				changed ? EArrayDecl(out) : e;
 			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
-				final ri = rewriteExpr(iterable, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-				final rg = guardExpr == null ? null : rewriteExpr(guardExpr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-				final ry = rewriteExpr(yieldExpr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final ri = rewriteExpr(iterable, rewriter, context, scope, depth);
+				final bindingScope = scope.child([name]);
+				final rg = guardExpr == null ? null : rewriteExpr(guardExpr, rewriter, context, bindingScope, depth);
+				final ry = rewriteExpr(yieldExpr, rewriter, context, bindingScope, depth);
 				(ri != iterable || rg != guardExpr || ry != yieldExpr) ? EArrayComprehension(name, ri, rg, ry) : e;
 			case EArrayAccess(arr, idx):
-				final ra = rewriteExpr(arr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-				final ri = rewriteExpr(idx, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final ra = rewriteExpr(arr, rewriter, context, scope, depth);
+				final ri = rewriteExpr(idx, rewriter, context, scope, depth);
 				(ra != arr || ri != idx) ? EArrayAccess(ra, ri) : e;
 			case ERange(start, end):
-				final rs = rewriteExpr(start, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-				final re = rewriteExpr(end, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final rs = rewriteExpr(start, rewriter, context, scope, depth);
+				final re = rewriteExpr(end, rewriter, context, scope, depth);
 				(rs != start || re != end) ? ERange(rs, re) : e;
 			case ECast(expr, hint):
-				final re = rewriteExpr(expr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final re = rewriteExpr(expr, rewriter, context, scope, depth);
 				re != expr ? ECast(re, hint) : e;
 			case ECheckType(expr, hint):
-				final re = rewriteExpr(expr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final re = rewriteExpr(expr, rewriter, context, scope, depth);
 				re != expr ? ECheckType(re, hint) : e;
 			case EUntyped(expr):
-				final re = rewriteExpr(expr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final re = rewriteExpr(expr, rewriter, context, scope, depth);
 				re != expr ? EUntyped(re) : e;
 			case EMacroExpr(expr, wrappers):
-				final re = rewriteExpr(expr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-				re != expr ? EMacroExpr(re, wrappers) : e;
+				// Quoted syntax is data, not an ordinary call in the enclosing scope.
+				e;
 			case EMacroType(_):
 				e;
-			case _:
+			case ESwitch(_, _, _) | ESwitchRaw(_):
+				scope.markUnavailable(context, "source macro traversal cannot prove this switch syntax");
+				e;
+			case EUnsupported(_):
+				scope.markUnavailable(context, "source macro traversal requires represented source syntax");
+				e;
+			case ENull | EThis | ESuper | EBool(_) | EString(_) | EInt(_) | EFloat(_) | EEnumValue(_) | EIdent(_):
 				e;
 		}
 	}

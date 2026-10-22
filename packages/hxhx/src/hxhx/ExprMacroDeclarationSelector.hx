@@ -2,7 +2,7 @@ package hxhx;
 
 /** Names visible at one source point; production lexical traversal must supply this contract. */
 typedef ExprMacroSelectionScope = {
-	final visibleNames:Array<String>;
+	final visibility:ExprMacroScopeVisibility;
 	final isStaticContext:Bool;
 }
 
@@ -16,10 +16,14 @@ typedef ExprMacroSelectionScope = {
 	provides one ordered member result; independent queries cannot prove a winner.
 **/
 function select(callee:HxExpr, context:TyperContext, scope:ExprMacroSelectionScope):Null<TyDeclarationInfo> {
+	final names = switch scope.visibility {
+		case Known(names): names;
+		case Unavailable(reason): throw reason;
+	};
 	return switch callee {
 		case EParenthesized(inner, _): select(inner, context, scope);
 		case EIdent(name):
-			if (scope.visibleNames.indexOf(name) >= 0) {
+			if (names.indexOf(name) >= 0) {
 				null;
 			} else {
 				final owner = context.currentClass();
@@ -41,7 +45,7 @@ function select(callee:HxExpr, context:TyperContext, scope:ExprMacroSelectionSco
 			}
 		case EField(receiver, name):
 			final path = typePath(receiver);
-			if (path == null || valueRoot(path.split(".")[0], context, scope)) {
+			if (path == null || valueRoot(path.split(".")[0], context, scope, names)) {
 				null;
 			} else {
 				final owner = context.resolveType(path);
@@ -53,8 +57,8 @@ function select(callee:HxExpr, context:TyperContext, scope:ExprMacroSelectionSco
 }
 
 /** A value-bound root must stay on ordinary typing, without inferring its receiver. */
-private function valueRoot(name:String, context:TyperContext, scope:ExprMacroSelectionScope):Bool {
-	if (scope.visibleNames.indexOf(name) >= 0)
+private function valueRoot(name:String, context:TyperContext, scope:ExprMacroSelectionScope, names:Array<String>):Bool {
+	if (names.indexOf(name) >= 0)
 		return true;
 	final owner = context.currentClass();
 	final field = owner == null ? null : owner.fieldInfo(name);

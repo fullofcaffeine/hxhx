@@ -73,7 +73,7 @@ class M14ExprMacroDeclarationSelectionTest {
 			return new TyperContext(index, parsed.getFilePath(), "callers." + name, "callers", directives, "callers." + name, null,
 				TyperStage.resolveModuleDirectives(directives, "callers", "callers." + name, index, null));
 		}
-		final scope:ExprMacroSelectionScope = {visibleNames: new Array<String>(), isStaticContext: true};
+		final scope:ExprMacroSelectionScope = {visibility: Known(new Array<String>()), isStaticContext: true};
 		function selected(text:String, owner:String, caller:String):Void {
 			final call = HxParser.parseExprText(text);
 			final captured = capture(call, context(caller), scope);
@@ -112,20 +112,22 @@ class M14ExprMacroDeclarationSelectionTest {
 			"ordinary same-name method or metadata substring became a macro");
 		require(capture(HxParser.parseExprText('preserve("ordinary")'), context("Ordinary"), scope) == null, "ordinary current-class method lost precedence");
 		require(capture(HxParser.parseExprText('preserve(1)'), context("Fields"), scope) == null, "callable current-class field lost precedence");
-		require(capture(HxParser.parseExprText('preserve("ordinary")'), context("Instance"), {visibleNames: [], isStaticContext: false}) == null,
+		require(capture(HxParser.parseExprText('preserve("ordinary")'), context("Instance"), {visibility: Known([]), isStaticContext: false}) == null,
 			"ordinary instance method lost precedence");
-		require(capture(HxParser.parseExprText('preserve("ordinary")'), context("InheritedField"), {visibleNames: [], isStaticContext: false}) == null,
+		require(capture(HxParser.parseExprText('preserve("ordinary")'), context("InheritedField"), {visibility: Known([]), isStaticContext: false}) == null,
 			"inherited callable field lost precedence");
 		final parameters = inputs[9];
 		final fn = HxClassDecl.getFunctions(HxModuleDecl.getMainClass(ResolvedModule.getParsed(parameters).getDecl()))[0];
 		final parameterNames = HxFunctionDecl.getArgs(fn).map(HxFunctionArg.getName);
 		for (text in ['Chosen.preserve(undefined)', 'keep(undefined)'])
-			require(capture(HxParser.parseExprText(text), context("Parameters"), {visibleNames: parameterNames, isStaticContext: true}) == null,
+			require(capture(HxParser.parseExprText(text), context("Parameters"), {visibility: Known(parameterNames), isStaticContext: true}) == null,
 				"parameter shadowing was ignored");
 		// The caller owns these exact point-in-source snapshots until production lexical traversal is integrated.
-		require(capture(HxParser.parseExprText('Chosen.preserve(undefined)'), context("Aliased"), {visibleNames: ["Chosen"], isStaticContext: true}) == null,
+		require(capture(HxParser.parseExprText('Chosen.preserve(undefined)'), context("Aliased"),
+			{visibility: Known(["Chosen"]), isStaticContext: true}) == null,
 			"local value did not shadow an imported type");
-		require(capture(HxParser.parseExprText('one.Identity.preserve(undefined)'), context("Aliased"), {visibleNames: ["one"], isStaticContext: true}) == null,
+		require(capture(HxParser.parseExprText('one.Identity.preserve(undefined)'), context("Aliased"),
+			{visibility: Known(["one"]), isStaticContext: true}) == null,
 			"local root did not shadow a qualified path");
 		require(capture(HxParser.parseExprText('missing.Identity.preserve(undefined)'), context("Aliased"), scope) == null,
 			"missing provider borrowed a same-suffix declaration");

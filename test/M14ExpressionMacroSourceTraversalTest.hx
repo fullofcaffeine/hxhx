@@ -1,5 +1,7 @@
 import hxhx.ExprMacroExpander;
 import hxhx.macro.MacroRuntimeSession;
+import hxhx.ExprMacroLexicalScope;
+import hxhx.ExprMacroCallRewrite;
 
 /** Check source traversal independently of native macro argument transport. */
 @:access(hxhx.ExprMacroExpander)
@@ -26,7 +28,16 @@ class M14ExpressionMacroSourceTraversalTest {
 			allowed.set(key, true);
 		var count = 0;
 		function rewrite(source:HxExpr):HxExpr {
-			return ExprMacroExpander.rewriteExpr(source, session, allowed, keys, new haxe.ds.StringMap<String>(), "", false, 0, () -> count++);
+			return ExprMacroExpander.rewriteExpr(source, (_, _, _) -> Recurse(call -> {
+				final rendered = switch call {
+					case ECall(callee, arguments): ExprMacroExpander.renderSimpleCall(callee, arguments);
+					case _: throw "expected call";
+				};
+				if (rendered == null || !allowed.exists(rendered))
+					return call;
+				count++;
+				return HxParser.parseExprText(session.expandExpr(rendered));
+			}), null, new ExprMacroLexicalScope(true, [], []), 0);
 		}
 		final position = new HxPos(7, 2, 3);
 		final catchFacts = new HxSourceCatch("error", "Dynamic", position);

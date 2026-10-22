@@ -25,8 +25,15 @@ The expansion pass does not use that metadata to select real macro declarations.
 macro declaration. It uses shared import resolution and retains original argument
 nodes without typing or expanding them. Its focused test covers aliases, ordinary
 calls, caller-supplied visible names, and outer-call syntax retention.
-Production expansion does not call this query yet. Production lexical traversal
-must supply and verify visible names before integration. Mixed imported fields and
+Production expansion does not call this query yet. The shared `ExprMacroExpander`
+walker now derives source scopes for a typed call callback. A consumed call keeps
+its original arguments unvisited. Ordinary calls visit children in order, then
+apply one designated transformation. Declaration selection rejects unavailable
+scopes. Callers must reject reported lexical coverage gaps before claiming
+complete selection, including opaque syntax with no visited calls.
+Guards, extractors, and raw syntax remain incomplete here. The compiler still
+calls the text adapter; native declaration dispatch remains a separate requirement.
+Mixed imported fields and
 methods produce an explicit unsupported diagnostic until shared lookup returns one
 ordered member. This query does not prove execution of a project's macro body.
 
