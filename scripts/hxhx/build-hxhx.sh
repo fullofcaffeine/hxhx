@@ -1188,19 +1188,9 @@ resolve_stage0_connect
     bash "$ROOT/scripts/hxhx/sanitize-stage3-emit-dir.sh" "$out_dir" >&2
   }
 
-  run_stage0_source_lane() {
+  run_stage0_target_build() {
     local executable_name=""
     local target=""
-    local code=0
-
-    set +e
-    run_stage0_build_with_connect_retry
-    code="$?"
-    set -e
-    if [ "$code" != "0" ]; then
-      return "$code"
-    fi
-    sanitize_stage0_emit_dir "$STAGE0_OUT_DIR"
     executable_name="$(stage0_executable_name)"
     target="./${executable_name}.bc"
     if [ "$build_mode" = "native" ]; then
@@ -1233,14 +1223,19 @@ resolve_stage0_connect
     return "$code"
   }
 
-  if ! run_stage0_source_lane; then
+  # Native and bytecode builds use the same emitted source. A generation failure
+  # must stop here; changing the Dune target cannot repair it or its timeout.
+  if run_stage0_build_with_connect_retry; then
+    sanitize_stage0_emit_dir "$STAGE0_OUT_DIR"
+  else
+    exit "$?"
+  fi
+
+  if ! run_stage0_target_build; then
     if [ "$build_mode" = "native" ]; then
-      echo "hxhx stage0 build: native failed; retrying bytecode (expected on some platforms; set HXHX_STAGE0_OCAML_BUILD=byte to skip native attempts)." >&2
+      echo "hxhx stage0 build: native compilation failed; retrying bytecode from emitted source (set HXHX_STAGE0_OCAML_BUILD=byte to skip native attempts)." >&2
       build_mode="byte"
-      rm -rf "$STAGE0_OUT_DIR"
-      mkdir -p "$STAGE0_OUT_DIR"
-      populate_haxe_args "$build_mode"
-      run_stage0_source_lane
+      run_stage0_target_build
     else
       exit 1
     fi

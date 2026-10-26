@@ -32,6 +32,7 @@ cat >"$TEST_TMP/compiler" <<'COMPILER'
 #!/usr/bin/env bash
 set -euo pipefail
 printf '%s\n' "$$" >"$TEST_PROCESS_DIR/launcher.pid"
+printf '%s\n' "$$" >>"$TEST_PROCESS_DIR/invocations"
 sleep 120 &
 printf '%s\n' "$!" >"$TEST_PROCESS_DIR/worker.pid"
 wait
@@ -43,7 +44,7 @@ CONTROL_PID="$!"
 set +e
 CI=false HAXE_FAMILY_HEAVY_RUN_LEASE_OWNER_PID= HXHX_HEAVY_RUN_LEASE_OWNER_PID= \
 TEST_PROCESS_DIR="$TEST_TMP" HAXE_BIN="$TEST_TMP/compiler" \
-HXHX_FORCE_STAGE0=1 HXHX_STAGE0_OCAML_BUILD=byte HXHX_STAGE0_USE_REPO_SERVER=0 HAXE_CONNECT= \
+HXHX_FORCE_STAGE0=1 HXHX_STAGE0_OCAML_BUILD=native HXHX_STAGE0_USE_REPO_SERVER=0 HAXE_CONNECT= \
 HXHX_STAGE0_OUTPUT_DIR="$TEST_TMP/out" HXHX_STAGE0_HEARTBEAT=1 HXHX_STAGE0_FAILFAST_SECS=2 \
 node "$ROOT/scripts/hxhx/with-heavy-run-lease.js" --lease-file "$TEST_TMP/lease.json" \
   --label timeout-cleanup-fixture -- bash "$ROOT/scripts/hxhx/build-hxhx.sh" >"$TEST_TMP/result.log" 2>&1
@@ -55,6 +56,11 @@ if [ "$status" -ne 1 ] || ! grep -q 'exceeded failfast limit' "$TEST_TMP/result.
   exit 1
 fi
 grep -q 'HAXE_FAMILY_HEAVY_RUN:LEASE_RELEASED' "$TEST_TMP/result.log"
+[ "$(wc -l <"$TEST_TMP/invocations" | tr -d ' ')" = 1 ] || {
+  cat "$TEST_TMP/result.log" >&2
+  echo "Source timeout must not start bytecode regeneration" >&2
+  exit 1
+}
 for role in launcher worker; do
   [ -s "$TEST_TMP/$role.pid" ] || { echo "Missing $role PID" >&2; exit 1; }
   if active "$(cat "$TEST_TMP/$role.pid")"; then
