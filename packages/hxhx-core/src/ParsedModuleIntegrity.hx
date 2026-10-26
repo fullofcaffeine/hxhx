@@ -74,6 +74,7 @@ class ParsedModuleIntegrity {
 			add(out, HxFunctionDecl.getName(fn));
 			add(out, visibilityName(HxFunctionDecl.getVisibility(fn)));
 			add(out, HxFunctionDecl.getIsStatic(fn) ? "static" : "instance");
+			add(out, HxFunctionDecl.getIsModuleLevel(fn) ? "module-function" : "class-member");
 			add(out, HxFunctionDecl.getReturnTypeHint(fn));
 			add(out, HxFunctionDecl.getReturnStringLiteral(fn));
 			add(out, HxFunctionDecl.getBodyText(fn));

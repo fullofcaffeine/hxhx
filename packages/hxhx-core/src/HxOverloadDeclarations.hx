@@ -37,8 +37,9 @@ function forClass(source:HxClassDecl, filePath:String):Array<HxIndexedFunctionDe
 				declaration: new HxFunctionDecl(HxFunctionDecl.getName(method), HxFunctionDecl.getVisibility(method), HxFunctionDecl.getIsStatic(method), [
 					for (argument in parsed.arguments)
 						HxFunctionSyntaxParser.methodArgument(argument.declaration)
-				], parsed.resultTypeHint, [], "", metadata,
-					HxFunctionDecl.getPos(method), HxFunctionDecl.getEndPos(method), "", false)
+				],
+					parsed.resultTypeHint, [], "", metadata, HxFunctionDecl.getPos(method), HxFunctionDecl.getEndPos(method), "", false,
+					HxFunctionDecl.getIsModuleLevel(method))
 			});
 		}
 	}

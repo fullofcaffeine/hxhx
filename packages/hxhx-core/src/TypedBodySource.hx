@@ -917,7 +917,8 @@ class TypedBodySource {
 		}
 		return new HxFunctionDecl(HxFunctionDecl.getName(source), HxFunctionDecl.getVisibility(source), HxFunctionDecl.getIsStatic(source), arguments,
 			returnTypeHint, statements(typedFunction.getBody(), catalog, projectionFacts), HxFunctionDecl.getReturnStringLiteral(source),
-			HxFunctionDecl.getMetadata(source), HxFunctionDecl.getPos(source), HxFunctionDecl.getEndPos(source), "", HxFunctionDecl.getHasBody(source));
+			HxFunctionDecl.getMetadata(source), HxFunctionDecl.getPos(source), HxFunctionDecl.getEndPos(source), "", HxFunctionDecl.getHasBody(source),
+			HxFunctionDecl.getIsModuleLevel(source));
 	}
 
 	/** Project one function while keeping its exact local and bare field-read catalogs inseparable from the source-shaped body. **/

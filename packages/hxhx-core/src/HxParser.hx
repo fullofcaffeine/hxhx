@@ -4883,7 +4883,7 @@ class HxParser {
 						HxFunctionDecl.getIsStatic(parsedFn), HxFunctionDecl.getArgs(parsedFn), HxFunctionDecl.getReturnTypeHint(parsedFn),
 						offsetFunctionBodyColumns(HxFunctionDecl.getBody(parsedFn), 1), HxFunctionDecl.getReturnStringLiteral(parsedFn),
 						HxFunctionDecl.getMetadata(parsedFn), HxFunctionDecl.getPos(parsedFn), HxFunctionDecl.getEndPos(parsedFn),
-						HxFunctionDecl.getBodyText(parsedFn), HxFunctionDecl.getHasBody(parsedFn));
+						HxFunctionDecl.getBodyText(parsedFn), HxFunctionDecl.getHasBody(parsedFn), true);
 					if (HxFunctionDecl.getName(fn) == "main")
 						hasToplevelMain = true;
 					moduleFunctions.push(fn);

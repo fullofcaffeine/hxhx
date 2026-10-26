@@ -89,7 +89,7 @@ class CompilerTypedModuleRevision {
 		final generatedDeclarations = module.getGeneratedDeclarations();
 		final sourceRevision = CompilerCacheIdentity.encode(["typed-module-source-v2", modulePath, sourceOriginRevision, parsed.getSource()]);
 		final publicFacts = new Array<Null<String>>();
-		publicFacts.push("typed-module-public-interface-v8");
+		publicFacts.push("typed-module-public-interface-v9");
 		publicFacts.push(modulePath);
 		final declaration = parsed.getDecl();
 		publicFacts.push(HxModuleDecl.getPackagePath(declaration));
@@ -267,6 +267,7 @@ class CompilerTypedModuleRevision {
 			out.push("public-function");
 			out.push(typedFunction.getStableIdentity());
 			out.push(HxFunctionDecl.getIsStatic(sourceFunction) ? "static" : "instance");
+			out.push(HxFunctionDecl.getIsModuleLevel(sourceFunction) ? "module-function" : "class-member");
 			addStrings(out, HxFunctionDecl.getMetadata(sourceFunction));
 			final declaration = typedFunction.getDeclaration();
 			if (declaration != null) {

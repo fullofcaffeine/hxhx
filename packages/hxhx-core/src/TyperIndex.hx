@@ -761,7 +761,7 @@ class TyperIndex {
 				else
 					addMethod(instances, instanceLists, signature);
 
-				final signatureKey = declarationSignatureKey(signature);
+				final signatureKey = (HxFunctionDecl.getIsModuleLevel(functionDeclaration) ? "module:" : "") + declarationSignatureKey(signature);
 				final occurrence = signatureOccurrences.exists(signatureKey) ? signatureOccurrences.get(signatureKey) : 0;
 				signatureOccurrences.set(signatureKey, occurrence + 1);
 				final declarationId = new TyDeclarationId(identity.getCanonicalName() + "#" + signatureKey + "#" + occurrence);

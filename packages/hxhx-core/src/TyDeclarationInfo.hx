@@ -18,6 +18,7 @@ class TyDeclarationInfo {
 	final position:HxPos;
 	final isInline:Bool;
 	final isPublic:Bool;
+	final isModuleLevel:Bool;
 	final modulePath:String;
 	final isEnumConstructor:Bool;
 	final typeParameters:Array<TyTypeParameterId>;
@@ -42,6 +43,7 @@ class TyDeclarationInfo {
 		this.position = position == null ? HxPos.unknown() : position;
 		this.isInline = isInline;
 		this.isPublic = isPublic;
+		this.isModuleLevel = HxFunctionDecl.getIsModuleLevel(sourceDeclaration);
 		this.modulePath = modulePath == null ? "" : StringTools.trim(modulePath);
 		this.isEnumConstructor = isEnumConstructor;
 		this.typeParameters = typeParameters == null ? [] : typeParameters.copy();
@@ -117,6 +119,10 @@ class TyDeclarationInfo {
 	/** Whether code in another module may name this declaration. **/
 	public function getIsPublic():Bool
 		return isPublic;
+
+	/** Indexing freezes whether a plain module import can expose this declaration as a bare function. */
+	public function getIsModuleLevel():Bool
+		return isModuleLevel;
 
 	/** Haxe module that owns the declaration, distinct from a secondary type's canonical path. **/
 	public function getModulePath():String
