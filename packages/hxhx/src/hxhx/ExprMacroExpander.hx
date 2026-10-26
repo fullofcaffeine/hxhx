@@ -147,7 +147,7 @@ class ExprMacroExpander {
 							HxFunctionDecl.getIsStatic(functionDecl), arguments, HxFunctionDecl.getReturnTypeHint(functionDecl), body,
 							HxFunctionDecl.getReturnStringLiteral(functionDecl), HxFunctionDecl.getMetadata(functionDecl),
 							HxFunctionDecl.getPos(functionDecl), HxFunctionDecl.getEndPos(functionDecl), HxFunctionDecl.getBodyText(functionDecl),
-							HxFunctionDecl.getHasBody(functionDecl)));
+							HxFunctionDecl.getHasBody(functionDecl), HxFunctionDecl.getIsModuleLevel(functionDecl)));
 					}
 				}
 				var rewritten = source;

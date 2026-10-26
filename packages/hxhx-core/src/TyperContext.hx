@@ -404,10 +404,41 @@ class TyperContext {
 		return null;
 	}
 
+	/**
+		A plain module import exposes its public top-level functions. The parser
+		retains their scope even when a class-shaped holder also contains ordinary
+		static methods. A type alias imports only the renamed type.
+	 */
+	function importedModuleFunction(directive:TyModuleDirective, name:String):Null<TyImportedStaticMethod> {
+		if (!directive.getKind().match(TypeImport) || !HxModuleDirective.getKind(directive.getSource()).match(ImportNormal))
+			return null;
+		var selected:Null<TyImportedStaticMethod> = null;
+		for (identity in directive.getProviders()) {
+			final provider = index.getByFullName(identity.getCanonicalName());
+			if (provider == null || provider.getModulePath() != HxModuleDirective.getPath(directive.getSource()))
+				continue;
+			final candidates = [
+				for (candidate in provider.staticMethodCandidates(name)) {
+					final declaration = provider.declarationForSignature(candidate);
+					if (declaration != null && declaration.getIsModuleLevel() && declaration.getIsPublic()) candidate;
+				}
+			];
+			if (candidates.length == 0)
+				continue;
+			if (selected != null)
+				throw "module import selected multiple owners for one top-level function";
+			selected = new TyImportedStaticMethod(provider, name, candidates);
+		}
+		return selected;
+	}
+
 	/** Resolve one bare imported method without separating its owner from its original name. **/
 	public function importedStaticMethod(name:String):Null<TyImportedStaticMethod> {
 		for (offset in 0...resolvedDirectives.length) {
 			final directive = resolvedDirectives[resolvedDirectives.length - 1 - offset];
+			final moduleFunction = importedModuleFunction(directive, name);
+			if (moduleFunction != null)
+				return moduleFunction;
 			for (provider in importedEnums(directive)) {
 				final candidates = [
 					for (candidate in provider.staticMethodCandidates(name))

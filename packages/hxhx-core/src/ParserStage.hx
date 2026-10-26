@@ -147,7 +147,7 @@ class ParserStage {
 					overlayChanged = true;
 				patchedFns.push(new HxFunctionDecl(HxFunctionDecl.getName(fn), HxFunctionDecl.getVisibility(fn), isStatic, HxFunctionDecl.getArgs(fn),
 					returnType, HxFunctionDecl.getBody(fn), HxFunctionDecl.getReturnStringLiteral(fn), metadata, HxFunctionDecl.getPos(fn),
-					HxFunctionDecl.getEndPos(fn), HxFunctionDecl.getBodyText(fn), hasBody));
+					HxFunctionDecl.getEndPos(fn), HxFunctionDecl.getBodyText(fn), hasBody, HxFunctionDecl.getIsModuleLevel(fn)));
 				final name = HxFunctionDecl.getName(fn);
 				if (name != null && name.length > 0)
 					existingFns.set(name, true);

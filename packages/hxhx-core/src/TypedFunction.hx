@@ -76,7 +76,7 @@ class TypedFunction {
 			return declaration.getIdentity().getCanonicalKey();
 		return (ownerName == null ? "" : ownerName)
 			+ "#"
-			+ (HxFunctionDecl.getIsStatic(sourceDeclaration) ? "static:" : "instance:")
+			+ (HxFunctionDecl.getIsModuleLevel(sourceDeclaration) ? "module:" : HxFunctionDecl.getIsStatic(sourceDeclaration) ? "static:" : "instance:")
 			+ HxFunctionDecl.getName(sourceDeclaration)
 			+ "#"
 			+ sourceOrdinal;
