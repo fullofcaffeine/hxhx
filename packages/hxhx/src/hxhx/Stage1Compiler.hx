@@ -279,6 +279,7 @@ class Stage1Args {
 	}
 
 	public static function parse(args:Array<String>, permissive:Bool = false):Null<Stage1Args> {
+		final startupCwd = Sys.getCwd();
 		final expanded = expandHxmlArgs(args);
 		if (expanded == null)
 			return null;
@@ -505,8 +506,12 @@ class Stage1Args {
 			}
 		}
 
-		if (stdRoot == null || stdRoot.length == 0)
+		if (stdRoot == null || stdRoot.length == 0) {
 			stdRoot = inferStdRoot(cwd);
+			// Like the launcher, retain the startup project's SDK when --cwd leaves that project.
+			if (stdRoot.length == 0)
+				stdRoot = inferStdRootFromHaxerc(startupCwd);
+		}
 		return new Stage1Args({explicitPaths: classPaths, standardRoot: stdRoot}, main, noOutput, roots, defines, libs, macros, resourceSpecs, displayRequest,
 			cwd, hadCmd, cmdCommands, hadRun, runArgs);
 	}
@@ -539,6 +544,7 @@ class Stage1Args {
 		return inferStdRoot(cwd);
 	}
 
+	/** Search only this directory's ancestors; request startup fallback is selected separately by parse. */
 	static function inferStdRootFromHaxerc(cwd:String):String {
 		final home = resolveHomeDir();
 		if (home.length == 0)
@@ -562,8 +568,9 @@ class Stage1Args {
 				}
 			}
 			previous = dir;
-			final parentInput = StringTools.endsWith(dir, "/") ? dir + ".." : dir + "/..";
-			dir = haxe.io.Path.normalize(sys.FileSystem.absolutePath(parentInput));
+			final parent = haxe.io.Path.directory(dir);
+			// A root's parent must remain absolute: directory returns "" for / and "C:" for C:/.
+			dir = haxe.io.Path.isAbsolute(parent) ? parent : haxe.io.Path.addTrailingSlash(parent);
 		}
 		return "";
 	}
