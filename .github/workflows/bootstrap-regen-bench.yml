@@ -115,6 +115,19 @@ jobs:
       - name: Download Haxe libraries (lix)
         run: npx lix download
 
+      - name: Record compiler inputs before generation
+        id: inputs
+        run: |
+          set -euo pipefail
+          REPORT_DIR="$RUNNER_TEMP/bootstrap_regen_bench"
+          mkdir -p "$REPORT_DIR"
+          echo "report_dir=$REPORT_DIR" >> "$GITHUB_OUTPUT"
+          git rev-parse HEAD > "$REPORT_DIR/source-head-before.txt"
+          test "$(cat "$REPORT_DIR/source-head-before.txt")" = "$GITHUB_SHA"
+          node scripts/hxhx/current-source-input-fingerprint.js \
+            --root "$GITHUB_WORKSPACE" --json-out "$REPORT_DIR/compiler-inputs-before.json" \
+            > "$REPORT_DIR/compiler-inputs-before.sha256"
+
       - name: Run bootstrap regen benchmark
         id: bench
         env:
@@ -140,11 +153,24 @@ jobs:
           HXHX_BOOTSTRAP_BENCH_REPORT_DIR="$REPORT_DIR" \
           npm run hxhx:bench:bootstrap-regen
 
+      - name: Verify compiler inputs after generation
+        if: ${{ always() && steps.inputs.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          REPORT_DIR="${{ steps.inputs.outputs.report_dir }}"
+          git rev-parse HEAD > "$REPORT_DIR/source-head-after.txt"
+          node scripts/hxhx/current-source-input-fingerprint.js \
+            --root "$GITHUB_WORKSPACE" --json-out "$REPORT_DIR/compiler-inputs-after.json" \
+            > "$REPORT_DIR/compiler-inputs-after.sha256"
+          # Compare content identities, not report timestamps or generated snapshots.
+          cmp "$REPORT_DIR/source-head-before.txt" "$REPORT_DIR/source-head-after.txt"
+          cmp "$REPORT_DIR/compiler-inputs-before.sha256" "$REPORT_DIR/compiler-inputs-after.sha256"
+
       - name: Add benchmark summary
         if: always()
         run: |
           set -euo pipefail
-          REPORT_DIR="${{ steps.bench.outputs.report_dir }}"
+          REPORT_DIR="${{ steps.inputs.outputs.report_dir }}"
           REPORT="$REPORT_DIR/report.json"
           RESULTS="$REPORT_DIR/results.tsv"
           if [ -f "$REPORT" ]; then
@@ -171,7 +197,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: bootstrap-regen-bench-${{ github.run_id }}
-          path: ${{ steps.bench.outputs.report_dir }}
+          path: ${{ steps.inputs.outputs.report_dir }}
           if-no-files-found: warn
           retention-days: 14
 
