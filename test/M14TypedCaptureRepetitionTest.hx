@@ -16,7 +16,7 @@ class M14TypedCaptureRepetitionTest {
 			+ "var selected = [for (item in [1,2]) { var elementLocal = item; () -> elementLocal; }];"
 			+ "} }";
 		final module = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
-		final fn = TyperStage.typeResolvedModule(module, TyperIndex.build([module])).getTypedClasses()[0].getFunctions()[0];
+		final fn = M14Stage3RuntimeFixture.typeResolved({module: module, root: "."}).getTypedClasses()[0].getFunctions()[0];
 		for (plan in [
 			TypedCapturePlan.analyze(fn),
 			TypedCapturePlan.afterLowering(fn, TypedControlLowering.functionBody(fn))
