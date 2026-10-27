@@ -30,6 +30,8 @@ echo "REFLAXE_OCAML_TARGET_REUSE_HARD_CUT:PASS"
 
 cd "$ROOT"
 for reuse_mode in disabled enabled; do
+	# Bash 3.2 (macOS) treats an empty array expansion as unbound under `set -u`;
+	# the `+` form expands to nothing when the array is empty.
 	observation_args=()
 	if [[ "$reuse_mode" = enabled ]]; then
 		observation_args+=(-D reflaxe_ocaml_target_reuse)
@@ -39,7 +41,7 @@ for reuse_mode in disabled enabled; do
 		-cp packages/reflaxe.ocaml/std \
 		-cp "$PROBE_SOURCE" \
 		-lib reflaxe \
-		"${observation_args[@]}" \
+		${observation_args[@]+"${observation_args[@]}"} \
 		--macro 'TargetRevisionObservationFixture.check()'
 done
 
