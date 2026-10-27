@@ -89,7 +89,7 @@ class CompilerTypedModuleRevision {
 		final generatedDeclarations = module.getGeneratedDeclarations();
 		final sourceRevision = CompilerCacheIdentity.encode(["typed-module-source-v2", modulePath, sourceOriginRevision, parsed.getSource()]);
 		final publicFacts = new Array<Null<String>>();
-		publicFacts.push("typed-module-public-interface-v9");
+		publicFacts.push("typed-module-public-interface-v10");
 		publicFacts.push(modulePath);
 		final declaration = parsed.getDecl();
 		publicFacts.push(HxModuleDecl.getPackagePath(declaration));
@@ -231,6 +231,28 @@ class CompilerTypedModuleRevision {
 			for (member in enumDomain.getMembers()) {
 				out.push(member.field.getCanonicalKey());
 				out.push(member.field.getConstant().getCanonicalIdentity());
+			}
+		}
+		// Indexed syntax can call private helpers. Their order and complete call
+		// contracts therefore belong to callers' public dependency identity too.
+		if (Std.isOfType(semanticInfo, TyAbstractInfo)) {
+			out.push("abstract-indexed-declarations-v1");
+			for (indexed in (cast semanticInfo : TyAbstractInfo).getIndexedDeclarations()) {
+				out.push(indexed.getIdentity().getCanonicalKey());
+				out.push(indexed.getIsStatic() ? "static" : "instance");
+				out.push(indexed.getIsInline() ? "inline" : "ordinary");
+				out.push(indexed.getNativeName().getCanonicalIdentity());
+				addStrings(out, indexed.getMetadata());
+				final signature = indexed.getSignature();
+				addTypes(out, signature.getArgs());
+				addBools(out, signature.getArgOptional());
+				addBools(out, signature.getArgRest());
+				out.push(signature.getReturnType().getSemanticKey());
+				final constraints = indexed.getResolvedTypeParameterConstraints();
+				for (parameter in indexed.getTypeParameterIds()) {
+					out.push(parameter.getCanonicalKey());
+					addTypes(out, constraints.exists(parameter.getCanonicalKey()) ? constraints.get(parameter.getCanonicalKey()) : []);
+				}
 			}
 		}
 

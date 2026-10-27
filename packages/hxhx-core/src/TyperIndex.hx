@@ -7,6 +7,7 @@ private typedef TyParsedAbstractOperatorMetadata = {
 	final unaryOperator:Null<HxUnaryOperator>;
 	final unaryFixity:Null<HxUnaryFixity>;
 	final binaryOperator:Null<String>;
+	final ?indexed:Bool;
 };
 
 /**
@@ -482,10 +483,13 @@ class TyperIndex {
 				{unaryOperator: null, unaryFixity: null, binaryOperator: null};
 			case EArrayAccess(_, _):
 				{unaryOperator: null, unaryFixity: null, binaryOperator: null};
-			case EArrayDecl(_):
-				// Upstream Haxe represents `@:op([])` as an empty array literal.
-				// Its declaration semantics remain outside this operator slice.
-				{unaryOperator: null, unaryFixity: null, binaryOperator: null};
+			case EArrayDecl(values) if (values.length == 0):
+				{
+					unaryOperator: null,
+					unaryFixity: null,
+					binaryOperator: null,
+					indexed: true
+				};
 			case _:
 				throw malformedOperator(filePath, position, metadata);
 		};
@@ -500,6 +504,22 @@ class TyperIndex {
 		var clean = metadata == null ? "" : StringTools.trim(metadata);
 		while (StringTools.startsWith(clean, "@") || StringTools.startsWith(clean, ":"))
 			clean = clean.substr(1);
+		final opening = clean.indexOf("(");
+		final metadataName = StringTools.trim(opening < 0 ? clean : clean.substr(0, opening));
+		if (metadataName == "arrayAccess") {
+			if (opening >= 0)
+				switch HxParser.parseCompleteExprText(clean) {
+					case ECall(EIdent("arrayAccess"), _):
+					case _:
+						throw malformedOperator(filePath, position, metadata);
+				}
+			return {
+				unaryOperator: null,
+				unaryFixity: null,
+				binaryOperator: null,
+				indexed: true
+			};
+		}
 		if (clean != "op" && !StringTools.startsWith(clean, "op("))
 			return null;
 		if (clean.length <= 2 || clean.charAt(2) != "(" || !StringTools.endsWith(clean, ")"))
@@ -529,6 +549,8 @@ class TyperIndex {
 				final parsed = parseOperatorMetadata(metadata, filePath, declaration.getPosition());
 				if (parsed == null)
 					continue;
+				if (parsed.indexed == true)
+					info.addIndexedDeclaration(declaration);
 				if (parsed.unaryOperator != null && parsed.unaryFixity != null) {
 					final key = HxUnaryOperatorTools.sourceToken(parsed.unaryOperator)
 						+ "|"
@@ -1028,6 +1050,9 @@ class TyperIndex {
 				lines.push(line);
 			if (Std.isOfType(info, TyAbstractInfo)) {
 				final abstractInfo:TyAbstractInfo = cast info;
+				final indexed = abstractInfo.getIndexedDeclarations();
+				for (ordinal in 0...indexed.length)
+					lines.push("  indexed " + ordinal + " " + indexed[ordinal].getIdentity().getCanonicalKey());
 				final operatorLines = [
 					for (operatorInfo in abstractInfo.getAllUnaryOperators())
 						"  unary "

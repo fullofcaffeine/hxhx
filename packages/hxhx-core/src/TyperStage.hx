@@ -15,7 +15,6 @@ private typedef TyMethodCallCapture = {
 private typedef TyCallInferenceContext = {
 	final expression:HxExpr;
 	final type:TyType;
-	final ?argumentTypes:Array<TyType>;
 };
 
 private typedef TyExtensionCallResolution = {
@@ -520,6 +519,46 @@ class TyperStage {
 					final storageType = expected.isNullable() && !value.getType().isNullLiteral() ? expected.unwrapNull() : expected;
 					final storage = TyImplicitConversionPlan.select(context.getIndex(), storageType, value.getType());
 					return storage != null && storage.isRepresentationPreservingAbstractConversion() ? storage.apply(value) : value;
+				},
+				indexedAccess: function(expression, position, environment) {
+					final binding = environment.getInference().indexedAccess(expression);
+					if (binding == null)
+						return null;
+					if (binding.conversion != null)
+						return {binding: binding, call: null};
+					final declaration = binding.declaration;
+					final replay = environment.copyForInference();
+					final receiverType = inferExprType(binding.receiver, replay, context, position);
+					final indexed = switch expression {
+						case EArrayAccess(receiver,
+							subscript): resolveIndexedAccess(expression, receiver, subscript, null, receiverType, replay, context, position);
+						case EBinop("=", EArrayAccess(receiver, subscript),
+							value): resolveIndexedAccess(expression, receiver, subscript, value, receiverType, replay, context, position);
+						case _: throw "indexed binding lost its source form";
+					};
+					final owner = context.getIndex().getByFullName(declaration.getOwner().getCanonicalName());
+					final signature = TyNominalApplication.signature(context.getIndex(), owner, declaration.getIsStatic() ? null : receiverType,
+						declaration.getSignature());
+					final inferred = environment.getInference().directCallType(expression, declaration);
+					final parameters = environment.getInference()
+						.receiverCallParameters(expression, declaration,
+							inferred == null ? TyMethodGenericBinding.specializeParameters(declaration, signature, indexed.order.rankedTypes(indexed.actual),
+								context.getIndex()) : inferred.getFunctionArguments());
+					final named = new TypedNamedCallPlan({
+						declaration: declaration,
+						signature: signature,
+						order: indexed.order,
+						parameters: parameters,
+						sources: binding.getArguments(),
+						index: context.getIndex(),
+						extensionProvider: null
+					});
+					final expected = named.getExpectedArguments();
+					final conversions = [
+						for (i in 0...expected.length)
+							TyImplicitConversionPlan.select(context.getIndex(), expected[i], indexed.actual[i])
+					];
+					return {binding: binding, call: new TypedCallResolution(declaration, declaration.getIsStatic(), null, conversions, expected, named)};
 				},
 				constructorApplication: function(constructed, arguments, sources) {
 					return TypedConstructorSelection.select(context.getIndex(), constructed, arguments, sources,
@@ -1663,8 +1702,170 @@ class TyperStage {
 		};
 	}
 
+	/** Declaration-indexed updates need their own read/write schedule; ordinary arrays and conversion-only wrappers keep their existing path. */
+	static function rejectAbstractIndexedUpdate(place:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Void {
+		if (ctx.getIndex() == null)
+			return;
+		switch place {
+			case EParenthesized(inner, _) | EPrivateAccess(inner, _):
+				rejectAbstractIndexedUpdate(inner, scope, ctx, pos);
+			case EArrayAccess(receiver, _):
+				final type = TyAliasExpansion.revealNonNullable(inferExprType(receiver, scope.copyForInference(), ctx, pos));
+				final identity = type.getNominalIdentity();
+				final owner = identity == null ? null : ctx.getIndex().getAbstractByFullName(identity.getCanonicalName());
+				if (owner != null && owner.getIndexedDeclarations().length > 0)
+					throw new TyperError(ctx.getFilePath(), pos, "Abstract indexed updates are not yet supported (haxe_ocaml-rgmu4)");
+			case _:
+		}
+	}
+
+	/** Select source-ordered indexed helpers through the existing method-call transaction. */
+	static function resolveIndexedAccess(source:HxExpr, receiver:HxExpr, subscript:HxExpr, value:Null<HxExpr>, receiverType:TyType, scope:TyFunctionEnv,
+			ctx:TyperContext, pos:HxPos, ?expectedResult:TyType):Null<TyMethodCallResolution> {
+		if (ctx.getIndex() == null)
+			return null;
+		final revealed = TyAliasExpansion.revealNonNullable(receiverType);
+		final identity = revealed.getNominalIdentity();
+		final owner = identity == null ? null : ctx.getIndex().getAbstractByFullName(identity.getCanonicalName());
+		if (owner == null)
+			return null;
+		final inference = scope.getInference();
+		final catalog = owner.getIndexedDeclarations();
+		final operands = value == null ? [subscript] : [subscript, value];
+		var binding = inference.indexedAccess(source);
+		if (catalog.length == 0) {
+			if (binding == null) {
+				var target:Null<TyType> = null;
+				for (declared in owner.getImplicitToTypes()) {
+					final applied = TyNominalApplication.applyType(ctx.getIndex(), owner, revealed, declared);
+					if (arrayElementType(applied) == null && TyDeclaredArrayAccess.element(ctx.getIndex(), applied) == null)
+						continue;
+					if (TyImplicitConversionPlan.select(ctx.getIndex(), applied, revealed) == null)
+						continue;
+					if (target != null && target.getSemanticKey() != applied.getSemanticKey())
+						throw new TyperError(ctx.getFilePath(), pos, "Ambiguous declared indexed conversion");
+					target = applied;
+				}
+				if (target == null)
+					throw new TyperError(ctx.getFilePath(), pos, "Array access is not allowed on " + receiverType.getDisplay());
+				binding = inference.indexedAccess(source, () -> new TyIndexedAccessBinding(source, receiver, operands, null, target));
+			}
+			final indexType = inferExprType(subscript, scope, ctx, pos, TyType.fromHintText("Int"));
+			if (!TyValueCompatibility.accepts(ctx.getIndex(), TyType.fromHintText("Int"), indexType, subscript))
+				throw new TyperError(ctx.getFilePath(), pos, indexType.getDisplay() + " should be Int for an array index");
+			final element = arrayElementType(binding.conversion);
+			final result = element == null ? TyDeclaredArrayAccess.element(ctx.getIndex(), binding.conversion) : element;
+			if (value != null) {
+				final actual = inferExprType(value, scope, ctx, pos, result);
+				if (!TyValueCompatibility.accepts(ctx.getIndex(), result, actual, value))
+					throw new TyperError(ctx.getFilePath(), pos, actual.getDisplay() + " should be " + result.getDisplay());
+			}
+			return {type: result, declaration: null};
+		}
+		final candidates = binding == null ? catalog.filter(declaration -> declaration.getSignature().getArgs().length == operands.length
+			+ (declaration.getIsStatic() ? 1 : 0)) : [binding.declaration];
+		final contexts = TyCallArgumentContext.shared(candidates.map(declaration -> {
+			final signature = TyNominalApplication.signature(ctx.getIndex(), owner, declaration.getIsStatic() ? null : revealed, declaration.getSignature());
+			final offset = declaration.getIsStatic() ? 1 : 0;
+			return new TyFunSig(signature.getName(), signature.getIsStatic(), signature.getArgNames().slice(offset), signature.getArgs().slice(offset),
+				signature.getArgOptional().slice(offset), signature.getArgRest().slice(offset), signature.getReturnType(), signature.getPos());
+		}), operands.length,
+			candidates.map(declaration -> declaration.getTypeParameterIds()));
+		final actual = [
+			for (i in 0...operands.length)
+				inferExprType(operands[i], scope, ctx, pos, inference.isSealed() ? null : contexts[i])
+		];
+		function select(declaration:TyDeclarationInfo, environment:TyFunctionEnv, probe:Bool):TyMethodCallResolution {
+			final arguments = declaration.getIsStatic() ? [receiver].concat(operands) : operands;
+			return resolveMethodCall(owner, declaration.getSignature().getName(), declaration.getIsStatic(), arguments, environment, ctx, pos,
+				[declaration.getSignature()], declaration.getIsStatic() ? null : {
+					expression: receiver,
+					type: revealed
+				}, declaration.getIsStatic() ? [receiverType].concat(actual) : actual, probe);
+		}
+		if (binding == null) {
+			for (candidate in candidates) {
+				final probe = select(candidate, scope.copyForInference(), true);
+				if (probe.declaration == null)
+					continue;
+				binding = inference.indexedAccess(source,
+					() -> new TyIndexedAccessBinding(source, receiver, candidate.getIsStatic() ? [receiver].concat(operands) : operands, candidate));
+				break;
+			}
+		}
+		if (binding == null)
+			throw new TyperError(ctx.getFilePath(), pos, "No compatible declared indexed " + (value == null ? "getter" : "setter"));
+		final declaration = binding.declaration;
+		final selection = select(declaration, scope, false);
+		if (selection.declaration != declaration)
+			throw "indexed replay changed its selected declaration";
+		inference.recordReceiverResult(source, receiver, declaration, scope, ctx.getIndex());
+		if (selection.receiverArguments != null)
+			inference.recordReceiverCall(source, declaration, selection.receiverArguments);
+		var result = inference.expressionType(source, selection.type, scope);
+		final signature = TyNominalApplication.signature(ctx.getIndex(), owner,
+			declaration.getIsStatic() ? null : inference.expressionType(receiver, revealed, scope), declaration.getSignature());
+		final parameters = TyMethodGenericBinding.specializeParameters(declaration, signature, selection.order.rankedTypes(selection.actual), ctx.getIndex());
+		if (declaration.getTypeParameterIds().length > 0
+			&& (result.hasUnknownComponent() || parameters.filter(type -> type.hasUnknownComponent()).length > 0)) {
+			result = inference.inferDirectCall({
+				expression: source,
+				declaration: declaration,
+				callable: TyMethodGenericBinding.inferenceCallable(declaration, signature, selection.order.rankedTypes(selection.actual), ctx.getIndex()),
+				signature: signature,
+				order: selection.order,
+				arguments: binding.getArguments(),
+				actual: selection.actual,
+				environment: scope,
+				index: ctx.getIndex(),
+				accepts: (expected, supplied) -> overloadArgScore(expected, supplied, [], ctx.getIndex()) >= 0
+			});
+		}
+		if (expectedResult != null && !inference.constrain([source], [expectedResult], scope, ctx.getIndex()))
+			throw new TyperError(ctx.getFilePath(), pos, "indexed call conflicts with its expected type");
+		result = inference.expressionType(source, result, scope);
+		if (expectedResult != null
+			&& !expectedResult.hasUnknownComponent()
+			&& !result.hasUnknownComponent()
+			&& !TyValueCompatibility.accepts(ctx.getIndex(), expectedResult, result, source))
+			throw new TyperError(ctx.getFilePath(), pos, result.getDisplay() + " should be " + expectedResult.getDisplay());
+		return {
+			type: inference.expressionType(source, result, scope),
+			declaration: declaration,
+			order: selection.order,
+			actual: selection.actual
+		};
+	}
+
+	/** Reuse the inferred receiver: lexical declarations inside it must not be visited twice during indexed dispatch. */
+	static function ordinaryIndexedElement(source:HxExpr, receiver:HxExpr, subscript:HxExpr, receiverType:TyType, scope:TyFunctionEnv, ctx:TyperContext,
+			pos:HxPos):TyType {
+		final indexType = inferExprType(subscript, scope, ctx, pos);
+		var elementType = arrayElementType(receiverType.unwrapNull());
+		if (elementType == null) {
+			final ancestor = TyNominalAncestor.view(ctx.getIndex(), receiverType.unwrapNull(), new TyNominalTypeId("Array"));
+			elementType = ancestor == null ? null : arrayElementType(ancestor);
+		}
+		if (elementType == null)
+			elementType = TyDeclaredArrayAccess.element(ctx.getIndex(), receiverType);
+		if (!scope.isUntypedContext()) {
+			if (elementType != null
+				&& !indexType.hasUnknownComponent()
+				&& !TyFieldAssignment.explicitlyUntyped(subscript)
+				&& !TyValueCompatibility.accepts(ctx.getIndex(), TyType.fromHintText("Int"), indexType, subscript))
+				throw new TyperError(ctx.getFilePath(), pos, indexType.getDisplay() + " should be Int for an array index");
+			if (elementType == null && TyDeclaredArrayAccess.isClass(ctx.getIndex(), receiverType))
+				throw new TyperError(ctx.getFilePath(), pos, "Array access is not allowed on " + receiverType.getDisplay());
+		}
+		scope.getInference().recordIndexedResult(source, receiver, scope, ctx.getIndex());
+		return scope.getInference().expressionType(source, elementType == null ? TyType.fromHintText("Dynamic") : elementType, scope);
+	}
+
 	static function resolveMethodCall(c:TyNominalInfo, field:String, isStatic:Bool, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos,
-			?admittedCandidates:Array<TyFunSig>, ?receiver:TyCallInferenceContext):TyMethodCallResolution {
+			?admittedCandidates:Array<TyFunSig>, ?receiver:TyCallInferenceContext, ?retainedArgumentTypes:Array<TyType>,
+			probe:Bool = false):TyMethodCallResolution {
+		if (probe && !scope.isSpeculative())
+			throw "method candidate probe requires an isolated inference scope";
 		if (!isStatic && admittedCandidates == null && field != "new") {
 			final declaring = ctx.instanceMethodOwner(field, c);
 			if (declaring != null)
@@ -1684,26 +1885,32 @@ class TyperStage {
 			final inference = scope.getInference();
 			final ranked = order.rankedTypes(actual);
 			if (receiver != null
-				&& !inference.constrainMember(receiver.expression, c, signature, ranked, scope, ctx.getIndex(), {expressions: args, order: order}))
+				&& !inference.constrainMember(receiver.expression, c, signature, ranked, scope, ctx.getIndex(), {expressions: args, order: order})) {
+				if (probe)
+					return {type: TyType.unknown(), declaration: null};
 				throw new TyperError(ctx.getFilePath(), pos, "selected member conflicts with generic constructor constraints");
+			}
 			var applied = TyNominalApplication.signature(ctx.getIndex(), c,
 				receiver == null ? null : inference.expressionType(receiver.expression, receiver.type, scope), signature);
 			final declaration = c.declarationForSignature(signature);
 			final trial = inputTrial(declaration, applied, ranked);
 			if (trial != null) {
 				applied = trial.getSignature();
-				if (!scope.isSpeculative() && !inference.isSealed())
-					ctx.getIndex().getMethodInputs().commit(trial);
 			}
 			if (declaration != null) {
 				final expected = order.sourceContexts(TyMethodGenericBinding.specializeParameters(declaration, applied, ranked, ctx.getIndex()));
-				if (!scope.getInference().constrain(args, expected, scope, ctx.getIndex()))
+				if (!scope.getInference().constrain(args, expected, scope, ctx.getIndex())) {
+					if (probe)
+						return {type: TyType.unknown(), declaration: null};
 					throw new TyperError(ctx.getFilePath(), pos, "selected call conflicts with generic constructor constraints");
+				}
 			}
 			final solved = [
 				for (index in 0...args.length)
 					scope.getInference().expressionType(args[index], actual[index], scope)
 			];
+			if (trial != null && !scope.isSpeculative() && !inference.isSealed())
+				ctx.getIndex().getMethodInputs().commit(trial);
 			final selected = selectedMethodCallResolution(c, signature, order.rankedTypes(solved), ctx, applied);
 			return {
 				type: selected.type,
@@ -1723,7 +1930,7 @@ class TyperStage {
 				final declaration = c.declarationForSignature(signature);
 				return declaration == null ? [] : declaration.getTypeParameterIds();
 			}));
-		final argTypes = receiver != null && receiver.argumentTypes != null ? receiver.argumentTypes.copy() : [
+		final argTypes = retainedArgumentTypes != null ? retainedArgumentTypes.copy() : [
 			for (index in 0...args.length)
 				switch (args[index]) {
 					case ECall(EIdent("__hxhx_spread"), [container]):
@@ -1867,6 +2074,8 @@ class TyperStage {
 			return select(selected, bestArguments, bestOrder);
 		}
 
+		if (probe)
+			return {type: TyType.unknown(), declaration: null};
 		if (rejectedMethodConstraint != null)
 			throw new TyperError(ctx.getFilePath(), pos, rejectedMethodConstraint);
 		if (rejectedReceiverConstraint || (receiver != null && scope.getInference().sourceTerm(receiver.expression, scope) != null))
@@ -3284,15 +3493,16 @@ class TyperStage {
 					if (constructor != null)
 						resolveMethodCall(constructor.getOwner(), "new", false, args, scope, ctx, pos, null, {
 							expression: expr,
-							type: constructor.getOwnerType(),
-							argumentTypes: argumentTypes
-						});
+							type: constructor.getOwnerType()
+						}, argumentTypes);
 				}
 				validateClassArguments(applied, ctx, pos);
 				applied;
 			case EUnop(_op, _fixity, e):
-				if (_op == Increment || _op == Decrement)
+				if (_op == Increment || _op == Decrement) {
 					assertWritableLocal(e, scope, ctx, pos);
+					rejectAbstractIndexedUpdate(e, scope, ctx, pos);
+				}
 				final inner = inferExprType(e, scope, ctx, pos);
 				final semanticIndex = ctx.getIndex();
 				final isPropertyUpdate = (_op == Increment || _op == Decrement)
@@ -3329,8 +3539,10 @@ class TyperStage {
 					}
 				}
 			case EBinop(op, a, b):
-				if (op == "??=")
+				if (op == "??=") {
 					assertWritableLocal(a, scope, ctx, pos);
+					rejectAbstractIndexedUpdate(a, scope, ctx, pos);
+				}
 				switch (op) {
 					case "is":
 						inferExprType(a, scope, ctx, pos);
@@ -3346,8 +3558,18 @@ class TyperStage {
 						inferNullCoalesceType(ta, tb);
 					case "=":
 						assertWritableLocal(a, scope, ctx, pos);
+						var indexedDestination:Null<TyType> = null;
+						switch a {
+							case EArrayAccess(receiver, subscript):
+								final receiverType = inferExprType(receiver, scope, ctx, pos);
+								final indexed = resolveIndexedAccess(expr, receiver, subscript, b, receiverType, scope, ctx, pos, expectedResult);
+								if (indexed != null)
+									return indexed.type;
+								indexedDestination = ordinaryIndexedElement(a, receiver, subscript, receiverType, scope, ctx, pos);
+							case _:
+						}
 						// Assignment as expression.
-						final destination = inferExprType(a, scope, ctx, pos);
+						final destination = indexedDestination == null ? inferExprType(a, scope, ctx, pos) : indexedDestination;
 						final rhs = inferExprType(b, scope, ctx, pos, destination);
 						if (a.match(EArrayAccess(_, _))
 							&& destination.hasUnknownComponent()
@@ -3424,6 +3646,7 @@ class TyperStage {
 						}
 					case _ if (HxBinaryOperatorTools.isCompoundAssignment(op)):
 						assertWritableLocal(a, scope, ctx, pos);
+						rejectAbstractIndexedUpdate(a, scope, ctx, pos);
 						final leftType = inferExprType(a, scope, ctx, pos);
 						final rightType = inferExprType(b, scope, ctx, pos);
 						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), leftType, rightType, op, ctx.getFilePath(), pos);
@@ -3643,28 +3866,10 @@ class TyperStage {
 				resolveTypeInContext(TyType.unresolved("Array", [elem]), ctx);
 			case EArrayAccess(array, index):
 				final arrayType = inferExprType(array, scope, ctx, pos);
-				final indexType = inferExprType(index, scope, ctx, pos);
-				var elementType = arrayElementType(arrayType.unwrapNull());
-				if (elementType == null) {
-					// Extern subclasses retain the element type of their applied Array
-					// superclass. This view does not replace the concrete receiver type.
-					final ancestor = TyNominalAncestor.view(ctx.getIndex(), arrayType.unwrapNull(), new TyNominalTypeId("Array"));
-					elementType = ancestor == null ? null : arrayElementType(ancestor);
-				}
-				if (elementType == null)
-					elementType = TyDeclaredArrayAccess.element(ctx.getIndex(), arrayType);
-				if (!scope.isUntypedContext()) {
-					if (elementType != null
-						&& !indexType.hasUnknownComponent()
-						&& !TyFieldAssignment.explicitlyUntyped(index)
-						&& !TyValueCompatibility.accepts(ctx.getIndex(), TyType.fromHintText("Int"), indexType, index))
-						throw new TyperError(ctx.getFilePath(), pos, indexType.getDisplay() + " should be Int for an array index");
-					if (elementType == null && TyDeclaredArrayAccess.isClass(ctx.getIndex(), arrayType))
-						throw new TyperError(ctx.getFilePath(), pos, "Array access is not allowed on " + arrayType.getDisplay());
-				}
-				scope.getInference().recordIndexedResult(expr, array, scope, ctx.getIndex());
-				// Abstract operators and explicit untyped access keep their existing boundary.
-				elementType == null ? TyType.fromHintText("Dynamic") : elementType;
+				final indexed = resolveIndexedAccess(expr, array, index, null, arrayType, scope, ctx, pos, expectedResult);
+				if (indexed != null)
+					return indexed.type;
+				ordinaryIndexedElement(expr, array, index, arrayType, scope, ctx, pos);
 			case ERange(start, end):
 				for (bound in [start, end]) {
 					final actual = inferExprType(bound, scope, ctx, pos, TyType.fromHintText("Int"));
