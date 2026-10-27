@@ -33,6 +33,9 @@ typedef TypedExprTypeResolver = {
 	/** Select an applied constructor using typed arguments without replaying their effects or lexical declarations. */
 	final constructorApplication:(constructed:TyType, arguments:Array<TyType>, sources:Array<HxExpr>) -> Null<TypedConstructorApplication>;
 
+	/** Replay constructor operand context from its authored path; Unknown denotes a declined positional context. */
+	final constructorArgumentContexts:(path:String, sources:Array<HxExpr>, environment:TyFunctionEnv) -> Array<TyType>;
+
 	/** Materialize a selected executable conversion at a written value boundary, retaining the original typed operand. */
 	final convertValue:(value:TypedExpr, expected:TyType) -> TypedExpr;
 
