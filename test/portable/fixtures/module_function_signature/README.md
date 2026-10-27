@@ -11,5 +11,14 @@ A constructor with an Int-to-Int callback retains that checked function signatur
 and passes recursive-module eligibility. Its runtime assertion checks the callback result.
 Unsupported callback representations remain covered by `module_callback_signature`.
 
+Standard `haxe.Int32` parameters and results retain their existing OCaml `int`
+carrier, including a transparent typedef alias. The fixture checks the exact
+internal Int64 constructor's `high` and `low` parameter types. It also checks an
+ordinary Int32 constructor and a returned alias through generated OCaml and runtime.
+The signature selector must reject a same-spelled user abstract, nullable Int32,
+a nonempty Int32 type application, and a conflicting target carrier.
+These checks do not grant optimized core Int call or storage permissions.
+They do not prove Int64 mutation or alias/copy behavior.
+
 This fixture does not emit recursive modules or prove safe initialization for arbitrary modules.
 It does not change the README Goals percentages.

@@ -109,6 +109,13 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 		};
 	}
 	return switch (type) {
+		case TAbstract(reference, []) if (isStandardInt32Declaration(reference.get())):
+			// Export the same carrier that ordinary Int32 declarations already use.
+			// This does not admit abstract conversions or optimized call/storage plans.
+			switch (nominalType(type)) {
+				case carrier = TIdent("int"): carrier;
+				case _: null;
+			}
 		case TFun(parameters, result):
 			final projectedResult = declarationCarrier(result, representations, nominalType, context, erasedMethodTypeParameters);
 			if (projectedResult == null) {
@@ -234,6 +241,17 @@ private function declarationCarrier(type:Type, representations:OcamlRepresentati
 			nominalType(type);
 		case _: null;
 	}
+}
+
+/** Only the standard unapplied Int32 declaration owns this existing integer carrier. */
+private function isStandardInt32Declaration(definition:AbstractType):Bool {
+	return definition.module == "haxe.Int32"
+		&& definition.pack.length == 1
+		&& definition.pack[0] == "haxe"
+		&& definition.name == "Int32"
+		&& definition.params.length == 0
+		&& !definition.isExtern
+		&& OcamlRepresentationRegistry.isExactInt(definition.type);
 }
 
 /**
