@@ -2,7 +2,7 @@
 class M14TypedCaptureLoweringTest {
 	static function typed(source:String):TypedFunction {
 		final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
-		return TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved])).getTypedClasses()[0].getFunctions()[0];
+		return M14Stage3RuntimeFixture.typeResolved({module: resolved, root: "."}).getTypedClasses()[0].getFunctions()[0];
 	}
 
 	static function check(condition:Bool, message:String):Void {
