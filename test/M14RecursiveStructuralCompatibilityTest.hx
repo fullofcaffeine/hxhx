@@ -17,7 +17,17 @@ class M14RecursiveStructuralCompatibilityTest {
 			+ "typedef NestedLeft={var nodes:Array<GrowingLeft<Int>>;}; "
 			+ "typedef NestedRight={var nodes:Array<{final value:Int; final ?next:GrowingLeft<Box<Int>>;}>;}; "
 			+ "typedef NestedWrong={var nodes:Array<{final value:String; final ?next:GrowingLeft<Box<Int>>;}>;}; ";
-		final cases = [
+		final memberDeclarations = "typedef Ref<T>={function get():T;}; "
+			+ "typedef Member<T>={var value:T; var siblings:Ref<Array<Member<T>>>;}; typedef Owner<T>={var fields:Ref<Array<Member<T>>>;}; "
+			+ "typedef ReadOnly={var value(get,never):Int;}; typedef Writable={var value:Int;}; "
+			+ "typedef Method={function get():Int;}; typedef FunctionField={var get:()->Int;}; class First {} class Second {} ";
+		final cases:Array<{
+			name:String,
+			expected:String,
+			actual:String,
+			accepted:Bool,
+			?equivalent:Bool
+		}> = [
 			{
 				name: "nested array alias expansion",
 				expected: "NestedLeft",
@@ -52,13 +62,15 @@ class M14RecursiveStructuralCompatibilityTest {
 				name: "optional to required",
 				expected: "Required",
 				actual: "Optional",
-				accepted: true
+				accepted: true,
+				equivalent: false
 			},
 			{
 				name: "required to optional",
 				expected: "Optional",
 				actual: "Required",
-				accepted: true
+				accepted: true,
+				equivalent: false
 			},
 			{
 				name: "missing required field",
@@ -89,6 +101,34 @@ class M14RecursiveStructuralCompatibilityTest {
 				expected: "GrowingRight<Int>",
 				actual: "ExtraParameter<String,Int>",
 				accepted: true
+			},
+			{
+				name: "recursive mutable payload mismatch",
+				expected: "Ref<Owner<String>>",
+				actual: "Ref<Owner<Int>>",
+				accepted: false,
+				equivalent: false
+			},
+			{
+				name: "property access mismatch",
+				expected: "Writable",
+				actual: "ReadOnly",
+				accepted: false,
+				equivalent: false
+			},
+			{
+				name: "method cannot supply mutable function field",
+				expected: "FunctionField",
+				actual: "Method",
+				accepted: false,
+				equivalent: false
+			},
+			{
+				name: "recursive distinct nominal owners",
+				expected: "Ref<Owner<Second>>",
+				actual: "Ref<Owner<First>>",
+				accepted: false,
+				equivalent: false
 			}
 		];
 		final root = JsRuntimeFixture.reserveOutput();
@@ -102,7 +142,7 @@ class M14RecursiveStructuralCompatibilityTest {
 			targetDefine: "js"
 		});
 		for (input in cases) {
-			final source = declarations + "class Main { static function check(value:" + input.actual + "):" + input.expected
+			final source = declarations + memberDeclarations + "class Main { static function check(value:" + input.actual + "):" + input.expected
 				+ " { return value; } static function main():Void {} }";
 			final path = root + "/Main.hx";
 			sys.io.File.saveContent(path, source);
@@ -136,6 +176,8 @@ class M14RecursiveStructuralCompatibilityTest {
 			};
 			final expected = index.resolveTypeUse(TyType.fromHintText(input.expected), context).getType();
 			final actual = index.resolveTypeUse(TyType.fromHintText(input.actual), context).getType();
+			if (input.equivalent != null && TyAliasEquivalence.equivalentTypes(expected, actual) != input.equivalent)
+				throw "exact recursive equivalence differs for " + input.name;
 			final result = TyStructuralArgument.compatibility(index, expected, actual);
 			if (result != (input.accepted ? Compatible : Incompatible))
 				throw "recursive compatibility differs for " + input.name;
