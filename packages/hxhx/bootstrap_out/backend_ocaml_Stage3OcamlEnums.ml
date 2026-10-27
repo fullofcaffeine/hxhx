@@ -117,18 +117,25 @@ let rec payloadType = fun self (payload : Backend_ocaml_Stage3OcamlEnumPlan.stag
         __assign_57
       )
     )
-    | Backend_ocaml_Stage3OcamlEnumPlan.EnumBox _p0 -> let _g = (_p0 : string) in let identity = (_g : string) in let this1 = (Obj.magic self : t).owners in let tempBool = HxMap.exists_string this1 (identity : string) in (
-      ignore (if not (tempBool) then HxType.hx_throw_typed_rtti (Obj.repr ((("OCaml enum payload representation is not implemented: " ^ HxString.toStdString declaration) ^ " / ") ^ HxString.toStdString identity)) ["Dynamic"] else ());
+    | Backend_ocaml_Stage3OcamlEnumPlan.ArrayValue _p0 -> (
+      ignore _p0;
       let __assign_58 = "Obj.t" in (
         tempResult := __assign_58;
         __assign_58
       )
     )
-    | Backend_ocaml_Stage3OcamlEnumPlan.NullableValue _p0 -> let _g = Obj.magic _p0 in let value = Obj.magic _g in (
-      ignore (payloadType (Obj.magic self) (Obj.magic value) (declaration : string));
+    | Backend_ocaml_Stage3OcamlEnumPlan.EnumBox _p0 -> let _g = (_p0 : string) in let identity = (_g : string) in let this1 = (Obj.magic self : t).owners in let tempBool = HxMap.exists_string this1 (identity : string) in (
+      ignore (if not (tempBool) then HxType.hx_throw_typed_rtti (Obj.repr ((("OCaml enum payload representation is not implemented: " ^ HxString.toStdString declaration) ^ " / ") ^ HxString.toStdString identity)) ["Dynamic"] else ());
       let __assign_59 = "Obj.t" in (
         tempResult := __assign_59;
         __assign_59
+      )
+    )
+    | Backend_ocaml_Stage3OcamlEnumPlan.NullableValue _p0 -> let _g = Obj.magic _p0 in let value = Obj.magic _g in (
+      ignore (payloadType (Obj.magic self) (Obj.magic value) (declaration : string));
+      let __assign_60 = "Obj.t" in (
+        tempResult := __assign_60;
+        __assign_60
       )
     ));
   !tempResult
@@ -157,82 +164,82 @@ let render = fun self (projection : TypedBackendClassProjection.t) -> (try (
   ignore (if HxClassDecl.getEnumDeclaration (Obj.magic (TypedBackendClassProjection.getDeclaration (Obj.magic projection) ())) == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let this1 = (Obj.magic self : t).byDeclaration in let key = Obj.magic (TypedBackendClassProjection.getDeclaration (Obj.magic projection) ()) in let tempMaybeStage3OcamlEnumPlan = Obj.magic (HxMap.get_object this1 key) in let owner = Obj.magic tempMaybeStage3OcamlEnumPlan in (
     ignore (if owner == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml enum module is missing its request-owned declaration") ["Dynamic"] else ());
-    let out = Obj.magic (let __represented_array_60 = HxArray.create () in let __represented_array_element_0_61 = "(* Generated from the exact typed enum declaration. *)" in (
-      ignore (HxArray.push __represented_array_60 __represented_array_element_0_61);
-      let __represented_array_element_1_62 = "type t =" in (
-        ignore (HxArray.push __represented_array_60 __represented_array_element_1_62);
-        __represented_array_60
+    let out = Obj.magic (let __represented_array_61 = HxArray.create () in let __represented_array_element_0_62 = "(* Generated from the exact typed enum declaration. *)" in (
+      ignore (HxArray.push __represented_array_61 __represented_array_element_0_62);
+      let __represented_array_element_1_63 = "type t =" in (
+        ignore (HxArray.push __represented_array_61 __represented_array_element_1_63);
+        __represented_array_61
       )
     )) in (
-      ignore (if HxArray.length ((Obj.magic owner : Backend_ocaml_Stage3OcamlEnumPlan.t).constructors) = 0 then ignore (let __array_receiver_63 = Obj.magic out in let __array_arg_0_64 = ("  |" : string) in HxArray.push __array_receiver_63 __array_arg_0_64) else ());
+      ignore (if HxArray.length ((Obj.magic owner : Backend_ocaml_Stage3OcamlEnumPlan.t).constructors) = 0 then ignore (let __array_receiver_64 = Obj.magic out in let __array_arg_0_65 = ("  |" : string) in HxArray.push __array_receiver_64 __array_arg_0_65) else ());
       let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic owner : Backend_ocaml_Stage3OcamlEnumPlan.t).constructors) in (
-        ignore (while !_g < HxArray.length _g1 do ignore (let constructor = let __array_read_receiver_65 = _g1 in let __array_read_index_66 = !_g in HxArray.get (Obj.magic __array_read_receiver_65) __array_read_index_66 in (
-          ignore (let __old_67 = !_g in let __new_68 = HxInt.add __old_67 1 in (
-            ignore (_g := __new_68);
-            __new_68
+        ignore (while !_g < HxArray.length _g1 do ignore (let constructor = let __array_read_receiver_66 = _g1 in let __array_read_index_67 = !_g in HxArray.get (Obj.magic __array_read_receiver_66) __array_read_index_67 in (
+          ignore (let __old_68 = !_g in let __new_69 = HxInt.add __old_68 1 in (
+            ignore (_g := __new_69);
+            __new_69
           ));
           let types = Obj.magic (payloadTypes (Obj.magic self) constructor) in let tempString = ref (HxString.hx_null_string : string) in (
-            ignore (if HxArray.length types = 0 then let __assign_69 = "" in (
-              tempString := __assign_69;
-              __assign_69
-            ) else let __assign_70 = let __string_part_71 = " of " in let __string_part_72 = HxString.toStdString (HxArray.join types " * " (fun x -> x)) in __string_part_71 ^ __string_part_72 in (
+            ignore (if HxArray.length types = 0 then let __assign_70 = "" in (
               tempString := __assign_70;
               __assign_70
+            ) else let __assign_71 = let __string_part_72 = " of " in let __string_part_73 = HxString.toStdString (HxArray.join types " * " (fun x -> x)) in __string_part_72 ^ __string_part_73 in (
+              tempString := __assign_71;
+              __assign_71
             ));
-            let __array_receiver_73 = Obj.magic out in let __array_arg_0_74 = (let __string_part_75 = "  | Constructor_" in let __string_part_76 = string_of_int (Obj.obj (HxAnon.get constructor "index")) in let __string_part_77 = HxString.toStdString (!tempString) in (__string_part_75 ^ __string_part_76) ^ __string_part_77 : string) in HxArray.push __array_receiver_73 __array_arg_0_74
+            let __array_receiver_74 = Obj.magic out in let __array_arg_0_75 = (let __string_part_76 = "  | Constructor_" in let __string_part_77 = string_of_int (Obj.obj (HxAnon.get constructor "index")) in let __string_part_78 = HxString.toStdString (!tempString) in (__string_part_76 ^ __string_part_77) ^ __string_part_78 : string) in HxArray.push __array_receiver_74 __array_arg_0_75
           )
         )) done);
         let immediateTag = ref 0 in let blockTag = ref 0 in let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic owner : Backend_ocaml_Stage3OcamlEnumPlan.t).constructors) in (
-          ignore (while !_g < HxArray.length _g1 do ignore (let constructor = let __array_read_receiver_78 = _g1 in let __array_read_index_79 = !_g in HxArray.get (Obj.magic __array_read_receiver_78) __array_read_index_79 in (
-            ignore (let __old_80 = !_g in let __new_81 = HxInt.add __old_80 1 in (
-              ignore (_g := __new_81);
-              __new_81
+          ignore (while !_g < HxArray.length _g1 do ignore (let constructor = let __array_read_receiver_79 = _g1 in let __array_read_index_80 = !_g in HxArray.get (Obj.magic __array_read_receiver_79) __array_read_index_80 in (
+            ignore (let __old_81 = !_g in let __new_82 = HxInt.add __old_81 1 in (
+              ignore (_g := __new_82);
+              __new_82
             ));
-            let types = Obj.magic (payloadTypes (Obj.magic self) constructor) in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in let _g2 = Obj.magic (let __represented_array_82 = HxArray.create () in __represented_array_82) in let _g3 = ref 0 in let _g4 = HxArray.length types in (
-              ignore (while !_g3 < _g4 do ignore (let index = let __old_83 = !_g3 in let __new_84 = HxInt.add __old_83 1 in (
-                ignore (_g3 := __new_84);
-                __old_83
-              ) in let __array_receiver_85 = Obj.magic _g2 in let __array_arg_0_86 = ("arg" ^ string_of_int index : string) in HxArray.push __array_receiver_85 __array_arg_0_86) done);
-              ignore (let __assign_87 = Obj.magic _g2 in (
-                tempArray := __assign_87;
-                __assign_87
+            let types = Obj.magic (payloadTypes (Obj.magic self) constructor) in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in let _g2 = Obj.magic (let __represented_array_83 = HxArray.create () in __represented_array_83) in let _g3 = ref 0 in let _g4 = HxArray.length types in (
+              ignore (while !_g3 < _g4 do ignore (let index = let __old_84 = !_g3 in let __new_85 = HxInt.add __old_84 1 in (
+                ignore (_g3 := __new_85);
+                __old_84
+              ) in let __array_receiver_86 = Obj.magic _g2 in let __array_arg_0_87 = ("arg" ^ string_of_int index : string) in HxArray.push __array_receiver_86 __array_arg_0_87) done);
+              ignore (let __assign_88 = Obj.magic _g2 in (
+                tempArray := __assign_88;
+                __assign_88
               ));
-              let args = Obj.magic (!tempArray) in let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in let _g2 = Obj.magic (let __represented_array_88 = HxArray.create () in __represented_array_88) in let _g3 = ref 0 in let _g4 = HxArray.length types in (
-                ignore (while !_g3 < _g4 do ignore (let index = let __old_89 = !_g3 in let __new_90 = HxInt.add __old_89 1 in (
-                  ignore (_g3 := __new_90);
-                  __old_89
-                ) in let __array_receiver_91 = Obj.magic _g2 in let __array_arg_0_92 = (let __string_part_97 = "(" in let __string_part_98 = HxString.toStdString (let __array_read_receiver_93 = args in let __array_read_index_94 = index in HxArray.get (Obj.magic __array_read_receiver_93) __array_read_index_94) in let __string_part_99 = " : " in let __string_part_100 = HxString.toStdString (let __array_read_receiver_95 = types in let __array_read_index_96 = index in HxArray.get (Obj.magic __array_read_receiver_95) __array_read_index_96) in let __string_part_101 = ")" in (((__string_part_97 ^ __string_part_98) ^ __string_part_99) ^ __string_part_100) ^ __string_part_101 : string) in HxArray.push __array_receiver_91 __array_arg_0_92) done);
-                ignore (let __assign_102 = Obj.magic _g2 in (
-                  tempArray1 := __assign_102;
-                  __assign_102
+              let args = Obj.magic (!tempArray) in let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in let _g2 = Obj.magic (let __represented_array_89 = HxArray.create () in __represented_array_89) in let _g3 = ref 0 in let _g4 = HxArray.length types in (
+                ignore (while !_g3 < _g4 do ignore (let index = let __old_90 = !_g3 in let __new_91 = HxInt.add __old_90 1 in (
+                  ignore (_g3 := __new_91);
+                  __old_90
+                ) in let __array_receiver_92 = Obj.magic _g2 in let __array_arg_0_93 = (let __string_part_98 = "(" in let __string_part_99 = HxString.toStdString (let __array_read_receiver_94 = args in let __array_read_index_95 = index in HxArray.get (Obj.magic __array_read_receiver_94) __array_read_index_95) in let __string_part_100 = " : " in let __string_part_101 = HxString.toStdString (let __array_read_receiver_96 = types in let __array_read_index_97 = index in HxArray.get (Obj.magic __array_read_receiver_96) __array_read_index_97) in let __string_part_102 = ")" in (((__string_part_98 ^ __string_part_99) ^ __string_part_100) ^ __string_part_101) ^ __string_part_102 : string) in HxArray.push __array_receiver_92 __array_arg_0_93) done);
+                ignore (let __assign_103 = Obj.magic _g2 in (
+                  tempArray1 := __assign_103;
+                  __assign_103
                 ));
-                let parameters = Obj.magic (!tempArray1) in let payload = Obj.magic (let __array_receiver_103 = Obj.magic args in HxArray.copy __array_receiver_103) in (
-                  ignore (if HxArray.length payload > 0 then ignore (let __assign_104 = (let __string_part_107 = "Stdlib.Sys.opaque_identity " in let __string_part_108 = HxString.toStdString (let __array_read_receiver_105 = payload in let __array_read_index_106 = 0 in HxArray.get (Obj.magic __array_read_receiver_105) __array_read_index_106) in __string_part_107 ^ __string_part_108 : string) in HxArray.set (Obj.magic payload) 0 __assign_104) else ());
+                let parameters = Obj.magic (!tempArray1) in let payload = Obj.magic (let __array_receiver_104 = Obj.magic args in HxArray.copy __array_receiver_104) in (
+                  ignore (if HxArray.length payload > 0 then ignore (let __assign_105 = (let __string_part_108 = "Stdlib.Sys.opaque_identity " in let __string_part_109 = HxString.toStdString (let __array_read_receiver_106 = payload in let __array_read_index_107 = 0 in HxArray.get (Obj.magic __array_read_receiver_106) __array_read_index_107) in __string_part_108 ^ __string_part_109 : string) in HxArray.set (Obj.magic payload) 0 __assign_105) else ());
                   let tempString1 = ref (HxString.hx_null_string : string) in (
-                    ignore (if HxArray.length payload = 0 then let __assign_109 = "" in (
-                      tempString1 := __assign_109;
-                      __assign_109
-                    ) else let __assign_110 = let __string_part_111 = " (" in let __string_part_112 = HxString.toStdString (HxArray.join payload ", " (fun x -> x)) in let __string_part_113 = ")" in (__string_part_111 ^ __string_part_112) ^ __string_part_113 in (
+                    ignore (if HxArray.length payload = 0 then let __assign_110 = "" in (
                       tempString1 := __assign_110;
                       __assign_110
+                    ) else let __assign_111 = let __string_part_112 = " (" in let __string_part_113 = HxString.toStdString (HxArray.join payload ", " (fun x -> x)) in let __string_part_114 = ")" in (__string_part_112 ^ __string_part_113) ^ __string_part_114 in (
+                      tempString1 := __assign_111;
+                      __assign_111
                     ));
-                    let variant = let __string_part_114 = "Constructor_" in let __string_part_115 = string_of_int (Obj.obj (HxAnon.get constructor "index")) in let __string_part_116 = HxString.toStdString (!tempString1) in (__string_part_114 ^ __string_part_115) ^ __string_part_116 in (
-                      ignore (let __array_receiver_117 = Obj.magic out in let __array_arg_0_118 = (let __string_part_119 = "let " in let __string_part_120 = HxString.toStdString (Obj.obj (HxAnon.get constructor "targetName")) in let __string_part_121 = " " in let __string_part_122 = HxString.toStdString (HxArray.join parameters " " (fun x -> x)) in let __string_part_123 = " : Obj.t = HxEnum.box_if_needed " in let __string_part_124 = HxString.toStdString ((Obj.magic self : t).quote ((Obj.magic owner : Backend_ocaml_Stage3OcamlEnumPlan.t).runtimeName : string)) in let __string_part_125 = " (Obj.repr (" in let __string_part_126 = HxString.toStdString variant in let __string_part_127 = "))" in (((((((__string_part_119 ^ __string_part_120) ^ __string_part_121) ^ __string_part_122) ^ __string_part_123) ^ __string_part_124) ^ __string_part_125) ^ __string_part_126) ^ __string_part_127 : string) in HxArray.push __array_receiver_117 __array_arg_0_118);
+                    let variant = let __string_part_115 = "Constructor_" in let __string_part_116 = string_of_int (Obj.obj (HxAnon.get constructor "index")) in let __string_part_117 = HxString.toStdString (!tempString1) in (__string_part_115 ^ __string_part_116) ^ __string_part_117 in (
+                      ignore (let __array_receiver_118 = Obj.magic out in let __array_arg_0_119 = (let __string_part_120 = "let " in let __string_part_121 = HxString.toStdString (Obj.obj (HxAnon.get constructor "targetName")) in let __string_part_122 = " " in let __string_part_123 = HxString.toStdString (HxArray.join parameters " " (fun x -> x)) in let __string_part_124 = " : Obj.t = HxEnum.box_if_needed " in let __string_part_125 = HxString.toStdString ((Obj.magic self : t).quote ((Obj.magic owner : Backend_ocaml_Stage3OcamlEnumPlan.t).runtimeName : string)) in let __string_part_126 = " (Obj.repr (" in let __string_part_127 = HxString.toStdString variant in let __string_part_128 = "))" in (((((((__string_part_120 ^ __string_part_121) ^ __string_part_122) ^ __string_part_123) ^ __string_part_124) ^ __string_part_125) ^ __string_part_126) ^ __string_part_127) ^ __string_part_128 : string) in HxArray.push __array_receiver_118 __array_arg_0_119);
                       let tempString2 = ref (HxString.hx_null_string : string) in (
-                        ignore (if HxArray.length types = 0 then let __assign_128 = let __string_part_131 = "HxType.EnumImmediate " in let __string_part_132 = string_of_int (let __old_129 = !immediateTag in let __new_130 = HxInt.add __old_129 1 in (
-                          ignore (immediateTag := __new_130);
-                          __old_129
-                        )) in __string_part_131 ^ __string_part_132 in (
-                          tempString2 := __assign_128;
-                          __assign_128
-                        ) else let __assign_133 = let __string_part_136 = "HxType.EnumBlock " in let __string_part_137 = string_of_int (let __old_134 = !blockTag in let __new_135 = HxInt.add __old_134 1 in (
-                          ignore (blockTag := __new_135);
-                          __old_134
-                        )) in __string_part_136 ^ __string_part_137 in (
-                          tempString2 := __assign_133;
-                          __assign_133
+                        ignore (if HxArray.length types = 0 then let __assign_129 = let __string_part_132 = "HxType.EnumImmediate " in let __string_part_133 = string_of_int (let __old_130 = !immediateTag in let __new_131 = HxInt.add __old_130 1 in (
+                          ignore (immediateTag := __new_131);
+                          __old_130
+                        )) in __string_part_132 ^ __string_part_133 in (
+                          tempString2 := __assign_129;
+                          __assign_129
+                        ) else let __assign_134 = let __string_part_137 = "HxType.EnumBlock " in let __string_part_138 = string_of_int (let __old_135 = !blockTag in let __new_136 = HxInt.add __old_135 1 in (
+                          ignore (blockTag := __new_136);
+                          __old_135
+                        )) in __string_part_137 ^ __string_part_138 in (
+                          tempString2 := __assign_134;
+                          __assign_134
                         ));
-                        let layout = !tempString2 in let __array_receiver_138 = Obj.magic out in let __array_arg_0_139 = (let __string_part_140 = "let () = HxType.register_enum_ctor_layout " in let __string_part_141 = HxString.toStdString ((Obj.magic self : t).quote ((Obj.magic owner : Backend_ocaml_Stage3OcamlEnumPlan.t).runtimeName : string)) in let __string_part_142 = " " in let __string_part_143 = HxString.toStdString ((Obj.magic self : t).quote (Obj.obj (HxAnon.get constructor "name") : string)) in let __string_part_144 = " " in let __string_part_145 = string_of_int (Obj.obj (HxAnon.get constructor "index")) in let __string_part_146 = " (" in let __string_part_147 = HxString.toStdString layout in let __string_part_148 = ")" in (((((((__string_part_140 ^ __string_part_141) ^ __string_part_142) ^ __string_part_143) ^ __string_part_144) ^ __string_part_145) ^ __string_part_146) ^ __string_part_147) ^ __string_part_148 : string) in HxArray.push __array_receiver_138 __array_arg_0_139
+                        let layout = !tempString2 in let __array_receiver_139 = Obj.magic out in let __array_arg_0_140 = (let __string_part_141 = "let () = HxType.register_enum_ctor_layout " in let __string_part_142 = HxString.toStdString ((Obj.magic self : t).quote ((Obj.magic owner : Backend_ocaml_Stage3OcamlEnumPlan.t).runtimeName : string)) in let __string_part_143 = " " in let __string_part_144 = HxString.toStdString ((Obj.magic self : t).quote (Obj.obj (HxAnon.get constructor "name") : string)) in let __string_part_145 = " " in let __string_part_146 = string_of_int (Obj.obj (HxAnon.get constructor "index")) in let __string_part_147 = " (" in let __string_part_148 = HxString.toStdString layout in let __string_part_149 = ")" in (((((((__string_part_141 ^ __string_part_142) ^ __string_part_143) ^ __string_part_144) ^ __string_part_145) ^ __string_part_146) ^ __string_part_147) ^ __string_part_148) ^ __string_part_149 : string) in HxArray.push __array_receiver_139 __array_arg_0_140
                       )
                     )
                   )
@@ -240,54 +247,54 @@ let render = fun self (projection : TypedBackendClassProjection.t) -> (try (
               )
             )
           )) done);
-          ignore (let __array_receiver_149 = Obj.magic out in let __array_arg_0_150 = (let __string_part_151 = "let () = ignore (HxType.enum_ " in let __string_part_152 = HxString.toStdString ((Obj.magic self : t).quote ((Obj.magic owner : Backend_ocaml_Stage3OcamlEnumPlan.t).runtimeName : string)) in let __string_part_153 = ")" in (__string_part_151 ^ __string_part_152) ^ __string_part_153 : string) in HxArray.push __array_receiver_149 __array_arg_0_150);
-          let __string_part_154 = HxString.toStdString (HxArray.join out "\n" (fun x -> x)) in let __string_part_155 = "\n" in __string_part_154 ^ __string_part_155
+          ignore (let __array_receiver_150 = Obj.magic out in let __array_arg_0_151 = (let __string_part_152 = "let () = ignore (HxType.enum_ " in let __string_part_153 = HxString.toStdString ((Obj.magic self : t).quote ((Obj.magic owner : Backend_ocaml_Stage3OcamlEnumPlan.t).runtimeName : string)) in let __string_part_154 = ")" in (__string_part_152 ^ __string_part_153) ^ __string_part_154 : string) in HxArray.push __array_receiver_150 __array_arg_0_151);
+          let __string_part_155 = HxString.toStdString (HxArray.join out "\n" (fun x -> x)) in let __string_part_156 = "\n" in __string_part_155 ^ __string_part_156
         )
       )
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_156 -> (Obj.obj __ret_156 : string) : string)
+  | HxRuntime.Hx_return __ret_157 -> (Obj.obj __ret_157 : string) : string)
 
 let call = fun self (selected : Obj.t) (emit : HxExpr.hxexpr -> string) (names : Backend_ocaml_Stage3OcamlLocalNames.t) (argumentFacts : HxExpr.hxexpr -> TypedBackendCallArgument.t) -> (try let this1 = (Obj.magic self : t).owners in let key = (Obj.obj (HxAnon.get selected "owner") : string) in let tempMaybeStage3OcamlEnumPlan = Obj.magic (HxMap.get_string this1 (key : string)) in let owner = Obj.magic tempMaybeStage3OcamlEnumPlan in (
-  ignore (if owner == Obj.magic (HxRuntime.hx_null) || (let __string_eq_left_157 = (Obj.magic owner : Backend_ocaml_Stage3OcamlEnumPlan.t).moduleIdentity in let __string_eq_right_158 = Obj.obj (HxAnon.get selected "modulePath") in not (HxString.equals __string_eq_left_157 __string_eq_right_158)) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_159 = "OCaml enum call has no exact program owner: " in let __string_part_160 = HxString.toStdString (Obj.obj (HxAnon.get selected "owner")) in __string_part_159 ^ __string_part_160)) ["Dynamic"] else ());
+  ignore (if owner == Obj.magic (HxRuntime.hx_null) || (let __string_eq_left_158 = (Obj.magic owner : Backend_ocaml_Stage3OcamlEnumPlan.t).moduleIdentity in let __string_eq_right_159 = Obj.obj (HxAnon.get selected "modulePath") in not (HxString.equals __string_eq_left_158 __string_eq_right_159)) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_160 = "OCaml enum call has no exact program owner: " in let __string_part_161 = HxString.toStdString (Obj.obj (HxAnon.get selected "owner")) in __string_part_160 ^ __string_part_161)) ["Dynamic"] else ());
   let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic owner : Backend_ocaml_Stage3OcamlEnumPlan.t).constructors) in (
-    ignore (while !_g < HxArray.length _g1 do try ignore (let constructor = let __array_read_receiver_161 = _g1 in let __array_read_index_162 = !_g in HxArray.get (Obj.magic __array_read_receiver_161) __array_read_index_162 in (
-      ignore (let __old_163 = !_g in let __new_164 = HxInt.add __old_163 1 in (
-        ignore (_g := __new_164);
-        __new_164
+    ignore (while !_g < HxArray.length _g1 do try ignore (let constructor = let __array_read_receiver_162 = _g1 in let __array_read_index_163 = !_g in HxArray.get (Obj.magic __array_read_receiver_162) __array_read_index_163 in (
+      ignore (let __old_164 = !_g in let __new_165 = HxInt.add __old_164 1 in (
+        ignore (_g := __new_165);
+        __new_165
       ));
-      ignore (if let __string_eq_left_165 = Obj.obj (HxAnon.get constructor "name") in let __string_eq_right_166 = Obj.obj (HxAnon.get selected "constructor") in not (HxString.equals __string_eq_left_165 __string_eq_right_166) then Stdlib.raise (HxRuntime.Hx_continue) else ());
+      ignore (if let __string_eq_left_166 = Obj.obj (HxAnon.get constructor "name") in let __string_eq_right_167 = Obj.obj (HxAnon.get selected "constructor") in not (HxString.equals __string_eq_left_166 __string_eq_right_167) then Stdlib.raise (HxRuntime.Hx_continue) else ());
       ignore (if HxArray.length (Obj.obj (HxAnon.get constructor "payloads")) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "OCaml enum call selected a singleton field") ["Dynamic"] else ());
-      ignore (if (let __string_eq_left_167 = Obj.obj (HxAnon.get constructor "declaration") in let __string_eq_right_168 = Obj.obj (HxAnon.get selected "declaration") in not (HxString.equals __string_eq_left_167 __string_eq_right_168)) || HxArray.length (Obj.obj (HxAnon.get selected "arguments")) > HxArray.length (Obj.obj (HxAnon.get constructor "payloads")) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml enum call disagrees with its exact constructor declaration") ["Dynamic"] else ());
-      let operands = Obj.magic (let __array_receiver_169 = Obj.magic (Obj.obj (HxAnon.get selected "arguments")) in HxArray.copy __array_receiver_169) in (
+      ignore (if (let __string_eq_left_168 = Obj.obj (HxAnon.get constructor "declaration") in let __string_eq_right_169 = Obj.obj (HxAnon.get selected "declaration") in not (HxString.equals __string_eq_left_168 __string_eq_right_169)) || HxArray.length (Obj.obj (HxAnon.get selected "arguments")) > HxArray.length (Obj.obj (HxAnon.get constructor "payloads")) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml enum call disagrees with its exact constructor declaration") ["Dynamic"] else ());
+      let operands = Obj.magic (let __array_receiver_170 = Obj.magic (Obj.obj (HxAnon.get selected "arguments")) in HxArray.copy __array_receiver_170) in (
         ignore (while HxArray.length operands < HxArray.length (Obj.obj (HxAnon.get constructor "payloads")) do ignore ((
-          ignore (if not (HxRuntime.unbox_bool_or_obj (HxAnon.get (let __array_read_receiver_170 = Obj.obj (HxAnon.get constructor "payloads") in let __array_read_index_171 = HxArray.length operands in HxArray.get (Obj.magic __array_read_receiver_170) __array_read_index_171) "optional")) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml enum call disagrees with its exact constructor declaration") ["Dynamic"] else ());
-          let __array_receiver_172 = Obj.magic operands in let __array_arg_0_173 = Obj.magic (HxExpr.ENull) in HxArray.push __array_receiver_172 __array_arg_0_173
+          ignore (if not (HxRuntime.unbox_bool_or_obj (HxAnon.get (let __array_read_receiver_171 = Obj.obj (HxAnon.get constructor "payloads") in let __array_read_index_172 = HxArray.length operands in HxArray.get (Obj.magic __array_read_receiver_171) __array_read_index_172) "optional")) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml enum call disagrees with its exact constructor declaration") ["Dynamic"] else ());
+          let __array_receiver_173 = Obj.magic operands in let __array_arg_0_174 = Obj.magic (HxExpr.ENull) in HxArray.push __array_receiver_173 __array_arg_0_174
         )) done);
-        let callId = let __place_receiver_174 = self in let __place_old_175 = (__place_receiver_174 : t).nextCall in let __place_new_176 = HxInt.add __place_old_175 1 in (
-          (__place_receiver_174 : t).nextCall <- __place_new_176;
-          __place_old_175
-        ) in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in let _g2 = Obj.magic (let __represented_array_177 = HxArray.create () in __represented_array_177) in let _g3 = ref 0 in let _g4 = HxArray.length operands in (
-          ignore (while !_g3 < _g4 do ignore (let index = let __old_178 = !_g3 in let __new_179 = HxInt.add __old_178 1 in (
-            ignore (_g3 := __new_179);
-            __old_178
-          ) in let __array_receiver_180 = Obj.magic _g2 in let __array_arg_0_181 = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ((("__hx_enum_arg_" ^ string_of_int callId) ^ "_") ^ string_of_int index : string) : string) in HxArray.push __array_receiver_180 __array_arg_0_181) done);
-          ignore (let __assign_182 = Obj.magic _g2 in (
-            tempArray := __assign_182;
-            __assign_182
+        let callId = let __place_receiver_175 = self in let __place_old_176 = (__place_receiver_175 : t).nextCall in let __place_new_177 = HxInt.add __place_old_176 1 in (
+          (__place_receiver_175 : t).nextCall <- __place_new_177;
+          __place_old_176
+        ) in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in let _g2 = Obj.magic (let __represented_array_178 = HxArray.create () in __represented_array_178) in let _g3 = ref 0 in let _g4 = HxArray.length operands in (
+          ignore (while !_g3 < _g4 do ignore (let index = let __old_179 = !_g3 in let __new_180 = HxInt.add __old_179 1 in (
+            ignore (_g3 := __new_180);
+            __old_179
+          ) in let __array_receiver_181 = Obj.magic _g2 in let __array_arg_0_182 = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ((("__hx_enum_arg_" ^ string_of_int callId) ^ "_") ^ string_of_int index : string) : string) in HxArray.push __array_receiver_181 __array_arg_0_182) done);
+          ignore (let __assign_183 = Obj.magic _g2 in (
+            tempArray := __assign_183;
+            __assign_183
           ));
-          let args = Obj.magic (!tempArray) in let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in let _g2 = Obj.magic (let __represented_array_183 = HxArray.create () in __represented_array_183) in let _g3 = ref 0 in let _g4 = HxArray.length args in (
-            ignore (while !_g3 < _g4 do ignore (let index = let __old_184 = !_g3 in let __new_185 = HxInt.add __old_184 1 in (
-              ignore (_g3 := __new_185);
-              __old_184
-            ) in let rendered = (emit (Obj.magic (let __array_read_receiver_186 = operands in let __array_read_index_187 = index in HxArray.get (Obj.magic __array_read_receiver_186) __array_read_index_187)) : string) in let tempString = ref (HxString.hx_null_string : string) in (
-              ignore (let _g5 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "backend.ocaml.Stage3OcamlEnumPayload" (HxAnon.get (let __array_read_receiver_188 = Obj.obj (HxAnon.get constructor "payloads") in let __array_read_index_189 = index in HxArray.get (Obj.magic __array_read_receiver_188) __array_read_index_189) "storage"))) in match _g5 with
+          let args = Obj.magic (!tempArray) in let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in let _g2 = Obj.magic (let __represented_array_184 = HxArray.create () in __represented_array_184) in let _g3 = ref 0 in let _g4 = HxArray.length args in (
+            ignore (while !_g3 < _g4 do ignore (let index = let __old_185 = !_g3 in let __new_186 = HxInt.add __old_185 1 in (
+              ignore (_g3 := __new_186);
+              __old_185
+            ) in let rendered = (emit (Obj.magic (let __array_read_receiver_187 = operands in let __array_read_index_188 = index in HxArray.get (Obj.magic __array_read_receiver_187) __array_read_index_188)) : string) in let tempString = ref (HxString.hx_null_string : string) in (
+              ignore (let _g5 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "backend.ocaml.Stage3OcamlEnumPayload" (HxAnon.get (let __array_read_receiver_189 = Obj.obj (HxAnon.get constructor "payloads") in let __array_read_index_190 = index in HxArray.get (Obj.magic __array_read_receiver_189) __array_read_index_190) "storage"))) in match _g5 with
                 | Backend_ocaml_Stage3OcamlEnumPlan.DynamicValue -> let tempShortCircuit = ref (false : bool) in (
-                  ignore (if index >= HxArray.length (Obj.obj (HxAnon.get selected "arguments")) then let __assign_191 = true in (
-                    tempShortCircuit := __assign_191;
-                    __assign_191
-                  ) else let _g6 = Obj.magic (let __array_read_receiver_192 = operands in let __array_read_index_193 = index in HxArray.get (Obj.magic __array_read_receiver_192) __array_read_index_193) in if (match _g6 with
+                  ignore (if index >= HxArray.length (Obj.obj (HxAnon.get selected "arguments")) then let __assign_192 = true in (
+                    tempShortCircuit := __assign_192;
+                    __assign_192
+                  ) else let _g6 = Obj.magic (let __array_read_receiver_193 = operands in let __array_read_index_194 = index in HxArray.get (Obj.magic __array_read_receiver_193) __array_read_index_194) in if (match _g6 with
                     | HxExpr.EParenthesized (_, _) -> 0
                     | HxExpr.ESourceTry (_, _, _) -> 1
                     | HxExpr.ESourceFor (_, _, _, _) -> 2
@@ -334,41 +341,41 @@ let call = fun self (selected : Obj.t) (emit : HxExpr.hxexpr -> string) (names :
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_194 = true in (
-                    tempShortCircuit := __assign_194;
-                    __assign_194
-                  ) else let __assign_195 = false in (
+                    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_195 = true in (
                     tempShortCircuit := __assign_195;
                     __assign_195
-                  ));
-                  if !tempShortCircuit then let __assign_196 = (("Obj.repr (" ^ HxString.toStdString rendered) ^ ")" : string) in (
-                    tempString := __assign_196;
+                  ) else let __assign_196 = false in (
+                    tempShortCircuit := __assign_196;
                     __assign_196
-                  ) else let fact = Obj.magic (argumentFacts (Obj.magic (let __array_read_receiver_197 = operands in let __array_read_index_198 = index in HxArray.get (Obj.magic __array_read_receiver_197) __array_read_index_198))) in (
-                    ignore (if fact == Obj.magic (HxRuntime.hx_null) || (let __enum_eq_left_199 = (Obj.magic fact : TypedBackendCallArgument.t).expression in let __enum_eq_right_200 = let __array_read_receiver_201 = operands in let __array_read_index_202 = index in HxArray.get (Obj.magic __array_read_receiver_201) __array_read_index_202 in HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_left_199) != HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_right_200)) || TyType.hasUnknownComponent (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)) () then HxType.hx_throw_typed_rtti (Obj.repr "OCaml Dynamic enum argument requires its exact typed operand") ["Dynamic"] else ());
+                  ));
+                  if !tempShortCircuit then let __assign_197 = (("Obj.repr (" ^ HxString.toStdString rendered) ^ ")" : string) in (
+                    tempString := __assign_197;
+                    __assign_197
+                  ) else let fact = Obj.magic (argumentFacts (Obj.magic (let __array_read_receiver_198 = operands in let __array_read_index_199 = index in HxArray.get (Obj.magic __array_read_receiver_198) __array_read_index_199))) in (
+                    ignore (if fact == Obj.magic (HxRuntime.hx_null) || (let __enum_eq_left_200 = (Obj.magic fact : TypedBackendCallArgument.t).expression in let __enum_eq_right_201 = let __array_read_receiver_202 = operands in let __array_read_index_203 = index in HxArray.get (Obj.magic __array_read_receiver_202) __array_read_index_203 in HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_left_200) != HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_right_201)) || TyType.hasUnknownComponent (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)) () then HxType.hx_throw_typed_rtti (Obj.repr "OCaml Dynamic enum argument requires its exact typed operand") ["Dynamic"] else ());
                     let tempOcamlDynamicArgumentCarrier = ref (Obj.magic (HxRuntime.hx_null) : Backend_ocaml_OcamlDynamicOperatorLowering.ocamldynamicargumentcarrier) in (
-                      ignore (if let __string_eq_left_203 = TyType.getSemanticKey (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)) () in let __string_eq_right_204 = "primitive:Bool" in HxString.equals __string_eq_left_203 __string_eq_right_204 then let __assign_205 = Obj.magic (Backend_ocaml_OcamlDynamicOperatorLowering.ExactBool) in (
-                        tempOcamlDynamicArgumentCarrier := __assign_205;
-                        __assign_205
-                      ) else if TyType.isDynamic (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)) () then let __assign_206 = Obj.magic (Backend_ocaml_OcamlDynamicOperatorLowering.DynamicValue) in (
+                      ignore (if let __string_eq_left_204 = TyType.getSemanticKey (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)) () in let __string_eq_right_205 = "primitive:Bool" in HxString.equals __string_eq_left_204 __string_eq_right_205 then let __assign_206 = Obj.magic (Backend_ocaml_OcamlDynamicOperatorLowering.ExactBool) in (
                         tempOcamlDynamicArgumentCarrier := __assign_206;
                         __assign_206
-                      ) else let __assign_207 = Obj.magic (Backend_ocaml_OcamlDynamicOperatorLowering.ConcreteValue) in (
+                      ) else if TyType.isDynamic (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)) () then let __assign_207 = Obj.magic (Backend_ocaml_OcamlDynamicOperatorLowering.DynamicValue) in (
                         tempOcamlDynamicArgumentCarrier := __assign_207;
                         __assign_207
-                      ));
-                      let carrier = Obj.magic (!tempOcamlDynamicArgumentCarrier) in let __assign_208 = (Backend_ocaml_OcamlDynamicOperatorLowering.callArgument ("Dynamic" : string) (Obj.magic carrier) (rendered : string) : string) in (
-                        tempString := __assign_208;
+                      ) else let __assign_208 = Obj.magic (Backend_ocaml_OcamlDynamicOperatorLowering.ConcreteValue) in (
+                        tempOcamlDynamicArgumentCarrier := __assign_208;
                         __assign_208
+                      ));
+                      let carrier = Obj.magic (!tempOcamlDynamicArgumentCarrier) in let __assign_209 = (Backend_ocaml_OcamlDynamicOperatorLowering.callArgument ("Dynamic" : string) (Obj.magic carrier) (rendered : string) : string) in (
+                        tempString := __assign_209;
+                        __assign_209
                       )
                     )
                   )
                 )
                 | Backend_ocaml_Stage3OcamlEnumPlan.AnonymousRecord _p0 -> let _g6 = (_p0 : string) in let key = (_g6 : string) in let tempShortCircuit1 = ref (false : bool) in (
-                  ignore (if index >= HxArray.length (Obj.obj (HxAnon.get selected "arguments")) then let __assign_209 = true in (
-                    tempShortCircuit1 := __assign_209;
-                    __assign_209
-                  ) else let _g7 = Obj.magic (let __array_read_receiver_210 = operands in let __array_read_index_211 = index in HxArray.get (Obj.magic __array_read_receiver_210) __array_read_index_211) in if (match _g7 with
+                  ignore (if index >= HxArray.length (Obj.obj (HxAnon.get selected "arguments")) then let __assign_210 = true in (
+                    tempShortCircuit1 := __assign_210;
+                    __assign_210
+                  ) else let _g7 = Obj.magic (let __array_read_receiver_211 = operands in let __array_read_index_212 = index in HxArray.get (Obj.magic __array_read_receiver_211) __array_read_index_212) in if (match _g7 with
                     | HxExpr.EParenthesized (_, _) -> 0
                     | HxExpr.ESourceTry (_, _, _) -> 1
                     | HxExpr.ESourceFor (_, _, _, _) -> 2
@@ -415,30 +422,99 @@ let call = fun self (selected : Obj.t) (emit : HxExpr.hxexpr -> string) (names :
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_212 = true in (
-                    tempShortCircuit1 := __assign_212;
-                    __assign_212
-                  ) else let __assign_213 = false in (
+                    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_213 = true in (
                     tempShortCircuit1 := __assign_213;
                     __assign_213
-                  ));
-                  if !tempShortCircuit1 then let __assign_214 = (("Obj.repr (" ^ HxString.toStdString rendered) ^ ")" : string) in (
-                    tempString := __assign_214;
+                  ) else let __assign_214 = false in (
+                    tempShortCircuit1 := __assign_214;
                     __assign_214
-                  ) else let fact = Obj.magic (argumentFacts (Obj.magic (let __array_read_receiver_215 = operands in let __array_read_index_216 = index in HxArray.get (Obj.magic __array_read_receiver_215) __array_read_index_216))) in (
-                    ignore (if fact == Obj.magic (HxRuntime.hx_null) || (let __enum_eq_left_217 = (Obj.magic fact : TypedBackendCallArgument.t).expression in let __enum_eq_right_218 = let __array_read_receiver_219 = operands in let __array_read_index_220 = index in HxArray.get (Obj.magic __array_read_receiver_219) __array_read_index_220 in HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_left_217) != HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_right_218)) || (Obj.magic fact : TypedBackendCallArgument.t).expectedType == Obj.magic (HxRuntime.hx_null) || (let __string_eq_left_221 = TyType.getSemanticKey (Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).expectedType)))) () in let __string_eq_right_222 = key in not (HxString.equals __string_eq_left_221 __string_eq_right_222)) || not (TyType.isAnonymous (Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)))) ()) || TyType.hasUnknownComponent (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)) () then HxType.hx_throw_typed_rtti (Obj.repr "OCaml record enum argument requires its exact typed record operand and destination") ["Dynamic"] else ());
-                    let __assign_223 = (rendered : string) in (
-                      tempString := __assign_223;
-                      __assign_223
+                  ));
+                  if !tempShortCircuit1 then let __assign_215 = (("Obj.repr (" ^ HxString.toStdString rendered) ^ ")" : string) in (
+                    tempString := __assign_215;
+                    __assign_215
+                  ) else let fact = Obj.magic (argumentFacts (Obj.magic (let __array_read_receiver_216 = operands in let __array_read_index_217 = index in HxArray.get (Obj.magic __array_read_receiver_216) __array_read_index_217))) in (
+                    ignore (if fact == Obj.magic (HxRuntime.hx_null) || (let __enum_eq_left_218 = (Obj.magic fact : TypedBackendCallArgument.t).expression in let __enum_eq_right_219 = let __array_read_receiver_220 = operands in let __array_read_index_221 = index in HxArray.get (Obj.magic __array_read_receiver_220) __array_read_index_221 in HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_left_218) != HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_right_219)) || (Obj.magic fact : TypedBackendCallArgument.t).expectedType == Obj.magic (HxRuntime.hx_null) || (let __string_eq_left_222 = TyType.getSemanticKey (Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).expectedType)))) () in let __string_eq_right_223 = key in not (HxString.equals __string_eq_left_222 __string_eq_right_223)) || not (TyType.isAnonymous (Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)))) ()) || TyType.hasUnknownComponent (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)) () then HxType.hx_throw_typed_rtti (Obj.repr "OCaml record enum argument requires its exact typed record operand and destination") ["Dynamic"] else ());
+                    let __assign_224 = (rendered : string) in (
+                      tempString := __assign_224;
+                      __assign_224
+                    )
+                  )
+                )
+                | Backend_ocaml_Stage3OcamlEnumPlan.ArrayValue _p0 -> let _g6 = Obj.magic _p0 in let storageType = Obj.magic _g6 in let tempShortCircuit2 = ref (false : bool) in (
+                  ignore (if index >= HxArray.length (Obj.obj (HxAnon.get selected "arguments")) then let __assign_225 = true in (
+                    tempShortCircuit2 := __assign_225;
+                    __assign_225
+                  ) else let _g7 = Obj.magic (let __array_read_receiver_226 = operands in let __array_read_index_227 = index in HxArray.get (Obj.magic __array_read_receiver_226) __array_read_index_227) in if (match _g7 with
+                    | HxExpr.EParenthesized (_, _) -> 0
+                    | HxExpr.ESourceTry (_, _, _) -> 1
+                    | HxExpr.ESourceFor (_, _, _, _) -> 2
+                    | HxExpr.ELoweredControl (_, _, _, _) -> 3
+                    | HxExpr.ENull -> 4
+                    | HxExpr.EBool _ -> 5
+                    | HxExpr.EString _ -> 6
+                    | HxExpr.EInt _ -> 7
+                    | HxExpr.EFloat _ -> 8
+                    | HxExpr.EEnumValue _ -> 9
+                    | HxExpr.EThis -> 10
+                    | HxExpr.ESuper -> 11
+                    | HxExpr.EIdent _ -> 12
+                    | HxExpr.EField (_, _) -> 13
+                    | HxExpr.ENullSafeField (_, _) -> 14
+                    | HxExpr.ECall (_, _) -> 15
+                    | HxExpr.EMacroExpr (_, _) -> 16
+                    | HxExpr.EMacroType _ -> 17
+                    | HxExpr.ELambda (_, _, _) -> 18
+                    | HxExpr.ETryCatchRaw _ -> 19
+                    | HxExpr.ESwitchRaw _ -> 20
+                    | HxExpr.ESwitch (_, _, _) -> 21
+                    | HxExpr.ENew (_, _) -> 22
+                    | HxExpr.EUnop (_, _, _) -> 23
+                    | HxExpr.EBinop (_, _, _) -> 24
+                    | HxExpr.ETernary (_, _, _) -> 25
+                    | HxExpr.ESourceIf (_, _, _, _) -> 26
+                    | HxExpr.EThrow (_, _) -> 27
+                    | HxExpr.EAnon (_, _) -> 28
+                    | HxExpr.EArrayComprehension (_, _, _, _) -> 29
+                    | HxExpr.EArrayDecl _ -> 30
+                    | HxExpr.EArrayAccess (_, _) -> 31
+                    | HxExpr.ERange (_, _) -> 32
+                    | HxExpr.ECast (_, _) -> 33
+                    | HxExpr.ECheckType (_, _) -> 34
+                    | HxExpr.EUntyped _ -> 35
+                    | HxExpr.EUnsupported _ -> 36
+                    | HxExpr.EReturn _ -> 37
+                    | HxExpr.EVars _ -> 38
+                    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 39
+                    | HxExpr.EWhile (_, _, _, _, _) -> 40
+                    | HxExpr.EBreak _ -> 41
+                    | HxExpr.EContinue _ -> 42
+                    | HxExpr.EDiscardThen (_, _) -> 43
+                    | HxExpr.ESourceGroup (_, _) -> 44
+                    | HxExpr.ESourceFunction (_, _, _, _) -> 45
+                    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_228 = true in (
+                    tempShortCircuit2 := __assign_228;
+                    __assign_228
+                  ) else let __assign_229 = false in (
+                    tempShortCircuit2 := __assign_229;
+                    __assign_229
+                  ));
+                  if !tempShortCircuit2 then let __assign_230 = (("Obj.repr (" ^ HxString.toStdString rendered) ^ ")" : string) in (
+                    tempString := __assign_230;
+                    __assign_230
+                  ) else let fact = Obj.magic (argumentFacts (Obj.magic (let __array_read_receiver_231 = operands in let __array_read_index_232 = index in HxArray.get (Obj.magic __array_read_receiver_231) __array_read_index_232))) in (
+                    ignore (if fact == Obj.magic (HxRuntime.hx_null) || (let __enum_eq_left_233 = (Obj.magic fact : TypedBackendCallArgument.t).expression in let __enum_eq_right_234 = let __array_read_receiver_235 = operands in let __array_read_index_236 = index in HxArray.get (Obj.magic __array_read_receiver_235) __array_read_index_236 in HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_left_233) != HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_right_234)) || (Obj.magic fact : TypedBackendCallArgument.t).expectedType == Obj.magic (HxRuntime.hx_null) || not (TyAliasEquivalence.equivalentTypes (Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).expectedType)))) (Obj.magic storageType)) || not (TyAliasEquivalence.equivalentTypes (Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)))) (Obj.magic storageType)) || TyType.hasUnknownComponent (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)) () then HxType.hx_throw_typed_rtti (Obj.repr "OCaml array enum argument requires its exact typed array operand and destination") ["Dynamic"] else ());
+                    let __assign_237 = (("Obj.repr (" ^ HxString.toStdString rendered) ^ ")" : string) in (
+                      tempString := __assign_237;
+                      __assign_237
                     )
                   )
                 )
                 | Backend_ocaml_Stage3OcamlEnumPlan.NullableValue _p0 -> (let _g6 = Obj.magic _p0 in match _g6 with
-                  | Backend_ocaml_Stage3OcamlEnumPlan.DynamicValue -> let tempShortCircuit2 = ref (false : bool) in (
-                    ignore (if index >= HxArray.length (Obj.obj (HxAnon.get selected "arguments")) then let __assign_225 = true in (
-                      tempShortCircuit2 := __assign_225;
-                      __assign_225
-                    ) else let _g7 = Obj.magic (let __array_read_receiver_226 = operands in let __array_read_index_227 = index in HxArray.get (Obj.magic __array_read_receiver_226) __array_read_index_227) in if (match _g7 with
+                  | Backend_ocaml_Stage3OcamlEnumPlan.DynamicValue -> let tempShortCircuit3 = ref (false : bool) in (
+                    ignore (if index >= HxArray.length (Obj.obj (HxAnon.get selected "arguments")) then let __assign_239 = true in (
+                      tempShortCircuit3 := __assign_239;
+                      __assign_239
+                    ) else let _g7 = Obj.magic (let __array_read_receiver_240 = operands in let __array_read_index_241 = index in HxArray.get (Obj.magic __array_read_receiver_240) __array_read_index_241) in if (match _g7 with
                       | HxExpr.EParenthesized (_, _) -> 0
                       | HxExpr.ESourceTry (_, _, _) -> 1
                       | HxExpr.ESourceFor (_, _, _, _) -> 2
@@ -485,41 +561,41 @@ let call = fun self (selected : Obj.t) (emit : HxExpr.hxexpr -> string) (names :
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_228 = true in (
-                      tempShortCircuit2 := __assign_228;
-                      __assign_228
-                    ) else let __assign_229 = false in (
-                      tempShortCircuit2 := __assign_229;
-                      __assign_229
+                      | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_242 = true in (
+                      tempShortCircuit3 := __assign_242;
+                      __assign_242
+                    ) else let __assign_243 = false in (
+                      tempShortCircuit3 := __assign_243;
+                      __assign_243
                     ));
-                    if !tempShortCircuit2 then let __assign_230 = (("Obj.repr (" ^ HxString.toStdString rendered) ^ ")" : string) in (
-                      tempString := __assign_230;
-                      __assign_230
-                    ) else let fact = Obj.magic (argumentFacts (Obj.magic (let __array_read_receiver_231 = operands in let __array_read_index_232 = index in HxArray.get (Obj.magic __array_read_receiver_231) __array_read_index_232))) in (
-                      ignore (if fact == Obj.magic (HxRuntime.hx_null) || (let __enum_eq_left_233 = (Obj.magic fact : TypedBackendCallArgument.t).expression in let __enum_eq_right_234 = let __array_read_receiver_235 = operands in let __array_read_index_236 = index in HxArray.get (Obj.magic __array_read_receiver_235) __array_read_index_236 in HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_left_233) != HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_right_234)) || TyType.hasUnknownComponent (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)) () then HxType.hx_throw_typed_rtti (Obj.repr "OCaml Dynamic enum argument requires its exact typed operand") ["Dynamic"] else ());
+                    if !tempShortCircuit3 then let __assign_244 = (("Obj.repr (" ^ HxString.toStdString rendered) ^ ")" : string) in (
+                      tempString := __assign_244;
+                      __assign_244
+                    ) else let fact = Obj.magic (argumentFacts (Obj.magic (let __array_read_receiver_245 = operands in let __array_read_index_246 = index in HxArray.get (Obj.magic __array_read_receiver_245) __array_read_index_246))) in (
+                      ignore (if fact == Obj.magic (HxRuntime.hx_null) || (let __enum_eq_left_247 = (Obj.magic fact : TypedBackendCallArgument.t).expression in let __enum_eq_right_248 = let __array_read_receiver_249 = operands in let __array_read_index_250 = index in HxArray.get (Obj.magic __array_read_receiver_249) __array_read_index_250 in HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_left_247) != HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_right_248)) || TyType.hasUnknownComponent (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)) () then HxType.hx_throw_typed_rtti (Obj.repr "OCaml Dynamic enum argument requires its exact typed operand") ["Dynamic"] else ());
                       let tempOcamlDynamicArgumentCarrier1 = ref (Obj.magic (HxRuntime.hx_null) : Backend_ocaml_OcamlDynamicOperatorLowering.ocamldynamicargumentcarrier) in (
-                        ignore (if let __string_eq_left_237 = TyType.getSemanticKey (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)) () in let __string_eq_right_238 = "primitive:Bool" in HxString.equals __string_eq_left_237 __string_eq_right_238 then let __assign_239 = Obj.magic (Backend_ocaml_OcamlDynamicOperatorLowering.ExactBool) in (
-                          tempOcamlDynamicArgumentCarrier1 := __assign_239;
-                          __assign_239
-                        ) else if TyType.isDynamic (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)) () then let __assign_240 = Obj.magic (Backend_ocaml_OcamlDynamicOperatorLowering.DynamicValue) in (
-                          tempOcamlDynamicArgumentCarrier1 := __assign_240;
-                          __assign_240
-                        ) else let __assign_241 = Obj.magic (Backend_ocaml_OcamlDynamicOperatorLowering.ConcreteValue) in (
-                          tempOcamlDynamicArgumentCarrier1 := __assign_241;
-                          __assign_241
+                        ignore (if let __string_eq_left_251 = TyType.getSemanticKey (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)) () in let __string_eq_right_252 = "primitive:Bool" in HxString.equals __string_eq_left_251 __string_eq_right_252 then let __assign_253 = Obj.magic (Backend_ocaml_OcamlDynamicOperatorLowering.ExactBool) in (
+                          tempOcamlDynamicArgumentCarrier1 := __assign_253;
+                          __assign_253
+                        ) else if TyType.isDynamic (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)) () then let __assign_254 = Obj.magic (Backend_ocaml_OcamlDynamicOperatorLowering.DynamicValue) in (
+                          tempOcamlDynamicArgumentCarrier1 := __assign_254;
+                          __assign_254
+                        ) else let __assign_255 = Obj.magic (Backend_ocaml_OcamlDynamicOperatorLowering.ConcreteValue) in (
+                          tempOcamlDynamicArgumentCarrier1 := __assign_255;
+                          __assign_255
                         ));
-                        let carrier = Obj.magic (!tempOcamlDynamicArgumentCarrier1) in let __assign_242 = (Backend_ocaml_OcamlDynamicOperatorLowering.callArgument ("Dynamic" : string) (Obj.magic carrier) (rendered : string) : string) in (
-                          tempString := __assign_242;
-                          __assign_242
+                        let carrier = Obj.magic (!tempOcamlDynamicArgumentCarrier1) in let __assign_256 = (Backend_ocaml_OcamlDynamicOperatorLowering.callArgument ("Dynamic" : string) (Obj.magic carrier) (rendered : string) : string) in (
+                          tempString := __assign_256;
+                          __assign_256
                         )
                       )
                     )
                   )
-                  | Backend_ocaml_Stage3OcamlEnumPlan.AnonymousRecord _p0 -> let _g7 = (_p0 : string) in let key = (_g7 : string) in let tempShortCircuit3 = ref (false : bool) in (
-                    ignore (if index >= HxArray.length (Obj.obj (HxAnon.get selected "arguments")) then let __assign_243 = true in (
-                      tempShortCircuit3 := __assign_243;
-                      __assign_243
-                    ) else let _g8 = Obj.magic (let __array_read_receiver_244 = operands in let __array_read_index_245 = index in HxArray.get (Obj.magic __array_read_receiver_244) __array_read_index_245) in if (match _g8 with
+                  | Backend_ocaml_Stage3OcamlEnumPlan.AnonymousRecord _p0 -> let _g7 = (_p0 : string) in let key = (_g7 : string) in let tempShortCircuit4 = ref (false : bool) in (
+                    ignore (if index >= HxArray.length (Obj.obj (HxAnon.get selected "arguments")) then let __assign_257 = true in (
+                      tempShortCircuit4 := __assign_257;
+                      __assign_257
+                    ) else let _g8 = Obj.magic (let __array_read_receiver_258 = operands in let __array_read_index_259 = index in HxArray.get (Obj.magic __array_read_receiver_258) __array_read_index_259) in if (match _g8 with
                       | HxExpr.EParenthesized (_, _) -> 0
                       | HxExpr.ESourceTry (_, _, _) -> 1
                       | HxExpr.ESourceFor (_, _, _, _) -> 2
@@ -566,45 +642,114 @@ let call = fun self (selected : Obj.t) (emit : HxExpr.hxexpr -> string) (names :
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_246 = true in (
-                      tempShortCircuit3 := __assign_246;
-                      __assign_246
-                    ) else let __assign_247 = false in (
-                      tempShortCircuit3 := __assign_247;
-                      __assign_247
+                      | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_260 = true in (
+                      tempShortCircuit4 := __assign_260;
+                      __assign_260
+                    ) else let __assign_261 = false in (
+                      tempShortCircuit4 := __assign_261;
+                      __assign_261
                     ));
-                    if !tempShortCircuit3 then let __assign_248 = (("Obj.repr (" ^ HxString.toStdString rendered) ^ ")" : string) in (
-                      tempString := __assign_248;
-                      __assign_248
-                    ) else let fact = Obj.magic (argumentFacts (Obj.magic (let __array_read_receiver_249 = operands in let __array_read_index_250 = index in HxArray.get (Obj.magic __array_read_receiver_249) __array_read_index_250))) in (
-                      ignore (if fact == Obj.magic (HxRuntime.hx_null) || (let __enum_eq_left_251 = (Obj.magic fact : TypedBackendCallArgument.t).expression in let __enum_eq_right_252 = let __array_read_receiver_253 = operands in let __array_read_index_254 = index in HxArray.get (Obj.magic __array_read_receiver_253) __array_read_index_254 in HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_left_251) != HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_right_252)) || (Obj.magic fact : TypedBackendCallArgument.t).expectedType == Obj.magic (HxRuntime.hx_null) || (let __string_eq_left_255 = TyType.getSemanticKey (Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).expectedType)))) () in let __string_eq_right_256 = key in not (HxString.equals __string_eq_left_255 __string_eq_right_256)) || not (TyType.isAnonymous (Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)))) ()) || TyType.hasUnknownComponent (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)) () then HxType.hx_throw_typed_rtti (Obj.repr "OCaml record enum argument requires its exact typed record operand and destination") ["Dynamic"] else ());
-                      let __assign_257 = (rendered : string) in (
-                        tempString := __assign_257;
-                        __assign_257
+                    if !tempShortCircuit4 then let __assign_262 = (("Obj.repr (" ^ HxString.toStdString rendered) ^ ")" : string) in (
+                      tempString := __assign_262;
+                      __assign_262
+                    ) else let fact = Obj.magic (argumentFacts (Obj.magic (let __array_read_receiver_263 = operands in let __array_read_index_264 = index in HxArray.get (Obj.magic __array_read_receiver_263) __array_read_index_264))) in (
+                      ignore (if fact == Obj.magic (HxRuntime.hx_null) || (let __enum_eq_left_265 = (Obj.magic fact : TypedBackendCallArgument.t).expression in let __enum_eq_right_266 = let __array_read_receiver_267 = operands in let __array_read_index_268 = index in HxArray.get (Obj.magic __array_read_receiver_267) __array_read_index_268 in HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_left_265) != HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_right_266)) || (Obj.magic fact : TypedBackendCallArgument.t).expectedType == Obj.magic (HxRuntime.hx_null) || (let __string_eq_left_269 = TyType.getSemanticKey (Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).expectedType)))) () in let __string_eq_right_270 = key in not (HxString.equals __string_eq_left_269 __string_eq_right_270)) || not (TyType.isAnonymous (Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)))) ()) || TyType.hasUnknownComponent (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)) () then HxType.hx_throw_typed_rtti (Obj.repr "OCaml record enum argument requires its exact typed record operand and destination") ["Dynamic"] else ());
+                      let __assign_271 = (rendered : string) in (
+                        tempString := __assign_271;
+                        __assign_271
                       )
                     )
                   )
-                  | _ -> let __assign_224 = (("Obj.repr (" ^ HxString.toStdString rendered) ^ ")" : string) in (
-                    tempString := __assign_224;
-                    __assign_224
+                  | Backend_ocaml_Stage3OcamlEnumPlan.ArrayValue _p0 -> let _g7 = Obj.magic _p0 in let storageType = Obj.magic _g7 in let tempShortCircuit5 = ref (false : bool) in (
+                    ignore (if index >= HxArray.length (Obj.obj (HxAnon.get selected "arguments")) then let __assign_272 = true in (
+                      tempShortCircuit5 := __assign_272;
+                      __assign_272
+                    ) else let _g8 = Obj.magic (let __array_read_receiver_273 = operands in let __array_read_index_274 = index in HxArray.get (Obj.magic __array_read_receiver_273) __array_read_index_274) in if (match _g8 with
+                      | HxExpr.EParenthesized (_, _) -> 0
+                      | HxExpr.ESourceTry (_, _, _) -> 1
+                      | HxExpr.ESourceFor (_, _, _, _) -> 2
+                      | HxExpr.ELoweredControl (_, _, _, _) -> 3
+                      | HxExpr.ENull -> 4
+                      | HxExpr.EBool _ -> 5
+                      | HxExpr.EString _ -> 6
+                      | HxExpr.EInt _ -> 7
+                      | HxExpr.EFloat _ -> 8
+                      | HxExpr.EEnumValue _ -> 9
+                      | HxExpr.EThis -> 10
+                      | HxExpr.ESuper -> 11
+                      | HxExpr.EIdent _ -> 12
+                      | HxExpr.EField (_, _) -> 13
+                      | HxExpr.ENullSafeField (_, _) -> 14
+                      | HxExpr.ECall (_, _) -> 15
+                      | HxExpr.EMacroExpr (_, _) -> 16
+                      | HxExpr.EMacroType _ -> 17
+                      | HxExpr.ELambda (_, _, _) -> 18
+                      | HxExpr.ETryCatchRaw _ -> 19
+                      | HxExpr.ESwitchRaw _ -> 20
+                      | HxExpr.ESwitch (_, _, _) -> 21
+                      | HxExpr.ENew (_, _) -> 22
+                      | HxExpr.EUnop (_, _, _) -> 23
+                      | HxExpr.EBinop (_, _, _) -> 24
+                      | HxExpr.ETernary (_, _, _) -> 25
+                      | HxExpr.ESourceIf (_, _, _, _) -> 26
+                      | HxExpr.EThrow (_, _) -> 27
+                      | HxExpr.EAnon (_, _) -> 28
+                      | HxExpr.EArrayComprehension (_, _, _, _) -> 29
+                      | HxExpr.EArrayDecl _ -> 30
+                      | HxExpr.EArrayAccess (_, _) -> 31
+                      | HxExpr.ERange (_, _) -> 32
+                      | HxExpr.ECast (_, _) -> 33
+                      | HxExpr.ECheckType (_, _) -> 34
+                      | HxExpr.EUntyped _ -> 35
+                      | HxExpr.EUnsupported _ -> 36
+                      | HxExpr.EReturn _ -> 37
+                      | HxExpr.EVars _ -> 38
+                      | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 39
+                      | HxExpr.EWhile (_, _, _, _, _) -> 40
+                      | HxExpr.EBreak _ -> 41
+                      | HxExpr.EContinue _ -> 42
+                      | HxExpr.EDiscardThen (_, _) -> 43
+                      | HxExpr.ESourceGroup (_, _) -> 44
+                      | HxExpr.ESourceFunction (_, _, _, _) -> 45
+                      | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_275 = true in (
+                      tempShortCircuit5 := __assign_275;
+                      __assign_275
+                    ) else let __assign_276 = false in (
+                      tempShortCircuit5 := __assign_276;
+                      __assign_276
+                    ));
+                    if !tempShortCircuit5 then let __assign_277 = (("Obj.repr (" ^ HxString.toStdString rendered) ^ ")" : string) in (
+                      tempString := __assign_277;
+                      __assign_277
+                    ) else let fact = Obj.magic (argumentFacts (Obj.magic (let __array_read_receiver_278 = operands in let __array_read_index_279 = index in HxArray.get (Obj.magic __array_read_receiver_278) __array_read_index_279))) in (
+                      ignore (if fact == Obj.magic (HxRuntime.hx_null) || (let __enum_eq_left_280 = (Obj.magic fact : TypedBackendCallArgument.t).expression in let __enum_eq_right_281 = let __array_read_receiver_282 = operands in let __array_read_index_283 = index in HxArray.get (Obj.magic __array_read_receiver_282) __array_read_index_283 in HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_left_280) != HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_right_281)) || (Obj.magic fact : TypedBackendCallArgument.t).expectedType == Obj.magic (HxRuntime.hx_null) || not (TyAliasEquivalence.equivalentTypes (Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).expectedType)))) (Obj.magic storageType)) || not (TyAliasEquivalence.equivalentTypes (Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)))) (Obj.magic storageType)) || TyType.hasUnknownComponent (Obj.magic ((Obj.magic fact : TypedBackendCallArgument.t).hx_type)) () then HxType.hx_throw_typed_rtti (Obj.repr "OCaml array enum argument requires its exact typed array operand and destination") ["Dynamic"] else ());
+                      let __assign_284 = (("Obj.repr (" ^ HxString.toStdString rendered) ^ ")" : string) in (
+                        tempString := __assign_284;
+                        __assign_284
+                      )
+                    )
+                  )
+                  | _ -> let __assign_238 = (("Obj.repr (" ^ HxString.toStdString rendered) ^ ")" : string) in (
+                    tempString := __assign_238;
+                    __assign_238
                   ))
-                | _ -> let __assign_190 = (rendered : string) in (
-                  tempString := __assign_190;
-                  __assign_190
+                | _ -> let __assign_191 = (rendered : string) in (
+                  tempString := __assign_191;
+                  __assign_191
                 ));
-              let stored = (!tempString : string) in let __array_receiver_258 = Obj.magic _g2 in let __array_arg_0_259 = (let __string_part_262 = "let " in let __string_part_263 = HxString.toStdString (let __array_read_receiver_260 = args in let __array_read_index_261 = index in HxArray.get (Obj.magic __array_read_receiver_260) __array_read_index_261) in let __string_part_264 = " = (" in let __string_part_265 = HxString.toStdString stored in let __string_part_266 = ") in " in (((__string_part_262 ^ __string_part_263) ^ __string_part_264) ^ __string_part_265) ^ __string_part_266 : string) in HxArray.push __array_receiver_258 __array_arg_0_259
+              let stored = (!tempString : string) in let __array_receiver_285 = Obj.magic _g2 in let __array_arg_0_286 = (let __string_part_289 = "let " in let __string_part_290 = HxString.toStdString (let __array_read_receiver_287 = args in let __array_read_index_288 = index in HxArray.get (Obj.magic __array_read_receiver_287) __array_read_index_288) in let __string_part_291 = " = (" in let __string_part_292 = HxString.toStdString stored in let __string_part_293 = ") in " in (((__string_part_289 ^ __string_part_290) ^ __string_part_291) ^ __string_part_292) ^ __string_part_293 : string) in HxArray.push __array_receiver_285 __array_arg_0_286
             )) done);
-            ignore (let __assign_267 = Obj.magic _g2 in (
-              tempArray1 := __assign_267;
-              __assign_267
+            ignore (let __assign_294 = Obj.magic _g2 in (
+              tempArray1 := __assign_294;
+              __assign_294
             ));
-            let bindings = Obj.magic (!tempArray1) in Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_part_268 = "(" in let __string_part_269 = HxString.toStdString (HxArray.join bindings "" (fun x -> x)) in let __string_part_270 = HxString.toStdString ((Obj.magic owner : Backend_ocaml_Stage3OcamlEnumPlan.t).outputModule) in let __string_part_271 = "." in let __string_part_272 = HxString.toStdString (Obj.obj (HxAnon.get constructor "targetName")) in let __string_part_273 = " " in let __string_part_274 = HxString.toStdString (HxArray.join args " " (fun x -> x)) in let __string_part_275 = ")" in ((((((__string_part_268 ^ __string_part_269) ^ __string_part_270) ^ __string_part_271) ^ __string_part_272) ^ __string_part_273) ^ __string_part_274) ^ __string_part_275)))
+            let bindings = Obj.magic (!tempArray1) in Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_part_295 = "(" in let __string_part_296 = HxString.toStdString (HxArray.join bindings "" (fun x -> x)) in let __string_part_297 = HxString.toStdString ((Obj.magic owner : Backend_ocaml_Stage3OcamlEnumPlan.t).outputModule) in let __string_part_298 = "." in let __string_part_299 = HxString.toStdString (Obj.obj (HxAnon.get constructor "targetName")) in let __string_part_300 = " " in let __string_part_301 = HxString.toStdString (HxArray.join args " " (fun x -> x)) in let __string_part_302 = ")" in ((((((__string_part_295 ^ __string_part_296) ^ __string_part_297) ^ __string_part_298) ^ __string_part_299) ^ __string_part_300) ^ __string_part_301) ^ __string_part_302)))
           )
         )
       )
     )) with
       | HxRuntime.Hx_continue -> () done);
-    HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_276 = "OCaml enum call selected an absent constructor: " in let __string_part_277 = HxString.toStdString (Obj.obj (HxAnon.get selected "constructor")) in __string_part_276 ^ __string_part_277)) ["Dynamic"]
+    HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_303 = "OCaml enum call selected an absent constructor: " in let __string_part_304 = HxString.toStdString (Obj.obj (HxAnon.get selected "constructor")) in __string_part_303 ^ __string_part_304)) ["Dynamic"]
   )
 ) with
-  | HxRuntime.Hx_return __ret_278 -> (Obj.obj __ret_278 : string) : string)
+  | HxRuntime.Hx_return __ret_305 -> (Obj.obj __ret_305 : string) : string)

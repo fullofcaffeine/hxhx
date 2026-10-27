@@ -732,6 +732,7 @@ let init () : unit =
   ignore (HxType.class_ "hxhx.CompilerJsonParser");
   ignore (HxType.class_ "hxhx.DisplayResponseSynthesizer");
   ignore (HxType.class_ "hxhx.ExprMacroExpander");
+  ignore (HxType.class_ "hxhx.ExprMacroLexicalScope");
   ignore (HxType.class_ "hxhx.Hxml");
   ignore (HxType.class_ "hxhx.LibraryResolver");
   ignore (HxType.class_ "hxhx.Main");
@@ -739,6 +740,7 @@ let init () : unit =
   ignore (HxType.class_ "hxhx.NativeBackendPluginHost");
   ignore (HxType.class_ "hxhx.NativeBackendPluginHostAbi");
   ignore (HxType.class_ "hxhx.NativeBackendPluginLoader");
+  ignore (HxType.class_ "hxhx.SelectedExprMacroCall");
   ignore (HxType.class_ "hxhx.Stage1Args");
   ignore (HxType.class_ "hxhx.Stage1Compiler");
   ignore (HxType.class_ "hxhx.Stage1Resolver");
@@ -759,6 +761,7 @@ let init () : unit =
   ignore (HxType.class_ "hxhx.Stage3RunSupport");
   ignore (HxType.class_ "hxhx.Stage3SetupSupport");
   ignore (HxType.class_ "hxhx.Stage3WaitServer");
+  ignore (HxType.class_ "hxhx._ExprMacroDeclarationSelector.ExprMacroDeclarationSelector_Fields_");
   ignore (HxType.class_ "hxhx.macro.BuildFieldSnapshotPayload");
   ignore (HxType.class_ "hxhx.macro.InProcGeneratedEntrypoints");
   ignore (HxType.class_ "hxhx.macro.InProcMacroRuntime");
@@ -948,6 +951,8 @@ let init () : unit =
   ignore (HxType.enum_ "backend.vm.NekoExecutableProjection");
   ignore (HxType.enum_ "haxe.StackItem");
   ignore (HxType.enum_ "hxhx.CompilerJsonValue");
+  ignore (HxType.enum_ "hxhx.ExprMacroCallRewrite");
+  ignore (HxType.enum_ "hxhx.ExprMacroScopeVisibility");
   ignore (HxType.enum_ "hxhx.macro._MacroHostClient.MacroHostReadResult");
   ignore (HxType.enum_ "reflaxe.ocaml.ast.OcamlAssignOp");
   ignore (HxType.enum_ "reflaxe.ocaml.ast.OcamlBinop");
@@ -1512,8 +1517,9 @@ let init () : unit =
   HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlEnumPayload" "DynamicValue" 3 (HxType.EnumImmediate 3);
   HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlEnumPayload" "RuntimeTypeValue" 4 (HxType.EnumImmediate 4);
   HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlEnumPayload" "AnonymousRecord" 5 (HxType.EnumBlock 0);
-  HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlEnumPayload" "EnumBox" 6 (HxType.EnumBlock 1);
-  HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlEnumPayload" "NullableValue" 7 (HxType.EnumBlock 2);
+  HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlEnumPayload" "ArrayValue" 6 (HxType.EnumBlock 1);
+  HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlEnumPayload" "EnumBox" 7 (HxType.EnumBlock 2);
+  HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlEnumPayload" "NullableValue" 8 (HxType.EnumBlock 3);
   HxType.register_enum_ctor_layout "backend.source.LuaFieldDefault" "Zero" 0 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "backend.source.LuaFieldDefault" "False" 1 (HxType.EnumImmediate 1);
   HxType.register_enum_ctor_layout "backend.source.LuaFieldDefault" "Nil" 2 (HxType.EnumImmediate 2);
@@ -1550,6 +1556,10 @@ let init () : unit =
   HxType.register_enum_ctor_layout "hxhx.CompilerJsonValue" "JsonString" 4 (HxType.EnumBlock 3);
   HxType.register_enum_ctor_layout "hxhx.CompilerJsonValue" "JsonArray" 5 (HxType.EnumBlock 4);
   HxType.register_enum_ctor_layout "hxhx.CompilerJsonValue" "JsonObject" 6 (HxType.EnumBlock 5);
+  HxType.register_enum_ctor_layout "hxhx.ExprMacroCallRewrite" "Consume" 0 (HxType.EnumBlock 0);
+  HxType.register_enum_ctor_layout "hxhx.ExprMacroCallRewrite" "Recurse" 1 (HxType.EnumBlock 1);
+  HxType.register_enum_ctor_layout "hxhx.ExprMacroScopeVisibility" "Known" 0 (HxType.EnumBlock 0);
+  HxType.register_enum_ctor_layout "hxhx.ExprMacroScopeVisibility" "Unavailable" 1 (HxType.EnumBlock 1);
   HxType.register_enum_ctor_layout "hxhx.macro._MacroHostClient.MacroHostReadResult" "ReadLine" 0 (HxType.EnumBlock 0);
   HxType.register_enum_ctor_layout "hxhx.macro._MacroHostClient.MacroHostReadResult" "ReadEof" 1 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "hxhx.macro._MacroHostClient.MacroHostReadResult" "ReadError" 2 (HxType.EnumBlock 1);
@@ -3884,6 +3894,11 @@ let init () : unit =
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'semanticKey' for backend.ocaml.Stage3OcamlEnumPayload.AnonymousRecord" in
     Obj.repr (Backend_ocaml_Stage3OcamlEnumPlan.AnonymousRecord a0)
   );
+  HxType.register_enum_ctor "backend.ocaml.Stage3OcamlEnumPayload" "ArrayValue" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'storageType' for backend.ocaml.Stage3OcamlEnumPayload.ArrayValue" in
+    Obj.repr (Backend_ocaml_Stage3OcamlEnumPlan.ArrayValue a0)
+  );
   HxType.register_enum_ctor "backend.ocaml.Stage3OcamlEnumPayload" "EnumBox" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'owner' for backend.ocaml.Stage3OcamlEnumPayload.EnumBox" in
@@ -4052,6 +4067,26 @@ let init () : unit =
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'fields' for hxhx.CompilerJsonValue.JsonObject" in
     Obj.repr (Hxhx_CompilerJsonValue.JsonObject a0)
+  );
+  HxType.register_enum_ctor "hxhx.ExprMacroCallRewrite" "Consume" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'replacement' for hxhx.ExprMacroCallRewrite.Consume" in
+    Obj.repr (Hxhx_ExprMacroCallRewrite.Consume a0)
+  );
+  HxType.register_enum_ctor "hxhx.ExprMacroCallRewrite" "Recurse" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'afterChildren' for hxhx.ExprMacroCallRewrite.Recurse" in
+    Obj.repr (Hxhx_ExprMacroCallRewrite.Recurse a0)
+  );
+  HxType.register_enum_ctor "hxhx.ExprMacroScopeVisibility" "Known" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'names' for hxhx.ExprMacroScopeVisibility.Known" in
+    Obj.repr (Hxhx_ExprMacroScopeVisibility.Known a0)
+  );
+  HxType.register_enum_ctor "hxhx.ExprMacroScopeVisibility" "Unavailable" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'reason' for hxhx.ExprMacroScopeVisibility.Unavailable" in
+    Obj.repr (Hxhx_ExprMacroScopeVisibility.Unavailable a0)
   );
   HxType.register_enum_ctor "hxhx.macro._MacroHostClient.MacroHostReadResult" "ReadLine" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -5040,7 +5075,8 @@ let init () : unit =
     let a9 = if len > 9 then Obj.magic ((HxArray.get args 9)) else Obj.magic HxRuntime.hx_null in
     let a10 = if len > 10 then Obj.obj ((HxArray.get args 10)) else Obj.magic HxRuntime.hx_null in
     let a11 = if len > 11 then (HxArray.get args 11) else HxRuntime.hx_null in
-    Obj.repr (HxFunctionDecl.create a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11)
+    let a12 = if len > 12 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 12)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (HxFunctionDecl.create a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)
   );
   HxType.register_class_ctor "HxFunctionSyntaxParser" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -5124,7 +5160,8 @@ let init () : unit =
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'pos' for HxToken" in
     let a2 = if len > 2 then Obj.obj ((HxArray.get args 2)) else Obj.magic HxRuntime.hx_null in
     let a3 = if len > 3 then Obj.obj ((HxArray.get args 3)) else Obj.magic HxRuntime.hx_null in
-    Obj.repr (HxToken.create a0 a1 a2 a3)
+    let a4 = if len > 4 then (HxArray.get args 4) else HxRuntime.hx_null in
+    Obj.repr (HxToken.create a0 a1 a2 a3 a4)
   );
   HxType.register_class_ctor "HxTypeSyntax" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -7468,6 +7505,14 @@ let init () : unit =
   HxType.register_class_ctor "hxhx.ExprMacroExpander" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_ExprMacroExpander.create ())
   );
+  HxType.register_class_ctor "hxhx.ExprMacroLexicalScope" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'isStaticContext' for hxhx.ExprMacroLexicalScope" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'names' for hxhx.ExprMacroLexicalScope" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'gaps' for hxhx.ExprMacroLexicalScope" in
+    let a3 = if len > 3 then Obj.obj ((HxArray.get args 3)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (Hxhx_ExprMacroLexicalScope.create a0 a1 a2 a3)
+  );
   HxType.register_class_ctor "hxhx.Hxml" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_Hxml.create ())
   );
@@ -7488,6 +7533,13 @@ let init () : unit =
   );
   HxType.register_class_ctor "hxhx.NativeBackendPluginLoader" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_NativeBackendPluginLoader.create ())
+  );
+  HxType.register_class_ctor "hxhx.SelectedExprMacroCall" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'declaration' for hxhx.SelectedExprMacroCall" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'call' for hxhx.SelectedExprMacroCall" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'arguments' for hxhx.SelectedExprMacroCall" in
+    Obj.repr (Hxhx_SelectedExprMacroCall.create a0 a1 a2)
   );
   HxType.register_class_ctor "hxhx.Stage1Args" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -8410,6 +8462,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "hxhx.CompilerJsonParser" (fun () -> Obj.repr (Hxhx_CompilerJsonParser.__empty ()));
   HxType.register_class_empty_ctor "hxhx.DisplayResponseSynthesizer" (fun () -> Obj.repr (Hxhx_DisplayResponseSynthesizer.__empty ()));
   HxType.register_class_empty_ctor "hxhx.ExprMacroExpander" (fun () -> Obj.repr (Hxhx_ExprMacroExpander.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.ExprMacroLexicalScope" (fun () -> Obj.repr (Hxhx_ExprMacroLexicalScope.__empty ()));
   HxType.register_class_empty_ctor "hxhx.Hxml" (fun () -> Obj.repr (Hxhx_Hxml.__empty ()));
   HxType.register_class_empty_ctor "hxhx.LibraryResolver" (fun () -> Obj.repr (Hxhx_LibraryResolver.__empty ()));
   HxType.register_class_empty_ctor "hxhx.Main" (fun () -> Obj.repr (Hxhx_Main.__empty ()));
@@ -8417,6 +8470,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "hxhx.NativeBackendPluginHost" (fun () -> Obj.repr (Hxhx_NativeBackendPluginHost.__empty ()));
   HxType.register_class_empty_ctor "hxhx.NativeBackendPluginHostAbi" (fun () -> Obj.repr (Hxhx_NativeBackendPluginHostAbi.__empty ()));
   HxType.register_class_empty_ctor "hxhx.NativeBackendPluginLoader" (fun () -> Obj.repr (Hxhx_NativeBackendPluginLoader.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.SelectedExprMacroCall" (fun () -> Obj.repr (Hxhx_SelectedExprMacroCall.__empty ()));
   HxType.register_class_empty_ctor "hxhx.Stage1Args" (fun () -> Obj.repr (Hxhx_Stage1Compiler.stage1args___empty ()));
   HxType.register_class_empty_ctor "hxhx.Stage1Compiler" (fun () -> Obj.repr (Hxhx_Stage1Compiler.__empty ()));
   HxType.register_class_empty_ctor "hxhx.Stage1Resolver" (fun () -> Obj.repr (Hxhx_Stage1Compiler.stage1resolver___empty ()));
@@ -8609,15 +8663,15 @@ let init () : unit =
   HxType.register_class_static_fields "HxFieldDecl" [ "getEndPos"; "getInit"; "getInitText"; "getIsFinal"; "getIsStatic"; "getMetadata"; "getName"; "getPos"; "getPropertyGet"; "getPropertySet"; "getTypeHint"; "getVisibility" ];
   HxType.register_class_instance_fields "HxFunctionArg" [ "defaultValue"; "defaultValueText"; "isOptional"; "isRest"; "metadata"; "name"; "typeHint" ];
   HxType.register_class_static_fields "HxFunctionArg" [ "getDefaultValue"; "getDefaultValueText"; "getIsOptional"; "getIsRest"; "getMetadata"; "getName"; "getTypeHint" ];
-  HxType.register_class_instance_fields "HxFunctionDecl" [ "args"; "body"; "bodyText"; "endPos"; "getFirstReturnExpr"; "hasBody"; "isStatic"; "metadata"; "name"; "pos"; "returnStringLiteral"; "returnTypeHint"; "visibility" ];
-  HxType.register_class_static_fields "HxFunctionDecl" [ "getArgs"; "getBody"; "getBodyText"; "getEndPos"; "getHasBody"; "getIsStatic"; "getMetadata"; "getName"; "getPos"; "getReturnStringLiteral"; "getReturnTypeHint"; "getVisibility"; "normalizeReturnTypeHint" ];
+  HxType.register_class_instance_fields "HxFunctionDecl" [ "args"; "body"; "bodyText"; "endPos"; "getFirstReturnExpr"; "hasBody"; "isModuleLevel"; "isStatic"; "metadata"; "name"; "pos"; "returnStringLiteral"; "returnTypeHint"; "visibility" ];
+  HxType.register_class_static_fields "HxFunctionDecl" [ "getArgs"; "getBody"; "getBodyText"; "getEndPos"; "getHasBody"; "getIsModuleLevel"; "getIsStatic"; "getMetadata"; "getName"; "getPos"; "getReturnStringLiteral"; "getReturnTypeHint"; "getVisibility"; "normalizeReturnTypeHint" ];
   HxType.register_class_instance_fields "HxFunctionSyntaxParser" [ "parser"; "read"; "readArgument"; "readArrow"; "readBlock"; "readOrdinary"; "readParenthesizedArguments" ];
   HxType.register_class_static_fields "HxFunctionSyntaxParser" [ "methodArgument"; "parse"; "parseOverloadMetadata" ];
   HxType.register_class_instance_fields "HxFunctionTypeParamMetadata" [];
   HxType.register_class_static_fields "HxFunctionTypeParamMetadata" [ "compactTypeHint"; "constraintHints"; "constraints"; "fromGenericText"; "fromParameters"; "splitTopLevel"; "splitTopLevelComma"; "topLevelColon"; "typeParamNames" ];
   HxType.register_class_instance_fields "HxLambdaSignature" [ "getCanonicalIdentity"; "getParameters"; "getReturnTypeHint"; "parameters"; "returnTypeHint" ];
   HxType.register_class_static_fields "HxLambdaSignature" [ "copyParameter" ];
-  HxType.register_class_instance_fields "HxLexer" [ "bump"; "column"; "consumeNumericSuffix"; "copyInterpolationBracePayload"; "copyQuotedInterpolationPart"; "eof"; "fork"; "index"; "isLeadingDotNumberStart"; "line"; "next"; "peek"; "pos"; "readIdent"; "readLeadingDotNumber"; "readNumber"; "readRegexLiteral"; "readSingleQuotedString"; "readString"; "skipWhitespaceAndComments"; "src" ];
+  HxType.register_class_instance_fields "HxLexer" [ "bump"; "column"; "consumeNumericSuffix"; "copyInterpolationBracePayload"; "copyQuotedInterpolationPart"; "eof"; "fork"; "index"; "isLeadingDotNumberStart"; "line"; "next"; "peek"; "pos"; "readIdent"; "readLeadingDotNumber"; "readNumber"; "readRegexLiteral"; "readSingleQuotedString"; "readString"; "skipWhitespaceAndComments"; "src"; "token" ];
   HxType.register_class_static_fields "HxLexer" [ "isDigit"; "isHexDigit"; "isIdentCont"; "isIdentStart"; "isNumericSeparator"; "isNumericSuffixStart"; "isSpace"; "maskComments"; "normalizeNumberText" ];
   HxType.register_class_instance_fields "HxModuleDecl" [ "classes"; "directives"; "hasToplevelMain"; "headerOnly"; "mainClass"; "packagePath"; "typedefs" ];
   HxType.register_class_static_fields "HxModuleDecl" [ "getClasses"; "getDirectives"; "getHasToplevelMain"; "getHeaderOnly"; "getMainClass"; "getPackagePath"; "getTypedefs" ];
@@ -8637,7 +8691,7 @@ let init () : unit =
   HxType.register_class_static_fields "HxSourceFunctionGenerics" [ "empty" ];
   HxType.register_class_instance_fields "HxSourceOffsetCursor" [ "advance"; "source"; "stringOffset"; "unicodeOffset" ];
   HxType.register_class_static_fields "HxSourceOffsetCursor" [];
-  HxType.register_class_instance_fields "HxToken" [ "getKind"; "getPos"; "kind"; "numericSuffix"; "numericText"; "pos" ];
+  HxType.register_class_instance_fields "HxToken" [ "endIndex"; "getKind"; "getPos"; "kind"; "numericSuffix"; "numericText"; "pos" ];
   HxType.register_class_static_fields "HxToken" [];
   HxType.register_class_instance_fields "HxTypeSyntax" [ "endPos"; "getEndPos"; "getKind"; "getPos"; "kind"; "pos" ];
   HxType.register_class_static_fields "HxTypeSyntax" [ "copyArguments"; "copyFieldKind"; "copyKind"; "copyParameters" ];
@@ -8717,7 +8771,7 @@ let init () : unit =
   HxType.register_class_static_fields "TyControlTarget" [];
   HxType.register_class_instance_fields "TyDeclarationId" [ "canonicalKey"; "equals"; "getCanonicalKey"; "toString" ];
   HxType.register_class_static_fields "TyDeclarationId" [];
-  HxType.register_class_instance_fields "TyDeclarationInfo" [ "getHasBody"; "getIdentity"; "getImplementation"; "getIsDynamic"; "getIsEnumConstructor"; "getIsExtern"; "getIsInline"; "getIsPublic"; "getIsStatic"; "getMetadata"; "getModulePath"; "getNativeName"; "getNoImportGlobal"; "getOwner"; "getPosition"; "getResolvedTypeParameterConstraints"; "getSignature"; "getSourceDeclaration"; "getTypeParameterConstraints"; "getTypeParameterIds"; "getTypeParameters"; "identity"; "implementation"; "isEnumConstructor"; "isInline"; "isPublic"; "metadata"; "modulePath"; "nativeName"; "owner"; "position"; "requireSupportedImplementation"; "resolvedConstraints"; "signature"; "sourceDeclaration"; "typeParameters" ];
+  HxType.register_class_instance_fields "TyDeclarationInfo" [ "getHasBody"; "getIdentity"; "getImplementation"; "getIsDynamic"; "getIsEnumConstructor"; "getIsExtern"; "getIsInline"; "getIsModuleLevel"; "getIsPublic"; "getIsStatic"; "getMetadata"; "getModulePath"; "getNativeName"; "getNoImportGlobal"; "getOwner"; "getPosition"; "getResolvedTypeParameterConstraints"; "getSignature"; "getSourceDeclaration"; "getTypeParameterConstraints"; "getTypeParameterIds"; "getTypeParameters"; "identity"; "implementation"; "isEnumConstructor"; "isInline"; "isModuleLevel"; "isPublic"; "metadata"; "modulePath"; "nativeName"; "owner"; "position"; "requireSupportedImplementation"; "resolvedConstraints"; "signature"; "sourceDeclaration"; "typeParameters" ];
   HxType.register_class_static_fields "TyDeclarationInfo" [];
   HxType.register_class_instance_fields "TyEnumAbstractConstants" [ "active"; "declarations"; "evaluate"; "owner"; "previous"; "resolve"; "resolved"; "underlying"; "unresolved" ];
   HxType.register_class_static_fields "TyEnumAbstractConstants" [];
@@ -8794,7 +8848,7 @@ let init () : unit =
   HxType.register_class_instance_fields "TySwitchAnalysis" [ "analyze"; "domain" ];
   HxType.register_class_static_fields "TySwitchAnalysis" [];
   HxType.register_class_instance_fields "TySwitchPatternBindings" [];
-  HxType.register_class_static_fields "TySwitchPatternBindings" [ "analyze"; "analyzeOr"; "arrayItemType"; "bindingFact"; "declare"; "effectiveType"; "emptyAnalysis"; "mergeIndependent"; "occurrenceCount" ];
+  HxType.register_class_static_fields "TySwitchPatternBindings" [ "analyze"; "analyzeOr"; "arrayItemType"; "bindingFact"; "declare"; "effectiveType"; "emptyAnalysis"; "mergeIndependent"; "occurrenceCount"; "sourceNames" ];
   HxType.register_class_instance_fields "TySymbol" [ "getIdentity"; "getKind"; "getName"; "getType"; "identity"; "kind"; "name"; "setType"; "toBinding"; "ty" ];
   HxType.register_class_static_fields "TySymbol" [];
   HxType.register_class_instance_fields "TyType" [ "aliasDefinition"; "anonymousFields"; "classValueScheme"; "containsComponent"; "display"; "functionParameters"; "functionReturn"; "getAliasDefinition"; "getAnonymousFieldNames"; "getAnonymousFieldTypes"; "getAnonymousFields"; "getCanonicalDisplay"; "getClassValueScheme"; "getDisplay"; "getFunctionArguments"; "getFunctionParameters"; "getFunctionReturn"; "getNominalIdentity"; "getNullableInner"; "getSemanticKey"; "getTypeArguments"; "getTypeParameterIdentity"; "getTypeParameterName"; "getUnresolvedPath"; "hasOpenMethodParameter"; "hasTypeParameter"; "hasUnknownComponent"; "isAbstractMeta"; "isAnonymous"; "isDynamic"; "isFunction"; "isNoNormalCompletion"; "isNullLiteral"; "isNullWrapped"; "isNullable"; "isNumeric"; "isOpenMethodParameter"; "isPrimitive"; "isTypeParameter"; "isUnknown"; "isUnresolved"; "isVoid"; "kind"; "nominalIdentity"; "nullableInner"; "openMethodParameterIdentity"; "semanticKeyInScopes"; "toString"; "typeArguments"; "typeParameterIdentity"; "unresolvedPath"; "unwrapNull"; "withAnonymousTypes"; "withFunctionTypes" ];
@@ -8888,7 +8942,7 @@ let init () : unit =
   HxType.register_class_instance_fields "TypedBackendThrownValue" [ "assertCurrent"; "expression"; "fingerprint"; "owner"; "revision"; "type" ];
   HxType.register_class_static_fields "TypedBackendThrownValue" [];
   HxType.register_class_instance_fields "TypedBodyBuilder" [];
-  HxType.register_class_static_fields "TypedBodyBuilder" [ "alignStructuralTryCatchResults"; "applyCallArgumentConversions"; "buildExpr"; "buildExpression"; "buildExpressions"; "buildFallbackModule"; "buildFunction"; "buildLambda"; "buildStatements"; "buildStmt"; "buildStructuralTryArguments"; "compileTimeProbe"; "conditionalBranch"; "convertCallValues"; "declarePatternBindings"; "exactPosition"; "expandStatement"; "expandStructuralStatements"; "expressionPath"; "expressionType"; "fallbackType"; "isCompoundAssignment"; "normalizeProbeText"; "opaqueBlockBody"; "opaqueBlockProbeResult"; "parsedOpaqueBlockStatements"; "recoveredOpaqueBlockStatements"; "recoveredStructuralExpression"; "statementAlwaysExits"; "structuralOpaqueBlock"; "structuralTryCatch"; "successfulProbeInferenceIsDecisive"; "untypedExpression"; "untypedStatement" ];
+  HxType.register_class_static_fields "TypedBodyBuilder" [ "alignStructuralTryCatchResults"; "applyCallArgumentConversions"; "buildExpr"; "buildExpression"; "buildExpressions"; "buildFallbackModule"; "buildFunction"; "buildIterable"; "buildLambda"; "buildStatements"; "buildStmt"; "buildStructuralTryArguments"; "compileTimeProbe"; "conditionalBranch"; "convertCallValues"; "declarePatternBindings"; "exactPosition"; "expandStatement"; "expandStructuralStatements"; "expressionPath"; "expressionType"; "fallbackType"; "isCompoundAssignment"; "normalizeProbeText"; "opaqueBlockBody"; "opaqueBlockProbeResult"; "parsedOpaqueBlockStatements"; "recoveredOpaqueBlockStatements"; "recoveredStructuralExpression"; "statementAlwaysExits"; "structuralOpaqueBlock"; "structuralTryCatch"; "successfulProbeInferenceIsDecisive"; "untypedExpression"; "untypedStatement" ];
   HxType.register_class_instance_fields "TypedBodyFingerprint" [];
   HxType.register_class_static_fields "TypedBodyFingerprint" [ "addExpression"; "addExpressions"; "addInt"; "addPattern"; "addPatterns"; "addPosition"; "addStatement"; "addStatements"; "addString"; "addStrings"; "addUnaryFixity"; "addUnaryOperator"; "exactExpression"; "exactStatements"; "forExpression"; "forStatements"; "loweredControlName" ];
   HxType.register_class_instance_fields "TypedBodyInvariant" [];
@@ -8981,7 +9035,7 @@ let init () : unit =
   HxType.register_class_static_fields "TypedStructuralRetention" [];
   HxType.register_class_instance_fields "TypedSwitchPatterns" [ "assertInput"; "getSelections"; "getSemanticKey"; "input"; "inputKey"; "selections"; "sourceIdentity"; "substituteTypes" ];
   HxType.register_class_static_fields "TypedSwitchPatterns" [ "identity"; "named" ];
-  HxType.register_class_instance_fields "TyperContext" [ "classFullName"; "classIsOrExtends"; "currentClass"; "directives"; "extensionMethods"; "filePath"; "getClassFullName"; "getDirectives"; "getFilePath"; "getIndex"; "getModulePath"; "getPackagePath"; "getResolvedDirectives"; "hasDefine"; "importedEnums"; "importedStaticField"; "importedStaticMethod"; "index"; "inferredReturnTypes"; "instanceField"; "instanceMethodOwner"; "loader"; "moduleEnumConstructorField"; "moduleEnumConstructorMethod"; "modulePath"; "packagePath"; "recordInferredReturnType"; "refinedMethodReturnType"; "resolvePrimitiveProvider"; "resolveType"; "resolveTypeUse"; "resolvedDirectives"; "resolvedProvider"; "superclass" ];
+  HxType.register_class_instance_fields "TyperContext" [ "classFullName"; "classIsOrExtends"; "currentClass"; "directives"; "expectedEnumConstructorMethod"; "extensionMethods"; "filePath"; "getClassFullName"; "getDirectives"; "getFilePath"; "getIndex"; "getModulePath"; "getPackagePath"; "getResolvedDirectives"; "hasDefine"; "importedEnums"; "importedModuleFunction"; "importedStaticField"; "importedStaticMethod"; "index"; "inferredReturnTypes"; "instanceField"; "instanceMethodOwner"; "loader"; "moduleEnumConstructorField"; "moduleEnumConstructorMethod"; "modulePath"; "packagePath"; "recordInferredReturnType"; "refinedMethodReturnType"; "resolveCoreProvider"; "resolvePrimitiveProvider"; "resolveType"; "resolveTypeUse"; "resolvedDirectives"; "resolvedProvider"; "superclass" ];
   HxType.register_class_static_fields "TyperContext" [ "asClass" ];
   HxType.register_class_instance_fields "TyperError" [ "filePath"; "getFilePath"; "getMessage"; "getPos"; "message"; "pos"; "toString" ];
   HxType.register_class_static_fields "TyperError" [];
@@ -9546,7 +9600,7 @@ let init () : unit =
   HxType.register_class_instance_fields "backend.js.JsClassInheritancePlan" [ "assertProgram"; "byIdentity"; "declarationRank"; "declarationRanks"; "graph"; "interfaceReferences"; "nodes"; "program"; "requireClass"; "requireRuntimeClass"; "requireRuntimeEnum" ];
   HxType.register_class_static_fields "backend.js.JsClassInheritancePlan" [];
   HxType.register_class_instance_fields "backend.js.JsExprEmitter" [];
-  HxType.register_class_static_fields "backend.js.JsExprEmitter" [ "blockToReturningJs"; "blockTypeErrorResult"; "compactProbeSource"; "copyQuotedRaw"; "emit"; "emitAbstractAdd"; "emitAbstractAddAssign"; "emitAnon"; "emitArrayCompound"; "emitArrayComprehension"; "emitArrayRead"; "emitArrayWrite"; "emitBinop"; "emitCall"; "emitCallArg"; "emitCatchCondition"; "emitCopyCall"; "emitEnumMatch"; "emitEnumMatchValue"; "emitExactEnumConstructor"; "emitField"; "emitForInExpr"; "emitForKeyValueExpr"; "emitIncDec"; "emitInlineJsCode"; "emitIsTypeTest"; "emitNew"; "emitNullSafeField"; "emitRangeExpr"; "emitSuperMethodCall"; "emitSuperPropertyGet"; "emitSuperPropertySet"; "emitSwitchExpr"; "emitSysCommand"; "emitThisAssignment"; "emitTryCatchRaw"; "emitTryExpr"; "emitWhileExpr"; "findLastTopLevelSemicolon"; "findMatching"; "hasClassRefForTypePath"; "hasForExprProbeArg"; "hasTopLevelQuestion"; "helperTypeErrorResult"; "helperTypeErrorText"; "isAssignmentOp"; "isLikelyPackageRoot"; "isMetadataPathChar"; "isNestedValueBlockOpen"; "isNullLiteral"; "isRawIdentChar"; "isRawIdentStart"; "isRawPathChar"; "isRawTypeHintSegment"; "isUpperStart"; "isWhitespace"; "localVarKeywordLengthAt"; "looksLikeRawObjectLiteral"; "nestedScope"; "normalizeCatchType"; "rawObjectLiteralFirstKeyEnd"; "resolveIdent"; "resolvePackageQualifiedSimpleClass"; "resolvePackageQualifiedTypePlaceholder"; "resolveSuperRef"; "rewriteLeadingControlThenReturn"; "rewriteLeadingIfThenReturn"; "rewriteLeadingWhileThenReturn"; "rewriteNestedOpaqueBlockExpressions"; "rewriteOpaqueBlockExprRaw"; "rewriteRawQualifiedClassNews"; "rewriteSimpleTryCatchRaw"; "rootIdentName"; "sanitizeCatchName"; "sanitizeCatchTypeHints"; "sanitizeRawHaxeExpressionSyntax"; "simpleTypeName"; "skipLocalVarTypeHint"; "skipQuotedRaw"; "skipWhitespace"; "standardCtorTypePath"; "startsWithRawKeyword"; "stripExpressionCastHints"; "stripExpressionMetadata"; "stripLocalVarTypeHints"; "typeTestName"; "unsupported" ];
+  HxType.register_class_static_fields "backend.js.JsExprEmitter" [ "blockToReturningJs"; "blockTypeErrorResult"; "compactProbeSource"; "copyQuotedRaw"; "emit"; "emitAbstractAdd"; "emitAbstractAddAssign"; "emitAnon"; "emitArrayCompound"; "emitArrayComprehension"; "emitArrayRead"; "emitArrayWrite"; "emitBinop"; "emitCall"; "emitCallArg"; "emitCatchCondition"; "emitCopyCall"; "emitEnumMatch"; "emitEnumMatchValue"; "emitExactEnumConstructor"; "emitField"; "emitForInExpr"; "emitForKeyValueExpr"; "emitIncDec"; "emitInlineJsCode"; "emitIsTypeTest"; "emitNew"; "emitNullSafeField"; "emitSuperMethodCall"; "emitSuperPropertyGet"; "emitSuperPropertySet"; "emitSwitchExpr"; "emitSysCommand"; "emitThisAssignment"; "emitTryCatchRaw"; "emitTryExpr"; "emitWhileExpr"; "findLastTopLevelSemicolon"; "findMatching"; "hasClassRefForTypePath"; "hasForExprProbeArg"; "hasTopLevelQuestion"; "helperTypeErrorResult"; "helperTypeErrorText"; "isAssignmentOp"; "isLikelyPackageRoot"; "isMetadataPathChar"; "isNestedValueBlockOpen"; "isNullLiteral"; "isRawIdentChar"; "isRawIdentStart"; "isRawPathChar"; "isRawTypeHintSegment"; "isUpperStart"; "isWhitespace"; "localVarKeywordLengthAt"; "looksLikeRawObjectLiteral"; "nestedScope"; "normalizeCatchType"; "rawObjectLiteralFirstKeyEnd"; "resolveIdent"; "resolvePackageQualifiedSimpleClass"; "resolvePackageQualifiedTypePlaceholder"; "resolveSuperRef"; "rewriteLeadingControlThenReturn"; "rewriteLeadingIfThenReturn"; "rewriteLeadingWhileThenReturn"; "rewriteNestedOpaqueBlockExpressions"; "rewriteOpaqueBlockExprRaw"; "rewriteRawQualifiedClassNews"; "rewriteSimpleTryCatchRaw"; "rootIdentName"; "sanitizeCatchName"; "sanitizeCatchTypeHints"; "sanitizeRawHaxeExpressionSyntax"; "simpleTypeName"; "skipLocalVarTypeHint"; "skipQuotedRaw"; "skipWhitespace"; "standardCtorTypePath"; "startsWithRawKeyword"; "stripExpressionCastHints"; "stripExpressionMetadata"; "stripLocalVarTypeHints"; "typeTestName"; "unsupported" ];
   HxType.register_class_instance_fields "backend.js.JsFunctionScope" [ "abstractPlan"; "abstractReceiver"; "abstractValues"; "allocationScope"; "bindIterationCell"; "classRefs"; "controlProjection"; "declareLocal"; "enumDeclarations"; "exprScope"; "fieldCatalog"; "freshTemp"; "initializerPrefix"; "instanceFields"; "isIterationCapture"; "iterationStorage"; "lexicalChild"; "localCatalog"; "locals"; "methodUses"; "parentScope"; "requireControlIdentity"; "reserve"; "resolveClassRef"; "resolveIterationCell"; "resolveLocal"; "resolveLocalBinding"; "resolveSuperClassRef"; "runtimeTypes"; "setAbstractPlan"; "setControlProjection"; "setEnumDeclarations"; "setReceiverPlan"; "superClassRef"; "tempCounter"; "used" ];
   HxType.register_class_static_fields "backend.js.JsFunctionScope" [ "initializer"; "nested" ];
   HxType.register_class_instance_fields "backend.js.JsIterationCaptureStorage" [ "captures"; "catalog"; "isCaptured"; "locals"; "names"; "prepare"; "prepared" ];
@@ -9970,7 +10024,9 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhx.DisplayResponseSynthesizer" [];
   HxType.register_class_static_fields "hxhx.DisplayResponseSynthesizer" [ "compactWhitespace"; "countArgumentIndexBeforeToken"; "extractArgTypeHintFromSegment"; "extractExprOfInner"; "findCallNameBeforeParen"; "findFunctionArgTypeHint"; "findMatchingCloseToken"; "findTypedefStructBody"; "formatCompletionList"; "isIdentContinue"; "isIdentStart"; "parseDisplayRequestQuery"; "parseStrictInt"; "parseStructFieldNames"; "readDisplaySource"; "stripTypePath"; "synthesize"; "synthesizeExprOfStructCompletion"; "tokenizeDisplaySource"; "xmlEscape" ];
   HxType.register_class_instance_fields "hxhx.ExprMacroExpander" [];
-  HxType.register_class_static_fields "hxhx.ExprMacroExpander" [ "buildImportMap"; "escapeStringLiteral"; "expandResolvedModules"; "exprKind"; "isTrueEnv"; "matchAllowlistedCall"; "renderCalleePath"; "renderSimpleCall"; "rewriteExpr"; "rewriteStmt"; "shortenCall" ];
+  HxType.register_class_static_fields "hxhx.ExprMacroExpander" [ "buildImportMap"; "escapeStringLiteral"; "expandResolvedModules"; "exprKind"; "isTrueEnv"; "matchAllowlistedCall"; "renderCalleePath"; "renderSimpleCall"; "rewriteExpr"; "rewriteResolvedModules"; "rewriteStmt"; "shortenCall" ];
+  HxType.register_class_instance_fields "hxhx.ExprMacroLexicalScope" [ "child"; "declare"; "gaps"; "isStaticContext"; "markUnavailable"; "names"; "snapshot"; "unavailableReason" ];
+  HxType.register_class_static_fields "hxhx.ExprMacroLexicalScope" [];
   HxType.register_class_instance_fields "hxhx.Hxml" [];
   HxType.register_class_static_fields "hxhx.Hxml" [ "expandArgsToUnits"; "isSpace"; "joinPath"; "normalizeFsPath"; "parseFile"; "parseFileRec"; "parseFileUnits"; "resolveAgainstCwd"; "splitIntoUnits"; "tokenizeLine" ];
   HxType.register_class_instance_fields "hxhx.LibraryResolver" [];
@@ -9985,6 +10041,8 @@ let init () : unit =
   HxType.register_class_static_fields "hxhx.NativeBackendPluginHostAbi" [ "assertNoDescriptorConflicts"; "beginCapture"; "captureProviderTypesForPlugin"; "decodeRow"; "decodeSnapshot"; "fail"; "normalizeSourceLabel"; "providerTypesForPlugin"; "providerTypesForPluginAllowEmpty"; "providerTypesForPluginInternal"; "requireToken"; "trim"; "trimTrailingCr" ];
   HxType.register_class_instance_fields "hxhx.NativeBackendPluginLoader" [];
   HxType.register_class_static_fields "hxhx.NativeBackendPluginLoader" [ "fail"; "providerTypeNamesForNativeManifest"; "resolvedSpecsForProviders"; "trim" ];
+  HxType.register_class_instance_fields "hxhx.SelectedExprMacroCall" [ "arguments"; "call"; "declaration"; "getArguments"; "getCall"; "getDeclaration" ];
+  HxType.register_class_static_fields "hxhx.SelectedExprMacroCall" [];
   HxType.register_class_instance_fields "hxhx.Stage1Args" [ "classPaths"; "cmdCommands"; "cwd"; "defines"; "displayRequest"; "explicitClassPaths"; "hadCmd"; "hadRun"; "libs"; "macros"; "main"; "noOutput"; "resourceSpecs"; "roots"; "runArgs"; "standardLibraryRoot" ];
   HxType.register_class_static_fields "hxhx.Stage1Args" [ "expandHxmlArgs"; "getClassPaths"; "getCmdCommands"; "getCwd"; "getDefines"; "getDisplayRequest"; "getExplicitClassPaths"; "getHadCmd"; "getHadRun"; "getLibs"; "getMacros"; "getMain"; "getNoOutput"; "getResourceSpecs"; "getRoots"; "getRunArgs"; "getStandardLibraryRoot"; "inferStdRoot"; "inferStdRootForCwd"; "inferStdRootFromHaxerc"; "parse"; "readHaxercVersion"; "resolveHomeDir" ];
   HxType.register_class_instance_fields "hxhx.Stage1Compiler" [];
@@ -10025,6 +10083,8 @@ let init () : unit =
   HxType.register_class_static_fields "hxhx.Stage3SetupSupport" [ "buildDefinesMap"; "collectLibraryDefines"; "collectLibraryMacros"; "collectMacroStdPaths"; "collectNekoNdllPaths"; "hostArchitecture"; "isNekoPlatformPath"; "macroHostClassPaths"; "nekoCandidateLibraryRoots"; "nekoNativeLinkPath"; "nekoNdllHostPlatform"; "nekoNdllHostPlatforms"; "nekoNdllHostSuffixForArchitecture"; "nekoNdllPlatformForHost"; "projectClassPaths"; "resolveLibraries"; "stripTrailingSlashes"; "trailingSlash"; "trim" ];
   HxType.register_class_instance_fields "hxhx.Stage3WaitServer" [];
   HxType.register_class_static_fields "hxhx.Stage3WaitServer" [ "encodeConnectRequest"; "hasDefineFlag"; "parseConnectMode"; "parseWaitMode"; "processConnectResponse"; "readConnectDisplayStdin"; "runConnect"; "runWaitSocket"; "runWaitStdio"; "writeWaitStdioReply" ];
+  HxType.register_class_instance_fields "hxhx._ExprMacroDeclarationSelector.ExprMacroDeclarationSelector_Fields_" [];
+  HxType.register_class_static_fields "hxhx._ExprMacroDeclarationSelector.ExprMacroDeclarationSelector_Fields_" [ "capture"; "declaration"; "select"; "typePath"; "valueRoot" ];
   HxType.register_class_instance_fields "hxhx.macro.BuildFieldSnapshotPayload" [];
   HxType.register_class_static_fields "hxhx.macro.BuildFieldSnapshotPayload" [ "encodeParsedModule" ];
   HxType.register_class_instance_fields "hxhx.macro.InProcGeneratedEntrypoints" [];
@@ -10987,6 +11047,7 @@ let init () : unit =
   HxType.register_class_tags "hxhx.CompilerJsonParser" [ "hxhx.CompilerJsonParser" ];
   HxType.register_class_tags "hxhx.DisplayResponseSynthesizer" [ "hxhx.DisplayResponseSynthesizer" ];
   HxType.register_class_tags "hxhx.ExprMacroExpander" [ "hxhx.ExprMacroExpander" ];
+  HxType.register_class_tags "hxhx.ExprMacroLexicalScope" [ "hxhx.ExprMacroLexicalScope" ];
   HxType.register_class_tags "hxhx.Hxml" [ "hxhx.Hxml" ];
   HxType.register_class_tags "hxhx.LibraryResolver" [ "hxhx.LibraryResolver" ];
   HxType.register_class_tags "hxhx.Main" [ "hxhx.Main" ];
@@ -10994,6 +11055,7 @@ let init () : unit =
   HxType.register_class_tags "hxhx.NativeBackendPluginHost" [ "hxhx.NativeBackendPluginHost" ];
   HxType.register_class_tags "hxhx.NativeBackendPluginHostAbi" [ "hxhx.NativeBackendPluginHostAbi" ];
   HxType.register_class_tags "hxhx.NativeBackendPluginLoader" [ "hxhx.NativeBackendPluginLoader" ];
+  HxType.register_class_tags "hxhx.SelectedExprMacroCall" [ "hxhx.SelectedExprMacroCall" ];
   HxType.register_class_tags "hxhx.Stage1Args" [ "hxhx.Stage1Args" ];
   HxType.register_class_tags "hxhx.Stage1Compiler" [ "hxhx.Stage1Compiler" ];
   HxType.register_class_tags "hxhx.Stage1Resolver" [ "hxhx.Stage1Resolver" ];
@@ -11014,6 +11076,7 @@ let init () : unit =
   HxType.register_class_tags "hxhx.Stage3RunSupport" [ "hxhx.Stage3RunSupport" ];
   HxType.register_class_tags "hxhx.Stage3SetupSupport" [ "hxhx.Stage3SetupSupport" ];
   HxType.register_class_tags "hxhx.Stage3WaitServer" [ "hxhx.Stage3WaitServer" ];
+  HxType.register_class_tags "hxhx._ExprMacroDeclarationSelector.ExprMacroDeclarationSelector_Fields_" [ "hxhx._ExprMacroDeclarationSelector.ExprMacroDeclarationSelector_Fields_" ];
   HxType.register_class_tags "hxhx.macro.BuildFieldSnapshotPayload" [ "hxhx.macro.BuildFieldSnapshotPayload" ];
   HxType.register_class_tags "hxhx.macro.InProcGeneratedEntrypoints" [ "hxhx.macro.InProcGeneratedEntrypoints" ];
   HxType.register_class_tags "hxhx.macro.InProcMacroRuntime" [ "hxhx.macro.InProcMacroRuntime" ];

@@ -8,6 +8,7 @@ type stage3ocamlenumpayload =
 | DynamicValue
 | RuntimeTypeValue
 | AnonymousRecord of string
+| ArrayValue of TyType.t
 | EnumBox of string
 | NullableValue of stage3ocamlenumpayload
 
@@ -49,29 +50,42 @@ let create = fun owner2 moduleIdentity2 runtimeName2 outputModule2 constructors2
 let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.ocaml.Stage3OcamlEnumPlan"; owner = HxString.hx_null_string; moduleIdentity = HxString.hx_null_string; runtimeName = HxString.hx_null_string; outputModule = HxString.hx_null_string; constructors = Obj.magic HxRuntime.hx_null } : t)
 
 let requiredPayload = fun hx_type declaration -> (try let record = Obj.magic (TyAliasExpansion.reveal (Obj.magic hx_type)) in (
-  ignore (if TyType.isAnonymous (Obj.magic record) () && not (TyType.hasUnknownComponent (Obj.magic record) ()) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __enum_arg_45 = (TyType.getSemanticKey (Obj.magic record) () : string) in AnonymousRecord (Stdlib.Sys.opaque_identity __enum_arg_45)))) else ());
+  ignore (if TyType.isAnonymous (Obj.magic record) () && not (TyType.hasUnknownComponent (Obj.magic record) ()) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __enum_arg_52 = (TyType.getSemanticKey (Obj.magic record) () : string) in AnonymousRecord (Stdlib.Sys.opaque_identity __enum_arg_52)))) else ());
   ignore (if TyType.isDynamic (Obj.magic hx_type) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr DynamicValue)) else ());
-  ignore (if let __string_eq_left_46 = TyType.getSemanticKey (Obj.magic hx_type) () in let __string_eq_right_47 = TyType.getSemanticKey (Obj.magic (TyType.fromHintText ("Int" : string))) () in HxString.equals __string_eq_left_46 __string_eq_right_47 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr NativeInt)) else ());
-  ignore (if let __string_eq_left_48 = TyType.getSemanticKey (Obj.magic hx_type) () in let __string_eq_right_49 = TyType.getSemanticKey (Obj.magic (TyType.fromHintText ("Bool" : string))) () in HxString.equals __string_eq_left_48 __string_eq_right_49 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr NativeBool)) else ());
-  ignore (if let __string_eq_left_50 = TyType.getSemanticKey (Obj.magic hx_type) () in let __string_eq_right_51 = TyType.getSemanticKey (Obj.magic (TyType.fromHintText ("String" : string))) () in HxString.equals __string_eq_left_50 __string_eq_right_51 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr NativeString)) else ());
+  ignore (if let __string_eq_left_53 = TyType.getSemanticKey (Obj.magic hx_type) () in let __string_eq_right_54 = TyType.getSemanticKey (Obj.magic (TyType.fromHintText ("Int" : string))) () in HxString.equals __string_eq_left_53 __string_eq_right_54 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr NativeInt)) else ());
+  ignore (if let __string_eq_left_55 = TyType.getSemanticKey (Obj.magic hx_type) () in let __string_eq_right_56 = TyType.getSemanticKey (Obj.magic (TyType.fromHintText ("Bool" : string))) () in HxString.equals __string_eq_left_55 __string_eq_right_56 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr NativeBool)) else ());
+  ignore (if let __string_eq_left_57 = TyType.getSemanticKey (Obj.magic hx_type) () in let __string_eq_right_58 = TyType.getSemanticKey (Obj.magic (TyType.fromHintText ("String" : string))) () in HxString.equals __string_eq_left_57 __string_eq_right_58 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr NativeString)) else ());
   let nominal = Obj.magic (TyType.getNominalIdentity (Obj.magic hx_type) ()) in (
-    ignore (if nominal != Obj.magic (HxRuntime.hx_null) && ((let __string_eq_left_52 = TyNominalTypeId.getCanonicalName (Obj.magic nominal) () in let __string_eq_right_53 = "Class" in HxString.equals __string_eq_left_52 __string_eq_right_53) || (let __string_eq_left_54 = TyNominalTypeId.getCanonicalName (Obj.magic nominal) () in let __string_eq_right_55 = "Enum" in HxString.equals __string_eq_left_54 __string_eq_right_55)) && HxArray.length (TyType.getTypeArguments (Obj.magic hx_type) ()) = 1 && not (TyType.hasUnknownComponent (Obj.magic hx_type) ()) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr RuntimeTypeValue)) else ());
-    ignore (if nominal != Obj.magic (HxRuntime.hx_null) && HxArray.length (TyType.getTypeArguments (Obj.magic hx_type) ()) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __enum_arg_56 = (TyNominalTypeId.getCanonicalName (Obj.magic nominal) () : string) in EnumBox (Stdlib.Sys.opaque_identity __enum_arg_56)))) else ());
-    HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_57 = "OCaml enum payload representation is not implemented: " in let __string_part_58 = HxString.toStdString declaration in let __string_part_59 = " / " in let __string_part_60 = HxString.toStdString (TyType.getDisplay (Obj.magic hx_type) ()) in ((__string_part_57 ^ __string_part_58) ^ __string_part_59) ^ __string_part_60)) ["Dynamic"]
+    ignore (if nominal != Obj.magic (HxRuntime.hx_null) && ((let __string_eq_left_59 = TyNominalTypeId.getCanonicalName (Obj.magic nominal) () in let __string_eq_right_60 = "Class" in HxString.equals __string_eq_left_59 __string_eq_right_60) || (let __string_eq_left_61 = TyNominalTypeId.getCanonicalName (Obj.magic nominal) () in let __string_eq_right_62 = "Enum" in HxString.equals __string_eq_left_61 __string_eq_right_62)) && HxArray.length (TyType.getTypeArguments (Obj.magic hx_type) ()) = 1 && not (TyType.hasUnknownComponent (Obj.magic hx_type) ()) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr RuntimeTypeValue)) else ());
+    ignore (if nominal != Obj.magic (HxRuntime.hx_null) && HxArray.length (TyType.getTypeArguments (Obj.magic hx_type) ()) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __enum_arg_63 = (TyNominalTypeId.getCanonicalName (Obj.magic nominal) () : string) in EnumBox (Stdlib.Sys.opaque_identity __enum_arg_63)))) else ());
+    HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_64 = "OCaml enum payload representation is not implemented: " in let __string_part_65 = HxString.toStdString declaration in let __string_part_66 = " / " in let __string_part_67 = HxString.toStdString (TyType.getDisplay (Obj.magic hx_type) ()) in ((__string_part_64 ^ __string_part_65) ^ __string_part_66) ^ __string_part_67)) ["Dynamic"]
   )
 ) with
-  | HxRuntime.Hx_return __ret_61 -> (Obj.obj __ret_61 : stage3ocamlenumpayload) : stage3ocamlenumpayload)
+  | HxRuntime.Hx_return __ret_68 -> (Obj.obj __ret_68 : stage3ocamlenumpayload) : stage3ocamlenumpayload)
 
-let payload = fun hx_type declaration optional -> let value = Obj.magic (requiredPayload (Obj.magic (TyType.unwrapNull (Obj.magic hx_type) ())) (declaration : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : stage3ocamlenumpayload) in (
-  ignore (if optional || TyType.isNullWrapped (Obj.magic hx_type) () then let __assign_42 = Obj.magic (let __enum_arg_43 = Obj.magic value in NullableValue (Stdlib.Sys.opaque_identity __enum_arg_43)) in (
-    tempResult := __assign_42;
-    __assign_42
-  ) else let __assign_44 = Obj.magic value in (
-    tempResult := __assign_44;
-    __assign_44
-  ));
-  !tempResult
-)
+let payload = fun hx_type declaration optional -> (try let concrete = Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic hx_type)) in let nominal = Obj.magic (TyType.getNominalIdentity (Obj.magic concrete) ()) in (
+  ignore (if nominal != Obj.magic (HxRuntime.hx_null) && (let __string_eq_left_42 = TyNominalTypeId.getCanonicalName (Obj.magic nominal) () in let __string_eq_right_43 = "Array" in HxString.equals __string_eq_left_42 __string_eq_right_43) && HxArray.length (TyType.getTypeArguments (Obj.magic concrete) ()) = 1 && not (TyType.hasUnknownComponent (Obj.magic concrete) ()) then let value = let __enum_arg_44 = Obj.magic concrete in ArrayValue (Stdlib.Sys.opaque_identity __enum_arg_44) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : stage3ocamlenumpayload) in (
+    ignore (if optional || TyType.isNullWrapped (Obj.magic (TyAliasExpansion.reveal (Obj.magic hx_type))) () then let __assign_45 = Obj.magic (let __enum_arg_46 = Obj.magic value in NullableValue (Stdlib.Sys.opaque_identity __enum_arg_46)) in (
+      tempResult := __assign_45;
+      __assign_45
+    ) else let __assign_47 = Obj.magic value in (
+      tempResult := __assign_47;
+      __assign_47
+    ));
+    Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
+  ) else ());
+  let value = Obj.magic (requiredPayload (Obj.magic (TyType.unwrapNull (Obj.magic hx_type) ())) (declaration : string)) in let tempResult1 = ref (Obj.magic (HxRuntime.hx_null) : stage3ocamlenumpayload) in (
+    ignore (if optional || TyType.isNullWrapped (Obj.magic hx_type) () then let __assign_48 = Obj.magic (let __enum_arg_49 = Obj.magic value in NullableValue (Stdlib.Sys.opaque_identity __enum_arg_49)) in (
+      tempResult1 := __assign_48;
+      __assign_48
+    ) else let __assign_50 = Obj.magic value in (
+      tempResult1 := __assign_50;
+      __assign_50
+    ));
+    !tempResult1
+  )
+) with
+  | HxRuntime.Hx_return __ret_51 -> (Obj.obj __ret_51 : stage3ocamlenumpayload) : stage3ocamlenumpayload)
 
 let fromProjection = fun projection outputModule2 packagePath valueName -> (try let declaration = Obj.magic (TypedBackendClassProjection.getDeclaration (Obj.magic projection) ()) in (
   ignore (if HxClassDecl.getEnumDeclaration (Obj.magic declaration) == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
