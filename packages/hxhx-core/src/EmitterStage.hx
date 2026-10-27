@@ -1967,6 +1967,16 @@ class EmitterStage {
 	}
 
 	static function stage3IsIntExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
+		// Callback aliases, applied generic calls, and selected methods retain
+		// their result on the exact projected call. A spelling-based signature
+		// lookup cannot recover that result safely, especially for nested sums.
+		switch expr {
+			case ECall(_, _):
+				final call = currentTypedInitializer != null ? currentTypedInitializer.findCallableExpression(expr) : currentTypedFunction == null ? null : currentTypedFunction.findCallableExpression(expr);
+				if (call != null && call.getTag() == Call)
+					return call.getType().getSemanticKey() == "primitive:Int";
+			case _:
+		}
 		final exact = objectAccessType(expr);
 		if (exact != null)
 			return exact.getSemanticKey() == "primitive:Int";
@@ -2303,19 +2313,20 @@ class EmitterStage {
 		}
 	}
 
+	/** HxInt owns arithmetic; ordered application preserves each operand's effects and abrupt completion. */
 	static function intBinopCallStage3(op:String, left:String, right:String):String {
-		return switch (op) {
-			case "+":
-				"(HxInt.add (" + left + ") (" + right + "))";
-			case "-":
-				"(HxInt.sub (" + left + ") (" + right + "))";
-			case "*":
-				"(HxInt.mul (" + left + ") (" + right + "))";
-			case "%":
-				"(HxInt.rem (" + left + ") (" + right + "))";
-			case _:
-				"(Obj.magic 0)";
-		}
+		final operation = switch (op) {
+			case "+": "add";
+			case "-": "sub";
+			case "*": "mul";
+			case "%": "rem";
+			case _: throw "unsupported native Int arithmetic operator";
+		};
+		return backend.ocaml.Stage3OcamlCallOrder.render({
+			callee: "HxInt." + operation,
+			arguments: [left, right],
+			names: currentFunctionLocalOcamlNames
+		});
 	}
 
 	static function exprToOcamlForConcatStage3(expr:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
