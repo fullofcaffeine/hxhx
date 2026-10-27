@@ -217,6 +217,27 @@ class TyperContext {
 	}
 
 	/**
+		Use a written or enclosing result type to disambiguate a bare constructor.
+
+		Only the exact enum owner contributes candidates. Argument types never
+		search other enums, and callers retain local and current-method precedence.
+	**/
+	public function expectedEnumConstructorMethod(name:String, expected:Null<TyType>):Null<TyImportedStaticMethod> {
+		if (index == null || expected == null || name == null || name.length == 0)
+			return null;
+		final identity = TyAliasExpansion.revealNonNullable(expected).getNominalIdentity();
+		final provider = identity == null ? null : index.getByFullName(identity.getCanonicalName());
+		if (provider == null || !provider.getIsEnum())
+			return null;
+		final candidates = [
+			for (candidate in provider.staticMethodCandidates(name))
+				if (provider.declarationForSignature(candidate) != null
+					&& provider.declarationForSignature(candidate).getIsEnumConstructor()) candidate
+		];
+		return candidates.length == 0 ? null : new TyImportedStaticMethod(provider, name, candidates);
+	}
+
+	/**
 		Resolve one unique enum constructor declared by a type in the current module.
 
 		Haxe makes same-module enum constructors available as bare calls. The

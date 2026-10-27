@@ -935,7 +935,8 @@ class TypedBodyBuilder {
 					loweredProbe;
 				} else {
 					final resolution = callResolver == null
-						|| environment == null ? new TypedCallResolution() : callResolver(callee, arguments, diagnosticPosition, environment, expression);
+						|| environment == null ? new TypedCallResolution() : callResolver(callee, arguments, diagnosticPosition, environment, expression,
+							expected);
 					// A declaration-selected generic call owns its applied signature. Replaying
 					// its callee must not allocate an unrelated stored-method capture.
 					// A selected enum constructor also owns its callable signature: the

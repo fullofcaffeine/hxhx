@@ -526,9 +526,9 @@ class TyperStage {
 						(signature, actual, parameters) -> overloadCandidateScore(signature, actual, actual.length, parameters, context.getIndex()));
 				}
 			};
-			final callResolver:TypedCallDeclarationResolver = function(callee, arguments, position, lexicalEnvironment, callExpression) {
+			final callResolver:TypedCallDeclarationResolver = function(callee, arguments, position, lexicalEnvironment, callExpression, resultContext) {
 				final inferenceEnvironment = lexicalEnvironment.copyForInference();
-				var selection = resolveCallSelection(callee, arguments, inferenceEnvironment, context, position);
+				var selection = resolveCallSelection(callee, arguments, inferenceEnvironment, context, position, resultContext);
 				var declaration = selection == null ? null : selection.declaration;
 				var extensionProvider:Null<TyNominalTypeId> = null;
 				if (declaration == null) {
@@ -1944,11 +1944,12 @@ class TyperStage {
 	}
 
 	/** Keep the winning argument order with its declaration for typed-body publication. */
-	static function resolveCallSelection(callee:HxExpr, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Null<TyMethodCallResolution> {
+	static function resolveCallSelection(callee:HxExpr, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos,
+			?expectedResult:TyType):Null<TyMethodCallResolution> {
 		switch (callee) {
 			case EParenthesized(inner, _) | EPrivateAccess(inner, _):
-				return resolveCallSelection(inner, args, scope, ctx, pos);
-			case EIdent(name):
+				return resolveCallSelection(inner, args, scope, ctx, pos, expectedResult);
+			case EIdent(name) | EEnumValue(name):
 				if (scope.resolveSymbol(name) != null)
 					return null;
 				final owner = ctx.currentClass();
@@ -1957,15 +1958,8 @@ class TyperStage {
 					return resolveCallSelectionCandidate(instanceOwner, name, false, args, scope, ctx, pos);
 				if (owner != null && owner.staticMethodCandidates(name).length > 0)
 					return resolveCallSelectionCandidate(owner, name, true, args, scope, ctx, pos);
-				final moduleEnumConstructor = ctx.moduleEnumConstructorMethod(name);
-				if (moduleEnumConstructor != null)
-					return resolveCallSelectionCandidate(moduleEnumConstructor.getProvider(), moduleEnumConstructor.getMemberName(), true, args, scope, ctx,
-						pos, moduleEnumConstructor.getCandidates());
-				final importedMethod = ctx.importedStaticMethod(name);
-				return importedMethod == null ? null : resolveCallSelectionCandidate(importedMethod.getProvider(), importedMethod.getMemberName(), true, args,
-					scope, ctx, pos, importedMethod.getCandidates());
-			case EEnumValue(name):
-				final moduleEnumConstructor = ctx.moduleEnumConstructorMethod(name);
+				final expectedConstructor = ctx.expectedEnumConstructorMethod(name, expectedResult);
+				final moduleEnumConstructor = expectedConstructor == null ? ctx.moduleEnumConstructorMethod(name) : expectedConstructor;
 				if (moduleEnumConstructor != null)
 					return resolveCallSelectionCandidate(moduleEnumConstructor.getProvider(), moduleEnumConstructor.getMemberName(), true, args, scope, ctx,
 						pos, moduleEnumConstructor.getCandidates());
@@ -2969,7 +2963,7 @@ class TyperStage {
 
 				// Best-effort: type children for local inference, and use the index when we can.
 				switch (callee) {
-					case EIdent(name):
+					case EIdent(name) | EEnumValue(name):
 						// A bare call inside a class can name one of that class's static
 						// methods. Keep local function values authoritative, then use the
 						// same declaration lookup as the structural typed-call builder so
@@ -2981,7 +2975,8 @@ class TyperStage {
 						} else if (owner != null && owner.staticMethodCandidates(name).length > 0) {
 							selectedCallType(resolveMethodCall(owner, name, true, args, scope, ctx, pos), capture);
 						} else {
-							final moduleEnumConstructor = scope.resolveSymbol(name) == null ? ctx.moduleEnumConstructorMethod(name) : null;
+							final expectedConstructor = scope.resolveSymbol(name) == null ? ctx.expectedEnumConstructorMethod(name, expectedResult) : null;
+							final moduleEnumConstructor = expectedConstructor != null ? expectedConstructor : scope.resolveSymbol(name) == null ? ctx.moduleEnumConstructorMethod(name) : null;
 							if (moduleEnumConstructor != null) {
 								selectedCallType(resolveMethodCall(moduleEnumConstructor.getProvider(), moduleEnumConstructor.getMemberName(), true, args,
 									scope, ctx, pos, moduleEnumConstructor.getCandidates()),
@@ -2996,21 +2991,6 @@ class TyperStage {
 									inferFunctionValueCall(callee, args, scope, ctx, pos);
 								}
 							}
-						}
-					case EEnumValue(name):
-						final moduleEnumConstructor = ctx.moduleEnumConstructorMethod(name);
-						if (moduleEnumConstructor != null) {
-							selectedCallType(resolveMethodCall(moduleEnumConstructor.getProvider(), moduleEnumConstructor.getMemberName(), true, args, scope,
-								ctx, pos, moduleEnumConstructor.getCandidates()),
-								capture);
-						} else {
-							final importedMethod = ctx.importedStaticMethod(name);
-							if (importedMethod != null)
-								selectedCallType(resolveMethodCall(importedMethod.getProvider(), importedMethod.getMemberName(), true, args, scope, ctx, pos,
-									importedMethod.getCandidates()),
-									capture);
-							else
-								inferFunctionValueCall(callee, args, scope, ctx, pos);
 						}
 					case EField(obj, field):
 						// A declared data field can contain a function. Its argument and
