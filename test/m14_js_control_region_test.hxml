@@ -51,6 +51,7 @@ test/m14_pattern_capture_coverage_test.hxml
 --interp
 --next
 -cp packages/hxhx-core/src
+-cp packages/hxhx/src
 -cp test
 -main M14UntypedRangeInferenceTest
 --interp

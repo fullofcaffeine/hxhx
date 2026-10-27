@@ -44,7 +44,7 @@ class M14CppCatchControlTest {
 		plan.assertCurrent();
 		final path = "test/oracle/cpp_catch_control_seed/CatchControl.hx";
 		final module = new ResolvedModule("CatchControl", path, ParserStage.parse(sys.io.File.getContent(path), path));
-		final otherFn = TyperStage.typeResolvedModule(module, TyperIndex.build([module]))
+		final otherFn = M14Stage3RuntimeFixture.typeResolved({module: module, root: "test/oracle/cpp_catch_control_seed"})
 			.getTypedClasses()[0].getFunctions().filter(value -> HxFunctionDecl.getName(value.getSourceDeclaration()) == "select")[0];
 		final other = TypedBodySource.functionProjection(otherFn);
 		reject(() -> rooted.renderTry(Statement(other.getBody()[0]), "", _ -> [], (_, _) -> []), "not an exact statement");

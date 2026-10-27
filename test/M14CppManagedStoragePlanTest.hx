@@ -14,7 +14,7 @@ import backend.cpp.CppManagedRootedExpression;
 class M14CppManagedStoragePlanTest {
 	static function projection(source:String):TypedBackendFunctionProjection {
 		final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
-		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved])).getTypedClasses()[0].getFunctions()[0];
+		final typed = M14Stage3RuntimeFixture.typeResolved({module: resolved, root: "."}).getTypedClasses()[0].getFunctions()[0];
 		return TypedBodySource.functionProjection(typed);
 	}
 
