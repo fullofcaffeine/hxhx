@@ -19,5 +19,6 @@ It compiles the imported `Main` observer to OCaml and compares native
 runtime output with `expected.stdout`. All three required source modules remain
 in the program, with its entry module first as the compiler API requires. The
 observer includes optional record payloads, explicitly qualified constructor
-calls, and a switch result. Switch patterns use short constructor names. This
-test does not establish macro dispatch or host ABI support.
+calls and patterns, and a switch result. Qualified patterns must match the
+selected constructor's runtime name, just like short patterns. This test does
+not establish macro dispatch or host ABI support.

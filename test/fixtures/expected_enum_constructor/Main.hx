@@ -5,7 +5,7 @@ import Second;
 class Main {
 	static function first(value:First):String {
 		return switch value {
-			case Build(text, record): text + (record == null ? ":absent" : ":" + record.name);
+			case First.Build(text, record): text + (record == null ? ":absent" : ":" + record.name);
 		};
 	}
 
@@ -23,7 +23,7 @@ class Main {
 		Sys.println(first(qualified));
 		Sys.println(first(branch));
 		Sys.println(switch fallback {
-			case Build(value, flag): Std.string(value) + ":" + Std.string(flag);
+			case Second.Build(value, flag): Std.string(value) + ":" + Std.string(flag);
 		});
 	}
 }

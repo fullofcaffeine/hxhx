@@ -42,12 +42,12 @@ class Main {
 
 	static function read(value:Choice):Int {
 		return switch value {
-			case Empty: 1;
-			case Pair(number, flag): flag ? number : -number;
+			case Choice.Empty: 1;
+			case Choice.Pair(number, flag): flag ? number : -number;
 			case Last: 2;
 			case Text("yes"): 3;
-			case Wrap(Pair(number, true)): number + 100;
-			case Wrap(Empty): 4;
+			case Choice.Wrap(Choice.Pair(number, true)): number + 100;
+			case Wrap(Choice.Empty): 4;
 			case Maybe(null): 5;
 			case Maybe(Pair(number, true)): number + 200;
 			case OptionalNumber(number): number == null ? 30 : number + 300;
@@ -61,8 +61,8 @@ class Main {
 
 	static function other(value:Other):Int {
 		return switch value {
-			case Empty: 10;
-			case Pair(number): number;
+			case Other.Empty: 10;
+			case Other.Pair(number): number;
 			case _: 0;
 		};
 	}

@@ -66,7 +66,9 @@ function select(input:PatternSelection):String {
 	Use selected enum-abstract values before constructing the decision matrix.
 	A null alias must participate in null ordering, just like a literal null case.
 	Lookup uses the original occurrence so another body's equal-looking case cannot
-	borrow its declaration. Ordinary enum constructors retain their payload shape.
+	borrow its declaration. Ordinary enum constructors use the selected member's
+	runtime name, so qualified source spelling cannot change matching behavior.
+	Their payload patterns keep the same shape and exact nested selections.
  */
 private function constantPattern(pattern:HxSwitchPattern, lookup:HxSwitchPattern->Null<TypedNamedPattern>):HxSwitchPattern {
 	function named(arguments:Array<HxSwitchPattern>):HxSwitchPattern {
@@ -84,11 +86,12 @@ private function constantPattern(pattern:HxSwitchPattern, lookup:HxSwitchPattern
 					case BoolValue(value): PBool(value);
 					case _: throw "OCaml constant pattern requires a resolved constant";
 				}
-			case Constructor(_, _, _, arity):
+			case Constructor(_, member, _, arity):
 				if (arity != arguments.length)
 					throw "OCaml constructor pattern arity differs from typing";
 				switch pattern {
-					case PEnumExtract(name, _): PEnumExtract(name, [for (child in arguments) constantPattern(child, lookup)]);
+					case PEnumValue(_): PEnumValue(member);
+					case PEnumExtract(_, _): PEnumExtract(member, [for (child in arguments) constantPattern(child, lookup)]);
 					case _: pattern;
 				}
 		};
