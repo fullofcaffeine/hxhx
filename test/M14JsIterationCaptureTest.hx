@@ -10,7 +10,7 @@ class M14JsIterationCaptureTest {
 		Sys.println("JS_ITERATION_CAPTURE_UPSTREAM:PASS");
 		final path = root + "/Main.hx";
 		final resolved = new ResolvedModule("Main", path, ParserStage.parse(File.getContent(path), path));
-		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		final typed = M14Stage3RuntimeFixture.typeResolved({module: resolved, root: root});
 		JsRuntimeFixture.assertRuntime(typed, "Main", "");
 		@:privateAccess JsRuntimeFixture.removeOutput(output);
 		Sys.println("JS_ITERATION_CAPTURE_RUNTIME:PASS");
