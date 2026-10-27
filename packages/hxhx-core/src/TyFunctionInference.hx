@@ -1,5 +1,7 @@
 import haxe.ds.StringMap;
 import TyInferenceTerm;
+import TyMethodInputState.TyMethodInputBatch;
+import TyIndexedUpdateSelection.TyIndexedUpdateQuery;
 
 /** Already aligned source operands retain their inference identities across a member call. */
 private typedef MemberInputSources = {
@@ -60,6 +62,108 @@ class TyFunctionInference {
 	var speculativeReplay:Bool = false;
 	var iteratorProtocols:Array<TyIteratorProtocolSource> = [];
 	var indexedAccesses:Array<TyIndexedAccessBinding> = [];
+	var indexedUpdates:Array<TyIndexedUpdateSelection> = [];
+
+	static function unchangedArray<T>(read:() -> Array<T>):() -> Bool {
+		final saved = read().copy();
+		return function() {
+			final current = read();
+			if (current.length != saved.length)
+				return false;
+			for (index in 0...saved.length)
+				if (saved[index] != current[index])
+					return false;
+			return true;
+		};
+	}
+
+	/** Capture fact identity as well as solver lineage: known facts can change without solving a variable. */
+	function unchangedFacts():() -> Bool {
+		final arrays = [
+			unchangedArray(() -> occurrences),
+			unchangedArray(() -> classValueUses),
+			unchangedArray(() -> directCalls),
+			unchangedArray(() -> receiverCalls),
+			unchangedArray(() -> capturedCalls),
+			unchangedArray(() -> callbackArguments),
+			unchangedArray(() -> sourceFunctions),
+			unchangedArray(() -> iteratorProtocols),
+			unchangedArray(() -> indexedAccesses),
+			unchangedArray(() -> indexedUpdates),
+			unchangedArray(() -> diagnosticProbes)
+		];
+		final savedLocals = new StringMap<TyInferenceTerm>();
+		for (key => value in locals)
+			savedLocals.set(key, value);
+		final replay = speculativeReplay;
+		return function() {
+			if (replay != speculativeReplay)
+				return false;
+			for (unchanged in arrays)
+				if (!unchanged())
+					return false;
+			for (key => value in locals)
+				if (!savedLocals.exists(key) || savedLocals.get(key) != value)
+					return false;
+			for (key in savedLocals.keys())
+				if (!locals.exists(key))
+					return false;
+			return true;
+		};
+	}
+
+	/**
+		Start only after authored operands have been typed in their owning environment.
+		The candidate receives retained facts, never permission to declare copied source locals.
+		Only query identities exist here; getter, operator and setter selection runs
+		inside this fork and supplies a completed selection to commitIndexedUpdate.
+	 */
+	public function beginIndexedUpdate(query:TyIndexedUpdateQuery):TyIndexedUpdateTrial {
+		query.validate(owner);
+		final unchanged = unchangedFacts();
+		final candidate = fork();
+		return new TyIndexedUpdateTrial(this, candidate, query, unchanged);
+	}
+
+	/**
+		Publish one fully checked selection after every owner validates its base.
+		Synchronous publication contains no callbacks, so method inputs cannot change
+		between validation and publication. A failed selection simply discards its trial.
+	 */
+	public function commitIndexedUpdate(trial:TyIndexedUpdateTrial, selection:TyIndexedUpdateSelection, inputs:TyMethodInputState,
+			batch:TyMethodInputBatch):Void {
+		if (trial == null || trial.parent != this || trial.committed || !trial.parentUnchanged())
+			throw "indexed update inference facts are foreign or stale";
+		if (selection == null || selection.query != trial.query)
+			throw "indexed update selection belongs to another trial query";
+		selection.validate(owner);
+		for (unchanged in trial.environmentsUnchanged)
+			if (!unchanged())
+				throw "indexed update candidate changed authored lexical or control state";
+		for (selection in trial.candidate.indexedUpdates)
+			selection.validate(owner);
+		solver.validateCandidate(trial.candidate.solver);
+		inputs.validateBatch(batch);
+		// Every check is complete before any participant publishes state.
+		solver.commit(trial.candidate.solver);
+		occurrences = trial.candidate.occurrences.copy();
+		classValueUses = trial.candidate.classValueUses.copy();
+		directCalls = trial.candidate.directCalls.copy();
+		receiverCalls = trial.candidate.receiverCalls.copy();
+		capturedCalls = trial.candidate.capturedCalls.copy();
+		callbackArguments = trial.candidate.callbackArguments.copy();
+		sourceFunctions = trial.candidate.sourceFunctions.copy();
+		iteratorProtocols = trial.candidate.iteratorProtocols.copy();
+		indexedAccesses = trial.candidate.indexedAccesses.copy();
+		indexedUpdates = trial.candidate.indexedUpdates.copy();
+		indexedUpdates.push(selection);
+		diagnosticProbes = trial.candidate.diagnosticProbes.copy();
+		locals = new StringMap();
+		for (key => value in trial.candidate.locals)
+			locals.set(key, value);
+		inputs.publishBatch(batch);
+		trial.committed = true;
+	}
 
 	/** A selected helper belongs to the original indexed occurrence, including after its receiver becomes more specific. */
 	public function indexedAccess(source:HxExpr, ?select:() -> TyIndexedAccessBinding):Null<TyIndexedAccessBinding> {
@@ -381,7 +485,12 @@ class TyFunctionInference {
 		locals.set(key, symbol.getType().isNullable() ? TyInferenceTerm.Nullable(inferred) : inferred);
 	}
 
-	/** Speculative replay shares sealed solutions but owns aliases for its temporary declarations. */
+	/**
+		Speculative replay shares sealed solutions but owns aliases for its temporary declarations.
+		Retained records and nested term arrays are borrowed read-only, as in ordinary
+		inference forks. Supported candidate methods replace records or constrain their
+		own solver; callers must never edit a term obtained from sourceTerm in place.
+	 */
 	public function fork():TyFunctionInference {
 		final candidate = new TyFunctionInference(owner);
 		candidate.solver = solver.isSealed() ? solver : solver.fork();
@@ -395,6 +504,7 @@ class TyFunctionInference {
 		candidate.sourceFunctions = sourceFunctions.copy();
 		candidate.iteratorProtocols = iteratorProtocols.copy();
 		candidate.indexedAccesses = indexedAccesses.copy();
+		candidate.indexedUpdates = indexedUpdates.copy();
 		candidate.diagnosticProbes = diagnosticProbes.copy();
 		for (key => value in locals)
 			candidate.locals.set(key, value);

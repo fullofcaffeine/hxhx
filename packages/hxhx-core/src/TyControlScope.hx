@@ -64,6 +64,43 @@ class TyControlScope {
 	public function copyForInference():TyControlScope
 		return copyState(this, false, false);
 
+	/** Indexed helper selection consumes retained operands; it cannot add source control destinations or returns. */
+	@:allow(TyFunctionEnv)
+	function unchangedForIndexedSelection():() -> Bool {
+		final savedTargets = targets.copy();
+		final savedActive = active.copy();
+		final savedStates = returnStates.copy();
+		final savedValues = savedStates.map(state -> state.getValues());
+		final savedCursor = cursor;
+		final savedReplay = replay;
+		return function() {
+			if (cursor != savedCursor
+				|| replay != savedReplay
+				|| targets.length != savedTargets.length
+				|| active.length != savedActive.length
+				|| returnStates.length != savedStates.length)
+				return false;
+			for (index in 0...targets.length)
+				if (targets[index] != savedTargets[index])
+					return false;
+			for (index in 0...active.length)
+				if (active[index] != savedActive[index])
+					return false;
+			for (index in 0...returnStates.length) {
+				if (returnStates[index] != savedStates[index])
+					return false;
+				final values = returnStates[index].getValues();
+				if (values.length != savedValues[index].length)
+					return false;
+				for (ordinal in 0...values.length)
+					if (values[ordinal].term != savedValues[index][ordinal].term
+						|| values[ordinal].position != savedValues[index][ordinal].position)
+						return false;
+			}
+			return true;
+		};
+	}
+
 	public function getRoot():TyControlTarget
 		return targets[0];
 
