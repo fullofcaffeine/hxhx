@@ -123,7 +123,7 @@ private function value(index:TyperIndex, solver:TyInferenceSolver, actual:TyInfe
 	if (!preview.hasUnknownComponent() && !expected.hasUnknownComponent()) {
 		final expectedKey = expected.getSemanticKey();
 		final actualKey = preview.getSemanticKey();
-		if (expectedKey == actualKey)
+		if (expectedKey == actualKey || TyAliasEquivalence.equivalentTypes(expected, preview))
 			return true;
 		for (ancestor in proof)
 			if (ancestor.expected == expectedKey && ancestor.actual == actualKey && ancestor.direction == direction)
