@@ -447,11 +447,13 @@ cat >"$tmpdir/src/JsNativeRangeExprMain.hx" <<'HX'
 class JsNativeRangeExprMain {
   static function main() {
     var items = 1...5;
+    var count = 0;
     var sum = 0;
     for (value in items) {
+      count++;
       sum += value;
     }
-    Sys.println("js-native-range-expr:" + items.length + ":" + sum);
+    Sys.println("js-native-range-expr:" + count + ":" + sum);
   }
 }
 HX
