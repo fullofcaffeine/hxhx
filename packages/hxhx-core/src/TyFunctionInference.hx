@@ -174,6 +174,43 @@ class TyFunctionInference {
 		});
 	}
 
+	/** Indexing retains the allocation's element variable; declared ancestry only supplies a view of that same child. */
+	public function recordIndexedResult(source:HxExpr, receiver:HxExpr, environment:TyFunctionEnv, index:TyperIndex):Void {
+		if (index == null || occurrence(source) != null)
+			return;
+		final original = sourceTerm(receiver, environment);
+		if (original == null)
+			return;
+		function nonNullable(term:TyInferenceTerm):TyInferenceTerm
+			return switch term {
+				case Nullable(inner): nonNullable(inner);
+				case _: term;
+			};
+		final viewedReceiver = nonNullable(original);
+		final provider = switch viewedReceiver {
+			case Nominal(identity, _): index.getByFullName(identity.getCanonicalName());
+			case _: null;
+		};
+		// Abstract operators have their own declaration-selection contract. Their
+		// backing storage alone does not authorize indexing or choose an element.
+		if (!Std.isOfType(provider, TyClassInfo))
+			return;
+		for (path in ["Array", "StdTypes.ArrayAccess"]) {
+			final identity = new TyNominalTypeId(path);
+			final viewed = TyInferenceNominalContext.view(index, viewedReceiver, TyType.nominal(identity, []));
+			final element = switch viewed {
+				case Nominal(owner, [child]) if (owner.equals(identity)): child;
+				case _: null;
+			};
+			if (element == null)
+				continue;
+			if (solver.isSealed())
+				throw "indexed result is absent from sealed inference";
+			occurrences.push({expression: source, term: element, sourceFingerprint: TypedBodyFingerprint.exactExpression(source)});
+			return;
+		}
+	}
+
 	/** A different occurrence receives no permission from an earlier call with the same spelling. */
 	public function receiverCallParameters(source:HxExpr, declaration:TyDeclarationInfo, parameters:Array<TyType>):Array<TyType> {
 		for (entry in receiverCalls)
