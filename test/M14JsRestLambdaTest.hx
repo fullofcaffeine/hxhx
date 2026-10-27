@@ -37,8 +37,12 @@ class M14JsRestLambdaTest {
 			].join("\n") + "\n";
 			run("node", [root + "/upstream.js"], upstreamExpected);
 			Sys.println("JS_REST_LAMBDA_UPSTREAM:PASS " + entry.name);
-			final typed = @:privateAccess M14GenericDynamicInferenceTest.typeSource(entry.source, root, path);
-			JsRuntimeFixture.assertRuntime(typed, "Main", entry.expected);
+			final program = JsSourceProgramFixture.build({
+				sources: [{path: "Main.hx", source: entry.source}],
+				requiredModules: ["haxe.Rest"],
+				mode: "full"
+			});
+			JsRuntimeFixture.assertProgramRuntime(program, "Main", entry.expected);
 			Sys.println("JS_REST_LAMBDA:PASS " + entry.name);
 		}
 	}
