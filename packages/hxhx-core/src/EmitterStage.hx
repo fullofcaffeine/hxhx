@@ -150,6 +150,15 @@ class EmitterStage {
 	static var currentModuleNameEntries:Array<_ModuleNameEntry> = [];
 
 	static var currentKnownModuleNames:Map<String, Bool> = new Map();
+
+	/**
+		OCaml modules copied from the reflaxe.ocaml runtime directory for this emission.
+
+		These files are written by hand under reflaxe.ocaml's naming rules, not
+		stage3's. See `ocamlModuleValueIdent`.
+	**/
+	static var currentRuntimeOcamlModuleNames:Map<String, Bool> = new Map();
+
 	static var currentGlobalImportAliasByIdent:Map<String, String> = new Map();
 
 	/**
@@ -473,6 +482,24 @@ class EmitterStage {
 		if (base == "effect")
 			return "effect'";
 		return isOcamlKeyword(base) ? (base + "_") : base;
+	}
+
+	/**
+		Name a value exported by the OCaml module `moduleName`.
+
+		Stage3 writes most modules itself and spells a keyword member such as
+		`match` as `match_`. Runtime modules such as `EReg` are not written by
+		stage3. They are copied from the reflaxe.ocaml runtime, which spells the
+		same member `hx_match` (see `reflaxe.ocaml.OcamlNameTools`). A reference
+		to such a module must use the runtime's spelling, or OCaml reports an
+		unbound value. Call signatures are indexed with this same function, so a
+		lookup and the emitted name always agree.
+	**/
+	static function ocamlModuleValueIdent(moduleName:String, raw:String):String {
+		if (currentRuntimeOcamlModuleNames == null || !currentRuntimeOcamlModuleNames.exists(moduleName))
+			return ocamlValueIdent(raw);
+		final base = lowerFirst(raw);
+		return base == "_" ? base : reflaxe.ocaml.OcamlNameTools.normalizeValueIdentifier(base);
 	}
 
 	static function ocamlFunctionLocalValueIdent(raw:String):String {
@@ -1481,7 +1508,8 @@ class EmitterStage {
 				final importedModule = staticImportModuleForStage3(typeName, staticImportByIdent);
 				if (importedModule != null && importedModule.length > 0) {
 					return (currentOcamlModuleName != null
-						&& importedModule == currentOcamlModuleName) ? ocamlValueIdent(field) : (importedModule + "." + ocamlValueIdent(field));
+						&& importedModule == currentOcamlModuleName) ? ocamlValueIdent(field) : (importedModule + "."
+							+ ocamlModuleValueIdent(importedModule, field));
 				}
 				if (currentOcamlModuleName != null && isUpperStart(typeName)) {
 					final inCurrentModule = currentInstanceFieldsFor(typeName) != null || currentInstanceMethodsFor(typeName) != null;
@@ -1532,7 +1560,8 @@ class EmitterStage {
 		if (parts.length == 1 && parts[0] == "Int64" && currentImportInt64 != null && currentImportInt64.length > 0) {
 			modName = currentImportInt64;
 		}
-		return (currentOcamlModuleName != null && modName == currentOcamlModuleName) ? ocamlValueIdent(field) : (modName + "." + ocamlValueIdent(field));
+		return (currentOcamlModuleName != null && modName == currentOcamlModuleName) ? ocamlValueIdent(field) : (modName + "."
+			+ ocamlModuleValueIdent(modName, field));
 	}
 
 	static function exprToOcamlStage3FieldAccess(obj:HxExpr, field:String, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
@@ -1583,7 +1612,8 @@ class EmitterStage {
 		if (isTypePathExpr(obj)) {
 			final ownerParts = tryExtractTypePathPartsFromExpr(obj);
 			if (ownerParts != null && ownerParts.length > 0) {
-				final qualifiedMethod = ocamlModuleNameFromTypePathParts(ownerParts) + "." + ocamlValueIdent(field);
+				final ownerModule = ocamlModuleNameFromTypePathParts(ownerParts);
+				final qualifiedMethod = ownerModule + "." + ocamlModuleValueIdent(ownerModule, field);
 				if (callSigForStage3(qualifiedMethod, callSigByCallee) != null)
 					return qualifiedMethod;
 			}
@@ -3022,7 +3052,7 @@ class EmitterStage {
 		if (intrinsic != null)
 			return intrinsic;
 		final owner = ocamlModuleNameFromTypePath(declaration.getOwner().getCanonicalName());
-		final name = ocamlValueIdent(declaration.getSignature().getName());
+		final name = ocamlModuleValueIdent(owner, declaration.getSignature().getName());
 		return owner == currentOcamlModuleName ? name : owner + "." + name;
 	}
 
@@ -3172,7 +3202,7 @@ class EmitterStage {
 				return arrayMethod;
 			final declaration = methodValue.getDeclaration();
 			final ownerModule = ocamlModuleNameFromTypePath(declaration.getOwner().getCanonicalName());
-			final methodName = ocamlValueIdent(declaration.getSignature().getName());
+			final methodName = ocamlModuleValueIdent(ownerModule, declaration.getSignature().getName());
 			final qualified = ownerModule + "." + methodName;
 			return backend.ocaml.Stage3OcamlMethodValue.render({
 				occurrence: methodValue,
@@ -3870,7 +3900,7 @@ class EmitterStage {
 					// Use the declaration selected by typing after builtin handling,
 					// then retain the ordinary argument conversion and arity plan.
 					final ownerModule = ocamlModuleNameFromTypePath(staticCall.owner);
-					final method = ocamlValueIdent(staticCall.method);
+					final method = ocamlModuleValueIdent(ownerModule, staticCall.method);
 					ownerModule == currentOcamlModuleName ? method : ownerModule + "." + method;
 				} else {
 					exprToOcaml(callee, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
@@ -7638,6 +7668,10 @@ class EmitterStage {
 		for (entry in moduleNameEntries)
 			knownModuleNames.set(entry.moduleName, true);
 		currentKnownModuleNames = knownModuleNames;
+		final runtimeOcamlModuleNames:Map<String, Bool> = new Map();
+		for (path in runtimePaths)
+			runtimeOcamlModuleNames.set(runtimeModuleNameFromPath(path), true);
+		currentRuntimeOcamlModuleNames = runtimeOcamlModuleNames;
 		/**
 			Global exact-import aliases that are unique across the current typed graph.
 
@@ -7828,12 +7862,13 @@ class EmitterStage {
 			if (fnNameRaw == null || fnNameRaw.length == 0)
 				return;
 			final sig0 = callSigFromFunction(fn);
-			final key0 = modName + "." + ocamlValueIdent(fnNameRaw);
+			final memberName = ocamlModuleValueIdent(modName, fnNameRaw);
+			final key0 = modName + "." + memberName;
 			globalCallSigByCallee.set(key0, sig0);
 			final aliasShorts = aliasShortsByTarget.get(modName);
 			if (aliasShorts != null) {
 				for (short in aliasShorts)
-					globalCallSigByCallee.set(short + "." + ocamlValueIdent(fnNameRaw), sig0);
+					globalCallSigByCallee.set(short + "." + memberName, sig0);
 			}
 		}
 		for (tm in typedModules) {
