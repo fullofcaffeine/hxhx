@@ -578,7 +578,7 @@ class TyFunctionInference {
 		return solver.isSealed() ? solver.requireSolved(term) : solver.preview(term);
 	}
 
-	/** Retain an empty literal's complete context for replay that has no enclosing parameter.
+	/** Retain a checked collection's complete context for replay that has no enclosing parameter.
 		An existing occurrence stays authoritative; ordinary constraint typing must reconcile it. */
 	public function contextualCollection(expression:HxExpr, type:TyType):TyType {
 		var term = occurrence(expression);

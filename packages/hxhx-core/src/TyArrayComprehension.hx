@@ -16,6 +16,7 @@ function infer(input:{
 	filePath:String,
 	position:HxPos,
 	typeExpression:(HxExpr, Null<TyType>) -> TyType,
+	accepts:(TyType, TyType) -> Bool,
 	typeMapEntry:HxExpr->TyType,
 	resolveArray:TyType->TyType
 }):Null<TyType> {
@@ -58,7 +59,14 @@ function infer(input:{
 				input.typeMapEntry(expression);
 			case _:
 				select(ArrayElement);
-				input.typeExpression(expression, expectedElement);
+				final actual = input.typeExpression(expression, expectedElement);
+				if (expectedElement != null && !input.accepts(expectedElement, actual))
+					throw new TyperError(input.filePath, input.position,
+						"array element "
+						+ actual.getDisplay()
+						+ " is not compatible with "
+						+ expectedElement.getDisplay());
+				actual;
 		};
 	}
 	final element = yieldedType(input.values[0]);

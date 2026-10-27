@@ -3770,6 +3770,11 @@ class TyperStage {
 				scope.exitLexicalScope();
 				TyType.fromHintText("Array<Dynamic>");
 			case EArrayDecl(values):
+				final acceptsArrayElement = (expected:TyType,
+					actual:TyType) -> actual.isDynamic()
+						|| TyStructuralArgument.compatibility(ctx.getIndex(), expected, actual) == Compatible
+						|| TyImplicitConversionPlan.select(ctx.getIndex(), expected.unwrapNull(), actual.unwrapNull()) != null
+						|| (actual.isNullLiteral() && TyNullArgument.acceptsLiteral(expected, ctx.getIndex()));
 				final comprehension = TyArrayComprehension.infer({
 					values: values,
 					expected: expectedResult,
@@ -3777,6 +3782,7 @@ class TyperStage {
 					filePath: ctx.getFilePath(),
 					position: pos,
 					typeExpression: (value, expected) -> inferExprType(value, scope, ctx, pos, expected),
+					accepts: acceptsArrayElement,
 					typeMapEntry: entry -> {
 						final map = TypedMapLiteral.infer({
 							values: [entry],
@@ -3796,8 +3802,14 @@ class TyperStage {
 					},
 					resolveArray: element -> resolveTypeInContext(TyType.unresolved("Array", [element]), ctx)
 				});
-				if (comprehension != null)
+				if (comprehension != null) {
+					if (TypedArrayLiteral.elementType(expectedResult) != null && TypedArrayLiteral.elementType(comprehension) != null)
+						return scope.getInference()
+							.isSealed() ? scope.getInference()
+							.expressionType(expr, expectedResult.unwrapNull(), scope) : scope.getInference()
+							.contextualCollection(expr, expectedResult.unwrapNull());
 					return comprehension;
+				}
 				final contextual = TypedCollectionExpectation.select(expr, expectedResult);
 				if (contextual != null)
 					return scope.getInference().contextualCollection(expr, contextual);
@@ -3824,19 +3836,20 @@ class TyperStage {
 					values: values,
 					expected: expectedResult,
 					typeExpression: (value, expected) -> inferExprType(value, scope, ctx, pos, expected),
-					accepts: (expected,
-						actual) -> actual.isDynamic()
-							|| TyStructuralArgument.compatibility(ctx.getIndex(), expected, actual) == Compatible
-							|| TyImplicitConversionPlan.select(ctx.getIndex(), expected.unwrapNull(), actual.unwrapNull()) != null
-							|| (actual.isNullLiteral() && TyNullArgument.acceptsLiteral(expected, ctx.getIndex())),
+					accepts: acceptsArrayElement,
 					filePath: ctx.getFilePath(),
 					position: pos
 				});
 				if (contextualArray != null) {
 					// Replayed calls no longer have their initial parameter context.
-					// Retain null-only literals just as we retain empty allocations;
-					// their elements cannot reconstruct the selected reference type.
-					return TypedArrayLiteral.isNullOnly(values) ? scope.getInference().contextualCollection(expr, contextualArray) : contextualArray;
+					// Checked children cannot reconstruct optional storage fields or
+					// reference types supplied by the selected parameter context.
+					// Generated enum payload arrays first receive context during sealed
+					// body construction; validate them without publishing new facts.
+					return scope.getInference()
+						.isSealed() ? scope.getInference()
+						.expressionType(expr, contextualArray, scope) : scope.getInference()
+						.contextualCollection(expr, contextualArray);
 				}
 				if (TypedArrayLiteral.isNullOnly(values)) {
 					final array = ctx.resolveType("Array");
