@@ -15,20 +15,21 @@ typedef CsLoweredLambda = {
 	C# consumes its statement adapter instead of synthesizing expression returns.
 **/
 function body(projection:TypedBackendFunctionProjection, program:backend.GenIrProgram, noRoot:Bool):Array<HxStmt> {
-	var locals:Null<SourceNativeFunctionLocals> = null;
+	final locals = new SourceNativeFunctionLocals({
+		target: Cs,
+		program: program,
+		projection: projection,
+		noRoot: noRoot
+	});
 	return SourceFunctionBodyRewriter.bodyWithOriginal(projection.getBody(), (original, rebuilt) -> {
+		final construction = SourceNativeConstructorLowering.expression(locals, original, rebuilt);
+		if (construction != rebuilt)
+			return construction;
 		switch original {
 			case ELambda(_, ELoweredControl(FunctionBody, _, _, _)):
 				final occurrence = projection.findLambda(original);
 				if (occurrence == null)
 					throw "C# callback requires its exact typed lambda occurrence";
-				if (locals == null)
-					locals = new SourceNativeFunctionLocals({
-						target: Cs,
-						program: program,
-						projection: projection,
-						noRoot: noRoot
-					});
 				final parameters = occurrence.callableType.getFunctionParameters();
 				final types = new Array<String>();
 				for (parameter in parameters) {

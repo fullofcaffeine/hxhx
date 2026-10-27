@@ -3,3 +3,6 @@
 -cp test
 -main M14NativeLocalDeclarationTest
 --interp
+
+--next
+test/m14_native_constructor_owner_test.hxml

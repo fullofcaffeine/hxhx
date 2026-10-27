@@ -1205,6 +1205,18 @@ class SourceTargetCommon {
 		if (staticCall != null)
 			return renderExprWithFrame(frame, TypedExactStaticCallSource.ordinaryCall(staticCall));
 		final target = SourceFunctionRenderFrameTools.target(frame);
+		final construction = SourceNativeConstructorLowering.decode(expr);
+		if (construction != null) {
+			if (construction.target != target)
+				throw "native constructor reached a different target";
+			return switch construction.kind {
+				case EmittedClass(name): "new "
+					+ name
+					+ "("
+					+ [for (argument in construction.arguments) renderExprWithFrame(frame, argument)].join(", ") + ")";
+				case Runtime(path): constructorExprWithFrame(frame, path, construction.arguments);
+			};
+		}
 		final luaExternPath = LuaExternValues.decode(expr);
 		if (luaExternPath != null) {
 			if (target != Lua)
@@ -8286,13 +8298,21 @@ class SourceTargetCommon {
 	/**
 	 * Renders a constructor without discarding the active function frame.
 	 *
-	 * PHP constructor arguments can contain local reads, calls, or nested
-	 * expressions whose meaning depends on the exact lexical scope. Other
-	 * source targets do not yet carry target-specific request state here, so
-	 * they continue through the established renderer.
+	 * PHP, Java, and C# arguments can contain local reads, calls, or nested
+	 * expressions whose meaning depends on the exact lexical scope. Java/C#
+	 * runtime constructors reach this path after exact occurrence admission;
+	 * ordinary emitted classes use their retained native owner instead.
 	 */
 	static function constructorExprWithFrame(frame:SourceFunctionRenderFrame, typePath:String, args:Array<HxExpr>):String {
 		final target = SourceFunctionRenderFrameTools.target(frame);
+		if (target == Java || target == Cs) {
+			final rendered = [for (arg in args) renderExprWithFrame(frame, arg)].join(", ");
+			if (target == Cs && csArrayConstructorTypePath(typePath))
+				return "new " + csArrayRuntimeType() + "(new object[] { " + rendered + " })";
+			if (target == Cs && csNativeArrayTypePath(typePath) && args.length == 1)
+				return "new object[System.Convert.ToInt32(" + rendered + ")]";
+			return "new " + sanitizeTypePath(target, typePath) + "(" + rendered + ")";
+		}
 		if (target != Php)
 			return constructorExpr(target, typePath, args);
 
@@ -8335,7 +8355,8 @@ class SourceTargetCommon {
 	}
 
 	static function csNativeArrayTypePath(typePath:String):Bool {
-		final clean = stripGenericTypeParams(removeTypeHintWhitespace(csTypePath(typePath)));
+		// Strip Haxe type arguments before target-name sanitization erases their delimiters.
+		final clean = csTypePath(stripGenericTypeParams(removeTypeHintWhitespace(typePath)));
 		return clean == "NativeArray" || clean == "cs.NativeArray";
 	}
 
@@ -10844,7 +10865,7 @@ class SourceTargetCommon {
 	public static function renderNativeFunctionBody(locals:SourceNativeFunctionLocals, body:Array<HxStmt>, indent:String):Array<String> {
 		if (locals == null)
 			throw "native function rendering requires typed local ownership";
-		return renderStmtsWithFrame(SourceFunctionRenderFrameTools.forNativeFunction(locals), body, indent);
+		return renderStmtsWithFrame(SourceFunctionRenderFrameTools.forNativeFunction(locals), SourceNativeConstructorLowering.body(locals, body), indent);
 	}
 
 	/** Resolve a legacy declaration through its typed owner before entering Java rendering. */
@@ -10862,12 +10883,13 @@ class SourceTargetCommon {
 	/** Keep one exact function catalog while target-specific rewrites preserve projected local names. */
 	static function renderProjectedNativeFunction(target:SourceNativeTarget, program:GenIrProgram, projection:TypedBackendFunctionProjection,
 			body:Array<HxStmt>, indent:String, noRoot:Bool):Array<String> {
-		return renderNativeFunctionBody(new SourceNativeFunctionLocals({
+		final locals = new SourceNativeFunctionLocals({
 			target: target,
 			program: program,
 			projection: projection,
 			noRoot: noRoot
-		}), body, indent);
+		});
+		return renderNativeFunctionBody(locals, body, indent);
 	}
 
 	static function nativeLocalDeclaration(frame:SourceFunctionRenderFrame, name:String, initializer:Null<HxExpr>):Null<String> {

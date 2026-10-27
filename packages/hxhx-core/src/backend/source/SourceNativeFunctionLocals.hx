@@ -56,6 +56,33 @@ class SourceNativeFunctionLocals {
 	public function requireEnumName(owner:TyNominalTypeId):String
 		return SourceEnumPatternOwner.requireName(program, owner, target);
 
+	/** Resolve an exact authored allocation; extern and core-runtime owners keep their target-specific paths. */
+	public function constructorName(expression:HxExpr):Null<String> {
+		final occurrence = projection.requireConstructor(expression);
+		final identity = occurrence.getConstructedType().getNominalIdentity();
+		if (identity == null)
+			throw "native allocation requires a selected nominal provider";
+		for (module in program.getTypedModules())
+			for (owner in module.getTypedClasses()) {
+				final info = owner.getSemanticInfo();
+				if (info == null || !info.getIdentity().equals(identity))
+					continue;
+				if (!Std.isOfType(info, TyClassInfo))
+					throw "native allocation requires a class or extern provider: " + identity.getCanonicalName();
+				final cls:TyClassInfo = cast info;
+				if (cls.getIsExtern())
+					return null;
+				// C# implements the selected core Array through its runtime support module.
+				// A secondary class such as Main.Array retains its ordinary emitted owner.
+				if (target == Cs && identity.getCanonicalName() == "Array" && cls.getModulePath() == "Array")
+					return null;
+				if (cls.getIsEnum() || cls.getIsInterface())
+					throw "native allocation requires an ordinary class declaration";
+				return nominalName(identity);
+			}
+		throw "native allocation cannot find its exact provider: " + identity.getCanonicalName();
+	}
+
 	/** Preserve the distinction between no initializer and an explicit null expression. */
 	public function declaration(name:String, hasNullInitializer:Bool):String {
 		final local = projection.getLocalCatalog().findByProjectedName(name);
