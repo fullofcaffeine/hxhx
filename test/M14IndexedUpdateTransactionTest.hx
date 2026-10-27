@@ -49,6 +49,8 @@ class M14IndexedUpdateTransactionTest {
 			kind: kind == null ? Unary(Increment, Postfix) : kind,
 			getterSource: get,
 			computedSource: computed,
+			placeResultSource: EBinop("+", get, EInt(1)),
+			setterInputSource: EBinop("+", get, EInt(1)),
 			setterSource: set
 		});
 	}

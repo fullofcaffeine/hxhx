@@ -4,6 +4,8 @@ private typedef TyMethodCallResolution = {
 	final ?order:TyMethodArgumentOrder;
 	final ?actual:Array<TyType>;
 	final ?receiverArguments:Array<Null<TyType>>;
+	final ?signature:TyFunSig;
+	final ?inputTrial:TyMethodInputState.TyMethodInputTrial;
 };
 
 /** One source-call traversal hands its selected declaration and operand types to generic inference. */
@@ -1720,9 +1722,164 @@ class TyperStage {
 		}
 	}
 
+	/**
+		Check retained helper/result facts without changing public source admission.
+		Authored operand traversal stays in the owning lexical catalog. The candidate
+		selects helpers and conversions over those facts and publishes them atomically.
+	 */
+	static function selectIndexedUpdate(source:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyIndexedUpdateOutcome {
+		final existing = scope.getInference().indexedUpdateOutcome(source, scope);
+		if (existing != null)
+			return existing;
+		if (scope.getInference().isSealed())
+			throw "indexed update outcome is absent from sealed inference";
+		final operands = switch source {
+			case EUnop(op, fixity, EArrayAccess(receiver, subscript)):
+				{
+					receiver: receiver,
+					subscript: subscript,
+					right: null,
+					kind: TyIndexedUpdateSelection.TyIndexedUpdateKind.Unary(op, fixity)
+				};
+			case EBinop(op, EArrayAccess(receiver, subscript), right):
+				{
+					receiver: receiver,
+					subscript: subscript,
+					right: right,
+					kind: TyIndexedUpdateSelection.TyIndexedUpdateKind.Compound(op)
+				};
+			case _: throw "indexed update requires a direct indexed source place";
+		};
+		function freshQuery():HxExpr
+			return switch source {
+				case EUnop(op, fixity, inner): EUnop(op, fixity, inner);
+				case EBinop(op, left, right): EBinop(op, left, right);
+				case _: throw "indexed query source changed";
+			};
+		final query = new TyIndexedUpdateSelection.TyIndexedUpdateQuery({
+			owner: scope.getOwnerIdentity(),
+			source: source,
+			kind: operands.kind,
+			getterSource: EArrayAccess(operands.receiver, operands.subscript),
+			computedSource: freshQuery(),
+			placeResultSource: freshQuery(),
+			setterInputSource: freshQuery(),
+			setterSource: freshQuery()
+		});
+		final receiverType = inferExprType(operands.receiver, scope, ctx, pos);
+		final identity = TyAliasExpansion.revealNonNullable(receiverType).getNominalIdentity();
+		final owner = identity == null ? null : ctx.getIndex().getAbstractByFullName(identity.getCanonicalName());
+		if (owner == null || owner.getIndexedDeclarations().length == 0)
+			throw new TyperError(ctx.getFilePath(), pos, "Indexed update requires declared getter and setter helpers (haxe_ocaml-rgmu4)");
+		final getterCandidates = owner.getIndexedDeclarations()
+			.filter(declaration -> declaration.getSignature().getArgs().length == (declaration.getIsStatic() ? 2 : 1));
+		final contexts = indexedArgumentContexts(getterCandidates, owner, TyAliasExpansion.revealNonNullable(receiverType), 1, ctx);
+		final indexType = inferExprType(operands.subscript, scope, ctx, pos, contexts[0]);
+		final rightType = operands.right == null ? null : inferExprType(operands.right, scope, ctx, pos);
+		final trial = scope.getInference().beginIndexedUpdate(query);
+		final candidate = scope.copyForIndexedSelection(trial);
+		final inference = candidate.getInference();
+		final getter = resolveIndexedAccess(query.getterSource, operands.receiver, operands.subscript, null, receiverType, candidate, ctx, pos, null,
+			[indexType]);
+		final operation = TyIndexedUpdateOperation.select({
+			query: query,
+			trial: trial,
+			getterType: getter.type,
+			right: operands.right,
+			rightType: rightType,
+			environment: candidate,
+			index: ctx.getIndex(),
+			filePath: ctx.getFilePath(),
+			position: pos
+		});
+		final placeType = inference.expressionType(query.getterSource, getter.type, candidate);
+		final computedType = operation.computed.getType(candidate);
+		final placeConversion = operation.binary != null
+			&& operation.binary.getResultConversion() != null ? operation.binary.getResultConversion() : TyAbstractBinaryConversion.select(ctx.getIndex(),
+				placeType, computedType);
+		if (placeConversion == null || placeConversion.getExpectedType().getSemanticKey() != placeType.getSemanticKey())
+			throw new TyperError(ctx.getFilePath(), pos, computedType.getDisplay() + " should be " + placeType.getDisplay() + " for an indexed update");
+		final place = TyIndexedComputedResult.converted(operation.computed, query.placeResultSource, placeConversion);
+		place.register(trial, candidate);
+		final setter = resolveIndexedAccess(query.setterSource, operands.receiver, operands.subscript, query.placeResultSource, receiverType, candidate, ctx,
+			pos, null, [indexType, place.getType(candidate)], false);
+		final rawSources = setter.declaration.getIsStatic() ? [operands.receiver, operands.subscript, query.placeResultSource] : [operands.subscript, query.placeResultSource];
+		final parameters = setter.order.sourceContexts(TyMethodGenericBinding.specializeParameters(setter.declaration, setter.signature,
+			setter.order.rankedTypes(setter.actual), ctx.getIndex()));
+		final parameter = parameters[parameters.length - 1];
+		final conversion = TyAbstractBinaryConversion.select(ctx.getIndex(), parameter, place.getType(candidate));
+		if (conversion == null)
+			throw new TyperError(ctx.getFilePath(), pos, "Selected indexed setter has no checked parameter conversion");
+		final setterInput = TyIndexedComputedResult.converted(place, query.setterInputSource, conversion);
+		setterInput.register(trial, candidate);
+		final finalSources = rawSources.slice(0, rawSources.length - 1).concat([query.setterInputSource]);
+		final finalTypes = finalSources.map((argument) -> inference.expressionType(argument,
+			argument == query.setterInputSource ? setterInput.getType(candidate) : argument == operands.receiver ? receiverType : indexType, candidate));
+		final setterBinding = inference.indexedAccess(query.setterSource,
+			() -> new TyIndexedAccessBinding(query.setterSource, operands.receiver, finalSources, setter.declaration));
+		inference.recordReceiverResult(query.setterSource, operands.receiver, setter.declaration, candidate, ctx.getIndex());
+		if (setter.receiverArguments != null)
+			inference.recordReceiverCall(query.setterSource, setter.declaration, setter.receiverArguments);
+		if (inference.sourceTerm(query.setterSource, candidate) == null || setter.declaration.getTypeParameterIds().length > 0)
+			inference.inferDirectCall({
+				expression: query.setterSource,
+				declaration: setter.declaration,
+				callable: TyMethodGenericBinding.inferenceCallable(setter.declaration, setter.signature, setter.order.rankedTypes(finalTypes), ctx.getIndex()),
+				signature: setter.signature,
+				order: setter.order,
+				arguments: finalSources,
+				actual: finalTypes,
+				environment: candidate,
+				index: ctx.getIndex(),
+				accepts: (_, _) -> false,
+				acceptsAt: (source, expected,
+					actual) -> source < finalSources.length
+						&& parameters[source].getSemanticKey() == expected.getSemanticKey()
+						&& TyValueCompatibility.accepts(ctx.getIndex(), expected, actual, finalSources[source])});
+		final selection = new TyIndexedUpdateSelection({
+			query: query,
+			getter: inference.indexedAccess(query.getterSource),
+			setter: setterBinding,
+			binary: operation.binary
+		});
+		final outcome = new TyIndexedUpdateOutcome({
+			selection: selection,
+			computed: operation.computed,
+			placeResult: place,
+			setterInput: setterInput,
+			admission: {
+				declaration: setter.declaration,
+				signature: setter.signature,
+				order: setter.order,
+				sources: rawSources,
+				types: setter.actual,
+				inputTrial: setter.inputTrial
+			},
+			environment: candidate,
+			index: ctx.getIndex(),
+			finalTypes: finalTypes
+		});
+		inference.recordIndexedOutcome(trial, outcome, candidate);
+		final inputs = ctx.getIndex().getMethodInputs();
+		final inputTrials = [getter.inputTrial, setter.inputTrial].filter(input -> input != null);
+		scope.getInference().commitIndexedUpdate(trial, selection, inputs, inputs.prepareBatch(inputTrials));
+		return outcome;
+	}
+
+	/** Shared argument context is independent of the eventual source-ordered helper choice. */
+	static function indexedArgumentContexts(candidates:Array<TyDeclarationInfo>, owner:TyAbstractInfo, revealed:TyType, count:Int,
+			ctx:TyperContext):Array<Null<TyType>> {
+		return TyCallArgumentContext.shared(candidates.map(declaration -> {
+			final signature = TyNominalApplication.signature(ctx.getIndex(), owner, declaration.getIsStatic() ? null : revealed, declaration.getSignature());
+			final offset = declaration.getIsStatic() ? 1 : 0;
+			return new TyFunSig(signature.getName(), signature.getIsStatic(), signature.getArgNames().slice(offset), signature.getArgs().slice(offset),
+				signature.getArgOptional().slice(offset), signature.getArgRest().slice(offset), signature.getReturnType(), signature.getPos());
+		}), count, candidates.map(declaration -> declaration.getTypeParameterIds()));
+	}
+
 	/** Select source-ordered indexed helpers through the existing method-call transaction. */
 	static function resolveIndexedAccess(source:HxExpr, receiver:HxExpr, subscript:HxExpr, value:Null<HxExpr>, receiverType:TyType, scope:TyFunctionEnv,
-			ctx:TyperContext, pos:HxPos, ?expectedResult:TyType):Null<TyMethodCallResolution> {
+			ctx:TyperContext, pos:HxPos, ?expectedResult:TyType, ?retained:Array<TyType>, retainBinding:Bool = true):Null<TyMethodCallResolution> {
 		if (ctx.getIndex() == null)
 			return null;
 		final revealed = TyAliasExpansion.revealNonNullable(receiverType);
@@ -1769,32 +1926,30 @@ class TyperStage {
 		}
 		final candidates = binding == null ? catalog.filter(declaration -> declaration.getSignature().getArgs().length == operands.length
 			+ (declaration.getIsStatic() ? 1 : 0)) : [binding.declaration];
-		final contexts = TyCallArgumentContext.shared(candidates.map(declaration -> {
-			final signature = TyNominalApplication.signature(ctx.getIndex(), owner, declaration.getIsStatic() ? null : revealed, declaration.getSignature());
-			final offset = declaration.getIsStatic() ? 1 : 0;
-			return new TyFunSig(signature.getName(), signature.getIsStatic(), signature.getArgNames().slice(offset), signature.getArgs().slice(offset),
-				signature.getArgOptional().slice(offset), signature.getArgRest().slice(offset), signature.getReturnType(), signature.getPos());
-		}), operands.length,
-			candidates.map(declaration -> declaration.getTypeParameterIds()));
-		final actual = [
+		final contexts = indexedArgumentContexts(candidates, owner, revealed, operands.length, ctx);
+		final actual = retained == null ? [
 			for (i in 0...operands.length)
 				inferExprType(operands[i], scope, ctx, pos, inference.isSealed() ? null : contexts[i])
-		];
+		] : retained.copy();
+		if (actual.length != operands.length)
+			throw "indexed selection requires one retained type per operand";
 		function select(declaration:TyDeclarationInfo, environment:TyFunctionEnv, probe:Bool):TyMethodCallResolution {
 			final arguments = declaration.getIsStatic() ? [receiver].concat(operands) : operands;
 			return resolveMethodCall(owner, declaration.getSignature().getName(), declaration.getIsStatic(), arguments, environment, ctx, pos,
 				[declaration.getSignature()], declaration.getIsStatic() ? null : {
 					expression: receiver,
 					type: revealed
-				}, declaration.getIsStatic() ? [receiverType].concat(actual) : actual, probe);
+				},
+				declaration.getIsStatic() ? [receiverType].concat(actual) : actual, probe, retained != null);
 		}
 		if (binding == null) {
 			for (candidate in candidates) {
 				final probe = select(candidate, scope.copyForInference(), true);
 				if (probe.declaration == null)
 					continue;
-				binding = inference.indexedAccess(source,
-					() -> new TyIndexedAccessBinding(source, receiver, candidate.getIsStatic() ? [receiver].concat(operands) : operands, candidate));
+				final selectedBinding = new TyIndexedAccessBinding(source, receiver, candidate.getIsStatic() ? [receiver].concat(operands) : operands,
+					candidate);
+				binding = retainBinding ? inference.indexedAccess(source, () -> selectedBinding) : selectedBinding;
 				break;
 			}
 		}
@@ -1804,6 +1959,8 @@ class TyperStage {
 		final selection = select(declaration, scope, false);
 		if (selection.declaration != declaration)
 			throw "indexed replay changed its selected declaration";
+		if (!retainBinding)
+			return selection;
 		inference.recordReceiverResult(source, receiver, declaration, scope, ctx.getIndex());
 		if (selection.receiverArguments != null)
 			inference.recordReceiverCall(source, declaration, selection.receiverArguments);
@@ -1811,7 +1968,8 @@ class TyperStage {
 		final signature = TyNominalApplication.signature(ctx.getIndex(), owner,
 			declaration.getIsStatic() ? null : inference.expressionType(receiver, revealed, scope), declaration.getSignature());
 		final parameters = TyMethodGenericBinding.specializeParameters(declaration, signature, selection.order.rankedTypes(selection.actual), ctx.getIndex());
-		if (declaration.getTypeParameterIds().length > 0
+		if ((retained != null && inference.sourceTerm(source, scope) == null)
+			|| declaration.getTypeParameterIds().length > 0
 			&& (result.hasUnknownComponent() || parameters.filter(type -> type.hasUnknownComponent()).length > 0)) {
 			result = inference.inferDirectCall({
 				expression: source,
@@ -1838,7 +1996,10 @@ class TyperStage {
 			type: inference.expressionType(source, result, scope),
 			declaration: declaration,
 			order: selection.order,
-			actual: selection.actual
+			actual: selection.actual,
+			receiverArguments: selection.receiverArguments,
+			signature: selection.signature,
+			inputTrial: selection.inputTrial
 		};
 	}
 
@@ -1867,8 +2028,8 @@ class TyperStage {
 	}
 
 	static function resolveMethodCall(c:TyNominalInfo, field:String, isStatic:Bool, args:Array<HxExpr>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos,
-			?admittedCandidates:Array<TyFunSig>, ?receiver:TyCallInferenceContext, ?retainedArgumentTypes:Array<TyType>,
-			probe:Bool = false):TyMethodCallResolution {
+			?admittedCandidates:Array<TyFunSig>, ?receiver:TyCallInferenceContext, ?retainedArgumentTypes:Array<TyType>, probe:Bool = false,
+			retainedUpdateOperands:Bool = false):TyMethodCallResolution {
 		if (probe && !scope.isSpeculative())
 			throw "method candidate probe requires an isolated inference scope";
 		if (!isStatic && admittedCandidates == null && field != "new") {
@@ -1904,7 +2065,14 @@ class TyperStage {
 			}
 			if (declaration != null) {
 				final expected = order.sourceContexts(TyMethodGenericBinding.specializeParameters(declaration, applied, ranked, ctx.getIndex()));
-				if (!scope.getInference().constrain(args, expected, scope, ctx.getIndex())) {
+				// A complete update result retains its source type until its selected
+				// conversion runs. Exact solver equality must not turn Int into Float.
+				final constrained = [
+					for (offset in 0...args.length)
+						if (!retainedUpdateOperands || actual[offset].hasUnknownComponent()) offset
+				];
+				if (!scope.getInference()
+					.constrain(constrained.map(offset -> args[offset]), constrained.map(offset -> expected[offset]), scope, ctx.getIndex())) {
 					if (probe)
 						return {type: TyType.unknown(), declaration: null};
 					throw new TyperError(ctx.getFilePath(), pos, "selected call conflicts with generic constructor constraints");
@@ -1922,6 +2090,8 @@ class TyperStage {
 				declaration: selected.declaration,
 				order: order,
 				actual: solved,
+				signature: applied,
+				inputTrial: trial,
 				receiverArguments: receiver != null
 				&& declaration != null
 				&& declaration.getTypeParameterIds().length == 0
@@ -1953,6 +2123,8 @@ class TyperStage {
 			throw "call selection requires one retained type per source argument";
 		// Candidate trials must not commit context to the caller's inference state.
 		function literalType(source:HxExpr, expected:TyType):Null<TyType> {
+			if (retainedUpdateOperands)
+				return null;
 			return try {
 				inferExprType(source, scope.copyForInference(), ctx, pos, expected);
 			} catch (_:TyperError) {
@@ -2000,7 +2172,8 @@ class TyperStage {
 			// Each candidate supplies its own collection and unchecked-cast context. Keep normal
 			// scoring and ambiguity checks when more than one accepts the literal.
 			final contextual = argTypes.copy();
-			if (declaration != null
+			if (!retainedUpdateOperands
+				&& declaration != null
 				&& (args.filter(TypedCollectionExpectation.isEmpty).length > 0
 					|| args.filter(TypedCastExpectation.isUnchecked).length > 0
 					|| args.filter(TypedMapLiteral.isLiteral).length > 0

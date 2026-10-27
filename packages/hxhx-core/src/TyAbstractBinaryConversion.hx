@@ -11,10 +11,12 @@ private enum BinaryConversionEvidence {
 	This composition does not add recursive method lookup to the header selector.
  */
 class TyAbstractBinaryConversion {
+	final actual:TyType;
 	final expected:TyType;
 	final evidence:BinaryConversionEvidence;
 
-	function new(expected:TyType, evidence:BinaryConversionEvidence) {
+	function new(actual:TyType, expected:TyType, evidence:BinaryConversionEvidence) {
+		this.actual = actual;
 		this.expected = expected;
 		this.evidence = evidence;
 	}
@@ -22,12 +24,12 @@ class TyAbstractBinaryConversion {
 	public static function select(index:TyperIndex, expected:TyType, actual:TyType):Null<TyAbstractBinaryConversion> {
 		final implicit = TyImplicitConversionPlan.select(index, expected, actual);
 		if (implicit != null)
-			return new TyAbstractBinaryConversion(expected, Implicit(implicit));
+			return new TyAbstractBinaryConversion(actual, expected, Implicit(implicit));
 		final method = TyAbstractMethodConversion.select(index, expected, actual);
 		if (method == null)
 			return null;
 		final result = TyImplicitConversionPlan.select(index, expected, method.getResultType());
-		return result == null ? null : new TyAbstractBinaryConversion(expected, Method(method, result));
+		return result == null ? null : new TyAbstractBinaryConversion(actual, expected, Method(method, result));
 	}
 
 	/** Scores choose argument orientation within one declaration, never priority between declarations. */
@@ -39,6 +41,10 @@ class TyAbstractBinaryConversion {
 
 	public function getExpectedType():TyType
 		return expected;
+
+	/** Replay checks the selected input before treating its output as converted argument evidence. */
+	public function getActualType():TyType
+		return actual;
 
 	/** Existing plans validate the exact source type before publishing a cast or method call. */
 	public function apply(expression:TypedExpr):TypedExpr
