@@ -2264,13 +2264,24 @@ class TyperStage {
 			case _:
 		}
 		var calleeType = selectedCallable == null ? inferExprType(callee, scope, ctx, pos) : selectedCallable;
+		final contextType = TyAliasExpansion.revealNonNullable(scope.getInference().expressionType(callee, calleeType, scope));
+		final hasSpread = args.filter(argument -> argument.match(ECall(EIdent("__hxhx_spread"), [_]))).length > 0;
+		final contexts:Array<Null<TyType>> = contextType.isFunction()
+			&& !hasSpread ? TyCallArgumentContext.functionValue(TyCallableSignature.fromFunctionValue(contextType), args.length,
+				ctx.getIndex()) : [for (_ in args) null];
 		final argumentTypes = [
-			for (argument in args)
-				switch (argument) {
+			for (index in 0...args.length)
+				switch (args[index]) {
 					case ECall(EIdent("__hxhx_spread"), [container]):
 						inferExprType(container, scope, ctx, pos);
-					case _:
-						inferExprType(argument, scope, ctx, pos);
+					case argument:
+						final shared = contexts[index];
+						// Replay reads the original collection occurrence even if the
+						// callable acquired a more concrete parameter type afterward.
+						final context = shared != null
+							&& TypedCollectionExpectation.context(shared) != null
+							&& scope.getInference().isSealed() ? null : shared;
+						inferExprType(argument, scope, ctx, pos, context);
 				}
 		];
 		scope.getInference().constrainInferredCallable(callee, args, argumentTypes, scope);
