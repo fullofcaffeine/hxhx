@@ -7,8 +7,23 @@ import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
 import reflaxe.data.ClassFuncData;
 import reflaxe.ocaml.lowered.OcamlCallPlan.OcamlCallPlanner;
+import reflaxe.ocaml.lowered.OcamlGenericArrayTransportDeclaration;
+import reflaxe.ocaml.lowered.OcamlGenericArrayTransportDeclaration.select as selectArrayDeclaration;
+import reflaxe.ocaml.lowered.OcamlGenericArrayTransportDeclaration.selectFunction as selectArrayFunction;
 import reflaxe.ocaml.lowered.OcamlGenericTransportDeclaration.select as selectDeclaration;
 import reflaxe.ocaml.lowered.OcamlGenericTransportDeclaration.selectFunction;
+
+/**
+	The closed set of generic declaration shapes that may export an OCaml type variable.
+
+	Each kind keeps its own source proof. `CallbackResult` forwards a callback's
+	value unchanged. `ArrayElement` reads a callback's `Array<T>` through checked
+	array operations and returns a concrete value.
+**/
+enum OcamlGenericTransportKind {
+	CallbackResult(declaration:OcamlGenericTransportDeclaration);
+	ArrayElement(declaration:OcamlGenericArrayTransportDeclaration);
+}
 
 /** One direct call retains the declaration's callback position and concrete arguments. */
 typedef OcamlGenericTransportCall = {
@@ -24,12 +39,12 @@ typedef OcamlGenericTransportCall = {
 	declaration applies only to the root; nested functions have their own results.
 **/
 typedef OcamlGenericTransportFunction = {
-	final declaration:Null<OcamlGenericTransportDeclaration>;
+	final declaration:Null<OcamlGenericTransportKind>;
 	final calls:ObjectMap<TypedExpr, OcamlGenericTransportCall>;
 }
 
 /**
-	Keeps a callback's returned value polymorphic across a closed set of direct calls.
+	Keeps generic callback values polymorphic across a closed set of direct calls.
 
 	Selection precedes module emission. First-class uses and calls outside ordinary
 	function bodies retain the existing convention. Each selected definition is
@@ -37,7 +52,7 @@ typedef OcamlGenericTransportFunction = {
 	definition before files can be published. No compiler objects survive a request.
 **/
 class OcamlGenericTransportProgram {
-	final declarations:Map<String, OcamlGenericTransportDeclaration> = [];
+	final declarations:Map<String, OcamlGenericTransportKind> = [];
 	final definitions:Map<String, Bool> = [];
 	final used:Map<String, Bool> = [];
 
@@ -50,7 +65,7 @@ class OcamlGenericTransportProgram {
 		used.clear();
 		for (owner in classes)
 			for (field in owner.statics.get()) {
-				final selected = selectDeclaration(owner, field);
+				final selected = selectKind(owner, field);
 				if (selected != null)
 					declarations.set(OcamlCallPlanner.calleeId(owner, field), selected);
 			}
@@ -97,19 +112,27 @@ class OcamlGenericTransportProgram {
 	public function plan(data:ClassFuncData):OcamlGenericTransportFunction {
 		final id = OcamlCallPlanner.calleeId(data.classType, data.field);
 		final selected = declarations.get(id);
-		var finalDeclaration:Null<OcamlGenericTransportDeclaration> = null;
+		var finalDeclaration:Null<OcamlGenericTransportKind> = null;
 		if (selected != null) {
 			if (data.expr == null || data.tfunc == null)
 				throw 'reflaxe.ocaml [ocaml-generic-transport:missing-body]: $id';
-			finalDeclaration = selectFunction(data.classType, data.field, {
+			final finalBody:TFunc = {
 				args: data.tfunc.args,
 				t: data.tfunc.t,
 				expr: data.expr
-			});
-			if (finalDeclaration == null
-				|| finalDeclaration.parameterId != selected.parameterId
-				|| finalDeclaration.callbackIndex != selected.callbackIndex)
-				throw 'reflaxe.ocaml [ocaml-generic-transport:changed-body]: $id no longer forwards its callback result';
+			};
+			finalDeclaration = switch (selected) {
+				case CallbackResult(original):
+					final checked = selectFunction(data.classType, data.field, finalBody);
+					if (checked == null || checked.parameterId != original.parameterId || checked.callbackIndex != original.callbackIndex)
+						throw 'reflaxe.ocaml [ocaml-generic-transport:changed-body]: $id no longer forwards its callback result';
+					CallbackResult(checked);
+				case ArrayElement(original):
+					final checked = selectArrayFunction(data.classType, data.field, finalBody);
+					if (checked == null || checked.parameterId != original.parameterId || checked.callbackIndex != original.callbackIndex)
+						throw 'reflaxe.ocaml [ocaml-generic-transport:changed-body]: $id no longer keeps its array elements in checked reads';
+					ArrayElement(checked);
+			};
 			definitions.set(id, true);
 		}
 		final calls = new ObjectMap<TypedExpr, OcamlGenericTransportCall>();
@@ -154,15 +177,32 @@ class OcamlGenericTransportProgram {
 		return id != null && declarations.exists(id);
 	}
 
-	static function callFor(selected:OcamlGenericTransportDeclaration, id:String, callee:TypedExpr,
-			arguments:Array<TypedExpr>):Null<OcamlGenericTransportCall> {
+	/** The callback-result proof keeps priority; its selector rejects every array-element helper. */
+	static function selectKind(owner:ClassType, field:ClassField):Null<OcamlGenericTransportKind> {
+		final callbackResult = selectDeclaration(owner, field);
+		if (callbackResult != null)
+			return CallbackResult(callbackResult);
+		final arrayElement = selectArrayDeclaration(owner, field);
+		return arrayElement == null ? null : ArrayElement(arrayElement);
+	}
+
+	/** Both kinds pass exactly one zero-argument callback at a fixed argument position. */
+	static function callbackIndexOf(selected:OcamlGenericTransportKind):Int {
+		return switch (selected) {
+			case CallbackResult(declaration): declaration.callbackIndex;
+			case ArrayElement(declaration): declaration.callbackIndex;
+		};
+	}
+
+	static function callFor(selected:OcamlGenericTransportKind, id:String, callee:TypedExpr, arguments:Array<TypedExpr>):Null<OcamlGenericTransportCall> {
+		final callbackIndex = callbackIndexOf(selected);
 		final parameters = switch (TypeTools.follow(callee.t)) {
 			case TFun(parameters, _): parameters;
 			case _: return null;
 		};
-		if (parameters.length != arguments.length || selected.callbackIndex >= arguments.length)
+		if (parameters.length != arguments.length || callbackIndex >= arguments.length)
 			return null;
-		final callback = unwrap(arguments[selected.callbackIndex]);
+		final callback = unwrap(arguments[callbackIndex]);
 		switch (callback.expr) {
 			case TFunction(_), TLocal(_):
 			case _:
@@ -173,7 +213,7 @@ class OcamlGenericTransportProgram {
 			case _:
 				return null;
 		}
-		return {calleeId: id, callbackIndex: selected.callbackIndex, argumentTypes: parameters.map(parameter -> parameter.t)};
+		return {calleeId: id, callbackIndex: callbackIndex, argumentTypes: parameters.map(parameter -> parameter.t)};
 	}
 
 	static function calleeId(expression:TypedExpr):Null<String> {

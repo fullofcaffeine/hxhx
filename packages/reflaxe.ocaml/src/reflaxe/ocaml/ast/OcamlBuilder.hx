@@ -226,7 +226,10 @@ class OcamlBuilder {
 	public final ctx:CompilationContext;
 	public final typeExprFromHaxeType:Type->OcamlTypeExpr;
 
-	var currentGenericTransport:Null<reflaxe.ocaml.lowered.OcamlGenericTransportDeclaration> = null;
+	/** The request-bound mapper before generic transport substitutes a declaration's type variable. */
+	final nominalTypeExprFromHaxeType:Type->OcamlTypeExpr;
+
+	var currentGenericTransport:Null<reflaxe.ocaml.lowered.OcamlGenericTransportProgram.OcamlGenericTransportKind> = null;
 	var currentGenericTransportFunction:Null<reflaxe.ocaml.lowered.OcamlGenericTransportProgram.OcamlGenericTransportFunction> = null;
 
 	public final emitSourceMap:Bool;
@@ -398,6 +401,7 @@ class OcamlBuilder {
 	public function new(ctx:CompilationContext, typeExprFromHaxeType:Type->OcamlTypeExpr, functionPlanRegistry:OcamlFunctionPlanRegistry,
 			representationRegistry:OcamlRepresentationRegistry, staticStoragePlan:OcamlStaticStoragePlan, emitSourceMap:Bool = false) {
 		this.ctx = ctx;
+		this.nominalTypeExprFromHaxeType = typeExprFromHaxeType;
 		this.typeExprFromHaxeType = type -> genericTransportType(type) ?? typeExprFromHaxeType(type);
 		this.functionPlanRegistry = functionPlanRegistry;
 		this.representationRegistry = representationRegistry;
@@ -406,16 +410,61 @@ class OcamlBuilder {
 		this.placeAssignmentLowerer = new OcamlPlaceAssignmentLowerer(ctx, functionPlanRegistry);
 	}
 
-	/** The checked forwarding declaration shares one type variable across its private return recovery. */
+	/**
+		Gives a selected generic declaration's values one shared OCaml type variable.
+
+		A forwarding declaration uses the variable for its callback result. An
+		array-element declaration uses it inside the existing array carrier, so
+		saved copies, element reads, and the callback all name the same element.
+	**/
 	function genericTransportType(type:Type):Null<OcamlTypeExpr> {
-		final selected = currentGenericTransport;
-		if (selected == null)
-			return null;
-		if (reflaxe.ocaml.lowered.OcamlGenericTransportDeclaration.parameterId(type) == selected.parameterId)
-			return OcamlTypeExpr.TVar("hx_result");
-		return switch (TypeTools.follow(type)) {
-			case TFun([], result) if (reflaxe.ocaml.lowered.OcamlGenericTransportDeclaration.parameterId(result) == selected.parameterId):
-				OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent("unit"), OcamlTypeExpr.TVar("hx_result"));
+		return switch (currentGenericTransport) {
+			case null: null;
+			case CallbackResult(selected):
+				if (reflaxe.ocaml.lowered.OcamlGenericTransportDeclaration.parameterId(type) == selected.parameterId)
+					return OcamlTypeExpr.TVar("hx_result");
+				switch (TypeTools.follow(type)) {
+					case TFun([], result) if (reflaxe.ocaml.lowered.OcamlGenericTransportDeclaration.parameterId(result) == selected.parameterId):
+						OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent("unit"), OcamlTypeExpr.TVar("hx_result"));
+					case _: null;
+				}
+			case ArrayElement(selected):
+				if (reflaxe.ocaml.lowered.OcamlGenericTransportDeclaration.parameterId(type) == selected.parameterId)
+					return OcamlTypeExpr.TVar("hx_element");
+				if (reflaxe.ocaml.lowered.OcamlGenericArrayTransportDeclaration.arrayElementParameterId(type) == selected.parameterId)
+					return genericElementArrayType(type);
+				switch (TypeTools.follow(type)) {
+					case TFun([], result)
+						if (reflaxe.ocaml.lowered.OcamlGenericArrayTransportDeclaration.arrayElementParameterId(result) == selected.parameterId):
+						final array = genericElementArrayType(result);
+						array == null ? null : OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent("unit"), array);
+					case _: null;
+				}
+		};
+	}
+
+	/**
+		Exports the selected declaration's polymorphic parameters with its proved result.
+
+		A forwarding result is the shared type variable. An array-element result
+		is concrete, so it uses the ordinary declaration projection and stays
+		unavailable when that projection has no admitted carrier.
+	**/
+	function genericTransportSignature(args:Array<{t:Type}>, resultType:Type):Null<reflaxe.ocaml.ast.OcamlDeclarationSignature.OcamlDeclarationSignature> {
+		final parameters = args.map(argument -> typeExprFromHaxeType(argument.t));
+		return switch (currentGenericTransport) {
+			case null: null;
+			case CallbackResult(_): {parameters: parameters, result: OcamlTypeExpr.TVar("hx_result")};
+			case ArrayElement(_):
+				final projected = projectDeclarationSignature([], resultType, representationRegistry, nominalTypeExprFromHaxeType, ctx);
+				projected == null ? null : {parameters: parameters, result: projected.result};
+		};
+	}
+
+	/** Keeps the checked array runtime reference and replaces only its erased element input. */
+	function genericElementArrayType(arrayType:Type):Null<OcamlTypeExpr> {
+		return switch (nominalTypeExprFromHaxeType(arrayType)) {
+			case TRuntimeApp(reference, [_]): OcamlTypeExpr.TRuntimeApp(reference, [OcamlTypeExpr.TVar("hx_element")]);
 			case _: null;
 		};
 	}
@@ -9842,10 +9891,8 @@ class OcamlBuilder {
 		// describe these same parameters, while its instance result must not become
 		// the result of the effect-only Haxe constructor body.
 		final parameterBoundary = callableBoundary == null ? functionPlan.constructionBoundary : callableBoundary;
-		final declarationSignature:Null<reflaxe.ocaml.ast.OcamlDeclarationSignature.OcamlDeclarationSignature> = currentGenericTransport != null ? {
-			parameters: args.map(argument -> typeExprFromHaxeType(argument.t)),
-			result: OcamlTypeExpr.TVar("hx_result")
-		} : !preserveDeclarationSignature ? null : callableBoundary != null
+		final declarationSignature:Null<reflaxe.ocaml.ast.OcamlDeclarationSignature.OcamlDeclarationSignature> = currentGenericTransport != null ? genericTransportSignature(args,
+			expectedReturnType ?? bodyExpr.t) : !preserveDeclarationSignature ? null : callableBoundary != null
 			&& callableBoundary.proofId == reflaxe.ocaml.lowered.OcamlCallableDeclarationCarrier.SIGNATURE_PROOF ? {
 				parameters: callableBoundary.arguments.map(value -> callableOutputType(value, bodyExpr.pos)),
 				result: callableBoundary.result == null ? OcamlTypeExpr.TIdent("unit") : callableOutputType(callableBoundary.result, bodyExpr.pos)
@@ -10069,7 +10116,13 @@ class OcamlBuilder {
 		**/
 	public function buildFunction(expression:TypedExpr, tfunc:haxe.macro.Type.TFunc):OcamlExpr {
 		final previousGenericTransport = currentGenericTransport;
-		currentGenericTransport = null;
+		// A forwarding declaration's nested functions have their own result owner.
+		// An array-element declaration proved that nested reads of captured
+		// carriers use the same admitted forms, so they keep the root binder.
+		currentGenericTransport = switch (currentGenericTransport) {
+			case ArrayElement(_): currentGenericTransport;
+			case _: null;
+		};
 		final storagePlan = currentLocalStoragePlan;
 		if (storagePlan == null)
 			return localStorageInvariant("a function expression reached syntax construction without a selected local-storage plan", tfunc.expr.pos);
