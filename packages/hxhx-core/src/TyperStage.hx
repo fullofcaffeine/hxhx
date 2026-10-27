@@ -679,10 +679,10 @@ class TyperStage {
 					position, named == null ? null : expectedArguments);
 				return new TypedCallResolution(declaration, requiresOwnerQualification, extensionProvider, argumentConversions, expectedArguments, named);
 			};
-			final memberResolver:TypedMemberDeclarationResolver = function(expression, position, lexicalEnvironment) {
-				final field = resolveFieldDeclaration(expression, lexicalEnvironment.copyForInference(), context, position);
+			final memberResolver:TypedMemberDeclarationResolver = function(expression, position, lexicalEnvironment, expected) {
+				final field = resolveFieldDeclaration(expression, lexicalEnvironment.copyForInference(), context, position, expected);
 				if (field == null) {
-					final method = resolveStaticMethodValue(expression, lexicalEnvironment, context);
+					final method = resolveStaticMethodValue(expression, lexicalEnvironment, context, expected);
 					if (method == null) {
 						final instance = resolveInstanceMethodValue(expression, lexicalEnvironment, context, position);
 						if (instance != null)
@@ -709,7 +709,8 @@ class TyperStage {
 				final importedBareField = switch (expression) {
 					case EIdent(name) | EEnumValue(name) if (lexicalEnvironment.resolveSymbol(name) == null): final current = context.currentClass(); (current == null
 							|| current.fieldInfo(name) == null) && (context.importedStaticField(name) == field
-							|| context.moduleEnumConstructorField(name) == field);
+							|| context.moduleEnumConstructorField(name) == field
+							|| context.expectedEnumConstructorField(name, expected) == field);
 					case _: false;
 				};
 				return TypedMemberResolution.field(field, importedBareField);
@@ -1775,10 +1776,11 @@ class TyperStage {
 			return new TyFunSig(signature.getName(), signature.getIsStatic(), signature.getArgNames().slice(offset), signature.getArgs().slice(offset),
 				signature.getArgOptional().slice(offset), signature.getArgRest().slice(offset), signature.getReturnType(), signature.getPos());
 		}), operands.length,
-			candidates.map(declaration -> declaration.getTypeParameterIds()));
+			candidates.map(declaration -> declaration.getTypeParameterIds()), ctx.getIndex());
 		final actual = [
 			for (i in 0...operands.length)
-				inferExprType(operands[i], scope, ctx, pos, inference.isSealed() ? null : contexts[i])
+				inferExprType(operands[i], scope, ctx, pos, inference.isSealed() && TyperContext.expectedEnumOwner(ctx.getIndex(),
+					contexts[i]) == null ? null : contexts[i])
 		];
 		function select(declaration:TyDeclarationInfo, environment:TyFunctionEnv, probe:Bool):TyMethodCallResolution {
 			final arguments = declaration.getIsStatic() ? [receiver].concat(operands) : operands;
@@ -1934,7 +1936,7 @@ class TyperStage {
 			candidates.map(signature -> {
 				final declaration = c.declarationForSignature(signature);
 				return declaration == null ? [] : declaration.getTypeParameterIds();
-			}));
+			}), ctx.getIndex());
 		final argTypes = retainedArgumentTypes != null ? retainedArgumentTypes.copy() : [
 			for (index in 0...args.length)
 				switch (args[index]) {
@@ -1945,7 +1947,9 @@ class TyperStage {
 						// A receiver can become more specific after this call. Collection
 						// replay reads retained literals; selected-call validation owns
 						// the original invocation context, not the receiver's final type.
-						final context = shared != null && !shared.isFunction() && scope.getInference().isSealed() ? null : shared;
+						final context = shared != null
+							&& TypedCollectionExpectation.context(shared) != null
+							&& scope.getInference().isSealed() ? null : shared;
 						inferExprType(argument, scope, ctx, pos, context);
 				}
 		];
@@ -2568,7 +2572,7 @@ class TyperStage {
 		overloaded method values need separate contextual binding and remain outside
 		this selection boundary.
 	 */
-	static function resolveStaticMethodValue(expression:HxExpr, scope:TyFunctionEnv, ctx:TyperContext):Null<TyDeclarationInfo> {
+	static function resolveStaticMethodValue(expression:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, ?expected:TyType):Null<TyDeclarationInfo> {
 		function select(owner:TyNominalInfo, name:String):Null<TyDeclarationInfo> {
 			if (owner == null || owner.fieldInfo(name) != null)
 				return null;
@@ -2580,11 +2584,12 @@ class TyperStage {
 				if (scope.resolveSymbol(name) != null
 					|| currentFieldReferenceType(name, ctx) != null
 					|| (!scope.isStaticContext() && ctx.instanceMethodOwner(name) != null)
-					|| ctx.importedStaticField(name) != null) {
+					|| (ctx.importedStaticField(name) != null && !currentMethodShadowsExpectedEnum(name, scope, ctx, expected))) {
 					null;
 				} else {
 					final current = select(ctx.currentClass(), name);
-					final imported = current == null ? ctx.importedStaticMethod(name) : null;
+					final imported = current == null
+						&& !currentMethodShadowsExpectedEnum(name, scope, ctx, expected) ? ctx.importedStaticMethod(name) : null;
 					current != null ? current : imported != null
 					&& imported.getCandidates().length == 1 ? imported.getProvider().declarationForSignature(imported.getCandidates()[0]) : null;
 				}
@@ -2654,7 +2659,7 @@ class TyperStage {
 		paths as expression typing. The immutable field record then travels with the
 		typed read so later analyses do not have to reconstruct the receiver path.
 	**/
-	static function resolveFieldDeclaration(expression:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Null<TyFieldInfo> {
+	static function resolveFieldDeclaration(expression:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos, ?expected:TyType):Null<TyFieldInfo> {
 		return switch (expression) {
 			case EIdent(name) | EEnumValue(name):
 				if (scope.resolveSymbol(name) != null) {
@@ -2663,8 +2668,15 @@ class TyperStage {
 					final current = ctx.currentClass();
 					final own = current == null ? null : current.fieldInfo(name);
 					final localField = own != null || scope.isStaticContext() ? own : ctx.instanceField(name, current);
-					final enumField = localField == null ? ctx.moduleEnumConstructorField(name) : null;
-					localField != null ? localField : enumField != null ? enumField : ctx.importedStaticField(name);
+					if (localField != null) {
+						localField;
+					} else if (currentMethodShadowsExpectedEnum(name, scope, ctx, expected)) {
+						null;
+					} else {
+						final contextual = ctx.expectedEnumConstructorField(name, expected);
+						final enumField = contextual == null ? ctx.moduleEnumConstructorField(name) : contextual;
+						enumField != null ? enumField : ctx.importedStaticField(name);
+					}
 				}
 			case EField(object, field):
 				final dotted = dottedFieldPath(object);
@@ -2689,6 +2701,25 @@ class TyperStage {
 			case _:
 				null;
 		};
+	}
+
+	/** Current callable declarations shadow implicit enum values even when overloaded. */
+	static function currentMethodShadowsExpectedEnum(name:String, scope:TyFunctionEnv, ctx:TyperContext, expected:Null<TyType>):Bool {
+		if (expected == null || expected.hasUnknownComponent() || TyperContext.expectedEnumOwner(ctx.getIndex(), expected) == null)
+			return false;
+		final current = ctx.currentClass();
+		return (!scope.isStaticContext() && ctx.instanceMethodOwner(name) != null)
+			|| (current != null && current.staticMethodCandidates(name).length > 0);
+	}
+
+	/** Apply only a selected enum singleton's owner arguments; ordinary static storage has no receiver. */
+	static function selectedFieldType(field:TyFieldInfo, receiver:Null<TyType>, expected:Null<TyType>, ctx:TyperContext):TyType {
+		final contextual = ctx.expectedEnumConstructorField(field.getName(), expected);
+		if (contextual == field) {
+			final owner = TyperContext.expectedEnumOwner(ctx.getIndex(), expected);
+			return TyNominalApplication.applyType(ctx.getIndex(), owner, TyAliasExpansion.revealNonNullable(expected), field.getType());
+		}
+		return TyNominalApplication.fieldType(ctx.getIndex(), field, receiver);
 	}
 
 	/** Name an undeclared extern member for write diagnostics without inventing field storage. */
@@ -2961,20 +2992,15 @@ class TyperStage {
 				if (sym != null) {
 					scope.getInference().localType(sym);
 				} else {
-					final fieldType = currentFieldReferenceType(name, ctx);
-					final enumField = fieldType == null ? ctx.moduleEnumConstructorField(name) : null;
-					final importedField = enumField != null ? enumField : fieldType == null ? ctx.importedStaticField(name) : null;
-					final instanceMethod = fieldType == null
-						&& importedField == null ? currentInstanceMethodReferenceType(name, scope, ctx) : null;
-					final currentMethod = instanceMethod != null ? instanceMethod : fieldType == null
-						&& importedField == null ? currentStaticMethodReferenceType(name, ctx) : null;
+					final field = resolveFieldDeclaration(expr, scope, ctx, pos, expectedResult);
+					final fieldType = field == null ? null : selectedFieldType(field, currentThisType(ctx), expectedResult, ctx);
+					final instanceMethod = fieldType == null ? currentInstanceMethodReferenceType(name, scope, ctx) : null;
+					final currentMethod = instanceMethod != null ? instanceMethod : fieldType == null ? currentStaticMethodReferenceType(name, ctx) : null;
 					final methodRef = currentMethod == null
 						&& fieldType == null
-						&& importedField == null ? importedStaticMethodReferenceType(name, ctx) : currentMethod;
+						&& !currentMethodShadowsExpectedEnum(name, scope, ctx, expectedResult) ? importedStaticMethodReferenceType(name, ctx) : currentMethod;
 					if (fieldType != null) {
 						fieldType;
-					} else if (importedField != null) {
-						TyNominalApplication.fieldType(ctx.getIndex(), importedField, null);
 					} else if (methodRef != null) {
 						methodRef;
 					} else {
@@ -3036,6 +3062,9 @@ class TyperStage {
 					if (scope.resolveSymbol(parts[0]) == null && isUpperStartName(last)) {
 						final c = ctx.resolveType(dotted);
 						if (c != null) {
+							final field = c.fieldInfo(_field);
+							if (field != null && field.getIsStatic() && ctx.expectedEnumConstructorField(_field, expectedResult) == field)
+								return selectedFieldType(field, null, expectedResult, ctx);
 							final memberType = declaredMemberReadType(c, _field, true, ctx);
 							if (memberType != null)
 								return memberType;

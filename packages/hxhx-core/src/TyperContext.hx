@@ -217,17 +217,23 @@ class TyperContext {
 	}
 
 	/**
-		Use a written or enclosing result type to disambiguate a bare constructor.
+		Reveal the exact indexed enum owner of a written or enclosing expected type.
 
 		Only the exact enum owner contributes candidates. Argument types never
 		search other enums, and callers retain local and current-method precedence.
 	**/
-	public function expectedEnumConstructorMethod(name:String, expected:Null<TyType>):Null<TyImportedStaticMethod> {
-		if (index == null || expected == null || name == null || name.length == 0)
+	public static function expectedEnumOwner(index:TyperIndex, expected:Null<TyType>):Null<TyNominalInfo> {
+		if (index == null || expected == null)
 			return null;
 		final identity = TyAliasExpansion.revealNonNullable(expected).getNominalIdentity();
 		final provider = identity == null ? null : index.getByFullName(identity.getCanonicalName());
-		if (provider == null || !provider.getIsEnum())
+		return provider != null && provider.getIsEnum() ? provider : null;
+	}
+
+	/** Select a payload constructor only from the actual expected enum declaration. */
+	public function expectedEnumConstructorMethod(name:String, expected:Null<TyType>):Null<TyImportedStaticMethod> {
+		final provider = expectedEnumOwner(index, expected);
+		if (provider == null || name == null || name.length == 0)
 			return null;
 		final candidates = [
 			for (candidate in provider.staticMethodCandidates(name))
@@ -235,6 +241,18 @@ class TyperContext {
 					&& provider.declarationForSignature(candidate).getIsEnumConstructor()) candidate
 		];
 		return candidates.length == 0 ? null : new TyImportedStaticMethod(provider, name, candidates);
+	}
+
+	/** A checked enum context exposes its singleton fields without importing other owners. */
+	public function expectedEnumConstructorField(name:String, expected:Null<TyType>):Null<TyFieldInfo> {
+		final provider = expected == null || expected.hasUnknownComponent() ? null : expectedEnumOwner(index, expected);
+		final field = provider == null ? null : provider.fieldInfo(name);
+		final identity = field == null ? null : field.getType().getNominalIdentity();
+		return field != null
+			&& field.getIsStatic()
+			&& field.getIsPublic()
+			&& identity != null
+			&& identity.getCanonicalName() == provider.getIdentity().getCanonicalName() ? field : null;
 	}
 
 	/**
