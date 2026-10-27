@@ -1,5 +1,5 @@
 /**
-	Find callback, collection, or enum context that every admitted method signature agrees upon.
+	Find callback, collection, or enum context shared by admitted callable parameters.
 	Collection context reaches empty literals inside branches before inference seals
 	them as Array<Dynamic>. Existing declared values keep their own types.
 	Only fixed, fully supplied parameter lists have an unambiguous source position
@@ -22,12 +22,25 @@ function shared(signatures:Array<TyFunSig>, arity:Int, ?methodParameters:Array<A
 			];
 		}
 	];
-	final contexts:Array<Null<TyType>> = [for (_ in 0...arity) null];
-	if (signatures.length == 0)
-		return contexts;
 	for (signature in signatures)
 		if (signature.getArgs().length != arity || signature.getArgRest().indexOf(true) >= 0)
-			return contexts;
+			return [for (_ in 0...arity) null];
+	return agreed(arguments, arity, declarationIndex);
+}
+
+/** A known function value supplies its existing parameter row; omission and rest selection stay with call alignment. */
+function functionValue(signature:TyCallableSignature, arity:Int, declarationIndex:TyperIndex):Array<Null<TyType>> {
+	final parameters = signature.getParameters();
+	if (parameters.length != arity || parameters.filter(parameter -> parameter.isRest).length > 0)
+		return [for (_ in 0...arity) null];
+	return agreed([parameters.map(parameter -> parameter.type)], arity, declarationIndex);
+}
+
+/** Share the same admission and equality rules after each callable owner supplies its own binder view. */
+private function agreed(arguments:Array<Array<TyType>>, arity:Int, declarationIndex:TyperIndex):Array<Null<TyType>> {
+	final contexts:Array<Null<TyType>> = [for (_ in 0...arity) null];
+	if (arguments.length == 0)
+		return contexts;
 	for (index in 0...arity) {
 		final first = arguments[0][index];
 		final expected = first.isFunction()
