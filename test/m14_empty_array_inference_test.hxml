@@ -15,3 +15,9 @@
 -cp test
 -main M14IndexedElementInferenceTest
 --interp
+--next
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp test
+-main M14ContextualArrayReplayTest
+--interp
