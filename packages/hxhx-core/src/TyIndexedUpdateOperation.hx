@@ -1,12 +1,19 @@
 import TyIndexedUpdateSelection.TyIndexedUpdateQuery;
 
+/** One source operand of a selected indexed operator: its occurrence, raw type and argument fact. */
+private typedef IndexedOperatorInput = {
+	final source:HxExpr;
+	final type:TyType;
+	final argument:TyAbstractBinaryArgument;
+}
+
 /** Source positions, selected declaration orientation and conversion objects must agree together. */
 private function validateInputs(input:{
 	query:TyIndexedUpdateQuery,
 	binding:TyBoundAbstractBinaryOperator,
 	sources:Array<HxExpr>,
 	types:Array<TyType>,
-	plans:Array<TyAbstractBinaryConversion>
+	plans:Array<TyAbstractBinaryArgument>
 }):Void {
 	final right = switch input.query.source {
 		case EBinop(_, EArrayAccess(_, _), right): right;
@@ -14,7 +21,7 @@ private function validateInputs(input:{
 	};
 	final binding = input.binding;
 	final sources = binding.getReverseArguments() ? [right, input.query.getterSource] : [input.query.getterSource, right];
-	final plans = binding.getReverseArguments() ? [binding.getSourceRightConversion(), binding.getSourceLeftConversion()] : [binding.getSourceLeftConversion(), binding.getSourceRightConversion()];
+	final plans = binding.getReverseArguments() ? [binding.getSourceRightArgument(), binding.getSourceLeftArgument()] : [binding.getSourceLeftArgument(), binding.getSourceRightArgument()];
 	final info = binding.getOperatorInfo();
 	if (input.sources.length != 2 || input.types.length != 2 || input.plans.length != 2)
 		throw "indexed operator lost its two selected input positions";
@@ -32,6 +39,11 @@ private function validateInputs(input:{
 	Check one operation over retained getter/RHS facts inside the update candidate.
 	Indexed unary steps follow the measured getter/setter contract and do not call
 	a declared increment helper. Compound overloads keep the shared binary selector.
+
+	A `Null<A>` getter whose applied abstract `A` has Int storage gets one checked
+	`TyIndexedNullableAbstractOperand`. Unary steps retain it as numeric-step
+	evidence; compound lookup may admit it unchanged to an `A` parameter at the
+	source-left getter position only. All recorded actual types stay `Null<A>`.
  */
 function select(input:{
 	query:TyIndexedUpdateQuery,
@@ -51,6 +63,7 @@ function select(input:{
 	final scope = input.environment;
 	final inference = scope.getInference();
 	var left = inference.expressionType(query.getterSource, input.getterType, scope);
+	final nullableOperand = TyIndexedNullableAbstractOperand.select(query, left, scope, input.index);
 	var right = input.rightType;
 	function fail(message:String):TyperError
 		return new TyperError(input.filePath, input.position, message + " (haxe_ocaml-rgmu4)");
@@ -61,23 +74,28 @@ function select(input:{
 		final applied:TyType;
 		final storage:TyType;
 		final index:TyperIndex;
+		final ?nullableOperand:TyIndexedNullableAbstractOperand;
 	}> = null;
 	switch query.kind {
 		case Unary(_, _):
 			final integer = TyNullableIntegerResult.isInteger(left);
 			if (!integer && !left.unwrapNull().isNumeric()) {
-				final identity = left.getNominalIdentity();
+				// A `Null<A>` getter with Int-backed `A` steps over `A`'s storage, as
+				// upstream does; the result below stays the original `Null<A>` type.
+				final applied = nullableOperand == null ? left : nullableOperand.applied;
+				final identity = applied.getNominalIdentity();
 				final owner = identity == null ? null : input.index.getAbstractByFullName(identity.getCanonicalName());
 				if (owner == null)
 					throw fail("Indexed increment/decrement requires a complete numeric getter");
-				final storage = TyNominalApplication.applyType(input.index, owner, left, owner.getUnderlyingType());
+				final storage = TyNominalApplication.applyType(input.index, owner, applied, owner.getUnderlyingType());
 				if (!storage.isNumeric())
 					throw fail("Indexed increment/decrement requires a complete numeric abstract representation");
 				numericStep = {
 					owner: owner,
-					applied: left,
+					applied: applied,
 					storage: storage,
-					index: input.index
+					index: input.index,
+					nullableOperand: nullableOperand
 				};
 			}
 			result = integer ? TyType.fromHintText("Int") : left;
@@ -97,28 +115,34 @@ function select(input:{
 				left = operands.left;
 				right = operands.right;
 			}
-			bound = TyAbstractBinaryBinding.select(input.index, left, right, compound, input.filePath, input.position);
+			if (nullableOperand != null)
+				nullableOperand.validate(scope);
+			bound = TyAbstractBinaryBinding.selectIndexed(input.index, left, right, compound, input.filePath, input.position, nullableOperand);
 			if (bound != null) {
 				final info = bound.getOperatorInfo();
 				final declaration = info.getDeclaration();
-				final sources = bound.getReverseArguments() ? [input.right, query.getterSource] : [query.getterSource, input.right];
-				final types = bound.getReverseArguments() ? [right, left] : [left, right];
-				final plans = bound.getReverseArguments() ? [bound.getSourceRightConversion(), bound.getSourceLeftConversion()] : [bound.getSourceLeftConversion(), bound.getSourceRightConversion()];
+				// One tuple per source operand. The selected orientation permutes whole
+				// tuples, so an occurrence, its raw type and its argument fact never separate.
+				final sourceLeft:IndexedOperatorInput = {source: query.getterSource, type: left, argument: bound.getSourceLeftArgument()};
+				final sourceRight:IndexedOperatorInput = {source: input.right, type: right, argument: bound.getSourceRightArgument()};
+				final oriented = bound.getReverseArguments() ? [sourceRight, sourceLeft] : [sourceLeft, sourceRight];
 				validateInputs({
 					query: query,
 					binding: bound,
-					sources: sources,
-					types: types,
-					plans: plans
+					sources: oriented.map(entry -> entry.source),
+					types: oriented.map(entry -> entry.type),
+					plans: oriented.map(entry -> entry.argument)
 				});
-				if (!declaration.getIsStatic()) {
-					sources.shift();
-					types.shift();
-					plans.shift();
-				}
+				// Validate both oriented tuples, including an instance receiver, before the
+				// receiver slot is removed. Admission follows its source, not parameter zero.
+				for (entry in oriented)
+					entry.argument.validateSource(entry.source, scope);
+				final explicit = declaration.getIsStatic() ? oriented : oriented.slice(1);
+				final sources = explicit.map(entry -> entry.source);
+				final types = explicit.map(entry -> entry.type);
 				final signature = declaration.getSignature();
 				final order = TyMethodArgumentOrder.select(signature, sources, (source, parameter, _) -> {
-					if (source != parameter || source >= plans.length)
+					if (source != parameter || source >= explicit.length)
 						return Incompatible;
 					return Compatible;
 				});
@@ -136,11 +160,12 @@ function select(input:{
 					index: input.index,
 					accepts: (_, _) -> false,
 					acceptsAt: (source, expected,
-						actual) -> source < plans.length
+						actual) -> source < explicit.length
 							&& order.parameterIndex(source) < signature.getArgs().length
 							&& signature.getArgs()[order.parameterIndex(source)].getSemanticKey() == expected.getSemanticKey()
-							&& plans[source].getExpectedType().getSemanticKey() == expected.getSemanticKey()
-							&& plans[source].getActualType().getSemanticKey() == actual.getSemanticKey()});
+							&& explicit[source].argument.admitsSource(explicit[source].source)
+							&& explicit[source].argument.getExpectedType().getSemanticKey() == expected.getSemanticKey()
+							&& explicit[source].argument.getActualType().getSemanticKey() == actual.getSemanticKey()});
 			} else {
 				if (["&", "|", "^", "<<", ">>", ">>>"].indexOf(op) >= 0) {
 					TyBitwiseOperandInference.constrain({

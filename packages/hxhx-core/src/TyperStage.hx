@@ -1805,14 +1805,22 @@ class TyperStage {
 		final placeType = inference.expressionType(query.getterSource, getter.type, candidate);
 		final computedType = operation.computed.getType(candidate);
 		final selectedPlaceConversion = operation.binary == null ? null : operation.binary.getResultConversion();
-		final place = if (selectedPlaceConversion == null && TyNullableIntegerResult.admits(placeType, computedType)) {
+		// A unary Int-storage step over a Null<A> getter must carry its derived result
+		// permission into the place; every other result keeps the existing order.
+		final place = if (selectedPlaceConversion == null && operation.computed.hasUnaryNullableAbstractStep()) {
+			TyIndexedComputedResult.admittedUnaryAbstractPlace(operation.computed, placeType, candidate);
+		} else if (selectedPlaceConversion == null && TyNullableIntegerResult.admits(placeType, computedType)) {
 			TyIndexedComputedResult.admittedPlace(operation.computed, placeType);
 		} else {
 			final conversion = selectedPlaceConversion == null ? TyAbstractBinaryConversion.select(ctx.getIndex(), placeType,
 				computedType) : selectedPlaceConversion;
-			if (conversion == null || conversion.getExpectedType().getSemanticKey() != placeType.getSemanticKey())
-				throw new TyperError(ctx.getFilePath(), pos, computedType.getDisplay() + " should be " + placeType.getDisplay() + " for an indexed update");
-			TyIndexedComputedResult.converted(operation.computed, query.placeResultSource, conversion);
+			if (conversion == null && selectedPlaceConversion == null && operation.computed.admitsSelectedAbstractPlace(placeType)) {
+				TyIndexedComputedResult.admittedSelectedAbstractPlace(operation.computed, placeType);
+			} else {
+				if (conversion == null || conversion.getExpectedType().getSemanticKey() != placeType.getSemanticKey())
+					throw new TyperError(ctx.getFilePath(), pos, computedType.getDisplay() + " should be " + placeType.getDisplay() + " for an indexed update");
+				TyIndexedComputedResult.converted(operation.computed, query.placeResultSource, conversion);
+			}
 		};
 		place.register(trial, candidate);
 		final setter = resolveIndexedAccess(query.setterSource, operands.receiver, operands.subscript, query.placeResultSource, receiverType, candidate, ctx,
@@ -1823,6 +1831,8 @@ class TyperStage {
 		final parameter = parameters[parameters.length - 1];
 		final setterInput = if (parameter != null && TyNullableIntegerResult.admits(parameter, place.getType(candidate))) {
 			TyIndexedComputedResult.admittedArgument(place, parameter);
+		} else if (parameter != null && place.admitsUnaryAbstractArgument(parameter)) {
+			TyIndexedComputedResult.admittedUnaryAbstractArgument(place, parameter, candidate);
 		} else {
 			final conversion = parameter == null ? null : TyAbstractBinaryConversion.select(ctx.getIndex(), parameter, place.getType(candidate));
 			if (conversion == null)

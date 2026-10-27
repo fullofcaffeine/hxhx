@@ -209,7 +209,8 @@ class TypedAbstractBinaryLowering {
 			allocator:TyCompilerTemporaryAllocator):TypedExpr {
 		final info = binding.getOperatorInfo();
 		final declaration = info.getDeclaration();
-		final ordered = orderedValues(binding.getSourceLeftConversion().apply(left), binding.getSourceRightConversion().apply(right), allocator);
+		final ordered = orderedValues(binding.getSourceLeftArgument().requireConversion().apply(left),
+			binding.getSourceRightArgument().requireConversion().apply(right), allocator);
 		final owner = index.getByFullName(declaration.getOwner().getCanonicalName());
 		final ownerName = owner == null ? declaration.getOwner().getCanonicalName() : owner.getShortName();
 		final calleeOwner = TypedExpr.nameRead(ownerName, TyType.nominal(declaration.getOwner(), [], ownerName), left.getPosition());
@@ -224,7 +225,8 @@ class TypedAbstractBinaryLowering {
 			allocator:TyCompilerTemporaryAllocator):TypedExpr {
 		final info = binding.getOperatorInfo();
 		final declaration = info.getDeclaration();
-		final ordered = orderedValues(binding.getSourceLeftConversion().apply(left), binding.getSourceRightConversion().apply(right), allocator);
+		final ordered = orderedValues(binding.getSourceLeftArgument().requireConversion().apply(left),
+			binding.getSourceRightArgument().requireConversion().apply(right), allocator);
 		final callArgs = callArguments(binding, ordered.left, ordered.right);
 		// callArguments has already restored declaration order after any
 		// commutative source reversal. An instance declaration always receives its
@@ -276,7 +278,8 @@ class TypedAbstractBinaryLowering {
 			allocator:TyCompilerTemporaryAllocator):TypedExpr {
 		final info = binding.getOperatorInfo();
 		final declaration = info.getDeclaration();
-		final ordered = orderedValues(binding.getSourceLeftConversion().apply(left), binding.getSourceRightConversion().apply(right), allocator);
+		final ordered = orderedValues(binding.getSourceLeftArgument().requireConversion().apply(left),
+			binding.getSourceRightArgument().requireConversion().apply(right), allocator);
 		final arguments = callArguments(binding, ordered.left, ordered.right);
 		final carrierLeft = carrierValue(arguments[0], info.getLeftType(), index);
 		final carrierRight = carrierValue(arguments[1], info.getRightType(), index);
@@ -295,8 +298,8 @@ class TypedAbstractBinaryLowering {
 		final declaration = info.getDeclaration();
 		final place = placeFor(left, index, filePath, left.getPosition() == null ? HxPos.unknown() : left.getPosition(), allocator);
 		final expressions = place.prefix.copy();
-		final ordered = orderedValues(binding.getSourceLeftConversion().apply(place.read(left.getType())), binding.getSourceRightConversion().apply(right),
-			allocator);
+		final ordered = orderedValues(binding.getSourceLeftArgument().requireConversion().apply(place.read(left.getType())),
+			binding.getSourceRightArgument().requireConversion().apply(right), allocator);
 		for (entry in ordered.prefix)
 			expressions.push(entry);
 		final owner = index.getByFullName(declaration.getOwner().getCanonicalName());
@@ -334,8 +337,8 @@ class TypedAbstractBinaryLowering {
 			return nativeBodylessValue(binding, left, right, index, filePath, allocator);
 		final place = placeFor(left, index, filePath, left.getPosition() == null ? HxPos.unknown() : left.getPosition(), allocator);
 		final expressions = place.prefix.copy();
-		final ordered = orderedValues(binding.getSourceLeftConversion().apply(place.read(left.getType())), binding.getSourceRightConversion().apply(right),
-			allocator);
+		final ordered = orderedValues(binding.getSourceLeftArgument().requireConversion().apply(place.read(left.getType())),
+			binding.getSourceRightArgument().requireConversion().apply(right), allocator);
 		for (entry in ordered.prefix)
 			expressions.push(entry);
 		final callArgs = callArguments(binding, ordered.left, ordered.right);
@@ -469,7 +472,7 @@ class TypedAbstractBinaryLowering {
 			allocator: allocator
 		});
 		final prefix = new Array<TypedExpr>();
-		final argumentConversion = binding.getReverseArguments() ? binding.getSourceLeftConversion() : binding.getSourceRightConversion();
+		final argumentConversion = (binding.getReverseArguments() ? binding.getSourceLeftArgument() : binding.getSourceRightArgument()).requireConversion();
 		final expectedArgumentType = argumentConversion.getExpectedType();
 		final convertedArgument = argumentConversion.apply(argument);
 		final argumentBinding = allocator.allocate("argument", expectedArgumentType);

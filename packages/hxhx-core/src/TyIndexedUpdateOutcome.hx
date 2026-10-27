@@ -79,6 +79,10 @@ class TyIndexedUpdateOutcome {
 			|| setterInput.source != query.setterInputSource
 			|| admission.declaration != selection.setter.declaration)
 			throw "indexed outcome has foreign result or declaration evidence";
+		// The setter input must be derived from this place, and the place from this
+		// computation. Equal types or queries cannot substitute another chain link.
+		if (placeResult.predecessor() != computed || setterInput.predecessor() != placeResult)
+			throw "indexed outcome joins results from another derivation chain";
 		for (result in [computed, placeResult, setterInput])
 			result.validate(environment, inference);
 		final arguments = selection.setter.getArguments();

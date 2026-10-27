@@ -152,11 +152,11 @@ class M14IndexedUpdateSelectionTest {
 				require(outcome.getStaticType(result.environment).getSemanticKey() == parameter.getSemanticKey(), "setter static result changed");
 				require(outcome.setterInput.validatesParameter(parameter), "actual Int lost its distinct selected nullable parameter");
 				require(switch outcome.placeResult.evidence {
-					case CheckedPlace(_, expected): expected.getSemanticKey() == getter.getSemanticKey();
+					case CheckedPlace(_, expected, _): expected.getSemanticKey() == getter.getSemanticKey();
 					case _: false;
 				}, "place compatibility invented an executable nullable conversion");
 				require(switch outcome.setterInput.evidence {
-					case CheckedArgument(_, expected): expected.getSemanticKey() == parameter.getSemanticKey();
+					case CheckedArgument(_, expected, _): expected.getSemanticKey() == parameter.getSemanticKey();
 					case _: false;
 				}, "setter admission invented an executable nullable conversion");
 			}
@@ -238,7 +238,7 @@ class M14IndexedUpdateSelectionTest {
 			case _: throw "missing original RHS";
 		};
 		final sources = [outcome.selection.query.getterSource, rhs];
-		final plans = [bound.getSourceLeftConversion(), bound.getSourceRightConversion()];
+		final plans = [bound.getSourceLeftArgument(), bound.getSourceRightArgument()];
 		require(plans[0] != plans[1], "control requires distinct equal-looking conversion plans");
 		@:privateAccess TyIndexedUpdateOperation.validateInputs({
 			query: outcome.selection.query,
