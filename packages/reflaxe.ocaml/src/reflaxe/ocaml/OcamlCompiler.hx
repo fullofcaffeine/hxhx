@@ -935,6 +935,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final outputProjectName = outputConfigured ? DuneProjectEmitter.defaultProjectName(outputDirectory) : "unconfigured";
 		#if macro
 		final packageVersion = Context.definedValue("reflaxe.ocaml") ?? "unversioned";
+		final reuseEnabled = Context.defined("reflaxe_ocaml_target_reuse");
 		final sourceConfigurationRevision = OcamlArtifactConfigurationRevision.fromMacroContext(OcamlFunctionPlanRegistry.PIPELINE_REVISION, outputProjectName);
 		targetReuseRuntimeSourceManifest = Context.defined("ocaml_no_runtime") ? null : RuntimeCopier.loadCheckedSourceManifest();
 		final runtimeInputRevision = targetReuseRuntimeSourceManifest == null ? "sha256:" +
@@ -946,8 +947,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 			outputSchemaRevision: '${OcamlArtifactManifestSchema.MODEL}:v${OcamlArtifactManifestSchema.SCHEMA_VERSION}:framework-receipt-v1',
 			runtimeInputRevision: runtimeInputRevision,
 			nativeSourceInputRevision: OcamlSourceBundleAuthority.nativeInputRevision(sourceConfigurationRevision),
-			targetImplementationRevision: OcamlTargetImplementationRevision.current(),
-			reuseEnabled: Context.defined("reflaxe_ocaml_target_reuse"),
+			// Disabled requests cannot replay or populate the cache. Keep their identity
+			// explicitly incomplete instead of hashing every target source unnecessarily.
+			targetImplementationRevision: reuseEnabled ? OcamlTargetImplementationRevision.current() : null,
+			reuseEnabled: reuseEnabled,
 			transactionalOutputEnabled: Context.defined("reflaxe_output_transaction"),
 			mliEnabled: Context.defined("ocaml_mli"),
 			outputConfigured: outputConfigured,
