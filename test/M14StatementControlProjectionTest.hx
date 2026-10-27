@@ -14,7 +14,7 @@ class M14StatementControlProjectionTest {
 	public static function main():Void {
 		final source = 'class Main {static function run():Int {var count=0; for (i in 0...3) {if (i==1) continue; count++; if (i==2) break;} return count;}}';
 		final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
-		final fn = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved])).getTypedClasses()[0].getFunctions()[0];
+		final fn = M14Stage3RuntimeFixture.typeResolved({module: resolved, root: "."}).getTypedClasses()[0].getFunctions()[0];
 		final projection = TypedBodySource.functionProjection(fn);
 		final foreign = TypedBodySource.functionProjection(fn);
 		var exits = 0;
