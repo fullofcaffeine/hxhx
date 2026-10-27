@@ -15,6 +15,7 @@ class TyAbstractInfo extends TyNominalInfo {
 	final implicitToTypes:Array<TyType>;
 	final unaryOperators:haxe.ds.StringMap<Array<TyAbstractOperatorInfo>>;
 	final binaryOperators:haxe.ds.StringMap<Array<TyAbstractBinaryOperatorInfo>>;
+	final indexedDeclarations:Array<TyDeclarationInfo>;
 	final enumDomain:Null<TyEnumAbstractDomain>;
 	final multiTypePolicy:Null<TyMultiTypePolicy>;
 
@@ -34,6 +35,7 @@ class TyAbstractInfo extends TyNominalInfo {
 		this.implicitToTypes = implicitToTypes == null ? [] : implicitToTypes.copy();
 		this.unaryOperators = new haxe.ds.StringMap();
 		this.binaryOperators = new haxe.ds.StringMap();
+		this.indexedDeclarations = [];
 		this.enumDomain = policies.enumDomain;
 		this.multiTypePolicy = policies.multiType;
 		}
@@ -105,4 +107,13 @@ class TyAbstractInfo extends TyNominalInfo {
 				out.push(candidate);
 		return out;
 	}
+
+	/** Indexed helpers retain source order: the first applicable declaration wins, including mixed static/instance forms. */
+	public function addIndexedDeclaration(declaration:TyDeclarationInfo):Void {
+		if (indexedDeclarations.indexOf(declaration) < 0)
+			indexedDeclarations.push(declaration);
+	}
+
+	public function getIndexedDeclarations():Array<TyDeclarationInfo>
+		return indexedDeclarations.copy();
 }

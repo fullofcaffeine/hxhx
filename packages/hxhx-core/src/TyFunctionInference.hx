@@ -59,6 +59,24 @@ class TyFunctionInference {
 	var locals:StringMap<TyInferenceTerm> = new StringMap();
 	var speculativeReplay:Bool = false;
 	var iteratorProtocols:Array<TyIteratorProtocolSource> = [];
+	var indexedAccesses:Array<TyIndexedAccessBinding> = [];
+
+	/** A selected helper belongs to the original indexed occurrence, including after its receiver becomes more specific. */
+	public function indexedAccess(source:HxExpr, ?select:() -> TyIndexedAccessBinding):Null<TyIndexedAccessBinding> {
+		for (entry in indexedAccesses)
+			if (entry.owns(source))
+				return entry;
+		if (select == null)
+			return null;
+		if (solver.isSealed())
+			throw "indexed selection is absent from sealed inference";
+		final entry = select();
+		if (!entry.owns(source))
+			throw "indexed selection belongs to another source occurrence";
+		indexedAccesses.push(entry);
+		return entry;
+	}
+
 	var diagnosticProbes:Array<{
 		final expression:HxExpr;
 		final fingerprint:String;
@@ -134,6 +152,13 @@ class TyFunctionInference {
 		receiverCalls.push(new TyReceiverCallContext(source, declaration, parameters));
 	}
 
+	/** Nullable access views the original child without changing the receiver's retained wrapper or allocating a variable. */
+	static function nonNullableReceiver(term:TyInferenceTerm):TyInferenceTerm
+		return switch term {
+			case Nullable(inner): nonNullableReceiver(inner);
+			case _: term;
+		};
+
 	/** A member result shares the receiver's type variables even when it allocates a different runtime value. */
 	public function recordReceiverResult(source:HxExpr, receiver:HxExpr, declaration:TyDeclarationInfo, environment:TyFunctionEnv, index:TyperIndex):Void {
 		if (declaration.getIsStatic() || declaration.getTypeParameterIds().length > 0)
@@ -154,7 +179,7 @@ class TyFunctionInference {
 		if (result.hasUnknownComponent()
 			|| TyTypeSubstitution.parameterIdentities(result).filter(parameter -> parameters.filter(owned -> owned.equals(parameter)).length > 0).length == 0)
 			return;
-		final viewed = TyInferenceNominalContext.view(index, original, TyType.nominal(owner.getIdentity(), []));
+		final viewed = TyInferenceNominalContext.view(index, nonNullableReceiver(original), TyType.nominal(owner.getIdentity(), []));
 		final arguments = switch viewed {
 			case Nominal(identity, arguments) if (identity.equals(owner.getIdentity())): arguments;
 			case _: return;
@@ -181,12 +206,7 @@ class TyFunctionInference {
 		final original = sourceTerm(receiver, environment);
 		if (original == null)
 			return;
-		function nonNullable(term:TyInferenceTerm):TyInferenceTerm
-			return switch term {
-				case Nullable(inner): nonNullable(inner);
-				case _: term;
-			};
-		final viewedReceiver = nonNullable(original);
+		final viewedReceiver = nonNullableReceiver(original);
 		final provider = switch viewedReceiver {
 			case Nominal(identity, _): index.getByFullName(identity.getCanonicalName());
 			case _: null;
@@ -374,6 +394,7 @@ class TyFunctionInference {
 		candidate.callbackArguments = callbackArguments.copy();
 		candidate.sourceFunctions = sourceFunctions.copy();
 		candidate.iteratorProtocols = iteratorProtocols.copy();
+		candidate.indexedAccesses = indexedAccesses.copy();
 		candidate.diagnosticProbes = diagnosticProbes.copy();
 		for (key => value in locals)
 			candidate.locals.set(key, value);
@@ -971,7 +992,7 @@ class TyFunctionInference {
 		final receiverTerm = sourceTerm(receiver, environment);
 		if (receiverTerm == null)
 			return true;
-		final arguments = switch receiverTerm {
+		final arguments = switch nonNullableReceiver(receiverTerm) {
 			case Nominal(identity, arguments) if (identity.equals(provider.getIdentity())): arguments;
 			case _: return true;
 		};

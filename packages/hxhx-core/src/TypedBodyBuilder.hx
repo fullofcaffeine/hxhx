@@ -9,6 +9,40 @@
 	location of the complete construct.
 **/
 class TypedBodyBuilder {
+	/** Project the selected indexed helper as a normal call, preserving receiver-first evaluation and its call argument plan. */
+	static function buildIndexedAccess(source:HxExpr, type:TyType, position:Null<HxPos>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
+			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
+			memberResolver:Null<TypedMemberDeclarationResolver>):Null<TypedExpr> {
+		if (typeResolver == null || environment == null)
+			return null;
+		final selected = typeResolver.indexedAccess(source, diagnosticPosition, environment);
+		if (selected == null)
+			return null;
+		final binding = selected.binding;
+		final sources = binding.getArguments();
+		if (binding.conversion != null) {
+			final receiver = typeResolver.convertValue(buildExpr(binding.receiver, null, diagnosticPosition, environment, typeResolver, callResolver,
+				memberResolver), binding.conversion);
+			final subscript = buildExpr(sources[0], null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+			final indexed = TypedExpr.arrayAccess(receiver, subscript, type, position);
+			return sources.length == 1 ? indexed : TypedExpr.assign(indexed,
+				typeResolver.convertValue(buildExpr(sources[1], null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, type), type),
+				type, position);
+		}
+		final resolution = selected.call;
+		final declaration = binding.declaration;
+		final callable = TyType.functionType(resolution.getExpectedArguments(), type);
+		final callee = declaration.getIsStatic() ? TypedExpr.staticMethodRead(declaration.getSignature().getName(), declaration, callable, position,
+			true) : TypedExpr.instanceMethodRead(buildExpr(binding.receiver, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver),
+				declaration.getSignature().getName(), declaration, callable, position);
+		var arguments = buildExpressions(sources, diagnosticPosition, environment, typeResolver, callResolver, memberResolver,
+			resolution.getExpectedArguments());
+		arguments = applyCallArgumentConversions(arguments, resolution.getArgumentConversions());
+		arguments = convertCallValues(arguments, resolution, typeResolver);
+		final call = TypedExpr.call(callee, arguments, declaration, type, position, declaration.getIsStatic());
+		return call.withNamedArguments(resolution.getNamedArguments().publish(arguments, type));
+	}
+
 	/**
 		Publish executable conversions inside their original argument positions.
 		Each wrapper retains its operand once, so targets observe source evaluation
@@ -1119,6 +1153,9 @@ class TypedBodyBuilder {
 				TypedExpr.runtimeTypeTest(buildExpr(value, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver), target,
 					position);
 			case EBinop("=", left, right):
+				final indexed = buildIndexedAccess(expression, nodeType, position, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				if (indexed != null)
+					return indexed;
 				final destination = TypedCastExpectation.isUnchecked(right)
 					|| TypedArrayLiteral.isLiteral(right)
 					|| TypedAnonymousLiteral.isLiteral(right) ? expressionType(left, diagnosticPosition, environment, typeResolver) : null;
@@ -1203,6 +1240,9 @@ class TypedBodyBuilder {
 					memberResolver, element == null || comprehension ? null : [for (_ in values) element]),
 					nodeType, position);
 			case EArrayAccess(array, index):
+				final indexed = buildIndexedAccess(expression, nodeType, position, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				if (indexed != null)
+					return indexed;
 				final typedArray = buildExpr(array, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				final typedIndex = buildExpr(index, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				TypedExpr.arrayAccess(typedArray, typedIndex, nodeType, position);

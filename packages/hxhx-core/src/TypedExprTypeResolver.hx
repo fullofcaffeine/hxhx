@@ -12,6 +12,9 @@ typedef TypedExprTypeResolver = {
 	/** A direct method call does not create a stored-method inference occurrence, even when no overload applies. */
 	final callTargetType:(expression:HxExpr, diagnosticPosition:HxPos, environment:TyFunctionEnv) -> TyType;
 
+	/** Indexed helpers become exact ordinary calls; their source operands retain their original order and inference facts. */
+	final indexedAccess:(expression:HxExpr, diagnosticPosition:HxPos, environment:TyFunctionEnv) -> Null<TypedIndexedAccessResolution>;
+
 	/** Resolve written local context with the current declaration's exact generic binders. */
 	final declaredType:(hint:String, environment:TyFunctionEnv) -> TyType;
 
