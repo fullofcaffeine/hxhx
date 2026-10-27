@@ -1884,8 +1884,10 @@ class HxParser {
 			returnType = readFunctionReturnTypeHint(() -> cur.kind.match(TLBrace) || cur.kind.match(TKeyword(KReturn)) || cur.kind.match(TKeyword(KThrow))
 				|| cur.kind.match(TSemicolon) || cur.kind.match(TEof));
 		}
-		final body = parseAuthoredControl(() -> parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TComma) || cur.kind.match(TRParen)
-			|| cur.kind.match(TRBrace) || cur.kind.match(TEof)));
+		// The closing brace completes this function body. A following call or
+		// array expression belongs to the enclosing source group.
+		final body = cur.kind.match(TLBrace) ? parseBraceExpr() : parseAuthoredControl(() -> parseExpr(() -> cur.kind.match(TSemicolon)
+			|| cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace) || cur.kind.match(TEof)));
 		final facts = new HxSourceFunction({
 			kind: name == null ? Anonymous : Named(name, isInline),
 			placement: placement,
@@ -2533,6 +2535,10 @@ class HxParser {
 	}
 
 	function parsePostfixSuffix(seed:HxExpr, stop:() -> Bool):HxExpr {
+		// Function values need parentheses before postfix operations. Their own
+		// non-braced bodies have already parsed any returned calls or indexing.
+		if (seed.match(ESourceFunction(_, _, _, _)))
+			return seed;
 		var e = seed;
 
 		inline function isTripleDotAhead():Bool {
