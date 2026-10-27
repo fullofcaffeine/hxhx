@@ -81,9 +81,12 @@ class M14GenericCallbackContextTest {
 			process.close();
 			if (code != 0 || stdout != entry.expected)
 				throw "upstream callback order differs: " + entry.name + stdout + stderr;
-			final typed = @:privateAccess M14GenericDynamicInferenceTest.typeSource(source, root, path);
-			typed.getBackendProjection();
-			JsRuntimeFixture.assertRuntime(typed, "Main", entry.expected);
+			final program = JsSourceProgramFixture.build({
+				sources: [{path: "Main.hx", source: source}],
+				requiredModules: entry.name == "rest" ? ["haxe.Rest"] : [],
+				mode: "full"
+			});
+			JsRuntimeFixture.assertProgramRuntime(program, "Main", entry.expected);
 			Sys.println("GENERIC_CALLBACK_CONTEXT_ORDER:PASS " + entry.name);
 		}
 	}
