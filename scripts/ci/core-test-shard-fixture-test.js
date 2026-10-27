@@ -625,8 +625,15 @@ function main() {
     'Core portable fixture deadline'
   )
   requireIncludes(workflow, '  hxhx-e2e:\n    name: Tests / hxhx target end-to-end', 'Q3 hxhx E2E job')
-  requireIncludes(workflow, "needs.route.outputs.run_q3 == 'true'", 'Q3 hxhx E2E condition')
-  requireIncludes(workflow, 'npm run test:ci:shard -- --shard hxhx-targets', 'Q3 hxhx E2E runner')
+  const e2eJob = workflow.slice(q3HxhxStart, workflow.indexOf('\n  test:', q3HxhxStart))
+  requireIncludes(e2eJob, "needs.route.outputs.run_q3 == 'true'", 'Q3 hxhx E2E condition')
+  requireIncludes(e2eJob, '    timeout-minutes: 40', 'Q3 hxhx E2E budget')
+  const e2eStepStart = e2eJob.indexOf('      - name: Run hxhx target end-to-end shard\n')
+  assert(e2eStepStart >= 0, 'Q3 hxhx E2E step is missing')
+  const e2eStep = e2eJob.slice(e2eStepStart)
+  requireIncludes(e2eStep, 'HXHX_FORCE_STAGE0: "0"', 'Q3 snapshot compiler selection')
+  requireIncludes(e2eStep, 'HXHX_BOOTSTRAP_PREFER_NATIVE: "1"', 'Q3 native bootstrap preference')
+  requireIncludes(e2eStep, 'npm run test:ci:shard -- --shard hxhx-targets', 'Q3 hxhx E2E runner')
   requireIncludes(workflow, '  test:\n    name: Tests\n    if: ${{ always() }}', 'stable Tests aggregate')
   requireIncludes(
     workflow,

@@ -822,8 +822,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [route]
     if: ${{ needs.route.outputs.run_q3 == 'true' }}
-    # Current-layout runs 33284703349 and 33289157979 measured this serialized
-    # job at 11m05s and 10m46s. Reserve it for Q3 with at least 28m55s headroom.
+    # Repeated compiler invocations amortize the native bootstrap build cost.
+    # Keep the complete Q3 workload within the existing job budget.
     timeout-minutes: 40
     steps:
       - name: Checkout
@@ -877,6 +877,7 @@ jobs:
       - name: Run hxhx target end-to-end shard
         env:
           HXHX_FORCE_STAGE0: "0"
+          HXHX_BOOTSTRAP_PREFER_NATIVE: "1"
           HXHX_STAGE0_HEARTBEAT: "30"
           HXHX_STAGE0_FAILFAST_SECS: "7200"
         run: npm run test:ci:shard -- --shard hxhx-targets
