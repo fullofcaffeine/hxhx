@@ -407,7 +407,8 @@ class TyperStage {
 	}
 
 	static function declarePatternBindings(scope:TyFunctionEnv, pattern:HxSwitchPattern, baseTy:TyType, ctx:TyperContext, pos:HxPos):Void {
-		TySwitchPatternBindings.declare(scope, pattern, baseTy, (input, name, arity) -> TyEnumPatternArguments.resolve(input, name, arity, ctx, pos));
+		TySwitchPatternBindings.declare(scope, pattern, baseTy,
+			(input, name, arity, suffix) -> TyEnumPatternArguments.resolve(input, name, arity, ctx, pos, suffix));
 	}
 
 	/** Guards share ordinary expression inference, but must supply a Boolean condition. */
@@ -482,8 +483,8 @@ class TyperStage {
 				catchUse: function(binding) {
 					return context.hasDefine("neko") || context.hasDefine("cpp") ? TypedCatchUse.resolve(binding, context) : null;
 				},
-				enumPatternArguments: function(input, name, arity, position) {
-					return TyEnumPatternArguments.resolve(input, name, arity, context, position);
+				enumPatternArguments: function(input, name, arity, position, suffix) {
+					return TyEnumPatternArguments.resolve(input, name, arity, context, position, suffix);
 				},
 				switchPatterns: function(input, patterns, position) {
 					return TyNamedPatternResolver.resolve(input, patterns, context, position);

@@ -91,7 +91,7 @@ private function constantPattern(pattern:HxSwitchPattern, lookup:HxSwitchPattern
 					throw "OCaml constructor pattern arity differs from typing";
 				switch pattern {
 					case PEnumValue(_): PEnumValue(member);
-					case PEnumExtract(_, _): PEnumExtract(member, [for (child in arguments) constantPattern(child, lookup)]);
+					case PEnumExtract(_, _, provenance): PEnumExtract(member, [for (child in arguments) constantPattern(child, lookup)], provenance);
 					case _: pattern;
 				}
 		};

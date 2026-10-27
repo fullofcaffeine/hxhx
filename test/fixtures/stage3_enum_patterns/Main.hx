@@ -15,6 +15,7 @@ enum Choice {
 	NullableAny(value:Null<Dynamic>);
 	AnyPair(first:Dynamic, second:Dynamic);
 	OptionalTail(number:Int, ?flag:Bool, ?text:String);
+	RequiredTail(number:Int, flag:Bool, text:String);
 }
 
 enum Other {
@@ -32,6 +33,16 @@ class Token {
 }
 
 class Main {
+	/** A final bare wildcard ignores required stored slots without shortening the runtime payload. */
+	static function wildcardSuffix(value:Choice):Int {
+		return switch value {
+			case Choice.RequiredTail(number, _): number;
+			case Choice.Wrap(Choice.RequiredTail(number, _)) if (number > 0): number + 100;
+			case Choice.Pair(_): 73;
+			case _: 0;
+		};
+	}
+
 	/** Omitted patterns ignore optional values; execution still matches the full stored constructor payload. */
 	static function omitted(value:Choice):Int {
 		return switch value {
@@ -154,5 +165,8 @@ class Main {
 		Sys.println(omitted(Choice.OptionalNumber(19)));
 		Sys.println(omitted(Choice.Wrap(Choice.OptionalTail(9, true, "nested"))));
 		Sys.println(omitted(Choice.OptionalFlag(false)));
+		Sys.println(wildcardSuffix(Choice.RequiredTail(11, false, "stored")));
+		Sys.println(wildcardSuffix(Choice.Wrap(Choice.RequiredTail(12, true, "nested"))));
+		Sys.println(wildcardSuffix(Choice.Pair(13, true)));
 	}
 }

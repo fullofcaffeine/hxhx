@@ -76,7 +76,7 @@ class TySwitchPatternBindings {
 	}
 
 	static function analyzeOr(patterns:Array<HxSwitchPattern>, baseType:TyType,
-			enumArguments:Null<(TyType, String, Int) -> Null<Array<TyType>>>):TySwitchPatternBindingAnalysis {
+			enumArguments:Null<(TyType, String, Int, Bool) -> Null<Array<TyType>>>):TySwitchPatternBindingAnalysis {
 		if (patterns == null || patterns.length == 0)
 			return emptyAnalysis();
 		final alternatives = [for (pattern in patterns) analyze(pattern, baseType, enumArguments)];
@@ -124,7 +124,7 @@ class TySwitchPatternBindings {
 	}
 
 	static function analyze(pattern:HxSwitchPattern, baseType:TyType,
-			enumArguments:Null<(TyType, String, Int) -> Null<Array<TyType>>>):TySwitchPatternBindingAnalysis {
+			enumArguments:Null<(TyType, String, Int, Bool) -> Null<Array<TyType>>>):TySwitchPatternBindingAnalysis {
 		if (pattern == null)
 			return emptyAnalysis();
 		return switch (pattern) {
@@ -132,9 +132,10 @@ class TySwitchPatternBindings {
 				bindingFact(name, baseType);
 			case PCapture(name, inner):
 				mergeIndependent([bindingFact(name, baseType), analyze(inner, baseType, enumArguments)]);
-			case PEnumExtract(name, arguments):
+			case PEnumExtract(name, arguments, provenance):
 				final children = arguments == null ? [] : arguments;
-				final types = enumArguments == null ? null : enumArguments(baseType, name, children.length);
+				final types = enumArguments == null ? null : enumArguments(baseType, name, children.length,
+					TyEnumPatternArguments.hasWildcardSuffix(children, provenance));
 				if (types != null && types.length != children.length)
 					throw "enum pattern argument types do not match its payload patterns";
 				mergeIndependent([
@@ -171,7 +172,7 @@ class TySwitchPatternBindings {
 		the already-recorded symbol instead of allocating a replacement identity.
 	**/
 	public static function declare(environment:Null<TyFunctionEnv>, pattern:HxSwitchPattern, baseType:TyType,
-			?enumArguments:(TyType, String, Int) -> Null<Array<TyType>>):Array<TyLocalBinding> {
+			?enumArguments:(TyType, String, Int, Bool) -> Null<Array<TyType>>):Array<TyLocalBinding> {
 		if (environment == null)
 			return [];
 		final analysis = analyze(pattern, baseType, enumArguments);

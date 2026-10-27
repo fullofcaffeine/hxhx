@@ -13,7 +13,10 @@ enum HxSwitchPattern {
 	PString(value:String);
 	PInt(value:Int);
 	PEnumValue(name:String);
-	PEnumExtract(name:String, args:Array<HxSwitchPattern>);
+
+	/** Only the parser's bare final `_` can cover an unwritten required payload suffix. */
+	PEnumExtract(name:String, args:Array<HxSwitchPattern>, ?bareWildcardSuffix:Bool);
+
 	PObject(fieldNames:Array<String>, fieldPatterns:Array<HxSwitchPattern>);
 	PCapture(name:String, pattern:HxSwitchPattern);
 	PArray(items:Array<HxSwitchPattern>);

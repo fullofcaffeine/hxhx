@@ -166,9 +166,10 @@ class CompilerTypedTreeRevision {
 			case PEnumValue(name):
 				out.push("pattern:enum-value");
 				out.push(name);
-			case PEnumExtract(name, arguments):
+			case PEnumExtract(name, arguments, provenance):
 				out.push("pattern:enum-extract");
 				out.push(name);
+				out.push(Std.string(provenance == true));
 				out.push(Std.string(arguments.length));
 				for (argument in arguments)
 					addPattern(out, argument);

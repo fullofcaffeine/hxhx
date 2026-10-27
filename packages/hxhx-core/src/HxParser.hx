@@ -1003,8 +1003,12 @@ class HxParser {
 				if ((qualified || isUpperStart(name)) && cur.kind.match(TLParen)) {
 					bump();
 					final args = new Array<HxSwitchPattern>();
+					var bareWildcardSuffix = false;
 					while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) {
-						args.push(parseSwitchPatternOr());
+						final startsWithWildcard = cur.kind.match(TIdent("_"));
+						final argument = parseSwitchPatternOr();
+						args.push(argument);
+						bareWildcardSuffix = startsWithWildcard && argument.match(PWildcard);
 						if (cur.kind.match(TComma)) {
 							bump();
 							continue;
@@ -1013,7 +1017,7 @@ class HxParser {
 					}
 					if (cur.kind.match(TRParen))
 						bump();
-					PEnumExtract(patternName, args);
+					PEnumExtract(patternName, args, bareWildcardSuffix);
 				} else if (!qualified && !isUpperStart(name) && acceptOtherChar("=")) {
 					PCapture(name, parseSwitchPatternAtom());
 				} else {

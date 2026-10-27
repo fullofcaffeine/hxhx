@@ -22,7 +22,7 @@ typedef TypedExprTypeResolver = {
 	final catchUse:(binding:TyLocalBinding) -> Null<TypedCatchUse>;
 
 	/** Apply the scrutinee enum's exact generic arguments before declaring payload locals. */
-	final enumPatternArguments:(input:TyType, name:String, arity:Int, position:HxPos) -> Null<Array<TyType>>;
+	final enumPatternArguments:(input:TyType, name:String, arity:Int, position:HxPos, bareWildcardSuffix:Bool) -> Null<Array<TyType>>;
 
 	/** Preserve named-pattern declarations for targets without rewriting source syntax. */
 	final switchPatterns:(input:TyType, patterns:Array<HxSwitchPattern>, position:HxPos) -> Null<TypedSwitchPatterns>;

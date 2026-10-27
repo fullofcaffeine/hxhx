@@ -36,13 +36,13 @@ class TypedSwitchPatterns {
 	static function writtenShape(pattern:HxSwitchPattern):String {
 		return CompilerCacheIdentity.encode(switch pattern {
 			case PEnumValue(name): ["value", name];
-			case PEnumExtract(name, children): ["extract", name, Std.string(children.length)];
+			case PEnumExtract(name, children, provenance): ["extract", name, Std.string(children.length), Std.string(provenance == true)];
 			case _: throw "written enum shape requires a named pattern";
 		});
 	}
 
 	/**
-		Complete executable patterns with wildcards for validated optional suffixes.
+		Complete executable patterns with wildcards for validated omitted suffixes.
 
 		Source patterns keep their written children. Projection may rename bindings,
 		but must retain each named occurrence's kind, spelling, count, and order. The
@@ -62,7 +62,7 @@ class TypedSwitchPatterns {
 				case PEnumValue(_):
 					cursor++;
 					pattern;
-				case PEnumExtract(name, children):
+				case PEnumExtract(name, children, provenance):
 					final selection = selections[cursor++];
 					final projected = [for (child in children) visit(child)];
 					if (selection != null)
@@ -74,7 +74,7 @@ class TypedSwitchPatterns {
 									projected.push(PWildcard);
 							case Constant(_):
 						}
-					PEnumExtract(name, projected);
+					PEnumExtract(name, projected, provenance);
 				case PObject(names, children): PObject(names.copy(), [for (child in children) visit(child)]);
 				case PArray(children): PArray([for (child in children) visit(child)]);
 				case POr(children): POr([for (child in children) visit(child)]);

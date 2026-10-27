@@ -53,4 +53,12 @@ optional slots keep their nullable types. Required slots and extra patterns
 remain errors. This shared pattern repair is tracked by `haxe_ocaml-i8jnj`.
 The same command also runs `ocaml_enum_type_values` for Class and Enum descriptor
 payloads, including nulls, optional arguments, identity, and evaluation order.
+
+A bare final wildcard also covers the remaining required payload slots:
+`RequiredTail(number, _)` reads the number from a three-slot constructor.
+The observer checks this rule in qualified, nested, and guarded patterns.
+Shared typing preserves the full declared arity and the original written children.
+Grouped, captured, and alternative wildcards do not grant suffix coverage.
+Programmatically constructed patterns without the parser's permission remain strict.
+This rule is tracked by `haxe_ocaml-a584e`; it does not make nullable arguments optional.
 README Goals status remains unchanged; broad parity and release checks remain required.

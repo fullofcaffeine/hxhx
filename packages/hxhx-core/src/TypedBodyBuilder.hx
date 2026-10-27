@@ -632,7 +632,7 @@ class TypedBodyBuilder {
 	static function declarePatternBindings(environment:Null<TyFunctionEnv>, pattern:HxSwitchPattern, baseType:TyType, resolver:Null<TypedExprTypeResolver>,
 			position:HxPos):Array<TyLocalBinding> {
 		return TySwitchPatternBindings.declare(environment, pattern, baseType,
-			resolver == null ? null : (input, name, arity) -> resolver.enumPatternArguments(input, name, arity, position));
+			resolver == null ? null : (input, name, arity, suffix) -> resolver.enumPatternArguments(input, name, arity, position, suffix));
 	}
 
 	/** Seal lambda bindings with their selected parameter types before typing captured reads. */

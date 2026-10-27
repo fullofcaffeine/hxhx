@@ -18,7 +18,7 @@ function resolve(input:TyType, patterns:Array<HxSwitchPattern>, context:TyperCon
 			type = type.unwrapNull();
 		return type;
 	}
-	function select(type:TyType, name:String, arity:Int, payload:Bool):Null<TypedNamedPattern> {
+	function select(type:TyType, name:String, arity:Int, payload:Bool, bareWildcardSuffix:Bool = false):Null<TypedNamedPattern> {
 		final inputType = effective(type);
 		var identity = inputType.getNominalIdentity();
 		var owner = identity == null ? null : context.getIndex().getByFullName(identity.getCanonicalName());
@@ -57,7 +57,8 @@ function resolve(input:TyType, patterns:Array<HxSwitchPattern>, context:TyperCon
 				final constructor = constructors[index];
 				if (constructor.name != member)
 					continue;
-				if (constructor.arity != arity && (!payload || !TyEnumPatternArguments.acceptsArity(owner.staticMethod(member), arity)))
+				if (constructor.arity != arity
+					&& (!payload || !TyEnumPatternArguments.acceptsArity(owner.staticMethod(member), arity, bareWildcardSuffix)))
 					throw new TyperError(context.getFilePath(), position, "Invalid enum pattern " + name + ": constructor or payload arity differs");
 				return new TypedNamedPattern(Constructor(identity, member, index, constructor.arity));
 			}
@@ -76,8 +77,9 @@ function resolve(input:TyType, patterns:Array<HxSwitchPattern>, context:TyperCon
 		switch pattern {
 			case PEnumValue(name):
 				selections.push(select(type, name, 0, false));
-			case PEnumExtract(name, children):
-				final selection = select(type, name, children.length, true);
+			case PEnumExtract(name, children, provenance):
+				final suffix = TyEnumPatternArguments.hasWildcardSuffix(children, provenance);
+				final selection = select(type, name, children.length, true, suffix);
 				selections.push(selection);
 				var payloadType = type;
 				var payloadName = name;
@@ -93,7 +95,7 @@ function resolve(input:TyType, patterns:Array<HxSwitchPattern>, context:TyperCon
 						case Constant(_):
 					}
 				}
-				final arguments = TyEnumPatternArguments.resolve(payloadType, payloadName, children.length, context, position);
+				final arguments = TyEnumPatternArguments.resolve(payloadType, payloadName, children.length, context, position, suffix);
 				for (index in 0...children.length)
 					visit(children[index], arguments == null ? TyType.unknown() : arguments[index]);
 			case PObject(names, children):

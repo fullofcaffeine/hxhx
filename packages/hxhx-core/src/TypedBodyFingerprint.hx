@@ -93,9 +93,10 @@ class TypedBodyFingerprint {
 			case PEnumValue(name):
 				addString(state, "pattern-enum-value");
 				addString(state, name);
-			case PEnumExtract(name, arguments):
+			case PEnumExtract(name, arguments, provenance):
 				addString(state, "pattern-enum-extract");
 				addString(state, name);
+				addString(state, Std.string(provenance == true));
 				addPatterns(state, arguments);
 			case PObject(fieldNames, fieldPatterns):
 				addString(state, "pattern-object");
