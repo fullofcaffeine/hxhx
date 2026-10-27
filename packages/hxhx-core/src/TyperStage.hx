@@ -3350,6 +3350,13 @@ class TyperStage {
 						final destination = inferExprType(a, scope, ctx, pos);
 						final rhs = inferExprType(b, scope, ctx, pos, destination);
 						if (a.match(EArrayAccess(_, _))
+							&& destination.hasUnknownComponent()
+							&& scope.getInference().canReceiveContext(a, scope)
+							&& !scope.isUntypedContext()
+							&& !TyFieldAssignment.explicitlyUntyped(b)
+							&& !scope.getInference().constrain([a], [rhs], scope, ctx.getIndex()))
+							throw new TyperError(ctx.getFilePath(), pos, "indexed assignment conflicts with inferred element type");
+						if (a.match(EArrayAccess(_, _))
 							&& !scope.isUntypedContext()
 							&& !TyFieldAssignment.explicitlyUntyped(b)
 							&& !destination.hasUnknownComponent()
@@ -3655,6 +3662,7 @@ class TyperStage {
 					if (elementType == null && TyDeclaredArrayAccess.isClass(ctx.getIndex(), arrayType))
 						throw new TyperError(ctx.getFilePath(), pos, "Array access is not allowed on " + arrayType.getDisplay());
 				}
+				scope.getInference().recordIndexedResult(expr, array, scope, ctx.getIndex());
 				// Abstract operators and explicit untyped access keep their existing boundary.
 				elementType == null ? TyType.fromHintText("Dynamic") : elementType;
 			case ERange(start, end):
