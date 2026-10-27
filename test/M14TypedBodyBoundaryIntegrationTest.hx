@@ -477,7 +477,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		}, "typed variable projection fabricated a missing initializer");
 	}
 
-	/** Keep source-inferred constructors distinct from explicit local annotations. **/
+	/** Preserve explicit or absent local annotations while constructors retain their canonical nominal owner. **/
 	static function assertInferredConstructorSourceProjection():Void {
 		final position = new HxPos(0, 1, 1);
 		final identity = new TyNominalTypeId("haxe.ds.IntMap");
@@ -493,13 +493,15 @@ class M14TypedBodyBoundaryIntegrationTest {
 		assertTrue(inferred.getTag() == TypedExprTag.NewValue && inferred.getType().getNominalIdentity() != null,
 			"inferred constructor lost its nominal semantic type");
 		assertTrue(switch (TypedBodySource.statement(declarations[0])) {
-			case SVar("h", "IntMap<Int>", ENew("IntMap<Int>", []), _): true;
+			case SVar("h", "IntMap<Int>", ENew("haxe.ds.IntMap<Int>", []), _): true;
 			case _: false;
-		}, "explicit constructor annotation did not survive typed-body projection");
+		},
+			"explicit local annotation or canonical constructor owner did not survive typed-body projection");
 		assertTrue(switch (TypedBodySource.statement(declarations[1])) {
-			case SVar("h", "", ENew("IntMap", []), _): true;
+			case SVar("h", "", ENew("haxe.ds.IntMap", []), _): true;
 			case _: false;
-		}, "source inference became a false bare constructor annotation");
+		},
+			"source inference or canonical constructor owner changed during typed-body projection");
 	}
 
 	static function assertStructuralExpressionBlock():Void {
