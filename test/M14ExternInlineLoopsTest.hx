@@ -29,7 +29,7 @@ class M14ExternInlineLoopsTest {
 		final index = TyperIndex.build([resolved]);
 		var rejected = false;
 		try {
-			final typed = TyperStage.typeResolvedModule(resolved, index);
+			final typed = M14Stage3RuntimeFixture.typeResolved({module: resolved, root: output});
 			TypedRequiredInlineLowering.lowerClasses(typed.getTypedClasses(), index);
 		} catch (message:String) {
 			rejected = message.indexOf("Cannot inline a not final return") >= 0;

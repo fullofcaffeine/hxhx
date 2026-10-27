@@ -80,8 +80,7 @@ class M14MultiTypeRuntimeTest {
 		@:privateAccess M14JsFunctionLiteralRuntimeTest.command("node", [output + "/upstream.js"]);
 		Sys.println("MULTITYPE_RUNTIME:" + name + ":upstream:PASS");
 		final resolved = new ResolvedModule("Main", output + "/Main.hx", ParserStage.parse(source, output + "/Main.hx"));
-		final index = TyperIndex.build([resolved]);
-		final typed = TyperStage.typeResolvedModule(resolved, index);
+		final typed = M14Stage3RuntimeFixture.typeResolved({module: resolved, root: output});
 		JsRuntimeFixture.assertRuntime(typed, "Main", "");
 		Sys.println("MULTITYPE_RUNTIME:" + name + ":local:PASS");
 		@:privateAccess JsRuntimeFixture.removeOutput(output);
