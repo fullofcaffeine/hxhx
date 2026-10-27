@@ -9,6 +9,7 @@ import haxe.ds.StringMap;
 	Bare field names and local variables can share a source spelling. The exact
 	function catalogs distinguish them before Python decides whether an assignment
 	is local. Static fields become class attributes; instance fields use self.
+	Module-qualified constructor types use their emitted class declaration name.
 	The maps belong to one emission and never survive a compiler request.
 **/
 class PythonFieldAccessLowering {
@@ -59,12 +60,22 @@ class PythonFieldAccessLowering {
 		return selected.functionProjection;
 	}
 
-	/** Rewrite only catalogued field accesses; projected locals remain local even when their original names match. */
+	/** Rewrite exact field and constructor occurrences while retaining local names and argument effects. */
 	public function body(projection:TypedBackendFunctionProjection):Array<HxStmt> {
 		final locals = projection.getLocalCatalog();
 		final fields = projection.getFieldReadCatalog();
-		return SourceFunctionBodyRewriter.body(HxFunctionDecl.getBody(projection.getDeclaration()), function(expression) {
+		final constructors = projection.getConstructorCatalog().getEntries();
+		return SourceFunctionBodyRewriter.bodyWithOriginal(HxFunctionDecl.getBody(projection.getDeclaration()), function(original, expression) {
 			return switch (expression) {
+				case ENew(_, arguments):
+					var owner:Null<String> = null;
+					for (entry in constructors)
+						if (entry.getExpression() == original) {
+							final identity = projection.requireConstructor(original).getConstructedType().getNominalIdentity();
+							owner = identity == null ? null : ownerNames.get(identity.getCanonicalName());
+							break;
+						}
+					owner == null ? expression : ENew(owner, arguments);
 				case EIdent(name):
 					final entry = locals.findByProjectedName(name) == null ? fields.findByProjectedName(name) : null;
 					if (entry == null) {
