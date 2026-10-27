@@ -25,20 +25,29 @@ The expansion pass does not use that metadata to select real macro declarations.
 macro declaration. It uses shared import resolution and retains original argument
 nodes without typing or expanding them. Its focused test covers aliases, ordinary
 calls, caller-supplied visible names, and outer-call syntax retention.
-Production expansion now calls this query. `Stage3Compiler` builds the header
-index and request loader before the expansion pass and hands them to
-`ExprMacroExpander` as an `ExprMacroSelectionContext`. A call whose callee selects
-a macro declaration is consumed before its children are visited and sent to
-`MacroRuntimeSession.expandSelected` as one `ExprMacroDispatchRequest` (selected
-declaration, original argument nodes, call file). The result is syntax inserted in
-place, or `Unavailable`, which is a compile error at the call site. Where the
-walker cannot prove visible names, a callee that would still select a macro
-declaration with no local names assumed fails explicitly with the gap reason.
-Ordinary calls visit children in order, then apply the exact-text allowlist route.
-Guards, extractors, and raw syntax remain incomplete here. Both executors still
-answer `Unavailable`: the in-process runtime registers exact no-argument keys only,
-and the host protocol has no structured method. Native declaration dispatch with
-argument transport remains the next requirement.
+Production expansion now calls this query through `Stage3ExprMacroPass`. The pass
+builds the header index and request loader, marks the resolved modules, and hands
+both to `ExprMacroExpander` as an `ExprMacroSelectionContext`; modules the loader
+discovers during selection are walked too, and after any rewrite the index and
+loader are rebuilt once (the rebuilt loader keeps the record of missing-type hooks
+already asked). Precedence per call: a registered exact-text expression (the
+allowlist, including promoted no-argument plugins) keeps the exact-text route; else
+a callee that selects a macro declaration is consumed before its children are
+visited and sent to `MacroRuntimeSession.expandSelected` as one
+`ExprMacroDispatchRequest` (selected declaration, original argument nodes, call
+file); `Expanded` syntax is inserted in place. A private static macro is selectable
+from its own class. Calls inside a lexical gap are not selected; the gap count is
+reported. When the session answers `Unavailable`, the call is recorded
+(`expr_macro_unexecuted[i]=<file>: <declaration>: <reason>`) and continues as an
+ordinary call, exactly as before this change; this keeps existing lanes that rely on
+later approximations (for example the emitter's `isCi` intrinsic and hxhx's own
+`CompilerBundledSourcesMacro.files()` during snapshot generation) compiling, while
+naming the unexecuted macro in the output. Both executors still answer
+`Unavailable`: the in-process runtime registers exact no-argument keys only, and the
+host protocol has no structured method. Once a general executor exists, an
+unexecuted selected macro must become a compile error. Static-extension and
+value-receiver macro calls are not selected (haxe_ocaml-1tyip); modules first loaded
+during body typing are not walked (haxe_ocaml-uf1hx).
 Mixed imported fields and
 methods produce an explicit unsupported diagnostic until shared lookup returns one
 ordered member. This query does not prove execution of a project's macro body.

@@ -39,21 +39,27 @@ The expander:
 - matches those call sites against an **explicit allowlist**
 - replaces the call expression node with the expression returned by the macro host
 
-Before the allowlist match, the expander selects calls by declaration: when the callee resolves to a public static
-`macro function` through the request's header index, the call is not typed as an ordinary call. It is sent to the macro
-session as one structured request (`MacroRuntimeSession.expandSelected`) carrying the selected declaration and the
-authored argument syntax. Today neither runtime mode has an executor for such a request, so the compile stops with an
-explicit diagnostic at the call site, for example:
+Calls that do not match the allowlist are selected by declaration: when the callee resolves to a static `macro function`
+through the request's header index (public, or private from its own class), the call is sent to the macro session as one
+structured request (`MacroRuntimeSession.expandSelected`) carrying the selected declaration and the authored argument
+syntax. An allowlisted exact call text always keeps the allowlist route, even if its callee is a macro; that is how the
+no-argument plugin pilot serves a promoted macro.
+
+Today neither runtime mode has an executor for a structured request. Such a call is reported on stdout and then compiled
+as before, as an ordinary call, so a later failure is attributable:
 
 ```
-expression macro macros.Macros.items cannot be expanded: the in-process macro runtime has no executor for project macro declaration macros.Macros.items; ...
+expr_macros_unexecuted=1
+expr_macro_unexecuted[0]=Main.hx: macros.Macros.items: the in-process macro runtime has no executor for project macro declaration macros.Macros.items; ...
 ```
 
-Previously the same program failed later and less clearly, while typing a loop over the macro's `haxe.macro.Expr` result.
+The report precedes whatever the ordinary typing of that call produces (for a loop over the macro's result, the usual
+iterator diagnostic). `expr_macro_scope_gaps=N` counts call sites the walker could not prove names for; nothing is selected
+there.
 
 Important constraints:
 
-- Selected `macro function` declarations are not executed yet; only the explicit diagnostic above is produced.
+- Selected `macro function` declarations are not executed yet; they are reported and then typed as ordinary calls.
 - We do **not** type-check the returned expression snippet yet; we just parse it into the bootstrap `HxExpr` subset.
 - The returned snippet must be parsable by `HxParser.parseExprText` (tiny expression grammar).
 

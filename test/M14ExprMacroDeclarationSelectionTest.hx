@@ -101,7 +101,8 @@ class M14ExprMacroDeclarationSelectionTest {
 			"value-bound package root selected a macro");
 		rejects(() -> {
 			capture(HxParser.parseExprText('negative.Hidden.preserve(undefined)'), context("Aliased"), scope);
-		}, "expression macro selection requires a public static declaration");
+		},
+			"expression macro selection requires a public declaration when called outside its class");
 		rejects(() -> {
 			capture(HxParser.parseExprText('negative.Ambiguous.preserve(undefined)'), context("Aliased"), scope);
 		},

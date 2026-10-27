@@ -32,12 +32,12 @@ function select(callee:HxExpr, context:TyperContext, scope:ExprMacroSelectionSco
 					|| (field != null && (field.getIsStatic() || !scope.isStaticContext))) {
 					null;
 				} else if (owner != null && owner.staticMethodCandidates(name).length > 0) {
-					declaration(owner, owner.staticMethodCandidates(name));
+					declaration(owner, owner.staticMethodCandidates(name), true);
 				} else if (context.moduleEnumConstructorMethod(name) != null) {
 					null;
 				} else {
 					final imported = context.importedStaticMethod(name);
-					final selected = imported == null ? null : declaration(imported.getProvider(), imported.getCandidates());
+					final selected = imported == null ? null : declaration(imported.getProvider(), imported.getCandidates(), false);
 					if (selected != null && context.importedStaticField(name) != null)
 						throw "expression macro selection does not yet resolve mixed field and method imports";
 					selected;
@@ -49,8 +49,13 @@ function select(callee:HxExpr, context:TyperContext, scope:ExprMacroSelectionSco
 				null;
 			} else {
 				final owner = context.resolveType(path);
-				owner == null
-				|| owner.fieldInfo(name) != null ? null : declaration(owner, owner.staticMethodCandidates(name));
+				if (owner == null || owner.fieldInfo(name) != null) {
+					null;
+				} else {
+					final current = context.currentClass();
+					final ownClass = current != null && current.getFullName() == owner.getFullName();
+					declaration(owner, owner.staticMethodCandidates(name), ownClass);
+				}
 			}
 		case _: null;
 	};
@@ -80,7 +85,12 @@ function capture(call:HxExpr, context:TyperContext, scope:ExprMacroSelectionScop
 	};
 }
 
-private function declaration(owner:TyNominalInfo, candidates:Array<TyFunSig>):Null<TyDeclarationInfo> {
+/**
+	Pick the one macro declaration among a method group. A private static macro is
+	legal when the call is made from its own class (`ownClass`), matching upstream
+	visibility; from any other class only a public static macro is selectable.
+**/
+private function declaration(owner:TyNominalInfo, candidates:Array<TyFunSig>, ownClass:Bool):Null<TyDeclarationInfo> {
 	final declarations = [for (candidate in candidates) owner.declarationForSignature(candidate)];
 	final macros = declarations.filter(value -> value != null && value.getMetadata().indexOf("macro") >= 0);
 	if (macros.length == 0)
@@ -88,8 +98,10 @@ private function declaration(owner:TyNominalInfo, candidates:Array<TyFunSig>):Nu
 	if (declarations.length != 1)
 		throw "expression macro selection requires one exact declaration before argument typing";
 	final selected = macros[0];
-	if (!selected.getIsStatic() || !selected.getIsPublic())
-		throw "expression macro selection requires a public static declaration";
+	if (!selected.getIsStatic())
+		throw "expression macro selection requires a static declaration";
+	if (!selected.getIsPublic() && !ownClass)
+		throw "expression macro selection requires a public declaration when called outside its class";
 	return selected;
 }
 

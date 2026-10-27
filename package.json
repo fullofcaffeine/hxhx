@@ -348,7 +348,7 @@
     "test:m14:stage3-java-noemit-diagnostics": "haxe test/m14_stage3_java_noemit_diagnostics_integration_test.hxml",
     "test:m14:expr-macro-declaration-selection": "haxe test/m14_expr_macro_declaration_selection_test.hxml",
     "test:m14:expr-macro-lexical-traversal": "haxe test/m14_expr_macro_lexical_traversal_test.hxml",
-    "test:m14:expr-macro-selected-dispatch": "haxe test/m14_expr_macro_selected_dispatch_test.hxml",
+    "test:m14:expr-macro-selected-dispatch": "haxe test/m14_expr_macro_selected_dispatch_test.hxml && haxe test/m14_expr_macro_selected_dispatch_loader_test.hxml",
     "test:m14:expression-macro-source-traversal": "npm run test:m14:expr-macro-declaration-selection && npm run test:m14:expr-macro-lexical-traversal && npm run test:m14:expr-macro-selected-dispatch && haxe test/m14_expression_macro_source_traversal_test.hxml",
     "test:m14:macro-runtime-mode-switch": "npm run test:m14:expression-macro-source-traversal && haxe test/m14_macro_runtime_mode_switch_integration_test.hxml",
     "test:macro-runtime:type-parameters": "haxe -cp test/hxhx_macro_host_type_parameters/src --macro 'MacroHostTypeParameterFixture.run()' --no-output && haxe -cp test/hxhx_macro_host_type_parameters/src -cp packages/hxhx-core/src -cp packages/hxhx-macro-host/src -cp packages/hxhx-macro-host/overrides --macro 'MacroHostTypeParameterFixture.run()' --no-output",
