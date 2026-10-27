@@ -66,6 +66,32 @@ class OcamlDynamicCarrierModel {
 		}
 	}
 
+	/**
+		Returns whether `==` or `!=` between two operands needs the runtime comparison.
+
+		What: the runtime comparison is `HxRuntime.dynamic_equals`. It compares
+		null only with null, numbers and strings by value, and other values by
+		identity.
+
+		Why: a Dynamic carrier does not know its stored kind until run time. A type
+		parameter has the same property: one generic body can compare Int, Float,
+		String, and object values. OCaml physical equality is wrong there for
+		boxed Float values and for equal strings in separate allocations.
+
+		How: planning and code generation both call this function, so each
+		comparison that it selects has exactly one sealed decision.
+	**/
+	public static function usesRuntimeEquality(left:Type, right:Type):Bool {
+		return usesDynamicCarrier(left) || usesDynamicCarrier(right) || isTypeParameter(left) || isTypeParameter(right);
+	}
+
+	static function isTypeParameter(type:Type):Bool {
+		return switch (followNoAbstracts(unwrapNullType(type))) {
+			case TInst(reference, _): reference.get().kind.match(KTypeParameter(_));
+			case _: false;
+		}
+	}
+
 	/** Returns whether an anonymous structure uses the runtime's `HxAnon` name-to-value table. */
 	public static function anonymousUsesHxAnon(type:Type):Bool {
 		if (isSysFileStatTypedef(type) || isSysFileStatAnonymous(type))
@@ -453,15 +479,13 @@ class OcamlDynamicEqualityPlanner {
 			switch (expression.expr) {
 				case TFunction(_):
 					return;
-				case TBinop(OpEq, left, right)
-					if (!isNull(left)
-						&& !isNull(right)
-						&& (OcamlDynamicCarrierModel.usesDynamicCarrier(left.t) || OcamlDynamicCarrierModel.usesDynamicCarrier(right.t))):
+				case TBinop(OpEq, left, right) if (!isNull(left)
+					&& !isNull(right)
+					&& OcamlDynamicCarrierModel.usesRuntimeEquality(left.t, right.t)):
 					add(expression, expression, OcamlDynamicEqualityKind.Equal, left.t, right.t);
-				case TBinop(OpNotEq, left, right)
-					if (!isNull(left)
-						&& !isNull(right)
-						&& (OcamlDynamicCarrierModel.usesDynamicCarrier(left.t) || OcamlDynamicCarrierModel.usesDynamicCarrier(right.t))):
+				case TBinop(OpNotEq, left, right) if (!isNull(left)
+					&& !isNull(right)
+					&& OcamlDynamicCarrierModel.usesRuntimeEquality(left.t, right.t)):
 					add(expression, expression, OcamlDynamicEqualityKind.NotEqual, left.t, right.t);
 				case TSwitch(scrutinee, cases, _) if (switchNeedsRuntimeEquality(scrutinee, cases)):
 					for (entry in cases)

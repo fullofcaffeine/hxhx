@@ -7527,7 +7527,7 @@ class OcamlBuilder {
 						return obj;
 					}
 
-					if (isDynamicLike(e1.t) || isDynamicLike(e2.t)) {
+					if (OcamlDynamicCarrierModel.usesRuntimeEquality(e1.t, e2.t)) {
 						return OcamlExpr.EApp(dynamicEqualityFunction(source, OcamlDynamicEqualityKind.Equal), [toDynamicObj(e1), toDynamicObj(e2)]);
 					}
 
@@ -7614,7 +7614,7 @@ class OcamlBuilder {
 						return obj;
 					}
 
-					if (isDynamicLike(e1.t) || isDynamicLike(e2.t)) {
+					if (OcamlDynamicCarrierModel.usesRuntimeEquality(e1.t, e2.t)) {
 						return OcamlExpr.EUnop(OcamlUnop.Not,
 							OcamlExpr.EApp(dynamicEqualityFunction(source, OcamlDynamicEqualityKind.NotEqual), [toDynamicObj(e1), toDynamicObj(e2)]));
 					}

@@ -1,0 +1,8 @@
+float-read:true:true
+float-value:true
+string:true:false:false
+int:true:true
+bool:true:false
+nullable:true:false:true
+object:true:false
+record:true:false
