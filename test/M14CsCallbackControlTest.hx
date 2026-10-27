@@ -64,7 +64,7 @@ class M14CsCallbackControlTest {
 
 	static function typed(source:String, path:String):TypedModule {
 		final resolved = new ResolvedModule("Main", path, ParserStage.parse(source, path));
-		return TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+		return M14Stage3RuntimeFixture.typeResolved({module: resolved, root: "."});
 	}
 
 	/** Equal syntax and mutation cannot borrow the original callback's checked signature. */
