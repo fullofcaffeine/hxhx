@@ -34,7 +34,7 @@ class M14BlockReturnConversionTest {
 		observe("node_modules/.bin/haxe", ["-cp", root, "--run", "Main"], expected);
 		Sys.println("BLOCK_RETURN_UPSTREAM:PASS cases=" + cases.length);
 		final module = new ResolvedModule("Main", path, ParserStage.parse(source, path));
-		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
+		final typed = M14Stage3RuntimeFixture.typeResolved({module: module, root: root});
 		final revision = CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity();
 		auditReturns(typed);
 		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml", true);
