@@ -1794,12 +1794,16 @@ class TyperStage {
 		});
 		final placeType = inference.expressionType(query.getterSource, getter.type, candidate);
 		final computedType = operation.computed.getType(candidate);
-		final placeConversion = operation.binary != null
-			&& operation.binary.getResultConversion() != null ? operation.binary.getResultConversion() : TyAbstractBinaryConversion.select(ctx.getIndex(),
-				placeType, computedType);
-		if (placeConversion == null || placeConversion.getExpectedType().getSemanticKey() != placeType.getSemanticKey())
-			throw new TyperError(ctx.getFilePath(), pos, computedType.getDisplay() + " should be " + placeType.getDisplay() + " for an indexed update");
-		final place = TyIndexedComputedResult.converted(operation.computed, query.placeResultSource, placeConversion);
+		final selectedPlaceConversion = operation.binary == null ? null : operation.binary.getResultConversion();
+		final place = if (selectedPlaceConversion == null && TyNullableIntegerResult.admits(placeType, computedType)) {
+			TyIndexedComputedResult.admittedPlace(operation.computed, placeType);
+		} else {
+			final conversion = selectedPlaceConversion == null ? TyAbstractBinaryConversion.select(ctx.getIndex(), placeType,
+				computedType) : selectedPlaceConversion;
+			if (conversion == null || conversion.getExpectedType().getSemanticKey() != placeType.getSemanticKey())
+				throw new TyperError(ctx.getFilePath(), pos, computedType.getDisplay() + " should be " + placeType.getDisplay() + " for an indexed update");
+			TyIndexedComputedResult.converted(operation.computed, query.placeResultSource, conversion);
+		};
 		place.register(trial, candidate);
 		final setter = resolveIndexedAccess(query.setterSource, operands.receiver, operands.subscript, query.placeResultSource, receiverType, candidate, ctx,
 			pos, null, [indexType, place.getType(candidate)], false);
@@ -1807,10 +1811,14 @@ class TyperStage {
 		final parameters = setter.order.sourceContexts(TyMethodGenericBinding.specializeParameters(setter.declaration, setter.signature,
 			setter.order.rankedTypes(setter.actual), ctx.getIndex()));
 		final parameter = parameters[parameters.length - 1];
-		final conversion = TyAbstractBinaryConversion.select(ctx.getIndex(), parameter, place.getType(candidate));
-		if (conversion == null)
-			throw new TyperError(ctx.getFilePath(), pos, "Selected indexed setter has no checked parameter conversion");
-		final setterInput = TyIndexedComputedResult.converted(place, query.setterInputSource, conversion);
+		final setterInput = if (parameter != null && TyNullableIntegerResult.admits(parameter, place.getType(candidate))) {
+			TyIndexedComputedResult.admittedArgument(place, parameter);
+		} else {
+			final conversion = parameter == null ? null : TyAbstractBinaryConversion.select(ctx.getIndex(), parameter, place.getType(candidate));
+			if (conversion == null)
+				throw new TyperError(ctx.getFilePath(), pos, "Selected indexed setter has no checked parameter conversion");
+			TyIndexedComputedResult.converted(place, query.setterInputSource, conversion);
+		};
 		setterInput.register(trial, candidate);
 		final finalSources = rawSources.slice(0, rawSources.length - 1).concat([query.setterInputSource]);
 		final finalTypes = finalSources.map((argument) -> inference.expressionType(argument,

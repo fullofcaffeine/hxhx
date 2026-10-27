@@ -64,7 +64,8 @@ function select(input:{
 	}> = null;
 	switch query.kind {
 		case Unary(_, _):
-			if (!left.unwrapNull().isNumeric()) {
+			final integer = TyNullableIntegerResult.isInteger(left);
+			if (!integer && !left.unwrapNull().isNumeric()) {
 				final identity = left.getNominalIdentity();
 				final owner = identity == null ? null : input.index.getAbstractByFullName(identity.getCanonicalName());
 				if (owner == null)
@@ -79,7 +80,7 @@ function select(input:{
 					index: input.index
 				};
 			}
-			result = left;
+			result = integer ? TyType.fromHintText("Int") : left;
 		case Compound(compound):
 			final op = HxBinaryOperatorTools.baseOperator(compound);
 			if (op == "+") {
@@ -160,7 +161,8 @@ function select(input:{
 						|| right.unwrapNull().getSemanticKey() == "primitive:String")) {
 					result = TyType.fromHintText("String");
 				} else {
-					if (!left.unwrapNull().isNumeric() || !right.unwrapNull().isNumeric())
+					if ((!TyNullableIntegerResult.isInteger(left) && !left.unwrapNull().isNumeric())
+						|| (!TyNullableIntegerResult.isInteger(right) && !right.unwrapNull().isNumeric()))
 						throw fail("Indexed arithmetic requires complete numeric operands");
 					result = op == "/" ? TyType.fromHintText("Float") : TyNullableIntegerResult.result(left, right);
 					if (result == null)
