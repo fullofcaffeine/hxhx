@@ -2691,10 +2691,6 @@ class EmitterStage {
 				return "(Obj.magic (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + "))";
 			case EField(EIdent("String"), "fromCharCode"):
 				return "(fun i -> Stdlib.String.make 1 (Char.chr i))";
-			case ECall(EField(_obj, "set_low"), [_v]):
-				return "()";
-			case ECall(EField(_obj, "set_high"), [_v]):
-				return "()";
 			case ECall(EField(EIdent("StringTools"), "fastCodeAt"), [s, idx]) | ECall(EField(EIdent("StringTools"), "unsafeCodeAt"), [s, idx]):
 				final s2 = exprToOcaml(s, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 				final i2 = exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
