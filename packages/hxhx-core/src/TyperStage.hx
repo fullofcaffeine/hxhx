@@ -134,7 +134,7 @@ class TyperStage {
 				result == null ? TyType.unknown() : resolveTypeInContext(result, ctx, typeParameters));
 		}
 		if (type.isAnonymous())
-			return TyType.anonymous(type.getAnonymousFieldNames(), [
+			return type.withAnonymousTypes([
 				for (fieldType in type.getAnonymousFieldTypes())
 					resolveTypeInContext(fieldType, ctx, typeParameters)
 			]);
