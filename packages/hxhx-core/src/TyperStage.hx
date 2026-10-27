@@ -2998,11 +2998,14 @@ class TyperStage {
 				final conditionType = inferExprType(condition, scope, ctx, sourcePosition, TyType.fromHintText("Bool"));
 				scope.enterLexicalScope();
 				final trueType = inferExprType(whenTrue, scope, ctx, sourcePosition, whenFalse == null ? null : expectedResult);
+				final trueTerm = scope.getInference().sourceTerm(whenTrue, scope);
 				scope.exitLexicalScope();
 				var falseType = TyType.fromHintText("Void");
+				var falseTerm:Null<TyInferenceTerm> = null;
 				if (whenFalse != null) {
 					scope.enterLexicalScope();
 					falseType = inferExprType(whenFalse, scope, ctx, sourcePosition, expectedResult);
+					falseTerm = scope.getInference().sourceTerm(whenFalse, scope);
 					scope.exitLexicalScope();
 				}
 				if (conditionType.isNoNormalCompletion()) {
@@ -3010,7 +3013,8 @@ class TyperStage {
 				} else if (whenFalse == null) {
 					TyType.fromHintText("Void");
 				} else {
-					final joined = TyConditionalResult.join(trueType, falseType, expectedResult, ctx.getIndex());
+					final inferred = scope.getInference().conditionalArrayResult(expr, trueType, trueTerm, falseType, falseTerm, ctx.getIndex());
+					final joined = inferred == null ? TyConditionalResult.join(trueType, falseType, expectedResult, ctx.getIndex()) : inferred;
 					joined == null ? TyType.fromHintText("Dynamic") : joined;
 				}
 			case EThrow(value, sourcePosition):
@@ -3836,8 +3840,11 @@ class TyperStage {
 			case ETernary(cond, thenExpr, elseExpr):
 				inferExprType(cond, scope, ctx, pos);
 				final t1 = inferExprType(thenExpr, scope, ctx, pos, expectedResult);
+				final term1 = scope.getInference().sourceTerm(thenExpr, scope);
 				final t2 = inferExprType(elseExpr, scope, ctx, pos, expectedResult);
-				final u = TyConditionalResult.join(t1, t2, expectedResult, ctx.getIndex());
+				final term2 = scope.getInference().sourceTerm(elseExpr, scope);
+				final inferred = scope.getInference().conditionalArrayResult(expr, t1, term1, t2, term2, ctx.getIndex());
+				final u = inferred == null ? TyConditionalResult.join(t1, t2, expectedResult, ctx.getIndex()) : inferred;
 				u == null ? TyType.fromHintText("Dynamic") : u;
 			case EAnon(names, values):
 				TypedAnonymousLiteral.infer({
