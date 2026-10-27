@@ -68,7 +68,7 @@ class M14CppInstanceUpdateTest {
 		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		final output = ".tmp/cpp-instance-update";
 		final result = backend.cpp.CppTargetCore.emit(new MacroExpandedProgram([typed], false),
-			new backend.BackendContext(output, null, "Main", true, true, new haxe.ds.StringMap()));
+			new backend.BackendContext(output, null, "Main", true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable || Sys.command(result.entryPath, []) != 0)
 			throw "instance update assertions failed";
 		CppManagedAssertionFixture.sanitizers(output, "CPP_INSTANCE_UPDATE");

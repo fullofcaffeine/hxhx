@@ -111,8 +111,7 @@ class M14PhpRuntimeTypeOperandsIntegrationTest {
 				File.saveContent(artifact, "previous-output\n");
 			}
 			reject(() -> {
-				BackendRegistry.requireForTarget("php-native")
-					.emit(incomplete, new BackendContext(output, artifact, "Main", true, false, new StringMap<String>()));
+				BackendRegistry.requireForTarget("php-native").emit(incomplete, new BackendContext(output, artifact, "Main", false, new StringMap<String>()));
 			}, "PHP runtime type operand has no emitted declaration");
 			if (previous) {
 				if (File.getContent(artifact) != "previous-output\n" || FileSystem.readDirectory(output).length != 1)
@@ -133,7 +132,7 @@ class M14PhpRuntimeTypeOperandsIntegrationTest {
 			body.push(statement);
 		final output = Path.join([root, "copied"]);
 		reject(() -> {
-			BackendRegistry.requireForTarget("php-native").emit(altered, new BackendContext(output, null, "Main", true, false, new StringMap<String>()));
+			BackendRegistry.requireForTarget("php-native").emit(altered, new BackendContext(output, null, "Main", false, new StringMap<String>()));
 		}, "not an exact occurrence");
 		if (FileSystem.exists(output))
 			throw "copied PHP operand published output";
@@ -150,7 +149,7 @@ class M14PhpRuntimeTypeOperandsIntegrationTest {
 			if (run("haxe", ["-cp", "test/php_runtime_type_operands/src", "-main", name, "--interp"]) != expected)
 				throw "upstream runtime type behavior changed for " + name;
 			final result = BackendRegistry.requireForTarget("php-native")
-				.emit(program(name), new BackendContext(Path.join([root, name]), null, name, true, false, new StringMap<String>()));
+				.emit(program(name), new BackendContext(Path.join([root, name]), null, name, false, new StringMap<String>()));
 			if (native) {
 				final actual = run("php", [result.entryPath]);
 				if (actual != expected)

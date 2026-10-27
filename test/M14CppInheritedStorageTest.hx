@@ -14,7 +14,7 @@ class M14CppInheritedStorageTest {
 		final module = new ResolvedModule(moduleName, path, ParserStage.parse(sys.io.File.getContent(path), path));
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		final result = CppTargetCore.emit(new MacroExpandedProgram([typed], false),
-			new BackendContext(output, null, moduleName, true, true, new haxe.ds.StringMap()));
+			new BackendContext(output, null, moduleName, true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable)
 			throw "inherited storage requires native execution";
 		final child = new sys.io.Process(result.entryPath, []);

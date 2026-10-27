@@ -1,12 +1,8 @@
 import sys.FileSystem;
 import sys.io.File;
 
+/** Nested enum patterns retain their selected declarations and bind payloads before use. */
 class M14Stage3EnumExtractorBindingIntegrationTest {
-	static function assertTrue(cond:Bool, message:String):Void {
-		if (!cond)
-			throw message;
-	}
-
 	static function deleteRecursive(path:String):Void {
 		if (!FileSystem.exists(path))
 			return;
@@ -27,8 +23,10 @@ class M14Stage3EnumExtractorBindingIntegrationTest {
 
 		final sourcePath = haxe.io.Path.join([tmpRoot, 'Main.hx']);
 		final src = [
+			'enum Scope { Method(owner:String, name:String); Other; }',
+			'enum Position { FilePos(line:Int, column:Int, offset:Int, scope:Scope); NoPos; }',
 			'class Main {',
-			'  static function f(item:Dynamic) {',
+			'  static function f(item:Dynamic):Int {',
 			'    return switch (item) {',
 			'      case FilePos(_, _, _, s):',
 			'        switch (s) {',
@@ -41,25 +39,24 @@ class M14Stage3EnumExtractorBindingIntegrationTest {
 			'        3;',
 			'    }',
 			'  }',
+			'  static function main():Void {',
+			'    Sys.println(f(FilePos(1, 2, 3, Method("Owner", "method"))));',
+			'    Sys.println(f(FilePos(1, 2, 3, Other)));',
+			'    Sys.println(f(NoPos));',
+			'  }',
 			'}',
 		].join("\n");
 		File.saveContent(sourcePath, src);
 
 		var thrown:Dynamic = null;
 		try {
-			final parsed = ParserStage.parse(src, sourcePath);
-			final typed = TyperStage.typeModule(parsed);
+			final expected = "1\n2\n3\n";
+			M14Stage3RuntimeFixture.observe({command: "haxe", arguments: ["-cp", tmpRoot, "--run", "Main"], expected: expected});
+			final typed = M14Stage3RuntimeFixture.typeMain({source: src, path: sourcePath, root: tmpRoot});
 			final expanded = MacroStage.expandProgram([typed], []);
-			EmitterStage.emitToDir(expanded, outDir, false, false);
-
-			final mainMl = haxe.io.Path.join([outDir, 'Main.ml']);
-			assertTrue(FileSystem.exists(mainMl), 'Expected Main.ml in emitted output.');
-			final ocaml = File.getContent(mainMl);
-			assertTrue(ocaml.indexOf('let s = Obj.magic ((HxArray.get (Obj.magic __hx_sw_params_0) 3)) in') >= 0,
-				'Stage3 enum extractor switch must bind constructor argument variables.');
-			assertTrue(ocaml.indexOf('let __sw = (s)') >= 0, 'Stage3 nested switch must use the constructor argument binding.');
-			assertTrue(ocaml.indexOf('let __sw = (s)') > ocaml.indexOf('let s = Obj.magic'),
-				'Stage3 nested switch referenced the constructor argument before binding it.');
+			final executable = EmitterStage.emitToDir(expanded, outDir);
+			M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
+			Sys.println("ENUM_EXTRACTOR_BINDING:PASS");
 		} catch (e:Dynamic) {
 			thrown = e;
 		}

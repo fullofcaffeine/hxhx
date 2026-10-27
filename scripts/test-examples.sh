@@ -248,7 +248,7 @@ for dir in "${EXAMPLE_DIRS[@]}"; do
       if [ "${#stage3_args[@]}" -eq 0 ]; then
         stage3_args=(build.hxml)
       fi
-      HXHX_REPO_ROOT="$ROOT" HAXE_BIN="$HAXE_BIN" "$HXHX_EXE" --hxhx-stage3 --hxhx-no-run --hxhx-emit-full-bodies --hxhx-out out "${stage3_args[@]}" -D ocaml_build=native
+      HXHX_REPO_ROOT="$ROOT" HAXE_BIN="$HAXE_BIN" "$HXHX_EXE" --hxhx-stage3 --hxhx-no-run --hxhx-out out "${stage3_args[@]}" -D ocaml_build=native
       artifact="out/out.exe"
       run_cmd=("./$artifact")
     elif [ -f "USE_HXHX_JS" ]; then

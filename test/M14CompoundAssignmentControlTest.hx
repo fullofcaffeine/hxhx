@@ -122,7 +122,7 @@ class M14CompoundAssignmentControlTest {
 		];
 		final revisions = functions.map(CompilerTypedTreeRevision.functionBody);
 		Sys.println('NEKO_COMPOUND_CONTROL:TYPED cases=' + (sources.length - 1));
-		final context = new backend.BackendContext(root, root + '/main.n', 'Main', true, false, HxDefineMap.fromRawDefines(['neko=1']));
+		final context = new backend.BackendContext(root, root + '/main.n', 'Main', false, HxDefineMap.fromRawDefines(['neko=1']));
 		final result = backend.vm.NekoTargetCore.emit(program, context);
 		assertSourceUnchanged(functions, revisions);
 		assertOutput('neko', [result.entryPath], expected);

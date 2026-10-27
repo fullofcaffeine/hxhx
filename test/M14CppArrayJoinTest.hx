@@ -5,7 +5,7 @@ class M14CppArrayJoinTest {
 		final output = ".tmp/cpp-array-join";
 		final boundary = M14CppArrayJoinBoundary.header(new backend.cpp.CppTypedProgramProjection(new MacroExpandedProgram(fixture.modules, false)));
 		final result = backend.cpp.CppTargetCore.emit(new MacroExpandedProgram(fixture.modules, false),
-			new backend.BackendContext(output, null, "Main", true, true, fixture.defines));
+			new backend.BackendContext(output, null, "Main", true, fixture.defines));
 		if (!result.builtExecutable || Sys.command(result.entryPath, []) != 0)
 			throw "native Array.join assertions failed";
 		sys.io.File.saveContent(output + "/JoinBoundary.hpp", boundary);

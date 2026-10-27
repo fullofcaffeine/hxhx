@@ -52,7 +52,7 @@ class M14CsSourceTypeImportsIntegrationTest {
 			final defines = new StringMap<String>();
 			if (noRoot)
 				defines.set("no_root", "1");
-			final result = BackendRegistry.requireForTarget("cs-native").emit(program, new BackendContext(output, null, "app.Main", true, native, defines));
+			final result = BackendRegistry.requireForTarget("cs-native").emit(program, new BackendContext(output, null, "app.Main", native, defines));
 			final source = File.getContent(Path.join(native ? [output, "src", "app", "__HxMain.cs"] : [output, "Main.cs"]));
 			if (source.indexOf("global::model.Secondary.visitSecondary()") < 0)
 				throw "secondary static call must select the emitted class, not a nested import stub";

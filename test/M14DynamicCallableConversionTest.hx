@@ -12,7 +12,7 @@ class M14DynamicCallableConversionTest {
 		lambdaContracts(typed);
 		JsRuntimeFixture.assertRuntime(typed, "Main", expected);
 		final output = ".tmp/dynamic_callable_conversion_" + Date.now().getTime();
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), output, true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), output);
 		if (run(executable, []) != expected)
 			throw "native callable conversion differs; retained " + output;
 		Sys.println("DYNAMIC_CALLABLE_CONVERSION:PASS artifacts=" + output);

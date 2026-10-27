@@ -13,8 +13,7 @@ class M14CppOptionalConstructorTest {
 		final module = new ResolvedModule("Main", path, ParserStage.parse(sys.io.File.getContent(path), path));
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		final output = ".tmp/cpp-optional-constructor";
-		final result = CppTargetCore.emit(new MacroExpandedProgram([typed], false),
-			new BackendContext(output, null, "Main", true, true, new haxe.ds.StringMap()));
+		final result = CppTargetCore.emit(new MacroExpandedProgram([typed], false), new BackendContext(output, null, "Main", true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable || Sys.command(result.entryPath, []) != 0)
 			throw "optional constructor native assertions failed";
 		CppManagedAssertionFixture.sanitizers(output, "CPP_OPTIONAL_CONSTRUCTOR");

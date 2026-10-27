@@ -57,7 +57,7 @@ class M14Stage3ObjectStorageTest {
 		for (fn in typed.getTypedClasses()[0].getFunctions())
 			if (HxFunctionDecl.getName(fn.getSourceDeclaration()) == "main")
 				checkOwnership(fn);
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/stage3-object-storage", true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/stage3-object-storage");
 		observe(executable, []);
 		Sys.println("M14_STAGE3_OBJECT_STORAGE:PASS");
 	}

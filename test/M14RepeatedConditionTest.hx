@@ -56,14 +56,13 @@ class M14RepeatedConditionTest {
 		sys.io.File.saveContent(root + "/src/Main.hx", source);
 		final fixture = CppResolvedFixture.load({sourceRoot: root + "/src", mainModule: "Main", requiredModules: ["Sys"]});
 		final cpp = backend.cpp.CppTargetCore.emit(new MacroExpandedProgram(fixture.modules, false),
-			new backend.BackendContext(root + "/cpp", null, "Main", true, true, fixture.defines));
+			new backend.BackendContext(root + "/cpp", null, "Main", true, fixture.defines));
 		if (!cpp.builtExecutable)
 			throw "repeated condition requires a native executable";
 		if (@:privateAccess M14NekoClosureControlTest.run(cpp.entryPath, []) != expected)
 			throw "C++ repeated condition effects differ";
 		final script = root + "/main.js";
-		new backend.js.JsBackend().emit(program,
-			new backend.BackendContext(root, script, "Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
+		new backend.js.JsBackend().emit(program, new backend.BackendContext(root, script, "Main", false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
 		if (@:privateAccess M14NekoClosureControlTest.run("node", [script]) != expected)
 			throw "JavaScript repeated condition effects differ";
 		for (i in 0...functions.length)

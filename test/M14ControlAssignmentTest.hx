@@ -98,7 +98,7 @@ class M14ControlAssignmentTest {
 		final js = JsSourceProgramFixture.build({sources: sources, requiredModules: ['Array', 'Sys', 'haxe.Exception']});
 		final jsFunctions = authoredFunctions(js, cases.length + 5);
 		final jsRevisions = jsFunctions.map(CompilerTypedTreeRevision.functionBody);
-		final jsContext = new backend.BackendContext(root, root + '/local.js', 'Main', true, false, HxDefineMap.fromRawDefines(['js=1', 'js-es=5']));
+		final jsContext = new backend.BackendContext(root, root + '/local.js', 'Main', false, HxDefineMap.fromRawDefines(['js=1', 'js-es=5']));
 		new backend.js.JsBackend().emit(js, jsContext);
 		assertOutput('node', [root + '/local.js'], expected);
 		assertSourceUnchanged(jsFunctions, jsRevisions);
@@ -135,7 +135,7 @@ class M14ControlAssignmentTest {
 		final nekoRevisions = nekoFunctions.map(CompilerTypedTreeRevision.functionBody);
 		final root = input.root;
 		final expected = input.expected;
-		final nekoContext = new backend.BackendContext(root, root + '/local.n', 'Main', true, false, HxDefineMap.fromRawDefines(['neko=1']));
+		final nekoContext = new backend.BackendContext(root, root + '/local.n', 'Main', false, HxDefineMap.fromRawDefines(['neko=1']));
 		final result = backend.vm.NekoTargetCore.emit(neko, nekoContext);
 		assertOutput('neko', [result.entryPath], expected);
 		assertSourceUnchanged(nekoFunctions, nekoRevisions);

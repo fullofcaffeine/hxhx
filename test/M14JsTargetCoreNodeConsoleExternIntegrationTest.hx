@@ -90,7 +90,7 @@ class M14JsTargetCoreNodeConsoleExternIntegrationTest {
 
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
-			new JsBackend().emit(program, new BackendContext(outDir, artifactPath, "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+			new JsBackend().emit(program, new BackendContext(outDir, artifactPath, "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 			final js = File.getContent(artifactPath);
 			assertContains(js, 'var __hx_cls_js_node_console_Console = require("console").Console;',
 				"Node Console extern should bind to the Node console module export");
@@ -105,7 +105,7 @@ class M14JsTargetCoreNodeConsoleExternIntegrationTest {
 			FileSystem.createDirectory(int64OutDir);
 			final int64ArtifactPath = Path.join([int64OutDir, "main.js"]);
 			new JsBackend().emit(MacroStage.expandProgram([int64CompareModule(), emptyMainModule()], []),
-				new BackendContext(int64OutDir, int64ArtifactPath, "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+				new BackendContext(int64OutDir, int64ArtifactPath, "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 			final int64Js = File.getContent(int64ArtifactPath);
 			assertContains(int64Js, "var __hx_to_number = function(__hx_value)", "haxe.Int64.compare should use the audited JS-native helper body");
 			assertContains(int64Js, "return __hx_left < __hx_right ? -1 : (__hx_left > __hx_right ? 1 : 0);",

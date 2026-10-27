@@ -43,7 +43,7 @@ class M14SourceComprehensionNativeTest {
 		];
 		final revisions = [for (fn in functions) CompilerTypedTreeRevision.functionBody(fn)];
 		final result = CppTargetCore.emit(new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(modules, index), false),
-			new BackendContext(".tmp/source-comprehension-array", null, "Main", true, true, defines));
+			new BackendContext(".tmp/source-comprehension-array", null, "Main", true, defines));
 		if (!result.builtExecutable)
 			throw "comprehension contract requires native execution";
 		for (index in 0...functions.length)

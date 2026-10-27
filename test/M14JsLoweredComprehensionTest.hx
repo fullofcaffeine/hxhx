@@ -24,7 +24,7 @@ class M14JsLoweredComprehensionTest {
 		final typed = TyperStage.typeResolvedModule(module, index, loader, true);
 		final revision = CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity();
 		new backend.js.JsBackend().emit(new MacroExpandedProgram([typed], false),
-			new backend.BackendContext(output, output + "/candidate.js", "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+			new backend.BackendContext(output, output + "/candidate.js", "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 		if (run("node", [output + "/candidate.js"]) != expected)
 			throw "candidate comprehension behavior differs";
 		if (CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity() != revision)

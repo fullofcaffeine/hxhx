@@ -155,7 +155,7 @@ class ResolverStage {
 		- The bootstrap resolver is still mostly import-driven.
 		- Real Haxe code frequently references types without an import, e.g.
 		  `haxeserver.HaxeServerSync.launch(...)`.
-		- In Stage3 `--hxhx-emit-full-bodies` mode, those references must still pull in the target
+		- During native compilation, those references must still pull in the target
 		  module, otherwise OCaml link fails with `Unbound module ...`.
 
 		What

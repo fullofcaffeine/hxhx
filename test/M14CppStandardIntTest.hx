@@ -29,7 +29,7 @@ class M14CppStandardIntTest {
 			for (module in fixture.modules)
 				CompilerTypedModuleRevision.fromTypedModule(module).getCanonicalIdentity()
 		];
-		CppTargetCore.emit(program, new BackendContext(directory, null, "Main", true, false, fixture.defines));
+		CppTargetCore.emit(program, new BackendContext(directory, null, "Main", false, fixture.defines));
 		final after = [
 			for (module in fixture.modules)
 				CompilerTypedModuleRevision.fromTypedModule(module).getCanonicalIdentity()
@@ -87,7 +87,7 @@ class M14CppStandardIntTest {
 		];
 		final index = TyperIndex.build(modules);
 		final program = new MacroExpandedProgram([for (module in modules) TyperStage.typeResolvedModule(module, index)], false);
-		final result = CppTargetCore.emit(program, new BackendContext(".tmp/cpp-standard-int-override", null, "Main", true, true, new haxe.ds.StringMap()));
+		final result = CppTargetCore.emit(program, new BackendContext(".tmp/cpp-standard-int-override", null, "Main", true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable)
 			throw "authored Std override requires a native executable";
 		observe(new sys.io.Process(result.entryPath, []), "", "authored override");

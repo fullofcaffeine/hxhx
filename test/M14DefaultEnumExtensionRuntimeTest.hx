@@ -24,7 +24,7 @@ class M14DefaultEnumExtensionRuntimeTest {
 		});
 		final outputRoot = ".tmp/default-enum-extension-runtime";
 		final script = outputRoot + "/main.js";
-		new JsBackend().emit(program, new BackendContext(outputRoot, script, "Main", true, false, defines));
+		new JsBackend().emit(program, new BackendContext(outputRoot, script, "Main", false, defines));
 		final child = new sys.io.Process(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["60", "node", script]);
 		final stdout = child.stdout.readAll().toString();
 		final stderr = child.stderr.readAll().toString();

@@ -76,7 +76,7 @@ class M14PortableNumericLoweringIntegrationTest {
 			final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
 			final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 			final program = MacroStage.expandProgram([typed], []);
-			final context = new BackendContext(outDir, null, "Main", true, true, HxDefineMap.fromRawDefines(["ocaml_profile=portable"]));
+			final context = new BackendContext(outDir, null, "Main", true, HxDefineMap.fromRawDefines(["ocaml_profile=portable"]));
 			final result = new OcamlTargetCore().emit(program, context);
 			final exePath = result.entryPath;
 			assertTrue(FileSystem.exists(exePath), "OcamlTargetCore did not produce executable: " + exePath);

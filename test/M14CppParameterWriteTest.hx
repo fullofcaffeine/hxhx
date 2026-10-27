@@ -60,7 +60,7 @@ class M14CppParameterWriteTest {
 					CompilerTypedTreeRevision.functionBody(fn)
 		];
 		final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules([typed], index), false);
-		final result = CppTargetCore.emit(program, new BackendContext(".tmp/cpp-parameter-write", null, "Main", true, true, new haxe.ds.StringMap()));
+		final result = CppTargetCore.emit(program, new BackendContext(".tmp/cpp-parameter-write", null, "Main", true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable)
 			throw "parameter write fixture did not build";
 		execute(result.entryPath, []);

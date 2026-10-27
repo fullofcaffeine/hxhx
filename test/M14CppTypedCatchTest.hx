@@ -30,7 +30,7 @@ class M14CppTypedCatchTest {
 		];
 		final revisions = [for (fn in functions) CompilerTypedTreeRevision.functionBody(fn)];
 		final outputDirectory = ".tmp/cpp-typed-catch-candidate/" + mainModule;
-		final context = new BackendContext(outputDirectory, null, mainModule, true, true, fixture.defines);
+		final context = new BackendContext(outputDirectory, null, mainModule, true, fixture.defines);
 		final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(typed, fixture.index), false);
 		final result = CppTargetCore.emit(program, context);
 		if (!result.builtExecutable)

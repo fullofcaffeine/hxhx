@@ -14,7 +14,7 @@ class M14CppPropertyAccessorTest {
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		final revision = CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity();
 		final result = CppTargetCore.emit(new MacroExpandedProgram([typed], false),
-			new BackendContext(".tmp/cpp-property-accessor", null, "Main", true, true, new haxe.ds.StringMap()));
+			new BackendContext(".tmp/cpp-property-accessor", null, "Main", true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable)
 			throw "property regression requires a native executable";
 		if (CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity() != revision)

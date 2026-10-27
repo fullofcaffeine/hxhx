@@ -9,7 +9,7 @@ class M14Stage3Int64WordAccessorsTest {
 		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", root, "--run", "Main"], expected: expected});
 		Sys.println("M14_STAGE3_INT64_WORD_ACCESSORS_UPSTREAM:PASS");
 		final prepared = M14Stage3RuntimeFixture.prepareMain({source: File.getContent(path), path: path, root: root});
-		final artifact = EmitterStage.emitToDir(new MacroExpandedProgram([prepared], false), ".tmp/ocaml_int64_word_accessors", true, true);
+		final artifact = EmitterStage.emitToDir(new MacroExpandedProgram([prepared], false), ".tmp/ocaml_int64_word_accessors", true);
 		M14Stage3RuntimeFixture.observe({command: artifact, arguments: [], expected: expected});
 		Sys.println("M14_STAGE3_INT64_WORD_ACCESSORS_NATIVE:PASS");
 	}

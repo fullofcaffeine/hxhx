@@ -52,7 +52,7 @@ class M14HihDynamicArrayIteratorRuntimeIntegrationTest {
 			M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", srcDir, "--run", "Main"], expected: "ok\n"});
 			final typed = M14Stage3RuntimeFixture.typeMain({source: src, path: mainHx, root: srcDir});
 			final expanded = MacroStage.expandProgram([typed], []);
-			final exePath = EmitterStage.emitToDir(expanded, outDir, true);
+			final exePath = EmitterStage.emitToDir(expanded, outDir);
 			assertTrue(FileSystem.exists(exePath), 'Emitter did not produce executable: ' + exePath);
 			M14Stage3RuntimeFixture.observe({command: exePath, arguments: [], expected: "ok\n"});
 		} catch (e:Dynamic) {

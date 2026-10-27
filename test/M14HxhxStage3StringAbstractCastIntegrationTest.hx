@@ -136,7 +136,7 @@ class M14HxhxStage3StringAbstractCastIntegrationTest {
 		final outDir = haxe.io.Path.join([tmpRoot, "out"]);
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), outDir, true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), outDir);
 		final output = File.getContent(haxe.io.Path.join([outDir, "StringAbstractCast.ml"]));
 		assertTrue(output.indexOf("HxString.toLowerCase (((Obj.obj (Obj.repr (value)) : string))) ()") >= 0,
 			"OCaml emission did not recover the concrete String carrier at the explicit cast");

@@ -186,7 +186,7 @@ class M14GenericStructuralCallTest {
 		}
 		Sys.println("GENERIC_STRUCTURAL_CALL:PASS");
 		for (input in nativeCases) {
-			final executable = EmitterStage.emitToDir(new MacroExpandedProgram([input.typed], false), input.directory + "/out", true);
+			final executable = EmitterStage.emitToDir(new MacroExpandedProgram([input.typed], false), input.directory + "/out");
 			M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: "read\n"});
 			Sys.println("GENERIC_STRUCTURAL_NATIVE:PASS " + input.name);
 		}

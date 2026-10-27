@@ -40,8 +40,7 @@ class M14HashLinkNativeBackendSmokeIntegrationTest {
 		assertTrue(!descriptor.capabilities.supportsBuildExecutable, "HashLink boundary must not claim executable build support yet");
 
 		final backend = BackendRegistry.createForTarget("hl-native");
-		final context = new BackendContext(Path.join([".tmp", "m14_hashlink_native_backend_smoke"]), "main.hl", "Main", true, false,
-			new haxe.ds.StringMap<String>());
+		final context = new BackendContext(Path.join([".tmp", "m14_hashlink_native_backend_smoke"]), "main.hl", "Main", false, new haxe.ds.StringMap<String>());
 		assertFailsContains(() -> BackendDispatchBoundary.emit(backend, program('class Main { static function main() { Sys.println("hello hl"); } }'), context),
 			"HashLink native backend reached Stage3 dispatch, but hxhx does not yet have a HashLink bytecode emitter");
 	}

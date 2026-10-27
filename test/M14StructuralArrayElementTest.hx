@@ -96,8 +96,7 @@ class M14StructuralArrayElementTest {
 				if (!observed)
 					throw "structural array observer missed the authored return";
 				final script = root + "/candidate.js";
-				new backend.js.JsBackend().emit(new MacroExpandedProgram([typed], false),
-					new backend.BackendContext(root, script, "Main", true, false, defines));
+				new backend.js.JsBackend().emit(new MacroExpandedProgram([typed], false), new backend.BackendContext(root, script, "Main", false, defines));
 				for (file in [root + "/upstream.js", script]) {
 					final result = run("node", [file]);
 					if (result.code != 0 || result.stdout != "true\nchanged\n")

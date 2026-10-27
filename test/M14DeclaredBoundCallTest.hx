@@ -163,7 +163,7 @@ class M14DeclaredBoundCallTest {
 				#if declared_bound_native
 				if (entry.name == 'object') {
 					@:privateAccess M14NekoClosureControlTest.assertSource('declared_bound_call', source, 'construct\nok\n');
-					final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + '/native', true);
+					final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + '/native');
 					final native = new sys.io.Process(Sys.systemName() == 'Mac' ? 'gtimeout' : 'timeout', ['30', executable]);
 					final actual = native.stdout.readAll().toString();
 					final stderr = native.stderr.readAll().toString();

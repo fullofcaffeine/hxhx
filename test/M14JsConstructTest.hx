@@ -49,7 +49,7 @@ class M14JsConstructTest {
 		final typed = TyperStage.typeResolvedModule(module, index, loader, true);
 		final lowered = TypedAbstractOperatorLowering.lowerModules([typed], index);
 		final script = output + "/candidate.js";
-		new backend.js.JsBackend().emit(MacroStage.expandProgram(lowered, []), new backend.BackendContext(output, script, "Main", true, false, defines));
+		new backend.js.JsBackend().emit(MacroStage.expandProgram(lowered, []), new backend.BackendContext(output, script, "Main", false, defines));
 		if (run("node", [script]) != expected)
 			throw "candidate construct output differs; retained " + output;
 		Sys.println("JS_CONSTRUCT_RUNTIME:PASS " + output);

@@ -12,7 +12,7 @@ class M14CppStringCatchTest {
 		];
 		final output = ".tmp/cpp-string-catch";
 		final result = backend.cpp.CppTargetCore.emit(CppResolvedFixture.prepare(fixture),
-			new backend.BackendContext(output, null, "Main", true, true, fixture.defines));
+			new backend.BackendContext(output, null, "Main", true, fixture.defines));
 		for (index in 0...fixture.modules.length)
 			if (CompilerTypedModuleRevision.fromTypedModule(fixture.modules[index]).getCanonicalIdentity() != revisions[index])
 				throw "String catch emission changed its authored typed source";

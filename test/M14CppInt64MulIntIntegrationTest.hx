@@ -136,7 +136,7 @@ class M14CppInt64MulIntIntegrationTest {
 		final root = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_int64_mul_int"]);
 		deleteRecursive(root);
 		FileSystem.createDirectory(root);
-		final context = new BackendContext(root, null, "Contract", true, true, fixture.defines);
+		final context = new BackendContext(root, null, "Contract", true, fixture.defines);
 		final result = BackendRegistry.createForTarget("cpp-native").emit(program, context);
 		assertTrue(result.builtExecutable, "focused Int64 * Int C++ artifact did not build");
 

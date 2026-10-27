@@ -58,7 +58,7 @@ class M14NullableStructuralArgumentTest {
 				+ 'if(input!==value)throw Error("record identity");return "object";},record(value){console.log(value);}};'
 				+ 'require(process.argv[2]);if(calls!==3||reads!==1)throw Error("evaluation count");');
 			new backend.js.JsBackend().emit(new MacroExpandedProgram([typed], false),
-				new backend.BackendContext(root, root + "/native.js", "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+				new backend.BackendContext(root, root + "/native.js", "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 			for (file in ["upstream.js", "native.js"]) {
 				final result = run("node", [harness, sys.FileSystem.fullPath(root + "/" + file)]);
 				if (result.code != 0 || result.stdout != "null\nnull\nobject\n")

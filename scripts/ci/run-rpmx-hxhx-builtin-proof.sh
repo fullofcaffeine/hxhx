@@ -102,7 +102,6 @@ compile_start_ms="$(now_ms)"
 set +e
 HXHX_FORBID_STAGE0=1 "${hxhx_cmd[@]}" \
   --ocaml \
-  --hxhx-emit-full-bodies \
   --hxhx-no-run \
   -cp "$source_repo/src" \
   -cp "$source_repo/vendor/reflaxe/src" \

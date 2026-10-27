@@ -52,7 +52,7 @@ class M14StructuralIntersectionTest {
 			&& fields[1].type.getSemanticKey() == "primitive:Int",
 			"intersection lost optionality, generic substitution, or field identity");
 		final typed = TyperStage.typeResolvedModule(module, index);
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml", true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml");
 		final native = run(executable, []);
 		check(native.code == 0 && native.stdout == expected, "native structural intersection differs: " + native.stderr);
 		for (invalid in [

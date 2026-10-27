@@ -59,7 +59,7 @@ class M14ConditionalAbstractResultTest {
 		final expected = sys.io.File.getContent(fixture + "expected.stdout");
 		JsRuntimeFixture.assertProgramRuntime(program, "Main", expected);
 		final result = BackendRegistry.createForTarget("cpp-native")
-			.emit(program, new BackendContext(".tmp/conditional-abstract-result", null, "Main", true, true, new haxe.ds.StringMap()));
+			.emit(program, new BackendContext(".tmp/conditional-abstract-result", null, "Main", true, new haxe.ds.StringMap()));
 		final process = new sys.io.Process(result.entryPath, []);
 		final stdout = process.stdout.readAll().toString();
 		final stderr = process.stderr.readAll().toString();

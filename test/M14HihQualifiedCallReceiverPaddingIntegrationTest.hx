@@ -133,7 +133,7 @@ class M14HihQualifiedCallReceiverPaddingIntegrationTest {
 			assertTrue(extensionCall.getExpressions().length == 2,
 				'Extension call should retain one callee plus one explicit source argument; the receiver remains in the callee field.');
 			final expanded = MacroStage.expandProgram([typed], []);
-			final mainExecutable = EmitterStage.emitToDir(expanded, outDir, true);
+			final mainExecutable = EmitterStage.emitToDir(expanded, outDir);
 			final native = observe(mainExecutable, []);
 			assertTrue(native.code == 0 && native.output == expected, "Native qualified or instance call behavior differs: " + native.errors);
 
@@ -197,7 +197,7 @@ class M14HihQualifiedCallReceiverPaddingIntegrationTest {
 				for (module in runtimeResolved)
 					TyperStage.typeResolvedModule(module, runtimeIndex, runtimeLoader)
 			];
-			final executable = EmitterStage.emitToDir(MacroStage.expandProgram(runtimeTyped, []), runtimeOutDir, true);
+			final executable = EmitterStage.emitToDir(MacroStage.expandProgram(runtimeTyped, []), runtimeOutDir);
 			assertTrue(FileSystem.exists(executable), 'Extension-provider fixture did not produce a native executable.');
 			assertTrue(Sys.command(executable) == 0, 'Native extension-provider runtime behavior differed from the source contract.');
 		} catch (e:Dynamic) {

@@ -163,7 +163,7 @@ class M14ExpectedEnumConstructorTest {
 		// The program API requires its entry module first; every imported enum remains present.
 		final modules = providers(File.getContent(root + "/Main.hx"), ["Main", "First", "Second"]);
 		final typed = typeModules(modules, root);
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram(typed, false), ".tmp/expected-enum-constructor-imported", true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram(typed, false), ".tmp/expected-enum-constructor-imported");
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		Sys.println("M14_EXPECTED_ENUM_CONSTRUCTOR:PASS");
 	}

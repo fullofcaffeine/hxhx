@@ -138,7 +138,7 @@ class M14PortableAutoMetalizationPlannerIntegrationTest {
 			assertTrue(loader.ensureTypeAvailable("Array", "", []) != null, "planner fixture requires the real Array declaration");
 			final typed = TyperStage.typeResolvedModule(resolved, index, loader, true);
 			final program = MacroStage.expandProgram([typed], []);
-			final context = new BackendContext(outDir, null, "Main", true, false, HxDefineMap.fromRawDefines(["ocaml_profile=portable"]));
+			final context = new BackendContext(outDir, null, "Main", false, HxDefineMap.fromRawDefines(["ocaml_profile=portable"]));
 			new OcamlTargetCore().emit(program, context);
 
 			final mainMlPath = findMainModulePath(outDir);

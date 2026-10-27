@@ -53,7 +53,7 @@ class M14CppMathConstantTest {
 		reader.render(expression, "result", "");
 		Sys.println("CPP_MATH_CONSTANT_OWNERSHIP:PASS");
 		final output = ".tmp/cpp-math-constants";
-		final result = backend.cpp.CppTargetCore.emit(prepared, new backend.BackendContext(output, null, "Main", true, true, fixture.defines));
+		final result = backend.cpp.CppTargetCore.emit(prepared, new backend.BackendContext(output, null, "Main", true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "Math constant program did not build";
 		for (index in 0...fixture.modules.length)

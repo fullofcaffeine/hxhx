@@ -16,7 +16,7 @@ class M14EnumSwitchCoverageTest {
 		final module = new ResolvedModule('Main', path, ParserStage.parse(source, path));
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		#if enum_coverage_ocaml
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), root + '/ocaml', true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), root + '/ocaml');
 		final process = new sys.io.Process(Sys.systemName() == 'Mac' ? 'gtimeout' : 'timeout', ['30', executable]);
 		final output = process.stdout.readAll().toString();
 		final errors = process.stderr.readAll().toString();
@@ -26,7 +26,7 @@ class M14EnumSwitchCoverageTest {
 			throw 'native enum coverage differs: ' + output + errors;
 		Sys.println('OCAML_ENUM_COVERAGE:PASS');
 		#else
-		final context = new backend.BackendContext(root, root + '/local.n', 'Main', true, false, HxDefineMap.fromRawDefines(['neko=1']));
+		final context = new backend.BackendContext(root, root + '/local.n', 'Main', false, HxDefineMap.fromRawDefines(['neko=1']));
 		final generated = @:privateAccess backend.vm.NekoTargetCore.renderProgram(new MacroExpandedProgram([typed], false), context);
 		sys.io.File.saveContent(root + '/local.neko', generated);
 		if (Sys.command('nekoc', [root + '/local.neko']) != 0)

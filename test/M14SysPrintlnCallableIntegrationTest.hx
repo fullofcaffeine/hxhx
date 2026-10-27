@@ -131,7 +131,7 @@ class M14SysPrintlnCallableIntegrationTest {
 			{target: "python-native", runtime: "python3", extension: "py"}
 		]) {
 			final output = Path.join([root, "main." + entry.extension]);
-			final context = new BackendContext(root, output, "Main", true, false, new StringMap<String>());
+			final context = new BackendContext(root, output, "Main", false, new StringMap<String>());
 			final emitted = BackendRegistry.createForTarget(entry.target).emit(program, context);
 			M14Stage3RuntimeFixture.observe({command: entry.runtime, arguments: [emitted.entryPath], expected: expected});
 		}

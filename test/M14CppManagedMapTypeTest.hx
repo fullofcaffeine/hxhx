@@ -27,7 +27,7 @@ class M14CppManagedMapTypeTest {
 		});
 		final original = new MacroExpandedProgram(fixture.modules, false);
 		final program = CppResolvedFixture.prepare(fixture);
-		final result = CppTargetCore.emit(program, new BackendContext('.tmp/cpp-managed-map-type', null, 'Main', true, true, new haxe.ds.StringMap()));
+		final result = CppTargetCore.emit(program, new BackendContext('.tmp/cpp-managed-map-type', null, 'Main', true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable || observe(result.entryPath, []) != expected)
 			throw 'managed Map type behavior differs from upstream';
 		original.assertTypedBodyRevisionsCurrent();

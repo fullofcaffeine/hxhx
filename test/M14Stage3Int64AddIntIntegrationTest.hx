@@ -96,7 +96,7 @@ class M14Stage3Int64AddIntIntegrationTest {
 
 		var thrown:Dynamic = null;
 		try {
-			final executable = EmitterStage.emitToDir(program, root, true);
+			final executable = EmitterStage.emitToDir(program, root);
 			final generatedMain = File.getContent(Path.join([root, "Main.ml"]));
 			final generatedHelper = File.getContent(Path.join([root, "Haxe_Int64.ml"]));
 			assertTrue(generatedMain.indexOf("Haxe_Int64.addInt") >= 0, "Stage3 did not preserve the exact haxe.Int64.addInt call selected by shared typing.");
@@ -152,7 +152,7 @@ class M14Stage3Int64AddIntIntegrationTest {
 		File.saveContent(assignmentSourcePath, assignmentSource);
 		File.saveContent(Path.join([assignmentInt64Dir, "Int64.hx"]), int64Source);
 		try {
-			final executable = EmitterStage.emitToDir(typedProgram(assignmentSource, assignmentSourcePath, int64Source), assignmentRoot, true);
+			final executable = EmitterStage.emitToDir(typedProgram(assignmentSource, assignmentSourcePath, int64Source), assignmentRoot);
 			final generatedMain = File.getContent(Path.join([assignmentRoot, "Main.ml"]));
 			assertTrue(generatedMain.indexOf("Haxe_Int64.ofInt (1)") >= 0, "Stage3 did not convert a positive Int before storing it in an Int64 local.");
 			assertTrue(generatedMain.indexOf("Haxe_Int64.ofInt ((HxInt.neg (10)))") >= 0,

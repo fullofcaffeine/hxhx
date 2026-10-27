@@ -44,7 +44,7 @@ class M14ConstructorOverloadMetadataTest {
 			'if(arguments.length!==1||value!==7)throw Error("constructor arguments");this.label="made";}};' +
 			'require(process.argv[2]);if(calls!==1)throw Error("constructor count");');
 		new backend.js.JsBackend().emit(new MacroExpandedProgram([typed], false),
-			new backend.BackendContext(root, root + "/native.js", "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+			new backend.BackendContext(root, root + "/native.js", "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 		for (file in ["upstream.js", "native.js"])
 			observe("node", [harness, sys.FileSystem.fullPath(root + "/" + file)], "made\n");
 		Sys.println("CONSTRUCTOR_METADATA_ORDER:PASS");

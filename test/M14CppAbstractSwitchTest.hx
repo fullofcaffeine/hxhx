@@ -56,7 +56,7 @@ class M14CppAbstractSwitchTest {
 		final integerBox = TyType.nominal(box.getIdentity(), [TyType.fromHintText("Int")]);
 		rejected(plan, integerBox, PBind("value"), "exact matching or binding support");
 		rejected(plan, integerBox, PBool(false), "exact matching or binding support");
-		final result = CppTargetCore.emit(program, new BackendContext(".tmp/cpp-abstract-switch", null, "Main", true, true, new haxe.ds.StringMap()));
+		final result = CppTargetCore.emit(program, new BackendContext(".tmp/cpp-abstract-switch", null, "Main", true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable)
 			throw "abstract switch fixture did not build";
 		execute(result.entryPath, []);

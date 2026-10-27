@@ -105,7 +105,7 @@ class M14EnumImportConstraintTest {
 		#if enum_import_ocaml
 		// The emitter's first module owns the executable entry point.
 		final modules = sameModule ? [typed] : [typed, TyperStage.typeResolvedModule(enums, index)];
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram(modules, false), root + "/ocaml", true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram(modules, false), root + "/ocaml");
 		final native = new sys.io.Process(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", executable]);
 		final nativeOutput = native.stdout.readAll().toString();
 		final nativeErrors = native.stderr.readAll().toString();

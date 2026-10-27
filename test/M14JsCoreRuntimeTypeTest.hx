@@ -29,7 +29,7 @@ class M14JsCoreRuntimeTypeTest {
 		final typed = TyperStage.typeResolvedModule(source, index, loader, true);
 		final revision = CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity();
 		new backend.js.JsBackend().emit(new MacroExpandedProgram([typed], false),
-			new backend.BackendContext(output, output + '/candidate.js', 'Main', true, false, HxDefineMap.fromRawDefines(['js=1'])));
+			new backend.BackendContext(output, output + '/candidate.js', 'Main', false, HxDefineMap.fromRawDefines(['js=1'])));
 		if (run('node', [root + '/host.cjs', sys.FileSystem.fullPath(output + '/candidate.js')]) != expected)
 			throw 'candidate core ' + name + ' behavior differs';
 		if (CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity() != revision)

@@ -115,7 +115,7 @@ class M14Stage3DynamicLocalStorageTest {
 		for (fn in functions)
 			if (HxFunctionDecl.getName(fn.getSourceDeclaration()) == "main")
 				checkOwnership(fn);
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/stage3-dynamic-local-seed", true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/stage3-dynamic-local-seed");
 		observe(executable, []);
 		for (index in 0...functions.length)
 			if (revisions[index] != CompilerTypedTreeRevision.functionBody(functions[index]))

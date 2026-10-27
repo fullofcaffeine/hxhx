@@ -36,7 +36,7 @@ class M14OcamlSysPrintlnCallableIntegrationTest {
 		File.saveContent(path, source);
 		M14Stage3RuntimeFixture.observe({command: "haxe", arguments: ["-cp", root, "--run", "Main"], expected: expected});
 		final typed = M14Stage3RuntimeFixture.typeMain({source: source, path: path, root: root});
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), Path.join([root, "ocaml"]), true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), Path.join([root, "ocaml"]));
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		Sys.println("OCAML_SYS_PRINTLN_CALLABLE:PASS");
 	}

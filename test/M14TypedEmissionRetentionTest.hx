@@ -70,7 +70,7 @@ class M14TypedEmissionRetentionTest {
 				}
 			}
 			final script = output + "/" + mode + ".js";
-			new backend.js.JsBackend().emit(selected, new backend.BackendContext(output, script, "FeatureEmission", true, false, defines));
+			new backend.js.JsBackend().emit(selected, new backend.BackendContext(output, script, "FeatureEmission", false, defines));
 			final process = new sys.io.Process(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", "node", script]);
 			final stdout = process.stdout.readAll().toString();
 			final stderr = process.stderr.readAll().toString();

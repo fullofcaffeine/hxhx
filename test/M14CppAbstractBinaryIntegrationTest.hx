@@ -240,7 +240,7 @@ class M14CppAbstractBinaryIntegrationTest {
 		final root = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_abstract_binary"]);
 		deleteRecursive(root);
 		FileSystem.createDirectory(root);
-		final context = new BackendContext(root, null, "Main", true, true, fixture.defines);
+		final context = new BackendContext(root, null, "Main", true, fixture.defines);
 		final result = BackendRegistry.createForTarget("cpp-native").emit(program, context);
 		assertTrue(result.builtExecutable, "focused abstract-binary C++ artifact did not build");
 		for (index in 0...fixture.modules.length)

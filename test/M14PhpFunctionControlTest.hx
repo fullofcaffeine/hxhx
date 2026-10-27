@@ -104,7 +104,7 @@ class M14PhpFunctionControlTest {
 				File.saveContent(artifact, "previous-output\n");
 			}
 			reject(() -> {
-				BackendRegistry.requireForTarget("php-native").emit(input, new BackendContext(output, null, "Main", true, false, new StringMap<String>()));
+				BackendRegistry.requireForTarget("php-native").emit(input, new BackendContext(output, null, "Main", false, new StringMap<String>()));
 			}, "occurrence");
 			if (previous) {
 				if (File.getContent(artifact) != "previous-output\n" || FileSystem.readDirectory(output).length != 1)
@@ -128,7 +128,7 @@ class M14PhpFunctionControlTest {
 		Sys.println("PHP_FUNCTION_CONTROL_UPSTREAM:PASS");
 		final output = ".tmp/m14_php_function_control_" + name + "_" + Std.string(Date.now().getTime());
 		final result = BackendRegistry.requireForTarget("php-native")
-			.emit(program(name), new BackendContext(output, null, name, true, false, new StringMap<String>()));
+			.emit(program(name), new BackendContext(output, null, name, false, new StringMap<String>()));
 		final actual = run("php", [result.entryPath]);
 		if (actual != expected)
 			throw "native PHP function-control behavior differs from upstream:\n" + actual;

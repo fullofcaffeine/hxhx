@@ -20,7 +20,7 @@ class M14JsMacroEnumProviderTest {
 		for (mode in ["full", "std", "no"]) {
 			final program = JsSourceProgramFixture.retain(loaded, mode);
 			final script = output + "/candidate-" + mode + ".js";
-			new backend.js.JsBackend().emit(program, new backend.BackendContext(output, script, "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+			new backend.js.JsBackend().emit(program, new backend.BackendContext(output, script, "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 			if (@:privateAccess M14NekoTypedProgramProjectionIntegrationTest.run("node", [script]) != expected)
 				throw "candidate macro enum contract changed: " + mode + " " + output;
 			Sys.println("JS_MACRO_ENUM_PROVIDER:" + mode + ":PASS");

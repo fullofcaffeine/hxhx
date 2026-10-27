@@ -101,7 +101,7 @@ class M14Stage3AbstractStaticFunctionIntegrationTest {
 				new ResolvedModule("Main", mainPath, ParserStage.parse(mainSource, mainPath)),
 				new ResolvedModule("demo.Ticket", ticketPath, ParserStage.parse(ticketSource, ticketPath)),
 			];
-			final executable = EmitterStage.emitToDir(program(sourceRoot, modules), outDir, true);
+			final executable = EmitterStage.emitToDir(program(sourceRoot, modules), outDir);
 			final generatedTicket = File.getContent(Path.join([outDir, "Demo_Ticket.ml"]));
 			final generatedChoice = File.getContent(Path.join([outDir, "Demo_Ticket_Choice.ml"]));
 			final generatedMain = File.getContent(Path.join([outDir, "Main.ml"]));

@@ -272,7 +272,7 @@ class M14CppAbstractUnaryIntegrationTest {
 		final program = CppResolvedFixture.prepare(fixture);
 		assertPreparedOperators(program);
 		Sys.println("CPP_ABSTRACT_UNARY:PREPARED");
-		final context = new BackendContext(root, null, "Main", true, true, fixture.defines);
+		final context = new BackendContext(root, null, "Main", true, fixture.defines);
 		final result = BackendRegistry.createForTarget("cpp-native").emit(program, context);
 		assertTrue(result.builtExecutable, "focused abstract-unary C++ artifact did not build");
 		for (index in 0...fixture.modules.length)

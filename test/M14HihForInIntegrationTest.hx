@@ -83,7 +83,7 @@ class M14HihForInIntegrationTest {
 			M14Stage3RuntimeFixture.observe({command: "haxe", arguments: ["-cp", srcDir, "--run", "Main"], expected: "sum=10\n"});
 			final runtimeTyped = M14Stage3RuntimeFixture.typeMain({source: runtimeMain, path: runtimeMainPath, root: srcDir});
 			final runtimeExpanded = MacroStage.expandProgram([runtimeTyped], []);
-			final exePath = EmitterStage.emitToDir(runtimeExpanded, outDir, true);
+			final exePath = EmitterStage.emitToDir(runtimeExpanded, outDir);
 			assertTrue(FileSystem.exists(exePath), "Emitter did not produce executable: " + exePath);
 
 			final p = new sys.io.Process(exePath, []);

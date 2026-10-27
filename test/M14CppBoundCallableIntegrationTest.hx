@@ -12,7 +12,7 @@ class M14CppBoundCallableIntegrationTest {
 		final fixture = CppResolvedFixture.load({sourceRoot: root, mainModule: "Main", requiredModules: ["Main"]});
 		Sys.println("CPP_BOUND_CALLABLE:PROVIDERS_LOADED " + (haxe.Timer.stamp() - started));
 		final directory = ".tmp/cpp-bound-callable";
-		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture), new BackendContext(directory, null, "Main", true, true, fixture.defines));
+		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture), new BackendContext(directory, null, "Main", true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "Stored method fixture did not build its native executable";
 		execute(result.entryPath, [], expected);

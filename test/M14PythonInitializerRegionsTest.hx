@@ -50,7 +50,7 @@ class M14PythonInitializerRegionsTest {
 	static function emit(module:TypedModule, root:String):String {
 		final before = CompilerTypedModuleRevision.fromTypedModule(module).getCanonicalIdentity();
 		final result = SourceMvpTargetCore.emit(Python, new MacroExpandedProgram([module], false),
-			new BackendContext(root, null, "Main", true, false, new haxe.ds.StringMap()));
+			new BackendContext(root, null, "Main", false, new haxe.ds.StringMap()));
 		if (before != CompilerTypedModuleRevision.fromTypedModule(module).getCanonicalIdentity())
 			throw "Python initializer emission changed authored typed source";
 		return result.entryPath;

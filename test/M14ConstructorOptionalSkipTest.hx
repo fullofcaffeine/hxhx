@@ -42,7 +42,7 @@ class M14ConstructorOptionalSkipTest {
 		final fixture = CppResolvedFixture.load({sourceRoot: root, mainModule: "Main", requiredModules: ["Sys"]});
 		final nativeProgram = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index), false);
 		final result = backend.cpp.CppTargetCore.emit(nativeProgram,
-			new backend.BackendContext(".tmp/cpp-constructor-optional-skip", null, "Main", true, true, fixture.defines));
+			new backend.BackendContext(".tmp/cpp-constructor-optional-skip", null, "Main", true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "optional skipping requires a native executable";
 		final native = new sys.io.Process(result.entryPath, []);

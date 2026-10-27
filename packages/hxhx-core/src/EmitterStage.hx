@@ -317,15 +317,14 @@ class EmitterStage {
 		Exception boundary note
 		- The catch is intentionally confined to this boundary to guarantee state restoration.
 	**/
-	public static function emitToDirWithPortableMetalizationPlan(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false,
-			buildExecutable:Bool = true, ocamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable,
-			?portableMetalizationPlan:backend.ocaml.PortableMetalizationPlan):String {
+	public static function emitToDirWithPortableMetalizationPlan(p:MacroExpandedProgram, outDir:String, buildExecutable:Bool = true,
+			ocamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable, ?portableMetalizationPlan:backend.ocaml.PortableMetalizationPlan):String {
 		EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_before_install");
 		final scope = installPortableMetalizationPlan(portableMetalizationPlan);
 		var entryPath = "";
 		try {
 			EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_before_emitToDir");
-			entryPath = emitToDir(p, outDir, emitFullBodies, buildExecutable, ocamlProfile);
+			entryPath = emitToDir(p, outDir, buildExecutable, ocamlProfile);
 			EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_after_emitToDir");
 		} catch (error:haxe.io.Error) {
 			EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_catch_io_error");
@@ -1729,11 +1728,10 @@ class EmitterStage {
 		constructors allocate `HxAnon`, initialize declared fields to null, then call
 		the generated `new` method when present, preserving the previous inline order.
 
-		For helper classes declared in the same `.hx` module, Stage3 emits those helpers
-		as separate stub modules while the root module still represents instances as
-		`HxAnon`. Until helper constructor bodies are emitted as real methods, seed
-		fields positionally from constructor arguments instead of calling an unbound
-		root-module `new_` value.
+		This legacy allocation fallback still seeds non-current-module fields from
+		constructor arguments. Emitting helper method bodies does not repair that
+		separate allocation limitation; callers must not infer constructor parity
+		from the absence of a partial-body emission mode.
 	**/
 	static function exprToOcamlNewStage3(typePath:String, args:Array<HxExpr>, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
@@ -3615,7 +3613,7 @@ class EmitterStage {
 							case _:
 						}
 					// Stage 3 bring-up: allow a tiny subset of `Array` operations so orchestration code
-					// can run under `--hxhx-emit-full-bodies`.
+					// can run through native compilation.
 					case EField(obj, "toArray") if (args.length == 0):
 						// Rest-args bring-up: upstream code frequently calls `rest.toArray()` where
 						// `rest` originates from a `...args:T` parameter.
@@ -7321,8 +7319,8 @@ class EmitterStage {
 	}
 
 	/**
-		Stage3 keeps std modules on stub bodies during full emit, but these DateTools
-		duration helpers are pure arithmetic and are evaluated by upstream unit statics.
+		Retains the existing native DateTools duration overrides used by unit statics.
+		Removing partial-body emission does not change these numeric operations.
 	**/
 	static function stage3DateToolsDurationBody(moduleName:String, nameRaw:String, argName:String):Null<String> {
 		if (moduleName != "DateTools" || argName == null || argName.length == 0)
@@ -7453,7 +7451,8 @@ class EmitterStage {
 		sys.io.File.saveContent(shimPath, StringTools.replace(src, from, macroContextLoadShimSourceForStage3()));
 	}
 
-	public static function emitToDir(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false, buildExecutable:Bool = true,
+	/** Emit method statements and locals; buildExecutable controls only native compilation and linking. */
+	public static function emitToDir(p:MacroExpandedProgram, outDir:String, buildExecutable:Bool = true,
 			ocamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable):String {
 		final previous = currentEnums;
 		final previousCallables = currentCallables;
@@ -7467,7 +7466,7 @@ class EmitterStage {
 		currentEnums = new backend.ocaml.Stage3OcamlEnums(ocamlValueIdent, escapeOcamlString);
 		var result:String;
 		try {
-			result = emitToDirWithEnumOwner(p, outDir, emitFullBodies, buildExecutable, ocamlProfile);
+			result = emitToDirWithEnumOwner(p, outDir, buildExecutable, ocamlProfile);
 		} catch (error:haxe.io.Error) {
 			currentEnums = previous;
 			currentCallables = previousCallables;
@@ -7498,8 +7497,7 @@ class EmitterStage {
 		return result;
 	}
 
-	static function emitToDirWithEnumOwner(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool, buildExecutable:Bool,
-			ocamlProfile:backend.OcamlProfile):String {
+	static function emitToDirWithEnumOwner(p:MacroExpandedProgram, outDir:String, buildExecutable:Bool, ocamlProfile:backend.OcamlProfile):String {
 		final runtimeSrcDir = stage3RuntimeSourceDirectory();
 		final runtimePaths = stage3RuntimePaths(runtimeSrcDir);
 
@@ -7912,9 +7910,7 @@ class EmitterStage {
 		}
 
 		function emitModule(tm:TypedModule, isRoot:Bool):{files:Array<String>, rootMain:Null<String>} {
-			// The caller selects full-body emission for the whole program. Directory
-			// names must not discard declarations and effects needed by its returns.
-			final moduleEmitBodies = emitFullBodies;
+			// Directory names must not discard declarations and effects needed by returns.
 
 			final moduleProjection = tm.getBackendProjection();
 			// The request plan admitted exact runtime type occurrences before output.
@@ -8055,107 +8051,6 @@ class EmitterStage {
 							!HxFieldDecl.getIsStatic(field), ocamlValueIdent);
 						return;
 					}
-			}
-
-			function emitStubClass(cls:HxClassDecl):Null<String> {
-				final classProjection = moduleProjection.findClass(cls);
-				if (classProjection == null)
-					throw "Stage3 emitter cannot find the exact stub-class projection";
-				final nm = HxClassDecl.getName(cls);
-				if (nm == null || nm.length == 0 || nm == "Unknown")
-					return null;
-				final moduleName = moduleNameForDecl(decl, moduleTypeName, nm);
-				final enumPath = emitEnum(classProjection, moduleName);
-				if (enumPath != null)
-					return enumPath;
-				EmitterStageDebug.traceStage3Phase("emit_stub_begin:" + moduleName);
-
-				final prevInt64 = currentImportInt64;
-				currentImportInt64 = importInt64;
-				try {
-					final out = new Array<String>();
-					out.push("(* Generated by hxhx(stage3) bootstrap emitter *)");
-					// Keep bring-up output warning-clean under strict dune setups.
-					// These warnings are common when we use `Obj.magic` / exception-return tricks.
-					out.push("[@@@warning \"-21-26\"]");
-					out.push("");
-
-					// Stage 3 bring-up: hxhx full output uses a narrow StringTools surface before
-					// Stage3 can reliably emit the full std module.
-					final hasStringToolsHex = moduleName == "StringTools";
-					// A runtime stub owns its own data; authored methods retain their source fields.
-					final emitParsedStaticFields = !hasStringToolsHex && shouldEmitParsedStaticFields(moduleName);
-					if (hasStringToolsHex) {
-						for (line in stringToolsBootstrapShimSourceForStage3().split("\n"))
-							out.push(line);
-						out.push("");
-					}
-
-					// Emit static fields (best-effort).
-					final parsedFields = HxClassDecl.getFields(cls);
-					final staticTyByIdent:Map<String, TyType> = new Map();
-					for (f in parsedFields) {
-						if (!emitParsedStaticFields)
-							continue;
-						if (!HxFieldDecl.getIsStatic(f))
-							continue;
-						final nameRaw = HxFieldDecl.getName(f);
-						if (nameRaw == null || nameRaw.length == 0)
-							continue;
-						final inferredType = inferStaticFieldType(f, staticTyByIdent);
-						final init = HxFieldDecl.getInit(f);
-						installFieldLocalNames(classProjection, f);
-						final initOcaml = init == null ? "(Obj.magic HxRuntime.hx_null)" : exprToOcaml(init, null, staticTyByIdent, null,
-							HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, globalCallSigByCallee);
-						currentFunctionLocalOcamlNames = null;
-						currentTypedInitializer = null;
-						out.push("let " + ocamlValueIdent(nameRaw) + " = " + initOcaml);
-						out.push("");
-						final knownType = staticTyByIdent.get(nameRaw);
-						if (knownType == null || (knownType.isUnknown() && !inferredType.isUnknown()))
-							staticTyByIdent.set(nameRaw, inferredType);
-					}
-					EmitterStageDebug.traceStage3Phase("emit_stub_after_fields:" + moduleName);
-
-					// Emit function stubs with correct arity to avoid OCaml partial application issues.
-					for (fn in HxClassDecl.getFunctions(cls)) {
-						final projection = classProjection.findFunction(fn);
-						if (projection == null)
-							throw "Stage3 emitter cannot find the exact stub-function projection";
-						final nameRaw = HxFunctionDecl.getName(fn);
-						if (nameRaw == null || nameRaw.length == 0)
-							continue;
-						if (hasStringToolsHex && nameRaw == "hex")
-							continue;
-						currentFunctionLocalOcamlNames = new backend.ocaml.Stage3OcamlLocalNames(projection.getLocalCatalog(), false, ocamlValueIdent);
-						final fnArgs = HxFunctionDecl.getArgs(fn);
-						final args = fnArgs == null ? [] : fnArgs;
-						final ocamlArgs = if (args.length == 0) {
-							"()";
-						} else {
-							projection.getParameters().map(a -> requireOcamlFunctionLocalValueIdent(a.getProjectedName())).join(" ");
-						};
-						final durationBody = args.length == 1 ? stage3DateToolsDurationBody(moduleName, nameRaw, HxFunctionArg.getName(args[0])) : null;
-						out.push("let " + ocamlValueIdent(nameRaw) + " " + ocamlArgs + " = " + (durationBody == null ? "(Obj.magic 0)" : durationBody));
-						currentFunctionLocalOcamlNames = null;
-						out.push("");
-					}
-					EmitterStageDebug.traceStage3Phase("emit_stub_after_functions:" + moduleName);
-
-					final mlPath = haxe.io.Path.join([outAbs, moduleName + ".ml"]);
-					EmitterStageDebug.traceStage3Phase("emit_stub_before_write:" + moduleName);
-					sys.io.File.saveContent(mlPath, out.join("\n"));
-					EmitterStageDebug.traceStage3Phase("emit_stub_after_write:" + moduleName);
-					EmitterStageDebug.traceStage3Phase("emit_stub_done:" + moduleName);
-					currentImportInt64 = prevInt64;
-					return moduleName + ".ml";
-				} catch (e:TyperError) {
-					currentImportInt64 = prevInt64;
-					throw e;
-				} catch (e:String) {
-					currentImportInt64 = prevInt64;
-					throw e;
-				}
 			}
 
 			/**
@@ -8610,8 +8505,6 @@ class EmitterStage {
 					// - When emitting macro std modules, hoist `load` to an independent non-rec `let`
 					//   binding before the main `let rec` group so it can be generalized.
 					//
-					// Note: This must apply in both "stub body" and "full body" emission modes. The failure mode
-					// (monomorphic `load` inside the recursive group) appears in both configurations.
 					final shouldHoistLoad = StringTools.startsWith(outputModuleName, "Haxe_macro_");
 					if (shouldHoistLoad) {
 						for (tf in typedFns) {
@@ -8826,10 +8719,6 @@ class EmitterStage {
 								hxhxStage3RunWaitStdioStage3OcamlBody();
 							} else if (durationBody != null) {
 								durationBody;
-							} else if (!moduleEmitBodies) {
-								callableDirectReturn(parsedFn.getFirstReturnExpr(),
-									returnExprToOcaml(parsedFn.getFirstReturnExpr(), allowed, tf.getReturnType(), arityByName, tyByIdent, staticImportByIdent,
-										HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee));
 							} else {final exc = uniqueReturnExceptionName(nameRaw);
 								exceptions.push("exception " + exc + " of Obj.t");
 								final stmts = HxFunctionDecl.getBody(parsedFn);
@@ -9362,7 +9251,7 @@ class EmitterStage {
 						}
 					}
 
-					if (moduleEmitBodies && exceptions.length > 0) {
+					if (exceptions.length > 0) {
 						// Prepend exceptions so the `try ... with` clauses can reference them.
 						out.insert(2, exceptions.join("\n") + "\n");
 					}
@@ -9421,9 +9310,8 @@ class EmitterStage {
 				final outputModule = moduleNameForDecl(decl, moduleTypeName, name);
 				if (runtimeModuleNames.exists(outputModule) || currentCallables.externs.ownsClass(projection))
 					continue;
-				EmitterStageDebug.traceStage3Module(isPrimary ? "main" : moduleEmitBodies ? "helper" : "stub", outputModule, tm.getParsed().getFilePath());
-				final path = isPrimary
-					|| moduleEmitBodies ? emitClass(projection, outputModule, isPrimary && isRoot) : emitStubClass(declaration);
+				EmitterStageDebug.traceStage3Module(isPrimary ? "main" : "helper", outputModule, tm.getParsed().getFilePath());
+				final path = emitClass(projection, outputModule, isPrimary && isRoot);
 				if (path != null) {
 					files.push(path);
 					if (isPrimary && isRoot)

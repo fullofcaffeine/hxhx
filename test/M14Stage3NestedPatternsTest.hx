@@ -48,7 +48,7 @@ class M14Stage3NestedPatternsTest {
 		observe("haxe", ["-cp", root, "--run", "Main"]);
 		final path = Path.join([root, "Main.hx"]);
 		final typed = M14Stage3RuntimeFixture.typeMain({source: File.getContent(path), path: path, root: root});
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/stage3-nested-patterns", true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/stage3-nested-patterns");
 		observe(executable, []);
 		Sys.println("M14_STAGE3_NESTED_PATTERNS:PASS");
 	}

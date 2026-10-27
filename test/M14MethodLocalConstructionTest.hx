@@ -49,7 +49,7 @@ class M14MethodLocalConstructionTest {
 		final fields = HxClassDecl.getFields(HxModuleDecl.getMainClass(projection.getDeclaration())).map(field -> HxFieldDecl.getName(field));
 		require(fields.length == 1 && fields[0] == "length", "method locals leaked into projected fields: " + fields.join(","));
 		final output = ".tmp/method_local_construction";
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), output, true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), output);
 		// Native compilation rejects an unbound constructor receiver. A textual
 		// ban on new_ (__hx_obj) also rejects valid calls with a bound receiver.
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});

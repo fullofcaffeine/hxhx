@@ -9,7 +9,7 @@ class M14CppBareFieldBindingIntegrationTest {
 		final resolved = new ResolvedModule("Main", path, ParserStage.parse(sys.io.File.getContent(path), path));
 		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		final program = new MacroExpandedProgram([typed], false);
-		final context = new BackendContext(".tmp/cpp-bare-field-bindings", null, "Main", true, true, new haxe.ds.StringMap<String>());
+		final context = new BackendContext(".tmp/cpp-bare-field-bindings", null, "Main", true, new haxe.ds.StringMap<String>());
 		final result = CppTargetCore.emit(program, context);
 		if (!result.builtExecutable)
 			throw "C++ bare-field test requires a native executable";

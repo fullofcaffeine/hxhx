@@ -27,7 +27,7 @@ class M14UntypedBodyReplayTest {
 		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		JsRuntimeFixture.assertRuntime(typed, 'Main', expected);
 		final program = MacroStage.expandProgram([typed], []);
-		final context = new BackendContext(root, root + '/main.n', 'Main', true, false, HxDefineMap.fromRawDefines(['neko=1']));
+		final context = new BackendContext(root, root + '/main.n', 'Main', false, HxDefineMap.fromRawDefines(['neko=1']));
 		final split = @:privateAccess NekoTargetCore.renderSplitProgram(program, context, root + '/main.neko');
 		sys.io.File.saveContent(split.entryPath, split.entrySource);
 		for (part in split.support)

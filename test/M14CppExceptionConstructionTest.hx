@@ -7,7 +7,7 @@ class M14CppExceptionConstructionTest {
 		final root = "test/oracle/cpp_exception_construction_seed";
 		final fixture = CppResolvedFixture.load({sourceRoot: root, mainModule: "Main", requiredModules: ["haxe.Exception"]});
 		final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index), false);
-		final result = CppTargetCore.emit(program, new BackendContext(".tmp/cpp-exception-construction", null, "Main", true, true, fixture.defines));
+		final result = CppTargetCore.emit(program, new BackendContext(".tmp/cpp-exception-construction", null, "Main", true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "exception construction requires a native executable";
 		final child = new sys.io.Process(result.entryPath, []);

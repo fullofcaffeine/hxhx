@@ -9,7 +9,7 @@ class M14NestedArithmeticEmissionTest {
 		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", root, "--run", "Main"], expected: expected});
 		Sys.println("NESTED_ARITHMETIC_UPSTREAM:PASS");
 		final typed = M14Stage3RuntimeFixture.typeMain({source: File.getContent(path), path: path, root: root});
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), ".tmp/nested_arithmetic_emission", true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), ".tmp/nested_arithmetic_emission");
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		Sys.println("NESTED_ARITHMETIC_NATIVE:PASS");
 	}

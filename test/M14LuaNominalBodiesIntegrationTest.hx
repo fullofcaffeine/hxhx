@@ -30,7 +30,7 @@ class M14LuaNominalBodiesIntegrationTest {
 		final program = MacroStage.expandProgram([TyperStage.typeResolvedModule(resolved, index, loader, true)], []);
 		final output = ".tmp/m14_" + name;
 		final result = BackendRegistry.requireForTarget("lua-native")
-			.emit(program, new BackendContext(output, output + "/Main.lua", "Main", true, false, new StringMap<String>()));
+			.emit(program, new BackendContext(output, output + "/Main.lua", "Main", false, new StringMap<String>()));
 		observe("lua", [result.entryPath], expected);
 		Sys.println(marker + "_NATIVE:PASS");
 	}

@@ -83,7 +83,7 @@ class SharedNullableValuesFixture {
 		final output = ".tmp/shared-nullable-values-" + Std.string(Date.now().getTime()) + "-" + Std.random(0x3fffffff);
 		final defines = new haxe.ds.StringMap<String>();
 		defines.set("reflaxe_ocaml_runtime_directory", sys.FileSystem.absolutePath("packages/reflaxe.ocaml/std/runtime"));
-		final context = new backend.BackendContext(sys.FileSystem.absolutePath(output), null, "Main", true, true, defines);
+		final context = new backend.BackendContext(sys.FileSystem.absolutePath(output), null, "Main", true, defines);
 		new backend.ocaml.OcamlNativeTargetCore().emit(new MacroExpandedProgram([typed], false), context);
 		if (File.getContent(output + "/" + OcamlTargetProgramCore.REPORT_FILE) != plan.reportJson("native-hxhx"))
 			throw "native target wrapper changed the shared plan report";

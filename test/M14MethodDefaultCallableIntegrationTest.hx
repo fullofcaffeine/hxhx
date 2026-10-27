@@ -65,7 +65,7 @@ class M14MethodDefaultCallableIntegrationTest {
 		check(referenceBody("Provider") != referenceBody("Alternate"), "changing the selected provider did not change the typed body revision");
 		final output = Sys.getCwd() + "/.tmp/m14_method_default_callable";
 		final result = new JsTargetCore().emit(new MacroExpandedProgram(typed, false),
-			new BackendContext(output, output + "/main.js", "Main", true, false, new haxe.ds.StringMap<String>()));
+			new BackendContext(output, output + "/main.js", "Main", false, new haxe.ds.StringMap<String>()));
 		final process = new sys.io.Process("node", [result.entryPath]);
 		final stdout = process.stdout.readAll().toString();
 		final stderr = process.stderr.readAll().toString();

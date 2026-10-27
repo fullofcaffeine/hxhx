@@ -219,7 +219,7 @@ class M14UntypedDynamicContextTest {
 		final module = new ResolvedModule('Main', path, ParserStage.parse(source, path));
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		JsRuntimeFixture.assertRuntime(typed, 'Main', expected);
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + '/ocaml', true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + '/ocaml');
 		final timeout = Sys.systemName() == 'Mac' ? 'gtimeout' : 'timeout';
 		final native = new sys.io.Process(timeout, ['30', executable]);
 		final nativeOutput = native.stdout.readAll().toString();

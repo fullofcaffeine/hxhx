@@ -14,7 +14,7 @@ class M14CppArrayPushValueTest {
 		final prepared = CppResolvedFixture.prepare(fixture);
 		ownership(new CppTypedProgramProjection(prepared));
 		final directory = ".tmp/cpp-array-push-value";
-		final result = CppTargetCore.emit(prepared, new BackendContext(directory, null, "Main", true, true, fixture.defines));
+		final result = CppTargetCore.emit(prepared, new BackendContext(directory, null, "Main", true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "Array.push method values require a native executable";
 		observe(result.entryPath, [], expected);

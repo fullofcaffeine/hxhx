@@ -26,7 +26,7 @@ class M14NekoSwitchGuardTest {
 						fn
 		];
 		final revisions = functions.map(CompilerTypedTreeRevision.functionBody);
-		final context = new BackendContext(output, output + "/local.n", "Main", true, false, HxDefineMap.fromRawDefines(["neko=1"]));
+		final context = new BackendContext(output, output + "/local.n", "Main", false, HxDefineMap.fromRawDefines(["neko=1"]));
 		final result = NekoTargetCore.emit(program, context);
 		Sys.println("SWITCH_GUARD_NEKO_EMITTED seconds=" + (Sys.time() - started));
 		M14Stage3RuntimeFixture.observe({command: "neko", arguments: [result.entryPath], expected: expected});

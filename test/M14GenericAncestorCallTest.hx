@@ -156,7 +156,7 @@ class M14GenericAncestorCallTest {
 		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		final script = root + "/main.js";
 		new backend.js.JsBackend().emit(new MacroExpandedProgram([typed], false),
-			new backend.BackendContext(root, script, "Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
+			new backend.BackendContext(root, script, "Main", false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
 		observe("node", ["--check", script]);
 		observe("node", [script]);
 		Sys.println("GENERIC_ANCESTOR_JS_RUNTIME:PASS");

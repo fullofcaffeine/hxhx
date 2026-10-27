@@ -9,7 +9,7 @@ class M14CppNullableTernaryTest {
 		final module = new ResolvedModule(moduleName, path, ParserStage.parse(sys.io.File.getContent(path), path));
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		Sys.println("CPP_NULLABLE_TERNARY:" + moduleName + ":typed");
-		CppTargetCore.emit(new MacroExpandedProgram([typed], false), new BackendContext(output, null, moduleName, true, false, new haxe.ds.StringMap()));
+		CppTargetCore.emit(new MacroExpandedProgram([typed], false), new BackendContext(output, null, moduleName, false, new haxe.ds.StringMap()));
 		Sys.println("CPP_NULLABLE_TERNARY:" + moduleName + ":emitted");
 		sys.io.File.copy("test/cpp_managed_heap/UninitializedLocalObserver.cpp", output + "/Observer.cpp");
 		final compiler = Sys.getEnv("CXX") == null ? "clang++" : Sys.getEnv("CXX");

@@ -21,7 +21,7 @@ class M14CppManagedIntCompoundTest {
 			if (CompilerTypedTreeRevision.functionBody(lowered) != CompilerTypedTreeRevision.functionBody(TypedControlLowering.functionBody(lowered)))
 				throw "repeated integer compound assignment lowering changed control or local identities";
 		}
-		final context = new BackendContext(".tmp/managed-int-compound", null, "Main", true, true, fixture.defines);
+		final context = new BackendContext(".tmp/managed-int-compound", null, "Main", true, fixture.defines);
 		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture), context);
 		if (!result.builtExecutable)
 			throw "integer compound assignment fixture requires a native executable";

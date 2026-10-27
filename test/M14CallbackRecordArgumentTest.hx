@@ -24,7 +24,7 @@ class M14CallbackRecordArgumentTest {
 		];
 		final output = ".tmp/callback-record-argument-" + main;
 		final emitted = backend.cpp.CppTargetCore.emit(CppResolvedFixture.prepare(fixture),
-			new backend.BackendContext(output, null, main, true, true, fixture.defines));
+			new backend.BackendContext(output, null, main, true, fixture.defines));
 		for (index in 0...fixture.modules.length)
 			if (CompilerTypedModuleRevision.fromTypedModule(fixture.modules[index]).getCanonicalIdentity() != revisions[index])
 				throw "callback record transfer changed its authored source";

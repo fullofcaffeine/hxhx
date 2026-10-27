@@ -57,7 +57,7 @@ class M14OcamlComprehensionTest {
 		ownership(typed);
 		final functions = [for (owner in typed.getTypedClasses()) for (fn in owner.getFunctions()) fn];
 		final revisions = [for (fn in functions) CompilerTypedTreeRevision.functionBody(fn)];
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/stage3-array-comprehension", true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/stage3-array-comprehension");
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		for (index in 0...functions.length)
 			if (CompilerTypedTreeRevision.functionBody(functions[index]) != revisions[index])

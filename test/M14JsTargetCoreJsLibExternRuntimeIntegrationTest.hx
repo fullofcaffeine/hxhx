@@ -79,7 +79,7 @@ class M14JsTargetCoreJsLibExternRuntimeIntegrationTest {
 			final program = makeProgram(source);
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
-			final context = new BackendContext(outDir, artifactPath, "Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"]));
+			final context = new BackendContext(outDir, artifactPath, "Main", false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"]));
 			final result = new JsBackend().emit(program, context);
 
 			assertTrue(result.entryPath == artifactPath, "unexpected emitted JS path");

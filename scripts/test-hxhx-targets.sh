@@ -841,8 +841,7 @@ class MultiStage3 {
     // - unqualified helper type (`Helper`)
     // - module-qualified helper type (`MultiStage3.Helper2`)
     //
-    // The Stage3 emitter is non-semantic, so the runtime result is irrelevant; this is a
-    // link-time regression check that providers for module-local helper types are emitted.
+    // Default compilation must retain these locals and helper calls, then print 59.
     var a = Helper.answer;
     var b = MultiStage3.Helper2.answer;
     Sys.println(Std.string(a + b + selectLeft(3, 7) + selectRight(3, 7)));
@@ -852,18 +851,23 @@ HX
 
   out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_helper" -cp "$tmpdir/src" -main MultiStage3)"
   echo "$out" | grep -q "^stage3=ok$"
+  helper_result="$("$tmpdir/out_stage3_helper/out.exe")"
+  if [ "$helper_result" != "59" ]; then
+    echo "Stage3 regression: default compilation did not preserve the helper program's result (expected 59, got $helper_result)." >&2
+    exit 1
+  fi
   if [ -f "$tmpdir/out_stage3_helper/Haxe_io_FPHelper.ml" ]; then
-    if ! grep -Eq '^let rec floatToI32 \(f : float\) : int = _floatToI32 \(f\)$' "$tmpdir/out_stage3_helper/Haxe_io_FPHelper.ml"; then
-      echo "Stage3 regression: FPHelper.floatToI32 did not forward exactly its typed parameter to _floatToI32." >&2
+    if ! grep -Eq '^let rec floatToI32 \(f : float\) : int = .*let __hx_native_argument_0 = \(f\) in \(HxFPHelper\.floatToI32 : float -> int\) __hx_native_argument_0' "$tmpdir/out_stage3_helper/Haxe_io_FPHelper.ml"; then
+      echo "Stage3 regression: FPHelper.floatToI32 did not forward exactly its typed parameter to its native operation." >&2
       exit 1
     fi
   fi
   if [ -f "$tmpdir/out_stage3_helper/MultiStage3.ml" ]; then
-    if ! grep -Eq '^(let rec|and) selectLeft \(left : int\) \(right : int\) : int = identity \(left\)$' "$tmpdir/out_stage3_helper/MultiStage3.ml"; then
+    if ! grep -Eq '^(let rec|and) selectLeft \(left : int\) \(right : int\) : int = .*let __hx_call_function = \(identity\) in let __hx_call_argument_0 = \(\(left\)\)' "$tmpdir/out_stage3_helper/MultiStage3.ml"; then
       echo "Stage3 regression: selectLeft did not forward its selected typed parameter." >&2
       exit 1
     fi
-    if ! grep -Eq '^(let rec|and) selectRight \(left : int\) \(right : int\) : int = identity \(right\)$' "$tmpdir/out_stage3_helper/MultiStage3.ml"; then
+    if ! grep -Eq '^(let rec|and) selectRight \(left : int\) \(right : int\) : int = .*let __hx_call_function = \(identity\) in let __hx_call_argument_0 = \(\(right\)\)' "$tmpdir/out_stage3_helper/MultiStage3.ml"; then
       echo "Stage3 regression: selectRight did not follow the call expression's parameter choice." >&2
       exit 1
     fi
@@ -922,7 +926,7 @@ class SysEnvStage3 {
 }
 HX
 
-  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_sysenv" -cp "$tmpdir/src" -main SysEnvStage3)"
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_sysenv" -cp "$tmpdir/src" -main SysEnvStage3)"
   echo "$out" | grep -q "^stage3=ok$"
   test -f "$tmpdir/out_stage3_sysenv/SysEnvStage3.ml"
   grep -q "HxSys.environment" "$tmpdir/out_stage3_sysenv/SysEnvStage3.ml"
@@ -939,7 +943,7 @@ class SysArgsStage3 {
 }
 HX
 
-  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_sysargs" -cp "$tmpdir/src" -main SysArgsStage3)"
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_sysargs" -cp "$tmpdir/src" -main SysArgsStage3)"
   echo "$out" | grep -q "^stage3=ok$"
   test -f "$tmpdir/out_stage3_sysargs/SysArgsStage3.ml"
   grep -q "Stdlib.Array.length __argv" "$tmpdir/out_stage3_sysargs/SysArgsStage3.ml"
@@ -962,7 +966,7 @@ class Int64FpHelperStage3 {
 }
 HX
 
-  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_int64_fphelper" -cp "$tmpdir/src" -main Int64FpHelperStage3)"
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_int64_fphelper" -cp "$tmpdir/src" -main Int64FpHelperStage3)"
   echo "$out" | grep -q "^stage3=ok$"
   test -f "$tmpdir/out_stage3_int64_fphelper/Int64FpHelperStage3.ml"
   grep -q "Haxe_Int64.ofInt" "$tmpdir/out_stage3_int64_fphelper/Int64FpHelperStage3.ml"
@@ -1039,7 +1043,7 @@ class ProcessSpawnStage3 {
 }
 HX
 
-  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_process_spawn" -cp "$tmpdir/src" -main ProcessSpawnStage3)"
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_process_spawn" -cp "$tmpdir/src" -main ProcessSpawnStage3)"
   echo "$out" | grep -q "^stage3=ok$"
   test -f "$tmpdir/out_stage3_process_spawn/ProcessSpawnStage3.ml"
   grep -q "HxBootProcess.spawn (\"echo\")" "$tmpdir/out_stage3_process_spawn/ProcessSpawnStage3.ml"
@@ -1064,7 +1068,7 @@ class FqRefStage3 {
   }
 }
 HX
-  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_fqdep" -cp "$tmpdir/src" -main FqRefStage3)"
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_fqdep" -cp "$tmpdir/src" -main FqRefStage3)"
   echo "$out" | grep -q "^stage3=ok$"
 
   echo "== Stage3 regression: OCaml keyword escaping for emitted value names"
@@ -1081,7 +1085,7 @@ class KeywordEscapeStage3 {
   }
 }
 HX
-  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_keyword_escape" -cp "$tmpdir/src" -main KeywordEscapeStage3)"
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_keyword_escape" -cp "$tmpdir/src" -main KeywordEscapeStage3)"
   echo "$out" | grep -q "^stage3=ok$"
   grep -q "mod_" "$tmpdir/out_stage3_keyword_escape/KeywordEscapeStage3.ml"
 
@@ -1399,7 +1403,7 @@ private class Helper {
   public static final ANSWER = 42;
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmphelper/src" -main Main --hxhx-out "$tmphelper/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmphelper/src" -main Main --hxhx-out "$tmphelper/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 
@@ -1427,7 +1431,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpenumabs/src" -main Main --hxhx-out "$tmpenumabs/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmpenumabs/src" -main Main --hxhx-out "$tmpenumabs/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^ok$"
 echo "$out" | grep -q "^run=ok$"
@@ -1464,7 +1468,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpfull/src" -main Main --hxhx-out "$tmpfull/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmpfull/src" -main Main --hxhx-out "$tmpfull/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^OK$"
 echo "$out" | grep -vq "^BAD$"
@@ -1481,9 +1485,9 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run -cp "$tmpreuse/src" -main Main --hxhx-out "$tmpreuse/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run -cp "$tmpreuse/src" -main Main --hxhx-out "$tmpreuse/out")"
 echo "$out" | grep -q "^stage3=ok$"
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run -cp "$tmpreuse/src" -main Main --hxhx-out "$tmpreuse/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run -cp "$tmpreuse/src" -main Main --hxhx-out "$tmpreuse/out")"
 echo "$out" | grep -q "^stage3=ok$"
 
 echo "== Stage3 bring-up: class-scope static finals bind + run"
@@ -1500,7 +1504,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpstaticfinal/src" -main Main --hxhx-out "$tmpstaticfinal/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmpstaticfinal/src" -main Main --hxhx-out "$tmpstaticfinal/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 
@@ -1532,7 +1536,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpcompmod/src" -main Main --hxhx-out "$tmpcompmod/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmpcompmod/src" -main Main --hxhx-out "$tmpcompmod/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^sum="
 echo "$out" | grep -q "^run=ok$"
@@ -1558,7 +1562,7 @@ class Main {
   }
 }
 HX
-out="$(HXHX_TYPER_STRICT=1 "$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit --hxhx-emit-full-bodies -cp "$tmpinstfield/src" -main Main --hxhx-out "$tmpinstfield/out")"
+out="$(HXHX_TYPER_STRICT=1 "$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit -cp "$tmpinstfield/src" -main Main --hxhx-out "$tmpinstfield/out")"
 echo "$out" | grep -q "^stage3=no_emit_ok$"
 
 echo "== Stage3 regression: field access on call results preserves Obj.repr call grouping"
@@ -1583,7 +1587,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmprunciobj/src" -main Main --hxhx-out "$tmprunciobj/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmprunciobj/src" -main Main --hxhx-out "$tmprunciobj/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 echo "$out" | grep -q "^ok$"
@@ -1603,7 +1607,7 @@ class Main {
   }
 }
 HX
-out="$($HXHX_BIN --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run -cp "$tmpmapjoin/src" -main Main --hxhx-out "$tmpmapjoin/out")"
+out="$($HXHX_BIN --hxhx-stage3 --hxhx-no-run -cp "$tmpmapjoin/src" -main Main --hxhx-out "$tmpmapjoin/out")"
 echo "$out" | grep -q "^stage3=ok$"
 grep -Eq "HxBootArray\\.map(_dyn)?" "$tmpmapjoin/out/Main.ml"
 grep -q "HxBootArray.join_dyn" "$tmpmapjoin/out/Main.ml"
@@ -1641,7 +1645,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run -cp "$tmpversionparser/src" -main Main --hxhx-out "$tmpversionparser/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run -cp "$tmpversionparser/src" -main Main --hxhx-out "$tmpversionparser/out")"
 echo "$out" | grep -q "^stage3=ok$"
 exe="$(echo "$out" | sed -n 's/^exe=//p' | tail -n 1)"
 test -n "$exe"
@@ -1668,7 +1672,7 @@ class Main {
   }
 }
 HX
-out="$($HXHX_BIN --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpmethodcb/src" -main Main --hxhx-out "$tmpmethodcb/out")"
+out="$($HXHX_BIN --hxhx-stage3 -cp "$tmpmethodcb/src" -main Main --hxhx-out "$tmpmethodcb/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 
@@ -1693,7 +1697,7 @@ class Main {
   }
 }
 HX
-out="$($HXHX_BIN --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpinstfieldrun/src" -main Main --hxhx-out "$tmpinstfieldrun/out")"
+out="$($HXHX_BIN --hxhx-stage3 -cp "$tmpinstfieldrun/src" -main Main --hxhx-out "$tmpinstfieldrun/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 
@@ -1750,7 +1754,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpfs/src" -main Main --hxhx-out "$tmpfs/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmpfs/src" -main Main --hxhx-out "$tmpfs/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 
@@ -1771,7 +1775,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbodyrecover/src" -main Main --hxhx-out "$tmpbodyrecover/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmpbodyrecover/src" -main Main --hxhx-out "$tmpbodyrecover/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^A$"
 # Current bootstrap snapshot still lowers `for` bodies conservatively in this lane.
@@ -1815,7 +1819,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmptrystmt/src" -main Main --hxhx-out "$tmptrystmt/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmptrystmt/src" -main Main --hxhx-out "$tmptrystmt/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^A$"
 echo "$out" | grep -q "^TRY$"
@@ -1839,7 +1843,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmprest/src" -main Main --hxhx-out "$tmprest/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmprest/src" -main Main --hxhx-out "$tmprest/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^p:$"
 echo "$out" | grep -q "^p:a$"
@@ -1865,7 +1869,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmprestonly/src" -main Main --hxhx-out "$tmprestonly/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmprestonly/src" -main Main --hxhx-out "$tmprestonly/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^\[\]$"
 echo "$out" | grep -q "^\[a\]$"
@@ -1884,7 +1888,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpternary/src" -main Main --hxhx-out "$tmpternary/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmpternary/src" -main Main --hxhx-out "$tmpternary/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^>hello<$"
 echo "$out" | grep -q "^run=ok$"
@@ -1903,7 +1907,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpstr/src" -main Main --hxhx-out "$tmpstr/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmpstr/src" -main Main --hxhx-out "$tmpstr/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^x=3$"
 echo "$out" | grep -q "^y=3$"
@@ -1933,7 +1937,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmppkg/src" -main Main --hxhx-out "$tmppkg/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmppkg/src" -main Main --hxhx-out "$tmppkg/out")"
 echo "$out" | grep -q "^hi$"
 echo "$out" | grep -q "^run=ok$"
 
@@ -1960,7 +1964,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmppkg_parent/src" -main a.b.Main --hxhx-out "$tmppkg_parent/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmppkg_parent/src" -main a.b.Main --hxhx-out "$tmppkg_parent/out")"
 echo "$out" | grep -q "^hi-parent$"
 echo "$out" | grep -q "^run=ok$"
 
@@ -1991,7 +1995,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpopt/src" -main runci.targets.Main --hxhx-out "$tmpopt/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmpopt/src" -main runci.targets.Main --hxhx-out "$tmpopt/out")"
 echo "$out" | grep -q "^retry$"
 echo "$out" | grep -q "^run=ok$"
 
@@ -2021,7 +2025,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpfileops/src" -main Main --hxhx-out "$tmpfileops/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmpfileops/src" -main Main --hxhx-out "$tmpfileops/out")"
 echo "$out" | grep -q "^hi$"
 echo "$out" | grep -q "^run=ok$"
 
@@ -2036,7 +2040,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpxml/src" -main Main --hxhx-out "$tmpxml/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmpxml/src" -main Main --hxhx-out "$tmpxml/out")"
 echo "$out" | grep -q "^ok$"
 echo "$out" | grep -q "^run=ok$"
 
@@ -2051,7 +2055,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run -cp "$tmpxmlctor/src" -main Main --hxhx-out "$tmpxmlctor/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run -cp "$tmpxmlctor/src" -main Main --hxhx-out "$tmpxmlctor/out")"
 echo "$out" | grep -q "^stage3=ok$"
 
 echo "== Stage3 regression: unary minus on php.Const.INF lowers to a float-safe form"
@@ -2079,7 +2083,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run -cp "$tmpphpinf/src" -main Main --hxhx-out "$tmpphpinf/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run -cp "$tmpphpinf/src" -main Main --hxhx-out "$tmpphpinf/out")"
 echo "$out" | grep -q "^stage3=ok$"
 test -f "$tmpphpinf/out/Main.ml"
 grep -Eq "neg_infinity|\\(-\\.(Php_Const.iNF)\\)" "$tmpphpinf/out/Main.ml"
@@ -2108,7 +2112,7 @@ cat >"$tmpmulti/build.hxml" <<HX
 -cp $tmpmulti/src
 -main B
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-out "$tmpmulti/out" "$tmpmulti/build.hxml")"
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-out "$tmpmulti/out" "$tmpmulti/build.hxml")"
 test "$(echo "$out" | grep -c '^stage3=ok$')" -eq 2
 echo "$out" | grep -q "^A$"
 echo "$out" | grep -q "^B$"
@@ -2220,7 +2224,7 @@ class Util {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmplazy/src" -main p.Main --hxhx-out "$tmplazy/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmplazy/src" -main p.Main --hxhx-out "$tmplazy/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^lazy=ok$"
 echo "$out" | grep -q "^run=ok$"
@@ -2246,7 +2250,7 @@ class RootHelper {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmproothelper/src" -main p.q.Main --hxhx-out "$tmproothelper/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmproothelper/src" -main p.q.Main --hxhx-out "$tmproothelper/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^11$"
 echo "$out" | grep -q "^run=ok$"
@@ -2269,7 +2273,7 @@ class Macro {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmprootlazy/src" -main Main --hxhx-out "$tmprootlazy/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmprootlazy/src" -main Main --hxhx-out "$tmprootlazy/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^7$"
 echo "$out" | grep -q "^run=ok$"
@@ -2398,7 +2402,7 @@ plugin_out="$tmpplugin/out"
 out="$(
   HXHX_PLUGIN_FIXTURE_CP="$tmpplugin/plugin_cp" \
   HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" \
-  "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies \
+  "$HXHX_BIN" --hxhx-stage3 \
     -cp "$tmpplugin/src" \
     -cp "$ROOT/test/fixtures/hxhx-macros/src" \
     -main Main \
@@ -2440,7 +2444,7 @@ plugin_out_lib="$tmpplugin_lib/out"
 out="$(
   HXHX_PLUGIN_FIXTURE_CP="$tmpplugin_lib/plugin_cp" \
   HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" \
-  "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies \
+  "$HXHX_BIN" --hxhx-stage3 \
     -cp "$tmpplugin_lib/src" \
     -cp "$ROOT/test/fixtures/hxhx-macros/src" \
     --library reflaxe.ocaml \
@@ -2493,7 +2497,7 @@ class Main {
   }
 }
 HX
-out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpstage3sum/src" -main Main --hxhx-out "$tmpstage3sum/out")"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmpstage3sum/src" -main Main --hxhx-out "$tmpstage3sum/out")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^native-reflaxe-stage3=ok$"
 echo "$out" | grep -q "^sum=10$"
@@ -2561,7 +2565,7 @@ class Main {
   }
 }
 HX
-out="$(HXHX_EXPR_MACROS='hxhxmacros.ExprMacroShim.hello()' HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpexpr/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpexpr/out")"
+out="$(HXHX_EXPR_MACROS='hxhxmacros.ExprMacroShim.hello()' HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$tmpexpr/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpexpr/out")"
 echo "$out" | grep -q "^expr_macros_expanded=1$"
 echo "$out" | grep -q "^HELLO$"
 echo "$out" | grep -q "^run=ok$"
@@ -2669,7 +2673,7 @@ class Main {
   }
 }
 HX
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbuild/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild/out")"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$tmpbuild/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild/out")"
 echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.BuildFieldMacros.addGeneratedField()$"
 echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
 echo "$out" | grep -q "^build_fields\\[Main\\]=1$"
@@ -2693,7 +2697,7 @@ class Main {
   }
 }
 HX
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbuild_lazy/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild_lazy/out")"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$tmpbuild_lazy/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild_lazy/out")"
 test "$(printf '%s\n' "$out" | grep -c '^build_macro\[Api\]\[0\]=hxhxmacros.BuildFieldMacros.addGeneratedField()$')" -eq 1
 echo "$out" | grep -q "^build_macro_run\[Api\]\[0\]=ok$"
 echo "$out" | grep -q "^build_fields\[Api\]=1$"
@@ -2716,7 +2720,7 @@ class Main extends Base {
   }
 }
 HX
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbuild_inheritance/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild_inheritance/out")"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$tmpbuild_inheritance/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild_inheritance/out")"
 test "$(printf '%s\n' "$out" | grep -c '^build_macro\[Base\]\[0\]=hxhxmacros.BuildFieldMacros.addGeneratedField()$')" -eq 1
 echo "$out" | grep -q "^build_fields\[Base\]=1$"
 test -f "$tmpbuild_inheritance/out/Base.ml"
@@ -2736,7 +2740,7 @@ class Main {
   }
 }
 HX
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbuild_ret/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild_ret/out")"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$tmpbuild_ret/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild_ret/out")"
 echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.ReturnFieldMacros.addGeneratedFieldReturn()$"
 echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
 echo "$out" | grep -q "^build_fields\\[Main\\]=1$"
@@ -2760,7 +2764,7 @@ class Main {
   }
 }
 HX
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbuild_rep/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild_rep/out")"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$tmpbuild_rep/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild_rep/out")"
 echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.ReturnFieldMacros.replaceGeneratedFieldReturn()$"
 echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
 echo "$out" | grep -q "^build_fields\\[Main\\]=1$"
@@ -2783,7 +2787,7 @@ class Main {
   }
 }
 HX
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbuild_print/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild_print/out")"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$tmpbuild_print/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild_print/out")"
 echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.FieldPrinterMacros.addArgFunctionAndVar()$"
 echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
 echo "$out" | grep -q "^build_fields\\[Main\\]=1$"

@@ -56,7 +56,7 @@ class M14LocalGenericFunctionIntegrationTest {
 				continue;
 			final module = new ResolvedModule("Main", path, ParserStage.parse(source, path));
 			final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]), null, true);
-			final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), directory + "/ocaml", true);
+			final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), directory + "/ocaml");
 			final native = observe(executable, []);
 			if (native.code != 0 || native.output != entry.output || native.errors.length != 0)
 				throw entry.name + " native contract differs: " + native.output + native.errors;

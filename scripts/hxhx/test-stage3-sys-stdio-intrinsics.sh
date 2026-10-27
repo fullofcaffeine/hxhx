@@ -48,7 +48,6 @@ fi
 
 HXHX_FORBID_STAGE0=1 "${HXHX_CMD[@]}" \
   --ocaml \
-  --hxhx-emit-full-bodies \
   --hxhx-no-run \
   -cp "$SRC_DIR" \
   -main Main \

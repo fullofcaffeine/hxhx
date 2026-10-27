@@ -90,7 +90,7 @@ class M14CppManagedMapGetTest {
 		final fixture = CppResolvedFixture.load({sourceRoot: root + '/src', mainModule: 'Main', requiredModules: ['haxe.ds.Map']});
 		final program = CppResolvedFixture.prepare(fixture);
 		assertCallOwnership(program);
-		final result = CppTargetCore.emit(program, new BackendContext('.tmp/cpp-managed-map-get', null, 'Main', true, true, new haxe.ds.StringMap()));
+		final result = CppTargetCore.emit(program, new BackendContext('.tmp/cpp-managed-map-get', null, 'Main', true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable || observe(result.entryPath, []) != expected)
 			throw 'native Map.get output differs';
 		final output = '.tmp/cpp-managed-map-get';

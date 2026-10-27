@@ -53,7 +53,7 @@ class M14EmptyObjectArgumentTest {
 		final module = typed(File.getContent(root + "/Main.hx"));
 		final script = ".tmp/empty-object-argument/Main.js";
 		new JsBackend().emit(new MacroExpandedProgram([module], false),
-			new BackendContext(".tmp/empty-object-argument", script, "Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
+			new BackendContext(".tmp/empty-object-argument", script, "Main", false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
 		observe("node", ["--check", script], "");
 		observe("node", [script], expected);
 		Sys.println("EMPTY_OBJECT_ARGUMENT:PASS");

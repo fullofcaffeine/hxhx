@@ -27,7 +27,7 @@ class M14Stage3PatternNullTest {
 			"Main.hx");
 		var rejected = false;
 		try {
-			EmitterStage.emitToDir(new MacroExpandedProgram([module], false), ".tmp/stage3-pattern-null-guard", true);
+			EmitterStage.emitToDir(new MacroExpandedProgram([module], false), ".tmp/stage3-pattern-null-guard");
 		} catch (error:String) {
 			if (error.indexOf("requires executable guard or extractor lowering") < 0)
 				throw error;
@@ -40,7 +40,7 @@ class M14Stage3PatternNullTest {
 	static function main():Void {
 		observe("haxe", ["-cp", root, "--run", "Main"]);
 		final path = root + "/Main.hx";
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed(File.getContent(path), path)], false), ".tmp/stage3-pattern-null", true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed(File.getContent(path), path)], false), ".tmp/stage3-pattern-null");
 		observe(executable, []);
 		checkGuardDiagnostic();
 		Sys.println("M14_STAGE3_PATTERN_NULL:PASS");

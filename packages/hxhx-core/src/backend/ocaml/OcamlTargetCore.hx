@@ -69,16 +69,13 @@ class OcamlTargetCore implements ITargetCore {
 			final emitOutDir = context.outputDir;
 			if (traceEnabled())
 				Sys.println("stage3_driver=ocaml_target_core_after_emit_arg_outDir value=" + emitOutDir);
-			final emitFullBodies = context.emitFullBodies;
-			if (traceEnabled())
-				Sys.println("stage3_driver=ocaml_target_core_after_emit_arg_emitFullBodies value=" + emitFullBodies);
 			final emitBuildExecutable = context.buildExecutable;
 			if (traceEnabled())
 				Sys.println("stage3_driver=ocaml_target_core_after_emit_arg_buildExecutable value=" + emitBuildExecutable);
 			final emitProfile = profile;
 			if (traceEnabled())
 				Sys.println("stage3_driver=ocaml_target_core_after_emit_arg_profile value=" + backend.OcamlProfile.toDefineValue(emitProfile));
-			final path = EmitterStage.emitToDir(emitTypedProgram, emitOutDir, emitFullBodies, emitBuildExecutable, emitProfile);
+			final path = EmitterStage.emitToDir(emitTypedProgram, emitOutDir, emitBuildExecutable, emitProfile);
 			if (traceEnabled())
 				Sys.println("stage3_driver=ocaml_target_core_after_emitToDir_direct");
 			path;

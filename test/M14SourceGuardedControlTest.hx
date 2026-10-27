@@ -35,7 +35,7 @@ class M14SourceGuardedControlTest {
 			for (target in fixture.targets) {
 				final targetOutput = output + "/" + fixture.name + "/" + Std.string(target);
 				final result = SourceTargetCommon.emitTarget(target, program,
-					new BackendContext(targetOutput, null, "Main", true, target == Cs, new haxe.ds.StringMap<String>()));
+					new BackendContext(targetOutput, null, "Main", target == Cs, new haxe.ds.StringMap<String>()));
 				switch target {
 					case Java:
 						M14Stage3RuntimeFixture.observe({

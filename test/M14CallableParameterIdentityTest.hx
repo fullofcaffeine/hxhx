@@ -33,7 +33,7 @@ class M14CallableParameterIdentityTest {
 			final module = new ResolvedModule("Main", path, ParserStage.parse(entry.source, path));
 			final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 			final revision = CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity();
-			final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml", true);
+			final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml");
 			observe(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", executable], entry.expected);
 			if (CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity() != revision)
 				throw "callback emission changed typed source";

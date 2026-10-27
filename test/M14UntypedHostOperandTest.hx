@@ -63,7 +63,7 @@ class M14UntypedHostOperandTest {
 						inspect(expression);
 		check(calls == 1, "host call lost its selected declaration");
 		new JsBackend().emit(new MacroExpandedProgram([typed], false),
-			new BackendContext(root, root + "/native.js", "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+			new BackendContext(root, root + "/native.js", "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 		final native = run("node", [harness, sys.FileSystem.fullPath(root + "/native.js")]);
 		check(native.code == 0 && native.stdout == expected, "native host operand differs: " + native.stderr);
 		final strict = StringTools.replace(source, "untyped ", "");
@@ -151,7 +151,7 @@ class M14UntypedHostOperandTest {
 				'let reads=0;Object.defineProperty(global,"hostName",{get(){reads++;return "word";}});' +
 				'require(process.argv[2]);if(reads!==1)throw Error("host read count differs");');
 			new JsBackend().emit(new MacroExpandedProgram([typed], false),
-				new BackendContext(root, root + "/native.js", "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+				new BackendContext(root, root + "/native.js", "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 			for (file in ["upstream.js", "native.js"]) {
 				final result = run("node", [harness, sys.FileSystem.fullPath(root + "/" + file)]);
 				check(result.code == 0 && result.stdout == "word\n", "receiver runtime differs: " + file + result.stderr);

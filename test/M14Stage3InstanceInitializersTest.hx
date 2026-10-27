@@ -46,7 +46,7 @@ class M14Stage3InstanceInitializersTest {
 		final expected = File.getContent(root + "/expected.stdout");
 		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", root, "--run", "Main"], expected: expected});
 		final typed = M14Stage3RuntimeFixture.typeMain({source: File.getContent(path), path: path, root: root});
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), ".tmp/stage3_instance_initializers", true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), ".tmp/stage3_instance_initializers");
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		Sys.println("STAGE3_INSTANCE_INITIALIZERS:PASS");
 	}

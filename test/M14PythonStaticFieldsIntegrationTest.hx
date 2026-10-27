@@ -114,7 +114,7 @@ class Main {
 		]);
 		if (output("python3", [Path.join([directory, "upstream.py"])]) != expected)
 			throw "upstream constructor order or effects differ from the authored expectation";
-		final context = new BackendContext(directory, Path.join([directory, "candidate.py"]), "Main", true, false, new StringMap<String>());
+		final context = new BackendContext(directory, Path.join([directory, "candidate.py"]), "Main", false, new StringMap<String>());
 		final emitted = BackendRegistry.createForTarget("python-native").emit(program, context);
 		if (output("python3", [emitted.entryPath]) != expected)
 			throw "Python changed nested constructor argument order or evaluation count";
@@ -131,7 +131,7 @@ class Main {
 		final typed = TyperStage.typeResolvedModule(resolved, index, loader);
 		final program = new MacroExpandedProgram([typed], false);
 		final root = Path.join([Sys.getCwd(), ".tmp", "m14_python_static_fields"]);
-		final context = new BackendContext(root, Path.join([root, "Main.py"]), "Main", true, false, new StringMap<String>());
+		final context = new BackendContext(root, Path.join([root, "Main.py"]), "Main", false, new StringMap<String>());
 		final emitted = BackendRegistry.createForTarget("python-native").emit(program, context);
 		final process = new sys.io.Process("python3", [emitted.entryPath]);
 		final stdout = process.stdout.readAll().toString();

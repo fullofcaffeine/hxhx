@@ -139,7 +139,7 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 			// Keep the declaration index that proved the instance call's Int result.
 			// Retyping without that index discards the facts required by Std.string.
 			final expanded = MacroStage.expandProgram([resolvedTyped], []);
-			final exePath = EmitterStage.emitToDir(expanded, outDir, true);
+			final exePath = EmitterStage.emitToDir(expanded, outDir);
 			assertTrue(FileSystem.exists(exePath), 'Emitter did not produce executable: ' + exePath);
 			observeReceiver("node_modules/.bin/haxe", ["-cp", srcDir, "--run", "Main"]);
 			observeReceiver(exePath, []);
@@ -200,7 +200,7 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 			final inheritedBaseTyped = TyperStage.typeResolvedModule(inheritedBaseResolved, inheritedIndex, inheritedLoader);
 			final importedOpsTyped = TyperStage.typeResolvedModule(importedOpsResolved, inheritedIndex, inheritedLoader);
 			final inheritedCollisionTyped = TyperStage.typeResolvedModule(inheritedCollisionResolved, inheritedIndex, inheritedLoader);
-			EmitterStage.emitToDir(MacroStage.expandProgram([inheritedBaseTyped, importedOpsTyped, inheritedCollisionTyped], []), inheritedOutDir, true, false);
+			EmitterStage.emitToDir(MacroStage.expandProgram([inheritedBaseTyped, importedOpsTyped, inheritedCollisionTyped], []), inheritedOutDir, false);
 			final inheritedOcaml = File.getContent(haxe.io.Path.join([inheritedOutDir, 'InheritedCollision.ml']));
 			assertTrue(inheritedOcaml.indexOf('ImportedOps.eq ("a") ("b")') < 0, 'An imported static method displaced a same-name inherited instance method.');
 			// Bindings must retain the declaring owner, one receiver, and both arguments.
@@ -230,7 +230,7 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 			File.saveContent(macroContextHx, macroContextSrc);
 			final macroContextParsed = ParserStage.parse(macroContextSrc, macroContextHx);
 			final macroContextTyped = TyperStage.typeModule(macroContextParsed);
-			EmitterStage.emitToDir(MacroStage.expandProgram([macroContextTyped], []), macroContextOutDir, true, false);
+			EmitterStage.emitToDir(MacroStage.expandProgram([macroContextTyped], []), macroContextOutDir, false);
 			final macroContextMl = File.getContent(haxe.io.Path.join([macroContextOutDir, 'Haxe_macro_Context.ml']));
 			assertTrue(macroContextMl.indexOf('Obj.magic ((let __hx_call_function = (load) in let __hx_call_argument_0 = (("render")) in let __hx_call_argument_1 = ((2)) in __hx_call_function __hx_call_argument_0 __hx_call_argument_1)) : Obj.t -> Obj.t -> Obj.t') >= 0,
 				'An immediate local Context.load call should use its returned callable arity.');
@@ -259,7 +259,7 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 			File.saveContent(callableFactoryHx, callableFactorySrc);
 			final callableFactoryParsed = ParserStage.parse(callableFactorySrc, callableFactoryHx);
 			final callableFactoryTyped = TyperStage.typeModule(callableFactoryParsed);
-			EmitterStage.emitToDir(MacroStage.expandProgram([callableFactoryTyped], []), callableFactoryOutDir, true, false);
+			EmitterStage.emitToDir(MacroStage.expandProgram([callableFactoryTyped], []), callableFactoryOutDir, false);
 			final callableFactoryMl = File.getContent(haxe.io.Path.join([callableFactoryOutDir, 'CallableFactory.ml']));
 			assertTrue(callableFactoryMl.indexOf('Obj.magic ((let __hx_call_function = (load) in let __hx_call_argument_0 = (("get")) in let __hx_call_argument_1 = ((0)) in __hx_call_function __hx_call_argument_0 __hx_call_argument_1)) : unit -> Obj.t') >= 0,
 				'A zero-argument returned callable should use a unit-call cast.');

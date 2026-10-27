@@ -7,7 +7,7 @@ class M14CppDynamicConditionTest {
 		final source = "test/oracle/cpp_dynamic_condition_seed";
 		final fixture = CppResolvedFixture.load({sourceRoot: source, mainModule: "Main", requiredModules: ["Array", "Sys"]});
 		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture),
-			new BackendContext(".tmp/cpp-dynamic-condition", null, "Main", true, true, fixture.defines));
+			new BackendContext(".tmp/cpp-dynamic-condition", null, "Main", true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "Dynamic conditions require a native executable";
 		final child = new sys.io.Process(result.entryPath, []);

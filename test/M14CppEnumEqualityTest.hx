@@ -7,7 +7,7 @@ class M14CppEnumEqualityTest {
 			final revisions = fixture.modules.map(module -> CompilerTypedModuleRevision.fromTypedModule(module).getCanonicalIdentity());
 			final output = ".tmp/cpp-enum-equality/" + main;
 			final result = backend.cpp.CppTargetCore.emit(CppResolvedFixture.prepare(fixture),
-				new backend.BackendContext(output, null, main, true, true, fixture.defines));
+				new backend.BackendContext(output, null, main, true, fixture.defines));
 			if (!result.builtExecutable)
 				throw "enum comparison fixture did not build";
 			for (index in 0...fixture.modules.length)

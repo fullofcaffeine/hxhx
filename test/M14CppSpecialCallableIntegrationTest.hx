@@ -33,7 +33,7 @@ class M14CppSpecialCallableIntegrationTest {
 		final index = TyperIndex.build(resolved);
 		final program = new MacroExpandedProgram([for (module in resolved) TyperStage.typeResolvedModule(module, index)], false);
 		final outputDirectory = ".tmp/cpp-special-callable" + (withoutPosition ? "-without-pos" : "") + (withoutGeneric ? "-without-generic" : "");
-		final context = new BackendContext(outputDirectory, null, "Main", true, true, defines);
+		final context = new BackendContext(outputDirectory, null, "Main", true, defines);
 		final result = CppTargetCore.emit(program, context);
 		if (!result.builtExecutable)
 			throw "Specialized callable test requires a native executable";

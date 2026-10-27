@@ -8,7 +8,7 @@ class M14CppAggregateStringTest {
 		];
 		final output = ".tmp/cpp-aggregate-string";
 		final result = backend.cpp.CppTargetCore.emit(CppResolvedFixture.prepare(fixture),
-			new backend.BackendContext(output, null, "AggregateContract", true, true, fixture.defines));
+			new backend.BackendContext(output, null, "AggregateContract", true, fixture.defines));
 		for (index in 0...fixture.modules.length)
 			if (CompilerTypedModuleRevision.fromTypedModule(fixture.modules[index]).getCanonicalIdentity() != revisions[index])
 				throw "aggregate string conversion changed its authored source";

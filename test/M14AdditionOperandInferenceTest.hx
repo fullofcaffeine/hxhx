@@ -42,7 +42,7 @@ class M14AdditionOperandInferenceTest {
 		observations.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
 		if (observations.join("\n") + "\n" != expectedTypes)
 			throw "addition input facts differ: " + observations.join(", ");
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), ".tmp/addition_operand_inference", true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), ".tmp/addition_operand_inference");
 		observe(executable, [], expected);
 		Sys.println("ADDITION_INPUT_NATIVE:PASS");
 	}

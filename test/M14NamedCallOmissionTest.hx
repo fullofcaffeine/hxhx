@@ -12,8 +12,7 @@ class M14NamedCallOmissionTest {
 		final resolved = new ResolvedModule("Main", path, ParserStage.parse(sys.io.File.getContent(path), path));
 		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		final output = ".tmp/cpp-named-call-omission";
-		final result = CppTargetCore.emit(new MacroExpandedProgram([typed], false),
-			new BackendContext(output, null, "Main", true, true, new haxe.ds.StringMap()));
+		final result = CppTargetCore.emit(new MacroExpandedProgram([typed], false), new BackendContext(output, null, "Main", true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable || Sys.command(result.entryPath, []) != 0)
 			throw "native named omission assertions failed";
 		CppManagedAssertionFixture.sanitizers(output, "NAMED_CALL_OMISSION");

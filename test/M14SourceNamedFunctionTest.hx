@@ -12,7 +12,7 @@ class M14SourceNamedFunctionTest {
 		final typed = fixture.main;
 		final functions = typed.getTypedClasses()[0].getFunctions();
 		final revisions = [for (fn in functions) CompilerTypedTreeRevision.functionBody(fn)];
-		final context = new BackendContext(".tmp/source-named-function", null, "Main", true, true, new haxe.ds.StringMap<String>());
+		final context = new BackendContext(".tmp/source-named-function", null, "Main", true, new haxe.ds.StringMap<String>());
 		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture), context);
 		if (!result.builtExecutable)
 			throw "named function requires a native executable";

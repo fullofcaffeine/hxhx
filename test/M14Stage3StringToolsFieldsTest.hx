@@ -54,7 +54,7 @@ class M14Stage3StringToolsFieldsTest {
 				pending.push(provider);
 		}
 		final prepared = TypedAbstractOperatorLowering.lowerModules(typed, index);
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram(prepared, []), root + "/out", true, true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram(prepared, []), root + "/out", true);
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		Sys.println("M14_STAGE3_STRINGTOOLS_FIELDS:PASS");
 	}

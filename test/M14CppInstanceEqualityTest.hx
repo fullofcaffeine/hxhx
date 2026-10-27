@@ -18,7 +18,7 @@ class M14CppInstanceEqualityTest {
 				throw "instance comparison accepted unrelated storage: " + wrong;
 		final output = ".tmp/cpp-instance-equality";
 		final result = backend.cpp.CppTargetCore.emit(new MacroExpandedProgram([typed], false),
-			new backend.BackendContext(output, null, "Main", true, true, new haxe.ds.StringMap()));
+			new backend.BackendContext(output, null, "Main", true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable || Sys.command(result.entryPath, []) != 0)
 			throw "instance equality assertions failed";
 		CppManagedAssertionFixture.sanitizers(output, "CPP_INSTANCE_EQUALITY");

@@ -76,7 +76,7 @@ class M14DynamicBooleanControlTest {
 		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", root, "--run", "Main"], expected: expected});
 		Sys.println("DYNAMIC_BOOLEAN_UPSTREAM:PASS");
 		final typed = M14Stage3RuntimeFixture.typeMain({source: File.getContent(path), path: path, root: root});
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), ".tmp/dynamic_boolean_control", true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), ".tmp/dynamic_boolean_control");
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		Sys.println("DYNAMIC_BOOLEAN_NATIVE:PASS");
 	}

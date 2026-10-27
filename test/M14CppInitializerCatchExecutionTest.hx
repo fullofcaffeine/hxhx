@@ -6,7 +6,7 @@ class M14CppInitializerCatchExecutionTest {
 			mainModule: "Main",
 			requiredModules: []
 		});
-		final context = new backend.BackendContext(".tmp/cpp-initializer-catch-execution", null, "Main", true, true, fixture.defines);
+		final context = new backend.BackendContext(".tmp/cpp-initializer-catch-execution", null, "Main", true, fixture.defines);
 		final result = backend.cpp.CppTargetCore.emit(new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index),
 			false), context);
 		if (!result.builtExecutable)

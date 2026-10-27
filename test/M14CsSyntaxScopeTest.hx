@@ -54,8 +54,7 @@ class M14CsSyntaxScopeTest {
 			final input = typed(directory);
 			checkScopeOwnership(input.module);
 			final result = backend.BackendRegistry.requireForTarget("cs-native")
-				.emit(new MacroExpandedProgram([input.module], false),
-					new backend.BackendContext(directory + "/candidate", null, "Main", true, true, input.defines));
+				.emit(new MacroExpandedProgram([input.module], false), new backend.BackendContext(directory + "/candidate", null, "Main", true, input.defines));
 			expect(run("mono", [root + "/Observe.exe", result.entryPath]), entry.expected);
 			final emitted = sys.io.File.getContent(directory + "/candidate/src/__HxMain.cs");
 			if (emitted.indexOf("unsafe\n") < 0)

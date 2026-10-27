@@ -32,12 +32,12 @@ class M14NativeCallbackCallPathsTest {
 		if (!Lambda.exists(backend.ocaml.Stage3OcamlCallableSelection.select([typed]), selected -> selected.fieldName == "main"))
 			throw "Callback invocation must select its consuming method";
 		final expanded = MacroStage.expandProgram([typed], []);
-		final executable = EmitterStage.emitToDir(expanded, directory + "/full", true);
+		final executable = EmitterStage.emitToDir(expanded, directory + "/full");
 		observe(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", executable]);
 		if (checkDirectReturn) {
 			// This bootstrap route omits ordinary statements. Successful native compilation
 			// proves its returned callback type; full-body execution above proves behavior.
-			EmitterStage.emitToDir(expanded, directory + "/direct", false);
+			EmitterStage.emitToDir(expanded, directory + "/direct");
 		}
 		Sys.println("NATIVE_CALLBACK_CALL_PATH:PASS " + name);
 	}

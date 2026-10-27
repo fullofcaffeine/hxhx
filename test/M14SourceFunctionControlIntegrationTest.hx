@@ -14,7 +14,7 @@ class M14SourceFunctionControlIntegrationTest {
 		final main = typed.getTypedClasses()[0].getFunctions()[0];
 		final revision = CompilerTypedTreeRevision.functionBody(main);
 		final program = CppResolvedFixture.prepare(fixture);
-		final context = new BackendContext(".tmp/source-function-control", null, "Main", true, true, fixture.defines);
+		final context = new BackendContext(".tmp/source-function-control", null, "Main", true, fixture.defines);
 		final result = CppTargetCore.emit(program, context);
 		if (!result.builtExecutable)
 			throw "Source-function tracer requires a native executable";

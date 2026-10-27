@@ -26,7 +26,7 @@ class M14AbstractBinarySelectionOrderTest {
 		];
 		final program = CppResolvedFixture.prepare(fixture);
 		final result = backend.cpp.CppTargetCore.emit(program,
-			new backend.BackendContext(".tmp/abstract-binary-selection-order-" + name, null, "Main", true, true, fixture.defines));
+			new backend.BackendContext(".tmp/abstract-binary-selection-order-" + name, null, "Main", true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "operator selection did not build a native executable";
 		for (i in 0...fixture.modules.length)

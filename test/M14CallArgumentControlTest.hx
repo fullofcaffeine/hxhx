@@ -29,7 +29,7 @@ class M14CallArgumentControlTest {
 			if (CompilerTypedTreeRevision.functionBody(functions[index]) != revisions[index])
 				throw "call lowering changed authored typed facts: " + name;
 		if (native) {
-			final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml", true);
+			final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml");
 			assertProcess(new sys.io.Process(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", executable]), "native " + name);
 		}
 		Sys.println("CALL_ARGUMENT_CONTROL:PASS " + name);
@@ -68,7 +68,7 @@ class M14CallArgumentControlTest {
 			"captured-null\ncapture-error:Cannot call null\n");
 		final module = new ResolvedModule("Main", root + "/Main.hx", ParserStage.parse(source, root + "/Main.hx"));
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml", true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml");
 		assertProcess(new sys.io.Process(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", executable]), "native null receiver",
 			"capture-error:Capturing a method from a null receiver is not supported\n");
 		Sys.println("CALL_ARGUMENT_CONTROL:PASS null_receiver_rejected");

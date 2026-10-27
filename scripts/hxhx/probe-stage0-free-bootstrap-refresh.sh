@@ -86,7 +86,6 @@ case "$SCOPE" in
     STAGE3_TIMEOUT_SEC="${STAGE3_TIMEOUT_SEC:-120}"
     STAGE3_ARGS=(
       --hxhx-stage3
-      --hxhx-emit-full-bodies
       --hxhx-no-run
       -cp "$ROOT/workloads/hih-compiler/fixtures/src"
       -main demo.A
@@ -110,7 +109,6 @@ case "$SCOPE" in
       STAGE3_TIMEOUT_SEC="${HXHX_STAGE0_FREE_REFRESH_STAGE3_TIMEOUT_SEC:-1800}"
       STAGE3_ARGS=(
         --hxhx-stage3
-        --hxhx-emit-full-bodies
         --hxhx-no-run
       )
     fi

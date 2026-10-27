@@ -10,7 +10,7 @@ class M14OcamlGenericValuesIntegrationTest {
 		Sys.println("GENERIC_VALUES_UPSTREAM:PASS");
 		final typed = M14Stage3RuntimeFixture.prepareMain({source: File.getContent(path), path: path, root: root});
 		final revision = CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity();
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/ocaml_generic_values", true, true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/ocaml_generic_values", true);
 		if (CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity() != revision)
 			throw "Generic representation selection changed authored typed source";
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});

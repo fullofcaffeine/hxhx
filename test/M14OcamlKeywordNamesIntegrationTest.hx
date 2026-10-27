@@ -34,7 +34,7 @@ class M14OcamlKeywordNamesIntegrationTest {
 		final resolved = new ResolvedModule("Main", path, ParserStage.parse(File.getContent(path), path));
 		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		final root = Path.normalize(Sys.getCwd() + "/.tmp/ocaml_keyword_names_" + Std.string(Date.now().getTime()));
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), root, true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), root);
 		final actual = run(executable, []);
 		File.saveContent(root + "/actual.stdout", actual);
 		if (actual != expected)

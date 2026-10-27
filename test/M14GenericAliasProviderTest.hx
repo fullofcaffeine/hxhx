@@ -71,7 +71,7 @@ class M14GenericAliasProviderTest {
 				pending.push(module);
 		}
 		new JsBackend().emit(new MacroExpandedProgram(typed, false),
-			new BackendContext(root, root + "/native.js", "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+			new BackendContext(root, root + "/native.js", "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 		final native = run("node", [root + "/native.js"]);
 		check(native.code == 0 && native.stdout == "7\n", "native static alias call differs: " + native.stderr);
 		sys.io.File.saveContent(root + "/Main.hx", 'class Main {static function main():Void {var missing:Alias=null;}}');

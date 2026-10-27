@@ -60,7 +60,7 @@ class M14Stage3EnumRecordPayloadTest {
 		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", root, "--run", "Main"], expected: expected});
 		final prepared = M14Stage3RuntimeFixture.prepareMain({source: File.getContent(path), path: path, root: root});
 		ownership(prepared);
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([prepared], false), ".tmp/stage3-enum-records", true, true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([prepared], false), ".tmp/stage3-enum-records", true);
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		Sys.println("M14_STAGE3_ENUM_RECORDS:PASS");
 	}

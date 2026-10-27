@@ -60,7 +60,7 @@ class M14HihNullableEnumBranchEmitIntegrationTest {
 		final resolved = new ResolvedModule("Main", mainHx, parsed);
 		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		final expanded = MacroStage.expandProgram([typed], []);
-		final exePath = EmitterStage.emitToDir(expanded, outDir, true);
+		final exePath = EmitterStage.emitToDir(expanded, outDir);
 		assertTrue(FileSystem.exists(exePath), "Emitter did not produce executable: " + exePath);
 
 		final mainMl = findMainMl(outDir);

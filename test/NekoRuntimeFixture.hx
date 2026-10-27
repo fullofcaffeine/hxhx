@@ -106,7 +106,7 @@ function exercise(fixture:String, requireExceptionProvider:Bool, upstreamNeko:Bo
 				throw "Neko fixture emission changed its authored function source";
 	}
 	completed("lower;next=render-split");
-	final context = new BackendContext(root, root + "/main.n", "Main", true, false, defines);
+	final context = new BackendContext(root, root + "/main.n", "Main", false, defines);
 	final split = @:privateAccess NekoTargetCore.renderSplitProgram(program, context, root + "/main.neko");
 	assertUnchanged();
 	File.saveContent(split.entryPath, split.entrySource);

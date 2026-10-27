@@ -51,7 +51,7 @@ class M14DiscardedControlTest {
 		JsRuntimeFixture.assertRuntime(typed, "Main", expected);
 		Sys.println("DISCARDED_CONTROL_JS:PASS " + name);
 		if (!syntax) {
-			final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), output + "/native", true);
+			final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), output + "/native");
 			assertOutput(executable, [], expected);
 			Sys.println("DISCARDED_CONTROL_NATIVE:PASS");
 		}

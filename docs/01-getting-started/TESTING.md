@@ -631,7 +631,7 @@ npm run test:upstream:unit-macro
 Notes:
 
 - Today `npm run test:upstream:unit-macro` is a **native/non-delegating bring-up rung**:
-  it routes the upstream `compile-macro.hxml` through `hxhx --hxhx-stage3 --hxhx-emit-full-bodies` to exercise
+  it routes the upstream `compile-macro.hxml` through `hxhx --hxhx-stage3` to exercise
   resolver + typer + macro-host plumbing plus OCaml emit/build wiring without invoking a stage0 `haxe` binary.
   - The historical stage0-shim baseline remains available as:
     `npm run test:upstream:unit-macro-stage0`
@@ -705,7 +705,7 @@ Use this when you want the repo to function as a compiler-bootstrap example:
 - Stage0-free native refresh prototype:
   - Command: `npm run hxhx:probe:stage0-free-refresh`
   - Scope: builds `hxhx` from committed snapshots with `HXHX_FORBID_STAGE0=1`, then runs Stage3
-    `--hxhx-emit-full-bodies --hxhx-no-run` on the repo-owned `demo.A` fixture.
+    `--hxhx-no-run` on the repo-owned `demo.A` fixture.
   - Scaling probe: set `HXHX_STAGE0_FREE_REFRESH_SCOPE=hxhx-type-only` to target the real
     `packages/hxhx/src` + `packages/hxhx-core/src` graph in Stage3 type-only mode without writing
     `packages/hxhx/bootstrap_out`.
@@ -1052,7 +1052,7 @@ npm run test:upstream:display-stage3-emit-stress
 Notes:
 
 - This runs upstream `tests/display/build.hxml` repeatedly under
-  `hxhx --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run`.
+  `hxhx --hxhx-stage3 --hxhx-no-run`.
 - It intentionally reuses the same `--hxhx-out` directory across iterations to catch
   warm-output determinism/linking regressions.
 - Tune iteration count with `HXHX_DISPLAY_EMIT_STRESS_ITERS=<n>` (default: `10`).
@@ -1067,7 +1067,7 @@ npm run test:upstream:display-stage3-emit-run-smoke
 Notes:
 
 - This runs upstream `tests/display/build.hxml` with execution enabled
-  (`hxhx --hxhx-stage3 --hxhx-emit-full-bodies`, no `--hxhx-no-run`).
+  (`hxhx --hxhx-stage3`, no `--hxhx-no-run`).
 - It now requires successful execution (`run=ok`) and fails on any non-zero exit.
 - It also explicitly fails hard on segfault-shaped regressions (`Segmentation fault` / `EXC_BAD_ACCESS` / rc `139`).
 - On success it emits `display_utest_suite=ok` after validating this is the utest workload

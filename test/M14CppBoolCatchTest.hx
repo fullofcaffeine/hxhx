@@ -9,7 +9,7 @@ class M14CppBoolCatchTest {
 		final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index), false);
 		ownership(new backend.cpp.CppTypedProgramProjection(program));
 		final output = ".tmp/cpp-bool-catch/" + mainModule;
-		final result = backend.cpp.CppTargetCore.emit(program, new backend.BackendContext(output, null, mainModule, true, true, fixture.defines));
+		final result = backend.cpp.CppTargetCore.emit(program, new backend.BackendContext(output, null, mainModule, true, fixture.defines));
 		if (!result.builtExecutable || Sys.command(result.entryPath, []) != 0)
 			throw "Boolean catch source assertions failed";
 		CppManagedAssertionFixture.sanitizers(output, "CPP_BOOL_CATCH:" + mainModule, "test/cpp_managed_heap/BoolCatchObserver.cpp",

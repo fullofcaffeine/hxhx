@@ -8,7 +8,7 @@ class M14CppCallableControlTraversalTest {
 		final path = root + "/src/Main.hx";
 		final resolved = new ResolvedModule("Main", path, ParserStage.parse(sys.io.File.getContent(path), path));
 		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
-		final context = new BackendContext(".tmp/source-callable-control", null, "Main", true, true, new haxe.ds.StringMap<String>());
+		final context = new BackendContext(".tmp/source-callable-control", null, "Main", true, new haxe.ds.StringMap<String>());
 		final result = CppTargetCore.emit(new MacroExpandedProgram([typed], false), context);
 		if (!result.builtExecutable)
 			throw "callback control traversal requires a native executable";

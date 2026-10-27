@@ -58,7 +58,7 @@ class M14InlineEnumValueTest {
 		if (conversions != 1)
 			throw "inline enum storage requires one explicit conversion: " + conversions;
 		final script = output + "/candidate.js";
-		new backend.js.JsBackend().emit(new MacroExpandedProgram(lowered, false), new backend.BackendContext(output, script, "Main", true, false, defines));
+		new backend.js.JsBackend().emit(new MacroExpandedProgram(lowered, false), new backend.BackendContext(output, script, "Main", false, defines));
 		if (@:privateAccess M14NekoTypedProgramProjectionIntegrationTest.run("node", [script]) != expected)
 			throw "candidate inline enum contract differs: " + output;
 		Sys.println("INLINE_ENUM_VALUE:PASS " + output);

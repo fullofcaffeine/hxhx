@@ -15,7 +15,7 @@ class M14JsEnumProviderTest {
 			requiredModules: ["Type", "haxe.ds.EnumValueMap"]
 		});
 		final script = output + "/candidate.js";
-		new backend.js.JsBackend().emit(program, new backend.BackendContext(output, script, "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+		new backend.js.JsBackend().emit(program, new backend.BackendContext(output, script, "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 		if (@:privateAccess M14NekoTypedProgramProjectionIntegrationTest.run("node", [script]) != expected)
 			throw "candidate enum provider contract changed: " + output;
 		Sys.println("JS_ENUM_PROVIDER:PASS " + output);

@@ -52,7 +52,7 @@ class M14Stage3FloatCallArgIntegrationTest {
 			final parsedMain = ParserStage.parse(mainSrc, mainPath);
 			final typed = [TyperStage.typeModule(parsedDateTools), TyperStage.typeModule(parsedMain)];
 			final expanded = MacroStage.expandProgram(typed, []);
-			EmitterStage.emitToDir(expanded, outDir, true, false);
+			EmitterStage.emitToDir(expanded, outDir, false);
 
 			final mainMl = haxe.io.Path.join([outDir, 'Main.ml']);
 			assertTrue(FileSystem.exists(mainMl), 'Expected Main.ml in emitted output.');
@@ -76,7 +76,7 @@ class M14Stage3FloatCallArgIntegrationTest {
 			final typedUpstreamLike = TyperStage.typeModule(parsedUpstreamLike);
 			final typedStdDateTools = TyperStage.typeModule(parsedStdDateTools);
 			final expandedUpstreamLike = MacroStage.expandProgram([typedStdDateTools, typedUpstreamLike], []);
-			EmitterStage.emitToDir(expandedUpstreamLike, stdOutDir, true, false);
+			EmitterStage.emitToDir(expandedUpstreamLike, stdOutDir, false);
 			final upstreamLikeMl = haxe.io.Path.join([stdOutDir, 'Unit_MyClass.ml']);
 			assertTrue(FileSystem.exists(upstreamLikeMl), 'Expected Unit_MyClass.ml in emitted upstream-like output.');
 			final upstreamLikeOcaml = File.getContent(upstreamLikeMl);

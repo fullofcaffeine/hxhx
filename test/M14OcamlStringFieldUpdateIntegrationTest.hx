@@ -10,7 +10,7 @@ class M14OcamlStringFieldUpdateIntegrationTest {
 		Sys.println("STRING_FIELD_UPDATE_UPSTREAM:PASS");
 		final typed = M14Stage3RuntimeFixture.prepareMain({source: File.getContent(path), path: path, root: root});
 		final revision = CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity();
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/ocaml_string_field_update", true, true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/ocaml_string_field_update", true);
 		if (CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity() != revision)
 			throw "String field lowering changed authored typed source";
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});

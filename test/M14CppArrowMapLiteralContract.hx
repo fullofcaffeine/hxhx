@@ -14,8 +14,7 @@ function run():Void {
 	final program = CppMapFixture.load();
 	final defines = new haxe.ds.StringMap<String>();
 	defines.set("no-compilation", "1");
-	final sourceOnly = BackendRegistry.createForTarget("cpp-native")
-		.emit(program, new BackendContext(root + "/source-only", null, "Main", true, true, defines));
+	final sourceOnly = BackendRegistry.createForTarget("cpp-native").emit(program, new BackendContext(root + "/source-only", null, "Main", true, defines));
 	if (sourceOnly.builtExecutable)
 		throw "source-only Map emission unexpectedly built an executable";
 	final source = File.getContent(sourceOnly.entryPath);
@@ -44,7 +43,7 @@ function run():Void {
 			throw "Map fixture restored a retired storage representation: " + forbidden;
 	}
 	final built = BackendRegistry.createForTarget("cpp-native")
-		.emit(program, new BackendContext(root + "/build", null, "Main", true, true, new haxe.ds.StringMap<String>()));
+		.emit(program, new BackendContext(root + "/build", null, "Main", true, new haxe.ds.StringMap<String>()));
 	if (!built.builtExecutable)
 		throw "Map contract requires a native executable";
 	final sources = built.artifacts.filter(artifact -> artifact.kind == "entry_cpp_source");

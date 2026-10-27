@@ -48,7 +48,7 @@ class M14OcamlIntFieldUpdateIntegrationTest {
 		final path = fixture + "/Main.hx";
 		final typed = M14Stage3RuntimeFixture.typeMain({source: File.getContent(path), path: path, root: fixture});
 		final root = Path.normalize(Sys.getCwd() + "/.tmp/ocaml_int_field_update_" + Std.string(Date.now().getTime()));
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), root, true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), root);
 		final actual = run(executable, []);
 		File.saveContent(root + "/actual.stdout", actual);
 		if (actual != expected)

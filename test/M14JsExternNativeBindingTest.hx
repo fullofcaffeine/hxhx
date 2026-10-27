@@ -36,7 +36,7 @@ class M14JsExternNativeBindingTest {
 		final module = new ResolvedModule("Main", path, ParserStage.parse(source, path));
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		new JsBackend().emit(new MacroExpandedProgram([typed], false),
-			new BackendContext(root, root + "/native.js", "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+			new BackendContext(root, root + "/native.js", "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 		final harness = root + "/host.cjs";
 		sys.io.File.saveContent(harness,
 			'class Host {constructor(value){this.value=value;} read(){return this.value;} static label(){return "host";}}'

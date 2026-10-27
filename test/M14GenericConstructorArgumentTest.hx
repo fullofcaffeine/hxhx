@@ -78,7 +78,7 @@ class M14GenericConstructorArgumentTest {
 		FileSystem.createDirectory(output);
 		final script = output + "/main.js";
 		new JsBackend().emit(MacroStage.expandProgram([typed], []),
-			new BackendContext(output, script, module, true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
+			new BackendContext(output, script, module, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
 		if (run("node", [script]) != expected)
 			throw "generated constructor behavior differs; retained output: " + script;
 		removeOutput(output);

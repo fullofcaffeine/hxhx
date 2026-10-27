@@ -61,7 +61,7 @@ class M14Stage3ExactCallOwnerIntegrationTest {
 			if (loader.ensureTypeAvailable("Sys", "", []) == null)
 				throw "exact-call fixture requires the real Sys provider";
 			final typed = modules.map(module -> TyperStage.typeResolvedModule(module, index, loader, true));
-			final executable = EmitterStage.emitToDir(MacroStage.expandProgram(typed, []), Path.join([root, "out"]), true);
+			final executable = EmitterStage.emitToDir(MacroStage.expandProgram(typed, []), Path.join([root, "out"]));
 			if (missing)
 				throw "missing source argument was accepted";
 			final process = new sys.io.Process(executable, []);

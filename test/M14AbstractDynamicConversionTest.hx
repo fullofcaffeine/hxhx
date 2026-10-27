@@ -23,7 +23,7 @@ class M14AbstractDynamicConversionTest {
 		final fixture = CppResolvedFixture.load({sourceRoot: root, mainModule: "Main", requiredModules: ["Sys", "Std"]});
 		final program = CppResolvedFixture.prepare(fixture);
 		final directory = ".tmp/abstract_dynamic_conversion_native";
-		final result = CppTargetCore.emit(program, new BackendContext(directory, null, "Main", true, true, fixture.defines));
+		final result = CppTargetCore.emit(program, new BackendContext(directory, null, "Main", true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "abstract Dynamic conversion requires a native executable";
 		final process = new sys.io.Process(result.entryPath, []);

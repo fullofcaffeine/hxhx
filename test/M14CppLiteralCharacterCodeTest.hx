@@ -8,7 +8,7 @@ class M14CppLiteralCharacterCodeTest {
 		final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
 		final program = new MacroExpandedProgram([TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]))], false);
 		final output = ".tmp/literal-character-code";
-		CppTargetCore.emit(program, new BackendContext(output, output + "/Main.cpp", "Main", true, false, new haxe.ds.StringMap()));
+		CppTargetCore.emit(program, new BackendContext(output, output + "/Main.cpp", "Main", false, new haxe.ds.StringMap()));
 		sys.io.File.copy("test/cpp_managed_heap/LiteralCharacterCodeObserver.cpp", output + "/Observer.cpp");
 		final compiler = Sys.getEnv("CXX") == null ? "clang++" : Sys.getEnv("CXX");
 		final timeout = Sys.systemName() == "Mac" ? "gtimeout" : "timeout";

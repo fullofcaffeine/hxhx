@@ -63,7 +63,7 @@ class M14CppStaticCallableIntegrationTest {
 		final fixture = "test/fixtures/cpp_static_callable/";
 		final source = program();
 		ownership(source);
-		final context = new BackendContext(".tmp/cpp-static-callable", null, "Main", true, true, new haxe.ds.StringMap<String>());
+		final context = new BackendContext(".tmp/cpp-static-callable", null, "Main", true, new haxe.ds.StringMap<String>());
 		final result = BackendRegistry.createForTarget("cpp-native").emit(source, context);
 		if (!result.builtExecutable)
 			throw "Expected a native executable for static function values";

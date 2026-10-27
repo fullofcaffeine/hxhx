@@ -94,7 +94,7 @@ class M14JsValueBlockIntegrationTest {
 		final outDir = Path.normalize(".tmp/m14_js_value_blocks_" + Std.string(Date.now().getTime()));
 		FileSystem.createDirectory(outDir);
 		final artifactPath = Path.join([outDir, "main.js"]);
-		new JsBackend().emit(program, new BackendContext(outDir, artifactPath, "ValueBlocks", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
+		new JsBackend().emit(program, new BackendContext(outDir, artifactPath, "ValueBlocks", false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
 		run("node", ["--check", artifactPath]);
 		final nativeOutput = run("node", [artifactPath]);
 		if (nativeOutput != expected)

@@ -75,7 +75,7 @@ class M14JsTargetCoreNodeUrlExternIntegrationTest {
 
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
-			new JsBackend().emit(program, new BackendContext(outDir, artifactPath, "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+			new JsBackend().emit(program, new BackendContext(outDir, artifactPath, "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 			final js = File.getContent(artifactPath);
 			assertContains(js, 'var __hx_cls_js_node_url_URL = require("url").URL;', "Node URL extern should bind to the Node url module export");
 			assertContains(js, 'var url = new __hx_cls_js_node_url_URL("https://example.com/path?q=1");',

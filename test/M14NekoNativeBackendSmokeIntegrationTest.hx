@@ -170,7 +170,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		final defines = new haxe.ds.StringMap<String>();
 		defines.set(NekoTargetCore.SOURCE_ONLY_DEFINE, "1");
 		final outputHint = Path.join([outDir, "main.n"]);
-		final context = new BackendContext(outDir, outputHint, "Main", true, false, defines);
+		final context = new BackendContext(outDir, outputHint, "Main", false, defines);
 		final backend = BackendRegistry.createForTarget("neko-native");
 		final result = BackendDispatchBoundary.emit(backend, program('class Main { static function main() { Sys.println("hello neko"); } }'), context);
 
@@ -190,7 +190,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 		assertTypedCatch(structuralTry, '$' + 'throw("boom");', '(result = e)');
 		assertContains(structuralTry, 'var value = result;', "the completed catch must supply the authored initializer value");
 
-		final splitContext = new BackendContext(outDir, outputHint, "Main", true, false, new haxe.ds.StringMap<String>());
+		final splitContext = new BackendContext(outDir, outputHint, "Main", false, new haxe.ds.StringMap<String>());
 		final split = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Helper { public static function value() return 40; } class Main { static function main() { Sys.println(Helper.value() + 2); } }'),
 			splitContext, sourcePath);
 		assertContains(split.support[0].source, "var __hxhx_symbols = $new(null);", "expected one split Neko symbol table allocation");
@@ -403,7 +403,7 @@ class M14NekoNativeBackendSmokeIntegrationTest {
 			"loader path extern chain must not be emitted as dynamic fields on a fake neko object");
 		assertNotContains(loaderPathSource, "var p = $loader.path[0][0];", "loader path must not double-index the raw Neko path value");
 
-		final loaderPathContext = new BackendContext(outDir, outputHint, "Main", true, false, defines, null, ["dummy/ndll/Linux64/"]);
+		final loaderPathContext = new BackendContext(outDir, outputHint, "Main", false, defines, null, ["dummy/ndll/Linux64/"]);
 		final loaderPathSplit = @:privateAccess NekoTargetCore.renderSplitProgram(program('class Main { static function main() { Sys.println(neko.vm.Loader.local().getPath()[0]); } }'),
 			loaderPathContext, sourcePath);
 		assertContains(loaderPathSplit.entrySource, "$" + 'loader.path = ' + "$" + 'array("dummy/ndll/Linux64/", ' + "$" + "loader.path);",

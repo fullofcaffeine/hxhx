@@ -168,7 +168,7 @@ class M14JsTypedLocalProjectionIntegrationTest {
 		FileSystem.createDirectory(outDir);
 		var failure:Null<String> = null;
 		try {
-			new JsBackend().emit(firstProgram, new BackendContext(outDir, scriptPath, "Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
+			new JsBackend().emit(firstProgram, new BackendContext(outDir, scriptPath, "Main", false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
 			final generated = File.getContent(scriptPath);
 			assertContains(generated, "var value = 1;", "outer typed binding should keep a readable JS local name");
 			assertContains(generated, 'var value_1 = "inner";', "shadowed typed binding should receive a distinct readable JS local name");

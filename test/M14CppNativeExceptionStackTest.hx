@@ -15,7 +15,7 @@ class M14CppNativeExceptionStackTest {
 			final defines = fixture.defines.copy();
 			if (debug)
 				defines.set("debug", "1");
-			final result = backend.cpp.CppTargetCore.emit(program, new backend.BackendContext(output, null, "ExceptionMain", true, true, defines));
+			final result = backend.cpp.CppTargetCore.emit(program, new backend.BackendContext(output, null, "ExceptionMain", true, defines));
 			if (!result.builtExecutable)
 				throw "exception stack fixture did not produce its native program";
 			// Resolve the host observer's two entry points through the same exact

@@ -25,7 +25,7 @@ class M14UntypedRangeInferenceTest {
 			final typed = M14Stage3RuntimeFixture.typeResolved({module: module, root: root});
 			final functions = [for (owner in typed.getTypedClasses()) for (fn in owner.getFunctions()) fn];
 			final revisions = functions.map(CompilerTypedTreeRevision.functionBody);
-			final context = new backend.BackendContext(root, root + '/local.n', 'Main', true, false, HxDefineMap.fromRawDefines(['neko=1']));
+			final context = new backend.BackendContext(root, root + '/local.n', 'Main', false, HxDefineMap.fromRawDefines(['neko=1']));
 			final generated = @:privateAccess backend.vm.NekoTargetCore.renderProgram(new MacroExpandedProgram([typed], false), context);
 			sys.io.File.saveContent(root + '/local.neko', generated);
 			if (Sys.command('nekoc', [root + '/local.neko']) != 0)

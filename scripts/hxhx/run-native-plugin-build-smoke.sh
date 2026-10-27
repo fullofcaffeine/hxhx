@@ -69,7 +69,7 @@ if (manifest.backend?.entry !== expectedEntry) {
 if (!Array.isArray(manifest.backend?.targetIds) || manifest.backend.targetIds.length !== 1 || manifest.backend.targetIds[0] !== 'js-native') {
   throw new Error(`unexpected backend.targetIds: ${JSON.stringify(manifest.backend?.targetIds)}`)
 }
-if (manifest.requires?.abiVersion !== 1 || manifest.requires?.genIrVersion !== 1 || manifest.requires?.macroApiVersion !== 1) {
+if (manifest.requires?.abiVersion !== 2 || manifest.requires?.genIrVersion !== 1 || manifest.requires?.macroApiVersion !== 1) {
   throw new Error(`unexpected requires block: ${JSON.stringify(manifest.requires)}`)
 }
 NODE

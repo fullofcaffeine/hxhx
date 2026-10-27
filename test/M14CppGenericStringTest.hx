@@ -13,7 +13,7 @@ class M14CppGenericStringTest {
 		final output = ".tmp/cpp-generic-string";
 		final prepared = CppResolvedFixture.prepare(fixture);
 		M14CppGenericClassValueTransferContract.check(new backend.cpp.CppTypedProgramProjection(prepared));
-		final result = backend.cpp.CppTargetCore.emit(prepared, new backend.BackendContext(output, null, "GenericContract", true, true, fixture.defines));
+		final result = backend.cpp.CppTargetCore.emit(prepared, new backend.BackendContext(output, null, "GenericContract", true, fixture.defines));
 		for (index in 0...fixture.modules.length)
 			if (CompilerTypedModuleRevision.fromTypedModule(fixture.modules[index]).getCanonicalIdentity() != revisions[index])
 				throw "generic string conversion changed its authored source";

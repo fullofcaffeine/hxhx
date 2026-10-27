@@ -30,7 +30,7 @@ class M14RecursiveTypedefRuntimeTest {
 		consumerFacts(typed);
 		final program = MacroStage.expandProgram(TypedAbstractOperatorLowering.lowerModules([typed], index), []);
 		final script = output + "/candidate.js";
-		new backend.js.JsBackend().emit(program, new backend.BackendContext(output, script, "Main", true, false, defines));
+		new backend.js.JsBackend().emit(program, new backend.BackendContext(output, script, "Main", false, defines));
 		if (@:privateAccess M14NekoTypedProgramProjectionIntegrationTest.run("node", [script]) != expected)
 			throw "candidate recursive record output differs: " + output;
 		Sys.println("RECURSIVE_TYPEDEF_RUNTIME:PASS " + output);

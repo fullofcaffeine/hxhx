@@ -53,7 +53,7 @@ class M14JsGlobalStartupTest {
 				Sys.println("JS_GLOBAL_STARTUP:" + tag + ":upstream:PASS");
 				final candidate = output + "/" + tag + "-candidate.js";
 				new JsBackend().emit(selected,
-					new BackendContext(output, candidate, "Main", true, false, HxDefineMap.fromRawDefines(classic ? ["js=1", "js-classic"] : ["js=1"])));
+					new BackendContext(output, candidate, "Main", false, HxDefineMap.fromRawDefines(classic ? ["js=1", "js-classic"] : ["js=1"])));
 				@:privateAccess M14JsFunctionLiteralRuntimeTest.command("node", [root + "/observe.cjs", candidate, mode]);
 				Sys.println("JS_GLOBAL_STARTUP:" + tag + ":local:PASS");
 			}

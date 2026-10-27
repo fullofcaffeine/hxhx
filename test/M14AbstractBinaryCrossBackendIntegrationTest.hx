@@ -96,7 +96,7 @@ class M14AbstractBinaryCrossBackendIntegrationTest {
 		final expected = "15\nx!\n106\n17\nz?\n5\nvalue4\n";
 		for (entry in cases) {
 			final outputPath = Path.join([root, entry.fileName]);
-			final context = new BackendContext(Path.join([root, entry.target]), outputPath, "Main", true, false, new StringMap<String>());
+			final context = new BackendContext(Path.join([root, entry.target]), outputPath, "Main", false, new StringMap<String>());
 			final emitted = BackendRegistry.createForTarget(entry.target).emit(program, context);
 			final generated = File.getContent(emitted.entryPath);
 			assertTrue(generated.indexOf(entry.callText) >= 0, entry.target + " rebound or lost the arbitrary-name helper selected by the shared typer");
@@ -121,7 +121,7 @@ class M14AbstractBinaryCrossBackendIntegrationTest {
 		];
 		for (entry in nullableCases) {
 			final outputPath = Path.join([root, entry.fileName]);
-			final context = new BackendContext(Path.join([root, entry.target + "-nullable"]), outputPath, "Main", true, false, new StringMap<String>());
+			final context = new BackendContext(Path.join([root, entry.target + "-nullable"]), outputPath, "Main", false, new StringMap<String>());
 			final emitted = BackendRegistry.createForTarget(entry.target).emit(nullableProgram, context);
 			final generated = File.getContent(emitted.entryPath);
 			assertTrue(generated.indexOf("addNullable") >= 0,

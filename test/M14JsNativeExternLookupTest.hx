@@ -91,7 +91,7 @@ class M14JsNativeExternLookupTest {
 			final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 			final revision = CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity();
 			new backend.js.JsBackend().emit(new MacroExpandedProgram([typed], false),
-				new backend.BackendContext(root, root + "/candidate.js", "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+				new backend.BackendContext(root, root + "/candidate.js", "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 			final harness = root + "/host.cjs";
 			sys.io.File.saveContent(harness, entry.setup + 'require(process.argv[2]);');
 			for (file in ["upstream.js", "candidate.js"]) {

@@ -61,7 +61,7 @@ class M14Stage3SwitchCaseIfElseIntegrationTest {
 			final parsed = ParserStage.parse(src, sourcePath);
 			final typed = TyperStage.typeModule(parsed);
 			final expanded = MacroStage.expandProgram([typed], []);
-			EmitterStage.emitToDir(expanded, outDir, false, false);
+			EmitterStage.emitToDir(expanded, outDir, false);
 
 			final mlPath = haxe.io.Path.join([outDir, 'DateTools.ml']);
 			assertTrue(FileSystem.exists(mlPath), 'Expected DateTools.ml in emitted output.');

@@ -1,6 +1,7 @@
 import sys.FileSystem;
 import sys.io.File;
 
+/** Array-backed Lambda operations, generic allocations and nullable returns retain native behavior. */
 class M14Stage3LambdaArrayShimIntegrationTest {
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
@@ -39,16 +40,27 @@ class M14Stage3LambdaArrayShimIntegrationTest {
 			'  static function nullableArray(flag:Bool, single:String):Null<Array<String>> {',
 			'    return flag ? null : [single];',
 			'  }',
+			'  static function main():Void {',
+			'    var values = f([3, 7]);',
+			'    Sys.println(values.length);',
+			'    Sys.println(values[0]);',
+			'    Sys.println(values[1]);',
+			'    var empty:Array<Int> = copyGeneric();',
+			'    Sys.println(empty.length);',
+			'    Sys.println(nullableArray(true, "ignored") == null);',
+			'    Sys.println(nullableArray(false, "kept")[0]);',
+			'  }',
 			'}',
 		].join("\n");
 		File.saveContent(sourcePath, src);
 
 		var thrown:Dynamic = null;
 		try {
-			final parsed = ParserStage.parse(src, sourcePath);
-			final typed = TyperStage.typeModule(parsed);
+			final expected = "2\n3\n7\n0\ntrue\nkept\n";
+			M14Stage3RuntimeFixture.observe({command: "haxe", arguments: ["-cp", tmpRoot, "--run", "Main"], expected: expected});
+			final typed = M14Stage3RuntimeFixture.typeMain({source: src, path: sourcePath, root: tmpRoot});
 			final expanded = MacroStage.expandProgram([typed], []);
-			EmitterStage.emitToDir(expanded, outDir, false, false);
+			final executable = EmitterStage.emitToDir(expanded, outDir);
 
 			final lambdaMl = haxe.io.Path.join([outDir, 'Lambda.ml']);
 			assertTrue(FileSystem.exists(lambdaMl), 'Expected Lambda.ml shim in emitted output.');
@@ -57,13 +69,8 @@ class M14Stage3LambdaArrayShimIntegrationTest {
 			assertTrue(ocaml.indexOf('Stdlib.List.fold_left') >= 0, 'Stage3 Lambda.fold shim must share the array-backed list conversion path.');
 			assertTrue(ocaml.indexOf('Seq.t') < 0, 'Stage3 Lambda shim regression: array values were treated as Seq.t.');
 
-			final mainMl = haxe.io.Path.join([outDir, 'Main.ml']);
-			assertTrue(FileSystem.exists(mainMl), 'Expected Main.ml in emitted output.');
-			final mainOcaml = File.getContent(mainMl);
-			assertTrue(mainOcaml.indexOf('let rec copyGeneric () : _ = HxBootArray.create ()') >= 0,
-				'Stage3 generic new Array<A>() should lower to bootstrap array creation.');
-			assertTrue(mainOcaml.indexOf('then ((Obj.magic ((Obj.magic HxRuntime.hx_null)))) else ((Obj.magic (HxBootArray.of_list [(Obj.magic (single))])))') >= 0,
-				'Stage3 nullable array ternary returns should cast branches to Obj.t before OCaml infers the conditional.');
+			M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
+			Sys.println("LAMBDA_ARRAY_SHIM:PASS");
 		} catch (e:Dynamic) {
 			thrown = e;
 		}

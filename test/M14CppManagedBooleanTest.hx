@@ -8,7 +8,7 @@ class M14CppManagedBooleanTest {
 		final module = new ResolvedModule("Main", path, ParserStage.parse(sys.io.File.getContent(path), path));
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		final result = CppTargetCore.emit(new MacroExpandedProgram([typed], false),
-			new BackendContext(".tmp/cpp-boolean-effects", null, "Main", true, true, new haxe.ds.StringMap()));
+			new BackendContext(".tmp/cpp-boolean-effects", null, "Main", true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable)
 			throw "logical effects require native execution";
 		if (Sys.command(result.entryPath, []) != 0)

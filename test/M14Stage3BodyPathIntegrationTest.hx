@@ -3,8 +3,9 @@ import sys.FileSystem;
 import sys.io.File;
 
 /**
-	Checks that moving a module into a directory named std preserves its body.
-	The native executable observes both a local return value and an earlier effect.
+	Checks that default compilation retains bodies in ordinary and std directories.
+	Upstream and native executables observe local values and effects in both primary
+	and module-local helper classes, without a body-emission option.
 	This test supplies resolved modules directly; fully qualified calls keep import
 	resolution outside the body-emission contract.
 **/
@@ -29,10 +30,17 @@ class M14Stage3BodyPathIntegrationTest {
 		final mainPath = Path.join([root, "Main.hx"]);
 		final helperPath = Path.join([helperDir, "Helper.hx"]);
 		final mainSource = "class Main { static function main() { Sys.println(probe.Helper.answer()); } }";
-		final helperSource = "package probe; class Helper { public static function answer():Int { final result = 7; Sys.println(\"effect\"); return result; } }";
+		final helperSource = "package probe; private class LocalHelper { public static function value():Int { final number = 7; Sys.println(\"helper\"); return number; } }"
+			+ " class Helper { public static function answer():Int { final result = LocalHelper.value(); Sys.println(\"effect\"); return result; } }";
 		File.saveContent(mainPath, mainSource);
 		File.saveContent(helperPath, helperSource);
 		try {
+			final expected = "helper\neffect\n7\n";
+			M14Stage3RuntimeFixture.observe({
+				command: "haxe",
+				arguments: ["-cp", root, "-cp", Path.join([root, directory]), "--run", "Main"],
+				expected: expected
+			});
 			final modules = [
 				new ResolvedModule("Main", mainPath, ParserStage.parse(mainSource, mainPath)),
 				new ResolvedModule("probe.Helper", helperPath, ParserStage.parse(helperSource, helperPath))
@@ -40,14 +48,8 @@ class M14Stage3BodyPathIntegrationTest {
 			final index = TyperIndex.build(modules);
 			final typed = modules.map(module -> TyperStage.typeResolvedModule(module, index));
 			final expanded = MacroStage.expandProgram(typed, []);
-			final executable = EmitterStage.emitToDir(expanded, Path.join([root, "out"]), true);
-			final process = new sys.io.Process(executable, []);
-			final stdout = process.stdout.readAll().toString();
-			final stderr = process.stderr.readAll().toString();
-			final code = process.exitCode();
-			process.close();
-			if (code != 0 || stdout != "effect\n7\n")
-				throw "body changed under " + directory + ": " + stdout + stderr;
+			final executable = EmitterStage.emitToDir(expanded, Path.join([root, "out"]));
+			M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		} catch (error:haxe.Exception) {
 			removeTree(root);
 			throw error;

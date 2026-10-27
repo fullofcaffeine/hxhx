@@ -73,7 +73,7 @@ class M14Stage3ExceptionIntegrationTest {
 		final typed = M14Stage3RuntimeFixture.typeResolved({module: resolved, root: sourceRoot});
 		assertExactThrowOwnership(typed);
 		final output = Sys.args().indexOf("nominal") >= 0 ? ".tmp/stage3-exception-nominal-seed" : ".tmp/stage3-exception-seed";
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), output, true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), output);
 		observe(executable, []);
 		Sys.println("M14_STAGE3_EXCEPTION:PASS");
 	}

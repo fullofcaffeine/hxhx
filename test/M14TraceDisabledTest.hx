@@ -22,7 +22,7 @@ class M14TraceDisabledTest {
 		final program = MacroStage.expandProgram([typed], []);
 		final artifact = output + "/main";
 		final defines = disabled ? ["neko=1", "no-traces=1"] : ["neko=1"];
-		final context = new BackendContext(output, artifact + ".n", name, true, false, HxDefineMap.fromRawDefines(defines));
+		final context = new BackendContext(output, artifact + ".n", name, false, HxDefineMap.fromRawDefines(defines));
 		File.saveContent(artifact + ".neko", @:privateAccess NekoTargetCore.renderProgram(program, context));
 		command("nekoc", [artifact + ".neko"]);
 		command("neko", [artifact + ".n"], expected);

@@ -37,7 +37,7 @@ class M14StaticMethodValueIdentityTest {
 		sys.FileSystem.createDirectory(output);
 		final script = output + "/main.js";
 		new backend.js.JsBackend().emit(new MacroExpandedProgram(typed, false),
-			new backend.BackendContext(output, script, "Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
+			new backend.BackendContext(output, script, "Main", false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
 		final process = new sys.io.Process(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", "node", script]);
 		final stdout = process.stdout.readAll().toString();
 		final stderr = process.stderr.readAll().toString();

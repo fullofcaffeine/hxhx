@@ -59,7 +59,7 @@ class M14CppNullableBooleanTest {
 		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		final output = ".tmp/cpp-nullable-boolean";
 		final result = backend.cpp.CppTargetCore.emit(new MacroExpandedProgram([typed], false),
-			new backend.BackendContext(output, null, "Main", true, true, new haxe.ds.StringMap()));
+			new backend.BackendContext(output, null, "Main", true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable || Sys.command(result.entryPath, []) != 0)
 			throw "nullable Boolean assertions failed";
 		CppManagedAssertionFixture.sanitizers(output, "CPP_NULLABLE_BOOLEAN");

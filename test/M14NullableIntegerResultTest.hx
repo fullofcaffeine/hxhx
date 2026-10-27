@@ -40,7 +40,7 @@ class M14NullableIntegerResultTest {
 			throw "nullable operands were erased or arithmetic cases were lost: " + results;
 		Sys.println("NULLABLE_INTEGER_RESULT:TYPED:PASS");
 		final output = ".tmp/nullable-integer-result";
-		CppTargetCore.emit(new MacroExpandedProgram([typed], false), new BackendContext(output, null, "Main", true, false, new haxe.ds.StringMap()));
+		CppTargetCore.emit(new MacroExpandedProgram([typed], false), new BackendContext(output, null, "Main", false, new haxe.ds.StringMap()));
 		CppManagedAssertionFixture.sanitizers(output, "NULLABLE_INTEGER_RESULT");
 		Sys.println("NULLABLE_INTEGER_RESULT:PASS");
 	}

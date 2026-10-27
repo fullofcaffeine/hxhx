@@ -103,7 +103,7 @@ class M14CppRuntimeClassValueTest {
 			rejectUnsupportedReflection(program, fixture.defines, directory);
 			return;
 		}
-		final result = CppTargetCore.emit(program, new BackendContext(directory, null, "Main", true, true, fixture.defines));
+		final result = CppTargetCore.emit(program, new BackendContext(directory, null, "Main", true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "runtime class-value contract requires a native executable";
 		final process = new sys.io.Process(result.entryPath, []);
@@ -125,7 +125,7 @@ class M14CppRuntimeClassValueTest {
 		before.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
 		var rejected = false;
 		try {
-			CppTargetCore.emit(program, new BackendContext(directory, output, "Main", true, false, defines));
+			CppTargetCore.emit(program, new BackendContext(directory, output, "Main", false, defines));
 		} catch (error:haxe.Exception) {
 			if (error.message.indexOf("extern reflection requires a target-owned runtime identity") < 0)
 				throw error;

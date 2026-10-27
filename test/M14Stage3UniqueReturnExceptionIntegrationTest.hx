@@ -52,7 +52,7 @@ class M14Stage3UniqueReturnExceptionIntegrationTest {
 
 		var thrown:Dynamic = null;
 		try {
-			EmitterStage.emitToDir(expanded, outDir, true, false);
+			EmitterStage.emitToDir(expanded, outDir, false);
 
 			final mainMl = haxe.io.Path.join([outDir, 'Main.ml']);
 			assertTrue(FileSystem.exists(mainMl), 'Expected Main.ml in emitted output.');

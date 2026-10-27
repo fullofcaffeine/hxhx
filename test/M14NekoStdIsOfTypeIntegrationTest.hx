@@ -74,7 +74,7 @@ class M14NekoStdIsOfTypeIntegrationTest {
 		if (!foundStandardProvider)
 			throw "real Neko Std provider was not loaded";
 		final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(typed, index), false);
-		final context = new BackendContext(root, root + "/main.n", "Main", true, false, defines);
+		final context = new BackendContext(root, root + "/main.n", "Main", false, defines);
 		final split = @:privateAccess NekoTargetCore.renderSplitProgram(program, context, root + "/main.neko");
 		File.saveContent(split.entryPath, split.entrySource);
 		for (part in split.support)

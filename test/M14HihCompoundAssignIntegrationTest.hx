@@ -58,7 +58,7 @@ class M14HihCompoundAssignIntegrationTest {
 		File.saveContent(sourcePath, source);
 		final resolved = new ResolvedModule("Main", sourcePath, ParserStage.parse(source, sourcePath));
 		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), haxe.io.Path.join([root, "out"]), true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), haxe.io.Path.join([root, "out"]));
 		assertTrue(Sys.command(executable, []) == 0, "native prefix/postfix increment returned the wrong values");
 		deleteRecursive(root);
 	}

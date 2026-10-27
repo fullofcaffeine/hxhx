@@ -45,7 +45,7 @@ class SharedInstanceValuesFixture {
 		final output = ".tmp/shared-instance-values-" + Date.now().getTime() + "-" + Std.random(0x3fffffff);
 		final defines = new haxe.ds.StringMap<String>();
 		defines.set("reflaxe_ocaml_runtime_directory", sys.FileSystem.absolutePath("packages/reflaxe.ocaml/std/runtime"));
-		final context = new BackendContext(sys.FileSystem.absolutePath(output), null, "Main", true, true, defines);
+		final context = new BackendContext(sys.FileSystem.absolutePath(output), null, "Main", true, defines);
 		new OcamlNativeTargetCore().emit(new MacroExpandedProgram([typed], false), context);
 		if (CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity() != revision)
 			throw "instance adaptation changed the original typed module";

@@ -42,7 +42,7 @@ class M14OcamlNativeExternsTest {
 		final owner = ordinary.getBackendProjection().getClasses()[0];
 		require(!owner.hasSemanticFacts(), "local typing fixture unexpectedly acquired a program index");
 		require(!new Stage3OcamlExternBindings([ordinary]).ownsClass(owner), "ordinary class entered native extern admission");
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([ordinary], []), ".tmp/ocaml_native_extern_local_typing", true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([ordinary], []), ".tmp/ocaml_native_extern_local_typing");
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: "7\n"});
 		final unindexed = TyperStage.typeModule(ParserStage.parse(programSource("HxString", "length"), "Main.hx"));
 		reject(() -> new Stage3OcamlExternBindings([unindexed]), "has no exact semantic facts for Host");
@@ -127,7 +127,7 @@ class M14OcamlNativeExternsTest {
 			}
 		]) {
 			reject(() -> new backend.ocaml.OcamlTargetCore().emit(MacroStage.expandProgram([typed(entry.source)], []),
-				new backend.BackendContext(root, null, "Main", true, false, HxDefineMap.fromRawDefines(["ocaml_profile=portable"]))),
+				new backend.BackendContext(root, null, "Main", false, HxDefineMap.fromRawDefines(["ocaml_profile=portable"]))),
 				entry.diagnostic);
 			require(File.getContent(root + "/Main.ml") == "previous native output\n" && FileSystem.readDirectory(root).length == entries,
 				"rejected native binding changed output");
@@ -145,7 +145,7 @@ class M14OcamlNativeExternsTest {
 		final module = M14Stage3RuntimeFixture.typeMain({source: File.getContent(root + "/Main.hx"), path: root + "/Main.hx", root: root});
 		final output = ".tmp/ocaml_native_externs";
 		final result = new backend.ocaml.OcamlTargetCore().emit(MacroStage.expandProgram([module], []),
-			new backend.BackendContext(output, null, "Main", true, true, HxDefineMap.fromRawDefines(["ocaml_profile=portable"])));
+			new backend.BackendContext(output, null, "Main", true, HxDefineMap.fromRawDefines(["ocaml_profile=portable"])));
 		require(result.builtExecutable, "native binding fixture was not built");
 		M14Stage3RuntimeFixture.observe({command: result.entryPath, arguments: [], expected: expected});
 		for (name in ["Main_HostString.ml", "Main_HostSys.ml", "Main_Nested.ml", "Main_HostStack.ml"])
@@ -154,7 +154,7 @@ class M14OcamlNativeExternsTest {
 		// must be caught by the native checker before an erased println can hide it.
 		final mismatch = ".tmp/ocaml_native_extern_abi";
 		new backend.ocaml.OcamlTargetCore().emit(MacroStage.expandProgram([typed(programSource("HxString", "toUpperCase"))], []),
-			new backend.BackendContext(mismatch, null, "Main", true, false, HxDefineMap.fromRawDefines(["ocaml_profile=portable"])));
+			new backend.BackendContext(mismatch, null, "Main", false, HxDefineMap.fromRawDefines(["ocaml_profile=portable"])));
 		final timeout = Sys.systemName() == "Mac" ? "gtimeout" : "timeout";
 		final check = new sys.io.Process(timeout, [
 			"30",

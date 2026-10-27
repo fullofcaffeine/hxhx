@@ -4654,7 +4654,7 @@ class M14CppNativeBackendSmokeIntegrationTest {
 		final defines = new StringMap<String>();
 		if (noCompilation)
 			defines.set("no-compilation", "1");
-		return new BackendContext(outDir, null, "Main", true, buildExecutable, defines, resources);
+		return new BackendContext(outDir, null, "Main", buildExecutable, defines, resources);
 	}
 
 	static function hasArtifactKind(artifacts:Array<backend.EmitArtifact>, kind:String):Bool {

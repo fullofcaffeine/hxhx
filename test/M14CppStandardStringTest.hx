@@ -24,8 +24,7 @@ class M14CppStandardStringTest {
 		// The real standard library contains private-access permissions. Consume
 		// them through shared property lowering before projecting backend bodies.
 		final lowered = TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index);
-		backend.cpp.CppTargetCore.emit(new MacroExpandedProgram(lowered, false),
-			new backend.BackendContext(output, null, "Main", true, false, fixture.defines));
+		backend.cpp.CppTargetCore.emit(new MacroExpandedProgram(lowered, false), new backend.BackendContext(output, null, "Main", false, fixture.defines));
 		Sys.println("CPP_STANDARD_STRING:emitted");
 		sys.io.File.copy("test/cpp_managed_heap/StandardStringObserver.cpp", output + "/Observer.cpp");
 		final compiler = Sys.getEnv("CXX") == null ? "clang++" : Sys.getEnv("CXX");

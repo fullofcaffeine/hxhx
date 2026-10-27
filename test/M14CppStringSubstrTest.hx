@@ -12,7 +12,7 @@ class M14CppStringSubstrTest {
 		final boundary = M14CppStringSubstrBoundary.header(new backend.cpp.CppTypedProgramProjection(program));
 		Sys.println("CPP_STRING_SUBSTR:BOUNDARY_CHECKED");
 		final output = ".tmp/cpp-string-substr";
-		backend.cpp.CppTargetCore.emit(program, new backend.BackendContext(output, null, "Main", true, false, fixture.defines));
+		backend.cpp.CppTargetCore.emit(program, new backend.BackendContext(output, null, "Main", false, fixture.defines));
 		sys.io.File.saveContent(output + "/SubstrBoundary.hpp", boundary);
 		for (index in 0...fixture.modules.length)
 			if (revisions[index] != CompilerTypedModuleRevision.fromTypedModule(fixture.modules[index]).getCanonicalIdentity())

@@ -91,7 +91,7 @@ class M14Stage3MissingRequiredCallArgumentIntegrationTest {
 				final expanded = MacroStage.expandProgram([typed], []);
 				var thrown:Dynamic = null;
 				try {
-					EmitterStage.emitToDir(expanded, outDir, true, false);
+					EmitterStage.emitToDir(expanded, outDir, false);
 				} catch (error:String) {
 					thrown = error;
 				}
@@ -139,7 +139,7 @@ class M14Stage3MissingRequiredCallArgumentIntegrationTest {
 			];
 			var inheritedThrown:Dynamic = null;
 			try {
-				EmitterStage.emitToDir(MacroStage.expandProgram(typed, []), inheritedOutDir, true, false);
+				EmitterStage.emitToDir(MacroStage.expandProgram(typed, []), inheritedOutDir, false);
 			} catch (error:String) {
 				inheritedThrown = error;
 			}

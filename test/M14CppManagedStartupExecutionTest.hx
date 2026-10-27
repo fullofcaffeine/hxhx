@@ -46,7 +46,7 @@ class M14CppManagedStartupExecutionTest {
 		final program = fixture == null ? new MacroExpandedProgram(modules, false) : CppResolvedFixture.prepare(fixture);
 		final output = input.output;
 		CppTargetCore.emit(program,
-			new BackendContext(output, output + "/Main.cpp", "Main", true, false, fixture == null ? new haxe.ds.StringMap() : fixture.defines));
+			new BackendContext(output, output + "/Main.cpp", "Main", false, fixture == null ? new haxe.ds.StringMap() : fixture.defines));
 		observeFixture(input);
 	}
 

@@ -12,7 +12,7 @@ function assertRuntime(typed:TypedModule, module:String, expected:String, ?nodeA
 function assertProgramRuntime(program:MacroExpandedProgram, module:String, expected:String, ?nodeArguments:Array<String>):Void {
 	final output = reserveOutput();
 	final script = output + "/main.js";
-	new JsBackend().emit(program, new BackendContext(output, script, module, true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
+	new JsBackend().emit(program, new BackendContext(output, script, module, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
 	final arguments = ["60", "node"].concat(nodeArguments == null ? [] : nodeArguments).concat([script]);
 	final process = new sys.io.Process(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", arguments);
 	final stdout = process.stdout.readAll().toString();

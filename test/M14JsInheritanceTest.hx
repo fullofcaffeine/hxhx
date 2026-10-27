@@ -71,7 +71,7 @@ class M14JsInheritanceTest {
 		FileSystem.createDirectory(output);
 		final script = output + "/main.js";
 		new JsBackend().emit(MacroStage.expandProgram([typed], []),
-			new BackendContext(output, script, "Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-classic=1"])));
+			new BackendContext(output, script, "Main", false, HxDefineMap.fromRawDefines(["js=1", "js-classic=1"])));
 		// This target observer checks native prototype identity after the Haxe program
 		// runs. It does not supply compiler facts or modify the generated program.
 		final observer = output + "/observer.js";

@@ -34,7 +34,7 @@ class M14PrimitiveConstructorEffectsTest {
 		final fixture = CppResolvedFixture.load({sourceRoot: root + '/src', mainModule: name, requiredModules: ['Std']});
 		final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index), false);
 		final result = CppTargetCore.emit(program,
-			new BackendContext(".tmp/primitive-constructor-effects-programs/" + name, null, name, true, true, fixture.defines));
+			new BackendContext(".tmp/primitive-constructor-effects-programs/" + name, null, name, true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "constructor effects require a native executable";
 		final process = new sys.io.Process(result.entryPath, []);

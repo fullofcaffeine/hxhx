@@ -32,7 +32,7 @@ class M14OcamlModuleInventoryTest {
 			throw "module fixture lost its exact declaration inventory";
 		final output = ".tmp/ocaml_module_inventory";
 		final result = new backend.ocaml.OcamlTargetCore().emit(MacroStage.expandProgram(modules, []),
-			new backend.BackendContext(output, null, "Main", true, true, HxDefineMap.fromRawDefines(["ocaml_profile=portable"])));
+			new backend.BackendContext(output, null, "Main", true, HxDefineMap.fromRawDefines(["ocaml_profile=portable"])));
 		if (!result.builtExecutable
 			|| FileSystem.exists(output + "/Record.ml")
 			|| FileSystem.exists(output + "/Mixed.ml")
@@ -43,7 +43,7 @@ class M14OcamlModuleInventoryTest {
 		final entryExpected = "entry\nhelper\n7\n";
 		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", root, "--run", "Entry"], expected: entryExpected});
 		final entry = new backend.ocaml.OcamlTargetCore().emit(MacroStage.expandProgram(modules, []),
-			new backend.BackendContext(".tmp/ocaml_module_entry", null, "Entry", true, true, HxDefineMap.fromRawDefines(["ocaml_profile=portable"])));
+			new backend.BackendContext(".tmp/ocaml_module_entry", null, "Entry", true, HxDefineMap.fromRawDefines(["ocaml_profile=portable"])));
 		if (!entry.builtExecutable)
 			throw "module-level entrypoint did not build";
 		M14Stage3RuntimeFixture.observe({command: entry.entryPath, arguments: [], expected: entryExpected});

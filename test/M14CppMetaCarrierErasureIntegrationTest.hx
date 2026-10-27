@@ -181,7 +181,7 @@ class M14CppMetaCarrierErasureIntegrationTest {
 		final root = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_meta_carrier_erasure"]);
 		deleteRecursive(root);
 		FileSystem.createDirectory(root);
-		final context = new BackendContext(root, null, "Main", true, true, fixture.defines);
+		final context = new BackendContext(root, null, "Main", true, fixture.defines);
 		final result = try BackendRegistry.createForTarget("cpp-native").emit(program, context) catch (error:haxe.Exception) {
 			Sys.println(error.details());
 			throw error;

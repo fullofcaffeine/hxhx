@@ -31,7 +31,7 @@ class M14CppManagedNullTest {
 		final fixture = CppResolvedFixture.load({sourceRoot: root, mainModule: 'Main', requiredModules: ['Array']});
 		final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index), false);
 		final output = '.tmp/cpp-managed-null';
-		final result = CppTargetCore.emit(program, new BackendContext(output, null, 'Main', true, true, new haxe.ds.StringMap()));
+		final result = CppTargetCore.emit(program, new BackendContext(output, null, 'Main', true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable)
 			throw 'null test did not build its normal target';
 		observe(result.entryPath, []);

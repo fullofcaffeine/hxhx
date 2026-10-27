@@ -87,7 +87,7 @@ class M14OcamlNominalTypePredicatesTest {
 		]) {
 			var rejected = false;
 			try
-				EmitterStage.emitToDir(MacroStage.expandProgram([typed(source)], []), root, true, false)
+				EmitterStage.emitToDir(MacroStage.expandProgram([typed(source)], []), root, false)
 			catch (error:String) {
 				rejected = error.indexOf("does not support runtime type operands") >= 0
 					|| error.indexOf("requires an admitted generated class") >= 0
@@ -124,7 +124,7 @@ class M14OcamlNominalTypePredicatesTest {
 		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", root, "--run", "Main"], expected: expected});
 		final module = M14Stage3RuntimeFixture.prepareMain({source: File.getContent(path), path: path, root: root});
 		final program = MacroStage.expandProgram([module], []);
-		final context = new backend.BackendContext(".tmp/ocaml_nominal_type_predicates", null, "Main", true, true,
+		final context = new backend.BackendContext(".tmp/ocaml_nominal_type_predicates", null, "Main", true,
 			HxDefineMap.fromRawDefines(["ocaml_profile=portable"]));
 		final result = new backend.ocaml.OcamlTargetCore().emit(program, context);
 		require(result.builtExecutable, "native target did not build the predicate observer");
@@ -140,7 +140,7 @@ class M14OcamlNominalTypePredicatesTest {
 		final expected = File.getContent(root + "/expected.stdout");
 		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", root, "--run", "Main"], expected: expected});
 		final module = M14Stage3RuntimeFixture.prepareMain({source: File.getContent(path), path: path, root: root});
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([module], false), ".tmp/ocaml_array_predicates", true, true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([module], false), ".tmp/ocaml_array_predicates", true);
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		final storage = new Stage3OcamlClassStorage();
 		for (owner in module.getBackendProjection().getClasses())

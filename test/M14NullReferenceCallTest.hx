@@ -40,7 +40,7 @@ class M14NullReferenceCallTest {
 		if (failures.length != 0)
 			throw "Null reference calls lost declarations: " + failures.join(", ");
 		observe("haxe", ["-cp", "test/fixtures/null_reference_call", "--run", "Main"]);
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/null-reference-call", true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/null-reference-call");
 		observe(executable, []);
 		Sys.println("M14_NULL_REFERENCE_CALL:PASS");
 	}

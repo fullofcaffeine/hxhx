@@ -22,7 +22,7 @@ class M14SourceLocalAssignmentControlTest {
 				throw "repeated local assignment lowering changed its identities";
 		}
 		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture),
-			new BackendContext(".tmp/source-local-assignment-control/" + name, null, name, true, true, fixture.defines));
+			new BackendContext(".tmp/source-local-assignment-control/" + name, null, name, true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "local assignment contract requires a native executable";
 		for (index in 0...functions.length)

@@ -17,8 +17,7 @@ class M14CppInstanceInitializerTest {
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		assertOwnership(typed, path);
 		final output = ".tmp/cpp-instance-initializer";
-		final result = CppTargetCore.emit(new MacroExpandedProgram([typed], false),
-			new BackendContext(output, null, "Main", true, true, new haxe.ds.StringMap()));
+		final result = CppTargetCore.emit(new MacroExpandedProgram([typed], false), new BackendContext(output, null, "Main", true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable || Sys.command(result.entryPath, []) != 0)
 			throw "instance initialization requires successful native execution";
 		sys.io.File.copy("test/cpp_managed_heap/InheritedStorageObserver.cpp", output + "/Observer.cpp");

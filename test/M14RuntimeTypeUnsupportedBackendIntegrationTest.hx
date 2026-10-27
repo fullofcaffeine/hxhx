@@ -129,7 +129,7 @@ class Main {
 			sys.io.File.saveContent(path, "previous-output\n");
 			final defines = new haxe.ds.StringMap<String>();
 			defines.set("hxhx_neko_source_only", "1");
-			final context = new BackendContext(directory, path, "Main", false, false, defines);
+			final context = new BackendContext(directory, path, "Main", false, defines);
 			var diagnostic = "";
 			try {
 				check.emit(context);
@@ -150,7 +150,7 @@ class Main {
 
 	/** Accepted descriptors must build and execute, rather than merely escaping a rejection guard. */
 	static function assertCppExecution(program:MacroExpandedProgram, directory:String):Void {
-		final result = CppTargetCore.emit(program, new BackendContext(directory, null, "Main", true, true, new haxe.ds.StringMap()));
+		final result = CppTargetCore.emit(program, new BackendContext(directory, null, "Main", true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable)
 			throw "supported runtime type input did not build a native executable";
 		final process = new sys.io.Process(result.entryPath, []);

@@ -110,7 +110,7 @@ class M14JsRuntimeTypeOperandsTest {
 			final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
 			final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 			final program = MacroStage.expandProgram([typed], []);
-			final context = new backend.BackendContext(directory, output, "Main", false, false, new haxe.ds.StringMap<String>());
+			final context = new backend.BackendContext(directory, output, "Main", false, new haxe.ds.StringMap<String>());
 			reject(() -> new backend.js.JsTargetCore().emit(program, context), "JavaScript core runtime type operand is unsupported");
 			if (File.getContent(output) != "previous-output\n" || sys.FileSystem.readDirectory(directory).length != 1)
 				throw "JavaScript changed existing output before rejecting " + primitive;

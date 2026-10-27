@@ -158,9 +158,9 @@ class M14HxhxStage3DynamicStringConcatIntegrationTest {
 			assertTrue(addition.getType().getSemanticKey() == "primitive:String", "hxhx lost a nested String addition result");
 
 		final expanded = MacroStage.expandProgram([typed], []);
-		EmitterStage.emitToDir(expanded, outDir, true, false);
+		EmitterStage.emitToDir(expanded, outDir, false);
 		final generated = File.getContent(haxe.io.Path.join([outDir, "DynamicStringConcat.ml"]));
-		final executable = EmitterStage.emitToDir(expanded, outDir, true);
+		final executable = EmitterStage.emitToDir(expanded, outDir);
 		assertTrue(countOccurrences(generated,
 			"let __hx_call_function = (observed) in let __hx_call_argument_0 = ((left)) in __hx_call_function __hx_call_argument_0") == 1,
 			"the left Dynamic expression was emitted more than once: "

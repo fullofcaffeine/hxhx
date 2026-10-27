@@ -117,7 +117,7 @@ class M14JsStaticInitOrderingIntegrationTest {
 			loader.markResolvedAlready(resolved);
 			final program = new MacroExpandedProgram([for (module in resolved) TyperStage.typeResolvedModule(module, index, loader)], false);
 			final artifactPath = Path.join([outDir, "main.js"]);
-			new JsBackend().emit(program, new BackendContext(outDir, artifactPath, "", true, false, defines));
+			new JsBackend().emit(program, new BackendContext(outDir, artifactPath, "", false, defines));
 			final js = File.getContent(artifactPath);
 			final dependency = js.indexOf("var __hx_cls_haxe_SysTools = function");
 			final eagerRead = js.indexOf("__hx_cls_StringTools.winMetaCharacters = __hx_cls_haxe_SysTools.winMetaCharacters");

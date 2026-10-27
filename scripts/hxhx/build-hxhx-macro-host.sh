@@ -424,7 +424,6 @@ trim_ws() {
       "$HXHX_BIN"
       --hxhx-stage3
       --hxhx-no-run
-      --hxhx-emit-full-bodies
       --hxhx-out "$OUT_DIR"
       --std "$STD_ROOT"
       -cp src

@@ -90,7 +90,7 @@ class M14OverloadMetadataRuntimeTest {
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		for (mode in ["full", "std", "no"]) {
 			final output = root + "/native-" + mode + ".js";
-			new JsBackend().emit(retained(typed, mode), new BackendContext(root, output, "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+			new JsBackend().emit(retained(typed, mode), new BackendContext(root, output, "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 			final native = run("node", [output]);
 			check(native.code == 0 && native.stdout == expected, "native metadata overload call differs: " + native.stderr);
 			Sys.println("OVERLOAD_RETENTION_RUNTIME:PASS " + mode);
@@ -247,7 +247,7 @@ class M14OverloadMetadataRuntimeTest {
 		final module = new ResolvedModule("Main", path, ParserStage.parse(source, path));
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		new JsBackend().emit(new MacroExpandedProgram([typed], false),
-			new BackendContext(root, root + "/native.js", "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+			new BackendContext(root, root + "/native.js", "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 		for (file in ["upstream.js", "native.js"]) {
 			final result = run("node", [harness, sys.FileSystem.fullPath(root + "/" + file)]);
 			check(result.code == 0 && result.stdout == "first:1\nsecond:2\nthird:2\n",

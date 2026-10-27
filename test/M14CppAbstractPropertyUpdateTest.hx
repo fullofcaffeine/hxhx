@@ -19,7 +19,7 @@ class M14CppAbstractPropertyUpdateTest {
 		final before = CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity();
 		final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules([typed], index), false);
 		final output = ".tmp/cpp-abstract-property-update";
-		CppTargetCore.emit(program, new BackendContext(output, output + "/Main.cpp", "Main", true, false, new haxe.ds.StringMap()));
+		CppTargetCore.emit(program, new BackendContext(output, output + "/Main.cpp", "Main", false, new haxe.ds.StringMap()));
 		if (before != CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity())
 			throw "property preparation changed its authored typed source";
 		M14CppManagedStartupExecutionTest.observeFixture({

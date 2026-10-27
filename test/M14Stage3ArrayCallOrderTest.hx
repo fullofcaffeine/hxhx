@@ -62,7 +62,7 @@ class M14Stage3ArrayCallOrderTest {
 		final typed = TyperStage.typeResolvedModule(resolved, index, loader, true);
 		assertCallOwnership(typed);
 		final emitted = new OcamlTargetCore().emit(new MacroExpandedProgram([typed], false),
-			new BackendContext(".tmp/stage3-array-call-order", null, "Main", true, true, defines));
+			new BackendContext(".tmp/stage3-array-call-order", null, "Main", true, defines));
 		observe(emitted.entryPath, [], "native");
 		Sys.println("ARRAY_CALL_ORDER_NATIVE:PASS");
 	}

@@ -94,6 +94,9 @@ class M14BackendPluginManifestIntegrationTest {
 		assertFailsContains(function() BackendPluginManifestParser.parse(manifestJson("linked-provider", "M14ResolverFixtureProvider", null,
 			BackendAbi.VERSION + 1), "fixture://abi-mismatch"),
 			"backend ABI mismatch");
+		assertFailsContains(function() BackendPluginManifestParser.parse(manifestJson("ocaml-dynlink", "plugin/backend.cmxs", null, 1),
+			"fixture://retired-body-mode-abi"),
+			"expected abiVersion=2, got 1");
 		assertFailsContains(function() BackendPluginManifestParser.parse(manifestJson("unknown", "M14ResolverFixtureProvider"), "fixture://unknown-kind"),
 			"unsupported backend kind");
 		assertFailsContains(function() BackendPluginManifestParser.parse(haxe.Json.stringify({
@@ -140,11 +143,11 @@ class M14BackendPluginManifestIntegrationTest {
 				targetIds: ["js-native"]
 			},
 			requires: {
-				abiVersion: BackendAbi.VERSION + 1,
+				abiVersion: 1,
 				genIrVersion: BackendAbi.GEN_IR_VERSION,
 				macroApiVersion: BackendAbi.MACRO_API_VERSION
 			}
-		}, "fixture://native-preflight-abi"), "backend ABI mismatch");
+		}, "fixture://native-preflight-retired-abi"), "expected abiVersion=2, got 1");
 
 		deleteIfExists(haxeManifestPath);
 		deleteIfExists(nativeManifestPath);

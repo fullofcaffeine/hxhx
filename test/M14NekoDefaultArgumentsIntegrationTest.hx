@@ -29,7 +29,7 @@ class M14NekoDefaultArgumentsIntegrationTest {
 		final parsed = ParserStage.parse(File.getContent(fixture + "/Main.hx"), fixture + "/Main.hx");
 		final resolved = new ResolvedModule("Main", fixture + "/Main.hx", parsed);
 		final program = MacroStage.expandProgram([TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]))], []);
-		final context = new BackendContext(root, root + "/main.n", "Main", true, false, new StringMap<String>());
+		final context = new BackendContext(root, root + "/main.n", "Main", false, new StringMap<String>());
 		final split = @:privateAccess NekoTargetCore.renderSplitProgram(program, context, root + "/main.neko");
 		File.saveContent(root + "/main.neko", split.entrySource);
 		for (part in split.support)

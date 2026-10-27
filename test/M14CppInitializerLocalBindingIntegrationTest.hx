@@ -10,7 +10,7 @@ class M14CppInitializerLocalBindingIntegrationTest {
 		final resolved = new ResolvedModule("Main", path, ParserStage.parse(sys.io.File.getContent(path), path));
 		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		final program = new MacroExpandedProgram([typed], false);
-		final context = new BackendContext(".tmp/cpp-initializer-local-bindings", null, "Main", true, true, new haxe.ds.StringMap<String>());
+		final context = new BackendContext(".tmp/cpp-initializer-local-bindings", null, "Main", true, new haxe.ds.StringMap<String>());
 		final result = CppTargetCore.emit(program, context);
 		if (!result.builtExecutable)
 			throw "C++ initializer binding test requires a native executable";

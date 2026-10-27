@@ -10,7 +10,7 @@ class M14CppSwitchGuardIntegrationTest {
 		Sys.println("CPP_SWITCH_GUARD_UPSTREAM:PASS");
 		final fixture = CppResolvedFixture.load({sourceRoot: source, mainModule: "Main", requiredModules: ["Array", "Sys"]});
 		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture),
-			new BackendContext(".tmp/cpp-switch-guard-complete", null, "Main", true, true, fixture.defines));
+			new BackendContext(".tmp/cpp-switch-guard-complete", null, "Main", true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "guarded switch acceptance requires a native executable";
 		// A returning default case must remain unconditional after native value conversion.

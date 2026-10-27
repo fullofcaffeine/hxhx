@@ -35,7 +35,7 @@ class M14CppInt64TransportTest {
 			for (module in fixture.modules)
 				CompilerTypedModuleRevision.fromTypedModule(module).getCanonicalIdentity()
 		];
-		CppTargetCore.emit(program, new BackendContext(directory, null, "Main", true, false, fixture.defines));
+		CppTargetCore.emit(program, new BackendContext(directory, null, "Main", false, fixture.defines));
 		final after = [
 			for (module in fixture.modules)
 				CompilerTypedModuleRevision.fromTypedModule(module).getCanonicalIdentity()
@@ -125,7 +125,7 @@ class M14CppInt64TransportTest {
 			requiredModules: ["haxe.Int64", "Sys"]
 		});
 		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture),
-			new BackendContext(".tmp/cpp-int64-override", null, "Main", true, true, fixture.defines));
+			new BackendContext(".tmp/cpp-int64-override", null, "Main", true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "authored Int64 override requires native execution";
 		observe(new sys.io.Process(result.entryPath, []), "false\n", "authored override");

@@ -60,7 +60,7 @@ class M14GenericCallableResultIntegrationTest {
 			}
 		final output = Sys.getCwd() + "/.tmp/m14_rest_method_selection";
 		final artifact = new backend.js.JsTargetCore().emit(new MacroExpandedProgram([typed], false),
-			new backend.BackendContext(output, output + "/main.js", "Main", true, false, new haxe.ds.StringMap<String>()));
+			new backend.BackendContext(output, output + "/main.js", "Main", false, new haxe.ds.StringMap<String>()));
 		final process = new sys.io.Process("node", [artifact.entryPath]);
 		final stdout = process.stdout.readAll().toString();
 		final stderr = process.stderr.readAll().toString();

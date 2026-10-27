@@ -69,7 +69,7 @@ class M14CppStringIndexOfExactIntegrationTest {
 			mainModule: "Main",
 			requiredModules: ["String", "Sys"]
 		});
-		final context = new BackendContext(root, null, "Main", true, true, fixture.defines);
+		final context = new BackendContext(root, null, "Main", true, fixture.defines);
 		final result = BackendRegistry.createForTarget("cpp-native").emit(CppResolvedFixture.prepare(fixture), context);
 		assertTrue(result.builtExecutable, "focused C++ String.indexOf artifact did not build");
 

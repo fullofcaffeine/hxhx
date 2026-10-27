@@ -12,7 +12,7 @@ class M14CppObjectStringTest {
 		];
 		final output = ".tmp/cpp-object-string";
 		final result = backend.cpp.CppTargetCore.emit(CppResolvedFixture.prepare(fixture),
-			new backend.BackendContext(output, null, "Main", true, true, fixture.defines));
+			new backend.BackendContext(output, null, "Main", true, fixture.defines));
 		for (index in 0...fixture.modules.length)
 			if (CompilerTypedModuleRevision.fromTypedModule(fixture.modules[index]).getCanonicalIdentity() != revisions[index])
 				throw "object string conversion changed its authored source";

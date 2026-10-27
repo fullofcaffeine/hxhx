@@ -110,7 +110,7 @@ class M14NativeLocalDeclarationTest {
 		expect(run("haxe", ["-cp", directory, "-main", "Main", "--interp"]), "7\n9");
 		for (target in ["java-native", "cs-native"]) {
 			final result = BackendRegistry.requireForTarget(target)
-				.emit(typeProgram(source), new BackendContext(directory + "/" + target, null, "Main", true, true, new haxe.ds.StringMap<String>()));
+				.emit(typeProgram(source), new BackendContext(directory + "/" + target, null, "Main", true, new haxe.ds.StringMap<String>()));
 			expect(run(target == "java-native" ? "java" : "mono", target == "java-native" ? ["-jar", result.entryPath] : [result.entryPath]), "7\n9");
 		}
 	}

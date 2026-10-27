@@ -50,7 +50,7 @@ class M14Stage3DateToolsDurationStubIntegrationTest {
 			final typedMain = TyperStage.typeModule(parsedMain);
 			final typedDateTools = TyperStage.typeModule(parsedDateTools);
 			final expanded = MacroStage.expandProgram([typedMain, typedDateTools], []);
-			EmitterStage.emitToDir(expanded, outDir, true, false);
+			EmitterStage.emitToDir(expanded, outDir, false);
 
 			final dateToolsMl = haxe.io.Path.join([outDir, 'DateTools.ml']);
 			assertTrue(FileSystem.exists(dateToolsMl), 'Expected DateTools.ml in emitted output.');

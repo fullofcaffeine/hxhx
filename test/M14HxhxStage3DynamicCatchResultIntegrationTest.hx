@@ -253,7 +253,7 @@ class M14HxhxStage3DynamicCatchResultIntegrationTest {
 		final unrelatedTry = findFunction(typed, "DynamicCatchResult", "unrelatedTry");
 		assertTrue(unrelatedTry.getEnvironment().getReturnType().getDisplay() == "Void", "an unrelated try/catch statement changed its explicit Void result");
 
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), outDir, true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), outDir);
 		final output = File.getContent(haxe.io.Path.join([outDir, "DynamicCatchResult.ml"]));
 		final catchCast = "(Obj.obj (Obj.repr ((let __hx_call_function = (fallback) in let __hx_call_argument_0 = ((error)) in __hx_call_function __hx_call_argument_0))) : string)";
 		assertTrue(countOccurrences(output, catchCast) == 1, "OCaml emission did not convert exactly the concrete String catch result: " + output);

@@ -117,7 +117,7 @@ class M14TypedFeatureRootsTest {
 					if (unused.length != (expectedUnused ? 1 : 0))
 						throw "emission confused SDK retention with feature relevance";
 					final script = temporary + "/" + sourceKind + "-" + called + "-" + mode + ".js";
-					new backend.js.JsBackend().emit(lowered, new backend.BackendContext(temporary, script, "FeatureOrigin", true, false, defines));
+					new backend.js.JsBackend().emit(lowered, new backend.BackendContext(temporary, script, "FeatureOrigin", false, defines));
 					final process = new sys.io.Process(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", "node", script]);
 					final stdout = process.stdout.readAll().toString();
 					final stderr = process.stderr.readAll().toString();

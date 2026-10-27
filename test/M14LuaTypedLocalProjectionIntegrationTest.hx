@@ -70,8 +70,7 @@ class M14LuaTypedLocalProjectionIntegrationTest {
 	static function emit(outputDir:String, outputPath:String):String {
 		if (!FileSystem.exists(outputDir))
 			FileSystem.createDirectory(outputDir);
-		BackendRegistry.requireForTarget("lua-native")
-			.emit(program(), new BackendContext(outputDir, outputPath, "Main", true, false, new StringMap<String>()));
+		BackendRegistry.requireForTarget("lua-native").emit(program(), new BackendContext(outputDir, outputPath, "Main", false, new StringMap<String>()));
 		return File.getContent(outputPath);
 	}
 

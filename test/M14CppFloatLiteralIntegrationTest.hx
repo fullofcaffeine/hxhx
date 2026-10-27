@@ -8,7 +8,7 @@ class M14CppFloatLiteralIntegrationTest {
 		final revision = CompilerTypedModuleRevision.fromTypedModule(module).getCanonicalIdentity();
 		final directory = ".tmp/cpp-float-literals";
 		final result = backend.cpp.CppTargetCore.emit(new MacroExpandedProgram([module], false),
-			new backend.BackendContext(directory, null, "Main", true, true, new haxe.ds.StringMap()));
+			new backend.BackendContext(directory, null, "Main", true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable || CompilerTypedModuleRevision.fromTypedModule(module).getCanonicalIdentity() != revision)
 			throw "Float literal emission did not preserve its authored source";
 		execute(result.entryPath, [], "");

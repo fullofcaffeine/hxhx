@@ -205,8 +205,7 @@ class M14JsTypedEnumConstructorProjectionIntegrationTest {
 		var failure:Null<String> = null;
 		try {
 			final oracleOutput = compileOracle(tmpRoot);
-			new JsBackend().emit(typedProgram,
-				new BackendContext(outDir, scriptPath, "demo.Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
+			new JsBackend().emit(typedProgram, new BackendContext(outDir, scriptPath, "demo.Main", false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
 			final generated = File.getContent(scriptPath);
 			assertContains(generated, '__hx_cls_demo_Alpha.AlphaValue(7, "a")', "JavaScript did not call the exact typed enum constructor");
 			assertTrue(generated.indexOf(TypedExactEnumConstructorSource.marker()) < 0, "compiler-owned enum marker leaked into generated JavaScript");

@@ -49,7 +49,7 @@ class M14PromotionPluginBuiltinEquivalenceIntegrationTest {
 	static function emitWithBackend(backend:IBackend, program:MacroExpandedProgram, outDir:String):String {
 		FileSystem.createDirectory(outDir);
 		final artifactPath = Path.join([outDir, "main.js"]);
-		final context = new BackendContext(outDir, artifactPath, "Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"]));
+		final context = new BackendContext(outDir, artifactPath, "Main", false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"]));
 		final result = backend.emit(program, context);
 		assertTrue(result.entryPath == artifactPath, "unexpected artifact path for backend " + backend.id());
 		assertTrue(FileSystem.exists(artifactPath), "missing emitted artifact for backend " + backend.id());

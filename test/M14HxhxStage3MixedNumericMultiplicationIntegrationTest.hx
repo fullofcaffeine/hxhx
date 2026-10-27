@@ -267,7 +267,7 @@ class M14HxhxStage3MixedNumericMultiplicationIntegrationTest {
 		requireCall(roundedImportedTimer, "round", "primitive:Int", "primitive:Float");
 		requireBinary(findFunction(typed, "MixedNumericMultiplication", "pureInt"), "*", "primitive:Int", "primitive:Int", "primitive:Int");
 
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed, typedTimeSource, typedTimer, typedCollidingTimer], []), outDir, true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed, typedTimeSource, typedTimer, typedCollidingTimer], []), outDir);
 		final generated = File.getContent(haxe.io.Path.join([outDir, "MixedNumericMultiplication.ml"]));
 		assertTrue(countOccurrences(generated, "*.") >= 6, "mixed multiplication did not use Float operators: " + generated);
 		assertTrue(generated.indexOf("HxInt.mul (1000)") < 0, "the elapsed-time scale still used Int multiplication: " + generated);

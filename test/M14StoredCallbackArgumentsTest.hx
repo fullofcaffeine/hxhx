@@ -20,7 +20,7 @@ class M14StoredCallbackArgumentsTest {
 		final module = new ResolvedModule("Main", path, ParserStage.parse(source, path));
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		final revision = CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity();
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml", true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml");
 		observe(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", executable], expected);
 		if (CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity() != revision)
 			throw "stored callback emission changed typed source";

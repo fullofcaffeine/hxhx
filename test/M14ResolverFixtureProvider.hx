@@ -9,7 +9,7 @@ class M14ResolverFixtureProvider implements ITargetBackendProvider {
 		final descriptor:backend.TargetDescriptor = {
 			id: "js-native",
 			implId: "plugin/js-native@fixture",
-			abiVersion: 1,
+			abiVersion: backend.BackendAbi.VERSION,
 			priority: 150,
 			description: "Fixture provider registration",
 			capabilities: {

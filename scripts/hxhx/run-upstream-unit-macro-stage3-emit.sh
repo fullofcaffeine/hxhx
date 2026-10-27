@@ -174,7 +174,7 @@ out="$(
     mkdir -p "$STAGE3_OUT_DIR"
   fi
   HAXELIB_BIN="$HAXELIB_RESOLVED" \
-    "${HXHX_BIN_RUNNER[@]}" --hxhx-stage3 --hxhx-emit-full-bodies compile-macro.hxml --hxhx-out "$STAGE3_OUT_DIR" 2>&1
+    "${HXHX_BIN_RUNNER[@]}" --hxhx-stage3 compile-macro.hxml --hxhx-out "$STAGE3_OUT_DIR" 2>&1
 )"
 code="$?"
 set -e

@@ -18,11 +18,11 @@ class M14Stage3SwitchGuardTest {
 			if (CompilerTypedTreeRevision.functionBody(lowered) != CompilerTypedTreeRevision.functionBody(TypedControlLowering.functionBody(lowered)))
 				throw "repeated guard lowering changed case execution";
 		}
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/stage3-switch-guard", true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/stage3-switch-guard");
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		final result = BackendRegistry.requireForTarget("js-native")
 			.emit(MacroStage.expandProgram([typed], []),
-				new BackendContext(".tmp/switch-guard-js-native", null, "Main", true, false, new haxe.ds.StringMap<String>()));
+				new BackendContext(".tmp/switch-guard-js-native", null, "Main", false, new haxe.ds.StringMap<String>()));
 		M14Stage3RuntimeFixture.observe({command: "node", arguments: [result.entryPath], expected: expected});
 		Sys.println("SWITCH_GUARD_JS:PASS");
 		for (index in 0...functions.length)

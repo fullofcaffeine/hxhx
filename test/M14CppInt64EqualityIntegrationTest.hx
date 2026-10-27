@@ -46,7 +46,7 @@ class M14CppInt64EqualityIntegrationTest {
 		final root = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_int64_equality"]);
 		deleteRecursive(root);
 		FileSystem.createDirectory(root);
-		final context = new BackendContext(root, null, "Main", true, true, fixture.defines);
+		final context = new BackendContext(root, null, "Main", true, fixture.defines);
 		final result = BackendRegistry.createForTarget("cpp-native").emit(program, context);
 		assertTrue(result.builtExecutable, "focused Int64 equality C++ artifact did not build");
 

@@ -54,7 +54,7 @@ class M14CppAnyInstanceEqualityTest {
 		if (comparisons != 7 || overrides != 1)
 			throw "opaque source comparisons did not survive ordinary typed lowering: " + comparisons;
 		final output = ".tmp/cpp-any-instance-equality";
-		final result = backend.cpp.CppTargetCore.emit(expanded, new backend.BackendContext(output, null, "Main", true, true, fixture.defines));
+		final result = backend.cpp.CppTargetCore.emit(expanded, new backend.BackendContext(output, null, "Main", true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "opaque instance fixture did not produce a native executable";
 		if (Sys.command(result.entryPath, []) != 0)

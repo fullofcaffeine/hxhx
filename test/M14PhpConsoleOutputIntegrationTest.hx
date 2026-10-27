@@ -34,7 +34,7 @@ class M14PhpConsoleOutputIntegrationTest {
 			final resolved = new ResolvedModule(name, path, ParserStage.parse(File.getContent(path), path));
 			final program = MacroStage.expandProgram([TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]))], []);
 			final result = BackendRegistry.requireForTarget("php-native")
-				.emit(program, new BackendContext(Path.join([root, name]), null, name, true, false, new StringMap<String>()));
+				.emit(program, new BackendContext(Path.join([root, name]), null, name, false, new StringMap<String>()));
 			if (native) {
 				final actual = run("php", [result.entryPath]);
 				if (actual != expected)

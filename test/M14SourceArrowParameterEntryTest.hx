@@ -6,7 +6,7 @@ class M14SourceArrowParameterEntryTest {
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		typed.getBackendDeclaration();
 		final result = backend.cpp.CppTargetCore.emit(new MacroExpandedProgram([typed], false),
-			new backend.BackendContext(".tmp/source-arrow-parameter-cases/" + moduleName, null, moduleName, true, true, new haxe.ds.StringMap()));
+			new backend.BackendContext(".tmp/source-arrow-parameter-cases/" + moduleName, null, moduleName, true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable)
 			throw "arrow parameter entry requires a native executable";
 		final process = new sys.io.Process(result.entryPath, []);

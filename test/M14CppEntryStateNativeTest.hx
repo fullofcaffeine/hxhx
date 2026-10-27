@@ -8,7 +8,7 @@ class M14CppEntryStateNativeTest {
 		final path = root + "/src/EntryStateMain.hx";
 		final resolved = new ResolvedModule("EntryStateMain", path, ParserStage.parse(sys.io.File.getContent(path), path));
 		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
-		final context = new BackendContext(".tmp/cpp-entry-state", null, "EntryStateMain", true, true, new haxe.ds.StringMap<String>());
+		final context = new BackendContext(".tmp/cpp-entry-state", null, "EntryStateMain", true, new haxe.ds.StringMap<String>());
 		final result = CppTargetCore.emit(new MacroExpandedProgram([typed], false), context);
 		if (!result.builtExecutable)
 			throw "entry storage regression requires a native executable";

@@ -72,7 +72,7 @@ class M14Stage3OptionalInstanceReceiverIntegrationTest {
 			final parsed = ParserStage.parse(source, sourcePath);
 			final typed = TyperStage.typeModule(parsed);
 			final expanded = MacroStage.expandProgram([typed], []);
-			final executable = EmitterStage.emitToDir(expanded, outDir, true);
+			final executable = EmitterStage.emitToDir(expanded, outDir);
 			final generated = File.getContent(Path.join([outDir, "Main.ml"]));
 			assertTrue(generated.indexOf("deq (this_) (this_)") < 0,
 				"Stage3 emitted the already-forwarded instance receiver twice when an optional argument was omitted");

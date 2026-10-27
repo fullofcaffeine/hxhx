@@ -33,7 +33,7 @@ class M14CppIntegerRemainderTest {
 			throw "remainder bypassed its required exception context";
 		final output = ".tmp/cpp-integer-remainder";
 		final program = CppResolvedFixture.prepare(fixture);
-		final result = backend.cpp.CppTargetCore.emit(program, new backend.BackendContext(output, null, "Main", true, true, fixture.defines));
+		final result = backend.cpp.CppTargetCore.emit(program, new backend.BackendContext(output, null, "Main", true, fixture.defines));
 		for (i in 0...fixture.modules.length)
 			if (CompilerTypedModuleRevision.fromTypedModule(fixture.modules[i]).getCanonicalIdentity() != revisions[i])
 				throw "remainder emission changed authored source";

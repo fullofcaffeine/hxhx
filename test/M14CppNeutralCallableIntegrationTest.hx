@@ -21,7 +21,7 @@ class M14CppNeutralCallableIntegrationTest {
 		];
 		final index = TyperIndex.build(resolved);
 		final program = new MacroExpandedProgram([for (module in resolved) TyperStage.typeResolvedModule(module, index)], false);
-		final context = new BackendContext(".tmp/cpp-neutral-callable", null, "Main", true, true, new haxe.ds.StringMap<String>());
+		final context = new BackendContext(".tmp/cpp-neutral-callable", null, "Main", true, new haxe.ds.StringMap<String>());
 		final result = CppTargetCore.emit(program, context);
 		if (!result.builtExecutable)
 			throw "Neutral callable test requires a native executable";

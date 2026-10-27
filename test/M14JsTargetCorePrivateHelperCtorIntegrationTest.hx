@@ -88,7 +88,7 @@ class M14JsTargetCorePrivateHelperCtorIntegrationTest {
 
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
-			new JsBackend().emit(program, new BackendContext(outDir, artifactPath, "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+			new JsBackend().emit(program, new BackendContext(outDir, artifactPath, "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 			final js = File.getContent(artifactPath);
 			assertContains(js, "var parent = new __hx_cls_Parent();", "Parent constructor should resolve through scanned helper class refs");
 			assertContains(js, "var child = new __hx_cls_Child();", "Child constructor should resolve through scanned helper class refs");

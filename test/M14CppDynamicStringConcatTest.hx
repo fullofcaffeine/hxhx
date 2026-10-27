@@ -11,7 +11,7 @@ class M14CppDynamicStringConcatTest {
 		];
 		final output = ".tmp/dynamic-concat-contract";
 		final emitted = backend.cpp.CppTargetCore.emit(CppResolvedFixture.prepare(fixture),
-			new backend.BackendContext(output, null, "DynamicConcat", true, true, fixture.defines));
+			new backend.BackendContext(output, null, "DynamicConcat", true, fixture.defines));
 		for (index in 0...fixture.modules.length)
 			if (CompilerTypedModuleRevision.fromTypedModule(fixture.modules[index]).getCanonicalIdentity() != revisions[index])
 				throw "Dynamic concatenation changed its authored source";

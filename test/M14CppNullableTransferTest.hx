@@ -36,7 +36,7 @@ class M14CppNullableTransferTest {
 		final modules = TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index);
 		final output = ".tmp/cpp-nullable-transfer";
 		final result = backend.cpp.CppTargetCore.emit(new MacroExpandedProgram(modules, false),
-			new backend.BackendContext(output, null, "Main", true, true, fixture.defines));
+			new backend.BackendContext(output, null, "Main", true, fixture.defines));
 		if (!result.builtExecutable || Sys.command(result.entryPath, []) != 0)
 			throw "nullable transfer assertions failed";
 		sanitizers();

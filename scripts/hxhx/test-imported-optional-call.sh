@@ -7,7 +7,7 @@ work_dir="$(mktemp -d)"
 trap 'rm -rf "$work_dir"' EXIT
 
 # Observe the generated program: compiler success alone can hide a dropped call.
-output="$(HXHX_FORBID_STAGE0=1 "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies \
+output="$(HXHX_FORBID_STAGE0=1 "$HXHX_BIN" --hxhx-stage3 \
   -cp "$ROOT/test/fixtures/stage3_imported_optional_call/src" \
   -main consumer.Main --hxhx-out "$work_dir/out")"
 if ! printf '%s\n' "$output" | grep -Fxq 'imported-call:executed'; then

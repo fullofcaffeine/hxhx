@@ -30,7 +30,7 @@ class M14UntypedRangeRecoveryTest {
 		final typed = M14Stage3RuntimeFixture.typeResolved({module: resolved, root: root});
 		JsRuntimeFixture.assertRuntime(typed, "Main", expected);
 		Sys.println("UNTYPED_RANGE_JS:PASS");
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml", true, true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml", true);
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		Sys.println("UNTYPED_RANGE_NATIVE:PASS");
 	}

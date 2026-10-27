@@ -208,7 +208,7 @@ class M14NativeConstructorOwnerTest {
 			+ "class Holder {public function new() {}}";
 		for (target in ["java-native", "cs-native"]) {
 			final result = BackendRegistry.requireForTarget(target)
-				.emit(program([module("Main", source)]), new BackendContext(root + "/" + target, null, "Main", true, true, new haxe.ds.StringMap<String>()));
+				.emit(program([module("Main", source)]), new BackendContext(root + "/" + target, null, "Main", true, new haxe.ds.StringMap<String>()));
 			if (run(target == "java-native" ? "java" : "mono", target == "java-native" ? ["-jar", result.entryPath] : [result.entryPath]) != "1")
 				throw "public backend constructor result differs";
 		}

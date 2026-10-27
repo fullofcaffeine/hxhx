@@ -31,7 +31,7 @@ class M14CppNativeStackCaptureTest {
 			final defines = fixture.defines.copy();
 			if (debug)
 				defines.set("debug", "1");
-			final result = backend.cpp.CppTargetCore.emit(program, new backend.BackendContext(output, null, "Main", true, true, defines));
+			final result = backend.cpp.CppTargetCore.emit(program, new backend.BackendContext(output, null, "Main", true, defines));
 			if (!result.builtExecutable || Sys.command(result.entryPath, []) != 0)
 				throw "native stack capture failed ordinary execution";
 			sys.io.File.copy("test/cpp_managed_heap/NativeStackCaptureObserver.cpp", output + "/Observer.cpp");

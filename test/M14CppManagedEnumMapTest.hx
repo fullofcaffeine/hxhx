@@ -23,7 +23,7 @@ class M14CppManagedEnumMapTest {
 		final fixture = CppResolvedFixture.load({sourceRoot: root + '/src', mainModule: 'Main', requiredModules: ['haxe.ds.Map']});
 		final program = CppResolvedFixture.prepare(fixture);
 		final output = '.tmp/cpp-managed-enum-map';
-		final result = CppTargetCore.emit(program, new BackendContext(output, null, 'Main', true, true, new haxe.ds.StringMap()));
+		final result = CppTargetCore.emit(program, new BackendContext(output, null, 'Main', true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable || observe(result.entryPath, []) != expected)
 			throw 'native enum Map output differs';
 		sys.io.File.copy('test/cpp_managed_heap/EnumMapObserver.cpp', output + '/Observer.cpp');

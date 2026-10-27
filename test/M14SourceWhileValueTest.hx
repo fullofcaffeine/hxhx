@@ -8,7 +8,7 @@ class M14SourceWhileValueTest {
 		final typed = fixture.main;
 		final functions = typed.getTypedClasses()[0].getFunctions();
 		final revisions = [for (fn in functions) CompilerTypedTreeRevision.functionBody(fn)];
-		final context = new BackendContext(".tmp/source-while-value", null, "Main", true, true, fixture.defines);
+		final context = new BackendContext(".tmp/source-while-value", null, "Main", true, fixture.defines);
 		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture), context);
 		if (!result.builtExecutable)
 			throw "while value fixture requires a native executable";

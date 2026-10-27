@@ -55,7 +55,7 @@ class M14SourceLoopControlTest {
 		}
 		if (!rejectedRetarget)
 			throw "lowering silently redirected loop control after its loop destination changed";
-		final context = new BackendContext(".tmp/source-loop-control", null, "Main", true, true, fixture.defines);
+		final context = new BackendContext(".tmp/source-loop-control", null, "Main", true, fixture.defines);
 		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture), context);
 		if (!result.builtExecutable)
 			throw "loop control requires a native executable";

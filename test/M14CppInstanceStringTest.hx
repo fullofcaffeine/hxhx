@@ -12,7 +12,7 @@ class M14CppInstanceStringTest {
 		];
 		final output = ".tmp/cpp-instance-string";
 		final result = backend.cpp.CppTargetCore.emit(CppResolvedFixture.prepare(fixture),
-			new backend.BackendContext(output, null, "InstanceContract", true, true, fixture.defines));
+			new backend.BackendContext(output, null, "InstanceContract", true, fixture.defines));
 		for (index in 0...fixture.modules.length)
 			if (CompilerTypedModuleRevision.fromTypedModule(fixture.modules[index]).getCanonicalIdentity() != revisions[index])
 				throw "instance conversion changed its authored source";

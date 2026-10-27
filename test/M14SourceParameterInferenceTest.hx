@@ -43,7 +43,7 @@ class M14SourceParameterInferenceTest {
 		JsRuntimeFixture.assertRuntime(typed, "Main", expected);
 		Sys.println("SOURCE_PARAMETER_INFERENCE_JS:PASS");
 		final output = ".tmp/source_parameter_inference_" + Date.now().getTime();
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), output, true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), output);
 		if (run(executable, []) != expected)
 			throw "native parameter runtime differs; retained " + output;
 		Sys.println("SOURCE_PARAMETER_INFERENCE_NATIVE:PASS");

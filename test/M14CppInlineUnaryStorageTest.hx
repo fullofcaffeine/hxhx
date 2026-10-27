@@ -20,7 +20,7 @@ class M14CppInlineUnaryStorageTest {
 		final program = CppResolvedFixture.prepare(fixture);
 		Sys.println("CPP_INLINE_UNARY_STORAGE:PREPARED");
 		final output = ".tmp/cpp-inline-unary-storage";
-		CppTargetCore.emit(program, new BackendContext(output, output + "/Main.cpp", "Main", true, false, fixture.defines));
+		CppTargetCore.emit(program, new BackendContext(output, output + "/Main.cpp", "Main", false, fixture.defines));
 		if (CompilerTypedModuleRevision.fromTypedModule(typed).implementationRevision != before)
 			throw "inline unary preparation changed the original typed module";
 		Sys.println("CPP_INLINE_UNARY_STORAGE:EMITTED");

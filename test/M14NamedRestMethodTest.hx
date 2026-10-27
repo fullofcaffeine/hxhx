@@ -66,7 +66,7 @@ class M14NamedRestMethodTest {
 					for (expression in statement.getExpressions())
 						inspect(expression);
 		check(selectedCalls == 3, "rest calls did not retain exact selected declarations");
-		new JsBackend().emit(new MacroExpandedProgram([typed], false), new BackendContext(root, root + "/native.js", "Main", true, false, defines));
+		new JsBackend().emit(new MacroExpandedProgram([typed], false), new BackendContext(root, root + "/native.js", "Main", false, defines));
 		final native = run("node", [root + "/native.js"]);
 		check(native.code == 0 && native.stdout == expected, "native named rest result differs: " + native.stderr);
 		final invalid = declarations + 'class Main {static function main():Void {Numbers.max(0,"bad");}}';

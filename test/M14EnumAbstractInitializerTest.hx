@@ -54,7 +54,7 @@ class M14EnumAbstractInitializerTest {
 		rejects('enum abstract Signal(Int) { var Red=10; } class Main { static function invalid():Signal return 10; }');
 		rejects('enum abstract Signal(Int) { var Red="bad"; } class Main {}');
 		observe("node_modules/.bin/haxe", ["-cp", root, "--run", "Main"]);
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/enum-abstract-initializers", true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/enum-abstract-initializers");
 		observe(executable, []);
 		Sys.println("ENUM_ABSTRACT_INITIALIZER:PASS");
 	}
@@ -86,7 +86,7 @@ class M14EnumAbstractInitializerTest {
 			throw "null constant inventory mismatch: " + count;
 		JsRuntimeFixture.assertRuntime(typed, "Main", expected);
 		Sys.println("ENUM_ABSTRACT_NULL_JS:PASS");
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/enum-abstract-null-constants", true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/enum-abstract-null-constants");
 		observe(executable, [], expected);
 		Sys.println("ENUM_ABSTRACT_NULL_NATIVE:PASS");
 	}

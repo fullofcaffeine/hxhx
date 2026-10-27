@@ -144,7 +144,7 @@ class M14NativeClassStorageTest {
 		final expected = File.getContent(root + "/expected.stdout");
 		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", root, "--run", "Main"], expected: expected});
 		final typed = M14Stage3RuntimeFixture.typeMain({source: File.getContent(path), path: path, root: root});
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), ".tmp/native_class_storage", true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), ".tmp/native_class_storage");
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		Sys.println("NATIVE_CLASS_STORAGE_RUNTIME:PASS");
 	}

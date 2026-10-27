@@ -155,7 +155,7 @@ class M14DynamicMemberContractTest {
 
 	static function emit(program:Array<TypedModule>, root:String):Void {
 		new backend.js.JsBackend().emit(new MacroExpandedProgram(program, false),
-			new backend.BackendContext(root, root + '/candidate.js', 'Main', true, false, HxDefineMap.fromRawDefines(['js=1'])));
+			new backend.BackendContext(root, root + '/candidate.js', 'Main', false, HxDefineMap.fromRawDefines(['js=1'])));
 	}
 
 	/** Marker payload edits must invalidate public and backend identities; lookalike providers remain ordinary parents. */

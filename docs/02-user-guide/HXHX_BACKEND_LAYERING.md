@@ -106,7 +106,17 @@ This internal policy does not change the plugin registration ABI or establish
 complete native Map support. `test:m14:backend-registry` checks the override path
 and runs the original Map program through the production C++ driver.
 
-### Backend ABI v1 policy (frozen contract)
+### Backend ABI v2
+
+Backend ABI version 2 removes `emitFullBodies` from `BackendContext` and its
+constructor. Native compilation emits method statements, local declarations,
+and helper methods without a separate body mode. `buildExecutable` still
+controls whether the backend builds and links its emitted code.
+
+Rebuild backend plugins against version 2 and regenerate their manifests.
+Version 1 descriptors and manifests are rejected before native plugin loading.
+There is no version 1 dispatch path. `GEN_IR_VERSION` and `MACRO_API_VERSION`
+remain at version 1 because their contracts did not change.
 
 `hxhx` now treats backend descriptor compatibility as a strict load-time contract:
 
@@ -123,8 +133,7 @@ and runs the original Map program through the production C++ driver.
   - invalid host capability entries → reject registration
 - Duplicate `descriptor.implId` registrations are rejected to keep precedence deterministic.
 
-This gives us a single compatibility gate for plugin/builtin backends before manifest/dynlink
-work is layered in.
+These checks apply to builtins, linked providers, and native plugin manifests.
 
 ## GenIR boundary decision (`haxe.ocaml-3b7`)
 

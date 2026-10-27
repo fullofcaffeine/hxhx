@@ -24,7 +24,7 @@ class M14Stage3WarningCleanShadowTraceIntegrationTest {
 		final parsed = ParserStage.parse(src, sourcePath);
 		final typed = TyperStage.typeModule(parsed);
 		final expanded = MacroStage.expandProgram([typed], []);
-		EmitterStage.emitToDir(expanded, outDir, true, false);
+		EmitterStage.emitToDir(expanded, outDir, false);
 	}
 
 	static function main():Void {

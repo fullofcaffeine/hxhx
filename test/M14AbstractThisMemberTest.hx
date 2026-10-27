@@ -45,7 +45,7 @@ class M14AbstractThisMemberTest {
 			throw "abstract this fixture lost a call";
 		final script = root + "/main.js";
 		new backend.js.JsBackend().emit(new MacroExpandedProgram([typed], false),
-			new backend.BackendContext(root, script, "Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
+			new backend.BackendContext(root, script, "Main", false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
 		observe("node", ["--check", script]);
 		observe("node", [script]);
 		Sys.println("ABSTRACT_THIS_MEMBER:PASS");
@@ -136,7 +136,7 @@ class M14AbstractThisMemberTest {
 			throw "qualified String regression missed its receiver";
 		final script = root + "/native.js";
 		new backend.js.JsBackend().emit(new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(typed, index), false),
-			new backend.BackendContext(root, script, "Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
+			new backend.BackendContext(root, script, "Main", false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
 		observe("node", ["--check", script]);
 		observe("node", [script]);
 		Sys.println("CORE_STRING_THIS:PASS");

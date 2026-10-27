@@ -19,7 +19,7 @@ class M14NativeStoredCallbackViewsTest {
 		final module = new ResolvedModule("Main", path, ParserStage.parse(source, path));
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		final revision = CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity();
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), ".tmp/native_stored_callback_views", true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), ".tmp/native_stored_callback_views");
 		observe(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", executable], expected);
 		if (CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity() != revision)
 			throw "Native callback emission changed typed source";

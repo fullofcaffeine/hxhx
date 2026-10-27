@@ -36,7 +36,7 @@ class M14PatternCaptureCoverageTest {
 					throw "capture coverage changed on repeated lowering";
 			}
 			#if pattern_capture_ocaml
-			final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), root + "/ocaml", true);
+			final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), root + "/ocaml");
 			requireOutput(run(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", executable]), entry.expected);
 			Sys.println("PATTERN_CAPTURE_COVERAGE:PASS " + entry.name);
 			#else
@@ -86,7 +86,7 @@ class M14PatternCaptureCoverageTest {
 			sys.io.File.saveContent(root + "/" + source.path, source.source);
 		requireOutput(run("haxe", ["-cp", root, "-main", "Main", "--interp"]), expected.toString());
 		final program = NekoSourceProgramFixture.build(sources);
-		final context = new backend.BackendContext(root, root + "/local.n", "Main", true, false, HxDefineMap.fromRawDefines(["neko=1"]));
+		final context = new backend.BackendContext(root, root + "/local.n", "Main", false, HxDefineMap.fromRawDefines(["neko=1"]));
 		final generated = @:privateAccess backend.vm.NekoTargetCore.renderProgram(program, context);
 		sys.io.File.saveContent(root + "/local.neko", generated);
 		run("nekoc", [root + "/local.neko"]);

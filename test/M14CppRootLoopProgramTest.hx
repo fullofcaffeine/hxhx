@@ -6,7 +6,7 @@ class M14CppRootLoopProgramTest {
 	static function main():Void {
 		final fixture = CppResolvedFixture.load({sourceRoot: "test/oracle/cpp_root_loop_seed/original", mainModule: "Main", requiredModules: ["Array"]});
 		final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index), false);
-		final result = CppTargetCore.emit(program, new BackendContext(".tmp/cpp-root-loop-original", null, "Main", true, true, fixture.defines));
+		final result = CppTargetCore.emit(program, new BackendContext(".tmp/cpp-root-loop-original", null, "Main", true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "original loop program requires native execution";
 		final timeout = Sys.systemName() == "Mac" ? "gtimeout" : "timeout";

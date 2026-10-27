@@ -35,7 +35,7 @@ class M14CppRuntimeTypeMapTest {
 			final root = "test/oracle/" + name;
 			final program = CppMapFixture.load(root + "/src/Main.hx");
 			final result = CppTargetCore.emit(program,
-				new BackendContext(".tmp/cpp-runtime-type-map/" + name, null, "Main", true, true, new haxe.ds.StringMap<String>()));
+				new BackendContext(".tmp/cpp-runtime-type-map/" + name, null, "Main", true, new haxe.ds.StringMap<String>()));
 			if (!result.builtExecutable)
 				throw "Map runtime type contract requires a native executable";
 			final process = new sys.io.Process(result.entryPath, []);
@@ -59,7 +59,7 @@ class M14CppRuntimeTypeMapTest {
 		sys.io.File.saveContent(path, "previous-output\n");
 		var diagnostic = "";
 		try {
-			CppTargetCore.emit(program, new BackendContext(directory, path, "Main", false, false, new haxe.ds.StringMap<String>()));
+			CppTargetCore.emit(program, new BackendContext(directory, path, "Main", false, new haxe.ds.StringMap<String>()));
 		} catch (error:haxe.Exception) {
 			diagnostic = error.message;
 		}

@@ -29,7 +29,7 @@ class M14CppManagedProgramPlanTest {
 		sys.io.File.saveContent(output, "retained prior source\n");
 		final before = sys.FileSystem.readDirectory(directory);
 		before.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
-		rejected(() -> CppTargetCore.emit(program(source), new BackendContext(directory, output, wanted, true, false, new haxe.ds.StringMap(), resources)),
+		rejected(() -> CppTargetCore.emit(program(source), new BackendContext(directory, output, wanted, false, new haxe.ds.StringMap(), resources)),
 			diagnostic);
 		final after = sys.FileSystem.readDirectory(directory);
 		after.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
@@ -50,7 +50,7 @@ class M14CppManagedProgramPlanTest {
 			for (module in selected.getTypedModules())
 				CompilerTypedModuleRevision.fromTypedModule(module).getCanonicalIdentity()
 		];
-		CppTargetCore.emit(selected, new BackendContext(directory, null, "Main", true, false, new haxe.ds.StringMap()));
+		CppTargetCore.emit(selected, new BackendContext(directory, null, "Main", false, new haxe.ds.StringMap()));
 		final after = [
 			for (module in selected.getTypedModules())
 				CompilerTypedModuleRevision.fromTypedModule(module).getCanonicalIdentity()
@@ -113,7 +113,7 @@ class M14CppManagedProgramPlanTest {
 		// Instance predicates are supported. Prove admission and the false result for null
 		// through a native process; the remaining rejection cases still protect old output.
 		final predicate = CppTargetCore.emit(program("class Main { static function main():Void { var value:Main = null; if (value is Main) throw 'null matched Main'; } }"),
-			new BackendContext(".tmp/managed-program-admission/runtime-type", null, "Main", true, true, new haxe.ds.StringMap()));
+			new BackendContext(".tmp/managed-program-admission/runtime-type", null, "Main", true, new haxe.ds.StringMap()));
 		if (!predicate.builtExecutable)
 			throw "instance predicate admission requires a native executable";
 		final process = new sys.io.Process(predicate.entryPath, []);

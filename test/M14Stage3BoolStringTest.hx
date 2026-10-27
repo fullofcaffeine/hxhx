@@ -72,7 +72,7 @@ class M14Stage3BoolStringTest {
 		final typed = typeModule(moduleName);
 		if (moduleName == "Main")
 			checkArguments(typed);
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/stage3-string-" + moduleName, true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/stage3-string-" + moduleName);
 		observe(executable, [], "native", expectation);
 	}
 

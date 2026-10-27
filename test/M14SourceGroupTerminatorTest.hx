@@ -50,7 +50,7 @@ class M14SourceGroupTerminatorTest {
 			}
 			final module = new ResolvedModule("Main", path, ParserStage.parse(source, path));
 			final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
-			final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml", true);
+			final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml");
 			final native = observe(new sys.io.Process(executable, []));
 			if (native.code != 0 || native.output != "ok\n")
 				throw "native function terminator behavior differs: " + native.output + native.errors;

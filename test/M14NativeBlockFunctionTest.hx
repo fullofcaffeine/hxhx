@@ -47,7 +47,7 @@ class M14NativeBlockFunctionTest {
 					}, _ -> {});
 		JsRuntimeFixture.assertRuntime(typed, "Main", expected);
 		final output = ".tmp/native_block_function_" + Date.now().getTime();
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), output, true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), output);
 		if (run(executable, []) != expected)
 			throw "native block-function output differs; retained " + output;
 		Sys.println("NATIVE_BLOCK_FUNCTION:PASS artifacts=" + output);

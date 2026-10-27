@@ -42,7 +42,7 @@ class M14PythonEntryMembersIntegrationTest {
 		final typed = TyperStage.typeResolvedModule(resolved, index, loader);
 		final root = Path.normalize(Sys.getCwd() + "/.tmp/python_entry_members_" + Std.string(Date.now().getTime()));
 		FileSystem.createDirectory(root);
-		final context = new BackendContext(root, root + "/out.py", "Main", true, false, new StringMap<String>());
+		final context = new BackendContext(root, root + "/out.py", "Main", false, new StringMap<String>());
 		final emitted = SourceTargetCommon.emitTarget(SourceNativeTarget.Python, new MacroExpandedProgram([typed], false), context);
 		final actual = run("python3", [emitted.entryPath]);
 		File.saveContent(root + "/actual.stdout", actual);

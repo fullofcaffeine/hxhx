@@ -78,7 +78,7 @@ class M14CppManagedClassTest {
 		final fixture = CppResolvedFixture.load({sourceRoot: root + '/src', mainModule: 'Main', requiredModules: []});
 		final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index), false);
 		final output = '.tmp/cpp-managed-class';
-		final result = CppTargetCore.emit(program, new BackendContext(output, null, 'Main', true, true, new haxe.ds.StringMap()));
+		final result = CppTargetCore.emit(program, new BackendContext(output, null, 'Main', true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable || observe(result.entryPath, []) != expected)
 			throw 'native class output differs from upstream';
 		sys.io.File.copy('test/cpp_managed_heap/ClassObserver.cpp', output + '/Observer.cpp');

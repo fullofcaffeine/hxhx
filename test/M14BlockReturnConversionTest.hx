@@ -37,7 +37,7 @@ class M14BlockReturnConversionTest {
 		final typed = M14Stage3RuntimeFixture.typeResolved({module: module, root: root});
 		final revision = CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity();
 		auditReturns(typed);
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml", true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml");
 		observe(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", executable], expected);
 		if (CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity() != revision)
 			throw "block return conversion changed typed source";

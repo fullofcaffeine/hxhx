@@ -13,7 +13,7 @@ class M14NativeClosureCaptureTest {
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		JsRuntimeFixture.assertRuntime(typed, "Main", expected);
 		final output = ".tmp/native_closure_capture_" + Date.now().getTime();
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), output, true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), output);
 		final observed = run(executable, []);
 		if (observed != expected)
 			throw "native closure capture differs; retained " + output + "\n" + observed;
@@ -49,7 +49,7 @@ class M14NativeClosureCaptureTest {
 		// claim that every loaded standard-library module has been compiled or run.
 		final typed = TyperStage.typeResolvedModule(mains[0], index, loader);
 		final output = ".tmp/native_complete_control_" + Date.now().getTime();
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), output, true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), output);
 		if (run(executable, []) != expected)
 			throw "native complete control differs; retained " + output;
 		Sys.println("NATIVE_COMPLETE_CONTROL:PASS artifacts=" + output);

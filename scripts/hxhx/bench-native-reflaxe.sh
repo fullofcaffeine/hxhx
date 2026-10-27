@@ -112,7 +112,6 @@ compile_stage3() {
     HXHX_FORBID_STAGE0=1 HXHX_REPO_ROOT="$ROOT" HAXE_BIN="$HAXE_BIN" "$HXHX_BIN" \
       --ocaml \
       --hxhx-no-run \
-      --hxhx-emit-full-bodies \
       --hxhx-out "$EXAMPLE_DIR/out_stage3" \
       "$EXAMPLE_DIR/build.hxml" \
       -D ocaml_build=native >/dev/null 2>&1

@@ -29,7 +29,7 @@ class M14LuaExternValueTest {
 		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		final program = MacroStage.expandProgram([typed], []);
 		final emitted = backend.source.SourceTargetCommon.emitTarget(Lua, program,
-			new backend.BackendContext(output + "/candidate", null, "Main", false, false, new haxe.ds.StringMap<String>()));
+			new backend.BackendContext(output + "/candidate", null, "Main", false, new haxe.ds.StringMap<String>()));
 		M14Stage3RuntimeFixture.observe({command: "lua", arguments: ["-e", host, emitted.entryPath], expected: expected});
 		ownership(program, resolved);
 		publication(output);
@@ -80,7 +80,7 @@ class M14LuaExternValueTest {
 			final program = MacroStage.expandProgram([TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]))], []);
 			sys.io.File.saveContent(retained, "unchanged");
 			reject(() -> backend.source.SourceTargetCommon.emitTarget(Lua, program,
-				new backend.BackendContext(output, retained, "Main", false, false, new haxe.ds.StringMap<String>())),
+				new backend.BackendContext(output, retained, "Main", false, new haxe.ds.StringMap<String>())),
 				"unsupported Lua extern native identifier");
 			if (sys.io.File.getContent(retained) != "unchanged")
 				throw "rejected extern operation replaced published output";

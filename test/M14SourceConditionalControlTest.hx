@@ -80,7 +80,7 @@ class M14SourceConditionalControlTest {
 		}
 		final functions = typed.getTypedClasses()[0].getFunctions();
 		final revisions = [for (fn in functions) CompilerTypedTreeRevision.functionBody(fn)];
-		final context = new BackendContext(".tmp/source-conditional-control", null, "Main", true, true, fixture.defines);
+		final context = new BackendContext(".tmp/source-conditional-control", null, "Main", true, fixture.defines);
 		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture), context);
 		if (!result.builtExecutable)
 			throw "conditional control requires a native executable";

@@ -62,7 +62,7 @@ class M14InheritedArrayReadTest {
 				'global.Host={input(){inputs++;return values;},offset(){offsets++;return 0;},take(value){takes++;if(value!==4)throw Error("offset result");}};' +
 				'require(process.argv[2]);if(inputs!==1||offsets!==1||reads!==1||takes!==1)throw Error("evaluation count");console.log("ok");');
 			new backend.js.JsBackend().emit(new MacroExpandedProgram([typed], false),
-				new backend.BackendContext(root, root + "/native.js", "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+				new backend.BackendContext(root, root + "/native.js", "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 			for (file in ["upstream.js", "native.js"]) {
 				final result = run("node", [harness, sys.FileSystem.fullPath(root + "/" + file)]);
 				if (result.code != 0 || result.stdout != "ok\n")

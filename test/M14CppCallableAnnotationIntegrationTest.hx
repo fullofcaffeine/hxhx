@@ -17,7 +17,7 @@ class M14CppCallableAnnotationIntegrationTest {
 		final modules = [resolved, positionModule];
 		final index = TyperIndex.build(modules);
 		final program = new MacroExpandedProgram([for (module in modules) TyperStage.typeResolvedModule(module, index)], false);
-		final context = new BackendContext(".tmp/cpp-callable-annotation", null, "Main", true, true, new haxe.ds.StringMap<String>());
+		final context = new BackendContext(".tmp/cpp-callable-annotation", null, "Main", true, new haxe.ds.StringMap<String>());
 		final result = CppTargetCore.emit(program, context);
 		if (!result.builtExecutable)
 			throw "Callable annotation observer requires a native executable";

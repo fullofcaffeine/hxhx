@@ -15,7 +15,7 @@ class M14SourceParenthesizedNativeTest {
 		final functions = typed.getTypedClasses()[0].getFunctions();
 		final revisions = [for (fn in functions) CompilerTypedTreeRevision.functionBody(fn)];
 		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture),
-			new BackendContext(".tmp/source-parenthesized-native", null, "Main", true, true, fixture.defines));
+			new BackendContext(".tmp/source-parenthesized-native", null, "Main", true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "parenthesis contract requires native execution";
 		for (index in 0...functions.length)

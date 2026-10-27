@@ -141,7 +141,7 @@ class M14CppInt64ComplementIntegrationTest {
 		final root = Path.join([Sys.getCwd(), ".tmp", "m14_cpp_int64_complement"]);
 		deleteRecursive(root);
 		FileSystem.createDirectory(root);
-		final context = new BackendContext(root, null, "Contract", true, true, fixture.defines);
+		final context = new BackendContext(root, null, "Contract", true, fixture.defines);
 		final result = BackendRegistry.createForTarget("cpp-native").emit(program, context);
 		assertTrue(result.builtExecutable, "focused Int64 complement C++ artifact did not build");
 

@@ -8,7 +8,7 @@ class M14CppDowncastTest {
 		final plan = new backend.cpp.CppManagedProgramPlan(program, "Main");
 		final boundary = M14CppDowncastBoundary.header(program, plan);
 		final output = ".tmp/cpp-downcast";
-		final result = backend.cpp.CppTargetCore.emit(source, new backend.BackendContext(output, null, "Main", true, true, fixture.defines));
+		final result = backend.cpp.CppTargetCore.emit(source, new backend.BackendContext(output, null, "Main", true, fixture.defines));
 		if (!result.builtExecutable || Sys.command(result.entryPath, []) != 0)
 			throw "native downcast assertions failed";
 		sys.io.File.saveContent(output + "/DowncastBoundary.hpp", boundary);

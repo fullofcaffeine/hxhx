@@ -226,7 +226,7 @@ class M14HxhxStage3DynamicFloatBoundaryIntegrationTest {
 		assertDynamicFloatCall(findFunctionCall(findFunction(typed, "DynamicFloatBoundary", "direct"), "takeFloat"), "direct");
 		assertDynamicFloatCall(findFunctionCall(findFunction(typed, "DynamicFloatBoundary", "guarded"), "takeFloat"), "guarded");
 
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), outDir, true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), outDir);
 		final generated = File.getContent(haxe.io.Path.join([outDir, "DynamicFloatBoundary.ml"]));
 		// Match the complete ordered call, including the nested producer, so each
 		// checked conversion remains attached to the argument that requires it.
@@ -267,7 +267,7 @@ class M14HxhxStage3DynamicFloatBoundaryIntegrationTest {
 		].join("\n");
 		File.saveContent(invalidSourcePath, invalidSource);
 		final invalidTyped = TyperStage.typeModule(ParserStage.parse(invalidSource, invalidSourcePath));
-		final invalidExecutable = EmitterStage.emitToDir(MacroStage.expandProgram([invalidTyped], []), invalidOutDir, true);
+		final invalidExecutable = EmitterStage.emitToDir(MacroStage.expandProgram([invalidTyped], []), invalidOutDir);
 		final invalidResult = run(invalidExecutable, []);
 		assertTrue(invalidResult.exitCode != 0, "a non-numeric Dynamic value unexpectedly entered Float");
 		assertTrue(invalidResult.stdout == "invalid-read=text\n", "the rejected Dynamic argument was not evaluated exactly once: " + invalidResult.stdout);

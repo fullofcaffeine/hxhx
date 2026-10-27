@@ -8,7 +8,7 @@ class M14OcamlFloatExternsTest {
 			+ 'class Main { static function main():Void { Sys.println(Host.length("abc")); } }';
 		final module = M14Stage3RuntimeFixture.typeMain({source: source, path: "Main.hx", root: "."});
 		final mismatch = ".tmp/ocaml_float_extern_wrong_result";
-		EmitterStage.emitToDir(new MacroExpandedProgram([module], false), mismatch, true, false);
+		EmitterStage.emitToDir(new MacroExpandedProgram([module], false), mismatch, false);
 		final timeout = Sys.systemName() == "Mac" ? "gtimeout" : "timeout";
 		final process = new sys.io.Process(timeout, [
 			"30",
@@ -39,7 +39,7 @@ class M14OcamlFloatExternsTest {
 			hxhx.Stage3SetupSupport.buildDefinesMap(["native_host"], "ocaml", "ocaml-stage3"));
 		final module = M14Stage3RuntimeFixture.prepareMain({source: source, path: path, root: root});
 		final output = ".tmp/ocaml_float_externs";
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([module], false), output, true, true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([module], false), output, true);
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		Sys.println("OCAML_FLOAT_EXTERN_RUNTIME:PASS");
 		rejectWrongResult(output);

@@ -9,7 +9,7 @@ class M14CppCompoundControlTest {
 		final revision = CompilerTypedModuleRevision.fromTypedModule(typed).getCanonicalIdentity();
 		final output = ".tmp/cpp-compound-control";
 		final result = backend.cpp.CppTargetCore.emit(new MacroExpandedProgram([typed], false),
-			new backend.BackendContext(output, null, "Main", true, true, new haxe.ds.StringMap()));
+			new backend.BackendContext(output, null, "Main", true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable)
 			throw "compound control requires a native executable";
 		observe(new sys.io.Process(result.entryPath, []));

@@ -56,7 +56,7 @@ class M14Stage3OptionalBoundsTest {
 		final path = root + "/Main.hx";
 		final typed = M14Stage3RuntimeFixture.typeMain({source: File.getContent(path), path: path, root: root});
 		assertOwnership(typed);
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), ".tmp/stage3-optional-bounds", true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), ".tmp/stage3-optional-bounds");
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		Sys.println("STAGE3_OPTIONAL_BOUNDS:PASS");
 	}

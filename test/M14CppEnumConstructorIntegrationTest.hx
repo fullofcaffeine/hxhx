@@ -31,7 +31,7 @@ class M14CppEnumConstructorIntegrationTest {
 		final revision = CompilerTypedModuleRevision.fromTypedModule(module).getCanonicalIdentity();
 		final directory = ".tmp/cpp-enum-constructor" + (throws ? "-throw" : "");
 		final result = backend.cpp.CppTargetCore.emit(new MacroExpandedProgram([module], false),
-			new backend.BackendContext(directory, null, "Main", true, true, new haxe.ds.StringMap()));
+			new backend.BackendContext(directory, null, "Main", true, new haxe.ds.StringMap()));
 		if (CompilerTypedModuleRevision.fromTypedModule(module).getCanonicalIdentity() != revision)
 			throw "enum construction changed its authored typed source";
 		if (!result.builtExecutable)

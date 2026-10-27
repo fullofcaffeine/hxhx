@@ -13,7 +13,7 @@ class M14SourceFieldInitializerNativeTest {
 			for (field in fields)
 				CompilerTypedTreeRevision.expression(field.getField().getCanonicalKey(), field.getExpression())
 		];
-		final context = new BackendContext(".tmp/source-field-initializer-control", null, "Main", true, true, new haxe.ds.StringMap<String>());
+		final context = new BackendContext(".tmp/source-field-initializer-control", null, "Main", true, new haxe.ds.StringMap<String>());
 		final result = CppTargetCore.emit(new MacroExpandedProgram([typed], false), context);
 		if (!result.builtExecutable)
 			throw "initializer fixture requires a native executable";

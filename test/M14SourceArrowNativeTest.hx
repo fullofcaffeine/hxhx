@@ -10,7 +10,7 @@ class M14SourceArrowNativeTest {
 		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
 		Sys.println("SOURCE_ARROW_NATIVE:typed:cpu_seconds=" + (Sys.cpuTime() - started));
 		final result = CppTargetCore.emit(new MacroExpandedProgram([typed], false),
-			new BackendContext(".tmp/source-arrow-native", null, "ArrowExecution", true, true, new haxe.ds.StringMap()));
+			new BackendContext(".tmp/source-arrow-native", null, "ArrowExecution", true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable)
 			throw "arrow assertions require a native executable";
 		Sys.println("SOURCE_ARROW_NATIVE:built:cpu_seconds=" + (Sys.cpuTime() - started));

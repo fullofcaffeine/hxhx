@@ -53,7 +53,7 @@ class M14PhpParameterEntryTypeTest {
 			}
 		}
 		final result = BackendRegistry.requireForTarget("php-native")
-			.emit(program, new BackendContext(root + "/php", null, "Main", true, false, new haxe.ds.StringMap<String>()));
+			.emit(program, new BackendContext(root + "/php", null, "Main", false, new haxe.ds.StringMap<String>()));
 		final actual = StringTools.trim(run("php", [result.entryPath]));
 		if (actual != expected)
 			throw "PHP parameter entry behavior differs: " + actual;

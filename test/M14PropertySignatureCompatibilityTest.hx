@@ -167,7 +167,7 @@ class M14PropertySignatureCompatibilityTest {
 				if (accessorCalls != 1)
 					throw "property did not select exactly one accessor";
 				new backend.js.JsBackend().emit(new MacroExpandedProgram([typed], false),
-					new backend.BackendContext(root, root + "/native.js", "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+					new backend.BackendContext(root, root + "/native.js", "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 				for (file in ["upstream.js", "native.js"]) {
 					final result = run("node", [root + "/" + file]);
 					if (result.code != 0 || result.stdout != "7\n1\n")

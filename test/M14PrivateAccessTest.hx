@@ -34,7 +34,7 @@ class M14PrivateAccessTest {
 			throw "upstream body metadata differs: " + output + errors;
 		final module = typed(source);
 		JsRuntimeFixture.assertRuntime(module, "Main", "7\n");
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([module], []), root + "/ocaml", true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([module], []), root + "/ocaml");
 		final native = new sys.io.Process(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", executable]);
 		final nativeOutput = native.stdout.readAll().toString();
 		final nativeErrors = native.stderr.readAll().toString();

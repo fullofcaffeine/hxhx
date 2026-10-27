@@ -35,7 +35,7 @@ class M14MetalProfileVerifierIntegrationTest {
 	static function expectTargetCoreMetalFailure(source:String, filePath:String):String {
 		final tmpOut = Path.normalize(".tmp/m14_metal_profile_verifier_emit_" + Std.string(Std.int(Date.now().getTime())));
 		deleteRecursive(tmpOut);
-		final context = new BackendContext(tmpOut, null, "Main", true, false, HxDefineMap.fromRawDefines(["ocaml_profile=metal"]));
+		final context = new BackendContext(tmpOut, null, "Main", false, HxDefineMap.fromRawDefines(["ocaml_profile=metal"]));
 		final program = makeProgram(source, filePath);
 		try {
 			final core = new OcamlTargetCore();

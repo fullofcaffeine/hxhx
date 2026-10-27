@@ -102,10 +102,9 @@ class M14CsTypedDynamicLocalProjectionIntegrationTest {
 		final defines = new StringMap<String>();
 		defines.set("no-compilation", "1");
 		final executableDir = Path.join([outputDir, "executable"]);
-		BackendRegistry.requireForTarget("cs-native").emit(program(), new BackendContext(executableDir, null, "Main", true, true, defines));
+		BackendRegistry.requireForTarget("cs-native").emit(program(), new BackendContext(executableDir, null, "Main", true, defines));
 		final libraryDir = Path.join([outputDir, "library"]);
-		BackendRegistry.requireForTarget("cs-native")
-			.emit(supportProgram(), new BackendContext(libraryDir, null, "Helper", false, false, new StringMap<String>()));
+		BackendRegistry.requireForTarget("cs-native").emit(supportProgram(), new BackendContext(libraryDir, null, "Helper", false, new StringMap<String>()));
 		return {
 			entry: File.getContent(Path.join([executableDir, "src", "__HxMain.cs"])),
 			support: File.getContent(Path.join([libraryDir, "src", "Helper.cs"]))

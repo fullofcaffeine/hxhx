@@ -11,7 +11,7 @@ class M14Stage3ArrayMethodValueTest {
 		final typed = M14Stage3RuntimeFixture.typeMain({source: File.getContent(path), path: path, root: root});
 		final functions = [for (owner in typed.getTypedClasses()) for (fn in owner.getFunctions()) fn];
 		final revisions = functions.map(CompilerTypedTreeRevision.functionBody);
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/stage3-array-method-value", true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/stage3-array-method-value");
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		for (index in 0...functions.length)
 			if (CompilerTypedTreeRevision.functionBody(functions[index]) != revisions[index])
@@ -31,7 +31,7 @@ class M14Stage3ArrayMethodValueTest {
 		File.saveContent(path, source);
 		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", root, "--run", "Main"], expected: "null\n"});
 		final typed = M14Stage3RuntimeFixture.typeMain({source: source, path: path, root: root});
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), root + "/native", true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), root + "/native");
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: "Capturing a method from a null receiver is not supported\n"});
 		Sys.println("ARRAY_METHOD_NULL_CAPTURE_REJECTION:PASS");
 	}

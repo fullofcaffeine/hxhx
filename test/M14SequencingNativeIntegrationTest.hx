@@ -19,7 +19,7 @@ class M14SequencingNativeIntegrationTest {
 		final resolved = new ResolvedModule("Main", path, ParserStage.parse(sys.io.File.getContent(path), path));
 		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		final program = new MacroExpandedProgram([typed], false);
-		final context = new BackendContext(".tmp/sequencing-producer-" + target + (localOnly ? "-local" : ""), null, "Main", true, true,
+		final context = new BackendContext(".tmp/sequencing-producer-" + target + (localOnly ? "-local" : ""), null, "Main", true,
 			new haxe.ds.StringMap<String>());
 		final result = switch (target) {
 			case "js": new JsTargetCore().emit(program, context);

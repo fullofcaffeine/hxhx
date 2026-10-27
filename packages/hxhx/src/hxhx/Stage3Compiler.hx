@@ -275,7 +275,6 @@ class Stage3Compiler {
 			return error(e);
 		}
 		var typeOnly = g.typeOnly;
-		var emitFullBodies = g.emitFullBodies;
 		var noEmit = g.noEmit;
 		var noRun = g.noRun;
 		if (requestContext.isServerRequest && !noRun)
@@ -312,13 +311,6 @@ class Stage3Compiler {
 		final parsedCmdCommands = Stage1Args.getCmdCommands(parsed);
 		final parsedHadRun = Stage1Args.getHadRun(parsed);
 		final parsedRunArgs = Stage1Args.getRunArgs(parsed);
-		// Upstream often uses `--interp` as “compile + run now”. In Stage3 (native OCaml),
-		// we emulate this by enabling the full-body emission rung.
-		final sawInterp = parsedDefines != null && parsedDefines.indexOf("interp=1") != -1;
-		emitFullBodies = emitFullBodies || sawInterp;
-		if (backendId == "js-native") {
-			emitFullBodies = true;
-		}
 
 		// Respect upstream `--no-output` by treating it as “no emit” in bring-up.
 		//
@@ -914,8 +906,8 @@ class Stage3Compiler {
 				defines: definesMap
 			}) : expanded;
 			Stage3EmitSupport.emitWithBackend(backend, prepared, backendId, typedModules.length, outputPaths.workingBackendOutputDir,
-				outputPaths.workingOutputFileHint, outputPaths.finalBackendOutputDir, parsedMain, emitFullBodies, supportsCustomOutputFile,
-				supportsBuildExecutable, definesMap, backendResources, nekoNdllPaths, requestOutput);
+				outputPaths.workingOutputFileHint, outputPaths.finalBackendOutputDir, parsedMain, supportsCustomOutputFile, supportsBuildExecutable,
+				definesMap, backendResources, nekoNdllPaths, requestOutput);
 		} catch (e:String) {
 			closeMacroSession();
 			return error("emit failed: " + e);
@@ -1057,8 +1049,6 @@ class Stage3Compiler {
 				unitArgs.push("--hxhx-no-run");
 			if (global.serverReport)
 				unitArgs.push("--hxhx-server-report");
-			if (global.emitFullBodies)
-				unitArgs.push("--hxhx-emit-full-bodies");
 
 			if (global.outDir != null && global.outDir.length > 0 && !hasFlag(u, "--hxhx-out")) {
 				unitArgs.push("--hxhx-out");

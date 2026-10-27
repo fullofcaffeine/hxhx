@@ -43,7 +43,7 @@ class M14CppManagedAbstractInitializerTest {
 				throw "matching backing storage admitted an undeclared field conversion";
 		}
 		final output = ".tmp/managed-abstract-initializer";
-		CppTargetCore.emit(program, new BackendContext(output, output + "/Main.cpp", "Main", true, false, new haxe.ds.StringMap()));
+		CppTargetCore.emit(program, new BackendContext(output, output + "/Main.cpp", "Main", false, new haxe.ds.StringMap()));
 		sys.io.File.copy("test/cpp_managed_heap/AbstractInitializerObserver.cpp", output + "/Observer.cpp");
 		final compiler = Sys.getEnv("CXX") == null ? "clang++" : Sys.getEnv("CXX");
 		final timeout = Sys.systemName() == "Mac" ? "gtimeout" : "timeout";

@@ -13,7 +13,7 @@ class M14SourceDoWhileTest {
 			if (CompilerTypedTreeRevision.functionBody(lowered) != CompilerTypedTreeRevision.functionBody(TypedControlLowering.functionBody(lowered)))
 				throw "repeated do/while lowering changed control or local identities";
 		}
-		final context = new BackendContext(".tmp/source-do-while", null, "Main", true, true, fixture.defines);
+		final context = new BackendContext(".tmp/source-do-while", null, "Main", true, fixture.defines);
 		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture), context);
 		if (!result.builtExecutable)
 			throw "do/while fixture requires a native executable";

@@ -149,7 +149,7 @@ class M14AbstractDestinationInferenceTest {
 					+ '";if(expected==="empty"?value.length!==0:value.length!==1||String(value[0])!==expected)throw Error("array contents");'
 					+ '}};require(process.argv[2]);if(starts!==1||observations!==1)throw Error("evaluation count");console.log("ok");');
 				new backend.js.JsBackend().emit(new MacroExpandedProgram([typed], false),
-					new backend.BackendContext(root, root + "/native.js", "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+					new backend.BackendContext(root, root + "/native.js", "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 				for (file in ["upstream.js", "native.js"]) {
 					final result = run("node", [harness, sys.FileSystem.fullPath(root + "/" + file)]);
 					if (result.code != 0 || result.stdout != "ok\n")

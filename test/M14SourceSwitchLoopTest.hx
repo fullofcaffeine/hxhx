@@ -13,7 +13,7 @@ class M14SourceSwitchLoopTest {
 			if (CompilerTypedTreeRevision.functionBody(lowered) != CompilerTypedTreeRevision.functionBody(TypedControlLowering.functionBody(lowered)))
 				throw "repeated switch lowering changed the selected control structure";
 		}
-		final context = new BackendContext(".tmp/source-switch-loop", null, "Main", true, true, fixture.defines);
+		final context = new BackendContext(".tmp/source-switch-loop", null, "Main", true, fixture.defines);
 		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture), context);
 		if (!result.builtExecutable)
 			throw "source switch requires a native executable";

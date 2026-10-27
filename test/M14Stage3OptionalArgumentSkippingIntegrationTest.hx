@@ -65,7 +65,7 @@ class M14Stage3OptionalArgumentSkippingIntegrationTest {
 			final parsed = ParserStage.parse(source, sourcePath);
 			final typed = TyperStage.typeModule(parsed);
 			final expanded = MacroStage.expandProgram([typed], []);
-			final executable = EmitterStage.emitToDir(expanded, outDir, true);
+			final executable = EmitterStage.emitToDir(expanded, outDir);
 			final generated = File.getContent(Path.join([outDir, "Main.ml"]));
 			// The selected function and aligned arguments now use ordered bindings.
 			// Keep checking the same skipped slots before observing the executable.

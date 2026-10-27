@@ -25,7 +25,7 @@ class M14CppManagedArrayReadTest {
 		final boundary = M14CppManagedArrayReadBoundaryFixture.header(new backend.cpp.CppTypedProgramProjection(program));
 		Sys.println('CPP_MANAGED_ARRAY_READ_BOUNDARY:PASS');
 		final output = '.tmp/cpp-managed-array-read';
-		final result = CppTargetCore.emit(program, new BackendContext(output, null, 'Main', true, true, new haxe.ds.StringMap()));
+		final result = CppTargetCore.emit(program, new BackendContext(output, null, 'Main', true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable || observe(result.entryPath, []) != expected)
 			throw 'native array read output differs';
 		sys.io.File.saveContent(output + '/NullRead.hpp', boundary);

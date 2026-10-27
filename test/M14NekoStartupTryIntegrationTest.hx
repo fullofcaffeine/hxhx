@@ -73,7 +73,7 @@ class M14NekoStartupTryIntegrationTest {
 		FileSystem.createDirectory(outputDirectory);
 		defines.set(NekoTargetCore.SOURCE_ONLY_DEFINE, "1");
 		final outputPath = Path.join([outputDirectory, "main.n"]);
-		final context = new BackendContext(outputDirectory, outputPath, "Main", true, false, defines);
+		final context = new BackendContext(outputDirectory, outputPath, "Main", false, defines);
 		final backend = BackendRegistry.createForTarget("neko-native");
 		final emitted = BackendDispatchBoundary.emit(backend, program, context);
 		final generated = File.getContent(emitted.entryPath);

@@ -100,8 +100,7 @@ class M14CppMapSetTest {
 		observe("haxe", ["-cp", root, "-main", "Normal", "--interp"]);
 		final normal = CppResolvedFixture.load({sourceRoot: root, mainModule: "Normal", requiredModules: ["haxe.ds.Map", "Sys"]});
 		final normalProgram = CppResolvedFixture.prepare(normal);
-		final result = backend.cpp.CppTargetCore.emit(normalProgram,
-			new backend.BackendContext(output + "/normal", null, "Normal", true, true, normal.defines));
+		final result = backend.cpp.CppTargetCore.emit(normalProgram, new backend.BackendContext(output + "/normal", null, "Normal", true, normal.defines));
 		if (!result.builtExecutable)
 			throw "Map.set requires normal native compilation";
 		observe(result.entryPath, []);

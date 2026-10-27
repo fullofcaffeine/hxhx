@@ -12,7 +12,7 @@ class M14CppStrictLocalBindingIntegrationTest {
 		final typed = TyperStage.typeModule(ParserStage.parse(sys.io.File.getContent(path), path));
 		final program = new MacroExpandedProgram([typed], false);
 		final directory = ".tmp/cpp-strict-local-bindings";
-		final context = new BackendContext(directory, null, "Main", true, true, new haxe.ds.StringMap<String>());
+		final context = new BackendContext(directory, null, "Main", true, new haxe.ds.StringMap<String>());
 		final result = CppTargetCore.emit(program, context);
 		if (!result.builtExecutable)
 			throw "C++ local binding test requires a native executable";

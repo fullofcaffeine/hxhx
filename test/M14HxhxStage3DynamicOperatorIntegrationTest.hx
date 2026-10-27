@@ -247,7 +247,7 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		// This regression checks the diagnostic mode that emits only the first
 		// return expression. Select it explicitly: a std/ path must not choose
 		// whether the caller receives complete function bodies.
-		final numericCarrierExecutable = EmitterStage.emitToDir(numericCarrierProgram, numericCarrierOutputDir, false);
+		final numericCarrierExecutable = EmitterStage.emitToDir(numericCarrierProgram, numericCarrierOutputDir);
 		assertTrue(FileSystem.exists(numericCarrierExecutable), "Nested integer carrier fixture did not build its OCaml executable.");
 		final numericCarrierGenerated = File.getContent(haxe.io.Path.join([numericCarrierOutputDir, "NestedIntegerCarrier.ml"]));
 		assertIntegerReturnCarrier(numericCarrierGenerated, false);
@@ -255,7 +255,7 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		// exception. Check the same conversion there without requiring the
 		// diagnostic mode's direct-return layout.
 		final fullCarrierOutputDir = haxe.io.Path.join([root, "out_numeric_carrier_full"]);
-		EmitterStage.emitToDir(numericCarrierProgram, fullCarrierOutputDir, true);
+		EmitterStage.emitToDir(numericCarrierProgram, fullCarrierOutputDir);
 		final fullCarrierGenerated = File.getContent(haxe.io.Path.join([fullCarrierOutputDir, "NestedIntegerCarrier.ml"]));
 		assertIntegerReturnCarrier(fullCarrierGenerated, true);
 		// The preceding root-only typing deliberately exercises the inferred
@@ -278,7 +278,7 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		M14Stage3RuntimeFixture.observe({command: "haxe", arguments: ["-cp", runtimeCarrierRoot, "--run", "Main"], expected: runtimeExpected});
 		final runtimeCarrier = M14Stage3RuntimeFixture.prepareMain({source: runtimeCarrierSource, path: runtimeCarrierPath, root: runtimeCarrierRoot});
 		M14IntBitwiseProjectionTest.verify(runtimeCarrier);
-		final runtimeCarrierExecutable = EmitterStage.emitToDir(MacroStage.expandProgram([runtimeCarrier], []), runtimeCarrierRoot + "/out", true);
+		final runtimeCarrierExecutable = EmitterStage.emitToDir(MacroStage.expandProgram([runtimeCarrier], []), runtimeCarrierRoot + "/out");
 		M14Stage3RuntimeFixture.observe({command: runtimeCarrierExecutable, arguments: [], expected: runtimeExpected});
 		Sys.println("NATIVE_INT_BITWISE:PASS");
 
@@ -301,7 +301,7 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		final resolved = new ResolvedModule("Main", sourcePath, parsed);
 		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		final expanded = MacroStage.expandProgram([typed], []);
-		final executable = EmitterStage.emitToDir(expanded, outputDir, true);
+		final executable = EmitterStage.emitToDir(expanded, outputDir);
 		final generated = File.getContent(haxe.io.Path.join([outputDir, "Main.ml"]));
 
 		assertTrue(generated.indexOf("(value : Obj.t)") >= 0, "Dynamic parameter did not use the Obj.t carrier.");
@@ -336,7 +336,7 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		final dateToolsPath = haxe.io.Path.join([stage0StdPath, "DateTools.hx"]);
 		final dateToolsSource = File.getContent(dateToolsPath);
 		final expandedDateTools = prepareDateTools(dateToolsSource, dateToolsPath, stage0StdPath);
-		EmitterStage.emitToDir(expandedDateTools, dateToolsOutputDir, true, false);
+		EmitterStage.emitToDir(expandedDateTools, dateToolsOutputDir, false);
 		final generatedDateTools = File.getContent(haxe.io.Path.join([dateToolsOutputDir, "DateTools.ml"]));
 		assertTrue(generatedDateTools.indexOf("HxRuntime.dynamic_equals (hour)") < 0,
 			"An inferred Date.getHours() Int local was incorrectly lowered as Dynamic equality.");
@@ -361,7 +361,7 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		final invalidParsed = ParserStage.parse(invalidSource, invalidSourcePath);
 		final invalidTyped = TyperStage.typeModule(invalidParsed);
 		final invalidExpanded = MacroStage.expandProgram([invalidTyped], []);
-		final invalidExecutable = EmitterStage.emitToDir(invalidExpanded, invalidOutputDir, true);
+		final invalidExecutable = EmitterStage.emitToDir(invalidExpanded, invalidOutputDir);
 		final invalidResult = new sys.io.Process(invalidExecutable, []);
 		final invalidStdout = invalidResult.stdout.readAll().toString();
 		final invalidStderr = invalidResult.stderr.readAll().toString();

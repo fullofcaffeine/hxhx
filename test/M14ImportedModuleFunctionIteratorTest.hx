@@ -121,7 +121,7 @@ class M14ImportedModuleFunctionIteratorTest {
 			for (module in resolved)
 				TyperStage.typeResolvedModule(module, index, loader, true)
 		];
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram(typed, false), ".tmp/imported-module-function-iterator", true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram(typed, false), ".tmp/imported-module-function-iterator");
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		Sys.println("M14_IMPORTED_MODULE_FUNCTION_ITERATOR:PASS");
 	}

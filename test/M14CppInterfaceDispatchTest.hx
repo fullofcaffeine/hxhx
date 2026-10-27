@@ -73,7 +73,7 @@ class M14CppInterfaceDispatchTest {
 		final expanded = new MacroExpandedProgram(fixture.modules, false);
 		final plan = checkPlan(expanded);
 		final output = ".tmp/cpp-interface-dispatch";
-		final result = backend.cpp.CppTargetCore.emit(expanded, new backend.BackendContext(output, null, "Main", true, true, fixture.defines));
+		final result = backend.cpp.CppTargetCore.emit(expanded, new backend.BackendContext(output, null, "Main", true, fixture.defines));
 		if (!result.builtExecutable || Sys.command(result.entryPath, []) != 0)
 			throw "interface dispatch did not execute its native assertions";
 		final owner = fixture.index.getByFullName("Main");

@@ -45,7 +45,7 @@ class M14CppIntegerBitwiseTest {
 			rejected(TyType.fromHintText(hint), integer);
 		}
 		final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules([typed], index), false);
-		final result = CppTargetCore.emit(program, new BackendContext(".tmp/cpp-integer-bitwise", null, "Main", true, true, new haxe.ds.StringMap()));
+		final result = CppTargetCore.emit(program, new BackendContext(".tmp/cpp-integer-bitwise", null, "Main", true, new haxe.ds.StringMap()));
 		if (!result.builtExecutable)
 			throw "integer bitwise fixture did not build";
 		execute(result.entryPath, []);

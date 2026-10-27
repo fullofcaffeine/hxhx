@@ -60,7 +60,7 @@ class M14StructuralFieldReadTypingTest {
 		final runtimeTyped = TyperStage.typeResolvedModule(runtimeModule, TyperIndex.build([runtimeModule]));
 		final script = ".tmp/structural-field-read/Main.js";
 		new JsBackend().emit(new MacroExpandedProgram([runtimeTyped], false),
-			new BackendContext(".tmp/structural-field-read", script, "Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
+			new BackendContext(".tmp/structural-field-read", script, "Main", false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
 		observe("node", ["--check", script], "");
 		observe("node", [script], expected);
 		Sys.println("M14_STRUCTURAL_FIELD_READ_TYPING:PASS");

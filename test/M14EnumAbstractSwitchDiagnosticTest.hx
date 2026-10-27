@@ -12,7 +12,7 @@ class M14EnumAbstractSwitchDiagnosticTest {
 		sys.FileSystem.createDirectory(outputDir);
 		final outputPath = outputDir + "/main.js";
 		new backend.js.JsBackend().emit(program,
-			new backend.BackendContext(outputDir, outputPath, "Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
+			new backend.BackendContext(outputDir, outputPath, "Main", false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
 		final process = new sys.io.Process("node", [outputPath]);
 		final output = process.stdout.readAll().toString();
 		final errors = process.stderr.readAll().toString();

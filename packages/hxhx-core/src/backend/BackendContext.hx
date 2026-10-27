@@ -12,7 +12,6 @@ package backend;
 	- `outputDir`: backend-owned working/output directory (already absolute).
 	- `outputFileHint`: optional concrete output file path (`-js out.js` style).
 	- `mainModule`: root module selected by the CLI (may be empty for macro-only units).
-	- `emitFullBodies`: Stage3 bootstrap mode that emits full function bodies.
 	- `buildExecutable`: whether the backend should perform build/link after emit.
 	- `defines`: effective define map after CLI + library + macro-state merging.
 	- `nativeLibraryPaths`: target-native runtime library search paths resolved from
@@ -27,18 +26,16 @@ class BackendContext {
 	public final outputDir:String;
 	public final outputFileHint:Null<String>;
 	public final mainModule:String;
-	public final emitFullBodies:Bool;
 	public final buildExecutable:Bool;
 	public final defines:haxe.ds.StringMap<String>;
 	public final resources:Array<BackendResource>;
 	public final nativeLibraryPaths:Array<String>;
 
-	public function new(outputDir:String, outputFileHint:Null<String>, mainModule:String, emitFullBodies:Bool, buildExecutable:Bool,
-			defines:haxe.ds.StringMap<String>, ?resources:Array<BackendResource>, ?nativeLibraryPaths:Array<String>) {
+	public function new(outputDir:String, outputFileHint:Null<String>, mainModule:String, buildExecutable:Bool, defines:haxe.ds.StringMap<String>,
+			?resources:Array<BackendResource>, ?nativeLibraryPaths:Array<String>) {
 		this.outputDir = outputDir;
 		this.outputFileHint = outputFileHint;
 		this.mainModule = mainModule == null ? "" : mainModule;
-		this.emitFullBodies = emitFullBodies;
 		this.buildExecutable = buildExecutable;
 		this.defines = defines == null ? new haxe.ds.StringMap<String>() : defines;
 		this.resources = resources == null ? [] : resources;

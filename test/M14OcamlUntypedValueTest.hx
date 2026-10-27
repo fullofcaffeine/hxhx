@@ -21,7 +21,7 @@ class M14OcamlUntypedValueTest {
 		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		ownership(typed);
 		JsRuntimeFixture.assertRuntime(typed, "Main", expected);
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml", true, true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml", true);
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		Sys.println("OCAML_UNTYPED_VALUE:PASS");
 	}

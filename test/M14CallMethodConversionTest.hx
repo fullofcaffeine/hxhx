@@ -123,7 +123,7 @@ class M14CallMethodConversionTest {
 		JsRuntimeFixture.assertRuntime(typed, 'Main', expected);
 		#if call_conversion_native
 		{
-			final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + '/ocaml', true);
+			final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + '/ocaml');
 			final native = new sys.io.Process(Sys.systemName() == 'Mac' ? 'gtimeout' : 'timeout', ['30', executable]);
 			final nativeOutput = native.stdout.readAll().toString();
 			final nativeErrors = native.stderr.readAll().toString();

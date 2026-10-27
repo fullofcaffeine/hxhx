@@ -84,7 +84,7 @@ class M14NekoStackPrimitivesIntegrationTest {
 		final loader = new ModuleLoader([directory], defines, index);
 		loader.markResolvedAlready([resolved]);
 		final program = MacroStage.expandProgram([TyperStage.typeResolvedModule(resolved, index, loader)], []);
-		final context = new BackendContext(directory, directory + "/main.n", "Main", true, false, defines);
+		final context = new BackendContext(directory, directory + "/main.n", "Main", false, defines);
 		final split = @:privateAccess NekoTargetCore.renderSplitProgram(program, context, directory + "/main.neko");
 		File.saveContent(split.entryPath, split.entrySource);
 		for (part in split.support)

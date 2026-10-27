@@ -124,7 +124,7 @@ class M14AbstractConstructorResultTest {
 		Sys.println("ABSTRACT_CONSTRUCTOR_RESULTS:PASS");
 		final output = ".tmp/abstract-constructor-result-candidate";
 		final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index), false);
-		final result = CppTargetCore.emit(program, new BackendContext(output, null, "Main", true, true, fixture.defines));
+		final result = CppTargetCore.emit(program, new BackendContext(output, null, "Main", true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "abstract constructor contract requires a native executable";
 		final process = new sys.io.Process(result.entryPath, []);

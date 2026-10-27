@@ -175,7 +175,7 @@ class M14CppManagedClassDescriptorTest {
 			throw "upstream descriptor source contract changed";
 		phase('native');
 		final native = backend.cpp.CppTargetCore.emit(source,
-			new backend.BackendContext('.tmp/cpp-class-descriptor-native', null, 'Main', true, true, new haxe.ds.StringMap()));
+			new backend.BackendContext('.tmp/cpp-class-descriptor-native', null, 'Main', true, new haxe.ds.StringMap()));
 		if (!native.builtExecutable || observe(native.entryPath, []) != expected)
 			throw "normal native descriptor transport differs";
 		Sys.println('CPP_MANAGED_CLASS_DESCRIPTOR_NATIVE:PASS');

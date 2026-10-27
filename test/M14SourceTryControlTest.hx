@@ -9,7 +9,7 @@ class M14SourceTryControlTest {
 		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		final functions = typed.getTypedClasses()[0].getFunctions();
 		final revisions = [for (fn in functions) CompilerTypedTreeRevision.functionBody(fn)];
-		final context = new BackendContext(".tmp/source-try-control", null, "Main", true, true, new haxe.ds.StringMap<String>());
+		final context = new BackendContext(".tmp/source-try-control", null, "Main", true, new haxe.ds.StringMap<String>());
 		final result = CppTargetCore.emit(new MacroExpandedProgram([typed], false), context);
 		if (!result.builtExecutable)
 			throw "source try requires a native executable";

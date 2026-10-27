@@ -11,7 +11,7 @@ class M14Stage3VirtualOptionalCallsTest {
 		if (FileSystem.exists(virtualPath))
 			throw "optional wrapper observer requires a source path absent from disk";
 		final typed = M14Stage3RuntimeFixture.prepareMain({source: File.getContent(fixture + "/Main.hx"), path: virtualPath, root: fixture});
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/m14_virtual_optional_calls", true, true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/m14_virtual_optional_calls", true);
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		Sys.println("M14_STAGE3_VIRTUAL_OPTIONAL_CALLS:PASS");
 	}

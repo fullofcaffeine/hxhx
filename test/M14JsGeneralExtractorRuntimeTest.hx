@@ -32,7 +32,7 @@ class M14JsGeneralExtractorRuntimeTest {
 		final output = JsRuntimeFixture.reserveOutput();
 		try {
 			new backend.js.JsBackend().emit(program,
-				new backend.BackendContext(output, output + "/main.js", "Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
+				new backend.BackendContext(output, output + "/main.js", "Main", false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
 		} catch (message:String) {
 			if (message.indexOf("JavaScript named pattern requires its exact selected declaration in Main.extract") < 0)
 				throw message;

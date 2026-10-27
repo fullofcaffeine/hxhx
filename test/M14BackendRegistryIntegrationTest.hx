@@ -4,6 +4,7 @@ import backend.BackendRegistrationSpec;
 import backend.ITargetBackendProvider;
 import backend.TargetCoreBackend;
 
+/** Checks builtin and plugin selection, including rejection of incompatible backend contracts. */
 class M14BackendRegistryIntegrationTest {
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
@@ -114,6 +115,9 @@ class M14BackendRegistryIntegrationTest {
 		assertFailsContains(function() BackendRegistry.register(compatSpec("plugin/compat-abi-mismatch", BackendAbi.VERSION + 1, BackendAbi.GEN_IR_VERSION,
 			BackendAbi.MACRO_API_VERSION, ["filesystem"])),
 			"backend ABI mismatch");
+		assertFailsContains(function() BackendRegistry.register(compatSpec("plugin/retired-body-mode", 1, BackendAbi.GEN_IR_VERSION,
+			BackendAbi.MACRO_API_VERSION, ["filesystem"])),
+			"expected abiVersion=2, got 1");
 
 		assertFailsContains(function() BackendRegistry.register(compatSpec("plugin/compat-genir-mismatch", BackendAbi.VERSION, BackendAbi.GEN_IR_VERSION + 1,
 			BackendAbi.MACRO_API_VERSION, ["filesystem"])),

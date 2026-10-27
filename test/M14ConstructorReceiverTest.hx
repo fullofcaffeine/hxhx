@@ -21,8 +21,7 @@ class M14ConstructorReceiverTest {
 		final root = "test/oracle/constructor_receiver_seed/" + name;
 		final fixture = CppResolvedFixture.load({sourceRoot: root, mainModule: "Main", requiredModules: name == "primitive_capture" ? [] : ["Array"]});
 		final program = new MacroExpandedProgram(TypedAbstractOperatorLowering.lowerModules(fixture.modules, fixture.index), false);
-		final result = CppTargetCore.emit(program,
-			new BackendContext(".tmp/constructor-receiver-candidate/" + name, null, "Main", true, true, fixture.defines));
+		final result = CppTargetCore.emit(program, new BackendContext(".tmp/constructor-receiver-candidate/" + name, null, "Main", true, fixture.defines));
 		if (!result.builtExecutable)
 			throw "constructor receiver contract requires a native executable";
 		final process = new sys.io.Process(result.entryPath, []);

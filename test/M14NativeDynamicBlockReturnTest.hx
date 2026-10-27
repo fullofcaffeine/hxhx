@@ -28,7 +28,7 @@ class M14NativeDynamicBlockReturnTest {
 		if (run("node_modules/.bin/haxe", ["-cp", root, "--run", "Main"]) != expected)
 			throw "upstream Dynamic block-return contract differs";
 		final typed = M14Stage3RuntimeFixture.typeMain({source: source, path: path, root: root});
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml", true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + "/ocaml");
 		if (run(executable, []) != expected)
 			throw "native Dynamic block-return values, identity, or effects differ";
 		Sys.println("NATIVE_DYNAMIC_BLOCK_RETURN:PASS");

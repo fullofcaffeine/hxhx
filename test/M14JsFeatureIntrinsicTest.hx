@@ -31,7 +31,7 @@ class M14JsFeatureIntrinsicTest {
 				final output = ".tmp/js_feature_preparation_" + Date.now().getTime() + "_" + mode + "_" + index;
 				sys.FileSystem.createDirectory(output);
 				final script = output + "/main.js";
-				backend.emit(prepared, new BackendContext(output, script, "Main", true, false, defines));
+				backend.emit(prepared, new BackendContext(output, script, "Main", false, defines));
 				final process = new sys.io.Process(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["60", "node", script]);
 				final stdout = process.stdout.readAll().toString();
 				final stderr = process.stderr.readAll().toString();

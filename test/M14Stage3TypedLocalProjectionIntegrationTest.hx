@@ -217,7 +217,7 @@ class M14Stage3TypedLocalProjectionIntegrationTest {
 			assertTrue(missingFailed, "Stage3 local naming accepted a binding outside the sealed function catalog");
 
 			final expanded = MacroStage.expandProgram([typed], []);
-			final executable = EmitterStage.emitToDir(expanded, outDir, true);
+			final executable = EmitterStage.emitToDir(expanded, outDir);
 			final generated = File.getContent(Path.join([outDir, "Main.ml"]));
 			assertContains(generated, "collide (match_ : int) (match__1 : int) (method_ : int) (method__1 : int)",
 				"Stage3 signature did not preserve exact target-local identities");

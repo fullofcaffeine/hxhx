@@ -167,7 +167,7 @@ class M14RootQualifiedTypeResolutionTest {
 		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", root, "--run", "Main"], expected: "7\n"});
 		final index = TyperIndex.build(modules);
 		final typed = [for (module in modules) TyperStage.typeResolvedModule(module, index)];
-		final executable = EmitterStage.emitToDir(new MacroExpandedProgram(typed, false), root + "/out", true);
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram(typed, false), root + "/out");
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: "7\n"});
 		Sys.println("ROOT_QUALIFIED_NATIVE:PASS");
 	}

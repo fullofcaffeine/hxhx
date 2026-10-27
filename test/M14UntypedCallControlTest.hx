@@ -75,7 +75,7 @@ class M14UntypedCallControlTest {
 			}
 			JsRuntimeFixture.assertRuntime(typed, 'Main', entry.expected);
 			Sys.println('JS_UNTYPED_CALL:PASS ' + entry.name);
-			final context = new backend.BackendContext(root, root + '/local.n', 'Main', true, false, HxDefineMap.fromRawDefines(['neko=1']));
+			final context = new backend.BackendContext(root, root + '/local.n', 'Main', false, HxDefineMap.fromRawDefines(['neko=1']));
 			final generated = @:privateAccess backend.vm.NekoTargetCore.renderProgram(new MacroExpandedProgram([typed], false), context);
 			sys.io.File.saveContent(root + '/local.neko', generated);
 			if (Sys.command('nekoc', [root + '/local.neko']) != 0)

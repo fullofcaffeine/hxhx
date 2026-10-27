@@ -55,7 +55,7 @@ class M14CppManagedStringConcatTest {
 			if (CompilerTypedTreeRevision.functionBody(lowered) != CompilerTypedTreeRevision.functionBody(TypedControlLowering.functionBody(lowered)))
 				throw "repeated String concatenation lowering changed control or local identities";
 		}
-		final context = new BackendContext(".tmp/managed-string-concat", null, "Main", true, true, fixture.defines);
+		final context = new BackendContext(".tmp/managed-string-concat", null, "Main", true, fixture.defines);
 		final result = CppTargetCore.emit(CppResolvedFixture.prepare(fixture), context);
 		if (!result.builtExecutable)
 			throw "String concatenation fixture requires a native executable";

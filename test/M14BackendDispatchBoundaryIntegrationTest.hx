@@ -14,7 +14,7 @@ class M14BackendDispatchBoundaryIntegrationTest {
 	}
 
 	static function fixtureContext():BackendContext {
-		return new BackendContext(".tmp/m14_backend_dispatch", null, "Main", true, false, new haxe.ds.StringMap<String>());
+		return new BackendContext(".tmp/m14_backend_dispatch", null, "Main", false, new haxe.ds.StringMap<String>());
 	}
 
 	static function fixtureProgram():GenIrProgram {
