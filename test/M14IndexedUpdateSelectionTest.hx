@@ -105,7 +105,120 @@ class M14IndexedUpdateSelectionTest {
 			"equal-looking foreign conversion output was accepted");
 		rejects(() -> TyIndexedComputedResult.converted(outcome.placeResult, outcome.selection.query.computedSource, conversion),
 			"swapped conversion output query was accepted");
+		final operatorSource = 'abstract Value(Int){@:from public static function fromInt(value:Int):Value return cast value;'
+			+ '@:op(a + b) public static function plus(a:Value,b:Int):Int return b;}'
+			+ 'abstract Slots(Array<Value>){public function new();@:arrayAccess public function read(index:Int):Value;'
+			+ '@:arrayAccess public function write(index:Int,value:Value):Value;}class Main{static function main():Void{}}';
+		final convertedOperator = selected(operatorSource, "slots[0] += 2");
+		final bound = convertedOperator.selection.selection.binary;
+		require(bound != null && bound.getResultConversion() != null, "selected base operator lost its executable result conversion");
+		require(convertedOperator.selection.computed.getType(convertedOperator.environment).getSemanticKey() == "primitive:Int"
+			&& convertedOperator.selection.placeResult.getType(convertedOperator.environment).getNominalIdentity().getCanonicalName() == "Main.Value",
+			"checked place admission replaced an executable nominal conversion");
+		require(switch convertedOperator.selection.placeResult.evidence {
+			case Converted(_, plan): plan == bound.getResultConversion();
+			case _: false;
+		}, "place result no longer retains the exact selected operator conversion");
 		Sys.println("INDEXED_UPDATE_SELECTION:PASS conversion_identity");
+	}
+
+	static function nullableApplications():Void {
+		function provider(getter:String, value:String):String {
+			return 'abstract Slots(Array<'
+				+ value
+				+ '>){public function new();@:arrayAccess public function read(index:Int):'
+				+ getter
+				+ ';@:arrayAccess public function write(index:Int,value:'
+				+ value
+				+ '):'
+				+ value
+				+ ';}class Main{static function main():Void{}}';
+		}
+		for (application in [
+			{getter: "Null<Int>", value: "Int", expressions: ["slots[0]++", "++slots[0]", "slots[0] += 3"]},
+			{getter: "Null<Null<Int>>", value: "Null<Int>", expressions: ["slots[0]++", "++slots[0]"]}
+		]) {
+			for (expression in application.expressions) {
+				final result = selected(provider(application.getter, application.value), expression);
+				final outcome = result.selection;
+				final getter = TyType.fromHintText(application.getter);
+				final parameter = TyType.fromHintText(application.value);
+				require(result.environment.getInference()
+					.expressionType(outcome.selection.query.getterSource, TyType.unknown(), result.environment)
+					.getSemanticKey() == getter.getSemanticKey(),
+					"nullable getter wrappers changed");
+				for (fact in [outcome.computed, outcome.placeResult, outcome.setterInput])
+					require(fact.getType(result.environment).getSemanticKey() == "primitive:Int", "admission changed the actual computed argument");
+				require(outcome.getStaticType(result.environment).getSemanticKey() == parameter.getSemanticKey(), "setter static result changed");
+				require(outcome.setterInput.validatesParameter(parameter), "actual Int lost its distinct selected nullable parameter");
+				require(switch outcome.placeResult.evidence {
+					case CheckedPlace(_, expected): expected.getSemanticKey() == getter.getSemanticKey();
+					case _: false;
+				}, "place compatibility invented an executable nullable conversion");
+				require(switch outcome.setterInput.evidence {
+					case CheckedArgument(_, expected): expected.getSemanticKey() == parameter.getSemanticKey();
+					case _: false;
+				}, "setter admission invented an executable nullable conversion");
+			}
+		}
+		final nullable = provider("Null<Int>", "Int");
+		final alias = selected('typedef Wrapped = Null<Null<Int>>;typedef Payload = Null<Int>;' + provider("Wrapped", "Payload"), "++slots[0]");
+		require(alias.selection.computed.getType(alias.environment).getSemanticKey() == "primitive:Int"
+			&& alias.selection.getStaticType(alias.environment).getSemanticKey() == "nullable:primitive:Int",
+			"existing alias resolution lost the nested integer application");
+		rejects(() -> selected(nullable, 'slots["wrong"]++'), "wrong nullable index was accepted");
+		rejects(() -> selected(nullable, "slots[0] /= 2"), "Float division bypassed a nullable Int place");
+		final denied = fixture(provider("Null<Int>", "Bool"));
+		final unchanged = denied.environment.getInference().unchangedFacts();
+		final revision = denied.index.getMethodInputs().getRevision();
+		rejects(() -> TyperStage.selectIndexedUpdate(HxParser.parseExprText("slots[0] += 2"), denied.environment, denied.context, HxPos.unknown()),
+			"wrong nullable setter payload was accepted");
+		require(unchanged()
+			&& denied.index.getMethodInputs().getRevision() == revision, "failed nullable setter published partial selection");
+		for (type in ["Dynamic", "Unknown", "Null<Float>", "Null<String>"])
+			require(!TyNullableIntegerResult.isInteger(TyType.fromHintText(type)), "nullable integer classification admitted " + type);
+		require(TyNullableIntegerResult.isInteger(TyType.fromHintText("Null<Null<Null<Int>>>")), "integer classification dropped an explicit wrapper");
+		Sys.println("INDEXED_UPDATE_SELECTION:PASS nullable_applications");
+	}
+
+	static function sharedIntegerArithmetic():Void {
+		final root = "test/oracle/nullable_integer_result_seed";
+		final compiler = Sys.getEnv("HXHX_UPSTREAM_HAXE");
+		if (Sys.command(compiler == null ? "node_modules/.bin/haxe" : compiler, ["-cp", root, "-main", "Nested", "--interp"]) != 0)
+			throw "upstream nested nullable arithmetic contract failed";
+		final path = root + "/Nested.hx";
+		final module = new ResolvedModule("Nested", path, ParserStage.parse(sys.io.File.getContent(path), path));
+		final typed = TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
+		var results = 0;
+		function expression(value:TypedExpr):Void {
+			if (value.getTag() == Binary && ["+", "-", "*", "%"].contains(value.getTexts()[0]) && value.getExpressions().length == 2) {
+				for (operand in value.getExpressions())
+					require(operand.getType().getSemanticKey() == "nullable:nullable:primitive:Int", "ordinary arithmetic erased nested nullable operands");
+				require(value.getType().getSemanticKey() == "primitive:Int", "ordinary nested nullable arithmetic lost its Int result");
+				results++;
+			}
+			for (child in value.getExpressions())
+				expression(child);
+		}
+		function statement(value:TypedStmt):Void {
+			for (child in value.getExpressions())
+				expression(child);
+			for (child in value.getStatements())
+				statement(child);
+		}
+		for (owner in typed.getTypedClasses())
+			for (fn in owner.getFunctions())
+				for (body in fn.getBody().getStatements())
+					statement(body);
+		require(results == 4, "ordinary nested nullable arithmetic control lost an operation");
+		final integer = TyType.fromHintText("Int");
+		for (type in ["Float", "String", "Null<Float>", "Null<String>"])
+			require(TyNullableIntegerResult.result(TyType.fromHintText(type), integer) == null, "integer result rule admitted " + type);
+		final abstractSetup = fixture('abstract Value(Int){}abstract Slots(Array<Int>){public function new();}class Main{static function main():Void{}}');
+		final nominal = TyType.nominal(abstractSetup.index.getAbstractByFullName("Main.Value").getIdentity(), []);
+		require(!TyNullableIntegerResult.isInteger(nominal) && TyNullableIntegerResult.result(TyType.nullable(nominal), integer) == null,
+			"integer result rule used a nominal abstract's carrier");
+		Sys.println("INDEXED_UPDATE_SELECTION:PASS shared_integer_arithmetic");
 	}
 
 	static function operatorPositions():Void {
@@ -240,7 +353,8 @@ class M14IndexedUpdateSelectionTest {
 		final division = selected(provider("Float", "Float"), "slots[0] /= 2");
 		require(division.selection.computed.getType(division.environment).getSemanticKey() == "primitive:Float", "division lost its checked Float result");
 		final nullable = selected(provider("Null<Int>", "Null<Int>"), "slots[0]++");
-		require(nullable.selection.computed.getType(nullable.environment).isNullable(), "numeric step erased nullable getter identity");
+		require(nullable.selection.computed.getType(nullable.environment).getSemanticKey() == "primitive:Int",
+			"numeric step copied the nullable getter type instead of computing Int");
 		final abstractSource = 'abstract Value(Int){@:op(a++) public function increment():Value return this;}' + provider("Value", "Value");
 		final abstractStep = selected(abstractSource, "slots[0]++");
 		require(abstractStep.selection.selection.binary == null, "indexed numeric step selected a declared increment overload");
@@ -279,6 +393,8 @@ class M14IndexedUpdateSelectionTest {
 		}
 		lateGetterAndRollback();
 		conversionAndIdentity();
+		nullableApplications();
+		sharedIntegerArithmetic();
 		operatorPositions();
 		finalBindingIdentity();
 		lexicalOperands();

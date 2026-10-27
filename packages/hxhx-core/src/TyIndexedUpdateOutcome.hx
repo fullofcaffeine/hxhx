@@ -90,6 +90,8 @@ class TyIndexedUpdateOutcome {
 		final parameters = admission.order.sourceContexts(TyMethodGenericBinding.specializeParameters(admission.declaration, admission.signature,
 			admission.order.rankedTypes(admission.types), index));
 		final valueIndex = arguments.length - 1;
+		if (parameters[valueIndex] == null || !setterInput.validatesParameter(parameters[valueIndex]))
+			throw "indexed argument admission differs from its selected setter parameter";
 		for (offset in 0...arguments.length) {
 			if (arguments[offset] != finalSources[offset]
 				|| arguments[offset] != (offset == valueIndex ? query.setterInputSource : admission.sources[offset]))

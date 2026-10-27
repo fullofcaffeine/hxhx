@@ -20,6 +20,8 @@ private enum IndexedResultEvidence {
 	SelectedCall(binding:TyBoundAbstractBinaryOperator, operands:Array<IndexedResultOperand>, left:TyAbstractBinaryConversion,
 		right:TyAbstractBinaryConversion);
 	Converted(input:TyIndexedComputedResult, plan:TyAbstractBinaryConversion);
+	CheckedPlace(input:TyIndexedComputedResult, expected:TyType);
+	CheckedArgument(input:TyIndexedComputedResult, expected:TyType);
 }
 
 /**
@@ -94,6 +96,29 @@ class TyIndexedComputedResult {
 		return new TyIndexedComputedResult(query, source, plan.getExpectedType(), Converted(input, plan));
 	}
 
+	/** Place compatibility preserves the actual computation; it does not box or unwrap a value. */
+	static function admittedPlace(input:TyIndexedComputedResult, expected:TyType):TyIndexedComputedResult {
+		if (input.source != input.query.computedSource || !TyNullableIntegerResult.admits(expected, input.type))
+			throw "indexed place does not admit its exact computed result";
+		return new TyIndexedComputedResult(input.query, input.query.placeResultSource, input.type, CheckedPlace(input, expected));
+	}
+
+	/** Retain the selected parameter separately from actual type; target storage transport is not a Haxe conversion. */
+	static function admittedArgument(input:TyIndexedComputedResult, expected:TyType):TyIndexedComputedResult {
+		if (input.source != input.query.placeResultSource || !TyNullableIntegerResult.admits(expected, input.type))
+			throw "indexed argument does not fit its exact selected parameter";
+		return new TyIndexedComputedResult(input.query, input.query.setterInputSource, input.type, CheckedArgument(input, expected));
+	}
+
+	/** The completed outcome joins this fact to the parameter of its one selected setter. */
+	function validatesParameter(expected:TyType):Bool {
+		return switch evidence {
+			case CheckedArgument(_, parameter): parameter.getSemanticKey() == expected.getSemanticKey();
+			case Converted(_, plan): plan.getExpectedType().getSemanticKey() == expected.getSemanticKey();
+			case _: false;
+		};
+	}
+
 	/** Current terms must still justify the exact selected result after later constraints. */
 	public function validate(environment:TyFunctionEnv, ?retainedInference:TyFunctionInference):Void {
 		query.validate(environment.getOwnerIdentity());
@@ -145,6 +170,23 @@ class TyIndexedComputedResult {
 					|| plan.getActualType().getSemanticKey() != input.type.getSemanticKey()
 					|| plan.getExpectedType().getSemanticKey() != type.getSemanticKey())
 					throw "indexed conversion result no longer fits its selected input";
+			case CheckedPlace(input, expected):
+				input.validate(environment, inference);
+				if (input.query != query
+					|| input.source != query.computedSource
+					|| source != query.placeResultSource
+					|| type.getSemanticKey() != input.type.getSemanticKey()
+					|| !TyNullableIntegerResult.admits(expected, input.type)
+					|| inference.expressionType(query.getterSource, expected, environment).getSemanticKey() != expected.getSemanticKey())
+					throw "indexed checked place lost its actual result or original getter type";
+			case CheckedArgument(input, expected):
+				input.validate(environment, inference);
+				if (input.query != query
+					|| input.source != query.placeResultSource
+					|| source != query.setterInputSource
+					|| type.getSemanticKey() != input.type.getSemanticKey()
+					|| !TyNullableIntegerResult.admits(expected, input.type))
+					throw "indexed checked argument lost its actual result or selected parameter";
 		}
 		if (inference.expressionType(source, type, environment).getSemanticKey() != type.getSemanticKey())
 			throw "indexed result changed after selection";
