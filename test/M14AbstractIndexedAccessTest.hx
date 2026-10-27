@@ -128,11 +128,67 @@ class M14AbstractIndexedAccessTest {
 				toArray: false
 			}
 		];
+		for (entry in [
+			{
+				name: "untyped_empty_catalog",
+				members: "",
+				body: 'var b=new Buffer<Int>();untyped {b[0]=7;var n:Int=b[0];}',
+				accepted: true,
+				toArray: false
+			},
+			{
+				name: "untyped_conversion_operands",
+				members: "",
+				body: 'var b=new Buffer<Int>();untyped {b["key"]="text";}',
+				accepted: true,
+				toArray: true
+			},
+			{
+				name: "untyped_declared_helpers",
+				members: getter + setter,
+				body: 'var b=new Buffer<Int>();untyped {b[0]=7;var n:Int=b[0];}',
+				accepted: true,
+				toArray: false
+			},
+			{
+				name: "untyped_declared_bad_index",
+				members: getter,
+				body: 'var b=new Buffer<Int>();untyped b["bad"];',
+				accepted: false,
+				toArray: false
+			},
+			{
+				name: "untyped_declared_bad_value",
+				members: setter,
+				body: 'var b=new Buffer<Int>();untyped {b[0]="text";}',
+				accepted: false,
+				toArray: false
+			},
+			{
+				name: "untyped_getter_only_write",
+				members: getter,
+				body: 'var b=new Buffer<Int>();untyped {b[0]=7;}',
+				accepted: false,
+				toArray: false
+			},
+			{
+				name: "untyped_catalog_suppresses_conversion",
+				members: getter,
+				body: 'var b=new Buffer<Int>();untyped b["bad"];',
+				accepted: false,
+				toArray: true
+			}
+		])
+			cases.push(entry);
 		for (entry in cases) {
 			final source = 'abstract Buffer<T>(Array<T>)' + (entry.toArray ? ' to Array<T>' : '') + '{public inline function new(){this=[];}' + helpers
 				+ entry.members + '}class Main{static function main():Void{' + entry.body + '}}';
 			check(entry.name, source, entry.accepted);
 		}
+		check("untyped_enum_value",
+			'class Main{static function read(value:EnumValue,key:String):Dynamic return untyped value[key];static function main():Void{}}', true);
+		check("typed_enum_value", 'class Main{static function read(value:EnumValue,key:String):Dynamic return value[key];static function main():Void{}}',
+			false);
 		check("nullable_owner", program(getter + setter, 'var b:Null<Buffer<Int>>=new Buffer();b[0]=7;var n:Int=b[0];'), true);
 		check("ordinary_receiver_block", 'class Main{static function main():Void{var values=[0];({var alias=values;alias;})[0]=7;}}', true);
 		// These controls observe lexical traversal during typing. Unary lvalue
@@ -152,8 +208,34 @@ class M14AbstractIndexedAccessTest {
 		checkRetainedTerms();
 		checkUpdates();
 		checkRuntime();
+		checkUntypedRuntime();
 		TyperStage.typeModule(ParserStage.parse('class Legacy{static function main(){var values=[];values[0]=7;}}', "Legacy.hx"));
 		Sys.println("ABSTRACT_INDEXED_ACCESS:PASS legacy_no_index");
+	}
+
+	/** Untyped raw access remains available, while declared indexers still own effects and assignment results. */
+	static function checkUntypedRuntime():Void {
+		final source = 'abstract Raw(Array<Int>){public inline function new(){this=[7];}}'
+			+ 'abstract Indexed(Array<Int>){public inline function new(){this=[7];}'
+			+ '@:arrayAccess public inline function read(i:Int):Int{Main.events+="G";return this[i]+10;}'
+			+ '@:arrayAccess public inline function write(i:Int,v:Int):Int{Main.events+="S";this[i]=v+20;return v+30;}}'
+			+ 'class Main{public static var events:String="";static function main():Void{'
+			+ 'var raw=new Raw();var before:Int=untyped raw[0];untyped {raw[0]=9;}var after:Int=untyped raw[0];trace(before+":"+after);'
+			+ 'var indexed=new Indexed();var first:Int=untyped indexed[0];var written:Int=untyped {indexed[0]=9;}var last:Int=untyped indexed[0];'
+			+ 'trace(events+":"+first+":"+written+":"+last);}}';
+		final expected = "7:9\nGSG:17:39:39\n";
+		final root = JsRuntimeFixture.reserveOutput();
+		final path = root + "/Main.hx";
+		sys.io.File.saveContent(path, source);
+		if (Sys.command("node_modules/.bin/haxe", ["-cp", root, "-main", "Main", "-js", root + "/upstream.js"]) != 0)
+			throw "untyped indexed upstream observer did not compile";
+		M14Stage3RuntimeFixture.observe({
+			command: "node",
+			arguments: [root + "/upstream.js"],
+			expected: path + ":1: 7:9\n" + path + ":1: GSG:17:39:39\n"
+		});
+		JsRuntimeFixture.assertRuntime(M14Stage3RuntimeFixture.prepareMain({source: source, path: path, root: root}), "Main", expected);
+		Sys.println("ABSTRACT_INDEXED_ACCESS:PASS untyped_runtime");
 	}
 
 	static function program(members:String, body:String):String

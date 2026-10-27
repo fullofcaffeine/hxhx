@@ -1732,6 +1732,10 @@ class TyperStage {
 			return null;
 		final inference = scope.getInference();
 		final catalog = owner.getIndexedDeclarations();
+		// Untyped source can index the runtime value directly. Real declared
+		// indexers still select and validate their helpers in an untyped scope.
+		if (catalog.length == 0 && scope.isUntypedContext())
+			return null;
 		final operands = value == null ? [subscript] : [subscript, value];
 		var binding = inference.indexedAccess(source);
 		if (catalog.length == 0) {
