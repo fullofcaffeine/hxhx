@@ -812,18 +812,38 @@ class TyFunctionInference {
 		final candidate = solver.fork();
 		final parameters = new StringMap<TyInferenceTerm>();
 		var collections:Null<haxe.ds.IntMap<TyInferenceTerm>> = null;
-		for (index in 0...expressions.length) {
-			if (index >= expected.length || expected[index].hasUnknownComponent())
-				continue;
-			var term = sourceTerm(expressions[index], environment);
-			final collection = TypedCollectionExpectation.select(expressions[index], expected[index]);
+		final inputs = new Array<{expression:HxExpr, type:TyType}>();
+		function append(expression:HxExpr, type:TyType):Void {
+			if (type.hasUnknownComponent())
+				return;
+			inputs.push({expression: expression, type: type});
+			switch expression {
+				case EParenthesized(inner, _) | EPrivateAccess(inner, _):
+					append(inner, type);
+				case EAnon(names, values):
+					// Candidate typing supplies field storage types, but the original
+					// child occurrences still own empty-array inference and replay.
+					final fields = TypedAnonymousLiteral.fieldTypes(names, type);
+					for (index in 0...values.length)
+						append(values[index], fields[index]);
+				case _:
+			}
+		}
+		for (index in 0...expressions.length)
+			if (index < expected.length)
+				append(expressions[index], expected[index]);
+		for (input in inputs) {
+			final expression = input.expression;
+			final expectedType = input.type;
+			var term = sourceTerm(expression, environment);
+			final collection = TypedCollectionExpectation.select(expression, expectedType);
 			if (collection != null
 				&& term != null
 				&& candidate.preview(term).hasUnknownComponent()
 				&& !TyMethodGenericBinding.sameTypeConstructor(candidate.preview(term), collection)) {
 				// Selection may give [] its first Map context after an initial Array
 				// preview. Only the literal can change constructor; a local alias cannot.
-				final occurrenceIndex = emptyLiteralOccurrence(expressions[index]);
+				final occurrenceIndex = emptyLiteralOccurrence(expression);
 				if (occurrenceIndex >= 0) {
 					term = TyInferenceSolver.fromType(collection);
 					if (collections == null)
@@ -831,7 +851,7 @@ class TyFunctionInference {
 					collections.set(occurrenceIndex, term);
 				}
 			}
-			if (expected[index].isDynamic()) {
+			if (expectedType.isDynamic()) {
 				// A Dynamic destination accepts the value without supplying a type
 				// for an omitted parameter. Explicitly untyped results still need
 				// their deferred carrier when consumed through a Dynamic boundary.
@@ -840,18 +860,18 @@ class TyFunctionInference {
 				continue;
 			}
 			if (term == null) {
-				final parameter = contextParameter(expressions[index], environment);
+				final parameter = contextParameter(expression, environment);
 				if (parameter != null) {
 					final identity = parameter.getIdentity().getCanonicalKey();
 					term = parameters.get(identity);
 					if (term == null) {
-						parameters.set(identity, TyInferenceSolver.fromType(expected[index]));
+						parameters.set(identity, TyInferenceSolver.fromType(expectedType));
 						continue;
 					}
 				}
 			}
 			if (term != null) {
-				final context = expected[index].unwrapNull();
+				final context = expectedType.unwrapNull();
 				// Assignment context constrains the value inside a nullable input. Keep
 				// its wrapper on the stored term so body publication still admits null.
 				final value = switch term {
