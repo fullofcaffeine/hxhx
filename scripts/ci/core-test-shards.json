@@ -103,6 +103,7 @@
     "stage0-free-smoke",
     "js-native-smoke",
     "plugin-matrix",
+    "native-plugin-happy-path",
     "test-shards",
     "hxhx-e2e"
   ],
@@ -112,6 +113,7 @@
     "stage0-free-smoke": "Q2",
     "js-native-smoke": "Q2",
     "plugin-matrix": "Q2",
+    "native-plugin-happy-path": "Q2",
     "test-shards": "Q2",
     "hxhx-e2e": "Q3"
   },

@@ -109,7 +109,7 @@ function checkCommandFailureReporting() {
 /** Independent runners consume routing outputs; final aggregation still owns guard enforcement. */
 function checkIndependentJobStarts(workflow) {
   const lines = workflow.split('\n')
-  for (const job of ['standalone-guards', 'stage0-free-smoke', 'js-native-smoke', 'plugin-matrix', 'test-shards', 'hxhx-e2e']) {
+  for (const job of ['standalone-guards', 'stage0-free-smoke', 'js-native-smoke', 'plugin-matrix', 'native-plugin-happy-path', 'test-shards', 'hxhx-e2e']) {
     const start = lines.indexOf(`  ${job}:`)
     if (start < 0) throw new Error(`missing independent job ${job}`)
     let end = start + 1
@@ -158,6 +158,7 @@ function main() {
     'stage0-free-smoke',
     'js-native-smoke',
     'plugin-matrix',
+    'native-plugin-happy-path',
     'test-shards',
     'hxhx-e2e'
   ]
@@ -206,6 +207,7 @@ function main() {
     'stage0-free-smoke': 'Q2',
     'js-native-smoke': 'Q2',
     'plugin-matrix': 'Q2',
+    'native-plugin-happy-path': 'Q2',
     'test-shards': 'Q2',
     'hxhx-e2e': 'Q3'
   }
@@ -369,7 +371,7 @@ function main() {
   )
   assert(
     JSON.stringify(jobsRequiredAtTier(plan.manifest, 'Q2')) ===
-      JSON.stringify(['guards', 'standalone-guards', 'stage0-free-smoke', 'js-native-smoke', 'plugin-matrix', 'test-shards']),
+      JSON.stringify(['guards', 'standalone-guards', 'stage0-free-smoke', 'js-native-smoke', 'plugin-matrix', 'native-plugin-happy-path', 'test-shards']),
     'Q2 job boundary changed'
   )
   assert(
@@ -431,7 +433,7 @@ function main() {
     CORE_TEST_QA_TIER: 'Q2'
   })
   assert(aggregateQ2.status === 0, `aggregate CLI rejected the policy-authorized Q2 hxhx skip\n${aggregateQ2.stderr}`)
-  assert(aggregateQ2.stdout.includes('required=6 skipped=1'), 'aggregate Q2 receipt omits its required/skip counts')
+  assert(aggregateQ2.stdout.includes('required=7 skipped=1'), 'aggregate Q2 receipt omits its required/skip counts')
 
   const aggregateQ3MissingHxhx = runScript('scripts/ci/core-test-aggregate.js', [], {
     ...process.env,
@@ -458,6 +460,24 @@ function main() {
     CORE_TEST_QA_TIER: 'Q1'
   })
   assert(aggregateQ1.status === 0, `aggregate CLI rejected policy-authorized Q1 skips\n${aggregateQ1.stderr}`)
+
+  // Both independent plugin workloads remain mandatory after they stop sharing a job budget.
+  for (const job of ['plugin-matrix', 'native-plugin-happy-path']) {
+    for (const tier of ['Q2', 'Q3']) {
+      for (const result of ['failure', 'cancelled', 'skipped', 'missing']) {
+        const needs = structuredClone({ ...alwaysNeeds, ...successNeeds })
+        if (result === 'missing') delete needs[job]
+        else needs[job].result = result
+        const rejected = runScript('scripts/ci/core-test-aggregate.js', [], {
+          ...process.env,
+          CORE_TEST_NEEDS_JSON: JSON.stringify(needs),
+          CORE_TEST_QA_TIER: tier
+        })
+        assert(rejected.status !== 0, `${tier} aggregate accepted ${job}=${result}`)
+        assert(rejected.stderr.includes(`required job ${job} result=${result}`), `${tier} lost the plugin failure reason`)
+      }
+    }
+  }
 
   // Every Q1 guard owner must succeed, even when all other independent jobs pass.
   for (const job of ['guards', 'standalone-guards']) {
@@ -500,6 +520,17 @@ function main() {
   assert(!coreGuardBlock.includes('run: npm run ci:guards\n'), 'core CI must not repeat the local full aggregate')
   assert(!serverGuardBlock.includes('run: npm run ci:guards'), 'server job must not repeat core guards')
   checkIndependentJobStarts(workflow)
+  const strictPluginBlock = workflow.slice(workflow.indexOf('  plugin-matrix:'), workflow.indexOf('  native-plugin-happy-path:'))
+  const happyPluginBlock = workflow.slice(workflow.indexOf('  native-plugin-happy-path:'), workflow.indexOf('  test-shards:'))
+  requireIncludes(strictPluginBlock, '    name: Plugin matrix (strict)\n', 'stable strict plugin check name')
+  for (const [block, command] of [
+    [strictPluginBlock, 'npm run -s test:plugins:strict-matrix'],
+    [happyPluginBlock, 'npm run -s test:hxhx:native-plugin-happy-path']
+  ]) {
+    requireIncludes(block, '    timeout-minutes: 40\n', 'unchanged plugin job budget')
+    requireIncludes(block, command, 'independent plugin command')
+    assert(workflow.split(command).length === 2, `${command} must run exactly once in Core`)
+  }
   expectThrow(
     () => checkIndependentJobStarts(workflow.replace(
       '  test-shards:\n    name: Tests / ${{ matrix.label }}\n    runs-on: ubuntu-latest\n    needs: [route]',

@@ -536,7 +536,7 @@ jobs:
           haxe -version
       - name: Download Haxe libraries (lix)
         run: npx lix download
-      - name: Build hxhx once (shared for plugin matrix + happy path)
+      - name: Build hxhx for strict plugin matrix
         run: |
           set -euo pipefail
           HXHX_BIN="$(bash scripts/hxhx/build-hxhx.sh | tail -n 1)"
@@ -552,14 +552,79 @@ jobs:
         run: |
           set -euo pipefail
           npm run -s test:plugins:strict-matrix
+      - name: Emit plugin matrix marker
+        run: echo "PLUGIN_MATRIX_STRICT:PASS"
+
+  native-plugin-happy-path:
+    name: Native plugin happy path
+    runs-on: ubuntu-latest
+    needs: [route]
+    if: ${{ needs.route.outputs.run_q2 == 'true' }}
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Setup OCaml toolchain (OCaml 5.2.1)
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.1
+          dune-cache: true
+      - name: Install OCaml packages
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          opam install -y dune ocamlfind
+          eval "$(opam env)"
+          dune --version
+          ocamlc -version
+      - name: Export OCaml switch binaries to PATH
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+      - name: Build hxhx for native plugin happy path
+        run: |
+          set -euo pipefail
+          HXHX_BIN="$(bash scripts/hxhx/build-hxhx.sh | tail -n 1)"
+          if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
+            echo "Failed to build hxhx binary for native plugin happy path." >&2
+            exit 1
+          fi
+          echo "HXHX_BIN=$HXHX_BIN" >> "$GITHUB_ENV"
       - name: Run auditable native plugin happy path
         env:
           HXHX_BIN: ${{ env.HXHX_BIN }}
         run: |
           set -euo pipefail
           npm run -s test:hxhx:native-plugin-happy-path
-      - name: Emit plugin matrix marker
-        run: echo "PLUGIN_MATRIX_STRICT:PASS"
 
   test-shards:
     name: Tests / ${{ matrix.label }}
@@ -820,7 +885,7 @@ jobs:
     name: Tests
     if: ${{ always() }}
     runs-on: ubuntu-latest
-    needs: [route, secret-scan, guards, standalone-guards, stage0-free-smoke, js-native-smoke, plugin-matrix, test-shards, hxhx-e2e]
+    needs: [route, secret-scan, guards, standalone-guards, stage0-free-smoke, js-native-smoke, plugin-matrix, native-plugin-happy-path, test-shards, hxhx-e2e]
     timeout-minutes: 5
     steps:
       - name: Checkout
