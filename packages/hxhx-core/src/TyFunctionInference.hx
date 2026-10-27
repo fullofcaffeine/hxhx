@@ -772,6 +772,59 @@ class TyFunctionInference {
 		return solver.isSealed() ? solver.published(term) : solver.preview(term);
 	}
 
+	/**
+		Join a retained incomplete Array with a checked complete Array branch.
+		The conditional and its aliases keep the original element variable. A failed
+		constraint changes neither branch; replay only reads an earlier occurrence.
+	 */
+	public function conditionalArrayResult(expression:HxExpr, leftType:TyType, leftTerm:Null<TyInferenceTerm>, rightType:TyType,
+			rightTerm:Null<TyInferenceTerm>, index:TyperIndex):Null<TyType> {
+		final retained = occurrence(expression);
+		if (retained != null)
+			return solver.isSealed() ? solver.published(retained) : solver.preview(retained);
+		if (solver.isSealed() || index == null || leftType.isNullable() || rightType.isNullable())
+			return null;
+		final left = TyAliasExpansion.reveal(leftType);
+		final right = TyAliasExpansion.reveal(rightType);
+		final array = index.getByFullName("Array");
+		if (!Std.isOfType(array, TyClassInfo)
+			|| left.isNullable()
+			|| right.isNullable()
+			|| left.getNominalIdentity() == null
+			|| right.getNominalIdentity() == null
+			|| !left.getNominalIdentity().equals(array.getIdentity())
+			|| !right.getNominalIdentity().equals(array.getIdentity())
+			|| left.getTypeArguments().length != 1
+			|| right.getTypeArguments().length != 1
+			|| left.hasUnknownComponent() == right.hasUnknownComponent())
+			return null;
+		function agrees(type:TyType, term:Null<TyInferenceTerm>):Bool {
+			if (term == null)
+				return true;
+			final preview = solver.preview(term);
+			return type.getSemanticKey() == preview.getSemanticKey() || TyAliasEquivalence.equivalentTypes(type, preview);
+		}
+		if (!agrees(leftType, leftTerm) || !agrees(rightType, rightTerm))
+			return null;
+		final incomplete = left.hasUnknownComponent() ? leftTerm : rightTerm;
+		final original = switch incomplete {
+			case Nominal(identity, [_]) if (identity.equals(array.getIdentity())): incomplete;
+			case _: return null;
+		};
+		final completeType = left.hasUnknownComponent() ? right : left;
+		final completeTerm = left.hasUnknownComponent() ? rightTerm : leftTerm;
+		final fingerprint = TypedBodyFingerprint.exactExpression(expression);
+		final candidate = solver.fork();
+		if (!TyStructuralConstraint.constrainTerms(index, candidate, original, completeTerm == null ? TyInferenceSolver.fromType(completeType) : completeTerm))
+			return null;
+		final result = candidate.preview(original);
+		if (result.hasUnknownComponent() || !TyAliasEquivalence.equivalentTypes(result, completeType))
+			return null;
+		solver.commit(candidate);
+		occurrences.push({expression: expression, term: original, sourceFingerprint: fingerprint});
+		return result;
+	}
+
 	/** Each generic method capture owns fresh variables; aliases keep the same function term. */
 	public function captureMethod(expression:HxExpr, type:TyType, parameters:Array<TyTypeParameterId>, signature:TyFunSig):TyType {
 		if (parameters.length == 0)
