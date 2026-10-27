@@ -1,60 +1,145 @@
 package hxhx;
 
+import hxhx.macro.ExprMacroDispatch;
 import hxhx.macro.MacroRuntimeSession;
 import hxhx.runtime.NullableRuntimeString;
 import hxhx.ExprMacroCallRewrite.ExprMacroCallRewriter;
+import hxhx.ExprMacroDeclarationSelector.capture;
+import hxhx.ExprMacroDeclarationSelector.ExprMacroSelectionScope;
 import hxhx.ExprMacroLexicalScope.ExprMacroLexicalGap;
+
+/**
+	Semantic facts a request supplies so calls can be selected by declaration.
+	The index holds registered module headers; the loader publishes declarations
+	on demand exactly as body typing does. Without this context only the exact
+	string route runs.
+**/
+typedef ExprMacroSelectionContext = {
+	final index:TyperIndex;
+	final loader:Null<ModuleLoader>;
+}
 
 /**
 	Rewrite source macro calls before ordinary body typing.
 	One syntax walker owns lexical visibility and ordered children. A typed call
 	decision either consumes original syntax or visits children before one final
-	transformation. The existing text adapter remains a limited runtime caller;
-	declaration selection and structured native dispatch are not wired here yet.
+	transformation. With a selection context, a callee that selects a public
+	static `macro` declaration is consumed and dispatched as one structured
+	request through `MacroRuntimeSession.expandSelected`; its result is inserted
+	as syntax. Other calls visit their children and then take the exact-text
+	allowlist route, which remains a limited runtime caller.
 **/
 class ExprMacroExpander {
-	public static function expandResolvedModules(modules:Array<ResolvedModule>, session:MacroRuntimeSession,
-			allowlist:Array<String>):{modules:Array<ResolvedModule>, expandedCount:Int} {
-		if (modules == null || modules.length == 0 || session == null || allowlist == null || allowlist.length == 0)
+	public static function expandResolvedModules(modules:Array<ResolvedModule>, session:MacroRuntimeSession, allowlist:Array<String>,
+			?selection:ExprMacroSelectionContext):{
+		modules:Array<ResolvedModule>,
+		expandedCount:Int
+	} {
+		if (modules == null || modules.length == 0 || session == null)
 			return {modules: modules == null ? [] : modules, expandedCount: 0};
 		final allowed = new haxe.ds.StringMap<Bool>();
 		final keys = new Array<String>();
-		for (raw in allowlist) {
+		final entries = allowlist == null ? [] : allowlist;
+		for (raw in entries) {
 			if (raw == null || StringTools.trim(raw).length == 0)
 				continue;
 			final key = StringTools.trim(raw);
 			allowed.set(key, true);
 			keys.push(key);
 		}
-		if (keys.length == 0)
+		if (keys.length == 0 && selection == null)
 			return {modules: modules, expandedCount: 0};
 		var count = 0;
 		final trace = isTrueEnv("HXHX_TRACE_EXPR_MACROS");
-		final rewritten = rewriteResolvedModules(modules, (_, context, _) -> Recurse(call -> {
-			return switch call {
-				case ECall(callee, arguments):
-					if (trace) {
-						final path = renderCalleePath(callee);
-						Sys.println("expr_macro_visit callee=" + (path.length == 0 ? exprKind(callee) : path) + " args=["
-							+ arguments.map(exprKind).join(",") + "]");
-					}
-					final candidate = renderSimpleCall(callee, arguments);
-					if (trace && candidate != null)
-						Sys.println("expr_macro_candidate raw=" + candidate);
-					final imports = buildImportMap(context.directives, context.packagePath);
-					final matched = candidate == null ? null : matchAllowlistedCall(candidate, allowed, keys, imports, context.packagePath);
-					if (matched == null) call else {
-						if (trace)
-							Sys.println("expr_macro_expand call=" + matched);
-						final replacement = HxParser.parseExprText(session.expandExpr(matched));
-						count++;
-						replacement;
-					}
-				case _: throw "source call continuation received a non-call";
-			};
-		}));
+		final typerContexts = new haxe.ds.ObjectMap<HxClassDecl, TyperContext>();
+		final rewritten = rewriteResolvedModules(modules, (original, context, scope) -> {
+			final selected = selection == null ? null : selectDeclaration(original, context, scope, selection, typerContexts);
+			if (selected != null) {
+				count++;
+				return Consume(dispatchSelected(selected, context, session, trace));
+			}
+			return Recurse(call -> {
+				return switch call {
+					case ECall(callee, arguments):
+						if (trace) {
+							final path = renderCalleePath(callee);
+							Sys.println("expr_macro_visit callee=" + (path.length == 0 ? exprKind(callee) : path) + " args=["
+								+ arguments.map(exprKind).join(",") + "]");
+						}
+						final candidate = renderSimpleCall(callee, arguments);
+						if (trace && candidate != null)
+							Sys.println("expr_macro_candidate raw=" + candidate);
+						final imports = buildImportMap(context.directives, context.packagePath);
+						final matched = candidate == null ? null : matchAllowlistedCall(candidate, allowed, keys, imports, context.packagePath);
+						if (matched == null) call else {
+							if (trace)
+								Sys.println("expr_macro_expand call=" + matched);
+							final replacement = HxParser.parseExprText(session.expandExpr(matched));
+							count++;
+							replacement;
+						}
+					case _: throw "source call continuation received a non-call";
+				};
+			});
+		});
 		return {modules: rewritten.modules, expandedCount: count};
 	}
+
+	/**
+		Select a macro declaration for one call before its children are visited.
+		Visible names come from the walker. Where the walker cannot prove them, a
+		callee that would still select a macro declaration with no local names
+		assumed is reported explicitly: it can neither be typed as an ordinary call
+		nor dispatched with unproven scope. A value-bound root stays ordinary.
+	**/
+	static function selectDeclaration(call:HxExpr, context:ExprMacroSourceContext, scope:ExprMacroSelectionScope, selection:ExprMacroSelectionContext,
+			typerContexts:haxe.ds.ObjectMap<HxClassDecl, TyperContext>):Null<SelectedExprMacroCall> {
+		final typerContext = typerContextFor(context, selection, typerContexts);
+		return switch scope.visibility {
+			case Known(_): capture(call, typerContext, scope);
+			case Unavailable(reason):
+				final candidate = capture(call, typerContext, {visibility: Known([]), isStaticContext: scope.isStaticContext});
+				if (candidate != null)
+					throw context.filePath + ": expression macro " + describeDeclaration(candidate.getDeclaration())
+						+ " is called where lexical scope cannot be proven: " + reason;
+				null;
+		};
+	}
+
+	/** One semantic context per source class, bound through the request index like body typing. */
+	static function typerContextFor(context:ExprMacroSourceContext, selection:ExprMacroSelectionContext,
+			typerContexts:haxe.ds.ObjectMap<HxClassDecl, TyperContext>):TyperContext {
+		final existing = typerContexts.get(context.sourceClass);
+		if (existing != null)
+			return existing;
+		final info = selection.index.getForSourceClass(context.sourceClass);
+		final className = HxClassDecl.getName(context.sourceClass);
+		final fullName = info != null ? info.getFullName() : (context.packagePath.length == 0 ? className : context.packagePath + "." + className);
+		final resolvedDirectives = TyperStage.resolveModuleDirectives(context.directives, context.packagePath, context.modulePath, selection.index,
+			selection.loader);
+		final created = new TyperContext(selection.index, context.filePath, context.modulePath, context.packagePath, context.directives, fullName,
+			selection.loader, resolvedDirectives);
+		typerContexts.set(context.sourceClass, created);
+		return created;
+	}
+
+	/** Send the selected call as one typed request; only syntax or an explicit failure comes back. */
+	static function dispatchSelected(selected:SelectedExprMacroCall, context:ExprMacroSourceContext, session:MacroRuntimeSession, trace:Bool):HxExpr {
+		final request = new ExprMacroDispatchRequest(selected.getDeclaration(), selected.getArguments(), context.filePath, context.modulePath);
+		if (trace)
+			Sys.println("expr_macro_dispatch declaration=" + request.describe() + " args=" + request.getArguments().length);
+		return switch session.expandSelected(request) {
+			case Expanded(expression):
+				if (expression == null)
+					throw context.filePath + ": expression macro " + request.describe() + " returned no syntax";
+				expression;
+			case Unavailable(reason):
+				throw context.filePath + ": expression macro " + request.describe() + " cannot be expanded: " + reason;
+		};
+	}
+
+	static function describeDeclaration(declaration:TyDeclarationInfo):String
+		return declaration.getOwner().getCanonicalName() + "." + declaration.getSignature().getName();
 
 	/**
 		Visit every source class using source-owned scope without publishing types.

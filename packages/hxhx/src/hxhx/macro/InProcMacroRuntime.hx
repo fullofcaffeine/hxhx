@@ -34,6 +34,7 @@ class InProcMacroRuntime {
 			runHook: impl.runHook,
 			runTypeNotFoundHook: impl.runTypeNotFoundHook,
 			expandExpr: impl.expandExpr,
+			expandSelected: impl.expandSelected,
 			close: impl.close
 		};
 	}

@@ -219,6 +219,7 @@ class M14ExprMacroLexicalTraversalTest {
 			run: _ -> throw "unexpected run",
 			runHook: (_, _) -> throw "unexpected hook",
 			runTypeNotFoundHook: (_, _) -> throw "unexpected type hook",
+			expandSelected: _ -> throw "unexpected selected dispatch",
 			expandExpr: expression -> {
 				calls.push(expression);
 				return expression == "Second.expand()" ? '"second"' : '"first"';

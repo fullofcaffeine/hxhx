@@ -523,10 +523,22 @@ class Stage3Compiler {
 			return error(failure.message);
 		}
 
-		// Stage4 bring-up: expression macro expansion pass (pre-typing).
+		// The header index and request loader exist before expression macro expansion so a call can be
+		// selected by its macro declaration. Expansion rewrites expressions only; when it changed a module,
+		// both are rebuilt once so later typing binds the rewritten source classes.
+		var typerIndex = TyperIndex.buildHeaders(resolvedForTyping);
+		function openModuleLoader(index:TyperIndex):ModuleLoader {
+			return new ModuleLoader(classPaths, definesMap, index, function(typePath:String):Bool {
+				return dispatchOnTypeNotFoundHooks(buildMacroPreparer.getSession(), typePath, requestOutput);
+			}, !noEmit, requestContext.sourceProvider, buildMacroPreparer.prepare);
+		}
+		var moduleLoader = openModuleLoader(typerIndex);
+
+		// Expression macro expansion pass (pre-typing).
 		//
-		// This is a small rung that only expands allowlisted exact call strings, and only supports
-		// a tiny returned expression subset (parsed by `HxParser.parseExprText`).
+		// A call whose callee selects a public static `macro` declaration is dispatched as one typed
+		// request; the exact allowlisted call strings remain the route for builtin and registered
+		// no-argument expressions (their text result is parsed by `HxParser.parseExprText`).
 		if (!typeOnly && exprMacros.length > 0) {
 			final expressionMacroSession = buildMacroPreparer.getSession();
 			if (expressionMacroSession == null) {
@@ -537,16 +549,28 @@ class Stage3Compiler {
 			closeMacroSession();
 			return error("expression macro expansion unavailable in stage0 profiling lane");
 			#else
-			final exp = ExprMacroExpander.expandResolvedModules(resolvedForTyping, expressionMacroSession, exprMacros);
-			resolvedForTyping = exp.modules;
+			final exp = try {
+				ExprMacroExpander.expandResolvedModules(resolvedForTyping, expressionMacroSession, exprMacros, {index: typerIndex, loader: moduleLoader});
+			} catch (e:TyperError) {
+				closeMacroSession();
+				final rawDiagnostic = rawTyperDiagnostic(e);
+				if (rawDiagnostic != null)
+					return haxeDiagnosticError(rawDiagnostic);
+				return error("expression macro expansion failed: " + formatException(e));
+			} catch (e:String) {
+				closeMacroSession();
+				return error("expression macro expansion failed: " + e);
+			}
+			if (exp.expandedCount > 0) {
+				resolvedForTyping = exp.modules;
+				for (discovered in moduleLoader.drainNewModules())
+					resolvedForTyping.push(discovered);
+				typerIndex = TyperIndex.buildHeaders(resolvedForTyping);
+				moduleLoader = openModuleLoader(typerIndex);
+			}
 			requestOutput.stdoutLine("expr_macros_expanded=" + exp.expandedCount);
 			#end
 		}
-
-		final typerIndex = TyperIndex.buildHeaders(resolvedForTyping);
-		final moduleLoader = new ModuleLoader(classPaths, definesMap, typerIndex, function(typePath:String):Bool {
-			return dispatchOnTypeNotFoundHooks(buildMacroPreparer.getSession(), typePath, requestOutput);
-		}, !noEmit, requestContext.sourceProvider, buildMacroPreparer.prepare);
 		moduleLoader.markResolvedAlready(resolvedForTyping);
 
 		// Stage3 diagnostic mode: type the full resolved graph (best-effort), then stop.
