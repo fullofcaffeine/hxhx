@@ -10,11 +10,11 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 	}
 
 	/** Ordered call bindings must stay inside the one box at the concrete integer return boundary. */
-	static function assertIntegerReturnCarrier(generated:String, fullBody:Bool):Void {
+	static function assertIntegerReturnCarrier(generated:String):Void {
 		final functions = generated.split("\n").filter(line -> StringTools.startsWith(line, "let rec combine ("));
 		assertTrue(functions.length == 1, "Expected one emitted nested integer combine function.");
 		final body = functions[0];
-		assertTrue(body.indexOf(fullBody ? "HxReturn_combine (Obj.repr ((let " : ": Obj.t = Obj.repr ((let ") >= 0,
+		assertTrue(body.indexOf("HxReturn_combine (Obj.repr ((let ") >= 0,
 			"The concrete nested integer result did not cross its Dynamic return boundary after ordered call binding.");
 		assertTrue(body.split("Obj.repr").length == 2, "Nested integer calls must box only the final result, not their arguments or the result twice.");
 		assertTrue(body.indexOf("let __hx_call_function = (addBits (this_))") >= 0,
@@ -244,20 +244,13 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		final numericCarrierMain = TyperStage.typeModule(ParserStage.parse(numericCarrierMainSource, numericCarrierMainPath));
 		final numericCarrierHelper = TyperStage.typeModule(ParserStage.parse(numericCarrierSource, numericCarrierPath));
 		final numericCarrierProgram = MacroStage.expandProgram([numericCarrierMain, numericCarrierHelper], []);
-		// This regression checks the diagnostic mode that emits only the first
-		// return expression. Select it explicitly: a std/ path must not choose
-		// whether the caller receives complete function bodies.
+		// Complete method bodies carry a returned value through the function's
+		// return exception. The concrete nested integer result must cross the
+		// Dynamic return boundary there inside one box.
 		final numericCarrierExecutable = EmitterStage.emitToDir(numericCarrierProgram, numericCarrierOutputDir);
 		assertTrue(FileSystem.exists(numericCarrierExecutable), "Nested integer carrier fixture did not build its OCaml executable.");
 		final numericCarrierGenerated = File.getContent(haxe.io.Path.join([numericCarrierOutputDir, "NestedIntegerCarrier.ml"]));
-		assertIntegerReturnCarrier(numericCarrierGenerated, false);
-		// Full bodies carry a returned value through the function's return
-		// exception. Check the same conversion there without requiring the
-		// diagnostic mode's direct-return layout.
-		final fullCarrierOutputDir = haxe.io.Path.join([root, "out_numeric_carrier_full"]);
-		EmitterStage.emitToDir(numericCarrierProgram, fullCarrierOutputDir);
-		final fullCarrierGenerated = File.getContent(haxe.io.Path.join([fullCarrierOutputDir, "NestedIntegerCarrier.ml"]));
-		assertIntegerReturnCarrier(fullCarrierGenerated, true);
+		assertIntegerReturnCarrier(numericCarrierGenerated);
 		// The preceding root-only typing deliberately exercises the inferred
 		// Dynamic return layout. Runtime proof needs actual declarations for
 		// Sys.println and the constructor, rather than that diagnostic setup.

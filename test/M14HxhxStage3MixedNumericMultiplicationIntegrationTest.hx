@@ -270,8 +270,12 @@ class M14HxhxStage3MixedNumericMultiplicationIntegrationTest {
 		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed, typedTimeSource, typedTimer, typedCollidingTimer], []), outDir);
 		final generated = File.getContent(haxe.io.Path.join([outDir, "MixedNumericMultiplication.ml"]));
 		assertTrue(countOccurrences(generated, "*.") >= 6, "mixed multiplication did not use Float operators: " + generated);
-		assertTrue(generated.indexOf("HxInt.mul (1000)") < 0, "the elapsed-time scale still used Int multiplication: " + generated);
-		assertTrue(generated.indexOf("HxInt.mul (6) (7)") >= 0, "pure Int multiplication lost HxInt semantics: " + generated);
+		// Calls bind their callee and arguments in source order before applying them,
+		// so match that ordered form. Only the pure Int product may select Int
+		// multiplication; every elapsed-time scale must stay on Float operators.
+		assertTrue(countOccurrences(generated, "HxInt.mul") == 1, "only the pure Int product may use Int multiplication: " + generated);
+		assertTrue(generated.indexOf("(HxInt.mul) in let __hx_call_argument_0 = (6) in let __hx_call_argument_1 = (7)") >= 0,
+			"pure Int multiplication lost HxInt semantics: " + generated);
 
 		final nativeResult = run(executable, []);
 		assertTrue(nativeResult.exitCode == 0, "native mixed numeric executable failed: " + nativeResult.stderr);
