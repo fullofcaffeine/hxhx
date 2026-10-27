@@ -63,6 +63,7 @@ class TyFunctionInference {
 	var iteratorProtocols:Array<TyIteratorProtocolSource> = [];
 	var indexedAccesses:Array<TyIndexedAccessBinding> = [];
 	var indexedUpdates:Array<TyIndexedUpdateSelection> = [];
+	var indexedUpdateOutcomes:Array<TyIndexedUpdateOutcome> = [];
 
 	static function unchangedArray<T>(read:() -> Array<T>):() -> Bool {
 		final saved = read().copy();
@@ -90,6 +91,7 @@ class TyFunctionInference {
 			unchangedArray(() -> iteratorProtocols),
 			unchangedArray(() -> indexedAccesses),
 			unchangedArray(() -> indexedUpdates),
+			unchangedArray(() -> indexedUpdateOutcomes),
 			unchangedArray(() -> diagnosticProbes)
 		];
 		final savedLocals = new StringMap<TyInferenceTerm>();
@@ -125,6 +127,58 @@ class TyFunctionInference {
 		return new TyIndexedUpdateTrial(this, candidate, query, unchanged);
 	}
 
+	/** Only checked results inside their own candidate can create these synthetic occurrences. */
+	@:allow(TyIndexedComputedResult)
+	function recordIndexedComputed(trial:TyIndexedUpdateTrial, result:TyIndexedComputedResult, environment:TyFunctionEnv):Void {
+		if (trial == null || trial.candidate != this || trial.committed || result.query != trial.query || environment.getInference() != this
+			|| solver.isSealed())
+			throw "indexed computed result belongs to another transaction";
+		result.validate(environment);
+		if (sourceTerm(result.source, environment) != null) {
+			if (expressionType(result.source, result.type, environment).getSemanticKey() != result.type.getSemanticKey())
+				throw "indexed result query already has another type";
+			return;
+		}
+		occurrences.push({
+			expression: result.source,
+			term: TyInferenceSolver.fromType(result.type),
+			sourceFingerprint: TypedBodyFingerprint.exactExpression(result.source)
+		});
+	}
+
+	/** The checked outcome belongs to the same transaction as its final static result term. */
+	@:allow(TyperStage)
+	function recordIndexedOutcome(trial:TyIndexedUpdateTrial, outcome:TyIndexedUpdateOutcome, environment:TyFunctionEnv):Void {
+		if (trial == null
+			|| trial.candidate != this
+			|| trial.committed
+			|| outcome.selection.query != trial.query
+			|| environment.getInference() != this
+			|| solver.isSealed())
+			throw "indexed outcome belongs to another transaction";
+		outcome.validate(this);
+		final term = sourceTerm(trial.query.setterSource, environment);
+		if (term == null || sourceTerm(trial.query.source, environment) != null)
+			throw "indexed outcome lost its distinct setter or original result query";
+		occurrences.push({
+			expression: trial.query.source,
+			term: term,
+			sourceFingerprint: TypedBodyFingerprint.exactExpression(trial.query.source)
+		});
+		indexedUpdateOutcomes.push(outcome);
+	}
+
+	/** Identity-only foundation selections are deliberately absent from this checked-result lookup. */
+	public function indexedUpdateOutcome(source:HxExpr, environment:TyFunctionEnv):Null<TyIndexedUpdateOutcome> {
+		for (outcome in indexedUpdateOutcomes)
+			if (outcome.selection.query.source == source) {
+				outcome.selection.query.validate(environment.getOwnerIdentity());
+				outcome.validate(this);
+				return outcome;
+			}
+		return null;
+	}
+
 	/**
 		Publish one fully checked selection after every owner validates its base.
 		Synchronous publication contains no callbacks, so method inputs cannot change
@@ -142,6 +196,8 @@ class TyFunctionInference {
 				throw "indexed update candidate changed authored lexical or control state";
 		for (selection in trial.candidate.indexedUpdates)
 			selection.validate(owner);
+		for (outcome in trial.candidate.indexedUpdateOutcomes)
+			outcome.validate(trial.candidate);
 		solver.validateCandidate(trial.candidate.solver);
 		inputs.validateBatch(batch);
 		// Every check is complete before any participant publishes state.
@@ -157,6 +213,7 @@ class TyFunctionInference {
 		indexedAccesses = trial.candidate.indexedAccesses.copy();
 		indexedUpdates = trial.candidate.indexedUpdates.copy();
 		indexedUpdates.push(selection);
+		indexedUpdateOutcomes = trial.candidate.indexedUpdateOutcomes.copy();
 		diagnosticProbes = trial.candidate.diagnosticProbes.copy();
 		locals = new StringMap();
 		for (key => value in trial.candidate.locals)
@@ -505,6 +562,7 @@ class TyFunctionInference {
 		candidate.iteratorProtocols = iteratorProtocols.copy();
 		candidate.indexedAccesses = indexedAccesses.copy();
 		candidate.indexedUpdates = indexedUpdates.copy();
+		candidate.indexedUpdateOutcomes = indexedUpdateOutcomes.copy();
 		candidate.diagnosticProbes = diagnosticProbes.copy();
 		for (key => value in locals)
 			candidate.locals.set(key, value);
@@ -764,7 +822,8 @@ class TyFunctionInference {
 		actual:Array<TyType>,
 		environment:TyFunctionEnv,
 		index:TyperIndex,
-		accepts:(TyType, TyType) -> Bool
+		accepts:(TyType, TyType) -> Bool,
+		?acceptsAt:(Int, TyType, TyType) -> Bool
 	}):TyType {
 		final expression = input.expression;
 		final declaration = input.declaration;
@@ -803,7 +862,8 @@ class TyFunctionInference {
 				arguments: input.arguments,
 				terms: terms,
 				index: input.index,
-				accepts: input.accepts
+				accepts: input.accepts,
+				acceptsAt: input.acceptsAt
 			}))
 				throw "selected direct generic call has conflicting operand constraints";
 			switch instantiated {

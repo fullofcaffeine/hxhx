@@ -8,6 +8,7 @@ typedef TyDirectGenericCallConstraintInput = {
 	final terms:Array<Null<TyInferenceTerm>>;
 	final index:TyperIndex;
 	final accepts:(TyType, TyType) -> Bool;
+	final ?acceptsAt:(Int, TyType, TyType) -> Bool;
 }
 
 /**
@@ -57,7 +58,7 @@ function constrain(input:TyDirectGenericCallConstraintInput):Bool {
 		if (supplied.isNullLiteral())
 			continue;
 		if (!wanted.hasUnknownComponent() && !supplied.hasUnknownComponent()) {
-			if (!input.accepts(wanted, supplied))
+			if (!(input.acceptsAt == null ? input.accepts(wanted, supplied) : input.acceptsAt(source, wanted, supplied)))
 				return false;
 			continue;
 		}

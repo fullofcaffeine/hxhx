@@ -11,6 +11,8 @@ typedef TyIndexedUpdateQueryInput = {
 	final kind:TyIndexedUpdateKind;
 	final getterSource:HxExpr;
 	final computedSource:HxExpr;
+	final placeResultSource:HxExpr;
+	final setterInputSource:HxExpr;
 	final setterSource:HxExpr;
 }
 
@@ -21,6 +23,8 @@ class TyIndexedUpdateQuery {
 	public final kind:TyIndexedUpdateKind;
 	public final getterSource:HxExpr;
 	public final computedSource:HxExpr;
+	public final placeResultSource:HxExpr;
+	public final setterInputSource:HxExpr;
 	public final setterSource:HxExpr;
 
 	final fingerprints:Array<String>;
@@ -31,6 +35,8 @@ class TyIndexedUpdateQuery {
 		kind = input.kind;
 		getterSource = input.getterSource;
 		computedSource = input.computedSource;
+		placeResultSource = input.placeResultSource;
+		setterInputSource = input.setterInputSource;
 		setterSource = input.setterSource;
 		if (owner == null || owner.length == 0)
 			throw "indexed update requires an owner";
@@ -58,7 +64,14 @@ class TyIndexedUpdateQuery {
 	}
 
 	function sources():Array<HxExpr>
-		return [source, getterSource, computedSource, setterSource];
+		return [
+			source,
+			getterSource,
+			computedSource,
+			placeResultSource,
+			setterInputSource,
+			setterSource
+		];
 
 	/** A different owner or a mutated original/query cannot borrow this candidate's facts. */
 	public function validate(candidateOwner:String):Void {
