@@ -42,7 +42,7 @@ class M14HihForInIntegrationTest {
 
 		final decl = new HxParser(src).parseModule("Main");
 		final pm = new ParsedModule(src, decl, "<m14_hih_forin>");
-		final tm = TyperStage.typeModule(pm);
+		final tm = M14Stage3RuntimeFixture.typeResolved({module: new ResolvedModule("Main", pm.getFilePath(), pm), root: "."});
 		final cls = tm.getEnv().getMainClass();
 		final fns = cls.getFunctions();
 

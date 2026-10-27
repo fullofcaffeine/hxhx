@@ -70,8 +70,7 @@ class M14Stage3ExceptionIntegrationTest {
 		final path = Path.join([sourceRoot, "Main.hx"]);
 		final parsed = ParserStage.parse(File.getContent(path), path);
 		final resolved = new ResolvedModule("Main", path, parsed);
-		final index = TyperIndex.build([resolved]);
-		final typed = TyperStage.typeResolvedModule(resolved, index);
+		final typed = M14Stage3RuntimeFixture.typeResolved({module: resolved, root: sourceRoot});
 		assertExactThrowOwnership(typed);
 		final output = Sys.args().indexOf("nominal") >= 0 ? ".tmp/stage3-exception-nominal-seed" : ".tmp/stage3-exception-seed";
 		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), output, true);

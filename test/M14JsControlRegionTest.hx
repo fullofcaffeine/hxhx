@@ -20,7 +20,7 @@ class M14JsControlRegionTest {
 		if (code != 0 || output != expected)
 			throw "upstream local function control differs: " + output + errors;
 		final module = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
-		JsRuntimeFixture.assertRuntime(TyperStage.typeResolvedModule(module, TyperIndex.build([module])), "Main", expected);
+		JsRuntimeFixture.assertRuntime(M14Stage3RuntimeFixture.typeResolved({module: module, root: "test/fixtures/js_control_region"}), "Main", expected);
 		final position = HxPos.unknown();
 		for (entry in [
 			HxExpr.ELoweredControl(Return, "another-function", [EInt(1)], position),

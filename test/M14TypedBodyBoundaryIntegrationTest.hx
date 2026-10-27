@@ -348,8 +348,7 @@ class M14TypedBodyBoundaryIntegrationTest {
 		].join("\n");
 		final parsed = ParserStage.parse(source, filePath);
 		final resolved = new ResolvedModule("NullCoalescingLoopControl", filePath, parsed);
-		final index = TyperIndex.build([resolved]);
-		final typed = TyperStage.typeResolvedModule(resolved, index);
+		final typed = M14Stage3RuntimeFixture.typeResolved({module: resolved, root: "."});
 		final body = findFunction(findClass(typed, "NullCoalescingLoopControl"), "check").getBody();
 		final loop = body.getStatements()[0];
 		assertTrue(loop.getTag() == TypedStmtTag.ForIn, "loop-control fixture lost its for loop");
@@ -750,7 +749,8 @@ class M14TypedBodyBoundaryIntegrationTest {
 			[SReturn(ETryCatchRaw(raw), position)], "", [], position);
 		final sourceClass = new HxClassDecl("Main", true, [sourceFunction], []);
 		final parsed = new ParsedModule("", new HxModuleDecl("", [], sourceClass, [sourceClass], false, false), "TypedTerminalReturnBlock.hx");
-		final body = findFunction(findClass(TyperStage.typeModule(parsed), "Main"), "decode").getBody();
+		final typed = M14Stage3RuntimeFixture.typeResolved({module: new ResolvedModule("Main", parsed.getFilePath(), parsed), root: "."});
+		final body = findFunction(findClass(typed, "Main"), "decode").getBody();
 		assertTrue(body.getStatements().length == 1 && body.getStatements()[0].getTag() == TypedStmtTag.Block,
 			"terminal return-block expression did not lift into structural statements");
 		assertTrue(bodyContainsTag(body, TypedExprTag.Assign), "terminal return block hid its assignment");
@@ -774,7 +774,8 @@ class M14TypedBodyBoundaryIntegrationTest {
 			"Dynamic", [SExpr(EUntyped(ETryCatchRaw(raw)), position)], "", [], position);
 		final sourceClass = new HxClassDecl("Main", true, [sourceFunction], []);
 		final parsed = new ParsedModule("", new HxModuleDecl("", [], sourceClass, [sourceClass], false, false), "TypedUntypedBlock.hx");
-		final body = findFunction(findClass(TyperStage.typeModule(parsed), "Main"), "decodeUntyped").getBody();
+		final typed = M14Stage3RuntimeFixture.typeResolved({module: new ResolvedModule("Main", parsed.getFilePath(), parsed), root: "."});
+		final body = findFunction(findClass(typed, "Main"), "decodeUntyped").getBody();
 		assertTrue(body.getStatements().length == 1 && body.getStatements()[0].getTag() == TypedStmtTag.Block,
 			"untyped statement block did not lift into structural statements");
 		assertTrue(bodyContainsTag(body, TypedExprTag.Assign), "untyped statement block hid its assignment");

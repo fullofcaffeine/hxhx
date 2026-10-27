@@ -70,7 +70,7 @@ class M14KeyValueProtocolDiagnosticsTest {
 			final module = new ResolvedModule("Main", path, ParserStage.parse(source, path));
 			var rejected = false;
 			try {
-				TyperStage.typeResolvedModule(module, TyperIndex.build([module]));
+				M14Stage3RuntimeFixture.typeResolved({module: module, root: output});
 			} catch (error:TyperError) {
 				if (error.filePath != path || error.pos.line != 3 || error.message.indexOf(item.candidateDiagnostic) < 0)
 					throw item.label + ": inaccurate protocol diagnostic: " + error.toString();
