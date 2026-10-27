@@ -108,80 +108,66 @@ let projection = fun self (owner : HxClassDecl.t) (declaration : HxFunctionDecl.
   )
 )
 
-let body = fun self (projection__local : TypedBackendFunctionProjection.t) -> let _gthis = Obj.magic self in let locals = Obj.magic (TypedBackendFunctionProjection.getLocalCatalog (Obj.magic projection__local) ()) in let fields = Obj.magic (TypedBackendFunctionProjection.getFieldReadCatalog (Obj.magic projection__local) ()) in Backend_source_SourceFunctionBodyRewriter.body (Obj.magic (HxFunctionDecl.getBody (Obj.magic (TypedBackendFunctionProjection.getDeclaration (Obj.magic projection__local) ())))) (fun expression -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
-  ignore (if (match expression with
-    | HxExpr.EParenthesized (_, _) -> 0
-    | HxExpr.ESourceTry (_, _, _) -> 1
-    | HxExpr.ESourceFor (_, _, _, _) -> 2
-    | HxExpr.ELoweredControl (_, _, _, _) -> 3
-    | HxExpr.ENull -> 4
-    | HxExpr.EBool _ -> 5
-    | HxExpr.EString _ -> 6
-    | HxExpr.EInt _ -> 7
-    | HxExpr.EFloat _ -> 8
-    | HxExpr.EEnumValue _ -> 9
-    | HxExpr.EThis -> 10
-    | HxExpr.ESuper -> 11
-    | HxExpr.EIdent _ -> 12
-    | HxExpr.EField (_, _) -> 13
-    | HxExpr.ENullSafeField (_, _) -> 14
-    | HxExpr.ECall (_, _) -> 15
-    | HxExpr.EMacroExpr (_, _) -> 16
-    | HxExpr.EMacroType _ -> 17
-    | HxExpr.ELambda (_, _, _) -> 18
-    | HxExpr.ETryCatchRaw _ -> 19
-    | HxExpr.ESwitchRaw _ -> 20
-    | HxExpr.ESwitch (_, _, _) -> 21
-    | HxExpr.ENew (_, _) -> 22
-    | HxExpr.EUnop (_, _, _) -> 23
-    | HxExpr.EBinop (_, _, _) -> 24
-    | HxExpr.ETernary (_, _, _) -> 25
-    | HxExpr.ESourceIf (_, _, _, _) -> 26
-    | HxExpr.EThrow (_, _) -> 27
-    | HxExpr.EAnon (_, _) -> 28
-    | HxExpr.EArrayComprehension (_, _, _, _) -> 29
-    | HxExpr.EArrayDecl _ -> 30
-    | HxExpr.EArrayAccess (_, _) -> 31
-    | HxExpr.ERange (_, _) -> 32
-    | HxExpr.ECast (_, _) -> 33
-    | HxExpr.ECheckType (_, _) -> 34
-    | HxExpr.EUntyped _ -> 35
-    | HxExpr.EUnsupported _ -> 36
-    | HxExpr.EReturn _ -> 37
-    | HxExpr.EVars _ -> 38
-    | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 39
-    | HxExpr.EWhile (_, _, _, _, _) -> 40
-    | HxExpr.EBreak _ -> 41
-    | HxExpr.EContinue _ -> 42
-    | HxExpr.EDiscardThen (_, _) -> 43
-    | HxExpr.ESourceGroup (_, _) -> 44
-    | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g = (match expression with
-    | HxExpr.EIdent __enum_param_30 -> __enum_param_30
-    | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g : string) in let tempMaybeTypedBackendFieldReadProjection = ref (Obj.magic (HxRuntime.hx_null) : TypedBackendFieldReadProjection.t) in (
-    ignore (if TypedBackendLocalCatalog.findByProjectedName (Obj.magic locals) (name : string) == Obj.magic (HxRuntime.hx_null) then let __assign_31 = Obj.magic (Obj.magic (TypedBackendFieldReadCatalog.findByProjectedName (Obj.magic fields) (name : string))) in (
-      tempMaybeTypedBackendFieldReadProjection := __assign_31;
-      __assign_31
-    ) else let __assign_32 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-      tempMaybeTypedBackendFieldReadProjection := __assign_32;
-      __assign_32
-    ));
-    let entry = Obj.magic (!tempMaybeTypedBackendFieldReadProjection) in if entry == Obj.magic (HxRuntime.hx_null) then let __assign_33 = Obj.magic expression in (
-      tempResult := __assign_33;
-      __assign_33
-    ) else let field = Obj.magic (TypedBackendFieldReadProjection.getField (Obj.magic entry) ()) in if not (TyFieldInfo.getIsStatic (Obj.magic field) ()) then let __assign_34 = Obj.magic (let __enum_arg_35 = Obj.magic (HxExpr.EThis) in let __enum_arg_36 = (TyFieldInfo.getName (Obj.magic field) () : string) in HxExpr.EField (Stdlib.Sys.opaque_identity __enum_arg_35, __enum_arg_36)) in (
-      tempResult := __assign_34;
-      __assign_34
-    ) else let _this = Obj.magic ((Obj.magic _gthis : t).ownerNames) in let key = (TyNominalTypeId.getCanonicalName (Obj.magic (TyFieldInfo.getOwner (Obj.magic field) ())) () : string) in let tempMaybeString = (HxMap.get_string (Obj.magic _this) (key : string) : string) in let owner = (tempMaybeString : string) in (
-      ignore (if owner == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_37 = "Python static field has no emitted declaration owner: " in let __string_part_38 = HxString.toStdString (TyFieldInfo.getCanonicalKey (Obj.magic field) ()) in __string_part_37 ^ __string_part_38)) ["Dynamic"] else ());
-      let __assign_39 = Obj.magic (let __enum_arg_41 = Obj.magic (let __enum_arg_40 = (owner : string) in HxExpr.EIdent (Stdlib.Sys.opaque_identity __enum_arg_40)) in let __enum_arg_42 = (TyFieldInfo.getName (Obj.magic field) () : string) in HxExpr.EField (Stdlib.Sys.opaque_identity __enum_arg_41, __enum_arg_42)) in (
-        tempResult := __assign_39;
-        __assign_39
+let body = fun self (projection__local : TypedBackendFunctionProjection.t) -> let _gthis = Obj.magic self in let locals = Obj.magic (TypedBackendFunctionProjection.getLocalCatalog (Obj.magic projection__local) ()) in let fields = Obj.magic (TypedBackendFunctionProjection.getFieldReadCatalog (Obj.magic projection__local) ()) in let constructors = Obj.magic (TypedBackendConstructorCatalog.getEntries (Obj.magic (TypedBackendFunctionProjection.getConstructorCatalog (Obj.magic projection__local) ())) ()) in Backend_source_SourceFunctionBodyRewriter.bodyWithOriginal (Obj.magic (HxFunctionDecl.getBody (Obj.magic (TypedBackendFunctionProjection.getDeclaration (Obj.magic projection__local) ())))) (fun original expression -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
+  ignore (match expression with
+    | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let tempMaybeTypedBackendFieldReadProjection = ref (Obj.magic (HxRuntime.hx_null) : TypedBackendFieldReadProjection.t) in (
+      ignore (if TypedBackendLocalCatalog.findByProjectedName (Obj.magic locals) (name : string) == Obj.magic (HxRuntime.hx_null) then let __assign_31 = Obj.magic (Obj.magic (TypedBackendFieldReadCatalog.findByProjectedName (Obj.magic fields) (name : string))) in (
+        tempMaybeTypedBackendFieldReadProjection := __assign_31;
+        __assign_31
+      ) else let __assign_32 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+        tempMaybeTypedBackendFieldReadProjection := __assign_32;
+        __assign_32
+      ));
+      let entry = Obj.magic (!tempMaybeTypedBackendFieldReadProjection) in if entry == Obj.magic (HxRuntime.hx_null) then let __assign_33 = Obj.magic expression in (
+        tempResult := __assign_33;
+        __assign_33
+      ) else let field = Obj.magic (TypedBackendFieldReadProjection.getField (Obj.magic entry) ()) in if not (TyFieldInfo.getIsStatic (Obj.magic field) ()) then let __assign_34 = Obj.magic (let __enum_arg_35 = Obj.magic (HxExpr.EThis) in let __enum_arg_36 = (TyFieldInfo.getName (Obj.magic field) () : string) in HxExpr.EField (Stdlib.Sys.opaque_identity __enum_arg_35, __enum_arg_36)) in (
+        tempResult := __assign_34;
+        __assign_34
+      ) else let _this = Obj.magic ((Obj.magic _gthis : t).ownerNames) in let key = (TyNominalTypeId.getCanonicalName (Obj.magic (TyFieldInfo.getOwner (Obj.magic field) ())) () : string) in let tempMaybeString = (HxMap.get_string (Obj.magic _this) (key : string) : string) in let owner = (tempMaybeString : string) in (
+        ignore (if owner == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_37 = "Python static field has no emitted declaration owner: " in let __string_part_38 = HxString.toStdString (TyFieldInfo.getCanonicalKey (Obj.magic field) ()) in __string_part_37 ^ __string_part_38)) ["Dynamic"] else ());
+        let __assign_39 = Obj.magic (let __enum_arg_41 = Obj.magic (let __enum_arg_40 = (owner : string) in HxExpr.EIdent (Stdlib.Sys.opaque_identity __enum_arg_40)) in let __enum_arg_42 = (TyFieldInfo.getName (Obj.magic field) () : string) in HxExpr.EField (Stdlib.Sys.opaque_identity __enum_arg_41, __enum_arg_42)) in (
+          tempResult := __assign_39;
+          __assign_39
+        )
       )
     )
-  ) else let __assign_43 = Obj.magic expression in (
-    tempResult := __assign_43;
-    __assign_43
-  ));
+    | HxExpr.ENew (_p0, _p1) -> (
+      ignore _p0;
+      let _g2 = Obj.magic _p1 in let arguments = Obj.magic _g2 in let owner = ref (Obj.magic (HxRuntime.hx_null) : string) in let _g3 = ref 0 in (
+        ignore (try while !_g3 < HxArray.length constructors do ignore (let entry = Obj.magic (let __array_read_receiver_43 = constructors in let __array_read_index_44 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_43) __array_read_index_44) in (
+          ignore (let __old_45 = !_g3 in let __new_46 = HxInt.add __old_45 1 in (
+            ignore (_g3 := __new_46);
+            __new_46
+          ));
+          if let __enum_eq_left_47 = TypedBackendConstructorOccurrence.getExpression (Obj.magic entry) () in let __enum_eq_right_48 = original in HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_left_47) == HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_right_48) then ignore (let identity = Obj.magic (TyType.getNominalIdentity (Obj.magic (TypedBackendConstructorOccurrence.getConstructedType (Obj.magic (TypedBackendFunctionProjection.requireConstructor (Obj.magic projection__local) (Obj.magic original))) ())) ()) in let tempRight = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+            ignore (if identity == Obj.magic (HxRuntime.hx_null) then let __assign_49 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+              tempRight := __assign_49;
+              __assign_49
+            ) else let _this = Obj.magic ((Obj.magic _gthis : t).ownerNames) in let key = (TyNominalTypeId.getCanonicalName (Obj.magic identity) () : string) in let __assign_50 = Obj.magic (HxMap.get_string (Obj.magic _this) (key : string) : string) in (
+              tempRight := __assign_50;
+              __assign_50
+            ));
+            ignore (let __assign_51 = Obj.magic (!tempRight : string) in (
+              owner := __assign_51;
+              __assign_51
+            ));
+            Stdlib.raise (HxRuntime.Hx_break)
+          )) else ()
+        )) done with
+          | HxRuntime.Hx_break -> ());
+        if !owner == Obj.magic (HxRuntime.hx_null) then let __assign_52 = Obj.magic expression in (
+          tempResult := __assign_52;
+          __assign_52
+        ) else let __assign_53 = Obj.magic (let __enum_arg_54 = (!owner : string) in let __enum_arg_55 = Obj.magic arguments in HxExpr.ENew (Stdlib.Sys.opaque_identity __enum_arg_54, __enum_arg_55)) in (
+          tempResult := __assign_53;
+          __assign_53
+        )
+      )
+    )
+    | _ -> let __assign_30 = Obj.magic expression in (
+      tempResult := __assign_30;
+      __assign_30
+    ));
   !tempResult
 ))

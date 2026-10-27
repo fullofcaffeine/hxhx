@@ -84,6 +84,7 @@ let init () : unit =
   ignore (HxType.class_ "ResolverStage");
   ignore (HxType.class_ "StringBuf");
   ignore (HxType.class_ "StringTools");
+  ignore (HxType.class_ "TyAbstractBinaryArgument");
   ignore (HxType.class_ "TyAbstractBinaryBinding");
   ignore (HxType.class_ "TyAbstractBinaryConversion");
   ignore (HxType.class_ "TyAbstractBinaryOperatorInfo");
@@ -118,6 +119,13 @@ let init () : unit =
   ignore (HxType.class_ "TyFunctionReturnState");
   ignore (HxType.class_ "TyImplicitConversionPlan");
   ignore (HxType.class_ "TyImportedStaticMethod");
+  ignore (HxType.class_ "TyIndexedAccessBinding");
+  ignore (HxType.class_ "TyIndexedComputedResult");
+  ignore (HxType.class_ "TyIndexedNullableAbstractOperand");
+  ignore (HxType.class_ "TyIndexedUpdateOutcome");
+  ignore (HxType.class_ "TyIndexedUpdateQuery");
+  ignore (HxType.class_ "TyIndexedUpdateSelection");
+  ignore (HxType.class_ "TyIndexedUpdateTrial");
   ignore (HxType.class_ "TyInferenceSolver");
   ignore (HxType.class_ "TyInferenceVariable");
   ignore (HxType.class_ "TyIteratorProtocolSource");
@@ -127,6 +135,7 @@ let init () : unit =
   ignore (HxType.class_ "TyMethodArgumentOrder");
   ignore (HxType.class_ "TyMethodBodyResults");
   ignore (HxType.class_ "TyMethodGenericBinding");
+  ignore (HxType.class_ "TyMethodInputBatch");
   ignore (HxType.class_ "TyMethodInputState");
   ignore (HxType.class_ "TyMethodInputTrial");
   ignore (HxType.class_ "TyModuleDirective");
@@ -288,6 +297,7 @@ let init () : unit =
   ignore (HxType.class_ "_TyEnumValueCompatibility.TyEnumValueCompatibility_Fields_");
   ignore (HxType.class_ "_TyFieldAssignment.TyFieldAssignment_Fields_");
   ignore (HxType.class_ "_TyFunctionParameter.TyFunctionParameter_Fields_");
+  ignore (HxType.class_ "_TyIndexedUpdateOperation.TyIndexedUpdateOperation_Fields_");
   ignore (HxType.class_ "_TyInferenceAbstractDestination.TyInferenceAbstractDestination_Fields_");
   ignore (HxType.class_ "_TyInferenceAbstractInput.TyInferenceAbstractInput_Fields_");
   ignore (HxType.class_ "_TyInferenceNominalContext.TyInferenceNominalContext_Fields_");
@@ -631,6 +641,7 @@ let init () : unit =
   ignore (HxType.class_ "backend.source.SourceIdentifier");
   ignore (HxType.class_ "backend.source.SourceMvpTargetCore");
   ignore (HxType.class_ "backend.source.SourceNativeBackend");
+  ignore (HxType.class_ "backend.source.SourceNativeConstructorLowering");
   ignore (HxType.class_ "backend.source.SourceNativeFunctionLocals");
   ignore (HxType.class_ "backend.source.SourceTargetCommon");
   ignore (HxType.class_ "backend.source.SourceTemporaryNames");
@@ -886,6 +897,8 @@ let init () : unit =
   ignore (HxType.enum_ "TyControlTargetKind");
   ignore (HxType.enum_ "TyDiagnosticProbeOutcome");
   ignore (HxType.enum_ "TyFieldConstantKind");
+  ignore (HxType.enum_ "TyIndexedUpdateKind");
+  ignore (HxType.enum_ "TyIndexedUpdatePayload");
   ignore (HxType.enum_ "TyInferenceTerm");
   ignore (HxType.enum_ "TyInferenceVariableKind");
   ignore (HxType.enum_ "TyIteratorProtocolKind");
@@ -914,8 +927,12 @@ let init () : unit =
   ignore (HxType.enum_ "TypedStmtTag");
   ignore (HxType.enum_ "_HxConditionalCompilation.Token");
   ignore (HxType.enum_ "_ModuleLoader.SignaturePreparationState");
+  ignore (HxType.enum_ "_TyAbstractBinaryArgument.BinaryArgumentEvidence");
   ignore (HxType.enum_ "_TyAbstractBinaryConversion.BinaryConversionEvidence");
   ignore (HxType.enum_ "_TyArrayComprehension.ComprehensionYieldKind");
+  ignore (HxType.enum_ "_TyIndexedComputedResult.IndexedArgumentAdmission");
+  ignore (HxType.enum_ "_TyIndexedComputedResult.IndexedPlaceAdmission");
+  ignore (HxType.enum_ "_TyIndexedComputedResult.IndexedResultEvidence");
   ignore (HxType.enum_ "_TyStructuralConstraint.StructuralDirection");
   ignore (HxType.enum_ "_TypedMemberResolution.MemberValue");
   ignore (HxType.enum_ "backend.cpp.CppCallableDefault");
@@ -945,6 +962,7 @@ let init () : unit =
   ignore (HxType.enum_ "backend.source.LuaFieldDefault");
   ignore (HxType.enum_ "backend.source.PhpLexicalScopeKind");
   ignore (HxType.enum_ "backend.source.SourceFunctionRenderFrame");
+  ignore (HxType.enum_ "backend.source.SourceNativeConstructionKind");
   ignore (HxType.enum_ "backend.source.SourceNativeTarget");
   ignore (HxType.enum_ "backend.source._LuaSourceClassEmitter.LuaExecutable");
   ignore (HxType.enum_ "backend.vm.NekoCatchBody");
@@ -1236,6 +1254,10 @@ let init () : unit =
   HxType.register_enum_ctor_layout "TyFieldConstantKind" "IntValue" 3 (HxType.EnumBlock 1);
   HxType.register_enum_ctor_layout "TyFieldConstantKind" "StringValue" 4 (HxType.EnumBlock 2);
   HxType.register_enum_ctor_layout "TyFieldConstantKind" "BoolValue" 5 (HxType.EnumBlock 3);
+  HxType.register_enum_ctor_layout "TyIndexedUpdateKind" "Unary" 0 (HxType.EnumBlock 0);
+  HxType.register_enum_ctor_layout "TyIndexedUpdateKind" "Compound" 1 (HxType.EnumBlock 1);
+  HxType.register_enum_ctor_layout "TyIndexedUpdatePayload" "OldGetter" 0 (HxType.EnumImmediate 0);
+  HxType.register_enum_ctor_layout "TyIndexedUpdatePayload" "SetterValue" 1 (HxType.EnumImmediate 1);
   HxType.register_enum_ctor_layout "TyInferenceTerm" "Known" 0 (HxType.EnumBlock 0);
   HxType.register_enum_ctor_layout "TyInferenceTerm" "Variable" 1 (HxType.EnumBlock 1);
   HxType.register_enum_ctor_layout "TyInferenceTerm" "Nominal" 2 (HxType.EnumBlock 2);
@@ -1421,10 +1443,22 @@ let init () : unit =
   HxType.register_enum_ctor_layout "_ModuleLoader.SignaturePreparationState" "Preparing" 0 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "_ModuleLoader.SignaturePreparationState" "Ready" 1 (HxType.EnumImmediate 1);
   HxType.register_enum_ctor_layout "_ModuleLoader.SignaturePreparationState" "Failed" 2 (HxType.EnumImmediate 2);
+  HxType.register_enum_ctor_layout "_TyAbstractBinaryArgument.BinaryArgumentEvidence" "Converted" 0 (HxType.EnumBlock 0);
+  HxType.register_enum_ctor_layout "_TyAbstractBinaryArgument.BinaryArgumentEvidence" "IndexedNullableAdmission" 1 (HxType.EnumBlock 1);
   HxType.register_enum_ctor_layout "_TyAbstractBinaryConversion.BinaryConversionEvidence" "Implicit" 0 (HxType.EnumBlock 0);
   HxType.register_enum_ctor_layout "_TyAbstractBinaryConversion.BinaryConversionEvidence" "Method" 1 (HxType.EnumBlock 1);
   HxType.register_enum_ctor_layout "_TyArrayComprehension.ComprehensionYieldKind" "ArrayElement" 0 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "_TyArrayComprehension.ComprehensionYieldKind" "MapEntry" 1 (HxType.EnumImmediate 1);
+  HxType.register_enum_ctor_layout "_TyIndexedComputedResult.IndexedArgumentAdmission" "ArgumentAssignment" 0 (HxType.EnumImmediate 0);
+  HxType.register_enum_ctor_layout "_TyIndexedComputedResult.IndexedArgumentAdmission" "ArgumentUnaryNullableAbstract" 1 (HxType.EnumBlock 0);
+  HxType.register_enum_ctor_layout "_TyIndexedComputedResult.IndexedPlaceAdmission" "PlaceAssignment" 0 (HxType.EnumImmediate 0);
+  HxType.register_enum_ctor_layout "_TyIndexedComputedResult.IndexedPlaceAdmission" "PlaceUnaryNullableAbstract" 1 (HxType.EnumBlock 0);
+  HxType.register_enum_ctor_layout "_TyIndexedComputedResult.IndexedPlaceAdmission" "PlaceSelectedAbstractResult" 2 (HxType.EnumImmediate 1);
+  HxType.register_enum_ctor_layout "_TyIndexedComputedResult.IndexedResultEvidence" "CheckedBuiltin" 0 (HxType.EnumBlock 0);
+  HxType.register_enum_ctor_layout "_TyIndexedComputedResult.IndexedResultEvidence" "SelectedCall" 1 (HxType.EnumBlock 1);
+  HxType.register_enum_ctor_layout "_TyIndexedComputedResult.IndexedResultEvidence" "Converted" 2 (HxType.EnumBlock 2);
+  HxType.register_enum_ctor_layout "_TyIndexedComputedResult.IndexedResultEvidence" "CheckedPlace" 3 (HxType.EnumBlock 3);
+  HxType.register_enum_ctor_layout "_TyIndexedComputedResult.IndexedResultEvidence" "CheckedArgument" 4 (HxType.EnumBlock 4);
   HxType.register_enum_ctor_layout "_TyStructuralConstraint.StructuralDirection" "Output" 0 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "_TyStructuralConstraint.StructuralDirection" "Input" 1 (HxType.EnumImmediate 1);
   HxType.register_enum_ctor_layout "_TyStructuralConstraint.StructuralDirection" "Exact" 2 (HxType.EnumImmediate 2);
@@ -1533,6 +1567,8 @@ let init () : unit =
   HxType.register_enum_ctor_layout "backend.source.SourceFunctionRenderFrame" "TypedFunction" 1 (HxType.EnumBlock 1);
   HxType.register_enum_ctor_layout "backend.source.SourceFunctionRenderFrame" "NativeFunction" 2 (HxType.EnumBlock 2);
   HxType.register_enum_ctor_layout "backend.source.SourceFunctionRenderFrame" "PhpFunction" 3 (HxType.EnumBlock 3);
+  HxType.register_enum_ctor_layout "backend.source.SourceNativeConstructionKind" "EmittedClass" 0 (HxType.EnumBlock 0);
+  HxType.register_enum_ctor_layout "backend.source.SourceNativeConstructionKind" "Runtime" 1 (HxType.EnumBlock 1);
   HxType.register_enum_ctor_layout "backend.source.SourceNativeTarget" "Python" 0 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "backend.source.SourceNativeTarget" "Java" 1 (HxType.EnumImmediate 1);
   HxType.register_enum_ctor_layout "backend.source.SourceNativeTarget" "Cs" 2 (HxType.EnumImmediate 2);
@@ -2531,7 +2567,8 @@ let init () : unit =
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'name' for HxSwitchPattern.PEnumExtract" in
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'args' for HxSwitchPattern.PEnumExtract" in
-    Obj.repr (HxSwitchPattern.PEnumExtract (a0, a1))
+    let a2 = if len > 2 then (HxArray.get args 2) else HxRuntime.hx_null in
+    Obj.repr (HxSwitchPattern.PEnumExtract (a0, a1, a2))
   );
   HxType.register_enum_ctor "HxSwitchPattern" "PObject" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -2881,6 +2918,23 @@ let init () : unit =
     let len = HxArray.length args in
     let a0 = if len > 0 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'value' for TyFieldConstantKind.BoolValue" in
     Obj.repr (TyFieldConstant.BoolValue a0)
+  );
+  HxType.register_enum_ctor "TyIndexedUpdateKind" "Unary" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'op' for TyIndexedUpdateKind.Unary" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'fixity' for TyIndexedUpdateKind.Unary" in
+    Obj.repr (TyIndexedUpdateSelection.Unary (a0, a1))
+  );
+  HxType.register_enum_ctor "TyIndexedUpdateKind" "Compound" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'op' for TyIndexedUpdateKind.Compound" in
+    Obj.repr (TyIndexedUpdateSelection.Compound a0)
+  );
+  HxType.register_enum_ctor "TyIndexedUpdatePayload" "OldGetter" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyIndexedUpdateOutcome.OldGetter)
+  );
+  HxType.register_enum_ctor "TyIndexedUpdatePayload" "SetterValue" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyIndexedUpdateOutcome.SetterValue)
   );
   HxType.register_enum_ctor "TyInferenceTerm" "Known" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -3514,6 +3568,17 @@ let init () : unit =
   HxType.register_enum_ctor "_ModuleLoader.SignaturePreparationState" "Failed" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (ModuleLoader.Failed)
   );
+  HxType.register_enum_ctor "_TyAbstractBinaryArgument.BinaryArgumentEvidence" "Converted" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'plan' for _TyAbstractBinaryArgument.BinaryArgumentEvidence.Converted" in
+    Obj.repr (TyAbstractBinaryArgument.Converted a0)
+  );
+  HxType.register_enum_ctor "_TyAbstractBinaryArgument.BinaryArgumentEvidence" "IndexedNullableAdmission" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'operand' for _TyAbstractBinaryArgument.BinaryArgumentEvidence.IndexedNullableAdmission" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'expected' for _TyAbstractBinaryArgument.BinaryArgumentEvidence.IndexedNullableAdmission" in
+    Obj.repr (TyAbstractBinaryArgument.IndexedNullableAdmission (a0, a1))
+  );
   HxType.register_enum_ctor "_TyAbstractBinaryConversion.BinaryConversionEvidence" "Implicit" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'plan' for _TyAbstractBinaryConversion.BinaryConversionEvidence.Implicit" in
@@ -3530,6 +3595,60 @@ let init () : unit =
   );
   HxType.register_enum_ctor "_TyArrayComprehension.ComprehensionYieldKind" "MapEntry" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (TyArrayComprehension.MapEntry)
+  );
+  HxType.register_enum_ctor "_TyIndexedComputedResult.IndexedArgumentAdmission" "ArgumentAssignment" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyIndexedComputedResult.ArgumentAssignment)
+  );
+  HxType.register_enum_ctor "_TyIndexedComputedResult.IndexedArgumentAdmission" "ArgumentUnaryNullableAbstract" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createEnum: missing ctor arg 'result' for _TyIndexedComputedResult.IndexedArgumentAdmission.ArgumentUnaryNullableAbstract" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'placeTerm' for _TyIndexedComputedResult.IndexedArgumentAdmission.ArgumentUnaryNullableAbstract" in
+    Obj.repr (TyIndexedComputedResult.ArgumentUnaryNullableAbstract (a0, a1))
+  );
+  HxType.register_enum_ctor "_TyIndexedComputedResult.IndexedPlaceAdmission" "PlaceAssignment" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyIndexedComputedResult.PlaceAssignment)
+  );
+  HxType.register_enum_ctor "_TyIndexedComputedResult.IndexedPlaceAdmission" "PlaceUnaryNullableAbstract" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createEnum: missing ctor arg 'result' for _TyIndexedComputedResult.IndexedPlaceAdmission.PlaceUnaryNullableAbstract" in
+    Obj.repr (TyIndexedComputedResult.PlaceUnaryNullableAbstract a0)
+  );
+  HxType.register_enum_ctor "_TyIndexedComputedResult.IndexedPlaceAdmission" "PlaceSelectedAbstractResult" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyIndexedComputedResult.PlaceSelectedAbstractResult)
+  );
+  HxType.register_enum_ctor "_TyIndexedComputedResult.IndexedResultEvidence" "CheckedBuiltin" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'operands' for _TyIndexedComputedResult.IndexedResultEvidence.CheckedBuiltin" in
+    let a1 = if len > 1 then (HxArray.get args 1) else failwith "Type.createEnum: missing ctor arg 'numericStep' for _TyIndexedComputedResult.IndexedResultEvidence.CheckedBuiltin" in
+    Obj.repr (TyIndexedComputedResult.CheckedBuiltin (a0, a1))
+  );
+  HxType.register_enum_ctor "_TyIndexedComputedResult.IndexedResultEvidence" "SelectedCall" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'binding' for _TyIndexedComputedResult.IndexedResultEvidence.SelectedCall" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'operands' for _TyIndexedComputedResult.IndexedResultEvidence.SelectedCall" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'left' for _TyIndexedComputedResult.IndexedResultEvidence.SelectedCall" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createEnum: missing ctor arg 'right' for _TyIndexedComputedResult.IndexedResultEvidence.SelectedCall" in
+    Obj.repr (TyIndexedComputedResult.SelectedCall (a0, a1, a2, a3))
+  );
+  HxType.register_enum_ctor "_TyIndexedComputedResult.IndexedResultEvidence" "Converted" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'input' for _TyIndexedComputedResult.IndexedResultEvidence.Converted" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'plan' for _TyIndexedComputedResult.IndexedResultEvidence.Converted" in
+    Obj.repr (TyIndexedComputedResult.Converted (a0, a1))
+  );
+  HxType.register_enum_ctor "_TyIndexedComputedResult.IndexedResultEvidence" "CheckedPlace" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'input' for _TyIndexedComputedResult.IndexedResultEvidence.CheckedPlace" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'expected' for _TyIndexedComputedResult.IndexedResultEvidence.CheckedPlace" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'admission' for _TyIndexedComputedResult.IndexedResultEvidence.CheckedPlace" in
+    Obj.repr (TyIndexedComputedResult.CheckedPlace (a0, a1, a2))
+  );
+  HxType.register_enum_ctor "_TyIndexedComputedResult.IndexedResultEvidence" "CheckedArgument" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'input' for _TyIndexedComputedResult.IndexedResultEvidence.CheckedArgument" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'expected' for _TyIndexedComputedResult.IndexedResultEvidence.CheckedArgument" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'admission' for _TyIndexedComputedResult.IndexedResultEvidence.CheckedArgument" in
+    Obj.repr (TyIndexedComputedResult.CheckedArgument (a0, a1, a2))
   );
   HxType.register_enum_ctor "_TyStructuralConstraint.StructuralDirection" "Output" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (TyStructuralConstraint.Output)
@@ -3550,7 +3669,8 @@ let init () : unit =
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'declaration' for _TypedMemberResolution.MemberValue.StaticMethod" in
     let a1 = if len > 1 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'qualifyOwner' for _TypedMemberResolution.MemberValue.StaticMethod" in
-    Obj.repr (TypedMemberResolution.StaticMethod (a0, a1))
+    let a2 = if len > 2 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'nonRuntimeQualifier' for _TypedMemberResolution.MemberValue.StaticMethod" in
+    Obj.repr (TypedMemberResolution.StaticMethod (a0, a1, a2))
   );
   HxType.register_enum_ctor "_TypedMemberResolution.MemberValue" "InstanceMethod" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -3962,6 +4082,16 @@ let init () : unit =
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'scope' for backend.source.SourceFunctionRenderFrame.PhpFunction" in
     let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'names' for backend.source.SourceFunctionRenderFrame.PhpFunction" in
     Obj.repr (Backend_source_SourceFunctionRenderFrame.PhpFunction (a0, a1, a2))
+  );
+  HxType.register_enum_ctor "backend.source.SourceNativeConstructionKind" "EmittedClass" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'name' for backend.source.SourceNativeConstructionKind.EmittedClass" in
+    Obj.repr (Backend_source_SourceNativeConstructorLowering.EmittedClass a0)
+  );
+  HxType.register_enum_ctor "backend.source.SourceNativeConstructionKind" "Runtime" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'path' for backend.source.SourceNativeConstructionKind.Runtime" in
+    Obj.repr (Backend_source_SourceNativeConstructorLowering.Runtime a0)
   );
   HxType.register_enum_ctor "backend.source.SourceNativeTarget" "Python" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_source_SourceNativeTarget.Python)
@@ -5253,14 +5383,20 @@ let init () : unit =
   HxType.register_class_ctor "StringTools" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (StringTools.create ())
   );
+  HxType.register_class_ctor "TyAbstractBinaryArgument" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'evidence' for TyAbstractBinaryArgument" in
+    Obj.repr (TyAbstractBinaryArgument.create a0)
+  );
   HxType.register_class_ctor "TyAbstractBinaryBinding" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (TyAbstractBinaryBinding.create ())
   );
   HxType.register_class_ctor "TyAbstractBinaryConversion" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
-    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'expected' for TyAbstractBinaryConversion" in
-    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'evidence' for TyAbstractBinaryConversion" in
-    Obj.repr (TyAbstractBinaryConversion.create a0 a1)
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'actual' for TyAbstractBinaryConversion" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'expected' for TyAbstractBinaryConversion" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'evidence' for TyAbstractBinaryConversion" in
+    Obj.repr (TyAbstractBinaryConversion.create a0 a1 a2)
   );
   HxType.register_class_ctor "TyAbstractBinaryOperatorInfo" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -5327,8 +5463,8 @@ let init () : unit =
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'operatorInfo' for TyBoundAbstractBinaryOperator" in
     let a2 = if len > 2 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'reverseArguments' for TyBoundAbstractBinaryOperator" in
     let a3 = if len > 3 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'requiresWriteback' for TyBoundAbstractBinaryOperator" in
-    let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'sourceLeftConversion' for TyBoundAbstractBinaryOperator" in
-    let a5 = if len > 5 then Obj.magic ((HxArray.get args 5)) else failwith "Type.createInstance: missing ctor arg 'sourceRightConversion' for TyBoundAbstractBinaryOperator" in
+    let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'sourceLeftArgument' for TyBoundAbstractBinaryOperator" in
+    let a5 = if len > 5 then Obj.magic ((HxArray.get args 5)) else failwith "Type.createInstance: missing ctor arg 'sourceRightArgument' for TyBoundAbstractBinaryOperator" in
     let a6 = if len > 6 then Obj.magic ((HxArray.get args 6)) else failwith "Type.createInstance: missing ctor arg 'resultConversion' for TyBoundAbstractBinaryOperator" in
     Obj.repr (TyBoundAbstractBinaryOperator.create a0 a1 a2 a3 a4 a5 a6)
   );
@@ -5536,6 +5672,51 @@ let init () : unit =
     let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'candidates' for TyImportedStaticMethod" in
     Obj.repr (TyImportedStaticMethod.create a0 a1 a2)
   );
+  HxType.register_class_ctor "TyIndexedAccessBinding" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'source' for TyIndexedAccessBinding" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'receiver' for TyIndexedAccessBinding" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'arguments' for TyIndexedAccessBinding" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else Obj.magic HxRuntime.hx_null in
+    let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (TyIndexedAccessBinding.create a0 a1 a2 a3 a4)
+  );
+  HxType.register_class_ctor "TyIndexedComputedResult" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'query' for TyIndexedComputedResult" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'source' for TyIndexedComputedResult" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'type' for TyIndexedComputedResult" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'evidence' for TyIndexedComputedResult" in
+    Obj.repr (TyIndexedComputedResult.create a0 a1 a2 a3)
+  );
+  HxType.register_class_ctor "TyIndexedNullableAbstractOperand" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createInstance: missing ctor arg 'input' for TyIndexedNullableAbstractOperand" in
+    Obj.repr (TyIndexedNullableAbstractOperand.create a0)
+  );
+  HxType.register_class_ctor "TyIndexedUpdateOutcome" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createInstance: missing ctor arg 'input' for TyIndexedUpdateOutcome" in
+    Obj.repr (TyIndexedUpdateOutcome.create a0)
+  );
+  HxType.register_class_ctor "TyIndexedUpdateQuery" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createInstance: missing ctor arg 'input' for TyIndexedUpdateQuery" in
+    Obj.repr (TyIndexedUpdateSelection.tyindexedupdatequery_create a0)
+  );
+  HxType.register_class_ctor "TyIndexedUpdateSelection" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createInstance: missing ctor arg 'input' for TyIndexedUpdateSelection" in
+    Obj.repr (TyIndexedUpdateSelection.create a0)
+  );
+  HxType.register_class_ctor "TyIndexedUpdateTrial" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'parent' for TyIndexedUpdateTrial" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'candidate' for TyIndexedUpdateTrial" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'query' for TyIndexedUpdateTrial" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'parentUnchanged' for TyIndexedUpdateTrial" in
+    Obj.repr (TyIndexedUpdateTrial.create a0 a1 a2 a3)
+  );
   HxType.register_class_ctor "TyInferenceSolver" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'owner' for TyInferenceSolver" in
@@ -5589,6 +5770,14 @@ let init () : unit =
   );
   HxType.register_class_ctor "TyMethodGenericBinding" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (TyMethodGenericBinding.create ())
+  );
+  HxType.register_class_ctor "TyMethodInputBatch" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'owner' for TyMethodInputBatch" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'revision' for TyMethodInputBatch" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'trials' for TyMethodInputBatch" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'changes' for TyMethodInputBatch" in
+    Obj.repr (TyMethodInputState.tymethodinputbatch_create a0 a1 a2 a3)
   );
   HxType.register_class_ctor "TyMethodInputState" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (TyMethodInputState.create ())
@@ -6433,12 +6622,11 @@ let init () : unit =
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'outputDir' for backend.BackendContext" in
     let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'outputFileHint' for backend.BackendContext" in
     let a2 = if len > 2 then Obj.obj ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'mainModule' for backend.BackendContext" in
-    let a3 = if len > 3 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'emitFullBodies' for backend.BackendContext" in
-    let a4 = if len > 4 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'buildExecutable' for backend.BackendContext" in
-    let a5 = if len > 5 then Obj.magic ((HxArray.get args 5)) else failwith "Type.createInstance: missing ctor arg 'defines' for backend.BackendContext" in
+    let a3 = if len > 3 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'buildExecutable' for backend.BackendContext" in
+    let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'defines' for backend.BackendContext" in
+    let a5 = if len > 5 then Obj.magic ((HxArray.get args 5)) else Obj.magic HxRuntime.hx_null in
     let a6 = if len > 6 then Obj.magic ((HxArray.get args 6)) else Obj.magic HxRuntime.hx_null in
-    let a7 = if len > 7 then Obj.magic ((HxArray.get args 7)) else Obj.magic HxRuntime.hx_null in
-    Obj.repr (Backend_BackendContext.create a0 a1 a2 a3 a4 a5 a6 a7)
+    Obj.repr (Backend_BackendContext.create a0 a1 a2 a3 a4 a5 a6)
   );
   HxType.register_class_ctor "backend.BackendDispatchBoundary" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_BackendDispatchBoundary.create ())
@@ -7182,6 +7370,9 @@ let init () : unit =
   );
   HxType.register_class_ctor "backend.source.SourceNativeBackend" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_source_SourceNativeBackend.create ())
+  );
+  HxType.register_class_ctor "backend.source.SourceNativeConstructorLowering" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_source_SourceNativeConstructorLowering.create ())
   );
   HxType.register_class_ctor "backend.source.SourceNativeFunctionLocals" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -8080,6 +8271,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "ResolverStage" (fun () -> Obj.repr (ResolverStage.__empty ()));
   HxType.register_class_empty_ctor "StringBuf" (fun () -> Obj.repr (StringBuf.__empty ()));
   HxType.register_class_empty_ctor "StringTools" (fun () -> Obj.repr (StringTools.__empty ()));
+  HxType.register_class_empty_ctor "TyAbstractBinaryArgument" (fun () -> Obj.repr (TyAbstractBinaryArgument.__empty ()));
   HxType.register_class_empty_ctor "TyAbstractBinaryBinding" (fun () -> Obj.repr (TyAbstractBinaryBinding.__empty ()));
   HxType.register_class_empty_ctor "TyAbstractBinaryConversion" (fun () -> Obj.repr (TyAbstractBinaryConversion.__empty ()));
   HxType.register_class_empty_ctor "TyAbstractBinaryOperatorInfo" (fun () -> Obj.repr (TyAbstractBinaryOperatorInfo.__empty ()));
@@ -8114,6 +8306,13 @@ let init () : unit =
   HxType.register_class_empty_ctor "TyFunctionReturnState" (fun () -> Obj.repr (TyFunctionReturnState.__empty ()));
   HxType.register_class_empty_ctor "TyImplicitConversionPlan" (fun () -> Obj.repr (TyImplicitConversionPlan.__empty ()));
   HxType.register_class_empty_ctor "TyImportedStaticMethod" (fun () -> Obj.repr (TyImportedStaticMethod.__empty ()));
+  HxType.register_class_empty_ctor "TyIndexedAccessBinding" (fun () -> Obj.repr (TyIndexedAccessBinding.__empty ()));
+  HxType.register_class_empty_ctor "TyIndexedComputedResult" (fun () -> Obj.repr (TyIndexedComputedResult.__empty ()));
+  HxType.register_class_empty_ctor "TyIndexedNullableAbstractOperand" (fun () -> Obj.repr (TyIndexedNullableAbstractOperand.__empty ()));
+  HxType.register_class_empty_ctor "TyIndexedUpdateOutcome" (fun () -> Obj.repr (TyIndexedUpdateOutcome.__empty ()));
+  HxType.register_class_empty_ctor "TyIndexedUpdateQuery" (fun () -> Obj.repr (TyIndexedUpdateSelection.tyindexedupdatequery___empty ()));
+  HxType.register_class_empty_ctor "TyIndexedUpdateSelection" (fun () -> Obj.repr (TyIndexedUpdateSelection.__empty ()));
+  HxType.register_class_empty_ctor "TyIndexedUpdateTrial" (fun () -> Obj.repr (TyIndexedUpdateTrial.__empty ()));
   HxType.register_class_empty_ctor "TyInferenceSolver" (fun () -> Obj.repr (TyInferenceSolver.__empty ()));
   HxType.register_class_empty_ctor "TyInferenceVariable" (fun () -> Obj.repr (TyInferenceTerm.__empty ()));
   HxType.register_class_empty_ctor "TyIteratorProtocolSource" (fun () -> Obj.repr (TyIteratorProtocolSource.__empty ()));
@@ -8123,6 +8322,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "TyMethodArgumentOrder" (fun () -> Obj.repr (TyMethodArgumentOrder.__empty ()));
   HxType.register_class_empty_ctor "TyMethodBodyResults" (fun () -> Obj.repr (TyMethodBodyResults.__empty ()));
   HxType.register_class_empty_ctor "TyMethodGenericBinding" (fun () -> Obj.repr (TyMethodGenericBinding.__empty ()));
+  HxType.register_class_empty_ctor "TyMethodInputBatch" (fun () -> Obj.repr (TyMethodInputState.tymethodinputbatch___empty ()));
   HxType.register_class_empty_ctor "TyMethodInputState" (fun () -> Obj.repr (TyMethodInputState.__empty ()));
   HxType.register_class_empty_ctor "TyMethodInputTrial" (fun () -> Obj.repr (TyMethodInputState.tymethodinputtrial___empty ()));
   HxType.register_class_empty_ctor "TyModuleDirective" (fun () -> Obj.repr (TyModuleDirective.__empty ()));
@@ -8399,6 +8599,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "backend.source.SourceIdentifier" (fun () -> Obj.repr (Backend_source_SourceIdentifier.__empty ()));
   HxType.register_class_empty_ctor "backend.source.SourceMvpTargetCore" (fun () -> Obj.repr (Backend_source_SourceMvpTargetCore.__empty ()));
   HxType.register_class_empty_ctor "backend.source.SourceNativeBackend" (fun () -> Obj.repr (Backend_source_SourceNativeBackend.__empty ()));
+  HxType.register_class_empty_ctor "backend.source.SourceNativeConstructorLowering" (fun () -> Obj.repr (Backend_source_SourceNativeConstructorLowering.__empty ()));
   HxType.register_class_empty_ctor "backend.source.SourceNativeFunctionLocals" (fun () -> Obj.repr (Backend_source_SourceNativeFunctionLocals.__empty ()));
   HxType.register_class_empty_ctor "backend.source.SourceTargetCommon" (fun () -> Obj.repr (Backend_source_SourceTargetCommon.__empty ()));
   HxType.register_class_empty_ctor "backend.source.SourceTemporaryNames" (fun () -> Obj.repr (Backend_source_SourceFunctionRenderFrame.__empty ()));
@@ -8729,13 +8930,15 @@ let init () : unit =
   HxType.register_class_static_fields "StringBuf" [];
   HxType.register_class_instance_fields "StringTools" [];
   HxType.register_class_static_fields "StringTools" [ "_hexUpper"; "_hexValue"; "_isUrlUnreserved"; "_quoteUnixArgOcaml"; "_quoteWinArgOcaml"; "_urlDecodeOcaml"; "_urlEncodeOcaml"; "_winMetaCharactersOcaml"; "contains"; "endsWith"; "fastCodeAt"; "hex"; "htmlEscape"; "htmlUnescape"; "isEof"; "isSpace"; "iterator"; "keyValueIterator"; "lpad"; "ltrim"; "quoteUnixArg"; "quoteWinArg"; "replace"; "rpad"; "rtrim"; "startsWith"; "trim"; "unsafeCodeAt"; "urlDecode"; "urlEncode"; "utf16CodePointAt"; "winMetaCharacters" ];
+  HxType.register_class_instance_fields "TyAbstractBinaryArgument" [ "admitsSource"; "evidence"; "getActualType"; "getExpectedType"; "getScore"; "requireConversion"; "validateSource" ];
+  HxType.register_class_static_fields "TyAbstractBinaryArgument" [ "converted"; "indexed" ];
   HxType.register_class_instance_fields "TyAbstractBinaryBinding" [];
-  HxType.register_class_static_fields "TyAbstractBinaryBinding" [ "bind"; "collect"; "containsTypeParameter"; "ensureNonGeneric"; "firstMatch"; "hasAbstractOperand"; "noApplicable"; "permitsOrdinaryFallback"; "select"; "validateBodyless" ];
-  HxType.register_class_instance_fields "TyAbstractBinaryConversion" [ "apply"; "evidence"; "expected"; "getExpectedType"; "getScore" ];
+  HxType.register_class_static_fields "TyAbstractBinaryBinding" [ "argument"; "bind"; "collect"; "containsTypeParameter"; "ensureNonGeneric"; "firstMatch"; "hasAbstractOperand"; "noApplicable"; "permitsOrdinaryFallback"; "select"; "selectIndexed"; "selectWithOperand"; "validateBodyless" ];
+  HxType.register_class_instance_fields "TyAbstractBinaryConversion" [ "actual"; "apply"; "evidence"; "expected"; "getActualType"; "getExpectedType"; "getScore" ];
   HxType.register_class_static_fields "TyAbstractBinaryConversion" [ "select" ];
   HxType.register_class_instance_fields "TyAbstractBinaryOperatorInfo" [ "commutative"; "declaration"; "getDeclaration"; "getIsCommutative"; "getLeftType"; "getOperator"; "getResultType"; "getRightType"; "leftType"; "op"; "resultType"; "rightType" ];
   HxType.register_class_static_fields "TyAbstractBinaryOperatorInfo" [];
-  HxType.register_class_instance_fields "TyAbstractInfo" [ "addBinaryOperator"; "addUnaryOperator"; "binaryOperators"; "declarationForSignature"; "declarationForSource"; "declarations"; "enumDeclaration"; "enumDomain"; "fieldInfo"; "fieldType"; "fields"; "getAllBinaryOperators"; "getAllUnaryOperators"; "getBinaryOperators"; "getDeclarations"; "getEnumDeclaration"; "getEnumDomain"; "getFieldInfos"; "getFullName"; "getIdentity"; "getImplicitFromTypes"; "getImplicitToTypes"; "getIsEnum"; "getModulePath"; "getMultiTypePolicy"; "getShortName"; "getTypeParameterIds"; "getTypeParameters"; "getUnaryOperators"; "getUnderlyingType"; "getVisibility"; "hasField"; "identity"; "implicitFromTypes"; "implicitToTypes"; "instanceMethod"; "instanceMethodCandidates"; "instanceMethodLists"; "instanceMethods"; "isEnum"; "modulePath"; "multiTypePolicy"; "properties"; "propertyInfo"; "shortName"; "staticMethod"; "staticMethodCandidates"; "staticMethodLists"; "staticMethods"; "typeParameters"; "unaryOperators"; "underlyingType"; "visibility" ];
+  HxType.register_class_instance_fields "TyAbstractInfo" [ "addBinaryOperator"; "addIndexedDeclaration"; "addUnaryOperator"; "binaryOperators"; "declarationForSignature"; "declarationForSource"; "declarations"; "enumDeclaration"; "enumDomain"; "fieldInfo"; "fieldType"; "fields"; "getAllBinaryOperators"; "getAllUnaryOperators"; "getBinaryOperators"; "getDeclarations"; "getEnumDeclaration"; "getEnumDomain"; "getFieldInfos"; "getFullName"; "getIdentity"; "getImplicitFromTypes"; "getImplicitToTypes"; "getIndexedDeclarations"; "getIsEnum"; "getModulePath"; "getMultiTypePolicy"; "getShortName"; "getTypeParameterIds"; "getTypeParameters"; "getUnaryOperators"; "getUnderlyingType"; "getVisibility"; "hasField"; "identity"; "implicitFromTypes"; "implicitToTypes"; "indexedDeclarations"; "instanceMethod"; "instanceMethodCandidates"; "instanceMethodLists"; "instanceMethods"; "isEnum"; "modulePath"; "multiTypePolicy"; "properties"; "propertyInfo"; "shortName"; "staticMethod"; "staticMethodCandidates"; "staticMethodLists"; "staticMethods"; "typeParameters"; "unaryOperators"; "underlyingType"; "visibility" ];
   HxType.register_class_static_fields "TyAbstractInfo" [ "unaryKey" ];
   HxType.register_class_instance_fields "TyAbstractMethodConversion" [ "actual"; "apply"; "callable"; "declaration"; "getDeclaration"; "getInputType"; "getResultType"; "index" ];
   HxType.register_class_static_fields "TyAbstractMethodConversion" [ "acceptsBound"; "choose"; "complete"; "constrain"; "hasConversion"; "select"; "term" ];
@@ -8747,7 +8950,7 @@ let init () : unit =
   HxType.register_class_static_fields "TyAbstractUnaryBinding" [ "containsTypeParameter"; "operatorLabel"; "select"; "unsupportedGeneric" ];
   HxType.register_class_instance_fields "TyAliasDefinition" [ "bind"; "body"; "declaration"; "defaultIndex"; "getBody"; "getBoundBody"; "getCanonicalName"; "getDeclaration"; "getParameterIds"; "getSourceSyntax"; "instantiate"; "sealed" ];
   HxType.register_class_static_fields "TyAliasDefinition" [ "seal" ];
-  HxType.register_class_instance_fields "TyBoundAbstractBinaryOperator" [ "getOperatorInfo"; "getRequiresWriteback"; "getResultConversion"; "getReverseArguments"; "getSourceLeftConversion"; "getSourceLeftParameterType"; "getSourceOperator"; "getSourceRightConversion"; "getSourceRightParameterType"; "operatorInfo"; "requiresWriteback"; "resultConversion"; "reverseArguments"; "sourceLeftConversion"; "sourceOperator"; "sourceRightConversion" ];
+  HxType.register_class_instance_fields "TyBoundAbstractBinaryOperator" [ "getOperatorInfo"; "getRequiresWriteback"; "getResultConversion"; "getReverseArguments"; "getSourceLeftArgument"; "getSourceLeftParameterType"; "getSourceOperator"; "getSourceRightArgument"; "getSourceRightParameterType"; "operatorInfo"; "requiresWriteback"; "resultConversion"; "reverseArguments"; "sourceLeftArgument"; "sourceOperator"; "sourceRightArgument" ];
   HxType.register_class_static_fields "TyBoundAbstractBinaryOperator" [];
   HxType.register_class_instance_fields "TyCallArgumentBinding" [ "assertCurrent"; "functionType"; "getExpectedArguments"; "getFunctionType"; "getOperandKinds"; "getOperandTypes"; "getSemanticKey"; "getSlots"; "nullPolicy"; "operandKinds"; "operandTypes"; "slots"; "substituteTypes" ];
   HxType.register_class_static_fields "TyCallArgumentBinding" [ "copySlots"; "require" ];
@@ -8765,7 +8968,7 @@ let init () : unit =
   HxType.register_class_static_fields "TyClassValueScheme" [ "convert"; "select" ];
   HxType.register_class_instance_fields "TyCompilerTemporaryAllocator" [ "allocate"; "copy"; "functionIdentity"; "generatedNamePrefix"; "nextOrdinal"; "passIdentity" ];
   HxType.register_class_static_fields "TyCompilerTemporaryAllocator" [];
-  HxType.register_class_instance_fields "TyControlScope" [ "active"; "assertReplayComplete"; "beginReturns"; "copy"; "copyForInference"; "createReplay"; "currentReturns"; "cursor"; "enter"; "exit"; "finishReturns"; "getRoot"; "loopTarget"; "ownerIdentity"; "replay"; "returnStates"; "returnTarget"; "sourceRevision"; "targets" ];
+  HxType.register_class_instance_fields "TyControlScope" [ "active"; "assertReplayComplete"; "beginReturns"; "copy"; "copyForInference"; "createReplay"; "currentReturns"; "cursor"; "enter"; "exit"; "finishReturns"; "getRoot"; "loopTarget"; "ownerIdentity"; "replay"; "returnStates"; "returnTarget"; "sourceRevision"; "targets"; "unchangedForIndexedSelection" ];
   HxType.register_class_static_fields "TyControlScope" [ "copyState" ];
   HxType.register_class_instance_fields "TyControlTarget" [ "getCanonicalIdentity"; "getKind"; "getOwnerIdentity"; "getParent"; "getSourceIdentity"; "kind"; "ordinal"; "ownerIdentity"; "parent"; "sourceIdentity"; "sourceRevision" ];
   HxType.register_class_static_fields "TyControlTarget" [];
@@ -8787,17 +8990,31 @@ let init () : unit =
   HxType.register_class_static_fields "TyFieldInitializerTypes" [];
   HxType.register_class_instance_fields "TyFunSig" [ "acceptsArity"; "argNames"; "argOptional"; "argRest"; "args"; "getArgNames"; "getArgOptional"; "getArgRest"; "getArgs"; "getIsStatic"; "getName"; "getPos"; "getReturnType"; "isStatic"; "name"; "pos"; "returnType" ];
   HxType.register_class_static_fields "TyFunSig" [];
-  HxType.register_class_instance_fields "TyFunctionEnv" [ "assertReplayComplete"; "controlScope"; "copyForInference"; "createBodyReplay"; "createNestedFunction"; "currentSourceReturns"; "declareLocal"; "enclosingSymbols"; "enterLexicalScope"; "exitLexicalScope"; "functionBodyForReplay"; "getInference"; "getLocals"; "getName"; "getOwnerIdentity"; "getParams"; "getReturnExprType"; "getReturnType"; "getRootControlTarget"; "getTypeParameters"; "inference"; "isSpeculative"; "isStaticContext"; "isUntypedContext"; "locals"; "matchesProtocolSource"; "name"; "ownerIdentity"; "params"; "protocolSource"; "protocolSourceExpression"; "protocolSourceType"; "replayCursor"; "replayLocal"; "replayMode"; "requireControlScope"; "resolveLocal"; "resolveSymbol"; "retainFunctionBody"; "retainedBody"; "returnExprType"; "returnType"; "scopes"; "sealInference"; "speculative"; "staticContext"; "typeParameters"; "untypedContext"; "withEnclosingSymbolsFrom"; "withProtocolSource"; "withReturnTypes"; "withUntyped" ];
+  HxType.register_class_instance_fields "TyFunctionEnv" [ "assertReplayComplete"; "controlScope"; "copyForIndexedSelection"; "copyForInference"; "copyWithInference"; "createBodyReplay"; "createNestedFunction"; "currentSourceReturns"; "declareLocal"; "enclosingSymbols"; "enterLexicalScope"; "exitLexicalScope"; "functionBodyForReplay"; "getInference"; "getLocals"; "getName"; "getOwnerIdentity"; "getParams"; "getReturnExprType"; "getReturnType"; "getRootControlTarget"; "getTypeParameters"; "inference"; "isSpeculative"; "isStaticContext"; "isUntypedContext"; "locals"; "matchesProtocolSource"; "name"; "ownerIdentity"; "params"; "protocolSource"; "protocolSourceExpression"; "protocolSourceType"; "replayCursor"; "replayLocal"; "replayMode"; "requireControlScope"; "resolveLocal"; "resolveSymbol"; "retainFunctionBody"; "retainedBody"; "returnExprType"; "returnType"; "scopes"; "sealInference"; "speculative"; "staticContext"; "typeParameters"; "unchangedForIndexedSelection"; "untypedContext"; "withEnclosingSymbolsFrom"; "withProtocolSource"; "withReturnTypes"; "withUntyped" ];
   HxType.register_class_static_fields "TyFunctionEnv" [];
-  HxType.register_class_instance_fields "TyFunctionInference" [ "callCaptured"; "callbackArguments"; "callbackBinding"; "callbackContextType"; "canReceiveContext"; "captureMethod"; "capturedCalls"; "classValueTerm"; "classValueUses"; "constrain"; "constrainConstructor"; "constrainInferredCallable"; "constrainMember"; "construct"; "contextParameter"; "contextualCollection"; "diagnosticProbe"; "diagnosticProbes"; "directCallType"; "directCalls"; "emptyLiteralOccurrence"; "expressionType"; "fork"; "inferDirectCall"; "inferredArray"; "instantiateMethod"; "isSealed"; "isUncheckedCallable"; "isUnresolvedInput"; "iteratorProtocolSource"; "iteratorProtocols"; "localType"; "locals"; "occurrence"; "occurrences"; "owner"; "receiverCallParameters"; "receiverCalls"; "recordCallbackAlignment"; "recordLocal"; "recordReceiverCall"; "recordReceiverResult"; "recordSourceFunction"; "registerOmittedParameter"; "requireDiagnosticProbe"; "seal"; "solver"; "sourceFunctionResult"; "sourceFunctionType"; "sourceFunctions"; "sourceTerm"; "speculativeReplay"; "termType"; "uncheckedCastResult"; "untypedResult" ];
-  HxType.register_class_static_fields "TyFunctionInference" [ "classValueSourceKey" ];
+  HxType.register_class_instance_fields "TyFunctionInference" [ "beginIndexedUpdate"; "callCaptured"; "callbackArguments"; "callbackBinding"; "callbackContextType"; "canReceiveContext"; "captureMethod"; "capturedCalls"; "classValueTerm"; "classValueUses"; "commitIndexedUpdate"; "conditionalArrayResult"; "constrain"; "constrainConstructor"; "constrainInferredCallable"; "constrainMember"; "construct"; "contextParameter"; "contextualCollection"; "diagnosticProbe"; "diagnosticProbes"; "directCallType"; "directCalls"; "emptyLiteralOccurrence"; "expressionType"; "fork"; "indexedAccess"; "indexedAccesses"; "indexedUpdateOutcome"; "indexedUpdateOutcomes"; "indexedUpdates"; "inferDirectCall"; "inferredArray"; "instantiateMethod"; "isSealed"; "isUncheckedCallable"; "isUnresolvedInput"; "iteratorProtocolSource"; "iteratorProtocols"; "localType"; "locals"; "occurrence"; "occurrences"; "owner"; "receiverCallParameters"; "receiverCalls"; "recordCallbackAlignment"; "recordIndexedComputed"; "recordIndexedOutcome"; "recordIndexedResult"; "recordLocal"; "recordReceiverCall"; "recordReceiverResult"; "recordSourceFunction"; "registerOmittedParameter"; "requireDiagnosticProbe"; "seal"; "solver"; "sourceFunctionResult"; "sourceFunctionType"; "sourceFunctions"; "sourceTerm"; "speculativeReplay"; "termType"; "unchangedFacts"; "uncheckedCastResult"; "untypedResult" ];
+  HxType.register_class_static_fields "TyFunctionInference" [ "classValueSourceKey"; "nonNullableReceiver"; "unchangedArray" ];
   HxType.register_class_instance_fields "TyFunctionReturnState" [ "copy"; "expected"; "getValues"; "record"; "target"; "values" ];
   HxType.register_class_static_fields "TyFunctionReturnState" [];
   HxType.register_class_instance_fields "TyImplicitConversionPlan" [ "actualType"; "apply"; "backingType"; "expectedType"; "getActualType"; "getExpectedType"; "getKind"; "getScore"; "getViaType"; "isAbstractTo"; "isRepresentationPreservingAbstractConversion"; "kind"; "score"; "viaType" ];
   HxType.register_class_static_fields "TyImplicitConversionPlan" [ "abstractBindings"; "nullableCompatible"; "select"; "uniqueCompatible" ];
   HxType.register_class_instance_fields "TyImportedStaticMethod" [ "candidates"; "getCandidates"; "getMemberName"; "getProvider"; "memberName"; "provider" ];
   HxType.register_class_static_fields "TyImportedStaticMethod" [];
-  HxType.register_class_instance_fields "TyInferenceSolver" [ "allocate"; "applyDynamicUses"; "assertOwned"; "baseRevision"; "commit"; "constrain"; "constrainNullableInput"; "dynamicUses"; "field"; "fieldRequirements"; "follow"; "fork"; "fresh"; "freshClassValueArgument"; "freshEmptyArrayElement"; "freshMethodParameter"; "freshOmittedParameter"; "freshUncheckedCastResult"; "freshUntypedResult"; "hasOmittedInputOrigin"; "inferredCallResult"; "inferredCallable"; "isInferredCallableResult"; "isSealed"; "isUncheckedCastResult"; "isUnresolvedInput"; "materialize"; "observeDynamicUse"; "occurs"; "owner"; "parent"; "preview"; "previewDynamicUses"; "publishOpenMethods"; "published"; "requireMutable"; "requireSolved"; "revision"; "seal"; "sealed"; "solutions"; "unify"; "unifyArguments"; "variables"; "visitDynamicUse" ];
+  HxType.register_class_instance_fields "TyIndexedAccessBinding" [ "arguments"; "conversion"; "declaration"; "fingerprint"; "getArguments"; "owns"; "receiver"; "source" ];
+  HxType.register_class_static_fields "TyIndexedAccessBinding" [];
+  HxType.register_class_instance_fields "TyIndexedComputedResult" [ "admitsSelectedAbstractPlace"; "admitsUnaryAbstractArgument"; "evidence"; "getType"; "hasUnaryNullableAbstractStep"; "predecessor"; "query"; "register"; "source"; "type"; "unaryAbstractPlaceResult"; "unaryAbstractResult"; "unaryNullableOperand"; "validate"; "validateUnaryResult"; "validatesParameter" ];
+  HxType.register_class_static_fields "TyIndexedComputedResult" [ "admittedArgument"; "admittedPlace"; "admittedSelectedAbstractPlace"; "admittedUnaryAbstractArgument"; "admittedUnaryAbstractPlace"; "builtin"; "converted"; "requireComplete"; "selected" ];
+  HxType.register_class_instance_fields "TyIndexedNullableAbstractOperand" [ "admits"; "applied"; "index"; "originalType"; "owner"; "query"; "storage"; "term"; "validate" ];
+  HxType.register_class_static_fields "TyIndexedNullableAbstractOperand" [ "select"; "stripNullable" ];
+  HxType.register_class_instance_fields "TyIndexedUpdateOutcome" [ "admission"; "computed"; "environment"; "finalSources"; "finalTypes"; "getStaticType"; "index"; "payload"; "placeResult"; "selection"; "setterInput"; "validate" ];
+  HxType.register_class_static_fields "TyIndexedUpdateOutcome" [];
+  HxType.register_class_instance_fields "TyIndexedUpdateQuery" [ "computedSource"; "fingerprints"; "getterSource"; "kind"; "matchesSource"; "owner"; "placeResultSource"; "setterInputSource"; "setterSource"; "source"; "sources"; "validate" ];
+  HxType.register_class_static_fields "TyIndexedUpdateQuery" [];
+  HxType.register_class_instance_fields "TyIndexedUpdateSelection" [ "binary"; "declarationKeys"; "declarations"; "getter"; "query"; "setter"; "validate" ];
+  HxType.register_class_static_fields "TyIndexedUpdateSelection" [];
+  HxType.register_class_instance_fields "TyIndexedUpdateTrial" [ "candidate"; "committed"; "environmentsUnchanged"; "parent"; "parentUnchanged"; "query" ];
+  HxType.register_class_static_fields "TyIndexedUpdateTrial" [];
+  HxType.register_class_instance_fields "TyInferenceSolver" [ "allocate"; "applyDynamicUses"; "assertOwned"; "baseRevision"; "commit"; "constrain"; "constrainNullableInput"; "dynamicUses"; "field"; "fieldRequirements"; "follow"; "fork"; "fresh"; "freshClassValueArgument"; "freshEmptyArrayElement"; "freshMethodParameter"; "freshOmittedParameter"; "freshUncheckedCastResult"; "freshUntypedResult"; "hasOmittedInputOrigin"; "inferredCallResult"; "inferredCallable"; "isInferredCallableResult"; "isSealed"; "isUncheckedCastResult"; "isUnresolvedInput"; "materialize"; "observeDynamicUse"; "occurs"; "owner"; "parent"; "preview"; "previewDynamicUses"; "publishOpenMethods"; "published"; "requireMutable"; "requireSolved"; "revision"; "seal"; "sealed"; "solutions"; "unify"; "unifyArguments"; "validateCandidate"; "variables"; "visitDynamicUse" ];
   HxType.register_class_static_fields "TyInferenceSolver" [ "copyTerm"; "fromType"; "isComplete"; "matchingCallableRules"; "matchingStructuralRules" ];
   HxType.register_class_instance_fields "TyInferenceVariable" [ "allowsUnknown"; "kind"; "openMethodParameter"; "ordinal"; "owner" ];
   HxType.register_class_static_fields "TyInferenceVariable" [];
@@ -8815,7 +9032,9 @@ let init () : unit =
   HxType.register_class_static_fields "TyMethodBodyResults" [ "sourceFingerprint" ];
   HxType.register_class_instance_fields "TyMethodGenericBinding" [];
   HxType.register_class_static_fields "TyMethodGenericBinding" [ "argumentsAreConsistent"; "bindings"; "collect"; "constraintFailure"; "hasOnlyUnconstrainingEvidence"; "hasUnbound"; "inferableTypeParameters"; "inferenceCallable"; "inlineBindings"; "isInferableParameter"; "parameterIdentity"; "sameTypeConstructor"; "specializeParameters"; "specializeResult"; "structuralArgument"; "substitute"; "substitutedGenericDisplay" ];
-  HxType.register_class_instance_fields "TyMethodInputState" [ "commit"; "getRevision"; "revision"; "signature"; "solutions"; "trial" ];
+  HxType.register_class_instance_fields "TyMethodInputBatch" [ "changes"; "owner"; "revision"; "trials" ];
+  HxType.register_class_static_fields "TyMethodInputBatch" [];
+  HxType.register_class_instance_fields "TyMethodInputState" [ "commit"; "commitBatch"; "getRevision"; "prepareBatch"; "publishBatch"; "revision"; "signature"; "solutions"; "trial"; "validateBatch"; "validateTrial" ];
   HxType.register_class_static_fields "TyMethodInputState" [ "fillOpen"; "omitted"; "replaceInputs"; "sourceIdentity" ];
   HxType.register_class_instance_fields "TyMethodInputTrial" [ "changed"; "declaration"; "getSignature"; "inputs"; "owner"; "revision"; "signature"; "sourceIdentity" ];
   HxType.register_class_static_fields "TyMethodInputTrial" [];
@@ -8942,7 +9161,7 @@ let init () : unit =
   HxType.register_class_instance_fields "TypedBackendThrownValue" [ "assertCurrent"; "expression"; "fingerprint"; "owner"; "revision"; "type" ];
   HxType.register_class_static_fields "TypedBackendThrownValue" [];
   HxType.register_class_instance_fields "TypedBodyBuilder" [];
-  HxType.register_class_static_fields "TypedBodyBuilder" [ "alignStructuralTryCatchResults"; "applyCallArgumentConversions"; "buildExpr"; "buildExpression"; "buildExpressions"; "buildFallbackModule"; "buildFunction"; "buildIterable"; "buildLambda"; "buildStatements"; "buildStmt"; "buildStructuralTryArguments"; "compileTimeProbe"; "conditionalBranch"; "convertCallValues"; "declarePatternBindings"; "exactPosition"; "expandStatement"; "expandStructuralStatements"; "expressionPath"; "expressionType"; "fallbackType"; "isCompoundAssignment"; "normalizeProbeText"; "opaqueBlockBody"; "opaqueBlockProbeResult"; "parsedOpaqueBlockStatements"; "recoveredOpaqueBlockStatements"; "recoveredStructuralExpression"; "statementAlwaysExits"; "structuralOpaqueBlock"; "structuralTryCatch"; "successfulProbeInferenceIsDecisive"; "untypedExpression"; "untypedStatement" ];
+  HxType.register_class_static_fields "TypedBodyBuilder" [ "alignStructuralTryCatchResults"; "applyCallArgumentConversions"; "buildExpr"; "buildExpression"; "buildExpressions"; "buildFallbackModule"; "buildFunction"; "buildIndexedAccess"; "buildIterable"; "buildLambda"; "buildStatements"; "buildStmt"; "buildStructuralTryArguments"; "compileTimeProbe"; "conditionalBranch"; "convertCallValues"; "declarePatternBindings"; "exactPosition"; "expandStatement"; "expandStructuralStatements"; "expressionPath"; "expressionType"; "fallbackType"; "isCompoundAssignment"; "normalizeProbeText"; "opaqueBlockBody"; "opaqueBlockProbeResult"; "parsedOpaqueBlockStatements"; "recoveredOpaqueBlockStatements"; "recoveredStructuralExpression"; "statementAlwaysExits"; "structuralOpaqueBlock"; "structuralTryCatch"; "successfulProbeInferenceIsDecisive"; "untypedExpression"; "untypedStatement" ];
   HxType.register_class_instance_fields "TypedBodyFingerprint" [];
   HxType.register_class_static_fields "TypedBodyFingerprint" [ "addExpression"; "addExpressions"; "addInt"; "addPattern"; "addPatterns"; "addPosition"; "addStatement"; "addStatements"; "addString"; "addStrings"; "addUnaryFixity"; "addUnaryOperator"; "exactExpression"; "exactStatements"; "forExpression"; "forStatements"; "loweredControlName" ];
   HxType.register_class_instance_fields "TypedBodyInvariant" [];
@@ -8999,7 +9218,7 @@ let init () : unit =
   HxType.register_class_static_fields "TypedIteratorProtocol" [ "assertProtocol"; "lower"; "lowerExpression"; "pairField"; "prepare"; "protocol"; "receiver"; "structuralCall" ];
   HxType.register_class_instance_fields "TypedMapProviderLowering" [ "access"; "allocator"; "call"; "convert"; "increment"; "index"; "literal"; "lower"; "save"; "statement"; "update" ];
   HxType.register_class_static_fields "TypedMapProviderLowering" [ "isMap"; "lowerClasses"; "same" ];
-  HxType.register_class_instance_fields "TypedMemberResolution" [ "fieldRead"; "nameRead"; "value" ];
+  HxType.register_class_instance_fields "TypedMemberResolution" [ "fieldRead"; "nameRead"; "nonRuntimeQualifierRead"; "value" ];
   HxType.register_class_static_fields "TypedMemberResolution" [ "field"; "instanceMethod"; "method"; "unresolvedAbstractField" ];
   HxType.register_class_instance_fields "TypedModule" [ "assertBodyRevisionCurrent"; "backendDeclarationCatalog"; "backendProjection"; "conditionalCompilation"; "env"; "findBackendFieldInitializer"; "findBackendFunctionProjection"; "generatedDeclarations"; "getBackendDeclaration"; "getBackendProjection"; "getConditionalCompilation"; "getEnv"; "getGeneratedDeclarations"; "getParsed"; "getRevision"; "getSourceOrigin"; "getTypedClasses"; "parsed"; "requireBackendDeclarationCatalog"; "revision"; "sourceOrigin"; "typedClasses"; "withTypedClasses" ];
   HxType.register_class_static_fields "TypedModule" [ "syntheticSourceOrigin" ];
@@ -9033,16 +9252,16 @@ let init () : unit =
   HxType.register_class_static_fields "TypedStmt" [ "block"; "breakStmt"; "continueStmt"; "doWhile"; "expressionStmt"; "forIn"; "forKeyValue"; "ifStmt"; "returnValue"; "returnVoid"; "switchStmt"; "throwStmt"; "tryStmt"; "variable"; "whileStmt" ];
   HxType.register_class_instance_fields "TypedStructuralRetention" [ "boundary"; "member"; "providers"; "retainField"; "retainMethod"; "seen" ];
   HxType.register_class_static_fields "TypedStructuralRetention" [];
-  HxType.register_class_instance_fields "TypedSwitchPatterns" [ "assertInput"; "getSelections"; "getSemanticKey"; "input"; "inputKey"; "selections"; "sourceIdentity"; "substituteTypes" ];
-  HxType.register_class_static_fields "TypedSwitchPatterns" [ "identity"; "named" ];
-  HxType.register_class_instance_fields "TyperContext" [ "classFullName"; "classIsOrExtends"; "currentClass"; "directives"; "expectedEnumConstructorMethod"; "extensionMethods"; "filePath"; "getClassFullName"; "getDirectives"; "getFilePath"; "getIndex"; "getModulePath"; "getPackagePath"; "getResolvedDirectives"; "hasDefine"; "importedEnums"; "importedModuleFunction"; "importedStaticField"; "importedStaticMethod"; "index"; "inferredReturnTypes"; "instanceField"; "instanceMethodOwner"; "loader"; "moduleEnumConstructorField"; "moduleEnumConstructorMethod"; "modulePath"; "packagePath"; "recordInferredReturnType"; "refinedMethodReturnType"; "resolveCoreProvider"; "resolvePrimitiveProvider"; "resolveType"; "resolveTypeUse"; "resolvedDirectives"; "resolvedProvider"; "superclass" ];
-  HxType.register_class_static_fields "TyperContext" [ "asClass" ];
+  HxType.register_class_instance_fields "TypedSwitchPatterns" [ "assertInput"; "getSelections"; "getSemanticKey"; "input"; "inputKey"; "projectPayloads"; "selections"; "sourceIdentity"; "substituteTypes"; "writtenShapes" ];
+  HxType.register_class_static_fields "TypedSwitchPatterns" [ "identity"; "named"; "writtenShape" ];
+  HxType.register_class_instance_fields "TyperContext" [ "classFullName"; "classIsOrExtends"; "currentClass"; "directives"; "expectedEnumConstructorField"; "expectedEnumConstructorMethod"; "extensionMethods"; "filePath"; "getClassFullName"; "getDirectives"; "getFilePath"; "getIndex"; "getModulePath"; "getPackagePath"; "getResolvedDirectives"; "hasDefine"; "importedEnums"; "importedModuleFunction"; "importedStaticField"; "importedStaticMethod"; "index"; "inferredReturnTypes"; "instanceField"; "instanceMethodOwner"; "loader"; "moduleEnumConstructorField"; "moduleEnumConstructorMethod"; "modulePath"; "packagePath"; "recordInferredReturnType"; "refinedMethodReturnType"; "resolveCoreProvider"; "resolvePrimitiveProvider"; "resolveType"; "resolveTypeUse"; "resolvedDirectives"; "resolvedProvider"; "superclass" ];
+  HxType.register_class_static_fields "TyperContext" [ "asClass"; "expectedEnumOwner" ];
   HxType.register_class_instance_fields "TyperError" [ "filePath"; "getFilePath"; "getMessage"; "getPos"; "message"; "pos"; "toString" ];
   HxType.register_class_static_fields "TyperError" [];
   HxType.register_class_instance_fields "TyperIndex" [ "addNominal"; "addResolvedModule"; "addResolvedModules"; "byFullName"; "byShortName"; "bySourceClass"; "catalogOperators"; "fieldInitializerTypes"; "getAbstractByFullName"; "getBinaryOperators"; "getByFullName"; "getByModulePath"; "getByShortName"; "getDeclaredByModulePath"; "getFieldInitializerTypes"; "getForSourceClass"; "getMethodBodyResults"; "getMethodInputs"; "getParameterBounds"; "getRegisteredModule"; "getTypedInputRevision"; "getUnaryOperators"; "identitiesByModulePath"; "identityByFullName"; "identityFromModuleByShortName"; "identityIsPublic"; "indexModule"; "isModulePublished"; "methodBodyResults"; "methodInputs"; "parameterBounds"; "publishResolvedModule"; "publishedModules"; "rawStaticWildcardHidesType"; "recordTypedInputRevision"; "registerIdentity"; "registerModuleIdentities"; "registerResolvedModules"; "registeredModules"; "resolveNominalProvider"; "resolveTypeDeclaration"; "resolveTypePath"; "resolveTypeUse"; "resolvedStaticWildcardHidesType"; "semanticDump"; "semanticType"; "typeDeclarations"; "typeUseResolver"; "typedInputRevisions"; "visibilityByFullName" ];
   HxType.register_class_static_fields "TyperIndex" [ "addMethod"; "build"; "buildHeaders"; "canonicalModulePath"; "classFullNameInModule"; "classifyOperatorExpression"; "compareText"; "declarationSignatureKey"; "expectedModuleNameFromFile"; "hasMetadata"; "hidesOriginalNameBehindAlias"; "malformedOperator"; "metadataValue"; "metadataValues"; "parseOperatorMetadata"; "typeParameters"; "typeVisibleFromModule" ];
   HxType.register_class_instance_fields "TyperStage" [];
-  HxType.register_class_static_fields "TyperStage" [ "accessorPropertyForAccess"; "appliedCallSignature"; "arrayElementType"; "assertWritableLocal"; "assignedLocalType"; "buildTypedClasses"; "callArgumentConversions"; "callArgumentExpectedTypes"; "callRange"; "callReceiverType"; "constraintAccepts"; "currentFieldReferenceType"; "currentInstanceMethodReferenceType"; "currentStaticMethodReferenceType"; "currentThisType"; "declarationLineRange"; "declarePatternBindings"; "declaredMemberReadType"; "diagnosticFileName"; "dottedFieldPath"; "dynamicMemberWriteName"; "exactDirectiveProvider"; "extractRawDiagnostic"; "flatOverloadTypeScore"; "functionNameRange"; "functionReferenceType"; "helperCompileTimeProbeName"; "importedStaticMethodReferenceType"; "inferDeclaredFieldType"; "inferDeclaredMethodResult"; "inferExprType"; "inferExprValueType"; "inferFunctionValueCall"; "inferLambdaType"; "inferLocalInitializer"; "inferNullCoalesceType"; "inferReturnType"; "inferSourceFunctionType"; "inferStructuralTryResult"; "inferSwitchGuard"; "inferSwitchInput"; "isRangeIdentCode"; "isStrict"; "isUpperStartName"; "methodArgumentOrder"; "moduleDirectiveProviders"; "nominalInfoForType"; "normalizeOverloadTypeName"; "overloadArgScore"; "overloadCandidateScore"; "providerDefinesStaticMember"; "providerIdentities"; "renderArgType"; "renderOverloadCandidate"; "resolveCallSelection"; "resolveCallSelectionCandidate"; "resolveClassHeaderTypes"; "resolveExtensionCall"; "resolveFieldDeclaration"; "resolveInstanceMethodValue"; "resolveMethodCall"; "resolveModuleDirectives"; "resolveStaticMethodValue"; "resolveTypeInContext"; "selectedCallType"; "selectedMethodCallResolution"; "sourceLine"; "typeErrorProbe"; "typeFromHintInContext"; "typeFunction"; "typeModule"; "typeResolvedModule"; "usingDirectiveProvider"; "validateClassArguments" ];
+  HxType.register_class_static_fields "TyperStage" [ "accessorPropertyForAccess"; "appliedCallSignature"; "arrayElementType"; "assertWritableLocal"; "assignedLocalType"; "buildTypedClasses"; "callArgumentConversions"; "callArgumentExpectedTypes"; "callRange"; "callReceiverType"; "constraintAccepts"; "constructorArgumentContexts"; "currentFieldReferenceType"; "currentInstanceMethodReferenceType"; "currentMethodShadowsExpectedEnum"; "currentStaticMethodReferenceType"; "currentThisType"; "declarationLineRange"; "declarePatternBindings"; "declaredMemberReadType"; "diagnosticFileName"; "dottedFieldPath"; "dynamicMemberWriteName"; "exactDirectiveProvider"; "extractRawDiagnostic"; "flatOverloadTypeScore"; "functionNameRange"; "functionReferenceType"; "helperCompileTimeProbeName"; "importedStaticMethodReferenceType"; "indexedArgumentContexts"; "inferDeclaredFieldType"; "inferDeclaredMethodResult"; "inferExprType"; "inferExprValueType"; "inferFunctionValueCall"; "inferLambdaType"; "inferLocalInitializer"; "inferNullCoalesceType"; "inferReturnType"; "inferSourceFunctionType"; "inferStructuralTryResult"; "inferSwitchGuard"; "inferSwitchInput"; "isRangeIdentCode"; "isStrict"; "isUpperStartName"; "methodArgumentOrder"; "moduleDirectiveProviders"; "nominalInfoForType"; "normalizeOverloadTypeName"; "ordinaryIndexedElement"; "overloadArgScore"; "overloadCandidateScore"; "providerDefinesStaticMember"; "providerIdentities"; "rejectAbstractIndexedUpdate"; "renderArgType"; "renderOverloadCandidate"; "resolveCallSelection"; "resolveCallSelectionCandidate"; "resolveClassHeaderTypes"; "resolveExtensionCall"; "resolveFieldDeclaration"; "resolveIndexedAccess"; "resolveInstanceMethodValue"; "resolveMethodCall"; "resolveModuleDirectives"; "resolveStaticMethodValue"; "resolveTypeInContext"; "selectIndexedUpdate"; "selectedCallType"; "selectedFieldType"; "selectedMethodCallResolution"; "sourceLine"; "typeErrorProbe"; "typeFromHintInContext"; "typeFunction"; "typeModule"; "typeResolvedModule"; "usingDirectiveProvider"; "validateClassArguments" ];
   HxType.register_class_instance_fields "_CompilerBundledSources.CompilerBundledSources_Fields_" [];
   HxType.register_class_static_fields "_CompilerBundledSources.CompilerBundledSources_Fields_" [ "files"; "isFile"; "namespace"; "owns"; "readBytes"; "readDirectory"; "root"; "targetRoot" ];
   HxType.register_class_instance_fields "_EmitterStage._InstanceFieldEntry" [ "fields"; "key" ];
@@ -9100,7 +9319,7 @@ let init () : unit =
   HxType.register_class_instance_fields "_TyCallAlignment.TyCallAlignment_Fields_" [];
   HxType.register_class_static_fields "_TyCallAlignment.TyCallAlignment_Fields_" [ "align" ];
   HxType.register_class_instance_fields "_TyCallArgumentContext.TyCallArgumentContext_Fields_" [];
-  HxType.register_class_static_fields "_TyCallArgumentContext.TyCallArgumentContext_Fields_" [ "shared" ];
+  HxType.register_class_static_fields "_TyCallArgumentContext.TyCallArgumentContext_Fields_" [ "agreed"; "functionValue"; "shared" ];
   HxType.register_class_instance_fields "_TyCallArgumentProjection.TyCallArgumentProjection_Fields_" [];
   HxType.register_class_static_fields "_TyCallArgumentProjection.TyCallArgumentProjection_Fields_" [ "project" ];
   HxType.register_class_instance_fields "_TyCallValidation.TyCallValidation_Fields_" [];
@@ -9126,7 +9345,7 @@ let init () : unit =
   HxType.register_class_instance_fields "_TyEmptySourceGroup.TyEmptySourceGroup_Fields_" [];
   HxType.register_class_static_fields "_TyEmptySourceGroup.TyEmptySourceGroup_Fields_" [ "functionBody"; "isEmpty" ];
   HxType.register_class_instance_fields "_TyEnumPatternArguments.TyEnumPatternArguments_Fields_" [];
-  HxType.register_class_static_fields "_TyEnumPatternArguments.TyEnumPatternArguments_Fields_" [ "resolve" ];
+  HxType.register_class_static_fields "_TyEnumPatternArguments.TyEnumPatternArguments_Fields_" [ "acceptsArity"; "hasWildcardSuffix"; "resolve" ];
   HxType.register_class_instance_fields "_TyEnumPatternInput.TyEnumPatternInput_Fields_" [];
   HxType.register_class_static_fields "_TyEnumPatternInput.TyEnumPatternInput_Fields_" [ "resolve" ];
   HxType.register_class_instance_fields "_TyEnumSwitchCoverage.TyEnumSwitchCoverage_Fields_" [];
@@ -9137,6 +9356,8 @@ let init () : unit =
   HxType.register_class_static_fields "_TyFieldAssignment.TyFieldAssignment_Fields_" [ "check"; "explicitlyUntyped" ];
   HxType.register_class_instance_fields "_TyFunctionParameter.TyFunctionParameter_Fields_" [];
   HxType.register_class_static_fields "_TyFunctionParameter.TyFunctionParameter_Fields_" [ "copy"; "declarationBodyType"; "isNullDefault"; "normalizeRest"; "withType" ];
+  HxType.register_class_instance_fields "_TyIndexedUpdateOperation.TyIndexedUpdateOperation_Fields_" [];
+  HxType.register_class_static_fields "_TyIndexedUpdateOperation.TyIndexedUpdateOperation_Fields_" [ "select"; "validateInputs" ];
   HxType.register_class_instance_fields "_TyInferenceAbstractDestination.TyInferenceAbstractDestination_Fields_" [];
   HxType.register_class_static_fields "_TyInferenceAbstractDestination.TyInferenceAbstractDestination_Fields_" [ "constrain" ];
   HxType.register_class_instance_fields "_TyInferenceAbstractInput.TyInferenceAbstractInput_Fields_" [];
@@ -9162,7 +9383,7 @@ let init () : unit =
   HxType.register_class_instance_fields "_TyNullArgument.TyNullArgument_Fields_" [];
   HxType.register_class_static_fields "_TyNullArgument.TyNullArgument_Fields_" [ "acceptsLiteral" ];
   HxType.register_class_instance_fields "_TyNullableIntegerResult.TyNullableIntegerResult_Fields_" [];
-  HxType.register_class_static_fields "_TyNullableIntegerResult.TyNullableIntegerResult_Fields_" [ "result" ];
+  HxType.register_class_static_fields "_TyNullableIntegerResult.TyNullableIntegerResult_Fields_" [ "admits"; "isInteger"; "result" ];
   HxType.register_class_instance_fields "_TyReceiverMemberLookup.TyReceiverMemberLookup_Fields_" [];
   HxType.register_class_static_fields "_TyReceiverMemberLookup.TyReceiverMemberLookup_Fields_" [ "classProvesAbsence"; "owner"; "rejectAbsent" ];
   HxType.register_class_instance_fields "_TySignatureDependencies.SignatureDependencyPaths" [ "add"; "ordered"; "seen"; "values" ];
@@ -9265,7 +9486,7 @@ let init () : unit =
   HxType.register_class_static_fields "_TypedTargetScope.TypedTargetScope_Fields_" [ "kind"; "select" ];
   HxType.register_class_instance_fields "backend.BackendAbi" [];
   HxType.register_class_static_fields "backend.BackendAbi" [ "descriptorLabel"; "normalizePluginLabel"; "validateDescriptor"; "validateManifestRequires" ];
-  HxType.register_class_instance_fields "backend.BackendContext" [ "buildExecutable"; "defineValue"; "defines"; "emitFullBodies"; "ensureOcamlProfileDefine"; "hasDefine"; "mainModule"; "nativeLibraryPaths"; "outputDir"; "outputFileHint"; "resources" ];
+  HxType.register_class_instance_fields "backend.BackendContext" [ "buildExecutable"; "defineValue"; "defines"; "ensureOcamlProfileDefine"; "hasDefine"; "mainModule"; "nativeLibraryPaths"; "outputDir"; "outputFileHint"; "resources" ];
   HxType.register_class_static_fields "backend.BackendContext" [];
   HxType.register_class_instance_fields "backend.BackendDispatchBoundary" [];
   HxType.register_class_static_fields "backend.BackendDispatchBoundary" [ "asDispatchValue"; "emit"; "emitReflective"; "requireJsBackend"; "requireOcamlBackend"; "requireTargetCoreBackend"; "traceEnabled" ];
@@ -9823,7 +10044,9 @@ let init () : unit =
   HxType.register_class_static_fields "backend.source.SourceMvpTargetCore" [ "emit" ];
   HxType.register_class_instance_fields "backend.source.SourceNativeBackend" [];
   HxType.register_class_static_fields "backend.source.SourceNativeBackend" [ "capabilitiesStatic"; "csCapabilities"; "csDescriptor"; "csRegistration"; "descriptor"; "descriptorWithCapabilities"; "emitTarget"; "javaCapabilities"; "javaDescriptor"; "javaRegistration"; "luaDescriptor"; "luaRegistration"; "phpDescriptor"; "phpRegistration"; "pythonDescriptor"; "pythonRegistration"; "registration" ];
-  HxType.register_class_instance_fields "backend.source.SourceNativeFunctionLocals" [ "declaration"; "findNamedPattern"; "hasLocal"; "noRoot"; "nominalName"; "patternDeclaration"; "program"; "projection"; "requireEnumName"; "requireRootControlIdentity"; "target"; "typeName" ];
+  HxType.register_class_instance_fields "backend.source.SourceNativeConstructorLowering" [];
+  HxType.register_class_static_fields "backend.source.SourceNativeConstructorLowering" [ "body"; "decode"; "expression"; "marker" ];
+  HxType.register_class_instance_fields "backend.source.SourceNativeFunctionLocals" [ "constructorName"; "declaration"; "findNamedPattern"; "hasLocal"; "noRoot"; "nominalName"; "patternDeclaration"; "program"; "projection"; "requireEnumName"; "requireRootControlIdentity"; "target"; "typeName" ];
   HxType.register_class_static_fields "backend.source.SourceNativeFunctionLocals" [];
   HxType.register_class_instance_fields "backend.source.SourceTargetCommon" [];
   HxType.register_class_static_fields "backend.source.SourceTargetCommon" [ "addJavaEntryBodyDirectCall"; "anonExpr"; "anonExprWithFrame"; "appendCsImportStubMembers"; "appendCsMainSupportMembers"; "appendCsNamespaceClose"; "appendCsNamespaceOpen"; "appendCsNestedImportStub"; "appendCsPostUpdateVarSupport"; "appendCsReadOnlyFieldMetadata"; "appendCsUsing"; "appendCsUtestRunnerAddCasesStub"; "appendCsUtestRunnerAddCasesStubOnce"; "appendCsUtilityProcessRuntime"; "appendJavaArraySupport"; "appendJavaEntryBodyCallSupportMembers"; "appendJavaEnumLikeClass"; "appendJavaFunctionalField"; "appendJavaFunctionalOverloads"; "appendJavaImportStubMembers"; "appendJavaInterfaceClass"; "appendJavaMainSupportMembers"; "appendJavaNestedImportStub"; "appendJavaOperationFunctionalOverloads"; "appendJavaSignalSupport"; "appendJavaStdSupport"; "appendJavaUtilityProcessRuntime"; "appendLuaNamespace"; "appendLuaRunciHelperBindings"; "appendLuaSupportClassBinding"; "appendLuaUtilityProcessRuntime"; "appendPhpClassNameMap"; "appendPhpDateRuntime"; "appendPhpDateToolsSupport"; "appendPhpGenericStackRuntime"; "appendPhpMetaRuntime"; "appendPhpOverloadDispatchers"; "appendPhpReflectionFieldPolicy"; "appendPhpResourceRuntime"; "appendPhpStringBufRuntime"; "appendPhpXmlRuntime"; "appendPythonDateToolsSupport"; "appendPythonMacroCompilerSupport"; "appendPythonMetaSupport"; "appendPythonReflectSupport"; "appendPythonStringMapSupport"; "appendPythonStringToolsSupport"; "appendPythonTestIssuesSupport"; "appendPythonTypeNameHelpers"; "appendPythonTypeSupport"; "appendPythonUnitBuilderSupport"; "appendPythonValueExceptionBase"; "appendPythonVectorSupport"; "appendSourceNativeTemplateLines"; "arrayAccessExpr"; "arrayAccessExprWithFrame"; "arrayComprehensionExpr"; "arrayLiteral"; "arrayLiteralWithFrame"; "artifactKind"; "assignedValueExpr"; "assignedValueExprWithFrame"; "binopExpr"; "binopExprWithFrame"; "binopToken"; "breakStmt"; "callArgExpr"; "callArgExprWithFrame"; "callExpr"; "callExprWithFrame"; "capabilitiesStatic"; "castExpr"; "castExprWithFrame"; "collectJavaEntryBodyDirectCalls"; "collectJavaEntryBodyDirectCallsInExpr"; "collectJavaEntryBodyFunctionRefs"; "collectJavaEntryBodyFunctionRefsInExpr"; "concatOp"; "conditionalExpr"; "constructorExpr"; "constructorExprWithFrame"; "continueStmt"; "copyBoolMap"; "copyExprMap"; "copyIntMap"; "copySourceSwitchBindings"; "copyStringArray"; "copyStringArrayMap"; "copyStringMap"; "csArgTypeFromHint"; "csArrayConstructorTypePath"; "csArrayRuntimeType"; "csCallArgsWithDefaults"; "csCapabilities"; "csCompilerCommand"; "csCreateReturnsNewOwner"; "csCurrentClassStaticMemberNames"; "csDefaultArgExpr"; "csDelegateTypeFromFunctionHint"; "csDescriptor"; "csDllPath"; "csDynamicFieldCallExpr"; "csEntryClassName"; "csEntrySourcePath"; "csEnumValueExpr"; "csEqualityNeedsObjectEquals"; "csExePath"; "csExprAsStatements"; "csExprIsBoxedFieldAccess"; "csFieldInitExpr"; "csFieldType"; "csForInExprStatements"; "csFuncType"; "csFunctionArgHasDefault"; "csFunctionArgs"; "csFunctionHintArgCount"; "csGlobalClassRef"; "csImportPathIsBcl"; "csImportShouldUseOwnerStub"; "csImportStubIsEligible"; "csImportUsingNamespace"; "csIsUtestReport"; "csIsUtestRunner"; "csLambdaCallDelegateType"; "csLambdaExpr"; "csLibIntrinsicCall"; "csLocalDeclType"; "csMissingDefaultArgDecls"; "csNativeArrayTypePath"; "csNestedImportConflictsWithMember"; "csNestedImportStubNames"; "csOutputPackagePath"; "csPackageQualifiedPathExpr"; "csPatternNeedsSourceLowering"; "csQualifiedClassName"; "csReflectIntrinsicCall"; "csRegistration"; "csRenameScopedLocalStmts"; "csReturnTypeFromHint"; "csRewriteSameClassStaticMemberExpr"; "csRewriteSameClassStaticMembersInStmt"; "csRewriteSameClassStaticMembersInStmts"; "csSignalRuntimeType"; "csSourcePath"; "csStubArityRange"; "csSupportClassNeedsMapSetSurface"; "csSupportConstructorBodySupported"; "csSupportMethodBodyLines"; "csSwitchExprLambda"; "csSwitchExprNeedsStatementLowering"; "csSwitchExprStatements"; "csSyntaxCodeExpr"; "csSystemNamespaceSegment"; "csTrimRawSnippet"; "csTypePath"; "csTypePathEndsWith"; "defaultFileName"; "defaultValue"; "descriptor"; "descriptorWithCapabilities"; "directiveProviderModulePath"; "directiveProviderTypePaths"; "emitCsExecutable"; "emitCsImportStubs"; "emitCsLibraryDll"; "emitCsLibrarySourceSet"; "emitCsLibrarySources"; "emitCsRunciHelperStubs"; "emitCsRuntimeSupportSource"; "emitCsSourceSet"; "emitCsSourceSetOnly"; "emitCsStandardStubs"; "emitJavaImportStubs"; "emitJavaJar"; "emitJavaLibraryJar"; "emitJavaLibrarySourceSet"; "emitJavaRunciHelperStubs"; "emitJavaSourceSet"; "emitPhpTarget"; "emitTarget"; "emptyStmt"; "ensureDirectory"; "ensureParentDirectory"; "equalityCond"; "exprKind"; "exprStmt"; "falseLiteral"; "fieldAccess"; "fieldAccessExpr"; "fieldAccessExprWithFrame"; "fieldCallExpr"; "fieldCallExprWithFrame"; "findMainModule"; "findSourceSwitchBinding"; "findTopLevelChar"; "floatLiteralExpr"; "hasForExprProbeArg"; "helperAbstractCastCarrierName"; "helperAbstractOverloadTypeError"; "helperAbstractOverloadTypeErrorWithFrame"; "helperAbstractUnaryTypeError"; "helperAbstractUnaryTypeErrorWithFrame"; "helperAnonLiteralHasDuplicateFields"; "helperAnonLiteralTypeError"; "helperAnonTypeFields"; "helperAssignmentTypeError"; "helperExprCreatesAbstractCastCarrier"; "helperExprFitsType"; "helperExprHasMyStringType"; "helperExprHasMyStringTypeWithFrame"; "helperExprHasNumericAbstractWrapper"; "helperExprHasNumericAbstractWrapperWithFrame"; "helperExprHasSimpleProbeValue"; "helperExprLooksBoolValue"; "helperExprLooksEnumValue"; "helperExprNullableState"; "helperExprNullableStateWithFrame"; "helperFollowWithAbstractsResult"; "helperFunctionCallAnonTypeError"; "helperFunctionCallArityTypeError"; "helperFunctionCallArityTypeErrorWithFrame"; "helperGenericNullTypeError"; "helperGetErrorMessageResult"; "helperGetErrorMessageResultWithFrame"; "helperGetMetaExpr"; "helperIsNullableResult"; "helperIsNullableResultWithFrame"; "helperMacroProbeExpr"; "helperMacroProbeExprWithFrame"; "helperMacroProbeName"; "helperMapLiteralKeySignature"; "helperMapLiteralProbeKind"; "helperMapLiteralTypeError"; "helperMetadataArgExprs"; "helperNullCheckSubject"; "helperNullCheckTernaryNullableState"; "helperNullCheckTernaryNullableStateWithFrame"; "helperOptionalLambdaCallTypeError"; "helperOptionalLambdaCallTypeErrorWithFrame"; "helperSameValueExpr"; "helperStringFieldCallTypeError"; "helperStringFieldCallTypeErrorWithFrame"; "helperTypeErrorAbstractCastAssignment"; "helperTypeErrorBlockResult"; "helperTypeErrorExpressionResult"; "helperTypeErrorExpressionResultWithFrame"; "helperTypeErrorLoweredBlockResult"; "helperTypeErrorResult"; "helperTypeErrorResultWithFrame"; "helperTypeErrorText"; "helperTypeStringResult"; "helperTypeStringResultWithFrame"; "indentStep"; "inferLocalTypeHint"; "inferRepoRootForSourceNativeTemplates"; "intLiteralExpr"; "isAssignmentOp"; "isBoolTypeHint"; "isCompileTimeOnlyFunction"; "isCompileTimeOnlySupportClass"; "isCsReservedIdentifier"; "isDynamicTypeHint"; "isFloatTypeHint"; "isInt64TypeHint"; "isIntTypeHint"; "isJavaBuiltinDirectCall"; "isJavaReservedIdentifier"; "isKilometerTypeHint"; "isLambdaTypeAscription"; "isMeterTypeHint"; "isMyAbstractCounterTypeHint"; "isMyHashStringTypeHint"; "isMyHashTypeHint"; "isNullTypeHint"; "isPhpImplicitIdentifier"; "isPhpUnitTestHelperName"; "isPythonReservedIdentifier"; "isStdSourceFile"; "isStringTypeHint"; "isTemplateWrapTypeHint"; "isUIntTypeHint"; "javaCapabilities"; "javaCreateReturnsNewOwner"; "javaDescriptor"; "javaEnumLikeClass"; "javaEnumRuntimeExpr"; "javaExprAsStatements"; "javaExprWithStmtTraceLine"; "javaForInExprStatements"; "javaFunctionArgs"; "javaFunctionProjection"; "javaFunctionalDefaultReturn"; "javaImportConflictsWithClass"; "javaImportParentIsEmittedClass"; "javaImportPathIsJdk"; "javaImportPathIsValid"; "javaImportShouldUseOwnerStub"; "javaImportStubIsEligible"; "javaImportStubShouldBeInterface"; "javaImportTargetsSamePackageEmittedOwner"; "javaImportableStaticMemberNames"; "javaJarPath"; "javaLambdaExpr"; "javaLambdaFieldInit"; "javaLibraryFallbackName"; "javaMainHelperBody"; "javaNestedImportStubNames"; "javaOperationDispatchBody"; "javaOperationReturnCall"; "javaQualifiedClassName"; "javaRegistration"; "javaSingleMethodInterfaceClass"; "javaSourcePath"; "javaStringLikeOperand"; "javaStubArityRange"; "javaSupportClassNeedsSignal"; "javaSupportDefaultReturn"; "javaSupportFieldDeclType"; "javaSupportFieldDefault"; "javaSupportFieldInitSupported"; "javaSupportFieldType"; "javaSupportMethodReturnType"; "javaSupportTypeHint"; "javaSwitchExprStatements"; "javaSyntheticObjectArgs"; "javaTraceAtLine"; "javaTypePath"; "javaUpperStart"; "lambdaCallExpr"; "lambdaCallExprWithFrame"; "lambdaExpr"; "lambdaExprWithPhpUse"; "looksLikePhpPackageRoot"; "looksLikeTypePathRoot"; "looksLikeTypePathSegment"; "lowerSourceArrayPattern"; "lowerSourceEnumExtract"; "lowerSourceExtractorPattern"; "lowerSourceObjectPattern"; "lowerSourceSwitchPattern"; "luaArrayConstructorTypePath"; "luaAssignmentStmt"; "luaDescriptor"; "luaExprAsStatements"; "luaForInExprStatements"; "luaIncrementExpr"; "luaLambdaExpr"; "luaRegistration"; "luaReturningExpr"; "luaStringFieldCall"; "luaStringFieldReceiver"; "luaStringLikeOperand"; "luaSwitchExprStatements"; "luaTryCatchRawExpr"; "luaUnwrapNullTypeHint"; "lvalueExpr"; "lvalueExprWithFrame"; "macroExpr"; "macroTypeExpr"; "mainModule"; "matchingOuterParen"; "mergeSourceSwitchOrBindings"; "metadataHasName"; "moduleHasClass"; "nativeLocalDeclaration"; "normalizeProbeText"; "normalizeTypeHint"; "normalizedPhpCaptureNames"; "nullCoalesceAssignExpr"; "nullCoalesceAssignExprWithFrame"; "nullCoalesceExpr"; "nullCoalesceExprWithFrame"; "optionalLambdaArgNames"; "packageFromSourcePath"; "patternKind"; "phpActivateLexicalLocal"; "phpAddAssignExprWithFrame"; "phpAddEmittedTypeNameKeys"; "phpAlignCallableFieldCallArgs"; "phpAlignCallableFieldCallArgsWithFrame"; "phpAlignKnownMethodCallArgs"; "phpAlignKnownMethodCallArgsWithFrame"; "phpAlignTypedOptionalCallArgs"; "phpAnonFieldTypeHint"; "phpAnonFieldValueExpr"; "phpAnonFieldValueExprWithFrame"; "phpArrayBackedAbstractTypeHint"; "phpArrayBackedReceiver"; "phpArrayBackedReceiverWithFrame"; "phpArrayBackedSequenceValue"; "phpArrayBackedSequenceValueWithFrame"; "phpArrayComprehensionYield"; "phpArrayConstructorTypePath"; "phpArrayFieldCall"; "phpArrayFieldCallWithFrame"; "phpArrayItemTypeHint"; "phpArrayMutatingFieldCall"; "phpArrayMutatingReceiverLocal"; "phpArrayMutatingReceiverLocalWithFrame"; "phpArrayResultReceiver"; "phpAssignedCapturesInList"; "phpAssignedCapturesInListWithFrame"; "phpAssignedValueExpr"; "phpAssignedValueExprWithFrame"; "phpAssignedValueForLvalue"; "phpAssignedValueForLvalueWithFrame"; "phpBaseClassDecl"; "phpBaseClassName"; "phpBindArgExprWithFrame"; "phpBindDeferredEmptyArrayParams"; "phpBindGenericTypeHint"; "phpBindScopedLocal"; "phpBlockExprUseClause"; "phpBootIntrinsicCallWithFrame"; "phpBootIntrinsicFieldWithFrame"; "phpBuiltinKnownStaticMethod"; "phpBuiltinTypeValueName"; "phpCallArgExpr"; "phpCallArgExprWithFrame"; "phpCallArgFitsParam"; "phpCallField"; "phpCallFieldWithFrame"; "phpCatchBindLines"; "phpCatchMatches"; "phpCatchPreservesWrapper"; "phpClassBaseTypeHint"; "phpClassIsOrExtends"; "phpClassIsPoint3Like"; "phpClassTypeAncestors"; "phpClassTypeAncestorsWithFrame"; "phpClassValueExpr"; "phpClassVisited"; "phpCollectArrayMutatingReceiverLocal"; "phpCollectAssignedIdents"; "phpCollectAssignedIdentsInStmt"; "phpCollectAssignedIdentsWithFrame"; "phpCollectAssignedList"; "phpCollectDeclaredLocalsInPattern"; "phpCollectDeclaredLocalsInStmt"; "phpCollectGenericStaticSpecializationsFromExpr"; "phpCollectGenericStaticSpecializationsFromStmt"; "phpCollectGenericStaticSpecializationsFromStmts"; "phpCollectGenericStaticSpecializationsFromText"; "phpCollectGenericTypeParams"; "phpCollectUsedIdents"; "phpCollectUsedIdentsInStmt"; "phpCollectUsedIdentsWithFrame"; "phpCollectUsedList"; "phpCollectUsedListWithFrame"; "phpCommonClassTypeHint"; "phpCommonClassTypeHintWithFrame"; "phpCommonNullableTypeHint"; "phpCommonValueTypeHint"; "phpCopyValueExpr"; "phpCurrentClassInstanceFieldNames"; "phpCurrentClassInstanceMethodNames"; "phpCurrentClassStaticFieldNames"; "phpCurrentClassStaticMemberNames"; "phpCurrentInstanceFieldTypeHint"; "phpCurrentInstanceFieldValue"; "phpCurrentInstanceMethodArgs"; "phpCurrentInstanceMethodValue"; "phpDeclareScopedLocal"; "phpDescriptor"; "phpDivideAssignExprWithFrame"; "phpDynamicMethodMapForType"; "phpDynamicMethodNames"; "phpERegLikeReceiver"; "phpERegLikeReceiverWithFrame"; "phpEffectiveFieldTypeHint"; "phpEmittedNameIsKnownInterface"; "phpEmittedTypeNameForModuleClass"; "phpEnumAbstractValueExpr"; "phpEnumCtorCallExpr"; "phpEnumCtorCallExprWithFrame"; "phpEnumCtorReceiverValueExpr"; "phpEnumCtorReceiverValueExprWithFrame"; "phpEnumCtorRef"; "phpEnumCtorRefWithFrame"; "phpEnumCtorValueExpr"; "phpEnumCtorValueExprWithFrame"; "phpEnumCtorValueFieldCall"; "phpEnumCtorValueFieldCallWithFrame"; "phpEnumNameFromTypeHint"; "phpEqualityNeedsHelper"; "phpExactEmittedTypeNameForClass"; "phpExactFunctionLocalTypes"; "phpExpectedModuleNameFromFile"; "phpExplicitGenericStaticSpecializationExists"; "phpExplicitGenericStaticSpecializationName"; "phpExplicitGenericStaticSpecializationNameFromRawArgs"; "phpExplicitGenericStaticSpecializationNameWithFrame"; "phpExprHasRefCaptureOfNames"; "phpExprIsConstantDefault"; "phpExprIsInt64Value"; "phpExprIsInt64ValueWithFrame"; "phpExprListHasRefCaptureOfNames"; "phpExprListTouchesThis"; "phpExprReturnsInt64"; "phpExprReturnsInt64WithFrame"; "phpExprTouchesThis"; "phpExprTypeHint"; "phpExprTypeHintForNullCoalesceOperand"; "phpFieldReadAccess"; "phpFilterCapturedNames"; "phpFindRawCallClose"; "phpFirstPriorGenericBinding"; "phpFoldRenderedTypeErrorProbe"; "phpForInExpr"; "phpForInExprWithFrame"; "phpForKeyValueExpr"; "phpForKeyValueExprWithFrame"; "phpFrameAfterStatementDeclaration"; "phpFrameHasCurrentInstanceMethod"; "phpFrameHasLocal"; "phpFunctionArgCanBeSkipped"; "phpFunctionArgConversionPrologue"; "phpFunctionArgIsRefLike"; "phpFunctionArgIsRestLike"; "phpFunctionIsDynamic"; "phpFunctionIsGeneric"; "phpFunctionIsStringExtension"; "phpFunctionTypeArgIsOptional"; "phpFunctionTypeArgTexts"; "phpFunctionTypeArgTypeHint"; "phpFunctionTypeArityRange"; "phpFunctionTypeOptionalArgNamesForLambda"; "phpFunctionTypeParams"; "phpFunctionTypeRefArgIndexesForLambda"; "phpGenericAnonSuffixFromRawArg"; "phpGenericArraySuffixFromRawArg"; "phpGenericArrayTypeHintFromRawArg"; "phpGenericBaseSuffix"; "phpGenericConstructorSample"; "phpGenericExprIsEmptyArray"; "phpGenericFunctionSuffixFromRawArg"; "phpGenericLocalTypeHint"; "phpGenericLooksTypeParam"; "phpGenericNewTypeText"; "phpGenericParamOrder"; "phpGenericRawArgIsEmptyArray"; "phpGenericReturnHintFromRawFunctionTail"; "phpGenericSpecializationSuffixFromExpr"; "phpGenericSpecializationSuffixFromRawArg"; "phpGenericSpecializedNameFromExprArgs"; "phpGenericSpecializedNameFromRawArgs"; "phpGenericStackReceiver"; "phpGenericStackReceiverWithFrame"; "phpGenericStackTypeHint"; "phpGenericStaticFunctionForType"; "phpGenericStaticFunctionMapForType"; "phpGenericStaticSpecializations"; "phpGenericTypeHintForProgram"; "phpGenericTypeHintFromExpr"; "phpGenericTypeHintFromRawArg"; "phpGenericTypeHintFromRawFunctionArg"; "phpGenericTypeSuffix"; "phpGlobalTypePath"; "phpImportedTypeAlias"; "phpInInstancePropertyAccessor"; "phpInStaticPropertyAccessor"; "phpIncrementedValueExpr"; "phpInstanceFieldMapForType"; "phpInstanceFieldNames"; "phpInstanceFieldTypeHintForType"; "phpInstanceFieldTypeHintMapForType"; "phpInstanceFieldTypeHints"; "phpInstanceMemberLookupCandidates"; "phpInstanceMethodArgs"; "phpInstanceMethodArgsForType"; "phpInstanceMethodArgsMapForType"; "phpInstanceMethodMapForType"; "phpInstanceMethodNames"; "phpInstanceOverloadMethodNameWithFrame"; "phpInstancePropertyGetterAccess"; "phpInstancePropertyGetterAccessWithFrame"; "phpInstancePropertySetterAccess"; "phpInstancePropertySetterAccessWithFrame"; "phpInt64AssignedValueExpr"; "phpInt64BitwiseExprWithFrame"; "phpInt64ImportedStaticCallArityMatches"; "phpInt64ImportedStaticMethodValueName"; "phpInt64InstanceMethodArgsSuggestInt64"; "phpInt64InstanceMethodArgsSuggestInt64WithFrame"; "phpInt64InstanceMethodCallWithFrame"; "phpInt64InstanceMethodReturnsInt64"; "phpInt64InstanceMethodReturnsInt64Call"; "phpInt64InstanceMethodReturnsInt64CallWithFrame"; "phpInt64ShiftAssignExprWithFrame"; "phpInt64StaticCall"; "phpInt64StaticCallWithFrame"; "phpInt64StaticMethodName"; "phpInt64StaticMethodReturnsInt64"; "phpInt64TypePath"; "phpIntLiteralExtensionReceiver"; "phpIsBootTypePath"; "phpIsSyntaxIntrinsicTypePath"; "phpKnownAbstractTypeName"; "phpKnownEmittedQualifiedTypePath"; "phpKnownEmittedQualifiedTypePathWithFrame"; "phpKnownStaticCallableField"; "phpKnownStaticCallableFieldWithFrame"; "phpKnownStaticMethod"; "phpKnownStaticMethodWithFrame"; "phpKnownStringResultReceiver"; "phpKnownStringResultReceiverWithFrame"; "phpKnownTypeName"; "phpLambdaArgCanUsePhpDefault"; "phpLambdaArgIsRefLike"; "phpLambdaArgPrologue"; "phpLambdaAssignedCaptures"; "phpLambdaAssignedCapturesWithFrame"; "phpLambdaExpr"; "phpLambdaExprWithFrame"; "phpLambdaUseClause"; "phpLambdaUsedCaptures"; "phpLambdaUsedCapturesWithFrame"; "phpLaterAssignedLocalsByStmt"; "phpLaterOptionalParamFits"; "phpLibTypePath"; "phpListFieldCall"; "phpListFieldCallWithFrame"; "phpListLikeReceiver"; "phpListLikeReceiverWithFrame"; "phpLocalExists"; "phpLocalHasDynamicCallField"; "phpLocalHasDynamicCallFieldWithFrame"; "phpLocalHasInstanceField"; "phpLocalHasInstanceMethod"; "phpLocalHasInstanceMethodWithFrame"; "phpLocalInitExpr"; "phpLocalTypeHint"; "phpLocalTypeHintWithFrame"; "phpLocalUsesPropertyAccessorWithFrame"; "phpLoopIterationUseClause"; "phpLoopNeedsIterationScope"; "phpLvalueExpr"; "phpLvalueExprWithFrame"; "phpMacroComplexType"; "phpMacroEnum"; "phpMacroExpr"; "phpMacroExprDef"; "phpMacroExprObject"; "phpMacroExtendsTypeName"; "phpMacroFunctionArgTypes"; "phpMacroTypeNameInModule"; "phpMacroTypePath"; "phpMainClassNeedsRuntimeSupport"; "phpMainClassStaticFieldNames"; "phpMainClassStaticMemberNames"; "phpMapLiteralPairs"; "phpMapLiteralPairsWithFrame"; "phpMarkClassVisited"; "phpMathConstantAccess"; "phpMergeInstanceFieldTypeHints"; "phpMergeRefCaptureLocals"; "phpMergeStringFieldTypeHints"; "phpMetadataArgExpr"; "phpMetadataArgs"; "phpMetadataExists"; "phpMetadataLiteral"; "phpMetadataName"; "phpMetadataObjectField"; "phpMetadataObjectFieldName"; "phpMethodValueClosure"; "phpModuleLocalEnumConstructorMap"; "phpModuleLocalTypeNameMap"; "phpModuloAssignExprWithFrame"; "phpMultiplyAssignExprWithFrame"; "phpMutableReceiverExpr"; "phpMutableReceiverExprWithFrame"; "phpNativeArrayTypePath"; "phpNeedsUnitTestLocalStaticSlot"; "phpNullCoalesceTypeHint"; "phpOpaqueBlockExpr"; "phpOptionalLambdaArgNames"; "phpOptionalLambdaOptionalArgNames"; "phpOverloadCandidateScore"; "phpOverloadDispatchCheck"; "phpOverloadFallbackCandidateWithLocals"; "phpOverloadFallbackName"; "phpOverloadFallbackNameWithLocals"; "phpOverloadGroups"; "phpOverloadMethodMapForType"; "phpOverloadMethodName"; "phpOverloadMethodNameForType"; "phpOverloadMethodNameForTypeAndLocals"; "phpOverloadMethodNameFromCandidates"; "phpOverloadSuffixForArgs"; "phpOverloadTypeScore"; "phpPackagePathPrefix"; "phpPackageQualifiedTypePath"; "phpPackageQualifiedTypeReference"; "phpPackageQualifiedTypeReferenceWithFrame"; "phpPlainTypeNameInModule"; "phpPoint3LikeReceiver"; "phpPoint3LikeReceiverWithFrame"; "phpPoint3LikeTypeHint"; "phpPostIncrementExprWithFrame"; "phpPreIncrementExprWithFrame"; "phpPreferFieldTypeHint"; "phpPreferLocalTypeHint"; "phpPreferredEnumFromExpr"; "phpPreferredEnumFromExprWithFrame"; "phpProgramAbstractTypeNameMap"; "phpProgramBodyRenderer"; "phpProgramClassBaseTypeMap"; "phpProgramDeclaresClass"; "phpProgramDuplicateTypeNameMap"; "phpProgramDynamicMethodMap"; "phpProgramEmittedTypeNameMap"; "phpProgramEnumAbstractValueMap"; "phpProgramEnumConstructorMap"; "phpProgramEnumConstructorsByEnumMap"; "phpProgramGenericStaticFunctionMap"; "phpProgramImportedSupportTypeNameMap"; "phpProgramInstanceFieldMap"; "phpProgramInstanceFieldTypeHintMap"; "phpProgramInstanceMethodArgsMap"; "phpProgramInstanceMethodMap"; "phpProgramInterfaceTypeNameMap"; "phpProgramKnownTypeNameMap"; "phpProgramOverloadMethodMap"; "phpProgramShortTypeNameCounts"; "phpProgramStaticCallableFieldMap"; "phpProgramStaticMethodMap"; "phpProgramStringExtensionMethodMap"; "phpProgramTypeAliasMap"; "phpRawCallHasBoundary"; "phpRawIsIdentPart"; "phpRawIsWhitespace"; "phpReceiverArrayItemTypeHint"; "phpReceiverArrayItemTypeHintWithFrame"; "phpReceiverExpr"; "phpReceiverExprWithFrame"; "phpReceiverHasInstanceField"; "phpReceiverHasInstanceFieldWithFrame"; "phpReceiverHasInstanceMethod"; "phpReceiverHasInstanceMethodWithFrame"; "phpRecordReferencedMemberExpr"; "phpRecordReferencedMemberStmt"; "phpReflectionExtraInstanceFields"; "phpReflectionLivePrivateMembers"; "phpReflectionShouldHideDceField"; "phpReflectionShouldHideField"; "phpReflectionShouldHideFunction"; "phpRegisterOptionalLambdaLocal"; "phpRegistration"; "phpRenameScopedLocalExpr"; "phpRenameScopedLocalStmt"; "phpRenameScopedLocalStmtList"; "phpRenameScopedLocalStmts"; "phpRenameScopedPattern"; "phpRenameScopedRawText"; "phpRenderedCallArgsWithEnumPeerContext"; "phpRenderedCallArgsWithEnumPeerContextWithFrame"; "phpRenderedCalleeIsActiveLocal"; "phpRenderedFunctionArgs"; "phpRenderedInt64ReceiverExpr"; "phpRenderedMethodName"; "phpRenderedTypeName"; "phpRenderedTypeNameForModule"; "phpRenderedTypeNameWithFrame"; "phpReturnBody"; "phpRewriteRawSameClassMemberStmts"; "phpRewriteRenderedExplicitGenericStaticCalls"; "phpRewriteSameClassMemberExpr"; "phpRewriteSameClassMembersInStmt"; "phpRewriteSameClassMembersInStmts"; "phpRuntimeCastTypeName"; "phpRuntimeListType"; "phpRuntimeMapBaseType"; "phpRuntimeMapConstructorExpr"; "phpRuntimeMapTagForTypeHint"; "phpRuntimeMapType"; "phpRuntimeSupportRenderedTypeName"; "phpRuntimeSupportRenderedTypeNameWithLocalType"; "phpSameClassStaticHelperCall"; "phpSetInferredLocalTypeIfUnknown"; "phpShouldEmitStdNormalEnumSupportClass"; "phpShouldEmitStdSupportClass"; "phpShouldEmitSupportPackage"; "phpShouldRefCaptureLocal"; "phpShouldRuntimeCast"; "phpShouldRuntimeCastWithFrame"; "phpShouldUseFieldReadHelper"; "phpShouldUseFieldReadHelperWithFrame"; "phpShouldUseFunctionBindSyntax"; "phpShouldUseFunctionBindSyntaxWithFrame"; "phpStaticCallableFieldMapForType"; "phpStaticFieldDefault"; "phpStaticFieldDefaultWithRenderer"; "phpStaticFieldIsCallable"; "phpStaticInitFallbackLines"; "phpStaticMethodCall"; "phpStaticMethodCallWithFrame"; "phpStaticMethodMapForType"; "phpStaticMethodValueAccess"; "phpStaticOverloadMethodName"; "phpStaticOverloadMethodNameWithFrame"; "phpStaticPropertyAccess"; "phpStaticPropertyAccessWithFrame"; "phpStaticTypePath"; "phpStaticTypePathPrefix"; "phpStaticTypePathWithFrame"; "phpStdIsOfTypeTypeArgWithFrame"; "phpStmtHasLoopControlEscape"; "phpStmtHasRefCaptureOfNames"; "phpStmtListHasLoopControlEscape"; "phpStmtListHasRefCaptureOfNames"; "phpStmtListTouchesThis"; "phpStmtTouchesThis"; "phpStringExtensionFieldCall"; "phpStringExtensionFieldCallWithFrame"; "phpStringExtensionFunctionVisibleFrom"; "phpStringExtensionImportCandidates"; "phpStringExtensionMethodsForClass"; "phpStringExtensionMethodsForModuleClass"; "phpStringExtensionMethodsForUsingClass"; "phpStringExtensionOwner"; "phpStringFieldCall"; "phpStringFieldCallWithFrame"; "phpStringLikeReceiver"; "phpStringMethodField"; "phpStringMethodReceiver"; "phpStringMethodReceiverWithFrame"; "phpStringMethodValueClosure"; "phpStructuralStringMethodHint"; "phpSubtractAssignExprWithFrame"; "phpSuperGetterCall"; "phpSuperGlobalIntrinsicField"; "phpSuperSetterCall"; "phpSupportPackage"; "phpSwitchExpr"; "phpSwitchExprWithFrame"; "phpSyntaxCodeExprWithFrame"; "phpSyntaxCustomArrayDeclWithFrame"; "phpSyntaxIntrinsicCallWithFrame"; "phpTernaryTypeHint"; "phpTestHelperCall"; "phpThisMethodValueAccess"; "phpThisValueExpr"; "phpThisValueExprWithFrame"; "phpTryCatchRawExpr"; "phpTryExprUseClause"; "phpTryExprUseClauseWithFrame"; "phpTypeCheckExpr"; "phpTypeExprName"; "phpTypeExprNameWithFrame"; "phpTypeHasInstanceField"; "phpTypeHasInstanceFieldWithFrame"; "phpTypeHasInstanceMethod"; "phpTypeHasInstanceMethodWithFrame"; "phpTypeHintsCompatible"; "phpTypeStringExprHint"; "phpTypeStringExprHintWithFrame"; "phpTypedAnonExpr"; "phpTypedAnonExprWithFrame"; "phpUnaryMinusNeedsHelper"; "phpUnaryMinusOperatorCall"; "phpUnaryMinusOperatorCallWithFrame"; "phpUnwrapNullTypeHint"; "phpValueTypeCtorIndex"; "phpValueTypeExprWithFrame"; "phpVariableStringReceiver"; "phpVariableStringReceiverWithFrame"; "phpWhileExpr"; "phpWhileExprWithFrame"; "postIncrementExpr"; "postIncrementStmt"; "postIncrementStmtWithFrame"; "preIncrementExpr"; "preIncrementStmt"; "preIncrementStmtWithFrame"; "printStmt"; "pythonAssignAttrExpr"; "pythonAssignIndexExpr"; "pythonAssignedValueExpr"; "pythonAssignmentExpr"; "pythonAssignmentStmt"; "pythonBaseClassDecl"; "pythonBaseClassName"; "pythonClassDefinesTypeNameHelper"; "pythonClassNeedsThisValueSlot"; "pythonClassVisited"; "pythonDescriptor"; "pythonFieldReceiverExpr"; "pythonInstanceFieldNames"; "pythonInstanceMethodNames"; "pythonMacroComplexType"; "pythonMacroEnum"; "pythonMacroExpr"; "pythonMacroExprDef"; "pythonMacroExprObject"; "pythonMacroFunctionArgTypes"; "pythonMacroTypePath"; "pythonMapLiteralPairs"; "pythonMarkClassVisited"; "pythonNeedsUnitTestLocalStaticSlot"; "pythonNullCoalesceAssignExpr"; "pythonNullCoalesceAssignStmt"; "pythonNullCoalesceAttrExpr"; "pythonNullCoalesceIndexExpr"; "pythonRegistration"; "pythonReturningExpr"; "pythonRewriteSameClassMemberExpr"; "pythonRewriteSameClassMembersInStmt"; "pythonRewriteSameClassMembersInStmts"; "pythonRuntimeMapType"; "pythonShouldEmitNeutralCompileTimeOnlyFunction"; "pythonShouldSkipNeutralCompileTimeOnlyRuntimeArg"; "pythonThisValueExpr"; "pythonTryCatchRawExpr"; "pythonUpdateIndexExpr"; "quoteString"; "rangeIterable"; "rangeIterableWithFrame"; "readSourceNativeTemplate"; "registration"; "removeTypeHintWhitespace"; "renderCStyleScopedBlock"; "renderCStyleScopedBlockWithFrame"; "renderCStyleSwitchStmtInto"; "renderCsHeader"; "renderCsImportStub"; "renderCsRunciHelperStub"; "renderCsRuntimeSupportSource"; "renderCsSupportClass"; "renderExpr"; "renderExprWithFrame"; "renderExprWithSourceSwitchBindings"; "renderForIn"; "renderForInWithFrame"; "renderForKeyValue"; "renderForKeyValueWithFrame"; "renderFunctionStmts"; "renderFunctionStmtsWithFrame"; "renderIf"; "renderIfWithFrame"; "renderJavaHeader"; "renderJavaImportStub"; "renderJavaRunciHelperStub"; "renderJavaSupportClass"; "renderLuaSupportPrelude"; "renderLuaTryExpr"; "renderNativeFunctionBody"; "renderPhpBlockExpr"; "renderPhpCatchChain"; "renderPhpCatchChainWithFrame"; "renderPhpFieldInitializer"; "renderPhpFunctionArg"; "renderPhpFunctionBody"; "renderPhpHelperClass"; "renderPhpLoopBody"; "renderPhpLoopBodyWithFrame"; "renderPhpProgram"; "renderPhpReturningCatchChainWithFrame"; "renderPhpSpecialHelperFunctionBody"; "renderPhpStmtsWithFrame"; "renderPhpSupportClasses"; "renderPhpTryExpr"; "renderPhpTryExprWithFrame"; "renderProgram"; "renderProjectedNativeFunction"; "renderPythonFunctionArg"; "renderPythonHelperClass"; "renderPythonPackageNamespaceAliases"; "renderPythonSpecialHelperFunctionBody"; "renderPythonSupportClasses"; "renderPythonTryExpr"; "renderReturningIf"; "renderReturningIfWithFrame"; "renderReturningStmt"; "renderReturningStmtWithFrame"; "renderStmt"; "renderStmtWithFrame"; "renderStmtWithLocals"; "renderStmtWithLocalsWithFrame"; "renderStmts"; "renderStmtsWithFrame"; "renderSupportClasses"; "renderSwitchStmt"; "renderSwitchStmtWithFrame"; "renderTry"; "renderTryWithFrame"; "renderWhile"; "renderWhileWithFrame"; "resolvedDirectives"; "returnStmt"; "returnVoidStmt"; "sanitizeCsIdentifier"; "sanitizeDottedPath"; "sanitizeJavaIdentifier"; "sanitizePythonIdentifier"; "sanitizeTypeName"; "sanitizeTypeNameForTarget"; "sanitizeTypePath"; "shouldCopyAssignedValue"; "shouldUnwrapPhpCatch"; "sourceAndOp"; "sourceEnumValueCond"; "sourceSwitchArrayItemExpr"; "sourceSwitchBindingValue"; "sourceSwitchCondOnly"; "sourceSwitchFieldExpr"; "sourceSwitchParamExpr"; "splitPhpMetadataTopLevel"; "splitTopLevelArrow"; "splitTopLevelComma"; "stdStringCall"; "stdStringCallWithFrame"; "stmtKind"; "strictTypedMainProjection"; "stringCall"; "stripGenericTypeParams"; "structuralTryCatchExpr"; "structuralTryCatchExprWithFrame"; "summarizeRaw"; "superConstructorCallExpr"; "superExpr"; "switchExpr"; "switchExprWithFrame"; "switchPatternCond"; "targetLabel"; "throwStmt"; "traceAtLine"; "traceStmt"; "traceStmtAtLine"; "trimLeadingTypeColon"; "trueLiteral"; "tryCatchRawExpr"; "typeCheckExpr"; "typedLambdaCallExpr"; "typedLambdaCallExprWithFrame"; "unopExpr"; "unopExprWithFrame"; "unsigned32IntText"; "unsignedRightShiftAssignExprWithFrame"; "unsignedRightShiftExpr"; "unsupportedBinopMessage"; "valueName"; "varDecl" ];
@@ -10365,6 +10588,7 @@ let init () : unit =
   HxType.register_class_tags "ResolverStage" [ "ResolverStage" ];
   HxType.register_class_tags "StringBuf" [ "StringBuf" ];
   HxType.register_class_tags "StringTools" [ "StringTools" ];
+  HxType.register_class_tags "TyAbstractBinaryArgument" [ "TyAbstractBinaryArgument" ];
   HxType.register_class_tags "TyAbstractBinaryBinding" [ "TyAbstractBinaryBinding" ];
   HxType.register_class_tags "TyAbstractBinaryConversion" [ "TyAbstractBinaryConversion" ];
   HxType.register_class_tags "TyAbstractBinaryOperatorInfo" [ "TyAbstractBinaryOperatorInfo" ];
@@ -10399,6 +10623,13 @@ let init () : unit =
   HxType.register_class_tags "TyFunctionReturnState" [ "TyFunctionReturnState" ];
   HxType.register_class_tags "TyImplicitConversionPlan" [ "TyImplicitConversionPlan" ];
   HxType.register_class_tags "TyImportedStaticMethod" [ "TyImportedStaticMethod" ];
+  HxType.register_class_tags "TyIndexedAccessBinding" [ "TyIndexedAccessBinding" ];
+  HxType.register_class_tags "TyIndexedComputedResult" [ "TyIndexedComputedResult" ];
+  HxType.register_class_tags "TyIndexedNullableAbstractOperand" [ "TyIndexedNullableAbstractOperand" ];
+  HxType.register_class_tags "TyIndexedUpdateOutcome" [ "TyIndexedUpdateOutcome" ];
+  HxType.register_class_tags "TyIndexedUpdateQuery" [ "TyIndexedUpdateQuery" ];
+  HxType.register_class_tags "TyIndexedUpdateSelection" [ "TyIndexedUpdateSelection" ];
+  HxType.register_class_tags "TyIndexedUpdateTrial" [ "TyIndexedUpdateTrial" ];
   HxType.register_class_tags "TyInferenceSolver" [ "TyInferenceSolver" ];
   HxType.register_class_tags "TyInferenceVariable" [ "TyInferenceVariable" ];
   HxType.register_class_tags "TyIteratorProtocolSource" [ "TyIteratorProtocolSource" ];
@@ -10408,6 +10639,7 @@ let init () : unit =
   HxType.register_class_tags "TyMethodArgumentOrder" [ "TyMethodArgumentOrder" ];
   HxType.register_class_tags "TyMethodBodyResults" [ "TyMethodBodyResults" ];
   HxType.register_class_tags "TyMethodGenericBinding" [ "TyMethodGenericBinding" ];
+  HxType.register_class_tags "TyMethodInputBatch" [ "TyMethodInputBatch" ];
   HxType.register_class_tags "TyMethodInputState" [ "TyMethodInputState" ];
   HxType.register_class_tags "TyMethodInputTrial" [ "TyMethodInputTrial" ];
   HxType.register_class_tags "TyModuleDirective" [ "TyModuleDirective" ];
@@ -10571,6 +10803,7 @@ let init () : unit =
   HxType.register_class_tags "_TyEnumValueCompatibility.TyEnumValueCompatibility_Fields_" [ "_TyEnumValueCompatibility.TyEnumValueCompatibility_Fields_" ];
   HxType.register_class_tags "_TyFieldAssignment.TyFieldAssignment_Fields_" [ "_TyFieldAssignment.TyFieldAssignment_Fields_" ];
   HxType.register_class_tags "_TyFunctionParameter.TyFunctionParameter_Fields_" [ "_TyFunctionParameter.TyFunctionParameter_Fields_" ];
+  HxType.register_class_tags "_TyIndexedUpdateOperation.TyIndexedUpdateOperation_Fields_" [ "_TyIndexedUpdateOperation.TyIndexedUpdateOperation_Fields_" ];
   HxType.register_class_tags "_TyInferenceAbstractDestination.TyInferenceAbstractDestination_Fields_" [ "_TyInferenceAbstractDestination.TyInferenceAbstractDestination_Fields_" ];
   HxType.register_class_tags "_TyInferenceAbstractInput.TyInferenceAbstractInput_Fields_" [ "_TyInferenceAbstractInput.TyInferenceAbstractInput_Fields_" ];
   HxType.register_class_tags "_TyInferenceNominalContext.TyInferenceNominalContext_Fields_" [ "_TyInferenceNominalContext.TyInferenceNominalContext_Fields_" ];
@@ -10914,6 +11147,7 @@ let init () : unit =
   HxType.register_class_tags "backend.source.SourceIdentifier" [ "backend.source.SourceIdentifier" ];
   HxType.register_class_tags "backend.source.SourceMvpTargetCore" [ "backend.source.SourceMvpTargetCore" ];
   HxType.register_class_tags "backend.source.SourceNativeBackend" [ "backend.source.SourceNativeBackend" ];
+  HxType.register_class_tags "backend.source.SourceNativeConstructorLowering" [ "backend.source.SourceNativeConstructorLowering" ];
   HxType.register_class_tags "backend.source.SourceNativeFunctionLocals" [ "backend.source.SourceNativeFunctionLocals" ];
   HxType.register_class_tags "backend.source.SourceTargetCommon" [ "backend.source.SourceTargetCommon" ];
   HxType.register_class_tags "backend.source.SourceTemporaryNames" [ "backend.source.SourceTemporaryNames" ];

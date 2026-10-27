@@ -111,7 +111,7 @@ let mapArrayPreservingIdentity = fun items mapItem -> let mappedItems = ref (Obj
     ignore (_g := __new_502);
     __old_501
   ) in let original = let __array_read_receiver_503 = items in let __array_read_index_504 = index in HxArray.get (Obj.magic __array_read_receiver_503) __array_read_index_504 in let mapped = mapItem original in (
-    ignore (if !mappedItems == Obj.magic (HxRuntime.hx_null) && Obj.repr mapped != Obj.repr original then ignore (let __assign_505 = Obj.magic (Obj.magic (let __array_receiver_506 = Obj.magic items in HxArray.copy __array_receiver_506)) in (
+    ignore (if !mappedItems == Obj.magic (HxRuntime.hx_null) && not (HxRuntime.dynamic_equals (Obj.repr mapped) (Obj.repr original)) then ignore (let __assign_505 = Obj.magic (Obj.magic (let __array_receiver_506 = Obj.magic items in HxArray.copy __array_receiver_506)) in (
       mappedItems := __assign_505;
       __assign_505
     )) else ());

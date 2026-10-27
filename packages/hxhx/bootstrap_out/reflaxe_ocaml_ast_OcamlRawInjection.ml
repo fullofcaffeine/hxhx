@@ -170,7 +170,7 @@ let mapExpressions = fun self (mapExpression : Obj.t -> Obj.t) -> let changed = 
         let __array_receiver_9 = Obj.magic mapped in let __array_arg_0_10 = Obj.magic segment in HxArray.push __array_receiver_9 __array_arg_0_10
       ))
       | RawExpression _p0 -> ignore (let _g2 = _p0 in let expression = _g2 in let mappedExpression = mapExpression expression in (
-        ignore (if Obj.repr mappedExpression != Obj.repr expression then ignore (let __assign_11 = true in (
+        ignore (if not (HxRuntime.dynamic_equals (Obj.repr mappedExpression) (Obj.repr expression)) then ignore (let __assign_11 = true in (
           changed := __assign_11;
           __assign_11
         )) else ());

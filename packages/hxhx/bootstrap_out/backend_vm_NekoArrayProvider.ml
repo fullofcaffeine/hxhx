@@ -3698,9 +3698,10 @@ let rec patternNeedsNekoIfLowering = fun pattern -> let tempResult = ref (false 
         __assign_2742
       )
     )
-    | HxSwitchPattern.PEnumExtract (_p0, _p1) -> (
+    | HxSwitchPattern.PEnumExtract (_p0, _p1, _p2) -> (
       ignore _p0;
       ignore _p1;
+      ignore _p2;
       let __assign_2743 = true in (
         tempResult := __assign_2743;
         __assign_2743
@@ -3825,9 +3826,10 @@ let patternKind = fun pattern -> let tempResult = ref (HxString.hx_null_string :
         __assign_2984
       )
     )
-    | HxSwitchPattern.PEnumExtract (_p0, _p1) -> (
+    | HxSwitchPattern.PEnumExtract (_p0, _p1, _p2) -> (
       ignore _p0;
       ignore _p1;
+      ignore _p2;
       let __assign_2985 = "PEnumExtract" in (
         tempResult := __assign_2985;
         __assign_2985
@@ -6096,9 +6098,12 @@ let rec lowerNekoSwitchPattern = fun context pattern scrutinee -> let tempResult
       tempResult := __assign_2780;
       __assign_2780
     )
-    | HxSwitchPattern.PEnumExtract (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let name = (_g : string) in let args = Obj.magic _g1 in let __assign_2785 = Obj.magic (lowerNekoEnumExtractPattern context (name : string) (Obj.magic args) (scrutinee : string)) in (
-      tempResult := __assign_2785;
-      __assign_2785
+    | HxSwitchPattern.PEnumExtract (_p0, _p1, _p2) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in (
+      ignore _p2;
+      let name = (_g : string) in let args = Obj.magic _g1 in let __assign_2785 = Obj.magic (lowerNekoEnumExtractPattern context (name : string) (Obj.magic args) (scrutinee : string)) in (
+        tempResult := __assign_2785;
+        __assign_2785
+      )
     )
     | HxSwitchPattern.PObject (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let fieldNames = Obj.magic _g in let fieldPatterns = Obj.magic _g1 in let __assign_2786 = Obj.magic (lowerNekoObjectPattern context (Obj.magic fieldNames) (Obj.magic fieldPatterns) (scrutinee : string)) in (
       tempResult := __assign_2786;
@@ -6338,8 +6343,9 @@ let renderSwitchPatternValue = fun pattern -> let tempResult = ref (HxString.hx_
       tempResult := __assign_2975;
       __assign_2975
     )
-    | HxSwitchPattern.PEnumExtract (_p0, _p1) -> let _g = (_p0 : string) in (
+    | HxSwitchPattern.PEnumExtract (_p0, _p1, _p2) -> let _g = (_p0 : string) in (
       ignore _p1;
+      ignore _p2;
       let name = (_g : string) in let __assign_2977 = (let __call_arg_0_2978 = name in quote __call_arg_0_2978 : string) in (
         tempResult := __assign_2977;
         __assign_2977
@@ -8454,9 +8460,10 @@ and renderSwitchStmt = fun out context scrutinee patterns bodies indent -> ignor
                 __assign_2580
               )
             )
-            | HxSwitchPattern.PEnumExtract (_p0, _p1) -> (
+            | HxSwitchPattern.PEnumExtract (_p0, _p1, _p2) -> (
               ignore _p0;
               ignore _p1;
+              ignore _p2;
               let __assign_2581 = Obj.magic (renderSwitchPatternValue (Obj.magic pattern) : string) in (
                 tempMaybeString := __assign_2581;
                 __assign_2581
@@ -8712,9 +8719,10 @@ and renderSwitchCase = fun context pattern expr -> let tempResult = ref (Obj.mag
         __assign_2938
       )
     )
-    | HxSwitchPattern.PEnumExtract (_p0, _p1) -> (
+    | HxSwitchPattern.PEnumExtract (_p0, _p1, _p2) -> (
       ignore _p0;
       ignore _p1;
+      ignore _p2;
       let __assign_2942 = Obj.magic (let __string_part_2943 = HxString.toStdString (renderSwitchPatternValue (Obj.magic pattern)) in let __string_part_2944 = " => " in let __string_part_2945 = HxString.toStdString (renderExpr context (Obj.magic expr)) in (__string_part_2943 ^ __string_part_2944) ^ __string_part_2945 : string) in (
         tempResult := __assign_2942;
         __assign_2942

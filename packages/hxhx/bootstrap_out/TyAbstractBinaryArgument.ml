@@ -1,0 +1,2 @@
+# 1 "TyAbstractBinaryArgument.ml"
+include CompilerDiagnosticProbe.TyAbstractBinaryArgument

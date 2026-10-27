@@ -69,8 +69,9 @@ let resolve = fun patterns context position -> (try (
     | HxRuntime.Hx_return_void -> ()) in let visit = ref (Obj.magic (HxRuntime.hx_null) : HxSwitchPattern.hxswitchpattern -> unit) in (
     ignore (let __assign_27 = Obj.magic (fun pattern -> ignore (match pattern with
       | HxSwitchPattern.PEnumValue _p0 -> ignore (let _g = (_p0 : string) in let name = (_g : string) in let __call_callee_28 = constructor in let __call_arg_0_29 = name in let __call_arg_1_30 = false in __call_callee_28 __call_arg_0_29 __call_arg_1_30)
-      | HxSwitchPattern.PEnumExtract (_p0, _p1) -> ignore (let _g = (_p0 : string) in (
+      | HxSwitchPattern.PEnumExtract (_p0, _p1, _p2) -> ignore (let _g = (_p0 : string) in (
         ignore _p1;
+        ignore _p2;
         let name = (_g : string) in let __call_callee_31 = constructor in let __call_arg_0_32 = name in let __call_arg_1_33 = true in __call_callee_31 __call_arg_0_32 __call_arg_1_33
       ))
       | HxSwitchPattern.PCapture (_p0, _p1) -> ignore ((

@@ -38,7 +38,7 @@ let isTrueEnv = fun (name : string) -> (let tempString = ref (HxString.hx_null_s
   )
 ) : bool)
 
-let emitWithBackend = fun backend expanded backendId typedModuleCount outputDirAbs outputFileHint reportedOutputDir parsedMain emitFullBodies supportsCustomOutputFile supportsBuildExecutable definesMap resources nativeLibraryPaths output -> (
+let emitWithBackend = fun backend expanded backendId typedModuleCount outputDirAbs outputFileHint reportedOutputDir parsedMain supportsCustomOutputFile supportsBuildExecutable definesMap resources nativeLibraryPaths output -> (
   ignore (if let __call_arg_0_13 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_13 then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=before_output_file_hint" : string)) else ());
   let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
     ignore (if supportsCustomOutputFile then let __assign_14 = Obj.magic (outputFileHint : string) in (
@@ -53,7 +53,7 @@ let emitWithBackend = fun backend expanded backendId typedModuleCount outputDirA
         ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=after_output_file_hint" : string));
         Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=before_backend_context" : string)
       )) else ());
-      let context = Obj.magic (Backend_BackendContext.create (outputDirAbs : string) (admittedOutputFileHint : string) (parsedMain : string) emitFullBodies supportsBuildExecutable (Obj.magic definesMap) (Obj.magic resources) (Obj.magic nativeLibraryPaths)) in (
+      let context = Obj.magic (Backend_BackendContext.create (outputDirAbs : string) (admittedOutputFileHint : string) (parsedMain : string) supportsBuildExecutable (Obj.magic definesMap) (Obj.magic resources) (Obj.magic nativeLibraryPaths)) in (
         ignore (if let __call_arg_0_17 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_17 then ignore ((
           ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=after_backend_context" : string));
           Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=before_emit_trace_backend_id" : string)

@@ -1,0 +1,2 @@
+# 1 "TyIndexedUpdateSelection.ml"
+include CompilerDiagnosticProbe.TyIndexedUpdateSelection

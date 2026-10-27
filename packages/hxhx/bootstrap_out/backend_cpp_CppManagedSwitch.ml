@@ -69,7 +69,7 @@ let render = fun input indent -> let tempTyType = ref (Obj.magic (HxRuntime.hx_n
         | HxSwitchPattern.PString _ -> 3
         | HxSwitchPattern.PInt _ -> 4
         | HxSwitchPattern.PEnumValue _ -> 5
-        | HxSwitchPattern.PEnumExtract (_, _) -> 6
+        | HxSwitchPattern.PEnumExtract (_, _, _) -> 6
         | HxSwitchPattern.PObject (_, _) -> 7
         | HxSwitchPattern.PCapture (_, _) -> 8
         | HxSwitchPattern.PArray _ -> 9

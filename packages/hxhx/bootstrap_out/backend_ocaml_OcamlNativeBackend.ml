@@ -23,7 +23,7 @@ let capabilities = fun () -> let __anonymous_value_8 = HxAnon.create () in (
 let descriptor = fun () -> let __anon_1 = HxAnon.create () in (
   ignore (HxAnon.set __anon_1 "id" (Obj.repr "ocaml-native"));
   ignore (HxAnon.set __anon_1 "implId" (Obj.repr "builtin/reflaxe-ocaml"));
-  ignore (HxAnon.set __anon_1 "abiVersion" (Obj.repr 1));
+  ignore (HxAnon.set __anon_1 "abiVersion" (Obj.repr 2));
   ignore (HxAnon.set __anon_1 "priority" (Obj.repr 100));
   ignore (HxAnon.set __anon_1 "description" (Obj.repr "Standalone reflaxe.ocaml target core"));
   ignore (HxAnon.set __anon_1 "capabilities" (capabilities ()));

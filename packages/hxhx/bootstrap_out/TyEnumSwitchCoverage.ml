@@ -23,7 +23,7 @@ let proves = fun input patterns context position isCapture -> (try (
         ignore (if owner == Obj.magic (HxRuntime.hx_null) || not ((Obj.magic owner : TyNominalInfo.t).getIsEnum (Obj.magic owner) ()) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
         let constructors = Obj.magic (HxEnumDeclaration.getConstructors (Obj.magic ((Obj.magic owner : TyNominalInfo.t).getEnumDeclaration (Obj.magic owner) ())) ()) in (
           ignore (if HxArray.length constructors = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-          let covered = Obj.magic (HxMap.create_string ()) in let constructor = fun name children -> ignore (try ignore (let dot = let __string_receiver_4 = name in let __string_argument_0_5 = "." in HxString.lastIndexOf __string_receiver_4 __string_argument_0_5 (HxString.length __string_receiver_4) in let tempString = ref (HxString.hx_null_string : string) in (
+          let covered = Obj.magic (HxMap.create_string ()) in let constructor = fun name children extractor suffix -> let suffix = if Obj.repr suffix == HxRuntime.hx_null then false else suffix in ignore (try ignore (let dot = let __string_receiver_4 = name in let __string_argument_0_5 = "." in HxString.lastIndexOf __string_receiver_4 __string_argument_0_5 (HxString.length __string_receiver_4) in let tempString = ref (HxString.hx_null_string : string) in (
             ignore (if dot < 0 then let __assign_6 = (name : string) in (
               tempString := __assign_6;
               __assign_6
@@ -34,22 +34,22 @@ let proves = fun input patterns context position isCapture -> (try (
             let member = (!tempString : string) in (
               ignore (if dot >= 0 then ignore (let qualifier = Obj.magic (TyperContext.resolveType (Obj.magic context) (let __string_receiver_10 = name in let __string_argument_0_11 = 0 in let __string_argument_1_12 = dot in HxString.substr __string_receiver_10 __string_argument_0_11 __string_argument_1_12 : string)) in if qualifier == Obj.magic (HxRuntime.hx_null) || not (TyNominalTypeId.equals (Obj.magic ((Obj.magic qualifier : TyNominalInfo.t).getIdentity (Obj.magic qualifier) ())) (Obj.magic identity)) then HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (TyperContext.getFilePath (Obj.magic context) () : string) (Obj.magic position) (("Invalid enum pattern " ^ HxString.toStdString name) ^ ": constructor belongs to another enum" : string))) ["Dynamic"] else ()) else ());
               let selected = Obj.magic (let __array_receiver_13 = Obj.magic constructors in let __array_arg_0_14 = fun candidate -> let __string_eq_left_15 = Obj.obj (HxAnon.get candidate "name") in let __string_eq_right_16 = member in HxString.equals __string_eq_left_15 __string_eq_right_16 in HxArray.filter __array_receiver_13 __array_arg_0_14) in (
-                ignore (if HxArray.length selected <> 1 || Obj.obj (HxAnon.get (let __array_read_receiver_17 = selected in let __array_read_index_18 = 0 in HxArray.get (Obj.magic __array_read_receiver_17) __array_read_index_18) "arity") <> HxArray.length children then HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (TyperContext.getFilePath (Obj.magic context) () : string) (Obj.magic position) (("Invalid enum pattern " ^ HxString.toStdString name) ^ ": constructor or payload arity differs" : string))) ["Dynamic"] else ());
+                ignore (if HxArray.length selected <> 1 || not (extractor) && Obj.obj (HxAnon.get (let __array_read_receiver_17 = selected in let __array_read_index_18 = 0 in HxArray.get (Obj.magic __array_read_receiver_17) __array_read_index_18) "arity") <> 0 then HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (TyperContext.getFilePath (Obj.magic context) () : string) (Obj.magic position) (("Invalid enum pattern " ^ HxString.toStdString name) ^ ": constructor or payload arity differs" : string))) ["Dynamic"] else ());
                 let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : TyType.t HxArray.t) in (
-                  ignore (if HxArray.length children = 0 then let __assign_19 = Obj.magic (Obj.magic (let __arr_20 = HxArray.create () in __arr_20)) in (
-                    tempMaybeArray := __assign_19;
-                    __assign_19
-                  ) else let __assign_21 = Obj.magic (Obj.magic (TyEnumPatternArguments.resolve (Obj.magic (!hx_type)) (name : string) (HxArray.length children) (Obj.magic context) (Obj.magic position))) in (
+                  ignore (if Obj.obj (HxAnon.get (let __array_read_receiver_19 = selected in let __array_read_index_20 = 0 in HxArray.get (Obj.magic __array_read_receiver_19) __array_read_index_20) "arity") = 0 && HxArray.length children = 0 then let __assign_21 = Obj.magic (Obj.magic (let __arr_22 = HxArray.create () in __arr_22)) in (
                     tempMaybeArray := __assign_21;
                     __assign_21
+                  ) else let __assign_23 = Obj.magic (Obj.magic (TyEnumPatternArguments.resolve (Obj.magic (!hx_type)) (name : string) (HxArray.length children) (Obj.magic context) (Obj.magic position) suffix)) in (
+                    tempMaybeArray := __assign_23;
+                    __assign_23
                   ));
                   let arguments = Obj.magic (!tempMaybeArray) in (
                     ignore (if arguments == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
                     let _g = ref 0 in let _g1 = HxArray.length children in (
-                      ignore (while !_g < _g1 do ignore (let index = let __old_22 = !_g in let __new_23 = HxInt.add __old_22 1 in (
-                        ignore (_g := __new_23);
-                        __old_22
-                      ) in if not (TySwitchIrrefutable.proves (Obj.magic (let __array_read_receiver_24 = children in let __array_read_index_25 = index in HxArray.get (Obj.magic __array_read_receiver_24) __array_read_index_25)) (Obj.magic (let __array_read_receiver_26 = arguments in let __array_read_index_27 = index in HxArray.get (Obj.magic __array_read_receiver_26) __array_read_index_27)) isCapture) then Stdlib.raise (HxRuntime.Hx_return_void) else ()) done);
+                      ignore (while !_g < _g1 do ignore (let index = let __old_24 = !_g in let __new_25 = HxInt.add __old_24 1 in (
+                        ignore (_g := __new_25);
+                        __old_24
+                      ) in if not (TySwitchIrrefutable.proves (Obj.magic (let __array_read_receiver_26 = children in let __array_read_index_27 = index in HxArray.get (Obj.magic __array_read_receiver_26) __array_read_index_27)) (Obj.magic (let __array_read_receiver_28 = arguments in let __array_read_index_29 = index in HxArray.get (Obj.magic __array_read_receiver_28) __array_read_index_29)) isCapture) then Stdlib.raise (HxRuntime.Hx_return_void) else ()) done);
                       HxMap.set_string (Obj.magic covered) (member : string) true
                     )
                   )
@@ -58,51 +58,51 @@ let proves = fun input patterns context position isCapture -> (try (
             )
           )) with
             | HxRuntime.Hx_return_void -> ()) in let collect = ref (Obj.magic (HxRuntime.hx_null) : HxSwitchPattern.hxswitchpattern -> unit) in (
-            ignore (let __assign_29 = Obj.magic (fun pattern -> ignore (match pattern with
-              | HxSwitchPattern.PEnumValue _p0 -> ignore (let _g = (_p0 : string) in let name = (_g : string) in constructor (name : string) (Obj.magic (let __arr_30 = HxArray.create () in __arr_30)))
-              | HxSwitchPattern.PEnumExtract (_p0, _p1) -> ignore (let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let name = (_g : string) in let arguments = Obj.magic _g1 in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxSwitchPattern.hxswitchpattern HxArray.t) in (
-                ignore (if arguments == Obj.magic (HxRuntime.hx_null) then let __assign_31 = Obj.magic (let __arr_32 = HxArray.create () in __arr_32) in (
-                  tempArray := __assign_31;
-                  __assign_31
-                ) else let __assign_33 = Obj.magic arguments in (
+            ignore (let __assign_31 = Obj.magic (fun pattern -> ignore (match pattern with
+              | HxSwitchPattern.PEnumValue _p0 -> ignore (let _g = (_p0 : string) in let name = (_g : string) in constructor (name : string) (Obj.magic (let __arr_32 = HxArray.create () in __arr_32)) false (Obj.magic (HxRuntime.hx_null)))
+              | HxSwitchPattern.PEnumExtract (_p0, _p1, _p2) -> ignore (let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = _p2 in let name = (_g : string) in let arguments = Obj.magic _g1 in let provenance = _g2 in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxSwitchPattern.hxswitchpattern HxArray.t) in (
+                ignore (if arguments == Obj.magic (HxRuntime.hx_null) then let __assign_33 = Obj.magic (let __arr_34 = HxArray.create () in __arr_34) in (
                   tempArray := __assign_33;
                   __assign_33
+                ) else let __assign_35 = Obj.magic arguments in (
+                  tempArray := __assign_35;
+                  __assign_35
                 ));
-                constructor (name : string) (Obj.magic (!tempArray))
+                constructor (name : string) (Obj.magic (!tempArray)) true (TyEnumPatternArguments.hasWildcardSuffix (Obj.magic arguments) provenance)
               ))
               | HxSwitchPattern.PCapture (_p0, _p1) -> ignore ((
                 ignore _p0;
                 let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in (!collect) (Obj.magic inner)
               ))
-              | HxSwitchPattern.POr _p0 -> ignore (let _g = Obj.magic _p0 in let alternatives = Obj.magic _g in if alternatives != Obj.magic (HxRuntime.hx_null) then ignore (let _g2 = ref 0 in while !_g2 < HxArray.length alternatives do ignore (let alternative = Obj.magic (let __array_read_receiver_34 = alternatives in let __array_read_index_35 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_34) __array_read_index_35) in (
-                ignore (let __old_36 = !_g2 in let __new_37 = HxInt.add __old_36 1 in (
-                  ignore (_g2 := __new_37);
-                  __new_37
+              | HxSwitchPattern.POr _p0 -> ignore (let _g = Obj.magic _p0 in let alternatives = Obj.magic _g in if alternatives != Obj.magic (HxRuntime.hx_null) then ignore (let _g2 = ref 0 in while !_g2 < HxArray.length alternatives do ignore (let alternative = Obj.magic (let __array_read_receiver_36 = alternatives in let __array_read_index_37 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_36) __array_read_index_37) in (
+                ignore (let __old_38 = !_g2 in let __new_39 = HxInt.add __old_38 1 in (
+                  ignore (_g2 := __new_39);
+                  __new_39
                 ));
                 (!collect) (Obj.magic alternative)
               )) done) else ())
               | _ -> ignore ())) in (
-              collect := __assign_29;
-              __assign_29
+              collect := __assign_31;
+              __assign_31
             ));
             let _g = ref 0 in (
-              ignore (while !_g < HxArray.length patterns do ignore (let pattern = Obj.magic (let __array_read_receiver_38 = patterns in let __array_read_index_39 = !_g in HxArray.get (Obj.magic __array_read_receiver_38) __array_read_index_39) in (
-                ignore (let __old_40 = !_g in let __new_41 = HxInt.add __old_40 1 in (
-                  ignore (_g := __new_41);
-                  __new_41
+              ignore (while !_g < HxArray.length patterns do ignore (let pattern = Obj.magic (let __array_read_receiver_40 = patterns in let __array_read_index_41 = !_g in HxArray.get (Obj.magic __array_read_receiver_40) __array_read_index_41) in (
+                ignore (let __old_42 = !_g in let __new_43 = HxInt.add __old_42 1 in (
+                  ignore (_g := __new_43);
+                  __new_43
                 ));
                 (!collect) (Obj.magic pattern)
               )) done);
               let _g = ref 0 in (
-                ignore (while !_g < HxArray.length constructors do ignore (let declaration = let __array_read_receiver_42 = constructors in let __array_read_index_43 = !_g in HxArray.get (Obj.magic __array_read_receiver_42) __array_read_index_43 in (
-                  ignore (let __old_44 = !_g in let __new_45 = HxInt.add __old_44 1 in (
-                    ignore (_g := __new_45);
-                    __new_45
+                ignore (while !_g < HxArray.length constructors do ignore (let declaration = let __array_read_receiver_44 = constructors in let __array_read_index_45 = !_g in HxArray.get (Obj.magic __array_read_receiver_44) __array_read_index_45 in (
+                  ignore (let __old_46 = !_g in let __new_47 = HxInt.add __old_46 1 in (
+                    ignore (_g := __new_47);
+                    __new_47
                   ));
                   let tempBool = ref (false : bool) in let key = (Obj.obj (HxAnon.get declaration "name") : string) in (
-                    ignore (let __assign_46 = HxMap.exists_string (Obj.magic covered) (key : string) in (
-                      tempBool := __assign_46;
-                      __assign_46
+                    ignore (let __assign_48 = HxMap.exists_string (Obj.magic covered) (key : string) in (
+                      tempBool := __assign_48;
+                      __assign_48
                     ));
                     if not (!tempBool) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ()
                   )
@@ -116,4 +116,4 @@ let proves = fun input patterns context position isCapture -> (try (
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_47 -> (Obj.obj __ret_47 : bool) : bool)
+  | HxRuntime.Hx_return __ret_49 -> (Obj.obj __ret_49 : bool) : bool)

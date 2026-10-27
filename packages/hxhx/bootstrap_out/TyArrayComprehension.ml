@@ -102,9 +102,9 @@ let infer = fun input -> (try let tempShortCircuit = ref (false : bool) in (
       ignore (match expression with
         | HxExpr.EParenthesized (_p0, _p1) -> let _g = Obj.magic _p0 in (
           ignore _p1;
-          let inner = Obj.magic _g in let __assign_16 = Obj.magic ((!yieldedType) (Obj.magic inner)) in (
-            tempResult := __assign_16;
-            __assign_16
+          let inner = Obj.magic _g in let __assign_20 = Obj.magic ((!yieldedType) (Obj.magic inner)) in (
+            tempResult := __assign_20;
+            __assign_20
           )
         )
         | HxExpr.ESourceFor (_p0, _p1, _p2, _p3) -> (
@@ -112,32 +112,35 @@ let infer = fun input -> (try let tempShortCircuit = ref (false : bool) in (
           ignore _p1;
           ignore _p2;
           ignore _p3;
-          let __assign_17 = Obj.magic (Obj.obj (HxAnon.get (TySourceFor.infer (let __anon_18 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_18 "expression" (HxEnum.box_if_needed "HxExpr" (Obj.repr expression)));
-            ignore (HxAnon.set __anon_18 "scope" (Obj.repr (Obj.obj (HxAnon.get input "scope"))));
-            ignore (HxAnon.set __anon_18 "filePath" (Obj.repr (Obj.obj (HxAnon.get input "filePath"))));
-            ignore (HxAnon.set __anon_18 "typeExpression" (Obj.repr (fun value -> (Obj.obj (HxAnon.get input "typeExpression") : _ -> _ -> _) (Obj.magic value) (Obj.magic (Obj.magic (HxRuntime.hx_null))))));
-            ignore (HxAnon.set __anon_18 "typeBody" (Obj.repr (!yieldedType)));
-            __anon_18
+          let __assign_21 = Obj.magic (Obj.obj (HxAnon.get (TySourceFor.infer (let __anon_22 = HxAnon.create () in (
+            ignore (HxAnon.set __anon_22 "expression" (HxEnum.box_if_needed "HxExpr" (Obj.repr expression)));
+            ignore (HxAnon.set __anon_22 "scope" (Obj.repr (Obj.obj (HxAnon.get input "scope"))));
+            ignore (HxAnon.set __anon_22 "filePath" (Obj.repr (Obj.obj (HxAnon.get input "filePath"))));
+            ignore (HxAnon.set __anon_22 "typeExpression" (Obj.repr (fun value -> (Obj.obj (HxAnon.get input "typeExpression") : _ -> _ -> _) (Obj.magic value) (Obj.magic (Obj.magic (HxRuntime.hx_null))))));
+            ignore (HxAnon.set __anon_22 "typeBody" (Obj.repr (!yieldedType)));
+            __anon_22
           ))) "bodyType")) in (
-            tempResult := __assign_17;
-            __assign_17
+            tempResult := __assign_21;
+            __assign_21
           )
         )
         | HxExpr.EBinop (_p0, _p1, _p2) -> let _g = (_p0 : string) in (
           ignore _p1;
           ignore _p2;
-          if let __string_eq_left_19 = _g in let __string_eq_right_20 = "=>" in HxString.equals __string_eq_left_19 __string_eq_right_20 then (
+          if let __string_eq_left_23 = _g in let __string_eq_right_24 = "=>" in HxString.equals __string_eq_left_23 __string_eq_right_24 then (
             ignore (select (Obj.magic MapEntry));
-            let __assign_21 = Obj.magic ((Obj.obj (HxAnon.get input "typeMapEntry") : _ -> _) (Obj.magic expression)) in (
-              tempResult := __assign_21;
-              __assign_21
+            let __assign_25 = Obj.magic ((Obj.obj (HxAnon.get input "typeMapEntry") : _ -> _) (Obj.magic expression)) in (
+              tempResult := __assign_25;
+              __assign_25
             )
           ) else (
             ignore (select (Obj.magic ArrayElement));
-            let __assign_22 = Obj.magic ((Obj.obj (HxAnon.get input "typeExpression") : _ -> _ -> _) (Obj.magic expression) (Obj.magic expectedElement)) in (
-              tempResult := __assign_22;
-              __assign_22
+            let actual = Obj.magic ((Obj.obj (HxAnon.get input "typeExpression") : _ -> _ -> _) (Obj.magic expression) (Obj.magic expectedElement)) in (
+              ignore (if expectedElement != Obj.magic (HxRuntime.hx_null) && not ((Obj.obj (HxAnon.get input "accepts") : _ -> _ -> _) (Obj.magic expectedElement) (Obj.magic actual)) then HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (Obj.obj (HxAnon.get input "filePath") : string) (Obj.magic (Obj.obj (HxAnon.get input "position"))) (let __string_part_26 = "array element " in let __string_part_27 = HxString.toStdString (TyType.getDisplay (Obj.magic actual) ()) in let __string_part_28 = " is not compatible with " in let __string_part_29 = HxString.toStdString (TyType.getDisplay (Obj.magic expectedElement) ()) in ((__string_part_26 ^ __string_part_27) ^ __string_part_28) ^ __string_part_29 : string))) ["Dynamic"] else ());
+              let __assign_30 = Obj.magic actual in (
+                tempResult := __assign_30;
+                __assign_30
+              )
             )
           )
         )
@@ -146,18 +149,18 @@ let infer = fun input -> (try let tempShortCircuit = ref (false : bool) in (
           ignore (TyFunctionEnv.enterLexicalScope (Obj.magic (Obj.obj (HxAnon.get input "scope"))) ());
           let yesType = Obj.magic ((!yieldedType) (Obj.magic yes)) in (
             ignore (TyFunctionEnv.exitLexicalScope (Obj.magic (Obj.obj (HxAnon.get input "scope"))) ());
-            if no == Obj.magic (HxRuntime.hx_null) then let __assign_23 = Obj.magic yesType in (
-              tempResult := __assign_23;
-              __assign_23
+            if no == Obj.magic (HxRuntime.hx_null) then let __assign_31 = Obj.magic yesType in (
+              tempResult := __assign_31;
+              __assign_31
             ) else (
               ignore (TyFunctionEnv.enterLexicalScope (Obj.magic (Obj.obj (HxAnon.get input "scope"))) ());
               let noType = Obj.magic ((!yieldedType) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" no))) in (
                 ignore (TyFunctionEnv.exitLexicalScope (Obj.magic (Obj.obj (HxAnon.get input "scope"))) ());
                 let combined = Obj.magic (TyType.unify (Obj.magic yesType) (Obj.magic noType)) in (
                   ignore (if combined == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (Obj.obj (HxAnon.get input "filePath") : string) (Obj.magic position) ("comprehension branches require compatible yielded values" : string))) ["Dynamic"] else ());
-                  let __assign_24 = Obj.magic combined in (
-                    tempResult := __assign_24;
-                    __assign_24
+                  let __assign_32 = Obj.magic combined in (
+                    tempResult := __assign_32;
+                    __assign_32
                   )
                 )
               )
@@ -166,9 +169,12 @@ let infer = fun input -> (try let tempShortCircuit = ref (false : bool) in (
         )
         | _ -> (
           ignore (select (Obj.magic ArrayElement));
-          let __assign_15 = Obj.magic ((Obj.obj (HxAnon.get input "typeExpression") : _ -> _ -> _) (Obj.magic expression) (Obj.magic expectedElement)) in (
-            tempResult := __assign_15;
-            __assign_15
+          let actual = Obj.magic ((Obj.obj (HxAnon.get input "typeExpression") : _ -> _ -> _) (Obj.magic expression) (Obj.magic expectedElement)) in (
+            ignore (if expectedElement != Obj.magic (HxRuntime.hx_null) && not ((Obj.obj (HxAnon.get input "accepts") : _ -> _ -> _) (Obj.magic expectedElement) (Obj.magic actual)) then HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (Obj.obj (HxAnon.get input "filePath") : string) (Obj.magic (Obj.obj (HxAnon.get input "position"))) (let __string_part_15 = "array element " in let __string_part_16 = HxString.toStdString (TyType.getDisplay (Obj.magic actual) ()) in let __string_part_17 = " is not compatible with " in let __string_part_18 = HxString.toStdString (TyType.getDisplay (Obj.magic expectedElement) ()) in ((__string_part_15 ^ __string_part_16) ^ __string_part_17) ^ __string_part_18 : string))) ["Dynamic"] else ());
+            let __assign_19 = Obj.magic actual in (
+              tempResult := __assign_19;
+              __assign_19
+            )
           )
         ));
       !tempResult
@@ -176,25 +182,25 @@ let infer = fun input -> (try let tempShortCircuit = ref (false : bool) in (
       yieldedType := __assign_14;
       __assign_14
     ));
-    let element = Obj.magic ((!yieldedType) (Obj.magic (let __array_read_receiver_25 = Obj.obj (HxAnon.get input "values") in let __array_read_index_26 = 0 in HxArray.get (Obj.magic __array_read_receiver_25) __array_read_index_26))) in let tempResult1 = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-      ignore (if let __enum_eq_left_27 = Obj.magic (!yieldKind) in let __enum_eq_right_28 = MapEntry in HxEnum.unbox_or_obj "_TyArrayComprehension.ComprehensionYieldKind" (Obj.repr __enum_eq_left_27) == HxEnum.unbox_or_obj "_TyArrayComprehension.ComprehensionYieldKind" (Obj.repr __enum_eq_right_28) then let __assign_29 = Obj.magic (Obj.magic element) in (
-        tempResult1 := __assign_29;
-        __assign_29
+    let element = Obj.magic ((!yieldedType) (Obj.magic (let __array_read_receiver_33 = Obj.obj (HxAnon.get input "values") in let __array_read_index_34 = 0 in HxArray.get (Obj.magic __array_read_receiver_33) __array_read_index_34))) in let tempResult1 = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+      ignore (if let __enum_eq_left_35 = Obj.magic (!yieldKind) in let __enum_eq_right_36 = MapEntry in HxEnum.unbox_or_obj "_TyArrayComprehension.ComprehensionYieldKind" (Obj.repr __enum_eq_left_35) == HxEnum.unbox_or_obj "_TyArrayComprehension.ComprehensionYieldKind" (Obj.repr __enum_eq_right_36) then let __assign_37 = Obj.magic (Obj.magic element) in (
+        tempResult1 := __assign_37;
+        __assign_37
       ) else let tempTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-        ignore (if expectedElement == Obj.magic (HxRuntime.hx_null) then let __assign_30 = Obj.magic element in (
-          tempTyType := __assign_30;
-          __assign_30
-        ) else let __assign_31 = Obj.magic expectedElement in (
-          tempTyType := __assign_31;
-          __assign_31
+        ignore (if expectedElement == Obj.magic (HxRuntime.hx_null) then let __assign_38 = Obj.magic element in (
+          tempTyType := __assign_38;
+          __assign_38
+        ) else let __assign_39 = Obj.magic expectedElement in (
+          tempTyType := __assign_39;
+          __assign_39
         ));
-        let __assign_32 = Obj.magic (Obj.magic ((Obj.obj (HxAnon.get input "resolveArray") : _ -> _) (Obj.magic (!tempTyType)))) in (
-          tempResult1 := __assign_32;
-          __assign_32
+        let __assign_40 = Obj.magic (Obj.magic ((Obj.obj (HxAnon.get input "resolveArray") : _ -> _) (Obj.magic (!tempTyType)))) in (
+          tempResult1 := __assign_40;
+          __assign_40
         )
       ));
       !tempResult1
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_33 -> (Obj.obj __ret_33 : TyType.t) : TyType.t)
+  | HxRuntime.Hx_return __ret_41 -> (Obj.obj __ret_41 : TyType.t) : TyType.t)

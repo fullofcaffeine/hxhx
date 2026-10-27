@@ -37,7 +37,7 @@ let csCapabilities = fun () -> let __anonymous_value_9 = HxAnon.create () in (
 let descriptor = fun targetId implId description hostCap -> let __anon_13 = HxAnon.create () in (
   ignore (HxAnon.set __anon_13 "id" (Obj.repr targetId));
   ignore (HxAnon.set __anon_13 "implId" (Obj.repr implId));
-  ignore (HxAnon.set __anon_13 "abiVersion" (Obj.repr 1));
+  ignore (HxAnon.set __anon_13 "abiVersion" (Obj.repr 2));
   ignore (HxAnon.set __anon_13 "priority" (Obj.repr 120));
   ignore (HxAnon.set __anon_13 "description" (Obj.repr description));
   ignore (HxAnon.set __anon_13 "capabilities" (capabilitiesStatic ()));

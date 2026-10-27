@@ -115,7 +115,7 @@ let same = fun before after -> (try (
     ignore (while !_g < _g1 do ignore (let ordinal = let __old_178 = !_g in let __new_179 = HxInt.add __old_178 1 in (
       ignore (_g := __new_179);
       __old_178
-    ) in if Obj.repr (let __array_read_receiver_180 = before in let __array_read_index_181 = ordinal in HxArray.get (Obj.magic __array_read_receiver_180) __array_read_index_181) != Obj.repr (let __array_read_receiver_182 = after in let __array_read_index_183 = ordinal in HxArray.get (Obj.magic __array_read_receiver_182) __array_read_index_183) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ()) done);
+    ) in if not (HxRuntime.dynamic_equals (Obj.repr (let __array_read_receiver_180 = before in let __array_read_index_181 = ordinal in HxArray.get (Obj.magic __array_read_receiver_180) __array_read_index_181)) (Obj.repr (let __array_read_receiver_182 = after in let __array_read_index_183 = ordinal in HxArray.get (Obj.magic __array_read_receiver_182) __array_read_index_183))) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ()) done);
     true
   )
 ) with

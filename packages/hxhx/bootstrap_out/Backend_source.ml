@@ -47,6 +47,7 @@ module SourceGuardedSwitch = Backend_source_SourceGuardedSwitch
 module SourceIdentifier = Backend_source_SourceIdentifier
 module SourceMvpTargetCore = Backend_source_SourceMvpTargetCore
 module SourceNativeBackend = Backend_source_SourceNativeBackend
+module SourceNativeConstructorLowering = Backend_source_SourceNativeConstructorLowering
 module SourceNativeFunctionLocals = Backend_source_SourceNativeFunctionLocals
 module SourceNativeTarget = Backend_source_SourceNativeTarget
 module SourceTargetCommon = Backend_source_SourceTargetCommon

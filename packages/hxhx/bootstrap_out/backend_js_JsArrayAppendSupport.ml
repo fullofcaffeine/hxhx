@@ -5970,11 +5970,14 @@ let constructor = fun pattern scope -> let tempMaybeTypedNamedPattern = ref (Obj
             __assign_66
           )
         )
-        | HxSwitchPattern.PEnumExtract (_p0, _p1) -> (
+        | HxSwitchPattern.PEnumExtract (_p0, _p1, _p2) -> (
           ignore _p0;
-          let _g2 = Obj.magic _p1 in let children = Obj.magic _g2 in let __assign_67 = HxArray.length children in (
-            tempNumber := __assign_67;
-            __assign_67
+          let _g2 = Obj.magic _p1 in (
+            ignore _p2;
+            let children = Obj.magic _g2 in let __assign_67 = HxArray.length children in (
+              tempNumber := __assign_67;
+              __assign_67
+            )
           )
         )
         | _ -> HxType.hx_throw_typed_rtti (Obj.repr "JavaScript constructor lookup requires a named pattern") ["Dynamic"]);
@@ -6134,7 +6137,8 @@ let rec lower = fun pattern scrutineeVar scope -> let tempResult = ref (Obj.magi
         __assign_25
       )
     )
-    | HxSwitchPattern.PEnumExtract (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in (
+    | HxSwitchPattern.PEnumExtract (_p0, _p1, _p2) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in (
+      ignore _p2;
       ignore _g;
       let args = Obj.magic _g1 in let __assign_27 = Obj.magic (lowerNamed (Obj.magic pattern) (Obj.magic args) (scrutineeVar : string) scope) in (
         tempResult := __assign_27;

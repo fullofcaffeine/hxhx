@@ -23,7 +23,7 @@ let capabilities = fun () -> let __anonymous_value_1 = HxAnon.create () in (
 let descriptor = fun () -> let __anon_5 = HxAnon.create () in (
   ignore (HxAnon.set __anon_5 "id" (Obj.repr "cpp-native"));
   ignore (HxAnon.set __anon_5 "implId" (Obj.repr "builtin/cpp-native-source-mvp"));
-  ignore (HxAnon.set __anon_5 "abiVersion" (Obj.repr 1));
+  ignore (HxAnon.set __anon_5 "abiVersion" (Obj.repr 2));
   ignore (HxAnon.set __anon_5 "priority" (Obj.repr 120));
   ignore (HxAnon.set __anon_5 "description" (Obj.repr "Native C++ source backend (MVP)"));
   ignore (HxAnon.set __anon_5 "capabilities" (capabilities ()));
