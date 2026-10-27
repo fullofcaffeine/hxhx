@@ -1,7 +1,7 @@
 /** Exact alternatives for data fields and unambiguous method selections. */
 private enum MemberValue {
 	DataField(field:TyFieldInfo, qualifyOwner:Bool);
-	StaticMethod(declaration:TyDeclarationInfo, qualifyOwner:Bool);
+	StaticMethod(declaration:TyDeclarationInfo, qualifyOwner:Bool, nonRuntimeQualifier:Bool);
 	InstanceMethod(declaration:TyDeclarationInfo, implicitReceiver:Null<TyType>);
 	UnresolvedAbstractField;
 }
@@ -28,10 +28,24 @@ class TypedMemberResolution {
 		return new TypedMemberResolution(DataField(field, qualifyOwner));
 	}
 
-	public static function method(declaration:TyDeclarationInfo, qualifyOwner:Bool):TypedMemberResolution {
+	/** The typer alone can prove that an explicit abstract qualifier names a declaration rather than a value. */
+	public static function method(declaration:TyDeclarationInfo, qualifyOwner:Bool, nonRuntimeQualifier:Bool = false):TypedMemberResolution {
 		if (declaration == null || !declaration.getIsStatic() || declaration.getIsEnumConstructor())
 			throw "member method resolution requires an exact static method";
-		return new TypedMemberResolution(StaticMethod(declaration, qualifyOwner));
+		return new TypedMemberResolution(StaticMethod(declaration, qualifyOwner, nonRuntimeQualifier));
+	}
+
+	/**
+		An abstract can own a static method without having a runtime class object.
+		Use its exact selected owner before building the qualifier's module path as
+		an expression. Ordinary class qualifiers and all value receivers keep their
+		existing children and evaluation behavior.
+	 */
+	public function nonRuntimeQualifierRead(name:String, type:TyType, position:Null<HxPos>):Null<TypedExpr> {
+		return switch (value) {
+			case StaticMethod(declaration, _, true): TypedExpr.staticMethodRead(name, declaration, type, position, true);
+			case _: null;
+		};
 	}
 
 	/** Instance selections keep their value receiver; targets still decide how to bind a method value. */
@@ -46,7 +60,7 @@ class TypedMemberResolution {
 		return switch (value) {
 			case UnresolvedAbstractField: throw "unresolved abstract member requires an explicit receiver";
 			case DataField(field, qualify): TypedExpr.nameRead(name, type, position, field, qualify);
-			case StaticMethod(declaration, qualify): TypedExpr.staticMethodRead(name, declaration, type, position, qualify);
+			case StaticMethod(declaration, qualify, _): TypedExpr.staticMethodRead(name, declaration, type, position, qualify);
 			case InstanceMethod(declaration, receiver):
 				if (receiver == null || receiver.isUnknown())
 					throw "instance method selection requires its receiver";
@@ -59,7 +73,7 @@ class TypedMemberResolution {
 		return switch (value) {
 			case UnresolvedAbstractField: TypedExpr.unresolvedAbstractFieldRead(object, name, type, position);
 			case DataField(field, _): TypedExpr.fieldRead(object, name, type, position, field);
-			case StaticMethod(declaration, _): TypedExpr.staticMethodRead(name, declaration, type, position, false, object);
+			case StaticMethod(declaration, _, _): TypedExpr.staticMethodRead(name, declaration, type, position, false, object);
 			case InstanceMethod(declaration, _): TypedExpr.instanceMethodRead(object, name, declaration, type, position);
 		};
 	}

@@ -908,9 +908,15 @@ HX
 
   out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_typedecls" -cp "$tmpdir/src" -main TypeDeclStage3)"
   echo "$out" | grep -q "^stage3=ok$"
-  test -f "$tmpdir/out_stage3_typedecls/TypeDeclStage3_Box.ml"
+  # The structural typedef needs no runtime module. Its field and the abstract
+  # helper must still produce the original program's observable result.
   test -f "$tmpdir/out_stage3_typedecls/TypeDeclStage3_Flag.ml"
-  grep -q "let fromInt" "$tmpdir/out_stage3_typedecls/TypeDeclStage3_Flag.ml"
+  grep -Eq '^let rec fromInt[ (]' "$tmpdir/out_stage3_typedecls/TypeDeclStage3_Flag.ml"
+  typedecl_output="$("$tmpdir/out_stage3_typedecls/out.exe")"
+  if [ "$typedecl_output" != "1" ]; then
+    echo "Expected the module-qualified abstract call and typedef field to print 1." >&2
+    exit 1
+  fi
 
   echo "== Stage3 regression: Sys.environment lowering (HxSys.environment)"
   cat >"$tmpdir/src/SysEnvStage3.hx" <<'HX'

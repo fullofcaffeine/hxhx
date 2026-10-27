@@ -710,7 +710,12 @@ class TyperStage {
 						case EIdent(name) | EEnumValue(name): final current = context.currentClass(); !lexicalEnvironment.isStaticContext() || current == null || current.declarationForSignature(current.staticMethod(name)) != method;
 						case _: false;
 					};
-					return TypedMemberResolution.method(method, qualifyBareMethod);
+					final nonRuntimeQualifier = switch (expression) {
+						case EField(receiver, _): final owner = TypedRuntimeTypeResolver.resolveQualifier(receiver, lexicalEnvironment,
+								context); Std.isOfType(owner, TyAbstractInfo) && owner.getIdentity().equals(method.getOwner());
+						case _: false;
+					};
+					return TypedMemberResolution.method(method, qualifyBareMethod, nonRuntimeQualifier);
 				}
 				final importedBareField = switch (expression) {
 					case EIdent(name) | EEnumValue(name) if (lexicalEnvironment.resolveSymbol(name) == null): final current = context.currentClass(); (current == null

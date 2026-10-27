@@ -940,9 +940,14 @@ class TypedBodyBuilder {
 			case EField(object, field):
 				final memberResolution = memberResolver == null
 					|| environment == null ? null : memberResolver(expression, diagnosticPosition, environment, expected);
-				final receiver = buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
-				memberResolution == null ? TypedExpr.fieldRead(receiver, field, nodeType,
-					position) : memberResolution.fieldRead(receiver, field, nodeType, position);
+				final qualifier = memberResolution == null ? null : memberResolution.nonRuntimeQualifierRead(field, nodeType, position);
+				if (qualifier != null) {
+					qualifier;
+				} else {
+					final receiver = buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+					memberResolution == null ? TypedExpr.fieldRead(receiver, field, nodeType,
+						position) : memberResolution.fieldRead(receiver, field, nodeType, position);
+				}
 			case ENullSafeField(object, field):
 				TypedExpr.nullSafeFieldRead(buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver), field,
 					nodeType, position);
