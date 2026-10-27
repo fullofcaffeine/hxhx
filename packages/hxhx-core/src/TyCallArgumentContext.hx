@@ -1,11 +1,11 @@
 /**
-	Find callback or collection context that every admitted method signature agrees upon.
+	Find callback, collection, or enum context that every admitted method signature agrees upon.
 	Collection context reaches empty literals inside branches before inference seals
 	them as Array<Dynamic>. Existing declared values keep their own types.
 	Only fixed, fully supplied parameter lists have an unambiguous source position
 	before operand typing. Rest and omitted-argument selection keep their own owner.
  */
-function shared(signatures:Array<TyFunSig>, arity:Int, ?methodParameters:Array<Array<TyTypeParameterId>>):Array<Null<TyType>> {
+function shared(signatures:Array<TyFunSig>, arity:Int, ?methodParameters:Array<Array<TyTypeParameterId>>, ?declarationIndex:TyperIndex):Array<Null<TyType>> {
 	if (methodParameters != null && methodParameters.length != signatures.length)
 		throw "call context requires method binders for each signature";
 	// Only method-owned binders are inference holes. Receiver and caller binders
@@ -35,7 +35,8 @@ function shared(signatures:Array<TyFunSig>, arity:Int, ?methodParameters:Array<A
 		if (expected.isFunction()) {
 			if (expected.getFunctionArguments().filter(type -> type.hasUnknownComponent()).length > 0)
 				continue;
-		} else if (TypedCollectionExpectation.context(expected) == null) {
+		} else if (TypedCollectionExpectation.context(expected) == null
+			&& (expected.hasUnknownComponent() || TyperContext.expectedEnumOwner(declarationIndex, expected) == null)) {
 			continue;
 		}
 		var agreed = true;

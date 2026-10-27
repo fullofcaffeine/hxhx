@@ -919,7 +919,7 @@ class TypedBodyBuilder {
 							local.toBinding()) : typeResolver.convertValue(TypedExpr.localRead(name, local.getType(), position, local.toBinding()), nodeType);
 				} else {
 					final memberResolution = memberResolver == null
-						|| environment == null ? null : memberResolver(expression, diagnosticPosition, environment);
+						|| environment == null ? null : memberResolver(expression, diagnosticPosition, environment, expected);
 					memberResolution == null ? TypedExpr.enumValue(name, nodeType, position) : memberResolution.nameRead(name, nodeType, position);
 				}
 			case EThis:
@@ -934,12 +934,12 @@ class TypedBodyBuilder {
 							local.toBinding()) : typeResolver.convertValue(TypedExpr.localRead(name, local.getType(), position, local.toBinding()), nodeType);
 				} else {
 					final memberResolution = memberResolver == null
-						|| environment == null ? null : memberResolver(expression, diagnosticPosition, environment);
+						|| environment == null ? null : memberResolver(expression, diagnosticPosition, environment, expected);
 					memberResolution == null ? TypedExpr.nameRead(name, nodeType, position) : memberResolution.nameRead(name, nodeType, position);
 				}
 			case EField(object, field):
 				final memberResolution = memberResolver == null
-					|| environment == null ? null : memberResolver(expression, diagnosticPosition, environment);
+					|| environment == null ? null : memberResolver(expression, diagnosticPosition, environment, expected);
 				final receiver = buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				memberResolution == null ? TypedExpr.fieldRead(receiver, field, nodeType,
 					position) : memberResolution.fieldRead(receiver, field, nodeType, position);
@@ -1099,7 +1099,7 @@ class TypedBodyBuilder {
 					return environment != null
 						&& memberResolver != null
 						&& (environment.resolveSymbol(name) != null
-							|| memberResolver(EIdent(name), diagnosticPosition, environment) == null);
+							|| memberResolver(EIdent(name), diagnosticPosition, environment, null) == null);
 				}
 				final irrefutable = patterns != null
 					&& patterns.filter(pattern -> TySwitchIrrefutable.proves(pattern, typedScrutinee.getType(), isCapture)).length > 0;
