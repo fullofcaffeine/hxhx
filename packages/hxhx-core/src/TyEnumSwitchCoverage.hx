@@ -21,7 +21,7 @@ function proves(input:TyType, patterns:Array<HxSwitchPattern>, context:TyperCont
 	if (constructors.length == 0)
 		return false;
 	final covered = new haxe.ds.StringMap<Bool>();
-	function constructor(name:String, children:Array<HxSwitchPattern>):Void {
+	function constructor(name:String, children:Array<HxSwitchPattern>, extractor:Bool):Void {
 		final dot = name.lastIndexOf('.');
 		final member = dot < 0 ? name : name.substr(dot + 1);
 		if (dot >= 0) {
@@ -30,9 +30,10 @@ function proves(input:TyType, patterns:Array<HxSwitchPattern>, context:TyperCont
 				throw new TyperError(context.getFilePath(), position, 'Invalid enum pattern ' + name + ': constructor belongs to another enum');
 		}
 		final selected = constructors.filter(candidate -> candidate.name == member);
-		if (selected.length != 1 || selected[0].arity != children.length)
+		if (selected.length != 1 || (!extractor && selected[0].arity != 0))
 			throw new TyperError(context.getFilePath(), position, 'Invalid enum pattern ' + name + ': constructor or payload arity differs');
-		final arguments = children.length == 0 ? [] : TyEnumPatternArguments.resolve(type, name, children.length, context, position);
+		final arguments = selected[0].arity == 0
+			&& children.length == 0 ? [] : TyEnumPatternArguments.resolve(type, name, children.length, context, position);
 		if (arguments == null)
 			return;
 		for (index in 0...children.length)
@@ -44,9 +45,9 @@ function proves(input:TyType, patterns:Array<HxSwitchPattern>, context:TyperCont
 	function collect(pattern:HxSwitchPattern):Void {
 		switch pattern {
 			case PEnumValue(name):
-				constructor(name, []);
+				constructor(name, [], false);
 			case PEnumExtract(name, arguments):
-				constructor(name, arguments == null ? [] : arguments);
+				constructor(name, arguments == null ? [] : arguments, true);
 			case POr(alternatives):
 				if (alternatives != null)
 					for (alternative in alternatives)
