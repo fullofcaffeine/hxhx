@@ -2,7 +2,7 @@
 class M14TypedCapturePlanTest {
 	static function typed(source:String):Array<TypedFunction> {
 		final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
-		return TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved])).getTypedClasses()[0].getFunctions();
+		return M14Stage3RuntimeFixture.typeResolved({module: resolved, root: "."}).getTypedClasses()[0].getFunctions();
 	}
 
 	static function names(bindings:Array<TyLocalBinding>):String
