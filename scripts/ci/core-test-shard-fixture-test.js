@@ -230,6 +230,18 @@ function main() {
   }
   assert(!plan.shards.some(shard => shard.id === 'compiler'), 'the timed-out broad compiler shard still exists')
   assert(
+    JSON.stringify(plan.shards.find(shard => shard.id === 'compiler-focused-4').commands) === JSON.stringify([
+      'test:m14:cpp-int-sub-int64',
+      'test:m14:cpp-int64-mul-int',
+      'test:m14:cpp-int64-mod-int',
+      'test:m14:cpp-int-div-int64',
+      'test:m14:cpp-guarded-control',
+      'test:m14:cpp-array-push-value',
+      'test:m14:cpp-string-length'
+    ]),
+    'C++ arithmetic setup selection must preserve all seven commands and their order'
+  )
+  assert(
     JSON.stringify(plan.shards.find(shard => shard.id === 'portable').commands) === JSON.stringify(['test:portable']),
     'portable fixture ownership must remain isolated from snapshots and examples'
   )
@@ -574,10 +586,24 @@ function main() {
       `Core bounded shard ${shard}`
     )
   }
-  assert(
-    (q2Matrix.match(/if: \$\{\{ startsWith\(matrix\.shard, 'compiler-focused-'\) \}\}/g) || []).length === 2,
-    'all focused partitions must install their runtime and Neko compiler dependencies'
-  )
+  const sourceRuntimeStep = 'Ensure PHP, Mono and Lua are available for focused runtime tests'
+  const sourceRuntimeCondition = "startsWith(matrix.shard, 'compiler-focused-') && matrix.shard != 'compiler-focused-4'"
+  requireIncludes(q2Matrix, `      - name: ${sourceRuntimeStep}\n        if: \${{ ${sourceRuntimeCondition} }}`,
+    'only C++ arithmetic may omit PHP, Mono and Lua setup')
+  const actualSourceRuntimeCondition = q2Matrix.match(
+    /- name: Ensure PHP, Mono and Lua are available for focused runtime tests\n        if: \$\{\{ (.+) \}\}/
+  )[1]
+  for (const shard of plan.shards) {
+    const selected = vm.runInNewContext(actualSourceRuntimeCondition, {
+      matrix: { shard: shard.id },
+      startsWith: (value, prefix) => value.startsWith(prefix)
+    })
+    const expected = shard.id.startsWith('compiler-focused-') && shard.id !== 'compiler-focused-4'
+    assert(selected === expected, `PHP, Mono and Lua setup changed for ${shard.id}`)
+  }
+  requireIncludes(q2Matrix,
+    "      - name: Expose the Neko compiler for focused tests\n        if: ${{ startsWith(matrix.shard, 'compiler-focused-') }}",
+    'all focused partitions must retain Neko compiler setup')
   assert(
     (q2Matrix.match(/          - shard: portable\n/g) || []).length === 3,
     'Core workflow must run exactly three portable fixture partitions'

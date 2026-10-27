@@ -757,7 +757,7 @@ jobs:
       - name: Download Haxe libraries (lix)
         run: npx lix download
       - name: Ensure PHP, Mono and Lua are available for focused runtime tests
-        if: ${{ startsWith(matrix.shard, 'compiler-focused-') }}
+        if: ${{ startsWith(matrix.shard, 'compiler-focused-') && matrix.shard != 'compiler-focused-4' }}
         run: |
           set -euo pipefail
           runtime_packages=()
