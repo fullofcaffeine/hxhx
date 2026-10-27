@@ -32,6 +32,23 @@ private typedef MethodInputSolution = {
 	final inputs:Array<TyType>;
 };
 
+/** A complete, still-unpublished set of compatible caller observations. */
+@:allow(TyMethodInputState)
+@:allow(TyFunctionInference)
+class TyMethodInputBatch {
+	final owner:TyMethodInputState;
+	final revision:Int;
+	final trials:Array<TyMethodInputTrial>;
+	final changes:Array<MethodInputSolution>;
+
+	function new(owner:TyMethodInputState, revision:Int, trials:Array<TyMethodInputTrial>, changes:Array<MethodInputSolution>) {
+		this.owner = owner;
+		this.revision = revision;
+		this.trials = trials.copy();
+		this.changes = changes.copy();
+	}
+}
+
 /**
 	Own caller evidence for omitted declaration inputs within one typing request.
 	A trial only fills genuinely omitted inputs. Written types remain authoritative.
@@ -49,6 +66,75 @@ class TyMethodInputState {
 
 	public function getRevision():Int
 		return revision;
+
+	/** Prepare every observation against one base; conflicting duplicate declarations publish nothing. */
+	public function prepareBatch(trials:Array<TyMethodInputTrial>):TyMethodInputBatch {
+		for (trial in trials)
+			validateTrial(trial);
+		final merged = new haxe.ds.StringMap<MethodInputSolution>();
+		final ordered = new Array<String>();
+		for (trial in trials) {
+			final key = trial.declaration.getIdentity().getCanonicalKey();
+			final prior = merged.get(key);
+			if (prior != null && (prior.declaration != trial.declaration || prior.sourceIdentity != trial.sourceIdentity))
+				throw "method input batch changed its declaration";
+			final inputs = trial.inputs.copy();
+			if (prior == null)
+				ordered.push(key);
+			else {
+				if (prior.inputs.length != inputs.length)
+					throw "method input batch changed its input count";
+				for (index in 0...inputs.length) {
+					final left = fillOpen(prior.inputs[index], inputs[index]);
+					final right = fillOpen(inputs[index], prior.inputs[index]);
+					if (left.getSemanticKey() != right.getSemanticKey())
+						throw "method input batch has conflicting observations";
+					inputs[index] = left;
+				}
+			}
+			merged.set(key, {declaration: trial.declaration, sourceIdentity: trial.sourceIdentity, inputs: inputs});
+		}
+		final changes = new Array<MethodInputSolution>();
+		for (key in ordered) {
+			final result = merged.get(key);
+			final current = signature(result.declaration, result.declaration.getSignature()).getArgs();
+			if (CompilerCacheIdentity.encode(current.map(type -> type.getSemanticKey())) != CompilerCacheIdentity.encode(result.inputs.map(type ->
+				type.getSemanticKey())))
+				changes.push(result);
+		}
+		return new TyMethodInputBatch(this, revision, trials, changes);
+	}
+
+	/** A combined inference transaction performs this check before publishing either owner's state. */
+	public function validateBatch(batch:TyMethodInputBatch):Void {
+		if (batch == null || batch.owner != this || batch.revision != revision)
+			throw "method input batch is foreign or stale";
+		for (trial in batch.trials)
+			validateTrial(trial);
+	}
+
+	/** Single-threaded publication follows all validation; one batch advances the revision at most once. */
+	@:allow(TyFunctionInference)
+	function publishBatch(batch:TyMethodInputBatch):Bool {
+		if (batch.changes.length == 0)
+			return false;
+		for (change in batch.changes)
+			solutions.set(change.declaration.getIdentity().getCanonicalKey(), change);
+		revision++;
+		return true;
+	}
+
+	public function commitBatch(batch:TyMethodInputBatch):Bool {
+		validateBatch(batch);
+		return publishBatch(batch);
+	}
+
+	function validateTrial(trial:TyMethodInputTrial):Void {
+		if (trial == null || trial.owner != this || trial.revision != revision)
+			throw "method input trial is foreign or stale";
+		if (trial.sourceIdentity != sourceIdentity(trial.declaration))
+			throw "method input trial belongs to changed source";
+	}
 
 	static function sourceIdentity(declaration:TyDeclarationInfo):String {
 		final source = declaration.getSourceDeclaration();
@@ -127,10 +213,7 @@ class TyMethodInputState {
 
 	/** Only a selected, still-current trial can publish new evidence. Repeated observations are idempotent. */
 	public function commit(trial:TyMethodInputTrial):Bool {
-		if (trial.owner != this || trial.revision != revision)
-			throw "method input trial is foreign or stale";
-		if (trial.sourceIdentity != sourceIdentity(trial.declaration))
-			throw "method input trial belongs to changed source";
+		validateTrial(trial);
 		if (!trial.changed)
 			return false;
 		final current = signature(trial.declaration, trial.declaration.getSignature()).getArgs();

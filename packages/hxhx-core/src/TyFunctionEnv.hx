@@ -379,7 +379,65 @@ class TyFunctionEnv {
 		The copy preserves exact identities, active lexical scopes, and replay
 		position while giving every symbol its own mutable type slot.
 	**/
-	public function copyForInference():TyFunctionEnv {
+	public function copyForInference():TyFunctionEnv
+		return copyWithInference(inference.fork());
+
+	/**
+		Select indexed helpers over operands already traversed in this environment.
+		Both lexical catalogs stay unchanged: committing copied declarations would
+		otherwise lose the source identities required by typed-body replay.
+	 */
+	public function copyForIndexedSelection(trial:TyIndexedUpdateTrial):TyFunctionEnv {
+		if (trial == null || trial.parent != inference || trial.committed)
+			throw "indexed selection belongs to another lexical environment";
+		final copied = copyWithInference(trial.candidate);
+		trial.environmentsUnchanged.push(unchangedForIndexedSelection());
+		trial.environmentsUnchanged.push(copied.unchangedForIndexedSelection());
+		return copied;
+	}
+
+	function unchangedForIndexedSelection():() -> Bool {
+		final symbols = params.concat(locals).concat(enclosingSymbols);
+		final types = symbols.map(symbol -> symbol.getType());
+		final savedLocals = locals.copy();
+		final savedEnclosing = enclosingSymbols.copy();
+		final savedScopes = scopes.map(scope -> scope.copy());
+		final savedCursor = replayCursor;
+		final savedUntyped = untypedContext;
+		final savedProtocol = protocolSource;
+		final savedBody = retainedBody;
+		final controlUnchanged = controlScope == null ? () -> true : controlScope.unchangedForIndexedSelection();
+		return function() {
+			if (replayCursor != savedCursor
+				|| untypedContext != savedUntyped
+				|| protocolSource != savedProtocol
+				|| retainedBody != savedBody
+				|| locals.length != savedLocals.length
+				|| enclosingSymbols.length != savedEnclosing.length
+				|| scopes.length != savedScopes.length
+				|| !controlUnchanged())
+				return false;
+			for (index in 0...symbols.length)
+				if (symbols[index].getType() != types[index])
+					return false;
+			for (index in 0...locals.length)
+				if (locals[index] != savedLocals[index])
+					return false;
+			for (index in 0...enclosingSymbols.length)
+				if (enclosingSymbols[index] != savedEnclosing[index])
+					return false;
+			for (index in 0...scopes.length) {
+				if (scopes[index].length != savedScopes[index].length)
+					return false;
+				for (ordinal in 0...scopes[index].length)
+					if (scopes[index][ordinal] != savedScopes[index][ordinal])
+						return false;
+			}
+			return true;
+		};
+	}
+
+	function copyWithInference(selectedInference:TyFunctionInference):TyFunctionEnv {
 		final copies = new StringMap<TySymbol>();
 		function copySymbol(symbol:TySymbol):TySymbol {
 			final key = symbol.getIdentity().getCanonicalKey();
@@ -397,7 +455,7 @@ class TyFunctionEnv {
 		// not declarations in the sealed source traversal. They must allocate only
 		// inside this copy instead of consuming the typed-body replay catalog.
 		final copied = new TyFunctionEnv(name, copiedParams, copiedLocals, returnType, returnExprType, ownerIdentity, copiedScopes, false, 0, staticContext,
-			controlScope == null ? null : controlScope.copyForInference(), inference.fork(), typeParameters);
+			controlScope == null ? null : controlScope.copyForInference(), selectedInference, typeParameters);
 		copied.untypedContext = untypedContext;
 		copied.speculative = true;
 		copied.protocolSource = protocolSource;

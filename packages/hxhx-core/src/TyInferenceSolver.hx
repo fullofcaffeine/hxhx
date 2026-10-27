@@ -164,11 +164,7 @@ class TyInferenceSolver {
 
 	/** Commit only a direct candidate based on the parent's still-current state. */
 	public function commit(candidate:TyInferenceSolver):Void {
-		requireMutable();
-		if (candidate == null || candidate.parent != this || candidate.baseRevision != revision)
-			throw "inference candidate is foreign or stale";
-		if (candidate.sealed)
-			throw "sealed inference candidate cannot replace mutable state";
+		validateCandidate(candidate);
 		variables = candidate.variables.copy();
 		dynamicUses = candidate.dynamicUses.copy();
 		solutions = [
@@ -177,6 +173,16 @@ class TyInferenceSolver {
 		];
 		fieldRequirements = [for (fields in candidate.fieldRequirements) fields.copy()];
 		revision++;
+	}
+
+	/** Combined transactions validate every participating owner before publishing any state. */
+	@:allow(TyFunctionInference)
+	function validateCandidate(candidate:TyInferenceSolver):Void {
+		requireMutable();
+		if (candidate == null || candidate.parent != this || candidate.baseRevision != revision)
+			throw "inference candidate is foreign or stale";
+		if (candidate.sealed)
+			throw "sealed inference candidate cannot replace mutable state";
 	}
 
 	/**
