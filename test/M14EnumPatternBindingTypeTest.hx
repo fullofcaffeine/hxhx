@@ -81,6 +81,7 @@ class M14EnumPatternBindingTypeTest {
 	static function main():Void {
 		checkParser();
 		M14NamedPatternProjectionTest.check();
+		M14OptionalEnumPatternTest.check();
 		reject("Second.Item(x)", "constructor belongs to another enum");
 		reject("Item(x,y)", "expected 1 payload patterns but received 2");
 		reject("Missing(x)", "constructor does not belong to Main.First");
@@ -99,6 +100,10 @@ class M14EnumPatternBindingTypeTest {
 			"read", ["text:primitive:String"]);
 		check('enum Box<T> { Item(?value:T); } class Main { static function read(v:Box<Int>):Int return switch v {case Item(number): number == null ? 0 : number;}; }',
 			"read", ["number:nullable:primitive:Int"]);
+		check('enum Box<T> { Item(value:T,?tail:Bool); } class Main { static function read(v:Box<Int>):Int return switch v {case Item(number,tail): tail == null ? number : 0;}; }',
+			"read", ["number:primitive:Int", "tail:nullable:primitive:Bool"]);
+		check('enum Box<T> { Item(value:T,?tail:Bool); } class Main { static function read(v:Box<Int>):Int return switch v {case Item(number): number;}; }',
+			"read", ["number:primitive:Int"]);
 		check('enum Box { Item(?value:Null<Int>); } class Main { static function read(v:Box):Int return switch v {case Item(number): number == null ? 0 : number;}; }',
 			"read", ["number:nullable:primitive:Int"]);
 		check('enum Box<T> { Item(value:T); } class Main { static function read(v:Box<Array<Bool>>):Bool return switch v {case Item([flag]): flag; case _: false;}; }',

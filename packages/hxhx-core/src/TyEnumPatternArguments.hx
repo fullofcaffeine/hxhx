@@ -31,7 +31,7 @@ function resolve(input:TyType, name:String, arity:Int, context:TyperContext, pos
 	if (declaration == null || !declaration.getIsEnumConstructor() || !declaration.getOwner().equals(identity))
 		reject("constructor does not belong to " + identity.getCanonicalName());
 	final arguments = signature.getArgs();
-	if (arguments.length != arity)
+	if (!acceptsArity(signature, arity))
 		reject("expected " + arguments.length + " payload patterns but received " + arity);
 	// The nominal index also contains abstracts. Only the validated enum class
 	// declaration owns the generic binders used by its constructor signatures.
@@ -43,10 +43,21 @@ function resolve(input:TyType, name:String, arity:Int, context:TyperContext, pos
 	// An omitted enum argument remains null in the stored payload. Pattern locals
 	// must retain that possibility, including after generic substitution.
 	return [
-		for (index in 0...arguments.length) {
+		for (index in 0...arity) {
 			final argument = TyTypeSubstitution.apply(arguments[index], substitutions);
 			index < optional.length
 		&& optional[index] && !argument.isNullable() ? TyType.nullable(argument) : argument;
 		}
 	];
+}
+
+/** A pattern may omit a suffix only when every omitted declaration slot is optional. */
+function acceptsArity(signature:TyFunSig, arity:Int):Bool {
+	if (signature == null || arity < 0 || arity > signature.getArgs().length)
+		return false;
+	final optional = signature.getArgOptional();
+	for (index in arity...signature.getArgs().length)
+		if (index >= optional.length || !optional[index])
+			return false;
+	return true;
 }

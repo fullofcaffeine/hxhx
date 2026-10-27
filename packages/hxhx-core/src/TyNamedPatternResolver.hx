@@ -57,9 +57,9 @@ function resolve(input:TyType, patterns:Array<HxSwitchPattern>, context:TyperCon
 				final constructor = constructors[index];
 				if (constructor.name != member)
 					continue;
-				if (constructor.arity != arity)
+				if (constructor.arity != arity && (!payload || !TyEnumPatternArguments.acceptsArity(owner.staticMethod(member), arity)))
 					throw new TyperError(context.getFilePath(), position, "Invalid enum pattern " + name + ": constructor or payload arity differs");
-				return new TypedNamedPattern(Constructor(identity, member, index, arity));
+				return new TypedNamedPattern(Constructor(identity, member, index, constructor.arity));
 			}
 			throw new TyperError(context.getFilePath(), position,
 				"Invalid enum pattern "

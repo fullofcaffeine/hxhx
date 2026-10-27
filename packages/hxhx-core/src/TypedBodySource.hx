@@ -328,12 +328,13 @@ class TypedBodySource {
 			?selections:TypedSwitchPatterns, ?facts:TypedBodyProjectionBuilder):Array<HxSwitchPattern> {
 		final exactBindings = bindings == null ? [] : bindings;
 		final cursor = [0];
-		final projected = catalog == null ? patterns.copy() : [
+		final renamed = catalog == null ? patterns.copy() : [
 			for (pattern in patterns)
 				projectPattern(pattern, exactBindings, cursor, catalog, new haxe.ds.StringMap<String>())
 		];
 		if (catalog != null && cursor[0] != exactBindings.length)
 			throw "switch pattern projection consumed " + cursor[0] + " of " + exactBindings.length + " typed local bindings";
+		final projected = selections == null ? renamed : selections.projectPayloads(renamed);
 		if (facts != null)
 			facts.projectNamedPatterns(selections, projected);
 		return projected;

@@ -14,6 +14,7 @@ enum Choice {
 	OptionalAny(?value:Dynamic);
 	NullableAny(value:Null<Dynamic>);
 	AnyPair(first:Dynamic, second:Dynamic);
+	OptionalTail(number:Int, ?flag:Bool, ?text:String);
 }
 
 enum Other {
@@ -31,6 +32,17 @@ class Token {
 }
 
 class Main {
+	/** Omitted patterns ignore optional values; execution still matches the full stored constructor payload. */
+	static function omitted(value:Choice):Int {
+		return switch value {
+			case Choice.OptionalTail(number): number;
+			case Choice.OptionalNumber(): 71;
+			case Choice.Wrap(Choice.OptionalTail(number)): number + 1000;
+			case Choice.OptionalFlag() if (true): 72;
+			case _: 0;
+		};
+	}
+
 	/** Pattern extraction returns the same checked Dynamic value stored by construction. */
 	static function readAny(value:Choice):Dynamic {
 		return switch value {
@@ -137,5 +149,10 @@ class Main {
 		Sys.println(readAny(wrapped) == token);
 		Sys.println(token.value);
 		Sys.println(readAny(Choice.AnyPair(flag(), number())));
+		Sys.println(omitted(Choice.OptionalTail(7)));
+		Sys.println(omitted(Choice.OptionalTail(8, false, "stored")));
+		Sys.println(omitted(Choice.OptionalNumber(19)));
+		Sys.println(omitted(Choice.Wrap(Choice.OptionalTail(9, true, "nested"))));
+		Sys.println(omitted(Choice.OptionalFlag(false)));
 	}
 }
