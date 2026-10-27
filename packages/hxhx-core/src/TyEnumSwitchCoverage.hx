@@ -21,7 +21,7 @@ function proves(input:TyType, patterns:Array<HxSwitchPattern>, context:TyperCont
 	if (constructors.length == 0)
 		return false;
 	final covered = new haxe.ds.StringMap<Bool>();
-	function constructor(name:String, children:Array<HxSwitchPattern>, extractor:Bool):Void {
+	function constructor(name:String, children:Array<HxSwitchPattern>, extractor:Bool, suffix:Bool = false):Void {
 		final dot = name.lastIndexOf('.');
 		final member = dot < 0 ? name : name.substr(dot + 1);
 		if (dot >= 0) {
@@ -33,7 +33,7 @@ function proves(input:TyType, patterns:Array<HxSwitchPattern>, context:TyperCont
 		if (selected.length != 1 || (!extractor && selected[0].arity != 0))
 			throw new TyperError(context.getFilePath(), position, 'Invalid enum pattern ' + name + ': constructor or payload arity differs');
 		final arguments = selected[0].arity == 0
-			&& children.length == 0 ? [] : TyEnumPatternArguments.resolve(type, name, children.length, context, position);
+			&& children.length == 0 ? [] : TyEnumPatternArguments.resolve(type, name, children.length, context, position, suffix);
 		if (arguments == null)
 			return;
 		for (index in 0...children.length)
@@ -46,8 +46,8 @@ function proves(input:TyType, patterns:Array<HxSwitchPattern>, context:TyperCont
 		switch pattern {
 			case PEnumValue(name):
 				constructor(name, [], false);
-			case PEnumExtract(name, arguments):
-				constructor(name, arguments == null ? [] : arguments, true);
+			case PEnumExtract(name, arguments, provenance):
+				constructor(name, arguments == null ? [] : arguments, true, TyEnumPatternArguments.hasWildcardSuffix(arguments, provenance));
 			case POr(alternatives):
 				if (alternatives != null)
 					for (alternative in alternatives)

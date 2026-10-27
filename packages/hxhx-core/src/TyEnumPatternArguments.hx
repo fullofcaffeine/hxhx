@@ -6,7 +6,7 @@
 	constructor from another enum cannot supply payload types. Non-enum inputs
 	remain with the existing pattern analysis.
  */
-function resolve(input:TyType, name:String, arity:Int, context:TyperContext, position:HxPos):Null<Array<TyType>> {
+function resolve(input:TyType, name:String, arity:Int, context:TyperContext, position:HxPos, bareWildcardSuffix:Bool = false):Null<Array<TyType>> {
 	if (input == null || context == null || context.getIndex() == null)
 		return null;
 	var type = input;
@@ -31,7 +31,7 @@ function resolve(input:TyType, name:String, arity:Int, context:TyperContext, pos
 	if (declaration == null || !declaration.getIsEnumConstructor() || !declaration.getOwner().equals(identity))
 		reject("constructor does not belong to " + identity.getCanonicalName());
 	final arguments = signature.getArgs();
-	if (!acceptsArity(signature, arity))
+	if (!acceptsArity(signature, arity, bareWildcardSuffix))
 		reject("expected " + arguments.length + " payload patterns but received " + arity);
 	// The nominal index also contains abstracts. Only the validated enum class
 	// declaration owns the generic binders used by its constructor signatures.
@@ -51,10 +51,17 @@ function resolve(input:TyType, name:String, arity:Int, context:TyperContext, pos
 	];
 }
 
-/** A pattern may omit a suffix only when every omitted declaration slot is optional. */
-function acceptsArity(signature:TyFunSig, arity:Int):Bool {
+/** Source provenance grants suffix coverage only when its final written child is still a wildcard. */
+function hasWildcardSuffix(children:Array<HxSwitchPattern>, provenance:Null<Bool>):Bool {
+	return provenance == true && children != null && children.length > 0 && children[children.length - 1].match(PWildcard);
+}
+
+/** Omitted slots must be optional unless a validated bare final wildcard covers the remaining payload. */
+function acceptsArity(signature:TyFunSig, arity:Int, bareWildcardSuffix:Bool = false):Bool {
 	if (signature == null || arity < 0 || arity > signature.getArgs().length)
 		return false;
+	if (bareWildcardSuffix && arity > 0)
+		return true;
 	final optional = signature.getArgOptional();
 	for (index in arity...signature.getArgs().length)
 		if (index >= optional.length || !optional[index])

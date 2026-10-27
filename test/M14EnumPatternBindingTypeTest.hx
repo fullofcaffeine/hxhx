@@ -82,6 +82,7 @@ class M14EnumPatternBindingTypeTest {
 		checkParser();
 		M14NamedPatternProjectionTest.check();
 		M14OptionalEnumPatternTest.check();
+		M14EnumWildcardSuffixPatternTest.check();
 		reject("Second.Item(x)", "constructor belongs to another enum");
 		reject("Item(x,y)", "expected 1 payload patterns but received 2");
 		reject("Missing(x)", "constructor does not belong to Main.First");

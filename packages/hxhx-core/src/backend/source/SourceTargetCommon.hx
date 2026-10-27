@@ -18732,8 +18732,8 @@ class SourceTargetCommon {
 				PBind(phpBindScopedLocal(name, env, counters));
 			case PCapture(name, inner):
 				PCapture(phpBindScopedLocal(name, env, counters), phpRenameScopedPattern(inner, env, counters, rewriteRawText));
-			case PEnumExtract(name, args):
-				PEnumExtract(name, [for (arg in args) phpRenameScopedPattern(arg, env, counters, rewriteRawText)]);
+			case PEnumExtract(name, args, provenance):
+				PEnumExtract(name, [for (arg in args) phpRenameScopedPattern(arg, env, counters, rewriteRawText)], provenance);
 			case PObject(fieldNames, fieldPatterns):
 				PObject(fieldNames, [
 					for (fieldPattern in fieldPatterns)

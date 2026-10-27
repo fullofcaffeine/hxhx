@@ -292,11 +292,11 @@ class TypedBodySource {
 			case PCapture(name, inner):
 				final projectedName = projectedPatternBinding(bindings, cursor, catalog, name, names);
 				PCapture(projectedName, projectPattern(inner, bindings, cursor, catalog, names));
-			case PEnumExtract(name, arguments):
+			case PEnumExtract(name, arguments, provenance):
 				PEnumExtract(name, [
 					for (argument in arguments)
 						projectPattern(argument, bindings, cursor, catalog, names)
-				]);
+				], provenance);
 			case PObject(fieldNames, fieldPatterns):
 				PObject(fieldNames.copy(), [
 					for (fieldPattern in fieldPatterns)
