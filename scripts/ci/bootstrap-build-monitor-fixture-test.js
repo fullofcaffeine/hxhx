@@ -106,11 +106,13 @@ exit 7
     fs.mkdirSync(logDir)
     const external = path.join(logDir, 'caller.log')
     if (name === 'external') fs.writeFileSync(external, 'caller record\n')
+    const previousTimers = new Set(fs.readdirSync(pids))
     const result = spawnSync('bash', [path.join(fixture, 'scripts/hxhx/build-hxhx.sh')], {
       encoding: 'utf8', timeout: 15000,
       env: {
         ...process.env,
         PATH: bin + path.delimiter + process.env.PATH,
+        MONITOR_PIDS: pids,
         HAXE_BIN: path.join(bin, 'haxe'), HAXE_CONNECT: '',
         HXHX_FORCE_STAGE0: '1', HXHX_FORBID_STAGE0: '0',
         HXHX_STAGE0_USE_REPO_SERVER: '0', HXHX_STAGE0_OCAML_BUILD: 'byte',
@@ -124,8 +126,20 @@ exit 7
       },
     })
     assert.ifError(result.error)
-    assert.equal(result.status, 1, result.stderr)
+    // The source watchdog reports 1 when it stops a timed-out compiler;
+    // ordinary compiler failures retain their original exit status.
+    assert.equal(result.status, name === 'timeout' ? 1 : 7, result.stderr)
     assert.equal(result.stdout, '', 'phase output polluted artifact stdout')
+    const timers = fs.readdirSync(pids).filter(file => !previousTimers.has(file))
+    if (name === 'direct') {
+      assert.equal(timers.length, 0, 'direct execution unexpectedly started monitor timers')
+    } else {
+      assert.ok(timers.length > 0, 'fixture did not observe new source monitor timers')
+    }
+    for (const file of timers) {
+      assert.ok(!active(Number(fs.readFileSync(path.join(pids, file), 'utf8'))), 'owned source timer survived: ' + file)
+    }
+    assert.ok(active(control.pid), 'source cleanup stopped the unrelated control process')
     if (name === 'disabled') {
       assert.ok(!result.stderr.includes('fixture_phase_begin'))
     } else {
