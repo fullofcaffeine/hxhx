@@ -1,6 +1,7 @@
 /** Indexed contexts constrain the original generic allocation, including aliases and declared ancestor views. */
 class M14IndexedElementInferenceTest {
 	static function main():Void {
+		checkSolvedDynamicInputs();
 		checkOccurrenceTransaction();
 		final cases = [
 			{
@@ -94,6 +95,50 @@ class M14IndexedElementInferenceTest {
 		checkRuntime();
 		TyperStage.typeModule(ParserStage.parse('class Legacy{static function main(){var values=[];values[0]=7;}}', "Legacy.hx"));
 		Sys.println("INDEXED_ELEMENT_INFERENCE:PASS legacy_unindexed_typing");
+	}
+
+	/** Explicit Dynamic solutions remain Dynamic at call inputs; deferred fallback still receives later concrete evidence. */
+	@:access(TyFunctionInference)
+	static function checkSolvedDynamicInputs():Void {
+		final dynamicType = TyType.fromHintText("Dynamic");
+		final integer = TyType.fromHintText("Int");
+		final expected = TyType.fromHintText("EnumValue");
+		for (kind in ["known", "solved", "deferred"]) {
+			final scope = new TyFunctionEnv("indexed-dynamic-" + kind, [], [], TyType.unknown(), TyType.unknown());
+			final inference = scope.getInference();
+			final source:HxExpr = EInt(0);
+			final term = kind == "known" ? TyInferenceTerm.Known(dynamicType) : inference.solver.fresh();
+			if (kind == "solved" && !inference.solver.constrain(term, TyInferenceTerm.Known(dynamicType)))
+				throw "could not establish the generic result's explicit Dynamic solution";
+			if (kind == "deferred")
+				inference.solver.observeDynamicUse(term);
+			// Arrange the indexed child's retained representation without requiring a reflection provider.
+			inference.occurrences.push({expression: source, term: term});
+			if (!inference.constrain([source], [expected], scope, null))
+				throw "indexed input rejected " + kind + " Dynamic evidence";
+			final actual = inference.solver.preview(term);
+			final wanted = kind == "deferred" ? expected : dynamicType;
+			if (actual.getSemanticKey() != wanted.getSemanticKey())
+				throw "indexed input changed " + kind + " evidence to " + actual.getDisplay();
+		}
+		final scope = new TyFunctionEnv("indexed-dynamic-rollback", [], [], TyType.unknown(), TyType.unknown());
+		final inference = scope.getInference();
+		final pending:HxExpr = EInt(0);
+		final fixed:HxExpr = EInt(1);
+		final term = inference.solver.fresh();
+		inference.solver.observeDynamicUse(term);
+		inference.occurrences.push({expression: pending, term: term});
+		inference.occurrences.push({expression: fixed, term: TyInferenceTerm.Known(integer)});
+		if (inference.constrain([pending, fixed], [integer, TyType.fromHintText("String")], scope, null))
+			throw "indexed input accepted a conflicting later concrete operand";
+		if (!inference.solver.preview(term).isUnknown())
+			throw "rejected indexed input leaked its earlier concrete constraint";
+		if (inference.constrain([fixed], [expected], scope, null))
+			throw "indexed input accepted a concrete non-enum value";
+		if (!inference.constrain([pending], [expected], scope, null)
+			|| inference.solver.preview(term).getSemanticKey() != expected.getSemanticKey())
+			throw "deferred fallback stopped receiving concrete context after rollback";
+		Sys.println("INDEXED_ELEMENT_INFERENCE:PASS solved_dynamic_inputs");
 	}
 
 	/** Failure on a later operand must leave the original constructor and its nullable alias unsolved. */

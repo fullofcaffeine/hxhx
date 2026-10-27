@@ -937,13 +937,11 @@ class TyFunctionInference {
 					case _: term;
 				};
 				// A declared Dynamic result crosses an assignment boundary without
-				// becoming the destination type. Solver-owned variables still need
-				// their constraints, even when a preview supplies a Dynamic fallback.
-				switch value {
-					case Known(type) if (type.isDynamic()):
-						continue;
-					case _:
-				}
+				// becoming the destination type, including through a solved variable.
+				// Preview follows explicit solutions but leaves deferred fallback holes
+				// unknown, so those variables still receive their concrete constraints.
+				if (candidate.preview(value).isDynamic())
+					continue;
 				final projected = TyInferenceNominalContext.view(semanticIndex, value, context);
 				// Callable assignment uses the existing parameter/result compatibility
 				// rules, including optional inputs, rather than exact solver equality.
