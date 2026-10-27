@@ -564,6 +564,10 @@ class TyperStage {
 				constructorApplication: function(constructed, arguments, sources) {
 					return TypedConstructorSelection.select(context.getIndex(), constructed, arguments, sources,
 						(signature, actual, parameters) -> overloadCandidateScore(signature, actual, actual.length, parameters, context.getIndex()));
+				},
+				constructorArgumentContexts: function(path, sources, environment) {
+					return constructorArgumentContexts(path, typeFromHintInContext(path, context, environment), sources, environment,
+						context).map(type -> type == null ? TyType.unknown() : type);
 				}
 			};
 			final callResolver:TypedCallDeclarationResolver = function(callee, arguments, position, lexicalEnvironment, callExpression, resultContext) {
@@ -2760,6 +2764,55 @@ class TyperStage {
 		return actual;
 	}
 
+	/** Inference and typed publication share declaration-owned operand context without allocating constructor variables or selecting a call. */
+	static function constructorArgumentContexts(typePath:String, written:TyType, args:Array<HxExpr>, scope:TyFunctionEnv,
+			ctx:TyperContext):Array<Null<TyType>> {
+		// An explicit but unresolved application is not evidence of omitted
+		// arguments. Its later validation cannot authorize guessed operand context.
+		if (typePath.indexOf("<") >= 0 && written.hasUnknownComponent())
+			return [for (_ in args) null];
+		final owner = nominalInfoForType(ctx.getIndex(), written);
+		final arity = owner == null ? 0 : TyNominalApplication.parameterIds(owner).length;
+		// Only genuinely omitted owner arguments are inference holes. This
+		// temporary context view creates no variables and never repairs an
+		// explicit application, including an empty or partial one.
+		var contextOwner = TyAliasExpansion.revealNonNullable(written);
+		if (written.getAliasDefinition() == null
+			&& written.getNominalIdentity() != null
+			&& written.getTypeArguments().length == 0
+			&& arity > 0
+			&& typePath.indexOf("<") < 0) {
+			// Transparent aliases lose their wrapper in the normalized type.
+			// Retained source declarations distinguish nominal omission from
+			// an alias whose own target is missing required owner arguments.
+			final declarations = ctx.resolveTypeUse(TyType.fromHintText(typePath)).getDeclarations();
+			var exactNominal = false;
+			var alias = false;
+			for (declaration in declarations)
+				switch declaration.getKind() {
+					case Nominal(identity):
+						if (identity.equals(written.getNominalIdentity()))
+							exactNominal = true;
+					case Alias(_):
+						alias = true;
+				}
+			if (!exactNominal || alias)
+				return [for (_ in args) null];
+			contextOwner = TyType.nominal(written.getNominalIdentity(), [for (_ in 0...arity) TyType.unknown()]);
+		}
+		final contextPath = TypedConstructorPath.select(ctx.getIndex(), contextOwner);
+		final candidates = contextPath == null ? [] : contextPath.getOwner().instanceMethodCandidates("new");
+		final declarations = candidates.map(signature -> contextPath.getOwner().declarationForSignature(signature));
+		final hasSpread = args.filter(argument -> argument.match(ECall(EIdent("__hxhx_spread"), [_]))).length > 0;
+		final contexts:Array<Null<TyType>> = hasSpread
+			|| declarations.indexOf(null) >= 0 ? [for (_ in args) null] : TyCallArgumentContext.shared(candidates.map(signature ->
+				TyNominalApplication.signature(ctx.getIndex(), contextPath.getOwner(), contextPath.getOwnerType(), signature)),
+				args.length, declarations.map(declaration -> declaration.getTypeParameterIds()), ctx.getIndex());
+		return contexts.map(type -> type != null
+			&& TypedCollectionExpectation.context(type) != null
+			&& scope.getInference().isSealed() ? null : type);
+	}
+
 	/** Validate result-producing branches before their types are merged, without revisiting lexical declarations. */
 	static function inferExprType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos, ?expectedResult:TyType):TyType {
 		final protocolSourceType = scope.protocolSourceType(expr);
@@ -3508,13 +3561,18 @@ class TyperStage {
 				}
 				out.isUnknown() ? TyType.fromHintText("Dynamic") : out;
 			case ENew(_typePath, args):
-				final argumentTypes = [for (argument in args) inferExprType(argument, scope, ctx, pos)];
 				// The parsed constructor path may be an applied type such as
 				// `Box<Int->Int>`. Resolve the structural hint so the exact
 				// nominal identity and its arguments reach local facts together.
 				final written = typeFromHintInContext(_typePath, ctx, scope);
 				final owner = nominalInfoForType(ctx.getIndex(), written);
 				final arity = owner == null ? 0 : TyNominalApplication.parameterIds(owner).length;
+				final contexts = constructorArgumentContexts(_typePath, written, args, scope, ctx);
+				final argumentTypes = [
+					for (index in 0...args.length) {
+						inferExprType(args[index], scope, ctx, pos, contexts[index]);
+					}
+				];
 				final constructed = scope.getInference().construct(expr, written, arity);
 				if (!scope.getInference().constrainConstructor({
 					expression: expr,

@@ -1135,7 +1135,9 @@ class TypedBodyBuilder {
 					guards)
 					.withSwitchPatterns(typeResolver == null ? null : typeResolver.switchPatterns(typedScrutinee.getType(), patterns, diagnosticPosition));
 			case ENew(typePath, arguments):
-				final typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				final contexts = typeResolver == null
+					|| environment == null ? null : typeResolver.constructorArgumentContexts(typePath, arguments, environment);
+				final typedArguments = buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, contexts);
 				// A spread contributes its checked container type, as it does for calls.
 				final constructor = typeResolver == null ? null : typeResolver.constructorApplication(nodeType,
 					TypedExpr.operandTypes(typedArguments, TypedExpr.operandKinds(typedArguments)), arguments);
