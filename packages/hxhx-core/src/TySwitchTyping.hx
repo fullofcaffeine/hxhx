@@ -36,8 +36,21 @@ function provesValueCoverage(scrutinee:TyType, patterns:Array<HxSwitchPattern>, 
 	for (declaration in owner.getDeclarations())
 		if (declaration.getSignature().getName() == "new" || declaration.getMetadata().indexOf("from") >= 0)
 			return false;
-	final result = analyze(scrutinee, patterns, ctx, true);
+	final result = analyze(scrutinee, patterns, ctx, admitsNull(owner.getUnderlyingType()));
 	return result != null && result.match(Exhaustive);
+}
+
+/**
+	Only a nullable representation can reach a value switch as null. An exact
+	Int, Float, or Bool backing (for example std `XmlType(Int)`) holds no null
+	on static targets, so its declared members alone cover the input; a
+	String or object backing still needs an explicit null arm. A `Null<...>`
+	scrutinee is not an exact abstract application and never reaches this proof.
+ */
+private function admitsNull(underlying:TyType):Bool {
+	if (underlying.isNullable() || !underlying.isPrimitive())
+		return true;
+	return !(underlying.isNumeric() || underlying.getDisplay() == "Bool");
 }
 
 /** Both consumers resolve the same exact field declarations and constant identities. */
