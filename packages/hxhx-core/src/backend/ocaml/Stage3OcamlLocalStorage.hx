@@ -5,8 +5,11 @@ package backend.ocaml;
 	separate Boolean box so true remains distinct from integer 1. The rendered
 	operand occurs once; this boundary never evaluates or reconstructs source.
 	A Dynamic source entering a Bool local uses the checked inverse conversion.
+	A nullable Int, Float, or Bool destination uses the shared carrier conversion.
  */
-function store(write:TypedBackendLocalWrite, rendered:String):String {
+function store(write:TypedBackendLocalWrite, rendered:String, names:Null<Stage3OcamlLocalNames>):String {
+	if (Stage3OcamlNullablePrimitive.innerPrimitive(write.binding.getType()) != null)
+		return Stage3OcamlValueConversion.convert(write.sourceType, write.binding.getType(), rendered, names);
 	if (write.binding.getType().getSemanticKey() == "primitive:Bool" && write.sourceType.isDynamic())
 		return "HxDynamic.booleanValue (" + rendered + ")";
 	if (!write.binding.getType().isDynamic())
@@ -30,5 +33,15 @@ function compound(write:TypedBackendLocalWrite, op:String, left:String, right:St
 	final operation = OcamlDynamicOperatorLowering.binary(op.substr(0, op.length - 1), DynamicValue, DynamicValue, true, true, leftName, rightName);
 	if (operation == null)
 		throw "unsupported Dynamic compound storage operation: " + op;
-	return "(let " + leftName + " = (" + left + ") in let " + rightName + " = (" + store(write, right) + ") in " + operation + ")";
+	return "(let "
+		+ leftName
+		+ " = ("
+		+ left
+		+ ") in let "
+		+ rightName
+		+ " = ("
+		+ store(write, right, names)
+		+ ") in "
+		+ operation
+		+ ")";
 }

@@ -5,10 +5,18 @@ package backend.ocaml;
 	values use the same Boolean box and checked Dynamic extraction. The operand
 	runs once; unsupported representation changes remain explicit failures.
 	Boolean boxing remains distinct from integers; this does not convert numbers.
+	Nullable Int, Float, and Bool sources and destinations use the carrier that
+	Stage3OcamlNullablePrimitive describes.
  */
 function convert(actual:TyType, expected:TyType, value:String, names:Null<Stage3OcamlLocalNames>):String {
 	if (actual.getSemanticKey() == expected.getSemanticKey())
 		return value;
+	final nullableDestination = Stage3OcamlNullablePrimitive.innerPrimitive(expected);
+	if (nullableDestination != null)
+		return Stage3OcamlNullablePrimitive.store(actual, nullableDestination, value);
+	final nullableSource = Stage3OcamlNullablePrimitive.innerPrimitive(actual);
+	if (nullableSource != null)
+		return Stage3OcamlNullablePrimitive.load(nullableSource, expected, value);
 	final source = actual.getSemanticKey();
 	final destination = expected.getSemanticKey();
 	if (expected.isDynamic())
