@@ -252,6 +252,20 @@ class TyIndexedComputedResult {
 			CheckedArgument(input, expected, ArgumentUnaryNullableAbstract(result, placeTerm)));
 	}
 
+	/** The executable conversion that produced this result from its predecessor; null for an admitted (unconverted) value or an operation. */
+	function executableConversion():Null<TyAbstractBinaryConversion>
+		return switch evidence {
+			case Converted(_, plan): plan;
+			case _: null;
+		};
+
+	/** The numeric storage a checked abstract increment/decrement computes over; null for ordinary primitive results and selected calls. */
+	function storageStep():Null<TyType>
+		return switch evidence {
+			case CheckedBuiltin(_, step) if (step != null): step.storage;
+			case _: null;
+		};
+
 	/** The fact this result was derived from; null for the computed operation itself. */
 	function predecessor():Null<TyIndexedComputedResult>
 		return switch evidence {

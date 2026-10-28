@@ -445,14 +445,23 @@ class M14AbstractIndexedAccessTest {
 		Sys.println("ABSTRACT_INDEXED_ACCESS:PASS retained_static_identity_and_late_rollback");
 	}
 
-	/** Update forms remain a diagnosed follow-up rather than silently becoming a raw carrier update. */
+	/**
+		Direct declared-index updates type and project like upstream; the forms that still
+		need their own schedule keep an explicit diagnostic instead of a raw carrier update.
+		A grouped place `(b[0])++` is "Invalid assign" upstream and locally. Null-coalescing
+		assignment and a `++` receiver that declares locals (it would have to be evaluated
+		twice) are the deferred forms with an explicit diagnostic.
+	 */
 	static function checkUpdates():Void {
-		for (update in ['b[0]+=1', 'b[0]++', '--b[0]']) {
-			final source = program(getter + setter, 'var b=new Buffer<Int>();' + update + ';');
+		for (update in ['b[0]+=1', 'b[0]++', '--b[0]'])
+			check("update_" + update, program(getter + setter, 'var b=new Buffer<Int>();' + update + ';'), true);
+		check("grouped_update", program(getter + setter, 'var b=new Buffer<Int>();(b[0])++;'), false);
+		for (deferred in ['b[0]??=1', '(function(){var r=b;return r;})()[0]++']) {
+			final source = program(getter + setter, 'var b=new Buffer<Int>();' + deferred + ';');
 			final root = JsRuntimeFixture.reserveOutput();
 			try {
-				M14Stage3RuntimeFixture.typeMain({source: source, path: root + "/Main.hx", root: root});
-				throw "abstract indexed update escaped its unsupported boundary";
+				M14Stage3RuntimeFixture.typeMain({source: source, path: root + "/Main.hx", root: root}).getBackendProjection();
+				throw "abstract indexed update escaped its explicit boundary: " + deferred;
 			} catch (error:TyperError) {
 				if (error.message.indexOf("haxe_ocaml-rgmu4") < 0)
 					throw error;

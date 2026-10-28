@@ -82,6 +82,17 @@ class TyAbstractBinaryArgument {
 			case IndexedNullableAdmission(_, _): throw "indexed nullable argument has no executable conversion";
 		};
 
+	/**
+		The executable plan behind a converted operand, or null for the raw indexed admission.
+		Only the completed indexed update may ask: it passes an admitted getter value unchanged.
+	 */
+	@:allow(TyIndexedUpdateOutcome)
+	function executableConversion():Null<TyAbstractBinaryConversion>
+		return switch evidence {
+			case Converted(plan): plan;
+			case IndexedNullableAdmission(_, _): null;
+		};
+
 	/** True for every conversion, and for an admission only at its own getter occurrence. */
 	public function admitsSource(source:HxExpr):Bool
 		return switch evidence {

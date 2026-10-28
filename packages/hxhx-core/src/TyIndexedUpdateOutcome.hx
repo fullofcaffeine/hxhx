@@ -1,3 +1,5 @@
+import TyIndexedUpdatePlan.TyIndexedUpdateStep;
+
 /** Runtime value ownership is independent of the setter-authoritative source type. */
 enum TyIndexedUpdatePayload {
 	OldGetter;
@@ -112,5 +114,70 @@ class TyIndexedUpdateOutcome {
 		selection.query.validate(scope.getOwnerIdentity());
 		validate(scope.getInference());
 		return scope.getInference().expressionType(selection.query.setterSource, admission.signature.getReturnType(), scope);
+	}
+
+	/**
+		Publish the closed facts a typed projection needs, after revalidating this outcome.
+
+		The setter call plan is derived from the retained admission (declaration,
+		argument order, actual types) in the same way the type resolver publishes a
+		selected getter: expected argument contexts, implicit conversions for the
+		receiver/index operands, and the named-argument plan. The value operand gets no
+		conversion here; its executable conversion, if any, is the retained
+		`setterConversion`, and an admitted value is passed unchanged.
+	 */
+	public function projection(scope:TyFunctionEnv):TyIndexedUpdatePlan {
+		final staticType = getStaticType(scope);
+		final query = selection.query;
+		final inference = scope.getInference();
+		final sources = selection.setter.getArguments();
+		final ranked = TyMethodGenericBinding.specializeParameters(admission.declaration, admission.signature, admission.order.rankedTypes(admission.types),
+			index);
+		final named = new TypedNamedCallPlan({
+			declaration: admission.declaration,
+			signature: admission.signature,
+			order: admission.order,
+			parameters: ranked,
+			sources: sources,
+			index: index,
+			extensionProvider: null
+		});
+		final expected = named.getExpectedArguments();
+		if (expected.length != sources.length || admission.types.length != sources.length)
+			throw "indexed setter projection lost its selected argument contexts";
+		final conversions = [
+			for (offset in 0...sources.length)
+				offset == sources.length - 1 ? null : TyImplicitConversionPlan.select(index, expected[offset], admission.types[offset])
+		];
+		final computedType = computed.getType(scope);
+		final op = switch query.kind {
+			case Unary(Increment, _): "+";
+			case Unary(_, _): "-";
+			case Compound(compound): HxBinaryOperatorTools.baseOperator(compound);
+		};
+		if (op == null)
+			throw "indexed update plan requires its base operator";
+		final storage = computed.storageStep();
+		final step = if (selection.binary != null) {
+			Selected(selection.binary, selection.binary.getSourceLeftArgument().executableConversion(),
+				selection.binary.getSourceRightArgument().executableConversion(), computedType);
+		} else if (storage != null) {
+			StorageView(op, storage, computedType);
+		} else {
+			Primitive(op, computedType);
+		};
+		return new TyIndexedUpdatePlan({
+			query: query,
+			payload: payload,
+			staticType: staticType,
+			getterType: inference.expressionType(query.getterSource, selection.getter.declaration.getSignature().getReturnType(), scope),
+			step: step,
+			placeConversion: placeResult.executableConversion(),
+			setterConversion: setterInput.executableConversion(),
+			setterDeclaration: admission.declaration,
+			setterSources: sources,
+			setterCall: new TypedCallResolution(admission.declaration, admission.declaration.getIsStatic(), null, conversions, expected, named),
+			ordinal: inference.indexedUpdateOrdinal(this)
+		});
 	}
 }

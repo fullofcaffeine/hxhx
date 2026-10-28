@@ -43,6 +43,23 @@ class TypedBodyBuilder {
 		return call.withNamedArguments(resolution.getNamedArguments().publish(arguments, type));
 	}
 
+	/** Project a completed declared-index update (`a[i]++`, `a[i] op= v`) through its retained getter/step/setter plan. */
+	static function buildIndexedUpdate(source:HxExpr, type:TyType, position:Null<HxPos>, diagnosticPosition:HxPos, environment:Null<TyFunctionEnv>,
+			typeResolver:Null<TypedExprTypeResolver>, callResolver:Null<TypedCallDeclarationResolver>,
+			memberResolver:Null<TypedMemberDeclarationResolver>):Null<TypedExpr> {
+		if (typeResolver == null || environment == null)
+			return null;
+		return TypedIndexedUpdateLowering.build({
+			expression: source,
+			type: type,
+			position: position,
+			diagnosticPosition: diagnosticPosition,
+			environment: environment,
+			resolver: typeResolver,
+			buildChild: child -> buildExpr(child, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver)
+		});
+	}
+
 	/**
 		Publish executable conversions inside their original argument positions.
 		Each wrapper retains its operand once, so targets observe source evaluation
@@ -1150,6 +1167,11 @@ class TypedBodyBuilder {
 				multiType == null ? TypedExpr.newValue(typePath, typedArguments, nodeType, position,
 					constructor) : multiType.apply(typedArguments, nodeType, position);
 			case EUnop(op, fixity, inner):
+				final update = op != Increment
+					&& op != Decrement ? null : buildIndexedUpdate(expression, nodeType, position, diagnosticPosition, environment, typeResolver,
+						callResolver, memberResolver);
+				if (update != null)
+					return update;
 				TypedExpr.unary(op, fixity, buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver), nodeType,
 					position);
 			case EBinop("is", value, operand):
@@ -1181,6 +1203,9 @@ class TypedBodyBuilder {
 					|| TyFieldAssignment.explicitlyUntyped(right) ? typedRight : typeResolver.convertValue(typedRight, typedLeft.getType());
 				TypedExpr.assign(typedLeft, converted, nodeType, position);
 			case EBinop(op, left, right) if (isCompoundAssignment(op)):
+				final update = buildIndexedUpdate(expression, nodeType, position, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+				if (update != null)
+					return update;
 				final typedLeft = buildExpr(left, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				final typedRight = buildExpr(right, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				TypedExpr.compoundAssign(op, typedLeft, typedRight, nodeType, position);

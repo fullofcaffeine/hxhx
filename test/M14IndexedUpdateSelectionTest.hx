@@ -366,9 +366,29 @@ class M14IndexedUpdateSelectionTest {
 		rejects(() -> TyperStage.selectIndexedUpdate(HxParser.parseExprText("slots[0]++"), incomplete.environment, incomplete.context, HxPos.unknown()),
 			"incomplete numeric result was materialized as a fallback");
 		require(unchanged(), "incomplete result published candidate facts");
-		final guarded = fixture(intSource);
-		rejects(() -> TyperStage.inferExprType(HxParser.parseExprText("slots[0]++"), guarded.environment, guarded.context, HxPos.unknown()),
-			"helper evidence enabled public indexed-update admission");
+		// Public admission: a direct declared place types through the selected schedule
+		// and takes the setter's return type; the completed outcome is published to the
+		// authored scope. A grouped place is "Invalid assign" as upstream reports it;
+		// private-access wrappers and null-coalescing assignment stay explicit.
+		final admitted = fixture(intSource);
+		final update = HxParser.parseExprText("slots[0]++");
+		final staticType = TyperStage.inferExprType(update, admitted.environment, admitted.context, HxPos.unknown());
+		require(staticType.getSemanticKey() == "primitive:String",
+			"public indexed update did not take its selected String setter result: " + staticType.getSemanticKey());
+		require(admitted.environment.getInference().indexedUpdateOutcome(update, admitted.environment) != null,
+			"public indexed update did not publish its completed outcome");
+		function diagnostic(expression:String):String {
+			final scope = fixture(intSource);
+			try {
+				TyperStage.inferExprType(HxParser.parseExprText(expression), scope.environment, scope.context, HxPos.unknown());
+			} catch (error:TyperError) {
+				return error.message;
+			}
+			return "";
+		}
+		require(diagnostic("(slots[0])++") == "Invalid assign", "grouped indexed place escaped the upstream Invalid assign diagnostic");
+		for (deferred in ["++@:privateAccess slots[0]", "slots[0] ??= 1"])
+			require(diagnostic(deferred).indexOf("haxe_ocaml-rgmu4") >= 0, deferred + " escaped its explicit diagnostic: " + diagnostic(deferred));
 		Sys.println("INDEXED_UPDATE_SELECTION:PASS numeric_and_admission_boundaries");
 	}
 

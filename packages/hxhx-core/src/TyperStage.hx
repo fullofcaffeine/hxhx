@@ -523,6 +523,10 @@ class TyperStage {
 					final storage = TyImplicitConversionPlan.select(context.getIndex(), storageType, value.getType());
 					return storage != null && storage.isRepresentationPreservingAbstractConversion() ? storage.apply(value) : value;
 				},
+				indexedUpdate: function(expression, environment) {
+					final outcome = environment.getInference().indexedUpdateOutcome(expression, environment);
+					return outcome == null ? null : outcome.projection(environment);
+				},
 				indexedAccess: function(expression, position, environment) {
 					final binding = environment.getInference().indexedAccess(expression);
 					if (binding == null)
@@ -1715,20 +1719,34 @@ class TyperStage {
 		};
 	}
 
-	/** Declaration-indexed updates need their own read/write schedule; ordinary arrays and conversion-only wrappers keep their existing path. */
-	static function rejectAbstractIndexedUpdate(place:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Void {
+	/**
+		True when `place` is a direct `a[i]` whose receiver is an abstract with declared
+		indexed helpers (`@:arrayAccess` / `@:op([])` getters and setters, as `Map` has).
+
+		What a user sees: `values["x"]++`, `--values["x"]` and `values["x"] += 2` on such
+		an abstract now type through `selectIndexedUpdate`, which selects the exact
+		getter, step and setter and owns the static type. Before, every such update
+		stopped with "Abstract indexed updates are not yet supported". Ordinary arrays
+		and conversion-only wrappers (an abstract with only `to Array<T>`) keep their
+		existing path. A parenthesized place such as `(values["x"])++` never reaches this
+		check: upstream and `assertWritableLocal` both reject it with "Invalid assign". A
+		`@:privateAccess` wrapper around a declared place is writable but is not the direct
+		`a[i]` occurrence the selected schedule is keyed on, so it stays an explicit
+		diagnostic.
+	 */
+	static function isDeclaredIndexedUpdatePlace(place:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Bool {
 		if (ctx.getIndex() == null)
-			return;
-		switch place {
-			case EParenthesized(inner, _) | EPrivateAccess(inner, _):
-				rejectAbstractIndexedUpdate(inner, scope, ctx, pos);
-			case EArrayAccess(receiver, _):
-				final type = TyAliasExpansion.revealNonNullable(inferExprType(receiver, scope.copyForInference(), ctx, pos));
-				final identity = type.getNominalIdentity();
-				final owner = identity == null ? null : ctx.getIndex().getAbstractByFullName(identity.getCanonicalName());
-				if (owner != null && owner.getIndexedDeclarations().length > 0)
-					throw new TyperError(ctx.getFilePath(), pos, "Abstract indexed updates are not yet supported (haxe_ocaml-rgmu4)");
+			return false;
+		return switch place {
+			case EPrivateAccess(inner, _):
+				if (isDeclaredIndexedUpdatePlace(inner, scope, ctx, pos))
+					throw new TyperError(ctx.getFilePath(), pos, "Private-access abstract indexed updates are not yet supported (haxe_ocaml-rgmu4)");
+				false;
+			case EArrayAccess(receiver, _): final type = TyAliasExpansion.revealNonNullable(inferExprType(receiver, scope.copyForInference(), ctx,
+					pos)); final identity = type.getNominalIdentity(); final owner = identity == null ? null : ctx.getIndex()
+					.getAbstractByFullName(identity.getCanonicalName()); owner != null && owner.getIndexedDeclarations().length > 0;
 			case _:
+				false;
 		}
 	}
 
@@ -3805,7 +3823,10 @@ class TyperStage {
 			case EUnop(_op, _fixity, e):
 				if (_op == Increment || _op == Decrement) {
 					assertWritableLocal(e, scope, ctx, pos);
-					rejectAbstractIndexedUpdate(e, scope, ctx, pos);
+					// A declared indexed place follows the measured getter/step/setter schedule;
+					// the completed outcome owns the static type (the setter's return type).
+					if (isDeclaredIndexedUpdatePlace(e, scope, ctx, pos))
+						return selectIndexedUpdate(expr, scope, ctx, pos).getStaticType(scope);
 				}
 				final inner = inferExprType(e, scope, ctx, pos);
 				final semanticIndex = ctx.getIndex();
@@ -3845,7 +3866,8 @@ class TyperStage {
 			case EBinop(op, a, b):
 				if (op == "??=") {
 					assertWritableLocal(a, scope, ctx, pos);
-					rejectAbstractIndexedUpdate(a, scope, ctx, pos);
+					if (isDeclaredIndexedUpdatePlace(a, scope, ctx, pos))
+						throw new TyperError(ctx.getFilePath(), pos, "Abstract indexed null-coalescing assignment is not yet supported (haxe_ocaml-rgmu4)");
 				}
 				switch (op) {
 					case "is":
@@ -3950,7 +3972,8 @@ class TyperStage {
 						}
 					case _ if (HxBinaryOperatorTools.isCompoundAssignment(op)):
 						assertWritableLocal(a, scope, ctx, pos);
-						rejectAbstractIndexedUpdate(a, scope, ctx, pos);
+						if (isDeclaredIndexedUpdatePlace(a, scope, ctx, pos))
+							return selectIndexedUpdate(expr, scope, ctx, pos).getStaticType(scope);
 						final leftType = inferExprType(a, scope, ctx, pos);
 						final rightType = inferExprType(b, scope, ctx, pos);
 						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), leftType, rightType, op, ctx.getFilePath(), pos);
