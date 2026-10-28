@@ -9005,221 +9005,47 @@ class EmitterStage {
 								if (i == initializerIndex)
 									continue;
 							}
-							final parsedFn = typedFnsRest[i].getDeclaration();
-							final localCatalog = typedFnsRest[i].getLocalCatalog();
-
+							final projection = typedFnsRest[i];
+							final localCatalog = projection.getLocalCatalog();
 							final stamp = i + 1;
-							final stmtWorklist = new Array<HxStmt>();
-							final exprWorklist = new Array<HxExpr>();
-							for (s in HxFunctionDecl.getBody(parsedFn))
-								if (s != null)
-									stmtWorklist.push(s);
-
-							while (stmtWorklist.length > 0) {
-								final s = stmtWorklist.pop();
-								if (s == null)
-									continue;
-								switch (s) {
-									case STargetScope(_, _, _):
-										throw "native target scope is not valid in this source or target phase";
-									case SBlock(stmts, _):
-										if (stmts != null)
-											for (ss in stmts)
-												if (ss != null)
-													stmtWorklist.push(ss);
-									case SVar(_name, _hint, init, _):
-										if (init != null)
-											exprWorklist.push(init);
-									case SIf(cond, thenBranch, elseBranch, _):
-										if (cond != null)
-											exprWorklist.push(cond);
-										if (thenBranch != null)
-											stmtWorklist.push(thenBranch);
-										if (elseBranch != null)
-											stmtWorklist.push(elseBranch);
-									case SWhile(cond, body, _):
-										if (cond != null)
-											exprWorklist.push(cond);
-										if (body != null)
-											stmtWorklist.push(body);
-									case SDoWhile(body, cond, _):
-										if (body != null)
-											stmtWorklist.push(body);
-										if (cond != null)
-											exprWorklist.push(cond);
-									case SForIn(_name, iterable, body, _):
-										if (iterable != null)
-											exprWorklist.push(iterable);
-										if (body != null)
-											stmtWorklist.push(body);
-									case SForKeyValue(_keyName, _valueName, iterable, body, _):
-										if (iterable != null)
-											exprWorklist.push(iterable);
-										if (body != null)
-											stmtWorklist.push(body);
-									case STry(tryBody, catches, _):
-										if (tryBody != null)
-											stmtWorklist.push(tryBody);
-										if (catches != null) {
-											for (c in catches)
-												if (c != null && c.body != null)
-													stmtWorklist.push(c.body);
-										}
-									case SThrow(expr, _):
-										if (expr != null)
-											exprWorklist.push(expr);
-									case SBreak(_):
-									case SContinue(_):
-									case SGuardedSwitch(scrutinee, enabled, _, bodies, _):
-										exprWorklist.push(scrutinee);
-										exprWorklist.push(enabled);
-										for (body in bodies)
-											stmtWorklist.push(body);
-									case SSwitch(scrutinee, _patterns, bodies, _):
-										if (scrutinee != null)
-											exprWorklist.push(scrutinee);
-										if (bodies != null)
-											for (body in bodies)
-												if (body != null)
-													stmtWorklist.push(body);
-									case SReturnVoid(_):
-									case SReturn(expr, _):
-										if (expr != null)
-											exprWorklist.push(expr);
-									case SExpr(expr, _):
-										if (expr != null)
-											exprWorklist.push(expr);
+							function depend(name:Null<String>):Void {
+								if (name == null || name.length == 0 || !restIndexByName.exists(name))
+									return;
+								final j = restIndexByName.get(name);
+								if (j != null && j != i && seenStamp[j] != stamp) {
+									seenStamp[j] = stamp;
+									edges[i].push(j);
+									revEdges[j].push(i);
 								}
 							}
-
-							while (exprWorklist.length > 0) {
-								final e = exprWorklist.pop();
-								if (e == null)
-									continue;
+							// Search with the shared source walk, so every node the body emitter renders is
+							// searched, including the groups, declarations and loops made by inline lowering.
+							// A reference to a local function is a dependency whether it is called or read
+							// as a value: a later separate binding is not in scope in OCaml.
+							TypedBackendSourceWalk.functionDeclaration(projection.getDeclaration(), e -> {
+								// Typed method values (`this.method`, a bare `method`, or a static capture) emit the
+								// owner's binding by name, exactly as the method-value renderer selects it.
+								final methodValue = projection.findMethodUse(e);
+								if (methodValue != null) {
+									final declaration = methodValue.getDeclaration();
+									if (ocamlModuleNameFromTypePath(declaration.getOwner().getCanonicalName()) == outputModuleName)
+										depend(declaration.getSignature().getName());
+								}
 								switch (e) {
-									case EVars(values) | ELoweredControl(_, _, values, _):
-										// Calls inside shared control still order their module-local providers.
-										for (value in values)
-											exprWorklist.push(value);
-									case EIdent(name):
-										// Function values (e.g. `map(printField)`) also create ordering
-										// dependencies between module-local functions.
-										//
-										// Without this edge, SCC ordering can emit the caller before the callee,
-										// yielding "Unbound value" in OCaml when the function value is referenced.
-										if (name != null
-											&& name.length > 0
-											&& localCatalog.findByProjectedName(name) == null
-											&& restIndexByName.exists(name)) {
-											final j = restIndexByName.get(name);
-											if (j != null && j != i && seenStamp[j] != stamp) {
-												seenStamp[j] = stamp;
-												edges[i].push(j);
-												revEdges[j].push(i);
-											}
-										}
-									case ECall(callee, args):
-										// A lexical callback does not depend on a same-named method.
-										// Explicit member calls retain their method dependency.
-										final calleeName = switch (callee) {
-											case EIdent(name) if (localCatalog.findByProjectedName(name) != null): null;
-											case _: backend.ocaml.OcamlLocalCallDependency.calleeName(e);
-										};
-
-										if (calleeName != null && calleeName.length > 0 && restIndexByName.exists(calleeName)) {
-											final j = restIndexByName.get(calleeName);
-											if (j != null && j != i && seenStamp[j] != stamp) {
-												seenStamp[j] = stamp;
-												edges[i].push(j);
-												revEdges[j].push(i);
-											}
-										}
-
-										if (callee != null)
-											exprWorklist.push(callee);
-										if (args != null)
-											for (a in args)
-												if (a != null)
-													exprWorklist.push(a);
-									case EField(obj, _):
-										if (obj != null)
-											exprWorklist.push(obj);
-									case ELambda(_args, body):
-										if (body != null)
-											exprWorklist.push(body);
-									case ETernary(cond, thenExpr, elseExpr):
-										if (cond != null)
-											exprWorklist.push(cond);
-										if (thenExpr != null)
-											exprWorklist.push(thenExpr);
-										if (elseExpr != null)
-											exprWorklist.push(elseExpr);
-									case EAnon(_names, values):
-										if (values != null)
-											for (v in values)
-												if (v != null)
-													exprWorklist.push(v);
-									case ESwitch(scrutinee, _patterns, exprs):
-										if (scrutinee != null)
-											exprWorklist.push(scrutinee);
-										if (exprs != null)
-											for (branchExpr in exprs)
-												if (branchExpr != null)
-													exprWorklist.push(branchExpr);
-									case ENew(_typePath, args):
-										// `ENew` lowers through the class constructor helper (`new_`) in Stage3.
-										// Register a dependency on `new` so SCC ordering keeps the callee available.
-										if (restIndexByName.exists("new")) {
-											final j = restIndexByName.get("new");
-											if (j != null && j != i && seenStamp[j] != stamp) {
-												seenStamp[j] = stamp;
-												edges[i].push(j);
-												revEdges[j].push(i);
-											}
-										}
-										if (args != null)
-											for (a in args)
-												if (a != null)
-													exprWorklist.push(a);
-									case EUnop(_op, _fixity, expr):
-										if (expr != null)
-											exprWorklist.push(expr);
-									case EBinop(_, left, right) | EDiscardThen(left, right):
-										if (left != null)
-											exprWorklist.push(left);
-										if (right != null)
-											exprWorklist.push(right);
-									case EArrayComprehension(_name, iterable, guardExpr, yieldExpr):
-										if (iterable != null)
-											exprWorklist.push(iterable);
-										if (guardExpr != null)
-											exprWorklist.push(guardExpr);
-										if (yieldExpr != null)
-											exprWorklist.push(yieldExpr);
-									case EArrayDecl(values):
-										if (values != null)
-											for (v in values)
-												if (v != null)
-													exprWorklist.push(v);
-									case EArrayAccess(array, index):
-										if (array != null)
-											exprWorklist.push(array);
-										if (index != null)
-											exprWorklist.push(index);
-									case ERange(start, end):
-										if (start != null)
-											exprWorklist.push(start);
-										if (end != null)
-											exprWorklist.push(end);
-									case ECast(expr, _hint) | ECheckType(expr, _hint):
-										if (expr != null)
-											exprWorklist.push(expr);
-									case EParenthesized(expr, _) | EUntyped(expr):
-										if (expr != null)
-											exprWorklist.push(expr);
+									case EIdent(name) if (localCatalog.findByProjectedName(name) == null):
+										depend(name);
+									// A lexical callback does not depend on a same-named method.
+									case ECall(EIdent(name), _) if (localCatalog.findByProjectedName(name) != null):
+									case ECall(_, _):
+										depend(backend.ocaml.OcamlLocalCallDependency.calleeName(e));
+									// `new` lowers through the class constructor helper (`new_`).
+									case ENew(_, _):
+										depend("new");
 									case _:
 								}
-							}
+							},
+								statement -> if (statement.match(STargetScope(_, _,
+									_))) throw "native target scope is not valid in this source or target phase");
 						}
 
 						// Kosaraju SCC on the function dependency graph.
