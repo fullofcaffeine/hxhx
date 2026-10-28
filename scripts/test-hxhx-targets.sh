@@ -1613,10 +1613,13 @@ class Main {
   }
 }
 HX
-out="$($HXHX_BIN --hxhx-stage3 --hxhx-no-run -cp "$tmpmapjoin/src" -main Main --hxhx-out "$tmpmapjoin/out")"
+# Typed lowering may inline Array.map; the observable contract is the joined
+# result, produced through a bootstrap array join rather than a Dynamic call.
+out="$($HXHX_BIN --hxhx-stage3 -cp "$tmpmapjoin/src" -main Main --hxhx-out "$tmpmapjoin/out")"
 echo "$out" | grep -q "^stage3=ok$"
-grep -Eq "HxBootArray\\.map(_dyn)?" "$tmpmapjoin/out/Main.ml"
-grep -q "HxBootArray.join_dyn" "$tmpmapjoin/out/Main.ml"
+echo "$out" | grep -q "^run=ok$"
+echo "$out" | grep -qx "haxe -version"
+grep -Eq "HxBootArray\\.join_(strict|dyn)" "$tmpmapjoin/out/Main.ml"
 
 echo "== Stage3 regression: full-body version parser return lowering compiles"
 tmpversionparser="$tmpdir/full_body_version_parser"
