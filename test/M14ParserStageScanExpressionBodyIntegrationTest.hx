@@ -18,7 +18,7 @@ class M14ParserStageScanExpressionBodyIntegrationTest {
 			classes.push(HxModuleDecl.getMainClass(new HxParser(ordinary).parseModule("RestBody")));
 			for (owner in classes) {
 				final argument = HxFunctionDecl.getArgs(HxClassDecl.getFunctions(owner)[0])[0];
-				assertTrue(HxFunctionArg.getTypeHint(argument) == "Array<" + element + ">", "scanner lost rest body container for " + element);
+				assertTrue(HxFunctionArg.getTypeHint(argument) == "haxe.Rest<" + element + ">", "scanner lost rest body container for " + element);
 				assertTrue(HxFunctionArg.getIsRest(argument), "scanner lost rest calling convention");
 			}
 		}

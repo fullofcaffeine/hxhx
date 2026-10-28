@@ -100,7 +100,7 @@ class TyCallableSignature {
 		};
 	}
 
-	/** Written ellipsis uses Array in bodies; resolved standard Rest keeps its own container. Callers supply elements. */
+	/** A rest body sees the standard Rest container (older signatures may still carry Array). Callers supply elements. */
 	static function restElement(container:TyType, method:String):TyType {
 		final identity = container.getNominalIdentity();
 		final name = identity == null ? container.getUnresolvedPath() : identity.getCanonicalName();

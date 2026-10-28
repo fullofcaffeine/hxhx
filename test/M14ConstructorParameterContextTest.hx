@@ -79,7 +79,15 @@ class M14ConstructorParameterContextTest {
 					}
 			if (!found)
 				throw "constructor context lost its method";
-			JsRuntimeFixture.assertRuntime(typed, "Main", "ok\n");
+			// A rest body reads the standard `haxe.Rest` provider, so its runtime check needs the
+			// real provider closure with shared lowering, as a compiler request would emit it.
+			if (entry.name == "rest")
+				JsRuntimeFixture.assertProgramRuntime(JsSourceProgramFixture.build({
+					sources: [{path: "Main.hx", source: source}],
+					requiredModules: ["haxe.Rest"]
+				}), "Main", "ok\n");
+			else
+				JsRuntimeFixture.assertRuntime(typed, "Main", "ok\n");
 			if (entry.name == "omitted")
 				@:privateAccess M14NekoClosureControlTest.assertSource("constructor_parameter_context", source, "ok\n");
 			Sys.println("CONSTRUCTOR_PARAMETER_CONTEXT:PASS " + entry.name);

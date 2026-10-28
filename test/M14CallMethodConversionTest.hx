@@ -120,7 +120,13 @@ class M14CallMethodConversionTest {
 					statement(entry);
 		if (selected != 2)
 			throw 'call operands must retain exactly two conversion calls';
-		JsRuntimeFixture.assertRuntime(typed, 'Main', expected);
+		// A rest body reads the standard `haxe.Rest` provider, so its runtime check needs the
+		// real provider closure with shared lowering, as a compiler request would emit it.
+		if (kind == 'rest')
+			JsRuntimeFixture.assertProgramRuntime(JsSourceProgramFixture.build({sources: [{path: 'Main.hx', source: source}], requiredModules: ['haxe.Rest']}),
+				'Main', expected);
+		else
+			JsRuntimeFixture.assertRuntime(typed, 'Main', expected);
 		#if call_conversion_native
 		{
 			final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), root + '/ocaml');

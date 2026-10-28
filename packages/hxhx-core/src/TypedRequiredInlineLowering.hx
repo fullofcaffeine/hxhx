@@ -15,8 +15,10 @@ private typedef RequiredInlineSelection = {
 	null-safe instance methods on ordinary classes. Abstract methods
 	that replace `this` must write to the caller's backing storage. Multi-type
 	abstract methods also need their authored bodies because the
-	selected provider does not own abstract-only methods. These calls use one
-	body expansion, with exact declaration and local identities.
+	selected provider does not own abstract-only methods. Inline members of the
+	standard `haxe.Rest` container also expand, because call sites own its packed
+	array. These calls use one body expansion, with exact declaration and local
+	identities.
 
 	Ordinary instance receivers are saved once before arguments, without a null
 	check. Abstract writers retain the caller's storage expression. Arguments are
@@ -62,6 +64,21 @@ class TypedRequiredInlineLowering {
 		final owner = index.getByFullName(declaration.getOwner().getCanonicalName());
 		return Std.isOfType(owner, TyClassInfo) && (cast owner : TyClassInfo).getIsExtern();
 	}
+
+	/**
+		Inline members of the standard rest container always expand at their use.
+
+		Why: a call site packs variadic arguments into the backing array of
+		`haxe.Rest<T>`, so the container's representation belongs to the compiler,
+		not to an emitted provider module. Its iterator class reads the container
+		through the same inline members, and the container builds that iterator.
+		Calling those members through emitted modules would make the two provider
+		modules depend on each other, which a native OCaml build rejects.
+		How: the owner is matched by its resolved abstract identity, never by
+		spelling, so a local type that happens to be named `Rest` keeps ordinary calls.
+	 */
+	static function isRestContainerMember(declaration:TyDeclarationInfo, owner:Null<TyAbstractInfo>):Bool
+		return owner != null && owner.getIdentity().getCanonicalName() == "haxe.Rest" && !declaration.getIsStatic();
 
 	static function voidType():TyType
 		return TyType.fromHintText("Void");
@@ -652,7 +669,9 @@ class TypedRequiredInlineLowering {
 				continue;
 			}
 			final owner = index.getAbstractByFullName(helper.getDeclaration().getOwner().getCanonicalName());
-			if (isExtern(helper.getDeclaration(), index) || (owner != null && owner.getMultiTypePolicy() != null))
+			if (isExtern(helper.getDeclaration(), index)
+				|| (owner != null && owner.getMultiTypePolicy() != null)
+				|| isRestContainerMember(helper.getDeclaration(), owner))
 				calls.set(identity, true);
 		}
 		return {calls: calls, writers: selected};

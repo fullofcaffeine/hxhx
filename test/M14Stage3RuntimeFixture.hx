@@ -60,6 +60,19 @@ class M14Stage3RuntimeFixture {
 		they do not establish native support for the entire standard-library closure.
 	 */
 	public static function prepareMain(input:{source:String, path:String, root:String}):TypedModule {
+		final roots = prepareProgram(input).filter(module -> module.getSourceOrigin().sourceModulePath == "Main");
+		if (roots.length != 1)
+			throw "native runtime fixture requires its exact prepared Main module";
+		return roots[0];
+	}
+
+	/**
+		Prepare the root observer together with every provider module that typing loaded.
+		Use this when the root calls ordinary (not extern) inline provider members, such as
+		the `haxe.Rest` abstract API: those members stay calls into the provider's emitted
+		module, so the native build needs that module next to `Main`.
+	 */
+	public static function prepareProgram(input:{source:String, path:String, root:String}):Array<TypedModule> {
 		final context = loadContext(input);
 		final pending = [context.main];
 		final typed = new Array<TypedModule>();
@@ -69,11 +82,7 @@ class M14Stage3RuntimeFixture {
 			for (module in context.loader.drainNewModules())
 				pending.push(module);
 		}
-		final prepared = TypedAbstractOperatorLowering.lowerModules(typed, context.index);
-		final roots = prepared.filter(module -> module.getSourceOrigin().sourceModulePath == "Main");
-		if (roots.length != 1)
-			throw "native runtime fixture requires its exact prepared Main module";
-		return roots[0];
+		return TypedAbstractOperatorLowering.lowerModules(typed, context.index);
 	}
 
 	/** Focused typing and native preparation share the same provider identity and classpath rules. */

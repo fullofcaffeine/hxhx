@@ -63,13 +63,22 @@ class HxFunctionSyntaxParser {
 		return parsed;
 	}
 
-	/** Method bodies currently bind a written rest parameter as an omittable Array<T>. */
+	/**
+		Give a written rest parameter its Haxe body type: `...parts:T` binds `parts` as `haxe.Rest<T>`.
+
+		Why: Haxe 4.3.7 exposes `toArray()`, `length`, indexing, and iteration through the
+		standard `haxe.Rest` abstract. Typing the body as `Array<T>` rejected `toArray()` and
+		accepted array mutation that real rest values do not offer.
+		How: the parameter keeps its rest and omission flags, so callers still pass separate
+		values (or nothing) and target call emission packs them into the abstract's array.
+		An unannotated rest parameter uses `Dynamic` elements.
+	 */
 	public static function methodArgument(declaration:HxFunctionArg):HxFunctionArg {
 		if (!HxFunctionArg.getIsRest(declaration))
 			return declaration;
 		final writtenHint = HxFunctionArg.getTypeHint(declaration);
 		final elementHint = StringTools.trim(writtenHint).length == 0 ? "Dynamic" : writtenHint;
-		return new HxFunctionArg(HxFunctionArg.getName(declaration), "Array<" + elementHint + ">", HxFunctionArg.getDefaultValue(declaration), true, true,
+		return new HxFunctionArg(HxFunctionArg.getName(declaration), "haxe.Rest<" + elementHint + ">", HxFunctionArg.getDefaultValue(declaration), true, true,
 			HxFunctionArg.getDefaultValueText(declaration), HxFunctionArg.getMetadata(declaration));
 	}
 

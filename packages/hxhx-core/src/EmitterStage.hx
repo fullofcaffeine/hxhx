@@ -3713,7 +3713,8 @@ class EmitterStage {
 						// Rest-args bring-up: upstream code frequently calls `rest.toArray()` where
 						// `rest` originates from a `...args:T` parameter.
 						//
-						// We lower rest params to `Array<T>`, so treat `toArray()` as identity.
+						// When the receiver is already an array, treat `toArray()` as identity.
+						// Typed rest parameters are `haxe.Rest<T>` and use the expanded provider body.
 						switch (obj) {
 							case EArrayDecl(_):
 								return exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,

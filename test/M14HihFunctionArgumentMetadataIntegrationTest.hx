@@ -81,7 +81,7 @@ class M14HihFunctionArgumentMetadataIntegrationTest {
 		}
 		assertEquals("(Int,Int)->Int", HxFunctionArg.getTypeHint(method[1]), "nested function annotation");
 		assertEquals("String", HxFunctionArg.getTypeHint(expression[2].declaration), "written rest element hint");
-		assertEquals("Array<String>", HxFunctionArg.getTypeHint(method[2]), "method body rest container");
+		assertEquals("haxe.Rest<String>", HxFunctionArg.getTypeHint(method[2]), "method body rest container");
 		assertTrue(HxFunctionArg.getIsOptional(method[2]), "method rest omission contract");
 		for (parameters in ["(value:)", "(value=)"]) {
 			var rejected = false;
