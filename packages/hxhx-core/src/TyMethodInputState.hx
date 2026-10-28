@@ -67,11 +67,21 @@ class TyMethodInputState {
 	public function getRevision():Int
 		return revision;
 
-	/** Prepare every observation against one base; conflicting duplicate declarations publish nothing. */
+	/**
+		Prepare every observation against one base; conflicting duplicate declarations publish nothing.
+
+		Only a trial that filled an omitted input (`changed`) is evidence, exactly as
+		`commit` requires for a single trial. A trial whose applied signature merely
+		spells a generic parameter concretely (`write(i:Int, v:T)` observed as
+		`write(Int, Int)`) is still compared for conflicts and merged, but it publishes
+		nothing: otherwise every typing pass would advance the revision and the module
+		driver, which re-types bodies until the revision is stable, would never finish.
+	 */
 	public function prepareBatch(trials:Array<TyMethodInputTrial>):TyMethodInputBatch {
 		for (trial in trials)
 			validateTrial(trial);
 		final merged = new haxe.ds.StringMap<MethodInputSolution>();
+		final filled = new haxe.ds.StringMap<Bool>();
 		final ordered = new Array<String>();
 		for (trial in trials) {
 			final key = trial.declaration.getIdentity().getCanonicalKey();
@@ -79,6 +89,8 @@ class TyMethodInputState {
 			if (prior != null && (prior.declaration != trial.declaration || prior.sourceIdentity != trial.sourceIdentity))
 				throw "method input batch changed its declaration";
 			final inputs = trial.inputs.copy();
+			if (trial.changed)
+				filled.set(key, true);
 			if (prior == null)
 				ordered.push(key);
 			else {
@@ -96,6 +108,8 @@ class TyMethodInputState {
 		}
 		final changes = new Array<MethodInputSolution>();
 		for (key in ordered) {
+			if (!filled.exists(key))
+				continue;
 			final result = merged.get(key);
 			final current = signature(result.declaration, result.declaration.getSignature()).getArgs();
 			if (CompilerCacheIdentity.encode(current.map(type -> type.getSemanticKey())) != CompilerCacheIdentity.encode(result.inputs.map(type ->

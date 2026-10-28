@@ -158,6 +158,17 @@ class M14IndexedUpdateTransactionTest {
 		state.commit(state.trial(method, body, [int]));
 		rejects(() -> state.commitBatch(batch), "stale");
 		require(state.getRevision() == 1, "stale batch changed revision");
+		// A selected helper call whose arguments fill no omitted input is not new
+		// evidence, even when its applied signature spells a generic parameter
+		// concretely. Publishing it would advance the revision on every typing pass
+		// and the module driver would re-type the body forever.
+		final applied = new TyFunSig(body.getName(), body.getIsStatic(), body.getArgNames().copy(), [string], body.getArgOptional().copy(),
+			body.getArgRest().copy(), body.getReturnType(), body.getPos());
+		final settled = new TyMethodInputState();
+		final unchanged = settled.trial(method, applied, []);
+		require(!settled.commitBatch(settled.prepareBatch([unchanged])) && settled.getRevision() == 0,
+			"unchanged applied observation published a method input revision");
+		require(settled.signature(method, body).getArgs()[0].isUnknown(), "unchanged applied observation rewrote the omitted input");
 	}
 
 	/** A known occurrence can change the parent facts without changing its solver revision. */
