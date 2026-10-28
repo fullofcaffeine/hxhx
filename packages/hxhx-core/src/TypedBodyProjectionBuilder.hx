@@ -327,9 +327,12 @@ class TypedBodyProjectionBuilder {
 		final children = source.getExpressions();
 		if (children.length != arguments.length + 1)
 			throw "call argument projection changed source arity";
-		final expected = TypedCallExpectedArguments.resolve(source);
-		for (index in 0...arguments.length)
-			callArguments.push(new TypedBackendCallArgument(ownerIdentity, bodyRevision, children[index + 1], arguments[index], expected[index]));
+		final expected = TypedCallExpectedArguments.resolveParameters(source);
+		for (index in 0...arguments.length) {
+			final parameter = expected[index];
+			callArguments.push(new TypedBackendCallArgument(ownerIdentity, bodyRevision, children[index + 1], arguments[index],
+				parameter == null ? null : parameter.type, parameter != null && parameter.isOptional));
+		}
 	}
 
 	public function getCallArguments():Array<TypedBackendCallArgument> {

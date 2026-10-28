@@ -1,7 +1,19 @@
 /** Copy parameter types from a checked call alignment without emitting omission placeholders. */
 function resolve(call:TypedExpr):Array<Null<TyType>> {
+	return [
+		for (parameter in resolveParameters(call))
+			parameter == null ? null : parameter.type
+	];
+}
+
+/**
+	Copy the aligned parameter declarations, so a target can see whether the
+	destination is optional as well as its written type. Omitted slots and
+	unresolved calls leave null entries.
+ */
+function resolveParameters(call:TypedExpr):Array<Null<TyFunctionParameter>> {
 	final children = call.getExpressions();
-	final result:Array<Null<TyType>> = [for (_ in 1...children.length) null];
+	final result:Array<Null<TyFunctionParameter>> = [for (_ in 1...children.length) null];
 	final named = call.getNamedArguments();
 	if (call.getTag() != Call || children.length == 0 || (call.getExtensionProvider() != null && named == null))
 		return result;
@@ -22,9 +34,9 @@ function resolve(call:TypedExpr):Array<Null<TyType>> {
 			final parameters = signature.getParameters();
 			for (index in 0...slots.length)
 				switch slots[index] {
-					case Supplied(source): result[source] = parameters[index].type;
+					case Supplied(source): result[source] = parameters[index];
 					case RestElements(sources): for (source in sources)
-							result[source] = parameters[index].type;
+							result[source] = parameters[index];
 					case Omitted | RestSpread(_):
 				}
 	}

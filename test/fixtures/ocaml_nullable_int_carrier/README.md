@@ -12,12 +12,20 @@ fixture checks the places where a value crosses between the two shapes:
 - arithmetic on nullable locals after a null check,
 - `==` and `!=` between a nullable value and `null` or a literal,
 - a `Null<Float>` local through the same assignment, arithmetic, and equality,
-- functions that return `Null<Int>` from branches that disagree about nullability.
+- functions that return `Null<Int>` from branches that disagree about nullability,
+- a nullable local passed to a required `Int` parameter (unwrapped at the call),
+- an optional `?size:Int` parameter that receives nothing, a plain `8`, and a
+  nullable local, and an optional `?scale:Int = 3` parameter whose present
+  value is unwrapped on entry. Optional Int, Float, and Bool parameters travel
+  in the carrier, so an omitted argument's null sentinel never has to be read
+  as a primitive.
 
-Reading a null through arithmetic raises the runtime's Null Access exception;
-upstream targets disagree about null arithmetic, so the fixture only reads
-values after a null check. The parser receives already split version parts
-because this root-only harness emits no `String.split` provider.
+Reading a null through arithmetic or a required primitive parameter raises the
+runtime's Null Access exception; upstream targets disagree about null
+arithmetic, so the fixture only reads values after a null check. The parser
+receives already split version parts because this root-only harness emits no
+`String.split` provider. Integral float literals such as `3.0` are avoided
+because of the separate literal defect tracked in haxe_ocaml-l26hl.
 
 Run `haxe test/m14_stage3_nullable_int_carrier_test.hxml` (or
 `npm run test:m14:stage3-nullable-int-carrier`) to compare upstream Haxe with

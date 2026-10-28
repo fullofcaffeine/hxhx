@@ -159,7 +159,7 @@ class Stage3OcamlClassStorage {
 		occurrence:TypedBackendConstructorOccurrence,
 		currentModule:String,
 		names:Stage3OcamlLocalNames,
-		emitArgument:(expression:HxExpr, actual:TyType, expected:TyType) -> String,
+		emitArgument:(expression:HxExpr, actual:TyType, expected:TyType, expectedIsOptional:Bool) -> String,
 		quote:String->String
 	}):Null<String> {
 		final occurrence = input.occurrence;
@@ -184,13 +184,25 @@ class Stage3OcamlClassStorage {
 		final arguments = argumentValues(occurrence);
 		final actual = binding.getOperandTypes();
 		final expected = binding.getExpectedArguments();
+		// An optional parameter (question mark or concrete default) receives the
+		// nullable carrier; map each supplied operand back to its declared parameter.
+		final declaredArguments = HxFunctionDecl.getArgs(methods[0].getDeclaration());
+		final optionalForOperand = [for (_ in arguments) false];
+		for (slot in 0...slots.length)
+			switch slots[slot] {
+				case Supplied(index) if (slot < declaredArguments.length):
+					final declared = declaredArguments[slot];
+					optionalForOperand[index] = HxFunctionArg.getIsOptional(declared)
+						|| HxFunctionArg.getDefaultValue(declared).match(Default(_));
+				case _:
+			}
 		final locals = [
 			for (index in 0...arguments.length)
 				input.names.internalName("__hx_ctor_arg_" + index)
 		];
 		final rendered = [
 			for (index in 0...arguments.length)
-				input.emitArgument(arguments[index], actual[index], expected[index])
+				input.emitArgument(arguments[index], actual[index], expected[index], optionalForOperand[index])
 		];
 		final parameters = [
 			for (slot in slots)

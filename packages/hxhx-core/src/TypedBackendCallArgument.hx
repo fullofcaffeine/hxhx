@@ -11,11 +11,14 @@ class TypedBackendCallArgument {
 	/** Exact destination selected by shared argument alignment, absent for unresolved calls. */
 	public final expectedType:Null<TyType>;
 
+	/** True when the aligned destination is an optional parameter, whose entry may carry null. */
+	public final expectedIsOptional:Bool;
+
 	final owner:String;
 	final revision:String;
 	final fingerprint:String;
 
-	public function new(owner:String, revision:String, source:TypedExpr, expression:HxExpr, ?expectedType:TyType) {
+	public function new(owner:String, revision:String, source:TypedExpr, expression:HxExpr, ?expectedType:TyType, expectedIsOptional:Bool = false) {
 		if (owner == null || owner.length == 0 || revision == null || revision.length == 0 || source == null || expression == null)
 			throw "call argument requires its exact executable and typed operand";
 		this.owner = owner;
@@ -23,6 +26,7 @@ class TypedBackendCallArgument {
 		this.expression = expression;
 		type = source.getType();
 		this.expectedType = expectedType;
+		this.expectedIsOptional = expectedIsOptional;
 		fingerprint = TypedBodyFingerprint.exactExpression(expression);
 	}
 

@@ -133,3 +133,77 @@ private function carrierOperand(inner:String, type:TyType, value:String):String 
 		return box(inner, "float_of_int (" + value + ")");
 	throw "unsupported OCaml nullable equality: " + key + " against nullable " + inner;
 }
+
+/**
+	Return the carrier's inner key for a call destination. A written nullable
+	type and an optional Int, Float, or Bool parameter both receive the carrier:
+	an omitted optional argument arrives as the null sentinel, so the native
+	parameter must be able to hold it. Returns null for other destinations.
+ */
+function destinationCarrier(expected:Null<TyType>, expectedIsOptional:Bool):Null<String> {
+	if (expected == null)
+		return null;
+	final written = innerPrimitive(expected);
+	if (written != null)
+		return written;
+	if (!expectedIsOptional)
+		return null;
+	final key = TyAliasExpansion.reveal(expected).getSemanticKey();
+	return key == INT || key == FLOAT || key == BOOL ? key : null;
+}
+
+/** The checked call-argument form of destinationCarrier. */
+function carrierDestination(argument:Null<TypedBackendCallArgument>):Null<String> {
+	return argument == null ? null : destinationCarrier(argument.expectedType, argument.expectedIsOptional);
+}
+
+/** True when the argument crosses the nullable boundary in either direction. */
+function isCarrierBoundary(argument:Null<TypedBackendCallArgument>):Bool {
+	return argument != null && (innerPrimitive(argument.type) != null || carrierDestination(argument) != null);
+}
+
+/**
+	Convert one checked call argument across the nullable boundary: a concrete
+	primitive passed to a carrier destination is boxed, and a nullable value
+	passed to a concrete primitive parameter is unwrapped. Returns null when the
+	argument has no typing facts, when neither side uses the carrier, or when
+	the parameter type is still open (a type parameter, Dynamic, or an
+	unresolved type) and therefore accepts the carrier as it is. The caller
+	passes the plain rendering, not one already coerced for a Float parameter.
+ */
+function callArgument(argument:Null<TypedBackendCallArgument>, rendered:String):Null<String> {
+	if (argument == null || argument.type == null || argument.expectedType == null)
+		return null;
+	return convertArgument(argument.type, argument.expectedType, argument.expectedIsOptional, rendered);
+}
+
+/** The same conversion from explicit operand and parameter facts, as a constructor application supplies them. */
+function convertArgument(actual:TyType, expected:TyType, expectedIsOptional:Bool, rendered:String):Null<String> {
+	final actualInner = innerPrimitive(actual);
+	final expectedInner = destinationCarrier(expected, expectedIsOptional);
+	if (actualInner == null && expectedInner == null)
+		return null;
+	final revealed = TyAliasExpansion.reveal(expected);
+	if (revealed.isDynamic() || revealed.isUnknown() || revealed.isUnresolved() || revealed.isTypeParameter())
+		return null;
+	if (expectedInner != null)
+		return store(actual, expectedInner, rendered);
+	return load(actualInner, expected, rendered);
+}
+
+/**
+	Read an optional primitive parameter with a concrete default on entry. The
+	caller passes the carrier (callArgument boxes it), so a present value must be
+	unwrapped into the concrete body binding; a null sentinel selects the default.
+ */
+function parameterEntry(bindingType:TyType, name:String, fallback:String):String {
+	final key = TyAliasExpansion.reveal(bindingType).getSemanticKey();
+	final present = key == INT || key == FLOAT || key == BOOL ? unwrap(key, name) : name;
+	return "(if HxRuntime.is_null (Obj.repr " + name + ") then (" + fallback + ") else " + present + ")";
+}
+
+/** True when a concrete-default parameter's native annotation must be the carrier rather than its body primitive. */
+function isCarrierParameter(bindingType:TyType):Bool {
+	final key = TyAliasExpansion.reveal(bindingType).getSemanticKey();
+	return key == INT || key == FLOAT || key == BOOL;
+}

@@ -4,7 +4,9 @@ package backend.ocaml;
 	Apply declared parameter defaults before the authored method body starts.
 	The incoming null sentinel selects a default lazily. Rebinding the exact local
 	name keeps later mutation and closure capture under the existing body owner.
-	Defaults run in declared parameter order.
+	Defaults run in declared parameter order. An optional Int, Float, or Bool
+	parameter arrives in the nullable carrier (see Stage3OcamlNullablePrimitive),
+	so a present value is unwrapped into its concrete body binding here.
  */
 function render(input:{
 	projection:TypedBackendFunctionProjection,
@@ -25,13 +27,9 @@ function render(input:{
 		final fallback = input.emit(value.expression, value.type, parameter.getBinding().getType());
 		result = "(let "
 			+ name
-			+ " = (if HxRuntime.is_null (Obj.repr "
-			+ name
-			+ ") then ("
-			+ fallback
-			+ ") else "
-			+ name
-			+ ") in "
+			+ " = "
+			+ Stage3OcamlNullablePrimitive.parameterEntry(parameter.getBinding().getType(), name, fallback)
+			+ " in "
 			+ result
 			+ ")";
 	}

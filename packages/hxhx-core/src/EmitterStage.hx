@@ -716,6 +716,13 @@ class EmitterStage {
 		};
 	}
 
+	/** Int, Float, and Bool parameter hints select the nullable carrier when the parameter is optional. */
+	static function stage3IsPrimitiveParamHint(hint:String):Bool {
+		final compact = StringTools.replace(StringTools.trim(hint == null ? "" : hint), " ", "");
+		return compact == "Int" || compact == "Float" || compact == "Bool" || compact == "StdTypes.Int" || compact == "StdTypes.Float"
+			|| compact == "StdTypes.Bool";
+	}
+
 	static function stage3IsFloatParamHint(hint:String):Bool {
 		final compact = StringTools.replace(StringTools.trim(hint == null ? "" : hint), " ", "");
 		return compact == "Float" || compact == "StdTypes.Float";
@@ -3243,12 +3250,21 @@ class EmitterStage {
 				occurrence: construction,
 				currentModule: currentOcamlModuleName,
 				names: currentFunctionLocalOcamlNames,
-				emitArgument: (expression, actual, expected) -> {
+				emitArgument: (expression, actual, expected, expectedIsOptional) -> {
 					final value = stage3IsFloatParamHint(expected.getDisplay()) ? exprToOcamlAsFloatValueStage3(expression, arityByIdent, tyByIdent,
 						staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 						callSigByCallee) : exprToOcaml(expression, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 							callSigByCallee);
 					final argument = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(expression) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(expression);
+					// Nullable Int/Float/Bool arguments convert from the plain rendering, as in ordinary calls.
+					if (backend.ocaml.Stage3OcamlNullablePrimitive.innerPrimitive(actual) != null
+						|| backend.ocaml.Stage3OcamlNullablePrimitive.destinationCarrier(expected, expectedIsOptional) != null) {
+						final nullableArgument = backend.ocaml.Stage3OcamlNullablePrimitive.convertArgument(actual, expected, expectedIsOptional,
+							exprToOcaml(expression, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee));
+						if (nullableArgument != null)
+							return nullableArgument;
+					}
 					final callable = backend.ocaml.Stage3OcamlCallableConversion.adapt(argument, value, currentFunctionLocalOcamlNames);
 					if (callable != null)
 						return callable;
@@ -3474,6 +3490,16 @@ class EmitterStage {
 						|| signature.paramTypeHints == null
 						|| argIndex < 0
 						|| argIndex >= signature.paramTypeHints.length ? "" : signature.paramTypeHints[argIndex];
+					final isReceiver = signature != null && signature.needsReceiver && argIndex == 0;
+					final argument = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(arg) : currentTypedFunction != null ? currentTypedFunction.findCallArgument(arg) : null;
+					// A nullable Int/Float/Bool argument is unwrapped from its plain rendering
+					// before any Float or Int64 parameter coercion could read the carrier.
+					if (!isReceiver && backend.ocaml.Stage3OcamlNullablePrimitive.isCarrierBoundary(argument)) {
+						final converted = backend.ocaml.Stage3OcamlNullablePrimitive.callArgument(argument,
+							exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
+						if (converted != null)
+							return converted;
+					}
 					final rendered = switch (arg) {
 						case ENull:
 							exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
@@ -3485,9 +3511,8 @@ class EmitterStage {
 								exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 								tyByIdentRaw);
 					};
-					if (signature != null && signature.needsReceiver && argIndex == 0)
+					if (isReceiver)
 						return rendered;
-					final argument = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(arg) : currentTypedFunction != null ? currentTypedFunction.findCallArgument(arg) : null;
 					final array = backend.ocaml.Stage3OcamlArrays.callArgument(argument, rendered);
 					if (array != null)
 						return array;
@@ -3497,9 +3522,17 @@ class EmitterStage {
 					final carrier = stage3DynamicArgumentCarrier(arg, tyByIdentRaw, callSigByCalleeRaw);
 					// Stored callbacks have checked argument destinations even without a
 					// method signature. Preserve Dynamic boxing at that exact call boundary.
-					final destination = argument != null
-						&& argument.expectedType != null
-						&& argument.expectedType.isDynamic() ? "Dynamic" : hint;
+					// Without typed facts, the parsed declaration still says whether the
+					// parameter is optional: an optional Int/Float/Bool parameter receives
+					// the nullable carrier, which is the same box Dynamic uses.
+					final optionalPrimitiveParameter = (argument == null || argument.expectedType == null)
+						&& signature != null
+						&& argIndex >= 0
+						&& argIndex < signature.paramFillable.length
+						&& signature.paramFillable[argIndex]
+						&& stage3IsPrimitiveParamHint(hint);
+					final destination = (argument != null && argument.expectedType != null && argument.expectedType.isDynamic())
+						|| optionalPrimitiveParameter ? "Dynamic" : hint;
 					return backend.ocaml.OcamlDynamicOperatorLowering.callArgument(destination, carrier, rendered);
 				}
 
@@ -8716,12 +8749,19 @@ class EmitterStage {
 							final headArgs = new Array<String>();
 							if (!isStaticFn)
 								headArgs.push("(this_ : _)");
-							for (a in args)
+							// An optional Int/Float/Bool parameter with a concrete default arrives in
+							// the nullable carrier; Stage3OcamlFunctionDefaults unwraps it on entry.
+							final defaultSlots = tf.hasDefaults() ? [for (value in tf.getDefaults()) value.slot] : [];
+							for (slot in 0...args.length) {
+								final a = args[slot];
+								final carrierEntry = defaultSlots.indexOf(slot) >= 0
+									&& backend.ocaml.Stage3OcamlNullablePrimitive.isCarrierParameter(a.getBinding().getType());
 								headArgs.push("("
 									+ requireOcamlFunctionLocalValueIdent(a.getProjectedName())
 									+ " : "
-									+ ocamlTypeFromTy(a.getBinding().getType())
+									+ (carrierEntry ? "Obj.t" : ocamlTypeFromTy(a.getBinding().getType()))
 									+ ")");
+							}
 							final ocamlArgs = headArgs.length == 0 ? "()" : headArgs.join(" ");
 
 							var retTy = ocamlTypeFromTy(tf.getReturnType());
