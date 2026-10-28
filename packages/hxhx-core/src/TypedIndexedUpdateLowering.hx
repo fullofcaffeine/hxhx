@@ -32,10 +32,16 @@ typedef TypedIndexedUpdateInput = {
 	  setter's value is the result.
 	The block's static type is the setter's return type, as upstream types it.
 
-	Explicit limits (diagnostics mention haxe_ocaml-rgmu4): a `++`/`--` receiver that
-	declares locals or functions cannot be evaluated twice through the replayed
-	lexical catalog; a selected compound helper must have a body and, when it is an
-	instance method, must not be inline.
+	Temporaries come from one allocator per function body (`TyFunctionEnv
+	.indexedUpdateTemporaries`), so an update nested inside another update's receiver,
+	such as `arr[m["i"]++]["a"]++`, gets fresh identities each time that receiver is
+	built, and generated names never repeat inside a function.
+
+	Explicit limits (diagnostics mention haxe_ocaml-rgmu4): a selected compound helper
+	must have a body and, when it is an instance method, must not be inline. The typer
+	already rejects a `++`/`--` receiver that cannot be evaluated twice
+	(`repeatableReceiver`) and a compound setter whose key parameter differs from the
+	getter's; this lowering only re-checks those as invariants.
  */
 class TypedIndexedUpdateLowering {
 	final plan:TyIndexedUpdatePlan;
@@ -48,14 +54,14 @@ class TypedIndexedUpdateLowering {
 
 	/** Null when the occurrence is not a completed declared-index update; the ordinary unary/compound node then applies. */
 	public static function build(input:TypedIndexedUpdateInput):Null<TypedExpr> {
-		final plan = input.resolver.indexedUpdate(input.expression, input.environment);
+		final plan = input.resolver.indexedUpdate(input.expression, input.diagnosticPosition, input.environment);
 		return plan == null ? null : new TypedIndexedUpdateLowering(plan, input).lower();
 	}
 
 	function new(plan:TyIndexedUpdatePlan, input:TypedIndexedUpdateInput) {
 		this.plan = plan;
 		this.input = input;
-		allocator = new TyCompilerTemporaryAllocator(input.environment.getOwnerIdentity(), "indexed-update-v1:" + plan.ordinal, "__hxhx_indexed_");
+		allocator = input.environment.indexedUpdateTemporaries();
 		final place = switch plan.query.getterSource {
 			case EArrayAccess(receiver, key): {receiver: receiver, key: key};
 			case _: throw "indexed update plan lost its getter place";
@@ -81,19 +87,22 @@ class TypedIndexedUpdateLowering {
 	}
 
 	/**
-		A `++`/`--` receiver is evaluated once for the read and once for the write.
-		Only receivers without declarations can be rebuilt twice from the same source.
+		True when a `++`/`--` receiver can be built twice from the same source: once for
+		the getter read and once for the setter write, as upstream evaluates it.
+		Only expressions without declarations qualify; a block, a function literal or
+		a comprehension would declare the same source locals twice in the replayed
+		lexical catalog. Nested calls and nested indexed updates are fine.
 	 */
-	static function requireRepeatable(expression:HxExpr):Bool {
+	public static function repeatableReceiver(expression:HxExpr):Bool {
 		return switch expression {
 			case EIdent(_) | EThis | ENull | EBool(_) | EString(_) | EInt(_) | EFloat(_) | EEnumValue(_): true;
 			case EField(inner, _) | ENullSafeField(inner, _) | EParenthesized(inner, _) | EPrivateAccess(inner, _) | ECast(inner, _) | ECheckType(inner, _) |
-				EUntyped(inner) | EUnop(_, _, inner): requireRepeatable(inner);
-			case EArrayAccess(left, right) | EBinop(_, left, right): requireRepeatable(left) && requireRepeatable(right);
-			case ETernary(condition, whenTrue, whenFalse): requireRepeatable(condition) && requireRepeatable(whenTrue) && requireRepeatable(whenFalse);
-			case ECall(callee, arguments): requireRepeatable(callee) && arguments.filter(argument -> !requireRepeatable(argument)).length == 0;
-			case ENew(_, arguments) | EArrayDecl(arguments): arguments.filter(argument -> !requireRepeatable(argument)).length == 0;
-			case EAnon(_, values): values.filter(value -> !requireRepeatable(value)).length == 0;
+				EUntyped(inner) | EUnop(_, _, inner): repeatableReceiver(inner);
+			case EArrayAccess(left, right) | EBinop(_, left, right): repeatableReceiver(left) && repeatableReceiver(right);
+			case ETernary(condition, whenTrue, whenFalse): repeatableReceiver(condition) && repeatableReceiver(whenTrue) && repeatableReceiver(whenFalse);
+			case ECall(callee, arguments): repeatableReceiver(callee) && arguments.filter(argument -> !repeatableReceiver(argument)).length == 0;
+			case ENew(_, arguments) | EArrayDecl(arguments): arguments.filter(argument -> !repeatableReceiver(argument)).length == 0;
+			case EAnon(_, values): values.filter(value -> !repeatableReceiver(value)).length == 0;
 			case _: false;
 		};
 	}
@@ -177,13 +186,26 @@ class TypedIndexedUpdateLowering {
 		return plan.setterConversion == null ? placed : plan.setterConversion.apply(placed);
 	}
 
+	/**
+		The compound key is converted once, at the getter, and the saved value is passed
+		to the setter unchanged. Selection admitted the update only when the setter's
+		key parameter is the getter's, so the saved key already has the setter's type;
+		a difference here would mean the plan and the saved value disagree.
+	 */
+	function requireSavedKeyFitsSetter(key:TypedExpr):Void {
+		final offset = plan.setterSources.indexOf(keySource);
+		final expected = offset < 0 ? null : plan.setterCall.getExpectedArguments()[offset];
+		if (expected == null || (!expected.isUnknown() && expected.getSemanticKey() != key.getType().getSemanticKey()))
+			throw "indexed compound update saved a key the selected setter parameter does not accept";
+	}
+
 	function lower():TypedExpr {
 		final unary = rightSource == null;
 		final getter = input.resolver.indexedAccess(plan.query.getterSource, input.diagnosticPosition, input.environment);
 		if (getter == null || getter.call == null || getter.binding.declaration == null)
 			throw "indexed update lost its selected getter call";
-		if (unary && !requireRepeatable(receiverSource))
-			throw unsupported("Indexed increment/decrement receiver declares locals or functions and cannot be evaluated twice");
+		if (unary && !repeatableReceiver(receiverSource))
+			throw "indexed update was admitted with a receiver that cannot be evaluated twice";
 		final keyValue = input.buildChild(keySource);
 		final key = if (unary) {
 			save("key", keyValue);
@@ -195,6 +217,8 @@ class TypedIndexedUpdateLowering {
 				|| plans[sources.indexOf(keySource)] == null ? keyValue : plans[sources.indexOf(keySource)].apply(keyValue);
 			save("key", expected.isUnknown() ? converted : input.resolver.convertValue(converted, expected));
 		}
+		if (!unary)
+			requireSavedKeyFitsSetter(key);
 		final receiver = unary ? null : save("receiver", input.buildChild(receiverSource));
 		function operand(source:HxExpr):TypedExpr {
 			if (source == keySource)

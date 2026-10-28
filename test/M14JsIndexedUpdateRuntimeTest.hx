@@ -42,7 +42,9 @@ class M14JsIndexedUpdateRuntimeTest {
 		Every update of a declared-index place in `Main` must reach the backend as its
 		selected getter/step/setter calls. A surviving typed `a[i]` read, `++`/`--` or
 		compound assignment on a `Map` or `Cells` value would make the backend index the
-		carrier directly, which is the fallback ordinary arrays use.
+		carrier directly, which is the fallback ordinary arrays use; a `++`/`--` or
+		compound assignment whose place is a call (the projected getter) would update a
+		temporary and lose the setter write.
 	 */
 	static function requireProjectedUpdates(program:MacroExpandedProgram):Void {
 		final declared = ["haxe.ds.Map", "Main.Cells"];
@@ -52,13 +54,19 @@ class M14JsIndexedUpdateRuntimeTest {
 		}
 		function expression(value:TypedExpr):Void {
 			final children = value.getExpressions();
+			final place = children.length > 0 ? children[0] : null;
+			final update = switch value.getTag() {
+				case Unary: value.getUnaryOperator() == Increment || value.getUnaryOperator() == Decrement;
+				case CompoundAssign: true;
+				case _: false;
+			};
 			switch value.getTag() {
-				case ArrayAccess if (children.length > 0 && declaredPlace(children[0])):
+				case ArrayAccess if (place != null && declaredPlace(place)):
 					throw "declared indexed place survived as a raw carrier read";
-				case Unary | CompoundAssign if (children.length > 0
-					&& children[0].getTag() == ArrayAccess
-					&& declaredPlace(children[0].getExpressions()[0])):
+				case _ if (update && place != null && place.getTag() == ArrayAccess && declaredPlace(place.getExpressions()[0])):
 					throw "declared indexed update survived as a raw carrier update";
+				case _ if (update && place != null && place.getTag() == Call):
+					throw "declared indexed update survived as an update of its getter call";
 				case _:
 			}
 			for (child in children)

@@ -15,8 +15,11 @@ typedef TypedExprTypeResolver = {
 	/** Indexed helpers become exact ordinary calls; their source operands retain their original order and inference facts. */
 	final indexedAccess:(expression:HxExpr, diagnosticPosition:HxPos, environment:TyFunctionEnv) -> Null<TypedIndexedAccessResolution>;
 
-	/** Completed facts for an authored `++`/`--`/compound update of a declared-index place; null for any other occurrence. */
-	final indexedUpdate:(expression:HxExpr, environment:TyFunctionEnv) -> Null<TyIndexedUpdatePlan>;
+	/**
+		Completed facts for an authored `++`/`--`/compound update of a declared-index place;
+		null for any other occurrence. Only the JavaScript target may project them.
+	 */
+	final indexedUpdate:(expression:HxExpr, diagnosticPosition:HxPos, environment:TyFunctionEnv) -> Null<TyIndexedUpdatePlan>;
 
 	/** Resolve written local context with the current declaration's exact generic binders. */
 	final declaredType:(hint:String, environment:TyFunctionEnv) -> TyType;

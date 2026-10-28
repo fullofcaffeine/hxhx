@@ -446,27 +446,38 @@ class M14AbstractIndexedAccessTest {
 	}
 
 	/**
-		Direct declared-index updates type and project like upstream; the forms that still
-		need their own schedule keep an explicit diagnostic instead of a raw carrier update.
-		A grouped place `(b[0])++` is "Invalid assign" upstream and locally. Null-coalescing
-		assignment and a `++` receiver that declares locals (it would have to be evaluated
-		twice) are the deferred forms with an explicit diagnostic.
+		Declared-index updates are typed and projected for the JavaScript target
+		(`M14JsIndexedUpdateRuntimeTest` proves them against upstream). This fixture types
+		under the native OCaml defines, where every accepted update form must stop at the
+		explicit target gate instead of emitting a block no native run has checked.
+		Forms that never project keep their own diagnostic: null-coalescing assignment, a
+		`++` receiver that declares locals (it would have to be evaluated twice), and a
+		compound update whose setter key parameter differs from the getter's (the key is
+		converted once). A grouped place `(b[0])++` is "Invalid assign" upstream and locally.
 	 */
 	static function checkUpdates():Void {
-		for (update in ['b[0]+=1', 'b[0]++', '--b[0]'])
-			check("update_" + update, program(getter + setter, 'var b=new Buffer<Int>();' + update + ';'), true);
-		check("grouped_update", program(getter + setter, 'var b=new Buffer<Int>();(b[0])++;'), false);
-		for (deferred in ['b[0]??=1', '(function(){var r=b;return r;})()[0]++']) {
-			final source = program(getter + setter, 'var b=new Buffer<Int>();' + deferred + ';');
+		final floatKeyGetter = '@:op([]) private inline function read(i:Float):T return this[Std.int(i)];';
+		final cases = [
+			{members: getter + setter, body: 'b[0]+=1', expected: "JavaScript target only"},
+			{members: getter + setter, body: 'b[0]++', expected: "JavaScript target only"},
+			{members: getter + setter, body: '--b[0]', expected: "JavaScript target only"},
+			{members: getter + setter, body: 'b[0]??=1', expected: "null-coalescing"},
+			{members: getter + setter, body: '(function(){var r=b;return r;})()[0]++', expected: "cannot be evaluated twice"},
+			{members: floatKeyGetter + setter, body: 'b[0]+=1', expected: "setter key parameter"}
+		];
+		for (entry in cases) {
+			final source = program(entry.members, 'var b=new Buffer<Int>();' + entry.body + ';');
 			final root = JsRuntimeFixture.reserveOutput();
+			var diagnostic = "";
 			try {
 				M14Stage3RuntimeFixture.typeMain({source: source, path: root + "/Main.hx", root: root}).getBackendProjection();
-				throw "abstract indexed update escaped its explicit boundary: " + deferred;
 			} catch (error:TyperError) {
-				if (error.message.indexOf("haxe_ocaml-rgmu4") < 0)
-					throw error;
+				diagnostic = error.message;
 			}
+			if (diagnostic.indexOf("haxe_ocaml-rgmu4") < 0 || diagnostic.indexOf(entry.expected) < 0)
+				throw "abstract indexed update escaped its explicit boundary: " + entry.body + ": " + diagnostic;
 		}
+		check("grouped_update", program(getter + setter, 'var b=new Buffer<Int>();(b[0])++;'), false);
 		Sys.println("ABSTRACT_INDEXED_ACCESS:PASS deferred_updates");
 	}
 

@@ -523,9 +523,17 @@ class TyperStage {
 					final storage = TyImplicitConversionPlan.select(context.getIndex(), storageType, value.getType());
 					return storage != null && storage.isRepresentationPreservingAbstractConversion() ? storage.apply(value) : value;
 				},
-				indexedUpdate: function(expression, environment) {
+				indexedUpdate: function(expression, position, environment) {
 					final outcome = environment.getInference().indexedUpdateOutcome(expression, environment);
-					return outcome == null ? null : outcome.projection(environment);
+					if (outcome == null)
+						return null;
+					// Only the JavaScript backend has proven the projected schedule against
+					// upstream. Every other target keeps an explicit diagnostic instead of
+					// emitting a block it has never been checked on.
+					if (!context.hasDefine("js"))
+						throw new TyperError(context.getFilePath(), position,
+							"Abstract indexed updates are projected for the JavaScript target only (haxe_ocaml-rgmu4)");
+					return outcome.projection(environment);
 				},
 				indexedAccess: function(expression, position, environment) {
 					final binding = environment.getInference().indexedAccess(expression);
@@ -1847,6 +1855,18 @@ class TyperStage {
 		final parameters = setter.order.sourceContexts(TyMethodGenericBinding.specializeParameters(setter.declaration, setter.signature,
 			setter.order.rankedTypes(setter.actual), ctx.getIndex()));
 		final parameter = parameters[parameters.length - 1];
+		// A compound update converts its key once, at the getter, and passes that saved
+		// value to the setter without a second conversion (upstream: "key;convert;receiver;").
+		// The setter's key parameter must therefore be the getter's; anything else stays explicit.
+		if (operands.right != null) {
+			final getterParameters = getter.order.sourceContexts(TyMethodGenericBinding.specializeParameters(getter.declaration, getter.signature,
+				getter.order.rankedTypes(getter.actual), ctx.getIndex()));
+			final getterKey = getterParameters[getterParameters.length - 1];
+			final setterKey = parameters[parameters.length - 2];
+			if (getterKey == null || setterKey == null || getterKey.getSemanticKey() != setterKey.getSemanticKey())
+				throw new TyperError(ctx.getFilePath(), pos,
+					"Indexed compound update requires the setter key parameter to match the getter key parameter (haxe_ocaml-rgmu4)");
+		}
 		final setterInput = if (parameter != null && TyNullableIntegerResult.admits(parameter, place.getType(candidate))) {
 			TyIndexedComputedResult.admittedArgument(place, parameter);
 		} else if (parameter != null && place.admitsUnaryAbstractArgument(parameter)) {
@@ -3825,8 +3845,16 @@ class TyperStage {
 					assertWritableLocal(e, scope, ctx, pos);
 					// A declared indexed place follows the measured getter/step/setter schedule;
 					// the completed outcome owns the static type (the setter's return type).
-					if (isDeclaredIndexedUpdatePlace(e, scope, ctx, pos))
+					if (isDeclaredIndexedUpdatePlace(e, scope, ctx, pos)) {
+						// The receiver is evaluated once for the getter and once for the setter.
+						switch e {
+							case EArrayAccess(receiver, _) if (!TypedIndexedUpdateLowering.repeatableReceiver(receiver)):
+								throw new TyperError(ctx.getFilePath(), pos,
+									"Indexed increment/decrement receiver declares locals or functions and cannot be evaluated twice (haxe_ocaml-rgmu4)");
+							case _:
+						}
 						return selectIndexedUpdate(expr, scope, ctx, pos).getStaticType(scope);
+					}
 				}
 				final inner = inferExprType(e, scope, ctx, pos);
 				final semanticIndex = ctx.getIndex();

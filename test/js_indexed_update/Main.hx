@@ -152,5 +152,28 @@ class Main {
 		var cellPrefix:String = ++cells[0];
 		var cellCompound:String = (cells[0] += 2);
 		log("cells:" + cellPostfix + ":" + cellPrefix + ":" + cellCompound + ":" + cells[0] + ":" + Events.text);
+		nested();
+	}
+
+	/** Updates nested inside another update's receiver, index or right operand, plus a ternary receiver and decrements. */
+	static function nested():Void {
+		var m:Map<String, Int> = ["i" => 0, "a" => 5, "b" => 7];
+		var n:Map<String, Int> = ["a" => 50];
+		var arr = [m, n, m];
+		var p = arr[m["i"]++]["a"]++;
+		log("nested-recv:" + p + ":" + m["i"] + ":" + m["a"] + ":" + n["a"]);
+		var q = (m["a"] += m["b"]++);
+		log("nested-rhs:" + q + ":" + m["a"] + ":" + m["b"]);
+		var r = (m["a"] -= m["a"]++);
+		log("nested-self:" + r + ":" + m["a"]);
+		var flag = true;
+		var t = (flag ? m : n)["a"]
+		++;
+		flag = false;
+		var u = ++(flag ? m : n)["a"];
+		log("ternary-recv:" + t + ":" + u + ":" + m["a"] + ":" + n["a"]);
+		var d = --n["a"];
+		var e = n["a"]--;
+		log("decrement:" + d + ":" + e + ":" + n["a"]);
 	}
 }

@@ -13,3 +13,8 @@ compound-order:7:7:key;receiver;value;
 postfix-order:3:3:4:key;receiver;receiver;
 prefix-order:4:3:4:key;receiver;receiver;
 cells:5:stored7:stored9:9:GSGSGSG
+nested-recv:5:2:5:6
+nested-rhs:12:12:8
+nested-self:0:0
+ternary-recv:0:7:1:7
+decrement:6:6:5

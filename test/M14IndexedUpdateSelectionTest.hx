@@ -377,8 +377,8 @@ class M14IndexedUpdateSelectionTest {
 			"public indexed update did not take its selected String setter result: " + staticType.getSemanticKey());
 		require(admitted.environment.getInference().indexedUpdateOutcome(update, admitted.environment) != null,
 			"public indexed update did not publish its completed outcome");
-		function diagnostic(expression:String):String {
-			final scope = fixture(intSource);
+		function diagnostic(expression:String, ?source:String):String {
+			final scope = fixture(source == null ? intSource : source);
 			try {
 				TyperStage.inferExprType(HxParser.parseExprText(expression), scope.environment, scope.context, HxPos.unknown());
 			} catch (error:TyperError) {
@@ -387,8 +387,23 @@ class M14IndexedUpdateSelectionTest {
 			return "";
 		}
 		require(diagnostic("(slots[0])++") == "Invalid assign", "grouped indexed place escaped the upstream Invalid assign diagnostic");
-		for (deferred in ["++@:privateAccess slots[0]", "slots[0] ??= 1"])
-			require(diagnostic(deferred).indexOf("haxe_ocaml-rgmu4") >= 0, deferred + " escaped its explicit diagnostic: " + diagnostic(deferred));
+		final explicit = [
+			{expression: "++@:privateAccess slots[0]", source: intSource, expected: "Private-access"},
+			{expression: "slots[0] ??= 1", source: intSource, expected: "null-coalescing"},
+			{expression: "(function(){var r=slots;return r;})()[0]++", source: intSource, expected: "cannot be evaluated twice"},
+			// A compound update converts its key once; a setter keyed on another type has no second conversion.
+			{
+				expression: "slots[0] += 1",
+				source: 'abstract Slots(Array<Int>){public function new();@:arrayAccess public function read(index:Float):Int;' +
+				'@:arrayAccess public function write(index:Int,value:Int):Int;}class Main{static function main():Void{}}',
+				expected: "setter key parameter"
+			}
+		];
+		for (entry in explicit) {
+			final message = diagnostic(entry.expression, entry.source);
+			require(message.indexOf("haxe_ocaml-rgmu4") >= 0 && message.indexOf(entry.expected) >= 0,
+				entry.expression + " escaped its explicit diagnostic: " + message);
+		}
 		Sys.println("INDEXED_UPDATE_SELECTION:PASS numeric_and_admission_boundaries");
 	}
 

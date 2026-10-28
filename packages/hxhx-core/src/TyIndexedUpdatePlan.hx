@@ -38,7 +38,8 @@ enum TyIndexedUpdateStep {
 	value is admitted raw), and the setter's call plan: declaration, source operands
 	in selected order (the last one is `query.setterInputSource`), expected argument
 	contexts, implicit argument conversions and named-argument plan, exactly as the
-	type resolver publishes them for the selected getter.
+	type resolver publishes them for the selected getter. Temporaries are allocated by
+	the projecting function body, not named here.
  */
 class TyIndexedUpdatePlan {
 	public final query:TyIndexedUpdateQuery;
@@ -53,9 +54,6 @@ class TyIndexedUpdatePlan {
 	public final setterSources:Array<HxExpr>;
 	public final setterCall:TypedCallResolution;
 
-	/** Position of this update among the function's committed updates; it names the compiler temporaries. */
-	public final ordinal:Int;
-
 	@:allow(TyIndexedUpdateOutcome)
 	function new(input:{
 		query:TyIndexedUpdateQuery,
@@ -67,8 +65,7 @@ class TyIndexedUpdatePlan {
 		setterConversion:Null<TyAbstractBinaryConversion>,
 		setterDeclaration:TyDeclarationInfo,
 		setterSources:Array<HxExpr>,
-		setterCall:TypedCallResolution,
-		ordinal:Int
+		setterCall:TypedCallResolution
 	}) {
 		query = input.query;
 		kind = query.kind;
@@ -81,7 +78,6 @@ class TyIndexedUpdatePlan {
 		setterDeclaration = input.setterDeclaration;
 		setterSources = input.setterSources.copy();
 		setterCall = input.setterCall;
-		ordinal = input.ordinal;
 		if (setterSources.length == 0
 			|| setterSources[setterSources.length - 1] != query.setterInputSource
 			|| setterCall.getDeclaration() != setterDeclaration

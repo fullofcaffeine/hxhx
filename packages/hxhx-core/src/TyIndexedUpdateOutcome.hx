@@ -176,8 +176,7 @@ class TyIndexedUpdateOutcome {
 			setterConversion: setterInput.executableConversion(),
 			setterDeclaration: admission.declaration,
 			setterSources: sources,
-			setterCall: new TypedCallResolution(admission.declaration, admission.declaration.getIsStatic(), null, conversions, expected, named),
-			ordinal: inference.indexedUpdateOrdinal(this)
+			setterCall: new TypedCallResolution(admission.declaration, admission.declaration.getIsStatic(), null, conversions, expected, named)
 		});
 	}
 }

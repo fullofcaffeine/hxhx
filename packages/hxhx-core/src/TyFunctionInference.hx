@@ -179,14 +179,6 @@ class TyFunctionInference {
 		return null;
 	}
 
-	/** Deterministic position of a committed outcome among this function's indexed updates; it names the update's compiler temporaries. */
-	public function indexedUpdateOrdinal(outcome:TyIndexedUpdateOutcome):Int {
-		final ordinal = indexedUpdateOutcomes.indexOf(outcome);
-		if (ordinal < 0)
-			throw "indexed update outcome was not committed to this inference";
-		return ordinal;
-	}
-
 	/**
 		Publish one fully checked selection after every owner validates its base.
 		Synchronous publication contains no callbacks, so method inputs cannot change

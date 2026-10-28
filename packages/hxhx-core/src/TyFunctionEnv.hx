@@ -41,6 +41,20 @@ class TyFunctionEnv {
 	final inference:TyFunctionInference;
 	var untypedContext:Bool = false;
 	var speculative:Bool = false;
+	var indexedUpdateAllocator:Null<TyCompilerTemporaryAllocator> = null;
+
+	/**
+		The one allocator for every declared indexed update projected while this
+		function body is built. Sharing it keeps temporary identities unique when an
+		update is nested inside another update's receiver (a `++`/`--` receiver is built
+		twice, so `arr[m["i"]++]["a"]++` projects the inner update twice) and keeps the
+		generated names unique inside the function for name-keyed backends.
+	 */
+	public function indexedUpdateTemporaries():TyCompilerTemporaryAllocator {
+		if (indexedUpdateAllocator == null)
+			indexedUpdateAllocator = new TyCompilerTemporaryAllocator(ownerIdentity, "indexed-update-v1", "__hxhx_indexed_");
+		return indexedUpdateAllocator;
+	}
 
 	/** A copied candidate must not publish request-wide method input evidence. */
 	public function isSpeculative():Bool
