@@ -3,7 +3,7 @@ package backend.ocaml;
 /** String operations whose bounds or nullable results use the shared runtime. */
 function supports(method:String):Bool {
 	return switch method {
-		case "indexOf" | "lastIndexOf" | "substr" | "substring" | "charCodeAt": true;
+		case "indexOf" | "lastIndexOf" | "substr" | "substring" | "charAt" | "charCodeAt": true;
 		case _: false;
 	};
 }
@@ -29,8 +29,9 @@ function render(input:{
 		throw "selected OCaml string call requires its exact String receiver type";
 	if ((call.arguments.length != 1 && call.arguments.length != 2) || input.names == null)
 		throw "selected OCaml string call requires its argument and local naming owner";
-	if (call.method == "charCodeAt" && call.arguments.length != 1)
-		throw "selected OCaml character-code call requires one index";
+	final characterRead = call.method == "charAt" || call.method == "charCodeAt";
+	if (characterRead && call.arguments.length != 1)
+		throw "selected OCaml character call requires one index";
 	final receiver = input.names.internalName("__hx_string_receiver");
 	final arguments = [
 		for (index in 0...call.arguments.length)
@@ -39,12 +40,12 @@ function render(input:{
 	final bindings = ["let " + receiver + " = (" + input.emit(call.receiver) + ") in "];
 	final argumentTypes = occurrence.getArgumentTypes();
 	for (index in 0...arguments.length) {
-		// charCodeAt takes a required index; the other slots are optional ints that
-		// recognize the sentinel bits, so a nullable Int carrier passes through.
+		// charAt and charCodeAt take a required index; the other slots are optional
+		// ints that recognize the sentinel bits, so a nullable Int carrier passes through.
 		final rendered = input.emit(call.arguments[index]);
 		final nullableInt = index < argumentTypes.length
 			&& Stage3OcamlNullablePrimitive.innerPrimitive(argumentTypes[index]) == "primitive:Int";
-		final value = !nullableInt ? rendered : call.method == "charCodeAt" ? Stage3OcamlNullablePrimitive.unwrap("primitive:Int",
+		final value = !nullableInt ? rendered : characterRead ? Stage3OcamlNullablePrimitive.unwrap("primitive:Int",
 			rendered) : Stage3OcamlNullablePrimitive.intrinsicOptionalInt(rendered);
 		bindings.push("let " + arguments[index] + " = (" + value + ") in ");
 	}
@@ -54,6 +55,9 @@ function render(input:{
 		// an authored null test must still run before any integer operation.
 		return "(" + bindings.join("") + "Obj.magic (HxString.charCodeAt " + receiver + " " + arguments[0] + "))";
 	}
+	// charAt returns an ordinary String, including "" outside the bounds.
+	if (call.method == "charAt")
+		return "(" + bindings.join("") + "HxString.charAt " + receiver + " " + arguments[0] + ")";
 	// HxString's optional Int ABI recognizes this sentinel before integer use.
 	// This is a representation boundary, not an unchecked source-type conversion.
 	if (arguments.length == 1)
