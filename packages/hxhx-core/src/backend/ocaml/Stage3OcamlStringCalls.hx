@@ -37,8 +37,17 @@ function render(input:{
 			input.names.internalName("__hx_string_argument_" + index)
 	];
 	final bindings = ["let " + receiver + " = (" + input.emit(call.receiver) + ") in "];
-	for (index in 0...arguments.length)
-		bindings.push("let " + arguments[index] + " = (" + input.emit(call.arguments[index]) + ") in ");
+	final argumentTypes = occurrence.getArgumentTypes();
+	for (index in 0...arguments.length) {
+		// charCodeAt takes a required index; the other slots are optional ints that
+		// recognize the sentinel bits, so a nullable Int carrier passes through.
+		final rendered = input.emit(call.arguments[index]);
+		final nullableInt = index < argumentTypes.length
+			&& Stage3OcamlNullablePrimitive.innerPrimitive(argumentTypes[index]) == "primitive:Int";
+		final value = !nullableInt ? rendered : call.method == "charCodeAt" ? Stage3OcamlNullablePrimitive.unwrap("primitive:Int",
+			rendered) : Stage3OcamlNullablePrimitive.intrinsicOptionalInt(rendered);
+		bindings.push("let " + arguments[index] + " = (" + value + ") in ");
+	}
 	if (call.method == "charCodeAt") {
 		// The runtime produces an Int or the canonical null sentinel. Restore the
 		// Stage3 nullable value view without inspecting bits or unwrapping null;

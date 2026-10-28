@@ -62,7 +62,16 @@ function access(occurrence:TypedBackendArrayAccess, emit:HxExpr->String, names:S
 		throw "OCaml indexed access requires its exact local naming owner";
 	final array = names.internalName("__hx_indexed_array");
 	final index = names.internalName("__hx_indexed_index");
-	final prefix = "(let " + array + " = (" + emit(occurrence.receiver) + ") in let " + index + " = (" + emit(occurrence.index) + ") in ";
+	// A nullable Int index is unwrapped like an arithmetic operand (null raises Null Access).
+	final prefix = "(let "
+		+ array
+		+ " = ("
+		+ emit(occurrence.receiver)
+		+ ") in let "
+		+ index
+		+ " = ("
+		+ Stage3OcamlNullablePrimitive.intValue(occurrence.indexType, emit(occurrence.index))
+		+ ") in ";
 	final receiver = "(Obj.magic " + array + ")";
 	return switch occurrence.kind {
 		case Read:

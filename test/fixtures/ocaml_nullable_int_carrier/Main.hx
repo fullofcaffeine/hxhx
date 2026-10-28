@@ -9,7 +9,10 @@
 	The remaining cases cover a plain assignment into a nullable local, arithmetic
 	after a null check, comparing a nullable value with a literal, returning a
 	nullable value from a function whose branches disagree about nullability,
-	and passing values between nullable and concrete parameters.
+	passing values between nullable and concrete parameters, whole-number
+	Float values, ordered comparisons, array indexing, String and Array
+	intrinsics with nullable Int arguments, instance and constructor defaults,
+	and the untouched Null<Bool> behaviour.
 	Upstream Haxe and the native OCaml program must print the same lines.
  */
 class Main {
@@ -46,6 +49,24 @@ class Main {
 		return value * scale;
 	}
 
+	static function stretched(value:Int, ?factor:Float = 1.5):Float {
+		return value * factor;
+	}
+
+	static function flagText(?flag:Bool):String {
+		return flag == null ? "null" : (flag ? "Y" : "N");
+	}
+
+	final offset:Int;
+
+	public function new(?offset:Int = 4) {
+		this.offset = offset;
+	}
+
+	function shifted(value:Int, ?by:Int = 10):Int {
+		return value + by + offset;
+	}
+
 	static function main():Void {
 		Sys.println(Std.string(parseCompilerVersion(["4", "3", "7"])));
 		Sys.println(Std.string(parseCompilerVersion(["4", "3"])));
@@ -80,5 +101,34 @@ class Main {
 			Sys.println(Std.string(square(fromParts)));
 		Sys.println(Std.string(sizeOr()) + " " + Std.string(sizeOr(8)) + " " + Std.string(sizeOr(fromParts)));
 		Sys.println(Std.string(scaled(2)) + " " + Std.string(scaled(2, 5)) + " " + Std.string(scaled(2, fromParts)));
+		var whole:Null<Float> = 2.0;
+		final tripled:Float = whole * 3;
+		Sys.println(Std.string(tripled == 6) + " " + Std.string(whole == 2) + " " + Std.string(whole > 1.5));
+		Sys.println(Std.string(stretched(2) == 3) + " " + Std.string(stretched(2, 3.0) == 6) + " " + Std.string(stretched(3, 0.5)));
+		var maybeFlag:Null<Bool> = true;
+		Sys.println(flagText() + " " + flagText(true) + " " + flagText(false) + " " + (maybeFlag ? "on" : "off"));
+		final values = [10, 20, 30];
+		var index:Null<Int> = 1;
+		index = 2;
+		Sys.println(Std.string(values[index])
+			+ " "
+			+ Std.string(index > 1)
+			+ " "
+			+ Std.string(index <= 1)
+			+ " "
+			+ Std.string(index >= fromParts));
+		final text = "abcabc";
+		var start:Null<Int> = null;
+		Sys.println(Std.string(text.indexOf("a", start)) + " " + Std.string(text.lastIndexOf("a", start)) + " " + text.substr(1, start));
+		start = 3;
+		Sys.println(Std.string(text.indexOf("a", start)) + " " + Std.string(text.charCodeAt(start)) + " " + text.substring(start, start)
+			+ text.substr(start, start));
+		var sliceEnd:Null<Int> = null;
+		Sys.println(Std.string(values.slice(1, sliceEnd).length) + " " + Std.string(values.indexOf(30, sliceEnd)));
+		sliceEnd = 2;
+		Sys.println(Std.string(values.slice(sliceEnd).length) + " " + Std.string(values.lastIndexOf(10, sliceEnd)));
+		final plain = new Main();
+		final custom = new Main(1);
+		Sys.println(Std.string(plain.shifted(1)) + " " + Std.string(custom.shifted(1, fromParts)) + " " + Std.string(custom.shifted(1, 2)));
 	}
 }

@@ -716,11 +716,23 @@ class EmitterStage {
 		};
 	}
 
-	/** Int, Float, and Bool parameter hints select the nullable carrier when the parameter is optional. */
+	/** Int and Float parameter hints select the nullable carrier when the parameter is optional; Null<Bool> keeps its raw value. */
 	static function stage3IsPrimitiveParamHint(hint:String):Bool {
 		final compact = StringTools.replace(StringTools.trim(hint == null ? "" : hint), " ", "");
-		return compact == "Int" || compact == "Float" || compact == "Bool" || compact == "StdTypes.Int" || compact == "StdTypes.Float"
-			|| compact == "StdTypes.Bool";
+		return compact == "Int" || compact == "Float" || compact == "StdTypes.Int" || compact == "StdTypes.Float";
+	}
+
+	/**
+		Render a Float literal so OCaml reads it as a float. Haxe prints whole
+		numbers without a decimal point, which OCaml would type as an int.
+	 */
+	static function ocamlFloatLiteral(value:Float):String {
+		if (Math.isNaN(value))
+			return "nan";
+		if (!Math.isFinite(value))
+			return value > 0 ? "infinity" : "neg_infinity";
+		final text = Std.string(value);
+		return text.indexOf(".") >= 0 || text.indexOf("e") >= 0 || text.indexOf("E") >= 0 ? text : text + ".";
 	}
 
 	static function stage3IsFloatParamHint(hint:String):Bool {
@@ -3401,7 +3413,7 @@ class EmitterStage {
 
 			case EBool(v): v ? "true" : "false";
 			case EInt(v): Std.string(v);
-			case EFloat(v): Std.string(v);
+			case EFloat(v): ocamlFloatLiteral(v);
 			case EString(v): escapeOcamlString(v);
 			case EIdent(name):
 				exprToOcamlIdentStage3(name, hasCurrentInstanceMethod(name), hasCurrentInstanceField(name), stage3HasThisBinding(tyByIdentRaw),
@@ -4677,11 +4689,15 @@ class EmitterStage {
 							"((" + la + ") <> (" + rb + "))";
 						}
 					case "<" | ">" | "<=" | ">=":
+						// Nullable operands are unwrapped like arithmetic operands; a null raises
+						// Null Access (upstream targets differ on ordering null, see the carrier module).
 						if (stage3IsFloatExpr(a, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)
-							|| stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)) {
+							|| stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)
+							|| nullableLeft == "primitive:Float"
+							|| nullableRight == "primitive:Float") {
 							"((" + exprToOcamlAsFloat(a) + ") " + op + " (" + exprToOcamlAsFloat(b) + "))";
 						} else {
-							"((" + la + ") " + op + " (" + rb + "))";
+							"((" + laInt + ") " + op + " (" + rbInt + "))";
 						}
 					case "&&" | "||":
 						final lhsBool = coerceNullableBoolIdent(a, la);
@@ -4832,7 +4848,12 @@ class EmitterStage {
 					+ exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 					+ ")))";
 				} else {final arrCode = exprToOcaml(arr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
-					final idxCode = exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+					// A nullable Int index local is unwrapped like an arithmetic operand (null raises Null Access).
+					final idxCode = backend.ocaml.Stage3OcamlNullablePrimitive.intValue(switch (idx) {
+						case EIdent(name): exactFunctionLocalType(name);
+						case _: null;
+					},
+						exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass));
 					// Bind the receiver once before the dynamic array cast. This keeps placeholder
 					// receivers like `(Obj.magic 0)` from being re-inferred as `Obj.t` arguments.
 					"(let __hx_arr_obj = Obj.repr ("

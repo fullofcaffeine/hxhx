@@ -143,7 +143,18 @@ function render(input:{
 	final result = call.method == "map"
 		&& !input.metal ? Stage3OcamlArrays.retainStringifier(occurrence.getResultType(), operation, input.names) : operation;
 	final bindings = ["let " + receiver + " = (" + input.emit(call.receiver) + ") in "];
-	for (index in 0...arguments.length)
-		bindings.push("let " + arguments[index] + " = (" + input.emit(call.arguments[index]) + ") in ");
+	final argumentTypes = occurrence.getArgumentTypes();
+	for (index in 0...arguments.length) {
+		// slice's start is a required Int; the second slot of slice/indexOf/lastIndexOf
+		// is an optional int that recognizes the sentinel bits.
+		final rendered = input.emit(call.arguments[index]);
+		final nullableInt = index < argumentTypes.length
+			&& Stage3OcamlNullablePrimitive.innerPrimitive(argumentTypes[index]) == "primitive:Int";
+		final optionalSlot = index == 1 && (call.method == "slice" || call.method == "indexOf" || call.method == "lastIndexOf");
+		final requiredSlot = index == 0 && call.method == "slice";
+		final value = !nullableInt ? rendered : optionalSlot ? Stage3OcamlNullablePrimitive.intrinsicOptionalInt(rendered) : requiredSlot ? Stage3OcamlNullablePrimitive.unwrap("primitive:Int",
+			rendered) : rendered;
+		bindings.push("let " + arguments[index] + " = (" + value + ") in ");
+	}
 	return "(" + bindings.join("") + result + ")";
 }

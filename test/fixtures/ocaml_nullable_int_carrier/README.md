@@ -16,16 +16,26 @@ fixture checks the places where a value crosses between the two shapes:
 - a nullable local passed to a required `Int` parameter (unwrapped at the call),
 - an optional `?size:Int` parameter that receives nothing, a plain `8`, and a
   nullable local, and an optional `?scale:Int = 3` parameter whose present
-  value is unwrapped on entry. Optional Int, Float, and Bool parameters travel
-  in the carrier, so an omitted argument's null sentinel never has to be read
-  as a primitive.
+  value is unwrapped on entry, plus an instance method and a constructor with
+  defaults. Optional Int and Float parameters travel in the carrier, so an
+  omitted argument's null sentinel never has to be read as a primitive,
+- a whole-number `Null<Float>` (`2.0`) through arithmetic, equality against an
+  Int literal, and an ordered comparison, and a `?factor:Float = 1.5` parameter
+  receiving an Int and a whole-number Float,
+- a nullable Int used as an array index, in ordered comparisons, and as the
+  optional start/end of `String.indexOf`, `lastIndexOf`, `substr`,
+  `substring`, `charCodeAt`, `Array.slice`, `indexOf`, and `lastIndexOf`,
+- `Null<Bool>` is deliberately left on its previous raw representation (an
+  optional `?flag:Bool` parameter and a `Null<Bool>` local in a condition);
+  its carrier is tracked separately.
 
-Reading a null through arithmetic or a required primitive parameter raises the
-runtime's Null Access exception; upstream targets disagree about null
+Reading a null through arithmetic, an ordered comparison, an array index, or a
+required primitive parameter raises the runtime's Null Access exception; upstream targets disagree about null
 arithmetic, so the fixture only reads values after a null check. The parser
 receives already split version parts because this root-only harness emits no
-`String.split` provider. Integral float literals such as `3.0` are avoided
-because of the separate literal defect tracked in haxe_ocaml-l26hl.
+`String.split` provider. Whole-number Float results are compared rather than
+printed because `Std.string` of such a Float still prints `6.` natively
+(haxe_ocaml-l26hl).
 
 Run `haxe test/m14_stage3_nullable_int_carrier_test.hxml` (or
 `npm run test:m14:stage3-nullable-int-carrier`) to compare upstream Haxe with

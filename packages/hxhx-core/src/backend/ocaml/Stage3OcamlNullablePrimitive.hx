@@ -1,31 +1,33 @@
 package backend.ocaml;
 
 /**
-	One native representation for `Null<Int>`, `Null<Float>`, and `Null<Bool>`.
+	One native representation for `Null<Int>` and `Null<Float>`.
 
-	OCaml `int`, `float`, and `bool` cannot hold a null sentinel, so a nullable
-	primitive is carried as `Obj.t`: `HxRuntime.hx_null` for null, otherwise the
-	same box that Dynamic uses for that primitive (`Obj.repr` for numbers,
-	`HxRuntime.box_bool` for Booleans). `Std.parseInt`, the `null` literal, and
-	Dynamic values already produce this carrier, so they enter a nullable
-	destination unchanged. A concrete primitive is boxed on entry, and a nullable
-	value is unwrapped through the checked runtime helpers before a concrete
-	destination or native arithmetic reads it. Unwrapping a null raises the
-	runtime's Null Access exception; upstream targets disagree about null
-	arithmetic, so that exception is the documented native contract.
+	OCaml `int` and `float` cannot hold a null sentinel, so a nullable primitive
+	is carried as `Obj.t`: `HxRuntime.hx_null` for null, otherwise the same box
+	that Dynamic uses for that primitive (`Obj.repr`). `Null<Bool>` is not
+	converted here; its conditions still read the raw value and a separate task
+	owns its carrier. `Std.parseInt`, the `null` literal, and Dynamic values
+	already produce this carrier, so they enter a nullable destination unchanged.
+	A concrete primitive is boxed on entry, and a nullable value is unwrapped
+	through the checked runtime helpers before a concrete destination, native
+	arithmetic, an ordered comparison, or an array index reads it. Unwrapping a
+	null raises the runtime's Null Access exception; upstream targets disagree
+	about null arithmetic, so that exception is the documented native contract.
 
 	Equality compares two carrier values structurally after boxing the concrete
 	side, so `nullable == null` and `nullable == 42` keep Haxe's value semantics
-	without unwrapping and without raising on null. Ordered comparisons are not
-	converted here. Representation changes this module does not describe fail at
-	emit time instead of leaving the choice to OCaml inference.
+	without unwrapping and without raising on null. The handwritten String and
+	Array intrinsics declare optional Int slots as `int` and test the sentinel
+	bits first; `intrinsicOptionalInt` reinterprets the carrier for exactly those
+	slots. Representation changes this module does not describe fail at emit
+	time instead of leaving the choice to OCaml inference.
  */
 final INT = "primitive:Int";
 
 final FLOAT = "primitive:Float";
-final BOOL = "primitive:Bool";
 
-/** Return the inner primitive key when the exact type is a nullable Int, Float, or Bool. */
+/** Return the inner primitive key when the exact type is a nullable Int or Float. */
 function innerPrimitive(type:Null<TyType>):Null<String> {
 	if (type == null)
 		return null;
@@ -33,20 +35,22 @@ function innerPrimitive(type:Null<TyType>):Null<String> {
 	if (!revealed.isNullable())
 		return null;
 	final key = TyAliasExpansion.reveal(revealed.unwrapNull()).getSemanticKey();
-	return key == INT || key == FLOAT || key == BOOL ? key : null;
+	return key == INT || key == FLOAT ? key : null;
 }
 
-/** Return the inner key only for the numeric carriers that native arithmetic can unwrap. */
-function numericInner(type:Null<TyType>):Null<String> {
-	final inner = innerPrimitive(type);
-	return inner == INT || inner == FLOAT ? inner : null;
-}
+/** The numeric carriers that native arithmetic can unwrap; currently every carrier this module owns. */
+function numericInner(type:Null<TyType>):Null<String>
+	return innerPrimitive(type);
 
-/** Box one concrete primitive value into the carrier. The operand occurs once. */
+/**
+	Box one concrete primitive value into the carrier. The operand occurs once
+	and is ascribed its OCaml type, so a value rendered with the wrong
+	representation is a compile-time error rather than a corrupt box.
+ */
 function box(inner:String, value:String):String {
 	return switch inner {
-		case "primitive:Bool": "HxRuntime.box_bool (" + value + ")";
-		case "primitive:Int" | "primitive:Float": "Obj.repr (" + value + ")";
+		case "primitive:Int": "Obj.repr ((" + value + " : int))";
+		case "primitive:Float": "Obj.repr ((" + value + " : float))";
 		case _: throw "unsupported nullable primitive carrier: " + inner;
 	};
 }
@@ -56,10 +60,23 @@ function unwrap(inner:String, value:String):String {
 	return switch inner {
 		case "primitive:Int": "HxRuntime.nullable_int_unwrap (" + value + ")";
 		case "primitive:Float": "HxRuntime.nullable_float_unwrap (" + value + ")";
-		case "primitive:Bool": "HxRuntime.nullable_bool_unwrap (" + value + ")";
 		case _: throw "unsupported nullable primitive carrier: " + inner;
 	};
 }
+
+/**
+	Pass a nullable Int carrier into a handwritten runtime intrinsic slot that
+	is declared `int` but checks `HxRuntime.is_null (Obj.repr i)` before any
+	integer use (HxString.indexOf and friends). The carrier's bits are exactly
+	that ABI: an immediate int or the sentinel pointer, so nothing is unwrapped
+	and a null still selects the intrinsic's default.
+ */
+function intrinsicOptionalInt(value:String):String
+	return "(Obj.obj (" + value + ") : int)";
+
+/** Convert a value of the exact `type` into a concrete Int when it is a nullable Int; other types pass through. */
+function intValue(type:Null<TyType>, value:String):String
+	return innerPrimitive(type) == INT ? unwrap(INT, value) : value;
 
 /**
 	Convert a value of the exact `source` type into a nullable destination whose
@@ -149,7 +166,7 @@ function destinationCarrier(expected:Null<TyType>, expectedIsOptional:Bool):Null
 	if (!expectedIsOptional)
 		return null;
 	final key = TyAliasExpansion.reveal(expected).getSemanticKey();
-	return key == INT || key == FLOAT || key == BOOL ? key : null;
+	return key == INT || key == FLOAT ? key : null;
 }
 
 /** The checked call-argument form of destinationCarrier. */
@@ -198,12 +215,12 @@ function convertArgument(actual:TyType, expected:TyType, expectedIsOptional:Bool
  */
 function parameterEntry(bindingType:TyType, name:String, fallback:String):String {
 	final key = TyAliasExpansion.reveal(bindingType).getSemanticKey();
-	final present = key == INT || key == FLOAT || key == BOOL ? unwrap(key, name) : name;
+	final present = key == INT || key == FLOAT ? unwrap(key, name) : name;
 	return "(if HxRuntime.is_null (Obj.repr " + name + ") then (" + fallback + ") else " + present + ")";
 }
 
 /** True when a concrete-default parameter's native annotation must be the carrier rather than its body primitive. */
 function isCarrierParameter(bindingType:TyType):Bool {
 	final key = TyAliasExpansion.reveal(bindingType).getSemanticKey();
-	return key == INT || key == FLOAT || key == BOOL;
+	return key == INT || key == FLOAT;
 }
