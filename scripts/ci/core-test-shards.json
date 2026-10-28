@@ -273,6 +273,7 @@
     "test:m14:ocaml-runtime-keyword-method": "compiler-focused-2",
     "test:m14:stage3-nullable-int-carrier": "compiler-focused-2",
     "test:m14:stage3-method-reference-order": "compiler-focused-2",
+    "test:m14:stage3-bare-alias-constructor": "compiler-focused-2",
     "test:m14:hxhx-display-exproft-completion": "compiler-focused-2",
     "test:m14:compilation-server-request-dispatcher": "compiler-focused-1",
     "test:m14:compilation-server-source-cache": "compiler-focused-1",

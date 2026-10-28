@@ -89,6 +89,27 @@ class TyperContext {
 	}
 
 	/**
+		Load and return the declaration a source type path names, nominal or alias.
+		Constructor paths need the declaration itself: a bare generic alias leaves
+		its own binders open for inference instead of failing as a value type use.
+	 */
+	public function resolveTypeDeclaration(typePath:String, ?position:HxPos):Null<TyTypeDeclaration> {
+		if (index == null)
+			return null;
+		final context:TyTypeDeclaration.TyTypeResolutionContext = {
+			packagePath: packagePath,
+			modulePath: modulePath,
+			directives: directives,
+			filePath: filePath,
+			position: position == null ? HxPos.unknown() : position,
+			parameters: []
+		};
+		if (loader != null)
+			loader.ensureDeclarationAvailable(typePath, context);
+		return index.resolveTypeDeclaration(typePath, context);
+	}
+
+	/**
 		Load the core declaration for an already typed primitive value.
 		A literal String value cannot acquire methods from a package-local String
 		class or import alias. Use the root type namespace with the same request

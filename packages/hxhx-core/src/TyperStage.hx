@@ -90,7 +90,7 @@ class TyperStage {
 		return inner.length == 0 ? TyType.unknown() : TyType.fromHintText(inner);
 	}
 
-	static function typeFromHintInContext(hint:String, ctx:TyperContext, ?scope:TyFunctionEnv):TyType {
+	static function typeFromHintInContext(hint:String, ctx:TyperContext, ?scope:TyFunctionEnv, ?position:HxPos):TyType {
 		final raw = hint == null ? "" : StringTools.trim(hint);
 		if (raw.length == 0)
 			return TyType.unknown();
@@ -100,7 +100,50 @@ class TyperStage {
 				return TyType.fromHintText(raw);
 			case _:
 		}
+		return resolveTypeInContext(TyType.fromHintText(raw), ctx, hintTypeParameters(ctx, scope), position);
+	}
 
+	/**
+		Resolve a `new` path. A bare generic alias such as `new Map()` omits all of
+		its arguments, as Haxe permits for constructor paths but not for value type
+		uses. Apply the alias to its own required binders and report them, so the
+		constructor occurrence allocates one inference variable per binder. The
+		contextual view replaces those binders with Unknown, matching the view a
+		bare nominal path gives constructor operands. Written arguments, nominal
+		paths, and aliases without required parameters resolve as ordinary hints.
+	 */
+	static function constructorPathType(typePath:String, ctx:TyperContext, scope:TyFunctionEnv, ?position:HxPos):{
+		written:TyType,
+		contextual:TyType,
+		omittedAliasParameters:Array<TyTypeParameterId>
+	} {
+		final raw = StringTools.trim(typePath);
+		final declaration = ctx == null || raw.indexOf("<") >= 0 ? null : ctx.resolveTypeDeclaration(raw, position);
+		final required = declaration == null ? [] : switch declaration.getKind() {
+			case Nominal(_): [];
+			case Alias(source):
+				final parameters = source.getParameters();
+				var count = 0;
+				for (index in 0...parameters.length)
+					if (parameters[index].defaultType == null)
+						count = index + 1;
+				declaration.getParameterIds().slice(0, count);
+		};
+		if (required.length == 0) {
+			final written = typeFromHintInContext(typePath, ctx, scope, position);
+			return {written: written, contextual: written, omittedAliasParameters: []};
+		}
+		// Bounds are checked on the applied constructor result, once its binders are solved.
+		final parameters = hintTypeParameters(ctx, scope);
+		return {
+			written: ctx.resolveTypeUse(TyType.unresolved(raw, required.map(TyType.typeParameter)), parameters, position).getType(),
+			contextual: ctx.resolveTypeUse(TyType.unresolved(raw, [for (_ in required) TyType.unknown()]), parameters, position).getType(),
+			omittedAliasParameters: required
+		};
+	}
+
+	/** Collect the class, declaration, and function binders visible to a source type hint. */
+	static function hintTypeParameters(ctx:TyperContext, scope:Null<TyFunctionEnv>):Array<TyTypeParameterId> {
 		// Resolve binders from outermost to innermost through the shared type-use owner.
 		final owner = ctx == null ? null : ctx.currentClass();
 		// Nominal providers have a closed class/abstract boundary. Preserve their
@@ -118,38 +161,38 @@ class TyperStage {
 					parameters = parameters.concat(declaration.getTypeParameterIds());
 		if (scope != null)
 			parameters = parameters.concat(scope.getTypeParameters());
-		return resolveTypeInContext(TyType.fromHintText(raw), ctx, parameters);
+		return parameters;
 	}
 
-	static function resolveTypeInContext(type:TyType, ctx:TyperContext, ?typeParameters:Array<TyTypeParameterId>):TyType {
+	static function resolveTypeInContext(type:TyType, ctx:TyperContext, ?typeParameters:Array<TyTypeParameterId>, ?position:HxPos):TyType {
 		if (type == null)
 			return TyType.unknown();
 		if (type.isNullable())
-			return TyType.nullable(resolveTypeInContext(type.getNullableInner(), ctx, typeParameters), type.getDisplay());
+			return TyType.nullable(resolveTypeInContext(type.getNullableInner(), ctx, typeParameters, position), type.getDisplay());
 		if (type.isFunction()) {
 			final result = type.getFunctionReturn();
 			return type.withFunctionTypes([
 				for (argument in type.getFunctionArguments())
-					resolveTypeInContext(argument, ctx, typeParameters)
+					resolveTypeInContext(argument, ctx, typeParameters, position)
 			],
-				result == null ? TyType.unknown() : resolveTypeInContext(result, ctx, typeParameters));
+				result == null ? TyType.unknown() : resolveTypeInContext(result, ctx, typeParameters, position));
 		}
 		if (type.isAnonymous())
 			return type.withAnonymousTypes([
 				for (fieldType in type.getAnonymousFieldTypes())
-					resolveTypeInContext(fieldType, ctx, typeParameters)
+					resolveTypeInContext(fieldType, ctx, typeParameters, position)
 			]);
 		if (!type.isUnresolved())
 			return type;
 		final arguments = [
 			for (argument in type.getTypeArguments())
-				resolveTypeInContext(argument, ctx, typeParameters)
+				resolveTypeInContext(argument, ctx, typeParameters, position)
 		];
 		// The shared resolver searches innermost binders first, including method
 		// parameters that shadow an enclosing class parameter with the same name.
 		final unresolved = TyType.unresolved(type.getUnresolvedPath(), arguments, type.getDisplay());
-		final resolved = ctx == null ? unresolved : ctx.resolveTypeUse(unresolved, typeParameters).getType();
-		validateClassArguments(resolved, ctx, HxPos.unknown());
+		final resolved = ctx == null ? unresolved : ctx.resolveTypeUse(unresolved, typeParameters, position).getType();
+		validateClassArguments(resolved, ctx, position == null ? HxPos.unknown() : position);
 		return resolved;
 	}
 
@@ -580,7 +623,7 @@ class TyperStage {
 						(signature, actual, parameters) -> overloadCandidateScore(signature, actual, actual.length, parameters, context.getIndex()));
 				},
 				constructorArgumentContexts: function(path, sources, environment) {
-					return constructorArgumentContexts(path, typeFromHintInContext(path, context, environment), sources, environment,
+					return constructorArgumentContexts(path, constructorPathType(path, context, environment, null).contextual, sources, environment,
 						context).map(type -> type == null ? TyType.unknown() : type);
 				}
 			};
@@ -1232,7 +1275,7 @@ class TyperStage {
 					scope.exitLexicalScope();
 					controls.exit(target);
 				case SVar(name, typeHint, init, pos):
-					final hinted = typeFromHintInContext(typeHint, ctx, scope);
+					final hinted = typeFromHintInContext(typeHint, ctx, scope, pos);
 					final hasWrittenType = StringTools.trim(typeHint == null ? "" : typeHint).length > 0;
 					var initializerType:Null<TyType> = null;
 					if (init != null) {
@@ -3681,7 +3724,7 @@ class TyperStage {
 				for (declaration in declarations) {
 					final initializer = HxExprVarDecl.getInitializer(declaration);
 					final writtenType = StringTools.trim(HxExprVarDecl.getTypeHint(declaration));
-					final hinted = writtenType.length == 0 ? null : typeFromHintInContext(writtenType, ctx, scope);
+					final hinted = writtenType.length == 0 ? null : typeFromHintInContext(writtenType, ctx, scope, pos);
 					final initializerType = initializer == null ? TyType.unknown() : inferLocalInitializer(initializer, hinted, scope, ctx,
 						HxExprVarDecl.getPosition(declaration));
 					final initializerTerm = initializer == null ? null : scope.getInference().sourceTerm(initializer, scope);
@@ -3746,7 +3789,8 @@ class TyperStage {
 							case SVar(name, typeHint, initializer, declarationPosition, _):
 								final initializerType = initializer == null ? TyType.unknown() : inferExprType(initializer, scope, ctx, declarationPosition);
 								final writtenType = StringTools.trim(typeHint == null ? "" : typeHint);
-								final localType = writtenType.length == 0 ? initializerType : typeFromHintInContext(writtenType, ctx, scope);
+								final localType = writtenType.length == 0 ? initializerType : typeFromHintInContext(writtenType, ctx, scope,
+									declarationPosition);
 								scope.declareLocal(name, localType, Variable);
 								resultType = TyType.fromHintText("Void");
 							case SExpr(value, expressionPosition):
@@ -3803,16 +3847,17 @@ class TyperStage {
 				// The parsed constructor path may be an applied type such as
 				// `Box<Int->Int>`. Resolve the structural hint so the exact
 				// nominal identity and its arguments reach local facts together.
-				final written = typeFromHintInContext(_typePath, ctx, scope);
+				final path = constructorPathType(_typePath, ctx, scope, pos);
+				final written = path.written;
 				final owner = nominalInfoForType(ctx.getIndex(), written);
 				final arity = owner == null ? 0 : TyNominalApplication.parameterIds(owner).length;
-				final contexts = constructorArgumentContexts(_typePath, written, args, scope, ctx);
+				final contexts = constructorArgumentContexts(_typePath, path.contextual, args, scope, ctx);
 				final argumentTypes = [
 					for (index in 0...args.length) {
 						inferExprType(args[index], scope, ctx, pos, contexts[index]);
 					}
 				];
-				final constructed = scope.getInference().construct(expr, written, arity);
+				final constructed = scope.getInference().construct(expr, written, arity, path.omittedAliasParameters);
 				if (!scope.getInference().constrainConstructor({
 					expression: expr,
 					provider: owner,
@@ -4252,7 +4297,7 @@ class TyperStage {
 					throw new TyperError(ctx.getFilePath(), pos, "interval requires its core IntIterator declaration");
 				TyType.nominal(new TyNominalTypeId(provider.getFullName()), []);
 			case ECheckType(operand, typeHint):
-				final hinted = typeFromHintInContext(typeHint, ctx, scope);
+				final hinted = typeFromHintInContext(typeHint, ctx, scope, pos);
 				final inner = inferExprType(operand, scope, ctx, pos, hinted);
 				if (!scope.isUntypedContext()
 					&& !TyFieldAssignment.explicitlyUntyped(operand)
@@ -4262,7 +4307,7 @@ class TyperStage {
 					throw new TyperError(ctx.getFilePath(), pos, inner.getDisplay() + " should be " + hinted.getDisplay());
 				hinted;
 			case ECast(operand, typeHint):
-				final hinted = typeFromHintInContext(typeHint, ctx, scope);
+				final hinted = typeFromHintInContext(typeHint, ctx, scope, pos);
 				final inner = switch (operand) {
 					case ELambda(names, body, signature) if (hinted.isFunction() && hinted.getFunctionArguments().length == names.length):
 						inferLambdaType(names, body, hinted.getFunctionArguments(), scope, ctx, pos, signature);

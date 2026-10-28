@@ -732,15 +732,23 @@ class TyFunctionInference {
 		};
 	}
 
-	/** Written type arguments remain authoritative; only genuinely omitted arguments allocate variables. */
-	public function construct(expression:HxExpr, type:TyType, arity:Int):TyType {
-		if (arity == 0 || type.getTypeArguments().length > 0 || type.getNominalIdentity() == null)
+	/**
+		Written type arguments remain authoritative; only genuinely omitted arguments allocate variables.
+		A bare nominal path omits every owner argument. A bare generic alias such as
+		`new Map()` instead names its own binders in `omittedAliasParameters`: the
+		alias body may place them anywhere in the target, so each binder becomes one
+		variable shared by all of its occurrences in this constructor term.
+	 */
+	public function construct(expression:HxExpr, type:TyType, arity:Int, ?omittedAliasParameters:Array<TyTypeParameterId>):TyType {
+		final omittedAlias = omittedAliasParameters != null && omittedAliasParameters.length > 0;
+		if (!omittedAlias && (arity == 0 || type.getTypeArguments().length > 0 || type.getNominalIdentity() == null))
 			return type;
 		var term = occurrence(expression);
 		if (term == null) {
 			if (solver.isSealed())
 				throw "constructor occurrence is absent from sealed inference";
-			term = Nominal(type.getNominalIdentity(), [for (_ in 0...arity) solver.fresh()]);
+			term = omittedAlias ? instantiate(type, omittedAliasParameters,
+				_ -> solver.fresh()) : Nominal(type.getNominalIdentity(), [for (_ in 0...arity) solver.fresh()]);
 			occurrences.push({expression: expression, term: term});
 		}
 		return solver.isSealed() ? solver.requireSolved(term) : solver.preview(term);
@@ -840,7 +848,11 @@ class TyFunctionInference {
 	}
 
 	/** Allocate only binders still present in the applied callable, sharing each binder inside this one occurrence. */
-	function instantiateMethod(type:TyType, parameters:Array<TyTypeParameterId>):TyInferenceTerm {
+	function instantiateMethod(type:TyType, parameters:Array<TyTypeParameterId>):TyInferenceTerm
+		return instantiate(type, parameters, solver.freshMethodParameter);
+
+	/** Replace each listed binder with one allocated term shared by all of its occurrences in `type`. */
+	function instantiate(type:TyType, parameters:Array<TyTypeParameterId>, allocate:TyTypeParameterId->TyInferenceTerm):TyInferenceTerm {
 		final bindings = new StringMap<TyInferenceTerm>();
 		function term(value:TyType):TyInferenceTerm {
 			final identity = value.getTypeParameterIdentity();
@@ -849,7 +861,7 @@ class TyFunctionInference {
 					if (parameter.equals(identity)) {
 						final key = parameter.getCanonicalKey();
 						if (!bindings.exists(key))
-							bindings.set(key, solver.freshMethodParameter(parameter));
+							bindings.set(key, allocate(parameter));
 						return bindings.get(key);
 					}
 			if (value.isNullable())
