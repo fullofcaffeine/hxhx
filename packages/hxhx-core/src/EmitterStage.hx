@@ -7159,6 +7159,78 @@ class EmitterStage {
 	}
 
 	/**
+		OCaml modules served by the Stage3 Xml bring-up shims, mapped to the members
+		each shim defines. Std bodies in this family are not emitted. Program code
+		that calls any other member of these classes is rejected before the native
+		build, instead of failing later as an unbound OCaml value.
+	**/
+	static final stage3XmlShimFamily:Map<String, Array<String>> = [
+		"Xml" => [
+			"createElement",
+			"createPCData",
+			"createCData",
+			"createDocType",
+			"createProcessingInstruction",
+			"createComment",
+			"createDocument",
+			"parse",
+			"get_nodeName",
+			"set_nodeName",
+			"get_nodeValue",
+			"set_nodeValue"
+		],
+		"Haxe_xml_Parser" => ["parse"],
+		"Haxe_xml_Printer" => []
+	];
+
+	/**
+		Reject emitted code that calls an Xml-family member the bring-up shims do not
+		define. Those bodies are not emitted, so such a call could only fail later as an
+		unbound OCaml value. Bodies of the shim-served classes themselves are skipped.
+	**/
+	static function requireStage3XmlShimSurface(modules:Array<TypedModule>, moduleNameFor:(HxModuleDecl, String, String) -> String,
+			runtimeModuleNames:Map<String, Bool>):Void {
+		function check(expression:TypedExpr, owner:String):Void {
+			final declaration = expression.getDeclaration();
+			if (declaration != null) {
+				final target = ocamlModuleNameFromTypePathParts(declaration.getOwner().getCanonicalName().split("."));
+				final surface = stage3XmlShimFamily.get(target);
+				final name = declaration.getSignature().getName();
+				if (surface != null && surface.indexOf(name) < 0)
+					throw "stage3 emitter: "
+						+ owner
+						+ " calls "
+						+ declaration.getOwner().getCanonicalName()
+						+ "."
+						+ name
+						+ ", but Stage3 serves the Xml family with bring-up shims that define only: "
+						+ surface.join(", ");
+			}
+			for (child in expression.getExpressions())
+				check(child, owner);
+		}
+		function statement(value:TypedStmt, owner:String):Void {
+			for (child in value.getExpressions())
+				check(child, owner);
+			for (child in value.getStatements())
+				statement(child, owner);
+		}
+		for (module in modules) {
+			final projection = module.getBackendProjection();
+			for (cls in module.getTypedClasses()) {
+				final owner = moduleNameFor(projection.getDeclaration(), moduleTypeNameFor(module), HxClassDecl.getName(cls.getSourceDeclaration()));
+				if (runtimeModuleNames.exists(owner))
+					continue;
+				for (fn in cls.getFunctions())
+					for (body in fn.getBody().getStatements())
+						statement(body, owner);
+				for (initializer in cls.getFieldInitializers())
+					check(initializer.getExpression(), owner);
+			}
+		}
+	}
+
+	/**
 		Builds the set of OCaml modules provided outside the typed-module emitter.
 
 		Why
@@ -7176,6 +7248,11 @@ class EmitterStage {
 		for (rootProvider in ["Type", "Lambda", "CallStack", "Reflect", "Xml", "Sys"])
 			runtimeModuleNames.set(rootProvider, true);
 		runtimeModuleNames.set("Haxe_Int64", true);
+		// The Xml bring-up shim replaces the whole std Xml family. Std Xml bodies call
+		// haxe.xml.Parser and haxe.xml.Printer, and those bodies call the real Xml API,
+		// so emitting either one against the shim cannot link.
+		for (xmlFamilyModule in stage3XmlShimFamily.keys())
+			runtimeModuleNames.set(xmlFamilyModule, true);
 		return runtimeModuleNames;
 	}
 
@@ -7657,7 +7734,7 @@ class EmitterStage {
 		currentClassStorage = new backend.ocaml.Stage3OcamlClassStorage();
 		EmitterStageDebug.traceStage3Phase("after_typed_modules_unique:" + typedModules.length);
 
-		inline function moduleNameForDecl(decl:HxModuleDecl, moduleTypeName:String, typeName:String):String {
+		function moduleNameForDecl(decl:HxModuleDecl, moduleTypeName:String, typeName:String):String {
 			final pkgRaw = decl == null ? "" : HxModuleDecl.getPackagePath(decl);
 			final pkg = pkgRaw == null ? "" : StringTools.trim(pkgRaw);
 			final parts = (pkg.length == 0 ? [] : pkg.split("."));
@@ -7684,6 +7761,7 @@ class EmitterStage {
 			}
 		}
 		currentEnums.validate();
+		requireStage3XmlShimSurface(typedModules, moduleNameForDecl, runtimeModuleNames);
 		currentRuntimeTypes = new backend.ocaml.Stage3OcamlRuntimeTypes(typedModules, currentClassStorage);
 
 		traceEmitToDirEntry("emitToDir_enter");
@@ -9346,78 +9424,39 @@ class EmitterStage {
 		}
 		EmitterStageDebug.traceStage3Phase("after_shim_warning20");
 
-		// Stage 3 bring-up: upstream unit fixtures call `haxe.xml.Parser.parse(...)`, but our Stage3
-		// typing can emit a `Haxe_xml_Parser.ml` unit that only contains placeholder statics
-		// (e.g. `escapes`) and no `parse` binding.
-		//
-		// Provide a minimal `parse` value so the suite can link during emit-only bring-up.
+		// Stage 3 bring-up: haxe.xml.Parser belongs to the Xml shim family, so its std
+		// body is never emitted. Provide the members that family declares for it.
 		{
-			final shimName = "Haxe_xml_Parser";
-			final shimFile = shimName + ".ml";
-			final shimPath = haxe.io.Path.join([outAbs, shimFile]);
-			final shimSource = "(* hxhx(stage3) bootstrap shim: haxe.xml.Parser.parse *)\n"
+			final shimFile = "Haxe_xml_Parser.ml";
+			sys.io.File.saveContent(haxe.io.Path.join([outAbs, shimFile]),
+				"(* hxhx(stage3) bootstrap shim: haxe.xml.Parser.parse *)\n"
 				+ "[@@@warning \"-21-26\"]\n"
 				+ "let escapes : _ = (Obj.magic 0)\n"
-				+ "let parse (_s : string) : _ = (Obj.magic 0)\n";
-			try {
-				if (sys.FileSystem.exists(shimPath)) {
-					final contents = sys.io.File.getContent(shimPath);
-					final trimmed = StringTools.trim(contents);
-					final hasParse = StringTools.startsWith(trimmed, "let parse")
-						|| StringTools.startsWith(trimmed, "let rec parse")
-						|| contents.indexOf("\nlet parse") != -1
-						|| contents.indexOf("\nlet rec parse") != -1;
-					final hasUnsafePlaceholderStatic = contents.indexOf("HxAnon.get") != -1 && contents.indexOf("let escapes") != -1;
-					if (!hasParse || hasUnsafePlaceholderStatic)
-						sys.io.File.saveContent(shimPath, shimSource);
-				} else {
-					sys.io.File.saveContent(shimPath, shimSource);
-					generatedPaths.push(shimFile);
-				}
-			} catch (_:haxe.io.Error) {} catch (_:String) {}
+				+ "let parse (_s : string) : _ = (Obj.magic 0)\n");
+			generatedPaths.push(shimFile);
 		}
 		EmitterStageDebug.traceStage3Phase("after_shim_xml_parser");
 
-		// Stage 3 bring-up: upstream unit fixtures use `Xml.*` helpers (e.g. `Xml.createElement`)
-		// but Stage3 typing doesn't yet guarantee an emitted provider module for `Xml`.
-		//
-		// Provide a minimal module so the suite can link during emit-only bring-up.
+		// Stage 3 bring-up: upstream unit fixtures use `Xml.*` helpers (e.g. `Xml.createElement`).
+		// Xml belongs to the shim family, so its std body is never emitted. Provide the
+		// constructors and the nodeName/nodeValue accessors so emit-only programs link.
 		{
-			final shimName = "Xml";
-			final shimFile = shimName + ".ml";
-			final shimPath = haxe.io.Path.join([outAbs, shimFile]);
-			if (sys.FileSystem.exists(shimPath)) {
-				final contents = sys.io.File.getContent(shimPath);
-				final trimmed = StringTools.trim(contents);
-				final hasCreateElement = StringTools.startsWith(trimmed, "let createElement")
-					|| StringTools.startsWith(trimmed, "let rec createElement")
-					|| contents.indexOf("\nlet createElement") != -1
-					|| contents.indexOf("\nlet rec createElement") != -1;
-				if (!hasCreateElement) {
-					sys.io.File.saveContent(shimPath,
-						contents
-						+ "\n\n(* hxhx(stage3) bootstrap shim: Xml camelCase constructors *)\n"
-						+ "let createElement (_name : string) : _ = (Obj.magic 0)\n"
-						+ "let createPCData (_data : string) : _ = (Obj.magic 0)\n"
-						+ "let createCData (_data : string) : _ = (Obj.magic 0)\n"
-						+ "let createDocType (_data : string) : _ = (Obj.magic 0)\n"
-						+ "let createProcessingInstruction (_data : string) : _ = (Obj.magic 0)\n"
-						+ "let createComment (_data : string) : _ = (Obj.magic 0)\n"
-						+ "let createDocument () : _ = (Obj.magic 0)\n");
-				}
-			} else {
-				sys.io.File.saveContent(shimPath,
-					"(* hxhx(stage3) bootstrap shim: Xml helpers *)\n"
-					+ "[@@@warning \"-21-26\"]\n"
-					+ "let createElement (_name : string) : _ = (Obj.magic 0)\n"
-					+ "let createPCData (_data : string) : _ = (Obj.magic 0)\n"
-					+ "let createCData (_data : string) : _ = (Obj.magic 0)\n"
-					+ "let createDocType (_data : string) : _ = (Obj.magic 0)\n"
-					+ "let createProcessingInstruction (_data : string) : _ = (Obj.magic 0)\n"
-					+ "let createComment (_data : string) : _ = (Obj.magic 0)\n"
-					+ "let createDocument () : _ = (Obj.magic 0)\n");
-				generatedPaths.push(shimFile);
-			}
+			final shimFile = "Xml.ml";
+			sys.io.File.saveContent(haxe.io.Path.join([outAbs, shimFile]),
+				"(* hxhx(stage3) bootstrap shim: Xml helpers *)\n"
+				+ "[@@@warning \"-21-26\"]\n"
+				+ "let createElement (_name : string) : _ = (Obj.magic 0)\n"
+				+ "let createPCData (_data : string) : _ = (Obj.magic 0)\n"
+				+ "let createCData (_data : string) : _ = (Obj.magic 0)\n"
+				+ "let createDocType (_data : string) : _ = (Obj.magic 0)\n"
+				+ "let createProcessingInstruction (_data : string) : _ = (Obj.magic 0)\n"
+				+ "let createComment (_data : string) : _ = (Obj.magic 0)\n"
+				+ "let createDocument () : _ = (Obj.magic 0)\n"
+				+ "let get_nodeName (_xml : _) : string = (Obj.magic 0)\n"
+				+ "let set_nodeName (_xml : _) (value : string) : string = value\n"
+				+ "let get_nodeValue (_xml : _) : string = (Obj.magic 0)\n"
+				+ "let set_nodeValue (_xml : _) (value : string) : string = value\n");
+			generatedPaths.push(shimFile);
 		}
 		EmitterStageDebug.traceStage3Phase("after_shim_xml");
 

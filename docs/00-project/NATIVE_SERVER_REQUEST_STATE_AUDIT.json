@@ -62,7 +62,8 @@
       "path": "packages/hxhx-core/src/EmitterStage.hx",
       "immutable_fields": [
         "var:moduleInitTrace",
-        "final:backendDialect"
+        "final:backendDialect",
+        "final:stage3XmlShimFamily"
       ],
       "request_reset_fields": [
         "var:currentRuntimeOcamlModuleNames",
