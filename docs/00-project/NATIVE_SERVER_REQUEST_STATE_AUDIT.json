@@ -65,6 +65,7 @@
         "final:backendDialect"
       ],
       "request_reset_fields": [
+        "var:currentRuntimeOcamlModuleNames",
         "var:currentEnums",
         "var:currentCallables",
         "var:currentClassStorage",
