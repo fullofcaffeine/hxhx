@@ -20,38 +20,44 @@ let checkedExtraction = fun value category carrier names -> (
 
 let convert = fun actual expected value names -> (try (
   ignore (if let __string_eq_left_1 = TyType.getSemanticKey (Obj.magic actual) () in let __string_eq_right_2 = TyType.getSemanticKey (Obj.magic expected) () in HxString.equals __string_eq_left_1 __string_eq_right_2 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr value)) else ());
-  let source = (TyType.getSemanticKey (Obj.magic actual) () : string) in let destination = (TyType.getSemanticKey (Obj.magic expected) () : string) in (
-    ignore (if TyType.isDynamic (Obj.magic expected) () then let tempResult = ref (HxString.hx_null_string : string) in (
-      ignore (match source with
-        | "primitive:Bool" -> let __assign_3 = ("HxRuntime.box_bool (" ^ HxString.toStdString value) ^ ")" in (
-          tempResult := __assign_3;
-          __assign_3
-        )
-        | "primitive:Int" | "primitive:String" -> let __assign_4 = ("Obj.repr (" ^ HxString.toStdString value) ^ ")" in (
-          tempResult := __assign_4;
-          __assign_4
-        )
-        | _ -> HxType.hx_throw_typed_rtti (Obj.repr ("unsupported OCaml value input carrier: " ^ HxString.toStdString source)) ["Dynamic"]);
-      Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
-    ) else ());
-    ignore (if TyType.isDynamic (Obj.magic actual) () then let tempResult1 = ref (HxString.hx_null_string : string) in (
-      ignore (match destination with
-        | "primitive:Bool" -> let __assign_5 = (("HxDynamic.booleanValue (" ^ HxString.toStdString value) ^ ")" : string) in (
-          tempResult1 := __assign_5;
-          __assign_5
-        )
-        | "primitive:Int" -> let __assign_6 = (checkedExtraction (value : string) ("Int" : string) ("int" : string) (Obj.magic names) : string) in (
-          tempResult1 := __assign_6;
-          __assign_6
-        )
-        | "primitive:String" -> let __assign_7 = (checkedExtraction (value : string) ("String" : string) ("string" : string) (Obj.magic names) : string) in (
-          tempResult1 := __assign_7;
-          __assign_7
-        )
-        | _ -> HxType.hx_throw_typed_rtti (Obj.repr ("unsupported OCaml value result carrier: " ^ HxString.toStdString destination)) ["Dynamic"]);
-      Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult1)))
-    ) else ());
-    HxType.hx_throw_typed_rtti (Obj.repr ((("unsupported OCaml value representation change: " ^ HxString.toStdString source) ^ " to ") ^ HxString.toStdString destination)) ["Dynamic"]
+  let nullableDestination = (Backend_ocaml_Stage3OcamlNullablePrimitive.innerPrimitive (Obj.magic expected) : string) in (
+    ignore (if nullableDestination != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Backend_ocaml_Stage3OcamlNullablePrimitive.store (Obj.magic actual) (nullableDestination : string) (value : string)))) else ());
+    let nullableSource = (Backend_ocaml_Stage3OcamlNullablePrimitive.innerPrimitive (Obj.magic actual) : string) in (
+      ignore (if nullableSource != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Backend_ocaml_Stage3OcamlNullablePrimitive.load (nullableSource : string) (Obj.magic expected) (value : string)))) else ());
+      let source = (TyType.getSemanticKey (Obj.magic actual) () : string) in let destination = (TyType.getSemanticKey (Obj.magic expected) () : string) in (
+        ignore (if TyType.isDynamic (Obj.magic expected) () then let tempResult = ref (HxString.hx_null_string : string) in (
+          ignore (match source with
+            | "primitive:Bool" -> let __assign_3 = ("HxRuntime.box_bool (" ^ HxString.toStdString value) ^ ")" in (
+              tempResult := __assign_3;
+              __assign_3
+            )
+            | "primitive:Int" | "primitive:String" -> let __assign_4 = ("Obj.repr (" ^ HxString.toStdString value) ^ ")" in (
+              tempResult := __assign_4;
+              __assign_4
+            )
+            | _ -> HxType.hx_throw_typed_rtti (Obj.repr ("unsupported OCaml value input carrier: " ^ HxString.toStdString source)) ["Dynamic"]);
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
+        ) else ());
+        ignore (if TyType.isDynamic (Obj.magic actual) () then let tempResult1 = ref (HxString.hx_null_string : string) in (
+          ignore (match destination with
+            | "primitive:Bool" -> let __assign_5 = (("HxDynamic.booleanValue (" ^ HxString.toStdString value) ^ ")" : string) in (
+              tempResult1 := __assign_5;
+              __assign_5
+            )
+            | "primitive:Int" -> let __assign_6 = (checkedExtraction (value : string) ("Int" : string) ("int" : string) (Obj.magic names) : string) in (
+              tempResult1 := __assign_6;
+              __assign_6
+            )
+            | "primitive:String" -> let __assign_7 = (checkedExtraction (value : string) ("String" : string) ("string" : string) (Obj.magic names) : string) in (
+              tempResult1 := __assign_7;
+              __assign_7
+            )
+            | _ -> HxType.hx_throw_typed_rtti (Obj.repr ("unsupported OCaml value result carrier: " ^ HxString.toStdString destination)) ["Dynamic"]);
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult1)))
+        ) else ());
+        HxType.hx_throw_typed_rtti (Obj.repr ((("unsupported OCaml value representation change: " ^ HxString.toStdString source) ^ " to ") ^ HxString.toStdString destination)) ["Dynamic"]
+      )
+    )
   )
 ) with
   | HxRuntime.Hx_return __ret_8 -> (Obj.obj __ret_8 : string) : string)
