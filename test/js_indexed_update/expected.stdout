@@ -1,0 +1,15 @@
+present:postfix:value=1:stored=2:events=
+present:prefix:value=2:stored=2:events=
+present:compound:value=1003:stored=1003:events=compound;
+null:postfix:value=null:stored=1:events=
+null:prefix:value=1:stored=1:events=
+null:compound:value=1002:stored=1002:events=compound;
+absent:postfix:value=null:stored=NaN:events=
+absent:prefix:value=NaN:stored=NaN:events=
+absent:compound:value=NaN:stored=NaN:events=compound;
+int:5:7:10:10
+nullable:4:6:6
+compound-order:7:7:key;receiver;value;
+postfix-order:3:3:4:key;receiver;receiver;
+prefix-order:4:3:4:key;receiver;receiver;
+cells:5:stored7:stored9:9:GSGSGSG
