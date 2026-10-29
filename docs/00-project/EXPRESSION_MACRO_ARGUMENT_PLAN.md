@@ -30,7 +30,10 @@ builds the header index and request loader, marks the resolved modules, and hand
 both to `ExprMacroExpander` as an `ExprMacroSelectionContext`; modules the loader
 discovers during selection are walked too, and after any rewrite the index and
 loader are rebuilt once (the rebuilt loader keeps the record of missing-type hooks
-already asked). Precedence per call: a registered exact-text expression (the
+already asked). Modules loaded during selection are reported to the driver so the
+no-emit lane, which otherwise types only its roots plus what typing discovers, still
+types their bodies. A receiver path whose last segment is not uppercase-initial
+(`Main.instance.run()`) is never resolved as a type, matching the typer. Precedence per call: a registered exact-text expression (the
 allowlist, including promoted no-argument plugins) keeps the exact-text route; else
 a callee that selects a macro declaration is consumed before its children are
 visited and sent to `MacroRuntimeSession.expandSelected` as one
@@ -38,8 +41,10 @@ visited and sent to `MacroRuntimeSession.expandSelected` as one
 file); `Expanded` syntax is inserted in place. A private static macro is selectable
 from its own class. Calls inside a lexical gap are not selected; the gap count is
 reported. When the session answers `Unavailable`, the call is recorded
-(`expr_macro_unexecuted[i]=<file>: <declaration>: <reason>`) and continues as an
-ordinary call, exactly as before this change; this keeps existing lanes that rely on
+(`expr_macro_unexecuted[i]=<file>: <declaration>: <reason>`) and continues through
+typing exactly as before this change, under the macro call-site contract
+(`TyMacroCallSignature`: `Expr` positions accept any expression, a trailing
+`Array<Expr>` is a rest position, the result is `Dynamic`); this keeps existing lanes that rely on
 later approximations (for example the emitter's `isCi` intrinsic and hxhx's own
 `CompilerBundledSourcesMacro.files()` during snapshot generation) compiling, while
 naming the unexecuted macro in the output. Both executors still answer

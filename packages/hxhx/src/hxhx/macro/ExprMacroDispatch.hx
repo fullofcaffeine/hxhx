@@ -19,9 +19,12 @@ package hxhx.macro;
 
 	How
 	- `ExprMacroExpander` builds a request when `ExprMacroDeclarationSelector`
-	  selects a public static `macro` declaration for a call. The session answers
-	  with `ExprMacroDispatchResult`; `Expanded` replaces the call structurally,
-	  `Unavailable` is a compile error at the call site.
+	  selects a static `macro` declaration for a call (public, or private when
+	  called from its own class). The session answers with `ExprMacroDispatchResult`:
+	  `Expanded` replaces the call structurally; `Unavailable` is recorded as an
+	  unexecuted call, and the call continues through ordinary typing under the
+	  macro call-site contract. Once a general executor exists, `Unavailable`
+	  must become a compile error at the call site.
 **/
 class ExprMacroDispatchRequest {
 	final declaration:TyDeclarationInfo;

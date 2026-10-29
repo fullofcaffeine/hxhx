@@ -45,21 +45,25 @@ structured request (`MacroRuntimeSession.expandSelected`) carrying the selected 
 syntax. An allowlisted exact call text always keeps the allowlist route, even if its callee is a macro; that is how the
 no-argument plugin pilot serves a promoted macro.
 
-Today neither runtime mode has an executor for a structured request. Such a call is reported on stdout and then compiled
-as before, as an ordinary call, so a later failure is attributable:
+Today neither runtime mode has an executor for a structured request. Such a call is reported on stdout and then typed
+as before, so a later failure is attributable:
 
 ```
 expr_macros_unexecuted=1
 expr_macro_unexecuted[0]=Main.hx: macros.Macros.items: the in-process macro runtime has no executor for project macro declaration macros.Macros.items; ...
 ```
 
-The report precedes whatever the ordinary typing of that call produces (for a loop over the macro's result, the usual
-iterator diagnostic). `expr_macro_scope_gaps=N` counts call sites the walker could not prove names for; nothing is selected
+An unexpanded macro call is typed by the macro call-site contract (`TyMacroCallSignature`), not as an ordinary call:
+any expression is accepted at an `Expr` parameter, a trailing `Array<Expr>` parameter collects the remaining arguments,
+and the call's value is `Dynamic`, because its real type would come from the expansion. The report precedes whatever that
+typing produces; for example, `for (v in macros.Macros.items())` still stops with
+`value loop requires a resolved iterator protocol`, since a `Dynamic` value has no known iterator. `expr_macro_scope_gaps=N` counts call sites the walker could not prove names for; nothing is selected
 there.
 
 Important constraints:
 
-- Selected `macro function` declarations are not executed yet; they are reported and then typed as ordinary calls.
+- Selected `macro function` declarations are not executed yet; they are reported and then typed by the macro call-site
+  contract described above.
 - We do **not** type-check the returned expression snippet yet; we just parse it into the bootstrap `HxExpr` subset.
 - The returned snippet must be parsable by `HxParser.parseExprText` (tiny expression grammar).
 
