@@ -178,6 +178,55 @@ class OcamlLoweringReportWriter {
 		return OcamlCallPlan.sameCallableBoundary(left, right, false);
 	}
 
+	/**
+		Requires every admitted early return to be explained before the report is published.
+
+		Why: a control admission records how many `return` transfers a top-level
+		function body contains. Inspection tools trust that each one has a typed
+		owner. A value-returning function proves this with its function-result
+		record. A function without that record must explain each admitted return
+		with its own control decision.
+
+		What counts as an explanation:
+		- a payloadless `return;` that uses the runtime Void return signal, but only
+		  after `OcamlControlPlan.requireDecision` accepts its complete target,
+		  effect, proof, capability, and revision facts;
+		- a value return whose payload is an admitted typed-function result crossing.
+
+		How: count those decisions per function, then require the count to equal the
+		admitted return-family occurrence count. Nested functions are skipped here
+		because their parent's function plan owns their boundary.
+
+		Gotcha: validate a Void decision before counting it. A corrupted record that
+		still names the Void mechanism must fail as an invalid plan; it must never
+		make an incomplete function look covered.
+	**/
+	static function requireReturnCoverage(admissions:Array<OcamlControlAdmissionSnapshot>, controls:Array<OcamlControlDecision>,
+			functionResultByFunction:Map<String, OcamlFunctionResultBoundaryPlan>):Void {
+		final typedReturnCountByFunction:Map<String, Int> = [];
+		for (control in controls) {
+			if (control.kind != OcamlControlTransferKind.Return)
+				continue;
+			if (control.payload == null && control.mechanism == OcamlControlTargetMechanism.RuntimeVoidReturnSignal) {
+				OcamlControlPlan.requireDecision(control);
+				typedReturnCountByFunction.set(control.functionId, (typedReturnCountByFunction.get(control.functionId) ?? 0) + 1);
+				continue;
+			}
+			if (control.payload != null && OcamlControlPlan.isAdmittedTypedFunctionReturnPayload(control.payload, control.functionId))
+				typedReturnCountByFunction.set(control.functionId, (typedReturnCountByFunction.get(control.functionId) ?? 0) + 1);
+		}
+		for (admission in admissions) {
+			final returnFamily = OcamlControlAdmissionContract.requireFamilyByKind(admission, OcamlControlAdmissionFamily.Return);
+			if (returnFamily.status == OcamlControlAdmissionStatus.Admitted
+				&& returnFamily.occurrenceCount > 0
+				&& admission.functionId.indexOf("|nested-function|") < 0
+				&& !functionResultByFunction.exists(admission.functionId)
+				&& typedReturnCountByFunction.get(admission.functionId) != returnFamily.occurrenceCount) {
+				throw 'Control admission "${admission.id}" admits return transfers without a function result boundary.';
+			}
+		}
+	}
+
 	public static function write(outputDirectory:String, entries:Array<OcamlLoweredPlaceReportEntry>, requirements:Array<OcamlRuntimeRequirement>,
 			representations:Array<OcamlRepresentationDecision>, representedArrays:Array<OcamlRepresentedArrayDescriptor>,
 			arrayLiteralProducers:Array<OcamlArrayLiteralProducerDecision>, anonymousStructures:Array<OcamlAnonymousStructureDecision>,
@@ -464,23 +513,6 @@ class OcamlLoweringReportWriter {
 		}
 		final sortedControlAdmissions = controlAdmissions.map(OcamlControlAdmissionContract.copySnapshot);
 		sortedControlAdmissions.sort((left, right) -> Reflect.compare(left.id, right.id));
-		final typedReturnCountByFunction:Map<String, Int> = [];
-		for (control in controls) {
-			// A typed Void function can own a payloadless return without a callable
-			// value-result record. Validate its complete control contract before counting it.
-			if (control.kind == OcamlControlTransferKind.Return
-				&& control.payload == null
-				&& control.mechanism == OcamlControlTargetMechanism.RuntimeVoidReturnSignal) {
-				OcamlControlPlan.requireDecision(control);
-				typedReturnCountByFunction.set(control.functionId, (typedReturnCountByFunction.get(control.functionId) ?? 0) + 1);
-				continue;
-			}
-			if (control.kind == OcamlControlTransferKind.Return
-				&& control.payload != null
-				&& OcamlControlPlan.isAdmittedTypedFunctionReturnPayload(control.payload, control.functionId)) {
-				typedReturnCountByFunction.set(control.functionId, (typedReturnCountByFunction.get(control.functionId) ?? 0) + 1);
-			}
-		}
 		final controlAdmissionByFunction:Map<String, OcamlControlAdmissionSnapshot> = [];
 		final controlAdmissionIds:Map<String, Bool> = [];
 		for (admission in sortedControlAdmissions) {
@@ -489,15 +521,8 @@ class OcamlLoweringReportWriter {
 				throw 'Control admission identity "${admission.id}" or function "${admission.functionId}" occurs more than once.';
 			controlAdmissionIds.set(admission.id, true);
 			controlAdmissionByFunction.set(admission.functionId, admission);
-			final returnFamily = OcamlControlAdmissionContract.requireFamilyByKind(admission, OcamlControlAdmissionFamily.Return);
-			if (returnFamily.status == OcamlControlAdmissionStatus.Admitted
-				&& returnFamily.occurrenceCount > 0
-				&& admission.functionId.indexOf("|nested-function|") < 0
-				&& !functionResultByFunction.exists(admission.functionId)
-				&& typedReturnCountByFunction.get(admission.functionId) != returnFamily.occurrenceCount) {
-				throw 'Control admission "${admission.id}" admits return transfers without a function result boundary.';
-			}
 		}
+		requireReturnCoverage(sortedControlAdmissions, controls, functionResultByFunction);
 		final sortedControlTargets = controlLoopTargets.copy();
 		sortedControlTargets.sort((left, right) -> Reflect.compare(left.id, right.id));
 		final controlTargetById:Map<String, OcamlControlLoopTarget> = [];
