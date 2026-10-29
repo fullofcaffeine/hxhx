@@ -71,10 +71,15 @@ class M14PythonRuntimeTypeOperandsIntegrationTest {
 	}
 
 	/** An unsupported operand reports its reason and leaves earlier output untouched. */
-	static function checkRejection(root:String, name:String, source:String, expected:String):Void {
+	static function checkRejection(root:String, name:String, source:String, expected:String, ?modules:Map<String, String>):Void {
 		final sourceRoot = root + "/" + name;
 		FileSystem.createDirectory(sourceRoot);
 		File.saveContent(sourceRoot + "/Main.hx", source);
+		if (modules != null)
+			for (path => text in modules) {
+				FileSystem.createDirectory(Path.directory(sourceRoot + "/" + path));
+				File.saveContent(sourceRoot + "/" + path, text);
+			}
 		final output = sourceRoot + "/out";
 		FileSystem.createDirectory(output);
 		File.saveContent(output + "/main.py", "previous-output\n");
@@ -112,6 +117,33 @@ class M14PythonRuntimeTypeOperandsIntegrationTest {
 			unsupported + " in Std.isOfType");
 		checkRejection(root, "core-value", "class Main { static function main():Void { var t:Dynamic = Int; Sys.println(t); } }",
 			unsupported + " as core type values");
+		checkRejection(root, "library-class",
+			"class Main { static function main():Void { var v:Dynamic = new haxe.ds.StringMap<Int>(); Sys.println(Std.isOfType(v, haxe.ds.StringMap)); } }",
+			unsupported + ": runtime-nominal:haxe.ds.StringMap");
+		checkRejection(root, "extern-class",
+			'@:native("int") extern class PyInt {} class Main { static function main():Void { var v:Dynamic = 1; Sys.println(Std.isOfType(v, PyInt)); } }',
+			unsupported + ": runtime-nominal:Main.PyInt");
+		checkRejection(root, "compile-time-only-class",
+			"class MacroHelper { macro public static function make() return macro null; }" +
+			" class Main { static function main():Void { var v:Dynamic = 1; Sys.println(Std.isOfType(v, MacroHelper)); } }",
+			unsupported + ": runtime-nominal:Main.MacroHelper");
+		// Python emits one class per Python name, so neither same-named class can answer a test.
+		checkRejection(root, "name-collision",
+			"class Main { static function main():Void { var v:Dynamic = new a.Foo(); Sys.println(Std.isOfType(v, a.Foo) || Std.isOfType(v, b.Foo)); } }",
+			unsupported + ": runtime-nominal:a.Foo", [
+				"a/Foo.hx" => "package a; class Foo { public function new() {} }",
+				"b/Foo.hx" => "package b; class Foo { public function new() {} }"
+			]);
+		// Unemitted library functions cannot receive a Python class object.
+		checkRejection(root, "downcast",
+			"class A { public function new() {} } class B extends A { public function new() super(); }" +
+			" class Main { static function main():Void { var v:A = new B(); Sys.println(Std.downcast(v, B) != null); } }",
+			unsupported + " passed to Std.downcast");
+		checkRejection(root, "create-instance",
+			"class A { public function new() {} } class Main { static function main():Void { Sys.println(Type.createInstance(A, []) != null); } }",
+			unsupported + " passed to Type.createInstance");
+		checkRejection(root, "deprecated-is", "class Main { static function main():Void { Sys.println(Std.is(1, Int)); } }", unsupported
+			+ " passed to Std.is");
 		removeTree(root);
 		Sys.println("PYTHON_RUNTIME_TYPE_OPERANDS:PASS");
 	}

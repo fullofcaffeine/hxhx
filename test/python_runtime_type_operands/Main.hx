@@ -9,6 +9,14 @@ class Dog extends Animal {
 	}
 }
 
+class Checks {
+	public static inline function isDogOrInt(v:Dynamic):Bool
+		return Std.isOfType(v, Dog) || Std.isOfType(v, Int);
+
+	public static function same(c:Dynamic):Dynamic
+		return c;
+}
+
 class Main {
 	static final intIsFloat:Bool = Std.isOfType(1, Float);
 	static final animalClass:Class<Animal> = Animal;
@@ -55,5 +63,16 @@ class Main {
 		show("static initializer", intIsFloat);
 		show("instance initializer", new Main().textIsInt);
 		show("class value", animalClass == Animal);
+		final classes:Array<Dynamic> = [Animal, Dog];
+		show("class value passed", Checks.same(Dog) == classes[1] && Checks.same(Animal) != Dog);
+		show("inline Dog", Checks.isDogOrInt(new Dog()));
+		show("inline Int", Checks.isDogOrInt(7));
+		show("inline String", Checks.isDogOrInt("7"));
+		final closure = function(x:Dynamic) return Std.isOfType(x, Animal) && (x is Dog);
+		final arrow = (x:Dynamic) -> x is String;
+		show("closure Dog", closure(new Dog()));
+		show("closure Animal", closure(new Animal()));
+		show("arrow String", arrow("a"));
+		show("arrow Int", arrow(1));
 	}
 }

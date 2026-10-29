@@ -22,38 +22,43 @@ class PythonFieldAccessLowering {
 	var nextInitializer:Int = 0;
 
 	public function new(program:MacroExpandedProgram) {
-		final emittedClasses = new StringMap<HxClassDecl>();
+		final testableClasses = new StringMap<String>();
+		final renderedOwners = new StringMap<Bool>();
 		final emittedNames = new StringMap<String>();
 		for (module in program.getTypedModules()) {
-			// Python renders every emitted body from an exact projection below,
-			// where each runtime type occurrence is lowered or rejected.
-			for (declaration in HxModuleDecl.getClasses(module.getBackendStructureDeclaration())) {
+			// Python renders every emitted body from an exact projection, where
+			// each runtime type occurrence is lowered or rejected.
+			final declarations = HxModuleDecl.getClasses(module.getPythonStructureDeclaration());
+			final typedClasses = module.getTypedClasses();
+			if (declarations.length != typedClasses.length)
+				throw "Python field lowering lost the typed class paired with a declaration";
+			for (index in 0...declarations.length) {
+				final declaration = declarations[index];
 				modules.set(declaration, module);
 				moduleNames.set(HxClassDecl.getName(declaration), true);
-			}
-			// Python renders classes only from non-library modules; only those can answer a class test.
-			final emitted = !SourceTargetCommon.isStdSourceFile(module.getParsed().getFilePath());
-			for (typedClass in module.getTypedClasses()) {
-				final info = typedClass.getSemanticInfo();
+				final info = typedClasses[index].getSemanticInfo();
 				if (info == null)
 					continue;
 				final canonical = info.getIdentity().getCanonicalName();
-				final declaration = typedClass.getSourceDeclaration();
-				final name = HxClassDecl.getName(declaration);
-				ownerNames.set(canonical, name);
-				if (!emitted || declaration.isExtern || declaration.enumDeclaration != null)
+				ownerNames.set(canonical, HxClassDecl.getName(typedClasses[index].getSourceDeclaration()));
+				// Emission and runtime class tests share one rule for which classes exist in Python.
+				final pythonName = SourceTargetCommon.pythonEmittedClassName(module.getParsed().getFilePath(), declaration);
+				if (pythonName == null || declaration.isExtern)
 					continue;
-				final previous = emittedNames.get(name);
+				renderedOwners.set(canonical, true);
+				if (declaration.enumDeclaration != null || declaration.isInterface)
+					continue;
+				final previous = emittedNames.get(pythonName);
 				if (previous != null && previous != canonical) {
-					// Python emits one class per short name, so neither identity is testable.
-					emittedClasses.remove(previous);
+					// Python emits only the first class with a name, so neither identity is testable.
+					testableClasses.remove(previous);
 					continue;
 				}
-				emittedNames.set(name, canonical);
-				emittedClasses.set(canonical, declaration);
+				emittedNames.set(pythonName, canonical);
+				testableClasses.set(canonical, pythonName);
 			}
 		}
-		runtimeTypes = new PythonRuntimeTypeLowering(emittedClasses);
+		runtimeTypes = new PythonRuntimeTypeLowering(testableClasses, renderedOwners);
 	}
 
 	/** Module-level initializer helpers must not replace an authored class name. */

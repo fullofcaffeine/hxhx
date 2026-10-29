@@ -84,16 +84,22 @@ class TypedModule {
 
 	/**
 		Return the same legacy declaration objects as `getBackendDeclaration`
-		without its declaration-only runtime type rejection.
+		without its declaration-only runtime type rejection. Only the Python
+		source target may call this.
 
-		Only a backend that never renders a body from these declarations may use
-		this view. Such a backend reads class and member structure here, then
-		renders every executable body through `findBackendFunctionProjection` or
+		Python reads class and member structure here. It renders function bodies
+		and static initializers only through `findBackendFunctionProjection` and
 		`findBackendFieldInitializer`, where each runtime type occurrence has its
-		exact catalog entry and is either lowered or rejected. A body that is not
-		emitted, such as an unused standard-library function, is never examined.
+		exact catalog entry and is lowered or rejected. Instance field
+		initializers are the one legacy expression it renders directly, and only
+		when they contain no runtime type marker; otherwise they also go through
+		`findBackendFieldInitializer`. A raw marker that still reaches Python
+		rendering is a compiler error. Bodies Python never emits, such as unused
+		standard-library functions, are never examined.
 	**/
-	public function getBackendStructureDeclaration():HxModuleDecl
+	@:allow(backend.source.SourceTargetCommon)
+	@:allow(backend.source.PythonFieldAccessLowering)
+	function getPythonStructureDeclaration():HxModuleDecl
 		return requireBackendDeclarationCatalog().getDeclaration();
 
 	/**

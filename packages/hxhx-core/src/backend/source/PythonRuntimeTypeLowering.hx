@@ -58,25 +58,39 @@ typedef PythonRuntimeTypeFacts = {
 	| `Array`     | `isinstance(v, list)`                                          |
 	| user class  | `isinstance(v, Cls)`; Python inheritance answers subclasses     |
 
-	A `null` operand fails every test, as in Haxe. A bare user class value
-	renders as its emitted Python class.
+	A `null` operand fails every test, as in Haxe.
+
+	A user class used as a value renders as its emitted Python class. That is
+	correct wherever the value is only stored, passed, returned, or compared,
+	including as an argument to a function Python emits. It is not correct as
+	an argument to a standard-library static function that Python does not
+	emit, such as `Std.downcast` or `Type.createInstance`, so such a call is
+	rejected naming the call. (`Std.isOfType` itself is lowered above.)
 
 	Fail closed: interfaces, enums, `Class`/`Enum` meta checks, classes this
 	backend does not emit as Python classes (standard-library or extern
-	declarations, or a short name shared by two emitted classes), core types used
-	as runtime values outside a direct `Std.isOfType` argument, and
-	`Std.isOfType` with a computed type argument are compiler errors raised
-	before any output file is written.
+	declarations, compile-time-only support classes, or a Python class name
+	shared by two classes), core types used as runtime values outside a direct
+	`Std.isOfType` argument, class values passed to an unemitted
+	standard-library static function, and `Std.isOfType` with a computed type
+	argument are compiler errors raised before any output file is written.
 **/
 class PythonRuntimeTypeLowering {
 	static inline final MARKER = "$hxhx:python-runtime-type";
 	static inline final IS_OF_TYPE = "Std#static:isOfType(required:dynamic,required:dynamic)->primitive:Bool#0";
 
-	final classes:StringMap<HxClassDecl>;
+	final classes:StringMap<String>;
+	final renderedOwners:StringMap<Bool>;
 
-	/** @param classes Emitted, unambiguous Python classes keyed by canonical typed identity. */
-	public function new(classes:StringMap<HxClassDecl>) {
+	/**
+		@param classes Python class names of testable classes (emitted, not an
+		interface, enum, or extern, and unambiguous), keyed by canonical identity.
+		@param renderedOwners Canonical identities of every class whose static
+		functions Python emits; their arguments may be class values.
+	**/
+	public function new(classes:StringMap<String>, renderedOwners:StringMap<Bool>) {
 		this.classes = classes;
+		this.renderedOwners = renderedOwners;
 	}
 
 	/**
@@ -98,8 +112,15 @@ class PythonRuntimeTypeLowering {
 			};
 		}
 		final call = TypedExactStaticCallSource.decode(original);
-		if (call == null || call.declaration != IS_OF_TYPE)
+		if (call == null)
 			return null;
+		if (call.declaration != IS_OF_TYPE) {
+			if (!renderedOwners.exists(call.owner))
+				for (argument in call.arguments)
+					if (isClassValue(facts, argument))
+						throw "Python source target does not support runtime type operands passed to " + call.owner + "." + call.method;
+			return null;
+		}
 		final lowered = TypedExactStaticCallSource.decode(rebuilt);
 		if (call.arguments.length != 2 || lowered == null || lowered.arguments.length != 2)
 			throw "Python Std.isOfType requires its value and type arguments";
@@ -107,6 +128,15 @@ class PythonRuntimeTypeLowering {
 		if (occurrence.getValue() != null)
 			throw "Python Std.isOfType requires a class value as its type argument";
 		return encode(check(occurrence.getTarget()), lowered.arguments[0]);
+	}
+
+	/** Whether an argument is directly a type used as a value, after grouping and certified conversions. */
+	static function isClassValue(facts:PythonRuntimeTypeFacts, expression:HxExpr):Bool {
+		return switch (expression) {
+			case EParenthesized(inner, _): isClassValue(facts, inner);
+			case ECast(_, _): final conversion = facts.findCast(expression); conversion != null && isClassValue(facts, conversion.getOperand());
+			case _: TypedRuntimeTypeSource.isMarker(expression) && facts.requireRuntimeType(expression).getValue() == null;
+		};
 	}
 
 	/** Peel grouping and certified class-value conversions; a computed type argument is rejected. */
@@ -137,10 +167,8 @@ class PythonRuntimeTypeLowering {
 	}
 
 	function emittedClass(target:TypedRuntimeTypeTarget, identity:TyNominalTypeId):String {
-		final declaration = classes.get(identity.getCanonicalName());
-		if (declaration == null || declaration.isInterface)
-			unsupported(target);
-		return HxClassDecl.getName(declaration);
+		final name = classes.get(identity.getCanonicalName());
+		return name == null ? unsupported(target) : name;
 	}
 
 	static function unsupported<T>(target:TypedRuntimeTypeTarget):T
@@ -186,14 +214,11 @@ class PythonRuntimeTypeLowering {
 		};
 	}
 
-	/**
-		Render a decoded operation. `operand` renders the tested value exactly once;
-		`className` maps an emitted declaration name to its Python identifier.
-	**/
-	public static function render(operation:PythonRuntimeTypeOperation, operand:HxExpr->String, className:String->String):String {
+	/** Render a decoded operation; `operand` renders the tested value exactly once. */
+	public static function render(operation:PythonRuntimeTypeOperation, operand:HxExpr->String):String {
 		if (operation.value == null)
 			return switch (operation.check) {
-				case EmittedClass(name): className(name);
+				case EmittedClass(name): name;
 				case _: throw "Python source target does not support runtime type operands as core type values outside a direct Std.isOfType argument";
 			};
 		final value = operand(operation.value);
@@ -204,7 +229,7 @@ class PythonRuntimeTypeLowering {
 			case StringValue: "isinstance(" + value + ", str)";
 			case DynamicValue: "(" + value + " is not None)";
 			case ArrayValue: "isinstance(" + value + ", list)";
-			case EmittedClass(name): "isinstance(" + value + ", " + className(name) + ")";
+			case EmittedClass(name): "isinstance(" + value + ", " + name + ")";
 		};
 	}
 }

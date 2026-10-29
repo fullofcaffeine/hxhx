@@ -7,7 +7,9 @@ import hxhx.Stage1Compiler.Stage1Args;
 /**
 	Unsupported runtime type operations must not replace or partially publish target files.
 	C++ class descriptors execute natively; primitive meta-values still reject.
-	Python renders user class values as its emitted classes and executes them.
+	Python renders user class values as its emitted classes; its output must match
+	upstream's Python target. Printed class-value behavior is covered by
+	M14PythonRuntimeTypeOperandsIntegrationTest through the full compiler pipeline.
 	JavaScript's admitted nominal operations and rejected core objects are exercised
 	together by M14JsRuntimeTypeOperandsTest in the same required package command.
  */
@@ -127,7 +129,7 @@ class Main {
 				continue;
 			}
 			if (check.name == "python" && cppSupported) {
-				assertPythonExecution(program, directory);
+				assertPythonExecution(source, program, directory);
 				continue;
 			}
 			final path = directory + "/existing";
@@ -167,19 +169,43 @@ class Main {
 			throw "runtime class value execution failed: " + stdout + stderr;
 	}
 
-	/** User class values are supported Python operands: the emitted program must run cleanly. */
-	static function assertPythonExecution(program:MacroExpandedProgram, directory:String):Void {
+	/**
+		User class values are supported Python operands: the emitted program must
+		print exactly what upstream Haxe's Python target prints for the same source.
+	**/
+	static function assertPythonExecution(source:String, program:MacroExpandedProgram, directory:String):Void {
+		sys.FileSystem.createDirectory(directory + "/upstream");
+		sys.io.File.saveContent(directory + "/upstream/Main.hx", source);
+		if (Sys.command("haxe", [
+			"-cp",
+			directory + "/upstream",
+			"-main",
+			"Main",
+			"-python",
+			directory + "/upstream/main.py"
+		]) != 0)
+			throw "upstream Python compilation failed for a runtime class value fixture";
+		final expected = pythonOutput(directory + "/upstream/main.py");
 		final path = directory + "/main.py";
 		SourceTargetCommon.emitTarget(Python, program, new BackendContext(directory, path, "Main", false, new haxe.ds.StringMap()));
+		final actual = pythonOutput(path);
+		if (actual != expected)
+			throw "Python runtime class value behavior differs from upstream: " + actual + " != " + expected;
+		for (file in ["upstream/Main.hx", "upstream/main.py", "main.py"])
+			sys.FileSystem.deleteFile(directory + "/" + file);
+		sys.FileSystem.deleteDirectory(directory + "/upstream");
+		sys.FileSystem.deleteDirectory(directory);
+	}
+
+	static function pythonOutput(path:String):String {
 		final process = new sys.io.Process("python3", [path]);
 		final stdout = process.stdout.readAll().toString();
 		final stderr = process.stderr.readAll().toString();
 		final code = process.exitCode();
 		process.close();
-		if (code != 0 || stdout != "" || stderr != "")
+		if (code != 0 || stderr != "")
 			throw "Python runtime class value execution failed: " + stdout + stderr;
-		sys.FileSystem.deleteFile(path);
-		sys.FileSystem.deleteDirectory(directory);
+		return stdout;
 	}
 
 	/** Independently check descriptor identity and effects on both sides of a discarded class value. */

@@ -296,7 +296,7 @@ class SourceTargetCommon {
 		without the declaration-only rejection. Other targets keep that rejection.
 	**/
 	static function backendDeclaration(target:SourceNativeTarget, typed:TypedModule):HxModuleDecl
-		return target == Python ? typed.getBackendStructureDeclaration() : typed.getBackendDeclaration();
+		return target == Python ? typed.getPythonStructureDeclaration() : typed.getBackendDeclaration();
 
 	static function findMainModule(target:SourceNativeTarget, program:GenIrProgram,
 			context:BackendContext):Null<{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl}> {
@@ -1227,7 +1227,7 @@ class SourceTargetCommon {
 		if (pythonRuntimeType != null) {
 			if (target != Python)
 				throw "Python runtime type operation reached a different target";
-			return PythonRuntimeTypeLowering.render(pythonRuntimeType, operand -> renderExprWithFrame(frame, operand), sanitizePythonIdentifier);
+			return PythonRuntimeTypeLowering.render(pythonRuntimeType, operand -> renderExprWithFrame(frame, operand));
 		}
 		if (target == Python && TypedRuntimeTypeSource.isMarker(expr))
 			throw "Python runtime type operand reached rendering without its exact typed projection";
@@ -14172,8 +14172,9 @@ class SourceTargetCommon {
 				return;
 			}
 			for (cls in HxModuleDecl.getClasses(moduleDecl)) {
+				final emittedName = pythonEmittedClassName(filePath, cls);
 				final className = sanitizePythonIdentifier(HxClassDecl.getName(cls));
-				if (isCompileTimeOnlySupportClass(cls)) {
+				if (emittedName == null) {
 					if (HxModuleDecl.getPackagePath(moduleDecl) == "unit" && className == "UnitBuilder")
 						sawUnitBuilderMacro = true;
 					if (HxModuleDecl.getPackagePath(moduleDecl) == "unit" && className == "TestIssues")
@@ -14189,7 +14190,7 @@ class SourceTargetCommon {
 		}
 		appendDeclClasses(decl, "");
 		for (typed in program.getTypedModules())
-			appendDeclClasses(typed.getBackendStructureDeclaration(), typed.getParsed().getFilePath());
+			appendDeclClasses(typed.getPythonStructureDeclaration(), typed.getParsed().getFilePath());
 		final pendingNames = new Map<String, Bool>();
 		var needsValueExceptionBase = false;
 		var needsTypeNameHelpers = false;
@@ -17427,8 +17428,16 @@ class SourceTargetCommon {
 		return specializations;
 	}
 
-	/** Standard-library modules supply declarations only; source targets do not render their classes. */
-	public static function isStdSourceFile(filePath:String):Bool {
+	/**
+		The single rule for which declarations Python renders as classes: a class
+		from a non-library module that is not compile-time-only support. Returns
+		its Python class name, which is also the key Python deduplicates by (the
+		first declaration with a name wins), or null when Python emits no class.
+	**/
+	public static function pythonEmittedClassName(filePath:String, cls:HxClassDecl):Null<String>
+		return isStdSourceFile(filePath) || isCompileTimeOnlySupportClass(cls) ? null : sanitizePythonIdentifier(HxClassDecl.getName(cls));
+
+	static function isStdSourceFile(filePath:String):Bool {
 		if (filePath == null || filePath.length == 0)
 			return false;
 		final normalized = StringTools.replace(filePath, "\\", "/");

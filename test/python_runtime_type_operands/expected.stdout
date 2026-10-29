@@ -131,3 +131,11 @@
 static initializer=true
 instance initializer=false
 class value=true
+class value passed=true
+inline Dog=true
+inline Int=true
+inline String=false
+closure Dog=true
+closure Animal=false
+arrow String=true
+arrow Int=false
