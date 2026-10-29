@@ -4487,6 +4487,20 @@ class EmitterStage {
 				final rbInt = nullableRight == "primitive:Int" ? backend.ocaml.Stage3OcamlNullablePrimitive.unwrap(nullableRight, rb) : rb;
 				final nullableEquality = (equality == null || (op != "==" && op != "!=")) ? null : backend.ocaml.Stage3OcamlNullablePrimitive.equality(equality,
 					la, rb);
+				// Integer arithmetic: a nullable operand is unwrapped only after both operands ran.
+				function intArithmetic(binop:String):String {
+					if (nullableLeft != "primitive:Int" && nullableRight != "primitive:Int")
+						return intBinopCallStage3(binop, laInt, rbInt);
+					return backend.ocaml.Stage3OcamlNullablePrimitive.orderedArithmetic({
+						left: la,
+						leftInner: nullableLeft,
+						right: rb,
+						rightInner: nullableRight,
+						asFloat: false,
+						names: currentFunctionLocalOcamlNames,
+						body: (left, right) -> intBinopCallStage3(binop, left, right)
+					});
+				}
 				function exprToOcamlAsFloat(e:HxExpr):String {
 					// Best-effort numeric coercion: when Haxe mixes Int/Float, it promotes to Float.
 					return switch (e) {
@@ -4508,6 +4522,20 @@ class EmitterStage {
 						case _:
 							exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 					}
+				}
+				// Float arithmetic: operands run left to right, then a nullable one is unwrapped.
+				function floatArithmetic(body:(String, String) -> String):String {
+					if (nullableLeft == null && nullableRight == null)
+						return body(exprToOcamlAsFloat(a), exprToOcamlAsFloat(b));
+					return backend.ocaml.Stage3OcamlNullablePrimitive.orderedArithmetic({
+						left: nullableLeft != null ? la : exprToOcamlAsFloat(a),
+						leftInner: nullableLeft,
+						right: nullableRight != null ? rb : exprToOcamlAsFloat(b),
+						rightInner: nullableRight,
+						asFloat: true,
+						names: currentFunctionLocalOcamlNames,
+						body: body
+					});
 				}
 
 				function coerceNullableBoolIdent(expr:HxExpr, rendered:String):String {
@@ -4640,16 +4668,14 @@ class EmitterStage {
 							final canFloat = (op == "+" || op == "-" || op == "*" || op == "/");
 							if (op == "%") {
 								if (aIsF || bIsF) {
-									final fa = exprToOcamlAsFloat(a);
-									final fb = exprToOcamlAsFloat(b);
-									"(mod_float (" + fa + ") (" + fb + "))";
+									floatArithmetic((left, right) -> "(mod_float (" + left + ") (" + right + "))");
 								} else if (aIsI && bIsI) {
-									intBinopCallStage3("%", laInt, rbInt);
+									intArithmetic("%");
 								} else if ((aIsI && stage3IsUnknownNumericIdent(b, tyByIdentRaw))
 									|| (bIsI && stage3IsUnknownNumericIdent(a, tyByIdentRaw))) {
-									intBinopCallStage3("%", laInt, rbInt);
+									intArithmetic("%");
 								} else if (allowNumericFallback) {
-									intBinopCallStage3("%", laInt, rbInt);
+									intArithmetic("%");
 								} else {
 									"(Obj.magic 0)";
 								}
@@ -4661,16 +4687,14 @@ class EmitterStage {
 									case "/": "/.";
 									case _: op;
 								}
-								final fa = exprToOcamlAsFloat(a);
-								final fb = exprToOcamlAsFloat(b);
-								"((" + fa + ") " + fop + " (" + fb + "))";
+								floatArithmetic((left, right) -> "((" + left + ") " + fop + " (" + right + "))");
 							} else if (aIsI && bIsI) {
-								intBinopCallStage3(op, laInt, rbInt);
+								intArithmetic(op);
 							} else if ((aIsI && stage3IsUnknownNumericIdent(b, tyByIdentRaw))
 								|| (bIsI && stage3IsUnknownNumericIdent(a, tyByIdentRaw))) {
-								intBinopCallStage3(op, laInt, rbInt);
+								intArithmetic(op);
 							} else if (allowNumericFallback) {
-								intBinopCallStage3(op, laInt, rbInt);
+								intArithmetic(op);
 							} else {
 								"(Obj.magic 0)";
 							}

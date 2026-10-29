@@ -69,6 +69,48 @@ function unwrap(inner:String, value:String):String {
 }
 
 /**
+	Evaluate both arithmetic operands, in Haxe's left-to-right order, before a
+	nullable operand is unwrapped. Haxe runs both operands before the arithmetic
+	reads a null, so `n + side()` and `n += side()` with a null `n` still call
+	`side()` and only then raise Null Access. `left` and `right` are rendered
+	operands (the carrier for a nullable side); `leftInner` and `rightInner` name
+	the carrier of each nullable side or are null. `body` receives the readable
+	operands: a nullable side is unwrapped (and widened to float when `asFloat`
+	and the carrier holds an Int); a concrete side is passed by its bound name.
+ */
+function orderedArithmetic(input:{
+	left:String,
+	leftInner:Null<String>,
+	right:String,
+	rightInner:Null<String>,
+	asFloat:Bool,
+	names:Stage3OcamlLocalNames,
+	body:(String, String) -> String
+}):String {
+	if (input.names == null)
+		throw "ordered nullable arithmetic requires a local naming owner";
+	final left = input.names.internalName("__hx_arith_left");
+	final right = input.names.internalName("__hx_arith_right");
+	function readable(inner:Null<String>, bound:String):String {
+		if (inner == null)
+			return bound;
+		final value = unwrap(inner, bound);
+		return input.asFloat && inner == INT ? "float_of_int (" + value + ")" : value;
+	}
+	return "(let "
+		+ left
+		+ " = ("
+		+ input.left
+		+ ") in let "
+		+ right
+		+ " = ("
+		+ input.right
+		+ ") in "
+		+ input.body(readable(input.leftInner, left), readable(input.rightInner, right))
+		+ ")";
+}
+
+/**
 	Pass a nullable Int carrier into a handwritten runtime intrinsic slot that
 	is declared `int` but checks `HxRuntime.is_null (Obj.repr i)` before any
 	integer use (HxString.indexOf and friends). The carrier's bits are exactly

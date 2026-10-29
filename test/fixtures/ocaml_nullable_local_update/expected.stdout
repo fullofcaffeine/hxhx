@@ -13,3 +13,15 @@ compound Null Access
 null
 nested decrement threw
 null
+float postfix Null Access
+float compound Null Access
+null
+side 1
+side compound threw
+side 2
+side sum threw
+side float 3
+side float compound threw
+side 4
+side 5
+3 6 5

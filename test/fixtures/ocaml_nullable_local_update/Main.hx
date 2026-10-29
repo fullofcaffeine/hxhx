@@ -5,13 +5,32 @@
 	Each update reads the stored value, computes the next number, and stores it
 	back. A postfix update produces the old number and a prefix update the new
 	one; both are plain numbers rather than nullable values. Updating a null
-	`Null<Int>` throws before anything is stored, so the local stays null.
-	Upstream Haxe's interpreter reports an increment as "Null Access" but a
-	decrement as "Invalid operation: null - 1"; the native program raises Null
-	Access for both, so the decrement case prints only that it threw.
+	`Null<Int>` or `Null<Float>` throws before anything is stored, so the local
+	stays null. A right operand still runs before the throw.
+
+	Upstream Haxe's interpreter reports "Null Access" only when a null is
+	stepped by the literal 1 (`n++`, `++n`, `n += 1`). Other shapes, such as a
+	decrement or `n += 2`, report "Invalid operation: null - 1" or similar. The
+	native program raises Null Access for every null update, so those other
+	cases print only that the update threw.
 	Upstream Haxe and the native OCaml program must print the same lines.
  */
 class Main {
+	// Counted through an array: native static variable increments are a separate gap (haxe_ocaml-nq65n).
+	static final sideCalls:Array<Int> = [];
+
+	static function side():Int {
+		sideCalls.push(1);
+		Sys.println("side " + Std.string(sideCalls.length));
+		return 2;
+	}
+
+	static function sideFloat():Float {
+		sideCalls.push(1);
+		Sys.println("side float " + Std.string(sideCalls.length));
+		return 0.5;
+	}
+
 	static function main():Void {
 		var count:Null<Int> = 4;
 		final old:Int = count++;
@@ -78,5 +97,43 @@ class Main {
 			Sys.println("nested decrement threw");
 		}
 		Sys.println(Std.string(missingNested));
+
+		var missingRatio:Null<Float> = null;
+		try {
+			missingRatio++;
+			Sys.println("float postfix produced " + Std.string(missingRatio));
+		} catch (error:Dynamic) {
+			Sys.println("float postfix " + Std.string(error));
+		}
+		try {
+			missingRatio += 1;
+			Sys.println("float compound produced " + Std.string(missingRatio));
+		} catch (error:Dynamic) {
+			Sys.println("float compound " + Std.string(error));
+		}
+		Sys.println(Std.string(missingRatio));
+
+		try {
+			missing += side();
+			Sys.println("side compound produced " + Std.string(missing));
+		} catch (error:Dynamic) {
+			Sys.println("side compound threw");
+		}
+		try {
+			final sum = missing + side();
+			Sys.println("side sum produced " + Std.string(sum));
+		} catch (error:Dynamic) {
+			Sys.println("side sum threw");
+		}
+		try {
+			missingRatio += sideFloat();
+			Sys.println("side float compound produced " + Std.string(missingRatio));
+		} catch (error:Dynamic) {
+			Sys.println("side float compound threw");
+		}
+		var present:Null<Int> = 1;
+		present += side();
+		final presentSum = present * side();
+		Sys.println(Std.string(present) + " " + Std.string(presentSum) + " " + Std.string(sideCalls.length));
 	}
 }
