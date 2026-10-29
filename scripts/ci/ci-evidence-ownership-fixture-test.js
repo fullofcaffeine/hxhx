@@ -59,6 +59,27 @@ function syntheticRun(check, id, overrides = {}) {
   }
 }
 
+/**
+ * Replay times for an open stale-success incident.
+ *
+ * The baseline replays each open incident's exact run so the evaluator can
+ * match it to its owner. Matching uses the run id, attempt, and SHA, not its
+ * timestamps. These fixtures evaluate at the fixed clock `fixedNow`, which
+ * can be earlier than a real incident's run. An exact copy of a stale run
+ * would then look fresh, and the baseline would report a "newer success"
+ * instead of the stale state that the incident records. Move only the
+ * replayed timestamps to just outside the check's freshness window at
+ * `fixedNow`. Other evidence states keep their recorded times.
+ */
+function staleReplayTimes(check, incident) {
+  if (incident.evidenceState !== 'stale-success') return {}
+  const updatedMs = Date.parse(fixedNow) - (check.freshnessHours + 1) * 3600000
+  return {
+    createdAt: new Date(updatedMs - 600000).toISOString(),
+    updatedAt: new Date(updatedMs).toISOString()
+  }
+}
+
 function baselineSnapshot(manifest) {
   const runs = {}
   let id = 99000000000
@@ -75,6 +96,7 @@ function baselineSnapshot(manifest) {
     if (incident && incident.run) {
       runs[check.id] = [{
         ...incident.run,
+        ...staleReplayTimes(check, incident),
         name: check.name,
         status: 'completed'
       }]
@@ -298,6 +320,71 @@ function main() {
       runEvaluator(productionManifestPath, productionBeadsPath, stalePath),
       'stale-success',
       'stale scheduled success'
+    )
+
+    // An open stale-success incident whose real run is newer than the fixed
+    // fixture clock must still validate in the baseline replay.
+    const kpi = manifest.checks.find(check => check.id === 'kpi-manual-weekly')
+    assert(kpi && kpi.kind === 'release-evidence', 'production manifest is missing kpi-manual-weekly')
+    const staleOwnedManifest = structuredClone(manifest)
+    staleOwnedManifest.incidents = staleOwnedManifest.incidents.filter(incident => (
+      incident.state !== 'open' || incident.checkId !== kpi.id
+    ))
+    const staleOwnedRun = syntheticRun(kpi, 99100000011, {
+      createdAt: '2026-08-16T00:15:38Z',
+      updatedAt: '2026-08-16T00:19:05Z'
+    })
+    staleOwnedManifest.incidents.push({
+      id: 'fixture-stale-kpi',
+      checkId: kpi.id,
+      state: 'open',
+      evidenceState: 'stale-success',
+      failureClass: 'repository-policy',
+      bead: 'fixture-stale-owner',
+      recordedAt: fixedNow,
+      run: {
+        id: staleOwnedRun.id,
+        attempt: staleOwnedRun.attempt,
+        headSha: staleOwnedRun.headSha,
+        event: staleOwnedRun.event,
+        conclusion: staleOwnedRun.conclusion,
+        createdAt: staleOwnedRun.createdAt,
+        updatedAt: staleOwnedRun.updatedAt,
+        url: staleOwnedRun.url
+      },
+      reproductionOrEvidence: 'A synthetic manual report succeeded but is older than its freshness window.',
+      closureGate: 'A later manual report run must complete successfully within the freshness window.'
+    })
+    const staleOwnedManifestPath = path.join(tmpDir, 'stale-owned.manifest.json')
+    writeJson(staleOwnedManifestPath, staleOwnedManifest)
+    const staleOwnedBeadsPath = path.join(tmpDir, 'stale-owned.issues.jsonl')
+    fs.writeFileSync(staleOwnedBeadsPath, `${fs.readFileSync(productionBeadsPath, 'utf8').trim()}\n${JSON.stringify({
+      id: 'fixture-stale-owner',
+      title: 'Synthetic stale report owner',
+      status: 'open',
+      priority: 1,
+      comments: [{
+        text: ['fixture-stale-kpi', String(staleOwnedRun.id), staleOwnedRun.headSha, 'repository-policy'].join(' ')
+      }]
+    })}\n`)
+    const staleOwnedSnapshotPath = path.join(tmpDir, 'stale-owned.snapshot.json')
+    const staleOwnedReportPath = path.join(tmpDir, 'stale-owned.report.json')
+    writeJson(staleOwnedSnapshotPath, baselineSnapshot(staleOwnedManifest))
+    const staleOwnedResult = runEvaluator(
+      staleOwnedManifestPath,
+      staleOwnedBeadsPath,
+      staleOwnedSnapshotPath,
+      staleOwnedReportPath
+    )
+    assert(
+      staleOwnedResult.status === 0,
+      `baseline replay of an open stale-success incident did not validate\n${staleOwnedResult.stderr}`
+    )
+    const staleOwnedFinding = JSON.parse(fs.readFileSync(staleOwnedReportPath, 'utf8')).findings
+      .find(finding => finding.checkId === kpi.id)
+    assert(
+      staleOwnedFinding.state === 'stale-success' && staleOwnedFinding.ownerIncident === 'fixture-stale-kpi',
+      'baseline replay must observe the open stale-success incident as stale and owned'
     )
 
     const crossSha = structuredClone(baseSnapshot)
