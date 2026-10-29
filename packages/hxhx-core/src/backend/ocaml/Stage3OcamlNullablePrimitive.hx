@@ -27,14 +27,18 @@ final INT = "primitive:Int";
 
 final FLOAT = "primitive:Float";
 
-/** Return the inner primitive key when the exact type is a nullable Int or Float. */
+/**
+	Return the inner primitive key when the exact type is a nullable Int or Float.
+	Nested wrappers such as `Null<Null<Int>>` hold the same values as one layer
+	(a number or null), so they share the one-layer carrier.
+ */
 function innerPrimitive(type:Null<TyType>):Null<String> {
 	if (type == null)
 		return null;
 	final revealed = TyAliasExpansion.reveal(type);
 	if (!revealed.isNullable())
 		return null;
-	final key = TyAliasExpansion.reveal(revealed.unwrapNull()).getSemanticKey();
+	final key = TyAliasExpansion.revealNonNullable(revealed).getSemanticKey();
 	return key == INT || key == FLOAT ? key : null;
 }
 
@@ -62,6 +66,48 @@ function unwrap(inner:String, value:String):String {
 		case "primitive:Float": "HxRuntime.nullable_float_unwrap (" + value + ")";
 		case _: throw "unsupported nullable primitive carrier: " + inner;
 	};
+}
+
+/**
+	Evaluate both arithmetic operands, in Haxe's left-to-right order, before a
+	nullable operand is unwrapped. Haxe runs both operands before the arithmetic
+	reads a null, so `n + side()` and `n += side()` with a null `n` still call
+	`side()` and only then raise Null Access. `left` and `right` are rendered
+	operands (the carrier for a nullable side); `leftInner` and `rightInner` name
+	the carrier of each nullable side or are null. `body` receives the readable
+	operands: a nullable side is unwrapped (and widened to float when `asFloat`
+	and the carrier holds an Int); a concrete side is passed by its bound name.
+ */
+function orderedArithmetic(input:{
+	left:String,
+	leftInner:Null<String>,
+	right:String,
+	rightInner:Null<String>,
+	asFloat:Bool,
+	names:Stage3OcamlLocalNames,
+	body:(String, String) -> String
+}):String {
+	if (input.names == null)
+		throw "ordered nullable arithmetic requires a local naming owner";
+	final left = input.names.internalName("__hx_arith_left");
+	final right = input.names.internalName("__hx_arith_right");
+	function readable(inner:Null<String>, bound:String):String {
+		if (inner == null)
+			return bound;
+		final value = unwrap(inner, bound);
+		return input.asFloat && inner == INT ? "float_of_int (" + value + ")" : value;
+	}
+	return "(let "
+		+ left
+		+ " = ("
+		+ input.left
+		+ ") in let "
+		+ right
+		+ " = ("
+		+ input.right
+		+ ") in "
+		+ input.body(readable(input.leftInner, left), readable(input.rightInner, right))
+		+ ")";
 }
 
 /**

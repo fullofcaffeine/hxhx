@@ -188,7 +188,7 @@ let nullable_int_unwrap (v : Obj.t) : int =
 
 let nullable_float_unwrap (v : Obj.t) : float =
   if is_null v then
-    failwith "Null<Float> unwrap"
+    raise (Hx_exception (Obj.repr "Null Access", [ "String"; "Dynamic" ]))
   else
     Obj.obj v
 

@@ -420,6 +420,12 @@ class Main { static function main():Void { var value:Wrapper = new Payload(); va
 			"    var nullablePostfixResult = nullableValue++;",
 			"    var nullablePrefixResult = ++nullableValue;",
 			"    shouldFail(nullableValue++);",
+			"    var nullableCompoundResult = (nullableValue += 1);",
+			"    var nullableFloat:Null<Float> = 1.5;",
+			"    var nullableFloatPrefixResult = --nullableFloat;",
+			"    var nestedValue:Null<Null<Int>> = 4;",
+			"    var nestedCopy = nestedValue;",
+			"    var nestedPostfixResult = nestedValue++;",
 			"  }",
 			"}",
 		].join("\n");
@@ -543,16 +549,21 @@ class Main { static function main():Void { var value:Wrapper = new Payload(); va
 		final ordinaryControl = initializer(main, "ordinaryControl");
 		assertTrue(ordinaryControl.getTag() == TypedExprTag.Unary && ordinaryControl.getDeclaration() == null,
 			"ordinary class acquired operator behavior from a similarly named method");
+		// Haxe 4.3.7 types an increment or decrement of a nullable local as the
+		// underlying number (`$type(n++)` reports Int and `var old = n++; old = null;`
+		// is rejected on static targets), while a compound assignment keeps the
+		// nullable destination type. Nested `Null<Null<Int>>` declarations keep their
+		// written type and update like one nullable layer.
 		final nullablePostfixResult = initializer(main, "nullablePostfixResult");
 		final nullablePrefixResult = initializer(main, "nullablePrefixResult");
 		assertTrue(nullablePostfixResult.getTag() == TypedExprTag.Unary
 			&& nullablePostfixResult.getUnaryFixity() == HxUnaryFixity.Postfix
-			&& nullablePostfixResult.getType().getSemanticKey() == "nullable:primitive:Int",
-			"nullable postfix update did not retain its ordinary Haxe expression type");
+			&& nullablePostfixResult.getType().getSemanticKey() == "primitive:Int",
+			"nullable postfix update did not produce the underlying Int value");
 		assertTrue(nullablePrefixResult.getTag() == TypedExprTag.Unary
 			&& nullablePrefixResult.getUnaryFixity() == HxUnaryFixity.Prefix
-			&& nullablePrefixResult.getType().getSemanticKey() == "nullable:primitive:Int",
-			"nullable prefix update did not retain its ordinary Haxe expression type");
+			&& nullablePrefixResult.getType().getSemanticKey() == "primitive:Int",
+			"nullable prefix update did not produce the underlying Int value");
 		var nullableCall:Null<TypedExpr> = null;
 		for (statement in main.getBody().getStatements())
 			for (expression in statement.getExpressions()) {
@@ -563,8 +574,15 @@ class Main { static function main():Void { var value:Wrapper = new Payload(); va
 		assertTrue(nullableCall != null
 			&& nullableCall.getExpressions().length == 2
 			&& nullableCall.getExpressions()[1].getTag() == TypedExprTag.Unary
-			&& nullableCall.getExpressions()[1].getType().getSemanticKey() == "nullable:primitive:Int",
+			&& nullableCall.getExpressions()[1].getType().getSemanticKey() == "primitive:Int",
 			"nullable postfix expression was not preserved through the validation call boundary");
+		assertTrue(initializer(main, "nullableCompoundResult").getType().getSemanticKey() == "nullable:primitive:Int",
+			"nullable compound assignment lost its nullable destination type");
+		assertTrue(initializer(main, "nullableFloatPrefixResult").getType().getSemanticKey() == "primitive:Float",
+			"nullable Float prefix update did not produce the underlying Float value");
+		assertTrue(initializer(main, "nestedCopy").getType().getDisplay() == "Null<Null<Int>>", "nested nullable declaration did not keep its written type");
+		assertTrue(initializer(main, "nestedPostfixResult").getType().getSemanticKey() == "primitive:Int",
+			"nested nullable postfix update did not produce the underlying Int value");
 
 		typingFailure([
 			"abstract Missing(Int) { public inline function new(value:Int) this = value; }",

@@ -4370,23 +4370,25 @@ class EmitterStage {
 				if (op == HxUnaryOperator.Increment || op == HxUnaryOperator.Decrement) {
 					switch (expr) {
 						case EIdent(name) if (isMutableLocalRefIdent(name)):
-							final ident = requireOcamlFunctionLocalValueIdent(name);
-							final isInt64 = stage3IsInt64Expr(expr, tyByIdentRaw);
-							final binop = op == HxUnaryOperator.Increment ? EmitterNumericUpdate.operation(isInt64,
-								true) : EmitterNumericUpdate.operation(isInt64, false);
-							final one = EmitterNumericUpdate.one(isInt64);
-							final resultName = fixity == HxUnaryFixity.Postfix ? "__hx_old" : "__hx_next";
-							"(let __hx_old = (!"
-							+ ident
-							+ ") in let __hx_next = "
-							+ binop
-							+ " __hx_old "
-							+ one
-							+ " in ("
-							+ ident
-							+ " := __hx_next; "
-							+ resultName
-							+ "))";
+							final carrier = stage3NullableNumericLocal(expr);
+							final exact = exactFunctionLocalType(name);
+							final kind = if (stage3IsInt64Expr(expr, tyByIdentRaw)) {
+								EmitterNumericUpdate.EmitterNumericUpdateKind.Int64Step;
+							} else if (carrier == backend.ocaml.Stage3OcamlNullablePrimitive.FLOAT
+								|| (carrier == null
+									&& exact != null
+									&& TyAliasExpansion.reveal(exact).getSemanticKey() == "primitive:Float")) {
+								EmitterNumericUpdate.EmitterNumericUpdateKind.FloatStep;
+							} else {
+								EmitterNumericUpdate.EmitterNumericUpdateKind.IntStep;
+							};
+							EmitterNumericUpdate.local({
+								ident: requireOcamlFunctionLocalValueIdent(name),
+								kind: kind,
+								increment: op == HxUnaryOperator.Increment,
+								postfix: fixity == HxUnaryFixity.Postfix,
+								carrier: carrier
+							});
 						case _:
 							"(Obj.magic 0)";
 					}
@@ -4485,6 +4487,20 @@ class EmitterStage {
 				final rbInt = nullableRight == "primitive:Int" ? backend.ocaml.Stage3OcamlNullablePrimitive.unwrap(nullableRight, rb) : rb;
 				final nullableEquality = (equality == null || (op != "==" && op != "!=")) ? null : backend.ocaml.Stage3OcamlNullablePrimitive.equality(equality,
 					la, rb);
+				// Integer arithmetic: a nullable operand is unwrapped only after both operands ran.
+				function intArithmetic(binop:String):String {
+					if (nullableLeft != "primitive:Int" && nullableRight != "primitive:Int")
+						return intBinopCallStage3(binop, laInt, rbInt);
+					return backend.ocaml.Stage3OcamlNullablePrimitive.orderedArithmetic({
+						left: la,
+						leftInner: nullableLeft,
+						right: rb,
+						rightInner: nullableRight,
+						asFloat: false,
+						names: currentFunctionLocalOcamlNames,
+						body: (left, right) -> intBinopCallStage3(binop, left, right)
+					});
+				}
 				function exprToOcamlAsFloat(e:HxExpr):String {
 					// Best-effort numeric coercion: when Haxe mixes Int/Float, it promotes to Float.
 					return switch (e) {
@@ -4506,6 +4522,20 @@ class EmitterStage {
 						case _:
 							exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 					}
+				}
+				// Float arithmetic: operands run left to right, then a nullable one is unwrapped.
+				function floatArithmetic(body:(String, String) -> String):String {
+					if (nullableLeft == null && nullableRight == null)
+						return body(exprToOcamlAsFloat(a), exprToOcamlAsFloat(b));
+					return backend.ocaml.Stage3OcamlNullablePrimitive.orderedArithmetic({
+						left: nullableLeft != null ? la : exprToOcamlAsFloat(a),
+						leftInner: nullableLeft,
+						right: nullableRight != null ? rb : exprToOcamlAsFloat(b),
+						rightInner: nullableRight,
+						asFloat: true,
+						names: currentFunctionLocalOcamlNames,
+						body: body
+					});
 				}
 
 				function coerceNullableBoolIdent(expr:HxExpr, rendered:String):String {
@@ -4638,16 +4668,14 @@ class EmitterStage {
 							final canFloat = (op == "+" || op == "-" || op == "*" || op == "/");
 							if (op == "%") {
 								if (aIsF || bIsF) {
-									final fa = exprToOcamlAsFloat(a);
-									final fb = exprToOcamlAsFloat(b);
-									"(mod_float (" + fa + ") (" + fb + "))";
+									floatArithmetic((left, right) -> "(mod_float (" + left + ") (" + right + "))");
 								} else if (aIsI && bIsI) {
-									intBinopCallStage3("%", laInt, rbInt);
+									intArithmetic("%");
 								} else if ((aIsI && stage3IsUnknownNumericIdent(b, tyByIdentRaw))
 									|| (bIsI && stage3IsUnknownNumericIdent(a, tyByIdentRaw))) {
-									intBinopCallStage3("%", laInt, rbInt);
+									intArithmetic("%");
 								} else if (allowNumericFallback) {
-									intBinopCallStage3("%", laInt, rbInt);
+									intArithmetic("%");
 								} else {
 									"(Obj.magic 0)";
 								}
@@ -4659,16 +4687,14 @@ class EmitterStage {
 									case "/": "/.";
 									case _: op;
 								}
-								final fa = exprToOcamlAsFloat(a);
-								final fb = exprToOcamlAsFloat(b);
-								"((" + fa + ") " + fop + " (" + fb + "))";
+								floatArithmetic((left, right) -> "((" + left + ") " + fop + " (" + right + "))");
 							} else if (aIsI && bIsI) {
-								intBinopCallStage3(op, laInt, rbInt);
+								intArithmetic(op);
 							} else if ((aIsI && stage3IsUnknownNumericIdent(b, tyByIdentRaw))
 								|| (bIsI && stage3IsUnknownNumericIdent(a, tyByIdentRaw))) {
-								intBinopCallStage3(op, laInt, rbInt);
+								intArithmetic(op);
 							} else if (allowNumericFallback) {
-								intBinopCallStage3(op, laInt, rbInt);
+								intArithmetic(op);
 							} else {
 								"(Obj.magic 0)";
 							}
@@ -6145,6 +6171,14 @@ class EmitterStage {
 			}
 			if (rhsCode == null)
 				return null;
+			// A compound update of a nullable Int/Float local computes a plain number from
+			// the checked unwrap of the old value; store it back in the nullable carrier.
+			final compoundCarrier = op == "=" ? null : backend.ocaml.Stage3OcamlNullablePrimitive.innerPrimitive(destination);
+			if (compoundCarrier != null) {
+				if (rhsCode == "(Obj.magic 0)")
+					throw "unsupported OCaml nullable compound assignment: " + op;
+				rhsCode = backend.ocaml.Stage3OcamlNullablePrimitive.box(compoundCarrier, rhsCode);
+			}
 			final ident = requireOcamlFunctionLocalValueIdent(name);
 			return "(let __hx_v = (" + rhsCode + ") in (" + ident + " := __hx_v; ()))";
 		}
