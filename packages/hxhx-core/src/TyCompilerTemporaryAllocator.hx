@@ -36,4 +36,12 @@ class TyCompilerTemporaryAllocator {
 		return new TyLocalBinding(TyLocalId.forCompilerTemporary(functionIdentity, passIdentity, ordinal, generatedName), generatedName, type,
 			CompilerTemporary);
 	}
+
+	/** Freshen an authored local or callable parameter without changing its semantic declaration role. */
+	public function copy(source:TyLocalBinding, type:TyType):TyLocalBinding {
+		final ordinal = nextOrdinal++;
+		final name = generatedNamePrefix + "copied_" + ordinal;
+		return new TyLocalBinding(TyLocalId.forLoweredDeclaration(functionIdentity, passIdentity, ordinal, name, source.getKind()), name, type,
+			source.getKind());
+	}
 }

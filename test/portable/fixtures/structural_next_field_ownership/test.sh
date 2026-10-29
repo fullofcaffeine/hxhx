@@ -5,8 +5,8 @@ node <<'NODE'
 const fs = require('fs')
 
 const lowering = JSON.parse(fs.readFileSync('out/ocaml_lowering_report.json', 'utf8'))
-if (lowering.schemaVersion !== 86
-	|| lowering.structuralFieldModel !== 'typed-structural-field-overlap-v4') {
+if (lowering.schemaVersion !== 95
+	|| lowering.structuralFieldModel !== 'typed-structural-field-overlap-v5') {
 	throw new Error('the lowering report has no current typed structural-field model')
 }
 
@@ -32,7 +32,7 @@ for (const field of storedFields) {
 		|| field.receiverCarrierTypeId !== 'Obj.t'
 		|| field.runtimeModule !== 'HxAnon'
 		|| field.runtimeOperation !== (field.operation === 'write-stored-field' ? 'set' : 'get')
-		|| field.pipelineRevision !== 'ocaml-function-plans-v113') {
+		|| field.pipelineRevision !== 'ocaml-function-plans-v119') {
 		throw new Error(`stored structural field ${field.id} is not fully sealed`)
 	}
 	const requirements = lowering.runtimeRequirements.filter(requirement => requirement.decisionId === field.id)
@@ -98,7 +98,7 @@ for (const field of tupleFields) {
 		|| !target.iteratorLocalId.startsWith('lexical-local-v1:')
 		|| !target.pairLocalId.startsWith('lexical-local-v1:')
 		|| target.proofId !== 'standard-map-key-value-tuple-projection-v3'
-		|| field.pipelineRevision !== 'ocaml-function-plans-v113') {
+		|| field.pipelineRevision !== 'ocaml-function-plans-v119') {
 		throw new Error(`Map-pair projection ${field.id} has no complete typed producer proof`)
 	}
 	if (lowering.runtimeRequirements.some(requirement => requirement.decisionId === field.id))
@@ -163,15 +163,22 @@ repo_root="$(cd ../../../.. && pwd)"
 fixture_root="$PWD"
 inspection_report="$(mktemp)"
 lowering_backup="$(mktemp)"
+inspector_dir="$(mktemp -d)"
 cp out/ocaml_lowering_report.json "$lowering_backup"
-trap 'cp "$lowering_backup" out/ocaml_lowering_report.json; rm -f "$inspection_report" "$lowering_backup"' EXIT
+trap 'cp "$lowering_backup" out/ocaml_lowering_report.json; rm -f "$inspection_report" "$lowering_backup"; rm -rf "$inspector_dir"' EXIT
+
+# Compile the strict inspector once; each report still gets a fresh process.
+(
+	cd "$repo_root"
+	haxe -cp packages/reflaxe.ocaml/src \
+		--macro 'nullSafety("reflaxe.ocaml")' -D reflaxe_runtime \
+		-main reflaxe.ocaml.tooling.ReflaxeOcamlRun --neko "$inspector_dir/inspect.n"
+)
 
 inspect() {
 	(
 		cd "$repo_root"
-		haxe -cp packages/reflaxe.ocaml/src \
-			--macro 'nullSafety("reflaxe.ocaml")' \
-			--run reflaxe.ocaml.tooling.ReflaxeOcamlRun \
+		neko "$inspector_dir/inspect.n" \
 			inspect --project "$fixture_root" --output out --require-lowering --json
 	)
 }
@@ -180,7 +187,7 @@ inspect >"$inspection_report"
 node - "$inspection_report" <<'NODE'
 const fs = require('fs')
 const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
-if (report.schemaVersion !== 47
+if (report.schemaVersion !== 53
 	|| !report.summary?.valid
 	|| report.lowering?.structuralFields?.length < 14
 	|| report.summary.structuralFieldCount !== report.lowering.structuralFields.length) {

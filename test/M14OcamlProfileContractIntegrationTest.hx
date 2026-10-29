@@ -9,7 +9,7 @@ class M14OcamlProfileContractIntegrationTest {
 
 	static function makeContext(rawDefines:Array<String>):BackendContext {
 		final defines = HxDefineMap.fromRawDefines(rawDefines);
-		return new BackendContext("out", null, "demo.Main", false, false, defines);
+		return new BackendContext("out", null, "demo.Main", false, defines);
 	}
 
 	static function main():Void {

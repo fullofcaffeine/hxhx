@@ -37,8 +37,8 @@ class Stage3EmitSupport {
 	}
 
 	public static function emitWithBackend(backend:IBackend, expanded:MacroExpandedProgram, backendId:String, typedModuleCount:Int, outputDirAbs:String,
-			outputFileHint:Null<String>, reportedOutputDir:String, parsedMain:Null<String>, emitFullBodies:Bool, supportsCustomOutputFile:Bool,
-			supportsBuildExecutable:Bool, definesMap:haxe.ds.StringMap<String>, resources:Array<backend.BackendResource>, ?nativeLibraryPaths:Array<String>,
+			outputFileHint:Null<String>, reportedOutputDir:String, parsedMain:Null<String>, supportsCustomOutputFile:Bool, supportsBuildExecutable:Bool,
+			definesMap:haxe.ds.StringMap<String>, resources:Array<backend.BackendResource>, ?nativeLibraryPaths:Array<String>,
 			?output:CompilationRequestOutput):EmitResult {
 		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
 			CompilationRequestOutput.writeStdoutLine(output, "stage3_driver=before_output_file_hint");
@@ -48,7 +48,7 @@ class Stage3EmitSupport {
 			CompilationRequestOutput.writeStdoutLine(output, "stage3_driver=after_output_file_hint");
 			CompilationRequestOutput.writeStdoutLine(output, "stage3_driver=before_backend_context");
 		}
-		final context = new BackendContext(outputDirAbs, admittedOutputFileHint, parsedMain, emitFullBodies, supportsBuildExecutable, definesMap, resources,
+		final context = new BackendContext(outputDirAbs, admittedOutputFileHint, parsedMain, supportsBuildExecutable, definesMap, resources,
 			nativeLibraryPaths);
 		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
 			CompilationRequestOutput.writeStdoutLine(output, "stage3_driver=after_backend_context");

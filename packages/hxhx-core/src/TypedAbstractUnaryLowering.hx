@@ -1,11 +1,7 @@
 import haxe.ds.StringMap;
 import TypedExpr.TypedExprTag;
-
-private typedef TypedUnaryPlace = {
-	final prefix:Array<TypedExpr>;
-	final read:TyType->TypedExpr;
-	final write:TypedExpr->TypedExpr;
-};
+import TypedAbstractUnaryInlinePlace.TypedUnaryPlace;
+import TypedAbstractUnaryInlinePlace.TypedInlineUnaryPlace;
 
 private typedef TypedInlineBodyState = {
 	final expressions:Array<TypedExpr>;
@@ -21,6 +17,8 @@ private typedef TypedInlineBodyState = {
 	expanded into explicit reads, writes, temporaries, and ordered expression
 	blocks. Backends therefore receive behavior that is already decided and never
 	infer mutation or prefix/postfix results from spelling.
+	Static and instance properties use exact getter/setter calls instead of the
+	abstract operator. Only instance properties need a saved receiver value.
 
 	The first supported inline subset covers local, field, and indexed places plus
 	straight-line variables, expressions, assignments, and returns. Unsupported
@@ -42,9 +40,10 @@ class TypedAbstractUnaryLowering {
 		};
 	}
 
-	static function accessorDeclaration(owner:TyNominalInfo, name:String, arity:Int):Null<TyDeclarationInfo> {
+	static function accessorDeclaration(owner:TyNominalInfo, name:String, arity:Int, isStatic:Bool):Null<TyDeclarationInfo> {
 		var selected:Null<TyDeclarationInfo> = null;
-		for (signature in owner.instanceMethodCandidates(name)) {
+		final candidates = isStatic ? owner.staticMethodCandidates(name) : owner.instanceMethodCandidates(name);
+		for (signature in candidates) {
 			if (signature.getArgs().length != arity)
 				continue;
 			final declaration = owner.declarationForSignature(signature);
@@ -55,6 +54,7 @@ class TypedAbstractUnaryLowering {
 		return selected;
 	}
 
+	/** Class-valued receivers select static accessors; instance receivers are evaluated once before either accessor runs. */
 	static function propertyPlaceFor(target:TypedExpr, index:TyperIndex, filePath:String, position:HxPos,
 			allocator:TyCompilerTemporaryAllocator):Null<TypedUnaryPlace> {
 		if (target.getTag() != TypedExprTag.FieldRead)
@@ -64,14 +64,15 @@ class TypedAbstractUnaryLowering {
 		if (texts.length != 1 || children.length != 1)
 			return null;
 		final receiver = children[0];
-		final receiverIdentity = receiver.getType().getNominalIdentity();
+		final runtimeTarget = receiver.getRuntimeTypeTarget();
+		final receiverIdentity = runtimeTarget == null ? receiver.getType().getNominalIdentity() : runtimeTarget.getDeclarationIdentity();
 		final owner = receiverIdentity == null ? null : index.getByFullName(receiverIdentity.getCanonicalName());
 		final property = owner == null ? null : owner.propertyInfo(texts[0]);
 		if (property == null || !property.usesExplicitAccessors())
 			return null;
-		if (property.getIsStatic())
+		if (property.getIsStatic() != (runtimeTarget != null))
 			throw new TyperError(filePath, position,
-				"Static abstract property increment/decrement is not supported yet: "
+				"Property update receiver does not match its static or instance declaration: "
 				+ owner.getFullName()
 				+ "."
 				+ texts[0]);
@@ -81,8 +82,8 @@ class TypedAbstractUnaryLowering {
 				+ owner.getFullName()
 				+ "."
 				+ texts[0]);
-		final getter = accessorDeclaration(owner, property.getGetterName(), 0);
-		final setter = accessorDeclaration(owner, property.getSetterName(), 1);
+		final getter = accessorDeclaration(owner, property.getGetterName(), 0, property.getIsStatic());
+		final setter = accessorDeclaration(owner, property.getSetterName(), 1, property.getIsStatic());
 		if (getter == null || setter == null)
 			throw new TyperError(filePath, position,
 				"Property update requires one exact getter and setter declaration: "
@@ -90,17 +91,20 @@ class TypedAbstractUnaryLowering {
 				+ "."
 				+ texts[0]);
 
-		final temporaryBinding = allocator.allocate("property_receiver", receiver.getType());
-		final temporaryName = temporaryBinding.getSourceName();
-		final temporary = TypedExpr.temporary(temporaryName, receiver.getType().getDisplay(), receiver, voidType(), receiver.getPosition(), temporaryBinding);
-		function receiverRead():TypedExpr
-			return TypedExpr.localRead(temporaryName, receiver.getType(), receiver.getPosition(), temporaryBinding);
+		final prefix = new Array<TypedExpr>();
+		var accessorReceiver = receiver;
+		if (!property.getIsStatic()) {
+			final temporaryBinding = allocator.allocate("property_receiver", receiver.getType());
+			final temporaryName = temporaryBinding.getSourceName();
+			prefix.push(TypedExpr.temporary(temporaryName, receiver.getType().getDisplay(), receiver, voidType(), receiver.getPosition(), temporaryBinding));
+			accessorReceiver = TypedExpr.localRead(temporaryName, receiver.getType(), receiver.getPosition(), temporaryBinding);
+		}
 		function accessorCall(declaration:TyDeclarationInfo, arguments:Array<TypedExpr>, resultType:TyType):TypedExpr {
-			final callee = TypedExpr.fieldRead(receiverRead(), declaration.getSignature().getName(), TyType.unknown(), target.getPosition());
+			final callee = TypedExpr.fieldRead(accessorReceiver, declaration.getSignature().getName(), TyType.unknown(), target.getPosition());
 			return TypedExpr.call(callee, arguments, declaration, resultType, target.getPosition());
 		}
 		return {
-			prefix: [temporary],
+			prefix: prefix,
 			read: function(type:TyType) {
 				final call = accessorCall(getter, [], getter.getSignature().getReturnType());
 				return call.getType()
@@ -148,11 +152,31 @@ class TypedAbstractUnaryLowering {
 		};
 	}
 
-	static function substituteExpression(expression:TypedExpr, place:TypedUnaryPlace, renamedLocals:StringMap<TyLocalBinding>):TypedExpr {
+	static function substituteExpression(expression:TypedExpr, place:TypedInlineUnaryPlace, renamedLocals:StringMap<TyLocalBinding>):TypedExpr {
 		final children = expression.getExpressions();
 		return switch (expression.getTag()) {
 			case ThisValue:
 				place.read(expression.getType());
+			case Call
+				if (expression.getDeclaration() != null
+					&& !expression.getDeclaration().getIsStatic()
+					&& (children[0].getTag() == NameRead
+						|| (children[0].getTag() == FieldRead
+							&& children[0].getExpressions().length == 1
+							&& children[0].getExpressions()[0].getTag() == ThisValue
+							&& expression.getDeclaration().getOwner().equals(place.receiverType.getNominalIdentity())))):
+				final declaration = expression.getDeclaration();
+				// A call on the same abstract needs its original writable place. The
+				// backing-value view is for value reads, not nested method receivers.
+				final receiverType = declaration.getOwner()
+					.equals(place.receiverType.getNominalIdentity()) ? place.receiverType : TyType.nominal(declaration.getOwner(), [],
+						declaration.getOwner().getCanonicalName());
+				final receiver = place.read(receiverType);
+				final callee = TypedExpr.fieldRead(receiver, declaration.getSignature().getName(), children[0].getType(), expression.getPosition());
+				expression.withExpressions([callee].concat([
+					for (child in children.slice(1))
+						substituteExpression(child, place, renamedLocals)
+				]));
 			case LocalRead:
 				final sourceBindings = expression.getLocalBindings();
 				if (sourceBindings.length != 1)
@@ -161,6 +185,12 @@ class TypedAbstractUnaryLowering {
 				renamed == null ? expression : TypedExpr.localRead(renamed.getSourceName(), expression.getType(), expression.getPosition(), renamed);
 			case Assign if (children.length == 2 && children[0].getTag() == TypedExprTag.ThisValue):
 				place.write(substituteExpression(children[1], place, renamedLocals));
+			case Unary
+				if (children.length == 1
+					&& children[0].getTag() == ThisValue
+					&& (expression.getUnaryOperator() == HxUnaryOperator.Increment
+						|| expression.getUnaryOperator() == HxUnaryOperator.Decrement)):
+				place.update(expression.getUnaryOperator(), expression.getUnaryFixity(), children[0].getType(), expression.getPosition());
 			case CompoundAssign if (children.length == 2 && children[0].getTag() == TypedExprTag.ThisValue):
 				final texts = expression.getTexts();
 				final compound = texts[0];
@@ -169,13 +199,13 @@ class TypedAbstractUnaryLowering {
 				// The compound lvalue is one observable occurrence. A separate helper
 				// result read remains a second occurrence, matching measured Haxe 4.3.7
 				// indexed prefix/postfix behavior without target-side memoization.
-				TypedExpr.compoundAssign(compound, place.read(carrierType), right, carrierType, expression.getPosition());
+				place.compound(compound, right, carrierType, expression.getPosition());
 			case _:
 				expression.withExpressions([for (child in children) substituteExpression(child, place, renamedLocals)]);
 		};
 	}
 
-	static function lowerInlineStatements(statements:Array<TypedStmt>, place:TypedUnaryPlace, renamedLocals:StringMap<TyLocalBinding>,
+	static function lowerInlineStatements(statements:Array<TypedStmt>, place:TypedInlineUnaryPlace, renamedLocals:StringMap<TyLocalBinding>,
 			state:TypedInlineBodyState, helpers:StringMap<TypedFunction>, index:TyperIndex, filePath:String, allocator:TyCompilerTemporaryAllocator,
 			declaration:TyDeclarationInfo):Void {
 		for (statement in statements) {
@@ -222,16 +252,20 @@ class TypedAbstractUnaryLowering {
 		final calleeOwner = TypedExpr.nameRead(ownerName, TyType.nominal(declaration.getOwner(), [], ownerName), operand.getPosition());
 		final callee = TypedExpr.fieldRead(calleeOwner, declaration.getSignature().getName(), TyType.unknown(), operand.getPosition());
 		final call = TypedExpr.call(callee, [operand], declaration, binding.getResultType(), operand.getPosition());
+		// The selected call already returns this exact type; its wrapper changes no storage.
 		return binding.getResultType()
-			.getNominalIdentity() == null ? call : TypedExpr.castValue(call, binding.getResultType().getDisplay(), binding.getResultType(), operand.getPosition());
+			.getNominalIdentity() == null ? call : TypedExpr.castValue(call, binding.getResultType().getDisplay(), binding.getResultType(),
+			operand.getPosition(), true);
 	}
 
 	static function instanceCall(binding:TyAbstractOperatorInfo, operand:TypedExpr):TypedExpr {
 		final declaration = binding.getDeclaration();
 		final callee = TypedExpr.fieldRead(operand, declaration.getSignature().getName(), TyType.unknown(), operand.getPosition());
 		final call = TypedExpr.call(callee, [], declaration, binding.getResultType(), operand.getPosition());
+		// The same identity guarantee applies to an exact instance helper result.
 		return binding.getResultType()
-			.getNominalIdentity() == null ? call : TypedExpr.castValue(call, binding.getResultType().getDisplay(), binding.getResultType(), operand.getPosition());
+			.getNominalIdentity() == null ? call : TypedExpr.castValue(call, binding.getResultType().getDisplay(), binding.getResultType(),
+			operand.getPosition(), true);
 	}
 
 	/**
@@ -258,12 +292,16 @@ class TypedAbstractUnaryLowering {
 			throw new TyperError(filePath, declaration.getPosition(),
 				"Bodyless abstract unary operator requires an explicit value result: " + declaration.getIdentity().getCanonicalKey());
 
+		// The exact bodyless declaration authorizes this Int/Bool storage view
+		// without a public from/to header. Other result types and numeric storage
+		// changes still require their own conversion plan.
+		final preservesCarrier = carrierType.getSemanticKey() == "primitive:Int" || carrierType.getSemanticKey() == "primitive:Bool";
 		final carrierOperand = op == HxUnaryOperator.Increment
 			|| op == HxUnaryOperator.Decrement ? operand.withType(carrierType) : TypedExpr.castValue(operand, carrierType.getDisplay(), carrierType,
-				operand.getPosition());
+				operand.getPosition(), preservesCarrier);
 		final carrierResult = TypedExpr.unary(op, binding.getFixity(), carrierOperand, carrierType, operand.getPosition());
 		return resultType.getSemanticKey() == carrierType.getSemanticKey() ? carrierResult : TypedExpr.castValue(carrierResult, resultType.getDisplay(),
-			resultType, operand.getPosition());
+			resultType, operand.getPosition(), preservesCarrier && resultType.getSemanticKey() == operand.getType().getSemanticKey());
 	}
 
 	static function inlineCall(binding:TyAbstractOperatorInfo, operand:TypedExpr, helpers:StringMap<TypedFunction>, index:TyperIndex, filePath:String,
@@ -285,7 +323,13 @@ class TypedAbstractUnaryLowering {
 			throw new TyperError(filePath, declaration.getPosition(),
 				"Inline abstract unary helper result conflicts with its declaration: " + declaration.getIdentity().getCanonicalKey());
 		}
-		final place = placeFor(operand, filePath, operand.getPosition(), allocator);
+		final place = TypedAbstractUnaryInlinePlace.prepare({
+			place: placeFor(operand, filePath, operand.getPosition(), allocator),
+			receiver: operand.getType(),
+			abstractInfo: index.getAbstractByFullName(declaration.getOwner().getCanonicalName()),
+			declaration: declaration,
+			allocator: allocator
+		});
 		final state:TypedInlineBodyState = {expressions: place.prefix.copy(), returned: false, returnedValue: false};
 		lowerInlineStatements(helper.getBody().getStatements(), place, new StringMap<TyLocalBinding>(), state, helpers, index, filePath, allocator,
 			declaration);
@@ -295,7 +339,9 @@ class TypedAbstractUnaryLowering {
 		if (state.expressions.length == 0)
 			state.expressions.push(TypedExpr.nullValue(resultType, operand.getPosition()));
 		final block = TypedExpr.block(state.expressions, resultType, operand.getPosition());
-		return resultType.getNominalIdentity() == null ? block : TypedExpr.castValue(block, resultType.getDisplay(), resultType, operand.getPosition());
+		// This wrapper preserves the block's already selected result type. Storage
+		// conversions inside the body have their own exact declaration proof.
+		return resultType.getNominalIdentity() == null ? block : TypedExpr.castValue(block, resultType.getDisplay(), resultType, operand.getPosition(), true);
 	}
 
 	/** Lower Haxe's getter/setter prefix/postfix contract without selecting the value abstract's helper. **/
@@ -303,16 +349,30 @@ class TypedAbstractUnaryLowering {
 			fixity:HxUnaryFixity, allocator:TyCompilerTemporaryAllocator, filePath:String):TypedExpr {
 		final resultType = operand.getType();
 		final carrierType = abstractInfo.getUnderlyingType();
+		if (resultType.getNominalIdentity() == null || !resultType.getNominalIdentity().equals(abstractInfo.getIdentity()))
+			throw "abstract property update requires its selected abstract owner";
 		if (!carrierType.isNumeric())
 			throw new TyperError(filePath, expression.getPosition(),
 				"Abstract property increment/decrement requires an Int or Float underlying carrier: " + resultType.getDisplay());
 		final binaryOperator = op == HxUnaryOperator.Increment ? "+" : "-";
 		final one = TypedExpr.intLiteral(1, TyType.fromHintText("Int"), expression.getPosition());
 		final expressions = place.prefix.copy();
+		// Property updates use this exact abstract's Int storage instead of its
+		// overloaded operator. These compiler-created views do not authorize
+		// authored casts or Float representation changes.
+		function storageView(value:TypedExpr, expected:TyType):TypedExpr {
+			final actual = value.getType().getSemanticKey();
+			final target = expected.getSemanticKey();
+			final abstractKey = resultType.getSemanticKey();
+			final carrierKey = carrierType.getSemanticKey();
+			if (!((actual == abstractKey && target == carrierKey) || (actual == carrierKey && target == abstractKey)))
+				throw "abstract property storage view differs from its selected backing type";
+			return TypedExpr.castValue(value, expected.getDisplay(), expected, value.getPosition(), carrierKey == "primitive:Int");
+		}
 		if (fixity == HxUnaryFixity.Prefix) {
-			final current = place.read(carrierType);
+			final current = storageView(place.read(resultType), carrierType);
 			final updatedCarrier = TypedExpr.binary(binaryOperator, current, one, carrierType, expression.getPosition());
-			final updated = TypedExpr.castValue(updatedCarrier, resultType.getDisplay(), resultType, expression.getPosition());
+			final updated = storageView(updatedCarrier, resultType);
 			expressions.push(place.write(updated));
 		} else {
 			final oldValue = place.read(resultType);
@@ -320,14 +380,14 @@ class TypedAbstractUnaryLowering {
 			final oldName = oldBinding.getSourceName();
 			expressions.push(TypedExpr.temporary(oldName, resultType.getDisplay(), oldValue, voidType(), expression.getPosition(), oldBinding));
 			final oldRead = TypedExpr.localRead(oldName, resultType, expression.getPosition(), oldBinding);
-			final carrierRead = TypedExpr.castValue(oldRead, carrierType.getDisplay(), carrierType, expression.getPosition());
+			final carrierRead = storageView(oldRead, carrierType);
 			final updatedCarrier = TypedExpr.binary(binaryOperator, carrierRead, one, carrierType, expression.getPosition());
-			final updated = TypedExpr.castValue(updatedCarrier, resultType.getDisplay(), resultType, expression.getPosition());
+			final updated = storageView(updatedCarrier, resultType);
 			expressions.push(place.write(updated));
 			expressions.push(oldRead);
 		}
 		final block = TypedExpr.block(expressions, resultType, expression.getPosition());
-		return TypedExpr.castValue(block, resultType.getDisplay(), resultType, expression.getPosition());
+		return TypedExpr.castValue(block, resultType.getDisplay(), resultType, expression.getPosition(), true);
 	}
 
 	static function lowerExpression(expression:TypedExpr, helpers:StringMap<TypedFunction>, index:TyperIndex, filePath:String,
@@ -396,6 +456,8 @@ class TypedAbstractUnaryLowering {
 		for (typedClass in classes)
 			for (typedFunction in typedClass.getFunctions()) {
 				final owner = typedFunction.getStableIdentity();
+				for (value in typedFunction.getDefaults())
+					assertNoAbstractUnaryExpression(value.getExpression(), index, owner);
 				for (statement in typedFunction.getBody().getStatements()) {
 					for (expression in statement.getExpressions())
 						assertNoAbstractUnaryExpression(expression, index, owner);
@@ -432,12 +494,15 @@ class TypedAbstractUnaryLowering {
 				typedClass.withFunctions([
 					for (typedFunction in typedClass.getFunctions()) {
 						final body = typedFunction.getBody();
-						final allocator = new TyCompilerTemporaryAllocator(typedFunction.getStableIdentity(), "typed-abstract-unary-v1", "__hxhx_abstract_");
+						final allocator = new TyCompilerTemporaryAllocator(typedFunction.getStableIdentity(), "typed-abstract-unary-v3", "__hxhx_abstract_");
 						final statements = [
 							for (statement in body.getStatements())
 								lowerStatement(statement, helpers, index, filePath, allocator)
 						];
-						typedFunction.withBody(new TypedFunctionBody(statements, body.getSourceFingerprint()));
+						typedFunction.withBody(new TypedFunctionBody(statements, body.getSourceFingerprint()), [
+							for (value in typedFunction.getDefaults())
+								new TypedFunctionDefault(value.getParameterIndex(), lowerExpression(value.getExpression(), helpers, index, filePath, allocator))
+						]);
 					}
 				])
 		];

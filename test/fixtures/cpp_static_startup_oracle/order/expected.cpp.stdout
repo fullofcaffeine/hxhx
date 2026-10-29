@@ -1,0 +1,11 @@
+Main.__init__
+Beta.__init__
+Alpha.__init__
+Unused.__init__
+Main.field
+Beta.value
+Alpha.first
+Alpha.second
+Unused.value
+main
+1

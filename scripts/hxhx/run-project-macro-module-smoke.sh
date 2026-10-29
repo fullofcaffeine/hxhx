@@ -82,7 +82,6 @@ HXHX_FORBID_STAGE0=1 \
 HAXE_BIN=__project_macro_plugin_stage0_forbidden__ \
 "$HXHX_BIN_RESOLVED" \
   --hxhx-stage3 \
-  --hxhx-emit-full-bodies \
   --hxhx-no-run \
   -cp "$FIXTURE_DIR/src" \
   -main projectmacro.ProjectMacroNative \

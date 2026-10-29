@@ -1,6 +1,7 @@
 import sys.FileSystem;
 import sys.io.File;
 
+/** Check inferred loop types and execute array iteration with production declarations. */
 class M14HihForInIntegrationTest {
 	static function assertEquals(actual:String, expected:String, label:String):Void {
 		if (actual != expected)
@@ -41,7 +42,7 @@ class M14HihForInIntegrationTest {
 
 		final decl = new HxParser(src).parseModule("Main");
 		final pm = new ParsedModule(src, decl, "<m14_hih_forin>");
-		final tm = TyperStage.typeModule(pm);
+		final tm = M14Stage3RuntimeFixture.typeResolved({module: new ResolvedModule("Main", pm.getFilePath(), pm), root: "."});
 		final cls = tm.getEnv().getMainClass();
 		final fns = cls.getFunctions();
 
@@ -79,10 +80,10 @@ class M14HihForInIntegrationTest {
 
 		var thrown:Dynamic = null;
 		try {
-			final runtimeParsed = ParserStage.parse(runtimeMain, runtimeMainPath);
-			final runtimeTyped = TyperStage.typeModule(runtimeParsed);
+			M14Stage3RuntimeFixture.observe({command: "haxe", arguments: ["-cp", srcDir, "--run", "Main"], expected: "sum=10\n"});
+			final runtimeTyped = M14Stage3RuntimeFixture.typeMain({source: runtimeMain, path: runtimeMainPath, root: srcDir});
 			final runtimeExpanded = MacroStage.expandProgram([runtimeTyped], []);
-			final exePath = EmitterStage.emitToDir(runtimeExpanded, outDir, true);
+			final exePath = EmitterStage.emitToDir(runtimeExpanded, outDir);
 			assertTrue(FileSystem.exists(exePath), "Emitter did not produce executable: " + exePath);
 
 			final p = new sys.io.Process(exePath, []);

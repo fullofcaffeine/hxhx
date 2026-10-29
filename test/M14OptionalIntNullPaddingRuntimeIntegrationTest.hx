@@ -1,6 +1,7 @@
 import sys.FileSystem;
 import sys.io.File;
 
+/** Preserve nullable optional bounds through real String/Array declarations and native execution. */
 class M14OptionalIntNullPaddingRuntimeIntegrationTest {
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
@@ -54,13 +55,12 @@ class M14OptionalIntNullPaddingRuntimeIntegrationTest {
 
 		var thrown:Dynamic = null;
 		try {
-			final parsed = ParserStage.parse(src, mainHx);
-			final typed = TyperStage.typeModule(parsed);
+			M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", srcDir, "--run", "Main"], expected: "ok\n"});
+			final typed = M14Stage3RuntimeFixture.typeMain({source: src, path: mainHx, root: srcDir});
 			final expanded = MacroStage.expandProgram([typed], []);
-			final exePath = EmitterStage.emitToDir(expanded, outDir, true);
+			final exePath = EmitterStage.emitToDir(expanded, outDir);
 			assertTrue(FileSystem.exists(exePath), 'Emitter did not produce executable: ' + exePath);
-			final code = Sys.command(exePath, []);
-			assertTrue(code == 0, 'Executable failed for optional-int null padding runtime checks with exit code ' + code + '.');
+			M14Stage3RuntimeFixture.observe({command: exePath, arguments: [], expected: "ok\n"});
 		} catch (e:Dynamic) {
 			thrown = e;
 		}

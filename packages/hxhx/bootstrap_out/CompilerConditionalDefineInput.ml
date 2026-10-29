@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable name : string; mutable access : CompilerCo
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun name2 access2 observedInputRevision2 -> let self = ({ __hx_type = HxType.class_ "CompilerConditionalDefineInput"; name = HxString.hx_null_string; access = Obj.magic HxRuntime.hx_null; observedInputRevision = HxString.hx_null_string } : t) in (
+let create = fun name2 access2 observedInputRevision2 -> let self = ({ __hx_type = HxType.instance_marker "CompilerConditionalDefineInput"; name = HxString.hx_null_string; access = Obj.magic HxRuntime.hx_null; observedInputRevision = HxString.hx_null_string } : t) in (
   ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
     ignore (if name2 == HxString.hx_null_string then let __assign_1 = "" in (
       tempRight := __assign_1;
@@ -43,97 +43,97 @@ let create = fun name2 access2 observedInputRevision2 -> let self = ({ __hx_type
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerConditionalDefineInput"; name = HxString.hx_null_string; access = Obj.magic HxRuntime.hx_null; observedInputRevision = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerConditionalDefineInput"; name = HxString.hx_null_string; access = Obj.magic HxRuntime.hx_null; observedInputRevision = HxString.hx_null_string } : t)
 
 let getObservedInputRevision = fun self () -> (Obj.magic self : t).observedInputRevision
 
 let accessKey = fun self () -> let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (if (Obj.magic self : t).access = CompilerConditionalDefineAccess.Value then let __assign_11 = Obj.magic ("value" : string) in (
-    tempMaybeString := __assign_11;
-    __assign_11
-  ) else let __assign_12 = Obj.magic ("presence" : string) in (
-    tempMaybeString := __assign_12;
-    __assign_12
+  ignore (if let __enum_eq_left_11 = (Obj.magic self : t).access in let __enum_eq_right_12 = CompilerConditionalDefineAccess.Value in HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (Obj.repr __enum_eq_left_11) == HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (Obj.repr __enum_eq_right_12) then let __assign_13 = Obj.magic ("value" : string) in (
+    tempMaybeString := __assign_13;
+    __assign_13
+  ) else let __assign_14 = Obj.magic ("presence" : string) in (
+    tempMaybeString := __assign_14;
+    __assign_14
   ));
-  CompilerCacheIdentity.encode (Obj.magic (let __arr_13 = HxArray.create () in (
-    ignore (HxArray.push __arr_13 "conditional-define-access-key-v1");
-    ignore (HxArray.push __arr_13 ((Obj.magic self : t).name));
-    ignore (HxArray.push __arr_13 (!tempMaybeString));
-    __arr_13
+  CompilerCacheIdentity.encode (Obj.magic (let __arr_15 = HxArray.create () in (
+    ignore (HxArray.push __arr_15 "conditional-define-access-key-v1");
+    ignore (HxArray.push __arr_15 ((Obj.magic self : t).name));
+    ignore (HxArray.push __arr_15 (!tempMaybeString));
+    __arr_15
   )))
 )
 
 let canonicalKey = fun self () -> let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (if (Obj.magic self : t).access = CompilerConditionalDefineAccess.Value then let __assign_14 = Obj.magic ("value" : string) in (
-    tempMaybeString := __assign_14;
-    __assign_14
-  ) else let __assign_15 = Obj.magic ("presence" : string) in (
-    tempMaybeString := __assign_15;
-    __assign_15
+  ignore (if let __enum_eq_left_16 = (Obj.magic self : t).access in let __enum_eq_right_17 = CompilerConditionalDefineAccess.Value in HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (Obj.repr __enum_eq_left_16) == HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (Obj.repr __enum_eq_right_17) then let __assign_18 = Obj.magic ("value" : string) in (
+    tempMaybeString := __assign_18;
+    __assign_18
+  ) else let __assign_19 = Obj.magic ("presence" : string) in (
+    tempMaybeString := __assign_19;
+    __assign_19
   ));
-  CompilerCacheIdentity.encode (Obj.magic (let __arr_16 = HxArray.create () in (
-    ignore (HxArray.push __arr_16 "conditional-define-fact-v2");
-    ignore (HxArray.push __arr_16 ((Obj.magic self : t).name));
-    ignore (HxArray.push __arr_16 (!tempMaybeString));
-    ignore (HxArray.push __arr_16 ((Obj.magic self : t).observedInputRevision));
-    __arr_16
+  CompilerCacheIdentity.encode (Obj.magic (let __arr_20 = HxArray.create () in (
+    ignore (HxArray.push __arr_20 "conditional-define-fact-v2");
+    ignore (HxArray.push __arr_20 ((Obj.magic self : t).name));
+    ignore (HxArray.push __arr_20 (!tempMaybeString));
+    ignore (HxArray.push __arr_20 ((Obj.magic self : t).observedInputRevision));
+    __arr_20
   )))
 )
 
 let fromDefines = fun name2 access2 defines -> let tempString = ref (HxString.hx_null_string : string) in (
-  ignore (if name2 == HxString.hx_null_string then let __assign_17 = "" in (
-    tempString := __assign_17;
-    __assign_17
-  ) else let __assign_18 = let __call_arg_0_19 = name2 in StringTools.trim __call_arg_0_19 in (
-    tempString := __assign_18;
-    __assign_18
+  ignore (if name2 == HxString.hx_null_string then let __assign_21 = "" in (
+    tempString := __assign_21;
+    __assign_21
+  ) else let __assign_22 = let __call_arg_0_23 = name2 in StringTools.trim __call_arg_0_23 in (
+    tempString := __assign_22;
+    __assign_22
   ));
-  let normalized = !tempString in let present = (let __string_receiver_20 = normalized in HxString.length __string_receiver_20) > 0 && defines != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string (Obj.magic defines) (normalized : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-    ignore (if present then let __assign_21 = Obj.magic (HxMap.get_string (Obj.magic defines) (normalized : string) : string) in (
-      tempMaybeString := __assign_21;
-      __assign_21
-    ) else let __assign_22 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempMaybeString := __assign_22;
-      __assign_22
+  let normalized = !tempString in let present = (let __string_receiver_24 = normalized in HxString.length __string_receiver_24) > 0 && (let __map_eq_left_25 = defines in let __map_eq_right_26 = Obj.magic (HxRuntime.hx_null) in Obj.repr __map_eq_left_25 != Obj.repr __map_eq_right_26) && HxMap.exists_string (Obj.magic defines) (normalized : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+    ignore (if present then let __assign_27 = Obj.magic (HxMap.get_string (Obj.magic defines) (normalized : string) : string) in (
+      tempMaybeString := __assign_27;
+      __assign_27
+    ) else let __assign_28 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempMaybeString := __assign_28;
+      __assign_28
     ));
     let value = (!tempMaybeString : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
-      ignore (if access2 = CompilerConditionalDefineAccess.Value then let __assign_23 = "value" in (
-        tempString1 := __assign_23;
-        __assign_23
-      ) else let __assign_24 = "presence" in (
-        tempString1 := __assign_24;
-        __assign_24
+      ignore (if let __enum_eq_left_29 = access2 in let __enum_eq_right_30 = CompilerConditionalDefineAccess.Value in HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (Obj.repr __enum_eq_left_29) == HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (Obj.repr __enum_eq_right_30) then let __assign_31 = "value" in (
+        tempString1 := __assign_31;
+        __assign_31
+      ) else let __assign_32 = "presence" in (
+        tempString1 := __assign_32;
+        __assign_32
       ));
       let accessName = !tempString1 in let tempString2 = ref (HxString.hx_null_string : string) in (
-        ignore (if present then let __assign_25 = "present" in (
-          tempString2 := __assign_25;
-          __assign_25
-        ) else let __assign_26 = "absent" in (
-          tempString2 := __assign_26;
-          __assign_26
+        ignore (if present then let __assign_33 = "present" in (
+          tempString2 := __assign_33;
+          __assign_33
+        ) else let __assign_34 = "absent" in (
+          tempString2 := __assign_34;
+          __assign_34
         ));
         let tempMaybeString1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-          ignore (if access2 = CompilerConditionalDefineAccess.Value then let __assign_27 = Obj.magic (value : string) in (
-            tempMaybeString1 := __assign_27;
-            __assign_27
-          ) else let __assign_28 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-            tempMaybeString1 := __assign_28;
-            __assign_28
+          ignore (if let __enum_eq_left_35 = access2 in let __enum_eq_right_36 = CompilerConditionalDefineAccess.Value in HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (Obj.repr __enum_eq_left_35) == HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (Obj.repr __enum_eq_right_36) then let __assign_37 = Obj.magic (value : string) in (
+            tempMaybeString1 := __assign_37;
+            __assign_37
+          ) else let __assign_38 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+            tempMaybeString1 := __assign_38;
+            __assign_38
           ));
-          let identityInputs = Obj.magic (let __arr_29 = HxArray.create () in (
-            ignore (HxArray.push __arr_29 "conditional-define-input-v2");
-            ignore (HxArray.push __arr_29 normalized);
-            ignore (HxArray.push __arr_29 accessName);
-            ignore (HxArray.push __arr_29 (!tempString2));
-            ignore (HxArray.push __arr_29 (!tempMaybeString1));
-            __arr_29
+          let identityInputs = Obj.magic (let __arr_39 = HxArray.create () in (
+            ignore (HxArray.push __arr_39 "conditional-define-input-v2");
+            ignore (HxArray.push __arr_39 normalized);
+            ignore (HxArray.push __arr_39 accessName);
+            ignore (HxArray.push __arr_39 (!tempString2));
+            ignore (HxArray.push __arr_39 (!tempMaybeString1));
+            __arr_39
           )) in let tempString3 = ref (HxString.hx_null_string : string) in (
-            ignore (if access2 = CompilerConditionalDefineAccess.Value then let __assign_30 = (let __call_arg_0_31 = CompilerCacheIdentity.encode (Obj.magic identityInputs) in Haxe_crypto_Sha256.encode __call_arg_0_31 : string) in (
-              tempString3 := __assign_30;
-              __assign_30
-            ) else let __assign_32 = (CompilerCacheIdentity.encode (Obj.magic identityInputs) : string) in (
-              tempString3 := __assign_32;
-              __assign_32
+            ignore (if let __enum_eq_left_40 = access2 in let __enum_eq_right_41 = CompilerConditionalDefineAccess.Value in HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (Obj.repr __enum_eq_left_40) == HxEnum.unbox_or_obj "CompilerConditionalDefineAccess" (Obj.repr __enum_eq_right_41) then let __assign_42 = (let __call_arg_0_43 = CompilerCacheIdentity.encode (Obj.magic identityInputs) in Haxe_crypto_Sha256.encode __call_arg_0_43 : string) in (
+              tempString3 := __assign_42;
+              __assign_42
+            ) else let __assign_44 = (CompilerCacheIdentity.encode (Obj.magic identityInputs) : string) in (
+              tempString3 := __assign_44;
+              __assign_44
             ));
             let revision = (!tempString3 : string) in create (normalized : string) (Obj.magic access2) (revision : string)
           )

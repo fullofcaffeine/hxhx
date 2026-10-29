@@ -2,6 +2,12 @@ package hxhx;
 
 import haxe.io.Path;
 
+/** Keeps explicit lookup roots separate from the inferred standard-library root. */
+private typedef Stage1ClassPathInput = {
+	final explicitPaths:Array<String>;
+	final standardRoot:String;
+}
+
 /**
 	Stage 1 compiler bring-up (`--hxhx-stage1`).
 
@@ -229,6 +235,10 @@ class Stage1Compiler {
 **/
 class Stage1Args {
 	public final classPaths:Array<String>;
+
+	final explicitClassPaths:Array<String>;
+	final standardLibraryRoot:String;
+
 	public final main:String;
 	public final noOutput:Bool;
 	public final roots:Array<String>;
@@ -243,9 +253,16 @@ class Stage1Args {
 	public final hadRun:Bool;
 	public final runArgs:Array<String>;
 
-	function new(classPaths:Array<String>, main:String, noOutput:Bool, roots:Array<String>, defines:Array<String>, libs:Array<String>, macros:Array<String>,
-			resourceSpecs:Array<String>, displayRequest:Null<String>, cwd:String, hadCmd:Bool, cmdCommands:Array<String>, hadRun:Bool, runArgs:Array<String>) {
-		this.classPaths = classPaths;
+	function new(classPathInput:Stage1ClassPathInput, main:String, noOutput:Bool, roots:Array<String>, defines:Array<String>, libs:Array<String>,
+			macros:Array<String>, resourceSpecs:Array<String>, displayRequest:Null<String>, cwd:String, hadCmd:Bool, cmdCommands:Array<String>, hadRun:Bool,
+			runArgs:Array<String>) {
+		this.explicitClassPaths = classPathInput.explicitPaths.copy();
+		this.standardLibraryRoot = classPathInput.standardRoot;
+		this.classPaths = explicitClassPaths.copy();
+		if (this.classPaths.length == 0)
+			this.classPaths.push(".");
+		if (standardLibraryRoot.length > 0 && this.classPaths.indexOf(standardLibraryRoot) == -1)
+			this.classPaths.push(standardLibraryRoot);
 		this.main = main;
 		this.noOutput = noOutput;
 		this.roots = roots;
@@ -262,6 +279,7 @@ class Stage1Args {
 	}
 
 	public static function parse(args:Array<String>, permissive:Bool = false):Null<Stage1Args> {
+		final startupCwd = Sys.getCwd();
 		final expanded = expandHxmlArgs(args);
 		if (expanded == null)
 			return null;
@@ -406,7 +424,8 @@ class Stage1Args {
 						Sys.println("hxhx(stage1): missing value after " + a);
 						return null;
 					}
-					classPaths.push(expanded[i + 1]);
+					// Haxe gives a later explicit classpath precedence over an earlier one.
+					classPaths.unshift(expanded[i + 1]);
 					i += 2;
 				case "-C", "--cwd":
 					if (i + 1 >= expanded.length) {
@@ -487,14 +506,14 @@ class Stage1Args {
 			}
 		}
 
-		if (classPaths.length == 0)
-			classPaths.push(".");
-		if (stdRoot == null || stdRoot.length == 0)
+		if (stdRoot == null || stdRoot.length == 0) {
 			stdRoot = inferStdRoot(cwd);
-		if (stdRoot != null && stdRoot.length > 0 && classPaths.indexOf(stdRoot) == -1)
-			classPaths.push(stdRoot);
-		return new Stage1Args(classPaths, main, noOutput, roots, defines, libs, macros, resourceSpecs, displayRequest, cwd, hadCmd, cmdCommands, hadRun,
-			runArgs);
+			// Like the launcher, retain the startup project's SDK when --cwd leaves that project.
+			if (stdRoot.length == 0)
+				stdRoot = inferStdRootFromHaxerc(startupCwd);
+		}
+		return new Stage1Args({explicitPaths: classPaths, standardRoot: stdRoot}, main, noOutput, roots, defines, libs, macros, resourceSpecs, displayRequest,
+			cwd, hadCmd, cmdCommands, hadRun, runArgs);
 	}
 
 	static function inferStdRoot(cwd:String):String {
@@ -525,6 +544,7 @@ class Stage1Args {
 		return inferStdRoot(cwd);
 	}
 
+	/** Search only this directory's ancestors; request startup fallback is selected separately by parse. */
 	static function inferStdRootFromHaxerc(cwd:String):String {
 		final home = resolveHomeDir();
 		if (home.length == 0)
@@ -548,8 +568,9 @@ class Stage1Args {
 				}
 			}
 			previous = dir;
-			final parentInput = StringTools.endsWith(dir, "/") ? dir + ".." : dir + "/..";
-			dir = haxe.io.Path.normalize(sys.FileSystem.absolutePath(parentInput));
+			final parent = haxe.io.Path.directory(dir);
+			// A root's parent must remain absolute: directory returns "" for / and "C:" for C:/.
+			dir = haxe.io.Path.isAbsolute(parent) ? parent : haxe.io.Path.addTrailingSlash(parent);
 		}
 		return "";
 	}
@@ -630,6 +651,14 @@ class Stage1Args {
 	**/
 	public static function getClassPaths(a:Stage1Args):Array<String>
 		return a.classPaths;
+
+	/** Explicit roots in lookup order, before target and common standard-library paths are added. */
+	public static function getExplicitClassPaths(a:Stage1Args):Array<String>
+		return a.explicitClassPaths.copy();
+
+	/** The explicit --std root or the root inferred once during argument parsing. */
+	public static function getStandardLibraryRoot(a:Stage1Args):String
+		return a.standardLibraryRoot;
 
 	public static function getMain(a:Stage1Args):String
 		return a.main;

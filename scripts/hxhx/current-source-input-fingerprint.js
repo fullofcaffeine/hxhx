@@ -29,6 +29,8 @@ const REPO_INPUT_GROUPS = [
     paths: [
       'packages/hxhx-core/shims',
       'packages/hxhx-core/source-templates',
+      'packages/hxhx-core/runtime',
+      'packages/hxhx-core/std',
       'packages/reflaxe.ocaml/src',
       'packages/reflaxe.ocaml/std',
     ],

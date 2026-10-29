@@ -1,0 +1,94 @@
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp test
+-main M14JsControlRegionTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp packages/hxhx/src
+-cp test
+-main M14DiscardedControlTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp test
+-main M14ControlAssignmentTest
+--interp
+--next
+test/m14_untyped_call_control_test.hxml
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14EnumSwitchCoverageProofTest
+--interp
+--next
+test/m14_pattern_capture_coverage_test.hxml
+--next
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp test
+-main M14CsEnumSwitchResultTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp packages/hxhx/src
+-cp test
+-main M14CsCallbackControlTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp packages/hxhx/src
+-cp test
+-main M14CsSyntaxScopeTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14UntypedFunctionBodySyntaxTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp test
+-main M14UntypedRangeInferenceTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14UntypedNominalFieldTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14NestedGenericCallInferenceTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14CapturedCallbackPublicationTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14CallableFieldResultTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp test
+-main M14EnumImportConstraintTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14UntypedLocalDestinationTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp test
+-main M14RecursiveThrowResultTest
+--interp

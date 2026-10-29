@@ -1,0 +1,2 @@
+# 1 "backend_cpp_CppManagedInstanceMethod.ml"
+include Backend_cpp_CppManagedBoundMethods.Backend_cpp_CppManagedInstanceMethod

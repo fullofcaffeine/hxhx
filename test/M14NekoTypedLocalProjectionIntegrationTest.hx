@@ -55,7 +55,11 @@ class M14NekoTypedLocalProjectionIntegrationTest {
 			"  }",
 			"}"
 		].join("\n");
-		return MacroStage.expandProgram([TyperStage.typeModule(ParserStage.parse(source, "Main.hx"))], []);
+		final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
+		final index = TyperIndex.build([resolved]);
+		final loader = new ModuleLoader(["."], new StringMap<String>(), index, function(_):Bool return false);
+		loader.markResolvedAlready([resolved]);
+		return MacroStage.expandProgram([TyperStage.typeResolvedModule(resolved, index, loader)], []);
 	}
 
 	static function assertReadableCollisionAvoidance():Void {
@@ -92,7 +96,7 @@ class M14NekoTypedLocalProjectionIntegrationTest {
 		try {
 			final sourceDefines = new StringMap<String>();
 			sourceDefines.set(NekoTargetCore.SOURCE_ONLY_DEFINE, "1");
-			NekoTargetCore.emit(program(), new BackendContext(sourceOnlyDir, sourceOnlyOutput, "Main", true, false, sourceDefines));
+			NekoTargetCore.emit(program(), new BackendContext(sourceOnlyDir, sourceOnlyOutput, "Main", false, sourceDefines));
 			final source = File.getContent(Path.join([sourceOnlyDir, "main.neko"]));
 			assertContains(source, "var value = 1;", "outer typed binding should keep a readable Neko local name");
 			assertContains(source, 'var value_1 = "inner";', "shadowed typed binding should receive a distinct Neko local name");
@@ -105,7 +109,7 @@ class M14NekoTypedLocalProjectionIntegrationTest {
 				final runtimeDir = Path.join([tmpRoot, "runtime"]);
 				FileSystem.createDirectory(runtimeDir);
 				final runtimeOutput = Path.join([runtimeDir, "main.n"]);
-				NekoTargetCore.emit(program(), new BackendContext(runtimeDir, runtimeOutput, "Main", true, false, new StringMap<String>()));
+				NekoTargetCore.emit(program(), new BackendContext(runtimeDir, runtimeOutput, "Main", false, new StringMap<String>()));
 				assertTrue(runNeko(runtimeOutput) == "inner!\n1", "generated Neko program did not preserve inner then outer shadowing behavior");
 			}
 		} catch (message:String) {

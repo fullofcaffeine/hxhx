@@ -1,0 +1,12 @@
+before-inner=4
+before-inner-after-write=5
+before-result=5
+before-escaped=5
+before-result-after-write=5
+before-escaped-after-write=9
+after-inner=4
+after-inner-after-write=5
+after-result=5
+after-escaped=5
+after-result-after-write=5
+after-escaped-after-write=9

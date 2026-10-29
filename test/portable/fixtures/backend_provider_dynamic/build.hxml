@@ -1,0 +1,13 @@
+-cp src
+-cp ../../../../packages/hxhx/src
+-cp ../../../../packages/hxhx-core/src
+-main ProviderMain
+--no-output
+-dce full
+--macro keep('backend.ITargetBackendProvider')
+-lib reflaxe.ocaml
+-D hxhx_stage0_ocaml_only
+-D reflaxe_ocaml_progress
+-D no-traces
+-D no_traces
+-D ocaml_output=out

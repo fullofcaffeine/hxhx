@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.vm.VmNativeBackend" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.vm.VmNativeBackend" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.vm.VmNativeBackend" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.VmNativeBackend" } : t)
 
 let nekoCapabilities = fun () -> let __anonymous_value_1 = HxAnon.create () in (
   let __anonymous_field_value_2 = true in ignore (HxAnon.set __anonymous_value_1 "supportsNoEmit" (HxRuntime.box_bool __anonymous_field_value_2));
@@ -30,7 +30,7 @@ let hlCapabilities = fun () -> let __anonymous_value_5 = HxAnon.create () in (
 let nekoDescriptor = fun () -> let __anon_9 = HxAnon.create () in (
   ignore (HxAnon.set __anon_9 "id" (Obj.repr "neko-native"));
   ignore (HxAnon.set __anon_9 "implId" (Obj.repr "builtin/neko-native-source-mvp"));
-  ignore (HxAnon.set __anon_9 "abiVersion" (Obj.repr 1));
+  ignore (HxAnon.set __anon_9 "abiVersion" (Obj.repr 2));
   ignore (HxAnon.set __anon_9 "priority" (Obj.repr 120));
   ignore (HxAnon.set __anon_9 "description" (Obj.repr "Native Neko source backend (MVP)"));
   ignore (HxAnon.set __anon_9 "capabilities" (nekoCapabilities ()));
@@ -55,7 +55,7 @@ let nekoDescriptor = fun () -> let __anon_9 = HxAnon.create () in (
 let hlDescriptor = fun () -> let __anon_15 = HxAnon.create () in (
   ignore (HxAnon.set __anon_15 "id" (Obj.repr "hl-native"));
   ignore (HxAnon.set __anon_15 "implId" (Obj.repr "builtin/hl-native-bytecode-boundary"));
-  ignore (HxAnon.set __anon_15 "abiVersion" (Obj.repr 1));
+  ignore (HxAnon.set __anon_15 "abiVersion" (Obj.repr 2));
   ignore (HxAnon.set __anon_15 "priority" (Obj.repr 120));
   ignore (HxAnon.set __anon_15 "description" (Obj.repr "Native HashLink bytecode backend boundary"));
   ignore (HxAnon.set __anon_15 "capabilities" (hlCapabilities ()));

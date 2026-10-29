@@ -162,7 +162,7 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 				new ResolvedModule("unit.MacroConsumer", macroConsumerHx, ParserStage.parse(macroConsumerSrc, macroConsumerHx)),
 				new ResolvedModule("unit.Main", mainHx, ParserStage.parse(src, mainHx))
 			]);
-			EmitterStage.emitToDir(expanded, outDir, true, false);
+			EmitterStage.emitToDir(expanded, outDir, false);
 
 			final mainMl = haxe.io.Path.join([outDir, 'Unit_Main.ml']);
 			assertTrue(FileSystem.exists(mainMl), 'Expected Unit_Main.ml in emitted output.');
@@ -220,7 +220,7 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			final haxeExpanded = program([haxeSrcDir], [
 				new ResolvedModule("haxe.Main", haxeMainHx, ParserStage.parse(haxeSrc, haxeMainHx))
 			]);
-			EmitterStage.emitToDir(haxeExpanded, haxeOutDir, true, false);
+			EmitterStage.emitToDir(haxeExpanded, haxeOutDir, false);
 
 			final haxeMainMl = haxe.io.Path.join([haxeOutDir, 'Haxe_Main.ml']);
 			assertTrue(FileSystem.exists(haxeMainMl), 'Expected Haxe_Main.ml in emitted output.');
@@ -257,7 +257,7 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 				new ResolvedModule("php.Syntax", phpSyntaxLocalHx, ParserStage.parse(File.getContent(phpSyntaxLocalHx), phpSyntaxLocalHx)),
 				new ResolvedModule("php.Boot", phpBootHx, ParserStage.parse(phpBootSrc, phpBootHx))
 			]);
-			EmitterStage.emitToDir(phpExpanded, phpOutDir, true, false);
+			EmitterStage.emitToDir(phpExpanded, phpOutDir, false);
 
 			final phpBootMl = haxe.io.Path.join([phpOutDir, 'Php_Boot.ml']);
 			assertTrue(FileSystem.exists(phpBootMl), 'Expected Php_Boot.ml in emitted output.');

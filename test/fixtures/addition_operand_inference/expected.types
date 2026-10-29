@@ -1,0 +1,11 @@
+alias.value=Int
+dynamicPeer.other=Dynamic
+dynamicPeer.value=Unknown
+explicit.value=Dynamic
+floating.value=Float
+left.value=Int
+pair.left=Int
+pair.right=Int
+right.value=Int
+text.value=String
+unused.value=Unknown

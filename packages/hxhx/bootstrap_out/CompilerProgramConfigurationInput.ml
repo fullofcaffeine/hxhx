@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable name : string; mutable observedInputRevisi
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun name2 observedInputRevision2 -> let self = ({ __hx_type = HxType.class_ "CompilerProgramConfigurationInput"; name = HxString.hx_null_string; observedInputRevision = HxString.hx_null_string } : t) in (
+let create = fun name2 observedInputRevision2 -> let self = ({ __hx_type = HxType.instance_marker "CompilerProgramConfigurationInput"; name = HxString.hx_null_string; observedInputRevision = HxString.hx_null_string } : t) in (
   ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
     ignore (if name2 == HxString.hx_null_string then let __assign_1 = "" in (
       tempRight := __assign_1;
@@ -38,7 +38,7 @@ let create = fun name2 observedInputRevision2 -> let self = ({ __hx_type = HxTyp
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerProgramConfigurationInput"; name = HxString.hx_null_string; observedInputRevision = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerProgramConfigurationInput"; name = HxString.hx_null_string; observedInputRevision = HxString.hx_null_string } : t)
 
 let getObservedInputRevision = fun self () -> ((self : t).observedInputRevision : string)
 

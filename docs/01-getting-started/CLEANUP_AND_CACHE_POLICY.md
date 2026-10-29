@@ -127,6 +127,14 @@ HXHX_KEEP_LOGS=1 bash scripts/hxhx/regenerate-hxhx-bootstrap.sh
 HXHX_KEEP_LOGS=1 HXHX_LOG_DIR="$PWD/.tmp/hxhx-logs" bash scripts/hxhx/build-hxhx.sh
 ```
 
+For a source build, set `HXHX_STAGE0_PROGRESS=1` to show the latest compiler
+phase at each heartbeat. The build keeps flushed progress in a separate file
+because compiler warnings can remain buffered until generation finishes.
+`HXHX_KEEP_LOGS` and `HXHX_LOG_DIR` also apply to this progress file.
+If you supply `REFLAXE_OCAML_PROGRESS_FILE`, the build preserves that file.
+With both heartbeat and timeout monitoring disabled, progress goes directly
+to stderr unless you supply a file.
+
 ## Suggested cadence
 
 - Before a heavy gate or bootstrap run: `npm run clean:dry-run -- --verbose`,

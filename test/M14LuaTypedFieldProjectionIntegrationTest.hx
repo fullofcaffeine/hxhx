@@ -132,7 +132,7 @@ class M14LuaTypedFieldProjectionIntegrationTest {
 	static function emit(program:MacroExpandedProgram, outputDir:String, outputPath:String):String {
 		if (!FileSystem.exists(outputDir))
 			FileSystem.createDirectory(outputDir);
-		BackendRegistry.requireForTarget("lua-native").emit(program, new BackendContext(outputDir, outputPath, "Main", true, false, new StringMap<String>()));
+		BackendRegistry.requireForTarget("lua-native").emit(program, new BackendContext(outputDir, outputPath, "Main", false, new StringMap<String>()));
 		return File.getContent(outputPath);
 	}
 
@@ -164,11 +164,15 @@ class M14LuaTypedFieldProjectionIntegrationTest {
 			final direct = emit(typedProgram, directDir, directPath);
 			final repeated = emit(program(), repeatedDir, repeatedPath);
 			assertTrue(direct == repeated, "equivalent Lua requests produced different exact field-projection output");
-			assertContains(direct, 'local value = "field"', "static field should retain its bare transport name");
+			assertContains(direct, '__hx_lua_classes.c0.value = "field"', "static field should use its exact class storage");
 			assertContains(direct, "local value_1 = 7", "shadowing local should not replace the field transport name");
-			assertContains(direct, "print(__hxhx_string_to_upper_case(value))", "main field read should select the Lua String helper from exact field facts");
-			assertContains(direct, "print(__hxhx_string_to_lower_case(value))", "field read after the nested local should retain exact String behavior");
-			assertContains(direct, "return __hxhx_string_to_upper_case(value)", "helper field read should select the Lua String helper from its own catalog");
+			assertContains(direct, "print(__hxhx_string_to_upper_case(__hx_lua_classes.c0.value))",
+				"main field read should select the Lua String helper from exact field facts");
+			assertContains(direct, "print(__hxhx_string_to_lower_case(__hx_lua_classes.c0.value))",
+				"field read after the nested local should retain exact String behavior");
+			assertContains(direct, "upperField = function()", "the selected static helper must be emitted before it is called");
+			assertContains(direct, "return __hxhx_string_to_upper_case(__hx_lua_classes.c0.value)",
+				"helper field read should select the Lua String helper from its own catalog");
 
 			final blockedPath = Path.join([tmpRoot, "blocked.lua"]);
 			FileSystem.createDirectory(blockedPath);

@@ -1,0 +1,2 @@
+# 1 "TypedSourceParameterEntry.ml"
+include CompilerDiagnosticProbe.TypedSourceParameterEntry

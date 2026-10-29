@@ -6,9 +6,9 @@ type t = { __hx_type : Obj.t; mutable outputEvents : Hxhx_CompilationRequestOutp
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun outputEvents2 isError2 stopServer2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerReply"; outputEvents = Obj.magic HxRuntime.hx_null; isError = false; stopServer = false } : t) in (
+let create = fun outputEvents2 isError2 stopServer2 -> let self = ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerReply"; outputEvents = Obj.magic HxRuntime.hx_null; isError = false; stopServer = false } : t) in (
   ignore (let stopServer2 = if Obj.repr stopServer2 == HxRuntime.hx_null then false else stopServer2 in ignore ((
-    ignore (let __assign_1 = Obj.magic (let __array_receiver_2 = outputEvents2 in HxArray.copy __array_receiver_2) in (
+    ignore (let __assign_1 = Obj.magic (let __array_receiver_2 = Obj.magic outputEvents2 in HxArray.copy __array_receiver_2) in (
       (Obj.magic self : t).outputEvents <- __assign_1;
       __assign_1
     ));
@@ -24,9 +24,9 @@ let create = fun outputEvents2 isError2 stopServer2 -> let self = ({ __hx_type =
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerReply"; outputEvents = Obj.magic HxRuntime.hx_null; isError = false; stopServer = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerReply"; outputEvents = Obj.magic HxRuntime.hx_null; isError = false; stopServer = false } : t)
 
-let events = fun self () -> let __array_receiver_7 = (Obj.magic self : t).outputEvents in HxArray.copy __array_receiver_7
+let events = fun self () -> let __array_receiver_7 = Obj.magic ((Obj.magic self : t).outputEvents) in HxArray.copy __array_receiver_7
 
 let message = fun text isError2 stopServer2 -> let stopServer2 = if Obj.repr stopServer2 == HxRuntime.hx_null then false else stopServer2 in create (Obj.magic (let __arr_8 = HxArray.create () in (
   ignore (HxArray.push __arr_8 (Hxhx_CompilationRequestOutputEvent.create (HxString.toStdString text ^ "\n" : string) true));

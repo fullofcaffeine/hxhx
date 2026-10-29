@@ -116,7 +116,7 @@ class CppAbstractHelperEmitter {
 		return switch (HxFunctionDecl.getBody(fn)) {
 			case [SReturn(EThis, _)]:
 				receiver;
-			case [SReturn(ECast(EThis, _), _)]:
+			case [SReturn(ECast(EThis, _), _)] | [SReturn(ECheckType(EThis, _), _)]:
 				receiver;
 			case [SReturn(EBinop(op, EThis, right), _)] if (isInlineBinaryOperator(op)):
 				"("

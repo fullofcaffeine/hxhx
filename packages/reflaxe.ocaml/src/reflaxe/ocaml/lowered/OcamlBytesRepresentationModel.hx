@@ -1,6 +1,5 @@
 package reflaxe.ocaml.lowered;
 
-#if (macro || reflaxe_runtime || eval)
 /**
 	Stable identities shared by Bytes representation and operation planning.
 
@@ -26,4 +25,3 @@ class OcamlBytesRepresentationContract {
 	public static inline final EXPLICIT_NULL_PROOF_ID = "explicit-null-haxe-bytes-reference-carrier-v2";
 	public static inline final DATA_PROOF_ID = "direct-haxe-bytes-data-alias-v1";
 }
-#end

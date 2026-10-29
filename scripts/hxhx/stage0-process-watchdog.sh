@@ -17,8 +17,8 @@
 # the client tree; the caller owns cleanup for any separately managed server.
 #
 # How ownership is divided:
-# The regeneration script starts the compiler, calls these functions once per
-# second, owns `wait`, writes diagnostics and JSON reports, and chooses the
+# The regeneration script starts the compiler, polls after one-second sleeps,
+# owns `wait`, writes diagnostics and JSON reports, and chooses the
 # configured limits. This focused module observes a bounded process-table
 # snapshot, records why progress was recognized, decides which limit fired,
 # and stops only the supplied process tree when asked. It never starts a
@@ -97,13 +97,28 @@ stage0_watchdog_process_tree_cpu_signature() {
 	printf '%s\n' "$signature"
 }
 
+# Use a monotonic clock so process inspection and scheduling delays count,
+# while changes to the system's calendar clock cannot extend the deadline.
+# Node is part of the repository's build toolchain. Read milliseconds before
+# subtracting the start time to avoid firing a whole-second deadline early.
+stage0_watchdog_now_ms() {
+	node -p 'Number(process.hrtime.bigint() / 1000000n)'
+}
+
+stage0_watchdog_elapsed_seconds() {
+	local now_ms
+	now_ms="$(stage0_watchdog_now_ms)" || return
+	printf '%s\n' "$(((now_ms - STAGE0_WATCHDOG_START_MS) / 1000))"
+}
+
 stage0_watchdog_init() {
+	STAGE0_WATCHDOG_START_MS="$(stage0_watchdog_now_ms)" || return
 	STAGE0_WATCHDOG_TIMEOUT_KIND="none"
 	STAGE0_WATCHDOG_TIMEOUT_ELAPSED=0
 	STAGE0_WATCHDOG_LAST_PROGRESS_ELAPSED=0
 	STAGE0_WATCHDOG_LAST_PROGRESS_REASON="process-start"
 	STAGE0_WATCHDOG_CLEANUP="not-needed"
-	STAGE0_WATCHDOG_POLL_ELAPSED=0
+	STAGE0_WATCHDOG_POLL_ELAPSED="$((-HXHX_STAGE0_PROGRESS_POLL_SECS))"
 	STAGE0_WATCHDOG_PREVIOUS_CPU_SIGNATURE=""
 	STAGE0_WATCHDOG_PREVIOUS_LOG_BYTES=0
 	STAGE0_WATCHDOG_PREVIOUS_TREE_PIDS=""
@@ -123,11 +138,10 @@ stage0_watchdog_poll() {
 		return
 	fi
 
-	STAGE0_WATCHDOG_POLL_ELAPSED="$((STAGE0_WATCHDOG_POLL_ELAPSED + 1))"
-	if [ "$STAGE0_WATCHDOG_POLL_ELAPSED" -lt "$HXHX_STAGE0_PROGRESS_POLL_SECS" ]; then
+	if [ "$((elapsed - STAGE0_WATCHDOG_POLL_ELAPSED))" -lt "$HXHX_STAGE0_PROGRESS_POLL_SECS" ]; then
 		return
 	fi
-	STAGE0_WATCHDOG_POLL_ELAPSED=0
+	STAGE0_WATCHDOG_POLL_ELAPSED="$elapsed"
 
 	local tree_pids
 	tree_pids="$(stage0_watchdog_collect_observed_pids "$root_pid" "$additional_owned_pids")"

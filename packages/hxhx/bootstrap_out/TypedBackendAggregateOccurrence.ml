@@ -1,0 +1,2 @@
+# 1 "TypedBackendAggregateOccurrence.ml"
+include CompilerDiagnosticProbe.TypedBackendAggregateOccurrence

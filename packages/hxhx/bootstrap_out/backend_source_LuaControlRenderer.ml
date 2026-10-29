@@ -1,0 +1,2 @@
+# 1 "backend_source_LuaControlRenderer.ml"
+include Backend_source_CsEnumConstructorCallLowering.Backend_source_LuaControlRenderer

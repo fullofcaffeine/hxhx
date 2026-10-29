@@ -16,6 +16,8 @@ class HxhxOcamlTargetProgramAdapter {
 			throw "native OCaml target program adapter requires a program";
 		final modules = program.getTypedModules();
 		final projections = [for (module in modules) module.getBackendProjection()];
+		for (projection in projections)
+			projection.assertRuntimeTypeOperandsAbsent("native OCaml target adapter");
 		final declarations = HxhxOcamlTargetDeclarationAdapter.fromModules(program.getTypedProgramRevision().getCanonicalIdentity(), projections);
 		final fieldInitializers = new Array<OcamlTargetFieldInitializerFact>();
 		final functions = new Array<OcamlTargetFunctionFact>();

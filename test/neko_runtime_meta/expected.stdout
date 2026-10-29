@@ -1,0 +1,11 @@
+dynamic:true,false,true
+class:true,false,false
+enum:true,false,false
+meta:true,true,false
+primitive:true,true,true
+instances:true,true,false
+operands:true,true,true,true
+replace-dynamic:true,false
+replace-class:true,false
+replace-enum:true,false
+restored:true,true,true

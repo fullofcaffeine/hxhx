@@ -1,0 +1,2 @@
+# 1 "TypedBackendStatementControl.ml"
+include CompilerDiagnosticProbe.TypedBackendStatementControl

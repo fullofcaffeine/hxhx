@@ -158,11 +158,17 @@ class M14HxhxStage3DynamicStringConcatIntegrationTest {
 			assertTrue(addition.getType().getSemanticKey() == "primitive:String", "hxhx lost a nested String addition result");
 
 		final expanded = MacroStage.expandProgram([typed], []);
-		EmitterStage.emitToDir(expanded, outDir, true, false);
+		EmitterStage.emitToDir(expanded, outDir, false);
 		final generated = File.getContent(haxe.io.Path.join([outDir, "DynamicStringConcat.ml"]));
-		final executable = EmitterStage.emitToDir(expanded, outDir, true);
-		assertTrue(countOccurrences(generated, "observed (left)") == 1, "the left Dynamic expression was emitted more than once: " + generated);
-		assertTrue(countOccurrences(generated, "observed (right)") == 1, "the right Dynamic expression was emitted more than once: " + generated);
+		final executable = EmitterStage.emitToDir(expanded, outDir);
+		assertTrue(countOccurrences(generated,
+			"let __hx_call_function = (observed) in let __hx_call_argument_0 = ((left)) in __hx_call_function __hx_call_argument_0") == 1,
+			"the left Dynamic expression was emitted more than once: "
+			+ generated);
+		assertTrue(countOccurrences(generated,
+			"let __hx_call_function = (observed) in let __hx_call_argument_0 = ((right)) in __hx_call_function __hx_call_argument_0") == 1,
+			"the right Dynamic expression was emitted more than once: "
+			+ generated);
 		assertTrue(countOccurrences(generated, "HxDynamic.add") == 3,
 			"the two mixed String additions and one Dynamic numeric addition did not retain checked runtime dispatch: " + generated);
 		assertTrue(countOccurrences(generated, "HxDynamic.toStdString (HxDynamic.add") == 2,

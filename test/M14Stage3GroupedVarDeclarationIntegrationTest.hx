@@ -49,7 +49,7 @@ class M14Stage3GroupedVarDeclarationIntegrationTest {
 			final parsed = ParserStage.parse(src, mainHx);
 			final typed = TyperStage.typeModule(parsed);
 			final expanded = MacroStage.expandProgram([typed], []);
-			EmitterStage.emitToDir(expanded, outDir, true, false);
+			EmitterStage.emitToDir(expanded, outDir, false);
 
 			final mainMl = haxe.io.Path.join([outDir, 'Unit_Main.ml']);
 			assertTrue(FileSystem.exists(mainMl), 'Expected Unit_Main.ml in emitted output.');

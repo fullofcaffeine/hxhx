@@ -10,6 +10,7 @@ class M14JsStmtEmitterMultiCatchIntegrationTest {
 	}
 
 	static function main() {
+		M14JsCatchIdentityRuntimeTest.run();
 		final pos = HxPos.unknown();
 		final tryStmt:HxStmt = STry(SBlock([SThrow(EString("boom"), pos)], pos), [
 			{

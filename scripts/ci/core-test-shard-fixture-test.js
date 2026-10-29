@@ -4,6 +4,7 @@
 const childProcess = require('child_process')
 const fs = require('fs')
 const path = require('path')
+const vm = require('vm')
 const {
   evaluateAggregateResults,
   jobsRequiredAtTier,
@@ -47,15 +48,117 @@ function requireIncludes(content, snippet, label) {
   assert(content.includes(snippet), `${label} must include ${JSON.stringify(snippet)}`)
 }
 
+/** Exercise the real runner without compiling products or starting external commands. */
+function checkCommandFailureReporting() {
+  const source = fs.readFileSync(path.join(__dirname, 'core-test-shard.js'), 'utf8')
+  const commands = ['test:first', 'test:middle', 'test:last']
+  function observe(outcomes, shared = false, corrupt = false) {
+    const invoked = []
+    const lines = []
+    const artifactResults = []
+    const runtime = { argv: ['node', 'core-test-shard.js', '--shard', 'fixture'], platform: 'linux', env: {}, cwd: () => repoRoot }
+    const artifact = {
+      environment: {},
+      verify: () => { if (corrupt) throw new Error('artifact changed') },
+      failConsumer: command => artifactResults.push(`fail:${command}`),
+      passConsumer: command => artifactResults.push(`pass:${command}`),
+      finish: status => artifactResults.push(`finish:${status}`)
+    }
+    vm.runInNewContext(source, {
+      process: runtime,
+      console: { log: line => lines.push(line), error: line => lines.push(line) },
+      require: name => {
+        if (name === 'child_process') return {
+          spawnSync: (executable, args) => {
+            assert(executable === 'npm' && args[0] === 'run', 'runner changed npm invocation')
+            invoked.push(args[1])
+            return outcomes[invoked.length - 1] || { status: 0 }
+          }
+        }
+        if (name === './core-test-shards') return { loadPlan: () => ({ shards: [{ id: 'fixture', commands }] }) }
+        if (name === './macro-host-test-artifact') return { maybePrepareSharedArtifact: () => shared ? artifact : null }
+        throw new Error(`unexpected runner dependency: ${name}`)
+      }
+    }, { filename: 'core-test-shard.js' })
+    return { invoked, lines: lines.join('\n'), status: runtime.exitCode || 0, artifactResults }
+  }
+  const success = observe([])
+  assert(success.status === 0 && success.invoked.join() === commands.join(), 'successful commands must run once in order')
+  requireIncludes(success.lines, 'PASS shard=fixture', 'successful shard')
+  for (const outcomes of [[{ status: 0 }, { status: 7 }], [{ status: 3 }, { status: 0 }, { status: 9 }]]) {
+    const failed = observe(outcomes)
+    assert(failed.invoked.join() === commands.join(), 'ordinary failure must not hide later independent commands')
+    assert(failed.status === 1 && !failed.lines.includes('PASS shard=fixture'), 'a failed shard must not report success')
+    outcomes.forEach((outcome, index) => {
+      if (outcome.status !== 0) requireIncludes(failed.lines, `${commands[index]} failed with exit ${outcome.status}`, 'failure summary')
+    })
+  }
+  for (const outcome of [{ error: new Error('cannot launch') }, { status: null, signal: 'SIGTERM' }, { status: null }]) {
+    const aborted = observe([{ status: 0 }, outcome])
+    assert(aborted.status === 1 && aborted.invoked.join() === commands.slice(0, 2).join(), 'execution failure must abort immediately')
+    assert(!aborted.lines.includes('PASS shard=fixture'), 'aborted shard must not report success')
+  }
+  const sharedFailure = observe([{ status: 4 }], true)
+  assert(sharedFailure.status === 1 && sharedFailure.invoked.length === 1, 'shared-artifact failure must stop dependent commands')
+  assert(sharedFailure.artifactResults.join() === 'fail:test:first,finish:failed', 'shared artifact must record failure')
+  const corrupt = observe([], true, true)
+  assert(corrupt.status === 1 && corrupt.invoked.length === 0, 'invalid shared artifact must not start a consumer')
+  assert(corrupt.artifactResults.join() === 'fail:test:first,finish:failed', 'invalid artifact must finish as failed')
+}
+
+/** Independent runners consume routing outputs; final aggregation still owns guard enforcement. */
+function checkIndependentJobStarts(workflow) {
+  const lines = workflow.split('\n')
+  for (const job of ['standalone-guards', 'stage0-free-smoke', 'js-native-smoke', 'plugin-matrix', 'native-plugin-happy-path', 'test-shards', 'hxhx-e2e']) {
+    const start = lines.indexOf(`  ${job}:`)
+    if (start < 0) throw new Error(`missing independent job ${job}`)
+    let end = start + 1
+    while (end < lines.length && !/^  [a-z][a-z0-9-]*:$/.test(lines[end])) end++
+    const block = lines.slice(start, end).join('\n')
+    const tier = job === 'standalone-guards' ? 'q1' : job === 'hxhx-e2e' ? 'q3' : 'q2'
+    if (!block.includes('    needs: [route]\n') || block.includes('needs.guards')) {
+      throw new Error(`${job} must start after routing without waiting for guards`)
+    }
+    if (!block.includes("    if: ${{ needs.route.outputs.run_" + tier + " == 'true' }}\n")) {
+      throw new Error(`${job} lost its exact routing condition`)
+    }
+  }
+}
+
+/** Keep the original serial command available while CI observes each C++ failure independently. */
+function checkRuntimeTypeCoverage(packageJson, plan, expected) {
+  const parent = 'test:m14:runtime-type-operands'
+  const groups = parseAggregateCommands(packageJson, parent)
+  if (plan.aggregateCommands.includes(parent)) throw new Error('serial runtime-type parent must not own a CI slot')
+  const scheduled = plan.aggregateCommands.filter(command => groups.includes(command))
+  if (groups.length !== 19 || JSON.stringify(scheduled) !== JSON.stringify(groups)) {
+    throw new Error('runtime-type groups must run exactly once in their original order')
+  }
+  const expanded = groups.flatMap(group => expected.includes(`npm run ${group}`)
+    ? [`npm run ${group}`]
+    : packageJson.scripts[group].split(/\s*&&\s*/))
+  if (JSON.stringify(expanded) !== JSON.stringify(expected)) {
+    throw new Error('runtime-type split changed original commands or order')
+  }
+  for (const command of expected.slice(34, 50)) {
+    if (!groups.some(group => command === `npm run ${group}` || packageJson.scripts[group] === command)) {
+      throw new Error('each C++ runtime-type check must own an independent CI command')
+    }
+  }
+}
+
 function main() {
+  checkCommandFailureReporting()
   const plan = loadPlan(repoRoot)
-  assert(plan.aggregateCommands.length === 131, `expected 131 npm test commands, found ${plan.aggregateCommands.length}`)
+  assert(plan.aggregateCommands.length === 187, `expected 187 npm test commands, found ${plan.aggregateCommands.length}`)
 
   const expectedAggregateJobs = [
     'guards',
+    'standalone-guards',
     'stage0-free-smoke',
     'js-native-smoke',
     'plugin-matrix',
+    'native-plugin-happy-path',
     'test-shards',
     'hxhx-e2e'
   ]
@@ -66,8 +169,16 @@ function main() {
 
   const expectedCounts = {
     'compiler-foundation': 18,
-    'compiler-packaging': 11,
-    'compiler-focused': 95,
+    'compiler-packaging': 14,
+    'compiler-focused-1': 45,
+    'compiler-focused-call-arguments': 1,
+    'compiler-focused-2': 61,
+    'compiler-focused-neko-runtime': 1,
+    'compiler-focused-neko-locals': 1,
+    'compiler-focused-3': 12,
+    'compiler-focused-4': 7,
+    'compiler-focused-cpp-closure-storage': 2,
+    'compiler-focused-5': 18,
     'macro-host-integration': 3,
     portable: 1,
     'target-packages': 2,
@@ -76,7 +187,15 @@ function main() {
   const expectedShardMinimumTiers = {
     'compiler-foundation': 'Q2',
     'compiler-packaging': 'Q2',
-    'compiler-focused': 'Q2',
+    'compiler-focused-1': 'Q2',
+    'compiler-focused-call-arguments': 'Q2',
+    'compiler-focused-2': 'Q2',
+    'compiler-focused-neko-runtime': 'Q2',
+    'compiler-focused-neko-locals': 'Q2',
+    'compiler-focused-3': 'Q2',
+    'compiler-focused-4': 'Q2',
+    'compiler-focused-cpp-closure-storage': 'Q2',
+    'compiler-focused-5': 'Q2',
     'macro-host-integration': 'Q2',
     portable: 'Q2',
     'target-packages': 'Q2',
@@ -84,9 +203,11 @@ function main() {
   }
   const expectedJobMinimumTiers = {
     guards: 'Q1',
+    'standalone-guards': 'Q1',
     'stage0-free-smoke': 'Q2',
     'js-native-smoke': 'Q2',
     'plugin-matrix': 'Q2',
+    'native-plugin-happy-path': 'Q2',
     'test-shards': 'Q2',
     'hxhx-e2e': 'Q3'
   }
@@ -109,6 +230,18 @@ function main() {
   }
   assert(!plan.shards.some(shard => shard.id === 'compiler'), 'the timed-out broad compiler shard still exists')
   assert(
+    JSON.stringify(plan.shards.find(shard => shard.id === 'compiler-focused-4').commands) === JSON.stringify([
+      'test:m14:cpp-int-sub-int64',
+      'test:m14:cpp-int64-mul-int',
+      'test:m14:cpp-int64-mod-int',
+      'test:m14:cpp-int-div-int64',
+      'test:m14:cpp-guarded-control',
+      'test:m14:cpp-array-push-value',
+      'test:m14:cpp-string-length'
+    ]),
+    'C++ arithmetic setup selection must preserve all seven commands and their order'
+  )
+  assert(
     JSON.stringify(plan.shards.find(shard => shard.id === 'portable').commands) === JSON.stringify(['test:portable']),
     'portable fixture ownership must remain isolated from snapshots and examples'
   )
@@ -130,15 +263,60 @@ function main() {
   )
 
   const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'))
+  const runtimeCommands = JSON.parse(fs.readFileSync(path.join(repoRoot, 'test/fixtures/core_test_shards/runtime_type_commands.json'), 'utf8'))
+  assert(runtimeCommands.length === 54, 'the runtime-type inventory must retain the original 53 commands and the Array boundary group')
+  checkRuntimeTypeCoverage(packageJson, plan, runtimeCommands)
+  for (const change of ['missing', 'duplicated']) {
+    const invalid = structuredClone(packageJson)
+    const group = 'test:m14:cpp-managed-map-type'
+    invalid.scripts[group] = change === 'missing' ? '' : `${invalid.scripts[group]} && ${invalid.scripts[group]}`
+    expectThrow(() => checkRuntimeTypeCoverage(invalid, plan, runtimeCommands),
+      'changed original commands or order', `${change} runtime-type check`)
+  }
+  const missingRuntimeGroup = { ...plan, aggregateCommands: plan.aggregateCommands.filter(command => command !== 'test:m14:cpp-managed-object-map') }
+  expectThrow(() => checkRuntimeTypeCoverage(packageJson, missingRuntimeGroup, runtimeCommands),
+    'must run exactly once', 'runtime-type group omitted from CI')
+  const repeatedRuntimeParent = { ...plan, aggregateCommands: [...plan.aggregateCommands, 'test:m14:runtime-type-operands'] }
+  expectThrow(() => checkRuntimeTypeCoverage(packageJson, repeatedRuntimeParent, runtimeCommands),
+    'parent must not own a CI slot', 'runtime-type parent repeated beside its children')
   assert(
     packageJson.scripts['test:ci:shard'].includes('scripts/hxhx/with-heavy-run-lease.js'),
     'package.json test:ci:shard must use the cooperative local lease wrapper'
   )
-  requireIncludes(packageJson.scripts['ci:guards'], 'guard:core-test-shards', 'package.json scripts.ci:guards')
+  requireIncludes(packageJson.scripts['ci:guards:core'], 'guard:core-test-shards', 'package.json scripts.ci:guards:core')
+  assert(
+    packageJson.scripts['ci:guards'] === 'npm run ci:guards:core && npm run ci:guards:standalone',
+    'local guard aggregate must retain both required CI groups exactly once'
+  )
+  const standaloneCommands = [
+    'test:reflaxe-ocaml:doctor',
+    'test:reflaxe-ocaml:target-reuse-contract',
+    'test:reflaxe-ocaml:complete-program-server'
+  ]
+  assert(JSON.stringify(parseAggregateCommands(packageJson, 'ci:guards:standalone')) === JSON.stringify(standaloneCommands),
+    'local standalone aggregate must retain all three independent commands exactly once')
+  for (const command of standaloneCommands) {
+    assert(!packageJson.scripts['ci:guards:core'].split(/\s*&&\s*/).includes(`npm run ${command}`),
+      `core guards must not repeat ${command}`)
+  }
 
   const workflowSource = fs.readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8')
   requireIncludes(workflowSource, 'Upload shared macro-host evidence', '.github/workflows/ci.yml')
   requireIncludes(workflowSource, '.artifacts/core-test/macro-host-integration', '.github/workflows/ci.yml')
+
+  // Unmeasured partitions are explicit; malformed or invented zero timings remain invalid.
+  const unmeasured = structuredClone(plan.manifest)
+  unmeasured.shards[0].baselineSeconds = null
+  validateManifest(unmeasured, plan.aggregateCommands)
+  for (const invalidBaseline of [undefined, 0, -1, 'unmeasured']) {
+    const invalidTiming = structuredClone(plan.manifest)
+    invalidTiming.shards[0].baselineSeconds = invalidBaseline
+    expectThrow(
+      () => validateManifest(invalidTiming, plan.aggregateCommands),
+      'needs a positive baselineSeconds value or explicit null until measured',
+      'invalid shard timing baseline'
+    )
+  }
 
   const invalidAggregate = structuredClone(packageJson)
   invalidAggregate.scripts.test = 'npm run one && echo hidden'
@@ -205,7 +383,7 @@ function main() {
   )
   assert(
     JSON.stringify(jobsRequiredAtTier(plan.manifest, 'Q2')) ===
-      JSON.stringify(['guards', 'stage0-free-smoke', 'js-native-smoke', 'plugin-matrix', 'test-shards']),
+      JSON.stringify(['guards', 'standalone-guards', 'stage0-free-smoke', 'js-native-smoke', 'plugin-matrix', 'native-plugin-happy-path', 'test-shards']),
     'Q2 job boundary changed'
   )
   assert(
@@ -267,7 +445,7 @@ function main() {
     CORE_TEST_QA_TIER: 'Q2'
   })
   assert(aggregateQ2.status === 0, `aggregate CLI rejected the policy-authorized Q2 hxhx skip\n${aggregateQ2.stderr}`)
-  assert(aggregateQ2.stdout.includes('required=5 skipped=1'), 'aggregate Q2 receipt omits its required/skip counts')
+  assert(aggregateQ2.stdout.includes('required=7 skipped=1'), 'aggregate Q2 receipt omits its required/skip counts')
 
   const aggregateQ3MissingHxhx = runScript('scripts/ci/core-test-aggregate.js', [], {
     ...process.env,
@@ -287,12 +465,49 @@ function main() {
 
   const q1Needs = structuredClone(q0Needs)
   q1Needs.guards.result = 'success'
+  q1Needs['standalone-guards'].result = 'success'
   const aggregateQ1 = runScript('scripts/ci/core-test-aggregate.js', [], {
     ...process.env,
     CORE_TEST_NEEDS_JSON: JSON.stringify({ ...alwaysNeeds, ...q1Needs }),
     CORE_TEST_QA_TIER: 'Q1'
   })
   assert(aggregateQ1.status === 0, `aggregate CLI rejected policy-authorized Q1 skips\n${aggregateQ1.stderr}`)
+
+  // Both independent plugin workloads remain mandatory after they stop sharing a job budget.
+  for (const job of ['plugin-matrix', 'native-plugin-happy-path']) {
+    for (const tier of ['Q2', 'Q3']) {
+      for (const result of ['failure', 'cancelled', 'skipped', 'missing']) {
+        const needs = structuredClone({ ...alwaysNeeds, ...successNeeds })
+        if (result === 'missing') delete needs[job]
+        else needs[job].result = result
+        const rejected = runScript('scripts/ci/core-test-aggregate.js', [], {
+          ...process.env,
+          CORE_TEST_NEEDS_JSON: JSON.stringify(needs),
+          CORE_TEST_QA_TIER: tier
+        })
+        assert(rejected.status !== 0, `${tier} aggregate accepted ${job}=${result}`)
+        assert(rejected.stderr.includes(`required job ${job} result=${result}`), `${tier} lost the plugin failure reason`)
+      }
+    }
+  }
+
+  // Every Q1 guard owner must succeed, even when all other independent jobs pass.
+  for (const job of ['guards', 'standalone-guards']) {
+    for (const tier of ['Q1', 'Q2', 'Q3', 'Q4']) {
+      for (const result of ['failure', 'cancelled', 'skipped', 'missing']) {
+        const needs = structuredClone({ ...alwaysNeeds, ...successNeeds })
+        if (result === 'missing') delete needs[job]
+        else needs[job].result = result
+        const rejected = runScript('scripts/ci/core-test-aggregate.js', [], {
+          ...process.env,
+          CORE_TEST_NEEDS_JSON: JSON.stringify(needs),
+          CORE_TEST_QA_TIER: tier
+        })
+        assert(rejected.status !== 0, `${tier} aggregate accepted ${job}=${result} with successful tests`)
+        assert(rejected.stderr.includes(`required job ${job} result=${result}`), `${tier} lost the guard failure reason`)
+      }
+    }
+  }
 
   const failedRouteNeeds = { ...alwaysNeeds, ...q0Needs, route: { result: 'failure' } }
   const failedRoute = runScript('scripts/ci/core-test-aggregate.js', [], {
@@ -305,7 +520,37 @@ function main() {
   const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8')
   requireIncludes(workflow, '  route:\n    name: QA risk route', 'Core workflow')
   requireIncludes(workflow, '  test-shards:', 'Core workflow')
-  requireIncludes(workflow, '    needs: [route, guards]', 'Core test shards')
+  const coreGuardBlock = workflow.slice(workflow.indexOf('  guards:'), workflow.indexOf('  standalone-guards:'))
+  const serverGuardBlock = workflow.slice(workflow.indexOf('  standalone-guards:'), workflow.indexOf('  stage0-free-smoke:'))
+  requireIncludes(coreGuardBlock, 'run: npm run ci:guards:core', 'core guard command')
+  const matrixCommands = [...serverGuardBlock.matchAll(/- script: ([^\s]+)/g)].map(match => match[1])
+  assert(JSON.stringify(matrixCommands) === JSON.stringify(standaloneCommands),
+    'standalone guard matrix must execute every local standalone command exactly once')
+  requireIncludes(serverGuardBlock, 'run: npm run "${{ matrix.script }}"', 'standalone matrix command')
+  requireIncludes(serverGuardBlock, 'fail-fast: false', 'independent standalone matrix outcomes')
+  requireIncludes(serverGuardBlock, 'timeout-minutes: 60', 'bounded server job')
+  assert(!coreGuardBlock.includes('run: npm run ci:guards\n'), 'core CI must not repeat the local full aggregate')
+  assert(!serverGuardBlock.includes('run: npm run ci:guards'), 'server job must not repeat core guards')
+  checkIndependentJobStarts(workflow)
+  const strictPluginBlock = workflow.slice(workflow.indexOf('  plugin-matrix:'), workflow.indexOf('  native-plugin-happy-path:'))
+  const happyPluginBlock = workflow.slice(workflow.indexOf('  native-plugin-happy-path:'), workflow.indexOf('  test-shards:'))
+  requireIncludes(strictPluginBlock, '    name: Plugin matrix (strict)\n', 'stable strict plugin check name')
+  for (const [block, command] of [
+    [strictPluginBlock, 'npm run -s test:plugins:strict-matrix'],
+    [happyPluginBlock, 'npm run -s test:hxhx:native-plugin-happy-path']
+  ]) {
+    requireIncludes(block, '    timeout-minutes: 40\n', 'unchanged plugin job budget')
+    requireIncludes(block, command, 'independent plugin command')
+    assert(workflow.split(command).length === 2, `${command} must run exactly once in Core`)
+  }
+  expectThrow(
+    () => checkIndependentJobStarts(workflow.replace(
+      '  test-shards:\n    name: Tests / ${{ matrix.label }}\n    runs-on: ubuntu-latest\n    needs: [route]',
+      '  test-shards:\n    name: Tests / ${{ matrix.label }}\n    runs-on: ubuntu-latest\n    needs: [route, guards]'
+    )),
+    'must start after routing',
+    'restored guard dependency'
+  )
   requireIncludes(workflow, '      fail-fast: false', 'Core test shard matrix')
   requireIncludes(workflow, 'npm run test:ci:shard -- --shard "${{ matrix.shard }}"', 'Core test shard runner')
   for (const shard of plan.shards.filter(shard => shard.minimumTier === 'Q2')) {
@@ -322,17 +567,43 @@ function main() {
   const expectedBoundedRows = [
     ['compiler-foundation', 'Compiler foundations and runtime'],
     ['compiler-packaging', 'OCaml packaging and metal profile'],
-    ['compiler-focused', 'Focused compiler regressions'],
+    ['compiler-focused-1', 'Focused compiler regressions (1/5)'],
+    ['compiler-focused-call-arguments', 'Native call arguments and inference'],
+    ['compiler-focused-2', 'Focused compiler regressions (2/5)'],
+    ['compiler-focused-neko-runtime', 'Neko runtime types and target admission', 60],
+    ['compiler-focused-neko-locals', 'Neko local bindings and constructors'],
+    ['compiler-focused-3', 'C++ constructor and instance regressions'],
+    ['compiler-focused-4', 'C++ arithmetic and control regressions'],
+    ['compiler-focused-cpp-closure-storage', 'C++ closures and inherited storage'],
+    ['compiler-focused-5', 'C++ runtime type and Map regressions'],
     ['macro-host-integration', 'Macro-host integration'],
     ['target-packages', 'Snapshots and examples']
   ]
-  for (const [shard, label] of expectedBoundedRows) {
+  for (const [shard, label, timeoutMinutes = 40] of expectedBoundedRows) {
     requireIncludes(
       q2Matrix,
-      `          - shard: ${shard}\n            label: ${label}\n            timeout_minutes: 40`,
+      `          - shard: ${shard}\n            label: ${label}\n            timeout_minutes: ${timeoutMinutes}`,
       `Core bounded shard ${shard}`
     )
   }
+  const sourceRuntimeStep = 'Ensure PHP, Mono and Lua are available for focused runtime tests'
+  const sourceRuntimeCondition = "startsWith(matrix.shard, 'compiler-focused-') && matrix.shard != 'compiler-focused-4'"
+  requireIncludes(q2Matrix, `      - name: ${sourceRuntimeStep}\n        if: \${{ ${sourceRuntimeCondition} }}`,
+    'only C++ arithmetic may omit PHP, Mono and Lua setup')
+  const actualSourceRuntimeCondition = q2Matrix.match(
+    /- name: Ensure PHP, Mono and Lua are available for focused runtime tests\n        if: \$\{\{ (.+) \}\}/
+  )[1]
+  for (const shard of plan.shards) {
+    const selected = vm.runInNewContext(actualSourceRuntimeCondition, {
+      matrix: { shard: shard.id },
+      startsWith: (value, prefix) => value.startsWith(prefix)
+    })
+    const expected = shard.id.startsWith('compiler-focused-') && shard.id !== 'compiler-focused-4'
+    assert(selected === expected, `PHP, Mono and Lua setup changed for ${shard.id}`)
+  }
+  requireIncludes(q2Matrix,
+    "      - name: Expose the Neko compiler for focused tests\n        if: ${{ startsWith(matrix.shard, 'compiler-focused-') }}",
+    'all focused partitions must retain Neko compiler setup')
   assert(
     (q2Matrix.match(/          - shard: portable\n/g) || []).length === 3,
     'Core workflow must run exactly three portable fixture partitions'
@@ -354,8 +625,15 @@ function main() {
     'Core portable fixture deadline'
   )
   requireIncludes(workflow, '  hxhx-e2e:\n    name: Tests / hxhx target end-to-end', 'Q3 hxhx E2E job')
-  requireIncludes(workflow, "needs.route.outputs.run_q3 == 'true'", 'Q3 hxhx E2E condition')
-  requireIncludes(workflow, 'npm run test:ci:shard -- --shard hxhx-targets', 'Q3 hxhx E2E runner')
+  const e2eJob = workflow.slice(q3HxhxStart, workflow.indexOf('\n  test:', q3HxhxStart))
+  requireIncludes(e2eJob, "needs.route.outputs.run_q3 == 'true'", 'Q3 hxhx E2E condition')
+  requireIncludes(e2eJob, '    timeout-minutes: 40', 'Q3 hxhx E2E budget')
+  const e2eStepStart = e2eJob.indexOf('      - name: Run hxhx target end-to-end shard\n')
+  assert(e2eStepStart >= 0, 'Q3 hxhx E2E step is missing')
+  const e2eStep = e2eJob.slice(e2eStepStart)
+  requireIncludes(e2eStep, 'HXHX_FORCE_STAGE0: "0"', 'Q3 snapshot compiler selection')
+  requireIncludes(e2eStep, 'HXHX_BOOTSTRAP_PREFER_NATIVE: "1"', 'Q3 native bootstrap preference')
+  requireIncludes(e2eStep, 'npm run test:ci:shard -- --shard hxhx-targets', 'Q3 hxhx E2E runner')
   requireIncludes(workflow, '  test:\n    name: Tests\n    if: ${{ always() }}', 'stable Tests aggregate')
   requireIncludes(
     workflow,
@@ -372,7 +650,7 @@ function main() {
     env: { ...process.env, CI: 'true' }
   })
   assert(ciList.status === 0, `CI-bypass shard listing failed\n${ciList.stderr}`)
-  assert(ciList.stdout.includes('HAXE_FAMILY_HEAVY_RUN:CI_BYPASS'), 'CI shard did not bypass the local lease')
+  assert(ciList.stderr.includes('HAXE_FAMILY_HEAVY_RUN:CI_BYPASS'), 'CI shard did not bypass the local lease')
   assert(ciList.stdout.includes('test:hxhx-targets'), 'wrapped shard did not receive its forwarded arguments')
 
   console.log(`[core-test-shard-fixture-test] commands=${plan.aggregateCommands.length} shards=${plan.shards.length}`)

@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable providerReport : CompilerSourceProviderRep
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "FilesystemCompilerSourceProvider"; providerReport = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "FilesystemCompilerSourceProvider"; providerReport = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let __assign_1 = Obj.magic (CompilerSourceProviderReport.create false) in (
     (Obj.magic self : t).providerReport <- __assign_1;
     __assign_1
@@ -14,111 +14,124 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "FilesystemCompil
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "FilesystemCompilerSourceProvider"; providerReport = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "FilesystemCompilerSourceProvider"; providerReport = Obj.magic HxRuntime.hx_null } : t)
 
-let readSource = fun self (filePath : string) -> (
+let readBytes = fun self (filePath : string) -> (
   ignore self;
   (try (
-    ignore (if filePath == HxString.hx_null_string || (let __string_receiver_2 = filePath in HxString.length __string_receiver_2) = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-    let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-      ignore (try if not (HxFileSystem.exists (filePath : string)) || HxFileSystem.isDirectory (filePath : string) then let __assign_9 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-        tempResult := __assign_9;
-        __assign_9
-      ) else let __assign_10 = Obj.magic (HxFile.getContent (filePath : string) : string) in (
-        tempResult := __assign_10;
-        __assign_10
+    ignore (if filePath == HxString.hx_null_string || (let __string_receiver_10 = filePath in HxString.length __string_receiver_10) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+    ignore (if CompilerBundledSources.owns (filePath : string) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (CompilerBundledSources.readBytes (filePath : string)))) else ());
+    let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxBytes.t) in (
+      ignore (try if not (HxFileSystem.exists (filePath : string)) || HxFileSystem.isDirectory (filePath : string) then let __assign_17 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+        tempResult := __assign_17;
+        __assign_17
+      ) else let __assign_18 = Obj.magic (Obj.magic (let __bytes_producer_arg_0_19 = HxFile.getBytes (filePath : string) in HxBytes.ofData __bytes_producer_arg_0_19 ())) in (
+        tempResult := __assign_18;
+        __assign_18
       ) with
-        | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-        | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-        | HxRuntime.Hx_return __ret_5 -> raise (HxRuntime.Hx_return __ret_5)
-        | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
-        | HxRuntime.Hx_exception (__exn_v_6, __exn_tags_7) -> if HxRuntime.tags_has __exn_tags_7 "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_6) : Haxe_io_Error.error) in (
+        | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+        | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+        | HxRuntime.Hx_return __ret_13 -> Stdlib.raise (HxRuntime.Hx_return __ret_13)
+        | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
+        | HxRuntime.Hx_exception (__exn_v_14, __exn_tags_15) -> if HxRuntime.tags_has __exn_tags_15 "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_14) : Haxe_io_Error.error) in (
           ignore _hx;
-          let __assign_3 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-            tempResult := __assign_3;
-            __assign_3
+          let __assign_11 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+            tempResult := __assign_11;
+            __assign_11
           )
-        ) else if HxRuntime.tags_has __exn_tags_7 "String" then let _hx = (Obj.obj __exn_v_6 : string) in (
+        ) else if HxRuntime.tags_has __exn_tags_15 "String" then let _hx = (Obj.obj __exn_v_14 : string) in (
           ignore _hx;
-          let __assign_4 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-            tempResult := __assign_4;
-            __assign_4
+          let __assign_12 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+            tempResult := __assign_12;
+            __assign_12
           )
-        ) else HxRuntime.hx_throw_typed __exn_v_6 __exn_tags_7
-        | __exn_8 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_8)) : Haxe_io_Error.error) in (
+        ) else HxRuntime.hx_throw_typed __exn_v_14 __exn_tags_15
+        | __exn_16 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_16)) : Haxe_io_Error.error) in (
           ignore _hx;
-          let __assign_3 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-            tempResult := __assign_3;
-            __assign_3
+          let __assign_11 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+            tempResult := __assign_11;
+            __assign_11
           )
-        ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_8) : string) in (
+        ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_16) : string) in (
           ignore _hx;
-          let __assign_4 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-            tempResult := __assign_4;
-            __assign_4
+          let __assign_12 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+            tempResult := __assign_12;
+            __assign_12
           )
-        ) else raise (__exn_8));
+        ) else Stdlib.raise (__exn_16));
       !tempResult
     )
   ) with
-    | HxRuntime.Hx_return __ret_11 -> (Obj.obj __ret_11 : string) : string)
+    | HxRuntime.Hx_return __ret_20 -> (Obj.obj __ret_20 : HxBytes.t) : HxBytes.t)
 )
 
-let parseFilteredSource = fun self (filteredSource : string) (filePath : string) -> (
+let readSource = fun self (filePath : string) -> let bytes = Obj.magic (readBytes (Obj.magic self) (filePath : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+  ignore (if bytes == Obj.magic (HxRuntime.hx_null) then let __assign_2 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempResult := __assign_2;
+    __assign_2
+  ) else let __assign_3 = Obj.magic (let __bytes_receiver_input_4 = bytes in let __bytes_receiver_5 = if HxRuntime.is_null (Obj.repr __bytes_receiver_input_4) then HxRuntime.hx_throw_typed (Obj.repr "Null Access") ["String"; "Dynamic"] else __bytes_receiver_input_4 in let __bytes_arg_0_6 = 0 in let __bytes_arg_1_7 = let __bytes_receiver_input_8 = bytes in let __bytes_receiver_9 = if HxRuntime.is_null (Obj.repr __bytes_receiver_input_8) then HxRuntime.hx_throw_typed (Obj.repr "Null Access") ["String"; "Dynamic"] else __bytes_receiver_input_8 in HxBytes.length __bytes_receiver_9 in HxBytes.getString __bytes_receiver_5 __bytes_arg_0_6 __bytes_arg_1_7 () : string) in (
+    tempResult := __assign_3;
+    __assign_3
+  ));
+  !tempResult
+)
+
+let parseFilteredSource = fun self (input : Obj.t) -> (
   ignore self;
-  ParserStage.parse (filteredSource : string) (filePath : string)
+  ParserStage.parseFilteredSource input
 )
 
 let isFile = fun self (path : string) -> (
   ignore self;
   (try (
-    ignore (if path == HxString.hx_null_string || (let __string_receiver_28 = path in HxString.length __string_receiver_28) = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (if path == HxString.hx_null_string || (let __string_receiver_37 = path in HxString.length __string_receiver_37) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+    ignore (if CompilerBundledSources.owns (path : string) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (CompilerBundledSources.isFile (path : string)))) else ());
     let tempResult = ref (false : bool) in (
-      ignore (try let __assign_35 = HxFileSystem.exists (path : string) && not (HxFileSystem.isDirectory (path : string)) in (
-        tempResult := __assign_35;
-        __assign_35
+      ignore (try let __assign_44 = HxFileSystem.exists (path : string) && not (HxFileSystem.isDirectory (path : string)) in (
+        tempResult := __assign_44;
+        __assign_44
       ) with
-        | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-        | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-        | HxRuntime.Hx_return __ret_31 -> raise (HxRuntime.Hx_return __ret_31)
-        | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
-        | HxRuntime.Hx_exception (__exn_v_32, __exn_tags_33) -> if HxRuntime.tags_has __exn_tags_33 "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_32) : Haxe_io_Error.error) in (
+        | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+        | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+        | HxRuntime.Hx_return __ret_40 -> Stdlib.raise (HxRuntime.Hx_return __ret_40)
+        | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
+        | HxRuntime.Hx_exception (__exn_v_41, __exn_tags_42) -> if HxRuntime.tags_has __exn_tags_42 "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_41) : Haxe_io_Error.error) in (
           ignore _hx;
-          let __assign_29 = false in (
-            tempResult := __assign_29;
-            __assign_29
+          let __assign_38 = false in (
+            tempResult := __assign_38;
+            __assign_38
           )
-        ) else if HxRuntime.tags_has __exn_tags_33 "String" then let _hx = (Obj.obj __exn_v_32 : string) in (
+        ) else if HxRuntime.tags_has __exn_tags_42 "String" then let _hx = (Obj.obj __exn_v_41 : string) in (
           ignore _hx;
-          let __assign_30 = false in (
-            tempResult := __assign_30;
-            __assign_30
+          let __assign_39 = false in (
+            tempResult := __assign_39;
+            __assign_39
           )
-        ) else HxRuntime.hx_throw_typed __exn_v_32 __exn_tags_33
-        | __exn_34 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_34)) : Haxe_io_Error.error) in (
+        ) else HxRuntime.hx_throw_typed __exn_v_41 __exn_tags_42
+        | __exn_43 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_43)) : Haxe_io_Error.error) in (
           ignore _hx;
-          let __assign_29 = false in (
-            tempResult := __assign_29;
-            __assign_29
+          let __assign_38 = false in (
+            tempResult := __assign_38;
+            __assign_38
           )
-        ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_34) : string) in (
+        ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_43) : string) in (
           ignore _hx;
-          let __assign_30 = false in (
-            tempResult := __assign_30;
-            __assign_30
+          let __assign_39 = false in (
+            tempResult := __assign_39;
+            __assign_39
           )
-        ) else raise (__exn_34));
+        ) else Stdlib.raise (__exn_43));
       !tempResult
     )
   ) with
-    | HxRuntime.Hx_return __ret_36 -> (Obj.obj __ret_36 : bool) : bool)
+    | HxRuntime.Hx_return __ret_45 -> (Obj.obj __ret_45 : bool) : bool)
 )
 
 let prepareFinish = fun self (_requestSucceeded : bool) -> ignore ((
   ignore self;
   (
     ignore _requestSucceeded;
-    ignore ()
+    (() : unit)
   )
 ))
 
@@ -126,22 +139,22 @@ let finish = fun self (_requestSucceeded : bool) -> ignore ((
   ignore self;
   (
     ignore _requestSucceeded;
-    ignore ()
+    (() : unit)
   )
 ))
 
 let report = fun self () -> (Obj.magic self : t).providerReport
 
 let compareStrings = fun (left : string) (right : string) -> (let tempResult = ref (0 : int) in (
-  ignore (if left < right then let __assign_37 = -1 in (
-    tempResult := __assign_37;
-    __assign_37
-  ) else if left > right then let __assign_38 = 1 in (
-    tempResult := __assign_38;
-    __assign_38
-  ) else let __assign_39 = 0 in (
-    tempResult := __assign_39;
-    __assign_39
+  ignore (if left < right then let __assign_46 = -1 in (
+    tempResult := __assign_46;
+    __assign_46
+  ) else if left > right then let __assign_47 = 1 in (
+    tempResult := __assign_47;
+    __assign_47
+  ) else let __assign_48 = 0 in (
+    tempResult := __assign_48;
+    __assign_48
   ));
   !tempResult
 ) : int)
@@ -149,50 +162,51 @@ let compareStrings = fun (left : string) (right : string) -> (let tempResult = r
 let readDirectory = fun self (path : string) -> (
   ignore self;
   (try (
-    ignore (if path == HxString.hx_null_string || (let __string_receiver_12 = path in HxString.length __string_receiver_12) = 0 then raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_13 = HxArray.create () in __represented_array_13))) else ());
+    ignore (if path == HxString.hx_null_string || (let __string_receiver_21 = path in HxString.length __string_receiver_21) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_22 = HxArray.create () in __represented_array_22))) else ());
+    ignore (if CompilerBundledSources.owns (path : string) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (CompilerBundledSources.readDirectory (path : string)))) else ());
     let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-      ignore (try if not (HxFileSystem.exists (path : string)) || not (HxFileSystem.isDirectory (path : string)) then let __assign_22 = Obj.magic (let __represented_array_23 = HxArray.create () in __represented_array_23) in (
-        tempArray := __assign_22;
-        __assign_22
-      ) else let __assign_24 = Obj.magic (HxFileSystem.readDirectory (path : string)) in (
-        tempArray := __assign_24;
-        __assign_24
+      ignore (try if not (HxFileSystem.exists (path : string)) || not (HxFileSystem.isDirectory (path : string)) then let __assign_31 = Obj.magic (let __represented_array_32 = HxArray.create () in __represented_array_32) in (
+        tempArray := __assign_31;
+        __assign_31
+      ) else let __assign_33 = Obj.magic (HxFileSystem.readDirectory (path : string)) in (
+        tempArray := __assign_33;
+        __assign_33
       ) with
-        | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-        | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-        | HxRuntime.Hx_return __ret_18 -> raise (HxRuntime.Hx_return __ret_18)
-        | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
-        | HxRuntime.Hx_exception (__exn_v_19, __exn_tags_20) -> if HxRuntime.tags_has __exn_tags_20 "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_19) : Haxe_io_Error.error) in (
+        | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+        | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+        | HxRuntime.Hx_return __ret_27 -> Stdlib.raise (HxRuntime.Hx_return __ret_27)
+        | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
+        | HxRuntime.Hx_exception (__exn_v_28, __exn_tags_29) -> if HxRuntime.tags_has __exn_tags_29 "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_28) : Haxe_io_Error.error) in (
           ignore _hx;
-          let __assign_14 = Obj.magic (let __represented_array_15 = HxArray.create () in __represented_array_15) in (
-            tempArray := __assign_14;
-            __assign_14
+          let __assign_23 = Obj.magic (let __represented_array_24 = HxArray.create () in __represented_array_24) in (
+            tempArray := __assign_23;
+            __assign_23
           )
-        ) else if HxRuntime.tags_has __exn_tags_20 "String" then let _hx = (Obj.obj __exn_v_19 : string) in (
+        ) else if HxRuntime.tags_has __exn_tags_29 "String" then let _hx = (Obj.obj __exn_v_28 : string) in (
           ignore _hx;
-          let __assign_16 = Obj.magic (let __represented_array_17 = HxArray.create () in __represented_array_17) in (
-            tempArray := __assign_16;
-            __assign_16
+          let __assign_25 = Obj.magic (let __represented_array_26 = HxArray.create () in __represented_array_26) in (
+            tempArray := __assign_25;
+            __assign_25
           )
-        ) else HxRuntime.hx_throw_typed __exn_v_19 __exn_tags_20
-        | __exn_21 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_21)) : Haxe_io_Error.error) in (
+        ) else HxRuntime.hx_throw_typed __exn_v_28 __exn_tags_29
+        | __exn_30 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_30)) : Haxe_io_Error.error) in (
           ignore _hx;
-          let __assign_14 = Obj.magic (let __represented_array_15 = HxArray.create () in __represented_array_15) in (
-            tempArray := __assign_14;
-            __assign_14
+          let __assign_23 = Obj.magic (let __represented_array_24 = HxArray.create () in __represented_array_24) in (
+            tempArray := __assign_23;
+            __assign_23
           )
-        ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_21) : string) in (
+        ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_30) : string) in (
           ignore _hx;
-          let __assign_16 = Obj.magic (let __represented_array_17 = HxArray.create () in __represented_array_17) in (
-            tempArray := __assign_16;
-            __assign_16
+          let __assign_25 = Obj.magic (let __represented_array_26 = HxArray.create () in __represented_array_26) in (
+            tempArray := __assign_25;
+            __assign_25
           )
-        ) else raise (__exn_21));
+        ) else Stdlib.raise (__exn_30));
       let entries = Obj.magic (!tempArray) in (
-        ignore (let __array_receiver_25 = entries in let __array_arg_0_26 = compareStrings in HxArray.sort __array_receiver_25 __array_arg_0_26);
+        ignore (let __array_receiver_34 = Obj.magic entries in let __array_arg_0_35 = compareStrings in HxArray.sort __array_receiver_34 __array_arg_0_35);
         entries
       )
     )
   ) with
-    | HxRuntime.Hx_return __ret_27 -> (Obj.obj __ret_27 : string HxArray.t) : string HxArray.t)
+    | HxRuntime.Hx_return __ret_36 -> (Obj.obj __ret_36 : string HxArray.t) : string HxArray.t)
 )

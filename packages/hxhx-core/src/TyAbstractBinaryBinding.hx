@@ -1,17 +1,17 @@
 private typedef TyBinaryCandidateMatch = {
 	final info:TyAbstractBinaryOperatorInfo;
 	final reverseArguments:Bool;
-	final score:Int;
-	final sourceLeftConversion:TyImplicitConversionPlan;
-	final sourceRightConversion:TyImplicitConversionPlan;
-	final resultConversion:Null<TyImplicitConversionPlan>;
+	final sourceLeftArgument:TyAbstractBinaryArgument;
+	final sourceRightArgument:TyAbstractBinaryArgument;
+	final resultConversion:Null<TyAbstractBinaryConversion>;
 };
 
 /**
 	Selects one exact abstract binary declaration in the shared typer.
 
-	Ranking supports exact semantic identity, numeric widening, declared abstract
-	header conversions, and `Dynamic`. The selected operand and compound-result
+	Declarations are tried in source order, with the left abstract before the right.
+	The first applicable declaration wins; conversion scores only choose argument
+	orientation within one commutative declaration. The selected operand and compound-result
 	conversion plans travel with the binding, so shared lowering does not repeat
 	overload logic and backends never infer conversions from target carriers.
 	Explicit compound declarations are calls without invented writeback. Only a
@@ -87,68 +87,56 @@ class TyAbstractBinaryBinding {
 				+ declaration.getIdentity().getCanonicalKey());
 	}
 
-	static function matches(index:TyperIndex, candidates:Array<TyAbstractBinaryOperatorInfo>, leftType:TyType, rightType:TyType, filePath:String,
-			position:HxPos):Array<TyBinaryCandidateMatch> {
-		final out = new Array<TyBinaryCandidateMatch>();
+	/** Keep declaration order; conversion quality only chooses one declaration's orientation. */
+	static function firstMatch(index:TyperIndex, candidates:Array<TyAbstractBinaryOperatorInfo>, leftType:TyType, rightType:TyType, filePath:String,
+			position:HxPos, ?indexedLeft:TyIndexedNullableAbstractOperand):Null<TyBinaryCandidateMatch> {
 		for (candidate in candidates) {
 			ensureNonGeneric(candidate, filePath, position);
-			final directLeft = TyImplicitConversionPlan.select(index, candidate.getLeftType(), leftType);
-			final directRight = TyImplicitConversionPlan.select(index, candidate.getRightType(), rightType);
-			if (directLeft != null && directRight != null)
-				out.push({
-					info: candidate,
-					reverseArguments: false,
-					score: directLeft.getScore() + directRight.getScore(),
-					sourceLeftConversion: directLeft,
-					sourceRightConversion: directRight,
-					resultConversion: null
-				});
+			final directLeft = argument(index, candidate.getLeftType(), leftType, indexedLeft);
+			final directRight = argument(index, candidate.getRightType(), rightType);
+			final directScore = directLeft == null || directRight == null ? -1 : directLeft.getScore() + directRight.getScore();
 			if (candidate.getIsCommutative()) {
-				final reverseLeft = TyImplicitConversionPlan.select(index, candidate.getRightType(), leftType);
-				final reverseRight = TyImplicitConversionPlan.select(index, candidate.getLeftType(), rightType);
-				final directScore = directLeft == null || directRight == null ? -1 : directLeft.getScore() + directRight.getScore();
+				final reverseLeft = argument(index, candidate.getRightType(), leftType, indexedLeft);
+				final reverseRight = argument(index, candidate.getLeftType(), rightType);
 				final reverseScore = reverseLeft == null || reverseRight == null ? -1 : reverseLeft.getScore() + reverseRight.getScore();
-				if (reverseLeft != null && reverseRight != null && (directScore < 0 || reverseScore > directScore))
-					out.push({
+				if (reverseScore > directScore)
+					return {
 						info: candidate,
 						reverseArguments: true,
-						score: reverseScore,
-						sourceLeftConversion: reverseLeft,
-						sourceRightConversion: reverseRight,
+						sourceLeftArgument: reverseLeft,
+						sourceRightArgument: reverseRight,
 						resultConversion: null
-					});
+					};
 			}
+			if (directScore >= 0)
+				return {
+					info: candidate,
+					reverseArguments: false,
+					sourceLeftArgument: directLeft,
+					sourceRightArgument: directRight,
+					resultConversion: null
+				};
 		}
-		return out;
+		return null;
 	}
 
-	static function best(matches:Array<TyBinaryCandidateMatch>, op:String, leftType:TyType, rightType:TyType, filePath:String, position:HxPos,
-			requiresWriteback:Bool):Null<TyBoundAbstractBinaryOperator> {
-		if (matches.length == 0)
-			return null;
-		var bestScore = -1;
-		for (match in matches)
-			if (match.score > bestScore)
-				bestScore = match.score;
-		final winners = [for (match in matches) if (match.score == bestScore) match];
-		if (winners.length > 1) {
-			final identities = [
-				for (winner in winners)
-					winner.info.getDeclaration().getIdentity().getCanonicalKey()
-			];
-			throw new TyperError(filePath, position,
-				"Ambiguous abstract binary operator "
-				+ op
-				+ " for "
-				+ leftType.getDisplay()
-				+ " and "
-				+ rightType.getDisplay()
-				+ "; candidates: "
-				+ identities.join(", "));
-		}
-		final winner = winners[0];
-		return new TyBoundAbstractBinaryOperator(op, winner.info, winner.reverseArguments, requiresWriteback, winner.sourceLeftConversion,
-			winner.sourceRightConversion, winner.resultConversion);
+	/**
+		Match one operand to one declared parameter. Existing executable conversions are
+		tried first against the raw actual type, so every ordinary result is unchanged.
+		Only when none applies may the checked indexed getter be admitted, and only to
+		its exact applied abstract. Callers pass `operand` for the source-left getter
+		position only, whichever declaration parameter that position is oriented to.
+	 */
+	static function argument(index:TyperIndex, expected:TyType, actual:TyType, ?operand:TyIndexedNullableAbstractOperand):Null<TyAbstractBinaryArgument> {
+		final plan = TyAbstractBinaryConversion.select(index, expected, actual);
+		if (plan != null)
+			return TyAbstractBinaryArgument.converted(plan);
+		return operand != null && operand.admits(expected, actual) ? TyAbstractBinaryArgument.indexed(operand, expected) : null;
+	}
+
+	static function bind(match:TyBinaryCandidateMatch, op:String, requiresWriteback:Bool):TyBoundAbstractBinaryOperator {
+		return new TyBoundAbstractBinaryOperator(op, match.info, match.reverseArguments, requiresWriteback, match.sourceLeftArgument,
+			match.sourceRightArgument, match.resultConversion);
 	}
 
 	static function noApplicable(op:String, leftType:TyType, rightType:TyType, candidates:Array<TyAbstractBinaryOperatorInfo>, filePath:String,
@@ -177,42 +165,68 @@ class TyAbstractBinaryBinding {
 	public static function permitsOrdinaryFallback(op:String, leftType:TyType, rightType:TyType):Bool {
 		if (HxBinaryOperatorTools.permitsOrdinaryAbstractFallback(op))
 			return true;
+		if (op == "+=" && leftType != null && leftType.getSemanticKey() == "primitive:String")
+			return true;
 		return op == "+"
 			&& ((leftType != null && leftType.getDisplay() == "String") || (rightType != null && rightType.getDisplay() == "String"));
 	}
 
 	/** Select an exact declaration, or return null when neither operand is an abstract. **/
 	public static function select(index:TyperIndex, leftType:TyType, rightType:TyType, op:String, filePath:String,
-			position:HxPos):Null<TyBoundAbstractBinaryOperator> {
+			position:HxPos):Null<TyBoundAbstractBinaryOperator>
+		return selectWithOperand(index, leftType, rightType, op, filePath, position);
+
+	/**
+		Indexed-update entry over the same catalog, declaration order, orientation and
+		generic rejection as `select`.
+
+		`leftType` is the raw source-left getter type. When `operand` is present it must
+		describe exactly that type; its applied abstract is then visible to declaration
+		lookup, and it may be admitted unchanged to a parameter of that same applied
+		abstract. The right-hand operand never receives this permission.
+	 */
+	public static function selectIndexed(index:TyperIndex, leftType:TyType, rightType:TyType, op:String, filePath:String, position:HxPos,
+			operand:Null<TyIndexedNullableAbstractOperand>):Null<TyBoundAbstractBinaryOperator> {
+		if (operand != null && operand.originalType.getSemanticKey() != leftType.getSemanticKey())
+			throw "indexed binary lookup has another original getter type";
+		return selectWithOperand(index, leftType, rightType, op, filePath, position, operand);
+	}
+
+	static function selectWithOperand(index:TyperIndex, leftType:TyType, rightType:TyType, op:String, filePath:String, position:HxPos,
+			?indexedLeft:TyIndexedNullableAbstractOperand):Null<TyBoundAbstractBinaryOperator> {
 		if (index == null || leftType == null || rightType == null || !HxBinaryOperatorTools.isAbstractOverloadable(op))
 			return null;
-		if (!hasAbstractOperand(index, leftType, rightType))
+		final lookupLeft = indexedLeft == null ? leftType : indexedLeft.applied;
+		if (!hasAbstractOperand(index, lookupLeft, rightType))
 			return null;
 
-		final explicitCandidates = collect(index, leftType, rightType, op);
-		final explicit = best(matches(index, explicitCandidates, leftType, rightType, filePath, position), op, leftType, rightType, filePath, position, false);
+		final explicitCandidates = collect(index, lookupLeft, rightType, op);
+		final explicit = firstMatch(index, explicitCandidates, leftType, rightType, filePath, position, indexedLeft);
 		if (explicit != null)
-			return validateBodyless(index, explicit, filePath);
+			return validateBodyless(index, bind(explicit, op, false), filePath);
 
 		final baseOperator = HxBinaryOperatorTools.baseOperator(op);
 		if (baseOperator != null) {
-			final baseCandidates = collect(index, leftType, rightType, baseOperator);
-			final baseMatches = new Array<TyBinaryCandidateMatch>();
-			for (match in matches(index, baseCandidates, leftType, rightType, filePath, position)) {
-				final resultConversion = TyImplicitConversionPlan.select(index, leftType, match.info.getResultType());
-				if (resultConversion != null)
-					baseMatches.push({
-						info: match.info,
-						reverseArguments: match.reverseArguments,
-						score: match.score,
-						sourceLeftConversion: match.sourceLeftConversion,
-						sourceRightConversion: match.sourceRightConversion,
-						resultConversion: resultConversion
-					});
+			final baseCandidates = collect(index, lookupLeft, rightType, baseOperator);
+			final match = firstMatch(index, baseCandidates, leftType, rightType, filePath, position, indexedLeft);
+			if (match != null) {
+				final resultConversion = TyAbstractBinaryConversion.select(index, leftType, match.info.getResultType());
+				// A selected base operator must fit the destination. Do not silently
+				// select a later declaration merely because its result would fit.
+				if (resultConversion == null)
+					throw noApplicable(op, leftType, rightType, [match.info], filePath, position);
+				return validateBodyless(index, bind({
+					info: match.info,
+					reverseArguments: match.reverseArguments,
+					sourceLeftArgument: match.sourceLeftArgument,
+					sourceRightArgument: match.sourceRightArgument,
+					resultConversion: resultConversion
+				}, op, true), filePath);
 			}
-			final fallback = best(baseMatches, op, leftType, rightType, filePath, position, true);
-			if (fallback != null)
-				return validateBodyless(index, fallback, filePath);
+			// Inapplicable numeric overloads on the right do not forbid appending
+			// that value to a String. Applicable authored operators still win above.
+			if (permitsOrdinaryFallback(op, leftType, rightType))
+				return null;
 			if (explicitCandidates.length > 0)
 				throw noApplicable(op, leftType, rightType, explicitCandidates, filePath, position);
 			if (baseCandidates.length > 0)

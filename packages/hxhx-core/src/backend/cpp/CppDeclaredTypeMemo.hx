@@ -10,6 +10,14 @@ package backend.cpp;
 	semantic cache.
 **/
 class CppDeclaredTypeMemo {
+	/**
+		Field definitions for generated aggregate types used during this request.
+		A cached type name must remain interpretable in every scope that receives it.
+		Names encode the fields and their C++ types; these definitions describe types,
+		not values or local bindings. They must not survive into another request.
+	**/
+	public final anonymousStructures:haxe.ds.StringMap<CppRenderScope.CppScopeAnonStruct>;
+
 	/** Rendered function-argument types keyed by declaration and scope shape. **/
 	public final functionArgTypesByShape:haxe.ds.StringMap<String>;
 
@@ -17,6 +25,7 @@ class CppDeclaredTypeMemo {
 	public final fieldTypesByShape:haxe.ds.StringMap<String>;
 
 	public function new() {
+		anonymousStructures = new haxe.ds.StringMap<CppRenderScope.CppScopeAnonStruct>();
 		functionArgTypesByShape = new haxe.ds.StringMap<String>();
 		fieldTypesByShape = new haxe.ds.StringMap<String>();
 	}

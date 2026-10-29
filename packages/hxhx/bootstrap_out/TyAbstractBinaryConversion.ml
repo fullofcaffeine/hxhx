@@ -1,0 +1,2 @@
+# 1 "TyAbstractBinaryConversion.ml"
+include CompilerDiagnosticProbe.TyAbstractBinaryConversion

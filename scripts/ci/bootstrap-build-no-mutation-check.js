@@ -63,6 +63,11 @@ const retiredBootstrapPatchTokens = [
   'patch_bootstrap_stage1_std_root_termination',
   'patch-stage1-std-root-termination',
   'bootstrap Stage1 std-root repair',
+  // HxParser owns interpolation and generic declarations before OCaml generation.
+  'patch_bootstrap_hxparser_interpolated_exprs',
+  'patch-hxparser-interpolated-exprs',
+  'patch_bootstrap_hxparser_generic_function_decl',
+  'patch-hxparser-generic-function-decl',
 ]
 for (const token of retiredBootstrapPatchTokens) {
   if (finalize.includes(token) || bootstrapPatchHelper.includes(token)) {
@@ -126,6 +131,82 @@ if (findEmitterShimPatchAnchor([
   temporaryShimCall
 ].join('\n')) !== temporaryShimCall) {
   fail('bootstrap finalizer must accept numbered call-argument temporaries without guessing their suffix')
+}
+
+// Current Haxe emission owns Eof construction. Older cumulative payloads must
+// retain their skip markers without synthesizing a second class representation.
+const eofPresenceMarker = '(* hxhx(stage3) bootstrap shim: haxe.io.Eof presence repair *)'
+const eofPayloads = [
+  ['project_generator_helper_calls', 'ProjectGenerator helper-call repair'],
+  ['php_syntax_empty_rest_calls', 'Php_Syntax empty-rest repair'],
+  ['php_boot_float_zero_compare', 'Php_Boot float zero compare repair'],
+  ['php_boot_string_key_lookups', 'Php_Boot string-key lookup repair'],
+  ['haxe_io_eof_presence', 'haxe.io.Eof presence repair'],
+].map(([name, marker]) => ({name, marker: `(* hxhx(stage3) bootstrap shim: ${marker} *)`}))
+const retiredEofSynthesis = ['providerNeedsEof', 'haxe_io_Eof.ml', 'bootstrap shim: haxe.io.Eof *)']
+for (const {name} of eofPayloads) {
+  const payload = read(path.join(bootstrapPatchPayloadDir, `${name}.mlpatch`))
+  for (const token of retiredEofSynthesis) {
+    if (payload.includes(token)) {
+      fail(`Eof construction belongs to authored Haxe, not bootstrap payload ${name} (found: ${token})`)
+    }
+  }
+  if (payload.split(eofPresenceMarker).length !== 2) {
+    fail(`bootstrap payload ${name} must retain exactly one Eof presence marker`)
+  }
+}
+if (read(path.join(bootstrapPatchPayloadDir, 'haxe_io_eof_presence.mlpatch')).trim() !== eofPresenceMarker) {
+  fail('the Eof presence payload must remain a marker without generated semantics')
+}
+
+// Execute the real shell wrappers and Python insertion helper. Each suffix can
+// be the first missing repair in an older snapshot; applying it twice must leave
+// one copy of every expected marker and preserve the supported call boundary.
+const wrapperStart = finalize.indexOf('run_bootstrap_patch_helper() {')
+const wrapperEnd = finalize.indexOf('\nfinalize_bootstrap_dir() {')
+if (wrapperStart < 0 || wrapperEnd <= wrapperStart) {
+  fail('cannot locate the bootstrap patch function definitions for the Eof regression')
+}
+const patchDefinitions = finalize.slice(wrapperStart, wrapperEnd)
+const eofFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hxhx-bootstrap-eof-'))
+try {
+  for (const [anchorIndex, shimCall] of [directShimCall, temporaryShimCall].entries()) {
+    for (const [firstMissing, {name}] of eofPayloads.entries()) {
+      const fixture = path.join(eofFixtureRoot, `${anchorIndex}-${firstMissing}`)
+      fs.mkdirSync(fixture)
+      const emitterPath = path.join(fixture, 'EmitterStage.ml')
+      fs.writeFileSync(emitterPath, [
+        'let patchStage3MacroContextLoadShimForStage3 = fun outAbs -> ()',
+        ...eofPayloads.slice(0, firstMissing).map(payload => payload.marker),
+        shimCall,
+        ''
+      ].join('\n'))
+      const runPatch = () => childProcess.execFileSync('bash', ['-c', [
+        'set -euo pipefail',
+        'ROOT="$1"',
+        'BOOTSTRAP_PATCH_HELPER="$ROOT/scripts/hxhx/bootstrap_patch_helper.py"',
+        'BOOTSTRAP_PATCH_PAYLOAD_DIR="$ROOT/scripts/hxhx/bootstrap_patch_payloads"',
+        patchDefinitions,
+        `patch_bootstrap_emitter_${name} "$2"`
+      ].join('\n'), 'bootstrap-eof-fixture', repoRoot, fixture], {encoding: 'utf8'})
+      runPatch()
+      const once = read(emitterPath)
+      for (const {marker} of eofPayloads) {
+        if (once.split(marker).length !== 2) {
+          throw new Error(`bootstrap suffix ${name} must retain one copy of ${marker}`)
+        }
+      }
+      if (once.split(shimCall).length !== 2 || retiredEofSynthesis.some(token => once.includes(token))) {
+        throw new Error(`bootstrap suffix ${name} changed the shim boundary or restored Eof synthesis`)
+      }
+      runPatch()
+      if (read(emitterPath) !== once) {
+        throw new Error(`bootstrap suffix ${name} must be byte-identical on repeated application`)
+      }
+    }
+  }
+} finally {
+  fs.rmSync(eofFixtureRoot, {recursive: true, force: true})
 }
 
 for (const token of forbiddenBuildTokens) {

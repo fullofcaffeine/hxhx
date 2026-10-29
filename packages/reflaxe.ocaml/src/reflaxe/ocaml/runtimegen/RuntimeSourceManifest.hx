@@ -1,6 +1,5 @@
 package reflaxe.ocaml.runtimegen;
 
-#if (macro || reflaxe_runtime || eval)
 import haxe.Json;
 import haxe.crypto.Sha256;
 import haxe.io.Path;
@@ -325,4 +324,3 @@ class RuntimeSourceManifest {
 		return left < right ? -1 : (left > right ? 1 : 0);
 	}
 }
-#end

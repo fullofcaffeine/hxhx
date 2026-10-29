@@ -95,6 +95,12 @@
       ]
     },
     {
+      "module": "HxMethodDispatch",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
       "module": "HxProcess",
       "reasons": [
         "full_runtime_mode"
@@ -179,6 +185,7 @@
     "HxInt",
     "HxIterator",
     "HxMap",
+    "HxMethodDispatch",
     "HxProcess",
     "HxReflect",
     "HxRuntime",
@@ -209,6 +216,7 @@
     "HxInt",
     "HxIterator",
     "HxMap",
+    "HxMethodDispatch",
     "HxProcess",
     "HxReflect",
     "HxRuntime",
@@ -237,6 +245,7 @@
     "HxInt",
     "HxIterator",
     "HxMap",
+    "HxMethodDispatch",
     "HxProcess",
     "HxReflect",
     "HxRuntime",

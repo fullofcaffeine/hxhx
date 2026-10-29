@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage3MacroHostSupport" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.Stage3MacroHostSupport" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage3MacroHostSupport" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.Stage3MacroHostSupport" } : t)
 
 let trim = fun value -> let tempResult = ref (HxString.hx_null_string : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (if value == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -48,9 +48,9 @@ let parseDelimitedList = fun raw -> (try let out = Obj.magic (HxArray.create ())
     __assign_9
   ));
   let normalized = (!tempMaybeString : string) in (
-    ignore (if normalized == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr out)) else ());
+    ignore (if normalized == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr out)) else ());
     let value = let __call_arg_0_10 = normalized in StringTools.trim __call_arg_0_10 in (
-      ignore (if (let __string_receiver_11 = value in HxString.length __string_receiver_11) = 0 then raise (HxRuntime.Hx_return (Obj.repr out)) else ());
+      ignore (if (let __string_receiver_11 = value in HxString.length __string_receiver_11) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr out)) else ());
       let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
         ignore (if (let __string_receiver_12 = value in let __string_argument_0_13 = ";" in HxString.indexOf __string_receiver_12 __string_argument_0_13 0) <> -1 then let __assign_14 = Obj.magic (let __string_receiver_15 = value in let __string_argument_0_16 = ";" in HxString.split __string_receiver_15 __string_argument_0_16) in (
           tempArray := __assign_14;
@@ -65,10 +65,10 @@ let parseDelimitedList = fun raw -> (try let out = Obj.magic (HxArray.create ())
               ignore (_g := __new_23);
               __new_23
             ));
-            ignore (if part == HxString.hx_null_string then raise (HxRuntime.Hx_continue) else ());
+            ignore (if part == HxString.hx_null_string then Stdlib.raise (HxRuntime.Hx_continue) else ());
             let trimmed = let __call_arg_0_24 = part in StringTools.trim __call_arg_0_24 in (
-              ignore (if (let __string_receiver_25 = trimmed in HxString.length __string_receiver_25) = 0 then raise (HxRuntime.Hx_continue) else ());
-              if (let __array_receiver_26 = out in let __array_arg_0_27 = trimmed in HxArray.indexOf_default __array_receiver_26 __array_arg_0_27) = -1 then ignore (let __array_receiver_28 = out in let __array_arg_0_29 = trimmed in HxArray.push __array_receiver_28 __array_arg_0_29) else ()
+              ignore (if (let __string_receiver_25 = trimmed in HxString.length __string_receiver_25) = 0 then Stdlib.raise (HxRuntime.Hx_continue) else ());
+              if (let __array_receiver_26 = Obj.magic out in let __array_arg_0_27 = (trimmed : string) in HxArray.indexOf_default __array_receiver_26 __array_arg_0_27) = -1 then ignore (let __array_receiver_28 = Obj.magic out in let __array_arg_0_29 = (trimmed : string) in HxArray.push __array_receiver_28 __array_arg_0_29) else ()
             )
           )) with
             | HxRuntime.Hx_continue -> () done);
@@ -107,7 +107,7 @@ let isBuiltinExprMacro = fun (expr : string) -> (let tempString = ref (HxString.
       tempString := __assign_38;
       __assign_38
     ));
-    (let __array_receiver_40 = builtinExprMacros () in let __array_arg_0_41 = !tempString in HxArray.indexOf_default __array_receiver_40 __array_arg_0_41) <> -1
+    (let __array_receiver_40 = Obj.magic (builtinExprMacros ()) in let __array_arg_0_41 = (!tempString : string) in HxArray.indexOf_default __array_receiver_40 __array_arg_0_41) <> -1
   )
 ) : bool)
 
@@ -117,7 +117,7 @@ let exprMacroAllowlistFromEnv = fun () -> let out = Obj.magic (HxArray.create ()
       ignore (_g := __new_45);
       __new_45
     ));
-    if (let __array_receiver_46 = out in let __array_arg_0_47 = expr in HxArray.indexOf_default __array_receiver_46 __array_arg_0_47) = -1 then ignore (let __array_receiver_48 = out in let __array_arg_0_49 = expr in HxArray.push __array_receiver_48 __array_arg_0_49) else ()
+    if (let __array_receiver_46 = Obj.magic out in let __array_arg_0_47 = (expr : string) in HxArray.indexOf_default __array_receiver_46 __array_arg_0_47) = -1 then ignore (let __array_receiver_48 = Obj.magic out in let __array_arg_0_49 = (expr : string) in HxArray.push __array_receiver_48 __array_arg_0_49) else ()
   )) done);
   let _g = ref 0 in let _g1 = Obj.magic (parseDelimitedList (HxSys.getEnv ("HXHX_EXPR_MACROS" : string) : string)) in (
     ignore (while !_g < HxArray.length _g1 do ignore (let expr = (let __array_read_receiver_50 = _g1 in let __array_read_index_51 = !_g in HxArray.get (Obj.magic __array_read_receiver_50) __array_read_index_51 : string) in (
@@ -125,7 +125,7 @@ let exprMacroAllowlistFromEnv = fun () -> let out = Obj.magic (HxArray.create ()
         ignore (_g := __new_53);
         __new_53
       ));
-      if expr != HxString.hx_null_string && (let __string_receiver_54 = expr in HxString.length __string_receiver_54) > 0 && (let __array_receiver_55 = out in let __array_arg_0_56 = expr in HxArray.indexOf_default __array_receiver_55 __array_arg_0_56) = -1 then ignore (let __array_receiver_57 = out in let __array_arg_0_58 = expr in HxArray.push __array_receiver_57 __array_arg_0_58) else ()
+      if expr != HxString.hx_null_string && (let __string_receiver_54 = expr in HxString.length __string_receiver_54) > 0 && (let __array_receiver_55 = Obj.magic out in let __array_arg_0_56 = (expr : string) in HxArray.indexOf_default __array_receiver_55 __array_arg_0_56) = -1 then ignore (let __array_receiver_57 = Obj.magic out in let __array_arg_0_58 = (expr : string) in HxArray.push __array_receiver_57 __array_arg_0_58) else ()
     )) done);
     out
   )
@@ -160,7 +160,7 @@ let anyNonBuiltinMacro = fun exprs -> (try let _g = ref 0 in (
       ignore (_g := __new_78);
       __new_78
     ));
-    if not (let __call_arg_0_79 = expr in isBuiltinMacroExpr __call_arg_0_79) then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
+    if not (let __call_arg_0_79 = expr in isBuiltinMacroExpr __call_arg_0_79) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr true)) else ()
   )) done);
   false
 ) with
@@ -195,7 +195,7 @@ let macroHostEntrypoints = fun parsedMacros exprMacros runHaxelibMacros libMacro
       ignore (_g := __new_96);
       __new_96
     ));
-    if not (let __call_arg_0_97 = expr in isBuiltinMacroExpr __call_arg_0_97) && (let __array_receiver_98 = entrypoints in let __array_arg_0_99 = expr in HxArray.indexOf_default __array_receiver_98 __array_arg_0_99) = -1 then ignore (let __array_receiver_100 = entrypoints in let __array_arg_0_101 = expr in HxArray.push __array_receiver_100 __array_arg_0_101) else ()
+    if not (let __call_arg_0_97 = expr in isBuiltinMacroExpr __call_arg_0_97) && (let __array_receiver_98 = Obj.magic entrypoints in let __array_arg_0_99 = (expr : string) in HxArray.indexOf_default __array_receiver_98 __array_arg_0_99) = -1 then ignore (let __array_receiver_100 = Obj.magic entrypoints in let __array_arg_0_101 = (expr : string) in HxArray.push __array_receiver_100 __array_arg_0_101) else ()
   )) done) else ());
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length parsedMacros do ignore (let expr = (let __array_read_receiver_102 = parsedMacros in let __array_read_index_103 = !_g in HxArray.get (Obj.magic __array_read_receiver_102) __array_read_index_103 : string) in (
@@ -203,7 +203,7 @@ let macroHostEntrypoints = fun parsedMacros exprMacros runHaxelibMacros libMacro
         ignore (_g := __new_105);
         __new_105
       ));
-      if not (let __call_arg_0_106 = expr in isBuiltinMacroExpr __call_arg_0_106) && (let __array_receiver_107 = entrypoints in let __array_arg_0_108 = expr in HxArray.indexOf_default __array_receiver_107 __array_arg_0_108) = -1 then ignore (let __array_receiver_109 = entrypoints in let __array_arg_0_110 = expr in HxArray.push __array_receiver_109 __array_arg_0_110) else ()
+      if not (let __call_arg_0_106 = expr in isBuiltinMacroExpr __call_arg_0_106) && (let __array_receiver_107 = Obj.magic entrypoints in let __array_arg_0_108 = (expr : string) in HxArray.indexOf_default __array_receiver_107 __array_arg_0_108) = -1 then ignore (let __array_receiver_109 = Obj.magic entrypoints in let __array_arg_0_110 = (expr : string) in HxArray.push __array_receiver_109 __array_arg_0_110) else ()
     )) done);
     let _g = ref 0 in (
       ignore (while !_g < HxArray.length exprMacros do ignore (let expr = (let __array_read_receiver_111 = exprMacros in let __array_read_index_112 = !_g in HxArray.get (Obj.magic __array_read_receiver_111) __array_read_index_112 : string) in (
@@ -211,7 +211,7 @@ let macroHostEntrypoints = fun parsedMacros exprMacros runHaxelibMacros libMacro
           ignore (_g := __new_114);
           __new_114
         ));
-        if not (let __call_arg_0_115 = expr in isBuiltinExprMacro __call_arg_0_115) && (let __array_receiver_116 = entrypoints in let __array_arg_0_117 = expr in HxArray.indexOf_default __array_receiver_116 __array_arg_0_117) = -1 then ignore (let __array_receiver_118 = entrypoints in let __array_arg_0_119 = expr in HxArray.push __array_receiver_118 __array_arg_0_119) else ()
+        if not (let __call_arg_0_115 = expr in isBuiltinExprMacro __call_arg_0_115) && (let __array_receiver_116 = Obj.magic entrypoints in let __array_arg_0_117 = (expr : string) in HxArray.indexOf_default __array_receiver_116 __array_arg_0_117) = -1 then ignore (let __array_receiver_118 = Obj.magic entrypoints in let __array_arg_0_119 = (expr : string) in HxArray.push __array_receiver_118 __array_arg_0_119) else ()
       )) done);
       entrypoints
     )
@@ -267,15 +267,15 @@ let buildMacroHostExe = fun repoRoot extraCp entrypoints -> let script = (Haxe_i
           ))) (HxRuntime.hx_null)) in let lines = Obj.magic (HxArray.create ()) in (
             ignore (try ignore (let rec __while_loop_142 = fun () -> (
               ignore ((
-                ignore (let __array_receiver_138 = lines in let __array_arg_0_139 = let __obj_140 = (Obj.magic process : Sys_io_Process.t).stdout in (Obj.magic __obj_140 : Haxe_io_Input.t).readLine (Obj.magic __obj_140) () in HxArray.push __array_receiver_138 __array_arg_0_139);
-                if HxArray.length lines > 80 then ignore (let __array_receiver_141 = lines in HxArray.shift __array_receiver_141 ()) else ()
+                ignore (let __array_receiver_138 = Obj.magic lines in let __array_arg_0_139 = (let __obj_140 = (Obj.magic process : Sys_io_Process.t).stdout in (Obj.magic __obj_140 : Haxe_io_Input.t).readLine (Obj.magic __obj_140) () : string) in HxArray.push __array_receiver_138 __array_arg_0_139);
+                if HxArray.length lines > 80 then ignore (let __array_receiver_141 = Obj.magic lines in HxArray.shift __array_receiver_141 ()) else ()
               ));
               __while_loop_142 ()
             ) in __while_loop_142 ()) with
-              | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-              | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-              | HxRuntime.Hx_return __ret_134 -> raise (HxRuntime.Hx_return __ret_134)
-              | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+              | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+              | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+              | HxRuntime.Hx_return __ret_134 -> Stdlib.raise (HxRuntime.Hx_return __ret_134)
+              | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
               | HxRuntime.Hx_exception (__exn_v_135, __exn_tags_136) -> if HxRuntime.tags_has __exn_tags_136 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_135 : Haxe_io_Eof.t) in (
                 ignore _hx;
                 ignore ()
@@ -283,7 +283,7 @@ let buildMacroHostExe = fun repoRoot extraCp entrypoints -> let script = (Haxe_i
               | __exn_137 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_137) : Haxe_io_Eof.t) in (
                 ignore _hx;
                 ignore ()
-              ) else raise (__exn_137));
+              ) else Stdlib.raise (__exn_137));
             let code = Sys_io_Process.exitCode (Obj.magic process) () in (
               ignore (Sys_io_Process.close (Obj.magic process) ());
               ignore (if code <> 0 then let detail = (HxArray.join lines "\n" (fun x -> x) : string) in let tempString = ref (HxString.hx_null_string : string) in (
@@ -340,25 +340,25 @@ let buildMacroHostExe = fun repoRoot extraCp entrypoints -> let script = (Haxe_i
 )
 
 let runCliMacrosIfNeeded = fun macroRuntimeMode typeOnly hasConfiguredExternalMacroHostExe parsedMacros exprMacros runHaxelibMacros libMacros macroHostClassPaths output -> (try (
-  ignore (if typeOnly || not (HxArray.length parsedMacros > 0 || HxArray.length exprMacros > 0 || runHaxelibMacros && HxArray.length libMacros > 0) then raise (HxRuntime.Hx_return (Obj.repr (let __anon_159 = HxAnon.create () in (
+  ignore (if typeOnly || not (HxArray.length parsedMacros > 0 || HxArray.length exprMacros > 0 || runHaxelibMacros && HxArray.length libMacros > 0) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __anon_159 = HxAnon.create () in (
     ignore (HxAnon.set __anon_159 "session" (Obj.magic (HxRuntime.hx_null)));
     ignore (HxAnon.set __anon_159 "error" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
     __anon_159
   )))) else ());
   ignore (if (let __string_eq_left_160 = macroRuntimeMode in let __string_eq_right_161 = "external-host" in HxString.equals __string_eq_left_160 __string_eq_right_161) && not (hasConfiguredExternalMacroHostExe) && shouldAutoBuildMacroHost () then ignore (let repoRoot = Hxhx_Stage3PathSupport.inferRepoRootForScripts () in (
-    ignore (if (let __string_receiver_162 = repoRoot in HxString.length __string_receiver_162) = 0 then raise (HxRuntime.Hx_return (Obj.repr (let __anon_163 = HxAnon.create () in (
+    ignore (if (let __string_receiver_162 = repoRoot in HxString.length __string_receiver_162) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __anon_163 = HxAnon.create () in (
       ignore (HxAnon.set __anon_163 "session" (Obj.magic (HxRuntime.hx_null)));
       ignore (HxAnon.set __anon_163 "error" (Obj.repr "macro host auto-build enabled, but repo root could not be inferred (set HXHX_REPO_ROOT)"));
       __anon_163
     )))) else ());
     try ignore (let entrypoints = Obj.magic (macroHostEntrypoints (Obj.magic parsedMacros) (Obj.magic exprMacros) runHaxelibMacros (Obj.magic libMacros)) in let exe = (buildMacroHostExe (repoRoot : string) (Obj.magic macroHostClassPaths) (Obj.magic entrypoints) : string) in if exe == Obj.magic (HxRuntime.hx_null) then ignore (HxSys.removeEnv ("HXHX_MACRO_HOST_EXE" : string)) else ignore (HxSys.putEnvValue ("HXHX_MACRO_HOST_EXE" : string) (exe : string))) with
-      | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-      | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_165 -> raise (HxRuntime.Hx_return __ret_165)
-      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+      | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+      | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+      | HxRuntime.Hx_return __ret_165 -> Stdlib.raise (HxRuntime.Hx_return __ret_165)
+      | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
       | HxRuntime.Hx_exception (__exn_v_166, __exn_tags_167) -> if HxRuntime.tags_has __exn_tags_167 "String" then let e = (Obj.obj __exn_v_166 : string) in (
         ignore e;
-        raise (HxRuntime.Hx_return (Obj.repr (let __anon_164 = HxAnon.create () in (
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __anon_164 = HxAnon.create () in (
           ignore (HxAnon.set __anon_164 "session" (Obj.magic (HxRuntime.hx_null)));
           ignore (HxAnon.set __anon_164 "error" (Obj.repr ("macro host auto-build failed: " ^ HxString.toStdString e)));
           __anon_164
@@ -366,37 +366,37 @@ let runCliMacrosIfNeeded = fun macroRuntimeMode typeOnly hasConfiguredExternalMa
       ) else HxRuntime.hx_throw_typed __exn_v_166 __exn_tags_167
       | __exn_168 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_168) : string) in (
         ignore e;
-        raise (HxRuntime.Hx_return (Obj.repr (let __anon_164 = HxAnon.create () in (
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __anon_164 = HxAnon.create () in (
           ignore (HxAnon.set __anon_164 "session" (Obj.magic (HxRuntime.hx_null)));
           ignore (HxAnon.set __anon_164 "error" (Obj.repr ("macro host auto-build failed: " ^ HxString.toStdString e)));
           __anon_164
         ))))
-      ) else raise (__exn_168)
+      ) else Stdlib.raise (__exn_168)
   )) else ());
   let tempMacroRuntimeSession = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
     ignore (try let macroSession = Hxhx_macro_MacroRuntimeMode.openSession (macroRuntimeMode : string) in (
       ignore (if runHaxelibMacros then ignore (let _g = ref 0 in let _g1 = HxArray.length libMacros in while !_g < _g1 do ignore (let i = let __old_174 = !_g in let __new_175 = HxInt.add __old_174 1 in (
         ignore (_g := __new_175);
         __old_174
-      ) in Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) (let __string_part_178 = "lib_macro_run[" in let __string_part_179 = string_of_int i in let __string_part_180 = "]=" in let __string_part_181 = HxString.toStdString (Obj.obj (HxAnon.get macroSession "run") (let __array_read_receiver_176 = libMacros in let __array_read_index_177 = i in HxArray.get (Obj.magic __array_read_receiver_176) __array_read_index_177 : string)) in ((__string_part_178 ^ __string_part_179) ^ __string_part_180) ^ __string_part_181 : string)) done) else ());
+      ) in Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) (let __string_part_181 = "lib_macro_run[" in let __string_part_182 = string_of_int i in let __string_part_183 = "]=" in let __string_part_184 = HxString.toStdString (let __method_receiver_176 = macroSession in let __method_callable_177 = (Obj.obj (HxMethodDispatch.bind_structural (Obj.repr __method_receiver_176) "run" "method-dispatch:3ded3735df7f6a23df988f0a92cfa08665b2816cd8f61e5f4a25877abb3a1e15") : string -> string) in let __method_argument_178 = (let __array_read_receiver_179 = libMacros in let __array_read_index_180 = i in HxArray.get (Obj.magic __array_read_receiver_179) __array_read_index_180 : string) in __method_callable_177 __method_argument_178) in ((__string_part_181 ^ __string_part_182) ^ __string_part_183) ^ __string_part_184 : string)) done) else ());
       let _g = ref 0 in let _g1 = HxArray.length parsedMacros in (
-        ignore (while !_g < _g1 do ignore (let i = let __old_182 = !_g in let __new_183 = HxInt.add __old_182 1 in (
-          ignore (_g := __new_183);
-          __old_182
-        ) in Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) (let __string_part_186 = "macro_run[" in let __string_part_187 = string_of_int i in let __string_part_188 = "]=" in let __string_part_189 = HxString.toStdString (Obj.obj (HxAnon.get macroSession "run") (let __array_read_receiver_184 = parsedMacros in let __array_read_index_185 = i in HxArray.get (Obj.magic __array_read_receiver_184) __array_read_index_185 : string)) in ((__string_part_186 ^ __string_part_187) ^ __string_part_188) ^ __string_part_189 : string)) done);
-        let __assign_190 = Obj.magic macroSession in (
-          tempMacroRuntimeSession := __assign_190;
-          __assign_190
+        ignore (while !_g < _g1 do ignore (let i = let __old_185 = !_g in let __new_186 = HxInt.add __old_185 1 in (
+          ignore (_g := __new_186);
+          __old_185
+        ) in Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) (let __string_part_192 = "macro_run[" in let __string_part_193 = string_of_int i in let __string_part_194 = "]=" in let __string_part_195 = HxString.toStdString (let __method_receiver_187 = macroSession in let __method_callable_188 = (Obj.obj (HxMethodDispatch.bind_structural (Obj.repr __method_receiver_187) "run" "method-dispatch:3ded3735df7f6a23df988f0a92cfa08665b2816cd8f61e5f4a25877abb3a1e15") : string -> string) in let __method_argument_189 = (let __array_read_receiver_190 = parsedMacros in let __array_read_index_191 = i in HxArray.get (Obj.magic __array_read_receiver_190) __array_read_index_191 : string) in __method_callable_188 __method_argument_189) in ((__string_part_192 ^ __string_part_193) ^ __string_part_194) ^ __string_part_195 : string)) done);
+        let __assign_196 = Obj.magic macroSession in (
+          tempMacroRuntimeSession := __assign_196;
+          __assign_196
         )
       )
     ) with
-      | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-      | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_170 -> raise (HxRuntime.Hx_return __ret_170)
-      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+      | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+      | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+      | HxRuntime.Hx_return __ret_170 -> Stdlib.raise (HxRuntime.Hx_return __ret_170)
+      | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
       | HxRuntime.Hx_exception (__exn_v_171, __exn_tags_172) -> if HxRuntime.tags_has __exn_tags_172 "String" then let e = (Obj.obj __exn_v_171 : string) in (
         ignore e;
-        raise (HxRuntime.Hx_return (Obj.repr (let __anon_169 = HxAnon.create () in (
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __anon_169 = HxAnon.create () in (
           ignore (HxAnon.set __anon_169 "session" (Obj.magic (HxRuntime.hx_null)));
           ignore (HxAnon.set __anon_169 "error" (Obj.repr ("macro failed: " ^ HxString.toStdString e)));
           __anon_169
@@ -404,20 +404,20 @@ let runCliMacrosIfNeeded = fun macroRuntimeMode typeOnly hasConfiguredExternalMa
       ) else HxRuntime.hx_throw_typed __exn_v_171 __exn_tags_172
       | __exn_173 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_173) : string) in (
         ignore e;
-        raise (HxRuntime.Hx_return (Obj.repr (let __anon_169 = HxAnon.create () in (
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __anon_169 = HxAnon.create () in (
           ignore (HxAnon.set __anon_169 "session" (Obj.magic (HxRuntime.hx_null)));
           ignore (HxAnon.set __anon_169 "error" (Obj.repr ("macro failed: " ^ HxString.toStdString e)));
           __anon_169
         ))))
-      ) else raise (__exn_173));
+      ) else Stdlib.raise (__exn_173));
     let session = Obj.magic (!tempMacroRuntimeSession) in (
       ignore (Hxhx_Stage3DiagnosticsSupport.printHxMacroDefines ("macro_define" : string) (Obj.magic output));
-      let __anon_191 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_191 "session" session);
-        ignore (HxAnon.set __anon_191 "error" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
-        __anon_191
+      let __anon_197 = HxAnon.create () in (
+        ignore (HxAnon.set __anon_197 "session" session);
+        ignore (HxAnon.set __anon_197 "error" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+        __anon_197
       )
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_192 -> (Obj.obj __ret_192 : Obj.t) : Obj.t)
+  | HxRuntime.Hx_return __ret_198 -> (Obj.obj __ret_198 : Obj.t) : Obj.t)

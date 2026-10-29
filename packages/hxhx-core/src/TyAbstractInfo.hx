@@ -15,12 +15,18 @@ class TyAbstractInfo extends TyNominalInfo {
 	final implicitToTypes:Array<TyType>;
 	final unaryOperators:haxe.ds.StringMap<Array<TyAbstractOperatorInfo>>;
 	final binaryOperators:haxe.ds.StringMap<Array<TyAbstractBinaryOperatorInfo>>;
+	final indexedDeclarations:Array<TyDeclarationInfo>;
+	final enumDomain:Null<TyEnumAbstractDomain>;
+	final multiTypePolicy:Null<TyMultiTypePolicy>;
 
 	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyFieldInfo>,
 			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
 			staticMethodLists:haxe.ds.StringMap<Array<TyFunSig>>, instanceMethodLists:haxe.ds.StringMap<Array<TyFunSig>>,
 			declarations:Array<TyDeclarationInfo>, underlyingType:TyType, typeParameters:Array<TyTypeParameterId>, implicitFromTypes:Array<TyType>,
-			implicitToTypes:Array<TyType>, visibility:HxVisibility = HxVisibility.Public) {
+			implicitToTypes:Array<TyType>, visibility:HxVisibility, policies:{
+			enumDomain:Null<TyEnumAbstractDomain>,
+			multiType:Null<TyMultiTypePolicy>
+		}) {
 		super(identity, shortName, modulePath, fields, properties, staticMethods, instanceMethods, staticMethodLists, instanceMethodLists, declarations,
 			visibility);
 		this.underlyingType = underlyingType;
@@ -29,7 +35,18 @@ class TyAbstractInfo extends TyNominalInfo {
 		this.implicitToTypes = implicitToTypes == null ? [] : implicitToTypes.copy();
 		this.unaryOperators = new haxe.ds.StringMap();
 		this.binaryOperators = new haxe.ds.StringMap();
-	}
+		this.indexedDeclarations = [];
+		this.enumDomain = policies.enumDomain;
+		this.multiTypePolicy = policies.multiType;
+		}
+
+	/** Null for ordinary abstracts; otherwise retain the exact declaration-bound specialization policy. */
+	public function getMultiTypePolicy():Null<TyMultiTypePolicy>
+		return multiTypePolicy;
+
+	/** Ordered enum members before backing-value erasure; null for ordinary abstracts. */
+	public function getEnumDomain():Null<TyEnumAbstractDomain>
+		return enumDomain;
 
 	static function unaryKey(op:HxUnaryOperator, fixity:HxUnaryFixity):String {
 		return HxUnaryOperatorTools.sourceToken(op) + "|" + (fixity == HxUnaryFixity.Prefix ? "prefix" : "postfix");
@@ -90,4 +107,13 @@ class TyAbstractInfo extends TyNominalInfo {
 				out.push(candidate);
 		return out;
 	}
+
+	/** Indexed helpers retain source order: the first applicable declaration wins, including mixed static/instance forms. */
+	public function addIndexedDeclaration(declaration:TyDeclarationInfo):Void {
+		if (indexedDeclarations.indexOf(declaration) < 0)
+			indexedDeclarations.push(declaration);
+	}
+
+	public function getIndexedDeclarations():Array<TyDeclarationInfo>
+		return indexedDeclarations.copy();
 }

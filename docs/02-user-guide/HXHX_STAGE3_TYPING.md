@@ -229,8 +229,12 @@ Stage 3 is invoked explicitly via:
 
 Bring-up flags (not part of the long-term `haxe` CLI surface):
 
+Native compilation emits method bodies by default, including local declarations
+and statements before a return. Remove `--hxhx-emit-full-bodies` from commands;
+the compiler rejects that retired option. This change removes the partial-body
+mode; it does not establish full Haxe compatibility or remove all bootstrap shims.
+
 - `--hxhx-out <dir>`: output directory for emitted `.ml` files and the built `out.exe`.
 - `--hxhx-type-only`: resolve + type the module graph; skip macro execution and skip emit/build.
 - `--hxhx-no-emit`: resolve + type the module graph and execute Stage4 macro hooks, but skip OCaml emission/build.
-- `--hxhx-emit-full-bodies`: emit best-effort OCaml for full statement bodies (bootstrap/diagnostic rung).
 - `--hxhx-no-run`: emit+build the OCaml executable but do not execute it (needed for long-lived server executables like the macro host).

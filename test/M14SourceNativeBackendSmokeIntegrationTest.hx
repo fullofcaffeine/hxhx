@@ -36,6 +36,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		return Sys.command("sh", ["-c", "command -v " + name + " >/dev/null 2>&1"]) == 0;
 	}
 
+	/** Check behavior independently of the temporary variables chosen by lowering. */
+	static function assertPythonRuntime(outputPath:String, expected:String):Void {
+		if (!commandExists("python3"))
+			return;
+		final run = commandOutput("python3", [outputPath]);
+		assertTrue(run.code == 0, "generated Python should execute, stderr:\n" + run.stderr);
+		assertTrue(run.stdout == expected, "generated Python output mismatch, expected:\n" + expected + "got:\n" + run.stdout);
+	}
+
 	static function installTrueExecutable(path:String):Void {
 		final candidates = ["/usr/bin/true", "/bin/true"];
 		for (candidate in candidates) {
@@ -145,22 +154,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 	}
 
 	/**
-		Add exact program declaration facts to legacy PHP smoke fixtures.
+		Add exact program declaration facts to legacy PHP and Lua smoke fixtures.
 
 		Most source-target smokes predate program-indexed typing and deliberately
 		use `TyperStage.typeModule`. Real compiler requests use
-		`typeResolvedModule`, so PHP production rendering now correctly rejects
+		`typeResolvedModule`, so PHP and Lua production rendering correctly reject
 		those factless fixtures. This test-only adapter retypes only such legacy
 		fixtures through one shared nominal index. Retyping keeps the exact method
 		declaration, generic parameter types, local environment, and typed body
 		coherent; attaching declarations to an older permissive body would create
 		conflicting semantic facts.
 
-		Keeping the adapter at the PHP backend boundary avoids changing Java,
-		C#, Python, and Lua fixtures whose permissive bring-up behavior is not
-		part of the PHP render-session hard cut.
+		The adapter remains at these test backend boundaries. Java, C#, and Python
+		fixtures keep their existing setup. Production code never repairs a
+		factless program during rendering.
 	**/
-	static function withExactPhpDeclarationFacts(program:GenIrProgram):GenIrProgram {
+	static function withExactDeclarationFacts(program:GenIrProgram):GenIrProgram {
 		final sourceModules = program.getTypedModules();
 		var needsRetyping = false;
 		for (module in sourceModules)
@@ -190,7 +199,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 	static function exactPhpBackend():backend.IBackend {
 		final delegate = BackendRegistry.requireForTarget(backend.source.SourceNativeBackend.PHP_TARGET_ID);
 		return new backend.TargetCoreBackend(backend.source.SourceNativeBackend.phpDescriptor(),
-			(program, context) -> delegate.emit(withExactPhpDeclarationFacts(program), context));
+			(program, context) -> delegate.emit(withExactDeclarationFacts(program), context));
+	}
+
+	/** Lua class generation requires the same indexed declarations as a real compiler request. */
+	static function exactLuaBackend():backend.IBackend {
+		final delegate = BackendRegistry.requireForTarget(backend.source.SourceNativeBackend.LUA_TARGET_ID);
+		return new backend.TargetCoreBackend(backend.source.SourceNativeBackend.luaDescriptor(),
+			(program, context) -> delegate.emit(withExactDeclarationFacts(program), context));
 	}
 
 	static function assertPhpSyntaxUtilities():Void {
@@ -243,7 +259,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(nullableCallback.getCanonicalDisplay() == "Null<(model.Api<String>)->Bool>",
 			"canonical semantic type display should preserve nullability, function shape, and resolved nominal arguments");
 		final anonymous = TyType.anonymous(["label", "service"], [TyType.fromHintText("String"), resolvedService]);
-		assertTrue(anonymous.getCanonicalDisplay() == "{label:String,service:model.Api<String>}",
+		assertTrue(anonymous.getCanonicalDisplay() == "{var label:String; var service:model.Api<String>;}",
 			"anonymous semantic type display should keep a deterministic field shape and canonical nested identities");
 
 		final mainFunction = new HxFunctionDecl("main", Public, true, [], "Void", [], "");
@@ -251,7 +267,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			new TypedFunctionBody([], TypedBodyFingerprint.forStatements(HxFunctionDecl.getBody(mainFunction))));
 		final mainIdentity = typedMainFunction.getStableIdentity();
 		final localBinding = new TyLocalBinding(TyLocalId.forSourceDeclaration(mainIdentity, 0, Variable, "service"), "service", resolvedService, Variable);
-		final localProjection = new TypedBackendFunctionProjection(mainIdentity, CompilerTypedTreeRevision.functionBody(typedMainFunction), mainFunction,
+		final localProjection = new TypedBackendFunctionProjection(typedMainFunction, typedMainFunction, mainFunction,
 			new TypedBackendLocalCatalog([localBinding]), TyType.unknown());
 		final localFacts = new backend.source.PhpFunctionLocalFacts(localProjection, value -> value);
 		final firstTypeHints = localFacts.copyTypeHints();
@@ -341,22 +357,26 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			], "String", [SReturn(EString("string"), HxPos.unknown())], "",
 				["inline", "noImportGlobal"]);
 			final firstDeclaration = new TyDeclarationInfo(new TyDeclarationId("unit.Container.Helper#choose:Int#0"), identity, firstSignature, [],
-				firstSource, HxPos.unknown(), false, true, "unit.Container");
+				firstSource, HxPos.unknown(), false, true, "unit.Container", new StringMap());
 			final secondDeclaration = new TyDeclarationInfo(new TyDeclarationId("unit.Container.Helper#choose:String:rest#0"), identity, secondSignature,
-				["inline", "noImportGlobal"], secondSource, HxPos.unknown(), true, true, "unit.Container");
+				["inline", "noImportGlobal"], secondSource, HxPos.unknown(), true, true, "unit.Container", new StringMap());
 			final declarations = reverse ? [secondDeclaration, firstDeclaration] : [firstDeclaration, secondDeclaration];
 			return new TyClassInfo(identity, "Helper", "unit.Container", fields, new StringMap(), new StringMap(), new StringMap(), new StringMap(),
 				new StringMap(), declarations, Public, false, TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []));
 		}
 
-		final orderedClassFacts = new TypedBackendClassSemanticFacts(classSemanticInfo(false), TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []));
-		final reversedClassFacts = new TypedBackendClassSemanticFacts(classSemanticInfo(true), TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []));
-		assertTrue(orderedClassFacts.getSchemaRevision() == "typed-backend-class-semantic-facts-v5",
+		final orderedClassFacts = new TypedBackendClassSemanticFacts(classSemanticInfo(false), TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []),
+			[]);
+		final reversedClassFacts = new TypedBackendClassSemanticFacts(classSemanticInfo(true), TyType.nominal(new TyNominalTypeId("unit.Container.Base"), []),
+			[]);
+		assertTrue(orderedClassFacts.getSchemaRevision() == "typed-backend-class-semantic-facts-v15",
 			"typed backend class facts should version their target-neutral representation");
 		assertTrue(orderedClassFacts.getClassIdentity() == "unit.Container.Helper",
 			"typed backend class facts should preserve the exact secondary-type identity");
 		assertTrue(orderedClassFacts.getModuleIdentity() == "unit.Container",
 			"typed backend class facts should keep source-module identity separate from secondary-type identity");
+		assertTrue(orderedClassFacts.getDeclaredName() == "Helper",
+			"typed backend class facts should retain the declared name without the package or module path");
 		assertTrue(orderedClassFacts.getSuperClassIdentity() == "unit.Container.Base",
 			"typed backend class facts should preserve the raw superclass node selected by typing");
 		assertTrue(orderedClassFacts.getSuperTypeIdentity() == "nominal:unit.Container.Base",
@@ -391,12 +411,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final conflictingSignature = new TyFunSig("different", true, [], [], [], [], TyType.fromHintText("Void"), HxPos.unknown());
 		conflictDeclarations.push(new TyDeclarationInfo(new TyDeclarationId("unit.Container.Helper#choose:Int#0"),
 			new TyNominalTypeId("unit.Container.Helper"), conflictingSignature, [], new HxFunctionDecl("different", Public, true, [], "Void", [], ""),
-			HxPos.unknown(), false, true, "unit.Container"));
+			HxPos.unknown(), false, true, "unit.Container", new StringMap()));
 		final conflictingInfo = new TyClassInfo(conflictInfo.getIdentity(), "Helper", "unit.Container", new StringMap(), new StringMap(), new StringMap(),
 			new StringMap(), new StringMap(), new StringMap(), conflictDeclarations, Public, false);
 		var conflictingClassFactsMessage = "";
 		try {
-			new TypedBackendClassSemanticFacts(conflictingInfo, null);
+			new TypedBackendClassSemanticFacts(conflictingInfo, null, []);
 		} catch (error) {
 			conflictingClassFactsMessage = Std.string(error);
 		}
@@ -410,7 +430,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			new StringMap(), new StringMap(), new StringMap(), [], Public, false);
 		var foreignFieldMessage = "";
 		try {
-			new TypedBackendClassSemanticFacts(foreignInfo, null);
+			new TypedBackendClassSemanticFacts(foreignInfo, null, []);
 		} catch (error) {
 			foreignFieldMessage = Std.string(error);
 		}
@@ -421,7 +441,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final shortName = classIdentity.indexOf(".") < 0 ? classIdentity : classIdentity.substr(classIdentity.lastIndexOf(".") + 1);
 			final info = new TyClassInfo(new TyNominalTypeId(classIdentity), shortName, moduleIdentity, new StringMap(), new StringMap(), new StringMap(),
 				new StringMap(), new StringMap(), new StringMap(), [], Public, false, superType);
-			return new TypedBackendClassSemanticFacts(info, superType);
+			return new TypedBackendClassSemanticFacts(info, superType, []);
 		}
 
 		final leftBaseType = TyType.nominal(new TyNominalTypeId("unit.Left.Base"), [TyType.fromHintText("String")]);
@@ -430,7 +450,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final childFacts = emptyClassFacts("unit.Child", "unit.Child", leftBaseType);
 		final orderedGraph = new TypedBackendClassGraph("typed-program-revision", [rightBaseFacts, childFacts, leftBaseFacts]);
 		final reversedGraph = new TypedBackendClassGraph("typed-program-revision", [leftBaseFacts, childFacts, rightBaseFacts]);
-		assertTrue(orderedGraph.getSchemaRevision() == "typed-backend-class-graph-v3",
+		assertTrue(orderedGraph.getSchemaRevision() == "typed-backend-class-graph-v4",
 			"typed backend class graphs should version their target-neutral representation");
 		assertTrue(orderedGraph.getCanonicalIdentity() == reversedGraph.getCanonicalIdentity(),
 			"typed backend class graphs should not depend on module or class traversal order");
@@ -467,7 +487,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			TyType.unresolved("Future", [genericBaseParameterType]),
 			TyType.nullable(TyType.functionType([genericBaseParameterType], TyType.nominal(new TyNominalTypeId("Array"), [genericBaseParameterType])))
 		]), structuralSubstitution);
-		assertTrue(specializedStructuralType.getCanonicalDisplay() == "{callback:Null<(String)->Array<String>>,pending:Future<String>}"
+		assertTrue(specializedStructuralType.getCanonicalDisplay() == "{var callback:Null<(String)->Array<String>>; var pending:Future<String>;}"
 			&& TyTypeSubstitution.parameterIdentities(specializedStructuralType).length == 0,
 			"structural substitution should cover anonymous fields, nullable functions, nominal results, and unresolved applications");
 		final genericBaseFields = new StringMap<TyFieldInfo>();
@@ -479,7 +499,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			HxPos.unknown());
 		genericBaseDeclarations.push(new TyDeclarationInfo(new TyDeclarationId("unit.GenericBase#take#0"), genericBaseIdentity, classParameterSignature, [],
 			new HxFunctionDecl("take", Public, false, [new HxFunctionArg("value", "T", NoDefault, false, false, null)], "T", [], ""), HxPos.unknown(), false,
-			true, "unit.GenericBase"));
+			true, "unit.GenericBase", new StringMap()));
 		final shadowParameter = TyTypeParameterId.method(genericBaseIdentity, false, "shadow", 0, 0, "T");
 		final shadowParameterType = TyType.typeParameter(shadowParameter);
 		final shadowSignature = new TyFunSig("shadow", false, ["value"], [shadowParameterType], [false], [false], shadowParameterType, HxPos.unknown());
@@ -487,10 +507,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			[HxFunctionTypeParamMetadata.TYPE_PARAMS_PREFIX + "T"],
 			new HxFunctionDecl("shadow", Public, false, [new HxFunctionArg("value", "T", NoDefault, false, false, null)], "T", [], "",
 				[HxFunctionTypeParamMetadata.TYPE_PARAMS_PREFIX + "T"]),
-			HxPos.unknown(), false, true, "unit.GenericBase", false, [shadowParameter]));
+			HxPos.unknown(), false, true, "unit.GenericBase", new StringMap(), false, [shadowParameter]));
 		final genericBaseInfo = new TyClassInfo(genericBaseIdentity, "GenericBase", "unit.GenericBase", genericBaseFields, new StringMap(), new StringMap(),
 			new StringMap(), new StringMap(), new StringMap(), genericBaseDeclarations, Public, false, null, [genericBaseParameter]);
-		final genericBaseFacts = new TypedBackendClassSemanticFacts(genericBaseInfo, null);
+		final genericBaseFacts = new TypedBackendClassSemanticFacts(genericBaseInfo, null, []);
 
 		final genericMiddleIdentity = new TyNominalTypeId("unit.GenericMiddle");
 		final genericMiddleParameter = TyTypeParameterId.nominal(genericMiddleIdentity, 0, "U");
@@ -499,19 +519,19 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		]);
 		final genericMiddleInfo = new TyClassInfo(genericMiddleIdentity, "GenericMiddle", "unit.GenericMiddle", new StringMap(), new StringMap(),
 			new StringMap(), new StringMap(), new StringMap(), new StringMap(), [], Public, false, genericMiddleSuper, [genericMiddleParameter]);
-		final genericMiddleFacts = new TypedBackendClassSemanticFacts(genericMiddleInfo, genericMiddleSuper);
+		final genericMiddleFacts = new TypedBackendClassSemanticFacts(genericMiddleInfo, genericMiddleSuper, []);
 
 		final genericChildIdentity = new TyNominalTypeId("unit.GenericChild");
 		final genericChildSuper = TyType.nominal(genericMiddleIdentity, [TyType.fromHintText("String")]);
 		final genericChildInfo = new TyClassInfo(genericChildIdentity, "GenericChild", "unit.GenericChild", new StringMap(), new StringMap(), new StringMap(),
 			new StringMap(), new StringMap(), new StringMap(), [], Public, false, genericChildSuper);
-		final genericChildFacts = new TypedBackendClassSemanticFacts(genericChildInfo, genericChildSuper);
+		final genericChildFacts = new TypedBackendClassSemanticFacts(genericChildInfo, genericChildSuper, []);
 		final unrelatedBaseIdentity = new TyNominalTypeId("other.GenericBase");
 		final unrelatedBaseParameter = TyTypeParameterId.nominal(unrelatedBaseIdentity, 0, "T");
 		final unrelatedBaseFacts = new TypedBackendClassSemanticFacts(new TyClassInfo(unrelatedBaseIdentity, "GenericBase", "other.GenericBase",
 			new StringMap(), new StringMap(), new StringMap(), new StringMap(), new StringMap(), new StringMap(), [], Public, false, null,
 			[unrelatedBaseParameter]),
-			null);
+			null, []);
 
 		final specializedGraph = new TypedBackendClassGraph("generic-program-revision",
 			[unrelatedBaseFacts, genericBaseFacts, genericMiddleFacts, genericChildFacts]);
@@ -555,7 +575,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		try {
 			new TypedBackendClassGraph("generic-program-revision", [
 				genericBaseFacts,
-				new TypedBackendClassSemanticFacts(missingGenericArgsInfo, missingGenericArgsInfo.getSuperType())
+				new TypedBackendClassSemanticFacts(missingGenericArgsInfo, missingGenericArgsInfo.getSuperType(), [])
 			]).requireSpecializedLineage("unit.RawChild");
 		} catch (error) {
 			genericArityMessage = Std.string(error);
@@ -712,7 +732,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertTrue(runDeclaration != null && runProjection != null && planChildFacts != null,
 			"the typed PHP fixture should expose the exact PlanChild.run projection and class facts");
 		final functionPlan = planProjection.requireFunctionLoweringPlan(runDeclaration);
-		assertTrue(functionPlan.getSchemaRevision() == "php-function-lowering-plan-v5",
+		assertTrue(functionPlan.getSchemaRevision() == "php-function-lowering-plan-v7",
 			"the PHP function plan should version target-specific selection separately");
 		assertTrue(functionPlan.getProgramRevision() == planProgram.getTypedProgramRevision().getCanonicalIdentity()
 			&& functionPlan.getModuleIdentity() == "unit.PlanChild"
@@ -766,9 +786,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final valueSlotRenderer = new backend.source.PhpFunctionBodyRenderer(valueSlotProgramRenderer, planProjection.getProgramRenderFacts(),
 			planProjection.getModuleRenderFacts("unit.PlanChild"), valueSlotPlan);
 		switch (backend.source.SourceFunctionRenderFrame.SourceFunctionRenderFrameTools.forPhpRenderer(valueSlotRenderer)) {
-			case PhpFunction(_, scope):
+			case PhpFunction(_, scope, _):
 				assertTrue(scope.usesThisValueSlot(), "the request-owned renderer should activate the sealed class-wide this-value representation");
-			case Program(_):
+			case Program(_) | NativeFunction(_, _) | TypedFunction(_, _, _, _):
 				throw "the PHP function renderer should create a function frame";
 		}
 		var mismatchedPlanMessage = "";
@@ -1145,41 +1165,41 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final changedRoot = Path.join([tmpRoot, "changed"]);
 		final returnedRoot = Path.join([tmpRoot, "returned"]);
 		final afterResetRoot = Path.join([tmpRoot, "after-reset"]);
-		backend.emit(renderFixture, new BackendContext(directRoot, null, "Main", true, false, new StringMap<String>()));
-		backend.emit(renderFixture, new BackendContext(repeatedRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(renderFixture, new BackendContext(directRoot, null, "Main", false, new StringMap<String>()));
+		backend.emit(renderFixture, new BackendContext(repeatedRoot, null, "Main", false, new StringMap<String>()));
 		final direct = File.getContent(Path.join([directRoot, "index.php"]));
 		final repeated = File.getContent(Path.join([repeatedRoot, "index.php"]));
 		assertTrue(repeated == direct, "a repeated PHP strict-projection request changed generated output");
 		var backendFailure = "";
 		try {
 			backend.emit(new MacroExpandedProgram([renderTyped, renderTyped], false, []),
-				new BackendContext(projectionFailureRoot, null, "Main", true, false, new StringMap<String>()));
+				new BackendContext(projectionFailureRoot, null, "Main", false, new StringMap<String>()));
 		} catch (error) {
 			backendFailure = Std.string(error);
 		}
 		assertContains(backendFailure, "Main.Main.main", "a failed PHP request should retain the exact duplicate projection identity");
 		var supportRenderFailure = "";
 		try {
-			backend.emit(phpSupportRenderFailureProgram(), new BackendContext(supportFailureRoot, null, "Main", true, false, new StringMap<String>()));
+			backend.emit(phpSupportRenderFailureProgram(), new BackendContext(supportFailureRoot, null, "Main", false, new StringMap<String>()));
 		} catch (error) {
 			supportRenderFailure = Std.string(error);
 		}
 		assertContains(supportRenderFailure, "unsupported __php__ intrinsic arguments",
 			"a failed PHP support render should reach function rendering after the request-owned program renderer is sealed");
 		assertTrue(!FileSystem.exists(Path.join([supportFailureRoot, "index.php"])), "a failed PHP support render should not publish partial target bytes");
-		backend.emit(renderFixture, new BackendContext(afterFailureRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(renderFixture, new BackendContext(afterFailureRoot, null, "Main", false, new StringMap<String>()));
 		final afterFailure = File.getContent(Path.join([afterFailureRoot, "index.php"]));
 		assertTrue(afterFailure == direct, "a failed PHP projection or support-render request changed the next generated output");
 		final changedParsed = ParserStage.parse('class Main { public static function main():Void { Sys.println("changed"); } }', "Main.hx");
 		final changedFixture = new MacroExpandedProgram([TyperStage.typeModule(changedParsed)], false, []);
-		backend.emit(changedFixture, new BackendContext(changedRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(changedFixture, new BackendContext(changedRoot, null, "Main", false, new StringMap<String>()));
 		final changed = File.getContent(Path.join([changedRoot, "index.php"]));
 		assertTrue(changed != direct && changed.indexOf('"changed"') >= 0, "the middle B request should produce distinct PHP before the A→B→A isolation check");
-		backend.emit(renderFixture, new BackendContext(returnedRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(renderFixture, new BackendContext(returnedRoot, null, "Main", false, new StringMap<String>()));
 		final returned = File.getContent(Path.join([returnedRoot, "index.php"]));
 		assertTrue(returned == direct, "an A→B→A PHP sequence retained render state from the middle program");
 		CompilerRequestStaticState.reset();
-		backend.emit(renderFixture, new BackendContext(afterResetRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(renderFixture, new BackendContext(afterResetRoot, null, "Main", false, new StringMap<String>()));
 		final afterReset = File.getContent(Path.join([afterResetRoot, "index.php"]));
 		assertTrue(afterReset == direct, "request-state reset changed request-owned PHP rendering");
 		if (commandExists("php")) {
@@ -1199,10 +1219,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 	}
 
+	/** Type authored syntax fixtures so their bodies carry real local-variable bindings. */
 	static function typedSyntheticModule(filePath:String, decl:HxModuleDecl):TypedModule {
-		final mainClass = HxModuleDecl.getMainClass(decl);
-		final env = new TyModuleEnv(HxModuleDecl.getPackagePath(decl), HxModuleDecl.getDirectives(decl), new TyClassEnv(HxClassDecl.getName(mainClass), []));
-		return new TypedModule(new ParsedModule("", decl, filePath), env);
+		return TyperStage.typeModule(new ParsedModule("", decl, filePath));
 	}
 
 	/**
@@ -6702,7 +6721,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		for (module in resolved)
 			typed.push(TyperStage.typeResolvedModule(module, index, loader));
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(MacroStage.expandProgram(typed, []), new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		backend.emit(MacroStage.expandProgram(typed, []), new BackendContext(tmpRoot, null, "unit.Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class TestOps:", "cross-module helper classes should be emitted");
@@ -6760,7 +6779,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		for (module in resolved)
 			typed.push(TyperStage.typeResolvedModule(module, index, loader));
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(MacroStage.expandProgram(typed, []), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(MacroStage.expandProgram(typed, []), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		final basePos = content.indexOf("class TestCommandBase:");
@@ -6799,7 +6818,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class LocalSupport:", "Python support emission should keep user support classes");
@@ -6829,7 +6848,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Runner:", "Python support emission should keep runtime support classes");
@@ -6865,7 +6884,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Runner:", "Python utest Runner should still emit runtime support");
@@ -6904,7 +6923,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class InitBase:", "Python support emission should keep the class with the static initializer");
@@ -6942,7 +6961,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class DateTools:", "Python std support should provide a small DateTools helper when std DateTools is skipped");
@@ -6983,7 +7002,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Timer:", "Python runtime should provide a small Timer helper for upstream utest handlers");
@@ -7019,7 +7038,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "unit = hxhx_anon()", "Python support should synthesize a package namespace for qualified references");
@@ -7065,7 +7084,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class StringMap(dict):", "Python std support should provide a small StringMap helper when std StringMap is skipped");
@@ -7118,7 +7137,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "def u(s):", "Python support should synthesize the global type-name helper used by static initializers");
@@ -7157,7 +7176,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class UnitBuilder:", "Python support should synthesize a UnitBuilder runtime fallback for macro-only generateSpec");
@@ -7200,7 +7219,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class TestIssues:", "Python support should synthesize a TestIssues runtime fallback for macro-only issue registration");
@@ -7245,7 +7264,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final program = MacroStage.expandProgram([typed], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("python/runtime", "Prelude.py"),
@@ -7291,7 +7310,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final program = MacroStage.expandProgram([typed], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class List:", "Python runtime should define a Haxe-style List constructor shim");
@@ -7341,7 +7360,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Compiler:", "Python support should synthesize a haxe.macro.Compiler fallback from std source");
@@ -7389,7 +7408,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content,
@@ -7430,7 +7449,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "self.addCaseOld(test)", "Python same-class instance calls should dispatch through self");
@@ -7480,7 +7499,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "print(self.globalPattern)", "Python same-class instance field reads should dispatch through self");
@@ -7541,7 +7560,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Reflect:", "Python std Reflect fallback should emit when std Reflect is excluded from helper classes");
@@ -7599,7 +7618,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Type:", "Python std Type fallback should emit when std Type is excluded from helper classes");
@@ -7649,7 +7668,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class StringTools:", "Python std StringTools fallback should emit when std StringTools is excluded from helper classes");
@@ -7684,7 +7703,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Vector(Array):", "Python std Vector fallback should emit when std Vector is excluded from helper classes");
@@ -7714,7 +7733,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final program = MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Main:", "Python backend should emit a runtime main class when main constructs Main()");
@@ -7756,7 +7775,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Meta:", "Python std Meta fallback should emit when haxe.rtti.Meta is excluded from helper classes");
@@ -7788,7 +7807,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class ValueException(Exception):", "Python source backend should emit the ValueException base helper when subclasses need it");
@@ -8266,9 +8285,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"  }",
 			"}",
 		].join("\n");
-		final main = TyperStage.typeModule(ParserStage.parse(mainSrc, "unit/Main.hx"));
-		final helper = TyperStage.typeModule(ParserStage.parse(helperSrc, "checks/ArrayTools.hx"));
-		return MacroStage.expandProgram([main, helper], []);
+		final modules = [
+			new ResolvedModule("unit.Main", "unit/Main.hx", ParserStage.parse(mainSrc, "unit/Main.hx")),
+			new ResolvedModule("checks.ArrayTools", "checks/ArrayTools.hx", ParserStage.parse(helperSrc, "checks/ArrayTools.hx"))
+		];
+		final index = TyperIndex.build(modules);
+		return MacroStage.expandProgram([for (module in modules) TyperStage.typeResolvedModule(module, index)], []);
 	}
 
 	static function csNoMainLibraryProgram():GenIrProgram {
@@ -8544,10 +8566,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_" + targetId + "_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = targetId == backend.source.SourceNativeBackend.PHP_TARGET_ID ? exactPhpBackend() : BackendRegistry.requireForTarget(targetId);
+		final backend = targetId == backend.source.SourceNativeBackend.PHP_TARGET_ID ? exactPhpBackend() : targetId == backend.source.SourceNativeBackend.LUA_TARGET_ID ? exactLuaBackend() : BackendRegistry.requireForTarget(targetId);
 		final defines = new StringMap<String>();
 		defines.set(label, "1");
-		final result = backend.emit(program(label), new BackendContext(tmpRoot, null, "Main", true, false, defines));
+		final result = backend.emit(program(label), new BackendContext(tmpRoot, null, "Main", false, defines));
 		final expectedPath = Path.join([tmpRoot, expectedFile]);
 		assertTrue(result.entryPath == expectedPath, "unexpected entry path for " + targetId + ": " + result.entryPath);
 		assertTrue(FileSystem.exists(expectedPath), "missing emitted source artifact for " + targetId);
@@ -8562,7 +8584,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		final outputPath = Path.join([tmpRoot, "bin", "unit.py"]);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		final result = backend.emit(program("python"), new BackendContext(tmpRoot, outputPath, "Main", true, false, new StringMap<String>()));
+		final result = backend.emit(program("python"), new BackendContext(tmpRoot, outputPath, "Main", false, new StringMap<String>()));
 		assertTrue(result.entryPath == outputPath, "source backend should honor explicit Python output file hint");
 		assertTrue(FileSystem.exists(outputPath), "source backend should create the explicit Python output file");
 		assertContains(File.getContent(outputPath), "print((\"source-native:\" + \"python\"))", "hinted Python output should contain emitted program");
@@ -8576,7 +8598,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		final outputDir = Path.join([tmpRoot, "bin", "java", "TestMain-Debug"]);
 		final backend = BackendRegistry.requireForTarget("java-native");
-		final result = backend.emit(program("java"), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+		final result = backend.emit(program("java"), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 		final sourcePath = Path.join([outputDir, "src", "Main.java"]);
 		final jarPath = outputDir + ".jar";
 		assertTrue(result.entryPath == jarPath, "Java source backend should report the packaged jar as primary artifact");
@@ -8602,18 +8624,18 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final runciOutputDir = Path.join([tmpRoot, "bin", "java"]);
 		final debugDefines = new StringMap<String>();
 		debugDefines.set("debug", "1");
-		final runciResult = backend.emit(program("java-runci"), new BackendContext(runciOutputDir, null, "Main", true, true, debugDefines));
+		final runciResult = backend.emit(program("java-runci"), new BackendContext(runciOutputDir, null, "Main", true, debugDefines));
 		final runciJarPath = Path.join([runciOutputDir, "Main-Debug.jar"]);
 		assertTrue(runciResult.entryPath == runciJarPath, "Java source backend should use runci-compatible jar path for bin/java output");
 		assertTrue(FileSystem.exists(runciJarPath), "Java source backend should package jar under bin/java for upstream runci");
 		final threadsOutputDir = Path.join([tmpRoot, "threads", "java"]);
-		final threadsResult = backend.emit(program("java-runci"), new BackendContext(threadsOutputDir, null, "Main", true, true, new StringMap<String>()));
+		final threadsResult = backend.emit(program("java-runci"), new BackendContext(threadsOutputDir, null, "Main", true, new StringMap<String>()));
 		final threadsJarPath = Path.join([threadsOutputDir, "Main.jar"]);
 		assertTrue(threadsResult.entryPath == threadsJarPath, "Java source backend should omit -Debug from non-debug bin/java jars");
 		assertTrue(FileSystem.exists(threadsJarPath), "Java source backend should package the non-debug jar expected by upstream threads");
 		final jvmBuildDir = Path.join([tmpRoot, "bin", "jvm"]);
 		final jvmJarPath = Path.join([tmpRoot, "jvm.jar"]);
-		final jvmResult = backend.emit(program("java"), new BackendContext(jvmBuildDir, jvmJarPath, "Main", true, true, new StringMap<String>()));
+		final jvmResult = backend.emit(program("java"), new BackendContext(jvmBuildDir, jvmJarPath, "Main", true, new StringMap<String>()));
 		assertTrue(jvmResult.entryPath == jvmJarPath, "Java source backend should preserve file-shaped --jvm jar output hints");
 		assertTrue(FileSystem.exists(jvmJarPath), "Java source backend should package the requested --jvm jar file");
 		deleteRecursive(tmpRoot);
@@ -8628,7 +8650,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final debugDefines = new StringMap<String>();
 		debugDefines.set("debug", "1");
 		final backend = BackendRegistry.requireForTarget("cs-native");
-		final result = backend.emit(program("cs-runci"), new BackendContext(outputDir, null, "Main", true, true, debugDefines));
+		final result = backend.emit(program("cs-runci"), new BackendContext(outputDir, null, "Main", true, debugDefines));
 		final sourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
 		final exePath = Path.join([outputDir, "bin", "Main-Debug.exe"]);
 		assertTrue(result.entryPath == exePath, "C# source backend should report the packaged exe as primary artifact");
@@ -8642,7 +8664,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			assertContains(run.stdout, "source-native:cs-runci", "C# source backend exe should execute generated main");
 		}
 		final nonDebugDir = Path.join([tmpRoot, "threads", "cs"]);
-		final nonDebugResult = backend.emit(program("cs-runci"), new BackendContext(nonDebugDir, null, "Main", true, true, new StringMap<String>()));
+		final nonDebugResult = backend.emit(program("cs-runci"), new BackendContext(nonDebugDir, null, "Main", true, new StringMap<String>()));
 		final nonDebugExePath = Path.join([nonDebugDir, "bin", "Main.exe"]);
 		assertTrue(nonDebugResult.entryPath == nonDebugExePath, "C# source backend should omit -Debug from non-debug runci paths");
 		assertTrue(FileSystem.exists(nonDebugExePath), "C# source backend should package the non-debug exe expected by upstream threads");
@@ -8662,7 +8684,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		try {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			final result = backend.emit(helperClassProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final result = backend.emit(helperClassProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			final mainSourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
 			final mainTypeSourcePath = Path.join([outputDir, "src", "Main.cs"]);
 			final helperSourcePath = Path.join([outputDir, "src", "Helper.cs"]);
@@ -8727,8 +8749,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final parsed = ParserStage.parse(src, "Main.hx");
 			final typed = TyperStage.typeModule(parsed);
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			final result = backend.emit(MacroStage.expandProgram([typed], []),
-				new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final result = backend.emit(MacroStage.expandProgram([typed], []), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
 			final mainTypeSourcePath = Path.join([outputDir, "src", "Main.cs"]);
 			final reflectSourcePath = Path.join([outputDir, "src", "Reflect.cs"]);
@@ -8765,7 +8786,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 		try {
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			backend.emit(csDynamicReflectArrayProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			backend.emit(csDynamicReflectArrayProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
 			final reflectSourcePath = Path.join([outputDir, "src", "Reflect.cs"]);
 			assertTrue(FileSystem.exists(entrySourcePath), "C# Dynamic/Reflect regression should emit an entry wrapper");
@@ -8809,7 +8830,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 		try {
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			backend.emit(csDynamicReflectedTypeCallProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			backend.emit(csDynamicReflectedTypeCallProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
 			assertTrue(FileSystem.exists(entrySourcePath), "C# reflected Type Dynamic call regression should emit an entry wrapper");
 			final entryContent = File.getContent(entrySourcePath);
@@ -8842,7 +8863,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 		try {
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			backend.emit(csScopedLocalBlockProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			backend.emit(csScopedLocalBlockProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
 			assertTrue(FileSystem.exists(entrySourcePath), "C# scoped-local regression should emit an entry wrapper");
 			final entryContent = File.getContent(entrySourcePath);
@@ -8876,7 +8897,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 		try {
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			backend.emit(csDuplicateLocalShadowProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			backend.emit(csDuplicateLocalShadowProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
 			assertTrue(FileSystem.exists(entrySourcePath), "C# duplicate-local regression should emit an entry wrapper");
 			final content = File.getContent(entrySourcePath);
@@ -8913,7 +8934,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 		try {
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			backend.emit(csRawIntrinsicAndSameClassStaticProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			backend.emit(csRawIntrinsicAndSameClassStaticProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
 			assertTrue(FileSystem.exists(entrySourcePath), "C# raw intrinsic regression should emit an entry wrapper");
 			final content = File.getContent(entrySourcePath);
@@ -8945,7 +8966,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 		try {
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			backend.emit(csSupportConstructorWithSuperProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			backend.emit(csSupportConstructorWithSuperProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			final childSourcePath = Path.join([outputDir, "src", "Child.cs"]);
 			assertTrue(FileSystem.exists(childSourcePath), "C# support constructor super regression should emit Child.cs");
 			final content = File.getContent(childSourcePath);
@@ -8972,7 +8993,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 		try {
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			backend.emit(csSupportConstructorAssignThisProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			backend.emit(csSupportConstructorAssignThisProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			final sourcePath = Path.join([outputDir, "src", "AssignThis.cs"]);
 			assertTrue(FileSystem.exists(sourcePath), "C# support constructor this-assignment regression should emit AssignThis.cs");
 			final content = File.getContent(sourcePath);
@@ -8999,7 +9020,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 		try {
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			backend.emit(csSupportFieldEqualityProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			backend.emit(csSupportFieldEqualityProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
 			assertTrue(FileSystem.exists(entrySourcePath), "C# field equality regression should emit an entry wrapper");
 			final content = File.getContent(entrySourcePath);
@@ -9028,7 +9049,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 		try {
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			backend.emit(csPostIncrementExpressionProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			backend.emit(csPostIncrementExpressionProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
 			assertTrue(FileSystem.exists(entrySourcePath), "C# post-increment expression regression should emit an entry wrapper");
 			final content = File.getContent(entrySourcePath);
@@ -9057,7 +9078,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 		try {
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			backend.emit(csEnumExtractSwitchExpressionProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			backend.emit(csEnumExtractSwitchExpressionProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
 			final aSourcePath = Path.join([outputDir, "src", "A.cs"]);
 			assertTrue(FileSystem.exists(entrySourcePath), "C# enum-extract switch regression should emit an entry wrapper");
@@ -9066,8 +9087,9 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final enumContent = File.getContent(aSourcePath);
 			assertContains(enumContent, "new global::hxhx.__HxEnumValue(\"A\", \"A2\"", "C# enum constructor support should return a runtime enum value");
 			assertContains(entryContent, "global::A.A2(global::B.BB(12))", "C# entry wrapper should qualify enum constructor calls");
-			assertContains(entryContent, "new System.Func<object>(() => {", "C# binding switch expressions should lower to an expression lambda");
-			assertContains(entryContent, "var v = ((global::hxhx.__HxEnumValue)__hxhx_switch).__hx_params[0];",
+			assertNotContains(entryContent, "new System.Func<object>(() => {", "C# value switches should use shared result storage without an extra callable");
+			assertContains(entryContent, "object result", "C# enum switch results should use the existing enum constructor ABI");
+			assertContains(entryContent, "object v = (object)(((global::hxhx.__HxEnumValue)(v1)).__hx_params[0]);",
 				"C# enum-extract switch expressions should declare extracted bindings before rendering the branch");
 			assertContains(entryContent, "global::A.A2(global::B.BB(__hxhx_postUpdateVar(ref v_1",
 				"C# nested enum switch branch should keep postfix old-value semantics on the exact typed binding");
@@ -9094,7 +9116,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 		try {
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			backend.emit(csAbstractToMapProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			backend.emit(csAbstractToMapProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
 			assertTrue(FileSystem.exists(entrySourcePath), "C# abstract toMap regression should emit an entry wrapper");
 			final entryContent = File.getContent(entrySourcePath);
@@ -9121,7 +9143,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 		try {
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			backend.emit(csMapSetSurfaceProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			backend.emit(csMapSetSurfaceProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			final entrySourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
 			final mapSourcePath = Path.join([outputDir, "src", "SortedStringMapImpl.cs"]);
 			assertTrue(FileSystem.exists(entrySourcePath), "C# map set regression should emit an entry wrapper");
@@ -9145,7 +9167,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("cs-native");
-		backend.emit(csImmediateBlockLambdaCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(csImmediateBlockLambdaCallProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.cs"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "((System.Func<dynamic, object>)((addr) => {",
@@ -9171,7 +9193,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		defines.set("no-compilation", "1");
 		final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 		final backend = BackendRegistry.requireForTarget("cs-native");
-		final result = backend.emit(csNoMainLibraryProgram(), new BackendContext(outputDir, null, "checks.LibraryOnly", true, true, defines));
+		final result = backend.emit(csNoMainLibraryProgram(), new BackendContext(outputDir, null, "checks.LibraryOnly", true, defines));
 		final sourcePath = Path.join([outputDir, "src", "checks", "LibraryOnly.cs"]);
 		final runtimeSourcePath = Path.join([outputDir, "src", "hxhx", "__HxRuntime.cs"]);
 		assertTrue(result.entryPath == sourcePath, "C# no-main library emission should report the first source artifact");
@@ -9202,8 +9224,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final sourcePath = Path.join([outputDir, "src", "checks", "LibraryOnly.cs"]);
 			final runtimeSourcePath = Path.join([outputDir, "src", "hxhx", "__HxRuntime.cs"]);
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			final result = backend.emit(csNoMainLibraryProgram(),
-				new BackendContext(outputDir, null, "checks.LibraryOnly", true, true, new StringMap<String>()));
+			final result = backend.emit(csNoMainLibraryProgram(), new BackendContext(outputDir, null, "checks.LibraryOnly", true, new StringMap<String>()));
 			assertTrue(result.entryPath == dllPath, "C# no-main library packaging should report the DLL as the primary artifact");
 			assertTrue(FileSystem.exists(dllPath), "C# no-main library packaging should produce a DLL at the runci-compatible path");
 			assertTrue(FileSystem.exists(sourcePath), "C# no-main library packaging should still emit the library source");
@@ -9242,7 +9263,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final program = MacroStage.expandProgram([typed], []);
 		final outputDir = Path.join([tmpRoot, "bin", "lib1"]);
 		final backend = BackendRegistry.requireForTarget("cs-native");
-		final result = backend.emit(program, new BackendContext(outputDir, null, "Lib1", true, true, defines));
+		final result = backend.emit(program, new BackendContext(outputDir, null, "Lib1", true, defines));
 		final rootLibPath = Path.join([outputDir, "src", "Lib1.cs"]);
 		final noRootLibPath = Path.join([outputDir, "src", "haxe", "root", "Lib1.cs"]);
 		final noRootReflectPath = Path.join([outputDir, "src", "haxe", "root", "Reflect.cs"]);
@@ -9352,7 +9373,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		try {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			backend.emit(csRootOwnerImportProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			backend.emit(csRootOwnerImportProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			final unicodeOwnerPath = Path.join([outputDir, "src", "UnicodeSequences.cs"]);
 			final utilityOwnerPath = Path.join([outputDir, "src", "UtilityProcess.cs"]);
 			assertTrue(FileSystem.exists(unicodeOwnerPath), "C# source backend should emit the root UnicodeSequences owner source");
@@ -9398,7 +9419,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		try {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			backend.emit(csRuntimeShapeProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			backend.emit(csRuntimeShapeProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			final mainSourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
 			final csLibPath = Path.join([outputDir, "src", "cs", "Lib.cs"]);
 			final runnerPath = Path.join([outputDir, "src", "unit", "Runner.cs"]);
@@ -9455,7 +9476,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		try {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			backend.emit(csImportedUtestProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			backend.emit(csImportedUtestProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			final mainSourcePath = Path.join([outputDir, "src", "__HxMain.cs"]);
 			final runnerPath = Path.join([outputDir, "src", "utest", "Runner.cs"]);
 			final reportPath = Path.join([outputDir, "src", "utest", "ui", "Report.cs"]);
@@ -9497,7 +9518,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 				"C# SuccessResultsDisplayMode support should expose NeverShowSuccessResults");
 
 			final stubOnlyDir = Path.join([tmpRoot, "bin", "cs-stub-only"]);
-			backend.emit(csImportedUtestDisplayModeStubProgram(), new BackendContext(stubOnlyDir, null, "Main", true, true, new StringMap<String>()));
+			backend.emit(csImportedUtestDisplayModeStubProgram(), new BackendContext(stubOnlyDir, null, "Main", true, new StringMap<String>()));
 			final stubRunnerContent = File.getContent(Path.join([stubOnlyDir, "src", "utest", "Runner.cs"]));
 			final stubReportContent = File.getContent(Path.join([stubOnlyDir, "src", "utest", "ui", "Report.cs"]));
 			final stubHeaderContent = File.getContent(Path.join([stubOnlyDir, "src", "utest", "ui", "common", "HeaderDisplayMode.cs"]));
@@ -9527,7 +9548,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("cs-native");
-		backend.emit(csSysExitProgram(), new BackendContext(tmpRoot, null, "ExitCode", true, false, new StringMap<String>()));
+		backend.emit(csSysExitProgram(), new BackendContext(tmpRoot, null, "ExitCode", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "ExitCode.cs"]);
 		final content = File.getContent(outputPath);
 		assertContains(content,
@@ -9550,7 +9571,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		try {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			backend.emit(csSysFileSurfaceProgram(), new BackendContext(outputDir, null, "ExitCode", true, true, new StringMap<String>()));
+			backend.emit(csSysFileSurfaceProgram(), new BackendContext(outputDir, null, "ExitCode", true, new StringMap<String>()));
 			final mainPath = Path.join([outputDir, "src", "ExitCode.cs"]);
 			final sysPath = Path.join([outputDir, "src", "Sys.cs"]);
 			final pathPath = Path.join([outputDir, "src", "haxe", "io", "Path.cs"]);
@@ -9607,7 +9628,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("cs-native");
-		backend.emit(csReservedLocalProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(csReservedLocalProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.cs"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "var out_ = \"ok\";", "C# locals named reserved keywords should be sanitized at declaration sites");
@@ -9628,7 +9649,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		try {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 			final backend = BackendRegistry.requireForTarget("cs-native");
-			backend.emit(csEntrySupportMembersProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			backend.emit(csEntrySupportMembersProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			final mainPath = Path.join([outputDir, "src", "__HxMain.cs"]);
 			final serializerPath = Path.join([outputDir, "src", "haxe", "Serializer.cs"]);
 			assertTrue(FileSystem.exists(mainPath), "C# source backend should emit the entry class source");
@@ -9658,7 +9679,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("cs-native");
-		backend.emit(csUtilityProcessCallableRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(csUtilityProcessCallableRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.cs"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "System.Func<dynamic, object> runUtility = (args) => {",
@@ -9676,8 +9697,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertNotContains(content, "Sys.", "C# UtilityProcess runtime shape should not leak unresolved Sys references");
 		if (commandExists("mcs") || commandExists("csc")) {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
-			final result = backend.emit(csUtilityProcessCallableRuntimeProgram(),
-				new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final result = backend.emit(csUtilityProcessCallableRuntimeProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			assertTrue(FileSystem.exists(result.entryPath), "C# UtilityProcess callable runtime shape should compile into an executable");
 		}
 		deleteRecursive(tmpRoot);
@@ -9688,7 +9708,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("cs-native");
-		backend.emit(csUtilityProcessRuntimeShimProgram(), new BackendContext(tmpRoot, null, "UtilityProcess", true, false, new StringMap<String>()));
+		backend.emit(csUtilityProcessRuntimeShimProgram(), new BackendContext(tmpRoot, null, "UtilityProcess", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "UtilityProcess.cs"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, indentedSourceTemplateContent("cs/runtime", "UtilityProcessMembers.cs", "  "),
@@ -9711,7 +9731,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("mcs") || commandExists("csc")) {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
 			final result = backend.emit(csUtilityProcessRuntimeShimProgram(),
-				new BackendContext(outputDir, null, "UtilityProcess", true, true, new StringMap<String>()));
+				new BackendContext(outputDir, null, "UtilityProcess", true, new StringMap<String>()));
 			assertTrue(FileSystem.exists(result.entryPath), "C# UtilityProcess runtime shim should compile into an executable");
 			if (commandExists("mono")) {
 				final run = commandOutput("mono", [result.entryPath, "println", "hello"]);
@@ -9730,7 +9750,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("java-native");
-		backend.emit(javaLambdaSequenceCallbackProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(javaLambdaSequenceCallbackProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.java"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "runner.onProgress.add((e) -> {", "Java callback lambdas with statement bodies should render as block lambdas");
@@ -9747,7 +9767,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("cs-native");
-		backend.emit(javaLambdaSequenceCallbackProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(javaLambdaSequenceCallbackProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.cs"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "runner.onProgress.add((e) => {", "C# callback lambdas with statement bodies should render as block lambdas");
@@ -9763,8 +9783,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_lambda_sequence_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
-		backend.emit(javaLambdaSequenceCallbackProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final backend = exactLuaBackend();
+		backend.emit(javaLambdaSequenceCallbackProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "runner.onProgress.add(function(e)", "Lua callback lambdas with statement bodies should render as block lambdas");
@@ -9782,8 +9802,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_enum_extract_lambda_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
-		backend.emit(luaEnumExtractLambdaProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final backend = exactLuaBackend();
+		backend.emit(luaEnumExtractLambdaProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "type(kind) == \"table\"", "Lua enum-extract patterns should guard table-shaped enum values");
@@ -9798,22 +9818,22 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_support_prelude_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
-		backend.emit(luaSupportPreludeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final backend = exactLuaBackend();
+		backend.emit(luaSupportPreludeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("lua/runtime", "Prelude.lua"),
 			"Lua output should emit the stable support prelude from the repo-owned runtime template");
 		assertContains(content, "local function hxhx_array(values)", "Lua output should define the array helper before main");
 		assertContains(content, "local function __hxhx_stub_class(_name)", "Lua output should define a small support-class helper before main");
-		assertContains(content, "Support = Support or __hxhx_stub_class(\"Support\")", "Lua support classes should be available as globals");
+		assertContains(content, "Support = __hx_lua_classes.c0", "Lua support classes should be available as globals");
 		assertContains(content, "unit.UnitBuilder = unit.UnitBuilder or __hxhx_stub_class(\"unit.UnitBuilder\")",
 			"Lua output should provide explicit unit helper globals skipped by compile-time-only filtering");
-		assertContains(content, "local cached = hxhx_array({})", "Lua static Array constructors should lower to the array helper");
+		assertContains(content, "__hx_lua_classes.c1.cached = hxhx_array({})", "Lua static Array constructors should lower to the array helper");
 		assertContains(content, "local empty = hxhx_array({})", "Lua local Array constructors should lower to the array helper");
-		assertContains(content, "local classes = hxhx_array({Support.new()})", "Lua array literals should be wrapped with push-capable tables");
+		assertContains(content, "local classes = hxhx_array({__hx_lua_classes.c0.new()})", "Lua array literals should be wrapped with push-capable tables");
 		assertContains(content, "empty.push(\"ok\")", "Lua constructed arrays should retain push support through the helper");
-		assertContains(content, "classes.push(Support.new())", "Lua generated push call should remain source-shaped");
+		assertContains(content, "classes.push(__hx_lua_classes.c0.new())", "Lua generated push call should use the exact declared constructor");
 		assertNotContains(content, "Array.new()", "Lua empty Array constructors should not require a global Array class");
 		assertContains(content, "local __hxhx_traceback = (debug and debug.traceback) or tostring",
 			"Lua entrypoints should install a traceback handler before running main");
@@ -9821,6 +9841,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"Lua entrypoints should preserve traceback text for pcall(require, ...) embedding");
 		assertContains(content, "if not __hxhx_ok then error(__hxhx_error, 0) end",
 			"Lua entrypoints should rethrow traceback text without adding an extra Lua error level");
+		assertContains(content, "__hxhx_lua_constructor(__hx_lua_classes.c0, function(", "Lua support classes should execute their authored constructor");
+		assertNotContains(content, "Support = Support or __hxhx_stub_class", "Ordinary Lua classes must not use nominal stubs");
+		if (commandExists("lua")) {
+			final run = commandOutput("lua", [outputPath]);
+			assertTrue(run.code == 0, "Lua arrays and stored callbacks should execute: " + run.stderr);
+			assertTrue(run.stdout == "ok\n", "Lua stored callback should read the first array element: " + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 
@@ -9828,8 +9855,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_reflect_string_method_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
-		backend.emit(luaReflectStringMethodProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final backend = exactLuaBackend();
+		backend.emit(luaReflectStringMethodProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "local __hxhx_reflect_method_keys = setmetatable({}, { __mode = \"k\" })",
@@ -9863,8 +9890,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_sys_process_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
-		backend.emit(luaSysProcessProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final backend = exactLuaBackend();
+		backend.emit(luaSysProcessProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "local function __hxhx_sys_args()", "Lua output should expose focused Sys.args support");
@@ -9897,8 +9924,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_string_substr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
-		backend.emit(luaStringSubstrProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final backend = exactLuaBackend();
+		backend.emit(luaStringSubstrProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "local function __hxhx_string_substr(value, pos, len)", "Lua output should define a string substr helper");
@@ -9928,20 +9955,21 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_issue9530_string_methods_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
-		backend.emit(luaIssue9530StringMethodProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final backend = exactLuaBackend();
+		backend.emit(luaIssue9530StringMethodProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "local function __hxhx_string_index_of(value, needle, start)", "Lua output should expose focused indexOf support");
 		assertContains(content, "local function __hxhx_string_to_upper_case(value)", "Lua output should expose focused toUpperCase support");
-		assertContains(content, "local f = \"field\"", "Lua same-class static string fields should initialize before main");
+		assertContains(content, "__hx_lua_classes.c0.f = \"field\"", "Lua same-class static string fields should initialize before main");
 		assertContains(content, "local sclass = tostring(\"foo\")", "Lua String.new should lower to a plain string value");
 		assertContains(content, "local scl = __hxhx_string_to_upper_case(sclass)", "Lua local string toUpperCase should use helper lowering");
-		assertContains(content, "local f2 = __hxhx_string_to_upper_case(f)", "Lua static string field toUpperCase should use helper lowering");
+		assertContains(content, "local f2 = __hxhx_string_to_upper_case(__hx_lua_classes.c0.f)",
+			"Lua static string field toUpperCase should use helper lowering");
 		assertContains(content, "local str = __hxhx_string_to_upper_case(\"str\")", "Lua literal toUpperCase should not emit invalid literal field syntax");
 		assertContains(content, "local isS = __hxhx_string_starts_with(\"sss\", \"s\")", "Lua literal startsWith should use helper lowering");
 		assertContains(content, "local i = __hxhx_string_index_of(\"foo\", \"\")", "Lua literal indexOf should use helper lowering");
-		assertContains(content, "print(__hxhx_string_to_upper_case(\"dyn\"))", "Lua dynamic-cast string toUpperCase should use helper lowering");
+		assertContains(content, "print(__hxhx_string_to_upper_case((\"dyn\")))", "Lua dynamic-cast string toUpperCase should use helper lowering");
 		assertNotContains(content, "\"str\".toUpperCase", "Lua should not emit invalid string-literal member calls");
 		assertNotContains(content, "\"sss\".startsWith", "Lua should not emit invalid string-literal startsWith calls");
 		assertNotContains(content, "\"foo\".indexOf", "Lua should not emit invalid string-literal indexOf calls");
@@ -9959,8 +9987,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_trace_line_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
-		backend.emit(luaTraceLineProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final backend = exactLuaBackend();
+		backend.emit(luaTraceLineProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "print(\"Main.hx:3: \" .. tostring(\"hello\"))", "Lua trace should include Haxe-style source line prefixes");
@@ -9977,8 +10005,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_ereg_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
-		backend.emit(luaERegRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final backend = exactLuaBackend();
+		backend.emit(luaERegRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("lua/runtime", "EReg.lua"), "Lua output should emit EReg support from the repo-owned runtime template");
@@ -10005,8 +10033,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_string_bool_concat_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
-		backend.emit(luaStringBoolConcatProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final backend = exactLuaBackend();
+		backend.emit(luaStringBoolConcatProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "(tostring(\"Has expected exception message: \") .. tostring(hasExpectedMessage))",
@@ -10023,15 +10051,15 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_static_helper_call_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
-		backend.emit(luaStaticHelperCallProgram(), new BackendContext(tmpRoot, null, "RunScript", true, false, new StringMap<String>()));
+		final backend = exactLuaBackend();
+		backend.emit(luaStaticHelperCallProgram(), new BackendContext(tmpRoot, null, "RunScript", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "RunScript.lua"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "local matchesExpectedMessage", "Lua output should predeclare same-module static helpers before main");
-		assertContains(content, "matchesExpectedMessage = function(actual)", "Lua output should emit the static helper body");
+		assertContains(content, "RunScript = __hx_lua_classes.c0", "Lua module helpers should share their declared class table");
+		assertContains(content, "__hx_lua_classes.c0.matchesExpectedMessage = function(actual)", "Lua output should emit the static helper body");
 		assertContains(content, "return (actual == \"ok\")", "Lua static helper body should preserve its return expression");
-		assertContains(content, "local hasExpectedMessage = matchesExpectedMessage(\"ok\")",
-			"Lua main should call same-module static helpers through the emitted local function");
+		assertContains(content, "local hasExpectedMessage = __hx_lua_classes.c0.matchesExpectedMessage(\"ok\")",
+			"Lua main should call same-module static helpers through the exact class table");
 		assertNotContains(content, "unusedRunUtility = function", "Lua output should not force emission of unused static helpers with unsupported bodies");
 		if (commandExists("lua")) {
 			final run = commandOutput("lua", [outputPath]);
@@ -10045,8 +10073,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_utility_process_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
-		backend.emit(luaUtilityProcessRuntimeProgram(), new BackendContext(tmpRoot, null, "UtilityProcess", true, false, new StringMap<String>()));
+		final backend = exactLuaBackend();
+		backend.emit(luaUtilityProcessRuntimeProgram(), new BackendContext(tmpRoot, null, "UtilityProcess", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "UtilityProcess.lua"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("lua/runtime", "UtilityProcess.lua"),
@@ -10077,7 +10105,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("cs-native");
-		backend.emit(csFunctionTypeReturnLambdaProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(csFunctionTypeReturnLambdaProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.cs"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static System.Func<dynamic, dynamic, object> forComparable()",
@@ -10087,7 +10115,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			"C# returned lambdas should not be emitted behind object return types that Mono rejects");
 		if (commandExists("mcs") || commandExists("csc")) {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
-			final result = backend.emit(csFunctionTypeReturnLambdaProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final result = backend.emit(csFunctionTypeReturnLambdaProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			assertTrue(FileSystem.exists(result.entryPath), "C# function-type return lambda should compile into an executable");
 		}
 		deleteRecursive(tmpRoot);
@@ -10098,7 +10126,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("cs-native");
-		backend.emit(csFunctionTypeArgumentLambdaProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(csFunctionTypeArgumentLambdaProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.cs"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static object consume(System.Func<dynamic, object> f)",
@@ -10107,8 +10135,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertNotContains(content, "public static object consume(object f)", "C# function-type arguments should not force lambdas into object parameters");
 		if (commandExists("mcs") || commandExists("csc")) {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
-			final result = backend.emit(csFunctionTypeArgumentLambdaProgram(),
-				new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final result = backend.emit(csFunctionTypeArgumentLambdaProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			assertTrue(FileSystem.exists(result.entryPath), "C# function-type argument lambda should compile into an executable");
 		}
 		deleteRecursive(tmpRoot);
@@ -10119,7 +10146,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("cs-native");
-		backend.emit(csArrayBackingAccessProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(csArrayBackingAccessProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.cs"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public object[] __a;", "C# Haxe array wrapper should expose the target backing array for private-access interop");
@@ -10132,16 +10159,16 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertNotContains(content, "public static object sortBacking(object items)",
 			"C# array backing helpers should not leave Array<T> formals behind object field access");
 		final namespacedRoot = Path.join([tmpRoot, "namespaced"]);
-		backend.emit(csNamespacedArrayFormalProgram(), new BackendContext(namespacedRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		backend.emit(csNamespacedArrayFormalProgram(), new BackendContext(namespacedRoot, null, "unit.Main", false, new StringMap<String>()));
 		final namespacedMain = File.getContent(Path.join([namespacedRoot, "Main.cs"]));
 		assertContains(namespacedMain, "namespace hxhx {", "C# runtime array support should live in a stable namespace outside the entry package");
 		if (commandExists("mcs") || commandExists("csc")) {
 			final outputDir = Path.join([tmpRoot, "bin", "cs"]);
-			final result = backend.emit(csArrayBackingAccessProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			final result = backend.emit(csArrayBackingAccessProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 			assertTrue(FileSystem.exists(result.entryPath), "C# array backing access should compile into an executable");
 			final namespacedOutputDir = Path.join([tmpRoot, "bin", "cs-namespaced"]);
 			final namespaced = backend.emit(csNamespacedArrayFormalProgram(),
-				new BackendContext(namespacedOutputDir, null, "unit.Main", true, true, new StringMap<String>()));
+				new BackendContext(namespacedOutputDir, null, "unit.Main", true, new StringMap<String>()));
 			final helperContent = File.getContent(Path.join([namespacedOutputDir, "src", "checks", "ArrayTools.cs"]));
 			assertContains(helperContent, "public static object touch(global::hxhx.__HxArray items)",
 				"C# namespaced Array<T> support methods should reference the stable runtime array type");
@@ -10157,7 +10184,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		final outputDir = Path.join([tmpRoot, "bin", "java", "SupportMain-Debug"]);
 		final backend = BackendRegistry.requireForTarget("java-native");
-		final result = backend.emit(javaSupportClassProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+		final result = backend.emit(javaSupportClassProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 		final mainSourcePath = Path.join([outputDir, "src", "Main.java"]);
 		final helperSourcePath = Path.join([outputDir, "src", "Helper.java"]);
 		final objectShapeSourcePath = Path.join([outputDir, "src", "JavaObjectShape.java"]);
@@ -10248,7 +10275,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertNotContains(mainContent, "import Map;", "Java main source should not import default-package classes");
 		assertNotContains(mainContent, "import Helper.label;", "Java main source should not import default-package module members");
 		assertNotContains(helperContent, "import Type;", "Java support source should not import default-package classes");
-		final secondResult = backend.emit(javaSupportClassProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+		final secondResult = backend.emit(javaSupportClassProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 		assertTrue(secondResult.entryPath == jarPath, "Java source backend should reuse the same jar path on repeated output-dir emits");
 		assertTrue(FileSystem.exists(jarPath), "Java source backend should recompile generated import/helper stubs on repeated output-dir emits");
 		final secondRun = commandOutput("java", ["-jar", jarPath]);
@@ -10267,7 +10294,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputDir = Path.join([tmpRoot, "bin", "java"]);
 		final jarPath = Path.join([tmpRoot, "bin", "haxe.jar"]);
 		final backend = BackendRegistry.requireForTarget("java-native");
-		final result = backend.emit(javaLibraryEnumProgram(), new BackendContext(outputDir, jarPath, "demo.Maybe", true, true, new StringMap<String>()));
+		final result = backend.emit(javaLibraryEnumProgram(), new BackendContext(outputDir, jarPath, "demo.Maybe", true, new StringMap<String>()));
 		final maybeSourcePath = Path.join([outputDir, "src", "demo", "Maybe.java"]);
 		assertTrue(result.entryPath == jarPath, "Java library emission should report the requested jar path as primary artifact");
 		assertTrue(FileSystem.exists(jarPath), "Java library emission should package a jar without requiring a Haxe main");
@@ -10307,7 +10334,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		final outputDir = Path.join([tmpRoot, "bin", "java", "OperationMain-Debug"]);
 		final backend = BackendRegistry.requireForTarget("java-native");
-		final result = backend.emit(javaOperationInterfaceProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+		final result = backend.emit(javaOperationInterfaceProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 		final jarPath = outputDir + ".jar";
 		final calcSourcePath = Path.join([outputDir, "src", "Calc.java"]);
 		final opSourcePath = Path.join([outputDir, "src", "BinaryOp.java"]);
@@ -10335,7 +10362,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final backend = BackendRegistry.requireForTarget("python-native");
 		var message = "";
 		try {
-			backend.emit(unsupportedDoWhileProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+			backend.emit(unsupportedDoWhileProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		} catch (e:String) {
 			message = e;
 		}
@@ -10348,12 +10375,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(whileProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(whileProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "while (count < 2):", "while loops should render conditions");
 		assertContains(content, "    count += 1", "while loop bodies should render with nested indentation");
-		assertContains(content, "print(str(count))", "while-derived locals should still flow through later statements");
+		assertContains(content, "print(hxhx_std_string(count))", "while-derived locals should retain Haxe string conversion");
+		assertPythonRuntime(outputPath, "2\n");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10362,7 +10390,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(ifStatementProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(ifStatementProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "if (value == 1):", "if statements should render conditions");
@@ -10377,7 +10405,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(genericCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(genericCallProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		assertContains(File.getContent(outputPath), "Math.isFinite(1.5)", "generic expression statement should render calls and fields");
 		deleteRecursive(tmpRoot);
@@ -10388,7 +10416,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(traceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(traceProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		assertContains(File.getContent(outputPath), "print(\"trace-native\")", "trace calls should lower to the target print statement");
 		deleteRecursive(tmpRoot);
@@ -10401,7 +10429,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		final outputDir = Path.join([tmpRoot, "bin", "java", "TraceMain-Debug"]);
 		final backend = BackendRegistry.requireForTarget("java-native");
-		backend.emit(traceProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+		backend.emit(traceProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 		final run = commandOutput("java", ["-jar", outputDir + ".jar"]);
 		assertTrue(run.code == 0, "Java trace jar should run: " + run.stderr);
 		assertContains(run.stdout, "Main.hx:3: trace-native", "Java trace should include Haxe-style file and line prefix");
@@ -10413,7 +10441,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		final outputDir = Path.join([tmpRoot, "bin", "java", "LambdaTraceMain-Debug"]);
 		final backend = BackendRegistry.requireForTarget("java-native");
-		backend.emit(javaLambdaTraceProgram(), new BackendContext(outputDir, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(javaLambdaTraceProgram(), new BackendContext(outputDir, null, "Main", false, new StringMap<String>()));
 		final content = File.getContent(Path.join([outputDir, "Main.java"]));
 		assertContains(content, "System.out.println(\"Main.hx:3: \" + 12);", "Java lambda trace should include the lambda body source line");
 		deleteRecursive(tmpRoot);
@@ -10424,13 +10452,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(unaryOperatorProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(unaryOperatorProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "flag = (not False)", "logical not should lower to the Python unary form");
 		assertContains(content, "delta = (-1)", "unary minus should lower to the target unary form");
-		assertContains(content, "print(str(flag))", "unary-derived values should still flow through normal calls");
-		assertContains(content, "print(str(delta))", "multiple unary-derived values should still render");
+		assertContains(content, "print(hxhx_std_string(flag))", "unary-derived Bool values should retain Haxe string conversion");
+		assertContains(content, "print(hxhx_std_string(delta))", "multiple unary-derived values should still render");
+		assertPythonRuntime(outputPath, "true\n-1\n");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10475,13 +10504,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(postfixStatementProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(postfixStatementProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "count = 1", "postfix smoke should declare the local first");
 		assertContains(content, "count = (count + 1)", "postfix increment statements should lower to explicit assignments");
 		assertContains(content, "count = (count - 1)", "postfix decrement statements should lower to explicit assignments");
-		assertContains(content, "print(str(count))", "postfix-lowered locals should still flow through later statements");
+		assertContains(content, "print(hxhx_std_string(count))", "postfix-lowered locals should retain Haxe string conversion");
+		assertPythonRuntime(outputPath, "1\n");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10490,11 +10520,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(ternaryProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(ternaryProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "label = (\"yes\" if (True) else \"no\")", "ternary expressions should lower to the Python conditional form");
-		assertContains(content, "print(str(label))", "ternary-derived locals should still flow through later statements");
+		assertContains(content, "print(hxhx_std_string(label))", "ternary-derived locals should retain Haxe string conversion");
+		assertPythonRuntime(outputPath, "yes\n");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10503,7 +10534,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(tryCatchProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(tryCatchProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "try:", "try statements should render the Python try header");
@@ -10518,12 +10549,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(arrayAccessProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(arrayAccessProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "values = Array([1, 2])", "array access smoke should render array literals through the Python Array shim");
 		assertContains(content, "first = values[0]", "array access expressions should lower to Python index syntax");
-		assertContains(content, "print(str(first))", "array-access-derived locals should still flow through later statements");
+		assertContains(content, "print(hxhx_std_string(first))", "array-access-derived locals should retain Haxe string conversion");
+		assertPythonRuntime(outputPath, "1\n");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10532,7 +10564,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(arrayComprehensionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(arrayComprehensionProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "values = Array([1, 2])", "array comprehension smoke should render the iterable source through the Python Array shim");
@@ -10547,7 +10579,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(guardedArrayComprehensionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(guardedArrayComprehensionProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "kept = Array([value for value in values if keep(value)])",
@@ -10561,7 +10593,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(anonymousObjectProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(anonymousObjectProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "def hxhx_anon(**kwargs):", "Python source backend should emit the anonymous-object helper");
@@ -10583,7 +10615,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final program = MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "info = hxhx_anon(def_=1)", "Python anonymous object fields should sanitize reserved keyword names");
@@ -10597,7 +10629,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(anonymousObjectProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(anonymousObjectProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "def hxhx_anon(**kwargs):", "Python helper definitions should avoid leading double-underscore names");
@@ -10612,13 +10644,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(anonymousObjectProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(anonymousObjectProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class __HxAnon {", "PHP anonymous object literals should emit the anonymous-object runtime helper");
 		assertContains(content, "$info = new __HxAnon([\"label\" => \"ok\", \"count\" => 1]);",
 			"PHP anonymous object literals should lower through the helper-backed object runtime");
-		assertContains(content, "echo $info->label . PHP_EOL;", "PHP anonymous object field access should keep using arrow syntax");
+		assertContains(content, "Sys::println($info->label);", "PHP anonymous object field access should keep using arrow syntax");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10627,7 +10659,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("cs-native");
-		backend.emit(anonymousObjectProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(anonymousObjectProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.cs"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "var info = new { label = \"ok\", count = 1 };", "C# anonymous object literals should lower to native anonymous types");
@@ -10640,7 +10672,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(loopControlProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(loopControlProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "while (i < 5):", "loop-control smoke should still render the surrounding while loop");
@@ -10656,7 +10688,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(postfixExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(postfixExpressionProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "def hxhx_post_update_attr(obj, field, delta):", "Python source backend should emit the postfix attribute helper");
@@ -10673,7 +10705,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(postfixExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(postfixExpressionProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "function __hxhx_post_update_var(&$value, $delta) {", "PHP source backend should emit the postfix local helper");
@@ -10692,12 +10724,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(unsignedRightShiftProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(unsignedRightShiftProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "def hxhx_ushr(value, bits):", "Python source backend should emit the unsigned-right-shift helper");
 		assertContains(content, "shifted = hxhx_ushr((-1), 1)", "unsigned right shift should lower through the helper");
-		assertContains(content, "print(str(shifted))", "unsigned-right-shift results should still flow through later statements");
+		assertContains(content, "print(hxhx_std_string(shifted))", "unsigned-right-shift results should retain Haxe string conversion");
+		assertPythonRuntime(outputPath, "2147483647\n");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10706,7 +10739,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(helperClassProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(helperClassProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Helper:", "helper classes should be emitted before main");
@@ -10721,13 +10754,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpStaticClassAccessProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpStaticClassAccessProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Helper {", "PHP support classes should be emitted before main");
 		assertContains(content, "public static function message() {", "PHP support classes should include static methods");
 		assertContains(content, "if (Flags::$ready) {", "PHP static property access should use class property syntax");
-		assertContains(content, "echo Helper::message() . PHP_EOL;", "PHP static method access should use class method syntax");
+		assertContains(content, "Sys::println(Helper::message());", "PHP static method access should use class method syntax");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10736,7 +10769,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(helperInstanceFieldProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(helperInstanceFieldProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Helper {", "PHP helper classes with instance fields should be emitted");
@@ -10746,7 +10779,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "public function message() {", "PHP helper instance methods should be emitted");
 		assertContains(content, "return $this->value;", "PHP instance methods should read lowered fields");
 		assertContains(content, "$helper = new Helper();", "PHP main should instantiate helper classes");
-		assertContains(content, "echo $helper->message() . PHP_EOL;", "PHP main should call helper instance methods");
+		assertContains(content, "Sys::println($helper->message());", "PHP main should call helper instance methods");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10755,7 +10788,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpSysArgsProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpSysArgsProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("php/runtime", "Anon.php"),
@@ -10818,7 +10851,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("php/runtime", "Utest.php"),
@@ -10878,7 +10911,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Http", "PHP haxe namespace support should provide haxe.Http");
@@ -10905,7 +10938,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpMapRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpMapRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$m = new Map();", "PHP Map construction should lower to the runtime shim");
@@ -10939,14 +10972,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "class Reflect {", "PHP source backend should emit a minimal Reflect helper for Array.sort callbacks");
 		assertContains(content, "public static function field($object, $field)", "PHP Reflect helper should support dynamic field lookup");
 		assertContains(content, "Reflect::field($keyword, \"new\")", "PHP Reflect.field should lower as a static helper call");
-		assertContains(content, "echo __hxhx_add(\"\", 5) . PHP_EOL;", "PHP literal interpolation should lower to string concat");
-		assertContains(content, "echo __hxhx_add(__hxhx_add(\"a\", __hxhx_add(\"\", $x",
+		assertContains(content, "Sys::println(__hxhx_add(\"\", 5));", "PHP literal interpolation should lower to string concat");
+		assertContains(content, "Sys::println(__hxhx_add(__hxhx_add(\"a\", __hxhx_add(\"\", $x",
 			"PHP identifier interpolation should keep prefix, payload, and suffix");
 		assertContains(content, "$values = Lambda::array($sm);", "PHP Lambda.array should accept Map-backed iterables");
-		assertContains(content, "echo __hxhx_array_join($values, \"#\") . PHP_EOL;", "PHP Array.join should lower for Lambda.array results");
+		assertContains(content, "Sys::println(__hxhx_array_join($values, \"#\"));", "PHP Array.join should lower for Lambda.array results");
 		assertContains(content, "$keys = Lambda::array(new __HxAnon([\"iterator\" => (function() use ($sm) { return $sm->keys(); })]));",
 			"PHP Lambda.array should accept structural iterator method closures");
-		assertContains(content, "echo __hxhx_array_join($keys, \"#\") . PHP_EOL;", "PHP Array.join should lower for structural iterator results");
+		assertContains(content, "Sys::println(__hxhx_array_join($keys, \"#\"));", "PHP Array.join should lower for structural iterator results");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -10955,7 +10988,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpMapLiteralTypeTagProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpMapLiteralTypeTagProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_map_literal([[1, 2], [3, 4]])", "PHP int-key map literals should lower through the map literal helper");
@@ -10976,7 +11009,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpMapSetTypeTagProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpMapSetTypeTagProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "if ($this->__hx_type === \"Map\")", "PHP Map.set should infer a concrete runtime map tag for generic Map values");
@@ -11005,7 +11038,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpHashMapRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpHashMapRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$grid = new Map(null, \"haxe.ds.HashMap\");", "PHP haxe.ds.HashMap construction should lower to a tagged Map shim");
@@ -11024,7 +11057,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpHaxeSerializerRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpHaxeSerializerRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Serializer {", "PHP source backend should emit haxe.Serializer support");
@@ -11087,7 +11120,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			typed.push(TyperStage.typeResolvedModule(module, index, loader));
 		final program = MacroStage.expandProgram(typed, []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "\\haxe\\Serializer::run", "PHP imported haxe.Serializer calls should target the namespaced runtime class");
@@ -11105,7 +11138,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpPoint3StringEqualityRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpPoint3StringEqualityRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_equals(\"(2,3,4)\", $point)", "PHP string-to-Point3 equality should lower through the equality helper");
@@ -11123,7 +11156,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpPoint3UnaryScaleRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpPoint3UnaryScaleRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public function toString() {", "PHP Point3 payload classes should expose abstract-style toString");
@@ -11149,7 +11182,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpLambdaListRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpLambdaListRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static function list($value)", "PHP Lambda helper should expose list");
@@ -11169,7 +11202,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpGenericStackRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpGenericStackRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("php/runtime", "GenericStack.php"),
@@ -11217,7 +11250,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("php/runtime", "Array.php"),
@@ -11337,7 +11370,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			typed.push(TyperStage.typeResolvedModule(module, index, loader));
 		final program = MacroStage.expandProgram(typed, []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("php/namespaces", "HaxeRtti.php"),
@@ -11363,7 +11396,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpReflectMakeVarArgsProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpReflectMakeVarArgsProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("php/runtime", "Reflect.php"),
@@ -11403,7 +11436,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static function fields($object)", "PHP Reflect helper should expose fields");
@@ -11441,7 +11474,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static function callMethod($object, $method, $args)", "PHP Reflect helper should expose callMethod");
@@ -11460,7 +11493,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpReflectPropertyAccessProgram(), new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		backend.emit(phpReflectPropertyAccessProgram(), new BackendContext(tmpRoot, null, "unit.Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static function getProperty($object, $field)", "PHP Reflect helper should expose getProperty");
@@ -11489,7 +11522,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpSamePackageQualifiedStaticProgram(), new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		backend.emit(phpSamePackageQualifiedStaticProgram(), new BackendContext(tmpRoot, null, "unit.Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class UnitBuilder", "PHP support class should be emitted in the current global class model");
@@ -11502,7 +11535,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpInstanceFieldMethodCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpInstanceFieldMethodCallProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$runner->onProgress->add(function($e) {", "PHP field method calls should use instance dispatch");
@@ -11515,7 +11548,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpInheritedTestHelperCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpInheritedTestHelperCallProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public function eq($a, $b, $pos = null)", "PHP optional helper parameters should be omittable at runtime");
@@ -11530,7 +11563,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpShadowedTestHelperClosureProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpShadowedTestHelperClosureProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$f();", "PHP local closure calls named f should not be rewritten as unit helper dispatch");
@@ -11544,7 +11577,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpPlusSemanticsProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpPlusSemanticsProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "function __hxhx_add($left, $right)", "PHP source backend should emit a Haxe plus-semantics helper");
@@ -11562,9 +11595,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "__hxhx_add(\"\", new __HxAnon([\"a\" => 1]))", "PHP anonymous object string plus should lower through Haxe helper");
 		assertContains(content, "__hxhx_add(\"\", [1, 2])", "PHP array string plus should lower through Haxe helper");
 		assertContains(content, "__hxhx_add(\"\", [[1], [2, 3]])", "PHP nested array string plus should lower through Haxe helper");
-		assertContains(content, "echo __hxhx_add_string([\"x\"]) . PHP_EOL;", "PHP Std.string on array literals should use Haxe stringification");
+		assertContains(content, "Sys::println(__hxhx_add_string([\"x\"]));", "PHP Std.string on array literals should use Haxe stringification");
 		assertContains(content, "function() use (&$s)", "PHP local functions that mutate outer locals should capture by reference");
-		assertContains(content, "function($__hxhx_lambda_seq_0) use (&$s)", "PHP local function statement continuations should see call-argument mutations");
+		assertContains(content, "$s = __hxhx_add($s, \"b\"); return $s;",
+			"PHP local functions should perform their mutation before returning the captured value");
 		assertContains(content, "$s = __hxhx_add($s, \"b\")", "PHP string-like add-assign should use Haxe plus semantics");
 		deleteRecursive(tmpRoot);
 	}
@@ -11574,7 +11608,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpDynamicAddOrConcatNullProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpDynamicAddOrConcatNullProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "return __hxhx_add($a, $b);", "PHP dynamic add helper should lower through the Haxe add runtime helper");
@@ -11607,7 +11641,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$toString = $value->toString;", "PHP Haxe stringification should inspect anonymous toString fields");
@@ -11629,7 +11663,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "function __hxhx_add_string($value, $seen = null)", "PHP Haxe stringification should carry recursion state");
@@ -11658,7 +11692,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpEnumStringProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpEnumStringProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content,
@@ -11682,12 +11716,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "function() use ($op, $left, $right)",
 			"PHP switch-expression closures should capture branch-only values referenced outside the scrutinee");
 		assertContains(content, "Type::enumEq($e2, MyEnum::C(1, \"x\"))", "PHP Type.enumEq should remain a static runtime call");
-		assertContains(content, "echo __hxhx_add_string($e) . PHP_EOL;", "PHP Std.string on enum values should use Haxe stringification");
-		assertContains(content, "echo __hxhx_add_string([$e]) . PHP_EOL;", "PHP Std.string on enum arrays should recursively stringify enum values");
+		assertContains(content, "Sys::println(__hxhx_add_string($e));", "PHP Std.string on enum values should use Haxe stringification");
+		assertContains(content, "Sys::println(__hxhx_add_string([$e]));", "PHP Std.string on enum arrays should recursively stringify enum values");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP enum constructor values should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\n1\nC(2,y)\n1\nid(3)\n1\n4z\nSE_A\n1\nWith(9)\n1\nA\n1\nSE_A\n1\nD(A)\n1\nSame\n1\nEConst(CFloatBox(12))\n20\n",
+			assertTrue(run.stdout == "C(0,h)\n[C(0,h)]\nC(1,x)\ntrue\nC(2,y)\ntrue\nid(3)\ntrue\n4z\nSE_A\ntrue\nWith(9)\ntrue\nA\ntrue\nSE_A\ntrue\nD(A)\ntrue\nSame\ntrue\nEConst(CFloatBox(12))\n20\n",
 				"generated PHP enum constructor values should stringify correctly, got:\n"
 				+ run.stdout);
 		}
@@ -11697,7 +11731,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(duplicateTmpRoot);
 		FileSystem.createDirectory(duplicateTmpRoot);
 		backend.emit(phpModuleLocalDuplicateEnumConstructorProgram(),
-			new BackendContext(duplicateTmpRoot, null, "unit.TestGADT", true, false, new StringMap<String>()));
+			new BackendContext(duplicateTmpRoot, null, "unit.TestGADT", false, new StringMap<String>()));
 		final duplicateOutputPath = Path.join([duplicateTmpRoot, "index.php"]);
 		final duplicateContent = File.getContent(duplicateOutputPath);
 		assertContains(duplicateContent, "class TestGADT_Expr", "PHP duplicate module-local enum should emit with a module-qualified name");
@@ -11716,7 +11750,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpStdEnumAbstractSupportProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpStdEnumAbstractSupportProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class KeywordKind {", "PHP std enum abstract helpers referenced by generated code should be emitted");
@@ -11734,7 +11768,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpFakeEnumAbstractSwitchProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpFakeEnumAbstractSwitchProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static $NotFound = 404;", "PHP enum abstract helper fields should preserve primitive initializer values");
@@ -11757,7 +11791,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpStdIoErrorEnumSupportProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpStdIoErrorEnumSupportProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Error_ {", "PHP haxe.io.Error support should avoid the built-in PHP Error class");
@@ -11769,7 +11803,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.io.Error support should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "OutsideBounds\n1\nCustom(disk)\n", "generated PHP haxe.io.Error output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "OutsideBounds\ntrue\nCustom(disk)\n", "generated PHP haxe.io.Error output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
 	}
@@ -11779,7 +11813,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpStdIoErrorRuntimeExceptionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpStdIoErrorRuntimeExceptionProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "function __hxhx_io_error($name)", "PHP runtime should expose haxe.io.Error resolution for IO failures");
@@ -11787,7 +11821,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP haxe.io.Error runtime failures should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "write-bounds:OutsideBounds\n1\nwrite-overflow:Overflow\n1\nread-bounds:OutsideBounds\n1\n",
+			assertTrue(run.stdout == "write-bounds:OutsideBounds\ntrue\nwrite-overflow:Overflow\ntrue\nread-bounds:OutsideBounds\ntrue\n",
 				"generated PHP haxe.io.Error runtime failure output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(tmpRoot);
@@ -11798,7 +11832,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpBitwisePrecedenceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpBitwisePrecedenceProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_add_string(((4 | 3) & 1))", "PHP bitwise operators should group left-to-right without explicit parentheses");
@@ -11811,7 +11845,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpSameClassStaticHelperCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpSameClassStaticHelperCallProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static function getA()", "PHP same-class static helper should be emitted as a static method");
@@ -11826,7 +11860,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpSameClassStaticInlineCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpSameClassStaticInlineCallProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static function foo($x)", "PHP should emit the same-class static helper method");
@@ -11846,7 +11880,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpStaticFunctionFieldCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpStaticFunctionFieldCallProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static $add = null;", "PHP static function fields should use a legal class property default");
@@ -11866,7 +11900,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpBitwiseEqualityPrecedenceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpBitwiseEqualityPrecedenceProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_add_string((!__hxhx_equals((1 & 32768), 0)))", "PHP bitwise/equality lowering should preserve explicit left grouping");
@@ -11881,7 +11915,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpModuloMultiplicationPrecedenceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpModuloMultiplicationPrecedenceProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_add_string(__hxhx_mul(5, __hxhx_mod(10, 3)))",
@@ -11896,7 +11930,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpFloatModuloProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpFloatModuloProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "function __hxhx_mod($left, $right)", "PHP source backend should emit a Haxe modulo helper");
@@ -11912,7 +11946,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpMathRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpMathRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("php/runtime", "Math.php"),
@@ -11943,7 +11977,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpMathRandomRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpMathRandomRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "Math::random()", "PHP Math.random should lower to the runtime shim");
@@ -11961,7 +11995,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpStdRandomRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpStdRandomRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("php/runtime", "Std.php"),
@@ -11981,16 +12015,16 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpTernaryAssignmentLogicalProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpTernaryAssignmentLogicalProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "echo __hxhx_add_string(((!true) ? true : true)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(((!true) ? true : true)));",
 			"PHP ternary should bind after unary not for `!true ? true : true`");
-		assertContains(content, "echo __hxhx_add_string($k = (true ? false : true)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string($k = (true ? false : true)));",
 			"PHP assignment should bind looser than ternary in expression form");
-		assertContains(content, "echo __hxhx_add_string((($k = true) ? false : true)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string((($k = true) ? false : true)));",
 			"PHP parenthesized assignment should remain the ternary condition");
-		assertContains(content, "echo __hxhx_add_string((true || (false && false))) . PHP_EOL;", "PHP logical and should bind tighter than logical or");
+		assertContains(content, "Sys::println(__hxhx_add_string((true || (false && false))));", "PHP logical and should bind tighter than logical or");
 		assertNotContains(content, "((!true ? true : true))", "PHP unary not should not wrap the full ternary");
 		deleteRecursive(tmpRoot);
 	}
@@ -12000,7 +12034,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpStringIndexOfProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpStringIndexOfProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "function __hxhx_string_index_of($value, $needle, $start = 0)", "PHP runtime should include a String.indexOf helper");
@@ -12011,31 +12045,31 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "function __hxhx_string_substr($value, $pos, $len = null)", "PHP runtime should include a String.substr helper");
 		assertContains(content, "function __hxhx_string_value($value)", "PHP runtime should include abstract-aware string receiver support");
 		assertContains(content, "$s = __hxhx_string_value($value);", "PHP string helpers should unwrap abstract string receivers before conversion");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_string_index_of(__hxhx_add(\"bla\", \"x\"), \"x\")) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_string_index_of(__hxhx_add(\"bla\", \"x\"), \"x\")));",
 			"PHP string-like concatenation receivers should lower indexOf through the helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_string_index_of(\"foo1bar\", \"o\", 2)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_string_index_of(\"foo1bar\", \"o\", 2)));",
 			"PHP string literal receivers should lower indexOf with a start index");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_string_last_index_of(\"foofoofoobarbar\", \"bar\", 11)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_string_last_index_of(\"foofoofoobarbar\", \"bar\", 11)));",
 			"PHP string literal receivers should lower lastIndexOf with a start index");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_length(__hxhx_string_split(\"abc\", \"\"))) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_length(__hxhx_string_split(\"abc\", \"\"))));",
 			"PHP string split should compose with array length");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_array_get(__hxhx_string_split(\"a,b,c\", \",\"), 1)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_array_get(__hxhx_string_split(\"a,b,c\", \",\"), 1)));",
 			"PHP string split results should use safe array reads");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_string_char_code_at(\"abc\", 0)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_string_char_code_at(\"abc\", 0)));",
 			"PHP string charCodeAt should lower through the helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_string_char_code_at(\"abc\", 99)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_string_char_code_at(\"abc\", 99)));",
 			"PHP out-of-range charCodeAt should lower through the nullable helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_string_char_code_at(\"a\", 0)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_string_char_code_at(\"a\", 0)));",
 			"PHP string literal .code should lower through the helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_string_index_of($str, \"b\")) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_string_index_of($str, \"b\")));",
 			"PHP string variable indexOf should lower through the helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_string_last_index_of($str, \"b\")) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_string_last_index_of($str, \"b\")));",
 			"PHP string variable lastIndexOf should lower through the helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_string_char_code_at($str, 1)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_string_char_code_at($str, 1)));",
 			"PHP string variable charCodeAt should lower through the helper");
-		assertContains(content, "echo __hxhx_string_substr($str, 1, 2) . PHP_EOL;", "PHP string variable substr should lower with explicit length");
-		assertContains(content, "echo __hxhx_string_substr($str, 3) . PHP_EOL;", "PHP string variable substr should lower with omitted length");
-		assertContains(content, "echo __hxhx_string_substr($str, 5) . PHP_EOL;", "PHP out-of-range substr should lower through the helper");
+		assertContains(content, "Sys::println(__hxhx_string_substr($str, 1, 2));", "PHP string variable substr should lower with explicit length");
+		assertContains(content, "Sys::println(__hxhx_string_substr($str, 3));", "PHP string variable substr should lower with omitted length");
+		assertContains(content, "Sys::println(__hxhx_string_substr($str, 5));", "PHP out-of-range substr should lower through the helper");
 		assertContains(content, "__hxhx_string_index_of(__hxhx_message_field($exc), \"Unclosed node <flow>\")",
 			"PHP exception message indexOf should lower through the string helper");
 		assertNotContains(content, "__hxhx_add(\"bla\", \"x\")->indexOf", "PHP string-like receivers should not emit object-method calls on raw strings");
@@ -12055,7 +12089,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpStringMethodClosureProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpStringMethodClosureProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("php/runtime", "DynamicString.php"),
@@ -12087,7 +12121,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpStringToolsReplaceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpStringToolsReplaceProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static function replace($value, $sub, $by)", "PHP StringTools helper should expose replace");
@@ -12107,13 +12141,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpStringFromCharCodeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpStringFromCharCodeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "function __hxhx_string_from_char_code($code)", "PHP runtime should include a String.fromCharCode helper");
-		assertContains(content, "echo __hxhx_string_from_char_code(77) . PHP_EOL;", "PHP String.fromCharCode should lower through the helper");
-		assertContains(content, "echo __hxhx_string_from_char_code((-1)) . PHP_EOL;", "PHP negative char codes should route through the helper");
-		assertContains(content, "echo __hxhx_string_from_char_code(256) . PHP_EOL;", "PHP oversized char codes should route through the helper");
+		assertContains(content, "Sys::println(__hxhx_string_from_char_code(77));", "PHP String.fromCharCode should lower through the helper");
+		assertContains(content, "Sys::println(__hxhx_string_from_char_code((-1)));", "PHP negative char codes should route through the helper");
+		assertContains(content, "Sys::println(__hxhx_string_from_char_code(256));", "PHP oversized char codes should route through the helper");
 		assertNotContains(content, "String::fromCharCode", "PHP should not emit calls to a missing String class");
 		deleteRecursive(tmpRoot);
 	}
@@ -12123,7 +12157,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpWebProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpWebProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("php/namespaces", "PhpWeb.php"),
@@ -12140,7 +12174,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpMacroExprProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpMacroExprProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "\"expr\" =>", "PHP macro expressions should lower to macro object shapes");
@@ -12162,11 +12196,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpMacroSwitchGuardProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpMacroSwitchGuardProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "Std::parseInt($__hxhx_switch->__hx_params[0]->__hx_params[0])",
-			"PHP guarded macro switch should substitute enum extractor bindings inside nested switch guards");
+		assertContains(content, "Std::parseInt(", "PHP guarded macro switch must retain the authored guard call");
 		assertNotContains(content, "&& false", "PHP parsed nested switch guards should not be lowered as unsupported guards");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
@@ -12181,7 +12214,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(phpMacroExprProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpMacroExprProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "hxhx_anon(expr=", "Python macro expressions should lower to macro object shapes");
@@ -12197,7 +12230,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpDollarStringProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpDollarStringProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$code = \"\\$__hxhx_result[] = 1;\";", "PHP string literals should escape dollars to avoid interpolation parse errors");
@@ -12209,7 +12242,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpInt64LiteralExtensionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpInt64LiteralExtensionProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$a = \\haxe\\Int64::ofInt(32);", "PHP Int64 literal extension calls should lower to qualified static calls");
@@ -12432,7 +12465,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("php/runtime", "Int64.php"),
@@ -12560,7 +12593,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Int64 {", "PHP should preserve user top-level Int64 support classes");
@@ -12579,7 +12612,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(phpInt64LiteralExtensionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpInt64LiteralExtensionProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "a = (32).ofInt()", "Python numeric literal field calls should parenthesize integer receivers");
@@ -12592,14 +12625,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpArrayConstructorProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpArrayConstructorProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$values = [];", "PHP Array constructor should lower to array literal syntax");
 		assertContains(content, "function __hxhx_length($value)", "PHP runtime should include a Haxe length helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_length($values)) . PHP_EOL;", "PHP array constructor length should use the Haxe length helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_length($items)) . PHP_EOL;", "PHP array literal length should use the Haxe length helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_length(\"abc\")) . PHP_EOL;", "PHP string length should use the Haxe length helper");
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_length($values)));", "PHP array constructor length should use the Haxe length helper");
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_length($items)));", "PHP array literal length should use the Haxe length helper");
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_length(\"abc\")));", "PHP string length should use the Haxe length helper");
 		assertNotContains(content, "new Array()", "PHP should not emit reserved Array constructor syntax");
 		assertNotContains(content, "$items->length", "PHP arrays should not use object-property length access");
 		deleteRecursive(tmpRoot);
@@ -12610,7 +12643,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpArrayOperationsProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpArrayOperationsProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "function __hxhx_array_get($array, $index)", "PHP runtime should include a safe Haxe array read helper");
@@ -12626,10 +12659,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "function __hxhx_array_map($array, $callback)", "PHP runtime should include an Array.map helper");
 		assertContains(content, "class __HxArrayIterator", "PHP runtime should include a Haxe array iterator wrapper");
 		assertContains(content, "function __hxhx_iterator($value)", "PHP runtime should include an iterator helper");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_array_get($a, 3)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_array_get($a, 3)));",
 			"PHP out-of-bounds array reads should go through safe Haxe read helper");
 		assertContains(content, "__hxhx_array_sort($a, [Reflect::class, \"compare\"]);", "PHP Array.sort should lower through the mutating helper");
-		assertContains(content, "echo __hxhx_array_join($a, \"#\") . PHP_EOL;", "PHP Array.join should lower through the join helper");
+		assertContains(content, "Sys::println(__hxhx_array_join($a, \"#\"));", "PHP Array.join should lower through the join helper");
 		assertContains(content, "__hxhx_remove($a, 2);", "PHP Array.remove should lower through the mutating helper");
 		assertContains(content, "__hxhx_array_splice($a, 1, 1);", "PHP Array.splice should lower through the mutating helper");
 		assertContains(content, "$mapped = __hxhx_array_map($base,", "PHP Array.map should lower through the array map helper");
@@ -12655,7 +12688,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpNativeAssocArrayProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpNativeAssocArrayProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$arr = [];", "PHP NativeAssocArray constructor should lower to native array syntax");
@@ -12683,7 +12716,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpSameClassArrayFieldMapProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpSameClassArrayFieldMapProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$values = __hxhx_array_map($this->callbacks,",
@@ -12702,7 +12735,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpObjectArrayAccessProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpObjectArrayAccessProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "function __hxhx_array_get($array, $index)", "PHP runtime should include object-aware custom array-access reads");
@@ -12725,7 +12758,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpReservedTypeNameProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpReservedTypeNameProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Abstract_ {", "PHP reserved type names should be renamed in class declarations");
@@ -12739,7 +12772,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpReservedEnumCtorGetNameProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpReservedEnumCtorGetNameProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_enum_get_name(Annotation::$Abstract)", "PHP enum constructor getName should use the enum value surface");
@@ -12758,7 +12791,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpDuplicateStaticFieldProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpDuplicateStaticFieldProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		final first = content.indexOf("public static $Expr = null;");
@@ -12773,7 +12806,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpDuplicateMethodProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpDuplicateMethodProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		final first = content.indexOf("public static function test(");
@@ -12788,7 +12821,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpReservedValueNameProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpReservedValueNameProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$GLOBALS_ = 1;", "PHP local variable names should avoid the GLOBALS superglobal");
@@ -12803,7 +12836,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpNonConstantStaticFieldProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpNonConstantStaticFieldProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static $names = null;", "PHP static field defaults should avoid non-constant expressions");
@@ -12816,7 +12849,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpArrayPostfixStatementProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpArrayPostfixStatementProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_post_update_index($values, $index, 1);", "PHP array postfix statements should use index update helper");
@@ -12828,7 +12861,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpCrossPackageSupportClassProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpCrossPackageSupportClassProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class TestBytes {", "PHP support class emission should include non-std typed modules across parser package boundaries");
@@ -12841,7 +12874,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpImportedHaxelibEnumSupportProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpImportedHaxelibEnumSupportProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class HeaderDisplayMode {",
@@ -12864,7 +12897,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpMacroTypeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpMacroTypeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "\"__hx_ctor\" => \"TFunction\"", "PHP macro type arrows should lower to TFunction nodes");
@@ -12894,7 +12927,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertNotContains(content, "MyRestMacro::testRest", "PHP macro-rest probes should fold before runtime emission");
@@ -12972,7 +13005,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertTrue(~/\$restAt = function\(\$a[A-Za-z0-9_]*, \$b[A-Za-z0-9_]*, \.\.\.\$r[A-Za-z0-9_]*\)/.match(content),
@@ -13020,7 +13053,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(phpMacroTypeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpMacroTypeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hx_ctor=\"TFunction\"", "Python macro type arrows should lower to TFunction nodes");
@@ -13037,7 +13070,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpTryCatchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpTryCatchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$label = (function() {", "PHP try/catch expressions should lower through an immediate closure");
@@ -13054,7 +13087,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(tryCatchProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(tryCatchProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "throw ValueException::thrown(\"boom\");", "PHP throw statements should preserve Haxe thrown values");
@@ -13067,20 +13100,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final exceptionTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_exception_catch_" + Std.string(Date.now().getTime()));
 		deleteRecursive(exceptionTmpRoot);
 		FileSystem.createDirectory(exceptionTmpRoot);
-		backend.emit(phpExceptionCatchProgram(), new BackendContext(exceptionTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpExceptionCatchProgram(), new BackendContext(exceptionTmpRoot, null, "Main", false, new StringMap<String>()));
 		final exceptionContent = File.getContent(Path.join([exceptionTmpRoot, "index.php"]));
 		assertContains(exceptionContent, "throw ValueException::thrown(123);", "PHP primitive throws should use the ValueException wrapper");
 		assertContains(exceptionContent, "catch (\\Exception $__hxhx_caught) {", "PHP Exception catches should catch the wrapper object");
 		assertNotContains(exceptionContent, "$e = __hxhx_unwrap_thrown_value($__hxhx_caught);",
 			"PHP Exception catches should preserve the ValueException object");
-		assertContains(exceptionContent, "echo __hxhx_message_field($e) . PHP_EOL;", "PHP Exception catch bodies should be able to read message");
+		assertContains(exceptionContent, "Sys::println(__hxhx_message_field($e));", "PHP Exception catch bodies should be able to read message");
 		assertContains(exceptionContent, "function __hxhx_message_field($value)", "PHP runtime should expose throwable-safe message reads");
 		deleteRecursive(exceptionTmpRoot);
 
 		final customTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_custom_exception_catch_" + Std.string(Date.now().getTime()));
 		deleteRecursive(customTmpRoot);
 		FileSystem.createDirectory(customTmpRoot);
-		backend.emit(phpCustomExceptionCatchProgram(), new BackendContext(customTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpCustomExceptionCatchProgram(), new BackendContext(customTmpRoot, null, "Main", false, new StringMap<String>()));
 		final customContent = File.getContent(Path.join([customTmpRoot, "index.php"]));
 		assertContains(customContent, "throw ValueException::thrown(new CustomHaxeException(\"boom\"));",
 			"PHP custom Haxe exception throws should use the ValueException wrapper");
@@ -13091,8 +13124,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final customGuardTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_custom_exception_value_guard_" + Std.string(Date.now().getTime()));
 		deleteRecursive(customGuardTmpRoot);
 		FileSystem.createDirectory(customGuardTmpRoot);
-		backend.emit(phpCustomExceptionValueExceptionGuardProgram(),
-			new BackendContext(customGuardTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpCustomExceptionValueExceptionGuardProgram(), new BackendContext(customGuardTmpRoot, null, "Main", false, new StringMap<String>()));
 		final customGuardContent = File.getContent(Path.join([customGuardTmpRoot, "index.php"]));
 		assertContains(customGuardContent,
 			"if ($type === \"ValueException\" || $type === \"haxe.ValueException\") return $caught instanceof ValueException && !($caught->value instanceof \\Throwable);",
@@ -13108,17 +13140,17 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final valueTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_value_exception_catch_" + Std.string(Date.now().getTime()));
 		deleteRecursive(valueTmpRoot);
 		FileSystem.createDirectory(valueTmpRoot);
-		backend.emit(phpValueExceptionCatchProgram(), new BackendContext(valueTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpValueExceptionCatchProgram(), new BackendContext(valueTmpRoot, null, "Main", false, new StringMap<String>()));
 		final valueContent = File.getContent(Path.join([valueTmpRoot, "index.php"]));
 		assertContains(valueContent, "throw ValueException::thrown(123);", "PHP primitive throws should still wrap values for ValueException catches");
 		assertNotContains(valueContent, "$e = __hxhx_unwrap_thrown_value($__hxhx_caught);", "PHP ValueException catches should preserve the wrapper object");
-		assertContains(valueContent, "echo $e->value . PHP_EOL;", "PHP ValueException catch bodies should be able to read value");
+		assertContains(valueContent, "Sys::println($e->value);", "PHP ValueException catch bodies should be able to read value");
 		deleteRecursive(valueTmpRoot);
 
 		final abstractTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_abstract_exception_catch_" + Std.string(Date.now().getTime()));
 		deleteRecursive(abstractTmpRoot);
 		FileSystem.createDirectory(abstractTmpRoot);
-		backend.emit(phpAbstractCatchProgram(), new BackendContext(abstractTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpAbstractCatchProgram(), new BackendContext(abstractTmpRoot, null, "Main", false, new StringMap<String>()));
 		final abstractContent = File.getContent(Path.join([abstractTmpRoot, "index.php"]));
 		assertContains(abstractContent, "__hxhx_catch_matches($__hxhx_caught, \"AbstrString\")",
 			"PHP abstract String catches should route through catch matching");
@@ -13140,7 +13172,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final enumTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_enum_catch_" + Std.string(Date.now().getTime()));
 		deleteRecursive(enumTmpRoot);
 		FileSystem.createDirectory(enumTmpRoot);
-		backend.emit(phpEnumCatchProgram(), new BackendContext(enumTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpEnumCatchProgram(), new BackendContext(enumTmpRoot, null, "Main", false, new StringMap<String>()));
 		final enumContent = File.getContent(Path.join([enumTmpRoot, "index.php"]));
 		assertContains(enumContent, "__hxhx_catch_matches($__hxhx_caught, \"EnumError\")", "PHP enum catches should route through catch matching");
 		assertContains(enumContent, "$e = __hxhx_unwrap_thrown_value($__hxhx_caught);",
@@ -13152,30 +13184,30 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		if (commandExists("php")) {
 			final run = commandOutput("php", [Path.join([enumTmpRoot, "index.php"])]);
 			assertTrue(run.code == 0, "generated PHP enum catches should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "EError\n1\n", "generated PHP enum catch should preserve thrown enum equality, got:\n" + run.stdout);
+			assertTrue(run.stdout == "EError\ntrue\n", "generated PHP enum catch should preserve thrown enum equality, got:\n" + run.stdout);
 		}
 		deleteRecursive(enumTmpRoot);
 
 		final catchShadowTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_catch_shadow_enum_" + Std.string(Date.now().getTime()));
 		deleteRecursive(catchShadowTmpRoot);
 		FileSystem.createDirectory(catchShadowTmpRoot);
-		backend.emit(phpCatchLocalShadowsEnumConstructorProgram(), new BackendContext(catchShadowTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpCatchLocalShadowsEnumConstructorProgram(), new BackendContext(catchShadowTmpRoot, null, "Main", false, new StringMap<String>()));
 		final catchShadowContent = File.getContent(Path.join([catchShadowTmpRoot, "index.php"]));
 		assertContains(catchShadowContent, "$e2 = __hxhx_unwrap_thrown_value($__hxhx_caught);",
 			"PHP catches should bind the catch local before rendering the body");
-		assertNotContains(catchShadowContent, "echo __hxhx_add_string(Expr::$e2)", "PHP catch locals should shadow same-named enum constructors");
+		assertNotContains(catchShadowContent, "Sys::println(__hxhx_add_string(Expr::$e2)", "PHP catch locals should shadow same-named enum constructors");
 		assertNotContains(catchShadowContent, "Type::enumEq(Expr::$e2", "PHP catch locals should shadow same-named enum constructors");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [Path.join([catchShadowTmpRoot, "index.php"])]);
 			assertTrue(run.code == 0, "generated PHP catch local shadowing should execute, stderr:\n" + run.stderr);
-			assertTrue(run.stdout == "OutsideBounds\n1\n", "generated PHP catch local shadowing output mismatch, got:\n" + run.stdout);
+			assertTrue(run.stdout == "OutsideBounds\ntrue\n", "generated PHP catch local shadowing output mismatch, got:\n" + run.stdout);
 		}
 		deleteRecursive(catchShadowTmpRoot);
 
 		final methodTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_instance_method_call_" + Std.string(Date.now().getTime()));
 		deleteRecursive(methodTmpRoot);
 		FileSystem.createDirectory(methodTmpRoot);
-		backend.emit(phpInstanceMethodCallProgram(), new BackendContext(methodTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpInstanceMethodCallProgram(), new BackendContext(methodTmpRoot, null, "Main", false, new StringMap<String>()));
 		final methodContent = File.getContent(Path.join([methodTmpRoot, "index.php"]));
 		assertContains(methodContent, "return $this->inner();", "PHP helper classes should rewrite same-class instance method calls through $this");
 		if (commandExists("php")) {
@@ -13188,7 +13220,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final pushTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_array_push_" + Std.string(Date.now().getTime()));
 		deleteRecursive(pushTmpRoot);
 		FileSystem.createDirectory(pushTmpRoot);
-		backend.emit(phpArrayPushProgram(), new BackendContext(pushTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpArrayPushProgram(), new BackendContext(pushTmpRoot, null, "Main", false, new StringMap<String>()));
 		final pushContent = File.getContent(Path.join([pushTmpRoot, "index.php"]));
 		assertContains(pushContent, "__hxhx_array_push($values, \"ok\")", "PHP Array.push should lower through the runtime helper");
 		assertContains(pushContent, "function __hxhx_array_push(&$array, $value)", "PHP runtime should expose Array.push helper");
@@ -13203,7 +13235,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final staticBodyTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_static_method_array_mutation_" + Std.string(Date.now().getTime()));
 		deleteRecursive(staticBodyTmpRoot);
 		FileSystem.createDirectory(staticBodyTmpRoot);
-		backend.emit(phpStaticMethodArrayMutationProgram(), new BackendContext(staticBodyTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpStaticMethodArrayMutationProgram(), new BackendContext(staticBodyTmpRoot, null, "Main", false, new StringMap<String>()));
 		final staticBodyContent = File.getContent(Path.join([staticBodyTmpRoot, "index.php"]));
 		assertContains(staticBodyContent, "$a = new Class2146();", "PHP static helper method bodies should retain local construction");
 		assertContains(staticBodyContent, "$this->array = [];", "PHP generic Array constructors should lower to native array values");
@@ -13220,7 +13252,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final stackTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_call_stack_" + Std.string(Date.now().getTime()));
 		deleteRecursive(stackTmpRoot);
 		FileSystem.createDirectory(stackTmpRoot);
-		backend.emit(phpCallStackProgram(), new BackendContext(stackTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpCallStackProgram(), new BackendContext(stackTmpRoot, null, "Main", false, new StringMap<String>()));
 		final stackContent = File.getContent(Path.join([stackTmpRoot, "index.php"]));
 		assertContains(stackContent, "class CallStack", "PHP runtime should expose haxe.CallStack support");
 		assertContains(stackContent, "function __hxhx_stack()", "PHP runtime should expose synthetic stack items");
@@ -13232,14 +13264,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			final run = commandOutput("php", [Path.join([stackTmpRoot, "index.php"])]);
 			assertTrue(run.code == 0, "generated PHP CallStack support should execute, stderr:\n" + run.stderr);
 			assertContains(run.stdout, "2", "generated PHP CallStack support should produce stack entries");
-			assertContains(run.stdout, "1", "generated PHP Std.downcast should recognize haxe.Exception values");
+			assertContains(run.stdout, "true\n", "generated PHP Std.downcast should recognize haxe.Exception values");
 		}
 		deleteRecursive(stackTmpRoot);
 
 		final stackSameTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_call_stack_same_" + Std.string(Date.now().getTime()));
 		deleteRecursive(stackSameTmpRoot);
 		FileSystem.createDirectory(stackSameTmpRoot);
-		backend.emit(phpCallStackSameProgram(), new BackendContext(stackSameTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpCallStackSameProgram(), new BackendContext(stackSameTmpRoot, null, "Main", false, new StringMap<String>()));
 		final stackSameContent = File.getContent(Path.join([stackSameTmpRoot, "index.php"]));
 		assertContains(stackSameContent, "Assert::same($expected, $actual, true, \"stack item data mismatch\")",
 			"PHP stack data parity regression should exercise recursive Assert.same");
@@ -13256,7 +13288,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final macroTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_helper_macro_fold_" + Std.string(Date.now().getTime()));
 		deleteRecursive(macroTmpRoot);
 		FileSystem.createDirectory(macroTmpRoot);
-		backend.emit(phpHelperMacroFoldProgram(), new BackendContext(macroTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpHelperMacroFoldProgram(), new BackendContext(macroTmpRoot, null, "Main", false, new StringMap<String>()));
 		final macroContent = File.getContent(Path.join([macroTmpRoot, "index.php"]));
 		assertNotContains(macroContent, "HelperMacros::parseAndPrint", "PHP compile-time macro helper calls should fold away");
 		assertContains(macroContent, "\"haxe.Exception\"", "PHP HelperMacros.typeString try/catch probe should fold to haxe.Exception");
@@ -13270,11 +13302,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final commonBaseTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_helper_macro_common_base_" + Std.string(Date.now().getTime()));
 		deleteRecursive(commonBaseTmpRoot);
 		FileSystem.createDirectory(commonBaseTmpRoot);
-		backend.emit(phpHelperMacroCommonBaseTypeStringProgram(), new BackendContext(commonBaseTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpHelperMacroCommonBaseTypeStringProgram(), new BackendContext(commonBaseTmpRoot, null, "Main", false, new StringMap<String>()));
 		final commonBaseContent = File.getContent(Path.join([commonBaseTmpRoot, "index.php"]));
 		assertContains(commonBaseContent, "\"unit._TestNullCoalescing.A\"",
 			"PHP HelperMacros.typeString should fold sibling-class null coalescing to the common private base type");
-		assertNotContains(commonBaseContent, "echo \"haxe.Exception\" . PHP_EOL;",
+		assertNotContains(commonBaseContent, "Sys::println(\"haxe.Exception\");",
 			"PHP HelperMacros.typeString should not emit the fallback haxe.Exception for typed sibling-class null coalescing");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [Path.join([commonBaseTmpRoot, "index.php"])]);
@@ -13287,7 +13319,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final notImplementedTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_not_implemented_exception_" + Std.string(Date.now().getTime()));
 		deleteRecursive(notImplementedTmpRoot);
 		FileSystem.createDirectory(notImplementedTmpRoot);
-		backend.emit(phpNotImplementedExceptionProgram(), new BackendContext(notImplementedTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpNotImplementedExceptionProgram(), new BackendContext(notImplementedTmpRoot, null, "Main", false, new StringMap<String>()));
 		final notImplementedContent = File.getContent(Path.join([notImplementedTmpRoot, "index.php"]));
 		assertContains(notImplementedContent, "class NotImplementedException extends PosException",
 			"PHP runtime should expose haxe.exceptions.NotImplementedException");
@@ -13307,7 +13339,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final lambdaThrowTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_throw_expression_lambda_" + Std.string(Date.now().getTime()));
 		deleteRecursive(lambdaThrowTmpRoot);
 		FileSystem.createDirectory(lambdaThrowTmpRoot);
-		backend.emit(phpThrowExpressionLambdaProgram(), new BackendContext(lambdaThrowTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpThrowExpressionLambdaProgram(), new BackendContext(lambdaThrowTmpRoot, null, "Main", false, new StringMap<String>()));
 		final lambdaThrowContent = File.getContent(Path.join([lambdaThrowTmpRoot, "index.php"]));
 		assertContains(lambdaThrowContent, "class ArgumentException extends PosException", "PHP runtime should expose haxe.exceptions.ArgumentException");
 		assertContains(lambdaThrowContent, "function __hxhx_throw($value)", "PHP runtime should expose expression-position throw helper");
@@ -13325,7 +13357,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final bytesTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_bytes_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(bytesTmpRoot);
 		FileSystem.createDirectory(bytesTmpRoot);
-		backend.emit(phpBytesRuntimeProgram(), new BackendContext(bytesTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpBytesRuntimeProgram(), new BackendContext(bytesTmpRoot, null, "Main", false, new StringMap<String>()));
 		final bytesContent = File.getContent(Path.join([bytesTmpRoot, "index.php"]));
 		assertContains(bytesContent, sourceTemplateContent("php/namespaces", "HaxeIo.php"),
 			"PHP source backend should emit haxe.io helpers from the repo-owned namespace template");
@@ -13360,7 +13392,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final md5TmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_md5_make_" + Std.string(Date.now().getTime()));
 		deleteRecursive(md5TmpRoot);
 		FileSystem.createDirectory(md5TmpRoot);
-		backend.emit(phpMd5MakeProgram(), new BackendContext(md5TmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpMd5MakeProgram(), new BackendContext(md5TmpRoot, null, "Main", false, new StringMap<String>()));
 		final md5Content = File.getContent(Path.join([md5TmpRoot, "index.php"]));
 		assertContains(md5Content, sourceTemplateContent("php/namespaces", "HaxeCrypto.php"),
 			"PHP source backend should emit haxe.crypto helpers from the repo-owned namespace template");
@@ -13377,7 +13409,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final sha1TmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_sha1_" + Std.string(Date.now().getTime()));
 		deleteRecursive(sha1TmpRoot);
 		FileSystem.createDirectory(sha1TmpRoot);
-		backend.emit(phpSha1Program(), new BackendContext(sha1TmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpSha1Program(), new BackendContext(sha1TmpRoot, null, "Main", false, new StringMap<String>()));
 		final sha1Content = File.getContent(Path.join([sha1TmpRoot, "index.php"]));
 		assertContains(sha1Content, "class Sha1", "PHP haxe.crypto.Sha1 should be emitted");
 		assertContains(sha1Content, "public static function encode($value)", "PHP haxe.crypto.Sha1 should expose encode");
@@ -13393,7 +13425,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final base64TmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_base64_" + Std.string(Date.now().getTime()));
 		deleteRecursive(base64TmpRoot);
 		FileSystem.createDirectory(base64TmpRoot);
-		backend.emit(phpBase64Program(), new BackendContext(base64TmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpBase64Program(), new BackendContext(base64TmpRoot, null, "Main", false, new StringMap<String>()));
 		final base64Content = File.getContent(Path.join([base64TmpRoot, "index.php"]));
 		assertContains(base64Content, "class Base64", "PHP haxe.crypto.Base64 should be emitted");
 		assertContains(base64Content, "public static function encode($bytes, $complement = true)", "PHP Base64 should expose encode");
@@ -13411,7 +13443,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final baseCodeTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_basecode_" + Std.string(Date.now().getTime()));
 		deleteRecursive(baseCodeTmpRoot);
 		FileSystem.createDirectory(baseCodeTmpRoot);
-		backend.emit(phpBaseCodeProgram(), new BackendContext(baseCodeTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpBaseCodeProgram(), new BackendContext(baseCodeTmpRoot, null, "Main", false, new StringMap<String>()));
 		final baseCodeContent = File.getContent(Path.join([baseCodeTmpRoot, "index.php"]));
 		assertContains(baseCodeContent, "class BaseCode", "PHP haxe.crypto.BaseCode should be emitted");
 		assertContains(baseCodeContent, "new haxe\\crypto\\BaseCode(", "PHP haxe.crypto.BaseCode constructors should use the namespaced runtime shim");
@@ -13430,7 +13462,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final stringToolsUrlTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_stringtools_url_" + Std.string(Date.now().getTime()));
 		deleteRecursive(stringToolsUrlTmpRoot);
 		FileSystem.createDirectory(stringToolsUrlTmpRoot);
-		backend.emit(phpStringToolsUrlProgram(), new BackendContext(stringToolsUrlTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpStringToolsUrlProgram(), new BackendContext(stringToolsUrlTmpRoot, null, "Main", false, new StringMap<String>()));
 		final stringToolsUrlContent = File.getContent(Path.join([stringToolsUrlTmpRoot, "index.php"]));
 		assertContains(stringToolsUrlContent, sourceTemplateContent("php/runtime", "StringTools.php"),
 			"PHP source backend should emit StringTools from the repo-owned runtime template");
@@ -13450,7 +13482,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final optionalStringTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_optional_string_null_" + Std.string(Date.now().getTime()));
 		deleteRecursive(optionalStringTmpRoot);
 		FileSystem.createDirectory(optionalStringTmpRoot);
-		backend.emit(phpOptionalStringNullProgram(), new BackendContext(optionalStringTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpOptionalStringNullProgram(), new BackendContext(optionalStringTmpRoot, null, "Main", false, new StringMap<String>()));
 		final optionalStringContent = File.getContent(Path.join([optionalStringTmpRoot, "index.php"]));
 		assertContains(optionalStringContent, "if ($value !== null) $value = __hxhx_to_string_value($value);",
 			"PHP optional String parameters should only coerce non-null values");
@@ -13468,7 +13500,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final xmlTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_xml_runtime_" + Std.string(Date.now().getTime()));
 		deleteRecursive(xmlTmpRoot);
 		FileSystem.createDirectory(xmlTmpRoot);
-		backend.emit(phpXmlRuntimeProgram(), new BackendContext(xmlTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpXmlRuntimeProgram(), new BackendContext(xmlTmpRoot, null, "Main", false, new StringMap<String>()));
 		final xmlContent = File.getContent(Path.join([xmlTmpRoot, "index.php"]));
 		assertContains(xmlContent, sourceTemplateContent("php/runtime", "Xml.php"), "PHP source backend should emit Xml from the repo-owned runtime template");
 		assertContains(xmlContent, sourceTemplateContent("php/namespaces", "HaxeXml.php"),
@@ -13486,7 +13518,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final shadowTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_scoped_local_shadow_" + Std.string(Date.now().getTime()));
 		deleteRecursive(shadowTmpRoot);
 		FileSystem.createDirectory(shadowTmpRoot);
-		backend.emit(phpScopedLocalShadowProgram(), new BackendContext(shadowTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpScopedLocalShadowProgram(), new BackendContext(shadowTmpRoot, null, "Main", false, new StringMap<String>()));
 		final shadowContent = File.getContent(Path.join([shadowTmpRoot, "index.php"]));
 		assertTrue(~/\$x_[A-Za-z0-9_]+ =/.match(shadowContent),
 			"PHP shadowed locals should use distinct projected identities instead of reusing the outer variable");
@@ -13501,7 +13533,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final loopCaptureTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_loop_capture_" + Std.string(Date.now().getTime()));
 		deleteRecursive(loopCaptureTmpRoot);
 		FileSystem.createDirectory(loopCaptureTmpRoot);
-		backend.emit(phpLoopCaptureProgram(), new BackendContext(loopCaptureTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpLoopCaptureProgram(), new BackendContext(loopCaptureTmpRoot, null, "Main", false, new StringMap<String>()));
 		final loopCaptureContent = File.getContent(Path.join([loopCaptureTmpRoot, "index.php"]));
 		assertContains(loopCaptureContent, "(function() use (&$funs, &$sum)",
 			"PHP loops that create ref-capturing closures should isolate per-iteration locals");
@@ -13518,7 +13550,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final subCaptureTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_subcapture_" + Std.string(Date.now().getTime()));
 		deleteRecursive(subCaptureTmpRoot);
 		FileSystem.createDirectory(subCaptureTmpRoot);
-		backend.emit(phpSubCaptureProgram(), new BackendContext(subCaptureTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpSubCaptureProgram(), new BackendContext(subCaptureTmpRoot, null, "Main", false, new StringMap<String>()));
 		final subCaptureContent = File.getContent(Path.join([subCaptureTmpRoot, "index.php"]));
 		assertNotContains(subCaptureContent, "$__hxhx_for_in(",
 			"PHP expression-lowered for-in loops should lower to real foreach blocks instead of undefined variable-function calls");
@@ -13535,7 +13567,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final eRegTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_ereg_" + Std.string(Date.now().getTime()));
 		deleteRecursive(eRegTmpRoot);
 		FileSystem.createDirectory(eRegTmpRoot);
-		backend.emit(phpERegProgram(), new BackendContext(eRegTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpERegProgram(), new BackendContext(eRegTmpRoot, null, "Main", false, new StringMap<String>()));
 		final eRegContent = File.getContent(Path.join([eRegTmpRoot, "index.php"]));
 		assertContains(eRegContent, sourceTemplateContent("php/runtime", "EReg.php"),
 			"PHP source backend should emit EReg support from the repo-owned runtime template");
@@ -13557,7 +13589,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final anonCallableTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_anon_callable_" + Std.string(Date.now().getTime()));
 		deleteRecursive(anonCallableTmpRoot);
 		FileSystem.createDirectory(anonCallableTmpRoot);
-		backend.emit(phpAnonCallableFieldProgram(), new BackendContext(anonCallableTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpAnonCallableFieldProgram(), new BackendContext(anonCallableTmpRoot, null, "Main", false, new StringMap<String>()));
 		final anonCallableContent = File.getContent(Path.join([anonCallableTmpRoot, "index.php"]));
 		assertContains(anonCallableContent, "class __HxAnon {", "PHP anonymous-object runtime should expose callable field dispatch");
 		assertContains(anonCallableContent, "new __HxAnon([\"inc\" => function() use (&$count)",
@@ -13575,14 +13607,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpTypeErrorProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpTypeErrorProbeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$ok = true;", "PHP source backend should fold HelperMacros.typeError for expression-position for probes");
 		assertContains(content, "$message = \"Int has no field keyValueIterator\";",
 			"PHP source backend should fold HelperMacros.typeErrorText for key/value for probes");
-		assertContains(content, "echo __hxhx_add_string($ok) . PHP_EOL;", "folded typeError results should still flow through normal printing");
-		assertContains(content, "echo $message . PHP_EOL;", "folded typeErrorText results should still flow through normal printing");
+		assertContains(content, "Sys::println(__hxhx_add_string($ok));", "folded typeError results should still flow through normal printing");
+		assertContains(content, "Sys::println($message);", "folded typeErrorText results should still flow through normal printing");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -13591,7 +13623,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpGetErrorMessageProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpGetErrorMessageProbeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertNotContains(content, "getErrorMessage", "PHP source backend should fold HelperMacros.getErrorMessage compile-time probes");
@@ -13622,7 +13654,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpTypeErrorExpressionProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpTypeErrorExpressionProbeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertNotContains(content, "$typeError(", "PHP source backend should fold unqualified typeError expression probes");
@@ -13655,7 +13687,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpTypeErrorBlockProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpTypeErrorBlockProbeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$ok = true;", "PHP source backend should fold known block typeError probes that should fail typing");
@@ -13670,7 +13702,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpAbstractCastConstraintProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpAbstractCastConstraintProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$s = __hxhx_to_string_value($z);", "PHP abstract-constrained String assignments should lower through scalar conversion");
@@ -13692,7 +13724,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpTypedAbstractCastTypeErrorProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpTypedAbstractCastTypeErrorProbeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$badInt = true;", "PHP typeError should fold typed Int abstract-cast probes");
@@ -13713,12 +13745,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpTypedAsHelperProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpTypedAsHelperProbeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertNotContains(content, "$typedAs(", "PHP source backend should fold unqualified HelperMacros.typedAs compile-time probes");
 		assertNotContains(content, "HelperMacros::typedAs", "PHP source backend should fold qualified HelperMacros.typedAs compile-time probes");
-		assertContains(content, "echo \"typedAs-ok\" . PHP_EOL;", "folded typedAs probes should keep following runtime statements reachable");
+		assertContains(content, "Sys::println(\"typedAs-ok\");", "folded typedAs probes should keep following runtime statements reachable");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP typedAs helper probes should execute, stderr:\n" + run.stderr);
@@ -13732,7 +13764,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpHelperMacroNullableProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpHelperMacroNullableProbeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertNotContains(content, "HelperMacros::isNullable", "PHP source backend should fold HelperMacros.isNullable compile-time probes");
@@ -13760,7 +13792,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpHaxeParserNullableProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpHaxeParserNullableProbeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$localStillNullable = true;", "PHP native-protocol nullable probe should preserve nullable ?? nullable as nullable");
@@ -13779,7 +13811,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
 		backend.emit(phpHaxeParserUpstreamNullCoalescingProbeProgram(),
-			new BackendContext(tmpRoot, null, "unit.TestNullCoalescing", true, false, new StringMap<String>()));
+			new BackendContext(tmpRoot, null, "unit.TestNullCoalescing", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$this->f(false);", "PHP upstream-shaped null-coalescing probe should fold non-null coalesce as non-null");
@@ -13801,7 +13833,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpDynamicMissingFieldNullProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpDynamicMissingFieldNullProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_field((new __HxAnon([])), \"x\")",
@@ -13823,7 +13855,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpFollowWithAbstractsProbeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpFollowWithAbstractsProbeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$direct = \"TInst(haxe.ds.StringMap,[TInst(String,[])])\";", "PHP source backend should fold followWithAbstracts Map probes");
@@ -13839,7 +13871,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpArrayComprehensionClosureProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpArrayComprehensionClosureProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$funcs = (function() {", "PHP array comprehensions should lower through an immediate closure");
@@ -13847,7 +13879,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertContains(content, "$__hxhx_result[] = function($value) use ($i) { return __hxhx_mul($value, $i); };",
 			"PHP closures yielded from comprehensions should capture the comprehension binder");
 		assertContains(content, "return $__hxhx_result;", "PHP array comprehensions should return the collected array");
-		assertContains(content, "echo __hxhx_add_string(__hxhx_array_get($funcs, 0)(10)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add_string(__hxhx_array_get($funcs, 0)(10)));",
 			"PHP array-comprehension-derived functions should still be callable from later statements");
 		deleteRecursive(tmpRoot);
 	}
@@ -13857,7 +13889,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpAbstractThisPostfixProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpAbstractThisPostfixProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Counter {", "PHP abstract-like helper classes should still emit as support classes");
@@ -13913,7 +13945,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpTemplateWrapRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpTemplateWrapRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "new haxe\\Template($s)", "PHP haxe.Template constructors should use the namespaced runtime shim");
@@ -13930,7 +13962,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpAbstractThisClosureCaptureProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpAbstractThisClosureCaptureProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "(function($__hxhx_this_value) { return function() use ($__hxhx_this_value)",
@@ -13951,7 +13983,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpAbstractCallableFacadeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpAbstractCallableFacadeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "function run($job)", "PHP abstract callable facades should preserve instance methods from wrapper abstracts");
@@ -13969,7 +14001,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpExposingAbstractArrayProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpExposingAbstractArrayProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "function __hxhx_array_push(&$array, $value)", "PHP runtime should expose an abstract-aware Array.push helper");
@@ -13990,7 +14022,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(pythonAbstractThisPostfixProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(pythonAbstractThisPostfixProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "self.__hx_value = None", "Python abstract-style helper classes should initialize a backing slot");
@@ -14007,7 +14039,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpSuperConstructorProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpSuperConstructorProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Child extends Base {", "PHP support classes should preserve simple inheritance headers");
@@ -14020,7 +14052,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpSuperPropertyProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpSuperPropertyProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "return __hxhx_add(parent::get_prop(), 1);", "PHP super property reads should lower through parent getters");
@@ -14045,14 +14077,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpForKeyValueProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpForKeyValueProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "foreach (__hxhx_key_value_iter($values) as $__hx_kv_index_value) {",
 			"PHP key/value loops should lower through the pair iterator helper");
 		assertContains(content, "$index = $__hx_kv_index_value[0];", "PHP key/value loops should bind the rendered key from pair slot 0");
 		assertContains(content, "$value = $__hx_kv_index_value[1];", "PHP key/value loops should bind the rendered value from pair slot 1");
-		assertContains(content, "echo __hxhx_add(__hxhx_add_string($index), __hxhx_add_string($value)) . PHP_EOL;",
+		assertContains(content, "Sys::println(__hxhx_add(__hxhx_add_string($index), __hxhx_add_string($value)));",
 			"PHP key/value loop bodies should render with both loop bindings in scope");
 		assertContains(content, "foreach (__hxhx_iter($expected) as $c) {", "PHP string value loops should lower through the runtime iterator helper");
 		assertTrue(~/foreach \(__hxhx_key_value_iter\(\$expected\) as \$__hx_kv_i_c[A-Za-z0-9_]*\) \{/.match(content),
@@ -14070,7 +14102,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(pythonForKeyValueProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(pythonForKeyValueProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "def hxhx_key_value_iter(value):", "Python key/value loops should emit an iterator helper");
@@ -14085,7 +14117,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(pythonTryCatchRawExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(pythonTryCatchRawExpressionProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "def hxhx_throw(value):", "Python try/catch expressions should emit the throw expression helper");
@@ -14099,15 +14131,23 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_try_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
-		backend.emit(luaTryCatchRawExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final backend = exactLuaBackend();
+		backend.emit(luaTryCatchRawExpressionProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "local function hxhx_throw(value)", "Lua try/catch expressions should emit the throw expression helper");
 		assertContains(content, "local function hxhx_try(try_fn, catch_fn)", "Lua try/catch expressions should emit the pcall expression helper");
-		assertContains(content, "local caught = hxhx_try(function() return hxhx_throw(\"boom\") end, function(e) return e end)",
-			"Lua raw try/catch expressions should lower through function-based pcall helpers");
+		assertContains(content, "__hx_lua_runtime.protect(function()", "Lua try regions should execute inside a protected call");
+		assertContains(content, "__hx_lua_runtime.raise(\"boom\", 0)", "Lua throw should retain its original value");
+		assertContains(content, "__hx_lua_runtime.valueType(_hx_pattern_1) == \"string\"", "Lua String catch should check its typed binding");
+		assertContains(content, "result = e", "Lua catch should assign the shared expression result");
+		assertContains(content, "local caught = result", "Lua try expressions should expose their result after the protected region");
 		assertContains(content, "print(caught)", "Lua try/catch expression results should remain usable by later statements");
+		if (commandExists("lua")) {
+			final run = commandOutput("lua", [outputPath]);
+			assertTrue(run.code == 0, "Lua try expression should execute: " + run.stderr);
+			assertTrue(run.stdout == "boom\n", "Lua try expression should preserve the caught value: " + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 
@@ -14116,7 +14156,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(pythonTypeCheckProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(pythonTypeCheckProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "def hxhx_is_of_type(value, type_name):", "Python type checks should emit the Haxe type helper");
@@ -14130,7 +14170,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(helperInstanceFieldProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(helperInstanceFieldProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Helper:", "helper classes with instance fields should still be emitted");
@@ -14148,7 +14188,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(superProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(superProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Base:", "base helper classes should still emit normally");
@@ -14165,7 +14205,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(pythonSuperMethodReferenceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(pythonSuperMethodReferenceProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "super().__init__(self._handler)", "constructor super calls should bind same-class method references through self");
@@ -14183,7 +14223,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(pythonInheritedFieldReferenceProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(pythonInheritedFieldReferenceProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "for i in range(self.pos, 3):", "Python inherited instance fields should rewrite through self in ranges");
@@ -14201,7 +14241,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(arrayLiteralProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(arrayLiteralProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		assertContains(File.getContent(outputPath), "values = Array([1, 2])", "array literals should render through the Python Array shim");
 		deleteRecursive(tmpRoot);
@@ -14212,7 +14252,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(mapLiteralWithLambdaProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(mapLiteralWithLambdaProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "callbacks = {1: lambda value: (value + 1), 2: lambda value: (value + 2)}",
@@ -14225,7 +14265,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpTypedMapLiteralWithLambdaFieldProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpTypedMapLiteralWithLambdaFieldProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_map_literal([[1, function($value) {", "PHP typed map assignments should preserve map literal entries");
@@ -14283,7 +14323,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Map:", "Python source backend should emit a minimal Map runtime helper");
@@ -14313,7 +14353,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final program = MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Sys:", "Python runtime should define Sys for direct Sys.environment calls");
@@ -14332,7 +14372,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(constructorProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(constructorProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		assertContains(File.getContent(outputPath), "EReg(\"a\", \"\")", "constructor expressions should render calls");
 		deleteRecursive(tmpRoot);
@@ -14343,7 +14383,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(forInProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(forInProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "for value in Array([1, 2]):", "for-in statements should render iterable loops");
@@ -14356,7 +14396,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(binopProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(binopProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "total = (1 + 2)", "binary plus should render in initializers");
@@ -14370,7 +14410,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(enumValueProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(enumValueProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		assertContains(File.getContent(outputPath), "print(str(\"Macro\"))", "enum-like values should render as stable string tags");
 		deleteRecursive(tmpRoot);
@@ -14381,7 +14421,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(lambdaProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(lambdaProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "inc = lambda value: (value + 1)", "lambda expressions should render in variable initializers");
@@ -14394,11 +14434,11 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(lambdaImmediateCallProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(lambdaImmediateCallProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$value = (function($input) { return $input; })(1);", "PHP immediate lambda calls should wrap the closure before invocation");
-		assertContains(content, "echo __hxhx_add_string($value) . PHP_EOL;", "PHP immediate lambda-call results should still flow through later statements");
+		assertContains(content, "Sys::println(__hxhx_add_string($value));", "PHP immediate lambda-call results should still flow through later statements");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -14421,7 +14461,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "while (true)", "PHP should lower expression-level while return-flow into a real while loop");
@@ -14439,25 +14479,28 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(switchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(switchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "label = (\"Python\" if", "switch expressions should render literal branch values");
-		assertContains(content, "or ((\"python\" == \"py\"))", "switch expressions should render or-pattern conditions");
-		assertContains(content, "print(str(label))", "switch expression results should render as normal values");
+		assertContains(content, "result = \"Python\"", "switch branches should assign their authored values");
+		assertContains(content, "or ((__hxhx_switch == \"py\"))", "switch expressions should preserve both or-pattern alternatives");
+		assertContains(content, "print(hxhx_std_string(label))", "switch results should retain Haxe string conversion");
+		assertPythonRuntime(outputPath, "Python\n");
 		deleteRecursive(tmpRoot);
 	}
 
-	static function assertUnsupportedSwitchGuardExpression():Void {
+	static function assertUnresolvedSwitchGuardRejected():Void {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_guarded_switch_expr_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(guardedSwitchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
-		final outputPath = Path.join([tmpRoot, "index.php"]);
-		final content = File.getContent(outputPath);
-		assertContains(content, "&& false", "unsupported switch guards should preserve the inner match and disable the branch");
-		assertContains(content, "$label = (", "guarded switch expressions should still lower to PHP conditional expressions");
+		var rejected = false;
+		try {
+			backend.emit(guardedSwitchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
+		} catch (error:TyperError) {
+			rejected = Std.string(error).indexOf("switch guard") >= 0;
+		}
+		assertTrue(rejected, "an unresolved guard must fail typing instead of silently disabling its case");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -14466,7 +14509,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpTupleOrPatternCaptureProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpTupleOrPatternCaptureProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$x = (", "PHP or-pattern captures should be initialized from the selected alternative");
@@ -14484,11 +14527,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpEnumIntGuardProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpEnumIntGuardProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "__hx_params[0] > 1", "PHP enum int guard should lower the greater-than comparison");
-		assertContains(content, "__hx_params[0] <= 1", "PHP enum int guard should lower the less-than-or-equal comparison");
+		assertContains(content, "->__hx_params[0]", "PHP enum guards should observe their constructor payload");
+		assertContains(content, "($x > 1)", "PHP enum guards should compare the first attempt's captured value");
+		assertContains(content, "($x_1 <= 1)", "PHP enum guards should compare the retry's captured value");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
 			assertTrue(run.code == 0, "generated PHP enum int guard should execute, stderr:\n" + run.stderr);
@@ -14502,7 +14546,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpClassSwitchProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpClassSwitchProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_equals($__hxhx_switch, __hxhx_class_value(\"String\"))", "PHP class switch should compare builtin class values");
@@ -14520,7 +14564,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpOptionalEnumCtorProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpOptionalEnumCtorProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static function A($x = null)", "PHP optional enum constructor args should default to null");
@@ -14537,7 +14581,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(switchStatementProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(switchStatementProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_switch = \"python\"", "switch statements should evaluate the scrutinee once");
@@ -14555,7 +14599,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		final outputDir = Path.join([tmpRoot, "bin", "java", "Main-Debug"]);
 		final backend = BackendRegistry.requireForTarget("java-native");
-		final result = backend.emit(javaArraySwitchStatementProgram(), new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+		final result = backend.emit(javaArraySwitchStatementProgram(), new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 		final sourcePath = Path.join([outputDir, "src", "Main.java"]);
 		final content = File.getContent(sourcePath);
 		assertContains(content, "main(String[] __hxhx_cli_args)", "Java entrypoint args should use an internal name so Haxe locals named args still compile");
@@ -14573,7 +14617,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("cs-native");
-		backend.emit(csUtilityProcessCallableRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(csUtilityProcessCallableRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.cs"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "Main(string[] __hxhx_cli_args)", "C# entrypoint args should use an internal name so Haxe locals named args still compile");
@@ -14594,8 +14638,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		final outputDir = Path.join([tmpRoot, "bin", "java", "UtilityProcess-Debug"]);
 		final backend = BackendRegistry.requireForTarget("java-native");
-		final result = backend.emit(javaUtilityProcessRuntimeProgram(),
-			new BackendContext(outputDir, null, "UtilityProcess", true, true, new StringMap<String>()));
+		final result = backend.emit(javaUtilityProcessRuntimeProgram(), new BackendContext(outputDir, null, "UtilityProcess", true, new StringMap<String>()));
 		final sourcePath = Path.join([outputDir, "src", "UtilityProcess.java"]);
 		final content = File.getContent(sourcePath);
 		assertContains(content, indentedSourceTemplateContent("java/runtime", "UtilityProcessMembers.java", "  "),
@@ -14656,7 +14699,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final outputDir = Path.join([tmpRoot, "bin", "java", "Main-Debug"]);
 		final backend = BackendRegistry.requireForTarget("java-native");
 		final result = backend.emit(javaFileSystemFullPathProgram(FileSystem.fullPath(linkPath)),
-			new BackendContext(outputDir, null, "Main", true, true, new StringMap<String>()));
+			new BackendContext(outputDir, null, "Main", true, new StringMap<String>()));
 		final sourcePath = Path.join([outputDir, "src", "sys", "FileSystem.java"]);
 		assertTrue(FileSystem.exists(sourcePath), "Java source backend should emit a sys.FileSystem support stub");
 		final content = File.getContent(sourcePath);
@@ -14674,7 +14717,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpTypeCheckProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpTypeCheckProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content,
@@ -14707,7 +14750,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpInterfaceCastProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpInterfaceCastProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "interface CapA {", "PHP source backend should emit Haxe interfaces as PHP interfaces");
@@ -14730,7 +14773,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpModuleLocalQualifiedInterfaceCastProgram(), new BackendContext(tmpRoot, null, "unit.MyClass", true, false, new StringMap<String>()));
+		backend.emit(phpModuleLocalQualifiedInterfaceCastProgram(), new BackendContext(tmpRoot, null, "unit.MyClass", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "interface MyClass_I1 {", "PHP duplicate module-local interfaces should emit with their owner module name");
@@ -14754,14 +14797,14 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
 		final program = phpModuleLocalTypeCollisionProgram();
-		final facts = new backend.source.PhpTypedProgramProjection(withExactPhpDeclarationFacts(program)).getProgramRenderFacts();
+		final facts = new backend.source.PhpTypedProgramProjection(withExactDeclarationFacts(program)).getProgramRenderFacts();
 		assertTrue(facts.findEmittedTypeName("unit.Point") == null,
 			"PHP program facts should omit a package-local convenience alias shared by secondary types in different modules");
 		assertTrue(facts.findEmittedTypeName("unit.SupportOne.Point") == "SupportOne_Point",
 			"PHP program facts should retain the exact module-qualified name of the first secondary type");
 		assertTrue(facts.findEmittedTypeName("unit.UsesInterface.Point") == "UsesInterface_Point",
 			"PHP program facts should retain the exact module-qualified name of the second secondary type");
-		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class SupportOne_Point", "PHP private helper classes should be emitted with their owner module to avoid collisions");
@@ -14783,7 +14826,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpArrayDynamicCastProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpArrayDynamicCastProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_cast($values, \"Array\")", "PHP Array<Dynamic> casts should normalize to the Array runtime type");
@@ -14801,7 +14844,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpAbstractValueCastProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpAbstractValueCastProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertNotContains(content, "__hxhx_cast(1, \"Wrap\")", "PHP abstract value casts should not lower through nominal runtime casts");
@@ -14818,7 +14861,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpSyntaxIntrinsicProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpSyntaxIntrinsicProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$one + $two", "PHP Syntax.code should inline literal PHP with rendered arguments");
@@ -14842,7 +14885,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final superGlobalTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_superglobal_intrinsics_" + Std.string(Date.now().getTime()));
 		deleteRecursive(superGlobalTmpRoot);
 		FileSystem.createDirectory(superGlobalTmpRoot);
-		backend.emit(phpSuperGlobalIntrinsicProgram(), new BackendContext(superGlobalTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpSuperGlobalIntrinsicProgram(), new BackendContext(superGlobalTmpRoot, null, "Main", false, new StringMap<String>()));
 		final superGlobalOutputPath = Path.join([superGlobalTmpRoot, "index.php"]);
 		final superGlobalContent = File.getContent(superGlobalOutputPath);
 		assertContains(superGlobalContent, "$GLOBALS", "PHP SuperGlobal.GLOBALS should lower to the native PHP superglobal");
@@ -14859,7 +14902,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final userTmpRoot = Path.normalize(".tmp/m14_source_native_backend_php_user_syntax_class_" + Std.string(Date.now().getTime()));
 		deleteRecursive(userTmpRoot);
 		FileSystem.createDirectory(userTmpRoot);
-		backend.emit(phpUserSyntaxClassProgram(), new BackendContext(userTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpUserSyntaxClassProgram(), new BackendContext(userTmpRoot, null, "Main", false, new StringMap<String>()));
 		final userOutputPath = Path.join([userTmpRoot, "index.php"]);
 		final userContent = File.getContent(userOutputPath);
 		assertContains(userContent, "class Syntax {", "PHP user classes named Syntax should still be emitted normally");
@@ -14877,7 +14920,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpNullEqualityProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpNullEqualityProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "if ($left === null || $right === null) return $left === $right;",
@@ -14895,7 +14938,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpUserClassTypeCheckProgram(), new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		backend.emit(phpUserClassTypeCheckProgram(), new BackendContext(tmpRoot, null, "unit.Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_is_of_type($value, \"MyClass\")", "PHP direct user-class `is` checks should use the runtime type helper");
@@ -14926,7 +14969,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpEnumTypeCheckProgram(), new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		backend.emit(phpEnumTypeCheckProgram(), new BackendContext(tmpRoot, null, "unit.Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "\"__hx_enum\" => \"MyEnum\"", "PHP scanned enum values should carry their enum type marker");
@@ -14959,7 +15002,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpTypeReflectionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpTypeReflectionProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("php/runtime", "Type.php"),
@@ -15008,7 +15051,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpGenericStaticReflectionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpGenericStaticReflectionProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static function gf1_Int($value)", "PHP @:generic static calls should emit reflected specialization wrappers");
@@ -15043,7 +15086,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpGenericStaticReflectionIgnoresRawBodyProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpGenericStaticReflectionIgnoresRawBodyProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final content = File.getContent(Path.join([tmpRoot, "index.php"]));
 		assertNotContains(content, "public static function gf2_String_Int($label, $values)",
 			"PHP must not infer @:generic specializations from parsed raw function text");
@@ -15093,7 +15136,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpOverloadDispatchProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpOverloadDispatchProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static function choose_Int($value)", "PHP overload dispatch should emit static Int variants");
@@ -15121,7 +15164,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpGenericConstructibleProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpGenericConstructibleProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_construct_like($seed, \"tail\")",
@@ -15143,10 +15186,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpTypeErrorGenericNullProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpTypeErrorGenericNullProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "echo __hxhx_add_string(true)", "PHP typeError(generic(null)) should fold to the helper macro result");
+		assertContains(content, "Sys::println(__hxhx_add_string(true)", "PHP typeError(generic(null)) should fold to the helper macro result");
 		assertNotContains(content, "$typeError", "PHP typeError(generic(null)) should not lower as a runtime variable call");
 		if (commandExists("php")) {
 			final run = commandOutput("php", [outputPath]);
@@ -15161,7 +15204,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpShiftAssignmentProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpShiftAssignmentProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$a <<= 2;", "PHP signed left-shift assignment should render directly");
@@ -15175,7 +15218,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(phpShiftAssignmentProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpShiftAssignmentProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "a <<= 2", "Python signed left-shift assignment should render directly");
@@ -15202,7 +15245,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final program = MacroStage.expandProgram([typed], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "def hxhx_mod(left, right):", "Python runtime should include a Haxe-style modulo helper");
@@ -15221,7 +15264,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpNullCoalescingProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpNullCoalescingProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$got = ($value ?? $fallback);", "PHP null coalescing should lower to the native ?? operator");
@@ -15234,7 +15277,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(phpNullCoalescingProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpNullCoalescingProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "got = (value if value is not None else fallback)", "Python null coalescing should lower to a None check expression");
@@ -15259,7 +15302,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final program = MacroStage.expandProgram([typed], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "eq((a := (a if a is not None else 5)), 5)",
@@ -15273,13 +15316,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpCompileTimeOnlyMacroSupportProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpCompileTimeOnlyMacroSupportProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertNotContains(content, "class TestIssues", "PHP support emission should skip compile-time-only macro helper classes");
 		assertContains(content, "/* hxhx skipped TestIssues.addIssueClasses */ null;",
 			"PHP compile-time-only TestIssues.addIssueClasses should not become a runtime class call");
-		assertContains(content, "echo \"ok\" . PHP_EOL;", "PHP main output should still emit when compile-time-only helpers are skipped");
+		assertContains(content, "Sys::println(\"ok\");", "PHP main output should still emit when compile-time-only helpers are skipped");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -15306,7 +15349,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("php/runtime", "Date.php"), "PHP source backend should emit Date from the repo-owned runtime template");
@@ -15361,7 +15404,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			typed.push(TyperStage.typeResolvedModule(module, index, loader));
 		final program = MacroStage.expandProgram(typed, []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("php/namespaces", "HaxeCore.php"),
@@ -15396,7 +15439,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$replacer(strval($key), $value)", "PHP haxe.Json should call replacers with key and value");
@@ -15425,7 +15468,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "haxe\\Json::stringify(INF)", "PHP Math.POSITIVE_INFINITY should lower to the native INF constant");
@@ -15457,7 +15500,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("php/namespaces", "HaxeFormat.php"),
@@ -15494,7 +15537,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class JsonParser {", "PHP runtime should expose haxe.format.JsonParser");
@@ -15560,7 +15603,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			{name: "re/s?!%[]))(\"'1.bin", data: haxe.io.Bytes.ofHex("48656c6c6f0021576f726c64")},
 			{name: "serializedValues.txt", data: haxe.io.Bytes.ofString("skip")}
 		];
-		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>(), resources));
+		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", false, new StringMap<String>(), resources));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class Resource {", "PHP runtime should expose haxe.Resource");
@@ -15609,7 +15652,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("php/runtime", "DateTools.php"),
@@ -15647,7 +15690,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "unit.Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "DCEClass::$c = [null, __hxhx_class_value(\"unit.UsedReferenced2\")];",
@@ -15690,7 +15733,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "TestReflect::$TYPES = [__hxhx_class_value(\"haxe.ds.StringMap\")];",
@@ -15737,7 +15780,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "TestReflect::$TNAMES = [\"haxe.ds.StringMap\", __hxhx_add(__hxhx_add(\"unit\", \".\"), \"MyEnum\")];",
@@ -15782,7 +15825,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public function get($x = 7)", "PHP override methods should preserve parsed default arguments");
@@ -15817,7 +15860,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$test = function()", "PHP should preserve the first local function's projected name");
@@ -15848,7 +15891,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$id = function($v, $pos = null)", "PHP local function optional args should receive default null");
@@ -15898,7 +15941,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_call_field($this, \"callback\")",
@@ -15922,7 +15965,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpOptionalBeforeRequiredFunctionFieldProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpOptionalBeforeRequiredFunctionFieldProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertNotContains(content, "function($a = null, $b)", "PHP lambdas should not rely on deprecated optional-before-required parameter signatures");
@@ -15953,7 +15996,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "(function($x) { return $x; })(__hxhx_to_string_value(__hxhx_add($prefix, \":ok\")))",
@@ -15987,7 +16030,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "function __hxhx_field($obj, $field)", "PHP runtime should centralize field reads");
@@ -16040,7 +16083,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public function __construct($s = \"test\", $i = (-5), $b = true)",
@@ -16085,7 +16128,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$setTo = function(&$v)", "PHP local functions typed as php.Ref<T> should declare by-reference parameters");
@@ -16104,7 +16147,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpInlineCastSelfReturnProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpInlineCastSelfReturnProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class InlineBase {", "PHP inline-cast regression should emit the normal base class");
@@ -16125,7 +16168,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpConstrainedParameterScannerFlowProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpConstrainedParameterScannerFlowProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static function staticSingle($a) {\n    return $a;\n  }",
@@ -16166,7 +16209,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, sourceTemplateContent("php/runtime", "StringBuf.php"),
@@ -16208,7 +16251,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_bind($join)", "PHP closure bind should support zero-argument bind calls");
@@ -16301,7 +16344,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_field($c, \"add\")", "PHP instance method values should lower through the callable field helper");
@@ -16378,7 +16421,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeResolvedModule(resolved, index);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "UsingChild2::pupFunc(\"foo\")", "PHP using extension calls should lower inherited helpers as static calls");
@@ -16418,7 +16461,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final mainTyped = TyperStage.typeResolvedModule(resolvedModules[0], moduleIndex);
 		final usingTyped = TyperStage.typeResolvedModule(resolvedModules[1], moduleIndex);
 		final moduleProgram = MacroStage.expandProgram([mainTyped, usingTyped], []);
-		backend.emit(moduleProgram, new BackendContext(moduleTmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(moduleProgram, new BackendContext(moduleTmpRoot, null, "Main", false, new StringMap<String>()));
 		final moduleOutputPath = Path.join([moduleTmpRoot, "index.php"]);
 		final moduleContent = File.getContent(moduleOutputPath);
 		assertContains(moduleContent, "LaterUsing::usingTest(\"foo\")", "PHP using module aliases should resolve later module-local string extension helpers");
@@ -16460,7 +16503,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "use (&$x)", "PHP closures should capture mutable locals by reference");
@@ -16510,7 +16553,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "use (&$arr)", "PHP closures should ref-capture local arrays mutated through push");
@@ -16539,7 +16582,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "__hxhx_length($value) - 1", "PHP string .length inside charCodeAt arguments should lower through __hxhx_length");
@@ -16574,7 +16617,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "haxe\\crypto\\Md5::encode(\"\")", "PHP std.haxe package root should lower to the haxe.crypto type path");
@@ -16640,10 +16683,10 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 			typed.push(TyperStage.typeResolvedModule(module, index, loader));
 		final program = MacroStage.expandProgram(typed, []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "unit.TestMisc", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "unit.TestMisc", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "echo MyDynamicClass::get_W() . PHP_EOL;", "PHP static property reads should call get_<field> accessors");
+		assertContains(content, "Sys::println(MyDynamicClass::get_W());", "PHP static property reads should call get_<field> accessors");
 		assertContains(content, "$this->eq(MyDynamicClass::get_W(), 57);",
 			"PHP static property reads should use get_<field> accessors inside instance helper calls");
 		assertContains(content, "return __hxhx_add(MyDynamicClass::$W, 2);", "PHP static getters should read the backing field without accessor recursion");
@@ -16711,7 +16754,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "return __hxhx_mul(__hxhx_add(__hxhx_add($this->v, $x), $y), 2);",
@@ -16746,7 +16789,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final typed = TyperStage.typeModule(parsed);
 		final program = MacroStage.expandProgram([typed], []);
 		final backend = exactPhpBackend();
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$unit_1 = Main::$unit;",
@@ -16766,7 +16809,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpUnitLocalStaticProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpUnitLocalStaticProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "public static $__basic_x = null;", "PHP TestLocalStatic fallback should declare persisted local-static storage");
@@ -16782,7 +16825,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(phpUnitLocalStaticProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpUnitLocalStaticProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "    __basic_x = None", "Python TestLocalStatic fallback should declare persisted local-static storage");
@@ -16797,7 +16840,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpUnitMapComprehensionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpUnitMapComprehensionProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$__hx_assert_map = function", "PHP TestMapComprehension fallback should emit a local assertion helper");
@@ -16813,7 +16856,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpMapComprehensionRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpMapComprehensionRuntimeProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "function __hxhx_map_comprehension($iterable, $projector)",
@@ -16835,7 +16878,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(phpUnitMapComprehensionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpUnitMapComprehensionProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "        def __hx_assert_map(__hx_map, __hx_expected, __hx_label):",
@@ -16851,7 +16894,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(pythonDoWhileExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(pythonDoWhileExpressionProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "        def z():", "Python do-while expression fallback should emit a closure");
@@ -16866,7 +16909,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(pythonPlainTextReportSetHandlerProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(pythonPlainTextReportSetHandlerProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "class PlainTextReport:", "Python utest helper support class should be emitted");
@@ -16897,7 +16940,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "    def assert_(self, message, pos):", "Python reserved method definitions should be sanitized");
@@ -16920,7 +16963,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final program = MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "from_ = lambda tpl: tpl", "Python reserved local variable declarations should be sanitized");
@@ -16943,7 +16986,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final program = MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "update = lambda : (s := (s + \"b\"))", "Python lambda update expressions should lower to parseable named expressions");
@@ -16964,7 +17007,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final program = MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "def hxhx_update_index(obj, index, op, value):", "Python runtime should include expression-position index update helper");
@@ -16992,7 +17035,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "def hxhx_assign_attr(obj, field, value):", "Python runtime should include expression-position attr assignment helper");
@@ -17007,7 +17050,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		final pos = HxPos.unknown();
 		final switchExpr = HxExpr.ESwitch(EIdent("items"), [
-			HxSwitchPattern.PLengthGuard(HxSwitchPattern.PBind("matched"), "matched", 3),
+			HxSwitchPattern.PGuard(HxSwitchPattern.PBind("matched"), EBinop("==", EField(EIdent("matched"), "length"), EInt(3))),
 			HxSwitchPattern.PBind("fallback")
 		], [EString("three"), EString("other")]);
 		final mainFn = new HxFunctionDecl("main", HxVisibility.Public, true, [], "Void", [
@@ -17020,11 +17063,12 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final program = MacroStage.expandProgram([typedSyntheticModule("Main.hx", mainDecl)], []);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(program, new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(program, new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "and (len(items) == 3)", "Python switch guard expressions should use Python conjunction syntax");
 		assertNotContains(content, "&&", "Python switch guard expressions should not emit C-style conjunctions");
+		final run = commandOutput("python3", [outputPath]);
+		assertTrue(run.code == 0 && run.stdout == "three\n", "Python must execute the matched guard and body: " + run.stdout + run.stderr);
 		deleteRecursive(tmpRoot);
 	}
 
@@ -17033,7 +17077,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpObjectPatternSwitchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpObjectPatternSwitchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "(function() use ($e) {", "PHP switch expressions should capture local scrutinees used inside closures");
@@ -17049,7 +17093,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = BackendRegistry.requireForTarget("python-native");
-		backend.emit(phpObjectPatternSwitchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpObjectPatternSwitchExpressionProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.py"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "hasattr(e, \"expr\")", "Python object switch expressions should check object field existence");
@@ -17062,7 +17106,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpUnitMatchExtractorProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpUnitMatchExtractorProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$__hx_f = function($__hx_i) {", "PHP TestMatch extractor fallback should emit a local extractor check");
@@ -17077,13 +17121,13 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(switchStatementProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(switchStatementProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "$__hxhx_switch = \"python\";", "PHP switch statements should evaluate the scrutinee once");
 		assertContains(content, "if (($__hxhx_switch === \"python\")) {", "PHP switch statements should lower literal cases with strict comparison");
 		assertContains(content, "} elseif (true) {", "PHP wildcard switch branches should lower to elseif true");
-		assertContains(content, "echo \"other\" . PHP_EOL;", "PHP switch statement branch bodies should render");
+		assertContains(content, "Sys::println(\"other\");", "PHP switch statement branch bodies should render");
 		deleteRecursive(tmpRoot);
 	}
 
@@ -17092,7 +17136,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		final backend = exactPhpBackend();
-		backend.emit(phpStrictScalarSwitchProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		backend.emit(phpStrictScalarSwitchProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "index.php"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "if (($__hxhx_switch === \"01\")) {", "PHP string switch should not use loose comparison for the first case");
@@ -17110,15 +17154,20 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_switch_stmt_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
-		backend.emit(switchStatementProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final backend = exactLuaBackend();
+		backend.emit(switchStatementProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
-		assertContains(content, "local __hxhx_switch = \"python\"", "Lua switch statements should evaluate the scrutinee once");
+		assertContains(content, "local __hxhx_switch = (\"python\")", "Lua switch statements should evaluate the scrutinee once");
 		assertContains(content, "if (__hxhx_switch == \"python\") then", "Lua switch statements should lower the first pattern as an if");
 		assertContains(content, "print(\"py\")", "Lua switch statement branch bodies should render");
 		assertContains(content, "elseif true then", "Lua wildcard switch branches should lower as an elseif true catch-all");
 		assertContains(content, "print(\"other\")", "Lua later switch statement branches should still render");
+		if (commandExists("lua")) {
+			final run = commandOutput("lua", [outputPath]);
+			assertTrue(run.code == 0, "generated Lua switch should execute: " + run.stderr);
+			assertTrue(run.stdout == "py\n", "Lua switch should execute only the matching branch: " + run.stdout);
+		}
 		deleteRecursive(tmpRoot);
 	}
 
@@ -17126,8 +17175,8 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		final tmpRoot = Path.normalize(".tmp/m14_source_native_backend_lua_array_switch_stmt_" + Std.string(Date.now().getTime()));
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
-		final backend = BackendRegistry.requireForTarget("lua-native");
-		backend.emit(luaArraySwitchStatementProgram(), new BackendContext(tmpRoot, null, "Main", true, false, new StringMap<String>()));
+		final backend = exactLuaBackend();
+		backend.emit(luaArraySwitchStatementProgram(), new BackendContext(tmpRoot, null, "Main", false, new StringMap<String>()));
 		final outputPath = Path.join([tmpRoot, "Main.lua"]);
 		final content = File.getContent(outputPath);
 		assertContains(content, "local args = hxhx_array({\"code\", \"7\"})", "Lua array switch test should use the Lua array runtime shape");
@@ -17146,7 +17195,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		emit("python-native", "python", "Main.py", "print((\"source-native:\" + \"python\"))");
 		emit("java-native", "java", "Main.java", "System.out.println((\"source-native:\" + \"java\"));");
 		emit("cs-native", "cs", "Main.cs", "System.Console.WriteLine((\"source-native:\" + \"cs\"));");
-		emit("php-native", "php", "index.php", "echo __hxhx_add(\"source-native:\", \"php\") . PHP_EOL;");
+		emit("php-native", "php", "index.php", "Sys::println(__hxhx_add(\"source-native:\", \"php\"));");
 		emit("lua-native", "lua", "Main.lua", "print((tostring(\"source-native:\") .. tostring(\"lua\")))");
 		assertPythonOutputHint();
 		assertJavaJarPackaging();
@@ -17451,7 +17500,7 @@ class M14SourceNativeBackendSmokeIntegrationTest {
 		assertLambdaExpression();
 		assertPhpLambdaImmediateCallExpression();
 		assertSwitchExpression();
-		assertUnsupportedSwitchGuardExpression();
+		assertUnresolvedSwitchGuardRejected();
 		assertPhpTupleOrPatternCapture();
 		assertPhpEnumIntGuard();
 		assertPhpClassSwitch();

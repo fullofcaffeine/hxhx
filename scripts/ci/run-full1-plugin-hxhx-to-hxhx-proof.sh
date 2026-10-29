@@ -145,7 +145,6 @@ summary_json="$ARTIFACT_DIR/full1-plugin-hxhx-to-hxhx.summary.json"
   HXHX_REPO_ROOT="$ROOT" \
   "$hxhx_bin" \
     --hxhx-stage3 \
-    --hxhx-emit-full-bodies \
     --hxhx-no-run \
     -cp "$src_dir" \
     -main PluginEntry \

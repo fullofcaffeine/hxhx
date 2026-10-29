@@ -1,0 +1,2 @@
+# 1 "TypedBackendInstanceCallOccurrence.ml"
+include CompilerDiagnosticProbe.TypedBackendInstanceCallOccurrence

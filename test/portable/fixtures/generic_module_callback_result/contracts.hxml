@@ -1,0 +1,6 @@
+-cp src
+-cp contracts
+-cp ../../../../packages/reflaxe.ocaml/src
+-main Main
+--no-output
+--macro CheckTransport.run()

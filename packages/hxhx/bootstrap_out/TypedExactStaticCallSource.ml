@@ -1,0 +1,2 @@
+# 1 "TypedExactStaticCallSource.ml"
+include CompilerDiagnosticProbe.TypedExactStaticCallSource

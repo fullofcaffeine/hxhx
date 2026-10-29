@@ -77,7 +77,7 @@ class PortableMetalizationPlanner {
 		for (typedModule in program.getTypedModules()) {
 			final parsed = typedModule.getParsed();
 			final filePath = normalizeFilePath(parsed.getFilePath());
-			final decl = typedModule.getBackendDeclaration();
+			final decl = typedModule.getBackendProjection().getDeclaration();
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final className = normalizeClassName(HxClassDecl.getName(cls));
 				for (fn in HxClassDecl.getFunctions(cls)) {

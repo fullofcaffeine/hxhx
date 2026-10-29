@@ -11,24 +11,30 @@
 	evaluate left-to-right. `requiresWriteback` is set only when Haxe falls back from
 	`a op= b` to an ordinary `a = a op b` declaration because no explicit compound
 	helper applied.
+
+	Each source operand is a closed `TyAbstractBinaryArgument`: an executable
+	conversion for every ordinary selection, or, inside one indexed update only, an
+	admission of the raw nullable getter value to its exact applied abstract
+	parameter. Ordinary lowering must call `requireConversion()` and therefore
+	rejects the admission. The result conversion is a separate executable fact.
 **/
 class TyBoundAbstractBinaryOperator {
 	final sourceOperator:String;
 	final operatorInfo:TyAbstractBinaryOperatorInfo;
 	final reverseArguments:Bool;
 	final requiresWriteback:Bool;
-	final sourceLeftConversion:TyImplicitConversionPlan;
-	final sourceRightConversion:TyImplicitConversionPlan;
-	final resultConversion:Null<TyImplicitConversionPlan>;
+	final sourceLeftArgument:TyAbstractBinaryArgument;
+	final sourceRightArgument:TyAbstractBinaryArgument;
+	final resultConversion:Null<TyAbstractBinaryConversion>;
 
 	public function new(sourceOperator:String, operatorInfo:TyAbstractBinaryOperatorInfo, reverseArguments:Bool, requiresWriteback:Bool,
-			sourceLeftConversion:TyImplicitConversionPlan, sourceRightConversion:TyImplicitConversionPlan, resultConversion:Null<TyImplicitConversionPlan>) {
+			sourceLeftArgument:TyAbstractBinaryArgument, sourceRightArgument:TyAbstractBinaryArgument, resultConversion:Null<TyAbstractBinaryConversion>) {
 		this.sourceOperator = sourceOperator;
 		this.operatorInfo = operatorInfo;
 		this.reverseArguments = reverseArguments;
 		this.requiresWriteback = requiresWriteback;
-		this.sourceLeftConversion = sourceLeftConversion;
-		this.sourceRightConversion = sourceRightConversion;
+		this.sourceLeftArgument = sourceLeftArgument;
+		this.sourceRightArgument = sourceRightArgument;
 		this.resultConversion = resultConversion;
 	}
 
@@ -44,13 +50,13 @@ class TyBoundAbstractBinaryOperator {
 	public function getRequiresWriteback():Bool
 		return requiresWriteback;
 
-	public function getSourceLeftConversion():TyImplicitConversionPlan
-		return sourceLeftConversion;
+	public function getSourceLeftArgument():TyAbstractBinaryArgument
+		return sourceLeftArgument;
 
-	public function getSourceRightConversion():TyImplicitConversionPlan
-		return sourceRightConversion;
+	public function getSourceRightArgument():TyAbstractBinaryArgument
+		return sourceRightArgument;
 
-	public function getResultConversion():Null<TyImplicitConversionPlan>
+	public function getResultConversion():Null<TyAbstractBinaryConversion>
 		return resultConversion;
 
 	public function getSourceLeftParameterType():TyType

@@ -17,7 +17,9 @@ package backend;
 	- Registry callers should run this check before accepting a registration.
 **/
 class BackendAbi {
-	public static inline var VERSION:Int = 1;
+	/** Version 2 removes partial-body emission from BackendContext; plugins must be rebuilt. */
+	public static inline var VERSION:Int = 2;
+
 	public static inline var GEN_IR_VERSION:Int = 1;
 	public static inline var MACRO_API_VERSION:Int = 1;
 

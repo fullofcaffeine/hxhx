@@ -6,6 +6,7 @@ import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
 
+/** Built-in and registered JavaScript backends must emit and execute the same resolved program. */
 class M14PromotionPluginBuiltinEquivalenceIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
@@ -30,10 +31,9 @@ class M14PromotionPluginBuiltinEquivalenceIntegrationTest {
 		FileSystem.deleteFile(path);
 	}
 
-	static function makeProgram(source:String, filePath:String):MacroExpandedProgram {
-		final parsed = ParserStage.parse(source, filePath);
-		final typed = TyperStage.typeModule(parsed);
-		return MacroStage.expandProgram([typed], []);
+	/** Array.length must come from the real provider before range lowering checks its type. */
+	static function makeProgram(source:String):MacroExpandedProgram {
+		return JsSourceProgramFixture.build({sources: [{path: "Main.hx", source: source}], requiredModules: ["Array"]});
 	}
 
 	static function runNodeScript(jsPath:String):String {
@@ -49,7 +49,7 @@ class M14PromotionPluginBuiltinEquivalenceIntegrationTest {
 	static function emitWithBackend(backend:IBackend, program:MacroExpandedProgram, outDir:String):String {
 		FileSystem.createDirectory(outDir);
 		final artifactPath = Path.join([outDir, "main.js"]);
-		final context = new BackendContext(outDir, artifactPath, "Main", true, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"]));
+		final context = new BackendContext(outDir, artifactPath, "Main", false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"]));
 		final result = backend.emit(program, context);
 		assertTrue(result.entryPath == artifactPath, "unexpected artifact path for backend " + backend.id());
 		assertTrue(FileSystem.exists(artifactPath), "missing emitted artifact for backend " + backend.id());
@@ -88,7 +88,7 @@ class M14PromotionPluginBuiltinEquivalenceIntegrationTest {
 				"  }",
 				"}"
 			].join("\n");
-			final program = makeProgram(source, "PromotionEquivalenceMain.hx");
+			final program = makeProgram(source);
 
 			final builtinBackend = new JsBackend();
 			final pluginBackend = JsBackend.providerRegistrations()[0].create();

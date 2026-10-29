@@ -1,0 +1,2 @@
+# 1 "TypedBackendNamedPattern.ml"
+include CompilerDiagnosticProbe.TypedBackendNamedPattern

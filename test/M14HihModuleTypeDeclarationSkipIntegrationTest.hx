@@ -26,7 +26,36 @@ class M14HihModuleTypeDeclarationSkipIntegrationTest {
 		assertTrue(diagnostic.indexOf(expectedMessage) >= 0, 'expected "$expectedMessage" in parser diagnostic, got "$diagnostic"');
 	}
 
+	/** Final class modifiers must retain class facts without consuming module-level final fields. */
+	static function assertFinalClassDeclarations():Void {
+		for (modifiers in ["final", "private final", "final private", "extern final", "final extern"]) {
+			final module = new HxParser([
+				"final before:Int = 7;",
+				"@:keep " + modifiers + " class SealedValue<T> { public var value:T; }",
+				"class Main { static function main():Void {} }",
+				"final after:Int = 9;"
+			].join("\n")).parseModule("Main");
+			final declaration = findClass(module, "SealedValue");
+			final metadata = HxClassDecl.getMetadata(declaration);
+			assertTrue(metadata.indexOf("@:keep") >= 0, "class metadata was lost: " + modifiers);
+			assertTrue(metadata.indexOf("final") >= 0, "final class modifier was lost: " + modifiers);
+			assertTrue(metadata.indexOf("__hxhx_type_params=T") >= 0, "generic class parameter was lost: " + modifiers);
+			assertTrue(HxClassDecl.getFields(declaration).length == 1, "module fields leaked into final class: " + modifiers);
+			assertTrue(HxClassDecl.getVisibility(declaration) == (modifiers.indexOf("private") >= 0 ? Private : Public),
+				"class visibility was lost: " + modifiers);
+			final main = findClass(module, "Main");
+			final fields = HxClassDecl.getFields(main);
+			assertTrue(fields.length == 2, "module-level final fields were lost: " + modifiers);
+			assertTrue(HxFieldDecl.getName(fields[0]) == "before" && HxFieldDecl.getName(fields[1]) == "after",
+				"module-level final field order changed: " + modifiers);
+			assertTrue(fields[0].isFinal && fields[1].isFinal, "module fields lost final modifiers: " + modifiers);
+			assertTrue(HxClassDecl.getFunctions(main).length == 1, "following class body was lost: " + modifiers);
+		}
+		assertRejects("final @:keep class Invalid {}", "Expected top-level field name");
+	}
+
 	static function main():Void {
+		assertFinalClassDeclarations();
 		final source = [
 			"package js.lib.intl;",
 			"@:native(\"Intl.NumberFormat\")",

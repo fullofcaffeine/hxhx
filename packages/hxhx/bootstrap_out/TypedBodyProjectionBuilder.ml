@@ -1,0 +1,2 @@
+# 1 "TypedBodyProjectionBuilder.ml"
+include CompilerDiagnosticProbe.TypedBodyProjectionBuilder

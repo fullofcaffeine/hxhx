@@ -1,7 +1,7 @@
 # Haxe-Authored Native Plugin and Target SDK Plan
 
-- Status: architecture review candidate retained; implementation deferred until
-  Full1 and the authentic shared-target hard cut; no support or readiness claim
+- Status: architecture review candidate retained; eval-to-native compiler pilot
+  prioritized on 2026-10-06; no support or readiness claim
 - Prepared: 2026-07-18
 - Compiler-transform owner: `haxe_ocaml-h5jta.1`
 - Backend/target owner: `haxe_ocaml-bomhr` (M22)
@@ -29,13 +29,17 @@ emit artifacts.
 This is a planning contract. It does not mean that either cross-host native
 profile is available today, and it does not move a README readiness bar.
 
-The six-month checkpoint pauses implementation even though the product goal
-remains accepted. Native `hxhx` must first call the real standalone
-`reflaxe.ocaml` target through `haxe_ocaml-38gsp.1`, that target must then
-complete the bounded two-generation native self-promotion proof in
-`haxe_ocaml-38gsp.2`, and Full1 must stabilize the baseline compiler. This
-avoids building transform and backend SDK contracts on top of a temporary
-second OCaml semantic implementation or an unproven native core.
+The repository owner prioritized the eval-to-native compiler workflow on
+2026-10-06. A bounded pilot can proceed before unrelated Full1 target work.
+It must compile the same Haxe implementation, preserve behavior and request
+isolation, and measure a real compiler workload. The
+[M22 schedule](REFLAXE_NATIVE_COMPILER_SDK_M22_PLAN.md) records this priority
+and its acceptance requirements.
+
+Full SDK support still requires the actual standalone target through
+`haxe_ocaml-38gsp.1`, its two-generation native self-promotion proof through
+`haxe_ocaml-38gsp.2`, and Full1. The pilot does not establish a public host ABI
+or permit a second implementation of target semantics.
 
 The exact-host redesign is recorded in
 `docs/00-project/ORACLE_CHECKPOINT_NATIVE_HAXE_PLUGIN_HOST_APIS_2026_07_29.md`.

@@ -1,0 +1,2 @@
+# 1 "backend_vm_NekoEnumRuntimeType.ml"
+include Backend_vm_NekoCatchCatalog.Backend_vm_NekoEnumRuntimeType

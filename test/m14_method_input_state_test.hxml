@@ -1,0 +1,26 @@
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp test
+-main M14MethodInputStateTest
+--interp
+
+--next
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp test
+-main M14IndexedUpdateTransactionTest
+--interp
+
+--next
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp test
+-main M14IndexedUpdateSelectionTest
+--interp
+
+--next
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp test
+-main M14IndexedMapCounterSelectionTest
+--interp

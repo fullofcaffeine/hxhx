@@ -1,11 +1,17 @@
 import backend.js.JsExprEmitter;
 import backend.js.JsFunctionScope;
 
+/** Raw comprehensions require typed lowering; the preceding HXML stage proves their runtime behavior. */
 class M14JsExprEmitterArrayComprehensionIntegrationTest {
-	static function assertContains(haystack:String, needle:String, label:String):Void {
-		if (haystack == null || haystack.indexOf(needle) < 0) {
-			throw label + ": expected substring '" + needle + "' in '" + haystack + "'";
+	static function assertRawRejected(expression:HxExpr, scope:backend.js.JsEmitScope, label:String):Void {
+		try {
+			JsExprEmitter.emit(expression, scope);
+		} catch (message:String) {
+			if (message.indexOf("source control must be lowered before JavaScript emission") < 0)
+				throw label + ": unexpected rejection: " + message;
+			return;
 		}
+		throw label + ": raw source unexpectedly bypassed typed lowering";
 	}
 
 	static function main() {
@@ -13,36 +19,20 @@ class M14JsExprEmitterArrayComprehensionIntegrationTest {
 		final exprScope = scope.exprScope();
 
 		final rangeExpr = HxParser.parseExprText("[for (i in 0...3) i * 2]");
-		final rangeJs = JsExprEmitter.emit(rangeExpr, exprScope);
-		assertContains(rangeJs, "(function () {", "range comprehension lowers to IIFE");
-		assertContains(rangeJs, "var __arr_comp_start = 0;", "range comprehension captures start once");
-		assertContains(rangeJs, "var __arr_comp_end = 3;", "range comprehension captures end once");
-		assertContains(rangeJs, "for (var __arr_comp_i = __arr_comp_start; __arr_comp_i < __arr_comp_end; __arr_comp_i++) {",
-			"range comprehension lowers to for loop");
-		assertContains(rangeJs, "__arr_comp_out.push((__arr_comp_i * 2));", "range comprehension uses bound iterator variable");
+		assertRawRejected(rangeExpr, exprScope, "range comprehension");
 
 		final iterExpr = HxParser.parseExprText("[for (value in values) value + 1]");
-		final iterJs = JsExprEmitter.emit(iterExpr, exprScope);
-		assertContains(iterJs, "var __arr_comp_iter = values;", "array comprehension captures iterable once");
-		assertContains(iterJs, "var __arr_comp_value = __arr_comp_iter[__arr_comp_i];", "array comprehension binds loop value each iteration");
-		assertContains(iterJs, "__hx_op_add", "array comprehension addition should use abstract-aware helper");
-		assertContains(iterJs, "(__arr_comp_value, 1)", "array comprehension yield uses bound value");
+		assertRawRejected(iterExpr, exprScope, "iterable comprehension");
 
 		final guardedExpr = HxParser.parseExprText("[for (value in values) if (keep(value)) value]");
-		final guardedJs = JsExprEmitter.emit(guardedExpr, exprScope);
-		assertContains(guardedJs, "if (keep(__arr_comp_value)) {", "guarded comprehension should lower the if-guard inside the loop");
-		assertContains(guardedJs, "__arr_comp_out.push(__arr_comp_value);", "guarded comprehension should still push the yielded value");
+		assertRawRejected(guardedExpr, exprScope, "guarded comprehension");
 
 		final staticNamesInit = HxParser.parseExprText('["ok", [for (i in 0...100) "a"].join(""),].concat(switch Sys.systemName() { case "Windows": []; case _: [
 			#if !(python || neko || cpp || java || cs)
 			[for (i in 0...255) "b"].join(""),
 			#end
 		]; })');
-		final staticNamesInitJs = JsExprEmitter.emit(staticNamesInit, exprScope);
-		assertContains(staticNamesInitJs, ".concat((function () {", "static array initializer concat should accept switch-expression arguments");
-		assertContains(staticNamesInitJs, "if (__sw === \"Windows\")",
-			"static array initializer switch should lower to branch tests instead of unsupported raw text");
-		assertContains(staticNamesInitJs, "__arr_comp_out.push(\"b\");", "switch branch array comprehension should lower inside concat argument");
+		assertRawRejected(staticNamesInit, exprScope, "static initializer with switch argument");
 
 		final scannedModule = new HxParser('class FileNames {
 			static public var names(default, never) = [
@@ -65,7 +55,7 @@ class M14JsExprEmitterArrayComprehensionIntegrationTest {
 		final scannedInit = HxFieldDecl.getInit(scannedFields[0]);
 		if (scannedInit == null)
 			throw "expected FileNames.names static initializer to parse through scanner path";
-		final scannedInitJs = JsExprEmitter.emit(scannedInit, exprScope);
-		assertContains(scannedInitJs, "__arr_comp_out.push(\"b\");", "scanner path should preserve switch branch array comprehension");
+		assertRawRejected(scannedInit, exprScope, "scanned static initializer");
+		Sys.println("JS_RAW_COMPREHENSION_BOUNDARY:PASS");
 	}
 }

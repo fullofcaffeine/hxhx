@@ -53,12 +53,12 @@ let writeBytes__impl = fun (self : t) (s : HxBytes.t) (pos : int) (len : int) ->
 
 let flush__impl = fun (self : t) () -> ignore ((
   ignore self;
-  ignore ()
+  (() : unit)
 ))
 
 let close__impl = fun (self : t) () -> ignore ((
   ignore self;
-  ignore ()
+  (() : unit)
 ))
 
 let write__impl = fun (self : t) (s : HxBytes.t) -> ignore (ignore (let l = ref (let __bytes_receiver_15 = s in HxBytes.length __bytes_receiver_15) in let p = ref 0 in while !l > 0 do ignore (let k = (Obj.magic self : t).writeBytes (Obj.magic self) (Obj.magic s) (!p) (!l) in (
@@ -76,7 +76,7 @@ let prepare__impl = fun (self : t) (_nbytes : int) -> ignore ((
   ignore self;
   (
     ignore _nbytes;
-    ignore ()
+    (() : unit)
   )
 ))
 
@@ -95,10 +95,10 @@ let writeInput__impl = fun (self : t) (i : Haxe_io_Input.t) (bufsize : Obj.t) ->
     ));
     __while_loop_24 ()
   ) in __while_loop_24 ()) with
-    | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-    | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-    | HxRuntime.Hx_return __ret_20 -> raise (HxRuntime.Hx_return __ret_20)
-    | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+    | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+    | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+    | HxRuntime.Hx_return __ret_20 -> Stdlib.raise (HxRuntime.Hx_return __ret_20)
+    | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
     | HxRuntime.Hx_exception (__exn_v_21, __exn_tags_22) -> if HxRuntime.tags_has __exn_tags_22 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_21 : Haxe_io_Eof.t) in (
       ignore _hx;
       ignore ()
@@ -106,7 +106,7 @@ let writeInput__impl = fun (self : t) (i : Haxe_io_Input.t) (bufsize : Obj.t) ->
     | __exn_23 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_23) : Haxe_io_Eof.t) in (
       ignore _hx;
       ignore ()
-    ) else raise (__exn_23)
+    ) else Stdlib.raise (__exn_23)
 )))
 
 let writeString__impl = fun (self : t) (s : string) (encoding : Obj.t) -> ignore ((
@@ -180,7 +180,7 @@ let writeInt32__impl = fun (self : t) (x : int) -> ignore (ignore (if (Obj.magic
   (Obj.magic self : t).writeByte (Obj.magic self) (HxInt.ushr x 24)
 ))))
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.io.Output"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); writeByte = (fun o a0 -> Obj.magic (writeByte__impl (Obj.magic o) (Obj.magic a0))); writeBytes = (fun o a0 a1 a2 -> Obj.magic (writeBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); flush = (fun o () -> Obj.magic (flush__impl (Obj.magic o) (Obj.magic ()))); close = (fun o () -> Obj.magic (close__impl (Obj.magic o) (Obj.magic ()))); write = (fun o a0 -> Obj.magic (write__impl (Obj.magic o) (Obj.magic a0))); writeFullBytes = (fun o a0 a1 a2 -> Obj.magic (writeFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); prepare = (fun o a0 -> Obj.magic (prepare__impl (Obj.magic o) (Obj.magic a0))); writeInput = (fun o a0 a1 -> Obj.magic (writeInput__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeString = (fun o a0 a1 -> Obj.magic (writeString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeFloat = (fun o a0 -> Obj.magic (writeFloat__impl (Obj.magic o) (Obj.magic a0))); writeDouble = (fun o a0 -> Obj.magic (writeDouble__impl (Obj.magic o) (Obj.magic a0))); writeInt8 = (fun o a0 -> Obj.magic (writeInt8__impl (Obj.magic o) (Obj.magic a0))); writeUInt8 = (fun o a0 -> Obj.magic (writeUInt8__impl (Obj.magic o) (Obj.magic a0))); writeInt16 = (fun o a0 -> Obj.magic (writeInt16__impl (Obj.magic o) (Obj.magic a0))); writeUInt16 = (fun o a0 -> Obj.magic (writeUInt16__impl (Obj.magic o) (Obj.magic a0))); writeInt24 = (fun o a0 -> Obj.magic (writeInt24__impl (Obj.magic o) (Obj.magic a0))); writeUInt24 = (fun o a0 -> Obj.magic (writeUInt24__impl (Obj.magic o) (Obj.magic a0))); writeInt32 = (fun o a0 -> Obj.magic (writeInt32__impl (Obj.magic o) (Obj.magic a0))) } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "haxe.io.Output"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); writeByte = (fun o a0 -> Obj.magic (writeByte__impl (Obj.magic o) (Obj.magic a0))); writeBytes = (fun o a0 a1 a2 -> Obj.magic (writeBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); flush = (fun o () -> Obj.magic (flush__impl (Obj.magic o) (Obj.magic ()))); close = (fun o () -> Obj.magic (close__impl (Obj.magic o) (Obj.magic ()))); write = (fun o a0 -> Obj.magic (write__impl (Obj.magic o) (Obj.magic a0))); writeFullBytes = (fun o a0 a1 a2 -> Obj.magic (writeFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); prepare = (fun o a0 -> Obj.magic (prepare__impl (Obj.magic o) (Obj.magic a0))); writeInput = (fun o a0 a1 -> Obj.magic (writeInput__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeString = (fun o a0 a1 -> Obj.magic (writeString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeFloat = (fun o a0 -> Obj.magic (writeFloat__impl (Obj.magic o) (Obj.magic a0))); writeDouble = (fun o a0 -> Obj.magic (writeDouble__impl (Obj.magic o) (Obj.magic a0))); writeInt8 = (fun o a0 -> Obj.magic (writeInt8__impl (Obj.magic o) (Obj.magic a0))); writeUInt8 = (fun o a0 -> Obj.magic (writeUInt8__impl (Obj.magic o) (Obj.magic a0))); writeInt16 = (fun o a0 -> Obj.magic (writeInt16__impl (Obj.magic o) (Obj.magic a0))); writeUInt16 = (fun o a0 -> Obj.magic (writeUInt16__impl (Obj.magic o) (Obj.magic a0))); writeInt24 = (fun o a0 -> Obj.magic (writeInt24__impl (Obj.magic o) (Obj.magic a0))); writeUInt24 = (fun o a0 -> Obj.magic (writeUInt24__impl (Obj.magic o) (Obj.magic a0))); writeInt32 = (fun o a0 -> Obj.magic (writeInt32__impl (Obj.magic o) (Obj.magic a0))) } : t) in (
   ignore ((
     ignore self;
     ()
@@ -188,4 +188,4 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.io.Output";
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.io.Output"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); writeByte = (fun o a0 -> Obj.magic (writeByte__impl (Obj.magic o) (Obj.magic a0))); writeBytes = (fun o a0 a1 a2 -> Obj.magic (writeBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); flush = (fun o () -> Obj.magic (flush__impl (Obj.magic o) (Obj.magic ()))); close = (fun o () -> Obj.magic (close__impl (Obj.magic o) (Obj.magic ()))); write = (fun o a0 -> Obj.magic (write__impl (Obj.magic o) (Obj.magic a0))); writeFullBytes = (fun o a0 a1 a2 -> Obj.magic (writeFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); prepare = (fun o a0 -> Obj.magic (prepare__impl (Obj.magic o) (Obj.magic a0))); writeInput = (fun o a0 a1 -> Obj.magic (writeInput__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeString = (fun o a0 a1 -> Obj.magic (writeString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeFloat = (fun o a0 -> Obj.magic (writeFloat__impl (Obj.magic o) (Obj.magic a0))); writeDouble = (fun o a0 -> Obj.magic (writeDouble__impl (Obj.magic o) (Obj.magic a0))); writeInt8 = (fun o a0 -> Obj.magic (writeInt8__impl (Obj.magic o) (Obj.magic a0))); writeUInt8 = (fun o a0 -> Obj.magic (writeUInt8__impl (Obj.magic o) (Obj.magic a0))); writeInt16 = (fun o a0 -> Obj.magic (writeInt16__impl (Obj.magic o) (Obj.magic a0))); writeUInt16 = (fun o a0 -> Obj.magic (writeUInt16__impl (Obj.magic o) (Obj.magic a0))); writeInt24 = (fun o a0 -> Obj.magic (writeInt24__impl (Obj.magic o) (Obj.magic a0))); writeUInt24 = (fun o a0 -> Obj.magic (writeUInt24__impl (Obj.magic o) (Obj.magic a0))); writeInt32 = (fun o a0 -> Obj.magic (writeInt32__impl (Obj.magic o) (Obj.magic a0))) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "haxe.io.Output"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); writeByte = (fun o a0 -> Obj.magic (writeByte__impl (Obj.magic o) (Obj.magic a0))); writeBytes = (fun o a0 a1 a2 -> Obj.magic (writeBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); flush = (fun o () -> Obj.magic (flush__impl (Obj.magic o) (Obj.magic ()))); close = (fun o () -> Obj.magic (close__impl (Obj.magic o) (Obj.magic ()))); write = (fun o a0 -> Obj.magic (write__impl (Obj.magic o) (Obj.magic a0))); writeFullBytes = (fun o a0 a1 a2 -> Obj.magic (writeFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); prepare = (fun o a0 -> Obj.magic (prepare__impl (Obj.magic o) (Obj.magic a0))); writeInput = (fun o a0 a1 -> Obj.magic (writeInput__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeString = (fun o a0 a1 -> Obj.magic (writeString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeFloat = (fun o a0 -> Obj.magic (writeFloat__impl (Obj.magic o) (Obj.magic a0))); writeDouble = (fun o a0 -> Obj.magic (writeDouble__impl (Obj.magic o) (Obj.magic a0))); writeInt8 = (fun o a0 -> Obj.magic (writeInt8__impl (Obj.magic o) (Obj.magic a0))); writeUInt8 = (fun o a0 -> Obj.magic (writeUInt8__impl (Obj.magic o) (Obj.magic a0))); writeInt16 = (fun o a0 -> Obj.magic (writeInt16__impl (Obj.magic o) (Obj.magic a0))); writeUInt16 = (fun o a0 -> Obj.magic (writeUInt16__impl (Obj.magic o) (Obj.magic a0))); writeInt24 = (fun o a0 -> Obj.magic (writeInt24__impl (Obj.magic o) (Obj.magic a0))); writeUInt24 = (fun o a0 -> Obj.magic (writeUInt24__impl (Obj.magic o) (Obj.magic a0))); writeInt32 = (fun o a0 -> Obj.magic (writeInt32__impl (Obj.magic o) (Obj.magic a0))) } : t)

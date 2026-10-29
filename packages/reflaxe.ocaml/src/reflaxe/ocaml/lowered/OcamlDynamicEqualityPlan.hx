@@ -6,8 +6,8 @@ import haxe.ds.ObjectMap;
 import haxe.macro.Expr.Binop;
 import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
-#if macro
 import haxe.macro.TypeTools;
+#if macro
 import haxe.macro.TypedExprTools;
 #end
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
@@ -42,6 +42,7 @@ typedef OcamlDynamicEqualityDecision = {
 	final pipelineRevision:String;
 }
 
+#if macro
 /**
 	Classifies Haxe values stored in the target's general-purpose OCaml container.
 
@@ -49,7 +50,6 @@ typedef OcamlDynamicEqualityDecision = {
 	that container. Planning and code generation share this model. Thus, both
 	phases make the same choice for `Dynamic`, `Any`, and `HxAnon` values.
 **/
-#if macro
 class OcamlDynamicCarrierModel {
 	/** Returns whether this exact type uses the general-purpose Dynamic container. */
 	public static function usesDynamicCarrier(type:Type):Bool {
@@ -63,6 +63,32 @@ class OcamlDynamicCarrierModel {
 				true;
 			case _:
 				false;
+		}
+	}
+
+	/**
+		Returns whether `==` or `!=` between two operands needs the runtime comparison.
+
+		What: the runtime comparison is `HxRuntime.dynamic_equals`. It compares
+		null only with null, numbers and strings by value, and other values by
+		identity.
+
+		Why: a Dynamic carrier does not know its stored kind until run time. A type
+		parameter has the same property: one generic body can compare Int, Float,
+		String, and object values. OCaml physical equality is wrong there for
+		boxed Float values and for equal strings in separate allocations.
+
+		How: planning and code generation both call this function, so each
+		comparison that it selects has exactly one sealed decision.
+	**/
+	public static function usesRuntimeEquality(left:Type, right:Type):Bool {
+		return usesDynamicCarrier(left) || usesDynamicCarrier(right) || isTypeParameter(left) || isTypeParameter(right);
+	}
+
+	static function isTypeParameter(type:Type):Bool {
+		return switch (followNoAbstracts(unwrapNullType(type))) {
+			case TInst(reference, _): reference.get().kind.match(KTypeParameter(_));
+			case _: false;
 		}
 	}
 
@@ -92,10 +118,11 @@ class OcamlDynamicCarrierModel {
 		}
 	}
 
+	/** Standard iterator pairs have no extra storage; wider records keep their ordinary HxAnon carrier. */
 	static function isKeyValueAnonymous(type:Type):Bool {
 		return switch (followNoAbstracts(type)) {
 			case TAnonymous(anonymousRef): final fields = anonymousRef.get()
-					.fields; Lambda.exists(fields, field -> field.name == "key") && Lambda.exists(fields, field -> field.name == "value");
+					.fields; fields.length == 2 && Lambda.exists(fields, field -> field.name == "key") && Lambda.exists(fields, field -> field.name == "value");
 			case _:
 				false;
 		}
@@ -452,15 +479,13 @@ class OcamlDynamicEqualityPlanner {
 			switch (expression.expr) {
 				case TFunction(_):
 					return;
-				case TBinop(OpEq, left, right)
-					if (!isNull(left)
-						&& !isNull(right)
-						&& (OcamlDynamicCarrierModel.usesDynamicCarrier(left.t) || OcamlDynamicCarrierModel.usesDynamicCarrier(right.t))):
+				case TBinop(OpEq, left, right) if (!isNull(left)
+					&& !isNull(right)
+					&& OcamlDynamicCarrierModel.usesRuntimeEquality(left.t, right.t)):
 					add(expression, expression, OcamlDynamicEqualityKind.Equal, left.t, right.t);
-				case TBinop(OpNotEq, left, right)
-					if (!isNull(left)
-						&& !isNull(right)
-						&& (OcamlDynamicCarrierModel.usesDynamicCarrier(left.t) || OcamlDynamicCarrierModel.usesDynamicCarrier(right.t))):
+				case TBinop(OpNotEq, left, right) if (!isNull(left)
+					&& !isNull(right)
+					&& OcamlDynamicCarrierModel.usesRuntimeEquality(left.t, right.t)):
 					add(expression, expression, OcamlDynamicEqualityKind.NotEqual, left.t, right.t);
 				case TSwitch(scrutinee, cases, _) if (switchNeedsRuntimeEquality(scrutinee, cases)):
 					for (entry in cases)

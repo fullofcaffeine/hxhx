@@ -44,6 +44,19 @@ function write(filePath, content, mode) {
 
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'hxhx-developer-cache-'))
 try {
+  // Exercise the production inventory as well as the smaller synthetic build.
+  // Both Haxe providers and native headers are embedded in the compiler binary.
+  const production = require(fingerprintTool)
+  const productionRoot = path.join(temp, 'production-inputs')
+  const targetInputs = production.REPO_INPUT_GROUPS.find(group => group.id === 'target-runtime-and-templates')
+  for (const relative of ['packages/hxhx-core/std/cpp/_std/haxe/Exception.hx', 'packages/hxhx-core/runtime/cpp/ManagedThrow.hpp']) {
+    const file = path.join(productionRoot, relative)
+    write(file, 'before\n')
+    const before = production.hashPathComponent(targetInputs.id, productionRoot, targetInputs.paths)
+    write(file, 'after\n')
+    const after = production.hashPathComponent(targetInputs.id, productionRoot, targetInputs.paths)
+    assert.notStrictEqual(after.sha256, before.sha256, `compiler reuse must observe ${relative}`)
+  }
   const repo = path.join(temp, 'repo')
   const compilerSource = path.join(repo, 'compiler/Main.hx')
   const runtimeSource = path.join(repo, 'runtime/HxRuntime.ml')

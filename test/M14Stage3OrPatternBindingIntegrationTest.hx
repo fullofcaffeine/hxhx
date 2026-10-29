@@ -45,7 +45,7 @@ class M14Stage3OrPatternBindingIntegrationTest {
 			final parsed = ParserStage.parse(src, sourcePath);
 			final typed = TyperStage.typeModule(parsed);
 			final expanded = MacroStage.expandProgram([typed], []);
-			EmitterStage.emitToDir(expanded, outDir, false, false);
+			EmitterStage.emitToDir(expanded, outDir, false);
 
 			final mainMl = haxe.io.Path.join([outDir, 'Main.ml']);
 			assertTrue(FileSystem.exists(mainMl), 'Expected Main.ml in emitted output.');

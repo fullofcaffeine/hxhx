@@ -6,55 +6,61 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppExactCallEmitter" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppExactCallEmitter" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppExactCallEmitter" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppExactCallEmitter" } : t)
 
 let cppType = fun expression scope services -> (try (
-  ignore (if scope == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
-  let exact = TypedExactCallSource.decodeInstance (Obj.magic expression) in let tempResult = ref (HxString.hx_null_string : string) in (
-    ignore (if exact == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
-      tempResult := __assign_1;
-      __assign_1
-    ) else let __assign_2 = (Obj.obj (HxAnon.get services "cppTypeHint") (Obj.obj (HxAnon.get exact "resultType") : string) scope (Obj.obj (HxAnon.get services "lookupForScope") scope) : string) in (
-      tempResult := __assign_2;
-      __assign_2
-    ));
-    !tempResult
+  ignore (if scope == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+  let staticCall = TypedExactStaticCallSource.decode (Obj.magic expression) in (
+    ignore (if staticCall != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr ((Obj.obj (HxAnon.get services "cppTypeHint") : _ -> _ -> _ -> _) (Obj.obj (HxAnon.get staticCall "resultType") : string) scope ((Obj.obj (HxAnon.get services "lookupForScope") : _ -> _) scope)))) else ());
+    let exact = TypedExactCallSource.decodeInstance (Obj.magic expression) in let tempResult = ref (HxString.hx_null_string : string) in (
+      ignore (if exact == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
+        tempResult := __assign_1;
+        __assign_1
+      ) else let __assign_2 = ((Obj.obj (HxAnon.get services "cppTypeHint") : _ -> _ -> _ -> _) (Obj.obj (HxAnon.get exact "resultType") : string) scope ((Obj.obj (HxAnon.get services "lookupForScope") : _ -> _) scope) : string) in (
+        tempResult := __assign_2;
+        __assign_2
+      ));
+      !tempResult
+    )
   )
 ) with
   | HxRuntime.Hx_return __ret_3 -> (Obj.obj __ret_3 : string) : string)
 
 let render = fun expression scope services -> (try (
-  ignore (if scope == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let exact = TypedExactCallSource.decodeInstance (Obj.magic expression) in (
-    ignore (if exact == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-    ignore (if (let __string_receiver_4 = Obj.obj (HxAnon.get exact "declaration") in HxString.length __string_receiver_4) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "exact typed instance call is missing its canonical declaration identity") ["Dynamic"] else ());
-    let lookup = Obj.obj (HxAnon.get services "lookupForScope") scope in let owner = Obj.magic (Obj.obj (HxAnon.get services "ownerForType") (Obj.obj (HxAnon.get exact "owner") : string) scope lookup) in let representation = Obj.magic (Obj.obj (HxAnon.get services "representation") (Obj.magic owner) lookup) in (
-      ignore (if representation == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxAnon.get services "ordinaryCall") (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get exact "receiver")))) (Obj.obj (HxAnon.get exact "method") : string) (Obj.magic (Obj.obj (HxAnon.get exact "arguments"))) scope))) else ());
-      let helper = Obj.magic (Obj.obj (HxAnon.get services "method") (Obj.magic owner) (Obj.obj (HxAnon.get exact "method") : string)) in (
-        ignore (if helper != Obj.magic (HxRuntime.hx_null) && Obj.obj (HxAnon.get services "isInline") (Obj.magic helper) then ignore (let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-          ignore (if HxArray.length (Obj.obj (HxAnon.get exact "arguments")) = 0 then let __assign_5 = Obj.magic (Obj.obj (HxAnon.get services "inlineBody") (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get exact "receiver")))) (Obj.magic helper) scope : string) in (
-            tempMaybeString := __assign_5;
-            __assign_5
-          ) else let __assign_6 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-            tempMaybeString := __assign_6;
-            __assign_6
-          ));
-          let inlineBody = (!tempMaybeString : string) in if inlineBody != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr inlineBody)) else ()
-        )) else ());
-        let receiver = (Obj.obj (HxAnon.get services "valueForExpectedType") (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get exact "receiver")))) (Backend_cpp_CppAbstractRepresentation.getCarrierCppType (Obj.magic representation) () : string) scope : string) in let _g = Obj.magic (let __represented_array_7 = HxArray.create () in __represented_array_7) in let _g1 = ref 0 in let _g2 = Obj.magic (Obj.obj (HxAnon.get exact "arguments")) in (
-          ignore (while !_g1 < HxArray.length _g2 do ignore (let argument = Obj.magic (let __array_read_receiver_8 = _g2 in let __array_read_index_9 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_8) __array_read_index_9) in (
-            ignore (let __old_10 = !_g1 in let __new_11 = HxInt.add __old_10 1 in (
-              ignore (_g1 := __new_11);
-              __new_11
+  ignore (if scope == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  let staticCall = TypedExactStaticCallSource.decode (Obj.magic expression) in (
+    ignore (if staticCall != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr ((Obj.obj (HxAnon.get services "renderExpression") : _ -> _ -> _) (Obj.magic (TypedExactStaticCallSource.ordinaryCall staticCall)) scope))) else ());
+    let exact = TypedExactCallSource.decodeInstance (Obj.magic expression) in (
+      ignore (if exact == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+      ignore (if (let __string_receiver_4 = Obj.obj (HxAnon.get exact "declaration") in HxString.length __string_receiver_4) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "exact typed instance call is missing its canonical declaration identity") ["Dynamic"] else ());
+      let lookup = (Obj.obj (HxAnon.get services "lookupForScope") : _ -> _) scope in let owner = Obj.magic ((Obj.obj (HxAnon.get services "ownerForType") : _ -> _ -> _ -> _) (Obj.obj (HxAnon.get exact "owner") : string) scope lookup) in let representation = Obj.magic ((Obj.obj (HxAnon.get services "representation") : _ -> _ -> _) (Obj.magic owner) lookup) in (
+        ignore (if representation == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr ((Obj.obj (HxAnon.get services "ordinaryCall") : _ -> _ -> _ -> _ -> _) (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get exact "receiver")))) (Obj.obj (HxAnon.get exact "method") : string) (Obj.magic (Obj.obj (HxAnon.get exact "arguments"))) scope))) else ());
+        let helper = Obj.magic ((Obj.obj (HxAnon.get services "method") : _ -> _ -> _) (Obj.magic owner) (Obj.obj (HxAnon.get exact "method") : string)) in (
+          ignore (if helper != Obj.magic (HxRuntime.hx_null) && (Obj.obj (HxAnon.get services "isInline") : _ -> _) (Obj.magic helper) then ignore (let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+            ignore (if HxArray.length (Obj.obj (HxAnon.get exact "arguments")) = 0 then let __assign_5 = Obj.magic ((Obj.obj (HxAnon.get services "inlineBody") : _ -> _ -> _ -> _) (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get exact "receiver")))) (Obj.magic helper) scope : string) in (
+              tempMaybeString := __assign_5;
+              __assign_5
+            ) else let __assign_6 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+              tempMaybeString := __assign_6;
+              __assign_6
             ));
-            let __array_receiver_12 = _g in let __array_arg_0_13 = Obj.obj (HxAnon.get services "renderExpression") (Obj.magic argument) scope in HxArray.push __array_receiver_12 __array_arg_0_13
-          )) done);
-          Backend_cpp_CppAbstractRepresentation.instanceHelperCall (Obj.magic representation) (Obj.obj (HxAnon.get services "sanitizeIdentifier") (Obj.obj (HxAnon.get exact "method") : string) : string) (receiver : string) (Obj.magic _g)
+            let inlineBody = (!tempMaybeString : string) in if inlineBody != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr inlineBody)) else ()
+          )) else ());
+          let receiver = ((Obj.obj (HxAnon.get services "valueForExpectedType") : _ -> _ -> _ -> _) (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get exact "receiver")))) (Backend_cpp_CppAbstractRepresentation.getCarrierCppType (Obj.magic representation) () : string) scope : string) in let _g = Obj.magic (let __represented_array_7 = HxArray.create () in __represented_array_7) in let _g1 = ref 0 in let _g2 = Obj.magic (Obj.obj (HxAnon.get exact "arguments")) in (
+            ignore (while !_g1 < HxArray.length _g2 do ignore (let argument = Obj.magic (let __array_read_receiver_8 = _g2 in let __array_read_index_9 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_8) __array_read_index_9) in (
+              ignore (let __old_10 = !_g1 in let __new_11 = HxInt.add __old_10 1 in (
+                ignore (_g1 := __new_11);
+                __new_11
+              ));
+              let __array_receiver_12 = Obj.magic _g in let __array_arg_0_13 = ((Obj.obj (HxAnon.get services "renderExpression") : _ -> _ -> _) (Obj.magic argument) scope : string) in HxArray.push __array_receiver_12 __array_arg_0_13
+            )) done);
+            Backend_cpp_CppAbstractRepresentation.instanceHelperCall (Obj.magic representation) ((Obj.obj (HxAnon.get services "sanitizeIdentifier") : _ -> _) (Obj.obj (HxAnon.get exact "method") : string) : string) (receiver : string) (Obj.magic _g)
+          )
         )
       )
     )

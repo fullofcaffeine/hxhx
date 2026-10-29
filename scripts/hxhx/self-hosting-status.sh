@@ -73,7 +73,6 @@ fi
 
 if has_text "$BOOTSTRAP_REFRESH_PROBE" "prototype=stage0-free-native-refresh-minimal" \
   && has_text "$BOOTSTRAP_REFRESH_PROBE" "HXHX_FORBID_STAGE0=1" \
-  && has_text "$BOOTSTRAP_REFRESH_PROBE" "--hxhx-emit-full-bodies" \
   && has_text "$BOOTSTRAP_REFRESH_PROBE" "bootstrap_snapshot_diff=clean"; then
   status_refresh_probe="Pass"
   evidence_refresh_probe="npm run hxhx:probe:stage0-free-refresh"

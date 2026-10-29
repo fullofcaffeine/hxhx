@@ -12,6 +12,13 @@ class Main {
 		Sys.println("parts=" + parts.join("|"));
 		Sys.println("map=" + r.map("a1b22c", (e) -> "[" + e.matched(0) + "]"));
 		Sys.println("esc=" + EReg.escape("a+b"));
+		final names:Array<String> = [];
+		final constructors = ~/\bnew\s+([A-Z][A-Za-z0-9_]*)\b/g;
+		constructors.map("é😀é😀é😀é😀é😀é😀 new First() new Later()", matched -> {
+			names.push(matched.matched(1));
+			return matched.matched(0);
+		});
+		Sys.println("unicode-map=" + names.join("|"));
 		Sys.println("OK ereg_basic");
 	}
 }

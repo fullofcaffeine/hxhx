@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable findSourceCallback : string -> Hxhx_Compil
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun findSource findParsed findResolution sourceMissReason parserMissReason resolutionMissReason quarantineParsed publish snapshotReportState -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerSourceCacheRequest"; findSourceCallback = Obj.magic HxRuntime.hx_null; findParsedCallback = Obj.magic HxRuntime.hx_null; findResolutionCallback = Obj.magic HxRuntime.hx_null; sourceMissReasonCallback = Obj.magic HxRuntime.hx_null; parserMissReasonCallback = Obj.magic HxRuntime.hx_null; resolutionMissReasonCallback = Obj.magic HxRuntime.hx_null; quarantineParsedCallback = Obj.magic HxRuntime.hx_null; publishCallback = Obj.magic HxRuntime.hx_null; snapshotReportStateCallback = Obj.magic HxRuntime.hx_null; filesystem = Obj.magic HxRuntime.hx_null; providerReport = Obj.magic HxRuntime.hx_null; stagedSources = Obj.magic HxRuntime.hx_null; stagedParsedModules = Obj.magic HxRuntime.hx_null; stagedResolutions = Obj.magic HxRuntime.hx_null; providerView = Obj.magic HxRuntime.hx_null; preparedForSuccess = false; finished = false } : t) in (
+let create = fun findSource findParsed findResolution sourceMissReason parserMissReason resolutionMissReason quarantineParsed publish snapshotReportState -> let self = ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerSourceCacheRequest"; findSourceCallback = Obj.magic HxRuntime.hx_null; findParsedCallback = Obj.magic HxRuntime.hx_null; findResolutionCallback = Obj.magic HxRuntime.hx_null; sourceMissReasonCallback = Obj.magic HxRuntime.hx_null; parserMissReasonCallback = Obj.magic HxRuntime.hx_null; resolutionMissReasonCallback = Obj.magic HxRuntime.hx_null; quarantineParsedCallback = Obj.magic HxRuntime.hx_null; publishCallback = Obj.magic HxRuntime.hx_null; snapshotReportStateCallback = Obj.magic HxRuntime.hx_null; filesystem = Obj.magic HxRuntime.hx_null; providerReport = Obj.magic HxRuntime.hx_null; stagedSources = Obj.magic HxRuntime.hx_null; stagedParsedModules = Obj.magic HxRuntime.hx_null; stagedResolutions = Obj.magic HxRuntime.hx_null; providerView = Obj.magic HxRuntime.hx_null; preparedForSuccess = false; finished = false } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = findSource in (
       (Obj.magic self : t).findSourceCallback <- __assign_1;
@@ -80,12 +80,12 @@ let create = fun findSource findParsed findResolution sourceMissReason parserMis
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerSourceCacheRequest"; findSourceCallback = Obj.magic HxRuntime.hx_null; findParsedCallback = Obj.magic HxRuntime.hx_null; findResolutionCallback = Obj.magic HxRuntime.hx_null; sourceMissReasonCallback = Obj.magic HxRuntime.hx_null; parserMissReasonCallback = Obj.magic HxRuntime.hx_null; resolutionMissReasonCallback = Obj.magic HxRuntime.hx_null; quarantineParsedCallback = Obj.magic HxRuntime.hx_null; publishCallback = Obj.magic HxRuntime.hx_null; snapshotReportStateCallback = Obj.magic HxRuntime.hx_null; filesystem = Obj.magic HxRuntime.hx_null; providerReport = Obj.magic HxRuntime.hx_null; stagedSources = Obj.magic HxRuntime.hx_null; stagedParsedModules = Obj.magic HxRuntime.hx_null; stagedResolutions = Obj.magic HxRuntime.hx_null; providerView = Obj.magic HxRuntime.hx_null; preparedForSuccess = false; finished = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerSourceCacheRequest"; findSourceCallback = Obj.magic HxRuntime.hx_null; findParsedCallback = Obj.magic HxRuntime.hx_null; findResolutionCallback = Obj.magic HxRuntime.hx_null; sourceMissReasonCallback = Obj.magic HxRuntime.hx_null; parserMissReasonCallback = Obj.magic HxRuntime.hx_null; resolutionMissReasonCallback = Obj.magic HxRuntime.hx_null; quarantineParsedCallback = Obj.magic HxRuntime.hx_null; publishCallback = Obj.magic HxRuntime.hx_null; snapshotReportStateCallback = Obj.magic HxRuntime.hx_null; filesystem = Obj.magic HxRuntime.hx_null; providerReport = Obj.magic HxRuntime.hx_null; stagedSources = Obj.magic HxRuntime.hx_null; stagedParsedModules = Obj.magic HxRuntime.hx_null; stagedResolutions = Obj.magic HxRuntime.hx_null; providerView = Obj.magic HxRuntime.hx_null; preparedForSuccess = false; finished = false } : t)
 
 let closeRequest = fun self (succeeded : bool) -> ignore (ignore ((
-  ignore (let __place_receiver_69 = self in let __place_rhs_70 = true in (
-    (__place_receiver_69 : t).finished <- __place_rhs_70;
-    __place_rhs_70
+  ignore (let __place_receiver_67 = self in let __place_rhs_68 = true in (
+    (__place_receiver_67 : t).finished <- __place_rhs_68;
+    __place_rhs_68
   ));
   ignore (if not (succeeded) then ignore ((Obj.magic self : t).snapshotReportStateCallback (Obj.magic ((Obj.magic self : t).providerReport))) else ());
   let _this = Obj.magic ((Obj.magic self : t).stagedSources) in (
@@ -115,145 +115,145 @@ let isFile = fun self (path : string) -> (
 )
 
 let sourceValues = fun self () -> let values = Obj.magic (HxArray.create ()) in let _this = Obj.magic ((Obj.magic self : t).stagedSources) in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.values_string (Obj.magic _this))) in (
-  ignore (while let __iterator_receiver_71 = tempIterator in HxIterator.hasNext __iterator_receiver_71 do ignore (let entry2 = Obj.magic (let __iterator_receiver_72 = tempIterator in HxIterator.next __iterator_receiver_72) in let __array_receiver_73 = values in let __array_arg_0_74 = entry2 in HxArray.push __array_receiver_73 __array_arg_0_74) done);
-  ignore (let __array_receiver_75 = values in let __array_arg_0_76 = fun left right -> let tempResult = ref (0 : int) in (
-    ignore (if (Obj.magic left : Hxhx_CompilationServerCachedSource.t).key < (Obj.magic right : Hxhx_CompilationServerCachedSource.t).key then let __assign_77 = -1 in (
+  ignore (while let __iterator_receiver_69 = tempIterator in HxIterator.hasNext __iterator_receiver_69 do ignore (let entry2 = Obj.magic (let __iterator_receiver_70 = tempIterator in HxIterator.next __iterator_receiver_70) in let __array_receiver_71 = Obj.magic values in let __array_arg_0_72 = Obj.magic entry2 in HxArray.push __array_receiver_71 __array_arg_0_72) done);
+  ignore (let __array_receiver_73 = Obj.magic values in let __array_arg_0_74 = fun left right -> let tempResult = ref (0 : int) in (
+    ignore (if (Obj.magic left : Hxhx_CompilationServerCachedSource.t).key < (Obj.magic right : Hxhx_CompilationServerCachedSource.t).key then let __assign_75 = -1 in (
+      tempResult := __assign_75;
+      __assign_75
+    ) else if (Obj.magic left : Hxhx_CompilationServerCachedSource.t).key > (Obj.magic right : Hxhx_CompilationServerCachedSource.t).key then let __assign_76 = 1 in (
+      tempResult := __assign_76;
+      __assign_76
+    ) else let __assign_77 = 0 in (
       tempResult := __assign_77;
       __assign_77
-    ) else if (Obj.magic left : Hxhx_CompilationServerCachedSource.t).key > (Obj.magic right : Hxhx_CompilationServerCachedSource.t).key then let __assign_78 = 1 in (
-      tempResult := __assign_78;
-      __assign_78
-    ) else let __assign_79 = 0 in (
-      tempResult := __assign_79;
-      __assign_79
     ));
     !tempResult
-  ) in HxArray.sort __array_receiver_75 __array_arg_0_76);
+  ) in HxArray.sort __array_receiver_73 __array_arg_0_74);
   values
 )
 
 let parsedValues = fun self () -> let values = Obj.magic (HxArray.create ()) in let _this = Obj.magic ((Obj.magic self : t).stagedParsedModules) in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.values_string (Obj.magic _this))) in (
-  ignore (while let __iterator_receiver_80 = tempIterator in HxIterator.hasNext __iterator_receiver_80 do ignore (let entry2 = Obj.magic (let __iterator_receiver_81 = tempIterator in HxIterator.next __iterator_receiver_81) in let __array_receiver_82 = values in let __array_arg_0_83 = entry2 in HxArray.push __array_receiver_82 __array_arg_0_83) done);
-  ignore (let __array_receiver_84 = values in let __array_arg_0_85 = fun left right -> let tempResult = ref (0 : int) in (
-    ignore (if (Obj.magic left : Hxhx_CompilationServerCachedParse.t).key < (Obj.magic right : Hxhx_CompilationServerCachedParse.t).key then let __assign_86 = -1 in (
+  ignore (while let __iterator_receiver_78 = tempIterator in HxIterator.hasNext __iterator_receiver_78 do ignore (let entry2 = Obj.magic (let __iterator_receiver_79 = tempIterator in HxIterator.next __iterator_receiver_79) in let __array_receiver_80 = Obj.magic values in let __array_arg_0_81 = Obj.magic entry2 in HxArray.push __array_receiver_80 __array_arg_0_81) done);
+  ignore (let __array_receiver_82 = Obj.magic values in let __array_arg_0_83 = fun left right -> let tempResult = ref (0 : int) in (
+    ignore (if (Obj.magic left : Hxhx_CompilationServerCachedParse.t).key < (Obj.magic right : Hxhx_CompilationServerCachedParse.t).key then let __assign_84 = -1 in (
+      tempResult := __assign_84;
+      __assign_84
+    ) else if (Obj.magic left : Hxhx_CompilationServerCachedParse.t).key > (Obj.magic right : Hxhx_CompilationServerCachedParse.t).key then let __assign_85 = 1 in (
+      tempResult := __assign_85;
+      __assign_85
+    ) else let __assign_86 = 0 in (
       tempResult := __assign_86;
       __assign_86
-    ) else if (Obj.magic left : Hxhx_CompilationServerCachedParse.t).key > (Obj.magic right : Hxhx_CompilationServerCachedParse.t).key then let __assign_87 = 1 in (
-      tempResult := __assign_87;
-      __assign_87
-    ) else let __assign_88 = 0 in (
-      tempResult := __assign_88;
-      __assign_88
     ));
     !tempResult
-  ) in HxArray.sort __array_receiver_84 __array_arg_0_85);
+  ) in HxArray.sort __array_receiver_82 __array_arg_0_83);
   values
 )
 
 let resolutionValues = fun self () -> let values = Obj.magic (HxArray.create ()) in let _this = Obj.magic ((Obj.magic self : t).stagedResolutions) in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.values_string (Obj.magic _this))) in (
-  ignore (while let __iterator_receiver_89 = tempIterator in HxIterator.hasNext __iterator_receiver_89 do ignore (let entry2 = Obj.magic (let __iterator_receiver_90 = tempIterator in HxIterator.next __iterator_receiver_90) in let __array_receiver_91 = values in let __array_arg_0_92 = entry2 in HxArray.push __array_receiver_91 __array_arg_0_92) done);
-  ignore (let __array_receiver_93 = values in let __array_arg_0_94 = fun left right -> let tempResult = ref (0 : int) in (
-    ignore (if (Obj.magic left : Hxhx_CompilationServerCachedResolution.t).key < (Obj.magic right : Hxhx_CompilationServerCachedResolution.t).key then let __assign_95 = -1 in (
+  ignore (while let __iterator_receiver_87 = tempIterator in HxIterator.hasNext __iterator_receiver_87 do ignore (let entry2 = Obj.magic (let __iterator_receiver_88 = tempIterator in HxIterator.next __iterator_receiver_88) in let __array_receiver_89 = Obj.magic values in let __array_arg_0_90 = Obj.magic entry2 in HxArray.push __array_receiver_89 __array_arg_0_90) done);
+  ignore (let __array_receiver_91 = Obj.magic values in let __array_arg_0_92 = fun left right -> let tempResult = ref (0 : int) in (
+    ignore (if (Obj.magic left : Hxhx_CompilationServerCachedResolution.t).key < (Obj.magic right : Hxhx_CompilationServerCachedResolution.t).key then let __assign_93 = -1 in (
+      tempResult := __assign_93;
+      __assign_93
+    ) else if (Obj.magic left : Hxhx_CompilationServerCachedResolution.t).key > (Obj.magic right : Hxhx_CompilationServerCachedResolution.t).key then let __assign_94 = 1 in (
+      tempResult := __assign_94;
+      __assign_94
+    ) else let __assign_95 = 0 in (
       tempResult := __assign_95;
       __assign_95
-    ) else if (Obj.magic left : Hxhx_CompilationServerCachedResolution.t).key > (Obj.magic right : Hxhx_CompilationServerCachedResolution.t).key then let __assign_96 = 1 in (
-      tempResult := __assign_96;
-      __assign_96
-    ) else let __assign_97 = 0 in (
-      tempResult := __assign_97;
-      __assign_97
     ));
     !tempResult
-  ) in HxArray.sort __array_receiver_93 __array_arg_0_94);
+  ) in HxArray.sort __array_receiver_91 __array_arg_0_92);
   values
 )
 
-let assertParsedIntegrity = fun entry -> ignore (let current = (ParsedModuleIntegrity.revision (Obj.magic ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).parsed)) : string) in if let __string_eq_left_102 = current in let __string_eq_right_103 = (Obj.magic entry : Hxhx_CompilationServerCachedParse.t).integrityRevision in not (HxString.equals __string_eq_left_102 __string_eq_right_103) then HxType.hx_throw_typed_rtti (Obj.repr "hxhx: parsed module changed after the cache recorded it; refusing to reuse it") ["Dynamic"] else ())
+let assertParsedIntegrity = fun entry -> ignore (let current = (ParsedModuleIntegrity.revision (Obj.magic ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).parsed)) : string) in if let __string_eq_left_100 = current in let __string_eq_right_101 = (Obj.magic entry : Hxhx_CompilationServerCachedParse.t).integrityRevision in not (HxString.equals __string_eq_left_100 __string_eq_right_101) then HxType.hx_throw_typed_rtti (Obj.repr "hxhx: parsed module changed after the cache recorded it; refusing to reuse it") ["Dynamic"] else ())
 
 let assertParsedIntegrityOrQuarantine = fun self (entry : Hxhx_CompilationServerCachedParse.t) -> ignore (ignore (try ignore (assertParsedIntegrity (Obj.magic entry)) with
-  | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-  | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-  | HxRuntime.Hx_return __ret_98 -> raise (HxRuntime.Hx_return __ret_98)
-  | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
-  | HxRuntime.Hx_exception (__exn_v_99, __exn_tags_100) -> if HxRuntime.tags_has __exn_tags_100 "String" then let error = (Obj.obj __exn_v_99 : string) in (
+  | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+  | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+  | HxRuntime.Hx_return __ret_96 -> Stdlib.raise (HxRuntime.Hx_return __ret_96)
+  | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
+  | HxRuntime.Hx_exception (__exn_v_97, __exn_tags_98) -> if HxRuntime.tags_has __exn_tags_98 "String" then let error = (Obj.obj __exn_v_97 : string) in (
     ignore error;
     (
       ignore ((Obj.magic self : t).quarantineParsedCallback ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).key : string));
       HxType.hx_throw_typed_rtti (Obj.repr error) ["Dynamic"]
     )
-  ) else HxRuntime.hx_throw_typed __exn_v_99 __exn_tags_100
-  | __exn_101 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let error = (Obj.obj (Obj.repr __exn_101) : string) in (
+  ) else HxRuntime.hx_throw_typed __exn_v_97 __exn_tags_98
+  | __exn_99 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let error = (Obj.obj (Obj.repr __exn_99) : string) in (
     ignore error;
     (
       ignore ((Obj.magic self : t).quarantineParsedCallback ((Obj.magic entry : Hxhx_CompilationServerCachedParse.t).key : string));
       HxType.hx_throw_typed_rtti (Obj.repr error) ["Dynamic"]
     )
-  ) else raise (__exn_101)))
+  ) else Stdlib.raise (__exn_99)))
 
 let prepareFinish = fun self (requestSucceeded : bool) -> ignore (ignore (try ignore ((
   ignore (ensureOpen (Obj.magic self) ());
-  ignore (if not (requestSucceeded) || (Obj.magic self : t).preparedForSuccess then raise (HxRuntime.Hx_return_void) else ());
+  ignore (if not (requestSucceeded) || (Obj.magic self : t).preparedForSuccess then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   let _g = ref 0 in let _g1 = Obj.magic (parsedValues (Obj.magic self) ()) in (
-    ignore (while !_g < HxArray.length _g1 do ignore (let entry = Obj.magic (let __array_read_receiver_57 = _g1 in let __array_read_index_58 = !_g in HxArray.get (Obj.magic __array_read_receiver_57) __array_read_index_58) in (
-      ignore (let __old_59 = !_g in let __new_60 = HxInt.add __old_59 1 in (
-        ignore (_g := __new_60);
-        __new_60
+    ignore (while !_g < HxArray.length _g1 do ignore (let entry = Obj.magic (let __array_read_receiver_55 = _g1 in let __array_read_index_56 = !_g in HxArray.get (Obj.magic __array_read_receiver_55) __array_read_index_56) in (
+      ignore (let __old_57 = !_g in let __new_58 = HxInt.add __old_57 1 in (
+        ignore (_g := __new_58);
+        __new_58
       ));
       assertParsedIntegrityOrQuarantine (Obj.magic self) (Obj.magic entry)
     )) done);
-    let __place_receiver_61 = self in let __place_rhs_62 = true in (
-      (__place_receiver_61 : t).preparedForSuccess <- __place_rhs_62;
-      __place_rhs_62
+    let __place_receiver_59 = self in let __place_rhs_60 = true in (
+      (__place_receiver_59 : t).preparedForSuccess <- __place_rhs_60;
+      __place_rhs_60
     )
   )
 )) with
   | HxRuntime.Hx_return_void -> ()))
 
 let finish = fun self (requestSucceeded : bool) -> ignore (ignore (try ignore ((
-  ignore (if (Obj.magic self : t).finished then raise (HxRuntime.Hx_return_void) else ());
+  ignore (if (Obj.magic self : t).finished then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   ignore (if not (requestSucceeded) then (
     ignore (closeRequest (Obj.magic self) false);
-    raise (HxRuntime.Hx_return_void)
+    Stdlib.raise (HxRuntime.Hx_return_void)
   ) else ());
   ignore (try ignore ((
     ignore (prepareFinish (Obj.magic self) true);
     (Obj.magic self : t).publishCallback (Obj.magic (sourceValues (Obj.magic self) ())) (Obj.magic (parsedValues (Obj.magic self) ())) (Obj.magic (resolutionValues (Obj.magic self) ())) (Obj.magic ((Obj.magic self : t).providerReport))
   )) with
-    | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-    | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-    | HxRuntime.Hx_return __ret_64 -> raise (HxRuntime.Hx_return __ret_64)
-    | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
-    | HxRuntime.Hx_exception (__exn_v_65, __exn_tags_66) -> if true then let error = (if HxRuntime.tags_has __exn_tags_66 "haxe.Exception" then Obj.obj __exn_v_65 else Obj.magic (Haxe_ValueException.create __exn_v_65 (Obj.magic (HxRuntime.hx_null)) __exn_v_65) : Haxe_Exception.t) in (
+    | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+    | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+    | HxRuntime.Hx_return __ret_62 -> Stdlib.raise (HxRuntime.Hx_return __ret_62)
+    | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
+    | HxRuntime.Hx_exception (__exn_v_63, __exn_tags_64) -> if true then let error = (if HxRuntime.tags_has __exn_tags_64 "haxe.Exception" then Obj.obj __exn_v_63 else Obj.magic (Haxe_ValueException.create __exn_v_63 (Obj.magic (HxRuntime.hx_null)) __exn_v_63) : Haxe_Exception.t) in (
       ignore error;
       (
         ignore (closeRequest (Obj.magic self) false);
         HxType.hx_throw_typed_rtti (Obj.repr error) ["Dynamic"]
       )
-    ) else if HxRuntime.tags_has __exn_tags_66 "String" then let error = (Obj.obj __exn_v_65 : string) in (
+    ) else if HxRuntime.tags_has __exn_tags_64 "String" then let error = (Obj.obj __exn_v_63 : string) in (
       ignore error;
       (
         ignore (closeRequest (Obj.magic self) false);
         HxType.hx_throw_typed_rtti (Obj.repr error) ["Dynamic"]
       )
-    ) else HxRuntime.hx_throw_typed __exn_v_65 __exn_tags_66
-    | __exn_67 -> if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_67) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_67) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_67)) : Haxe_Exception.t) in (
+    ) else HxRuntime.hx_throw_typed __exn_v_63 __exn_tags_64
+    | __exn_65 -> if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_65) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_65) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_65)) : Haxe_Exception.t) in (
       ignore error;
       (
         ignore (closeRequest (Obj.magic self) false);
         HxType.hx_throw_typed_rtti (Obj.repr error) ["Dynamic"]
       )
-    ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let error = (Obj.obj (Obj.repr __exn_67) : string) in (
+    ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let error = (Obj.obj (Obj.repr __exn_65) : string) in (
       ignore error;
       (
         ignore (closeRequest (Obj.magic self) false);
         HxType.hx_throw_typed_rtti (Obj.repr error) ["Dynamic"]
       )
-    ) else raise (__exn_67));
+    ) else Stdlib.raise (__exn_65));
   closeRequest (Obj.magic self) true
 )) with
   | HxRuntime.Hx_return_void -> ()))
 
-let assertResolutionMatches = fun entry resolution -> ignore (if (let __string_eq_left_104 = (Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).lookupIdentity in let __string_eq_right_105 = (Obj.magic resolution : CompilerModuleResolution.t).lookupIdentity in not (HxString.equals __string_eq_left_104 __string_eq_right_105)) || (let __string_eq_left_106 = (Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).observationRevision in let __string_eq_right_107 = (Obj.magic resolution : CompilerModuleResolution.t).observationRevision in not (HxString.equals __string_eq_left_106 __string_eq_right_107)) || (let __string_eq_left_108 = (Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).filePath in let __string_eq_right_109 = (Obj.magic resolution : CompilerModuleResolution.t).filePath in not (HxString.equals __string_eq_left_108 __string_eq_right_109)) || (Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).selectedClassPathIndex <> (Obj.magic resolution : CompilerModuleResolution.t).selectedClassPathIndex || (Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).usedSecondaryTypeFallback <> (Obj.magic resolution : CompilerModuleResolution.t).usedSecondaryTypeFallback then HxType.hx_throw_typed_rtti (Obj.repr "hxhx: cached module lookup does not match current filesystem observations") ["Dynamic"] else ())
+let assertResolutionMatches = fun entry resolution -> ignore (if (let __string_eq_left_102 = (Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).lookupIdentity in let __string_eq_right_103 = (Obj.magic resolution : CompilerModuleResolution.t).lookupIdentity in not (HxString.equals __string_eq_left_102 __string_eq_right_103)) || (let __string_eq_left_104 = (Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).observationRevision in let __string_eq_right_105 = (Obj.magic resolution : CompilerModuleResolution.t).observationRevision in not (HxString.equals __string_eq_left_104 __string_eq_right_105)) || (let __string_eq_left_106 = (Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).filePath in let __string_eq_right_107 = (Obj.magic resolution : CompilerModuleResolution.t).filePath in not (HxString.equals __string_eq_left_106 __string_eq_right_107)) || (Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).selectedClassPathIndex <> (Obj.magic resolution : CompilerModuleResolution.t).selectedClassPathIndex || (Obj.magic entry : Hxhx_CompilationServerCachedResolution.t).usedSecondaryTypeFallback <> (Obj.magic resolution : CompilerModuleResolution.t).usedSecondaryTypeFallback then HxType.hx_throw_typed_rtti (Obj.repr "hxhx: cached module lookup does not match current filesystem observations") ["Dynamic"] else ())
 
 let resolveModule = fun self (classPaths : string HxArray.t) (modulePath : string) -> (try (
   ignore (ensureOpen (Obj.magic self) ());
@@ -265,7 +265,7 @@ let resolveModule = fun self (classPaths : string HxArray.t) (modulePath : strin
   ))) : string) in let _this = Obj.magic ((Obj.magic self : t).stagedResolutions) in let tempMaybeCompilationServerCachedResolution = Obj.magic (HxMap.get_string (Obj.magic _this) (key : string)) in let staged = Obj.magic tempMaybeCompilationServerCachedResolution in (
     ignore (if staged != Obj.magic (HxRuntime.hx_null) then (
       ignore (assertResolutionMatches (Obj.magic staged) (Obj.magic resolution));
-      raise (HxRuntime.Hx_return (Obj.repr resolution))
+      Stdlib.raise (HxRuntime.Hx_return (Obj.repr resolution))
     ) else ());
     let cached = Obj.magic ((Obj.magic self : t).findResolutionCallback (key : string)) in (
       ignore (if cached != Obj.magic (HxRuntime.hx_null) then (
@@ -273,7 +273,7 @@ let resolveModule = fun self (classPaths : string HxArray.t) (modulePath : strin
         let _this = Obj.magic ((Obj.magic self : t).stagedResolutions) in (
           ignore (HxMap.set_string (Obj.magic _this) (key : string) cached);
           ignore (CompilerSourceProviderReport.recordResolutionHit (Obj.magic ((Obj.magic self : t).providerReport)) ());
-          raise (HxRuntime.Hx_return (Obj.repr resolution))
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr resolution))
         )
       ) else ());
       ignore (CompilerSourceProviderReport.recordResolutionMiss (Obj.magic ((Obj.magic self : t).providerReport)) ((Obj.magic self : t).resolutionMissReasonCallback ((Obj.magic resolution : CompilerModuleResolution.t).lookupIdentity : string) (key : string) ((Obj.magic resolution : CompilerModuleResolution.t).filePath : string) : string));
@@ -297,118 +297,99 @@ let resolveModule = fun self (classPaths : string HxArray.t) (modulePath : strin
 
 let resolveModuleFile = fun self (classPaths : string HxArray.t) (modulePath : string) -> (Obj.magic (resolveModule (Obj.magic self) (Obj.magic classPaths) (modulePath : string)) : CompilerModuleResolution.t).filePath
 
-let normalizePath = fun (path : string) -> (let __call_arg_0_110 = HxFileSystem.absolutePath (path : string) in Haxe_io_Path.normalize __call_arg_0_110 : string)
+let normalizePath = fun (path : string) -> (try (
+  ignore (if CompilerBundledSources.owns (path : string) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr path)) else ());
+  let __call_arg_0_108 = HxFileSystem.absolutePath (path : string) in Haxe_io_Path.normalize __call_arg_0_108
+) with
+  | HxRuntime.Hx_return __ret_109 -> (Obj.obj __ret_109 : string) : string)
 
 let readSource = fun self (filePath : string) -> (try (
   ignore (ensureOpen (Obj.magic self) ());
-  ignore (if filePath == HxString.hx_null_string || (let __string_receiver_28 = filePath in HxString.length __string_receiver_28) = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  ignore (if not (FilesystemCompilerSourceProvider.isFile (Obj.magic ((Obj.magic self : t).filesystem)) (filePath : string)) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let tempBytes = ref (Obj.magic (HxRuntime.hx_null) : HxBytes.t) in (
-    ignore (try let __assign_33 = Obj.magic (let __bytes_producer_arg_0_34 = HxFile.getBytes (filePath : string) in HxBytes.ofData __bytes_producer_arg_0_34 ()) in (
-      tempBytes := __assign_33;
-      __assign_33
-    ) with
-      | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-      | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-      | HxRuntime.Hx_return __ret_29 -> raise (HxRuntime.Hx_return __ret_29)
-      | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
-      | HxRuntime.Hx_exception (__exn_v_30, __exn_tags_31) -> if HxRuntime.tags_has __exn_tags_31 "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_30) : Haxe_io_Error.error) in (
-        ignore _hx;
-        raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
-      ) else if HxRuntime.tags_has __exn_tags_31 "String" then let _hx = (Obj.obj __exn_v_30 : string) in (
-        ignore _hx;
-        raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
-      ) else HxRuntime.hx_throw_typed __exn_v_30 __exn_tags_31
-      | __exn_32 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_32)) : Haxe_io_Error.error) in (
-        ignore _hx;
-        raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
-      ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_32) : string) in (
-        ignore _hx;
-        raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
-      ) else raise (__exn_32));
-    let bytes = Obj.magic (!tempBytes) in (
-      ignore (CompilerSourceProviderReport.recordSourceBytesRead (Obj.magic ((Obj.magic self : t).providerReport)) (let __bytes_receiver_35 = bytes in HxBytes.length __bytes_receiver_35));
-      let logicalPath = let __call_arg_0_36 = filePath in normalizePath __call_arg_0_36 in let source = (let __bytes_receiver_37 = bytes in let __bytes_arg_0_38 = 0 in let __bytes_arg_1_39 = let __bytes_receiver_40 = bytes in HxBytes.length __bytes_receiver_40 in HxBytes.getString __bytes_receiver_37 __bytes_arg_0_38 __bytes_arg_1_39 () : string) in let contentRevision = (CompilerCacheIdentity.encode (Obj.magic (let __arr_41 = HxArray.create () in (
-        ignore (HxArray.push __arr_41 "source-content-v2");
-        ignore (HxArray.push __arr_41 source);
-        __arr_41
-      ))) : string) in let key = (CompilerCacheIdentity.encode (Obj.magic (let __arr_42 = HxArray.create () in (
-        ignore (HxArray.push __arr_42 "source-entry-v2");
-        ignore (HxArray.push __arr_42 logicalPath);
-        ignore (HxArray.push __arr_42 contentRevision);
-        __arr_42
-      ))) : string) in let _this = Obj.magic ((Obj.magic self : t).stagedSources) in let tempMaybeCompilationServerCachedSource = Obj.magic (HxMap.get_string (Obj.magic _this) (key : string)) in let staged = Obj.magic tempMaybeCompilationServerCachedSource in (
-        ignore (if staged != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ((Obj.magic staged : Hxhx_CompilationServerCachedSource.t).source))) else ());
-        let cached = Obj.magic ((Obj.magic self : t).findSourceCallback (key : string)) in (
-          ignore (if cached != Obj.magic (HxRuntime.hx_null) then let _this = Obj.magic ((Obj.magic self : t).stagedSources) in (
-            ignore (HxMap.set_string (Obj.magic _this) (key : string) cached);
-            ignore (CompilerSourceProviderReport.recordSourceHit (Obj.magic ((Obj.magic self : t).providerReport)) ());
-            raise (HxRuntime.Hx_return (Obj.repr ((Obj.magic cached : Hxhx_CompilationServerCachedSource.t).source)))
-          ) else ());
-          ignore (CompilerSourceProviderReport.recordSourceMiss (Obj.magic ((Obj.magic self : t).providerReport)) ((Obj.magic self : t).sourceMissReasonCallback (logicalPath : string) (contentRevision : string) : string));
-          let retainedBytesEstimate = HxInt.add (HxInt.add (let __bytes_receiver_43 = bytes in HxBytes.length __bytes_receiver_43) (HxInt.mul (let __string_receiver_44 = key in HxString.length __string_receiver_44) 2)) 256 in let _this = Obj.magic ((Obj.magic self : t).stagedSources) in let value = Hxhx_CompilationServerCachedSource.create (key : string) (logicalPath : string) (contentRevision : string) (source : string) retainedBytesEstimate in (
-            ignore (HxMap.set_string (Obj.magic _this) (key : string) value);
-            source
-          )
+  ignore (if filePath == HxString.hx_null_string || (let __string_receiver_28 = filePath in HxString.length __string_receiver_28) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  let bytes = Obj.magic (FilesystemCompilerSourceProvider.readBytes (Obj.magic ((Obj.magic self : t).filesystem)) (filePath : string)) in (
+    ignore (if bytes == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+    ignore (CompilerSourceProviderReport.recordSourceBytesRead (Obj.magic ((Obj.magic self : t).providerReport)) (let __bytes_receiver_input_29 = bytes in let __bytes_receiver_30 = if HxRuntime.is_null (Obj.repr __bytes_receiver_input_29) then HxRuntime.hx_throw_typed (Obj.repr "Null Access") ["String"; "Dynamic"] else __bytes_receiver_input_29 in HxBytes.length __bytes_receiver_30));
+    let logicalPath = let __call_arg_0_31 = filePath in normalizePath __call_arg_0_31 in let source = (let __bytes_receiver_input_32 = bytes in let __bytes_receiver_33 = if HxRuntime.is_null (Obj.repr __bytes_receiver_input_32) then HxRuntime.hx_throw_typed (Obj.repr "Null Access") ["String"; "Dynamic"] else __bytes_receiver_input_32 in let __bytes_arg_0_34 = 0 in let __bytes_arg_1_35 = let __bytes_receiver_input_36 = bytes in let __bytes_receiver_37 = if HxRuntime.is_null (Obj.repr __bytes_receiver_input_36) then HxRuntime.hx_throw_typed (Obj.repr "Null Access") ["String"; "Dynamic"] else __bytes_receiver_input_36 in HxBytes.length __bytes_receiver_37 in HxBytes.getString __bytes_receiver_33 __bytes_arg_0_34 __bytes_arg_1_35 () : string) in let contentRevision = (CompilerCacheIdentity.encode (Obj.magic (let __arr_38 = HxArray.create () in (
+      ignore (HxArray.push __arr_38 "source-content-v2");
+      ignore (HxArray.push __arr_38 source);
+      __arr_38
+    ))) : string) in let key = (CompilerCacheIdentity.encode (Obj.magic (let __arr_39 = HxArray.create () in (
+      ignore (HxArray.push __arr_39 "source-entry-v2");
+      ignore (HxArray.push __arr_39 logicalPath);
+      ignore (HxArray.push __arr_39 contentRevision);
+      __arr_39
+    ))) : string) in let _this = Obj.magic ((Obj.magic self : t).stagedSources) in let tempMaybeCompilationServerCachedSource = Obj.magic (HxMap.get_string (Obj.magic _this) (key : string)) in let staged = Obj.magic tempMaybeCompilationServerCachedSource in (
+      ignore (if staged != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr ((Obj.magic staged : Hxhx_CompilationServerCachedSource.t).source))) else ());
+      let cached = Obj.magic ((Obj.magic self : t).findSourceCallback (key : string)) in (
+        ignore (if cached != Obj.magic (HxRuntime.hx_null) then let _this = Obj.magic ((Obj.magic self : t).stagedSources) in (
+          ignore (HxMap.set_string (Obj.magic _this) (key : string) cached);
+          ignore (CompilerSourceProviderReport.recordSourceHit (Obj.magic ((Obj.magic self : t).providerReport)) ());
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr ((Obj.magic cached : Hxhx_CompilationServerCachedSource.t).source)))
+        ) else ());
+        ignore (CompilerSourceProviderReport.recordSourceMiss (Obj.magic ((Obj.magic self : t).providerReport)) ((Obj.magic self : t).sourceMissReasonCallback (logicalPath : string) (contentRevision : string) : string));
+        let retainedBytesEstimate = HxInt.add (HxInt.add (let __bytes_receiver_input_40 = bytes in let __bytes_receiver_41 = if HxRuntime.is_null (Obj.repr __bytes_receiver_input_40) then HxRuntime.hx_throw_typed (Obj.repr "Null Access") ["String"; "Dynamic"] else __bytes_receiver_input_40 in HxBytes.length __bytes_receiver_41) (HxInt.mul (let __string_receiver_42 = key in HxString.length __string_receiver_42) 2)) 256 in let _this = Obj.magic ((Obj.magic self : t).stagedSources) in let value = Hxhx_CompilationServerCachedSource.create (key : string) (logicalPath : string) (contentRevision : string) (source : string) retainedBytesEstimate in (
+          ignore (HxMap.set_string (Obj.magic _this) (key : string) value);
+          source
         )
       )
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_45 -> (Obj.obj __ret_45 : string) : string)
+  | HxRuntime.Hx_return __ret_43 -> (Obj.obj __ret_43 : string) : string)
 
-let parseFilteredSource = fun self (filteredSource : string) (filePath : string) -> (try (
+let parseFilteredSource = fun self (input : Obj.t) -> (try (
   ignore (ensureOpen (Obj.magic self) ());
-  let logicalPath = let __call_arg_0_46 = filePath in normalizePath __call_arg_0_46 in let parserConfiguration = ParserStage.cacheConfigurationRevision () in let inputRevision = (CompilerCacheIdentity.encode (Obj.magic (let __arr_47 = HxArray.create () in (
-    ignore (HxArray.push __arr_47 "parser-input-v2");
-    ignore (HxArray.push __arr_47 logicalPath);
-    ignore (HxArray.push __arr_47 parserConfiguration);
-    ignore (HxArray.push __arr_47 filteredSource);
-    __arr_47
+  let logicalPath = let __call_arg_0_44 = Obj.obj (HxAnon.get input "filePath") in normalizePath __call_arg_0_44 in let parserConfiguration = ParserStage.cacheConfigurationRevision () in let inputRevision = (CompilerCacheIdentity.encode (Obj.magic (let __arr_45 = HxArray.create () in (
+    ignore (HxArray.push __arr_45 "parser-input-v3");
+    ignore (HxArray.push __arr_45 logicalPath);
+    ignore (HxArray.push __arr_45 parserConfiguration);
+    ignore (HxArray.push __arr_45 (Obj.obj (HxAnon.get input "filteredSource")));
+    ignore (HxArray.push __arr_45 (Obj.obj (HxAnon.get input "originalSource")));
+    __arr_45
   ))) : string) in let _this = Obj.magic ((Obj.magic self : t).stagedParsedModules) in let tempMaybeCompilationServerCachedParse = Obj.magic (HxMap.get_string (Obj.magic _this) (inputRevision : string)) in let staged = Obj.magic tempMaybeCompilationServerCachedParse in (
     ignore (if staged != Obj.magic (HxRuntime.hx_null) then (
       ignore (assertParsedIntegrity (Obj.magic staged));
-      raise (HxRuntime.Hx_return (Obj.repr ((Obj.magic staged : Hxhx_CompilationServerCachedParse.t).parsed)))
+      Stdlib.raise (HxRuntime.Hx_return (Obj.repr ((Obj.magic staged : Hxhx_CompilationServerCachedParse.t).parsed)))
     ) else ());
     let cached = Obj.magic ((Obj.magic self : t).findParsedCallback (inputRevision : string)) in (
       ignore (if cached != Obj.magic (HxRuntime.hx_null) then (
         ignore (try ignore (assertParsedIntegrity (Obj.magic cached)) with
-          | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-          | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-          | HxRuntime.Hx_return __ret_48 -> raise (HxRuntime.Hx_return __ret_48)
-          | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
-          | HxRuntime.Hx_exception (__exn_v_49, __exn_tags_50) -> if HxRuntime.tags_has __exn_tags_50 "String" then let error = (Obj.obj __exn_v_49 : string) in (
+          | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+          | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+          | HxRuntime.Hx_return __ret_46 -> Stdlib.raise (HxRuntime.Hx_return __ret_46)
+          | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
+          | HxRuntime.Hx_exception (__exn_v_47, __exn_tags_48) -> if HxRuntime.tags_has __exn_tags_48 "String" then let error = (Obj.obj __exn_v_47 : string) in (
             ignore error;
             (
               ignore ((Obj.magic self : t).quarantineParsedCallback (inputRevision : string));
               HxType.hx_throw_typed_rtti (Obj.repr error) ["Dynamic"]
             )
-          ) else HxRuntime.hx_throw_typed __exn_v_49 __exn_tags_50
-          | __exn_51 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let error = (Obj.obj (Obj.repr __exn_51) : string) in (
+          ) else HxRuntime.hx_throw_typed __exn_v_47 __exn_tags_48
+          | __exn_49 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let error = (Obj.obj (Obj.repr __exn_49) : string) in (
             ignore error;
             (
               ignore ((Obj.magic self : t).quarantineParsedCallback (inputRevision : string));
               HxType.hx_throw_typed_rtti (Obj.repr error) ["Dynamic"]
             )
-          ) else raise (__exn_51));
+          ) else Stdlib.raise (__exn_49));
         let _this = Obj.magic ((Obj.magic self : t).stagedParsedModules) in (
           ignore (HxMap.set_string (Obj.magic _this) (inputRevision : string) cached);
           ignore (CompilerSourceProviderReport.recordParserHit (Obj.magic ((Obj.magic self : t).providerReport)) ());
-          raise (HxRuntime.Hx_return (Obj.repr ((Obj.magic cached : Hxhx_CompilationServerCachedParse.t).parsed)))
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr ((Obj.magic cached : Hxhx_CompilationServerCachedParse.t).parsed)))
         )
       ) else ());
       ignore (CompilerSourceProviderReport.recordParserMiss (Obj.magic ((Obj.magic self : t).providerReport)) ((Obj.magic self : t).parserMissReasonCallback (logicalPath : string) (inputRevision : string) : string));
-      let parsed = Obj.magic (FilesystemCompilerSourceProvider.parseFilteredSource (Obj.magic ((Obj.magic self : t).filesystem)) (filteredSource : string) (filePath : string)) in let integrityRevision = (ParsedModuleIntegrity.revision (Obj.magic parsed) : string) in let retainedBytesEstimate = HxInt.add (HxInt.add (HxInt.add (HxInt.mul (let __bytes_receiver_52 = let __bytes_producer_arg_0_53 = filteredSource in HxBytes.ofString __bytes_producer_arg_0_53 () in HxBytes.length __bytes_receiver_52) 2) (HxInt.mul (let __string_receiver_54 = inputRevision in HxString.length __string_receiver_54) 2)) (HxInt.mul (let __string_receiver_55 = integrityRevision in HxString.length __string_receiver_55) 2)) 1024 in let _this = Obj.magic ((Obj.magic self : t).stagedParsedModules) in let value = Obj.magic (Hxhx_CompilationServerCachedParse.create (inputRevision : string) (logicalPath : string) (inputRevision : string) (Obj.magic parsed) (integrityRevision : string) retainedBytesEstimate) in (
+      let parsed = Obj.magic (FilesystemCompilerSourceProvider.parseFilteredSource (Obj.magic ((Obj.magic self : t).filesystem)) input) in let integrityRevision = (ParsedModuleIntegrity.revision (Obj.magic parsed) : string) in let retainedBytesEstimate = HxInt.add (HxInt.add (HxInt.add (HxInt.mul (let __bytes_receiver_50 = let __bytes_producer_arg_0_51 = Obj.obj (HxAnon.get input "filteredSource") in HxBytes.ofString __bytes_producer_arg_0_51 () in HxBytes.length __bytes_receiver_50) 2) (HxInt.mul (let __string_receiver_52 = inputRevision in HxString.length __string_receiver_52) 2)) (HxInt.mul (let __string_receiver_53 = integrityRevision in HxString.length __string_receiver_53) 2)) 1024 in let _this = Obj.magic ((Obj.magic self : t).stagedParsedModules) in let value = Obj.magic (Hxhx_CompilationServerCachedParse.create (inputRevision : string) (logicalPath : string) (inputRevision : string) (Obj.magic parsed) (integrityRevision : string) retainedBytesEstimate) in (
         ignore (HxMap.set_string (Obj.magic _this) (inputRevision : string) value);
         parsed
       )
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_56 -> (Obj.obj __ret_56 : ParsedModule.t) : ParsedModule.t)
+  | HxRuntime.Hx_return __ret_54 -> (Obj.obj __ret_54 : ParsedModule.t) : ParsedModule.t)
 
 let provider = fun self () -> (
-  ignore (if (Obj.magic self : t).providerView == Obj.magic (HxRuntime.hx_null) then ignore (let __assign_20 = Obj.magic (CompilerSourceProvider.fromCallbacks (fun a0 a1 -> resolveModule self a0 a1) (fun a0 -> readSource self a0) (fun a0 a1 -> parseFilteredSource self a0 a1) (fun a0 -> readDirectory self a0) (fun a0 -> isFile self a0) (fun a0 -> prepareFinish self a0) (fun a0 -> finish self a0) (fun () -> report self ())) in (
+  ignore (if (Obj.magic self : t).providerView == Obj.magic (HxRuntime.hx_null) then ignore (let __assign_20 = Obj.magic (CompilerSourceProvider.fromCallbacks (fun a0 a1 -> resolveModule self a0 a1) (fun a0 -> readSource self a0) (fun a0 -> parseFilteredSource self a0) (fun a0 -> readDirectory self a0) (fun a0 -> isFile self a0) (fun a0 -> prepareFinish self a0) (fun a0 -> finish self a0) (fun () -> report self ())) in (
     (Obj.magic self : t).providerView <- __assign_20;
     __assign_20
   )) else ());

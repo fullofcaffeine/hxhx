@@ -29,6 +29,37 @@ let hx_null : Obj.t = Obj.repr (ref 0)
 let is_null (v : Obj.t) : bool =
   v == hx_null
 
+(* Managed allocations keep one private header for their whole lifetime.
+   Haxe selects the allocation and payload; this boundary supplies only native
+   identity. Counter wrap can cause hash collisions, never key equality.
+   The marker and counter are lexical values, not exported runtime state. *)
+let identity_header, is_identity_header, identity_payload, identity_hash =
+  let marker : Obj.t = Obj.repr (ref 0) in
+  let counter = Atomic.make 0 in
+  let is_header (header : Obj.t) : bool =
+    Obj.is_block header && Obj.tag header = 0 && Obj.size header = 3
+    && Obj.field header 0 == marker && Obj.is_int (Obj.field header 1)
+  in
+  let create (payload : Obj.t) : Obj.t =
+    let stamp = Atomic.fetch_and_add counter 1 in
+    let header = Obj.new_block 0 3 in
+    Obj.set_field header 0 marker;
+    Obj.set_field header 1 (Obj.repr stamp);
+    Obj.set_field header 2 payload;
+    header
+  in
+  let payload (header : Obj.t) : Obj.t =
+    if is_header header then Obj.field header 2 else hx_null
+  in
+  let hash (key : Obj.t) : int =
+    if Obj.is_block key && Obj.tag key = 0 && Obj.size key > 0 then
+      let header = Obj.field key 0 in
+      if is_header header then (Obj.obj (Obj.field header 1) : int) land max_int
+      else 0
+    else 0
+  in
+  create, is_header, payload, hash
+
 (* Boxing for booleans stored as `Obj.t`.
 
    Why:

@@ -77,16 +77,11 @@ if [ "$PORTABLE_UPDATE_LOWERING_GOLDENS" != "0" ] && [ "$PORTABLE_UPDATE_LOWERIN
   exit 2
 fi
 
-# Golden updates are deliberately sequential. Each replacement is written only
-# after two compiler runs produced byte-identical semantic reports.
-if [ "$PORTABLE_UPDATE_LOWERING_GOLDENS" = "1" ] && [ "$PORTABLE_PARALLEL_WORKER" != "1" ] && [ "$PORTABLE_JOBS" -gt 1 ]; then
-  echo "Lowering-golden update mode is running fixtures sequentially."
-  PORTABLE_JOBS=1
-fi
-
 # Each fixture owns its output directory and compiler process, so the complete
 # corpus can use a bounded worker pool safely. A worker re-enters this script
-# with one fixture selected and parallel dispatch disabled.
+# with one fixture selected and parallel dispatch disabled. Golden updates use
+# the same isolation: each worker completes its two sequential compiler runs
+# and checks exact report equality before replacing only its own expectation.
 if [ "$PORTABLE_PARALLEL_WORKER" != "1" ] && [ "$PORTABLE_JOBS" -gt 1 ]; then
   if ! command -v node >/dev/null 2>&1; then
     echo "PORTABLE_JOBS=$PORTABLE_JOBS requires Node.js for bounded fixture scheduling." >&2

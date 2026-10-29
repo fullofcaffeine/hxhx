@@ -1,0 +1,22 @@
+[
+  {"name":"assigned", "body":"this = 3;", "accepted":true},
+  {"name":"unassigned", "body":"var value = 3;", "accepted":false},
+  {"name":"both_branches", "body":"if (flag) this = 3; else this = 4;", "accepted":true},
+  {"name":"one_branch", "body":"if (flag) this = 3;", "accepted":false},
+  {"name":"throw_branch", "body":"if (flag) this = 3; else throw \"stop\";", "accepted":true},
+  {"name":"always_throw", "body":"throw \"stop\";", "accepted":true},
+  {"name":"early_return", "body":"if (flag) return; this = 3;", "accepted":false},
+  {"name":"read_before_assignment", "body":"this = this + 1;", "accepted":false},
+  {"name":"while_may_skip", "body":"while (flag) { this = 3; break; }", "accepted":false},
+  {"name":"do_assign", "body":"do { this = 3; } while (flag);", "accepted":true},
+  {"name":"infinite_assign_break", "body":"while (true) { this = 3; break; }", "accepted":false},
+  {"name":"do_early_break", "body":"do { if (flag) break; this = 3; } while (false);", "accepted":true},
+  {"name":"try_missing_catch", "body":"try { this = 3; } catch (error:Dynamic) {}", "accepted":false},
+  {"name":"try_throwing_catch", "body":"try { this = 3; } catch (error:Dynamic) { throw error; }", "accepted":true},
+  {"name":"try_both_assign", "body":"try { this = 3; } catch (error:Dynamic) { this = 4; }", "accepted":true},
+  {"name":"switch_both", "body":"switch (flag) { case true: this = 3; case false: this = 4; }", "accepted":true},
+  {"name":"short_circuit", "body":"flag && ((this = 3) == 3);", "accepted":true},
+  {"name":"ternary_both", "body":"flag ? (this = 3) : (this = 4);", "accepted":true},
+  {"name":"capture_before_assignment", "body":"var read = function():Int { return this; }; this = 3;", "accepted":true},
+  {"name":"capture_after_assignment", "body":"this = 3; var read = function():Int { return this; };", "accepted":true}
+]

@@ -1,4 +1,5 @@
 class Reflect:
+    _hx_class_name = "Reflect"
     @staticmethod
     def field(obj, name):
         if obj is None:
@@ -17,7 +18,10 @@ class Reflect:
 
     @staticmethod
     def isObject(value):
-        return value is not None and not callable(value) and not isinstance(value, (bool, int, float))
+        if value is None:
+            return False
+        # Haxe class objects are objects even though Python classes are callable.
+        return isinstance(value, type) or (not callable(value) and not isinstance(value, (bool, int, float)))
 
     @staticmethod
     def compare(left, right):

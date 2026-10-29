@@ -54,7 +54,7 @@ class M14Stage3MacroPrinterReturnTypeIntegrationTest {
 			final parsed = ParserStage.parse(src, printerHx);
 			final typed = TyperStage.typeModule(parsed);
 			final expanded = MacroStage.expandProgram([typed], []);
-			EmitterStage.emitToDir(expanded, outDir, false, false);
+			EmitterStage.emitToDir(expanded, outDir, false);
 
 			final printerMl = haxe.io.Path.join([outDir, 'Haxe_macro_Printer.ml']);
 			assertTrue(FileSystem.exists(printerMl), 'Expected Haxe_macro_Printer.ml in emitted output.');

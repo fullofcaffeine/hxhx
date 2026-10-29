@@ -1,0 +1,9 @@
+p:
+p:a
+p:a,b
+[]
+[a]
+[a,b]
+count=0 first=none total=0
+count=1 first=4 total=4
+count=3 first=1 total=6

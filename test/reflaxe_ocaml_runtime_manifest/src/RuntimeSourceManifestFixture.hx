@@ -92,9 +92,23 @@ class RuntimeSourceManifestFixture {
 	static function testValidManifest(runtimeDirectory:String):Void {
 		final first = RuntimeSourceManifest.load(runtimeDirectory);
 		final second = RuntimeSourceManifest.load(runtimeDirectory);
-		assertTrue(first.modules.length == 31, "the locked catalog should own all 31 runtime modules");
+		assertTrue(first.modules.length == 32, "the locked catalog should own all 32 runtime modules");
 		assertTrue(first.revision == second.revision, "unchanged runtime sources should have one deterministic revision");
 		assertTrue(first.revision.startsWith("sha256:"), "the runtime revision should identify its digest algorithm");
+		final dispatchClosure = RuntimeSourceManifest.resolveClosure(first, ["HxMethodDispatch"], "portable", false);
+		assertArrayEquals([
+			"HxAnon",
+			"HxArray",
+			"HxEnum",
+			"HxIterator",
+			"HxMethodDispatch",
+			"HxRuntime",
+			"HxString",
+			"HxType"
+		], [for (entry in dispatchClosure) entry.module],
+			"method dispatch should include its exact runtime dependencies");
+		final dispatchModules = dispatchClosure.filter(entry -> entry.module == "HxMethodDispatch");
+		assertArrayEquals(["threads"], dispatchModules[0].duneLibraries, "concurrent method registration requires the native threads library");
 		final dynamicSource = File.getContent(Path.join([runtimeDirectory, "HxDynamic.ml"]));
 		assertTrue(dynamicSource.contains("Stdlib.List.rev"),
 			"the Dynamic runtime should keep OCaml List operations stable when generated code defines a List module");
@@ -124,8 +138,8 @@ class RuntimeSourceManifestFixture {
 		],
 			[for (entry in dynamicClosure) entry.module],
 			"Dynamic text behavior should receive the anonymous-value and class-registry runtime owners it calls");
-		assertTrue(RuntimeSourceManifest.fullRoots(first, "portable", false).length == 26,
-			"application builds should include the new Dynamic owner and exclude the eight compiler-tooling modules");
+		assertTrue(RuntimeSourceManifest.fullRoots(first, "portable", false).length == 27,
+			"application builds should include all 27 application modules and exclude the five tooling modules");
 	}
 
 	static function testChangedSource(runtimeDirectory:String, root:String):Void {

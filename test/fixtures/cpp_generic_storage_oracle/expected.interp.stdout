@@ -1,0 +1,13 @@
+same-class=true
+class-value=true
+int-unset=true
+string-unset=true
+plain-int=null
+stored-unset-int=null
+returned-unset-int=null
+int-set=7
+string-set=word
+leaf-box=true
+leaf-class=true
+leaf-unset=true
+middle-super=true

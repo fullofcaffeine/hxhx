@@ -84,6 +84,73 @@ class OcamlStandardMapCarrierContract {
 	public static inline final PAIR_PRODUCER_PROOF_CLAIM = "The final typed iterator initializer is the exact target-authored NativeHxMapIterator.of_array call around NativeHxMap.pairs_string, pairs_int, or pairs_object. The nested pair helper's Array<{key:K,value:V}> result determines the key and value types before field syntax. A shared native symbol, an arbitrary Iterator of anonymous objects, anonymous shape, or the key/value field names alone do not satisfy this proof.";
 
 	#if macro
+	/** Identifies a canonical standard Map family without granting runtime syntax authority. */
+	public static function kindForType(type:Type):Null<OcamlStandardMapCarrierKind> {
+		final selected = select(type);
+		return selected == null ? null : selected.kind;
+	}
+
+	/**
+		Returns the parameters of an exact standard Map storage type for export checks.
+
+		The declaration projector must validate each parameter before asking the
+		normal mapper for a checked runtime reference. Classification alone does not
+		authorize private target syntax or an unspecified key/value type.
+	**/
+	public static function declarationParameters(type:Type):Null<Array<Type>> {
+		final selected = select(type);
+		if (selected == null || selected.keyType == null || selected.valueType == null)
+			return null;
+		return switch (selected.kind) {
+			case StringKeys, IntKeys: [selected.valueType];
+			case ObjectIdentityKeys: [selected.keyType, selected.valueType];
+		};
+	}
+
+	/**
+		A direct map result needs Obj.repr when the declared result uses nullable storage.
+		Both sides must select the same canonical map family and applied key/value types.
+		Already nullable values and unrelated externs do not cross this boundary.
+	 */
+	public static function nullableResultNeedsBox(result:Type, value:Type):Bool {
+		final expected = switch (followAliases(result)) {
+			case TAbstract(reference, [inner]) if (reference.get().pack.length == 0 && reference.get().name == "Null"):
+				select(followAliases(inner));
+			case _: null;
+		};
+		final actual = select(followAliases(value));
+		return expected != null
+			&& actual != null
+			&& expected.kind == actual.kind
+			&& expected.keyType != null
+			&& expected.valueType != null
+			&& semanticTypeId(expected.keyType) == semanticTypeId(actual.keyType)
+			&& semanticTypeId(expected.valueType) == semanticTypeId(actual.valueType);
+	}
+
+	/**
+		Selects nullable Map recovery into the same exact native Map type.
+
+		This is the inverse of result boxing. Recovery preserves the original map
+		and the null sentinel: a required Haxe reference parameter may still receive
+		null. Different key/value types and nonstandard declarations are excluded.
+	**/
+	public static function nullableValueNeedsUnbox(destination:Type, value:Type):Bool {
+		return nullableResultNeedsBox(value, destination);
+	}
+
+	/** Ordinary TypeTools.follow erases Null around references; this boundary must retain it. */
+	static function followAliases(type:Type):Type {
+		return switch type {
+			case TType(reference, parameters):
+				final alias = reference.get();
+				followAliases(TypeTools.applyTypeParameters(alias.type, alias.params, parameters));
+			case TMono(reference): reference.get() == null ? type : followAliases(reference.get());
+			case TLazy(load): followAliases(load());
+			case _: type;
+		};
+	}
+
 	/**
 		Returns the standard carrier kind, or `null` for a non-Map declaration.
 	**/

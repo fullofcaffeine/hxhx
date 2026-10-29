@@ -22,7 +22,10 @@ cat >"$FAKE_HAXE" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-printf '%s\n' "$*" >"${FAKE_HAXE_TRACE:?missing FAKE_HAXE_TRACE}"
+printf '%s\n' "$*" >>"${FAKE_HAXE_TRACE:?missing FAKE_HAXE_TRACE}"
+if [ "${FAKE_HAXE_EXIT:-0}" != 0 ]; then
+  exit "$FAKE_HAXE_EXIT"
+fi
 output_dir=""
 while [ "$#" -gt 0 ]; do
   if [ "$1" = "-D" ] && [ "$#" -ge 2 ]; then
@@ -76,6 +79,47 @@ expected="$CUSTOM_OUT/_build/default/current_source_fast.bc"
   exit 1
 }
 [ -f "$expected" ]
+
+# An emission error must preserve its status and must not regenerate in another mode.
+: >"$TRACE_FILE"
+set +e
+HXHX_FORCE_STAGE0=1 HAXE_BIN="$FAKE_HAXE" FAKE_HAXE_TRACE="$TRACE_FILE" FAKE_HAXE_EXIT=42 \
+HXHX_STAGE0_OUTPUT_DIR="$CUSTOM_OUT" HXHX_STAGE0_OCAML_BUILD=native \
+HXHX_STAGE0_HEARTBEAT=0 HXHX_STAGE0_FAILFAST_SECS=0 \
+bash "$ROOT/scripts/hxhx/build-hxhx.sh" >"$TEST_TMP/emission-error.output" 2>&1
+emission_code="$?"
+set -e
+[ "$emission_code" -eq 42 ] && [ "$(wc -l <"$TRACE_FILE" | tr -d ' ')" = 1 ] || {
+  cat "$TEST_TMP/emission-error.output" >&2
+  echo "Emission failure must stop after one invocation and retain its exit status" >&2
+  exit 1
+}
+
+# Only the native target fails. The bytecode target must reuse that emission.
+REAL_DUNE="$(command -v dune)"
+export REAL_DUNE
+mkdir -p "$TEST_TMP/bin"
+cat >"$TEST_TMP/bin/dune" <<'DUNE_WRAPPER'
+#!/usr/bin/env bash
+set -euo pipefail
+for arg in "$@"; do
+  case "$arg" in *.exe) exit 19 ;; esac
+done
+exec "$REAL_DUNE" "$@"
+DUNE_WRAPPER
+chmod +x "$TEST_TMP/bin/dune"
+: >"$TRACE_FILE"
+PATH="$TEST_TMP/bin:$PATH" HXHX_FORCE_STAGE0=1 HAXE_BIN="$FAKE_HAXE" \
+FAKE_HAXE_TRACE="$TRACE_FILE" HXHX_STAGE0_OUTPUT_DIR="$CUSTOM_OUT" HXHX_STAGE0_OCAML_BUILD=native \
+HXHX_STAGE0_HEARTBEAT=0 HXHX_STAGE0_FAILFAST_SECS=0 HXHX_BOOTSTRAP_HEARTBEAT=0 \
+bash "$ROOT/scripts/hxhx/build-hxhx.sh" >"$TEST_TMP/native-fallback.output" 2>&1
+[ "$(wc -l <"$TRACE_FILE" | tr -d ' ')" = 1 ] && [ -f "$expected" ] || {
+  cat "$TEST_TMP/native-fallback.output" >&2
+  echo "Native compilation fallback must reuse one successful emission" >&2
+  exit 1
+}
+[ "$(tail -n 1 "$TEST_TMP/native-fallback.output")" = "$expected" ]
+grep -Fq 'native compilation failed; retrying bytecode from emitted source' "$TEST_TMP/native-fallback.output"
 
 set +e
 HXHX_FORCE_STAGE0=1 \

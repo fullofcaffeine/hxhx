@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable path : string; mutable kind : HxModuleDire
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxModuleDirective"; path = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "HxModuleDirective"; path = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null } : t)
 
 let getPath = fun directive -> (Obj.magic directive : t).path
 
@@ -14,61 +14,61 @@ let getKind = fun directive -> (Obj.magic directive : t).kind
 
 let getImportedLocalName = fun directive -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (let _g = Obj.magic ((Obj.magic directive : t).kind) in match _g with
-    | HxModuleDirectiveKind.ImportNormal -> let dot = let __string_receiver_44 = (Obj.magic directive : t).path in let __string_argument_0_45 = "." in HxString.lastIndexOf __string_receiver_44 __string_argument_0_45 (HxString.length __string_receiver_44) in if dot < 0 then let __assign_46 = Obj.magic ((Obj.magic directive : t).path : string) in (
-      tempResult := __assign_46;
-      __assign_46
-    ) else let __assign_47 = Obj.magic (let __string_receiver_48 = (Obj.magic directive : t).path in let __string_argument_0_49 = HxInt.add dot 1 in HxString.substr __string_receiver_48 __string_argument_0_49 (-1) : string) in (
+    | HxModuleDirectiveKind.ImportNormal -> let dot = let __string_receiver_45 = (Obj.magic directive : t).path in let __string_argument_0_46 = "." in HxString.lastIndexOf __string_receiver_45 __string_argument_0_46 (HxString.length __string_receiver_45) in if dot < 0 then let __assign_47 = Obj.magic ((Obj.magic directive : t).path : string) in (
       tempResult := __assign_47;
       __assign_47
+    ) else let __assign_48 = Obj.magic (let __string_receiver_49 = (Obj.magic directive : t).path in let __string_argument_0_50 = HxInt.add dot 1 in HxString.substr __string_receiver_49 __string_argument_0_50 (-1) : string) in (
+      tempResult := __assign_48;
+      __assign_48
     )
-    | HxModuleDirectiveKind.ImportAlias _p0 -> let _g2 = (_p0 : string) in let alias = (_g2 : string) in let __assign_50 = Obj.magic (alias : string) in (
-      tempResult := __assign_50;
-      __assign_50
-    )
-    | HxModuleDirectiveKind.ImportAll | HxModuleDirectiveKind.Using -> let __assign_51 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    | HxModuleDirectiveKind.ImportAlias _p0 -> let _g2 = (_p0 : string) in let alias = (_g2 : string) in let __assign_51 = Obj.magic (alias : string) in (
       tempResult := __assign_51;
       __assign_51
+    )
+    | HxModuleDirectiveKind.ImportAll | HxModuleDirectiveKind.Using -> let __assign_52 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempResult := __assign_52;
+      __assign_52
     ));
   !tempResult
 )
 
 let isImport = fun directive -> let tempResult = ref (false : bool) in (
   ignore (let _g = Obj.magic ((Obj.magic directive : t).kind) in match _g with
-    | HxModuleDirectiveKind.ImportNormal -> let __assign_52 = true in (
-      tempResult := __assign_52;
-      __assign_52
+    | HxModuleDirectiveKind.ImportNormal -> let __assign_53 = true in (
+      tempResult := __assign_53;
+      __assign_53
     )
     | HxModuleDirectiveKind.ImportAlias _p0 -> (
       ignore _p0;
-      let __assign_53 = true in (
-        tempResult := __assign_53;
-        __assign_53
+      let __assign_54 = true in (
+        tempResult := __assign_54;
+        __assign_54
       )
     )
-    | HxModuleDirectiveKind.ImportAll -> let __assign_54 = true in (
-      tempResult := __assign_54;
-      __assign_54
-    )
-    | HxModuleDirectiveKind.Using -> let __assign_55 = false in (
+    | HxModuleDirectiveKind.ImportAll -> let __assign_55 = true in (
       tempResult := __assign_55;
       __assign_55
+    )
+    | HxModuleDirectiveKind.Using -> let __assign_56 = false in (
+      tempResult := __assign_56;
+      __assign_56
     ));
   !tempResult
 )
 
 let isBootstrapIdentifier = fun (value : string) -> (try (
-  ignore (if value == HxString.hx_null_string || (let __string_receiver_56 = value in HxString.length __string_receiver_56) = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-  let _g = ref 0 in let _g1 = let __string_receiver_57 = value in HxString.length __string_receiver_57 in (
-    ignore (while !_g < _g1 do ignore (let index = let __old_58 = !_g in let __new_59 = HxInt.add __old_58 1 in (
-      ignore (_g := __new_59);
-      __old_58
-    ) in let code = let __string_receiver_60 = value in let __string_argument_0_61 = index in HxString.charCodeAt __string_receiver_60 __string_argument_0_61 in let letter = (let __nullable_62 = code in let __nullable_63 = 65 in if __nullable_62 == HxRuntime.hx_null then false else Obj.obj __nullable_62 >= __nullable_63) && (let __nullable_64 = code in let __nullable_65 = 90 in if __nullable_64 == HxRuntime.hx_null then false else Obj.obj __nullable_64 <= __nullable_65) || (let __nullable_66 = code in let __nullable_67 = 97 in if __nullable_66 == HxRuntime.hx_null then false else Obj.obj __nullable_66 >= __nullable_67) && (let __nullable_68 = code in let __nullable_69 = 122 in if __nullable_68 == HxRuntime.hx_null then false else Obj.obj __nullable_68 <= __nullable_69) || (let __nullable_70 = code in if __nullable_70 == HxRuntime.hx_null then false else Obj.obj __nullable_70 = 95) in if not (letter) && not (index > 0 && (let __nullable_71 = code in let __nullable_72 = 48 in if __nullable_71 == HxRuntime.hx_null then false else Obj.obj __nullable_71 >= __nullable_72) && (let __nullable_73 = code in let __nullable_74 = 57 in if __nullable_73 == HxRuntime.hx_null then false else Obj.obj __nullable_73 <= __nullable_74)) then raise (HxRuntime.Hx_return (Obj.repr false)) else ()) done);
+  ignore (if value == HxString.hx_null_string || (let __string_receiver_57 = value in HxString.length __string_receiver_57) = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  let _g = ref 0 in let _g1 = let __string_receiver_58 = value in HxString.length __string_receiver_58 in (
+    ignore (while !_g < _g1 do ignore (let index = let __old_59 = !_g in let __new_60 = HxInt.add __old_59 1 in (
+      ignore (_g := __new_60);
+      __old_59
+    ) in let code = let __string_receiver_61 = value in let __string_argument_0_62 = index in HxString.charCodeAt __string_receiver_61 __string_argument_0_62 in let letter = (let __nullable_63 = code in let __nullable_64 = 65 in if __nullable_63 == HxRuntime.hx_null then false else Obj.obj __nullable_63 >= __nullable_64) && (let __nullable_65 = code in let __nullable_66 = 90 in if __nullable_65 == HxRuntime.hx_null then false else Obj.obj __nullable_65 <= __nullable_66) || (let __nullable_67 = code in let __nullable_68 = 97 in if __nullable_67 == HxRuntime.hx_null then false else Obj.obj __nullable_67 >= __nullable_68) && (let __nullable_69 = code in let __nullable_70 = 122 in if __nullable_69 == HxRuntime.hx_null then false else Obj.obj __nullable_69 <= __nullable_70) || (let __nullable_71 = code in if __nullable_71 == HxRuntime.hx_null then false else Obj.obj __nullable_71 = 95) in if not (letter) && not (index > 0 && (let __nullable_72 = code in let __nullable_73 = 48 in if __nullable_72 == HxRuntime.hx_null then false else Obj.obj __nullable_72 >= __nullable_73) && (let __nullable_74 = code in let __nullable_75 = 57 in if __nullable_74 == HxRuntime.hx_null then false else Obj.obj __nullable_74 <= __nullable_75)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ()) done);
     true
   )
 ) with
-  | HxRuntime.Hx_return __ret_75 -> (Obj.obj __ret_75 : bool) : bool)
+  | HxRuntime.Hx_return __ret_76 -> (Obj.obj __ret_76 : bool) : bool)
 
-let create = fun path2 kind2 -> let self = ({ __hx_type = HxType.class_ "HxModuleDirective"; path = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun path2 kind2 -> let self = ({ __hx_type = HxType.instance_marker "HxModuleDirective"; path = HxString.hx_null_string; kind = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore (let tempString = ref (HxString.hx_null_string : string) in (
     ignore (if path2 == HxString.hx_null_string then let __assign_1 = "" in (
       tempString := __assign_1;
@@ -115,7 +115,7 @@ let aliasImport = fun path2 alias -> let tempString = ref (HxString.hx_null_stri
   ));
   let normalizedAlias = !tempString in (
     ignore (if (let __string_receiver_38 = normalizedAlias in HxString.length __string_receiver_38) = 0 || (let __string_eq_left_39 = alias in let __string_eq_right_40 = normalizedAlias in not (HxString.equals __string_eq_left_39 __string_eq_right_40)) || (let __string_receiver_41 = normalizedAlias in let __string_argument_0_42 = "." in HxString.indexOf __string_receiver_41 __string_argument_0_42 0) >= 0 || not (let __call_arg_0_43 = normalizedAlias in isBootstrapIdentifier __call_arg_0_43) then HxType.hx_throw_typed_rtti (Obj.repr "aliased import must name its local alias") ["Dynamic"] else ());
-    create (path2 : string) (Obj.magic (HxModuleDirectiveKind.ImportAlias (normalizedAlias : string)))
+    create (path2 : string) (Obj.magic (let __enum_arg_44 = (normalizedAlias : string) in HxModuleDirectiveKind.ImportAlias (Stdlib.Sys.opaque_identity __enum_arg_44)))
   )
 )
 
@@ -125,21 +125,21 @@ let usingDirective = fun path2 -> create (path2 : string) (Obj.magic (HxModuleDi
 
 let canonicalIdentity = fun directive -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (let _g = Obj.magic ((Obj.magic directive : t).kind) in match _g with
-    | HxModuleDirectiveKind.ImportNormal -> let __assign_76 = let __string_part_77 = "import-normal:" in let __string_part_78 = HxString.toStdString ((Obj.magic directive : t).path) in __string_part_77 ^ __string_part_78 in (
-      tempResult := __assign_76;
-      __assign_76
+    | HxModuleDirectiveKind.ImportNormal -> let __assign_77 = let __string_part_78 = "import-normal:" in let __string_part_79 = HxString.toStdString ((Obj.magic directive : t).path) in __string_part_78 ^ __string_part_79 in (
+      tempResult := __assign_77;
+      __assign_77
     )
-    | HxModuleDirectiveKind.ImportAlias _p0 -> let _g2 = (_p0 : string) in let alias = (_g2 : string) in let __assign_79 = let __string_part_80 = "import-alias:" in let __string_part_81 = HxString.toStdString ((Obj.magic directive : t).path) in let __string_part_82 = ":" in let __string_part_83 = HxString.toStdString alias in ((__string_part_80 ^ __string_part_81) ^ __string_part_82) ^ __string_part_83 in (
-      tempResult := __assign_79;
-      __assign_79
+    | HxModuleDirectiveKind.ImportAlias _p0 -> let _g2 = (_p0 : string) in let alias = (_g2 : string) in let __assign_80 = let __string_part_81 = "import-alias:" in let __string_part_82 = HxString.toStdString ((Obj.magic directive : t).path) in let __string_part_83 = ":" in let __string_part_84 = HxString.toStdString alias in ((__string_part_81 ^ __string_part_82) ^ __string_part_83) ^ __string_part_84 in (
+      tempResult := __assign_80;
+      __assign_80
     )
-    | HxModuleDirectiveKind.ImportAll -> let __assign_84 = let __string_part_85 = "import-all:" in let __string_part_86 = HxString.toStdString ((Obj.magic directive : t).path) in __string_part_85 ^ __string_part_86 in (
-      tempResult := __assign_84;
-      __assign_84
+    | HxModuleDirectiveKind.ImportAll -> let __assign_85 = let __string_part_86 = "import-all:" in let __string_part_87 = HxString.toStdString ((Obj.magic directive : t).path) in __string_part_86 ^ __string_part_87 in (
+      tempResult := __assign_85;
+      __assign_85
     )
-    | HxModuleDirectiveKind.Using -> let __assign_87 = let __string_part_88 = "using:" in let __string_part_89 = HxString.toStdString ((Obj.magic directive : t).path) in __string_part_88 ^ __string_part_89 in (
-      tempResult := __assign_87;
-      __assign_87
+    | HxModuleDirectiveKind.Using -> let __assign_88 = let __string_part_89 = "using:" in let __string_part_90 = HxString.toStdString ((Obj.magic directive : t).path) in __string_part_89 ^ __string_part_90 in (
+      tempResult := __assign_88;
+      __assign_88
     ));
   !tempResult
 )

@@ -1,8 +1,8 @@
 (* hxhx Stage3 provider for haxe.Int64.
 
    Haxe Int64 values use signed 64-bit, two's-complement arithmetic. OCaml's
-   Stdlib.Int64 has the same value width and wrapping behavior, so this shim
-   keeps values in that native carrier instead of approximating them with the
+   Stdlib.Int64 has the same value width and wrapping behavior, so every
+   operation computes on that native type instead of approximating it with the
    platform-sized OCaml [int] type.
 
    Shared Haxe typing has already selected exact declarations such as
@@ -12,28 +12,67 @@
 
    This remains a Stage3 bootstrap provider rather than the final shared
    reflaxe.ocaml Int64 representation. Its public functions are deliberately
-   typed, contain no unchecked casts, and preserve the supported Haxe 4.3.7
-   arithmetic behavior while the two host routes converge on one target core. *)
+   typed and preserve the supported Haxe 4.3.7 arithmetic behavior while the
+   two host routes converge on one target core. The only Obj reads are in the
+   Dynamic stringifier and each follows a matching runtime-shape check. *)
 
-type t = Stdlib.Int64.t
+(* Haxe 4.3.7 models one Int64 as a reference to a mutable two-word object.
+   Copying a reference shares the object, so a private set_low/set_high call is
+   visible through every alias, while [copy] and every arithmetic operation
+   return a new object. The record below has the same field order as the
+   reflaxe.ocaml generated [Haxe_Int64.___int64_t] record: a per-allocation
+   identity header naming [haxe._Int64.___Int64], then the signed high and low
+   32-bit words. Arithmetic still runs on [Stdlib.Int64.t] so wrapping matches
+   two's-complement Haxe semantics; [to_native] and [of_native] convert at the
+   edge of each operation. *)
+type t = {
+  __hx_type : Obj.t;
+  mutable high : int;
+  mutable low : int;
+}
 
 type divmod = {
   quotient : t;
   modulus : t;
 }
 
+let class_name = "haxe._Int64.___Int64"
+
 let low_word_mask = 0xffff_ffffL
 
+(* Keep one stored word inside the signed Haxe Int32 range, wrapping modulo
+   2^32 as [make] already does for its arguments. *)
+let signed_word (value : int) : int =
+  Stdlib.Int32.to_int (Stdlib.Int32.of_int value)
+
+let of_words (high : int) (low : int) : t =
+  {
+    __hx_type = HxType.instance_marker class_name;
+    high = signed_word high;
+    low = signed_word low;
+  }
+
+let to_native (value : t) : Stdlib.Int64.t =
+  let high_bits = Stdlib.Int64.shift_left (Stdlib.Int64.of_int value.high) 32 in
+  let low_bits = Stdlib.Int64.logand (Stdlib.Int64.of_int value.low) low_word_mask in
+  Stdlib.Int64.logor high_bits low_bits
+
+let of_native (value : Stdlib.Int64.t) : t =
+  of_words
+    (Stdlib.Int64.to_int (Stdlib.Int64.shift_right value 32))
+    (Stdlib.Int32.to_int (Stdlib.Int64.to_int32 value))
+
 let of_haxe_int (value : int) : t =
-  Stdlib.Int64.of_int32 (Stdlib.Int64.to_int32 (Stdlib.Int64.of_int value))
+  of_words (if signed_word value < 0 then -1 else 0) value
 
 let make (high : int) (low : int) : t =
-  let high_bits = Stdlib.Int64.shift_left (Stdlib.Int64.of_int high) 32 in
-  let low_bits = Stdlib.Int64.logand (Stdlib.Int64.of_int low) low_word_mask in
-  Stdlib.Int64.logor high_bits low_bits
+  of_words high low
 
 let ofInt (value : int) : t =
   of_haxe_int value
+
+let copy (value : t) : t =
+  of_words value.high value.low
 
 let fromFloat (value : float) : t =
   if
@@ -43,72 +82,122 @@ let fromFloat (value : float) : t =
   then
     failwith "Overflow"
   else
-    Stdlib.Int64.of_float value
+    of_native (Stdlib.Int64.of_float value)
 
 let parseString (value : string) : t =
-  Stdlib.Int64.of_string (Stdlib.String.trim value)
+  of_native (Stdlib.Int64.of_string (Stdlib.String.trim value))
 
 let toInt (value : t) : int =
-  let narrowed = Stdlib.Int64.to_int32 value in
-  if Stdlib.Int64.of_int32 narrowed <> value then
+  let high = value.high in
+  let low = value.low in
+  if high <> (if low < 0 then -1 else 0) then
     failwith "Overflow"
   else
-    Stdlib.Int32.to_int narrowed
+    low
 
 let toStr (value : t) : string =
-  Stdlib.Int64.to_string value
+  Stdlib.Int64.to_string (to_native value)
 
 let getHigh (value : t) : int =
-  Stdlib.Int64.to_int (Stdlib.Int64.shift_right value 32)
+  value.high
 
 let getLow (value : t) : int =
-  Stdlib.Int32.to_int (Stdlib.Int64.to_int32 value)
+  value.low
+
+(* Shared Haxe typing selects these declarations for .high and .low.
+   They expose the same signed words as the public helpers above; no source
+   property lookup or numeric policy is inferred by this native boundary. *)
+let get_high = getHigh
+let get_low = getLow
+
+(* Shared Haxe typing selects these private setters for code such as
+   haxe.io.FPHelper. Like Haxe's [this.high = x], they change the existing
+   object in place, so aliases observe the new word and copies do not. The
+   result is the stored word, matching the value of a Haxe assignment. *)
+let set_high (value : t) (word : int) : int =
+  let stored = signed_word word in
+  value.high <- stored;
+  stored
+
+let set_low (value : t) (word : int) : int =
+  let stored = signed_word word in
+  value.low <- stored;
+  stored
+
+(* Haxe's Int64 object prints itself through Int64.toStr, so Std.string and
+   Dynamic printing show the decimal value. HxDynamic calls this adapter only
+   after the identity header names [class_name]; the layout check below keeps
+   each Obj.obj read behind a matching runtime-shape check. *)
+let () =
+  HxDynamic.register_class_stringifier class_name (fun (dynamic : Obj.t) ->
+      if
+        Obj.is_block dynamic && Obj.tag dynamic = 0 && Obj.size dynamic = 3
+        && Obj.is_int (Obj.field dynamic 1)
+        && Obj.is_int (Obj.field dynamic 2)
+      then
+        toStr
+          (of_words (Obj.obj (Obj.field dynamic 1) : int)
+             (Obj.obj (Obj.field dynamic 2) : int))
+      else
+        class_name)
+
+(* The operations below read each operand once, compute on the native 64-bit
+   carrier, and allocate a new object for every Int64 result. None of them
+   mutates an operand, matching Haxe's value-producing Int64 operators. *)
+let lift1 (operation : Stdlib.Int64.t -> Stdlib.Int64.t) (value : t) : t =
+  of_native (operation (to_native value))
+
+let lift2 (operation : Stdlib.Int64.t -> Stdlib.Int64.t -> Stdlib.Int64.t)
+    (left : t) (right : t) : t =
+  of_native (operation (to_native left) (to_native right))
 
 let isNeg (value : t) : bool =
-  Stdlib.Int64.compare value 0L < 0
+  value.high < 0
 
 let isZero (value : t) : bool =
-  value = 0L
+  value.high = 0 && value.low = 0
 
 let compare (left : t) (right : t) : int =
-  Stdlib.Int64.compare left right
+  Stdlib.Int64.compare (to_native left) (to_native right)
 
 let ucompare (left : t) (right : t) : int =
   Stdlib.Int64.compare
-    (Stdlib.Int64.logxor left Stdlib.Int64.min_int)
-    (Stdlib.Int64.logxor right Stdlib.Int64.min_int)
+    (Stdlib.Int64.logxor (to_native left) Stdlib.Int64.min_int)
+    (Stdlib.Int64.logxor (to_native right) Stdlib.Int64.min_int)
 
 let add (left : t) (right : t) : t =
-  Stdlib.Int64.add left right
+  lift2 Stdlib.Int64.add left right
 
 let addInt (value : t) (amount : int) : t =
-  Stdlib.Int64.add value (of_haxe_int amount)
+  add value (of_haxe_int amount)
 
 let sub (left : t) (right : t) : t =
-  Stdlib.Int64.sub left right
+  lift2 Stdlib.Int64.sub left right
 
 let subInt (value : t) (amount : int) : t =
-  Stdlib.Int64.sub value (of_haxe_int amount)
+  sub value (of_haxe_int amount)
 
 let intSub (value : int) (amount : t) : t =
-  Stdlib.Int64.sub (of_haxe_int value) amount
+  sub (of_haxe_int value) amount
 
 let mul (left : t) (right : t) : t =
-  Stdlib.Int64.mul left right
+  lift2 Stdlib.Int64.mul left right
 
 let mulInt (value : t) (amount : int) : t =
-  Stdlib.Int64.mul value (of_haxe_int amount)
+  mul value (of_haxe_int amount)
 
 let neg (value : t) : t =
-  Stdlib.Int64.neg value
+  lift1 Stdlib.Int64.neg value
 
 let divMod (dividend : t) (divisor : t) : divmod =
-  if divisor = 0L then
+  if isZero divisor then
     failwith "divide by zero"
   else
+    let native_dividend = to_native dividend in
+    let native_divisor = to_native divisor in
     {
-      quotient = Stdlib.Int64.div dividend divisor;
-      modulus = Stdlib.Int64.rem dividend divisor;
+      quotient = of_native (Stdlib.Int64.div native_dividend native_divisor);
+      modulus = of_native (Stdlib.Int64.rem native_dividend native_divisor);
     }
 
 let div (left : t) (right : t) : t =
@@ -132,17 +221,18 @@ let modInt (value : t) (divisor : int) : t =
 let intMod (value : int) (divisor : t) : t =
   of_haxe_int (toInt (remainder (of_haxe_int value) divisor))
 
+(* Haxe compares Int64 values by their 64 bits, never by object identity. *)
 let eq (left : t) (right : t) : bool =
-  left = right
+  left.high = right.high && left.low = right.low
 
 let eqInt (value : t) (other : int) : bool =
-  value = of_haxe_int other
+  eq value (of_haxe_int other)
 
 let neq (left : t) (right : t) : bool =
-  left <> right
+  not (eq left right)
 
 let neqInt (value : t) (other : int) : bool =
-  value <> of_haxe_int other
+  not (eqInt value other)
 
 let lt (left : t) (right : t) : bool =
   compare left right < 0
@@ -181,25 +271,29 @@ let intGte (value : int) (other : t) : bool =
   gte (of_haxe_int value) other
 
 let complement (value : t) : t =
-  Stdlib.Int64.lognot value
+  lift1 Stdlib.Int64.lognot value
 
 let and_ (left : t) (right : t) : t =
-  Stdlib.Int64.logand left right
+  lift2 Stdlib.Int64.logand left right
 
 let or_ (left : t) (right : t) : t =
-  Stdlib.Int64.logor left right
+  lift2 Stdlib.Int64.logor left right
 
 let xor (left : t) (right : t) : t =
-  Stdlib.Int64.logxor left right
+  lift2 Stdlib.Int64.logxor left right
 
 let shl (value : t) (amount : int) : t =
-  Stdlib.Int64.shift_left value (amount land 63)
+  lift1 (fun native -> Stdlib.Int64.shift_left native (amount land 63)) value
 
 let shr (value : t) (amount : int) : t =
-  Stdlib.Int64.shift_right value (amount land 63)
+  lift1 (fun native -> Stdlib.Int64.shift_right native (amount land 63)) value
 
 let ushr (value : t) (amount : int) : t =
-  Stdlib.Int64.shift_right_logical value (amount land 63)
+  lift1 (fun native -> Stdlib.Int64.shift_right_logical native (amount land 63)) value
 
-let isInt64 (_value : Obj.t) : bool =
-  true
+(* Upstream answers Std.isOfType(value, ___Int64). The identity header written
+   by [of_words] is the runtime class fact this check reads. *)
+let isInt64 (value : Obj.t) : bool =
+  let value_class = HxType.getClass value in
+  (not (HxRuntime.is_null value_class))
+  && HxType.getClassName value_class = class_name

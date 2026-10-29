@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.cpp.CppNativeBackend" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.cpp.CppNativeBackend" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.cpp.CppNativeBackend" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.cpp.CppNativeBackend" } : t)
 
 let capabilities = fun () -> let __anonymous_value_1 = HxAnon.create () in (
   let __anonymous_field_value_2 = true in ignore (HxAnon.set __anonymous_value_1 "supportsNoEmit" (HxRuntime.box_bool __anonymous_field_value_2));
@@ -23,7 +23,7 @@ let capabilities = fun () -> let __anonymous_value_1 = HxAnon.create () in (
 let descriptor = fun () -> let __anon_5 = HxAnon.create () in (
   ignore (HxAnon.set __anon_5 "id" (Obj.repr "cpp-native"));
   ignore (HxAnon.set __anon_5 "implId" (Obj.repr "builtin/cpp-native-source-mvp"));
-  ignore (HxAnon.set __anon_5 "abiVersion" (Obj.repr 1));
+  ignore (HxAnon.set __anon_5 "abiVersion" (Obj.repr 2));
   ignore (HxAnon.set __anon_5 "priority" (Obj.repr 120));
   ignore (HxAnon.set __anon_5 "description" (Obj.repr "Native C++ source backend (MVP)"));
   ignore (HxAnon.set __anon_5 "capabilities" (capabilities ()));

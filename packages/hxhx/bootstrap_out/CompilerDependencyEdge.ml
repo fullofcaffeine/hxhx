@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable consumerModule : string; mutable providerM
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerDependencyEdge"; consumerModule = HxString.hx_null_string; providerModule = HxString.hx_null_string; phase = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; factIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerDependencyEdge"; consumerModule = HxString.hx_null_string; providerModule = HxString.hx_null_string; phase = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; factIdentity = HxString.hx_null_string } : t)
 
 let canonicalKey = fun self () -> CompilerCacheIdentity.encode (Obj.magic (let __arr_12 = HxArray.create () in (
   ignore (HxArray.push __arr_12 "compiler-dependency-edge-v2");
@@ -31,7 +31,7 @@ let normalize = fun (value : string) -> (let tempResult = ref (HxString.hx_null_
   !tempResult
 ) : string)
 
-let create = fun consumerModule2 providerModule2 phase2 kind2 factIdentity2 -> let self = ({ __hx_type = HxType.class_ "CompilerDependencyEdge"; consumerModule = HxString.hx_null_string; providerModule = HxString.hx_null_string; phase = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; factIdentity = HxString.hx_null_string } : t) in (
+let create = fun consumerModule2 providerModule2 phase2 kind2 factIdentity2 -> let self = ({ __hx_type = HxType.instance_marker "CompilerDependencyEdge"; consumerModule = HxString.hx_null_string; providerModule = HxString.hx_null_string; phase = Obj.magic HxRuntime.hx_null; kind = Obj.magic HxRuntime.hx_null; factIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (let __call_arg_0_2 = consumerModule2 in normalize __call_arg_0_2 : string) in (
       (Obj.magic self : t).consumerModule <- __assign_1;

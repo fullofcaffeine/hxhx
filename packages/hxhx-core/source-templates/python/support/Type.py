@@ -1,45 +1,23 @@
 class Type:
-    @staticmethod
-    def resolveClass(name):
-        if name is None:
-            return None
-        return globals().get(str(name).split(".")[-1], None)
-
+    _hx_class_name = "Type"
     @staticmethod
     def getClass(value):
-        if value is None:
+        # Class objects and anonymous records have no Haxe class.
+        if value is None or isinstance(value, type) or type(value).__name__ == "HxAnon":
             return None
-        return value if isinstance(value, type) else value.__class__
+        return value.__class__
 
     @staticmethod
     def getClassName(cls):
         if cls is None:
             return None
-        target = cls if isinstance(cls, type) else Type.getClass(cls)
-        return getattr(target, "__name__", str(target))
-
-    @staticmethod
-    def getInstanceFields(cls):
-        if cls is None:
-            return Array()
-        fields = []
-        for current in reversed(getattr(cls, "__mro__", [cls])):
-            for name, value in getattr(current, "__dict__", {}).items():
-                if name.startswith("__") or isinstance(value, (staticmethod, classmethod)):
-                    continue
-                if name not in fields:
-                    fields.append(name)
-        return Array(fields)
-
-    @staticmethod
-    def getClassFields(cls):
-        if cls is None:
-            return Array()
-        fields = []
-        for current in reversed(getattr(cls, "__mro__", [cls])):
-            for name, value in getattr(current, "__dict__", {}).items():
-                if name.startswith("__") or not isinstance(value, (staticmethod, classmethod)):
-                    continue
-                if name not in fields:
-                    fields.append(name)
-        return Array(fields)
+        target = cls if isinstance(cls, type) else cls.__class__
+        # Emitted and runtime classes carry their full dotted Haxe path.
+        name = getattr(target, "_hx_class_name", None)
+        if name is not None:
+            return name
+        if target is str:
+            return "String"
+        if target is list:
+            return "Array"
+        raise TypeError("hxhx Python has no Haxe class name for " + str(target))

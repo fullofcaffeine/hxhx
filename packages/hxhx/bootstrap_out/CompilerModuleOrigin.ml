@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable requestedModulePath : string; mutable sour
 
 let __reflaxe_ocaml__ = ()
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerModuleOrigin"; requestedModulePath = HxString.hx_null_string; sourceModulePath = HxString.hx_null_string; selectedClassPathIndex = 0; usedSecondaryTypeFallback = false; isSynthetic = false; sourceIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerModuleOrigin"; requestedModulePath = HxString.hx_null_string; sourceModulePath = HxString.hx_null_string; selectedClassPathIndex = 0; usedSecondaryTypeFallback = false; isSynthetic = false; sourceIdentity = HxString.hx_null_string } : t)
 
 let getSourceIdentity = fun self () -> ((self : t).sourceIdentity : string)
 
@@ -32,32 +32,32 @@ let describeLookup = fun self () -> (let tempString = ref (HxString.hx_null_stri
     tempString := __assign_30;
     __assign_30
   ));
-  let __string_part_31 = HxString.toStdString ((self : t).requestedModulePath) in let __string_part_32 = "->" in let __string_part_33 = HxString.toStdString (describeSource (Obj.magic self) ()) in let __string_part_34 = HxString.toStdString (!tempString) in ((__string_part_31 ^ __string_part_32) ^ __string_part_33) ^ __string_part_34
+  let __string_part_32 = HxString.toStdString ((self : t).requestedModulePath) in let __string_part_33 = "->" in let __string_part_34 = HxString.toStdString (let __call_receiver_31 = self in describeSource __call_receiver_31 ()) in let __string_part_35 = HxString.toStdString (!tempString) in ((__string_part_32 ^ __string_part_33) ^ __string_part_34) ^ __string_part_35
 ) : string)
 
-let parentModule = fun (modulePath : string) -> (let dot = let __string_receiver_39 = modulePath in let __string_argument_0_40 = "." in HxString.lastIndexOf __string_receiver_39 __string_argument_0_40 (HxString.length __string_receiver_39) in let tempResult = ref (HxString.hx_null_string : string) in (
-  ignore (if dot < 0 then let __assign_41 = ("" : string) in (
-    tempResult := __assign_41;
-    __assign_41
-  ) else let __assign_42 = (let __string_receiver_43 = modulePath in let __string_argument_0_44 = 0 in let __string_argument_1_45 = dot in HxString.substr __string_receiver_43 __string_argument_0_44 __string_argument_1_45 : string) in (
+let parentModule = fun (modulePath : string) -> (let dot = let __string_receiver_40 = modulePath in let __string_argument_0_41 = "." in HxString.lastIndexOf __string_receiver_40 __string_argument_0_41 (HxString.length __string_receiver_40) in let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if dot < 0 then let __assign_42 = ("" : string) in (
     tempResult := __assign_42;
     __assign_42
+  ) else let __assign_43 = (let __string_receiver_44 = modulePath in let __string_argument_0_45 = 0 in let __string_argument_1_46 = dot in HxString.substr __string_receiver_44 __string_argument_0_45 __string_argument_1_46 : string) in (
+    tempResult := __assign_43;
+    __assign_43
   ));
   !tempResult
 ) : string)
 
 let normalize = fun (value : string) -> (let tempResult = ref (HxString.hx_null_string : string) in (
-  ignore (if value == HxString.hx_null_string then let __assign_46 = "" in (
-    tempResult := __assign_46;
-    __assign_46
-  ) else let __assign_47 = let __call_arg_0_48 = value in StringTools.trim __call_arg_0_48 in (
+  ignore (if value == HxString.hx_null_string then let __assign_47 = "" in (
     tempResult := __assign_47;
     __assign_47
+  ) else let __assign_48 = let __call_arg_0_49 = value in StringTools.trim __call_arg_0_49 in (
+    tempResult := __assign_48;
+    __assign_48
   ));
   !tempResult
 ) : string)
 
-let create = fun requestedModulePath2 selectedClassPathIndex2 usedSecondaryTypeFallback2 isSynthetic2 -> let self = ({ __hx_type = HxType.class_ "CompilerModuleOrigin"; requestedModulePath = HxString.hx_null_string; sourceModulePath = HxString.hx_null_string; selectedClassPathIndex = 0; usedSecondaryTypeFallback = false; isSynthetic = false; sourceIdentity = HxString.hx_null_string } : t) in (
+let create = fun requestedModulePath2 selectedClassPathIndex2 usedSecondaryTypeFallback2 isSynthetic2 -> let self = ({ __hx_type = HxType.instance_marker "CompilerModuleOrigin"; requestedModulePath = HxString.hx_null_string; sourceModulePath = HxString.hx_null_string; selectedClassPathIndex = 0; usedSecondaryTypeFallback = false; isSynthetic = false; sourceIdentity = HxString.hx_null_string } : t) in (
   ignore (let isSynthetic2 = if Obj.repr isSynthetic2 == HxRuntime.hx_null then false else isSynthetic2 in ignore ((
     ignore (let __assign_1 = (let __call_arg_0_2 = requestedModulePath2 in normalize __call_arg_0_2 : string) in (
       (Obj.magic self : t).requestedModulePath <- __assign_1;
@@ -119,13 +119,13 @@ let create = fun requestedModulePath2 selectedClassPathIndex2 usedSecondaryTypeF
 
 let direct = fun (modulePath : string) (selectedClassPathIndex2 : int) -> (create (modulePath : string) selectedClassPathIndex2 false (Obj.magic (HxRuntime.hx_null)) : t)
 
-let synthetic = fun (modulePath : string) -> (let normalized = let __call_arg_0_35 = modulePath in normalize __call_arg_0_35 in let tempString = ref (HxString.hx_null_string : string) in (
-  ignore (if (let __string_receiver_36 = normalized in HxString.length __string_receiver_36) = 0 then let __assign_37 = "<synthetic-module>" in (
-    tempString := __assign_37;
-    __assign_37
-  ) else let __assign_38 = normalized in (
+let synthetic = fun (modulePath : string) -> (let normalized = let __call_arg_0_36 = modulePath in normalize __call_arg_0_36 in let tempString = ref (HxString.hx_null_string : string) in (
+  ignore (if (let __string_receiver_37 = normalized in HxString.length __string_receiver_37) = 0 then let __assign_38 = "<synthetic-module>" in (
     tempString := __assign_38;
     __assign_38
+  ) else let __assign_39 = normalized in (
+    tempString := __assign_39;
+    __assign_39
   ));
   let safeModule = !tempString in create (safeModule : string) 0 false true
 ) : t)

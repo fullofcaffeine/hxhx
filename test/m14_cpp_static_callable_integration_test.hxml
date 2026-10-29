@@ -1,0 +1,9 @@
+-cp test
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-main M14CppStaticCallableIntegrationTest
+--interp
+--next
+test/m14_cpp_bound_method_ownership_test.hxml
+--next
+test/m14_cpp_bound_callable_integration_test.hxml

@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.BackendPluginManifestResolver" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.BackendPluginManifestResolver" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.BackendPluginManifestResolver" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.BackendPluginManifestResolver" } : t)
 
 let normalizePath = fun manifestPath -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (if manifestPath == HxString.hx_null_string then let __assign_1 = "" in (
@@ -46,11 +46,11 @@ let fail = fun manifestPath message -> let tempString = ref (HxString.hx_null_st
 
 let providerTypeNamesForManifest = fun manifest sourceLabel -> (try (
   ignore (let _g = (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "kind") : string) in match _g with
-    | "linked-provider" -> raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_19 = HxArray.create () in let __represented_array_element_0_20 = Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "entry") in (
+    | "linked-provider" -> Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_19 = HxArray.create () in let __represented_array_element_0_20 = Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "entry") in (
       ignore (HxArray.push __represented_array_19 __represented_array_element_0_20);
       __represented_array_19
     ))))
-    | "ocaml-dynlink" -> raise (HxRuntime.Hx_return (Obj.repr (Hxhx_NativeBackendPluginLoader.providerTypeNamesForNativeManifest manifest (sourceLabel : string))))
+    | "ocaml-dynlink" -> Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Hxhx_NativeBackendPluginLoader.providerTypeNamesForNativeManifest manifest (sourceLabel : string))))
     | _ -> let message = let __string_part_10 = "unsupported backend kind `" in let __string_part_11 = "<unsupported>" in let __string_part_12 = "`" in (__string_part_10 ^ __string_part_11) ^ __string_part_12 in let tempString = ref (HxString.hx_null_string : string) in (
       ignore (if sourceLabel == HxString.hx_null_string then let __assign_13 = "" in (
         tempString := __assign_13;
@@ -145,10 +145,10 @@ let providerTypeNamesForManifestPath = fun manifestPath -> let tempString = ref 
         tempString7 := __assign_57;
         __assign_57
       ) with
-        | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-        | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-        | HxRuntime.Hx_return __ret_53 -> raise (HxRuntime.Hx_return __ret_53)
-        | HxRuntime.Hx_return_void -> raise (HxRuntime.Hx_return_void)
+        | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
+        | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
+        | HxRuntime.Hx_return __ret_53 -> Stdlib.raise (HxRuntime.Hx_return __ret_53)
+        | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
         | HxRuntime.Hx_exception (__exn_v_54, __exn_tags_55) -> if true then let error = (if HxRuntime.tags_has __exn_tags_55 "haxe.Exception" then Obj.obj __exn_v_54 else Obj.magic (Haxe_ValueException.create __exn_v_54 (Obj.magic (HxRuntime.hx_null)) __exn_v_54) : Haxe_Exception.t) in (
           ignore error;
           let message = let __string_part_45 = "failed to read manifest: " in let __string_part_46 = HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) in __string_part_45 ^ __string_part_46 in let tempString8 = ref (HxString.hx_null_string : string) in (
@@ -192,7 +192,7 @@ let providerTypeNamesForManifestPath = fun manifestPath -> let tempString = ref 
               let label = !tempString9 in HxType.hx_throw_typed_rtti (Obj.repr ((("backend plugin manifest (" ^ HxString.toStdString label) ^ "): ") ^ HxString.toStdString message)) ["Dynamic"]
             )
           )
-        ) else raise (__exn_56));
+        ) else Stdlib.raise (__exn_56));
       let raw = (!tempString7 : string) in let manifest = Backend_plugin_BackendPluginManifestParser.parse (raw : string) (normalized : string) in providerTypeNamesForManifest manifest (normalized : string)
     )
   )

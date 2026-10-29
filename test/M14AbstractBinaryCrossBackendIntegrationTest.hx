@@ -36,8 +36,10 @@ class M14AbstractBinaryCrossBackendIntegrationTest {
 	static function typeProgram(source:String):MacroExpandedProgram {
 		final parsed = ParserStage.parse(source, "Main.hx");
 		final resolved = new ResolvedModule("Main", "Main.hx", parsed);
-		final index = TyperIndex.build([resolved]);
-		final loader = new ModuleLoader(["."], new StringMap<String>(), index, function(_):Bool return false);
+		final index = TyperIndex.buildHeaders([resolved]);
+		final loader = new ModuleLoader([
+			hxhx.Stage1Compiler.Stage1Args.getStandardLibraryRoot(hxhx.Stage1Compiler.Stage1Args.parse(["-main", "Main"], true))
+		], HxDefineMap.fromRawDefines(["sys"]), index);
 		loader.markResolvedAlready([resolved]);
 		final typed = TyperStage.typeResolvedModule(resolved, index, loader);
 		return new MacroExpandedProgram([typed], false);
@@ -94,7 +96,7 @@ class M14AbstractBinaryCrossBackendIntegrationTest {
 		final expected = "15\nx!\n106\n17\nz?\n5\nvalue4\n";
 		for (entry in cases) {
 			final outputPath = Path.join([root, entry.fileName]);
-			final context = new BackendContext(Path.join([root, entry.target]), outputPath, "Main", true, false, new StringMap<String>());
+			final context = new BackendContext(Path.join([root, entry.target]), outputPath, "Main", false, new StringMap<String>());
 			final emitted = BackendRegistry.createForTarget(entry.target).emit(program, context);
 			final generated = File.getContent(emitted.entryPath);
 			assertTrue(generated.indexOf(entry.callText) >= 0, entry.target + " rebound or lost the arbitrary-name helper selected by the shared typer");
@@ -119,7 +121,7 @@ class M14AbstractBinaryCrossBackendIntegrationTest {
 		];
 		for (entry in nullableCases) {
 			final outputPath = Path.join([root, entry.fileName]);
-			final context = new BackendContext(Path.join([root, entry.target + "-nullable"]), outputPath, "Main", true, false, new StringMap<String>());
+			final context = new BackendContext(Path.join([root, entry.target + "-nullable"]), outputPath, "Main", false, new StringMap<String>());
 			final emitted = BackendRegistry.createForTarget(entry.target).emit(nullableProgram, context);
 			final generated = File.getContent(emitted.entryPath);
 			assertTrue(generated.indexOf("addNullable") >= 0,

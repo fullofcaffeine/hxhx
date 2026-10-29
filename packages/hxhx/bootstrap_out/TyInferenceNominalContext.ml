@@ -1,0 +1,2 @@
+# 1 "TyInferenceNominalContext.ml"
+include CompilerDiagnosticProbe.TyInferenceNominalContext

@@ -98,15 +98,9 @@ class CompilationServerSourceCacheRequest {
 		ensureOpen();
 		if (filePath == null || filePath.length == 0)
 			return null;
-		if (!filesystem.isFile(filePath))
+		final bytes = filesystem.readBytes(filePath);
+		if (bytes == null)
 			return null;
-		final bytes = try {
-			sys.io.File.getBytes(filePath);
-		} catch (_:haxe.io.Error) {
-			return null;
-		} catch (_:String) {
-			return null;
-		}
 		providerReport.recordSourceBytesRead(bytes.length);
 		final logicalPath = normalizePath(filePath);
 		final source = bytes.getString(0, bytes.length);
@@ -129,11 +123,18 @@ class CompilationServerSourceCacheRequest {
 		return source;
 	}
 
-	public function parseFilteredSource(filteredSource:String, filePath:String):ParsedModule {
+	public function parseFilteredSource(input:CompilerParseInput):ParsedModule {
 		ensureOpen();
-		final logicalPath = normalizePath(filePath);
+		final logicalPath = normalizePath(input.filePath);
 		final parserConfiguration = ParserStage.cacheConfigurationRevision();
-		final inputRevision = CompilerCacheIdentity.encode(["parser-input-v2", logicalPath, parserConfiguration, filteredSource]);
+		// Inactive Unicode can change source positions without changing filtered text.
+		final inputRevision = CompilerCacheIdentity.encode([
+			"parser-input-v3",
+			logicalPath,
+			parserConfiguration,
+			input.filteredSource,
+			input.originalSource
+		]);
 		final key = inputRevision;
 		final staged = stagedParsedModules.get(key);
 		if (staged != null) {
@@ -154,9 +155,9 @@ class CompilationServerSourceCacheRequest {
 		}
 
 		providerReport.recordParserMiss(parserMissReasonCallback(logicalPath, inputRevision));
-		final parsed = filesystem.parseFilteredSource(filteredSource, filePath);
+		final parsed = filesystem.parseFilteredSource(input);
 		final integrityRevision = ParsedModuleIntegrity.revision(parsed);
-		final retainedBytesEstimate = Bytes.ofString(filteredSource).length * 2 + key.length * 2 + integrityRevision.length * 2 + 1024;
+		final retainedBytesEstimate = Bytes.ofString(input.filteredSource).length * 2 + key.length * 2 + integrityRevision.length * 2 + 1024;
 		stagedParsedModules.set(key, new CompilationServerCachedParse(key, logicalPath, inputRevision, parsed, integrityRevision, retainedBytesEstimate));
 		return parsed;
 	}
@@ -268,6 +269,8 @@ class CompilationServerSourceCacheRequest {
 	}
 
 	static function normalizePath(path:String):String {
+		if (CompilerBundledSources.owns(path))
+			return path;
 		return Path.normalize(sys.FileSystem.absolutePath(path));
 	}
 }

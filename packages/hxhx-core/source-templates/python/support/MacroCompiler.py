@@ -1,4 +1,5 @@
 class Compiler:
+    _hx_class_name = "haxe.macro.Compiler"
     __hx_defines = {}
 
     @staticmethod

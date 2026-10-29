@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "Main" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "Main" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "Main" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "Main" } : t)
 
 let main = fun () -> ignore (let a = Stdlib.Array.make 3 1 in (
   ignore (Stdlib.Array.set a 0 42);
@@ -34,7 +34,7 @@ let main = fun () -> ignore (let a = Stdlib.Array.make 3 1 in (
         ignore (Stdlib.Hashtbl.remove tempHashtbl "missing");
         ignore (Stdlib.Hashtbl.find_opt tempHashtbl "missing");
         ignore (Stdlib.Hashtbl.find tempHashtbl "k");
-        ignore (Stdlib.Hashtbl.create ?random:(let __optarg_4 = Obj.repr (HxRuntime.box_bool true) in if __optarg_4 == HxRuntime.hx_null then None else Some (Obj.obj __optarg_4)) 16);
+        ignore (Stdlib.Hashtbl.create ?random:(let __optarg_4 = Obj.repr (Obj.repr true) in if __optarg_4 == HxRuntime.hx_null then None else Some (Obj.obj __optarg_4)) 16);
         let bytes = Stdlib.Bytes.of_string ("hi" : string) in let fill = Stdlib.Char.chr 97 in let tempBytes = Stdlib.Bytes.make 3 fill in let len = Stdlib.Bytes.length bytes in (
           ignore (Stdlib.Bytes.sub tempBytes 0 len);
           ignore (Stdlib.Bytes.to_string bytes);

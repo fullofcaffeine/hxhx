@@ -483,31 +483,84 @@ the repository-local minimum when that skill is unavailable.
 - Follow `docs/00-project/REFLAXE_INTEGRATION_FORK_POLICY.md` for the full PR, sync, CI, delta, and
   rollback contract.
 
+## Bounded Pull Requests (MANDATORY)
+
+- Default to **one independently mergeable Beads task per PR**. Split epics and
+  milestones into child tasks with concrete outcomes before implementation.
+  Several tasks can share a PR only when they form one inseparable behavior change.
+  Record that reason and the exact task list in the PR.
+- Before implementation or takeover, record a short merge contract in live Beads:
+  the outcome, included tasks, acceptance evidence, required checks, and exclusions.
+  Keep the PR description aligned with that contract.
+  Repository-wide goals do not become this PR's acceptance criteria.
+- Treat **500 changed authored lines or 20 authored files** as a scope-review
+  trigger, not a target or permission to pad a change.
+  Before further growth, split independent work or record why the change is indivisible.
+  Count authored tests and documentation. Report generated changes separately and review
+  their source, regeneration command, and resulting artifacts.
+- For each new discovery, distinguish a merge blocker from a follow-up.
+  A blocker needs evidence that it breaks the retained change, its acceptance
+  contract, or a required check. Discovery during testing alone is not enough.
+  If that relationship is unknown, investigate it before adding a blocking dependency.
+- Put independent discoveries in separate Beads tasks with their evidence, owner,
+  and acceptance criteria. Use related or discovered-from links for those tasks.
+  Do not expand the current PR merely because the new work improves the same target.
+- Keep task status separate from merge dependencies. A task awaiting integration can
+  remain open without making its entire product roadmap a prerequisite for landing.
+  Close it only when its own acceptance criteria and integration evidence are satisfied.
+- Freeze feature scope when final validation begins. Add only fixes needed for the
+  recorded merge contract, required checks, or review findings about the retained change.
+  If closure reveals another independent feature, schedule its own PR.
+- Never obtain a smaller scope by weakening assertions, disabling required checks,
+  hiding a regression, or claiming unsupported behavior.
+  Preserve failing evidence and unfinished work when proposing a scope change.
+- If an existing PR cannot meet a bounded contract, present a concrete split or
+  withdrawal plan before adding more implementation. Preserve unique work and task
+  ownership. Do not replace several reviewable PRs with one consolidation PR for convenience.
+- Make each non-trivial commit explain one coherent change and its validation.
+  Keep unrelated task fixes separate. Include a fix's tests and documentation with
+  the behavior they verify, and identify its owning Bead.
+- Finish review, required checks, merge, and default-branch verification before
+  starting the next ordinary PR. A necessary dependency stack or independent work
+  during an external block requires an explicit owner and landing order.
+
 ## Landing the Plane (Session Completion)
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+**Own each pull request through merge.** A successful push preserves the work;
+it does not complete a PR task. An explicit draft-only or review-only request
+limits this duty. Follow the shared **Finish owned pull requests** rule and the
+repository checklist below.
 
 **MANDATORY WORKFLOW:**
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
-   ```bash
-   git pull --rebase
-   bd export -o .beads/issues.jsonl
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
+1. **Keep scope bounded.** Record the PR acceptance criteria and remaining work
+   in live Beads using the bounded-PR rules above. Do not make unrelated milestones
+   prerequisites for merge.
+2. **Validate and publish.** Run the relevant checks, review the diff, and commit
+   and push only owned changes through the documented hooks and Beads tooling.
+3. **Finish review and CI.** Monitor checks on the published revision, address
+   feedback, and repair failures. Preserve one live CI run instead of restarting
+   it merely because polling is slow.
+4. **Merge when ready.** Use the existing merge authority after the PR meets its
+   acceptance criteria and required approvals. Respect branch protections and
+   explicit user stop instructions; do not invent another approval checkpoint.
+5. **Verify and reconcile.** Verify the intended changes on the default branch.
+   Close completed Beads and reconcile source PRs whose work the merge includes.
+   Record the successor when closing a superseded PR; do not imply it has merged.
+6. **Clean up owned work only.** Preserve unrelated changes, unique commits,
+   stashes, branches, and worktrees. Never run broad cleanup merely to end a session.
+7. **Record a real blocker when necessary.** Keep an unmerged task in progress
+   with the PR link, exact blocker, evidence, responsible owner, and next action.
+   Recheck it at the next continuation. A push, draft, or pending CI is not completion.
 
 **CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
+- Finish or unblock an existing owned PR before creating another. Document any
+  necessary dependency stack or independent work during an external block.
+- Do not leave a PR open because every repository goal is not yet complete.
+  Merge bounded, verified work and track later product work separately.
+- Never report a PR task complete at "committed and pushed" or "PR opened."
+  Completion requires verified merge or explicit withdrawal or supersession.
+- Do not bypass tests, required reviews, ownership, or protections to force closure.
 
 ## Artifact Hygiene (MANDATORY)
 

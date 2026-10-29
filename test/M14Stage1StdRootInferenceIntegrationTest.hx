@@ -4,6 +4,7 @@ import hxhx.Stage1Compiler.Stage1Resolver;
 import sys.FileSystem;
 import sys.io.File;
 
+/** SDK selection follows each request's explicit configuration and directories without retaining another request's choice. */
 class M14Stage1StdRootInferenceIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
@@ -60,7 +61,80 @@ class M14Stage1StdRootInferenceIntegrationTest {
 		return "";
 	}
 
+	/** Use independent SDK directories outside the checkout so repository ancestors cannot make an absent SDK appear configured. */
+	static function checkExternalCwdSelection():Void {
+		final originalCwd = Sys.getCwd();
+		final originalHome = envOrEmpty("HOME");
+		final originalStd = envOrEmpty("HAXE_STD_PATH");
+		final originalHaxePath = envOrEmpty("HAXEPATH");
+		var tempParent = envOrEmpty("TMPDIR");
+		if (tempParent.length == 0)
+			tempParent = envOrEmpty("TEMP");
+		if (tempParent.length == 0)
+			tempParent = "/tmp";
+		final root = Path.normalize(FileSystem.absolutePath(tempParent) + "/hxhx_sdk_cwd_" + Date.now().getTime());
+		final home = root + "/home";
+		final startup = root + "/startup";
+		final otherStartup = root + "/other_startup";
+		final target = root + "/target";
+		final external = root + "/unconfigured";
+		final firstSdk = home + "/haxe/versions/0.0.101/std";
+		final secondSdk = home + "/haxe/versions/0.0.102/std";
+		final explicitSdk = root + "/explicit/std";
+		final environmentSdk = root + "/environment/std";
+		var failure = "";
+		try {
+			for (directory in [
+				startup,
+				otherStartup,
+				target,
+				external,
+				firstSdk,
+				secondSdk,
+				explicitSdk,
+				environmentSdk
+			])
+				FileSystem.createDirectory(directory);
+			File.saveContent(startup + "/.haxerc", '{"version":"0.0.101"}');
+			File.saveContent(otherStartup + "/.haxerc", '{"version":"0.0.102"}');
+			File.saveContent(target + "/.haxerc", '{"version":"0.0.102"}');
+			Sys.putEnv("HOME", home);
+			Sys.putEnv("HAXE_STD_PATH", "");
+			Sys.putEnv("HAXEPATH", "");
+			Sys.setCwd(startup);
+			assertTrue(@:privateAccess Stage1Args.inferStdRootFromHaxerc(external) == "",
+				"directory ancestry must stop at the filesystem root instead of reading startup configuration");
+			function selected(args:Array<String>):String {
+				final parsed = Stage1Args.parse(args, true);
+				assertTrue(parsed != null, "SDK selection arguments must parse");
+				return Path.normalize(Stage1Args.getStandardLibraryRoot(parsed));
+			}
+			assertTrue(selected(["--cwd", external]) == firstSdk, "external cwd must retain the startup SDK");
+			assertTrue(selected(["--cwd", target]) == secondSdk, "target directory configuration must precede the startup SDK");
+			Sys.putEnv("HAXE_STD_PATH", environmentSdk);
+			assertTrue(selected(["--cwd", target]) == environmentSdk, "explicit SDK environment must precede directory configuration");
+			assertTrue(selected(["--cwd", target, "--std", explicitSdk]) == explicitSdk, "--std must precede SDK environment configuration");
+			Sys.putEnv("HAXE_STD_PATH", "");
+			Sys.putEnv("HAXEPATH", root + "/environment");
+			assertTrue(selected(["--cwd", target]) == environmentSdk, "HAXEPATH must precede directory configuration");
+			Sys.putEnv("HAXEPATH", "");
+			Sys.setCwd(external);
+			assertTrue(selected(["--cwd", external]) == "", "an unconfigured request must not reuse the previous SDK");
+			Sys.setCwd(otherStartup);
+			assertTrue(selected(["--cwd", external]) == secondSdk, "each request must discover its own startup SDK");
+		} catch (error:haxe.Exception) {
+			failure = error.message;
+		}
+		Sys.setCwd(originalCwd);
+		restoreEnv("HOME", originalHome);
+		restoreEnv("HAXE_STD_PATH", originalStd);
+		restoreEnv("HAXEPATH", originalHaxePath);
+		rmrf(root);
+		assertTrue(failure.length == 0, failure);
+	}
+
 	static function main():Void {
+		checkExternalCwdSelection();
 		final originalHome = envOrEmpty("HOME");
 		final originalStdPath = envOrEmpty("HAXE_STD_PATH");
 		final originalHaxePath = envOrEmpty("HAXEPATH");

@@ -1,11 +1,24 @@
 import sys.FileSystem;
 import sys.io.File;
+import hxhx.Stage3SetupSupport;
 
 /** Proves that native Stage3 preserves checked operations on Dynamic values. */
 class M14HxhxStage3DynamicOperatorIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
 		if (!condition)
 			throw message;
+	}
+
+	/** Ordered call bindings must stay inside the one box at the concrete integer return boundary. */
+	static function assertIntegerReturnCarrier(generated:String):Void {
+		final functions = generated.split("\n").filter(line -> StringTools.startsWith(line, "let rec combine ("));
+		assertTrue(functions.length == 1, "Expected one emitted nested integer combine function.");
+		final body = functions[0];
+		assertTrue(body.indexOf("HxReturn_combine (Obj.repr ((let ") >= 0,
+			"The concrete nested integer result did not cross its Dynamic return boundary after ordered call binding.");
+		assertTrue(body.split("Obj.repr").length == 2, "Nested integer calls must box only the final result, not their arguments or the result twice.");
+		assertTrue(body.indexOf("let __hx_call_function = (addBits (this_))") >= 0,
+			"The nested integer call lost its selected receiver before argument evaluation.");
 	}
 
 	static function deleteRecursive(path:String):Void {
@@ -42,6 +55,40 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 			return localOracle;
 
 		throw 'Could not locate the Haxe $version standard library. Set HAXE_STD_PATH or install that version through Lix.';
+	}
+
+	/**
+		Keep DateTools and all its dependencies in the production OCaml typing context.
+		Raw source contains other targets' branches, and an isolated module lacks the
+		Date method declarations needed to prove that the inferred hour is an Int.
+	**/
+	static function prepareDateTools(source:String, path:String, standardRoot:String):MacroExpandedProgram {
+		final defines = Stage3SetupSupport.buildDefinesMap([], "ocaml", "ocaml-stage3");
+		final parsed = ParserStage.parseFilteredSource({
+			originalSource: source,
+			filteredSource: HxConditionalCompilation.filterSource(source, defines),
+			filePath: path
+		});
+		final module = new ResolvedModule("DateTools", path, parsed);
+		final paths = Stage3SetupSupport.projectClassPaths({
+			explicitPaths: [],
+			libraries: [],
+			cwd: Sys.getCwd(),
+			standardRoot: standardRoot,
+			targetDefine: "ocaml"
+		});
+		final index = TyperIndex.buildHeaders([module]);
+		final loader = new ModuleLoader(paths, defines, index);
+		loader.markResolvedAlready([module]);
+		final pending = [module];
+		final typed = new Array<TypedModule>();
+		var cursor = 0;
+		while (cursor < pending.length) {
+			typed.push(TyperStage.typeResolvedModule(pending[cursor++], index, loader, true));
+			for (provider in loader.drainNewModules())
+				pending.push(provider);
+		}
+		return MacroStage.expandProgram(TypedAbstractOperatorLowering.lowerModules(typed, index), []);
 	}
 
 	static function main():Void {
@@ -197,12 +244,36 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		final numericCarrierMain = TyperStage.typeModule(ParserStage.parse(numericCarrierMainSource, numericCarrierMainPath));
 		final numericCarrierHelper = TyperStage.typeModule(ParserStage.parse(numericCarrierSource, numericCarrierPath));
 		final numericCarrierProgram = MacroStage.expandProgram([numericCarrierMain, numericCarrierHelper], []);
-		final numericCarrierExecutable = EmitterStage.emitToDir(numericCarrierProgram, numericCarrierOutputDir, true);
+		// Complete method bodies carry a returned value through the function's
+		// return exception. The concrete nested integer result must cross the
+		// Dynamic return boundary there inside one box.
+		final numericCarrierExecutable = EmitterStage.emitToDir(numericCarrierProgram, numericCarrierOutputDir);
 		assertTrue(FileSystem.exists(numericCarrierExecutable), "Nested integer carrier fixture did not build its OCaml executable.");
 		final numericCarrierGenerated = File.getContent(haxe.io.Path.join([numericCarrierOutputDir, "NestedIntegerCarrier.ml"]));
-		assertTrue(numericCarrierGenerated.indexOf(": Obj.t = Obj.repr (addBits") >= 0,
-			"A concrete nested integer result did not cross its inferred Dynamic return boundary exactly once.");
-		assertTrue(numericCarrierGenerated.indexOf("addBits (this_) (Obj.repr") < 0, "Nested integer arguments were boxed before concrete integer parameters.");
+		assertIntegerReturnCarrier(numericCarrierGenerated);
+		// The preceding root-only typing deliberately exercises the inferred
+		// Dynamic return layout. Runtime proof needs actual declarations for
+		// Sys.println and the constructor, rather than that diagnostic setup.
+		final runtimeCarrierRoot = haxe.io.Path.join([root, "numeric_carrier_runtime"]);
+		FileSystem.createDirectory(runtimeCarrierRoot);
+		final runtimeCarrierPath = haxe.io.Path.join([runtimeCarrierRoot, "Main.hx"]);
+		final bitwiseRoot = "test/fixtures/ocaml_int_bitwise";
+		final runtimeCarrierSource = numericCarrierSource + "\n" + File.getContent(bitwiseRoot + "/IntBitwiseChecks.hx") + "\n" + [
+			"class Main {",
+			"  static function main() {",
+			"    Sys.println(new NestedIntegerCarrier().combine(1, 2, 3, 4, 5, 6));",
+			"    IntBitwiseChecks.run();",
+			"  }",
+			"}"
+		].join("\n");
+		File.saveContent(runtimeCarrierPath, runtimeCarrierSource);
+		final runtimeExpected = numericOracleStdout + File.getContent(bitwiseRoot + "/expected.stdout");
+		M14Stage3RuntimeFixture.observe({command: "haxe", arguments: ["-cp", runtimeCarrierRoot, "--run", "Main"], expected: runtimeExpected});
+		final runtimeCarrier = M14Stage3RuntimeFixture.prepareMain({source: runtimeCarrierSource, path: runtimeCarrierPath, root: runtimeCarrierRoot});
+		M14IntBitwiseProjectionTest.verify(runtimeCarrier);
+		final runtimeCarrierExecutable = EmitterStage.emitToDir(MacroStage.expandProgram([runtimeCarrier], []), runtimeCarrierRoot + "/out");
+		M14Stage3RuntimeFixture.observe({command: runtimeCarrierExecutable, arguments: [], expected: runtimeExpected});
+		Sys.println("NATIVE_INT_BITWISE:PASS");
 
 		final exprToolsSource = File.getContent(haxe.io.Path.join([stage0StdPath, "haxe", "macro", "ExprTools.hx"]));
 		for (shape in [
@@ -217,9 +288,13 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 			assertTrue(exprToolsSource.indexOf(shape) >= 0, "The focused fixture drifted from the Haxe 4.3.7 ExprTools.getValue shape: " + shape);
 
 		final parsed = ParserStage.parse(source, sourcePath);
-		final typed = TyperStage.typeModule(parsed);
+		// Runtime emission needs the declared method signatures in the module index.
+		// The root-only typer deliberately has no index and loses observed()'s
+		// Dynamic result, so it cannot prove the Boolean storage conversion.
+		final resolved = new ResolvedModule("Main", sourcePath, parsed);
+		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 		final expanded = MacroStage.expandProgram([typed], []);
-		final executable = EmitterStage.emitToDir(expanded, outputDir, true);
+		final executable = EmitterStage.emitToDir(expanded, outputDir);
 		final generated = File.getContent(haxe.io.Path.join([outputDir, "Main.ml"]));
 
 		assertTrue(generated.indexOf("(value : Obj.t)") >= 0, "Dynamic parameter did not use the Obj.t carrier.");
@@ -238,19 +313,8 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		assertTrue(generated.indexOf("not (read)") < 0 && generated.indexOf("-(read)") < 0 && generated.indexOf("HxInt.lognot (read)") < 0,
 			"The ExprTools-shaped Dynamic local still reached a raw OCaml operator.");
 
-		// DateTools projects this inferred local as an untyped temporary. Lack of a
-		// temporary type is not evidence that the source value uses Dynamic.
-		final dateToolsPath = haxe.io.Path.join([stage0StdPath, "DateTools.hx"]);
-		final dateToolsSource = File.getContent(dateToolsPath);
-		final parsedDateTools = ParserStage.parse(dateToolsSource, dateToolsPath);
-		final typedDateTools = TyperStage.typeModule(parsedDateTools);
-		final expandedDateTools = MacroStage.expandProgram([typedDateTools], []);
-		EmitterStage.emitToDir(expandedDateTools, dateToolsOutputDir, true, false);
-		final generatedDateTools = File.getContent(haxe.io.Path.join([dateToolsOutputDir, "DateTools.ml"]));
-		assertTrue(generatedDateTools.indexOf("HxRuntime.dynamic_equals (hour)") < 0,
-			"An inferred Date.getHours() Int local was incorrectly lowered as Dynamic equality.");
-		assertTrue(generatedDateTools.indexOf("(hour) = (0)") >= 0, "An inferred Date.getHours() Int local did not keep primitive integer equality.");
-
+		// Observe the operator program before a separate standard-library check can
+		// stop this runner. Both checks remain required for whole-test success.
 		final result = new sys.io.Process(executable, []);
 		final stdout = result.stdout.readAll().toString();
 		final stderr = result.stderr.readAll().toString();
@@ -258,6 +322,18 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		result.close();
 		assertTrue(code == 0, "Dynamic unary executable failed: " + stderr);
 		assertTrue(stdout == expected, "Native Dynamic operators differed from Haxe 4.3.7:\n" + stdout);
+		Sys.println("M14_STAGE3_DYNAMIC_OPERATOR_RUNTIME:PASS");
+
+		// The real provider context must preserve Date.getHours() as Int through
+		// the switch-local temporary, while the Dynamic observer above stays checked.
+		final dateToolsPath = haxe.io.Path.join([stage0StdPath, "DateTools.hx"]);
+		final dateToolsSource = File.getContent(dateToolsPath);
+		final expandedDateTools = prepareDateTools(dateToolsSource, dateToolsPath, stage0StdPath);
+		EmitterStage.emitToDir(expandedDateTools, dateToolsOutputDir, false);
+		final generatedDateTools = File.getContent(haxe.io.Path.join([dateToolsOutputDir, "DateTools.ml"]));
+		assertTrue(generatedDateTools.indexOf("HxRuntime.dynamic_equals (hour)") < 0,
+			"An inferred Date.getHours() Int local was incorrectly lowered as Dynamic equality.");
+		assertTrue(generatedDateTools.indexOf("(hour) = (0)") >= 0, "An inferred Date.getHours() Int local did not keep primitive integer equality.");
 
 		// Keep rejection evidence independent from Stage3 try/catch support. The
 		// failing program prints its operand before the checked runtime call, which
@@ -278,7 +354,7 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		final invalidParsed = ParserStage.parse(invalidSource, invalidSourcePath);
 		final invalidTyped = TyperStage.typeModule(invalidParsed);
 		final invalidExpanded = MacroStage.expandProgram([invalidTyped], []);
-		final invalidExecutable = EmitterStage.emitToDir(invalidExpanded, invalidOutputDir, true);
+		final invalidExecutable = EmitterStage.emitToDir(invalidExpanded, invalidOutputDir);
 		final invalidResult = new sys.io.Process(invalidExecutable, []);
 		final invalidStdout = invalidResult.stdout.readAll().toString();
 		final invalidStderr = invalidResult.stderr.readAll().toString();

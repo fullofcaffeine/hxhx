@@ -54,6 +54,7 @@ class AnonymousStructurePlanFixture {
 		assertTrue(structures.length == 1, 'the admitted case should own one structure, received ${structures.length}');
 		assertTrue(operations.length == 7, 'the admitted case should own seven operations, received ${operations.length}');
 		final structure = structures[0];
+		requirePlanOwnership(first);
 		assertTrue(structure.semanticTypeId == "anonymous{count:Int,enabled:Bool,name:String}",
 			"the normalized shape should use field-name order and exact Haxe types");
 		assertTrue(structure.carrierTypeId == "Obj.t"
@@ -204,6 +205,27 @@ class AnonymousStructurePlanFixture {
 
 		trace("REFLAXE_OCAML_ANONYMOUS_STRUCTURE_PLAN_FIXTURE:PASS");
 		return macro null;
+	}
+
+	/** Constructor inputs and returned records cannot mutate the plan's private proof. */
+	static function requirePlanOwnership(original:OcamlAnonymousStructurePlan):Void {
+		final inputStructures = original.structures();
+		final inputOperations = original.operations();
+		final owned = new OcamlAnonymousStructurePlan(inputStructures, inputOperations);
+		final expected = haxe.Json.stringify({structures: owned.structures(), operations: owned.operations()});
+		inputStructures[0].fields.pop();
+		inputOperations[0].evaluationSchedule.push("foreign-step");
+		inputOperations[0].runtimeUseOccurrences[0].profileEligibility.push("foreign-profile");
+		expectFailure("public operation rejects changed structure", "stale-structure",
+			() -> OcamlAnonymousStructureContract.requireOperation(original.operations()[0], inputStructures[0]));
+		assertTrue(haxe.Json.stringify({structures: owned.structures(), operations: owned.operations()}) == expected,
+			"mutating constructor inputs must not change the plan's fields, operation order, or nested runtime proof");
+		final returnedStructures = owned.structures();
+		final returnedOperations = owned.operations();
+		returnedStructures[0].fields.pop();
+		returnedOperations[0].runtimeUseOccurrences[0].profileEligibility.push("foreign-profile");
+		assertTrue(haxe.Json.stringify({structures: owned.structures(), operations: owned.operations()}) == expected,
+			"mutating exported records must not change later reads of the private plan");
 	}
 
 	/**

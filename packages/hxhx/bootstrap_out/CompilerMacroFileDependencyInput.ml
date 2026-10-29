@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable pathIdentityRevision : string; mutable fil
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun pathIdentityRevision2 fileState2 contentRevision2 -> let self = ({ __hx_type = HxType.class_ "CompilerMacroFileDependencyInput"; pathIdentityRevision = HxString.hx_null_string; fileState = HxString.hx_null_string; contentRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t) in (
+let create = fun pathIdentityRevision2 fileState2 contentRevision2 -> let self = ({ __hx_type = HxType.instance_marker "CompilerMacroFileDependencyInput"; pathIdentityRevision = HxString.hx_null_string; fileState = HxString.hx_null_string; contentRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t) in (
   ignore (ignore (let tempRight = ref (HxString.hx_null_string : string) in (
     ignore (if pathIdentityRevision2 == HxString.hx_null_string then let __assign_1 = ("" : string) in (
       tempRight := __assign_1;
@@ -62,7 +62,7 @@ let create = fun pathIdentityRevision2 fileState2 contentRevision2 -> let self =
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "CompilerMacroFileDependencyInput"; pathIdentityRevision = HxString.hx_null_string; fileState = HxString.hx_null_string; contentRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "CompilerMacroFileDependencyInput"; pathIdentityRevision = HxString.hx_null_string; fileState = HxString.hx_null_string; contentRevision = HxString.hx_null_string; canonicalIdentity = HxString.hx_null_string } : t)
 
 let getPathIdentityRevision = fun self () -> ((self : t).pathIdentityRevision : string)
 

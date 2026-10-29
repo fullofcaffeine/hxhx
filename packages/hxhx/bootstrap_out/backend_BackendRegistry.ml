@@ -6,83 +6,84 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.BackendRegistry" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.BackendRegistry" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.BackendRegistry" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.BackendRegistry" } : t)
 
 let buildBuiltinRegistrations = fun () -> let registrations = Obj.magic (HxArray.create ()) in (
-  ignore (let __array_receiver_1 = registrations in let __array_arg_0_2 = let __anon_3 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_3 "descriptor" (Backend_ocaml_OcamlStage3Backend.descriptor ()));
-    ignore (HxAnon.set __anon_3 "create" (Obj.repr (fun () -> Backend_ocaml_OcamlStage3Backend.create ())));
-    __anon_3
-  ) in HxArray.push __array_receiver_1 __array_arg_0_2);
-  ignore (let __array_receiver_4 = registrations in let __array_arg_0_5 = Backend_vm_VmNativeBackend.nekoRegistration () in HxArray.push __array_receiver_4 __array_arg_0_5);
-  ignore (let __array_receiver_6 = registrations in let __array_arg_0_7 = Backend_vm_VmNativeBackend.hlRegistration () in HxArray.push __array_receiver_6 __array_arg_0_7);
-  ignore (let __array_receiver_8 = registrations in let __array_arg_0_9 = Backend_cpp_CppNativeBackend.registration () in HxArray.push __array_receiver_8 __array_arg_0_9);
-  ignore (let __array_receiver_10 = registrations in let __array_arg_0_11 = Backend_source_SourceNativeBackend.pythonRegistration () in HxArray.push __array_receiver_10 __array_arg_0_11);
-  ignore (let __array_receiver_12 = registrations in let __array_arg_0_13 = Backend_source_SourceNativeBackend.javaRegistration () in HxArray.push __array_receiver_12 __array_arg_0_13);
-  ignore (let __array_receiver_14 = registrations in let __array_arg_0_15 = Backend_source_SourceNativeBackend.csRegistration () in HxArray.push __array_receiver_14 __array_arg_0_15);
-  ignore (let __array_receiver_16 = registrations in let __array_arg_0_17 = Backend_source_SourceNativeBackend.phpRegistration () in HxArray.push __array_receiver_16 __array_arg_0_17);
-  ignore (let __array_receiver_18 = registrations in let __array_arg_0_19 = Backend_source_SourceNativeBackend.luaRegistration () in HxArray.push __array_receiver_18 __array_arg_0_19);
-  ignore (let __array_receiver_20 = registrations in let __array_arg_0_21 = let __anon_22 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_22 "descriptor" (Backend_js_JsBackend.descriptor ()));
-    ignore (HxAnon.set __anon_22 "create" (Obj.repr (fun () -> Backend_js_JsBackend.create ())));
-    __anon_22
-  ) in HxArray.push __array_receiver_20 __array_arg_0_21);
+  ignore (let __array_receiver_1 = Obj.magic registrations in let __array_arg_0_2 = Backend_ocaml_OcamlNativeBackend.registration () in HxArray.push __array_receiver_1 __array_arg_0_2);
+  ignore (let __array_receiver_3 = Obj.magic registrations in let __array_arg_0_4 = let __anon_5 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_5 "descriptor" (Backend_ocaml_OcamlStage3Backend.descriptor ()));
+    ignore (HxAnon.set __anon_5 "create" (Obj.repr (fun () -> Backend_ocaml_OcamlStage3Backend.create ())));
+    __anon_5
+  ) in HxArray.push __array_receiver_3 __array_arg_0_4);
+  ignore (let __array_receiver_6 = Obj.magic registrations in let __array_arg_0_7 = Backend_vm_VmNativeBackend.nekoRegistration () in HxArray.push __array_receiver_6 __array_arg_0_7);
+  ignore (let __array_receiver_8 = Obj.magic registrations in let __array_arg_0_9 = Backend_vm_VmNativeBackend.hlRegistration () in HxArray.push __array_receiver_8 __array_arg_0_9);
+  ignore (let __array_receiver_10 = Obj.magic registrations in let __array_arg_0_11 = Backend_cpp_CppNativeBackend.registration () in HxArray.push __array_receiver_10 __array_arg_0_11);
+  ignore (let __array_receiver_12 = Obj.magic registrations in let __array_arg_0_13 = Backend_source_SourceNativeBackend.pythonRegistration () in HxArray.push __array_receiver_12 __array_arg_0_13);
+  ignore (let __array_receiver_14 = Obj.magic registrations in let __array_arg_0_15 = Backend_source_SourceNativeBackend.javaRegistration () in HxArray.push __array_receiver_14 __array_arg_0_15);
+  ignore (let __array_receiver_16 = Obj.magic registrations in let __array_arg_0_17 = Backend_source_SourceNativeBackend.csRegistration () in HxArray.push __array_receiver_16 __array_arg_0_17);
+  ignore (let __array_receiver_18 = Obj.magic registrations in let __array_arg_0_19 = Backend_source_SourceNativeBackend.phpRegistration () in HxArray.push __array_receiver_18 __array_arg_0_19);
+  ignore (let __array_receiver_20 = Obj.magic registrations in let __array_arg_0_21 = Backend_source_SourceNativeBackend.luaRegistration () in HxArray.push __array_receiver_20 __array_arg_0_21);
+  ignore (let __array_receiver_22 = Obj.magic registrations in let __array_arg_0_23 = let __anon_24 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_24 "descriptor" (Backend_js_JsBackend.descriptor ()));
+    ignore (HxAnon.set __anon_24 "create" (Obj.repr (fun () -> Backend_js_JsBackend.create ())));
+    __anon_24
+  ) in HxArray.push __array_receiver_22 __array_arg_0_23);
   registrations
 )
 
 let builtinRegistrations = Obj.magic (buildBuiltinRegistrations ())
 
-let dynamicRegistrations = Obj.magic (let __arr_84 = HxArray.create () in __arr_84)
+let dynamicRegistrations = Obj.magic (let __arr_86 = HxArray.create () in __arr_86)
 
-let allRegistrations = fun () -> let __array_receiver_23 = builtinRegistrations in let __array_arg_0_24 = dynamicRegistrations in HxArray.concat __array_receiver_23 __array_arg_0_24
+let allRegistrations = fun () -> let __array_receiver_25 = Obj.magic builtinRegistrations in let __array_arg_0_26 = Obj.magic dynamicRegistrations in HxArray.concat __array_receiver_25 __array_arg_0_26
 
 let sortedForTarget = fun targetId -> let tempString = ref (HxString.hx_null_string : string) in (
-  ignore (if targetId == HxString.hx_null_string then let __assign_25 = ("" : string) in (
-    tempString := __assign_25;
-    __assign_25
-  ) else let __assign_26 = (targetId : string) in (
-    tempString := __assign_26;
-    __assign_26
+  ignore (if targetId == HxString.hx_null_string then let __assign_27 = ("" : string) in (
+    tempString := __assign_27;
+    __assign_27
+  ) else let __assign_28 = (targetId : string) in (
+    tempString := __assign_28;
+    __assign_28
   ));
-  let normalized = (!tempString : string) in let candidates = Obj.magic (let __array_receiver_27 = allRegistrations () in let __array_arg_0_28 = fun r -> let __string_eq_left_29 = Obj.obj (HxAnon.get (Obj.obj (HxAnon.get r "descriptor")) "id") in let __string_eq_right_30 = normalized in HxString.equals __string_eq_left_29 __string_eq_right_30 in HxArray.filter __array_receiver_27 __array_arg_0_28) in (
-    ignore (let __array_receiver_31 = candidates in let __array_arg_0_32 = fun a b -> (try (
-      ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "priority") <> Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "priority") then raise (HxRuntime.Hx_return (Obj.repr (HxInt.sub (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "priority")) (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "priority"))))) else ());
+  let normalized = (!tempString : string) in let candidates = Obj.magic (let __array_receiver_29 = Obj.magic (allRegistrations ()) in let __array_arg_0_30 = fun r -> let __string_eq_left_31 = Obj.obj (HxAnon.get (Obj.obj (HxAnon.get r "descriptor")) "id") in let __string_eq_right_32 = normalized in HxString.equals __string_eq_left_31 __string_eq_right_32 in HxArray.filter __array_receiver_29 __array_arg_0_30) in (
+    ignore (let __array_receiver_33 = Obj.magic candidates in let __array_arg_0_34 = fun a b -> (try (
+      ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "priority") <> Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "priority") then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (HxInt.sub (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "priority")) (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "priority"))))) else ());
       let tempResult = ref (0 : int) in (
-        ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "implId") < Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "implId") then let __assign_33 = -1 in (
-          tempResult := __assign_33;
-          __assign_33
-        ) else if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "implId") > Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "implId") then let __assign_34 = 1 in (
-          tempResult := __assign_34;
-          __assign_34
-        ) else let __assign_35 = 0 in (
+        ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "implId") < Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "implId") then let __assign_35 = -1 in (
           tempResult := __assign_35;
           __assign_35
+        ) else if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "implId") > Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "implId") then let __assign_36 = 1 in (
+          tempResult := __assign_36;
+          __assign_36
+        ) else let __assign_37 = 0 in (
+          tempResult := __assign_37;
+          __assign_37
         ));
         !tempResult
       )
     ) with
-      | HxRuntime.Hx_return __ret_36 -> (Obj.obj __ret_36 : int) : int) in HxArray.sort __array_receiver_31 __array_arg_0_32);
+      | HxRuntime.Hx_return __ret_38 -> (Obj.obj __ret_38 : int) : int) in HxArray.sort __array_receiver_33 __array_arg_0_34);
     candidates
   )
 )
 
-let listDescriptors = fun () -> let __array_receiver_37 = allRegistrations () in let __array_arg_0_38 = fun r -> Obj.obj (HxAnon.get r "descriptor") in HxArray.map __array_receiver_37 __array_arg_0_38
+let listDescriptors = fun () -> let __array_receiver_39 = Obj.magic (allRegistrations ()) in let __array_arg_0_40 = fun r -> Obj.obj (HxAnon.get r "descriptor") in HxArray.map __array_receiver_39 __array_arg_0_40
 
 let supportedTargetIds = fun () -> let seen = Obj.magic (HxMap.create_string ()) in let ids = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (allRegistrations ()) in (
-  ignore (while !_g < HxArray.length _g1 do try ignore (let r = let __array_read_receiver_39 = _g1 in let __array_read_index_40 = !_g in HxArray.get (Obj.magic __array_read_receiver_39) __array_read_index_40 in (
-    ignore (let __old_41 = !_g in let __new_42 = HxInt.add __old_41 1 in (
-      ignore (_g := __new_42);
-      __new_42
+  ignore (while !_g < HxArray.length _g1 do try ignore (let r = let __array_read_receiver_41 = _g1 in let __array_read_index_42 = !_g in HxArray.get (Obj.magic __array_read_receiver_41) __array_read_index_42 in (
+    ignore (let __old_43 = !_g in let __new_44 = HxInt.add __old_43 1 in (
+      ignore (_g := __new_44);
+      __new_44
     ));
     let id = (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get r "descriptor")) "id") : string) in (
-      ignore (if HxMap.exists_string (Obj.magic seen) (id : string) then raise (HxRuntime.Hx_continue) else ());
+      ignore (if HxMap.exists_string (Obj.magic seen) (id : string) then Stdlib.raise (HxRuntime.Hx_continue) else ());
       ignore (HxMap.set_string (Obj.magic seen) (id : string) true);
-      let __array_receiver_43 = ids in let __array_arg_0_44 = id in HxArray.push __array_receiver_43 __array_arg_0_44
+      let __array_receiver_45 = Obj.magic ids in let __array_arg_0_46 = (id : string) in HxArray.push __array_receiver_45 __array_arg_0_46
     )
   )) with
     | HxRuntime.Hx_continue -> () done);
@@ -90,82 +91,82 @@ let supportedTargetIds = fun () -> let seen = Obj.magic (HxMap.create_string ())
 )
 
 let register = fun spec -> ignore ((
-  ignore (if spec == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get spec "descriptor") == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get spec "create") == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "invalid backend registration (descriptor/create required)") ["Dynamic"; "String"] else ());
+  ignore (if spec == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get spec "descriptor") == Obj.magic (HxRuntime.hx_null) || (Obj.obj (HxAnon.get spec "create") : unit -> _) == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "invalid backend registration (descriptor/create required)") ["Dynamic"] else ());
   let d = Obj.obj (HxAnon.get spec "descriptor") in (
-    ignore (if Obj.obj (HxAnon.get d "id") == HxString.hx_null_string || (let __string_receiver_45 = Obj.obj (HxAnon.get d "id") in HxString.length __string_receiver_45) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "invalid backend registration: descriptor.id is required") ["Dynamic"; "String"] else ());
-    ignore (if Obj.obj (HxAnon.get d "implId") == HxString.hx_null_string || (let __string_receiver_46 = Obj.obj (HxAnon.get d "implId") in HxString.length __string_receiver_46) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "invalid backend registration: descriptor.implId is required") ["Dynamic"; "String"] else ());
+    ignore (if Obj.obj (HxAnon.get d "id") == HxString.hx_null_string || (let __string_receiver_47 = Obj.obj (HxAnon.get d "id") in HxString.length __string_receiver_47) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "invalid backend registration: descriptor.id is required") ["Dynamic"] else ());
+    ignore (if Obj.obj (HxAnon.get d "implId") == HxString.hx_null_string || (let __string_receiver_48 = Obj.obj (HxAnon.get d "implId") in HxString.length __string_receiver_48) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "invalid backend registration: descriptor.implId is required") ["Dynamic"] else ());
     let compatibilityError = (Backend_BackendAbi.validateDescriptor d : string) in (
-      ignore (if compatibilityError != Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr compatibilityError) ["Dynamic"; "String"] else ());
+      ignore (if compatibilityError != Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr compatibilityError) ["Dynamic"] else ());
       let _g = ref 0 in let _g1 = Obj.magic (allRegistrations ()) in (
-        ignore (while !_g < HxArray.length _g1 do ignore (let existing = let __array_read_receiver_47 = _g1 in let __array_read_index_48 = !_g in HxArray.get (Obj.magic __array_read_receiver_47) __array_read_index_48 in (
-          ignore (let __old_49 = !_g in let __new_50 = HxInt.add __old_49 1 in (
-            ignore (_g := __new_50);
-            __new_50
+        ignore (while !_g < HxArray.length _g1 do ignore (let existing = let __array_read_receiver_49 = _g1 in let __array_read_index_50 = !_g in HxArray.get (Obj.magic __array_read_receiver_49) __array_read_index_50 in (
+          ignore (let __old_51 = !_g in let __new_52 = HxInt.add __old_51 1 in (
+            ignore (_g := __new_52);
+            __new_52
           ));
-          if let __string_eq_left_51 = Obj.obj (HxAnon.get (Obj.obj (HxAnon.get existing "descriptor")) "implId") in let __string_eq_right_52 = Obj.obj (HxAnon.get d "implId") in HxString.equals __string_eq_left_51 __string_eq_right_52 then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_53 = "duplicate backend registration: descriptor.implId already registered: " in let __string_part_54 = HxString.toStdString (Obj.obj (HxAnon.get d "implId")) in __string_part_53 ^ __string_part_54)) ["Dynamic"; "String"] else ()
+          if let __string_eq_left_53 = Obj.obj (HxAnon.get (Obj.obj (HxAnon.get existing "descriptor")) "implId") in let __string_eq_right_54 = Obj.obj (HxAnon.get d "implId") in HxString.equals __string_eq_left_53 __string_eq_right_54 then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_55 = "duplicate backend registration: descriptor.implId already registered: " in let __string_part_56 = HxString.toStdString (Obj.obj (HxAnon.get d "implId")) in __string_part_55 ^ __string_part_56)) ["Dynamic"] else ()
         )) done);
-        let __array_receiver_55 = dynamicRegistrations in let __array_arg_0_56 = spec in HxArray.push __array_receiver_55 __array_arg_0_56
+        let __array_receiver_57 = Obj.magic dynamicRegistrations in let __array_arg_0_58 = spec in HxArray.push __array_receiver_57 __array_arg_0_58
       )
     )
   )
 ))
 
 let registerProvider = fun regs -> (try (
-  ignore (if regs == Obj.magic (HxRuntime.hx_null) || HxArray.length regs = 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
+  ignore (if regs == Obj.magic (HxRuntime.hx_null) || HxArray.length regs = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let _g = ref 0 in (
-    ignore (while !_g < HxArray.length regs do ignore (let reg = let __array_read_receiver_57 = regs in let __array_read_index_58 = !_g in HxArray.get (Obj.magic __array_read_receiver_57) __array_read_index_58 in (
-      ignore (let __old_59 = !_g in let __new_60 = HxInt.add __old_59 1 in (
-        ignore (_g := __new_60);
-        __new_60
+    ignore (while !_g < HxArray.length regs do ignore (let reg = let __array_read_receiver_59 = regs in let __array_read_index_60 = !_g in HxArray.get (Obj.magic __array_read_receiver_59) __array_read_index_60 in (
+      ignore (let __old_61 = !_g in let __new_62 = HxInt.add __old_61 1 in (
+        ignore (_g := __new_62);
+        __new_62
       ));
       register reg
     )) done);
     HxArray.length regs
   )
 ) with
-  | HxRuntime.Hx_return __ret_61 -> (Obj.obj __ret_61 : int) : int)
+  | HxRuntime.Hx_return __ret_63 -> (Obj.obj __ret_63 : int) : int)
 
-let clearDynamicRegistrations = fun () -> ignore (let __array_receiver_62 = dynamicRegistrations in let __array_arg_0_63 = 0 in let __array_arg_1_64 = HxArray.length dynamicRegistrations in HxArray.splice __array_receiver_62 __array_arg_0_63 __array_arg_1_64)
+let clearDynamicRegistrations = fun () -> ignore (let __array_receiver_64 = Obj.magic dynamicRegistrations in let __array_arg_0_65 = 0 in let __array_arg_1_66 = HxArray.length dynamicRegistrations in HxArray.splice __array_receiver_64 __array_arg_0_65 __array_arg_1_66)
 
 let descriptorForTarget = fun targetId -> let candidates = Obj.magic (sortedForTarget (targetId : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-  ignore (if HxArray.length candidates = 0 then let __assign_65 = Obj.magic (HxRuntime.hx_null) in (
-    tempResult := __assign_65;
-    __assign_65
-  ) else let __assign_66 = Obj.magic (Obj.obj (HxAnon.get (let __array_read_receiver_67 = candidates in let __array_read_index_68 = 0 in HxArray.get (Obj.magic __array_read_receiver_67) __array_read_index_68) "descriptor")) in (
-    tempResult := __assign_66;
-    __assign_66
+  ignore (if HxArray.length candidates = 0 then let __assign_67 = Obj.magic (HxRuntime.hx_null) in (
+    tempResult := __assign_67;
+    __assign_67
+  ) else let __assign_68 = Obj.magic (Obj.obj (HxAnon.get (let __array_read_receiver_69 = candidates in let __array_read_index_70 = 0 in HxArray.get (Obj.magic __array_read_receiver_69) __array_read_index_70) "descriptor")) in (
+    tempResult := __assign_68;
+    __assign_68
   ));
   Obj.magic (!tempResult)
 )
 
 let createForTarget = fun targetId -> let candidates = Obj.magic (sortedForTarget (targetId : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Backend_IBackend.t) in (
-  ignore (if HxArray.length candidates = 0 then let __assign_69 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-    tempResult := __assign_69;
-    __assign_69
-  ) else let __assign_70 = Obj.magic (Obj.magic (Obj.obj (HxAnon.get (let __array_read_receiver_71 = candidates in let __array_read_index_72 = 0 in HxArray.get (Obj.magic __array_read_receiver_71) __array_read_index_72) "create") ())) in (
-    tempResult := __assign_70;
-    __assign_70
+  ignore (if HxArray.length candidates = 0 then let __assign_71 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+    tempResult := __assign_71;
+    __assign_71
+  ) else let __assign_72 = Obj.magic (Obj.magic ((Obj.obj (HxAnon.get (let __array_read_receiver_73 = candidates in let __array_read_index_74 = 0 in HxArray.get (Obj.magic __array_read_receiver_73) __array_read_index_74) "create") : unit -> _) ())) in (
+    tempResult := __assign_72;
+    __assign_72
   ));
   !tempResult
 )
 
 let requireForTarget = fun targetId -> (try let backend = Obj.magic (createForTarget (targetId : string)) in (
-  ignore (if backend != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr backend)) else ());
+  ignore (if backend != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr backend)) else ());
   let supported = Obj.magic (supportedTargetIds ()) in (
-    ignore (let __array_receiver_73 = supported in let __array_arg_0_74 = fun a b -> let tempResult = ref (0 : int) in (
-      ignore (if a < b then let __assign_75 = -1 in (
-        tempResult := __assign_75;
-        __assign_75
-      ) else if a > b then let __assign_76 = 1 in (
-        tempResult := __assign_76;
-        __assign_76
-      ) else let __assign_77 = 0 in (
+    ignore (let __array_receiver_75 = Obj.magic supported in let __array_arg_0_76 = fun a b -> let tempResult = ref (0 : int) in (
+      ignore (if a < b then let __assign_77 = -1 in (
         tempResult := __assign_77;
         __assign_77
+      ) else if a > b then let __assign_78 = 1 in (
+        tempResult := __assign_78;
+        __assign_78
+      ) else let __assign_79 = 0 in (
+        tempResult := __assign_79;
+        __assign_79
       ));
       !tempResult
-    ) in HxArray.sort __array_receiver_73 __array_arg_0_74);
-    HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_78 = "unknown Stage3 backend: " in let __string_part_79 = HxString.toStdString targetId in let __string_part_80 = " (supported: " in let __string_part_81 = HxString.toStdString (HxArray.join supported ", " (fun x -> x)) in let __string_part_82 = ")" in (((__string_part_78 ^ __string_part_79) ^ __string_part_80) ^ __string_part_81) ^ __string_part_82)) ["Dynamic"]
+    ) in HxArray.sort __array_receiver_75 __array_arg_0_76);
+    HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_80 = "unknown Stage3 backend: " in let __string_part_81 = HxString.toStdString targetId in let __string_part_82 = " (supported: " in let __string_part_83 = HxString.toStdString (HxArray.join supported ", " (fun x -> x)) in let __string_part_84 = ")" in (((__string_part_80 ^ __string_part_81) ^ __string_part_82) ^ __string_part_83) ^ __string_part_84)) ["Dynamic"]
   )
 ) with
-  | HxRuntime.Hx_return __ret_83 -> (Obj.obj __ret_83 : Backend_IBackend.t) : Backend_IBackend.t)
+  | HxRuntime.Hx_return __ret_85 -> (Obj.obj __ret_85 : Backend_IBackend.t) : Backend_IBackend.t)

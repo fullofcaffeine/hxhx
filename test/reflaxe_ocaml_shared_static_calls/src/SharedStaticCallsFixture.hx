@@ -19,8 +19,14 @@ class SharedStaticCallsFixture {
 		final main = request.copyFunctions().filter(fn -> fn.sourceFunctionName == "main")[0];
 		if (main.body.copyStaticCalls().map(call -> call.sourceFunctionName).join(",") != "middle,type,ignore")
 			throw "authored call order or declaration identity changed";
-		final foreignCall = reflaxe.ocaml.target.OcamlTargetExpressionFact.directStaticCall("root",
-			new reflaxe.ocaml.target.OcamlTargetStaticCallFact({moduleId: "Other", sourceTypeName: "Other", sourceFunctionName: "middle"}));
+		final foreignCall = reflaxe.ocaml.target.OcamlTargetExpressionFact.directStaticCall("root/block-item/0",
+			new reflaxe.ocaml.target.OcamlTargetStaticCallFact({
+				moduleId: "Other",
+				sourceTypeName: "Other",
+				sourceFunctionName: "middle",
+				argumentTypeDisplays: [],
+				returnTypeDisplay: "Void"
+			}), []);
 		assertRejected(() -> new reflaxe.ocaml.target.OcamlTargetFunctionFact({
 			moduleId: "Main",
 			sourceTypeName: "Main",
@@ -28,7 +34,9 @@ class SharedStaticCallsFixture {
 			role: StaticFunction,
 			argumentTypeDisplays: [],
 			returnTypeDisplay: "Void"
-		}, foreignCall), "cross-owner");
+		},
+			reflaxe.ocaml.target.OcamlTargetStatementFact.block("root", [reflaxe.ocaml.target.OcamlTargetStatementFact.evaluate(foreignCall)]),
+			[]), "cross-owner");
 		assertRejected(() -> new reflaxe.ocaml.target.OcamlTargetFieldInitializerFact({
 			moduleId: "Main",
 			sourceTypeName: "Main",
@@ -43,7 +51,7 @@ class SharedStaticCallsFixture {
 			role: StaticFunction,
 			argumentTypeDisplays: [],
 			returnTypeDisplay: "Void"
-		}, reflaxe.ocaml.target.OcamlTargetExpressionFact.block("root", "Void", []));
+		}, reflaxe.ocaml.target.OcamlTargetStatementFact.block("root", []), []);
 		assertRejected(() -> new reflaxe.ocaml.target.OcamlTargetProgramRequest("fixture", "Main", declarations, [],
 			request.copyFunctions().concat([conflicting])),
 			"conflicting function facts");
@@ -72,8 +80,8 @@ class SharedStaticCallsFixture {
 	/** Unsupported signatures and computed callees must reject the whole authored function. **/
 	static function assertRejectedCalls():Void {
 		final cases = [
-			{member: "static function target(value:Int):Void {}", body: "target(1);"},
-			{member: "static function target():Int { return 1; }", body: "target();"},
+			{member: "static function target(value:Float):Void {}", body: "target(1);"},
+			{member: "static function target(?value:Int):Void {}", body: "target();"},
 			{member: "static dynamic function target():Void {}", body: "target();"},
 			{member: "static function target<T>():Void {}", body: "target();"},
 			{member: "static function target():Void {}", body: "var local = target; local();"},

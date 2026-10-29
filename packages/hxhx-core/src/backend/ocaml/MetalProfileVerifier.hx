@@ -87,7 +87,7 @@ class MetalProfileVerifier {
 	static function verifyTypedModule(typedModule:TypedModule, violations:Array<MetalViolation>):Void {
 		final parsed = typedModule.getParsed();
 		final filePath = parsed.getFilePath();
-		final moduleDecl = typedModule.getBackendDeclaration();
+		final moduleDecl = typedModule.getBackendProjection().getDeclaration();
 		for (cls in HxModuleDecl.getClasses(moduleDecl)) {
 			final className = HxClassDecl.getName(cls);
 			for (field in HxClassDecl.getFields(cls)) {
@@ -114,6 +114,10 @@ class MetalProfileVerifier {
 
 	static function verifyStmt(filePath:String, className:String, fnName:String, stmt:HxStmt, violations:Array<MetalViolation>):Void {
 		switch (stmt) {
+			case SGuardedSwitch(_, _, _, _, _):
+				throw "backend guarded switch cannot reach source statement analysis";
+			case STargetScope(_, _, _):
+				throw "native target scope is not valid in this source or target phase";
 			case SBlock(stmts, _):
 				for (inner in stmts)
 					verifyStmt(filePath, className, fnName, inner, violations);
@@ -166,7 +170,33 @@ class MetalProfileVerifier {
 	}
 
 	static function verifyExpr(filePath:String, className:String, fnName:String, stmtPos:Null<HxPos>, expr:HxExpr, violations:Array<MetalViolation>):Void {
+		if (TypedRuntimeTypeSource.isMarker(expr))
+			addViolation(violations, filePath, className, fnName, stmtPos, CODE_REFLECTION_CALL, "runtime type operation",
+				"runtime class identity needs the portable object representation", "use the portable profile for runtime class predicates");
 		switch (expr) {
+			case ESourceTry(_, bodies, position):
+				for (body in bodies)
+					verifyExpr(filePath, className, fnName, position, body, violations);
+			case ESourceFor(_, iterable, body, position):
+				verifyExpr(filePath, className, fnName, position, iterable, violations);
+				verifyExpr(filePath, className, fnName, position, body, violations);
+			case ESourceIf(condition, whenTrue, whenFalse, position):
+				verifyExpr(filePath, className, fnName, position, condition, violations);
+				verifyExpr(filePath, className, fnName, position, whenTrue, violations);
+				if (whenFalse != null)
+					verifyExpr(filePath, className, fnName, position, whenFalse, violations);
+			case EThrow(value, position):
+				verifyExpr(filePath, className, fnName, position, value, violations);
+			case ESourceGroup(children, position) | ELoweredControl(_, _, children, position):
+				for (child in children)
+					verifyExpr(filePath, className, fnName, position, child, violations);
+			case ESourceFunction(facts, body, defaults, position):
+				facts.assertDefaultCount(defaults.length);
+				verifyExpr(filePath, className, fnName, position, body, violations);
+				for (value in defaults)
+					verifyExpr(filePath, className, fnName, position, value, violations);
+			case EParenthesized(inner, position) | EPrivateAccess(inner, position):
+				verifyExpr(filePath, className, fnName, position, inner, violations);
 			case EUntyped(inner):
 				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNTYPED, "`untyped` expression",
 					"metal profile forbids `untyped` because it bypasses typed lowering and native guarantees",
@@ -182,13 +212,20 @@ class MetalProfileVerifier {
 				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNSUPPORTED_SEMANTIC, "ESwitchRaw(" + summarizeRaw(raw) + ")",
 					"raw switch fallback nodes cannot guarantee native metal semantics", "use structured switch forms that type-check without fallback nodes");
 			case ECall(callee, args):
-				final reflectionCall = reflectionCallName(callee);
+				// Selection can retain an alias in the source callee. Classify the
+				// selected owner and visit only the original call operands, so the
+				// adapter's metadata cannot hide nested reflection calls.
+				final selected = TypedExactStaticCallSource.decode(expr);
+				final reflectionCall = selected == null ? reflectionCallName(callee) : switch (selected.owner) {
+					case "Reflect", "Type": selected.owner + "." + selected.method;
+					case _: null;
+				};
 				if (reflectionCall != null) {
 					addViolation(violations, filePath, className, fnName, stmtPos, CODE_REFLECTION_CALL, reflectionCall,
 						"reflection-driven calls prevent static specialization in metal mode", "replace reflection calls with static/typed APIs");
 				}
-				verifyExpr(filePath, className, fnName, stmtPos, callee, violations);
-				for (arg in args)
+				verifyExpr(filePath, className, fnName, stmtPos, selected == null ? callee : selected.callee, violations);
+				for (arg in (selected == null ? args : selected.arguments))
 					verifyExpr(filePath, className, fnName, stmtPos, arg, violations);
 			case EReturn(value):
 				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNSUPPORTED_SEMANTIC, "expression-position return",
@@ -196,7 +233,7 @@ class MetalProfileVerifier {
 					"expand the macro or move the return to statement position before selecting metal profile");
 				if (value != null)
 					verifyExpr(filePath, className, fnName, stmtPos, value, violations);
-			case EWhile(condition, body, _, _):
+			case EWhile(condition, body, _, _, loopKind):
 				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNSUPPORTED_SEMANTIC, "expression-position while",
 					"a while loop nested inside another expression must be handled by macro expansion before metal emission",
 					"expand the macro or move the loop to statement position before selecting metal profile");
@@ -233,7 +270,7 @@ class MetalProfileVerifier {
 				verifyExpr(filePath, className, fnName, stmtPos, obj, violations);
 			case EUnop(_, _, inner):
 				verifyExpr(filePath, className, fnName, stmtPos, inner, violations);
-			case EBinop(_, left, right):
+			case EBinop(_, left, right) | EDiscardThen(left, right):
 				verifyExpr(filePath, className, fnName, stmtPos, left, violations);
 				verifyExpr(filePath, className, fnName, stmtPos, right, violations);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -257,6 +294,9 @@ class MetalProfileVerifier {
 			case ERange(start, end):
 				verifyExpr(filePath, className, fnName, stmtPos, start, violations);
 				verifyExpr(filePath, className, fnName, stmtPos, end, violations);
+			case ECheckType(inner, typeHint):
+				verifyExplicitDynamicTypeHint(filePath, className, fnName, stmtPos, "annotation type", typeHint, violations);
+				verifyExpr(filePath, className, fnName, stmtPos, inner, violations);
 			case ECast(inner, typeHint):
 				verifyExplicitDynamicTypeHint(filePath, className, fnName, stmtPos, "cast target type", typeHint, violations);
 				verifyExpr(filePath, className, fnName, stmtPos, inner, violations);

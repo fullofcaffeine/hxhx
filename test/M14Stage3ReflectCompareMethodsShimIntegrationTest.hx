@@ -40,7 +40,7 @@ class M14Stage3ReflectCompareMethodsShimIntegrationTest {
 			final parsed = ParserStage.parse(src, sourcePath);
 			final typed = TyperStage.typeModule(parsed);
 			final expanded = MacroStage.expandProgram([typed], []);
-			EmitterStage.emitToDir(expanded, outDir, false, false);
+			EmitterStage.emitToDir(expanded, outDir, false);
 
 			final reflectMl = haxe.io.Path.join([outDir, 'Reflect.ml']);
 			assertTrue(FileSystem.exists(reflectMl), 'Expected Reflect.ml shim in emitted output.');

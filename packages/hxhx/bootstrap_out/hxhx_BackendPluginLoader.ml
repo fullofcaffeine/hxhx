@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.BackendPluginLoader" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.BackendPluginLoader" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.BackendPluginLoader" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.BackendPluginLoader" } : t)
 
 let trim = fun value -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (if value == HxString.hx_null_string then let __assign_1 = "" in (
@@ -116,7 +116,7 @@ let normalizeRequest = fun request index -> (
 )
 
 let withSourcePriority = fun spec source -> (
-  ignore (if spec == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get spec "descriptor") == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get spec "create") == Obj.magic (HxRuntime.hx_null) then let tempRight = ref (HxString.hx_null_string : string) in (
+  ignore (if spec == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get spec "descriptor") == Obj.magic (HxRuntime.hx_null) || (Obj.obj (HxAnon.get spec "create") : unit -> _) == Obj.magic (HxRuntime.hx_null) then let tempRight = ref (HxString.hx_null_string : string) in (
     ignore (match source with
       | "bundled" -> let __assign_25 = ("bundled" : string) in (
         tempRight := __assign_25;
@@ -157,7 +157,7 @@ let withSourcePriority = fun spec source -> (
       __anon_30
     ) in let __anon_31 = HxAnon.create () in (
       ignore (HxAnon.set __anon_31 "descriptor" withPriority);
-      ignore (HxAnon.set __anon_31 "create" (Obj.repr (Obj.obj (HxAnon.get spec "create"))));
+      ignore (HxAnon.set __anon_31 "create" (Obj.repr (Obj.obj (HxAnon.get spec "create") : unit -> _)));
       __anon_31
     )
   )
@@ -192,8 +192,8 @@ let selectWinning = fun existing incoming -> (try let tempNumber = ref (0 : int)
         __assign_35
       ));
     let existingRank = !tempNumber1 in (
-      ignore (if incomingRank > existingRank then raise (HxRuntime.Hx_return (Obj.repr incoming)) else ());
-      ignore (if incomingRank < existingRank then raise (HxRuntime.Hx_return (Obj.repr existing)) else ());
+      ignore (if incomingRank > existingRank then Stdlib.raise (HxRuntime.Hx_return (Obj.repr incoming)) else ());
+      ignore (if incomingRank < existingRank then Stdlib.raise (HxRuntime.Hx_return (Obj.repr existing)) else ());
       let tempRight = ref (HxString.hx_null_string : string) in let source = (Obj.obj (HxAnon.get incoming "source") : string) in (
         ignore (match source with
           | "bundled" -> let __assign_39 = ("bundled" : string) in (
@@ -216,7 +216,7 @@ let selectWinning = fun existing incoming -> (try let tempNumber = ref (0 : int)
   | HxRuntime.Hx_return __ret_50 -> (Obj.obj __ret_50 : Obj.t) : Obj.t)
 
 let registrationsForRequests = fun requests -> (try (
-  ignore (if requests == Obj.magic (HxRuntime.hx_null) || HxArray.length requests = 0 then raise (HxRuntime.Hx_return (Obj.repr (let __arr_51 = HxArray.create () in __arr_51))) else ());
+  ignore (if requests == Obj.magic (HxRuntime.hx_null) || HxArray.length requests = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __arr_51 = HxArray.create () in __arr_51))) else ());
   let winnersByImplId = Obj.magic (HxMap.create_string ()) in let index = ref 0 in let _g = ref 0 in (
     ignore (while !_g < HxArray.length requests do ignore (let request = let __array_read_receiver_52 = requests in let __array_read_index_53 = !_g in HxArray.get (Obj.magic __array_read_receiver_52) __array_read_index_53 in (
       ignore (let __old_54 = !_g in let __new_55 = HxInt.add __old_54 1 in (
@@ -255,9 +255,9 @@ let registrationsForRequests = fun requests -> (try (
       )
     )) done);
     let out = Obj.magic (HxArray.create ()) in let winner = HxIterator.of_array (Obj.magic (HxMap.values_string (Obj.magic winnersByImplId))) in (
-      ignore (while let __iterator_receiver_70 = winner in HxIterator.hasNext __iterator_receiver_70 do ignore (let winner2 = let __iterator_receiver_71 = winner in HxIterator.next __iterator_receiver_71 in let __array_receiver_72 = out in let __array_arg_0_73 = Obj.obj (HxAnon.get winner2 "spec") in HxArray.push __array_receiver_72 __array_arg_0_73) done);
-      ignore (let __array_receiver_74 = out in let __array_arg_0_75 = fun a b -> (try (
-        ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "priority") <> Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "priority") then raise (HxRuntime.Hx_return (Obj.repr (HxInt.sub (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "priority")) (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "priority"))))) else ());
+      ignore (while let __iterator_receiver_70 = winner in HxIterator.hasNext __iterator_receiver_70 do ignore (let winner2 = let __iterator_receiver_71 = winner in HxIterator.next __iterator_receiver_71 in let __array_receiver_72 = Obj.magic out in let __array_arg_0_73 = Obj.obj (HxAnon.get winner2 "spec") in HxArray.push __array_receiver_72 __array_arg_0_73) done);
+      ignore (let __array_receiver_74 = Obj.magic out in let __array_arg_0_75 = fun a b -> (try (
+        ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "priority") <> Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "priority") then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (HxInt.sub (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "priority")) (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "priority"))))) else ());
         let tempResult = ref (0 : int) in (
           ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "implId") < Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "implId") then let __assign_76 = -1 in (
             tempResult := __assign_76;

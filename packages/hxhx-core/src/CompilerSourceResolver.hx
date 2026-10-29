@@ -60,7 +60,7 @@ class CompilerSourceResolver {
 			observations.push("kind=" + (candidateIsFile ? "file" : "non-file"));
 			if (!candidateIsFile)
 				continue;
-			observations.push("selected-normalized=" + normalizePath(candidate));
+			observations.push("selected-normalized=" + sourceFileKey(candidate));
 			// Preserve the returned spelling too. Equivalent class-path spellings
 			// must not reuse a result that carries a previous request's path text.
 			observations.push("selected-path=" + candidate);
@@ -74,9 +74,12 @@ class CompilerSourceResolver {
 		return new CompilerModuleResolution(lookupIdentity, observationRevision(observations), null, -1, false);
 	}
 
-	static function normalizePath(path:String):String {
+	/** Compare source identity across path spellings without changing paths returned to callers. */
+	public static function sourceFileKey(path:String):String {
 		if (path == null || path.length == 0)
 			return "";
+		if (CompilerBundledSources.owns(path))
+			return path;
 		return Path.normalize(sys.FileSystem.absolutePath(path));
 	}
 

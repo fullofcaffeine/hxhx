@@ -38,7 +38,6 @@ class Stage3Args {
 		var backendId = "ocaml-stage3";
 		var macroRuntimeMode:Null<String> = null;
 		var typeOnly = false;
-		var emitFullBodies = false;
 		var noEmit = false;
 		var noRun = false;
 		var serverReport = false;
@@ -82,8 +81,7 @@ class Stage3Args {
 					serverReport = true;
 					i += 1;
 				case "--hxhx-emit-full-bodies":
-					emitFullBodies = true;
-					i += 1;
+					throw "--hxhx-emit-full-bodies was removed; native compilation always emits complete method bodies. Remove this option.";
 				case _:
 					rest.push(a);
 					i += 1;
@@ -95,7 +93,6 @@ class Stage3Args {
 			backendId: backendId,
 			macroRuntimeMode: macroRuntimeMode,
 			typeOnly: typeOnly,
-			emitFullBodies: emitFullBodies,
 			noEmit: noEmit,
 			noRun: noRun,
 			serverReport: serverReport,

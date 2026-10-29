@@ -77,7 +77,7 @@ class M14JsTargetCoreNodeBufferExternIntegrationTest {
 
 			FileSystem.createDirectory(outDir);
 			final artifactPath = Path.join([outDir, "main.js"]);
-			new JsBackend().emit(program, new BackendContext(outDir, artifactPath, "Main", true, false, HxDefineMap.fromRawDefines(["js=1"])));
+			new JsBackend().emit(program, new BackendContext(outDir, artifactPath, "Main", false, HxDefineMap.fromRawDefines(["js=1"])));
 			final js = File.getContent(artifactPath);
 			assertContains(js, 'var __hx_cls_js_node_buffer_Buffer = require("buffer").Buffer;',
 				"Node Buffer extern should bind to the Node buffer module export");

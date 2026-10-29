@@ -13,7 +13,7 @@
 class CompilerDiagnosticProbe {
 	public static function getErrorMessage(expression:HxExpr, ?localInitializer:String->Null<HxExpr>):Null<String> {
 		return switch (expression) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EPrivateAccess(inner, _) | EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				getErrorMessage(inner, localInitializer);
 			case ESwitch(scrutinee, patterns, _):
 				final diagnosticScrutinee = diagnosticScrutineeExpr(scrutinee, localInitializer);
@@ -26,7 +26,7 @@ class CompilerDiagnosticProbe {
 
 	static function diagnosticScrutineeExpr(expression:HxExpr, localInitializer:Null<String->Null<HxExpr>>):HxExpr {
 		return switch (expression) {
-			case EMacroExpr(inner, _) | EUntyped(inner):
+			case EPrivateAccess(inner, _) | EParenthesized(inner, _) | EMacroExpr(inner, _) | EUntyped(inner):
 				diagnosticScrutineeExpr(inner, localInitializer);
 			case EIdent(name) if (localInitializer != null):
 				final initializer = localInitializer(name);
@@ -134,8 +134,7 @@ class CompilerDiagnosticProbe {
 				if (children != null)
 					for (child in children)
 						collectPatternBindings(child, counts, order);
-			case PExtractor(_, inner) | PLengthGuard(inner, _, _) | PStartsWithGuard(inner, _, _) | PIntEqualsGuard(inner, _, _) |
-				PIntCompareGuard(inner, _, _, _) | PParsedIntSwitchGuard(inner, _, _, _) | PUnsupportedGuard(inner):
+			case PExtractor(_, inner) | PGuard(inner, _) | PUnsupportedPattern(inner):
 				collectPatternBindings(inner, counts, order);
 			case _:
 		}
@@ -185,8 +184,7 @@ class CompilerDiagnosticProbe {
 				if (children != null)
 					for (child in children)
 						collectPatternBindingTypes(child, contextType, out);
-			case PExtractor(_, inner) | PLengthGuard(inner, _, _) | PStartsWithGuard(inner, _, _) | PIntEqualsGuard(inner, _, _) |
-				PIntCompareGuard(inner, _, _, _) | PParsedIntSwitchGuard(inner, _, _, _) | PUnsupportedGuard(inner):
+			case PExtractor(_, inner) | PGuard(inner, _) | PUnsupportedPattern(inner):
 				collectPatternBindingTypes(inner, contextType, out);
 			case _:
 		}
@@ -268,7 +266,7 @@ class CompilerDiagnosticProbe {
 		return switch (pattern) {
 			case PBool(actual):
 				actual == value;
-			case PCapture(_, inner) | PUnsupportedGuard(inner):
+			case PCapture(_, inner) | PGuard(inner, _) | PUnsupportedPattern(inner):
 				patternHasBool(inner, value);
 			case POr(patterns):
 				patternListHasBool(patterns == null ? [] : patterns, value);
@@ -288,7 +286,7 @@ class CompilerDiagnosticProbe {
 		return switch (pattern) {
 			case PEnumValue(value):
 				value == name;
-			case PCapture(_, inner) | PUnsupportedGuard(inner):
+			case PCapture(_, inner) | PGuard(inner, _) | PUnsupportedPattern(inner):
 				patternHasEnumValue(inner, name);
 			case POr(patterns):
 				patternListHasEnumValue(patterns == null ? [] : patterns, name);
@@ -308,7 +306,7 @@ class CompilerDiagnosticProbe {
 		return switch (pattern) {
 			case PEnumExtract(value, _):
 				value == name;
-			case PCapture(_, inner) | PUnsupportedGuard(inner):
+			case PCapture(_, inner) | PGuard(inner, _) | PUnsupportedPattern(inner):
 				patternHasEnumExtract(inner, name);
 			case POr(patterns):
 				patternListHasEnumExtract(patterns == null ? [] : patterns, name);
@@ -328,7 +326,7 @@ class CompilerDiagnosticProbe {
 						&& patternListHasBool(patternItems, true)
 						&& !patternListHasBool(patternItems, false))
 						return true;
-				case PCapture(_, inner) | PUnsupportedGuard(inner):
+				case PCapture(_, inner) | PGuard(inner, _) | PUnsupportedPattern(inner):
 					if (arraySwitchNeedsBoolFalse(items, [inner]))
 						return true;
 				case POr(alternatives):
@@ -354,7 +352,7 @@ class CompilerDiagnosticProbe {
 	static function patternIsNodeLeafSpecific(pattern:HxSwitchPattern):Bool {
 		return switch (pattern) {
 			case PEnumExtract("Node", arguments): arguments != null && arguments.length > 0 && patternIsLeafSpecific(arguments[0]);
-			case PCapture(_, inner) | PUnsupportedGuard(inner): patternIsNodeLeafSpecific(inner);
+			case PCapture(_, inner) | PGuard(inner, _) | PUnsupportedPattern(inner): patternIsNodeLeafSpecific(inner);
 			case POr(patterns): patterns != null && patternListHasNodeLeafSpecificThenLeafWildcard(patterns);
 			case _: false;
 		};
@@ -403,7 +401,7 @@ class CompilerDiagnosticProbe {
 
 	static function patternIsGuardedLeaf(pattern:HxSwitchPattern):Bool {
 		return switch (pattern) {
-			case PUnsupportedGuard(inner): patternHasEnumExtract(inner, "Leaf");
+			case PGuard(inner, _) | PUnsupportedPattern(inner): patternHasEnumExtract(inner, "Leaf");
 			case PCapture(_, inner): patternIsGuardedLeaf(inner);
 			case POr(patterns): patterns != null && patternListHasGuardedLeaf(patterns);
 			case _: false;

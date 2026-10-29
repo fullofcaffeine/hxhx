@@ -47,7 +47,7 @@ if ! rg -q '^-lib[[:space:]]+utest$' build.hxml; then
 fi
 
 set +e
-"$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies build.hxml --hxhx-out "$OUT_NAME" >"$tmp_log" 2>&1
+"$HXHX_BIN" --hxhx-stage3 build.hxml --hxhx-out "$OUT_NAME" >"$tmp_log" 2>&1
 code="$?"
 set -e
 

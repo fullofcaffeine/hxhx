@@ -86,7 +86,7 @@ class OcamlCallRuntimeRequirementRecorder {
 						implementationFeature: "haxe-boolean-carrier-v1",
 						rootModules: ["HxRuntime"],
 						profileEligibility: occurrence.profileEligibility.copy(),
-						explanation: "The sealed typed call boxes one exact Bool argument slot with HxRuntime so Dynamic preserves the difference between Bool and Int."
+						explanation: call.genericInstanceTarget != null ? "The sealed generic method crossing boxes or unboxes one exact Bool value, including nested callback boundaries, while preserving null and the distinction between Bool and Int." : "The sealed typed call boxes one exact Bool argument slot with HxRuntime so Dynamic preserves the difference between Bool and Int."
 				}
 		];
 	}

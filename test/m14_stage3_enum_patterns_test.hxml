@@ -1,0 +1,30 @@
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp test
+-cp packages/hxhx/src
+-main M14Stage3EnumPatternsTest
+--interp
+
+--next
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp test
+-cp packages/hxhx/src
+-main M14Stage3EnumTypeValuePayloadTest
+--interp
+
+--next
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp test
+-cp packages/hxhx/src
+-main M14Stage3EnumRecordPayloadTest
+--interp
+
+--next
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp test
+-cp packages/hxhx/src
+-main M14Stage3EnumArrayPayloadTest
+--interp

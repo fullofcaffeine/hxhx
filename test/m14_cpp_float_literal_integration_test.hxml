@@ -1,0 +1,11 @@
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp test
+-main M14CppFloatLiteralIntegrationTest
+--interp
+--next
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp test
+-main M14CppFloatArrayDefaultTest
+--interp

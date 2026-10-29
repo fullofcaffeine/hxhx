@@ -1,5 +1,10 @@
+test/m14_cpp_string_substr_test.hxml
+
+--next
 -cp test
 -cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp packages/hxhx/src
 
 -main M14CppAbstractBinaryIntegrationTest
 --interp

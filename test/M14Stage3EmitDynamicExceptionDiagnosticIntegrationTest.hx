@@ -59,11 +59,16 @@ class M14Stage3EmitDynamicExceptionDiagnosticIntegrationTest {
 			"hxhx_backend_provider=M14Stage3EmitDynamicExceptionDiagnosticProvider",
 		]);
 		deleteRecursive(tmpRoot);
+		assertTrue(M14Stage3EmitDynamicExceptionDiagnosticProvider.emitInvoked,
+			"the diagnostic fixture must reach backend emission before its failure can prove exception formatting");
 		assertTrue(code == 2, "non-string backend emit exception should become a structured Stage3 error code");
 	}
 }
 
 class M14Stage3EmitDynamicExceptionDiagnosticProvider implements ITargetBackendProvider {
+	/** Proves that an earlier parsing or typing failure did not satisfy the exit-code assertion. */
+	public static var emitInvoked(default, null):Bool = false;
+
 	public function new() {}
 
 	public function registrations():Array<BackendRegistrationSpec> {
@@ -93,6 +98,7 @@ class M14Stage3EmitDynamicExceptionDiagnosticProvider implements ITargetBackendP
 	}
 
 	static function emit(_program:GenIrProgram, _context:BackendContext):EmitResult {
+		emitInvoked = true;
 		throw new haxe.Exception("fixture non-string emit failure");
 	}
 }

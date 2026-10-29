@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable enabled : bool; mutable hasPrevious : bool
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun enabled2 -> let self = ({ __hx_type = HxType.class_ "hxhx.CompilationServerDependencyReport"; enabled = false; hasPrevious = false; moduleCount = 0; edgeCount = 0; snapshotFingerprint = HxString.hx_null_string; comparison = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun enabled2 -> let self = ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerDependencyReport"; enabled = false; hasPrevious = false; moduleCount = 0; edgeCount = 0; snapshotFingerprint = HxString.hx_null_string; comparison = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __place_receiver_1 = self in let __place_rhs_2 = enabled2 in (
       (__place_receiver_1 : t).enabled <- __place_rhs_2;
@@ -36,10 +36,10 @@ let create = fun enabled2 -> let self = ({ __hx_type = HxType.class_ "hxhx.Compi
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.CompilationServerDependencyReport"; enabled = false; hasPrevious = false; moduleCount = 0; edgeCount = 0; snapshotFingerprint = HxString.hx_null_string; comparison = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.CompilationServerDependencyReport"; enabled = false; hasPrevious = false; moduleCount = 0; edgeCount = 0; snapshotFingerprint = HxString.hx_null_string; comparison = Obj.magic HxRuntime.hx_null } : t)
 
 let record = fun self (snapshot : CompilerDependencySnapshot.t) (previous : CompilerDependencySnapshot.t) -> ignore (ignore (try ignore ((
-  ignore (if not ((Obj.magic self : t).enabled) || snapshot == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return_void) else ());
+  ignore (if not ((Obj.magic self : t).enabled) || snapshot == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   ignore (let __place_receiver_12 = self in let __place_rhs_13 = HxArray.length (CompilerDependencySnapshot.getModules (Obj.magic snapshot) ()) in (
     (__place_receiver_12 : t).moduleCount <- __place_rhs_13;
     __place_rhs_13

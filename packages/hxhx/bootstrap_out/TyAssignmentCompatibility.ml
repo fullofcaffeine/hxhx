@@ -1,0 +1,2 @@
+# 1 "TyAssignmentCompatibility.ml"
+include CompilerDiagnosticProbe.TyAssignmentCompatibility

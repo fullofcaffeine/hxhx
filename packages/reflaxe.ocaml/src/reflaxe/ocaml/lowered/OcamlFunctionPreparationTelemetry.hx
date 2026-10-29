@@ -16,6 +16,16 @@ enum abstract OcamlFunctionPreparationResult(String) to String {
 	var Failed = "failed";
 }
 
+/** Names the work between final-body validation and syntax materialization. */
+enum abstract OcamlFunctionSyntaxPhase(String) to String {
+	var ObserveBody = "observe_body";
+	var ConstructionBoundary = "construction_boundary";
+	var GenericTransport = "generic_transport";
+	var MethodViews = "method_views";
+	var MethodOccurrences = "method_occurrences";
+	var Ready = "ready";
+}
+
 private typedef OcamlFunctionPreparationPhaseTiming = {
 	final name:String;
 	final dtMs:Int;
@@ -122,6 +132,28 @@ class OcamlFunctionPreparationTelemetry {
 		count++;
 		return new OcamlFunctionPreparationTelemetrySession(logLine, count, className, data.field.name, OcamlFunctionPreparationRootKind.Ordinary, data.id,
 			data.args.length, data.expr != null);
+	}
+
+	/**
+		Logs each handoff phase before it starts, so an interruption retains its location.
+
+		This uses the same exact class/field filter as preparation telemetry. The
+		observer records only names and elapsed time; it never reads or changes a body.
+	**/
+	public function syntaxProgressFor(data:ClassFuncData):Null<OcamlFunctionSyntaxPhase->Void> {
+		final className = (data.classType.pack ?? []).concat([data.classType.name]).join(".");
+		if (className != classFilter || (fieldFilter != null && fieldFilter.length > 0 && data.field.name != fieldFilter))
+			return null;
+		final fieldName = data.field.name;
+		final started = haxe.Timer.stamp();
+		return phase -> logLine("reflaxe.ocaml: function_syntax_phase class="
+			+ className
+			+ " field="
+			+ fieldName
+			+ " phase="
+			+ phase
+			+ " elapsed_ms="
+			+ Std.string(Std.int(Math.max(0, (haxe.Timer.stamp() - started) * 1000))));
 	}
 }
 #end

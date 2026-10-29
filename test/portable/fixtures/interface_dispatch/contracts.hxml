@@ -1,0 +1,7 @@
+-cp src
+-cp contracts
+-cp ../../../../packages/reflaxe.ocaml/src
+-lib reflaxe
+-main Main
+--no-output
+--macro CheckSignatures.run()

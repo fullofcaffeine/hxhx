@@ -4,7 +4,7 @@ set -euo pipefail
 # Gate 2 diagnostic rung: Stage3 emit+build the upstream RunCi runner.
 #
 # Goal
-# - Ensure `hxhx --hxhx-stage3 --hxhx-emit-full-bodies` can compile the upstream
+# - Ensure `hxhx --hxhx-stage3` can compile the upstream
 #   `tests/RunCi.hxml` into a native OCaml executable without stage0 `haxe`.
 #
 # Why
@@ -64,7 +64,7 @@ set +e
 (
   cd "$UPSTREAM_DIR/tests"
   rm -rf out_hxhx_runci_stage3_emit_runner
-  "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run RunCi.hxml --hxhx-out out_hxhx_runci_stage3_emit_runner 2>&1 | tee "$tmp_out"
+  "$HXHX_BIN" --hxhx-stage3 --hxhx-no-run RunCi.hxml --hxhx-out out_hxhx_runci_stage3_emit_runner 2>&1 | tee "$tmp_out"
 )
 code=$?
 set -e

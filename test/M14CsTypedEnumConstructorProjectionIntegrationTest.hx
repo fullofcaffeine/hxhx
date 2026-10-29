@@ -196,10 +196,10 @@ class M14CsTypedEnumConstructorProjectionIntegrationTest {
 		final defines = new StringMap<String>();
 		defines.set("no-compilation", "1");
 		final executableDir = Path.join([outputDir, "executable"]);
-		BackendRegistry.requireForTarget("cs-native").emit(program(), new BackendContext(executableDir, null, "demo.Main", true, true, defines));
+		BackendRegistry.requireForTarget("cs-native").emit(program(), new BackendContext(executableDir, null, "demo.Main", true, defines));
 		final libraryDir = Path.join([outputDir, "library"]);
 		BackendRegistry.requireForTarget("cs-native")
-			.emit(supportProgram(), new BackendContext(libraryDir, null, "demo.Helper", false, false, new StringMap<String>()));
+			.emit(supportProgram(), new BackendContext(libraryDir, null, "demo.Helper", false, new StringMap<String>()));
 		return {
 			entry: File.getContent(Path.join([executableDir, "src", "demo", "__HxMain.cs"])),
 			helper: File.getContent(Path.join([libraryDir, "src", "demo", "Helper.cs"]))

@@ -1,6 +1,12 @@
 -cp test
 -cp packages/hxhx-core/src
+-cp packages/hxhx/src
 
 -main M14JsTargetCoreWiringIntegrationTest
 --interp
 
+--next
+-cp test
+-cp packages/hxhx-core/src
+-main M14JsUnaryOperandTest
+--interp

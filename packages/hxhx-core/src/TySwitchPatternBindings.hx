@@ -18,9 +18,33 @@ private typedef TySwitchPatternBindingAnalysis = {
 	that contract before it mutates the function scope, declares each logical
 	local once, and returns one binding reference for every source occurrence.
 	Typed-body replay calls the same operation, so it consumes the declarations
-	in exactly the order recorded by the typer.
+	in exactly the order recorded by the typer. Array elements and structural
+	fields retain their declared types, including through nested captures; branch
+	arithmetic must not become Dynamic merely because a pattern introduced a local.
 **/
 class TySwitchPatternBindings {
+	/**
+		Return syntax-owned names without inferring the switch input or payload types.
+		Guards, extractors, and unsupported syntax need a separate source traversal;
+		null prevents a caller from treating partial names as complete visibility.
+	**/
+	public static function sourceNames(pattern:HxSwitchPattern):Null<Array<String>> {
+		function supported(value:HxSwitchPattern):Bool {
+			return switch value {
+				case PGuard(_, _) | PExtractor(_, _) | PUnsupportedPattern(_): false;
+				case PCapture(_, inner): supported(inner);
+				case PEnumExtract(_, children) | PArray(children) | POr(children): children.filter(child -> !supported(child)).length == 0;
+				case PObject(_, children): children.filter(child -> !supported(child)).length == 0;
+				case _: true;
+			};
+		}
+		return supported(pattern) ? analyze(pattern, TyType.unknown(), null).declarations.map(fact -> fact.name) : null;
+	}
+
+	/** Count source occurrences without allocating replacement local identities during lowering. */
+	public static function occurrenceCount(pattern:HxSwitchPattern):Int
+		return analyze(pattern, TyType.unknown(), null).occurrences.length;
+
 	static function effectiveType(type:TyType):TyType
 		return type == null || type.isUnknown() ? TyType.fromHintText("Dynamic") : type;
 
@@ -51,10 +75,11 @@ class TySwitchPatternBindings {
 		return {declarations: declarations, occurrences: occurrences};
 	}
 
-	static function analyzeOr(patterns:Array<HxSwitchPattern>, baseType:TyType):TySwitchPatternBindingAnalysis {
+	static function analyzeOr(patterns:Array<HxSwitchPattern>, baseType:TyType,
+			enumArguments:Null<(TyType, String, Int, Bool) -> Null<Array<TyType>>>):TySwitchPatternBindingAnalysis {
 		if (patterns == null || patterns.length == 0)
 			return emptyAnalysis();
-		final alternatives = [for (pattern in patterns) analyze(pattern, baseType)];
+		final alternatives = [for (pattern in patterns) analyze(pattern, baseType, enumArguments)];
 		final declarations = [
 			for (fact in alternatives[0].declarations)
 				{name: fact.name, type: fact.type}
@@ -87,33 +112,53 @@ class TySwitchPatternBindings {
 		return {declarations: declarations, occurrences: occurrences};
 	}
 
-	static function analyze(pattern:HxSwitchPattern, baseType:TyType):TySwitchPatternBindingAnalysis {
+	/** Keep nested array captures typed before branch operations are selected. */
+	static function arrayItemType(type:TyType):TyType {
+		var container = effectiveType(type);
+		while (container.isNullable())
+			container = container.unwrapNull();
+		final arguments = container.getTypeArguments();
+		final identity = container.getNominalIdentity();
+		final path = identity == null ? container.getUnresolvedPath() : identity.getCanonicalName();
+		return arguments.length == 1 && (path == "Array" || path == "haxe.Array") ? arguments[0] : TyType.fromHintText("Dynamic");
+	}
+
+	static function analyze(pattern:HxSwitchPattern, baseType:TyType,
+			enumArguments:Null<(TyType, String, Int, Bool) -> Null<Array<TyType>>>):TySwitchPatternBindingAnalysis {
 		if (pattern == null)
 			return emptyAnalysis();
 		return switch (pattern) {
 			case PBind(name):
 				bindingFact(name, baseType);
 			case PCapture(name, inner):
-				mergeIndependent([bindingFact(name, baseType), analyze(inner, baseType)]);
-			case PEnumExtract(_, arguments):
+				mergeIndependent([bindingFact(name, baseType), analyze(inner, baseType, enumArguments)]);
+			case PEnumExtract(name, arguments, provenance):
 				final children = arguments == null ? [] : arguments;
-				mergeIndependent([for (argument in children) analyze(argument, TyType.fromHintText("Dynamic"))]);
-			case PObject(_, fieldPatterns):
-				final children = fieldPatterns == null ? [] : fieldPatterns;
+				final types = enumArguments == null ? null : enumArguments(baseType, name, children.length,
+					TyEnumPatternArguments.hasWildcardSuffix(children, provenance));
+				if (types != null && types.length != children.length)
+					throw "enum pattern argument types do not match its payload patterns";
 				mergeIndependent([
-					for (fieldPattern in children)
-						analyze(fieldPattern, TyType.fromHintText("Dynamic"))
+					for (i in 0...children.length)
+						analyze(children[i], types == null ? TyType.fromHintText("Dynamic") : types[i], enumArguments)
+				]);
+			case PObject(fieldNames, fieldPatterns):
+				if (fieldNames == null || fieldPatterns == null || fieldNames.length != fieldPatterns.length)
+					throw "switch object pattern requires aligned fields";
+				mergeIndependent([
+					for (i in 0...fieldPatterns.length)
+						analyze(fieldPatterns[i], effectiveType(TyStructuralFieldRead.resolve(effectiveType(baseType), fieldNames[i])), enumArguments)
 				]);
 			case PArray(items):
 				final children = items == null ? [] : items;
-				mergeIndependent([for (item in children) analyze(item, TyType.fromHintText("Dynamic"))]);
+				final itemType = arrayItemType(baseType);
+				mergeIndependent([for (item in children) analyze(item, itemType, enumArguments)]);
 			case PExtractor(_, resultPattern):
-				analyze(resultPattern, TyType.fromHintText("Dynamic"));
-			case PLengthGuard(inner, _, _), PStartsWithGuard(inner, _, _), PIntEqualsGuard(inner, _, _), PIntCompareGuard(inner, _, _, _),
-				PParsedIntSwitchGuard(inner, _, _, _), PUnsupportedGuard(inner):
-				analyze(inner, baseType);
+				analyze(resultPattern, TyType.fromHintText("Dynamic"), enumArguments);
+			case PGuard(inner, _), PUnsupportedPattern(inner):
+				analyze(inner, baseType, enumArguments);
 			case POr(patterns):
-				analyzeOr(patterns, baseType);
+				analyzeOr(patterns, baseType, enumArguments);
 			case _:
 				emptyAnalysis();
 		}
@@ -126,10 +171,11 @@ class TySwitchPatternBindings {
 		mutated lexical scope. In replay mode, `environment.declareLocal` consumes
 		the already-recorded symbol instead of allocating a replacement identity.
 	**/
-	public static function declare(environment:Null<TyFunctionEnv>, pattern:HxSwitchPattern, baseType:TyType):Array<TyLocalBinding> {
+	public static function declare(environment:Null<TyFunctionEnv>, pattern:HxSwitchPattern, baseType:TyType,
+			?enumArguments:(TyType, String, Int, Bool) -> Null<Array<TyType>>):Array<TyLocalBinding> {
 		if (environment == null)
 			return [];
-		final analysis = analyze(pattern, baseType);
+		final analysis = analyze(pattern, baseType, enumArguments);
 		final symbols = new StringMap<TySymbol>();
 		for (fact in analysis.declarations)
 			symbols.set(fact.name, environment.declareLocal(fact.name, fact.type, PatternVariable));

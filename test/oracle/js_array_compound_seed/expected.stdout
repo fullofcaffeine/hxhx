@@ -1,0 +1,4 @@
+compound:5:5:receiver,index,right
+throw:2:receiver,index,throw
+coalesce:4:9:4,9:fallback
+lexical:9:9

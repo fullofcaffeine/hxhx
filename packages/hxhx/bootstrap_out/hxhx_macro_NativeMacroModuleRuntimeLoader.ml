@@ -6,15 +6,15 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.NativeMacroModuleRuntimeLoader" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.macro.NativeMacroModuleRuntimeLoader" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.NativeMacroModuleRuntimeLoader" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.macro.NativeMacroModuleRuntimeLoader" } : t)
 
 let loadConfigured = fun artifactKind loadModule -> (try let activation = Hxhxmacrohost_NativeMacroModuleReceipt.loadFromEnvironment (artifactKind : string) in (
-  ignore (if activation == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if activation == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let actualExpressions = Obj.magic (loadModule (Obj.obj (HxAnon.get activation "artifactPath") : string) (Obj.obj (HxAnon.get activation "pluginId") : string)) in (
     ignore (if HxArray.length actualExpressions <> HxArray.length (Obj.obj (HxAnon.get activation "expressions")) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_1 = "native macro module receipt: registered expression count mismatch for plugin `" in let __string_part_2 = HxString.toStdString (Obj.obj (HxAnon.get activation "pluginId")) in let __string_part_3 = "` (receipt=" in let __string_part_4 = string_of_int (HxArray.length (Obj.obj (HxAnon.get activation "expressions"))) in let __string_part_5 = ", module=" in let __string_part_6 = string_of_int (HxArray.length actualExpressions) in let __string_part_7 = ")" in (((((__string_part_1 ^ __string_part_2) ^ __string_part_3) ^ __string_part_4) ^ __string_part_5) ^ __string_part_6) ^ __string_part_7)) ["Dynamic"] else ());
     let _g = ref 0 in let _g1 = HxArray.length (Obj.obj (HxAnon.get activation "expressions")) in (

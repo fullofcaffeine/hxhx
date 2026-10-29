@@ -33,7 +33,7 @@ export HXHX_GATE2_SKIP_PARTY
 # - `stage3_no_emit_direct`: RunCi is *not* executed. Instead, this script runs the same sequence
 #   of sub-invocations as `runci.targets.Macro.run(...)`, but routes every `haxe` call through
 #   `hxhx --hxhx-stage3 --hxhx-no-emit`.
-# - `stage3_emit_runner`: RunCi is compiled+run by `hxhx --hxhx-stage3 --hxhx-emit-full-bodies`,
+# - `stage3_emit_runner`: RunCi is compiled+run by `hxhx --hxhx-stage3`,
 #   and RunCi sub-invocations (`haxe`) are routed through `hxhx --hxhx-stage3 --hxhx-no-emit`.
 #   This mode is intended to run the upstream `tests/RunCi.hx` *unmodified* (once Stage3 is ready).
 # - `stage3_emit_runner_minimal`: patched bring-up rung that replaces upstream `tests/RunCi.hx` in the
@@ -1411,7 +1411,7 @@ case "$HXHX_GATE2_MODE" in
     echo "== Gate 2: upstream tests/runci Macro target (direct: stage3 no-emit; no stage0 RunCi harness)"
     ;;
   stage3_emit_runner)
-    echo "== Gate 2: upstream tests/runci Macro target (native attempt: hxhx --hxhx-stage3 --hxhx-emit-full-bodies for RunCi; stage3_no_emit for sub-invocations)"
+    echo "== Gate 2: upstream tests/runci Macro target (native attempt: hxhx --hxhx-stage3 for RunCi; stage3_no_emit for sub-invocations)"
     echo "== Gate 2: stage3_emit_runner timeout=${HXHX_GATE2_RUNCI_TIMEOUT_SEC}s heartbeat=${HXHX_GATE2_RUNCI_HEARTBEAT_SEC}s"
     ;;
   stage3_emit_runner_minimal)
@@ -1457,7 +1457,7 @@ esac
     set +e
     PATH="$WRAP_DIR:$PATH" HAXELIB_BIN="$WRAP_DIR/haxelib" \
       run_with_gate2_timeout_and_heartbeat "${HXHX_GATE2_RUNCI_TIMEOUT_SEC}" \
-      "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies RunCi.hxml --hxhx-out out_hxhx_runci_stage3_emit_runner
+      "$HXHX_BIN" --hxhx-stage3 RunCi.hxml --hxhx-out out_hxhx_runci_stage3_emit_runner
     code="$?"
     set -e
     printf '%s' "$code" >"$HXHX_GATE2_RUNCI_EXIT_FILE"

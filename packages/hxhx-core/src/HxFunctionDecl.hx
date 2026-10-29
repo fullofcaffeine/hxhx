@@ -31,8 +31,11 @@ class HxFunctionDecl {
 	public final bodyText:String;
 	public final hasBody:Bool;
 
+	/** Parser-owned scope: plain module imports expose these functions, but do not expose class static methods. */
+	public final isModuleLevel:Bool;
+
 	public function new(name:String, visibility:HxVisibility, isStatic:Bool, args:Array<HxFunctionArg>, returnTypeHint:String, body:Array<HxStmt>,
-			returnStringLiteral:String, ?metadata:Array<String>, ?pos:HxPos, ?endPos:HxPos, ?bodyText:String, ?hasBody:Bool) {
+			returnStringLiteral:String, ?metadata:Array<String>, ?pos:HxPos, ?endPos:HxPos, ?bodyText:String, ?hasBody:Bool, isModuleLevel:Bool = false) {
 		this.name = name;
 		this.visibility = visibility;
 		this.isStatic = isStatic;
@@ -45,7 +48,14 @@ class HxFunctionDecl {
 		this.endPos = endPos == null ? this.pos : endPos;
 		this.bodyText = bodyText == null ? "" : bodyText;
 		this.hasBody = hasBody == null ? this.body.length > 0 || this.bodyText.length > 0 : hasBody;
+		if (isModuleLevel && !isStatic)
+			throw "module function must retain static holder storage";
+		this.isModuleLevel = isModuleLevel;
 	}
+
+	/** Read authored declaration scope without inferring it from a holder name or user metadata. */
+	public static function getIsModuleLevel(fn:HxFunctionDecl):Bool
+		return fn.isModuleLevel;
 
 	static function normalizeReturnTypeHint(typeHint:String):String {
 		final text = StringTools.trim(typeHint == null ? "" : typeHint);

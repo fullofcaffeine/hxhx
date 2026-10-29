@@ -29,6 +29,9 @@ type 'a t = {
      For typed stores this stays at 0. *)
   mutable null_slots : int;
   marker : Obj.t;
+  (* The compiler selects this callback from the actual element carrier.
+     Keeping it on the array preserves identity and observes later mutations. *)
+  mutable element_stringifier : (Obj.t -> string) option;
 }
 
 let hx_null : Obj.t = HxRuntime.hx_null
@@ -39,7 +42,7 @@ let array_marker : Obj.t = Obj.repr (ref 0)
    The marker gives Type.getClass a stable representation test without
    inspecting array contents or relying on a generated source name. *)
 let is_value (value : Obj.t) : bool =
-  (not (Obj.is_int value)) && Obj.tag value = 0 && Obj.size value = 4 && Obj.field value 3 == array_marker
+  (not (Obj.is_int value)) && Obj.tag value = 0 && Obj.size value = 5 && Obj.field value 3 == array_marker
 
 type raw_kind =
   | KindObj
@@ -102,7 +105,20 @@ let storage_capacity (store : storage) : int =
   | StringStore data -> Stdlib.Array.length data
 
 let create () : 'a t =
-  { store = ObjStore [||]; length = 0; null_slots = 0; marker = array_marker }
+  { store = ObjStore [||]; length = 0; null_slots = 0; marker = array_marker; element_stringifier = None }
+
+(* This does not inspect elements or change their storage. The caller must supply
+   the converter for this array's element carrier, including nullable values. *)
+let with_element_stringifier (a : 'a t) (to_string : 'a -> string) : 'a t =
+  a.element_stringifier <- Some (fun value -> to_string (Obj.obj value));
+  a
+
+(* Operations that retain the element type also retain its conversion contract,
+   even when their result is initially empty. Map intentionally uses create. *)
+let create_like (a : 'a t) : 'a t =
+  let out = create () in
+  out.element_stringifier <- a.element_stringifier;
+  out
 
 let length (a : 'a t) : int =
   match unwrap_or_empty a with
@@ -591,10 +607,10 @@ let slice (a : 'a t) (pos : int) (end_ : 'b) : 'a t =
       if clamped < 0 then 0 else clamped
     in
     if p >= len || e <= p then
-      create ()
+      create_like a
     else (
       let out_len = e - p in
-      let out = create () in
+      let out = create_like a in
       ensure_capacity out out_len;
       (match out.store with
       | ObjStore out_data ->
@@ -621,16 +637,16 @@ let splice (a : 'a t) (pos : int) (len : int) : 'a t =
   | Some a ->
     let data = ensure_obj_store a in
     if len < 0 then
-      create ()
+      create_like a
     else (
       let total = a.length in
       let p0 = normalize_slice_pos total pos in
       let p = if p0 > total then total else p0 in
       let l = if p + len > total then total - p else len in
       if l <= 0 then
-        create ()
+        create_like a
       else (
-        let removed = create () in
+        let removed = create_like a in
         ensure_capacity removed l;
         (match removed.store with
         | ObjStore removed_data ->
@@ -668,7 +684,7 @@ let copy (a : 'a t) : 'a t =
   match unwrap_or_empty a with
   | None -> create ()
   | Some a ->
-    let out = create () in
+    let out = create_like a in
     out.length <- a.length;
     out.null_slots <- a.null_slots;
     out.store <-
@@ -685,7 +701,7 @@ let concat (a : 'a t) (b : 'a t) : 'a t =
   | Some a, None -> copy a
   | None, Some b -> copy b
   | Some a, Some b ->
-    let out = create () in
+    let out = create_like a in
     let len_a = a.length in
     let len_b = b.length in
     let total = len_a + len_b in
@@ -833,6 +849,12 @@ let join (a : 'a t) (sep : string) (to_string : 'a -> string) : string =
 let toString (a : 'a t) (to_string : 'a -> string) : string =
   "[" ^ join a "," to_string ^ "]"
 
+(* The callback belongs to this array, not to the global Array class. The
+   fallback handles arrays whose elements already use Dynamic representation. *)
+let to_dynamic_string (a : 'a t) (fallback : Obj.t -> string) : string =
+  let convert = match a.element_stringifier with Some f -> f | None -> fallback in
+  toString a (fun value -> convert (Obj.repr value))
+
 let map (a : 'a t) (f : 'a -> 'b) : 'b t =
   match unwrap_or_empty a with
   | None -> create ()
@@ -852,7 +874,7 @@ let filter (a : 'a t) (f : 'a -> bool) : 'a t =
   match unwrap_or_empty a with
   | None -> create ()
   | Some a ->
-    let out = create () in
+    let out = create_like a in
     if a.length = 0 then
       out
     else (

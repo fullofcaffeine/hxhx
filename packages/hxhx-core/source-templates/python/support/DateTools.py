@@ -1,4 +1,5 @@
 class DateTools:
+    _hx_class_name = "DateTools"
     @staticmethod
     def seconds(n):
         return (n * 1000.0)

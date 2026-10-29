@@ -1,0 +1,14 @@
+ints:true:2
+ints-changed:false:3
+floats:true
+floats-changed:false
+flags:true
+flags-changed:false
+words:true
+words-equal-copy:true
+words-grown:false
+nullable:true
+nullable-changed:false
+boxes:true
+boxes-replaced:false
+boxes-restored:true

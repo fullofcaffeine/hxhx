@@ -1,4 +1,3 @@
-import haxe.ds.StringMap;
 import sys.FileSystem;
 import sys.io.File;
 import TypedExpr.TypedExprTag;
@@ -8,8 +7,8 @@ import TypedExpr.TypedExprTag;
 
 	Haxe selects the successful branch's concrete type when a `Dynamic` catch
 	branch can flow into it. The typed tree must retain that decision and expose
-	the catch conversion before OCaml requires both `HxRuntime.hx_try` closures
-	to return the same representation. An unresolved statement-level return is
+	the catch conversion before OCaml assigns either branch to its result storage.
+	An unresolved statement-level return is
 	also provisional: a later concrete return can still determine the function's
 	result, while a real `Dynamic` return stays `Dynamic`.
 **/
@@ -82,19 +81,20 @@ class M14HxhxStage3DynamicCatchResultIntegrationTest {
 		return null;
 	}
 
-	static function catchBody(tryCall:TypedExpr):TypedExpr {
-		final callChildren = tryCall.getExpressions();
-		assertTrue(callChildren.length == 4, "structural try call lost its three arguments");
-		final catches = callChildren[2];
-		assertTrue(catches.getTag() == TypedExprTag.ArrayDecl
-			&& catches.getExpressions().length == 1, "structural try call lost its catch list");
-		final catchEntry = catches.getExpressions()[0];
-		assertTrue(catchEntry.getTag() == TypedExprTag.ArrayDecl && catchEntry.getExpressions().length == 3,
-			"structural catch entry lost its metadata or handler");
-		final handler = catchEntry.getExpressions()[2];
-		assertTrue(handler.getTag() == TypedExprTag.Lambda
-			&& handler.getExpressions().length == 1, "structural catch entry lost its handler lambda");
-		return handler.getExpressions()[0];
+	/** The handler remains in its authored lexical scope with the exact catch declaration. */
+	static function catchBody(sourceTry:TypedExpr):TypedExpr {
+		assertTrue(sourceTry.getTag() == TypedExprTag.SourceTry, "try expression lost its source control node");
+		final bodies = sourceTry.getExpressions();
+		final catches = sourceTry.getSourceCatches();
+		final bindings = sourceTry.getLocalBindings();
+		assertTrue(bodies.length == 2 && catches.length == 1 && bindings.length == 1, "source try lost its body or ordered handler");
+		assertTrue(catches[0].getName() == "error"
+			&& catches[0].getTypeHint() == "Dynamic"
+			&& bindings[0].getSourceName() == "error"
+			&& bindings[0].getKind() == CatchVariable
+			&& bindings[0].getType().isDynamic(),
+			"source try lost its authored Dynamic catch declaration");
+		return bodies[1];
 	}
 
 	static function countOccurrences(text:String, needle:String):Int {
@@ -128,6 +128,10 @@ class M14HxhxStage3DynamicCatchResultIntegrationTest {
 			"    final result = try { if (shouldFail) throw 'boom'; 'ready'; } catch(error:Dynamic) fallback(error);",
 			"    return result;",
 			"  }",
+			"  public static function attempted(value:Dynamic):String {",
+			"    final result = try value catch(error:Dynamic) 'fallback';",
+			"    return result;",
+			"  }",
 			"  public static function keepDynamic(value:Dynamic):Dynamic {",
 			"    final result = try value catch(error:Dynamic) fallback(error);",
 			"    return result;",
@@ -147,6 +151,7 @@ class M14HxhxStage3DynamicCatchResultIntegrationTest {
 			"    Sys.println(read(false));",
 			"    Sys.println(read(true));",
 			"    Sys.println('result=' + inferredStatementResult('statement'));",
+			"    Sys.println(attempted('attempted'));",
 			"  }",
 			"}",
 		].join("\n");
@@ -191,18 +196,28 @@ class M14HxhxStage3DynamicCatchResultIntegrationTest {
 			"ReturnTypeProbe.verify()"
 		]);
 		assertTrue(upstream.exitCode == 0, "upstream Haxe rejected the inferred String contract: " + upstream.stderr);
-		assertTrue(upstream.stdout == "ready\ncaught\nresult=statement\n", "upstream Haxe produced unexpected output: " + upstream.stdout);
+		assertTrue(upstream.stdout == "ready\ncaught\nresult=statement\nattempted\n", "upstream Haxe produced unexpected output: " + upstream.stdout);
 
 		final parsed = ParserStage.parse(source, sourcePath);
 		final resolved = new ResolvedModule("DynamicCatchResult", sourcePath, parsed);
-		final index = TyperIndex.build([resolved]);
-		final loader = new ModuleLoader(["checks"], new StringMap<String>(), index, function(_):Bool return false);
+		final arguments = hxhx.Stage1Compiler.Stage1Args.parse(["-cp", sourceDir, "-main", "DynamicCatchResult"], true);
+		final paths = hxhx.Stage3SetupSupport.projectClassPaths({
+			explicitPaths: [sourceDir],
+			libraries: [],
+			cwd: Sys.getCwd(),
+			standardRoot: hxhx.Stage1Compiler.Stage1Args.getStandardLibraryRoot(arguments),
+			targetDefine: "ocaml"
+		});
+		final index = TyperIndex.buildHeaders([resolved]);
+		final loader = new ModuleLoader(paths, hxhx.Stage3SetupSupport.buildDefinesMap([], "ocaml", "ocaml"), index);
 		loader.markResolvedAlready([resolved]);
-		final typed = TyperStage.typeResolvedModule(resolved, index, loader);
+		for (name in ["Std", "Sys"])
+			assertTrue(loader.ensureTypeAvailable(name, "", []) != null, "try result fixture requires the real " + name + " provider");
+		final typed = TyperStage.typeResolvedModule(resolved, index, loader, true);
 
 		final expression = resultInitializer(findFunction(typed, "DynamicCatchResult", "read"));
-		final structuralTry = findCallNamed(expression, "__hxhx_try");
-		assertTrue(structuralTry != null, "read lost its structural try expression");
+		final structuralTry = expression;
+		assertTrue(structuralTry.getTag() == TypedExprTag.SourceTry, "read lost its source try expression");
 		assertTrue(structuralTry.getType().getSemanticKey() == "primitive:String",
 			"read did not select the successful branch's String result: " + structuralTry.getType().getSemanticKey());
 		final handlerBody = catchBody(structuralTry);
@@ -211,9 +226,21 @@ class M14HxhxStage3DynamicCatchResultIntegrationTest {
 			&& handlerBody.getExpressions()[0].getType().isDynamic(),
 			"read did not retain the Dynamic-to-String catch conversion");
 
+		final attempted = resultInitializer(findFunction(typed, "DynamicCatchResult", "attempted"));
+		assertTrue(attempted.getTag() == TypedExprTag.SourceTry && attempted.getType().getSemanticKey() == "primitive:String",
+			"concrete handler did not select the try result type");
+		final attemptedBody = attempted.getExpressions()[0];
+		assertTrue(attemptedBody.getTag() == TypedExprTag.Cast
+			&& attemptedBody.getType().getSemanticKey() == "primitive:String"
+			&& attemptedBody.getExpressions().length == 1
+			&& attemptedBody.getExpressions()[0].getType().isDynamic(),
+			"Dynamic try body lost its selected String conversion");
+		assertTrue(catchBody(attempted).getTag() != TypedExprTag.Cast, "concrete handler gained an unnecessary conversion");
+
 		final dynamicExpression = resultInitializer(findFunction(typed, "DynamicCatchResult", "keepDynamic"));
-		final dynamicTry = findCallNamed(dynamicExpression, "__hxhx_try");
-		assertTrue(dynamicTry != null && dynamicTry.getType().isDynamic(), "genuine Dynamic try expression changed its static result");
+		final dynamicTry = dynamicExpression;
+		assertTrue(dynamicTry.getTag() == TypedExprTag.SourceTry && dynamicTry.getType().isDynamic(),
+			"genuine Dynamic try expression changed its static result");
 		assertTrue(catchBody(dynamicTry).getTag() != TypedExprTag.Cast, "genuine Dynamic catch branch gained a concrete conversion");
 		final inferredStatementResult = findFunction(typed, "DynamicCatchResult", "inferredStatementResult");
 		assertTrue(inferredStatementResult.getEnvironment().getReturnType().getDisplay() == "String",
@@ -226,13 +253,15 @@ class M14HxhxStage3DynamicCatchResultIntegrationTest {
 		final unrelatedTry = findFunction(typed, "DynamicCatchResult", "unrelatedTry");
 		assertTrue(unrelatedTry.getEnvironment().getReturnType().getDisplay() == "Void", "an unrelated try/catch statement changed its explicit Void result");
 
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), outDir, true);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), outDir);
 		final output = File.getContent(haxe.io.Path.join([outDir, "DynamicCatchResult.ml"]));
-		final catchCast = "(Obj.obj (Obj.repr (fallback (error))) : string)";
+		final catchCast = "(Obj.obj (Obj.repr ((let __hx_call_function = (fallback) in let __hx_call_argument_0 = ((error)) in __hx_call_function __hx_call_argument_0))) : string)";
 		assertTrue(countOccurrences(output, catchCast) == 1, "OCaml emission did not convert exactly the concrete String catch result: " + output);
 		assertTrue(output.indexOf("inferredStatementResult (value : Obj.t) : string") >= 0,
 			"OCaml emission lost the inferred String function result: " + output);
 		assertNotContains(output, "Obj.obj (Obj.repr (inferredStatementResult", "the String caller gained an unchecked target-side result repair");
+		assertNotContains(output, "Obj.obj (Obj.repr ((let __hx_call_function = (inferredStatementResult)",
+			"the ordered String caller gained an unchecked target-side result repair");
 		final result = run(executable, []);
 		assertTrue(result.exitCode == 0, "Dynamic catch result executable failed: " + result.stderr);
 		assertTrue(result.stdout == upstream.stdout, "native try/catch output differs from upstream Haxe: " + result.stdout);

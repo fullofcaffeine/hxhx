@@ -1,0 +1,2 @@
+# 1 "TypedCollectionExpectation.ml"
+include CompilerDiagnosticProbe.TypedCollectionExpectation

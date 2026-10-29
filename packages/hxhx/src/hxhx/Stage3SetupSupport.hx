@@ -7,6 +7,15 @@ import backend.OcamlProfile;
 
 private typedef HaxelibSpec = LibraryResolver.LibrarySpec;
 
+/** Separates user lookup priority from target-selected standard-library providers. */
+typedef Stage3ProjectClassPathInput = {
+	final explicitPaths:Array<String>;
+	final libraries:Array<LibraryResolver.LibrarySpec>;
+	final cwd:String;
+	final standardRoot:String;
+	final targetDefine:String;
+}
+
 /**
 	Stage3 library, classpath, and define setup helpers.
 
@@ -251,10 +260,19 @@ class Stage3SetupSupport {
 		return filtered;
 	}
 
-	public static function projectClassPaths(parsedClassPaths:Array<String>, libsResolved:Array<HaxelibSpec>, cwd:String):Array<String> {
-		final base = parsedClassPaths.map(cp -> Stage3PathSupport.absFromCwd(cwd, cp));
+	/**
+		Selects project sources before standard-library providers. C++ and OCaml use the authored
+		providers embedded in this compiler. Neko, JavaScript, and Lua use
+		their target _std implementations before common declarations; missing overrides fall
+		through to the common root. Explicit user roots retain their original priority,
+		including an explicitly supplied common standard-library directory. Macro-host
+		classpath construction remains separate because it compiles for the host target.
+	**/
+	public static function projectClassPaths(input:Stage3ProjectClassPathInput):Array<String> {
+		final cwd = input.cwd;
+		final base = input.explicitPaths.map(cp -> Stage3PathSupport.absFromCwd(cwd, cp));
 		final libs = new Array<String>();
-		for (s in libsResolved)
+		for (s in input.libraries)
 			for (p in s.classPaths)
 				libs.push(Stage3PathSupport.absFromCwd(cwd, p));
 		final extra = hxhx.macro.MacroState.listClassPaths().map(cp -> Stage3PathSupport.absFromCwd(cwd, cp));
@@ -273,26 +291,38 @@ class Stage3SetupSupport {
 				out.push(generatedHxDir);
 		}
 
-		final inferredStd = Stage1Args.inferStdRootForCwd(cwd);
-		if (inferredStd.length > 0) {
-			final inferredNorm = Path.normalize(inferredStd);
-			var hasStd = false;
-			for (cp in out) {
-				if (Path.normalize(cp) == inferredNorm) {
-					hasStd = true;
-					break;
-				}
-			}
-			if (!hasStd)
-				out.push(inferredStd);
+		final withCwd = ResolverStage.withImplicitCwdClassPath(out, cwd);
+		function appendUnique(path:String):Void {
+			final normalized = Path.normalize(path);
+			for (existing in withCwd)
+				if (Path.normalize(existing) == normalized)
+					return;
+			withCwd.push(normalized);
 		}
-		return ResolverStage.withImplicitCwdClassPath(out, cwd);
+		final bundledRoot = CompilerBundledSources.targetRoot(input.targetDefine);
+		if (bundledRoot != null)
+			appendUnique(bundledRoot);
+		if (input.standardRoot.length > 0) {
+			final common = Stage3PathSupport.absFromCwd(cwd, input.standardRoot);
+			// Other targets retain their existing providers until their own promotion proof.
+			if (input.targetDefine == "neko" || input.targetDefine == "js" || input.targetDefine == "lua") {
+				final target = Path.join([common, input.targetDefine, "_std"]);
+				if (sys.FileSystem.exists(target) && sys.FileSystem.isDirectory(target))
+					appendUnique(target);
+			}
+			appendUnique(common);
+		}
+		return withCwd;
 	}
 
 	public static function buildDefinesMap(allDefines:Array<String>, backendTargetDefine:String, backendId:String):haxe.ds.StringMap<String> {
 		final definesMap = HxDefineMap.fromRawDefines(allDefines);
 		definesMap.set("sys", "1");
 		definesMap.set(backendTargetDefine, "1");
+		// Native OCaml uses the authored provider branch even without a CLI output path.
+		// An explicit output value remains available to the normal routing owner.
+		if (backendTargetDefine == "ocaml" && !definesMap.exists("ocaml_output"))
+			definesMap.set("ocaml_output", "1");
 		for (n in hxhx.macro.MacroState.listDefineNames()) {
 			definesMap.set(n, hxhx.macro.MacroState.definedValue(n));
 		}

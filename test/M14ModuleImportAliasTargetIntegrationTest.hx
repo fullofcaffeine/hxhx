@@ -176,7 +176,7 @@ class M14ModuleImportAliasTargetIntegrationTest {
 	static function assertJavaCollisionOutput(root:String):Void {
 		final outputRoot = Path.join([root, "java-collision"]);
 		final result = BackendRegistry.requireForTarget("java-native")
-			.emit(javaCollisionProgram(), new BackendContext(outputRoot, null, "Main", true, false, new StringMap<String>()));
+			.emit(javaCollisionProgram(), new BackendContext(outputRoot, null, "Main", false, new StringMap<String>()));
 		final content = File.getContent(result.entryPath);
 		assertTrue(content.indexOf("import b.Tools;") >= 0, "Java did not import the later Haxe type binding");
 		assertTrue(content.indexOf("import a.Tools;") < 0, "Java emitted the shadowed earlier Haxe type import");
@@ -209,14 +209,14 @@ class M14ModuleImportAliasTargetIntegrationTest {
 		final typedProgram = wildcardProgram();
 		final javaRoot = Path.join([root, "java-wildcard"]);
 		final javaResult = BackendRegistry.requireForTarget("java-native")
-			.emit(typedProgram, new BackendContext(javaRoot, null, "Main", true, false, new StringMap<String>()));
+			.emit(typedProgram, new BackendContext(javaRoot, null, "Main", false, new StringMap<String>()));
 		final java = File.getContent(javaResult.entryPath);
 		assertTrue(java.indexOf("import static values.Provider.visible;") >= 0, "Java did not emit the eligible wildcard static member");
 		assertTrue(java.indexOf("import static values.Provider.hidden;") < 0 && java.indexOf("import static values.Provider.*;") < 0,
 			"Java re-exposed a @:noImportGlobal member through wildcard target syntax");
 
 		final ocamlRoot = Path.join([root, "ocaml-wildcard"]);
-		EmitterStage.emitToDir(typedProgram, ocamlRoot, true, false);
+		EmitterStage.emitToDir(typedProgram, ocamlRoot, false);
 		final ocamlMain = File.getContent(Path.join([ocamlRoot, "Main.ml"]));
 		assertTrue(ocamlMain.indexOf("Values_Provider.visible") >= 0, "OCaml did not qualify the eligible wildcard static member");
 		assertTrue(ocamlMain.indexOf("Values_Provider.hidden") >= 0, "OCaml did not preserve the explicitly qualified @:noImportGlobal member access");
@@ -240,7 +240,7 @@ class M14ModuleImportAliasTargetIntegrationTest {
 	static function assertPhpUsingOrder(root:String):Void {
 		final outputRoot = Path.join([root, "php-using-order"]);
 		final result = BackendRegistry.requireForTarget("php-native")
-			.emit(phpUsingOrderProgram(), new BackendContext(outputRoot, null, "Main", true, false, new StringMap<String>()));
+			.emit(phpUsingOrderProgram(), new BackendContext(outputRoot, null, "Main", false, new StringMap<String>()));
 		if (!commandExists("php"))
 			return;
 		final runtime = commandOutput("php", [result.entryPath]);
@@ -252,15 +252,27 @@ class M14ModuleImportAliasTargetIntegrationTest {
 	static function emit(targetId:String, root:String):String {
 		final outputRoot = Path.join([root, targetId]);
 		final result = BackendRegistry.requireForTarget(targetId)
-			.emit(program(), new BackendContext(outputRoot, null, "Main", true, false, new StringMap<String>()));
+			.emit(program(), new BackendContext(outputRoot, null, "Main", false, new StringMap<String>()));
 		assertTrue(FileSystem.exists(result.entryPath), targetId + " did not produce its entry source file");
 		final content = File.getContent(result.entryPath);
-		assertTrue(content.indexOf("Service") < 0, targetId + " leaked the Haxe-only alias instead of consuming the resolved model.Api identity");
-		assertTrue(content.indexOf("Role") < 0, targetId + " leaked the Haxe-only interface alias instead of consuming the resolved model.Contract identity");
+		// C# may declare exact aliases in its header. Calls and class declarations
+		// must still consume the resolved identities checked by this fixture.
+		var resolvedContent = content;
+		if (targetId == "cs-native")
+			for (alias in [
+				"Service = global::model.Api",
+				"Role = global::model.Contract",
+				"Parent = global::model.Base"
+			])
+				resolvedContent = StringTools.replace(resolvedContent, "using " + alias + ";", "");
+		assertTrue(resolvedContent.indexOf("Service") < 0, targetId + " leaked the Haxe-only alias instead of consuming the resolved model.Api identity");
+		assertTrue(resolvedContent.indexOf("Role") < 0,
+			targetId + " leaked the Haxe-only interface alias instead of consuming the resolved model.Contract identity");
 		if (targetId == "php-native")
 			assertTrue(content.indexOf("class Main extends Base") >= 0, "PHP did not render Main with the resolved Base parent")
 		else
-			assertTrue(content.indexOf("Parent") < 0, targetId + " leaked the Haxe-only parent alias instead of consuming the resolved model.Base identity");
+			assertTrue(resolvedContent.indexOf("Parent") < 0,
+				targetId + " leaked the Haxe-only parent alias instead of consuming the resolved model.Base identity");
 		assertTrue(content.indexOf("Api") >= 0, targetId + " output did not reference the selected Api provider");
 		if (targetId != "cs-native")
 			assertTrue(content.indexOf("Base") >= 0, targetId + " output did not reference the selected Base parent");
@@ -537,7 +549,7 @@ class M14ModuleImportAliasTargetIntegrationTest {
 			return;
 		final outputRoot = Path.join([root, targetId + "-compiled"]);
 		final result = BackendRegistry.requireForTarget(targetId)
-			.emit(compiledAliasProgram(), new BackendContext(outputRoot, null, "Main", true, true, new StringMap<String>()));
+			.emit(compiledAliasProgram(), new BackendContext(outputRoot, null, "Main", true, new StringMap<String>()));
 		assertTrue(FileSystem.exists(result.entryPath), targetId + " did not produce its compiled alias artifact");
 	}
 

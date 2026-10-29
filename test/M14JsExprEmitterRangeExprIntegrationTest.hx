@@ -18,13 +18,12 @@ class M14JsExprEmitterRangeExprIntegrationTest {
 		final scope = new JsFunctionScope(new haxe.ds.StringMap<String>());
 		final exprScope = scope.exprScope();
 
-		final expr = HxParser.parseExprText("1...5");
-		final js = JsExprEmitter.emit(expr, exprScope);
-		assertContains(js, "(function () {", "range expression lowers to IIFE");
-		assertContains(js, "var __range_start = 1;", "range expression captures start once");
-		assertContains(js, "var __range_end = 5;", "range expression captures end once");
-		assertContains(js, "for (var __range_i = __range_start; __range_i < __range_end; __range_i++) {", "range expression lowers to deterministic for loop");
-		assertContains(js, "__range_out.push(__range_i);", "range expression appends current loop value");
+		var rejection = "";
+		try
+			JsExprEmitter.emit(HxParser.parseExprText("1...5"), exprScope)
+		catch (error:haxe.Exception)
+			rejection = error.message;
+		assertContains(rejection, "kind=ERange detail=unlowered interval value", "raw intervals require shared typed construction");
 
 		final coalesceJs = JsExprEmitter.emit(HxParser.parseExprText("left() ?? right()"), exprScope);
 		assertContains(coalesceJs, "function(__hx_coalesce)", "null coalescing should capture left once");
@@ -49,5 +48,6 @@ class M14JsExprEmitterRangeExprIntegrationTest {
 		final typeTestJs = JsExprEmitter.emit(HxParser.parseExprText("1f64 is Float"), exprScope);
 		assertContains(typeTestJs, "function(__hx_is)", "type-test should evaluate the value once");
 		assertContains(typeTestJs, 'typeof __hx_is === "number"', "Float type-test should lower to a JS number check");
+		M14Stage3RangeValueTest.runContract();
 	}
 }

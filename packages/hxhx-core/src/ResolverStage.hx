@@ -83,24 +83,24 @@ class ResolverStage {
 	}
 
 	static function implicitSamePackageDeps(source:String, modulePath:String, decl:HxModuleDecl):Array<String> {
+		source = HxLexer.maskComments(source);
 		final pkg = HxModuleDecl.getPackagePath(decl);
 		final moduleName = modulePath == null ? "" : modulePath.split(".").pop();
 
 		final candidates = new Map<String, Bool>();
 		function addMatches(re:EReg):Void {
-			var pos = 0;
-			while (re.matchSub(source, pos, -1)) {
-				final name = re.matched(1);
+			// Let EReg advance its own cursor. Eval's substring offsets and
+			// matchedPos coordinates disagree after multibyte source text.
+			re.map(source, matched -> {
+				final name = matched.matched(1);
 				if (name != null && name.length > 0)
 					candidates.set(name, true);
-				final mp = re.matchedPos();
-				pos = mp.pos + mp.len;
-			}
+				return matched.matched(0);
+			});
 		}
 		function addTypeListMatches(re:EReg):Void {
-			var pos = 0;
-			while (re.matchSub(source, pos, -1)) {
-				final list = re.matched(1);
+			re.map(source, matched -> {
+				final list = matched.matched(1);
 				if (list != null) {
 					for (raw in list.split(",")) {
 						final name = StringTools.trim(raw);
@@ -108,9 +108,8 @@ class ResolverStage {
 							candidates.set(name, true);
 					}
 				}
-				final mp = re.matchedPos();
-				pos = mp.pos + mp.len;
-			}
+				return matched.matched(0);
+			});
 		}
 
 		// Note: this is intentionally heuristic. It exists as a bootstrap bridge toward
@@ -156,7 +155,7 @@ class ResolverStage {
 		- The bootstrap resolver is still mostly import-driven.
 		- Real Haxe code frequently references types without an import, e.g.
 		  `haxeserver.HaxeServerSync.launch(...)`.
-		- In Stage3 `--hxhx-emit-full-bodies` mode, those references must still pull in the target
+		- During native compilation, those references must still pull in the target
 		  module, otherwise OCaml link fails with `Unbound module ...`.
 
 		What
@@ -169,33 +168,7 @@ class ResolverStage {
 		  positives low enough for bring-up.
 	**/
 	static function implicitQualifiedTypeDeps(source:String, ?defines:haxe.ds.StringMap<String>):Array<String> {
-		if (source == null || source.length == 0)
-			return [];
-
-		final candidates = new Map<String, Bool>();
-		// Skip metadata lines (`@:build(...)`, `@:autoBuild(...)`, etc.) so macro entrypoint
-		// paths do not widen the main compilation graph.
-		for (line in source.split("\n")) {
-			final trimmed = StringTools.trim(line);
-			if (StringTools.startsWith(trimmed, "@:"))
-				continue;
-
-			final re = ~/\b(([A-Za-z_][A-Za-z0-9_]*\.)+[A-Z][A-Za-z0-9_]*)\b/g;
-			var pos = 0;
-			while (re.matchSub(line, pos, -1)) {
-				final dep = re.matched(1);
-				if (dep != null && dep.length > 0 && !HxConditionalCompilation.isInactiveTargetQualifiedTypePath(dep, defines))
-					candidates.set(dep, true);
-				final mp = re.matchedPos();
-				pos = mp.pos + mp.len;
-			}
-		}
-
-		final out = new Array<String>();
-		for (dep in candidates.keys())
-			out.push(dep);
-		out.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
-		return out;
+		return HxImplicitDependencies.qualifiedTypePaths(source, defines);
 	}
 
 	/**
@@ -219,9 +192,8 @@ class ResolverStage {
 			return [];
 
 		final re = ~/\baddCases\s*\(\s*["']([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)["']/g;
-		var pos = 0;
-		while (re.matchSub(source, pos, -1)) {
-			final packageName = re.matched(1);
+		re.map(source, matched -> {
+			final packageName = matched.matched(1);
 			if (packageName != null && packageName.length > 0) {
 				final relDir = packageName.split(".").join("/");
 				for (cp in classPaths) {
@@ -235,9 +207,8 @@ class ResolverStage {
 					}
 				}
 			}
-			final mp = re.matchedPos();
-			pos = mp.pos + mp.len;
-		}
+			return matched.matched(0);
+		});
 
 		final out = new Array<String>();
 		for (dep in outSet.keys())
@@ -251,7 +222,62 @@ class ResolverStage {
 	}
 
 	/**
-		Resolve only the explicit root modules, without walking import or heuristic dependency closure.
+		Return the resolved module for the first requested root.
+
+		What: callers that need "the program's root module" (its typed summary, its
+		entry point) must look it up by module path.
+
+		Why: resolution also adds implicit standard declarations (`StdTypes`, `Class`)
+		as roots, and the dependency walk does not keep requested roots first in its
+		result. Taking `resolved[0]` then picks a standard module instead of the
+		requested one.
+
+		How: match the first non-empty requested root by module path. When no root was
+		requested (for example display inference), the first resolved module is used.
+		A requested root that resolution did not return is reported as an error.
+	**/
+	public static function requestedRoot(resolved:Array<ResolvedModule>, roots:Array<String>):ResolvedModule {
+		var requested:Null<String> = null;
+		if (roots != null)
+			for (root in roots) {
+				final modulePath = root == null ? "" : StringTools.trim(root);
+				if (modulePath.length > 0) {
+					requested = modulePath;
+					break;
+				}
+			}
+		if (requested == null) {
+			if (resolved.length == 0)
+				throw "resolution returned no modules";
+			return resolved[0];
+		}
+		for (module in resolved)
+			if (ResolvedModule.getModulePath(module) == requested)
+				return module;
+		throw "requested root module was not resolved: " + requested;
+	}
+
+	/**
+		Include the installed standard declarations before callers build type signatures.
+
+		Haxe implicitly exposes public types from `StdTypes`, such as `ArrayAccess`.
+		The `Class` declaration gives class values their parameterized `Class<T>` type.
+		Resolve that source through the request's normal provider so class-path selection
+		and source observations apply equally to implicit and explicit modules. Small
+		isolated projects with no standard-library path retain their supplied roots.
+	**/
+	static function withStandardTypesRoots(classPaths:Array<String>, roots:Array<String>, sources:CompilerSourceProvider):Array<String> {
+		final selected = roots == null ? [] : roots.copy();
+		if (selected.length == 0)
+			return selected;
+		for (modulePath in ["StdTypes", "Class"])
+			if (selected.indexOf(modulePath) < 0 && sources.resolveModule(classPaths, modulePath).filePath != null)
+				selected.push(modulePath);
+		return selected;
+	}
+
+	/**
+		Resolve the explicit roots and standard declarations, without walking their dependencies.
 
 		Why
 		- Stage3 `--hxhx-no-emit` is a no-output compiler-latency lane. It should behave closer to
@@ -288,9 +314,7 @@ class ResolverStage {
 			return out;
 		}
 
-		if (roots == null)
-			return out;
-		for (root in roots) {
+		for (root in withStandardTypesRoots(classPaths, roots, sources)) {
 			if (root == null)
 				continue;
 			final modulePath = StringTools.trim(root);
@@ -322,7 +346,7 @@ class ResolverStage {
 			final conditional = HxConditionalCompilation.filterSourceObserved(source, effectiveDefines);
 			final filteredSource = conditional.getFilteredSource();
 			final parsed = try {
-				sources.parseFilteredSource(filteredSource, filePath);
+				sources.parseFilteredSource({originalSource: source, filteredSource: filteredSource, filePath: filePath});
 			} catch (e:HxParseError) {
 				throw "parse_failed " + filePath + ": " + e.message;
 			} catch (e:String) {
@@ -372,15 +396,13 @@ class ResolverStage {
 		}
 
 		final stack = new Array<String>();
-		if (roots != null) {
-			for (r in roots) {
-				if (r == null)
-					continue;
-				final m = StringTools.trim(r);
-				if (m.length == 0)
-					continue;
-				stack.push(m);
-			}
+		for (r in withStandardTypesRoots(classPaths, roots, sources)) {
+			if (r == null)
+				continue;
+			final m = StringTools.trim(r);
+			if (m.length == 0)
+				continue;
+			stack.push(m);
 		}
 
 		// Use an explicit worklist instead of recursion so widening the module graph (e.g. upstream suites)
@@ -431,7 +453,7 @@ class ResolverStage {
 			final filteredSource = conditional.getFilteredSource();
 
 			final parsed = try {
-				sources.parseFilteredSource(filteredSource, filePath);
+				sources.parseFilteredSource({originalSource: source, filteredSource: filteredSource, filePath: filePath});
 			} catch (e:HxParseError) {
 				throw "parse_failed " + filePath + ": " + e.message;
 			} catch (e:String) {

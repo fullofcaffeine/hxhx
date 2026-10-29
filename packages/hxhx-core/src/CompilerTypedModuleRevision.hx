@@ -89,7 +89,7 @@ class CompilerTypedModuleRevision {
 		final generatedDeclarations = module.getGeneratedDeclarations();
 		final sourceRevision = CompilerCacheIdentity.encode(["typed-module-source-v2", modulePath, sourceOriginRevision, parsed.getSource()]);
 		final publicFacts = new Array<Null<String>>();
-		publicFacts.push("typed-module-public-interface-v4");
+		publicFacts.push("typed-module-public-interface-v10");
 		publicFacts.push(modulePath);
 		final declaration = parsed.getDecl();
 		publicFacts.push(HxModuleDecl.getPackagePath(declaration));
@@ -102,7 +102,7 @@ class CompilerTypedModuleRevision {
 			addPublicClassFacts(publicFacts, typedClass);
 		final publicRevision = CompilerCacheIdentity.encode(publicFacts);
 		final implementationFacts = new Array<Null<String>>();
-		implementationFacts.push("typed-module-implementation-v9");
+		implementationFacts.push("typed-module-implementation-v10");
 		implementationFacts.push(modulePath);
 		implementationFacts.push(publicRevision);
 		addDirectives(implementationFacts, directives);
@@ -111,6 +111,11 @@ class CompilerTypedModuleRevision {
 		for (typedClass in module.getTypedClasses()) {
 			implementationFacts.push("typed-class");
 			implementationFacts.push(HxClassDecl.getName(typedClass.getSourceDeclaration()));
+			for (field in typedClass.getFields()) {
+				implementationFacts.push("typed-field-declaration");
+				implementationFacts.push(HxFieldDecl.getName(field));
+				implementationFacts.push(HxFieldDecl.getIsStatic(field) ? "static" : "instance");
+			}
 			for (fieldInitializer in typedClass.getFieldInitializers()) {
 				implementationFacts.push("typed-field-initializer");
 				implementationFacts.push(fieldInitializer.getField().getCanonicalKey());
@@ -202,13 +207,56 @@ class CompilerTypedModuleRevision {
 		out.push("class");
 		out.push(HxClassDecl.getName(sourceClass));
 		out.push(HxClassDecl.getIsInterface(sourceClass) ? "interface" : "class");
+		out.push(HxClassDecl.getIsExtern(sourceClass) ? "extern" : "generated");
+		final enumDeclaration = HxClassDecl.getEnumDeclaration(sourceClass);
+		out.push(enumDeclaration == null ? "not-enum" : enumDeclaration.getCanonicalIdentity());
 		out.push(HxClassDecl.getVisibility(sourceClass) == HxVisibility.Public ? "public" : "private");
 		addResolvedHeaderType(out, "extends", typedClass.getResolvedExtends());
 		for (implemented in typedClass.getResolvedImplements())
 			addResolvedHeaderType(out, "implements", implemented);
+		for (extended in typedClass.getResolvedInterfaceExtends())
+			addResolvedHeaderType(out, "interface-extends", extended);
 		addStrings(out, HxClassDecl.getMetadata(sourceClass));
+		// The checked class boundary includes enums but excludes erased abstracts.
+		// Runtime names are public API even when no field or method changes.
+		out.push(Std.isOfType(semanticInfo, TyClassInfo) ? (cast semanticInfo : TyClassInfo).getPublicReflectionName().getCanonicalIdentity() : null);
+		out.push(Std.isOfType(semanticInfo, TyClassInfo) ? (cast semanticInfo : TyClassInfo).getNativeName().getCanonicalIdentity() : null);
+		// A switch consumes the complete enum domain, including values it omits.
+		// Changing alias equality can turn a complete switch into an incomplete one.
+		// Unlike an ordinary constant read, that dependency is part of type checking.
+		// The runtime class check proves the subtype before accessing its domain.
+		final enumDomain = Std.isOfType(semanticInfo, TyAbstractInfo) ? (cast semanticInfo : TyAbstractInfo).getEnumDomain() : null;
+		if (enumDomain != null) {
+			out.push("enum-abstract-domain-v1");
+			for (member in enumDomain.getMembers()) {
+				out.push(member.field.getCanonicalKey());
+				out.push(member.field.getConstant().getCanonicalIdentity());
+			}
+		}
+		// Indexed syntax can call private helpers. Their order and complete call
+		// contracts therefore belong to callers' public dependency identity too.
+		if (Std.isOfType(semanticInfo, TyAbstractInfo)) {
+			out.push("abstract-indexed-declarations-v1");
+			for (indexed in (cast semanticInfo : TyAbstractInfo).getIndexedDeclarations()) {
+				out.push(indexed.getIdentity().getCanonicalKey());
+				out.push(indexed.getIsStatic() ? "static" : "instance");
+				out.push(indexed.getIsInline() ? "inline" : "ordinary");
+				out.push(indexed.getNativeName().getCanonicalIdentity());
+				addStrings(out, indexed.getMetadata());
+				final signature = indexed.getSignature();
+				addTypes(out, signature.getArgs());
+				addBools(out, signature.getArgOptional());
+				addBools(out, signature.getArgRest());
+				out.push(signature.getReturnType().getSemanticKey());
+				final constraints = indexed.getResolvedTypeParameterConstraints();
+				for (parameter in indexed.getTypeParameterIds()) {
+					out.push(parameter.getCanonicalKey());
+					addTypes(out, constraints.exists(parameter.getCanonicalKey()) ? constraints.get(parameter.getCanonicalKey()) : []);
+				}
+			}
+		}
 
-		for (field in HxClassDecl.getFields(sourceClass)) {
+		for (field in typedClass.getFields()) {
 			if (HxFieldDecl.getVisibility(field) != HxVisibility.Public)
 				continue;
 			out.push("public-field");
@@ -241,14 +289,23 @@ class CompilerTypedModuleRevision {
 			out.push("public-function");
 			out.push(typedFunction.getStableIdentity());
 			out.push(HxFunctionDecl.getIsStatic(sourceFunction) ? "static" : "instance");
+			out.push(HxFunctionDecl.getIsModuleLevel(sourceFunction) ? "module-function" : "class-member");
 			addStrings(out, HxFunctionDecl.getMetadata(sourceFunction));
 			final declaration = typedFunction.getDeclaration();
 			if (declaration != null) {
+				out.push(declaration.getNativeName().getCanonicalIdentity());
 				final signature = declaration.getSignature();
 				addTypes(out, signature.getArgs());
 				addBools(out, signature.getArgOptional());
 				addBools(out, signature.getArgRest());
 				out.push(signature.getReturnType().getSemanticKey());
+				final constraints = declaration.getResolvedTypeParameterConstraints();
+				for (parameter in declaration.getTypeParameterIds())
+					if (constraints.exists(parameter.getCanonicalKey())) {
+						out.push("method-constraint");
+						out.push(parameter.getCanonicalKey());
+						addTypes(out, constraints.get(parameter.getCanonicalKey()));
+					}
 				out.push(declaration.getIsInline() ? "inline" : "ordinary");
 			} else {
 				out.push(HxFunctionDecl.getReturnTypeHint(sourceFunction));

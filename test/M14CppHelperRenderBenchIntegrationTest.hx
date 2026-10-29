@@ -612,9 +612,11 @@ class M14CppHelperRenderBenchIntegrationTest {
 	}
 
 	static function typedSyntheticModule(filePath:String, decl:HxModuleDecl):TypedModule {
-		final mainClass = HxModuleDecl.getMainClass(decl);
-		final env = new TyModuleEnv(HxModuleDecl.getPackagePath(decl), HxModuleDecl.getDirectives(decl), new TyClassEnv(HxClassDecl.getName(mainClass), []));
-		return new TypedModule(new ParsedModule("", decl, filePath), env);
+		final packagePath = HxModuleDecl.getPackagePath(decl);
+		final moduleName = haxe.io.Path.withoutExtension(haxe.io.Path.withoutDirectory(filePath));
+		final modulePath = packagePath.length == 0 ? moduleName : packagePath + "." + moduleName;
+		final resolved = new ResolvedModule(modulePath, filePath, new ParsedModule("", decl, filePath));
+		return TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
 	}
 
 	static function renderStdListWhenAvailable():Null<HelperRenderBenchResult> {
@@ -635,7 +637,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 				listClass = cls;
 		assertTrue(listClass != null, "vendored haxe.ds.List source should contain List");
 		final program = new GenIrProgram(modules, false);
-		final lookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(program);
+		final lookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(new backend.cpp.CppTypedProgramProjection(program));
 		assertTrue(@:privateAccess backend.cpp.CppTargetCore.packagePathForRenderedClass(listClass, lookup) == "haxe.ds",
 			"haxe.ds.List package identity should survive the top-level List typedef alias");
 		final kind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(listClass, lookup);
@@ -665,7 +667,7 @@ class M14CppHelperRenderBenchIntegrationTest {
 			typedSyntheticModule("std/haxe/macro/Context.hx", new HxModuleDecl("haxe.macro", [], context, [context, bodyOnly], false, false)),
 			typedSyntheticModule("Main.hx", new HxModuleDecl("", [], main, [main], false, false))
 		], false);
-		final lookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(program);
+		final lookup = @:privateAccess backend.cpp.CppTargetCore.collectClassLookup(new backend.cpp.CppTypedProgramProjection(program));
 		final kind = @:privateAccess backend.cpp.CppTargetCore.helperClassRenderKind(context, lookup);
 		final kindLabel = @:privateAccess backend.cpp.CppTargetCore.helperRenderKindLabel(kind);
 		assertTrue(kindLabel == "declaration_only", "compile-time macro API helpers should not render runtime C++ bodies");

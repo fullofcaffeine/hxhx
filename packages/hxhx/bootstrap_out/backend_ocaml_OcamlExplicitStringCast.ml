@@ -6,15 +6,15 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.OcamlExplicitStringCast" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.ocaml.OcamlExplicitStringCast" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.OcamlExplicitStringCast" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.ocaml.OcamlExplicitStringCast" } : t)
 
 let render = fun (typeHint : string) (value : string) -> (try let destination = Obj.magic (TyType.fromHintText (typeHint : string)) in (
-  ignore (if let __string_eq_left_1 = TyType.getSemanticKey (Obj.magic destination) () in let __string_eq_right_2 = "primitive:String" in not (HxString.equals __string_eq_left_1 __string_eq_right_2) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if let __string_eq_left_1 = TyType.getSemanticKey (Obj.magic destination) () in let __string_eq_right_2 = "primitive:String" in not (HxString.equals __string_eq_left_1 __string_eq_right_2) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   ("(Obj.obj (Obj.repr (" ^ HxString.toStdString value) ^ ")) : string)"
 ) with
   | HxRuntime.Hx_return __ret_3 -> (Obj.obj __ret_3 : string) : string)

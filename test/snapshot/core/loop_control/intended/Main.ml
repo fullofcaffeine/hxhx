@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "Main" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "Main" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "Main" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "Main" } : t)
 
 let main = fun () -> ignore (let i = ref 0 in let sum = ref 0 in (
   ignore (try while true do try ignore ((
@@ -19,8 +19,8 @@ let main = fun () -> ignore (let i = ref 0 in let sum = ref 0 in (
       ignore (i := __new_2);
       __old_1
     ));
-    ignore (if !i = 2 then raise (HxRuntime.Hx_continue) else ());
-    ignore (if !i = 5 then raise (HxRuntime.Hx_break) else ());
+    ignore (if !i = 2 then Stdlib.raise (HxRuntime.Hx_continue) else ());
+    ignore (if !i = 5 then Stdlib.raise (HxRuntime.Hx_break) else ());
     sum := HxInt.add (!sum) (!i)
   )) with
     | HxRuntime.Hx_continue -> () done with
@@ -42,7 +42,7 @@ let main = fun () -> ignore (let i = ref 0 in let sum = ref 0 in (
           ignore (innerCount := __new_8);
           __old_7
         ));
-        if !inner = 2 then raise (HxRuntime.Hx_break) else ()
+        if !inner = 2 then Stdlib.raise (HxRuntime.Hx_break) else ()
       )) done with
         | HxRuntime.Hx_break -> ()
     )) done);

@@ -1,6 +1,5 @@
 package reflaxe.ocaml.runtimegen;
 
-#if (macro || reflaxe_runtime || eval)
 /** One hashed source file owned by a runtime module. **/
 typedef RuntimeSourceFile = {
 	final path:String;
@@ -27,4 +26,3 @@ typedef RuntimeSourceManifestSnapshot = {
 	final revision:String;
 	final modules:Array<RuntimeSourceModule>;
 }
-#end

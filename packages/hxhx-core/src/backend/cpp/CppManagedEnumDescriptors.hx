@@ -1,0 +1,209 @@
+package backend.cpp;
+
+import backend.cpp.CppManagedCallContext.CppManagedEnclosingApplication;
+
+/**
+	Emit immutable native enum metadata from exact typed declaration facts.
+	Singleton startup uses these descriptors before class initialization. Payload
+	constructor calls, conversion, and source equality remain separate Haxe decisions.
+ */
+class CppManagedEnumDescriptors {
+	final program:CppTypedProgramProjection;
+	final owners:Array<TypedBackendClassProjection> = [];
+	final symbols = new haxe.ds.ObjectMap<TypedBackendClassProjection, String>();
+
+	public function new(program:CppTypedProgramProjection) {
+		if (program == null)
+			throw "enum descriptors require an exact program";
+		this.program = program;
+		program.assertPlanningCurrent();
+		for (module in program.getModules())
+			for (owner in module.projection.getClasses())
+				switch owner.requireSemanticFacts().getNominalKind() {
+					case EnumValue:
+						owners.push(owner);
+					case _:
+				}
+		owners.sort((left, right) -> {
+			final a = left.requireSemanticFacts().getClassIdentity();
+			final b = right.requireSemanticFacts().getClassIdentity();
+			return a < b ? -1 : a > b ? 1 : 0;
+		});
+		for (index in 0...owners.length)
+			symbols.set(owners[index], "hxhx_enum_" + index);
+	}
+
+	/**
+		Select only enums whose every constructor is parameterless. Their exact
+		descriptor and ordinal fully identify a key; payloads need structural comparison.
+		Other nominal categories return no match instead of borrowing enum storage.
+	 */
+	public function findNullarySymbol(type:TyType):Null<String> {
+		program.assertPlanningCurrent();
+		CppManagedClosureAbi.assertComplete(type);
+		final identity = type.getNominalIdentity();
+		if (identity == null)
+			return null;
+		final owner = program.requireClass(program.requireClassIdentity(identity.getCanonicalName()));
+		final facts = owner.requireSemanticFacts();
+		switch facts.getNominalKind() {
+			case EnumValue:
+			case _:
+				return null;
+		}
+		if (facts.getIsExtern() || type.getTypeArguments().length != 0 || facts.getTypeParameterIds().length != 0)
+			throw 'managed enum Map keys require an ordinary nongeneric enum';
+		for (constructor in facts.copyEnumConstructors())
+			switch constructor.member {
+				case Singleton(_):
+				case Callable(_):
+					throw 'managed enum Map keys require structural payload comparison';
+			}
+		return requireSymbol(owner);
+	}
+
+	/** Resolve a constructor by exact typed declaration, never by its source spelling alone. */
+	public function constructorTarget(declaration:TyDeclarationInfo):{symbol:String, index:Int, arity:Int} {
+		program.assertPlanningCurrent();
+		if (declaration == null || !declaration.getIsEnumConstructor() || !declaration.getIsStatic())
+			throw "managed enum construction requires a selected constructor declaration";
+		final owner = program.requireClass(program.requireClassIdentity(declaration.getOwner().getCanonicalName()));
+		final facts = owner.requireSemanticFacts();
+		if (facts.getIsExtern() || facts.getModuleIdentity() != declaration.getModulePath())
+			throw "managed enum construction requires its ordinary declared owner";
+		final matches = owner.getFunctions().filter(fn -> fn.requireSemanticDeclaration() == declaration);
+		if (matches.length != 1)
+			throw "managed enum construction belongs to another typed program";
+		for (constructor in facts.copyEnumConstructors())
+			switch constructor.member {
+				case Callable(method) if (method.canonicalIdentity == declaration.getIdentity().getCanonicalKey()):
+					return {symbol: requireSymbol(owner), index: constructor.index, arity: method.arguments.length};
+				case _:
+			}
+		throw "managed enum constructor is absent from its declaration inventory";
+	}
+
+	/** Pattern tests use the typed constructor ordinal of this program's ordinary enum descriptor. */
+	public function patternTarget(selected:TypedNamedPattern):{symbol:String, index:Int, arity:Int} {
+		program.assertPlanningCurrent();
+		return switch selected.getKind() {
+			case Constructor(identity, name, index, arity):
+				final owner = program.requireClass(program.requireClassIdentity(identity.getCanonicalName()));
+				final facts = owner.requireSemanticFacts();
+				final constructors = facts.copyEnumConstructors();
+				if (facts.getIsExtern() || index < 0 || index >= constructors.length)
+					throw "managed guarded pattern requires its ordinary enum provider";
+				final constructor = constructors[index];
+				final count = switch constructor.member {
+					case Singleton(_): 0;
+					case Callable(method): method.arguments.length;
+				};
+				if (constructor.index != index || constructor.name != name || count != arity)
+					throw "managed guarded constructor differs from typing";
+				{symbol: requireSymbol(owner), index: index, arity: arity};
+			case _: throw "managed guarded constructor requires an ordinary enum selection";
+		};
+	}
+
+	/** Applied payload types authorize nested field/array reads, without changing physical enum storage. */
+	public function patternPayload(selected:TypedNamedPattern, receiver:TyType, index:Int):TyType {
+		final target = patternTarget(selected);
+		if (index < 0 || index >= target.arity)
+			throw "managed guarded extraction has no exact payload";
+		return switch selected.getKind() {
+			case Constructor(identity, _, ordinal, _):
+				final owner = program.requireClass(program.requireClassIdentity(identity.getCanonicalName()));
+				final facts = owner.requireSemanticFacts();
+				final parameters = facts.getTypeParameterIds();
+				if (parameters.length > 0 && (receiver.getNominalIdentity() == null || !receiver.getNominalIdentity().equals(identity)))
+					throw "managed guarded generic enum requires its applied receiver";
+				final bindings = TyTypeSubstitution.bind(parameters, parameters.length == 0 ? [] : receiver.getTypeArguments(), identity.getCanonicalName());
+				switch facts.copyEnumConstructors()[ordinal].member {
+					case Callable(method): TyTypeSubstitution.apply(method.arguments[index].semanticType, bindings);
+					case _: throw "managed guarded singleton has no payload";
+				}
+			case _: throw "managed guarded extraction requires an ordinary enum selection";
+		};
+	}
+
+	/** An enum literal retains its exact lexical occurrence and this registry's declaration owner. */
+	public function requireRuntimeDescriptor(occurrence:TypedBackendRuntimeTypeOccurrence, classes:CppManagedClassStorage,
+			?context:CppManagedEnclosingApplication):String {
+		if (classes == null || !occurrence.getTarget().getKind().match(EnumDeclaration(_)))
+			throw "managed enum handle requires its exact runtime occurrence";
+		final owner = classes.runtimeDescriptorOwner(occurrence, context);
+		if (owner.requireSemanticFacts().getIsExtern())
+			throw "managed enum handle requires an ordinary enum declaration";
+		return requireSymbol(owner);
+	}
+
+	/** A same-named class from another projection cannot borrow this program's symbol. */
+	public function requireSymbol(owner:TypedBackendClassProjection):String {
+		program.assertPlanningCurrent();
+		final symbol = symbols.get(owner);
+		if (symbol == null)
+			throw "enum descriptor requires its exact program-owned enum";
+		return symbol;
+	}
+
+	/**
+		Allocate each parameterless constructor once per heap before class startup.
+		The temporary root protects publication; static cells retain earlier singletons
+		when a later allocation collects. No synthetic initializer record is executed.
+	 */
+	public function renderSingletonStartup(statics:CppManagedStaticStorage, heap:String, destination:String):Array<String> {
+		program.assertPlanningCurrent();
+		if (!~/^[A-Za-z_][A-Za-z0-9_]*$/.match(heap) || !~/^[A-Za-z_][A-Za-z0-9_]*$/.match(destination))
+			throw "managed enum startup requires allocated native symbols";
+		final lines = new Array<String>();
+		for (owner in owners) {
+			if (owner.requireSemanticFacts().getIsExtern())
+				continue;
+			for (constructor in owner.requireSemanticFacts().copyEnumConstructors())
+				switch constructor.member {
+					case Singleton(_):
+						final member = statics.singletonMember(owner, constructor.index);
+						lines.push("{");
+						lines.push("  hxhx::managed::Root<hxhx::managed::Ref<hxhx::managed::EnumPayload>> hxhx_singleton(" + heap + ");");
+						lines.push("  " + heap + ".allocateInto(hxhx_singleton, " + symbols.get(owner) + ", " + constructor.index
+							+ ", std::vector<hxhx::managed::Value>{});");
+						lines.push("  " + destination + ".get()->" + member + ".write(hxhx::managed::Value::managed(hxhx_singleton.get()));");
+						lines.push("}");
+					case Callable(_):
+				}
+		}
+		return lines;
+	}
+
+	/** The caller includes ManagedValue.hpp before these static-lifetime declarations. */
+	public function render():String {
+		program.assertPlanningCurrent();
+		final lines = new Array<String>();
+		for (owner in owners) {
+			final symbol = symbols.get(owner);
+			final facts = owner.requireSemanticFacts();
+			final constructors = facts.copyEnumConstructors();
+			if (constructors.length > 0) {
+				lines.push("inline const hxhx::managed::EnumConstructorDescriptor " + symbol + "_constructors[] = {");
+				for (constructor in constructors) {
+					final arity = switch constructor.member {
+						case Singleton(_): 0;
+						case Callable(method): method.arguments.length;
+					};
+					lines.push("  {" + CppManagedText.quotedBytes(constructor.name) + ", " + arity + "},");
+				}
+				lines.push("};");
+			}
+			lines.push("inline const hxhx::managed::EnumDescriptor "
+				+ symbol
+				+ " = {"
+				+ CppManagedText.quotedBytes(facts.getClassIdentity())
+				+ ", "
+				+ (constructors.length == 0 ? "nullptr" : symbol + "_constructors")
+				+ ", "
+				+ constructors.length
+				+ "};");
+		}
+		return lines.join("\n");
+	}
+}

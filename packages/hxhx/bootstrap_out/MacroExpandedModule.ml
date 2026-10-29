@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t; mutable macroMode : bool; mutable typed : TypedMod
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun typed2 macroMode2 generatedOcamlModules2 -> let self = ({ __hx_type = HxType.class_ "MacroExpandedModule"; macroMode = false; typed = Obj.magic HxRuntime.hx_null; generatedOcamlModules = Obj.magic HxRuntime.hx_null } : t) in (
+let create = fun typed2 macroMode2 generatedOcamlModules2 -> let self = ({ __hx_type = HxType.instance_marker "MacroExpandedModule"; macroMode = false; typed = Obj.magic HxRuntime.hx_null; generatedOcamlModules = Obj.magic HxRuntime.hx_null } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic typed2 in (
       (Obj.magic self : t).typed <- __assign_1;
@@ -33,7 +33,7 @@ let create = fun typed2 macroMode2 generatedOcamlModules2 -> let self = ({ __hx_
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "MacroExpandedModule"; macroMode = false; typed = Obj.magic HxRuntime.hx_null; generatedOcamlModules = Obj.magic HxRuntime.hx_null } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "MacroExpandedModule"; macroMode = false; typed = Obj.magic HxRuntime.hx_null; generatedOcamlModules = Obj.magic HxRuntime.hx_null } : t)
 
 let getTyped = fun self () -> (Obj.magic self : t).typed
 

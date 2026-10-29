@@ -76,7 +76,7 @@ These are ordered so we can land value continuously, while keeping the final “
 As of **2026-02-08**, the repo is in “bootstrap + upstream harness wiring” mode:
 
 - Gate 1 (`npm run test:upstream:unit-macro`): defaults to a **native/non-delegating bring-up rung**
-  (Stage3 `--hxhx-emit-full-bodies` emit+build+run), intended to surface missing frontend/macro ABI behavior without invoking a stage0 `haxe` binary.
+  (`hxhx --ocaml` emit+build+run), intended to surface missing frontend/macro ABI behavior without invoking a stage0 `haxe` binary.
   - The historical stage0-shim baseline is still available as: `npm run test:upstream:unit-macro-stage0`.
   - CI cadence: weekly Linux baseline in `.github/workflows/gate1.yml` + manual `workflow_dispatch` override.
   - Gate1 unit-macro scripts now fail fast on non-zero exits across hosts, and all Stage3 rungs (`no-emit`, `type-only`, `emit`) run widening-enabled (`HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=1`).

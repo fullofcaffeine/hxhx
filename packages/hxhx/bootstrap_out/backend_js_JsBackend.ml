@@ -24,7 +24,7 @@ let capabilitiesStatic = fun () -> let __anonymous_value_18 = HxAnon.create () i
 let descriptor = fun () -> let __anon_6 = HxAnon.create () in (
   ignore (HxAnon.set __anon_6 "id" (Obj.repr "js-native"));
   ignore (HxAnon.set __anon_6 "implId" (Obj.repr "builtin/js-native"));
-  ignore (HxAnon.set __anon_6 "abiVersion" (Obj.repr 1));
+  ignore (HxAnon.set __anon_6 "abiVersion" (Obj.repr 2));
   ignore (HxAnon.set __anon_6 "priority" (Obj.repr 100));
   ignore (HxAnon.set __anon_6 "description" (Obj.repr "Native JS backend (MVP)"));
   ignore (HxAnon.set __anon_6 "capabilities" (capabilitiesStatic ()));
@@ -49,7 +49,7 @@ let descriptor = fun () -> let __anon_6 = HxAnon.create () in (
 let providerDescriptor = fun () -> let __anon_12 = HxAnon.create () in (
   ignore (HxAnon.set __anon_12 "id" (Obj.repr "js-native"));
   ignore (HxAnon.set __anon_12 "implId" (Obj.repr "provider/js-native-wrapper"));
-  ignore (HxAnon.set __anon_12 "abiVersion" (Obj.repr 1));
+  ignore (HxAnon.set __anon_12 "abiVersion" (Obj.repr 2));
   ignore (HxAnon.set __anon_12 "priority" (Obj.repr 200));
   ignore (HxAnon.set __anon_12 "description" (Obj.repr "JS backend provider wrapper (dynamic)"));
   ignore (HxAnon.set __anon_12 "capabilities" (capabilitiesStatic ()));
@@ -89,7 +89,10 @@ let registrations__impl = fun (self : t) () -> (
   providerRegistrations ()
 )
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.js.JsBackend"; delegate = Obj.magic HxRuntime.hx_null; id = (fun o () -> Obj.magic (id__impl (Obj.magic o) (Obj.magic ()))); describe = (fun o () -> Obj.magic (describe__impl (Obj.magic o) (Obj.magic ()))); capabilities = (fun o () -> Obj.magic (capabilities__impl (Obj.magic o) (Obj.magic ()))); emit = (fun o a0 a1 -> Obj.magic (emit__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); registrations = (fun o () -> Obj.magic (registrations__impl (Obj.magic o) (Obj.magic ()))) } : t) in (
+let create = fun () -> let self = let __hx_method_class = HxType.instance_marker "backend.js.JsBackend" in (
+  HxMethodDispatch.ensure __hx_method_class "sha256:e8bfa7c2f62686a7326a0436b2e8b308242f0a701418b32abdade8bb3cd7cec8" 7 (fun () -> [("method-dispatch:50f8134b774ad2926900a788fcfff9019ad6a74911e81d4d7fa5065ed15b8b17", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun (__hx_method_arg0 : MacroExpandedProgram.t) (__hx_method_arg1 : Backend_BackendContext.t) -> (emit__impl __hx_method_self __hx_method_arg0 __hx_method_arg1 : Backend_EmitResult.t)))); ("method-dispatch:52e72b3fcded4a30d020ff86a5151822e2d1c4e6a90762046492063a81905362", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun () -> (id__impl __hx_method_self () : string)))); ("method-dispatch:b2efe095f6e72953f741e64104b550d54f8bb658c93f4a9c04140c28bf6145b1", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun () -> (registrations__impl __hx_method_self () : Obj.t HxArray.t)))); ("method-dispatch:eb6dfe4e6ccd637abfe0d8500ebccf614ef635ee2e177a2906860907e341d7fc", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun () -> (describe__impl __hx_method_self () : string)))); ("method-dispatch:ecc8670c92063081ec94b93a5fbb3ad78f005372b21f1d9ef43d4c1ed344cd83", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun () -> (capabilities__impl __hx_method_self () : Obj.t))))]);
+  ({ __hx_type = __hx_method_class; delegate = Obj.magic HxRuntime.hx_null; id = (fun o () -> Obj.magic (id__impl (Obj.magic o) (Obj.magic ()))); describe = (fun o () -> Obj.magic (describe__impl (Obj.magic o) (Obj.magic ()))); capabilities = (fun o () -> Obj.magic (capabilities__impl (Obj.magic o) (Obj.magic ()))); emit = (fun o a0 a1 -> Obj.magic (emit__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); registrations = (fun o () -> Obj.magic (registrations__impl (Obj.magic o) (Obj.magic ()))) } : t)
+) in (
   ignore (ignore (let __assign_1 = Obj.magic (Backend_reflaxe_ReflaxeTargetAdapter.backend (descriptor ()) targetCoreEmit) in (
     (Obj.magic self : t).delegate <- __assign_1;
     __assign_1
@@ -97,4 +100,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.js.JsBac
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsBackend"; delegate = Obj.magic HxRuntime.hx_null; id = (fun o () -> Obj.magic (id__impl (Obj.magic o) (Obj.magic ()))); describe = (fun o () -> Obj.magic (describe__impl (Obj.magic o) (Obj.magic ()))); capabilities = (fun o () -> Obj.magic (capabilities__impl (Obj.magic o) (Obj.magic ()))); emit = (fun o a0 a1 -> Obj.magic (emit__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); registrations = (fun o () -> Obj.magic (registrations__impl (Obj.magic o) (Obj.magic ()))) } : t)
+let __empty = fun () -> let __hx_method_class = HxType.instance_marker "backend.js.JsBackend" in (
+  HxMethodDispatch.ensure __hx_method_class "sha256:e8bfa7c2f62686a7326a0436b2e8b308242f0a701418b32abdade8bb3cd7cec8" 7 (fun () -> [("method-dispatch:50f8134b774ad2926900a788fcfff9019ad6a74911e81d4d7fa5065ed15b8b17", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun (__hx_method_arg0 : MacroExpandedProgram.t) (__hx_method_arg1 : Backend_BackendContext.t) -> (emit__impl __hx_method_self __hx_method_arg0 __hx_method_arg1 : Backend_EmitResult.t)))); ("method-dispatch:52e72b3fcded4a30d020ff86a5151822e2d1c4e6a90762046492063a81905362", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun () -> (id__impl __hx_method_self () : string)))); ("method-dispatch:b2efe095f6e72953f741e64104b550d54f8bb658c93f4a9c04140c28bf6145b1", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun () -> (registrations__impl __hx_method_self () : Obj.t HxArray.t)))); ("method-dispatch:eb6dfe4e6ccd637abfe0d8500ebccf614ef635ee2e177a2906860907e341d7fc", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun () -> (describe__impl __hx_method_self () : string)))); ("method-dispatch:ecc8670c92063081ec94b93a5fbb3ad78f005372b21f1d9ef43d4c1ed344cd83", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun () -> (capabilities__impl __hx_method_self () : Obj.t))))]);
+  ({ __hx_type = __hx_method_class; delegate = Obj.magic HxRuntime.hx_null; id = (fun o () -> Obj.magic (id__impl (Obj.magic o) (Obj.magic ()))); describe = (fun o () -> Obj.magic (describe__impl (Obj.magic o) (Obj.magic ()))); capabilities = (fun o () -> Obj.magic (capabilities__impl (Obj.magic o) (Obj.magic ()))); emit = (fun o a0 a1 -> Obj.magic (emit__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); registrations = (fun o () -> Obj.magic (registrations__impl (Obj.magic o) (Obj.magic ()))) } : t)
+)

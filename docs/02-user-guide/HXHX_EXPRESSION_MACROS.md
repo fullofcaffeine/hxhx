@@ -71,7 +71,7 @@ Example:
 ```bash
 HXHX_EXPR_MACROS='hxhxmacros.ExprMacroShim.hello()' \
   HXHX_MACRO_HOST_EXE=/path/to/hxhx-macro-host \
-  hxhx --hxhx-stage3 --hxhx-emit-full-bodies \
+  hxhx --hxhx-stage3 \
     -cp src -cp test/fixtures/hxhx-macros/src -main Main --hxhx-out out
 ```
 

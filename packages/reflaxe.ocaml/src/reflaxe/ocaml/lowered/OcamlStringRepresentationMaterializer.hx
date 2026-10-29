@@ -33,7 +33,7 @@ class OcamlStringRepresentationMaterializer {
 	public static function carrierType(decision:OcamlRepresentationDecision, expectedDomain:OcamlRepresentationDomain):OcamlTypeExpr {
 		switch (expectedDomain) {
 			case InternalValue, MutableLocalStorage, CapturedLocalStorage, InstanceField, StaticField:
-			case ArrayElement:
+			case ArrayElement, GenericCallValue:
 				throw 'reflaxe.ocaml [ocaml-string-representation:unsupported-domain]: exact String materialization does not admit $expectedDomain';
 		}
 		if (decision.domain != expectedDomain) {

@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "sys.io.File" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "sys.io.File" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "sys.io.File" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "sys.io.File" } : t)
 
 let getContent = fun path -> HxFile.getContent (path : string)
 

@@ -44,7 +44,7 @@ for i in $(seq 1 "$ITERATIONS"); do
   echo "== display stage3 emit iter $i/$ITERATIONS =="
   tmp_log="$(mktemp)"
   set +e
-  "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run build.hxml --hxhx-out "$OUT_NAME" >"$tmp_log" 2>&1
+  "$HXHX_BIN" --hxhx-stage3 --hxhx-no-run build.hxml --hxhx-out "$OUT_NAME" >"$tmp_log" 2>&1
   code="$?"
   set -e
   rg -N "^(resolved_modules|typed_modules|header_only_modules|unsupported_exprs_total|unsupported_files|stage3|run)=" "$tmp_log" || true

@@ -86,7 +86,6 @@ case "$SCOPE" in
     STAGE3_TIMEOUT_SEC="${STAGE3_TIMEOUT_SEC:-120}"
     STAGE3_ARGS=(
       --hxhx-stage3
-      --hxhx-emit-full-bodies
       --hxhx-no-run
       -cp "$ROOT/workloads/hih-compiler/fixtures/src"
       -main demo.A
@@ -110,14 +109,14 @@ case "$SCOPE" in
       STAGE3_TIMEOUT_SEC="${HXHX_STAGE0_FREE_REFRESH_STAGE3_TIMEOUT_SEC:-1800}"
       STAGE3_ARGS=(
         --hxhx-stage3
-        --hxhx-emit-full-bodies
         --hxhx-no-run
       )
     fi
-    SOURCE_INPUTS="$ROOT/packages/hxhx/src,$ROOT/packages/hxhx-core/src:hxhx.Main"
+    SOURCE_INPUTS="$ROOT/packages/hxhx/src,$ROOT/packages/hxhx-core/src,$ROOT/packages/reflaxe.ocaml/src:hxhx.Main"
     STAGE3_ARGS+=(
       -cp "$ROOT/packages/hxhx/src"
       -cp "$ROOT/packages/hxhx-core/src"
+      -cp "$ROOT/packages/reflaxe.ocaml/src"
       -main hxhx.Main
       -D reflaxe_ocaml
       -D no_traces

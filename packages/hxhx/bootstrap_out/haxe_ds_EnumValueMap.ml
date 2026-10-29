@@ -6,7 +6,7 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.ds.EnumValueMap" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "haxe.ds.EnumValueMap" } : t) in (
   ignore ((
     ignore self;
     ()
@@ -14,7 +14,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.ds.EnumValu
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.ds.EnumValueMap" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "haxe.ds.EnumValueMap" } : t)
 
 let __ctor = fun (self : t) () -> ignore ((
   ignore self;

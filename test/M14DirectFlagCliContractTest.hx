@@ -4,6 +4,7 @@ import hxhx.Stage3Args;
 import sys.FileSystem;
 import sys.io.File;
 
+/** Checks native target routing and command-line option contracts. */
 class M14DirectFlagCliContractTest {
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
@@ -89,6 +90,9 @@ class M14DirectFlagCliContractTest {
 	}
 
 	static function main():Void {
+		expectThrowMessage(() -> Stage3Args.parseGlobalStage3Flags(["--hxhx-emit-full-bodies"]), "Remove this option.");
+		final controls = Stage3Args.parseGlobalStage3Flags(["--hxhx-type-only", "--hxhx-no-emit", "--hxhx-no-run"]);
+		assertTrue(controls.typeOnly && controls.noEmit && controls.noRun, "body-mode removal changed compilation controls");
 		expectThrowMessage(function() plan(["--target", "ocaml"]), "--target removed");
 		expectThrowMessage(function() plan(["--js"]), "Missing value after --js/ -js");
 		expectThrowMessage(function() plan(["--ocaml-eval", "--js", "out.js"]), "--ocaml-eval is the target; remove other targets.");

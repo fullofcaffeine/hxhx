@@ -6,12 +6,12 @@ type t = { __hx_type : Obj.t }
 
 let __reflaxe_ocaml__ = ()
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.source.SourceNativeBackend" } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend.source.SourceNativeBackend" } : t) in (
   ignore ();
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.source.SourceNativeBackend" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.source.SourceNativeBackend" } : t)
 
 let capabilitiesStatic = fun () -> let __anonymous_value_1 = HxAnon.create () in (
   let __anonymous_field_value_2 = true in ignore (HxAnon.set __anonymous_value_1 "supportsNoEmit" (HxRuntime.box_bool __anonymous_field_value_2));
@@ -37,7 +37,7 @@ let csCapabilities = fun () -> let __anonymous_value_9 = HxAnon.create () in (
 let descriptor = fun targetId implId description hostCap -> let __anon_13 = HxAnon.create () in (
   ignore (HxAnon.set __anon_13 "id" (Obj.repr targetId));
   ignore (HxAnon.set __anon_13 "implId" (Obj.repr implId));
-  ignore (HxAnon.set __anon_13 "abiVersion" (Obj.repr 1));
+  ignore (HxAnon.set __anon_13 "abiVersion" (Obj.repr 2));
   ignore (HxAnon.set __anon_13 "priority" (Obj.repr 120));
   ignore (HxAnon.set __anon_13 "description" (Obj.repr description));
   ignore (HxAnon.set __anon_13 "capabilities" (capabilitiesStatic ()));

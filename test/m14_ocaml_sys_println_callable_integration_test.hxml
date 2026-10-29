@@ -1,0 +1,13 @@
+-cp test
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp packages/reflaxe.ocaml/src
+-main M14OcamlSysPrintlnCallableIntegrationTest
+--interp
+--next
+-cp test
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp packages/reflaxe.ocaml/src
+-main M14Stage3PrintedArithmeticIntegrationTest
+--interp

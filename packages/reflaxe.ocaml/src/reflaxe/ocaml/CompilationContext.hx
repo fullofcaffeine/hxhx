@@ -550,6 +550,28 @@ class CompilationContext {
 		activeRuntimeRequirementProgramRevision = programRevision;
 	}
 
+	/** Retain shared function syntax and its signature while registering required runtime support. **/
+	public function lowerSharedTargetFunction(fact:reflaxe.ocaml.target.OcamlTargetFunctionFact):reflaxe.ocaml.ast.OcamlBuiltFunction {
+		final profile = activeRuntimeRequirementProfile;
+		if (profile == null || activeRuntimeRequirementProgramRevision == null)
+			throw "Shared target function lowering requires an active runtime program.";
+		final lowered = reflaxe.ocaml.target.OcamlTargetFunctionLowerer.lower(fact, profile, finalRuntimeUses);
+		for (requirement in lowered.runtimeRequirements)
+			runtimeRequirements.record(requirement);
+		return {expression: lowered.expression, signature: lowered.signature};
+	}
+
+	/** Keep standalone shared expressions in the same runtime checks as function bodies. **/
+	public function lowerSharedTargetExpression(fact:reflaxe.ocaml.target.OcamlTargetExpressionFact, ownerId:String):reflaxe.ocaml.ast.OcamlExpr {
+		final profile = activeRuntimeRequirementProfile;
+		if (profile == null || activeRuntimeRequirementProgramRevision == null)
+			throw "Shared target expression lowering requires an active runtime program.";
+		final lowered = reflaxe.ocaml.target.OcamlTargetExpressionLowerer.lower(fact, ownerId, profile, finalRuntimeUses);
+		for (requirement in lowered.runtimeRequirements)
+			runtimeRequirements.record(requirement);
+		return lowered.expression;
+	}
+
 	/** Records the runtime capabilities already sealed into one place-lowering plan. **/
 	public function recordPlaceRuntimeRequirements(decisionId:String, originId:String, source:OcamlLoweredSourceSpan, semanticTypeId:String,
 			requirementIds:Array<String>):Void {
@@ -886,14 +908,14 @@ class CompilationContext {
 	}
 
 	/**
-		Records why one sealed enum array element needs `HxEnum`.
+		Records the runtime module required to preserve an array element type.
 
-		The container plan already owns the exact array slot, enum identity, and
+		The container plan already owns the exact array slot, input type, and
 		boxing operation. Packaging receives that typed reason without inspecting
 		the generated `HxArray.push` expression.
 	**/
-	public function recordEnumDynamicContainerRuntimeRequirement(decision:OcamlContainerElementDecision):Void {
-		OcamlEnumRuntimeRequirementRecorder.recordContainerElement(runtimeRequirements, decision);
+	public function recordContainerRuntimeRequirement(decision:OcamlContainerElementDecision):Void {
+		reflaxe.ocaml.runtimegen.OcamlContainerRuntimeRequirementRecorder.record(runtimeRequirements, decision);
 	}
 
 	/**

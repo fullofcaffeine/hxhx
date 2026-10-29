@@ -1,0 +1,7 @@
+-cp test
+-cp packages/hxhx/src
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-D hxhx
+-main M14PythonRuntimeTypeOperandsIntegrationTest
+--interp

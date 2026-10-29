@@ -1,0 +1,27 @@
+// This component observer constructs independent containers. The full macro-array
+// fixture separately exercises the production runtime and provider together.
+var wrap = @@ARRAY_FACTORY@@;
+var shortened = function(values) {
+  var result = wrap(values, $asize(values));
+  result.pop();
+  return result;
+};
+var make = function(name, values) {
+  var value = $new(null);
+  value.__hx_ctor = name;
+  value.__hx_params = values;
+  return value;
+};
+var __hxhx_enum_ctor_is = function(value, name) { return value.__hx_ctor == name; };
+var __hxhx_enum_params = function(value) { return value.__hx_params; };
+var matches = function(value) { return @@CONDITION@@; };
+
+// Pair(4, Nested(7)) matches. Missing outer/inner arguments and another name do not.
+$print(matches(make("Pair", $array(4, make("Nested", $array(7))))), "\n");
+$print(matches(make("Pair", $array(4))), "\n");
+$print(matches(make("Pair", $array(4, make("Nested", $array())))), "\n");
+$print(matches(make("Other", $array(4, make("Nested", $array(7))))), "\n");
+$print(matches(make("Pair", wrap($array(4, make("Nested", wrap($array(7), 1))), 2))), "\n");
+$print(matches(make("Pair", shortened($array(4, make("Nested", wrap($array(7), 1)))))), "\n");
+$print(matches(make("Pair", wrap($array(4, make("Nested", shortened($array(7)))), 2))), "\n");
+$print(matches(make("Other", wrap($array(4, make("Nested", wrap($array(7), 1))), 2))), "\n");
