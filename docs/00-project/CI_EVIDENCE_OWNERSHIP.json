@@ -1035,6 +1035,32 @@
       },
       "reproductionOrEvidence": "The newest manually triggered KPI report passed on 2026-08-16 and is far older than the 192-hour freshness window. Newer pull-request and push KPI runs do not satisfy this check because the contract requires a workflow_dispatch run on main.",
       "closureGate": "A new workflow_dispatch KPI run on current main must succeed and publish an hxhx.kpi.v2 report that passes the repository validator; record that exact run as the resolution."
+    },
+    {
+      "id": "gate1-lite-iterator-protocol-40907938558",
+      "checkId": "gate1-lite-pr",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "semantic",
+      "bead": "haxe_ocaml-9sj5p",
+      "recordedAt": "2026-10-29T18:00:00Z",
+      "run": {
+        "id": 40907938558,
+        "attempt": 1,
+        "headSha": "dc456f001beeac94f5b7c669bf43b9e2ab69877e",
+        "event": "push",
+        "conclusion": "failure",
+        "createdAt": "2026-10-29T16:04:30Z",
+        "updatedAt": "2026-10-29T16:07:52Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/40907938558"
+      },
+      "failureSignature": {
+        "job": "Upstream unit macro stage3 no-emit",
+        "step": "Run Gate1 lite macro smoke",
+        "logPattern": "TestMain.hx:122:3: value loop requires a resolved iterator protocol"
+      },
+      "reproductionOrEvidence": "Since the PR 92 merge, every main push builds the bootstrap and then stops in the upstream unit-macro no-emit rung at TestMain.hx:122:3 because selected project expression macros are not executed yet, so the value loop has no resolved iterator protocol.",
+      "closureGate": "A Gate 1 Lite push run on main must pass on its exact head commit after project expression macros execute; resolve this record against that run."
     }
   ]
 }

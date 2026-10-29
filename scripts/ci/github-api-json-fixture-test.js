@@ -5,6 +5,7 @@
 
 const {
   githubJson,
+  githubText,
   parseRetryAfterMs,
   retryableStatuses
 } = require('./github-api-json')
@@ -34,6 +35,9 @@ function response(status, body = {}, headerValues = {}) {
     headers: headers(headerValues),
     async json() {
       return body
+    },
+    async text() {
+      return typeof body === 'string' ? body : JSON.stringify(body)
     }
   }
 }
@@ -146,6 +150,18 @@ async function main() {
   assert(unauthorized.requests.length === 1, 'non-retryable 401 was retried')
   assert(unauthorized.waits.length === 0, 'non-retryable 401 slept before failing')
   assert(!unauthorizedError.message.includes(token), 'authentication failure leaked the GitHub token')
+
+  const textRead = createHarness([response(503), response(200, 'job log line\n')])
+  const textResult = await githubText(`${endpoint}/1/logs`, token, textRead.options)
+  assert(textResult === 'job log line\n', 'text read did not return the response body')
+  assert(textRead.requests.length === 2, 'text read did not use the bounded retry policy')
+  const missingLog = createHarness([response(410)])
+  await expectFailure(
+    githubText(`${endpoint}/1/logs`, token, missingLog.options),
+    ['response=http-410', 'attempts=1/4'],
+    'expired job log'
+  )
+  assert(missingLog.requests.length === 1, 'non-retryable missing log was retried')
 
   assert(parseRetryAfterMs('2', 0) === 2000, 'numeric Retry-After parsing changed')
   assert(parseRetryAfterMs('not-a-date', 0) === null, 'invalid Retry-After should be ignored')

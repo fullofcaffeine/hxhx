@@ -421,10 +421,284 @@ function main() {
       'P2 incident owner'
     )
 
+    signatureFixtures(manifest, baseSnapshot, tmpDir)
+
     console.log('[ci:guards] OK: CI evidence ownership synthetic fixtures pass')
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true })
   }
 }
 
+/**
+ * A failure signature lets one open incident own a required check's failure
+ * on later main commits. It must match the failing job, the failing step, and
+ * one log line. Every other case still needs a new owner.
+ */
+function signatureFixtures(manifest, baseSnapshot, tmpDir) {
+  const lite = manifest.checks.find(check => check.id === 'gate1-lite-pr')
+  assert(lite && lite.kind === 'required', 'production manifest is missing gate1-lite-pr')
+  const signature = {
+    job: 'Fixture macro smoke',
+    step: 'Run fixture macro smoke',
+    logPattern: 'Fixture.hx:7:3: value loop requires a resolved iterator protocol'
+  }
+  const oldSha = 'dddddddddddddddddddddddddddddddddddddddd'
+  const originalRun = syntheticRun(lite, 99200000001, {
+    conclusion: 'failure',
+    headSha: oldSha,
+    createdAt: '2026-07-12T06:00:00Z',
+    updatedAt: '2026-07-12T06:10:00Z'
+  })
+  const baseManifest = structuredClone(manifest)
+  baseManifest.incidents = baseManifest.incidents.filter(incident => (
+    incident.state !== 'open' || incident.checkId !== lite.id
+  ))
+  function incidentFor(withSignature) {
+    const incident = {
+      id: 'fixture-lite-signature',
+      checkId: lite.id,
+      state: 'open',
+      evidenceState: 'failure-current',
+      failureClass: 'semantic',
+      bead: 'fixture-lite-owner',
+      recordedAt: fixedNow,
+      run: {
+        id: originalRun.id,
+        attempt: originalRun.attempt,
+        headSha: originalRun.headSha,
+        event: originalRun.event,
+        conclusion: originalRun.conclusion,
+        createdAt: originalRun.createdAt,
+        updatedAt: originalRun.updatedAt,
+        url: originalRun.url
+      },
+      reproductionOrEvidence: 'A synthetic required smoke stops at one known typing diagnostic on every commit.',
+      closureGate: 'An exact-head required smoke run on main must complete successfully.'
+    }
+    if (withSignature) incident.failureSignature = structuredClone(signature)
+    return incident
+  }
+  function writeCase(name, incident) {
+    const caseManifest = structuredClone(baseManifest)
+    caseManifest.incidents.push(incident)
+    const manifestPath = path.join(tmpDir, `${name}.manifest.json`)
+    writeJson(manifestPath, caseManifest)
+    return manifestPath
+  }
+  const signedManifestPath = writeCase('lite-signed', incidentFor(true))
+  const unsignedManifestPath = writeCase('lite-unsigned', incidentFor(false))
+  const beadsPath = path.join(tmpDir, 'lite-owner.issues.jsonl')
+  fs.writeFileSync(beadsPath, `${fs.readFileSync(productionBeadsPath, 'utf8').trim()}\n${JSON.stringify({
+    id: 'fixture-lite-owner',
+    title: 'Synthetic required smoke owner',
+    status: 'in_progress',
+    priority: 1,
+    comments: [{
+      text: ['fixture-lite-signature', String(originalRun.id), oldSha, 'semantic', signature.logPattern].join(' ')
+    }]
+  })}\n`)
+
+  const matchingLog = [
+    '2026-07-13T06:05:00.0000000Z == Gate 1 (stage3 no-emit rung)',
+    `2026-07-13T06:05:01.0000000Z hxhx(stage3): type failed: /src/Fixture.hx: /src/${signature.logPattern}`,
+    '2026-07-13T06:05:01.1000000Z ##[error]Process completed with exit code 2.'
+  ].join('\n')
+  function newerRun(id, failedJobs) {
+    const run = syntheticRun(lite, id, { conclusion: 'failure', headSha: baseSnapshot.headSha })
+    if (failedJobs !== undefined) run.failedJobs = failedJobs
+    return run
+  }
+  function evaluateCase(name, manifestPath, run, headSha = baseSnapshot.headSha) {
+    const snapshot = structuredClone(baseSnapshot)
+    snapshot.headSha = headSha
+    snapshot.runs[lite.id] = [run]
+    const snapshotPath = path.join(tmpDir, `${name}.snapshot.json`)
+    const reportPath = path.join(tmpDir, `${name}.report.json`)
+    writeJson(snapshotPath, snapshot)
+    const result = runEvaluator(manifestPath, beadsPath, snapshotPath, reportPath)
+    const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
+    return { result, finding: report.findings.find(finding => finding.checkId === lite.id) }
+  }
+  const unowned = 'has no matching open P0/P1 incident'
+
+  const matched = evaluateCase('lite-match', signedManifestPath, newerRun(99200000002, [
+    { name: signature.job, failedSteps: [signature.step], log: matchingLog }
+  ]))
+  assert(matched.result.status === 0, `matching failure signature on a newer commit was not owned\n${matched.result.stderr}`)
+  assert(
+    matched.finding.ownerIncident === 'fixture-lite-signature'
+      && matched.finding.ownerMatch === 'failure-signature'
+      && matched.finding.signatureMatchedRun
+      && matched.finding.signatureMatchedRun.id === 99200000002
+      && matched.finding.signatureMatchedRun.headSha === baseSnapshot.headSha,
+    'report must record the run that the failure signature matched'
+  )
+
+  const exact = evaluateCase('lite-exact', signedManifestPath, {
+    ...originalRun,
+    headSha: baseSnapshot.headSha
+  })
+  expectFailure(exact.result, unowned, 'signed incident replay with a changed SHA')
+
+  expectFailure(
+    evaluateCase('lite-other-message', signedManifestPath, newerRun(99200000003, [
+      { name: signature.job, failedSteps: [signature.step], log: matchingLog.replace('Fixture.hx:7:3', 'Fixture.hx:9:1') }
+    ])).result,
+    unowned,
+    'different failure message'
+  )
+  expectFailure(
+    evaluateCase('lite-no-evidence', signedManifestPath, newerRun(99200000004)).result,
+    unowned,
+    'run without fetched failure evidence'
+  )
+  expectFailure(
+    evaluateCase('lite-null-log', signedManifestPath, newerRun(99200000005, [
+      { name: signature.job, failedSteps: [signature.step], log: null }
+    ])).result,
+    unowned,
+    'failed job whose log could not be read'
+  )
+  expectFailure(
+    evaluateCase('lite-other-job', signedManifestPath, newerRun(99200000006, [
+      { name: 'Another job', failedSteps: [signature.step], log: matchingLog }
+    ])).result,
+    unowned,
+    'different failing job'
+  )
+  expectFailure(
+    evaluateCase('lite-other-step', signedManifestPath, newerRun(99200000007, [
+      { name: signature.job, failedSteps: ['Install toolchain'], log: matchingLog }
+    ])).result,
+    unowned,
+    'different failing step'
+  )
+  expectFailure(
+    evaluateCase('lite-extra-job', signedManifestPath, newerRun(99200000008, [
+      { name: signature.job, failedSteps: [signature.step], log: matchingLog },
+      { name: 'Another job', failedSteps: ['Run other check'], log: 'unrelated failure' }
+    ])).result,
+    unowned,
+    'additional unrelated failing job'
+  )
+  expectFailure(
+    evaluateCase('lite-no-jobs', signedManifestPath, newerRun(99200000009, [])).result,
+    unowned,
+    'failed run with no failed job'
+  )
+  expectFailure(
+    evaluateCase('lite-older-run', signedManifestPath, {
+      ...newerRun(99200000010, [{ name: signature.job, failedSteps: [signature.step], log: matchingLog }]),
+      createdAt: '2026-07-11T06:00:00Z',
+      updatedAt: '2026-07-11T06:10:00Z'
+    }).result,
+    unowned,
+    'run older than the signed incident'
+  )
+  const cancelled = newerRun(99200000011, [
+    { name: signature.job, failedSteps: [signature.step], log: matchingLog }
+  ])
+  cancelled.conclusion = 'cancelled'
+  expectFailure(
+    evaluateCase('lite-cancelled', signedManifestPath, cancelled).result,
+    unowned,
+    'cancelled run with a matching log'
+  )
+  expectFailure(
+    evaluateCase('lite-unsigned', unsignedManifestPath, newerRun(99200000012, [
+      { name: signature.job, failedSteps: [signature.step], log: matchingLog }
+    ])).result,
+    unowned,
+    'incident without a signature on a newer commit'
+  )
+  const unsignedExact = evaluateCase('lite-unsigned-exact', unsignedManifestPath, originalRun, oldSha)
+  assert(
+    unsignedExact.result.status === 0
+      && unsignedExact.finding.ownerIncident === 'fixture-lite-signature'
+      && unsignedExact.finding.ownerMatch === 'exact-run'
+      && unsignedExact.finding.signatureMatchedRun === null,
+    `incident without a signature must still own its exact run\n${unsignedExact.result.stderr}`
+  )
+
+  const badSignature = incidentFor(true)
+  badSignature.failureSignature = { job: signature.job, step: '', logPattern: 'short' }
+  expectFailure(
+    runEvaluator(writeCase('lite-bad-signature', badSignature), beadsPath, path.join(tmpDir, 'lite-match.snapshot.json')),
+    'failureSignature.step is required',
+    'incomplete failure signature'
+  )
+  const unrecordedBeadsPath = path.join(tmpDir, 'lite-unrecorded.issues.jsonl')
+  const beadLines = fs.readFileSync(beadsPath, 'utf8').trim().split(/\r?\n/)
+  const owner = JSON.parse(beadLines.pop())
+  owner.comments = [{ text: owner.comments[0].text.replace(signature.logPattern, '') }]
+  fs.writeFileSync(unrecordedBeadsPath, `${beadLines.join('\n')}\n${JSON.stringify(owner)}\n`)
+  expectFailure(
+    runEvaluator(signedManifestPath, unrecordedBeadsPath, path.join(tmpDir, 'lite-match.snapshot.json')),
+    'must record failure signature',
+    'bead without the signature text'
+  )
+}
+
+/**
+ * The live collector reads job metadata and job logs only for a signature
+ * candidate. A read failure must leave the run without evidence so that it
+ * stays unowned.
+ */
+async function liveFailureEvidenceFixtures() {
+  const { collectFailedJobs } = require('./ci-evidence-ownership')
+  const apiRoot = 'https://api.example.test/repos/example/hxhx'
+  const run = { id: 77, attempt: 2 }
+  const jobsPayload = {
+    total_count: 2,
+    jobs: [
+      { id: 1, name: 'Passing job', conclusion: 'success', steps: [{ name: 'ok', conclusion: 'success' }] },
+      {
+        id: 2,
+        name: 'Failing job',
+        conclusion: 'failure',
+        steps: [
+          { name: 'Setup', conclusion: 'success' },
+          { name: 'Run smoke', conclusion: 'failure' }
+        ]
+      }
+    ]
+  }
+  const requested = []
+  const ok = await collectFailedJobs(apiRoot, run, 'token', {
+    json: async url => { requested.push(url); return jobsPayload },
+    text: async url => { requested.push(url); return 'line one\nknown failure line\n' }
+  })
+  assert(
+    ok.error === null
+      && ok.failedJobs.length === 1
+      && ok.failedJobs[0].name === 'Failing job'
+      && ok.failedJobs[0].failedSteps.join(',') === 'Run smoke'
+      && ok.failedJobs[0].log.includes('known failure line'),
+    `live collector did not build failed-job evidence: ${JSON.stringify(ok)}`
+  )
+  assert(requested[0] === `${apiRoot}/actions/runs/77/attempts/2/jobs?per_page=100`, `unexpected jobs URL ${requested[0]}`)
+  assert(requested[1] === `${apiRoot}/actions/jobs/2/logs`, `unexpected log URL ${requested[1]}`)
+
+  const logFailure = await collectFailedJobs(apiRoot, run, 'token', {
+    json: async () => jobsPayload,
+    text: async () => { throw new Error('GitHub API read failed: http-410') }
+  })
+  assert(
+    logFailure.failedJobs === null && /http-410/.test(logFailure.error),
+    'an unreadable job log must leave the run without failure evidence'
+  )
+  const jobsFailure = await collectFailedJobs(apiRoot, run, 'token', {
+    json: async () => { throw new Error('GitHub API read failed: http-404') },
+    text: async () => 'unused'
+  })
+  assert(jobsFailure.failedJobs === null, 'an unreadable job list must leave the run without failure evidence')
+  const truncated = await collectFailedJobs(apiRoot, run, 'token', {
+    json: async () => ({ ...jobsPayload, total_count: 101 }),
+    text: async () => 'unused'
+  })
+  assert(truncated.failedJobs === null, 'an incomplete job list must leave the run without failure evidence')
+  console.log('[ci:guards] OK: CI evidence ownership live failure evidence fails closed')
+}
+
 main()
+liveFailureEvidenceFixtures().catch(error => fail(error.stack || error.message))

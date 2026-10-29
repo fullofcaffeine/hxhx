@@ -65,6 +65,44 @@ has to inspect the first useful log or artifact.
 5. Close the bead and mark the incident resolved only after a valid remote
    successor passes. A cancelled run is not a pass.
 
+### Owning a known required-check failure across commits
+
+A required check runs on each new main commit. Usually an incident owns one
+exact run: its run ID, attempt, and commit SHA. If a required check stays red
+for a known, owned reason, every new commit produces a new run that the
+incident does not name. The audit would then report that run as unowned.
+
+An open `failure-current` incident can declare an optional
+`failureSignature` for this case:
+
+```json
+"failureSignature": {
+  "job": "Upstream unit macro stage3 no-emit",
+  "step": "Run Gate1 lite macro smoke",
+  "logPattern": "TestMain.hx:122:3: value loop requires a resolved iterator protocol"
+}
+```
+
+A newer failing run of that check on main counts as owned by the incident
+only when all of these are true:
+
+- the run is not older than the incident's recorded run;
+- the signature's `job` is the only failed job;
+- the signature's `step` is the only failed step in that job;
+- one line of that job's log contains `logPattern` as literal text.
+
+In every other case the run still needs a new owner. That includes a different
+message, another failing job or step, a timeout without a failed step, or a log
+that GitHub cannot return. The live audit reads job lists and job logs only for
+these candidate runs, and a failed read always counts as "no match". The
+owning bead must contain the `logPattern` text. The JSON report records how
+each owner was matched: `ownerMatch` is `exact-run` or `failure-signature`, and
+`signatureMatchedRun` names the run that the signature matched.
+
+A signature changes nothing else. Freshness windows, exact-run matching for
+incidents without a signature, and the resolved and superseded rules stay the
+same. When the check passes, resolve the incident against that run as usual.
+
 Scheduled runs remain the normal freshness signal. For M7, Full1 plugin, and
 macro-runtime lanes, an explicit `workflow_dispatch` rerun may also resolve an
 owned failure when it uses the same full workflow and produces the lane's

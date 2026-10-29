@@ -6,11 +6,18 @@
  * GitHub observed. This evaluator joins those facts with the tracked Beads
  * export and refuses an unowned failure, cancellation, stale success, or
  * missing scheduled run.
+ *
+ * An incident normally owns one exact run (id, attempt, and commit). An open
+ * incident may also declare a `failureSignature`: the failing job name, the
+ * failing step name, and a literal text that must appear in one line of that
+ * job's log. A newer failing run on main is then owned by that incident only
+ * when its only failure is that job and step and the log line is present.
+ * Missing or unreadable logs never count as a match.
  */
 
 const fs = require('fs')
 const path = require('path')
-const { githubJson } = require('./github-api-json')
+const { githubJson, githubText } = require('./github-api-json')
 
 const defaultManifestPath = 'docs/00-project/CI_EVIDENCE_OWNERSHIP.json'
 const defaultBeadsPath = '.beads/issues.jsonl'
@@ -225,6 +232,9 @@ function validateManifest(manifest, issues, manifestPath = defaultManifestPath) 
     if (!nonEmptyString(incident.closureGate) || incident.closureGate.trim().length < 20) {
       errors.push(`${label}.closureGate must explain what remote evidence closes the incident`)
     }
+    if (incident.failureSignature !== undefined) {
+      validateFailureSignature(incident, label, errors)
+    }
     if (incident.evidenceState === 'missing') {
       if (incident.run !== null) errors.push(`${label}.run must be null for missing evidence`)
     } else {
@@ -259,6 +269,10 @@ function validateManifest(manifest, issues, manifestPath = defaultManifestPath) 
       }
       if (!record.includes(incident.failureClass)) {
         errors.push(`${label}.bead must record failure class ${incident.failureClass}`)
+      }
+      const signature = incident.failureSignature
+      if (signature && nonEmptyString(signature.logPattern) && !record.includes(signature.logPattern)) {
+        errors.push(`${label}.bead must record failure signature ${JSON.stringify(signature.logPattern)}`)
       }
     }
 
@@ -296,6 +310,29 @@ function validateManifest(manifest, issues, manifestPath = defaultManifestPath) 
   return errors
 }
 
+function validateFailureSignature(incident, label, errors) {
+  const signature = incident.failureSignature
+  const owner = `${label}.failureSignature`
+  if (!signature || typeof signature !== 'object' || Array.isArray(signature)) {
+    errors.push(`${owner} must be an object`)
+    return
+  }
+  const allowed = new Set(['job', 'step', 'logPattern'])
+  for (const key of Object.keys(signature)) {
+    if (!allowed.has(key)) errors.push(`${owner}.${key} is not a recognized field`)
+  }
+  if (!nonEmptyString(signature.job)) errors.push(`${owner}.job is required`)
+  if (!nonEmptyString(signature.step)) errors.push(`${owner}.step is required`)
+  if (!nonEmptyString(signature.logPattern) || signature.logPattern.trim().length < 20) {
+    errors.push(`${owner}.logPattern must be a literal log text of at least 20 characters`)
+  } else if (/[\r\n]/.test(signature.logPattern)) {
+    errors.push(`${owner}.logPattern must fit on one log line`)
+  }
+  if (incident.evidenceState !== 'failure-current' || !incident.run) {
+    errors.push(`${owner} is only allowed on a failure-current incident with a recorded run`)
+  }
+}
+
 function normalizeRun(run) {
   return {
     id: Number(run.id ?? run.databaseId),
@@ -307,7 +344,9 @@ function normalizeRun(run) {
     attempt: Number(run.attempt ?? run.run_attempt ?? 1),
     createdAt: run.createdAt ?? run.created_at,
     updatedAt: run.updatedAt ?? run.updated_at,
-    url: run.url ?? run.html_url
+    url: run.url ?? run.html_url,
+    failedJobs: Array.isArray(run.failedJobs) ? run.failedJobs : null,
+    failureEvidenceError: nonEmptyString(run.failureEvidenceError) ? run.failureEvidenceError : null
   }
 }
 
@@ -330,6 +369,40 @@ function matchingOpenIncident(manifest, check, observation) {
       && incident.run.attempt === observation.run.attempt
       && incident.run.headSha === observation.run.headSha
   }) || null
+}
+
+/**
+ * Find the open signed incident that owns a newer failing run, if any.
+ *
+ * Every failed job of the run must be the signature's job, its only failed
+ * step must be the signature's step, and its log must contain the signature
+ * text on one line. A run without fetched evidence, a failed job without a
+ * log, an extra failing job, or a run older than the incident never matches.
+ */
+function signatureOwner(manifest, check, observation) {
+  const run = observation.run
+  if (observation.state !== 'failure-current' || !run || run.conclusion !== 'failure') return null
+  const incident = manifest.incidents.find(candidate => (
+    candidate.state === 'open'
+      && candidate.checkId === check.id
+      && candidate.failureSignature
+      && candidate.evidenceState === 'failure-current'
+      && candidate.run
+  ))
+  if (!incident) return null
+  if (Date.parse(run.createdAt) < Date.parse(incident.run.createdAt)) return null
+  const signature = incident.failureSignature
+  if (!Array.isArray(run.failedJobs) || run.failedJobs.length === 0) return null
+  const matches = run.failedJobs.every(job => (
+    job
+      && job.name === signature.job
+      && Array.isArray(job.failedSteps)
+      && job.failedSteps.length === 1
+      && job.failedSteps[0] === signature.step
+      && typeof job.log === 'string'
+      && job.log.split(/\r?\n/).some(line => line.includes(signature.logPattern))
+  ))
+  return matches ? incident : null
 }
 
 function observeCheck(check, snapshot, nowMs) {
@@ -372,6 +445,16 @@ function observeCheck(check, snapshot, nowMs) {
   return observed('failure-current')
 }
 
+function reportRun(run) {
+  const { failedJobs, ...rest } = run
+  return {
+    ...rest,
+    failedJobs: failedJobs
+      ? failedJobs.map(job => ({ name: job.name, failedSteps: job.failedSteps, logRead: typeof job.log === 'string' }))
+      : null
+  }
+}
+
 function evaluate(manifest, snapshot, nowValue) {
   const errors = []
   const nowMs = Date.parse(nowValue || snapshot.observedAt)
@@ -386,7 +469,9 @@ function evaluate(manifest, snapshot, nowValue) {
   const findings = []
   for (const check of manifest.checks) {
     const observation = observeCheck(check, snapshot, nowMs)
-    const owner = matchingOpenIncident(manifest, check, observation)
+    const exactOwner = matchingOpenIncident(manifest, check, observation)
+    const signedOwner = exactOwner ? null : signatureOwner(manifest, check, observation)
+    const owner = exactOwner || signedOwner
     const openForCheck = manifest.incidents.filter(incident => (
       incident.state === 'open' && incident.checkId === check.id
     ))
@@ -397,7 +482,10 @@ function evaluate(manifest, snapshot, nowValue) {
       const runLabel = observation.run
         ? `run ${observation.run.id} attempt ${observation.run.attempt}`
         : 'no qualifying run'
-      errors.push(`${check.name}: ${observation.state} (${runLabel}) has no matching open P0/P1 incident`)
+      const evidenceNote = observation.run && observation.run.failureEvidenceError
+        ? `; failure signature evidence unavailable: ${observation.run.failureEvidenceError}`
+        : ''
+      errors.push(`${check.name}: ${observation.state} (${runLabel}) has no matching open P0/P1 incident${evidenceNote}`)
     }
     if (observation.state === 'success-current' && openForCheck.length > 0) {
       errors.push(`${check.name}: a newer success exists; mark its open incident resolved with that successor run`)
@@ -411,10 +499,19 @@ function evaluate(manifest, snapshot, nowValue) {
       workflow: check.name,
       kind: check.kind,
       state: observation.state,
-      run: observation.run,
+      run: observation.run ? reportRun(observation.run) : null,
       supersededCancellations: observation.supersededCancellations,
       ownerIncident: owner ? owner.id : null,
-      ownerBead: owner ? owner.bead : null
+      ownerBead: owner ? owner.bead : null,
+      ownerMatch: exactOwner ? 'exact-run' : (signedOwner ? 'failure-signature' : null),
+      signatureMatchedRun: signedOwner
+        ? {
+            id: observation.run.id,
+            attempt: observation.run.attempt,
+            headSha: observation.run.headSha,
+            url: observation.run.url
+          }
+        : null
     })
   }
 
@@ -431,6 +528,38 @@ function evaluate(manifest, snapshot, nowValue) {
       errors
     },
     errors
+  }
+}
+
+/**
+ * Read the failed jobs, failed steps, and job logs of one run attempt.
+ *
+ * Any read failure, including an incomplete job list, returns
+ * `failedJobs: null`. The evaluator treats that as "no evidence", so the run
+ * stays unowned.
+ */
+async function collectFailedJobs(apiRoot, run, token, readers = {}) {
+  const json = readers.json || (url => githubJson(url, token))
+  const text = readers.text || (url => githubText(url, token))
+  try {
+    const payload = await json(`${apiRoot}/actions/runs/${run.id}/attempts/${run.attempt}/jobs?per_page=100`)
+    const jobs = Array.isArray(payload && payload.jobs) ? payload.jobs : null
+    if (!jobs || payload.total_count !== jobs.length) {
+      throw new Error(`incomplete job list for run ${run.id} attempt ${run.attempt}`)
+    }
+    const failedJobs = []
+    for (const job of jobs) {
+      if (['success', 'skipped', 'neutral'].includes(job.conclusion)) continue
+      const steps = Array.isArray(job.steps) ? job.steps : []
+      failedJobs.push({
+        name: job.name,
+        failedSteps: steps.filter(step => step.conclusion === 'failure').map(step => step.name),
+        log: await text(`${apiRoot}/actions/jobs/${job.id}/logs`)
+      })
+    }
+    return { failedJobs, error: null }
+  } catch (error) {
+    return { failedJobs: null, error: error.message }
   }
 }
 
@@ -464,6 +593,21 @@ async function collectLiveSnapshot(manifest, args) {
       for (const run of payload.workflow_runs || []) collected.push(normalizeRun(run))
     }
     runs[check.id] = collected
+
+    // Fetch logs only when a signed open incident could own the newest run.
+    const signed = manifest.incidents.find(incident => (
+      incident.state === 'open' && incident.checkId === check.id && incident.failureSignature && incident.run
+    ))
+    const qualifying = collected.filter(run => (
+      check.events.includes(run.event) && (check.kind !== 'required' || run.headSha === headSha)
+    ))
+    const candidate = newestRun(qualifying)
+    if (signed && candidate && candidate.status === 'completed' && candidate.conclusion === 'failure'
+      && !(candidate.id === signed.run.id && candidate.attempt === signed.run.attempt)) {
+      const evidence = await collectFailedJobs(apiRoot, candidate, token)
+      candidate.failedJobs = evidence.failedJobs
+      if (evidence.error) candidate.failureEvidenceError = evidence.error
+    }
   }
 
   return {
@@ -517,11 +661,13 @@ async function main() {
 if (require.main === module) main()
 
 module.exports = {
+  collectFailedJobs,
   collectLiveSnapshot,
   evaluate,
   normalizeRun,
   observeCheck,
   parseArgs,
   readIssues,
+  signatureOwner,
   validateManifest
 }
