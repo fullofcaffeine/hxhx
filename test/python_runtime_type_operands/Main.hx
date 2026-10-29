@@ -77,5 +77,18 @@ class Main {
 		Sys.println("class name " + Type.getClassName(Dog));
 		final named:Class<Dynamic> = Animal;
 		Sys.println("class name through value " + Type.getClassName(named));
+		final callback = () -> 1;
+		show("getClass instance", Type.getClass(new Dog()) == Dog);
+		show("getClass class object", Type.getClass(Dog) == null);
+		show("getClass anonymous", Type.getClass({a: 1}) == null);
+		show("getClass string", Type.getClass("s") == null);
+		show("getClass null", Type.getClass(null) == null);
+		show("isObject class", Reflect.isObject(Dog));
+		show("isObject instance", Reflect.isObject(new Animal()));
+		show("isObject anonymous", Reflect.isObject({a: 1}));
+		show("isObject string", Reflect.isObject("s"));
+		show("isObject number", Reflect.isObject(1));
+		show("isObject function", Reflect.isObject(callback));
+		show("isObject null", Reflect.isObject(null));
 	}
 }

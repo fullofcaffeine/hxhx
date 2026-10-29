@@ -27,13 +27,7 @@ class PythonStaticCallAdmission {
 			case "Std": ["string", "isOfType"];
 			case "Sys": ["println", "environment", "systemName", "exit"];
 			case "haxe.Timer": ["stamp"];
-			case "Type": [
-					"resolveClass",
-					"getClass",
-					"getClassName",
-					"getInstanceFields",
-					"getClassFields"
-				];
+			case "Type": ["getClass", "getClassName"];
 			case "Reflect": ["field", "getProperty", "isFunction", "isObject", "compare"];
 			case "StringTools": ["startsWith", "endsWith", "hex"];
 			case "DateTools": ["seconds", "minutes", "hours", "days"];

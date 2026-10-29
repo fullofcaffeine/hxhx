@@ -165,6 +165,16 @@ class M14PythonRuntimeTypeOperandsIntegrationTest {
 			"class A { public function new() {} } class B extends A { public function new() super(); }" +
 			" class Main { static function main():Void { Sys.println(Std.is(1, Int)); } }",
 			library + "Std.is");
+		// These library members need class metadata Python does not emit yet.
+		checkRejection(root, "resolve-class",
+			"class A { public function new() {} } class Main { static function main():Void { Sys.println(Type.resolveClass(\"nope.A\") == null); } }",
+			library + "Type.resolveClass");
+		checkRejection(root, "instance-fields",
+			"class A { public function new() {} } class Main { static function main():Void { Sys.println(Type.getInstanceFields(A).length); } }",
+			library + "Type.getInstanceFields");
+		checkRejection(root, "class-fields",
+			"class A { public function new() {} } class Main { static function main():Void { Sys.println(Type.getClassFields(A).length); } }",
+			library + "Type.getClassFields");
 		removeTree(root);
 		Sys.println("PYTHON_RUNTIME_TYPE_OPERANDS:PASS");
 	}

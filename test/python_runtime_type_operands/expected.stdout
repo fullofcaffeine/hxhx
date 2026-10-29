@@ -141,3 +141,15 @@ arrow String=true
 arrow Int=false
 class name Dog
 class name through value Animal
+getClass instance=true
+getClass class object=true
+getClass anonymous=true
+getClass string=false
+getClass null=true
+isObject class=true
+isObject instance=true
+isObject anonymous=true
+isObject string=true
+isObject number=false
+isObject function=false
+isObject null=false
