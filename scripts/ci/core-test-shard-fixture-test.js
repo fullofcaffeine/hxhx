@@ -150,7 +150,7 @@ function checkRuntimeTypeCoverage(packageJson, plan, expected) {
 function main() {
   checkCommandFailureReporting()
   const plan = loadPlan(repoRoot)
-  assert(plan.aggregateCommands.length === 186, `expected 186 npm test commands, found ${plan.aggregateCommands.length}`)
+  assert(plan.aggregateCommands.length === 187, `expected 187 npm test commands, found ${plan.aggregateCommands.length}`)
 
   const expectedAggregateJobs = [
     'guards',
@@ -172,7 +172,7 @@ function main() {
     'compiler-packaging': 14,
     'compiler-focused-1': 45,
     'compiler-focused-call-arguments': 1,
-    'compiler-focused-2': 60,
+    'compiler-focused-2': 61,
     'compiler-focused-neko-runtime': 1,
     'compiler-focused-neko-locals': 1,
     'compiler-focused-3': 12,

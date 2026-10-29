@@ -35,7 +35,7 @@ class CompilerDriver {
 		untyped __ocaml__("(ResolvedModule.getParsed)");
 		#end
 
-		final root:ResolvedModule = resolved[0];
+		final root:ResolvedModule = ResolverStage.requestedRoot(resolved, [mainModule]);
 		final ast = ResolvedModule.getParsed(root);
 		final decl = ast.getDecl();
 		final pkg = HxModuleDecl.getPackagePath(decl);

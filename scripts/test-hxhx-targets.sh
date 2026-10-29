@@ -2318,30 +2318,46 @@ type_only_out="$tmpdir/out_stage3_type_only"
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-type-only -cp "$ROOT/workloads/hih-compiler/fixtures/src" -main demo.A --hxhx-out "$type_only_out")"
 echo "$out" | grep -q "^resolved_modules="
 echo "$out" | grep -q "^resolved_modules=6$"
-# The resolver supplies demo.A, demo.Util, demo.Point, Math, Std, and String.
-# Typing then loads Array plus its ArrayKeyValueIterator, ArraySort, and
-# ArrayIterator support modules. Older typing re-read indexed function
-# signatures from source hints and redundantly loaded Class as an eleventh
-# module; indexed semantic signatures now preserve the same type without that
-# extra load.
-if ! echo "$out" | grep -q "^typed_modules=10$"; then
-  echo "Expected Stage3 type-only full graph to type exactly 10 real modules." >&2
+# The resolver supplies demo.A, demo.Util, demo.Point, and Math, plus the
+# implicit standard declarations StdTypes and Class. Typing these bodies needs no
+# further module, so no on-demand load happens. Earlier compilers resolved Std and
+# String instead of the implicit standard roots, and typing String then loaded
+# Array with its ArrayKeyValueIterator, ArraySort, and ArrayIterator support
+# modules (10 modules, 95 parsed methods). The root's typed summary below must
+# match what that older compiler printed, except that callPing now infers Void
+# from Util.ping instead of Dynamic.
+if ! echo "$out" | grep -q "^typed_modules=6$"; then
+  echo "Expected Stage3 type-only full graph to type exactly 6 real modules." >&2
   printf "%s\n" "$out" >&2
   exit 1
 fi
 echo "$out" | grep -q "^header_only_modules=0$"
 parsed_methods_total="$(printf "%s\n" "$out" | sed -n 's/^parsed_methods_total=//p')"
-# This fixture has 95 real method bodies under the pinned Haxe 4.3.7 stdlib.
+# This fixture has 35 real method bodies under the pinned Haxe 4.3.7 stdlib.
 # Keep this exact so a missing method and an accidental duplicate both fail.
 # The old false-positive graph parsed Math.hx three extra times under the made-up
 # module names Math.NEGATIVE_INFINITY, Math.NaN, and Math.POSITIVE_INFINITY,
 # inflating this count to 167. Intentional fixture growth must update this
 # expected count in the same reviewed change.
-if [ "$parsed_methods_total" != "95" ]; then
-  echo "Expected Stage3 type-only full graph to parse exactly 95 real method bodies, got: ${parsed_methods_total:-missing}" >&2
+if [ "$parsed_methods_total" != "35" ]; then
+  echo "Expected Stage3 type-only full graph to parse exactly 35 real method bodies, got: ${parsed_methods_total:-missing}" >&2
   printf "%s\n" "$out" >&2
   exit 1
 fi
+# The summary is printed only for the requested root module. It disappeared when
+# the implicit standard roots were resolved ahead of demo.A and Stage3 took the
+# first resolved module as the root.
+for expected_fn in \
+  "typed_fn[1]=greet args= locals= ret=String inferred=String" \
+  "typed_fn[3]=fortyTwo args= locals=x:Int ret=Int inferred=Int" \
+  "typed_fn[5]=callPing args= locals= ret=Void inferred=Void" \
+  "typed_fn[6]=pointFromUtil args= locals=p:demo.Point ret=Int inferred=Int"; do
+  if ! printf "%s\n" "$out" | grep -qxF "$expected_fn"; then
+    echo "Expected Stage3 type-only root summary line: $expected_fn" >&2
+    printf "%s\n" "$out" >&2
+    exit 1
+  fi
+done
 echo "$out" | grep -q "^stage3=type_only_ok$"
 test ! -f "$type_only_out/out.exe"
 

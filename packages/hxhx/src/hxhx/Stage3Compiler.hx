@@ -568,7 +568,7 @@ class Stage3Compiler {
 			var unsupportedFilesCount = 0;
 			final traceUnsupported = isTrueEnv("HXHX_TRACE_UNSUPPORTED");
 			final unsupportedTraceCounters = Stage3DiagnosticsSupport.newUnsupportedTraceCounters();
-			final rootFilePath = ResolvedModule.getFilePath(resolved[0]);
+			final rootFilePath = ResolvedModule.getFilePath(ResolverStage.requestedRoot(resolved, roots));
 			var rootTyped:Null<TypedModule> = null;
 			// Worklist so the typer can lazily load modules on demand.
 			final toType = resolvedForTyping.copy();

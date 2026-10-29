@@ -222,6 +222,42 @@ class ResolverStage {
 	}
 
 	/**
+		Return the resolved module for the first requested root.
+
+		What: callers that need "the program's root module" (its typed summary, its
+		entry point) must look it up by module path.
+
+		Why: resolution also adds implicit standard declarations (`StdTypes`, `Class`)
+		as roots, and the dependency walk does not keep requested roots first in its
+		result. Taking `resolved[0]` then picks a standard module instead of the
+		requested one.
+
+		How: match the first non-empty requested root by module path. When no root was
+		requested (for example display inference), the first resolved module is used.
+		A requested root that resolution did not return is reported as an error.
+	**/
+	public static function requestedRoot(resolved:Array<ResolvedModule>, roots:Array<String>):ResolvedModule {
+		var requested:Null<String> = null;
+		if (roots != null)
+			for (root in roots) {
+				final modulePath = root == null ? "" : StringTools.trim(root);
+				if (modulePath.length > 0) {
+					requested = modulePath;
+					break;
+				}
+			}
+		if (requested == null) {
+			if (resolved.length == 0)
+				throw "resolution returned no modules";
+			return resolved[0];
+		}
+		for (module in resolved)
+			if (ResolvedModule.getModulePath(module) == requested)
+				return module;
+		throw "requested root module was not resolved: " + requested;
+	}
+
+	/**
 		Include the installed standard declarations before callers build type signatures.
 
 		Haxe implicitly exposes public types from `StdTypes`, such as `ArrayAccess`.
