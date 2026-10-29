@@ -241,6 +241,91 @@ If a checkpoint advances an internal burn-down blocker but does not change a
 user-facing readiness claim, keep the bars unchanged and record that decision in
 the relevant bead/checkpoint note.
 
+### Readiness review log
+
+The README keeps only the current readiness review. Older reviews move here so
+their evidence links stay findable. Newest entries come first.
+
+#### 2026-10-29: progress bars unchanged
+
+Evidence since 2026-09-13:
+
+- PR #92 (`16a8ed595`) combined 69 branches. Its final revision `4c0972c80`
+  passed every required workflow, including all 28 Core jobs
+  ([run 40837469333](https://github.com/fullofcaffeine/hxhx/actions/runs/40837469333)).
+  The committed bootstrap snapshot is the checked regeneration of the PR's own
+  compiler source
+  ([run 40826113652](https://github.com/fullofcaffeine/hxhx/actions/runs/40826113652),
+  source `950421720`, `haxe_ocaml-7zpge`). The `hxhx` end-to-end job, which
+  failed with the older committed snapshot, now passes.
+- PR #93 (`66ffff571`) selects project expression-macro calls by declaration
+  before typing. It does not execute them. Gate 1 Lite still fails at
+  `TestMain.hx:122` with `value loop requires a resolved iterator protocol`
+  ([run 40896078456](https://github.com/fullofcaffeine/hxhx/actions/runs/40896078456)
+  on `main`). Execution stays with `haxe_ocaml-9sj5p`.
+- PR #94 (`4f4047ff6`) adds writer and inspector tests for corrupted or missing
+  `Void` return coverage (`haxe_ocaml-eu7fj.9`, closed). Its final revision
+  passed all Core jobs
+  ([run 40864936887](https://github.com/fullofcaffeine/hxhx/actions/runs/40864936887)).
+- The shared OCaml target subset grew. Both compiler hosts now share primitive
+  parameters, returned values, conditional values, comparisons, Boolean
+  operations, nullable integers, and instance method bodies. Calls are still
+  limited to same-class static functions. Object construction and receiver
+  calls (`haxe_ocaml-i1c2c`) remain open.
+- The private runtime reference inventory fell from 209 to 207 legacy helper
+  sites.
+
+Why no bar changes: these results are focused regressions, a regenerated
+bootstrap, and green Core checks (evidence levels 2 and 3 above). They remove
+earlier blockers, but none of them closes an owner Bead that controls a
+user-facing claim. `haxe_ocaml-38gsp.1` is still in progress and
+`haxe_ocaml-38gsp.2` is open, so the `hxhx` integration, plugin, and builtin
+rows stay where they are. Macro execution and Gate 1 are still red, so the
+replacement row stays. `haxe_ocaml-s7jry`, `haxe_ocaml-0uwin`,
+`haxe.ocaml-f1cl.3`, `haxe.ocaml-f1cl.3.1`, and `haxe_ocaml-u6esu` are still
+open or in progress, and no new release aggregate exists.
+
+#### 2026-09-13 review (archived from the README)
+
+This is the earlier README text, kept as written. Some items are now superseded.
+For example, the committed-bootstrap end-to-end failure was fixed by PR #92.
+
+- Focused exception-transport and runtime-report checks pass. Native-surface validation now completes for the macro host.
+- [Hosted checks for PR #29](https://github.com/fullofcaffeine/hxhx/actions/runs/34499566098) passed formatting, guardrails, package installation, plugin checks, macro-host integration, and all portable tests.
+- The fresh PR #43 native compiler now passes the focused imported-call runtime regression with stage0 delegation forbidden.
+- Typed map access preserves the wildcard-imported call and its optional-argument positions. The normal type-import control also runs through its generated module alias.
+- The full-standard-library fixture and retained local-identity workload still fail dependency sorting, so their runtime acceptance remains open.
+- [Fresh bootstrap verification](https://github.com/fullofcaffeine/hxhx/actions/runs/34634224140) passed: full source generation took 2,763 seconds, followed by a successful bytecode build.
+- The literal-support module cycle and unused callback result bindings are fixed. Local native linking also passes.
+- Focused source fixes now preserve bodies under `std/` directories and exact instance-call owners (`haxe_ocaml-xmf73.5`, `haxe_ocaml-xmf73.6`).
+- [PR #32 bootstrap verification](https://github.com/fullofcaffeine/hxhx/actions/runs/34699106971) also passed after the full-body fix; source generation took 2,387 seconds.
+- [PR #33 bootstrap verification](https://github.com/fullofcaffeine/hxhx/actions/runs/34699909729) passed with the exact-call fix; source generation took 2,877 seconds.
+- The fresh PR #33 compiler linked natively in 257 seconds. With stage0 forbidden, the retained workload now reaches a standard-library module dependency cycle.
+- The authored compiler reaches the same cycle. Standalone `reflaxe.ocaml` now passes a focused function-only recursion test using two classes.
+- Eager initialization in recursive groups is rejected before module publication. The broader standard-library cycle remains open (`haxe_ocaml-xmf73.7`).
+- The focused Dynamic operator test passes with explicit diagnostic and full-body return modes, including its native runtime comparisons.
+- A focused source fix preserves Boolean variables when selecting strings; native regression output matches upstream Haxe for both Boolean values and a mutable local.
+- [PR #39 bootstrap verification](https://github.com/fullofcaffeine/hxhx/actions/runs/34705519363) passed: generation took 2,782 seconds, and local native linking took 245 seconds.
+- [PR #43 bootstrap verification](https://github.com/fullofcaffeine/hxhx/actions/runs/34719122793) passed: source generation took 2,827 seconds, followed by bytecode verification. Local native linking took 275 seconds.
+- [PR #44 checks](https://github.com/fullofcaffeine/hxhx/actions/runs/34719215118) passed guardrails, focused regressions, all portable fixtures, packaging, and macro-host integration.
+- The end-to-end job still fails with the committed bootstrap, which predates the imported-call fix. The fresh compiler has separate focused native evidence above.
+- Runtime acceptance and release checks remain open, so overall and integration percentages remain unchanged.
+- The supported `--ocaml` route uses the standalone target core for a small revision-one subset.
+- The fresh PR #43 compiler rejects the reduced cycle example before output: `OCaml target program revision 1 cannot lower function "main"`.
+- The native adapter currently accepts only empty static functions with no arguments and a `Void` result.
+- The dependency-sort failures above occur in the explicit Stage3 diagnostic route. They do not prove recursive-module support through the shared target.
+- Control-effects owner `haxe_ocaml-w32h3` closed on September 6. Runtime-requirement owner `haxe_ocaml-0uwin` remains open.
+- The complete inspector fixture passed locally in 38 minutes 32 seconds; 29 CLI invocations consumed about 91% of that time.
+- A disposable compiled CLI failed valid-report digest checks because JSON field order differs between Eval and Neko.
+- The schema 88 [portable report digest contract](../02-architecture/OCAML_REPORT_JSON.md) now passes independent Eval/Neko byte checks, fresh compiled inspection, and six corrupt-report checks locally.
+- All six lowering snapshots regenerated deterministically and passed native fixture checks; their semantic collections are unchanged.
+- The complete inspector fixture also passed through a compiled Neko CLI, including old-schema rejection.
+- Eight corrected map corruption cases reached semantic diagnostics. Haxe formatting passed with a 600-second task limit; the default 240-second run timed out.
+- The digest change (`haxe_ocaml-1hd2w.1`) awaits review. The startup optimization (`haxe_ocaml-t1io4`) has no accepted speedup yet; readiness percentages remain unchanged.
+- [PR #46 checks](https://github.com/fullofcaffeine/hxhx/actions/runs/34755436379) passed all three portable shards, compiler foundations, focused regressions, packaging, examples, macro-host integration, plugins, and smoke checks.
+- The early-return fixture now compiles its inspector once and retains all 40 inspections in fresh processes. It passed on CI in 901.5 seconds within the unchanged 2,100-second limit (`haxe_ocaml-ogsdv`).
+- The committed-bootstrap end-to-end check still fails at the imported-call runtime marker. Overall workflow acceptance, review, and release checks remain open; these results do not increase the readiness percentages.
+
 ## Goal 2: Stable `hxhx` parity
 
 `hxhx` should become a practical replacement for upstream Haxe `4.3.7` within
