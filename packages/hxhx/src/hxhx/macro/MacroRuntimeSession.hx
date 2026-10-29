@@ -1,5 +1,7 @@
 package hxhx.macro;
 
+import hxhx.macro.ExprMacroDispatch;
+
 /**
 	Shared macro-runtime session contract for Stage4 bring-up.
 
@@ -12,7 +14,12 @@ package hxhx.macro;
 
 	What
 	- Defines the exact callable surface Stage3 and expr-macro expansion need:
-	  run, hook dispatch, expr expansion, and close.
+	  run, hook dispatch, string expr expansion, selected-declaration dispatch,
+	  and close.
+	- `expandExpr` is the exact-text route used by builtin and registered
+	  no-argument expressions. `expandSelected` is the structured route for a call
+	  whose declaration was selected before typing; it carries authored argument
+	  syntax and returns syntax or an explicit `Unavailable` reason.
 
 	How
 	- Runtime factories return exact-shape anonymous objects matching this typedef.
@@ -24,5 +31,6 @@ typedef MacroRuntimeSession = {
 	function runHook(kind:String, id:Int):Void;
 	function runTypeNotFoundHook(id:Int, typePath:String):Bool;
 	function expandExpr(expr:String):String;
+	function expandSelected(request:ExprMacroDispatchRequest):ExprMacroDispatchResult;
 	function close():Void;
 }

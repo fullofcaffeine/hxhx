@@ -523,31 +523,64 @@ class Stage3Compiler {
 			return error(failure.message);
 		}
 
-		// Stage4 bring-up: expression macro expansion pass (pre-typing).
+		// Expression macro expansion pass (pre-typing), owned by Stage3ExprMacroPass.
 		//
-		// This is a small rung that only expands allowlisted exact call strings, and only supports
-		// a tiny returned expression subset (parsed by `HxParser.parseExprText`).
-		if (!typeOnly && exprMacros.length > 0) {
-			final expressionMacroSession = buildMacroPreparer.getSession();
-			if (expressionMacroSession == null) {
-				closeMacroSession();
-				return error("expression macro expansion requested (HXHX_EXPR_MACROS), but no macro host session is available");
-			}
-			#if hxhx_stage0_no_expr_macros
+		// The request's header index and loader are built first (marking the resolved modules) and
+		// stay outside the expansion error handling, as before the pass existed. The pass then serves
+		// registered exact-text expressions, selects other calls by their `macro` declaration, and
+		// reports selected calls no executor can run; those continue through ordinary typing.
+		//
+		// Every non-type-only compile runs the pass, because the built-in date macros are always
+		// allowlisted. The scope-gap count describes the walker's coverage (standard-library switch
+		// scopes produce gaps in every program), so it is printed only under HXHX_TRACE_EXPR_MACROS.
+		function openModuleLoader(index:TyperIndex):ModuleLoader {
+			return new ModuleLoader(classPaths, definesMap, index, function(typePath:String):Bool {
+				return dispatchOnTypeNotFoundHooks(buildMacroPreparer.getSession(), typePath, requestOutput);
+			}, !noEmit, requestContext.sourceProvider, buildMacroPreparer.prepare);
+		}
+		final expansionRequested = !typeOnly && exprMacros.length > 0;
+		final expressionMacroSession = expansionRequested ? buildMacroPreparer.getSession() : null;
+		if (expansionRequested && expressionMacroSession == null) {
+			closeMacroSession();
+			return error("expression macro expansion requested (HXHX_EXPR_MACROS), but no macro host session is available");
+		}
+		#if hxhx_stage0_no_expr_macros
+		if (expressionMacroSession != null) {
 			closeMacroSession();
 			return error("expression macro expansion unavailable in stage0 profiling lane");
-			#else
-			final exp = ExprMacroExpander.expandResolvedModules(resolvedForTyping, expressionMacroSession, exprMacros);
-			resolvedForTyping = exp.modules;
-			requestOutput.stdoutLine("expr_macros_expanded=" + exp.expandedCount);
-			#end
 		}
-
-		final typerIndex = TyperIndex.buildHeaders(resolvedForTyping);
-		final moduleLoader = new ModuleLoader(classPaths, definesMap, typerIndex, function(typePath:String):Bool {
-			return dispatchOnTypeNotFoundHooks(buildMacroPreparer.getSession(), typePath, requestOutput);
-		}, !noEmit, requestContext.sourceProvider, buildMacroPreparer.prepare);
-		moduleLoader.markResolvedAlready(resolvedForTyping);
+		final macroPass = Stage3ExprMacroPass.expand(resolvedForTyping, Stage3ExprMacroPass.prepare(resolvedForTyping, openModuleLoader), null, exprMacros,
+			openModuleLoader);
+		#else
+		final macroSetup = Stage3ExprMacroPass.prepare(resolvedForTyping, openModuleLoader);
+		final macroPass = try {
+			Stage3ExprMacroPass.expand(resolvedForTyping, macroSetup, expressionMacroSession, exprMacros, openModuleLoader);
+		} catch (e:TyperError) {
+			closeMacroSession();
+			final rawDiagnostic = rawTyperDiagnostic(e);
+			if (rawDiagnostic != null)
+				return haxeDiagnosticError(rawDiagnostic);
+			return error("expression macro expansion failed: " + formatException(e));
+		} catch (e:String) {
+			closeMacroSession();
+			return error("expression macro expansion failed: " + e);
+		}
+		#end
+		resolvedForTyping = macroPass.modules;
+		final typerIndex = macroPass.index;
+		final moduleLoader = macroPass.loader;
+		if (expressionMacroSession != null) {
+			requestOutput.stdoutLine("expr_macros_expanded=" + macroPass.expandedCount);
+			if (macroPass.unexecuted.length > 0) {
+				requestOutput.stdoutLine("expr_macros_unexecuted=" + macroPass.unexecuted.length);
+				for (position in 0...macroPass.unexecuted.length) {
+					final entry = macroPass.unexecuted[position];
+					requestOutput.stdoutLine("expr_macro_unexecuted[" + position + "]=" + entry.filePath + ": " + entry.declaration + ": " + entry.reason);
+				}
+			}
+			if (macroPass.lexicalGaps.length > 0 && isTrueEnv("HXHX_TRACE_EXPR_MACROS"))
+				requestOutput.stdoutLine("expr_macro_scope_gaps=" + macroPass.lexicalGaps.length);
+		}
 
 		// Stage3 diagnostic mode: type the full resolved graph (best-effort), then stop.
 		//
@@ -708,10 +741,14 @@ class Stage3Compiler {
 				if (rootSet.exists(modulePath))
 					rootModules.push(m);
 			}
-			if (rootModules.length > 0)
-				rootModules
-			else
-				[resolvedForTyping[0]];
+			if (rootModules.length == 0)
+				rootModules.push(resolvedForTyping[0]);
+			// Modules the macro pass loaded are already marked resolved, so the loader will not yield
+			// them during typing; type them here as if typing had discovered them.
+			for (m in macroPass.discovered)
+				if (rootModules.indexOf(m) == -1)
+					rootModules.push(m);
+			rootModules;
 		} else {
 			resolvedForTyping.copy();
 		}

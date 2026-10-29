@@ -1,5 +1,6 @@
 package hxhx.macro;
 
+import hxhx.macro.ExprMacroDispatch;
 import hxhxmacrohost.NativeMacroModuleDynlink;
 import hxhxmacrohost.NativeMacroModuleHost;
 import hxhxmacrohost.NativeMacroModuleHostAbi;
@@ -176,6 +177,20 @@ class InProcMacroSession {
 			case _:
 				throw "macro.expandExpr: expr not registered: " + e;
 		}
+	}
+
+	/**
+		Answer a declaration-selected macro call.
+
+		The in-process runtime currently executes only exact no-argument expression
+		keys registered by native modules (`NativeMacroModuleHost.runExpr`). It has
+		no executor that receives authored argument syntax for a declaration, so a
+		selected call is reported as unavailable instead of being guessed from text.
+	**/
+	public function expandSelected(request:ExprMacroDispatchRequest):ExprMacroDispatchResult {
+		return Unavailable("the in-process macro runtime has no executor for project macro declaration "
+			+ request.describe()
+			+ "; native macro modules currently register exact no-argument expression keys only");
 	}
 
 	/** Load one validated project-macro plugin into this in-process compilation session. **/

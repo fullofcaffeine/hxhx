@@ -12,6 +12,7 @@ class M14ExpressionMacroSourceTraversalTest {
 			run: _ -> throw "unexpected macro run",
 			runHook: (_, _) -> throw "unexpected macro hook",
 			runTypeNotFoundHook: (_, _) -> throw "unexpected type hook",
+			expandSelected: _ -> throw "unexpected selected dispatch",
 			expandExpr: expression -> {
 				calls.push(expression);
 				return switch expression {

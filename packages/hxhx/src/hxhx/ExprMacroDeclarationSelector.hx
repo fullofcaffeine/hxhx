@@ -7,11 +7,13 @@ typedef ExprMacroSelectionScope = {
 }
 
 /**
-	Find an unambiguous public static macro through existing declaration lookup.
-	Only a callee is inspected: receiver values and syntax arguments are never
-	inferred or executed. Null leaves ordinary/unresolved calls to normal typing.
-	The caller owns module preparation and exact lexical visibility. This service
-	is not yet wired into production expansion or the native macro runtime.
+	Find an unambiguous static macro (public, or private from its own class)
+	through existing declaration lookup. Only a callee is inspected: receiver
+	values and syntax arguments are never inferred or executed, and a receiver
+	path whose last segment is not type-shaped is never resolved as a type.
+	Null leaves ordinary/unresolved calls to normal typing. The caller owns module
+	preparation and exact lexical visibility. Production expansion reaches this
+	through `Stage3ExprMacroPass`; executing the selected macro is a later owner.
 	Mixed field/method imports fail explicitly until their shared lookup owner
 	provides one ordered member result; independent queries cannot prove a winner.
 **/
@@ -32,12 +34,12 @@ function select(callee:HxExpr, context:TyperContext, scope:ExprMacroSelectionSco
 					|| (field != null && (field.getIsStatic() || !scope.isStaticContext))) {
 					null;
 				} else if (owner != null && owner.staticMethodCandidates(name).length > 0) {
-					declaration(owner, owner.staticMethodCandidates(name));
+					declaration(owner, owner.staticMethodCandidates(name), true);
 				} else if (context.moduleEnumConstructorMethod(name) != null) {
 					null;
 				} else {
 					final imported = context.importedStaticMethod(name);
-					final selected = imported == null ? null : declaration(imported.getProvider(), imported.getCandidates());
+					final selected = imported == null ? null : declaration(imported.getProvider(), imported.getCandidates(), false);
 					if (selected != null && context.importedStaticField(name) != null)
 						throw "expression macro selection does not yet resolve mixed field and method imports";
 					selected;
@@ -45,12 +47,20 @@ function select(callee:HxExpr, context:TyperContext, scope:ExprMacroSelectionSco
 			}
 		case EField(receiver, name):
 			final path = typePath(receiver);
-			if (path == null || valueRoot(path.split(".")[0], context, scope, names)) {
+			final segments = path == null ? [] : path.split(".");
+			if (path == null
+				|| valueRoot(segments[0], context, scope, names)
+				|| !TyperStage.isUpperStartName(segments[segments.length - 1])) {
 				null;
 			} else {
 				final owner = context.resolveType(path);
-				owner == null
-				|| owner.fieldInfo(name) != null ? null : declaration(owner, owner.staticMethodCandidates(name));
+				if (owner == null || owner.fieldInfo(name) != null) {
+					null;
+				} else {
+					final current = context.currentClass();
+					final ownClass = current != null && current.getFullName() == owner.getFullName();
+					declaration(owner, owner.staticMethodCandidates(name), ownClass);
+				}
 			}
 		case _: null;
 	};
@@ -80,7 +90,12 @@ function capture(call:HxExpr, context:TyperContext, scope:ExprMacroSelectionScop
 	};
 }
 
-private function declaration(owner:TyNominalInfo, candidates:Array<TyFunSig>):Null<TyDeclarationInfo> {
+/**
+	Pick the one macro declaration among a method group. A private static macro is
+	legal when the call is made from its own class (`ownClass`), matching upstream
+	visibility; from any other class only a public static macro is selectable.
+**/
+private function declaration(owner:TyNominalInfo, candidates:Array<TyFunSig>, ownClass:Bool):Null<TyDeclarationInfo> {
 	final declarations = [for (candidate in candidates) owner.declarationForSignature(candidate)];
 	final macros = declarations.filter(value -> value != null && value.getMetadata().indexOf("macro") >= 0);
 	if (macros.length == 0)
@@ -88,8 +103,10 @@ private function declaration(owner:TyNominalInfo, candidates:Array<TyFunSig>):Nu
 	if (declarations.length != 1)
 		throw "expression macro selection requires one exact declaration before argument typing";
 	final selected = macros[0];
-	if (!selected.getIsStatic() || !selected.getIsPublic())
-		throw "expression macro selection requires a public static declaration";
+	if (!selected.getIsStatic())
+		throw "expression macro selection requires a static declaration";
+	if (!selected.getIsPublic() && !ownClass)
+		throw "expression macro selection requires a public declaration when called outside its class";
 	return selected;
 }
 

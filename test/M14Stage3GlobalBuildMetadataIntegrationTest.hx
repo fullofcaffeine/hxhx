@@ -102,6 +102,7 @@ class M14Stage3GlobalBuildMetadataIntegrationTest {
 			runHook: function(_, _):Void {},
 			runTypeNotFoundHook: function(_, _):Bool return false,
 			expandExpr: function(expr):String return expr,
+			expandSelected: function(_):hxhx.macro.ExprMacroDispatch.ExprMacroDispatchResult return Unavailable("test session"),
 			close: function():Void sessionClosed = true
 		};
 		final request = hxhx.CompilationRequestContext.direct();
@@ -124,6 +125,7 @@ class M14Stage3GlobalBuildMetadataIntegrationTest {
 			runHook: function(_, _):Void {},
 			runTypeNotFoundHook: function(_, _):Bool return false,
 			expandExpr: function(expr):String return expr,
+			expandSelected: function(_):hxhx.macro.ExprMacroDispatch.ExprMacroDispatchResult return Unavailable("test session"),
 			close: function():Void {}
 		};
 		final failingRequest = hxhx.CompilationRequestContext.server(1);
@@ -148,6 +150,7 @@ class M14Stage3GlobalBuildMetadataIntegrationTest {
 			runHook: function(_, _):Void {},
 			runTypeNotFoundHook: function(_, _):Bool return false,
 			expandExpr: function(expr):String return expr,
+			expandSelected: function(_):hxhx.macro.ExprMacroDispatch.ExprMacroDispatchResult return Unavailable("test session"),
 			close: function():Void {}
 		};
 		final cancelledRequest = hxhx.CompilationRequestContext.server(2);

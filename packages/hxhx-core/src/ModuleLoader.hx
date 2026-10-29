@@ -261,6 +261,20 @@ class ModuleLoader extends LazyTypeLoader {
 	}
 
 	/**
+		Carry another loader's record of missing-type hooks already attempted.
+
+		A request may replace its loader after a source rewrite. The hooks are
+		request-level effects (a macro may define the missing module once), so the
+		replacement must not ask them again for the same candidate paths.
+	**/
+	public function inheritTypeNotFoundAttempts(previous:ModuleLoader):Void {
+		if (previous == null)
+			return;
+		for (candidate in previous.typeNotFoundTried.keys())
+			typeNotFoundTried.set(candidate, true);
+	}
+
+	/**
 		Ensure that a type path can be resolved against the shared `TyperIndex`, loading a module
 		on-demand if needed.
 

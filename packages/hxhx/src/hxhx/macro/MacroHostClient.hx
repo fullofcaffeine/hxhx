@@ -1,5 +1,6 @@
 package hxhx.macro;
 
+import hxhx.macro.ExprMacroDispatch;
 import hxhx.runtime.NullableRuntimeString;
 
 private typedef RuntimeResolvedTypeSnapshot = {
@@ -1115,6 +1116,18 @@ class MacroHostSession {
 	**/
 	public function expandExpr(expr:String):String {
 		return client.call("macro.expandExpr", MacroProtocol.encodeLen("e", expr));
+	}
+
+	/**
+		Answer a declaration-selected macro call.
+
+		The host protocol has only the exact-text `macro.expandExpr` method. A
+		structured request carrying authored argument syntax cannot be sent through
+		it faithfully, so the client reports the gap instead of flattening the call
+		to text.
+	**/
+	public function expandSelected(request:ExprMacroDispatchRequest):ExprMacroDispatchResult {
+		return Unavailable("the external macro host protocol has no structured dispatch method for project macro declaration " + request.describe());
 	}
 
 	public function runHook(kind:String, id:Int):Void {
