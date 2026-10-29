@@ -18,7 +18,9 @@ enum Stage3OcamlLocalCompoundKind {
 
 	Why: in Haxe a compound assignment is an expression. `var r = (x -= 2)` and
 	`while ((i += 1) < 3)` need the stored value, so emitting the update only as a
-	unit statement leaves no value for the surrounding expression.
+	unit statement leaves no value for the surrounding expression. A statement
+	`x -= 2;` uses this same form with its value ignored, so both positions share
+	one evaluation order.
 
 	What the emitted expression guarantees, matching Haxe 4.3.7:
 
@@ -42,6 +44,34 @@ enum Stage3OcamlLocalCompoundKind {
 	nullable right carrier through `rightCarrier`. Bitwise compound operators and
 	abstract operator overloads are not handled here and fail at emit time.
  */
+/** Arithmetic compound operators with a local value form. The six bitwise ones are not lowered yet (haxe_ocaml-sq6ii). */
+function isArithmeticOperator(op:String):Bool {
+	return switch op {
+		case "+=" | "-=" | "*=" | "/=" | "%=": true;
+		case _: false;
+	};
+}
+
+/**
+	The representation a local of exact type `type` updates in: `Int` or
+	`Float` (also inside a nullable carrier) or `String`. Null for every other
+	type, including `Dynamic`, which keeps its own runtime operation.
+ */
+function kindOf(type:TyType):Null<Stage3OcamlLocalCompoundKind> {
+	final carrier = Stage3OcamlNullablePrimitive.innerPrimitive(type);
+	return switch carrier != null ? carrier : TyAliasExpansion.reveal(type).getSemanticKey() {
+		case "primitive:Int": IntUpdate;
+		case "primitive:Float": FloatUpdate;
+		case "primitive:String": StringUpdate;
+		case _: null;
+	};
+}
+
+/** Whether a local of exact type `type` has a compound value form: a `kindOf` kind or `Dynamic`. */
+function hasValueForm(type:TyType):Bool {
+	return type.isDynamic() || kindOf(type) != null;
+}
+
 function value(input:{
 	ident:String,
 	op:String,

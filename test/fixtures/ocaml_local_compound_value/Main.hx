@@ -7,9 +7,10 @@
 	right operand to the value `y` had before the nested update.
 
 	The fixture covers `Int`, `Float`, `Null<Int>`, `Null<Float>`, `String`, and
-	`Dynamic` locals, in initializers, nested arithmetic, call arguments, and a
-	`while` condition. Upstream Haxe and the native OCaml program must print the
-	same lines.
+	`Dynamic` locals, in initializers, nested arithmetic, call arguments,
+	operators that consume the value, and `while` conditions. Statement-position
+	updates are checked for the same old-value-first order. Upstream Haxe and the
+	native OCaml program must print the same lines.
  */
 class Main {
 	// Counted through an array: native static variable increments are a separate gap (haxe_ocaml-nq65n).
@@ -91,5 +92,58 @@ class Main {
 		var dynamicValue:Dynamic = 1;
 		final dynamicRaised = (dynamicValue += 2);
 		Sys.println("dynamic += " + Std.string(dynamicRaised) + " " + Std.string(dynamicValue));
+
+		// An operator that consumes the value must see the local's type.
+		var pair = 1;
+		final pairSum = (pair += 1) + (pair += 1);
+		Sys.println("int operands " + Std.string(pairSum) + " " + Std.string(pair));
+		final widened = 0.25 * (pair += 2);
+		Sys.println("int operand of float " + Std.string(widened) + " " + Std.string(pair));
+		var scale = 1.25;
+		final scaled = (scale += 1) * 2;
+		Sys.println("float operand " + Std.string(scaled) + " " + Std.string(scale));
+		var stock:Null<Int> = 4;
+		final stockProduct = (stock += 2) * 3;
+		var steps = 0;
+		while ((stock += 1) < 9)
+			steps++;
+		Sys.println("nullable int operand " + Std.string(stockProduct) + " " + Std.string(steps) + " " + Std.string(stock));
+		var share:Null<Float> = 1.5;
+		final shareLarge = (share *= 3) > 4;
+		Sys.println("nullable float operand " + Std.string(shareLarge) + " " + Std.string(share));
+		var label = "s";
+		final labelText = (label += "t") + "!";
+		Sys.println("string operand " + labelText + " " + label);
+
+		// A numeric right operand is added before it is appended: "p" + (1 + 2).
+		var sum = "p";
+		final sumValue = (sum += 1 + 2);
+		var sumStatement = "q";
+		sumStatement += 1 + 2;
+		var flag = "f";
+		final flagValue = (flag += 1 > 0);
+		Sys.println("string numeric right operand " + sumValue + " " + sum + " " + sumStatement + " " + flagValue);
+
+		// Statement-position updates also read the old value before the right operand.
+		var counter = 10;
+		counter += (counter += 5);
+		var fraction = 0.5;
+		fraction += (fraction += 0.25);
+		var letters = "a";
+		letters += (letters += "b");
+		var calls = 1;
+		function bump():Int {
+			calls += 10;
+			return 1;
+		}
+		calls += bump();
+		Sys.println("statement old value first "
+			+ Std.string(counter)
+			+ " "
+			+ Std.string(fraction)
+			+ " "
+			+ letters
+			+ " "
+			+ Std.string(calls));
 	}
 }

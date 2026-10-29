@@ -20,3 +20,11 @@ null update threw; still null true
 string += ab ab3 ab3
 string old value first aab aab
 dynamic += 3 3
+int operands 5 3
+int operand of float 1.25 5
+float operand 4.5 2.25
+nullable int operand 18 2 9
+nullable float operand true 4.5
+string operand st! st
+string numeric right operand p3 p3 q3 ftrue
+statement old value first 25 1.25 aab 2

@@ -2016,6 +2016,53 @@ class EmitterStage {
 		return facts != null && facts.isConcreteInt() ? facts : null;
 	}
 
+	/**
+		The exact local type of a local compound assignment value such as
+		`(x += 1)`, or null when `expr` is not one. The value form emitted by
+		`backend.ocaml.Stage3OcamlLocalCompoundValue` has the local's
+		representation (a nullable local produces its carrier), so operators
+		consuming the value must classify it by this type rather than guess.
+	**/
+	static function localCompoundValueType(expr:HxExpr):Null<TyType> {
+		return switch expr {
+			case EParenthesized(inner, _): localCompoundValueType(inner);
+			case EBinop(op, target = EIdent(name), _) if (isLocalCompoundValue(op, target)): exactFunctionLocalType(name);
+			case _: null;
+		};
+	}
+
+	/**
+		Render the right operand of `text += value` as the String it appends.
+
+		A scalar operand is evaluated as a value first and converted afterwards, so
+		`text += 1 + 2` appends "3" like Haxe, instead of letting the concatenation
+		renderer turn the inner `+` into another append ("12"). `rendered` is the
+		operand already emitted as a value. String and other operands keep the
+		concatenation renderer.
+	**/
+	static function localCompoundStringOperand(value:HxExpr, rendered:String, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
+			?callSigByCallee:Map<String, EmitterCallSig>):String {
+		final scalar = if (stage3IsIntExpr(value, tyByIdent)) {
+			"Int";
+		} else if (stage3IsFloatExpr(value, tyByIdent, callSigByCallee, staticImportByIdent)) {
+			"Float";
+		} else if (stage3IsBoolExpr(value, tyByIdent, callSigByCallee)) {
+			"Bool";
+		} else {
+			null;
+		};
+		if (scalar != null)
+			return backend.ocaml.Stage3OcamlStringConversion.convert(TyType.fromHintText(scalar), rendered, currentFunctionLocalOcamlNames);
+		return exprToOcamlForConcatStage3(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+	}
+
+	/** Whether `expr` is a local compound assignment value whose local has the semantic key `key`. */
+	static function isLocalCompoundValueOf(expr:HxExpr, key:String):Bool {
+		final type = localCompoundValueType(expr);
+		return type != null && TyAliasExpansion.reveal(type).getSemanticKey() == key;
+	}
+
 	static function stage3IsIntExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>):Bool {
 		// Callback aliases, applied generic calls, and selected methods retain
 		// their result on the exact projected call. A spelling-based signature
@@ -2027,6 +2074,8 @@ class EmitterStage {
 					return call.getType().getSemanticKey() == "primitive:Int";
 			case _:
 		}
+		if (localCompoundValueType(expr) != null)
+			return isLocalCompoundValueOf(expr, "primitive:Int");
 		final exact = objectAccessType(expr);
 		if (exact != null)
 			return exact.getSemanticKey() == "primitive:Int";
@@ -2072,6 +2121,8 @@ class EmitterStage {
 		final instanceCall = TypedExactCallSource.decodeInstance(expr);
 		if (instanceCall != null)
 			return instanceCall.resultType == "Float";
+		if (localCompoundValueType(expr) != null)
+			return isLocalCompoundValueOf(expr, "primitive:Float");
 		return switch (expr) {
 			case EParenthesized(inner, _): stage3IsFloatExpr(inner, tyByIdent, callSigByCallee, staticImportByIdent);
 			case EDiscardThen(_, continuation): stage3IsFloatExpr(continuation, tyByIdent, callSigByCallee, staticImportByIdent);
@@ -2110,6 +2161,8 @@ class EmitterStage {
 		final exact = objectAccessType(expr);
 		if (exact != null)
 			return exact.getSemanticKey() == "primitive:String";
+		if (localCompoundValueType(expr) != null)
+			return isLocalCompoundValueOf(expr, "primitive:String");
 		return switch (expr) {
 			case EDiscardThen(_, continuation): stage3IsStringExpr(continuation, tyByIdent);
 			case EString(_):
@@ -2180,6 +2233,9 @@ class EmitterStage {
 		final instanceCall = TypedExactCallSource.decodeInstance(expr);
 		if (instanceCall != null)
 			return backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(instanceCall.resultType);
+		final compound = localCompoundValueType(expr);
+		if (compound != null)
+			return compound.isDynamic();
 		return switch (expr) {
 			case EDiscardThen(_, continuation): stage3IsDynamicExpr(continuation, tyByIdent, callSigByCallee);
 			case EIdent(name):
@@ -2332,6 +2388,8 @@ class EmitterStage {
 		return switch (expr) {
 			case EParenthesized(inner, _): stage3NullableNumericLocal(inner);
 			case EIdent(name): backend.ocaml.Stage3OcamlNullablePrimitive.numericInner(exactFunctionLocalType(name));
+			// A nullable local's compound value is the stored carrier.
+			case EBinop(_, _, _): backend.ocaml.Stage3OcamlNullablePrimitive.numericInner(localCompoundValueType(expr));
 			case _:
 				null;
 		}
@@ -2384,14 +2442,10 @@ class EmitterStage {
 		}
 	}
 
-	/**
-		Whether `target op= value` is an arithmetic compound assignment of a mutable
-		local, whose value form `backend.ocaml.Stage3OcamlLocalCompoundValue` emits.
-		The six bitwise compound operators are not lowered yet (haxe_ocaml-sq6ii).
-	**/
+	/** Whether `target op= value` is an arithmetic compound assignment of a mutable local. */
 	static function isLocalCompoundValue(op:String, target:HxExpr):Bool {
-		return switch [op, target] {
-			case ["+=" | "-=" | "*=" | "/=" | "%=", EIdent(name)]: isMutableLocalRefIdent(name);
+		return backend.ocaml.Stage3OcamlLocalCompoundValue.isArithmeticOperator(op) && switch target {
+			case EIdent(name): isMutableLocalRefIdent(name);
 			case _: false;
 		};
 	}
@@ -4521,11 +4575,14 @@ class EmitterStage {
 						case EUnop(op, fixity, inner) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
 							// Promote negative int literals/expressions to float too.
 							"(-.(" + exprToOcamlAsFloat(inner) + "))";
-						case EIdent(_) | EParenthesized(_, _) if (stage3NullableNumericLocal(e) != null):
+						case EIdent(_) | EParenthesized(_, _) | EBinop(_, _, _) if (stage3NullableNumericLocal(e) != null):
 							final inner = stage3NullableNumericLocal(e);
 							final unwrapped = backend.ocaml.Stage3OcamlNullablePrimitive.unwrap(inner,
 								exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
 							inner == "primitive:Int" ? "float_of_int (" + unwrapped + ")" : unwrapped;
+						case _ if (isLocalCompoundValueOf(e, "primitive:Int")):
+							"float_of_int (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee) + ")";
 						case EIdent(name) if (stage3TyForIdent(name, tyByIdentRaw) == "Int"):
 							"float_of_int " + ocamlReadValueIdent(name);
 						case EField(_obj, "length"):
@@ -4589,8 +4646,8 @@ class EmitterStage {
 					return fn == null ? "(Obj.magic 0)" : ("Haxe_Int64." + fn + " (" + exprToOcamlAsInt64(a) + ") (" + exprToOcamlAsInt64(b) + ")");
 				}
 				// A local arithmetic compound assignment used as a value stores and produces
-				// the update. Statement-position updates of these operators use the local
-				// assignment path in `stmtListToOcaml` and do not reach this branch.
+				// the update. Statement-position updates of supported locals also come here
+				// (through `mutableAssignmentStmtToUnit`) and discard the value.
 				switch a {
 					case EIdent(name) if (isLocalCompoundValue(op, a)):
 						final destination = exactFunctionLocalType(name);
@@ -4602,12 +4659,9 @@ class EmitterStage {
 								backend.ocaml.Stage3OcamlLocalStorage.compound(requireLocalStorageWrite(name, b), op, la, rb, currentFunctionLocalOcamlNames),
 								null, currentFunctionLocalOcamlNames);
 						final carrier = backend.ocaml.Stage3OcamlNullablePrimitive.innerPrimitive(destination);
-						final kind = switch carrier != null ? carrier : TyAliasExpansion.reveal(destination).getSemanticKey() {
-							case "primitive:Int": backend.ocaml.Stage3OcamlLocalCompoundValue.Stage3OcamlLocalCompoundKind.IntUpdate;
-							case "primitive:Float": backend.ocaml.Stage3OcamlLocalCompoundValue.Stage3OcamlLocalCompoundKind.FloatUpdate;
-							case "primitive:String": backend.ocaml.Stage3OcamlLocalCompoundValue.Stage3OcamlLocalCompoundKind.StringUpdate;
-							case _: throw "unsupported OCaml local compound assignment value: " + op + " on " + destination.getDisplay();
-						};
+						final kind = backend.ocaml.Stage3OcamlLocalCompoundValue.kindOf(destination);
+						if (kind == null)
+							throw "unsupported OCaml local compound assignment value: " + op + " on " + destination.getDisplay();
 						// Render the right operand in the local's representation; a nullable
 						// right operand stays a carrier and is unwrapped after both operands ran.
 						final right = switch kind {
@@ -4615,7 +4669,7 @@ class EmitterStage {
 								&& !stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)):
 								stage3IsIntExpr(b, tyByIdentRaw) ? "float_of_int (" + rb + ")" : exprToOcamlAsFloat(b);
 							case StringUpdate:
-								exprToOcamlForConcatStage3(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								localCompoundStringOperand(b, rb, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 									callSigByCallee);
 							case _: rb;
 						};
@@ -6126,6 +6180,17 @@ class EmitterStage {
 			final lhsCode = localReadIdent(name);
 			final lhsTy = localTyForIdent(name);
 			final destination = exactFunctionLocalType(name);
+			// One lowering for every position: a statement update is the value form of
+			// the same compound assignment with its value discarded. It reads the old
+			// value before the right operand, which the older direct rendering below
+			// did not (`HxInt.add (!y) (rhs)` lets OCaml run `rhs` first).
+			if (destination != null
+				&& backend.ocaml.Stage3OcamlLocalCompoundValue.hasValueForm(destination)
+				&& isLocalCompoundValue(op, EIdent(name)))
+				return "ignore ("
+					+ exprToOcaml(EBinop(op, EIdent(name), rhs), arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+						callSigByCallee)
+					+ ")";
 			if (op != "=" && destination != null && destination.isDynamic()) {
 				final write = requireLocalStorageWrite(name, rhs);
 				final rendered = exprToOcaml(rhs, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
