@@ -7,11 +7,13 @@ typedef ExprMacroSelectionScope = {
 }
 
 /**
-	Find an unambiguous public static macro through existing declaration lookup.
-	Only a callee is inspected: receiver values and syntax arguments are never
-	inferred or executed. Null leaves ordinary/unresolved calls to normal typing.
-	The caller owns module preparation and exact lexical visibility. This service
-	is not yet wired into production expansion or the native macro runtime.
+	Find an unambiguous static macro (public, or private from its own class)
+	through existing declaration lookup. Only a callee is inspected: receiver
+	values and syntax arguments are never inferred or executed, and a receiver
+	path whose last segment is not type-shaped is never resolved as a type.
+	Null leaves ordinary/unresolved calls to normal typing. The caller owns module
+	preparation and exact lexical visibility. Production expansion reaches this
+	through `Stage3ExprMacroPass`; executing the selected macro is a later owner.
 	Mixed field/method imports fail explicitly until their shared lookup owner
 	provides one ordered member result; independent queries cannot prove a winner.
 **/
@@ -45,7 +47,10 @@ function select(callee:HxExpr, context:TyperContext, scope:ExprMacroSelectionSco
 			}
 		case EField(receiver, name):
 			final path = typePath(receiver);
-			if (path == null || valueRoot(path.split(".")[0], context, scope, names)) {
+			final segments = path == null ? [] : path.split(".");
+			if (path == null
+				|| valueRoot(segments[0], context, scope, names)
+				|| !TyperStage.isUpperStartName(segments[segments.length - 1])) {
 				null;
 			} else {
 				final owner = context.resolveType(path);

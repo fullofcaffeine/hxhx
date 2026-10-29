@@ -170,6 +170,16 @@ class M14ExprMacroSelectedDispatchLoaderTest {
 			&& own.unexecuted[0].reason == "no executor",
 			"unexecuted private macro was rewritten or not recorded");
 
+		// A receiver chain whose last segment is a value (`ValueChain.instance`) is not a type path. Selection must
+		// not ask the loader or the missing-type hook for it, matching the typer's own static-owner lookup.
+		final chainMissing = new Array<String>();
+		final chainRequests = new Array<ExprMacroDispatchRequest>();
+		final chain = module("callers.ValueChain");
+		final chainResult = pass([chain], session(chainRequests, [], _ -> throw "must not dispatch an instance call"), [], chainMissing);
+		require(chainRequests.length == 0 && chainResult.modules[0] == chain, "value receiver chain was selected");
+		require(chainMissing.filter(path -> StringTools.endsWith(path, "ValueChain.instance")).length == 0,
+			"value receiver chain reached the missing-type hook: " + chainMissing.join(","));
+
 		Sys.println("M14_EXPR_MACRO_SELECTED_DISPATCH_LOADER:PASS");
 	}
 }

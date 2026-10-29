@@ -1383,7 +1383,15 @@ class TyperStage {
 		}
 	}
 
-	static function isUpperStartName(name:String):Bool {
+	/**
+		Whether a dotted-path segment can name a type in a static-owner lookup.
+
+		The typer only asks `TyperContext.resolveType` for a receiver path whose last
+		segment starts with an uppercase letter; `Main.instance` is a value path and
+		must not reach the module loader or missing-type hooks. Pre-typing expression
+		macro selection uses the same rule so both phases ask the loader the same questions.
+	**/
+	public static function isUpperStartName(name:String):Bool {
 		if (name == null || name.length == 0)
 			return false;
 		final c = name.charCodeAt(0);
