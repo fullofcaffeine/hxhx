@@ -2682,9 +2682,16 @@ HX
 cat >"$tmpinc/src/Extra.hx" <<'HX'
 class Extra {}
 HX
+# Resolution also adds the implicit standard roots (StdTypes, Class) when the
+# standard library is available, so compare with the same program without the
+# include instead of pinning an absolute count: include("Extra") must add exactly
+# one resolved module.
+base_out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit -cp "$tmpinc/src" -main Main --hxhx-out "$tmpinc/out_base")"
+base_resolved="$(printf "%s\n" "$base_out" | sed -n 's/^resolved_modules=//p')"
 out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit -cp "$tmpinc/src" -main Main --macro 'include("Extra")' --hxhx-out "$tmpinc/out")"
 echo "$out" | grep -q "^macro_run\\[0\\]=include=ok$"
-echo "$out" | grep -q "^resolved_modules=2$"
+test -n "$base_resolved"
+echo "$out" | grep -q "^resolved_modules=$((base_resolved + 1))$"
 echo "$out" | grep -q "^stage3=no_emit_ok$"
 
 echo "== Stage3 bring-up: @:build emits a field into the typed program"
