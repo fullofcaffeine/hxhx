@@ -1,0 +1,15 @@
+4 5
+6 6
+6 4
+14 true
+1.5 2.5
+1.5 1.25
+0.25 -0.75
+4 6 16
+true
+postfix Null Access
+prefix Null Access
+compound Null Access
+null
+nested decrement threw
+null

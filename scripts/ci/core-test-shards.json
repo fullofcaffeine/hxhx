@@ -274,6 +274,7 @@
     "test:m14:hih-mixed-numeric-multiplication": "compiler-focused-2",
     "test:m14:ocaml-runtime-keyword-method": "compiler-focused-2",
     "test:m14:stage3-nullable-int-carrier": "compiler-focused-2",
+    "test:m14:stage3-nullable-local-update": "compiler-focused-2",
     "test:m14:stage3-method-reference-order": "compiler-focused-2",
     "test:m14:stage3-bare-alias-constructor": "compiler-focused-2",
     "test:m14:stage3-enum-abstract-value-switch": "compiler-focused-2",

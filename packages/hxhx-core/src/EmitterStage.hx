@@ -4370,23 +4370,25 @@ class EmitterStage {
 				if (op == HxUnaryOperator.Increment || op == HxUnaryOperator.Decrement) {
 					switch (expr) {
 						case EIdent(name) if (isMutableLocalRefIdent(name)):
-							final ident = requireOcamlFunctionLocalValueIdent(name);
-							final isInt64 = stage3IsInt64Expr(expr, tyByIdentRaw);
-							final binop = op == HxUnaryOperator.Increment ? EmitterNumericUpdate.operation(isInt64,
-								true) : EmitterNumericUpdate.operation(isInt64, false);
-							final one = EmitterNumericUpdate.one(isInt64);
-							final resultName = fixity == HxUnaryFixity.Postfix ? "__hx_old" : "__hx_next";
-							"(let __hx_old = (!"
-							+ ident
-							+ ") in let __hx_next = "
-							+ binop
-							+ " __hx_old "
-							+ one
-							+ " in ("
-							+ ident
-							+ " := __hx_next; "
-							+ resultName
-							+ "))";
+							final carrier = stage3NullableNumericLocal(expr);
+							final exact = exactFunctionLocalType(name);
+							final kind = if (stage3IsInt64Expr(expr, tyByIdentRaw)) {
+								EmitterNumericUpdate.EmitterNumericUpdateKind.Int64Step;
+							} else if (carrier == backend.ocaml.Stage3OcamlNullablePrimitive.FLOAT
+								|| (carrier == null
+									&& exact != null
+									&& TyAliasExpansion.reveal(exact).getSemanticKey() == "primitive:Float")) {
+								EmitterNumericUpdate.EmitterNumericUpdateKind.FloatStep;
+							} else {
+								EmitterNumericUpdate.EmitterNumericUpdateKind.IntStep;
+							};
+							EmitterNumericUpdate.local({
+								ident: requireOcamlFunctionLocalValueIdent(name),
+								kind: kind,
+								increment: op == HxUnaryOperator.Increment,
+								postfix: fixity == HxUnaryFixity.Postfix,
+								carrier: carrier
+							});
 						case _:
 							"(Obj.magic 0)";
 					}
@@ -6145,6 +6147,14 @@ class EmitterStage {
 			}
 			if (rhsCode == null)
 				return null;
+			// A compound update of a nullable Int/Float local computes a plain number from
+			// the checked unwrap of the old value; store it back in the nullable carrier.
+			final compoundCarrier = op == "=" ? null : backend.ocaml.Stage3OcamlNullablePrimitive.innerPrimitive(destination);
+			if (compoundCarrier != null) {
+				if (rhsCode == "(Obj.magic 0)")
+					throw "unsupported OCaml nullable compound assignment: " + op;
+				rhsCode = backend.ocaml.Stage3OcamlNullablePrimitive.box(compoundCarrier, rhsCode);
+			}
 			final ident = requireOcamlFunctionLocalValueIdent(name);
 			return "(let __hx_v = (" + rhsCode + ") in (" + ident + " := __hx_v; ()))";
 		}

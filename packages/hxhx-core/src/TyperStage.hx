@@ -3944,21 +3944,27 @@ class TyperStage {
 					else if (_op == Negate)
 						inner.isNumeric() ? inner : TyType.unknown();
 					else {
-						// Haxe types `Null<Int>` and `Null<Float>` updates as nullable numeric
-						// expressions. Strict null-safety reports unsafe access later.
-						if ((_op == Increment || _op == Decrement)
+						// Haxe 4.3.7 accepts updates of `Null<Int>` and `Null<Float>` values,
+						// including nested `Null<Null<Int>>` declarations, and types the update
+						// itself as the underlying number: `var old = n++` gives `old:Int`.
+						// Strict null-safety reports unsafe access later.
+						final isUpdate = _op == Increment || _op == Decrement;
+						final updatedNumber = isUpdate && inner.isNullable() ? TyAliasExpansion.revealNonNullable(inner) : null;
+						final nullableNumber = updatedNumber != null && updatedNumber.isNumeric();
+						if (isUpdate
 							&& !isPropertyUpdate // Stage3 still models an abstract backing carrier as
 							// `this` in a small compatibility subset. Its explicit
 							// write-back is validated by the typed abstract lowering.
 							&& !e.match(EThis)
-							&& !inner.unwrapNull().isNumeric()
+							&& !inner.isNumeric()
+							&& !nullableNumber
 							&& !inner.isDynamic()
 							&& !inner.isUnknown()
 							&& !inner.isUnresolved())
 							throw new TyperError(ctx.getFilePath(), pos, inner.getDisplay() + " should be Int");
-						// Bitwise-not and accepted increment/decrement operations keep
+						// Bitwise-not and other accepted increment/decrement operations keep
 						// the operand type when no abstract operator overrides it.
-						inner;
+						nullableNumber ? updatedNumber : inner;
 					}
 				}
 			case EBinop(op, a, b):

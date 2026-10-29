@@ -27,14 +27,18 @@ final INT = "primitive:Int";
 
 final FLOAT = "primitive:Float";
 
-/** Return the inner primitive key when the exact type is a nullable Int or Float. */
+/**
+	Return the inner primitive key when the exact type is a nullable Int or Float.
+	Nested wrappers such as `Null<Null<Int>>` hold the same values as one layer
+	(a number or null), so they share the one-layer carrier.
+ */
 function innerPrimitive(type:Null<TyType>):Null<String> {
 	if (type == null)
 		return null;
 	final revealed = TyAliasExpansion.reveal(type);
 	if (!revealed.isNullable())
 		return null;
-	final key = TyAliasExpansion.reveal(revealed.unwrapNull()).getSemanticKey();
+	final key = TyAliasExpansion.revealNonNullable(revealed).getSemanticKey();
 	return key == INT || key == FLOAT ? key : null;
 }
 
