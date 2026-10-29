@@ -267,6 +267,13 @@ Evidence since 2026-09-13:
   `Void` return coverage (`haxe_ocaml-eu7fj.9`, closed). Its final revision
   passed all Core jobs
   ([run 40864936887](https://github.com/fullofcaffeine/hxhx/actions/runs/40864936887)).
+- PR #95 (`dc456f001`) types `++`/`--` on nullable `Int`/`Float` locals as the
+  plain number, as upstream Haxe 4.3.7 does, and keeps nullable updates in the
+  native carrier. A null update raises Null Access before anything is stored,
+  and both operands are evaluated before the null check (`haxe_ocaml-eu7fj.32`,
+  closed). Its final revision passed all Core jobs; Gate 1 failed as on `main`.
+  Using a compound assignment as a value is still wrong for every local type
+  (`haxe_ocaml-u0j9w`). The committed bootstrap snapshot predates this PR.
 - The shared OCaml target subset grew. Both compiler hosts now share primitive
   parameters, returned values, conditional values, comparisons, Boolean
   operations, nullable integers, and instance method bodies. Calls are still

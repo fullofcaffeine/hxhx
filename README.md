@@ -52,7 +52,7 @@ column control the claim.
 Overall north-star readiness: `[###-------]` about 30–35% (coarse; not
 additive).
 
-Readiness review, 2026-10-29. Three notable changes reached `main` since the
+Readiness review, 2026-10-29. Four notable changes reached `main` since the
 2026-09-13 review:
 
 - PR #92 combined 69 compiler and tooling branches. It fixed many native OCaml
@@ -67,6 +67,10 @@ Readiness review, 2026-10-29. Three notable changes reached `main` since the
   `TestMain.hx:122` (`haxe_ocaml-9sj5p`).
 - PR #94 adds tests that reject corrupted or missing `Void` return records in
   the OCaml lowering report.
+- PR #95 makes `++`, `--`, `+=`, `-=`, and `*=` on nullable `Int` and `Float`
+  locals type and run natively as upstream Haxe does. Updating a null value
+  now raises a catchable Null Access error. The committed bootstrap snapshot
+  predates this change until the next regeneration is imported.
 
 Strongest current evidence: on the final PR #94 revision, all
 [Core checks](https://github.com/fullofcaffeine/hxhx/actions/runs/40864936887)
