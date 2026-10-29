@@ -7282,6 +7282,11 @@ class EmitterStage {
 			+ "let stdout () = ocamlstdiooutput_create HxStdio.stdout_stream\n"
 			+ "let stderr () = ocamlstdiooutput_create HxStdio.stderr_stream\n"));
 
+		// Stage3 boxes an argument for a `Dynamic` parameter with `Obj.repr`, but
+		// it passes an argument for a type parameter, such as `compare<T>(a:T,
+		// b:T)`, unchanged. A shim for a generic function must therefore accept
+		// any OCaml value and box it itself. A fixed `Obj.t` parameter fails when
+		// a sort callback also passes the same parameter where a `String` is needed.
 		generatedPaths.push(writeStage3ShimIfMissing(outAbs, "Reflect",
 			"(* hxhx(stage3) bootstrap shim: Reflect *)\n"
 			+ "let field o f = HxAnon.get o f\n"
@@ -7292,7 +7297,7 @@ class EmitterStage {
 			+ "let isFunction = HxReflect.isFunction\n"
 			+ "let isEnumValue = HxReflect.isEnumValue\n"
 			+ "let isObject = HxReflect.isObject\n"
-			+ "let compare = HxReflect.compare\n"
+			+ "let compare a b = HxReflect.compare (Obj.repr a) (Obj.repr b)\n"
 			+ "let compareMethods a b = HxReflect.same_closure (Obj.repr a) (Obj.repr b)\n"
 			+ "let callMethod = HxReflect.callMethod\n"
 			+ "let makeVarArgs = HxReflect.makeVarArgs\n"

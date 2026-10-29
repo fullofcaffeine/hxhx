@@ -3,7 +3,7 @@ package backend.ocaml;
 /** Only these declared Array operations use this native call adapter. */
 function supports(method:String):Bool {
 	return switch method {
-		case "map" | "join" | "push" | "copy" | "concat" | "slice" | "splice" | "filter" | "indexOf" | "lastIndexOf": true;
+		case "map" | "join" | "push" | "copy" | "concat" | "slice" | "splice" | "filter" | "indexOf" | "lastIndexOf" | "sort": true;
 		case _: false;
 	};
 }
@@ -124,6 +124,13 @@ function render(input:{
 				+ arguments.join(" ");
 		case "splice": "HxArray.splice " + runtimeReceiver + " " + arguments.join(" ");
 		case "filter": "HxArray.filter " + runtimeReceiver + " " + argument;
+		case "sort":
+			// Sort in place through the shared runtime. Without this case the call
+			// fell through to `Array.sort receiver comparator`, which OCaml resolves
+			// to `Stdlib.Array.sort` with the opposite argument order and a native
+			// array type. The comparator keeps the element type selected by the
+			// typer, so a `String` callback parameter stays `string`.
+			"HxArray.sort " + runtimeReceiver + " " + argument;
 		case "indexOf" | "lastIndexOf":
 			// Dynamic arrays store boxed values. Search must compare the same
 			// representation used by push, including boxed Bool and Float values.
