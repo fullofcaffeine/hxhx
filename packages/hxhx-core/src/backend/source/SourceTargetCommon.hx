@@ -19558,13 +19558,11 @@ class SourceTargetCommon {
 		return out;
 	}
 
-	/** Instance initializers containing runtime type operands resolve them through their exact initializer projection. */
+	/** Instance initializers resolve runtime type operands and static calls through their exact initializer projection. */
 	static function pythonInstanceFieldInit(cls:HxClassDecl, field:HxFieldDecl, pythonFields:PythonFieldAccessLowering):String {
 		final init = HxFieldDecl.getInit(field);
 		if (init == null)
 			return defaultValue(Python);
-		if (TypedRuntimeTypeSource.inExpression(init).length == 0)
-			return renderExpr(Python, init);
 		return renderExpr(Python, pythonFields.initializerExpression(pythonFields.initializer(cls, field), init));
 	}
 

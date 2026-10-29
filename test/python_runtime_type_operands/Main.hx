@@ -74,5 +74,8 @@ class Main {
 		show("closure Animal", closure(new Animal()));
 		show("arrow String", arrow("a"));
 		show("arrow Int", arrow(1));
+		Sys.println("class name " + Type.getClassName(Dog));
+		final named:Class<Dynamic> = Animal;
+		Sys.println("class name through value " + Type.getClassName(named));
 	}
 }

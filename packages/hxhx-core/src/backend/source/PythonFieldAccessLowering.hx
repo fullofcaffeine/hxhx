@@ -11,7 +11,8 @@ import haxe.ds.StringMap;
 	is local. Static fields become class attributes; instance fields use self.
 	Module-qualified constructor types use their emitted class declaration name.
 	Runtime type operands (`Std.isOfType`, `is`, class values) are resolved
-	through the same exact projection and lowered by `PythonRuntimeTypeLowering`.
+	through the same exact projection and lowered by `PythonRuntimeTypeLowering`;
+	static calls Python cannot execute are rejected by `PythonStaticCallAdmission`.
 	The maps belong to one emission and never survive a compiler request.
 **/
 class PythonFieldAccessLowering {
@@ -19,6 +20,7 @@ class PythonFieldAccessLowering {
 	final ownerNames:StringMap<String> = new StringMap();
 	final moduleNames:StringMap<Bool> = new StringMap();
 	final runtimeTypes:PythonRuntimeTypeLowering;
+	final staticCalls:PythonStaticCallAdmission;
 	var nextInitializer:Int = 0;
 
 	public function new(program:MacroExpandedProgram) {
@@ -43,10 +45,10 @@ class PythonFieldAccessLowering {
 				ownerNames.set(canonical, HxClassDecl.getName(typedClasses[index].getSourceDeclaration()));
 				// Emission and runtime class tests share one rule for which classes exist in Python.
 				final pythonName = SourceTargetCommon.pythonEmittedClassName(module.getParsed().getFilePath(), declaration);
-				if (pythonName == null || declaration.isExtern)
+				if (pythonName == null)
 					continue;
 				renderedOwners.set(canonical, true);
-				if (declaration.enumDeclaration != null || declaration.isInterface)
+				if (declaration.isExtern || declaration.enumDeclaration != null || declaration.isInterface)
 					continue;
 				final previous = emittedNames.get(pythonName);
 				if (previous != null && previous != canonical) {
@@ -58,7 +60,8 @@ class PythonFieldAccessLowering {
 				testableClasses.set(canonical, pythonName);
 			}
 		}
-		runtimeTypes = new PythonRuntimeTypeLowering(testableClasses, renderedOwners);
+		runtimeTypes = new PythonRuntimeTypeLowering(testableClasses);
+		staticCalls = new PythonStaticCallAdmission(renderedOwners);
 	}
 
 	/** Module-level initializer helpers must not replace an authored class name. */
@@ -96,6 +99,7 @@ class PythonFieldAccessLowering {
 		final constructors = projection.getConstructorCatalog().getEntries();
 		final runtimeFacts = functionFacts(projection);
 		return SourceFunctionBodyRewriter.bodyWithOriginal(HxFunctionDecl.getBody(projection.getDeclaration()), function(original, expression) {
+			staticCalls.check(original);
 			final runtimeType = runtimeTypes.rewrite(runtimeFacts, original, expression);
 			if (runtimeType != null)
 				return runtimeType;
@@ -131,13 +135,14 @@ class PythonFieldAccessLowering {
 	}
 
 	/**
-		Lower runtime type operands in one field initializer value or statement
-		list taken from `projection`. Other field and constructor rewrites are not
+		Lower runtime type operands and admit static calls in one field
+		initializer value or statement list taken from `projection`. Other field and constructor rewrites are not
 		applied here; initializers keep their existing rendering path.
 	**/
 	public function initializerExpression(projection:TypedBackendFieldInitializerProjection, value:HxExpr):HxExpr {
 		final facts = initializerFacts(projection);
 		return SourceFunctionBodyRewriter.expressionWithOriginal(value, (original, expression) -> {
+			staticCalls.check(original);
 			final runtimeType = runtimeTypes.rewrite(facts, original, expression);
 			runtimeType == null ? expression : runtimeType;
 		});
@@ -146,6 +151,7 @@ class PythonFieldAccessLowering {
 	public function initializerStatements(projection:TypedBackendFieldInitializerProjection, statements:Array<HxStmt>):Array<HxStmt> {
 		final facts = initializerFacts(projection);
 		return SourceFunctionBodyRewriter.bodyWithOriginal(statements, (original, expression) -> {
+			staticCalls.check(original);
 			final runtimeType = runtimeTypes.rewrite(facts, original, expression);
 			runtimeType == null ? expression : runtimeType;
 		});

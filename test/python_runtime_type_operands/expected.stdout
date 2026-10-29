@@ -139,3 +139,5 @@ closure Dog=true
 closure Animal=false
 arrow String=true
 arrow Int=false
+class name Dog
+class name through value Animal

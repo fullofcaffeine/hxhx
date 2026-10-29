@@ -91,9 +91,8 @@ class TypedModule {
 		and static initializers only through `findBackendFunctionProjection` and
 		`findBackendFieldInitializer`, where each runtime type occurrence has its
 		exact catalog entry and is lowered or rejected. Instance field
-		initializers are the one legacy expression it renders directly, and only
-		when they contain no runtime type marker; otherwise they also go through
-		`findBackendFieldInitializer`. A raw marker that still reaches Python
+		initializers are read from these declarations but rendered only after
+		the same lowering through `findBackendFieldInitializer`. A raw marker that still reaches Python
 		rendering is a compiler error. Bodies Python never emits, such as unused
 		standard-library functions, are never examined.
 	**/

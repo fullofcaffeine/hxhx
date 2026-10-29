@@ -134,16 +134,37 @@ class M14PythonRuntimeTypeOperandsIntegrationTest {
 				"a/Foo.hx" => "package a; class Foo { public function new() {} }",
 				"b/Foo.hx" => "package b; class Foo { public function new() {} }"
 			]);
-		// Unemitted library functions cannot receive a Python class object.
+		// Python does not emit library classes. A library static call must be one
+		// the Python runtime implements, whatever its arguments are.
+		final library = "Python source target does not support the standard-library call ";
 		checkRejection(root, "downcast",
 			"class A { public function new() {} } class B extends A { public function new() super(); }" +
 			" class Main { static function main():Void { var v:A = new B(); Sys.println(Std.downcast(v, B) != null); } }",
-			unsupported + " passed to Std.downcast");
+			library + "Std.downcast");
+		checkRejection(root, "downcast-local",
+			"class A { public function new() {} } class B extends A { public function new() super(); }" +
+			" class Main { static function main():Void { var v:A = new B(); var c = B; Sys.println(Std.downcast(v, c) != null); } }",
+			library + "Std.downcast");
 		checkRejection(root, "create-instance",
-			"class A { public function new() {} } class Main { static function main():Void { Sys.println(Type.createInstance(A, []) != null); } }",
-			unsupported + " passed to Type.createInstance");
-		checkRejection(root, "deprecated-is", "class Main { static function main():Void { Sys.println(Std.is(1, Int)); } }", unsupported
-			+ " passed to Std.is");
+			"class A { public function new() {} } class B extends A { public function new() super(); }" +
+			" class Main { static function main():Void { Sys.println(Type.createInstance(A, []) != null); } }",
+			library + "Type.createInstance");
+		checkRejection(root, "create-instance-dynamic",
+			"class A { public function new() {} } class B extends A { public function new() super(); }" +
+			" class Main { static function main():Void { var c:Dynamic = A; Sys.println(Type.createInstance(c, []) != null); } }",
+			library + "Type.createInstance");
+		checkRejection(root, "create-instance-field",
+			"class A { public function new() {} } class B extends A { public function new() super(); }" +
+			" class Main { static function main():Void { var o = {c: A}; Sys.println(Type.createInstance(o.c, []) != null); } }",
+			library + "Type.createInstance");
+		checkRejection(root, "create-instance-get-class",
+			"class A { public function new() {} } class B extends A { public function new() super(); }" +
+			" class Main { static function main():Void { var v:Dynamic = new B(); Sys.println(Type.createInstance(Type.getClass(v), []) != null); } }",
+			library + "Type.createInstance");
+		checkRejection(root, "deprecated-is",
+			"class A { public function new() {} } class B extends A { public function new() super(); }" +
+			" class Main { static function main():Void { Sys.println(Std.is(1, Int)); } }",
+			library + "Std.is");
 		removeTree(root);
 		Sys.println("PYTHON_RUNTIME_TYPE_OPERANDS:PASS");
 	}
