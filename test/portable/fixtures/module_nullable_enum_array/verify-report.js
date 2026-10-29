@@ -47,9 +47,10 @@ try {
     entry => { entry.proofId = 'invalid-void-proof' })
   corrupt('wrong runtime capability', /effect-only Void return contract/i,
     entry => { entry.runtimeCapabilityId = 'hxhx-runtime:function-return-signal-v1' })
-  corrupt('return targets another function', /return target|function.*target/i,
+  corrupt('return targets another function', /invalid return target, effect, or tag policy/i,
     entry => { entry.targetId = 'another-function' })
-  corrupt('missing admitted return', /control|return/i, (entry, changed) => {
+  // The admission still promises one return, so the report must not pass with no decision for it.
+  corrupt('missing admitted return', /disagrees with its admitted decision counts/i, (entry, changed) => {
     changed.controls = changed.controls.filter(candidate => candidate.id !== entry.id)
     changed.controlCount = changed.controls.length
   })
