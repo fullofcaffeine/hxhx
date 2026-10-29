@@ -36,13 +36,31 @@ let intrinsicOptionalInt = fun value -> ("(Obj.obj (" ^ HxString.toStdString val
 
 let hx_INT = "primitive:Int"
 
+let orderedArithmetic = fun input -> (
+  ignore (if Obj.obj (HxAnon.get input "names") == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "ordered nullable arithmetic requires a local naming owner") ["Dynamic"] else ());
+  let left = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic (Obj.obj (HxAnon.get input "names"))) ("__hx_arith_left" : string) : string) in let right = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic (Obj.obj (HxAnon.get input "names"))) ("__hx_arith_right" : string) : string) in let readable = let __callback_input_17 = fun (inner : string) (bound : string) -> (try (
+    ignore (if inner == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr bound)) else ());
+    let value = (unwrap (inner : string) (bound : string) : string) in let tempResult = ref (HxString.hx_null_string : string) in (
+      ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get input "asFloat") && (let __string_eq_left_12 = inner in let __string_eq_right_13 = hx_INT in HxString.equals __string_eq_left_12 __string_eq_right_13) then let __assign_14 = (("float_of_int (" ^ HxString.toStdString value) ^ ")" : string) in (
+        tempResult := __assign_14;
+        __assign_14
+      ) else let __assign_15 = (value : string) in (
+        tempResult := __assign_15;
+        __assign_15
+      ));
+      !tempResult
+    )
+  ) with
+    | HxRuntime.Hx_return __ret_16 -> (Obj.obj __ret_16 : string) : string) in let __callable_origin_18 = __callback_input_17 in (__callable_origin_18, Obj.repr (ref ())) in let __string_part_25 = "(let " in let __string_part_26 = HxString.toStdString left in let __string_part_27 = " = (" in let __string_part_28 = HxString.toStdString (Obj.obj (HxAnon.get input "left")) in let __string_part_29 = ") in let " in let __string_part_30 = HxString.toStdString right in let __string_part_31 = " = (" in let __string_part_32 = HxString.toStdString (Obj.obj (HxAnon.get input "right")) in let __string_part_33 = ") in " in let __string_part_34 = HxString.toStdString ((Obj.obj (HxAnon.get input "body") : _ -> _ -> _) (let __call_callee_19 = readable in let __call_arg_0_20 = Obj.obj (HxAnon.get input "leftInner") in let __call_arg_1_21 = left in Stdlib.fst __call_callee_19 __call_arg_0_20 __call_arg_1_21 : string) (let __call_callee_22 = readable in let __call_arg_0_23 = Obj.obj (HxAnon.get input "rightInner") in let __call_arg_1_24 = right in Stdlib.fst __call_callee_22 __call_arg_0_23 __call_arg_1_24 : string)) in let __string_part_35 = ")" in (((((((((__string_part_25 ^ __string_part_26) ^ __string_part_27) ^ __string_part_28) ^ __string_part_29) ^ __string_part_30) ^ __string_part_31) ^ __string_part_32) ^ __string_part_33) ^ __string_part_34) ^ __string_part_35
+)
+
 let hx_FLOAT = "primitive:Float"
 
 let innerPrimitive = fun hx_type -> (try (
   ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let revealed = Obj.magic (TyAliasExpansion.reveal (Obj.magic hx_type)) in (
     ignore (if not (TyType.isNullable (Obj.magic revealed) ()) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-    let key = (TyType.getSemanticKey (Obj.magic (TyAliasExpansion.reveal (Obj.magic (TyType.unwrapNull (Obj.magic revealed) ())))) () : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+    let key = (TyType.getSemanticKey (Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic revealed))) () : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
       ignore (if (let __string_eq_left_1 = key in let __string_eq_right_2 = hx_INT in HxString.equals __string_eq_left_1 __string_eq_right_2) || (let __string_eq_left_3 = key in let __string_eq_right_4 = hx_FLOAT in HxString.equals __string_eq_left_3 __string_eq_right_4) then let __assign_5 = Obj.magic (key : string) in (
         tempResult := __assign_5;
         __assign_5
@@ -59,74 +77,74 @@ let innerPrimitive = fun hx_type -> (try (
 let numericInner = fun hx_type -> innerPrimitive (Obj.magic hx_type)
 
 let intValue = fun hx_type value -> let tempResult = ref (HxString.hx_null_string : string) in (
-  ignore (if let __string_eq_left_12 = innerPrimitive (Obj.magic hx_type) in let __string_eq_right_13 = hx_INT in HxString.equals __string_eq_left_12 __string_eq_right_13 then let __assign_14 = (unwrap (hx_INT : string) (value : string) : string) in (
-    tempResult := __assign_14;
-    __assign_14
-  ) else let __assign_15 = (value : string) in (
-    tempResult := __assign_15;
-    __assign_15
+  ignore (if let __string_eq_left_36 = innerPrimitive (Obj.magic hx_type) in let __string_eq_right_37 = hx_INT in HxString.equals __string_eq_left_36 __string_eq_right_37 then let __assign_38 = (unwrap (hx_INT : string) (value : string) : string) in (
+    tempResult := __assign_38;
+    __assign_38
+  ) else let __assign_39 = (value : string) in (
+    tempResult := __assign_39;
+    __assign_39
   ));
   !tempResult
 )
 
 let store = fun source inner value -> (try let revealed = Obj.magic (TyAliasExpansion.reveal (Obj.magic source)) in (
-  ignore (if TyType.isNullLiteral (Obj.magic revealed) () || TyType.isDynamic (Obj.magic revealed) () || (let __string_eq_left_16 = innerPrimitive (Obj.magic revealed) in let __string_eq_right_17 = inner in HxString.equals __string_eq_left_16 __string_eq_right_17) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr value)) else ());
+  ignore (if TyType.isNullLiteral (Obj.magic revealed) () || TyType.isDynamic (Obj.magic revealed) () || (let __string_eq_left_40 = innerPrimitive (Obj.magic revealed) in let __string_eq_right_41 = inner in HxString.equals __string_eq_left_40 __string_eq_right_41) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr value)) else ());
   ignore (if TyType.isUnknown (Obj.magic revealed) () || TyType.isUnresolved (Obj.magic revealed) () || TyType.isTypeParameter (Obj.magic revealed) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr value)) else ());
   let key = (TyType.getSemanticKey (Obj.magic revealed) () : string) in (
-    ignore (if let __string_eq_left_18 = key in let __string_eq_right_19 = inner in HxString.equals __string_eq_left_18 __string_eq_right_19 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (box (inner : string) (value : string)))) else ());
-    ignore (if (let __string_eq_left_20 = inner in let __string_eq_right_21 = hx_FLOAT in HxString.equals __string_eq_left_20 __string_eq_right_21) && (let __string_eq_left_22 = key in let __string_eq_right_23 = hx_INT in HxString.equals __string_eq_left_22 __string_eq_right_23) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (box (inner : string) (("float_of_int (" ^ HxString.toStdString value) ^ ")" : string)))) else ());
+    ignore (if let __string_eq_left_42 = key in let __string_eq_right_43 = inner in HxString.equals __string_eq_left_42 __string_eq_right_43 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (box (inner : string) (value : string)))) else ());
+    ignore (if (let __string_eq_left_44 = inner in let __string_eq_right_45 = hx_FLOAT in HxString.equals __string_eq_left_44 __string_eq_right_45) && (let __string_eq_left_46 = key in let __string_eq_right_47 = hx_INT in HxString.equals __string_eq_left_46 __string_eq_right_47) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (box (inner : string) (("float_of_int (" ^ HxString.toStdString value) ^ ")" : string)))) else ());
     HxType.hx_throw_typed_rtti (Obj.repr ((("unsupported OCaml nullable storage: " ^ HxString.toStdString key) ^ " into nullable ") ^ HxString.toStdString inner)) ["Dynamic"]
   )
 ) with
-  | HxRuntime.Hx_return __ret_24 -> (Obj.obj __ret_24 : string) : string)
+  | HxRuntime.Hx_return __ret_48 -> (Obj.obj __ret_48 : string) : string)
 
 let load = fun inner destination value -> (try let revealed = Obj.magic (TyAliasExpansion.reveal (Obj.magic destination)) in (
-  ignore (if TyType.isDynamic (Obj.magic revealed) () || (let __string_eq_left_25 = innerPrimitive (Obj.magic revealed) in let __string_eq_right_26 = inner in HxString.equals __string_eq_left_25 __string_eq_right_26) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr value)) else ());
+  ignore (if TyType.isDynamic (Obj.magic revealed) () || (let __string_eq_left_49 = innerPrimitive (Obj.magic revealed) in let __string_eq_right_50 = inner in HxString.equals __string_eq_left_49 __string_eq_right_50) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr value)) else ());
   let key = (TyType.getSemanticKey (Obj.magic revealed) () : string) in (
-    ignore (if let __string_eq_left_27 = key in let __string_eq_right_28 = inner in HxString.equals __string_eq_left_27 __string_eq_right_28 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (unwrap (inner : string) (value : string)))) else ());
-    ignore (if (let __string_eq_left_29 = inner in let __string_eq_right_30 = hx_INT in HxString.equals __string_eq_left_29 __string_eq_right_30) && (let __string_eq_left_31 = key in let __string_eq_right_32 = hx_FLOAT in HxString.equals __string_eq_left_31 __string_eq_right_32) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_part_33 = "float_of_int (" in let __string_part_34 = HxString.toStdString (unwrap (inner : string) (value : string)) in let __string_part_35 = ")" in (__string_part_33 ^ __string_part_34) ^ __string_part_35))) else ());
+    ignore (if let __string_eq_left_51 = key in let __string_eq_right_52 = inner in HxString.equals __string_eq_left_51 __string_eq_right_52 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (unwrap (inner : string) (value : string)))) else ());
+    ignore (if (let __string_eq_left_53 = inner in let __string_eq_right_54 = hx_INT in HxString.equals __string_eq_left_53 __string_eq_right_54) && (let __string_eq_left_55 = key in let __string_eq_right_56 = hx_FLOAT in HxString.equals __string_eq_left_55 __string_eq_right_56) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_part_57 = "float_of_int (" in let __string_part_58 = HxString.toStdString (unwrap (inner : string) (value : string)) in let __string_part_59 = ")" in (__string_part_57 ^ __string_part_58) ^ __string_part_59))) else ());
     HxType.hx_throw_typed_rtti (Obj.repr ((("unsupported OCaml nullable extraction: nullable " ^ HxString.toStdString inner) ^ " into ") ^ HxString.toStdString key)) ["Dynamic"]
   )
 ) with
-  | HxRuntime.Hx_return __ret_36 -> (Obj.obj __ret_36 : string) : string)
+  | HxRuntime.Hx_return __ret_60 -> (Obj.obj __ret_60 : string) : string)
 
 let carrierOperand = fun inner hx_type value -> (try let revealed = Obj.magic (TyAliasExpansion.reveal (Obj.magic hx_type)) in (
   ignore (if TyType.isNullLiteral (Obj.magic revealed) () || TyType.isDynamic (Obj.magic revealed) () || TyType.isUnknown (Obj.magic revealed) () || TyType.isUnresolved (Obj.magic revealed) () || TyType.isTypeParameter (Obj.magic revealed) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr value)) else ());
   let key = (TyType.getSemanticKey (Obj.magic revealed) () : string) in (
-    ignore (if let __string_eq_left_46 = key in let __string_eq_right_47 = inner in HxString.equals __string_eq_left_46 __string_eq_right_47 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (box (inner : string) (value : string)))) else ());
-    ignore (if (let __string_eq_left_48 = inner in let __string_eq_right_49 = hx_FLOAT in HxString.equals __string_eq_left_48 __string_eq_right_49) && (let __string_eq_left_50 = key in let __string_eq_right_51 = hx_INT in HxString.equals __string_eq_left_50 __string_eq_right_51) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (box (inner : string) (("float_of_int (" ^ HxString.toStdString value) ^ ")" : string)))) else ());
+    ignore (if let __string_eq_left_70 = key in let __string_eq_right_71 = inner in HxString.equals __string_eq_left_70 __string_eq_right_71 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (box (inner : string) (value : string)))) else ());
+    ignore (if (let __string_eq_left_72 = inner in let __string_eq_right_73 = hx_FLOAT in HxString.equals __string_eq_left_72 __string_eq_right_73) && (let __string_eq_left_74 = key in let __string_eq_right_75 = hx_INT in HxString.equals __string_eq_left_74 __string_eq_right_75) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (box (inner : string) (("float_of_int (" ^ HxString.toStdString value) ^ ")" : string)))) else ());
     HxType.hx_throw_typed_rtti (Obj.repr ((("unsupported OCaml nullable equality: " ^ HxString.toStdString key) ^ " against nullable ") ^ HxString.toStdString inner)) ["Dynamic"]
   )
 ) with
-  | HxRuntime.Hx_return __ret_52 -> (Obj.obj __ret_52 : string) : string)
+  | HxRuntime.Hx_return __ret_76 -> (Obj.obj __ret_76 : string) : string)
 
 let equality = fun facts left right -> (try let leftInner = (innerPrimitive (Obj.magic ((Obj.magic facts : TypedBackendEqualityOccurrence.t).leftType)) : string) in let rightInner = (innerPrimitive (Obj.magic ((Obj.magic facts : TypedBackendEqualityOccurrence.t).rightType)) : string) in (
   ignore (if leftInner == Obj.magic (HxRuntime.hx_null) && rightInner == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let tempString = ref (HxString.hx_null_string : string) in (
-    ignore (if leftInner != Obj.magic (HxRuntime.hx_null) then let __assign_37 = (left : string) in (
-      tempString := __assign_37;
-      __assign_37
-    ) else let __assign_38 = (carrierOperand (rightInner : string) (Obj.magic ((Obj.magic facts : TypedBackendEqualityOccurrence.t).leftType)) (left : string) : string) in (
-      tempString := __assign_38;
-      __assign_38
+    ignore (if leftInner != Obj.magic (HxRuntime.hx_null) then let __assign_61 = (left : string) in (
+      tempString := __assign_61;
+      __assign_61
+    ) else let __assign_62 = (carrierOperand (rightInner : string) (Obj.magic ((Obj.magic facts : TypedBackendEqualityOccurrence.t).leftType)) (left : string) : string) in (
+      tempString := __assign_62;
+      __assign_62
     ));
     let leftCarrier = (!tempString : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
-      ignore (if rightInner != Obj.magic (HxRuntime.hx_null) then let __assign_39 = (right : string) in (
-        tempString1 := __assign_39;
-        __assign_39
-      ) else let __assign_40 = (carrierOperand (leftInner : string) (Obj.magic ((Obj.magic facts : TypedBackendEqualityOccurrence.t).rightType)) (right : string) : string) in (
-        tempString1 := __assign_40;
-        __assign_40
+      ignore (if rightInner != Obj.magic (HxRuntime.hx_null) then let __assign_63 = (right : string) in (
+        tempString1 := __assign_63;
+        __assign_63
+      ) else let __assign_64 = (carrierOperand (leftInner : string) (Obj.magic ((Obj.magic facts : TypedBackendEqualityOccurrence.t).rightType)) (right : string) : string) in (
+        tempString1 := __assign_64;
+        __assign_64
       ));
       let rightCarrier = (!tempString1 : string) in (
-        ignore (if leftInner != Obj.magic (HxRuntime.hx_null) && rightInner != Obj.magic (HxRuntime.hx_null) && (let __string_eq_left_41 = leftInner in let __string_eq_right_42 = rightInner in not (HxString.equals __string_eq_left_41 __string_eq_right_42)) then HxType.hx_throw_typed_rtti (Obj.repr ((("unsupported OCaml nullable equality: " ^ HxString.toStdString leftInner) ^ " against ") ^ HxString.toStdString rightInner)) ["Dynamic"] else ());
+        ignore (if leftInner != Obj.magic (HxRuntime.hx_null) && rightInner != Obj.magic (HxRuntime.hx_null) && (let __string_eq_left_65 = leftInner in let __string_eq_right_66 = rightInner in not (HxString.equals __string_eq_left_65 __string_eq_right_66)) then HxType.hx_throw_typed_rtti (Obj.repr ((("unsupported OCaml nullable equality: " ^ HxString.toStdString leftInner) ^ " against ") ^ HxString.toStdString rightInner)) ["Dynamic"] else ());
         let tempString2 = ref (HxString.hx_null_string : string) in (
-          ignore (if (Obj.magic facts : TypedBackendEqualityOccurrence.t).equal then let __assign_43 = "=" in (
-            tempString2 := __assign_43;
-            __assign_43
-          ) else let __assign_44 = "<>" in (
-            tempString2 := __assign_44;
-            __assign_44
+          ignore (if (Obj.magic facts : TypedBackendEqualityOccurrence.t).equal then let __assign_67 = "=" in (
+            tempString2 := __assign_67;
+            __assign_67
+          ) else let __assign_68 = "<>" in (
+            tempString2 := __assign_68;
+            __assign_68
           ));
           ((((("((" ^ HxString.toStdString leftCarrier) ^ ") ") ^ HxString.toStdString (!tempString2)) ^ " (") ^ HxString.toStdString rightCarrier) ^ "))"
         )
@@ -134,7 +152,7 @@ let equality = fun facts left right -> (try let leftInner = (innerPrimitive (Obj
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_45 -> (Obj.obj __ret_45 : string) : string)
+  | HxRuntime.Hx_return __ret_69 -> (Obj.obj __ret_69 : string) : string)
 
 let destinationCarrier = fun expected expectedIsOptional -> (try (
   ignore (if expected == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
@@ -142,26 +160,26 @@ let destinationCarrier = fun expected expectedIsOptional -> (try (
     ignore (if written != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr written)) else ());
     ignore (if not (expectedIsOptional) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     let key = (TyType.getSemanticKey (Obj.magic (TyAliasExpansion.reveal (Obj.magic expected))) () : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-      ignore (if (let __string_eq_left_53 = key in let __string_eq_right_54 = hx_INT in HxString.equals __string_eq_left_53 __string_eq_right_54) || (let __string_eq_left_55 = key in let __string_eq_right_56 = hx_FLOAT in HxString.equals __string_eq_left_55 __string_eq_right_56) then let __assign_57 = Obj.magic (key : string) in (
-        tempResult := __assign_57;
-        __assign_57
-      ) else let __assign_58 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-        tempResult := __assign_58;
-        __assign_58
+      ignore (if (let __string_eq_left_77 = key in let __string_eq_right_78 = hx_INT in HxString.equals __string_eq_left_77 __string_eq_right_78) || (let __string_eq_left_79 = key in let __string_eq_right_80 = hx_FLOAT in HxString.equals __string_eq_left_79 __string_eq_right_80) then let __assign_81 = Obj.magic (key : string) in (
+        tempResult := __assign_81;
+        __assign_81
+      ) else let __assign_82 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+        tempResult := __assign_82;
+        __assign_82
       ));
       !tempResult
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_59 -> (Obj.obj __ret_59 : string) : string)
+  | HxRuntime.Hx_return __ret_83 -> (Obj.obj __ret_83 : string) : string)
 
 let carrierDestination = fun argument -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (if argument == Obj.magic (HxRuntime.hx_null) then let __assign_60 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempResult := __assign_60;
-    __assign_60
-  ) else let __assign_61 = Obj.magic (destinationCarrier (Obj.magic ((Obj.magic argument : TypedBackendCallArgument.t).expectedType)) ((Obj.magic argument : TypedBackendCallArgument.t).expectedIsOptional) : string) in (
-    tempResult := __assign_61;
-    __assign_61
+  ignore (if argument == Obj.magic (HxRuntime.hx_null) then let __assign_84 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempResult := __assign_84;
+    __assign_84
+  ) else let __assign_85 = Obj.magic (destinationCarrier (Obj.magic ((Obj.magic argument : TypedBackendCallArgument.t).expectedType)) ((Obj.magic argument : TypedBackendCallArgument.t).expectedIsOptional) : string) in (
+    tempResult := __assign_85;
+    __assign_85
   ));
   !tempResult
 )
@@ -176,23 +194,23 @@ let convertArgument = fun actual expected expectedIsOptional rendered -> (try le
     load (actualInner : string) (Obj.magic expected) (rendered : string)
   )
 ) with
-  | HxRuntime.Hx_return __ret_63 -> (Obj.obj __ret_63 : string) : string)
+  | HxRuntime.Hx_return __ret_87 -> (Obj.obj __ret_87 : string) : string)
 
 let callArgument = fun argument rendered -> (try (
   ignore (if argument == Obj.magic (HxRuntime.hx_null) || (Obj.magic argument : TypedBackendCallArgument.t).hx_type == Obj.magic (HxRuntime.hx_null) || (Obj.magic argument : TypedBackendCallArgument.t).expectedType == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   convertArgument (Obj.magic ((Obj.magic argument : TypedBackendCallArgument.t).hx_type)) (Obj.magic ((Obj.magic argument : TypedBackendCallArgument.t).expectedType)) ((Obj.magic argument : TypedBackendCallArgument.t).expectedIsOptional) (rendered : string)
 ) with
-  | HxRuntime.Hx_return __ret_62 -> (Obj.obj __ret_62 : string) : string)
+  | HxRuntime.Hx_return __ret_86 -> (Obj.obj __ret_86 : string) : string)
 
 let parameterEntry = fun bindingType name fallback -> let key = (TyType.getSemanticKey (Obj.magic (TyAliasExpansion.reveal (Obj.magic bindingType))) () : string) in let tempString = ref (HxString.hx_null_string : string) in (
-  ignore (if (let __string_eq_left_64 = key in let __string_eq_right_65 = hx_INT in HxString.equals __string_eq_left_64 __string_eq_right_65) || (let __string_eq_left_66 = key in let __string_eq_right_67 = hx_FLOAT in HxString.equals __string_eq_left_66 __string_eq_right_67) then let __assign_68 = (unwrap (key : string) (name : string) : string) in (
-    tempString := __assign_68;
-    __assign_68
-  ) else let __assign_69 = (name : string) in (
-    tempString := __assign_69;
-    __assign_69
+  ignore (if (let __string_eq_left_88 = key in let __string_eq_right_89 = hx_INT in HxString.equals __string_eq_left_88 __string_eq_right_89) || (let __string_eq_left_90 = key in let __string_eq_right_91 = hx_FLOAT in HxString.equals __string_eq_left_90 __string_eq_right_91) then let __assign_92 = (unwrap (key : string) (name : string) : string) in (
+    tempString := __assign_92;
+    __assign_92
+  ) else let __assign_93 = (name : string) in (
+    tempString := __assign_93;
+    __assign_93
   ));
   let present = (!tempString : string) in ((((("(if HxRuntime.is_null (Obj.repr " ^ HxString.toStdString name) ^ ") then (") ^ HxString.toStdString fallback) ^ ") else ") ^ HxString.toStdString present) ^ ")"
 )
 
-let isCarrierParameter = fun bindingType -> let key = (TyType.getSemanticKey (Obj.magic (TyAliasExpansion.reveal (Obj.magic bindingType))) () : string) in (let __string_eq_left_70 = key in let __string_eq_right_71 = hx_INT in HxString.equals __string_eq_left_70 __string_eq_right_71) || (let __string_eq_left_72 = key in let __string_eq_right_73 = hx_FLOAT in HxString.equals __string_eq_left_72 __string_eq_right_73)
+let isCarrierParameter = fun bindingType -> let key = (TyType.getSemanticKey (Obj.magic (TyAliasExpansion.reveal (Obj.magic bindingType))) () : string) in (let __string_eq_left_94 = key in let __string_eq_right_95 = hx_INT in HxString.equals __string_eq_left_94 __string_eq_right_95) || (let __string_eq_left_96 = key in let __string_eq_right_97 = hx_FLOAT in HxString.equals __string_eq_left_96 __string_eq_right_97)
