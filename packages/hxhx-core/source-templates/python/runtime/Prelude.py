@@ -333,5 +333,16 @@ def hxhx_is_of_type(value, type_name):
     cls = globals().get(type_name)
     return isinstance(value, cls) if isinstance(cls, type) else False
 
+def hxhx_is_int_value(value):
+    # Haxe Int: a Python int (bool excluded) or an integral float within 32-bit range.
+    if isinstance(value, bool):
+        return False
+    if isinstance(value, int):
+        return True
+    return isinstance(value, float) and value.is_integer() and -2147483648.0 <= value <= 2147483647.0
+
+def hxhx_is_float_value(value):
+    return (isinstance(value, int) or isinstance(value, float)) and not isinstance(value, bool)
+
 def hxhx_ushr(value, bits):
     return ((value & 0xffffffff) >> (bits & 31))

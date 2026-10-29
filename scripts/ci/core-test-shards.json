@@ -249,6 +249,7 @@
     "test:m14:portable-auto-metalization-planner": "compiler-focused-1",
     "test:m14:metal-array-string-specialization": "compiler-focused-1",
     "test:m14:python-bool-string": "compiler-focused-2",
+    "test:m14:python-runtime-type-operands": "compiler-focused-2",
     "test:m14:js-target-core-wiring": "compiler-focused-2",
     "test:m14:js-static-init-ordering": "compiler-focused-2",
     "test:m14:js-stmt-try-throw": "compiler-focused-1",

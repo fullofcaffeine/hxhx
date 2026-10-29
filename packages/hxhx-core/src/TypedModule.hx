@@ -83,6 +83,20 @@ class TypedModule {
 	}
 
 	/**
+		Return the same legacy declaration objects as `getBackendDeclaration`
+		without its declaration-only runtime type rejection.
+
+		Only a backend that never renders a body from these declarations may use
+		this view. Such a backend reads class and member structure here, then
+		renders every executable body through `findBackendFunctionProjection` or
+		`findBackendFieldInitializer`, where each runtime type occurrence has its
+		exact catalog entry and is either lowered or rejected. A body that is not
+		emitted, such as an unused standard-library function, is never examined.
+	**/
+	public function getBackendStructureDeclaration():HxModuleDecl
+		return requireBackendDeclarationCatalog().getDeclaration();
+
+	/**
 		Project executable bodies only when a backend requests them.
 		Typing and shared control lowering must first retain authored source functions.
 		The cached catalog still owns the exact declaration objects used by legacy callers.

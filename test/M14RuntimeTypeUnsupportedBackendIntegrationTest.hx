@@ -7,6 +7,7 @@ import hxhx.Stage1Compiler.Stage1Args;
 /**
 	Unsupported runtime type operations must not replace or partially publish target files.
 	C++ class descriptors execute natively; primitive meta-values still reject.
+	Python renders user class values as its emitted classes and executes them.
 	JavaScript's admitted nominal operations and rejected core objects are exercised
 	together by M14JsRuntimeTypeOperandsTest in the same required package command.
  */
@@ -125,6 +126,10 @@ class Main {
 				assertCppExecution(program, directory);
 				continue;
 			}
+			if (check.name == "python" && cppSupported) {
+				assertPythonExecution(program, directory);
+				continue;
+			}
 			final path = directory + "/existing";
 			sys.io.File.saveContent(path, "previous-output\n");
 			final defines = new haxe.ds.StringMap<String>();
@@ -160,6 +165,21 @@ class Main {
 		process.close();
 		if (code != 0 || stdout != "" || stderr != "")
 			throw "runtime class value execution failed: " + stdout + stderr;
+	}
+
+	/** User class values are supported Python operands: the emitted program must run cleanly. */
+	static function assertPythonExecution(program:MacroExpandedProgram, directory:String):Void {
+		final path = directory + "/main.py";
+		SourceTargetCommon.emitTarget(Python, program, new BackendContext(directory, path, "Main", false, new haxe.ds.StringMap()));
+		final process = new sys.io.Process("python3", [path]);
+		final stdout = process.stdout.readAll().toString();
+		final stderr = process.stderr.readAll().toString();
+		final code = process.exitCode();
+		process.close();
+		if (code != 0 || stdout != "" || stderr != "")
+			throw "Python runtime class value execution failed: " + stdout + stderr;
+		sys.FileSystem.deleteFile(path);
+		sys.FileSystem.deleteDirectory(directory);
 	}
 
 	/** Independently check descriptor identity and effects on both sides of a discarded class value. */

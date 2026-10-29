@@ -288,11 +288,22 @@ class SourceTargetCommon {
 			ensureDirectory(parent);
 	}
 
-	static function findMainModule(program:GenIrProgram, context:BackendContext):Null<{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl}> {
+	/**
+		Select the legacy declaration view a source target may read.
+
+		Python renders every executable body from an exact typed projection and
+		lowers or rejects each runtime type operand there, so it reads structure
+		without the declaration-only rejection. Other targets keep that rejection.
+	**/
+	static function backendDeclaration(target:SourceNativeTarget, typed:TypedModule):HxModuleDecl
+		return target == Python ? typed.getBackendStructureDeclaration() : typed.getBackendDeclaration();
+
+	static function findMainModule(target:SourceNativeTarget, program:GenIrProgram,
+			context:BackendContext):Null<{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl}> {
 		final wanted = context.mainModule == null ? "" : context.mainModule;
 		var fallback:Null<{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl}> = null;
 		for (typed in program.getTypedModules()) {
-			final decl = typed.getBackendDeclaration();
+			final decl = backendDeclaration(target, typed);
 			final pkg = HxModuleDecl.getPackagePath(decl);
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final clsName = HxClassDecl.getName(cls);
@@ -313,13 +324,6 @@ class SourceTargetCommon {
 		return null;
 	}
 
-	static function mainModule(program:GenIrProgram, context:BackendContext):{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl} {
-		final found = findMainModule(program, context);
-		if (found != null)
-			return found;
-		throw "source target MVP requires a static main entrypoint";
-	}
-
 	/**
 		Select the strict projection corresponding to the legacy main lookup.
 
@@ -328,9 +332,10 @@ class SourceTargetCommon {
 		resolves the selected objects through their stable typed identity. This
 		target never reads parsed source or guesses from names/order.
 	**/
-	static function strictTypedMainProjection(program:GenIrProgram, legacy:{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl}):StrictTypedMainProjection {
+	static function strictTypedMainProjection(target:SourceNativeTarget, program:GenIrProgram,
+			legacy:{decl:HxModuleDecl, cls:HxClassDecl, fn:HxFunctionDecl}):StrictTypedMainProjection {
 		for (typed in program.getTypedModules()) {
-			if (typed.getBackendDeclaration() != legacy.decl)
+			if (backendDeclaration(target, typed) != legacy.decl)
 				continue;
 			final selected = typed.findBackendFunctionProjection(legacy.cls, legacy.fn);
 			if (selected == null)
@@ -351,14 +356,15 @@ class SourceTargetCommon {
 			return emitPhpTarget(program, context);
 		if (target == Lua)
 			new LuaExternValues(program).validate();
-		else
+		else if (target != Python)
+			// Python lowers or rejects each emitted occurrence while rendering, before writing output.
 			TypedBackendProgramValidation.assertRuntimeTypeOperandsAbsent(program.getTypedModules(), "source target backend");
 		final luaMain = target == Lua ? LuaProgramEntry.find(program, context.mainModule) : null;
 		final maybeMain = target == Lua ? (luaMain == null ? null : {
 			decl: luaMain.module.getDeclaration(),
 			cls: luaMain.cls.getDeclaration(),
 			fn: luaMain.main.getDeclaration()
-		}) : findMainModule(program, context);
+		}) : findMainModule(target, program, context);
 		final buildTargetExecutable = context.buildExecutable && !context.hasDefine("no-compilation");
 		if (maybeMain == null) {
 			if (target == Java && buildTargetExecutable)
@@ -373,7 +379,7 @@ class SourceTargetCommon {
 		final className = sanitizeTypeNameForTarget(target, HxClassDecl.getName(main.cls));
 		final strictProjection = target == Lua ? luaMain : target == Cs
 			|| target == Java
-			|| target == Python ? strictTypedMainProjection(program, main) : null;
+			|| target == Python ? strictTypedMainProjection(target, program, main) : null;
 		final csEnumConstructors = target == Cs ? new CsEnumConstructorCallLowering(program, context.hasDefine("no_root")) : null;
 		final mainBody = switch (target) {
 			case Lua: LuaStringLocalCallLowering.body(strictProjection.main);
@@ -1217,6 +1223,14 @@ class SourceTargetCommon {
 				case Runtime(path): constructorExprWithFrame(frame, path, construction.arguments);
 			};
 		}
+		final pythonRuntimeType = PythonRuntimeTypeLowering.decode(expr);
+		if (pythonRuntimeType != null) {
+			if (target != Python)
+				throw "Python runtime type operation reached a different target";
+			return PythonRuntimeTypeLowering.render(pythonRuntimeType, operand -> renderExprWithFrame(frame, operand), sanitizePythonIdentifier);
+		}
+		if (target == Python && TypedRuntimeTypeSource.isMarker(expr))
+			throw "Python runtime type operand reached rendering without its exact typed projection";
 		final luaExternPath = LuaExternValues.decode(expr);
 		if (luaExternPath != null) {
 			if (target != Lua)
@@ -14175,7 +14189,7 @@ class SourceTargetCommon {
 		}
 		appendDeclClasses(decl, "");
 		for (typed in program.getTypedModules())
-			appendDeclClasses(typed.getBackendDeclaration(), typed.getParsed().getFilePath());
+			appendDeclClasses(typed.getBackendStructureDeclaration(), typed.getParsed().getFilePath());
 		final pendingNames = new Map<String, Bool>();
 		var needsValueExceptionBase = false;
 		var needsTypeNameHelpers = false;
@@ -17413,7 +17427,8 @@ class SourceTargetCommon {
 		return specializations;
 	}
 
-	static function isStdSourceFile(filePath:String):Bool {
+	/** Standard-library modules supply declarations only; source targets do not render their classes. */
+	public static function isStdSourceFile(filePath:String):Bool {
 		if (filePath == null || filePath.length == 0)
 			return false;
 		final normalized = StringTools.replace(filePath, "\\", "/");
@@ -19452,15 +19467,17 @@ class SourceTargetCommon {
 			final fieldName = sanitizePythonIdentifier(HxFieldDecl.getName(field));
 			final init = HxFieldDecl.getInit(field);
 			out.push("    " + fieldName + " = " + defaultValue(Python));
-			if (init != null && postStaticInitializers != null)
+			if (init != null && postStaticInitializers != null) {
+				final initializer = pythonFields.initializer(cls, field);
 				for (line in PythonFieldInitializer.render({
-					projection: pythonFields.initializer(cls, field),
+					projection: initializer,
 					destination: className + "." + fieldName,
 					helperName: pythonFields.initializerName,
-					statements: (body, indent) -> renderStmts(Python, body, indent),
-					expression: value -> renderExpr(Python, value)
+					statements: (body, indent) -> renderStmts(Python, pythonFields.initializerStatements(initializer, body), indent),
+					expression: value -> renderExpr(Python, pythonFields.initializerExpression(initializer, value))
 				}))
 					postStaticInitializers.push(line);
+			}
 			memberCount += 1;
 		}
 		var sawConstructor = false;
@@ -19500,9 +19517,8 @@ class SourceTargetCommon {
 				if (needsThisValueSlot)
 					out.push("        self.__hx_value = None");
 				for (field in instanceFields) {
-					final init = HxFieldDecl.getInit(field);
-					final rhs = init == null ? defaultValue(Python) : renderExpr(Python, init);
-					out.push("        self." + sanitizePythonIdentifier(HxFieldDecl.getName(field)) + " = " + rhs);
+					out.push("        self." + sanitizePythonIdentifier(HxFieldDecl.getName(field)) + " = " + pythonInstanceFieldInit(cls, field,
+						pythonFields));
 				}
 			}
 			if (!renderPythonSpecialHelperFunctionBody(out, fullName, className, HxFunctionDecl.getName(fn))) {
@@ -19521,15 +19537,26 @@ class SourceTargetCommon {
 			if (needsThisValueSlot)
 				out.push("        self.__hx_value = None");
 			for (field in instanceFields) {
-				final init = HxFieldDecl.getInit(field);
-				final rhs = init == null ? defaultValue(Python) : renderExpr(Python, init);
-				out.push("        self." + sanitizePythonIdentifier(HxFieldDecl.getName(field)) + " = " + rhs);
+				out.push("        self."
+					+ sanitizePythonIdentifier(HxFieldDecl.getName(field))
+					+ " = "
+					+ pythonInstanceFieldInit(cls, field, pythonFields));
 			}
 			memberCount += 1;
 		}
 		if (memberCount == 0)
 			out.push("    pass");
 		return out;
+	}
+
+	/** Instance initializers containing runtime type operands resolve them through their exact initializer projection. */
+	static function pythonInstanceFieldInit(cls:HxClassDecl, field:HxFieldDecl, pythonFields:PythonFieldAccessLowering):String {
+		final init = HxFieldDecl.getInit(field);
+		if (init == null)
+			return defaultValue(Python);
+		if (TypedRuntimeTypeSource.inExpression(init).length == 0)
+			return renderExpr(Python, init);
+		return renderExpr(Python, pythonFields.initializerExpression(pythonFields.initializer(cls, field), init));
 	}
 
 	static function pythonNeedsUnitTestLocalStaticSlot(className:String):Bool {
@@ -19803,7 +19830,7 @@ class SourceTargetCommon {
 				appendSourceNativeTemplateLines(lines, "", "python/runtime", "Prelude.py");
 				lines.push("");
 				lines.push("def main():");
-				final mainProjection = strictTypedMainProjection(program, findMainModule(program, context)).main;
+				final mainProjection = strictTypedMainProjection(target, program, findMainModule(target, program, context)).main;
 				for (line in renderFunctionStmtsWithFrame(SourceFunctionRenderFrameTools.forTypedFunction(Python, mainProjection, program), body, "    ",
 					className + ".main"))
 					lines.push(line);
@@ -19826,7 +19853,7 @@ class SourceTargetCommon {
 				if (className == "UtilityProcess") {
 					appendJavaUtilityProcessRuntime(lines, className);
 				} else {
-					final mainProjection = strictTypedMainProjection(program, findMainModule(program, context)).main;
+					final mainProjection = strictTypedMainProjection(target, program, findMainModule(target, program, context)).main;
 					for (line in renderProjectedNativeFunction(Java, program, mainProjection, body, "    ", false))
 						lines.push(line);
 					lines.push("  }");
@@ -19860,7 +19887,7 @@ class SourceTargetCommon {
 				} else {
 					final entryBody = csRewriteSameClassStaticMembersInStmts(body, csCurrentClassStaticMemberNames(HxModuleDecl.getMainClass(decl)), classRef,
 						[]);
-					final mainProjection = strictTypedMainProjection(program, findMainModule(program, context)).main;
+					final mainProjection = strictTypedMainProjection(target, program, findMainModule(target, program, context)).main;
 					for (line in renderProjectedNativeFunction(Cs, program, mainProjection, entryBody, "    ", noRoot))
 						lines.push(bodyIndent + line);
 					lines.push(bodyIndent + "  }");
