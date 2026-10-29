@@ -1,4 +1,5 @@
 class StringTools:
+    _hx_class_name = "StringTools"
     @staticmethod
     def startsWith(value, prefix):
         return str(value).startswith(str(prefix))

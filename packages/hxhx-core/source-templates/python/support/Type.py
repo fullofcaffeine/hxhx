@@ -1,4 +1,5 @@
 class Type:
+    _hx_class_name = "Type"
     @staticmethod
     def getClass(value):
         # Class objects and anonymous records have no Haxe class.
@@ -11,4 +12,12 @@ class Type:
         if cls is None:
             return None
         target = cls if isinstance(cls, type) else cls.__class__
-        return getattr(target, "__name__", str(target))
+        # Emitted and runtime classes carry their full dotted Haxe path.
+        name = getattr(target, "_hx_class_name", None)
+        if name is not None:
+            return name
+        if target is str:
+            return "String"
+        if target is list:
+            return "Array"
+        raise TypeError("hxhx Python has no Haxe class name for " + str(target))

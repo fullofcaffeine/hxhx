@@ -19460,8 +19460,9 @@ class SourceTargetCommon {
 		final baseName = pythonBaseClassName(HxClassDecl.getExtendsPath(cls));
 		final classHeader = baseName == null
 			|| baseName.length == 0 ? "class " + className + ":" : "class " + className + "(" + baseName + "):";
-		final out = [classHeader];
-		var memberCount = 0;
+		// Type.getClassName reports the dotted Haxe path, which the sanitized Python name cannot carry.
+		final out = [classHeader, "    _hx_class_name = " + quoteString(fullName)];
+		var memberCount = 1;
 		final instanceFields = new Array<HxFieldDecl>();
 		final needsThisValueSlot = pythonClassNeedsThisValueSlot(cls);
 		if (pythonNeedsUnitTestLocalStaticSlot(className)) {

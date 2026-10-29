@@ -90,5 +90,13 @@ class Main {
 		show("isObject number", Reflect.isObject(1));
 		show("isObject function", Reflect.isObject(callback));
 		show("isObject null", Reflect.isObject(null));
+		Sys.println("class name packaged " + Type.getClassName(zoo.Cat));
+		Sys.println("class name nested " + Type.getClassName(zoo.deep.Owl));
+		Sys.println("class name sub-type " + Type.getClassName(zoo.deep.Owl.Nest));
+		Sys.println("class name reserved " + Type.getClassName(zoo.deep.Owl.None));
+		Sys.println("class name of instance " + Type.getClassName(Type.getClass(new zoo.deep.Owl())));
+		Sys.println("class name of top-level instance " + Type.getClassName(Type.getClass(new Dog())));
+		Sys.println("class name of string " + Type.getClassName(Type.getClass("s")));
+		show("packaged is", Std.isOfType(new zoo.Cat(), zoo.Cat));
 	}
 }

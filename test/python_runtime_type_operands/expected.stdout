@@ -153,3 +153,11 @@ isObject string=true
 isObject number=false
 isObject function=false
 isObject null=false
+class name packaged zoo.Cat
+class name nested zoo.deep.Owl
+class name sub-type zoo.deep.Nest
+class name reserved zoo.deep.None
+class name of instance zoo.deep.Owl
+class name of top-level instance Dog
+class name of string String
+packaged is=true

@@ -1,4 +1,5 @@
 class Reflect:
+    _hx_class_name = "Reflect"
     @staticmethod
     def field(obj, name):
         if obj is None:

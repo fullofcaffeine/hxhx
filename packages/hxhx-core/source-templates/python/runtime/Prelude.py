@@ -32,12 +32,14 @@ class HxIterator:
         return value
 
 class Timer:
+    _hx_class_name = "haxe.Timer"
     @staticmethod
     def stamp():
         import time
         return time.perf_counter()
 
 class Array(list):
+    _hx_class_name = "Array"
     @property
     def length(self):
         return len(self)
@@ -95,6 +97,7 @@ class Array(list):
             super().sort(key=functools.cmp_to_key(compare))
 
 class List:
+    _hx_class_name = "haxe.ds.List"
     def __init__(self):
         self.__hx_values = []
 
@@ -205,6 +208,7 @@ class Map:
         return len(self.__hx_entries)
 
 class Sys:
+    _hx_class_name = "Sys"
     @staticmethod
     def println(value):
         """Keep direct calls and saved function values on the same output boundary."""

@@ -1,4 +1,5 @@
 class StringMap(dict):
+    _hx_class_name = "haxe.ds.StringMap"
     def set(self, key, value):
         self[key] = value
 
