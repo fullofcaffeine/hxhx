@@ -26,14 +26,18 @@ function literalFits(expression:HxExpr, expected:TyType):Bool {
 	Reuse the typed member relation for complete record/class operands in the
 	caller's unchecked null policy. Nullable wrappers do not change the underlying
 	field contract. Keep null literals and other categories with their normal checker.
+	An abstract value is nominal: it reaches a record only through its declared
+	`to` conversions, so its compatibility belongs to the conversion planner.
  */
 function compatibility(index:TyperIndex, expected:TyType, actual:TyType, ?parameters:Array<TyTypeParameterId>):Null<TyCallArgumentCompatibility> {
 	var target = TyAliasExpansion.revealNonNullable(expected);
 	final source = TyAliasExpansion.revealNonNullable(actual);
+	final sourceIdentity = source.getNominalIdentity();
 	if (!target.isAnonymous()
 		|| target.hasUnknownComponent()
 		|| source.hasUnknownComponent()
-		|| (!source.isAnonymous() && source.getNominalIdentity() == null))
+		|| (!source.isAnonymous() && sourceIdentity == null)
+		|| (sourceIdentity != null && index != null && index.getAbstractByFullName(sourceIdentity.getCanonicalName()) != null))
 		return null;
 	if (parameters != null && parameters.length > 0) {
 		final inferred = TyMethodGenericBinding.structuralArgument(target, source, parameters, index);

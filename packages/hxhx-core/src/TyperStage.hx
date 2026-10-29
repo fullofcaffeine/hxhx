@@ -1753,10 +1753,26 @@ class TyperStage {
 	static function appliedCallSignature(declaration:TyDeclarationInfo, callee:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyFunSig {
 		final signature = declaration.getSignature();
 		if (declaration.getIsStatic())
-			return ctx.getIndex().getMethodBodyResults().signature(declaration);
+			return macroCallSignature(declaration, ctx.getIndex().getMethodBodyResults().signature(declaration), ctx, scope, pos);
 		final receiverType = callReceiverType(declaration, callee, scope, ctx, pos);
 		final owner = ctx.getIndex().getByFullName(declaration.getOwner().getCanonicalName());
-		return owner == null ? signature : TyNominalApplication.signature(ctx.getIndex(), owner, receiverType, signature);
+		return macroCallSignature(declaration, owner == null ? signature : TyNominalApplication.signature(ctx.getIndex(), owner, receiverType, signature),
+			ctx, scope, pos);
+	}
+
+	/**
+		Return the signature a call site satisfies for `declaration`.
+
+		A `macro` declaration receives syntax at its `haxe.macro.Expr` positions and
+		collects a trailing `Array<Expr>` as rest arguments (see
+		`TyMacroCallSignature`). Selection and typed-call building must score the
+		same contract, so both reach it through this one function. Every other
+		declaration keeps its applied signature unchanged.
+	**/
+	static function macroCallSignature(declaration:Null<TyDeclarationInfo>, applied:TyFunSig, ctx:TyperContext, scope:TyFunctionEnv, pos:HxPos):TyFunSig {
+		if (!TyMacroCallSignature.isMacro(declaration))
+			return applied;
+		return TyMacroCallSignature.callSite(applied, typeFromHintInContext("haxe.macro.Expr", ctx, scope, pos));
 	}
 
 	/** Apply the same declaring-owner receiver to method parameters and their post-inference bounds. */
@@ -2148,6 +2164,11 @@ class TyperStage {
 			if (declaring != null)
 				c = declaring;
 		}
+		// Selection scores the contract callers satisfy. A macro receives syntax at
+		// its Expr positions; every other declaration keeps its resolved signature.
+		function callable(candidate:TyFunSig, receiverType:Null<TyType>):TyFunSig
+			return macroCallSignature(c.declarationForSignature(candidate), TyNominalApplication.signature(ctx.getIndex(), c, receiverType, candidate), ctx,
+				scope, pos);
 		function inputTrial(declaration:TyDeclarationInfo, signature:TyFunSig, actual:Array<TyType>):Null<TyMethodInputState.TyMethodInputTrial> {
 			// Positional evidence is unambiguous only after every fixed slot is supplied.
 			// Optional/rest alignment retains its ordinary call-policy owner.
@@ -2167,8 +2188,7 @@ class TyperStage {
 					return {type: TyType.unknown(), declaration: null};
 				throw new TyperError(ctx.getFilePath(), pos, "selected member conflicts with generic constructor constraints");
 			}
-			var applied = TyNominalApplication.signature(ctx.getIndex(), c,
-				receiver == null ? null : inference.expressionType(receiver.expression, receiver.type, scope), signature);
+			var applied = callable(signature, receiver == null ? null : inference.expressionType(receiver.expression, receiver.type, scope));
 			final declaration = c.declarationForSignature(signature);
 			final trial = inputTrial(declaration, applied, ranked);
 			if (trial != null) {
@@ -2210,9 +2230,8 @@ class TyperStage {
 					scope) != null ? TyReceiverCallContext.select(signature, applied, TyNominalApplication.parameterIds(c), solved, order) : null};
 		}
 		final candidates = admittedCandidates == null ? (isStatic ? c.staticMethodCandidates(field) : c.instanceMethodCandidates(field)) : admittedCandidates;
-		final argumentContexts = TyCallArgumentContext.shared(candidates.map(signature -> TyNominalApplication.signature(ctx.getIndex(), c,
-			receiver == null ? null : receiver.type, signature)), args.length,
-			candidates.map(signature -> {
+		final argumentContexts = TyCallArgumentContext.shared(candidates.map(signature -> callable(signature, receiver == null ? null : receiver.type)),
+			args.length, candidates.map(signature -> {
 				final declaration = c.declarationForSignature(signature);
 				return declaration == null ? [] : declaration.getTypeParameterIds();
 			}), ctx.getIndex());
@@ -2259,8 +2278,7 @@ class TyperStage {
 		for (candidate in candidates) {
 			final declaration = c.declarationForSignature(candidate);
 			final candidateInference = receiver == null ? scope.getInference() : scope.getInference().fork();
-			var initial = TyNominalApplication.signature(ctx.getIndex(), c,
-				receiver == null ? null : candidateInference.expressionType(receiver.expression, receiver.type, scope), candidate);
+			var initial = callable(candidate, receiver == null ? null : candidateInference.expressionType(receiver.expression, receiver.type, scope));
 			final initialTrial = inputTrial(declaration, initial, argTypes);
 			if (initialTrial != null)
 				initial = initialTrial.getSignature();
@@ -2277,8 +2295,7 @@ class TyperStage {
 				rejectedReceiverConstraint = true;
 				continue;
 			}
-			var applied = TyNominalApplication.signature(ctx.getIndex(), c,
-				receiver == null ? null : candidateInference.expressionType(receiver.expression, receiver.type, scope), candidate);
+			var applied = callable(candidate, receiver == null ? null : candidateInference.expressionType(receiver.expression, receiver.type, scope));
 			final rankedTrial = inputTrial(declaration, applied, ranked);
 			if (rankedTrial != null)
 				applied = rankedTrial.getSignature();

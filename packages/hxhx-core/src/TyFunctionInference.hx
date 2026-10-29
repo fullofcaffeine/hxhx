@@ -1285,6 +1285,13 @@ class TyFunctionInference {
 					actual: actualType,
 					term: term,
 					index: index
+				})
+				&& !TyInferenceAbstractOutput.constrain({
+					solver: candidate,
+					expected: expected[argumentIndex].unwrapNull(),
+					actual: actualType,
+					term: term,
+					index: index
 				}))
 				return false;
 		}
