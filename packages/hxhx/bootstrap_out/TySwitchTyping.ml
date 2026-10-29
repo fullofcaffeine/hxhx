@@ -4,111 +4,117 @@
 
 let __reflaxe_ocaml__ = ()
 
+let admitsNull = fun underlying -> (try (
+  ignore (if TyType.isNullable (Obj.magic underlying) () || not (TyType.isPrimitive (Obj.magic underlying) ()) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+  not (TyType.isNumeric (Obj.magic underlying) () || (let __string_eq_left_37 = TyType.getDisplay (Obj.magic underlying) () in let __string_eq_right_38 = "Bool" in HxString.equals __string_eq_left_37 __string_eq_right_38))
+) with
+  | HxRuntime.Hx_return __ret_39 -> (Obj.obj __ret_39 : bool) : bool)
+
 let analyze = fun scrutinee patterns ctx requireNullCoverage -> (try Obj.repr (let identity = Obj.magic (TyType.getNominalIdentity (Obj.magic scrutinee) ()) in (
   ignore (if identity == Obj.magic (HxRuntime.hx_null) || TyperContext.getIndex (Obj.magic ctx) () == Obj.magic (HxRuntime.hx_null) || patterns == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
   let info = Obj.magic (TyperIndex.getAbstractByFullName (Obj.magic (TyperContext.getIndex (Obj.magic ctx) ())) (TyNominalTypeId.getCanonicalName (Obj.magic identity) () : string)) in (
     ignore (if info == Obj.magic (HxRuntime.hx_null) || (Obj.magic info : TyAbstractInfo.t).getEnumDomain (Obj.magic info) () == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
-    let domain = Obj.magic ((Obj.magic info : TyAbstractInfo.t).getEnumDomain (Obj.magic info) ()) in let resolveMember = fun name -> (try let dot = let __string_receiver_37 = name in let __string_argument_0_38 = "." in HxString.lastIndexOf __string_receiver_37 __string_argument_0_38 (HxString.length __string_receiver_37) in (
-      ignore (if dot >= 0 then let owner = Obj.magic (TyperContext.resolveType (Obj.magic ctx) (let __string_receiver_39 = name in let __string_argument_0_40 = 0 in let __string_argument_1_41 = dot in HxString.substr __string_receiver_39 __string_argument_0_40 __string_argument_1_41 : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFieldInfo.t) in (
-        ignore (if owner == Obj.magic (HxRuntime.hx_null) then let __assign_42 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-          tempResult := __assign_42;
-          __assign_42
-        ) else let __assign_43 = Obj.magic (Obj.magic ((Obj.magic owner : TyNominalInfo.t).fieldInfo (Obj.magic owner) (let __string_receiver_44 = name in let __string_argument_0_45 = HxInt.add dot 1 in HxString.substr __string_receiver_44 __string_argument_0_45 (-1) : string))) in (
-          tempResult := __assign_43;
-          __assign_43
+    let domain = Obj.magic ((Obj.magic info : TyAbstractInfo.t).getEnumDomain (Obj.magic info) ()) in let resolveMember = fun name -> (try let dot = let __string_receiver_40 = name in let __string_argument_0_41 = "." in HxString.lastIndexOf __string_receiver_40 __string_argument_0_41 (HxString.length __string_receiver_40) in (
+      ignore (if dot >= 0 then let owner = Obj.magic (TyperContext.resolveType (Obj.magic ctx) (let __string_receiver_42 = name in let __string_argument_0_43 = 0 in let __string_argument_1_44 = dot in HxString.substr __string_receiver_42 __string_argument_0_43 __string_argument_1_44 : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFieldInfo.t) in (
+        ignore (if owner == Obj.magic (HxRuntime.hx_null) then let __assign_45 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+          tempResult := __assign_45;
+          __assign_45
+        ) else let __assign_46 = Obj.magic (Obj.magic ((Obj.magic owner : TyNominalInfo.t).fieldInfo (Obj.magic owner) (let __string_receiver_47 = name in let __string_argument_0_48 = HxInt.add dot 1 in HxString.substr __string_receiver_47 __string_argument_0_48 (-1) : string))) in (
+          tempResult := __assign_46;
+          __assign_46
         ));
         Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
       ) else ());
       let own = Obj.magic ((Obj.magic info : TyNominalInfo.t).fieldInfo (Obj.magic info) (name : string)) in let tempResult1 = ref (Obj.magic (HxRuntime.hx_null) : TyFieldInfo.t) in (
-        ignore (if own != Obj.magic (HxRuntime.hx_null) then let __assign_46 = Obj.magic (Obj.magic own) in (
-          tempResult1 := __assign_46;
-          __assign_46
-        ) else let __assign_47 = Obj.magic (Obj.magic (TyperContext.importedStaticField (Obj.magic ctx) (name : string))) in (
-          tempResult1 := __assign_47;
-          __assign_47
+        ignore (if own != Obj.magic (HxRuntime.hx_null) then let __assign_49 = Obj.magic (Obj.magic own) in (
+          tempResult1 := __assign_49;
+          __assign_49
+        ) else let __assign_50 = Obj.magic (Obj.magic (TyperContext.importedStaticField (Obj.magic ctx) (name : string))) in (
+          tempResult1 := __assign_50;
+          __assign_50
         ));
         !tempResult1
       )
     ) with
-      | HxRuntime.Hx_return __ret_48 -> (Obj.obj __ret_48 : TyFieldInfo.t) : TyFieldInfo.t) in let resolve = ref (Obj.magic (HxRuntime.hx_null) : HxSwitchPattern.hxswitchpattern -> TySwitchAnalysis.tyswitchcasecoverage) in (
-      ignore (let __assign_49 = Obj.magic (fun pattern -> let tempResult2 = ref (Obj.magic (HxRuntime.hx_null) : TySwitchAnalysis.tyswitchcasecoverage) in (
+      | HxRuntime.Hx_return __ret_51 -> (Obj.obj __ret_51 : TyFieldInfo.t) : TyFieldInfo.t) in let resolve = ref (Obj.magic (HxRuntime.hx_null) : HxSwitchPattern.hxswitchpattern -> TySwitchAnalysis.tyswitchcasecoverage) in (
+      ignore (let __assign_52 = Obj.magic (fun pattern -> let tempResult2 = ref (Obj.magic (HxRuntime.hx_null) : TySwitchAnalysis.tyswitchcasecoverage) in (
         ignore (match pattern with
-          | HxSwitchPattern.PNull -> let __assign_52 = Obj.magic (TySwitchAnalysis.NullOnly) in (
-            tempResult2 := __assign_52;
-            __assign_52
+          | HxSwitchPattern.PNull -> let __assign_55 = Obj.magic (TySwitchAnalysis.NullOnly) in (
+            tempResult2 := __assign_55;
+            __assign_55
           )
-          | HxSwitchPattern.PWildcard -> let __assign_53 = Obj.magic (TySwitchAnalysis.CatchAll) in (
-            tempResult2 := __assign_53;
-            __assign_53
-          )
-          | HxSwitchPattern.PEnumValue _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let field = Obj.magic (resolveMember (name : string)) in if field == Obj.magic (HxRuntime.hx_null) then let __assign_54 = Obj.magic (let __enum_arg_55 = ("unresolved enum pattern " ^ HxString.toStdString name : string) in TySwitchAnalysis.Unsupported (Stdlib.Sys.opaque_identity __enum_arg_55)) in (
-            tempResult2 := __assign_54;
-            __assign_54
-          ) else let __assign_56 = Obj.magic (let __enum_arg_57 = Obj.magic field in TySwitchAnalysis.Member (Stdlib.Sys.opaque_identity __enum_arg_57)) in (
+          | HxSwitchPattern.PWildcard -> let __assign_56 = Obj.magic (TySwitchAnalysis.CatchAll) in (
             tempResult2 := __assign_56;
             __assign_56
           )
+          | HxSwitchPattern.PEnumValue _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let field = Obj.magic (resolveMember (name : string)) in if field == Obj.magic (HxRuntime.hx_null) then let __assign_57 = Obj.magic (let __enum_arg_58 = ("unresolved enum pattern " ^ HxString.toStdString name : string) in TySwitchAnalysis.Unsupported (Stdlib.Sys.opaque_identity __enum_arg_58)) in (
+            tempResult2 := __assign_57;
+            __assign_57
+          ) else let __assign_59 = Obj.magic (let __enum_arg_60 = Obj.magic field in TySwitchAnalysis.Member (Stdlib.Sys.opaque_identity __enum_arg_60)) in (
+            tempResult2 := __assign_59;
+            __assign_59
+          )
           | HxSwitchPattern.PCapture (_p0, _p1) -> (
             ignore _p0;
-            let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_58 = Obj.magic ((!resolve) (Obj.magic inner)) in (
-              tempResult2 := __assign_58;
-              __assign_58
+            let _g2 = Obj.magic _p1 in let inner = Obj.magic _g2 in let __assign_61 = Obj.magic ((!resolve) (Obj.magic inner)) in (
+              tempResult2 := __assign_61;
+              __assign_61
             )
           )
           | HxSwitchPattern.PGuard (_p0, _p1) -> let _g = Obj.magic _p0 in (
             ignore _p1;
-            let inner = Obj.magic _g in let __assign_59 = Obj.magic (let __enum_arg_60 = Obj.magic ((!resolve) (Obj.magic inner)) in TySwitchAnalysis.Guarded (Stdlib.Sys.opaque_identity __enum_arg_60)) in (
-              tempResult2 := __assign_59;
-              __assign_59
+            let inner = Obj.magic _g in let __assign_62 = Obj.magic (let __enum_arg_63 = Obj.magic ((!resolve) (Obj.magic inner)) in TySwitchAnalysis.Guarded (Stdlib.Sys.opaque_identity __enum_arg_63)) in (
+              tempResult2 := __assign_62;
+              __assign_62
             )
           )
-          | HxSwitchPattern.PUnsupportedPattern _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_61 = Obj.magic (let __enum_arg_62 = Obj.magic ((!resolve) (Obj.magic inner)) in TySwitchAnalysis.Guarded (Stdlib.Sys.opaque_identity __enum_arg_62)) in (
-            tempResult2 := __assign_61;
-            __assign_61
-          )
-          | HxSwitchPattern.PBind _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let field = Obj.magic (resolveMember (name : string)) in if field == Obj.magic (HxRuntime.hx_null) then let __assign_63 = Obj.magic (TySwitchAnalysis.CatchAll) in (
-            tempResult2 := __assign_63;
-            __assign_63
-          ) else let __assign_64 = Obj.magic (let __enum_arg_65 = Obj.magic field in TySwitchAnalysis.Member (Stdlib.Sys.opaque_identity __enum_arg_65)) in (
+          | HxSwitchPattern.PUnsupportedPattern _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_64 = Obj.magic (let __enum_arg_65 = Obj.magic ((!resolve) (Obj.magic inner)) in TySwitchAnalysis.Guarded (Stdlib.Sys.opaque_identity __enum_arg_65)) in (
             tempResult2 := __assign_64;
             __assign_64
           )
-          | HxSwitchPattern.POr _p0 -> let _g = Obj.magic _p0 in let items = Obj.magic _g in let _g2 = Obj.magic (let __arr_66 = HxArray.create () in __arr_66) in let _g1 = ref 0 in (
-            ignore (while !_g1 < HxArray.length items do ignore (let item = Obj.magic (let __array_read_receiver_67 = items in let __array_read_index_68 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_67) __array_read_index_68) in (
-              ignore (let __old_69 = !_g1 in let __new_70 = HxInt.add __old_69 1 in (
-                ignore (_g1 := __new_70);
-                __new_70
+          | HxSwitchPattern.PBind _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let field = Obj.magic (resolveMember (name : string)) in if field == Obj.magic (HxRuntime.hx_null) then let __assign_66 = Obj.magic (TySwitchAnalysis.CatchAll) in (
+            tempResult2 := __assign_66;
+            __assign_66
+          ) else let __assign_67 = Obj.magic (let __enum_arg_68 = Obj.magic field in TySwitchAnalysis.Member (Stdlib.Sys.opaque_identity __enum_arg_68)) in (
+            tempResult2 := __assign_67;
+            __assign_67
+          )
+          | HxSwitchPattern.POr _p0 -> let _g = Obj.magic _p0 in let items = Obj.magic _g in let _g2 = Obj.magic (let __arr_69 = HxArray.create () in __arr_69) in let _g1 = ref 0 in (
+            ignore (while !_g1 < HxArray.length items do ignore (let item = Obj.magic (let __array_read_receiver_70 = items in let __array_read_index_71 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_70) __array_read_index_71) in (
+              ignore (let __old_72 = !_g1 in let __new_73 = HxInt.add __old_72 1 in (
+                ignore (_g1 := __new_73);
+                __new_73
               ));
-              let __array_receiver_71 = Obj.magic _g2 in let __array_arg_0_72 = Obj.magic ((!resolve) (Obj.magic item)) in HxArray.push __array_receiver_71 __array_arg_0_72
+              let __array_receiver_74 = Obj.magic _g2 in let __array_arg_0_75 = Obj.magic ((!resolve) (Obj.magic item)) in HxArray.push __array_receiver_74 __array_arg_0_75
             )) done);
-            let tempArray = Obj.magic _g2 in let __assign_73 = Obj.magic (let __enum_arg_74 = Obj.magic tempArray in TySwitchAnalysis.Alternatives (Stdlib.Sys.opaque_identity __enum_arg_74)) in (
-              tempResult2 := __assign_73;
-              __assign_73
+            let tempArray = Obj.magic _g2 in let __assign_76 = Obj.magic (let __enum_arg_77 = Obj.magic tempArray in TySwitchAnalysis.Alternatives (Stdlib.Sys.opaque_identity __enum_arg_77)) in (
+              tempResult2 := __assign_76;
+              __assign_76
             )
           )
-          | _ -> let __assign_50 = Obj.magic (let __enum_arg_51 = ("pattern form requires enum-abstract coverage support" : string) in TySwitchAnalysis.Unsupported (Stdlib.Sys.opaque_identity __enum_arg_51)) in (
-            tempResult2 := __assign_50;
-            __assign_50
+          | _ -> let __assign_53 = Obj.magic (let __enum_arg_54 = ("pattern form requires enum-abstract coverage support" : string) in TySwitchAnalysis.Unsupported (Stdlib.Sys.opaque_identity __enum_arg_54)) in (
+            tempResult2 := __assign_53;
+            __assign_53
           ));
         !tempResult2
       )) in (
-        resolve := __assign_49;
-        __assign_49
+        resolve := __assign_52;
+        __assign_52
       ));
-      let _g = Obj.magic (let __arr_75 = HxArray.create () in __arr_75) in let _g1 = ref 0 in (
-        ignore (while !_g1 < HxArray.length patterns do ignore (let pattern = Obj.magic (let __array_read_receiver_76 = patterns in let __array_read_index_77 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_76) __array_read_index_77) in (
-          ignore (let __old_78 = !_g1 in let __new_79 = HxInt.add __old_78 1 in (
-            ignore (_g1 := __new_79);
-            __new_79
+      let _g = Obj.magic (let __arr_78 = HxArray.create () in __arr_78) in let _g1 = ref 0 in (
+        ignore (while !_g1 < HxArray.length patterns do ignore (let pattern = Obj.magic (let __array_read_receiver_79 = patterns in let __array_read_index_80 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_79) __array_read_index_80) in (
+          ignore (let __old_81 = !_g1 in let __new_82 = HxInt.add __old_81 1 in (
+            ignore (_g1 := __new_82);
+            __new_82
           ));
-          let __array_receiver_80 = Obj.magic _g in let __array_arg_0_81 = Obj.magic ((!resolve) (Obj.magic pattern)) in HxArray.push __array_receiver_80 __array_arg_0_81
+          let __array_receiver_83 = Obj.magic _g in let __array_arg_0_84 = Obj.magic ((!resolve) (Obj.magic pattern)) in HxArray.push __array_receiver_83 __array_arg_0_84
         )) done);
         let tempArray1 = Obj.magic _g in TySwitchAnalysis.analyze (Obj.magic (TySwitchAnalysis.create (Obj.magic domain))) (Obj.magic tempArray1) requireNullCoverage
       )
     )
   )
 )) with
-  | HxRuntime.Hx_return __ret_82 -> (__ret_82 : Obj.t) : Obj.t)
+  | HxRuntime.Hx_return __ret_85 -> (__ret_85 : Obj.t) : Obj.t)
 
 let check = fun scrutinee patterns bodyCount ctx pos -> ignore (try ignore ((
   ignore (if patterns == Obj.magic (HxRuntime.hx_null) || HxArray.length patterns <> bodyCount then HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (TyperContext.getFilePath (Obj.magic ctx) () : string) (Obj.magic pos) ("switch pattern/body count differs" : string))) ["Dynamic"] else ());
@@ -174,7 +180,7 @@ let provesValueCoverage = fun scrutinee patterns ctx -> (try let identity = Obj.
         ));
         if (let __string_eq_left_27 = TyFunSig.getName (Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration) ())) () in let __string_eq_right_28 = "new" in HxString.equals __string_eq_left_27 __string_eq_right_28) || (let __array_receiver_29 = Obj.magic (TyDeclarationInfo.getMetadata (Obj.magic declaration) ()) in let __array_arg_0_30 = ("from" : string) in HxArray.indexOf_default __array_receiver_29 __array_arg_0_30) >= 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ()
       )) done);
-      let result = analyze (Obj.magic scrutinee) (Obj.magic patterns) (Obj.magic ctx) true in let tempShortCircuit = ref (false : bool) in (
+      let result = analyze (Obj.magic scrutinee) (Obj.magic patterns) (Obj.magic ctx) (admitsNull (Obj.magic ((Obj.magic owner : TyAbstractInfo.t).getUnderlyingType (Obj.magic owner) ()))) in let tempShortCircuit = ref (false : bool) in (
         ignore (if result != Obj.magic (HxRuntime.hx_null) then if result == Obj.magic (HxRuntime.hx_null) then let __assign_31 = false in (
           tempShortCircuit := __assign_31;
           __assign_31
