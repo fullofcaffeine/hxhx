@@ -53,6 +53,18 @@ class M14Stage3ExprMacroPassDriverTest {
 			+ unexecuted.stdout
 			+ unexecuted.stderr);
 
+		// A compile with no project macros still runs the pass (the built-in date macros are always
+		// allowlisted) and walks standard-library switch scopes it cannot prove. That coverage count is a
+		// trace diagnostic: ordinary output must not change, and HXHX_TRACE_EXPR_MACROS=1 still shows it.
+		final ordinary = compile("Ordinary");
+		require(ordinary.code == 0, "ordinary compile failed:\n" + ordinary.stdout + ordinary.stderr);
+		require(ordinary.stdout.indexOf("expr_macro_scope_gaps=") < 0 && ordinary.stdout.indexOf("expr_macros_unexecuted=") < 0,
+			"ordinary compile printed macro selection diagnostics:\n" + ordinary.stdout + ordinary.stderr);
+		Sys.putEnv("HXHX_TRACE_EXPR_MACROS", "1");
+		final traced = compile("Ordinary");
+		Sys.putEnv("HXHX_TRACE_EXPR_MACROS", "");
+		require(traced.stdout.indexOf("expr_macro_scope_gaps=") >= 0, "traced compile did not report scope gaps:\n" + traced.stdout + traced.stderr);
+
 		Sys.println("M14_STAGE3_EXPR_MACRO_PASS_DRIVER:PASS");
 	}
 }

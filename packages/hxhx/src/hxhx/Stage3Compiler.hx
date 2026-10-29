@@ -526,8 +526,13 @@ class Stage3Compiler {
 		// Expression macro expansion pass (pre-typing), owned by Stage3ExprMacroPass.
 		//
 		// The request's header index and loader are built first (marking the resolved modules) and
-		// stay outside the expansion error handling, as before the pass existed. The pass then serves registered exact-text expressions, selects other calls by their `macro` declaration,
-		// and reports selected calls no executor can run; those continue through ordinary typing.
+		// stay outside the expansion error handling, as before the pass existed. The pass then serves
+		// registered exact-text expressions, selects other calls by their `macro` declaration, and
+		// reports selected calls no executor can run; those continue through ordinary typing.
+		//
+		// Every non-type-only compile runs the pass, because the built-in date macros are always
+		// allowlisted. The scope-gap count describes the walker's coverage (standard-library switch
+		// scopes produce gaps in every program), so it is printed only under HXHX_TRACE_EXPR_MACROS.
 		function openModuleLoader(index:TyperIndex):ModuleLoader {
 			return new ModuleLoader(classPaths, definesMap, index, function(typePath:String):Bool {
 				return dispatchOnTypeNotFoundHooks(buildMacroPreparer.getSession(), typePath, requestOutput);
@@ -573,7 +578,7 @@ class Stage3Compiler {
 					requestOutput.stdoutLine("expr_macro_unexecuted[" + position + "]=" + entry.filePath + ": " + entry.declaration + ": " + entry.reason);
 				}
 			}
-			if (macroPass.lexicalGaps.length > 0)
+			if (macroPass.lexicalGaps.length > 0 && isTrueEnv("HXHX_TRACE_EXPR_MACROS"))
 				requestOutput.stdoutLine("expr_macro_scope_gaps=" + macroPass.lexicalGaps.length);
 		}
 

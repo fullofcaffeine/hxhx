@@ -852,9 +852,9 @@ export HAXE_BIN="${STAGE0_HAXE}"
 run_hxhx_filtered() {
   set +e
   if [ "\${HXHX_FORBID_STAGE0:-0}" = "1" ]; then
-    "${HXHX_BIN}" "\$@" | sed -E '/^(hxhx_macro_runtime_mode=|resolved_modules=|expr_macros_expanded=|stage3=|stage3_driver=|outDir=|exe=|artifact=|run=)/d'
+    "${HXHX_BIN}" "\$@" | sed -E '/^(hxhx_macro_runtime_mode=|resolved_modules=|expr_macros_expanded=|expr_macros_unexecuted=|expr_macro_unexecuted\\[|expr_macro_scope_gaps=|stage3=|stage3_driver=|outDir=|exe=|artifact=|run=)/d'
   else
-    "${HXHX_BIN}" --compat "\$@" | sed -E '/^(hxhx_macro_runtime_mode=|resolved_modules=|expr_macros_expanded=|stage3=|stage3_driver=|outDir=|exe=|artifact=|run=)/d'
+    "${HXHX_BIN}" --compat "\$@" | sed -E '/^(hxhx_macro_runtime_mode=|resolved_modules=|expr_macros_expanded=|expr_macros_unexecuted=|expr_macro_unexecuted\\[|expr_macro_scope_gaps=|stage3=|stage3_driver=|outDir=|exe=|artifact=|run=)/d'
   fi
   local code="\${PIPESTATUS[0]}"
   set -e

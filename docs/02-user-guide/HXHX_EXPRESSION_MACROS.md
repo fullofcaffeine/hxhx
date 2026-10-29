@@ -57,8 +57,8 @@ An unexpanded macro call is typed by the macro call-site contract (`TyMacroCallS
 any expression is accepted at an `Expr` parameter, a trailing `Array<Expr>` parameter collects the remaining arguments,
 and the call's value is `Dynamic`, because its real type would come from the expansion. The report precedes whatever that
 typing produces; for example, `for (v in macros.Macros.items())` still stops with
-`value loop requires a resolved iterator protocol`, since a `Dynamic` value has no known iterator. `expr_macro_scope_gaps=N` counts call sites the walker could not prove names for; nothing is selected
-there.
+`value loop requires a resolved iterator protocol`, since a `Dynamic` value has no known iterator. With `HXHX_TRACE_EXPR_MACROS=1`, `expr_macro_scope_gaps=N` also counts call sites the walker could not prove names for;
+nothing is selected there. It is a trace line only, because standard-library switch scopes produce gaps in every program.
 
 Important constraints:
 
