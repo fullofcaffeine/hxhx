@@ -2384,6 +2384,18 @@ class EmitterStage {
 		}
 	}
 
+	/**
+		Whether `target op= value` is an arithmetic compound assignment of a mutable
+		local, whose value form `backend.ocaml.Stage3OcamlLocalCompoundValue` emits.
+		The six bitwise compound operators are not lowered yet (haxe_ocaml-sq6ii).
+	**/
+	static function isLocalCompoundValue(op:String, target:HxExpr):Bool {
+		return switch [op, target] {
+			case ["+=" | "-=" | "*=" | "/=" | "%=", EIdent(name)]: isMutableLocalRefIdent(name);
+			case _: false;
+		};
+	}
+
 	/** HxInt owns arithmetic; ordered application preserves each operand's effects and abrupt completion. */
 	static function intBinopCallStage3(op:String, left:String, right:String):String {
 		final operation = switch (op) {
@@ -4576,6 +4588,49 @@ class EmitterStage {
 					}
 					return fn == null ? "(Obj.magic 0)" : ("Haxe_Int64." + fn + " (" + exprToOcamlAsInt64(a) + ") (" + exprToOcamlAsInt64(b) + ")");
 				}
+				// A local arithmetic compound assignment used as a value stores and produces
+				// the update. Statement-position updates of these operators use the local
+				// assignment path in `stmtListToOcaml` and do not reach this branch.
+				switch a {
+					case EIdent(name) if (isLocalCompoundValue(op, a)):
+						final destination = exactFunctionLocalType(name);
+						if (destination == null)
+							throw "OCaml local compound assignment value requires an exact local type: " + name;
+						final ident = requireOcamlFunctionLocalValueIdent(name);
+						if (destination.isDynamic())
+							return backend.ocaml.Stage3OcamlLocalCompoundValue.store(ident,
+								backend.ocaml.Stage3OcamlLocalStorage.compound(requireLocalStorageWrite(name, b), op, la, rb, currentFunctionLocalOcamlNames),
+								null, currentFunctionLocalOcamlNames);
+						final carrier = backend.ocaml.Stage3OcamlNullablePrimitive.innerPrimitive(destination);
+						final kind = switch carrier != null ? carrier : TyAliasExpansion.reveal(destination).getSemanticKey() {
+							case "primitive:Int": backend.ocaml.Stage3OcamlLocalCompoundValue.Stage3OcamlLocalCompoundKind.IntUpdate;
+							case "primitive:Float": backend.ocaml.Stage3OcamlLocalCompoundValue.Stage3OcamlLocalCompoundKind.FloatUpdate;
+							case "primitive:String": backend.ocaml.Stage3OcamlLocalCompoundValue.Stage3OcamlLocalCompoundKind.StringUpdate;
+							case _: throw "unsupported OCaml local compound assignment value: " + op + " on " + destination.getDisplay();
+						};
+						// Render the right operand in the local's representation; a nullable
+						// right operand stays a carrier and is unwrapped after both operands ran.
+						final right = switch kind {
+							case FloatUpdate if (nullableRight == null
+								&& !stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)):
+								stage3IsIntExpr(b, tyByIdentRaw) ? "float_of_int (" + rb + ")" : exprToOcamlAsFloat(b);
+							case StringUpdate:
+								exprToOcamlForConcatStage3(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+									callSigByCallee);
+							case _: rb;
+						};
+						return backend.ocaml.Stage3OcamlLocalCompoundValue.value({
+							ident: ident,
+							op: op,
+							kind: kind,
+							carrier: carrier,
+							old: la,
+							right: right,
+							rightCarrier: kind == StringUpdate ? null : nullableRight,
+							names: currentFunctionLocalOcamlNames
+						});
+					case _:
+				}
 				switch (op) {
 					case "=":
 						switch (a) {
@@ -5116,6 +5171,9 @@ class EmitterStage {
 							// Do not replace a supported operation with a bootstrap placeholder.
 							hasBringupPoison(a)
 							|| hasBringupPoison(b);
+						case _ if (isLocalCompoundValue(op, a)):
+							// `exprToOcaml` emits the local update and its value, or fails at emit time.
+							hasBringupPoison(b);
 						case _:
 							true;
 					}

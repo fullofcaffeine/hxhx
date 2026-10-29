@@ -41,8 +41,8 @@ counted through an array because native static variable increments are a
 separate gap (haxe_ocaml-nq65n).
 
 Not covered here: a compound assignment used as a value, such as
-`var r = (n -= 2)`. The native emitter does not yet produce a value for any
-local compound assignment in expression position (haxe_ocaml-u0j9w).
+`var r = (n -= 2)`. `test/fixtures/ocaml_local_compound_value` covers that
+form for nullable and ordinary locals.
 
 Run `haxe test/m14_stage3_nullable_local_update_test.hxml` (or
 `npm run test:m14:stage3-nullable-local-update`) to compare upstream Haxe with

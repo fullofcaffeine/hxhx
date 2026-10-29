@@ -1,0 +1,22 @@
+int -= 2 2
+int += *= %= 7 21 1 1
+nested 20 2
+side 1
+argument -2 -1
+old value first 25 25
+loop 1
+loop 2
+loop end 3
+float += /= 3.5 0.875 0.875
+side 2
+float *= %= 2.625 0.625 0.625
+float old value first 1.25 1.25
+nullable int += 6 6 false
+side 3
+nullable int -= 5 5
+nullable float *= 4.5 4.5
+side 4
+null update threw; still null true
+string += ab ab3 ab3
+string old value first aab aab
+dynamic += 3 3
