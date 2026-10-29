@@ -174,3 +174,25 @@ including the executable path that macro-host consumers read. The focused
 `test:macro-runtime:host-lifecycle` checks include peer contention, inherited
 ownership, direct execution, failure propagation, and generated-input cleanup.
 This scheduling change does not increase README Goals readiness.
+
+## Focused shard rebalance (2026-10-29)
+
+`compiler-focused-1` had reached 38-39 minutes of its 40-minute job limit
+(command time 35.7 minutes) and one run on PR #97 was cancelled. Per-command
+`elapsed=` lines from the CI runs of PRs #98 and #99 showed no duplicated
+build or repeated fixture compile among its commands; the time was spread over
+many legitimately heavy Haxe compiler tests. We therefore moved commands
+instead of editing tests:
+
+| Command | Measured | From | To |
+| --- | --- | --- | --- |
+| `test:m14:runtime-type-catches` | 439s | focused-1 | focused-neko-locals |
+| `test:m14:typed-body-boundary` | 297s | focused-1 | focused-neko-locals |
+| `test:m14:js-typed-local-projection` | 292s | focused-1 | focused-5 |
+| `test:m14:js-expr-function-literal` | 250s | focused-2 | focused-1 |
+
+Budget rule: keep the sum of command times of every focused shard at or below
+about 25 minutes (job limit 40 minutes, about 3 minutes of setup). Re-measure
+with the `[core-test-shard] COMMAND n/N PASS <script> elapsed=Xs` log lines
+before adding commands to a shard. `compiler-focused-4` has no PHP, Mono, or
+Lua installed, so only commands that need none of them may go there.
