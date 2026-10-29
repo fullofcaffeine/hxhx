@@ -525,8 +525,8 @@ class Stage3Compiler {
 
 		// Expression macro expansion pass (pre-typing), owned by Stage3ExprMacroPass.
 		//
-		// The pass builds the request's header index and loader (marking the resolved modules first),
-		// serves registered exact-text expressions, selects other calls by their `macro` declaration,
+		// The request's header index and loader are built first (marking the resolved modules) and
+		// stay outside the expansion error handling, as before the pass existed. The pass then serves registered exact-text expressions, selects other calls by their `macro` declaration,
 		// and reports selected calls no executor can run; those continue through ordinary typing.
 		function openModuleLoader(index:TyperIndex):ModuleLoader {
 			return new ModuleLoader(classPaths, definesMap, index, function(typePath:String):Bool {
@@ -544,10 +544,12 @@ class Stage3Compiler {
 			closeMacroSession();
 			return error("expression macro expansion unavailable in stage0 profiling lane");
 		}
-		final macroPass = Stage3ExprMacroPass.run(resolvedForTyping, null, exprMacros, openModuleLoader);
+		final macroPass = Stage3ExprMacroPass.expand(resolvedForTyping, Stage3ExprMacroPass.prepare(resolvedForTyping, openModuleLoader), null, exprMacros,
+			openModuleLoader);
 		#else
+		final macroSetup = Stage3ExprMacroPass.prepare(resolvedForTyping, openModuleLoader);
 		final macroPass = try {
-			Stage3ExprMacroPass.run(resolvedForTyping, expressionMacroSession, exprMacros, openModuleLoader);
+			Stage3ExprMacroPass.expand(resolvedForTyping, macroSetup, expressionMacroSession, exprMacros, openModuleLoader);
 		} catch (e:TyperError) {
 			closeMacroSession();
 			final rawDiagnostic = rawTyperDiagnostic(e);
@@ -734,10 +736,14 @@ class Stage3Compiler {
 				if (rootSet.exists(modulePath))
 					rootModules.push(m);
 			}
-			if (rootModules.length > 0)
-				rootModules
-			else
-				[resolvedForTyping[0]];
+			if (rootModules.length == 0)
+				rootModules.push(resolvedForTyping[0]);
+			// Modules the macro pass loaded are already marked resolved, so the loader will not yield
+			// them during typing; type them here as if typing had discovered them.
+			for (m in macroPass.discovered)
+				if (rootModules.indexOf(m) == -1)
+					rootModules.push(m);
+			rootModules;
 		} else {
 			resolvedForTyping.copy();
 		}

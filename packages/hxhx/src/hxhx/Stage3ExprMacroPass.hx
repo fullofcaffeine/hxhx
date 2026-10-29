@@ -9,6 +9,15 @@ typedef Stage3ExprMacroPassResult = {
 	/** Modules to type, in request order; lazily discovered modules follow the roots. */
 	final modules:Array<ResolvedModule>;
 
+	/**
+		Modules the loader first loaded while calls were being selected, in discovery
+		order; they are also the tail of `modules`. The loader already counts them as
+		resolved, so it never yields them again: a driver that types only its roots
+		(the no-emit lane) must add these itself, exactly as it would add a module the
+		loader discovers during typing.
+	**/
+	final discovered:Array<ResolvedModule>;
+
 	/** Header index bound to `modules`; rebuilt when a module was rewritten. */
 	final index:TyperIndex;
 
@@ -22,6 +31,12 @@ typedef Stage3ExprMacroPassResult = {
 
 	/** Call sites whose visible names the walker could not prove; no selection happened there. */
 	final lexicalGaps:Array<ExprMacroLexicalGap>;
+}
+
+/** The header index and loader a request types with, before any expansion. */
+typedef Stage3ExprMacroPassSetup = {
+	final index:TyperIndex;
+	final loader:ModuleLoader;
 }
 
 /**
@@ -44,11 +59,30 @@ typedef Stage3ExprMacroPassResult = {
 	  the counts and records the driver prints.
 **/
 class Stage3ExprMacroPass {
+	/**
+		Build the request's header index and loader and mark `resolved` as already known.
+
+		This is ordinary request setup, not macro expansion: a driver calls it outside
+		its expansion error handling so an index failure keeps its own diagnostic.
+	**/
+	public static function prepare(resolved:Array<ResolvedModule>, openLoader:TyperIndex->ModuleLoader):Stage3ExprMacroPassSetup {
+		final index = TyperIndex.buildHeaders(resolved);
+		final loader = openLoader(index);
+		loader.markResolvedAlready(resolved);
+		return {index: index, loader: loader};
+	}
+
+	/** `prepare` followed by `expand`. */
 	public static function run(resolved:Array<ResolvedModule>, session:Null<MacroRuntimeSession>, allowlist:Array<String>,
 			openLoader:TyperIndex->ModuleLoader):Stage3ExprMacroPassResult {
-		var index = TyperIndex.buildHeaders(resolved);
-		var loader = openLoader(index);
-		loader.markResolvedAlready(resolved);
+		return expand(resolved, prepare(resolved, openLoader), session, allowlist, openLoader);
+	}
+
+	/** Expand over a `prepare`d index and loader; with no session the setup is returned unchanged. */
+	public static function expand(resolved:Array<ResolvedModule>, setup:Stage3ExprMacroPassSetup, session:Null<MacroRuntimeSession>, allowlist:Array<String>,
+			openLoader:TyperIndex->ModuleLoader):Stage3ExprMacroPassResult {
+		var index = setup.index;
+		var loader = setup.loader;
 		final modules = resolved.copy();
 		final unexecuted = new Array<ExprMacroUnexecutedCall>();
 		final lexicalGaps = new Array<ExprMacroLexicalGap>();
@@ -56,6 +90,7 @@ class Stage3ExprMacroPass {
 		if (session == null)
 			return {
 				modules: modules,
+				discovered: [],
 				index: index,
 				loader: loader,
 				expandedCount: 0,
@@ -76,8 +111,8 @@ class Stage3ExprMacroPass {
 				lexicalGaps.push(gap);
 			offset = modules.length;
 			work = loader.drainNewModules();
-			for (discovered in work)
-				modules.push(discovered);
+			for (module in work)
+				modules.push(module);
 		}
 
 		if (expandedCount > 0) {
@@ -89,6 +124,7 @@ class Stage3ExprMacroPass {
 		}
 		return {
 			modules: modules,
+			discovered: modules.slice(resolved.length),
 			index: index,
 			loader: loader,
 			expandedCount: expandedCount,

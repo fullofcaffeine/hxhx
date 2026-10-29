@@ -103,6 +103,8 @@ class M14ExprMacroSelectedDispatchLoaderTest {
 		require(result.modules.length == roots.length + 1
 			&& ResolvedModule.getModulePath(result.modules[roots.length]) == "lazy.LazyMacros",
 			"lazily discovered module was not appended after the roots");
+		require(result.discovered.length == 1 && result.discovered[0] == result.modules[roots.length],
+			"pass did not report the module it discovered (rewritten form) to the driver");
 		require(result.modules[4] == shadowed, "value-shadowed package root was selected");
 		switch firstBodyCall(result.modules[2], "main") {
 			case EArrayDecl([EInt(1), EInt(2)]):
