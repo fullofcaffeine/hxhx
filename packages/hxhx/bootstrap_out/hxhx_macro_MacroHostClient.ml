@@ -1517,26 +1517,31 @@ let macrohostsession_runNativeExpr = fun self (expr : string) -> macroclient_cal
 
 let macrohostsession_expandExpr = fun self (expr : string) -> macroclient_call (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ("macro.expandExpr" : string) (let __call_arg_0_25 = "e" in let __call_arg_1_26 = expr in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_25 __call_arg_1_26 : string)
 
+let macrohostsession_expandSelected = fun self (request : Hxhx_macro_ExprMacroDispatch.t) -> (
+  ignore self;
+  let __enum_arg_29 = (let __string_part_27 = "the external macro host protocol has no structured dispatch method for project macro declaration " in let __string_part_28 = HxString.toStdString (Hxhx_macro_ExprMacroDispatch.describe (Obj.magic request) ()) in __string_part_27 ^ __string_part_28 : string) in Hxhx_macro_ExprMacroDispatch.Unavailable (Stdlib.Sys.opaque_identity __enum_arg_29)
+)
+
 let macrohostsession_runHook = fun self (kind : string) (id : int) -> ignore (ignore (let tempString = ref (HxString.hx_null_string : string) in (
-  ignore (if kind == HxString.hx_null_string then let __assign_27 = ("" : string) in (
-    tempString := __assign_27;
-    __assign_27
-  ) else let __assign_28 = (kind : string) in (
-    tempString := __assign_28;
-    __assign_28
+  ignore (if kind == HxString.hx_null_string then let __assign_30 = ("" : string) in (
+    tempString := __assign_30;
+    __assign_30
+  ) else let __assign_31 = (kind : string) in (
+    tempString := __assign_31;
+    __assign_31
   ));
-  let tail = let __string_part_33 = HxString.toStdString (let __call_arg_0_29 = "k" in let __call_arg_1_30 = !tempString in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_29 __call_arg_1_30) in let __string_part_34 = " " in let __string_part_35 = HxString.toStdString (let __call_arg_0_31 = "i" in let __call_arg_1_32 = string_of_int id in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_31 __call_arg_1_32) in (__string_part_33 ^ __string_part_34) ^ __string_part_35 in macroclient_call (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ("macro.runHook" : string) (tail : string)
+  let tail = let __string_part_36 = HxString.toStdString (let __call_arg_0_32 = "k" in let __call_arg_1_33 = !tempString in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_32 __call_arg_1_33) in let __string_part_37 = " " in let __string_part_38 = HxString.toStdString (let __call_arg_0_34 = "i" in let __call_arg_1_35 = string_of_int id in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_34 __call_arg_1_35) in (__string_part_36 ^ __string_part_37) ^ __string_part_38 in macroclient_call (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ("macro.runHook" : string) (tail : string)
 )))
 
 let macrohostsession_runTypeNotFoundHook = fun self (id : int) (typePath : string) -> let tempString = ref (HxString.hx_null_string : string) in (
-  ignore (if typePath == HxString.hx_null_string then let __assign_36 = ("" : string) in (
-    tempString := __assign_36;
-    __assign_36
-  ) else let __assign_37 = (typePath : string) in (
-    tempString := __assign_37;
-    __assign_37
+  ignore (if typePath == HxString.hx_null_string then let __assign_39 = ("" : string) in (
+    tempString := __assign_39;
+    __assign_39
+  ) else let __assign_40 = (typePath : string) in (
+    tempString := __assign_40;
+    __assign_40
   ));
-  let tail = let __string_part_42 = HxString.toStdString (let __call_arg_0_38 = "i" in let __call_arg_1_39 = string_of_int id in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_38 __call_arg_1_39) in let __string_part_43 = " " in let __string_part_44 = HxString.toStdString (let __call_arg_0_40 = "n" in let __call_arg_1_41 = !tempString in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_40 __call_arg_1_41) in (__string_part_42 ^ __string_part_43) ^ __string_part_44 in let __string_eq_left_45 = macroclient_call (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ("macro.runTypeNotFoundHook" : string) (tail : string) in let __string_eq_right_46 = "1" in HxString.equals __string_eq_left_45 __string_eq_right_46
+  let tail = let __string_part_45 = HxString.toStdString (let __call_arg_0_41 = "i" in let __call_arg_1_42 = string_of_int id in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_41 __call_arg_1_42) in let __string_part_46 = " " in let __string_part_47 = HxString.toStdString (let __call_arg_0_43 = "n" in let __call_arg_1_44 = !tempString in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_43 __call_arg_1_44) in (__string_part_45 ^ __string_part_46) ^ __string_part_47 in let __string_eq_left_48 = macroclient_call (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ("macro.runTypeNotFoundHook" : string) (tail : string) in let __string_eq_right_49 = "1" in HxString.equals __string_eq_left_48 __string_eq_right_49
 )
 
 let macrohostsession_close = fun self () -> ignore (ignore (macroclient_close (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ()))

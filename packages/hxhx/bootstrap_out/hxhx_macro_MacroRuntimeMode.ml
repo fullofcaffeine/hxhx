@@ -51,6 +51,7 @@ let openSession = fun mode -> (try match mode with
       ignore (HxAnon.set __anon_10 "runHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_MacroHostClient.macrohostsession_runHook impl a0 a1)));
       ignore (HxAnon.set __anon_10 "runTypeNotFoundHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_MacroHostClient.macrohostsession_runTypeNotFoundHook impl a0 a1)));
       ignore (HxAnon.set __anon_10 "expandExpr" (Obj.repr (fun a0 -> Hxhx_macro_MacroHostClient.macrohostsession_expandExpr impl a0)));
+      ignore (HxAnon.set __anon_10 "expandSelected" (Obj.repr (fun a0 -> Hxhx_macro_MacroHostClient.macrohostsession_expandSelected impl a0)));
       ignore (HxAnon.set __anon_10 "close" (Obj.repr (fun () -> Hxhx_macro_MacroHostClient.macrohostsession_close impl ())));
       __anon_10
     ))))

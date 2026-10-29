@@ -52,6 +52,7 @@ module Stage3Compiler = Hxhx_Stage3Compiler
 module Stage3CustomizationSupport = Hxhx_Stage3CustomizationSupport
 module Stage3DiagnosticsSupport = Hxhx_Stage3DiagnosticsSupport
 module Stage3EmitSupport = Hxhx_Stage3EmitSupport
+module Stage3ExprMacroPass = Hxhx_Stage3ExprMacroPass
 module Stage3HookSupport = Hxhx_Stage3HookSupport
 module Stage3JsPreparation = Hxhx_Stage3JsPreparation
 module Stage3MacroFileDependencySupport = Hxhx_Stage3MacroFileDependencySupport

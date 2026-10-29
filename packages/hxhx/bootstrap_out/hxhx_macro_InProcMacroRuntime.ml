@@ -59,6 +59,7 @@ let openSession = fun () -> let impl = Obj.magic (Hxhx_macro_InProcMacroSession.
     ignore (HxAnon.set __anon_12 "runHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_InProcMacroSession.runHook impl a0 a1)));
     ignore (HxAnon.set __anon_12 "runTypeNotFoundHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_InProcMacroSession.runTypeNotFoundHook impl a0 a1)));
     ignore (HxAnon.set __anon_12 "expandExpr" (Obj.repr (fun a0 -> Hxhx_macro_InProcMacroSession.expandExpr impl a0)));
+    ignore (HxAnon.set __anon_12 "expandSelected" (Obj.repr (fun a0 -> Hxhx_macro_InProcMacroSession.expandSelected impl a0)));
     ignore (HxAnon.set __anon_12 "close" (Obj.repr (fun () -> Hxhx_macro_InProcMacroSession.close impl ())));
     __anon_12
   )
