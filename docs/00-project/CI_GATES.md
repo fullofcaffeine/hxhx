@@ -68,6 +68,12 @@ an owner. That marker means the failure queue is accountable; it does **not**
 mean the owned compiler, target, macro, plugin, performance, or Full1 failures
 have passed.
 
+An incident can also carry an optional `failureSignature`: the failing job,
+the failing step, and one literal log line. This keeps a known red required
+check owned on new main commits while its failure still matches. Any other
+failure, or a log the audit cannot read, still needs a new owner. See
+`docs/00-project/WEEKLY_CI_EVIDENCE.md` for the exact rules.
+
 The live collector retries only safe GitHub API reads after a network failure,
 rate limit, or temporary `502`/`503`/`504` response. It makes at most four
 attempts, honors `Retry-After` up to an eight-second per-wait cap, and records

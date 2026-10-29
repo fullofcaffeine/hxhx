@@ -702,7 +702,7 @@
     {
       "id": "gate1-typed-return-31916786026",
       "checkId": "gate1-weekly",
-      "state": "open",
+      "state": "superseded",
       "evidenceState": "failure-current",
       "failureClass": "semantic",
       "bead": "haxe_ocaml-nsj94",
@@ -718,12 +718,20 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31916786026"
       },
       "reproductionOrEvidence": "The hosted OCaml compiler rejects two generated conditional-expression loops because their unannotated private return handlers are inferred as unit instead of Bool.",
-      "closureGate": "The focused typed-return lowering regression must pass, and a workflow-dispatch Gate 1 successor on the repair commit must complete successfully."
+      "closureGate": "The focused typed-return lowering regression must pass, and a workflow-dispatch Gate 1 successor on the repair commit must complete successfully.",
+      "supersededBy": {
+        "runId": 40336060521,
+        "runAttempt": 1,
+        "headSha": "0b3d0cb79d444b49222d446678ec6ab01f009f0d",
+        "conclusion": "failure",
+        "updatedAt": "2026-10-26T14:34:09Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/40336060521"
+      }
     },
     {
       "id": "gate2-typed-return-31916785908",
       "checkId": "gate2-weekly",
-      "state": "open",
+      "state": "resolved",
       "evidenceState": "failure-current",
       "failureClass": "semantic",
       "bead": "haxe_ocaml-nsj94",
@@ -739,12 +747,20 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31916785908"
       },
       "reproductionOrEvidence": "Both Gate 2 jobs stop while building hxhx because the hosted OCaml compiler infers the generated conditional-expression loop as unit instead of Bool.",
-      "closureGate": "The focused typed-return lowering regression must pass, and a workflow-dispatch Gate 2 successor on the repair commit must complete successfully."
+      "closureGate": "The focused typed-return lowering regression must pass, and a workflow-dispatch Gate 2 successor on the repair commit must complete successfully.",
+      "resolution": {
+        "runId": 40352853614,
+        "runAttempt": 1,
+        "headSha": "0b3d0cb79d444b49222d446678ec6ab01f009f0d",
+        "conclusion": "success",
+        "resolvedAt": "2026-10-26T16:15:39Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/40352853614"
+      }
     },
     {
       "id": "macro-runtime-typed-return-31916786108",
       "checkId": "macro-runtime-weekly",
-      "state": "open",
+      "state": "resolved",
       "evidenceState": "failure-current",
       "failureClass": "semantic",
       "bead": "haxe_ocaml-nsj94",
@@ -760,7 +776,15 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31916786108"
       },
       "reproductionOrEvidence": "Both macro-runtime modes stop while building hxhx because the hosted OCaml compiler infers the generated conditional-expression loop as unit instead of Bool.",
-      "closureGate": "The focused typed-return lowering regression must pass, and a workflow-dispatch macro-runtime successor on the repair commit must complete successfully."
+      "closureGate": "The focused typed-return lowering regression must pass, and a workflow-dispatch macro-runtime successor on the repair commit must complete successfully.",
+      "resolution": {
+        "runId": 40340422874,
+        "runAttempt": 1,
+        "headSha": "0b3d0cb79d444b49222d446678ec6ab01f009f0d",
+        "conclusion": "success",
+        "resolvedAt": "2026-10-26T15:00:17Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/40340422874"
+      }
     },
     {
       "id": "tier1-cancelled-31916032680",
@@ -794,7 +818,7 @@
     {
       "id": "m7-current-31306044495",
       "checkId": "m7-weekly",
-      "state": "open",
+      "state": "superseded",
       "evidenceState": "failure-current",
       "failureClass": "unknown",
       "bead": "haxe_ocaml-d516o",
@@ -810,12 +834,20 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31306044495"
       },
       "reproductionOrEvidence": "The latest qualifying M7 schedule failed after more than two hours in the replacement-ready bundle and did not emit its required markers.",
-      "closureGate": "Classify the retained bundle evidence and require one complete current M7 successor with both strict PASS markers."
+      "closureGate": "Classify the retained bundle evidence and require one complete current M7 successor with both strict PASS markers.",
+      "supersededBy": {
+        "runId": 40197685380,
+        "runAttempt": 1,
+        "headSha": "0b3d0cb79d444b49222d446678ec6ab01f009f0d",
+        "conclusion": "failure",
+        "updatedAt": "2026-10-25T16:06:08Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/40197685380"
+      }
     },
     {
       "id": "full1-plugin-timeout-31892556777",
       "checkId": "full1-plugin-weekly",
-      "state": "open",
+      "state": "superseded",
       "evidenceState": "failure-current",
       "failureClass": "timeout-performance",
       "bead": "haxe_ocaml-xsg6m",
@@ -831,12 +863,20 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31892556777"
       },
       "reproductionOrEvidence": "The upstream-host plugin proofs pass, but the hxhx-to-hxhx proof exceeds its 1,800-second stage0 fail-fast limit.",
-      "closureGate": "The bounded bootstrap path must complete within policy and a current plugin-parity successor must emit the aggregate PASS marker."
+      "closureGate": "The bounded bootstrap path must complete within policy and a current plugin-parity successor must emit the aggregate PASS marker.",
+      "supersededBy": {
+        "runId": 40118431416,
+        "runAttempt": 1,
+        "headSha": "0b3d0cb79d444b49222d446678ec6ab01f009f0d",
+        "conclusion": "failure",
+        "updatedAt": "2026-10-24T18:07:25Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/40118431416"
+      }
     },
     {
       "id": "full1-current-31881774241",
       "checkId": "full1-aggregate-weekly",
-      "state": "open",
+      "state": "superseded",
       "evidenceState": "failure-current",
       "failureClass": "expected-no-go",
       "bead": "haxe.ocaml-f1cl",
@@ -852,7 +892,15 @@
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31881774241"
       },
       "reproductionOrEvidence": "The current aggregate remains an expected no-go because extended targets, native eval, server mode, macro evidence, and plugin parity are not all green on one commit.",
-      "closureGate": "One candidate commit must provide authentic passing suite, target, macro/eval, plugin, and performance artifacts and emit the aggregate PASS marker."
+      "closureGate": "One candidate commit must provide authentic passing suite, target, macro/eval, plugin, and performance artifacts and emit the aggregate PASS marker.",
+      "supersededBy": {
+        "runId": 40101818833,
+        "runAttempt": 1,
+        "headSha": "0b3d0cb79d444b49222d446678ec6ab01f009f0d",
+        "conclusion": "failure",
+        "updatedAt": "2026-10-24T14:26:17Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/40101818833"
+      }
     },
     {
       "id": "package-profile-comparison-31916032648",
@@ -882,6 +930,137 @@
         "resolvedAt": "2026-08-29T23:53:28Z",
         "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/33281077585"
       }
+    },
+    {
+      "id": "gate1-sort-callback-40336060521",
+      "checkId": "gate1-weekly",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "semantic",
+      "bead": "haxe_ocaml-fdq0p",
+      "recordedAt": "2026-10-29T17:00:00Z",
+      "run": {
+        "id": 40336060521,
+        "attempt": 1,
+        "headSha": "0b3d0cb79d444b49222d446678ec6ab01f009f0d",
+        "event": "schedule",
+        "conclusion": "failure",
+        "createdAt": "2026-10-26T14:03:19Z",
+        "updatedAt": "2026-10-26T14:34:09Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/40336060521"
+      },
+      "reproductionOrEvidence": "The bootstrap, macro host, and macro run succeed and Stage3 generates all 899 units, but ocamlopt rejects the generated sort comparator in Utest_ui_common_ClassResult.methodNames because its parameter b is Obj.t where a String is required. The earlier generated-loop failure is gone.",
+      "closureGate": "A focused regression must keep sort-callback parameter types in generated OCaml, and a Gate 1 successor on main must pass or stop at a different, separately owned failure."
+    },
+    {
+      "id": "m7-bundle-40197685380",
+      "checkId": "m7-weekly",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "semantic",
+      "bead": "haxe_ocaml-d516o",
+      "recordedAt": "2026-10-29T17:00:00Z",
+      "run": {
+        "id": 40197685380,
+        "attempt": 1,
+        "headSha": "0b3d0cb79d444b49222d446678ec6ab01f009f0d",
+        "event": "schedule",
+        "conclusion": "failure",
+        "createdAt": "2026-10-25T13:27:24Z",
+        "updatedAt": "2026-10-25T16:06:08Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/40197685380"
+      },
+      "reproductionOrEvidence": "Artifact gate-m7-logs-40197685380 shows ci:guards, gate1-unit-macro, and gate3-runci-targets red while the other bundle steps pass. The causes are a stale Bytes plan fixture (fixed on main), the Gate 1 sort-comparator OCaml type error, invalid generated JavaScript in unit.js, and an opaque neko.Web startup try expression.",
+      "closureGate": "Each listed cause must be repaired on main, and one complete M7 successor must emit M7_STRICT_STAGE0:PASS and M7_REPLACEMENT_READY:PASS with validated artifacts."
+    },
+    {
+      "id": "full1-plugin-exception-control-40118431416",
+      "checkId": "full1-plugin-weekly",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "semantic",
+      "bead": "haxe_ocaml-2kbaw",
+      "recordedAt": "2026-10-29T17:00:00Z",
+      "run": {
+        "id": 40118431416,
+        "attempt": 1,
+        "headSha": "0b3d0cb79d444b49222d446678ec6ab01f009f0d",
+        "event": "schedule",
+        "conclusion": "failure",
+        "createdAt": "2026-10-24T17:56:50Z",
+        "updatedAt": "2026-10-24T18:07:25Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/40118431416"
+      },
+      "reproductionOrEvidence": "The hxhx-to-hxhx proof stops after 451 seconds at the EmitterStage.hx:323 exception-control plan invariant for a caught rethrow, and the upstream host adapter cannot build luv 0.5.13 on the Ubuntu 26.04 runner image, so neither plugin summary is produced.",
+      "closureGate": "Both plugin proofs must produce their summaries and a current Full1 / Plugin Parity successor must emit FULL1_PLUGIN_PARITY:PASS."
+    },
+    {
+      "id": "full1-aggregate-40101818833",
+      "checkId": "full1-aggregate-weekly",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "expected-no-go",
+      "bead": "haxe.ocaml-f1cl",
+      "recordedAt": "2026-10-29T17:00:00Z",
+      "run": {
+        "id": 40101818833,
+        "attempt": 1,
+        "headSha": "0b3d0cb79d444b49222d446678ec6ab01f009f0d",
+        "event": "schedule",
+        "conclusion": "failure",
+        "createdAt": "2026-10-24T14:17:17Z",
+        "updatedAt": "2026-10-24T14:26:17Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/40101818833"
+      },
+      "reproductionOrEvidence": "The aggregate remains a no-go: extended targets cannot install libpcre3-dev on Ubuntu 26.04, the optimization and server suites stop at typing and parsing gaps, native eval hits the Gate 1 sort-comparator error, and plugin parity fails. Macro evidence passed.",
+      "closureGate": "One candidate commit must provide authentic passing suite, target, macro/eval, plugin, and performance artifacts and emit the aggregate PASS marker."
+    },
+    {
+      "id": "kpi-manual-stale-20261029",
+      "checkId": "kpi-manual-weekly",
+      "state": "open",
+      "evidenceState": "stale-success",
+      "failureClass": "repository-policy",
+      "bead": "haxe_ocaml-850ii.39",
+      "recordedAt": "2026-10-29T17:00:00Z",
+      "run": {
+        "id": 31916786114,
+        "attempt": 1,
+        "headSha": "f02ad82d5c370f3a70e0e2ddbbe38ef3db41778e",
+        "event": "workflow_dispatch",
+        "conclusion": "success",
+        "createdAt": "2026-08-16T00:15:38Z",
+        "updatedAt": "2026-08-16T00:19:05Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/31916786114"
+      },
+      "reproductionOrEvidence": "The newest manually triggered KPI report passed on 2026-08-16 and is far older than the 192-hour freshness window. Newer pull-request and push KPI runs do not satisfy this check because the contract requires a workflow_dispatch run on main.",
+      "closureGate": "A new workflow_dispatch KPI run on current main must succeed and publish an hxhx.kpi.v2 report that passes the repository validator; record that exact run as the resolution."
+    },
+    {
+      "id": "gate1-lite-iterator-protocol-40907938558",
+      "checkId": "gate1-lite-pr",
+      "state": "open",
+      "evidenceState": "failure-current",
+      "failureClass": "semantic",
+      "bead": "haxe_ocaml-9sj5p",
+      "recordedAt": "2026-10-29T18:00:00Z",
+      "run": {
+        "id": 40907938558,
+        "attempt": 1,
+        "headSha": "dc456f001beeac94f5b7c669bf43b9e2ab69877e",
+        "event": "push",
+        "conclusion": "failure",
+        "createdAt": "2026-10-29T16:04:30Z",
+        "updatedAt": "2026-10-29T16:07:52Z",
+        "url": "https://github.com/fullofcaffeine/hxhx/actions/runs/40907938558"
+      },
+      "failureSignature": {
+        "job": "Upstream unit macro stage3 no-emit",
+        "step": "Run Gate1 lite macro smoke",
+        "logPattern": "TestMain.hx:122:3: value loop requires a resolved iterator protocol"
+      },
+      "reproductionOrEvidence": "Since the PR 92 merge, every main push builds the bootstrap and then stops in the upstream unit-macro no-emit rung at TestMain.hx:122:3 because selected project expression macros are not executed yet, so the value loop has no resolved iterator protocol.",
+      "closureGate": "A Gate 1 Lite push run on main must pass on its exact head commit after project expression macros execute; resolve this record against that run."
     }
   ]
 }

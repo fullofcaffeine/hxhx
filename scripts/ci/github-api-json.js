@@ -71,6 +71,22 @@ function validateOptions(options) {
  * workflow-level ten-minute timeout as the final upper bound.
  */
 async function githubJson(url, token, overrides = {}) {
+  return githubRead(url, token, overrides, 'json')
+}
+
+/**
+ * Fetch one GitHub API endpoint that returns plain text, such as a job log.
+ *
+ * It uses the same bounded retry policy as `githubJson`. GitHub answers a job
+ * log request with a redirect to a signed download URL. `fetch` follows that
+ * redirect and drops the token, because the download host is a different
+ * origin.
+ */
+async function githubText(url, token, overrides = {}) {
+  return githubRead(url, token, overrides, 'text')
+}
+
+async function githubRead(url, token, overrides, decode) {
   const options = {
     ...defaultRetryOptions,
     ...overrides
@@ -114,11 +130,11 @@ async function githubJson(url, token, overrides = {}) {
 
     if (response.ok) {
       try {
-        return await response.json()
+        return decode === 'text' ? await response.text() : await response.json()
       } catch (error) {
         history.push({
           attempt,
-          responseClass: 'invalid-json',
+          responseClass: decode === 'text' ? 'invalid-text' : 'invalid-json',
           retryable: false,
           delayMs: null
         })
@@ -151,6 +167,7 @@ async function githubJson(url, token, overrides = {}) {
 module.exports = {
   defaultRetryOptions,
   githubJson,
+  githubText,
   parseRetryAfterMs,
   retryableStatuses
 }
