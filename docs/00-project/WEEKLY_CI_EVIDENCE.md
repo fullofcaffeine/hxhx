@@ -91,13 +91,19 @@ only when all of these are true:
 - the signature's `step` is the only failed step in that job;
 - one line of that job's log contains `logPattern` as literal text.
 
+Choose `logPattern` from the fatal diagnostic line itself, for example the
+compiler's error message with its file and position. Do not use text that an
+earlier, successful step could also print, such as a banner, a command echo,
+or a progress line. The match covers the whole job log, so text like that
+could match a run that failed for a different reason.
+
 In every other case the run still needs a new owner. That includes a different
 message, another failing job or step, a timeout without a failed step, or a log
 that GitHub cannot return. The live audit reads job lists and job logs only for
 these candidate runs, and a failed read always counts as "no match". The
-owning bead must contain the `logPattern` text. The JSON report records how
-each owner was matched: `ownerMatch` is `exact-run` or `failure-signature`, and
-`signatureMatchedRun` names the run that the signature matched.
+owning bead must contain the `logPattern` text. In the JSON report, each finding's
+`ownerMatch` is `exact-run` or `failure-signature`, and its `run` names the run
+that was matched.
 
 A signature changes nothing else. Freshness windows, exact-run matching for
 incidents without a signature, and the resolved and superseded rules stay the

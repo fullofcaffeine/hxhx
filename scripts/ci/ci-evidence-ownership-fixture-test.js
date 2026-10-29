@@ -528,10 +528,9 @@ function signatureFixtures(manifest, baseSnapshot, tmpDir) {
   assert(
     matched.finding.ownerIncident === 'fixture-lite-signature'
       && matched.finding.ownerMatch === 'failure-signature'
-      && matched.finding.signatureMatchedRun
-      && matched.finding.signatureMatchedRun.id === 99200000002
-      && matched.finding.signatureMatchedRun.headSha === baseSnapshot.headSha,
-    'report must record the run that the failure signature matched'
+      && matched.finding.run.id === 99200000002
+      && matched.finding.run.headSha === baseSnapshot.headSha,
+    'report must identify the run that the failure signature matched'
   )
 
   const exact = evaluateCase('lite-exact', signedManifestPath, {
@@ -582,6 +581,21 @@ function signatureFixtures(manifest, baseSnapshot, tmpDir) {
     'additional unrelated failing job'
   )
   expectFailure(
+    evaluateCase('lite-duplicate-job', signedManifestPath, newerRun(99200000013, [
+      { name: signature.job, failedSteps: [signature.step], log: matchingLog },
+      { name: signature.job, failedSteps: [signature.step], log: matchingLog }
+    ])).result,
+    unowned,
+    'two identically named failed jobs'
+  )
+  expectFailure(
+    evaluateCase('lite-two-steps', signedManifestPath, newerRun(99200000014, [
+      { name: signature.job, failedSteps: [signature.step, 'Upload logs'], log: matchingLog }
+    ])).result,
+    unowned,
+    'signature job with a second failed step'
+  )
+  expectFailure(
     evaluateCase('lite-no-jobs', signedManifestPath, newerRun(99200000009, [])).result,
     unowned,
     'failed run with no failed job'
@@ -615,8 +629,7 @@ function signatureFixtures(manifest, baseSnapshot, tmpDir) {
   assert(
     unsignedExact.result.status === 0
       && unsignedExact.finding.ownerIncident === 'fixture-lite-signature'
-      && unsignedExact.finding.ownerMatch === 'exact-run'
-      && unsignedExact.finding.signatureMatchedRun === null,
+      && unsignedExact.finding.ownerMatch === 'exact-run',
     `incident without a signature must still own its exact run\n${unsignedExact.result.stderr}`
   )
 
@@ -626,6 +639,13 @@ function signatureFixtures(manifest, baseSnapshot, tmpDir) {
     runEvaluator(writeCase('lite-bad-signature', badSignature), beadsPath, path.join(tmpDir, 'lite-match.snapshot.json')),
     'failureSignature.step is required',
     'incomplete failure signature'
+  )
+  const paddedSignature = incidentFor(true)
+  paddedSignature.failureSignature.logPattern = `  ${signature.logPattern}`
+  expectFailure(
+    runEvaluator(writeCase('lite-padded-signature', paddedSignature), beadsPath, path.join(tmpDir, 'lite-match.snapshot.json')),
+    'must not start or end with whitespace',
+    'failure signature with surrounding whitespace'
   )
   const unrecordedBeadsPath = path.join(tmpDir, 'lite-unrecorded.issues.jsonl')
   const beadLines = fs.readFileSync(beadsPath, 'utf8').trim().split(/\r?\n/)
@@ -697,6 +717,60 @@ async function liveFailureEvidenceFixtures() {
     text: async () => 'unused'
   })
   assert(truncated.failedJobs === null, 'an incomplete job list must leave the run without failure evidence')
+
+  // Candidate selection uses the evaluator's own run selection.
+  const { attachSignatureEvidence } = require('./ci-evidence-ownership')
+  const manifest = JSON.parse(fs.readFileSync(productionManifestPath, 'utf8'))
+  const lite = manifest.checks.find(check => check.id === 'gate1-lite-pr')
+  const headSha = 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+  const recorded = syntheticRun(lite, 99300000001, { conclusion: 'failure', headSha })
+  const signedManifest = {
+    checks: [lite],
+    incidents: [{
+      id: 'fixture-live-signature',
+      checkId: lite.id,
+      state: 'open',
+      evidenceState: 'failure-current',
+      run: { id: recorded.id, attempt: recorded.attempt, headSha, createdAt: recorded.createdAt },
+      failureSignature: { job: 'Fixture job', step: 'Fixture step', logPattern: 'Fixture.hx:1:1: fixture failure text' }
+    }]
+  }
+  function liveSnapshot(runs) {
+    return { headSha, headCreatedAt: '2026-07-13T05:30:00Z', runs: { [lite.id]: runs } }
+  }
+  const calls = []
+  const collect = async run => {
+    calls.push(run.id)
+    return { failedJobs: [{ name: 'Fixture job', failedSteps: ['Fixture step'], log: 'x' }], error: null }
+  }
+  const nowMs = Date.parse(fixedNow)
+  await attachSignatureEvidence(signedManifest, liveSnapshot([structuredClone(recorded)]), nowMs, collect)
+  assert(calls.length === 0, 'live audit fetched evidence for the exact recorded run')
+  await attachSignatureEvidence(signedManifest, liveSnapshot([
+    syntheticRun(lite, 99300000002, { headSha, createdAt: '2026-07-13T06:20:00Z', updatedAt: '2026-07-13T06:30:00Z' })
+  ]), nowMs, collect)
+  assert(calls.length === 0, 'live audit fetched evidence for a successful run')
+  const newer = syntheticRun(lite, 99300000003, {
+    conclusion: 'failure',
+    headSha,
+    createdAt: '2026-07-13T06:20:00Z',
+    updatedAt: '2026-07-13T06:30:00Z'
+  })
+  const newerSnapshot = liveSnapshot([structuredClone(recorded), newer])
+  await attachSignatureEvidence(signedManifest, newerSnapshot, nowMs, collect)
+  assert(calls.join(',') === '99300000003', `live audit must fetch evidence only for the newer failing run: ${calls}`)
+  assert(
+    Array.isArray(newerSnapshot.runs[lite.id][1].failedJobs) && newerSnapshot.runs[lite.id][0].failedJobs === undefined,
+    'live audit must attach evidence to the selected run only'
+  )
+  const failing = async () => ({ failedJobs: null, error: 'GitHub API read failed: http-410' })
+  const failedSnapshot = liveSnapshot([newer])
+  await attachSignatureEvidence(signedManifest, failedSnapshot, nowMs, failing)
+  assert(
+    failedSnapshot.runs[lite.id][0].failedJobs === null
+      && /http-410/.test(failedSnapshot.runs[lite.id][0].failureEvidenceError),
+    'live audit must record a failed evidence read as no evidence'
+  )
   console.log('[ci:guards] OK: CI evidence ownership live failure evidence fails closed')
 }
 

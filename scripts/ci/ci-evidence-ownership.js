@@ -323,10 +323,12 @@ function validateFailureSignature(incident, label, errors) {
   }
   if (!nonEmptyString(signature.job)) errors.push(`${owner}.job is required`)
   if (!nonEmptyString(signature.step)) errors.push(`${owner}.step is required`)
-  if (!nonEmptyString(signature.logPattern) || signature.logPattern.trim().length < 20) {
+  if (!nonEmptyString(signature.logPattern) || signature.logPattern.length < 20) {
     errors.push(`${owner}.logPattern must be a literal log text of at least 20 characters`)
   } else if (/[\r\n]/.test(signature.logPattern)) {
     errors.push(`${owner}.logPattern must fit on one log line`)
+  } else if (signature.logPattern.trim() !== signature.logPattern) {
+    errors.push(`${owner}.logPattern must not start or end with whitespace`)
   }
   if (incident.evidenceState !== 'failure-current' || !incident.run) {
     errors.push(`${owner} is only allowed on a failure-current incident with a recorded run`)
@@ -374,10 +376,11 @@ function matchingOpenIncident(manifest, check, observation) {
 /**
  * Find the open signed incident that owns a newer failing run, if any.
  *
- * Every failed job of the run must be the signature's job, its only failed
- * step must be the signature's step, and its log must contain the signature
- * text on one line. A run without fetched evidence, a failed job without a
- * log, an extra failing job, or a run older than the incident never matches.
+ * The run must have exactly one failed job, with the signature's job name.
+ * That job's only failed step must be the signature's step, and its log must
+ * contain the signature text on one line. A run without fetched evidence, a
+ * failed job without a log, any extra failing job or step, or a run older
+ * than the incident never matches.
  */
 function signatureOwner(manifest, check, observation) {
   const run = observation.run
@@ -392,7 +395,7 @@ function signatureOwner(manifest, check, observation) {
   if (!incident) return null
   if (Date.parse(run.createdAt) < Date.parse(incident.run.createdAt)) return null
   const signature = incident.failureSignature
-  if (!Array.isArray(run.failedJobs) || run.failedJobs.length === 0) return null
+  if (!Array.isArray(run.failedJobs) || run.failedJobs.length !== 1) return null
   const matches = run.failedJobs.every(job => (
     job
       && job.name === signature.job
@@ -503,15 +506,7 @@ function evaluate(manifest, snapshot, nowValue) {
       supersededCancellations: observation.supersededCancellations,
       ownerIncident: owner ? owner.id : null,
       ownerBead: owner ? owner.bead : null,
-      ownerMatch: exactOwner ? 'exact-run' : (signedOwner ? 'failure-signature' : null),
-      signatureMatchedRun: signedOwner
-        ? {
-            id: observation.run.id,
-            attempt: observation.run.attempt,
-            headSha: observation.run.headSha,
-            url: observation.run.url
-          }
-        : null
+      ownerMatch: exactOwner ? 'exact-run' : (signedOwner ? 'failure-signature' : null)
     })
   }
 
@@ -563,6 +558,34 @@ async function collectFailedJobs(apiRoot, run, token, readers = {}) {
   }
 }
 
+/**
+ * Attach failed-job evidence to the run that a signed open incident could own.
+ *
+ * The candidate is the run that `observeCheck` selects, so the live reader and
+ * the evaluator use one selection rule. Evidence is read only when that run
+ * completed with a failure and is not the incident's exact recorded run.
+ */
+async function attachSignatureEvidence(manifest, snapshot, nowMs, collect) {
+  for (const check of manifest.checks) {
+    const signed = manifest.incidents.some(incident => (
+      incident.state === 'open' && incident.checkId === check.id && incident.failureSignature && incident.run
+    ))
+    if (!signed) continue
+    const observation = observeCheck(check, snapshot, nowMs)
+    if (observation.state !== 'failure-current' || !observation.run
+      || observation.run.conclusion !== 'failure'
+      || matchingOpenIncident(manifest, check, observation)) continue
+    const raw = (snapshot.runs[check.id] || []).find(run => {
+      const normalized = normalizeRun(run)
+      return normalized.id === observation.run.id && normalized.attempt === observation.run.attempt
+    })
+    if (!raw) continue
+    const evidence = await collect(observation.run)
+    raw.failedJobs = evidence.failedJobs
+    if (evidence.error) raw.failureEvidenceError = evidence.error
+  }
+}
+
 async function collectLiveSnapshot(manifest, args) {
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN
   if (!token) throw new Error('--live requires GITHUB_TOKEN or GH_TOKEN')
@@ -593,24 +616,9 @@ async function collectLiveSnapshot(manifest, args) {
       for (const run of payload.workflow_runs || []) collected.push(normalizeRun(run))
     }
     runs[check.id] = collected
-
-    // Fetch logs only when a signed open incident could own the newest run.
-    const signed = manifest.incidents.find(incident => (
-      incident.state === 'open' && incident.checkId === check.id && incident.failureSignature && incident.run
-    ))
-    const qualifying = collected.filter(run => (
-      check.events.includes(run.event) && (check.kind !== 'required' || run.headSha === headSha)
-    ))
-    const candidate = newestRun(qualifying)
-    if (signed && candidate && candidate.status === 'completed' && candidate.conclusion === 'failure'
-      && !(candidate.id === signed.run.id && candidate.attempt === signed.run.attempt)) {
-      const evidence = await collectFailedJobs(apiRoot, candidate, token)
-      candidate.failedJobs = evidence.failedJobs
-      if (evidence.error) candidate.failureEvidenceError = evidence.error
-    }
   }
 
-  return {
+  const snapshot = {
     schema: 'hxhx.ci-run-snapshot.v1',
     repository: args.repository,
     defaultBranch: manifest.defaultBranch,
@@ -619,6 +627,13 @@ async function collectLiveSnapshot(manifest, args) {
     observedAt: args.now || new Date().toISOString(),
     runs
   }
+  await attachSignatureEvidence(
+    manifest,
+    snapshot,
+    Date.parse(snapshot.observedAt),
+    run => collectFailedJobs(apiRoot, run, token)
+  )
+  return snapshot
 }
 
 async function main() {
@@ -661,6 +676,7 @@ async function main() {
 if (require.main === module) main()
 
 module.exports = {
+  attachSignatureEvidence,
   collectFailedJobs,
   collectLiveSnapshot,
   evaluate,
