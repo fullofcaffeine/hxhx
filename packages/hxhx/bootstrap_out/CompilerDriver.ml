@@ -26,7 +26,10 @@ let run = fun () -> ignore (let preferredFixtureRoot = "workloads/hih-compiler/f
     __represented_array_3
   )) in let mainModule = "demo.A" in let resolved = Obj.magic (ResolverStage.parseProject (Obj.magic classPaths) (mainModule : string) (Obj.magic (HxRuntime.hx_null))) in (
     ignore (ResolvedModule.getParsed);
-    let root = Obj.magic (let __array_read_receiver_5 = resolved in let __array_read_index_6 = 0 in HxArray.get (Obj.magic __array_read_receiver_5) __array_read_index_6) in let ast = Obj.magic (ResolvedModule.getParsed (Obj.magic root)) in let decl = Obj.magic (ParsedModule.getDecl (Obj.magic ast) ()) in let pkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let directives = Obj.magic (HxModuleDecl.getDirectives (Obj.magic decl)) in let mainClass = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in let value = Obj.repr "parse=ok" in (
+    let root = Obj.magic (ResolverStage.requestedRoot (Obj.magic resolved) (Obj.magic (let __represented_array_5 = HxArray.create () in let __represented_array_element_0_6 = mainModule in (
+      ignore (HxArray.push __represented_array_5 __represented_array_element_0_6);
+      __represented_array_5
+    )))) in let ast = Obj.magic (ResolvedModule.getParsed (Obj.magic root)) in let decl = Obj.magic (ParsedModule.getDecl (Obj.magic ast) ()) in let pkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let directives = Obj.magic (HxModuleDecl.getDirectives (Obj.magic decl)) in let mainClass = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in let value = Obj.repr "parse=ok" in (
       ignore (HxSys.printlnValue value);
       let v = Obj.repr (let __string_part_7 = "modules=" in let __string_part_8 = string_of_int (HxArray.length resolved) in __string_part_7 ^ __string_part_8) in (
         ignore (HxSys.printlnValue v);
