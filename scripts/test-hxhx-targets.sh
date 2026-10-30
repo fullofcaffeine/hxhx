@@ -2526,7 +2526,7 @@ out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmpstage3sum/src" -main Main --hxhx-out "
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^native-reflaxe-stage3=ok$"
 echo "$out" | grep -q "^sum=10$"
-grep -q 'sum := __hx_v' "$tmpstage3sum/out/Main.ml"
+grep -Eq 'sum := __hx_[a-z_]+' "$tmpstage3sum/out/Main.ml"
 grep -q 'HxBootArray.iter' "$tmpstage3sum/out/Main.ml"
 grep -Eq 'print_endline \(\("sum=" \^ (HxDynamic\.toStdString|string_of_int)' "$tmpstage3sum/out/Main.ml"
 

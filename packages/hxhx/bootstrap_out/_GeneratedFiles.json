@@ -606,6 +606,7 @@
 		"backend_ocaml_Stage3OcamlInstanceInitializers.ml",
 		"backend_ocaml_Stage3OcamlIntBitwise.ml",
 		"backend_ocaml_Stage3OcamlIntrinsicCallable.ml",
+		"backend_ocaml_Stage3OcamlLocalCompoundValue.ml",
 		"backend_ocaml_Stage3OcamlLocalNames.ml",
 		"backend_ocaml_Stage3OcamlLocalStorage.ml",
 		"backend_ocaml_Stage3OcamlMethodValue.ml",
