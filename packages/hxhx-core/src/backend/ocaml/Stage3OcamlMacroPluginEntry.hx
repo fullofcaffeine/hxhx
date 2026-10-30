@@ -135,7 +135,7 @@ class Stage3OcamlMacroPluginEntry {
 
 	static function checkedArity(key:String, owner:String, method:String, modules:Array<TypedModule>):Int {
 		for (typed in modules) {
-			final declaration = typed.getParsed().getDecl();
+			final declaration = typed.getBackendDeclaration();
 			final packagePath = HxModuleDecl.getPackagePath(declaration);
 			for (source in HxModuleDecl.getClasses(declaration)) {
 				final name = HxClassDecl.getName(source);
