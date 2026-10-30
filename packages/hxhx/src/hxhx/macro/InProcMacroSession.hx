@@ -216,18 +216,22 @@ class InProcMacroSession {
 		}
 	}
 
-	/** Load one validated project-macro plugin into this in-process compilation session. **/
+	/**
+		Load one validated project-macro plugin into this in-process compilation session.
+
+		A session accepts one plugin, as the plan allows one plugin per project. The native loader
+		clears its registration table before each load, so a second load would leave this session
+		believing earlier declarations are still callable. The second call is rejected before
+		anything is loaded. Declaration keys are validated by `NativeMacroModuleHostAbi`.
+	**/
 	public function loadNativeModule(modulePath:String, pluginId:String):Array<String> {
+		if (nativeModuleTouched)
+			throw "native macro module: only one project macro plugin per compilation session is supported (refusing to load `" + modulePath + "`)";
 		nativeModuleTouched = true;
 		final snapshot = NativeMacroModuleDynlink.loadAndCapture(modulePath, pluginId);
 		final declarations = NativeMacroModuleHostAbi.declarationsForPlugin(snapshot, pluginId, modulePath);
-		for (declaration in declarations) {
-			if (isBuiltinExpr(declaration))
-				throw "native macro module cannot override built-in macro declaration `" + declaration + "`";
-			if (nativeDeclarations.exists(declaration))
-				throw "native macro module declaration already loaded: " + declaration;
+		for (declaration in declarations)
 			nativeDeclarations.set(declaration, true);
-		}
 		return declarations;
 	}
 

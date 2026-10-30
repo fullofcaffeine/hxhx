@@ -261,16 +261,6 @@ class Main {
 		return "ran:" + e;
 	}
 
-	static function isReservedNativeExpression(expr:String):Bool {
-		final value = StringTools.trim(expr == null ? "" : expr);
-		return StringTools.startsWith(value, "BuiltinMacros.")
-			|| StringTools.startsWith(value, "hxhxmacrohost.BuiltinMacros.")
-			|| StringTools.startsWith(value, "include(")
-			|| value == "unit.HelperMacros.getCompilationDate()"
-			|| value == "HelperMacros.getCompilationDate()"
-			|| EntryPoints.handles(value);
-	}
-
 	static function loadNativeModule(modulePath:String, pluginId:String):String {
 		final path = StringTools.trim(modulePath == null ? "" : modulePath);
 		final pid = StringTools.trim(pluginId == null ? "" : pluginId);
@@ -286,8 +276,6 @@ class Main {
 		final snapshot = NativeMacroModuleDynlink.loadAndCapture(path, pid);
 		final declarations = NativeMacroModuleHostAbi.declarationsForPlugin(snapshot, pid, path);
 		for (declaration in declarations) {
-			if (isReservedNativeExpression(declaration))
-				throw "macro.loadNativeModule: project module cannot override built-in macro declaration `" + declaration + "`";
 			final existingPlugin = nativeDeclarationToPlugin.get(declaration);
 			if (existingPlugin == null) {
 				nativeDeclarationToPlugin.set(declaration, pid);

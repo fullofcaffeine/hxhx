@@ -239,7 +239,13 @@ class M14MacroSyntaxRoundTripTest {
 		final p:Position = {file: "Cover.hx", min: 1, max: 2};
 		function e(definition:ExprDef):Expr
 			return {expr: definition, pos: p};
-		final x = e(EConst(CIdent("x")));
+		// Every expression slot gets its own leaf, so a reader that reads two same-kind fields in
+		// a different order than the writer changes the decoded tree and fails the checks below.
+		var leaves = 0;
+		function leaf():Expr
+			return e(EConst(CIdent("l" + leaves++)));
+		function id(name:String):Expr
+			return e(EConst(CIdent(name)));
 		final type = TPath({
 			pack: ["haxe"],
 			name: "Rest",
@@ -268,21 +274,21 @@ class M14MacroSyntaxRoundTripTest {
 			e(EConst(CFloat("1.5", "f64"))),
 			e(EConst(CString("s", SingleQuotes))),
 			e(EConst(CRegexp("a+", "g"))),
-			e(EArray(x, x)),
-			e(EBinop(OpAssignOp(OpNullCoal), x, x)),
-			e(EField(x, "f", Safe)),
-			e(EParenthesis(x)),
+			e(EArray(id("array"), id("index"))),
+			e(EBinop(OpAssignOp(OpNullCoal), id("left"), id("right"))),
+			e(EField(leaf(), "f", Safe)),
+			e(EParenthesis(leaf())),
 			e(EObjectDecl([
 				{
 					field: "q",
-					expr: x,
+					expr: leaf(),
 					quotes: Quoted
 				}
 			])),
-			e(EArrayDecl([x])),
-			e(ECall(x, [])),
-			e(ENew({pack: [], name: "T"}, [x])),
-			e(EUnop(OpSpread, false, x)),
+			e(EArrayDecl([leaf()])),
+			e(ECall(id("callee"), [id("first"), id("second")])),
+			e(ENew({pack: [], name: "T"}, [leaf()])),
+			e(EUnop(OpSpread, false, leaf())),
 			e(EVars([
 				{
 					name: "v",
@@ -300,12 +306,12 @@ class M14MacroSyntaxRoundTripTest {
 							name: "a",
 							opt: true,
 							type: null,
-							value: x,
+							value: leaf(),
 							meta: null
 						}
 					],
 					ret: TFunction([], TExtend([{pack: [], name: "B"}], [])),
-					expr: x,
+					expr: leaf(),
 					params: [
 						{
 							name: "T",
@@ -316,29 +322,87 @@ class M14MacroSyntaxRoundTripTest {
 						}
 					]
 				})),
-			e(EFor(x, x)),
-			e(EIf(x, x, null)),
-			e(EWhile(x, x, false)),
-			e(ESwitch(x, [{values: [x], guard: x, expr: null}], x)),
-			e(ETry(x, [{name: "c", type: null, expr: x}])),
+			e(EFor(id("iterator"), id("loopBody"))),
+			e(EIf(id("condition"), id("then"), null)),
+			e(EWhile(id("whileCondition"), id("whileBody"), false)),
+			e(ESwitch(leaf(), [
+				{
+					values: [leaf()],
+					guard: leaf(),
+					expr: null
+				}
+			],
+				leaf())),
+			e(ETry(leaf(), [{name: "c", type: null, expr: leaf()}])),
 			e(EReturn(null)),
 			e(EBreak),
 			e(EContinue),
-			e(EUntyped(x)),
-			e(EThrow(x)),
-			e(ECast(x, null)),
-			e(EDisplay(x, DKPattern(true))),
-			e(ETernary(x, x, x)),
-			e(ECheckType(x, TPath({
+			e(EUntyped(leaf())),
+			e(EThrow(leaf())),
+			e(ECast(leaf(), null)),
+			e(EDisplay(leaf(), DKPattern(true))),
+			e(ETernary(id("test"), id("yes"), id("no"))),
+			e(ECheckType(leaf(), TPath({
 				pack: [],
 				name: "T",
-				params: [TPExpr(x)]
+				params: [TPExpr(leaf())]
 			}))),
-			e(EMeta({name: "m", params: [x], pos: p}, x)),
-			e(EIs(x, type))
+			e(EMeta({name: "m", params: [leaf()], pos: p}, leaf())),
+			e(EIs(leaf(), type))
 		]));
 		final payload = MacroSyntaxWire.encodeResult(everything);
-		require(MacroSyntaxWire.encodeResult(MacroSyntaxWire.decodeResult(payload)) == payload, "full syntax payload is not stable across a decode");
+		final decoded = MacroSyntaxWire.decodeResult(payload);
+		require(MacroSyntaxWire.encodeResult(decoded) == payload, "full syntax payload is not stable across a decode");
+		final entries = block(decoded);
+		function name(value:Expr):String
+			return switch value.expr {
+				case EConst(CIdent(text)): text;
+				case _: "<not an identifier>";
+			};
+		var checked = 0;
+		for (entry in entries) {
+			require(entry.pos.file == "Cover.hx" && entry.pos.min == 1 && entry.pos.max == 2, "decoded position fields changed");
+			switch entry.expr {
+				case EArray(array, index):
+					require(name(array) == "array" && name(index) == "index", "EArray operands changed order");
+					checked++;
+				case EBinop(OpAssignOp(OpNullCoal), left, right):
+					require(name(left) == "left" && name(right) == "right", "EBinop operands changed order");
+					checked++;
+				case ECall(callee, arguments):
+					require(name(callee) == "callee" && arguments.length == 2 && name(arguments[0]) == "first" && name(arguments[1]) == "second",
+						"ECall callee or arguments changed");
+					checked++;
+				case EFor(iterator, body):
+					require(name(iterator) == "iterator" && name(body) == "loopBody", "EFor operands changed order");
+					checked++;
+				case EIf(condition, whenTrue, whenFalse):
+					require(name(condition) == "condition" && name(whenTrue) == "then" && whenFalse == null, "EIf operands changed");
+					checked++;
+				case EWhile(condition, body, normal):
+					require(name(condition) == "whileCondition" && name(body) == "whileBody" && !normal, "EWhile operands changed");
+					checked++;
+				case ETernary(test, yes, no):
+					require(name(test) == "test" && name(yes) == "yes" && name(no) == "no", "ETernary operands changed order");
+					checked++;
+				case EFunction(FNamed("f", true), f):
+					require(f.args.length == 1 && f.args[0].name == "a" && f.args[0].opt == true && f.params.length == 1 && f.params[0].name == "T",
+						"function fields changed");
+					checked++;
+				case EVars([variable]):
+					require(variable.name == "v" && variable.isFinal == true && variable.expr == null && variable.type != null, "variable fields changed");
+					switch variable.type {
+						case TPath(path):
+							require(path.pack.join(".") == "haxe" && path.name == "Rest" && path.sub == "Sub" && path.params.length == 1,
+								"type path fields changed");
+						case _:
+							throw "variable type changed";
+					}
+					checked++;
+				case _:
+			}
+		}
+		require(checked == 9, "decoded structure checks did not all run: " + checked);
 		final failure = MacroSyntaxWire.encodeFailure("macro said no");
 		require(MacroSyntaxWire.isFailure(failure)
 			&& MacroSyntaxWire.decodeFailure(failure) == "macro said no", "failure payload changed");

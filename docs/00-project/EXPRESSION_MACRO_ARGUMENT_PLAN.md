@@ -33,6 +33,15 @@ a raw value cannot be shared. Both sides compile the one Haxe-authored codec ins
 only stores the closure and passes the payload through (plugin ABI version 2,
 `register_macro_declaration`).
 
+Standing boundary contract (accepted by review, 2026-10-29): raw Haxe values never cross the
+plugin boundary. The native ABI surface is `string -> string` (`register_macro_declaration` stores
+a callback from an encoded request payload to an encoded response payload), and native code never
+reads either payload. Both runtime routes use the same `MacroSyntaxWire` payloads: the in-process
+Dynlink route today, and the external macro host, which should gain a `macro.runDeclaration`
+method that carries exactly the same request and response payloads. Later Context services
+(`haxe_ocaml-9sj5p.6`) extend this contract with host-resolved type handles instead of serialized
+`haxe.macro.Type` values (`haxe_ocaml-expdc`).
+
 Contract details and limits:
 
 - Positions: a node that owns a known `HxPos` gets `{file: <call file>, min: start, max: start}`.
@@ -50,7 +59,13 @@ Contract details and limits:
 - Plugin declarations must be static `macro` methods whose parameters are all required `Expr`
   values and whose result is `Expr`.
 - The external macro host loads and validates the same plugin but has no structured dispatch
-  method; it reports selected declarations as unexecuted.
+  method (`macro.runDeclaration`, above); it reports selected declarations as unexecuted.
+- One in-process session loads at most one plugin; a second load is rejected. Registrations must
+  name `pack.Type.method`, and `haxe.macro.*` owners are reserved.
+- Follow-ups: literal spelling and quote kind (`haxe_ocaml-gzufu`), reflaxe.ocaml pattern
+  workarounds (`haxe_ocaml-hhihe`), toolchain-bound receipts and unique plugin library names
+  (`haxe_ocaml-kokp8`), typed adapter methods instead of the OCaml adapter template
+  (`haxe_ocaml-gal5o`), and the macro host's own converter (`haxe_ocaml-0ln1t`).
 - No `haxe.macro.Context` API is available to plugin code yet. In the plugin compilation, a macro
   `Position` is opaque (see the define gap below); `MacroSyntaxWire` is the only code that reads
   or builds its `{file, min, max}` record.

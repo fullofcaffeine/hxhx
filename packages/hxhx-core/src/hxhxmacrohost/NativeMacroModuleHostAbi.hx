@@ -128,6 +128,32 @@ class NativeMacroModuleHostAbi {
 		return rows;
 	}
 
+	/**
+		A registration must name a project macro declaration, `pack.Type.method`: dot-separated
+		identifiers with at least an owner type and a method. Owners under `haxe.macro.` are the
+		standard macro API and are reserved; a project plugin cannot register them.
+	**/
+	static function requireDeclarationKey(declaration:String, sourceLabel:String):Void {
+		final parts = declaration.split(".");
+		var valid = parts.length >= 2;
+		for (part in parts) {
+			if (part.length == 0) {
+				valid = false;
+				continue;
+			}
+			for (index in 0...part.length) {
+				final code = part.charCodeAt(index);
+				final letter = code >= "A".code && code <= "Z".code || code >= "a".code && code <= "z".code || code == "_".code;
+				if (!(letter || index > 0 && code >= "0".code && code <= "9".code))
+					valid = false;
+			}
+		}
+		if (!valid)
+			fail(sourceLabel, "registration `" + declaration + "` is not a macro declaration (expected pack.Type.method)");
+		if (StringTools.startsWith(declaration, "haxe.macro."))
+			fail(sourceLabel, "registration `" + declaration + "` names a reserved standard macro API owner");
+	}
+
 	static function declarationsForPluginInternal(snapshot:String, pluginId:String, sourceLabel:String, allowEmpty:Bool):Array<String> {
 		final expectedPluginId = requireToken(pluginId, "pluginId", sourceLabel);
 		final rows = decodeSnapshot(snapshot, sourceLabel);
@@ -144,6 +170,7 @@ class NativeMacroModuleHostAbi {
 					+ row.declaration
 					+ "`)");
 			}
+			requireDeclarationKey(row.declaration, sourceLabel);
 			if (seen.exists(row.declaration))
 				fail(sourceLabel, "duplicate declaration registration `" + row.declaration + "` for plugin `" + expectedPluginId + "`");
 			seen.set(row.declaration, true);

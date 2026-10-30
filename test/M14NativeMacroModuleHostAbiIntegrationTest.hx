@@ -36,6 +36,16 @@ class M14NativeMacroModuleHostAbiIntegrationTest {
 			NativeMacroModuleHostAbi.declarationsForPlugin("v3\nabiVersion=2\nmacroApiVersion=1\nfixture.native.macro.plugin\tFixtureNativeMacroPlugin.smoke\nfixture.native.macro.plugin\tFixtureNativeMacroPlugin.smoke\n",
 			"fixture.native.macro.plugin", "fixture://duplicate"),
 			"duplicate declaration registration");
+		// A row must name a declaration (`pack.Type.method`); standard macro API owners are reserved.
+		assertFailsContains(function()
+			NativeMacroModuleHostAbi.declarationsForPlugin("v3\nabiVersion=2\nmacroApiVersion=1\nfixture.native.macro.plugin\tsmoke()\n",
+				"fixture.native.macro.plugin", "fixture://not-a-declaration"),
+			"is not a macro declaration");
+		assertFailsContains(function()
+			NativeMacroModuleHostAbi.declarationsForPlugin("v3\nabiVersion=2\nmacroApiVersion=1\nfixture.native.macro.plugin\thaxe.macro.Context.parse\n",
+				"fixture.native.macro.plugin",
+			"fixture://reserved"),
+			"reserved standard macro API owner");
 		assertFailsContains(function() NativeMacroModuleHostAbi.decodeSnapshot("", "fixture://missing-version"), "snapshot is missing version header");
 		assertFailsContains(function()
 			NativeMacroModuleHostAbi.decodeSnapshot("v2\nabiVersion=1\nmacroApiVersion=1\nfixture.native.macro.plugin\tFixture.smoke\n",
