@@ -18,6 +18,12 @@ RESULTS_TSV="$REPORT_DIR/results.tsv"
 HXHX_BIN_RESOLVED="${HXHX_NATIVE_PLUGIN_LOOP_HXHX_BIN:-${HXHX_BIN:-}}"
 HXHX_BIN_COMMIT="${HXHX_NATIVE_PLUGIN_LOOP_HXHX_COMMIT:-}"
 HXHX_DUNE_JOBS_VALUE="${HXHX_DUNE_JOBS:-auto}"
+# Space-separated routes to measure. `project-macro` times the project expression macro plugin
+# that hxhx builds and caches itself (cold: fresh cache; warm: cache hit); it is reported in
+# project-macro.tsv beside the backend-plugin report.
+ROUTES="${HXHX_NATIVE_PLUGIN_LOOP_ROUTES:-upstream-to-hxhx hxhx-to-hxhx project-macro}"
+PROJECT_MACRO_FIXTURE="$ROOT/test/fixtures/project-macro-identity"
+PROJECT_MACRO_TSV="$REPORT_DIR/project-macro.tsv"
 
 fail() {
 	echo "native plugin-loop benchmark: $*" >&2
@@ -130,6 +136,53 @@ esac
 
 printf 'route\trep\torder\telapsed_ms\tsummary\n' >"$RESULTS_TSV"
 
+route_enabled() {
+	case " $ROUTES " in
+		*" $1 "*)
+			return 0
+			;;
+	esac
+	return 1
+}
+
+backend_routes_enabled() {
+	route_enabled upstream-to-hxhx || route_enabled hxhx-to-hxhx
+}
+
+# One cold compile (fresh plugin cache, so hxhx builds the plugin) and one warm compile (cache
+# hit) of the identity fixture. Both must run the macro and produce upstream's output.
+run_project_macro_sample() {
+	local rep="$1"
+	local sample_dir="$REPORT_DIR/project-macro/$rep"
+	local cache_dir="$sample_dir/cache"
+	local phase expected start_ms elapsed_ms
+	mkdir -p "$sample_dir"
+	for phase in cold warm; do
+		expected="built"
+		[ "$phase" = "warm" ] && expected="reused"
+		start_ms="$(now_ms)"
+		if ! (
+			cd "$PROJECT_MACRO_FIXTURE"
+			HXHX_FORBID_STAGE0=1 HAXE_BIN=__plugin_loop_project_macro_stage0_forbidden__ \
+				"$HXHX_BIN_RESOLVED" --hxhx-stage3 --hxhx-no-run -cp src -main Main \
+				--hxhx-out "$sample_dir/out-$phase" --hxhx-macro-cache "$cache_dir"
+		) >"$sample_dir/$phase.stdout" 2>"$sample_dir/$phase.stderr"; then
+			cat "$sample_dir/$phase.stdout" "$sample_dir/$phase.stderr" >&2 || true
+			fail "project macro $phase compile failed"
+		fi
+		elapsed_ms="$(($(now_ms) - start_ms))"
+		grep -q "^project_macro_plugin=$expected\$" "$sample_dir/$phase.stdout" \
+			|| fail "project macro $phase compile did not report project_macro_plugin=$expected"
+		grep -q '^expr_macros_expanded=1$' "$sample_dir/$phase.stdout" \
+			|| fail "project macro $phase compile did not run the macro"
+		"$sample_dir/out-$phase/out.exe" >"$sample_dir/$phase.run.stdout"
+		diff -u "$PROJECT_MACRO_FIXTURE/expected.stdout" "$sample_dir/$phase.run.stdout" >/dev/null \
+			|| fail "project macro $phase program output differs from upstream"
+		printf 'project-macro\t%s\t%s\t%s\n' "$rep" "$phase" "$elapsed_ms" >>"$PROJECT_MACRO_TSV"
+		echo "sample route=project-macro #$rep phase=$phase ${elapsed_ms}ms"
+	done
+}
+
 run_proof() {
 	local route="$1"
 	local phase="$2"
@@ -199,6 +252,21 @@ echo "Warmups per route: $WARMUPS"
 echo "Dune jobs: $HXHX_DUNE_JOBS_VALUE"
 echo "Report directory: $REPORT_DIR"
 echo ""
+
+if route_enabled project-macro; then
+	printf 'route\trep\tphase\telapsed_ms\n' >"$PROJECT_MACRO_TSV"
+	rep=1
+	while [ "$rep" -le "$REPS" ]; do
+		run_project_macro_sample "$rep"
+		rep="$((rep + 1))"
+	done
+	echo "Project macro plugin samples: $PROJECT_MACRO_TSV"
+fi
+
+if ! backend_routes_enabled; then
+	echo "HXHX_NATIVE_PLUGIN_LOOP_PROJECT_MACRO:PASS"
+	exit 0
+fi
 
 warmup=1
 while [ "$warmup" -le "$WARMUPS" ]; do

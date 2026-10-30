@@ -73,12 +73,15 @@ packages are present and valid:
 - **in-process mode:** compile-time code ran inside the main `hxhx` process;
 - **external-host mode:** compile-time code ran in the reusable helper process,
   with its candidate-bound host receipt and protocol handshake;
-- **project macro module:** one Haxe-authored project macro (`Identity.preserve`)
-  was compiled into a plugin, authenticated, loaded in both native modes, and
-  executed in-process on its authored `Expr` argument. Since plugin ABI version 2
-  the external-host mode loads the same plugin but must report the declaration as
-  unexecuted (`PROJECT_MACRO_MODULE_EXTERNAL_HOST_UNEXECUTED:PASS`) until its
-  protocol gains structured dispatch.
+- **project macro module:** a plain `hxhx` compile of one Haxe-authored project
+  macro (`Identity.preserve`) built its plugin, wrote and validated a version 3
+  receipt bound to the hxhx executable's digest (the smoke records that digest
+  independently as `hxhx_md5`), loaded the plugin, and executed the macro
+  in-process on its authored `Expr` argument. The smoke also proves a warm cache
+  hit, a rebuild after an edit, rejection of changed receipts, and one clear
+  diagnostic without `dune`/`ocamlopt`. Since `haxe_ocaml-9sj5p.4` the
+  external-host mode, which has no structured dispatch method yet, fails the
+  compile at the call (`PROJECT_MACRO_MODULE_EXTERNAL_HOST_REJECTED:PASS`).
 
 For every package, the validator checks:
 

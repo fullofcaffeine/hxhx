@@ -154,20 +154,6 @@ expect_failure() {
   fi
 }
 
-# A selected call that cannot run is reported, with its reason, and the type-only compile goes on.
-expect_unexecuted() {
-  local label="$1"
-  local reason="$2"
-  shift 2
-  compile_app "$label" "$FIXTURE_DIR/src" Main --hxhx-no-emit "$@"
-  require_line "$label" '^expr_macros_unexecuted=1$'
-  if ! grep -Fq "$DECLARATION: " "$ARTIFACT_DIR/$label.compile.stdout" || ! grep -Fq "$reason" "$ARTIFACT_DIR/$label.compile.stdout"; then
-    echo "Project macro run '$label' did not report the unexecuted declaration ($reason)." >&2
-    cat "$ARTIFACT_DIR/$label.compile.stdout" >&2
-    exit 1
-  fi
-}
-
 # Cold: hxhx builds the plugin, runs the macro, and the native program matches upstream.
 cold_start="$(now_ms)"
 compile_app cold "$FIXTURE_DIR/src" Main --hxhx-macro-cache "$CACHE_DIR"
@@ -238,7 +224,7 @@ require_line edited_twice '^project_macro_plugin_reason=.*macro source changed s
 run_app edited_twice
 echo "PROJECT_MACRO_MODULE_REBUILD_ON_EDIT:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
-# Without dune and ocamlopt on PATH the plugin cannot be built; the call reports one clear reason.
+# Without dune and ocamlopt on PATH the plugin cannot be built; the call fails with one clear reason.
 (
   PATH="/usr/bin:/bin"
   export PATH
@@ -246,16 +232,18 @@ echo "PROJECT_MACRO_MODULE_REBUILD_ON_EDIT:PASS" | tee -a "$ARTIFACT_DIR/markers
     echo "The missing-toolchain check needs a PATH without dune and ocamlopt; /usr/bin or /bin provides one." >&2
     exit 1
   fi
-  expect_unexecuted missing_toolchain "project macros need \`dune\` and the OCaml native compiler (\`ocamlopt\`) on PATH" \
+  expect_failure missing_toolchain "$FIXTURE_DIR/src" Main \
+    "expression macro $DECLARATION was not executed: the project macro plugin is unavailable: project macros need \`dune\` and the OCaml native compiler (\`ocamlopt\`) on PATH" \
     --hxhx-macro-cache "$WORK_DIR/toolless-cache"
 )
 echo "PROJECT_MACRO_MODULE_MISSING_TOOLCHAIN:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
-# The external host cannot dispatch declarations yet, so it never builds or loads the plugin.
-expect_unexecuted external_host "the external macro host has no structured dispatch method for project macro declarations yet" \
+# The external host cannot dispatch declarations yet, so a selected call fails instead of running.
+expect_failure external_host "$FIXTURE_DIR/src" Main \
+  "expression macro $DECLARATION was not executed: the external macro host has no structured dispatch method for project macro declarations yet" \
   --hxhx-macro-runtime external-host --hxhx-macro-cache "$CACHE_DIR"
 require_line external_host '^hxhx_macro_runtime_mode=external-host$'
-echo "PROJECT_MACRO_MODULE_EXTERNAL_HOST_UNEXECUTED:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+echo "PROJECT_MACRO_MODULE_EXTERNAL_HOST_REJECTED:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
 # A changed receipt is rejected; hxhx rebuilds instead of loading the plugin it names.
 mutate_receipt() {
