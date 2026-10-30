@@ -73,8 +73,12 @@ packages are present and valid:
 - **in-process mode:** compile-time code ran inside the main `hxhx` process;
 - **external-host mode:** compile-time code ran in the reusable helper process,
   with its candidate-bound host receipt and protocol handshake;
-- **project macro module:** one Haxe-authored project macro was generated,
-  authenticated, loaded, and executed through both native modes.
+- **project macro module:** one Haxe-authored project macro (`Identity.preserve`)
+  was compiled into a plugin, authenticated, loaded in both native modes, and
+  executed in-process on its authored `Expr` argument. Since plugin ABI version 2
+  the external-host mode loads the same plugin but must report the declaration as
+  unexecuted (`PROJECT_MACRO_MODULE_EXTERNAL_HOST_UNEXECUTED:PASS`) until its
+  protocol gains structured dispatch.
 
 For every package, the validator checks:
 

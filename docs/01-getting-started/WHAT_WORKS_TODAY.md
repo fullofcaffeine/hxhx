@@ -18,7 +18,7 @@ If you need deeper architectural details, use:
 | `hxhx` native JS lane | `hxhx --js out.js ...` | Working (scoped MVP) | Scope is intentionally bounded; see `docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md`. |
 | Native backend plugin loading | `-D hxhx_backend_plugin_manifest=...` | Working | Uses `ocaml-dynlink` manifest kind (`.cmxs` / `.cma`). |
 | One native Reflaxe target core for stock Haxe and `hxhx` | Planned M22 semantic ABI | Deferred | Current stock-Haxe eval-host and `hxhx` artifacts are host-specific. M22 waits for Full1, the authentic target hard cut, and two-generation self-promotion. It requires one semantic core and contract; one combined `.cmxs` is a feasibility experiment, while exact generated host shells are allowed. |
-| Native macro module loading | `macro.loadNativeModule` / `macro.runNativeExpr` | Working (promoted-module rung) | ABI/version validation is enforced before registration. |
+| Native macro module loading | `macro.loadNativeModule`; in-process `expandSelected` | Working for one in-process identity macro (plugin ABI v2) | ABI/version validation is enforced before registration. The in-process mode runs a plugin's macro declarations on structured `Expr` arguments; the external host loads plugins but reports declarations unexecuted. Plugins are still built by hand, and no `Context` API is available. |
 
 A useful milestone, but not the finish line: strict/full M7 run `29321576340`
 proved that the bounded Macro, JavaScript, Neko, and plugin bundle works without

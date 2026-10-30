@@ -3,7 +3,17 @@
 Upstream Haxe supports **expression macros**: a call expression that appears in *normal runtime code* is executed at
 compile-time (in the macro context), and the call site is replaced with the expression AST returned by the macro.
 
-This repository implements a small, explicit rung of that feature to support Gate1 bring-up and to validate the pipeline:
+What works today, in short:
+
+- A project macro such as `Identity.preserve(function(label:String):String { ... })` runs its real Haxe body when its
+  class is compiled into a project-macro plugin and the compile runs in-process. The macro receives the authored
+  argument as `haxe.macro.Expr`, and the expression it returns replaces the call before typing.
+  See "Project macro plugins" below.
+- The plugin is still built by hand (the smoke script shows the commands); automatic building is the next step.
+- Macros that need `haxe.macro.Context`, reification (`macro ...`), or the external macro host are not executed yet;
+  such calls are reported as unexecuted.
+
+The older, explicit rung of this feature still exists for Gate1 bring-up:
 
 - detect eligible call sites
 - ask the macro host to expand them
@@ -25,7 +35,8 @@ the feature with a conservative and auditable mechanism, then expand coverage on
 
 ### Compiler-side: `ExprMacroExpander`
 
-In Stage3, when `HXHX_EXPR_MACROS` is set, `hxhx` runs a pre-typing rewrite pass:
+In Stage3, every compile that is not `--hxhx-type-only` runs a pre-typing rewrite pass (the built-in date macros are
+always on the exact-text list, and `HXHX_EXPR_MACROS` adds more):
 
 - file: `packages/hxhx/src/hxhx/ExprMacroExpander.hx`
 - integration point: `packages/hxhx/src/hxhx/Stage3Compiler.hx`
@@ -42,15 +53,15 @@ The expander:
 Calls that do not match the allowlist are selected by declaration: when the callee resolves to a static `macro function`
 through the request's header index (public, or private from its own class), the call is sent to the macro session as one
 structured request (`MacroRuntimeSession.expandSelected`) carrying the selected declaration and the authored argument
-syntax. An allowlisted exact call text always keeps the allowlist route, even if its callee is a macro; that is how the
-no-argument plugin pilot serves a promoted macro.
+syntax. An allowlisted exact call text always keeps the allowlist route, even if its callee is a macro.
 
-Today neither runtime mode has an executor for a structured request. Such a call is reported on stdout and then typed
-as before, so a later failure is attributable:
+The in-process session runs a selected declaration when a loaded project-macro plugin provides it (next section). When
+no plugin provides it, or in the external-host mode, which has no structured dispatch method yet, the call is reported
+on stdout and then typed as before, so a later failure is attributable:
 
 ```
 expr_macros_unexecuted=1
-expr_macro_unexecuted[0]=Main.hx: macros.Macros.items: the in-process macro runtime has no executor for project macro declaration macros.Macros.items; ...
+expr_macro_unexecuted[0]=Main.hx: macros.Macros.items: no loaded project macro plugin provides declaration macros.Macros.items
 ```
 
 An unexpanded macro call is typed by the macro call-site contract (`TyMacroCallSignature`), not as an ordinary call:
@@ -62,10 +73,57 @@ nothing is selected there. It is a trace line only, because standard-library swi
 
 Important constraints:
 
-- Selected `macro function` declarations are not executed yet; they are reported and then typed by the macro call-site
-  contract described above.
-- We do **not** type-check the returned expression snippet yet; we just parse it into the bootstrap `HxExpr` subset.
-- The returned snippet must be parsable by `HxParser.parseExprText` (tiny expression grammar).
+- A selected `macro function` declaration runs only through a loaded project-macro plugin in the in-process mode.
+  Otherwise it is reported and then typed by the macro call-site contract described above.
+- For the exact-text allowlist route below:
+  - we do **not** type-check the returned expression snippet yet; we just parse it into the bootstrap `HxExpr` subset;
+  - the returned snippet must be parsable by `HxParser.parseExprText` (tiny expression grammar).
+
+### Project macro plugins (in-process)
+
+A project macro plugin is an OCaml library compiled from the project's macro classes by hxhx's own Stage3 emitter. For
+each listed macro declaration it registers a generated adapter of Haxe type `Array<haxe.macro.Expr> -> haxe.macro.Expr`
+that calls the real macro method.
+
+```bash
+# 1. Build the plugin (bytecode .cma and native .cmxs) from the macro class.
+hxhx --hxhx-stage3 --hxhx-no-run \
+  -cp packages/hxhx-core/src -cp src \
+  -main hxhxmacrohost.MacroDeclarationPlugin \
+  --hxhx-out plugin \
+  -D ocaml_dune_layout=plugin \
+  -D ocaml_plugin_register_macro=my.project.macros \
+  -D ocaml_plugin_macro_declarations=Identity.preserve
+# The compile prints exe=<plugin>/hxhx_macro_plugin_my_project_macros.cma: the plugin is a
+# wrapped dune library, so its modules cannot collide with the compiler's own when loaded.
+(cd plugin && dune build ./hxhx_macro_plugin_my_project_macros.cma ./hxhx_macro_plugin_my_project_macros.cmxs)
+
+# 2. Write a receipt that binds the plugin to this compiler build, then compile the project.
+node scripts/ci/native-macro-module-receipt.js write --report module/receipt.json \
+  --candidate-commit <id> --plugin-id my.project.macros --declarations Identity.preserve \
+  --native-artifact module/plugin.cmxs --bytecode-artifact module/plugin.cma
+HXHX_NATIVE_MACRO_MODULE_RECEIPT=module/receipt.json HXHX_CANDIDATE_COMMIT=<id> \
+  hxhx --hxhx-stage3 -cp src -main Main --hxhx-out out
+```
+
+During the compile, for each selected call of a provided declaration:
+
+1. `MacroSyntaxExport` converts each authored argument to `haxe.macro.Expr`. Brace groups, function signatures,
+   `return`, loops, and branches keep their public form (`EBlock`, `EFunction`, `EReturn`, ...).
+2. `MacroSyntaxWire` encodes the arguments, the plugin adapter runs the macro, and the result comes back encoded. The
+   compiler binary and the plugin are compiled by different OCaml backends, so `Expr` values cross the boundary as this
+   versioned structured payload, never as raw memory and never as source text.
+3. `MacroSyntaxImport` converts the returned expression to parser syntax, which replaces the call and is then typed
+   like authored code.
+
+A macro exception, an argument without a recorded source position, or a returned shape the importer does not support
+(for example `ESwitch` or metadata other than `@:privateAccess`) is a compile error at the call; it never falls back to
+an ordinary call.
+
+Positions are approximate: a node that the parser gave a start position receives a zero-width position at that start in
+the call file; other nodes reuse their nearest enclosing node's position. Exact source ranges are tracked separately.
+
+The working example is `test/fixtures/project-macro-identity`, checked by `npm run test:macro-runtime:project-module`.
 
 ### Macro-host-side: `macro.expandExpr`
 
@@ -136,7 +194,8 @@ This rung is compatible with the Stage4 macro-host model:
 - macro execution is isolated in the macro-host process
 - the bridge is a small, versioned RPC protocol
 
-As Stage4 grows toward full upstream macro compatibility, this bring-up “expression text snippet” approach is expected
-to evolve toward transmitting a real expression AST over the macro ABI (or an equivalent structured form), while keeping
-this rung’s tests as a regression guard for “expression macro splicing works end-to-end”.
+Project macro plugins already transmit a structured expression form (`MacroSyntaxWire`) over plugin ABI version 2; the
+external macro host loads such plugins but cannot dispatch them yet. The exact-text snippet route remains for built-in
+and generated bring-up entrypoints, and its tests remain a regression guard for "expression macro splicing works
+end-to-end".
 

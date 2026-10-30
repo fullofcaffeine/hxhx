@@ -1,5 +1,15 @@
 # Project macro modules: first safe native loading path
 
+> **Superseded (2026-10-29) by plugin ABI version 2** (`haxe_ocaml-9sj5p.3`, see
+> [EXPRESSION_MACRO_ARGUMENT_PLAN.md](EXPRESSION_MACRO_ARGUMENT_PLAN.md)). The loading, receipt, and
+> identity checks described here remain. The exact-expression `unit -> string` handler
+> (`register_expr_handler`, `-D ocaml_plugin_macro_expr`, `-D ocaml_plugin_macro_handler`,
+> `macro.runNativeExpr`) and the `projectmacro` fixture were removed. A plugin now registers one
+> generated adapter per macro declaration with `register_macro_declaration`, the real macro body
+> runs on structured `haxe.macro.Expr` arguments in the in-process mode, and the smoke uses
+> `test/fixtures/project-macro-identity`. Version 1 receipts and plugins are rejected. The text
+> below records the original pilot decision.
+
 Status: implemented and verified for `haxe_ocaml-vhk47.3`
 Risk level: `thinking:xhigh`
 Decision date: 2026-07-14

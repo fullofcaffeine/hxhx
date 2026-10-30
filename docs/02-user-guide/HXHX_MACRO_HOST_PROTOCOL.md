@@ -409,29 +409,23 @@ Load a promoted native macro module artifact and validate its registration ABI b
 `<payload>` is a list of length-prefixed fragments:
 
 - `c=<len>:<count>`
-- then `e0=<...> e1=<...> ...` (registered expression entrypoints)
+- then `e0=<...> e1=<...> ...` (registered macro declarations, `pack.Type.method`)
 
 Validation semantics:
 
 - The macro host dynlinks the artifact and captures registration snapshot rows.
-- Snapshot format is versioned (`v2`) and decoded by `NativeMacroModuleHostAbi`.
+- Snapshot format is versioned (`v3`, plugin ABI version 2) and decoded by `NativeMacroModuleHostAbi`.
 - Snapshot headers must match host compatibility requirements before any handler registration is accepted:
   - `abiVersion=<expected>`
   - `macroApiVersion=<expected>`
 - All rows must match request plugin ID (`i=`); mismatches are hard errors.
-- Duplicate expression registrations are hard errors.
+- Duplicate declaration registrations are hard errors.
 
-### `macro.runNativeExpr` (native module promotion rung)
-
-Run one expression entrypoint previously registered via `macro.loadNativeModule`.
-
-- request: `req <id> macro.runNativeExpr e=<len>:<expr>`
-- response: `res <id> ok v=<len>:<result>`
-
-Failure semantics:
-
-- If `expr` was not registered by a loaded native module in the current host session,
-  the host returns a deterministic error (`native macro expr not registered: <expr>`).
+The host records the declarations but cannot run them: the protocol has no structured dispatch
+method yet, so the compiler's external-host session reports selected declarations as unexecuted.
+The former `macro.runNativeExpr` method ran a no-argument `unit -> string` handler; it was removed
+with plugin ABI version 2. In-process compiles run declarations directly (see
+[HXHX_EXPRESSION_MACROS.md](HXHX_EXPRESSION_MACROS.md)).
 
 ### `macro.runHook` (bring-up rung)
 
@@ -496,9 +490,9 @@ Native macro-module dynlink smoke (C7R lane):
 npm run test:hxhx:macro-module-dynlink-smoke
 ```
 
-This smoke builds a promoted native macro module artifact, loads it through `macro.loadNativeModule`,
-runs it via `macro.runNativeExpr`, and asserts negative diagnostics for plugin-ID mismatch and
-missing entrypoint.
+This smoke builds a native macro module artifact that registers one macro declaration, loads it
+through `macro.loadNativeModule`, checks the registered declaration list, and asserts the negative
+diagnostic for a plugin-ID mismatch.
 
 ### Macro host build modes (bootstrap vs stage0 vs Stage3)
 
