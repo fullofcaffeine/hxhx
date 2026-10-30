@@ -42,6 +42,39 @@ class M14NativeCallbackCallPathsTest {
 		Sys.println("NATIVE_CALLBACK_CALL_PATH:PASS " + name);
 	}
 
+	/**
+		Compile through the production `Stage3Compiler` request path, then run the native program.
+
+		A selected instance method call on a captured value (`values.push`) inside a callback, and
+		another (`values.join`) in the same program, are method calls on their receiver. Their exact
+		payload must not be counted as callback arguments (haxe_ocaml-fikpj); before the fix the
+		emitter stopped with "Native callback call lost its fixed argument mapping".
+	**/
+	static function checkCompiled(name:String, source:String):Void {
+		final directory = ".tmp/native_callback_call_paths/" + name;
+		sys.FileSystem.createDirectory(directory);
+		sys.io.File.saveContent(directory + "/Main.hx", source);
+		observe("node_modules/.bin/haxe", ["-cp", directory, "--run", "Main"]);
+		final request = hxhx.CompilationRequestContext.server(1);
+		final code = hxhx.Stage3Compiler.runRequest([
+			"--hxhx-no-run",
+			"--hxhx-out",
+			directory + "/stage3",
+			"-cp",
+			directory,
+			"-main",
+			"Main"
+		], request);
+		final output = new StringBuf();
+		for (event in request.output.events())
+			output.add(event.text);
+		request.close(code == 0);
+		if (code != 0)
+			throw "Callback program did not compile natively: " + output.toString();
+		observe(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", ["30", directory + "/stage3/out.exe"]);
+		Sys.println("NATIVE_CALLBACK_CALL_PATH:PASS " + name);
+	}
+
 	static function main():Void {
 		check("grouped", "class Main {
 			static function observe(value:Dynamic):Dynamic { Sys.println(value); return value; }
@@ -53,5 +86,13 @@ class M14NativeCallbackCallPathsTest {
 			static function factory():Int->Dynamic return observe;
 			static function main():Void { Sys.println(factory()(7)); }
 		}", true);
+		checkCompiled("captured-instance-calls", "class Main {
+			static function main():Void {
+				final values = new Array<String>();
+				final record = function(value:Int):Void { values.push(Std.string(value)); };
+				record(7);
+				Sys.println(values.join(\",\"));
+			}
+		}");
 	}
 }
