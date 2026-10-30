@@ -1,0 +1,10 @@
+reverse -> z,y,x
+pop x -> z,y
+shift z -> y
+unshift -> a,y
+insert -> a,b,y
+remove true false contains true false -> a,y
+empty pop null
+ints pop 3 shift 2 remove true contains true -> 9,1
+toString [9,1]
+resize 4
