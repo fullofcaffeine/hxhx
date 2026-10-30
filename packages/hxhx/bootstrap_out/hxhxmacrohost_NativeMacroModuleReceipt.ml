@@ -92,7 +92,7 @@ let normalizeDigest = fun (value : string) -> (let digest = (let __string_receiv
   )
 ) : string)
 
-let decodeExpressions = fun value -> let tempArray = ref (Obj.magic (HxRuntime.hx_null) : Hxhx_CompilerJsonValue.compilerjsonvalue HxArray.t) in (
+let decodeDeclarations = fun value -> let tempArray = ref (Obj.magic (HxRuntime.hx_null) : Hxhx_CompilerJsonValue.compilerjsonvalue HxArray.t) in (
   ignore (if (match value with
     | Hxhx_CompilerJsonValue.JsonNull -> 0
     | Hxhx_CompilerJsonValue.JsonBool _ -> 1
@@ -105,18 +105,18 @@ let decodeExpressions = fun value -> let tempArray = ref (Obj.magic (HxRuntime.h
     | _ -> failwith "Unexpected enum parameter") in let values = Obj.magic _g in let __assign_58 = Obj.magic values in (
     tempArray := __assign_58;
     __assign_58
-  ) else HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_59 = "expressions must be an array" in failureMessage __call_arg_0_59)) ["Dynamic"]);
+  ) else HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_59 = "declarations must be an array" in failureMessage __call_arg_0_59)) ["Dynamic"]);
   let raw = Obj.magic (!tempArray) in (
-    ignore (if HxArray.length raw = 0 then HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_60 = "expressions must contain at least one exact macro call" in failureMessage __call_arg_0_60)) ["Dynamic"] else ());
+    ignore (if HxArray.length raw = 0 then HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_60 = "declarations must contain at least one macro declaration" in failureMessage __call_arg_0_60)) ["Dynamic"] else ());
     let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
       ignore (while !_g < HxArray.length raw do ignore (let entry = Obj.magic (let __array_read_receiver_61 = raw in let __array_read_index_62 = !_g in HxArray.get (Obj.magic __array_read_receiver_61) __array_read_index_62) in (
         ignore (let __old_63 = !_g in let __new_64 = HxInt.add __old_63 1 in (
           ignore (_g := __new_64);
           __new_64
         ));
-        let expr = (requiredString (Obj.magic entry) ("expressions[]" : string) : string) in (
-          ignore (if (let __array_receiver_65 = Obj.magic out in let __array_arg_0_66 = (expr : string) in HxArray.indexOf_default __array_receiver_65 __array_arg_0_66) <> -1 then HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_67 = ("duplicate expression `" ^ HxString.toStdString expr) ^ "`" in failureMessage __call_arg_0_67)) ["Dynamic"] else ());
-          let __array_receiver_68 = Obj.magic out in let __array_arg_0_69 = (expr : string) in HxArray.push __array_receiver_68 __array_arg_0_69
+        let declaration = (requiredString (Obj.magic entry) ("declarations[]" : string) : string) in (
+          ignore (if (let __array_receiver_65 = Obj.magic out in let __array_arg_0_66 = (declaration : string) in HxArray.indexOf_default __array_receiver_65 __array_arg_0_66) <> -1 then HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_67 = ("duplicate declaration `" ^ HxString.toStdString declaration) ^ "`" in failureMessage __call_arg_0_67)) ["Dynamic"] else ());
+          let __array_receiver_68 = Obj.magic out in let __array_arg_0_69 = (declaration : string) in HxArray.push __array_receiver_68 __array_arg_0_69
         )
       )) done);
       out
@@ -160,14 +160,14 @@ let loadFromEnvironment = fun artifactKind -> (try let configuredPath = (HxSys.g
           ()
         )) else HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_88 = "receipt JSON must be an object" in failureMessage __call_arg_0_88)) ["Dynamic"]);
         let schema = (requiredString (Obj.magic (requiredField (Obj.magic decoded) ("schema" : string))) ("schema" : string) : string) in (
-          ignore (if let __string_eq_left_89 = schema in let __string_eq_right_90 = "hxhx.native-macro-module.v1" in not (HxString.equals __string_eq_left_89 __string_eq_right_90) then HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_91 = ((("unsupported schema `" ^ HxString.toStdString schema) ^ "` (expected `") ^ "hxhx.native-macro-module.v1") ^ "`)" in failureMessage __call_arg_0_91)) ["Dynamic"] else ());
+          ignore (if let __string_eq_left_89 = schema in let __string_eq_right_90 = "hxhx.native-macro-module.v2" in not (HxString.equals __string_eq_left_89 __string_eq_right_90) then HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_91 = ((("unsupported schema `" ^ HxString.toStdString schema) ^ "` (expected `") ^ "hxhx.native-macro-module.v2") ^ "`)" in failureMessage __call_arg_0_91)) ["Dynamic"] else ());
           let candidateCommit = (requiredString (Obj.magic (requiredField (Obj.magic decoded) ("candidateCommit" : string))) ("candidateCommit" : string) : string) in let expectedCandidate = let __call_arg_0_92 = HxSys.getEnv ("HXHX_CANDIDATE_COMMIT" : string) in let __call_arg_1_93 = "HXHX_CANDIDATE_COMMIT" in requiredText __call_arg_0_92 __call_arg_1_93 in (
             ignore (if let __string_eq_left_94 = candidateCommit in let __string_eq_right_95 = expectedCandidate in not (HxString.equals __string_eq_left_94 __string_eq_right_95) then HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_96 = ((("candidate mismatch: receipt has `" ^ HxString.toStdString candidateCommit) ^ "`, current compiler expects `") ^ HxString.toStdString expectedCandidate) ^ "`" in failureMessage __call_arg_0_96)) ["Dynamic"] else ());
             let pluginId = (requiredString (Obj.magic (requiredField (Obj.magic decoded) ("pluginId" : string))) ("pluginId" : string) : string) in let abiVersion = requiredInt (Obj.magic (requiredField (Obj.magic decoded) ("abiVersion" : string))) ("abiVersion" : string) in (
-              ignore (if abiVersion <> 1 then HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_97 = (("abiVersion mismatch: expected " ^ string_of_int 1) ^ ", got ") ^ string_of_int abiVersion in failureMessage __call_arg_0_97)) ["Dynamic"] else ());
+              ignore (if abiVersion <> 2 then HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_97 = (("abiVersion mismatch: expected " ^ string_of_int 2) ^ ", got ") ^ string_of_int abiVersion in failureMessage __call_arg_0_97)) ["Dynamic"] else ());
               let macroApiVersion = requiredInt (Obj.magic (requiredField (Obj.magic decoded) ("macroApiVersion" : string))) ("macroApiVersion" : string) in (
                 ignore (if macroApiVersion <> 1 then HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_98 = (("macroApiVersion mismatch: expected " ^ string_of_int 1) ^ ", got ") ^ string_of_int macroApiVersion in failureMessage __call_arg_0_98)) ["Dynamic"] else ());
-                let expressions = Obj.magic (decodeExpressions (Obj.magic (requiredField (Obj.magic decoded) ("expressions" : string)))) in let tempString = ref (HxString.hx_null_string : string) in (
+                let declarations = Obj.magic (decodeDeclarations (Obj.magic (requiredField (Obj.magic decoded) ("declarations" : string)))) in let tempString = ref (HxString.hx_null_string : string) in (
                   ignore (if artifactKind == HxString.hx_null_string then let __assign_99 = ("" : string) in (
                     tempString := __assign_99;
                     __assign_99
@@ -184,7 +184,7 @@ let loadFromEnvironment = fun artifactKind -> (try let configuredPath = (HxSys.g
                         let __anon_117 = HxAnon.create () in (
                           ignore (HxAnon.set __anon_117 "candidateCommit" (Obj.repr candidateCommit));
                           ignore (HxAnon.set __anon_117 "pluginId" (Obj.repr pluginId));
-                          ignore (HxAnon.set __anon_117 "expressions" (Obj.repr expressions));
+                          ignore (HxAnon.set __anon_117 "declarations" (Obj.repr declarations));
                           ignore (HxAnon.set __anon_117 "artifactKind" (Obj.repr selectedArtifactKind));
                           ignore (HxAnon.set __anon_117 "artifactPath" (Obj.repr artifactPath));
                           ignore (HxAnon.set __anon_117 "artifactSha256" (Obj.repr actualDigest));

@@ -17,4 +17,10 @@ let clear = fun () -> ignore (HxHxMacroModuleHost.clear ())
 
 let snapshot = fun () -> (HxHxMacroModuleHost.snapshot () : string)
 
-let runExpr = fun (expr : string) -> (HxHxMacroModuleHost.run_expr (expr : string) : string)
+let runDeclaration = fun (declaration : string) (payload : string) -> (try let response = (HxHxMacroModuleHost.run_declaration (declaration : string) (payload : string) : string) in (
+  ignore (if response == HxString.hx_null_string then HxType.hx_throw_typed_rtti (Obj.repr "native macro module host returned no response") ["Dynamic"] else ());
+  ignore (if let __call_arg_0_1 = response in let __call_arg_1_2 = "ok\n" in StringTools.startsWith __call_arg_0_1 __call_arg_1_2 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_receiver_3 = response in let __string_argument_0_4 = 3 in HxString.substr __string_receiver_3 __string_argument_0_4 (-1)))) else ());
+  ignore (if let __call_arg_0_5 = response in let __call_arg_1_6 = "err\n" in StringTools.startsWith __call_arg_0_5 __call_arg_1_6 then HxType.hx_throw_typed_rtti (Obj.repr (let __string_receiver_7 = response in let __string_argument_0_8 = 4 in HxString.substr __string_receiver_7 __string_argument_0_8 (-1))) ["Dynamic"] else ());
+  HxType.hx_throw_typed_rtti (Obj.repr "native macro module host returned a malformed response") ["Dynamic"]
+) with
+  | HxRuntime.Hx_return __ret_9 -> (Obj.obj __ret_9 : string) : string)
