@@ -250,6 +250,18 @@ their evidence links stay findable. Newest entries come first.
 
 Evidence since 2026-10-29:
 
+- PR #106 (`abf659c48`, `haxe_ocaml-tl2yx`) routes `sys.io.File` and
+  `sys.FileSystem` calls in Stage3 native output by their typed owner, so
+  qualified spellings no longer reach the empty generated stub, and adds an
+  emit-time error for any bodiless static call that would. It also fixes
+  `.length` on String/Array call results and two `HxFileSystem` parity gaps.
+  Its final revision passed every check except the known Gate 1 Lite failure.
+  The bootstrap snapshot generated from `abf659c48` (bootstrap-regen-bench run
+  41096208886) carries #103 and #106; a local continue-on-failure run of
+  `test:hxhx-targets` with the hxhx built from it finished `OK: hxhx lanes`.
+  Bars unchanged: these are focused correctness fixes and the macro limits
+  below still apply.
+
 - Macro PR1 landed as a stack: PR #104 (`e0feec923`), PR #105 (`913d25e4a`),
   and PR #103 (`e75488203`). An in-process `hxhx` compile now runs the
   project's own `Identity.preserve` expression macro from a native plugin

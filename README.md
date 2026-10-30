@@ -69,9 +69,16 @@ Readiness review, 2026-10-30. These changes reached `main` since the
   confirmed that fix yet.
 - PR #97 makes compound assignments such as `x -= 2` produce the stored value
   when used as a value, with upstream evaluation order.
-- PRs #99 and #102 import regenerated bootstrap snapshots, so the committed
-  compiler includes #95, #97, and #101. The snapshot predates the macro work
-  in #103, which needs one more regeneration.
+- PR #106 makes `sys.io.File` and `sys.FileSystem` calls work in native
+  Stage3 programs however they are spelled. Before, qualified calls such as
+  `sys.io.File.getContent(...)` reached an empty stub and crashed. A static
+  call that would reach such a stub now stops the compile with an error
+  instead. Byte and stream file operations are not routed yet
+  (`haxe_ocaml-ysjdv`), and native file errors cannot yet be caught from
+  Haxe (`haxe_ocaml-u3n4l`).
+- Bootstrap snapshot imports (PRs #99, #102, and the import after #106) keep
+  the committed compiler current. It now includes #95, #97, #101, the macro
+  work in #103, and #106.
 - PR #98 gives every known red CI result an owner. The evidence audit, which
   had failed since 2026-08-16, now
   [passes](https://github.com/fullofcaffeine/hxhx/actions/runs/41030387107).
