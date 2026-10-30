@@ -286,6 +286,16 @@ class Stage3OcamlCallableFunction {
 		if (direct
 			&& !reflaxe.ocaml.lowered.OcamlCallableProgramAdmission.needsBoundary(Stage3OcamlCallableSelection.declarationShape(declaration)))
 			return null;
+		// A selected instance method call (`events.push(value)`) is a method call on its receiver,
+		// not a call of a callback value. Its exact payload also carries the receiver and the
+		// selected declaration as extra operands, so it must never be counted as callback
+		// arguments. Without callback-typed parameters or results the method keeps its ordinary
+		// interface, and ordinary emission owns it, exactly as for direct static calls above.
+		if (TypedExactCallSource.decodeInstance(expression) != null
+			&& declaration != null
+			&& !declaration.getIsStatic()
+			&& !reflaxe.ocaml.lowered.OcamlCallableProgramAdmission.needsBoundary(Stage3OcamlCallableSelection.declarationShape(declaration)))
+			return null;
 		final exact = TypedExactStaticCallSource.decode(expression);
 		final projected = if (exact != null) {
 			{callee: exact.callee, arguments: exact.arguments};
