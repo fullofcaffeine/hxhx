@@ -1,17 +1,20 @@
 import haxe.macro.Expr;
+import hxhxmacrohost.MacroSyntaxWire;
 
 /**
 	A project macro receives authored syntax as `haxe.macro.Expr` and its result becomes parser
 	syntax again. This test proves that round trip without running a macro:
 
 	1. parse a real fixture call and export its argument (`MacroSyntaxExport`),
-	2. import the identity result (`MacroSyntaxImport`),
-	3. compare the imported syntax with the parsed argument using the parser's exact body
+	2. send it through the plugin payload (`MacroSyntaxWire`) in both directions,
+	3. import the identity result (`MacroSyntaxImport`),
+	4. compare the imported syntax with the parsed argument using the parser's exact body
 	   fingerprint, which covers every node, written annotation, and position.
 
 	Fixtures: the nested-return function of `test/fixtures/project-macro-identity` and the loop of
 	`test/fixtures/expression_macro_while`. It also checks the public shape the identity macro
-	inspects, the documented position contract, and explicit rejection of unsupported shapes.
+	inspects, the documented position contract, and explicit rejection of unsupported shapes and
+	malformed payloads.
 **/
 class M14MacroSyntaxRoundTripTest {
 	static function require(value:Bool, message:String):Void {
@@ -71,11 +74,17 @@ class M14MacroSyntaxRoundTripTest {
 		return found[0];
 	}
 
-	/** Export and import one argument; return the imported syntax. */
+	/** Export, transport, decode, re-encode, and import one argument; return the imported syntax. */
 	static function roundTrip(file:String, argument:HxExpr):{exported:Expr, imported:HxExpr} {
 		final positions = new MacroSyntaxPositions(file);
 		final exported = new MacroSyntaxExport(positions).argument(argument, 0);
-		final returned = exported;
+		final payload = MacroSyntaxWire.encodeArguments([exported]);
+		final decoded = MacroSyntaxWire.decodeArguments(payload);
+		require(decoded.length == 1, file + ": payload changed the argument count");
+		require(MacroSyntaxWire.encodeArguments(decoded) == payload, file + ": payload is not stable across a decode");
+		final response = MacroSyntaxWire.encodeResult(decoded[0]);
+		require(!MacroSyntaxWire.isFailure(response), file + ": a result payload was read as a failure");
+		final returned = MacroSyntaxWire.decodeResult(response);
 		final imported = new MacroSyntaxImport(positions).result(returned);
 		require(TypedBodyFingerprint.exactExpression(imported) == TypedBodyFingerprint.exactExpression(argument),
 			file
@@ -226,10 +235,126 @@ class M14MacroSyntaxRoundTripTest {
 		})) == "haxe.ds.StringMap<Int>", "type path text changed");
 	}
 
+	static function wireCoverage():Void {
+		final p:Position = {file: "Cover.hx", min: 1, max: 2};
+		function e(definition:ExprDef):Expr
+			return {expr: definition, pos: p};
+		final x = e(EConst(CIdent("x")));
+		final type = TPath({
+			pack: ["haxe"],
+			name: "Rest",
+			params: [
+				TPType(TAnonymous([
+					{
+						name: "a",
+						doc: "doc",
+						access: [APublic, AFinal],
+						kind: FProp("get", "never", TOptional(TNamed("n", TParent(TIntersection([]))))),
+						pos: p,
+						meta: [
+							{
+								name: ":optional",
+								params: null,
+								pos: p
+							}
+						]
+					}
+				]))
+			],
+			sub: "Sub"
+		});
+		final everything = e(EBlock([
+			e(EConst(CInt("1", null))),
+			e(EConst(CFloat("1.5", "f64"))),
+			e(EConst(CString("s", SingleQuotes))),
+			e(EConst(CRegexp("a+", "g"))),
+			e(EArray(x, x)),
+			e(EBinop(OpAssignOp(OpNullCoal), x, x)),
+			e(EField(x, "f", Safe)),
+			e(EParenthesis(x)),
+			e(EObjectDecl([
+				{
+					field: "q",
+					expr: x,
+					quotes: Quoted
+				}
+			])),
+			e(EArrayDecl([x])),
+			e(ECall(x, [])),
+			e(ENew({pack: [], name: "T"}, [x])),
+			e(EUnop(OpSpread, false, x)),
+			e(EVars([
+				{
+					name: "v",
+					type: type,
+					expr: null,
+					isFinal: true,
+					meta: [],
+					namePos: p
+				}
+			])),
+			e(EFunction(FNamed("f", true),
+				{
+					args: [
+						{
+							name: "a",
+							opt: true,
+							type: null,
+							value: x,
+							meta: null
+						}
+					],
+					ret: TFunction([], TExtend([{pack: [], name: "B"}], [])),
+					expr: x,
+					params: [
+						{
+							name: "T",
+							constraints: [type],
+							params: [],
+							meta: null,
+							defaultType: null
+						}
+					]
+				})),
+			e(EFor(x, x)),
+			e(EIf(x, x, null)),
+			e(EWhile(x, x, false)),
+			e(ESwitch(x, [{values: [x], guard: x, expr: null}], x)),
+			e(ETry(x, [{name: "c", type: null, expr: x}])),
+			e(EReturn(null)),
+			e(EBreak),
+			e(EContinue),
+			e(EUntyped(x)),
+			e(EThrow(x)),
+			e(ECast(x, null)),
+			e(EDisplay(x, DKPattern(true))),
+			e(ETernary(x, x, x)),
+			e(ECheckType(x, TPath({
+				pack: [],
+				name: "T",
+				params: [TPExpr(x)]
+			}))),
+			e(EMeta({name: "m", params: [x], pos: p}, x)),
+			e(EIs(x, type))
+		]));
+		final payload = MacroSyntaxWire.encodeResult(everything);
+		require(MacroSyntaxWire.encodeResult(MacroSyntaxWire.decodeResult(payload)) == payload, "full syntax payload is not stable across a decode");
+		final failure = MacroSyntaxWire.encodeFailure("macro said no");
+		require(MacroSyntaxWire.isFailure(failure)
+			&& MacroSyntaxWire.decodeFailure(failure) == "macro said no", "failure payload changed");
+		requireFailure("truncated", "macro syntax wire:", "truncated", () -> MacroSyntaxWire.decodeResult(payload.substr(0, payload.length - 3)));
+		requireFailure("trailing", "macro syntax wire:", "trailing", () -> MacroSyntaxWire.decodeResult(payload + "_"));
+		requireFailure("version", "macro syntax wire:", "version", () -> MacroSyntaxWire.decodeResult("hxhx-macro-syntax.v0\nR"));
+		requireFailure("envelope", "macro syntax wire:", "envelope", () -> MacroSyntaxWire.decodeArguments(payload));
+		requireFailure("constructor", "macro syntax wire:", "unknown expression constructor",
+			() -> MacroSyntaxWire.decodeResult(MacroSyntaxWire.VERSION + "\nRS5:ENope"));
+	}
+
 	static function main():Void {
 		identityShape();
 		whileShape();
 		positionsAndRejections();
+		wireCoverage();
 		Sys.println("M14_MACRO_SYNTAX_ROUND_TRIP:PASS");
 	}
 }
