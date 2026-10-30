@@ -526,6 +526,43 @@ The two similarly named Reflaxe benchmarks answer different questions:
   digest. Its comparison is report-only until repeated observations support a
   stable threshold.
 
+### Project macro plugin build (2026-10-30)
+
+Since `haxe_ocaml-9sj5p.4`, a compile that calls a project expression macro
+builds the macro's native plugin itself (a child hxhx compile of the macro
+classes plus `dune build`) and caches it by content digest. The
+`project-macro` route of `hxhx:bench:native-plugin-loop` measures it:
+
+```bash
+HXHX_NATIVE_PLUGIN_LOOP_ROUTES=project-macro HXHX_NATIVE_PLUGIN_LOOP_REPS=3 \
+  HXHX_NATIVE_PLUGIN_LOOP_HXHX_BIN=<native hxhx built from the commit> \
+  HXHX_NATIVE_PLUGIN_LOOP_HXHX_COMMIT=<that commit> \
+  bash scripts/hxhx/bench-native-plugin-loop.sh
+```
+
+Each sample compiles `test/fixtures/project-macro-identity` twice into a fresh
+cache: *cold* (the plugin is built) and *warm* (the cached plugin is reused).
+Both must run the macro and print upstream's output.
+
+First measurement (macOS arm64, OCaml 5.4.0, dune 3.21.0, native hxhx built
+from stack commit `ef3923cf6` with stage0; the host was shared with other
+compiler builds, load average 10 to 26):
+
+| Compile | Samples (ms) | Median |
+| --- | --- | --- |
+| cold (plugin built) | 30156, 31558, 31353 | 31.4 s |
+| warm (cache hit) | 36563 (outlier under load), 15875, 15595 | 15.9 s |
+| same program without the macro call | 12860 (one run) | 12.9 s |
+
+So a plugin build adds about 15 to 16 s to a compile, and a cache hit adds
+about 3 s over the same program without a macro (two macro passes, digesting
+the runtime sources, the recorded macro sources, and the plugin artifact with
+the Haxe-authored SHA-256, and loading the plugin). Under the interpreter
+(`npm run test:m14:project-macro-plugin-cache`) the cache alone takes about
+42 s cold and 1.7 s warm. The numbers are report-only. The warm overhead is
+the next target: a native digest primitive for these checks would remove most
+of it without weakening them.
+
 When a bead materially changes compiler iteration speed, plugin/native artifact
 loops, bootstrap regeneration, or Full1 throughput:
 

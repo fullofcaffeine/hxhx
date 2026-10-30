@@ -12,17 +12,29 @@ event line (`expected.stdout`). Upstream Haxe 4.3.7 produces the same output:
 cd test/fixtures/project-macro-identity && haxe oracle.hxml
 ```
 
-The hxhx check is `npm run test:macro-runtime:project-module`
-(`scripts/hxhx/run-project-macro-module-smoke.sh`). It:
+A plain compile runs the macro; hxhx builds, caches, and loads its native plugin itself:
 
-1. builds a plugin from `Identity.hx` with hxhx's own Stage3 OCaml emitter
-   (`-main hxhxmacrohost.MacroDeclarationPlugin -D ocaml_plugin_macro_declarations=Identity.preserve`),
-2. writes and validates a receipt for that plugin,
-3. compiles `Main.hx` in-process with the plugin loaded, runs the native program, and compares
-   its output with `expected.stdout`,
-4. checks that `WrongSignature.hx` fails at the macro call with the macro's own message, that a
-   compile without a plugin reports the call as unexecuted, that the external macro host loads
-   the plugin but reports the declaration as unexecuted, and that changed receipts are rejected.
+```bash
+cd test/fixtures/project-macro-identity && hxhx --hxhx-stage3 -cp src -main Main
+```
+
+The hxhx check is `npm run test:macro-runtime:project-module`
+(`scripts/hxhx/run-project-macro-module-smoke.sh`, which needs a native hxhx built from the
+current sources). It checks that:
+
+1. the first compile builds the plugin (`project_macro_plugin=built`), runs the macro, and the
+   native program prints `expected.stdout`;
+2. a second compile reuses the plugin (`project_macro_plugin=reused`);
+3. `WrongSignature.hx` fails at the macro call with the macro's own message;
+4. editing `Identity.hx` rebuilds the plugin;
+5. without `dune` and `ocamlopt`, and in the external-host mode, the call fails with one clear
+   reason;
+6. a changed receipt (compiler identity, ABI version, declaration, artifact digest) is rejected
+   and the plugin is rebuilt;
+7. the plain command above, with the default cache directory, runs the macro.
+
+The focused interpreter checks are `npm run test:m14:project-macro-plugin-cache` and
+`npm run test:m14:macro-compilation-context`.
 
 The macro calls no `haxe.macro.Context` API. Positions it receives are zero-width starts of the
 syntax that owns one (see `docs/00-project/EXPRESSION_MACRO_ARGUMENT_PLAN.md`).
