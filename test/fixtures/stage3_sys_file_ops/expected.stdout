@@ -4,7 +4,14 @@ root is directory true
 a.txt = alpha
 line two
 b.txt = beta
+a.txt length 14
+b.txt length 4
+a.txt lines 2
+fromCharCode length 1
 a.txt is directory false
+missing is directory false
+absolute path kept /x/../y/./z
+absolute root kept /
 c.txt exists true
 root lists a.txt,b.txt,nested
 nested lists c.txt

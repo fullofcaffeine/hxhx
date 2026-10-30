@@ -69,17 +69,17 @@ let normalize_path (p : string) : string =
   let body = Stdlib.String.concat "/" rev in
   if is_abs then "/" ^ body else body
 
+(* Haxe `absolutePath` keeps an absolute input unchanged, including `..` and
+   `.` segments; only a relative input is joined to the working directory. *)
 let absolutePath (relPath : string) : string =
-  let base =
-    if Filename.is_relative relPath then
-      Filename.concat (Stdlib.Sys.getcwd ()) relPath
-    else
-      relPath
-  in
-  normalize_path base
+  if Filename.is_relative relPath then
+    normalize_path (Filename.concat (Stdlib.Sys.getcwd ()) relPath)
+  else
+    relPath
 
+(* Haxe `isDirectory` answers false for a missing path instead of failing. *)
 let isDirectory (path : string) : bool =
-  Stdlib.Sys.is_directory path
+  Stdlib.Sys.file_exists path && Stdlib.Sys.is_directory path
 
 let rec createDirectory (path : string) : unit =
   if path = "" || path = "." then

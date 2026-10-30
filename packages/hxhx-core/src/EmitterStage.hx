@@ -1601,6 +1601,15 @@ class EmitterStage {
 			if (stage3IsStringExpr(obj, tyByIdent)) {
 				return "HxString.length (" + o + ")";
 			}
+			// A selected call that returns an Array, such as `text.split(",")`,
+			// carries its typed result; a dynamic field lookup would return null.
+			final selectedResult = switch [TypedExactStaticCallSource.decode(obj), TypedExactCallSource.decodeInstance(obj)] {
+				case [staticCall, _] if (staticCall != null): staticCall.resultType;
+				case [_, instanceCall] if (instanceCall != null): instanceCall.resultType;
+				case _: null;
+			};
+			if (selectedResult != null && StringTools.startsWith(selectedResult, "Array<"))
+				return "HxBootArray.length (" + o + ")";
 			switch (obj) {
 				case EArrayDecl(_):
 					return "HxBootArray.length (" + o + ")";
@@ -2170,6 +2179,15 @@ class EmitterStage {
 			return exact.getSemanticKey() == "primitive:String";
 		if (localCompoundValueType(expr) != null)
 			return isLocalCompoundValueOf(expr, "primitive:String");
+		// A selected call carries its typed result. Without this, a field read
+		// on the result, such as `File.getContent(path).length`, would fall
+		// back to a dynamic field lookup that returns null for a string.
+		final staticCall = TypedExactStaticCallSource.decode(expr);
+		if (staticCall != null)
+			return staticCall.resultType == "String";
+		final instanceCall = TypedExactCallSource.decodeInstance(expr);
+		if (instanceCall != null)
+			return instanceCall.resultType == "String";
 		return switch (expr) {
 			case EDiscardThen(_, continuation): stage3IsStringExpr(continuation, tyByIdent);
 			case EString(_):
@@ -2830,6 +2848,13 @@ class EmitterStage {
 		`Date`) and bootstrap shims (`Sys`, `Type`, `Reflect`) implement the
 		method in OCaml. Calls to host-owned `@:native` externs are rendered by
 		`Stage3OcamlExternBindings` before they reach this check.
+
+		Keep this check coupled to the class-emission loop in
+		`emitToDirWithEnumOwner`, which skips a class when
+		`runtimeModuleNames.exists(outputModule) || currentCallables.externs.ownsClass(projection)`.
+		`currentNonGeneratedModuleNames` is that same `runtimeModuleNames` map.
+		If the skip rule changes, this check must change with it, or the guard
+		will either reject real OCaml implementations or miss generated stubs.
 	**/
 	static function requireEmittedMethodBody(owner:String, method:String, hasBody:Bool):Void {
 		if (hasBody)
@@ -9491,6 +9516,7 @@ class EmitterStage {
 				final name = HxClassDecl.getName(declaration);
 				final isPrimary = name == className;
 				final outputModule = moduleNameForDecl(decl, moduleTypeName, name);
+				// `requireEmittedMethodBody` relies on this exact skip rule.
 				if (runtimeModuleNames.exists(outputModule) || currentCallables.externs.ownsClass(projection))
 					continue;
 				EmitterStageDebug.traceStage3Module(isPrimary ? "main" : "helper", outputModule, tm.getParsed().getFilePath());

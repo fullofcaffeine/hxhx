@@ -3,7 +3,7 @@ package backend.ocaml;
 /** String operations whose bounds or nullable results use the shared runtime. */
 function supports(method:String):Bool {
 	return switch method {
-		case "indexOf" | "lastIndexOf" | "substr" | "substring" | "charAt" | "charCodeAt": true;
+		case "indexOf" | "lastIndexOf" | "substr" | "substring" | "charAt" | "charCodeAt" | "split": true;
 		case _: false;
 	};
 }
@@ -32,6 +32,8 @@ function render(input:{
 	final characterRead = call.method == "charAt" || call.method == "charCodeAt";
 	if (characterRead && call.arguments.length != 1)
 		throw "selected OCaml character call requires one index";
+	if (call.method == "split" && call.arguments.length != 1)
+		throw "selected OCaml split call requires one delimiter";
 	final receiver = input.names.internalName("__hx_string_receiver");
 	final arguments = [
 		for (index in 0...call.arguments.length)
@@ -55,6 +57,11 @@ function render(input:{
 		// an authored null test must still run before any integer operation.
 		return "(" + bindings.join("") + "Obj.magic (HxString.charCodeAt " + receiver + " " + arguments[0] + "))";
 	}
+	// split returns the shared `string HxArray.t` Array<String> representation.
+	// Without this adapter, the call bound to the empty `String.split` stub that
+	// Stage3 generates from the extern String class.
+	if (call.method == "split")
+		return "(" + bindings.join("") + "HxString.split " + receiver + " " + arguments[0] + ")";
 	// charAt returns an ordinary String, including "" outside the bounds.
 	if (call.method == "charAt")
 		return "(" + bindings.join("") + "HxString.charAt " + receiver + " " + arguments[0] + ")";

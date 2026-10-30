@@ -39,7 +39,14 @@ class Main {
 
 		Sys.println("a.txt = " + File.getContent(root + "/a.txt"));
 		Sys.println("b.txt = " + sys.io.File.getContent(root + "/b.txt"));
+		Sys.println("a.txt length " + File.getContent(root + "/a.txt").length);
+		Sys.println("b.txt length " + sys.io.File.getContent(root + "/b.txt").length);
+		Sys.println("a.txt lines " + File.getContent(root + "/a.txt").split("\n").length);
+		Sys.println("fromCharCode length " + String.fromCharCode(65).length);
 		Sys.println("a.txt is directory " + sys.FileSystem.isDirectory(root + "/a.txt"));
+		Sys.println("missing is directory " + FileSystem.isDirectory(root + "/missing"));
+		Sys.println("absolute path kept " + FileSystem.absolutePath("/x/../y/./z"));
+		Sys.println("absolute root kept " + sys.FileSystem.absolutePath("/"));
 		Sys.println("c.txt exists " + sys.FileSystem.exists(root + "/nested/c.txt"));
 		Sys.println("root lists " + sorted(FileSystem.readDirectory(root)));
 		Sys.println("nested lists " + sorted(sys.FileSystem.readDirectory(root + "/nested")));
