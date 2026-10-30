@@ -246,6 +246,81 @@ the relevant bead/checkpoint note.
 The README keeps only the current readiness review. Older reviews move here so
 their evidence links stay findable. Newest entries come first.
 
+#### 2026-10-30: progress bars unchanged
+
+Evidence since 2026-10-29:
+
+- Macro PR1 landed as a stack: PR #104 (`e0feec923`), PR #105 (`913d25e4a`),
+  and PR #103 (`e75488203`). An in-process `hxhx` compile now runs the
+  project's own `Identity.preserve` expression macro from a native plugin
+  compiled by the Stage3 emitter. Arguments and results cross the plugin
+  boundary as a versioned `haxe.macro.Expr` payload (plugin ABI version 2; old
+  plugins are rejected). The fixture output matches upstream Haxe 4.3.7. The
+  final PR #103 revision passed every check except the known Gate 1 Lite
+  failure
+  ([Core run 41050415800](https://github.com/fullofcaffeine/hxhx/actions/runs/41050415800)).
+  The full project-module smoke ran locally, not in CI. Limits: only static
+  macro methods with `Expr` parameters and an `Expr` result; no
+  `haxe.macro.Context` API and no reification; the plugin is built by the
+  smoke script, not by a normal compile; the external macro host loads the
+  plugin but does not run the declaration. `haxe_ocaml-9sj5p` and
+  `haxe_ocaml-9sj5p.3` are in progress, and `.4` to `.8` are open. PR #104
+  fixes only part of `haxe_ocaml-fikpj`, which stays open.
+- PR #101 (`2b1996985`) makes every bodiless standard `Array` method in Stage3
+  output use the `HxArray` runtime. Before, `sort`, `reverse`, `pop`, `shift`,
+  `unshift`, `insert`, `remove`, `contains`, `toString`, and `resize` compiled
+  to an empty stub and silently did nothing. Any other bodiless `Array` method
+  now stops emission with a named error. The PR also makes the bootstrap
+  `Reflect.compare` shim polymorphic, which fixes the `ocamlopt` error
+  (`b : Obj.t` used as `string`) that stopped the weekly Gate 1 run
+  [40336060521](https://github.com/fullofcaffeine/hxhx/actions/runs/40336060521)
+  and M7 run
+  [40197685380](https://github.com/fullofcaffeine/hxhx/actions/runs/40197685380)
+  (`haxe_ocaml-fdq0p`, closed). No Gate 1 weekly or M7 run has happened since,
+  so the fix is not yet confirmed there. A local probe in the PR suggests the
+  next Gate 1 stop is the Stage3 `Map` stub (`haxe_ocaml-iww70`).
+- PR #97 (`5c0afc428`) makes local compound assignments used as values produce
+  the stored value for `Int`, `Float`, `String`, `Null<Int>`, `Null<Float>`,
+  and `Dynamic` locals, reading the old value before the right operand as
+  upstream does (`haxe_ocaml-u0j9w`, closed).
+- PRs #99 (`217d6d3f2`, `haxe_ocaml-4yp4z`) and #102 (`66bab53ff`,
+  `haxe_ocaml-2e1vw`) import checked bootstrap regenerations for `dc456f001`
+  ([run 40908213154](https://github.com/fullofcaffeine/hxhx/actions/runs/40908213154))
+  and `2b1996985`
+  ([run 40994837200](https://github.com/fullofcaffeine/hxhx/actions/runs/40994837200)).
+  PR #102 also updates an end-to-end assertion that had pinned a generated
+  temporary name. The committed snapshot predates PR #103's plugin ABI
+  version 2, so the snapshot-built weekly macro runtime job is expected to
+  fail until the next import.
+- PR #98 (`085b87d57`, `haxe_ocaml-urw70`) records an owner for each current
+  weekly CI failure and lets an incident own a known red required check across
+  commits when its job, step, and fatal log line match. The evidence ownership
+  audit, red on `main` since 2026-08-16, passes again (for example
+  [run 41030387107](https://github.com/fullofcaffeine/hxhx/actions/runs/41030387107)).
+- PR #100 (`0c4a83a89`, `haxe_ocaml-w22te`, closed) moves four commands
+  between test shards. The `compiler-focused-1` job took 38–40 minutes against
+  its 40-minute limit. It took 17m51s on PR #100, 18m36s on PR #103, and about
+  27 minutes on three later `main` runs.
+- On `main` at `913d25e4a`, every Core job passed, including the `hxhx`
+  end-to-end job
+  ([run 41033464232](https://github.com/fullofcaffeine/hxhx/actions/runs/41033464232)).
+  Gate 1 Lite still fails at `TestMain.hx:122:3: value loop requires a
+  resolved iterator protocol`
+  ([run 41033464229](https://github.com/fullofcaffeine/hxhx/actions/runs/41033464229)).
+
+Why no bar changes: the first executed project macro is real progress, but it
+does not yet change what a user can do. It covers one macro shape in one
+compile mode. It needs a plugin built outside the normal compile, and it has
+none of the `Context` API or reification that real macro libraries use. Gate 1
+Lite is still red, and `haxe_ocaml-9sj5p` stays in progress. The `Array` and
+compound-assignment results are correctness fixes with focused regressions
+(evidence levels 2 and 3 above), and the weekly Gate 1 and M7 runs have not
+yet confirmed the comparator fix. `haxe_ocaml-38gsp.1` is still in progress
+and `haxe_ocaml-38gsp.2`, `haxe_ocaml-s7jry`, and `haxe_ocaml-u6esu` are
+still open, so the target, plugin, builtin, and replacement rows stay where
+they are. The only table change is a plain note in the replacement row on
+what project macros can do now.
+
 #### 2026-10-29: progress bars unchanged
 
 Evidence since 2026-09-13:
