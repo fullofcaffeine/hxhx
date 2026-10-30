@@ -99,11 +99,18 @@ after step 2.
   `packages/hxhx-core/src/EmitterStage.hx:3381` only by rejecting lost source groups; it has no
   lowering, so a plugin whose macro body uses `macro ...` cannot be emitted. Step 3 owns it. The
   identity fixture therefore builds its result without reification.
-- Macro-context defines: `ModuleLoader.moduleDefines`
-  (`packages/hxhx-core/src/ModuleLoader.hx:412-437`) sets `macro` and `eval` only for modules
-  under `haxe.macro.*`. In a plugin compilation the standard macro types therefore see the macro
-  context (`Position` becomes an opaque core type) while the project's own macro classes do not.
-  Step 2 owns a real macro compilation context.
+- Macro-context defines: before step 2, `ModuleLoader.moduleDefines` and two copies in
+  `ResolverStage` set `macro` and `eval` only for modules under `haxe.macro.*`, so in a plugin
+  compilation the standard macro types saw the macro context while the project's own macro
+  classes did not. Step 2 moved that rule into `MacroCompilationContext`
+  (`packages/hxhx-core/src/MacroCompilationContext.hx`), which the resolver and the lazy loader
+  share. A request can now name macro classpaths (`--hxhx-macro-classpath <dir>`); modules
+  resolved through them are compiled with `macro` and `eval` added to the request defines.
+  Standard-library roots keep their target branches, even when nested inside a macro classpath,
+  because the plugin is still compiled to OCaml. One difference from upstream remains: the
+  `ocaml` target define stays defined in macro modules, while upstream's eval macro context does
+  not define the program's target. Covered by `npm run
+  test:m14:macro-compilation-context`.
 - Prerequisite beads checked on 2026-10-29: `o25kr` (source groups) has landed enough for the
   identity function (`ESourceGroup`/`ESourceFunction` round-trip exactly); `yhvzj` (nested
   patterns) and `05q72` (object literals) no longer block the identity macro, whose nested enum

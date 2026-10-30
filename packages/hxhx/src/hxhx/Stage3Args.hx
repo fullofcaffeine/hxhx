@@ -12,6 +12,8 @@ import hxhx.Stage1Compiler.Stage1Args;
 
 	What
 	- Parses `--hxhx-*` Stage3 control flags.
+	- Turns each `--hxhx-macro-classpath <dir>` into an ordinary `-cp <dir>` at the same position and
+	  records it, so the request can compile that classpath's modules as macro code.
 	- Removes the opt-in `--hxhx-server-report` flag before ordinary Haxe argument
 	  parsing; the request context owns that lifecycle report.
 	- Maps backend IDs to target define/output hint behavior.
@@ -42,6 +44,7 @@ class Stage3Args {
 		var noRun = false;
 		var serverReport = false;
 		final customizations = new Array<String>();
+		final macroClassPaths = new Array<String>();
 		final rest = new Array<String>();
 
 		var i = 0;
@@ -67,6 +70,15 @@ class Stage3Args {
 					if (i + 1 >= args.length)
 						throw "missing value after --hxhx-customization";
 					customizations.push(args[i + 1]);
+					i += 2;
+				case "--hxhx-macro-classpath":
+					// A classpath whose modules are compiled as macro code (see MacroCompilationContext).
+					// It keeps its position among the ordinary `-cp` entries.
+					if (i + 1 >= args.length)
+						throw "missing value after --hxhx-macro-classpath";
+					macroClassPaths.push(args[i + 1]);
+					rest.push("-cp");
+					rest.push(args[i + 1]);
 					i += 2;
 				case "--hxhx-type-only":
 					typeOnly = true;
@@ -97,6 +109,7 @@ class Stage3Args {
 			noRun: noRun,
 			serverReport: serverReport,
 			customizations: customizations,
+			macroClassPaths: macroClassPaths,
 			rest: rest
 		};
 	}

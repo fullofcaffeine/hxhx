@@ -238,3 +238,7 @@ mode; it does not establish full Haxe compatibility or remove all bootstrap shim
 - `--hxhx-type-only`: resolve + type the module graph; skip macro execution and skip emit/build.
 - `--hxhx-no-emit`: resolve + type the module graph and execute Stage4 macro hooks, but skip OCaml emission/build.
 - `--hxhx-no-run`: emit+build the OCaml executable but do not execute it (needed for long-lived server executables like the macro host).
+- `--hxhx-macro-classpath <dir>`: add `<dir>` as a classpath (at the same position as a `-cp`) and compile the modules
+  it provides as macro code, with `macro` and `eval` defined, as upstream Haxe's macro context does. Standard-library
+  roots keep their ordinary target branches, even when they sit inside `<dir>`. hxhx uses this when it builds a project
+  macro plugin; see [HXHX_EXPRESSION_MACROS.md](HXHX_EXPRESSION_MACROS.md).
