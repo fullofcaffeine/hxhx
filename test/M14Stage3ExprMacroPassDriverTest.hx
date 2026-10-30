@@ -9,7 +9,8 @@ import hxhx.Stage3Compiler;
 	- A module first loaded while the pass selects calls must still have its
 	  method bodies typed under `--hxhx-no-emit` (the `--no-output` lane), so a
 	  body error there fails the request exactly as it does without the pass.
-	- A selected macro with no executor is reported on stdout before typing.
+	- A selected macro that cannot run is reported on stdout and fails the compile, except
+	  hxhx's own `CompilerBundledSourcesMacro.files()`, which stays reported but non-fatal.
 	- In a macro compilation, macro code calling another macro function is reported as
 	  "macro-in-macro", the error upstream Haxe 4.3.7 gives.
 **/
@@ -47,13 +48,23 @@ class M14Stage3ExprMacroPassDriverTest {
 		require((bodyError.stdout + bodyError.stderr).indexOf("project/Util.hx") >= 0,
 			"body error was not attributed to the discovered module:\n" + bodyError.stdout + bodyError.stderr);
 
+		// A selected macro that cannot run is a compile error at the call; it is never typed as an ordinary call.
 		final unexecuted = compile("Unexecuted");
-		require(unexecuted.stdout.indexOf("expr_macros_unexecuted=1\n") >= 0
-			&& unexecuted.stdout.indexOf("expr_macro_unexecuted[0]=") >= 0
-			&& unexecuted.stdout.indexOf("macros.Macros.items") >= 0,
-			"selected macro without an executor was not reported:\n"
+		require(unexecuted.code != 0, "a selected macro that could not run did not fail the compile:\n" + unexecuted.stdout + unexecuted.stderr);
+		require(unexecuted.stdout.indexOf("expr_macro_unexecuted[0]=") >= 0
+			&& unexecuted.stdout.indexOf("expression macro macros.Macros.items was not executed: ") >= 0
+			&& unexecuted.stdout.indexOf("Unexecuted.hx") >= 0,
+			"the unexecuted macro error does not name the call and its reason:\n"
 			+ unexecuted.stdout
 			+ unexecuted.stderr);
+		require(unexecuted.stdout.indexOf("stage3=no_emit_ok") < 0, "the compile continued after an unexecuted macro:\n" + unexecuted.stdout);
+
+		// hxhx's own bundled-source macro is the one scoped exception until it runs through the plugin path.
+		final bundled = compile("BundledSources");
+		require(bundled.code == 0, "the bundled-source macro opt-out failed the compile:\n" + bundled.stdout + bundled.stderr);
+		require(bundled.stdout.indexOf("expr_macro_unexecuted[0]=") >= 0
+			&& bundled.stdout.indexOf("CompilerBundledSourcesMacro.files") >= 0,
+			"the bundled-source macro was not reported as unexecuted:\n" + bundled.stdout);
 
 		// In a macro compilation, macro code that calls another macro function is "macro-in-macro",
 		// which upstream Haxe 4.3.7 rejects; the call is reported with that reason.
