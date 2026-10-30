@@ -1,3 +1,11 @@
+## [0.36.1](https://github.com/fullofcaffeine/hxhx/compare/v0.36.0...v0.36.1) (2026-10-30)
+
+
+### Bug Fixes
+
+* **stage3:** compile sort comparators that use Reflect.compare ([66eb404](https://github.com/fullofcaffeine/hxhx/commit/66eb404337220dc89f526fe59c9517ce1b831961))
+* **stage3:** route bodiless Array methods through the runtime ([328cb83](https://github.com/fullofcaffeine/hxhx/commit/328cb83e795689111322447dc22c0225bb1b7e17))
+
 # [0.36.0](https://github.com/fullofcaffeine/hxhx/compare/v0.35.0...v0.36.0) (2026-10-30)
 
 
