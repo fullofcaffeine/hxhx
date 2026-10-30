@@ -88,6 +88,21 @@ class HxTypedefParser {
 		return parameters;
 	}
 
+	/**
+		Parse one stored type annotation, such as the `typeHint` text of a parameter.
+
+		The parser keeps written annotations as compact text (`Map<String,Int>`). Macro syntax
+		export needs their structure, so this reads the text with the same type grammar that
+		parses typedef declarations instead of a second, string-splitting parser.
+	**/
+	public static function parseTypeHint(source:String):HxTypeSyntax {
+		final parser = new HxParser(source);
+		final value = new HxTypedefParser(parser).type();
+		if (!parser.cur.kind.match(TEof))
+			parser.fail("Unexpected token after type annotation");
+		return value;
+	}
+
 	/** Parse a recovered header slice while retaining positions in the original source. */
 	public static function parseParametersAt(source:String, start:Int, end:Int):Array<HxTypeSyntaxParameter> {
 		final positioned = new StringBuf();
