@@ -14,11 +14,12 @@ Earlier native builds failed on these shapes. Reflaxe OCaml once read record
 fields as tuple projections such as `fst left` and once kept an unused result
 binding that the OCaml warnings-as-errors build rejected. The hxhx Stage3
 emitter rejected the third shape because its `Reflect.compare` shim accepted
-only `Obj.t`, and it sent a typed `Array.sort` call to OCaml's
-`Stdlib.Array.sort`.
+only `Obj.t`. A typed `Array.sort` call under Stage3 also bound to an empty
+stub in the generated `Array` module, so it compiled but left the array
+unsorted.
 
 Run `PORTABLE_FIXTURE_ALLOWLIST=sort_callback_shapes bash scripts/test-portable.sh`
 for the Reflaxe OCaml build. The runner compares native output with
 `expected.stdout`, and `test.sh` compares the same program with upstream Haxe
-eval. `npm run test:m14:stage3-sort-callbacks` builds the same program with the
+eval. `npm run test:m14:stage3-array-methods` builds the same program with the
 Stage3 emitter and compares it with upstream Haxe.

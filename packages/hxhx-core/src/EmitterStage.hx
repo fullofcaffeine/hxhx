@@ -2791,6 +2791,23 @@ class EmitterStage {
 		return null;
 	}
 
+	/**
+		Rejects a typed Array call that would bind to an empty stub.
+
+		Stage3 emits an OCaml `Array` module from the standard `Array` class. A
+		method without a Haxe body becomes a stub there that returns a
+		placeholder and changes nothing. A call that is not rendered by
+		`Stage3OcamlArrayCalls` is emitted as an ordinary call into that module,
+		so it may continue only when the selected declaration has a real body.
+	**/
+	static function requireEmittedArrayMethodBody(call:HxExpr, method:String):Void {
+		final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findInstanceCall(call) : currentTypedFunction == null ? null : currentTypedFunction.findInstanceCall(call);
+		if (occurrence == null)
+			throw "stage3 emitter: Array." + method + " requires its exact executable occurrence";
+		if (!occurrence.getDeclaration().getHasBody())
+			throw "stage3 emitter: Array." + method + " has no native adapter; the generated Array module only has an empty stub for it";
+	}
+
 	/** Authored lambda return conversions consume occurrence facts, never rendered annotations. */
 	static function stage3LambdaReturn(expression:HxExpr, value:String):String {
 		final facts = currentTypedInitializer != null ? currentTypedInitializer.findLambda(expression) : currentTypedFunction == null ? null : currentTypedFunction.findLambda(expression);
@@ -3418,6 +3435,8 @@ class EmitterStage {
 				if (rendered != null)
 					return rendered;
 			}
+			if (exactCall.owner == "Array")
+				requireEmittedArrayMethodBody(e, exactCall.method);
 			final ownerModule = ocamlModuleNameFromTypePath(exactCall.owner);
 			if (ownerModule.length > 0 && ownerModule != currentOcamlModuleName) {
 				final ownerParts = exactCall.owner.split(".");

@@ -1,9 +1,19 @@
 package backend.ocaml;
 
-/** Only these declared Array operations use this native call adapter. */
+/**
+	Array operations that this native call adapter renders through the shared
+	`HxArray` runtime.
+
+	Stage3 also emits an OCaml `Array` module from the standard `Array` class.
+	A method without a Haxe body (for example `pop`) is an empty stub in that
+	module. An ordinary call that reached such a stub compiled and then did
+	nothing, so every bodiless standard Array method must appear here. The
+	emitter rejects a bodiless Array method that is missing from this list.
+ */
 function supports(method:String):Bool {
 	return switch method {
-		case "map" | "join" | "push" | "copy" | "concat" | "slice" | "splice" | "filter" | "indexOf" | "lastIndexOf" | "sort": true;
+		case "map" | "join" | "push" | "copy" | "concat" | "slice" | "splice" | "filter" | "indexOf" | "lastIndexOf" | "sort" | "reverse" | "pop" | "shift" |
+			"unshift" | "insert" | "remove" | "contains" | "toString" | "resize": true;
 		case _: false;
 	};
 }
@@ -84,8 +94,8 @@ function render(input:{
 		|| receiverType.getTypeArguments().length != 1)
 		throw "selected OCaml array call requires its exact Array receiver type";
 	final expectedCount = switch call.method {
-		case "copy": 0;
-		case "splice": 2;
+		case "copy" | "reverse" | "pop" | "shift" | "toString": 0;
+		case "splice" | "insert": 2;
 		case "slice" | "indexOf" | "lastIndexOf": call.arguments.length == 1 ? 1 : 2;
 		case _: 1;
 	};
@@ -103,6 +113,12 @@ function render(input:{
 			input.names.internalName("__hx_array_argument_" + index)
 	];
 	final argument = arguments.length == 0 ? "" : arguments[0];
+	// Dynamic arrays store boxed values. Inserted and searched values must use
+	// the same representation as push, including boxed Bool and Float values.
+	final element = receiverType.getTypeArguments()[0];
+	final stored = (index:Int) -> element.isDynamic() ? "(Obj.magic ("
+		+ Stage3OcamlObjects.store(occurrence.getProjectedArgumentTypes()[index], arguments[index])
+		+ "))" : arguments[index];
 	final operation = switch (call.method) {
 		case "map": if (autoTyped) input.mark("array_map_typed"); input.metal || autoTyped ? "HxBootArray.map (" + receiver + ") (" + argument + ")" : "HxBootArray.map_dyn (Obj.magic (" + receiver + ")) (Obj.repr (" + argument + "))";
 		case "join":
@@ -125,18 +141,28 @@ function render(input:{
 		case "splice": "HxArray.splice " + runtimeReceiver + " " + arguments.join(" ");
 		case "filter": "HxArray.filter " + runtimeReceiver + " " + argument;
 		case "sort":
-			// Sort in place through the shared runtime. Without this case the call
-			// fell through to `Array.sort receiver comparator`, which OCaml resolves
-			// to `Stdlib.Array.sort` with the opposite argument order and a native
-			// array type. The comparator keeps the element type selected by the
-			// typer, so a `String` callback parameter stays `string`.
+			// The comparator keeps the element type selected by the typer, so a
+			// `String` callback parameter stays `string`.
 			"HxArray.sort " + runtimeReceiver + " " + argument;
+		case "reverse": "HxArray.reverse " + runtimeReceiver + " ()";
+		case "pop" | "shift":
+			// The Haxe result is `Null<T>`: an empty array returns null. The metal
+			// profile has no nullable carrier for a typed element result.
+			if (input.metal)
+				throw "stage3 emitter: metal profile unsupported semantics: Array." + call.method + " returns Null<T>";
+			"HxArray." + call.method + " " + runtimeReceiver + " ()";
+		case "unshift": "HxArray.unshift " + runtimeReceiver + " " + stored(0);
+		case "insert": "HxArray.insert " + runtimeReceiver + " " + arguments[0] + " " + stored(1);
+		case "remove" | "contains": "HxArray." + call.method + " " + runtimeReceiver + " " + stored(0);
+		case "resize": "HxArray.resize " + runtimeReceiver + " " + argument;
+		case "toString":
+			// Use the element stringifier that Stage3 attaches to each array, the
+			// same path as `Std.string(array)`.
+			if (input.metal)
+				throw "stage3 emitter: metal profile unsupported semantics: Array.toString requires a Dynamic element stringifier";
+			"HxDynamic.toStdString (Obj.repr " + receiver + ")";
 		case "indexOf" | "lastIndexOf":
-			// Dynamic arrays store boxed values. Search must compare the same
-			// representation used by push, including boxed Bool and Float values.
-			final searched = receiverType.getTypeArguments()[0].isDynamic() ? "(Obj.magic ("
-				+ Stage3OcamlObjects.store(occurrence.getProjectedArgumentTypes()[0], argument)
-				+ "))" : argument;
+			final searched = stored(0);
 			"HxArray."
 			+ call.method
 			+ (arguments.length == 1 ? "_default" : "")

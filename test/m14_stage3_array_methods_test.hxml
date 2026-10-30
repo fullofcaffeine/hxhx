@@ -2,5 +2,5 @@
 -cp packages/reflaxe.ocaml/src
 -cp packages/hxhx/src
 -cp test
--main M14Stage3SortCallbacksTest
+-main M14Stage3ArrayMethodsTest
 --interp
