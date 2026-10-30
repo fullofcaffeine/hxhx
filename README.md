@@ -52,36 +52,45 @@ column control the claim.
 Overall north-star readiness: `[###-------]` about 30–35% (coarse; not
 additive).
 
-Readiness review, 2026-10-29. Four notable changes reached `main` since the
-2026-09-13 review:
+Readiness review, 2026-10-30. These changes reached `main` since the
+2026-10-29 review:
 
-- PR #92 combined 69 compiler and tooling branches. It fixed many native OCaml
-  correctness bugs and replaced the committed bootstrap snapshot with a checked
-  [regeneration](https://github.com/fullofcaffeine/hxhx/actions/runs/40826113652)
-  of its own compiler source. The `hxhx` end-to-end job, which failed in the
-  last review, now passes with that snapshot.
-- PR #93 makes `hxhx` find project expression-macro calls by their declaration
-  before typing. It does not run those macros yet. The Gate 1 Lite upstream
-  macro unit smoke still
-  [fails](https://github.com/fullofcaffeine/hxhx/actions/runs/40896078456) at
-  `TestMain.hx:122` (`haxe_ocaml-9sj5p`).
-- PR #94 adds tests that reject corrupted or missing `Void` return records in
-  the OCaml lowering report.
-- PR #95 makes `++`, `--`, `+=`, `-=`, and `*=` on nullable `Int` and `Float`
-  locals type and run natively as upstream Haxe does. Updating a null value
-  now raises a catchable Null Access error. The committed bootstrap snapshot
-  predates this change until the next regeneration is imported.
+- A first project expression macro now runs. PRs #104, #105, and #103 let an
+  in-process `hxhx` compile run a project's own macro from a native plugin
+  that `hxhx` compiles itself. The test macro returns its argument unchanged,
+  and the program prints what upstream Haxe prints. Limits: no
+  `haxe.macro.Context` API, no reification, the plugin is built by a separate
+  script step, and the external macro host does not run macros yet
+  (`haxe_ocaml-9sj5p`).
+- PR #101 fixes native programs from the Stage3 emitter where many `Array`
+  methods (`sort`, `pop`, `reverse`, `remove`, and others) silently did
+  nothing. They now use the runtime. It also fixes the sort comparator compile
+  error that stopped the weekly Gate 1 and M7 runs. No weekly run has
+  confirmed that fix yet.
+- PR #97 makes compound assignments such as `x -= 2` produce the stored value
+  when used as a value, with upstream evaluation order.
+- PRs #99 and #102 import regenerated bootstrap snapshots, so the committed
+  compiler includes #95, #97, and #101. The snapshot predates the macro work
+  in #103, which needs one more regeneration.
+- PR #98 gives every known red CI result an owner. The evidence audit, which
+  had failed since 2026-08-16, now
+  [passes](https://github.com/fullofcaffeine/hxhx/actions/runs/41030387107).
+  PR #100 rebalances the slowest test shard: it took 38–40 minutes against a
+  40-minute limit and now takes about 18–27 minutes.
 
-Strongest current evidence: on the final PR #94 revision, all
-[Core checks](https://github.com/fullofcaffeine/hxhx/actions/runs/40864936887)
-passed, including the `hxhx` end-to-end job. Gate 2 workloads, Gate 3 native
+Strongest current evidence: on `main` after PR #105, all
+[Core checks](https://github.com/fullofcaffeine/hxhx/actions/runs/41033464232)
+passed, including the `hxhx` end-to-end job. Gate 2 Lite, Gate 3 native
 target smoke, the JavaScript oracle smoke, the stdlib checks, and the package
-matrix also passed on that revision.
+matrix also passed on that revision. The Gate 1 Lite upstream macro unit smoke
+still
+[fails](https://github.com/fullofcaffeine/hxhx/actions/runs/41033464229) at
+`TestMain.hx:122`.
 
-Macro execution, the shared OCaml target work, the upstream suite matrix,
-performance evidence, and release checks remain open. The progress bars are
-unchanged; `docs/00-project/NORTH_STAR_GOALS.md` explains why and keeps the
-earlier per-PR evidence log.
+Broader macro execution, the shared OCaml target work, the upstream suite
+matrix, performance evidence, and release checks remain open. The progress
+bars are unchanged; `docs/00-project/NORTH_STAR_GOALS.md` explains why and
+keeps the earlier reviews.
 
 | Goal | Progress | Production usability today | What to use now | Not ready yet |
 | --- | --- | --- | --- | --- |
@@ -90,7 +99,7 @@ earlier per-PR evidence log.
 | `reflaxe.ocaml` as a native `hxhx` plugin | `[###-------]` about 25–30% | **Experimental promotion path.** Loader, registry, manifest, plugin-safe output, and scoped same-candidate route proofs exist. The current artifact still packages a Stage3 backend provider rather than the standalone target core. | Use the promotion workflow as loader/ABI evidence, not as the final native target product. | Complete `38gsp.1`, then `38gsp.2`; prove exact typed OCaml dependencies, lifecycle cleanup, target-core identity, evaluated/native equivalence, and phase-separated speed. |
 | One native Reflaxe target core for stock Haxe and `hxhx` | `[#---------]` about 5–10% | **Reviewed planning contract only.** Stock Haxe has an exact-version eval-plugin seam and `hxhx` has an experimental native loader, but no supported shared semantic ABI/core exists. | Use the current host-specific lanes. Do not assume their `.cmxs`/`.cma` files are interchangeable. | M22 waits for Full1, `38gsp.1`, and `38gsp.2`. It must then prove exact stock profiles, typed capability parity, one semantic core through stock and `hxhx` shells plus builtin, lifecycle/reset safety, packaging/trust, and performance. A byte-identical container is an experiment, not the invariant. |
 | `reflaxe.ocaml` as a builtin/native `hxhx` target | `[##--------]` about 15–20% | **Architecture proof.** The builtin `ocaml-native` adapter invokes the standalone target core for the same small subset. The separate `ocaml-stage3` target retains the old emitter for diagnostics. | Use the small shared-target fixtures to inspect native host integration. Use the promotion matrix to understand the intended plugin/builtin composition. | Expand supported inputs and finish the runtime prerequisites of `38gsp.1`. Prove that the plugin and builtin consume the same canonical request/service contract; direct calls may optimize transport only. |
-| `hxhx` as a MIT Haxe replacement | `[###-------]` about 25–30% | **Scoped replacement preview, not production-ready.** Stage0-forbidden Macro/JavaScript/Neko/plugin and macro/eval evidence exists for bounded lanes. The declared Full1 product still requires Haxe `4.3.7` suite and target compatibility, performance, and one candidate-bound release proof. | Use `hxhx` for scoped native lanes, experiments, and subprocess embedding where its documented surface matches your project. Read `docs/02-user-guide/compat/FULL1_TARGET_SCOPE.md`. | `haxe.ocaml-f1cl.3` and `.3.1` remain active; C++/Cppia and both HashLink forms are required. `haxe_ocaml-u6esu` still owns credible compiler performance evidence, and the aggregate release handoff remains a correct no-go. |
+| `hxhx` as a MIT Haxe replacement | `[###-------]` about 25–30% | **Scoped replacement preview, not production-ready.** Stage0-forbidden Macro/JavaScript/Neko/plugin and macro/eval evidence exists for bounded lanes. The declared Full1 product still requires Haxe `4.3.7` suite and target compatibility, performance, and one candidate-bound release proof. | Use `hxhx` for scoped native lanes, experiments, and subprocess embedding where its documented surface matches your project. Read `docs/02-user-guide/compat/FULL1_TARGET_SCOPE.md`. | Project expression macros run only in an in-process compile, for a plugin built by a separate step, with no `haxe.macro.Context` API or reification. `haxe_ocaml-9sj5p` owns the rest, including the Gate 1 Lite macro smoke. `haxe.ocaml-f1cl.3` and `.3.1` remain active; C++/Cppia and both HashLink forms are required. `haxe_ocaml-u6esu` still owns credible compiler performance evidence, and the aggregate release handoff remains a correct no-go. |
 | `hxhx` as a hackable Haxe-in-Haxe compiler | `[####------]` about 35–40% | **Strong design intent with mixed implementation.** Package, phase, typed-body, request, and backend seams are real, while several very large mixed-purpose files and the Stage3 emitter still make routine changes harder than the north star. | Make changes through the focused package/test seams and preserve behavior-driven upstream-oracle coverage. | Retire duplicate Stage3 target semantics, keep extracting only real ownership boundaries, and continue the mega-file guard. A whole-compiler rewrite or speculative universal IR is not planned. |
 | Pluggable Haxe customization and Haxe-family variants | `[#---------]` about 5–10% | **Architecture foundation only.** This is deliberately not an active supported product while baseline compatibility and one authentic target core are unfinished. | Use existing macro libraries, Reflaxe targets, and explicitly excluded experiments. Keep vanilla Haxe compatibility as the default. | Post-Full1 owners `haxe_ocaml-h5jta` and `.1` remain deferred. The future transform profile must stay separate from backend-target authority and reuse the same identity/packaging substrate. |
 | Declared Full1 source/native target matrix | `[###-------]` about 30–40% | **Uneven target bring-up.** The required matrix is explicit and several lanes work, but the same-candidate aggregate is not green. | Use OCaml through standalone `reflaxe.ocaml`; treat other native/source targets per their individual scope and current evidence. | Matrix owners `haxe.ocaml-f1cl.3.1` and `.3.11` still require authentic per-target evidence. C++/Cppia and both HashLink forms remain blockers. JVM, Flash/SWF, and XML/JSON type descriptions are outside the first Full1 claim. |
