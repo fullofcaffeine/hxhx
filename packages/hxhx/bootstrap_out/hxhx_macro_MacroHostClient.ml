@@ -1498,13 +1498,13 @@ let macrohostsession_loadNativeModule = fun self (modulePath : string) (pluginId
       __assign_14
     ));
     let countStr = (!tempMaybeString : string) in let count = Std.parseInt (countStr : string) in (
-      ignore (if count == HxRuntime.hx_null || (let __nullable_15 = count in let __nullable_16 = 0 in if __nullable_15 == HxRuntime.hx_null then false else Obj.obj __nullable_15 < __nullable_16) then HxType.hx_throw_typed_rtti (Obj.repr ("macro host: invalid native module expr count payload: " ^ HxString.toStdString countStr)) ["Dynamic"] else ());
+      ignore (if count == HxRuntime.hx_null || (let __nullable_15 = count in let __nullable_16 = 0 in if __nullable_15 == HxRuntime.hx_null then false else Obj.obj __nullable_15 < __nullable_16) then HxType.hx_throw_typed_rtti (Obj.repr ("macro host: invalid native module declaration count payload: " ^ HxString.toStdString countStr)) ["Dynamic"] else ());
       let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = count in (
         ignore (while let __nullable_17 = !_g in let __nullable_18 = _g1 in if __nullable_18 == HxRuntime.hx_null then false else __nullable_17 < Obj.obj __nullable_18 do ignore (let i = let __old_19 = !_g in let __new_20 = HxInt.add __old_19 1 in (
           ignore (_g := __new_20);
           __old_19
         ) in let key = "e" ^ string_of_int i in (
-          ignore (if not (HxMap.exists_string (Obj.magic parts) (key : string)) then HxType.hx_throw_typed_rtti (Obj.repr ("macro host: missing native module expr payload key: " ^ HxString.toStdString key)) ["Dynamic"] else ());
+          ignore (if not (HxMap.exists_string (Obj.magic parts) (key : string)) then HxType.hx_throw_typed_rtti (Obj.repr ("macro host: missing native module declaration payload key: " ^ HxString.toStdString key)) ["Dynamic"] else ());
           let __array_receiver_21 = Obj.magic out in let __array_arg_0_22 = (HxMap.get_string (Obj.magic parts) (key : string) : string) in HxArray.push __array_receiver_21 __array_arg_0_22
         )) done);
         out
@@ -1513,35 +1513,33 @@ let macrohostsession_loadNativeModule = fun self (modulePath : string) (pluginId
   )
 )
 
-let macrohostsession_runNativeExpr = fun self (expr : string) -> macroclient_call (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ("macro.runNativeExpr" : string) (let __call_arg_0_23 = "e" in let __call_arg_1_24 = expr in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_23 __call_arg_1_24 : string)
-
-let macrohostsession_expandExpr = fun self (expr : string) -> macroclient_call (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ("macro.expandExpr" : string) (let __call_arg_0_25 = "e" in let __call_arg_1_26 = expr in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_25 __call_arg_1_26 : string)
+let macrohostsession_expandExpr = fun self (expr : string) -> macroclient_call (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ("macro.expandExpr" : string) (let __call_arg_0_23 = "e" in let __call_arg_1_24 = expr in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_23 __call_arg_1_24 : string)
 
 let macrohostsession_expandSelected = fun self (request : Hxhx_macro_ExprMacroDispatch.t) -> (
   ignore self;
-  let __enum_arg_29 = (let __string_part_27 = "the external macro host protocol has no structured dispatch method for project macro declaration " in let __string_part_28 = HxString.toStdString (Hxhx_macro_ExprMacroDispatch.describe (Obj.magic request) ()) in __string_part_27 ^ __string_part_28 : string) in Hxhx_macro_ExprMacroDispatch.Unavailable (Stdlib.Sys.opaque_identity __enum_arg_29)
+  let __enum_arg_27 = (let __string_part_25 = "the external macro host protocol has no structured dispatch method for project macro declaration " in let __string_part_26 = HxString.toStdString (Hxhx_macro_ExprMacroDispatch.describe (Obj.magic request) ()) in __string_part_25 ^ __string_part_26 : string) in Hxhx_macro_ExprMacroDispatch.Unavailable (Stdlib.Sys.opaque_identity __enum_arg_27)
 )
 
 let macrohostsession_runHook = fun self (kind : string) (id : int) -> ignore (ignore (let tempString = ref (HxString.hx_null_string : string) in (
-  ignore (if kind == HxString.hx_null_string then let __assign_30 = ("" : string) in (
-    tempString := __assign_30;
-    __assign_30
-  ) else let __assign_31 = (kind : string) in (
-    tempString := __assign_31;
-    __assign_31
+  ignore (if kind == HxString.hx_null_string then let __assign_28 = ("" : string) in (
+    tempString := __assign_28;
+    __assign_28
+  ) else let __assign_29 = (kind : string) in (
+    tempString := __assign_29;
+    __assign_29
   ));
-  let tail = let __string_part_36 = HxString.toStdString (let __call_arg_0_32 = "k" in let __call_arg_1_33 = !tempString in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_32 __call_arg_1_33) in let __string_part_37 = " " in let __string_part_38 = HxString.toStdString (let __call_arg_0_34 = "i" in let __call_arg_1_35 = string_of_int id in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_34 __call_arg_1_35) in (__string_part_36 ^ __string_part_37) ^ __string_part_38 in macroclient_call (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ("macro.runHook" : string) (tail : string)
+  let tail = let __string_part_34 = HxString.toStdString (let __call_arg_0_30 = "k" in let __call_arg_1_31 = !tempString in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_30 __call_arg_1_31) in let __string_part_35 = " " in let __string_part_36 = HxString.toStdString (let __call_arg_0_32 = "i" in let __call_arg_1_33 = string_of_int id in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_32 __call_arg_1_33) in (__string_part_34 ^ __string_part_35) ^ __string_part_36 in macroclient_call (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ("macro.runHook" : string) (tail : string)
 )))
 
 let macrohostsession_runTypeNotFoundHook = fun self (id : int) (typePath : string) -> let tempString = ref (HxString.hx_null_string : string) in (
-  ignore (if typePath == HxString.hx_null_string then let __assign_39 = ("" : string) in (
-    tempString := __assign_39;
-    __assign_39
-  ) else let __assign_40 = (typePath : string) in (
-    tempString := __assign_40;
-    __assign_40
+  ignore (if typePath == HxString.hx_null_string then let __assign_37 = ("" : string) in (
+    tempString := __assign_37;
+    __assign_37
+  ) else let __assign_38 = (typePath : string) in (
+    tempString := __assign_38;
+    __assign_38
   ));
-  let tail = let __string_part_45 = HxString.toStdString (let __call_arg_0_41 = "i" in let __call_arg_1_42 = string_of_int id in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_41 __call_arg_1_42) in let __string_part_46 = " " in let __string_part_47 = HxString.toStdString (let __call_arg_0_43 = "n" in let __call_arg_1_44 = !tempString in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_43 __call_arg_1_44) in (__string_part_45 ^ __string_part_46) ^ __string_part_47 in let __string_eq_left_48 = macroclient_call (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ("macro.runTypeNotFoundHook" : string) (tail : string) in let __string_eq_right_49 = "1" in HxString.equals __string_eq_left_48 __string_eq_right_49
+  let tail = let __string_part_43 = HxString.toStdString (let __call_arg_0_39 = "i" in let __call_arg_1_40 = string_of_int id in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_39 __call_arg_1_40) in let __string_part_44 = " " in let __string_part_45 = HxString.toStdString (let __call_arg_0_41 = "n" in let __call_arg_1_42 = !tempString in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_41 __call_arg_1_42) in (__string_part_43 ^ __string_part_44) ^ __string_part_45 in let __string_eq_left_46 = macroclient_call (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ("macro.runTypeNotFoundHook" : string) (tail : string) in let __string_eq_right_47 = "1" in HxString.equals __string_eq_left_46 __string_eq_right_47
 )
 
 let macrohostsession_close = fun self () -> ignore (ignore (macroclient_close (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ()))
@@ -1575,13 +1573,13 @@ let decodeNativeExprListPayload = fun payload -> let tempString = ref (HxString.
       __assign_60
     ));
     let countStr = (!tempMaybeString : string) in let count = Std.parseInt (countStr : string) in (
-      ignore (if count == HxRuntime.hx_null || (let __nullable_61 = count in let __nullable_62 = 0 in if __nullable_61 == HxRuntime.hx_null then false else Obj.obj __nullable_61 < __nullable_62) then HxType.hx_throw_typed_rtti (Obj.repr ("macro host: invalid native module expr count payload: " ^ HxString.toStdString countStr)) ["Dynamic"] else ());
+      ignore (if count == HxRuntime.hx_null || (let __nullable_61 = count in let __nullable_62 = 0 in if __nullable_61 == HxRuntime.hx_null then false else Obj.obj __nullable_61 < __nullable_62) then HxType.hx_throw_typed_rtti (Obj.repr ("macro host: invalid native module declaration count payload: " ^ HxString.toStdString countStr)) ["Dynamic"] else ());
       let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = count in (
         ignore (while let __nullable_63 = !_g in let __nullable_64 = _g1 in if __nullable_64 == HxRuntime.hx_null then false else __nullable_63 < Obj.obj __nullable_64 do ignore (let i = let __old_65 = !_g in let __new_66 = HxInt.add __old_65 1 in (
           ignore (_g := __new_66);
           __old_65
         ) in let key = "e" ^ string_of_int i in (
-          ignore (if not (HxMap.exists_string (Obj.magic parts) (key : string)) then HxType.hx_throw_typed_rtti (Obj.repr ("macro host: missing native module expr payload key: " ^ HxString.toStdString key)) ["Dynamic"] else ());
+          ignore (if not (HxMap.exists_string (Obj.magic parts) (key : string)) then HxType.hx_throw_typed_rtti (Obj.repr ("macro host: missing native module declaration payload key: " ^ HxString.toStdString key)) ["Dynamic"] else ());
           let __array_receiver_67 = Obj.magic out in let __array_arg_0_68 = (HxMap.get_string (Obj.magic parts) (key : string) : string) in HxArray.push __array_receiver_67 __array_arg_0_68
         )) done);
         out
@@ -1799,11 +1797,6 @@ let withStringSession = fun run__local -> (try let session = Obj.magic (openSess
   | HxRuntime.Hx_return __ret_15 -> (Obj.obj __ret_15 : string) : string)
 
 let loadNativeModule = fun modulePath pluginId -> withStringArraySession (fun session -> macrohostsession_loadNativeModule (Obj.magic session) (modulePath : string) (pluginId : string))
-
-let runNativeModuleExpr = fun (modulePath : string) (pluginId : string) (expr : string) -> (withStringSession (fun session -> (
-  ignore (macrohostsession_loadNativeModule (Obj.magic session) (modulePath : string) (pluginId : string));
-  macrohostsession_runNativeExpr (Obj.magic session) (expr : string)
-)) : string)
 
 let runAll = fun exprs -> withStringArraySession (fun session -> let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
   ignore (while !_g < HxArray.length exprs do ignore (let expr = (let __array_read_receiver_49 = exprs in let __array_read_index_50 = !_g in HxArray.get (Obj.magic __array_read_receiver_49) __array_read_index_50 : string) in (

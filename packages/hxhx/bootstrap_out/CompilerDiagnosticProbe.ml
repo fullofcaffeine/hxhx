@@ -43536,6 +43536,7 @@ val anonymous : t -> HxPos.t -> HxTypeSyntax.t
 val hx_type : t -> unit -> HxTypeSyntax.t
 val declaration : t -> HxVisibility.hxvisibility -> string HxArray.t -> bool -> HxTypedefDecl.t
 val parseParameters : string -> Obj.t HxArray.t
+val parseTypeHint : string -> HxTypeSyntax.t
 val parseParametersAt : string -> int -> int -> Obj.t HxArray.t
 end = struct
 type t = { __hx_type : Obj.t; mutable parser : HxParser.t; mutable hx_end : HxPos.t }
@@ -44583,21 +44584,49 @@ let parseParameters = fun source -> let parser2 = Obj.magic (HxParser.create (so
   parameters__local
 )
 
+let parseTypeHint = fun source -> let parser2 = Obj.magic (HxParser.create (source : string)) in let value = Obj.magic (hx_type (Obj.magic (create (Obj.magic parser2))) ()) in let tempBool = ref (false : bool) in let _g = Obj.magic ((Obj.magic ((Obj.magic parser2 : HxParser.t).cur) : HxToken.t).kind) in (
+  ignore (if (match _g with
+    | HxTokenKind.TEof -> 0
+    | HxTokenKind.TIdent _ -> 1
+    | HxTokenKind.TString (_, _) -> 2
+    | HxTokenKind.TInt _ -> 3
+    | HxTokenKind.TFloat _ -> 4
+    | HxTokenKind.TRegex (_, _) -> 5
+    | HxTokenKind.TKeyword _ -> 6
+    | HxTokenKind.TLBrace -> 7
+    | HxTokenKind.TRBrace -> 8
+    | HxTokenKind.TLParen -> 9
+    | HxTokenKind.TRParen -> 10
+    | HxTokenKind.TSemicolon -> 11
+    | HxTokenKind.TColon -> 12
+    | HxTokenKind.TDot -> 13
+    | HxTokenKind.TComma -> 14
+    | HxTokenKind.TOther _ -> 15) = 0 then let __assign_204 = true in (
+    tempBool := __assign_204;
+    __assign_204
+  ) else let __assign_205 = false in (
+    tempBool := __assign_205;
+    __assign_205
+  ));
+  ignore (if not (!tempBool) then ignore (HxParser.fail (Obj.magic parser2) ("Unexpected token after type annotation" : string)) else ());
+  value
+)
+
 let parseParametersAt = fun source start hx_end -> let positioned = Obj.magic (StringBuf.create ()) in let _g = ref 0 in let _g1 = start in (
-  ignore (while !_g < _g1 do ignore (let index = let __old_204 = !_g in let __new_205 = HxInt.add __old_204 1 in (
-    ignore (_g := __new_205);
-    __old_204
-  ) in let code = let __string_receiver_206 = source in let __string_argument_0_207 = index in HxString.charCodeAt __string_receiver_206 __string_argument_0_207 in let tempNumber = ref (0 : int) in (
-    ignore (if (let __nullable_208 = code in if __nullable_208 == HxRuntime.hx_null then false else Obj.obj __nullable_208 = 10) || (let __nullable_209 = code in if __nullable_209 == HxRuntime.hx_null then false else Obj.obj __nullable_209 = 13) then let __assign_210 = let __nullable_int_211 = code in if __nullable_int_211 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_211 in (
-      tempNumber := __assign_210;
-      __assign_210
-    ) else let __assign_212 = 32 in (
+  ignore (while !_g < _g1 do ignore (let index = let __old_206 = !_g in let __new_207 = HxInt.add __old_206 1 in (
+    ignore (_g := __new_207);
+    __old_206
+  ) in let code = let __string_receiver_208 = source in let __string_argument_0_209 = index in HxString.charCodeAt __string_receiver_208 __string_argument_0_209 in let tempNumber = ref (0 : int) in (
+    ignore (if (let __nullable_210 = code in if __nullable_210 == HxRuntime.hx_null then false else Obj.obj __nullable_210 = 10) || (let __nullable_211 = code in if __nullable_211 == HxRuntime.hx_null then false else Obj.obj __nullable_211 = 13) then let __assign_212 = let __nullable_int_213 = code in if __nullable_int_213 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_213 in (
       tempNumber := __assign_212;
       __assign_212
+    ) else let __assign_214 = 32 in (
+      tempNumber := __assign_214;
+      __assign_214
     ));
     StringBuf.addChar (Obj.magic positioned) (!tempNumber)
   )) done);
-  ignore (StringBuf.add (Obj.magic positioned) (Obj.repr (let __string_receiver_213 = source in let __string_argument_0_214 = start in let __string_argument_1_215 = hx_end in HxString.substring __string_receiver_213 __string_argument_0_214 __string_argument_1_215)));
+  ignore (StringBuf.add (Obj.magic positioned) (Obj.repr (let __string_receiver_215 = source in let __string_argument_0_216 = start in let __string_argument_1_217 = hx_end in HxString.substring __string_receiver_215 __string_argument_0_216 __string_argument_1_217)));
   parseParameters (StringBuf.toString (Obj.magic positioned) () : string)
 )
 end
@@ -86401,7 +86430,7 @@ and projectExpression = fun typedExpression catalog projectionFacts suppressCall
                     ignore (match callee with
                       | HxExpr.EField (_, __enum_param_581) -> __enum_param_581
                       | _ -> failwith "Unexpected enum parameter");
-                    let receiver = Obj.magic _g2 in let __assign_582 = Obj.magic (TypedExactStaticCallSource.encode (TyNominalTypeId.getCanonicalName (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) () : string) (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) () : string) (TyFunSig.getName (Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration) ())) () : string) (projectedTypeHint (Obj.magic (TypedExpr.getType (Obj.magic typedExpression) ())) : string) (Obj.magic (let __enum_arg_583 = Obj.magic (resolvedTypeExpression ("" : string) (Obj.magic extensionProvider)) in let __enum_arg_584 = (TyFunSig.getName (Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration) ())) () : string) in HxExpr.EField (Stdlib.Sys.opaque_identity __enum_arg_583, __enum_arg_584))) (Obj.magic (let __array_receiver_585 = Obj.magic (let __arr_586 = HxArray.create () in (
+                    let receiver = Obj.magic _g2 in let __assign_582 = Obj.magic (TypedExactStaticCallSource.encode (TyNominalTypeId.getCanonicalName (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) () : string) (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) () : string) (TyFunSig.getName (Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration) ())) () : string) (projectedTypeHint (Obj.magic (TypedExpr.getType (Obj.magic typedExpression) ())) : string) (TyDeclarationInfo.getHasBody (Obj.magic declaration) ()) (Obj.magic (let __enum_arg_583 = Obj.magic (resolvedTypeExpression ("" : string) (Obj.magic extensionProvider)) in let __enum_arg_584 = (TyFunSig.getName (Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration) ())) () : string) in HxExpr.EField (Stdlib.Sys.opaque_identity __enum_arg_583, __enum_arg_584))) (Obj.magic (let __array_receiver_585 = Obj.magic (let __arr_586 = HxArray.create () in (
                       ignore (HxArray.push __arr_586 receiver);
                       __arr_586
                     )) in let __array_arg_0_587 = Obj.magic arguments in HxArray.concat __array_receiver_585 __array_arg_0_587))) in (
@@ -86487,7 +86516,7 @@ and projectExpression = fun typedExpression catalog projectionFacts suppressCall
                       tempHxExpr2 := __assign_602;
                       __assign_602
                     ));
-                  let ordinary = Obj.magic (!tempHxExpr2) in let __assign_612 = Obj.magic (TypedExactStaticCallSource.encode (TyNominalTypeId.getCanonicalName (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) () : string) (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) () : string) (TyFunSig.getName (Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration) ())) () : string) (projectedTypeHint (Obj.magic (TypedExpr.getType (Obj.magic typedExpression) ())) : string) (Obj.magic ordinary) (Obj.magic arguments)) in (
+                  let ordinary = Obj.magic (!tempHxExpr2) in let __assign_612 = Obj.magic (TypedExactStaticCallSource.encode (TyNominalTypeId.getCanonicalName (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic declaration) ())) () : string) (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) () : string) (TyFunSig.getName (Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration) ())) () : string) (projectedTypeHint (Obj.magic (TypedExpr.getType (Obj.magic typedExpression) ())) : string) (TyDeclarationInfo.getHasBody (Obj.magic declaration) ()) (Obj.magic ordinary) (Obj.magic arguments)) in (
                     tempResult := __assign_612;
                     __assign_612
                   )
@@ -94569,7 +94598,7 @@ and TypedExactStaticCallSource : sig
 type t = { __hx_type : Obj.t }
 val create : unit -> t
 val __empty : unit -> t
-val encode : string -> string -> string -> string -> HxExpr.hxexpr -> HxExpr.hxexpr HxArray.t -> HxExpr.hxexpr
+val encode : string -> string -> string -> string -> bool -> HxExpr.hxexpr -> HxExpr.hxexpr HxArray.t -> HxExpr.hxexpr
 val decode : HxExpr.hxexpr -> Obj.t
 val ordinaryCall : Obj.t -> HxExpr.hxexpr
 end = struct
@@ -94587,14 +94616,15 @@ let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "TypedEx
 
 let __empty = fun () -> ({ __hx_type = HxType.instance_marker "TypedExactStaticCallSource" } : t)
 
-let encode = fun owner declaration hx_method resultType callee arguments -> let payload = Obj.magic (let __arr_1 = HxArray.create () in (
+let encode = fun owner declaration hx_method resultType hasBody callee arguments -> let payload = Obj.magic (let __arr_1 = HxArray.create () in (
   ignore (HxArray.push __arr_1 (let __enum_arg_2 = (owner : string) in HxExpr.EString (Stdlib.Sys.opaque_identity __enum_arg_2)));
   ignore (HxArray.push __arr_1 (let __enum_arg_3 = (declaration : string) in HxExpr.EString (Stdlib.Sys.opaque_identity __enum_arg_3)));
   ignore (HxArray.push __arr_1 (let __enum_arg_4 = (hx_method : string) in HxExpr.EString (Stdlib.Sys.opaque_identity __enum_arg_4)));
   ignore (HxArray.push __arr_1 (let __enum_arg_5 = (resultType : string) in HxExpr.EString (Stdlib.Sys.opaque_identity __enum_arg_5)));
+  ignore (HxArray.push __arr_1 (let __enum_arg_6 = hasBody in HxExpr.EBool (Stdlib.Sys.opaque_identity __enum_arg_6)));
   ignore (HxArray.push __arr_1 callee);
   __arr_1
-)) in let __enum_arg_9 = Obj.magic (let __enum_arg_6 = ("__hxhx_exact_static_call" : string) in HxExpr.EIdent (Stdlib.Sys.opaque_identity __enum_arg_6)) in let __enum_arg_10 = Obj.magic (let __array_receiver_7 = Obj.magic payload in let __array_arg_0_8 = Obj.magic arguments in HxArray.concat __array_receiver_7 __array_arg_0_8) in HxExpr.ECall (Stdlib.Sys.opaque_identity __enum_arg_9, __enum_arg_10)
+)) in let __enum_arg_10 = Obj.magic (let __enum_arg_7 = ("__hxhx_exact_static_call" : string) in HxExpr.EIdent (Stdlib.Sys.opaque_identity __enum_arg_7)) in let __enum_arg_11 = Obj.magic (let __array_receiver_8 = Obj.magic payload in let __array_arg_0_9 = Obj.magic arguments in HxArray.concat __array_receiver_8 __array_arg_0_9) in HxExpr.ECall (Stdlib.Sys.opaque_identity __enum_arg_10, __enum_arg_11)
 
 let decode = fun expression -> (try let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr HxArray.t) in (
   ignore (if (match expression with
@@ -94645,9 +94675,9 @@ let decode = fun expression -> (try let tempArray = ref (Obj.magic (HxRuntime.hx
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
     | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (match expression with
-    | HxExpr.ECall (__enum_param_11, _) -> __enum_param_11
+    | HxExpr.ECall (__enum_param_12, _) -> __enum_param_12
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expression with
-    | HxExpr.ECall (_, __enum_param_12) -> __enum_param_12
+    | HxExpr.ECall (_, __enum_param_13) -> __enum_param_13
     | _ -> failwith "Unexpected enum parameter") in if (match _g with
     | HxExpr.EParenthesized (_, _) -> 0
     | HxExpr.ESourceTry (_, _, _) -> 1
@@ -94696,15 +94726,15 @@ let decode = fun expression -> (try let tempArray = ref (Obj.magic (HxRuntime.hx
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
     | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
-    | HxExpr.EIdent __enum_param_13 -> __enum_param_13
-    | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_14 = _g2 in let __string_eq_right_15 = "__hxhx_exact_static_call" in HxString.equals __string_eq_left_14 __string_eq_right_15 then let arguments = Obj.magic _g1 in let __assign_16 = Obj.magic arguments in (
-    tempArray := __assign_16;
-    __assign_16
+    | HxExpr.EIdent __enum_param_14 -> __enum_param_14
+    | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_15 = _g2 in let __string_eq_right_16 = "__hxhx_exact_static_call" in HxString.equals __string_eq_left_15 __string_eq_right_16 then let arguments = Obj.magic _g1 in let __assign_17 = Obj.magic arguments in (
+    tempArray := __assign_17;
+    __assign_17
   ) else Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))));
   let payload = Obj.magic (!tempArray) in (
-    ignore (if HxArray.length payload < 5 then HxType.hx_throw_typed_rtti (Obj.repr "exact static call contains a malformed typed payload") ["Dynamic"] else ());
+    ignore (if HxArray.length payload < 6 then HxType.hx_throw_typed_rtti (Obj.repr "exact static call contains a malformed typed payload") ["Dynamic"] else ());
     let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-      ignore (let _g = Obj.magic (let __array_receiver_17 = Obj.magic payload in let __array_arg_0_18 = 0 in let __array_arg_1_19 = 4 in HxArray.slice __array_receiver_17 __array_arg_0_18 __array_arg_1_19) in if HxArray.length _g = 4 then let _g1 = Obj.magic (let __array_read_receiver_20 = _g in let __array_read_index_21 = 0 in HxArray.get (Obj.magic __array_read_receiver_20) __array_read_index_21) in let _g2 = Obj.magic (let __array_read_receiver_22 = _g in let __array_read_index_23 = 1 in HxArray.get (Obj.magic __array_read_receiver_22) __array_read_index_23) in let _g3 = Obj.magic (let __array_read_receiver_24 = _g in let __array_read_index_25 = 2 in HxArray.get (Obj.magic __array_read_receiver_24) __array_read_index_25) in let _g4 = Obj.magic (let __array_read_receiver_26 = _g in let __array_read_index_27 = 3 in HxArray.get (Obj.magic __array_read_receiver_26) __array_read_index_27) in if (match _g1 with
+      ignore (let _g = Obj.magic (let __array_receiver_18 = Obj.magic payload in let __array_arg_0_19 = 0 in let __array_arg_1_20 = 5 in HxArray.slice __array_receiver_18 __array_arg_0_19 __array_arg_1_20) in if HxArray.length _g = 5 then let _g1 = Obj.magic (let __array_read_receiver_21 = _g in let __array_read_index_22 = 0 in HxArray.get (Obj.magic __array_read_receiver_21) __array_read_index_22) in let _g2 = Obj.magic (let __array_read_receiver_23 = _g in let __array_read_index_24 = 1 in HxArray.get (Obj.magic __array_read_receiver_23) __array_read_index_24) in let _g3 = Obj.magic (let __array_read_receiver_25 = _g in let __array_read_index_26 = 2 in HxArray.get (Obj.magic __array_read_receiver_25) __array_read_index_26) in let _g4 = Obj.magic (let __array_read_receiver_27 = _g in let __array_read_index_28 = 3 in HxArray.get (Obj.magic __array_read_receiver_27) __array_read_index_28) in let _g5 = Obj.magic (let __array_read_receiver_29 = _g in let __array_read_index_30 = 4 in HxArray.get (Obj.magic __array_read_receiver_29) __array_read_index_30) in if (match _g1 with
         | HxExpr.EParenthesized (_, _) -> 0
         | HxExpr.ESourceTry (_, _, _) -> 1
         | HxExpr.ESourceFor (_, _, _, _) -> 2
@@ -94751,8 +94781,8 @@ let decode = fun expression -> (try let tempArray = ref (Obj.magic (HxRuntime.hx
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g5 = (match _g1 with
-        | HxExpr.EString __enum_param_28 -> __enum_param_28
+        | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g6 = (match _g1 with
+        | HxExpr.EString __enum_param_31 -> __enum_param_31
         | _ -> failwith "Unexpected enum parameter" : string) in if (match _g2 with
         | HxExpr.EParenthesized (_, _) -> 0
         | HxExpr.ESourceTry (_, _, _) -> 1
@@ -94800,8 +94830,8 @@ let decode = fun expression -> (try let tempArray = ref (Obj.magic (HxRuntime.hx
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g6 = (match _g2 with
-        | HxExpr.EString __enum_param_29 -> __enum_param_29
+        | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g7 = (match _g2 with
+        | HxExpr.EString __enum_param_32 -> __enum_param_32
         | _ -> failwith "Unexpected enum parameter" : string) in if (match _g3 with
         | HxExpr.EParenthesized (_, _) -> 0
         | HxExpr.ESourceTry (_, _, _) -> 1
@@ -94849,8 +94879,8 @@ let decode = fun expression -> (try let tempArray = ref (Obj.magic (HxRuntime.hx
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g7 = (match _g3 with
-        | HxExpr.EString __enum_param_30 -> __enum_param_30
+        | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g8 = (match _g3 with
+        | HxExpr.EString __enum_param_33 -> __enum_param_33
         | _ -> failwith "Unexpected enum parameter" : string) in if (match _g4 with
         | HxExpr.EParenthesized (_, _) -> 0
         | HxExpr.ESourceTry (_, _, _) -> 1
@@ -94898,30 +94928,80 @@ let decode = fun expression -> (try let tempArray = ref (Obj.magic (HxRuntime.hx
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g8 = (match _g4 with
-        | HxExpr.EString __enum_param_31 -> __enum_param_31
-        | _ -> failwith "Unexpected enum parameter" : string) in let resultType = (_g8 : string) in let declaration = (_g6 : string) in let owner = (_g5 : string) in let hx_method = (_g7 : string) in (
-        ignore (if (let __string_receiver_32 = owner in HxString.length __string_receiver_32) = 0 || (let __string_receiver_33 = declaration in HxString.length __string_receiver_33) = 0 || (let __string_receiver_34 = hx_method in HxString.length __string_receiver_34) = 0 || (let __string_receiver_35 = resultType in HxString.length __string_receiver_35) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "exact static call contains empty typed identities") ["Dynamic"] else ());
-        let __assign_36 = Obj.magic (let __anon_37 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_37 "owner" (Obj.repr owner));
-          ignore (HxAnon.set __anon_37 "declaration" (Obj.repr declaration));
-          ignore (HxAnon.set __anon_37 "method" (Obj.repr hx_method));
-          ignore (HxAnon.set __anon_37 "resultType" (Obj.repr resultType));
-          ignore (HxAnon.set __anon_37 "callee" (HxEnum.box_if_needed "HxExpr" (Obj.repr (let __array_read_receiver_38 = payload in let __array_read_index_39 = 4 in HxArray.get (Obj.magic __array_read_receiver_38) __array_read_index_39))));
-          ignore (HxAnon.set __anon_37 "arguments" (Obj.repr (let __array_receiver_40 = Obj.magic payload in let __array_arg_0_41 = 5 in HxArray.slice_default __array_receiver_40 __array_arg_0_41)));
-          __anon_37
+        | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g9 = (match _g4 with
+        | HxExpr.EString __enum_param_34 -> __enum_param_34
+        | _ -> failwith "Unexpected enum parameter" : string) in if (match _g5 with
+        | HxExpr.EParenthesized (_, _) -> 0
+        | HxExpr.ESourceTry (_, _, _) -> 1
+        | HxExpr.ESourceFor (_, _, _, _) -> 2
+        | HxExpr.ELoweredControl (_, _, _, _) -> 3
+        | HxExpr.ENull -> 4
+        | HxExpr.EBool _ -> 5
+        | HxExpr.EString _ -> 6
+        | HxExpr.EInt _ -> 7
+        | HxExpr.EFloat _ -> 8
+        | HxExpr.EEnumValue _ -> 9
+        | HxExpr.EThis -> 10
+        | HxExpr.ESuper -> 11
+        | HxExpr.EIdent _ -> 12
+        | HxExpr.EField (_, _) -> 13
+        | HxExpr.ENullSafeField (_, _) -> 14
+        | HxExpr.ECall (_, _) -> 15
+        | HxExpr.EMacroExpr (_, _) -> 16
+        | HxExpr.EMacroType _ -> 17
+        | HxExpr.ELambda (_, _, _) -> 18
+        | HxExpr.ETryCatchRaw _ -> 19
+        | HxExpr.ESwitchRaw _ -> 20
+        | HxExpr.ESwitch (_, _, _) -> 21
+        | HxExpr.ENew (_, _) -> 22
+        | HxExpr.EUnop (_, _, _) -> 23
+        | HxExpr.EBinop (_, _, _) -> 24
+        | HxExpr.ETernary (_, _, _) -> 25
+        | HxExpr.ESourceIf (_, _, _, _) -> 26
+        | HxExpr.EThrow (_, _) -> 27
+        | HxExpr.EAnon (_, _) -> 28
+        | HxExpr.EArrayComprehension (_, _, _, _) -> 29
+        | HxExpr.EArrayDecl _ -> 30
+        | HxExpr.EArrayAccess (_, _) -> 31
+        | HxExpr.ERange (_, _) -> 32
+        | HxExpr.ECast (_, _) -> 33
+        | HxExpr.ECheckType (_, _) -> 34
+        | HxExpr.EUntyped _ -> 35
+        | HxExpr.EUnsupported _ -> 36
+        | HxExpr.EReturn _ -> 37
+        | HxExpr.EVars _ -> 38
+        | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 39
+        | HxExpr.EWhile (_, _, _, _, _) -> 40
+        | HxExpr.EBreak _ -> 41
+        | HxExpr.EContinue _ -> 42
+        | HxExpr.EDiscardThen (_, _) -> 43
+        | HxExpr.ESourceGroup (_, _) -> 44
+        | HxExpr.ESourceFunction (_, _, _, _) -> 45
+        | HxExpr.EPrivateAccess (_, _) -> 46) = 5 then let _g10 = match _g5 with
+        | HxExpr.EBool __enum_param_35 -> __enum_param_35
+        | _ -> failwith "Unexpected enum parameter" in let hasBody = _g10 in let hx_method = (_g8 : string) in let owner = (_g6 : string) in let declaration = (_g7 : string) in let resultType = (_g9 : string) in (
+        ignore (if (let __string_receiver_36 = owner in HxString.length __string_receiver_36) = 0 || (let __string_receiver_37 = declaration in HxString.length __string_receiver_37) = 0 || (let __string_receiver_38 = hx_method in HxString.length __string_receiver_38) = 0 || (let __string_receiver_39 = resultType in HxString.length __string_receiver_39) = 0 then HxType.hx_throw_typed_rtti (Obj.repr "exact static call contains empty typed identities") ["Dynamic"] else ());
+        let __assign_40 = Obj.magic (let __anon_41 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_41 "owner" (Obj.repr owner));
+          ignore (HxAnon.set __anon_41 "declaration" (Obj.repr declaration));
+          ignore (HxAnon.set __anon_41 "method" (Obj.repr hx_method));
+          ignore (HxAnon.set __anon_41 "resultType" (Obj.repr resultType));
+          ignore (HxAnon.set __anon_41 "hasBody" (HxRuntime.box_bool hasBody));
+          ignore (HxAnon.set __anon_41 "callee" (HxEnum.box_if_needed "HxExpr" (Obj.repr (let __array_read_receiver_42 = payload in let __array_read_index_43 = 5 in HxArray.get (Obj.magic __array_read_receiver_42) __array_read_index_43))));
+          ignore (HxAnon.set __anon_41 "arguments" (Obj.repr (let __array_receiver_44 = Obj.magic payload in let __array_arg_0_45 = 6 in HxArray.slice_default __array_receiver_44 __array_arg_0_45)));
+          __anon_41
         )) in (
-          tempResult := __assign_36;
-          __assign_36
+          tempResult := __assign_40;
+          __assign_40
         )
-      ) else HxType.hx_throw_typed_rtti (Obj.repr "exact static call contains a malformed typed payload") ["Dynamic"] else HxType.hx_throw_typed_rtti (Obj.repr "exact static call contains a malformed typed payload") ["Dynamic"] else HxType.hx_throw_typed_rtti (Obj.repr "exact static call contains a malformed typed payload") ["Dynamic"] else HxType.hx_throw_typed_rtti (Obj.repr "exact static call contains a malformed typed payload") ["Dynamic"] else HxType.hx_throw_typed_rtti (Obj.repr "exact static call contains a malformed typed payload") ["Dynamic"]);
+      ) else HxType.hx_throw_typed_rtti (Obj.repr "exact static call contains a malformed typed payload") ["Dynamic"] else HxType.hx_throw_typed_rtti (Obj.repr "exact static call contains a malformed typed payload") ["Dynamic"] else HxType.hx_throw_typed_rtti (Obj.repr "exact static call contains a malformed typed payload") ["Dynamic"] else HxType.hx_throw_typed_rtti (Obj.repr "exact static call contains a malformed typed payload") ["Dynamic"] else HxType.hx_throw_typed_rtti (Obj.repr "exact static call contains a malformed typed payload") ["Dynamic"] else HxType.hx_throw_typed_rtti (Obj.repr "exact static call contains a malformed typed payload") ["Dynamic"]);
       Obj.magic (!tempResult)
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_42 -> (Obj.obj __ret_42 : Obj.t) : Obj.t)
+  | HxRuntime.Hx_return __ret_46 -> (Obj.obj __ret_46 : Obj.t) : Obj.t)
 
-let ordinaryCall = fun call -> let __enum_arg_44 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get call "callee"))) in let __enum_arg_45 = Obj.magic (let __array_receiver_43 = Obj.magic (Obj.obj (HxAnon.get call "arguments")) in HxArray.copy __array_receiver_43) in HxExpr.ECall (Stdlib.Sys.opaque_identity __enum_arg_44, __enum_arg_45)
+let ordinaryCall = fun call -> let __enum_arg_48 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get call "callee"))) in let __enum_arg_49 = Obj.magic (let __array_receiver_47 = Obj.magic (Obj.obj (HxAnon.get call "arguments")) in HxArray.copy __array_receiver_47) in HxExpr.ECall (Stdlib.Sys.opaque_identity __enum_arg_48, __enum_arg_49)
 end
 and TypedExpr : sig
 type typedexprtag =
