@@ -67,6 +67,7 @@
       ],
       "request_reset_fields": [
         "var:currentRuntimeOcamlModuleNames",
+        "var:currentNonGeneratedModuleNames",
         "var:currentEnums",
         "var:currentCallables",
         "var:currentClassStorage",

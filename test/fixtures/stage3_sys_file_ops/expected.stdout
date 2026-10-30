@@ -1,0 +1,17 @@
+exists before false
+exists after true
+root is directory true
+a.txt = alpha
+line two
+b.txt = beta
+a.txt is directory false
+c.txt exists true
+root lists a.txt,b.txt,nested
+nested lists c.txt
+a.txt after rewrite = rewritten
+b.txt exists after rename false
+renamed.txt = beta
+copy.txt = beta
+a.txt exists after delete false
+root lists after delete copy.txt,nested,renamed.txt
+exists at end false

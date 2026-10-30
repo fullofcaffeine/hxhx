@@ -159,6 +159,13 @@ class EmitterStage {
 	**/
 	static var currentRuntimeOcamlModuleNames:Map<String, Bool> = new Map();
 
+	/**
+		OCaml modules in this emission that Stage3 does not generate from Haxe
+		classes: runtime modules and bootstrap shims. A bodiless method of such
+		a module has a real OCaml implementation.
+	**/
+	static var currentNonGeneratedModuleNames:Map<String, Bool> = new Map();
+
 	static var currentGlobalImportAliasByIdent:Map<String, String> = new Map();
 
 	/**
@@ -2804,8 +2811,39 @@ class EmitterStage {
 		final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findInstanceCall(call) : currentTypedFunction == null ? null : currentTypedFunction.findInstanceCall(call);
 		if (occurrence == null)
 			throw "stage3 emitter: Array." + method + " requires its exact executable occurrence";
-		if (!occurrence.getDeclaration().getHasBody())
-			throw "stage3 emitter: Array." + method + " has no native adapter; the generated Array module only has an empty stub for it";
+		requireEmittedMethodBody("Array", method, occurrence.getDeclaration().getHasBody());
+	}
+
+	/**
+		Rejects a typed call that would bind to an empty generated placeholder.
+
+		Example: the standard `sys.io.File` class is `extern`, so
+		`getBytes(path)` has no Haxe body. Stage3 still writes a `Sys_io_File`
+		OCaml module for the class, and the method there only returns a
+		placeholder. A call that reaches the ordinary module-qualified form
+		after every native adapter has declined it would compile and then return
+		garbage or crash at run time. This check turns that into an emit-time
+		error that names the method.
+
+		A bodiless method stays valid when its owner module is not generated from
+		Haxe: modules copied from the reflaxe.ocaml runtime (`Std`, `Math`,
+		`Date`) and bootstrap shims (`Sys`, `Type`, `Reflect`) implement the
+		method in OCaml. Calls to host-owned `@:native` externs are rendered by
+		`Stage3OcamlExternBindings` before they reach this check.
+	**/
+	static function requireEmittedMethodBody(owner:String, method:String, hasBody:Bool):Void {
+		if (hasBody)
+			return;
+		final ownerModule = ocamlModuleNameFromTypePath(owner);
+		if (currentNonGeneratedModuleNames.exists(ownerModule))
+			return;
+		throw "stage3 emitter: "
+			+ owner
+			+ "."
+			+ method
+			+ " has no native adapter; the generated "
+			+ ownerModule
+			+ " module only has an empty stub for it";
 	}
 
 	/** Authored lambda return conversions consume occurrence facts, never rendered annotations. */
@@ -2982,76 +3020,6 @@ class EmitterStage {
 				return "((match Stdlib.Sys.getenv_opt \"GITHUB_ACTIONS\" with | Some v -> v | None -> \"\") = \"true\")";
 			case EField(EIdent("runci.Config"), "isCi") if (args.length == 0):
 				return "((match Stdlib.Sys.getenv_opt \"GITHUB_ACTIONS\" with | Some v -> v | None -> \"\") = \"true\")";
-
-			// Stage3 emit-runner bring-up: map `sys.FileSystem` statics used by RunCi to the
-			// repo-owned OCaml runtime implementation.
-			case EField(EIdent("FileSystem"), "fullPath") if (args.length == 1):
-				return "HxFileSystem.fullPath ("
-					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ")";
-			case EField(EIdent("FileSystem"), "absolutePath") if (args.length == 1):
-				return "HxFileSystem.absolutePath ("
-					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ")";
-			case EField(EIdent("FileSystem"), "exists") if (args.length == 1):
-				return "HxFileSystem.exists ("
-					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ")";
-			case EField(EIdent("FileSystem"), "isDirectory") if (args.length == 1):
-				return "HxFileSystem.isDirectory ("
-					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ")";
-			case EField(EIdent("FileSystem"), "readDirectory") if (args.length == 1):
-				return "HxFileSystem.readDirectory ("
-					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ")";
-			case EField(EIdent("FileSystem"), "createDirectory") if (args.length == 1):
-				return "HxFileSystem.createDirectory ("
-					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ")";
-			case EField(EIdent("FileSystem"), "deleteFile") if (args.length == 1):
-				return "HxFileSystem.deleteFile ("
-					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ")";
-			case EField(EIdent("FileSystem"), "deleteDirectory") if (args.length == 1):
-				return "HxFileSystem.deleteDirectory ("
-					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ")";
-			case EField(EIdent("FileSystem"), "rename") if (args.length == 2):
-				return "HxFileSystem.rename ("
-					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ") ("
-					+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ")";
-
-			// Stage3 emit-runner bring-up: map `sys.io.File` statics used by RunCi targets to
-			// the repo-owned OCaml runtime implementation.
-			case EField(EIdent("File"), "getContent") if (args.length == 1):
-				return "HxFile.getContent ("
-					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ")";
-			case EField(EIdent("File"), "saveContent") if (args.length == 2):
-				return "HxFile.saveContent ("
-					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ") ("
-					+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ")";
-			case EField(EIdent("File"), "getBytes") if (args.length == 1):
-				return "HxFile.getBytes ("
-					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ")";
-			case EField(EIdent("File"), "saveBytes") if (args.length == 2):
-				return "HxFile.saveBytes ("
-					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ") ("
-					+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ")";
-			case EField(EIdent("File"), "copy") if (args.length == 2):
-				return "HxFile.copy ("
-					+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ") ("
-					+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ")";
 
 			// Gate2 bring-up: avoid depending on the std `Xml` implementation while still
 			// compiling upstream harness code that parses remote appcasts.
@@ -3402,8 +3370,17 @@ class EmitterStage {
 		final moduleNameByPkgAndClassRaw = moduleNameByPkgAndClass;
 		final callSigByCalleeRaw = callSigByCallee;
 		final staticCall = TypedExactStaticCallSource.decode(e);
-		if (staticCall != null)
+		if (staticCall != null) {
+			final stdStaticCall = backend.ocaml.Stage3OcamlStdStaticCalls.render({
+				call: staticCall,
+				emit: value -> exprToOcaml(value, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+					callSigByCalleeRaw),
+				names: currentFunctionLocalOcamlNames
+			});
+			if (stdStaticCall != null)
+				return stdStaticCall;
 			e = TypedExactStaticCallSource.ordinaryCall(staticCall);
+		}
 		final exactCall = TypedExactCallSource.decodeInstance(e);
 		if (exactCall != null) {
 			if (exactCall.owner == "String" && backend.ocaml.Stage3OcamlStringCalls.supports(exactCall.method)) {
@@ -4054,6 +4031,9 @@ class EmitterStage {
 					// A nested type is not a value field of its containing module.
 					// Use the declaration selected by typing after builtin handling,
 					// then retain the ordinary argument conversion and arity plan.
+					// Every native adapter has declined this call by now, so a
+					// bodiless declaration would bind to its empty generated stub.
+					requireEmittedMethodBody(staticCall.owner, staticCall.method, staticCall.hasBody);
 					final ownerModule = ocamlModuleNameFromTypePath(staticCall.owner);
 					final method = ocamlModuleValueIdent(ownerModule, staticCall.method);
 					ownerModule == currentOcamlModuleName ? method : ownerModule + "." + method;
@@ -7871,6 +7851,7 @@ class EmitterStage {
 			throw "stage3 emitter: empty typed module graph";
 
 		final runtimeModuleNames = runtimeModuleNamesForStage3(runtimePaths);
+		currentNonGeneratedModuleNames = runtimeModuleNames;
 
 		function uniqueTypedModules(mods:Array<TypedModule>):Array<TypedModule> {
 			if (mods == null || mods.length <= 1)
@@ -9844,6 +9825,7 @@ class EmitterStage {
 	**/
 	public static function resetRequestState():Void {
 		currentRuntimeOcamlModuleNames = new Map();
+		currentNonGeneratedModuleNames = new Map();
 		currentEnums = null;
 		currentCallables = null;
 		currentClassStorage = null;
