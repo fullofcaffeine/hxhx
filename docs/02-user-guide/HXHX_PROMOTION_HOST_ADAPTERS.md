@@ -6,7 +6,7 @@ Scope:
 
 - lane A: `hxhx` Stage3 native backend plugin host (`ocaml-dynlink`)
 - lane B: upstream Haxe eval plugin host (`eval.vm.Context.loadPlugin`)
-- lane C: Stage4 native macro-module host (`macro.loadNativeModule` + `macro.runNativeExpr`)
+- lane C: Stage4 native macro-module host (`macro.loadNativeModule`; declarations run in-process)
 
 Compatibility target:
 

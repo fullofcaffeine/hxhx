@@ -150,7 +150,7 @@
     {
       "module": "HxHxMacroModuleHost",
       "scope": "tooling",
-      "files": [{ "path": "HxHxMacroModuleHost.ml", "sha256": "8202c5795a371a3d0950314b2b91d4338081cf179994a9ddb9979cd69ef56905" }],
+      "files": [{ "path": "HxHxMacroModuleHost.ml", "sha256": "d2c61e44425b6d7ccc53f8c2534d247bd24a1a45230d7ba03e75e7065a0a7de3" }],
       "dependencies": [],
       "duneLibraries": [],
       "profiles": ["portable"],

@@ -4,8 +4,8 @@ const crypto = require('node:crypto')
 const fs = require('node:fs')
 const path = require('node:path')
 
-const SCHEMA = 'hxhx.native-macro-module.v1'
-const ABI_VERSION = 1
+const SCHEMA = 'hxhx.native-macro-module.v2'
+const ABI_VERSION = 2
 const MACRO_API_VERSION = 1
 
 function fail(message) {
@@ -74,9 +74,15 @@ function validateReceipt(reportPath, expectedCandidate) {
   if (!receipt.pluginId) fail('pluginId is required')
   if (receipt.abiVersion !== ABI_VERSION) fail(`abiVersion mismatch: ${receipt.abiVersion}`)
   if (receipt.macroApiVersion !== MACRO_API_VERSION) fail(`macroApiVersion mismatch: ${receipt.macroApiVersion}`)
-  if (!Array.isArray(receipt.expressions) || receipt.expressions.length !== 1 || !receipt.expressions[0]) {
-    fail('this pilot requires exactly one expression')
+  if (!Array.isArray(receipt.declarations) || receipt.declarations.length === 0) {
+    fail('declarations must list at least one macro declaration')
   }
+  for (const declaration of receipt.declarations) {
+    if (typeof declaration !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)+$/.test(declaration)) {
+      fail(`invalid macro declaration: ${JSON.stringify(declaration)}`)
+    }
+  }
+  if (new Set(receipt.declarations).size !== receipt.declarations.length) fail('duplicate macro declaration')
   if (!receipt.artifacts) fail('artifacts is required')
   const native = validateArtifact(reportPath, receipt.artifacts.native, 'native')
   const bytecode = validateArtifact(reportPath, receipt.artifacts.bytecode, 'bytecode')
@@ -104,7 +110,7 @@ function writeReceipt(values) {
     pluginId: required(values, 'plugin-id'),
     abiVersion: ABI_VERSION,
     macroApiVersion: MACRO_API_VERSION,
-    expressions: [required(values, 'expr')],
+    declarations: required(values, 'declarations').split(',').map((entry) => entry.trim()).filter((entry) => entry.length > 0),
     artifacts: {
       native: {
         path: relativeArtifact(nativeArtifactPath),
@@ -127,9 +133,10 @@ function mutateFixture(values) {
   const receipt = JSON.parse(fs.readFileSync(sourcePath, 'utf8'))
   if (kind === 'wrong-candidate') receipt.candidateCommit = 'definitely-another-candidate'
   else if (kind === 'wrong-abi') receipt.abiVersion = ABI_VERSION + 1
+  else if (kind === 'old-abi') receipt.abiVersion = 1
   else if (kind === 'wrong-native-digest') receipt.artifacts.native.sha256 = '0'.repeat(64)
   else if (kind === 'wrong-bytecode-digest') receipt.artifacts.bytecode.sha256 = '0'.repeat(64)
-  else if (kind === 'wrong-expression') receipt.expressions = ['projectmacro.ProjectMacro.missing()']
+  else if (kind === 'wrong-declaration') receipt.declarations = ['Identity.missing']
   else if (kind === 'missing-native') receipt.artifacts.native.path = 'missing.cmxs'
   else if (kind === 'missing-bytecode') receipt.artifacts.bytecode.path = 'missing.cma'
   else fail(`unsupported fixture mutation: ${kind}`)
@@ -151,7 +158,7 @@ function main() {
       schema: result.receipt.schema,
       candidateCommit: result.receipt.candidateCommit,
       pluginId: result.receipt.pluginId,
-      expressions: result.receipt.expressions,
+      declarations: result.receipt.declarations,
       artifacts: {
         native: { path: result.native.artifactPath, sha256: result.native.actualDigest },
         bytecode: { path: result.bytecode.artifactPath, sha256: result.bytecode.actualDigest },

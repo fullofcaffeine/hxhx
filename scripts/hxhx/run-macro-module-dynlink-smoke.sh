@@ -56,18 +56,18 @@ cat >"$good_src" <<'ML'
 let plugin_id : string = "fixture.native.macro.plugin"
 
 let () =
-  HxHxMacroModuleHost.register_expr_handler plugin_id
-    "FixtureNativeMacroPlugin.smoke()"
-    (fun () -> "native_macro_smoke_ok")
+  HxHxMacroModuleHost.register_macro_declaration plugin_id
+    "FixtureNativeMacroPlugin.smoke"
+    (fun payload -> payload)
 ML
 
 cat >"$bad_src" <<'ML'
 let plugin_id : string = "fixture.native.macro.other"
 
 let () =
-  HxHxMacroModuleHost.register_expr_handler plugin_id
-    "FixtureNativeMacroPlugin.bad()"
-    (fun () -> "native_macro_bad")
+  HxHxMacroModuleHost.register_macro_declaration plugin_id
+    "FixtureNativeMacroPlugin.bad"
+    (fun payload -> payload)
 ML
 
 build_native_macro_artifact() {
@@ -117,32 +117,24 @@ class DynlinkSmokeMain {
 		final modulePath = Sys.getEnv("HXHX_NATIVE_MACRO_GOOD");
 		final badPath = Sys.getEnv("HXHX_NATIVE_MACRO_BAD");
 		final pluginId = "fixture.native.macro.plugin";
-		final expr = "FixtureNativeMacroPlugin.smoke()";
+		final declaration = "FixtureNativeMacroPlugin.smoke";
 		if (modulePath == null || modulePath.length == 0)
 			fail("missing HXHX_NATIVE_MACRO_GOOD");
 		if (badPath == null || badPath.length == 0)
 			fail("missing HXHX_NATIVE_MACRO_BAD");
 
-		final exprs = MacroHostClient.loadNativeModule(modulePath, pluginId);
-		if (exprs.length != 1)
-			fail("expected one registered expr");
-		if (exprs[0] != expr)
-			fail("unexpected registered expr: " + exprs[0]);
-		Sys.println("macro_native_expr_count=" + exprs.length);
-		Sys.println("macro_native_expr[0]=" + exprs[0]);
-
-		final runResult = MacroHostClient.runNativeModuleExpr(modulePath, pluginId, expr);
-		Sys.println("macro_native_run=" + runResult);
+		final declarations = MacroHostClient.loadNativeModule(modulePath, pluginId);
+		if (declarations.length != 1)
+			fail("expected one registered declaration");
+		if (declarations[0] != declaration)
+			fail("unexpected registered declaration: " + declarations[0]);
+		Sys.println("macro_native_declaration_count=" + declarations.length);
+		Sys.println("macro_native_declaration[0]=" + declarations[0]);
 
 		expectFailureContains("plugin-id mismatch", "registration pluginId mismatch", function() {
 			MacroHostClient.loadNativeModule(badPath, pluginId);
 		});
 		Sys.println("macro_native_mismatch=ok");
-
-		expectFailureContains("missing entrypoint", "native macro expr not registered", function() {
-			MacroHostClient.runNativeModuleExpr(modulePath, pluginId, "FixtureNativeMacroPlugin.missing()");
-		});
-		Sys.println("macro_native_missing_entry=ok");
 	}
 }
 HX
@@ -162,11 +154,9 @@ if [ "$client_code" -ne 0 ]; then
   exit "$client_code"
 fi
 
-printf '%s\n' "$client_output" | grep -q '^macro_native_expr_count=1$'
-printf '%s\n' "$client_output" | grep -q '^macro_native_expr\[0\]=FixtureNativeMacroPlugin.smoke()$'
-printf '%s\n' "$client_output" | grep -q '^macro_native_run=native_macro_smoke_ok$'
+printf '%s\n' "$client_output" | grep -q '^macro_native_declaration_count=1$'
+printf '%s\n' "$client_output" | grep -q '^macro_native_declaration\[0\]=FixtureNativeMacroPlugin.smoke$'
 printf '%s\n' "$client_output" | grep -q '^macro_native_mismatch=ok$'
-printf '%s\n' "$client_output" | grep -q '^macro_native_missing_entry=ok$'
 
 echo "macro_native_good_artifact=$good_artifact"
 echo "macro_native_bad_artifact=$bad_artifact"

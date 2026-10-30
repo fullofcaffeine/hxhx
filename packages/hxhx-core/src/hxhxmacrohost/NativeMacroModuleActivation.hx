@@ -4,7 +4,7 @@ package hxhxmacrohost;
 typedef NativeMacroModuleActivation = {
 	final candidateCommit:String;
 	final pluginId:String;
-	final expressions:Array<String>;
+	final declarations:Array<String>;
 	final artifactKind:String;
 	final artifactPath:String;
 	final artifactSha256:String;

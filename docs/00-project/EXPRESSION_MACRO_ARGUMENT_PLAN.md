@@ -1,7 +1,119 @@
 # Pass authored syntax to project expression macros
 
-Status: proposed implementation sequence; native argument transport is unfinished.
+Status: approved plan (2026-10-29); step 1 (in-process identity macro) implemented by `haxe_ocaml-9sj5p.3`.
 Owners: `haxe_ocaml-9sj5p` and `haxe_ocaml-geafz`.
+
+## What works now (after step 1)
+
+A project macro body runs for real when its class is compiled into a project-macro plugin and the
+compile runs in-process. For example, `test/fixtures/project-macro-identity` calls
+`Identity.preserve(function(label:String):String { { if (label == "ok") { return label; } ... } ... })`.
+The macro receives the function as `haxe.macro.Expr`, checks its written signature, nested brace
+group, both returns, and the statements after the group, and returns it unchanged. The native
+program prints `ok` and an empty event line, as upstream Haxe 4.3.7 does.
+
+The pieces, in call order:
+
+1. `ExprMacroExpander` selects the declaration and sends one `ExprMacroDispatchRequest`
+   (unchanged from the selection step below).
+2. `InProcMacroSession.expandSelected` looks up the declaration key `<owner>.<method>`. With no
+   plugin providing it the call stays `Unavailable` and is reported as unexecuted.
+3. `MacroSyntaxExport` converts each argument (`HxExpr`) to `haxe.macro.Expr`.
+4. `MacroSyntaxWire` encodes the arguments. The plugin's generated adapter
+   (`Array<Expr> -> Expr`, emitted by `Stage3OcamlMacroPluginEntry` for the declarations listed in
+   `-D ocaml_plugin_macro_declarations`) decodes them, runs the macro, and encodes its result or
+   its failure.
+5. `MacroSyntaxImport` converts the returned expression back to parser syntax, which replaces the
+   call before typing.
+
+Why a payload crosses the plugin boundary instead of `Expr` values: the `hxhx` binary is compiled
+by `reflaxe.ocaml`, while the plugin is compiled by hxhx's Stage3 emitter. The two backends lay out
+the same Haxe enum differently in memory (Stage3 boxes every enum value and uses `HxBootArray`), so
+a raw value cannot be shared. Both sides compile the one Haxe-authored codec instead; native code
+only stores the closure and passes the payload through (plugin ABI version 2,
+`register_macro_declaration`).
+
+Standing boundary contract (accepted by review, 2026-10-29): raw Haxe values never cross the
+plugin boundary. The native ABI surface is `string -> string` (`register_macro_declaration` stores
+a callback from an encoded request payload to an encoded response payload), and native code never
+reads either payload. Both runtime routes use the same `MacroSyntaxWire` payloads: the in-process
+Dynlink route today, and the external macro host, which should gain a `macro.runDeclaration`
+method that carries exactly the same request and response payloads. Later Context services
+(`haxe_ocaml-9sj5p.6`) extend this contract with host-resolved type handles instead of serialized
+`haxe.macro.Type` values (`haxe_ocaml-expdc`).
+
+Contract details and limits:
+
+- Positions: a node that owns a known `HxPos` gets `{file: <call file>, min: start, max: start}`.
+  The end is not known, so the span is zero-width. Other nodes reuse the nearest enclosing owned
+  position. An argument whose root owns no position fails explicitly. On import, positions this
+  call exported restore the original `HxPos`; any other position falls back to the first
+  argument's start. Exact ranges remain `haxe_ocaml-9sj5p.2`.
+- Import handles every `ExprDef` constructor. It rejects, with a compile error at the call,
+  shapes the parser has no faithful form for yet: `ESwitch`, `EDisplay`, `EIs`, metadata other
+  than `@:privateAccess`, local functions with type parameters, literal suffixes, and
+  single-quoted interpolation.
+- Export rejects pattern switches, comprehensions, raw text, lowered sequences without source
+  groups, and `is`. Written types are read with the shared type grammar
+  (`HxTypedefParser.parseTypeHint`) and printed back in the parser's compact text form.
+- Plugin declarations must be static `macro` methods whose parameters are all required `Expr`
+  values and whose result is `Expr`.
+- The external macro host loads and validates the same plugin but has no structured dispatch
+  method (`macro.runDeclaration`, above); it reports selected declarations as unexecuted.
+- One in-process session loads at most one plugin; a second load is rejected. Registrations must
+  name `pack.Type.method`, and `haxe.macro.*` owners are reserved.
+- Follow-ups: literal spelling and quote kind (`haxe_ocaml-gzufu`), reflaxe.ocaml pattern
+  workarounds (`haxe_ocaml-hhihe`), toolchain-bound receipts and unique plugin library names
+  (`haxe_ocaml-kokp8`), typed adapter methods instead of the OCaml adapter template
+  (`haxe_ocaml-gal5o`), and the macro host's own converter (`haxe_ocaml-0ln1t`).
+- No `haxe.macro.Context` API is available to plugin code yet. In the plugin compilation, a macro
+  `Position` is opaque (see the define gap below); `MacroSyntaxWire` is the only code that reads
+  or builds its `{file, min, max}` record.
+- The plugin is still built by the smoke script (`scripts/hxhx/run-project-macro-module-smoke.sh`).
+
+## Approved plan (2026-10-29)
+
+The owner approved this executor model after an independent design review (recorded on
+`haxe_ocaml-9sj5p`). One native plugin per project is compiled by hxhx's own Stage3 OCaml emitter
+in a macro compilation context and loaded through the existing receipt and Dynlink ABI, with one
+typed adapter per macro declaration. Projects with macros require `dune` and `ocaml`; a missing
+toolchain must produce one clear error. Plugins are cached by content digest. One-shot compiles
+load plugins in-process; the `--wait` server uses the external macro host per plugin digest and
+restarts it when the digest changes. An interpreter-based executor is deferred as post-Full1
+research. Hard cuts follow the compatibility policy, and `expr_macro_unexecuted` becomes an error
+after step 2.
+
+1. Typed executor seam and in-process identity macro: `MacroSyntaxExport`/`MacroSyntaxImport`,
+   `register_macro_declaration` with an ABI bump (`haxe_ocaml-9sj5p.3`, done).
+2. Macro compilation context and plugin build and cache driver (`haxe_ocaml-9sj5p.4`).
+3. Lower macro reification before backend emission (`haxe_ocaml-9sj5p.5`).
+4. `MacroContextServices` v1 bound to the real typer; retire the synthetic `typeof`/`getType`
+   in `hxhxmacrohost/api` (`haxe_ocaml-9sj5p.6`).
+5. Real `--macro` init macros and compiler hooks; delete the fake
+   `InProcGeneratedEntrypoints`/`EntryPointsGen` `Macro.init()` (`haxe_ocaml-9sj5p.7`).
+6. Gate 1 Lite: `UnitBuilder.generateSpec` executes (`haxe_ocaml-9sj5p.8`).
+
+### Prerequisites found by the review
+
+- Reification: `EmitterStage.exprToOcaml` handles `EMacroExpr` (a `macro ...` quote) at
+  `packages/hxhx-core/src/EmitterStage.hx:3381` only by rejecting lost source groups; it has no
+  lowering, so a plugin whose macro body uses `macro ...` cannot be emitted. Step 3 owns it. The
+  identity fixture therefore builds its result without reification.
+- Macro-context defines: `ModuleLoader.moduleDefines`
+  (`packages/hxhx-core/src/ModuleLoader.hx:412-437`) sets `macro` and `eval` only for modules
+  under `haxe.macro.*`. In a plugin compilation the standard macro types therefore see the macro
+  context (`Position` becomes an opaque core type) while the project's own macro classes do not.
+  Step 2 owns a real macro compilation context.
+- Prerequisite beads checked on 2026-10-29: `o25kr` (source groups) has landed enough for the
+  identity function (`ESourceGroup`/`ESourceFunction` round-trip exactly); `yhvzj` (nested
+  patterns) and `05q72` (object literals) no longer block the identity macro, whose nested enum
+  patterns and object literals compile and run natively; `20jan` (comprehensions) is not needed
+  by the identity case; `pi2q3` concerns the macro host build and is not needed for in-process
+  plugins.
+- A Stage3 callback-program defect blocked the identity program itself: a selected instance call
+  (`events.push(...)`) inside a function value was counted as callback arguments
+  (`haxe_ocaml-fikpj`). Step 1 fixed the no-callback-parameter case; instance methods that take
+  callbacks still need the full fix.
 
 A real expression macro receives written Haxe syntax before ordinary typing.
 For example, it can inspect `while (unknown) { tick(unknown); }` and replace it
@@ -47,9 +159,9 @@ typing exactly as before this change, under the macro call-site contract
 `Array<Expr>` is a rest position, the result is `Dynamic`); this keeps existing lanes that rely on
 later approximations (for example the emitter's `isCi` intrinsic and hxhx's own
 `CompilerBundledSourcesMacro.files()` during snapshot generation) compiling, while
-naming the unexecuted macro in the output. Both executors still answer
-`Unavailable`: the in-process runtime registers exact no-argument keys only, and the
-host protocol has no structured method. Once a general executor exists, an
+naming the unexecuted macro in the output. Since step 1 the in-process runtime runs a
+declaration that a loaded plugin provides; it answers `Unavailable` otherwise, and the external
+host protocol still has no structured method. Once a general executor exists, an
 unexecuted selected macro must become a compile error. Static-extension and
 value-receiver macro calls are not selected (haxe_ocaml-1tyip); modules first loaded
 during body typing are not walked (haxe_ocaml-uf1hx).
@@ -57,18 +169,17 @@ Mixed imported fields and
 methods produce an explicit unsupported diagnostic until shared lookup returns one
 ordered member. This query does not prove execution of a project's macro body.
 
-`MacroRuntimeSession.expandExpr` sends a string and receives expression text.
-Both runtime modes reach native handlers through `NativeMacroModuleHost`.
-The native registration stores a `unit -> string` callback. It cannot receive
-syntax arguments or return structured syntax with preserved positions.
+`MacroRuntimeSession.expandExpr` sends a string and receives expression text; it now serves only
+built-in and generated exact-text entrypoints. Before step 1 the native plugin registration
+stored a `unit -> string` callback that could not receive syntax arguments or return structured
+syntax; plugin ABI version 2 removed it.
 
 The [first project-module decision](PROJECT_MACRO_MODULE_PATH_DECISION.md)
-proves loading, identity checks, and no-argument handlers. Its fixture uses a
-separate native text handler. It does not prove compilation of the real macro
-body or general `haxe.macro.Expr` arguments.
+proved loading, identity checks, and no-argument handlers. It is superseded by step 1.
 
 `HxSourceMacroSyntax` maps several authored constructs to public macro syntax.
-It is useful conversion infrastructure, not a complete transport contract.
+`MacroSyntaxExport` uses it for authored control syntax; `RuntimeMacroExprs.convert` in the macro
+host still keeps its own copy of the remaining cases.
 `RuntimeMacroExprs.convert` currently assigns the supplied position to each
 converted node. `HxPos` records a start index, line, and column; it has no end
 index or file identity. Several expression constructors have no position.

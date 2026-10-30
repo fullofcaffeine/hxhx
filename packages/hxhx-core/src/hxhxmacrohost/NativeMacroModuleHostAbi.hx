@@ -12,12 +12,12 @@ package hxhxmacrohost;
 	- First non-empty line: snapshot version token (`NativeMacroModuleAbi.SNAPSHOT_VERSION`).
 	- Second non-empty line: `abiVersion=<int>`.
 	- Third non-empty line: `macroApiVersion=<int>`.
-	- Remaining lines: `<pluginId>\t<expr>`.
+	- Remaining lines: `<pluginId>\t<declaration>`, where a declaration is `pack.Type.method`.
 	- Tokens must be non-empty and must not contain tabs/newlines.
 
 	Failure policy
 	- Any malformed row or identity mismatch is a hard error.
-	- Validation happens before macro expressions are accepted as runnable.
+	- Validation happens before macro declarations are accepted as runnable.
 **/
 class NativeMacroModuleHostAbi {
 	static inline final FIELD_SEPARATOR = "\t";
@@ -57,18 +57,18 @@ class NativeMacroModuleHostAbi {
 
 	static function decodeRow(line:String, lineNumber:Int, sourceLabel:String):{
 		pluginId:String,
-		expr:String
+		declaration:String
 	} {
 		final idx = line.indexOf(FIELD_SEPARATOR);
 		if (idx <= 0 || idx + FIELD_SEPARATOR.length >= line.length)
-			fail(sourceLabel, "invalid registration row at line " + lineNumber + " (expected pluginId<TAB>expr)");
+			fail(sourceLabel, "invalid registration row at line " + lineNumber + " (expected pluginId<TAB>declaration)");
 		if (line.indexOf(FIELD_SEPARATOR, idx + FIELD_SEPARATOR.length) >= 0)
 			fail(sourceLabel, "invalid registration row at line " + lineNumber + " (too many separators)");
 		final pluginId = requireToken(line.substr(0, idx), "pluginId", sourceLabel);
-		final expr = requireToken(line.substr(idx + FIELD_SEPARATOR.length), "expr", sourceLabel);
+		final declaration = requireToken(line.substr(idx + FIELD_SEPARATOR.length), "declaration", sourceLabel);
 		return {
 			pluginId: pluginId,
-			expr: expr
+			declaration: declaration
 		};
 	}
 
@@ -85,13 +85,13 @@ class NativeMacroModuleHostAbi {
 
 	public static function decodeSnapshot(snapshot:String, sourceLabel:String):Array<{
 		pluginId:String,
-		expr:String
+		declaration:String
 	}> {
 		final raw = snapshot == null ? "" : snapshot;
 		final lines = raw.split("\n");
 		final rows = new Array<{
 			pluginId:String,
-			expr:String
+			declaration:String
 		}>();
 		var headerState = 0;
 		var lineNumber = 0;
@@ -128,36 +128,64 @@ class NativeMacroModuleHostAbi {
 		return rows;
 	}
 
-	static function exprsForPluginInternal(snapshot:String, pluginId:String, sourceLabel:String, allowEmpty:Bool):Array<String> {
+	/**
+		A registration must name a project macro declaration, `pack.Type.method`: dot-separated
+		identifiers with at least an owner type and a method. Owners under `haxe.macro.` are the
+		standard macro API and are reserved; a project plugin cannot register them.
+	**/
+	static function requireDeclarationKey(declaration:String, sourceLabel:String):Void {
+		final parts = declaration.split(".");
+		var valid = parts.length >= 2;
+		for (part in parts) {
+			if (part.length == 0) {
+				valid = false;
+				continue;
+			}
+			for (index in 0...part.length) {
+				final code = part.charCodeAt(index);
+				final letter = code >= "A".code && code <= "Z".code || code >= "a".code && code <= "z".code || code == "_".code;
+				if (!(letter || index > 0 && code >= "0".code && code <= "9".code))
+					valid = false;
+			}
+		}
+		if (!valid)
+			fail(sourceLabel, "registration `" + declaration + "` is not a macro declaration (expected pack.Type.method)");
+		if (StringTools.startsWith(declaration, "haxe.macro."))
+			fail(sourceLabel, "registration `" + declaration + "` names a reserved standard macro API owner");
+	}
+
+	static function declarationsForPluginInternal(snapshot:String, pluginId:String, sourceLabel:String, allowEmpty:Bool):Array<String> {
 		final expectedPluginId = requireToken(pluginId, "pluginId", sourceLabel);
 		final rows = decodeSnapshot(snapshot, sourceLabel);
 		final out = new Array<String>();
-		final seenExprs = new haxe.ds.StringMap<Bool>();
+		final seen = new haxe.ds.StringMap<Bool>();
 		for (row in rows) {
 			if (row.pluginId != expectedPluginId) {
-				fail(sourceLabel, "registration pluginId mismatch: expected `"
+				fail(sourceLabel,
+					"registration pluginId mismatch: expected `"
 					+ expectedPluginId
 					+ "`, got `"
 					+ row.pluginId
-					+ "` (expr `"
-					+ row.expr
+					+ "` (declaration `"
+					+ row.declaration
 					+ "`)");
 			}
-			if (seenExprs.exists(row.expr))
-				fail(sourceLabel, "duplicate expr registration `" + row.expr + "` for plugin `" + expectedPluginId + "`");
-			seenExprs.set(row.expr, true);
-			out.push(row.expr);
+			requireDeclarationKey(row.declaration, sourceLabel);
+			if (seen.exists(row.declaration))
+				fail(sourceLabel, "duplicate declaration registration `" + row.declaration + "` for plugin `" + expectedPluginId + "`");
+			seen.set(row.declaration, true);
+			out.push(row.declaration);
 		}
 		if (!allowEmpty && out.length == 0)
-			fail(sourceLabel, "plugin `" + expectedPluginId + "` did not register any macro expressions");
+			fail(sourceLabel, "plugin `" + expectedPluginId + "` did not register any macro declarations");
 		return out;
 	}
 
-	public static function exprsForPlugin(snapshot:String, pluginId:String, sourceLabel:String):Array<String> {
-		return exprsForPluginInternal(snapshot, pluginId, sourceLabel, false);
+	public static function declarationsForPlugin(snapshot:String, pluginId:String, sourceLabel:String):Array<String> {
+		return declarationsForPluginInternal(snapshot, pluginId, sourceLabel, false);
 	}
 
-	public static function exprsForPluginAllowEmpty(snapshot:String, pluginId:String, sourceLabel:String):Array<String> {
-		return exprsForPluginInternal(snapshot, pluginId, sourceLabel, true);
+	public static function declarationsForPluginAllowEmpty(snapshot:String, pluginId:String, sourceLabel:String):Array<String> {
+		return declarationsForPluginInternal(snapshot, pluginId, sourceLabel, true);
 	}
 }

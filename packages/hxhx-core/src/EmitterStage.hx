@@ -7486,41 +7486,29 @@ class EmitterStage {
 		return out.toString();
 	}
 
-	static function isSimpleHaxePathForStage3(value:String):Bool {
-		if (value == null || value.length == 0)
-			return false;
-		for (part in value.split(".")) {
-			if (part.length == 0)
-				return false;
-			for (idx in 0...part.length) {
-				final code = part.charCodeAt(idx);
-				final valid = code >= 65 && code <= 90 || code >= 97 && code <= 122 || code == 95 || idx > 0 && code >= 48 && code <= 57;
-				if (!valid)
-					return false;
-			}
-		}
-		return true;
-	}
-
 	/**
 		Build the one load-time action for a Stage3 OCaml plugin.
 
 		Provider plugins and project-macro plugins deliberately use separate, mutually exclusive
-		entry contracts. The macro form links one generated Haxe handler and registers it under an
-		exact expression string; it does not execute the project's `main` or use reflection.
+		entry contracts. The macro form registers one typed adapter per configured macro declaration
+		(`Stage3OcamlMacroPluginEntry`); it does not execute the project's `main` or use reflection.
 	**/
-	static function pluginRegistrationEntrySourceForStage3():String {
+	static function pluginRegistrationEntrySourceForStage3(typedModules:Array<TypedModule>):String {
 		final rawProviderRegistration = stage3BootstrapDefineValue("ocaml_plugin_register_provider");
 		final rawMacroPluginId = stage3BootstrapDefineValue("ocaml_plugin_register_macro");
-		final rawMacroExpr = stage3BootstrapDefineValue("ocaml_plugin_macro_expr");
-		final rawMacroHandler = stage3BootstrapDefineValue("ocaml_plugin_macro_handler");
+		final rawMacroDeclarations = stage3BootstrapDefineValue(backend.ocaml.Stage3OcamlMacroPluginEntry.DECLARATIONS_DEFINE);
+		for (removed in ["ocaml_plugin_macro_expr", "ocaml_plugin_macro_handler"])
+			if (stage3BootstrapDefineValue(removed) != null)
+				throw "-D "
+					+ removed
+					+ " was removed with plugin ABI version 2; list macro declarations with -D "
+					+ backend.ocaml.Stage3OcamlMacroPluginEntry.DECLARATIONS_DEFINE
+					+ "=<pack.Type.method>";
 		final hasProviderRegistration = rawProviderRegistration != null && StringTools.trim(rawProviderRegistration).length > 0;
 		final hasAnyMacroRegistration = rawMacroPluginId != null
 			&& StringTools.trim(rawMacroPluginId).length > 0
-			|| rawMacroExpr != null
-			&& StringTools.trim(rawMacroExpr).length > 0
-			|| rawMacroHandler != null
-			&& StringTools.trim(rawMacroHandler).length > 0;
+			|| rawMacroDeclarations != null
+			&& StringTools.trim(rawMacroDeclarations).length > 0;
 
 		if (hasProviderRegistration && hasAnyMacroRegistration)
 			throw "ocaml plugin entry cannot register both a backend provider and a project macro";
@@ -7548,21 +7536,11 @@ class EmitterStage {
 		}
 
 		final pluginId = rawMacroPluginId == null ? "" : StringTools.trim(rawMacroPluginId);
-		final expr = rawMacroExpr == null ? "" : StringTools.trim(rawMacroExpr);
-		final handler = rawMacroHandler == null ? "" : StringTools.trim(rawMacroHandler);
-		if (pluginId.length == 0 || expr.length == 0 || handler.length == 0)
-			throw "invalid project macro plugin entry; expected -D ocaml_plugin_register_macro, -D ocaml_plugin_macro_expr, and -D ocaml_plugin_macro_handler";
-		final separator = handler.lastIndexOf(".");
-		if (separator <= 0 || separator >= handler.length - 1)
-			throw "invalid -D ocaml_plugin_macro_handler; expected <typePath>.<staticMethod>";
-		final handlerType = handler.substr(0, separator);
-		final handlerMethod = handler.substr(separator + 1);
-		if (!isSimpleHaxePathForStage3(handlerType) || !isSimpleHaxePathForStage3(handlerMethod))
-			throw "invalid -D ocaml_plugin_macro_handler; expected a simple Haxe type and static method path";
-		final handlerModule = ocamlModuleNameFromTypePath(handlerType);
-		lines.push("  HxHxMacroModuleHost.register_expr_handler \"" + escapeOcamlStringLiteralForStage3(pluginId) + "\" \""
-			+ escapeOcamlStringLiteralForStage3(expr) + "\"");
-		lines.push("    (fun () -> " + handlerModule + "." + ocamlValueIdent(handlerMethod) + " ())");
+		if (pluginId.length == 0)
+			throw "invalid project macro plugin entry; expected -D ocaml_plugin_register_macro=<pluginId>";
+		for (line in backend.ocaml.Stage3OcamlMacroPluginEntry.render(pluginId, backend.ocaml.Stage3OcamlMacroPluginEntry.declarations(rawMacroDeclarations),
+			typedModules, ocamlModuleNameFromTypePath, ocamlValueIdent, escapeOcamlStringLiteralForStage3))
+			lines.push(line);
 		lines.push("");
 		return lines.join("\n");
 	}
@@ -7582,11 +7560,11 @@ class EmitterStage {
 		  bytecode plugin artifact path before the normal executable path.
 		- When `-D ocaml_plugin_register_provider=<pluginId>:<providerType>` is supplied, the
 		  plugin entry registers that provider through the hxhx OCaml plugin-host bridge.
-		- When the three `ocaml_plugin_register_macro`, `ocaml_plugin_macro_expr`, and
-		  `ocaml_plugin_macro_handler` defines are supplied, the entry registers one exact
-		  project-macro expression through the shared native macro-module host.
+		- When `ocaml_plugin_register_macro` and `ocaml_plugin_macro_declarations` are supplied, the
+		  entry registers one typed adapter per project macro declaration through the shared native
+		  macro-module host.
 	**/
-	static function emitPluginDuneLayoutIfRequestedForStage3(outAbs:String):Null<String> {
+	static function emitPluginDuneLayoutIfRequestedForStage3(outAbs:String, typedModules:Array<TypedModule>):Null<String> {
 		if (!stage3BootstrapWantsPluginDuneLayout())
 			return null;
 
@@ -7597,22 +7575,25 @@ class EmitterStage {
 		final outMlPath = haxe.io.Path.join([outAbs, exeName + ".ml"]);
 		final pluginArtifactPath = haxe.io.Path.join([outAbs, exeName + ".cma"]);
 		final rawMacroPluginId = stage3BootstrapDefineValue("ocaml_plugin_register_macro");
-		// The current Stage3 function emitter can conservatively write `let rec` for the
-		// selected macro handler. Dune's dev profile promotes warning 39 to an error, so
-		// suppress only that warning and only for this bounded project-macro plugin form.
-		final macroWarningFlags = rawMacroPluginId != null
-			&& StringTools.trim(rawMacroPluginId).length > 0 ? "\n (flags (:standard -w -39))" : "";
+		final macroPluginId = rawMacroPluginId == null ? "" : StringTools.trim(rawMacroPluginId);
 		sys.io.File.saveContent(runtimeDunePath,
 			"(library\n (name hx_runtime)\n (wrapped false)\n (modules :standard)\n (libraries unix str threads dynlink))\n\n; Generated by hxhx(stage3)\n");
 		sys.io.File.saveContent(haxe.io.Path.join([outAbs, ".gitignore"]), "_build/\n*.install\n");
 		sys.io.File.saveContent(duneProjectPath, "(lang dune 2.9)\n(name hxhx_plugin)\n(wrapped_executables false)\n\n; Generated by hxhx(stage3)\n");
+		if (macroPluginId.length > 0) {
+			// A project-macro plugin is a wrapped library so its modules cannot collide with the
+			// compiler's own modules when Dynlink loads it (see Stage3OcamlMacroPluginEntry).
+			final library = backend.ocaml.Stage3OcamlMacroPluginEntry.libraryName(macroPluginId);
+			sys.io.File.saveContent(dunePath, backend.ocaml.Stage3OcamlMacroPluginEntry.duneStanza(library));
+			sys.io.File.saveContent(outMlPath, pluginRegistrationEntrySourceForStage3(typedModules));
+			return haxe.io.Path.join([outAbs, library + ".cma"]);
+		}
 		sys.io.File.saveContent(dunePath,
 			"(executable\n (name "
 			+ exeName
 			+ ")\n (modules :standard)\n (libraries hx_runtime unix str threads dynlink)"
-			+ macroWarningFlags
 			+ "\n (modes (native plugin) (byte plugin)))\n\n; Generated by hxhx(stage3)\n");
-		sys.io.File.saveContent(outMlPath, pluginRegistrationEntrySourceForStage3());
+		sys.io.File.saveContent(outMlPath, pluginRegistrationEntrySourceForStage3(typedModules));
 		return pluginArtifactPath;
 	}
 
@@ -9818,7 +9799,7 @@ class EmitterStage {
 		EmitterStageDebug.traceStage3Phase("after_alias_shims:" + generatedPaths.length);
 
 		final exePath = EmitterStageBuildSupport.expectedExePath(outAbs);
-		final pluginArtifactPath = emitPluginDuneLayoutIfRequestedForStage3(outAbs);
+		final pluginArtifactPath = emitPluginDuneLayoutIfRequestedForStage3(outAbs, typedModules);
 		if (pluginArtifactPath != null)
 			return pluginArtifactPath;
 

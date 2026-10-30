@@ -30,7 +30,7 @@ import hxhxmacrohost.api.RuntimeMacroTypes;
 	  by `hxhx` during `--hxhx-macro-selftest` and later macro stages.
 **/
 class Main {
-	static final nativeExprToPlugin:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
+	static final nativeDeclarationToPlugin:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
 
 	static function main() {
 		// Handshake banner: printed first so the client can verify protocol version.
@@ -138,14 +138,6 @@ class Main {
 						return;
 					}
 					replyOk(id, Protocol.encodeLen("v", loadNativeModule(modulePath, pluginId)));
-				case "macro.runNativeExpr":
-					final parsed = parseKV(tail);
-					final expr = parsed.exists("e") ? parsed.get("e") : "";
-					if (expr.length == 0) {
-						replyErr(id, method + ": missing expr");
-						return;
-					}
-					replyOk(id, Protocol.encodeLen("v", runNativeExpr(expr)));
 				case "macro.expandExpr":
 					// Stage 4 bring-up rung: expression-macro expansion.
 					//
@@ -265,20 +257,8 @@ class Main {
 		final ext = EntryPoints.run(e);
 		if (ext != null)
 			return ext;
-		if (nativeExprToPlugin.exists(e))
-			return NativeMacroModuleHost.runExpr(e);
 
 		return "ran:" + e;
-	}
-
-	static function isReservedNativeExpression(expr:String):Bool {
-		final value = StringTools.trim(expr == null ? "" : expr);
-		return StringTools.startsWith(value, "BuiltinMacros.")
-			|| StringTools.startsWith(value, "hxhxmacrohost.BuiltinMacros.")
-			|| StringTools.startsWith(value, "include(")
-			|| value == "unit.HelperMacros.getCompilationDate()"
-			|| value == "HelperMacros.getCompilationDate()"
-			|| EntryPoints.handles(value);
 	}
 
 	static function loadNativeModule(modulePath:String, pluginId:String):String {
@@ -289,33 +269,26 @@ class Main {
 		if (pid.length == 0)
 			throw "macro.loadNativeModule: plugin id is required";
 
+		// The plugin registers macro declarations (`pack.Type.method`). This host records them so the
+		// receipt can be validated in both macro modes, but its protocol has no structured dispatch
+		// method yet: the compiler's external-host session reports selected declarations as
+		// unexecuted instead of running them here.
 		final snapshot = NativeMacroModuleDynlink.loadAndCapture(path, pid);
-		final exprs = NativeMacroModuleHostAbi.exprsForPlugin(snapshot, pid, path);
-		for (expr in exprs) {
-			if (isReservedNativeExpression(expr))
-				throw "macro.loadNativeModule: project module cannot override built-in/generated expression `" + expr + "`";
-			final existingPlugin = nativeExprToPlugin.get(expr);
+		final declarations = NativeMacroModuleHostAbi.declarationsForPlugin(snapshot, pid, path);
+		for (declaration in declarations) {
+			final existingPlugin = nativeDeclarationToPlugin.get(declaration);
 			if (existingPlugin == null) {
-				nativeExprToPlugin.set(expr, pid);
+				nativeDeclarationToPlugin.set(declaration, pid);
 			} else if (existingPlugin != pid) {
-				throw "macro.loadNativeModule: expr `" + expr + "` already registered by plugin `" + existingPlugin + "`";
+				throw "macro.loadNativeModule: declaration `" + declaration + "` already registered by plugin `" + existingPlugin + "`";
 			}
 		}
 		final payloadParts = new Array<String>();
-		payloadParts.push(Protocol.encodeLen("c", Std.string(exprs.length)));
-		for (i in 0...exprs.length) {
-			payloadParts.push(Protocol.encodeLen("e" + i, exprs[i]));
+		payloadParts.push(Protocol.encodeLen("c", Std.string(declarations.length)));
+		for (i in 0...declarations.length) {
+			payloadParts.push(Protocol.encodeLen("e" + i, declarations[i]));
 		}
 		return payloadParts.join(" ");
-	}
-
-	static function runNativeExpr(expr:String):String {
-		final key = StringTools.trim(expr == null ? "" : expr);
-		if (key.length == 0)
-			throw "macro.runNativeExpr: expr is required";
-		if (!nativeExprToPlugin.exists(key))
-			throw "native macro expr not registered: " + key;
-		return NativeMacroModuleHost.runExpr(key);
 	}
 
 	static function expandExprMacro(expr:String):String {
@@ -332,8 +305,6 @@ class Main {
 		final ext = EntryPoints.run(e);
 		if (ext != null)
 			return ext;
-		if (nativeExprToPlugin.exists(e))
-			return NativeMacroModuleHost.runExpr(e);
 
 		// Minimal builtin expansions for bring-up.
 		//

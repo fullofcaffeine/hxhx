@@ -20,7 +20,7 @@ const AGGREGATE_MARKERS = [
   'FULL1_MACRO_PARITY:PASS',
 ]
 const TIMING_SCHEMA = 'full1-phase-timing-summary.v2'
-const PROJECT_SCHEMA = 'hxhx.native-macro-module.v1'
+const PROJECT_SCHEMA = 'hxhx.native-macro-module.v2'
 const HOST_SCHEMA = 'macro-runtime-host-evidence.v1'
 
 const MODE_PROOFS = [
@@ -67,7 +67,7 @@ const PROJECT_PROOF = {
     'PROJECT_MACRO_MODULE_ORACLE:PASS',
     'PROJECT_MACRO_MODULE_BUILD:PASS',
     'PROJECT_MACRO_MODULE_INPROC:PASS',
-    'PROJECT_MACRO_MODULE_EXTERNAL_HOST:PASS',
+    'PROJECT_MACRO_MODULE_EXTERNAL_HOST_UNEXECUTED:PASS',
     'PROJECT_MACRO_MODULE_NEGATIVE_PATHS:PASS',
     'PROJECT_MACRO_MODULE:PASS',
   ],
@@ -254,13 +254,13 @@ function validateProjectProof(context) {
     requireValue(value.schema === PROJECT_SCHEMA, `${owner} expected schema ${PROJECT_SCHEMA}`)
     requireValue(value.candidateCommit === context.candidateSha, `${owner} candidate SHA mismatch`)
     requireValue(value.pluginId === 'hxhx.project-macro.fixture', `${owner} plugin ID mismatch`)
-    requireValue(Array.isArray(value.expressions)
-      && value.expressions.includes('projectmacro.ProjectMacro.message()'),
-    `${owner} expression registration is missing`)
+    requireValue(Array.isArray(value.declarations)
+      && value.declarations.includes('Identity.preserve'),
+    `${owner} macro declaration registration is missing`)
   }
   requireValue(meta.candidate_commit === context.candidateSha, 'project macro metadata candidate mismatch')
   requireValue(meta.plugin_id === 'hxhx.project-macro.fixture', 'project macro metadata plugin mismatch')
-  requireValue(receipt.abiVersion === 1 && receipt.macroApiVersion === 1,
+  requireValue(receipt.abiVersion === 2 && receipt.macroApiVersion === 1,
     'project macro ABI/API version mismatch')
 
   const nativeDigest = verifyRelativeArtifact(

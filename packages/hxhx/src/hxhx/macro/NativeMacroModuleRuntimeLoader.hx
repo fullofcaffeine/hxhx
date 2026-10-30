@@ -7,7 +7,8 @@ import hxhxmacrohost.NativeMacroModuleReceipt;
 	Activates the optional project-macro plugin selected by its validated receipt.
 
 	Receipt validation is shared by both macro modes. This helper then asks the selected runtime to
-	load the artifact and requires the plugin's actual registration list to match the receipt exactly.
+	load the artifact and requires the plugin's actual macro declaration list to match the receipt
+	exactly, in order.
 	A mismatch is fatal; it never falls back to an installed Haxe compiler.
 **/
 class NativeMacroModuleRuntimeLoader {
@@ -15,20 +16,20 @@ class NativeMacroModuleRuntimeLoader {
 		final activation = NativeMacroModuleReceipt.loadFromEnvironment(artifactKind);
 		if (activation == null)
 			return null;
-		final actualExpressions = loadModule(activation.artifactPath, activation.pluginId);
-		if (actualExpressions.length != activation.expressions.length)
-			throw "native macro module receipt: registered expression count mismatch for plugin `"
+		final actualDeclarations = loadModule(activation.artifactPath, activation.pluginId);
+		if (actualDeclarations.length != activation.declarations.length)
+			throw "native macro module receipt: registered declaration count mismatch for plugin `"
 				+ activation.pluginId
 				+ "` (receipt="
-				+ activation.expressions.length
+				+ activation.declarations.length
 				+ ", module="
-				+ actualExpressions.length
+				+ actualDeclarations.length
 				+ ")";
-		for (idx in 0...activation.expressions.length) {
-			final expected = activation.expressions[idx];
-			final actual = actualExpressions[idx];
+		for (idx in 0...activation.declarations.length) {
+			final expected = activation.declarations[idx];
+			final actual = actualDeclarations[idx];
 			if (actual != expected)
-				throw "native macro module receipt: registered expression mismatch at index "
+				throw "native macro module receipt: registered declaration mismatch at index "
 					+ idx
 					+ " (receipt=`"
 					+ expected

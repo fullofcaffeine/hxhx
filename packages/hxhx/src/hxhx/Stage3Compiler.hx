@@ -476,7 +476,9 @@ class Stage3Compiler {
 			return error(e);
 		}
 
-		final roots = roots0.concat(hxhx.macro.MacroState.listIncludedModules());
+		// A project-macro plugin build compiles the classes that declare its listed macros.
+		final roots = roots0.concat(hxhx.macro.MacroState.listIncludedModules())
+			.concat(backend.ocaml.Stage3OcamlMacroPluginEntry.ownerTypePaths(definesMap.get(backend.ocaml.Stage3OcamlMacroPluginEntry.DECLARATIONS_DEFINE)));
 		if (!requestContext.checkpoint("resolution"))
 			return CompilationRequestContext.CANCELLED_EXIT_CODE;
 		final resolved = try {

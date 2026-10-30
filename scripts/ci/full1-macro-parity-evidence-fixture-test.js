@@ -94,9 +94,9 @@ function values() {
     schema: PROJECT_SCHEMA,
     candidateCommit: context.candidateSha,
     pluginId: 'hxhx.project-macro.fixture',
-    abiVersion: 1,
+    abiVersion: 2,
     macroApiVersion: 1,
-    expressions: ['projectmacro.ProjectMacro.message()'],
+    declarations: ['Identity.preserve'],
     artifacts: {
       native: { path: 'project-macro.cmxs', sha256: digest(nativeBody) },
       bytecode: { path: 'project-macro.cma', sha256: digest(bytecodeBody) },
@@ -116,7 +116,7 @@ function values() {
       meta: {
         candidate_commit: context.candidateSha,
         plugin_id: 'hxhx.project-macro.fixture',
-        expression: 'projectmacro.ProjectMacro.message()',
+        declarations: 'Identity.preserve',
       },
     },
   }

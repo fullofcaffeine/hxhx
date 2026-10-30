@@ -122,13 +122,15 @@
         "kind": "native-abi-adapter",
         "haxeDecisionOwners": [
           "packages/hxhx-core/src/hxhxmacrohost/NativeMacroModuleHost.hx",
-          "packages/hxhx-core/src/hxhxmacrohost/NativeMacroModuleHostAbi.hx"
+          "packages/hxhx-core/src/hxhxmacrohost/NativeMacroModuleHostAbi.hx",
+          "packages/hxhx-core/src/hxhxmacrohost/MacroSyntaxWire.hx"
         ],
         "ownerBeads": [
           "haxe.ocaml-8nv.30.1",
-          "haxe_ocaml-38gsp.1"
+          "haxe_ocaml-38gsp.1",
+          "haxe_ocaml-9sj5p.3"
         ],
-        "whyOcaml": "The OCaml callback registry retains native closures and emits a versioned registration snapshot. Haxe validates that snapshot and owns all compiler-visible macro behavior and cleanup.",
+        "whyOcaml": "The OCaml callback registry retains the native closure a plugin registers for each macro declaration, emits a versioned registration snapshot, and passes one opaque payload string to the selected closure. Haxe validates that snapshot, encodes and decodes every payload (MacroSyntaxWire), and owns all compiler-visible macro behavior and cleanup.",
         "focusedEvidence": [
           "npm run test:m14:native-macro-module-host-abi",
           "npm run guard:bridge-boundaries"
