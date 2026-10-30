@@ -1,3 +1,15 @@
+# [0.37.0](https://github.com/fullofcaffeine/hxhx/compare/v0.36.1...v0.37.0) (2026-10-30)
+
+
+### Bug Fixes
+
+* **ocaml:** keep selected instance calls out of callback mapping ([0fda23e](https://github.com/fullofcaffeine/hxhx/commit/0fda23e5697273f8f61bcaf2e82845a8eac9dc1e))
+
+
+### Features
+
+* **hxhx:** convert macro arguments and results to haxe.macro.Expr ([4ce993b](https://github.com/fullofcaffeine/hxhx/commit/4ce993baaf304b1f367c2a661f6b15b195a93a69))
+
 ## [0.36.1](https://github.com/fullofcaffeine/hxhx/compare/v0.36.0...v0.36.1) (2026-10-30)
 
 
