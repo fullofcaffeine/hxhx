@@ -2046,17 +2046,16 @@ class EmitterStage {
 		final structural = objectAccessType(expr);
 		if (structural != null)
 			return structural;
+		// A typed call, including one encoded as an exact static or instance
+		// call, is recorded as a callable occurrence with its full result type.
+		// The call encodings also carry that result as hint text, but parsing
+		// the text cannot rebuild a nominal type: `Array<Int>` becomes an
+		// unresolved path, so only the occurrence can classify an Array result.
 		if (expr.match(ECall(_, _))) {
 			final call = currentTypedInitializer != null ? currentTypedInitializer.findCallableExpression(expr) : currentTypedFunction == null ? null : currentTypedFunction.findCallableExpression(expr);
 			if (call != null && call.getTag() == Call)
 				return call.getType();
 		}
-		final staticCall = TypedExactStaticCallSource.decode(expr);
-		if (staticCall != null)
-			return TyType.fromHintText(staticCall.resultType);
-		final instanceCall = TypedExactCallSource.decodeInstance(expr);
-		if (instanceCall != null)
-			return TyType.fromHintText(instanceCall.resultType);
 		return switch expr {
 			case EIdent(name):
 				final local = exactFunctionLocalType(name);

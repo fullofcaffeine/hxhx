@@ -1,3 +1,5 @@
+typedef NS = Null<String>;
+
 class Box {
 	public var text:String;
 	public var items:Array<Int>;
@@ -22,6 +24,10 @@ class Main {
 		return present ? "yes" : null;
 	}
 
+	static function maybeAlias(present:Bool):NS {
+		return present ? "alias" : null;
+	}
+
 	static function maybeList(present:Bool):Null<Array<Int>> {
 		return present ? [7, 8] : null;
 	}
@@ -43,6 +49,9 @@ class Main {
 
 		Sys.println(maybe(true).length);
 		Sys.println(maybeList(true).length);
+		Sys.println(maybeAlias(true).length);
+		final local:Null<String> = maybe(true);
+		Sys.println(local.length);
 
 		final dynamicText:Dynamic = "dynamic";
 		Sys.println((dynamicText : String).length);
@@ -68,6 +77,24 @@ class Main {
 			Sys.println("unreachable");
 		} catch (e:Dynamic) {
 			Sys.println("caught null field length");
+		}
+		try {
+			final missing:Null<String> = maybe(false);
+			Sys.println(missing.length);
+			Sys.println("unreachable");
+		} catch (e:String) {
+			// The message text differs by target (upstream eval says "field
+			// access on null"; native says "Null Access"), so print only that
+			// a String-typed catch selected it.
+			Sys.println("caught as String");
+		} catch (e:Dynamic) {
+			Sys.println("caught as Dynamic");
+		}
+		try {
+			Sys.println(maybeAlias(false).length);
+			Sys.println("unreachable");
+		} catch (e:Dynamic) {
+			Sys.println("caught null alias length");
 		}
 	}
 }

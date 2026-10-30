@@ -8,9 +8,13 @@
 3
 3
 2
+5
+3
 7
 5
 5
 caught null string length
 caught null array length
 caught null field length
+caught as String
+caught null alias length

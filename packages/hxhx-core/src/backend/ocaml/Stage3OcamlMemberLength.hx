@@ -10,11 +10,15 @@ enum Stage3OcamlLengthReceiver {
 	Lower `x.length` on a `String` or `Array` from the typed type of `x`.
 
 	Why
-	- A Haxe string is an OCaml `string` and a Haxe array is an `HxBootArray.t`.
-	  Neither is an `HxAnon` record, so a dynamic field lookup for `length`
-	  finds nothing and returns `null`. The emitter must know from typing that
-	  the receiver is a String or an Array to call `HxString.length` or
-	  `HxBootArray.length` instead.
+	- A Haxe string is an OCaml `string` and a Haxe array is an `HxBootArray.t`
+	  (an alias of `HxArray.t`). Neither is an `HxAnon` record. The dynamic
+	  lookup `HxAnon.get` only special-cases a few members of each: for an
+	  array it answers `length`, `iterator`, `indexOf`, `lastIndexOf`, and
+	  `slice`, and for a string `cca`, `indexOf`, `lastIndexOf`, `substr`, and
+	  `substring`. It returns `null` for a string's length and for any member
+	  it does not special-case. The emitter must know from typing that the
+	  receiver is a String or an Array to call `HxString.length` or
+	  `HxBootArray.length` directly, rather than rely on that shim.
 	- The receiver can come from anywhere the typer recorded a type: a local,
 	  an instance or static field (`box.text`), an index (`parts[1]`), or a
 	  call result (`maybe(true)`). This module only reads the type; the emitter
@@ -79,9 +83,12 @@ function lower(type:Null<TyType>, receiver:String, quote:String->String):Null<St
 	fall back to a dynamic record lookup.
 
 	Why
-	- That lookup always returns `null` for a native string or array, so the
-	  program would run and print a wrong value instead of failing. A named
-	  emit-time error points at the unsupported shape instead.
+	- `HxAnon.get` returns `null` for a string's length and for any member the
+	  runtime shim does not special-case, so the program would run and print a
+	  wrong value instead of failing. A named emit-time error points at the
+	  unsupported shape instead. On a typed receiver, `.length` is lowered
+	  before this point, and in the current Stage3 tests no other member read
+	  on a typed String or Array receiver reaches this lookup.
 
 	What
 	- Throws when `type` is a String or Array (or `Null<...>` of one). Any other
