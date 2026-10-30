@@ -1,3 +1,19 @@
+# [0.38.0](https://github.com/fullofcaffeine/hxhx/compare/v0.37.0...v0.38.0) (2026-10-30)
+
+
+### Bug Fixes
+
+* **hxhx:** tighten the macro plugin contract after review ([d253fc8](https://github.com/fullofcaffeine/hxhx/commit/d253fc86d6411c009a832f8bc62f4dfa0410102e))
+* **ocaml:** read macro plugin declarations through the backend projection ([99695de](https://github.com/fullofcaffeine/hxhx/commit/99695de0d28216d996e0b3efa240a68a8920e6ec))
+* **stage3:** read .length from routed results and match upstream file checks ([cda65bf](https://github.com/fullofcaffeine/hxhx/commit/cda65bfb3da93b0c58d3a91352e93a2ae9504ef0))
+* **stage3:** route sys.io.File and sys.FileSystem calls through the runtime ([ba128f4](https://github.com/fullofcaffeine/hxhx/commit/ba128f470108d67053f3092205ad8d5461a1b112)), closes [#101](https://github.com/fullofcaffeine/hxhx/issues/101)
+
+
+### Features
+
+* **hxhx:** add a versioned payload for haxe.macro.Expr ([05bf033](https://github.com/fullofcaffeine/hxhx/commit/05bf0334654535fbd15a2380a8e172229c5eef5e))
+* **hxhx:** run project macro declarations from a native plugin ([77dbb1f](https://github.com/fullofcaffeine/hxhx/commit/77dbb1fa8a0a457793275b4e6efd964c26002e0c))
+
 # [0.37.0](https://github.com/fullofcaffeine/hxhx/compare/v0.36.1...v0.37.0) (2026-10-30)
 
 
