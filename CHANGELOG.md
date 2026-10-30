@@ -1,3 +1,19 @@
+# [0.36.0](https://github.com/fullofcaffeine/hxhx/compare/v0.35.0...v0.36.0) (2026-10-30)
+
+
+### Bug Fixes
+
+* **ci:** own current weekly evidence failures ([30c5543](https://github.com/fullofcaffeine/hxhx/commit/30c5543c9a8a5c150db31b5e2512fbe616d75e41))
+* **ci:** rebalance compiler-focused-1 shard ([c341b09](https://github.com/fullofcaffeine/hxhx/commit/c341b09928a3fe8274367e87826dc54a297da52f))
+* **ci:** tighten failure-signature matching after review ([4f1cd2e](https://github.com/fullofcaffeine/hxhx/commit/4f1cd2ede6dc493d9d78ce29e3d64fa7aae9de72))
+* **ocaml:** produce values for local compound assignments ([c6fb69a](https://github.com/fullofcaffeine/hxhx/commit/c6fb69a3d5d95d9fc78191427f20a09344476e9b))
+* **ocaml:** type compound values for operators and order statement updates ([d7b63a6](https://github.com/fullofcaffeine/hxhx/commit/d7b63a631010db4b1b4c794a05b1d6908685f13c))
+
+
+### Features
+
+* **ci:** let a matching failure signature own a red required check ([c84ac57](https://github.com/fullofcaffeine/hxhx/commit/c84ac577c232442ce32e6bacaf1c8ef0a010cac4))
+
 # [0.35.0](https://github.com/fullofcaffeine/hxhx/compare/v0.34.0...v0.35.0) (2026-10-29)
 
 
