@@ -20,31 +20,34 @@ class M14NativeMacroModuleHostAbiIntegrationTest {
 	}
 
 	static function main():Void {
-		final snapshot = "v2\n" + "abiVersion=1\n" + "macroApiVersion=1\n" + "fixture.native.macro.plugin\tFixtureNativeMacroPlugin.smoke()\n";
-		final exprs = NativeMacroModuleHostAbi.exprsForPlugin(snapshot, "fixture.native.macro.plugin", "fixture://ok");
-		assertTrue(exprs.length == 1, "expected one registered macro expr");
-		assertTrue(exprs[0] == "FixtureNativeMacroPlugin.smoke()", "unexpected macro expr value");
+		final snapshot = "v3\n" + "abiVersion=2\n" + "macroApiVersion=1\n" + "fixture.native.macro.plugin\tFixtureNativeMacroPlugin.smoke\n";
+		final declarations = NativeMacroModuleHostAbi.declarationsForPlugin(snapshot, "fixture.native.macro.plugin", "fixture://ok");
+		assertTrue(declarations.length == 1, "expected one registered macro declaration");
+		assertTrue(declarations[0] == "FixtureNativeMacroPlugin.smoke", "unexpected macro declaration value");
 
-		assertFailsContains(function() NativeMacroModuleHostAbi.exprsForPlugin("v2\nabiVersion=1\nmacroApiVersion=1\n", "fixture.native.macro.plugin",
+		assertFailsContains(function() NativeMacroModuleHostAbi.declarationsForPlugin("v3\nabiVersion=2\nmacroApiVersion=1\n", "fixture.native.macro.plugin",
 			"fixture://empty"),
-			"did not register any macro expressions");
+			"did not register any macro declarations");
 		assertFailsContains(function()
-			NativeMacroModuleHostAbi.exprsForPlugin("v2\nabiVersion=1\nmacroApiVersion=1\nfixture.other\tFixtureNativeMacroPlugin.smoke()\n",
+			NativeMacroModuleHostAbi.declarationsForPlugin("v3\nabiVersion=2\nmacroApiVersion=1\nfixture.other\tFixtureNativeMacroPlugin.smoke\n",
 				"fixture.native.macro.plugin", "fixture://mismatch"),
 			"registration pluginId mismatch");
 		assertFailsContains(function()
-			NativeMacroModuleHostAbi.exprsForPlugin("v2\nabiVersion=1\nmacroApiVersion=1\nfixture.native.macro.plugin\tFixtureNativeMacroPlugin.smoke()\nfixture.native.macro.plugin\tFixtureNativeMacroPlugin.smoke()\n",
+			NativeMacroModuleHostAbi.declarationsForPlugin("v3\nabiVersion=2\nmacroApiVersion=1\nfixture.native.macro.plugin\tFixtureNativeMacroPlugin.smoke\nfixture.native.macro.plugin\tFixtureNativeMacroPlugin.smoke\n",
 			"fixture.native.macro.plugin", "fixture://duplicate"),
-			"duplicate expr registration");
+			"duplicate declaration registration");
 		assertFailsContains(function() NativeMacroModuleHostAbi.decodeSnapshot("", "fixture://missing-version"), "snapshot is missing version header");
-		assertFailsContains(function() NativeMacroModuleHostAbi.decodeSnapshot("v1\nabiVersion=1\nmacroApiVersion=1\nfixture.native.macro.plugin\texpr\n",
-			"fixture://bad-version"),
+		assertFailsContains(function()
+			NativeMacroModuleHostAbi.decodeSnapshot("v2\nabiVersion=1\nmacroApiVersion=1\nfixture.native.macro.plugin\tFixture.smoke\n",
+				"fixture://bad-version"),
 			"invalid snapshot version");
-		assertFailsContains(function() NativeMacroModuleHostAbi.decodeSnapshot("v2\nabiVersion=2\nmacroApiVersion=1\nfixture.native.macro.plugin\texpr\n",
-			"fixture://abi-mismatch"),
+		assertFailsContains(function()
+			NativeMacroModuleHostAbi.decodeSnapshot("v3\nabiVersion=1\nmacroApiVersion=1\nfixture.native.macro.plugin\tFixture.smoke\n",
+				"fixture://abi-mismatch"),
 			"abiVersion mismatch");
-		assertFailsContains(function() NativeMacroModuleHostAbi.decodeSnapshot("v2\nabiVersion=1\nmacroApiVersion=2\nfixture.native.macro.plugin\texpr\n",
-			"fixture://macro-api-mismatch"),
+		assertFailsContains(function()
+			NativeMacroModuleHostAbi.decodeSnapshot("v3\nabiVersion=2\nmacroApiVersion=2\nfixture.native.macro.plugin\tFixture.smoke\n",
+				"fixture://macro-api-mismatch"),
 			"macroApiVersion mismatch");
 	}
 }

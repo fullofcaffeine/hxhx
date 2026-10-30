@@ -10,7 +10,7 @@ import sys.io.File;
 /**
 	Validates the receipt that binds a generated project-macro plugin to one `hxhx` candidate.
 
-	The receipt is deliberately small: it identifies the candidate, ABI, exact expressions, and
+	The receipt is deliberately small: it identifies the candidate, ABI, macro declarations (`pack.Type.method`), and
 	plugin digest. Both in-process and external-host macro modes call this validator before loading
 	the same artifact. A receipt is optional; once selected through the environment, every missing
 	or mismatched field is a hard error rather than a fallback to stage0.
@@ -18,7 +18,7 @@ import sys.io.File;
 	other value kinds are not coerced into identifiers, macro calls, paths, or versions.
 **/
 class NativeMacroModuleReceipt {
-	public static inline final SCHEMA:String = "hxhx.native-macro-module.v1";
+	public static inline final SCHEMA:String = "hxhx.native-macro-module.v2";
 	public static inline final RECEIPT_ENV:String = "HXHX_NATIVE_MACRO_MODULE_RECEIPT";
 	public static inline final CANDIDATE_ENV:String = "HXHX_CANDIDATE_COMMIT";
 	public static inline final NATIVE_ARTIFACT:String = "native";
@@ -103,19 +103,19 @@ class NativeMacroModuleReceipt {
 		return digest;
 	}
 
-	static function decodeExpressions(value:CompilerJsonValue):Array<String> {
+	static function decodeDeclarations(value:CompilerJsonValue):Array<String> {
 		final raw = switch (value) {
 			case JsonArray(values): values;
-			case _: throw failureMessage("expressions must be an array");
+			case _: throw failureMessage("declarations must be an array");
 		}
 		if (raw.length == 0)
-			throw failureMessage("expressions must contain at least one exact macro call");
+			throw failureMessage("declarations must contain at least one macro declaration");
 		final out = new Array<String>();
 		for (entry in raw) {
-			final expr = requiredString(entry, "expressions[]");
-			if (out.indexOf(expr) != -1)
-				throw failureMessage("duplicate expression `" + expr + "`");
-			out.push(expr);
+			final declaration = requiredString(entry, "declarations[]");
+			if (out.indexOf(declaration) != -1)
+				throw failureMessage("duplicate declaration `" + declaration + "`");
+			out.push(declaration);
 		}
 		return out;
 	}
@@ -161,7 +161,7 @@ class NativeMacroModuleReceipt {
 		final macroApiVersion = requiredInt(requiredField(decoded, "macroApiVersion"), "macroApiVersion");
 		if (macroApiVersion != NativeMacroModuleAbi.MACRO_API_VERSION)
 			throw failureMessage("macroApiVersion mismatch: expected " + NativeMacroModuleAbi.MACRO_API_VERSION + ", got " + macroApiVersion);
-		final expressions = decodeExpressions(requiredField(decoded, "expressions"));
+		final declarations = decodeDeclarations(requiredField(decoded, "declarations"));
 
 		final selectedArtifactKind = StringTools.trim(artifactKind == null ? "" : artifactKind);
 		if (selectedArtifactKind != NATIVE_ARTIFACT && selectedArtifactKind != BYTECODE_ARTIFACT)
@@ -181,7 +181,7 @@ class NativeMacroModuleReceipt {
 		return {
 			candidateCommit: candidateCommit,
 			pluginId: pluginId,
-			expressions: expressions,
+			declarations: declarations,
 			artifactKind: selectedArtifactKind,
 			artifactPath: artifactPath,
 			artifactSha256: actualDigest

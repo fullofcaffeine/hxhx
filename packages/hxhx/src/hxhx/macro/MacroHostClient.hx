@@ -155,13 +155,6 @@ class MacroHostClient {
 		});
 	}
 
-	public static function runNativeModuleExpr(modulePath:String, pluginId:String, expr:String):String {
-		return withStringSession(function(session) {
-			session.loadNativeModule(modulePath, pluginId);
-			return session.runNativeExpr(expr);
-		});
-	}
-
 	/**
 		Open a macro host session for a full compilation.
 
@@ -212,12 +205,12 @@ class MacroHostClient {
 		final countStr = parts.exists("c") ? parts.get("c") : "0";
 		final count = Std.parseInt(countStr);
 		if (count == null || count < 0)
-			throw "macro host: invalid native module expr count payload: " + countStr;
+			throw "macro host: invalid native module declaration count payload: " + countStr;
 		final out = new Array<String>();
 		for (i in 0...count) {
 			final key = "e" + i;
 			if (!parts.exists(key))
-				throw "macro host: missing native module expr payload key: " + key;
+				throw "macro host: missing native module declaration payload key: " + key;
 			out.push(parts.get(key));
 		}
 		return out;
@@ -1080,19 +1073,15 @@ class MacroHostSession {
 		final countStr = parts.exists("c") ? parts.get("c") : "0";
 		final count = Std.parseInt(countStr);
 		if (count == null || count < 0)
-			throw "macro host: invalid native module expr count payload: " + countStr;
+			throw "macro host: invalid native module declaration count payload: " + countStr;
 		final out = new Array<String>();
 		for (i in 0...count) {
 			final key = "e" + i;
 			if (!parts.exists(key))
-				throw "macro host: missing native module expr payload key: " + key;
+				throw "macro host: missing native module declaration payload key: " + key;
 			out.push(parts.get(key));
 		}
 		return out;
-	}
-
-	public function runNativeExpr(expr:String):String {
-		return client.call("macro.runNativeExpr", MacroProtocol.encodeLen("e", expr));
 	}
 
 	/**

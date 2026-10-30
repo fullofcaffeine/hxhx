@@ -32,10 +32,10 @@ class M14NativeMacroModuleReceiptIntegrationTest {
 	**/
 	static function writeReceipt(path:String, candidate:String, nativePath:String, bytecodePath:String, ?nativeDigest:String):Void {
 		final selectedDigest = nativeDigest == null ? digest(nativePath) : nativeDigest;
-		final receipt = '{"schema":"hxhx.native-macro-module.v1","candidateCommit":"'
+		final receipt = '{"schema":"hxhx.native-macro-module.v2","candidateCommit":"'
 			+ candidate
-			+ '","pluginId":"fixture.project.macro","abiVersion":1,"macroApiVersion":1,'
-			+ '"expressions":["projectmacro.ProjectMacro.message()"],"artifacts":{'
+			+ '","pluginId":"fixture.project.macro","abiVersion":2,"macroApiVersion":1,'
+			+ '"declarations":["Identity.preserve"],"artifacts":{'
 			+ '"native":{"path":"native.cmxs","sha256":"'
 			+ selectedDigest
 			+ '"},'
@@ -85,7 +85,7 @@ class M14NativeMacroModuleReceiptIntegrationTest {
 		for (token in ["1.5", '"1suffix"', "true", "[]", "{}"]) {
 			expectInvalidField(receiptPath, validReceipt, {
 				field: "abiVersion",
-				original: "1",
+				original: "2",
 				replacement: token,
 				error: "abiVersion must be an integer"
 			});
@@ -97,19 +97,38 @@ class M14NativeMacroModuleReceiptIntegrationTest {
 			error: "pluginId must be a string"
 		});
 		expectInvalidField(receiptPath, validReceipt, {
-			field: "expressions",
-			original: '["projectmacro.ProjectMacro.message()"]',
+			field: "declarations",
+			original: '["Identity.preserve"]',
 			replacement: "[7]",
-			error: "expressions[] must be a string"
+			error: "declarations[] must be a string"
 		});
 		expectInvalidField(receiptPath, validReceipt, {
 			field: "abiVersion",
-			original: "1",
+			original: "2",
 			replacement: "null",
 			error: "abiVersion is required"
 		});
+		// A receipt for the removed version 1 plugin ABI (exact-expression `unit -> string` handlers) is rejected.
+		expectInvalidField(receiptPath, validReceipt, {
+			field: "abiVersion",
+			original: "2",
+			replacement: "1",
+			error: "abiVersion mismatch: expected 2, got 1"
+		});
+		expectInvalidField(receiptPath, validReceipt, {
+			field: "schema",
+			original: '"hxhx.native-macro-module.v2"',
+			replacement: '"hxhx.native-macro-module.v1"',
+			error: "unsupported schema"
+		});
+		expectInvalidField(receiptPath, validReceipt, {
+			field: "declarations",
+			original: '["Identity.preserve"]',
+			replacement: "[]",
+			error: "declarations must contain at least one macro declaration"
+		});
 		// JSON fraction/exponent syntax remains valid when its value is an exact integer.
-		File.saveContent(receiptPath, StringTools.replace(validReceipt, '"abiVersion":1', '"abiVersion":1e0'));
+		File.saveContent(receiptPath, StringTools.replace(validReceipt, '"abiVersion":2', '"abiVersion":2e0'));
 		assertEq("integral exponent receipt", NativeMacroModuleReceipt.loadFromEnvironment(NativeMacroModuleReceipt.NATIVE_ARTIFACT).pluginId,
 			"fixture.project.macro");
 

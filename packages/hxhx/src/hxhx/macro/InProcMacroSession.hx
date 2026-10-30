@@ -4,6 +4,7 @@ import hxhx.macro.ExprMacroDispatch;
 import hxhxmacrohost.NativeMacroModuleDynlink;
 import hxhxmacrohost.NativeMacroModuleHost;
 import hxhxmacrohost.NativeMacroModuleHostAbi;
+import hxhxmacrohost.MacroSyntaxWire;
 
 /**
 	In-process macro runtime session implementation.
@@ -21,6 +22,8 @@ import hxhxmacrohost.NativeMacroModuleHostAbi;
 	- Implements the current bring-up macro effect surface by forwarding effects
 	  into `MacroState`.
 	- Provides exact-string builtin macro behavior used by Stage4 fixtures.
+	- Runs declaration-selected project macros through a loaded project-macro plugin
+	  (`expandSelected`).
 
 	How
 	- The class remains in the same package as `InProcMacroRuntime`, so existing
@@ -33,14 +36,14 @@ class InProcMacroSession {
 	final onGenerateHooks:Array<Void->Void>;
 	final afterGenerateHooks:Array<Void->Void>;
 	final effectSink:InProcMacroEffectSink;
-	final nativeExpressions:haxe.ds.StringMap<Bool>;
+	final nativeDeclarations:haxe.ds.StringMap<Bool>;
 	var nativeModuleTouched:Bool;
 
 	public function new() {
 		afterTypingHooks = [];
 		onGenerateHooks = [];
 		afterGenerateHooks = [];
-		nativeExpressions = new haxe.ds.StringMap();
+		nativeDeclarations = new haxe.ds.StringMap();
 		nativeModuleTouched = false;
 		effectSink = {
 			setDefine: setDefine,
@@ -71,8 +74,6 @@ class InProcMacroSession {
 		final generated = InProcGeneratedEntrypoints.run(e, effectSink);
 		if (generated != null)
 			return generated;
-		if (nativeExpressions.exists(e))
-			return NativeMacroModuleHost.runExpr(e);
 
 		if (!isBuiltinExpr(e))
 			return "ran:" + e;
@@ -169,8 +170,6 @@ class InProcMacroSession {
 		final generated = InProcGeneratedEntrypoints.expandExpr(e);
 		if (generated != null)
 			return generated;
-		if (nativeExpressions.exists(e))
-			return NativeMacroModuleHost.runExpr(e);
 		return switch (e) {
 			case "unit.HelperMacros.getCompilationDate()", "HelperMacros.getCompilationDate()":
 				"\"<compilation-date>\"";
@@ -180,32 +179,56 @@ class InProcMacroSession {
 	}
 
 	/**
-		Answer a declaration-selected macro call.
+		Answer a declaration-selected macro call by running the project's own macro body.
 
-		The in-process runtime currently executes only exact no-argument expression
-		keys registered by native modules (`NativeMacroModuleHost.runExpr`). It has
-		no executor that receives authored argument syntax for a declaration, so a
-		selected call is reported as unavailable instead of being guessed from text.
+		The declaration key is `<owner canonical name>.<method>`, for example `Identity.preserve`.
+		When no loaded project-macro plugin registered that key, the call stays `Unavailable` and the
+		caller reports it as unexecuted. Otherwise:
+
+		1. export each authored argument to `haxe.macro.Expr` (`MacroSyntaxExport`),
+		2. encode them (`MacroSyntaxWire`) and call the plugin's generated adapter, which runs the
+		   real macro method compiled into the plugin,
+		3. decode the returned expression and import it as parser syntax (`MacroSyntaxImport`).
+
+		Any failure in these steps (an argument without a source position, a macro exception, a
+		returned shape the importer rejects, a malformed payload) is thrown as a compile error that
+		names the call file and the declaration. It never falls back to ordinary typing.
 	**/
 	public function expandSelected(request:ExprMacroDispatchRequest):ExprMacroDispatchResult {
-		return Unavailable("the in-process macro runtime has no executor for project macro declaration "
-			+ request.describe()
-			+ "; native macro modules currently register exact no-argument expression keys only");
+		final declaration = request.getDeclaration();
+		final key = declaration.getOwner().getCanonicalName() + "." + declaration.getSignature().getName();
+		if (!nativeDeclarations.exists(key))
+			return Unavailable("no loaded project macro plugin provides declaration " + key);
+		final callSite = request.getFilePath() + ": expression macro " + key + ": ";
+		try {
+			final positions = new MacroSyntaxPositions(request.getFilePath());
+			final exporter = new MacroSyntaxExport(positions);
+			final authored = request.getArguments();
+			final arguments = [for (index in 0...authored.length) exporter.argument(authored[index], index)];
+			final response = NativeMacroModuleHost.runDeclaration(key, MacroSyntaxWire.encodeArguments(arguments));
+			if (MacroSyntaxWire.isFailure(response))
+				throw "the macro failed: " + MacroSyntaxWire.decodeFailure(response);
+			return Expanded(new MacroSyntaxImport(positions).result(MacroSyntaxWire.decodeResult(response)));
+		} catch (error:String) {
+			throw callSite + error;
+		} catch (error:haxe.Exception) {
+			throw callSite + error.message;
+		}
 	}
 
 	/** Load one validated project-macro plugin into this in-process compilation session. **/
 	public function loadNativeModule(modulePath:String, pluginId:String):Array<String> {
 		nativeModuleTouched = true;
 		final snapshot = NativeMacroModuleDynlink.loadAndCapture(modulePath, pluginId);
-		final expressions = NativeMacroModuleHostAbi.exprsForPlugin(snapshot, pluginId, modulePath);
-		for (expr in expressions) {
-			if (isBuiltinExpr(expr) || InProcGeneratedEntrypoints.handles(expr))
-				throw "native macro module cannot override built-in/generated expression `" + expr + "`";
-			if (nativeExpressions.exists(expr))
-				throw "native macro module expression already loaded: " + expr;
-			nativeExpressions.set(expr, true);
+		final declarations = NativeMacroModuleHostAbi.declarationsForPlugin(snapshot, pluginId, modulePath);
+		for (declaration in declarations) {
+			if (isBuiltinExpr(declaration))
+				throw "native macro module cannot override built-in macro declaration `" + declaration + "`";
+			if (nativeDeclarations.exists(declaration))
+				throw "native macro module declaration already loaded: " + declaration;
+			nativeDeclarations.set(declaration, true);
 		}
-		return expressions;
+		return declarations;
 	}
 
 	public function setDefine(name:String, value:String):Void {
