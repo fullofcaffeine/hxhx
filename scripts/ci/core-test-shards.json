@@ -193,6 +193,7 @@
     "test:m14:stage3-missing-required-call-argument": "compiler-focused-1",
     "test:m14:stage3-array-methods": "compiler-focused-1",
     "test:m14:stage3-sys-file-ops": "compiler-focused-1",
+    "test:m14:stage3-member-length": "compiler-foundation",
     "test:m14:stage3-optional-argument-skipping": "compiler-focused-2",
     "test:m14:parser-stage-scan-expression-body": "compiler-focused-1",
     "test:m14:typer-abstract-catalog": "compiler-focused-2",

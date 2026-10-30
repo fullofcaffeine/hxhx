@@ -1598,6 +1598,12 @@ class EmitterStage {
 			?callSigByCallee:Map<String, EmitterCallSig>):String {
 		if (field == "length") {
 			final o = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+			// The typed receiver decides first: a field, index, or call result
+			// typed `String`/`Array` (or `Null<...>` of them) has no other fact
+			// the spelling-based checks below could recover.
+			final typed = backend.ocaml.Stage3OcamlMemberLength.lower(stage3ExactExprType(obj), o, escapeOcamlString);
+			if (typed != null)
+				return typed;
 			if (stage3IsStringExpr(obj, tyByIdent)) {
 				return "HxString.length (" + o + ")";
 			}
@@ -1658,6 +1664,8 @@ class EmitterStage {
 		}
 
 		final staticField = tryExprToOcamlStage3StaticField(obj, field, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+		if (staticField == null)
+			backend.ocaml.Stage3OcamlMemberLength.rejectDynamicLookup(stage3ExactExprType(obj), field);
 		return staticField != null ? staticField : ("(Obj.magic (HxAnon.get (Obj.repr ("
 			+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 			+ ")) "
@@ -2014,6 +2022,61 @@ class EmitterStage {
 	static function objectAccessType(expr:HxExpr):Null<TyType> {
 		final access = objectAccess(expr);
 		return access == null ? null : access.resultType;
+	}
+
+	/**
+		The type the typer recorded for this exact expression, or null when the
+		active typed body has no fact for it.
+
+		Member reads such as `.length` choose their native lowering from the
+		receiver's type. The receiver can be a local, a structural or nominal
+		field read (`box.text`, `Main.title`), an index (`parts[1]`), a call
+		result (`maybe(true)`, `s.substr(1)`), or a type check or cast
+		(`(value : String)`); each has its own typed fact. This
+		helper reads only those facts. It never guesses a type from a name.
+	**/
+	static function stage3ExactExprType(expr:HxExpr):Null<TyType> {
+		switch expr {
+			case EParenthesized(inner, _):
+				return stage3ExactExprType(inner);
+			case EDiscardThen(_, continuation):
+				return stage3ExactExprType(continuation);
+			case _:
+		}
+		final structural = objectAccessType(expr);
+		if (structural != null)
+			return structural;
+		// A typed call, including one encoded as an exact static or instance
+		// call, is recorded as a callable occurrence with its full result type.
+		// The call encodings also carry that result as hint text, but parsing
+		// the text cannot rebuild a nominal type: `Array<Int>` becomes an
+		// unresolved path, so only the occurrence can classify an Array result.
+		if (expr.match(ECall(_, _))) {
+			final call = currentTypedInitializer != null ? currentTypedInitializer.findCallableExpression(expr) : currentTypedFunction == null ? null : currentTypedFunction.findCallableExpression(expr);
+			if (call != null && call.getTag() == Call)
+				return call.getType();
+		}
+		return switch expr {
+			case EIdent(name):
+				final local = exactFunctionLocalType(name);
+				local != null ? local : stage3FieldOccurrenceType(expr);
+			case EField(_, _):
+				stage3FieldOccurrenceType(expr);
+			case EArrayAccess(_, _):
+				final indexed = arrayAccess(expr);
+				indexed == null ? null : indexed.resultType;
+			case ECast(_, _) | ECheckType(_, _):
+				final conversion = currentTypedInitializer != null ? currentTypedInitializer.findCast(expr) : currentTypedFunction == null ? null : currentTypedFunction.findCast(expr);
+				conversion == null ? null : conversion.getTargetType();
+			case _:
+				null;
+		};
+	}
+
+	/** The typed result of a nominal field read owned by the active typed body. */
+	static function stage3FieldOccurrenceType(expr:HxExpr):Null<TyType> {
+		final field = currentTypedInitializer != null ? currentTypedInitializer.findField(expr) : currentTypedFunction == null ? null : currentTypedFunction.findField(expr);
+		return field == null ? null : field.getType();
 	}
 
 	/** Allocation and parent calls retain their original typed occurrence through emission. */
