@@ -4,6 +4,15 @@ typedef TypedExactStaticCall = {
 	final declaration:String;
 	final method:String;
 	final resultType:String;
+
+	/**
+		Whether the selected declaration has a Haxe body. A bodiless declaration,
+		such as a method of the standard `extern class sys.io.File`, is
+		implemented by each target. A backend must route it to target code
+		instead of calling the empty placeholder it generates for that method.
+	**/
+	final hasBody:Bool;
+
 	final callee:HxExpr;
 	final arguments:Array<HxExpr>;
 };
@@ -18,12 +27,14 @@ typedef TypedExactStaticCall = {
 class TypedExactStaticCallSource {
 	public static inline final INTRINSIC = "__hxhx_exact_static_call";
 
-	public static function encode(owner:String, declaration:String, method:String, resultType:String, callee:HxExpr, arguments:Array<HxExpr>):HxExpr {
+	public static function encode(owner:String, declaration:String, method:String, resultType:String, hasBody:Bool, callee:HxExpr,
+			arguments:Array<HxExpr>):HxExpr {
 		final payload:Array<HxExpr> = [
 			EString(owner),
 			EString(declaration),
 			EString(method),
 			EString(resultType),
+			EBool(hasBody),
 			callee
 		];
 		return ECall(EIdent(INTRINSIC), payload.concat(arguments));
@@ -35,10 +46,16 @@ class TypedExactStaticCallSource {
 			case ECall(EIdent(INTRINSIC), arguments): arguments;
 			case _: return null;
 		};
-		if (payload.length < 5)
+		if (payload.length < 6)
 			throw "exact static call contains a malformed typed payload";
-		return switch (payload.slice(0, 4)) {
-			case [EString(owner), EString(declaration), EString(method), EString(resultType)]:
+		return switch (payload.slice(0, 5)) {
+			case [
+				EString(owner),
+				EString(declaration),
+				EString(method),
+				EString(resultType),
+				EBool(hasBody)
+			]:
 				if (owner.length == 0 || declaration.length == 0 || method.length == 0 || resultType.length == 0)
 					throw "exact static call contains empty typed identities";
 				{
@@ -46,8 +63,9 @@ class TypedExactStaticCallSource {
 					declaration: declaration,
 					method: method,
 					resultType: resultType,
-					callee: payload[4],
-					arguments: payload.slice(5)
+					hasBody: hasBody,
+					callee: payload[5],
+					arguments: payload.slice(6)
 				};
 			case _: throw "exact static call contains a malformed typed payload";
 		};

@@ -162,7 +162,8 @@ class M14OcamlNominalTypePredicatesTest {
 						case _: throw "Array predicate requires its projected cast";
 					}
 					// The decoded argument array is a copy; the original remains unchanged.
-					final copied = TypedExactStaticCallSource.encode(call.owner, call.declaration, call.method, call.resultType, call.callee, call.arguments);
+					final copied = TypedExactStaticCallSource.encode(call.owner, call.declaration, call.method, call.resultType, call.hasBody, call.callee,
+						call.arguments);
 					reject(() -> plan.renderCall(copied, fn, null, _ -> "unused", null, value -> value), "exact typed call");
 					tested = true;
 				}, _ -> {});

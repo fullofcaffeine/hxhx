@@ -645,7 +645,7 @@ class TypedBodySource {
 					switch (callee) {
 						case EField(receiver, _):
 							TypedExactStaticCallSource.encode(declaration.getOwner().getCanonicalName(), declaration.getIdentity().getCanonicalKey(),
-								declaration.getSignature().getName(), projectedTypeHint(typedExpression.getType()),
+								declaration.getSignature().getName(), projectedTypeHint(typedExpression.getType()), declaration.getHasBody(),
 								EField(resolvedTypeExpression("", extensionProvider), declaration.getSignature().getName()), [receiver].concat(arguments));
 						case _:
 							throw "typed extension call does not retain its receiver field shape";
@@ -668,7 +668,7 @@ class TypedBodySource {
 							case _: callee;
 						};
 						TypedExactStaticCallSource.encode(declaration.getOwner().getCanonicalName(), declaration.getIdentity().getCanonicalKey(),
-							declaration.getSignature().getName(), projectedTypeHint(typedExpression.getType()), ordinary, arguments);
+							declaration.getSignature().getName(), projectedTypeHint(typedExpression.getType()), declaration.getHasBody(), ordinary, arguments);
 					} else {
 						ECall(callee, arguments);
 					}

@@ -160,7 +160,7 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 		final program = new NekoTypedProgramProjection("neko-projection-test", [module]);
 		final declaration = "Main.Api#static:value()->primitive:Int#0";
 		final sourceCall:HxExpr = EField(EIdent("Api"), "value");
-		final encoded = TypedExactStaticCallSource.encode("Main.Api", declaration, "value", "Int", sourceCall, []);
+		final encoded = TypedExactStaticCallSource.encode("Main.Api", declaration, "value", "Int", true, sourceCall, []);
 		final plan = backend.vm.NekoExactStaticCallPlan.fromExpression(program, encoded);
 		if (plan == null || plan.selected.body.getStableIdentity() != declaration)
 			throw "static call lost its selected declaration";
@@ -168,14 +168,14 @@ class Main { static function main():Void { Sys.println(Flavor.Bold.label()); } }
 			throw "static call changed its ordinary source callee";
 		expectFailure("malformed typed payload", () -> TypedExactStaticCallSource.decode(ECall(EIdent(TypedExactStaticCallSource.INTRINSIC), [])));
 		expectFailure("empty typed identities",
-			() -> TypedExactStaticCallSource.decode(TypedExactStaticCallSource.encode("", declaration, "value", "Int", sourceCall, [])));
+			() -> TypedExactStaticCallSource.decode(TypedExactStaticCallSource.encode("", declaration, "value", "Int", true, sourceCall, [])));
 		expectFailure("requires its typed program", () -> backend.vm.NekoExactStaticCallPlan.fromExpression(null, encoded));
 		expectFailure("conflicts with declaration",
 			() -> backend.vm.NekoExactStaticCallPlan.fromExpression(program,
-				TypedExactStaticCallSource.encode("Main.Api", declaration, "different", "Int", sourceCall, [])));
+				TypedExactStaticCallSource.encode("Main.Api", declaration, "different", "Int", true, sourceCall, [])));
 		expectFailure("does not belong to Main",
 			() -> backend.vm.NekoExactStaticCallPlan.fromExpression(program,
-				TypedExactStaticCallSource.encode("Main", declaration, "value", "Int", sourceCall, [])));
+				TypedExactStaticCallSource.encode("Main", declaration, "value", "Int", true, sourceCall, [])));
 	}
 
 	/** Embedding must reject mutable-field evidence and preserve receiver effects. */
