@@ -75,14 +75,46 @@ class Stage3ProjectMacroPlugins {
 		};
 	}
 
+	/**
+		The classpaths a request contributes to its project-macro plugin, from its resolver list.
+
+		- `keyClassPaths`: the lookup list without the per-output `_gen_hx` directory, which names this
+		  compile's output directory and is never seen by the plugin compilation.
+		- `macroClassPaths`: the key list without the standard-library roots (`standardRoot` and
+		  anything under it, such as its target `_std`) and the bundled sources inside the compiler.
+		  It keeps explicit `-cp` entries, libraries, macro-added classpaths, and the implicit working
+		  directory, so `cd proj && hxhx --hxhx-stage3 -main Main` with `Macros.hx` beside `Main.hx`
+		  compiles `Macros` in the macro context.
+	**/
+	public static function classPathsFor(classPaths:Array<String>, generatedHxDir:Null<String>,
+			standardRoot:String):{keyClassPaths:Array<String>, macroClassPaths:Array<String>} {
+		final generated = generatedHxDir == null || generatedHxDir.length == 0 ? null : haxe.io.Path.normalize(generatedHxDir);
+		final standard = standardRoot.length == 0 ? null : haxe.io.Path.addTrailingSlash(haxe.io.Path.normalize(standardRoot));
+		final keyClassPaths = [
+			for (path in classPaths)
+				if (generated == null || haxe.io.Path.normalize(path) != generated) path
+		];
+		final macroClassPaths = new Array<String>();
+		for (path in keyClassPaths) {
+			if (CompilerBundledSources.owns(path))
+				continue;
+			if (standard != null && StringTools.startsWith(haxe.io.Path.addTrailingSlash(haxe.io.Path.normalize(path)), standard))
+				continue;
+			macroClassPaths.push(path);
+		}
+		return {keyClassPaths: keyClassPaths, macroClassPaths: macroClassPaths};
+	}
+
 	/** Why a request cannot build and load project macro plugins, or `null` when it can. */
 	public static function unavailableReason(macroRuntimeMode:String, isServerRequest:Bool, isMacroCompilation:Bool):Null<String> {
+		if (isMacroCompilation)
+			// Upstream Haxe 4.3.7 rejects a macro function called from macro code (directly or through
+			// a helper) with "macro-in-macro"; a plugin compilation reports it the same way.
+			return "macro-in-macro: macro code cannot call another macro function (upstream Haxe rejects this too)";
 		if (macroRuntimeMode != hxhx.macro.MacroRuntimeMode.INPROC)
 			return "the external macro host has no structured dispatch method for project macro declarations yet";
 		if (isServerRequest)
 			return "the compilation server does not load project macro plugins yet; compile without --connect";
-		if (isMacroCompilation)
-			return "macro calls inside a macro compilation are not executed yet";
 		return null;
 	}
 
@@ -92,7 +124,7 @@ class Stage3ProjectMacroPlugins {
 		final sorted = declarations.copy();
 		sorted.sort((left, right) -> left < right ? -1 : (left > right ? 1 : 0));
 		try {
-			final result = ProjectMacroPluginCache.ensure(request(sorted, inputs));
+			final result = ProjectMacroPluginCache.ensure(request(sorted, inputs, output));
 			switch (result.outcome) {
 				case Reused:
 					output.stdoutLine("project_macro_plugin=reused");
@@ -112,7 +144,14 @@ class Stage3ProjectMacroPlugins {
 		}
 	}
 
-	static function request(declarations:Array<String>, inputs:Stage3ProjectMacroPluginInputs):ProjectMacroPluginRequest {
+	/** Each plugin tool run's limit: `HXHX_MACRO_PLUGIN_BUILD_TIMEOUT` seconds, 1800 by default. */
+	static function buildTimeoutSeconds():Float {
+		final configured = Sys.getEnv("HXHX_MACRO_PLUGIN_BUILD_TIMEOUT");
+		final parsed = configured == null ? null : Std.parseFloat(StringTools.trim(configured));
+		return parsed == null || Math.isNaN(parsed) || parsed <= 0 ? 1800.0 : parsed;
+	}
+
+	static function request(declarations:Array<String>, inputs:Stage3ProjectMacroPluginInputs, output:CompilationRequestOutput):ProjectMacroPluginRequest {
 		final repoRoot = Stage3PathSupport.inferRepoRootForScripts();
 		if (repoRoot.length == 0)
 			throw "cannot locate the hxhx sources that project macro plugins are built with (set HXHX_REPO_ROOT)";
@@ -137,7 +176,9 @@ class Stage3ProjectMacroPlugins {
 			dune: "dune",
 			ocamlopt: "ocamlopt",
 			artifactKind: hxhx.macro.InProcMacroRuntime.pluginArtifactKind(),
-			lockTimeoutSeconds: 900.0
+			lockTimeoutSeconds: 900.0,
+			buildTimeoutSeconds: buildTimeoutSeconds(),
+			progress: line -> output.stdoutLine(line)
 		};
 	}
 }

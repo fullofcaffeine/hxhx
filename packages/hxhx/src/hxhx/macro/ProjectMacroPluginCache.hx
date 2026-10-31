@@ -59,6 +59,12 @@ typedef ProjectMacroPluginRequest = {
 
 	/** How long to wait for another process that is building the same plugin. */
 	final lockTimeoutSeconds:Float;
+
+	/** Wall-clock limit for each tool run of a build (the child compiler, `dune`); the tool is killed after it. */
+	final buildTimeoutSeconds:Float;
+
+	/** Receives one human-readable line before the cache waits for a lock or builds. */
+	final progress:String->Void;
 }
 
 /** Whether `ensure` reused a valid cached plugin or built one, and why it built. */
@@ -114,8 +120,15 @@ typedef ProjectMacroPluginResult = {
 	Gotchas
 	- Adding a new file that changes which file an import or type lookup selects, without editing
 	  any file the plugin read, is not detected (`haxe_ocaml-9sj5p.4` docs list this limit).
-	- The child compiler and dune run without a timeout; their output is merged and kept for the
-	  failure message.
+	- Each tool run has a wall-clock limit (`buildTimeoutSeconds`); output is merged and kept for
+	  the failure message.
+	- A source whose modification time is later than the start of the build is refused, so an edit
+	  made while the child compiler ran cannot be recorded with a digest of text it never compiled.
+	- A reused plugin is not compared with the current `ocamlopt -config`. The plugin must match
+	  the hxhx binary, which the key binds by executable digest and OCaml version; the `PATH`
+	  toolchain matters only while building, where its version is checked.
+	- A rebuild keeps the previous build directory (a concurrent compile may have validated the
+	  previous receipt and be loading its plugin); older builds are deleted.
 **/
 class ProjectMacroPluginCache {
 	public static inline final KEY_SCHEMA:String = "hxhx.project-macro-plugin.v1";
@@ -170,7 +183,7 @@ class ProjectMacroPluginCache {
 			list(request.declarations),
 			list(request.macroClassPaths),
 			list(request.classPaths),
-			list(request.defines),
+			list(sortedCopy(request.defines)),
 			request.cwd,
 			request.supportClassPath,
 			Sys.getEnv("OCAMLPARAM"),
@@ -203,7 +216,8 @@ class ProjectMacroPluginCache {
 		}
 
 		FileSystem.createDirectory(keyDirectory);
-		final lock = acquireLock(keyDirectory, request.lockTimeoutSeconds);
+		request.progress("hxhx: building project macro plugin for " + request.declarations.join(", ") + " (" + firstLine(reason) + ")...");
+		final lock = acquireLock(keyDirectory, request.lockTimeoutSeconds, request.progress);
 		try {
 			// Another process may have finished the same build while this one waited for the lock.
 			if (FileSystem.exists(receiptPath)) {
@@ -230,6 +244,11 @@ class ProjectMacroPluginCache {
 		};
 	}
 
+	static function firstLine(text:String):String {
+		final newline = text.indexOf("\n");
+		return newline < 0 ? text : text.substr(0, newline);
+	}
+
 	static function reused(activation:NativeMacroModuleActivation, receiptPath:String, key:String):ProjectMacroPluginResult {
 		return {
 			activation: activation,
@@ -249,8 +268,12 @@ class ProjectMacroPluginCache {
 		final buildName = "build-" + buildId;
 		final outDirectory = Path.join([keyDirectory, buildName, "plugin"]);
 		FileSystem.createDirectory(outDirectory);
+		// Only the lock holder writes temporary receipts; any left now belong to an interrupted build.
+		for (entry in FileSystem.readDirectory(keyDirectory))
+			if (StringTools.startsWith(entry, RECEIPT_NAME + ".") && StringTools.endsWith(entry, ".tmp"))
+				FileSystem.deleteFile(Path.join([keyDirectory, entry]));
 
-		final args = request.compiler.leadingArgs.concat(["--hxhx-no-run", "--hxhx-out", outDirectory]);
+		final args = request.compiler.leadingArgs.concat(["--hxhx-no-run", "--hxhx-out", outDirectory, "--cwd", request.cwd]);
 		for (classPath in request.macroClassPaths) {
 			args.push("--hxhx-macro-classpath");
 			args.push(classPath);
@@ -272,7 +295,11 @@ class ProjectMacroPluginCache {
 			backend.ocaml.Stage3OcamlMacroPluginEntry.DECLARATIONS_DEFINE + "=" + request.declarations.join(",")
 		])
 			args.push(arg);
-		final compile = ProjectMacroPluginProcess.run(request.compiler.program, args);
+		final compile = ProjectMacroPluginProcess.run(request.compiler.program, args, request.buildTimeoutSeconds);
+		if (compile.timedOut)
+			throw "the project macro plugin compile did not finish within "
+				+ request.buildTimeoutSeconds
+				+ " s and was stopped (set HXHX_MACRO_PLUGIN_BUILD_TIMEOUT to allow longer)";
 		if (compile.code != 0)
 			throw "the project macro plugin compile failed (exit "
 				+ compile.code
@@ -307,7 +334,11 @@ class ProjectMacroPluginCache {
 			"quiet",
 			"./" + library + ".cma",
 			"./" + library + ".cmxs"
-		]);
+		], request.buildTimeoutSeconds);
+		if (dune.timedOut)
+			throw "dune did not finish building the project macro plugin within "
+				+ request.buildTimeoutSeconds
+				+ " s and was stopped (set HXHX_MACRO_PLUGIN_BUILD_TIMEOUT to allow longer)";
 		if (dune.code != 0)
 			throw "dune could not build the project macro plugin (exit "
 				+ dune.code
@@ -343,9 +374,16 @@ class ProjectMacroPluginCache {
 		final temporary = receiptPath + "." + buildId + ".tmp";
 		File.saveContent(temporary, receipt);
 		FileSystem.rename(temporary, receiptPath);
-		for (entry in FileSystem.readDirectory(keyDirectory))
-			if (StringTools.startsWith(entry, "build-") && entry != buildName)
-				deleteTree(Path.join([keyDirectory, entry]));
+		// A concurrent compile may have validated the previous receipt and be about to load its
+		// plugin, so the previous build stays; only older generations are removed.
+		final older = [
+			for (entry in FileSystem.readDirectory(keyDirectory))
+				if (StringTools.startsWith(entry, "build-")
+					&& entry != buildName) {name: entry, time: FileSystem.stat(Path.join([keyDirectory, entry])).mtime.getTime()}
+		];
+		older.sort((left, right) -> left.time > right.time ? -1 : (left.time < right.time ? 1 : 0));
+		for (position in 1...older.length)
+			deleteTree(Path.join([keyDirectory, older[position].name]));
 	}
 
 	/** Fails before building when `dune` or `ocamlopt` is missing or `ocamlopt` is another OCaml version. */
@@ -378,21 +416,22 @@ class ProjectMacroPluginCache {
 	/**
 		Take the per-key build lock and return its path.
 
-		The lock is a directory that holds an `owner` file. A process creates its own uniquely named
-		directory and renames it to `.lock`; renaming onto an existing non-empty directory fails, so
-		exactly one process holds the lock. A lock older than 30 minutes is treated as left behind by
-		a crashed build and removed.
+		The lock is a directory that holds an `owner` file with the owner's process id. A process
+		creates its own uniquely named directory and renames it to `.lock`; renaming onto an existing
+		non-empty directory fails, so exactly one process holds the lock. A lock is stale when its
+		owner process no longer exists (an interrupted build, for example Ctrl-C) or when it is older
+		than 30 minutes. A stale lock is first renamed away to a unique name, so only one waiter can
+		remove it, and then deleted.
 	**/
-	static function acquireLock(keyDirectory:String, timeoutSeconds:Float):String {
+	static function acquireLock(keyDirectory:String, timeoutSeconds:Float, progress:String->Void):String {
 		final lockPath = Path.join([keyDirectory, LOCK_NAME]);
 		final deadline = Sys.time() + timeoutSeconds;
+		final ownPid = hxhxmacrohost.NativeMacroModuleHostIdentity.processId();
+		var announced = false;
 		while (true) {
-			final candidate = Path.join([
-				keyDirectory,
-				".lock-" + Sha256.encode(Sys.time() + ":" + Std.random(0x3fffffff)).substr(0, 12)
-			]);
+			final candidate = Path.join([keyDirectory, ".lock-" + uniqueSuffix()]);
 			FileSystem.createDirectory(candidate);
-			File.saveContent(Path.join([candidate, "owner"]), Std.string(Sys.time()) + "\n");
+			File.saveContent(Path.join([candidate, "owner"]), Std.string(ownPid) + "\n");
 			final acquired = try {
 				FileSystem.rename(candidate, lockPath);
 				true;
@@ -404,13 +443,23 @@ class ProjectMacroPluginCache {
 			if (acquired)
 				return lockPath;
 			deleteTree(candidate);
-			final owner = Path.join([lockPath, "owner"]);
-			if (FileSystem.exists(owner)) {
-				final age = (Date.now().getTime() - FileSystem.stat(owner).mtime.getTime()) / 1000;
-				if (age > STALE_LOCK_SECONDS) {
-					deleteTree(lockPath);
-					continue;
+			if (isStaleLock(lockPath)) {
+				final staleName = Path.join([keyDirectory, ".lock-stale-" + uniqueSuffix()]);
+				final claimed = try {
+					FileSystem.rename(lockPath, staleName);
+					true;
+				} catch (_:String) {
+					false;
+				} catch (_:haxe.Exception) {
+					false;
 				}
+				if (claimed)
+					deleteTree(staleName);
+				continue;
+			}
+			if (!announced) {
+				progress("hxhx: waiting for another hxhx process that is building this project macro plugin (lock: " + lockPath + ")");
+				announced = true;
 			}
 			if (Sys.time() > deadline)
 				throw "timed out after "
@@ -420,6 +469,25 @@ class ProjectMacroPluginCache {
 					+ ")";
 			Sys.sleep(0.2);
 		}
+	}
+
+	/** A lock whose owner process is gone, whose owner file is unreadable, or that is older than 30 minutes. */
+	static function isStaleLock(lockPath:String):Bool {
+		final owner = Path.join([lockPath, "owner"]);
+		if (!FileSystem.exists(owner))
+			return FileSystem.exists(lockPath) && ageSeconds(lockPath) > 5.0;
+		if (ageSeconds(owner) > STALE_LOCK_SECONDS)
+			return true;
+		final pid = Std.parseInt(StringTools.trim(File.getContent(owner)));
+		return pid == null || !ProjectMacroPluginProcess.isAlive(pid);
+	}
+
+	static function ageSeconds(path:String):Float {
+		return (Sys.time() * 1000.0 - FileSystem.stat(path).mtime.getTime()) / 1000.0;
+	}
+
+	static function uniqueSuffix():String {
+		return Sha256.encode(Sys.time() + ":" + Std.random(0x3fffffff)).substr(0, 12);
 	}
 
 	static function releaseLock(lockPath:String):Void {
@@ -437,6 +505,12 @@ class ProjectMacroPluginCache {
 		for (entry in FileSystem.readDirectory(path))
 			deleteTree(Path.join([path, entry]));
 		FileSystem.deleteDirectory(path);
+	}
+
+	static function sortedCopy(values:Array<String>):Array<String> {
+		final out = values.copy();
+		out.sort(compareStrings);
+		return out;
 	}
 
 	static function compareStrings(left:String, right:String):Int

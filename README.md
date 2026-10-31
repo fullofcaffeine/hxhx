@@ -286,7 +286,8 @@ For full command reference (tests, gates, promotion, plugin matrix):
 - OCaml `5.2+`, `dune`, `ocaml-findlib`
 - Projects that call expression macros: `dune` and `ocamlopt` on `PATH`, from the same OCaml version that built
   `hxhx`. `hxhx` compiles each project's macro classes into a native plugin with them and caches the plugin
-  (see [expression macros](docs/02-user-guide/HXHX_EXPRESSION_MACROS.md#toolchain-requirement)).
+  (see [expression macros](docs/02-user-guide/HXHX_EXPRESSION_MACROS.md#toolchain-requirement)). The build also reads
+  the hxhx source checkout, found next to the `hxhx` binary or through `HXHX_REPO_ROOT`.
 - Repository server helper: `flock` on Linux or `lockf` on macOS.
   These tools serialize server ownership updates and cleanup.
 
