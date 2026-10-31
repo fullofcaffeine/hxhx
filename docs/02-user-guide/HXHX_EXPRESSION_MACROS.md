@@ -68,7 +68,8 @@ expr_macro_unexecuted[0]=Main.hx: macros.Macros.items: project macro declaration
 hxhx(stage3): Main.hx: expression macro macros.Macros.items was not executed: project macro declaration `macros.Macros.items` parameter `n` must be a required haxe.macro.Expr; other parameter kinds are not supported yet
 ```
 
-One declaration is exempt for now: hxhx's own `CompilerBundledSourcesMacro.files()`, which embeds standard-library
+One declaration is exempt for now: hxhx's own `CompilerBundledSourcesMacro.files()` (only the one in the hxhx
+checkout, `packages/hxhx-core/src/CompilerBundledSourcesMacro.hx`), which embeds standard-library
 sources when hxhx compiles itself and needs `haxe.macro.Context` and reification. It is still reported, and its call is
 then typed by the macro call-site contract (`TyMacroCallSignature`): any expression is accepted at an `Expr` parameter,
 a trailing `Array<Expr>` parameter collects the remaining arguments, and the value is `Dynamic`. With `HXHX_TRACE_EXPR_MACROS=1`, `expr_macro_scope_gaps=N` also counts call sites the walker could not prove names for;
