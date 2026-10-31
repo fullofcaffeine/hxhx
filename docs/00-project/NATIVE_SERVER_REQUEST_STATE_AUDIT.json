@@ -73,6 +73,7 @@
         "var:currentClassStorage",
         "var:currentRuntimeTypes",
         "var:currentCallableFunction",
+        "var:currentAbstractConstructor",
         "var:currentTypedFunction",
         "var:currentTypedInitializer",
         "var:currentOcamlModuleName",
