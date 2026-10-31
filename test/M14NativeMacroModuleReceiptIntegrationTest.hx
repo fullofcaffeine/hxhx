@@ -34,6 +34,8 @@ class M14NativeMacroModuleReceiptIntegrationTest {
 	static final digestA = StringTools.lpad("", "a", 64);
 
 	static function main():Void {
+		// A fresh checkout has no .tmp yet; fullPath needs an existing directory.
+		FileSystem.createDirectory(".tmp");
 		final root = FileSystem.fullPath(".tmp") + "/m14-native-macro-receipt-" + Std.string(Std.int(haxe.Timer.stamp() * 1000000));
 		FileSystem.createDirectory(root + "/build");
 		final receiptPath = root + "/receipt.json";
