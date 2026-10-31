@@ -977,7 +977,12 @@ Notes:
       (if local `haxe` and local OCaml toolchain ABI differ, the smoke emits `PROMOTION_EVAL_SMOKE:SKIP_HOST_ABI` and keeps the lane non-blocking)
     - macro-module dynlink smoke (`npm run test:hxhx:macro-module-dynlink-smoke`) proving a native macro module that registers a
       macro declaration (plugin ABI version 2) loads via Stage4 RPC (`macro.loadNativeModule`), with a negative diagnostic for
-      plugin-ID mismatch; project macro bodies run in-process (`npm run test:macro-runtime:project-module`)
+      plugin-ID mismatch; project macro bodies run in-process (`npm run test:macro-runtime:project-module`, which needs a
+      native hxhx built from the current sources, for example
+      `HXHX_FORCE_STAGE0=1 HXHX_STAGE0_OCAML_BUILD=native bash scripts/hxhx/build-hxhx.sh`, passed as `HXHX_BIN`, plus
+      `HXHX_MACRO_HOST_EXE` from `bash scripts/hxhx/build-hxhx-macro-host.sh`; hxhx builds, caches, and rebuilds the
+      plugin by itself, and the focused interpreter checks are `npm run test:m14:project-macro-plugin-cache` and
+      `npm run test:m14:macro-compilation-context`)
     - native backend plugin runtime smoke (`npm run test:hxhx:native-plugin-runtime-smoke`) for load + emit + run + negative diagnostics
       (required in strict plugin matrix; runs `.cma` artifact when `HXHX_BIN` is bytecode and `.cmxs` when native)
     - macro-library smoke (`reflaxe.ocaml` build fixture + Stage3 `--library` activation from `haxe_libraries/*.hxml`)

@@ -106,7 +106,8 @@
         "haxeDecisionOwners": [
           "packages/hxhx-core/src/hxhxmacrohost/NativeMacroModuleDynlink.hx",
           "packages/hxhx-core/src/hxhxmacrohost/NativeMacroModuleHostAbi.hx",
-          "packages/hxhx-core/src/hxhxmacrohost/NativeMacroModuleHostIdentity.hx"
+          "packages/hxhx-core/src/hxhxmacrohost/NativeMacroModuleHostIdentity.hx",
+          "packages/hxhx/src/hxhx/macro/ProjectMacroPluginCache.hx"
         ],
         "ownerBeads": [
           "haxe.ocaml-8nv.30.1",
@@ -116,7 +117,7 @@
         "whyOcaml": "OCaml Dynlink opens the selected macro module and captures registrations. Two identity primitives return the running binary's OCaml version (Sys.ocaml_version) and the MD5 digest of its executable file, which OCaml computes natively. Haxe owns ABI validation, plugin identity, cache keys, receipts, expression selection, request lifetime, and compiler effects.",
         "focusedEvidence": [
           "npm run test:m14:native-macro-module-host-abi",
-          "npm run test:m14:native-macro-module-receipt",
+          "npm run test:m14:project-macro-plugin-cache",
           "npm run guard:bridge-boundaries"
         ]
       },

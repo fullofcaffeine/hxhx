@@ -45,6 +45,7 @@ class Stage3Args {
 		var serverReport = false;
 		final customizations = new Array<String>();
 		final macroClassPaths = new Array<String>();
+		var macroCacheRoot = "";
 		final rest = new Array<String>();
 
 		var i = 0;
@@ -80,6 +81,11 @@ class Stage3Args {
 					rest.push("-cp");
 					rest.push(args[i + 1]);
 					i += 2;
+				case "--hxhx-macro-cache":
+					if (i + 1 >= args.length)
+						throw "missing value after --hxhx-macro-cache";
+					macroCacheRoot = args[i + 1];
+					i += 2;
 				case "--hxhx-type-only":
 					typeOnly = true;
 					i += 1;
@@ -110,6 +116,7 @@ class Stage3Args {
 			serverReport: serverReport,
 			customizations: customizations,
 			macroClassPaths: macroClassPaths,
+			macroCacheRoot: macroCacheRoot,
 			rest: rest
 		};
 	}

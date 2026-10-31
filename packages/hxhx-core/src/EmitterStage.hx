@@ -7305,6 +7305,19 @@ class EmitterStage {
 		return runtimeSrcDir;
 	}
 
+	/**
+		The directories whose OCaml sources every Stage3 output copies: the runtime and the shim templates.
+
+		A project-macro plugin is built from them and links against the compiler's own copy, so the
+		plugin cache digests them (`hxhx.macro.ProjectMacroPluginCache.runtimeDigest`).
+	**/
+	public static function stage3RuntimeSourceDirectories():Array<String> {
+		return [
+			stage3RuntimeSourceDirectory(),
+			haxe.io.Path.join([inferRepoRootForStage3Shims(), "packages", "hxhx-core", "shims"])
+		];
+	}
+
 	/** Select the exact runtime modules before admitting operations or writing output. */
 	static function stage3RuntimePaths(runtimeSrcDir:String):Array<String> {
 		return [
