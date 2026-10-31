@@ -82,7 +82,11 @@ class M14Stage3RuntimeFixture {
 			for (module in context.loader.drainNewModules())
 				pending.push(module);
 		}
-		return TypedAbstractOperatorLowering.lowerModules(typed, context.index);
+		// Use the production Stage3 native-call contract, so standard Map calls stay
+		// calls for the emitter's runtime adapter exactly as in a driver request.
+		// Read it from the light policy module: Neko and other target tests share
+		// this helper without reflaxe.ocaml, and OcamlStage3Backend loads the emitter.
+		return TypedAbstractOperatorLowering.lowerModules(typed, context.index, backend.ocaml.Stage3OcamlNativeCallPolicy.retain);
 	}
 
 	/** Focused typing and native preparation share the same provider identity and classpath rules. */

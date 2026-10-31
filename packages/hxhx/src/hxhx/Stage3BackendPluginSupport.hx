@@ -3,7 +3,6 @@ package hxhx;
 import backend.BackendRegistry;
 import backend.IBackend;
 import backend.TargetDescriptor;
-import backend.cpp.CppNativeCallPolicy.forBackend;
 import hxhx.runtime.NullableRuntimeString;
 
 typedef Stage3BackendSelection = {
@@ -240,9 +239,20 @@ class Stage3BackendPluginSupport {
 		return {
 			backend: backend,
 			descriptor: selected,
-			retainNativeCall: forBackend(selected),
+			retainNativeCall: retainNativeCall(selected),
 			supportsCustomOutputFile: backendCaps.supportsCustomOutputFile == true,
 			supportsBuildExecutable: backendCaps.supportsBuildExecutable == true
 		};
+	}
+
+	/**
+		The selected builtin target's exact native-operation contract, if any.
+		C++ keeps Map operations for its managed storage and Stage3 OCaml keeps
+		them for the `HxMap` runtime. Plugin providers and other targets expand
+		the authored bodies.
+	**/
+	static function retainNativeCall(selected:TargetDescriptor):Null<TyDeclarationInfo->Bool> {
+		final cpp = backend.cpp.CppNativeCallPolicy.forBackend(selected);
+		return cpp != null ? cpp : backend.ocaml.Stage3OcamlNativeCallPolicy.forBackend(selected);
 	}
 }

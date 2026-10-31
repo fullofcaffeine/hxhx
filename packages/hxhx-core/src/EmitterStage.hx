@@ -1860,6 +1860,23 @@ class EmitterStage {
 			+ "; __hx_obj)";
 	}
 
+	/** A `Map<K, V>` literal in a portable executable body, with its typed arrow entries. */
+	static function stage3MapLiteral(expr:HxExpr):Null<TypedBackendAggregateOccurrence> {
+		if (!expr.match(EArrayDecl(_)) || isMetalProfileActive() || (currentTypedFunction == null && currentTypedInitializer == null))
+			return null;
+		// Same selection order as instance calls: an active field initializer wins.
+		final aggregate = currentTypedInitializer != null ? currentTypedInitializer.requireAggregate(expr) : currentTypedFunction.requireAggregate(expr);
+		final identity = aggregate.getType().getNominalIdentity();
+		return identity != null && identity.getCanonicalName() == "haxe.ds.Map" ? aggregate : null;
+	}
+
+	/** Standard extern map classes allocate the shared runtime table selected by their typed construction. */
+	static function stage3MapConstruction(expr:HxExpr, argumentCount:Int):Null<String> {
+		final occurrence = exactConstructor(expr);
+		return occurrence == null
+			|| occurrence.getIsSuperCall() ? null : backend.ocaml.Stage3OcamlMapCalls.renderConstruction(occurrence.getConstructedType(), argumentCount);
+	}
+
 	static function isStage3StdArrayCtorTypePath(typePath:String):Bool {
 		final raw = typePath == null ? "" : StringTools.trim(typePath);
 		final genericStart = raw.indexOf("<");
@@ -2880,21 +2897,22 @@ class EmitterStage {
 	}
 
 	/**
-		Rejects a typed Array or String instance call that would bind to an empty stub.
+		Rejects a typed Array, String, or standard map instance call that would bind to an empty stub.
 
-		Stage3 emits OCaml `Array` and `String` modules from the standard `Array`
-		and `String` classes. A method without a Haxe body becomes a stub there
-		that returns a placeholder and changes nothing. Every `String` method is
-		bodiless, because `String` is an `extern` class. A call that is not
-		rendered by `Stage3OcamlArrayCalls` or `Stage3OcamlStringCalls` is emitted
-		as an ordinary call into that module, so it may continue only when the
-		selected declaration has a real body.
+		Stage3 emits OCaml modules from the standard `Array` and `String` classes
+		and from the `haxe.ds.StringMap`, `IntMap`, and `ObjectMap` classes. A
+		method without a Haxe body becomes a stub there that returns a
+		placeholder and changes nothing. Every `String` and map method is
+		bodiless, because those are `extern` classes. A call that is not rendered
+		by `Stage3OcamlArrayCalls`, `Stage3OcamlStringCalls`, or
+		`Stage3OcamlMapCalls` is emitted as an ordinary call into that module, so
+		it may continue only when the selected declaration has a real body.
 
-		This check covers only the `String` and `Array` owners. Other owners
-		are not checked here. Interface methods (for example `IMap.get` or a
-		user interface's method) and other bodiless std methods (for example
-		`StringBuf.toString`) can still bind to a generated stub today; that
-		gap is tracked separately in haxe_ocaml-3tow5 and haxe_ocaml-iww70.
+		This check covers only these owners. Other owners are not checked here.
+		Interface methods (for example `IMap.get` or a user interface's method)
+		and other bodiless std methods (for example `StringBuf.toString`) can
+		still bind to a generated stub today; that gap is tracked separately in
+		haxe_ocaml-3tow5 and haxe_ocaml-hxj43.
 	**/
 	static function requireEmittedStdInstanceMethodBody(call:HxExpr, owner:String, method:String):Void {
 		final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findInstanceCall(call) : currentTypedFunction == null ? null : currentTypedFunction.findInstanceCall(call);
@@ -3508,7 +3526,23 @@ class EmitterStage {
 				if (rendered != null)
 					return rendered;
 			}
-			if (exactCall.owner == "Array" || exactCall.owner == "String")
+			if (backend.ocaml.Stage3OcamlMapCalls.ownsInstanceCall(exactCall.owner)) {
+				final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findInstanceCall(e) : currentTypedFunction == null ? null : currentTypedFunction.findInstanceCall(e);
+				if (occurrence == null)
+					throw "selected OCaml map call requires its exact executable occurrence";
+				final rendered = backend.ocaml.Stage3OcamlMapCalls.render({
+					occurrence: occurrence,
+					emit: value -> exprToOcaml(value, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+						callSigByCalleeRaw),
+					names: currentFunctionLocalOcamlNames,
+					quote: escapeOcamlString
+				});
+				if (rendered != null)
+					return rendered;
+			}
+			if (exactCall.owner == "Array"
+				|| exactCall.owner == "String"
+				|| backend.ocaml.Stage3OcamlMapCalls.ownerKeys(exactCall.owner) != null)
 				requireEmittedStdInstanceMethodBody(e, exactCall.owner, exactCall.method);
 			final ownerModule = ocamlModuleNameFromTypePath(exactCall.owner);
 			if (ownerModule.length > 0 && ownerModule != currentOcamlModuleName) {
@@ -3590,6 +3624,8 @@ class EmitterStage {
 			case EEnumValue(name):
 				// Bring-up: lower enum-like value tags (e.g. `Macro`) to a stable string.
 				escapeOcamlString(name);
+			case ENew(_, args) if (stage3MapConstruction(e, args.length) != null):
+				stage3MapConstruction(e, args.length);
 			case ENew(typePath, args):
 				final rendered = exprToOcamlNewStage3(typePath, args, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
 					moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
@@ -5034,6 +5070,10 @@ class EmitterStage {
 				backend.ocaml.Stage3OcamlObjects.literal(aggregate,
 					value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 					currentFunctionLocalOcamlNames, escapeOcamlString);
+			case EArrayDecl(_) if (stage3MapLiteral(e) != null):
+				backend.ocaml.Stage3OcamlMapCalls.renderLiteral(stage3MapLiteral(e),
+					value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+					currentFunctionLocalOcamlNames);
 			case EArrayDecl(values):
 				// Portable arrays use HxArray through the bootstrap naming adapter.
 				if (isMetalProfileActive()) {
@@ -5214,6 +5254,11 @@ class EmitterStage {
 						return true;
 				return false;
 			}
+			// A standard map allocation has no operands and renders its runtime table.
+			if (construction != null
+				&& !construction.getIsSuperCall()
+				&& backend.ocaml.Stage3OcamlMapCalls.renderConstruction(construction.getConstructedType(), construction.getArguments().length) != null)
+				return false;
 			final indexedAccess = arrayAccess(e);
 			if (!isMetalProfileActive() && indexedAccess != null && backend.ocaml.Stage3OcamlArrays.supportsAccess(indexedAccess)) {
 				// The typed renderer owns this operation; retain unsupported-operand checks
@@ -5426,6 +5471,12 @@ class EmitterStage {
 						return true;
 					for (a in args)
 						if (hasBringupPoison(a))
+							return true;
+					false;
+				case EArrayDecl(_) if (stage3MapLiteral(e) != null):
+					// Map literal entries are arrow pairs; their keys and values are the operands.
+					for (entry in stage3MapLiteral(e).getMapEntries())
+						if (hasBringupPoison(entry.key) || hasBringupPoison(entry.value))
 							return true;
 					false;
 				case EArrayDecl(values):
@@ -7902,6 +7953,21 @@ class EmitterStage {
 		final previousCallableFunction = currentCallableFunction;
 		final previousRuntimeTypes = currentRuntimeTypes;
 		final previousClassStorage = currentClassStorage;
+		final previousTypedFunction = currentTypedFunction;
+		final previousTypedInitializer = currentTypedInitializer;
+		final previousLocalNames = currentFunctionLocalOcamlNames;
+		// A failed emit stops inside one function or initializer. Restore every
+		// selection it made, so the next emit in this process starts clean.
+		function restore():Void {
+			currentEnums = previous;
+			currentCallables = previousCallables;
+			currentCallableFunction = previousCallableFunction;
+			currentRuntimeTypes = previousRuntimeTypes;
+			currentClassStorage = previousClassStorage;
+			currentTypedFunction = previousTypedFunction;
+			currentTypedInitializer = previousTypedInitializer;
+			currentFunctionLocalOcamlNames = previousLocalNames;
+		}
 		currentRuntimeTypes = null;
 		currentClassStorage = null;
 		currentCallables = null;
@@ -7911,25 +7977,13 @@ class EmitterStage {
 		try {
 			result = emitToDirWithEnumOwner(p, outDir, buildExecutable, ocamlProfile);
 		} catch (error:haxe.io.Error) {
-			currentEnums = previous;
-			currentCallables = previousCallables;
-			currentCallableFunction = previousCallableFunction;
-			currentRuntimeTypes = previousRuntimeTypes;
-			currentClassStorage = previousClassStorage;
+			restore();
 			throw error;
 		} catch (error:String) {
-			currentEnums = previous;
-			currentCallables = previousCallables;
-			currentCallableFunction = previousCallableFunction;
-			currentRuntimeTypes = previousRuntimeTypes;
-			currentClassStorage = previousClassStorage;
+			restore();
 			throw error;
 		} catch (error:haxe.Exception) {
-			currentEnums = previous;
-			currentCallables = previousCallables;
-			currentCallableFunction = previousCallableFunction;
-			currentRuntimeTypes = previousRuntimeTypes;
-			currentClassStorage = previousClassStorage;
+			restore();
 			throw error;
 		}
 		currentEnums = previous;

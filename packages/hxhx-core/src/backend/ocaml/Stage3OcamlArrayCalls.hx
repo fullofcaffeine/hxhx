@@ -87,7 +87,8 @@ function render(input:{
 	final call = occurrence.getCall();
 	if (occurrence.getDeclaration().getOwner().getCanonicalName() != "Array" || !supports(call.method))
 		return null;
-	final receiverType = occurrence.getReceiverType();
+	// A `Null<Array<T>>` receiver, such as `map.get(key)`, uses the same array value.
+	final receiverType = occurrence.getReceiverType() == null ? null : TyAliasExpansion.revealNonNullable(occurrence.getReceiverType());
 	if (receiverType == null
 		|| receiverType.getNominalIdentity() == null
 		|| receiverType.getNominalIdentity().getCanonicalName() != "Array"
