@@ -3,9 +3,11 @@ package backend.ocaml;
 /**
 	Select field storage for ordinary generated classes in one native request.
 	Only classes emitted by this request use HxAnon field storage. Externs, enums,
-	abstracts, interfaces, and modules supplied by the native runtime remain under
-	their existing representation owners. A declared field named length therefore
+	interfaces, and modules supplied by the native runtime remain under their
+	existing representation owners. A declared field named length therefore
 	remains an ordinary field without changing String, Array, or Bytes operations.
+	Abstracts have no storage of their own: an abstract value is its backing value.
+	Their constructors are registered with `abstracts` instead.
 **/
 class Stage3OcamlClassStorage {
 	// Every exact class declaration can describe ancestry. Only admitted generated
@@ -17,6 +19,9 @@ class Stage3OcamlClassStorage {
 	final modules:Map<String, String> = [];
 	final initializers:Map<String, Stage3OcamlInstanceInitializers> = [];
 
+	/** Generated abstracts whose constructor builds the backing value with `this = value`. */
+	public final abstracts = new Stage3OcamlAbstractConstructors();
+
 	public function new() {}
 
 	/**
@@ -26,6 +31,18 @@ class Stage3OcamlClassStorage {
 	 */
 	public function add(projection:TypedBackendClassProjection, runtimeProvided:Bool, ?outputModule:String):Void {
 		final facts = projection.requireSemanticFacts();
+		switch facts.getNominalKind() {
+			case AbstractValue(underlying):
+				if (!runtimeProvided && !facts.getIsExtern() && outputModule != null)
+					abstracts.add({
+						projection: projection,
+						identity: facts.getClassIdentity(),
+						underlying: underlying,
+						module: outputModule
+					});
+				return;
+			case _:
+		}
 		if (!facts.getNominalKind().match(ClassInstance))
 			return;
 		final identity = facts.getClassIdentity();
@@ -136,19 +153,8 @@ class Stage3OcamlClassStorage {
 	}
 
 	/** A checked spread passes its original array value, not the source-only spread marker. */
-	public function argumentValues(occurrence:TypedBackendConstructorOccurrence):Array<HxExpr> {
-		final arguments = occurrence.getArguments();
-		final kinds = occurrence.requireArgumentBinding().getOperandKinds();
-		return [
-			for (index in 0...arguments.length)
-				if (kinds[index] == Spread) switch arguments[index] {
-					case ECall(EIdent("__hxhx_spread"), [value]):
-						value;
-					case _:
-						throw "native constructor spread lost its original array operand";
-				} else arguments[index]
-		];
-	}
+	public function argumentValues(occurrence:TypedBackendConstructorOccurrence):Array<HxExpr>
+		return Stage3OcamlConstructorArguments.values(occurrence);
 
 	/**
 		Invoke the exact selected constructor after evaluating each source operand once.
@@ -177,46 +183,13 @@ class Stage3OcamlClassStorage {
 		final methods = projection.getFunctions().filter(fn -> fn.requireSemanticDeclaration() == declaration);
 		if (methods.length != 1)
 			throw "native constructor requires its exact declaration";
-		final binding = occurrence.requireArgumentBinding();
-		final slots = binding.getSlots();
-		if (slots.length != methods[0].getParameters().length)
-			throw "native constructor parameter projection changed its checked arity";
-		final arguments = argumentValues(occurrence);
-		final actual = binding.getOperandTypes();
-		final expected = binding.getExpectedArguments();
-		// An optional parameter (question mark or concrete default) receives the
-		// nullable carrier; map each supplied operand back to its declared parameter.
-		final declaredArguments = HxFunctionDecl.getArgs(methods[0].getDeclaration());
-		final optionalForOperand = [for (_ in arguments) false];
-		for (slot in 0...slots.length)
-			switch slots[slot] {
-				case Supplied(index) if (slot < declaredArguments.length):
-					final declared = declaredArguments[slot];
-					optionalForOperand[index] = HxFunctionArg.getIsOptional(declared)
-						|| HxFunctionArg.getDefaultValue(declared).match(Default(_));
-				case _:
-			}
-		final locals = [
-			for (index in 0...arguments.length)
-				input.names.internalName("__hx_ctor_arg_" + index)
-		];
-		final rendered = [
-			for (index in 0...arguments.length)
-				input.emitArgument(arguments[index], actual[index], expected[index], optionalForOperand[index])
-		];
-		final parameters = [
-			for (slot in slots)
-				switch slot {
-					case Supplied(index):
-						locals[index];
-					case Omitted:
-						"(Obj.magic HxRuntime.hx_null)";
-					case RestElements(indices):
-						"HxBootArray.of_list [" + indices.map(index -> locals[index]).join("; ") + "]";
-					case RestSpread(index):
-						locals[index];
-				}
-		];
+		final arguments = new Stage3OcamlConstructorArguments({
+			occurrence: occurrence,
+			constructor: methods[0],
+			names: input.names,
+			emitArgument: input.emitArgument
+		});
+		final parameters = arguments.parameters;
 		final object = occurrence.getIsSuperCall() ? "this_" : input.names.internalName("__hx_obj");
 		final callee = module == input.currentModule ? "new_" : module + ".new_";
 		final call = callee + " (" + object + ")" + parameters.map(parameter -> " (" + parameter + ")").join("");
@@ -233,10 +206,7 @@ class Stage3OcamlClassStorage {
 				initialize.push((module == input.currentModule ? "" : module + ".") + plan.getName() + " (" + object + "); ");
 			}
 		}
-		result = initialize.join("") + result;
-		var index = arguments.length;
-		while (index-- > 0)
-			result = "let " + locals[index] + " = (" + rendered[index] + ") in " + result;
+		result = arguments.evaluateBefore(initialize.join("") + result);
 		if (!occurrence.getIsSuperCall()) {
 			final fields = new Array<String>();
 			var identity:Null<String> = occurrence.getConstructedType().getNominalIdentity().getCanonicalName();
