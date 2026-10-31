@@ -1,0 +1,36 @@
+local HELLO;WORLD hello;world Hello;World
+field HELLO;WORLD hello;world Hello;World
+field H 72 6 9
+field World Hello World
+static HELLO;WORLD hello;world Hello;World Hello
+static o 111 5 -1
+static World H
+index B a b
+index b 98 0 0
+index 1 b b
+call HELLO;WORLD hello;world Hello;World World
+call e 101 2 9
+call el ll
+method HELLO;WORLD hello;world WORLD
+chain D world
+cast HELLO;WORLD hello;world H
+cast Hello He Hello;World
+nullable HELLO;WORLD hello;world Hello;World World
+arg upper=HELLO;WORLD lower=hello;world
+arg charAt=e code=101
+arg indexOf=4,7
+arg lastIndexOf=7,4
+arg split=2 substr=ell,World
+arg substring=ell,World toString=Hello;World
+field-arg upper=HELLO;WORLD lower=hello;world
+field-arg charAt=e code=101
+field-arg indexOf=4,7
+field-arg lastIndexOf=7,4
+field-arg split=2 substr=ell,World
+field-arg substring=ell,World toString=Hello;World
+index-arg upper=HELLO;WORLD lower=hello;world
+index-arg charAt=e code=101
+index-arg indexOf=4,7
+index-arg lastIndexOf=7,4
+index-arg split=2 substr=ell,World
+index-arg substring=ell,World toString=Hello;World
