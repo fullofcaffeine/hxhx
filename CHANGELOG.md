@@ -1,3 +1,17 @@
+# [0.40.0](https://github.com/fullofcaffeine/hxhx/compare/v0.39.0...v0.40.0) (2026-10-31)
+
+
+### Bug Fixes
+
+* **stage3:** accept nullable Array receivers and reset emitter state on failure ([54e29cf](https://github.com/fullofcaffeine/hxhx/commit/54e29cf935357861e66b41a5eea04bae207d6d60))
+* **stage3:** keep the OCaml native-call policy free of the emitter ([0a2cfff](https://github.com/fullofcaffeine/hxhx/commit/0a2cfff9aab5a621e83bff3bc4f29ab2e5be63e5))
+* **stage3:** run StringMap, IntMap, ObjectMap and Map through HxMap ([dd2dd1b](https://github.com/fullofcaffeine/hxhx/commit/dd2dd1bec1be5a02c81a37c5938f8f99002b13ac))
+
+
+### Features
+
+* **hxhx:** receipt v3 bound to the compiler binary ([5af7b72](https://github.com/fullofcaffeine/hxhx/commit/5af7b72d191ce9fbfdba88c4bea2a61fac479f53))
+
 # [0.39.0](https://github.com/fullofcaffeine/hxhx/compare/v0.38.2...v0.39.0) (2026-10-31)
 
 
