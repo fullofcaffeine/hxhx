@@ -40,7 +40,8 @@ typedef ProjectMacroPluginProcessResult = {
 **/
 class ProjectMacroPluginProcess {
 	/** The POSIX wrapper: `$1` marker file, `$2` limit in seconds, then the tool and its arguments. */
-	static final WATCHED = "marker=\"$1\"; limit=\"$2\"; shift 2; \"$@\" 2>&1 & child=$!; ( elapsed=0; while kill -0 \"$child\" 2>/dev/null; do if [ \"$elapsed\" -ge \"$limit\" ]; then : > \"$marker\"; kill -TERM \"$child\" 2>/dev/null; sleep 5; kill -KILL \"$child\" 2>/dev/null; break; fi; sleep 1; elapsed=$((elapsed + 1)); done ) >/dev/null 2>&1 & wait \"$child\"; exit \"$?\"";
+	static function watchedScript():String
+		return "marker=\"$1\"; limit=\"$2\"; shift 2; \"$@\" 2>&1 & child=$!; ( elapsed=0; while kill -0 \"$child\" 2>/dev/null; do if [ \"$elapsed\" -ge \"$limit\" ]; then : > \"$marker\"; kill -TERM \"$child\" 2>/dev/null; sleep 5; kill -KILL \"$child\" 2>/dev/null; break; fi; sleep 1; elapsed=$((elapsed + 1)); done ) >/dev/null 2>&1 & wait \"$child\"; exit \"$?\"";
 
 	public static function run(program:String, args:Array<String>, timeoutSeconds:Float = 600.0):ProjectMacroPluginProcessResult {
 		final windows = Sys.systemName() == "Windows";
@@ -51,7 +52,7 @@ class ProjectMacroPluginProcess {
 		]);
 		final limit = Std.string(Math.max(1, Math.ceil(timeoutSeconds)));
 		final process = try {
-			windows ? new sys.io.Process(program, args) : new sys.io.Process("/bin/sh", ["-c", WATCHED, "sh", marker, limit, program].concat(args));
+			windows ? new sys.io.Process(program, args) : new sys.io.Process("/bin/sh", ["-c", watchedScript(), "sh", marker, limit, program].concat(args));
 		} catch (error:String) {
 			return {code: 127, output: "could not start `" + program + "`: " + error, timedOut: false};
 		} catch (error:haxe.Exception) {
