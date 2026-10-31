@@ -17,6 +17,9 @@ class Stage3OcamlClassStorage {
 	final modules:Map<String, String> = [];
 	final initializers:Map<String, Stage3OcamlInstanceInitializers> = [];
 
+	/** Interface method tables for the same classes, selected from the same typed facts. */
+	public final interfaces = new Stage3OcamlInterfaceDispatch();
+
 	public function new() {}
 
 	/**
@@ -32,6 +35,8 @@ class Stage3OcamlClassStorage {
 		if (ancestry.exists(identity))
 			throw "native class storage owner registered twice: " + identity;
 		ancestry.set(identity, facts);
+		if (outputModule != null)
+			interfaces.add(facts, !runtimeProvided, outputModule);
 		if (runtimeProvided || facts.getIsExtern())
 			return;
 		if (facts.getIsInterface()) {
@@ -93,6 +98,15 @@ class Stage3OcamlClassStorage {
 		visit(identity);
 		return "let () = HxType.register_class_tags " + quote(names[0]) + " [" + names.map(quote).join("; ") + "]";
 	}
+
+	/** Whether this class is an interface whose bodiless methods become runtime dispatchers. */
+	public function dispatchesInterfaceMethods(projection:TypedBackendClassProjection):Bool
+		return projection.hasSemanticFacts() && interfaces.ownsInterfaceMethod(projection.requireSemanticFacts().getClassIdentity());
+
+	/** The interface method table this class registers after its functions, or null. */
+	public function interfaceMethodTable(projection:TypedBackendClassProjection, currentModule:String, ident:(String, String) -> String,
+			quote:String->String):Null<String>
+		return projection.hasSemanticFacts() ? interfaces.registration(projection.requireSemanticFacts(), currentModule, ident, quote) : null;
 
 	/** Return field execution only for the exact emitted class that owns it. */
 	public function instanceInitializers(projection:TypedBackendClassProjection):Null<Stage3OcamlInstanceInitializers> {

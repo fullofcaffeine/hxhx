@@ -168,24 +168,42 @@ class TyperContext {
 
 		Bare calls search the current type, including abstracts, before imports.
 		Explicit receiver selections can start from their resolved nominal owner.
-		Classes also search each exact superclass. Returning the declaring type keeps
-		overload selection and call projection tied to the method's actual owner.
+		Classes also search each exact superclass. An interface has no superclass;
+		it inherits methods from the interfaces it extends, so `g.name()` on an
+		`interface Greeter extends Named` value selects `Named.name`. Those parents
+		are searched depth-first in declaration order. A class never needs that
+		search, because it must itself implement every interface method. Returning
+		the declaring type keeps overload selection and call projection tied to the
+		method's actual owner.
 	**/
 	public function instanceMethodOwner(name:String, ?receiverOwner:TyNominalInfo):Null<TyNominalInfo> {
 		if (name == null || name.length == 0)
 			return null;
 		final seen = new haxe.ds.StringMap<Bool>();
-		var current = receiverOwner == null ? currentClass() : receiverOwner;
-		while (current != null) {
-			final fullName = current.getFullName();
-			if (seen.exists(fullName))
-				return null;
-			seen.set(fullName, true);
-			if (current.instanceMethodCandidates(name).length > 0)
-				return current;
-			current = superclass(current);
+		function search(start:Null<TyNominalInfo>):Null<TyNominalInfo> {
+			var current = start;
+			while (current != null) {
+				final fullName = current.getFullName();
+				if (seen.exists(fullName))
+					return null;
+				seen.set(fullName, true);
+				if (current.instanceMethodCandidates(name).length > 0)
+					return current;
+				final cls = asClass(current);
+				if (cls != null && cls.getIsInterface() && index != null) {
+					for (parent in cls.getInterfaceTypes()) {
+						final identity = parent.getNominalIdentity();
+						final found = identity == null ? null : search(index.getByFullName(identity.getCanonicalName()));
+						if (found != null)
+							return found;
+					}
+					return null;
+				}
+				current = superclass(current);
+			}
+			return null;
 		}
-		return null;
+		return search(receiverOwner == null ? currentClass() : receiverOwner);
 	}
 
 	/** Resolve inherited storage at its declaring class so bare reads retain the receiver and exact field identity. */

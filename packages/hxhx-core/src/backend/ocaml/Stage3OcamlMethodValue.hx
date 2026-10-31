@@ -3,6 +3,10 @@ package backend.ocaml;
 /** The exact method body and emitted receiver ABI selected by the native emitter. */
 typedef MethodValueInput = {
 	final occurrence:TypedBackendMethodOccurrence;
+
+	/** The bodiless method belongs to an interface whose module dispatches on the receiver's class. */
+	final interfaceDispatch:Bool;
+
 	final reference:String;
 	final signature:EmitterCallSig;
 	final emit:HxExpr->String;
@@ -16,6 +20,8 @@ typedef MethodValueInput = {
 	than fields in the receiver's anonymous record. Partial application captures
 	that receiver immediately and retains the method's existing parameter ABI.
 	A zero-argument method needs a unit wrapper so capture does not invoke it.
+	An interface method value binds the interface module's dispatcher, which
+	selects the implementing class's function when the value is called.
 	Reject a null receiver before binding: nullable method-value transport is
 	not supported yet, and binding a stateless method would falsely succeed.
 	Shared typing instantiates each generic capture and checks its later uses.
@@ -30,7 +36,7 @@ function render(input:MethodValueInput):String {
 	final declaration = occurrence.getDeclaration();
 	declaration.requireSupportedImplementation();
 	final signature = input.signature;
-	if (declaration.getIsDynamic() || !declaration.getHasBody())
+	if (declaration.getIsDynamic() || (!declaration.getHasBody() && !input.interfaceDispatch))
 		throw "OCaml method value requires an ordinary implemented method";
 	if (signature == null || !signature.needsReceiver || signature.expected < 1 || signature.hasRest || signature.paramFillable.contains(true))
 		throw "OCaml method value requires its fixed required receiver ABI";
