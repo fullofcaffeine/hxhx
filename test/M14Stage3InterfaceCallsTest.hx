@@ -22,7 +22,8 @@ import sys.io.File;
 	  that inherits its implementation from a superclass, subclasses that do
 	  and do not override the implementation, a packaged interface, interface
 	  method values, and String, Int, Float, and Bool results and arguments.
-	  It also covers `StringBuf.toString` on a local, a field, and a call result.
+	  It also covers `StringBuf.toString` on a local, a field, and a call result,
+	  and a call on a null interface value that `catch` must handle.
 	- The native executable must print exactly what upstream Haxe 4.3.7 prints.
 	- Every interface module of the fixture must hold dispatchers, not stubs.
 	- An interface method whose calling convention cannot be forwarded yet must
@@ -78,7 +79,15 @@ class M14Stage3InterfaceCallsTest {
 				source: "interface Named {\n\tfunction name():String;\n}\n" +
 				"class Person implements Named {\n\tpublic function new() {}\n\tpublic dynamic function name():String\n\t\treturn \"ann\";\n}\n" +
 				"class Main {\n\tstatic function main() {\n\t\tfinal p:Named = new Person();\n\t\tSys.println(p.name());\n\t}\n}\n"
-			}
+			},
+			{ // Greeter redeclares Named.name. A call through the parent
+				// interface must see the same rejection as one through Greeter.
+				name: "redeclared",
+				expected: "Person's implementation is a dynamic method",
+				source: "interface Named {\n\tfunction name():String;\n}\n"
+				+ "interface Greeter extends Named {\n\tfunction name():String;\n}\n"
+				+ "class Person implements Greeter {\n\tpublic function new() {}\n\tpublic dynamic function name():String\n\t\treturn \"ann\";\n}\n"
+				+ "class Main {\n\tstatic function main() {\n\t\tfinal p:Named = new Person();\n\t\tSys.println(p.name());\n\t}\n}\n"}
 		];
 		for (shape in cases) {
 			final emitted = emitInline(shape.name, shape.source);

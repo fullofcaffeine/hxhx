@@ -24,6 +24,7 @@ true false true
 square 3
 2.25
 ann hi cat from host
+caught null receiver
 ABC
 DEF
 GHI

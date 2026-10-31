@@ -224,6 +224,14 @@ class Main {
 		final readGreeting = g.greet;
 		Sys.println(read() + " " + readGreeting("cat"));
 
+		// A call on a null interface value throws a catchable Haxe error.
+		final missing:Named = null;
+		try {
+			Sys.println(missing.name());
+		} catch (e:Dynamic) {
+			Sys.println("caught null receiver");
+		}
+
 		// StringBuf.toString on a local, a field, and a call result.
 		final buffer = new StringBuf();
 		buffer.add("abc");

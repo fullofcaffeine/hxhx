@@ -14,7 +14,8 @@ Stage3 program with upstream Haxe 4.3.7. It covers:
 - interface method values (`final read = p.name`);
 - String, Int, Float, and Bool results and arguments, including a String
   method called on an interface result;
-- `StringBuf.toString` on a local, an instance field, and a call result.
+- `StringBuf.toString` on a local, an instance field, and a call result;
+- a call on a `null` interface value, which throws an error that `catch` handles.
 
 Before the fix, the interface module held an empty stub for each method that
 returned the placeholder `0`. `p.name()` printed `raw 0`, and
@@ -38,5 +39,6 @@ an array literal. Those gaps have their own Beads.
 executable to print the same text. It also checks that every interface module
 of the fixture holds dispatchers rather than stubs, that interface calls with
 an optional argument or a `dynamic` implementation fail at emit time with a
-named error, and that an `IMap` call on an extern `StringMap` stops with a
+named error (also when a child interface redeclares the method and the call
+goes through the parent), and that an `IMap` call on an extern `StringMap` stops with a
 named runtime error.

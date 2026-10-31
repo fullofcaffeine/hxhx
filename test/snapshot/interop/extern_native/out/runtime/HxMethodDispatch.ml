@@ -109,8 +109,10 @@ let bind_structural receiver field key =
 
    Haxe selects, for each generated class, the function that implements each
    interface method (its own or an inherited superclass method). The class
-   module registers those functions here while OCaml initializes it, which is
-   before any code can allocate one of its instances. The interface module's
+   module registers those functions here at the end of its initialization, so
+   code in modules that use the class runs after it. A static initializer in the
+   class's own module runs before it; see Stage3OcamlInterfaceDispatch. The
+   interface module's
    method then looks the function up by the receiver's class and calls it with
    the same receiver and arguments. Keys are opaque method names; this module
    never inspects a Haxe signature.
@@ -133,7 +135,13 @@ let register_class_methods name entries =
       Hashtbl.add anon_classes name methods)
 
 let class_method receiver key =
-  if HxRuntime.is_null receiver then fail ("interface method called on null: " ^ key);
+  (* Calling a method on null is a Haxe error that `try`/`catch` can handle, so
+     it is raised as a Haxe throw, as captured method values do. The other
+     failures below are compiler or runtime contract violations. *)
+  if HxRuntime.is_null receiver then
+    HxRuntime.hx_throw_typed
+      (Obj.repr ("Null object reference: interface method " ^ key))
+      [ "String"; "Dynamic" ];
   if not (HxAnon.is_anon receiver) then fail ("receiver is not a class instance: " ^ key);
   let descriptor = HxAnon.class_value receiver in
   if HxRuntime.is_null descriptor then fail ("receiver has no class: " ^ key);

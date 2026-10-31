@@ -49,11 +49,15 @@ private typedef InterfaceDispatchEntry = {
 	- Typing chooses the class ancestry and each method's declaration. This
 	  class only matches interface method names against those typed facts; it
 	  never reads OCaml text.
-	- A class registers its table while OCaml initializes its module, before any
-	  code can allocate one of its instances. The table only references the class's
-	  own module and its superclass modules, which it already depends on.
-	- An interface method keeps the OCaml type that its stub had, so its callers
-	  stay type-checked against the interface signature.
+	- A class registers its table at the end of its own OCaml module, after
+	  its functions. Code in other modules runs later, because OCaml initializes
+	  a module before the modules that use it. The table only references the
+	  class's own module and its superclass modules, which it already depends on.
+	- An interface method keeps the OCaml type that its stub had. For a
+	  non-generic signature that type is concrete, so OCaml checks callers
+	  against it. A type parameter of the interface is emitted as `_`, so a
+	  generic interface's arguments and results are not checked by OCaml; the
+	  Haxe typer is the only check there.
 
 	Limits
 	- A generated implementation whose calling convention this table cannot
@@ -68,8 +72,12 @@ private typedef InterfaceDispatchEntry = {
 	  contains `IMap` calls, even though `Map` methods themselves render through
 	  `Stage3OcamlMapCalls`. The dispatcher then stops the program with a named
 	  `HxMethodDispatch` error. In neither case does a call reach a placeholder.
+	- A static initializer in the class's own module runs before the table is
+	  registered. If it allocates an instance of the class and calls an interface
+	  method on it, the dispatcher stops with a named "class has no interface
+	  method table" error (haxe_ocaml-j6aof).
 	- Overridden class methods called on a superclass-typed value still bind to
-	  the superclass function. That is a separate gap.
+	  the superclass function (haxe_ocaml-tcf2h).
 **/
 class Stage3OcamlInterfaceDispatch {
 	final classes:Map<String, InterfaceDispatchClass> = [];
@@ -174,10 +182,10 @@ class Stage3OcamlInterfaceDispatch {
 				continue;
 			final entries = new Array<InterfaceDispatchEntry>();
 			final seen:Map<String, Bool> = [];
+			// Check every (interface, method) pair, including a method that a child
+			// interface redeclares: a call through either interface must see the
+			// same rejection. The table still holds one entry per method name.
 			for (declared in interfaceMethods(identity)) {
-				if (seen.exists(declared.method.name))
-					continue;
-				seen.set(declared.method.name, true);
 				final key = declared.owner + "." + declared.method.name;
 				final problem = methodShapeProblem(declared.method, "the interface method");
 				if (problem != null) {
@@ -196,6 +204,9 @@ class Stage3OcamlInterfaceDispatch {
 						missing.set(key, failure);
 					continue;
 				}
+				if (seen.exists(declared.method.name))
+					continue;
+				seen.set(declared.method.name, true);
 				entries.push({method: declared.method.name, module: implementation.owner.module});
 			}
 			if (entries.length > 0)
