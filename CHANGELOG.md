@@ -1,3 +1,10 @@
+## [0.38.2](https://github.com/fullofcaffeine/hxhx/compare/v0.38.1...v0.38.2) (2026-10-31)
+
+
+### Bug Fixes
+
+* **stage3:** route every String method on typed receivers to HxString ([a28fce8](https://github.com/fullofcaffeine/hxhx/commit/a28fce88c80753efcd7e413663f8bc9d9bc54ae9))
+
 ## [0.38.1](https://github.com/fullofcaffeine/hxhx/compare/v0.38.0...v0.38.1) (2026-10-31)
 
 
