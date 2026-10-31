@@ -291,28 +291,14 @@ class ResolverStage {
 		- `ModuleLoader` can still load dependencies on demand while typing the root surface.
 	**/
 	public static function parseProjectRootsShallow(classPaths:Array<String>, roots:Array<String>, ?defines:haxe.ds.StringMap<String>,
-			?sourceProvider:CompilerSourceProvider):Array<ResolvedModule> {
+			?sourceProvider:CompilerSourceProvider, ?macroContext:MacroCompilationContext):Array<ResolvedModule> {
 		final out = new Array<ResolvedModule>();
 		final visited = new Map<String, Bool>();
 		final visitedSourceFiles = new Map<String, Bool>();
 		final definesMap = defines == null ? new haxe.ds.StringMap<String>() : defines;
 		final sources = sourceProvider == null ? new CompilerSourceProvider() : sourceProvider;
 
-		inline function isMacroStdModule(modulePath:String, filePath:String):Bool {
-			if (modulePath != null && StringTools.startsWith(modulePath, "haxe.macro."))
-				return true;
-			if (filePath == null || filePath.length == 0)
-				return false;
-			return filePath.indexOf("/haxe/macro/") != -1 || filePath.indexOf("\\haxe\\macro\\") != -1;
-		}
-
-		function cloneDefines(src:haxe.ds.StringMap<String>):haxe.ds.StringMap<String> {
-			final out = new haxe.ds.StringMap<String>();
-			if (src != null)
-				for (k in src.keys())
-					out.set(k, src.get(k));
-			return out;
-		}
+		final macroDefines = macroContext == null ? MacroCompilationContext.standardMacroModulesOnly() : macroContext;
 
 		for (root in withStandardTypesRoots(classPaths, roots, sources)) {
 			if (root == null)
@@ -335,14 +321,7 @@ class ResolverStage {
 			if (source == null)
 				throw "import_unreadable " + filePath;
 
-			final effectiveDefines = isMacroStdModule(modulePath, filePath) ? (() -> {
-				final m = cloneDefines(definesMap);
-				if (!m.exists("macro"))
-					m.set("macro", "1");
-				if (!m.exists("eval"))
-					m.set("eval", "1");
-				m;
-			})() : definesMap;
+			final effectiveDefines = macroDefines.definesFor(modulePath, filePath, definesMap);
 			final conditional = HxConditionalCompilation.filterSourceObserved(source, effectiveDefines);
 			final filteredSource = conditional.getFilteredSource();
 			final parsed = try {
@@ -372,28 +351,14 @@ class ResolverStage {
 		  macros can affect the module graph without implementing full DCE/analyzer semantics yet.
 	**/
 	public static function parseProjectRoots(classPaths:Array<String>, roots:Array<String>, ?defines:haxe.ds.StringMap<String>,
-			?sourceProvider:CompilerSourceProvider):Array<ResolvedModule> {
+			?sourceProvider:CompilerSourceProvider, ?macroContext:MacroCompilationContext):Array<ResolvedModule> {
 		final out = new Array<ResolvedModule>();
 		final visited = new Map<String, Bool>();
 		final visitedSourceFiles = new Map<String, Bool>();
 		final definesMap = defines == null ? new haxe.ds.StringMap<String>() : defines;
 		final sources = sourceProvider == null ? new CompilerSourceProvider() : sourceProvider;
 
-		inline function isMacroStdModule(modulePath:String, filePath:String):Bool {
-			if (modulePath != null && StringTools.startsWith(modulePath, "haxe.macro."))
-				return true;
-			if (filePath == null || filePath.length == 0)
-				return false;
-			return filePath.indexOf("/haxe/macro/") != -1 || filePath.indexOf("\\haxe\\macro\\") != -1;
-		}
-
-		function cloneDefines(src:haxe.ds.StringMap<String>):haxe.ds.StringMap<String> {
-			final out = new haxe.ds.StringMap<String>();
-			if (src != null)
-				for (k in src.keys())
-					out.set(k, src.get(k));
-			return out;
-		}
+		final macroDefines = macroContext == null ? MacroCompilationContext.standardMacroModulesOnly() : macroContext;
 
 		final stack = new Array<String>();
 		for (r in withStandardTypesRoots(classPaths, roots, sources)) {
@@ -431,24 +396,12 @@ class ResolverStage {
 			// Apply conditional compilation filtering so inactive `#if` branches don't affect
 			// the resolver's module graph during bootstrapping.
 			//
-			// Macro stdlib note
+			// Macro context note
 			// - Haxe's `haxe.macro.*` APIs are only available when compiling the macro context, where
-			//   the compiler defines `macro`. The main compilation does not.
-			// - Our bootstrap pipeline does not fully separate "macro" vs "main" compilation yet,
-			//   but upstream unit harness modules can still reference `haxe.macro.*` at build time.
-			// - To keep Gate bring-up moving, parse/filter `haxe.macro.*` modules with `macro=1`
-			//   so their declarations exist for Stage3 emission (stubs/Obj.magic are fine here).
-			final effectiveDefines = isMacroStdModule(modulePath, filePath) ? (() -> {
-				final m = cloneDefines(definesMap);
-				if (!m.exists("macro"))
-					m.set("macro", "1");
-				// Macros run on the eval host by default in Haxe 4.x. Many macro APIs are guarded by:
-				//   #if (neko || eval || display)
-				// so we also set `eval=1` to surface their declarations during bring-up.
-				if (!m.exists("eval"))
-					m.set("eval", "1");
-				m;
-			})() : definesMap;
+			//   the compiler defines `macro` and `eval`. The main compilation does not.
+			// - `MacroCompilationContext` owns which modules see those defines: `haxe.macro.*` in every
+			//   request, plus the request's macro classpaths in a macro compilation (plugin builds).
+			final effectiveDefines = macroDefines.definesFor(modulePath, filePath, definesMap);
 			final conditional = HxConditionalCompilation.filterSourceObserved(source, effectiveDefines);
 			final filteredSource = conditional.getFilteredSource();
 

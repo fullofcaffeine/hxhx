@@ -462,6 +462,13 @@ class Stage3Compiler {
 			standardRoot: Stage1Args.getStandardLibraryRoot(parsed),
 			targetDefine: backendTargetDefine
 		});
+		// A macro compilation (`--hxhx-macro-classpath`, used for project-macro plugin builds) compiles
+		// those classpaths' modules with `macro` and `eval` defined; every request compiles
+		// `haxe.macro.*` that way.
+		final macroContext = g.macroClassPaths.length == 0 ? MacroCompilationContext.standardMacroModulesOnly() : MacroCompilationContext.forMacroClassPaths([
+			for (path in g.macroClassPaths)
+				absFromCwd(cwd, path)
+		], classPaths);
 
 		// Defines available for conditional compilation filtering.
 		//
@@ -483,9 +490,9 @@ class Stage3Compiler {
 			return CompilationRequestContext.CANCELLED_EXIT_CODE;
 		final resolved = try {
 			if (noEmit && !typeOnly)
-				ResolverStage.parseProjectRootsShallow(classPaths, roots, definesMap, requestContext.sourceProvider)
+				ResolverStage.parseProjectRootsShallow(classPaths, roots, definesMap, requestContext.sourceProvider, macroContext)
 			else
-				ResolverStage.parseProjectRoots(classPaths, roots, definesMap, requestContext.sourceProvider);
+				ResolverStage.parseProjectRoots(classPaths, roots, definesMap, requestContext.sourceProvider, macroContext);
 		} catch (e:TyperError) {
 			closeMacroSession();
 			return error("resolve failed: " + formatException(e));
@@ -538,7 +545,8 @@ class Stage3Compiler {
 		function openModuleLoader(index:TyperIndex):ModuleLoader {
 			return new ModuleLoader(classPaths, definesMap, index, function(typePath:String):Bool {
 				return dispatchOnTypeNotFoundHooks(buildMacroPreparer.getSession(), typePath, requestOutput);
-			}, !noEmit, requestContext.sourceProvider, buildMacroPreparer.prepare);
+			}, !noEmit, requestContext.sourceProvider, buildMacroPreparer.prepare,
+				macroContext);
 		}
 		final expansionRequested = !typeOnly && exprMacros.length > 0;
 		final expressionMacroSession = expansionRequested ? buildMacroPreparer.getSession() : null;

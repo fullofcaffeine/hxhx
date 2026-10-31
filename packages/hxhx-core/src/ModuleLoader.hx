@@ -59,6 +59,9 @@ class ModuleLoader extends LazyTypeLoader {
 	final prepareModule:Null<ModulePreparationHook>;
 	final sourceProvider:CompilerSourceProvider;
 
+	/** Which modules this request compiles as macro code (`macro` and `eval` defined). */
+	final macroContext:MacroCompilationContext;
+
 	/**
 		Whether lazily loaded modules should recursively pull their direct dependencies.
 
@@ -79,7 +82,8 @@ class ModuleLoader extends LazyTypeLoader {
 	final signatureStates = new haxe.ds.StringMap<SignaturePreparationState>();
 
 	public function new(classPaths:Array<String>, defines:haxe.ds.StringMap<String>, index:TyperIndex, ?onMissingType:String->Bool,
-			?expandDependencies:Bool = true, ?sourceProvider:CompilerSourceProvider, ?prepareModule:ResolvedModule->ResolvedModule) {
+			?expandDependencies:Bool = true, ?sourceProvider:CompilerSourceProvider, ?prepareModule:ResolvedModule->ResolvedModule,
+			?macroContext:MacroCompilationContext) {
 		super();
 		this.classPaths = classPaths == null ? [] : classPaths;
 		this.defines = defines == null ? new haxe.ds.StringMap<String>() : defines;
@@ -88,6 +92,7 @@ class ModuleLoader extends LazyTypeLoader {
 		this.prepareModule = prepareModule == null ? null : {invoke: prepareModule};
 		this.expandDependencies = expandDependencies;
 		this.sourceProvider = sourceProvider == null ? new CompilerSourceProvider() : sourceProvider;
+		this.macroContext = macroContext == null ? MacroCompilationContext.standardMacroModulesOnly() : macroContext;
 		this.visited = new haxe.ds.StringMap<Bool>();
 		this.typeNotFoundTried = new haxe.ds.StringMap<Bool>();
 		this.pending = [];
@@ -409,32 +414,9 @@ class ModuleLoader extends LazyTypeLoader {
 		return uniq;
 	}
 
-	/** Macro standard modules retain their existing conditional compilation policy. */
-	function moduleDefines(modulePath:String, filePath:String):haxe.ds.StringMap<String> {
-		inline function isMacroStdModule(modulePath:String, filePath:String):Bool {
-			if (modulePath != null && StringTools.startsWith(modulePath, "haxe.macro."))
-				return true;
-			if (filePath == null || filePath.length == 0)
-				return false;
-			return filePath.indexOf("/haxe/macro/") != -1 || filePath.indexOf("\\haxe\\macro\\") != -1;
-		}
-
-		function cloneDefines(src:haxe.ds.StringMap<String>):haxe.ds.StringMap<String> {
-			final out = new haxe.ds.StringMap<String>();
-			if (src != null)
-				for (k in src.keys())
-					out.set(k, src.get(k));
-			return out;
-		}
-
-		return isMacroStdModule(modulePath, filePath) ? (() -> {
-			final m = cloneDefines(defines);
-			if (!m.exists("macro"))
-				m.set("macro", "1");
-			if (!m.exists("eval"))
-				m.set("eval", "1");
-			m;
-		})() : defines;
+	/** The defines one module's source is filtered with; `MacroCompilationContext` owns the macro rule. */
+	inline function moduleDefines(modulePath:String, filePath:String):haxe.ds.StringMap<String> {
+		return macroContext.definesFor(modulePath, filePath, defines);
 	}
 
 	/** Complete one source module after its declaration headers have been discovered. */
