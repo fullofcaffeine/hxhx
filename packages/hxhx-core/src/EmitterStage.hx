@@ -112,6 +112,9 @@ class EmitterStage {
 	static var currentRuntimeTypes:Null<backend.ocaml.Stage3OcamlRuntimeTypes> = null;
 	static var currentCallableFunction:Null<backend.ocaml.Stage3OcamlCallableProgram.Stage3OcamlCallableFunction> = null;
 
+	/** The `this` slot while an abstract constructor body is emitted; null in every other function. */
+	static var currentAbstractConstructor:Null<backend.ocaml.Stage3OcamlAbstractConstructors.Stage3OcamlAbstractConstructorBody> = null;
+
 	static var currentModuleFilePath:Null<String> = null;
 	static var currentFunctionName:Null<String> = null;
 	static var currentFunctionLocalTypeHints:Null<Map<String, TyType>> = null;
@@ -1860,6 +1863,55 @@ class EmitterStage {
 			+ "; __hx_obj)";
 	}
 
+	/**
+		Whether `abstractThisAssignment` decides an assignment to `this` in the
+		current function. Upstream Haxe allows it only in abstract constructors
+		and inline abstract methods. An inline method (such as the standard
+		`Int32` increment operators) keeps the older bring-up lowering, which does
+		not write the caller's value back; Bead haxe_ocaml-rs48f tracks that gap.
+	**/
+	static function ownsThisAssignment():Bool {
+		if (currentAbstractConstructor != null)
+			return true;
+		return currentTypedFunction == null || !currentTypedFunction.requireSemanticDeclaration().getIsInline();
+	}
+
+	/**
+		Render `this = value` inside an abstract constructor as a store into its
+		`this` slot (see `backend.ocaml.Stage3OcamlAbstractConstructors`). In a
+		non-inline function the assignment is rejected, as upstream Haxe rejects it.
+	**/
+	static function abstractThisAssignment(op:String, value:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
+			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
+			?callSigByCallee:Map<String, EmitterCallSig>):String {
+		final where = (currentOcamlModuleName == null ? "" : currentOcamlModuleName + ".") + (currentFunctionName == null ? "" : currentFunctionName);
+		if (currentAbstractConstructor == null)
+			throw "stage3 emitter: " + where + " assigns this outside an abstract constructor; Stage3 supports `this = value` only in abstract constructors";
+		if (op != "=")
+			throw "stage3 emitter: " + where + " uses `this " + op + " value`; Stage3 abstract constructors support only `this = value`";
+		final expected = currentAbstractConstructor.getUnderlyingType();
+		final rendered = stage3IsFloatParamHint(expected.getDisplay()) ? exprToOcamlAsFloatValueStage3(value, arityByIdent, tyByIdent, staticImportByIdent,
+			currentPackagePath, moduleNameByPkgAndClass,
+			callSigByCallee) : exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+		return currentAbstractConstructor.assign(rendered);
+	}
+
+	/**
+		Reject an abstract construction that no generated constructor renders.
+		An abstract value is its backing value; the legacy class allocator and the
+		bring-up placeholder would both invent a value that the program never built.
+		Multi-type abstracts such as `Map` select their own construction.
+	**/
+	static function requireNoUnownedAbstractConstruction(construction:TypedBackendConstructorOccurrence):Void {
+		if (construction.getIsSuperCall() || (currentClassStorage != null && currentClassStorage.abstracts.ownsConstruction(construction)))
+			return;
+		final application = construction.findApplication();
+		if (application != null && application.getUnderlyingType() != null && application.getMultiTypeConstruction() == null)
+			throw "stage3 emitter: new "
+				+ construction.getConstructedType().getDisplay()
+				+ "() constructs an abstract whose constructor this request does not emit, so it has no native value";
+	}
+
 	/** A `Map<K, V>` literal in a portable executable body, with its typed arrow entries. */
 	static function stage3MapLiteral(expr:HxExpr):Null<TypedBackendAggregateOccurrence> {
 		if (!expr.match(EArrayDecl(_)) || isMetalProfileActive() || (currentTypedFunction == null && currentTypedInitializer == null))
@@ -3423,35 +3475,44 @@ class EmitterStage {
 		final structuralAccess = objectAccess(e);
 		final construction = exactConstructor(e);
 		if (construction != null && currentClassStorage != null) {
+			final emitArgument = (expression:HxExpr, actual:TyType, expected:TyType, expectedIsOptional:Bool) -> {
+				final value = stage3IsFloatParamHint(expected.getDisplay()) ? exprToOcamlAsFloatValueStage3(expression, arityByIdent, tyByIdent,
+					staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+					callSigByCallee) : exprToOcaml(expression, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+						callSigByCallee);
+				final argument = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(expression) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(expression);
+				// Nullable Int/Float/Bool arguments convert from the plain rendering, as in ordinary calls.
+				if (backend.ocaml.Stage3OcamlNullablePrimitive.innerPrimitive(actual) != null
+					|| backend.ocaml.Stage3OcamlNullablePrimitive.destinationCarrier(expected, expectedIsOptional) != null) {
+					final nullableArgument = backend.ocaml.Stage3OcamlNullablePrimitive.convertArgument(actual, expected, expectedIsOptional,
+						exprToOcaml(expression, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
+					if (nullableArgument != null)
+						return nullableArgument;
+				}
+				final callable = backend.ocaml.Stage3OcamlCallableConversion.adapt(argument, value, currentFunctionLocalOcamlNames);
+				if (callable != null)
+					return callable;
+				final carrier = actual.getSemanticKey() == "primitive:Bool" ? backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ExactBool : actual.isDynamic() ? backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.DynamicValue : backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ConcreteValue;
+				return backend.ocaml.OcamlDynamicOperatorLowering.callArgument(expected.getDisplay(), carrier, value);
+			};
+			final abstractValue = currentClassStorage.abstracts.construct({
+				occurrence: construction,
+				currentModule: currentOcamlModuleName,
+				names: currentFunctionLocalOcamlNames,
+				emitArgument: emitArgument
+			});
+			if (abstractValue != null)
+				return abstractValue;
 			final rendered = currentClassStorage.construct({
 				occurrence: construction,
 				currentModule: currentOcamlModuleName,
 				names: currentFunctionLocalOcamlNames,
-				emitArgument: (expression, actual, expected, expectedIsOptional) -> {
-					final value = stage3IsFloatParamHint(expected.getDisplay()) ? exprToOcamlAsFloatValueStage3(expression, arityByIdent, tyByIdent,
-						staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-						callSigByCallee) : exprToOcaml(expression, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-							callSigByCallee);
-					final argument = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(expression) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(expression);
-					// Nullable Int/Float/Bool arguments convert from the plain rendering, as in ordinary calls.
-					if (backend.ocaml.Stage3OcamlNullablePrimitive.innerPrimitive(actual) != null
-						|| backend.ocaml.Stage3OcamlNullablePrimitive.destinationCarrier(expected, expectedIsOptional) != null) {
-						final nullableArgument = backend.ocaml.Stage3OcamlNullablePrimitive.convertArgument(actual, expected, expectedIsOptional,
-							exprToOcaml(expression, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee));
-						if (nullableArgument != null)
-							return nullableArgument;
-					}
-					final callable = backend.ocaml.Stage3OcamlCallableConversion.adapt(argument, value, currentFunctionLocalOcamlNames);
-					if (callable != null)
-						return callable;
-					final carrier = actual.getSemanticKey() == "primitive:Bool" ? backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ExactBool : actual.isDynamic() ? backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.DynamicValue : backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ConcreteValue;
-					return backend.ocaml.OcamlDynamicOperatorLowering.callArgument(expected.getDisplay(), carrier, value);
-				},
+				emitArgument: emitArgument,
 				quote: escapeOcamlString
 			});
 			if (rendered != null)
 				return rendered;
+			requireNoUnownedAbstractConstruction(construction);
 		}
 		if (currentClassStorage != null && (e.match(EField(_, _)) || e.match(EIdent(_)))) {
 			final field = currentTypedInitializer != null ? currentTypedInitializer.findField(e) : currentTypedFunction == null ? null : currentTypedFunction.findField(e);
@@ -3611,6 +3672,8 @@ class EmitterStage {
 				exprToOcamlIdentStage3(name, hasCurrentInstanceMethod(name), hasCurrentInstanceField(name), stage3HasThisBinding(tyByIdentRaw),
 					stage3HasTyIdent(name, tyByIdentRaw), stage3HasStmtValueIdent(name) || stage3HasLocalValueIdent(name), isMutableLocalRefIdent(name),
 					stage3HasArity(name, arityByIdentRaw), staticImportModuleForStage3(name, staticImportByIdentRaw));
+			case EThis if (currentAbstractConstructor != null):
+				currentAbstractConstructor.read();
 			case EThis:
 				// Stage 3 full-body bring-up: instance methods bind an explicit `this` parameter.
 				// If we are outside that context, conservatively collapse to poison.
@@ -4626,6 +4689,12 @@ class EmitterStage {
 				} else {
 					"(Obj.magic 0)";
 				}
+			case EBinop(op, EThis, value) if (isAssignmentOpToken(op) && ownsThisAssignment()):
+				"("
+				+ abstractThisAssignment(op, value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+				+ "; "
+				+ currentAbstractConstructor.read()
+				+ ")";
 			case EBinop(op, a, b):
 				final equality = (op != "==" && op != "!=") ? null : currentTypedInitializer != null ? currentTypedInitializer.findEquality(e) : currentTypedFunction == null ? null : currentTypedFunction.findEquality(e);
 				final bitwise = intBitwise(e);
@@ -5248,12 +5317,16 @@ class EmitterStage {
 				return value != null && hasBringupPoison(value);
 			}
 			final construction = exactConstructor(e);
-			if (construction != null && currentClassStorage != null && currentClassStorage.ownsConstruction(construction)) {
+			if (construction != null
+				&& currentClassStorage != null
+				&& (currentClassStorage.ownsConstruction(construction) || currentClassStorage.abstracts.ownsConstruction(construction))) {
 				for (argument in currentClassStorage.argumentValues(construction))
 					if (hasBringupPoison(argument))
 						return true;
 				return false;
 			}
+			if (construction != null)
+				requireNoUnownedAbstractConstruction(construction);
 			// A standard map allocation has no operands and renders its runtime table.
 			if (construction != null
 				&& !construction.getIsSuperCall()
@@ -6894,6 +6967,9 @@ class EmitterStage {
 										currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")";
 								}
 							}
+						case EBinop(op, EThis, value) if (isAssignmentOpToken(op) && ownsThisAssignment()):
+							abstractThisAssignment(op, value, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee);
 						case EBinop("=", EField(_, _), _) | EBinop("=", EArrayAccess(_, _), _):
 							"ignore (" + returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
 								currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")";
@@ -7969,9 +8045,11 @@ class EmitterStage {
 		final previousTypedFunction = currentTypedFunction;
 		final previousTypedInitializer = currentTypedInitializer;
 		final previousLocalNames = currentFunctionLocalOcamlNames;
+		final previousAbstractConstructor = currentAbstractConstructor;
 		// A failed emit stops inside one function or initializer. Restore every
 		// selection it made, so the next emit in this process starts clean.
 		function restore():Void {
+			currentAbstractConstructor = previousAbstractConstructor;
 			currentEnums = previous;
 			currentCallables = previousCallables;
 			currentCallableFunction = previousCallableFunction;
@@ -9156,8 +9234,11 @@ class EmitterStage {
 							currentTypedFunction = tf;
 							final previousCallable = currentCallableFunction;
 							currentCallableFunction = currentCallables.bind(tf, currentFunctionLocalOcamlNames);
+							// An abstract constructor has no receiver: it returns the backing value it assigns to `this`.
+							final abstractConstructor = isStaticFn
+								|| currentClassStorage == null ? null : currentClassStorage.abstracts.body(tf, currentFunctionLocalOcamlNames);
 							final headArgs = new Array<String>();
-							if (!isStaticFn)
+							if (!isStaticFn && abstractConstructor == null)
 								headArgs.push("(this_ : _)");
 							// An optional Int/Float/Bool parameter with a concrete default arrives in
 							// the nullable carrier; Stage3OcamlFunctionDefaults unwraps it on entry.
@@ -9174,7 +9255,7 @@ class EmitterStage {
 							}
 							final ocamlArgs = headArgs.length == 0 ? "()" : headArgs.join(" ");
 
-							var retTy = ocamlTypeFromTy(tf.getReturnType());
+							var retTy = abstractConstructor != null ? "_" : ocamlTypeFromTy(tf.getReturnType());
 							retTy = stage3ReturnTypeOverride(outputModuleName, nameRaw, retTy);
 							final allowed:Map<String, Bool> = new Map();
 							final tyByIdent:Map<String, TyType> = new Map();
@@ -9243,6 +9324,17 @@ class EmitterStage {
 								hxhxStage3RunWaitStdioStage3OcamlBody();
 							} else if (durationBody != null) {
 								durationBody;
+							} else if (abstractConstructor != null) {
+								final exc = uniqueReturnExceptionName(nameRaw);
+								exceptions.push("exception " + exc + " of Obj.t");
+								final previousAbstractConstructor = currentAbstractConstructor;
+								currentAbstractConstructor = abstractConstructor;
+								final statements = stmtListToOcaml(HxFunctionDecl.getBody(parsedFn), allowed, exc, eraseBoundary(arityByName), tyByIdent,
+									eraseBoundary(staticImportByIdent), HxModuleDecl.getPackagePath(decl), eraseBoundary(moduleNameByPkgAndClass),
+									eraseBoundary(callSigByCallee), localTypeHints, fnReturnTypesByName, null,
+									[for (argument in args) argument.getProjectedName()]);
+								currentAbstractConstructor = previousAbstractConstructor;
+								abstractConstructor.render(statements, exc);
 							} else {final exc = uniqueReturnExceptionName(nameRaw);
 								exceptions.push("exception " + exc + " of Obj.t");
 								final stmts = HxFunctionDecl.getBody(parsedFn);
@@ -9999,6 +10091,7 @@ class EmitterStage {
 		currentClassStorage = null;
 		currentRuntimeTypes = null;
 		currentCallableFunction = null;
+		currentAbstractConstructor = null;
 		currentTypedFunction = null;
 		currentTypedInitializer = null;
 		currentOcamlModuleName = null;

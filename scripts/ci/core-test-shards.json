@@ -199,6 +199,7 @@
     "test:m14:stage3-member-length": "compiler-foundation",
     "test:m14:stage3-string-methods": "compiler-foundation",
     "test:m14:stage3-map-methods": "compiler-foundation",
+    "test:m14:stage3-abstract-this-constructor": "compiler-foundation",
     "test:m14:stage3-optional-argument-skipping": "compiler-focused-2",
     "test:m14:parser-stage-scan-expression-body": "compiler-focused-1",
     "test:m14:typer-abstract-catalog": "compiler-focused-2",
