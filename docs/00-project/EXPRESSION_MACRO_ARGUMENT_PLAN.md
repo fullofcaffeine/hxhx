@@ -1,12 +1,13 @@
 # Pass authored syntax to project expression macros
 
-Status: approved plan (2026-10-29); step 1 (in-process identity macro) implemented by `haxe_ocaml-9sj5p.3`.
+Status: approved plan (2026-10-29); step 1 (in-process identity macro) implemented by `haxe_ocaml-9sj5p.3`; step 2
+(macro compilation context and plugin build and cache driver) implemented by `haxe_ocaml-9sj5p.4`.
 Owners: `haxe_ocaml-9sj5p` and `haxe_ocaml-geafz`.
 
 ## What works now (after step 1)
 
-A project macro body runs for real when its class is compiled into a project-macro plugin and the
-compile runs in-process. For example, `test/fixtures/project-macro-identity` calls
+A project macro body runs for real in an in-process compile: hxhx compiles its class into a
+project-macro plugin, caches the plugin, and loads it (step 2, `hxhx.macro.ProjectMacroPluginCache`). For example, `test/fixtures/project-macro-identity` calls
 `Identity.preserve(function(label:String):String { { if (label == "ok") { return label; } ... } ... })`.
 The macro receives the function as `haxe.macro.Expr`, checks its written signature, nested brace
 group, both returns, and the statements after the group, and returns it unchanged. The native
@@ -15,7 +16,8 @@ program prints `ok` and an empty event line, as upstream Haxe 4.3.7 does.
 The pieces, in call order:
 
 1. `ExprMacroExpander` selects the declaration and sends one `ExprMacroDispatchRequest`
-   (unchanged from the selection step below).
+   (unchanged from the selection step below). Since step 2, `Stage3ProjectMacroPlugins` first
+   records the supported declarations, provides their plugin, and then repeats the pass.
 2. `InProcMacroSession.expandSelected` looks up the declaration key `<owner>.<method>`. With no
    plugin providing it the call stays `Unavailable` and is reported as unexecuted.
 3. `MacroSyntaxExport` converts each argument (`HxExpr`) to `haxe.macro.Expr`.
@@ -58,8 +60,9 @@ Contract details and limits:
   (`HxTypedefParser.parseTypeHint`) and printed back in the parser's compact text form.
 - Plugin declarations must be static `macro` methods whose parameters are all required `Expr`
   values and whose result is `Expr`.
-- The external macro host loads and validates the same plugin but has no structured dispatch
-  method (`macro.runDeclaration`, above); it reports selected declarations as unexecuted.
+- The external macro host has no structured dispatch method (`macro.runDeclaration`, above), so
+  hxhx neither builds nor loads a plugin in that mode; it reports selected declarations as
+  unexecuted.
 - One in-process session loads at most one plugin; a second load is rejected. Registrations must
   name `pack.Type.method`, and `haxe.macro.*` owners are reserved.
 - Follow-ups: literal spelling and quote kind (`haxe_ocaml-gzufu`), reflaxe.ocaml pattern
@@ -69,7 +72,21 @@ Contract details and limits:
 - No `haxe.macro.Context` API is available to plugin code yet. In the plugin compilation, a macro
   `Position` is opaque (see the define gap below); `MacroSyntaxWire` is the only code that reads
   or builds its `{file, min, max}` record.
-- The plugin is still built by the smoke script (`scripts/hxhx/run-project-macro-module-smoke.sh`).
+- Since step 2 hxhx builds the plugin itself. A plain `hxhx --hxhx-stage3 -cp src -main Main`
+  records the selected declarations in a first pass, reuses or builds the plugin
+  (`ProjectMacroPluginCache`: cache key over the compiler executable digest and OCaml version,
+  ABI versions, declarations, classpaths, defines, working directory, and the runtime and shim
+  sources; a receipt that also binds every source file the plugin compilation read), loads it,
+  and runs the macros in a second pass. A child hxhx compiles the plugin with
+  `--hxhx-macro-classpath` for each project classpath, and `dune` builds it. Each build gets a
+  fresh plugin id, so plugin libraries never share OCaml unit names (`haxe_ocaml-kokp8`). A
+  missing `dune`/`ocamlopt`, or an `ocamlopt` of another OCaml version than the binary, is one
+  diagnostic before any build. The cache test is `npm run test:m14:project-macro-plugin-cache`;
+  the end-to-end check with a native hxhx is `npm run test:macro-runtime:project-module`.
+- Step 2 limits: the external host and the compilation server do not build or load plugins
+  (the server needs one external host per plugin digest, as planned); a new file that changes a
+  lookup without editing any recorded file is not detected; macro calls inside macro classes are
+  not run.
 
 ## Approved plan (2026-10-29)
 

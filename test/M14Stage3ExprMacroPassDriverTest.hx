@@ -10,6 +10,8 @@ import hxhx.Stage3Compiler;
 	  method bodies typed under `--hxhx-no-emit` (the `--no-output` lane), so a
 	  body error there fails the request exactly as it does without the pass.
 	- A selected macro with no executor is reported on stdout before typing.
+	- In a macro compilation, macro code calling another macro function is reported as
+	  "macro-in-macro", the error upstream Haxe 4.3.7 gives.
 **/
 class M14Stage3ExprMacroPassDriverTest {
 	static final root = "test/fixtures/expr_macro_pass_driver";
@@ -19,15 +21,15 @@ class M14Stage3ExprMacroPassDriverTest {
 			throw message;
 	}
 
-	static function compile(main:String):{code:Int, stdout:String, stderr:String} {
+	static function compile(main:String, ?classPathFlag:String, ?classPath:String):{code:Int, stdout:String, stderr:String} {
 		final request = CompilationRequestContext.server(1);
 		final code = Stage3Compiler.runRequest([
 			"--hxhx-no-run",
 			"--hxhx-no-emit",
 			"--hxhx-out",
 			".tmp/m14-expr-macro-pass-driver/" + main,
-			"-cp",
-			root,
+			classPathFlag == null ? "-cp" : classPathFlag,
+			classPath == null ? root : classPath,
 			"-main",
 			main
 		], request);
@@ -52,6 +54,12 @@ class M14Stage3ExprMacroPassDriverTest {
 			"selected macro without an executor was not reported:\n"
 			+ unexecuted.stdout
 			+ unexecuted.stderr);
+
+		// In a macro compilation, macro code that calls another macro function is "macro-in-macro",
+		// which upstream Haxe 4.3.7 rejects; the call is reported with that reason.
+		final chain = compile("MacroChain", "--hxhx-macro-classpath", root + "/chain");
+		require(chain.stdout.indexOf("MacroChain.inner: macro-in-macro") >= 0,
+			"a macro-to-macro call was not reported as macro-in-macro:\n" + chain.stdout + chain.stderr);
 
 		// A compile with no project macros still runs the pass (the built-in date macros are always
 		// allowlisted) and walks standard-library switch scopes it cannot prove. That coverage count is a

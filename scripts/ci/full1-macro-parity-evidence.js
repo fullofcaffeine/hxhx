@@ -20,7 +20,7 @@ const AGGREGATE_MARKERS = [
   'FULL1_MACRO_PARITY:PASS',
 ]
 const TIMING_SCHEMA = 'full1-phase-timing-summary.v2'
-const PROJECT_SCHEMA = 'hxhx.native-macro-module.v2'
+const PROJECT_SCHEMA = 'hxhx.native-macro-module.v3'
 const HOST_SCHEMA = 'macro-runtime-host-evidence.v1'
 
 const MODE_PROOFS = [
@@ -67,8 +67,14 @@ const PROJECT_PROOF = {
     'PROJECT_MACRO_MODULE_ORACLE:PASS',
     'PROJECT_MACRO_MODULE_BUILD:PASS',
     'PROJECT_MACRO_MODULE_INPROC:PASS',
+    'PROJECT_MACRO_MODULE_CACHE_HIT:PASS',
+    'PROJECT_MACRO_MODULE_IMPLICIT_CLASSPATH:PASS',
+    'PROJECT_MACRO_MODULE_MACRO_FAILURE:PASS',
+    'PROJECT_MACRO_MODULE_REBUILD_ON_EDIT:PASS',
+    'PROJECT_MACRO_MODULE_MISSING_TOOLCHAIN:PASS',
     'PROJECT_MACRO_MODULE_EXTERNAL_HOST_UNEXECUTED:PASS',
     'PROJECT_MACRO_MODULE_NEGATIVE_PATHS:PASS',
+    'PROJECT_MACRO_MODULE_PLAIN_COMMAND:PASS',
     'PROJECT_MACRO_MODULE:PASS',
   ],
 }
@@ -241,25 +247,23 @@ function validateProjectProof(context) {
   const directory = path.join(context.artifactsDir, name)
   requireValue(fs.existsSync(directory) && fs.statSync(directory).isDirectory(),
     `missing artifact directory ${name}`)
-  const summaryPath = findOne(directory, 'receipt-summary.json')
   const receiptPath = findOne(directory, 'project-macro-receipt.json')
   const markersPath = findOne(directory, 'markers.txt')
   const metaPath = findOne(directory, 'meta.txt')
-  const summary = readJson(summaryPath)
   const receipt = readJson(receiptPath)
   const meta = readKeyValues(metaPath)
   requireMarkers(markersPath, spec.requiredMarkers)
 
-  for (const [owner, value] of [['project summary', summary], ['project receipt', receipt]]) {
-    requireValue(value.schema === PROJECT_SCHEMA, `${owner} expected schema ${PROJECT_SCHEMA}`)
-    requireValue(value.candidateCommit === context.candidateSha, `${owner} candidate SHA mismatch`)
-    requireValue(value.pluginId === 'hxhx.project-macro.fixture', `${owner} plugin ID mismatch`)
-    requireValue(Array.isArray(value.declarations)
-      && value.declarations.includes('Identity.preserve'),
-    `${owner} macro declaration registration is missing`)
-  }
+  // hxhx writes the receipt itself; it binds the plugin to the digest of the hxhx executable
+  // that built it, which the smoke records independently as hxhx_md5.
+  requireValue(receipt.schema === PROJECT_SCHEMA, `project receipt expected schema ${PROJECT_SCHEMA}`)
   requireValue(meta.candidate_commit === context.candidateSha, 'project macro metadata candidate mismatch')
-  requireValue(meta.plugin_id === 'hxhx.project-macro.fixture', 'project macro metadata plugin mismatch')
+  requireValue(typeof receipt.compilerIdentity === 'string' && receipt.compilerIdentity === meta.hxhx_md5,
+    'project receipt compiler identity does not match the hxhx binary')
+  requireValue(typeof receipt.pluginId === 'string' && receipt.pluginId.startsWith('hxhx.project-macro.'),
+    'project receipt plugin ID mismatch')
+  requireValue(Array.isArray(receipt.declarations) && receipt.declarations.includes('Identity.preserve'),
+    'project receipt macro declaration registration is missing')
   requireValue(receipt.abiVersion === 2 && receipt.macroApiVersion === 1,
     'project macro ABI/API version mismatch')
 
@@ -273,15 +277,10 @@ function validateProjectProof(context) {
     receipt.artifacts?.bytecode?.path,
     receipt.artifacts?.bytecode?.sha256,
   )
-  requireValue(summary.artifacts?.native?.sha256 === nativeDigest,
-    'project summary native digest does not match its receipt')
-  requireValue(summary.artifacts?.bytecode?.sha256 === bytecodeDigest,
-    'project summary bytecode digest does not match its receipt')
 
   return {
     id: spec.id,
     artifact_name: name,
-    summary_sha256: sha256File(summaryPath),
     receipt_sha256: sha256File(receiptPath),
     markers_sha256: sha256File(markersPath),
     native_artifact_sha256: nativeDigest,

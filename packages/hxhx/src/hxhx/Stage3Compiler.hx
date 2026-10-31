@@ -563,8 +563,22 @@ class Stage3Compiler {
 			openModuleLoader);
 		#else
 		final macroSetup = Stage3ExprMacroPass.prepare(resolvedForTyping, openModuleLoader);
+		// Selected project macros run through a native plugin that this compile reuses from the cache
+		// or builds (Stage3ProjectMacroPlugins); requests that cannot load one say why.
+		final projectMacroClassPathLists = Stage3ProjectMacroPlugins.classPathsFor(classPaths, hxhx.macro.MacroState.getGeneratedHxDir(),
+			Stage1Args.getStandardLibraryRoot(parsed).length == 0 ? "" : absFromCwd(cwd, Stage1Args.getStandardLibraryRoot(parsed)));
+		final projectMacroInputs:Stage3ProjectMacroPlugins.Stage3ProjectMacroPluginInputs = {
+			macroClassPaths: projectMacroClassPathLists.macroClassPaths,
+			classPaths: projectMacroClassPathLists.keyClassPaths,
+			defines: allDefines,
+			cwd: cwd,
+			cacheRoot: g.macroCacheRoot.length == 0 ? "" : absFromCwd(cwd, g.macroCacheRoot)
+		};
+		final projectMacroPluginsUnavailable = Stage3ProjectMacroPlugins.unavailableReason(macroRuntimeMode, requestContext.isServerRequest,
+			g.macroClassPaths.length > 0);
 		final macroPass = try {
-			Stage3ExprMacroPass.expand(resolvedForTyping, macroSetup, expressionMacroSession, exprMacros, openModuleLoader);
+			Stage3ProjectMacroPlugins.expand(resolvedForTyping, macroSetup, expressionMacroSession, exprMacros, openModuleLoader,
+				projectMacroPluginsUnavailable, projectMacroInputs, requestOutput);
 		} catch (e:TyperError) {
 			closeMacroSession();
 			final rawDiagnostic = rawTyperDiagnostic(e);
@@ -988,6 +1002,12 @@ class Stage3Compiler {
 			requestOutput.stdoutLine("exe=" + emitted.entryPath);
 		} else {
 			requestOutput.stdoutLine("artifact=" + emitted.entryPath);
+		}
+		// A macro compilation (a project-macro plugin build) reports every source file it read, so the
+		// plugin cache can bind the plugin to their contents (ProjectMacroPluginCache).
+		if (g.macroClassPaths.length > 0) {
+			for (position in 0...typedModules.length)
+				requestOutput.stdoutLine("macro_context_source[" + position + "]=" + typedModules[position].getParsed().getFilePath());
 		}
 
 		closeMacroSession();

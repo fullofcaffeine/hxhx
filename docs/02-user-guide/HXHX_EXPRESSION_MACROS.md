@@ -9,7 +9,8 @@ What works today, in short:
   class is compiled into a project-macro plugin and the compile runs in-process. The macro receives the authored
   argument as `haxe.macro.Expr`, and the expression it returns replaces the call before typing.
   See "Project macro plugins" below.
-- The plugin is still built by hand (the smoke script shows the commands); automatic building is the next step.
+- hxhx builds and caches that plugin by itself, so a plain `hxhx --hxhx-stage3 -cp src -main Main` runs the macro.
+  This needs `dune` and the matching OCaml compiler on `PATH`.
 - Macros that need `haxe.macro.Context`, reification (`macro ...`), or the external macro host are not executed yet;
   such calls are reported as unexecuted.
 
@@ -55,13 +56,14 @@ through the request's header index (public, or private from its own class), the 
 structured request (`MacroRuntimeSession.expandSelected`) carrying the selected declaration and the authored argument
 syntax. An allowlisted exact call text always keeps the allowlist route, even if its callee is a macro.
 
-The in-process session runs a selected declaration when a loaded project-macro plugin provides it (next section). When
-no plugin provides it, or in the external-host mode, which has no structured dispatch method yet, the call is reported
-on stdout and then typed as before, so a later failure is attributable:
+The in-process session runs a selected declaration through the project macro plugin that hxhx builds or reuses for the
+compile (next section). When the call cannot run, the call is reported with the reason on stdout and then typed as
+before, so a later failure is attributable. Reasons include an unsupported declaration shape, a plugin that cannot be
+built, the external-host mode (which has no structured dispatch method yet), and the compilation server:
 
 ```
 expr_macros_unexecuted=1
-expr_macro_unexecuted[0]=Main.hx: macros.Macros.items: no loaded project macro plugin provides declaration macros.Macros.items
+expr_macro_unexecuted[0]=Main.hx: macros.Macros.items: project macro declaration `macros.Macros.items` parameter `n` must be a required haxe.macro.Expr; other parameter kinds are not supported yet
 ```
 
 An unexpanded macro call is typed by the macro call-site contract (`TyMacroCallSignature`), not as an ordinary call:
@@ -81,30 +83,85 @@ Important constraints:
 
 ### Project macro plugins (in-process)
 
-A project macro plugin is an OCaml library compiled from the project's macro classes by hxhx's own Stage3 emitter. For
-each listed macro declaration it registers a generated adapter of Haxe type `Array<haxe.macro.Expr> -> haxe.macro.Expr`
-that calls the real macro method.
+A project macro runs from a *project macro plugin*: an OCaml library that hxhx compiles from the project's macro classes
+with its own Stage3 emitter. For each called macro declaration the plugin registers a generated adapter of Haxe type
+`Array<haxe.macro.Expr> -> haxe.macro.Expr` that calls the real macro method.
+
+hxhx builds, caches, and loads the plugin by itself. A plain compile is enough:
 
 ```bash
-# 1. Build the plugin (bytecode .cma and native .cmxs) from the macro class.
-hxhx --hxhx-stage3 --hxhx-no-run \
-  -cp packages/hxhx-core/src -cp src \
-  -main hxhxmacrohost.MacroDeclarationPlugin \
-  --hxhx-out plugin \
-  -D ocaml_dune_layout=plugin \
-  -D ocaml_plugin_register_macro=my.project.macros \
-  -D ocaml_plugin_macro_declarations=Identity.preserve
-# The compile prints exe=<plugin>/hxhx_macro_plugin_my_project_macros.cma: the plugin is a
-# wrapped dune library, so its modules cannot collide with the compiler's own when loaded.
-(cd plugin && dune build ./hxhx_macro_plugin_my_project_macros.cma ./hxhx_macro_plugin_my_project_macros.cmxs)
-
-# 2. Write a receipt that binds the plugin to this compiler build, then compile the project.
-node scripts/ci/native-macro-module-receipt.js write --report module/receipt.json \
-  --candidate-commit <id> --plugin-id my.project.macros --declarations Identity.preserve \
-  --native-artifact module/plugin.cmxs --bytecode-artifact module/plugin.cma
-HXHX_NATIVE_MACRO_MODULE_RECEIPT=module/receipt.json HXHX_CANDIDATE_COMMIT=<id> \
-  hxhx --hxhx-stage3 -cp src -main Main --hxhx-out out
+cd test/fixtures/project-macro-identity
+hxhx --hxhx-stage3 -cp src -main Main
 ```
+
+What happens, in order:
+
+1. The pre-typing pass finds the calls whose callee is a supported macro declaration (a static `macro` method whose
+   parameters are all required `Expr` values and whose result is `Expr`), here `Identity.preserve`.
+2. hxhx computes a cache key from everything it knows before building: the digest of its own executable and its OCaml
+   version, the plugin ABI versions, the declarations, the classpaths, the `-D` defines, the working directory, and the
+   OCaml runtime sources the plugin is built with.
+3. If `<cache>/<key>/receipt.json` exists and still matches (same compiler, versions, declarations, unchanged source
+   files, unchanged artifacts), hxhx loads that plugin. The compile prints `project_macro_plugin=reused`.
+4. Otherwise it takes a per-key lock, starts itself as a child compiler that compiles the macro classes in a macro
+   compilation context (`--hxhx-macro-classpath`, so `#if macro` and `#if eval` branches are active), runs `dune` to
+   build the `.cma` and `.cmxs`, and writes a receipt that also records every source file the child read, with its
+   SHA-256. The compile prints `project_macro_plugin=built` and the reason (`project_macro_plugin_reason=`).
+   Editing a macro class, or anything it uses, therefore rebuilds the plugin.
+
+The cache lives in `$XDG_CACHE_HOME/hxhx/macro-plugins`, else `~/.cache/hxhx/macro-plugins` (or
+`%LOCALAPPDATA%\hxhx\macro-plugins`). Pass `--hxhx-macro-cache <dir>` to use another directory. Every build gets a
+fresh plugin id (`hxhx.project-macro.<build id>`), so two plugin builds never share OCaml unit names.
+
+#### Toolchain requirement
+
+Projects that call expression macros need `dune` and `ocamlopt` on `PATH`, and `ocamlopt` must be the same OCaml
+version that built the hxhx binary (a plugin is linked against the binary's own runtime). Without them the call cannot
+run, and hxhx says why:
+
+```
+expr_macro_unexecuted[0]=.../Main.hx: Identity.preserve: the project macro plugin is unavailable: project macros need
+`dune` and the OCaml native compiler (`ocamlopt`) on PATH to build their native plugin; `ocamlopt -version` failed: ...
+```
+
+A different OCaml version is rejected the same way, before anything is built.
+
+#### Building needs the hxhx source checkout
+
+A plugin is compiled from hxhx's own sources: the plugin entry and payload codec
+(`packages/hxhx-core/src/hxhxmacrohost`), the OCaml runtime (`packages/reflaxe.ocaml/std/runtime`), and the shim
+templates (`packages/hxhx-core/shims`). hxhx finds the checkout from `HXHX_REPO_ROOT`, or by walking up from its own
+executable (and, for the runtime, from the working directory). A binary copied outside the checkout therefore needs
+`HXHX_REPO_ROOT=<checkout>`. Making plugins independent of the checkout is tracked as `haxe_ocaml-53uzv`.
+
+#### Interrupted and concurrent builds
+
+One process builds a given plugin at a time; others wait on the per-plugin lock and say so
+(`hxhx: waiting for another hxhx process that is building this project macro plugin`). A lock left by an interrupted
+build (for example Ctrl-C) is recovered as soon as its owner process is gone, or after 30 minutes; a compile waits up to
+about 32 minutes for a lock, so an owner id reused by an unrelated process cannot make it fail first. A rebuild keeps
+the build the previous receipt named and removes every other build, including partial ones. A compile that already validated that
+receipt can therefore still load its plugin. Each tool run of a build (the child compiler,
+then `dune`) is stopped after 30 minutes; `HXHX_MACRO_PLUGIN_BUILD_TIMEOUT=<seconds>` changes the limit. The quick
+toolchain checks before a build (`ocamlopt -version`, `ocamlopt -config`, `dune --version`) have their own 10-minute limit.
+A stop (time limit, or Ctrl-C on the compile) reaches the tool's whole process group, so processes it started stop too.
+On Windows, and on a POSIX host whose `/bin/sh` has neither `setsid` nor job control, only the tool itself is stopped.
+
+#### Current limits
+
+- Only one-shot in-process compiles run project macros. The external macro host and the compilation server report the
+  calls as unexecuted, with that reason.
+- Macro code that calls another macro function (directly or through a helper) is "macro-in-macro". Upstream Haxe 4.3.7
+  rejects it when the call runs; a plugin build reports a helper's call with that reason when the plugin is compiled,
+  even if the helper would never run, which is stricter than upstream. A call written directly in a macro function's
+  body is not detected yet and runs as an ordinary call (`haxe_ocaml-48uwv`).
+- The plugin compilation keeps the `ocaml` target define in macro classes, while upstream's eval macro context does
+  not define the program target.
+- A new file that changes which file a lookup selects, without any edit to a file the plugin read, is not detected; edit
+  or touch a macro source to force a rebuild.
+- A reused plugin is not compared with the current `ocamlopt -config`: compatibility is with the hxhx binary, whose
+  digest and OCaml version are in the key, and the `PATH` toolchain matters only when a plugin is built.
+- A compilation-server cancellation does not stop a running plugin build; the time limit bounds it.
 
 During the compile, for each selected call of a provided declaration:
 
@@ -195,7 +252,7 @@ This rung is compatible with the Stage4 macro-host model:
 - the bridge is a small, versioned RPC protocol
 
 Project macro plugins already transmit a structured expression form (`MacroSyntaxWire`) over plugin ABI version 2; the
-external macro host loads such plugins but cannot dispatch them yet. The exact-text snippet route remains for built-in
+external macro host cannot dispatch them yet, so hxhx does not build or load a plugin in that mode. The exact-text snippet route remains for built-in
 and generated bring-up entrypoints, and its tests remain a regression guard for "expression macro splicing works
 end-to-end".
 
