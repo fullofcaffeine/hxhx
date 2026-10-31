@@ -27,7 +27,9 @@ package backend.ocaml;
 	```
 
 	`this` is a mutable slot while the constructor runs: a later assignment
-	replaces an earlier one, and `return` keeps the value assigned so far.
+	replaces an earlier one, `this op= value` stores `this op value`, a closure
+	created in the constructor writes the same slot, and `return` keeps the
+	value assigned so far.
 	A constructor body that never assigns `this` is rejected at emit time, as
 	upstream Haxe rejects it ("Missing this = value"). Checking that every
 	path assigns `this` before it is read is the typer's job; see Bead

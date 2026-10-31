@@ -1878,7 +1878,8 @@ class EmitterStage {
 
 	/**
 		Render `this = value` inside an abstract constructor as a store into its
-		`this` slot (see `backend.ocaml.Stage3OcamlAbstractConstructors`). In a
+		`this` slot (see `backend.ocaml.Stage3OcamlAbstractConstructors`). A
+		compound assignment `this op= value` stores `this op value`. In a
 		non-inline function the assignment is rejected, as upstream Haxe rejects it.
 	**/
 	static function abstractThisAssignment(op:String, value:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
@@ -1887,11 +1888,31 @@ class EmitterStage {
 		final where = (currentOcamlModuleName == null ? "" : currentOcamlModuleName + ".") + (currentFunctionName == null ? "" : currentFunctionName);
 		if (currentAbstractConstructor == null)
 			throw "stage3 emitter: " + where + " assigns this outside an abstract constructor; Stage3 supports `this = value` only in abstract constructors";
-		if (op != "=")
-			throw "stage3 emitter: " + where + " uses `this " + op + " value`; Stage3 abstract constructors support only `this = value`";
+		// `this op= value` stores `this op value`, rendered by the ordinary binary operator path.
+		final baseOperator = op == "=" ? null : HxBinaryOperatorTools.baseOperator(op);
+		if (op != "=" && baseOperator == null)
+			throw "stage3 emitter: " + where + " uses unsupported `this " + op + " value` in an abstract constructor";
 		final expected = currentAbstractConstructor.getUnderlyingType();
-		final rendered = stage3IsFloatParamHint(expected.getDisplay()) ? exprToOcamlAsFloatValueStage3(value, arityByIdent, tyByIdent, staticImportByIdent,
-			currentPackagePath, moduleNameByPkgAndClass,
+		final floating = stage3IsFloatParamHint(expected.getDisplay());
+		if (baseOperator != null && floating) {
+			// `this` reads as Dynamic in this emitter, so the generic operator path cannot
+			// select Float arithmetic; apply the Float operator to the slot directly.
+			final floatOperator = switch baseOperator {
+				case "+": "( +. )";
+				case "-": "( -. )";
+				case "*": "( *. )";
+				case "/": "( /. )";
+				case "%": "Float.rem";
+				case _: throw "stage3 emitter: " + where + " uses `this " + op + " value` on a Float abstract";
+			};
+			final operand = exprToOcamlAsFloatValueStage3(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+				callSigByCallee);
+			return currentAbstractConstructor.assign(floatOperator + " (" + currentAbstractConstructor.read() + " : float) (" + operand + ")");
+		}
+		if (baseOperator != null)
+			value = EBinop(baseOperator, EThis, value);
+		final rendered = floating ? exprToOcamlAsFloatValueStage3(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
+			moduleNameByPkgAndClass,
 			callSigByCallee) : exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 		return currentAbstractConstructor.assign(rendered);
 	}
@@ -5420,6 +5441,9 @@ class EmitterStage {
 					// Stage 3: allow a tiny subset of unary operators in return positions so bring-up
 					// programs can become incrementally more semantic.
 					hasBringupPoison(inner);
+				case EBinop(op, EThis, value) if (isAssignmentOpToken(op) && currentAbstractConstructor != null):
+					// The abstract constructor's `this` slot owns this write (see abstractThisAssignment).
+					hasBringupPoison(value);
 				case EBinop(op, a, b):
 					// Stage 3: allow a curated subset of operators in return positions.
 					switch (op) {

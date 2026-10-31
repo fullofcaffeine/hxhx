@@ -107,6 +107,65 @@ abstract Scores(Map<String, Int>) {
 		return this.exists(name) ? this.get(name) : -1;
 }
 
+/** `this = value` used as a value: the slot is written, and the expression is the stored value. */
+abstract Cell(Array<Int>) {
+	public function new(reassign:Bool) {
+		if (reassign)
+			this = [];
+		final stored = (this = [9]);
+		Sys.println("cell stored=" + stored.length);
+	}
+
+	public function get():Int
+		return this[0];
+}
+
+/** Compound assignment reads the current value of `this` and stores the result. */
+abstract Total(Int) {
+	public function new(start:Int) {
+		this = start;
+		this += 10;
+		this *= 2;
+		this -= 1;
+	}
+
+	public function get():Int
+		return this;
+}
+
+abstract Ratio(Float) {
+	public function new(start:Float) {
+		this = start;
+		this *= 3;
+		this /= 2;
+	}
+
+	public function get():Float
+		return this;
+}
+
+abstract Echo(String) {
+	public function new(text:String) {
+		this = text;
+		this += "-" + text;
+	}
+
+	public function get():String
+		return this;
+}
+
+/** A closure created in the constructor writes the same `this` slot. */
+abstract Slots(Array<Int>) {
+	public function new() {
+		this = [1];
+		final reset = function() this = [7, 8];
+		reset();
+	}
+
+	public function dump():String
+		return this.join(",");
+}
+
 class Main {
 	static final shared = new Scores("static");
 
@@ -138,6 +197,10 @@ class Main {
 		final text = new Box("text");
 		final number = new Box(41);
 		Sys.println("box=" + text.unwrap() + " " + (number.unwrap() + 1));
+
+		Sys.println("cell=" + new Cell(true).get() + " " + new Cell(false).get());
+		Sys.println("total=" + new Total(1).get() + " ratio=" + new Ratio(1.5).get() + " echo=" + new Echo("ab").get());
+		Sys.println("slots=" + new Slots().dump());
 
 		Sys.println("scores " + new Scores("a",
 			5).score("a") + " " + new Scores("b").score("b") + " " + new Scores().score("a") + " " + shared.score("static"));

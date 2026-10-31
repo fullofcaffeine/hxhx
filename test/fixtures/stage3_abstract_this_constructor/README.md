@@ -13,8 +13,10 @@ abstract Bag(Map<String, Int>) {
 `Main.hx` and `Box.hx` build abstracts over `Map`, `Array`, `Float`, `String`,
 a class, and a type parameter. The constructors take required, optional, and
 default arguments. They assign `this` after other statements, assign it twice,
-keep the first value through an early `return`, and call one of the abstract's
-own methods after the assignment. Values are built in locals, a static field
+keep the first value through an early `return`, use `this = value` as a value,
+update `this` with compound assignment (`+=`, `-=`, `*=`, `/=`) on Int, Float,
+and String backing types, write it from a closure, and call one of the
+abstract's own methods after the assignment. Values are built in locals, a static field
 initializer, and a static factory method, and every abstract is read back
 through its methods.
 

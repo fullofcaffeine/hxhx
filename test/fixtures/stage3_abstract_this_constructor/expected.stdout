@@ -7,4 +7,9 @@ meters=2.5
 clicker=17
 <quiet> <LOUD>
 box=text 42
+cell stored=1
+cell stored=1
+cell=9 9
+total=21 ratio=2.25 echo=ab-ab
+slots=7,8
 scores 5 2 -1 2

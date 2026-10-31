@@ -19,9 +19,10 @@ import sys.io.File;
 	  `Float`, `String`, a class, and a type parameter (in its own module),
 	  constructors with required, optional, and default arguments, `this`
 	  assigned after other statements, assigned twice, kept by an early
-	  `return`, a method call on the new value inside the constructor, a
-	  static field initializer, and methods and a static factory that use the
-	  value.
+	  `return`, used as a value (`final stored = (this = [9])`), updated by
+	  compound assignment on Int, Float, and String backing types, and written
+	  by a closure. A method call on the new value inside the constructor, a
+	  static field initializer, and methods and a static factory use the value.
 	- The native executable must print exactly what upstream Haxe 4.3.7 prints.
 	- A constructor that never assigns `this`, and `this = value` in a
 	  non-inline method, are rejected by upstream Haxe. Stage3 must reject
