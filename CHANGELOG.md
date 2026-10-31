@@ -1,3 +1,11 @@
+## [0.38.1](https://github.com/fullofcaffeine/hxhx/compare/v0.38.0...v0.38.1) (2026-10-31)
+
+
+### Bug Fixes
+
+* **stage3:** correct member-length notes and cover nullable aliases ([c4c2650](https://github.com/fullofcaffeine/hxhx/commit/c4c26501baf1d4cdefc6b11de4bf46d68c087fcf))
+* **stage3:** read .length from typed field, index, and nullable receivers ([861a40d](https://github.com/fullofcaffeine/hxhx/commit/861a40ddc0abf742f96fc396c063bb14c1fe950f))
+
 # [0.38.0](https://github.com/fullofcaffeine/hxhx/compare/v0.37.0...v0.38.0) (2026-10-30)
 
 
