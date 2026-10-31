@@ -57,9 +57,12 @@ class ProjectMacroPluginProcess {
 		then SIGKILL two seconds later. The watchdog does the same at the limit after writing the
 		marker. When the tool exits, any process it left in its group is stopped too, so no
 		grandchild keeps the output pipe open.
+
+		The group is signalled as `kill -SIG -PGID`, without `--`: dash (`/bin/sh` on Debian and
+		Ubuntu) rejects `--` as an illegal number, which would leave the group running.
 	**/
 	static function watchedScript():String
-		return "marker=\"$1\"; limit=\"$2\"; shift 2\nif command -v setsid >/dev/null 2>&1; then setsid \"$@\" 2>&1 & else set -m; \"$@\" 2>&1 & fi\nchild=$!\nstop() { kill -\"$1\" -- \"-$child\" 2>/dev/null || kill -\"$1\" \"$child\" 2>/dev/null; }\ntrap 'stop TERM; sleep 2; stop KILL; exit 130' INT\ntrap 'stop TERM; sleep 2; stop KILL; exit 143' TERM HUP\n( elapsed=0\n  while kill -0 \"$child\" 2>/dev/null; do\n    if [ \"$elapsed\" -ge \"$limit\" ]; then : > \"$marker\"; stop TERM; sleep 5; stop KILL; break; fi\n    sleep 1; elapsed=$((elapsed + 1))\n  done ) >/dev/null 2>&1 &\nwhile :; do wait \"$child\"; status=$?; kill -0 \"$child\" 2>/dev/null || break; done\nstop TERM\nexit \"$status\"";
+		return "marker=\"$1\"; limit=\"$2\"; shift 2\nif command -v setsid >/dev/null 2>&1; then setsid \"$@\" 2>&1 & else set -m; \"$@\" 2>&1 & fi\nchild=$!\nstop() { kill -\"$1\" \"-$child\" 2>/dev/null || kill -\"$1\" \"$child\" 2>/dev/null; }\ntrap 'stop TERM; sleep 2; stop KILL; exit 130' INT\ntrap 'stop TERM; sleep 2; stop KILL; exit 143' TERM HUP\n( elapsed=0\n  while kill -0 \"$child\" 2>/dev/null; do\n    if [ \"$elapsed\" -ge \"$limit\" ]; then : > \"$marker\"; stop TERM; sleep 5; stop KILL; break; fi\n    sleep 1; elapsed=$((elapsed + 1))\n  done ) >/dev/null 2>&1 &\nwhile :; do wait \"$child\"; status=$?; kill -0 \"$child\" 2>/dev/null || break; done\nstop TERM\nexit \"$status\"";
 
 	/** A started wrapper: the process (its id is the wrapper shell's) and its timeout marker file. */
 	public static function launch(program:String, args:Array<String>, timeoutSeconds:Float):{process:sys.io.Process, marker:String} {
