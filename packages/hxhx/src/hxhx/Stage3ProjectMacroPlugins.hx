@@ -115,6 +115,12 @@ class Stage3ProjectMacroPlugins {
 		declaration and by its owner file, `packages/hxhx-core/src/CompilerBundledSourcesMacro.hx`
 		in the hxhx checkout (`HXHX_REPO_ROOT`, or found from the hxhx executable); a project class
 		with the same name gets no exception.
+
+		Known ways it can miss (the call then fails like any other):
+		- the hxhx binary comes from a different checkout than the sources it compiles, and
+		  `HXHX_REPO_ROOT` does not name the compiled checkout;
+		- the unexecuted record has no `ownerFilePath`, because the request index did not know the
+		  declaration's module.
 	**/
 	public static inline final UNEXECUTED_OPT_OUT:String = "CompilerBundledSourcesMacro.files";
 
