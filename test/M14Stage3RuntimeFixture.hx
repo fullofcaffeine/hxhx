@@ -82,7 +82,10 @@ class M14Stage3RuntimeFixture {
 			for (module in context.loader.drainNewModules())
 				pending.push(module);
 		}
-		return TypedAbstractOperatorLowering.lowerModules(typed, context.index);
+		// Use the production Stage3 native-call contract, so standard Map calls stay
+		// calls for the emitter's runtime adapter exactly as in a driver request.
+		return TypedAbstractOperatorLowering.lowerModules(typed, context.index,
+			backend.ocaml.Stage3OcamlNativeCallPolicy.forBackend(backend.ocaml.OcamlStage3Backend.descriptor()));
 	}
 
 	/** Focused typing and native preparation share the same provider identity and classpath rules. */

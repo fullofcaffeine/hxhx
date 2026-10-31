@@ -1,0 +1,37 @@
+string get=3,2 missing=null
+string exists=true,false
+string keys=a,b
+string values=2,3
+string pairs=a:3,b:2
+string copy=true original=false
+string remove=true,false left=b
+string text=[b => 2]
+string cleared=0 text=[]
+string static=y,false
+int get=c,z missing=null
+int exists=true,false
+int keys=-1,0,3
+int values=c,m,z
+int pairs=-1:m,0:z,3:c
+int remove=true,false left=-1,0
+int text=[0 => z] copy=z
+int cleared=false
+object get=3,2 missing=null
+object exists=true keys=2
+object values=2,3
+object pairs=same:2,same:3
+object remove=true,false copy=true
+object cleared=false
+map key=b
+map index=10,4 missing=null
+map exists=true,false
+map keys=four,one,three,two
+map pairs=four:4,one:10,three:3,two:2
+map sum=19
+map remove=true,false copy=false,true
+map text=[only => 7] empty=[]
+map cleared=0
+map int=one,three missing=null
+map int pairs=1:one,2:two,3:three
+map float=0.5,2.25 missing=null
+map field=4,5 sum=9
