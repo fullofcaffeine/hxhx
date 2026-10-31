@@ -11,8 +11,12 @@ package backend.ocaml;
 **/
 class OcamlExplicitStringCast {
 	public static function render(typeHint:String, value:String):Null<String> {
-		final destination = TyType.fromHintText(typeHint);
-		if (destination.getSemanticKey() != "primitive:String")
+		return renderType(TyType.fromHintText(typeHint), value);
+	}
+
+	/** The same lowering for a destination that typing selected, such as a hint-free `cast`. */
+	public static function renderType(destination:TyType, value:String):Null<String> {
+		if (destination == null || destination.getSemanticKey() != "primitive:String")
 			return null;
 		return "(Obj.obj (Obj.repr (" + value + ")) : string)";
 	}

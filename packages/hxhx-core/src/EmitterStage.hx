@@ -2880,19 +2880,27 @@ class EmitterStage {
 	}
 
 	/**
-		Rejects a typed Array call that would bind to an empty stub.
+		Rejects a typed Array or String instance call that would bind to an empty stub.
 
-		Stage3 emits an OCaml `Array` module from the standard `Array` class. A
-		method without a Haxe body becomes a stub there that returns a
-		placeholder and changes nothing. A call that is not rendered by
-		`Stage3OcamlArrayCalls` is emitted as an ordinary call into that module,
-		so it may continue only when the selected declaration has a real body.
+		Stage3 emits OCaml `Array` and `String` modules from the standard `Array`
+		and `String` classes. A method without a Haxe body becomes a stub there
+		that returns a placeholder and changes nothing. Every `String` method is
+		bodiless, because `String` is an `extern` class. A call that is not
+		rendered by `Stage3OcamlArrayCalls` or `Stage3OcamlStringCalls` is emitted
+		as an ordinary call into that module, so it may continue only when the
+		selected declaration has a real body.
+
+		This check covers only the `String` and `Array` owners. Other owners
+		are not checked here. Interface methods (for example `IMap.get` or a
+		user interface's method) and other bodiless std methods (for example
+		`StringBuf.toString`) can still bind to a generated stub today; that
+		gap is tracked separately in haxe_ocaml-3tow5 and haxe_ocaml-iww70.
 	**/
-	static function requireEmittedArrayMethodBody(call:HxExpr, method:String):Void {
+	static function requireEmittedStdInstanceMethodBody(call:HxExpr, owner:String, method:String):Void {
 		final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findInstanceCall(call) : currentTypedFunction == null ? null : currentTypedFunction.findInstanceCall(call);
 		if (occurrence == null)
-			throw "stage3 emitter: Array." + method + " requires its exact executable occurrence";
-		requireEmittedMethodBody("Array", method, occurrence.getDeclaration().getHasBody());
+			throw "stage3 emitter: " + owner + "." + method + " requires its exact executable occurrence";
+		requireEmittedMethodBody(owner, method, occurrence.getDeclaration().getHasBody());
 	}
 
 	/**
@@ -3500,8 +3508,8 @@ class EmitterStage {
 				if (rendered != null)
 					return rendered;
 			}
-			if (exactCall.owner == "Array")
-				requireEmittedArrayMethodBody(e, exactCall.method);
+			if (exactCall.owner == "Array" || exactCall.owner == "String")
+				requireEmittedStdInstanceMethodBody(e, exactCall.owner, exactCall.method);
 			final ownerModule = ocamlModuleNameFromTypePath(exactCall.owner);
 			if (ownerModule.length > 0 && ownerModule != currentOcamlModuleName) {
 				final ownerParts = exactCall.owner.split(".");
@@ -5099,7 +5107,11 @@ class EmitterStage {
 					&& occurrence.isAnnotation()
 					&& occurrence.getSourceType().getSemanticKey() == occurrence.getTargetType().getSemanticKey())
 					return value;
-				final stringCast = backend.ocaml.OcamlExplicitStringCast.render(hint, value);
+				// A hint-free `cast value` names no destination in its syntax; typing
+				// selected one from the surrounding context, as in `(cast value : String)`.
+				final stringCast = occurrence != null
+					&& occurrence.isUnchecked() ? backend.ocaml.OcamlExplicitStringCast.renderType(occurrence.getTargetType(),
+						value) : backend.ocaml.OcamlExplicitStringCast.render(hint, value);
 				stringCast == null ? value : stringCast;
 			case EParenthesized(inner, _):
 				"(" + exprToOcaml(inner, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")";
