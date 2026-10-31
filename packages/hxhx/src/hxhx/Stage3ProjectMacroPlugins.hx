@@ -111,9 +111,24 @@ class Stage3ProjectMacroPlugins {
 		It embeds standard-library sources when hxhx compiles itself and needs `haxe.macro.Context`
 		and reification, which plugins cannot use yet (`haxe_ocaml-9sj5p.5`, `haxe_ocaml-9sj5p.6`).
 		Until it runs through the plugin path it keeps the old behavior: reported, then typed as an
-		ordinary call that later compiler stages approximate.
+		ordinary call that later compiler stages approximate. The exception is matched by the
+		declaration and by its owner file, `packages/hxhx-core/src/CompilerBundledSourcesMacro.hx`
+		in the hxhx checkout (`HXHX_REPO_ROOT`, or found from the hxhx executable); a project class
+		with the same name gets no exception.
 	**/
 	public static inline final UNEXECUTED_OPT_OUT:String = "CompilerBundledSourcesMacro.files";
+
+	static function isUnexecutedOptOut(entry:hxhx.ExprMacroExpander.ExprMacroUnexecutedCall):Bool {
+		if (entry.declaration != UNEXECUTED_OPT_OUT || entry.ownerFilePath.length == 0)
+			return false;
+		final repoRoot = Stage3PathSupport.inferRepoRootForScripts();
+		if (repoRoot.length == 0)
+			return false;
+		final owner = haxe.io.Path.join([repoRoot, "packages", "hxhx-core", "src", "CompilerBundledSourcesMacro.hx"]);
+		return sys.FileSystem.exists(owner)
+			&& sys.FileSystem.exists(entry.ownerFilePath)
+			&& haxe.io.Path.normalize(sys.FileSystem.fullPath(owner)) == haxe.io.Path.normalize(sys.FileSystem.fullPath(entry.ownerFilePath));
+	}
 
 	/**
 		The compile error for selected macro calls that could not run, or `null` when every call ran.
@@ -124,7 +139,7 @@ class Stage3ProjectMacroPlugins {
 	public static function unexecutedError(unexecuted:Array<hxhx.ExprMacroExpander.ExprMacroUnexecutedCall>):Null<String> {
 		final lines = [
 			for (entry in unexecuted)
-				if (entry.declaration != UNEXECUTED_OPT_OUT) entry.filePath
+				if (!isUnexecutedOptOut(entry)) entry.filePath
 					+ ": expression macro "
 					+ entry.declaration
 					+ " was not executed: "
