@@ -563,8 +563,31 @@ class Stage3Compiler {
 			openModuleLoader);
 		#else
 		final macroSetup = Stage3ExprMacroPass.prepare(resolvedForTyping, openModuleLoader);
+		// Selected project macros run through a native plugin that this compile reuses from the cache
+		// or builds (Stage3ProjectMacroPlugins); requests that cannot load one say why.
+		final projectMacroClassPaths = [for (path in Stage1Args.getExplicitClassPaths(parsed)) absFromCwd(cwd, path)];
+		for (library in libsResolved)
+			for (path in library.classPaths)
+				projectMacroClassPaths.push(absFromCwd(cwd, path));
+		// The per-output `_gen_hx` classpath names this compile's output directory, not a plugin input
+		// (the plugin compilation never sees it), so it stays out of the plugin cache key.
+		final generatedHxDir = hxhx.macro.MacroState.getGeneratedHxDir();
+		final projectMacroKeyClassPaths = [
+			for (path in classPaths)
+				if (generatedHxDir == null || haxe.io.Path.normalize(path) != haxe.io.Path.normalize(generatedHxDir)) path
+		];
+		final projectMacroInputs:Stage3ProjectMacroPlugins.Stage3ProjectMacroPluginInputs = {
+			macroClassPaths: projectMacroClassPaths,
+			classPaths: projectMacroKeyClassPaths,
+			defines: allDefines,
+			cwd: cwd,
+			cacheRoot: g.macroCacheRoot.length == 0 ? "" : absFromCwd(cwd, g.macroCacheRoot)
+		};
+		final projectMacroPluginsUnavailable = Stage3ProjectMacroPlugins.unavailableReason(macroRuntimeMode, requestContext.isServerRequest,
+			g.macroClassPaths.length > 0);
 		final macroPass = try {
-			Stage3ExprMacroPass.expand(resolvedForTyping, macroSetup, expressionMacroSession, exprMacros, openModuleLoader);
+			Stage3ProjectMacroPlugins.expand(resolvedForTyping, macroSetup, expressionMacroSession, exprMacros, openModuleLoader,
+				projectMacroPluginsUnavailable, projectMacroInputs, requestOutput);
 		} catch (e:TyperError) {
 			closeMacroSession();
 			final rawDiagnostic = rawTyperDiagnostic(e);
@@ -988,6 +1011,12 @@ class Stage3Compiler {
 			requestOutput.stdoutLine("exe=" + emitted.entryPath);
 		} else {
 			requestOutput.stdoutLine("artifact=" + emitted.entryPath);
+		}
+		// A macro compilation (a project-macro plugin build) reports every source file it read, so the
+		// plugin cache can bind the plugin to their contents (ProjectMacroPluginCache).
+		if (g.macroClassPaths.length > 0) {
+			for (position in 0...typedModules.length)
+				requestOutput.stdoutLine("macro_context_source[" + position + "]=" + typedModules[position].getParsed().getFilePath());
 		}
 
 		closeMacroSession();

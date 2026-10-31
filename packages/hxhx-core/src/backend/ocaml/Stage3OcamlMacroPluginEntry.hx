@@ -145,26 +145,41 @@ class Stage3OcamlMacroPluginEntry {
 				for (candidate in HxClassDecl.getFunctions(source)) {
 					if (HxFunctionDecl.getName(candidate) != method)
 						continue;
-					if (!HxFunctionDecl.getIsStatic(candidate) || HxFunctionDecl.getMetadata(candidate).indexOf("macro") < 0)
-						throw "project macro declaration `" + key + "` is not a static macro method";
-					for (argument in HxFunctionDecl.getArgs(candidate)) {
-						if (HxFunctionArg.getIsOptional(argument)
-							|| HxFunctionArg.getIsRest(argument)
-							|| !isExprType(HxFunctionArg.getTypeHint(argument)))
-							throw "project macro declaration `"
-								+ key
-								+ "` parameter `"
-								+ HxFunctionArg.getName(argument)
-								+ "` must be a required haxe.macro.Expr; other parameter kinds are not supported yet";
-					}
-					if (!isExprType(HxFunctionDecl.getReturnTypeHint(candidate)))
-						throw "project macro declaration `" + key + "` must declare an haxe.macro.Expr result";
+					final unsupported = unsupportedDeclarationShape(key, candidate);
+					if (unsupported != null)
+						throw unsupported;
 					return HxFunctionDecl.getArgs(candidate).length;
 				}
 				throw "project macro declaration `" + key + "` names no method of " + owner;
 			}
 		}
 		throw "project macro declaration `" + key + "` names no compiled class " + owner;
+	}
+
+	/**
+		Why the declaration `key` cannot be registered in a project-macro plugin, or `null` when it can.
+
+		A plugin adapter has the shape `Array<haxe.macro.Expr> -> haxe.macro.Expr`, so the declaration
+		must be a static `macro` method whose parameters are all required `Expr` values and whose
+		declared result is `Expr`. The compiler asks this before it builds a plugin, so an unsupported
+		declaration is reported at its call instead of failing a plugin build.
+	**/
+	public static function unsupportedDeclarationShape(key:String, candidate:HxFunctionDecl):Null<String> {
+		if (!HxFunctionDecl.getIsStatic(candidate) || HxFunctionDecl.getMetadata(candidate).indexOf("macro") < 0)
+			return "project macro declaration `" + key + "` is not a static macro method";
+		for (argument in HxFunctionDecl.getArgs(candidate)) {
+			if (HxFunctionArg.getIsOptional(argument)
+				|| HxFunctionArg.getIsRest(argument)
+				|| !isExprType(HxFunctionArg.getTypeHint(argument)))
+				return "project macro declaration `"
+					+ key
+					+ "` parameter `"
+					+ HxFunctionArg.getName(argument)
+					+ "` must be a required haxe.macro.Expr; other parameter kinds are not supported yet";
+		}
+		if (!isExprType(HxFunctionDecl.getReturnTypeHint(candidate)))
+			return "project macro declaration `" + key + "` must declare an haxe.macro.Expr result";
+		return null;
 	}
 
 	static function isExprType(typeHint:Null<String>):Bool {

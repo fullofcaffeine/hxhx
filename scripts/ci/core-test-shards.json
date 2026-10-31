@@ -177,6 +177,7 @@
     "test:m14:macro-syntax-round-trip": "compiler-focused-2",
     "test:m14:macro-syntax-wire-native": "compiler-focused-5",
     "test:m14:macro-compilation-context": "compiler-focused-5",
+    "test:m14:project-macro-plugin-cache": "compiler-focused-5",
     "test:m14:runtime-build-fields": "macro-host-integration",
     "test:m14:stage3-global-build-metadata": "compiler-focused-2",
     "test:m14:stage3-on-type-not-found": "macro-host-integration",

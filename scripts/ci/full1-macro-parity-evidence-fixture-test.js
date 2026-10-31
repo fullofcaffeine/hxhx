@@ -92,30 +92,25 @@ function values() {
 
   const receipt = {
     schema: PROJECT_SCHEMA,
-    candidateCommit: context.candidateSha,
-    pluginId: 'hxhx.project-macro.fixture',
+    cacheKey: 'c'.repeat(64),
+    compilerIdentity: 'd'.repeat(32),
+    pluginId: 'hxhx.project-macro.0123456789abcdef',
     abiVersion: 2,
     macroApiVersion: 1,
     declarations: ['Identity.preserve'],
     artifacts: {
-      native: { path: 'project-macro.cmxs', sha256: digest(nativeBody) },
-      bytecode: { path: 'project-macro.cma', sha256: digest(bytecodeBody) },
+      native: { path: 'build-0123456789abcdef/project-macro.cmxs', sha256: digest(nativeBody) },
+      bytecode: { path: 'build-0123456789abcdef/project-macro.cma', sha256: digest(bytecodeBody) },
     },
   }
-  const summary = clone(receipt)
-  delete summary.abiVersion
-  delete summary.macroApiVersion
-  summary.artifacts.native.path = '/diagnostic-only/project-macro.cmxs'
-  summary.artifacts.bytecode.path = '/diagnostic-only/project-macro.cma'
   return {
     modes,
     project: {
       receipt,
-      summary,
       markers: PROJECT_PROOF.requiredMarkers,
       meta: {
         candidate_commit: context.candidateSha,
-        plugin_id: 'hxhx.project-macro.fixture',
+        hxhx_md5: 'd'.repeat(32),
         declarations: 'Identity.preserve',
       },
     },
@@ -154,14 +149,13 @@ function writeFixture(root, fixture, options) {
   if (options.removeId === PROJECT_PROOF.id) return
   const directory = path.join(root, artifactName(PROJECT_PROOF, context))
   const moduleDirectory = path.join(directory, 'module')
-  fs.mkdirSync(moduleDirectory, { recursive: true })
-  fs.writeFileSync(path.join(directory, 'receipt-summary.json'),
-    `${JSON.stringify(fixture.project.summary, null, 2)}\n`)
+  const buildDirectory = path.join(moduleDirectory, 'build-0123456789abcdef')
+  fs.mkdirSync(buildDirectory, { recursive: true })
   fs.writeFileSync(path.join(moduleDirectory, 'project-macro-receipt.json'),
     `${JSON.stringify(fixture.project.receipt, null, 2)}\n`)
-  fs.writeFileSync(path.join(moduleDirectory, 'project-macro.cmxs'),
+  fs.writeFileSync(path.join(buildDirectory, 'project-macro.cmxs'),
     options.tamperProject ? Buffer.from('changed\n') : nativeBody)
-  fs.writeFileSync(path.join(moduleDirectory, 'project-macro.cma'), bytecodeBody)
+  fs.writeFileSync(path.join(buildDirectory, 'project-macro.cma'), bytecodeBody)
   fs.writeFileSync(path.join(directory, 'markers.txt'), `${fixture.project.markers.join('\n')}\n`)
   writeKeyValues(path.join(directory, 'meta.txt'), fixture.project.meta)
 }
@@ -218,6 +212,12 @@ assertRejected(run(fixture => {
 }), 'did not forbid stage0')
 assertRejected(run(null, { tamperHost: true }), 'digest does not match')
 assertRejected(run(null, { tamperProject: true }), 'digest mismatch')
+assertRejected(run(fixture => {
+  fixture.project.meta.hxhx_md5 = 'e'.repeat(32)
+}), 'compiler identity does not match the hxhx binary')
+assertRejected(run(fixture => {
+  fixture.project.receipt.schema = 'hxhx.native-macro-module.v2'
+}), 'expected schema')
 assertRejected(run(null, { matrixResult: 'failure' }), 'matrix result is failure')
 assertRejected(run(null, { projectResult: 'cancelled' }), 'project macro result is cancelled')
 
