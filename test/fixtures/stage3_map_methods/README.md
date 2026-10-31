@@ -8,7 +8,9 @@ abstract with String and Int keys: `new Map()`, map literals such as
 loop forms `for (k in m.keys())`, `for (v in m)`, and `for (k => v in m)`. It
 covers missing keys (`get` returns `null`), removing a key twice, copies that
 change independently, clearing, object keys compared by identity, and maps
-held in a local, a static field, an instance field, and a parameter.
+held in a local, a static field, an instance field, and a parameter. A
+map literal in a static initializer and `Array` values read back through
+`get` and `map[key]` (then used with `push` and `length`) are covered too.
 
 Upstream Haxe does not define a Map iteration order, so every listing with
 more than one entry is sorted before printing, and `toString` is only printed

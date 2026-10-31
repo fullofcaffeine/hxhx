@@ -30,6 +30,7 @@ class Holder {
 **/
 class Main {
 	static var shared:StringMap<String> = new StringMap();
+	static var colors:Map<String, Int> = ["red" => 1];
 
 	static function sorted(items:Array<String>):String {
 		items.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
@@ -139,6 +140,14 @@ class Main {
 		holder.scores["ann"] = 4;
 		holder.scores.set("bob", 5);
 		Sys.println("map field=" + holder.scores.get("ann") + "," + holder.scores["bob"] + " sum=" + count(holder.scores));
+
+		// A stored Array is read back as Null<Array<Int>> and then used as an Array.
+		final lists = new Map<String, Array<Int>>();
+		lists.set("a", [1]);
+		lists.get("a").push(2);
+		lists["a"].push(3);
+		Sys.println("map initializer=" + colors["red"] + "," + colors.exists("blue"));
+		Sys.println("map array=" + lists["a"].join(",") + " length=" + lists.get("a").length + "," + lists["a"].length);
 	}
 
 	static function main():Void {

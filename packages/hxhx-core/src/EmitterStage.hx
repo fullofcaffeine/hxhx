@@ -1864,7 +1864,8 @@ class EmitterStage {
 	static function stage3MapLiteral(expr:HxExpr):Null<TypedBackendAggregateOccurrence> {
 		if (!expr.match(EArrayDecl(_)) || isMetalProfileActive() || (currentTypedFunction == null && currentTypedInitializer == null))
 			return null;
-		final aggregate = currentTypedFunction != null ? currentTypedFunction.requireAggregate(expr) : currentTypedInitializer.requireAggregate(expr);
+		// Same selection order as instance calls: an active field initializer wins.
+		final aggregate = currentTypedInitializer != null ? currentTypedInitializer.requireAggregate(expr) : currentTypedFunction.requireAggregate(expr);
 		final identity = aggregate.getType().getNominalIdentity();
 		return identity != null && identity.getCanonicalName() == "haxe.ds.Map" ? aggregate : null;
 	}
@@ -7952,6 +7953,21 @@ class EmitterStage {
 		final previousCallableFunction = currentCallableFunction;
 		final previousRuntimeTypes = currentRuntimeTypes;
 		final previousClassStorage = currentClassStorage;
+		final previousTypedFunction = currentTypedFunction;
+		final previousTypedInitializer = currentTypedInitializer;
+		final previousLocalNames = currentFunctionLocalOcamlNames;
+		// A failed emit stops inside one function or initializer. Restore every
+		// selection it made, so the next emit in this process starts clean.
+		function restore():Void {
+			currentEnums = previous;
+			currentCallables = previousCallables;
+			currentCallableFunction = previousCallableFunction;
+			currentRuntimeTypes = previousRuntimeTypes;
+			currentClassStorage = previousClassStorage;
+			currentTypedFunction = previousTypedFunction;
+			currentTypedInitializer = previousTypedInitializer;
+			currentFunctionLocalOcamlNames = previousLocalNames;
+		}
 		currentRuntimeTypes = null;
 		currentClassStorage = null;
 		currentCallables = null;
@@ -7961,25 +7977,13 @@ class EmitterStage {
 		try {
 			result = emitToDirWithEnumOwner(p, outDir, buildExecutable, ocamlProfile);
 		} catch (error:haxe.io.Error) {
-			currentEnums = previous;
-			currentCallables = previousCallables;
-			currentCallableFunction = previousCallableFunction;
-			currentRuntimeTypes = previousRuntimeTypes;
-			currentClassStorage = previousClassStorage;
+			restore();
 			throw error;
 		} catch (error:String) {
-			currentEnums = previous;
-			currentCallables = previousCallables;
-			currentCallableFunction = previousCallableFunction;
-			currentRuntimeTypes = previousRuntimeTypes;
-			currentClassStorage = previousClassStorage;
+			restore();
 			throw error;
 		} catch (error:haxe.Exception) {
-			currentEnums = previous;
-			currentCallables = previousCallables;
-			currentCallableFunction = previousCallableFunction;
-			currentRuntimeTypes = previousRuntimeTypes;
-			currentClassStorage = previousClassStorage;
+			restore();
 			throw error;
 		}
 		currentEnums = previous;

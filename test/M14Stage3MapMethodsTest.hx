@@ -24,7 +24,9 @@ import sys.io.File;
 	- Every instance method of the emitted extern map classes must have a native
 	  adapter, and every `Map<K, V>` instance method must stay a call for it.
 	- A `Map` whose key type has no native table yet must fail at emit time
-	  with a named error instead of reaching a placeholder at runtime.
+	  with a named error instead of reaching a placeholder at runtime. That
+	  failed emit runs first, so the passing emit after it also proves a
+	  failure leaves no emitter state behind.
 **/
 class M14Stage3MapMethodsTest {
 	static function deleteRecursive(path:String):Void {
@@ -141,9 +143,11 @@ class M14Stage3MapMethodsTest {
 	}
 
 	static function main():Void {
+		// The rejected emit runs first: a failed emit must leave no typed
+		// executable selected for the next emit in the same process.
+		rejectUnsupportedKey();
 		final program = compareWithUpstream("test/fixtures/stage3_map_methods");
 		requireAdapterForEveryMapMethod(program);
 		requireRetainedAbstractMethods(program);
-		rejectUnsupportedKey();
 	}
 }

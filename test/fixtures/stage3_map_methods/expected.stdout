@@ -35,3 +35,5 @@ map int=one,three missing=null
 map int pairs=1:one,2:two,3:three
 map float=0.5,2.25 missing=null
 map field=4,5 sum=9
+map initializer=1,false
+map array=1,2,3 length=3,3
