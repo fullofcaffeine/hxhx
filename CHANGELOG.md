@@ -1,3 +1,18 @@
+# [0.41.0](https://github.com/fullofcaffeine/hxhx/compare/v0.40.0...v0.41.0) (2026-10-31)
+
+
+### Bug Fixes
+
+* **hxhx:** keep the plugin tool wrapper out of process-wide state ([369b5c2](https://github.com/fullofcaffeine/hxhx/commit/369b5c268fe0eb7140cd402ea3a55a6602a1292a))
+* **hxhx:** recover interrupted plugin builds and bound their tools ([352e5b4](https://github.com/fullofcaffeine/hxhx/commit/352e5b48b8f3cc0026b9a59afa949c045f87c2f8))
+* **hxhx:** signal a plugin tool's process group without `--` so dash honours it ([58143ad](https://github.com/fullofcaffeine/hxhx/commit/58143ade0d2d8deea60bf0329b33dfc2e29165da))
+* **hxhx:** stop a plugin tool's whole process group on Ctrl-C and timeout ([62e531a](https://github.com/fullofcaffeine/hxhx/commit/62e531a70c1abeef0e566e27294ab1dc4eda71df))
+
+
+### Features
+
+* **hxhx:** build, cache, and load project macro plugins automatically ([9e43c70](https://github.com/fullofcaffeine/hxhx/commit/9e43c70ed0004305f683f711337afe41b2e03977))
+
 # [0.40.0](https://github.com/fullofcaffeine/hxhx/compare/v0.39.0...v0.40.0) (2026-10-31)
 
 
