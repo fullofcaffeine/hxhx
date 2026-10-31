@@ -28,3 +28,16 @@ let load_and_capture (module_path : string) (plugin_id : string) : string =
 let load_and_capture_safe (module_path : string) (plugin_id : string) : string =
   try "ok\n" ^ load_and_capture module_path plugin_id
   with exn -> "err\n" ^ Printexc.to_string exn
+
+(* Identity of the running compiler binary, read before a project-macro plugin is built or
+   loaded. A plugin links against this binary's runtime units, so it must be built by the same
+   OCaml version and must be rebuilt whenever the binary changes. Haxe owns every decision made
+   from these two values (cache keys, receipts, diagnostics). *)
+let host_ocaml_version () : string = Stdlib.Sys.ocaml_version
+
+let host_executable_digest () : string =
+  Stdlib.Digest.to_hex (Stdlib.Digest.file Stdlib.Sys.executable_name)
+
+(* Process id of the compiler, recorded as the owner of a plugin build lock so that a lock left
+   by an interrupted build can be recognized once its owner is gone. *)
+let host_pid () : int = Unix.getpid ()

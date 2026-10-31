@@ -224,6 +224,7 @@ class M14ExprMacroLexicalTraversalTest {
 				calls.push(expression);
 				return expression == "Second.expand()" ? '"second"' : '"first"';
 			},
+			loadProjectMacroPlugin: (_, _) -> throw "unexpected project macro plugin load",
 			close: () -> {}
 		};
 		final legacy = module("Legacy",

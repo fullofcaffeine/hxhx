@@ -17,26 +17,22 @@ package hxhx.macro;
 class InProcMacroRuntime {
 	public static function openSession():MacroRuntimeSession {
 		final impl = new InProcMacroSession();
-		try {
-			final programPath = Sys.programPath().toLowerCase();
-			final usesBytecodePlugin = StringTools.endsWith(programPath, ".bc") || StringTools.endsWith(programPath, ".byte");
-			final artifactKind = usesBytecodePlugin ? hxhxmacrohost.NativeMacroModuleReceipt.BYTECODE_ARTIFACT : hxhxmacrohost.NativeMacroModuleReceipt.NATIVE_ARTIFACT;
-			NativeMacroModuleRuntimeLoader.loadConfigured(artifactKind, impl.loadNativeModule);
-		} catch (error:String) {
-			impl.close();
-			throw error;
-		} catch (error:haxe.Exception) {
-			impl.close();
-			throw error.message;
-		}
 		return {
 			run: impl.run,
 			runHook: impl.runHook,
 			runTypeNotFoundHook: impl.runTypeNotFoundHook,
 			expandExpr: impl.expandExpr,
 			expandSelected: impl.expandSelected,
+			loadProjectMacroPlugin: impl.loadNativeModule,
 			close: impl.close
 		};
+	}
+
+	/** Which plugin artifact this binary can load: bytecode builds load `.cma`, native builds `.cmxs`. */
+	public static function pluginArtifactKind():String {
+		final programPath = Sys.programPath().toLowerCase();
+		final usesBytecodePlugin = StringTools.endsWith(programPath, ".bc") || StringTools.endsWith(programPath, ".byte");
+		return usesBytecodePlugin ? hxhxmacrohost.NativeMacroModuleReceipt.BYTECODE_ARTIFACT : hxhxmacrohost.NativeMacroModuleReceipt.NATIVE_ARTIFACT;
 	}
 
 	public static function parseOneStringLiteralArg(s:String):Null<String> {

@@ -7,8 +7,12 @@
 > `macro.runNativeExpr`) and the `projectmacro` fixture were removed. A plugin now registers one
 > generated adapter per macro declaration with `register_macro_declaration`, the real macro body
 > runs on structured `haxe.macro.Expr` arguments in the in-process mode, and the smoke uses
-> `test/fixtures/project-macro-identity`. Version 1 receipts and plugins are rejected. The text
-> below records the original pilot decision.
+> `test/fixtures/project-macro-identity`. Version 1 receipts and plugins are rejected. Since
+> `haxe_ocaml-9sj5p.4`, hxhx builds and caches the plugin itself and writes a version 3 receipt
+> (`hxhx.native-macro-module.v3`) that binds the plugin to the compiler executable's digest and to
+> every source the plugin compilation read; the `HXHX_NATIVE_MACRO_MODULE_RECEIPT` and
+> `HXHX_CANDIDATE_COMMIT` selection and the Node receipt writer were removed. The text below records
+> the original pilot decision.
 
 Status: implemented and verified for `haxe_ocaml-vhk47.3`
 Risk level: `thinking:xhigh`
