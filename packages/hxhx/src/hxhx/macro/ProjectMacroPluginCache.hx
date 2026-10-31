@@ -8,6 +8,7 @@ import hxhxmacrohost.NativeMacroModuleReceipt;
 import hxhxmacrohost.NativeMacroModuleReceipt.NativeMacroModuleExpectation;
 import hxhxmacrohost.NativeMacroModuleReceipt.NativeMacroModuleFile;
 import hxhxmacrohost.NativeMacroModuleReceipt.NativeMacroModuleToolchain;
+import hxhx.CompilerJsonValue;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -127,8 +128,9 @@ typedef ProjectMacroPluginResult = {
 	- A reused plugin is not compared with the current `ocamlopt -config`. The plugin must match
 	  the hxhx binary, which the key binds by executable digest and OCaml version; the `PATH`
 	  toolchain matters only while building, where its version is checked.
-	- A rebuild keeps the previous build directory (a concurrent compile may have validated the
-	  previous receipt and be loading its plugin); older builds are deleted.
+	- A rebuild keeps the build the previous receipt named (a concurrent compile may have validated
+	  that receipt and be loading its plugin); every other build directory, including partial ones
+	  left by interrupted builds, is deleted.
 **/
 class ProjectMacroPluginCache {
 	public static inline final KEY_SCHEMA:String = "hxhx.project-macro-plugin.v1";
@@ -371,19 +373,16 @@ class ProjectMacroPluginCache {
 			},
 			bytecode: {path: builtRelative + ".cma", sha256: NativeMacroModuleReceipt.fileSha256(Path.join([keyDirectory, builtRelative + ".cma"]))}
 		});
+		// A concurrent compile may have validated the previous receipt and be about to load its
+		// plugin, so the build that receipt names stays; every other build (older generations and
+		// partial directories of interrupted builds) is removed.
+		final previousBuild = receiptBuildName(receiptPath);
 		final temporary = receiptPath + "." + buildId + ".tmp";
 		File.saveContent(temporary, receipt);
 		FileSystem.rename(temporary, receiptPath);
-		// A concurrent compile may have validated the previous receipt and be about to load its
-		// plugin, so the previous build stays; only older generations are removed.
-		final older = [
-			for (entry in FileSystem.readDirectory(keyDirectory))
-				if (StringTools.startsWith(entry, "build-")
-					&& entry != buildName) {name: entry, time: FileSystem.stat(Path.join([keyDirectory, entry])).mtime.getTime()}
-		];
-		older.sort((left, right) -> left.time > right.time ? -1 : (left.time < right.time ? 1 : 0));
-		for (position in 1...older.length)
-			deleteTree(Path.join([keyDirectory, older[position].name]));
+		for (entry in FileSystem.readDirectory(keyDirectory))
+			if (StringTools.startsWith(entry, "build-") && entry != buildName && entry != previousBuild)
+				deleteTree(Path.join([keyDirectory, entry]));
 	}
 
 	/** Fails before building when `dune` or `ocamlopt` is missing or `ocamlopt` is another OCaml version. */
@@ -505,6 +504,33 @@ class ProjectMacroPluginCache {
 		for (entry in FileSystem.readDirectory(path))
 			deleteTree(Path.join([path, entry]));
 		FileSystem.deleteDirectory(path);
+	}
+
+	/** The `build-<id>` directory the receipt at `receiptPath` names, or `null` when it names none. */
+	static function receiptBuildName(receiptPath:String):Null<String> {
+		if (!FileSystem.exists(receiptPath))
+			return null;
+		try {
+			switch (hxhx.CompilerJsonParser.parse(File.getContent(receiptPath))) {
+				case JsonObject(fields):
+					switch (fields.get("artifacts")) {
+						case JsonObject(artifacts):
+							switch (artifacts.get("native")) {
+								case JsonObject(native):
+									switch (native.get("path")) {
+										case JsonString(path):
+											final slash = path.indexOf("/");
+											return slash > 0 ? path.substr(0, slash) : null;
+										case _:
+									}
+								case _:
+							}
+						case _:
+					}
+				case _:
+			}
+		} catch (_:String) {} catch (_:haxe.Exception) {}
+		return null;
 	}
 
 	static function sortedCopy(values:Array<String>):Array<String> {

@@ -176,7 +176,7 @@ class Stage3ProjectMacroPlugins {
 			dune: "dune",
 			ocamlopt: "ocamlopt",
 			artifactKind: hxhx.macro.InProcMacroRuntime.pluginArtifactKind(),
-			lockTimeoutSeconds: 900.0,
+			lockTimeoutSeconds: 1900.0,
 			buildTimeoutSeconds: buildTimeoutSeconds(),
 			progress: line -> output.stdoutLine(line)
 		};
