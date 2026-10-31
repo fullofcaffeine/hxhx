@@ -22,7 +22,8 @@ import sys.io.File;
 	5. Editing the macro class rebuilds the plugin under a new plugin id, past a lock whose owner
 	   process is gone, removes a temporary receipt left by an interrupted build, announces the
 	   build once, and keeps the previous build for compiles that may still load it.
-	6. A lock older than 30 minutes is stale; the next rebuild removes builds older than the previous one.
+	6. A lock older than 30 minutes is stale; the next rebuild keeps only itself and the build the
+	   previous receipt named, removing older builds and a partial directory of an interrupted build.
 
 	Loading the plugin needs an OCaml-native hxhx; `scripts/hxhx/run-project-macro-module-smoke.sh`
 	covers that end to end.
@@ -198,11 +199,15 @@ class M14ProjectMacroPluginCacheTest {
 		final touch = new sys.io.Process("touch", ["-t", "200001010000", keyDirectory + "/.lock/owner"]);
 		require(touch.exitCode() == 0, "could not age the lock");
 		touch.close();
+		// An interrupted build leaves a newer, partial build directory; it must not displace the build
+		// that the current receipt names.
+		FileSystem.createDirectory(keyDirectory + "/build-interrupted/plugin");
 		File.saveContent(src + "/Identity.hx", macroOnly + "\n// edited twice\n");
 		final again = ProjectMacroPluginCache.ensure(request(null, null, 5));
 		require(again.outcome.match(Built(_)), "an old lock blocked the rebuild");
 		require(!FileSystem.exists(cold.activation.artifactPath), "builds older than the previous one were kept");
 		require(FileSystem.exists(edited.activation.artifactPath), "the previous build was removed");
+		require(!FileSystem.exists(keyDirectory + "/build-interrupted"), "a partial build directory of an interrupted build was kept");
 
 		Sys.println("project_macro_plugin_cold_seconds=" + Math.round(coldSeconds * 10) / 10);
 		Sys.println("project_macro_plugin_warm_seconds=" + Math.round(warmSeconds * 1000) / 1000);

@@ -138,16 +138,23 @@ executable (and, for the runtime, from the working directory). A binary copied o
 
 One process builds a given plugin at a time; others wait on the per-plugin lock and say so
 (`hxhx: waiting for another hxhx process that is building this project macro plugin`). A lock left by an interrupted
-build (for example Ctrl-C) is recovered as soon as its owner process is gone, or after 30 minutes. A rebuild keeps the
-previous build, so a compile that already validated it can still load it. Each tool run of a build (the child compiler,
-then `dune`) is stopped after 30 minutes; `HXHX_MACRO_PLUGIN_BUILD_TIMEOUT=<seconds>` changes the limit.
+build (for example Ctrl-C) is recovered as soon as its owner process is gone, or after 30 minutes; a compile waits up to
+about 32 minutes for a lock, so an owner id reused by an unrelated process cannot make it fail first. A rebuild keeps
+the build the previous receipt named and removes every other build, including partial ones. A compile that already validated that
+receipt can therefore still load its plugin. Each tool run of a build (the child compiler,
+then `dune`) is stopped after 30 minutes; `HXHX_MACRO_PLUGIN_BUILD_TIMEOUT=<seconds>` changes the limit. The quick
+toolchain checks before a build (`ocamlopt -version`, `ocamlopt -config`, `dune --version`) have their own 10-minute limit.
+A stop (time limit, or Ctrl-C on the compile) reaches the tool's whole process group, so processes it started stop too.
+On Windows, and on a POSIX host whose `/bin/sh` has neither `setsid` nor job control, only the tool itself is stopped.
 
 #### Current limits
 
 - Only one-shot in-process compiles run project macros. The external macro host and the compilation server report the
   calls as unexecuted, with that reason.
 - Macro code that calls another macro function (directly or through a helper) is "macro-in-macro". Upstream Haxe 4.3.7
-  rejects it; a plugin build reports such a call with that reason.
+  rejects it when the call runs; a plugin build reports a helper's call with that reason when the plugin is compiled,
+  even if the helper would never run, which is stricter than upstream. A call written directly in a macro function's
+  body is not detected yet and runs as an ordinary call (`haxe_ocaml-48uwv`).
 - The plugin compilation keeps the `ocaml` target define in macro classes, while upstream's eval macro context does
   not define the program target.
 - A new file that changes which file a lookup selects, without any edit to a file the plugin read, is not detected; edit
