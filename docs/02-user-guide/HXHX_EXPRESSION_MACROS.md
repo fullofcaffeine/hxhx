@@ -126,15 +126,35 @@ expr_macro_unexecuted[0]=.../Main.hx: Identity.preserve: the project macro plugi
 
 A different OCaml version is rejected the same way, before anything is built.
 
+#### Building needs the hxhx source checkout
+
+A plugin is compiled from hxhx's own sources: the plugin entry and payload codec
+(`packages/hxhx-core/src/hxhxmacrohost`), the OCaml runtime (`packages/reflaxe.ocaml/std/runtime`), and the shim
+templates (`packages/hxhx-core/shims`). hxhx finds the checkout from `HXHX_REPO_ROOT`, or by walking up from its own
+executable (and, for the runtime, from the working directory). A binary copied outside the checkout therefore needs
+`HXHX_REPO_ROOT=<checkout>`. Making plugins independent of the checkout is tracked as `haxe_ocaml-53uzv`.
+
+#### Interrupted and concurrent builds
+
+One process builds a given plugin at a time; others wait on the per-plugin lock and say so
+(`hxhx: waiting for another hxhx process that is building this project macro plugin`). A lock left by an interrupted
+build (for example Ctrl-C) is recovered as soon as its owner process is gone, or after 30 minutes. A rebuild keeps the
+previous build, so a compile that already validated it can still load it. Each tool run of a build (the child compiler,
+then `dune`) is stopped after 30 minutes; `HXHX_MACRO_PLUGIN_BUILD_TIMEOUT=<seconds>` changes the limit.
+
 #### Current limits
 
 - Only one-shot in-process compiles run project macros. The external macro host and the compilation server report the
-  calls as unexecuted, with that reason; macro calls inside macro classes are not run either.
+  calls as unexecuted, with that reason.
+- Macro code that calls another macro function (directly or through a helper) is "macro-in-macro". Upstream Haxe 4.3.7
+  rejects it; a plugin build reports such a call with that reason.
 - The plugin compilation keeps the `ocaml` target define in macro classes, while upstream's eval macro context does
   not define the program target.
 - A new file that changes which file a lookup selects, without any edit to a file the plugin read, is not detected; edit
   or touch a macro source to force a rebuild.
-- The child compiler and `dune` run without a timeout.
+- A reused plugin is not compared with the current `ocamlopt -config`: compatibility is with the hxhx binary, whose
+  digest and OCaml version are in the key, and the `PATH` toolchain matters only when a plugin is built.
+- A compilation-server cancellation does not stop a running plugin build; the time limit bounds it.
 
 During the compile, for each selected call of a provided declaration:
 

@@ -207,6 +207,17 @@ for artifact_path in $(node -e 'const r = require(process.argv[1]); console.log(
   cp "$(dirname "$RECEIPT")/$artifact_path" "$MODULE_ARTIFACT_DIR/$artifact_path"
 done
 
+# Without any -cp, the macro class beside Main.hx is found on the implicit working-directory
+# classpath and still runs.
+(
+  cd "$FIXTURE_DIR/src"
+  HXHX_FORBID_STAGE0=1 HAXE_BIN=__project_macro_cwd_stage0_forbidden__ \
+    "$HXHX_BIN_RESOLVED" --hxhx-stage3 --hxhx-no-run -main Main --hxhx-out "$WORK_DIR/app-cwd" --hxhx-macro-cache "$CACHE_DIR"
+) >"$ARTIFACT_DIR/cwd.compile.stdout" 2>"$ARTIFACT_DIR/cwd.compile.stderr"
+require_line cwd '^expr_macros_expanded=1$'
+run_app cwd
+echo "PROJECT_MACRO_MODULE_IMPLICIT_CLASSPATH:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+
 # The macro's own exception becomes a compile error at the call; it is never an ordinary call.
 expect_failure wrong_signature "$FIXTURE_DIR/src" WrongSignature \
   "expression macro $DECLARATION: the macro failed: Identity.preserve: parameter name changed" --hxhx-macro-cache "$CACHE_DIR"

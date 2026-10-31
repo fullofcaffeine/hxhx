@@ -565,20 +565,11 @@ class Stage3Compiler {
 		final macroSetup = Stage3ExprMacroPass.prepare(resolvedForTyping, openModuleLoader);
 		// Selected project macros run through a native plugin that this compile reuses from the cache
 		// or builds (Stage3ProjectMacroPlugins); requests that cannot load one say why.
-		final projectMacroClassPaths = [for (path in Stage1Args.getExplicitClassPaths(parsed)) absFromCwd(cwd, path)];
-		for (library in libsResolved)
-			for (path in library.classPaths)
-				projectMacroClassPaths.push(absFromCwd(cwd, path));
-		// The per-output `_gen_hx` classpath names this compile's output directory, not a plugin input
-		// (the plugin compilation never sees it), so it stays out of the plugin cache key.
-		final generatedHxDir = hxhx.macro.MacroState.getGeneratedHxDir();
-		final projectMacroKeyClassPaths = [
-			for (path in classPaths)
-				if (generatedHxDir == null || haxe.io.Path.normalize(path) != haxe.io.Path.normalize(generatedHxDir)) path
-		];
+		final projectMacroClassPathLists = Stage3ProjectMacroPlugins.classPathsFor(classPaths, hxhx.macro.MacroState.getGeneratedHxDir(),
+			Stage1Args.getStandardLibraryRoot(parsed).length == 0 ? "" : absFromCwd(cwd, Stage1Args.getStandardLibraryRoot(parsed)));
 		final projectMacroInputs:Stage3ProjectMacroPlugins.Stage3ProjectMacroPluginInputs = {
-			macroClassPaths: projectMacroClassPaths,
-			classPaths: projectMacroKeyClassPaths,
+			macroClassPaths: projectMacroClassPathLists.macroClassPaths,
+			classPaths: projectMacroClassPathLists.keyClassPaths,
 			defines: allDefines,
 			cwd: cwd,
 			cacheRoot: g.macroCacheRoot.length == 0 ? "" : absFromCwd(cwd, g.macroCacheRoot)
