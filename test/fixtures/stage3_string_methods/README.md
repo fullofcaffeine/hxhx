@@ -14,8 +14,10 @@ Before the fix, the native program printed `0` for every `toUpperCase`,
 methods have no Haxe body. Stage3 still writes a `String` OCaml module, and
 each method there is an empty stub that returns `0`. The emitter routed the
 other String methods to the `HxString` runtime, but these three bound to the
-stub. A hint-free `(cast value : String)` also kept its `Dynamic` OCaml value,
-so a String method on it did not compile.
+stub. A hint-free `(cast value : String)` kept its `Dynamic` OCaml value. On
+main that still compiled and printed `cast 0 0 H`, because the stub accepts any
+value. The routed `HxString` call needs a real `string`, so routing these
+methods also needed the cast to convert its value.
 
 `npm run test:m14:stage3-string-methods` checks that upstream Haxe 4.3.7
 prints `expected.stdout`. It then builds the program with Stage3 and requires

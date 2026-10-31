@@ -12,8 +12,10 @@ import sys.io.File;
 	  route to the `HxString` runtime bound to that stub. `toUpperCase`,
 	  `toLowerCase`, and `toString` had no route, so `box.text.toUpperCase()`
 	  and `parts[1].toUpperCase()` printed `0` where upstream prints the text.
-	- `(cast value : String)` produced the untyped `Dynamic` value, so a
-	  routed method on that receiver did not compile.
+	- `(cast value : String)` kept its untyped `Dynamic` OCaml value. On main
+	  the program still compiled and printed `cast 0 0 H`, because the stub
+	  accepts any value. The routed `HxString` call needs a real `string`, so
+	  routing these methods also needed the cast to convert its value.
 
 	What
 	- `stage3_string_methods` calls every String instance method on a local, an

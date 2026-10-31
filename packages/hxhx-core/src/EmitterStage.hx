@@ -2890,9 +2890,11 @@ class EmitterStage {
 		as an ordinary call into that module, so it may continue only when the
 		selected declaration has a real body.
 
-		This check covers only these two owners. Interface and other class
-		calls (for example `IMap.get`) have bodiless declarations that dispatch
-		to a real implementation, so they must not be rejected here.
+		This check covers only the `String` and `Array` owners. Other owners
+		are not checked here. Interface methods (for example `IMap.get` or a
+		user interface's method) and other bodiless std methods (for example
+		`StringBuf.toString`) can still bind to a generated stub today; that
+		gap is tracked separately in haxe_ocaml-3tow5 and haxe_ocaml-iww70.
 	**/
 	static function requireEmittedStdInstanceMethodBody(call:HxExpr, owner:String, method:String):Void {
 		final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findInstanceCall(call) : currentTypedFunction == null ? null : currentTypedFunction.findInstanceCall(call);

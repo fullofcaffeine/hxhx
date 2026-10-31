@@ -93,7 +93,7 @@ function render(input:{
 		// an authored null test must still run before any integer operation.
 		return "(" + bindings.join("") + "Obj.magic (HxString.charCodeAt " + receiver + " " + arguments[0] + "))";
 	}
-	// split returns the shared `string HxArray.t` Array<String> representation;
+	// split returns the shared `string HxArray.t` Array<String> representation.
 	// charAt returns an ordinary String, including "" outside the bounds.
 	if (range.max == 1)
 		return "(" + bindings.join("") + "HxString." + call.method + " " + receiver + " " + arguments[0] + ")";
