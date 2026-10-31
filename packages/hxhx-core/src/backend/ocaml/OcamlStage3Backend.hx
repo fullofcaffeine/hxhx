@@ -27,8 +27,9 @@ import backend.reflaxe.ReflaxeTargetAdapter;
 	- Any OCaml-specific emission logic remains in `EmitterStage` for now.
 **/
 class OcamlStage3Backend implements IBackend {
-	public static inline var TARGET_ID = "ocaml-stage3";
-	public static inline var IMPL_ID = "builtin/ocaml-stage3";
+	// The shared driver compares these ids without loading this emitter.
+	public static inline var TARGET_ID = Stage3OcamlNativeCallPolicy.TARGET_ID;
+	public static inline var IMPL_ID = Stage3OcamlNativeCallPolicy.IMPL_ID;
 	public static inline var ABI_VERSION = BackendAbi.VERSION;
 	public static inline var PRIORITY = 100;
 

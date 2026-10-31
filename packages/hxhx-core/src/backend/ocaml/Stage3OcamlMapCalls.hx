@@ -76,27 +76,12 @@ function ownsInstanceCall(owner:String):Bool
 	return owner == "haxe.ds.Map" || ownerKeys(owner) != null;
 
 /** The instance methods of the extern map classes; each one has an adapter below. */
-function supports(method:String):Bool {
-	return switch method {
-		case "set" | "get" | "exists" | "remove" | "keys" | "iterator" | "keyValueIterator" | "copy" | "toString" | "clear": true;
-		case _: false;
-	};
-}
+function supports(method:String):Bool
+	return Stage3OcamlNativeCallPolicy.supportsMapMethod(method);
 
-/**
-	Whether shared preparation must keep this `Map<K, V>` method as a call.
-
-	Only the exact standard declaration qualifies. Its forwarding body would
-	otherwise become an `IMap` interface call before emission.
-**/
-function retainsAbstractDeclaration(declaration:TyDeclarationInfo):Bool {
-	if (declaration.getOwner().getCanonicalName() != "haxe.ds.Map"
-		|| declaration.getModulePath() != "haxe.ds.Map"
-		|| declaration.getIsStatic())
-		return false;
-	final method = declaration.getSignature().getName();
-	return supports(method) || method == "arrayWrite";
-}
+/** Whether shared preparation keeps this `Map<K, V>` method as a call for this adapter. */
+function retainsAbstractDeclaration(declaration:TyDeclarationInfo):Bool
+	return Stage3OcamlNativeCallPolicy.retain(declaration);
 
 /** Select the table from an applied extern map class or a `Map<K, V>` with String or Int keys. */
 function storage(owner:String, receiverType:Null<TyType>, method:String):Stage3OcamlMapStorage {
