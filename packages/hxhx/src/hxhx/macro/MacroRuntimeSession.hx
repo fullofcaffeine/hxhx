@@ -15,7 +15,7 @@ import hxhx.macro.ExprMacroDispatch;
 	What
 	- Defines the exact callable surface Stage3 and expr-macro expansion need:
 	  run, hook dispatch, string expr expansion, selected-declaration dispatch,
-	  and close.
+	  project-macro plugin loading, and close.
 	- `expandExpr` is the exact-text route used by builtin and registered
 	  no-argument expressions. `expandSelected` is the structured route for a call
 	  whose declaration was selected before typing; it carries authored argument
@@ -32,5 +32,13 @@ typedef MacroRuntimeSession = {
 	function runTypeNotFoundHook(id:Int, typePath:String):Bool;
 	function expandExpr(expr:String):String;
 	function expandSelected(request:ExprMacroDispatchRequest):ExprMacroDispatchResult;
+
+	/**
+		Load one validated project-macro plugin into this session and return the declarations it
+		registered, in order. A session accepts at most one plugin; only the in-process runtime can
+		load one (the external host has no structured dispatch method yet).
+	**/
+	function loadProjectMacroPlugin(artifactPath:String, pluginId:String):Array<String>;
+
 	function close():Void;
 }

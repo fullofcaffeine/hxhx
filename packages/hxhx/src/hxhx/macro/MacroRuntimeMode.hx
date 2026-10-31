@@ -35,27 +35,28 @@ class MacroRuntimeMode {
 				throw "invalid macro runtime mode `" + mode + "` (external-host disabled in stage0 profiling lane; expected inproc)";
 				#else
 				final impl = MacroHostClient.openSession();
-				try {
-					NativeMacroModuleRuntimeLoader.loadConfigured(hxhxmacrohost.NativeMacroModuleReceipt.NATIVE_ARTIFACT, impl.loadNativeModule);
-				} catch (error:String) {
-					impl.close();
-					throw error;
-				} catch (error:haxe.Exception) {
-					impl.close();
-					throw error.message;
-				}
 				return {
 					run: impl.run,
 					runHook: impl.runHook,
 					runTypeNotFoundHook: impl.runTypeNotFoundHook,
 					expandExpr: impl.expandExpr,
 					expandSelected: impl.expandSelected,
+					loadProjectMacroPlugin: externalHostCannotLoadProjectMacroPlugin,
 					close: impl.close
 				};
 				#end
 			case _:
 				throw "invalid macro runtime mode `" + mode + "` (expected inproc|external-host)";
 		}
+	}
+
+	/** The external host protocol has no structured dispatch method, so it never loads project plugins. */
+	static function externalHostCannotLoadProjectMacroPlugin(artifactPath:String, pluginId:String):Array<String> {
+		throw "the external macro host cannot run project macro declarations yet (it has no structured dispatch method); refusing to load `"
+			+ artifactPath
+			+ "` ("
+			+ pluginId
+			+ ")";
 	}
 
 	public static function emitMarker(mode:String, ?output:CompilationRequestOutput):Void {

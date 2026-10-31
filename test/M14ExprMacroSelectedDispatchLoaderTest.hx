@@ -36,6 +36,7 @@ class M14ExprMacroSelectedDispatchLoaderTest {
 				requests.push(request);
 				answer(request);
 			},
+			loadProjectMacroPlugin: (_, _) -> throw "unexpected project macro plugin load",
 			close: () -> {}
 		};
 	}

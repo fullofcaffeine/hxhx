@@ -21,6 +21,7 @@ class M14ExpressionMacroSourceTraversalTest {
 					case _: throw "unexpected expansion";
 				};
 			},
+			loadProjectMacroPlugin: (_, _) -> throw "unexpected project macro plugin load",
 			close: () -> {}
 		};
 		final allowed = new haxe.ds.StringMap<Bool>();

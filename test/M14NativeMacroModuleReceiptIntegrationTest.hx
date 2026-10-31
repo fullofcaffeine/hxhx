@@ -1,9 +1,18 @@
-import haxe.crypto.Sha256;
 import hxhxmacrohost.NativeMacroModuleReceipt;
+import hxhxmacrohost.NativeMacroModuleReceipt.NativeMacroModuleExpectation;
 import sys.FileSystem;
 import sys.io.File;
 
-/** Validates receipt kinds and artifact identity before a macro plugin can load. */
+/**
+	A project-macro plugin receipt must match the loading compiler before its plugin can load.
+
+	The receipt (`hxhx.native-macro-module.v3`) is written by `NativeMacroModuleReceipt.encode` and
+	checked by `NativeMacroModuleReceipt.validate`. Each case below changes one input, through the
+	public validator, and requires the named rejection: field kinds, schema and ABI versions
+	(including the removed version 1), the cache key, compiler identity, OCaml version, runtime
+	digest, declarations, an edited or deleted macro source, a changed or missing artifact, and an
+	artifact path that leaves the receipt directory.
+**/
 class M14NativeMacroModuleReceiptIntegrationTest {
 	static function assertEq(label:String, actual:String, expected:String):Void {
 		if (actual != expected)
@@ -22,139 +31,105 @@ class M14NativeMacroModuleReceiptIntegrationTest {
 		throw label + ": expected failure";
 	}
 
-	static function digest(path:String):String {
-		return Sha256.make(File.getBytes(path)).toHex().toLowerCase();
-	}
-
-	/**
-		Writes literal parser input without importing a JSON serializer or its parser.
-		Candidate names are fixed test tokens; digest values contain hexadecimal digits.
-	**/
-	static function writeReceipt(path:String, candidate:String, nativePath:String, bytecodePath:String, ?nativeDigest:String):Void {
-		final selectedDigest = nativeDigest == null ? digest(nativePath) : nativeDigest;
-		final receipt = '{"schema":"hxhx.native-macro-module.v2","candidateCommit":"'
-			+ candidate
-			+ '","pluginId":"fixture.project.macro","abiVersion":2,"macroApiVersion":1,'
-			+ '"declarations":["Identity.preserve"],"artifacts":{'
-			+ '"native":{"path":"native.cmxs","sha256":"'
-			+ selectedDigest
-			+ '"},'
-			+ '"bytecode":{"path":"bytecode.cma","sha256":"'
-			+ digest(bytecodePath)
-			+ '"}}}';
-		File.saveContent(path, receipt + "\n");
-	}
-
-	/** Changes one input token so malformed metadata is checked through the public loader. */
-	static function expectInvalidField(path:String, validReceipt:String, change:{
-		field:String,
-		original:String,
-		replacement:String,
-		error:String
-	}):Void {
-		final original = '"' + change.field + '":' + change.original;
-		if (validReceipt.indexOf(original) == -1)
-			throw "fixture token missing: " + original;
-		File.saveContent(path, StringTools.replace(validReceipt, original, '"' + change.field + '":' + change.replacement));
-		expectFailure(change.field, () -> NativeMacroModuleReceipt.loadFromEnvironment(NativeMacroModuleReceipt.NATIVE_ARTIFACT), change.error);
-	}
+	static final digestA = StringTools.lpad("", "a", 64);
 
 	static function main():Void {
-		final root = ".tmp/m14-native-macro-receipt-" + Std.string(Std.int(haxe.Timer.stamp() * 1000000));
-		FileSystem.createDirectory(root);
+		// A fresh checkout has no .tmp yet; fullPath needs an existing directory.
+		FileSystem.createDirectory(".tmp");
+		final root = FileSystem.fullPath(".tmp") + "/m14-native-macro-receipt-" + Std.string(Std.int(haxe.Timer.stamp() * 1000000));
+		FileSystem.createDirectory(root + "/build");
 		final receiptPath = root + "/receipt.json";
-		final nativePath = root + "/native.cmxs";
-		final bytecodePath = root + "/bytecode.cma";
+		final nativePath = root + "/build/native.cmxs";
+		final bytecodePath = root + "/build/bytecode.cma";
+		final sourcePath = root + "/Identity.hx";
 		File.saveContent(nativePath, "native-fixture");
 		File.saveContent(bytecodePath, "bytecode-fixture");
-		writeReceipt(receiptPath, "candidate-ok", nativePath, bytecodePath);
+		File.saveContent(sourcePath, "class Identity {}\n");
 
-		final oldReceipt = Sys.getEnv(NativeMacroModuleReceipt.RECEIPT_ENV);
-		final oldCandidate = Sys.getEnv(NativeMacroModuleReceipt.CANDIDATE_ENV);
-		Sys.putEnv(NativeMacroModuleReceipt.RECEIPT_ENV, receiptPath);
-		Sys.putEnv(NativeMacroModuleReceipt.CANDIDATE_ENV, "candidate-ok");
-
-		final native = NativeMacroModuleReceipt.loadFromEnvironment(NativeMacroModuleReceipt.NATIVE_ARTIFACT);
-		assertEq("native artifact kind", native.artifactKind, NativeMacroModuleReceipt.NATIVE_ARTIFACT);
-		assertEq("native artifact path", native.artifactPath, FileSystem.fullPath(nativePath));
-		final bytecode = NativeMacroModuleReceipt.loadFromEnvironment(NativeMacroModuleReceipt.BYTECODE_ARTIFACT);
-		assertEq("bytecode artifact kind", bytecode.artifactKind, NativeMacroModuleReceipt.BYTECODE_ARTIFACT);
-		assertEq("bytecode artifact path", bytecode.artifactPath, FileSystem.fullPath(bytecodePath));
-
-		final validReceipt = File.getContent(receiptPath);
-		for (token in ["1.5", '"1suffix"', "true", "[]", "{}"]) {
-			expectInvalidField(receiptPath, validReceipt, {
-				field: "abiVersion",
-				original: "2",
-				replacement: token,
-				error: "abiVersion must be an integer"
+		function receipt(?nativeDigest:String):String {
+			return NativeMacroModuleReceipt.encode({
+				cacheKey: digestA,
+				compilerIdentity: "compiler-ok",
+				pluginId: "hxhx.project-macro.fixture",
+				declarations: ["Identity.preserve"],
+				toolchain: {ocaml: "5.4.0", dune: "3.21.0", ocamlConfigSha256: digestA},
+				runtimeDigest: "runtime-ok",
+				sources: [{path: sourcePath, sha256: NativeMacroModuleReceipt.fileSha256(sourcePath)}],
+				native: {path: "build/native.cmxs", sha256: nativeDigest == null ? NativeMacroModuleReceipt.fileSha256(nativePath) : nativeDigest},
+				bytecode: {path: "build/bytecode.cma", sha256: NativeMacroModuleReceipt.fileSha256(bytecodePath)}
 			});
 		}
-		expectInvalidField(receiptPath, validReceipt, {
-			field: "pluginId",
-			original: '"fixture.project.macro"',
-			replacement: "true",
-			error: "pluginId must be a string"
-		});
-		expectInvalidField(receiptPath, validReceipt, {
-			field: "declarations",
-			original: '["Identity.preserve"]',
-			replacement: "[7]",
-			error: "declarations[] must be a string"
-		});
-		expectInvalidField(receiptPath, validReceipt, {
-			field: "abiVersion",
-			original: "2",
-			replacement: "null",
-			error: "abiVersion is required"
-		});
+		final expected:NativeMacroModuleExpectation = {
+			cacheKey: digestA,
+			compilerIdentity: "compiler-ok",
+			ocamlVersion: "5.4.0",
+			runtimeDigest: "runtime-ok",
+			declarations: ["Identity.preserve"]
+		};
+		function load(?kind:String)
+			return NativeMacroModuleReceipt.validate(receiptPath, expected, kind == null ? NativeMacroModuleReceipt.NATIVE_ARTIFACT : kind);
+
+		final validReceipt = receipt();
+		File.saveContent(receiptPath, validReceipt);
+		final native = load();
+		assertEq("native artifact kind", native.artifactKind, NativeMacroModuleReceipt.NATIVE_ARTIFACT);
+		assertEq("native artifact path", native.artifactPath, FileSystem.fullPath(nativePath));
+		assertEq("plugin id", native.pluginId, "hxhx.project-macro.fixture");
+		final bytecode = load(NativeMacroModuleReceipt.BYTECODE_ARTIFACT);
+		assertEq("bytecode artifact path", bytecode.artifactPath, FileSystem.fullPath(bytecodePath));
+
+		/** Change one `"field": original` token of the valid receipt and require the rejection. */
+		function invalid(field:String, original:String, replacement:String, error:String):Void {
+			final token = '"' + field + '": ' + original;
+			if (validReceipt.indexOf(token) == -1)
+				throw "fixture token missing: " + token;
+			File.saveContent(receiptPath, StringTools.replace(validReceipt, token, '"' + field + '": ' + replacement));
+			expectFailure(field + " -> " + replacement, () -> load(), error);
+		}
+		for (token in ["1.5", '"1suffix"', "true", "[]", "{}"])
+			invalid("abiVersion", "2", token, "abiVersion must be an integer");
+		invalid("abiVersion", "2", "null", "abiVersion is required");
 		// A receipt for the removed version 1 plugin ABI (exact-expression `unit -> string` handlers) is rejected.
-		expectInvalidField(receiptPath, validReceipt, {
-			field: "abiVersion",
-			original: "2",
-			replacement: "1",
-			error: "abiVersion mismatch: expected 2, got 1"
-		});
-		expectInvalidField(receiptPath, validReceipt, {
-			field: "schema",
-			original: '"hxhx.native-macro-module.v2"',
-			replacement: '"hxhx.native-macro-module.v1"',
-			error: "unsupported schema"
-		});
-		expectInvalidField(receiptPath, validReceipt, {
-			field: "declarations",
-			original: '["Identity.preserve"]',
-			replacement: "[]",
-			error: "declarations must contain at least one macro declaration"
-		});
-		// JSON fraction/exponent syntax remains valid when its value is an exact integer.
-		File.saveContent(receiptPath, StringTools.replace(validReceipt, '"abiVersion":2', '"abiVersion":2e0'));
-		assertEq("integral exponent receipt", NativeMacroModuleReceipt.loadFromEnvironment(NativeMacroModuleReceipt.NATIVE_ARTIFACT).pluginId,
-			"fixture.project.macro");
+		invalid("abiVersion", "2", "1", "abiVersion mismatch: expected 2, got 1");
+		invalid("abiVersion", "2", "3", "abiVersion mismatch: expected 2, got 3");
+		invalid("schema", '"hxhx.native-macro-module.v3"', '"hxhx.native-macro-module.v2"', "unsupported schema");
+		invalid("pluginId", '"hxhx.project-macro.fixture"', "true", "pluginId must be a string");
+		invalid("cacheKey", '"' + digestA + '"', '"' + StringTools.lpad("", "b", 64) + '"', "cacheKey mismatch");
+		invalid("compilerIdentity", '"compiler-ok"', '"another-compiler"', "compilerIdentity mismatch");
+		invalid("ocaml", '"5.4.0"', '"5.3.0"', "toolchain.ocaml mismatch");
+		invalid("runtimeDigest", '"runtime-ok"', '"runtime-other"', "runtimeDigest mismatch");
+		invalid("declarations", '["Identity.preserve"]', '["Identity.missing"]', "registered declaration mismatch");
+		invalid("declarations", '["Identity.preserve"]', "[7]", "declarations[] must be a string");
+		invalid("declarations", '["Identity.preserve"]', "[]", "declarations must contain at least one macro declaration");
+		invalid("path", '"build/native.cmxs"', '"../escape.cmxs"', "escapes the receipt directory");
+		invalid("path", '"build/native.cmxs"', '"build/missing.cmxs"', "artifact file not found");
+
+		// JSON fraction and exponent syntax remains valid when its value is an exact integer.
+		File.saveContent(receiptPath, StringTools.replace(validReceipt, '"abiVersion": 2', '"abiVersion": 2e0'));
+		assertEq("integral exponent receipt", load().pluginId, "hxhx.project-macro.fixture");
 
 		File.saveContent(receiptPath, "{");
-		expectFailure("invalid JSON", () -> NativeMacroModuleReceipt.loadFromEnvironment(NativeMacroModuleReceipt.NATIVE_ARTIFACT), "invalid JSON");
+		expectFailure("invalid JSON", () -> load(), "invalid JSON");
 		File.saveContent(receiptPath, "true\n");
-		expectFailure("non-object JSON", () -> NativeMacroModuleReceipt.loadFromEnvironment(NativeMacroModuleReceipt.NATIVE_ARTIFACT),
-			"receipt JSON must be an object");
-		writeReceipt(receiptPath, "candidate-ok", nativePath, bytecodePath);
+		expectFailure("non-object JSON", () -> load(), "receipt JSON must be an object");
 
-		Sys.putEnv(NativeMacroModuleReceipt.CANDIDATE_ENV, "candidate-other");
-		expectFailure("candidate mismatch", () -> NativeMacroModuleReceipt.loadFromEnvironment(NativeMacroModuleReceipt.NATIVE_ARTIFACT), "candidate mismatch");
-		Sys.putEnv(NativeMacroModuleReceipt.CANDIDATE_ENV, "candidate-ok");
-		writeReceipt(receiptPath, "candidate-ok", nativePath, bytecodePath, StringTools.lpad("0", "0", 64));
-		expectFailure("digest mismatch", () -> NativeMacroModuleReceipt.loadFromEnvironment(NativeMacroModuleReceipt.NATIVE_ARTIFACT),
-			"artifact SHA-256 mismatch");
+		File.saveContent(receiptPath, receipt(StringTools.lpad("", "0", 64)));
+		expectFailure("digest mismatch", () -> load(), "artifact SHA-256 mismatch");
+		File.saveContent(receiptPath, validReceipt);
+		File.saveContent(sourcePath, "class Identity { /* edited */ }\n");
+		expectFailure("edited source", () -> load(), "macro source changed since the plugin was built");
+		FileSystem.deleteFile(sourcePath);
+		expectFailure("deleted source", () -> load(), "macro source no longer exists");
+		File.saveContent(sourcePath, "class Identity {}\n");
+		assertEq("restored source", load().pluginId, "hxhx.project-macro.fixture");
 		FileSystem.deleteFile(nativePath);
-		expectFailure("missing artifact", () -> NativeMacroModuleReceipt.loadFromEnvironment(NativeMacroModuleReceipt.NATIVE_ARTIFACT),
-			"artifact file not found");
-		Sys.putEnv(NativeMacroModuleReceipt.RECEIPT_ENV, root + "/missing-receipt.json");
-		expectFailure("missing receipt", () -> NativeMacroModuleReceipt.loadFromEnvironment(NativeMacroModuleReceipt.NATIVE_ARTIFACT), "file not found");
-
-		Sys.putEnv(NativeMacroModuleReceipt.RECEIPT_ENV, oldReceipt);
-		Sys.putEnv(NativeMacroModuleReceipt.CANDIDATE_ENV, oldCandidate);
-		FileSystem.deleteFile(bytecodePath);
+		expectFailure("missing artifact", () -> load(), "artifact file not found");
 		FileSystem.deleteFile(receiptPath);
+		expectFailure("missing receipt", () -> load(), "file not found");
+
+		FileSystem.deleteFile(bytecodePath);
+		FileSystem.deleteFile(sourcePath);
+		FileSystem.deleteDirectory(root + "/build");
 		FileSystem.deleteDirectory(root);
 		Sys.println("OK m14 native macro module receipt");
 	}
