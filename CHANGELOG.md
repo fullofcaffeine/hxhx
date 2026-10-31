@@ -1,3 +1,10 @@
+# [0.39.0](https://github.com/fullofcaffeine/hxhx/compare/v0.38.2...v0.39.0) (2026-10-31)
+
+
+### Features
+
+* **hxhx:** compile macro classpaths in a macro compilation context ([75e6a00](https://github.com/fullofcaffeine/hxhx/commit/75e6a001d084300a496e0e1c25da93d11ed0f9a2)), closes [#if](https://github.com/fullofcaffeine/hxhx/issues/if) [#if](https://github.com/fullofcaffeine/hxhx/issues/if) [#if](https://github.com/fullofcaffeine/hxhx/issues/if) [#end](https://github.com/fullofcaffeine/hxhx/issues/end) [#if](https://github.com/fullofcaffeine/hxhx/issues/if) [#if](https://github.com/fullofcaffeine/hxhx/issues/if) [#if](https://github.com/fullofcaffeine/hxhx/issues/if)
+
 ## [0.38.2](https://github.com/fullofcaffeine/hxhx/compare/v0.38.1...v0.38.2) (2026-10-31)
 
 
