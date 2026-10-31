@@ -1,7 +1,7 @@
 import haxe.ds.StringMap;
 import haxe.io.Path;
 import hxhx.macro.MacroHostClient;
-import hxhx.macro.MacroRuntimeSession;
+import hxhx.macro.MacroHostClient.MacroHostSession;
 import hxhx.macro.MacroState;
 import sys.io.File;
 
@@ -38,7 +38,7 @@ class M14Stage3OnTypeNotFoundIntegrationTest {
 		MacroState.setCurrentPos({file: "M14Stage3OnTypeNotFoundIntegrationTest.hx", min: 0, max: 0});
 		MacroState.setGeneratedHxDir(generatedDir);
 
-		var session:Null<MacroRuntimeSession> = null;
+		var session:Null<MacroHostSession> = null;
 		var failure:Null<String> = null;
 		try {
 			final exe = MacroHostTestArtifact.resolve("test:m14:stage3-on-type-not-found");
