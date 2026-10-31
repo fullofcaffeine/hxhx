@@ -19,7 +19,7 @@ The pieces, in call order:
    (unchanged from the selection step below). Since step 2, `Stage3ProjectMacroPlugins` first
    records the supported declarations, provides their plugin, and then repeats the pass.
 2. `InProcMacroSession.expandSelected` looks up the declaration key `<owner>.<method>`. With no
-   plugin providing it the call stays `Unavailable` and is reported as unexecuted.
+   plugin providing it the call stays `Unavailable`, is reported, and fails the compile.
 3. `MacroSyntaxExport` converts each argument (`HxExpr`) to `haxe.macro.Expr`.
 4. `MacroSyntaxWire` encodes the arguments. The plugin's generated adapter
    (`Array<Expr> -> Expr`, emitted by `Stage3OcamlMacroPluginEntry` for the declarations listed in
@@ -61,8 +61,7 @@ Contract details and limits:
 - Plugin declarations must be static `macro` methods whose parameters are all required `Expr`
   values and whose result is `Expr`.
 - The external macro host has no structured dispatch method (`macro.runDeclaration`, above), so
-  hxhx neither builds nor loads a plugin in that mode; it reports selected declarations as
-  unexecuted.
+  hxhx neither builds nor loads a plugin in that mode; a selected declaration fails the compile.
 - One in-process session loads at most one plugin; a second load is rejected. Registrations must
   name `pack.Type.method`, and `haxe.macro.*` owners are reserved.
 - Follow-ups: literal spelling and quote kind (`haxe_ocaml-gzufu`), reflaxe.ocaml pattern
@@ -177,16 +176,16 @@ visited and sent to `MacroRuntimeSession.expandSelected` as one
 file); `Expanded` syntax is inserted in place. A private static macro is selectable
 from its own class. Calls inside a lexical gap are not selected; the gap count is
 reported. When the session answers `Unavailable`, the call is recorded
-(`expr_macro_unexecuted[i]=<file>: <declaration>: <reason>`) and continues through
-typing exactly as before this change, under the macro call-site contract
-(`TyMacroCallSignature`: `Expr` positions accept any expression, a trailing
-`Array<Expr>` is a rest position, the result is `Dynamic`); this keeps existing lanes that rely on
-later approximations (for example the emitter's `isCi` intrinsic and hxhx's own
-`CompilerBundledSourcesMacro.files()` during snapshot generation) compiling, while
-naming the unexecuted macro in the output. Since step 1 the in-process runtime runs a
-declaration that a loaded plugin provides; it answers `Unavailable` otherwise, and the external
-host protocol still has no structured method. Once a general executor exists, an
-unexecuted selected macro must become a compile error. Static-extension and
+(`expr_macro_unexecuted[i]=<file>: <declaration>: <reason>`). Since step 2 that is a compile
+error (`<file>: expression macro <declaration> was not executed: <reason>`), because
+compiling the call as an ordinary call would give a program upstream Haxe never produces. One
+scoped exception remains, hxhx's own `CompilerBundledSourcesMacro.files()` (it embeds
+standard-library sources during hxhx's own build and needs `Context` and reification, steps 3
+and 4); that call is still typed under the macro call-site contract (`TyMacroCallSignature`:
+`Expr` positions accept any expression, a trailing `Array<Expr>` is a rest position, the result
+is `Dynamic`). Before step 2, every unexecuted call continued that way, which also kept the
+emitter's `isCi` intrinsic for upstream `tests/runci/Config.hx` working; `isCi` uses
+reification, so Stage3 compiles of the runci sources now stop at that call until step 3. Static-extension and
 value-receiver macro calls are not selected (haxe_ocaml-1tyip); modules first loaded
 during body typing are not walked (haxe_ocaml-uf1hx).
 Mixed imported fields and

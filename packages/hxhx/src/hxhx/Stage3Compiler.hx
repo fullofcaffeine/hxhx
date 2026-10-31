@@ -537,7 +537,7 @@ class Stage3Compiler {
 		// The request's header index and loader are built first (marking the resolved modules) and
 		// stay outside the expansion error handling, as before the pass existed. The pass then serves
 		// registered exact-text expressions, selects other calls by their `macro` declaration, and
-		// reports selected calls no executor can run; those continue through ordinary typing.
+		// reports selected calls no executor can run; such a call fails the compile (see Stage3ProjectMacroPlugins).
 		//
 		// Every non-type-only compile runs the pass, because the built-in date macros are always
 		// allowlisted. The scope-gap count describes the walker's coverage (standard-library switch
@@ -604,6 +604,11 @@ class Stage3Compiler {
 			}
 			if (macroPass.lexicalGaps.length > 0 && isTrueEnv("HXHX_TRACE_EXPR_MACROS"))
 				requestOutput.stdoutLine("expr_macro_scope_gaps=" + macroPass.lexicalGaps.length);
+		}
+		final unexecutedError = Stage3ProjectMacroPlugins.unexecutedError(macroPass.unexecuted);
+		if (unexecutedError != null) {
+			closeMacroSession();
+			return error(unexecutedError);
 		}
 
 		// Stage3 diagnostic mode: type the full resolved graph (best-effort), then stop.

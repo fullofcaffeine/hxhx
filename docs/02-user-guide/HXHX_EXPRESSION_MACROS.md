@@ -11,8 +11,9 @@ What works today, in short:
   See "Project macro plugins" below.
 - hxhx builds and caches that plugin by itself, so a plain `hxhx --hxhx-stage3 -cp src -main Main` runs the macro.
   This needs `dune` and the matching OCaml compiler on `PATH`.
-- Macros that need `haxe.macro.Context`, reification (`macro ...`), or the external macro host are not executed yet;
-  such calls are reported as unexecuted.
+- Macros that need `haxe.macro.Context`, reification (`macro ...`), or the external macro host are not executed yet.
+  A selected call that cannot run is a compile error at the call, as it would be wrong to compile it as an ordinary
+  call (upstream Haxe would have run it).
 
 The older, explicit rung of this feature still exists for Gate1 bring-up:
 
@@ -57,26 +58,27 @@ structured request (`MacroRuntimeSession.expandSelected`) carrying the selected 
 syntax. An allowlisted exact call text always keeps the allowlist route, even if its callee is a macro.
 
 The in-process session runs a selected declaration through the project macro plugin that hxhx builds or reuses for the
-compile (next section). When the call cannot run, the call is reported with the reason on stdout and then typed as
-before, so a later failure is attributable. Reasons include an unsupported declaration shape, a plugin that cannot be
-built, the external-host mode (which has no structured dispatch method yet), and the compilation server:
+compile (next section). When the call cannot run, the compile fails before typing. The call is reported on stdout, and
+the error names the file, the declaration, and the reason. Reasons include an unsupported declaration shape, a plugin
+that cannot be built, the external-host mode (which has no structured dispatch method yet), and the compilation server:
 
 ```
 expr_macros_unexecuted=1
 expr_macro_unexecuted[0]=Main.hx: macros.Macros.items: project macro declaration `macros.Macros.items` parameter `n` must be a required haxe.macro.Expr; other parameter kinds are not supported yet
+hxhx(stage3): Main.hx: expression macro macros.Macros.items was not executed: project macro declaration `macros.Macros.items` parameter `n` must be a required haxe.macro.Expr; other parameter kinds are not supported yet
 ```
 
-An unexpanded macro call is typed by the macro call-site contract (`TyMacroCallSignature`), not as an ordinary call:
-any expression is accepted at an `Expr` parameter, a trailing `Array<Expr>` parameter collects the remaining arguments,
-and the call's value is `Dynamic`, because its real type would come from the expansion. The report precedes whatever that
-typing produces; for example, `for (v in macros.Macros.items())` still stops with
-`value loop requires a resolved iterator protocol`, since a `Dynamic` value has no known iterator. With `HXHX_TRACE_EXPR_MACROS=1`, `expr_macro_scope_gaps=N` also counts call sites the walker could not prove names for;
+One declaration is exempt for now: hxhx's own `CompilerBundledSourcesMacro.files()` (only the one in the hxhx
+checkout, `packages/hxhx-core/src/CompilerBundledSourcesMacro.hx`), which embeds standard-library
+sources when hxhx compiles itself and needs `haxe.macro.Context` and reification. It is still reported, and its call is
+then typed by the macro call-site contract (`TyMacroCallSignature`): any expression is accepted at an `Expr` parameter,
+a trailing `Array<Expr>` parameter collects the remaining arguments, and the value is `Dynamic`. With `HXHX_TRACE_EXPR_MACROS=1`, `expr_macro_scope_gaps=N` also counts call sites the walker could not prove names for;
 nothing is selected there. It is a trace line only, because standard-library switch scopes produce gaps in every program.
 
 Important constraints:
 
 - A selected `macro function` declaration runs only through a loaded project-macro plugin in the in-process mode.
-  Otherwise it is reported and then typed by the macro call-site contract described above.
+  Otherwise the compile fails at the call (except the bundled-source declaration described above).
 - For the exact-text allowlist route below:
   - we do **not** type-check the returned expression snippet yet; we just parse it into the bootstrap `HxExpr` subset;
   - the returned snippet must be parsable by `HxParser.parseExprText` (tiny expression grammar).
@@ -117,11 +119,12 @@ fresh plugin id (`hxhx.project-macro.<build id>`), so two plugin builds never sh
 
 Projects that call expression macros need `dune` and `ocamlopt` on `PATH`, and `ocamlopt` must be the same OCaml
 version that built the hxhx binary (a plugin is linked against the binary's own runtime). Without them the call cannot
-run, and hxhx says why:
+run, and the compile fails with one diagnostic that says why:
 
 ```
-expr_macro_unexecuted[0]=.../Main.hx: Identity.preserve: the project macro plugin is unavailable: project macros need
-`dune` and the OCaml native compiler (`ocamlopt`) on PATH to build their native plugin; `ocamlopt -version` failed: ...
+hxhx(stage3): .../Main.hx: expression macro Identity.preserve was not executed: the project macro plugin is unavailable:
+project macros need `dune` and the OCaml native compiler (`ocamlopt`) on PATH to build their native plugin;
+`ocamlopt -version` failed: ...
 ```
 
 A different OCaml version is rejected the same way, before anything is built.
@@ -149,10 +152,10 @@ On Windows, and on a POSIX host whose `/bin/sh` has neither `setsid` nor job con
 
 #### Current limits
 
-- Only one-shot in-process compiles run project macros. The external macro host and the compilation server report the
-  calls as unexecuted, with that reason.
+- Only one-shot in-process compiles run project macros. In the external macro host and the compilation server, a
+  selected call fails the compile with that reason.
 - Macro code that calls another macro function (directly or through a helper) is "macro-in-macro". Upstream Haxe 4.3.7
-  rejects it when the call runs; a plugin build reports a helper's call with that reason when the plugin is compiled,
+  rejects it when the call runs; a plugin build fails at a helper's call with that reason when the plugin is compiled,
   even if the helper would never run, which is stricter than upstream. A call written directly in a macro function's
   body is not detected yet and runs as an ordinary call (`haxe_ocaml-48uwv`).
 - The plugin compilation keeps the `ocaml` target define in macro classes, while upstream's eval macro context does
