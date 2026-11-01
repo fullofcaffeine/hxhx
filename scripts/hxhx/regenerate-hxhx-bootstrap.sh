@@ -31,6 +31,10 @@ Options:
   --clean-out                Clean packages/hxhx/out before stage0 emit.
   --no-verify                Skip bootstrap snapshot verify build.
   --verify                   Run bootstrap snapshot verify build.
+  --emit-only                Check that reflaxe.ocaml accepts the hxhx sources: run only the stage0
+                             emit into packages/hxhx/out, then stop. Leaves bootstrap_out, the regen
+                             fingerprint, and the verify build untouched. Used by the pre-merge
+                             `check:hxhx-reflaxe-self-compile` gate.
   --server-preflight         Check for stale haxe --wait/--server-connect processes before emit (default).
   --no-server-preflight      Skip stale haxe server preflight checks.
   --kill-repo-server         Stop only the repo-owned haxe --wait server before emit.
@@ -79,6 +83,7 @@ Environment knobs (all optional):
   HXHX_BOOTSTRAP_FAST=1             Same effect as --fast.
   HXHX_BOOTSTRAP_CLEAN_OUT=0        Reuse packages/hxhx/out (incremental).
   HXHX_BOOTSTRAP_VERIFY=0           Skip verify step.
+  HXHX_BOOTSTRAP_EMIT_ONLY=1        Same effect as --emit-only.
   HXHX_HAXE_SERVER_PREFLIGHT=1      Enable stale haxe server preflight.
   HXHX_KILL_STALE_HAXE_SERVERS=1    Kill all local haxe servers in preflight (unsafe).
   HXHX_KILL_REPO_HAXE_SERVER=1      Kill only repo-owned haxe server in preflight.
@@ -198,6 +203,7 @@ HXHX_LOG_DIR="${HXHX_LOG_DIR:-}"
 HXHX_BOOTSTRAP_FAST="${HXHX_BOOTSTRAP_FAST:-0}"
 HXHX_BOOTSTRAP_CLEAN_OUT="${HXHX_BOOTSTRAP_CLEAN_OUT:-}"
 HXHX_BOOTSTRAP_VERIFY="${HXHX_BOOTSTRAP_VERIFY:-}"
+HXHX_BOOTSTRAP_EMIT_ONLY="${HXHX_BOOTSTRAP_EMIT_ONLY:-0}"
 HXHX_HAXE_SERVER_PREFLIGHT="${HXHX_HAXE_SERVER_PREFLIGHT:-1}"
 HXHX_KILL_STALE_HAXE_SERVERS="${HXHX_KILL_STALE_HAXE_SERVERS:-0}"
 HXHX_KILL_REPO_HAXE_SERVER="${HXHX_KILL_REPO_HAXE_SERVER:-0}"
@@ -233,6 +239,9 @@ while [ $# -gt 0 ]; do
 			;;
 		--verify)
 			HXHX_BOOTSTRAP_VERIFY=1
+			;;
+		--emit-only)
+			HXHX_BOOTSTRAP_EMIT_ONLY=1
 			;;
 		--server-preflight)
 			HXHX_HAXE_SERVER_PREFLIGHT=1
@@ -377,6 +386,13 @@ while [ $# -gt 0 ]; do
 done
 
 assert_bool_01 "HXHX_BOOTSTRAP_FAST" "$HXHX_BOOTSTRAP_FAST"
+assert_bool_01 "HXHX_BOOTSTRAP_EMIT_ONLY" "$HXHX_BOOTSTRAP_EMIT_ONLY"
+if [ "$HXHX_BOOTSTRAP_EMIT_ONLY" = "1" ]; then
+	# An acceptance check must always run the emit, and it never produces a
+	# snapshot to verify.
+	HXHX_BOOTSTRAP_VERIFY=0
+	HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED=0
+fi
 if [ -z "$HXHX_BOOTSTRAP_CLEAN_OUT" ]; then
 	HXHX_BOOTSTRAP_CLEAN_OUT="$([ "$HXHX_BOOTSTRAP_FAST" = "1" ] && echo 0 || echo 1)"
 fi
@@ -841,7 +857,7 @@ write_report_json() {
 {
   "status": "$(json_escape "$script_status")",
   "exit_code": $script_exit_code,
-  "mode": "$(json_escape "$([ "$HXHX_BOOTSTRAP_FAST" = "1" ] && echo fast || echo full)")",
+  "mode": "$(json_escape "$([ "$HXHX_BOOTSTRAP_EMIT_ONLY" = "1" ] && echo emit-only || { [ "$HXHX_BOOTSTRAP_FAST" = "1" ] && echo fast || echo full; })")",
   "skipped_emit": $skipped_emit,
   "haxe_bin": "$(json_escape "$HAXE_BIN")",
   "haxe_bin_requested": "$(json_escape "$stage0_haxe_requested")",
@@ -1237,7 +1253,9 @@ elif [ -n "${DUNE_JOBS:-}" ]; then
 else
 	echo "== Dune jobs: auto (HXHX_DUNE_JOBS=auto)"
 fi
-if [ "$HXHX_BOOTSTRAP_FAST" = "1" ]; then
+if [ "$HXHX_BOOTSTRAP_EMIT_ONLY" = "1" ]; then
+	echo "== Mode: emit-only (clean_out=${HXHX_BOOTSTRAP_CLEAN_OUT}; bootstrap_out and fingerprint untouched)"
+elif [ "$HXHX_BOOTSTRAP_FAST" = "1" ]; then
 	echo "== Mode: fast (clean_out=${HXHX_BOOTSTRAP_CLEAN_OUT}, verify=${HXHX_BOOTSTRAP_VERIFY})"
 else
 	echo "== Mode: full (clean_out=${HXHX_BOOTSTRAP_CLEAN_OUT}, verify=${HXHX_BOOTSTRAP_VERIFY})"
@@ -1412,6 +1430,17 @@ if [ "$skipped_emit" = "0" ]; then
 	if [ ! -d "$OUT_DIR" ]; then
 		echo "Missing generated output directory: $OUT_DIR" >&2
 		exit 1
+	fi
+
+	if [ "$HXHX_BOOTSTRAP_EMIT_ONLY" = "1" ]; then
+		# reflaxe.ocaml lowered and printed every hxhx class without an error.
+		# That is the whole claim of this mode; the committed snapshot is a
+		# separate maintenance step.
+		total_sec="$(( $(now_ts) - total_start ))"
+		echo "== Total emit-only duration: ${total_sec}s"
+		write_report_json "$HXHX_BOOTSTRAP_REPORT_JSON"
+		echo "HXHX_REFLAXE_SELF_COMPILE:PASS"
+		exit 0
 	fi
 
 	copy_start="$(now_ts)"
