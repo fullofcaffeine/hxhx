@@ -1,0 +1,414 @@
+{
+  "schema": "hxhx.test-entry-reachability.v1",
+  "description": "Test entry points that no CI path runs, each with the reason and the Bead that owns bringing it back or removing it. Files that only a listed entry runs share its exception. Checked by npm run guard:test-entry-reachability; see docs/01-getting-started/TESTING.md.",
+  "unreachable": {
+    "file:test/m14_abstract_constructor_initialization_test.hxml": {
+      "reason": "Fails on origin/main: unassigned: uninitialized constructor accepted",
+      "bead": "haxe_ocaml-cwnu4"
+    },
+    "file:test/m14_callable_annotation_typing_test.hxml": {
+      "reason": "Fails on origin/main: rest wrapper: source rest parameter lost its inferred container",
+      "bead": "haxe_ocaml-cwnu4"
+    },
+    "file:test/m14_constructor_receiver_test.hxml": {
+      "reason": "Fails on origin/main: nullable_transport: managed class value requires an explicit meta-value representation",
+      "bead": "haxe_ocaml-cwnu4"
+    },
+    "file:test/m14_cpp_bare_field_binding_integration_test.hxml": {
+      "reason": "Fails on origin/main: managed closure ABI requires complete semantic types",
+      "bead": "haxe_ocaml-rm28v"
+    },
+    "file:test/m14_cpp_callable_annotation_integration_test.hxml": {
+      "reason": "Fails on origin/main: macro-in-macro",
+      "bead": "haxe_ocaml-d79fx"
+    },
+    "file:test/m14_cpp_callable_control_traversal_test.hxml": {
+      "reason": "Fails on origin/main: managed function body Main#static:invoke(required:dynamic)->primitive:Int#0: managed closure ABI requires a typed function",
+      "bead": "haxe_ocaml-rm28v"
+    },
+    "file:test/m14_cpp_capture_carriers_test.hxml": {
+      "reason": "Fails on origin/main: managed function body Main#static:arrayAlias()->primitive:Int#0: managed value transfer requires complete types: unresolved:Array<primitive:Int> -> unresolved:Array<primitive:Int>",
+      "bead": "haxe_ocaml-rm28v"
+    },
+    "file:test/m14_cpp_generic_null_comparison_integration_test.hxml": {
+      "reason": "Fails on origin/main: managed function body Main#static:main()->primitive:Void#0: managed source argument requires an explicit typed conversion at slot 0: nullable:primitive:Int -> type-parameter:4:26:type-parameter-identit",
+      "bead": "haxe_ocaml-rm28v"
+    },
+    "file:test/m14_cpp_initializer_catch_execution_test.hxml": {
+      "reason": "Fails on origin/main: managed function body Main#static:main()->primitive:Void#0: managed integer operation requires exact Int or nullable Int operands: != (dynamic, primitive:String)",
+      "bead": "haxe_ocaml-rm28v"
+    },
+    "file:test/m14_cpp_initializer_local_binding_integration_test.hxml": {
+      "reason": "Fails on origin/main: managed function body Main.Holder#instance:new(required:primitive:Int)->nominal:Main.Holder#0: managed local read is absent from its executable catalog: Sys",
+      "bead": "haxe_ocaml-rm28v"
+    },
+    "file:test/m14_cpp_neutral_callable_integration_test.hxml": {
+      "reason": "Fails on origin/main: macro-in-macro",
+      "bead": "haxe_ocaml-d79fx"
+    },
+    "file:test/m14_cpp_ordinary_helper_callable_integration_test.hxml": {
+      "reason": "Fails on origin/main: managed function body Main#static:main()->primitive:Void#0: managed local read is absent from its executable catalog: Sys",
+      "bead": "haxe_ocaml-rm28v"
+    },
+    "file:test/m14_cpp_special_callable_integration_test.hxml": {
+      "reason": "Fails on origin/main: macro-in-macro",
+      "bead": "haxe_ocaml-d79fx"
+    },
+    "file:test/m14_cpp_strict_local_binding_integration_test.hxml": {
+      "reason": "Fails on origin/main: test/oracle/cpp_strict_local_binding_seed/src/Main.hx:37:3: interval requires its core IntIterator declaration",
+      "bead": "haxe_ocaml-rm28v"
+    },
+    "file:test/m14_cpp_typed_catch_test.hxml": {
+      "reason": "Fails on origin/main: managed function body Main#static:category(required:dynamic)->primitive:String#0: managed catch requires typed handler selection for primitive:Int (haxe_ocaml-qrk0u)",
+      "bead": "haxe_ocaml-rm28v"
+    },
+    "file:test/m14_generic_structural_call_test.hxml": {
+      "reason": "Fails on origin/main: native generic method requires a supported ordinary signature: Main#static:take(required:anonymous:{read:method<0>:function:()->type-parameter:4:26:type-parameter-identity-v125:method:Main#static#take#",
+      "bead": "haxe_ocaml-hg8m2"
+    },
+    "file:test/m14_js_general_extractor_runtime_test.hxml": {
+      "reason": "Fails on origin/main: JavaScript named pattern requires its exact selected declaration in Main.extract (static function body)",
+      "bead": "haxe_ocaml-kgt5c"
+    },
+    "file:test/m14_local_generic_function_integration_test.hxml": {
+      "reason": "Fails on origin/main: .tmp/local-generic-integration/identity/Main.hx:1:44: Generic local functions require independently instantiated local binders",
+      "bead": "haxe_ocaml-cwnu4"
+    },
+    "file:test/m14_pattern_capture_coverage_ocaml_test.hxml": {
+      "reason": "Fails on origin/main: OCaml enum payload representation is not implemented for a Float payload.",
+      "bead": "haxe_ocaml-ywjwj"
+    },
+    "file:test/m14_source_comprehension_native_test.hxml": {
+      "reason": "Fails on origin/main: comprehension program loading haxe.io.Input: implicit catch payload requires the real haxe.ValueException.value field; selected type: unresolved:Any",
+      "bead": "haxe_ocaml-hg8m2"
+    },
+    "file:test/m14_source_field_initializer_native_test.hxml": {
+      "reason": "Fails on origin/main: managed initializer failed for Main#static#shared: managed value requires explicit typed expression lowering for ELoweredControl",
+      "bead": "haxe_ocaml-rm28v"
+    },
+    "file:test/m14_source_try_control_test.hxml": {
+      "reason": "Fails on origin/main: managed function body Main#static:main()->primitive:Void#0: managed local read is absent from its executable catalog: Sys",
+      "bead": "haxe_ocaml-rm28v"
+    },
+    "file:test/m14_typedef_array_constructor_test.hxml": {
+      "reason": "Fails on origin/main: test/oracle/generic_array_alias_seed/Main.hx:1:18: Type not found : Array",
+      "bead": "haxe_ocaml-cwnu4"
+    },
+    "script:test:cpp-abstract-binary-operator-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-abstract-underlying-conversion-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-arrow-map-literal-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-callable-extern-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-constrained-generic-arity-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-constrained-generic-relation-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-dynamic-equality-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-empty-map-expected-type-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-enum-carrier-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-generic-array-local-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-generic-call-array-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-generic-constructor-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-int-div-int64-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-int-mod-int64-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-int-sub-int64-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-int64-add-int-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-int64-complement-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-int64-div-int-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-int64-equality-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-int64-mod-int-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-int64-mul-int-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-int64-sub-int-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-meta-carrier-erasure-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-string-index-of-exact-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:cpp-testjson-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:hxhx:build-bootstrap-ocaml-eval-hxml-smoke": {
+      "reason": "Heavy lane: builds hxhx itself; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:hxhx:cross-repository-heavy-run-lease": {
+      "reason": "Manual: needs --peer-root with a sibling Reflaxe checkout.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:hxhx:stage3-customization-toggle": {
+      "reason": "Heavy lane: builds hxhx itself; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:m14:call-method-conversion-native": {
+      "reason": "Fails on origin/main: native call conversion differs: first",
+      "bead": "haxe_ocaml-hg8m2"
+    },
+    "script:test:m14:cpp-empty-map-expected-type-native": {
+      "reason": "Fails on origin/main: Type not found : reflaxe.data.ClassFuncData",
+      "bead": "haxe_ocaml-d79fx"
+    },
+    "script:test:m14:cpp-generic-storage-oracle": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:m14:cpp-helper-render-bench": {
+      "reason": "Fails on origin/main: test/M14CppHelperRenderBenchIntegrationTest.hx:1158: characters 108-115 : Too many arguments",
+      "bead": "haxe_ocaml-d79fx"
+    },
+    "script:test:m14:cpp-managed-startup-order": {
+      "reason": "Fails on origin/main: source access permission must be consumed before backend projection",
+      "bead": "haxe_ocaml-d79fx"
+    },
+    "script:test:m14:cpp-native-backend-smoke:generated": {
+      "reason": "Fails on origin/main: Type not found : reflaxe.data.ClassFuncData",
+      "bead": "haxe_ocaml-d79fx"
+    },
+    "script:test:m14:cpp-static-startup-oracle": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:m14:declared-bound-call": {
+      "reason": "Fails on origin/main: .tmp/declared_bound_call_compound/Main.hx:1:217: Structural extension requires an anonymous type",
+      "bead": "haxe_ocaml-cwnu4"
+    },
+    "script:test:m14:declared-bound-call-native": {
+      "reason": "Fails on origin/main: .tmp/declared_bound_call_compound/Main.hx:1:217: Structural extension requires an anonymous type",
+      "bead": "haxe_ocaml-cwnu4"
+    },
+    "script:test:m14:enum-switch-coverage": {
+      "reason": "Fails on origin/main: Neko typed program cannot find class Array",
+      "bead": "haxe_ocaml-jfe4a"
+    },
+    "script:test:m14:heavy": {
+      "reason": "Heavy lane: builds hxhx itself; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:m14:hih-complete-numeric-literals:current-source": {
+      "reason": "Heavy lane: builds hxhx itself; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:m14:hih-generic-function-decl": {
+      "reason": "Fails on origin/main: intersection constraints stay separate: expected 2, got 1",
+      "bead": "haxe_ocaml-cwnu4"
+    },
+    "script:test:m14:js-target-core-node-buffer-extern": {
+      "reason": "Fails on origin/main: typed body opaque expression can hide operator or mutation semantics in Buffer#instance:new#0: [js-native:unsupported_expr] kind=EUnsupported detail=6",
+      "bead": "haxe_ocaml-kgt5c"
+    },
+    "script:test:m14:js-target-core-node-console-extern": {
+      "reason": "Fails on origin/main: typed body opaque expression can hide operator or mutation semantics in Console#instance:new#0: [js-native:unsupported_expr] kind=EUnsupported detail=6",
+      "bead": "haxe_ocaml-kgt5c"
+    },
+    "script:test:m14:js-target-core-node-url-extern": {
+      "reason": "Fails on origin/main: typed body opaque expression can hide operator or mutation semantics in URL#instance:new#0: [js-native:unsupported_expr] kind=EUnsupported detail=6",
+      "bead": "haxe_ocaml-kgt5c"
+    },
+    "script:test:m14:js-target-core-systools": {
+      "reason": "Fails on origin/main: - operation helper static lambda field should parse as a lambda initializer",
+      "bead": "haxe_ocaml-kgt5c"
+    },
+    "script:test:m14:neko-native-backend-smoke": {
+      "reason": "Fails on origin/main: field access on null",
+      "bead": "haxe_ocaml-jfe4a"
+    },
+    "script:test:m14:neko-startup-try": {
+      "reason": "Fails on origin/main: test/M14RepeatedConditionTest.hx:62: characters 49-52 : Class<M14NekoClosureControlTest> has no field run",
+      "bead": "haxe_ocaml-d79fx"
+    },
+    "script:test:m14:runtime-macro-session-call": {
+      "reason": "Fails on origin/main: compile failed: OCaml runtime module HxHxMacroModuleDynlink is tooling-only and cannot enter an application runtime.",
+      "bead": "haxe_ocaml-hg8m2"
+    },
+    "script:test:m14:runtime-stage3-cli-macro": {
+      "reason": "Fails on origin/main: stage3 php source compile failed: haxe/io/Input.hx:74:5: Array<Int> has no field set",
+      "bead": "haxe_ocaml-cwnu4"
+    },
+    "script:test:m14:source-native-backend-smoke": {
+      "reason": "Fails on origin/main: native allocation requires a selected nominal provider",
+      "bead": "haxe_ocaml-uwn1o"
+    },
+    "script:test:m14:source-native-backend-smoke:language": {
+      "reason": "Fails on origin/main: inference cannot publish an incomplete concrete type in Main#static:main#0: unknown",
+      "bead": "haxe_ocaml-uwn1o"
+    },
+    "script:test:m14:source-native-backend-smoke:objects": {
+      "reason": "Fails on origin/main: Python initializer requires its exact class and field declaration",
+      "bead": "haxe_ocaml-uwn1o"
+    },
+    "script:test:m14:source-native-backend-smoke:platforms": {
+      "reason": "Fails on origin/main: Java array switch statements should lower array length guards (missing `if (args != null && args.length == 1` in `// Generated by hxhx Stage3 Java source backend MVP",
+      "bead": "haxe_ocaml-uwn1o"
+    },
+    "script:test:m14:source-native-backend-smoke:runtime": {
+      "reason": "Fails on origin/main: Main.hx:20:5: No compatible method signature for mapMe",
+      "bead": "haxe_ocaml-uwn1o"
+    },
+    "script:test:m14:source-native-backend-smoke:targets": {
+      "reason": "Fails on origin/main: native allocation requires a selected nominal provider",
+      "bead": "haxe_ocaml-uwn1o"
+    },
+    "script:test:m14:stage3-constructor-execution": {
+      "reason": "Fails: ocamlopt reports Unbound module Haxe_Rest for a constructor that iterates its rest argument.",
+      "bead": "haxe_ocaml-e4qfo"
+    },
+    "script:test:m14:stage3-datetools-duration-stub": {
+      "reason": "Fails: typing DateTools alone cannot materialize an unresolved operand in DateTools.__format_get.",
+      "bead": "haxe_ocaml-ubybo"
+    },
+    "script:test:m14:stage3-float-call-arg": {
+      "reason": "Fails: typing DateTools alone cannot materialize an unresolved operand in DateTools.__format_get.",
+      "bead": "haxe_ocaml-ubybo"
+    },
+    "script:test:m14:stage3-import-root-resolution": {
+      "reason": "Fails on origin/main: No compatible method signature for check (Class<Main> passed for Class<Dynamic>).",
+      "bead": "haxe_ocaml-ofyi5"
+    },
+    "script:test:m14:stage3-java-noemit-diagnostics": {
+      "reason": "Fails on origin/main: the parser rejects abstract class (Expected abstract name).",
+      "bead": "haxe_ocaml-aqaao"
+    },
+    "script:test:m14:stage3-nested-patterns": {
+      "reason": "Fails on origin/main: an unsupported switch guard is silently discarded. Owned by another agent.",
+      "bead": "haxe_ocaml-efsn2"
+    },
+    "script:test:m14:stage3-or-pattern-binding": {
+      "reason": "Fails on origin/main: OCaml named pattern requires its exact selected declaration.",
+      "bead": "haxe_ocaml-5g27b"
+    },
+    "script:test:m14:stage3-switch-case-if-else": {
+      "reason": "Fails on origin/main: the parser drops the expression-if else branch inside a switch case. Owned by another agent.",
+      "bead": "haxe_ocaml-5ohhk"
+    },
+    "script:test:m14:stage3-sys-stdio-intrinsics": {
+      "reason": "Fails on origin/main: native OCaml target adapter does not support runtime type operands in haxe.Int64.isInt64.",
+      "bead": "haxe_ocaml-lw12o"
+    },
+    "script:test:m14:structural-field-read-typing": {
+      "reason": "Fails on origin/main: structural field observer failed: true",
+      "bead": "haxe_ocaml-cwnu4"
+    },
+    "script:test:m14:untyped-call-control": {
+      "reason": "Fails on origin/main: unsupported OCaml value input carrier: unknown",
+      "bead": "haxe_ocaml-hg8m2"
+    },
+    "script:test:reflaxe-ocaml:haxe-matrix": {
+      "reason": "Manual: runs several Haxe versions; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:reflaxe-ocaml:nullable-anonymous-return-review": {
+      "reason": "Review tool: reads lowering reports from an earlier run; alone it finds none.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:self-hosting-smoke": {
+      "reason": "Heavy lane: builds hxhx itself; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:serializer-oracle-seed": {
+      "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:upstream:display-stage3-emit-run-smoke": {
+      "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:upstream:display-stage3-emit-stress": {
+      "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:upstream:runci-macro-stage1": {
+      "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:upstream:runci-macro-stage3-emit-runner": {
+      "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:upstream:runci-macro-stage3-typeonly": {
+      "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:upstream:stage2": {
+      "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:upstream:unit-macro-ocaml": {
+      "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:upstream:unit-macro-stage1": {
+      "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:upstream:unit-macro-stage3-typeonly": {
+      "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    }
+  }
+}
