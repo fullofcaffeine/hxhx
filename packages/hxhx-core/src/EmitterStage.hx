@@ -3101,8 +3101,6 @@ class EmitterStage {
 					+ ") ("
 					+ digitsOcaml
 					+ ")";
-			case ECall(EField(EIdent("StringTools"), "replace"), [_s, _sub, _by]):
-				return escapeOcamlString("");
 			case ECall(EField(EIdent("Std"), "string"), [arg]):
 				return backend.ocaml.Stage3OcamlStringConversion.convert(callArgumentType(arg),
 					exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
