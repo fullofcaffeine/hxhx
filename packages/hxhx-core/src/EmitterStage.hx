@@ -2190,8 +2190,8 @@ class EmitterStage {
 				stage3IsInt64Expr(inner, tyByIdent);
 			// Arithmetic unwraps a nullable Int operand, so its result is a concrete Int.
 			case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%"): (stage3IsIntExpr(a, tyByIdent)
-					|| stage3NullableNumericLocal(a) == "primitive:Int") && (stage3IsIntExpr(b, tyByIdent)
-					|| stage3NullableNumericLocal(b) == "primitive:Int");
+					|| stage3NullableNumericOperand(a) == "primitive:Int") && (stage3IsIntExpr(b, tyByIdent)
+					|| stage3NullableNumericOperand(b) == "primitive:Int");
 			case ETernary(_cond, thenExpr, elseExpr): stage3IsIntExpr(thenExpr, tyByIdent) && stage3IsIntExpr(elseExpr, tyByIdent);
 			case _:
 				false;
@@ -2244,8 +2244,8 @@ class EmitterStage {
 			case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*"):
 				stage3IsFloatExpr(a, tyByIdent, callSigByCallee, staticImportByIdent)
 				|| stage3IsFloatExpr(b, tyByIdent, callSigByCallee, staticImportByIdent)
-				|| stage3NullableNumericLocal(a) == "primitive:Float"
-				|| stage3NullableNumericLocal(b) == "primitive:Float";
+				|| stage3NullableNumericOperand(a) == "primitive:Float"
+				|| stage3NullableNumericOperand(b) == "primitive:Float";
 			case ETernary(_cond, thenExpr, elseExpr): stage3IsFloatExpr(thenExpr, tyByIdent, callSigByCallee,
 					staticImportByIdent) && stage3IsFloatExpr(elseExpr, tyByIdent, callSigByCallee, staticImportByIdent);
 			case _:
@@ -2484,19 +2484,41 @@ class EmitterStage {
 	}
 
 	/**
-		Return the inner primitive key ("primitive:Int" or "primitive:Float") when
-		the expression reads an exact local whose declared type is nullable. Native
-		arithmetic unwraps such operands through the carrier contract; other
-		expression shapes keep their existing numeric classification.
+		The semantic key of the typer's recorded type for this exact operand, after
+		expanding typedefs, or null without a fact. Arithmetic uses it next to the
+		older shape-based checks, so an operand such as `this` inside an Int
+		abstract still selects Int operators when its spelling reveals nothing.
 	 */
-	static function stage3NullableNumericLocal(expr:HxExpr):Null<String> {
+	static function stage3ExactPrimitiveKey(expr:HxExpr):Null<String> {
+		final type = stage3ExactExprType(expr);
+		return type == null ? null : TyAliasExpansion.reveal(type).getSemanticKey();
+	}
+
+	/** The generated module and function being emitted, for emit-time error messages. */
+	static function stage3EmitLocation():String {
+		return (currentOcamlModuleName == null ? "<module>" : currentOcamlModuleName) + "." + (currentFunctionName == null ? "<init>" : currentFunctionName);
+	}
+
+	/**
+		Return the inner primitive key ("primitive:Int" or "primitive:Float") when
+		the typer recorded a nullable Int or Float type for this exact operand.
+
+		The operand can be any expression with a typed fact: a local, a field
+		read, an index, or a call result such as `s.charCodeAt(i)` or
+		`map.get(key)`. Each of these produces the nullable carrier, so native
+		arithmetic and ordered comparisons unwrap it through the checked carrier
+		contract (a null raises a catchable error). Earlier only locals were
+		recognized here, so `s.charCodeAt(0) + s.charCodeAt(1)` matched no
+		numeric case and became the `(Obj.magic 0)` placeholder.
+	 */
+	static function stage3NullableNumericOperand(expr:HxExpr):Null<String> {
 		return switch (expr) {
-			case EParenthesized(inner, _): stage3NullableNumericLocal(inner);
-			case EIdent(name): backend.ocaml.Stage3OcamlNullablePrimitive.numericInner(exactFunctionLocalType(name));
-			// A nullable local's compound value is the stored carrier.
+			case EParenthesized(inner, _): stage3NullableNumericOperand(inner);
+			// A nullable local's compound value is the stored carrier; other
+			// operators produce concrete values and have no recorded type here.
 			case EBinop(_, _, _): backend.ocaml.Stage3OcamlNullablePrimitive.numericInner(localCompoundValueType(expr));
 			case _:
-				null;
+				backend.ocaml.Stage3OcamlNullablePrimitive.numericInner(stage3ExactExprType(expr));
 		}
 	}
 
@@ -4571,7 +4593,7 @@ class EmitterStage {
 				if (op == HxUnaryOperator.Increment || op == HxUnaryOperator.Decrement) {
 					switch (expr) {
 						case EIdent(name) if (isMutableLocalRefIdent(name)):
-							final carrier = stage3NullableNumericLocal(expr);
+							final carrier = stage3NullableNumericOperand(expr);
 							final exact = exactFunctionLocalType(name);
 							final kind = if (stage3IsInt64Expr(expr, tyByIdentRaw)) {
 								EmitterNumericUpdate.EmitterNumericUpdateKind.Int64Step;
@@ -4682,8 +4704,8 @@ class EmitterStage {
 				final rb = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 				// Nullable Int/Float locals carry Obj.t; arithmetic reads them through the
 				// checked unwrap while equality keeps the carrier (see Stage3OcamlNullablePrimitive).
-				final nullableLeft = stage3NullableNumericLocal(a);
-				final nullableRight = stage3NullableNumericLocal(b);
+				final nullableLeft = stage3NullableNumericOperand(a);
+				final nullableRight = stage3NullableNumericOperand(b);
 				final laInt = nullableLeft == "primitive:Int" ? backend.ocaml.Stage3OcamlNullablePrimitive.unwrap(nullableLeft, la) : la;
 				final rbInt = nullableRight == "primitive:Int" ? backend.ocaml.Stage3OcamlNullablePrimitive.unwrap(nullableRight, rb) : rb;
 				final nullableEquality = (equality == null || (op != "==" && op != "!=")) ? null : backend.ocaml.Stage3OcamlNullablePrimitive.equality(equality,
@@ -4710,8 +4732,8 @@ class EmitterStage {
 						case EUnop(op, fixity, inner) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
 							// Promote negative int literals/expressions to float too.
 							"(-.(" + exprToOcamlAsFloat(inner) + "))";
-						case EIdent(_) | EParenthesized(_, _) | EBinop(_, _, _) if (stage3NullableNumericLocal(e) != null):
-							final inner = stage3NullableNumericLocal(e);
+						case _ if (stage3NullableNumericOperand(e) != null):
+							final inner = stage3NullableNumericOperand(e);
 							final unwrapped = backend.ocaml.Stage3OcamlNullablePrimitive.unwrap(inner,
 								exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
 							inner == "primitive:Int" ? "float_of_int (" + unwrapped + ")" : unwrapped;
@@ -4863,11 +4885,17 @@ class EmitterStage {
 							// - Otherwise, collapse to bring-up poison to avoid type errors for abstract/operator-
 							//   overloaded cases (e.g. upstream Int64 tests).
 							final aIsF = stage3IsFloatExpr(a, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)
-								|| nullableLeft == "primitive:Float";
+								|| nullableLeft == "primitive:Float"
+								|| stage3ExactPrimitiveKey(a) == "primitive:Float";
 							final bIsF = stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)
-								|| nullableRight == "primitive:Float";
-							final aIsI = stage3IsIntExpr(a, tyByIdentRaw) || nullableLeft == "primitive:Int";
-							final bIsI = stage3IsIntExpr(b, tyByIdentRaw) || nullableRight == "primitive:Int";
+								|| nullableRight == "primitive:Float"
+								|| stage3ExactPrimitiveKey(b) == "primitive:Float";
+							final aIsI = stage3IsIntExpr(a, tyByIdentRaw)
+								|| nullableLeft == "primitive:Int"
+								|| stage3ExactPrimitiveKey(a) == "primitive:Int";
+							final bIsI = stage3IsIntExpr(b, tyByIdentRaw)
+								|| nullableRight == "primitive:Int"
+								|| stage3ExactPrimitiveKey(b) == "primitive:Int";
 							final hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI;
 							final allowMetalFallback = metalNumeric
 								&& hasKnownNumericSide
@@ -4876,7 +4904,9 @@ class EmitterStage {
 							if (allowMetalFallback && portableAutoMetalizedRegion && !isMetalProfileActive())
 								markPortableAutoMetalizedLoweringUse("numeric_division_fallback");
 							final allowNumericDivision = (aIsF || bIsF) || (aIsI && bIsI) || allowMetalFallback;
-							allowNumericDivision ? "((" + exprToOcamlAsFloat(a) + ") /. (" + exprToOcamlAsFloat(b) + "))" : "(Obj.magic 0)";
+							allowNumericDivision ? "((" + exprToOcamlAsFloat(a) + ") /. (" + exprToOcamlAsFloat(b) +
+							"))" : backend.ocaml.Stage3OcamlArithmeticOperands.unclassified(stage3EmitLocation(), op, stage3ExactExprType(a),
+									stage3ExactExprType(b));
 						}
 					case "+" | "-" | "*" | "%":
 						if (stage3IsInt64Expr(a, tyByIdentRaw) || stage3IsInt64Expr(b, tyByIdentRaw)) {
@@ -4894,11 +4924,17 @@ class EmitterStage {
 							// - if both sides look like ints, use OCaml int operators,
 							// - otherwise, collapse to bring-up poison to avoid type errors.
 							final aIsF = stage3IsFloatExpr(a, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)
-								|| nullableLeft == "primitive:Float";
+								|| nullableLeft == "primitive:Float"
+								|| stage3ExactPrimitiveKey(a) == "primitive:Float";
 							final bIsF = stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)
-								|| nullableRight == "primitive:Float";
-							final aIsI = stage3IsIntExpr(a, tyByIdentRaw) || nullableLeft == "primitive:Int";
-							final bIsI = stage3IsIntExpr(b, tyByIdentRaw) || nullableRight == "primitive:Int";
+								|| nullableRight == "primitive:Float"
+								|| stage3ExactPrimitiveKey(b) == "primitive:Float";
+							final aIsI = stage3IsIntExpr(a, tyByIdentRaw)
+								|| nullableLeft == "primitive:Int"
+								|| stage3ExactPrimitiveKey(a) == "primitive:Int";
+							final bIsI = stage3IsIntExpr(b, tyByIdentRaw)
+								|| nullableRight == "primitive:Int"
+								|| stage3ExactPrimitiveKey(b) == "primitive:Int";
 							final hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI;
 							// Portable lane parity: when one side is confidently numeric and the other side
 							// is an expression the current heuristic cannot classify, prefer numeric lowering
@@ -4921,7 +4957,8 @@ class EmitterStage {
 								} else if (allowNumericFallback) {
 									intArithmetic("%");
 								} else {
-									"(Obj.magic 0)";
+									backend.ocaml.Stage3OcamlArithmeticOperands.unclassified(stage3EmitLocation(), op, stage3ExactExprType(a),
+										stage3ExactExprType(b));
 								}
 							} else if ((aIsF || bIsF) && canFloat) {
 								final fop = switch (op) {
@@ -4940,7 +4977,8 @@ class EmitterStage {
 							} else if (allowNumericFallback) {
 								intArithmetic(op);
 							} else {
-								"(Obj.magic 0)";
+								backend.ocaml.Stage3OcamlArithmeticOperands.unclassified(stage3EmitLocation(), op, stage3ExactExprType(a),
+									stage3ExactExprType(b));
 							}
 						}
 					case "==" | "!=" if (nullableEquality != null):
