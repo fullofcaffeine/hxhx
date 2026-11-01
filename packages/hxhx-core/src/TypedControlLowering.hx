@@ -671,6 +671,14 @@ class TypedControlLowering {
 		Haxe saves array addresses before a control-valued right side, but evaluates
 		a field receiver after that side's statements. Preserve this measured order;
 		never materialize the stored field/element value as the write destination.
+
+		`this` is a destination only where the typer admitted an assignment to it:
+		an abstract constructor (`this = if (n > 0) n else -n`) or an inline
+		abstract method. Like a local, it has no receiver or index to evaluate, so
+		the lowered tree runs the right side's statements and then writes the
+		final value with one ordinary `this = value`. Each target renders that
+		write through its own `this` storage; Stage3 uses the constructor's
+		mutable slot (`backend.ocaml.Stage3OcamlAbstractConstructors`).
 	 */
 	function retainDestination(destination:TypedExpr, steps:Array<TypedExpr>):TypedExpr {
 		final children = destination.getExpressions();
@@ -679,13 +687,19 @@ class TypedControlLowering {
 				return destination;
 			case FieldRead:
 				return destination;
+			case ThisValue if (children.length == 0):
+				return destination;
 			case ArrayAccess:
 				final retained = new Array<TypedExpr>();
 				for (operand in children)
 					retained.push(retainAddressOperand(operand, steps));
 				return destination.withExpressions(retained);
 			case _:
-				throw "control-valued assignment requires a supported exact destination";
+				throw "control-valued assignment requires a supported exact destination in "
+					+ owner
+					+ " ("
+					+ Std.string(destination.getTag())
+					+ ")";
 		}
 	}
 

@@ -23,6 +23,12 @@ import sys.io.File;
 	  compound assignment on Int, Float, and String backing types, and written
 	  by a closure. A method call on the new value inside the constructor, a
 	  static field initializer, and methods and a static factory use the value.
+	- `stage3_abstract_this_control` assigns `this` from control flow: `if`,
+	  a ternary, `switch`, an array comprehension, nested control, `try`, a
+	  closure, and compound assignments with a control-valued right side, on
+	  Int, String, Array, and Float backing types. Control lowering used to
+	  reject `this` as a destination with "control-valued assignment requires
+	  a supported exact destination".
 	- The native executable must print exactly what upstream Haxe 4.3.7 prints.
 	- A constructor that never assigns `this`, and `this = value` in a
 	  non-inline method, are rejected by upstream Haxe. Stage3 must reject
@@ -41,17 +47,17 @@ class M14Stage3AbstractThisConstructorTest {
 		FileSystem.deleteFile(path);
 	}
 
-	static function compareWithUpstream(source:String):Void {
+	static function compareWithUpstream(source:String, marker:String):Void {
 		final path = source + "/Main.hx";
 		final expected = File.getContent(source + "/expected.stdout");
 		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", source, "--run", "Main"], expected: expected});
-		final outDir = ".tmp/m14_stage3_abstract_this_constructor";
+		final outDir = ".tmp/m14_stage3_abstract_this_" + marker.toLowerCase();
 		deleteRecursive(outDir);
 		final program = M14Stage3RuntimeFixture.prepareProgram({source: File.getContent(path), path: path, root: source});
 		final executable = EmitterStage.emitToDir(new MacroExpandedProgram(program, false), outDir);
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		deleteRecursive(outDir);
-		Sys.println("M14_STAGE3_ABSTRACT_THIS_CONSTRUCTOR_WHOLE_FILE:PASS");
+		Sys.println("M14_STAGE3_ABSTRACT_THIS_" + marker + ":PASS");
 	}
 
 	/** Upstream's diagnostic for a rejected program, or null when it compiles. */
@@ -97,6 +103,7 @@ class M14Stage3AbstractThisConstructorTest {
 			'abstract Mark(Int) {\n\tpublic function new()\n\t\tthis = 1;\n\n\tpublic function reset():Int {\n\t\tthis = 5;\n\t\treturn this;\n\t}\n}\n' +
 			'class Main {\n\tstatic function main() {\n\t\tSys.println(new Mark().reset());\n\t}\n}\n',
 			"Abstract 'this' value can only be modified inside an inline function", "assigns this outside an abstract constructor");
-		compareWithUpstream("test/fixtures/stage3_abstract_this_constructor");
+		compareWithUpstream("test/fixtures/stage3_abstract_this_constructor", "CONSTRUCTOR_WHOLE_FILE");
+		compareWithUpstream("test/fixtures/stage3_abstract_this_control", "CONTROL_WHOLE_FILE");
 	}
 }
