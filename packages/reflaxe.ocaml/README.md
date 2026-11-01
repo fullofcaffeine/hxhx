@@ -201,6 +201,24 @@ deliberately does not claim enum-key maps, structural or type-parameter keys,
 or arbitrary user implementations of `IMap`; those need a typed interface
 conversion and dispatch contract instead of the `HxMap` carrier.
 
+Map methods also work on a value whose type is `Null<Map<K,V>>`, such as a
+lazily filled field:
+
+```haxe
+var names:Null<Map<String, String>> = null;
+function name(key:String) return names.get(key);
+```
+
+The generated code checks the value for null once, before the call. A present
+Map behaves normally. A null Map throws a catchable `Null Access` error, as
+`haxe --interp` does. This covers class and anonymous-structure fields, static
+fields, and results of methods declared to return `Null<Map<K,V>>`. One shape
+is still rejected: a nullable Map stored in a variable typed
+`haxe.Constraints.IMap<K,V>`, when the code also uses that variable for
+anything other than direct method calls (for example, `view == null`). The
+compiler reports `[ocaml-imap-interface:nullable-local-unsupported]` at that
+variable. Check the Map for null first, or keep the variable typed as `Map`.
+
 The same report inventories mutable static fields
 before code generation, including where each OCaml `ref` cell is declared and
 where its Haxe initializer runs. It also records direct dependencies between

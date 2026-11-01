@@ -1,0 +1,13 @@
+emptyGuard=no-table
+nullField=caught
+nullFieldSet=caught
+field=gap
+guard=found:gap
+exists=true removed=true after=false nameKeys=a.b,c.d count=20 countHas=false countRemoved=true countValues=10,20 raw=7 rawRemoved=true rawKeys=x,y
+call=four
+nullCall=caught
+local=five true
+anon=3
+genericNull=caught
+generic=1 2 true true 2
+convertNull=true convertMap=false

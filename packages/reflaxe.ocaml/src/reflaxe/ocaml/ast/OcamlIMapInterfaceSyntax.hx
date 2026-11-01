@@ -280,7 +280,28 @@ class OcamlIMapInterfaceSyntax {
 		final record = OcamlExpr.EAnnot(OcamlExpr.ERecord(fields), OcamlTypeExpr.TIdent("Haxe_Constraints.imap_t"));
 		final adapter = OcamlExpr.EFun([OcamlPat.PVar(receiverName)], OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [record]));
 		final recursive = materialization.operations.indexOf(OcamlStandardIMapOperation.Copy) >= 0;
-		return OcamlExpr.ELet(adapterName, adapter, OcamlExpr.EApp(OcamlExpr.EIdent(adapterName), [services.buildExpression(value)]), recursive);
+		final decision = materialization.decision;
+		if (!OcamlIMapInterfaceContract.hasNullableStandardSource(decision))
+			return OcamlExpr.ELet(adapterName, adapter, OcamlExpr.EApp(OcamlExpr.EIdent(adapterName), [services.buildExpression(value)]), recursive);
+		// A `Null<Map<K,V>>` source is an `Obj.t` holding the map or the Haxe null
+		// sentinel. Evaluate it once and test it before building the record. Null
+		// either stays null (the IMap carrier is also `Obj.t`) or throws the same
+		// catchable `Null Access` error as a nullable static Map receiver.
+		final sourceName = services.freshName("nullable_imap_source");
+		final source = OcamlExpr.EIdent(sourceName);
+		final isNull = OcamlExpr.EApp(runtimeIdentifier(decision, "check-null", "HxRuntime.is_null", runtimeAuthority, runtimeReferences), [source]);
+		final whenNull = OcamlIMapInterfaceContract.throwsOnNullSource(decision) ? OcamlExpr.EApp(runtimeIdentifier(decision, "throw-null-access",
+			"HxRuntime.hx_throw_typed", runtimeAuthority, runtimeReferences), [
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EConst(OcamlConst.CString("Null Access"))]),
+				OcamlExpr.EList([
+					OcamlExpr.EConst(OcamlConst.CString("String")),
+					OcamlExpr.EConst(OcamlConst.CString("Dynamic"))
+				])
+			]) : source;
+		final converted = OcamlExpr.ELet(adapterName, adapter,
+			OcamlExpr.EApp(OcamlExpr.EIdent(adapterName), [OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [source])]), recursive);
+		return OcamlExpr.ELet(sourceName, OcamlExpr.EAnnot(services.buildExpression(value), OcamlTypeExpr.TIdent("Obj.t")),
+			OcamlExpr.EIf(isNull, whenNull, converted), false);
 	}
 
 	/** Returns the typed source arguments for one already-admitted operation. */
