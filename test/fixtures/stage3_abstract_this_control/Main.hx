@@ -139,6 +139,49 @@ abstract Late(Int) {
 		return this;
 }
 
+/** The right side reads the value assigned to `this` so far. */
+abstract Grow(Int) {
+	public function new(n:Int, c:Bool) {
+		this = n;
+		this = if (c) this + 1 else this;
+	}
+
+	public function get():Int
+		return this;
+}
+
+/** A compound update reads `this` before its right side writes `this`, and writes once at the end. */
+abstract Rewrite(Int) {
+	public function new(c:Bool) {
+		this = 10;
+		this += if (c) {
+			this = 100;
+			1;
+		} else 2;
+	}
+
+	public function get():Int
+		return this;
+}
+
+/** Control-valued `this` writes used as values. */
+abstract Stored(Int) {
+	public function new(c:Bool) {
+		final stored = (this = if (c) 3 else 4);
+		Sys.println("stored " + stored);
+		final again = (this += switch c {
+			case true: 10;
+			case false: 20;
+		});
+		Sys.println("again " + again);
+		final steps = [for (i in 0...2) (this = if (c) this + i else this - i)];
+		Sys.println("steps " + steps.join(","));
+	}
+
+	public function get():Int
+		return this;
+}
+
 class Main {
 	static function main() {
 		Sys.println(new Pick(-4).get());
@@ -171,5 +214,11 @@ class Main {
 		Sys.println(new Safe("").get());
 		Sys.println(new Late(5).get());
 		Sys.println(new Late(-5).get());
+		Sys.println(new Grow(4, true).get());
+		Sys.println(new Grow(4, false).get());
+		Sys.println(new Rewrite(true).get());
+		Sys.println(new Rewrite(false).get());
+		Sys.println(new Stored(true).get());
+		Sys.println(new Stored(false).get());
 	}
 }
