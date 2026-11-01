@@ -44,7 +44,7 @@ class M14Stage3DateToolsDurationStubIntegrationTest {
 
 		var thrown:Dynamic = null;
 		try {
-			final stdDateToolsPath = haxe.io.Path.normalize('vendor/haxe/std/DateTools.hx');
+			final stdDateToolsPath = haxe.io.Path.join([M14Stage0StdPath.locate(), 'DateTools.hx']);
 			final parsedMain = ParserStage.parse(mainSrc, mainPath);
 			final parsedDateTools = ParserStage.parse(File.getContent(stdDateToolsPath), stdDateToolsPath);
 			final typedMain = TyperStage.typeModule(parsedMain);

@@ -34,30 +34,6 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 	}
 
 	/**
-		Returns the standard-library root for the exact stage0 Haxe version used as
-		the behavior oracle. CI installs that compiler through Lix, while a local
-		developer can select another complete installation with HAXE_STD_PATH.
-	**/
-	static function requiredStage0StdPath(version:String):String {
-		final configured = Sys.getEnv("HAXE_STD_PATH");
-		if (configured != null && configured != "" && FileSystem.isDirectory(configured))
-			return configured;
-
-		final home = Sys.getEnv("HOME");
-		if (home != null && home != "") {
-			final lixManaged = haxe.io.Path.join([home, "haxe", "versions", version, "std"]);
-			if (FileSystem.isDirectory(lixManaged))
-				return lixManaged;
-		}
-
-		final localOracle = haxe.io.Path.normalize("vendor/haxe/std");
-		if (FileSystem.isDirectory(localOracle))
-			return localOracle;
-
-		throw 'Could not locate the Haxe $version standard library. Set HAXE_STD_PATH or install that version through Lix.';
-	}
-
-	/**
 		Keep DateTools and all its dependencies in the production OCaml typing context.
 		Raw source contains other targets' branches, and an isolated module lacks the
 		Date method declarations needed to prove that the inferred hour is an Int.
@@ -189,7 +165,7 @@ class M14HxhxStage3DynamicOperatorIntegrationTest {
 		assertTrue(versionCode == 0
 			&& StringTools.startsWith(trimmedHaxeVersion, "4.3.7"), "The Dynamic operator oracle requires Haxe 4.3.7: "
 			+ versionError);
-		final stage0StdPath = requiredStage0StdPath(trimmedHaxeVersion);
+		final stage0StdPath = M14Stage0StdPath.locate(trimmedHaxeVersion);
 		final oracleProcess = new sys.io.Process("haxe", ["-cp", sourceDir, "-main", "Main", "--interp"]);
 		final oracleStdout = oracleProcess.stdout.readAll().toString();
 		final oracleStderr = oracleProcess.stderr.readAll().toString();

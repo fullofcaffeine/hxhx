@@ -57,8 +57,9 @@ npm test
 `npm test` is the complete serialized regression inventory, not the command to
 rerun after every small edit. Core CI routes that inventory by change risk and
 then reports one `Tests` result that fails when any required check fails or is
-incomplete. The inventory has 177 named commands. Q2 target/compiler changes
+incomplete. The inventory has 286 named commands. Q2 target/compiler changes
 run compiler foundations, packaging, five focused groups, two dedicated Neko groups,
+three groups of tests that CI did not run before the reachability audit,
 macro-host integration, portable fixtures, and snapshots/examples, plus native/plugin smoke checks.
 Q3 high-risk, scheduled, manual, and release work also runs `hxhx-targets`,
 which treats the compiler as a large application. To reproduce a group locally:
@@ -88,6 +89,33 @@ The inventory guard compares this split with the original command list and
 rejects missing, duplicated, or reordered checks. New runner durations remain
 unmeasured until a complete hosted run finishes; every focused job keeps its
 40-minute limit.
+
+### Every test must be reachable from CI
+
+A test that CI never runs breaks without anyone noticing. `npm run
+guard:test-entry-reachability` lists every test entry point: each top-level
+`test/*.hxml` file, each `test:*` npm script, each `scripts/ci/*-test.js` file,
+and each portable fixture directory. It then follows references from the CI
+starting points: the `npm test` commands, and the scripts and files that the
+`.github/workflows/*.yml` jobs name. A reference is an `npm run <name>` call, a
+quoted script name, or a repository path such as `test/foo.hxml`. A script
+that only wraps files CI already runs counts as reachable.
+
+When you add a test, do one of these:
+
+- add its `npm run <script>` to the `npm test` aggregate and assign it to a
+  shard in `scripts/ci/core-test-shards.json`;
+- run it from another reachable script, runner, or `.hxml` file; or
+- if it must stay out of CI (for example, it needs a sibling checkout, hxcpp,
+  or a full upstream suite), list it in
+  `scripts/ci/test-entry-reachability.json` with a reason and an owning Bead.
+  A file that only a listed script runs, such as its `.hxml` file, shares that
+  entry and needs no entry of its own.
+
+The guard also fails when a listed test becomes reachable, when a listed test
+no longer exists, and when an npm script runs a `test/` or `scripts/` file that
+does not exist. Run `node scripts/ci/test-entry-reachability.js
+--list-unreachable` to print the current unreachable entries.
 
 For the ordinary inner loop, prefer the narrow `test:*` or `guard:*` command
 that owns the behavior you changed, then broaden to its shard and finally to

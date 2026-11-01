@@ -150,7 +150,7 @@ function checkRuntimeTypeCoverage(packageJson, plan, expected) {
 function main() {
   checkCommandFailureReporting()
   const plan = loadPlan(repoRoot)
-  assert(plan.aggregateCommands.length === 201, `expected 201 npm test commands, found ${plan.aggregateCommands.length}`)
+  assert(plan.aggregateCommands.length === 286, `expected 286 npm test commands, found ${plan.aggregateCommands.length}`)
 
   const expectedAggregateJobs = [
     'guards',
@@ -179,6 +179,9 @@ function main() {
     'compiler-focused-4': 7,
     'compiler-focused-cpp-closure-storage': 2,
     'compiler-focused-5': 23,
+    'compiler-focused-audit-1': 26,
+    'compiler-focused-audit-2': 33,
+    'compiler-focused-audit-3': 26,
     'macro-host-integration': 3,
     portable: 1,
     'target-packages': 2,
@@ -196,6 +199,9 @@ function main() {
     'compiler-focused-4': 'Q2',
     'compiler-focused-cpp-closure-storage': 'Q2',
     'compiler-focused-5': 'Q2',
+    'compiler-focused-audit-1': 'Q2',
+    'compiler-focused-audit-2': 'Q2',
+    'compiler-focused-audit-3': 'Q2',
     'macro-host-integration': 'Q2',
     portable: 'Q2',
     'target-packages': 'Q2',
@@ -576,6 +582,9 @@ function main() {
     ['compiler-focused-4', 'C++ arithmetic and control regressions'],
     ['compiler-focused-cpp-closure-storage', 'C++ closures and inherited storage'],
     ['compiler-focused-5', 'C++ runtime type and Map regressions'],
+    ['compiler-focused-audit-1', 'Regressions found outside CI (1/3)'],
+    ['compiler-focused-audit-2', 'Regressions found outside CI (2/3)'],
+    ['compiler-focused-audit-3', 'Regressions found outside CI (3/3)'],
     ['macro-host-integration', 'Macro-host integration'],
     ['target-packages', 'Snapshots and examples']
   ]

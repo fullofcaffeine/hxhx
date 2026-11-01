@@ -20,7 +20,7 @@ class M14Stage3ConstructorExecutionTest {
 				occurrence: method.requireConstructor(expression),
 				currentModule: "Main",
 				names: new backend.ocaml.Stage3OcamlLocalNames(method.getLocalCatalog(), false, value -> value),
-				emitArgument: (_, _, _) -> "1",
+				emitArgument: (_, _, _, _) -> "1",
 				quote: value -> '"' + value + '"'
 			});
 		}
