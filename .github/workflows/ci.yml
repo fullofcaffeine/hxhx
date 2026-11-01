@@ -670,6 +670,17 @@ jobs:
           - shard: compiler-focused-5
             label: C++ runtime type and Map regressions
             timeout_minutes: 40
+          # Tests that no CI job ran before haxe_ocaml-k86ww. Durations are not
+          # yet measured on hosted runners; a busy local machine took about 77 minutes.
+          - shard: compiler-focused-audit-1
+            label: Regressions found outside CI (1/3)
+            timeout_minutes: 40
+          - shard: compiler-focused-audit-2
+            label: Regressions found outside CI (2/3)
+            timeout_minutes: 40
+          - shard: compiler-focused-audit-3
+            label: Regressions found outside CI (3/3)
+            timeout_minutes: 40
           - shard: macro-host-integration
             label: Macro-host integration
             timeout_minutes: 40
