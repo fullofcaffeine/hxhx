@@ -1,7 +1,8 @@
 # Pass authored syntax to project expression macros
 
 Status: approved plan (2026-10-29); step 1 (in-process identity macro) implemented by `haxe_ocaml-9sj5p.3`; step 2
-(macro compilation context and plugin build and cache driver) implemented by `haxe_ocaml-9sj5p.4`.
+(macro compilation context and plugin build and cache driver) implemented by `haxe_ocaml-9sj5p.4`; step 3 (reification
+lowering) implemented by `haxe_ocaml-9sj5p.5`.
 Owners: `haxe_ocaml-9sj5p` and `haxe_ocaml-geafz`.
 
 ## What works now (after step 1)
@@ -112,10 +113,24 @@ after step 2.
 
 ### Prerequisites found by the review
 
-- Reification: `EmitterStage.exprToOcaml` handles `EMacroExpr` (a `macro ...` quote) at
-  `packages/hxhx-core/src/EmitterStage.hx:3381` only by rejecting lost source groups; it has no
-  lowering, so a plugin whose macro body uses `macro ...` cannot be emitted. Step 3 owns it. The
-  identity fixture therefore builds its result without reification.
+- Reification: before step 3, `EmitterStage.exprToOcaml` handled `EMacroExpr` (a `macro ...`
+  quote) only by rejecting lost source groups; it had no lowering, so a plugin whose macro body
+  used `macro ...` could not be emitted, and the identity fixture built its result without
+  reification. Step 3 lowers every quotation in the typer (`MacroReificationLowering`,
+  `MacroReificationSyntax`): the quoted syntax is exported with `MacroSyntaxExport`, the same
+  mapping macro arguments use, and rewritten as ordinary syntax that constructs the
+  `haxe.macro.Expr` value, so no backend meets a quote. Splices `$e{}`/`$x`, `$i{}`, `$a{}`,
+  `$b{}`, `$v{}` (Int, Float, Bool, String, `Null` of those, and arrays of the four scalars through
+  `hxhxmacrohost.MacroReificationValues`, decided by the payload's static type), `o.$name`, `new $tp()`, `@:pos(p)`, `untyped`, and `macro :Type` are covered;
+  `$p{}`, other expression metadata, `macro class`, switch and comprehensions inside quotes,
+  and `$v{}` on structures or enum values are explicit errors (`haxe_ocaml-9sj5p.5` children).
+  Quoted nodes get the zero-width positions of `MacroSyntaxPositions` in the macro's file;
+  `Position` is the opaque macro-context abstract in every hxhx compile, so the lowered syntax
+  writes `cast({file, min, max}, haxe.macro.Expr.Position)`, the record `MacroSyntaxWire`
+  reads. Tests: `npm run test:m14:macro-reification-lowering`, the JavaScript quotation runtime
+  cases (upstream oracle), and `npm run test:m14:project-macro-reification`
+  (`test/fixtures/project-macro-reification`: plugin built by the step-2 driver, native result
+  compared with upstream).
 - Macro-context defines: before step 2, `ModuleLoader.moduleDefines` and two copies in
   `ResolverStage` set `macro` and `eval` only for modules under `haxe.macro.*`, so in a plugin
   compilation the standard macro types saw the macro context while the project's own macro

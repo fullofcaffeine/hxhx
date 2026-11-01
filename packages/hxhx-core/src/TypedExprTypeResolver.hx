@@ -9,6 +9,12 @@ typedef TypedExprTypeResolver = {
 
 	final expressionType:(expression:HxExpr, diagnosticPosition:HxPos, environment:TyFunctionEnv, expected:Null<TyType>) -> TyType;
 
+	/**
+		Ordinary syntax that builds the `haxe.macro.Expr` or `ComplexType` of a quotation node
+		(`macro e`, `macro :T`), the same tree inference typed, with `$v{}` payloads typed in `environment`.
+	**/
+	final macroQuotation:(quote:HxExpr, diagnosticPosition:HxPos, environment:TyFunctionEnv) -> HxExpr;
+
 	/** A direct method call does not create a stored-method inference occurrence, even when no overload applies. */
 	final callTargetType:(expression:HxExpr, diagnosticPosition:HxPos, environment:TyFunctionEnv) -> TyType;
 

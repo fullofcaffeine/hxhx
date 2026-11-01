@@ -981,8 +981,10 @@ Notes:
       native hxhx built from the current sources, for example
       `HXHX_FORCE_STAGE0=1 HXHX_STAGE0_OCAML_BUILD=native bash scripts/hxhx/build-hxhx.sh`, passed as `HXHX_BIN`, plus
       `HXHX_MACRO_HOST_EXE` from `bash scripts/hxhx/build-hxhx-macro-host.sh`; hxhx builds, caches, and rebuilds the
-      plugin by itself, and the focused interpreter checks are `npm run test:m14:project-macro-plugin-cache` and
-      `npm run test:m14:macro-compilation-context`)
+      plugin by itself, and the focused interpreter checks are `npm run test:m14:project-macro-plugin-cache`,
+      `npm run test:m14:macro-compilation-context`, `npm run test:m14:macro-reification-lowering` (quotations lower to
+      ordinary `haxe.macro.Expr` construction) and `npm run test:m14:project-macro-reification` (a macro written with
+      reification builds as a plugin and computes upstream's expression natively))
     - native backend plugin runtime smoke (`npm run test:hxhx:native-plugin-runtime-smoke`) for load + emit + run + negative diagnostics
       (required in strict plugin matrix; runs `.cma` artifact when `HXHX_BIN` is bytecode and `.cmxs` when native)
     - macro-library smoke (`reflaxe.ocaml` build fixture + Stage3 `--library` activation from `haxe_libraries/*.hxml`)

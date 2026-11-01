@@ -92,9 +92,10 @@ class MacroSyntaxWire {
 	Outside the macro context the standard library declares `Position` as exactly this structure.
 	When hxhx compiles `haxe.macro.Expr` for a plugin it applies the macro-context definition, in
 	which `Position` is an opaque compiler type. hxhx's plugin runtime has no separate native
-	position value: it stores this record. `MacroSyntaxWire` is the one place that converts between
-	the opaque type and the record; macro code itself keeps using positions only as opaque values
-	until the macro context services land (`haxe_ocaml-9sj5p.6`).
+	position value: it stores this record. `MacroSyntaxWire` converts between the opaque type and the
+	record on the plugin boundary, and lowered macro quotations (`MacroReificationSyntax`) write the
+	same record for the positions of quoted syntax; macro code itself keeps using positions only as
+	opaque values until the macro context services land (`haxe_ocaml-9sj5p.6`).
 **/
 typedef MacroSyntaxWirePosition = {
 	final file:String;

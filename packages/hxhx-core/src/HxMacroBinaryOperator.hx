@@ -46,7 +46,8 @@ function render(token:String, makeEnum:(String, Array<String>) -> String):String
 	return renderOperation(parse(token), makeEnum);
 }
 
-function renderOperation(operation:Binop, makeEnum:(String, Array<String>) -> String):String {
+/** Name every constructor of `operation` through `makeEnum`, which builds the caller's own form (text or syntax). */
+function renderOperation<T>(operation:Binop, makeEnum:(String, Array<T>) -> T):T {
 	return switch operation {
 		case OpAssignOp(inner): makeEnum("OpAssignOp", [renderOperation(inner, makeEnum)]);
 		case OpAdd: makeEnum("OpAdd", []);

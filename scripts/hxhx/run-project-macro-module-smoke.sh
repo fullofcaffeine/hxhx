@@ -292,6 +292,21 @@ require_line plain '^expr_macros_expanded=1$'
 run_app plain
 echo "PROJECT_MACRO_MODULE_PLAIN_COMMAND:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
+# A macro whose body is written with reification (`macro { ... }`, `$v{}`, `$b{}`, `$a{}`, `$e{}`,
+# field splices, `@:pos`) builds as a plugin and the program prints what upstream prints.
+REIFICATION_DIR="$ROOT/test/fixtures/project-macro-reification"
+(
+  cd "$REIFICATION_DIR"
+  haxe oracle.hxml
+) >"$ARTIFACT_DIR/reification.oracle.stdout" 2>"$ARTIFACT_DIR/reification.oracle.stderr"
+diff -u "$REIFICATION_DIR/expected.stdout" "$ARTIFACT_DIR/reification.oracle.stdout"
+compile_app reification "$REIFICATION_DIR/src" Main --hxhx-macro-cache "$CACHE_DIR"
+require_line reification '^project_macro_plugin=built$'
+require_line reification '^expr_macros_expanded=1$'
+"$WORK_DIR/app-reification/out.exe" >"$ARTIFACT_DIR/reification.stdout" 2>"$ARTIFACT_DIR/reification.stderr"
+diff -u "$REIFICATION_DIR/expected.stdout" "$ARTIFACT_DIR/reification.stdout"
+echo "PROJECT_MACRO_MODULE_REIFICATION:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+
 {
   echo "candidate_commit=$CANDIDATE_COMMIT"
   echo "hxhx_bin=$HXHX_BIN_RESOLVED"

@@ -24,6 +24,7 @@ class TyperContext {
 	final resolvedDirectives:Array<TyModuleDirective>;
 	final classFullName:String;
 	final inferredReturnTypes:haxe.ds.StringMap<TyType>;
+	final loweredQuotations:Array<{quote:HxExpr, lowered:HxExpr}>;
 
 	public function new(index:TyperIndex, filePath:String, modulePath:String, packagePath:String, directives:Array<HxModuleDirective>, classFullName:String,
 			?loader:LazyTypeLoader, ?resolvedDirectives:Array<TyModuleDirective>) {
@@ -36,6 +37,23 @@ class TyperContext {
 		this.resolvedDirectives = resolvedDirectives == null ? [] : resolvedDirectives.copy();
 		this.classFullName = classFullName == null ? "" : classFullName;
 		this.inferredReturnTypes = new haxe.ds.StringMap<TyType>();
+		this.loweredQuotations = [];
+	}
+
+	/**
+		The ordinary syntax of one macro quotation, lowered once per quote node.
+
+		Function inference records its facts by expression identity and replays the same nodes
+		when the typed body is built, so a quote must lower to one tree that both passes share.
+		`quote` is the parser's `EMacroExpr`/`EMacroType` node; `lower` runs on the first request.
+	**/
+	public function loweredQuotation(quote:HxExpr, lower:() -> HxExpr):HxExpr {
+		for (entry in loweredQuotations)
+			if (entry.quote == quote)
+				return entry.lowered;
+		final lowered = lower();
+		loweredQuotations.push({quote: quote, lowered: lowered});
+		return lowered;
 	}
 
 	/**

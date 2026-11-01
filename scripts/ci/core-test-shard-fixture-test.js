@@ -178,7 +178,7 @@ function main() {
     'compiler-focused-3': 12,
     'compiler-focused-4': 7,
     'compiler-focused-cpp-closure-storage': 2,
-    'compiler-focused-5': 23,
+    'compiler-focused-5': 24,
     'macro-host-integration': 3,
     portable: 1,
     'target-packages': 2,
