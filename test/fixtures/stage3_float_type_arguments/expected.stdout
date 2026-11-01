@@ -1,0 +1,19 @@
+interface put: 2.25
+interface put of Int result: 3.25
+Float local from Int result: 3.5
+Float local assignment: 3.5
+Float argument from Int result: 1.5
+Float return of Int result: 3.5
+constructor: 1.5
+method: 2.5
+Int expression: 7.5
+field of type T: 4.5
+Cell<Int>: 10
+Cell<Dynamic>: 4
+Cell<Null<Float>>: 6.5
+Cell<Null<Float>> null: true
+generic method: 2.25
+array literal: 1.5
+array index write: 3.5
+array push: 5.5
+array insert: 8.5

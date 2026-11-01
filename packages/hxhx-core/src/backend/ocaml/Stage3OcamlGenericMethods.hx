@@ -198,11 +198,18 @@ class Stage3OcamlGenericMethods {
 					throw "native generic instance call lost its receiver";
 				values.push(input.emit(instanceCall.receiver));
 			}
+			final appliedParameters = applied.getFunctionParameters();
 			for (index in 0...arguments.length) {
-				final actual = shape(source.getExpressions()[index + 1].getType());
+				final argumentType = source.getExpressions()[index + 1].getType();
+				// `second(2.5, 2)` instantiates T as Float: the Int operand is promoted
+				// first and then stored with the Float shape.
+				final promoted = index < appliedParameters.length
+					&& Stage3OcamlNumericWidening.needsPromotion(argumentType, appliedParameters[index].type);
+				final actual = shape(promoted ? appliedParameters[index].type : argumentType);
 				if (actual == null)
 					throw "native generic argument has no shared storage shape";
-				values.push(convert(actual, signature.parameters[index], input.emit(arguments[index]), input.names));
+				final rendered = input.emit(arguments[index]);
+				values.push(convert(actual, signature.parameters[index], promoted ? Stage3OcamlNumericWidening.promote(rendered) : rendered, input.names));
 			}
 			final result = shape(source.getType());
 			if (result == null)
