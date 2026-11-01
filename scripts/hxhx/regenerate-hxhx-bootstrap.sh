@@ -1233,7 +1233,10 @@ fi
 
 resolve_stage0_haxe_bin
 
-if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; then
+# The emit itself runs no OCaml tool (`-D ocaml_emit_only`); only the snapshot
+# verify and later builds of the snapshot do.
+if [ "$HXHX_BOOTSTRAP_EMIT_ONLY" != "1" ] \
+	&& { ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; }; then
 	echo "Missing dune/ocamlc on PATH." >&2
 	exit 1
 fi
