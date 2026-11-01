@@ -26,8 +26,8 @@ import MacroReificationLowering.MacroReificationHole;
 
 	Splice placeholders (see `MacroReificationLowering`):
 	- `EConst(CIdent("<hole>"))` stands for an expression, identifier, block, array, or value
-	  splice; `ECall(f, [<array hole>])` and `EArrayDecl([<array hole>])` splice the payload list
-	  itself, as upstream does for a sole `$a{}`;
+	  splice; `ECall(f, [<array hole>])`, `EArrayDecl([<array hole>])` and `EBlock([<array hole>])`
+	  splice the payload list itself, as upstream does for a sole `$a{}`;
 	- a field name or a `TypePath.name` that is a placeholder stands for `o.$name` / `new $tp()`;
 	- `EMeta({name: ":pos", params: [<position hole>]}, e)` applies `@:pos(p)` to `e`.
 **/
@@ -142,8 +142,8 @@ class MacroReificationSyntax {
 				case BlockHole(payload): exprRecord(ctor("ExprDef", "EBlock", [payload]), at);
 				case ArrayHole(payload): exprRecord(ctor("ExprDef", "EArrayDecl", [payload]), at);
 				case ValueHole(payload): valueSplice(payload, at);
-				case TypePathHole(_) | FieldNameHole(_) | PositionHole(_):
-					throw "macro reification: a type path, field name, or position splice was written in expression position";
+				case TypePathHole(_) | PositionHole(_):
+					throw "macro reification: a type path or position splice was written in expression position";
 			};
 		}
 		switch value.expr {
@@ -170,7 +170,7 @@ class MacroReificationSyntax {
 	function optionalExpr(value:Null<Expr>):HxExpr
 		return value == null ? ENull : expr(value);
 
-	/** An argument or element list; a sole `$a{}` splice contributes the payload array itself. */
+	/** An argument, element, or block list; a sole `$a{}` splice contributes the payload array itself. */
 	function exprs(values:Array<Expr>):HxExpr {
 		final spliced = arrayHolePayload(values);
 		return spliced != null ? spliced : list([for (value in values) expr(value)]);
@@ -193,7 +193,7 @@ class MacroReificationSyntax {
 			case EUnop(op, postFix, e): def("EUnop", [unop(op), bool(postFix), expr(e)]);
 			case EVars(vars): def("EVars", [list([for (v in vars) variable(v)])]);
 			case EFunction(kind, f): def("EFunction", [functionKind(kind), func(f)]);
-			case EBlock(exprList): def("EBlock", [list([for (e in exprList) expr(e)])]);
+			case EBlock(exprList): def("EBlock", [exprs(exprList)]);
 			case EFor(it, e): def("EFor", [expr(it), expr(e)]);
 			case EIf(econd, eif, eelse): def("EIf", [expr(econd), expr(eif), optionalExpr(eelse)]);
 			case EWhile(econd, e, normalWhile): def("EWhile", [expr(econd), expr(e), bool(normalWhile)]);

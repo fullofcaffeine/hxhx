@@ -46,6 +46,10 @@ class TyperContext {
 		Function inference records its facts by expression identity and replays the same nodes
 		when the typed body is built, so a quote must lower to one tree that both passes share.
 		`quote` is the parser's `EMacroExpr`/`EMacroType` node; `lower` runs on the first request.
+		Entries are matched by node identity: `==` on enum values is physical equality on every
+		route that compiles hxhx (the OCaml target's `OcamlEnumIdentityPlan`, eval in tests), so
+		two identical quotes never share a tree or a position. The list is scanned linearly; it
+		holds the quotes of one class, a few dozen at most in upstream's macro code.
 	**/
 	public function loweredQuotation(quote:HxExpr, lower:() -> HxExpr):HxExpr {
 		for (entry in loweredQuotations)
@@ -73,6 +77,10 @@ class TyperContext {
 
 	public function getFilePath():String
 		return filePath;
+
+	/** Whether this module is compiled as macro code (a plugin build or `haxe.macro.*`). */
+	public function isMacroModule():Bool
+		return loader != null && loader.isMacroModule(modulePath, filePath);
 
 	public function getModulePath():String
 		return modulePath;

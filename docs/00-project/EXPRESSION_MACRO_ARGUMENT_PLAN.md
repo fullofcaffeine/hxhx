@@ -120,10 +120,12 @@ after step 2.
   `MacroReificationSyntax`): the quoted syntax is exported with `MacroSyntaxExport`, the same
   mapping macro arguments use, and rewritten as ordinary syntax that constructs the
   `haxe.macro.Expr` value, so no backend meets a quote. Splices `$e{}`/`$x`, `$i{}`, `$a{}`,
-  `$b{}`, `$v{}` (Int, Float, Bool, String, `Null` of those, and arrays of the four scalars through
-  `hxhxmacrohost.MacroReificationValues`, decided by the payload's static type), `o.$name`, `new $tp()`, `@:pos(p)`, `untyped`, and `macro :Type` are covered;
-  `$p{}`, other expression metadata, `macro class`, switch and comprehensions inside quotes,
-  and `$v{}` on structures or enum values are explicit errors (`haxe_ocaml-9sj5p.5` children).
+  `$b{}`, `$v{}` (Int, Float, Bool, String, and `Null` or arrays of those four through
+  `hxhxmacrohost.MacroReificationValues`, decided by the payload's static type), spread arguments
+  and literal suffixes, `o.$name`, `new $tp()`, `@:pos(p)`, `untyped`, and `macro :Type` are covered;
+  `$p{}`, other expression metadata, `macro class` in a macro module, switch inside quotes, and
+  `$v{}` on structures, enum values or nested arrays are explicit errors (`haxe_ocaml-9sj5p.5`
+  children).
   Quoted nodes get the zero-width positions of `MacroSyntaxPositions` in the macro's file;
   `Position` is the opaque macro-context abstract in every hxhx compile, so the lowered syntax
   writes `cast({file, min, max}, haxe.macro.Expr.Position)`, the record `MacroSyntaxWire`

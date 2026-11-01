@@ -196,9 +196,10 @@ upstream Haxe 4.3.7 is the behavior reference for every form:
 | `macro 1 + x`, `macro { a; b; }`, `macro function(a:Int) ...`, loops, branches, `var`, `return`, `new`, literals, casts, `try`, `throw` | the public `ExprDef` tree, as `MacroSyntaxExport` maps a macro argument |
 | `$e{e}`, `${e}`, bare `$e` | the `Expr` value `e` in place |
 | `$i{name}` | `EConst(CIdent(name))` |
-| `$a{list}` as the only call argument or array element | the `Array<Expr>` as that list; elsewhere `EArrayDecl(list)` |
+| `$a{list}` as the only call argument, array element, or block entry | the `Array<Expr>` as that list; elsewhere `EArrayDecl(list)` |
 | `$b{list}` | `EBlock(list)` |
-| `$v{value}` | a constant chosen from the payload's static type: `Int`, `Float`, `Bool`, `String`, `Null<T>` of those (null is checked when the macro runs), and `Array<T>` of the four scalars (built by `hxhxmacrohost.MacroReificationValues`, which every plugin build has on its classpath) |
+| `$v{value}` | a constant chosen from the payload's static type: `Int`, `Float`, `Bool`, `String`, and `Null<T>` or `Array<T>` of those four (`Null` and arrays go through `hxhxmacrohost.MacroReificationValues`, which every plugin build has on its classpath; the payload is read once and null is decided when the macro runs) |
+| `f(...xs)`, `1i32`, `1.5f64` | `EUnop(OpSpread, ...)`, `CInt("1", "i32")`, `CFloat("1.5", "f64")` |
 | `o.$name`, `new $tp(...)` | the `String` field name, the `TypePath` value |
 | `@:pos(p) e` | every position inside `e` is `p` |
 | `macro :Array<Int>`, `macro :X->Y`, `macro :{a:Int}` | the `ComplexType` value |
@@ -208,9 +209,10 @@ arguments receive (a node that starts a group, function, loop, branch, or declar
 the nearest enclosing one). Exact ranges are tracked separately.
 
 Not lowered yet, each a compile error naming the form: `$p{}`, expression metadata other than `@:pos` and
-`@:privateAccess`, `switch` and array comprehensions inside a quote, `$v{}` on anonymous structures or enum values, and
-`macro class` (the parser keeps a placeholder object), and `$v{}` on nested arrays. The negative-literal and quote-kind spelling of constants follows
-the parser (`macro -1` is `EUnop(OpNeg, ...)`, `macro 'x'` is reported as double-quoted).
+`@:privateAccess`, `switch` inside a quote, `$v{}` on anonymous structures, enum values, or nested arrays, and
+`macro class` in a macro module (a plugin build). Outside a macro module `macro class` keeps the parser's placeholder
+object (a `TypeDefinition` with the name and no fields) for bring-up code. The negative-literal and quote-kind spelling
+of constants follows the parser (`macro -1` is `EUnop(OpNeg, ...)`, `macro 'x'` is reported as double-quoted).
 
 The example is `test/fixtures/project-macro-reification`: `Macros.tally(["alpha", "beta"])` expands to a block that
 prints one line per label and evaluates to the count. `npm run test:m14:macro-reification-lowering` checks the lowered

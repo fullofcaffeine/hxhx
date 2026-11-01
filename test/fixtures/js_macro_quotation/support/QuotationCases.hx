@@ -13,7 +13,16 @@ class QuotationCases {
 			case _: false;
 		};
 
+	/** A quotation in a static initializer is lowered like one in a function body. */
+	static final initialized = macro 1 + 2;
+
 	public static function run():Void {
+		switch initialized.expr {
+			case EBinop(OpAdd, left, right):
+				require(isInt(left, "1") && isInt(right, "2"), "static initializer operands");
+			case _:
+				throw "static initializer quotation";
+		}
 		final string = macro "bar";
 		switch string.expr {
 			case EConst(CString("bar", _)):
@@ -110,6 +119,12 @@ class QuotationCases {
 				require(isInt(a, "2") && isInt(b, "3"), "array literal splice");
 			case _:
 				throw "array literal splice";
+		}
+		switch (macro {$a{items};}).expr {
+			case EBlock([a, b]):
+				require(isInt(a, "2") && isInt(b, "3"), "block entry splice");
+			case _:
+				throw "block entry splice";
 		}
 		switch (macro box.$field).expr {
 			case EField({expr: EConst(CIdent("box"))}, "size", _):

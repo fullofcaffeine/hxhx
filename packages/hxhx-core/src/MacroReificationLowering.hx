@@ -23,9 +23,6 @@ enum MacroReificationHole {
 	/** `new $tp(...)`: a `TypePath` value. */
 	TypePathHole(payload:HxExpr);
 
-	/** `o.$name`: a `String` field name. Carried in the field text, never as a placeholder node. */
-	FieldNameHole(payload:HxExpr);
-
 	/** `@:pos(p) e`: the `Position` every node of `e` receives. */
 	PositionHole(payload:HxExpr);
 }
@@ -53,9 +50,9 @@ enum MacroReificationHole {
 	- `lowerType` handles `macro :Type` through the shared type grammar (`HxTypedefParser`) and
 	  `HxMacroTypeSyntax`, giving a `ComplexType` construction.
 	- `$v{}` is decided by the payload's static type, supplied by the caller's `valueType` probe:
-	  Int, Float, Bool, String, `Null<T>` of those (checked at run time), and `Array<T>` of the
-	  four scalars (through `hxhxmacrohost.MacroReificationValues`, present on every plugin
-	  build's classpath). Other types are a compile error, as upstream rejects unsupported values
+	  Int, Float, Bool, String, and `Null<T>` or `Array<T>` of those four (through
+	  `hxhxmacrohost.MacroReificationValues`, present on every plugin build's classpath, which
+	  reads the payload once and decides null at run time). Other types are a compile error, as upstream rejects unsupported values
 	  at macro run time.
 
 	Positions
@@ -66,8 +63,8 @@ enum MacroReificationHole {
 	  `haxe_ocaml-9sj5p.2`. `@:pos(p)` replaces every position inside with `p`, as upstream does.
 
 	Not lowered yet (explicit errors): `$p{}`, metadata other than `@:pos` and `@:privateAccess`,
-	and the syntax `MacroSyntaxExport` cannot export (switch, comprehensions). `macro class`
-	keeps the parser's placeholder object; it does not reach this module.
+	the syntax `MacroSyntaxExport` cannot export (switch), and `macro class` in a macro module;
+	outside one, `macro class` keeps the parser's placeholder object for bring-up code.
 **/
 class MacroReificationLowering {
 	/** Prefix of the identifier the exporter writes where a splice was; the index follows. */
@@ -100,14 +97,24 @@ class MacroReificationLowering {
 	/**
 		Syntax that builds the `Expr` of `macro <quoted>`.
 
-		`wrappers` is the parser's list of quote modifiers (`untyped`). `anchor` is the position
-		of the statement that contains the quote, in `file`. `valueType` gives the static type of a
-		`$v{}` payload in the quote's scope.
+		`wrappers` is the parser's list of quote modifiers (`untyped`, or `class` for a
+		`macro class` placeholder). `anchor` is the position of the statement that contains the
+		quote, in `file`. `valueType` gives the static type of a `$v{}` payload in the quote's
+		scope. `inMacroContext` is true when the module is compiled as macro code (a plugin
+		build), where a placeholder class definition is refused.
 	**/
-	public static function lowerExpression(quoted:HxExpr, wrappers:Null<Array<String>>, file:String, anchor:HxPos, valueType:HxExpr->TyType):HxExpr {
+	public static function lowerExpression(quoted:HxExpr, wrappers:Null<Array<String>>, file:String, anchor:HxPos, valueType:HxExpr->TyType,
+			inMacroContext:Bool):HxExpr {
 		final lowering = new MacroReificationLowering(file, anchor, valueType);
 		var expression = quoted;
 		if (wrappers != null) {
+			if (wrappers.indexOf("class") >= 0) {
+				// The parser keeps a placeholder definition for Stage3 bring-up code; a macro
+				// module (plugin build) would hand a macro an empty class, so it is refused.
+				if (inMacroContext)
+					throw failure("`macro class` quotations are not lowered yet (haxe_ocaml-9sj5p.5.4); a macro module cannot use one");
+				return quoted;
+			}
 			var index = wrappers.length;
 			while (index > 0) {
 				index--;
@@ -221,9 +228,18 @@ class MacroReificationLowering {
 		if (type.isNullLiteral())
 			return constantExpr("CIdent", [EString("null")], at);
 		if (type.isNullWrapped()) {
-			// Upstream decides at macro run time; the payload is read twice when it is nullable.
-			final whenNull = constantExpr("CIdent", [EString("null")], at);
-			return ETernary(EBinop("==", payload, ENull), whenNull, valueOfType(payload, type.unwrapNull(), at));
+			// Upstream decides at macro run time; the helper reads the payload once.
+			final inner = type.unwrapNull();
+			final helper = inner.isPrimitive() ? switch inner.getDisplay() {
+				case "Int": "nullableInt";
+				case "Float": "nullableFloat";
+				case "Bool": "nullableBool";
+				case "String": "nullableString";
+				case _: null;
+			} : null;
+			if (helper == null)
+				throw failure("`$v{}` supports Null of Int, Float, Bool, or String; this payload has type " + type.getDisplay());
+			return ECall(valuesHelper(helper), [payload, at]);
 		}
 		final stringOf = ECall(EField(EIdent("Std"), "string"), [payload]);
 		if (type.isPrimitive()) {
@@ -252,11 +268,13 @@ class MacroReificationLowering {
 			} : null;
 			if (helper == null)
 				throw failure("`$v{}` supports arrays of Int, Float, Bool, or String; this payload has type " + type.getDisplay());
-			final values = EField(EField(EIdent("hxhxmacrohost"), "MacroReificationValues"), helper);
-			return ECall(values, [payload, at]);
+			return ECall(valuesHelper(helper), [payload, at]);
 		}
 		throw failure("`$v{}` supports Int, Float, Bool, String, Null of those, and arrays of those; this payload has type " + type.getDisplay());
 	}
+
+	static function valuesHelper(name:String):HxExpr
+		return EField(EField(EIdent("hxhxmacrohost"), "MacroReificationValues"), name);
 
 	static function arrayElementType(type:TyType):Null<TyType> {
 		final display = type.getDisplay();

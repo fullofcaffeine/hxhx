@@ -29,13 +29,14 @@ class M14MacroReificationLoweringTest {
 		return switch payload {
 			case ENull: TyType.fromHintText("Null");
 			case EIdent(name) if (types.exists(name)): TyType.fromHintText(types.get(name));
+			case ECall(EIdent("next"), []): TyType.fromHintText("Null<Int>");
 			case _: TyType.unknown();
 		};
 	}
 
-	static function lower(source:String):HxExpr {
+	static function lower(source:String, inMacroContext:Bool = false):HxExpr {
 		return switch HxParser.parseExprText(source) {
-			case EMacroExpr(inner, wrappers): MacroReificationLowering.lowerExpression(inner, wrappers, FILE, ANCHOR, probe);
+			case EMacroExpr(inner, wrappers): MacroReificationLowering.lowerExpression(inner, wrappers, FILE, ANCHOR, probe, inMacroContext);
 			case EMacroType(text): MacroReificationLowering.lowerType(text, FILE, ANCHOR);
 			case other: throw "not a quotation: " + Std.string(other);
 		};
@@ -123,10 +124,9 @@ class M14MacroReificationLoweringTest {
 		expect("value string", "macro $v{s}", constant("CString(s, StringLiteralKind.DoubleQuotes)"));
 		expect("value bool", "macro $v{b}", constant('CIdent(b ? "true" : "false")'));
 		expect("value null", "macro $v{null}", constant('CIdent("null")'));
-		expect("value nullable", "macro $v{maybe}", "maybe == null ? "
-			+ constant('CIdent("null")')
-			+ " : "
-			+ constant("CInt(Std.string(maybe), null)"));
+		expect("value nullable", "macro $v{maybe}", "hxhxmacrohost.MacroReificationValues.nullableInt(maybe, @P)");
+		// The helper reads a nullable payload once; a call payload must not be repeated.
+		expect("value nullable call", "macro $v{next()}", "hxhxmacrohost.MacroReificationValues.nullableInt(next(), @P)");
 		expect("value array", "macro $v{words}", "hxhxmacrohost.MacroReificationValues.strings(words, @P)");
 		expectFailure("value nested array", "macro $v{grid}", "arrays of Int, Float, Bool, or String; this payload has type Array<Null<Int>>");
 
@@ -144,6 +144,15 @@ class M14MacroReificationLoweringTest {
 			+ constant('CInt("0", null)')
 			+ ", {expr: ExprDef.EArrayDecl(es), pos: @P}]), pos: @P}");
 		expect("array splice in place", "macro $a{es}", "{expr: ExprDef.EArrayDecl(es), pos: @P}");
+		expect("array splice as sole block entry", "macro { $a{es}; }", "{expr: ExprDef.EBlock(es), pos: " + position(6) + "}");
+		expect("spread", "macro f(...xs)",
+			"{expr: ExprDef.ECall("
+			+ constant('CIdent("f")')
+			+ ", [{expr: ExprDef.EUnop( Unop.OpSpread, false, "
+			+ constant('CIdent("xs")')
+			+ "), pos: @P}]), pos: @P}");
+		expect("int suffix", "macro 1i32", constant('CInt("1", "i32")'));
+		expect("float suffix", "macro 1.5f64", constant('CFloat("1.5", "f64")'));
 		expect("field splice", "macro o.$name", "{expr: ExprDef.EField(" + constant('CIdent("o")') + ", name, EFieldKind.Normal), pos: @P}");
 		expect("type path splice", "macro new $tp(1)", "{expr: ExprDef.ENew(tp, [" + constant('CInt("1", null)') + "]), pos: @P}");
 
@@ -166,6 +175,21 @@ class M14MacroReificationLoweringTest {
 			+ ")))], "
 			+ path("Void")
 			+ ")");
+
+		// `macro class` is refused in a macro module and keeps the parser's placeholder elsewhere.
+		switch lower("macro class Foo {}") {
+			case EAnon(names, _) if (names.length == 8 && names[1] == "name"):
+			case other:
+				throw "macro class placeholder: unexpected shape " + Std.string(other);
+		}
+		final classFailure = try {
+			lower("macro class Foo {}", true);
+			"";
+		} catch (error:String) {
+			error;
+		}
+		if (classFailure.indexOf("`macro class` quotations are not lowered yet") < 0)
+			throw "macro class in a macro module: expected a named failure, got `" + classFailure + "`";
 
 		// Explicit failures.
 		expectFailure("path splice", "macro $p{parts}", "`$p{}` is not lowered yet");

@@ -56,8 +56,9 @@ class M14ProjectMacroReificationTest {
 		FileSystem.createDirectory(src);
 		for (name in ["Macros.hx", "Probe.hx"])
 			File.copy(fixture + "/src/" + name, src + "/" + name);
-		// `$v{}` on an array calls the plugin support module; the probe program sees it the way a
-		// plugin build does, through its classpath.
+		// `$v{}` on an array or nullable calls the plugin support module. A plugin build reaches it
+		// through its support classpath (`packages/hxhx-core/src`); the copy mirrors that classpath
+		// for the probe program, whose harness compiles from one root.
 		FileSystem.createDirectory(src + "/hxhxmacrohost");
 		File.copy("packages/hxhx-core/src/hxhxmacrohost/MacroReificationValues.hx", src + "/hxhxmacrohost/MacroReificationValues.hx");
 

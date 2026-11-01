@@ -3258,7 +3258,8 @@ class TyperStage {
 		return ctx.loweredQuotation(quote, () -> try {
 			switch quote {
 				case EMacroExpr(inner, wrappers):
-					MacroReificationLowering.lowerExpression(inner, wrappers, ctx.getFilePath(), pos, payload -> inferExprType(payload, scope, ctx, pos));
+					MacroReificationLowering.lowerExpression(inner, wrappers, ctx.getFilePath(), pos, payload -> inferExprType(payload, scope, ctx, pos),
+						ctx.isMacroModule());
 				case EMacroType(typeText):
 					MacroReificationLowering.lowerType(typeText, ctx.getFilePath(), pos);
 				case _:

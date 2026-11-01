@@ -1695,8 +1695,15 @@ class HxParser {
 				bump();
 				intLiteralExpr(v, raw, suffix);
 			case TFloat(v):
+				final raw = cur.numericText;
+				final suffix = cur.numericSuffix;
 				bump();
-				EFloat(v);
+				// Ordinary code reads the value; a quotation must keep the written suffix
+				// (`1.5f64`), which only `MacroSyntaxExport` consumes.
+				inMacroQuote
+				&& raw != null
+				&& suffix != null
+				&& suffix.length > 0 ? ECall(EIdent("__hxhx_float_literal"), [EString(raw), EString(suffix)]) : EFloat(v);
 			case TRegex(pattern, flags):
 				bump();
 				ENew("EReg", [EString(pattern), EString(flags)]);
@@ -2811,6 +2818,8 @@ class HxParser {
 		// `macro class Name ... { ... }` produces a `haxe.macro.TypeDefinition`, not
 		// a normal expression quote. Stage3 only needs to consume the balanced class
 		// quote and expose the object fields used by generator code (`name`, `fields`).
+		// The placeholder is wrapped as a quotation with the `class` marker so the typer
+		// can reject it where a real definition is required (`MacroReificationLowering`).
 		if (!acceptKeyword(KClass))
 			fail("Expected 'class'");
 
@@ -2839,7 +2848,7 @@ class HxParser {
 			skipBalancedBraces();
 		}
 
-		return EAnon(["pack", "name", "pos", "meta", "params", "isExtern", "kind", "fields"], [
+		return EMacroExpr(EAnon(["pack", "name", "pos", "meta", "params", "isExtern", "kind", "fields"], [
 			EArrayDecl([]),
 			EString(className),
 			ENull,
@@ -2852,7 +2861,7 @@ class HxParser {
 				EArrayDecl([ENull, EArrayDecl([]), EBool(false), EBool(false), EBool(false)])
 			]),
 			EArrayDecl([])
-		]);
+		]), ["class"]);
 	}
 
 	function parseMacroQuotePayload(stop:() -> Bool):HxExpr {

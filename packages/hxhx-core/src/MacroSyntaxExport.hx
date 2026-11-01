@@ -106,6 +106,14 @@ class MacroSyntaxExport {
 				EField(child(owner, position), field, Normal);
 			case ENullSafeField(owner, field):
 				EField(child(owner, position), field, Safe);
+			case ECall(EIdent("__hxhx_spread"), [inner]):
+				EUnop(OpSpread, false, child(inner, position));
+			case ECall(EIdent("__hxhx_int_literal"), [EString(raw), EString(suffix)]):
+				EConst(CInt(raw, suffix));
+			case ECall(EIdent("__hxhx_float_literal"), [EString(raw), EString(suffix)]):
+				EConst(CFloat(raw, suffix));
+			case ECall(EIdent(marker), _) if (StringTools.startsWith(marker, "__hxhx_")):
+				throw failure("the parser marker `" + marker + "` has no public macro form");
 			case ECall(callee, arguments):
 				ECall(child(callee, position), [for (argument in arguments) child(argument, position)]);
 			case ETernary(condition, whenTrue, whenFalse):

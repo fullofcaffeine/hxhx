@@ -271,7 +271,7 @@ class HxLexer {
 		final text = normalizeNumberText(src.substring(start, numericEnd));
 		if (isFloat || StringTools.startsWith(suffix.toLowerCase(), "f")) {
 			final value = Std.parseFloat(text);
-			return token(TFloat(value), startPos);
+			return token(TFloat(value), startPos, text, suffix);
 		}
 		final value = Std.parseInt(text);
 		return token(TInt(value == null ? 0 : value), startPos, text, suffix);

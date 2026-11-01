@@ -17,13 +17,30 @@ import haxe.macro.Expr;
 	  (`packages/hxhx-core/src` is the plugin's support classpath), which is where `$v{}` runs.
 
 	What
-	- Each function returns the `EArrayDecl` upstream's `makeExpr` returns for an array of that
-	  element type, with every node at `pos`. Scalars and `Null` values are lowered inline by
-	  `MacroReificationLowering`; nested arrays and other element types are rejected there.
+	- The `nullable*` functions read a `Null<T>` payload once and return `CIdent("null")` or the
+	  scalar constant, as `makeExpr` does at macro run time. The array functions return the
+	  `EArrayDecl` of one constant per element. Every node is at `pos`. Non-null scalars are
+	  lowered inline by `MacroReificationLowering`; nested arrays and other element types are
+	  rejected there.
 **/
 class MacroReificationValues {
 	static function arrayOf(items:Array<Expr>, pos:Position):Expr
 		return {expr: EArrayDecl(items), pos: pos};
+
+	static function nullConstant(pos:Position):Expr
+		return {expr: EConst(CIdent("null")), pos: pos};
+
+	public static function nullableInt(value:Null<Int>, pos:Position):Expr
+		return value == null ? nullConstant(pos) : {expr: EConst(CInt(Std.string(value), null)), pos: pos};
+
+	public static function nullableFloat(value:Null<Float>, pos:Position):Expr
+		return value == null ? nullConstant(pos) : {expr: EConst(CFloat(Std.string(value), null)), pos: pos};
+
+	public static function nullableBool(value:Null<Bool>, pos:Position):Expr
+		return value == null ? nullConstant(pos) : {expr: EConst(CIdent(value ? "true" : "false")), pos: pos};
+
+	public static function nullableString(value:Null<String>, pos:Position):Expr
+		return value == null ? nullConstant(pos) : {expr: EConst(CString(value, DoubleQuotes)), pos: pos};
 
 	public static function ints(values:Array<Int>, pos:Position):Expr {
 		final items:Array<Expr> = [];
