@@ -37,23 +37,30 @@ class M14Stage3PatternNullTest {
 		Patterns that Stage3 cannot execute yet must stop emission with a named
 		error instead of being treated as an unconditional match. Extractors have
 		no native lowering; a guard attached to one must not hide that either.
+		A plain extractor reaches OCaml pattern selection. A guarded extractor is
+		rejected earlier, by the shared guard planner, which cannot split it into
+		a structural test.
 	 */
 	static function checkUnsupportedPatternDiagnostic():Void {
-		for (pattern in ["_.length => 2", "_.length => n if (n > 0)"]) {
+		final cases = [
+			{pattern: "_.length => 2", diagnostic: "requires executable guard or extractor lowering"},
+			{pattern: "_.length => n if (n > 0)", diagnostic: "guarded pattern requires a structural decision"}
+		];
+		for (entry in cases) {
 			final module = typed('class Main { static function main():Void { switch [1] { case '
-				+ pattern
+				+ entry.pattern
 				+ ': Sys.println("bad"); case _: Sys.println("ok"); } } }',
 				"Main.hx");
 			var rejected = false;
 			try {
 				EmitterStage.emitToDir(new MacroExpandedProgram([module], false), ".tmp/stage3-pattern-null-extractor");
 			} catch (error:String) {
-				if (error.indexOf("requires executable guard or extractor lowering") < 0)
+				if (error.indexOf(entry.diagnostic) < 0)
 					throw error;
 				rejected = true;
 			}
 			if (!rejected)
-				throw "Unsupported extractor pattern was silently discarded: " + pattern;
+				throw "Unsupported extractor pattern was silently discarded: " + entry.pattern;
 		}
 	}
 

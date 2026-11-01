@@ -10,7 +10,12 @@ enum Shape {
 	Guards run only after their pattern matches, at most once per attempt.
  */
 class Main {
-	static var log:Array<String> = [];
+	/**
+		Guard effects are recorded here. It is cleared in place rather than
+		reassigned: native Stage3 still drops static-variable writes
+		(haxe_ocaml-nq65n), which this guard fixture does not test.
+	 */
+	static final log:Array<String> = [];
 
 	/** Record that a guard ran, then return its decision. */
 	static function check(label:String, result:Bool):Bool {
@@ -20,7 +25,8 @@ class Main {
 
 	static function flush():Void {
 		Sys.println(log.join(","));
-		log = [];
+		while (log.length > 0)
+			log.pop();
 	}
 
 	static function enumGuard(shape:Shape):String {
