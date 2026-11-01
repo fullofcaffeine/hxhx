@@ -3347,6 +3347,15 @@ class EmitterStage {
 		return owner == currentOcamlModuleName ? name : owner + "." + name;
 	}
 
+	/** The direct function that `super.method(...)` reaches for this ancestor declaration. */
+	static function superDeclarationReference(declaration:TyDeclarationInfo):String {
+		final owner = ocamlModuleNameFromTypePath(declaration.getOwner().getCanonicalName());
+		final method = currentClassStorage == null ? declaration.getSignature()
+			.getName() : currentClassStorage.virtuals.superCallTarget(declaration.getOwner().getCanonicalName(), declaration.getSignature().getName());
+		final name = ocamlModuleValueIdent(owner, method);
+		return owner == currentOcamlModuleName ? name : owner + "." + name;
+	}
+
 	/** Convert a direct method return through its typed owner when callback layout selection applies. */
 	static function callableDirectReturn(expression:HxExpr, rendered:String):String {
 		if (currentCallableFunction == null || currentTypedInitializer != null)
@@ -3387,6 +3396,7 @@ class EmitterStage {
 				lookup: currentTypedInitializer != null ? currentTypedInitializer.findCallableExpression : currentTypedFunction == null ? null : currentTypedFunction.findCallableExpression,
 				emit: value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 				reference: callableDeclarationReference,
+				superReference: superDeclarationReference,
 				names: currentFunctionLocalOcamlNames
 			});
 			if (generic != null)
@@ -3494,7 +3504,14 @@ class EmitterStage {
 				return arrayMethod;
 			final declaration = methodValue.getDeclaration();
 			final ownerModule = ocamlModuleNameFromTypePath(declaration.getOwner().getCanonicalName());
-			final methodName = ocamlModuleValueIdent(ownerModule, declaration.getSignature().getName());
+			// A method value binds the dispatcher of an overridden method, or its
+			// direct function when the receiver type proves that no override applies.
+			final receiverType = methodValue.getReceiverType().unwrapNull().getNominalIdentity();
+			final selectedMethod = currentClassStorage == null
+				|| declaration.getIsStatic() ? declaration.getSignature()
+					.getName() : currentClassStorage.virtuals.requireCallTarget(declaration.getOwner().getCanonicalName(),
+					declaration.getSignature().getName(), receiverType == null ? null : receiverType.getCanonicalName(), currentOcamlModuleName);
+			final methodName = ocamlModuleValueIdent(ownerModule, selectedMethod);
 			final qualified = ownerModule + "." + methodName;
 			return backend.ocaml.Stage3OcamlMethodValue.render({
 				occurrence: methodValue,
@@ -3644,6 +3661,16 @@ class EmitterStage {
 			if (currentClassStorage != null)
 				currentClassStorage.interfaces.requireCall(exactCall.owner, exactCall.method);
 			final ownerModule = ocamlModuleNameFromTypePath(exactCall.owner);
+			// An overridden method's own name is its dispatcher. A super call, or a
+			// call whose receiver type no override can reach, names the direct function.
+			final virtualCall = currentClassStorage == null ? null : backend.ocaml.Stage3OcamlVirtualCalls.select({
+				call: exactCall,
+				occurrence: currentTypedInitializer != null ? currentTypedInitializer.findInstanceCall(e) : currentTypedFunction == null ? null : currentTypedFunction.findInstanceCall(e),
+				virtuals: currentClassStorage.virtuals,
+				currentModule: currentOcamlModuleName
+			});
+			final receiver = virtualCall == null ? exactCall.receiver : virtualCall.receiver;
+			final method = virtualCall == null ? exactCall.method : virtualCall.method;
 			if (ownerModule.length > 0 && ownerModule != currentOcamlModuleName) {
 				final ownerParts = exactCall.owner.split(".");
 				var ownerExpression:HxExpr = EIdent(ownerParts[0]);
@@ -3651,7 +3678,7 @@ class EmitterStage {
 					ownerExpression = EField(ownerExpression, ownerParts[partIndex]);
 				// Keep the typed owner and explicit receiver together through call
 				// planning. Rebuilding receiver.method would rediscover it by name.
-				e = ECall(EField(ownerExpression, exactCall.method), [exactCall.receiver].concat(exactCall.arguments));
+				e = ECall(EField(ownerExpression, method), [receiver].concat(exactCall.arguments));
 			} else {
 				return exprToOcaml(TypedExactCallSource.ordinaryInstanceCall(exactCall), arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw,
 					currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
@@ -3717,8 +3744,9 @@ class EmitterStage {
 				// If we are outside that context, conservatively collapse to poison.
 				stage3HasThisBinding(tyByIdentRaw) ? "this_" : "(Obj.magic 0)";
 			case ESuper:
-				// Stage 3 bring-up: no class hierarchy semantics yet.
-				"(Obj.magic 0)";
+				// `super.method(...)` calls and `super(...)` constructor calls are selected
+				// before this point. Any other use of `super` has no native lowering.
+				throw "stage3 emitter: super is supported only in super(...) and super.method(...) calls (haxe_ocaml-37rs6)";
 			case ENull:
 				// Stage 3 bring-up: represent `null` as the runtime sentinel and cast it as needed.
 				"(Obj.magic HxRuntime.hx_null)";
@@ -5395,7 +5423,8 @@ class EmitterStage {
 				return hasBringupPoison(TypedExactStaticCallSource.ordinaryCall(staticCall));
 			final exactCall = TypedExactCallSource.decodeInstance(e);
 			if (exactCall != null) {
-				if (hasBringupPoison(exactCall.receiver))
+				// `super.method()` is a direct call on this instance; Stage3OcamlVirtualCalls selects it.
+				if (!(exactCall.receiver.match(ESuper) && hasThisBinding()) && hasBringupPoison(exactCall.receiver))
 					return true;
 				for (argument in exactCall.arguments)
 					if (hasBringupPoison(argument))
@@ -5414,7 +5443,9 @@ class EmitterStage {
 					// Instance context only: static functions still collapse `this` to poison.
 					!hasThisBinding();
 				case ESuper:
-					true;
+					// Supported super calls are selected above. Other uses reach the
+					// named emit error instead of collapsing to a placeholder.
+					!hasThisBinding();
 				case ENew(typePath, args):
 					// Stage 3 bring-up: allow a tiny subset of allocations that we can lower
 					// deterministically in `exprToOcaml`.
@@ -8470,6 +8501,12 @@ class EmitterStage {
 			final memberName = ocamlModuleValueIdent(modName, fnNameRaw);
 			final key0 = modName + "." + memberName;
 			globalCallSigByCallee.set(key0, sig0);
+			// A super call or an exact-type call names the direct function of an
+			// overridden method; it takes the same arguments as the dispatcher.
+			if (currentClassStorage.virtuals.dispatchesInModule(modName, fnNameRaw))
+				globalCallSigByCallee.set(modName
+					+ "."
+					+ ocamlModuleValueIdent(modName, backend.ocaml.Stage3OcamlVirtualDispatch.directName(fnNameRaw)), sig0);
 			final aliasShorts = aliasShortsByTarget.get(modName);
 			if (aliasShorts != null) {
 				for (short in aliasShorts)
@@ -9356,6 +9393,19 @@ class EmitterStage {
 							final interfaceDispatcher = !isStaticFn
 								&& !HxFunctionDecl.getHasBody(parsedFn)
 								&& currentClassStorage.dispatchesInterfaceMethods(classProjection);
+							// A method that a subclass overrides keeps its body in a direct
+							// function and gets a dispatcher under its own name.
+							final virtualDispatcher = isStaticFn
+								|| !HxFunctionDecl.getHasBody(parsedFn) ? null : currentClassStorage.virtualDispatcher(classProjection, nameRaw, {
+									name: name,
+									head: ocamlArgs,
+									resultType: retTy,
+									arguments: [
+										for (argument in args)
+											requireOcamlFunctionLocalValueIdent(argument.getProjectedName())
+									],
+									quote: escapeOcamlString
+								});
 							var body = if (interfaceDispatcher) {
 								currentClassStorage.interfaces.dispatcherBody(nameRaw, [
 									for (argument in args)
@@ -9415,7 +9465,12 @@ class EmitterStage {
 							});
 
 							final kw = i == 0 && !includeInitializers ? "let rec" : "and";
-							out.push(kw + " " + name + " " + ocamlArgs + " : " + retTy + " = " + body);
+							final emittedName = virtualDispatcher == null ? name : ocamlValueIdent(backend.ocaml.Stage3OcamlVirtualDispatch.directName(nameRaw));
+							out.push(kw + " " + emittedName + " " + ocamlArgs + " : " + retTy + " = " + body);
+							if (virtualDispatcher != null) {
+								out.push("");
+								out.push(virtualDispatcher);
+							}
 							out.push("");
 							EmitterStageDebug.traceStage3Phase("emit_fn_done:" + outputModuleName + ":" + nameRaw);
 							currentFunctionName = previousFunctionName;
@@ -9748,7 +9803,7 @@ class EmitterStage {
 					}
 
 					// After every method is defined, and before `main` can allocate an instance.
-					final methodTable = currentClassStorage.interfaceMethodTable(classProjection, outputModuleName, ocamlModuleValueIdent, escapeOcamlString);
+					final methodTable = currentClassStorage.methodTable(classProjection, outputModuleName, ocamlModuleValueIdent, escapeOcamlString);
 					if (methodTable != null) {
 						out.push(methodTable);
 						out.push("");

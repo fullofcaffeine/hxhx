@@ -1,0 +1,29 @@
+pat | person pat | 1 | 1.5 | false | hello ann x1 | tag pat
+person shout pat
+teacher tom | person teacher tom | 11 | 2.25 | true | teacher hello ann x2 | tag tom
+person shout tom
+teacher shout
+teacher abe | person teacher abe | 11 | 2.25 | true | teacher hello ann x2 | tag abe
+person shout abe
+teacher shout
+prof teacher pia | professor; person prof teacher pia | 33 | 2.25 | true | teacher hello ann x2 | tag pia
+person shout pia
+teacher shout
+vic | person vic | 1 | 1.5 | false | hello ann x1 | tag vic
+person shout vic
+prof teacher lou
+prof teacher mid 33
+professor; person prof teacher ace
+teacher sam 11
+teacher hal / teacher hal
+prof teacher hep / prof teacher hep
+prof teacher pia 11
+prof teacher lou 33
+teacher plain / teacher plain x / 1105 / 102 / plain y
+teacher ratio 2.5 / teacher ratio 0.5 / no ratio / ratio 0.25
+teacher echo
+teacher echo
+e 7 true
+33 11
+tag pro / 2.25 prof teacher pro
+vee 1

@@ -149,6 +149,7 @@ class Stage3OcamlGenericMethods {
 		lookup:HxExpr->Null<TypedExpr>,
 		emit:HxExpr->String,
 		reference:TyDeclarationInfo->String,
+		superReference:TyDeclarationInfo->String,
 		names:Stage3OcamlLocalNames
 	}):Null<String> {
 		if (methodCount == 0 || input.lookup == null || input.names == null)
@@ -193,10 +194,13 @@ class Stage3OcamlGenericMethods {
 			if (arguments.length != signature.parameters.length || source.getExpressions().length != arguments.length + 1)
 				throw "native generic call changed its argument count";
 			final values:Array<String> = [];
+			// `super.method(...)` calls the ancestor's direct function on `this`
+			// instead of the dispatcher of an overridden method.
+			final superCall = instanceCall != null && instanceCall.receiver.match(ESuper);
 			if (!declaration.getIsStatic()) {
 				if (instanceCall == null)
 					throw "native generic instance call lost its receiver";
-				values.push(input.emit(instanceCall.receiver));
+				values.push(input.emit(superCall ? EThis : instanceCall.receiver));
 			}
 			for (index in 0...arguments.length) {
 				final actual = shape(source.getExpressions()[index + 1].getType());
@@ -207,8 +211,9 @@ class Stage3OcamlGenericMethods {
 			final result = shape(source.getType());
 			if (result == null)
 				throw "native generic result has no shared storage shape";
-			final called = values.length == 0 ? input.reference(declaration) + " ()" : Stage3OcamlCallOrder.render({
-				callee: input.reference(declaration),
+			final callee = superCall ? input.superReference(declaration) : input.reference(declaration);
+			final called = values.length == 0 ? callee + " ()" : Stage3OcamlCallOrder.render({
+				callee: callee,
 				arguments: values,
 				names: input.names
 			});
