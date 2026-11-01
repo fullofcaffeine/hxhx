@@ -2909,10 +2909,10 @@ class EmitterStage {
 		it may continue only when the selected declaration has a real body.
 
 		This check covers only these owners. Other owners are not checked here.
-		Interface methods (for example `IMap.get` or a user interface's method)
-		and other bodiless std methods (for example `StringBuf.toString`) can
-		still bind to a generated stub today; that gap is tracked separately in
-		haxe_ocaml-3tow5 and haxe_ocaml-hxj43.
+		Interface methods dispatch on the receiver's class at run time instead
+		(see `Stage3OcamlInterfaceDispatch`). Other bodiless std methods (for
+		example `StringBuf.toString`) can still bind to a generated stub today;
+		that gap is tracked separately in haxe_ocaml-3tow5.
 	**/
 	static function requireEmittedStdInstanceMethodBody(call:HxExpr, owner:String, method:String):Void {
 		final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findInstanceCall(call) : currentTypedFunction == null ? null : currentTypedFunction.findInstanceCall(call);
@@ -3414,6 +3414,8 @@ class EmitterStage {
 			final qualified = ownerModule + "." + methodName;
 			return backend.ocaml.Stage3OcamlMethodValue.render({
 				occurrence: methodValue,
+				interfaceDispatch: currentClassStorage != null
+				&& currentClassStorage.interfaces.requireCall(declaration.getOwner().getCanonicalName(), declaration.getSignature().getName()),
 				reference: ownerModule == currentOcamlModuleName ? methodName : qualified,
 				signature: callSigForStage3(qualified, callSigByCallee),
 				emit: value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
@@ -3544,6 +3546,10 @@ class EmitterStage {
 				|| exactCall.owner == "String"
 				|| backend.ocaml.Stage3OcamlMapCalls.ownerKeys(exactCall.owner) != null)
 				requireEmittedStdInstanceMethodBody(e, exactCall.owner, exactCall.method);
+			// An interface method's module holds a runtime dispatcher, not a stub.
+			// Reject the call here when some implementing class cannot answer it.
+			if (currentClassStorage != null)
+				currentClassStorage.interfaces.requireCall(exactCall.owner, exactCall.method);
 			final ownerModule = ocamlModuleNameFromTypePath(exactCall.owner);
 			if (ownerModule.length > 0 && ownerModule != currentOcamlModuleName) {
 				final ownerParts = exactCall.owner.split(".");
@@ -9231,7 +9237,15 @@ class EmitterStage {
 								&& nameRaw == "readConnectDisplayStdin";
 							final useStage3RunWaitStdioBody = outputModuleName == "Hxhx_Stage3Compiler" && nameRaw == "runWaitStdio";
 							final durationBody = args.length == 1 ? stage3DateToolsDurationBody(outputModuleName, nameRaw, args[0].getProjectedName()) : null;
-							var body = if (useStage3ModuleTypeNameBody) {
+							final interfaceDispatcher = !isStaticFn
+								&& !HxFunctionDecl.getHasBody(parsedFn)
+								&& currentClassStorage.dispatchesInterfaceMethods(classProjection);
+							var body = if (interfaceDispatcher) {
+								currentClassStorage.interfaces.dispatcherBody(nameRaw, [
+									for (argument in args)
+										requireOcamlFunctionLocalValueIdent(argument.getProjectedName())
+								], retTy, escapeOcamlString);
+							} else if (useStage3ModuleTypeNameBody) {
 								moduleTypeNameForStage3OcamlBody();
 							} else if (useStage3HxhxMainJsRouteBody) {
 								hxhxMainShouldRouteStandardJsToNativeStage3OcamlBody();
@@ -9604,6 +9618,13 @@ class EmitterStage {
 					if (exceptions.length > 0) {
 						// Prepend exceptions so the `try ... with` clauses can reference them.
 						out.insert(2, exceptions.join("\n") + "\n");
+					}
+
+					// After every method is defined, and before `main` can allocate an instance.
+					final methodTable = currentClassStorage.interfaceMethodTable(classProjection, outputModuleName, ocamlModuleValueIdent, escapeOcamlString);
+					if (methodTable != null) {
+						out.push(methodTable);
+						out.push("");
 					}
 
 					if (isEntryPoint && sawMain) {
