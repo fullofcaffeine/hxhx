@@ -81,8 +81,12 @@ private typedef InterfaceDispatchEntry = {
 **/
 class Stage3OcamlInterfaceDispatch {
 	final classes:Map<String, InterfaceDispatchClass> = [];
-	var tables:Null<Map<String, Array<InterfaceDispatchEntry>>> = null;
-	var gaps:Null<Map<String, String>> = null;
+	// The planned tables stay non-null maps, filled once by `plan()`. hxhx itself
+	// is compiled by reflaxe.ocaml, which has no conversion from a
+	// `Null<Map<K, V>>` receiver to `haxe.IMap` (haxe_ocaml-f5jcm).
+	final tables:Map<String, Array<InterfaceDispatchEntry>> = [];
+	final gaps:Map<String, String> = [];
+	var planned = false;
 
 	public function new() {}
 
@@ -90,7 +94,7 @@ class Stage3OcamlInterfaceDispatch {
 	public function add(facts:TypedBackendClassSemanticFacts, generated:Bool, module:String):Void {
 		if (!facts.getNominalKind().match(ClassInstance))
 			return;
-		if (tables != null)
+		if (planned)
 			throw "native interface dispatch received a class after planning: " + facts.getClassIdentity();
 		classes.set(facts.getClassIdentity(), {facts: facts, generated: generated && !facts.getIsExtern(), module: module});
 	}
@@ -170,10 +174,11 @@ class Stage3OcamlInterfaceDispatch {
 	}
 
 	function plan():Void {
-		if (tables != null)
+		if (planned)
 			return;
-		final selected:Map<String, Array<InterfaceDispatchEntry>> = [];
-		final missing:Map<String, String> = [];
+		planned = true;
+		final selected = tables;
+		final missing = gaps;
 		final identities = [for (identity in classes.keys()) identity];
 		identities.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
 		for (identity in identities) {
@@ -212,8 +217,6 @@ class Stage3OcamlInterfaceDispatch {
 			if (entries.length > 0)
 				selected.set(identity, entries);
 		}
-		tables = selected;
-		gaps = missing;
 	}
 
 	/** A method shape whose OCaml calling convention this table cannot forward unchanged. */
