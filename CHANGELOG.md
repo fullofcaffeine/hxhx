@@ -1,3 +1,11 @@
+## [0.41.1](https://github.com/fullofcaffeine/hxhx/compare/v0.41.0...v0.41.1) (2026-11-01)
+
+
+### Bug Fixes
+
+* **stage3:** catchable null receivers and complete gap keys for interface calls ([abdca4f](https://github.com/fullofcaffeine/hxhx/commit/abdca4fe417142a4ce3aad94f2f06e0e85b2541e))
+* **stage3:** dispatch interface calls to the implementing class ([d433d36](https://github.com/fullofcaffeine/hxhx/commit/d433d3670ec2920e392627e49342a6c110c99a1d))
+
 # [0.41.0](https://github.com/fullofcaffeine/hxhx/compare/v0.40.0...v0.41.0) (2026-10-31)
 
 
