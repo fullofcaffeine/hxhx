@@ -13,89 +13,59 @@ let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "hxhx.ma
 
 let __empty = fun () -> ({ __hx_type = HxType.instance_marker "hxhx.macro.InProcMacroRuntime" } : t)
 
-let openSession = fun () -> let impl = Obj.magic (Hxhx_macro_InProcMacroSession.create ()) in (
-  ignore (try ignore (let programPath = (let __string_receiver_5 = HxSys.programPath () in HxString.toLowerCase __string_receiver_5 () : string) in let usesBytecodePlugin = (let __call_arg_0_6 = programPath in let __call_arg_1_7 = ".bc" in StringTools.endsWith __call_arg_0_6 __call_arg_1_7) || (let __call_arg_0_8 = programPath in let __call_arg_1_9 = ".byte" in StringTools.endsWith __call_arg_0_8 __call_arg_1_9) in let tempString = ref (HxString.hx_null_string : string) in (
-    ignore (if usesBytecodePlugin then let __assign_10 = "bytecode" in (
-      tempString := __assign_10;
-      __assign_10
-    ) else let __assign_11 = "native" in (
-      tempString := __assign_11;
-      __assign_11
-    ));
-    let artifactKind = !tempString in Hxhx_macro_NativeMacroModuleRuntimeLoader.loadConfigured (artifactKind : string) (fun a0 a1 -> Hxhx_macro_InProcMacroSession.loadNativeModule impl a0 a1)
-  )) with
-    | HxRuntime.Hx_break -> Stdlib.raise (HxRuntime.Hx_break)
-    | HxRuntime.Hx_continue -> Stdlib.raise (HxRuntime.Hx_continue)
-    | HxRuntime.Hx_return __ret_1 -> Stdlib.raise (HxRuntime.Hx_return __ret_1)
-    | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
-    | HxRuntime.Hx_exception (__exn_v_2, __exn_tags_3) -> if HxRuntime.tags_has __exn_tags_3 "String" then let error = (Obj.obj __exn_v_2 : string) in (
-      ignore error;
-      (
-        ignore (Hxhx_macro_InProcMacroSession.close (Obj.magic impl) ());
-        HxType.hx_throw_typed_rtti (Obj.repr error) ["Dynamic"]
-      )
-    ) else if true then let error = (if HxRuntime.tags_has __exn_tags_3 "haxe.Exception" then Obj.obj __exn_v_2 else Obj.magic (Haxe_ValueException.create __exn_v_2 (Obj.magic (HxRuntime.hx_null)) __exn_v_2) : Haxe_Exception.t) in (
-      ignore error;
-      (
-        ignore (Hxhx_macro_InProcMacroSession.close (Obj.magic impl) ());
-        HxType.hx_throw_typed_rtti (Obj.repr ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ())) ["Dynamic"]
-      )
-    ) else HxRuntime.hx_throw_typed __exn_v_2 __exn_tags_3
-    | __exn_4 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let error = (Obj.obj (Obj.repr __exn_4) : string) in (
-      ignore error;
-      (
-        ignore (Hxhx_macro_InProcMacroSession.close (Obj.magic impl) ());
-        HxType.hx_throw_typed_rtti (Obj.repr error) ["Dynamic"]
-      )
-    ) else if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_4) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_4) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_4)) : Haxe_Exception.t) in (
-      ignore error;
-      (
-        ignore (Hxhx_macro_InProcMacroSession.close (Obj.magic impl) ());
-        HxType.hx_throw_typed_rtti (Obj.repr ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ())) ["Dynamic"]
-      )
-    ) else Stdlib.raise (__exn_4));
-  let __anon_12 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_12 "run" (Obj.repr (fun a0 -> Hxhx_macro_InProcMacroSession.run impl a0)));
-    ignore (HxAnon.set __anon_12 "runHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_InProcMacroSession.runHook impl a0 a1)));
-    ignore (HxAnon.set __anon_12 "runTypeNotFoundHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_InProcMacroSession.runTypeNotFoundHook impl a0 a1)));
-    ignore (HxAnon.set __anon_12 "expandExpr" (Obj.repr (fun a0 -> Hxhx_macro_InProcMacroSession.expandExpr impl a0)));
-    ignore (HxAnon.set __anon_12 "expandSelected" (Obj.repr (fun a0 -> Hxhx_macro_InProcMacroSession.expandSelected impl a0)));
-    ignore (HxAnon.set __anon_12 "close" (Obj.repr (fun () -> Hxhx_macro_InProcMacroSession.close impl ())));
-    __anon_12
-  )
+let openSession = fun () -> let impl = Obj.magic (Hxhx_macro_InProcMacroSession.create ()) in let __anon_1 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_1 "run" (Obj.repr (fun a0 -> Hxhx_macro_InProcMacroSession.run impl a0)));
+  ignore (HxAnon.set __anon_1 "runHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_InProcMacroSession.runHook impl a0 a1)));
+  ignore (HxAnon.set __anon_1 "runTypeNotFoundHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_InProcMacroSession.runTypeNotFoundHook impl a0 a1)));
+  ignore (HxAnon.set __anon_1 "expandExpr" (Obj.repr (fun a0 -> Hxhx_macro_InProcMacroSession.expandExpr impl a0)));
+  ignore (HxAnon.set __anon_1 "expandSelected" (Obj.repr (fun a0 -> Hxhx_macro_InProcMacroSession.expandSelected impl a0)));
+  ignore (HxAnon.set __anon_1 "loadProjectMacroPlugin" (Obj.repr (fun a0 a1 -> Hxhx_macro_InProcMacroSession.loadNativeModule impl a0 a1)));
+  ignore (HxAnon.set __anon_1 "close" (Obj.repr (fun () -> Hxhx_macro_InProcMacroSession.close impl ())));
+  __anon_1
 )
+
+let pluginArtifactKind = fun () -> (let programPath = (let __string_receiver_2 = HxSys.programPath () in HxString.toLowerCase __string_receiver_2 () : string) in let usesBytecodePlugin = (let __call_arg_0_3 = programPath in let __call_arg_1_4 = ".bc" in StringTools.endsWith __call_arg_0_3 __call_arg_1_4) || (let __call_arg_0_5 = programPath in let __call_arg_1_6 = ".byte" in StringTools.endsWith __call_arg_0_5 __call_arg_1_6) in let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if usesBytecodePlugin then let __assign_7 = "bytecode" in (
+    tempResult := __assign_7;
+    __assign_7
+  ) else let __assign_8 = "native" in (
+    tempResult := __assign_8;
+    __assign_8
+  ));
+  !tempResult
+) : string)
 
 let parseOneStringLiteralArg = fun (s : string) -> (try (
   ignore (if s == HxString.hx_null_string then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let t = let __call_arg_0_13 = s in StringTools.trim __call_arg_0_13 in (
-    ignore (if (let __string_receiver_14 = t in HxString.length __string_receiver_14) < 2 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-    let q = let __string_receiver_15 = t in let __string_argument_0_16 = 0 in HxString.charCodeAt __string_receiver_15 __string_argument_0_16 in (
-      ignore (if not (let __nullable_17 = q in if __nullable_17 == HxRuntime.hx_null then false else Obj.obj __nullable_17 = 34) && not (let __nullable_18 = q in if __nullable_18 == HxRuntime.hx_null then false else Obj.obj __nullable_18 = 39) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-      ignore (if not (let __nullable_22 = let __string_receiver_19 = t in let __string_argument_0_20 = HxInt.sub (let __string_receiver_21 = t in HxString.length __string_receiver_21) 1 in HxString.charCodeAt __string_receiver_19 __string_argument_0_20 in let __nullable_23 = q in if __nullable_22 == HxRuntime.hx_null then __nullable_22 == HxRuntime.hx_null && __nullable_23 == HxRuntime.hx_null else not (__nullable_23 == HxRuntime.hx_null) && Obj.obj __nullable_22 = Obj.obj __nullable_23) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-      let body = (let __string_receiver_24 = t in let __string_argument_0_25 = 1 in let __string_argument_1_26 = HxInt.sub (let __string_receiver_27 = t in HxString.length __string_receiver_27) 2 in HxString.substr __string_receiver_24 __string_argument_0_25 __string_argument_1_26 : string) in let body = (let __call_arg_0_28 = body in let __call_arg_1_29 = "\\\\" in let __call_arg_2_30 = "\\" in StringTools.replace __call_arg_0_28 __call_arg_1_29 __call_arg_2_30 : string) in let body = (let __call_arg_0_31 = body in let __call_arg_1_32 = "\\\"" in let __call_arg_2_33 = "\"" in StringTools.replace __call_arg_0_31 __call_arg_1_32 __call_arg_2_33 : string) in let body = (let __call_arg_0_34 = body in let __call_arg_1_35 = "\\'" in let __call_arg_2_36 = "'" in StringTools.replace __call_arg_0_34 __call_arg_1_35 __call_arg_2_36 : string) in body
+  let t = let __call_arg_0_9 = s in StringTools.trim __call_arg_0_9 in (
+    ignore (if (let __string_receiver_10 = t in HxString.length __string_receiver_10) < 2 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+    let q = let __string_receiver_11 = t in let __string_argument_0_12 = 0 in HxString.charCodeAt __string_receiver_11 __string_argument_0_12 in (
+      ignore (if not (let __nullable_13 = q in if __nullable_13 == HxRuntime.hx_null then false else Obj.obj __nullable_13 = 34) && not (let __nullable_14 = q in if __nullable_14 == HxRuntime.hx_null then false else Obj.obj __nullable_14 = 39) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+      ignore (if not (let __nullable_18 = let __string_receiver_15 = t in let __string_argument_0_16 = HxInt.sub (let __string_receiver_17 = t in HxString.length __string_receiver_17) 1 in HxString.charCodeAt __string_receiver_15 __string_argument_0_16 in let __nullable_19 = q in if __nullable_18 == HxRuntime.hx_null then __nullable_18 == HxRuntime.hx_null && __nullable_19 == HxRuntime.hx_null else not (__nullable_19 == HxRuntime.hx_null) && Obj.obj __nullable_18 = Obj.obj __nullable_19) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+      let body = (let __string_receiver_20 = t in let __string_argument_0_21 = 1 in let __string_argument_1_22 = HxInt.sub (let __string_receiver_23 = t in HxString.length __string_receiver_23) 2 in HxString.substr __string_receiver_20 __string_argument_0_21 __string_argument_1_22 : string) in let body = (let __call_arg_0_24 = body in let __call_arg_1_25 = "\\\\" in let __call_arg_2_26 = "\\" in StringTools.replace __call_arg_0_24 __call_arg_1_25 __call_arg_2_26 : string) in let body = (let __call_arg_0_27 = body in let __call_arg_1_28 = "\\\"" in let __call_arg_2_29 = "\"" in StringTools.replace __call_arg_0_27 __call_arg_1_28 __call_arg_2_29 : string) in let body = (let __call_arg_0_30 = body in let __call_arg_1_31 = "\\'" in let __call_arg_2_32 = "'" in StringTools.replace __call_arg_0_30 __call_arg_1_31 __call_arg_2_32 : string) in body
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_37 -> (Obj.obj __ret_37 : string) : string)
+  | HxRuntime.Hx_return __ret_33 -> (Obj.obj __ret_33 : string) : string)
 
 let builtinTypeDesc = fun (name : string) -> (let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (match name with
-    | "Bool" | "Float" | "Int" | "String" | "Void" -> let __assign_39 = "builtin:" ^ HxString.toStdString name in (
-      tempResult := __assign_39;
-      __assign_39
+    | "Bool" | "Float" | "Int" | "String" | "Void" -> let __assign_35 = "builtin:" ^ HxString.toStdString name in (
+      tempResult := __assign_35;
+      __assign_35
     )
-    | _ -> let __assign_38 = "unknown:" ^ HxString.toStdString name in (
-      tempResult := __assign_38;
-      __assign_38
+    | _ -> let __assign_34 = "unknown:" ^ HxString.toStdString name in (
+      tempResult := __assign_34;
+      __assign_34
     ));
   !tempResult
 ) : string)
 
-let isBuiltin = fun (expr : string) -> ((let __call_arg_0_40 = expr in let __call_arg_1_41 = "BuiltinMacros." in StringTools.startsWith __call_arg_0_40 __call_arg_1_41) || (let __call_arg_0_42 = expr in let __call_arg_1_43 = "hxhxmacrohost.BuiltinMacros." in StringTools.startsWith __call_arg_0_42 __call_arg_1_43) : bool)
+let isBuiltin = fun (expr : string) -> ((let __call_arg_0_36 = expr in let __call_arg_1_37 = "BuiltinMacros." in StringTools.startsWith __call_arg_0_36 __call_arg_1_37) || (let __call_arg_0_38 = expr in let __call_arg_1_39 = "hxhxmacrohost.BuiltinMacros." in StringTools.startsWith __call_arg_0_38 __call_arg_1_39) : bool)
 
 let withoutBuiltinPrefix = fun (expr : string) -> (try (
-  ignore (if let __call_arg_0_44 = expr in let __call_arg_1_45 = "BuiltinMacros." in StringTools.startsWith __call_arg_0_44 __call_arg_1_45 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_receiver_46 = expr in let __string_argument_0_47 = let __string_receiver_48 = "BuiltinMacros." in HxString.length __string_receiver_48 in HxString.substr __string_receiver_46 __string_argument_0_47 (-1)))) else ());
-  ignore (if let __call_arg_0_49 = expr in let __call_arg_1_50 = "hxhxmacrohost.BuiltinMacros." in StringTools.startsWith __call_arg_0_49 __call_arg_1_50 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_receiver_51 = expr in let __string_argument_0_52 = let __string_receiver_53 = "hxhxmacrohost.BuiltinMacros." in HxString.length __string_receiver_53 in HxString.substr __string_receiver_51 __string_argument_0_52 (-1)))) else ());
+  ignore (if let __call_arg_0_40 = expr in let __call_arg_1_41 = "BuiltinMacros." in StringTools.startsWith __call_arg_0_40 __call_arg_1_41 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_receiver_42 = expr in let __string_argument_0_43 = let __string_receiver_44 = "BuiltinMacros." in HxString.length __string_receiver_44 in HxString.substr __string_receiver_42 __string_argument_0_43 (-1)))) else ());
+  ignore (if let __call_arg_0_45 = expr in let __call_arg_1_46 = "hxhxmacrohost.BuiltinMacros." in StringTools.startsWith __call_arg_0_45 __call_arg_1_46 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_receiver_47 = expr in let __string_argument_0_48 = let __string_receiver_49 = "hxhxmacrohost.BuiltinMacros." in HxString.length __string_receiver_49 in HxString.substr __string_receiver_47 __string_argument_0_48 (-1)))) else ());
   expr
 ) with
-  | HxRuntime.Hx_return __ret_54 -> (Obj.obj __ret_54 : string) : string)
+  | HxRuntime.Hx_return __ret_50 -> (Obj.obj __ret_50 : string) : string)

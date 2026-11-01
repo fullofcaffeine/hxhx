@@ -5,4 +5,5 @@ module NativeMacroModuleAbi = Hxhxmacrohost_NativeMacroModuleAbi
 module NativeMacroModuleDynlink = Hxhxmacrohost_NativeMacroModuleDynlink
 module NativeMacroModuleHost = Hxhxmacrohost_NativeMacroModuleHost
 module NativeMacroModuleHostAbi = Hxhxmacrohost_NativeMacroModuleHostAbi
+module NativeMacroModuleHostIdentity = Hxhxmacrohost_NativeMacroModuleHostIdentity
 module NativeMacroModuleReceipt = Hxhxmacrohost_NativeMacroModuleReceipt

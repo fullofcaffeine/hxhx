@@ -58,6 +58,7 @@ module Stage3JsPreparation = Hxhx_Stage3JsPreparation
 module Stage3MacroFileDependencySupport = Hxhx_Stage3MacroFileDependencySupport
 module Stage3MacroHostSupport = Hxhx_Stage3MacroHostSupport
 module Stage3PathSupport = Hxhx_Stage3PathSupport
+module Stage3ProjectMacroPlugins = Hxhx_Stage3ProjectMacroPlugins
 module Stage3RunSupport = Hxhx_Stage3RunSupport
 module Stage3SetupSupport = Hxhx_Stage3SetupSupport
 module Stage3WaitServer = Hxhx_Stage3WaitServer
