@@ -17,6 +17,11 @@ Measured on October 6, 2026, in the PR92 integration candidate.
 The EmitterStage count was refreshed on October 29, 2026, after local compound
 assignment values (`haxe_ocaml-u0j9w`) added classifier and dispatch hooks; the
 lowering itself lives in `backend/ocaml/Stage3OcamlLocalCompoundValue.hx`.
+It was refreshed again on November 1, 2026, after Stage3 maps, interface
+dispatch, and abstract constructors (`haxe_ocaml-bc4pm`) added routing hooks.
+Abstract construction lives in `backend/ocaml/Stage3OcamlAbstractConstructors.hx`
+and `Stage3OcamlConstructorArguments.hx`. The emitter is now over the red
+threshold; its retirement from the product route is owned by `haxe_ocaml-38gsp.1`.
 The guard allows small drift but asks for this table to be refreshed when a
 watched file moves by more than 250 lines.
 
@@ -24,7 +29,7 @@ watched file moves by more than 250 lines.
 | --- | ---: | --- |
 | `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 19,846 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
 | `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 25,549 | Fixed prelude assembly lives in `CppProgramPrelude`, and known standard-library carrier signatures live in `CppKnownStdlibSignatures`; rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support still make this a red hotspot. |
-| `packages/hxhx-core/src/EmitterStage.hx` | 9,868 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
+| `packages/hxhx-core/src/EmitterStage.hx` | 10,161 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
 | `packages/hxhx-core/src/HxParser.hx` | 4,937 | Parser behavior is central and easy to destabilize with local workarounds. |
 | `packages/hxhx-core/src/ParserStage.hx` | 279 | The July 24 parser hard cut removed the duplicate native decoder and profiling copies. Keep this file as the narrow stage/cache adapter around `HxParser`; module-local recovery scanning remains isolated in `ParserStageScanHelpers`. |
 | `packages/hxhx/src/hxhx/Stage3Compiler.hx` | 1,023 | Keep orchestration-only; do not let it become a target/runtime implementation surface. |
