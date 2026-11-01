@@ -23,32 +23,42 @@
 	Notes / tradeoffs
 	- This is a **portable surface**: we preserve Haxe `StringBuf` behavior, but the
 	  underlying implementation is OCaml-specific and intentionally optimized.
-	- `addChar` uses `String.fromCharCode` semantics, which (in this backend) are
-	  currently best-effort for codepoints 0..255 (see `HxString.fromCharCode`).
+	- `addChar` appends the UTF-8 encoding of a code point through
+	  `String.fromCharCode` (see `HxString.fromCharCode`).
+	- `length` counts code points, like `String.length`. `Buffer.length` counts
+	  bytes, so the buffer keeps its own code-point count: each append adds the
+	  length of the appended String, which costs no more than copying it.
 **/
 class StringBuf {
 	final buf:ocaml.Buffer;
+	var characters:Int;
 
 	public var length(get, never):Int;
 
 	public function new() {
 		buf = ocaml.Buffer.create(16);
+		characters = 0;
 	}
 
 	function get_length():Int {
-		return ocaml.Buffer.length(buf);
+		return characters;
+	}
+
+	function append(s:String):Void {
+		ocaml.Buffer.addString(buf, s);
+		characters = characters + s.length;
 	}
 
 	public function add<T>(x:T):Void {
-		ocaml.Buffer.addString(buf, Std.string(x));
+		append(Std.string(x));
 	}
 
 	public function addChar(c:Int):Void {
-		ocaml.Buffer.addString(buf, String.fromCharCode(c));
+		append(String.fromCharCode(c));
 	}
 
 	public function addSub(s:String, pos:Int, ?len:Int):Void {
-		ocaml.Buffer.addString(buf, len == null ? s.substr(pos) : s.substr(pos, len));
+		append(len == null ? s.substr(pos) : s.substr(pos, len));
 	}
 
 	public function toString():String {

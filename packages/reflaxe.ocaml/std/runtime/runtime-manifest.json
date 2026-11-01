@@ -231,7 +231,7 @@
     {
       "module": "HxString",
       "scope": "application",
-      "files": [{ "path": "HxString.ml", "sha256": "300a271ddcb41fd353e49c7fa792a5c4f5c5b81e411c2445068b4d774b96ad37" }],
+      "files": [{ "path": "HxString.ml", "sha256": "c83536716829c4a73cc715703ad01450cb748baebe67509567077b4f4ae35876" }],
       "dependencies": ["HxArray", "HxRuntime"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],

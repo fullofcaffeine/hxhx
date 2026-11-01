@@ -1,0 +1,9 @@
+# Main comes from the Stage3 fixture so both paths run the same String checks.
+-cp ../../../fixtures/stage3_string_unicode
+-cp src
+-main PortableMain
+--no-output
+-lib reflaxe.ocaml
+-D no-traces
+-D no_traces
+-D ocaml_output=out
