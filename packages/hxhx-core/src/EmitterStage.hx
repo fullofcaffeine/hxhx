@@ -3444,6 +3444,7 @@ class EmitterStage {
 					body: body,
 					names: currentFunctionLocalOcamlNames,
 					renderType: ocamlTypeFromTy,
+					isEnumBox: type -> currentEnums != null && currentEnums.runtimeName(type) != null,
 					renderStatements: (statements,
 						renderReturn) -> stmtListToOcaml(statements, allowed, "HxBlockReturn", arityByIdent, hints, staticImportByIdent, currentPackagePath,
 							moduleNameByPkgAndClass, callSigByCallee, hints, new Map(), null, arguments, renderReturn)
