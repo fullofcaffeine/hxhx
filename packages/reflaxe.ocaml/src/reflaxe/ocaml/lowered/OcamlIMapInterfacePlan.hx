@@ -67,6 +67,15 @@ private typedef PendingStandardMapStorageAlias = {
 	var invalid:Bool;
 }
 
+/** How one local of a planned function body is read; see `analyzeIMapLocalUses`. */
+private typedef IMapLocalUses = {
+	var reads:Int;
+	final receiverCalls:Array<TypedExpr>;
+	final storageReads:Array<TypedExpr>;
+	var captured:Bool;
+	var nextStatementReceiver:Bool;
+}
+
 private typedef PlannedStandardMapStorageAliases = {
 	final initializers:ObjectMap<TypedExpr, OcamlIMapStorageAliasDecision>;
 	final uses:ObjectMap<TypedExpr, OcamlIMapStorageAliasDecision>;
@@ -556,14 +565,12 @@ class OcamlIMapInterfacePlanner {
 		final conversions:ObjectMap<TypedExpr, OcamlIMapInterfaceConversionMaterialization> = new ObjectMap();
 		final calls:ObjectMap<TypedExpr, OcamlIMapInterfaceCallDecision> = new ObjectMap();
 		final storageAliases = planStandardMapStorageAliases(expression);
-		final callOnlyLocals = callOnlyIMapLocals(expression);
+		final iMapLocalUses = analyzeIMapLocalUses(expression);
 
-		function registerConversion(targetType:Type, value:TypedExpr, role:OcamlIMapInterfaceConversionRole, roleIdentity:String, ?local:TVar):Void {
+		function registerConversion(targetType:Type, value:TypedExpr, role:OcamlIMapInterfaceConversionRole, roleIdentity:String):Void {
 			final selected = selectConversion(targetType, value, role, roleIdentity);
 			if (selected == null)
 				return;
-			if (OcamlIMapInterfaceContract.throwsOnNullSource(selected.decision) && (local == null || !callOnlyLocals.exists(local.id)))
-				rejectNullableLocalInitializer(value, selected.decision.sourceSemanticTypeId, local);
 			final existing = conversions.get(value);
 			if (existing != null) {
 				if (haxe.Json.stringify(existing.decision) != haxe.Json.stringify(selected.decision))
@@ -607,8 +614,8 @@ class OcamlIMapInterfacePlanner {
 					registerConversion(functionResultType, value, OcamlIMapInterfaceConversionRole.ReturnValue, "return-value");
 				case TVar(variable, initializer) if (initializer != null):
 					if (storageAliases.initializers.get(initializer) == null)
-						registerConversion(variable.t, initializer, OcamlIMapInterfaceConversionRole.LocalInitializer, localIdentities.require(variable).id,
-							variable);
+						registerConversion(variable.t, initializer, nullableIMapLocalRole(variable, initializer, iMapLocalUses.get(variable.id)),
+							localIdentities.require(variable).id);
 				case TBinop(OpAssign, left, right):
 					registerConversion(left.t, right, OcamlIMapInterfaceConversionRole.Assignment, "assignment");
 				case _:
@@ -621,21 +628,31 @@ class OcamlIMapInterfacePlanner {
 	}
 
 	/**
-		Finds `IMap` locals whose every read is the receiver of a direct `IMap` call.
+		Records how each local of the function body is read.
 
-		Haxe inlines a Map method on a generic or interface-backed Map as
-		`var this1:IMap<K,V> = source; this1.get(key)`. When `source` is
-		`Null<Map<K,V>>`, every use of a null `this1` is a null method call, so its
-		conversion may throw Haxe `Null Access` once instead of producing a null
-		dispatch record. A local that is captured, assigned, compared, passed on, or
-		returned is excluded because Haxe can observe a null value there.
+		The `IMap` planner needs four facts about a local initialized from
+		`Null<Map<K,V>>`: how many times it is read, which reads are receivers of
+		direct `IMap` method calls, which reads are raw-storage arguments of
+		target-authored `NativeHxMap` operations, and whether Haxe's single-use
+		inline-expansion shape applies (see `ReceiverLocalInitializer`).
 	**/
-	static function callOnlyIMapLocals(expression:TypedExpr):Map<Int, Bool> {
-		final reads:Map<Int, Int> = [];
-		final receiverReads:Map<Int, Int> = [];
-		final captured:Map<Int, Bool> = [];
-		function count(table:Map<Int, Int>, id:Int):Void {
-			table.set(id, (table.get(id) ?? 0) + 1);
+	function analyzeIMapLocalUses(expression:TypedExpr):Map<Int, IMapLocalUses> {
+		final uses:Map<Int, IMapLocalUses> = [];
+		function entry(local:TVar):IMapLocalUses {
+			var found = uses.get(local.id);
+			if (found == null) {
+				found = {
+					reads: 0,
+					receiverCalls: [],
+					storageReads: [],
+					captured: false,
+					nextStatementReceiver: false
+				};
+				uses.set(local.id, found);
+			}
+			if (local.capture)
+				found.captured = true;
+			return found;
 		}
 		function visit(current:TypedExpr):Void {
 			switch (current.expr) {
@@ -643,47 +660,116 @@ class OcamlIMapInterfacePlanner {
 					if (OcamlStandardIMapCallContract.isIMapClass(classRef.get()) && parameters.length == 2):
 					switch (unwrapParenthesesAndMetadata(receiver).expr) {
 						case TLocal(local):
-							count(reads, local.id);
-							count(receiverReads, local.id);
-							if (local.capture) captured.set(local.id, true);
+							final found = entry(local);
+							found.reads++;
+							found.receiverCalls.push(current);
 						case _:
 							visit(receiver);
 					}
 					for (argument in arguments)
 						visit(argument);
 					return;
+				case TCall(callee, arguments):
+					final storage = nativeStandardMapStorageUse(current);
+					if (storage != null) {
+						switch (storage.storageExpression.expr) {
+							case TLocal(local):
+								final found = entry(local);
+								found.reads++;
+								found.storageReads.push(current);
+							case _:
+						}
+						visit(callee);
+						for (index in 1...arguments.length)
+							visit(arguments[index]);
+						return;
+					}
+				case TBlock(statements):
+					for (index in 0...statements.length - 1)
+						switch (statements[index].expr) {
+							case TVar(local, initializer) if (initializer != null):
+								final next = leadingReceiverLocal(statements[index + 1]);
+								if (next != null && next.id == local.id) entry(local).nextStatementReceiver = true;
+							case _:
+						}
 				case TLocal(local):
-					count(reads, local.id);
-					if (local.capture)
-						captured.set(local.id, true);
+					entry(local).reads++;
 				case _:
 			}
 			TypedExprTools.iter(current, visit);
 		}
 		visit(expression);
-		final out:Map<Int, Bool> = [];
-		for (id => total in reads)
-			if (!captured.exists(id) && receiverReads.get(id) == total)
-				out.set(id, true);
-		return out;
+		return uses;
 	}
 
 	/**
-		Stops with a source-level error for a nullable Map stored in an `IMap` local.
+		Returns the local whose read is evaluated first by one statement, when that
+		first evaluation is the receiver of a direct `IMap` method call.
 
-		The conversion is valid Haxe, and the local may hold null. The OCaml target
-		does not yet check a null `IMap` receiver before dispatch, so it cannot keep
-		that null safely in a local that is later compared, passed, or captured.
-		Report the shape at its source position instead of emitting unsafe code.
+		Only forms that evaluate nothing else first are followed: `return`, a local
+		declaration, an assignment to a local, parentheses, metadata, casts, and the
+		first statement of a nested block. Anything else returns `null`.
 	**/
-	static function rejectNullableLocalInitializer(value:TypedExpr, sourceSemanticTypeId:String, local:Null<TVar>):Void {
-		final name = local == null ? "an IMap local" : 'IMap local "${local.name}"';
-		final message = 'reflaxe.ocaml [ocaml-imap-interface:nullable-local-unsupported]: $sourceSemanticTypeId is stored in $name '
-			+ "that is used other than as the receiver of direct Map method calls. "
-			+ "The OCaml target cannot yet keep a null IMap value in such a local. "
-			+ "Check the Map for null first, or keep it typed as Map instead of IMap.";
+	static function leadingReceiverLocal(statement:TypedExpr):Null<TVar> {
+		return switch (statement.expr) {
+			case TReturn(value) if (value != null): leadingReceiverLocal(value);
+			case TVar(_, initializer) if (initializer != null): leadingReceiverLocal(initializer);
+			case TParenthesis(inner), TMeta(_, inner), TCast(inner, _): leadingReceiverLocal(inner);
+			case TBlock(statements) if (statements.length > 0): leadingReceiverLocal(statements[0]);
+			// Assigning to a local evaluates only the right-hand side.
+			case TBinop(OpAssign, {expr: TLocal(_)}, value): leadingReceiverLocal(value);
+			case TCall({expr: TField(receiver, FInstance(classRef, parameters, _))}, _)
+				if (OcamlStandardIMapCallContract.isIMapClass(classRef.get()) && parameters.length == 2):
+				switch (unwrapParenthesesAndMetadata(receiver).expr) {
+					case TLocal(local): local;
+					case _: null;
+				}
+			case _: null;
+		};
+	}
+
+	/**
+		Chooses the conversion role for one `IMap` local initializer.
+
+		A non-nullable source keeps the ordinary local-initializer role. For a
+		`Null<Map<K,V>>` source:
+
+		- Haxe's single-use expansion (one read, the receiver of a call in the next
+		  statement, not captured) gets `ReceiverLocalInitializer`, which throws
+		  `Null Access` at the initializer when the Map is null.
+		- A local that is never a method receiver keeps null as null.
+		- A local read as raw `NativeHxMap` storage needs a proven `Obj.t` producer.
+		  The storage-alias planner did not prove one, so the value is rejected.
+		- A local that is a method receiver in any other way is rejected, because
+		  the target does not yet check a null `IMap` receiver before dispatch.
+	**/
+	function nullableIMapLocalRole(local:TVar, initializer:TypedExpr, uses:Null<IMapLocalUses>):OcamlIMapInterfaceConversionRole {
+		final sourceType = conversionSourceType(initializer);
+		if (exactIMap(local.t) == null || nullableStandardMapAbstractTypes(sourceType) == null)
+			return OcamlIMapInterfaceConversionRole.LocalInitializer;
+		if (uses == null)
+			return OcamlIMapInterfaceConversionRole.LocalInitializer;
+		final typeId = semanticTypeId(sourceType);
+		if (uses.storageReads.length > 0)
+			reportUnsupportedNullableIMap('reflaxe.ocaml [ocaml-imap-interface:unproven-nullable-producer]: this $typeId value is not proven to be stored as Obj.t, so its Map methods cannot run on the OCaml target. '
+				+ "Proven producers are fields, static fields, and results of methods declared to return the nullable Map. "
+				+ "Store the value in such a field or return it from such a method first.",
+				initializer.pos);
+		if (uses.receiverCalls.length == 0)
+			return OcamlIMapInterfaceConversionRole.LocalInitializer;
+		if (uses.nextStatementReceiver && uses.reads == 1 && uses.receiverCalls.length == 1 && !uses.captured)
+			return OcamlIMapInterfaceConversionRole.ReceiverLocalInitializer;
+		reportUnsupportedNullableIMap('reflaxe.ocaml [ocaml-imap-interface:nullable-receiver-unsupported]: this call uses IMap local "${local.name}", which may hold a null $typeId. '
+			+ "The OCaml target cannot yet check a null IMap receiver before a method call. "
+			+ "Check the Map for null first, or call the method on the Map directly.",
+			uses.receiverCalls[0].pos);
+		return OcamlIMapInterfaceConversionRole.LocalInitializer;
+	}
+
+	/** Stops with a user-facing error at the Haxe source position of the unsupported shape. */
+	static function reportUnsupportedNullableIMap(message:String, position:haxe.macro.Expr.Position):Void {
 		#if macro
-		haxe.macro.Context.error(message, value.pos);
+		haxe.macro.Context.error(message, position);
 		#end
 		throw message;
 	}

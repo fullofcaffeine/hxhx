@@ -33,6 +33,19 @@ enum abstract OcamlIMapInterfaceConversionRole(String) from String to String {
 	final CallArgument = "call-argument";
 	final ReturnValue = "return-value";
 	final LocalInitializer = "local-initializer";
+
+	/**
+		An `IMap` local initialized from `Null<Map<K,V>>` and read exactly once, as
+		the receiver of a direct `IMap` call in the next statement of the same block.
+
+		This is the shape of Haxe's own inline expansion of a Map method,
+		`{ var this1:IMap<K,V> = source; this1.get(key); }`. A null source throws
+		Haxe `Null Access` at the initializer. Nothing runs between the initializer
+		and the call's receiver read, and Haxe 4.3.7 eval also fails before it
+		evaluates the call arguments, so the observable order is the same.
+	**/
+	final ReceiverLocalInitializer = "receiver-local-initializer";
+
 	final Assignment = "assignment";
 }
 
@@ -217,6 +230,8 @@ class OcamlIMapInterfaceContract {
 			|| !validConversionRole(decision.role, decision.roleIdentity)) {
 			throw "reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: conversion has incomplete type, source, proof, or revision facts";
 		}
+		if (decision.role == OcamlIMapInterfaceConversionRole.ReceiverLocalInitializer && !hasNullableStandardSource(decision))
+			throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: conversion "${decision.id}" uses the receiver-local role without a Null<Map<K,V>> source';
 		final expectedKeyKind = standardKeyKind(decision.sourceKind);
 		final standard = expectedKeyKind != null;
 		if (!standard && decision.sourceKind != OcamlIMapInterfaceSourceKind.UserImplementation)
@@ -471,16 +486,16 @@ class OcamlIMapInterfaceContract {
 		The policy follows from the conversion role, so saved reports can be checked
 		without extra fields:
 
-		- A local initializer throws. The planner admits a nullable local
-		  initializer only when every read of that `IMap` local is the receiver of a
-		  direct `IMap` method call, as in Haxe's inline expansion
-		  `var this1:IMap<K,V> = owner.field; this1.get(key)`. Every use of a null
-		  value would fail, so the conversion fails once, before the first call.
-		- Every other role (call argument, return value, assignment) keeps null as
-		  null, because Haxe allows passing or storing a null `IMap` value.
+		- `ReceiverLocalInitializer` throws. The planner selects that role only for
+		  the single-use shape described on the role, which is how Haxe expands a
+		  Map method call on a non-local receiver.
+		- Every other role keeps null as null, because Haxe allows passing, storing,
+		  returning, or comparing a null `IMap` value. The planner rejects a method
+		  call on such a local, because the target does not yet check a null `IMap`
+		  receiver before dispatch.
 	**/
 	public static function throwsOnNullSource(decision:OcamlIMapInterfaceConversionDecision):Bool {
-		return hasNullableStandardSource(decision) && decision.role == OcamlIMapInterfaceConversionRole.LocalInitializer;
+		return hasNullableStandardSource(decision) && decision.role == OcamlIMapInterfaceConversionRole.ReceiverLocalInitializer;
 	}
 
 	/** Recomputes the ordered private names inserted by one adapter conversion. */
@@ -605,7 +620,7 @@ class OcamlIMapInterfaceContract {
 	static function validConversionRole(role:OcamlIMapInterfaceConversionRole, roleIdentity:String):Bool {
 		return switch (role) {
 			case CallArgument: StringTools.startsWith(roleIdentity, "call-argument:") && validNonNegativeIndex(roleIdentity.substr("call-argument:".length));
-			case LocalInitializer:
+			case LocalInitializer, ReceiverLocalInitializer:
 				isReusableLexicalLocalId(roleIdentity);
 			case ReturnValue:
 				roleIdentity == "return-value";

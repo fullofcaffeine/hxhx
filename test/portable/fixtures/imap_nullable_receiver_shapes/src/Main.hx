@@ -12,6 +12,7 @@ class Tables {
 	public var names:Null<Map<String, String>> = null;
 	public var counts:Null<Map<Int, Int>> = null;
 	public var raw:Null<StringMap<Int>> = null;
+	public var byKey:Null<Map<Key, Int>> = null;
 
 	public function new() {}
 
@@ -104,6 +105,67 @@ class Key {
 	}
 }
 
+/**
+	Method results of every dispatch kind, with an evaluation log.
+
+	`make` and `key` record when they run, so the fixture can check that a
+	nullable receiver is evaluated once and before the method arguments. When
+	the receiver is null, Haxe 4.3.7 eval throws before it evaluates the key.
+**/
+class Provider {
+	public var calls = 0;
+	public var log:Array<String> = [];
+	public var table:Null<Map<String, Int>> = null;
+
+	public function new() {}
+
+	public function make(present:Bool):Null<Map<String, Int>> {
+		calls++;
+		log.push("make");
+		if (!present)
+			return null;
+		return ["k" => 1];
+	}
+
+	public function key():String {
+		log.push("key");
+		return "k";
+	}
+
+	public function value():Int {
+		log.push("value");
+		return 9;
+	}
+
+	public dynamic function dyn():Null<Map<String, Int>> {
+		return ["d" => 4];
+	}
+}
+
+class BaseLookup {
+	public function new() {}
+
+	public function lookup():Null<Map<String, Int>> {
+		return null;
+	}
+}
+
+class DerivedLookup extends BaseLookup {
+	override public function lookup():Null<Map<String, Int>> {
+		return ["o" => 6];
+	}
+}
+
+abstract Wrap(Provider) {
+	public function new(provider:Provider) {
+		this = provider;
+	}
+
+	public function look():Null<Map<String, Int>> {
+		return this.table;
+	}
+}
+
 typedef Holder = {
 	final table:Null<Map<String, Int>>;
 }
@@ -135,6 +197,10 @@ class Main {
 		return map == null;
 	}
 
+	static function isAbsentInt(map:IMap<Int, String>):Bool {
+		return map == null;
+	}
+
 	static function failure(action:() -> Void):String {
 		try {
 			action();
@@ -157,6 +223,9 @@ class Main {
 		emit("call=" + makeInts(true).get(4));
 		emit("nullCall=" + failure(() -> makeInts(false).get(4)));
 
+		// A method call on a nullable Map *local* has no null check on this
+		// target yet (a known gap, tracked separately), so this case only uses
+		// a present Map.
 		final local:Null<Map<Int, String>> = makeInts(true);
 		local.set(5, "five");
 		emit("local=" + local.get(5) + " " + local.exists(4));
@@ -189,5 +258,35 @@ class Main {
 		final absent:Null<Map<String, Int>> = null;
 		final present:Null<Map<String, Int>> = ["p" => 1];
 		emit("convertNull=" + isAbsent(absent) + " convertMap=" + isAbsent(present));
+		emit("convertIntNull=" + isAbsentInt(makeInts(false)) + " convertIntMap=" + isAbsentInt(makeInts(true)));
+
+		// An explicit IMap local keeps null when it is never used as a method
+		// receiver, whether it is unused or only compared.
+		var unusedView:IMap<String, Int> = absent;
+		final comparedView:IMap<String, Int> = absent;
+		emit("comparedView=" + (comparedView == null));
+
+		final provider = new Provider();
+		emit("once=" + provider.make(true).get(provider.key()) + " calls=" + provider.calls + " log=" + provider.log.join(","));
+		provider.log = [];
+		emit("order=" + provider.make(true).exists(provider.key()) + " log=" + provider.log.join(","));
+		provider.log = [];
+		provider.make(true).set(provider.key(), provider.value());
+		emit("setLog=" + provider.log.join(","));
+		provider.log = [];
+		emit("nullOrder=" + failure(() -> provider.make(false).get(provider.key())) + " log=" + provider.log.join(","));
+		emit("dynamic=" + provider.dyn().get("d"));
+		final lookup:BaseLookup = new DerivedLookup();
+		emit("override=" + lookup.lookup().get("o"));
+		provider.table = ["w" => 7];
+		emit("abstract=" + new Wrap(provider).look().get("w"));
+
+		final keyed = new Key("keyed");
+		final objectTable = new Tables();
+		emit("nullObjectField=" + failure(() -> objectTable.byKey.get(keyed)));
+		final byKey:Map<Key, Int> = [];
+		byKey.set(keyed, 11);
+		objectTable.byKey = byKey;
+		emit("objectField=" + objectTable.byKey.get(keyed) + " " + objectTable.byKey.exists(first));
 	}
 }

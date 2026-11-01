@@ -11,3 +11,14 @@ anon=3
 genericNull=caught
 generic=1 2 true true 2
 convertNull=true convertMap=false
+convertIntNull=true convertIntMap=false
+comparedView=true
+once=1 calls=1 log=make,key
+order=true log=make,key
+setLog=make,key,value
+nullOrder=caught log=make
+dynamic=4
+override=6
+abstract=7
+nullObjectField=caught
+objectField=11 false
