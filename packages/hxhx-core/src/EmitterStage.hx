@@ -3025,8 +3025,6 @@ class EmitterStage {
 					+ ") ("
 					+ digitsOcaml
 					+ ")";
-			case ECall(EField(EIdent("StringTools"), "replace"), [_s, _sub, _by]):
-				return escapeOcamlString("");
 			case ECall(EField(EIdent("Std"), "is"), [_v, _t]):
 				return "true";
 			case ECall(EField(EIdent("Std"), "string"), [arg]):
