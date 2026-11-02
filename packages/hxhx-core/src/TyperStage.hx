@@ -2704,7 +2704,8 @@ class TyperStage {
 			return TyType.unknown();
 		final signature = TyCallableSignature.fromFunctionValue(calleeType);
 		final parameters = signature.getParameters().filter(parameter -> !parameter.isRest);
-		TyBasicNullArgument.check(parameters.map(parameter -> parameter.type), parameters.map(parameter -> parameter.isOptional), argumentTypes, ctx, pos);
+		TyBasicNullArgument.check(parameters.map(parameter -> parameter.type), parameters.map(parameter -> parameter.isOptional), argumentTypes, ctx, pos,
+			false);
 		final kinds:Array<TyCallAlignment.TyCallOperandKind> = [
 			for (argument in args)
 				argument.match(ECall(EIdent("__hxhx_spread"), [_])) ? Spread : Value

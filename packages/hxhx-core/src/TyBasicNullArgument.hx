@@ -151,15 +151,19 @@ private function basicNullPositions(signature:TyFunSig, types:Array<TyType>, ind
 /**
 	Reject a null literal at a basic parameter on static targets, and where the
 	native OCaml backend cannot convert it; paths that already accept it call this.
+	`nativeConverted` is false for function-value calls: a callback held in a local,
+	field or array element reaches the native call without a trustworthy parameter
+	type, so native OCaml rejects every such null instead of passing it into an
+	unboxed slot (haxe_ocaml-8gouw).
 **/
-function check(parameters:Array<Null<TyType>>, optional:Array<Bool>, types:Array<TyType>, ctx:TyperContext, pos:HxPos):Void {
+function check(parameters:Array<Null<TyType>>, optional:Array<Bool>, types:Array<TyType>, ctx:TyperContext, pos:HxPos, nativeConverted:Bool = true):Void {
 	for (index in 0...types.length)
 		if (index < parameters.length
 			&& types[index].isNullLiteral()
 			&& requiresValue(parameters[index], index < optional.length && optional[index], ctx.getIndex())) {
 			if (isStaticTarget(ctx))
 				throw staticPlatformError(parameters[index], ctx, pos);
-			if (nativeUnsupported(parameters[index], null, ctx))
+			if ((!nativeConverted && ctx.hasDefine("ocaml")) || nativeUnsupported(parameters[index], null, ctx))
 				throw nativeUnsupportedError(parameters[index], ctx, pos);
 		}
 }

@@ -21,9 +21,11 @@ import hxhx.Stage3SetupSupport;
 	dynamic targets, but a native unboxed `int`, `float` or `bool` parameter cannot
 	hold null. The call raises the catchable "Null Access" at the argument instead,
 	as passing a null `Null<Int>` already does. The upstream interpreter passes null
-	through. The native observer checks both. A parameter written as an abstract or
-	typedef over a basic type (`q(v:Abs)`) stops with a named native error instead,
-	because the backend cannot convert its written null yet (haxe_ocaml-8gouw).
+	through. The native observer checks both, after an optional `o(null)` in the
+	same function. A parameter written as an abstract or typedef over a basic type
+	(`q(v:Abs)`), and any call through a function value, stops with a named native
+	error instead, because the backend cannot convert its written null yet
+	(haxe_ocaml-8gouw).
 **/
 class M14NullBasicCallArgumentTest {
 	static final declarations = 'abstract Abs(Int) from Int to Int{}typedef MyInt = Int;'
@@ -42,23 +44,29 @@ class M14NullBasicCallArgumentTest {
 		{name: "static_float", body: 'g(null);'},
 		{name: "static_bool", body: 'h(null);'},
 		{name: "instance_method", body: 'var c=new C(1);c.m(null);'},
-		{name: "constructor", body: 'new C(null);'},
-		{name: "function_value", body: 'var fn=f;fn(null);'}
+		{name: "constructor", body: 'new C(null);'}
 	];
 
 	/**
-		Parameters written as an abstract or typedef over a basic type. Upstream treats
-		them like `Int`. Native OCaml cannot convert their written null yet, so hxhx
-		stops with a named error there (haxe_ocaml-8gouw) instead of passing a
-		reinterpreted null into an unboxed slot. `staticRejects` is false for the
-		indexed setter, which upstream rejects only on C# (see M14IndexedNullSetterTest).
+		Calls whose written null the native OCaml backend cannot convert yet: parameters
+		written as an abstract or typedef over a basic type, and every call through a
+		function value (a local, a method value, an object field or an array element),
+		which reaches the native call without a trustworthy parameter type. Upstream
+		treats them like any basic parameter. hxhx stops with a named error on native
+		OCaml (haxe_ocaml-8gouw) instead of passing a reinterpreted null into an unboxed
+		slot. `staticRejects` is false for the indexed setter, which upstream rejects
+		only on C# (see M14IndexedNullSetterTest).
 	**/
 	static final indirect = [
 		{name: "basic_abstract", body: 'q(null);', staticRejects: true},
 		{name: "basic_typedef", body: 'a(null);', staticRejects: true},
 		{name: "abstract_constructor", body: 'new CA(null);', staticRejects: true},
 		{name: "abstract_function_value", body: 'var fn=q;fn(null);', staticRejects: true},
-		{name: "abstract_indexed_setter", body: 'var s=new SA();s[0]=null;', staticRejects: false}
+		{name: "abstract_indexed_setter", body: 'var s=new SA();s[0]=null;', staticRejects: false},
+		{name: "function_value", body: 'var fn=f;fn(null);', staticRejects: true},
+		{name: "method_value", body: 'var c=new C(1);var m=c.m;m(null);', staticRejects: true},
+		{name: "object_field_function", body: 'var ob={fn:f};ob.fn(null);', staticRejects: true},
+		{name: "array_element_function", body: 'var arr=[f];arr[0](null);', staticRejects: true}
 	];
 
 	static final nativeUnsupported = "is not yet supported on the native OCaml target (haxe_ocaml-8gouw)";
@@ -172,13 +180,14 @@ class M14NullBasicCallArgumentTest {
 			{label: "float", call: 'Main.show(g(null));'},
 			{label: "bool", call: 'Main.show(h(null));'},
 			{label: "method", call: 'var c=new C(1);c.m(null);Main.show(0);'},
-			{label: "constructor", call: 'new C(null);Main.show(0);'},
-			{label: "function_value", call: 'var fn=f;Main.show(fn(null));'}
+			{label: "constructor", call: 'new C(null);Main.show(0);'}
 		];
 		final body = new StringBuf();
+		// An optional `o(null)` comes first in the same function: its null must not lend
+		// its carrier to the later required Int and Float nulls.
+		body.add('Sys.println("optional:"+o(null)+":"+o());');
 		for (attempt in attempts)
 			body.add('Sys.print("' + attempt.label + ':");try{' + attempt.call + '}catch(e:String){Sys.println(e);}');
-		body.add('Sys.println("optional:"+o(null)+":"+o());');
 		final source = declarations
 			+ 'class Main{'
 			+ helpers
@@ -194,12 +203,12 @@ class M14NullBasicCallArgumentTest {
 		M14Stage3RuntimeFixture.observe({
 			command: "node_modules/.bin/haxe",
 			arguments: ["-cp", root, "-main", "Main", "--interp"],
-			expected: passed + "\noptional:0:0\n"
+			expected: "optional:0:0\n" + passed + "\n"
 		});
 		final raised = [for (attempt in attempts) attempt.label + ":Null Access"].join("\n");
 		final prepared = M14Stage3RuntimeFixture.prepareProgram({source: source, path: path, root: root});
 		final artifact = EmitterStage.emitToDir(new MacroExpandedProgram(prepared, false), root + "/ocaml", true);
-		M14Stage3RuntimeFixture.observe({command: artifact, arguments: [], expected: raised + "\noptional:0:0\n"});
+		M14Stage3RuntimeFixture.observe({command: artifact, arguments: [], expected: "optional:0:0\n" + raised + "\n"});
 		Sys.println("NULL_BASIC_CALL_ARGUMENT:PASS native_null_access");
 	}
 }

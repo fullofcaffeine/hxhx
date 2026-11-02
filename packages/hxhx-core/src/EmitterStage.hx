@@ -4010,7 +4010,8 @@ class EmitterStage {
 						|| argIndex < 0
 						|| argIndex >= signature.paramTypeHints.length ? "" : signature.paramTypeHints[argIndex];
 					final isReceiver = signature != null && signature.needsReceiver && argIndex == 0;
-					final argument = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(arg) : currentTypedFunction != null ? currentTypedFunction.findCallArgument(arg) : null;
+					// Every parsed `null` is one shared value, so its identity-keyed fact may belong to another call.
+					final argument = arg.match(ENull) ? null : currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(arg) : currentTypedFunction != null ? currentTypedFunction.findCallArgument(arg) : null;
 					// A nullable Int/Float/Bool argument is unwrapped from its plain rendering
 					// before any Float or Int64 parameter coercion could read the carrier.
 					if (!isReceiver && backend.ocaml.Stage3OcamlNullablePrimitive.isCarrierBoundary(argument)) {
