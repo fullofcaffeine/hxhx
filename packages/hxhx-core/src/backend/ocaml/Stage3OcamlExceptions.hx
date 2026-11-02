@@ -40,13 +40,14 @@ function throwValue(value:TypedBackendThrownValue, rendered:String, classes:Stag
 	Catch Haxe-visible failures; native returns and loop signals retain their destinations.
 
 	Two kinds of OCaml exception are Haxe-visible. A Haxe `throw` raises
-	`HxRuntime.Hx_exception`. The OCaml runtime can also raise ordinary OCaml
-	exceptions, for example `Sys_error` when `sys.io.File.getContent` opens a
-	missing file. Upstream Haxe lets `catch (e:Dynamic)`, `catch (e:String)`,
-	and `catch (e:haxe.Exception)` handle such a failure as a `String` message.
+	`HxRuntime.Hx_exception`. The sys runtime raises `Sys_error`, for example
+	when `sys.io.File.getContent` opens a missing file. Upstream Haxe lets
+	`catch (e:Dynamic)`, `catch (e:String)`, and `catch (e:haxe.Exception)`
+	handle such a failure as a `String` message.
 	`HxRuntime.catchable_exception` is the one runtime place that converts both
-	kinds into a value and its type tags; it answers `None` for every exception
-	that must pass through, such as each function's early-return signal.
+	kinds into a value and its type tags. It answers `None` for every exception
+	that must pass through, such as each function's early-return signal and the
+	runtime's own invariant failures.
 
 	`catch (e:haxe.Exception)` matches every Haxe-visible value, as upstream does:
 	a value that is not already an exception object is wrapped by the emitted
@@ -63,6 +64,8 @@ function tryStatement(body:String, catches:Array<Stage3OcamlCatch>, names:Stage3
 		final nominal = classes.nominalName(entry.type);
 		final enumName = enums.runtimeName(entry.type);
 		final wrapper = nominal == "haxe.Exception" ? classes.outputModule(entry.type) : null;
+		if (nominal == "haxe.Exception" && wrapper == null)
+			throw "Stage3 OCaml catch (e:haxe.Exception) requires the emitted haxe.Exception module for its caught wrapper";
 		final converted = switch entry.type.getSemanticKey() {
 			case "primitive:Bool": "HxRuntime.unbox_bool_or_obj " + value;
 			case "primitive:Int": "(Obj.obj " + value + " : int)";

@@ -19,7 +19,19 @@ Upstream Haxe 4.3.7 (`--interp`) reports each failure as a `String`, so
 `catch (e:Dynamic)`, `catch (e:String)`, and `catch (e:haxe.Exception)` all
 handle it. The fixture checks those handlers, the exact message text for each
 call, a handler for another type that must let the failure reach an outer
-handler, and `return` and `break` inside a `try`.
+handler, `return`, `break`, and `continue` inside a `try` (including a
+`return` from a closure and a `break` from a `haxe.Exception` handler), and
+`haxe.Exception` handlers for thrown `Int`, `Float`, and `Bool` values, and
+a user subclass of `haxe.Exception` caught as `haxe.Exception`, as its own
+type, and by an outer handler after a non-matching inner one. It also uses
+`try` as a value (`final x = try read() catch (e:Dynamic) "fallback";`).
+
+A statement `try` whose body is not a block (`try f() catch (e:String) g();`)
+still loses its handlers in the parser. That is owned by `haxe_ocaml-2aql5`.
+
+The test also builds a native-only program that raises an OCaml `Failure`,
+the runtime's report for its own bugs, inside `catch (e:Dynamic)`. That
+handler must not run: the failure must stop the program.
 
 `npm run test:m14:stage3-runtime-exception-catch` checks that upstream Haxe
 prints `expected.stdout`. It then builds the program with Stage3 and requires
