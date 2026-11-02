@@ -5,6 +5,7 @@
    Std.string and Haxe's print facades:
 
    - null, Bool, Int, String, and Float use their exact runtime tags;
+   - boxed enum values print their constructor name and arguments;
    - anonymous structures enumerate their stable HxAnon fields recursively;
    - boxed enum values print their constructor and arguments, and class and
      enum type values print as `Class<Name>` and `Enum<Name>`;
@@ -150,6 +151,8 @@ let rec toStdString (value : Obj.t) : string =
       if string_value == hx_null_string then "null" else string_value
     else if tag = Obj.double_tag then
       HxRuntime.float_toStdString (Obj.obj value)
+    else if HxEnum.is_box value then
+      enumToStdString value
     else if HxArray.is_value value then
       HxArray.to_dynamic_string (Obj.obj value) toStdString
     else if HxEnum.is_box value then

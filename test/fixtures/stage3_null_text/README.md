@@ -1,0 +1,37 @@
+# Null values and enum values as text
+
+Run `npm run test:m14:stage3-null-text` from the repository root. The test runs
+`Main.hx` with pinned upstream Haxe 4.3.7, builds it with the Stage3 native
+emitter, and requires both programs to print `expected.stdout` exactly.
+
+A null String at run time is the runtime null sentinel, not the text `null`.
+Stage3 passed some String values to OCaml's `^` and `print_endline` unchanged,
+so they printed the sentinel's raw bytes:
+
+| Haxe expression | Upstream | Old native output |
+| --- | --- | --- |
+| `"x=" + nothing` (String local, null) | `x=null` | `x=` and raw bytes |
+| `"static " + staticText` | `static null` | raw bytes |
+| `Sys.println(nothing)` | `null` | raw bytes |
+| `'interpolated ${nothing}'` | `interpolated null` | raw bytes |
+| `s += "x"` on a null local | `nullx` | raw bytes, then `x` |
+| `"concat " + (hello.charCodeAt(9) + "a")` | `concat nulla` | raw bytes |
+| `"e=" + Red`, `"e=" + Rgb(1, 2, 3)` | `e=Red`, `e=Rgb(1,2,3)` | `e=<object>` |
+
+Now:
+- A String operand of a concatenation, a String call argument such as
+  `Sys.println(nothing)`, and both operands of a String `+=` print through
+  `HxString.toStdString`, which turns the sentinel into `null`. The operand
+  type comes from the typed concatenation and call-argument records, so only
+  String-typed operands get the check. A string literal or another
+  concatenation can never be null and is left unchanged
+  (`Stage3OcamlStringConversion.nonNullText`).
+- A parenthesized concatenation inside another one keeps its typed operands,
+  so a null `Null<Int>` operand prints `null`.
+- `HxDynamic.toStdString` prints a boxed enum value as its constructor name,
+  followed by its arguments in parentheses when it has any.
+
+Not covered: a Bool argument of an enum constructor is stored as a raw OCaml
+bool, so `Flagged(true)` prints `Flagged(1)` (haxe_ocaml-k3jwd).
+
+Beads: haxe_ocaml-txs4e, haxe_ocaml-npbsu, haxe_ocaml-aib5d.
