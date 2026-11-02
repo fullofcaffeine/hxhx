@@ -74,13 +74,20 @@ One declaration is exempt for now: hxhx's own `CompilerBundledSourcesMacro.files
 checkout, `packages/hxhx-core/src/CompilerBundledSourcesMacro.hx`), which embeds standard-library
 sources when hxhx compiles itself and needs `haxe.macro.Context` and reification. It is still reported, and its call is
 then typed by the macro call-site contract (`TyMacroCallSignature`): any expression is accepted at an `Expr` parameter,
-a trailing `Array<Expr>` parameter collects the remaining arguments, and the value is `Dynamic`. With `HXHX_TRACE_EXPR_MACROS=1`, `expr_macro_scope_gaps=N` also counts call sites the walker could not prove names for;
+a trailing `Array<Expr>` parameter collects the remaining arguments, and the value is `Dynamic`.
+
+Macros declared in the standard library are not project macros, so they never fail the compile either. Target syntax
+helpers such as `python.Syntax.arrayAccess(x, rest:Array<Expr>)` and `python.Syntax.tuple(...)` are called from the
+standard library itself (`haxe.io.Bytes`, `python.Tuple`). Their calls are reported with the reason `standard-library
+macro ... is not a project macro`, typed by the same call-site contract, and lowered by the target backend. hxhx
+decides by the declaration's file: under the standard-library root (with its `_std` overlays) or in the sources
+bundled into hxhx. With `HXHX_TRACE_EXPR_MACROS=1`, `expr_macro_scope_gaps=N` also counts call sites the walker could not prove names for;
 nothing is selected there. It is a trace line only, because standard-library switch scopes produce gaps in every program.
 
 Important constraints:
 
 - A selected `macro function` declaration runs only through a loaded project-macro plugin in the in-process mode.
-  Otherwise the compile fails at the call (except the bundled-source declaration described above).
+  Otherwise the compile fails at the call (except standard-library macros and the bundled-source declaration described above).
 - For the exact-text allowlist route below:
   - we do **not** type-check the returned expression snippet yet; we just parse it into the bootstrap `HxExpr` subset;
   - the returned snippet must be parsable by `HxParser.parseExprText` (tiny expression grammar).

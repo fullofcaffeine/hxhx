@@ -537,7 +537,8 @@ class Stage3Compiler {
 		// The request's header index and loader are built first (marking the resolved modules) and
 		// stay outside the expansion error handling, as before the pass existed. The pass then serves
 		// registered exact-text expressions, selects other calls by their `macro` declaration, and
-		// reports selected calls no executor can run; such a call fails the compile (see Stage3ProjectMacroPlugins).
+		// reports selected calls no executor can run; such a call fails the compile unless its declaration is in the
+		// standard library (see Stage3ProjectMacroPlugins).
 		//
 		// Every non-type-only compile runs the pass, because the built-in date macros are always
 		// allowlisted. The scope-gap count describes the walker's coverage (standard-library switch
@@ -554,6 +555,7 @@ class Stage3Compiler {
 			closeMacroSession();
 			return error("expression macro expansion requested (HXHX_EXPR_MACROS), but no macro host session is available");
 		}
+		final macroStandardRoot = Stage1Args.getStandardLibraryRoot(parsed).length == 0 ? "" : absFromCwd(cwd, Stage1Args.getStandardLibraryRoot(parsed));
 		#if hxhx_stage0_no_expr_macros
 		if (expressionMacroSession != null) {
 			closeMacroSession();
@@ -565,14 +567,14 @@ class Stage3Compiler {
 		final macroSetup = Stage3ExprMacroPass.prepare(resolvedForTyping, openModuleLoader);
 		// Selected project macros run through a native plugin that this compile reuses from the cache
 		// or builds (Stage3ProjectMacroPlugins); requests that cannot load one say why.
-		final projectMacroClassPathLists = Stage3ProjectMacroPlugins.classPathsFor(classPaths, hxhx.macro.MacroState.getGeneratedHxDir(),
-			Stage1Args.getStandardLibraryRoot(parsed).length == 0 ? "" : absFromCwd(cwd, Stage1Args.getStandardLibraryRoot(parsed)));
+		final projectMacroClassPathLists = Stage3ProjectMacroPlugins.classPathsFor(classPaths, hxhx.macro.MacroState.getGeneratedHxDir(), macroStandardRoot);
 		final projectMacroInputs:Stage3ProjectMacroPlugins.Stage3ProjectMacroPluginInputs = {
 			macroClassPaths: projectMacroClassPathLists.macroClassPaths,
 			classPaths: projectMacroClassPathLists.keyClassPaths,
 			defines: allDefines,
 			cwd: cwd,
-			cacheRoot: g.macroCacheRoot.length == 0 ? "" : absFromCwd(cwd, g.macroCacheRoot)
+			cacheRoot: g.macroCacheRoot.length == 0 ? "" : absFromCwd(cwd, g.macroCacheRoot),
+			standardRoot: macroStandardRoot
 		};
 		final projectMacroPluginsUnavailable = Stage3ProjectMacroPlugins.unavailableReason(macroRuntimeMode, requestContext.isServerRequest,
 			g.macroClassPaths.length > 0);
@@ -605,7 +607,7 @@ class Stage3Compiler {
 			if (macroPass.lexicalGaps.length > 0 && isTrueEnv("HXHX_TRACE_EXPR_MACROS"))
 				requestOutput.stdoutLine("expr_macro_scope_gaps=" + macroPass.lexicalGaps.length);
 		}
-		final unexecutedError = Stage3ProjectMacroPlugins.unexecutedError(macroPass.unexecuted);
+		final unexecutedError = Stage3ProjectMacroPlugins.unexecutedError(macroPass.unexecuted, macroStandardRoot);
 		if (unexecutedError != null) {
 			closeMacroSession();
 			return error(unexecutedError);
