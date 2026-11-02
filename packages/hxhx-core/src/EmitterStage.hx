@@ -2743,14 +2743,18 @@ class EmitterStage {
 				+ exprToOcamlAsFloatValueStage3(continuation, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 					callSigByCallee, checkedInt)
 				+ ")";
+			// A negative literal is parenthesized: `float_of_int -2147483648` would
+			// parse as a subtraction.
 			case EInt(v):
-				"float_of_int " + Std.string(v);
+				v < 0 ? "(float_of_int (" + Std.string(v) + "))" : "float_of_int " + Std.string(v);
 			case EUnop(op, fixity, inner) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
 				"(-.(" + exprToOcamlAsFloatValueStage3(inner, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 					callSigByCallee, checkedInt) + "))";
 			case EIdent(name) if (stage3TyForIdent(name, tyByIdent) == "Int"):
 				"float_of_int " + ocamlReadValueIdent(name);
-			case _ if (checkedInt):
+			// A typed Int result (a call, a binop, a field) is widened even when the
+			// caller did not check it: `Math.round(id(4))`, `Math.round(w * 2)`.
+			case _ if (checkedInt || stage3ExactPrimitiveKey(expr) == "primitive:Int"):
 				backend.ocaml.Stage3OcamlNumericWidening.promote(exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
 					moduleNameByPkgAndClass, callSigByCallee));
 			case _ if (stage3IsDynamicExpr(expr, tyByIdent, callSigByCallee)):
