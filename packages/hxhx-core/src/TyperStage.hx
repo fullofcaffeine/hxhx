@@ -4035,6 +4035,11 @@ class TyperStage {
 					// A declared indexed place follows the measured getter/step/setter schedule;
 					// the completed outcome owns the static type (the setter's return type).
 					if (isDeclaredIndexedUpdatePlace(e, scope, ctx, pos)) {
+						// `++untyped b[i]` parses as an update of an untyped place. Upstream
+						// increments the inlined getter place without a setter call, which
+						// the declared update schedule does not model.
+						if (e.match(EUntyped(_)))
+							throw new TyperError(ctx.getFilePath(), pos, "Untyped prefix indexed increment/decrement is not yet supported (haxe_ocaml-9f5qd)");
 						// The receiver is evaluated once for the getter and once for the setter.
 						switch e {
 							case EArrayAccess(receiver, _) if (!TypedIndexedUpdateLowering.repeatableReceiver(receiver)):
