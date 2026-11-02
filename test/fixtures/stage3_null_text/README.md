@@ -26,11 +26,16 @@ Now:
   String-typed operands get the check. A string literal or another
   concatenation can never be null and is left unchanged
   (`Stage3OcamlStringConversion.nonNullText`).
-- A static field without an initializer holds null when its type is String,
-  a nullable primitive, or another reference type, and `0`, `0.0` or `false`
-  for a non-null Int, Float or Bool (`Stage3OcamlStaticDefault`). It used to
-  hold the immediate `(Obj.magic 0)` for every type, which the String null
-  check did not recognize: printing such a String crashed the program.
+- A static field without an initializer holds null when it is stored as a
+  reference (String, nullable types, Dynamic, functions, anonymous
+  structures, classes, enums). It holds `0`, `0.0` or `false` when its
+  carrier is an unboxed number or Bool: a non-null Int, Float or Bool, or an
+  abstract over one such as `enum abstract Kind(Int)` (`Stage3OcamlStaticDefault`).
+  That is the static-target default; upstream eval prints `null` for these too
+  (haxe_ocaml-a8wbz), so the fixture only compares them with themselves and
+  the test checks the emitted defaults. Stage3 used to emit the immediate
+  `(Obj.magic 0)` for every type, which the String null check did not
+  recognize: printing such a String crashed the program.
 - A parenthesized concatenation inside another one keeps its typed operands,
   so a null `Null<Int>` operand prints `null`.
 - `HxDynamic.toStdString` prints a boxed enum value as its constructor name,

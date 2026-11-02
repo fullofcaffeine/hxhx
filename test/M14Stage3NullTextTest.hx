@@ -38,6 +38,39 @@ class M14Stage3NullTextTest {
 		FileSystem.deleteFile(path);
 	}
 
+	/**
+		An uninitialized static keeps the carrier its type needs. An unboxed
+		number or Bool (also through an abstract) holds an immediate, never the
+		null sentinel. A reference type holds the null sentinel.
+	**/
+	static function requireStaticDefaults(outDir:String):Void {
+		var source = "";
+		for (entry in FileSystem.readDirectory(outDir))
+			if (StringTools.endsWith(entry, ".ml"))
+				source += File.getContent(Path.join([outDir, entry])) + "\n";
+		final expected = [
+			"let kind = 0",
+			"let meters = 0.",
+			"let count = 0",
+			"let flag = false",
+			"let plain = 0",
+			"let ratio = 0.",
+			"let slabel = (Obj.magic HxRuntime.hx_null)",
+			"let scount = (Obj.magic HxRuntime.hx_null)",
+			"let sflag = (Obj.magic HxRuntime.hx_null)",
+			"let sitems = (Obj.magic HxRuntime.hx_null)"
+		];
+		for (line in expected)
+			if (source.indexOf("\n" + line + "\n") < 0)
+				throw "missing static default: " + line;
+		for (name in ["unsigned", "int32"]) {
+			final at = source.indexOf("\nlet " + name + " = ");
+			if (at < 0
+				|| source.substr(at + 1, ("let " + name + " = (Obj.magic HxRuntime.hx_null)").length) == "let " + name + " = (Obj.magic HxRuntime.hx_null)")
+				throw "an Int-backed static must not hold the null sentinel: " + name;
+		}
+	}
+
 	static function main():Void {
 		final source = "test/fixtures/stage3_null_text";
 		final path = source + "/Main.hx";
@@ -48,6 +81,7 @@ class M14Stage3NullTextTest {
 		final program = M14Stage3RuntimeFixture.prepareProgram({source: File.getContent(path), path: path, root: source});
 		final executable = EmitterStage.emitToDir(new MacroExpandedProgram(program, false), outDir);
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
+		requireStaticDefaults(outDir);
 		deleteRecursive(outDir);
 		Sys.println("M14_STAGE3_NULL_TEXT:PASS");
 	}

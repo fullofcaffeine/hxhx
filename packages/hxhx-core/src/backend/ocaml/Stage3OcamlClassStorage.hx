@@ -13,6 +13,9 @@ class Stage3OcamlClassStorage {
 	// Every exact class declaration can describe ancestry. Only admitted generated
 	// declarations below may select object storage or typed-catch representations.
 	final ancestry:Map<String, TypedBackendClassSemanticFacts> = [];
+	// The nominal kind of every declaration in this request, including
+	// runtime-provided and extern ones, for static default selection.
+	final nominalKinds:Map<String, TypedBackendClassSemanticFacts.TypedBackendNominalKind> = [];
 	final nominals:Map<String, TypedBackendClassSemanticFacts> = [];
 	final owners:Map<String, TypedBackendClassSemanticFacts> = [];
 	final projections:Map<String, TypedBackendClassProjection> = [];
@@ -37,6 +40,7 @@ class Stage3OcamlClassStorage {
 	 */
 	public function add(projection:TypedBackendClassProjection, runtimeProvided:Bool, ?outputModule:String):Void {
 		final facts = projection.requireSemanticFacts();
+		nominalKinds.set(facts.getClassIdentity(), facts.getNominalKind());
 		switch facts.getNominalKind() {
 			case AbstractValue(underlying):
 				if (!runtimeProvided && !facts.getIsExtern() && outputModule != null)
@@ -140,6 +144,9 @@ class Stage3OcamlClassStorage {
 		null when the class has no typed facts for it. Stage3 uses it to choose
 		the default of a static field without an initializer.
 	**/
+	public function staticDefault(projection:TypedBackendClassProjection, name:String):String
+		return Stage3OcamlStaticDefault.value(staticFieldType(projection, name), identity -> nominalKinds.get(identity));
+
 	public function staticFieldType(projection:TypedBackendClassProjection, name:String):Null<TyType> {
 		if (projection == null || !projection.hasSemanticFacts())
 			return null;
