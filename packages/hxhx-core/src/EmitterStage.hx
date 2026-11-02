@@ -1116,8 +1116,17 @@ class EmitterStage {
 				case EEnumValue(name): escapeOcamlString(name);
 				// When an expression is demanded as a string (e.g. trace/println), treat `+` as
 				// string concatenation and lower it to OCaml's `^`.
+				// The typed result decides: `ratio + 0.25` stays Float addition.
+				case EBinop("+", a, b) if (stage3IsStringExpr(expr, tyByIdent)):
+					backend.ocaml.Stage3OcamlStringConcat.render(emitStringExpr(a), emitStringExpr(b), stage3ConcatOperandIsStable(a),
+						stage3ConcatOperandIsStable(b), currentFunctionLocalOcamlNames);
+				case EBinop("+", _, _) if (stage3ExactExprType(expr) != null):
+					backend.ocaml.Stage3OcamlStringConversion.convert(stage3ExactExprType(expr),
+						exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+						currentFunctionLocalOcamlNames);
 				case EBinop("+", a, b):
-					"(" + emitStringExpr(a) + " ^ " + emitStringExpr(b) + ")";
+					backend.ocaml.Stage3OcamlStringConcat.render(emitStringExpr(a), emitStringExpr(b), stage3ConcatOperandIsStable(a),
+						stage3ConcatOperandIsStable(b), currentFunctionLocalOcamlNames);
 				case ECall(EField(EIdent("Std"), "string"), [arg]):
 					// String interpolation lowering uses `Std.string(...)` to force stringification.
 					//
@@ -2302,11 +2311,29 @@ class EmitterStage {
 				stage3IsStringExpr(inner, tyByIdent);
 			case EParenthesized(inner, _) | EUntyped(inner):
 				stage3IsStringExpr(inner, tyByIdent);
-			case EBinop("+", a, b): stage3IsStringExpr(a, tyByIdent) || stage3IsStringExpr(b, tyByIdent);
+			// The typed result decides: `n + 3 + "x"` adds the Ints before it concatenates.
+			case EBinop("+", a, b):
+				final typed = stage3ExactPrimitiveKey(expr);
+				typed != null ? typed == "primitive:String" : (stage3IsStringExpr(a, tyByIdent) || stage3IsStringExpr(b, tyByIdent));
 			case ETernary(_cond, thenExpr, elseExpr): stage3IsStringExpr(thenExpr, tyByIdent) && stage3IsStringExpr(elseExpr, tyByIdent);
 			case _:
 				false;
 		}
+	}
+
+	/**
+		Whether evaluating a concatenation operand has no effect and always gives the same value:
+		a literal, a read of an immutable local, or a `+` of such operands. Such an operand
+		may be evaluated out of source order without changing the result.
+	**/
+	static function stage3ConcatOperandIsStable(expr:HxExpr):Bool {
+		return switch expr {
+			case EString(_) | EInt(_) | EFloat(_) | EBool(_) | ENull: true;
+			case EIdent(name): exactFunctionLocalType(name) != null && !isMutableLocalRefIdent(name);
+			case EParenthesized(inner, _) | ECast(inner, _) | ECheckType(inner, _): stage3ConcatOperandIsStable(inner);
+			case EBinop("+", a, b): stage3ConcatOperandIsStable(a) && stage3ConcatOperandIsStable(b);
+			case _: false;
+		};
 	}
 
 	static function stage3IsBoolExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>, ?callSigByCallee:Map<String, EmitterCallSig>):Bool {
@@ -4928,14 +4955,12 @@ class EmitterStage {
 							case _:
 								"(Obj.magic 0)";
 						}
-					case "+" if (stage3IsStringExpr(a, tyByIdentRaw) || stage3IsStringExpr(b, tyByIdentRaw)):
-						"(("
-						+ exprToOcamlForConcatStage3(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-							callSigByCallee)
-						+ ") ^ ("
-						+ exprToOcamlForConcatStage3(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-							callSigByCallee)
-						+ "))";
+					case "+" if (stage3IsStringExpr(e, tyByIdentRaw)):
+						backend.ocaml.Stage3OcamlStringConcat.render(exprToOcamlForConcatStage3(a, arityByIdent, tyByIdent, staticImportByIdent,
+							currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+							exprToOcamlForConcatStage3(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee),
+							stage3ConcatOperandIsStable(a), stage3ConcatOperandIsStable(b), currentFunctionLocalOcamlNames);
 					case "/":
 						if (stage3IsInt64Expr(a, tyByIdentRaw) || stage3IsInt64Expr(b, tyByIdentRaw)) {
 							int64DivModField("quotient");
