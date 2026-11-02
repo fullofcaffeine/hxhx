@@ -210,6 +210,12 @@ class M14MacroSyntaxRoundTripTest {
 			case _:
 				throw "arrow function changed";
 		}
+		// The compiler's rooted spelling (`HxRootedPath`) cannot come back from a macro result.
+		requireFailure("rooted identifier", "macro syntax import:", "`::Std` is not a valid identifier", () -> importer.result(ident("::Std")));
+		requireFailure("rooted type path", "macro syntax import:", "`::haxe` is not a valid identifier", () -> importer.result({
+			expr: ECheckType(ident("x"), TPath({pack: ["::haxe", "ds"], name: "StringMap", params: []})),
+			pos: created
+		}));
 		switch importer.result({expr: EConst(CIdent("Color")), pos: created}) {
 			case EEnumValue("Color"):
 			case _:

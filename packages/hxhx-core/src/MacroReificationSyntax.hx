@@ -16,7 +16,8 @@ import MacroReificationLowering.MacroReificationHole;
 	- `expression` and `complexType` return `HxExpr` syntax; nothing here is target-specific, the
 	  typer and every backend treat the result as ordinary code.
 	- Enum constructors are written as `haxe.macro.Expr.<Enum>.<Constructor>(...)`, so the lowered
-	  code needs no import in the macro's module.
+	  code needs no import in the macro's module. The path is rooted (`HxRootedPath`): a local,
+	  parameter, or field named `haxe` in the macro's code does not change what it names.
 	- Records are written with every field of the 4.3.7 typedef, absent optional fields as `null`,
 	  the same shape `hxhxmacrohost.MacroSyntaxWire` builds in a plugin.
 	- Positions become `cast({file: .., min: .., max: ..}, haxe.macro.Expr.Position)`: hxhx
@@ -36,12 +37,17 @@ class MacroReificationSyntax {
 
 	final holes:Array<MacroReificationHole>;
 	final valueSplice:(payload:HxExpr, position:HxExpr) -> HxExpr;
+	final rooted:Bool;
 	var positionOverride:Null<HxExpr>;
 
-	/** `valueSplice` builds the `$v{}` constant for a typed payload; the lowering owns that policy. */
-	public function new(holes:Array<MacroReificationHole>, valueSplice:(payload:HxExpr, position:HxExpr) -> HxExpr) {
+	/**
+		`valueSplice` builds the `$v{}` constant for a typed payload; the lowering owns that policy.
+		`rooted` selects rooted paths (`HxRootedPath`); see `MacroReificationLowering.lowerExpression`.
+	**/
+	public function new(holes:Array<MacroReificationHole>, valueSplice:(payload:HxExpr, position:HxExpr) -> HxExpr, rooted:Bool) {
 		this.holes = holes;
 		this.valueSplice = valueSplice;
+		this.rooted = rooted;
 		positionOverride = null;
 	}
 
@@ -53,20 +59,12 @@ class MacroReificationSyntax {
 
 	// --- syntax helpers -------------------------------------------------------------------------
 
-	static function qualified(path:String):HxExpr {
-		final parts = path.split(".");
-		var out:HxExpr = EIdent(parts[0]);
-		for (index in 1...parts.length)
-			out = EField(out, parts[index]);
-		return out;
-	}
-
-	/** The fully qualified constructor `haxe.macro.Expr.<owner>.<name>` as syntax. */
-	public static function enumPath(owner:String, name:String):HxExpr
-		return qualified(MODULE + "." + owner + "." + name);
+	/** The fully qualified constructor `haxe.macro.Expr.<owner>.<name>`, rooted so no user name captures `haxe`. */
+	public function enumPath(owner:String, name:String):HxExpr
+		return HxRootedPath.expression(MODULE + "." + owner + "." + name, rooted);
 
 	/** `haxe.macro.Expr.<owner>.<name>(args)`, or the bare constructor value when it has no payload. */
-	static function ctor(owner:String, name:String, args:Array<HxExpr>):HxExpr {
+	function ctor(owner:String, name:String, args:Array<HxExpr>):HxExpr {
 		final path = enumPath(owner, name);
 		return args.length == 0 ? path : ECall(path, args);
 	}
@@ -124,6 +122,8 @@ class MacroReificationSyntax {
 		final facts:hxhxmacrohost.MacroSyntaxWire.MacroSyntaxWirePosition = cast value;
 		final fields = record(["file", "min", "max"], [str(facts.file), EInt(facts.min), EInt(facts.max)]);
 		// A hinted cast names the destination without an inference variable; the backends emit the record itself.
+		// The hint stays unrooted: a type hint is resolved only as a type, so no local, parameter, or
+		// field can capture it, and Haxe has no lowercase type or alias that could stand for `haxe`.
 		return ECast(fields, MODULE + ".Position");
 	}
 

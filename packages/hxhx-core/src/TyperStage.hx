@@ -1395,9 +1395,12 @@ class TyperStage {
 		macro selection uses the same rule so both phases ask the loader the same questions.
 	**/
 	public static function isUpperStartName(name:String):Bool {
-		if (name == null || name.length == 0)
+		if (name == null)
 			return false;
-		final c = name.charCodeAt(0);
+		final segment = HxRootedPath.unrooted(name);
+		if (segment.length == 0)
+			return false;
+		final c = segment.charCodeAt(0);
 		return c >= "A".code && c <= "Z".code;
 	}
 
@@ -3255,19 +3258,60 @@ class TyperStage {
 		so inference and typed-body replay share it; `$v{}` payloads are typed in `scope`.
 	**/
 	static function lowerMacroQuotation(quote:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):HxExpr {
-		return ctx.loweredQuotation(quote, () -> try {
-			switch quote {
-				case EMacroExpr(inner, wrappers):
-					MacroReificationLowering.lowerExpression(inner, wrappers, ctx.getFilePath(), pos, payload -> inferExprType(payload, scope, ctx, pos),
-						ctx.isMacroModule());
-				case EMacroType(typeText):
-					MacroReificationLowering.lowerType(typeText, ctx.getFilePath(), pos);
-				case _:
-					throw "macro reification: not a quotation";
-			}
-		} catch (message:String) {
-			throw new TyperError(ctx.getFilePath(), pos, message);
+		return ctx.loweredQuotation(quote, () -> {
+			final lowered = try {
+				switch quote {
+					case EMacroExpr(inner, wrappers):
+						MacroReificationLowering.lowerExpression(inner, wrappers, ctx.getFilePath(), pos, payload -> inferExprType(payload, scope, ctx, pos),
+							ctx.isMacroModule(), ctx.hasLoader());
+					case EMacroType(typeText):
+						MacroReificationLowering.lowerType(typeText, ctx.getFilePath(), pos, ctx.hasLoader());
+					case _:
+						throw "macro reification: not a quotation";
+				}
+			} catch (message:String) {
+				throw new TyperError(ctx.getFilePath(), pos, message);
+			};
+			if (ctx.hasLoader())
+				requireRootedOwners(lowered, ctx, pos);
+			lowered;
 		});
+	}
+
+	/**
+		Every type a lowered quotation names through a rooted path (`HxRootedPath`) must resolve.
+
+		An unresolved rooted path would otherwise stay a plain name in the typed body and reach a
+		backend with its `::` prefix. Each owner (`haxe.macro.Expr.ExprDef`, `Std`,
+		`hxhxmacrohost.MacroReificationValues`) is resolved once per quotation.
+	**/
+	static function requireRootedOwners(lowered:HxExpr, ctx:TyperContext, pos:HxPos):Void {
+		// In `::haxe.macro.Expr.ExprDef.EConst` the owner is `::haxe.macro.Expr.ExprDef`: the receiver
+		// of a field whose own access is not the receiver of another field.
+		final receivers = new Array<String>();
+		final inner = new Array<String>();
+		TypedBackendSourceWalk.expression(lowered, node -> switch node {
+			case EField(owner, _):
+				final path = dottedFieldPath(owner);
+				if (HxRootedPath.isRooted(path) && receivers.indexOf(path) < 0)
+					receivers.push(path);
+				switch owner {
+					case EField(receiver, _):
+						final prefix = dottedFieldPath(receiver);
+						if (HxRootedPath.isRooted(prefix) && inner.indexOf(prefix) < 0) inner.push(prefix);
+					case _:
+				}
+			case _:
+		});
+		for (owner in receivers)
+			if (inner.indexOf(owner) < 0 && ctx.resolveType(owner) == null) {
+				final name = HxRootedPath.unrooted(owner);
+				throw new TyperError(ctx.getFilePath(), pos,
+					StringTools.startsWith(name,
+						"hxhxmacrohost.") ? "macro reification: the support module " + name +
+						" is not on the classpath (a project-macro plugin build adds it)" : "macro reification: the lowered quotation needs `" + name +
+						"`, which is not on the classpath");
+			}
 	}
 
 	static function inferExprValueType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos, expectedResult:Null<TyType>,

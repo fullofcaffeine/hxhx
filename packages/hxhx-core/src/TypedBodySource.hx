@@ -235,7 +235,7 @@ class TypedBodySource {
 		instead produce invalid names such as `model_Api` in Python.
 	**/
 	static function resolvedTypeExpression(sourceName:String, identity:Null<TyNominalTypeId>):HxExpr {
-		final resolved = resolvedNameWhenAliased(sourceName, identity);
+		final resolved = HxRootedPath.assertResolved(resolvedNameWhenAliased(sourceName, identity));
 		if (resolved.indexOf(".") < 0)
 			return EIdent(resolved);
 		final parts = resolved.split(".");
@@ -584,6 +584,7 @@ class TypedBodySource {
 			case SuperValue: ESuper;
 			case LocalRead: EIdent(exactProjectedName(catalog, typedExpression.getLocalBindings(), texts[0], "typed local read"));
 			case NameRead:
+				HxRootedPath.assertResolved(texts[0]);
 				final nameField = typedExpression.getFieldInfo();
 				final method = typedExpression.getDeclaration();
 				if (method != null) {

@@ -9,6 +9,10 @@ Files:
 - `oracle.hxml` runs the program with upstream Haxe 4.3.7; `expected.stdout` is its output.
 - `probe-oracle.hxml` runs `Probe.main()` in upstream's macro context; it prints the structure
   of the expression `Macros.build` returns, as `probe-expected.stdout`.
+- `Shadowing.hx` quotes where locals, parameters, and static fields are named `haxe`, `Std`, and
+  `hxhxmacrohost`, and calls `AliasQuotes` (an import alias named `Std`) and `shadow.PackageQuotes`
+  (a package with its own `Std` class and a `shadow.haxe` sub-package); `Probe` prints those results
+  too, so a user name that captured the lowered syntax would change the probe output.
 
 Checks:
 

@@ -98,9 +98,16 @@ class TyperContext {
 		return classFullName;
 
 	/** Load a requested declaration before resolving its nominal provider; generic aliases retain their own binders. */
+	/** Whether this module is typed with a module loader, that is, against a classpath. */
+	public function hasLoader():Bool
+		return loader != null;
+
 	public function resolveType(typePath:String):Null<TyNominalInfo> {
 		if (index == null)
 			return null;
+		// A rooted path (`HxRootedPath`) names a top-level type; imports and the current package do not apply.
+		if (HxRootedPath.isRooted(typePath))
+			return resolveCoreProvider(HxRootedPath.unrooted(typePath));
 		final context:TyTypeDeclaration.TyTypeResolutionContext = {
 			packagePath: packagePath,
 			modulePath: modulePath,
@@ -122,17 +129,20 @@ class TyperContext {
 	public function resolveTypeDeclaration(typePath:String, ?position:HxPos):Null<TyTypeDeclaration> {
 		if (index == null)
 			return null;
+		// A rooted path (`HxRootedPath`) names a top-level type; imports and the current package do not apply.
+		final rooted = HxRootedPath.isRooted(typePath);
+		final path = HxRootedPath.unrooted(typePath);
 		final context:TyTypeDeclaration.TyTypeResolutionContext = {
-			packagePath: packagePath,
-			modulePath: modulePath,
-			directives: directives,
+			packagePath: rooted ? "" : packagePath,
+			modulePath: rooted ? "" : modulePath,
+			directives: rooted ? [] : directives,
 			filePath: filePath,
 			position: position == null ? HxPos.unknown() : position,
 			parameters: []
 		};
 		if (loader != null)
-			loader.ensureDeclarationAvailable(typePath, context);
-		return index.resolveTypeDeclaration(typePath, context);
+			loader.ensureDeclarationAvailable(path, context);
+		return index.resolveTypeDeclaration(path, context);
 	}
 
 	/**
