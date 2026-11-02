@@ -266,6 +266,19 @@ class ModuleLoader extends LazyTypeLoader {
 		under the current defines, as `haxe.http.HttpJs` does outside JS.
 		Upstream accepts an import of such a module.
 	**/
+	/**
+		Whether the class path includes the standard library (it can find
+		`StdTypes`). Asked once per loader, because each module query is also
+		recorded as a dependency observation.
+	**/
+	override public function hasStandardLibrary():Bool {
+		if (standardLibrary == null)
+			standardLibrary = hasModuleSource("StdTypes");
+		return standardLibrary;
+	}
+
+	var standardLibrary:Null<Bool> = null;
+
 	override public function hasModuleSource(modulePath:String):Bool
 		return sourceProvider.resolveModuleFile(classPaths, modulePath) != null;
 

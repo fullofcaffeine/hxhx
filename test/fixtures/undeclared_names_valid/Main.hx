@@ -40,6 +40,7 @@ class Main {
 		Sys.println(Alias.hi());
 		Sys.println(parse("1"));
 		Sys.println(Std.string(Mode.Build));
+		Sys.println(ModuleOps.total());
 		if (false) {
 			untyped Nope.foo();
 			untyped Missing;

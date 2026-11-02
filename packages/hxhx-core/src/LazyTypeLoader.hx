@@ -33,6 +33,10 @@ class LazyTypeLoader {
 	public function hasModuleSource(_modulePath:String):Bool
 		return false;
 
+	/** Whether the class path includes the standard library; false without a request. */
+	public function hasStandardLibrary():Bool
+		return false;
+
 	/** Make a source declaration available without promising that it denotes a class. */
 	public function ensureDeclarationAvailable(_path:String, _context:TyTypeDeclaration.TyTypeResolutionContext):Null<TyTypeDeclaration>
 		return null;

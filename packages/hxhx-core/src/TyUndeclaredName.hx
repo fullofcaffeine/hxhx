@@ -40,11 +40,8 @@ class TyUndeclaredName {
 		decides in `TyUndeclaredValueNames.requireDeclared` after typing.
 	**/
 	public static function recordValueName(name:String, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Void {
-		if (!ctx.hasDeclarationLoader()
-			|| scope.isUntypedContext()
-			|| ctx.importsLocalName(name)
-			|| namesType(name, ctx)
-			|| sourceImportsName(ctx.getFilePath(), name))
+		if (!ctx.hasDeclarationLoader() || scope.isUntypedContext() || ctx.importsLocalName(name) || namesType(name, ctx) || runsBuildMacro(ctx)
+			|| sourceImportsName(ctx, name))
 			return;
 		ctx.getIndex().undeclaredValueNames(ctx.getFilePath()).record(name, pos);
 	}
@@ -61,19 +58,14 @@ class TyUndeclaredName {
 			|| ctx.importsLocalName(name)
 			|| resolvesValue(name, scope, ctx, pos)
 			|| namesType(name, ctx)
-			|| ctx.namesModule(name))
+			|| ctx.namesModule(name)
+			|| runsBuildMacro(ctx))
 			return;
-		if (sourceImportsName(ctx.getFilePath(), name) || declaredBySameFile(name, ctx))
+		if (sourceImportsName(ctx, name) || declaredBySameFile(name, ctx))
 			return;
 		throw new TyperError(ctx.getFilePath(), pos, "Type not found : " + name);
 	}
 
-	/**
-		Whether the module source imports `name` in any conditional branch. Code
-		in a `#if macro` block can be typed without the directives of that block
-		(the imports are filtered for the current defines), so an import written
-		anywhere in the file counts as a declaration of the name.
-	**/
 	/**
 		Whether a type of this name is indexed under the module that the current
 		file's name implies. A caller can register a source under another module
@@ -93,11 +85,82 @@ class TyUndeclaredName {
 		return false;
 	}
 
-	public static function sourceImportsName(filePath:Null<String>, name:String):Bool {
-		if (filePath == null || !sys.FileSystem.exists(filePath) || sys.FileSystem.isDirectory(filePath))
+	/**
+		Whether the module source imports `name` in any conditional branch. Code
+		in a `#if macro` block can be typed without the directives of that block
+		(the imports are filtered for the current defines), so this deliberately
+		reads every branch of the raw file. An import of a loaded module that
+		declares no type of that name does not count (`import pack.Ops` of a
+		module of module-level functions). The text is read once per index.
+	**/
+	public static function sourceImportsName(ctx:TyperContext, name:String):Bool {
+		final text = ctx.getIndex().rawSourceText(ctx.getFilePath());
+		if (text == null)
 			return false;
-		final pattern = new EReg("\\b(import|using)\\s+[A-Za-z0-9_.]*\\b" + name + "\\s*;|\\bas\\s+" + name + "\\s*;", "");
-		return pattern.match(sys.io.File.getContent(filePath));
+		for (directive in importDirectives(text))
+			if (directive.local == name && !ctx.importedModuleLacksType(directive.path, name))
+				return true;
+		return false;
+	}
+
+	/**
+		The `import` and `using` directives written anywhere in `text`, without
+		regular expressions (the native EReg runtime supports a small subset).
+	**/
+	static function importDirectives(text:String):Array<{path:String, local:String}> {
+		final out = [];
+		for (keyword in ["import", "using"]) {
+			var at = text.indexOf(keyword);
+			while (at >= 0) {
+				final before = at == 0 ? " ".code : text.charCodeAt(at - 1);
+				var cursor = at + keyword.length;
+				if (!isIdentifierCode(before) && cursor < text.length && isSpaceCode(text.charCodeAt(cursor))) {
+					while (cursor < text.length && isSpaceCode(text.charCodeAt(cursor)))
+						cursor++;
+					final start = cursor;
+					while (cursor < text.length && (isIdentifierCode(text.charCodeAt(cursor)) || text.charCodeAt(cursor) == ".".code))
+						cursor++;
+					final path = text.substring(start, cursor);
+					while (cursor < text.length && isSpaceCode(text.charCodeAt(cursor)))
+						cursor++;
+					var local = path.substr(path.lastIndexOf(".") + 1);
+					if (StringTools.startsWith(text.substr(cursor, 3), "as ")) {
+						cursor += 3;
+						while (cursor < text.length && isSpaceCode(text.charCodeAt(cursor)))
+							cursor++;
+						final aliasStart = cursor;
+						while (cursor < text.length && isIdentifierCode(text.charCodeAt(cursor)))
+							cursor++;
+						local = text.substring(aliasStart, cursor);
+					}
+					if (path.length > 0 && local.length > 0)
+						out.push({path: path, local: local});
+				}
+				at = text.indexOf(keyword, at + keyword.length);
+			}
+		}
+		return out;
+	}
+
+	static function isIdentifierCode(code:Int):Bool
+		return (code >= "a".code && code <= "z".code)
+			|| (code >= "A".code && code <= "Z".code)
+			|| (code >= "0".code && code <= "9".code)
+			|| code == "_".code;
+
+	static function isSpaceCode(code:Int):Bool
+		return code == " ".code || code == "\t".code || code == "\n".code || code == "\r".code;
+
+	/**
+		Whether a class of this module declares a build macro (`@:build`,
+		`@:autoBuild`). Such a macro can add fields that use or declare the name.
+		The native in-process lane does not apply build fields yet, so reporting
+		the name would blame the program for a missing macro result. The
+		module is left to the build-macro owner instead.
+	**/
+	static function runsBuildMacro(ctx:TyperContext):Bool {
+		final text = ctx.getIndex().rawSourceText(ctx.getFilePath());
+		return text != null && (text.indexOf("@:build(") >= 0 || text.indexOf("@:autoBuild(") >= 0);
 	}
 
 	static function isUpperStart(name:String):Bool {
