@@ -21,7 +21,8 @@ class HihOcamlBackendDialect implements HihBackendDialect {
 	}
 
 	public function runtimeDynamicEquals(lhsExpr:String, rhsExpr:String):String {
-		return "(HxRuntime.dynamic_equals (Obj.repr " + lhsExpr + ") (Obj.repr " + rhsExpr + "))";
+		// Parenthesize the operands: a negative constant such as `-1` must not read as `Obj.repr - 1`.
+		return "(HxRuntime.dynamic_equals (Obj.repr (" + lhsExpr + ")) (Obj.repr (" + rhsExpr + ")))";
 	}
 
 	public function dynamicNullValue():String {

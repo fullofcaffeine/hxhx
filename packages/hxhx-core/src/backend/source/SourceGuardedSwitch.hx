@@ -64,6 +64,7 @@ function render(frame:SourceFunctionRenderFrame, input:HxExpr, enabled:HxExpr, p
 				+ literal : target == Php ? value
 				+ " === "
 				+ literal : SourceTargetCommon.equalityCond(target, value, Std.string(literal));
+			case IsFloat(literal): SourceTargetCommon.equalityCond(target, value, literal);
 			case IsString(literal): target == Cs ? "System.Object.Equals(" + value + ", " + quote(literal) + ")" : target == Php ? value
 				+ " === "
 				+ quote(literal) : SourceTargetCommon.equalityCond(target, value, quote(literal));

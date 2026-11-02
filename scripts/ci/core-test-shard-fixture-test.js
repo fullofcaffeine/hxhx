@@ -168,7 +168,7 @@ function checkRuntimeTypeCoverage(packageJson, plan, expected) {
 function main() {
   checkCommandFailureReporting()
   const plan = loadPlan(repoRoot)
-  assert(plan.aggregateCommands.length === 330, `expected 330 npm test commands, found ${plan.aggregateCommands.length}`)
+  assert(plan.aggregateCommands.length === 331, `expected 331 npm test commands, found ${plan.aggregateCommands.length}`)
 
   const expectedAggregateJobs = [
     'guards',
@@ -188,7 +188,7 @@ function main() {
   )
 
   const expectedCounts = {
-    'compiler-foundation': 44,
+    'compiler-foundation': 45,
     'compiler-packaging': 15,
     'compiler-focused-1': 46,
     'compiler-focused-call-arguments': 1,

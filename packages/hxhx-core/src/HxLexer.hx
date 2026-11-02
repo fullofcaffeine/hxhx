@@ -315,9 +315,9 @@ class HxLexer {
 		}
 
 		final numericEnd = index;
-		consumeNumericSuffix();
+		final suffix = consumeNumericSuffix();
 		final text = normalizeNumberText(src.substring(start, numericEnd));
-		return token(TFloat(Std.parseFloat(text)), startPos);
+		return token(TFloat(Std.parseFloat(text)), startPos, text, suffix);
 	}
 
 	function consumeNumericSuffix():String {

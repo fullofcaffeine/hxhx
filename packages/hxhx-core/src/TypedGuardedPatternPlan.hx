@@ -11,6 +11,10 @@ enum GuardedPatternTest {
 	IsNull;
 	IsBool(value:Bool);
 	IsInt(value:Int);
+
+	/** Float equality with a `HxFloatPatternText` spelling; an Int test of the same value is the same test (see `sameTest`). */
+	IsFloat(text:String);
+
 	IsString(value:String);
 	ArrayLength(length:Int);
 	EnumConstructor(source:HxSwitchPattern, selection:TypedNamedPattern);
@@ -197,6 +201,9 @@ class TypedGuardedPatternPlan {
 						case IsInt(value):
 							parts.push("int");
 							parts.push(Std.string(value));
+						case IsFloat(value):
+							parts.push("float");
+							parts.push(value);
 						case IsString(value):
 							parts.push("string");
 							parts.push(value);
@@ -279,6 +286,7 @@ class TypedGuardedPatternPlan {
 			case PNull: IsNull;
 			case PBool(value): IsBool(value);
 			case PInt(value): IsInt(value);
+			case PFloat(value): IsFloat(value);
 			case PString(value): IsString(value);
 			case PArray(items): ArrayLength(items.length);
 			case PEnumValue(_) | PEnumExtract(_, _):
@@ -315,6 +323,8 @@ class TypedGuardedPatternPlan {
 			case [IsNull, IsNull]: true;
 			case [IsBool(a), IsBool(b)]: a == b;
 			case [IsInt(a), IsInt(b)]: a == b;
+			case [IsFloat(a), IsFloat(b)]: HxFloatPatternText.value(a) == HxFloatPatternText.value(b);
+			case [IsInt(a), IsFloat(b)] | [IsFloat(b), IsInt(a)]: a == HxFloatPatternText.value(b);
 			case [IsString(a), IsString(b)]: a == b;
 			case [ArrayLength(a), ArrayLength(b)]: a == b;
 			case [EnumConstructor(_, a), EnumConstructor(_, b)]: a.getSemanticKey() == b.getSemanticKey();

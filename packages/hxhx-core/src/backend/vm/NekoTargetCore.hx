@@ -2579,7 +2579,7 @@ class NekoTargetCore {
 			final prefix:Null<String> = switch (pattern) {
 				case PWildcard | PBind(_):
 					"default";
-				case PNull | PBool(_) | PString(_) | PInt(_) | PEnumValue(_) | PEnumExtract(_, _):
+				case PNull | PBool(_) | PString(_) | PInt(_) | PFloat(_) | PEnumValue(_) | PEnumExtract(_, _):
 					renderSwitchPatternValue(pattern);
 				case PCapture(_, inner):
 					renderSwitchPatternValue(inner);
@@ -2694,6 +2694,8 @@ class NekoTargetCore {
 				{cond: "(" + scrutinee + " == " + quote(value) + ")", bindings: []};
 			case PInt(value):
 				{cond: "(" + scrutinee + " == " + Std.string(value) + ")", bindings: []};
+			case PFloat(text):
+				{cond: "(" + scrutinee + " == " + nekoFloatLiteral(text) + ")", bindings: []};
 			case PEnumValue(name):
 				{cond: nekoEnumCtorCond(scrutinee, name), bindings: []};
 			case PEnumExtract(name, args):
@@ -2818,7 +2820,7 @@ class NekoTargetCore {
 		return switch (pattern) {
 			case PWildcard | PBind(_):
 				"default => " + renderExpr(context, expr);
-			case PNull | PBool(_) | PString(_) | PInt(_) | PEnumValue(_) | PEnumExtract(_, _):
+			case PNull | PBool(_) | PString(_) | PInt(_) | PFloat(_) | PEnumValue(_) | PEnumExtract(_, _):
 				renderSwitchPatternValue(pattern) + " => " + renderExpr(context, expr);
 			case PCapture(_, inner):
 				renderSwitchCase(context, inner, expr);
@@ -2839,11 +2841,21 @@ class NekoTargetCore {
 				quote(value);
 			case PInt(value):
 				Std.string(value);
+			case PFloat(text):
+				nekoFloatLiteral(text);
 			case PEnumValue(name) | PEnumExtract(name, _):
 				quote(name);
 			case _:
 				unsupported("switch pattern", patternKind(pattern));
 		}
+	}
+
+	/** Neko has no exponent syntax in Float literals, so an exponent spelling is parsed at run time. */
+	public static function floatPatternLiteral(text:String):String
+		return nekoFloatLiteral(text);
+
+	static function nekoFloatLiteral(text:String):String {
+		return text.indexOf("e") >= 0 || text.indexOf("E") >= 0 ? "$float(\"" + text + "\")" : text;
 	}
 
 	static function patternKind(pattern:HxSwitchPattern):String {
@@ -2853,6 +2865,7 @@ class NekoTargetCore {
 			case PBool(_): "PBool";
 			case PString(_): "PString";
 			case PInt(_): "PInt";
+			case PFloat(_): "PFloat";
 			case PEnumValue(_): "PEnumValue";
 			case PEnumExtract(_, _): "PEnumExtract";
 			case PObject(_, _): "PObject";

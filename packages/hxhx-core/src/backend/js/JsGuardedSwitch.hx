@@ -17,6 +17,7 @@ function emit(writer:JsWriter, input:HxExpr, enabled:HxExpr, plan:TypedGuardedPa
 			case IsNull: value + " == null";
 			case IsBool(literal): value + " === " + literal;
 			case IsInt(literal): value + " === " + literal;
+			case IsFloat(literal): value + " === " + literal;
 			case IsString(literal): value + " === " + JsNameMangler.quoteString(literal);
 			case ArrayLength(length): "Array.isArray(" + value + ") && " + value + ".length === " + length;
 			case EnumConstructor(pattern, selected):
