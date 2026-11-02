@@ -2844,10 +2844,6 @@ class EmitterStage {
 				+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 				+ ") = FP_infinite)";
 		}
-		if (stage3RootCallArgs(e, "Math", "pow", 2) != null)
-			return "(Obj.magic 0)";
-		if (stage3RootCallArgs(e, "Math", "log", 1) != null)
-			return "(Obj.magic 0)";
 		if (stage3RootCallArgs(e, "Timer", "stamp", 0) != null)
 			return "(Unix.gettimeofday ())";
 		switch (e) {

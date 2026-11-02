@@ -1,0 +1,29 @@
+pow(2, 3) finite ok
+pow(2, -1) finite ok
+pow(-2, 3) finite ok
+pow(-2, 2) finite ok
+pow(2.5, 2) finite ok
+pow(0, 0) finite ok
+pow(nan, 0) finite ok
+pow(1, nan) finite ok
+pow(nan, 1) nan ok
+pow(-8, 1/3) nan ok
+pow(0, -1) +inf ok
+pow(-0, -1) -inf ok
+pow(-0, 3) -0 ok
+pow(+inf, -1) 0 ok
+pow(-inf, 3) -inf ok
+pow(-inf, 2) +inf ok
+pow(0.5, +inf) 0 ok
+pow(-1, +inf) finite ok
+pow(10, 309) +inf ok
+pow(Int 3, Int 3) finite ok
+log(Int 1) 0 ok
+pow(2, 0.5) squared near 2 true
+log(1) 0 ok
+log(0) -inf ok
+log(-0) -inf ok
+log(-1) nan ok
+log(+inf) +inf ok
+log(nan) nan ok
+log(e) near 1 true
