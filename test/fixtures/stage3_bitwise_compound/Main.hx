@@ -77,6 +77,27 @@ class Main {
 		cells[2] ^= 1;
 		Sys.println("array " + cells.join(",") + " " + (cells[0] >>= 2));
 
+		// Int `%=` keeps the sign of the dividend on every target.
+		flags.bits = 7;
+		flags.bits %= 4;
+		final remainder = {value: -7};
+		remainder.value %= 3;
+		final remainders = [9, -9];
+		remainders[0] %= 4;
+		remainders[1] %= 4;
+		var localRemainder = -10;
+		localRemainder %= 3;
+		Sys.println("remainder "
+			+ flags.bits
+			+ " "
+			+ remainder.value
+			+ " "
+			+ remainders.join(",")
+			+ " "
+			+ localRemainder
+			+ " "
+			+ (remainders[0] %= 2));
+
 		// haxe.Int32 targets: 32-bit wrapping on every update.
 		var word:Int32 = 0x40000000;
 		word <<= 1;

@@ -8,6 +8,7 @@ field 7 7 8
 anon 7 3
 anon arithmetic 13 9
 array 16,10,2 4
+remainder 3 -1 1,-1 -1 1
 int32 local -2147483648 134217732 4
 int32 field 1073741824 1073741832
 int32 array -2147483648 -2147483648

@@ -23,6 +23,14 @@ removed the whole statement. The `haxe.Int32` and `Dynamic` updates already
 worked, because they lower through the abstract operator and the Dynamic
 runtime. They stay in the fixture so both representations remain covered.
 
+It also covers Int `%=` on instance fields, structure fields, array elements
+and locals. Haxe's `%` keeps the sign of the dividend (`-7 % 3` is `-1`).
+Before, `%=` on fields was dropped and on array elements stopped emission.
+
+Compound updates of optional structure fields (`{?x:Int}`) are not lowered
+yet (haxe_ocaml-gaa3a). They stop emission with a named error, which the test
+checks.
+
 Static fields are not covered. Stage3 has no mutable static storage yet
 (haxe_ocaml-nq65n), and static bitwise updates are tracked in
 haxe_ocaml-8k5ja.
