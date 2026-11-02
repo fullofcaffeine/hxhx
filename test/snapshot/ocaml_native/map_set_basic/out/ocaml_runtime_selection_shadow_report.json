@@ -1,6 +1,6 @@
 {
   "model": "requirements-only-runtime-selection-shadow",
-  "runtimeSourceRevision": "sha256:5b387201615cc0424b907a4873579ead730c4d64d3cd4797c8a3429c7d482868",
+  "runtimeSourceRevision": "sha256:193cd3554c6a2f402e0b640e94d7546bc9f95650f06c77038ec92e2d63d03960",
   "requirementRevision": "sha256:c2a6c76eae964590e1529f2f0eb1d14af36d6d9e56a4259c32f4a2ffa93860ea",
   "schemaVersion": 1,
   "selectionMode": "full",
@@ -35,8 +35,8 @@
       {
         "module": "HxDynamic",
         "path": "HxDynamic.ml",
-        "sha256": "sha256:b1c4a0c6584d4a1571476011f61efb1631e264c679147ac3a6eeee2d6a817771",
-        "bytes": 8550
+        "sha256": "sha256:91c5a3c2d50e6852d3dd71797f7209a13d5c90ad2c94934ec5545f26aebf53c5",
+        "bytes": 8944
       },
       {
         "module": "HxEnum",
@@ -591,7 +591,7 @@
       "HxString",
       "HxType"
     ],
-    "revision": "sha256:9592d39d3ee12e2aba7bb6249499efe73dd539831213ea9e6cf4535b16c9d6af"
+    "revision": "sha256:a515b360d7b248ffd12da8e5c6ef8f9c8a2ec757ea0d584aefaddfc133226493"
   },
   "profile": "portable",
   "message": "Explicit requirements do not yet select the same checked runtime source bytes. This mismatch blocks a hard cut, while the current compiler selection remains authoritative.",
@@ -637,8 +637,8 @@
       {
         "module": "HxDynamic",
         "path": "HxDynamic.ml",
-        "sha256": "sha256:b1c4a0c6584d4a1571476011f61efb1631e264c679147ac3a6eeee2d6a817771",
-        "bytes": 8550
+        "sha256": "sha256:91c5a3c2d50e6852d3dd71797f7209a13d5c90ad2c94934ec5545f26aebf53c5",
+        "bytes": 8944
       },
       {
         "module": "HxEnum",
@@ -983,9 +983,9 @@
       "Std",
       "haxe_CallStack"
     ],
-    "revision": "sha256:e40c9c68df09a11e09894fb7e7d0fffdc6fa5df28ec9f408e0485bfa60d50c47"
+    "revision": "sha256:467c18bfca61813d2a7425429806c787ade8392133eb202f9e91ab5455be76ea"
   },
-  "reportRevision": "sha256:1aab8b264daea8a9df9f96c10e6d6192c3d22de101957adbe5082dc12bae1eec",
+  "reportRevision": "sha256:0ac31053d215f64e439a9ae25de2b36b7c3cb88a38353d4213ce2732e65af47d",
   "differences": {
     "currentOnlyRoots": [
       "Date",
