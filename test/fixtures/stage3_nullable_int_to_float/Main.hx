@@ -1,7 +1,10 @@
 typedef Point = {x:Float, y:Float};
+typedef Optional = {?o:Float, v:Float};
+typedef NullableFloats = {n:Null<Float>};
 
 class Holder {
 	public var f:Float = 0.5;
+	public var nf:Null<Float> = null;
 
 	public function new() {}
 }
@@ -9,6 +12,10 @@ class Holder {
 class Main {
 	static function count():Int {
 		return 3;
+	}
+
+	static function nothing():Null<Int> {
+		return null;
 	}
 
 	static function returned(n:Null<Int>):Float {
@@ -49,6 +56,33 @@ class Main {
 		final q:Point = {x: n, y: 0.25};
 		q.y = n;
 		Sys.println("nullable literal " + (q.x + q.y + 0.5));
+
+		// Null<Float> destinations and optional Float fields keep null as null,
+		// and store a present Int as a Float.
+		final z:Null<Int> = nothing();
+		final optional:Optional = {o: z, v: 1.5};
+		Sys.println("optional literal " + (optional.o == null));
+		optional.o = z;
+		Sys.println("optional write " + (optional.o == null));
+		optional.o = n;
+		Sys.println("optional present " + (optional.o + 0.25));
+		final nullables:Array<Null<Float>> = [n, z];
+		Sys.println("nullable array " + (nullables[0] + 0.25) + " " + (nullables[1] == null));
+		nullables.push(n);
+		nullables[1] = n;
+		Sys.println("nullable array write " + (nullables[1] + 0.5) + " " + (nullables[2] + 0.5));
+		h.nf = n;
+		Sys.println("nullable field " + (h.nf + 0.25));
+		h.nf = z;
+		Sys.println("nullable field null " + (h.nf == null));
+		h.nf = 4;
+		Sys.println("nullable field int " + (h.nf + 0.5));
+		final nullableFields:NullableFloats = {n: n};
+		Sys.println("nullable anon " + (nullableFields.n + 0.25));
+		nullableFields.n = z;
+		Sys.println("nullable anon null " + (nullableFields.n == null));
+		var nullableLocal:Null<Float> = n;
+		Sys.println("nullable local " + (nullableLocal + 0.25));
 
 		// Int literals stored in Float slots, then read as Float.
 		final floats:Array<Float> = [1, 2];

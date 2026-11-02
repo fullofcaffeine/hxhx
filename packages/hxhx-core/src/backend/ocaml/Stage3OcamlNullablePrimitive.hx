@@ -134,6 +134,8 @@ function store(source:TyType, inner:String, value:String):String {
 	final revealed = TyAliasExpansion.reveal(source);
 	if (revealed.isNullLiteral() || revealed.isDynamic() || innerPrimitive(revealed) == inner)
 		return value;
+	if (inner == FLOAT && innerPrimitive(revealed) == INT)
+		return nullableIntToNullableFloat(value);
 	if (revealed.isUnknown() || revealed.isUnresolved() || revealed.isTypeParameter())
 		return value;
 	final key = revealed.getSemanticKey();
@@ -142,6 +144,20 @@ function store(source:TyType, inner:String, value:String):String {
 	if (inner == FLOAT && key == INT)
 		return box(inner, "float_of_int (" + value + ")");
 	throw "unsupported OCaml nullable storage: " + key + " into nullable " + inner;
+}
+
+/**
+	Convert a `Null<Int>` carrier into a `Null<Float>` carrier. A null value
+	stays the null sentinel; a present Int becomes a boxed Float. The carrier
+	is evaluated once, outside the converting function, so the expression
+	captures no surrounding name.
+ */
+function nullableIntToNullableFloat(value:String):String {
+	return "((fun __hx_nullable_int -> if HxRuntime.is_null __hx_nullable_int then __hx_nullable_int else "
+		+ box(FLOAT, "float_of_int (Obj.obj __hx_nullable_int : int)")
+		+ ") ("
+		+ value
+		+ "))";
 }
 
 /** Convert a carrier value with inner primitive `inner` into the exact concrete `destination` type. */

@@ -4921,9 +4921,17 @@ class EmitterStage {
 				function fieldStoredValue(target:HxExpr, rendered:String):String {
 					final fieldType = stage3FieldOccurrenceType(target);
 					final valueType = stage3ExactExprType(b);
-					// A Null<Int> or Null<Float> value is unwrapped (and an Int promoted) from its carrier.
-					if (valueType != null && backend.ocaml.Stage3OcamlNullablePrimitive.innerPrimitive(valueType) != null)
+					// A Null<Int> or Null<Float> value is unwrapped (and an Int promoted) from its
+					// carrier; a Null<Float> field receives the nullable Float carrier.
+					if (valueType != null
+						&& (backend.ocaml.Stage3OcamlNullablePrimitive.innerPrimitive(valueType) != null
+							|| backend.ocaml.Stage3OcamlNullablePrimitive.innerPrimitive(fieldType) == backend.ocaml.Stage3OcamlNullablePrimitive.FLOAT))
 						return backend.ocaml.Stage3OcamlNumericWidening.toFloatDestination(valueType, fieldType, rendered);
+					// An Int value (`h.nf = 4`) entering a Null<Float> field is boxed as a Float.
+					if (backend.ocaml.Stage3OcamlNullablePrimitive.innerPrimitive(fieldType) == backend.ocaml.Stage3OcamlNullablePrimitive.FLOAT
+						&& stage3IsIntExpr(b, tyByIdentRaw)
+						&& !stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw))
+						return backend.ocaml.Stage3OcamlNumericWidening.toFloatDestination(TyType.fromHintText("Int"), fieldType, rendered);
 					return backend.ocaml.Stage3OcamlNumericWidening.isFloatDestination(fieldType)
 						&& stage3IsIntExpr(b, tyByIdentRaw)
 						&& !stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw,
