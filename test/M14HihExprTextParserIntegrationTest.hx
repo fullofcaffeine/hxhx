@@ -1704,8 +1704,10 @@ class M14HihExprTextParserIntegrationTest {
 
 		final macroClassVars = HxParser.parseFunctionBodyText('var td = macro class Generated extends Base { static function build():Int return 1; }; td.fields.push(field); (macro class Helper { public function run() {} }).fields;');
 		assertTrue(macroClassVars.length == 3, "expected macro class quote body to parse");
+		// The placeholder is wrapped as a quotation with the `class` marker, so the typer can refuse
+		// it in a macro module (`MacroReificationLowering`) and keep it for bring-up code elsewhere.
 		switch (macroClassVars[0]) {
-			case SVar("td", _, EAnon(names, values), _):
+			case SVar("td", _, EMacroExpr(EAnon(names, values), ["class"]), _):
 				assertTrue(names.indexOf("name") >= 0, "expected macro class placeholder to expose a name field");
 				assertTrue(names.indexOf("fields") >= 0, "expected macro class placeholder to expose fields");
 				switch (values[names.indexOf("name")]) {
@@ -1726,7 +1728,7 @@ class M14HihExprTextParserIntegrationTest {
 				fail("expected macro class follow-up field push to parse");
 		}
 		switch (macroClassVars[2]) {
-			case SExpr(EField(EParenthesized(EAnon(names, _), _), "fields"), _):
+			case SExpr(EField(EParenthesized(EMacroExpr(EAnon(names, _), ["class"]), _), "fields"), _):
 				assertTrue(names.indexOf("fields") >= 0, "expected parenthesized macro class quote to expose fields");
 			case SExpr(EUnsupported(raw), _):
 				fail("parenthesized macro class field access parsed as unsupported: " + raw);

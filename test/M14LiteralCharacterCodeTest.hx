@@ -7,6 +7,21 @@ class M14LiteralCharacterCodeTest {
 		return typed.getTypedClasses()[0].getFieldInitializers()[0].getExpression();
 	}
 
+	/** The `expr` field of a lowered `{expr: <ExprDef>, pos: <Position>}` record. */
+	static function loweredDefinition(record:TypedExpr):TypedExpr {
+		if (record.getTag() != Anonymous || record.getTexts().join(",") != "expr,pos")
+			throw "quotation was not lowered to an Expr record";
+		return record.getExpressions()[0];
+	}
+
+	/** A lowered constructor call; this fixture loads no `haxe.macro.Expr`, so the callee's last segment names it. */
+	static function loweredConstruction(call:TypedExpr, name:String):TypedExpr {
+		final callee = call.getTag() == Call ? call.getExpressions()[0] : null;
+		if (callee == null || callee.getTag() != FieldRead || callee.getTexts()[0] != name)
+			throw "expected the lowered `" + name + "` construction";
+		return call;
+	}
+
 	static function main():Void {
 		for (entry in [
 			{source: '"A".code', value: 65},
@@ -82,13 +97,18 @@ class M14LiteralCharacterCodeTest {
 			case _:
 				throw "literal code was folded before macro quotation";
 		}
+		// The typer lowers a quote to the construction of its `Expr` value. Inside it, `"A".code`
+		// stays the field access `EField(EConst(CString("A")), "code")`: it is neither folded to a
+		// character code nor rejected for an empty or multi-character string.
 		for (text in ["A", "", "ab"]) {
 			final quote = typedValue('macro "' + text + '".code', "");
-			switch TypedSourceSyntax.expression(quote) {
-				case EMacroExpr(EField(EString(value), "code"), _) if (value == text):
-				case _:
-					throw "typing changed quoted literal syntax";
-			}
+			final field = loweredConstruction(loweredDefinition(quote), "EField");
+			final constant = loweredConstruction(loweredConstruction(loweredDefinition(field.getExpressions()[1]), "EConst").getExpressions()[1], "CString");
+			if (constant.getExpressions()[1].getTag() != StringValue
+				|| constant.getExpressions()[1].getTexts()[0] != text
+				|| field.getExpressions()[2].getTag() != StringValue
+				|| field.getExpressions()[2].getTexts()[0] != "code")
+				throw "typing changed quoted literal syntax";
 		}
 		switch HxParser.parseCompleteExprText("'$" + "$'") {
 			case EString(value) if (value == "$"):
