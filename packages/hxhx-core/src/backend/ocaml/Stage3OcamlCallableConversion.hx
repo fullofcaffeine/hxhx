@@ -78,6 +78,10 @@ function validateReturn(actual:TyType, expected:TyType):Void {
 		return;
 	if (TyAssignmentCompatibility.classify(expected, actual, Unchecked) != Compatible)
 		throw "OCaml lambda body does not satisfy its return contract";
+	// Nullable Int and Float carriers convert through Stage3OcamlNullablePrimitive,
+	// which rejects every pair it does not own.
+	if (Stage3OcamlNullablePrimitive.innerPrimitive(actual) != null || Stage3OcamlNullablePrimitive.innerPrimitive(expected) != null)
+		return;
 	final scalar = actual.isDynamic() ? expected : actual;
 	if (!(actual.isDynamic() || expected.isDynamic())
 		|| !["primitive:Bool", "primitive:Int", "primitive:String"].contains(scalar.getSemanticKey()))
