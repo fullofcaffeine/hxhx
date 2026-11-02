@@ -6,7 +6,7 @@ import sys.io.File;
 	Builds programs that pass nullable primitives to concrete parameters and compares them with upstream Haxe.
 
 	Why
-	- Stage3 keeps a `Null<Int>` (and `Null<Float>`, `Null<Bool>`) in a boxed
+	- Stage3 keeps a `Null<Int>` or `Null<Float>` in a boxed
 	  carrier, while a concrete `Int` parameter takes a native OCaml `int`.
 	  Ordinary calls already converted at that boundary, but the native call
 	  adapters did not. `String.fromCharCode(Std.parseInt("65"))`,
@@ -20,9 +20,12 @@ import sys.io.File;
 	  standard static call, ordinary static, instance, and constructor calls,
 	  Array, Map, and String methods, and `Math.abs`. The native executable must
 	  print exactly what upstream Haxe 4.3.7 prints.
-	- `stage3_nullable_call_arguments_null` is native-only. It pins the null case:
-	  the unwrap throws the catchable Haxe String "Null Access". The fixture
-	  explains how this differs from upstream targets.
+	- `stage3_nullable_call_arguments_null` is native-only. It pins the null cases:
+	  the unwrap throws the catchable Haxe String "Null Access", and optional
+	  Int slots read null as omitted. The fixture lists where eval agrees
+	  (fromCharCode, Map keys, Math.abs, optional slots) and where it differs
+	  (Haxe Int parameters, and push, insert, unshift, indexOf, contains, and
+	  remove on Array<Int>).
 **/
 class M14Stage3NullableCallArgumentsTest {
 	static function deleteRecursive(path:String):Void {

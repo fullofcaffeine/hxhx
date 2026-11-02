@@ -1,5 +1,5 @@
 /**
-	Pass `Null<Int>`, `Null<Float>`, and `Null<Bool>` values to parameters of the concrete type.
+	Pass `Null<Int>` and `Null<Float>` values (and, through the ordinary call path, a `Null<Bool>`) to parameters of the concrete type.
 
 	Haxe allows `Null<Int>` where `Int` is expected. The native route keeps a
 	nullable value in a boxed carrier and a concrete `Int` as a native `int`, so

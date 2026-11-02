@@ -1972,7 +1972,7 @@ class EmitterStage {
 		Convert one rendered call operand to the carrier of the parameter it was aligned to.
 
 		Typing records each call operand with its own type and its parameter type
-		(`TypedBackendCallArgument`). A `Null<Int>`, `Null<Float>`, or `Null<Bool>`
+		(`TypedBackendCallArgument`). A `Null<Int>` or `Null<Float>`
 		value lives in a nullable carrier (`Obj.t`), while a concrete `Int` parameter
 		takes a native `int`. Ordinary calls already convert at that boundary in
 		`renderCallArgForSignature`; native call adapters (standard static calls,
