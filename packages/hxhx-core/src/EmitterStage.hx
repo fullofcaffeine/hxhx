@@ -9977,6 +9977,12 @@ class EmitterStage {
 						out.push(reflectionTable);
 						out.push("");
 					}
+					final stringifier = currentClassStorage.stringifierRegistration(classProjection, outputModuleName, ocamlModuleValueIdent,
+						escapeOcamlString);
+					if (stringifier != null) {
+						out.push(stringifier);
+						out.push("");
+					}
 
 					if (isEntryPoint && sawMain) {
 						out.push("let () = ignore (main ())");

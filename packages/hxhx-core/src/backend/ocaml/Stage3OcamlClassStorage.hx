@@ -22,6 +22,9 @@ class Stage3OcamlClassStorage {
 	/** Interface method tables for the same classes, selected from the same typed facts. */
 	public final interfaces = new Stage3OcamlInterfaceDispatch();
 
+	/** `toString()` adapters for the same classes, selected from the same typed facts. */
+	public final stringifiers = new Stage3OcamlClassStringifiers();
+
 	/** Generated abstracts whose constructor builds the backing value with `this = value`. */
 	public final abstracts = new Stage3OcamlAbstractConstructors();
 
@@ -62,6 +65,7 @@ class Stage3OcamlClassStorage {
 			statics.add(facts, runtimeProvided, outputModule);
 			interfaces.add(facts, !runtimeProvided, outputModule);
 			virtuals.add(facts, !runtimeProvided, outputModule);
+			stringifiers.add(facts, !runtimeProvided, outputModule);
 		}
 		if (runtimeProvided || facts.getIsExtern())
 			return;
@@ -273,6 +277,11 @@ class Stage3OcamlClassStorage {
 		final facts = projection.requireSemanticFacts();
 		return virtuals.registration(facts, interfaces.entries(facts), currentModule, ident, quote);
 	}
+
+	/** The statement that registers this class's `toString()` adapter for runtime string conversion, or null. */
+	public function stringifierRegistration(projection:TypedBackendClassProjection, currentModule:String, ident:(String, String) -> String,
+			quote:String->String):Null<String>
+		return projection.hasSemanticFacts() ? stringifiers.registration(projection.requireSemanticFacts(), currentModule, ident, quote) : null;
 
 	/** Return field execution only for the exact emitted class that owns it. */
 	public function instanceInitializers(projection:TypedBackendClassProjection):Null<Stage3OcamlInstanceInitializers> {

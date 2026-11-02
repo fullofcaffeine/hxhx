@@ -8,7 +8,8 @@
    - anonymous structures enumerate their stable HxAnon fields recursively;
    - boxed enum values print their constructor and arguments, and class and
      enum type values print as `Class<Name>` and `Enum<Name>`;
-   - generated classes may register their real zero-argument toString method;
+   - generated classes may register their real zero-argument toString method,
+     whether they are native records or Stage3's class-tagged HxAnon objects;
    - other reference-bearing values use the conservative "<object>" fallback.
 
    Generated class registrations carry only a class name and a typed adapter.
@@ -158,7 +159,13 @@ let rec toStdString (value : Obj.t) : string =
     else if HxType.is_type_value HxType.enum_marker value then
       "Enum<" ^ HxType.getEnumName value ^ ">"
     else if HxAnon.is_anon value then
-      anonymousToStdString value
+      (* Stage3 stores a class instance as an HxAnon object tagged with its
+         class. It prints through the class's registered toString adapter,
+         or its class name, like any other class instance. *)
+      if HxRuntime.is_null (HxAnon.class_value value) then
+        anonymousToStdString value
+      else
+        classToStdString value
     else
       classToStdString value
 
