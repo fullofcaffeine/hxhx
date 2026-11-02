@@ -21,16 +21,20 @@ package backend.ocaml;
 	  recursive binding would change its meaning.
  */
 function bindingKeyword(projectedName:String, value:Null<HxExpr>, catalog:Null<TypedBackendLocalCatalog>):String {
-	if (value == null || catalog == null)
-		return "let ";
-	final entry = catalog.findByProjectedName(projectedName);
-	if (entry == null || entry.getBinding().getKind() != NamedFunction)
+	if (value == null)
 		return "let ";
 	final lambda = switch value {
 		case ECast(inner, _) | ECheckType(inner, _): inner;
 		case _: value;
 	};
 	if (!lambda.match(ELambda(_, _)))
+		return "let ";
+	// A function value can be a named local function only inside a typed owner.
+	// Without its catalog the binding kind is unknown, so do not guess `let`.
+	if (catalog == null)
+		throw "OCaml local function binding requires its typed local catalog";
+	final entry = catalog.findByProjectedName(projectedName);
+	if (entry == null || entry.getBinding().getKind() != NamedFunction)
 		return "let ";
 	var selfRead = false;
 	TypedBackendSourceWalk.expression(lambda, expression -> switch expression {
