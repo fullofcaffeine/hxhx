@@ -98,7 +98,7 @@ used for ordinary external OCaml libraries.
 | Runtime module (`std/runtime/*.ml`) | Portable | Metal | Notes / migration |
 |---|---|---|---|
 | `Date` | yes | `metal-supported` | Keep as typed date/time usage. |
-| `EReg` | yes | `metal-supported` | Regex support is allowed; keep typed call sites. |
+| `EReg` | yes | `metal-supported` | Regex support is allowed; keep typed call sites. Positions count Unicode code points; ASCII subjects use a byte fast path. |
 | `HxAnon` | yes | `metal-forbidden (current)` | Dynamic anonymous-object reflection path (portable uses shape/slot runtime with explicit presence tracking + repeated-field cache); migrate to typed records/classes for metal. |
 | `HxArray` | yes | `metal-supported` | Arrays are supported; future metal specialization may reduce runtime dependence. |
 | `HxBacktrace` | yes | `metal-supported` | Stack capture reached through checked `haxe-stack-traces` typed externs. |
@@ -120,7 +120,7 @@ used for ordinary external OCaml libraries.
 | `HxReflect` | yes | `metal-forbidden (current)` | Reflection-heavy APIs are blocked by MetalProfileVerifier (`Reflect.*`). |
 | `HxRuntime` | yes | `metal-required` | Core runtime module; always linked in metal mode. |
 | `HxStdio` | yes | `metal-supported` | stdio helpers (`stdin/stdout/stderr`) when referenced. |
-| `HxString` | yes | `metal-supported` | String helpers. |
+| `HxString` | yes | `metal-supported` | String helpers. Indices and lengths count Unicode code points over UTF-8 storage; ASCII strings index bytes directly. |
 | `HxSys` | yes | `metal-supported` | `Sys.*` host interaction helpers. |
 | `HxThread` | yes | `metal-supported` | Thread primitives for `sys.thread.*` (locks, mutexes, conditions, semaphores, deque, TLS, thread messaging). |
 | `HxType` | yes | `metal-forbidden (current)` | Reflection-style `Type.*` flows are blocked by verifier today. |

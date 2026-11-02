@@ -1,0 +1,17 @@
+mixed length=7 upper=HÉLLO😀漢 lower=héllo😀漢
+mixed charAt=é|😀|漢||
+mixed charCodeAt=233,128512,28450,null
+mixed indexOf=2,3,5,6,3,-1
+mixed lastIndexOf=3,2,1,5
+mixed substr=éll|😀漢|😀漢|😀
+mixed substring=o😀|éllo😀|😀漢
+mixed split=hé//o😀漢|h/é/l/l/o/😀/漢|héllo/漢
+mixed codes=104,233,108,108,111,128512,28450
+fromCharCode=é漢😀 length=1
+case=àéîõü ÀÉÎÕÜ ΑΒΓ ΣΣ джя ß ǅ i
+fastCodeAt=128512,28450,true unsafeCodeAt=233
+tools=üüé|漢😀😀|é😀|true|true|true|true|é&lt;😀&gt;
+compare=false,true,true,true,true
+buf=é😀xél length=5
+case-table changed=2224 checksum=39197224
+long length=160 at=233,28450,128512 index=157 sub=漢😀aé

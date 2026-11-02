@@ -72,7 +72,7 @@ Matrix status taxonomy:
 | Module / Area | Status | Notes |
 |---|---:|---|
 | `Array<T>` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/Array.hx` + `packages/reflaxe.ocaml/std/runtime/HxArray.ml` |
-| `String` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/String.hx` + `packages/reflaxe.ocaml/std/runtime/HxString.ml` |
+| `String` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/String.hx` + `packages/reflaxe.ocaml/std/runtime/HxString.ml`. Stored as UTF-8; `length`, indices and character codes count Unicode code points, as upstream eval does (`"héllo😀".length == 6`). Case conversion uses eval's one-to-one mapping. |
 | `haxe.io.Bytes` | ✅ | Runtime-backed (lowered in codegen) |
 | `Date` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/Date.hx` + `packages/reflaxe.ocaml/std/runtime/Date.ml` |
 | `Sys` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/Sys.hx` + `packages/reflaxe.ocaml/std/runtime/HxSys.ml` |
@@ -80,7 +80,7 @@ Matrix status taxonomy:
 | `sys.FileSystem` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/sys/FileSystem.hx` + `packages/reflaxe.ocaml/std/runtime/HxFileSystem.ml` |
 | `sys.io.File` | ✅ | Runtime subset exercised by fixtures/examples |
 | `haxe.ds.Map` / `haxe.ds.*` | ✅ | Runtime `HxMap.ml` + codegen lowering |
-| `EReg` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/EReg.hx` + `packages/reflaxe.ocaml/std/runtime/EReg.ml` |
+| `EReg` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/EReg.hx` + `packages/reflaxe.ocaml/std/runtime/EReg.ml`, built on OCaml `Str`. Positions (`matchedPos`, `matchSub`) count Unicode code points like `String`, and `.` and classes match whole characters (`~/l+/` on `"héllo"` gives `pos == 2`). Not yet supported: Unicode `\w` `\d` `\s`, lazy quantifiers, lookaround. See `EREG_STRATEGY.md`. |
 | `Math` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/Math.hx` + `packages/reflaxe.ocaml/std/runtime/Math.ml` |
 
 ## OCaml-native surface (`ocaml.*`)
