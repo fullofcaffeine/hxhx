@@ -15,6 +15,14 @@ x23
 [3][3] at most true
 [G][H] nullable false
 [K][L] sum 0.75
+[1][2] int equal false
+[M][N] float differ false
+[S][T] text equal true
+[U][V] same box true
+[W][X] null text true
+[Y][Z] null int true
+[m]fixedm
+[n]run!n
 postfix 1 2
 nested 30 3
 3.25

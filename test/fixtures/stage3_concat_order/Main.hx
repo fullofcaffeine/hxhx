@@ -1,3 +1,7 @@
+class Box {
+	public function new() {}
+}
+
 class Main {
 	static function step(name:String):String {
 		Sys.print("[" + name + "]");
@@ -15,6 +19,16 @@ class Main {
 	}
 
 	static function maybe(label:String, value:Null<Int>):Null<Int> {
+		Sys.print("[" + label + "]");
+		return value;
+	}
+
+	static function word(label:String, value:Null<String>):Null<String> {
+		Sys.print("[" + label + "]");
+		return value;
+	}
+
+	static function box(label:String, value:Box):Box {
 		Sys.print("[" + label + "]");
 		return value;
 	}
@@ -50,6 +64,27 @@ class Main {
 		Sys.println(" nullable " + nullableLess);
 		final sum = side("K", 0.5) + side("L", 0.25);
 		Sys.println(" sum " + sum);
+
+		final intEqual = count(1) == count(2);
+		Sys.println(" int equal " + intEqual);
+		final floatDiffer = side("M", 1.5) != side("N", 1.5);
+		Sys.println(" float differ " + floatDiffer);
+		final textEqual = word("S", "a") == word("T", "a");
+		Sys.println(" text equal " + textEqual);
+		final shared = new Box();
+		final sameBox = box("U", shared) == box("V", shared);
+		Sys.println(" same box " + sameBox);
+		final nullText = word("W", null) == word("X", null);
+		Sys.println(" null text " + nullText);
+		final nullInt = maybe("Y", null) != maybe("Z", 3);
+		Sys.println(" null int " + nullInt);
+
+		// Generated-text checks: an immutable local needs no binding, a mutable one does.
+		final fixedLabel = "fixed";
+		Sys.println(fixedLabel + step("m"));
+		var runningLabel = "run";
+		runningLabel = runningLabel + "!";
+		Sys.println(runningLabel + step("n"));
 
 		var w = 1;
 		Sys.println("postfix " + Std.string(w++) + " " + Std.string(w));

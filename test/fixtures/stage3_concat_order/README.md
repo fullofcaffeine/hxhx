@@ -7,6 +7,13 @@ were evaluated. It also prints numeric `+` expressions directly
 The same logging calls check that `/`, `<`, `<=`, `>` (also with
 `Null<Int>` operands) and Float `+` run their left operand first, and that
 `w++` and `(w += 1)` inside a concatenation are seen by a later operand.
+`==` and `!=` are checked the same way with Int, Float, String, object, and
+null operands.
+
+A whole-number Float sum such as `side("K", 1) + side("L", 2)` is left out:
+Stage3 prints it as `3.` where upstream prints `3`. That is the Float
+formatting bug haxe_ocaml-vzr17 (being fixed in the iffj5 work), not an
+ordering problem.
 
 Before the fix:
 

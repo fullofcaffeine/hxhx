@@ -18,7 +18,10 @@ import sys.io.File;
 	  run, and prints numeric `+` results directly and inside concatenations.
 	- The native executable must print exactly what upstream Haxe prints.
 	- A concatenation with a literal or immutable-local operand keeps the plain
-	  `^` form, so ordering adds no bindings where order cannot be observed.
+	  `^` form, so ordering adds no bindings where order cannot be observed. A
+	  mutable-local operand is bound before the other operand runs.
+	- `==` and `!=` on Int, Float, String, object and nullable operands also
+	  run their left operand first.
 **/
 class M14Stage3ConcatOrderTest {
 	static function deleteRecursive(path:String):Void {
@@ -49,6 +52,12 @@ class M14Stage3ConcatOrderTest {
 			throw "Stage3 must bind effectful concatenation operands left to right";
 		if (generated.indexOf("((\"[\") ^ (name))") < 0)
 			throw "Stage3 added ordering bindings to a concatenation whose order cannot be observed";
+		// An immutable local cannot change while the other operand runs, so it stays unbound.
+		if (generated.indexOf("((fixedLabel) ^ (") < 0 || generated.indexOf("= (fixedLabel) in") >= 0)
+			throw "Stage3 bound an immutable-local concatenation operand";
+		// A mutable local can change, so it is read before the other operand runs.
+		if (generated.indexOf("let __hx_ordered_left = ((!runningLabel)) in") < 0)
+			throw "Stage3 must bind a mutable-local concatenation operand before the other operand";
 		deleteRecursive(outDir);
 		Sys.println("M14_STAGE3_CONCAT_ORDER_NATIVE:PASS");
 	}
