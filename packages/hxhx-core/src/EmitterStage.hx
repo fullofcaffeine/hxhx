@@ -469,24 +469,15 @@ class EmitterStage {
 		return isUpper ? (String.fromCharCode(c + 32) + name.substr(1)) : name;
 	}
 
-	static function isOcamlKeyword(name:String):Bool {
-		if (name == null)
-			return false;
-		return switch (name) {
-			case "and" | "as" | "assert" | "begin" | "class" | "constraint" | "do" | "done" | "downto" | "effect" | "else" | "end" | "exception" |
-				"external" | "false" | "for" | "fun" | "function" | "functor" | "if" | "in" | "include" | "inherit" | "initializer" | "lazy" | "let" |
-				"match" | "method" | "module" | "mutable" | "mod" | "new" | "nonrec" | "object" | "of" | "open" | "or" | "private" | "rec" | "sig" |
-				"struct" | "then" | "to" | "true" | "try" | "type" | "val" | "virtual" | "when" | "while" | "with":
-				true;
-			case _:
-				false;
-		}
-	}
+	static function isOcamlKeyword(name:String):Bool
+		return backend.ocaml.Stage3OcamlIdentifiers.isKeyword(name);
 
 	static function ocamlValueIdent(raw:String):String {
 		final base = lowerFirst(raw);
-		if (base == "_" || base.length == 0)
+		if (base.length == 0)
 			return "_";
+		if (base == "_")
+			return backend.ocaml.Stage3OcamlIdentifiers.UNDERSCORE;
 		// OCaml's effect keyword needs an escape that cannot collide with a Haxe
 		// method named effect_. OCaml permits apostrophes in identifiers; Haxe does not.
 		if (base == "effect")
@@ -509,7 +500,7 @@ class EmitterStage {
 		if (currentRuntimeOcamlModuleNames == null || !currentRuntimeOcamlModuleNames.exists(moduleName))
 			return ocamlValueIdent(raw);
 		final base = lowerFirst(raw);
-		return base == "_" ? base : reflaxe.ocaml.OcamlNameTools.normalizeValueIdentifier(base);
+		return base == "_" ? backend.ocaml.Stage3OcamlIdentifiers.UNDERSCORE : reflaxe.ocaml.OcamlNameTools.normalizeValueIdentifier(base);
 	}
 
 	static function ocamlFunctionLocalValueIdent(raw:String):String {
