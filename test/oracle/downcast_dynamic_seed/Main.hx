@@ -22,6 +22,10 @@ class Main {
 		trace(make(Base) != null);
 		trace(pick(null, 5));
 		trace(arrayOf(null, [5]));
+		trace(arrayOf(null, []));
+		trace(arrayOf(null, [null]));
+		// As a statement: upstream accepts this, though a typed destination such as `:Any` makes it reject.
+		arrayOf(null, anyNumber);
 	}
 
 	/** A null literal leaves `T` as a nullable monomorph, so upstream accepts `S:T` for any `S`. */

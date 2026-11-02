@@ -20,6 +20,8 @@ class M14DowncastDynamicConstraintTest {
 		reject("InvalidNullBoundedArrayBound", "Constraint check failure for pick.S");
 		reject("InvalidNullRecordBound", "Constraint check failure for pick.S", "{ y : Int } should be { x : Null<Unknown<0>> }");
 		reject("InvalidNullClassBound", "Constraint check failure for pick.S");
+		// Bounds share what a null `T` matched, so one call cannot read it as Int and as String.
+		reject("InvalidNullSharedBound", "Constraint check failure for pick.U", "String should be Int");
 		Sys.println("DOWNCAST_DYNAMIC_CONSTRAINT:PASS");
 	}
 
@@ -69,7 +71,10 @@ class M14DowncastDynamicConstraintTest {
 			"downcast=open-method-parameter" => 2,
 			"downcast=nominal:Shapes.Base" => 1,
 			"open=primitive:String" => 1,
-			"arrayOf=nominal:Array<primitive:Int>" => 1
+			"arrayOf=nominal:Array<primitive:Int>" => 1,
+			"arrayOf=nominal:Array<dynamic>" => 1,
+			"arrayOf=nominal:Array<nullable:dynamic>" => 1,
+			"arrayOf=nominal:Any" => 1
 		];
 		final actual = [for (entry in counts.keys()) entry + "*" + counts.get(entry)];
 		actual.sort(Reflect.compare);

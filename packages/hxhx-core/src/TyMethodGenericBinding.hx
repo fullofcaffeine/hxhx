@@ -81,6 +81,7 @@ class TyMethodGenericBinding {
 			closeFromDependentBounds(declaration, signature, arguments, applyBound, inferred, index);
 		final nullOpen = parameters.filter(parameter -> !inferred.exists(parameter.getCanonicalKey())
 			&& evidence(signature, arguments, parameter).match(NullOnly));
+		final wildcards = new haxe.ds.StringMap<TyType>();
 		for (parameter in parameters) {
 			final key = parameter.getCanonicalKey();
 			if (!constraints.exists(key))
@@ -95,20 +96,91 @@ class TyMethodGenericBinding {
 						return failure(signature, parameter);
 					continue;
 				}
-				var proof = inferred;
+				var expected = substitute(bound, parameters, inferred);
+				var shown = supplied;
 				if (hasUnbound(bound, nullOpen, inferred)) {
-					// Match null-open parameters structurally; a missing shape leaves Unknown, which fails below.
-					proof = new haxe.ds.StringMap<TyType>();
+					// Match null-open parameters structurally. Bindings are shared by every
+					// bound, so `S:Array<T>, U:Array<T>` cannot read `T` as Int and as String.
+					if (!collect(bound, supplied, nullOpen, wildcards, index))
+						return failure(signature, parameter);
+					final proof = new haxe.ds.StringMap<TyType>();
 					for (known in inferred.keys())
 						proof.set(known, inferred.get(known));
-					if (!collect(bound, supplied, nullOpen, proof, index))
-						return failure(signature, parameter);
+					// A position that matched nothing concrete (`[]`, `[null]`) stays a wildcard
+					// on both sides, so only the shape that `collect` matched is compared.
+					final wild = nullOpen.filter(open -> {
+						final found = wildcards.get(open.getCanonicalKey());
+						if (found == null || found.hasUnknownComponent())
+							return true;
+						proof.set(open.getCanonicalKey(), found);
+						return false;
+					});
+					expected = substitute(bound, parameters, proof, true);
+					shown = maskWildcards(bound, supplied, wild);
 				}
-				if (!accepts(substitute(bound, parameters, proof), supplied))
+				if (!accepts(expected, shown))
 					return failure(signature, parameter);
 			}
 		}
 		return null;
+	}
+
+	/**
+		Copy `actual`, putting the wildcard parameter itself wherever `expected` names one.
+
+		For `S:Array<T>` with a null-open `T`, `[]` has type `Array<Unknown>`. Masking gives
+		`Array<T>`, which equals the bound with `T` left open. A shape that does not line up
+		(`Int` against `Array<T>`) is returned unchanged, so the bound check still fails.
+	**/
+	static function maskWildcards(expected:TyType, actual:TyType, wild:Array<TyTypeParameterId>):TyType {
+		if (expected == null || actual == null || wild.length == 0)
+			return actual;
+		if (parameterIdentity(expected, wild) != null)
+			return expected;
+		expected = TyAliasExpansion.reveal(expected);
+		if (expected.isNullable() || actual.isNullable())
+			return expected.isNullable()
+				&& actual.isNullable() ? TyType.nullable(maskWildcards(expected.unwrapNull(), actual.unwrapNull(), wild)) : actual;
+		if (expected.isFunction() || actual.isFunction()) {
+			if (!expected.isFunction() || !actual.isFunction())
+				return actual;
+			final expectedArguments = expected.getFunctionArguments();
+			final actualArguments = actual.getFunctionArguments();
+			if (expectedArguments.length != actualArguments.length)
+				return actual;
+			return actual.withFunctionTypes([
+				for (slot in 0...actualArguments.length)
+					maskWildcards(expectedArguments[slot], actualArguments[slot], wild)
+			], maskWildcards(expected.getFunctionReturn(), actual.getFunctionReturn(), wild));
+		}
+		if (expected.isAnonymous() || actual.isAnonymous()) {
+			if (!expected.isAnonymous() || !actual.isAnonymous())
+				return actual;
+			final names = expected.getAnonymousFieldNames();
+			final types = expected.getAnonymousFieldTypes();
+			final actualTypes = actual.getAnonymousFieldTypes();
+			final actualNames = actual.getAnonymousFieldNames();
+			return actual.withAnonymousTypes([
+				for (slot in 0...actualNames.length) {
+					final match = names.indexOf(actualNames[slot]);
+					match < 0 ? actualTypes[slot] : maskWildcards(types[match], actualTypes[slot], wild);
+				}
+			]);
+		}
+		final expectedArguments = expected.getTypeArguments();
+		final actualArguments = actual.getTypeArguments();
+		if (expectedArguments.length == 0 || !sameTypeConstructor(expected, actual) || expectedArguments.length != actualArguments.length)
+			return actual;
+		final masked = [
+			for (slot in 0...actualArguments.length)
+				maskWildcards(expectedArguments[slot], actualArguments[slot], wild)
+		];
+		final identity = actual.getNominalIdentity();
+		if (identity != null)
+			return TyType.nominal(identity, masked, substitutedGenericDisplay(actual, masked));
+		if (actual.isUnresolved())
+			return TyType.unresolved(actual.getUnresolvedPath(), masked, substitutedGenericDisplay(actual, masked));
+		return actual;
 	}
 
 	static function failure(signature:TyFunSig, parameter:TyTypeParameterId):String
