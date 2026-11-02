@@ -34,6 +34,7 @@ class TypedBackendFunctionProjection {
 	final collectionControls:Array<TypedBackendCollectionControl>;
 	final equalities:Array<TypedBackendEqualityOccurrence>;
 	final stringConcats:Array<TypedBackendStringConcatOccurrence>;
+	final traces:Array<TypedBackendTraceOccurrence>;
 	final verifiedStringConcats:Array<Bool>;
 	final bitwiseOperations:Array<TypedBackendBitwiseOccurrence>;
 	final conditions:Array<TypedBackendCondition>;
@@ -54,6 +55,7 @@ class TypedBackendFunctionProjection {
 			?collectionControls:Array<TypedBackendCollectionControl>,
 			?equalities:Array<TypedBackendEqualityOccurrence>,
 			?stringConcats:Array<TypedBackendStringConcatOccurrence>,
+			?traces:Array<TypedBackendTraceOccurrence>,
 			?bitwiseOperations:Array<TypedBackendBitwiseOccurrence>,
 			?conditions:Array<TypedBackendCondition>,
 			?namedPatterns:Array<TypedBackendNamedPattern>
@@ -116,6 +118,9 @@ class TypedBackendFunctionProjection {
 		for (entry in this.stringConcats)
 			entry.assertCurrent(stableIdentity, bodyRevision);
 		this.verifiedStringConcats = [for (_ in this.stringConcats) false];
+		this.traces = indexedAccesses == null || indexedAccesses.traces == null ? [] : indexedAccesses.traces.copy();
+		for (entry in this.traces)
+			entry.assertCurrent(stableIdentity, bodyRevision);
 		this.bitwiseOperations = indexedAccesses == null
 			|| indexedAccesses.bitwiseOperations == null ? [] : indexedAccesses.bitwiseOperations.copy();
 		for (entry in this.bitwiseOperations)
@@ -469,6 +474,17 @@ class TypedBackendFunctionProjection {
 	/** Bitwise facts require the original expression in the current function revision. */
 	public function findBitwise(expression:HxExpr):Null<TypedBackendBitwiseOccurrence> {
 		for (entry in bitwiseOperations)
+			if (entry.expression == expression) {
+				requireExpression(expression);
+				entry.assertCurrent(stableIdentity, bodyRevision);
+				return entry;
+			}
+		return null;
+	}
+
+	/** The line and argument facts of this exact `trace(...)` call in this executable, or null. */
+	public function findTrace(expression:HxExpr):Null<TypedBackendTraceOccurrence> {
+		for (entry in traces)
 			if (entry.expression == expression) {
 				requireExpression(expression);
 				entry.assertCurrent(stableIdentity, bodyRevision);

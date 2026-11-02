@@ -602,7 +602,8 @@ class TypedBodySource {
 			case FieldRead: projectFieldRead(typedExpression, catalog, projectionFacts, use);
 			case NullSafeFieldRead: ENullSafeField(expression(expressions[0], catalog, projectionFacts), texts[0]);
 			case TraceCall:
-				ECall(EIdent("trace"), expressionTail(expressions, 0, catalog, projectionFacts));
+				final call:HxExpr = ECall(EIdent("trace"), expressionTail(expressions, 0, catalog, projectionFacts));
+				projectionFacts == null ? call : projectionFacts.projectTrace(typedExpression, call);
 			case Call:
 				if (expressions.length > 0 && expressions[0].getTag() == SuperValue) {
 					final arguments = expressionTail(expressions, 1, catalog, projectionFacts);
@@ -954,6 +955,7 @@ class TypedBodySource {
 				collectionControls: projectionFacts.getCollectionControls(),
 				equalities: projectionFacts.getEqualities(),
 				stringConcats: projectionFacts.getStringConcats(),
+				traces: projectionFacts.getTraces(),
 				bitwiseOperations: projectionFacts.getBitwiseOperations(),
 				conditions: projectionFacts.getConditions(),
 				namedPatterns: projectionFacts.getNamedPatterns()
@@ -1011,6 +1013,7 @@ class TypedBodySource {
 				collectionControls: projectionFacts.getCollectionControls(),
 				equalities: projectionFacts.getEqualities(),
 				stringConcats: projectionFacts.getStringConcats(),
+				traces: projectionFacts.getTraces(),
 				bitwiseOperations: projectionFacts.getBitwiseOperations(),
 				conditions: projectionFacts.getConditions(),
 				namedPatterns: projectionFacts.getNamedPatterns()
