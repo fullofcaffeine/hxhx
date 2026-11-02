@@ -214,3 +214,88 @@ let isObject (v : Obj.t) : bool =
       else
         let en = HxType.getEnumName v in
         en != hx_null_string
+
+(* Reflection over class instances built by the hxhx Stage3 native emitter.
+
+   Stage3 stores a class instance as an `HxAnon` object that carries its class
+   descriptor. Its stored fields are ordinary `HxAnon` slots, so `HxAnon.get`,
+   `HxAnon.has`, and `HxAnon.fields` already answer for them. Its methods are
+   module-level OCaml functions, not slots.
+
+   The compiler registers, for each generated class, the names of its instance
+   methods, including inherited ones. With that list `field` can tell a method
+   name apart from a missing field. Building a bound method value from a name
+   is not implemented, so reading a method raises a Haxe exception that names
+   it instead of returning null. The same holds for `getProperty` and
+   `setProperty` when the class declares the property's accessor method. *)
+let instance_method_names : (string, string list) Hashtbl.t = Hashtbl.create 31
+
+let register_instance_method_names (name : string) (methods : string list) : unit =
+  Hashtbl.replace instance_method_names name methods
+
+let class_instance_name (o : Obj.t) : string option =
+  if HxAnon.is_anon o then
+    let c = HxAnon.class_value o in
+    if HxType.is_type_value HxType.class_marker c then Some (HxType.getClassName c) else None
+  else
+    None
+
+let unsupported_method (o : Obj.t) (operation : string) (method_name : string) : bool =
+  match class_instance_name o with
+  | None -> false
+  | Some class_name -> (
+      match Hashtbl.find_opt instance_method_names class_name with
+      | Some methods when Stdlib.List.mem method_name methods ->
+          HxRuntime.hx_throw_typed
+            (Obj.repr
+               ("Reflect." ^ operation ^ " cannot use method " ^ class_name ^ "." ^ method_name
+              ^ " on the Stage3 native target yet"))
+            [ "String"; "Dynamic" ]
+      | _ -> false)
+
+let field (o : Obj.t) (name : string) : Obj.t =
+  if HxAnon.has o name then HxAnon.get o name
+  else if unsupported_method o "field" name then HxRuntime.hx_null
+  else HxAnon.get o name
+
+let getProperty (o : Obj.t) (name : string) : Obj.t =
+  if unsupported_method o "getProperty" ("get_" ^ name) then HxRuntime.hx_null else field o name
+
+let setProperty (o : Obj.t) (name : string) (value : Obj.t) : unit =
+  if not (unsupported_method o "setProperty" ("set_" ^ name)) then HxAnon.set o name value
+
+(* Haxe deletes fields only from anonymous structures; a class instance keeps
+   its declared fields. *)
+let deleteField (o : Obj.t) (name : string) : bool =
+  match class_instance_name o with
+  | Some _ -> false
+  | None -> HxAnon.delete o name
+
+(* `Type.getClass` for a value of any static type. Strings and arrays are
+   instances of `String` and `Array`, a class instance answers its class, and
+   every other value (null, numbers, Bools, functions, enum values, anonymous
+   objects, and type values) has no class. Only these known layouts are read. *)
+let value_class (v : Obj.t) : Obj.t =
+  if HxRuntime.is_null v || Obj.is_int v then HxRuntime.hx_null
+  else if Obj.tag v = Obj.string_tag then HxType.class_ "String"
+  else if HxArray.is_value v then HxType.class_ "Array"
+  else if HxAnon.is_anon v then
+    let c = HxAnon.class_value v in
+    if HxType.is_type_value HxType.class_marker c then c else HxRuntime.hx_null
+  else HxRuntime.hx_null
+
+(* `Type.typeof`: the index of the `ValueType` constructor for `v`, in its
+   declaration order: TNull, TInt, TFloat, TBool, TObject, TFunction, TClass,
+   TEnum, TUnknown. The compiler builds the constructor from this index.
+   Class and enum type values are objects, as in Haxe. *)
+let value_type_index (v : Obj.t) : int =
+  if HxRuntime.is_null v then 0
+  else if HxRuntime.is_boxed_bool v then 3
+  else if Obj.is_int v then 1
+  else if Obj.tag v = Obj.double_tag then 2
+  else if isFunction v then 5
+  else if isEnumValue v then 7
+  else if not (HxRuntime.is_null (value_class v)) then 6
+  else if HxAnon.is_anon v then 4
+  else if HxType.is_type_value HxType.class_marker v || HxType.is_type_value HxType.enum_marker v then 4
+  else 8
