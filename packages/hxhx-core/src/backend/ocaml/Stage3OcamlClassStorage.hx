@@ -28,6 +28,9 @@ class Stage3OcamlClassStorage {
 	/** Overridden-method dispatchers and `super` targets for the same classes. */
 	public final virtuals = new Stage3OcamlVirtualDispatch();
 
+	/** Mutable static field cells for the same request, selected before any module is emitted. */
+	public final statics = new Stage3OcamlStaticStorage();
+
 	public function new() {}
 
 	/**
@@ -35,7 +38,7 @@ class Stage3OcamlClassStorage {
 		The emitter supplies its actual runtime-module selection; that selection controls
 		storage and catch admission separately from the exact ancestry metadata.
 	 */
-	public function add(projection:TypedBackendClassProjection, runtimeProvided:Bool, ?outputModule:String):Void {
+	public function add(projection:TypedBackendClassProjection, runtimeProvided:Bool, ?outputModule:String, ?ident:String->String):Void {
 		final facts = projection.requireSemanticFacts();
 		switch facts.getNominalKind() {
 			case AbstractValue(underlying):
@@ -55,6 +58,9 @@ class Stage3OcamlClassStorage {
 		if (ancestry.exists(identity))
 			throw "native class storage owner registered twice: " + identity;
 		ancestry.set(identity, facts);
+		// `ident` is the emitter's value naming; a request that emits modules supplies it.
+		if (outputModule != null && ident != null)
+			statics.add(facts, runtimeProvided, outputModule, ident);
 		if (outputModule != null) {
 			interfaces.add(facts, !runtimeProvided, outputModule);
 			virtuals.add(facts, !runtimeProvided, outputModule);
