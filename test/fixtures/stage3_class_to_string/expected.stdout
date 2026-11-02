@@ -1,0 +1,18 @@
+animal cat
+dog rex
+dog fido
+dog pup
+point(1,2)
+concat: dog rex / point(1,2)
+animal cat, dog rex, dog pup
+[animal cat,dog rex,dog pup]
+[animal cat,dog rex,dog pup]
+point(1,2) point(3,4)
+dog rex
+dynamic dog rex
+[1,point(1,2),s]
+{pet: dog pup}
+inline label
+Plain
+Plain
+null
