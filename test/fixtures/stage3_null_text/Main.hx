@@ -9,6 +9,33 @@ enum Shape {
 	Sized(size:{w:Int});
 }
 
+enum abstract Kind(Int) {
+	var First = 1;
+	var Second = 2;
+}
+
+abstract Meters(Float) from Float to Float {}
+abstract Count(Int) from Int to Int {}
+abstract Switch(Bool) from Bool to Bool {}
+
+/**
+	Uninitialized statics whose carrier is an unboxed number or Bool. Upstream
+	eval prints null for them and Stage3 holds 0, 0.0 or false (the
+	static-target default, haxe_ocaml-a8wbz), so the fixture only reads them
+	in comparisons that print the same on both. The test checks the emitted
+	defaults.
+**/
+class Numbers {
+	public static var kind:Kind;
+	public static var meters:Meters;
+	public static var count:Count;
+	public static var flag:Switch;
+	public static var unsigned:UInt;
+	public static var int32:haxe.Int32;
+	public static var plain:Int;
+	public static var ratio:Float;
+}
+
 class Holder {
 	public static var slabel:String;
 	public static var scount:Null<Int>;
@@ -83,6 +110,9 @@ class Main {
 		Sys.println(Std.string(Sized({w: 2})));
 		// Statics without an initializer hold null.
 		Sys.println(Holder.slabel);
+		Sys.println("numbers " + (Numbers.kind == Numbers.kind) + " " + (Numbers.meters == Numbers.meters) + " " + (Numbers.count == Numbers.count) + " "
+			+ (Numbers.flag == Numbers.flag) + " " + (Numbers.int32 == Numbers.int32) + " " + (Numbers.plain == Numbers.plain) + " "
+			+ (Numbers.ratio == Numbers.ratio));
 		Sys.println("statics " + Holder.slabel + " " + Holder.scount + " " + Holder.sflag + " " + Holder.sitems);
 	}
 }

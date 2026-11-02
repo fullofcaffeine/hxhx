@@ -26,4 +26,5 @@ none null null
 Named(n) Named(null) Painted(Rgb(1,2,3)) Painted(null)
 Sized({w: 2})
 null
+numbers true true true true true true true
 statics null null null null

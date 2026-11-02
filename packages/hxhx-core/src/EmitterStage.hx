@@ -9707,8 +9707,8 @@ class EmitterStage {
 						final storedOperand = init == null
 							|| currentClassStorage == null ? null : currentClassStorage.statics.initializerOperand(outputModuleName, nameRaw, init);
 						// A static without an initializer gets its Haxe default (null, 0, false, 0.0).
-						final initOcaml = init == null ? (currentClassStorage == null ? null : backend.ocaml.Stage3OcamlStaticDefault.value(currentClassStorage.staticFieldType(classProjection,
-							nameRaw))) : stage3StaticOperand(storedOperand == null ? Plain : storedOperand, init, arityByName, staticTyByIdent,
+						final initOcaml = init == null ? (currentClassStorage == null ? null : currentClassStorage.staticDefault(classProjection,
+							nameRaw)) : stage3StaticOperand(storedOperand == null ? Plain : storedOperand, init, arityByName, staticTyByIdent,
 								staticImportByIdent, HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
 						currentFunctionLocalOcamlNames = null;
 						currentTypedInitializer = null;
