@@ -4059,7 +4059,11 @@ class EmitterStage {
 						&& argIndex < signature.paramFillable.length
 						&& signature.paramFillable[argIndex]
 						&& stage3IsPrimitiveParamHint(hint);
-					final destination = (argument != null && argument.expectedType != null && argument.expectedType.isDynamic())
+					// haxe.Constraints.Function is an abstract over Dynamic: it shares the
+					// Dynamic carrier, so a function value is passed as Obj.t.
+					final destination = (argument != null
+						&& argument.expectedType != null
+						&& (argument.expectedType.isDynamic() || TyFunctionConstraint.isFunctionConstraint(argument.expectedType)))
 						|| optionalPrimitiveParameter ? "Dynamic" : hint;
 					return backend.ocaml.OcamlDynamicOperatorLowering.callArgument(destination, carrier, rendered);
 				}
