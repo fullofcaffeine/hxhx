@@ -29,7 +29,8 @@ class HxFunctionTypeParamMetadata {
 			out.push(TYPE_PARAMS_PREFIX + names.join(","));
 		for (parameter in parameters) {
 			final hints = [
-				for (constraint in parameter.constraints)
+				// Split on syntax, as class bounds do; constraintHints later splits only these top-level `&`s.
+				for (constraint in HxTypeSyntax.constraintMembers(parameter.constraints))
 					compactTypeHint(source.substring(constraint.getPos().getIndex(), constraint.getEndPos().getIndex()))
 			];
 			if (hints.length > 0)

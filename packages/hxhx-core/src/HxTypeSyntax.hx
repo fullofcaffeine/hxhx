@@ -85,6 +85,43 @@ class HxTypeSyntax {
 		return endPos;
 
 	/** Copy parameter containers while sharing their immutable nested type nodes. */
+	/**
+		Split declared type-parameter bounds into the members that are checked one by one.
+
+		The parser keeps an authored constraint as one type, as upstream's syntax tree
+		does, so a macro sees `K:First & Second` as one intersection. In a constraint
+		position upstream checks each member separately: `Box<K:First & Second>` accepts a
+		class that implements both interfaces and reports `Constraint check failure for
+		Box.K` otherwise. Class and method bounds both use this one splitter.
+
+		Only the whole constraint is split, after removing any grouping parentheses around
+		it, so `K:((First & Second))` splits too. A grouped intersection inside it, as in
+		`K:First & (Second & Third)`, stays one member. The typer then resolves that member
+		as a structure, and it fails like upstream's "Can only extend structures".
+	**/
+	public static function constraintMembers(constraints:Array<HxTypeSyntax>):Array<HxTypeSyntax> {
+		final members = new Array<HxTypeSyntax>();
+		for (constraint in constraints) {
+			switch ungroup(constraint).getKind() {
+				case IntersectionType(parts):
+					for (part in parts)
+						members.push(part);
+				case _:
+					// A grouped single type keeps its authored form and source range.
+					members.push(constraint);
+			}
+		}
+		return members;
+	}
+
+	/** Remove every pair of grouping parentheses around a whole type. **/
+	static function ungroup(syntax:HxTypeSyntax):HxTypeSyntax {
+		return switch syntax.getKind() {
+			case GroupedType(inner): ungroup(inner);
+			case _: syntax;
+		};
+	}
+
 	public static function copyParameters(parameters:Array<HxTypeSyntaxParameter>):Array<HxTypeSyntaxParameter> {
 		return [
 			for (parameter in parameters)

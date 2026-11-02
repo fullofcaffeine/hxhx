@@ -6,7 +6,7 @@
       "id": "compiler-foundation",
       "label": "Compiler foundations and runtime",
       "minimumTier": "Q2",
-      "baselineSeconds": 1255.271
+      "baselineSeconds": 1665.271
     },
     {
       "id": "compiler-packaging",
