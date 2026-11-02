@@ -11,8 +11,10 @@ What works today, in short:
   See "Project macro plugins" below.
 - hxhx builds and caches that plugin by itself, so a plain `hxhx --hxhx-stage3 -cp src -main Main` runs the macro.
   This needs `dune` and the matching OCaml compiler on `PATH`.
-- Macros that need `haxe.macro.Context`, reification (`macro ...`), or the external macro host are not executed yet;
-  such calls are reported as unexecuted.
+- A macro body may build its result with reification (`macro { ... }`, `$v{}`, `$i{}`, `$e{}`, `$a{}`, `$b{}`,
+  `@:pos`, `macro :Type`); see "Reification in macro bodies" below for the exact scope.
+- Macros that need `haxe.macro.Context` or the external macro host are not executed yet; such calls are reported as
+  unexecuted.
 
 The older, explicit rung of this feature still exists for Gate1 bring-up:
 
@@ -181,6 +183,41 @@ Positions are approximate: a node that the parser gave a start position receives
 the call file; other nodes reuse their nearest enclosing node's position. Exact source ranges are tracked separately.
 
 The working example is `test/fixtures/project-macro-identity`, checked by `npm run test:macro-runtime:project-module`.
+
+#### Reification in macro bodies
+
+A quotation such as `macro Sys.println($v{text})` is ordinary Haxe syntax for "build this `haxe.macro.Expr` value".
+hxhx lowers every quotation while typing the macro's module into the expression that constructs the value, for every
+target, so the plugin's Stage3 emitter never meets a quote. Splice payloads are typed in the macro's own scope, and
+upstream Haxe 4.3.7 is the behavior reference for every form:
+
+| Written | Lowered to |
+| --- | --- |
+| `macro 1 + x`, `macro { a; b; }`, `macro function(a:Int) ...`, loops, branches, `var`, `return`, `new`, literals, casts, `try`, `throw` | the public `ExprDef` tree, as `MacroSyntaxExport` maps a macro argument |
+| `$e{e}`, `${e}`, bare `$e` | the `Expr` value `e` in place |
+| `$i{name}` | `EConst(CIdent(name))` |
+| `$a{list}` as the only call argument, array element, or block entry | the `Array<Expr>` as that list; elsewhere `EArrayDecl(list)` |
+| `$b{list}` | `EBlock(list)` |
+| `$v{value}` | a constant chosen from the payload's static type: `Int`, `Float`, `Bool`, `String`, and `Null<T>` or `Array<T>` of those four (`Null` and arrays go through `hxhxmacrohost.MacroReificationValues`, which every plugin build has on its classpath; the payload is read once and null is decided when the macro runs) |
+| `f(...xs)`, `1i32`, `1.5f64` | `EUnop(OpSpread, ...)`, `CInt("1", "i32")`, `CFloat("1.5", "f64")` |
+| `o.$name`, `new $tp(...)` | the `String` field name, the `TypePath` value |
+| `@:pos(p) e` | every position inside `e` is `p` |
+| `macro :Array<Int>`, `macro :X->Y`, `macro :{a:Int}` | the `ComplexType` value |
+
+Positions: every quoted node gets a zero-width position in the macro's source file, the same approximation macro
+arguments receive (a node that starts a group, function, loop, branch, or declaration gets its own start; other nodes
+the nearest enclosing one). Exact ranges are tracked separately.
+
+Not lowered yet, each a compile error naming the form: `$p{}`, expression metadata other than `@:pos` and
+`@:privateAccess`, `switch` inside a quote, `$v{}` on anonymous structures, enum values, or nested arrays, and
+`macro class` in a macro module (a plugin build). Outside a macro module `macro class` keeps the parser's placeholder
+object (a `TypeDefinition` with the name and no fields) for bring-up code. The negative-literal and quote-kind spelling
+of constants follows the parser (`macro -1` is `EUnop(OpNeg, ...)`, `macro 'x'` is reported as double-quoted).
+
+The example is `test/fixtures/project-macro-reification`: `Macros.tally(["alpha", "beta"])` expands to a block that
+prints one line per label and evaluates to the count. `npm run test:m14:macro-reification-lowering` checks the lowered
+syntax, and `npm run test:m14:project-macro-reification` builds the plugin through the cache driver and compares the
+natively computed expression with upstream.
 
 ### Macro-host-side: `macro.expandExpr`
 

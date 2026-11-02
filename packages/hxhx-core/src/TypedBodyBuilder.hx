@@ -1094,6 +1094,12 @@ class TypedBodyBuilder {
 				final typedEffect = buildExpr(effect, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				final typedContinuation = buildExpr(continuation, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
 				TypedExpr.block([typedEffect, typedContinuation], nodeType, position);
+			case EMacroExpr(_, _) | EMacroType(_) if (typeResolver != null && environment != null):
+				// The quotation is ordinary syntax that builds its `haxe.macro.Expr`; build that tree
+				// (the one inference already typed) so no backend meets a quote.
+				final quotePosition = position == null ? diagnosticPosition : position;
+				buildExpr(typeResolver.macroQuotation(expression, quotePosition, environment), position, diagnosticPosition, environment, typeResolver,
+					callResolver, memberResolver, expected);
 			case EMacroExpr(inner, wrappers):
 				TypedExpr.macroExpr(buildExpr(inner, null, diagnosticPosition, null, null, null, null), wrappers == null ? [] : wrappers.copy(), nodeType,
 					position);

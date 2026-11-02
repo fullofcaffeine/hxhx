@@ -78,11 +78,29 @@ class M14PrivateAccessTest {
 			+
 			"class Main { static var seed:Int=(@:privateAccess new Other().value); static function read(o:Other):Int { @:privateAccess return o.value; } static function main() {} }");
 		final quoted = typed("class Main { static function main() { var syntax=macro @:privateAccess value; } }");
+		// The typer lowers the quote to the construction of its `Expr` value, so the permission is
+		// the data `EMeta({name: ":privateAccess"}, EConst(CIdent("value")))`, not a source
+		// permission that property lowering could consume or erase.
 		var keptQuote = false;
+		function constructor(node:TypedExpr):String {
+			final callee = node.getTag() == Call ? node.getExpressions()[0] : null;
+			return callee != null && callee.getTag() == FieldRead ? callee.getTexts()[0] : "";
+		}
 		function expression(node:TypedExpr):Void {
-			if (node.getTag() == MacroExpr) {
-				if (node.getExpressions()[0].getTag() != PrivateAccess)
+			if (node.getTag() == PrivateAccess)
+				throw "quoted permission became a source permission";
+			if (node.getTag() == Anonymous
+				&& node.getTexts().join(",") == "expr,pos"
+				&& constructor(node.getExpressions()[0]) == "EMeta") {
+				final meta = node.getExpressions()[0].getExpressions();
+				final entry = meta[1];
+				if (entry.getTag() != Anonymous || entry.getExpressions()[0].getTexts()[0] != ":privateAccess")
 					throw "property lowering erased quoted permission";
+				final inner = meta[2].getExpressions()[0];
+				if (constructor(inner) != "EConst"
+					|| constructor(inner.getExpressions()[1]) != "CIdent"
+					|| inner.getExpressions()[1].getExpressions()[1].getTexts()[0] != "value")
+					throw "quoted permission lost its expression";
 				keptQuote = true;
 			}
 			for (child in node.getExpressions())

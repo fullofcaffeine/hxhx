@@ -22,12 +22,28 @@ import haxe.macro.Expr;
 **/
 class MacroSyntaxExport {
 	final positions:MacroSyntaxPositions;
+	final splice:Null<MacroSyntaxSpliceHook>;
 
-	public function new(positions:MacroSyntaxPositions) {
+	/**
+		`splice` is consulted before every node. A macro quotation (`macro ...`) passes one that
+		recognizes the parser's splice markers (`$i{}`, `$e{}`, ...) and returns the public form
+		of a hole; it returns null for ordinary syntax. Macro arguments pass none: a marker there
+		is a parse error upstream and is exported as the identifier the parser produced.
+	**/
+	public function new(positions:MacroSyntaxPositions, ?splice:MacroSyntaxSpliceHook) {
 		if (positions == null)
 			throw "macro syntax export requires call positions";
 		this.positions = positions;
+		this.splice = splice;
 	}
+
+	/**
+		Export quoted syntax. Unlike an argument, a quote (`macro 1 + 2`) owns no position of its
+		own; `inherited` is the position every quoted node without one receives, usually that of
+		the statement containing the quote.
+	**/
+	public function quotation(expression:HxExpr, inherited:Position):Expr
+		return convert(expression, inherited);
 
 	/** Export the argument at `index`; its root syntax must own a known source position. */
 	public function argument(expression:HxExpr, index:Int):Expr {
@@ -55,6 +71,11 @@ class MacroSyntaxExport {
 		return expression == null ? null : convert(expression, position);
 
 	function definition(expression:HxExpr, position:Position):ExprDef {
+		if (splice != null) {
+			final spliced = splice(expression, value -> child(value, position));
+			if (spliced != null)
+				return spliced;
+		}
 		return switch expression {
 			case EPrivateAccess(_, _) | EParenthesized(_, _) | ESourceGroup(_, _) | ESourceFunction(_, _, _, _) | ESourceIf(_, _, _, _) |
 				ESourceFor(_, _, _, _) | ESourceTry(_, _, _) | HxExpr.EThrow(_, _) | HxExpr.EWhile(_, _, _, _, _):
@@ -85,6 +106,14 @@ class MacroSyntaxExport {
 				EField(child(owner, position), field, Normal);
 			case ENullSafeField(owner, field):
 				EField(child(owner, position), field, Safe);
+			case ECall(EIdent("__hxhx_spread"), [inner]):
+				EUnop(OpSpread, false, child(inner, position));
+			case ECall(EIdent("__hxhx_int_literal"), [EString(raw), EString(suffix)]):
+				EConst(CInt(raw, suffix));
+			case ECall(EIdent("__hxhx_float_literal"), [EString(raw), EString(suffix)]):
+				EConst(CFloat(raw, suffix));
+			case ECall(EIdent(marker), _) if (StringTools.startsWith(marker, "__hxhx_")):
+				throw failure("the parser marker `" + marker + "` has no public macro form");
 			case ECall(callee, arguments):
 				ECall(child(callee, position), [for (argument in arguments) child(argument, position)]);
 			case ETernary(condition, whenTrue, whenFalse):
@@ -236,3 +265,6 @@ class MacroSyntaxExport {
 	static function failure(message:String):String
 		return StringTools.startsWith(message, "macro syntax export:") ? message : "macro syntax export: " + message;
 }
+
+/** See `MacroSyntaxExport.new`: `child` converts an ordinary nested node with the current position. */
+typedef MacroSyntaxSpliceHook = (expression:HxExpr, child:HxExpr->Expr) -> Null<ExprDef>;

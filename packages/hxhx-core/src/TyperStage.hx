@@ -511,6 +511,9 @@ class TyperStage {
 				expressionType: function(expression, position, lexicalEnvironment, expected) {
 					return inferExprType(expression, lexicalEnvironment.copyForInference(), context, position, expected);
 				},
+				macroQuotation: function(quote, position, lexicalEnvironment) {
+					return lowerMacroQuotation(quote, lexicalEnvironment.copyForInference(), context, position);
+				},
 				callTargetType: function(expression, position, lexicalEnvironment) {
 					final scope = lexicalEnvironment.copyForInference();
 					final method = resolveStaticMethodValue(expression, scope, context);
@@ -3247,6 +3250,26 @@ class TyperStage {
 		return selection.type;
 	}
 
+	/**
+		The ordinary syntax of a quotation node, lowered once per node (`TyperContext.loweredQuotation`)
+		so inference and typed-body replay share it; `$v{}` payloads are typed in `scope`.
+	**/
+	static function lowerMacroQuotation(quote:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):HxExpr {
+		return ctx.loweredQuotation(quote, () -> try {
+			switch quote {
+				case EMacroExpr(inner, wrappers):
+					MacroReificationLowering.lowerExpression(inner, wrappers, ctx.getFilePath(), pos, payload -> inferExprType(payload, scope, ctx, pos),
+						ctx.isMacroModule());
+				case EMacroType(typeText):
+					MacroReificationLowering.lowerType(typeText, ctx.getFilePath(), pos);
+				case _:
+					throw "macro reification: not a quotation";
+			}
+		} catch (message:String) {
+			throw new TyperError(ctx.getFilePath(), pos, message);
+		});
+	}
+
 	static function inferExprValueType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos, expectedResult:Null<TyType>,
 			?capture:TyMethodCallCapture):TyType {
 		switch HxLiteralCharacterCode.resolve(expr) {
@@ -3788,12 +3811,10 @@ class TyperStage {
 					&& expectedResult.getFunctionArguments().length == argNames.length ? expectedResult : null;
 				inferLambdaType(argNames, body, context == null ? [for (_ in argNames) TyType.unknown()] : context.getFunctionArguments(), scope, ctx, pos,
 					signature, context == null ? null : context.getFunctionReturn());
-			case EMacroExpr(inner, _wrappers):
-				// Resolve the public quotation type so fields such as expr retain
-				// their declared enum type without typing the quoted source as code.
-				typeFromHintInContext("haxe.macro.Expr", ctx, scope);
-			case EMacroType(_typeText):
-				typeFromHintInContext("haxe.macro.Expr.ComplexType", ctx, scope);
+			case EMacroExpr(_, _) | EMacroType(_):
+				// A quotation is sugar for the expression that builds its `haxe.macro.Expr`;
+				// type that expression, so splice payloads are checked in this scope.
+				inferExprValueType(lowerMacroQuotation(expr, scope, ctx, pos), scope, ctx, pos, expectedResult, capture);
 			case ETryCatchRaw(raw):
 				final recovered = TypedBodyBuilder.recoveredOpaqueBlockStatements(raw);
 				if (recovered == null) {
