@@ -1,3 +1,17 @@
+# [0.42.0](https://github.com/fullofcaffeine/hxhx/compare/v0.41.3...v0.42.0) (2026-11-02)
+
+
+### Bug Fixes
+
+* **macro:** splice blocks, read nullable values once, keep literal markers out of quotes ([0587984](https://github.com/fullofcaffeine/hxhx/commit/0587984dc445f75bf309683ab62967b2d2a2c4d8)), closes [#125](https://github.com/fullofcaffeine/hxhx/issues/125)
+* **ocaml:** keep enum constructors exact when arguments need statements ([8a201eb](https://github.com/fullofcaffeine/hxhx/commit/8a201eb4bfd342d6f4dc321b54512debc72cafd0))
+* **ocaml:** test classes for Std.is and Std.downcast in Stage3 ([1b80430](https://github.com/fullofcaffeine/hxhx/commit/1b80430412330af464fadc96a159a63686dcb32e))
+
+
+### Features
+
+* **macro:** lower macro reification before backend emission ([19fc3c3](https://github.com/fullofcaffeine/hxhx/commit/19fc3c374e8d2c7c1e78329a0015f4f53ab840d5))
+
 ## [0.41.3](https://github.com/fullofcaffeine/hxhx/compare/v0.41.2...v0.41.3) (2026-11-02)
 
 
