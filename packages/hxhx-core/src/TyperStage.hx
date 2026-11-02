@@ -2123,12 +2123,21 @@ class TyperStage {
 			throw "indexed selection requires one retained type per operand";
 		function select(declaration:TyDeclarationInfo, environment:TyFunctionEnv, probe:Bool):TyMethodCallResolution {
 			final arguments = declaration.getIsStatic() ? [receiver].concat(operands) : operands;
+			final supplied = declaration.getIsStatic() ? [receiverType].concat(actual) : actual.copy();
+			if (value != null) {
+				final signature = TyNominalApplication.signature(ctx.getIndex(), owner, declaration.getIsStatic() ? null : revealed,
+					declaration.getSignature());
+				final parameters = signature.getArgs();
+				final last = supplied.length - 1;
+				if (parameters.length == supplied.length && TyIndexedNullValue.admits(supplied[last], parameters[last], ctx.getIndex())) {
+					supplied[last] = TyType.nullable(parameters[last]);
+				}
+			}
 			return resolveMethodCall(owner, declaration.getSignature().getName(), declaration.getIsStatic(), arguments, environment, ctx, pos,
 				[declaration.getSignature()], declaration.getIsStatic() ? null : {
 					expression: receiver,
 					type: revealed
-				},
-				declaration.getIsStatic() ? [receiverType].concat(actual) : actual, probe, retained != null);
+				}, supplied, probe, retained != null);
 		}
 		if (binding == null) {
 			for (candidate in candidates) {
@@ -2156,6 +2165,8 @@ class TyperStage {
 		final signature = TyNominalApplication.signature(ctx.getIndex(), owner,
 			declaration.getIsStatic() ? null : inference.expressionType(receiver, revealed, scope), declaration.getSignature());
 		final parameters = TyMethodGenericBinding.specializeParameters(declaration, signature, selection.order.rankedTypes(selection.actual), ctx.getIndex());
+		if (value != null && parameters.length > 0)
+			TyIndexedNullValue.checkTarget(actual[actual.length - 1], parameters[parameters.length - 1], ctx, pos);
 		if ((retained != null && inference.sourceTerm(source, scope) == null)
 			|| declaration.getTypeParameterIds().length > 0
 			&& (result.hasUnknownComponent() || parameters.filter(type -> type.hasUnknownComponent()).length > 0)) {
