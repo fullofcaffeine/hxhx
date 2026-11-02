@@ -80,5 +80,11 @@ class Main {
 			long += "aé漢😀";
 		Sys.println("long length=" + long.length + " at=" + long.charCodeAt(157) + "," + long.charCodeAt(158) + "," + long.charCodeAt(159) + " index="
 			+ long.lastIndexOf("é") + " sub=" + long.substring(150, 154));
+		// ASCII strings of 64+ bytes take the cached ASCII path; a start past the end swaps with the end.
+		var ascii = "";
+		for (i in 0...10)
+			ascii += "abcdefghij";
+		Sys.println("ascii length=" + ascii.length + " at=" + ascii.charCodeAt(99) + " index=" + ascii.indexOf("j", 10) + "," + ascii.lastIndexOf("a")
+			+ " sub=" + ascii.substring(500, 98) + "|" + "hello".substring(9, 1) + "|" + ascii.substr(-3));
 	}
 }

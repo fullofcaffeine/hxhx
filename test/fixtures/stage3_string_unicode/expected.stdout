@@ -15,3 +15,4 @@ compare=false,true,true,true,true
 buf=é😀xél length=5
 case-table changed=2224 checksum=39197224
 long length=160 at=233,28450,128512 index=157 sub=漢😀aé
+ascii length=100 at=106 index=19,90 sub=ij|ello|hij

@@ -14,6 +14,12 @@
  *   node scripts/reflaxe-ocaml/generate-hxstring-case-table.js .tmp/UnicodeData-8.0.0.txt
  *
  * Paste the output between the "BEGIN/END generated case tables" markers.
+ *
+ * The tables are derived from the Unicode Character Database, so the output
+ * starts with the Unicode License V3 copyright and permission notice
+ * (https://www.unicode.org/license.txt). That license requires the notice to
+ * appear with every copy, and HxString.ml is copied into every generated
+ * OCaml program.
  * test/fixtures/stage3_string_unicode compares a checksum over every code
  * point with upstream, so a wrong table fails that fixture.
  */
@@ -106,10 +112,55 @@ function render(name, table) {
   return `let ${name} : int array = [|\n${rows.join("\n")}\n|]`;
 }
 
+const UNICODE_LICENSE = `UNICODE LICENSE V3
+
+COPYRIGHT AND PERMISSION NOTICE
+
+Copyright © 1991-2026 Unicode, Inc.
+
+NOTICE TO USER: Carefully read the following legal agreement. BY
+DOWNLOADING, INSTALLING, COPYING OR OTHERWISE USING DATA FILES, AND/OR
+SOFTWARE, YOU UNEQUIVOCALLY ACCEPT, AND AGREE TO BE BOUND BY, ALL OF THE
+TERMS AND CONDITIONS OF THIS AGREEMENT. IF YOU DO NOT AGREE, DO NOT
+DOWNLOAD, INSTALL, COPY, DISTRIBUTE OR USE THE DATA FILES OR SOFTWARE.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of data files and any associated documentation (the "Data Files") or
+software and any associated documentation (the "Software") to deal in the
+Data Files or Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, and/or sell
+copies of the Data Files or Software, and to permit persons to whom the
+Data Files or Software are furnished to do so, provided that either (a)
+this copyright and permission notice appear with all copies of the Data
+Files or Software, or (b) this copyright and permission notice appear in
+associated Documentation.
+
+THE DATA FILES AND SOFTWARE ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF
+THIRD PARTY RIGHTS.
+
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE
+BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES,
+OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THE DATA
+FILES OR SOFTWARE.
+
+Except as contained in this notice, the name of a copyright holder shall
+not be used in advertising or otherwise to promote the sale, use or other
+dealings in these Data Files or Software without prior written
+authorization of the copyright holder.`;
+
 const upperRuns = requireDisjoint("upper_runs", runs(upper));
 const lowerRuns = requireDisjoint("lower_runs", runs(lower));
 const changed = new Set([...upper.keys(), ...lower.keys()].filter((c) => upper.get(c) !== c || lower.get(c) !== c));
 console.log("(* BEGIN generated case tables: scripts/reflaxe-ocaml/generate-hxstring-case-table.js *)");
+console.log("(* The case tables below are derived from the Unicode Character Database");
+console.log("   (UnicodeData.txt, Unicode 8.0.0, https://www.unicode.org/Public/8.0.0/ucd/)");
+console.log("   and are distributed under the following notice.");
+console.log("");
+console.log(UNICODE_LICENSE.split("\n").map((line) => (line === "" ? "" : "   " + line)).join("\n") + " *)");
 console.log(`(* ${changed.size} code points change case; ${upperRuns.length} upper and ${lowerRuns.length} lower runs. *)`);
 console.log(render("upper_runs", upperRuns));
 console.log("");

@@ -28,6 +28,10 @@
 	- `length` counts code points, like `String.length`. `Buffer.length` counts
 	  bytes, so the buffer keeps its own code-point count: each append adds the
 	  length of the appended String, which costs no more than copying it.
+	- `toString` returns `Buffer.contents`, a fresh copy. Never expose the
+	  buffer's bytes as a String (for example with `Bytes.unsafe_to_string` in
+	  `untyped __ocaml__`): the String runtime caches facts about a String by
+	  its identity and assumes it never changes after first use.
 **/
 class StringBuf {
 	final buf:ocaml.Buffer;

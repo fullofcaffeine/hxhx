@@ -1,7 +1,7 @@
 {
   "model": "recorded-ocaml-runtime-requirements",
   "runtimeVersion": "1",
-  "runtimeSourceRevision": "sha256:d1b4fc0515197c7ae054c096761a1da02cbabd36c6636c977bbf3ec7e1ab8e45",
+  "runtimeSourceRevision": "sha256:e38944dd2978840bd403cef8f64944bf9fc319ef9626bb46b0c35048b0eeeb63",
   "compilerObservationGranularity": "module-name-only",
   "runtimeSources": [
     {
@@ -237,8 +237,8 @@
       "files": [
         {
           "path": "HxString.ml",
-          "sha256": "sha256:c83536716829c4a73cc715703ad01450cb748baebe67509567077b4f4ae35876",
-          "bytes": 30648
+          "sha256": "sha256:23d2c1a2d7bffe699a2fb89bb6b96117808206cd8b1f7543bd26762696bfc565",
+          "bytes": 35293
         }
       ],
       "profiles": [
@@ -286,7 +286,7 @@
     "HxString",
     "HxType"
   ],
-  "requirementRevision": "sha256:c43715baa1558a153003031158850830bcfddba403ad2779b7f0e1fa73950b6b",
+  "requirementRevision": "sha256:c6ae544aff60738a5b6705ab2f39d0270de9e9da2a734f1c2e182738e65e6d6f",
   "schemaVersion": 5,
   "selectionMode": "full",
   "authorityStatus": "partial",
@@ -2609,32 +2609,6 @@
     {
       "implementationFeature": "haxe-class-identity-marker-v2",
       "subject": {
-        "id": "StringBuf",
-        "kind": "haxe-type"
-      },
-      "cause": "representation-decision",
-      "semanticCapability": "haxe-class-identity-marker",
-      "explanation": "The generated constructor-record for StringBuf stores the exact Haxe runtime class marker used by Type.getClass.",
-      "rootModules": [
-        "HxType"
-      ],
-      "id": "class-identity-marker:0f8acb6b2f2a6fc0a015bd67:runtime:haxe-class-identity-marker",
-      "source": {
-        "min": 1496,
-        "max": 2186,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringBuf.hx"
-      },
-      "sourceId": "StringBuf",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "class-identity-marker:0f8acb6b2f2a6fc0a015bd67",
-      "sourceKind": "representation-decision"
-    },
-    {
-      "implementationFeature": "haxe-class-identity-marker-v2",
-      "subject": {
         "id": "haxe.Exception",
         "kind": "haxe-type"
       },
@@ -2812,6 +2786,32 @@
         "portable"
       ],
       "decisionId": "class-identity-marker:32ef5b45d9846137db607d13",
+      "sourceKind": "representation-decision"
+    },
+    {
+      "implementationFeature": "haxe-class-identity-marker-v2",
+      "subject": {
+        "id": "StringBuf",
+        "kind": "haxe-type"
+      },
+      "cause": "representation-decision",
+      "semanticCapability": "haxe-class-identity-marker",
+      "explanation": "The generated empty-instance-record for StringBuf stores the exact Haxe runtime class marker used by Type.getClass.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "class-identity-marker:37ed93d25f509ab25f7b5a20:runtime:haxe-class-identity-marker",
+      "source": {
+        "min": 1781,
+        "max": 2471,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringBuf.hx"
+      },
+      "sourceId": "StringBuf",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "class-identity-marker:37ed93d25f509ab25f7b5a20",
       "sourceKind": "representation-decision"
     },
     {
@@ -3020,6 +3020,32 @@
         "portable"
       ],
       "decisionId": "class-identity-marker:6f01956c8bcbb4ed4be1d7ec",
+      "sourceKind": "representation-decision"
+    },
+    {
+      "implementationFeature": "haxe-class-identity-marker-v2",
+      "subject": {
+        "id": "StringBuf",
+        "kind": "haxe-type"
+      },
+      "cause": "representation-decision",
+      "semanticCapability": "haxe-class-identity-marker",
+      "explanation": "The generated constructor-record for StringBuf stores the exact Haxe runtime class marker used by Type.getClass.",
+      "rootModules": [
+        "HxType"
+      ],
+      "id": "class-identity-marker:701c3008622a1f2e2943e422:runtime:haxe-class-identity-marker",
+      "source": {
+        "min": 1781,
+        "max": 2471,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringBuf.hx"
+      },
+      "sourceId": "StringBuf",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "class-identity-marker:701c3008622a1f2e2943e422",
       "sourceKind": "representation-decision"
     },
     {
@@ -3722,32 +3748,6 @@
         "portable"
       ],
       "decisionId": "class-identity-marker:f0045e70c17aae74b2d83b95",
-      "sourceKind": "representation-decision"
-    },
-    {
-      "implementationFeature": "haxe-class-identity-marker-v2",
-      "subject": {
-        "id": "StringBuf",
-        "kind": "haxe-type"
-      },
-      "cause": "representation-decision",
-      "semanticCapability": "haxe-class-identity-marker",
-      "explanation": "The generated empty-instance-record for StringBuf stores the exact Haxe runtime class marker used by Type.getClass.",
-      "rootModules": [
-        "HxType"
-      ],
-      "id": "class-identity-marker:f54b9b1d260188fc672122b2:runtime:haxe-class-identity-marker",
-      "source": {
-        "min": 1496,
-        "max": 2186,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringBuf.hx"
-      },
-      "sourceId": "StringBuf",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "class-identity-marker:f54b9b1d260188fc672122b2",
       "sourceKind": "representation-decision"
     },
     {
@@ -6115,18 +6115,18 @@
       "rootModules": [
         "HxDynamic"
       ],
-      "id": "dynamic-string:152c4b9fdffeb2c8c2ef2ff1:runtime:haxe-dynamic-string",
+      "id": "dynamic-string:39735a8eeeb479351229bd8f:runtime:haxe-dynamic-string",
       "source": {
-        "min": 1898,
-        "max": 1899,
+        "min": 2183,
+        "max": 2184,
         "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringBuf.hx"
       },
-      "sourceId": "dynamic-string:152c4b9fdffeb2c8c2ef2ff1",
+      "sourceId": "dynamic-string:39735a8eeeb479351229bd8f",
       "profileEligibility": [
         "metal",
         "portable"
       ],
-      "decisionId": "dynamic-string:152c4b9fdffeb2c8c2ef2ff1",
+      "decisionId": "dynamic-string:39735a8eeeb479351229bd8f",
       "sourceKind": "haxe-expression"
     },
     {
@@ -8637,6 +8637,32 @@
       "rootModules": [
         "HxString"
       ],
+      "id": "string-field:721241ad66964317a2739f4e:runtime:haxe-string-field-read",
+      "source": {
+        "min": 2113,
+        "max": 2121,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringBuf.hx"
+      },
+      "sourceId": "string-field:721241ad66964317a2739f4e",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "string-field:721241ad66964317a2739f4e",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-string-field-v1",
+      "subject": {
+        "id": "String.length -> Int",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-string-field-read",
+      "explanation": "The final typed String.length field read selected one private length helper and a receiver-first evaluation schedule before target syntax.",
+      "rootModules": [
+        "HxString"
+      ],
       "id": "string-field:7bcbb70c82d336dfa3d1a8e6:runtime:haxe-string-field-read",
       "source": {
         "min": 11160,
@@ -8753,32 +8779,6 @@
         "portable"
       ],
       "decisionId": "string-field:98543390ce9a50be8a558f02",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-string-field-v1",
-      "subject": {
-        "id": "String.length -> Int",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-string-field-read",
-      "explanation": "The final typed String.length field read selected one private length helper and a receiver-first evaluation schedule before target syntax.",
-      "rootModules": [
-        "HxString"
-      ],
-      "id": "string-field:9f1335dc1364c0f8947f4224:runtime:haxe-string-field-read",
-      "source": {
-        "min": 1828,
-        "max": 1836,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringBuf.hx"
-      },
-      "sourceId": "string-field:9f1335dc1364c0f8947f4224",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "string-field:9f1335dc1364c0f8947f4224",
       "sourceKind": "haxe-expression"
     },
     {
@@ -9053,18 +9053,18 @@
       "rootModules": [
         "HxString"
       ],
-      "id": "string-from-char-code:5fc596c10b2db958be2fb5b5:runtime:haxe-string-from-char-code",
+      "id": "string-from-char-code:5606c112758418b58ddd5760:runtime:haxe-string-from-char-code",
       "source": {
-        "min": 21520,
-        "max": 21549,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
+        "min": 2240,
+        "max": 2262,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringBuf.hx"
       },
-      "sourceId": "string-from-char-code:5fc596c10b2db958be2fb5b5",
+      "sourceId": "string-from-char-code:5606c112758418b58ddd5760",
       "profileEligibility": [
         "metal",
         "portable"
       ],
-      "decisionId": "string-from-char-code:5fc596c10b2db958be2fb5b5",
+      "decisionId": "string-from-char-code:5606c112758418b58ddd5760",
       "sourceKind": "haxe-expression"
     },
     {
@@ -9079,18 +9079,18 @@
       "rootModules": [
         "HxString"
       ],
-      "id": "string-from-char-code:b068a87c0d7e79a50129660d:runtime:haxe-string-from-char-code",
+      "id": "string-from-char-code:5fc596c10b2db958be2fb5b5:runtime:haxe-string-from-char-code",
       "source": {
-        "min": 1955,
-        "max": 1977,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringBuf.hx"
+        "min": 21520,
+        "max": 21549,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringTools.hx"
       },
-      "sourceId": "string-from-char-code:b068a87c0d7e79a50129660d",
+      "sourceId": "string-from-char-code:5fc596c10b2db958be2fb5b5",
       "profileEligibility": [
         "metal",
         "portable"
       ],
-      "decisionId": "string-from-char-code:b068a87c0d7e79a50129660d",
+      "decisionId": "string-from-char-code:5fc596c10b2db958be2fb5b5",
       "sourceKind": "haxe-expression"
     },
     {
@@ -9143,33 +9143,6 @@
         "portable"
       ],
       "decisionId": "string-method:047c06169063d23eb8415ce4",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-string-method-v1",
-      "subject": {
-        "id": "String.substr(Int,Null<Int>) -> String",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-string-method",
-      "explanation": "The final typed direct String call selected its method helper, optional-index behavior, result carrier, and receiver-first evaluation schedule before target syntax.",
-      "rootModules": [
-        "HxRuntime",
-        "HxString"
-      ],
-      "id": "string-method:0d86dec6eab8293ec90dcdc9:runtime:haxe-string-method",
-      "source": {
-        "min": 2083,
-        "max": 2101,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringBuf.hx"
-      },
-      "sourceId": "string-method:0d86dec6eab8293ec90dcdc9",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "string-method:0d86dec6eab8293ec90dcdc9",
       "sourceKind": "haxe-expression"
     },
     {
@@ -9274,6 +9247,33 @@
         "portable"
       ],
       "decisionId": "string-method:38c29d09cb5a77401f1acc31",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-string-method-v1",
+      "subject": {
+        "id": "String.substr(Int,Null<Int>) -> String",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-string-method",
+      "explanation": "The final typed direct String call selected its method helper, optional-index behavior, result carrier, and receiver-first evaluation schedule before target syntax.",
+      "rootModules": [
+        "HxRuntime",
+        "HxString"
+      ],
+      "id": "string-method:3cbae066e6b4824dbc63591c:runtime:haxe-string-method",
+      "source": {
+        "min": 2368,
+        "max": 2386,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringBuf.hx"
+      },
+      "sourceId": "string-method:3cbae066e6b4824dbc63591c",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "string-method:3cbae066e6b4824dbc63591c",
       "sourceKind": "haxe-expression"
     },
     {
@@ -9539,6 +9539,32 @@
     {
       "implementationFeature": "haxe-string-method-v1",
       "subject": {
+        "id": "String.substr(Int) -> String",
+        "kind": "haxe-type"
+      },
+      "cause": "lowering-decision",
+      "semanticCapability": "haxe-string-method",
+      "explanation": "The final typed direct String call selected its method helper, optional-index behavior, result carrier, and receiver-first evaluation schedule before target syntax.",
+      "rootModules": [
+        "HxString"
+      ],
+      "id": "string-method:599b24c68ff66e69d03d3c69:runtime:haxe-string-method",
+      "source": {
+        "min": 2352,
+        "max": 2365,
+        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringBuf.hx"
+      },
+      "sourceId": "string-method:599b24c68ff66e69d03d3c69",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "decisionId": "string-method:599b24c68ff66e69d03d3c69",
+      "sourceKind": "haxe-expression"
+    },
+    {
+      "implementationFeature": "haxe-string-method-v1",
+      "subject": {
         "id": "String.indexOf(String) -> Int",
         "kind": "haxe-type"
       },
@@ -9742,32 +9768,6 @@
         "portable"
       ],
       "decisionId": "string-method:b420f890ed5f6502d2a3a72e",
-      "sourceKind": "haxe-expression"
-    },
-    {
-      "implementationFeature": "haxe-string-method-v1",
-      "subject": {
-        "id": "String.substr(Int) -> String",
-        "kind": "haxe-type"
-      },
-      "cause": "lowering-decision",
-      "semanticCapability": "haxe-string-method",
-      "explanation": "The final typed direct String call selected its method helper, optional-index behavior, result carrier, and receiver-first evaluation schedule before target syntax.",
-      "rootModules": [
-        "HxString"
-      ],
-      "id": "string-method:bcdfc89f9771ebbd90ff1152:runtime:haxe-string-method",
-      "source": {
-        "min": 2067,
-        "max": 2080,
-        "file": "packages/reflaxe.ocaml/std/ocaml/_std/StringBuf.hx"
-      },
-      "sourceId": "string-method:bcdfc89f9771ebbd90ff1152",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "decisionId": "string-method:bcdfc89f9771ebbd90ff1152",
       "sourceKind": "haxe-expression"
     },
     {
@@ -10194,7 +10194,7 @@
     "HxString",
     "HxType"
   ],
-  "reportRevision": "sha256:6f63bb0885138f10e73b55d90c5d0c7aa394f75b5b57ede694ac0a37614648d9",
+  "reportRevision": "sha256:cde57f00e3568daae0c40c3702563e355b15517f03ec0874b89596003a884008",
   "runtimeMode": "full",
   "recordedRequirementSourceKinds": [
     "compiler-infrastructure",
@@ -10895,18 +10895,6 @@
         "HxString",
         "HxType"
       ],
-      "requirementId": "class-identity-marker:0f8acb6b2f2a6fc0a015bd67:runtime:haxe-class-identity-marker"
-    },
-    {
-      "resolvedModules": [
-        "HxAnon",
-        "HxArray",
-        "HxEnum",
-        "HxIterator",
-        "HxRuntime",
-        "HxString",
-        "HxType"
-      ],
       "requirementId": "class-identity-marker:11ac45e1bcbcaf7ff0d64afa:runtime:haxe-class-identity-marker"
     },
     {
@@ -10980,6 +10968,18 @@
         "HxType"
       ],
       "requirementId": "class-identity-marker:32ef5b45d9846137db607d13:runtime:haxe-class-identity-marker"
+    },
+    {
+      "resolvedModules": [
+        "HxAnon",
+        "HxArray",
+        "HxEnum",
+        "HxIterator",
+        "HxRuntime",
+        "HxString",
+        "HxType"
+      ],
+      "requirementId": "class-identity-marker:37ed93d25f509ab25f7b5a20:runtime:haxe-class-identity-marker"
     },
     {
       "resolvedModules": [
@@ -11076,6 +11076,18 @@
         "HxType"
       ],
       "requirementId": "class-identity-marker:6f01956c8bcbb4ed4be1d7ec:runtime:haxe-class-identity-marker"
+    },
+    {
+      "resolvedModules": [
+        "HxAnon",
+        "HxArray",
+        "HxEnum",
+        "HxIterator",
+        "HxRuntime",
+        "HxString",
+        "HxType"
+      ],
+      "requirementId": "class-identity-marker:701c3008622a1f2e2943e422:runtime:haxe-class-identity-marker"
     },
     {
       "resolvedModules": [
@@ -11400,18 +11412,6 @@
         "HxType"
       ],
       "requirementId": "class-identity-marker:f0045e70c17aae74b2d83b95:runtime:haxe-class-identity-marker"
-    },
-    {
-      "resolvedModules": [
-        "HxAnon",
-        "HxArray",
-        "HxEnum",
-        "HxIterator",
-        "HxRuntime",
-        "HxString",
-        "HxType"
-      ],
-      "requirementId": "class-identity-marker:f54b9b1d260188fc672122b2:runtime:haxe-class-identity-marker"
     },
     {
       "resolvedModules": [
@@ -12117,7 +12117,7 @@
         "HxString",
         "HxType"
       ],
-      "requirementId": "dynamic-string:152c4b9fdffeb2c8c2ef2ff1:runtime:haxe-dynamic-string"
+      "requirementId": "dynamic-string:39735a8eeeb479351229bd8f:runtime:haxe-dynamic-string"
     },
     {
       "resolvedModules": [
@@ -12854,6 +12854,14 @@
         "HxRuntime",
         "HxString"
       ],
+      "requirementId": "string-field:721241ad66964317a2739f4e:runtime:haxe-string-field-read"
+    },
+    {
+      "resolvedModules": [
+        "HxArray",
+        "HxRuntime",
+        "HxString"
+      ],
       "requirementId": "string-field:7bcbb70c82d336dfa3d1a8e6:runtime:haxe-string-field-read"
     },
     {
@@ -12887,14 +12895,6 @@
         "HxString"
       ],
       "requirementId": "string-field:98543390ce9a50be8a558f02:runtime:haxe-string-field-read"
-    },
-    {
-      "resolvedModules": [
-        "HxArray",
-        "HxRuntime",
-        "HxString"
-      ],
-      "requirementId": "string-field:9f1335dc1364c0f8947f4224:runtime:haxe-string-field-read"
     },
     {
       "resolvedModules": [
@@ -12982,7 +12982,7 @@
         "HxRuntime",
         "HxString"
       ],
-      "requirementId": "string-from-char-code:5fc596c10b2db958be2fb5b5:runtime:haxe-string-from-char-code"
+      "requirementId": "string-from-char-code:5606c112758418b58ddd5760:runtime:haxe-string-from-char-code"
     },
     {
       "resolvedModules": [
@@ -12990,7 +12990,7 @@
         "HxRuntime",
         "HxString"
       ],
-      "requirementId": "string-from-char-code:b068a87c0d7e79a50129660d:runtime:haxe-string-from-char-code"
+      "requirementId": "string-from-char-code:5fc596c10b2db958be2fb5b5:runtime:haxe-string-from-char-code"
     },
     {
       "resolvedModules": [
@@ -13007,14 +13007,6 @@
         "HxString"
       ],
       "requirementId": "string-method:047c06169063d23eb8415ce4:runtime:haxe-string-method"
-    },
-    {
-      "resolvedModules": [
-        "HxArray",
-        "HxRuntime",
-        "HxString"
-      ],
-      "requirementId": "string-method:0d86dec6eab8293ec90dcdc9:runtime:haxe-string-method"
     },
     {
       "resolvedModules": [
@@ -13047,6 +13039,14 @@
         "HxString"
       ],
       "requirementId": "string-method:38c29d09cb5a77401f1acc31:runtime:haxe-string-method"
+    },
+    {
+      "resolvedModules": [
+        "HxArray",
+        "HxRuntime",
+        "HxString"
+      ],
+      "requirementId": "string-method:3cbae066e6b4824dbc63591c:runtime:haxe-string-method"
     },
     {
       "resolvedModules": [
@@ -13134,6 +13134,14 @@
         "HxRuntime",
         "HxString"
       ],
+      "requirementId": "string-method:599b24c68ff66e69d03d3c69:runtime:haxe-string-method"
+    },
+    {
+      "resolvedModules": [
+        "HxArray",
+        "HxRuntime",
+        "HxString"
+      ],
       "requirementId": "string-method:59b69b71ed1a199b21c8fbc3:runtime:haxe-string-method"
     },
     {
@@ -13191,14 +13199,6 @@
         "HxString"
       ],
       "requirementId": "string-method:b420f890ed5f6502d2a3a72e:runtime:haxe-string-method"
-    },
-    {
-      "resolvedModules": [
-        "HxArray",
-        "HxRuntime",
-        "HxString"
-      ],
-      "requirementId": "string-method:bcdfc89f9771ebbd90ff1152:runtime:haxe-string-method"
     },
     {
       "resolvedModules": [

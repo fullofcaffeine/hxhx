@@ -13,9 +13,14 @@
    Speed: a string's ASCII flag, code-point count, and sparse
    code-point-to-byte marks are computed in one pass. Strings shorter than
    [cache_min_bytes] are scanned directly. Longer strings are remembered in a
-   small cache keyed by physical identity, so a lexer that reads one source
-   string many times scans it once. An ASCII string then indexes bytes
-   directly. *)
+   cache keyed by physical identity, so a lexer that reads one source string
+   many times scans it once. An ASCII string then indexes bytes directly.
+
+   Invariant: a String must never change after its first use. OCaml strings
+   are immutable, but `Bytes.unsafe_to_string` (for example inside
+   `untyped __ocaml__`) can create a string that aliases bytes written later.
+   Such a string would keep its old cached layout and give wrong indices.
+   Copy with `Bytes.to_string` instead. *)
 
 let hx_null_string : string = Obj.magic HxRuntime.hx_null
 
@@ -116,9 +121,13 @@ let add_code (b : Stdlib.Buffer.t) (code : int) : unit =
     Stdlib.Buffer.add_char b (Stdlib.Char.unsafe_chr (0x80 lor ((code lsr 6) land 0x3F)));
     Stdlib.Buffer.add_char b (Stdlib.Char.unsafe_chr (0x80 lor (code land 0x3F))))
 
-(* Index of the first byte >= 0x80 at or after [from], or [len]. *)
+(* Index of the first byte >= 0x80 at or after [from], or [len]. Whole
+   8-byte words are tested at once, then the remaining bytes one by one. *)
 let first_non_ascii (s : string) (from : int) (len : int) : int =
   let i = ref from in
+  while !i + 8 <= len && Stdlib.Int64.logand (Stdlib.String.get_int64_ne s !i) 0x8080808080808080L = 0L do
+    i := !i + 8
+  done;
   while !i < len && byte_at s !i < 0x80 do
     incr i
   done;
@@ -136,7 +145,8 @@ let mark_stride = 1 lsl mark_bits
    - [cursor] packs the last resolved (code point, byte) pair into one word
      ([index lsl cursor_bits lor byte]), or is -1. A single word cannot tear,
      so a race between threads at worst loses the hint.
-   - [hits] ranks cache entries. Every other field is immutable. *)
+   - [referenced] is the cache's second-chance bit (0 or 1). Every other
+     field is immutable. *)
 type layout = {
   text : string;
   bytes : int;
@@ -144,18 +154,25 @@ type layout = {
   ascii : bool;
   marks : int array;
   mutable cursor : int;
-  mutable hits : int;
+  mutable referenced : int;
 }
 
 let cursor_bits = 31
 let cursor_mask = (1 lsl cursor_bits) - 1
 let cursor_enabled (bytes : int) : bool = Stdlib.Sys.int_size >= 63 && bytes <= cursor_mask
 
+(* Work counters read by test/reflaxe_ocaml_hxstring_runtime. [stats_scans]
+   counts full layout scans of cacheable strings; [stats_walked] counts
+   characters stepped over while resolving a non-ASCII index. Both make the
+   cost contract checkable without timing. *)
+let stats_scans = ref 0
+let stats_walked = ref 0
+
 let scan (s : string) : layout =
   let n = Stdlib.String.length s in
   let first = first_non_ascii s 0 n in
   if first = n then
-    { text = s; bytes = n; count = n; ascii = true; marks = [||]; cursor = -1; hits = 0 }
+    { text = s; bytes = n; count = n; ascii = true; marks = [||]; cursor = -1; referenced = 0 }
   else (
     let marks = Stdlib.Array.make ((n lsr mark_bits) + 1) 0 in
     let k = ref 0 in
@@ -170,7 +187,7 @@ let scan (s : string) : layout =
       byte := !byte + character_width s n !byte;
       incr index
     done;
-    { text = s; bytes = n; count = !index; ascii = false; marks; cursor = -1; hits = 0 })
+    { text = s; bytes = n; count = !index; ascii = false; marks; cursor = -1; referenced = 0 })
 
 let remember_cursor (l : layout) (index : int) (byte : int) : unit =
   if cursor_enabled l.bytes then l.cursor <- (index lsl cursor_bits) lor byte
@@ -189,6 +206,7 @@ let byte_offset (l : layout) (i : int) : int =
       if ci <= i && ci > !index then (
         index := ci;
         byte := c land cursor_mask));
+    stats_walked := !stats_walked + (i - !index);
     while !index < i do
       byte := !byte + character_width l.text l.bytes !byte;
       incr index
@@ -228,87 +246,114 @@ let index_of_byte (l : layout) (b : int) : int =
 
 (* ---- Layout cache -------------------------------------------------------
 
-   Shorter strings are cheaper to rescan than to cache. A new long string
-   enters a probation ring; a second hit there promotes it into the protected
-   set, replacing the protected entry with the fewest hits. Promotion halves
-   every protected hit count, so old favorites age out. A stream of strings
-   that are used once therefore never evicts a source string that a lexer
-   reads constantly. *)
+   Strings shorter than [cache_min_bytes] are cheaper to rescan than to cache.
+   Longer strings share [cache_ways] slots managed by the CLOCK
+   (second-chance) policy: a hit sets the entry's [referenced] bit, and a miss
+   advances the hand, clearing set bits, until it finds an entry whose bit is
+   clear. A string used again before the hand comes round is therefore kept,
+   so up to [cache_ways] strings used in rotation are each scanned once, and a
+   stream of single-use strings only replaces entries nobody has touched.
+   [last_slot] remembers the most recent hit, so a lexer reading one source
+   string compares a single pointer per call.
+
+   Invariant: a String must not change after its first use. OCaml strings are
+   immutable, but Bytes.unsafe_to_string (for example through
+   `untyped __ocaml__`) can alias bytes that are written later. The cache keys
+   on physical identity, so it would keep answering from the old layout. *)
 
 let cache_min_bytes = 64
-let cache_ways = 4
+let cache_ways = 16
 let empty_layout : layout = scan (Stdlib.Bytes.to_string (Stdlib.Bytes.make cache_min_bytes ' '))
-let protected_layouts : layout array = Stdlib.Array.make cache_ways empty_layout
-let probation_layouts : layout array = Stdlib.Array.make cache_ways empty_layout
-let probation_next = ref 0
+let cache_slots : layout array = Stdlib.Array.make cache_ways empty_layout
+let clock_hand = ref 0
+let last_slot = ref 0
 
-let promote (slot : int) (l : layout) : unit =
-  let victim = ref 0 in
-  for j = 1 to cache_ways - 1 do
-    if (Stdlib.Array.get protected_layouts j).hits < (Stdlib.Array.get protected_layouts !victim).hits then victim := j
-  done;
-  let evicted = (Stdlib.Array.get protected_layouts !victim) in
-  for j = 0 to cache_ways - 1 do
-    let e = (Stdlib.Array.get protected_layouts j) in
-    e.hits <- e.hits lsr 1
-  done;
-  Stdlib.Array.set protected_layouts !victim l;
-  Stdlib.Array.set probation_layouts slot evicted
+let mark_referenced (l : layout) : unit =
+  if l.referenced = 0 then l.referenced <- 1
 
-(* Each finder returns [empty_layout] on a miss, so a hit does not allocate. *)
-let rec find_protected (s : string) (j : int) : layout =
-  if j >= cache_ways then empty_layout
-  else
-    let l = (Stdlib.Array.get protected_layouts j) in
-    if l.text == s then (
-      if l.hits < max_int then l.hits <- l.hits + 1;
-      l)
-    else find_protected s (j + 1)
+let rec find_slot (s : string) (j : int) : int =
+  if j >= cache_ways then -1
+  else if (Stdlib.Array.get cache_slots j).text == s then j
+  else find_slot s (j + 1)
 
-let rec find_probation (s : string) (j : int) : layout =
-  if j >= cache_ways then empty_layout
-  else
-    let l = (Stdlib.Array.get probation_layouts j) in
-    if l.text == s then (
-      l.hits <- l.hits + 1;
-      if l.hits >= 2 then promote j l;
-      l)
-    else find_probation s (j + 1)
+let insert (l : layout) : unit =
+  let rec victim tries =
+    let slot = !clock_hand in
+    clock_hand := (slot + 1) land (cache_ways - 1);
+    let e = Stdlib.Array.get cache_slots slot in
+    if e.referenced = 0 || tries >= cache_ways then slot
+    else (
+      e.referenced <- 0;
+      victim (tries + 1))
+  in
+  let slot = victim 0 in
+  Stdlib.Array.set cache_slots slot l;
+  last_slot := slot
 
 let layout (s : string) : layout =
   if Stdlib.String.length s < cache_min_bytes then scan s
   else
-    let l = find_protected s 0 in
-    if l != empty_layout then l
+    let recent = Stdlib.Array.get cache_slots !last_slot in
+    if recent.text == s then (
+      mark_referenced recent;
+      recent)
     else
-      let l = find_probation s 0 in
-      if l != empty_layout then l
-      else (
-        let l = scan s in
-        let slot = !probation_next in
-        Stdlib.Array.set probation_layouts slot l;
-        probation_next := (slot + 1) mod cache_ways;
+      let j = find_slot s 0 in
+      if j >= 0 then (
+        let l = Stdlib.Array.get cache_slots j in
+        mark_referenced l;
+        last_slot := j;
         l)
+      else (
+        incr stats_scans;
+        let l = scan s in
+        insert l;
+        l)
+
+(* ---- Short strings ------------------------------------------------------
+
+   Short strings are not cached. An ASCII prefix is indexed directly. For a
+   non-ASCII short string, [short_cursor] remembers the last resolved
+   position, so a character-by-character loop walks forward from there
+   instead of from byte 0. The record is immutable and replaced with one
+   pointer write, so a race between threads at worst loses the hint. *)
+
+type short_position = { short_text : string; short_index : int; short_byte : int }
+
+let short_cursor : short_position ref = ref { short_text = ""; short_index = 0; short_byte = 0 }
 
 (* Code-point count of a short string without allocating a layout. *)
 let count_direct (s : string) (n : int) : int =
-  let count = ref 0 in
-  let i = ref 0 in
-  while !i < n do
-    i := !i + character_width s n !i;
-    incr count
-  done;
-  !count
+  let first = first_non_ascii s 0 n in
+  if first = n then n
+  else (
+    let count = ref first in
+    let i = ref first in
+    while !i < n do
+      i := !i + character_width s n !i;
+      incr count
+    done;
+    !count)
 
-(* Byte offset of code point [index] in a short string, or -1 past the end. *)
+(* Byte offset of code point [index] (>= 0) in a short string, or -1 past the end. *)
 let byte_offset_direct (s : string) (n : int) (index : int) : int =
-  let i = ref 0 in
-  let k = ref 0 in
-  while !k < index && !i < n do
-    i := !i + character_width s n !i;
-    incr k
-  done;
-  if !i < n then !i else -1
+  if index < n && first_non_ascii s 0 (index + 1) > index then index
+  else (
+    let c = !short_cursor in
+    let i = ref 0 in
+    let k = ref 0 in
+    if c.short_text == s && c.short_index <= index then (
+      i := c.short_byte;
+      k := c.short_index);
+    stats_walked := !stats_walked + (index - !k);
+    while !k < index && !i < n do
+      i := !i + character_width s n !i;
+      incr k
+    done;
+    if !i < n then (
+      short_cursor := { short_text = s; short_index = index; short_byte = !i };
+      !i)
+    else -1)
 
 (* ---- String API ---------------------------------------------------------- *)
 
@@ -326,6 +371,49 @@ let character_offset (s : string) (index : int) : int =
     if index >= l.count then -1 else byte_offset l index
 
 (* BEGIN generated case tables: scripts/reflaxe-ocaml/generate-hxstring-case-table.js *)
+(* The case tables below are derived from the Unicode Character Database
+   (UnicodeData.txt, Unicode 8.0.0, https://www.unicode.org/Public/8.0.0/ucd/)
+   and are distributed under the following notice.
+
+   UNICODE LICENSE V3
+
+   COPYRIGHT AND PERMISSION NOTICE
+
+   Copyright © 1991-2026 Unicode, Inc.
+
+   NOTICE TO USER: Carefully read the following legal agreement. BY
+   DOWNLOADING, INSTALLING, COPYING OR OTHERWISE USING DATA FILES, AND/OR
+   SOFTWARE, YOU UNEQUIVOCALLY ACCEPT, AND AGREE TO BE BOUND BY, ALL OF THE
+   TERMS AND CONDITIONS OF THIS AGREEMENT. IF YOU DO NOT AGREE, DO NOT
+   DOWNLOAD, INSTALL, COPY, DISTRIBUTE OR USE THE DATA FILES OR SOFTWARE.
+
+   Permission is hereby granted, free of charge, to any person obtaining a
+   copy of data files and any associated documentation (the "Data Files") or
+   software and any associated documentation (the "Software") to deal in the
+   Data Files or Software without restriction, including without limitation
+   the rights to use, copy, modify, merge, publish, distribute, and/or sell
+   copies of the Data Files or Software, and to permit persons to whom the
+   Data Files or Software are furnished to do so, provided that either (a)
+   this copyright and permission notice appear with all copies of the Data
+   Files or Software, or (b) this copyright and permission notice appear in
+   associated Documentation.
+
+   THE DATA FILES AND SOFTWARE ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+   KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF
+   THIRD PARTY RIGHTS.
+
+   IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE
+   BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES,
+   OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+   WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+   ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THE DATA
+   FILES OR SOFTWARE.
+
+   Except as contained in this notice, the name of a copyright holder shall
+   not be used in advertising or otherwise to promote the sale, use or other
+   dealings in these Data Files or Software without prior written
+   authorization of the copyright holder. *)
 (* 2224 code points change case; 170 upper and 162 lower runs. *)
 let upper_runs : int array = [|
   0x61; 0x7a; 1; -32; 0xb5; 0xb5; 1; 743; 0xe0; 0xf6; 1; -32; 0xf8; 0xfe; 1; -32;
@@ -435,15 +523,19 @@ let map_case (runs : int array) (code : int) : int =
 (* Case conversion is one code point to one code point (simple case mapping),
    as in upstream eval: "\xc3\x9f" (sharp s) stays unchanged. Ill-formed bytes
    are copied unchanged. *)
-let convert_case (runs : int array) (ascii : string -> string) (s : string) : string =
+let convert_case (runs : int array) (ascii : string -> string) (ascii_char : char -> char) (s : string) : string =
   let n = Stdlib.String.length s in
   if first_non_ascii s 0 n = n then ascii s
   else (
     let b = Stdlib.Buffer.create n in
     let i = ref 0 in
     while !i < n do
-      let width = sequence_width s n !i in
-      if width = 0 then (
+      let b0 = byte_at s !i in
+      let width = if b0 < 0x80 then 1 else sequence_width s n !i in
+      if b0 < 0x80 then (
+        Stdlib.Buffer.add_char b (ascii_char (Stdlib.String.unsafe_get s !i));
+        incr i)
+      else if width = 0 then (
         Stdlib.Buffer.add_char b (Stdlib.String.unsafe_get s !i);
         incr i)
       else (
@@ -453,10 +545,10 @@ let convert_case (runs : int array) (ascii : string -> string) (s : string) : st
     Stdlib.Buffer.contents b)
 
 let toUpperCase (s : string) () : string =
-  convert_case upper_runs Stdlib.String.uppercase_ascii s
+  convert_case upper_runs Stdlib.String.uppercase_ascii Stdlib.Char.uppercase_ascii s
 
 let toLowerCase (s : string) () : string =
-  convert_case lower_runs Stdlib.String.lowercase_ascii s
+  convert_case lower_runs Stdlib.String.lowercase_ascii Stdlib.Char.lowercase_ascii s
 
 let charAt (s : string) (index : int) : string =
   let b = character_offset s index in
