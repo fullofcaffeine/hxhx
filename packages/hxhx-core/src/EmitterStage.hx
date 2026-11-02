@@ -7204,7 +7204,9 @@ class EmitterStage {
 					if (isMutableLocalRefIdent(name)) {
 						wrapStatement("let " + ident + " = ref (" + rhs + ") in (ignore " + ident + "; (", "))");
 					} else {
-						wrapStatement("let " + ident + " = " + rhs + " in (ignore " + ident + "; (", "))");
+						final catalog = currentTypedInitializer != null ? currentTypedInitializer.getLocalCatalog() : currentTypedFunction == null ? null : currentTypedFunction.getLocalCatalog();
+						final keyword = backend.ocaml.Stage3OcamlRecursiveLocalFunction.bindingKeyword(name, init, catalog);
+						wrapStatement(keyword + ident + " = " + rhs + " in (ignore " + ident + "; (", "))");
 					}
 				case SIf(cond, thenBranch, elseBranch, _pos):
 					// Stage 3 bring-up: recognize and SSA-lower the common "null-coalescing assignment"
