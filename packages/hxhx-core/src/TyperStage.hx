@@ -207,12 +207,20 @@ class TyperStage {
 		Use one bound relation during selection, publication, and class application.
 		Ordinary enum values satisfy the core EnumValue abstract without a class
 		inheritance edge. Other nominal bounds still require exact ancestry, and
-		empty records retain their object-only meaning.
+		empty records retain their object-only meaning. The core `Any` abstract
+		satisfies every bound, as in upstream Haxe: its generic `@:to` conversion
+		promotes an `Any` value to whatever type the bound names. An `Any` bound,
+		such as `S:T` after `T` was inferred from an `Any` argument, accepts every type.
+		A parameter that this call's inference left open (`Open<S>`, for example from
+		`Std.downcast(value, cast null)`) is upstream's unbound monomorph: it fixes no
+		type, so it cannot violate a bound.
 	 */
 	static function constraintAccepts(expected:TyType, supplied:TyType, index:TyperIndex):Bool {
-		if (supplied.isDynamic())
+		if (supplied.isDynamic() || supplied.isOpenMethodParameter() || isCoreAny(expected, index))
 			return true;
 		return TyCallerConstraintProof.accepts(expected, supplied, index.getParameterBounds, (target, actual) -> {
+			if (isCoreAny(actual, index))
+				return true;
 			if (TyEnumValueCompatibility.accepts(index, target, actual))
 				return true;
 			if (target.isAnonymous() && target.getAnonymousFieldNames().length == 0)
@@ -224,6 +232,12 @@ class TyperStage {
 			}
 			return overloadArgScore(target, actual, [], index) >= 0;
 		});
+	}
+
+	/** The top-level `Any` abstract from the standard library, not a user type spelled `pkg.Any`. */
+	static function isCoreAny(type:TyType, index:TyperIndex):Bool {
+		final identity = type.getNominalIdentity();
+		return identity != null && identity.getCanonicalName() == "Any" && index.getAbstractByFullName("Any") != null;
 	}
 
 	static function nominalInfoForType(index:TyperIndex, type:TyType):Null<TyNominalInfo> {
@@ -2331,7 +2345,14 @@ class TyperStage {
 			if (declaration != null && applied.acceptsArity(args.length)) {
 				final boundReceiver = receiver == null ? (isStatic ? null : currentThisType(ctx)) : candidateInference.expressionType(receiver.expression,
 					receiver.type, scope);
-				final failure = TyMethodGenericBinding.constraintFailure(declaration, applied, contextualRanked,
+				// An unchecked `cast null` whose slot names a still-open parameter fixes no
+				// type, like upstream's fresh monomorph. Pass it to the bound check as Dynamic,
+				// the typer's no-evidence argument, instead of the Unknown slot placeholder.
+				final boundEvidence = order.rankedTypes([
+					for (index in 0...contextual.length)
+						index < args.length && TypedCastExpectation.isUnchecked(args[index]) && contextual[index].isUnknown() ? TyType.fromHintText("Dynamic") : contextual[index]
+				]);
+				final failure = TyMethodGenericBinding.constraintFailure(declaration, applied, boundEvidence,
 					bound -> TyNominalApplication.applyType(ctx.getIndex(), c, boundReceiver, bound),
 					(expected, supplied) -> constraintAccepts(expected, supplied, ctx.getIndex()), ctx.getIndex());
 				if (failure != null) {

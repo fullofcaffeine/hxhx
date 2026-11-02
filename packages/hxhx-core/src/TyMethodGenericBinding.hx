@@ -42,30 +42,103 @@ class TyMethodGenericBinding {
 		});
 	}
 
-	/** Validate inferred direct-call arguments against bounds resolved at their declaration, never caller spellings. */
+	/**
+		Validate inferred direct-call arguments against bounds resolved at their declaration, never caller spellings.
+
+		A bound can name another method parameter, as in `Std.downcast<T:{}, S:T>(value:T, c:Class<S>)`.
+		Upstream Haxe types such a parameter as a monomorph (an inference variable). When the
+		arguments do not fix it, the dependent check `S:T` binds it instead of failing:
+
+		- Dynamic or an unchecked `cast null` leaves `T` open, so `S:T` closes `T` to `S` and
+		  `T`'s own bounds are then checked against that type. `Std.downcast(dynamicValue, Sub)`
+		  closes `T` to `Sub` and passes `T:{}`; `pick<T:String, S:T>(dynamicValue, 5)` closes
+		  `T` to `Int` and fails on `pick.T`.
+		- A `null` literal makes `T` a nullable monomorph whose own bounds upstream has already
+		  accepted, so a bound that still names only such parameters passes. Both
+		  `Std.downcast(null, Sub)` and `pick(null, 5)` are accepted.
+	**/
 	public static function constraintFailure(declaration:TyDeclarationInfo, signature:TyFunSig, actual:Array<TyType>, applyBound:TyType->TyType,
 			accepts:(TyType, TyType) -> Bool, index:TyperIndex):Null<String> {
 		final constraints = declaration.getResolvedTypeParameterConstraints();
-		final inferred = bindings(signature, actual, actual.length, inferableTypeParameters(declaration), index);
-		for (parameter in declaration.getTypeParameterIds()) {
+		final parameters = declaration.getTypeParameterIds();
+		final found = bindings(signature, actual, actual.length, inferableTypeParameters(declaration), index);
+		// Conflicting evidence binds nothing; each bound then depends on its own arguments.
+		final inferred:haxe.ds.StringMap<TyType> = found == null ? new haxe.ds.StringMap<TyType>() : found;
+		if (found != null)
+			closeFromDependentBounds(declaration, signature, actual, applyBound, inferred, index);
+		final nullOpen = parameters.filter(parameter -> !inferred.exists(parameter.getCanonicalKey())
+			&& evidence(signature, actual, parameter).match(NullOnly));
+		for (parameter in parameters) {
 			final key = parameter.getCanonicalKey();
 			if (!constraints.exists(key))
 				continue;
-			final supplied = inferred == null ? null : inferred.get(key);
+			final supplied = inferred.get(key);
 			for (constraint in constraints.get(key)) {
 				final bound = applyBound(constraint);
-				if (bound.hasUnknownComponent()
-					|| bound.isUnresolved()
-					|| (supplied == null ? !hasOnlyUnconstrainingEvidence(signature, actual,
-						parameter) : !accepts(substitute(bound, declaration.getTypeParameterIds(), inferred), supplied)))
-					return "Constraint check failure for " + signature.getName() + "." + parameter.getName();
+				if (bound.hasUnknownComponent() || bound.isUnresolved())
+					return failure(signature, parameter);
+				if (supplied == null) {
+					if (evidence(signature, actual, parameter).match(Constraining))
+						return failure(signature, parameter);
+				} else if (!hasUnbound(bound, nullOpen, inferred) && !accepts(substitute(bound, parameters, inferred), supplied))
+					return failure(signature, parameter);
 			}
 		}
 		return null;
 	}
 
-	/** Null and explicit Dynamic leave method variables open; unresolved types do not authorize a bound. */
-	static function hasOnlyUnconstrainingEvidence(signature:TyFunSig, actual:Array<TyType>, parameter:TyTypeParameterId):Bool {
+	static function failure(signature:TyFunSig, parameter:TyTypeParameterId):String
+		return "Constraint check failure for " + signature.getName() + "." + parameter.getName();
+
+	/**
+		Bind each method parameter left open by Dynamic or an unchecked cast from the bounds that name it, in place.
+
+		A parameter with no argument, with unresolved evidence, or with a `null` literal is not
+		closed here; `constraintFailure` handles those cases. A newly closed parameter can close
+		a further one (`U:T, T:S`), so repeat until no binding changes. Each repeated pass has
+		bound at least one more parameter, so the loop runs at most once per parameter.
+	**/
+	static function closeFromDependentBounds(declaration:TyDeclarationInfo, signature:TyFunSig, actual:Array<TyType>, applyBound:TyType->TyType,
+			inferred:haxe.ds.StringMap<TyType>, index:TyperIndex):Void {
+		final constraints = declaration.getResolvedTypeParameterConstraints();
+		final parameters = declaration.getTypeParameterIds();
+		var changed = true;
+		while (changed) {
+			changed = false;
+			final open = parameters.filter(parameter -> !inferred.exists(parameter.getCanonicalKey())
+				&& evidence(signature, actual, parameter).match(DynamicOnly));
+			if (open.length == 0)
+				return;
+			for (parameter in parameters) {
+				final supplied = inferred.get(parameter.getCanonicalKey());
+				final bounds = constraints.get(parameter.getCanonicalKey());
+				if (supplied == null || bounds == null)
+					continue;
+				for (constraint in bounds) {
+					final bound = applyBound(constraint);
+					if (!hasUnbound(bound, open, inferred))
+						continue;
+					final closed = new haxe.ds.StringMap<TyType>();
+					// A conflict adds nothing; the ordinary bound check reports it.
+					if (!collect(bound, supplied, open, closed, index))
+						continue;
+					for (key in closed.keys())
+						if (!inferred.exists(key)) {
+							inferred.set(key, closed.get(key));
+							changed = true;
+						}
+				}
+			}
+		}
+	}
+
+	/**
+		Classify the arguments that reach an unbound method parameter.
+
+		Null and explicit Dynamic leave method variables open; unresolved types, or no argument
+		at all, do not authorize a bound. Any `null` literal makes the parameter `NullOnly`.
+	**/
+	static function evidence(signature:TyFunSig, actual:Array<TyType>, parameter:TyTypeParameterId):TyParameterEvidence {
 		function contains(type:TyType):Bool {
 			final identity = type.getTypeParameterIdentity();
 			if (identity != null && identity.equals(parameter))
@@ -78,14 +151,17 @@ class TyMethodGenericBinding {
 			return type.isFunction() && contains(type.getFunctionReturn());
 		}
 		var found = false;
+		var sawNull = false;
 		final expected = signature.getArgs();
 		for (index in 0...actual.length)
 			if (index < expected.length && contains(expected[index])) {
-				if (!actual[index].isNullLiteral() && !actual[index].isDynamic())
-					return false;
+				if (actual[index].isNullLiteral())
+					sawNull = true;
+				else if (!actual[index].isDynamic())
+					return Constraining;
 				found = true;
 			}
-		return found;
+		return !found ? Constraining : sawNull ? NullOnly : DynamicOnly;
 	}
 
 	/** Whether this exact semantic type is one of the inferable method parameters. **/
@@ -406,4 +482,16 @@ class TyMethodGenericBinding {
 				inferred == null || hasUnbound(type, parameters, inferred) ? TyType.unknown() : substitute(type, parameters, inferred)
 		];
 	}
+}
+
+/** What the arguments that reach one unbound method parameter say about its type. **/
+private enum TyParameterEvidence {
+	/** A concrete, unresolved, or missing argument: the parameter must be bound to pass its bounds. **/
+	Constraining;
+
+	/** Only Dynamic (or an unchecked cast passed as Dynamic) reaches it: a dependent bound may close it. **/
+	DynamicOnly;
+
+	/** A `null` literal reaches it: upstream's nullable monomorph has already accepted its bounds. **/
+	NullOnly;
 }
