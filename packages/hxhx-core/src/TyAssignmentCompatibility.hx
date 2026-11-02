@@ -45,6 +45,9 @@ function classify(expected:TyType, actual:TyType, nullPolicy:TyAssignmentNullPol
 		return Compatible;
 	if (expected.isFunction() && actual.isFunction())
 		return functions(expected, actual, nullPolicy);
+	// Every function value unifies with haxe.Constraints.Function.
+	if (TyFunctionConstraint.accepts(expected, actual))
+		return Compatible;
 	if (expected.isPrimitive() && actual.isPrimitive())
 		return expected.isNumeric() && actual.isNumeric() && expected.getDisplay() == "Float" ? Compatible : Incompatible;
 	return nominalArguments(expected, actual);
