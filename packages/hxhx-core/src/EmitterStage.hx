@@ -3396,14 +3396,17 @@ class EmitterStage {
 				return "(Obj.magic 0)";
 			case ECall(EField(_obj, "isDirectory"), []):
 				return "false";
-			case ECall(EIdent("trace"), traceArguments) if (stage3TraceFact(e) != null):
+			// A trace argument without a complete checked type keeps the older
+			// untyped path instead of aborting emission.
+			case ECall(EIdent("trace"), traceArguments) if (stage3TraceFact(e) != null
+				&& backend.ocaml.Stage3OcamlTrace.hasCompleteTypes(stage3TraceFact(e))):
 				return backend.ocaml.Stage3OcamlTrace.render(stage3TraceFact(e),
 					backend.ocaml.Stage3OcamlTrace.displayFileName(currentModuleFilePath, Sys.getCwd()),
 					(argument,
 							type) -> backend.ocaml.Stage3OcamlTrace.argumentText(argument, type,
 							exprToOcaml(argument, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 							stage3AbstractUnderlying, currentFunctionLocalOcamlNames),
-					escapeOcamlString);
+					escapeOcamlString, currentFunctionLocalOcamlNames);
 			case ECall(EIdent("trace"), [arg]) if (backend.ocaml.Stage3OcamlStringConversion.isUnsigned(stage3ExactExprType(arg))):
 				// Upstream `trace` prints a `UInt` argument through `UInt.toString`, as its unsigned value.
 				return "print_endline ("

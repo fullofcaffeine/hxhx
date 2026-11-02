@@ -6,10 +6,10 @@ emitter, and requires both programs to print `expected.stdout` exactly.
 
 | Haxe expression | Upstream | Old native output |
 | --- | --- | --- |
-| `trace("hello")` | `test/fixtures/stage3_trace_text/Main.hx:18: hello` | `hello` |
-| `trace(flag)` (Bool static) | `...Main.hx:19: true` | `1` |
-| `trace(42, "extra", true)` | `...Main.hx:20: 42,extra,true` | nothing |
-| `trace(nothing)` (null String) | `...Main.hx:23: null` | raw bytes |
+| `trace("hello")` (on line LINE) | `test/fixtures/stage3_trace_text/Main.hx:LINE: hello` | `hello` |
+| `trace(flag)` (Bool static) | `...Main.hx:LINE: true` | `1` |
+| `trace(42, "extra", true)` | `...Main.hx:LINE: 42,extra,true` | nothing |
+| `trace(nothing)` (null String) | `...Main.hx:LINE: null` | raw bytes |
 | `Helper.report(7)` tracing in `Helper.hx` | `...Helper.hx:4: helper,7` | `helper` |
 | `Std.string(Flagged(true))` | `Flagged(true)` | `Flagged(1)` |
 
@@ -20,9 +20,15 @@ Now:
   argument, separated by commas. Each argument is converted from its type,
   like `Std.string`; a null String prints `null`.
 - The file name is the module's path relative to the compiler's working
-  directory, which is what upstream prints for a relative `-cp`. With an
-  absolute `-cp`, upstream prints an absolute path and Stage3 prints a
-  relative one.
+  directory. Upstream prints the path relative to the owning class path,
+  spelled as that class path was given (`-cp src` prints `src/Main.hx`, an
+  absolute `-cp /abs/src` prints `Main.hx`, `-cp ../src` prints
+  `../src/Main.hx`). Stage3 resolves class paths to absolute paths and loses
+  their spelling, so it matches upstream for a relative class path under the
+  working directory, as in this fixture, and differs for absolute class
+  paths and class paths outside the working directory.
+- Arguments are evaluated once, left to right: `trace(next(), next(),
+  next())` prints `0,1,2`, as upstream does.
 - A generated enum module registers which constructor arguments are Bool or
   `Null<Bool>` (`HxDynamic.register_enum_bool_arguments`), so enum text prints
   `Flagged(true)` and `Maybe(null)` (haxe_ocaml-k3jwd).
