@@ -19,19 +19,29 @@ so they printed the sentinel's raw bytes:
 | `"e=" + Red`, `"e=" + Rgb(1, 2, 3)` | `e=Red`, `e=Rgb(1,2,3)` | `e=<object>` |
 
 Now:
-- A String operand of a concatenation, a String call argument such as
-  `Sys.println(nothing)`, and both operands of a String `+=` print through
+- A String operand of a concatenation, a String argument of `Sys.println` or
+  `Sys.print`, and both operands of a String `+=` on a local print through
   `HxString.toStdString`, which turns the sentinel into `null`. The operand
   type comes from the typed concatenation and call-argument records, so only
   String-typed operands get the check. A string literal or another
   concatenation can never be null and is left unchanged
   (`Stage3OcamlStringConversion.nonNullText`).
+- A static field without an initializer holds null when its type is String,
+  a nullable primitive, or another reference type, and `0`, `0.0` or `false`
+  for a non-null Int, Float or Bool (`Stage3OcamlStaticDefault`). It used to
+  hold the immediate `(Obj.magic 0)` for every type, which the String null
+  check did not recognize: printing such a String crashed the program.
 - A parenthesized concatenation inside another one keeps its typed operands,
   so a null `Null<Int>` operand prints `null`.
 - `HxDynamic.toStdString` prints a boxed enum value as its constructor name,
   followed by its arguments in parentheses when it has any.
 
-Not covered: a Bool argument of an enum constructor is stored as a raw OCaml
-bool, so `Flagged(true)` prints `Flagged(1)` (haxe_ocaml-k3jwd).
+Not covered:
+- `trace(nothing)` still prints raw bytes, because `trace` does not go
+  through the call-argument record; and a String `+=` on a field or a static
+  is not converted. Both are handled with haxe_ocaml-00tpu.
+- Enum abstract values print their index (haxe_ocaml-cu68l).
+- A Bool argument of an enum constructor is stored as a raw OCaml bool, so
+  `Flagged(true)` prints `Flagged(1)` (haxe_ocaml-k3jwd).
 
 Beads: haxe_ocaml-txs4e, haxe_ocaml-npbsu, haxe_ocaml-aib5d.

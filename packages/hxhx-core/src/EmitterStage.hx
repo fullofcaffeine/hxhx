@@ -9490,8 +9490,9 @@ class EmitterStage {
 							staticTyByIdent.set(nameRaw, inferredType);
 						final init = HxFieldDecl.getInit(f);
 						installFieldLocalNames(classProjection, f);
-						final initOcaml = init == null ? "(Obj.magic 0)" : exprToOcaml(init, arityByName, staticTyByIdent, staticImportByIdent,
-							HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
+						final initOcaml = init == null ? backend.ocaml.Stage3OcamlStaticDefault.value(currentClassStorage.staticFieldType(classProjection,
+							nameRaw)) : exprToOcaml(init, arityByName, staticTyByIdent, staticImportByIdent, HxModuleDecl.getPackagePath(decl),
+								moduleNameByPkgAndClass, callSigByCallee);
 						currentFunctionLocalOcamlNames = null;
 						currentTypedInitializer = null;
 						out.push("let " + ocamlValueIdent(nameRaw) + " = " + initOcaml);

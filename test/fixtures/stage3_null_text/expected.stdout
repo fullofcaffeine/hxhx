@@ -22,3 +22,8 @@ e=Rgb(1,2,3)
 Rgb(4,5,6) Red
 Red Rgb(7,8,9)
 [Red,Rgb(4,5,6)]
+none null null
+Named(n) Named(null) Painted(Rgb(1,2,3)) Painted(null)
+Sized({w: 2})
+null
+statics null null null null

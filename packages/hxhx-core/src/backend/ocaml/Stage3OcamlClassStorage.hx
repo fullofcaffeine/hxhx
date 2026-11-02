@@ -135,6 +135,20 @@ class Stage3OcamlClassStorage {
 			quote:String->String):Null<String>
 		return projection.hasSemanticFacts() ? stringifiers.registration(projection.requireSemanticFacts(), currentModule, ident, quote) : null;
 
+	/**
+		The checked declared type of the static field `name` of this class, or
+		null when the class has no typed facts for it. Stage3 uses it to choose
+		the default of a static field without an initializer.
+	**/
+	public function staticFieldType(projection:TypedBackendClassProjection, name:String):Null<TyType> {
+		if (projection == null || !projection.hasSemanticFacts())
+			return null;
+		for (field in projection.requireSemanticFacts().copyFields())
+			if (field.isStatic && field.name == name)
+				return field.semanticType;
+		return null;
+	}
+
 	/** Return field execution only for the exact emitted class that owns it. */
 	public function instanceInitializers(projection:TypedBackendClassProjection):Null<Stage3OcamlInstanceInitializers> {
 		final plan = initializers.get(projection.requireSemanticFacts().getClassIdentity());

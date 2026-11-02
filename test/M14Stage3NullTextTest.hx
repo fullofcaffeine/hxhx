@@ -20,7 +20,9 @@ import sys.io.File;
 	- `stage3_null_text` prints null and present Strings through concatenation
 	  on either side, `Sys.println`, `Std.string`, interpolation, `join`,
 	  `Array.toString` and String `+=` (statement and value). It prints null
-	  `Null<Int>` values and enum values with and without arguments.
+	  `Null<Int>` values, enum values with and without arguments, null enum
+	  values, enum arguments of String, enum and anonymous types, and static
+	  fields without an initializer.
 	- The native executable must print exactly what upstream Haxe prints.
 **/
 class M14Stage3NullTextTest {
