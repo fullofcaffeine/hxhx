@@ -978,6 +978,7 @@ class HxParser {
 					PString(s);
 				}
 			case TInt(v):
+				requireValidHexLiteral();
 				bump();
 				PInt(v);
 			case TFloat(_) if (cur.numericText != null):
@@ -1212,6 +1213,21 @@ class HxParser {
 	inline function nextIsAdjacentDot():Bool {
 		final next = peek();
 		return next.kind.match(TDot) && next.pos.getIndex() == cur.pos.getIndex() + 1;
+	}
+
+	/**
+		Reject an unsuffixed hex literal wider than 32 bits where it is used as a
+		value or pattern, as upstream does ("Invalid hexadecimal integer"). The
+		lexer keeps such a token (see `HxLexer.readNumber`), so text the parser
+		only skips, such as metadata arguments, is still accepted.
+	**/
+	function requireValidHexLiteral():Void {
+		final text = cur.numericText;
+		if (text != null
+			&& (cur.numericSuffix == null || cur.numericSuffix.length == 0)
+			&& (StringTools.startsWith(text, "0x") || StringTools.startsWith(text, "0X"))
+			&& HxIntegerLiteral.hexadecimal(text) == null)
+			fail("Invalid hexadecimal integer");
 	}
 
 	function fail<T>(message:String):T {
@@ -1707,6 +1723,7 @@ class HxParser {
 				// Keep its field-access syntax intact for macro quotation and later typing.
 				final literalCode = cur.kind.match(TDot) && peekKind().match(TIdent("code")); interpolate && !literalCode ? parseInterpolatedStringExpr(s) : EString(s);
 			case TInt(v):
+				requireValidHexLiteral();
 				final raw = cur.numericText;
 				final suffix = cur.numericSuffix;
 				bump();

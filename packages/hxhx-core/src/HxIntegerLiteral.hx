@@ -64,17 +64,13 @@ class HxIntegerLiteral {
 
 	/**
 		The 32-bit Int with the bits of `text`, which starts with `0x` or `0X`.
-		Returns null when the literal has no digits, has a non-hex digit, or needs
-		more than 32 bits.
+		Returns null when the literal has no digits, has a non-hex digit, or has
+		more than 8 digits. Like upstream, leading zeros count: `0x000000001` is
+		rejected even though its value fits.
 	**/
 	public static function hexadecimal(text:String):Null<Int> {
-		if (text.length < 3)
-			return null;
-		var start = 2;
-		while (start < text.length - 1 && text.charCodeAt(start) == "0".code)
-			start++;
-		final significant = text.substr(start);
-		if (significant.length > 8)
+		final significant = text.substr(2);
+		if (significant.length == 0 || significant.length > 8)
 			return null;
 		var value = 0;
 		for (index in 0...significant.length) {

@@ -192,7 +192,9 @@ class MacroSyntaxImport {
 			final value = HxIntegerLiteral.hexadecimal(magnitude);
 			if (value == null)
 				throw failure("integer literal `" + written + "` is an invalid hexadecimal integer");
-			return EInt(negative ? -value : value);
+			// Negate within 32 bits: `-0x80000000` stays the minimum Int (a native host
+			// with wider integers must not produce 2147483648).
+			return EInt(negative && value != -2147483647 - 1 ? -value : value);
 		}
 		if (negative && magnitude == "2147483648")
 			return EInt(-2147483647 - 1);

@@ -236,10 +236,11 @@ class HxLexer {
 			// A suffixed literal keeps its raw text for `HxParser.intLiteralExpr`.
 			if (suffix.length > 0)
 				return suffixedIntToken(text, suffix, startPos);
+			// An invalid wide literal keeps its text; `HxParser` rejects it only where it
+			// parses an expression or pattern, so skipped regions such as metadata
+			// arguments stay tolerant, as upstream does.
 			final value = HxIntegerLiteral.hexadecimal(text);
-			if (value == null)
-				throw new HxParseError("Invalid hexadecimal integer", startPos);
-			return token(TInt(value), startPos, text, suffix);
+			return token(TInt(value == null ? 0 : value), startPos, text, suffix);
 		}
 
 		var isFloat = false;

@@ -98,7 +98,48 @@ class M14Stage3LargeIntLiteralTest {
 		Sys.println("M14_STAGE3_LARGE_INT_LITERALS_REJECT_OUT_OF_RANGE_PATTERN:PASS");
 	}
 
+	static function requireEqual(actual:Null<Int>, expected:Null<Int>, label:String):Void {
+		if (actual != expected)
+			throw "literal_boundaries: " + label + " expected " + expected + ", got " + actual;
+	}
+
+	/**
+		Classification at the lexer boundary, independent of the host's
+		`Std.parseInt` (upstream Haxe 4.3.7 cases).
+	**/
+	static function literalBoundaries():Void {
+		requireEqual(HxIntegerLiteral.decimal("2147483647"), 2147483647, "maximum Int");
+		requireEqual(HxIntegerLiteral.decimal("2147483648"), null, "above maximum Int");
+		requireEqual(HxIntegerLiteral.decimal("0000002147483647"), 2147483647, "leading zeros");
+		requireEqual(HxIntegerLiteral.decimal("99999999999999999999"), null, "twenty digits");
+		requireEqual(HxIntegerLiteral.decimal("12a"), null, "non-digit");
+		requireEqual(HxIntegerLiteral.hexadecimal("0xFFFFFFFF"), -1, "32-bit hex");
+		requireEqual(HxIntegerLiteral.hexadecimal("0x80000000"), -2147483647 - 1, "minimum Int bits");
+		requireEqual(HxIntegerLiteral.hexadecimal("0x00000001"), 1, "eight hex digits with leading zeros");
+		requireEqual(HxIntegerLiteral.hexadecimal("0x000000001"), null, "nine hex digits, as upstream rejects");
+		requireEqual(HxIntegerLiteral.hexadecimal("0x100000000"), null, "wider than 32 bits");
+		requireEqual(HxIntegerLiteral.hexadecimal("0x"), null, "no digits");
+		final lexer = new HxLexer("0x100000000 2147483648 2147483647");
+		final wide = lexer.next();
+		if (!wide.kind.match(TInt(_)) || wide.numericText != "0x100000000")
+			throw "literal_boundaries: the lexer must keep a wide hex literal's text for the parser to reject";
+		final above = lexer.next();
+		if (!above.kind.match(TFloat(_)) || above.numericText != "2147483648")
+			throw "literal_boundaries: an out-of-range decimal must be a Float token that keeps its text";
+		if (!lexer.next().kind.match(TInt(2147483647)))
+			throw "literal_boundaries: the maximum Int must stay an Int token";
+		Sys.println("M14_STAGE3_LARGE_INT_LITERALS_LITERAL_BOUNDARIES:PASS");
+	}
+
+	/** Upstream accepts a wide hex literal inside metadata arguments, which are not typed as values. */
+	static function acceptWideHexInMetadata():Void {
+		ParserStage.parse("class Main {\n\t@:foo(0x100000000) static function g() {}\n\n\tstatic function main() {}\n}\n", "Main.hx");
+		Sys.println("M14_STAGE3_LARGE_INT_LITERALS_METADATA_WIDE_HEX:PASS");
+	}
+
 	static function main():Void {
+		literalBoundaries();
+		acceptWideHexInMetadata();
 		rejectOutOfRangePattern();
 		rejectLikeUpstream("wide_hexadecimal", 'class Main {\n\tstatic function main() {\n\t\tvar x = 0x100000000;\n\t\tSys.println(x);\n\t}\n}\n',
 			"Invalid hexadecimal integer", "Invalid hexadecimal integer");

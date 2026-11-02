@@ -439,6 +439,12 @@ class M14MacroSyntaxRoundTripTest {
 		require(imported("-2147483649") == expected(EFloat(-2147483649.0)), "an Int below the range must import as Float");
 		require(imported("2_147_483_648") == expected(EFloat(2147483648.0)), "separators must not change the classification");
 		require(imported("0xFFFFFFFF") == expected(EInt(-1)), "a 32-bit hex constant must keep its bits");
+		// Upstream: CInt("-0x80000000") is -2147483648 and CInt("-0xFFFFFFFF") is 1.
+		require(imported("-0x80000000") == expected(EInt(-2147483647 - 1)), "a negated minimum-Int hex constant must stay the minimum Int");
+		require(imported("-0xFFFFFFFF") == expected(EInt(1)), "a negated hex constant must negate its 32-bit value");
+		requireFailure("leading-zero wide hex", "", "invalid hexadecimal integer", () -> {
+			imported("0x000000001");
+		});
 		requireFailure("wide hex", "", "invalid hexadecimal integer", () -> {
 			imported("0x100000000");
 		});
