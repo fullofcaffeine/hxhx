@@ -6,11 +6,13 @@ import TySwitchAnalysis.TySwitchCoverageResult;
 	Other switch families remain with their existing typer. Applicable unsupported
 	patterns fail explicitly instead of claiming that the switch is exhaustive.
 **/
-function check(scrutinee:TyType, patterns:Array<HxSwitchPattern>, bodyCount:Int, ctx:TyperContext, pos:HxPos):Void {
+function check(scrutinee:TyType, patterns:Array<HxSwitchPattern>, bodyCount:Int, ctx:TyperContext, pos:HxPos, untypedContext:Bool = false):Void {
 	if (patterns == null || patterns.length != bodyCount)
 		throw new TyperError(ctx.getFilePath(), pos, "switch pattern/body count differs");
 	// Constants are typed first, as upstream reports `Float should be Int` before coverage.
-	TySwitchConstantPatterns.check(scrutinee, patterns, ctx, pos);
+	// Inside `untyped`, upstream does not report a constant's kind error.
+	if (!untypedContext)
+		TySwitchConstantPatterns.check(scrutinee, patterns, ctx, pos);
 	final result = analyze(scrutinee, patterns, ctx, false);
 	if (result == null)
 		return;
