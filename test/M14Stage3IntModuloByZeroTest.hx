@@ -36,13 +36,17 @@ class M14Stage3IntModuloByZeroTest {
 		FileSystem.deleteFile(path);
 	}
 
-	static function output(command:String, arguments:Array<String>):String {
-		final process = new sys.io.Process(command, arguments);
-		final stdout = process.stdout.readAll().toString();
-		process.stderr.readAll();
-		process.exitCode();
-		process.close();
-		return stdout;
+	// Redirect both streams to files so a full stderr pipe cannot block the
+	// child while stdout is still being read.
+	static function output(command:String, arguments:Array<String>, outDir:String):String {
+		final stdoutPath = outDir + "/eval.stdout";
+		final stderrPath = outDir + "/eval.stderr";
+		final quoted = [for (part in [command].concat(arguments)) haxe.SysTools.quoteUnixArg(part)].join(" ");
+		Sys.command("sh", [
+			"-c",
+			quoted + " >" + haxe.SysTools.quoteUnixArg(stdoutPath) + " 2>" + haxe.SysTools.quoteUnixArg(stderrPath)
+		]);
+		return File.getContent(stdoutPath);
 	}
 
 	static function main():Void {
@@ -55,7 +59,7 @@ class M14Stage3IntModuloByZeroTest {
 		if (Sys.command("node_modules/.bin/haxe", ["-cp", source, "-main", "Main", "-neko", outDir + "/main.n"]) != 0)
 			throw "upstream Neko compilation failed";
 		M14Stage3RuntimeFixture.observe({command: "neko", arguments: [outDir + "/main.n"], expected: expected});
-		final eval = output("node_modules/.bin/haxe", ["-cp", source, "--run", "Main"]);
+		final eval = output("node_modules/.bin/haxe", ["-cp", source, "--run", "Main"], outDir);
 		if (!StringTools.startsWith(eval, "nan\n"))
 			throw "upstream eval no longer returns nan for Int modulo by zero; revisit the parity decision: " + eval;
 		final program = M14Stage3RuntimeFixture.prepareProgram({source: File.getContent(path), path: path, root: source});

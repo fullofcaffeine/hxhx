@@ -9,17 +9,35 @@
 class Main {
 	static function main() {
 		final zero = Std.parseInt("0");
+		// Typed clauses tell a catchable Haxe String apart from an untagged native
+		// exception that only `catch (e:Dynamic)` would see. Labels, not messages,
+		// are printed, because each target words the error differently.
 		try {
 			Sys.println(7 % zero);
+		} catch (e:String) {
+			Sys.println("caught modulo as String");
+		} catch (e:haxe.Exception) {
+			Sys.println("caught modulo as haxe.Exception");
 		} catch (e:Dynamic) {
-			Sys.println("caught modulo");
+			Sys.println("caught modulo as Dynamic");
 		}
 		var x = 7;
 		try {
 			x %= zero;
 			Sys.println(x);
+		} catch (e:String) {
+			Sys.println("caught compound modulo as String");
 		} catch (e:Dynamic) {
-			Sys.println("caught compound modulo");
+			Sys.println("caught compound modulo as Dynamic");
+		}
+		final word:haxe.Int32 = 7;
+		final zeroWord:haxe.Int32 = zero;
+		try {
+			Sys.println(word % zeroWord);
+		} catch (e:String) {
+			Sys.println("caught Int32 modulo as String");
+		} catch (e:Dynamic) {
+			Sys.println("caught Int32 modulo as Dynamic");
 		}
 		Sys.println(x);
 		Sys.println(7 % 3);
