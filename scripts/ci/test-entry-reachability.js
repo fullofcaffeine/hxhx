@@ -22,13 +22,18 @@
  * References are found by text: `npm run <name>`, quoted npm script names,
  * repository paths such as `test/foo.hxml` or `scripts/ci/foo.js`, bare file
  * names that resolve beside the referring file, and the `test/<Main>.hx`
- * class that an `.hxml` file runs (a test can start other test builds). That is deliberately
- * generous: a false "reachable" result only hides a test, while a false
- * "unreachable" result fails CI and is fixed by naming the path literally.
+ * class that an `.hxml` file runs (a test can start other test builds).
+ *
+ * A wrapper npm script that nothing names, such as `test:x` = `node
+ * scripts/ci/x.js` while a workflow calls that file directly, counts as
+ * reachable only when CI runs each of its `&&` commands as written. A copy
+ * with an extra environment variable, define, or argument is a variant that
+ * CI never runs, so it stays unreachable.
  *
  * Entries that are unreachable on purpose are listed in
  * scripts/ci/test-entry-reachability.json with a reason and an owning Bead.
- * Files that only a listed entry runs share its exception.
+ * Files that only a listed entry runs share its exception; scripts never do,
+ * so every unreachable npm script has its own entry.
  * The guard fails when a new unreachable entry is not listed, when a listed
  * entry has become reachable, when a listed entry no longer exists, or when an
  * npm script runs a `test/` or `scripts/` file that does not exist.
@@ -160,6 +165,34 @@ function withoutPathFilters(text) {
   return kept.join('\n')
 }
 
+/** Returns the command text that CI runs: workflows, reachable scripts and shell files. */
+function ciCommandText(repoRoot, scripts, reachable, workflowTexts) {
+  const corpus = [...workflowTexts]
+  for (const key of reachable) {
+    if (key.startsWith('script:')) corpus.push(scripts[key.slice('script:'.length)] || '')
+    else if (key.startsWith('file:') && /\.(sh|js|cjs|mjs)$/.test(key) && isFile(repoRoot, key.slice('file:'.length))) {
+      corpus.push(readText(repoRoot, key.slice('file:'.length)))
+    }
+  }
+  return corpus
+}
+
+/** True when `command` appears in `corpus` as a whole command, not inside a longer one. */
+function containsCommand(corpus, command) {
+  for (const text of corpus) {
+    let index = text.indexOf(command)
+    while (index >= 0) {
+      const before = text.slice(0, index)
+      const after = text.slice(index + command.length)
+      const startsCommand = /(^|[\n;&|(]|run:|['"`])\s*$/.test(before)
+      const endsCommand = /^\s*($|[\n;&|)]|['"`])/.test(after) || /^\s+--?[A-Za-z]/.test(after) && !/^\s+-D\b/.test(after)
+      if (startsCommand && endsCommand) return true
+      index = text.indexOf(command, index + 1)
+    }
+  }
+  return false
+}
+
 /**
  * Walks every reference and returns the keys it reaches. Without `roots`,
  * the walk starts from the CI roots; with `roots`, it starts from those keys.
@@ -176,10 +209,12 @@ function reachableKeys(repoRoot, scripts, roots = null) {
   if (roots) for (const key of roots) visit(key)
   else for (const command of aggregateCommands(scripts)) visit(`script:${command}`)
   const workflowRoot = path.join(repoRoot, '.github/workflows')
+  const workflowTexts = []
   for (const name of roots ? [] : fs.readdirSync(workflowRoot).sort()) {
     if (!/\.ya?ml$/.test(name)) continue
     const workflow = `.github/workflows/${name}`
     const text = withoutPathFilters(readText(repoRoot, workflow))
+    workflowTexts.push(text)
     const found = references(repoRoot, text, scriptNames, null)
     for (const script of found.scripts) visit(`script:${script}`)
     for (const file of found.files) visit(`file:${file}`)
@@ -207,19 +242,31 @@ function reachableKeys(repoRoot, scripts, roots = null) {
     for (const script of found.scripts) visit(`script:${script}`)
     for (const file of found.files) visit(`file:${file}`)
   }
-  // A wrapper script is covered when CI already runs everything it runs, for
-  // example `test:x` = `node scripts/ci/x.js` while a workflow calls the file
-  // directly. Repeat until no further wrapper becomes covered.
+  if (roots) return reachable
+  // A wrapper script is covered when CI already runs exactly the commands it
+  // runs, for example `test:x` = `node scripts/ci/x.js` while a workflow calls
+  // `node scripts/ci/x.js --out dir`. Each `&&` part must appear as a whole
+  // command in CI text, so an added environment variable, define, or argument
+  // (a variant CI never runs) keeps the wrapper unreachable. A part that is
+  // `npm run <reachable script>` needs no text match. Repeat until stable.
+  const corpus = ciCommandText(repoRoot, scripts, reachable, workflowTexts)
   let changed = true
   while (changed) {
     changed = false
     for (const name of scriptNames) {
       const key = `script:${name}`
       if (reachable.has(key)) continue
-      const found = references(repoRoot, scripts[name], scriptNames, null)
-      const targets = [...[...found.scripts].map(script => `script:${script}`), ...[...found.files].map(file => `file:${file}`)]
-      if (targets.length > 0 && targets.every(target => reachable.has(target))) {
+      const parts = scripts[name].split(/\s*&&\s*/).map(part => part.trim())
+      const covered = parts.every(part => {
+        const npmRun = part.match(/^npm\s+run\s+(?:-s\s+)?([A-Za-z0-9:._-]+)$/)
+        if (npmRun) return reachable.has(`script:${npmRun[1]}`)
+        const found = references(repoRoot, part, scriptNames, null)
+        if (found.scripts.size + found.files.size === 0) return false
+        return containsCommand(corpus, part)
+      })
+      if (covered) {
         reachable.add(key)
+        corpus.push(scripts[name])
         changed = true
       }
     }
@@ -255,7 +302,12 @@ function evaluate(repoRoot = process.cwd()) {
   const entrySet = new Set(entries)
   // An entry that only a listed exception runs, such as the `.hxml` file of a
   // listed npm script, shares that exception and needs no entry of its own.
-  const accounted = reachableKeys(repoRoot, scripts, Object.keys(exceptions).filter(key => entrySet.has(key)))
+  // Only files share an exception; a script always needs its own entry.
+  const accounted = new Set(
+    [...reachableKeys(repoRoot, scripts, Object.keys(exceptions).filter(key => entrySet.has(key)))].filter(
+      key => key.startsWith('file:') || Object.prototype.hasOwnProperty.call(exceptions, key)
+    )
+  )
   const errors = []
   for (const key of unreachable) {
     if (!accounted.has(key)) errors.push(`no CI path reaches ${key}; wire it into npm test, a shard, or a workflow, or list it in ${EXCEPTIONS_PATH} with a reason and bead`)

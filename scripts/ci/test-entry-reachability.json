@@ -194,6 +194,34 @@
       "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
       "bead": "haxe_ocaml-gbvr1"
     },
+    "script:test:full1:bootstrap-source-reconcile": {
+      "reason": "Local wrapper: the bootstrap source reconcile workflow runs its script with different arguments.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:full1:suite:display": {
+      "reason": "Local wrapper: the Full1 suite workflow runs scripts/ci/run-upstream-suite.js with its own arguments, not this exact command.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:full1:suite:misc": {
+      "reason": "Local wrapper: the Full1 suite workflow runs scripts/ci/run-upstream-suite.js with its own arguments, not this exact command.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:full1:suite:optimization": {
+      "reason": "Local wrapper: the Full1 suite workflow runs scripts/ci/run-upstream-suite.js with its own arguments, not this exact command.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:full1:suite:server": {
+      "reason": "Local wrapper: the Full1 suite workflow runs scripts/ci/run-upstream-suite.js with its own arguments, not this exact command.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:full1:suite:threads": {
+      "reason": "Local wrapper: the Full1 suite workflow runs scripts/ci/run-upstream-suite.js with its own arguments, not this exact command.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:hooks:post-checkout:real": {
+      "reason": "Manual: needs the reviewed bd and bd-toolchain binaries (HXHX_REVIEWED_BD_BIN); CI runs only the temporary-repository variant.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
     "script:test:hxhx:build-bootstrap-ocaml-eval-hxml-smoke": {
       "reason": "Heavy lane: builds hxhx itself; not run by the audit.",
       "bead": "haxe_ocaml-gbvr1"
@@ -210,8 +238,28 @@
       "reason": "Fails on origin/main: native call conversion differs: first",
       "bead": "haxe_ocaml-hg8m2"
     },
+    "script:test:m14:cpp-abstract-underlying-conversion-native": {
+      "reason": "Fails on origin/main: Type not found : reflaxe.data.ClassFuncData (the .hxml lacks -lib reflaxe for this HXHX_M14_SMOKE_GROUP variant; CI runs only group=all).",
+      "bead": "haxe_ocaml-d79fx"
+    },
+    "script:test:m14:cpp-arrow-map-literal-native": {
+      "reason": "Fails on origin/main: Type not found : reflaxe.data.ClassFuncData (the .hxml lacks -lib reflaxe for this HXHX_M14_SMOKE_GROUP variant; CI runs only group=all).",
+      "bead": "haxe_ocaml-d79fx"
+    },
+    "script:test:m14:cpp-callable-extern-native": {
+      "reason": "Fails on origin/main: Type not found : reflaxe.data.ClassFuncData (the .hxml lacks -lib reflaxe for this HXHX_M14_SMOKE_GROUP variant; CI runs only group=all).",
+      "bead": "haxe_ocaml-d79fx"
+    },
     "script:test:m14:cpp-empty-map-expected-type-native": {
       "reason": "Fails on origin/main: Type not found : reflaxe.data.ClassFuncData",
+      "bead": "haxe_ocaml-d79fx"
+    },
+    "script:test:m14:cpp-generic-array-local-native": {
+      "reason": "Fails on origin/main: Type not found : reflaxe.data.ClassFuncData (the .hxml lacks -lib reflaxe for this HXHX_M14_SMOKE_GROUP variant; CI runs only group=all).",
+      "bead": "haxe_ocaml-d79fx"
+    },
+    "script:test:m14:cpp-generic-call-array-native": {
+      "reason": "Fails on origin/main: Type not found : reflaxe.data.ClassFuncData (the .hxml lacks -lib reflaxe for this HXHX_M14_SMOKE_GROUP variant; CI runs only group=all).",
       "bead": "haxe_ocaml-d79fx"
     },
     "script:test:m14:cpp-generic-storage-oracle": {
@@ -230,6 +278,10 @@
       "reason": "Fails on origin/main: Type not found : reflaxe.data.ClassFuncData",
       "bead": "haxe_ocaml-d79fx"
     },
+    "script:test:m14:cpp-native-backend-smoke:render": {
+      "reason": "Fails on origin/main: Type not found : reflaxe.data.ClassFuncData (the .hxml lacks -lib reflaxe for this HXHX_M14_SMOKE_GROUP variant; CI runs only group=all).",
+      "bead": "haxe_ocaml-d79fx"
+    },
     "script:test:m14:cpp-static-startup-oracle": {
       "reason": "Manual oracle lane: compiles with upstream Haxe and hxcpp; not run by the audit.",
       "bead": "haxe_ocaml-gbvr1"
@@ -242,16 +294,32 @@
       "reason": "Fails on origin/main: .tmp/declared_bound_call_compound/Main.hx:1:217: Structural extension requires an anonymous type",
       "bead": "haxe_ocaml-cwnu4"
     },
+    "script:test:m14:declared-field-types": {
+      "reason": "Fails on origin/main: Main.hx:13:35: Cannot access this or other member field in variable initialization.",
+      "bead": "haxe_ocaml-cwnu4"
+    },
     "script:test:m14:enum-switch-coverage": {
       "reason": "Fails on origin/main: Neko typed program cannot find class Array",
       "bead": "haxe_ocaml-jfe4a"
+    },
+    "script:test:m14:field-assignment": {
+      "reason": "Fails on origin/main: field assignment disagreements: callback_variance: inferred value (value:Float)->Int is not compatible with (Int)->Void.",
+      "bead": "haxe_ocaml-cwnu4"
     },
     "script:test:m14:heavy": {
       "reason": "Heavy lane: builds hxhx itself; not run by the audit.",
       "bead": "haxe_ocaml-gbvr1"
     },
+    "script:test:m14:hih-complete-numeric-literals": {
+      "reason": "Heavy lane under test:m14:heavy, kept out of npm test on purpose; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
     "script:test:m14:hih-complete-numeric-literals:current-source": {
       "reason": "Heavy lane: builds hxhx itself; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:m14:hih-generic-function-arity": {
+      "reason": "Heavy lane under test:m14:heavy, kept out of npm test on purpose; not run by the audit.",
       "bead": "haxe_ocaml-gbvr1"
     },
     "script:test:m14:hih-generic-function-decl": {
@@ -280,6 +348,14 @@
     },
     "script:test:m14:neko-startup-try": {
       "reason": "Fails on origin/main: test/M14RepeatedConditionTest.hx:62: characters 49-52 : Class<M14NekoClosureControlTest> has no field run",
+      "bead": "haxe_ocaml-d79fx"
+    },
+    "script:test:m14:neko-static-fields": {
+      "reason": "Fails on origin/main through its first step, test:m14:declared-field-types. Its other steps pass and are wired separately.",
+      "bead": "haxe_ocaml-cwnu4"
+    },
+    "script:test:m14:repeated-condition": {
+      "reason": "Fails on origin/main: test/M14RepeatedConditionTest.hx calls M14NekoClosureControlTest.run, which no longer exists.",
       "bead": "haxe_ocaml-d79fx"
     },
     "script:test:m14:runtime-macro-session-call": {
@@ -366,6 +442,10 @@
       "reason": "Review tool: reads lowering reports from an earlier run; alone it finds none.",
       "bead": "haxe_ocaml-gbvr1"
     },
+    "script:test:reflaxe-ocaml:perf": {
+      "reason": "Manual performance lane: on a busy local machine it reports RO_TARGET_PERF_CREDIBLE:FAIL; needs a quiet runner.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
     "script:test:self-hosting-smoke": {
       "reason": "Heavy lane: builds hxhx itself; not run by the audit.",
       "bead": "haxe_ocaml-gbvr1"
@@ -382,8 +462,24 @@
       "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; not run by the audit.",
       "bead": "haxe_ocaml-gbvr1"
     },
+    "script:test:upstream:replacement-ready:full": {
+      "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; CI gates run other modes. Not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:upstream:replacement-ready:strict": {
+      "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; CI gates run other modes. Not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
     "script:test:upstream:runci-macro-stage1": {
       "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:upstream:runci-macro-stage3-direct": {
+      "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; CI gates run other modes. Not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:upstream:runci-macro-stage3-driver": {
+      "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; CI gates run other modes. Not run by the audit.",
       "bead": "haxe_ocaml-gbvr1"
     },
     "script:test:upstream:runci-macro-stage3-emit-runner": {
@@ -398,16 +494,32 @@
       "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; not run by the audit.",
       "bead": "haxe_ocaml-gbvr1"
     },
+    "script:test:upstream:unit-macro-native": {
+      "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; CI gates run other modes. Not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
     "script:test:upstream:unit-macro-ocaml": {
       "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:upstream:unit-macro-stage0": {
+      "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; CI gates run other modes. Not run by the audit.",
       "bead": "haxe_ocaml-gbvr1"
     },
     "script:test:upstream:unit-macro-stage1": {
       "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; not run by the audit.",
       "bead": "haxe_ocaml-gbvr1"
     },
+    "script:test:upstream:unit-macro-stage3-emit": {
+      "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; CI gates run other modes. Not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
     "script:test:upstream:unit-macro-stage3-typeonly": {
       "reason": "Manual upstream lane: needs an upstream Haxe checkout in vendor/haxe; not run by the audit.",
+      "bead": "haxe_ocaml-gbvr1"
+    },
+    "script:test:workloads:full": {
+      "reason": "Manual: the full workload profile; Gate 2 lite runs the fast profile only. Not run by the audit.",
       "bead": "haxe_ocaml-gbvr1"
     }
   }

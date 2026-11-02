@@ -104,8 +104,9 @@ guard:test-entry-reachability` lists every test entry point: each top-level
 and each portable fixture directory. It then follows references from the CI
 starting points: the `npm test` commands, and the scripts and files that the
 `.github/workflows/*.yml` jobs name. A reference is an `npm run <name>` call, a
-quoted script name, or a repository path such as `test/foo.hxml`. A script
-that only wraps files CI already runs counts as reachable.
+quoted script name, or a repository path such as `test/foo.hxml`. A wrapper
+script counts as reachable only when CI runs its exact commands: a copy that
+adds an environment variable, define, or argument is a variant CI never runs.
 
 When you add a test, do one of these:
 
@@ -116,7 +117,7 @@ When you add a test, do one of these:
   or a full upstream suite), list it in
   `scripts/ci/test-entry-reachability.json` with a reason and an owning Bead.
   A file that only a listed script runs, such as its `.hxml` file, shares that
-  entry and needs no entry of its own.
+  entry and needs no entry of its own. A script always needs its own entry.
 
 The guard also fails when a listed test becomes reachable, when a listed test
 no longer exists, and when an npm script runs a `test/` or `scripts/` file that

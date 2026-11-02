@@ -79,6 +79,69 @@ result = evaluate(writeRepo(baseFiles(
 )))
 assert.ok(result.errors.some(error => error.includes('test:dead runs test/missing_test.hxml, which does not exist')))
 
+// A wrapper counts as reachable only when CI runs the same command. An
+// environment variable or an extra argument selects a variant CI never runs.
+const filtered = { 'file:test/filtered_test.hxml': exception }
+result = evaluate(writeRepo(baseFiles({
+  ...scripts,
+  'test:smoke-variant': 'HXHX_GROUP=extra haxe test/smoke_test.hxml',
+  'test:smoke-define': 'haxe test/smoke_test.hxml -D extra',
+  'test:smoke-copy': 'haxe test/smoke_test.hxml'
+}, filtered)))
+assert.ok(result.unreachable.includes('script:test:smoke-variant'), 'an environment variant must stay unreachable')
+assert.ok(result.unreachable.includes('script:test:smoke-define'), 'an argument variant must stay unreachable')
+assert.ok(!result.unreachable.includes('script:test:smoke-copy'), 'an identical command must count as reachable')
+
+// A new unlisted script that only runs a listed script's files still needs
+// its own entry; only files share an exception.
+result = evaluate(writeRepo(baseFiles({
+  ...scripts,
+  'test:manual': 'haxe test/filtered_test.hxml',
+  'test:manual-copy': 'haxe test/filtered_test.hxml'
+}, { 'script:test:manual': exception })))
+assert.ok(result.errors.some(error => error.includes('script:test:manual-copy')), 'an unlisted script must not share an exception')
+
+// An .hxml file's main class is followed: here it starts another test build.
+result = evaluate(writeRepo({
+  ...baseFiles({ ...scripts, 'test:aggregate': 'haxe test/main_test.hxml' }, filtered),
+  'test/main_test.hxml': '-cp test\n-main MainTest\n--interp\n',
+  'test/MainTest.hx': 'class MainTest { static function main() Sys.command("haxe", ["test/aggregate_test.hxml"]); }\n'
+}))
+assert.ok(!result.unreachable.includes('file:test/aggregate_test.hxml'), 'the main class reference must be followed')
+
+// A portable fixture is reachable only with test:portable and a build.hxml.
+const portable = {
+  'test/portable/fixtures/with_build/build.hxml': '--interp\n',
+  'test/portable/fixtures/without_build/Main.hx': 'class Main {}\n',
+  'scripts/test-portable.sh': 'true\n'
+}
+result = evaluate(writeRepo({
+  ...baseFiles({ ...scripts, test: 'npm run test:aggregate && npm run test:portable', 'test:portable': 'bash scripts/test-portable.sh' }, filtered),
+  ...portable
+}))
+assert.ok(!result.unreachable.includes('fixture:test/portable/fixtures/with_build'))
+assert.ok(result.unreachable.includes('fixture:test/portable/fixtures/without_build'))
+
+// `paths-ignore:` filters are not references; matrix list items are.
+const matrixRepo = baseFiles({ ...scripts, 'test:matrix-item': 'haxe test/filtered_test.hxml' }, {})
+matrixRepo['.github/workflows/ci.yml'] = [
+  'on:',
+  '  pull_request:',
+  '    paths-ignore:',
+  '      - test/filtered_test.hxml',
+  'jobs:',
+  '  matrix:',
+  '    strategy:',
+  '      matrix:',
+  '        script:',
+  '          - test:matrix-item',
+  '    steps:',
+  '      - run: npm run test:smoke',
+  '      - run: node scripts/ci/direct-test.js'
+].join('\n')
+result = evaluate(writeRepo(matrixRepo))
+assert.deepStrictEqual(result.unreachable, [], 'a matrix list item must be reachable through its script')
+
 // An exception needs a reason and a bead id.
 assert.throws(
   () => evaluate(writeRepo(baseFiles(scripts, { 'file:test/filtered_test.hxml': { reason: 'x' } }))),
