@@ -1395,9 +1395,12 @@ class TyperStage {
 		macro selection uses the same rule so both phases ask the loader the same questions.
 	**/
 	public static function isUpperStartName(name:String):Bool {
-		if (name == null || name.length == 0)
+		if (name == null)
 			return false;
-		final c = name.charCodeAt(0);
+		final segment = HxRootedPath.unrooted(name);
+		if (segment.length == 0)
+			return false;
+		final c = segment.charCodeAt(0);
 		return c >= "A".code && c <= "Z".code;
 	}
 

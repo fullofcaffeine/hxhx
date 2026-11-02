@@ -6,6 +6,11 @@
 	parser's exact expression fingerprint. `@P` in an expectation is the quote's position record,
 	`ExprDef.`, `Constant.` and the other enum owners are the fully qualified
 	`haxe.macro.Expr.<Enum>.` paths. Unsupported syntax must fail with a named reason.
+
+	The lowering roots every path it writes (`HxRootedPath`: `::haxe.macro...`, `::Std.string`,
+	`::hxhxmacrohost...`) so user names cannot capture them. Source cannot spell a rooted path, so
+	`rootPaths` roots the `haxe`, `Std`, and `hxhxmacrohost` chains of an expectation after parsing;
+	a payload written with one of those names stays an ordinary identifier.
 **/
 class M14MacroReificationLoweringTest {
 	static final FILE = "Main.hx";
@@ -28,7 +33,7 @@ class M14MacroReificationLoweringTest {
 	static function probe(payload:HxExpr):TyType {
 		return switch payload {
 			case ENull: TyType.fromHintText("Null");
-			case EIdent(name) if (types.exists(name)): TyType.fromHintText(types.get(name));
+			case EIdent(name) | EEnumValue(name) if (types.exists(name)): TyType.fromHintText(types.get(name));
 			case ECall(EIdent("next"), []): TyType.fromHintText("Null<Int>");
 			case _: TyType.unknown();
 		};
@@ -52,9 +57,25 @@ class M14MacroReificationLoweringTest {
 		return text;
 	}
 
+	static final ROOTS = ["haxe", "Std", "hxhxmacrohost"];
+
+	/** Root the generated chains of an expectation; the shapes are those the expectations use. */
+	static function rootPaths(expression:HxExpr):HxExpr {
+		return switch expression {
+			case EField(EIdent(name), field) if (ROOTS.indexOf(name) >= 0): EField(EIdent(HxRootedPath.PREFIX + name), field);
+			case EField(inner, field): EField(rootPaths(inner), field);
+			case ECall(callee, arguments): ECall(rootPaths(callee), [for (argument in arguments) rootPaths(argument)]);
+			case EAnon(names, values): EAnon(names, [for (value in values) rootPaths(value)]);
+			case EArrayDecl(values): EArrayDecl([for (value in values) rootPaths(value)]);
+			case ECast(inner, hint): ECast(rootPaths(inner), hint);
+			case ETernary(condition, whenTrue, whenFalse): ETernary(rootPaths(condition), rootPaths(whenTrue), rootPaths(whenFalse));
+			case other: other;
+		};
+	}
+
 	static function expect(label:String, source:String, expected:String):Void {
 		final lowered = TypedBodyFingerprint.exactExpression(lower(source));
-		final wanted = TypedBodyFingerprint.exactExpression(HxParser.parseExprText(expand(expected)));
+		final wanted = TypedBodyFingerprint.exactExpression(rootPaths(HxParser.parseExprText(expand(expected))));
 		if (lowered != wanted)
 			throw label + ": lowered syntax differs from the expectation\n  lowered:  " + lowered + "\n  expected: " + wanted;
 	}
@@ -84,7 +105,9 @@ class M14MacroReificationLoweringTest {
 			"maybe" => "Null<Int>",
 			"words" => "Array<String>",
 			"grid" => "Array<Null<Int>>",
-			"obj" => "{a:Int}"
+			"obj" => "{a:Int}",
+			"haxe" => "Int",
+			"Std" => "Float"
 		];
 
 		// Constants, identifiers, and nesting through every exported form share the quote's position.
@@ -129,6 +152,35 @@ class M14MacroReificationLoweringTest {
 		expect("value nullable call", "macro $v{next()}", "hxhxmacrohost.MacroReificationValues.nullableInt(next(), @P)");
 		expect("value array", "macro $v{words}", "hxhxmacrohost.MacroReificationValues.strings(words, @P)");
 		expectFailure("value nested array", "macro $v{grid}", "arrays of Int, Float, Bool, or String; this payload has type Array<Null<Int>>");
+
+		// Generated paths are rooted; a payload named like a root keeps naming the user's value.
+		switch lower("macro 1") {
+			case EAnon(_, [
+				ECall(EField(EField(EField(EField(EIdent(root), "macro"), "Expr"), "ExprDef"), "EConst"), _),
+				_
+			]):
+				if (root != HxRootedPath.PREFIX + "haxe")
+					throw "constructor root: expected a rooted `haxe`, got `" + root + "`";
+			case other:
+				throw "constructor root: unexpected shape " + Std.string(other);
+		}
+		expect("value named haxe", "macro $v{haxe}", constant("CInt(Std.string(haxe), null)"));
+		expect("value named Std", "macro $v{Std}", constant("CFloat(Std.string(Std), null)"));
+		switch lower("macro $v{Std}") {
+			case EAnon(_, [
+				ECall(_, [
+					ECall(_, [
+						ECall(EField(EIdent(root), "string"), [EIdent("Std") | EEnumValue("Std")]),
+						ENull
+					])
+				]),
+				_
+			]):
+				if (root != HxRootedPath.PREFIX + "Std")
+					throw "value conversion root: expected a rooted `Std`, got `" + root + "`";
+			case other:
+				throw "value named Std: unexpected shape " + Std.string(other);
+		}
 
 		// Identifier, expression, block, array, field, and type-path splices.
 		expect("ident splice", "macro $i{name}", "{expr: ExprDef.EConst( Constant.CIdent(name)), pos: @P}");

@@ -1,7 +1,8 @@
 import haxe.macro.Expr;
 
 /**
-	Print the structure of the expression `Macros.build` returns, without positions.
+	Print the structure of the expression `Macros.build` returns and of the `Shadowing` quotations,
+	without positions.
 
 	Upstream runs it in the macro context (`haxe -cp src --macro Probe.main() --no-output`);
 	hxhx compiles it natively through its Stage3 emitter. Both must print `probe-expected.stdout`.
@@ -10,6 +11,8 @@ class Probe {
 	public static function main():Void {
 		// Positions are not printed: upstream's eval keeps them opaque, so only the shape is comparable.
 		Sys.println(shape(Macros.build(macro ["alpha", "beta"])));
+		for (quoted in Shadowing.cases())
+			Sys.println(shape(quoted));
 	}
 
 	static function shape(e:Expr):String {

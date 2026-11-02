@@ -241,7 +241,7 @@ class MacroReificationLowering {
 				throw failure("`$v{}` supports Null of Int, Float, Bool, or String; this payload has type " + type.getDisplay());
 			return ECall(valuesHelper(helper), [payload, at]);
 		}
-		final stringOf = ECall(EField(EIdent("Std"), "string"), [payload]);
+		final stringOf = ECall(HxRootedPath.expression("Std.string"), [payload]);
 		if (type.isPrimitive()) {
 			switch type.getDisplay() {
 				case "Int":
@@ -274,7 +274,7 @@ class MacroReificationLowering {
 	}
 
 	static function valuesHelper(name:String):HxExpr
-		return EField(EField(EIdent("hxhxmacrohost"), "MacroReificationValues"), name);
+		return HxRootedPath.expression("hxhxmacrohost.MacroReificationValues." + name);
 
 	static function arrayElementType(type:TyType):Null<TyType> {
 		final display = type.getDisplay();

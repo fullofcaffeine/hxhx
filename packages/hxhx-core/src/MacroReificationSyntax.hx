@@ -16,7 +16,8 @@ import MacroReificationLowering.MacroReificationHole;
 	- `expression` and `complexType` return `HxExpr` syntax; nothing here is target-specific, the
 	  typer and every backend treat the result as ordinary code.
 	- Enum constructors are written as `haxe.macro.Expr.<Enum>.<Constructor>(...)`, so the lowered
-	  code needs no import in the macro's module.
+	  code needs no import in the macro's module. The path is rooted (`HxRootedPath`): a local,
+	  parameter, or field named `haxe` in the macro's code does not change what it names.
 	- Records are written with every field of the 4.3.7 typedef, absent optional fields as `null`,
 	  the same shape `hxhxmacrohost.MacroSyntaxWire` builds in a plugin.
 	- Positions become `cast({file: .., min: .., max: ..}, haxe.macro.Expr.Position)`: hxhx
@@ -53,17 +54,9 @@ class MacroReificationSyntax {
 
 	// --- syntax helpers -------------------------------------------------------------------------
 
-	static function qualified(path:String):HxExpr {
-		final parts = path.split(".");
-		var out:HxExpr = EIdent(parts[0]);
-		for (index in 1...parts.length)
-			out = EField(out, parts[index]);
-		return out;
-	}
-
-	/** The fully qualified constructor `haxe.macro.Expr.<owner>.<name>` as syntax. */
+	/** The fully qualified constructor `haxe.macro.Expr.<owner>.<name>`, rooted so no user name captures `haxe`. */
 	public static function enumPath(owner:String, name:String):HxExpr
-		return qualified(MODULE + "." + owner + "." + name);
+		return HxRootedPath.expression(MODULE + "." + owner + "." + name);
 
 	/** `haxe.macro.Expr.<owner>.<name>(args)`, or the bare constructor value when it has no payload. */
 	static function ctor(owner:String, name:String, args:Array<HxExpr>):HxExpr {

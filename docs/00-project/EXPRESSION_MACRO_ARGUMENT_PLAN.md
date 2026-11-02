@@ -128,7 +128,11 @@ after step 2.
   Quoted nodes get the zero-width positions of `MacroSyntaxPositions` in the macro's file;
   `Position` is the opaque macro-context abstract in every hxhx compile, so the lowered syntax
   writes `cast({file, min, max}, haxe.macro.Expr.Position)`, the record `MacroSyntaxWire`
-  reads. Tests: `npm run test:m14:macro-reification-lowering`, the JavaScript quotation runtime
+  reads. The lowered syntax names `haxe`, `Std`, and `hxhxmacrohost` through `HxRootedPath`
+  (a first identifier `::haxe` that the lexer cannot produce, resolved by
+  `TyperContext.resolveType` from the top-level package), so user locals, parameters, and
+  fields with those names cannot capture it (`haxe_ocaml-9sj5p.5.7`).
+  Tests: `npm run test:m14:macro-reification-lowering`, the JavaScript quotation runtime
   cases (upstream oracle), and `npm run test:m14:project-macro-reification`
   (`test/fixtures/project-macro-reification`: plugin built by the step-2 driver, native result
   compared with upstream).

@@ -9,6 +9,8 @@ import sys.io.File;
 
 	Fixture: `test/fixtures/project-macro-reification`. `Macros.build` assembles its result with
 	`macro { ... }` and the splices `$b{}`, `$v{}`, `$e{}`, `$a{}`, a field splice and `@:pos`.
+	`Shadowing` quotes where locals, parameters, and fields are named `haxe`, `Std`, and
+	`hxhxmacrohost`, the roots of the lowered syntax; the probe prints those results too.
 
 	1. Oracles: upstream Haxe 4.3.7 runs `Main` (`expected.stdout`) and `Probe` in its macro
 	   context (`probe-expected.stdout`).
@@ -54,7 +56,7 @@ class M14ProjectMacroReificationTest {
 		final src = root + "/src";
 		deleteRecursive(root);
 		FileSystem.createDirectory(src);
-		for (name in ["Macros.hx", "Probe.hx"])
+		for (name in ["Macros.hx", "Probe.hx", "Shadowing.hx"])
 			File.copy(fixture + "/src/" + name, src + "/" + name);
 		// `$v{}` on an array or nullable calls the plugin support module. A plugin build reaches it
 		// through its support classpath (`packages/hxhx-core/src`); the copy mirrors that classpath
