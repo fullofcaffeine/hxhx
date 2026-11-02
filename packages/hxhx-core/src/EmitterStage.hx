@@ -3078,11 +3078,6 @@ class EmitterStage {
 					+ exprToOcamlAsFloatValueStage3(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 						callSigByCallee, stage3ExactPrimitiveKey(arg) == "primitive:Int")
 					+ ")";
-			case ECall(EField(EIdent("Math"), "round"), [arg]):
-				return "(int_of_float (floor (("
-					+ exprToOcamlAsFloatValueStage3(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-						callSigByCallee)
-					+ ") +. 0.5)))";
 			case ECall(EField(obj, "toString"), []) if (stage3IsStringExpr(obj, tyByIdent)):
 				return exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 			case _:
