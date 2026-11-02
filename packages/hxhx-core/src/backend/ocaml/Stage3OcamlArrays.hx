@@ -98,17 +98,34 @@ function access(occurrence:TypedBackendArrayAccess, emit:HxExpr->String, names:S
 			+ value
 			+ ")";
 		case Compound(op):
-			if (occurrence.resultType.getSemanticKey() != "primitive:Int" || occurrence.valueType.getSemanticKey() != "primitive:Int")
+			// `ints[i] += n` keeps Int arithmetic. `floats[i] += n` uses Float
+			// arithmetic and promotes an Int right operand (`floats[0] += count()`).
+			final valueKey = occurrence.valueType.getSemanticKey();
+			final floatUpdate = occurrence.resultType.getSemanticKey() == "primitive:Float"
+				&& (valueKey == "primitive:Float" || valueKey == "primitive:Int");
+			if (!floatUpdate && (occurrence.resultType.getSemanticKey() != "primitive:Int" || valueKey != "primitive:Int"))
 				throw "OCaml indexed compound update requires a supported exact numeric operation";
-			final operation = switch op {
-				case "+=": "HxInt.add";
-				case "-=": "HxInt.sub";
-				case "*=": "HxInt.mul";
-				case _: throw "unsupported OCaml indexed compound operation: " + op;
-			};
 			final old = names.internalName("__hx_indexed_old");
 			final right = names.internalName("__hx_indexed_right");
 			final result = names.internalName("__hx_indexed_result");
+			final combined = if (floatUpdate) {
+				switch op {
+					case "+=": old + " +. " + right;
+					case "-=": old + " -. " + right;
+					case "*=": old + " *. " + right;
+					case "/=": old + " /. " + right;
+					case "%=": "Float.rem " + old + " " + right;
+					case _: throw "unsupported OCaml indexed Float compound operation: " + op;
+				}
+			} else {
+				switch op {
+					case "+=": "HxInt.add " + old + " " + right;
+					case "-=": "HxInt.sub " + old + " " + right;
+					case "*=": "HxInt.mul " + old + " " + right;
+					case _: throw "unsupported OCaml indexed compound operation: " + op;
+				}
+			};
+			final rendered = emit(occurrence.value);
 			prefix
 			+ "let "
 			+ old
@@ -119,15 +136,11 @@ function access(occurrence:TypedBackendArrayAccess, emit:HxExpr->String, names:S
 			+ " in let "
 			+ right
 			+ " = ("
-			+ emit(occurrence.value)
+			+ (floatUpdate && valueKey == "primitive:Int" ? Stage3OcamlNumericWidening.promote(rendered) : rendered)
 			+ ") in let "
 			+ result
 			+ " = "
-			+ operation
-			+ " "
-			+ old
-			+ " "
-			+ right
+			+ combined
 			+ " in HxBootArray.set "
 			+ receiver
 			+ " "

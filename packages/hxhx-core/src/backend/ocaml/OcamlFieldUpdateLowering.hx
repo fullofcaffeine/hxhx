@@ -1,7 +1,7 @@
 package backend.ocaml;
 
 /**
-	Makes ordinary Int field updates and String field appends explicit for native OCaml.
+	Makes ordinary Int and Float field updates and String field appends explicit for native OCaml.
 
 	One receiver capture and one old-value capture preserve effects and postfix
 	results. Exact field facts restrict this pass to ordinary instance storage;
@@ -52,8 +52,10 @@ private function lowerExpression(expression:TypedExpr, allocator:TyCompilerTempo
 
 /**
 	Capture the receiver and old value before the RHS, then return the written value.
-	Admits String `+=` appends and Int `+=`, `-=`, `*=` updates with an Int operand,
-	such as `state.index += value.length`; other operand types keep their owners.
+	Admits String `+=` appends, Int `+=`, `-=`, `*=` updates with an Int operand,
+	such as `state.index += value.length`, and Float `+=`, `-=`, `*=`, `/=`, `%=`
+	updates with an Int or Float operand, such as `cell.total += count()`. Other
+	operand types keep their owners.
  */
 private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTemporaryAllocator):TypedExpr {
 	final children = expression.getExpressions();
@@ -67,7 +69,13 @@ private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTe
 	final intUpdate = (assignment == "+=" || assignment == "-=" || assignment == "*=")
 		&& key == "primitive:Int"
 		&& children[1].getType().getSemanticKey() == "primitive:Int";
-	if ((!stringAppend && !intUpdate)
+	// A Float field accepts an Int or Float operand; the binary `old op right`
+	// keeps both checked types, so the backend promotes an Int operand there.
+	final rightKey = children[1].getType().getSemanticKey();
+	final floatUpdate = (assignment == "+=" || assignment == "-=" || assignment == "*=" || assignment == "/=" || assignment == "%=")
+		&& key == "primitive:Float"
+		&& (rightKey == "primitive:Float" || rightKey == "primitive:Int");
+	if ((!stringAppend && !intUpdate && !floatUpdate)
 		|| (operand.getTag() != FieldRead && operand.getTag() != NameRead)
 		|| field == null
 		|| field.getIsStatic()

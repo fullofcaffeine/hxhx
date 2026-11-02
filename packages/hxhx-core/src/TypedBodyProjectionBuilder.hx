@@ -24,6 +24,7 @@ class TypedBodyProjectionBuilder {
 	final collectionControls:Array<TypedBackendCollectionControl> = [];
 	final equalities:Array<TypedBackendEqualityOccurrence> = [];
 	final bitwiseOperations:Array<TypedBackendBitwiseOccurrence> = [];
+	final arithmeticOperations:Array<TypedBackendArithmeticOccurrence> = [];
 	final conditions:Array<TypedBackendCondition> = [];
 	final callArguments:Array<TypedBackendCallArgument> = [];
 	final lambdas:Array<TypedBackendLambdaOccurrence> = [];
@@ -184,6 +185,13 @@ class TypedBodyProjectionBuilder {
 				source: source,
 				expression: expression
 			}));
+		if (TypedBackendArithmeticOccurrence.supports(source.getTexts()[0]))
+			arithmeticOperations.push(new TypedBackendArithmeticOccurrence({
+				owner: ownerIdentity,
+				revision: bodyRevision,
+				source: source,
+				expression: expression
+			}));
 		if (source.getTexts()[0] == "==" || source.getTexts()[0] == "!=")
 			equalities.push(new TypedBackendEqualityOccurrence({
 				owner: ownerIdentity,
@@ -204,6 +212,12 @@ class TypedBodyProjectionBuilder {
 		if (!sealed)
 			throw "bitwise facts require a sealed projection";
 		return bitwiseOperations.copy();
+	}
+
+	public function getArithmeticOperations():Array<TypedBackendArithmeticOccurrence> {
+		if (!sealed)
+			throw "arithmetic facts require a sealed projection";
+		return arithmeticOperations.copy();
 	}
 
 	/** Retain typed callback producers, uses and comparisons before source projection loses their meaning. */

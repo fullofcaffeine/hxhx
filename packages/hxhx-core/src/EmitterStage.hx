@@ -2049,8 +2049,9 @@ class EmitterStage {
 		Member reads such as `.length` choose their native lowering from the
 		receiver's type. The receiver can be a local, a structural or nominal
 		field read (`box.text`, `Main.title`), an index (`parts[1]`), a call
-		result (`maybe(true)`, `s.substr(1)`), or a type check or cast
-		(`(value : String)`); each has its own typed fact. This
+		result (`maybe(true)`, `s.substr(1)`), a type check or cast
+		(`(value : String)`), or an arithmetic or ordering expression
+		(`side * side`); each has its own typed fact. This
 		helper reads only those facts. It never guesses a type from a name.
 	**/
 	static function stage3ExactExprType(expr:HxExpr):Null<TyType> {
@@ -2086,6 +2087,11 @@ class EmitterStage {
 			// Every `this` in one function has the same type; inside an abstract's
 			// method it is the underlying type (Int for `abstract Score(Int)`).
 			case EThis: currentTypedInitializer == null && currentTypedFunction != null ? currentTypedFunction.getThisType() : null;
+			// Arithmetic and ordering keep their checked result (TypedBackendArithmeticOccurrence),
+			// so a nested `side * side` or `count() * a[2]` is classified like a leaf operand.
+			case EBinop(_, _, _):
+				final arithmetic = currentTypedInitializer != null ? currentTypedInitializer.findArithmetic(expr) : currentTypedFunction == null ? null : currentTypedFunction.findArithmetic(expr);
+				arithmetic == null ? null : arithmetic.resultType;
 			case ECast(_, _) | ECheckType(_, _):
 				final conversion = currentTypedInitializer != null ? currentTypedInitializer.findCast(expr) : currentTypedFunction == null ? null : currentTypedFunction.findCast(expr);
 				conversion == null ? null : conversion.getTargetType();
@@ -2181,6 +2187,9 @@ class EmitterStage {
 			return exact.getSemanticKey() == "primitive:Int";
 		if (intBitwise(expr) != null)
 			return true;
+		// A recorded Int operand, such as the instance field `side` in `side * side / 2`.
+		if (stage3ExactPrimitiveKey(expr) == "primitive:Int")
+			return true;
 		return switch (expr) {
 			case EParenthesized(inner, _): stage3IsIntExpr(inner, tyByIdent);
 			case EDiscardThen(_, continuation): stage3IsIntExpr(continuation, tyByIdent);
@@ -2193,7 +2202,8 @@ class EmitterStage {
 			case EField(inner, "high" | "low"):
 				stage3IsInt64Expr(inner, tyByIdent);
 			// Arithmetic unwraps a nullable Int operand, so its result is a concrete Int.
-			case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%"): (stage3IsIntExpr(a, tyByIdent)
+			// Division is never Int in Haxe: `side * side / 2` is a Float.
+			case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*" || op == "%"): (stage3IsIntExpr(a, tyByIdent)
 					|| stage3NullableNumericOperand(a) == "primitive:Int") && (stage3IsIntExpr(b, tyByIdent)
 					|| stage3NullableNumericOperand(b) == "primitive:Int");
 			case ETernary(_cond, thenExpr, elseExpr): stage3IsIntExpr(thenExpr, tyByIdent) && stage3IsIntExpr(elseExpr, tyByIdent);
@@ -2215,6 +2225,10 @@ class EmitterStage {
 		final exact = objectAccessType(expr);
 		if (exact != null)
 			return exact.getSemanticKey() == "primitive:Float";
+		// A recorded Float operand (`a[2]`, `cell.value:T`, a call) keeps nested
+		// sums such as `count() * a[2] + i` on Float operators.
+		if (stage3ExactPrimitiveKey(expr) == "primitive:Float")
+			return true;
 		final staticCall = TypedExactStaticCallSource.decode(expr);
 		if (staticCall != null)
 			return staticCall.resultType == "Float";

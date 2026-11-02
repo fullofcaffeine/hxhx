@@ -26,6 +26,7 @@ class TypedBackendFieldInitializerProjection {
 	final collectionControls:Array<TypedBackendCollectionControl>;
 	final equalities:Array<TypedBackendEqualityOccurrence>;
 	final bitwiseOperations:Array<TypedBackendBitwiseOccurrence>;
+	final arithmeticOperations:Array<TypedBackendArithmeticOccurrence>;
 	final conditions:Array<TypedBackendCondition>;
 	final namedPatterns:Array<TypedBackendNamedPattern>;
 	final localWrites:Array<TypedBackendLocalWrite>;
@@ -47,6 +48,7 @@ class TypedBackendFieldInitializerProjection {
 			?collectionControls:Array<TypedBackendCollectionControl>,
 			?equalities:Array<TypedBackendEqualityOccurrence>,
 			?bitwiseOperations:Array<TypedBackendBitwiseOccurrence>,
+			?arithmeticOperations:Array<TypedBackendArithmeticOccurrence>,
 			?conditions:Array<TypedBackendCondition>,
 			?namedPatterns:Array<TypedBackendNamedPattern>
 		}) {
@@ -93,6 +95,10 @@ class TypedBackendFieldInitializerProjection {
 		this.bitwiseOperations = indexedAccesses == null
 			|| indexedAccesses.bitwiseOperations == null ? [] : indexedAccesses.bitwiseOperations.copy();
 		for (entry in this.bitwiseOperations)
+			entry.assertCurrent(stableIdentity, bodyRevision);
+		this.arithmeticOperations = indexedAccesses == null
+			|| indexedAccesses.arithmeticOperations == null ? [] : indexedAccesses.arithmeticOperations.copy();
+		for (entry in this.arithmeticOperations)
 			entry.assertCurrent(stableIdentity, bodyRevision);
 		this.conditions = indexedAccesses == null || indexedAccesses.conditions == null ? [] : indexedAccesses.conditions.copy();
 		this.namedPatterns = indexedAccesses == null || indexedAccesses.namedPatterns == null ? [] : indexedAccesses.namedPatterns.copy();
@@ -343,6 +349,18 @@ class TypedBackendFieldInitializerProjection {
 	/** Initializer bitwise operations cannot borrow facts from a method or another field. */
 	public function findBitwise(expression:HxExpr):Null<TypedBackendBitwiseOccurrence> {
 		for (entry in bitwiseOperations)
+			if (entry.expression == expression) {
+				requireCaptureCatalog();
+				requireExpression(expression);
+				entry.assertCurrent(stableIdentity, bodyRevision);
+				return entry;
+			}
+		return null;
+	}
+
+	/** Initializer arithmetic cannot borrow facts from a method or another field. */
+	public function findArithmetic(expression:HxExpr):Null<TypedBackendArithmeticOccurrence> {
+		for (entry in arithmeticOperations)
 			if (entry.expression == expression) {
 				requireCaptureCatalog();
 				requireExpression(expression);
