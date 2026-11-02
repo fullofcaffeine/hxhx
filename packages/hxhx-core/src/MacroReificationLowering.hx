@@ -83,7 +83,10 @@ class MacroReificationLowering {
 	final holes:Array<MacroReificationHole>;
 	final valueType:HxExpr->TyType;
 
-	function new(file:String, anchor:HxPos, valueType:HxExpr->TyType) {
+	final rooted:Bool;
+
+	function new(file:String, anchor:HxPos, valueType:HxExpr->TyType, rooted:Bool) {
+		this.rooted = rooted;
 		if (file == null || file.length == 0)
 			throw failure("the macro's source file is unknown");
 		this.file = file;
@@ -102,10 +105,16 @@ class MacroReificationLowering {
 		quote, in `file`. `valueType` gives the static type of a `$v{}` payload in the quote's
 		scope. `inMacroContext` is true when the module is compiled as macro code (a plugin
 		build), where a placeholder class definition is refused.
+
+		`rooted` writes the generated type paths as rooted paths (`HxRootedPath`) so user names
+		cannot capture them. The typer passes false only when it has no module loader: a module
+		typed without a classpath (isolated unit typing, the legacy `CompilerDriver`) cannot
+		resolve `haxe.macro.Expr` at all, and there the plain chains keep the earlier best-effort
+		shape instead of failing the rooted-owner check.
 	**/
 	public static function lowerExpression(quoted:HxExpr, wrappers:Null<Array<String>>, file:String, anchor:HxPos, valueType:HxExpr->TyType,
-			inMacroContext:Bool):HxExpr {
-		final lowering = new MacroReificationLowering(file, anchor, valueType);
+			inMacroContext:Bool, rooted:Bool = true):HxExpr {
+		final lowering = new MacroReificationLowering(file, anchor, valueType, rooted);
 		var expression = quoted;
 		if (wrappers != null) {
 			if (wrappers.indexOf("class") >= 0) {
@@ -127,8 +136,8 @@ class MacroReificationLowering {
 	}
 
 	/** Syntax that builds the `ComplexType` of `macro :<typeText>`. */
-	public static function lowerType(typeText:String, file:String, anchor:HxPos):HxExpr {
-		final lowering = new MacroReificationLowering(file, anchor, _ -> TyType.unknown());
+	public static function lowerType(typeText:String, file:String, anchor:HxPos, rooted:Bool = true):HxExpr {
+		final lowering = new MacroReificationLowering(file, anchor, _ -> TyType.unknown(), rooted);
 		final text = typeText == null ? "" : StringTools.trim(typeText);
 		if (text.length == 0)
 			throw failure("`macro :` requires a type");
@@ -142,7 +151,7 @@ class MacroReificationLowering {
 	}
 
 	function syntax():MacroReificationSyntax
-		return new MacroReificationSyntax(holes, value);
+		return new MacroReificationSyntax(holes, value, rooted);
 
 	function hole(kind:MacroReificationHole):ExprDef {
 		holes.push(kind);
@@ -213,9 +222,9 @@ class MacroReificationLowering {
 
 	// --- `$v{}` --------------------------------------------------------------------------------
 
-	static function constantExpr(constructor:String, arguments:Array<HxExpr>, at:HxExpr):HxExpr {
-		final constant = ECall(MacroReificationSyntax.enumPath("Constant", constructor), arguments);
-		return EAnon(["expr", "pos"], [ECall(MacroReificationSyntax.enumPath("ExprDef", "EConst"), [constant]), at]);
+	function constantExpr(constructor:String, arguments:Array<HxExpr>, at:HxExpr):HxExpr {
+		final constant = ECall(syntax().enumPath("Constant", constructor), arguments);
+		return EAnon(["expr", "pos"], [ECall(syntax().enumPath("ExprDef", "EConst"), [constant]), at]);
 	}
 
 	/** The constant for a `$v{payload}` whose static type is `type`; `at` is the position syntax. */
@@ -241,7 +250,7 @@ class MacroReificationLowering {
 				throw failure("`$v{}` supports Null of Int, Float, Bool, or String; this payload has type " + type.getDisplay());
 			return ECall(valuesHelper(helper), [payload, at]);
 		}
-		final stringOf = ECall(HxRootedPath.expression("Std.string"), [payload]);
+		final stringOf = ECall(HxRootedPath.expression("Std.string", rooted), [payload]);
 		if (type.isPrimitive()) {
 			switch type.getDisplay() {
 				case "Int":
@@ -251,7 +260,7 @@ class MacroReificationLowering {
 				case "Bool":
 					return constantExpr("CIdent", [ETernary(payload, EString("true"), EString("false"))], at);
 				case "String":
-					return constantExpr("CString", [payload, MacroReificationSyntax.enumPath("StringLiteralKind", "DoubleQuotes")], at);
+					return constantExpr("CString", [payload, syntax().enumPath("StringLiteralKind", "DoubleQuotes")], at);
 				case _:
 			}
 		}
@@ -273,8 +282,8 @@ class MacroReificationLowering {
 		throw failure("`$v{}` supports Int, Float, Bool, String, Null of those, and arrays of those; this payload has type " + type.getDisplay());
 	}
 
-	static function valuesHelper(name:String):HxExpr
-		return HxRootedPath.expression("hxhxmacrohost.MacroReificationValues." + name);
+	function valuesHelper(name:String):HxExpr
+		return HxRootedPath.expression("hxhxmacrohost.MacroReificationValues." + name, rooted);
 
 	static function arrayElementType(type:TyType):Null<TyType> {
 		final display = type.getDisplay();

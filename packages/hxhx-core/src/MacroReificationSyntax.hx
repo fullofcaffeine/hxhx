@@ -37,12 +37,17 @@ class MacroReificationSyntax {
 
 	final holes:Array<MacroReificationHole>;
 	final valueSplice:(payload:HxExpr, position:HxExpr) -> HxExpr;
+	final rooted:Bool;
 	var positionOverride:Null<HxExpr>;
 
-	/** `valueSplice` builds the `$v{}` constant for a typed payload; the lowering owns that policy. */
-	public function new(holes:Array<MacroReificationHole>, valueSplice:(payload:HxExpr, position:HxExpr) -> HxExpr) {
+	/**
+		`valueSplice` builds the `$v{}` constant for a typed payload; the lowering owns that policy.
+		`rooted` selects rooted paths (`HxRootedPath`); see `MacroReificationLowering.lowerExpression`.
+	**/
+	public function new(holes:Array<MacroReificationHole>, valueSplice:(payload:HxExpr, position:HxExpr) -> HxExpr, rooted:Bool) {
 		this.holes = holes;
 		this.valueSplice = valueSplice;
+		this.rooted = rooted;
 		positionOverride = null;
 	}
 
@@ -55,11 +60,11 @@ class MacroReificationSyntax {
 	// --- syntax helpers -------------------------------------------------------------------------
 
 	/** The fully qualified constructor `haxe.macro.Expr.<owner>.<name>`, rooted so no user name captures `haxe`. */
-	public static function enumPath(owner:String, name:String):HxExpr
-		return HxRootedPath.expression(MODULE + "." + owner + "." + name);
+	public function enumPath(owner:String, name:String):HxExpr
+		return HxRootedPath.expression(MODULE + "." + owner + "." + name, rooted);
 
 	/** `haxe.macro.Expr.<owner>.<name>(args)`, or the bare constructor value when it has no payload. */
-	static function ctor(owner:String, name:String, args:Array<HxExpr>):HxExpr {
+	function ctor(owner:String, name:String, args:Array<HxExpr>):HxExpr {
 		final path = enumPath(owner, name);
 		return args.length == 0 ? path : ECall(path, args);
 	}
@@ -117,6 +122,8 @@ class MacroReificationSyntax {
 		final facts:hxhxmacrohost.MacroSyntaxWire.MacroSyntaxWirePosition = cast value;
 		final fields = record(["file", "min", "max"], [str(facts.file), EInt(facts.min), EInt(facts.max)]);
 		// A hinted cast names the destination without an inference variable; the backends emit the record itself.
+		// The hint stays unrooted: a type hint is resolved only as a type, so no local, parameter, or
+		// field can capture it, and Haxe has no lowercase type or alias that could stand for `haxe`.
 		return ECast(fields, MODULE + ".Position");
 	}
 

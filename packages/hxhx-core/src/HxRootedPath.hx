@@ -15,21 +15,27 @@
 	What
 	- `expression("haxe.macro.Expr.ExprDef")` returns the usual `EIdent` + `EField` chain whose
 	  first identifier carries the prefix `::` (`::haxe`, then `.macro`, ...), similar to C++'s
-	  global-namespace `::`. The lexer never produces an identifier with `:`, so authored code cannot
-	  write, declare, or shadow it.
+	  global-namespace `::`. The lexer never produces an identifier with `:`, and the macro result
+	  importer (`MacroSyntaxImport`) refuses one, so neither source nor a macro result can write,
+	  declare, or shadow it.
 	- The typer treats a dotted path that starts with `::` as rooted: no local, field, import, or
 	  package-relative lookup applies, and `TyperContext.resolveType` resolves the rest from the
-	  top-level package. Typed output carries the selected declaration's canonical name, so backends
-	  never see the prefix.
+	  top-level package. A rooted type that does not resolve is a compile error at the
+	  quotation (`TyperStage.requireRootedOwners`). A module typed without a module loader has no
+	  classpath to resolve against; the lowering writes plain chains there. Typed output carries the ordinary spelling, and
+	  backend projection rejects a rooted name (`assertResolved`), so backends never see the prefix.
 **/
 class HxRootedPath {
 	/** The spelling that marks the first identifier of a rooted path. */
 	public static inline final PREFIX = "::";
 
-	/** Syntax for the rooted, dot-separated `path` (`haxe.macro.Expr.ExprDef`, `Std`). */
-	public static function expression(path:String):HxExpr {
+	/**
+		Syntax for the dot-separated `path` (`haxe.macro.Expr.ExprDef`, `Std`), rooted unless `rooted`
+		is false (then the ordinary identifier chain, for typing without a classpath).
+	**/
+	public static function expression(path:String, rooted:Bool = true):HxExpr {
 		final parts = path.split(".");
-		var out:HxExpr = EIdent(PREFIX + parts[0]);
+		var out:HxExpr = EIdent((rooted ? PREFIX : "") + parts[0]);
 		for (index in 1...parts.length)
 			out = EField(out, parts[index]);
 		return out;
@@ -38,6 +44,19 @@ class HxRootedPath {
 	/** Whether a dotted path (or identifier) was written by `expression`. */
 	public static function isRooted(path:Null<String>):Bool
 		return path != null && StringTools.startsWith(path, PREFIX);
+
+	/**
+		Fail when a rooted name reaches backend projection.
+
+		The typer resolves every rooted path to its declaration and reports a missing one at the
+		quotation, so a rooted spelling here is a compiler bug; a backend would otherwise print the
+		prefix (`__hxhxmacrohost` in JavaScript, an invalid OCaml path).
+	**/
+	public static function assertResolved(name:String):String {
+		if (isRooted(name))
+			throw "rooted path `" + name + "` reached backend projection without a resolved declaration";
+		return name;
+	}
 
 	/** The path without its prefix (`::Std.string` gives `Std.string`); other paths are unchanged. */
 	public static function unrooted(path:String):String

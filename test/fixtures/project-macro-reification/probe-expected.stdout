@@ -4,3 +4,6 @@ h(((haxe + Std) + hxhxmacrohost))
 f(2, "two")
 [5, 1.5, 3, ["a", "b"]]
 g(named, 3, [4, 5])
+7
+(marker + 2)
+2.5

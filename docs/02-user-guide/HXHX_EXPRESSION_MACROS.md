@@ -217,8 +217,10 @@ upstream Haxe 4.3.7 is the behavior reference for every form:
 Names: the lowered expression names `haxe.macro.Expr`, `Std`, and `hxhxmacrohost` through a rooted path that no local,
 parameter, or field can capture (imports and the current package do not apply to it either), so `{ var haxe = 42;
 macro 1; }` returns `CInt("1", null)` as upstream does. A splice payload with one of those names (`$v{Std}`,
-`$i{haxe}`) still reads your own binding. The root marker is internal syntax (`HxRootedPath`); source code cannot
-write it.
+`$i{haxe}`) still reads your own binding. The root marker is internal syntax (`HxRootedPath`); source and macro
+results cannot write it (a macro that returns `$i{"::Std"}` gets a named error). If a rooted type is not on the
+classpath, the quotation is a compile error that names it, for example the `$v{}` support module
+`hxhxmacrohost.MacroReificationValues` outside a project-macro plugin build.
 
 Positions: every quoted node gets a zero-width position in the macro's source file, the same approximation macro
 arguments receive (a node that starts a group, function, loop, branch, or declaration gets its own start; other nodes

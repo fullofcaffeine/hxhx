@@ -96,6 +96,54 @@ class M14MacroReificationLoweringTest {
 	static function constant(definition:String):String
 		return "{expr: ExprDef.EConst( Constant." + definition + "), pos: @P}";
 
+	/** Type `class Quotes { static function run(<parameters>) <body> }` against the standard library only. */
+	static function typeQuotes(parameters:String, body:String):TypedModule {
+		final filePath = "checks/Quotes.hx";
+		final parsed = ParserStage.parse("import haxe.macro.Expr;\nclass Quotes {\n  static function run("
+			+ parameters
+			+ "):Expr "
+			+ body
+			+ "\n}\n", filePath);
+		final resolved = new ResolvedModule("Quotes", filePath, parsed);
+		final args = hxhx.Stage1Compiler.Stage1Args.parse(["-main", "Quotes"], true);
+		if (args == null)
+			throw "typed quotation fixture could not locate its standard library";
+		final index = TyperIndex.buildHeaders([resolved]);
+		final loader = new ModuleLoader([hxhx.Stage1Compiler.Stage1Args.getStandardLibraryRoot(args)], new haxe.ds.StringMap<String>(), index, null, false);
+		loader.markResolvedAlready([resolved]);
+		return TyperStage.typeResolvedModule(resolved, index, loader);
+	}
+
+	/** Typed lowering: rooted paths resolve, project with their ordinary spelling, and a missing support module is named. */
+	static function typedRoots():Void {
+		final typed = typeQuotes("n:Int, Std:Float, haxe:Int", "return macro $v{n};");
+		var stringCall = false;
+		for (statement in TypedBodySource.statements(typed.getTypedClasses()[0].getFunctions()[0].getBody()))
+			TypedBackendSourceWalk.statement(statement, node -> {
+				switch node {
+					case EIdent(name) if (HxRootedPath.isRooted(name)):
+						throw "typed projection kept the rooted name `" + name + "`";
+					case _:
+				}
+				final call = TypedExactStaticCallSource.decode(node);
+				if (call != null)
+					switch TypedExactStaticCallSource.ordinaryCall(call) {
+						case ECall(EField(EIdent("Std"), "string"), [EIdent("n")]): stringCall = true;
+						case _:
+					}
+			}, _ -> {});
+		if (!stringCall)
+			throw "`$v{}` on an Int did not project to the canonical `Std.string(n)` call";
+		final missing = try {
+			typeQuotes("maybe:Null<Int>", "return macro $v{maybe};");
+			"";
+		} catch (error:TyperError) {
+			error.toString();
+		}
+		if (missing.indexOf("the support module hxhxmacrohost.MacroReificationValues is not on the classpath") < 0)
+			throw "a missing `$v{}` support module: expected a named error, got `" + missing + "`";
+	}
+
 	static function main():Void {
 		types = [
 			"n" => "Int",
@@ -250,6 +298,7 @@ class M14MacroReificationLoweringTest {
 		expectFailure("value of unknown type", "macro $v{mystery}", "requires a payload whose type is known");
 		expectFailure("switch", "macro switch x { case 1: 2; }", "switch expressions are not exported yet");
 
+		typedRoots();
 		Sys.println("M14_MACRO_REIFICATION_LOWERING:PASS");
 	}
 }

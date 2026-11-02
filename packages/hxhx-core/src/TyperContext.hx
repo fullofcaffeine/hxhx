@@ -98,6 +98,10 @@ class TyperContext {
 		return classFullName;
 
 	/** Load a requested declaration before resolving its nominal provider; generic aliases retain their own binders. */
+	/** Whether this module is typed with a module loader, that is, against a classpath. */
+	public function hasLoader():Bool
+		return loader != null;
+
 	public function resolveType(typePath:String):Null<TyNominalInfo> {
 		if (index == null)
 			return null;

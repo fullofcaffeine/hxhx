@@ -136,7 +136,7 @@ class MacroSyntaxImport {
 				final handlers = new Array<HxSourceCatch>();
 				final bodies = [convert(body, false)];
 				for (entry in catches) {
-					handlers.push(new HxSourceCatch(entry.name, entry.type == null ? "" : typeText(entry.type), position(entry.expr)));
+					handlers.push(new HxSourceCatch(identifier(entry.name), entry.type == null ? "" : typeText(entry.type), position(entry.expr)));
 					bodies.push(convert(entry.expr, false));
 				}
 				ESourceTry(handlers, bodies, position(expression));
@@ -207,7 +207,7 @@ class MacroSyntaxImport {
 					case "false": EBool(false);
 					case "this": EThis;
 					case "super": ESuper;
-					case _: !fieldOwner && isEnumValueName(name) ? EEnumValue(name) : EIdent(name);
+					case _: !fieldOwner && isEnumValueName(identifier(name)) ? EEnumValue(name) : EIdent(name);
 				}
 		};
 	}
@@ -232,7 +232,7 @@ class MacroSyntaxImport {
 			throw failure("metadata on local variable `" + variable.name + "` is not imported yet");
 		final restored = positions.resolve(variable.namePos);
 		final declared = restored == null ? position(owner) : restored;
-		return HxExprVarDecl.make(variable.name, variable.type == null ? "" : typeText(variable.type), optional(variable.expr), declared,
+		return HxExprVarDecl.make(identifier(variable.name), variable.type == null ? "" : typeText(variable.type), optional(variable.expr), declared,
 			variable.isFinal == true, variable.isStatic == true);
 	}
 
@@ -260,7 +260,7 @@ class MacroSyntaxImport {
 			final hasDefault = argument.value != null;
 			// Export marks a defaulted arrow parameter optional, as upstream does; only the default is written.
 			final optional = argument.opt == true && !(sourceKind == Arrow && hasDefault);
-			names.push(argument.name);
+			names.push(identifier(argument.name));
 			parameters.push({
 				typeHint: written == null ? null : typeText(written),
 				isOptional: optional,
@@ -339,7 +339,7 @@ class MacroSyntaxImport {
 			throw failure("a for loop binding is missing");
 		final shape:ExprDef = binding.expr;
 		return switch shape {
-			case EConst(CIdent(name)): name;
+			case EConst(CIdent(name)): identifier(name);
 			case _: throw failure("a for loop binding must be an identifier");
 		};
 	}
@@ -446,8 +446,8 @@ class MacroSyntaxImport {
 	public static function typePathText(path:TypePath):String {
 		if (path == null || path.name == null || path.name.length == 0)
 			throw failure("a type path has no name");
-		final segments = path.pack == null ? [] : path.pack.copy();
-		segments.push(path.name);
+		final segments = path.pack == null ? [] : [for (segment in path.pack) identifier(segment)];
+		segments.push(identifier(path.name));
 		if (path.sub != null)
 			segments.push(path.sub);
 		final parameters = path.params == null ? [] : path.params;
@@ -462,6 +462,18 @@ class MacroSyntaxImport {
 						throw failure("expression type parameters are not imported yet");
 				}
 		].join(",") + ">";
+	}
+
+	/**
+		A name from a macro result, refused when no source text could spell it.
+
+		The compiler's rooted paths start with `HxRootedPath.PREFIX` (`::Std`); a result such as
+		`$i{"::Std"}` must not reach the typer as one. Upstream reports it as an unknown identifier.
+	**/
+	static function identifier(name:String):String {
+		if (HxRootedPath.isRooted(name))
+			throw failure("`" + name + "` is not a valid identifier");
+		return name;
 	}
 
 	static function failure(message:String):String

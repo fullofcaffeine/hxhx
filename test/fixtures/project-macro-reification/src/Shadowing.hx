@@ -1,7 +1,9 @@
 import haxe.macro.Expr;
 
 /**
-	Quotations written where the code declares the names `haxe`, `Std`, and `hxhxmacrohost`.
+	Quotations written where the code declares the names `haxe`, `Std`, and `hxhxmacrohost`, plus a
+	module whose package has its own `Std` class (`shadow.PackageQuotes`) and one with an import alias
+	named `Std` (`AliasQuotes`).
 
 	Upstream builds a quotation's tree inside the compiler, so a local, parameter, or field with one
 	of those names does not change what `macro ...` returns. A splice payload with such a name still
@@ -9,7 +11,16 @@ import haxe.macro.Expr;
 **/
 class Shadowing {
 	public static function cases():Array<Expr> {
-		return [ShadowingFields.quote(), local(), parameters(1, 2.5, "x"), values(), payloads()];
+		return [
+			ShadowingFields.quote(),
+			local(),
+			parameters(1, 2.5, "x"),
+			values(),
+			payloads(),
+			shadow.PackageQuotes.value(),
+			shadow.PackageQuotes.operation(),
+			AliasQuotes.value()
+		];
 	}
 
 	static function local():Expr {
