@@ -5,7 +5,10 @@ import sys.io.File;
 	to return `Float` run in the native OCaml program as they do in Haxe 4.3.7.
 	The emitter chooses the OCaml `float` result carrier from the typed return
 	type, so literal, local, arithmetic and multi-return results all work,
-	including a closure that updates a captured outer `Float` local.
+	including a closure that updates a captured outer `Float` local. The
+	fixture also does arithmetic directly on the call results, because those
+	results were never reachable before this carrier existed and must select
+	Float operators, not concatenation or a placeholder.
 
 	The fixture first runs under upstream Haxe, so `expected.stdout` stays an
 	upstream observation. The same source is then emitted through the native

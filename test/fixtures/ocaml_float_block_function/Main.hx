@@ -54,12 +54,54 @@ class Main {
 				return 1;
 			return count;
 		};
-		final one:Float = widened(true);
-		final three:Float = widened(false);
-		Sys.println(one * 0.25);
-		Sys.println(three * 0.25);
 		final expressionWidened = function():Float return count;
-		final threeAgain:Float = expressionWidened();
-		Sys.println(threeAgain / 4);
+		Sys.println(widened(true) * 0.25);
+		Sys.println(widened(false) * 0.25);
+		Sys.println(expressionWidened() / 4);
+
+		// Arithmetic and comparisons directly on Float call results.
+		final a = function():Float return 1.25;
+		final b = function():Float {
+			return 0.5;
+		};
+		Sys.println(a() + 0.5);
+		Sys.println(0.5 + a());
+		Sys.println(a() + b());
+		Sys.println(a() * a());
+		Sys.println(a() / b() + 0.25);
+		Sys.println(a() - 0.5);
+		Sys.println(a() + 1);
+		Sys.println(a() - 0.5 < a());
+		final sum = a() + b();
+		Sys.println(sum * 0.5);
+
+		// A closure that adds the results of another closure.
+		final outer = function(x:Float):Float {
+			final inner = function(y:Float):Float {
+				if (y > 1)
+					return y + 0.25;
+				return 0.75;
+			};
+			return inner(x) + inner(0.5);
+		};
+		Sys.println(outer(2.5));
+
+		// Special values reach the caller unchanged.
+		final negativeZero = function():Float {
+			return -0.0;
+		};
+		final notANumber = function():Float {
+			return Math.NaN;
+		};
+		Sys.println(1 / negativeZero() < 0);
+		Sys.println(Math.isNaN(notANumber()));
+
+		// Int-returning closures keep Int arithmetic; a String operand concatenates.
+		final h = function():Int {
+			return 2;
+		};
+		Sys.println(h() * h() + 1);
+		Sys.println("sum=" + (a() + 0.5));
+		Sys.println(a() + "!");
 	}
 }
