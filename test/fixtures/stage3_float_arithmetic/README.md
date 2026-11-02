@@ -15,8 +15,18 @@ prints. It covers:
 - `this` arithmetic in a Float-backed abstract;
 - Float-valued `if` and `switch` expressions with an Int branch, stored in a
   local and in a field;
-- `Null<Float>` and `Null<Int>` operands;
-- String + Float, which must still concatenate.
+- `Array<Float>` and `Array<Int>` element sums stored in a local and passed
+  straight to `Sys.println` (`Sys.println(floats[0] + floats[1])` printed
+  `1.52.25` before);
+- Int and Float instance fields added with and without `this.` (`x + y`
+  printed 0 natively before, haxe_ocaml-evi2o);
+- `Null<Float>` and `Null<Int>` operands, and a null `Null<Float>` operand,
+  which must raise a catchable error;
+- String + Float and String + Int, also when the String comes from a
+  function-typed local, which must still concatenate.
+
+The test also requires the typer to reject `count += 1.5` and `count /= 2` on
+an Int local with Haxe's `Float should be Int`.
 
 Before the fix, the emitter guessed each operand type from its source shape.
 `c.get() + 0.5` printed `1.250.5` (String concatenation), `g.value / 8` and

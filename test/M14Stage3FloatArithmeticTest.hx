@@ -22,6 +22,8 @@ import sys.io.File;
 	  feeds Int branches into Float-valued `if` and `switch`, and concatenates
 	  Strings with Floats.
 	- The native executable must print exactly what upstream Haxe 4.3.7 prints.
+	- `count += 1.5` and `count /= 2` on an Int local must fail to type with
+	  Haxe's `Float should be Int`.
 	- The generated OCaml must use Float operators for `a[0] + a[1]` and for
 	  the `Array<Float>` compound update, so the check cannot pass by an unrelated
 	  route.
@@ -46,7 +48,23 @@ class M14Stage3FloatArithmeticTest {
 			throw reason + ": missing `" + text + "` in generated Main.ml";
 	}
 
+	/** Haxe rejects storing a Float into an Int place through a compound update. */
+	static function requireFloatShouldBeInt(statement:String):Void {
+		final source = "class Main { static function main() { var count = 1; " + statement + " } }";
+		try {
+			M14Stage3RuntimeFixture.typeMain({source: source, path: fixture + "/Main.hx", root: fixture});
+		} catch (error:Dynamic) {
+			if (Std.string(error).indexOf("Float should be Int") >= 0)
+				return;
+			throw "`" + statement + "` failed with the wrong diagnostic: " + Std.string(error);
+		}
+		throw "`" + statement + "` must fail with `Float should be Int`";
+	}
+
 	static function main():Void {
+		requireFloatShouldBeInt("count += 1.5;");
+		requireFloatShouldBeInt("count /= 2;");
+		Sys.println("M14_STAGE3_FLOAT_ARITHMETIC_INT_UPDATE_DIAGNOSTIC:PASS");
 		final path = fixture + "/Main.hx";
 		final expected = File.getContent(fixture + "/expected.stdout");
 		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", fixture, "--run", "Main"], expected: expected});

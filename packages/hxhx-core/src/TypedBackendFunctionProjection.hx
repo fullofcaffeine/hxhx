@@ -35,6 +35,7 @@ class TypedBackendFunctionProjection {
 	final equalities:Array<TypedBackendEqualityOccurrence>;
 	final bitwiseOperations:Array<TypedBackendBitwiseOccurrence>;
 	final arithmeticOperations:Array<TypedBackendArithmeticOccurrence>;
+	final verifiedArithmetic:Array<Bool>;
 	final conditions:Array<TypedBackendCondition>;
 	final namedPatterns:Array<TypedBackendNamedPattern>;
 	final thisType:Null<TyType>;
@@ -121,6 +122,7 @@ class TypedBackendFunctionProjection {
 			|| indexedAccesses.arithmeticOperations == null ? [] : indexedAccesses.arithmeticOperations.copy();
 		for (entry in this.arithmeticOperations)
 			entry.assertCurrent(stableIdentity, bodyRevision);
+		this.verifiedArithmetic = [for (_ in this.arithmeticOperations) false];
 		this.conditions = indexedAccesses == null || indexedAccesses.conditions == null ? [] : indexedAccesses.conditions.copy();
 		this.namedPatterns = indexedAccesses == null || indexedAccesses.namedPatterns == null ? [] : indexedAccesses.namedPatterns.copy();
 		this.thisType = indexedAccesses == null ? null : indexedAccesses.thisType;
@@ -481,12 +483,20 @@ class TypedBackendFunctionProjection {
 
 	/** Arithmetic and ordering facts require the original expression in the current function revision. */
 	public function findArithmetic(expression:HxExpr):Null<TypedBackendArithmeticOccurrence> {
-		for (entry in arithmeticOperations)
+		for (index in 0...arithmeticOperations.length) {
+			final entry = arithmeticOperations[index];
 			if (entry.expression == expression) {
-				requireExpression(expression);
-				entry.assertCurrent(stableIdentity, bodyRevision);
+				// The emitter asks for the same operator many times while it classifies
+				// nested operands. The projected body cannot change, so walking it once
+				// per entry proves membership; later lookups reuse that proof.
+				if (!verifiedArithmetic[index]) {
+					requireExpression(expression);
+					entry.assertCurrent(stableIdentity, bodyRevision);
+					verifiedArithmetic[index] = true;
+				}
 				return entry;
 			}
+		}
 		return null;
 	}
 

@@ -114,7 +114,7 @@ function access(occurrence:TypedBackendArrayAccess, emit:HxExpr->String, names:S
 					case "-=": old + " -. " + right;
 					case "*=": old + " *. " + right;
 					case "/=": old + " /. " + right;
-					case "%=": "Float.rem " + old + " " + right;
+					case "%=": "mod_float " + old + " " + right;
 					case _: throw "unsupported OCaml indexed Float compound operation: " + op;
 				}
 			} else {
