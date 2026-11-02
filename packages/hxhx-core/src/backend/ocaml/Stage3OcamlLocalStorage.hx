@@ -7,13 +7,14 @@ package backend.ocaml;
 	A Dynamic source entering a Bool local uses the checked inverse conversion.
 	A nullable Int, Float, or Bool destination uses the shared carrier conversion.
 	An Int value entering a Float local is promoted (`var f:Float = box.get()`
-	where the call returns Int); the operand is rendered as an OCaml int.
+	where the call returns Int); the operand is rendered as an OCaml int. A
+	`Null<Int>` or `Null<Float>` value is unwrapped from its carrier first.
  */
 function store(write:TypedBackendLocalWrite, rendered:String, names:Null<Stage3OcamlLocalNames>):String {
 	if (Stage3OcamlNullablePrimitive.innerPrimitive(write.binding.getType()) != null)
 		return Stage3OcamlValueConversion.convert(write.sourceType, write.binding.getType(), rendered, names);
-	if (Stage3OcamlNumericWidening.needsPromotion(write.sourceType, write.binding.getType()))
-		return Stage3OcamlNumericWidening.promote(rendered);
+	if (Stage3OcamlNumericWidening.convertsToFloat(write.sourceType, write.binding.getType()))
+		return Stage3OcamlNumericWidening.toFloatDestination(write.sourceType, write.binding.getType(), rendered);
 	if (write.binding.getType().getSemanticKey() == "primitive:Bool" && write.sourceType.isDynamic())
 		return "HxDynamic.booleanValue (" + rendered + ")";
 	if (!write.binding.getType().isDynamic())

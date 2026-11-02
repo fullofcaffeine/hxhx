@@ -70,12 +70,13 @@ private function push(receiverType:TyType, argumentType:TyType, receiver:String,
 
 /**
 	Store one operand in an array slot. Dynamic slots hold the boxed value; an
-	Int operand entering a Float slot (`floats.push(count)`) is promoted.
+	Int or `Null<Int>` operand entering a Float slot (`floats.push(count)`) is
+	converted to Float.
  */
 private function element(slot:TyType, argumentType:Null<TyType>, argument:String):String {
 	if (slot.isDynamic())
 		return "(Obj.magic (" + Stage3OcamlObjects.store(argumentType, argument) + "))";
-	return Stage3OcamlNumericWidening.needsPromotion(argumentType, slot) ? Stage3OcamlNumericWidening.promote(argument) : argument;
+	return Stage3OcamlNumericWidening.toFloatDestination(argumentType, slot, argument);
 }
 
 /**

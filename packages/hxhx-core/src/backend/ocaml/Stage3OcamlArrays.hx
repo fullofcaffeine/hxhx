@@ -93,7 +93,7 @@ function access(occurrence:TypedBackendArrayAccess, emit:HxExpr->String, names:S
 			+ "let "
 			+ value
 			+ " = ("
-			+ (Stage3OcamlNumericWidening.needsPromotion(occurrence.valueType, element) ? Stage3OcamlNumericWidening.promote(rendered) : rendered)
+			+ Stage3OcamlNumericWidening.toFloatDestination(occurrence.valueType, element, rendered)
 			+ ") in ignore (HxBootArray.set "
 			+ receiver
 			+ " "
@@ -181,7 +181,7 @@ function literal(occurrence:TypedBackendAggregateOccurrence, emit:HxExpr->String
 		final value = emit(children[index]);
 		// `[1, 2.5]` is an Array<Float>: its Int element is promoted before storage.
 		final stored = arguments[0].isDynamic() ? Stage3OcamlObjects.store(types[index],
-			value) : Stage3OcamlNumericWidening.needsPromotion(types[index], arguments[0]) ? Stage3OcamlNumericWidening.promote(value) : value;
+			value) : Stage3OcamlNumericWidening.toFloatDestination(types[index], arguments[0], value);
 		bindings.push("let " + name + " = (" + stored + ") in ");
 		// HxArray's polymorphic container also carries the target null sentinel.
 		// The typed element contract above owns each value before that erasure.

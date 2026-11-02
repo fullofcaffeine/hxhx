@@ -57,3 +57,38 @@ private function isExactly(type:Null<TyType>, key:String):Bool {
 /** Promote one rendered OCaml `int` value to `float`. */
 function promote(value:String):String
 	return "(float_of_int (" + value + "))";
+
+/**
+	Convert one rendered value for a non-nullable Float destination.
+
+	- An exact `Int` value is promoted (`float_of_int`).
+	- A `Null<Int>` value arrives in the nullable carrier (an `Obj.t` holding an
+	  immediate int, or the null sentinel). It is unwrapped first, then
+	  promoted. A `Null<Float>` value is unwrapped. A null value raises the
+	  runtime's Null Access error, as for nullable arithmetic operands.
+	- Every other value, and every non-Float destination, is returned
+	  unchanged.
+
+	Why: storing the carrier of `Null<Int>` (an immediate `3`) into a Float
+	field, `Array<Float>` slot or Float return made a later Float read
+	dereference address 3 and crash with SIGSEGV.
+ */
+function toFloatDestination(actual:Null<TyType>, expected:Null<TyType>, value:String):String {
+	if (!isFloatDestination(expected) || actual == null)
+		return value;
+	if (isExactly(actual, "primitive:Int"))
+		return promote(value);
+	return switch Stage3OcamlNullablePrimitive.innerPrimitive(actual) {
+		case "primitive:Int": promote(Stage3OcamlNullablePrimitive.unwrap("primitive:Int", value));
+		case "primitive:Float": "(" + Stage3OcamlNullablePrimitive.unwrap("primitive:Float", value) + ")";
+		case _: value;
+	};
+}
+
+/** Whether `toFloatDestination` changes the value's representation. */
+function convertsToFloat(actual:Null<TyType>, expected:Null<TyType>):Bool {
+	if (!isFloatDestination(expected) || actual == null)
+		return false;
+	final inner = Stage3OcamlNullablePrimitive.innerPrimitive(actual);
+	return isExactly(actual, "primitive:Int") || inner == "primitive:Int" || inner == "primitive:Float";
+}

@@ -34,6 +34,18 @@ function literal(occurrence:TypedBackendAggregateOccurrence, emit:HxExpr->String
 	final values = occurrence.getChildren();
 	final types = occurrence.getChildTypes();
 	final object = names.internalName("__hx_object");
+	// A Float field stores its value as a Float, also from an Int or Null<Int>
+	// value (`final p:{x:Float} = {x: 1}`).
+	final structure = TyAliasExpansion.revealNonNullable(occurrence.getType());
+	final fieldNames = structure.isAnonymous() ? structure.getAnonymousFieldNames() : [];
+	final fieldTypes = structure.isAnonymous() ? structure.getAnonymousFieldTypes() : [];
+	function stored(index:Int):String {
+		final position = fieldNames.indexOf(fields[index]);
+		final expected = position < 0 ? null : fieldTypes[position];
+		final rendered = emit(values[index]);
+		return Stage3OcamlNumericWidening.convertsToFloat(types[index],
+			expected) ? store(expected, Stage3OcamlNumericWidening.toFloatDestination(types[index], expected, rendered)) : store(types[index], rendered);
+	}
 	final writes = [
 		for (index in 0...fields.length)
 			"HxAnon.set (Obj.repr "
@@ -41,7 +53,7 @@ function literal(occurrence:TypedBackendAggregateOccurrence, emit:HxExpr->String
 			+ ") "
 			+ quote(fields[index])
 			+ " ("
-			+ store(types[index], emit(values[index]))
+			+ stored(index)
 			+ "); "];
 	return "(let " + object + " = HxAnon.create () in " + writes.join("") + object + ")";
 }
@@ -60,6 +72,10 @@ function access(occurrence:TypedBackendObjectAccess, emit:HxExpr->String, names:
 				throw "object assignment lost its typed operand";
 			final object = names.internalName("__hx_object");
 			final value = names.internalName("__hx_field_value");
+			// A Float field converts an Int or Null<Int> value, and the assignment
+			// then yields the stored Float.
+			final converts = Stage3OcamlNumericWidening.convertsToFloat(occurrence.valueType, occurrence.placeType);
+			final rendered = emit(occurrence.value);
 			"(let "
 			+ object
 			+ " = ("
@@ -67,13 +83,13 @@ function access(occurrence:TypedBackendObjectAccess, emit:HxExpr->String, names:
 			+ ") in let "
 			+ value
 			+ " = ("
-			+ emit(occurrence.value)
+			+ (converts ? Stage3OcamlNumericWidening.toFloatDestination(occurrence.valueType, occurrence.placeType, rendered) : rendered)
 			+ ") in HxAnon.set (Obj.repr "
 			+ object
 			+ ") "
 			+ quote(occurrence.field)
 			+ " ("
-			+ store(occurrence.valueType, value)
+			+ store(converts ? occurrence.placeType : occurrence.valueType, value)
 			+ "); "
 			+ value
 			+ ")";
