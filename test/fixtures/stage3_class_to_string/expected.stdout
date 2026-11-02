@@ -13,6 +13,15 @@ dynamic dog rex
 [1,point(1,2),s]
 {pet: dog pup}
 inline label
+optional null
+7 optional null
+default 3 default 3
+dynamic
+dynamic
+boom
+LOUD
+person
+root same / pack same
 Plain
 Plain
 null

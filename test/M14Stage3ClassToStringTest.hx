@@ -16,10 +16,12 @@ import sys.io.File;
 	- `stage3_class_to_string` converts instances through `Std.string`,
 	  concatenation, `Array.join`, `Array.toString`, `Std.string` of an array,
 	  Dynamic storage, a mixed `Array<Dynamic>`, and an anonymous-object field.
-	- It covers an override called through a supertype-typed value, a method
-	  inherited without an override, a private `toString` with an inferred
-	  return type, an inline `toString`, a class without `toString` (upstream
-	  eval prints the class name), and a null instance.
+	- It covers overrides called through supertype- and interface-typed values,
+	  inherited, private, inferred-return, inline, optional-argument,
+	  default-argument, Int-returning and dynamic `toString` methods,
+	  `haxe.Exception` subclasses, a packaged class next to a root class of the
+	  same name, a class without `toString` (upstream eval prints the class
+	  name), and a null instance.
 	- The native executable must print exactly what upstream Haxe prints.
 **/
 class M14Stage3ClassToStringTest {
