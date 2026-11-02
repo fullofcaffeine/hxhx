@@ -23,6 +23,7 @@ class TypedBodyProjectionBuilder {
 	final arrayAccesses:Array<TypedBackendArrayAccess> = [];
 	final collectionControls:Array<TypedBackendCollectionControl> = [];
 	final equalities:Array<TypedBackendEqualityOccurrence> = [];
+	final stringConcats:Array<TypedBackendStringConcatOccurrence> = [];
 	final bitwiseOperations:Array<TypedBackendBitwiseOccurrence> = [];
 	final conditions:Array<TypedBackendCondition> = [];
 	final callArguments:Array<TypedBackendCallArgument> = [];
@@ -157,7 +158,22 @@ class TypedBodyProjectionBuilder {
 				source: source,
 				expression: expression
 			}));
+		// Record only a projection that kept the addition's source shape; other
+		// projections keep the generic string conversion.
+		if (TypedBackendStringConcatOccurrence.supports(source) && expression.match(EBinop("+", _, _)))
+			stringConcats.push(new TypedBackendStringConcatOccurrence({
+				owner: ownerIdentity,
+				revision: bodyRevision,
+				source: source,
+				expression: expression
+			}));
 		return expression;
+	}
+
+	public function getStringConcats():Array<TypedBackendStringConcatOccurrence> {
+		if (!sealed)
+			throw "string concatenation facts require a sealed projection";
+		return stringConcats.copy();
 	}
 
 	public function getEqualities():Array<TypedBackendEqualityOccurrence> {

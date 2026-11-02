@@ -1113,6 +1113,11 @@ class EmitterStage {
 
 		var emitStringExpr:HxExpr->String = null;
 		emitStringExpr = function(expr:HxExpr):String {
+			final concatType = currentTypedInitializer != null ? currentTypedInitializer.findStringConcatOperandType(expr) : currentTypedFunction == null ? null : currentTypedFunction.findStringConcatOperandType(expr);
+			if (backend.ocaml.Stage3OcamlStringConversion.isBoolText(concatType))
+				return backend.ocaml.Stage3OcamlStringConversion.convert(concatType,
+					exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+					currentFunctionLocalOcamlNames);
 			return switch (expr) {
 				case EString(v): escapeOcamlString(v);
 				case EEnumValue(name): escapeOcamlString(name);

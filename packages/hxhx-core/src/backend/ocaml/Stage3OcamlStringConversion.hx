@@ -2,6 +2,15 @@ package backend.ocaml;
 
 import backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier;
 
+/**
+	Whether a checked String-concatenation operand of this type is a Bool or
+	`Null<Bool>`. Such an operand must reach `convert` with its type: an OCaml
+	`bool` and `int` share one runtime shape, so the runtime alone would print
+	`true` as `1` (haxe_ocaml-agc6n, haxe_ocaml-caxgt).
+**/
+function isBoolText(type:Null<TyType>):Bool
+	return type != null && !type.isUnknown() && !type.isUnresolved() && type.unwrapNull().getSemanticKey() == "primitive:Bool";
+
 /** Pass the original typed value to runtime string conversion exactly once. */
 function convert(type:TyType, value:String, names:Stage3OcamlLocalNames):String {
 	if (type == null || type.isUnknown() || type.isUnresolved())

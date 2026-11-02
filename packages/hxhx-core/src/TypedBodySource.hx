@@ -953,6 +953,7 @@ class TypedBodySource {
 				arrays: projectionFacts.getArrayAccesses(),
 				collectionControls: projectionFacts.getCollectionControls(),
 				equalities: projectionFacts.getEqualities(),
+				stringConcats: projectionFacts.getStringConcats(),
 				bitwiseOperations: projectionFacts.getBitwiseOperations(),
 				conditions: projectionFacts.getConditions(),
 				namedPatterns: projectionFacts.getNamedPatterns()
@@ -1009,6 +1010,7 @@ class TypedBodySource {
 				arrays: projectionFacts.getArrayAccesses(),
 				collectionControls: projectionFacts.getCollectionControls(),
 				equalities: projectionFacts.getEqualities(),
+				stringConcats: projectionFacts.getStringConcats(),
 				bitwiseOperations: projectionFacts.getBitwiseOperations(),
 				conditions: projectionFacts.getConditions(),
 				namedPatterns: projectionFacts.getNamedPatterns()
