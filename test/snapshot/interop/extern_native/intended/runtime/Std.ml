@@ -41,10 +41,12 @@ let string (v : Obj.t) : string =
 let int (x : float) : int =
   (* Haxe: truncate toward 0, then wrap into the signed 32-bit Int range, as
      upstream eval does: Std.int(4294967295.0) is -1 and Std.int(2^31) is
-     -2147483648. `int_of_float` never raises. NaN gives 0. For +/-Infinity
-     and |x| >= 2^63 the truncated value depends on the CPU's conversion, the
-     same primitive eval uses (see docs/00-project/FLOAT_NUMERIC_REVIEW_GATE.md
-     and Bead haxe_ocaml-3lpr4). *)
+     -2147483648. `int_of_float` never raises. NaN, +/-Infinity, and
+     |x| >= 2^63 have no defined OCaml result: what `int_of_float` returns
+     there is the CPU's conversion (NaN gives 0 on arm64 and x86-64), the same
+     primitive eval uses. Reviewed under the gate in
+     docs/00-project/FLOAT_NUMERIC_REVIEW_GATE.md; the answers are recorded
+     on Bead haxe_ocaml-3lpr4. *)
   Int32.to_int (Int32.of_int (int_of_float x))
 
 let parseInt (x : string) : Obj.t =
