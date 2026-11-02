@@ -14,12 +14,23 @@ typedef TyTypeResolutionContext = {
 	final parameters:Array<TyTypeParameterId>;
 };
 
+/**
+	How many type arguments an explicit application of a class, interface, enum or
+	abstract may supply. `required` excludes trailing parameters with a default, so
+	`class Def<A, B = String>` accepts `Def<Int>` and `Def<Int, Bool>`.
+**/
+typedef TyNominalArity = {
+	final total:Int;
+	final required:Int;
+};
+
 /** Named header facts shared by declaration lookup and type instantiation. */
 typedef TyTypeDeclarationInput = {
 	final canonicalName:String;
 	final visibility:HxVisibility;
 	final kind:TyTypeDeclarationKind;
 	final context:TyTypeResolutionContext;
+	final ?nominalArity:TyNominalArity;
 };
 
 /**
@@ -35,9 +46,11 @@ class TyTypeDeclaration {
 	final kind:TyTypeDeclarationKind;
 	final context:TyTypeResolutionContext;
 	final parameterIds:Array<TyTypeParameterId>;
+	final nominalArity:Null<TyNominalArity>;
 
 	public function new(input:TyTypeDeclarationInput) {
 		canonicalName = input.canonicalName;
+		nominalArity = input.nominalArity == null ? null : {total: input.nominalArity.total, required: input.nominalArity.required};
 		visibility = input.visibility;
 		kind = input.kind;
 		context = copyContext(input.context);
@@ -73,6 +86,10 @@ class TyTypeDeclaration {
 
 	public function getContext():TyTypeResolutionContext
 		return copyContext(context);
+
+	/** Type-argument counts for a nominal declaration; null for an alias or an unknown header. **/
+	public function getNominalArity():Null<TyNominalArity>
+		return nominalArity;
 
 	/** Exact alias binders are available with the header, before target resolution. */
 	public function getParameterIds():Array<TyTypeParameterId>

@@ -182,6 +182,17 @@ class M14ConstructorArgumentContextTest {
 			final root = write(entry.name, source);
 			upstream(root, false);
 			final path = root + "/Main.hx";
+			// `new Box<>()` is now a syntax error, as upstream reports ("Unexpected >").
+			if (entry.name == "empty_type") {
+				var parseRejected = false;
+				try
+					ParserStage.parse(source, path)
+				catch (error:HxParseError)
+					parseRejected = error.message.indexOf("Unexpected >") == 0;
+				require(parseRejected, "empty type arguments must be a syntax error");
+				Sys.println("CONSTRUCTOR_ARGUMENT_CONTEXT:PASS no_context_" + entry.name);
+				continue;
+			}
 			final loaded = @:privateAccess M14Stage3RuntimeFixture.loadContext({source: source, path: path, root: root});
 			final context = new TyperContext(loaded.index, path, "Main", "", [], "Main", loaded.loader);
 			final scope = new TyFunctionEnv("main", [], [], TyType.fromHintText("Void"), TyType.fromHintText("Void"), "Main#static#main", null, false, 0, true);
@@ -190,10 +201,17 @@ class M14ConstructorArgumentContextTest {
 				for (method in HxClassDecl.getFunctions(owner))
 					TypedBackendSourceWalk.functionDeclaration(method, expression -> switch expression {
 						case ENew(written, arguments):
-							final type = @:privateAccess TyperStage.typeFromHintInContext(written, context, scope);
-							final contexts = @:privateAccess TyperStage.constructorArgumentContexts(written, type, arguments, scope, context);
-							require(contexts.length == arguments.length && contexts.filter(type -> type != null).length == 0,
-								"invalid original application acquired early context");
+							// A wrong type-argument count is now rejected while the hint is resolved
+							// (haxe_ocaml-4dytx), so such an application cannot acquire any context.
+							final type = try @:privateAccess TyperStage.typeFromHintInContext(written, context, scope) catch (error:TyperError) {
+								require(error.getMessage().indexOf("type parameters for Box") >= 0, "invalid type application failed differently");
+								null;
+							};
+							if (type != null) {
+								final contexts = @:privateAccess TyperStage.constructorArgumentContexts(written, type, arguments, scope, context);
+								require(contexts.length == arguments.length && contexts.filter(type -> type != null).length == 0,
+									"invalid original application acquired early context");
+							}
 							original++;
 						case _:
 					}, _ -> {});
