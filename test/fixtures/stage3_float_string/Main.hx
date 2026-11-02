@@ -15,6 +15,13 @@ class Main {
 		Sys.println(Std.string(half(200)));
 		Sys.println(Std.string(4294967296.0));
 		Sys.println(Std.string(9007199254740992.0));
+		// The runtime prints whole numbers below 1e12 through a faster integer
+		// path; these values sit on both sides of that bound.
+		Sys.println(Std.string(999999999999.0));
+		Sys.println(Std.string(-999999999999.0));
+		Sys.println(Std.string(1e12));
+		Sys.println(Std.string(-1e12));
+		Sys.println(Std.string(1000000000001.0));
 		// Signed zero keeps its sign.
 		Sys.println(Std.string(0.0));
 		Sys.println(Std.string(-0.0));
