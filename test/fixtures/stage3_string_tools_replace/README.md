@@ -14,6 +14,11 @@ The Stage3 emitter had an early bring-up case that replaced any
 The call now reaches the generated `StringTools.replace`, whose body comes
 from the standard library (`s.split(sub).join(by)`).
 
+The inputs are ASCII on purpose. An empty `sub` splits the string with
+`HxString.split` and an empty delimiter, which currently splits per byte, so
+`"héllo".replace("", "-")` would cut the `é` in half. That is part of the
+code-point work in haxe_ocaml-4oeu4, not of this fixture.
+
 `npm run test:m14:stage3-string-methods` checks that upstream Haxe 4.3.7
 prints `expected.stdout`. It then builds the program with Stage3 and requires
 the native executable to print the same text.

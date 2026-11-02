@@ -36,6 +36,7 @@ class TypedBackendFunctionProjection {
 	final bitwiseOperations:Array<TypedBackendBitwiseOccurrence>;
 	final conditions:Array<TypedBackendCondition>;
 	final namedPatterns:Array<TypedBackendNamedPattern>;
+	final thisType:Null<TyType>;
 	final callArguments:Array<TypedBackendCallArgument>;
 	final lambdas:Array<TypedBackendLambdaOccurrence>;
 	final statementControls:Array<TypedBackendStatementControl>;
@@ -53,7 +54,8 @@ class TypedBackendFunctionProjection {
 			?equalities:Array<TypedBackendEqualityOccurrence>,
 			?bitwiseOperations:Array<TypedBackendBitwiseOccurrence>,
 			?conditions:Array<TypedBackendCondition>,
-			?namedPatterns:Array<TypedBackendNamedPattern>
+			?namedPatterns:Array<TypedBackendNamedPattern>,
+			?thisType:TyType
 		}) {
 		if (source == null || lowered == null)
 			throw "typed backend function projection requires authored and lowered owners";
@@ -115,6 +117,7 @@ class TypedBackendFunctionProjection {
 			entry.assertCurrent(stableIdentity, bodyRevision);
 		this.conditions = indexedAccesses == null || indexedAccesses.conditions == null ? [] : indexedAccesses.conditions.copy();
 		this.namedPatterns = indexedAccesses == null || indexedAccesses.namedPatterns == null ? [] : indexedAccesses.namedPatterns.copy();
+		this.thisType = indexedAccesses == null ? null : indexedAccesses.thisType;
 		for (entry in this.namedPatterns)
 			entry.assertCurrent(stableIdentity, bodyRevision);
 		for (entry in this.conditions)
@@ -573,6 +576,14 @@ class TypedBackendFunctionProjection {
 	/** Return the exact semantic body revision supplied by the sealed typed owner. **/
 	public function getBodyRevision():String
 		return bodyRevision;
+
+	/**
+		The type of `this` reads in this body, or null when the body reads no
+		`this`. Inside an abstract's method it is the underlying type, so a backend
+		can select Int or Float operators for `this + n`.
+	 */
+	public function getThisType():Null<TyType>
+		return thisType;
 
 	public function getLocalCatalog():TypedBackendLocalCatalog
 		return localCatalog;
