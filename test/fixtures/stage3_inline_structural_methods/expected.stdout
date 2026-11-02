@@ -12,3 +12,6 @@ literal adder: 20
 mixed: 3 70
 named override: 70
 array: 7;12;70;
+dynamic method: 4
+stored function field: 5
+null receiver: Null Access

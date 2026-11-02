@@ -221,8 +221,10 @@ class Stage3OcamlInterfaceDispatch {
 			}
 			// Every other instance method too, so a structural field read can bind a
 			// method of a class instance (`HxMethodDispatch.structural_field`).
-			// A method whose calling convention the table cannot forward stays out;
-			// a structural read of it stops with a named runtime error.
+			// That read binds only the receiver, so a `dynamic` method keeps the
+			// calling convention of an ordinary method value. A method with its own
+			// type parameters, an optional argument, or a rest argument stays out;
+			// a structural read of it raises a catchable named error at run time.
 			var current:Null<String> = identity;
 			while (current != null) {
 				final owner = classes.get(current);
@@ -232,9 +234,7 @@ class Stage3OcamlInterfaceDispatch {
 					if (method.isStatic || method.name == "new" || seen.exists(method.name))
 						continue;
 					final implementation = implementationFor(identity, method.name);
-					if (implementation == null
-						|| !implementation.owner.generated
-						|| methodShapeProblem(implementation.method, identity) != null)
+					if (implementation == null || !implementation.owner.generated || !structurallyBindable(implementation.method))
 						continue;
 					seen.set(method.name, true);
 					entries.push({method: method.name, module: implementation.owner.module});
@@ -244,6 +244,18 @@ class Stage3OcamlInterfaceDispatch {
 			if (entries.length > 0)
 				selected.set(identity, entries);
 		}
+	}
+
+	/** Whether a structural read can bind this method to its receiver unchanged. */
+	static function structurallyBindable(method:TypedBackendClassMethodFact):Bool {
+		if (method.typeParameters.length > 0)
+			return false;
+		// A structural call site does not pad an omitted optional argument yet, so
+		// binding such a method would read OCaml's `()` as the argument value.
+		for (argument in method.arguments)
+			if (argument.isRest || argument.isOptional)
+				return false;
+		return true;
 	}
 
 	/** A method shape whose OCaml calling convention this table cannot forward unchanged. */

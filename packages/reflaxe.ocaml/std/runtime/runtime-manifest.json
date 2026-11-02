@@ -186,7 +186,7 @@
     {
       "module": "HxMethodDispatch",
       "scope": "application",
-      "files": [{ "path": "HxMethodDispatch.ml", "sha256": "3930888f461aa173a54eadbd6f9a204a34a2a6f27360769262ee71b11401ef33" }],
+      "files": [{ "path": "HxMethodDispatch.ml", "sha256": "ed949c70d8a04c10f3742b28db9e0c1f81e1d67fd00d3433aa89b59092aba347" }],
       "dependencies": ["HxAnon", "HxRuntime", "HxType"],
       "duneLibraries": ["threads"],
       "profiles": ["metal", "portable"],

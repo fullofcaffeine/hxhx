@@ -167,10 +167,41 @@ let class_method receiver key =
    zero-argument Haxe closure; other methods are partially applied to the
    receiver, which leaves the remaining arguments in order. *)
 let structural_field receiver field arity =
+  (* Reading a field of null is a Haxe error that `try`/`catch` can handle;
+     upstream reports it as the String "Null Access". *)
+  if HxRuntime.is_null receiver then
+    HxRuntime.hx_throw_typed (Obj.repr "Null Access") [ "String"; "Dynamic" ];
   if HxAnon.is_anon receiver && HxAnon.has receiver field then
     HxAnon.get receiver field
   else if HxAnon.is_anon receiver && not (HxRuntime.is_null (HxAnon.class_value receiver)) then (
-    let fn : Obj.t -> Obj.t = Obj.obj (class_method receiver field) in
-    if arity = 0 then Obj.repr (fun () -> fn receiver) else fn receiver)
-  else
+    let name = descriptor_name (HxAnon.class_value receiver) in
+    let entry =
+      match Hashtbl.find_opt anon_classes name with
+      | None -> None
+      | Some methods -> Hashtbl.find_opt methods field
+    in
+    match entry with
+    | Some method_value ->
+        let fn : Obj.t -> Obj.t = Obj.obj method_value in
+        if arity = 0 then Obj.repr (fun () -> fn receiver) else fn receiver
+    | None ->
+        (* The class has no bindable method of this name: a method with its own
+           type parameters, an optional or a rest argument, or a class whose
+           methods are not generated from Haxe bodies. Report it as a Haxe
+           error so the program can still handle it. *)
+        HxRuntime.hx_throw_typed
+          (Obj.repr
+             ("Stage3 cannot call method " ^ field ^ " of class " ^ name
+            ^ " through a structure type (methods with type parameters, optional or rest arguments, or without a generated body are not supported)"))
+          [ "String"; "Dynamic" ])
+  else if HxAnon.is_anon receiver then
+    (* A missing optional field of an anonymous object reads as null. *)
     HxAnon.get receiver field
+  else
+    (* A runtime-provided value, such as a String, Array, or native map. *)
+    let value = HxAnon.get receiver field in
+    if HxRuntime.is_null value then
+      HxRuntime.hx_throw_typed
+        (Obj.repr ("Stage3 cannot call method " ^ field ^ " of a runtime-provided value through a structure type"))
+        [ "String"; "Dynamic" ]
+    else value
