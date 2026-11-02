@@ -4323,7 +4323,8 @@ class TyperStage {
 							TyType.fromHintText("Dynamic");
 						} else {
 							final integer = TyNullableIntegerResult.result(ta, tb);
-							final u = integer == null ? TyType.unify(ta, tb) : integer;
+							// Arithmetic reads a nullable operand's value: `Null<Float> + 1` is Float.
+							final u = integer == null ? TyType.unify(ta.unwrapNull(), tb.unwrapNull()) : integer;
 							u != null
 							&& u.isNumeric() ? u : TyType.unknown();
 						}
@@ -4333,8 +4334,8 @@ class TyperStage {
 						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), ta, tb, op, ctx.getFilePath(), pos);
 						if (bound != null) bound.getOperatorInfo().getResultType(); else {
 							final integer = op == "/" ? null : TyNullableIntegerResult.result(ta, tb);
-							final unified = integer == null ? TyType.unify(ta, tb) : integer;
-							// Haxe division yields Float even for two Int operands.
+							final unified = integer == null ? TyType.unify(ta.unwrapNull(), tb.unwrapNull()) : integer;
+							// Haxe division always produces Float, also for two Int operands (`7 / 2` is 3.5).
 							unified != null
 							&& unified.isNumeric() ? (op == "/" ? TyType.fromHintText("Float") : unified) : TyType.unknown();
 						}

@@ -955,6 +955,7 @@ class TypedBodySource {
 				collectionControls: projectionFacts.getCollectionControls(),
 				equalities: projectionFacts.getEqualities(),
 				bitwiseOperations: projectionFacts.getBitwiseOperations(),
+				arithmeticOperations: projectionFacts.getArithmeticOperations(),
 				conditions: projectionFacts.getConditions(),
 				namedPatterns: projectionFacts.getNamedPatterns(),
 				thisType: projectionFacts.getThisType()
@@ -1012,6 +1013,7 @@ class TypedBodySource {
 				collectionControls: projectionFacts.getCollectionControls(),
 				equalities: projectionFacts.getEqualities(),
 				bitwiseOperations: projectionFacts.getBitwiseOperations(),
+				arithmeticOperations: projectionFacts.getArithmeticOperations(),
 				conditions: projectionFacts.getConditions(),
 				namedPatterns: projectionFacts.getNamedPatterns()
 			});

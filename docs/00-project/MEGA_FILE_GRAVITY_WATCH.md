@@ -28,7 +28,9 @@ removed two hand-written expression scanners and dropped the count below 10,000
 lines. The emitter still owns several independent concerns, so it stays red.
 On November 8, 2026, Int-to-Float promotion at typed value boundaries
 (`haxe_ocaml-ljotn`) added call sites here; the promotion rule lives in
-`backend/ocaml/Stage3OcamlNumericWidening.hx`.
+`backend/ocaml/Stage3OcamlNumericWidening.hx`. Checked arithmetic result types
+(`haxe_ocaml-1a0eh`) added one more classifier case during the November 15
+consolidation.
 The guard allows small drift but asks for this table to be refreshed when a
 watched file moves by more than 250 lines.
 

@@ -34,6 +34,7 @@ class TypedBackendFunctionProjection {
 	final collectionControls:Array<TypedBackendCollectionControl>;
 	final equalities:Array<TypedBackendEqualityOccurrence>;
 	final bitwiseOperations:Array<TypedBackendBitwiseOccurrence>;
+	final arithmeticOperations:Array<TypedBackendArithmeticOccurrence>;
 	final conditions:Array<TypedBackendCondition>;
 	final namedPatterns:Array<TypedBackendNamedPattern>;
 	final thisType:Null<TyType>;
@@ -53,6 +54,7 @@ class TypedBackendFunctionProjection {
 			?collectionControls:Array<TypedBackendCollectionControl>,
 			?equalities:Array<TypedBackendEqualityOccurrence>,
 			?bitwiseOperations:Array<TypedBackendBitwiseOccurrence>,
+			?arithmeticOperations:Array<TypedBackendArithmeticOccurrence>,
 			?conditions:Array<TypedBackendCondition>,
 			?namedPatterns:Array<TypedBackendNamedPattern>,
 			?thisType:TyType
@@ -114,6 +116,10 @@ class TypedBackendFunctionProjection {
 		this.bitwiseOperations = indexedAccesses == null
 			|| indexedAccesses.bitwiseOperations == null ? [] : indexedAccesses.bitwiseOperations.copy();
 		for (entry in this.bitwiseOperations)
+			entry.assertCurrent(stableIdentity, bodyRevision);
+		this.arithmeticOperations = indexedAccesses == null
+			|| indexedAccesses.arithmeticOperations == null ? [] : indexedAccesses.arithmeticOperations.copy();
+		for (entry in this.arithmeticOperations)
 			entry.assertCurrent(stableIdentity, bodyRevision);
 		this.conditions = indexedAccesses == null || indexedAccesses.conditions == null ? [] : indexedAccesses.conditions.copy();
 		this.namedPatterns = indexedAccesses == null || indexedAccesses.namedPatterns == null ? [] : indexedAccesses.namedPatterns.copy();
@@ -465,6 +471,17 @@ class TypedBackendFunctionProjection {
 	/** Bitwise facts require the original expression in the current function revision. */
 	public function findBitwise(expression:HxExpr):Null<TypedBackendBitwiseOccurrence> {
 		for (entry in bitwiseOperations)
+			if (entry.expression == expression) {
+				requireExpression(expression);
+				entry.assertCurrent(stableIdentity, bodyRevision);
+				return entry;
+			}
+		return null;
+	}
+
+	/** Arithmetic and ordering facts require the original expression in the current function revision. */
+	public function findArithmetic(expression:HxExpr):Null<TypedBackendArithmeticOccurrence> {
+		for (entry in arithmeticOperations)
 			if (entry.expression == expression) {
 				requireExpression(expression);
 				entry.assertCurrent(stableIdentity, bodyRevision);
