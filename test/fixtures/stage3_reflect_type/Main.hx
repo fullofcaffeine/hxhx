@@ -1,3 +1,7 @@
+import Reflect.fields as reflectFields;
+
+using Type;
+
 /**
 	Runs the `Reflect` and `Type` calls that Stage3 routes to its runtime, on
 	anonymous objects and class instances, and prints each result. The native
@@ -19,7 +23,10 @@ class Point {
 	}
 
 	public function sum():Int
-		return x + y;
+		return x * 10;
+
+	public function scaled(factor:Int):Int
+		return y * factor;
 }
 
 class Point3 extends Point {
@@ -28,6 +35,26 @@ class Point3 extends Point {
 	public function new(x:Int, y:Int, z:Int) {
 		super(x, y);
 		this.z = z;
+	}
+
+	override public function sum():Int
+		return z * 100;
+}
+
+/** A property whose reads and writes go through accessor methods. */
+class Box {
+	public var size(get, set):Int;
+
+	var stored:Int = 2;
+
+	public function new() {}
+
+	function get_size():Int
+		return stored * 3;
+
+	function set_size(value:Int):Int {
+		stored = value;
+		return value;
 	}
 }
 
@@ -119,6 +146,31 @@ class Main {
 			+ " "
 			+ (Type.getSuperClass(Type.getClass(point)) == null));
 		Sys.println("getInstanceFields " + sorted(Type.getInstanceFields(Type.getClass(point3))));
+		final sum:Dynamic = Reflect.field(point, "sum");
+		final scaled:Dynamic = Reflect.field(point, "scaled");
+		Sys.println("method field "
+			+ Reflect.isFunction(sum)
+			+ " "
+			+ Reflect.callMethod(point, sum, [])
+			+ " "
+			+ Reflect.callMethod(point, scaled, [args[0]]));
+		Sys.println("override field "
+			+ Reflect.callMethod(point3, Reflect.field(point3, "sum"), [])
+			+ " "
+			+ sorted(Type.getInstanceFields(Type.getClass(point3))));
+		final box = new Box();
+		Sys.println("accessor " + Reflect.getProperty(box, "size") + " " + Reflect.field(box, "size"));
+		Reflect.setProperty(box, "size", 7);
+		Sys.println("accessor set " + box.size + " " + Reflect.field(box, "stored"));
+		final copiedPoint:Dynamic = Reflect.copy(point);
+		Sys.println("copy class " + Type.getClassName(Type.getClass(copiedPoint)) + " " + Reflect.field(copiedPoint, "x"));
+		Sys.println("null " + Reflect.field(null, "x") + " " + (Type.getClass(null) == null) + " " + Reflect.hasField(null, "x"));
+		final read = Reflect.field;
+		final write = Reflect.setField;
+		write(anon, "w", 5);
+		Sys.println("method value " + read(anon, "w") + " " + read(point, "x"));
+		Sys.println("static import " + sorted(reflectFields(point3)));
+		Sys.println("using " + point3.getClass().getClassName() + " " + Red.enumIndex());
 		Sys.println("enumIndex " + Type.enumIndex(Red) + " " + Type.enumIndex(Rgb(1, 2, 3)));
 	}
 }

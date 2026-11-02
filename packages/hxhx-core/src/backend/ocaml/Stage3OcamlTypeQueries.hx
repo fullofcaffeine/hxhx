@@ -24,6 +24,19 @@ function render(input:{
 			return null;
 	}
 	final fact = input.lookup == null ? null : input.lookup(input.expression);
+	// A static extension call (`using Type; value.getClass()`) keeps its exact
+	// declaration in the encoded call, but its callable-expression fact is
+	// missing or holds only the callee, with the receiver inside it. The
+	// typer already selected the bodiless standard declaration, and every
+	// runtime function below accepts any `Obj.t`, so it needs no operand type.
+	final extension = fact == null || fact.getTag() == Call && fact.getExpressions().length == 1;
+	if (extension
+		&& !call.hasBody
+		&& call.arguments.length == 1
+		&& call.declaration.indexOf("Type#static:" + call.method + "(") == 0) {
+		final operand = "Obj.repr (" + input.emit(call.arguments[0]) + ")";
+		return call.method == "getClass" ? "HxReflect.value_class (" + operand + ")" : "HxType." + call.method + " (" + operand + ")";
+	}
 	if (fact == null || fact.getTag() != Call || fact.getExpressions().length != 2 || call.arguments.length != 1)
 		throw "OCaml type query requires its exact typed call";
 	final declaration = fact.getExpressions()[0].getDeclaration();
@@ -51,7 +64,9 @@ function render(input:{
 		// classified by the runtime, which reads only layouts it knows.
 		final operand = fact.getExpressions()[1].getType();
 		if (!operand.isNullLiteral() && input.classes.nominalName(operand) == null)
-			return "HxReflect.value_class (" + dynamicOperand(operand, input.emit(call.arguments[0])) + ")";
+			return "HxReflect.value_class ("
+				+ Stage3OcamlValueConversion.dynamicValue(operand, input.emit(call.arguments[0]), "stage3 emitter: Type.getClass")
+				+ ")";
 	} else {
 		final argument = signature.getArgs()[0];
 		final nominal = argument.getNominalIdentity();
@@ -64,12 +79,4 @@ function render(input:{
 	}
 	// Obj.repr preserves the existing carrier. The single operand executes once.
 	return "HxType." + call.method + " (Obj.repr (" + input.emit(call.arguments[0]) + "))";
-}
-
-/** A raw Bool needs the runtime Bool box; every other Stage3 carrier is already an `Obj.t` value. */
-private function dynamicOperand(type:TyType, rendered:String):String {
-	final revealed = TyAliasExpansion.reveal(type);
-	if (revealed.unwrapNull().getSemanticKey() == "primitive:Bool" && !revealed.isNullable())
-		return "HxRuntime.box_bool (" + rendered + ")";
-	return "Obj.repr (" + rendered + ")";
 }

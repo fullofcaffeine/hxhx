@@ -130,14 +130,13 @@ class Stage3OcamlClassStorage {
 
 	/**
 		Register what `Type.getInstanceFields`, `Type.getSuperClass`, and
-		`Reflect.field` need at run time. Instance fields are the stored fields
-		and the instance methods of the class and its superclasses; properties
-		without storage are not fields, as in Haxe. Method names are registered
-		separately so reflection can tell a method from a missing field.
+		`Reflect` need before the class's functions exist. Instance fields are
+		the stored fields and the instance methods of the class and its
+		superclasses; properties without storage are not fields, as in Haxe.
+		The method binders follow later, in `reflectionMethodTable`.
 	 */
 	function reflectionRegistration(identity:String, quote:String->String):Array<String> {
 		final fields = new Array<String>();
-		final methods = new Array<String>();
 		final seen:Map<String, Bool> = [];
 		final visited:Map<String, Bool> = [];
 		var owner:Null<String> = identity;
@@ -157,18 +156,13 @@ class Stage3OcamlClassStorage {
 				if (!method.isStatic && method.name != "new" && !seen.exists(method.name)) {
 					seen.set(method.name, true);
 					fields.push(method.name);
-					methods.push(method.name);
 				}
 			owner = facts.getSuperClassIdentity();
 		}
 		final facts = ancestry.get(identity);
 		final name = quote(facts.requirePublicReflectionName());
 		final list = (values:Array<String>) -> "[" + values.map(quote).join("; ") + "]";
-		final result = ["let () = HxType.register_class_instance_fields " + name + " " + list(fields),
-			"let () = HxReflect.register_instance_method_names "
-			+ name
-			+ " "
-			+ list(methods)];
+		final result = ["let () = HxType.register_class_instance_fields " + name + " " + list(fields)];
 		final parent = facts.getSuperClassIdentity();
 		if (parent != null)
 			result.push("let () = HxType.register_class_super "
@@ -177,6 +171,59 @@ class Stage3OcamlClassStorage {
 				+ quote(ancestry.get(parent).requirePublicReflectionName())
 				+ ")");
 		return result;
+	}
+
+	/**
+		The OCaml statement that registers this class's reflection method
+		binders, or null when the class has no bindable instance method. It runs
+		after the class's functions are defined.
+
+		Each binder receives an instance and returns the method bound to it,
+		with the same calling convention as a Stage3 method value: a method
+		without parameters becomes `fun () -> method receiver`, and any other
+		method is partially applied to the receiver. The nearest declaration
+		wins, so an override replaces its parent. A `dynamic` method, a method
+		without a body, and a method of a class whose functions Stage3 does not
+		generate get no binder; `Reflect.field` then returns null for it.
+	 */
+	public function reflectionMethodTable(projection:TypedBackendClassProjection, currentModule:String, ident:(String, String) -> String,
+			quote:String->String):Null<String> {
+		final identity = projection.requireSemanticFacts().getClassIdentity();
+		if (!owners.exists(identity))
+			return null;
+		final binders = new Array<String>();
+		final seen:Map<String, Bool> = [];
+		final visited:Map<String, Bool> = [];
+		var owner:Null<String> = identity;
+		while (owner != null) {
+			if (visited.exists(owner))
+				throw "native class registration has cyclic ancestry: " + owner;
+			visited.set(owner, true);
+			final facts = ancestry.get(owner);
+			if (facts == null)
+				throw "native class registration lacks exact ancestor facts: " + owner;
+			final module = modules.get(owner);
+			for (method in facts.copyMethods()) {
+				if (method.isStatic || method.name == "new" || seen.exists(method.name))
+					continue;
+				seen.set(method.name, true);
+				if (module == null || !owners.exists(owner) || method.isDynamic || !method.hasBody)
+					continue;
+				final name = ident(module, method.name);
+				final reference = module == currentModule ? name : module + "." + name;
+				final receiver = "(Obj.obj __hx_reflect_receiver)";
+				final bound = method.arguments.length == 0 ? "fun () -> " + reference + " " + receiver : reference + " " + receiver;
+				binders.push("(" + quote(method.name) + ", fun __hx_reflect_receiver -> Obj.repr (" + bound + "))");
+			}
+			owner = facts.getSuperClassIdentity();
+		}
+		if (binders.length == 0)
+			return null;
+		return "let () = HxReflect.register_instance_methods "
+			+ quote(owners.get(identity).requirePublicReflectionName())
+			+ " ["
+			+ binders.join("; ")
+			+ "]";
 	}
 
 	/** Whether this class is an interface whose bodiless methods become runtime dispatchers. */

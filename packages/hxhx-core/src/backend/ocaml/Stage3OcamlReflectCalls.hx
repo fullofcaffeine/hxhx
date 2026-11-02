@@ -154,24 +154,12 @@ function render(input:ReflectCallInput):Null<String> {
 	return Stage3OcamlCallOrder.render({callee: selected.reference, arguments: arguments, names: input.names});
 }
 
-/**
-	Box one argument into the runtime's `Obj.t` carrier. A Bool needs the Bool
-	box, because a raw OCaml `true` has the same bits as the integer 1. Every
-	other Stage3 value is already a valid `Obj.t`, or becomes one through
-	`Obj.repr` without a change of bits.
- */
+/** Pass one argument unchanged, or as the runtime's `Obj.t` carrier. */
 private function argument(input:ReflectCallInput, expression:HxExpr, kind:ReflectArgument):String {
 	final rendered = input.emit(expression);
 	if (kind == Plain)
 		return rendered;
-	final type = input.argumentType(expression);
-	final revealed = TyAliasExpansion.reveal(type);
-	if (revealed.unwrapNull().getSemanticKey() == "primitive:Bool") {
-		if (revealed.isNullable())
-			throw "stage3 emitter: " + input.call.owner + "." + input.call.method + " does not support a Null<Bool> argument yet";
-		return "HxRuntime.box_bool (" + rendered + ")";
-	}
-	return "Obj.repr (" + rendered + ")";
+	return Stage3OcamlValueConversion.dynamicValue(input.argumentType(expression), rendered, "stage3 emitter: " + input.call.owner + "." + input.call.method);
 }
 
 /**
