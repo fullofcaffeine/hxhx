@@ -160,7 +160,8 @@ function main() {
     'plugin-matrix',
     'native-plugin-happy-path',
     'test-shards',
-    'hxhx-e2e'
+    'hxhx-e2e',
+    'reflaxe-self-compile'
   ]
   assert(
     JSON.stringify(plan.manifest.aggregateJobs) === JSON.stringify(expectedAggregateJobs),
@@ -209,7 +210,8 @@ function main() {
     'plugin-matrix': 'Q2',
     'native-plugin-happy-path': 'Q2',
     'test-shards': 'Q2',
-    'hxhx-e2e': 'Q3'
+    'hxhx-e2e': 'Q3',
+    'reflaxe-self-compile': 'Q2'
   }
   assert(
     JSON.stringify(plan.manifest.aggregateJobMinimumTiers) === JSON.stringify(expectedJobMinimumTiers),
@@ -383,7 +385,7 @@ function main() {
   )
   assert(
     JSON.stringify(jobsRequiredAtTier(plan.manifest, 'Q2')) ===
-      JSON.stringify(['guards', 'standalone-guards', 'stage0-free-smoke', 'js-native-smoke', 'plugin-matrix', 'native-plugin-happy-path', 'test-shards']),
+      JSON.stringify(['guards', 'standalone-guards', 'stage0-free-smoke', 'js-native-smoke', 'plugin-matrix', 'native-plugin-happy-path', 'test-shards', 'reflaxe-self-compile']),
     'Q2 job boundary changed'
   )
   assert(
@@ -445,7 +447,7 @@ function main() {
     CORE_TEST_QA_TIER: 'Q2'
   })
   assert(aggregateQ2.status === 0, `aggregate CLI rejected the policy-authorized Q2 hxhx skip\n${aggregateQ2.stderr}`)
-  assert(aggregateQ2.stdout.includes('required=7 skipped=1'), 'aggregate Q2 receipt omits its required/skip counts')
+  assert(aggregateQ2.stdout.includes('required=8 skipped=1'), 'aggregate Q2 receipt omits its required/skip counts')
 
   const aggregateQ3MissingHxhx = runScript('scripts/ci/core-test-aggregate.js', [], {
     ...process.env,

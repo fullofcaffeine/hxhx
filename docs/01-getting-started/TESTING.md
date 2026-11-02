@@ -746,6 +746,23 @@ Use this when you want the repo to function as a compiler-bootstrap example:
       `progress_poll_seconds`, `timeout_kind`, `timeout_elapsed_seconds`,
       `last_progress_elapsed_seconds`, `last_progress_reason`, and `timeout_cleanup`
   - Selection-only probe (no emit/copy/verify): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --stage0-selection-only`
+  - Self-compile check (emit only): `npm run hxhx:check:reflaxe-self-compile`
+    - What it answers: does `reflaxe.ocaml` still accept every `hxhx` source file? Most CI jobs
+      build `hxhx` from the committed `packages/hxhx/bootstrap_out` snapshot, so they cannot see
+      `hxhx` code that `reflaxe.ocaml` would reject. PR #116 merged such code (a `.get` call on a
+      `Null<Map<String, String>>` field), and the next bootstrap regeneration failed after 34
+      minutes with `[ocaml-imap-interface:missing-conversion]`.
+    - What it runs: `regenerate-hxhx-bootstrap.sh --emit-only`. This is the same stage0 emit as a
+      regeneration: Haxe types all of `hxhx`, then `reflaxe.ocaml` lowers and prints every class
+      into `packages/hxhx/out`. It then stops. It does not change `bootstrap_out` or the regen
+      fingerprint, and it does not run dune. It prints `HXHX_REFLAXE_SELF_COMPILE:PASS` on success.
+    - Cost: about an hour and about 10 GB of memory on a GitHub-hosted runner. Typing takes about
+      4 minutes; the rest is per-class lowering. Run it locally only when no other heavy stage0
+      build is running.
+    - In CI: the `hxhx self-compile through reflaxe.ocaml` job in `CI / Core PR Checks` runs it
+      for every Q2-or-higher change, beside the test shards, and the `Tests` aggregate requires it.
+      On failure, the `reflaxe-self-compile-<commit>` artifact keeps the stage0 log tail and the
+      per-class progress log, which names the class that was being lowered.
   - Wrapper-vs-native benchmark utility (policy compare + RSS summary):
     - `HXHX_BOOTSTRAP_BENCH_SCENARIOS=warm HXHX_BOOTSTRAP_BENCH_DUNE_JOBS=auto,2,4 HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1 npm run hxhx:bench:bootstrap-regen`
     - Set `upload_snapshot=1` in the manual `Utility / Bootstrap Regen Benchmark` workflow to upload the generated `packages/hxhx/bootstrap_out` tree.

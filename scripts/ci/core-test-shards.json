@@ -105,7 +105,8 @@
     "plugin-matrix",
     "native-plugin-happy-path",
     "test-shards",
-    "hxhx-e2e"
+    "hxhx-e2e",
+    "reflaxe-self-compile"
   ],
   "aggregateJobMinimumTiers": {
     "guards": "Q1",
@@ -115,7 +116,8 @@
     "plugin-matrix": "Q2",
     "native-plugin-happy-path": "Q2",
     "test-shards": "Q2",
-    "hxhx-e2e": "Q3"
+    "hxhx-e2e": "Q3",
+    "reflaxe-self-compile": "Q2"
   },
   "assignments": {
     "test:reflaxe-ocaml:shared-construction": "compiler-packaging",
