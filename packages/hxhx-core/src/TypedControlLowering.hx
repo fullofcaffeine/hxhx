@@ -841,6 +841,8 @@ class TypedControlLowering {
 			&& ((callee.getTag() == NameRead && children.length == 0)
 				|| (callee.getTag() == FieldRead && children.length == 1 && children[0].getTag() == RuntimeTypeValue)))
 			return callee;
+		if (selected != null && selected.getIsEnumConstructor() && isEnumConstructorSelection(callee))
+			return callee;
 		switch callee.getTag() {
 			case Parenthesized | Untyped:
 				final inner = retainInvocationCallee(call, children[0], admitted || callee.getTag() == Untyped, steps);
@@ -859,6 +861,24 @@ class TypedControlLowering {
 				]);
 			case _:
 				return null;
+		}
+	}
+
+	/**
+		An enum constructor named directly (`Leaf`) or through its enum type
+		(`Tree.Leaf`, `pack.Module.Tree.Leaf`) cannot be rebound, has no receiver,
+		and reads no runtime state. Haxe evaluates nothing when it selects the
+		constructor, so argument statements may run first and the call can stay
+		an exact enum construction. Capturing the selection into a temporary would
+		instead turn the constructor, or its enum type, into a first-class value.
+	 */
+	static function isEnumConstructorSelection(callee:TypedExpr):Bool {
+		final children = callee.getExpressions();
+		return switch callee.getTag() {
+			case EnumValue | NameRead: children.length == 0;
+			case FieldRead: children.length == 1 && children[0].getTag() == RuntimeTypeValue;
+			case Parenthesized: children.length == 1 && isEnumConstructorSelection(children[0]);
+			case _: false;
 		}
 	}
 

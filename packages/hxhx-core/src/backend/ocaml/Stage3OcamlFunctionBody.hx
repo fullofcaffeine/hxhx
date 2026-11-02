@@ -15,11 +15,14 @@ typedef FunctionRenderInput = {
 	final names:Stage3OcamlLocalNames;
 	final renderType:TyType->String;
 	final renderStatements:(Array<HxStmt>, (HxStmt, String) -> String) -> String;
+
+	/** Answers whether a typed result is an enum value this request stores as an `Obj.t` box. */
+	final ?isEnumBox:TyType->Bool;
 }
 
 /** Each closure owns a return exception; the nearest invocation catches its own exit. */
 function render(input:FunctionRenderInput):String {
-	final selected = plan(input.facts, input.body);
+	final selected = plan(input.facts, input.body, input.isEnumBox);
 	if (input.names == null)
 		throw "OCaml block function requires its local naming owner";
 	final arguments = switch input.facts.expression {
@@ -69,8 +72,10 @@ function render(input:FunctionRenderInput):String {
 	Admit shared block-function control only where native statements preserve it.
 	Each return operation retains its checked operand type through statement
 	adaptation. Conversion happens before its value enters the return exception.
+	An enum result uses the `Obj.t` box that its generated constructors return;
+	`isEnumBox` must answer from the request's registered enum declarations.
  */
-function plan(facts:TypedBackendLambdaOccurrence, body:HxExpr):FunctionStatements {
+function plan(facts:TypedBackendLambdaOccurrence, body:HxExpr, ?isEnumBox:TyType->Bool):FunctionStatements {
 	if (facts == null)
 		throw "OCaml block function requires its exact lambda facts";
 	switch facts.expression {
@@ -85,6 +90,7 @@ function plan(facts:TypedBackendLambdaOccurrence, body:HxExpr):FunctionStatement
 		case "primitive:String": "string";
 		case "primitive:Void": "unit";
 		case "dynamic": "Obj.t";
+		case _ if (isEnumBox != null && isEnumBox(result)): "Obj.t";
 		case _: throw "OCaml block function requires a supported concrete return carrier";
 	};
 	for (type in facts.getReturnTypes())
