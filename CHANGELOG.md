@@ -1,3 +1,13 @@
+## [0.41.3](https://github.com/fullofcaffeine/hxhx/compare/v0.41.2...v0.41.3) (2026-11-02)
+
+
+### Bug Fixes
+
+* **lowering:** accept this as a control-valued assignment destination ([4c149bf](https://github.com/fullofcaffeine/hxhx/commit/4c149bf824ed261bb9c20fb968f6286d94ff522c)), closes [#117](https://github.com/fullofcaffeine/hxhx/issues/117)
+* **lowering:** reject control-valued this writes outside constructors ([014fd0c](https://github.com/fullofcaffeine/hxhx/commit/014fd0c48f71bb0a0e9e4164dd71226ff9c20095))
+* **stage3:** build abstracts from the value their constructor assigns to this ([b2eafc1](https://github.com/fullofcaffeine/hxhx/commit/b2eafc1d34d3ac9fd05d5fccc66faf1f8da0841b))
+* **stage3:** keep this assignments in value position and support compound ones ([75ef40c](https://github.com/fullofcaffeine/hxhx/commit/75ef40c7e1211e9d29a2428363b69a8786160e13))
+
 ## [0.41.2](https://github.com/fullofcaffeine/hxhx/compare/v0.41.1...v0.41.2) (2026-11-02)
 
 
