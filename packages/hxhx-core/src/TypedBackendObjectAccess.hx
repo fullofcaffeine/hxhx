@@ -19,6 +19,13 @@ class TypedBackendObjectAccess {
 	public final resultType:TyType;
 	public final valueType:Null<TyType>;
 
+	/**
+		The checked type of the written field place (`p.x` in `p.x = v`), or
+		null for a read. The assignment's own type is not reliable for this:
+		it can follow the written value's type.
+	**/
+	public final placeType:Null<TyType>;
+
 	final owner:String;
 	final revision:String;
 	final fingerprint:String;
@@ -72,6 +79,7 @@ class TypedBackendObjectAccess {
 				throw "object access operator differs from its typed operation";
 		}
 		valueType = kind == Read ? null : input.source.getExpressions()[1].getType();
+		placeType = kind == Read ? null : selected.getType();
 		fingerprint = TypedBodyFingerprint.exactExpression(expression);
 	}
 

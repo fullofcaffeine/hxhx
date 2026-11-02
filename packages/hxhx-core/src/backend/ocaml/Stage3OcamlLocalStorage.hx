@@ -16,8 +16,8 @@ function store(write:TypedBackendLocalWrite, rendered:String, names:Null<Stage3O
 		|| (Stage3OcamlNumericWidening.isFloatDestination(write.binding.getType())
 			&& Stage3OcamlNullablePrimitive.innerPrimitive(write.sourceType) != null))
 		return Stage3OcamlValueConversion.convert(write.sourceType, write.binding.getType(), rendered, names);
-	if (Stage3OcamlNumericWidening.needsPromotion(write.sourceType, write.binding.getType()))
-		return Stage3OcamlNumericWidening.promote(rendered);
+	if (Stage3OcamlNumericWidening.convertsToFloat(write.sourceType, write.binding.getType()))
+		return Stage3OcamlNumericWidening.toFloatDestination(write.sourceType, write.binding.getType(), rendered);
 	if (write.binding.getType().getSemanticKey() == "primitive:Bool" && write.sourceType.isDynamic())
 		return "HxDynamic.booleanValue (" + rendered + ")";
 	if (!write.binding.getType().isDynamic())

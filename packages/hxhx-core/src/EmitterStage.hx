@@ -5340,8 +5340,14 @@ class EmitterStage {
 						});
 					case _:
 				}
-				function fieldStoredValue(target:HxExpr, rendered:String):String
+				// A field typed Float (also `Cell<Float>.value:T`) stores an Int operand promoted;
+				// a Null<Int> or Null<Float> value is unwrapped (and an Int promoted) from its carrier.
+				function fieldStoredValue(target:HxExpr, rendered:String):String {
+					final valueType = stage3ExactExprType(b);
+					if (valueType != null && backend.ocaml.Stage3OcamlNullablePrimitive.innerPrimitive(valueType) != null)
+						return backend.ocaml.Stage3OcamlNumericWidening.toFloatDestination(valueType, stage3FieldOccurrenceType(target), rendered);
 					return stage3FieldStoredValue(target, b, rendered, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw);
+				}
 				function sideIsFloat(left:Bool):Bool {
 					if (sides != null)
 						return left ? sides.leftFloat : sides.rightFloat;
@@ -7295,6 +7301,13 @@ class EmitterStage {
 						&& currentTypedFunction != null
 						&& stage3PromotesToFloat(expr, currentTypedFunction.getReturnType(), cast tyCtx, callSigByCallee, staticImportByIdent))
 						rendered = backend.ocaml.Stage3OcamlNumericWidening.promote(rendered);
+					// `function f(n:Null<Int>):Float return n;` unwraps the carrier, then promotes.
+					else if (renderReturn == null && currentTypedInitializer == null && currentTypedFunction != null) {
+						final returnedType = stage3ExactExprType(expr);
+						if (returnedType != null && backend.ocaml.Stage3OcamlNullablePrimitive.innerPrimitive(returnedType) != null)
+							rendered = backend.ocaml.Stage3OcamlNumericWidening.toFloatDestination(returnedType, currentTypedFunction.getReturnType(),
+								rendered);
+					}
 					final declaredReturn = currentFunctionName == null
 						|| fnReturnTypesMap == null ? null : fnReturnTypesMap.get(currentFunctionName);
 					final dynamicReturn = declaredReturn != null
