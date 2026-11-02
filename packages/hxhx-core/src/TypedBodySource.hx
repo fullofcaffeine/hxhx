@@ -761,8 +761,8 @@ class TypedBodySource {
 					value = projectionFacts.projectLocalWrite(catalog.projectedName(binding), binding, expressions[1], value);
 				}
 				final assignment:HxExpr = EBinop(typedExpression.getTag() == Assign ? "=" : texts[0], target, value);
-				projectionFacts == null ? assignment : projectionFacts.projectArrayAccess(typedExpression,
-					projectionFacts.projectObjectAccess(typedExpression, assignment));
+				projectionFacts == null ? assignment : projectionFacts.projectStringCompound(typedExpression,
+					projectionFacts.projectArrayAccess(typedExpression, projectionFacts.projectObjectAccess(typedExpression, assignment)));
 			case Ternary:
 				ETernary(condition(expressions[0], catalog, projectionFacts), expression(expressions[1], catalog, projectionFacts),
 					expression(expressions[2], catalog, projectionFacts));
@@ -953,6 +953,7 @@ class TypedBodySource {
 				arrays: projectionFacts.getArrayAccesses(),
 				collectionControls: projectionFacts.getCollectionControls(),
 				equalities: projectionFacts.getEqualities(),
+				stringConcats: projectionFacts.getStringConcats(),
 				bitwiseOperations: projectionFacts.getBitwiseOperations(),
 				conditions: projectionFacts.getConditions(),
 				namedPatterns: projectionFacts.getNamedPatterns()
@@ -1009,6 +1010,7 @@ class TypedBodySource {
 				arrays: projectionFacts.getArrayAccesses(),
 				collectionControls: projectionFacts.getCollectionControls(),
 				equalities: projectionFacts.getEqualities(),
+				stringConcats: projectionFacts.getStringConcats(),
 				bitwiseOperations: projectionFacts.getBitwiseOperations(),
 				conditions: projectionFacts.getConditions(),
 				namedPatterns: projectionFacts.getNamedPatterns()

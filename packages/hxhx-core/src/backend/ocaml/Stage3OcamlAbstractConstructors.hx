@@ -46,6 +46,10 @@ class Stage3OcamlAbstractConstructors {
 
 	public function new() {}
 
+	/** The checked backing type of a generated abstract, or null when `identity` names no registered abstract. */
+	public function underlyingOf(identity:String):Null<TyType>
+		return underlyings.get(identity);
+
 	/**
 		Register the constructor of one generated abstract. Class storage supplies
 		the abstract's checked identity and backing type from its semantic facts;

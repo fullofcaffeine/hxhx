@@ -33,6 +33,8 @@ class TypedBackendFunctionProjection {
 	final arrayAccesses:Array<TypedBackendArrayAccess>;
 	final collectionControls:Array<TypedBackendCollectionControl>;
 	final equalities:Array<TypedBackendEqualityOccurrence>;
+	final stringConcats:Array<TypedBackendStringConcatOccurrence>;
+	final verifiedStringConcats:Array<Bool>;
 	final bitwiseOperations:Array<TypedBackendBitwiseOccurrence>;
 	final conditions:Array<TypedBackendCondition>;
 	final namedPatterns:Array<TypedBackendNamedPattern>;
@@ -51,6 +53,7 @@ class TypedBackendFunctionProjection {
 			arrays:Array<TypedBackendArrayAccess>,
 			?collectionControls:Array<TypedBackendCollectionControl>,
 			?equalities:Array<TypedBackendEqualityOccurrence>,
+			?stringConcats:Array<TypedBackendStringConcatOccurrence>,
 			?bitwiseOperations:Array<TypedBackendBitwiseOccurrence>,
 			?conditions:Array<TypedBackendCondition>,
 			?namedPatterns:Array<TypedBackendNamedPattern>
@@ -109,6 +112,10 @@ class TypedBackendFunctionProjection {
 		for (entry in this.collectionControls)
 			entry.assertCurrent(stableIdentity, bodyRevision);
 		this.equalities = indexedAccesses == null || indexedAccesses.equalities == null ? [] : indexedAccesses.equalities.copy();
+		this.stringConcats = indexedAccesses == null || indexedAccesses.stringConcats == null ? [] : indexedAccesses.stringConcats.copy();
+		for (entry in this.stringConcats)
+			entry.assertCurrent(stableIdentity, bodyRevision);
+		this.verifiedStringConcats = [for (_ in this.stringConcats) false];
 		this.bitwiseOperations = indexedAccesses == null
 			|| indexedAccesses.bitwiseOperations == null ? [] : indexedAccesses.bitwiseOperations.copy();
 		for (entry in this.bitwiseOperations)
@@ -467,6 +474,29 @@ class TypedBackendFunctionProjection {
 				entry.assertCurrent(stableIdentity, bodyRevision);
 				return entry;
 			}
+		return null;
+	}
+
+	/**
+		The checked type of `operand` when it is one side of a String
+		concatenation in this executable, or null. Only the original operand
+		object qualifies; an equal copy cannot borrow its type.
+	**/
+	public function findStringConcatOperandType(operand:HxExpr):Null<TyType> {
+		for (index in 0...stringConcats.length) {
+			final entry = stringConcats[index];
+			final type = entry.operandType(operand);
+			if (type != null) {
+				// The emitter asks for every operand of long chains. The projected
+				// body cannot change, so one membership walk per entry suffices.
+				if (!verifiedStringConcats[index]) {
+					requireExpression(entry.expression);
+					entry.assertCurrent(stableIdentity, bodyRevision);
+					verifiedStringConcats[index] = true;
+				}
+				return type;
+			}
+		}
 		return null;
 	}
 

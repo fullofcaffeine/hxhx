@@ -23,6 +23,7 @@ class TypedBodyProjectionBuilder {
 	final arrayAccesses:Array<TypedBackendArrayAccess> = [];
 	final collectionControls:Array<TypedBackendCollectionControl> = [];
 	final equalities:Array<TypedBackendEqualityOccurrence> = [];
+	final stringConcats:Array<TypedBackendStringConcatOccurrence> = [];
 	final bitwiseOperations:Array<TypedBackendBitwiseOccurrence> = [];
 	final conditions:Array<TypedBackendCondition> = [];
 	final callArguments:Array<TypedBackendCallArgument> = [];
@@ -157,7 +158,34 @@ class TypedBodyProjectionBuilder {
 				source: source,
 				expression: expression
 			}));
+		if (TypedBackendStringConcatOccurrence.supports(source))
+			stringConcats.push(new TypedBackendStringConcatOccurrence({
+				owner: ownerIdentity,
+				revision: bodyRevision,
+				source: source,
+				expression: expression
+			}));
 		return expression;
+	}
+
+	/** Keep the operand types of a String `+=`, which is projected outside `projectBinary`. */
+	public function projectStringCompound(source:TypedExpr, expression:HxExpr):HxExpr {
+		if (sealed)
+			throw "cannot add string concatenation facts to a sealed projection";
+		if (TypedBackendStringConcatOccurrence.supports(source))
+			stringConcats.push(new TypedBackendStringConcatOccurrence({
+				owner: ownerIdentity,
+				revision: bodyRevision,
+				source: source,
+				expression: expression
+			}));
+		return expression;
+	}
+
+	public function getStringConcats():Array<TypedBackendStringConcatOccurrence> {
+		if (!sealed)
+			throw "string concatenation facts require a sealed projection";
+		return stringConcats.copy();
 	}
 
 	public function getEqualities():Array<TypedBackendEqualityOccurrence> {

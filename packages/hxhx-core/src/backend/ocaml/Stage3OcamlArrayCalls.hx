@@ -127,9 +127,21 @@ function render(input:{
 				throw "stage3 emitter: metal profile unsupported semantics: Array.join requires Array<String> receiver";
 			if (autoTyped)
 				input.mark("array_join_typed");
-			if (input.metal || autoTyped) "HxBootArray.join_strict (" + receiver + ") (" + argument + ") (fun (s : string) -> s)"; else if (strings)
-				"HxBootArray.join ("
-				+ receiver + ") (" + argument + ") (fun (s : string) -> s)"; else "HxBootArray.join_dyn (Obj.magic (" + receiver + ")) (" + argument + ")";
+			if (input.metal || autoTyped) "HxBootArray.join_strict (" + receiver + ") (" + argument + ") (fun (s : string) -> s)"; else
+				if (Stage3OcamlStringConversion.isBoolText(element)) { // The generic join cannot tell a stored Bool from an Int, so the
+				// checked element type selects the Bool text (haxe_ocaml-caxgt).
+				final value = input.names.internalName("__hx_join_element");
+				"HxArray.join (Obj.magic "
+				+ receiver
+				+ ") ("
+				+ argument
+				+ ") (fun "
+				+ value
+				+ " -> "
+				+ Stage3OcamlStringConversion.convert(element, value, input.names)
+				+ ")";
+			} else if (strings) "HxBootArray.join (" + receiver + ") (" + argument + ") (fun (s : string) -> s)"; else "HxBootArray.join_dyn (Obj.magic ("
+				+ receiver + ")) (" + argument + ")";
 		case "push":
 			push(receiverType, occurrence.getProjectedArgumentTypes()[0], runtimeReceiver, argument);
 		case "copy": "HxArray.copy " + runtimeReceiver;
