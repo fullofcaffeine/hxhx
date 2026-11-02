@@ -80,7 +80,7 @@ class M6StringIntegrationTest {
 		assertContains(content, "HxString.fromCharCode", "fromCharCode");
 		assertContains(content, "string_of_int", "toString(Int) lowering");
 		assertContains(content, "string_of_bool", "toString(Bool) lowering");
-		assertContains(content, "string_of_float", "toString(Float) lowering");
+		assertContains(content, "HxRuntime.float_toStdString", "toString(Float) lowering prints Floats like upstream Haxe");
 		assertContains(content, " ^ ", "string concatenation uses ^");
 
 		// Best-effort: if dune+ocamlc are available, ensure dune build + run succeeds.

@@ -60,7 +60,7 @@
     {
       "module": "HxDynamic",
       "scope": "application",
-      "files": [{ "path": "HxDynamic.ml", "sha256": "6195c08972146061d8cc50408de2bcc8b6fa04667f538f108b9ed0f453ebc39a" }],
+      "files": [{ "path": "HxDynamic.ml", "sha256": "b1c4a0c6584d4a1571476011f61efb1631e264c679147ac3a6eeee2d6a817771" }],
       "dependencies": ["HxAnon", "HxArray", "HxRuntime", "HxType"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],
@@ -213,7 +213,7 @@
     {
       "module": "HxRuntime",
       "scope": "application",
-      "files": [{ "path": "HxRuntime.ml", "sha256": "66a675e4872277be3474bbdfccfc5aecca4ba4d8d6bad767f5ef5e485410e2a2" }],
+      "files": [{ "path": "HxRuntime.ml", "sha256": "e3198a182f41c177b3f218257a9ce406b2829a472bd0a459226e528c7ca42b48" }],
       "dependencies": [],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],

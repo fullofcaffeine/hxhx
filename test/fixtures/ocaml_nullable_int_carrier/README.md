@@ -34,8 +34,8 @@ required primitive parameter raises the runtime's Null Access exception; upstrea
 arithmetic, so the fixture only reads values after a null check. The parser
 receives already split version parts because this root-only harness emits no
 `String.split` provider. Whole-number Float results are compared rather than
-printed because `Std.string` of such a Float still prints `6.` natively
-(haxe_ocaml-l26hl).
+printed. Whole-number Float text is covered by `test/fixtures/stage3_float_string`
+(haxe_ocaml-iffj5).
 
 Run `haxe test/m14_stage3_nullable_int_carrier_test.hxml` (or
 `npm run test:m14:stage3-nullable-int-carrier`) to compare upstream Haxe with
