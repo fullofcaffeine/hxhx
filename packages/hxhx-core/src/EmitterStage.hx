@@ -3205,31 +3205,6 @@ class EmitterStage {
 		return backend.ocaml.Stage3OcamlCallableConversion.lambdaResult(facts, value, currentFunctionLocalOcamlNames);
 	}
 
-	static function tryExprToOcamlStage3ReflectTypeIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
-			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
-			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
-		switch (e) {
-			case ECall(EField(EIdent("Reflect"), "fields"), [_obj]):
-				return "(Obj.magic 0)";
-			case ECall(EField(EIdent("Reflect"), "field"), [_obj, _name]):
-				return "(Obj.magic 0)";
-			case ECall(EField(EIdent("Reflect"), "getProperty"), [_obj, _name]):
-				return "(Obj.magic 0)";
-			case ECall(EField(EIdent("Reflect"), "setProperty"), [_obj, _name, _value]):
-				return "(Obj.magic 0)";
-			case ECall(EField(EIdent("Reflect"), "hasField"), [_obj, _name]):
-				return "false";
-			case ECall(EField(EIdent("Reflect"), "isFunction"), [_obj]):
-				return "true";
-			case ECall(EField(EIdent("Type"), "getInstanceFields"), [_cls]):
-				return "(Obj.magic 0)";
-			case ECall(EField(EIdent("Type"), "typeof"), [_v]):
-				return "(Obj.magic 0)";
-			case _:
-		}
-		return null;
-	}
-
 	static function tryExprToOcamlStage3StdStringIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
 			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
@@ -3337,10 +3312,6 @@ class EmitterStage {
 		if (code != null)
 			return code;
 		code = tryExprToOcamlStage3LambdaTryIntrinsic(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-			callSigByCallee);
-		if (code != null)
-			return code;
-		code = tryExprToOcamlStage3ReflectTypeIntrinsic(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 			callSigByCallee);
 		if (code != null)
 			return code;
@@ -3794,6 +3765,17 @@ class EmitterStage {
 			});
 			if (stdStaticCall != null)
 				return stdStaticCall;
+			final reflectCall = backend.ocaml.Stage3OcamlReflectCalls.render({
+				call: staticCall,
+				emit: value -> exprToOcaml(value, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+					callSigByCalleeRaw),
+				argumentType: callArgumentType,
+				names: currentFunctionLocalOcamlNames,
+				valueTypeConstructor: (name,
+					index) -> currentEnums.constructorValue(backend.ocaml.Stage3OcamlReflectCalls.VALUE_TYPE_OWNER, name, index, currentOcamlModuleName)
+			});
+			if (reflectCall != null)
+				return reflectCall;
 			e = TypedExactStaticCallSource.ordinaryCall(staticCall);
 		}
 		final exactCall = TypedExactCallSource.decodeInstance(e);

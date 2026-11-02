@@ -60,8 +60,8 @@
     {
       "module": "HxDynamic",
       "scope": "application",
-      "files": [{ "path": "HxDynamic.ml", "sha256": "6195c08972146061d8cc50408de2bcc8b6fa04667f538f108b9ed0f453ebc39a" }],
-      "dependencies": ["HxAnon", "HxArray", "HxRuntime", "HxType"],
+      "files": [{ "path": "HxDynamic.ml", "sha256": "dd53458f9d7c7dd64129195251d6110c5cbe8f35562aeb19f666005adcbf971e" }],
+      "dependencies": ["HxAnon", "HxArray", "HxEnum", "HxRuntime", "HxType"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],
       "license": "MIT"
@@ -204,7 +204,7 @@
     {
       "module": "HxReflect",
       "scope": "application",
-      "files": [{ "path": "HxReflect.ml", "sha256": "21d5ed38bb8c4a5de47f184fd2f8750f01e703aa9c29dd08ae5988e4949e5e6e" }],
+      "files": [{ "path": "HxReflect.ml", "sha256": "fcf2afa9ed94826b50d837964db71e30508e0bfe1e29c6f202f648d0bed76fe8" }],
       "dependencies": ["HxAnon", "HxArray", "HxEnum", "HxRuntime", "HxType"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],
