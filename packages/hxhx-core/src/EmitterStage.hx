@@ -4630,19 +4630,26 @@ class EmitterStage {
 							// Emit explicit arity casts for common call arities so OCaml treats these
 							// as intentional dynamic calls (matching Stage3 bring-up semantics) rather
 							// than "ignored extra argument" over-application.
+							// A missing field reads as null; `require_callable` turns calling it into a
+							// catchable Haxe exception instead of applying null as a function.
+							final fieldName = switch (callee) {
+								case EField(_, name): name;
+								case _: "<computed>";
+							};
+							final guardedCallee = "(HxAnon.require_callable (" + c + ") " + escapeOcamlString(fieldName) + ")";
 							if (renderedArgs.length == 0) {
-								"(Obj.magic ((Obj.magic (" + c + ") : unit -> Obj.t) ()))";
+								"(Obj.magic ((Obj.magic (" + guardedCallee + ") : unit -> Obj.t) ()))";
 							} else if (renderedArgs.length <= 5) {
 								var fnTy = "Obj.t";
 								for (_ in 0...renderedArgs.length)
 									fnTy = "Obj.t -> " + fnTy;
-								var renderedCall = "((Obj.magic (" + c + ") : " + fnTy + ")";
+								var renderedCall = "((Obj.magic (" + guardedCallee + ") : " + fnTy + ")";
 								for (argCode in renderedArgs)
 									renderedCall += " (Obj.repr " + argCode + ")";
 								renderedCall += ")";
 								"(Obj.magic " + renderedCall + ")";
 							} else {
-								c + " " + renderedArgs.join(" ");
+								guardedCallee + " " + renderedArgs.join(" ");
 							}
 						} else if (renderedArgs.length == 0) {
 							var appendUnit = true;

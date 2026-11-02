@@ -1,6 +1,6 @@
 {
   "model": "requirements-only-runtime-selection-shadow",
-  "runtimeSourceRevision": "sha256:6035421ba258562dad0086aee429c3fcef0298e7bc1720f9519e83e01883c9bd",
+  "runtimeSourceRevision": "sha256:702d6e91caafbaf53ed3d26d11e67975bcd4c9ec8f547d1461304b8f1a096c0f",
   "requirementRevision": "sha256:e0ca804761da8ca870d466f94b6b9722ce71bca61ef233fc64fdf7962e7d6522",
   "schemaVersion": 1,
   "selectionMode": "full",
@@ -11,8 +11,8 @@
       {
         "module": "HxAnon",
         "path": "HxAnon.ml",
-        "sha256": "sha256:d3e4bf7c5e907e0f3e96d4b4a58fb5324278ed78033d984414b39e748852afe4",
-        "bytes": 8969
+        "sha256": "sha256:66ca212af97fc34f032fed5b97b11ba63b8e682cca23e3cec847e1549d5e8460",
+        "bytes": 9545
       },
       {
         "module": "HxArray",
@@ -640,7 +640,7 @@
       "HxSys",
       "HxType"
     ],
-    "revision": "sha256:662fbca47540a614a9f7db0ccf0b29894dd3197873efd2c616054b8a9769a9b3"
+    "revision": "sha256:2c5bb8b0cd2d5aecc21bde22449f3e4b1fda4a9d5f90ed6f628991b8dde803c4"
   },
   "profile": "portable",
   "message": "Explicit requirements do not yet select the same checked runtime source bytes. This mismatch blocks a hard cut, while the current compiler selection remains authoritative.",
@@ -656,14 +656,14 @@
       {
         "module": "EReg",
         "path": "EReg.ml",
-        "sha256": "sha256:1983649d740c3ce94bfd7ff1c940384921b7892ac2bf590ab945e732b064173b",
-        "bytes": 9276
+        "sha256": "sha256:5232c7f1d8e9696960be25b3d30f574cdf71a4750f043445d6c92fbf7bdaed0a",
+        "bytes": 9669
       },
       {
         "module": "HxAnon",
         "path": "HxAnon.ml",
-        "sha256": "sha256:d3e4bf7c5e907e0f3e96d4b4a58fb5324278ed78033d984414b39e748852afe4",
-        "bytes": 8969
+        "sha256": "sha256:66ca212af97fc34f032fed5b97b11ba63b8e682cca23e3cec847e1549d5e8460",
+        "bytes": 9545
       },
       {
         "module": "HxArray",
@@ -1032,9 +1032,9 @@
       "Std",
       "haxe_CallStack"
     ],
-    "revision": "sha256:63a207528c345bcf744576a5dc224433859ef959e80926e760c0f5888f2834cd"
+    "revision": "sha256:a6522518af9fc3f004ea04defabda84a47ac02165e46fe99e71867962f7ff551"
   },
-  "reportRevision": "sha256:d6bef933cd78c9e404860dd4b2c3503b3a0abf25f93b7beace3635355b80e379",
+  "reportRevision": "sha256:ae64716f86fc47e3cf5a8cd6f68fd08097c526975a61b50175227ed3f2736f63",
   "differences": {
     "currentOnlyRoots": [
       "Date",
@@ -2918,8 +2918,8 @@
       {
         "module": "EReg",
         "path": "EReg.ml",
-        "sha256": "sha256:1983649d740c3ce94bfd7ff1c940384921b7892ac2bf590ab945e732b064173b",
-        "bytes": 9276
+        "sha256": "sha256:5232c7f1d8e9696960be25b3d30f574cdf71a4750f043445d6c92fbf7bdaed0a",
+        "bytes": 9669
       },
       {
         "module": "HxFile",

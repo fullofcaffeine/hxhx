@@ -167,6 +167,17 @@ let get (o : Obj.t) (field : string) : Obj.t =
   else
     HxRuntime.hx_null
 
+(* A Dynamic method call `d.f(x)` first reads `f` with `get`. A missing field
+   reads as null, and applying null as an OCaml function crashes the process.
+   Raise a catchable Haxe exception instead. Values without a Dynamic field
+   table, such as a native `EReg`, read every field as null. *)
+let require_callable (value : Obj.t) (field : string) : 'a =
+  if value == HxRuntime.hx_null then
+    HxRuntime.hx_throw_typed
+      (Obj.repr ("Cannot call null: Dynamic field " ^ field ^ " is not a function on this value"))
+      [ "String"; "Dynamic" ]
+  else Obj.magic value
+
 let set (o : Obj.t) (field : string) (value : Obj.t) : unit =
   if is_anon o then (
     let obj = anon_of_obj o in

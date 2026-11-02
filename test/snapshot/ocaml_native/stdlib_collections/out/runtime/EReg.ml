@@ -88,7 +88,16 @@ let translate_pattern (p : string) : string =
 
 let create (r : string) (opt : string) : t =
   let pat = translate_pattern r in
-  let re = if is_casefold opt then Str.regexp_case_fold pat else Str.regexp pat in
+  (* `Str` reports an invalid pattern with an OCaml `Failure`, which Haxe
+     `catch` cannot see. Throw a Haxe String instead. Upstream's message text
+     differs per target, so this keeps the `Str` reason. *)
+  let re =
+    try if is_casefold opt then Str.regexp_case_fold pat else Str.regexp pat
+    with Failure reason ->
+      HxRuntime.hx_throw_typed
+        (Obj.repr ("EReg: invalid regular expression \"" ^ r ^ "\": " ^ reason))
+        [ "String"; "Dynamic" ]
+  in
   { re; global = is_global opt; last = None }
 
 let collect_groups () : (int * int) array =

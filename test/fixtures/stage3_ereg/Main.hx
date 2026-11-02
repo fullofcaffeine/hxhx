@@ -1,12 +1,16 @@
 /**
 	Regular expressions on the Stage3 native route.
 
-	Covers regex literals with and without the `g`, `i`, and `m` flags,
+	Covers regex literals with and without flags,
 	`new EReg(pattern, flags)`, and the instance methods `match`, `matched`,
 	`matchedLeft`, `matchedRight`, `matchedPos`, `matchSub`, `replace`, `split`, and `map`,
 	plus the static `EReg.escape`.
 	The regexes live in locals, a static field, an instance field, and a
-	function parameter. Each `match` runs in its own statement before `matched`
+	function parameter. Stage3 passes the flags string to the runtime
+	unchecked; only `g` and `i` change behavior today. The `m` line prints the
+	same result as upstream only because the OCaml runtime always anchors `^`
+	at line starts (Bead haxe_ocaml-y2nv7), so it does not prove `m` works.
+	Each `match` runs in its own statement before `matched`
 	reads the result, so the output does not depend on the evaluation order
 	of String concatenation operands (Bead haxe_ocaml-b544p). Only patterns that behave the same in the OCaml `Str`
 	translation and in upstream Haxe are used here.

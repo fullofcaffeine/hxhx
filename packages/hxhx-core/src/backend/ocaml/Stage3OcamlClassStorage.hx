@@ -230,6 +230,8 @@ class Stage3OcamlClassStorage {
 					throw "native construction has cyclic class storage";
 				visited.set(identity, true);
 				final facts = owners.get(identity);
+				if (facts == null && identity == "EReg")
+					throw "stage3 emitter: EReg is an extern runtime class and cannot be extended natively yet";
 				if (facts == null)
 					throw "native construction lacks inherited storage: " + identity;
 				for (field in facts.copyFields())
