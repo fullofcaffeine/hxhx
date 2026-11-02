@@ -1118,15 +1118,15 @@ class EmitterStage {
 				// string concatenation and lower it to OCaml's `^`.
 				// The typed result decides: `ratio + 0.25` stays Float addition.
 				case EBinop("+", a, b) if (stage3IsStringExpr(expr, tyByIdent)):
-					backend.ocaml.Stage3OcamlStringConcat.render(emitStringExpr(a), emitStringExpr(b), stage3ConcatOperandIsStable(a),
-						stage3ConcatOperandIsStable(b), currentFunctionLocalOcamlNames);
+					backend.ocaml.Stage3OcamlOrderedOperands.concat(emitStringExpr(a), emitStringExpr(b), stage3OperandIsStable(a), stage3OperandIsStable(b),
+						currentFunctionLocalOcamlNames);
 				case EBinop("+", _, _) if (stage3ExactExprType(expr) != null):
 					backend.ocaml.Stage3OcamlStringConversion.convert(stage3ExactExprType(expr),
 						exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 						currentFunctionLocalOcamlNames);
 				case EBinop("+", a, b):
-					backend.ocaml.Stage3OcamlStringConcat.render(emitStringExpr(a), emitStringExpr(b), stage3ConcatOperandIsStable(a),
-						stage3ConcatOperandIsStable(b), currentFunctionLocalOcamlNames);
+					backend.ocaml.Stage3OcamlOrderedOperands.concat(emitStringExpr(a), emitStringExpr(b), stage3OperandIsStable(a), stage3OperandIsStable(b),
+						currentFunctionLocalOcamlNames);
 				case ECall(EField(EIdent("Std"), "string"), [arg]):
 					// String interpolation lowering uses `Std.string(...)` to force stringification.
 					//
@@ -2322,16 +2322,16 @@ class EmitterStage {
 	}
 
 	/**
-		Whether evaluating a concatenation operand has no effect and always gives the same value:
+		Whether evaluating an operand has no effect and always gives the same value:
 		a literal, a read of an immutable local, or a `+` of such operands. Such an operand
 		may be evaluated out of source order without changing the result.
 	**/
-	static function stage3ConcatOperandIsStable(expr:HxExpr):Bool {
+	static function stage3OperandIsStable(expr:HxExpr):Bool {
 		return switch expr {
 			case EString(_) | EInt(_) | EFloat(_) | EBool(_) | ENull: true;
 			case EIdent(name): exactFunctionLocalType(name) != null && !isMutableLocalRefIdent(name);
-			case EParenthesized(inner, _) | ECast(inner, _) | ECheckType(inner, _): stage3ConcatOperandIsStable(inner);
-			case EBinop("+", a, b): stage3ConcatOperandIsStable(a) && stage3ConcatOperandIsStable(b);
+			case EParenthesized(inner, _) | ECast(inner, _) | ECheckType(inner, _): stage3OperandIsStable(inner);
+			case EBinop("+", a, b): stage3OperandIsStable(a) && stage3OperandIsStable(b);
 			case _: false;
 		};
 	}
@@ -4832,7 +4832,8 @@ class EmitterStage {
 				// Float arithmetic: operands run left to right, then a nullable one is unwrapped.
 				function floatArithmetic(body:(String, String) -> String):String {
 					if (nullableLeft == null && nullableRight == null)
-						return body(exprToOcamlAsFloat(a), exprToOcamlAsFloat(b));
+						return backend.ocaml.Stage3OcamlOrderedOperands.apply(exprToOcamlAsFloat(a), exprToOcamlAsFloat(b), stage3OperandIsStable(a),
+							stage3OperandIsStable(b), currentFunctionLocalOcamlNames, body);
 					return backend.ocaml.Stage3OcamlNullablePrimitive.orderedArithmetic({
 						left: nullableLeft != null ? la : exprToOcamlAsFloat(a),
 						leftInner: nullableLeft,
@@ -4956,11 +4957,11 @@ class EmitterStage {
 								"(Obj.magic 0)";
 						}
 					case "+" if (stage3IsStringExpr(e, tyByIdentRaw)):
-						backend.ocaml.Stage3OcamlStringConcat.render(exprToOcamlForConcatStage3(a, arityByIdent, tyByIdent, staticImportByIdent,
+						backend.ocaml.Stage3OcamlOrderedOperands.concat(exprToOcamlForConcatStage3(a, arityByIdent, tyByIdent, staticImportByIdent,
 							currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 							exprToOcamlForConcatStage3(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee),
-							stage3ConcatOperandIsStable(a), stage3ConcatOperandIsStable(b), currentFunctionLocalOcamlNames);
+							stage3OperandIsStable(a), stage3OperandIsStable(b), currentFunctionLocalOcamlNames);
 					case "/":
 						if (stage3IsInt64Expr(a, tyByIdentRaw) || stage3IsInt64Expr(b, tyByIdentRaw)) {
 							int64DivModField("quotient");
@@ -4989,8 +4990,9 @@ class EmitterStage {
 							if (allowMetalFallback && portableAutoMetalizedRegion && !isMetalProfileActive())
 								markPortableAutoMetalizedLoweringUse("numeric_division_fallback");
 							final allowNumericDivision = (aIsF || bIsF) || (aIsI && bIsI) || allowMetalFallback;
-							allowNumericDivision ? "((" + exprToOcamlAsFloat(a) + ") /. (" + exprToOcamlAsFloat(b) +
-							"))" : backend.ocaml.Stage3OcamlArithmeticOperands.unclassified(stage3EmitLocation(), op, stage3ExactExprType(a),
+							allowNumericDivision ? floatArithmetic((left,
+									right) -> "((" + left + ") /. (" + right +
+									"))") : backend.ocaml.Stage3OcamlArithmeticOperands.unclassified(stage3EmitLocation(), op, stage3ExactExprType(a),
 									stage3ExactExprType(b));
 						}
 					case "+" | "-" | "*" | "%":
@@ -5089,9 +5091,26 @@ class EmitterStage {
 							|| stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)
 							|| nullableLeft == "primitive:Float"
 							|| nullableRight == "primitive:Float") {
-							"((" + exprToOcamlAsFloat(a) + ") " + op + " (" + exprToOcamlAsFloat(b) + "))";
+							floatArithmetic((left, right) -> "((" + left + ") " + op + " (" + right + "))");
+						} else if (nullableLeft == "primitive:Int" || nullableRight == "primitive:Int") {
+							backend.ocaml.Stage3OcamlNullablePrimitive.orderedArithmetic({
+								left: la,
+								leftInner: nullableLeft,
+								right: rb,
+								rightInner: nullableRight,
+								asFloat: false,
+								names: currentFunctionLocalOcamlNames,
+								body: (left, right) -> "((" + left + ") " + op + " (" + right + "))"
+							});
 						} else {
-							"((" + laInt + ") " + op + " (" + rbInt + "))";
+							backend.ocaml.Stage3OcamlOrderedOperands.apply(la, rb, stage3OperandIsStable(a), stage3OperandIsStable(b),
+								currentFunctionLocalOcamlNames, (left, right) -> "(("
+									+ left
+									+ ") "
+									+ op
+									+ " ("
+									+ right
+									+ "))");
 						}
 					case "&&" | "||":
 						final lhsBool = coerceNullableBoolIdent(a, la);

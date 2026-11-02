@@ -9,4 +9,12 @@
 x23
 0.75 units
 [6][7]13
-
+[I][J] divide 4.5
+[9][2] int divide 4.5
+[E][F] less true
+[3][3] at most true
+[G][H] nullable false
+[K][L] sum 0.75
+postfix 1 2
+nested 30 3
+3.25

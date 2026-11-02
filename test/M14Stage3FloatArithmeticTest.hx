@@ -60,7 +60,10 @@ class M14Stage3FloatArithmeticTest {
 		// The old fallback printed the placeholder instead of `a[0] + a[1]`.
 		if (main.indexOf("HxDynamic.toStdString (Obj.repr ((Obj.magic 0)))") >= 0)
 			throw "Float arithmetic must not print the `(Obj.magic 0)` placeholder";
-		requireText(main, "HxBootArray.get (Obj.magic __hx_indexed_array) __hx_indexed_index)) +. ((let", "`a[0] + a[1]` must use the OCaml Float addition");
+		// Both indexed reads are bound in source order before the Float addition.
+		requireText(main,
+			"let __hx_ordered_right = ((let __hx_indexed_array = (a) in let __hx_indexed_index = (1) in HxBootArray.get (Obj.magic __hx_indexed_array) __hx_indexed_index)) in ((__hx_ordered_left) +. (__hx_ordered_right))",
+			"`a[0] + a[1]` must use the OCaml Float addition");
 		requireText(main, "__hx_indexed_old +. __hx_indexed_right", "`a[0] += count()` must use the OCaml Float addition");
 		Sys.println("M14_STAGE3_FLOAT_ARITHMETIC_OPERATORS:PASS");
 		deleteRecursive(outDir);
