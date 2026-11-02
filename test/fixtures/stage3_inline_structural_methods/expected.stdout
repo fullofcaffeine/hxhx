@@ -1,0 +1,14 @@
+ok
+literal: 8
+adder: 5
+holder: 9
+stored class method: 7
+stored literal method: 8
+passed class: 7
+passed literal: 11
+passed override: 70
+class adder: 103
+literal adder: 20
+mixed: 3 70
+named override: 70
+array: 7;12;70;
