@@ -17,7 +17,11 @@ import sys.io.File;
 	- `stage3_bitwise_compound` applies `|= &= ^= <<= >>= >>>=` to Int and
 	  `haxe.Int32` locals, fields, anonymous fields and array elements, as
 	  statements and as values.
+	- The fixture also covers Int `%=` on fields, structure fields, array
+	  elements and locals, which keeps the sign of the dividend.
 	- The native executable must print exactly what upstream Haxe prints.
+	- A compound update of an optional structure field (`{?x:Int}`) stops
+	  with a named error instead of being dropped.
 **/
 class M14Stage3BitwiseCompoundTest {
 	static function deleteRecursive(path:String):Void {
@@ -30,6 +34,30 @@ class M14Stage3BitwiseCompoundTest {
 			return;
 		}
 		FileSystem.deleteFile(path);
+	}
+
+	/**
+		A compound update of an optional structure field has no native lowering yet
+		(haxe_ocaml-gaa3a). It must stop with a named error, not drop the statement.
+	**/
+	static function rejectOptionalStructureField():Void {
+		final source = ".tmp/m14_stage3_bitwise_compound_optional";
+		deleteRecursive(source);
+		FileSystem.createDirectory(source);
+		final path = source + "/Main.hx";
+		File.saveContent(path, "class Main { static function main():Void { final opt:{?x:Int} = {x: 4}; opt.x <<= 1; Sys.println(\"x \" + opt.x); } }\n");
+		var message:Null<String> = null;
+		try {
+			final program = M14Stage3RuntimeFixture.prepareProgram({source: File.getContent(path), path: path, root: source});
+			EmitterStage.emitToDir(new MacroExpandedProgram(program, false), source + "/out");
+		} catch (error:Dynamic) {
+			message = Std.string(error);
+		}
+		deleteRecursive(source);
+		final expected = "unsupported native OCaml compound assignment <<= on optional structure field `x`";
+		if (message == null || message.indexOf(expected) < 0)
+			throw "expected <" + expected + ">, got <" + message + ">";
+		Sys.println("M14_STAGE3_BITWISE_COMPOUND_OPTIONAL_FIELD_REJECTED:PASS");
 	}
 
 	static function main():Void {
@@ -48,5 +76,6 @@ class M14Stage3BitwiseCompoundTest {
 			throw "Stage3 replaced a compound assignment with the placeholder";
 		deleteRecursive(outDir);
 		Sys.println("M14_STAGE3_BITWISE_COMPOUND_NATIVE:PASS");
+		rejectOptionalStructureField();
 	}
 }

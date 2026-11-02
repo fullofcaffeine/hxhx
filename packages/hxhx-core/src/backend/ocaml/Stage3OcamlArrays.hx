@@ -122,6 +122,8 @@ function access(occurrence:TypedBackendArrayAccess, emit:HxExpr->String, names:S
 					case "+=": "HxInt.add " + old + " " + right;
 					case "-=": "HxInt.sub " + old + " " + right;
 					case "*=": "HxInt.mul " + old + " " + right;
+					// Haxe Int `%` keeps the sign of the dividend, like OCaml's `rem`.
+					case "%=": "HxInt.rem " + old + " " + right;
 					case _ if (Stage3OcamlLocalCompoundValue.bitwiseFunction(op) != null):
 						Stage3OcamlLocalCompoundValue.bitwiseFunction(op)
 						+ " "

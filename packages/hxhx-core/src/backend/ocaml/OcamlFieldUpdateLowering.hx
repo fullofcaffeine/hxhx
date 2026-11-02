@@ -52,7 +52,7 @@ private function lowerExpression(expression:TypedExpr, allocator:TyCompilerTempo
 
 /**
 	Capture the receiver and old value before the RHS, then return the written value.
-	Admits String `+=` appends, Int `+=`, `-=`, `*=` and bitwise
+	Admits String `+=` appends, Int `+=`, `-=`, `*=`, `%=` and bitwise
 	`|= &= ^= <<= >>= >>>=` updates with an Int operand, such as
 	`state.index += value.length` or `flags.bits |= 2`, and Float `+=`, `-=`, `*=`, `/=`, `%=`
 	updates with an Int or Float operand, such as `cell.total += count()`. The
@@ -71,6 +71,7 @@ private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTe
 	final intUpdate = (assignment == "+="
 		|| assignment == "-="
 		|| assignment == "*="
+		|| assignment == "%="
 		|| Stage3OcamlLocalCompoundValue.isBitwiseOperator(assignment))
 		&& key == "primitive:Int"
 		&& children[1].getType().getSemanticKey() == "primitive:Int";
@@ -85,6 +86,23 @@ private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTe
 	final structural = field == null
 		&& operand.getTag() == FieldRead
 		&& TyAliasExpansion.revealNonNullable(operand.getExpressions()[0].getType()).isAnonymous();
+	// An optional structure field (`{?x:Int}`) has no native compound lowering:
+	// the typer leaves such a structure type unresolved, and the field holds a
+	// nullable value. Stop with a named error; before, the backend silently
+	// dropped the statement.
+	final receiverType = operand.getTag() == FieldRead ? TyAliasExpansion.revealNonNullable(operand.getExpressions()[0].getType()) : null;
+	final unresolvedStructure = receiverType != null
+		&& receiverType.isUnresolved()
+		&& StringTools.startsWith(receiverType.getDisplay(), "{");
+	if (field == null && ((structural && operand.getType().isNullable()) || unresolvedStructure))
+		throw "unsupported native OCaml compound assignment "
+			+ assignment
+			+ " on optional structure field `"
+			+ operand.getTexts()[0]
+			+ "` of "
+			+ (receiverType == null ? "an unknown structure" : receiverType.getDisplay())
+			+ (expression.getPosition() == null ? "" : " at " + expression.getPosition().toString())
+			+ " (haxe_ocaml-gaa3a)";
 	if ((!stringAppend && !intUpdate && !floatUpdate)
 		|| (operand.getTag() != FieldRead && operand.getTag() != NameRead)
 		|| expression.getType().getSemanticKey() != key)

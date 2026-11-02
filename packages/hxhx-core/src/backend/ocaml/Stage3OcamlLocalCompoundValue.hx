@@ -50,7 +50,7 @@ enum Stage3OcamlLocalCompoundKind {
 	Int bitwise ones (`|= &= ^= <<= >>= >>>=`). A bitwise operator is valid Haxe
 	only on Int-like locals, so `arithmetic` admits it only for `IntUpdate`.
  */
-function isArithmeticOperator(op:String):Bool {
+function isCompoundOperator(op:String):Bool {
 	return switch op {
 		case "+=" | "-=" | "*=" | "/=" | "%=": true;
 		case _: isBitwiseOperator(op);

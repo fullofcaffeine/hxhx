@@ -2618,7 +2618,7 @@ class EmitterStage {
 
 	/** Whether `target op= value` is an arithmetic compound assignment of a mutable local. */
 	static function isLocalCompoundValue(op:String, target:HxExpr):Bool {
-		return backend.ocaml.Stage3OcamlLocalCompoundValue.isArithmeticOperator(op) && switch target {
+		return backend.ocaml.Stage3OcamlLocalCompoundValue.isCompoundOperator(op) && switch target {
 			case EIdent(name): isMutableLocalRefIdent(name);
 			case _: false;
 		};
