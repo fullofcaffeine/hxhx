@@ -86,6 +86,12 @@ class Stage3OcamlClassStorage {
 			modules.set(identity, outputModule);
 	}
 
+	/** The module this request emits for an admitted generated class, or null when another owner supplies the class. */
+	public function outputModule(type:TyType):Null<String> {
+		final identity = type.unwrapNull().getNominalIdentity();
+		return identity == null ? null : modules.get(identity.getCanonicalName());
+	}
+
 	/** Runtime catch names come from admitted declarations, never aliases or printed type hints. */
 	public function nominalName(type:TyType):Null<String> {
 		final identity = type.unwrapNull().getNominalIdentity();
