@@ -2773,11 +2773,6 @@ class EmitterStage {
 					+ "("
 					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 					+ ")";
-			case ECall(EField(EIdent("Math"), "round"), [arg]):
-				return "(int_of_float (floor (("
-					+ exprToOcamlAsFloatValueStage3(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-						callSigByCallee)
-					+ ") +. 0.5)))";
 			case ECall(EField(obj, "toString"), []) if (stage3IsStringExpr(obj, tyByIdent)):
 				return exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 			case _:
@@ -2851,11 +2846,7 @@ class EmitterStage {
 		}
 		if (stage3RootCallArgs(e, "Math", "pow", 2) != null)
 			return "(Obj.magic 0)";
-		if (stage3RootCallArgs(e, "Math", "floor", 1) != null)
-			return "(Obj.magic 0)";
 		if (stage3RootCallArgs(e, "Math", "log", 1) != null)
-			return "(Obj.magic 0)";
-		if (stage3RootCallArgs(e, "Math", "fround", 1) != null)
 			return "(Obj.magic 0)";
 		if (stage3RootCallArgs(e, "Timer", "stamp", 0) != null)
 			return "(Unix.gettimeofday ())";

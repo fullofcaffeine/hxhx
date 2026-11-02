@@ -1,7 +1,7 @@
 {
   "model": "recorded-ocaml-runtime-requirements",
   "runtimeVersion": "1",
-  "runtimeSourceRevision": "sha256:ff592535b114e0ba676f22e98f695b9155d1b534b2e1d72355c5cdc784811ea6",
+  "runtimeSourceRevision": "sha256:2783dc99ee5a42771dd12f18411938170441943ed23c32989433b5c6bd81c83d",
   "compilerObservationGranularity": "module-name-only",
   "runtimeSources": [
     {
@@ -10402,7 +10402,7 @@
     "HxSys",
     "HxType"
   ],
-  "reportRevision": "sha256:171a01333ec8fb04b23c4a17a376f0caa7ca3d046eb4fd358b62bf77e3378e40",
+  "reportRevision": "sha256:373b8e04bd3a6eba505236e74577b8ecb5732e33b3efe00dc78a8ec6de1c276f",
   "runtimeMode": "full",
   "recordedRequirementSourceKinds": [
     "compiler-infrastructure",
