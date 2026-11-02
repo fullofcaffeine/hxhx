@@ -97,3 +97,41 @@ OCaml exceptions raised by OCaml stdlib code are not tagged as Haxe types.
 
 - `catch (e:Dynamic)` can catch them.
 - Typed catches (`catch (e:T)`) are not expected to match them.
+
+## Runtime failures in hxhx native (Stage3) output
+
+The hxhx native route (Stage3) uses the same `HxRuntime` module, but it
+treats failures from the OCaml runtime as Haxe `String` values, as upstream
+Haxe 4.3.7 does. For example:
+
+```haxe
+try {
+  sys.io.File.getContent("missing.txt");
+} catch (e:String) {
+  trace(e); // Could not read file missing.txt
+}
+```
+
+What happens at each Stage3 `try`:
+
+- Every OCaml exception that reaches the `try` goes through
+  `HxRuntime.catchable_exception`, the one place that decides what Haxe code
+  can catch.
+- A Haxe `throw` keeps its value and type tags.
+- `Sys_error` becomes its message text. The file-system runtime
+  (`HxFile`, `HxFileSystem`, `HxSys.setCwd`) shapes that text to match
+  upstream, for example `No such file or directory(rmdir, missing)`.
+- `Failure`, `Invalid_argument`, `Not_found`, `End_of_file`, and
+  `Division_by_zero` become their printed OCaml form, for example
+  `Failure("get_full_path")`.
+- Each such value matches `catch (e:Dynamic)`, `catch (e:String)`, and
+  `catch (e:haxe.Exception)`. A `haxe.Exception` handler receives an
+  exception object whose `message` is the text.
+- Everything else passes through unchanged: loop `break`/`continue`, each
+  function's private early-return signal, and fatal conditions such as
+  `Stack_overflow`.
+
+Known gaps: the `haxe.Exception` object is a plain `haxe.Exception`, not a
+`haxe.ValueException` (`haxe_ocaml-du1j7`), and `Std.string(e)` on it does not
+call `toString` yet (`haxe_ocaml-czx3v`). The behavior is checked by
+`npm run test:m14:stage3-runtime-exception-catch`.
