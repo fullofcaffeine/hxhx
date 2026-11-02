@@ -57,11 +57,15 @@ class M14UndeclaredNameDiagnosticTest {
 	}
 
 	/** Upstream and hxhx must both reject `source` with a message containing `message`, on `line`. */
-	static function reject(name:String, source:String, message:String, line:Int):Void {
+	static function reject(name:String, source:String, message:String, line:Int, ?providers:Array<{path:String, source:String}>):Void {
 		final root = ".tmp/m14_undeclared_names_" + name;
 		deleteRecursive(root);
 		FileSystem.createDirectory(root);
 		File.saveContent(root + "/Main.hx", source);
+		for (provider in (providers == null ? [] : providers)) {
+			FileSystem.createDirectory(haxe.io.Path.directory(root + "/" + provider.path));
+			File.saveContent(root + "/" + provider.path, provider.source);
+		}
 		final upstream = upstreamDiagnostic(root);
 		if (upstream == null || upstream.indexOf("Main.hx:" + line + ":") < 0 || upstream.indexOf(message) < 0)
 			throw name + ": upstream must reject on line " + line + " with <" + message + ">, got: " + upstream;
@@ -119,5 +123,39 @@ class M14UndeclaredNameDiagnosticTest {
 		if (accepted != null)
 			throw "valid_names: hxhx typing must accept the declared and untyped names, got: " + accepted;
 		Sys.println("M14_UNDECLARED_NAMES_VALID:PASS");
+		buildMacroNames();
+	}
+
+	/**
+		A build macro can add the field a name refers to. The native in-process
+		lane does not apply build fields yet, so the name check must leave such a
+		module alone rather than report "Unknown identifier" for a valid program.
+	**/
+	static function buildMacroNames():Void {
+		final root = ".tmp/m14_undeclared_names_build_macro";
+		deleteRecursive(root);
+		FileSystem.createDirectory(root);
+		File.saveContent(root + "/Macros.hx",
+			'import haxe.macro.Context;\nimport haxe.macro.Expr;\n\nclass Macros {\n\tpublic static macro function build():Array<Field> {\n\t\tfinal fields = Context.getBuildFields();\n\t\tfields.push({name: "Generated", access: [AStatic, APublic], kind: FVar(macro :Int, macro 42), pos: Context.currentPos()});\n\t\treturn fields;\n\t}\n}\n');
+		final source = '@:build(Macros.build())\nclass Main {\n\tstatic function main() {\n\t\tSys.println(Generated);\n\t}\n}\n';
+		File.saveContent(root + "/Main.hx", source);
+		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", root, "--run", "Main"], expected: "42\n"});
+		final diagnostic = hxhxDiagnostic(root);
+		if (diagnostic != null && diagnostic.indexOf("Unknown identifier") >= 0)
+			throw "build_macro: a name a build macro adds must not be reported as unknown, got: " + diagnostic;
+		final code = hxhx.Stage3Compiler.run([
+			"-cp",
+			root,
+			"-main",
+			"Main",
+			"--hxhx-no-run",
+			"--hxhx-no-emit",
+			"--hxhx-out",
+			root + "/out"
+		]);
+		if (code != 0)
+			throw "build_macro: the no-emit driver must not reject the build-macro program (exit " + code + ")";
+		deleteRecursive(root);
+		Sys.println("M14_UNDECLARED_NAMES_BUILD_MACRO:PASS");
 	}
 }
