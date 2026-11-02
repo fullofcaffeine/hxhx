@@ -27,20 +27,23 @@ private function lowerExpression(expression:TypedExpr, allocator:TyCompilerTempo
 		return lowerIndexedStep(rebuilt, operand, allocator);
 	final field = operand.getFieldInfo();
 	final valueType = operand.getType();
-	final key = valueType.getSemanticKey();
-	if (key != "primitive:Int" && key != "primitive:Float")
+	final stepType = steppedType(valueType);
+	if (stepType == null)
 		return rebuilt;
+	final key = stepType.getSemanticKey();
 	// A field of an anonymous structure (`{k: 1}`) has no declared field facts.
 	// Its read and write already lower through the structural object path.
 	final structural = field == null
 		&& operand.getTag() == FieldRead
 		&& TyAliasExpansion.revealNonNullable(operand.getExpressions()[0].getType()).isAnonymous();
+	if (structural && valueType.isNullable())
+		return rebuilt;
 	if (!structural
 		&& ((operand.getTag() != FieldRead && operand.getTag() != NameRead)
 			|| field == null
 			|| field.getIsStatic()
 			|| field.getIsFinal()
-			|| field.getType().getSemanticKey() != key
+			|| field.getType().getSemanticKey() != valueType.getSemanticKey()
 			|| (field.getPropertyGet() != "" && field.getPropertyGet() != "default")
 			|| (field.getPropertySet() != "" && field.getPropertySet() != "default")))
 		return rebuilt;
@@ -55,8 +58,8 @@ private function lowerExpression(expression:TypedExpr, allocator:TyCompilerTempo
 	function capture(binding:TyLocalBinding, value:TypedExpr):TypedExpr
 		return TypedExpr.temporary(binding.getSourceName(), binding.getType().getCanonicalDisplay(), value, TyType.fromHintText("Void"), position, binding);
 	final place = receiverBinding == null ? operand : TypedExpr.fieldRead(read(receiverBinding), fieldName, valueType, position, field);
-	final one = key == "primitive:Int" ? TypedExpr.intLiteral(1, valueType, position) : TypedExpr.floatLiteral(1.0, valueType, position);
-	final next = TypedExpr.binary(op == HxUnaryOperator.Increment ? "+" : "-", read(oldBinding), one, valueType, position);
+	final one = key == "primitive:Int" ? TypedExpr.intLiteral(1, stepType, position) : TypedExpr.floatLiteral(1.0, stepType, position);
+	final next = TypedExpr.binary(op == HxUnaryOperator.Increment ? "+" : "-", read(oldBinding), one, stepType, position);
 	final sequence = receiverBinding == null ? [] : [capture(receiverBinding, receiver)];
 	return TypedExpr.block(sequence.concat([
 		capture(oldBinding, place),
@@ -66,14 +69,28 @@ private function lowerExpression(expression:TypedExpr, allocator:TyCompilerTempo
 }
 
 /**
+	The type `++`/`--` computes in for a slot of type `type`: `Int` or `Float`,
+	also when the slot is `Null<Int>` or `Null<Float>`. The new value is stored
+	back with the slot's own type, so a nullable slot is re-boxed by the
+	ordinary assignment. A null value throws "Null Access" when it is read for
+	the arithmetic. Returns null for every other type.
+**/
+private function steppedType(type:TyType):Null<TyType> {
+	final inner = type.isNullable() ? type.unwrapNull() : type;
+	final key = inner.getSemanticKey();
+	return key == "primitive:Int" || key == "primitive:Float" ? inner : null;
+}
+
+/**
 	Lower `a[i]++`, `++a[i]`, `a[i]--`, and `--a[i]` on an `Array<Int>` or `Array<Float>`.
 
 	Stage3 had no lowering for an indexed operand, so the whole update became a
 	placeholder and was dropped. This rewrites it into operations Stage3 already
 	emits: bind the array and the index once, read the old element, store
 	old plus or minus 1, then yield the old value (postfix) or the new value
-	(prefix). The array and index expressions run once, in source order. Other
-	element types, such as `Null<Int>`, and other indexed receivers, such as
+	(prefix). The array and index expressions run once, in source order.
+	`Int`, `Float`, `Null<Int>`, and `Null<Float>` elements are lowered (see
+	`steppedType`); other element types, and other indexed receivers such as
 	abstracts with `@:arrayAccess`, keep their existing owners.
  */
 private function lowerIndexedStep(expression:TypedExpr, operand:TypedExpr, allocator:TyCompilerTemporaryAllocator):TypedExpr {
@@ -87,11 +104,10 @@ private function lowerIndexedStep(expression:TypedExpr, operand:TypedExpr, alloc
 	if (identity == null || identity.getCanonicalName() != "Array" || arrayType.getTypeArguments().length != 1)
 		return expression;
 	final elementType = operand.getType();
-	// `Null<Int>` and `Null<Float>` elements step their value; the stored result is the nullable slot type.
-	final stepType = elementType.isNullable() ? elementType.unwrapNull() : elementType;
-	final key = stepType.getSemanticKey();
-	if (key != "primitive:Int" && key != "primitive:Float")
+	final stepType = steppedType(elementType);
+	if (stepType == null)
 		return expression;
+	final key = stepType.getSemanticKey();
 	final position = expression.getPosition();
 	function read(binding:TyLocalBinding):TypedExpr
 		return TypedExpr.localRead(binding.getSourceName(), binding.getType(), position, binding);
