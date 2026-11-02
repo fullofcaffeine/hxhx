@@ -246,6 +246,15 @@ the relevant bead/checkpoint note.
 The README keeps only the current readiness review. Older reviews move here so
 their evidence links stay findable. Newest entries come first.
 
+#### 2026-11-01: progress bars unchanged
+
+Evidence since 2026-10-30:
+
+- PRs #112, #114, #115, and #116 route `.length`, `String` methods, `Map` types, and interface-typed calls in Stage3 native output to the runtime instead of empty generated stubs, with emit-time errors for unsupported shapes. Open: virtual dispatch for overrides (`haxe_ocaml-tcf2h`) and `super.method()` (`haxe_ocaml-37rs6`).
+- PRs #108, #113, and #110 add the macro compilation context, receipt v3 bound to the compiler binary and OCaml toolchain (`haxe_ocaml-kokp8`), and the in-process project macro plugin build and cache driver.
+- Bootstrap regeneration from `main` at `c7c67c570` (run 41333694128) failed: `reflaxe.ocaml` rejected a `Null<Map>` receiver added in #116 (`haxe_ocaml-f5jcm`). PR #118 fixes it; run 41337445958 regenerated the snapshot from the fix commit `f1ae9aaaa`, with verified digests, matching source and compiler-input fingerprints, a native build, and a local `hxhx` end-to-end run whose only failures were the expected negative checks. The snapshot is imported in #118. Follow-ups: `haxe_ocaml-4zcbt` (support or diagnose `Null<Map>` receivers) and `haxe_ocaml-e9mgv` (catch such sources before merge).
+- The Gate 1 Lite upstream macro unit smoke still fails at `TestMain.hx:122`; the weekly Gate 1 confirmation of #101 (`haxe_ocaml-fdq0p`) is still pending.
+
 #### 2026-10-30: progress bars unchanged
 
 Evidence since 2026-10-29:

@@ -11,7 +11,7 @@ let render = fun input -> let occurrence = Obj.magic (Obj.obj (HxAnon.get input 
   let declaration = Obj.magic (TypedBackendMethodOccurrence.getDeclaration (Obj.magic occurrence) ()) in (
     ignore (TyDeclarationInfo.requireSupportedImplementation (Obj.magic declaration) ());
     let signature = Obj.obj (HxAnon.get input "signature") in (
-      ignore (if TyDeclarationInfo.getIsDynamic (Obj.magic declaration) () || not (TyDeclarationInfo.getHasBody (Obj.magic declaration) ()) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml method value requires an ordinary implemented method") ["Dynamic"] else ());
+      ignore (if TyDeclarationInfo.getIsDynamic (Obj.magic declaration) () || not (TyDeclarationInfo.getHasBody (Obj.magic declaration) ()) && not (HxRuntime.unbox_bool_or_obj (HxAnon.get input "interfaceDispatch")) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml method value requires an ordinary implemented method") ["Dynamic"] else ());
       ignore (if signature == Obj.magic (HxRuntime.hx_null) || not (HxRuntime.unbox_bool_or_obj (HxAnon.get signature "needsReceiver")) || Obj.obj (HxAnon.get signature "expected") < 1 || HxRuntime.unbox_bool_or_obj (HxAnon.get signature "hasRest") || (let __array_receiver_3 = Obj.magic (Obj.obj (HxAnon.get signature "paramFillable")) in let __array_arg_0_4 = true in HxArray.contains __array_receiver_3 __array_arg_0_4) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml method value requires its fixed required receiver ABI") ["Dynamic"] else ());
       let tempHxExpr = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
         ignore (let _g = Obj.magic (TypedBackendMethodOccurrence.getExpression (Obj.magic occurrence) ()) in if (match _g with

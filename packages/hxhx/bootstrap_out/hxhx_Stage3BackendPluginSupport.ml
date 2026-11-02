@@ -348,6 +348,17 @@ let buildProviderDefines = fun allDefines -> let providerDefines = Obj.magic (le
   providerDefines
 )
 
+let retainNativeCall = fun selected -> let cpp = Backend_cpp_CppNativeCallPolicy.forBackend selected in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
+  ignore (if cpp != Obj.magic (HxRuntime.hx_null) then let __assign_175 = Obj.magic (Obj.magic cpp) in (
+    tempResult := __assign_175;
+    __assign_175
+  ) else let __assign_176 = Obj.magic (Obj.magic (Backend_ocaml_Stage3OcamlNativeCallPolicy.forBackend selected)) in (
+    tempResult := __assign_176;
+    __assign_176
+  ));
+  Obj.magic (!tempResult)
+)
+
 let selectBackend = fun backendId providerDefines output -> (
   ignore (try ignore ((
     ignore (if let __call_arg_0_162 = "HXHX_TRACE_STAGE3_DRIVER" in isTrueEnv __call_arg_0_162 then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) ("stage3_driver=before_load_dynamic_backend_providers" : string)) else ());
@@ -394,7 +405,7 @@ let selectBackend = fun backendId providerDefines output -> (
         let backendCaps = Obj.obj (HxAnon.get selected "capabilities") in let __anon_174 = HxAnon.create () in (
           ignore (HxAnon.set __anon_174 "backend" (Obj.repr backend));
           ignore (HxAnon.set __anon_174 "descriptor" selected);
-          ignore (HxAnon.set __anon_174 "retainNativeCall" (Obj.repr (Backend_cpp_CppNativeCallPolicy.forBackend selected)));
+          ignore (HxAnon.set __anon_174 "retainNativeCall" (Obj.repr (retainNativeCall selected)));
           ignore (HxAnon.set __anon_174 "supportsCustomOutputFile" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get backendCaps "supportsCustomOutputFile") = true)));
           ignore (HxAnon.set __anon_174 "supportsBuildExecutable" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get backendCaps "supportsBuildExecutable") = true)));
           __anon_174

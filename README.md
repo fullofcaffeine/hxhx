@@ -52,46 +52,35 @@ column control the claim.
 Overall north-star readiness: `[###-------]` about 30–35% (coarse; not
 additive).
 
-Readiness review, 2026-10-30. These changes reached `main` since the
-2026-10-29 review:
+Readiness review, 2026-11-01. These changes reached `main` since the
+2026-10-30 review:
 
-- A first project expression macro now runs. PRs #104, #105, and #103 let an
-  in-process `hxhx` compile run a project's own macro from a native plugin
-  that `hxhx` compiles itself. The test macro returns its argument unchanged,
-  and the program prints what upstream Haxe prints. Limits: no
-  `haxe.macro.Context` API, no reification, the plugin is built by a separate
-  script step, and the external macro host does not run macros yet
-  (`haxe_ocaml-9sj5p`).
-- PR #101 fixes native programs from the Stage3 emitter where many `Array`
-  methods (`sort`, `pop`, `reverse`, `remove`, and others) silently did
-  nothing. They now use the runtime. It also fixes the sort comparator compile
-  error that stopped the weekly Gate 1 and M7 runs. No weekly run has
-  confirmed that fix yet.
-- PR #97 makes compound assignments such as `x -= 2` produce the stored value
-  when used as a value, with upstream evaluation order.
-- PR #106 makes `sys.io.File` and `sys.FileSystem` calls work in native
-  Stage3 programs however they are spelled. Before, qualified calls such as
-  `sys.io.File.getContent(...)` reached an empty stub and crashed. A static
-  call that would reach such a stub now stops the compile with an error
-  instead. Byte and stream file operations are not routed yet
-  (`haxe_ocaml-ysjdv`), and native file errors cannot yet be caught from
-  Haxe (`haxe_ocaml-u3n4l`).
-- Bootstrap snapshot imports (PRs #99, #102, and the import after #106) keep
-  the committed compiler current. It now includes #95, #97, #101, the macro
-  work in #103, and #106.
-- PR #98 gives every known red CI result an owner. The evidence audit, which
-  had failed since 2026-08-16, now
-  [passes](https://github.com/fullofcaffeine/hxhx/actions/runs/41030387107).
-  PR #100 rebalances the slowest test shard: it took 38–40 minutes against a
-  40-minute limit and now takes about 18–27 minutes.
+- Native Stage3 programs reach the runtime instead of empty stubs in more
+  places. PR #112 fixes `.length` on nullable and aliased values, PR #114
+  routes the standard `String` methods, PR #115 routes `Map`, `StringMap`,
+  `IntMap`, and `ObjectMap`, and PR #116 makes calls through an interface
+  type run the implementing class's method. Before #116, such a call returned
+  the placeholder `0` or crashed. Shapes the emitter cannot lower yet stop the
+  compile with a named error. Known gaps: an overridden method called through
+  a superclass-typed value still runs the superclass method
+  (`haxe_ocaml-tcf2h`), and `super.method()` is not lowered yet
+  (`haxe_ocaml-37rs6`).
+- Project macro plugins are now built, cached, and loaded by `hxhx` itself.
+  PRs #108, #113, and #110 add the macro compilation context, a plugin receipt
+  bound to the compiler binary and the OCaml toolchain, and the build and
+  cache driver with time limits and interrupt handling. The plugin step no
+  longer needs a separate script. Macro reification and the
+  `haxe.macro.Context` API are still open (`haxe_ocaml-9sj5p`).
+- PR #118 fixes a compiler source that the `reflaxe.ocaml` build of `hxhx`
+  rejected, which had stopped bootstrap regeneration. It also imports the
+  bootstrap snapshot generated from that commit, so the committed compiler now
+  includes #108 and #110 through #116. On that snapshot, the local `hxhx`
+  end-to-end run passed with only its expected negative checks failing.
 
-Strongest current evidence: on `main` after PR #105, all
-[Core checks](https://github.com/fullofcaffeine/hxhx/actions/runs/41033464232)
-passed, including the `hxhx` end-to-end job. Gate 2 Lite, Gate 3 native
-target smoke, the JavaScript oracle smoke, the stdlib checks, and the package
-matrix also passed on that revision. The Gate 1 Lite upstream macro unit smoke
-still
-[fails](https://github.com/fullofcaffeine/hxhx/actions/runs/41033464229) at
+Strongest current evidence: the bootstrap regeneration
+[run 41337445958](https://github.com/fullofcaffeine/hxhx/actions/runs/41337445958)
+rebuilt `hxhx` from its own sources through `reflaxe.ocaml` and verified the
+result. The Gate 1 Lite upstream macro unit smoke still fails at
 `TestMain.hx:122`.
 
 Broader macro execution, the shared OCaml target work, the upstream suite
