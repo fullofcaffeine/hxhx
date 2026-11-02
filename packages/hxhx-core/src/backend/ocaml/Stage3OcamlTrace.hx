@@ -22,27 +22,55 @@ package backend.ocaml;
 	program that replaces `haxe.Log.trace` is not supported, because Stage3
 	does not run reassigned dynamic functions yet (haxe_ocaml-waz9w).
 
-	File name: upstream prints the class path as given plus the module's path,
-	for example `src/Main.hx` for `-cp src`. Stage3 resolves class paths to
-	absolute paths before emission, so `displayFileName` prints a path under
-	the compiler's working directory relative to it. That matches upstream for
-	relative class paths. With an absolute `-cp`, upstream prints the absolute
-	path and Stage3 prints the relative one.
+	File name: upstream prints the path relative to the class path that owns
+	the module, spelled as that class path was given. `-cp src` prints
+	`src/Main.hx`, `-cp ../src` prints `../src/Main.hx`, and an absolute
+	`-cp /abs/src` prints `Main.hx` (or `pkg/Sub.hx`); only `-D absolute-path`
+	prints absolute paths. Stage3 resolves class paths to absolute paths before
+	emission and does not keep their spelling, so `displayFileName` prints the
+	module path relative to the compiler's working directory. That matches
+	upstream for a relative class path under the working directory, the usual
+	hxml case. It differs for an absolute class path (Stage3 prints a longer
+	relative path) and for a class path outside the working directory, such as
+	`../src` (Stage3 prints the absolute path).
+
+	Arguments are evaluated once, left to right, as upstream does: each is
+	bound with `let` before the line is assembled, because OCaml may evaluate
+	list elements and application arguments right to left.
 **/
 class Stage3OcamlTrace {
 	/**
 		The OCaml expression that prints one trace line. `text` renders one
 		argument as an OCaml `string` expression from its checked type.
 	**/
-	public static function render(fact:TypedBackendTraceOccurrence, fileName:String, text:(HxExpr, TyType) -> String, quote:String->String):String {
+	public static function render(fact:TypedBackendTraceOccurrence, fileName:String, text:(HxExpr, TyType) -> String, quote:String->String,
+			names:Stage3OcamlLocalNames):String {
+		if (names == null)
+			throw "OCaml trace rendering requires a local naming owner";
 		final prefix = fileName + ":" + fact.line + ": ";
+		final bound = [
+			for (index in 0...fact.arguments.length)
+				names.internalName("__hx_trace_argument_" + index)
+		];
 		final parts = [quote(prefix)];
-		for (index in 0...fact.arguments.length) {
+		for (index in 0...bound.length) {
 			if (index > 0)
 				parts.push(quote(","));
-			parts.push("(" + text(fact.arguments[index], fact.argumentTypes[index]) + ")");
+			parts.push(bound[index]);
 		}
-		return "print_endline (" + (fact.arguments.length == 0 ? quote(prefix) : "Stdlib.String.concat \"\" [" + parts.join("; ") + "]") + ")";
+		var body = "print_endline (Stdlib.String.concat \"\" [" + parts.join("; ") + "])";
+		var index = bound.length;
+		while (index-- > 0)
+			body = "let " + bound[index] + " = (" + text(fact.arguments[index], fact.argumentTypes[index]) + ") in " + body;
+		return "(" + body + ")";
+	}
+
+	/** Whether every argument has a checked type that the typed text conversion accepts. */
+	public static function hasCompleteTypes(fact:TypedBackendTraceOccurrence):Bool {
+		for (type in fact.argumentTypes)
+			if (type == null || type.isUnknown() || type.isUnresolved() || type.hasUnknownComponent())
+				return false;
+		return true;
 	}
 
 	/** The file name a trace prints for a module loaded from `path`; see the class notes. */

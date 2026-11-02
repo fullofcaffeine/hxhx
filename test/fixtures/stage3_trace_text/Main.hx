@@ -11,6 +11,16 @@ class Holder {
 }
 
 class Main {
+	// Static writes are stored only with haxe_ocaml-nq65n (PR #131), so the
+	// counter lives in an array element.
+	static final calls:Array<Int> = [0];
+
+	static function next():Int {
+		final value = calls[0];
+		calls[0] = value + 1;
+		return value;
+	}
+
 	static var flag = true;
 
 	static function main() {
@@ -23,6 +33,8 @@ class Main {
 		trace(nothing);
 		trace(Flagged(true), Pair(false, "p"));
 		Helper.report(7);
+		// Arguments are evaluated once, left to right.
+		trace(next(), next(), next());
 		haxe.Log.trace("direct", null);
 		// Bool enum arguments.
 		Sys.println(Std.string(Flagged(true)) + " " + Pair(false, "x"));
