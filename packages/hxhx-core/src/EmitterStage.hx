@@ -1869,11 +1869,14 @@ class EmitterStage {
 		and inline abstract methods. An inline method (such as the standard
 		`Int32` increment operators) keeps the older bring-up lowering, which does
 		not write the caller's value back; Bead haxe_ocaml-rs48f tracks that gap.
+		Any other constructor, inline or not, is owned here so that it is
+		rejected rather than dropped.
 	**/
 	static function ownsThisAssignment():Bool {
-		if (currentAbstractConstructor != null)
+		if (currentAbstractConstructor != null || currentTypedFunction == null)
 			return true;
-		return currentTypedFunction == null || !currentTypedFunction.requireSemanticDeclaration().getIsInline();
+		final declaration = currentTypedFunction.requireSemanticDeclaration();
+		return !declaration.getIsInline() || (declaration.getSignature().getName() == "new" && !declaration.getIsStatic());
 	}
 
 	/**
