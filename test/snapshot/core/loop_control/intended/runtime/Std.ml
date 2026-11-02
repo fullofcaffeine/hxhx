@@ -39,8 +39,13 @@ let string (v : Obj.t) : string =
   HxDynamic.toStdString v
 
 let int (x : float) : int =
-  (* Haxe: rounded towards 0. *)
-  try int_of_float x with _ -> 0
+  (* Haxe: truncate toward 0, then wrap into the signed 32-bit Int range, as
+     upstream eval does: Std.int(4294967295.0) is -1 and Std.int(2^31) is
+     -2147483648. `int_of_float` never raises. NaN gives 0. For +/-Infinity
+     and |x| >= 2^63 the truncated value depends on the CPU's conversion, the
+     same primitive eval uses (see docs/00-project/FLOAT_NUMERIC_REVIEW_GATE.md
+     and Bead haxe_ocaml-3lpr4). *)
+  Int32.to_int (Int32.of_int (int_of_float x))
 
 let parseInt (x : string) : Obj.t =
   if x == hx_null_string then
