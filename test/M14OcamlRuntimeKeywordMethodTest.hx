@@ -8,10 +8,9 @@ import sys.io.File;
 	that exported name, not the `match_` spelling that stage3 gives to the
 	modules it writes itself.
 
-	The native build is the check: OCaml rejects any call to a name that the
-	runtime module does not export. The program is not run, because stage3 does
-	not yet construct runtime-provided externs such as `new EReg(...)`
-	(Bead haxe_ocaml-r4ylw).
+	The native build checks the names: OCaml rejects any call to a name that the
+	runtime module does not export. Running the program checks that the regex
+	literal builds a real runtime value (Bead haxe_ocaml-r4ylw).
  */
 class M14OcamlRuntimeKeywordMethodTest {
 	static function main():Void {
@@ -33,6 +32,7 @@ class M14OcamlRuntimeKeywordMethodTest {
 		final generated = File.getContent(output + "/Main.ml");
 		if (generated.indexOf("EReg.hx_match") < 0 || generated.indexOf("EReg.match_") >= 0 || generated.indexOf("EReg.matched") < 0)
 			throw "runtime EReg calls do not use the runtime export names: " + generated;
+		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: "true\nabc\n"});
 		Sys.println("OCAML_RUNTIME_KEYWORD_METHOD:PASS");
 	}
 }
