@@ -4800,7 +4800,11 @@ class EmitterStage {
 								for (argument in fullArgs)
 									currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(argument) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(argument)
 							];
-							for (sentinel in backend.ocaml.Stage3OcamlLocalCallOmissions.omitted(typedCall, supplied))
+							final slots:backend.ocaml.Stage3OcamlLocalCallOmissions.SentinelSlots = {
+								isEnumBox: type -> currentEnums != null && currentEnums.runtimeName(type) != null,
+								referenceCarrier: type -> backend.ocaml.Stage3OcamlReferenceCarrier.select(type, currentClassStorage, ocamlTypeFromTy)
+							};
+							for (sentinel in backend.ocaml.Stage3OcamlLocalCallOmissions.omitted(typedCall, supplied, slots))
 								renderedArgs.push(sentinel);
 						}
 						final isHxAnonDynamicCall = c.indexOf("HxAnon.get") != -1;
