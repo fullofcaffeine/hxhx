@@ -12,6 +12,22 @@
 class M14ArityChecksTest {
 	static final root = "test/oracle/arity_checks_seed";
 
+	/**
+		Cases whose hxhx column differs from upstream's; only the line is compared.
+		A type-argument count inside a body points at the statement, not the hint.
+		A return hint points at the hint, where upstream points at the surplus argument.
+	**/
+	static final lineOnly = [
+		"AbstractTooManyTypes",
+		"GenericCtorTooManyTypes",
+		"LocalTooFewTypes",
+		"NewTooFewTypes",
+		"NewTooManyTypes",
+		"ReturnTooManyTypes",
+		"TypedefTooFewTypes",
+		"TypedefTooManyTypes"
+	];
+
 	static function main():Void {
 		upstream("Accepted", null);
 		load("Accepted");
@@ -24,6 +40,10 @@ class M14ArityChecksTest {
 			{module: "CtorNone", diagnostic: "Not enough arguments, expected x:Int, y:Int"},
 			{module: "CtorTooFew", diagnostic: "Not enough arguments, expected y:Int"},
 			{module: "CtorTooMany", diagnostic: "Too many arguments"},
+			{
+				module: "DisplayTooFew",
+				diagnostic: "Not enough arguments, expected f:Int -> Void, g:(Int, String) -> Bool, h:() -> Void, a:{ b : String, a : Int }, z:Int, o:Null<Int>, k:(Int -> Void) -> Int"
+			},
 			{module: "FieldTooFewTypes", diagnostic: "Not enough type parameters for Box"},
 			{module: "GenericCtorTooManyTypes", diagnostic: "Too many type parameters for G"},
 			{module: "GenericInheritedTooFew", diagnostic: "Not enough arguments, expected v:Int"},
@@ -48,7 +68,7 @@ class M14ArityChecksTest {
 			{module: "TypedefTooFewTypes", diagnostic: "Not enough type parameters for Pair"},
 			{module: "TypedefTooManyTypes", diagnostic: "Too many type parameters for Pair"}
 		]) {
-			upstream(entry.module, entry.diagnostic);
+			final expectedPosition = upstream(entry.module, entry.diagnostic);
 			var message:Null<String> = null;
 			try
 				load(entry.module)
@@ -56,6 +76,10 @@ class M14ArityChecksTest {
 				if (!StringTools.endsWith(error.getFilePath(), root + "/" + entry.module + ".hx"))
 					throw error;
 				message = error.getMessage();
+				final position = error.pos.getLine() + ":" + error.pos.getColumn();
+				final wanted = lineOnly.indexOf(entry.module) >= 0 ? expectedPosition.split(":")[0] + ":" + error.pos.getColumn() : expectedPosition;
+				if (position != wanted)
+					throw "arity diagnostic position differs for " + entry.module + ": " + position + ", upstream " + expectedPosition;
 			} catch (error:haxe.Exception) {
 				// Syntax errors surface from module loading as "parse_failed <path>: <message>".
 				final prefix = "parse_failed ";
@@ -75,8 +99,11 @@ class M14ArityChecksTest {
 		CppResolvedFixture.load({sourceRoot: root, mainModule: module, requiredModules: []});
 	}
 
-	/** The first upstream diagnostic line must carry the same message hxhx reports. */
-	static function upstream(module:String, diagnostic:Null<String>):Void {
+	/**
+		The first upstream diagnostic line must carry the same message hxhx reports.
+		Return its `line:column`, the first character of upstream's range.
+	**/
+	static function upstream(module:String, diagnostic:Null<String>):String {
 		final process = new sys.io.Process("node_modules/.bin/haxe", ["-cp", root, "-main", module, "--no-output"]);
 		final stderr = process.stderr.readAll().toString();
 		final code = process.exitCode();
@@ -84,5 +111,7 @@ class M14ArityChecksTest {
 		final first = stderr.split("\n")[0];
 		if (diagnostic == null ? code != 0 : code == 0 || !StringTools.endsWith(first, " : " + diagnostic))
 			throw "upstream arity contract differs for " + module + ": " + stderr;
+		final range = ~/:([0-9]+): characters ([0-9]+)-/;
+		return diagnostic != null && range.match(first) ? range.matched(1) + ":" + range.matched(2) : "";
 	}
 }

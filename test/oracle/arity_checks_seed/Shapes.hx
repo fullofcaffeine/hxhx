@@ -43,3 +43,7 @@ extern class Ext {
 	@:overload(function(a:Int, b:Int):Void {})
 	public function new(a:String);
 }
+
+class Shown {
+	public function new(x:Int, f:Int->Void, g:(Int, String) -> Bool, h:() -> Void, a:{a:Int, b:String}, z:Int = 2, ?o:Int, k:(Int->Void)->Int) {}
+}

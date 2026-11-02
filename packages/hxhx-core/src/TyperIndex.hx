@@ -26,6 +26,9 @@ class TyperIndex {
 	/** The source file whose signatures `indexModule` is resolving, for type-use diagnostics. **/
 	var signatureFilePath:String = "<signature>";
 
+	/** That file's text, used to place a diagnostic on the written type hint. **/
+	var signatureSource:String = "";
+
 	final byFullName:StringMap<TyNominalInfo>;
 	final byShortName:StringMap<Array<TyNominalInfo>>;
 	final identityByFullName:StringMap<TyNominalTypeId>;
@@ -443,16 +446,80 @@ class TyperIndex {
 		return false;
 	}
 
-	function semanticType(hint:String, packagePath:String, moduleName:Null<String>, directives:Array<HxModuleDirective>,
-			typeParams:Array<TyTypeParameterId>):TyType {
+	function semanticType(hint:String, packagePath:String, moduleName:Null<String>, directives:Array<HxModuleDirective>, typeParams:Array<TyTypeParameterId>,
+			?anchor:HxPos):TyType {
 		return resolveTypeUse(TyType.fromHintText(hint), {
 			packagePath: packagePath,
 			modulePath: canonicalModulePath(packagePath, moduleName),
 			directives: directives,
 			filePath: signatureFilePath,
-			position: HxPos.unknown(),
+			position: hintPosition(hint, anchor),
 			parameters: typeParams
 		}).getType();
+	}
+
+	/** Anchor a return hint after the parameter list, so it is not confused with an argument hint. **/
+	function returnHintAnchor(functionDeclaration:HxFunctionDecl):HxPos {
+		final start = HxFunctionDecl.getPos(functionDeclaration);
+		final open = start.getIndex() < 0 ? -1 : signatureSource.indexOf("(", start.getIndex());
+		if (open < 0)
+			return start;
+		var depth = 0;
+		for (index in open...signatureSource.length) {
+			final ch = signatureSource.charAt(index);
+			if (ch == "(")
+				depth++;
+			else if (ch == ")" && --depth == 0)
+				return new HxPos(index, start.getLine(), start.getColumn());
+		}
+		return start;
+	}
+
+	/**
+		Find where a type hint is written, searching forward from its declaration.
+
+		Hints are stored as text with whitespace removed (`Box<Int,String>`), so the
+		search skips whitespace in the source. For `static var field:Box<Int>` the
+		diagnostic then points at `Box<Int>`, as upstream's does. Without an anchor, or
+		when the text is not found, the declaration position (or unknown) is used.
+	**/
+	function hintPosition(hint:String, anchor:Null<HxPos>):HxPos {
+		if (anchor == null || anchor.getIndex() < 0 || hint == null || hint.length == 0 || signatureSource.length == 0)
+			return anchor == null ? HxPos.unknown() : anchor;
+		final wanted = StringTools.replace(StringTools.replace(StringTools.replace(hint, " ", ""), "\t", ""), "\n", "");
+		function isSpace(ch:String):Bool
+			return ch == " " || ch == "\t" || ch == "\r" || ch == "\n";
+		var start = anchor.getIndex();
+		while (start < signatureSource.length) {
+			final found = signatureSource.indexOf(wanted.charAt(0), start);
+			if (found < 0)
+				break;
+			var cursor = found;
+			var matched = 0;
+			while (matched < wanted.length && cursor < signatureSource.length) {
+				final ch = signatureSource.charAt(cursor);
+				if (isSpace(ch) && matched > 0) {
+					cursor++;
+					continue;
+				}
+				if (ch != wanted.charAt(matched))
+					break;
+				matched++;
+				cursor++;
+			}
+			if (matched == wanted.length) {
+				var line = 1;
+				var lineStart = 0;
+				for (index in 0...found)
+					if (signatureSource.charAt(index) == "\n") {
+						line++;
+						lineStart = index + 1;
+					}
+				return new HxPos(found, line, found - lineStart + 1);
+			}
+			start = found + 1;
+		}
+		return anchor;
 	}
 
 	static function addMethod(primary:StringMap<TyFunSig>, all:StringMap<Array<TyFunSig>>, signature:TyFunSig):Void {
@@ -670,6 +737,7 @@ class TyperIndex {
 		final moduleName = expectedModuleNameFromFile(ResolvedModule.getFilePath(module));
 		// A signature hint such as `static var field:Box<Int>` reports this file.
 		signatureFilePath = ResolvedModule.getFilePath(module);
+		signatureSource = parsedModule.getSource() == null ? "" : parsedModule.getSource();
 		final semanticModulePath = canonicalModulePath(packagePath, moduleName);
 		final directives = HxModuleDecl.getDirectives(moduleDeclaration);
 		final completed = new Array<{source:HxClassDecl, info:TyNominalInfo}>();
@@ -721,7 +789,7 @@ class TyperIndex {
 					&& hasMetadata(HxFieldDecl.getMetadata(field), "__hxhx_enum_abstract_value");
 				final fieldType = isEnumValue ? TyType.nominal(identity,
 					[for (parameter in parameterIds) TyType.typeParameter(parameter)]) : semanticType(HxFieldDecl.getTypeHint(field), packagePath, moduleName,
-						directives, parameterIds);
+						directives, parameterIds, HxFieldDecl.getPos(field));
 				final fieldName = HxFieldDecl.getName(field);
 				fields.set(fieldName,
 					new TyFieldInfo(identity, semanticModulePath, fieldName, fieldType, HxFieldDecl.getIsStatic(field),
@@ -785,9 +853,15 @@ class TyperIndex {
 				final argNames = new Array<String>();
 				final argOptional = new Array<Bool>();
 				final argRest = new Array<Bool>();
+				// Each argument hint is searched after the previous one, so `(a:Box<Int>, b:Box<Int>)` points at b's own hint.
+				var argumentAnchor = HxFunctionDecl.getPos(functionDeclaration);
 				for (argument in HxFunctionDecl.getArgs(functionDeclaration)) {
 					argNames.push(HxFunctionArg.getName(argument));
-					args.push(semanticType(HxFunctionArg.getTypeHint(argument), packagePath, moduleName, directives, functionParams));
+					final hint = HxFunctionArg.getTypeHint(argument);
+					final written = hintPosition(hint, argumentAnchor);
+					args.push(semanticType(hint, packagePath, moduleName, directives, functionParams, written));
+					if (written.getIndex() >= 0)
+						argumentAnchor = new HxPos(written.getIndex() + 1, written.getLine(), written.getColumn() + 1);
 					// Omission is allowed by a default as well as by ?. The declared value type stays unchanged.
 					final hasDefault = switch (HxFunctionArg.getDefaultValue(argument)) {
 						case Default(_): true;
@@ -799,7 +873,7 @@ class TyperIndex {
 
 				final returnType = functionName == "new" ? TyType.nominal(identity,
 					[for (parameter in parameterIds) TyType.typeParameter(parameter)]) : semanticType(HxFunctionDecl.getReturnTypeHint(functionDeclaration),
-						packagePath, moduleName, directives, functionParams);
+						packagePath, moduleName, directives, functionParams, returnHintAnchor(functionDeclaration));
 				final signature = new TyFunSig(functionName, isStatic, argNames, args, argOptional, argRest, returnType,
 					HxFunctionDecl.getPos(functionDeclaration));
 				if (isStatic)
