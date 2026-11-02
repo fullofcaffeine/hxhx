@@ -166,6 +166,7 @@
     "test:m14:structural-method-binder": "compiler-focused-2",
     "test:m14:dynamic-member-contract": "compiler-focused-2",
     "test:m14:hih-try-throw-stmt": "compiler-focused-1",
+    "test:m14:unbraced-try-catch": "compiler-focused-1",
     "test:m14:hih-nullable-enum-branch-emit": "compiler-focused-1",
     "test:m14:backend-registry": "compiler-focused-1",
     "test:m14:backend-provider-resolver": "compiler-focused-1",
