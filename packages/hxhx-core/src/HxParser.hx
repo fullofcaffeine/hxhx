@@ -1571,6 +1571,16 @@ class HxParser {
 		return parts.join("");
 	}
 
+	/** Whether the current keyword starts an expression and so ends a return type hint. */
+	function startsExpressionBody():Bool {
+		return switch cur.kind {
+			case TKeyword(KUntyped | KThis | KSuper | KNew | KCast | KFunction | KSwitch | KIf | KFor | KWhile | KDo | KTry | KReturn | KThrow | KBreak | KContinue | KVar | KFinal | KNull | KTrue | KFalse):
+				true;
+			case _:
+				false;
+		};
+	}
+
 	function readFunctionReturnTypeHint(stop:() -> Bool):String {
 		// In signatures like `function f():Bytes untyped { ... }`, `untyped`
 		// modifies the function body. Leave the token for the body parser so
@@ -1578,10 +1588,11 @@ class HxParser {
 		// Abstract constructors may use a semicolonless `this = value` body, so
 		// `this` is also a body boundary and can never be part of a type hint.
 		// Body metadata must reach the statement parser with its permission scope intact.
-		final hint = readTypeHintText(() -> stop() || isOtherChar("@") || cur.kind.match(TKeyword(KUntyped)) || cur.kind.match(TKeyword(KThis))
-			|| cur.kind.match(TKeyword(KSwitch)) || cur.kind.match(TKeyword(KIf)) || cur.kind.match(TKeyword(KFor)) || cur.kind.match(TKeyword(KWhile))
-			|| cur.kind.match(TKeyword(KDo)) || cur.kind.match(TKeyword(KTry)),
-			true);
+		// More generally, no keyword that can start an expression can continue a
+		// type. Without these stops `function put(v:Int):Void super.put(v);` read
+		// `Voidsuper.put(v)` as its return type and lost its body, so an override
+		// silently disappeared.
+		final hint = readTypeHintText(() -> stop() || isOtherChar("@") || startsExpressionBody(), true);
 		return hint;
 	}
 

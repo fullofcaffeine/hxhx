@@ -22,7 +22,7 @@ import sys.io.File;
 	  and Void results, optional arguments whose default differs per class,
 	  a method with its own type parameter,
 	  and `super` calls with and without arguments, in value and statement
-	  position, to a direct parent, to an ancestor through a class that does
+	  position, as an unbraced expression body, to a direct parent, to an ancestor through a class that does
 	  not override, and to a method no class overrides.
 	- The native executable must print exactly what upstream Haxe 4.3.7 prints.
 	- The generated modules must keep calls direct where no override can
@@ -90,7 +90,8 @@ class M14Stage3VirtualCallsTest {
 				source: hierarchy("public function count(...values:Int):Int\n\t\treturn values.length;",
 					"override public function count(...values:Int):Int\n\t\treturn 0;", "final b:Base = new Sub();\n\t\tSys.println(b.count(1, 2));")
 			},
-			{
+			{ // Upstream rejects this while typing (haxe_ocaml-rmknt); until hxhx does,
+				// the emitter must still refuse it by name.
 				name: "super_value",
 				expected: "super is supported only in super(...) and super.method(...) calls",
 				source: hierarchy("public function name():String\n\t\treturn \"base\";",
@@ -166,6 +167,7 @@ class M14Stage3VirtualCallsTest {
 		// Super calls reach the nearest ancestor's direct function.
 		requireText(outDir, "Main_Teacher", "Main_Person.name'direct)", "super.name() in Teacher");
 		requireText(outDir, "Main_Teacher", "Main_Person.shout'direct)", "super.shout() in statement position");
+		requireText(outDir, "Main_Teacher", "Main_Person.record'direct)", "super.record() as an unbraced expression body");
 		requireText(outDir, "Main_Professor", "Main_Teacher.name'direct)", "super.name() reaches Teacher through Assistant");
 		requireText(outDir, "Main_Professor", "Main_Person.describe'direct)", "super.describe() reaches Person through two classes");
 		requireText(outDir, "Main_Professor", "(Main_Person.tag)", "super.tag() reaches a method no class overrides");

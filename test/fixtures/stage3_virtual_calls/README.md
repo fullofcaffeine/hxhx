@@ -14,7 +14,7 @@ compares the native Stage3 program with upstream Haxe 4.3.7. It covers:
   default value differs between the class and its override, and a method with
   its own type parameter;
 - `super.method()` with and without arguments, in value and statement
-  position, to the direct parent, to an ancestor reached through a class that
+  position, as an unbraced expression body (`override function record(v:Int):Void super.record(v * 2);`), to the direct parent, to an ancestor reached through a class that
   does not override (`Professor` -> `Teacher` through `Assistant`), and to a
   method that no class overrides (`super.tag()`).
 

@@ -43,6 +43,9 @@ class Person implements Ranked {
 	public function ratio(?x:Float):String
 		return x == null ? "no ratio" : "ratio " + x;
 
+	public function record(value:Int):Void
+		Sys.println("person record " + value);
+
 	// No class overrides tag(), so its calls stay direct.
 	public function tag():String
 		return "tag " + first;
@@ -76,6 +79,10 @@ class Teacher extends Person {
 
 	override public function ratio(?x:Float = 2.5):String
 		return "teacher " + super.ratio(x);
+
+	// An expression body that starts with `super` (not a block).
+	override public function record(value:Int):Void
+		super.record(value * 2);
 
 	// A method with its own type parameter.
 	override public function echo<T>(value:T):T {
@@ -186,6 +193,9 @@ class Main {
 			+ people[0].score() + " / " + people[0].label("y"));
 
 		Sys.println(local.ratio() + " / " + local.ratio(0.5) + " / " + people[0].ratio() + " / " + people[0].ratio(0.25));
+
+		local.record(4);
+		people[0].record(4);
 
 		// Generic methods: arguments and results are erased in both classes.
 		Sys.println(local.echo("e") + " " + local.echo(7) + " " + people[0].echo(true));
