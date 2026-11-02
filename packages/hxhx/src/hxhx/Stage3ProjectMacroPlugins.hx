@@ -15,6 +15,9 @@ typedef Stage3ProjectMacroPluginInputs = {
 
 	/** `--hxhx-macro-cache <dir>`, or empty for the default cache root. */
 	final cacheRoot:String;
+
+	/** The absolute standard-library root, or empty when the request has none (see `isStandardLibraryFile`). */
+	final standardRoot:String;
 }
 
 /**
@@ -57,8 +60,13 @@ class Stage3ProjectMacroPlugins {
 			output:CompilationRequestOutput):Stage3ExprMacroPassResult {
 		if (session == null)
 			return Stage3ExprMacroPass.expand(resolved, setup, session, allowlist, openLoader);
-		final dispatch = new ProjectMacroCallDispatch(session, unavailableReason);
+		var index = setup.index;
+		final dispatch = new ProjectMacroCallDispatch(session, unavailableReason, declaration -> {
+			final owner = index.getRegisteredModule(declaration.getModulePath());
+			return owner != null && isStandardLibraryFile(ResolvedModule.getFilePath(owner), inputs.standardRoot);
+		});
 		final first = Stage3ExprMacroPass.expand(resolved, setup, dispatch.session(), allowlist, openLoader);
+		index = first.index;
 		if (dispatch.recorded.length == 0)
 			return first;
 
@@ -103,6 +111,77 @@ class Stage3ProjectMacroPlugins {
 			macroClassPaths.push(path);
 		}
 		return {keyClassPaths: keyClassPaths, macroClassPaths: macroClassPaths};
+	}
+
+	/**
+		Whether `filePath` is a standard-library source, so a macro declared there is not a project macro.
+
+		Upstream runs standard-library macros such as `python.Syntax.arrayAccess(x, rest:Array<Expr>)`
+		or `php.Syntax.customArrayDecl` in its own macro interpreter. hxhx does not compile them into project
+		macro plugins (`classPathsFor` leaves these roots out); ordinary typing checks their calls by
+		the macro call-site contract (`TyMacroCallSignature`) and the target backend lowers them. Such a
+		call is reported as unexecuted but never fails the compile. A file counts when it lies under
+		`standardRoot` (including its target `_std` overlays) or in the sources bundled into hxhx.
+	**/
+	public static function isStandardLibraryFile(filePath:String, standardRoot:String):Bool {
+		if (filePath == null || filePath.length == 0)
+			return false;
+		if (CompilerBundledSources.owns(filePath))
+			return true;
+		if (standardRoot == null || standardRoot.length == 0)
+			return false;
+		final standard = haxe.io.Path.addTrailingSlash(haxe.io.Path.normalize(standardRoot));
+		return StringTools.startsWith(haxe.io.Path.normalize(filePath), standard);
+	}
+
+	/**
+		The one selected project macro that may stay unexecuted: hxhx's own `CompilerBundledSourcesMacro.files()`.
+
+		It embeds standard-library sources when hxhx compiles itself and needs `haxe.macro.Context`
+		and reification, which plugins cannot use yet (`haxe_ocaml-9sj5p.5`, `haxe_ocaml-9sj5p.6`).
+		Until it runs through the plugin path it keeps the old behavior: reported, then typed as an
+		ordinary call that later compiler stages approximate. The exception is matched by the
+		declaration and by its owner file, `packages/hxhx-core/src/CompilerBundledSourcesMacro.hx`
+		in the hxhx checkout (`HXHX_REPO_ROOT`, or found from the hxhx executable); a project class
+		with the same name gets no exception.
+
+		Known ways it can miss (the call then fails like any other):
+		- the hxhx binary comes from a different checkout than the sources it compiles, and
+		  `HXHX_REPO_ROOT` does not name the compiled checkout;
+		- the unexecuted record has no `ownerFilePath`, because the request index did not know the
+		  declaration's module.
+	**/
+	public static inline final UNEXECUTED_OPT_OUT:String = "CompilerBundledSourcesMacro.files";
+
+	static function isUnexecutedOptOut(entry:hxhx.ExprMacroExpander.ExprMacroUnexecutedCall):Bool {
+		if (entry.declaration != UNEXECUTED_OPT_OUT || entry.ownerFilePath.length == 0)
+			return false;
+		final repoRoot = Stage3PathSupport.inferRepoRootForScripts();
+		if (repoRoot.length == 0)
+			return false;
+		final owner = haxe.io.Path.join([repoRoot, "packages", "hxhx-core", "src", "CompilerBundledSourcesMacro.hx"]);
+		return sys.FileSystem.exists(owner)
+			&& sys.FileSystem.exists(entry.ownerFilePath)
+			&& haxe.io.Path.normalize(sys.FileSystem.fullPath(owner)) == haxe.io.Path.normalize(sys.FileSystem.fullPath(entry.ownerFilePath));
+	}
+
+	/**
+		The compile error for selected macro calls that could not run, or `null` when every call ran.
+
+		A selected project macro call is never typed as an ordinary call: upstream Haxe would run it,
+		so an hxhx that cannot must stop. Each call is named with its file, declaration, and reason.
+		Standard-library macros (`isStandardLibraryFile`, judged by the declaration's owner file under
+		`standardRoot`) keep the call-site contract and the target lowering.
+	**/
+	public static function unexecutedError(unexecuted:Array<hxhx.ExprMacroExpander.ExprMacroUnexecutedCall>, standardRoot:String):Null<String> {
+		final lines = [
+			for (entry in unexecuted)
+				if (!isUnexecutedOptOut(entry) && !isStandardLibraryFile(entry.ownerFilePath, standardRoot)) entry.filePath
+					+ ": expression macro "
+					+ entry.declaration
+					+ " was not executed: "
+					+ entry.reason];
+		return lines.length == 0 ? null : lines.join("\n");
 	}
 
 	/** Why a request cannot build and load project macro plugins, or `null` when it can. */
@@ -190,18 +269,21 @@ class Stage3ProjectMacroPlugins {
 	every other request goes to the real session. After `finishRecording`, a declaration with an
 	unsupported shape, or every recorded declaration when the plugin could not be provided, gets
 	its reason; the rest reach the real session, which runs them through the loaded plugin.
+	A standard-library declaration is never recorded: it gets its own reason in every pass.
 **/
 private class ProjectMacroCallDispatch {
 	public final recorded = new Array<String>();
 
 	final target:MacroRuntimeSession;
 	final unavailableReason:Null<String>;
+	final isStandardLibraryDeclaration:TyDeclarationInfo->Bool;
 	var recording = true;
 	var failure:Null<String> = null;
 
-	public function new(target:MacroRuntimeSession, unavailableReason:Null<String>) {
+	public function new(target:MacroRuntimeSession, unavailableReason:Null<String>, isStandardLibraryDeclaration:TyDeclarationInfo->Bool) {
 		this.target = target;
 		this.unavailableReason = unavailableReason;
+		this.isStandardLibraryDeclaration = isStandardLibraryDeclaration;
 	}
 
 	public function finishRecording(failure:Null<String>):Void {
@@ -224,6 +306,10 @@ private class ProjectMacroCallDispatch {
 	function expandSelected(request:ExprMacroDispatchRequest):ExprMacroDispatchResult {
 		final declaration = request.getDeclaration();
 		final key = declaration.getOwner().getCanonicalName() + "." + declaration.getSignature().getName();
+		if (isStandardLibraryDeclaration(declaration))
+			return Unavailable("standard-library macro `"
+				+ key
+				+ "` is not a project macro; ordinary typing checks the call and the target backend lowers it");
 		final source = declaration.getSourceDeclaration();
 		final unsupported = source == null ? "project macro declaration `" + key +
 			"` has no source declaration" : backend.ocaml.Stage3OcamlMacroPluginEntry.unsupportedDeclarationShape(key, source);
