@@ -60,7 +60,7 @@
     {
       "module": "HxDynamic",
       "scope": "application",
-      "files": [{ "path": "HxDynamic.ml", "sha256": "684c5cedc2b78139537d9e7be74153f56e16309cd7455a713b3b5326fb98fcab" }],
+      "files": [{ "path": "HxDynamic.ml", "sha256": "4ea723df06a3d0a3b5fb8bc6ac5c1d3ff9b055f9ccbbc966f1b85bd391fc55fb" }],
       "dependencies": ["HxAnon", "HxArray", "HxEnum", "HxRuntime", "HxType"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],

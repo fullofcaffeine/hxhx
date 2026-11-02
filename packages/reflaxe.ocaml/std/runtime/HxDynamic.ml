@@ -21,6 +21,15 @@ let class_stringifiers : (string, Obj.t -> string) Hashtbl.t = Hashtbl.create 31
 let register_class_stringifier (name : string) (stringifier : Obj.t -> string) : unit =
   Hashtbl.replace class_stringifiers name stringifier
 
+(* Enum payloads store a Bool argument as a raw OCaml bool, which has the same
+   runtime shape as an int. Generated enum modules register which argument
+   positions of each constructor are Bool (or Null<Bool>), so enum text prints
+   `Flagged(true)`, not `Flagged(1)`. *)
+let enum_bool_arguments : (string * string, int list) Hashtbl.t = Hashtbl.create 31
+
+let register_enum_bool_arguments (enum_name : string) (constructor : string) (positions : int list) : unit =
+  Hashtbl.replace enum_bool_arguments (enum_name, constructor) positions
+
 (* Checked unary operations for values that cross Haxe's Dynamic boundary.
 
    The Haxe-authored Stage3 emitter selects the operation. This runtime code
@@ -172,19 +181,36 @@ let rec toStdString (value : Obj.t) : string =
     else
       classToStdString value
 
-(* A boxed enum value prints as its constructor name, followed by its
-   arguments in parentheses when it has any: `Rgb(1,2,3)`. *)
+(* A boxed enum value prints as Haxe does: its constructor name, followed by
+   its arguments in parentheses when it has any (`Red`, `Rgb(1,2,3)`). An
+   argument is converted by its runtime shape, except the Bool positions that
+   the enum module registered with register_enum_bool_arguments. *)
 and enumToStdString (value : Obj.t) : string =
   let name = HxType.enumConstructor value in
   let parameters = HxType.enumParameters value in
   if HxRuntime.is_null (Obj.repr name) then "<object>"
   else if HxArray.length parameters = 0 then name
   else
+    let bools =
+      match HxEnum.name_opt value with
+      | Some enum_name -> (
+          match Hashtbl.find_opt enum_bool_arguments (enum_name, name) with
+          | Some positions -> positions
+          | None -> [])
+      | None -> []
+    in
+    let argument index =
+      let raw = HxArray.get parameters index in
+      if Stdlib.List.mem index bools && not (HxRuntime.is_null raw || HxRuntime.is_boxed_bool raw) then
+        HxRuntime.box_bool (Obj.obj raw)
+      else
+        raw
+    in
     let parts = ref [] in
-    for index = 0 to HxArray.length parameters - 1 do
-      parts := toStdString (HxArray.get parameters index) :: !parts
+    for index = HxArray.length parameters - 1 downto 0 do
+      parts := toStdString (argument index) :: !parts
     done;
-    name ^ "(" ^ Stdlib.String.concat "," (Stdlib.List.rev !parts) ^ ")"
+    name ^ "(" ^ Stdlib.String.concat "," !parts ^ ")"
 
 and anonymousToStdString (value : Obj.t) : string =
   let fields = HxAnon.fields value in
