@@ -953,7 +953,7 @@ class ParserStageScanHelpers {
 			i = t.nextPos;
 			if (t.text.length == 0)
 				break;
-			final metadataName = t.isIdent && (previous == "@" || previous == "@:" || (previous == ":" && beforePrevious == "@"));
+			final metadataName = t.isIdent && (previous == "@" || (previous == ":" && beforePrevious == "@"));
 			beforePrevious = previous;
 			previous = t.text;
 

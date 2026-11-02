@@ -10,8 +10,10 @@
 	  (haxe_ocaml-ey6o2).
 
 	What
-	- `@:abstract class` and `@:final class` parse as the
-	  one authored class, with its metadata, and no abstract.
+	- `@:abstract class` and `@:final class` parse as the one authored class,
+	  with its metadata retained, and no abstract.
+	- Metadata with arguments right before the `abstract` keyword does not hide
+	  the abstract (`@:native("x") abstract Y(Int)`).
 	- Real abstracts and legacy `@:enum abstract` keep their abstract reading.
 **/
 class M14AbstractMetadataClassParseTest {
@@ -29,6 +31,17 @@ class M14AbstractMetadataClassParseTest {
 			throw "parsed " + source + "\n  expected " + expected.join(" ") + "\n  got      " + actual.join(" ");
 	}
 
+	/** The parsed class named `name` keeps the authored metadata `entry`. */
+	static function expectMetadata(source:String, name:String, entry:String):Void {
+		for (c in HxModuleDecl.getClasses(ParserStage.parse(source, "Probe.hx").getDecl()))
+			if (HxClassDecl.getName(c) == name) {
+				if (HxClassDecl.getMetadata(c).indexOf(entry) < 0)
+					throw "parsed " + source + "\n  " + name + " lost metadata " + entry + ": " + HxClassDecl.getMetadata(c).join(",");
+				return;
+			}
+		throw "parsed " + source + "\n  no class named " + name;
+	}
+
 	static function main():Void {
 		expect('@:keep @:abstract @:nativeGen @:native("haxe.lang.Function") class Function {\n\tfunction new(arity:Int, type:Int) {}\n}', ["Function:class"]);
 		expect('@:abstract class Base {}', ["Base:class"]);
@@ -36,6 +49,11 @@ class M14AbstractMetadataClassParseTest {
 		expect('abstract Real(Int) {\n\tpublic function new() this = 1;\n}', ["Real:abstract"]);
 		expect('@:enum abstract Legacy(Int) {\n\tvar One = 1;\n}', ["Legacy:abstract"]);
 		expect('@:forward abstract Wrapped(Array<Int>) {}', ["Wrapped:abstract"]);
+		expect('@:native("x") abstract Named(Int) {}', ["Named:abstract"]);
+		final functionSource = '@:keep @:abstract @:nativeGen @:native("haxe.lang.Function") class Function {\n\tfunction new(arity:Int, type:Int) {}\n}';
+		expectMetadata(functionSource, "Function", "@:abstract");
+		expectMetadata(functionSource, "Function", "@:nativeGen");
+		expectMetadata('@:final class Sealed {}', "Sealed", "@:final");
 		Sys.println("ABSTRACT_METADATA_CLASS_PARSE:PASS");
 	}
 }
