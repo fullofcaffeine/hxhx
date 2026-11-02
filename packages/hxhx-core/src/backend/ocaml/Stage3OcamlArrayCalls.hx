@@ -80,6 +80,8 @@ function render(input:{
 	metal:Bool,
 	autoMetal:Bool,
 	emit:HxExpr->String,
+	/** Renders an operand already converted to its aligned parameter carrier. */
+	argument:HxExpr->String,
 	names:Stage3OcamlLocalNames,
 	mark:String->Void
 }):Null<String> {
@@ -179,15 +181,13 @@ function render(input:{
 	final bindings = ["let " + receiver + " = (" + input.emit(call.receiver) + ") in "];
 	final argumentTypes = occurrence.getArgumentTypes();
 	for (index in 0...arguments.length) {
-		// slice's start is a required Int; the second slot of slice/indexOf/lastIndexOf
-		// is an optional int that recognizes the sentinel bits.
-		final rendered = input.emit(call.arguments[index]);
+		// The second slot of slice/indexOf/lastIndexOf is an optional int that the
+		// runtime reads with the sentinel bits, so a nullable carrier passes through.
+		// Every other operand is converted to its aligned parameter carrier.
+		final optionalSlot = index == 1 && (call.method == "slice" || call.method == "indexOf" || call.method == "lastIndexOf");
 		final nullableInt = index < argumentTypes.length
 			&& Stage3OcamlNullablePrimitive.innerPrimitive(argumentTypes[index]) == "primitive:Int";
-		final optionalSlot = index == 1 && (call.method == "slice" || call.method == "indexOf" || call.method == "lastIndexOf");
-		final requiredSlot = index == 0 && call.method == "slice";
-		final value = !nullableInt ? rendered : optionalSlot ? Stage3OcamlNullablePrimitive.intrinsicOptionalInt(rendered) : requiredSlot ? Stage3OcamlNullablePrimitive.unwrap("primitive:Int",
-			rendered) : rendered;
+		final value = !optionalSlot ? input.argument(call.arguments[index]) : nullableInt ? Stage3OcamlNullablePrimitive.intrinsicOptionalInt(input.emit(call.arguments[index])) : input.emit(call.arguments[index]);
 		bindings.push("let " + arguments[index] + " = (" + value + ") in ");
 	}
 	return "(" + bindings.join("") + result + ")";
