@@ -66,6 +66,8 @@ function promote(value:String):String
 	  immediate int, or the null sentinel). It is unwrapped first, then
 	  promoted. A `Null<Float>` value is unwrapped. A null value raises the
 	  runtime's Null Access error, as for nullable arithmetic operands.
+	- A `Null<Float>` destination receives the nullable Float carrier: see
+	  `toNullableFloatDestination`. Null stays null there.
 	- Every other value, and every non-Float destination, is returned
 	  unchanged.
 
@@ -74,7 +76,11 @@ function promote(value:String):String
 	dereference address 3 and crash with SIGSEGV.
  */
 function toFloatDestination(actual:Null<TyType>, expected:Null<TyType>, value:String):String {
-	if (!isFloatDestination(expected) || actual == null)
+	if (actual == null || expected == null)
+		return value;
+	if (Stage3OcamlNullablePrimitive.innerPrimitive(expected) == "primitive:Float")
+		return toNullableFloatDestination(actual, value);
+	if (!isFloatDestination(expected))
 		return value;
 	if (isExactly(actual, "primitive:Int"))
 		return promote(value);
@@ -85,10 +91,29 @@ function toFloatDestination(actual:Null<TyType>, expected:Null<TyType>, value:St
 	};
 }
 
+/**
+	A `Null<Float>` destination holds the nullable Float carrier: null, or a
+	boxed Float. An Int value is promoted and boxed. A `Null<Int>` carrier
+	stays null when it is null and otherwise becomes a boxed Float, so a
+	later `nullable_float_unwrap` reads a real Float. A Float or `Null<Float>`
+	value already has that representation.
+ */
+private function toNullableFloatDestination(actual:TyType, value:String):String {
+	if (isExactly(actual, "primitive:Int"))
+		return Stage3OcamlNullablePrimitive.box("primitive:Float", "float_of_int (" + value + ")");
+	if (Stage3OcamlNullablePrimitive.innerPrimitive(actual) == "primitive:Int")
+		return Stage3OcamlNullablePrimitive.nullableIntToNullableFloat(value);
+	return value;
+}
+
 /** Whether `toFloatDestination` changes the value's representation. */
 function convertsToFloat(actual:Null<TyType>, expected:Null<TyType>):Bool {
-	if (!isFloatDestination(expected) || actual == null)
+	if (actual == null || expected == null)
 		return false;
 	final inner = Stage3OcamlNullablePrimitive.innerPrimitive(actual);
+	if (Stage3OcamlNullablePrimitive.innerPrimitive(expected) == "primitive:Float")
+		return isExactly(actual, "primitive:Int") || inner == "primitive:Int";
+	if (!isFloatDestination(expected))
+		return false;
 	return isExactly(actual, "primitive:Int") || inner == "primitive:Int" || inner == "primitive:Float";
 }

@@ -79,8 +79,27 @@ class TypedBackendObjectAccess {
 				throw "object access operator differs from its typed operation";
 		}
 		valueType = kind == Read ? null : input.source.getExpressions()[1].getType();
-		placeType = kind == Read ? null : selected.getType();
+		placeType = kind == Read ? null : writtenPlaceType(selected);
 		fingerprint = TypedBodyFingerprint.exactExpression(expression);
+	}
+
+	/**
+		The storage destination of one structure field. An optional field
+		(`?o:Float`) may hold null, so it is a nullable destination even though
+		its recorded type is the plain field type.
+	**/
+	public static function fieldDestination(field:TyAnonymousField):TyType {
+		return field.isOptional && !field.type.isNullable() ? TyType.nullable(field.type) : field.type;
+	}
+
+	/** An optional structure field (`?o:Float`) is a nullable place. */
+	static function writtenPlaceType(place:TypedExpr):TyType {
+		final receiver = TyAliasExpansion.revealNonNullable(place.getExpressions()[0].getType());
+		if (receiver.isAnonymous())
+			for (field in receiver.getAnonymousFields())
+				if (field.name == place.getTexts()[0])
+					return fieldDestination(field);
+		return place.getType();
 	}
 
 	public function assertCurrent(owner:String, revision:String):Void {
