@@ -21,6 +21,9 @@ import sys.io.File;
 	- The test types the same program with hxhx (with each `$type(` replaced
 	  by `(`) and compares the type of each assignment expression, in source
 	  order, with that list.
+	- `typer_assignment_type_null_local` assigns an Int to a local initialized
+	  with bare `null` inside a call (`takeInt(n = 2)`). Upstream accepts it, and
+	  hxhx must type it without rejecting the call.
 **/
 class M14TyperAssignmentTypeTest {
 	static final fixture = "test/fixtures/typer_assignment_type";
@@ -74,5 +77,24 @@ class M14TyperAssignmentTypeTest {
 		if (actual.join(",") != expected.join(","))
 			throw "hxhx assignment types differ from upstream:\n  hxhx:     " + actual.join(",") + "\n  upstream: " + expected.join(",");
 		Sys.println("M14_TYPER_ASSIGNMENT_TYPE:PASS");
+		acceptNullInitializedLocal();
+	}
+
+	/**
+		A local initialized with bare `null` keeps the assigned value's type for
+		the assignment, so `takeInt(n = 2)` is accepted as it is upstream.
+	**/
+	static function acceptNullInitializedLocal():Void {
+		final source = "test/fixtures/typer_assignment_type_null_local";
+		final process = new sys.io.Process("node_modules/.bin/haxe", ["-cp", source, "-main", "Main", "--no-output", "--interp"]);
+		process.stdout.readAll();
+		final stderr = process.stderr.readAll().toString();
+		final code = process.exitCode();
+		process.close();
+		if (code != 0)
+			throw "upstream rejected the null-initialized local program: " + stderr;
+		final path = source + "/Main.hx";
+		M14Stage3RuntimeFixture.typeMain({source: File.getContent(path), path: path, root: source});
+		Sys.println("M14_TYPER_ASSIGNMENT_TYPE_NULL_LOCAL:PASS");
 	}
 }

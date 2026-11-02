@@ -4066,11 +4066,12 @@ class TyperStage {
 										//
 										// Haxe types `local = value` as the local's type (after the
 										// value's conversion), not the value's: `(ratio = 5)` with
-										// `ratio:Float` is a Float. An unknown local keeps the value's type.
-										sym.getType().isUnknown() ? rhs : sym.getType();
+										// `ratio:Float` is a Float. A local whose type is still unknown, or
+										// only the type of a bare `null` initializer, keeps the value's type.
+										(sym.getType().isUnknown() || sym.getType().isNullLiteral()) ? rhs : sym.getType();
 									} else {
 										sym.setType(u);
-										u.isUnknown() ? rhs : u;
+										(u.isUnknown() || u.isNullLiteral()) ? rhs : u;
 									}
 								} else {
 									rhs;
