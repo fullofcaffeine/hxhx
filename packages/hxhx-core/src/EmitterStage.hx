@@ -3826,6 +3826,12 @@ class EmitterStage {
 					final callable = backend.ocaml.Stage3OcamlCallableConversion.adapt(argument, rendered, currentFunctionLocalOcamlNames);
 					if (callable != null)
 						return callable;
+					// A Function parameter is called through the Dynamic convention.
+					final functionValue = argument != null
+						&& TyFunctionConstraint.isFunctionConstraint(argument.expectedType) ? backend.ocaml.Stage3OcamlFunctionBoundary.adapt(argument.type,
+							rendered, currentFunctionLocalOcamlNames) : null;
+					if (functionValue != null)
+						return functionValue;
 					final carrier = stage3DynamicArgumentCarrier(arg, tyByIdentRaw, callSigByCalleeRaw);
 					// Stored callbacks have checked argument destinations even without a
 					// method signature. Preserve Dynamic boxing at that exact call boundary.
