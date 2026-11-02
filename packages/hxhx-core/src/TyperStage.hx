@@ -4256,7 +4256,17 @@ class TyperStage {
 						}
 						final leftType = inferExprType(a, scope, ctx, pos);
 						final rightType = inferExprType(b, scope, ctx, pos);
-						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), leftType, rightType, op, ctx.getFilePath(), pos);
+						final bound = try TyAbstractBinaryBinding.select(ctx.getIndex(), leftType, rightType, op, ctx.getFilePath(),
+							pos) catch (error:TyperError) {
+							// Report a failed abstract lookup with a numeric value as upstream does.
+							final reworded = StringTools.startsWith(error.getMessage(),
+								"No applicable abstract binary operator ") ? TyCompoundAssignmentKinds.abstractFailure(op, leftType, rightType,
+									ctx.getIndex()) : null;
+							throw reworded == null ? error : new TyperError(ctx.getFilePath(), pos, reworded);
+						};
+						final kindFailure = bound == null ? TyCompoundAssignmentKinds.primitive(op, leftType, rightType) : null;
+						if (kindFailure != null)
+							throw new TyperError(ctx.getFilePath(), pos, kindFailure);
 						if (bound != null) {
 							bound.getRequiresWriteback() ? leftType : bound.getOperatorInfo().getResultType();
 						} else {
