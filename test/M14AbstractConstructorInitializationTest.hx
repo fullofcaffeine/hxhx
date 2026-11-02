@@ -34,7 +34,7 @@ class M14AbstractConstructorInitializationTest {
 			final source = 'class Main { static function main():Void { new Result(false); } }\n'
 				+ 'abstract Result(Int) { public function new(flag:Bool) { '
 				+ entry.body
-				+ ' } static inline final COUNT = 3; }\n';
+				+ ' } static inline final COUNT = 3; static inline function count():Int return 3; static var STATIC_N = 3; }\n';
 			var diagnostic:Null<String> = null;
 			// Type with the production declaration loader: loops over ranges need
 			// the standard IntIterator, which a root-only index omits.

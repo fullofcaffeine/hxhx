@@ -37,5 +37,15 @@
   {"name":"negative_constant_range", "body":"for (i in -1...3) this = 3;", "accepted":true},
   {"name":"named_constant_range", "body":"for (i in 0...COUNT) this = 3;", "accepted":true},
   {"name":"parameter_range", "body":"for (i in 0...(flag ? 1 : 0)) this = 3;", "accepted":false},
-  {"name":"untyped_assignment", "body":"untyped this = 1;", "accepted":true}
+  {"name":"untyped_assignment", "body":"untyped this = 1;", "accepted":true},
+  {"name":"inline_call_range", "body":"for (i in 0...count()) this = 3;", "accepted":true},
+  {"name":"inline_call_paren_range", "body":"for (i in 0...(count())) this = 3;", "accepted":false},
+  {"name":"shadowed_local_out_of_scope", "body":"{ var COUNT = 2; } for (i in 0...COUNT) this = 3;", "accepted":true},
+  {"name":"local_declared_after_loop", "body":"for (i in 0...COUNT) this = 3; var COUNT = 1;", "accepted":true},
+  {"name":"local_bound_in_scope", "body":"final n = 3; for (i in 0...n) this = 3;", "accepted":false},
+  {"name":"all_cases_guarded", "body":"switch (flag) { case _ if (flag): this = 1; }", "accepted":false},
+  {"name":"parenthesized_literal_range", "body":"for (i in (0)...(3)) this = 3;", "accepted":false},
+  {"name":"negated_parenthesized_range", "body":"for (i in -(1)...3) this = 3;", "accepted":false},
+  {"name":"constant_sum_range", "body":"for (i in 0...COUNT+1) this = 3;", "accepted":false},
+  {"name":"static_var_range", "body":"for (i in 0...STATIC_N) this = 3;", "accepted":false}
 ]

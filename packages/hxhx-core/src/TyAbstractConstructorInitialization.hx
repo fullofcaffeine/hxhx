@@ -45,18 +45,31 @@ class TyAbstractConstructorInitialization {
 	}
 
 	/**
-		Names declared by the constructor itself: its parameters and its local
-		variables. A range bound that names one of them is a run-time value, so
-		upstream does not unroll that loop.
+		Names in scope that the constructor itself declares: its parameters, and
+		each local variable from its declaration to the end of its block. A range
+		bound that names one of them is a run-time value, so upstream does not
+		unroll that loop. A local declared later, or in a closed block, does not
+		hide a same-named class constant.
 	**/
-	final runtimeNames = new Map<String, Bool>();
+	var runtimeNames = new Map<String, Bool>();
 
-	/** Throw upstream's diagnostic when `body` can complete without assigning `this`. */
+	/** Run `walk` in a nested lexical scope: locals it declares are forgotten afterwards. */
+	function scoped<T>(walk:() -> T):T {
+		final outer = runtimeNames.copy();
+		final result = walk();
+		runtimeNames = outer;
+		return result;
+	}
+
+	/**
+		Throw upstream's diagnostic when `body` can complete without assigning
+		`this`. `runtimeNames` are names that are run-time values in the whole
+		body: the parameters and the abstract's mutable static fields.
+	**/
 	public static function require(body:Array<HxStmt>, filePath:String, constructorPos:HxPos, ?parameterNames:Array<String>):Void {
 		final checker = new TyAbstractConstructorInitialization(filePath);
 		for (name in (parameterNames == null ? [] : parameterNames))
 			checker.runtimeNames.set(name, true);
-		checker.collectLocals(body);
 		if (!checker.statements(body, false, constructorPos))
 			throw new TyperError(filePath, constructorPos, MESSAGE);
 	}
@@ -75,29 +88,6 @@ class TyAbstractConstructorInitialization {
 	function ends(assigned:Bool):Bool
 		return nested ? assigned : true;
 
-	function collectLocals(body:Array<HxStmt>):Void {
-		for (s in body)
-			switch (s) {
-				case SVar(name, _, _, _):
-					runtimeNames.set(name, true);
-				case SBlock(children, _):
-					collectLocals(children);
-				case SIf(_, whenTrue, whenFalse, _):
-					collectLocals([whenTrue]);
-					if (whenFalse != null)
-						collectLocals([whenFalse]);
-				case SWhile(_, child, _) | SDoWhile(child, _, _) | SForIn(_, _, child, _) | SForKeyValue(_, _, _, child, _) | STargetScope(_, child, _):
-					collectLocals([child]);
-				case STry(child, catches, _):
-					collectLocals([child]);
-					for (handler in catches)
-						collectLocals([handler.body]);
-				case SSwitch(_, _, bodies, _, _) | SGuardedSwitch(_, _, _, bodies, _):
-					collectLocals(bodies);
-				case _:
-			}
-	}
-
 	function statements(body:Array<HxStmt>, assigned:Bool, pos:HxPos):Bool {
 		var state = assigned;
 		for (child in body)
@@ -109,9 +99,11 @@ class TyAbstractConstructorInitialization {
 	function statement(s:HxStmt, assigned:Bool):Bool {
 		return switch (s) {
 			case SBlock(body, pos):
-				statements(body, assigned, pos);
-			case SVar(_, _, init, pos):
-				init == null ? assigned : expression(init, assigned, pos);
+				scoped(() -> statements(body, assigned, pos));
+			case SVar(name, _, init, pos):
+				final state = init == null ? assigned : expression(init, assigned, pos);
+				runtimeNames.set(name, true);
+				state;
 			case SIf(condition, whenTrue, whenFalse, pos):
 				final afterCondition = expression(condition, assigned, pos);
 				final trueState = statement(whenTrue, afterCondition);
@@ -173,46 +165,58 @@ class TyAbstractConstructorInitialization {
 		return switch (iterable) {
 			case EParenthesized(inner, _): runsAtLeastOnce(inner);
 			case ERange(start, end):
-				final first = constantInt(start);
-				final last = constantInt(end);
-				if (first != null && last != null) last > first; else // A bound that is no literal: a constructor parameter or local is a
-					// run-time value (no unrolling). Anything else, such as an inline
-					// constant, may be unrolled by upstream, so do not reject it.
-					!(mentionsRuntimeName(start) || mentionsRuntimeName(end));
+				final first = literalBound(start);
+				final last = literalBound(end);
+				if (first != null && last != null) last > first; else !(notUnrolled(start) || notUnrolled(end));
 			case EArrayDecl(values): values.length > 0;
 			case _: false;
 		};
 	}
 
-	static function constantInt(e:HxExpr):Null<Int> {
+	/**
+		An integer literal bound, optionally negated (`3`, `-1`). Upstream unrolls
+		only bare constants: `(0)...(3)` and `-(1)...3` are not unrolled.
+	**/
+	static function literalBound(e:HxExpr):Null<Int> {
 		return switch (e) {
 			case EInt(value): value;
-			case EParenthesized(inner, _): constantInt(inner);
-			case EUnop(Negate, _, inner):
-				final value = constantInt(inner);
-				value == null ? null : -value;
+			case EUnop(Negate, _, EInt(value)): -value;
 			case _: null;
 		};
 	}
 
-	function mentionsRuntimeName(e:HxExpr):Bool {
+	/**
+		Whether upstream certainly does not unroll a loop over this bound: a
+		parenthesized or computed bound (`(count())`, `COUNT + 1`), or a
+		constructor parameter or local in scope. A bare name or call that may be
+		an inline constant (`COUNT`, `count()`) is accepted rather than rejected;
+		upstream unrolls those, but not a plain `static var`.
+	**/
+	function notUnrolled(e:HxExpr):Bool {
 		return switch (e) {
+			case EInt(_): false;
+			case EUnop(Negate, _, EInt(_)): false;
 			case EIdent(name): runtimeNames.exists(name);
-			case EParenthesized(inner, _) | EUnop(_, _, inner) | EField(inner, _): mentionsRuntimeName(inner);
-			case EBinop(_, left, right): mentionsRuntimeName(left) || mentionsRuntimeName(right);
-			case ETernary(condition, whenTrue, whenFalse): mentionsRuntimeName(condition) || mentionsRuntimeName(whenTrue) || mentionsRuntimeName(whenFalse);
-			case ECall(callee, arguments): true;
+			case EParenthesized(_, _) | EBinop(_, _, _) | ETernary(_, _, _) | EUnop(_, _, _): true;
 			case _: false;
 		};
 	}
 
-	/** A switch covers every value when it has a catch-all case, both Bool values, or only constructor patterns. */
+	/**
+		A switch covers every value when an unguarded case is a catch-all, the
+		unguarded cases name both Bool values, or every unguarded case is a
+		constructor pattern. Guarded cases never cover, and they do not disqualify
+		the unguarded ones (upstream accepts `case Some(v) if (v > 0): ...
+		case Some(_): ... case None: ...`). A switch of only guarded cases does
+		not cover.
+	**/
 	static function covers(patterns:Array<HxSwitchPattern>, exhaustive:Null<Bool>):Bool {
 		if (exhaustive == true)
 			return true;
 		var sawTrue = false;
 		var sawFalse = false;
-		var onlyConstructors = patterns.length > 0;
+		var sawConstructor = false;
+		var sawOther = false;
 		function visit(pattern:HxSwitchPattern):Void {
 			switch (pattern) {
 				case PWildcard | PBind(_):
@@ -224,24 +228,22 @@ class TyAbstractConstructorInitialization {
 						visit(item);
 				case PBool(true):
 					sawTrue = true;
-					onlyConstructors = false;
+					sawOther = true;
 				case PBool(false):
 					sawFalse = true;
-					onlyConstructors = false;
+					sawOther = true;
 				case PEnumValue(_) | PEnumExtract(_, _):
+					sawConstructor = true;
 				case PGuard(_, _):
-					// A guarded case never covers its values, and it does not stop the
-					// unguarded cases from covering the switch (upstream accepts
-					// `case Some(v) if (v > 0): ... case Some(_): ... case None: ...`).
 				case _:
-					onlyConstructors = false;
+					sawOther = true;
 			}
 		}
 		for (pattern in patterns)
 			visit(pattern);
 		// Constructor patterns: typing owns enum coverage. Count them as covering
 		// rather than reject a constructor whose switch names every member.
-		return (sawTrue && sawFalse) || onlyConstructors;
+		return (sawTrue && sawFalse) || (sawConstructor && !sawOther);
 	}
 
 	/** Returns whether `this` is assigned after evaluating `e`. */
@@ -293,12 +295,16 @@ class TyAbstractConstructorInitialization {
 				final trueState = expression(whenTrue, afterCondition, position);
 				whenFalse == null ? afterCondition : expression(whenFalse, afterCondition, position) && trueState;
 			case ESourceGroup(children, position):
-				var state = assigned;
-				for (child in children)
-					state = expression(child, state, position);
+				scoped(() -> {
+					var state = assigned;
+					for (child in children)
+						state = expression(child, state, position);
+					state;
+				});
+			case EVariableDeclaration(name, _, initializer, position, _, _):
+				final state = initializer == null ? assigned : expression(initializer, assigned, position);
+				runtimeNames.set(name, true);
 				state;
-			case EVariableDeclaration(_, _, initializer, position, _, _):
-				initializer == null ? assigned : expression(initializer, assigned, position);
 			case EVars(declarations):
 				var state = assigned;
 				for (declaration in declarations)
