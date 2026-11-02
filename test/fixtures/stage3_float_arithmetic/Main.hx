@@ -26,6 +26,35 @@ class Cell {
 		this.v += n;
 }
 
+class Point {
+	public var x:Int;
+	public var y:Int;
+	public var w:Float;
+	public var h:Float;
+
+	public function new(x:Int, y:Int, w:Float, h:Float) {
+		this.x = x;
+		this.y = y;
+		this.w = w;
+		this.h = h;
+	}
+
+	public function sum():Int
+		return x + y;
+
+	public function explicitSum():Int
+		return this.x + this.y;
+
+	public function size():Float
+		return w * h;
+
+	public function explicitSize():Float
+		return this.w + this.h;
+
+	public function mixed():Float
+		return x * w + this.y / 8;
+}
+
 class G<T> {
 	public var value:T;
 
@@ -102,6 +131,18 @@ class Main {
 		Sys.println(Std.string(a[1] / a[2] + 0.25));
 		Sys.println(Std.string(a[1] % a[0]));
 		Sys.println(Std.string(a[0] + c.get()));
+		// Element sums stored in a local and passed straight to Sys.println.
+		final floats:Array<Float> = [1.5, 2.25];
+		final ints:Array<Int> = [2, 5];
+		final floatSum:Float = floats[0] + floats[1];
+		Sys.println(floatSum);
+		Sys.println(floats[0] + floats[1]);
+		final intSum:Int = ints[0] + ints[1];
+		Sys.println(intSum);
+		Sys.println(ints[0] + ints[1]);
+		final mixedSum:Float = ints[0] + floats[0];
+		Sys.println(mixedSum);
+		Sys.println(floats[1] + ints[1]);
 		// Mixed Int and Float, and Int / Int.
 		final i = 7;
 		Sys.println(Std.string(i + c.get()));
@@ -152,6 +193,10 @@ class Main {
 		Sys.println(c.get() + " first");
 		Sys.println("item " + a[1]);
 		Sys.println("g " + g.value);
+		// A String operand from a function-typed local still concatenates.
+		final label:() -> String = () -> "n=";
+		Sys.println(label() + count());
+		Sys.println(label() + c.get());
 		// A nullable Float operand: the product is a Float.
 		final maybe:Null<Float> = 1.5;
 		Sys.println(Std.string(maybe * 3));
@@ -162,6 +207,22 @@ class Main {
 		var steps:Null<Int> = 3;
 		Sys.println(Std.string(steps / 2));
 		Sys.println(Std.string(steps * 2 + 1));
+		// Int and Float instance fields, read with and without `this.`.
+		final p = new Point(3, 4, 1.25, 2.5);
+		Sys.println(Std.string(p.sum()));
+		Sys.println(Std.string(p.explicitSum()));
+		Sys.println(Std.string(p.size()));
+		Sys.println(Std.string(p.explicitSize()));
+		Sys.println(Std.string(p.mixed()));
+		Sys.println(Std.string(p.x + p.y));
+		Sys.println(Std.string(p.w - p.h));
+		// Arithmetic on a null Null<Float> raises a catchable error.
+		final nothing:Null<Float> = null;
+		try {
+			Sys.println(Std.string(nothing * 3));
+		} catch (error:Dynamic) {
+			Sys.println("null arithmetic raised");
+		}
 		// A Float field written from a Float-valued if with an Int branch.
 		c.v = if (i > 3) 1 else 0.25;
 		Sys.println(Std.string(c.v + 0.5));

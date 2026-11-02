@@ -4084,6 +4084,12 @@ class TyperStage {
 						if (bound != null) {
 							bound.getRequiresWriteback() ? leftType : bound.getOperatorInfo().getResultType();
 						} else {
+							// `count += 1.5` and `count /= 2` would store a Float into an Int place.
+							if (leftType.unwrapNull().getSemanticKey() == "primitive:Int"
+								&& (op == "/="
+									|| ((op == "+=" || op == "-=" || op == "*=" || op == "%=")
+										&& rightType.unwrapNull().getSemanticKey() == "primitive:Float")))
+								throw new TyperError(ctx.getFilePath(), pos, "Float should be Int");
 							switch (a) {
 								case EIdent(name):
 									final symbol = scope.resolveSymbol(name);
