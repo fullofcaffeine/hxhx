@@ -1048,12 +1048,14 @@ class EmitterStage {
 	static function exprToOcamlString(e:HxExpr, ?tyByIdent:Map<String, TyType>, ?arityByIdent:Map<String, Int>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
 		// Preserve checked scalar results before rendering them as text. Boolean
-		// bits must not become 1, and numeric addition must not become concatenation.
+		// bits must not become 1, and Int, Float, or Dynamic addition
+		// (`floats[0] + floats[1]`, `boxed + 1`) must not become concatenation.
 		final operand = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(e) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(e);
 		final operandKey = operand == null ? null : operand.type.getSemanticKey();
 		if (operand != null
 			&& (operandKey == "primitive:Int"
 				|| (operandKey == "primitive:Float" && e.match(EBinop("+", _, _)))
+				|| (operand.type.isDynamic() && e.match(EBinop(_, _, _)))
 				|| backend.ocaml.Stage3OcamlStringConversion.isBoolText(operand.type, stage3AbstractUnderlying)))
 			return backend.ocaml.Stage3OcamlStringConversion.convert(backend.ocaml.Stage3OcamlStringConversion.textType(operand.type, stage3AbstractUnderlying),
 				exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
@@ -5173,6 +5175,11 @@ class EmitterStage {
 					// parent addition uses OCaml's typed string concatenation.
 					if (op == "+" && (stage3IsStringExpr(a, tyByIdentRaw) || stage3IsStringExpr(b, tyByIdentRaw)))
 						return "HxDynamic.toStdString (" + dynamicBinary + ")";
+					// `boxed * 2` is a Float in Haxe: read the runtime result as the checked Float.
+					if (recordedArithmetic != null
+						&& !recordedArithmetic.resultType.isNullable()
+						&& recordedArithmetic.resultType.getSemanticKey() == "primitive:Float")
+						return "HxDynamic.floatValue (" + dynamicBinary + ")";
 					return dynamicBinary;
 				}
 				// Stage 3 expansion: support a small set of binary ops so `if` conditions can
