@@ -15,6 +15,8 @@ import sys.FileSystem;
 	  renames, deletions, listings, and directory changes through `Dynamic`,
 	  `String`, and `haxe.Exception` handlers and prints each message.
 	- The native executable must print exactly what upstream Haxe 4.3.7 prints.
+	- An OCaml `Failure`, which the runtime uses for its own invariant
+	  failures, must still escape a `catch (e:Dynamic)`.
 **/
 class M14Stage3RuntimeExceptionCatchTest {
 	static function deleteRecursive(path:String):Void {
@@ -29,6 +31,37 @@ class M14Stage3RuntimeExceptionCatchTest {
 		FileSystem.deleteFile(path);
 	}
 
+	/**
+		A runtime invariant failure must stop the program, not reach a Haxe handler.
+
+		The program raises an OCaml `Failure` through a host binding to
+		`Stdlib.failwith`, which is how the runtime reports its own bugs. A
+		`catch (e:Dynamic)` around it must not run, so the native program exits
+		with OCaml's uncaught-exception report. Upstream has no equivalent
+		failure, so only the native result is checked.
+	**/
+	static function invariantFailureEscapes():Void {
+		final root = ".tmp/m14_stage3_runtime_exception_catch_invariant";
+		deleteRecursive(root);
+		FileSystem.createDirectory(root + "/src");
+		final path = root + "/src/Main.hx";
+		final source = "@:native(\"Stdlib\") extern class OcamlHost {\n" + "\tstatic function failwith(message:String):Void;\n" + "}\n\n" + "class Main {\n"
+			+ "\tstatic function main():Void {\n" + "\t\ttry {\n" + "\t\t\tOcamlHost.failwith(\"backend invariant\");\n" + "\t\t} catch (e:Dynamic) {\n"
+			+ "\t\t\tSys.println(\"caught: \" + Std.string(e));\n" + "\t\t}\n" + "\t\tSys.println(\"after\");\n" + "\t}\n" + "}\n";
+		sys.io.File.saveContent(path, source);
+		final program = M14Stage3RuntimeFixture.prepareProgram({source: source, path: path, root: root + "/src"});
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram(program, false), root + "/out");
+		final process = new sys.io.Process(executable, []);
+		final stdout = process.stdout.readAll().toString();
+		final stderr = process.stderr.readAll().toString();
+		final code = process.exitCode();
+		process.close();
+		deleteRecursive(root);
+		if (code == 0 || stdout != "" || stderr.indexOf("Failure(\"backend invariant\")") < 0)
+			throw "runtime invariant failure must escape catch (e:Dynamic): exit=" + code + " stdout=" + stdout + " stderr=" + stderr;
+		Sys.println("M14_STAGE3_RUNTIME_EXCEPTION_CATCH_INVARIANT_ESCAPES:PASS");
+	}
+
 	static function main():Void {
 		final source = "test/fixtures/stage3_runtime_exception_catch";
 		final path = source + "/Main.hx";
@@ -41,5 +74,6 @@ class M14Stage3RuntimeExceptionCatchTest {
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		deleteRecursive(outDir);
 		Sys.println("M14_STAGE3_RUNTIME_EXCEPTION_CATCH:PASS");
+		invariantFailureEscapes();
 	}
 }

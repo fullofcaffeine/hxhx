@@ -208,24 +208,21 @@ let hx_throw (v : Obj.t) : 'a =
   hx_throw_typed v [ "Dynamic" ]
 
 (* Stage3 `try`/`catch` boundaries call this for every OCaml exception that
-   reaches them, so failures raised by the OCaml runtime itself can be caught
-   by Haxe code like a thrown `String`.
+   reaches them. It decides which exceptions Haxe code can catch.
 
    - A Haxe `throw` keeps its payload and type tags.
-   - `Sys_error` (raised by file and directory functions) becomes its message
-     text. The sys runtime modules shape that text to match upstream Haxe.
-   - Other ordinary runtime failures (`Failure`, `Invalid_argument`,
-     `Not_found`, `End_of_file`, `Division_by_zero`) become their printed
-     OCaml form, for example `Failure("get_full_path")`.
-   - Every other exception answers `None` and must keep travelling: loop
-     `break`/`continue` signals, each function's private early-return
-     exception, and fatal conditions such as `Stack_overflow`. *)
+   - `Sys_error` becomes its message as a Haxe `String`. Only the sys runtime
+     modules (`HxFile`, `HxFileSystem`, `HxSys`) raise it toward Haxe code,
+     and they shape the text to match upstream Haxe.
+   - Every other exception answers `None` and keeps travelling. That includes
+     loop `break`/`continue` signals, each function's private early-return
+     exception, fatal conditions such as `Stack_overflow`, and the runtime's
+     own invariant failures (`Failure`, `Invalid_argument`). A backend bug
+     therefore stops the program instead of reaching a Haxe `catch`. *)
 let catchable_exception (exn : exn) : (Obj.t * string list) option =
   match exn with
   | Hx_exception (v, tags) -> Some (v, tags)
   | Sys_error message -> Some (Obj.repr message, [ "String"; "Dynamic" ])
-  | Failure _ | Invalid_argument _ | Not_found | End_of_file | Division_by_zero ->
-      Some (Obj.repr (Stdlib.Printexc.to_string exn), [ "String"; "Dynamic" ])
   | _ -> None
 
 let hx_try (f : unit -> 'a) (handler : Obj.t -> 'a) : 'a =
