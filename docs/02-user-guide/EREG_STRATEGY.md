@@ -48,6 +48,10 @@ Unsupported or not-guaranteed-yet features include:
 - named groups
 - many unicode properties / full unicode character classes
 - exact parity for edge cases like zero-length global matches
+- non-ASCII text: `Str` works on UTF-8 bytes, so `.` matches one byte and
+  `matchedPos()` reports byte offsets. `String` methods count Unicode code
+  points, so after a multi-byte character `s.substr(r.matchedPos().pos)` cuts
+  in the wrong place (tracked by `haxe_ocaml-1w6os`).
 
 When unsupported patterns are used, behavior is “best effort” and may raise at
 runtime.

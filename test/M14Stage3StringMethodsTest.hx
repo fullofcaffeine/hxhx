@@ -22,6 +22,9 @@ import sys.io.File;
 	  instance field, a static field, an array index, static and instance call
 	  results, a chained split and index, a type check, an unchecked cast, a
 	  `Null<String>` local, and a function parameter.
+	- `stage3_string_unicode` runs the same methods on text with two-, three-
+	  and four-byte UTF-8 characters. Upstream counts Unicode code points; the
+	  native runtime counted bytes, so `"héllo😀".length` printed 10, not 6.
 	- The native executable must print exactly what upstream Haxe 4.3.7 prints.
 	- Every instance method of the `String` declaration that Stage3 emits must
 	  have a native adapter. The emitter rejects a typed String call without one
@@ -86,5 +89,6 @@ class M14Stage3StringMethodsTest {
 	static function main():Void {
 		final program = compareWithUpstream("whole_file", "test/fixtures/stage3_string_methods", "test/fixtures/stage3_string_methods/expected.stdout");
 		requireAdapterForEveryStringMethod(program);
+		compareWithUpstream("unicode", "test/fixtures/stage3_string_unicode", "test/fixtures/stage3_string_unicode/expected.stdout");
 	}
 }
