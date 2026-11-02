@@ -41,14 +41,40 @@ enum Stage3OcamlLocalCompoundKind {
 	This module chooses no operand conversions. The caller renders `right` in the
 	local's representation (for example widening an `Int` operand of a `Float`
 	update to float, or stringifying a non-String operand of `+=`) and reports a
-	nullable right carrier through `rightCarrier`. Bitwise compound operators and
-	abstract operator overloads are not handled here and fail at emit time.
+	nullable right carrier through `rightCarrier`. Int bitwise compound operators
+	use the 32-bit `HxInt` helpers; abstract operator overloads are not handled
+	here and fail at emit time.
  */
-/** Arithmetic compound operators with a local value form. The six bitwise ones are not lowered yet (haxe_ocaml-sq6ii). */
+/**
+	Compound operators with a local value form: the arithmetic ones and the six
+	Int bitwise ones (`|= &= ^= <<= >>= >>>=`). A bitwise operator is valid Haxe
+	only on Int-like locals, so `arithmetic` admits it only for `IntUpdate`.
+ */
 function isArithmeticOperator(op:String):Bool {
 	return switch op {
 		case "+=" | "-=" | "*=" | "/=" | "%=": true;
-		case _: false;
+		case _: isBitwiseOperator(op);
+	};
+}
+
+/** The six Int bitwise compound operators. */
+function isBitwiseOperator(op:String):Bool {
+	return bitwiseFunction(op) != null;
+}
+
+/**
+	The `HxInt` helper for one Int bitwise compound operator. These helpers
+	compute in 32 bits and mask shift counts to 0..31, as Haxe does.
+ */
+function bitwiseFunction(op:String):Null<String> {
+	return switch op {
+		case "|=": "HxInt.logor";
+		case "&=": "HxInt.logand";
+		case "^=": "HxInt.logxor";
+		case "<<=": "HxInt.shl";
+		case ">>=": "HxInt.shr";
+		case ">>>=": "HxInt.ushr";
+		case _: null;
 	};
 }
 
@@ -121,6 +147,13 @@ function arithmetic(kind:Stage3OcamlLocalCompoundKind, op:String):(String, Strin
 		case [FloatUpdate, "/="]: (left, right) -> "((" + left + ") /. (" + right + "))";
 		case [FloatUpdate, "%="]: (left, right) -> "(mod_float (" + left + ") (" + right + "))";
 		case [StringUpdate, "+="]: (left, right) -> "((" + left + ") ^ (" + right + "))";
+		case [IntUpdate, _] if (bitwiseFunction(op) != null): (left, right) -> "("
+				+ bitwiseFunction(op)
+				+ " ("
+				+ left
+				+ ") ("
+				+ right
+				+ "))";
 		case _: throw "unsupported OCaml local compound assignment value: " + op + " on " + kind.getName();
 	};
 }

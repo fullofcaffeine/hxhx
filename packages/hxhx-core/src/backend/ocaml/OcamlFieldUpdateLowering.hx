@@ -52,10 +52,12 @@ private function lowerExpression(expression:TypedExpr, allocator:TyCompilerTempo
 
 /**
 	Capture the receiver and old value before the RHS, then return the written value.
-	Admits String `+=` appends, Int `+=`, `-=`, `*=` updates with an Int operand,
-	such as `state.index += value.length`, and Float `+=`, `-=`, `*=`, `/=`, `%=`
-	updates with an Int or Float operand, such as `cell.total += count()`. Other
-	operand types keep their owners.
+	Admits String `+=` appends, Int `+=`, `-=`, `*=` and bitwise
+	`|= &= ^= <<= >>= >>>=` updates with an Int operand, such as
+	`state.index += value.length` or `flags.bits |= 2`, and Float `+=`, `-=`, `*=`, `/=`, `%=`
+	updates with an Int or Float operand, such as `cell.total += count()`. The
+	same forms apply to a field of an anonymous structure. Other operand types
+	keep their owners.
  */
 private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTemporaryAllocator):TypedExpr {
 	final children = expression.getExpressions();
@@ -66,7 +68,10 @@ private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTe
 	final field = operand.getFieldInfo();
 	final key = operand.getType().getSemanticKey();
 	final stringAppend = assignment == "+=" && key == "primitive:String";
-	final intUpdate = (assignment == "+=" || assignment == "-=" || assignment == "*=")
+	final intUpdate = (assignment == "+="
+		|| assignment == "-="
+		|| assignment == "*="
+		|| Stage3OcamlLocalCompoundValue.isBitwiseOperator(assignment))
 		&& key == "primitive:Int"
 		&& children[1].getType().getSemanticKey() == "primitive:Int";
 	// A Float field accepts an Int or Float operand; the binary `old op right`
@@ -75,14 +80,21 @@ private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTe
 	final floatUpdate = (assignment == "+=" || assignment == "-=" || assignment == "*=" || assignment == "/=" || assignment == "%=")
 		&& key == "primitive:Float"
 		&& (rightKey == "primitive:Float" || rightKey == "primitive:Int");
+	// A field of an anonymous structure (`anon.mask |= 6`) has no declaration; its
+	// reads and writes already use the structural object access.
+	final structural = field == null
+		&& operand.getTag() == FieldRead
+		&& TyAliasExpansion.revealNonNullable(operand.getExpressions()[0].getType()).isAnonymous();
 	if ((!stringAppend && !intUpdate && !floatUpdate)
 		|| (operand.getTag() != FieldRead && operand.getTag() != NameRead)
-		|| field == null
-		|| field.getIsStatic()
-		|| field.getIsFinal()
-		|| expression.getType().getSemanticKey() != key
-		|| (field.getPropertyGet() != "" && field.getPropertyGet() != "default")
-		|| (field.getPropertySet() != "" && field.getPropertySet() != "default"))
+		|| expression.getType().getSemanticKey() != key)
+		return expression;
+	if (!structural
+		&& (field == null
+			|| field.getIsStatic()
+			|| field.getIsFinal()
+			|| (field.getPropertyGet() != "" && field.getPropertyGet() != "default")
+			|| (field.getPropertySet() != "" && field.getPropertySet() != "default")))
 		return expression;
 	final valueType = operand.getType();
 	final position = expression.getPosition();
@@ -96,14 +108,15 @@ private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTe
 		final receiver = operand.getExpressions()[0];
 		final receiverBinding = allocator.allocate("receiver", receiver.getType());
 		sequence.push(capture(receiverBinding, receiver));
-		place = TypedExpr.fieldRead(read(receiverBinding), field.getName(), valueType, position, field);
+		place = structural ? TypedExpr.fieldRead(read(receiverBinding), operand.getTexts()[0], valueType,
+			position) : TypedExpr.fieldRead(read(receiverBinding), field.getName(), valueType, position, field);
 	}
 	final oldBinding = allocator.allocate("old", valueType);
 	final rightBinding = allocator.allocate("right", children[1].getType());
 	final nextBinding = allocator.allocate("next", valueType);
 	sequence.push(capture(oldBinding, place));
 	sequence.push(capture(rightBinding, children[1]));
-	final next = TypedExpr.binary(assignment.substr(0, 1), read(oldBinding), read(rightBinding), valueType, position);
+	final next = TypedExpr.binary(assignment.substr(0, assignment.length - 1), read(oldBinding), read(rightBinding), valueType, position);
 	sequence.push(capture(nextBinding, TypedExpr.assign(place, next, valueType, position)));
 	sequence.push(read(nextBinding));
 	return TypedExpr.block(sequence, valueType, position);
