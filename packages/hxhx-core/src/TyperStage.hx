@@ -309,11 +309,134 @@ class TyperStage {
 		}
 		if (args.length >= required)
 			return hasRest ? null : "Too many arguments";
-		// Upstream prints full type paths, and the owner's still-open parameters as monomorphs.
 		final bindings = applied == null
 			|| applied.getTypeArguments()
 				.length != currentParameters.length ? null : TyTypeSubstitution.bind(currentParameters, applied.getTypeArguments(), current.getFullName());
+		final names = signature.getArgNames();
+		// Only `?y` is shown as `Null<T>`; a default value (`y:Int = 2`) keeps the written type.
+		final declaration = current.declarationForSignature(signature);
+		final source = declaration == null ? [] : HxFunctionDecl.getArgs(declaration.getSourceDeclaration());
 		final open = new Array<TyTypeParameterId>();
+		final missing = [
+			for (slot in args.length...types.length) {
+				final declared = bindings == null ? types[slot] : TyTypeSubstitution.apply(types[slot], bindings);
+				final isRest = slot < rest.length && rest[slot];
+				final isQuestion = source.length == types.length ? HxFunctionArg.getIsOptional(source[slot]) : slot < optional.length && optional[slot];
+				final display = upstreamTypeDisplay(!isRest
+					&& isQuestion
+					&& !declared.isNullable() ? TyType.nullable(declared) : declared, open);
+				// A rest parameter may already be typed `haxe.Rest<T>`; otherwise upstream wraps its element type.
+				final shown = isRest && !StringTools.startsWith(display, "haxe.Rest<") ? "haxe.Rest<"
+					+ display
+					+ ">" : display; (slot < names.length ? names[slot] : "arg" + slot)
+					+ ":"
+					+ shown;
+			}
+		];
+		return "Not enough arguments, expected " + missing.join(", ");
+	}
+
+	/** The fixed parameter count of the nearest declared constructor, for placing "Too many arguments". **/
+	static function constructorParameterLimit(index:TyperIndex, owner:TyNominalInfo):Int {
+		var current = owner;
+		final visited = new haxe.ds.StringMap<Bool>();
+		while (current != null && current.instanceMethodCandidates("new").length == 0 && Std.isOfType(current, TyClassInfo)) {
+			visited.set(current.getFullName(), true);
+			final superType = (cast current : TyClassInfo).getSuperType();
+			final identity = superType == null ? null : superType.getNominalIdentity();
+			current = identity == null
+				|| visited.exists(identity.getCanonicalName()) ? null : index.getByFullName(identity.getCanonicalName());
+		}
+		return current == null
+			|| current.instanceMethodCandidates("new").length == 0 ? -1 : current.instanceMethodCandidates("new")[0].getArgs().length;
+	}
+
+	/**
+		Place a diagnostic on argument `surplus` (0-based) of the `new` expression at `pos`.
+
+		Call arguments carry no positions of their own, so this reads the module source: it
+		finds `new` at or after `pos`, skips the type path to its `(`, and counts top-level
+		commas, ignoring brackets, braces, parentheses and string literals. Upstream points
+		"Too many arguments" at the first argument that does not fit. When the source is
+		unavailable or the text does not line up, `pos` is kept.
+	**/
+	static function surplusArgumentPosition(ctx:TyperContext, pos:HxPos, surplus:Int):HxPos {
+		final module = ctx.getIndex() == null ? null : ctx.getIndex().getRegisteredModule(ctx.getModulePath());
+		final parsed = module == null ? null : ResolvedModule.getParsed(module);
+		final source = parsed == null ? null : parsed.getSource();
+		if (source == null || surplus < 0 || pos == null || pos.getIndex() < 0)
+			return pos;
+		var cursor = source.indexOf("new", pos.getIndex());
+		if (cursor < 0)
+			return pos;
+		cursor += 3;
+		var angle = 0;
+		while (cursor < source.length) {
+			final ch = source.charAt(cursor);
+			if (ch == "<")
+				angle++;
+			else if (ch == ">" && source.charAt(cursor - 1) != "-")
+				angle--;
+			else if (ch == "(" && angle <= 0)
+				break;
+			cursor++;
+		}
+		if (cursor >= source.length)
+			return pos;
+		var depth = 0;
+		var argument = 0;
+		var quote = "";
+		var index = cursor + 1;
+		while (index < source.length) {
+			final ch = source.charAt(index);
+			if (quote != "") {
+				if (ch == "\\")
+					index++;
+				else if (ch == quote)
+					quote = "";
+			} else if (ch == "\"" || ch == "'") {
+				quote = ch;
+			} else if (ch == "(" || ch == "[" || ch == "{") {
+				depth++;
+			} else if (ch == ")" || ch == "]" || ch == "}") {
+				if (depth == 0)
+					return pos;
+				depth--;
+			} else if (ch == "," && depth == 0) {
+				argument++;
+				if (argument == surplus) {
+					var start = index + 1;
+					while (start < source.length && StringTools.isSpace(source, start))
+						start++;
+					var line = 1;
+					var lineStart = 0;
+					for (offset in 0...start)
+						if (source.charAt(offset) == "\n") {
+							line++;
+							lineStart = offset + 1;
+						}
+					return new HxPos(start, line, start - lineStart + 1);
+				}
+			}
+			index++;
+		}
+		return pos;
+	}
+
+	/**
+		Print a type the way Haxe 4.3.7's diagnostics do.
+
+		- Nominal types use their full path (`haxe.Exception`); an alias keeps its own name (`Map`).
+		- A type parameter that is still open prints as upstream's monomorph, `Unknown<0>`,
+		  numbered by first appearance in one message.
+		- Functions print as `Int -> Void`, `() -> Void` and `(Int, String) -> Bool`, with a
+		  function argument in parentheses: `(Int -> Void) -> Int`.
+		- Anonymous structures print as `{ b : String, a : Int }`, fields in descending
+		  name order as upstream lists them, and an optional field as `?q : Null<Int>`.
+	**/
+	static function upstreamTypeDisplay(type:TyType, ?open:Array<TyTypeParameterId>):String {
+		if (open == null)
+			open = [];
 		function show(type:TyType):String {
 			final parameter = type.getTypeParameterIdentity();
 			if (parameter != null) {
@@ -329,26 +452,37 @@ class TyperStage {
 			}
 			if (type.isNullable())
 				return "Null<" + show(type.unwrapNull()) + ">";
+			final alias = type.getAliasDefinition();
+			if (alias != null) {
+				final aliasArguments = type.getTypeArguments();
+				return alias.getCanonicalName() + (aliasArguments.length == 0 ? "" : "<" + [for (argument in aliasArguments) show(argument)].join(", ") + ">");
+			}
+			if (type.isFunction()) {
+				final inputs = type.getFunctionArguments();
+				final result = type.getFunctionReturn() == null ? "Void" : show(type.getFunctionReturn());
+				if (inputs.length == 1)
+					return (inputs[0].isFunction() ? "(" + show(inputs[0]) + ")" : show(inputs[0])) + " -> " + result;
+				return "(" + [for (input in inputs) show(input)].join(", ") + ") -> " + result;
+			}
+			if (type.isAnonymous()) {
+				final fields = type.getAnonymousFields();
+				if (fields.length == 0)
+					return "{ }";
+				fields.sort((left, right) -> left.name < right.name ? 1 : left.name > right.name ? -1 : 0);
+				return "{ " + [
+					for (field in fields)
+						(field.isOptional ? "?" : "")
+						+ field.name
+						+ " : "
+						+ show(field.isOptional && !field.type.isNullable() ? TyType.nullable(field.type) : field.type)].join(", ") + " }";
+			}
 			final identity = type.getNominalIdentity();
 			if (identity == null)
 				return type.getDisplay();
 			final arguments = type.getTypeArguments();
 			return identity.getCanonicalName() + (arguments.length == 0 ? "" : "<" + [for (argument in arguments) show(argument)].join(", ") + ">");
 		}
-		final names = signature.getArgNames();
-		final missing = [
-			for (slot in args.length...types.length) {
-				final declared = bindings == null ? types[slot] : TyTypeSubstitution.apply(types[slot], bindings);
-				final shown = show(declared);
-				final display = slot < rest.length
-					&& rest[slot] ? (StringTools.startsWith(shown, "haxe.Rest<") ? shown : "haxe.Rest<"
-						+ shown
-						+
-						">") : slot < optional.length && optional[slot] && !declared.isNullable() ? "Null<" + shown + ">" : shown; (slot < names.length ? names[slot] : "arg"
-						+ slot) + ":" + display;
-			}
-		];
-		return "Not enough arguments, expected " + missing.join(", ");
+		return show(type);
 	}
 
 	static function nominalInfoForType(index:TyperIndex, type:TyType):Null<TyNominalInfo> {
@@ -4075,7 +4209,9 @@ class TyperStage {
 				final arity = owner == null ? 0 : TyNominalApplication.parameterIds(owner).length;
 				final arityFailure = constructorArityFailure(ctx.getIndex(), owner, written, args);
 				if (arityFailure != null)
-					throw new TyperError(ctx.getFilePath(), pos, arityFailure);
+					throw new TyperError(ctx.getFilePath(),
+						arityFailure == "Too many arguments" ? surplusArgumentPosition(ctx, pos, constructorParameterLimit(ctx.getIndex(), owner)) : pos,
+						arityFailure);
 				final contexts = constructorArgumentContexts(_typePath, path.contextual, args, scope, ctx);
 				final argumentTypes = [
 					for (index in 0...args.length) {
