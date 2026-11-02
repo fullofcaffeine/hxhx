@@ -4121,8 +4121,11 @@ class TyperStage {
 										ordinaryIndexedElement(place, receiver, subscript, receiverType, scope, ctx, pos);
 									return selected;
 								});
+								// The setter-selected result is keyed on the whole assignment, so
+								// a call argument, local or outer assignment that consumes it reads
+								// this term. Without a declared setter the place is the raw wrapper.
 								if (indexed != null)
-									return scope.getInference().untypedResult(a);
+									return scope.getInference().untypedResult(expr);
 								indexedDestination = scope.getInference().untypedResult(a);
 							case _:
 						}

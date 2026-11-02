@@ -26,6 +26,14 @@ class M14UntypedIndexedAssignmentTest {
 		check("setter_result_is_unconstrained", getter + stringResultSetter, 'static function w(b:B):Int return untyped b[0]=9;', true);
 		check("setter_result_to_string", getter + setter, 'static function w(b:B):Void{var s:String=untyped b[0]=9;}', true);
 		check("raw_untyped_storage", "", 'static function w(b:B):Int return untyped b[0]=9;', true);
+		// The untyped result flows into declared setters, calls and locals.
+		final take = 'static function take(v:Int):Void{}';
+		check("chained_untyped_assignment", getter + setter, 'static function w(b:B):Void{untyped b[0]=untyped b[0]=1;}', true);
+		check("result_local_to_setter", getter + setter, 'static function w(b:B):Void{var x=untyped b[0]=1;b[0]=x;}', true);
+		check("result_local_to_call", getter + setter, take + 'static function w(b:B):Void{var x=untyped b[0]=1;take(x);}', true);
+		check("result_to_call", getter + setter, take + 'static function w(b:B):Void{take(untyped b[0]=1);}', true);
+		check("result_to_typed_setter", getter + setter, 'static function w(b:B):Void{b[1]=untyped b[0]=1;}', true);
+		check("result_local_to_untyped_setter", getter + setter, 'static function w(b:B):Void{var x=untyped b[0]=1;untyped b[0]=x;}', true);
 		// Update forms stay rejected for a getter-only abstract; real untyped update
 		// support with a declared setter is owned by haxe_ocaml-2hkru.
 		check("compound_getter_only", getter, 'static function w(b:B):Void{untyped b[0]+=1;}', false);
