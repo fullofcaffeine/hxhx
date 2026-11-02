@@ -67,14 +67,24 @@ function returnValue(actual:TyType, expected:TyType, value:String, names:Stage3O
 	if (expected.isVoid())
 		return "ignore (" + value + ")";
 	validateReturn(actual, expected);
+	if (isIntToFloat(actual, expected))
+		return "float_of_int (" + value + ")";
 	return convert(actual, expected, value, names);
 }
+
+/**
+	Haxe widens an `Int` result to a declared `Float` result (`return 1;` in a
+	`Float` function). Every 32-bit Int is exactly representable as a double,
+	so `float_of_int` gives the same value upstream Haxe returns.
+ */
+private function isIntToFloat(actual:TyType, expected:TyType):Bool
+	return actual.getSemanticKey() == "primitive:Int" && expected.getSemanticKey() == "primitive:Float";
 
 /** Reject unsupported carriers before the native statement adapter admits a function. */
 function validateReturn(actual:TyType, expected:TyType):Void {
 	if (actual.hasUnknownComponent() || expected.hasUnknownComponent())
 		throw "OCaml lambda return conversion requires complete types";
-	if (actual.getSemanticKey() == expected.getSemanticKey() || expected.isVoid())
+	if (actual.getSemanticKey() == expected.getSemanticKey() || expected.isVoid() || isIntToFloat(actual, expected))
 		return;
 	if (TyAssignmentCompatibility.classify(expected, actual, Unchecked) != Compatible)
 		throw "OCaml lambda body does not satisfy its return contract";

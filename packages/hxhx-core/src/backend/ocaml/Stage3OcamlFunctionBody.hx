@@ -86,6 +86,9 @@ function plan(facts:TypedBackendLambdaOccurrence, body:HxExpr, ?isEnumBox:TyType
 	final result = facts.callableType.getFunctionReturn();
 	final carrier = switch result.getSemanticKey() {
 		case "primitive:Int": "int";
+		// A Haxe Float is an unboxed OCaml float. Obj.repr/Obj.obj keep the boxed
+		// double unchanged, so the value leaves the return exception bit for bit.
+		case "primitive:Float": "float";
 		case "primitive:Bool": "bool";
 		case "primitive:String": "string";
 		case "primitive:Void": "unit";
