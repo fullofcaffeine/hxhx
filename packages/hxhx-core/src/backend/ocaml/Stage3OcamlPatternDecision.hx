@@ -146,6 +146,10 @@ private function expandAlternative(row:PatternRow, index:Int, pattern:HxSwitchPa
 private function sameTest(left:HxSwitchPattern, right:HxSwitchPattern):Bool {
 	return switch [head(left), head(right)] {
 		case [PInt(a), PInt(b)]: a == b;
+		// Upstream compares numeric constants by value, so `case 3:` and `case 3.0:`
+		// in a Float switch test the same value.
+		case [PFloat(a), PFloat(b)]: HxFloatPatternText.value(a) == HxFloatPatternText.value(b);
+		case [PInt(a), PFloat(b)] | [PFloat(b), PInt(a)]: a == HxFloatPatternText.value(b);
 		case [PString(a), PString(b)]: a == b;
 		case [PBool(a), PBool(b)]: a == b;
 		case [PArray(a), PArray(b)]: a.length == b.length;
@@ -317,6 +321,7 @@ private function compileRows(rows:Array<PatternRow>, columns:Array<PatternColumn
 	}
 	final test = switch pattern {
 		case PInt(literal): context.dialect.runtimeDynamicEquals(value, Std.string(literal));
+		case PFloat(literal): context.dialect.runtimeDynamicEquals(value, Stage3OcamlFloatConstant.render(literal));
 		case PString(literal): context.dialect.runtimeDynamicEquals(value, context.quote(literal));
 		case PBool(literal): context.dialect.runtimeDynamicEquals(value, literal ? "true" : "false");
 		case PArray(items): "(HxArray.length (Obj.magic " + value + ") = " + items.length + ")";

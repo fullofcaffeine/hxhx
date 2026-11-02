@@ -980,6 +980,24 @@ class HxParser {
 			case TInt(v):
 				bump();
 				PInt(v);
+			case TFloat(v):
+				final pattern = HxSwitchPattern.PFloat(HxFloatPatternText.of(cur.numericText, v, false));
+				bump();
+				pattern;
+			case TOther(c) if (c == "-".code && (peekKind().match(TInt(_)) || peekKind().match(TFloat(_)))):
+				// A negative numeric constant, such as `case -1:` or `case -2.5:`.
+				bump();
+				switch (cur.kind) {
+					case TInt(v):
+						bump();
+						PInt(-v);
+					case TFloat(v):
+						final pattern = HxSwitchPattern.PFloat(HxFloatPatternText.of(cur.numericText, v, true));
+						bump();
+						pattern;
+					case _:
+						fail("Expected a number after '-' in a pattern");
+				}
 			case TIdent(name) if (name == "macro" && peekKind().match(TColon)):
 				parseMacroTypeSwitchPattern();
 			case TIdent(name) if (name == "macro"):
@@ -1025,10 +1043,20 @@ class HxParser {
 					|| isUpperStart(name) ? PEnumValue(patternName) : PBind(name);
 				}
 			case _:
-				// Best-effort: consume one token and treat it as a wildcard.
-				bump();
-				PWildcard;
+				// Upstream rejects every other expression as a pattern (for example a
+				// regular expression literal). Turning it into a wildcard would make the
+				// case match every value.
+				fail("Unrecognized pattern: " + patternTokenText(cur.kind));
 		}
+	}
+
+	static function patternTokenText(kind:HxTokenKind):String {
+		return switch (kind) {
+			case TRegex(pattern, flags): "~/" + pattern + "/" + flags;
+			case TOther(c): String.fromCharCode(c);
+			case TKeyword(keyword): keywordText(keyword);
+			case _: Std.string(kind);
+		};
 	}
 
 	function parseMacroTypeSwitchPattern():HxSwitchPattern {

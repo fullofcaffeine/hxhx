@@ -90,6 +90,9 @@ class TypedBodyFingerprint {
 			case PInt(value):
 				addString(state, "pattern-int");
 				addInt(state, value);
+			case PFloat(value):
+				addString(state, "pattern-float");
+				addString(state, value);
 			case PEnumValue(name):
 				addString(state, "pattern-enum-value");
 				addString(state, name);

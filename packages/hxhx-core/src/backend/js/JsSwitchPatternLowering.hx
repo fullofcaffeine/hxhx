@@ -30,6 +30,8 @@ class JsSwitchPatternLowering {
 				{cond: scrutineeVar + " === " + JsNameMangler.quoteString(value), bindings: []};
 			case PInt(value):
 				{cond: scrutineeVar + " === " + Std.string(value), bindings: []};
+			case PFloat(text):
+				{cond: scrutineeVar + " === " + text, bindings: []};
 			case PEnumValue(name):
 				lowerNamed(pattern, [], scrutineeVar, scope);
 			case PEnumExtract(name, args):

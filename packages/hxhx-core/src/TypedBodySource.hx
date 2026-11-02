@@ -320,6 +320,7 @@ class TypedBodySource {
 			case PBool(value): PBool(value);
 			case PString(value): PString(value);
 			case PInt(value): PInt(value);
+			case PFloat(value): PFloat(value);
 			case PEnumValue(name): PEnumValue(name);
 		};
 	}
