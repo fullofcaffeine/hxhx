@@ -4257,6 +4257,23 @@ class OcamlBuilder {
 		]));
 	}
 
+	/**
+		Haxe `Std.int` of a Float: truncate toward zero, then wrap into the signed
+		32-bit Int range, as upstream eval does (`Std.int(4294967295.0)` is -1).
+		This is the same expression as the runtime `Std.int` in
+		`std/runtime/Std.ml`. It is inlined so that the call keeps no runtime
+		module dependency. Out-of-range, infinite, and NaN inputs follow the
+		CPU's float-to-int conversion, like eval (reviewed under
+		`docs/00-project/FLOAT_NUMERIC_REVIEW_GATE.md`; answers are on Beads
+		haxe_ocaml-3lpr4 and haxe_ocaml-kmdfe).
+	**/
+	static function stdIntOfFloat(value:OcamlExpr):OcamlExpr {
+		final int32 = OcamlExpr.EField(OcamlExpr.EIdent("Stdlib"), "Int32");
+		return OcamlExpr.EApp(OcamlExpr.EField(int32, "to_int"), [
+			OcamlExpr.EApp(OcamlExpr.EField(int32, "of_int"), [OcamlExpr.EApp(OcamlExpr.EIdent("int_of_float"), [value])])
+		]);
+	}
+
 	static function unwrap(e:TypedExpr):TypedExpr {
 		var current = e;
 		while (true) {
@@ -5486,15 +5503,10 @@ class OcamlBuilder {
 											}
 										} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Std" && cf.name == "int" && args.length == 1) {
 											final arg = unwrap(args[0]);
-											switch (arg.expr) {
-												case TBinop(OpDiv, a, b) if (isIntType(a.t) && isIntType(b.t)):
-													// Haxe `Std.int(a / b)` with Int operands: lower directly to OCaml int division.
-													OcamlExpr.EBinop(OcamlBinop.Div, buildExpr(a), buildExpr(b));
-												case _ if (isIntType(arg.t)):
-													buildExpr(arg);
-												case _:
-													OcamlExpr.EApp(OcamlExpr.EIdent("int_of_float"), [buildExpr(arg)]);
-											}
+											// `Std.int(a / b)` with Int operands is a Float division in Haxe, so it
+											// takes the same path: `-2147483648 / -1` wraps to -2147483648, and a
+											// zero divisor yields an infinity instead of OCaml's Division_by_zero.
+											isIntType(arg.t) ? buildExpr(arg) : stdIntOfFloat(buildExpr(arg));
 										} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Std" && cf.name == "isOfType" && args.length == 2) {
 											buildPlannedStdIsOfType(e, args[0], args[1]);
 										} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Std" && cf.name == "string" && args.length == 1) {
