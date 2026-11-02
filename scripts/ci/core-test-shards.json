@@ -238,6 +238,7 @@
     "test:m14:stage3-runtime-exception-catch": "compiler-foundation",
     "test:m14:stage3-inline-structural-methods": "compiler-focused-1",
     "test:m14:inline-structural-method-typing": "compiler-focused-1",
+    "test:m14:stage3-underscore-bindings": "compiler-focused-1",
     "test:m14:stage3-member-length": "compiler-foundation",
     "test:m14:stage3-string-methods": "compiler-foundation",
     "test:m14:stage3-map-methods": "compiler-foundation",

@@ -12,6 +12,9 @@ import haxe.ds.StringMap;
 	supply their own catalog; this pass never recovers bindings from source text.
 **/
 class Stage3OcamlLocalNames {
+	/** The OCaml base name for a Haxe local named `_`. */
+	static inline final UNDERSCORE_LOCAL = "_hx_underscore";
+
 	final byProjectedName:StringMap<String>;
 	final localCatalog:TypedBackendLocalCatalog;
 
@@ -29,10 +32,13 @@ class Stage3OcamlLocalNames {
 			final projectedName = entry.getProjectedName();
 			final normalized = normalize(projectedName);
 			// Native static field cells own every name with this prefix, so a local spelled
-			// like one is renamed instead of shadowing the cell.
-			final base = normalized != null
+			// like one is renamed instead of shadowing the cell. Haxe `_` is an ordinary,
+			// readable local (`catch (_:String) trace(_)`), but OCaml `_` is a wildcard
+			// pattern that cannot be read, so it gets a real OCaml name; the leading
+			// underscore keeps OCaml's unused-variable warning quiet.
+			final base = normalized == "_" ? UNDERSCORE_LOCAL : normalized != null
 				&& StringTools.startsWith(normalized, Stage3OcamlStaticStorage.CELL_PREFIX) ? "local" + normalized : normalized;
-			if (base == null || base.length == 0 || base == "_")
+			if (base == null || base.length == 0)
 				throw "Stage3 OCaml local naming cannot render exact binding " + entry.getBinding().getIdentity().getCanonicalKey();
 			var targetName = base;
 			var suffix = 0;

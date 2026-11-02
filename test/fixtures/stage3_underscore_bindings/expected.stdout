@@ -1,0 +1,9 @@
+braced catch
+unbraced catch
+caught value: read
+second catch
+loops: 7
+lambdas: 1 2 3 4
+methods: 1 6
+local: 7
+pattern wildcard: 2
