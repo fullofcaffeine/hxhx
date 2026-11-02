@@ -1953,6 +1953,14 @@ class EmitterStage {
 			|| occurrence.getIsSuperCall() ? null : backend.ocaml.Stage3OcamlMapCalls.renderConstruction(occurrence.getConstructedType(), argumentCount);
 	}
 
+	/** A typed `new EReg(...)`, including a regex literal, which the runtime `EReg.ml` constructs. */
+	static function stage3ERegConstruction(expr:HxExpr):Null<TypedBackendConstructorOccurrence> {
+		final occurrence = exactConstructor(expr);
+		return occurrence == null
+			|| occurrence.getIsSuperCall()
+			|| !backend.ocaml.Stage3OcamlERegCalls.ownsConstruction(occurrence.getConstructedType()) ? null : occurrence;
+	}
+
 	static function isStage3StdArrayCtorTypePath(typePath:String):Bool {
 		final raw = typePath == null ? "" : StringTools.trim(typePath);
 		final genericStart = raw.indexOf("<");
@@ -3614,6 +3622,19 @@ class EmitterStage {
 				if (rendered != null)
 					return rendered;
 			}
+			if (exactCall.owner == "EReg") {
+				final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findInstanceCall(e) : currentTypedFunction == null ? null : currentTypedFunction.findInstanceCall(e);
+				if (occurrence == null)
+					throw "selected OCaml EReg call requires its exact executable occurrence";
+				final rendered = backend.ocaml.Stage3OcamlERegCalls.render({
+					occurrence: occurrence,
+					emit: value -> exprToOcaml(value, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+						callSigByCalleeRaw),
+					names: currentFunctionLocalOcamlNames
+				});
+				if (rendered != null)
+					return rendered;
+			}
 			if (backend.ocaml.Stage3OcamlMapCalls.ownsInstanceCall(exactCall.owner)) {
 				final occurrence = currentTypedInitializer != null ? currentTypedInitializer.findInstanceCall(e) : currentTypedFunction == null ? null : currentTypedFunction.findInstanceCall(e);
 				if (occurrence == null)
@@ -3720,6 +3741,16 @@ class EmitterStage {
 				escapeOcamlString(name);
 			case ENew(_, args) if (stage3MapConstruction(e, args.length) != null):
 				stage3MapConstruction(e, args.length);
+			case ENew(_, args) if (stage3ERegConstruction(e) != null):
+				backend.ocaml.Stage3OcamlERegCalls.renderConstruction({
+					arguments: [
+						for (argument in args)
+							exprToOcaml(argument, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+								callSigByCalleeRaw)
+					],
+					runtimeModules: currentRuntimeOcamlModuleNames,
+					names: currentFunctionLocalOcamlNames
+				});
 			case ENew(typePath, args):
 				final rendered = exprToOcamlNewStage3(typePath, args, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath,
 					moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
@@ -5363,6 +5394,13 @@ class EmitterStage {
 				&& !construction.getIsSuperCall()
 				&& backend.ocaml.Stage3OcamlMapCalls.renderConstruction(construction.getConstructedType(), construction.getArguments().length) != null)
 				return false;
+			// `new EReg(pattern, flags)` renders the runtime constructor.
+			if (construction != null && stage3ERegConstruction(e) != null) {
+				for (argument in construction.getArguments())
+					if (hasBringupPoison(argument))
+						return true;
+				return false;
+			}
 			final indexedAccess = arrayAccess(e);
 			if (!isMetalProfileActive() && indexedAccess != null && backend.ocaml.Stage3OcamlArrays.supportsAccess(indexedAccess)) {
 				// The typed renderer owns this operation; retain unsupported-operand checks
