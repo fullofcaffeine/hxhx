@@ -122,6 +122,12 @@ function access(occurrence:TypedBackendArrayAccess, emit:HxExpr->String, names:S
 					case "+=": "HxInt.add " + old + " " + right;
 					case "-=": "HxInt.sub " + old + " " + right;
 					case "*=": "HxInt.mul " + old + " " + right;
+					case _ if (Stage3OcamlLocalCompoundValue.bitwiseFunction(op) != null):
+						Stage3OcamlLocalCompoundValue.bitwiseFunction(op)
+						+ " "
+						+ old
+						+ " "
+						+ right;
 					case _: throw "unsupported OCaml indexed compound operation: " + op;
 				}
 			};
