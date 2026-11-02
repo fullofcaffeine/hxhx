@@ -240,9 +240,8 @@ class M14TypedBodyBoundaryIntegrationTest {
 	}
 
 	/** Load the real quotation type before validating a call that accepts a macro expression. */
-	static function typeWhileArgument(argument:String):TypedModule {
-		final filePath = "checks/WhileMacroArgument.hx";
-		final source = [
+	static function whileArgumentSource(argument:String):String {
+		return [
 			"class WhileMacroArgument {",
 			"  static function shouldFail(value:Dynamic):Void {}",
 			"  static function tick(value:Bool):Void {}",
@@ -251,6 +250,11 @@ class M14TypedBodyBoundaryIntegrationTest {
 			"  }",
 			"}",
 		].join("\n");
+	}
+
+	static function typeWhileArgument(argument:String):TypedModule {
+		final filePath = "checks/WhileMacroArgument.hx";
+		final source = whileArgumentSource(argument);
 		final parsed = ParserStage.parse(source, filePath);
 		final resolved = new ResolvedModule("WhileMacroArgument", filePath, parsed);
 		final args = hxhx.Stage1Compiler.Stage1Args.parse(["-main", "WhileMacroArgument"], true);
@@ -261,30 +265,81 @@ class M14TypedBodyBoundaryIntegrationTest {
 		return TyperStage.typeResolvedModule(resolved, index, loader);
 	}
 
-	/** Quotation preserves the loop's syntax without binding names or control to the caller. */
+	/** Whether no node below `node` binds a caller local, is a loop or return, or carries a control destination. */
+	static function quotedDataOnly(node:TypedExpr):Bool {
+		if (node.getLocalBindings().length != 0 || node.getControlTarget() != null)
+			return false;
+		switch node.getTag() {
+			case WhileExpr | ReturnExpr | LocalRead | MacroExpr:
+				return false;
+			case _:
+		}
+		for (child in node.getExpressions())
+			if (!quotedDataOnly(child))
+				return false;
+		return true;
+	}
+
+	/** The `expr` field of a lowered `{expr: <ExprDef>, pos: <Position>}` record, checked to be the enum constructor `name`. */
+	static function loweredNode(record:TypedExpr, name:String, message:String):TypedExpr {
+		assertTrue(record.getTag() == TypedExprTag.Anonymous
+			&& record.getTexts().join(",") == "expr,pos", message + ": not an Expr record");
+		final definition = record.getExpressions()[0];
+		final constructor = definition.getDeclaration();
+		assertTrue(definition.getTag() == TypedExprTag.Call
+			&& constructor != null
+			&& constructor.getIsEnumConstructor()
+			&& constructor.getSignature().getName() == name,
+			message
+			+ ": expected the `"
+			+ name
+			+ "` constructor");
+		return definition;
+	}
+
+	/**
+		A quotation is lowered by the typer to the construction of its `haxe.macro.Expr` value
+		(`MacroReificationLowering`). The loop's syntax survives as data, `EWhile(cond, EBlock([...]), true)`,
+		with positions in the macro's file; nothing in it binds the caller's `a` or is an executing loop.
+	**/
 	static function assertWhileMacroArgumentStructure():Void {
-		final typed = typeWhileArgument("macro while (a) { tick(a); }");
+		final argument = "macro while (a) { tick(a); }";
+		final typed = typeWhileArgument(argument);
 		final body = findFunction(findClass(typed, "WhileMacroArgument"), "check").getBody();
 		final call = body.getStatements()[0].getExpressions()[0];
 		assertTrue(call.getTag() == TypedExprTag.Call, "while macro fixture lost its outer call");
 		final quote = call.getExpressions()[1];
-		assertTrue(quote.getTag() == TypedExprTag.MacroExpr, "while macro argument lost its quotation boundary");
-		final loop = quote.getExpressions()[0];
-		assertTrue(loop.getTag() == TypedExprTag.WhileExpr, "while macro argument did not become a typed loop expression");
-		assertTrue(loop.getBoolValue(), "while macro block lost its brace-block identity");
-		assertTrue(loop.getExpressions().length == 2, "typed while macro argument lost its condition or body expression");
-		assertTrue(loop.getExpressions()[0].getTag() == TypedExprTag.NameRead && loop.getExpressions()[0].getTexts()[0] == "a",
+		assertTrue(quotedDataOnly(quote), "quoted while acquired an executing loop destination or caller binding");
+		final loop = loweredNode(quote, "EWhile", "while macro argument");
+		assertTrue(loop.getExpressions().length == 4, "lowered while lost its condition, body, or loop kind");
+		final condition = loweredNode(loop.getExpressions()[1], "EConst", "quoted while condition");
+		final identifier = condition.getExpressions()[1];
+		assertTrue(identifier.getDeclaration() != null
+			&& identifier.getDeclaration().getSignature().getName() == "CIdent"
+			&& identifier.getExpressions()[1].getTag() == TypedExprTag.StringValue
+			&& identifier.getExpressions()[1].getTexts()[0] == "a",
 			"quoted while condition did not retain its authored name");
-		assertTrue(loop.getControlTarget() == null && loop.getExpressions()[0].getLocalBindings().length == 0,
-			"quoted while acquired an executing loop destination or caller binding");
-		assertTrue(loop.getPosition() != null && loop.getPosition().getLine() == 5, "typed while macro argument lost the loop's exact source line");
+		final block = loweredNode(loop.getExpressions()[2], "EBlock", "while macro block lost its brace-block identity");
+		final statements = block.getExpressions()[1];
+		assertTrue(statements.getTag() == TypedExprTag.ArrayDecl
+			&& statements.getExpressions().length == 1, "quoted while body lost its statement");
+		loweredNode(statements.getExpressions()[0], "ECall", "quoted while body");
+		assertTrue(loop.getExpressions()[3].getTag() == TypedExprTag.BoolValue && loop.getExpressions()[3].getBoolValue(),
+			"lowered while lost its ordinary (not do-while) kind");
+		// The loop's position is the zero-width start of `while`, on line 5 of the source.
+		final position = quote.getExpressions()[1];
+		final facts = position.getTag() == TypedExprTag.Cast ? position.getExpressions()[0] : position;
+		final source = whileArgumentSource(argument);
+		assertTrue(facts.getTag() == TypedExprTag.Anonymous
+			&& facts.getTexts().join(",") == "file,min,max"
+			&& facts.getExpressions()[1].getIntValue() == source.indexOf("while (a)")
+			&& source.substr(0, source.indexOf("while (a)")).split("\n").length == 5,
+			"typed while macro argument lost the loop's exact source start");
 		switch (ordinaryStatements(body)[0]) {
-			case SExpr(ECall(EIdent("shouldFail"), [
-				EMacroExpr(EWhile(EIdent("a"), [ECall(EIdent("tick"), [EIdent("a")])], true, position, HxWhileKind.Normal), [])
-			]), _):
-				assertTrue(position.getLine() == 5, "typed-body source projection changed the while position");
+			case SExpr(ECall(EIdent("shouldFail"), [EAnon(["expr", "pos"], [_, ECast(EAnon(["file", "min", "max"], _), _)])]), position):
+				assertTrue(position.getLine() == 5, "typed-body source projection changed the while statement position");
 			case _:
-				throw "typed-body source projection changed the while macro argument";
+				throw "typed-body source projection changed the lowered while macro argument";
 		}
 		final position = new HxPos(0, 1, 1);
 		final emptyFingerprint = TypedBodyFingerprint.forStatements([SExpr(EWhile(EIdent("a"), [], true, position, HxWhileKind.Normal), position)]);

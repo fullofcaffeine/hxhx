@@ -2,7 +2,10 @@ import backend.cpp.CppMacroExpr;
 import backend.source.SourceTargetCommon;
 import backend.vm.NekoMacroExprLowering;
 
-/** Native quotation adapters preserve authored brace boundaries, including empty and nested groups. */
+/**
+	Quotations keep authored brace boundaries, including empty and nested groups: in the typer's
+	lowering (every typed module) and in the per-target quote adapters used by fallback modules.
+**/
 class M14SourceGroupMacroAdapterTest {
 	public static function run():Void {
 		final sources = ["{ 1; 2; }", "{ { 1; 2; } 3; }", "{ 1; { 2; 3; } }", "{}"];
@@ -15,12 +18,25 @@ class M14SourceGroupMacroAdapterTest {
 			+ [for (source in sources) "Sys.println(shape(macro " + source + "));"].join("\n") + "} }";
 		sys.io.File.saveContent(root + "/Main.hx", upstream);
 		check("haxe", ["-cp", root, "-main", "Main", "--interp"], expected);
+		// The typer lowers each quote to the construction of its `Expr` value; that construction
+		// must keep the authored grouping (`{ { 1; 2; } 3; }` is two nested `EBlock`s).
+		final lowered = [
+			for (source in sources) {
+				final typed = TyperStage.typeModule(ParserStage.parse(wrap(source), "Main.hx"));
+				typed.getBackendProjection();
+				loweredShape(typed.getTypedClasses()[0].getFunctions()[0].getBody().getStatements()[0].getExpressions()[0]);
+			}
+		];
+		if (lowered.join("\n") != expected)
+			throw "typed quotation lowering changed source brace grouping: " + lowered.join("\n");
+		// The per-target quote adapters below now run only for modules built without the typer
+		// (`TypedBodyBuilder.buildFallbackModule`), which keeps the quote node; feed them that input.
 		final projected = new Array<HxExpr>();
 		for (source in sources) {
-			final parsed = ParserStage.parse("class Main { static function main() { var quoted = macro " + source + "; } }", "Main.hx");
-			final typed = TyperStage.typeModule(parsed);
-			typed.getBackendProjection();
-			final quote = typed.getTypedClasses()[0].getFunctions()[0].getBody().getStatements()[0].getExpressions()[0];
+			final fallback = TypedBodyBuilder.buildFallbackModule(ParserStage.parse(wrap(source), "Main.hx"), null);
+			final quote = fallback[0].getFunctions()[0].getBody().getStatements()[0].getExpressions()[0];
+			if (quote.getTag() != MacroExpr)
+				throw "fallback module lost its quotation node";
 			projected.push(TypedSourceSyntax.expression(quote.getExpressions()[0]));
 		}
 		final cpp = "#include <iostream>\n#include <memory>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <vector>\n"
@@ -71,6 +87,31 @@ class M14SourceGroupMacroAdapterTest {
 		sys.io.File.saveContent(root + "/quote.php", php);
 		check("php", [root + "/quote.php"], expected);
 		Sys.println("SOURCE_GROUP_MACRO_ADAPTERS:PASS");
+	}
+
+	static function wrap(source:String):String
+		return "class Main { static function main() { var quoted = macro " + source + "; } }";
+
+	/** The `block(...)`/integer shape of a lowered `{expr: <ExprDef>, pos: <Position>}` construction. */
+	static function loweredShape(record:TypedExpr):String {
+		if (record.getTag() != Anonymous || record.getTexts().join(",") != "expr,pos")
+			throw "quotation was not lowered to an Expr record";
+		final definition = record.getExpressions()[0];
+		return switch constructorName(definition) {
+			case "EBlock": "block(" + [for (item in definition.getExpressions()[1].getExpressions()) loweredShape(item)].join(",") + ")";
+			case "EConst":
+				final constant = definition.getExpressions()[1];
+				if (constructorName(constant) != "CInt")
+					throw "lowered constant is not an integer";
+				constant.getExpressions()[1].getTexts()[0];
+			case name: throw "unexpected lowered constructor `" + name + "`";
+		};
+	}
+
+	/** The constructor a lowered call names; `typeModule` loads no `haxe.macro.Expr`, so read the callee's last segment. */
+	static function constructorName(call:TypedExpr):String {
+		final callee = call.getTag() == Call ? call.getExpressions()[0] : null;
+		return callee != null && callee.getTag() == FieldRead ? callee.getTexts()[0] : "";
 	}
 
 	static function check(executable:String, arguments:Array<String>, expected:String):Void {

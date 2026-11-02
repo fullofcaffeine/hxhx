@@ -60,6 +60,24 @@ class M14SourceFunctionTypingTest {
 		throw "source function accepted invalid return contract";
 	}
 
+	/** Whether no node below `node` is a return or carries a control destination. */
+	static function controlFree(node:TypedExpr):Bool {
+		if (node.getTag() == ReturnExpr || node.getControlTarget() != null)
+			return false;
+		for (child in node.getExpressions())
+			if (!controlFree(child))
+				return false;
+		return true;
+	}
+
+	/** The lowered call `<owner>.<name>(...)`; this fixture loads no `haxe.macro.Expr`, so the callee spelling identifies it. */
+	static function constructorCall(node:TypedExpr, name:String):TypedExpr {
+		final callee = node.getTag() == Call ? node.getExpressions()[0] : null;
+		if (callee == null || callee.getTag() != FieldRead || callee.getTexts()[0] != name)
+			throw "quoted return: expected a lowered `" + name + "` construction";
+		return node;
+	}
+
 	static function main():Void {
 		namedBlockReplay();
 		final oldStrict = Sys.getEnv("HXHX_TYPER_STRICT");
@@ -80,15 +98,23 @@ class M14SourceFunctionTypingTest {
 			throw "source function return lost its exact parameter binding";
 		reject(ESourceGroup([EInt(7)], position), "Int", "Missing return");
 		reject(ESourceGroup([EReturn(EInt(7))], position), "Void", "lambda result");
+		// The typer lowers a quotation to the construction of its `haxe.macro.Expr` value, so the
+		// quoted `return` is the data `{expr: EReturn({expr: EConst(CInt("7"))}), pos}`, not a
+		// return statement: nothing inside it may target the enclosing function.
 		final quoted = typeBody(ESourceGroup([EMacroExpr(EReturn(EInt(7)), []), EReturn(null)], position), "Void");
-		final quote = quoted.getExpressions()[0].getExpressions()[0];
-		if (quote.getTag() != MacroExpr || quote.getExpressions()[0].getControlTarget() != null)
+		final group = quoted.getExpressions()[0];
+		final quote = group.getExpressions()[0];
+		if (quote.getTag() != Anonymous || quote.getTexts().join(",") != "expr,pos")
+			throw "quoted return was not lowered to an Expr record";
+		if (!controlFree(quote))
 			throw "quoted return acquired an executing function target";
-		switch TypedSourceSyntax.expression(quote.getExpressions()[0]) {
-			case EReturn(EInt(7)):
-			case _:
-				throw "quoted return lost its authored value";
-		}
+		final returned = constructorCall(quote.getExpressions()[0], "EReturn");
+		final value = constructorCall(constructorCall(returned.getExpressions()[1].getExpressions()[0], "EConst").getExpressions()[1], "CInt");
+		if (value.getExpressions()[1].getTag() != StringValue || value.getExpressions()[1].getTexts()[0] != "7")
+			throw "quoted return lost its authored value";
+		final real = group.getExpressions()[1];
+		if (real.getTag() != ReturnExpr || real.getControlTarget() != quoted.getControlTarget())
+			throw "the unquoted return no longer targets its function";
 		reject(ESourceGroup([EMacroExpr(EReturn(EInt(7)), [])], position), "Int", "Missing return");
 		Sys.putEnv("HXHX_TYPER_STRICT", oldStrict == null ? "" : oldStrict);
 		Sys.println("SOURCE_FUNCTION_TYPING:PASS");
