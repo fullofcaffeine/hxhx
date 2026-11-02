@@ -2768,12 +2768,12 @@ class EmitterStage {
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
 			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
 		switch (e) {
+			// Haxe declares `Math.abs(v:Float):Float`, so an Int argument is widened
+			// and the result is always a Float (`Math.abs(-2) + 0.5` is 2.5).
 			case ECall(EField(EIdent("Math"), "abs"), [arg]):
-				final absFn = stage3IsFloatExpr(arg, tyByIdent, callSigByCallee,
-					staticImportByIdent) ? "abs_float " : (stage3IsIntExpr(arg, tyByIdent) ? "abs " : "abs_float ");
-				return absFn
-					+ "("
-					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+				return "abs_float ("
+					+ exprToOcamlAsFloatValueStage3(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+						callSigByCallee, stage3ExactPrimitiveKey(arg) == "primitive:Int")
 					+ ")";
 			case ECall(EField(EIdent("Math"), "round"), [arg]):
 				return "(int_of_float (floor (("
@@ -2830,35 +2830,25 @@ class EmitterStage {
 
 	static function tryExprToOcamlStage3MathCallIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>):Null<String> {
+		// Every Math check takes a Float, so an Int argument is widened first.
+		function mathFloatArgument(arg:HxExpr):String
+			return exprToOcamlAsFloatValueStage3(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, null,
+				stage3ExactPrimitiveKey(arg) == "primitive:Int");
 		final isNaNArgs = stage3RootCallArgs(e, "Math", "isNaN", 1);
 		if (isNaNArgs != null) {
 			final arg = isNaNArgs[0];
-			return "(classify_float ("
-				+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-				+ ") = FP_nan)";
+			return "(classify_float (" + mathFloatArgument(arg) + ") = FP_nan)";
 		}
 		final isFiniteArgs = stage3RootCallArgs(e, "Math", "isFinite", 1);
 		if (isFiniteArgs != null) {
 			final arg = isFiniteArgs[0];
-			return "(match classify_float ("
-				+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-				+ ") with | FP_nan | FP_infinite -> false | _ -> true)";
+			return "(match classify_float (" + mathFloatArgument(arg) + ") with | FP_nan | FP_infinite -> false | _ -> true)";
 		}
 		final isInfiniteArgs = stage3RootCallArgs(e, "Math", "isInfinite", 1);
 		if (isInfiniteArgs != null) {
 			final arg = isInfiniteArgs[0];
-			return "(classify_float ("
-				+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-				+ ") = FP_infinite)";
+			return "(classify_float (" + mathFloatArgument(arg) + ") = FP_infinite)";
 		}
-		if (stage3RootCallArgs(e, "Math", "pow", 2) != null)
-			return "(Obj.magic 0)";
-		if (stage3RootCallArgs(e, "Math", "floor", 1) != null)
-			return "(Obj.magic 0)";
-		if (stage3RootCallArgs(e, "Math", "log", 1) != null)
-			return "(Obj.magic 0)";
-		if (stage3RootCallArgs(e, "Math", "fround", 1) != null)
-			return "(Obj.magic 0)";
 		if (stage3RootCallArgs(e, "Timer", "stamp", 0) != null)
 			return "(Unix.gettimeofday ())";
 		switch (e) {

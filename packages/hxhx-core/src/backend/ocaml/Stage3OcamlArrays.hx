@@ -18,13 +18,19 @@ function callArgument(argument:Null<TypedBackendCallArgument>, value:String):Nul
 	return "(Obj.obj (" + value + ") : _ HxBootArray.t)";
 }
 
-/** Limit indexed lowering to the runtime array carrier and an exact integer index. */
+/**
+	Limit indexed lowering to the runtime array carrier and an Int index. A
+	`Null<Int>` index is admitted too; `access` unwraps it (null raises Null
+	Access). Before, such an index fell outside this lowering and a write
+	`a[i] = 5` was dropped.
+ */
 function supportsAccess(occurrence:TypedBackendArrayAccess):Bool {
 	final type = TyAliasExpansion.revealNonNullable(occurrence.receiverType);
 	final identity = type.getNominalIdentity();
 	return ((identity != null && identity.getCanonicalName() == "Array")
 		|| type.isDynamic())
-		&& occurrence.indexType.getSemanticKey() == "primitive:Int";
+		&& (occurrence.indexType.getSemanticKey() == "primitive:Int"
+			|| Stage3OcamlNullablePrimitive.innerPrimitive(occurrence.indexType) == Stage3OcamlNullablePrimitive.INT);
 }
 
 /**
