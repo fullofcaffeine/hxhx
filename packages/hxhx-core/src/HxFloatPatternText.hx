@@ -11,7 +11,8 @@
 	  with `Std.string` depends on the host and can round.
 
 	What
-	- `of(".5", 0.5, false)` is `"0.5"`, `of("1e3", 1000.0, true)` is
+	- `of(".5", 0.5, false)` is `"0.5"`, `of("1.", 1.0, false)` is `"1.0"`,
+	  `of("1e3", 1000.0, true)` is
 	  `"-1e3"`, `of("2147483648", ..., false)` is `"2147483648.0"`.
 	- `value(text)` reads the number back for equality checks.
 **/
@@ -20,6 +21,9 @@ class HxFloatPatternText {
 		var text = written == null ? Std.string(value) : written;
 		if (StringTools.startsWith(text, "."))
 			text = "0" + text;
+		// `1.` is valid Haxe but not a valid C# or Java literal.
+		if (StringTools.endsWith(text, "."))
+			text += "0";
 		if (text.indexOf(".") < 0 && text.indexOf("e") < 0 && text.indexOf("E") < 0)
 			text += ".0";
 		return negative ? "-" + text : text;

@@ -63,6 +63,7 @@ class M14Stage3FloatPatternTest {
 			"switch x { case -2.5: 0; }" => "PFloat(-2.5)",
 			"switch x { case 1e3: 0; }" => "PFloat(1e3)",
 			"switch x { case .5: 0; }" => "PFloat(0.5)",
+			"switch x { case 1.: 0; }" => "PFloat(1.0)",
 			"switch x { case -1: 0; }" => "PInt(-1)",
 			"switch x { case 7 | 8.5: 0; }" => "POr([PInt(7),PFloat(8.5)])",
 			"switch x { case \"a\": 0; }" => "PString(a)",
@@ -90,7 +91,38 @@ class M14Stage3FloatPatternTest {
 		Sys.println("M14_STAGE3_FLOAT_PATTERNS_REJECT_UNRECOGNIZED:PASS");
 	}
 
+	static function managedRejected(type:TyType, pattern:HxSwitchPattern, message:String):Void {
+		final error = try {
+			backend.cpp.CppManagedSwitch.render({
+				value: EInt(0),
+				type: type,
+				patterns: [pattern],
+				heap: "heap",
+				prefix: "switch_test_",
+				renderValue: (_, _, _) -> [],
+				renderBody: (_, _) -> []
+			}, "");
+			null;
+		} catch (failure:haxe.Exception) {
+			failure.message;
+		}
+		if (error == null || error.indexOf(message) < 0)
+			throw "managed_cpp: a Float pattern must be rejected with <" + message + ">, got: " + error;
+	}
+
+	/**
+		Managed C++ has no Float pattern support yet (Bead haxe_ocaml-0ep0d), so
+		it must reject a Float switch and a Float constant by name, never emit a
+		wildcard.
+	**/
+	static function managedCppRejects():Void {
+		managedRejected(TyType.fromHintText("Float"), PFloat("1.5"), "exact supported scalar type");
+		managedRejected(TyType.fromHintText("Int"), PFloat("1.5"), "exact matching or binding support");
+		Sys.println("M14_STAGE3_FLOAT_PATTERNS_MANAGED_CPP_REJECTS:PASS");
+	}
+
 	static function main():Void {
+		managedCppRejects();
 		parsedConstants();
 		rejectUnrecognizedPattern();
 		compareWithUpstream("test/fixtures/stage3_float_patterns", "WHOLE_FILE");
