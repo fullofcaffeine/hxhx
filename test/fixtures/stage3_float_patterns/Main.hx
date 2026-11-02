@@ -26,6 +26,22 @@ class Main {
 		}
 	}
 
+	/** `case 1.:` is a valid Haxe spelling; `0.0` and `-0.0` match each other, and NaN matches no constant. */
+	static function special(x:Float):String {
+		return switch x {
+			case 0.0: "zero";
+			case 1.: "one";
+			case _: "other";
+		}
+	}
+
+	static function negativeZero(x:Float):String {
+		return switch x {
+			case -0.0: "negative zero pattern";
+			case _: "other";
+		}
+	}
+
 	static function integer(x:Int):String {
 		return switch x {
 			case -1: "minus one";
@@ -74,6 +90,10 @@ class Main {
 			1.4999999999999998
 		])
 			Sys.println(float(x));
+		for (x in [0.0, -0.0, 1.0, Math.NaN])
+			Sys.println(special(x));
+		for (x in [0.0, -0.0, Math.NaN])
+			Sys.println(negativeZero(x));
 		for (x in [-1, 0, 1, 2, -7, 9])
 			Sys.println(integer(x));
 		for (s in [null, "", "a", "b", "long text", "xy"])
