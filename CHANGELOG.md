@@ -1,3 +1,10 @@
+## [0.41.2](https://github.com/fullofcaffeine/hxhx/compare/v0.41.1...v0.41.2) (2026-11-02)
+
+
+### Bug Fixes
+
+* **stage3:** keep interface dispatch tables non-null so reflaxe.ocaml compiles hxhx ([f1ae9aa](https://github.com/fullofcaffeine/hxhx/commit/f1ae9aaaa21ea3550dad342a9e8de5b9a406f087))
+
 ## [0.41.1](https://github.com/fullofcaffeine/hxhx/compare/v0.41.0...v0.41.1) (2026-11-01)
 
 
