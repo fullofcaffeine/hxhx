@@ -260,6 +260,15 @@ class ModuleLoader extends LazyTypeLoader {
 	override public function isMacroModule(modulePath:String, filePath:String):Bool
 		return macroContext.isMacroModule(modulePath, filePath);
 
+	/**
+		Whether a module source exists on the class path. A module can exist
+		without a type of its own name, for example `StdTypes`, or define no type
+		under the current defines, as `haxe.http.HttpJs` does outside JS.
+		Upstream accepts an import of such a module.
+	**/
+	override public function hasModuleSource(modulePath:String):Bool
+		return sourceProvider.resolveModuleFile(classPaths, modulePath) != null;
+
 	public function drainNewModules():Array<ResolvedModule> {
 		if (pending.length == 0)
 			return [];

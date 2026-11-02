@@ -302,6 +302,56 @@ class TyperStage {
 	}
 
 	/**
+		Reject an import or `using` directive that names nothing, as upstream does
+		(haxe_ocaml-db83a). Upstream reports `import does.not.Exist;` as
+		"Type not found : does.not.Exist", and a missing member of an existing
+		class as "Class<haxe.Json> has no field nope". Package wildcards
+		(`import pkg.*`) stay lenient: upstream accepts an empty package.
+	**/
+	static function requireResolvedDirectives(parsed:ParsedModule, resolved:Array<TyModuleDirective>, packagePath:String, index:TyperIndex,
+			loader:ModuleLoader):Void {
+		final sourceDirectives = [for (directive in resolved) directive.getSource()];
+		for (directive in resolved) {
+			if (!directive.getKind().match(Unresolved))
+				continue;
+			final source = directive.getSource();
+			final path = HxModuleDirective.getPath(source);
+			// Nominal resolution does not select type aliases, such as the
+			// `haxe.macro.Type.TypedExpr` typedef that std `Context` imports.
+			final context:TyTypeDeclaration.TyTypeResolutionContext = {
+				packagePath: packagePath,
+				modulePath: "",
+				directives: [],
+				filePath: parsed.getFilePath(),
+				position: HxPos.unknown(),
+				parameters: []
+			};
+			final separator = path.lastIndexOf(".");
+			final member = separator > 0 ? path.substr(separator + 1) : "";
+			final ownerPath = separator > 0 ? path.substr(0, separator) : "";
+			// `import haxe.Json.nope`: a lowercase member of an existing class that declares no such field.
+			if (member.length > 0 && !isUpperStartName(member) && !HxModuleDirective.getKind(source).match(Using)) {
+				final owner = exactDirectiveProvider(ownerPath, packagePath, sourceDirectives, index, loader);
+				if (owner != null && !owner.getIsEnum())
+					throw new TyperError(parsed.getFilePath(), TyDirectivePosition.find(parsed.getSource(), path),
+						"Class<"
+						+ owner.getFullName()
+						+ "> has no field "
+						+ member);
+			}
+			if (loader.hasModuleSource(path)
+				|| loader.ensureDeclarationAvailable(path, context) != null
+				|| index.resolveTypeDeclaration(path, context) != null)
+				continue;
+			// A sub-type or member of a module that exists: leave its selection to typing.
+			if (ownerPath.length > 0 && loader.hasModuleSource(ownerPath))
+				continue;
+			final message = "Type not found : " + path;
+			throw new TyperError(parsed.getFilePath(), TyDirectivePosition.find(parsed.getSource(), path), message);
+		}
+	}
+
+	/**
 		Resolve parsed imports through the shared declaration owner before body typing.
 		Pre-typing macro selection needs these same provider identities and precedence;
 		this query never resolves a call's argument expressions.
@@ -487,6 +537,10 @@ class TyperStage {
 		final packagePath = HxModuleDecl.getPackagePath(declaration);
 		final directives = HxModuleDecl.getDirectives(declaration);
 		final resolvedDirectives = resolveModuleDirectives(directives, packagePath, modulePath, index, loader);
+		// A root-only index, or a loader without the standard library, cannot prove
+		// that an import names nothing; see TyperContext.hasDeclarationLoader.
+		if (index != null && loader != null && loader.hasModuleSource("StdTypes"))
+			requireResolvedDirectives(parsed, resolvedDirectives, packagePath, index, loader);
 		TyClassArgumentBounds.validateDeclarations(parsed, modulePath, index, (expected, supplied) -> constraintAccepts(expected, supplied, index));
 		final mainClass = HxModuleDecl.getMainClass(declaration);
 		final typedClasses = new Array<TypedClass>();
@@ -874,6 +928,8 @@ class TyperStage {
 
 		// JavaScript uses authored Map providers. Resolve collection syntax while
 		// declarations are indexed; other targets retain their physical-storage passes.
+		if (index != null)
+			index.undeclaredValueNames(parsed.getFilePath()).requireDeclared(index);
 		final collections = index != null
 			&& loader != null
 			&& loader.hasDefine("js") ? TypedMapProviderLowering.lowerClasses(typedClasses, index) : typedClasses;
@@ -2980,6 +3036,21 @@ class TyperStage {
 		paths as expression typing. The immutable field record then travels with the
 		typed read so later analyses do not have to reconstruct the receiver path.
 	**/
+	/**
+		Whether a bare name denotes a value in this scope: a local, a member, an
+		enum constructor, an imported static, a method value, or a runtime type
+		value. `TyUndeclaredName` uses this before it reports an unknown name.
+	**/
+	static function resolvesValueName(name:String, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Bool {
+		final expression = HxExpr.EIdent(name);
+		return scope.resolveSymbol(name) != null
+			|| resolveFieldDeclaration(expression, scope, ctx, pos) != null
+			|| currentInstanceMethodReferenceType(name, scope, ctx) != null
+			|| currentStaticMethodReferenceType(name, ctx) != null
+			|| importedStaticMethodReferenceType(name, ctx) != null
+			|| TypedRuntimeTypeResolver.resolve(expression, scope, ctx, ValueExpression) != null;
+	}
+
 	static function resolveFieldDeclaration(expression:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos, ?expected:TyType):Null<TyFieldInfo> {
 		return switch (expression) {
 			case EIdent(name) | EEnumValue(name):
@@ -3401,7 +3472,13 @@ class TyperStage {
 						// Runtime class values were resolved above. Preserve the existing enum
 						// constructor path until its separate typed-enum owner replaces it.
 						switch (expr) {
-							case EEnumValue(_): TyType.fromHintText("String");
+							case EEnumValue(name):
+								// Upstream rejects a name that is no local, member, enum
+								// constructor, import or type (haxe_ocaml-ikrmd). This
+								// occurrence may still be resolved from an expected type
+								// elsewhere, so the module decides after typing.
+								TyUndeclaredName.recordValueName(name, scope, ctx, pos);
+								TyType.fromHintText("String");
 							// Only an unresolved host name under authored untyped syntax
 							// gets a retained inference occurrence. Known lexical/member
 							// bindings were resolved above and keep their own constraints.
@@ -3467,6 +3544,7 @@ class TyperStage {
 						}
 					}
 				}
+				TyUndeclaredName.requireStaticReceiver(obj, scope, ctx, pos, resolvesValueName);
 				switch (obj) {
 					case _:
 						// Best-effort: infer child for locals; actual field typing depends on the index.

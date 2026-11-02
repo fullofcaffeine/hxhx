@@ -29,6 +29,10 @@ class LazyTypeLoader {
 	public function isMacroModule(_modulePath:String, _filePath:String):Bool
 		return false;
 
+	/** Whether a module source exists on the class path; false without a request. */
+	public function hasModuleSource(_modulePath:String):Bool
+		return false;
+
 	/** Make a source declaration available without promising that it denotes a class. */
 	public function ensureDeclarationAvailable(_path:String, _context:TyTypeDeclaration.TyTypeResolutionContext):Null<TyTypeDeclaration>
 		return null;

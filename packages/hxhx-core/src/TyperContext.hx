@@ -98,6 +98,49 @@ class TyperContext {
 		return classFullName;
 
 	/** Load a requested declaration before resolving its nominal provider; generic aliases retain their own binders. */
+	/**
+		Whether typing can load any declaration it needs: a loader whose class
+		path includes the standard library (it can find `StdTypes`). A root-only
+		index, or a loader over only a test's own sources, omits the standard
+		library, so an unresolved name there is no evidence that the program is
+		wrong.
+	**/
+	public function hasDeclarationLoader():Bool {
+		if (loader == null)
+			return false;
+		if (completeLoader == null)
+			completeLoader = loader.hasModuleSource("StdTypes");
+		return completeLoader;
+	}
+
+	var completeLoader:Null<Bool> = null;
+
+	/**
+		Whether an import directive of this module introduces `name`, as
+		`import haxe.macro.Context;` introduces `Context`. Such a name is
+		declared by the import even when typing cannot load its module here, for
+		example a macro-only module referenced from `#if macro` code.
+	**/
+	/**
+		Whether `name` names a module in this package or the root package, such
+		as a module that declares only module-level functions (`CounterOps.total`).
+	**/
+	public function namesModule(name:String):Bool {
+		if (loader == null)
+			return false;
+		final qualified = packagePath == null || packagePath.length == 0 ? name : packagePath + "." + name;
+		return loader.hasModuleSource(qualified) || loader.hasModuleSource(name);
+	}
+
+	public function importsLocalName(name:String):Bool {
+		if (directives == null)
+			return false;
+		for (directive in directives)
+			if (HxModuleDirective.getImportedLocalName(directive) == name)
+				return true;
+		return false;
+	}
+
 	public function resolveType(typePath:String):Null<TyNominalInfo> {
 		if (index == null)
 			return null;
@@ -313,11 +356,15 @@ class TyperContext {
 		final provider = expected == null || expected.hasUnknownComponent() ? null : expectedEnumOwner(index, expected);
 		final field = provider == null ? null : provider.fieldInfo(name);
 		final identity = field == null ? null : field.getType().getNominalIdentity();
-		return field != null
+		final selected = field != null
 			&& field.getIsStatic()
 			&& field.getIsPublic()
 			&& identity != null
 			&& identity.getCanonicalName() == provider.getIdentity().getCanonicalName() ? field : null;
+		// A name typed elsewhere without this context is still declared (see TyUndeclaredName).
+		if (selected != null && index != null)
+			index.undeclaredValueNames(filePath).markContextual(name);
+		return selected;
 	}
 
 	/**
