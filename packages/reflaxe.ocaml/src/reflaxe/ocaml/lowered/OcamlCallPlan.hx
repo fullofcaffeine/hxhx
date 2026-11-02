@@ -278,7 +278,18 @@ class OcamlCallPlan {
 
 	public final revision:String;
 
-	public function new(decisions:Array<OcamlCallDecision>) {
+	/**
+		The lexical local identities of the function body these calls belong to,
+		or null for a plan built without one (for example, an empty plan).
+
+		Matching uses it to tell apart emitted copies of one source call that call
+		different locals (see `OcamlCallableInvocationContract.calleeId`). Like the
+		rest of a sealed function plan, it is request-local.
+	**/
+	final localIdentities:Null<LexicalLocalIdentityPlan>;
+
+	public function new(decisions:Array<OcamlCallDecision>, ?localIdentities:LexicalLocalIdentityPlan) {
+		this.localIdentities = localIdentities;
 		final sorted = decisions.map(copyDecision);
 		sorted.sort((left, right) -> Reflect.compare(left.id, right.id));
 		final normalized:Array<OcamlCallDecision> = [];
@@ -308,20 +319,22 @@ class OcamlCallPlan {
 		revision = "sha256:" + Sha256.encode(ordered.map(decisionFingerprint).join("\n"));
 	}
 
-	/**
-		Returns one admitted call by its exact final-body source occurrence.
-
-		`stableLocalId` maps a Haxe host local to its stable lexical identity in
-		this function body. Pass it whenever it is available: Haxe can emit one
-		source call more than once with a different local callee in each copy,
-		and only the local identity tells those calls apart.
-	**/
-	public function decisionFor(expression:TypedExpr, ?stableLocalId:(hostLocalId:Int) -> Null<String>):Null<OcamlCallDecision> {
+	/** Returns one admitted call by its exact final-body source occurrence. */
+	public function decisionFor(expression:TypedExpr):Null<OcamlCallDecision> {
 		final candidates = bySourceKey.get(sourceKey(OcamlLoweredOrigin.sourceSpan(expression.pos))) ?? [];
-		final matching = candidates.filter(decision -> matchesTypedOccurrence(decision, expression, stableLocalId));
+		final lookup = localIdentities == null ? null : stableLocalId;
+		final matching = candidates.filter(decision -> matchesTypedOccurrence(decision, expression, lookup));
 		if (matching.length > 1)
 			throw 'reflaxe.ocaml [ocaml-call:ambiguous-source-occurrence]: ${matching.length} sealed calls match one typed occurrence at ${sourceKey(OcamlLoweredOrigin.sourceSpan(expression.pos))}';
 		return matching.length == 0 ? null : copyDecision(matching[0]);
+	}
+
+	/** The stable lexical identity of one host local in this body, or null when the body does not declare or capture it. */
+	function stableLocalId(hostLocalId:Int):Null<String> {
+		final identities = localIdentities;
+		if (identities == null)
+			return null;
+		return try identities.requireHostId(hostLocalId).id catch (_:haxe.Exception) null;
 	}
 
 	static function matchesTypedOccurrence(decision:OcamlCallDecision, expression:TypedExpr, stableLocalId:Null<(hostLocalId:Int) -> Null<String>>):Bool {
@@ -2324,7 +2337,7 @@ class OcamlCallPlanner {
 			TypedExprTools.iter(current, visit);
 		}
 		visit(expression);
-		return new OcamlCallPlan(decisions);
+		return new OcamlCallPlan(decisions, localIdentities);
 	}
 
 	function requireReusablePreliminaryPlanner(preliminary:OcamlCallPlanner):Void {

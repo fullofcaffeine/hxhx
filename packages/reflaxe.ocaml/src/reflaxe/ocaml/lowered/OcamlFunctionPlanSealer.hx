@@ -276,8 +276,7 @@ class OcamlFunctionPlanSealer {
 		if (hasCallbackResult)
 			callableBoundary = finalCallPlanner.boundaryFor(data);
 		final callbackExpressions = new OcamlCallableExpressionPlanner(representations, binding, localRepresentations, localIdentities,
-			(owner, field) -> registry.callableDeclaration(OcamlCallPlanner.calleeId(owner, field)),
-			expression -> calls.decisionFor(expression, hostLocalId -> localIdentities.requireHostId(hostLocalId).id));
+			(owner, field) -> registry.callableDeclaration(OcamlCallPlanner.calleeId(owner, field)), calls.decisionFor);
 		localRepresentations = localRepresentations.withCallableComparisons(callbackExpressions.comparisons(data.expr));
 		localRepresentations.requirePlanBinding(binding);
 		final reflectCompare = new OcamlReflectComparePlanner(binding).plan(data.expr);
