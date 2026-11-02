@@ -23,6 +23,9 @@ private typedef TyParsedAbstractOperatorMetadata = {
 	an overload, inline a body, decide mutation, or expose target carriers.
 **/
 class TyperIndex {
+	/** The source file whose signatures `indexModule` is resolving, for type-use diagnostics. **/
+	var signatureFilePath:String = "<signature>";
+
 	final byFullName:StringMap<TyNominalInfo>;
 	final byShortName:StringMap<Array<TyNominalInfo>>;
 	final identityByFullName:StringMap<TyNominalTypeId>;
@@ -283,6 +286,24 @@ class TyperIndex {
 		return false;
 	}
 
+	/**
+		Count the type arguments a class-like declaration accepts.
+
+		The indexed binders come from `__hxhx_type_params`. Defaults come from the
+		parsed parameters, and only when those parameters match the binders name for
+		name; otherwise every parameter counts as required.
+	**/
+	static function nominalArity(classDeclaration:HxClassDecl):TyTypeDeclaration.TyNominalArity {
+		final names = typeParameters(HxClassDecl.getMetadata(classDeclaration));
+		final parsed = HxClassDecl.getTypeParameters(classDeclaration);
+		var required = names.length;
+		if (parsed.length == names.length) {
+			while (required > 0 && parsed[required - 1].name == names[required - 1] && parsed[required - 1].defaultType != null)
+				required--;
+		}
+		return {total: names.length, required: required};
+	}
+
 	static function typeParameters(metadata:Array<String>):Array<String> {
 		final encoded = metadataValue(metadata, "__hxhx_type_params");
 		if (encoded == null || StringTools.trim(encoded).length == 0)
@@ -329,7 +350,8 @@ class TyperIndex {
 				canonicalName: identity.getCanonicalName(),
 				visibility: HxClassDecl.getVisibility(classDeclaration),
 				kind: Nominal(identity),
-				context: context
+				context: context,
+				nominalArity: nominalArity(classDeclaration)
 			}));
 			visibilityByFullName.set(identity.getCanonicalName(), HxClassDecl.getVisibility(classDeclaration));
 			final moduleIdentities = identitiesByModulePath.exists(modulePath) ? identitiesByModulePath.get(modulePath) : [];
@@ -427,7 +449,7 @@ class TyperIndex {
 			packagePath: packagePath,
 			modulePath: canonicalModulePath(packagePath, moduleName),
 			directives: directives,
-			filePath: "<signature>",
+			filePath: signatureFilePath,
 			position: HxPos.unknown(),
 			parameters: typeParams
 		}).getType();
@@ -646,6 +668,8 @@ class TyperIndex {
 		final moduleDeclaration = parsedModule.getDecl();
 		final packagePath = HxModuleDecl.getPackagePath(moduleDeclaration);
 		final moduleName = expectedModuleNameFromFile(ResolvedModule.getFilePath(module));
+		// A signature hint such as `static var field:Box<Int>` reports this file.
+		signatureFilePath = ResolvedModule.getFilePath(module);
 		final semanticModulePath = canonicalModulePath(packagePath, moduleName);
 		final directives = HxModuleDecl.getDirectives(moduleDeclaration);
 		final completed = new Array<{source:HxClassDecl, info:TyNominalInfo}>();

@@ -1209,6 +1209,23 @@ class HxParser {
 		return next.kind.match(TDot) && next.pos.getIndex() == cur.pos.getIndex() + 1;
 	}
 
+	/**
+		Whether a constructor's type-argument text has an empty slot, such as `<>`,
+		`<Int,>` or `<,Int>`. An arrow `->` is not a closing bracket.
+	**/
+	static function hasEmptyTypeArgument(text:String):Bool {
+		var previous = "";
+		for (index in 0...text.length) {
+			final ch = text.charAt(index);
+			if (ch == " " || ch == "\t" || ch == "\r" || ch == "\n")
+				continue;
+			if ((ch == ">" || ch == ",") && (previous == "<" || previous == ","))
+				return true;
+			previous = ch;
+		}
+		return false;
+	}
+
 	function fail<T>(message:String):T {
 		throw new HxParseError(message, cur.pos);
 	}
@@ -1654,6 +1671,9 @@ class HxParser {
 					var typePath = readConstructorTypePath();
 					if (isOtherChar("<")) {
 						final typeArgs = readTypeHintText(() -> cur.kind.match(TLParen) || cur.kind.match(TEof));
+						// `new Box<>()` and `new Box<Int,>()` are syntax errors in Haxe 4.3.7.
+						if (hasEmptyTypeArgument(typeArgs))
+							fail("Unexpected >");
 						if (typeArgs.length > 0)
 							typePath += typeArgs;
 					}
