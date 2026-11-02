@@ -1,0 +1,15 @@
+static true
+is false true false true
+is-interface true false true true
+is-other false false false false
+is-primitive false false false false
+is-array true false false
+isOfType true true false
+operator true true false false false
+downcast square null tile tile
+narrowed square true
+missing true
+downcast-null true
+downcast-interface square true
+instance tile null
+order true null tile is,downcast,downcast-hit
