@@ -595,6 +595,11 @@ class Stage3Compiler {
 		resolvedForTyping = macroPass.modules;
 		final typerIndex = macroPass.index;
 		final moduleLoader = macroPass.loader;
+		// Every production compile types with the request's module loader. Quotation lowering
+		// depends on it: without a loader (`TyperContext.hasLoader`) it cannot resolve rooted paths
+		// and falls back to plain identifier chains, which user names can capture.
+		if (moduleLoader == null)
+			return error("internal: Stage3 typing requires the request's module loader");
 		if (expressionMacroSession != null) {
 			requestOutput.stdoutLine("expr_macros_expanded=" + macroPass.expandedCount);
 			if (macroPass.unexecuted.length > 0) {
