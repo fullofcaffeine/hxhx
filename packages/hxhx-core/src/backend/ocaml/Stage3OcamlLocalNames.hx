@@ -27,8 +27,13 @@ class Stage3OcamlLocalNames {
 			used.set("this_", true);
 		for (entry in localCatalog.getEntries()) {
 			final projectedName = entry.getProjectedName();
-			final base = normalize(projectedName);
-			if (base == null || base.length == 0 || base == "_")
+			final normalized = normalize(projectedName);
+			// Haxe `_` is an ordinary, readable local (`catch (_:String) trace(_)`),
+			// but OCaml `_` is a wildcard pattern that cannot be read. Give it a
+			// real OCaml name; the leading underscore keeps OCaml's unused-variable
+			// warning quiet, as `_` does in Haxe intent.
+			final base = normalized == "_" ? Stage3OcamlIdentifiers.UNDERSCORE : normalized;
+			if (base == null || base.length == 0)
 				throw "Stage3 OCaml local naming cannot render exact binding " + entry.getBinding().getIdentity().getCanonicalKey();
 			var targetName = base;
 			var suffix = 0;
