@@ -45,7 +45,7 @@ class M14Stage3ConcatOrderTest {
 		final executable = EmitterStage.emitToDir(new MacroExpandedProgram(program, false), outDir);
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		final generated = File.getContent(outDir + "/Main.ml");
-		if (generated.indexOf("let __hx_concat_left") < 0)
+		if (generated.indexOf("let __hx_ordered_left") < 0)
 			throw "Stage3 must bind effectful concatenation operands left to right";
 		if (generated.indexOf("((\"[\") ^ (name))") < 0)
 			throw "Stage3 added ordering bindings to a concatenation whose order cannot be observed";

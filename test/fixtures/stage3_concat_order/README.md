@@ -4,6 +4,9 @@
 `[a]` when they run, so the output shows the order in which the operands
 were evaluated. It also prints numeric `+` expressions directly
 (`Sys.println(ratio + 0.25)`) and inside concatenations (`whole + 3 + "x"`).
+The same logging calls check that `/`, `<`, `<=`, `>` (also with
+`Null<Int>` operands) and Float `+` run their left operand first, and that
+`w++` and `(w += 1)` inside a concatenation are seen by a later operand.
 
 Before the fix:
 
@@ -13,6 +16,10 @@ Before the fix:
 - `Sys.println(ratio + 0.25)` printed `0.50.25`, and `whole + 3 + "x"`
   printed `23x`. The path that renders printed expressions treated every `+`
   as concatenation instead of reading the typed result.
+- `side("I", 9) / side("J", 2)` and `side("E", 1) < side("F", 2)` ran the
+  right call first, for the same OCaml reason as `^`.
+- `"postfix " + Std.string(w++) + " " + Std.string(w)` printed `postfix 1 1`
+  instead of `postfix 1 2`.
 
 `npm run test:m14:stage3-concat-order` checks that upstream Haxe 4.3.7
 prints `expected.stdout`. It then builds the program with Stage3 and
