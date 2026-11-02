@@ -506,7 +506,7 @@ class OcamlIMapInterfaceContract {
 				planned.push({role: role, symbol: "HxString.toStdString"});
 			case DynamicObject:
 				planned.push({role: role, symbol: "HxDynamic.toStdString"});
-			case ExactInt, ExactFloat, ExactBool, null:
+			case ExactInt, ExactBool, null:
 		}
 	}
 

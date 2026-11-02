@@ -4243,14 +4243,14 @@ class OcamlBuilder {
 				return OcamlExpr.EIdent("string_of_int");
 			if (isBoolType(elemType))
 				return OcamlExpr.EIdent("string_of_bool");
-			if (isFloatType(elemType))
-				return OcamlExpr.EIdent("string_of_float");
 		}
 
 		// Fallback: use `Std.string` on the boxed value.
 		//
 		// This is slower than direct `string_of_*`, but it matches portable expectations
 		// and is required by upstream workloads (e.g. `Array.toString` on `Array<Dynamic>`).
+		// Float elements also take this path: OCaml's `string_of_float` prints `2.`
+		// where Haxe prints `2`, and the runtime conversion matches Haxe.
 		final v = renameVar("x");
 		return OcamlExpr.EFun([OcamlPat.PVar(v)], OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Std"), "string"), [
 			OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EIdent(v)])
@@ -6494,7 +6494,7 @@ class OcamlBuilder {
 				final a = aRef.get();
 				switch (a.name) {
 					case "Float":
-						OcamlExpr.EApp(OcamlExpr.EIdent("string_of_float"), [buildExpr(inner)]);
+						staticStringInvariant("Float string conversion bypassed its sealed source decision", inner.pos);
 					case "Bool":
 						OcamlExpr.EApp(OcamlExpr.EIdent("string_of_bool"), [buildExpr(inner)]);
 					case "Null":

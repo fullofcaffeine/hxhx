@@ -25,8 +25,8 @@ class Holder {
 	order, so every listing with more than one entry is sorted before printing.
 	Each `remove` result is saved before printing, so the output does not
 	depend on the order in which one concatenation evaluates its operands
-	(haxe_ocaml-5of2v). Float values are not whole numbers, because native
-	whole-number Float text is tracked separately (haxe_ocaml-iffj5).
+	(haxe_ocaml-5of2v). Float values are not whole numbers; whole-number
+	Float text has its own fixture, stage3_float_string (haxe_ocaml-iffj5).
 **/
 class Main {
 	static var shared:StringMap<String> = new StringMap();
