@@ -16,6 +16,61 @@ class Main {
 	static var fromOther:Int = Registry.base + 1;
 	static var seq:Int = counter + 5;
 	static var transform:Int->Int = x -> x + 1;
+	static var half:Null<Float>;
+
+	/** The usual setter idiom: the parameter has the static's own name. */
+	static function setRatio(ratio:Float):Void {
+		Main.ratio = ratio;
+	}
+
+	/** A local named like a static shadows the bare name; the type path still names the static. */
+	static function shadowed():Void {
+		var counter = 3;
+		counter++;
+		Main.counter++;
+		Sys.println(counter + " " + Main.counter);
+		counter += 10;
+		Main.counter += 100;
+		Sys.println(counter + " " + Main.counter);
+	}
+
+	/** Writes used as operands: each update runs in source order and produces its Haxe value. */
+	static function nested():Void {
+		counter = 5;
+		Sys.println(counter++ + counter++);
+		Sys.println(++counter + ++counter);
+		Sys.println(counter-- - --counter);
+		counter = counter++ + ++counter;
+		Sys.println(counter);
+		ratio = 0.5;
+		Sys.println((ratio += 1) + 1);
+		Sys.println(ratio++ + 1);
+		Sys.println(ratio);
+	}
+
+	/** Haxe divides Ints into a Float, so these values reach Float storage unchanged. */
+	static function divisions():Void {
+		counter = 3;
+		ratio = 1 / 4;
+		Sys.println(ratio);
+		ratio = counter / 2;
+		Sys.println(ratio);
+		ratio += counter / 4;
+		Sys.println(ratio);
+		ratio = counter * 2 / 4;
+		Sys.println(ratio);
+		ratio = (counter + 1) * 1.125;
+		Sys.println(ratio);
+		text = "list ";
+		final parts = [1, 2];
+		text += parts;
+		Sys.println(text);
+		half = 1 / 2;
+		Sys.println(half);
+		var local:Float = 0.5;
+		local = 1 / 4;
+		Sys.println(local);
+	}
 
 	static function reset():Void {
 		items = [];
@@ -135,6 +190,12 @@ class Main {
 		Sys.println(transform(2));
 		transform = x -> x * counter;
 		Sys.println(transform(2));
+
+		setRatio(0.75);
+		Sys.println(ratio);
+		shadowed();
+		nested();
+		divisions();
 	}
 }
 

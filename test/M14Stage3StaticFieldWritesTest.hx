@@ -90,9 +90,31 @@ class M14Stage3StaticFieldWritesTest {
 		Sys.println("M14_STAGE3_STATIC_FIELD_WRITES_UNSUPPORTED:PASS");
 	}
 
+	/**
+		An uninitialized Int, Float, or Bool static starts at 0, 0.0, or false natively,
+		as on Haxe's static targets (C++, Java, C#). `haxe --interp` starts them at
+		null instead, so this check has a native-only expectation.
+	**/
+	static function requireBasicDefaults():Void {
+		final root = ".tmp/m14_stage3_static_field_writes_defaults";
+		deleteRecursive(root);
+		FileSystem.createDirectory(root);
+		final path = root + "/Main.hx";
+		final source = "class Main {\n\tstatic var i:Int;\n\tstatic var f:Float;\n\tstatic var b:Bool;\n"
+			+ "\tstatic function main() {\n\t\tSys.println(i == 0);\n\t\tSys.println(f == 0);\n\t\tSys.println(b == false);\n"
+			+ "\t\ti++;\n\t\tf += 0.5;\n\t\tb = !b;\n\t\tSys.println(i + \" \" + f + \" \" + b);\n\t}\n}\n";
+		File.saveContent(path, source);
+		final program = M14Stage3RuntimeFixture.prepareProgram({source: source, path: path, root: root});
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram(program, false), root + "/out");
+		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: "true\ntrue\ntrue\n1 0.5 true\n"});
+		deleteRecursive(root);
+		Sys.println("M14_STAGE3_STATIC_FIELD_WRITES_DEFAULTS:PASS");
+	}
+
 	static function main():Void {
 		// The rejected emits run first: a failed emit must leave no emitter state behind.
 		rejectUnsupportedWrites();
 		compareWithUpstream();
+		requireBasicDefaults();
 	}
 }

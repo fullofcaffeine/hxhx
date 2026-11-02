@@ -72,8 +72,8 @@ private typedef StoredStatic = {
 	  Registry.count += 5;           // from another class
 	  ```
 	  ```ocaml
-	  let count : int ref = ref (0)                       (* Counters_Registry.ml *)
-	  ... Counters_Registry.count := ... (!Counters_Registry.count) ...
+	  let __hx_static_count : int ref = ref (0)           (* Counters_Registry.ml *)
+	  ... Counters_Registry.__hx_static_count := ... (!Counters_Registry.__hx_static_count) ...
 	  ```
 	- `static final`, `static inline`, and accessor-only properties without
 	  storage keep their immutable `let` or their accessor calls. A
@@ -93,8 +93,12 @@ private typedef StoredStatic = {
 	  in another always agree on the representation.
 	- Reads and writes find the field through the exact typed field occurrence
 	  of the active body (`TypedBackendFieldOccurrence`), never through source
-	  spelling, so a local or parameter with the same name is never mistaken
-	  for the static.
+	  spelling. The cell is bound as `__hx_static_<name>`, a spelling that no
+	  local or parameter can have, so a same-named local never shadows it in
+	  the generated OCaml either.
+	- An uninitialized Int, Float, or Bool static starts at 0, 0.0, or false, as
+	  on Haxe's static targets (C++, Java, C#). `haxe --interp` starts them at
+	  null; other uninitialized statics start at null on both.
 	- The caller renders the right operand in the destination representation
 	  (for example `float_of_int` for an Int written to a Float); this module
 	  only reads, combines, and stores. Compound and increment arithmetic reuse
@@ -108,6 +112,14 @@ private typedef StoredStatic = {
 	  is a separate ordering limit (haxe_ocaml-j6aof).
 **/
 class Stage3OcamlStaticStorage {
+	/**
+		Every cell binding starts with this prefix, so a parameter named like the
+		static (`function setRatio(ratio:Float) Main.ratio = ratio;`) never shadows
+		the cell. `Stage3OcamlLocalNames` renames the rare local whose own name
+		starts with this prefix.
+	**/
+	public static inline final CELL_PREFIX = "__hx_static_";
+
 	final byField:Map<String, StoredStatic> = [];
 	final byDeclaration:Map<String, StoredStatic> = [];
 
@@ -127,10 +139,9 @@ class Stage3OcamlStaticStorage {
 
 	/**
 		Select the stored static fields of one class that this request generates into
-		output module `module`. `ident` is the emitter's value naming, so declarations
-		and references spell the binding identically.
+		output module `module`.
 	**/
-	public function add(facts:TypedBackendClassSemanticFacts, runtimeProvided:Bool, module:String, ident:String->String):Void {
+	public function add(facts:TypedBackendClassSemanticFacts, runtimeProvided:Bool, module:String):Void {
 		if (runtimeProvided
 			|| facts.getIsExtern()
 			|| facts.getIsInterface()
@@ -146,7 +157,7 @@ class Stage3OcamlStaticStorage {
 			final stored:StoredStatic = {
 				key: facts.getClassIdentity() + "." + field.name,
 				module: module,
-				ident: ident(field.name),
+				ident: CELL_PREFIX + field.name,
 				type: field.semanticType,
 				cell: cellFor(field.semanticType)
 			};

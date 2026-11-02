@@ -1037,9 +1037,12 @@ class EmitterStage {
 	static function exprToOcamlString(e:HxExpr, ?tyByIdent:Map<String, TyType>, ?arityByIdent:Map<String, Int>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
 		// Preserve checked scalar results before rendering them as text. Boolean
-		// bits must not become 1, and integer addition must not become concatenation.
+		// bits must not become 1, and numeric addition must not become concatenation.
 		final operand = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(e) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(e);
-		if (operand != null && (operand.type.getSemanticKey() == "primitive:Bool" || operand.type.getSemanticKey() == "primitive:Int"))
+		final operandKey = operand == null ? null : operand.type.getSemanticKey();
+		if (operandKey == "primitive:Bool"
+			|| operandKey == "primitive:Int"
+			|| (operandKey == "primitive:Float" && e.match(EBinop("+", _, _))))
 			return backend.ocaml.Stage3OcamlStringConversion.convert(operand.type,
 				exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 				currentFunctionLocalOcamlNames);
@@ -2194,12 +2197,6 @@ class EmitterStage {
 	static function stage3StoredStaticRead(e:HxExpr):Null<TypedBackendFieldOccurrence>
 		return currentClassStorage == null ? null : currentClassStorage.statics.storedRead(e, stage3FieldOccurrence);
 
-	/** Whether `e` reads an Int static stored in a cell, which float paths promote without spelling the bare name. */
-	static function stage3StoredStaticIntRead(e:HxExpr):Bool {
-		final read = stage3StoredStaticRead(e);
-		return read != null && !read.getType().isNullable() && TyAliasExpansion.reveal(read.getType()).getSemanticKey() == "primitive:Int";
-	}
-
 	/** Render a typed static field write, or return null for any other expression. */
 	static function stage3StaticFieldWrite(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
@@ -2209,7 +2206,7 @@ class EmitterStage {
 		final value = update.value;
 		final right = value == null ? null : stage3StaticOperand(update.operand, value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
 			moduleNameByPkgAndClass, callSigByCallee);
-		return currentClassStorage.statics.write(update, right, value == null ? null : stage3NullableNumericLocal(value), currentOcamlModuleName,
+		return currentClassStorage.statics.write(update, right, value == null ? null : stage3NullableNumericOperand(value), currentOcamlModuleName,
 			currentFunctionLocalOcamlNames);
 	}
 
@@ -2217,16 +2214,22 @@ class EmitterStage {
 	static function stage3StaticOperand(operand:backend.ocaml.Stage3OcamlStaticStorage.Stage3OcamlStaticOperand, value:HxExpr, ?arityByIdent:Map<String, Int>,
 			?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>, ?currentPackagePath:String,
 			?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
-		final fieldType = stage3FieldOccurrenceType(value);
-		// A Float destination promotes an Int selected by typing or by its local type; other values render as floats.
-		final promoted = operand == FloatValue
-			&& (fieldType == null ? stage3IsIntExpr(value,
-				tyByIdent) : !fieldType.isNullable() && TyAliasExpansion.reveal(fieldType).getSemanticKey() == "primitive:Int");
+		// A Float destination promotes an Int selected by the typer's fact for this operand,
+		// or by its shape when it has none; other values render as floats.
+		final exactKey = stage3ExactPrimitiveKey(value);
+		final promoted = operand == FloatValue && (exactKey == null ? stage3IsIntExpr(value, tyByIdent) : exactKey == "primitive:Int");
 		if (operand == FloatValue && !promoted)
 			return exprToOcamlAsFloatValueStage3(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 				callSigByCallee);
 		final rendered = exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 		return switch operand {
+			// `text += [1]` appends the value's Haxe string form, as `Std.string` would.
+			case StringAppend
+				if (exactKey != null
+					&& exactKey != "primitive:String"
+					&& !stage3ExactExprType(value).isUnknown()
+					&& !stage3ExactExprType(value).isUnresolved()):
+				backend.ocaml.Stage3OcamlStringConversion.convert(stage3ExactExprType(value), rendered, currentFunctionLocalOcamlNames);
 			case StringAppend:
 				localCompoundStringOperand(value, rendered, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 					callSigByCallee);
@@ -2262,8 +2265,21 @@ class EmitterStage {
 		return switch expr {
 			case EParenthesized(inner, _): localCompoundValueType(inner);
 			case EBinop(op, target = EIdent(name), _) if (isLocalCompoundValue(op, target)): exactFunctionLocalType(name);
-			case _: null;
+			case _: stage3StaticUpdateValueType(expr);
 		};
+	}
+
+	/**
+		The type of the value a static field compound assignment or `++`/`--` produces,
+		or null for any other expression. A compound update produces the stored value
+		(a nullable static's carrier); an increment produces the plain number.
+	**/
+	static function stage3StaticUpdateValueType(expr:HxExpr):Null<TyType> {
+		final update = expr.match(EBinop(_, _, _) | EUnop(_, _, _)) ? stage3StaticFieldWriteParts(expr) : null;
+		if (update == null || update.op == "=")
+			return null;
+		final type = update.target.getType();
+		return update.value == null ? TyAliasExpansion.revealNonNullable(type) : type;
 	}
 
 	/**
@@ -2328,7 +2344,8 @@ class EmitterStage {
 			case EField(inner, "high" | "low"):
 				stage3IsInt64Expr(inner, tyByIdent);
 			// Arithmetic unwraps a nullable Int operand, so its result is a concrete Int.
-			case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%"): (stage3IsIntExpr(a, tyByIdent)
+			// Haxe `/` always produces a Float, even for two Int operands.
+			case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*" || op == "%"): (stage3IsIntExpr(a, tyByIdent)
 					|| stage3NullableNumericOperand(a) == "primitive:Int") && (stage3IsIntExpr(b, tyByIdent)
 					|| stage3NullableNumericOperand(b) == "primitive:Int");
 			case ETernary(_cond, thenExpr, elseExpr): stage3IsIntExpr(thenExpr, tyByIdent) && stage3IsIntExpr(elseExpr, tyByIdent);
@@ -2836,7 +2853,7 @@ class EmitterStage {
 			case EUnop(op, fixity, inner) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
 				"(-.(" + exprToOcamlAsFloatValueStage3(inner, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 					callSigByCallee) + "))";
-			case EIdent(_) | EField(_, _) if (stage3StoredStaticIntRead(expr)):
+			case EIdent(_) | EField(_, _) if (stage3ExactPrimitiveKey(expr) == "primitive:Int"):
 				"float_of_int (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 					callSigByCallee) + ")";
 			case EIdent(name) if (stage3TyForIdent(name, tyByIdent) == "Int"):
@@ -4959,12 +4976,13 @@ class EmitterStage {
 						case _ if (isLocalCompoundValueOf(e, "primitive:Int")):
 							"float_of_int (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee) + ")";
-						case EIdent(_) | EField(_, _) if (stage3StoredStaticIntRead(e)):
-							"float_of_int (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-								callSigByCallee) + ")";
 						case EIdent(name) if (stage3TyForIdent(name, tyByIdentRaw) == "Int"):
 							"float_of_int " + ocamlReadValueIdent(name);
 						case EField(_obj, "length"):
+							"float_of_int (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee) + ")";
+						// Int arithmetic such as `counter * 2` in `counter * 2 / 3` renders an OCaml int.
+						case _ if (stage3IsIntExpr(e, tyByIdentRaw)):
 							"float_of_int (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee) + ")";
 						case _:
@@ -5827,7 +5845,7 @@ class EmitterStage {
 				return switch (e) {
 					case EInt(v):
 						"float_of_int " + Std.string(v);
-					case EIdent(_) | EField(_, _) if (stage3StoredStaticIntRead(e)):
+					case EIdent(_) | EField(_, _) if (stage3ExactPrimitiveKey(e) == "primitive:Int"):
 						"float_of_int (" + exprToOcaml(e, arityByIdentRaw, emissionTyByIdent, staticImportByIdentRaw, currentPackagePath,
 							moduleNameByPkgAndClassRaw, callSigByCalleeRaw) + ")";
 					case EIdent(name) if (tyForIdent(name) == "Int"):
@@ -8347,7 +8365,7 @@ class EmitterStage {
 				final outputModule = moduleNameForDecl(decl, moduleTypeNameFor(tm), HxClassDecl.getName(cls.getDeclaration()));
 				currentEnums.add(cls, outputModule, HxModuleDecl.getPackagePath(decl));
 				if (cls.hasSemanticFacts())
-					currentClassStorage.add(cls, runtimeModuleNames.exists(outputModule), outputModule, ocamlValueIdent);
+					currentClassStorage.add(cls, runtimeModuleNames.exists(outputModule), outputModule);
 			}
 		}
 		currentEnums.validate();
