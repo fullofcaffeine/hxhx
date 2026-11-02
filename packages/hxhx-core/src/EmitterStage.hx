@@ -5736,8 +5736,11 @@ class EmitterStage {
 									|| selected.getReceiver() != ImplicitOwner
 									|| selected.getField().getIsStatic()
 									|| selected.getField().getIsFinal()
-									|| !selected.getField().getHasStorage()
-									|| (selected.getField().getPropertySet() != "" && selected.getField().getPropertySet() != "default")
+									|| !selected.getField().getHasStorage() // Inside a property's own accessor, typing marks the write as
+										// physical storage access (`@:isVar`), not a setter call.
+									|| (selected.getField().getPropertySet() != ""
+										&& selected.getField().getPropertySet() != "default"
+										&& !selected.getHasPropertyStorageAccess())
 									|| hasBringupPoison(b);
 								case _:
 									true;
