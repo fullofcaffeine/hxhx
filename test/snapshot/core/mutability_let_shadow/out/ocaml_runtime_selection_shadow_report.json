@@ -1,6 +1,6 @@
 {
   "model": "requirements-only-runtime-selection-shadow",
-  "runtimeSourceRevision": "sha256:6035421ba258562dad0086aee429c3fcef0298e7bc1720f9519e83e01883c9bd",
+  "runtimeSourceRevision": "sha256:5f84f1f8f176c81cc5f54e6b84c8c38c5c4c28a5fc83f2d725328784630cb167",
   "requirementRevision": "sha256:2559f13435d4b7e7fa6a6079e437550674fcf4b30a477a279f917b4f206d5ebd",
   "schemaVersion": 1,
   "selectionMode": "full",
@@ -71,8 +71,8 @@
       {
         "module": "HxRuntime",
         "path": "HxRuntime.ml",
-        "sha256": "sha256:66a675e4872277be3474bbdfccfc5aecca4ba4d8d6bad767f5ef5e485410e2a2",
-        "bytes": 7725
+        "sha256": "sha256:f069e210cb05e97efa4d0aabfbed346f44824b49ff4043cbf1688624f2852ead",
+        "bytes": 8917
       },
       {
         "module": "HxStdio",
@@ -89,8 +89,8 @@
       {
         "module": "HxSys",
         "path": "HxSys.ml",
-        "sha256": "sha256:89c79dadf1091696986ca2698e382d9bdf6752956181b0ec8e9f5d19dd5bce12",
-        "bytes": 4530
+        "sha256": "sha256:e0146ea05104f1746f4190bee4c5efe3af21fb6ecf5bef136fdf8ecd574b44a8",
+        "bytes": 4824
       },
       {
         "module": "HxType",
@@ -631,7 +631,7 @@
       "HxSys",
       "HxType"
     ],
-    "revision": "sha256:f3fd1fc308dbaea1ad0addf8706fd818a6e8f66f228cb11b998517c94f4b9ee6"
+    "revision": "sha256:ee5b0b4ecab02aa13813975c41577bd52b52927c832deeeba82cef629b345867"
   },
   "profile": "portable",
   "message": "Explicit requirements do not yet select the same checked runtime source bytes. This mismatch blocks a hard cut, while the current compiler selection remains authoritative.",
@@ -695,8 +695,8 @@
       {
         "module": "HxFile",
         "path": "HxFile.ml",
-        "sha256": "sha256:9ebcd9c3944652ded8f256bdc7336b703a384d5210bc836892c13a51e47a0696",
-        "bytes": 1655
+        "sha256": "sha256:1883e76c94354e3842cc38c7f7a418e694733064e5a7ac08548e094d86fe3b3d",
+        "bytes": 1934
       },
       {
         "module": "HxFileStream",
@@ -707,8 +707,8 @@
       {
         "module": "HxFileSystem",
         "path": "HxFileSystem.ml",
-        "sha256": "sha256:04d5b45693e1f7a46ab1b2c657edfcc39ab320a3ded4a07f4db662f436c4b946",
-        "bytes": 3220
+        "sha256": "sha256:a8f2dc649064a1b4d9d03b8fa7283c57f0831e42bdacf1d5475c71cdb88b46ef",
+        "bytes": 4253
       },
       {
         "module": "HxInt",
@@ -749,8 +749,8 @@
       {
         "module": "HxRuntime",
         "path": "HxRuntime.ml",
-        "sha256": "sha256:66a675e4872277be3474bbdfccfc5aecca4ba4d8d6bad767f5ef5e485410e2a2",
-        "bytes": 7725
+        "sha256": "sha256:f069e210cb05e97efa4d0aabfbed346f44824b49ff4043cbf1688624f2852ead",
+        "bytes": 8917
       },
       {
         "module": "HxStdio",
@@ -767,8 +767,8 @@
       {
         "module": "HxSys",
         "path": "HxSys.ml",
-        "sha256": "sha256:89c79dadf1091696986ca2698e382d9bdf6752956181b0ec8e9f5d19dd5bce12",
-        "bytes": 4530
+        "sha256": "sha256:e0146ea05104f1746f4190bee4c5efe3af21fb6ecf5bef136fdf8ecd574b44a8",
+        "bytes": 4824
       },
       {
         "module": "HxThread",
@@ -1023,9 +1023,9 @@
       "Std",
       "haxe_CallStack"
     ],
-    "revision": "sha256:63a207528c345bcf744576a5dc224433859ef959e80926e760c0f5888f2834cd"
+    "revision": "sha256:5dbbf9b6683658eaf795a29ba1a772734022959ea5ce4dc4f2418e01dca67f25"
   },
-  "reportRevision": "sha256:667da3c6ff0e659d724b4c6745b99421344b423d5d0850cff9ef8b4a7cdeca44",
+  "reportRevision": "sha256:188524e355626bd9eb153bf75964a4e598aeb9d27b0a586ef132281e9958e1c6",
   "differences": {
     "currentOnlyRoots": [
       "Date",
@@ -2879,8 +2879,8 @@
       {
         "module": "HxFile",
         "path": "HxFile.ml",
-        "sha256": "sha256:9ebcd9c3944652ded8f256bdc7336b703a384d5210bc836892c13a51e47a0696",
-        "bytes": 1655
+        "sha256": "sha256:1883e76c94354e3842cc38c7f7a418e694733064e5a7ac08548e094d86fe3b3d",
+        "bytes": 1934
       },
       {
         "module": "HxFileStream",
@@ -2891,8 +2891,8 @@
       {
         "module": "HxFileSystem",
         "path": "HxFileSystem.ml",
-        "sha256": "sha256:04d5b45693e1f7a46ab1b2c657edfcc39ab320a3ded4a07f4db662f436c4b946",
-        "bytes": 3220
+        "sha256": "sha256:a8f2dc649064a1b4d9d03b8fa7283c57f0831e42bdacf1d5475c71cdb88b46ef",
+        "bytes": 4253
       },
       {
         "module": "HxMethodDispatch",

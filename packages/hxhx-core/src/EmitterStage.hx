@@ -3936,7 +3936,7 @@ class EmitterStage {
 						return "(let __v = Obj.repr (" + rawValue + ") in " + "if __v == HxRuntime.hx_null then HxSys.removeEnv (" + rawName
 							+ ") else HxSys.putEnvValue (" + rawName + ") (Obj.obj __v))";
 					case EField(sysObj, "setCwd") if (args.length == 1 && isRootSysReceiverExpr(sysObj)):
-						return "(Stdlib.Sys.chdir ("
+						return "(HxSys.setCwd ("
 							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ "))";
 					case EField(sysObj, "getCwd") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
