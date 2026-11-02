@@ -1177,6 +1177,10 @@ class TyFunctionInference {
 				// unknown, so those variables still receive their concrete constraints.
 				if (candidate.preview(value).isDynamic())
 					continue;
+				// Any function value unifies with haxe.Constraints.Function. The
+				// destination supplies no argument or result types to solve.
+				if (TyFunctionConstraint.accepts(context, candidate.preview(value)))
+					continue;
 				final projected = TyInferenceNominalContext.view(semanticIndex, value, context);
 				// Callable assignment uses the existing parameter/result compatibility
 				// rules, including optional inputs, rather than exact solver equality.
