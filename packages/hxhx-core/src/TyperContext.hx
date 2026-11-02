@@ -379,6 +379,29 @@ class TyperContext {
 		return selected;
 	}
 
+	/**
+		A bare value of an enum abstract declared in the current module, such as `One` for
+		`enum abstract EA(Int) { var One = 1; }`. Upstream Haxe 4.3.7 resolves it to type `EA`
+		without qualification. A name that two such abstracts both declare is ambiguous and
+		gives null.
+	**/
+	public function moduleEnumAbstractValueField(name:String):Null<TyFieldInfo> {
+		if (index == null || name == null || name.length == 0)
+			return null;
+		var selected:Null<TyFieldInfo> = null;
+		for (provider in index.getDeclaredByModulePath(modulePath)) {
+			if (!Std.isOfType(provider, TyAbstractInfo) || (cast provider : TyAbstractInfo).getEnumDomain() == null)
+				continue;
+			final field = provider.fieldInfo(name);
+			if (field == null || !field.getIsStatic())
+				continue;
+			if (selected != null)
+				return null;
+			selected = field;
+		}
+		return selected;
+	}
+
 	/** A type or module import exposes constructors only from its selected enum declarations. */
 	function importedEnums(directive:TyModuleDirective):Array<TyNominalInfo> {
 		if (!directive.getKind().match(TypeImport))

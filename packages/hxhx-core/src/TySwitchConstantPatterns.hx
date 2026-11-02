@@ -65,15 +65,44 @@ private function visit(pattern:HxSwitchPattern, expected:Null<TyType>, ctx:Typer
 private function constant(expected:Null<TyType>, actual:TyType, literal:HxExpr, ctx:TyperContext, pos:HxPos):Void {
 	if (expected == null || !known(expected))
 		return;
-	if (TyValueCompatibility.accepts(ctx.getIndex(), expected, actual, literal))
+	if (TyValueCompatibility.accepts(ctx.getIndex(), expected, actual, literal)
+		|| abstractPath(expected, actual, literal, ctx.getIndex(), []))
 		return;
 	throw new TyperError(ctx.getFilePath(), pos, actual.getDisplay() + " should be " + display(expected, ctx.getIndex()));
 }
 
-/** Only a fully known, non-Dynamic type can reject a constant. */
+/**
+	Whether a constant reaches an abstract through one of its declared `from` or `to`
+	types, as upstream's unification allows. For example, `case 1:` matches
+	`abstract M(Float) from Int to Float`, `abstract N(Null<Int>) from Int`, and cpp's
+	`Single` (`from Float`, so an Int widens first). The underlying type alone is not
+	a path: `case 1:` on `enum abstract EA(Int)` without `from Int` is rejected. A
+	generic `from T` admits any constant, because the parameter is not known here.
+**/
+private function abstractPath(expected:TyType, actual:TyType, literal:HxExpr, index:Null<TyperIndex>, seen:Array<String>):Bool {
+	final target = TyAliasExpansion.revealNonNullable(expected);
+	final identity = target.getNominalIdentity();
+	final owner = identity == null || index == null ? null : index.getAbstractByFullName(identity.getCanonicalName());
+	if (owner == null || seen.indexOf(identity.getCanonicalName()) >= 0)
+		return false;
+	final next = seen.concat([identity.getCanonicalName()]);
+	for (path in owner.getImplicitFromTypes().concat(owner.getImplicitToTypes())) {
+		if (path.hasTypeParameter() || path.isTypeParameter())
+			return true;
+		if (TyValueCompatibility.accepts(index, path, actual, literal)
+			|| (actual.getDisplay() == "Int" && TyValueCompatibility.accepts(index, path, TyType.fromHintText("Float"), literal))
+			|| abstractPath(path, actual, literal, index, next))
+			return true;
+	}
+	return false;
+}
+
+/** Only a fully known, non-Dynamic type can reject a constant; a bare `null` local's type is not known. */
 private function known(type:TyType):Bool {
 	final inner = type.unwrapNull();
 	return !type.hasUnknownComponent()
+		&& !type.isNullLiteral()
+		&& !inner.isNullLiteral()
 		&& !type.isUnresolved()
 		&& !inner.isDynamic()
 		&& !inner.isTypeParameter()
@@ -89,6 +118,17 @@ private function known(type:TyType):Bool {
 private function display(type:TyType, index:Null<TyperIndex>):String {
 	if (type.isNullable())
 		return "Null<" + display(type.unwrapNull(), index) + ">";
+	// A typedef keeps its own name, as upstream prints `Float should be MyInt`.
+	final alias = type.getAliasDefinition();
+	if (alias != null) {
+		final declaration = alias.getDeclaration();
+		final module = declaration.getModulePath();
+		final dot = module.lastIndexOf(".");
+		final aliasArguments = type.getTypeArguments();
+		return (dot < 0 ? "" : module.substr(0, dot + 1))
+			+ declaration.getShortName()
+			+ (aliasArguments.length == 0 ? "" : "<" + [for (argument in aliasArguments) display(argument, index)].join(", ") + ">");
+	}
 	final identity = type.getNominalIdentity();
 	if (identity == null)
 		return type.getDisplay();
