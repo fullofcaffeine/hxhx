@@ -1,6 +1,6 @@
 /**
-	Retain both checked operand types at one String concatenation (`a + b`
-	whose result is String).
+	Retain both checked operand types at one String concatenation: `a + b`
+	whose result is String, or the compound form `s += b` on a String.
 
 	Why: a target turns each operand into text, and the right conversion
 	depends on the operand's type, not on how it is spelled. A Bool static
@@ -17,14 +17,17 @@ class TypedBackendStringConcatOccurrence {
 	public final leftType:TyType;
 	public final rightType:TyType;
 
+	/** `+` or `+=`. */
+	public final operation:String;
+
 	final owner:String;
 	final revision:String;
 	final fingerprint:String;
 
 	/** Whether this checked binary expression is a String concatenation. */
 	public static function supports(source:TypedExpr):Bool {
-		return source.getTag() == Binary
-			&& source.getTexts()[0] == "+"
+		return ((source.getTag() == Binary && source.getTexts()[0] == "+")
+			|| (source.getTag() == CompoundAssign && source.getTexts()[0] == "+="))
 			&& source.getExpressions().length == 2
 			&& source.getType() != null
 			&& source.getType().getSemanticKey() == "primitive:String";
@@ -38,10 +41,12 @@ class TypedBackendStringConcatOccurrence {
 	}) {
 		if (!supports(input.source))
 			throw "string concatenation occurrence requires a checked String addition";
+		final expected = input.source.getTexts()[0];
 		final operands = switch input.expression {
-			case EBinop("+", a, b): {left: a, right: b};
+			case EBinop(op, a, b) if (op == expected): {left: a, right: b};
 			case _: throw "string concatenation projection changed its operator";
 		};
+		operation = expected;
 		owner = input.owner;
 		revision = input.revision;
 		expression = input.expression;
@@ -61,7 +66,7 @@ class TypedBackendStringConcatOccurrence {
 		if (owner != expectedOwner || revision != expectedRevision || fingerprint != TypedBodyFingerprint.exactExpression(expression))
 			throw "string concatenation occurrence belongs to another executable or changed after projection";
 		switch expression {
-			case EBinop("+", a, b) if (a == left && b == right):
+			case EBinop(op, a, b) if (op == operation && a == left && b == right):
 			case _:
 				throw "string concatenation operands were replaced";
 		}

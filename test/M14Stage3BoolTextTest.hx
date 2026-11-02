@@ -13,9 +13,10 @@ import sys.io.File;
 	  printed `1`/`0` (haxe_ocaml-agc6n, haxe_ocaml-caxgt).
 
 	What
-	- `stage3_bool_text` prints Bool values through concatenation, `join`,
-	  `Std.string`, `Array.toString`, interpolation, `StringBuf`, anonymous
-	  objects and Dynamic values. Integers must still print `1` and `0`.
+	- `stage3_bool_text` prints Bool values through concatenation, String `+=`,
+	  `join`, `Std.string`, `Sys.println`, `Array.toString`, interpolation,
+	  `StringBuf`, anonymous objects and Dynamic values, including `Null<Bool>`
+	  values and an abstract over Bool. Integers must still print `1` and `0`.
 	- The native executable must print exactly what upstream Haxe prints.
 **/
 class M14Stage3BoolTextTest {

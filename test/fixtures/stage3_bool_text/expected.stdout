@@ -22,3 +22,9 @@ interpolated true true
 result true null
 true|null|false
 ternary true
+built truetruetrue
+true
+false
+true true true
+[true,false]
+{opt: true}

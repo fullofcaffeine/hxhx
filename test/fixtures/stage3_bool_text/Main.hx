@@ -8,6 +8,12 @@ class Child extends Base {
 	}
 }
 
+/** An abstract over Bool prints like its Bool value. */
+abstract Flag(Bool) from Bool {
+	public inline function new(value:Bool)
+		this = value;
+}
+
 class Main {
 	static var flag:Bool = true;
 	static var blockFlag:Bool = {
@@ -84,5 +90,23 @@ class Main {
 		final optionalFlags:Array<Null<Bool>> = [true, null, false];
 		Sys.println(optionalFlags.join("|"));
 		Sys.println("ternary " + (one > zero ? true : false));
+		// Compound String assignment.
+		var built = "built";
+		built += " ";
+		built += t;
+		final present:Null<Bool> = true;
+		built += present;
+		built += map.get("a");
+		Sys.println(built);
+		// A nullable Bool passed straight to println.
+		Sys.println(present);
+		Sys.println(map.get("b"));
+		// An abstract over Bool.
+		final fl:Flag = true;
+		Sys.println(Std.string(fl) + " " + ("" + fl) + ' ${fl}');
+		// Nullable Bools stored in Dynamic and anonymous storage.
+		final stored:Array<Dynamic> = [present, map.get("b")];
+		Sys.println(Std.string(stored));
+		Sys.println(Std.string({opt: present}));
 	}
 }

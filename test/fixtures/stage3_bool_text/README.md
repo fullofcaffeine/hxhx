@@ -16,15 +16,27 @@ reach text through its checked type. Stage3 lost that type in two places:
 | `"echo " + value` (optional `?value:Bool`) | `echo true` | `echo 1` |
 | `"map " + map.get("a")` (`Map<String, Bool>`) | `map true` | `map 1` |
 | `[true, false].join(",")` | `true,false` | `1,0` |
+| `built += present` (`Null<Bool>`) | `...true` | `...1` |
+| `built += map.get("a")` | `...true` | segmentation fault |
+| `Sys.println(present)` (`Null<Bool>`) | `true` | `1` |
+| `Std.string(fl)` (`abstract Flag(Bool)`) | `true` | `1` |
+| `Std.string([present])` as `Array<Dynamic>` | `[true]` | `[1]` |
 
 Now:
 - Typing records each String concatenation's operand types
-  (`TypedBackendStringConcatOccurrence`, recorded by `projectBinary`). Stage3
+  (`TypedBackendStringConcatOccurrence`, recorded by `projectBinary` for `+`
+  and by `projectStringCompound` for a String `+=`). Stage3
   converts a Bool or `Null<Bool>` operand through
   `Stage3OcamlStringConversion.convert`, which boxes the Bool before runtime
   conversion, or uses the nullable Bool helper.
 - `Array.join` on a checked `Array<Bool>` or `Array<Null<Bool>>` receiver
   converts each element through the same typed conversion.
+- A `Null<Bool>` call argument (`Sys.println(present)`) uses the nullable
+  Bool conversion, like a Bool one already did.
+- A generated abstract over Bool prints like its Bool value: the conversion
+  follows the abstract's checked backing type.
+- Storing a `Null<Bool>` into Dynamic storage (an `Array<Dynamic>` element or
+  an anonymous-object field) boxes a present value, so it prints `true`.
 
 The fixture also covers literals, locals, comparisons, function results,
 `Null<Bool>` results, ternaries, interpolation, `Std.string`,
@@ -32,8 +44,10 @@ The fixture also covers literals, locals, comparisons, function results,
 `Array<Dynamic>`, `StringBuf.add`, null checks, a `Null<Bool>` condition, and
 optional Bool parameters. Integers still print `1` and `0`.
 
-`trace` is left out of the exact comparison. Native `trace(true)` prints
-`true`, but it has no `file:line:` prefix (haxe_ocaml-00tpu).
+`trace` is left out of the exact comparison. Native `trace(true)` has no
+`file:line:` prefix, and `trace(flag)` on a Bool static prints `1`
+(haxe_ocaml-00tpu). `StringBuf.add(maybe)` and `maybe == null ? flag : maybe`
+on a `Null<Bool>` fail OCaml typing (haxe_ocaml-ap723).
 
 Not changed here: `Null<Bool>` locals and optional Bool parameters still store
 a raw OCaml `bool` rather than the nullable box (`HxRuntime.box_bool`). Their
