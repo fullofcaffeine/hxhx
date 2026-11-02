@@ -232,6 +232,34 @@ class TyperIndex {
 		return dot <= 0 ? name : name.substr(0, dot);
 	}
 
+	/**
+		Split a declared bound such as `K:First & Second` into one bound per member.
+
+		The parser keeps the authored constraint as one type, as upstream's syntax tree
+		does, and macros see that one type. In a constraint position upstream checks each
+		member separately, so `Box<K:First & Second>` accepts a class that implements both
+		interfaces and reports `Constraint check failure for Box.K` otherwise. Resolving
+		the whole intersection as a structure would instead reject class and interface
+		members. A grouped `(First & Second)` is split the same way.
+	**/
+	static function constraintMembers(constraints:Array<HxTypeSyntax>):Array<HxTypeSyntax> {
+		final members = new Array<HxTypeSyntax>();
+		function add(syntax:HxTypeSyntax):Void {
+			switch syntax.getKind() {
+				case IntersectionType(parts):
+					for (part in parts)
+						add(part);
+				case GroupedType(inner) if (inner.getKind().match(IntersectionType(_))):
+					add(inner);
+				case _:
+					members.push(syntax);
+			}
+		}
+		for (constraint in constraints)
+			add(constraint);
+		return members;
+	}
+
 	static function classFullNameInModule(pkg:String, moduleName:Null<String>, className:String):String {
 		final packagePath = pkg == null ? "" : StringTools.trim(pkg);
 		final rawModule = moduleName == null ? "" : StringTools.trim(moduleName);
@@ -670,7 +698,7 @@ class TyperIndex {
 					throw "parsed class parameters differ from indexed binder identities";
 				final key = parameterIds[ordinal].getCanonicalKey();
 				parameterBounds.set(key, [
-					for (bound in parameter.constraints)
+					for (bound in constraintMembers(parameter.constraints))
 						typeUseResolver.resolveParsed(bound, {
 							packagePath: packagePath,
 							modulePath: semanticModulePath,

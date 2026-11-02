@@ -124,7 +124,15 @@ class M14HihGenericFunctionDeclIntegrationTest {
 		}
 		final intersection = HxFunctionSyntaxParser.parse("function pair<T:{x:Int} & {y:Int}>(value:T):Int { return value.x + value.y; }").typeParameters;
 		assertEqInt(intersection.length, 1, "intersection binder count");
-		assertEqInt(intersection[0].constraints.length, 2, "intersection constraints stay separate");
+		// Upstream's syntax tree stores `T:A & B` as one constraint type, an intersection;
+		// macros see that one type. The typer splits it into separate bounds.
+		assertEqInt(intersection[0].constraints.length, 1, "intersection stays one authored constraint");
+		switch intersection[0].constraints[0].getKind() {
+			case IntersectionType(members):
+				assertEqInt(members.length, 2, "intersection keeps both members");
+			case _:
+				fail("intersection constraint lost its intersection syntax");
+		}
 		assertEqString(HxFunctionTypeParamMetadata.constraints(HxFunctionTypeParamMetadata.fromGenericText("<T:{x:Int} & {y:Int}>")).get("T"),
 			"{x:Int}&{y:Int}", "intersection projection keeps both constraints");
 		for (parameters in ["<T:>", "<T,,U>"]) {

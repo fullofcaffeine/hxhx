@@ -197,6 +197,7 @@
     "test:m14:stage1-std-root-inference": "compiler-focused-2",
     "test:m14:neko-standard-library-paths": "compiler-focused-1",
     "test:m14:stage3-call-argument-policy": "compiler-focused-call-arguments",
+    "test:m14:hih-generic-function-decl": "compiler-foundation",
     "test:m14:stage3-missing-required-call-argument": "compiler-focused-1",
     "test:m14:stage3-array-methods": "compiler-focused-1",
     "test:m14:stage3-sys-file-ops": "compiler-focused-1",

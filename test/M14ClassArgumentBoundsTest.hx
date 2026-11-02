@@ -1,7 +1,27 @@
 /** Invalid class applications must fail before a method can rely on its declared bound. */
 class M14ClassArgumentBoundsTest {
 	static function main():Void {
+		// `K:First & Second` checks each member separately; it is not a structural extension.
+		final intersection = 'interface First{public var value:String;}interface Second{public var other:Int;}class Item implements First implements Second{public var value:String=\'item\';public var other:Int=1;public function new(){}}class Partial implements First{public var value:String=\'partial\';public function new(){}}';
 		final cases = [
+			{
+				name: 'intersection_valid',
+				extra: intersection + 'class Pair<K:First & Second>{public function new(){}}',
+				body: 'var pair=new Pair<Item>();',
+				accepted: true
+			},
+			{
+				name: 'intersection_grouped',
+				extra: intersection + 'class Pair<K:(First & Second)>{public function new(){}}',
+				body: 'var pair=new Pair<Item>();',
+				accepted: true
+			},
+			{
+				name: 'intersection_missing',
+				extra: intersection + 'class Pair<K:First & Second>{public function new(){}}',
+				body: 'var pair=new Pair<Partial>();',
+				accepted: false
+			},
 			{
 				name: 'unused_alias',
 				extra: 'typedef Invalid=Box<Int>;',
