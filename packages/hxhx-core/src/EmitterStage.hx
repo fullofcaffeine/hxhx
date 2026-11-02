@@ -5068,22 +5068,23 @@ class EmitterStage {
 									stage3ExactExprType(b));
 							}
 						}
+					// Equality operands also run left to right (OCaml applies `=` right to left).
 					case "==" | "!=" if (nullableEquality != null):
-						nullableEquality;
-					case "==":
-						if (stage3IsFloatExpr(a, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)
-							|| stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)) {
-							"((" + exprToOcamlAsFloat(a) + ") = (" + exprToOcamlAsFloat(b) + "))";
-						} else {
-							"((" + la + ") = (" + rb + "))";
-						}
-					case "!=":
-						if (stage3IsFloatExpr(a, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)
-							|| stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)) {
-							"((" + exprToOcamlAsFloat(a) + ") <> (" + exprToOcamlAsFloat(b) + "))";
-						} else {
-							"((" + la + ") <> (" + rb + "))";
-						}
+						backend.ocaml.Stage3OcamlOrderedOperands.apply(la, rb, stage3OperandIsStable(a), stage3OperandIsStable(b),
+							currentFunctionLocalOcamlNames, (left, right) -> backend.ocaml.Stage3OcamlNullablePrimitive.equality(equality, left, right));
+					case "==" | "!=":
+						final ocamlOp = op == "==" ? "=" : "<>";
+						final isFloat = stage3IsFloatExpr(a, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)
+							|| stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw);
+						backend.ocaml.Stage3OcamlOrderedOperands.apply(isFloat ? exprToOcamlAsFloat(a) : la, isFloat ? exprToOcamlAsFloat(b) : rb,
+							stage3OperandIsStable(a), stage3OperandIsStable(b), currentFunctionLocalOcamlNames,
+							(left, right) -> "(("
+								+ left
+								+ ") "
+								+ ocamlOp
+								+ " ("
+								+ right
+								+ "))");
 					case "<" | ">" | "<=" | ">=":
 						// Nullable operands are unwrapped like arithmetic operands; a null raises
 						// Null Access (upstream targets differ on ordering null, see the carrier module).
