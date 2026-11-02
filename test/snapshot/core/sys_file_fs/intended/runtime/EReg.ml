@@ -33,11 +33,15 @@
    `matched`, `matchedLeft`, `split`, `replace` and `map` slice bytes at
    character boundaries.
 
-   Known limitations: `{m,n}`, lazy quantifiers (matched greedily),
-   lookaround, named groups, `\B`, Unicode properties for `\w` `\d` `\s` `\b`
-   (ASCII only here), and PCRE `^`/`$` (here they always match at line
-   boundaries). Unsupported group syntax such as `(?=...)` raises `Failure`
-   when the EReg is created. *)
+   `{m,n}` is written out as copies of the repeated item, which rules out
+   counting a capturing group.
+
+   Known limitations: lazy quantifiers (matched greedily), Unicode properties
+   for `\w` `\d` `\s` `\b` (ASCII only here), case-insensitive back
+   references, and PCRE `^`/`$` (here they always match at line boundaries).
+   Syntax that cannot be translated (lookaround, named groups, `\B`, `\A`,
+   unknown letter escapes, a counted capturing group) raises `Failure` when
+   the EReg is created: both translations run in [create]. *)
 
 type match_result =
   { src : string
@@ -50,11 +54,10 @@ type compiled =
   }
 
 type t =
-  { pattern : int array (* code points of the Haxe pattern *)
-  ; global : bool
+  { global : bool
   ; casefold : bool
-  ; dotall : bool
   ; ascii_mode : compiled
+  ; utf8_source : string * int array (* UTF-8 translation, compiled on first use *)
   ; mutable utf8_mode : compiled option
   ; mutable last : match_result option
   }
@@ -229,15 +232,43 @@ type translator =
   ; mutable haxe_groups : int list (* Str group of each Haxe group, newest first *)
   }
 
-(* The atom a postfix operator would apply to, by its start in the buffer. A
-   unit takes the operator directly; a sequence (such as the two bytes of "é")
-   must be wrapped in a group first. *)
+(* The atom a postfix operator would apply to, with its start in the buffer.
+   A unit takes the operator directly; a sequence (such as the two bytes of
+   "é") must be wrapped in a group first. [inner] counts the Str groups the
+   atom's text opens, which matters when `{m,n}` copies that text. *)
 type atom =
   | No_atom
-  | Unit
+  | Unit of { start : int; inner : int; capture : bool }
   | Sequence of int
   | Any_non_ascii of int * (int * int) list
       (* A set holding every non-ASCII character plus these ASCII ranges. *)
+
+let unit_at (start : int) (inner : int) : atom = Unit { start; inner; capture = false }
+
+(* Upper bound for m and n in `{m,n}`; each copy is written out in full. *)
+let max_repeat = 1000
+
+(* Reads `{m}`, `{m,}` or `{m,n}` at [i]: (m, Some n or None, index after).
+   Anything else, such as `{,2}` or `{x}`, is a literal brace in PCRE. *)
+let read_counted (p : int array) (i : int) : (int * int option * int) option =
+  let n = Stdlib.Array.length p in
+  let digits j =
+    let k = ref j and value = ref 0 in
+    while !k < n && Stdlib.Array.get p !k >= Stdlib.Char.code '0' && Stdlib.Array.get p !k <= Stdlib.Char.code '9' do
+      value := min (max_repeat + 1) ((!value * 10) + Stdlib.Array.get p !k - Stdlib.Char.code '0');
+      incr k
+    done;
+    if !k = j then None else Some (!value, !k)
+  in
+  let at j c = j < n && Stdlib.Array.get p j = Stdlib.Char.code c in
+  match digits (i + 1) with
+  | None -> None
+  | Some (m, j) ->
+      if at j '}' then Some (m, Some m, j + 1)
+      else if at j ',' then
+        if at (j + 1) '}' then Some (m, None, j + 2)
+        else match digits (j + 1) with Some (hi, k) when at k '}' -> Some (m, Some hi, k + 1) | _ -> None
+      else None
 
 let emit_set (tr : translator) (set : (int * int) list) : atom =
   let start = Stdlib.Buffer.length tr.buf in
@@ -245,7 +276,7 @@ let emit_set (tr : translator) (set : (int * int) list) : atom =
   let non_ascii = Stdlib.List.filter_map (fun (lo, hi) -> if hi < 0x80 then None else Some (max lo 0x80, hi)) set in
   if (not tr.utf8) || non_ascii = [] then (
     Stdlib.Buffer.add_string tr.buf (render_bytes ascii);
-    Unit)
+    unit_at start 0)
   else if non_ascii = [ (0x80, max_code) ] then (
     (* Any non-ASCII character: a lead byte, then its continuation bytes. *)
     Stdlib.Buffer.add_string tr.buf (render_byte_class (ascii @ [ (0xC0, 0xFF) ]));
@@ -257,14 +288,14 @@ let emit_set (tr : translator) (set : (int * int) list) : atom =
     Stdlib.Buffer.add_string tr.buf (Stdlib.String.concat "\\|" alternatives);
     Stdlib.Buffer.add_string tr.buf "\\)";
     tr.str_groups <- tr.str_groups + 1;
-    Unit)
+    unit_at start 1)
 
 let emit_literal (tr : translator) (code : int) : atom =
   if tr.fold then emit_set tr (fold_set [ (code, code) ])
   else
     let start = Stdlib.Buffer.length tr.buf in
     Stdlib.Buffer.add_string tr.buf (Str.quote (HxString.fromCharCode code));
-    if code < 0x80 then Unit else Sequence start
+    if code < 0x80 then unit_at start 0 else Sequence start
 
 let hex_value (code : int) : int =
   if code >= 0x30 && code <= 0x39 then code - 0x30
@@ -297,6 +328,14 @@ let read_escape (p : int array) (i : int) (in_class : bool) : escaped * int =
   | 'v' -> (Code 0x0B, i + 1)
   | 'e' -> (Code 0x1B, i + 1)
   | 'b' when in_class -> (Code 0x08, i + 1)
+  | '0' ->
+      (* `\0` and up to two more octal digits. *)
+      let j = ref (i + 1) and value = ref 0 in
+      while !j < n && !j < i + 3 && Stdlib.Array.get p !j >= code '0' && Stdlib.Array.get p !j <= code '7' do
+        value := (!value * 8) + Stdlib.Array.get p !j - code '0';
+        incr j
+      done;
+      (Code !value, !j)
   | 'x' when i + 1 < n && (Stdlib.Array.get p (i + 1)) = code '{' ->
       let j = ref (i + 2) and value = ref 0 in
       while !j < n && hex_value (Stdlib.Array.get p (!j)) >= 0 && !value <= max_code do
@@ -312,6 +351,11 @@ let read_escape (p : int array) (i : int) (in_class : bool) : escaped * int =
         incr j
       done;
       (Code !value, !j)
+  | 'a' .. 'z' | 'A' .. 'Z' ->
+      (* PCRE gives every letter escape a meaning or rejects it; `\B`, `\A`,
+         `\z`, `\p{..}` and the rest cannot be translated, so fail here
+         rather than silently matching the letter. *)
+      failwith ("EReg: unsupported escape \\" ^ HxString.fromCharCode c)
   | _ -> (Code c, i + 1)
 
 (* The members of the class whose `[` is at [i - 1], whether it is negated,
@@ -351,7 +395,8 @@ let translate ~(utf8 : bool) ~(casefold : bool) ~(dotall : bool) (p : int array)
   let tr = { utf8; casefold; fold = utf8 && casefold; buf = Stdlib.Buffer.create (Stdlib.Array.length p * 2); str_groups = 0; haxe_groups = [] } in
   let n = Stdlib.Array.length p in
   let dot = if dotall then [ (0, max_code) ] else complement [ (0x0A, 0x0A) ] in
-  let open_groups = ref 0 in
+  (* For each open group: its start, the Str groups before it, the Haxe groups before it. *)
+  let open_groups = ref [] in
   let rec loop i (atom : atom) =
     if i < n then
       let c = (Stdlib.Array.get p (i)) in
@@ -364,8 +409,9 @@ let translate ~(utf8 : bool) ~(casefold : bool) ~(dotall : bool) (p : int array)
             if haxe > Stdlib.List.length groups then failwith "EReg: back reference to an unknown group";
             let str = Stdlib.List.nth groups (haxe - 1) in
             if str > 9 then failwith "EReg: back reference needs more than 9 internal groups";
+            let start = Stdlib.Buffer.length tr.buf in
             Stdlib.Buffer.add_string tr.buf ("\\" ^ string_of_int str);
-            loop (i + 2) Unit)
+            loop (i + 2) (unit_at start 0))
           else if next = code 'b' then (
             Stdlib.Buffer.add_string tr.buf "\\b";
             loop (i + 2) No_atom)
@@ -379,6 +425,7 @@ let translate ~(utf8 : bool) ~(casefold : bool) ~(dotall : bool) (p : int array)
           let members = if not casefold then members else if utf8 then fold_set members else fold_ascii members in
           loop after (emit_set tr (if negated then complement members else members))
       | '(' ->
+          let haxe_before = Stdlib.List.length tr.haxe_groups in
           let after =
             if i + 1 < n && (Stdlib.Array.get p (i + 1)) = code '?' then
               if i + 2 < n && (Stdlib.Array.get p (i + 2)) = code ':' then i + 3
@@ -387,14 +434,16 @@ let translate ~(utf8 : bool) ~(casefold : bool) ~(dotall : bool) (p : int array)
               tr.haxe_groups <- (tr.str_groups + 1) :: tr.haxe_groups;
               i + 1)
           in
+          open_groups := (Stdlib.Buffer.length tr.buf, tr.str_groups, haxe_before) :: !open_groups;
           Stdlib.Buffer.add_string tr.buf "\\(";
           tr.str_groups <- tr.str_groups + 1;
-          incr open_groups;
           loop after No_atom
-      | ')' when !open_groups > 0 ->
-          decr open_groups;
+      | ')' when !open_groups <> [] ->
+          let start, str_before, haxe_before = Stdlib.List.hd !open_groups in
+          open_groups := Stdlib.List.tl !open_groups;
           Stdlib.Buffer.add_string tr.buf "\\)";
-          loop (i + 1) Unit
+          let capture = Stdlib.List.length tr.haxe_groups > haxe_before in
+          loop (i + 1) (Unit { start; inner = tr.str_groups - str_before; capture })
       | '|' ->
           Stdlib.Buffer.add_string tr.buf "\\|";
           loop (i + 1) No_atom
@@ -425,6 +474,41 @@ let translate ~(utf8 : bool) ~(casefold : bool) ~(dotall : bool) (p : int array)
           (* A lazy (`*?`) or possessive (`*+`) marker is accepted and matched greedily. *)
           let marked = i + 1 < n && ((Stdlib.Array.get p (i + 1)) = code '?' || (Stdlib.Array.get p (i + 1)) = code '+') in
           loop (if marked then i + 2 else i + 1) No_atom
+      | '{' when atom <> No_atom && read_counted p i <> None -> (
+          match read_counted p i with
+          | None -> ()
+          | Some (lo, hi, after) ->
+              if lo > max_repeat || (match hi with Some h -> h > max_repeat || h < lo | None -> false) then
+                failwith "EReg: counted repetition out of range";
+              (* Make the atom one Str unit, then write it out: [lo] required
+                 copies, then [hi - lo] optional copies or one starred copy.
+                 Copying a capturing group would need several Haxe numbers
+                 for one group, so that case is rejected. *)
+              let start, inner =
+                match atom with
+                | Unit { capture = true; _ } -> failwith "EReg: counted repetition of a capturing group is not supported"
+                | Unit { start; inner; _ } -> (start, inner)
+                | Sequence start | Any_non_ascii (start, _) ->
+                    let tail = Stdlib.Buffer.sub tr.buf start (Stdlib.Buffer.length tr.buf - start) in
+                    Stdlib.Buffer.truncate tr.buf start;
+                    Stdlib.Buffer.add_string tr.buf ("\\(" ^ tail ^ "\\)");
+                    tr.str_groups <- tr.str_groups + 1;
+                    (start, 1)
+                | No_atom -> (Stdlib.Buffer.length tr.buf, 0)
+              in
+              let text = Stdlib.Buffer.sub tr.buf start (Stdlib.Buffer.length tr.buf - start) in
+              Stdlib.Buffer.truncate tr.buf start;
+              for _ = 1 to lo do
+                Stdlib.Buffer.add_string tr.buf text
+              done;
+              let optional = match hi with Some h -> h - lo | None -> 1 in
+              for _ = 1 to optional do
+                Stdlib.Buffer.add_string tr.buf text;
+                Stdlib.Buffer.add_char tr.buf (if hi = None then '*' else '?')
+              done;
+              tr.str_groups <- tr.str_groups + (inner * (lo + optional - 1));
+              let marked = after < n && (Stdlib.Array.get p after = code '?' || Stdlib.Array.get p after = code '+') in
+              loop (if marked then after + 1 else after) No_atom)
       | _ -> loop (i + 1) (emit_literal tr c)
   in
   loop 0 No_atom;
@@ -432,19 +516,20 @@ let translate ~(utf8 : bool) ~(casefold : bool) ~(dotall : bool) (p : int array)
 
 (* ---- Construction -------------------------------------------------------- *)
 
-let compile ~(utf8 : bool) ~(casefold : bool) ~(dotall : bool) (p : int array) : compiled =
-  let source, group_map = translate ~utf8 ~casefold ~dotall p in
+let compile ~(utf8 : bool) ~(casefold : bool) ((source, group_map) : string * int array) : compiled =
   let re = if casefold && not utf8 then Str.regexp_case_fold source else Str.regexp source in
   { re; group_map }
 
+(* Both translations run here, so every unsupported-syntax failure happens
+   when the EReg is created, not at its first non-ASCII subject. Only the
+   UTF-8 Str compilation is deferred. *)
 let create (r : string) (opt : string) : t =
   let pattern = Stdlib.Array.init (HxString.length r) (fun i -> HxString.cca r i) in
   let casefold = Stdlib.String.contains opt 'i' and dotall = Stdlib.String.contains opt 's' in
-  { pattern
-  ; global = Stdlib.String.contains opt 'g'
+  { global = Stdlib.String.contains opt 'g'
   ; casefold
-  ; dotall
-  ; ascii_mode = compile ~utf8:false ~casefold ~dotall pattern
+  ; ascii_mode = compile ~utf8:false ~casefold (translate ~utf8:false ~casefold ~dotall pattern)
+  ; utf8_source = translate ~utf8:true ~casefold ~dotall pattern
   ; utf8_mode = None
   ; last = None
   }
@@ -455,7 +540,7 @@ let compiled_for (self : t) (l : HxString.layout) : compiled =
     match self.utf8_mode with
     | Some c -> c
     | None ->
-        let c = compile ~utf8:true ~casefold:self.casefold ~dotall:self.dotall self.pattern in
+        let c = compile ~utf8:true ~casefold:self.casefold self.utf8_source in
         self.utf8_mode <- Some c;
         c
 
@@ -621,6 +706,9 @@ let replace (self : t) (s : string) (by : string) : string =
   let buf = Stdlib.Buffer.create (len_s + 32) in
   let l = HxString.layout s in
   let c = compiled_for self l in
+  (* Upstream's replace leaves the previous match state alone; `$1` expansion
+     needs the current match, so it is restored afterwards. *)
+  let previous = self.last in
   let rec loop pos =
     match search c s l pos with
     | None -> Stdlib.Buffer.add_substring buf s pos (len_s - pos)
@@ -637,6 +725,7 @@ let replace (self : t) (s : string) (by : string) : string =
           loop (b + w))
   in
   loop 0;
+  self.last <- previous;
   Stdlib.Buffer.contents buf
 
 (* Upstream eval's algorithm, including its handling of empty matches, but

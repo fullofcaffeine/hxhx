@@ -19,7 +19,17 @@ matchSub ascii prefix=true 3+1 bounded=false,true
 matchSub first=2+1 left=hé
 empty ascii map=-a-b replace=-a-b- split=/a/
 long=150+6 needle dots=56
+backref=true é漢 2+5 caseless=false
+alternation=aéab|a|b|1+4
+non-capturing first=é|b|1+5
+counted=true,false,true,false ranges=[ééé][ééé],[漢漢漢]x漢,[é漢é漢]é漢,x[y] literal=[a{,2}]
+modes=true 0+2,true 1+2,true 1+2
+matchSub end=true 2+0 zero=true,false
+not digit=1[é漢]2 not space=[é漢] [😀]
+replace keeps match=<漢>x<漢> 漢 1+1
 escape=é\.漢\+
 matchSub loop=2:l,3:l,7:l
 matchSub code points=true,false,true true len=1
+unsupported=rejected,rejected,rejected,rejected,rejected,rejected nul=true
+ascii word classes=a[é][-] matchSub past end=false,false,false
 empty unicode map=-é-漢 replace=-é-漢-😀- split=/é/漢/

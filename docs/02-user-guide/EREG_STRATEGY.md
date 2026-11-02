@@ -43,7 +43,14 @@ s.substr(r.matchedPos().pos); // "llo😀漢l"
   in half (and makes `map` fail). Otherwise these follow upstream's
   algorithm, so ASCII results are identical, including upstream's quirk that
   `~/x*/g.split("ab")` gives `["", "a", ""]`.
+- `matchSub` with a position below 0 or past the end, or a window that runs
+  past the end, returns `false`. Upstream eval stops the program with an
+  uncatchable PCRE error instead.
 - An unmatched optional group gives `null` from `matched(n)`, as upstream.
+- `replace` leaves the previous `match` result in place, as upstream does;
+  `map` clears it.
+- Every pattern is translated in full when the `EReg` is created, so
+  unsupported syntax fails there and never at a later call.
 
 The portable fixture `test/portable/fixtures/ereg_unicode_code_points` checks
 all of this against upstream output.
@@ -81,8 +88,16 @@ caches long strings. Text results (`matched`, `matchedLeft`, `split`, …) are
 byte slices taken at character boundaries.
 
 Other translated syntax: `\d \w \s` (ASCII sets), `\n \r \t \f \v \e`,
-`\xhh` and `\x{h...}`, back references `\1`–`\9`, `^`, `$`, `\b`, `|`, `*`,
-`+`, `?`, and the `g`, `i`, `s` options.
+`\0` (NUL, with up to two more octal digits), `\xhh` and `\x{h...}`, back
+references `\1`–`\9`, `^`, `$`, `\b`, `|`, `*`, `+`, `?`, and the `g`, `i`,
+`s` options.
+
+Counted repetition `{m}`, `{m,}` and `{m,n}` (up to 1000) is written out as
+copies of the repeated item: `[0-9a-f]{64}` becomes 64 copies of the class,
+and `é{2,3}` becomes `éé` followed by an optional `é`. A capturing group
+cannot be counted this way, because each copy would need its own group
+number, so `(ab){2}` raises an error; `(?:ab){2}` works. As in upstream, a
+brace that does not start a valid count, such as `a{,2}`, is a literal.
 
 ## Known limitations
 
@@ -90,10 +105,13 @@ Tracked by `haxe_ocaml-2lqqu`:
 
 - Unicode properties for `\w`, `\d`, `\s` and `\b`. Upstream matches `é` and
   `漢` with `\w`; this runtime only matches ASCII word characters.
-- `{m,n}` counted repetition (the braces are literal), lazy quantifiers
-  (`*?` is matched greedily), lookahead/lookbehind, named groups, inline
-  flags, and `\B`. Unsupported group syntax raises an error when the `EReg` is
-  created.
+- Lazy quantifiers (`*?` is matched greedily), lookahead/lookbehind, named
+  groups, inline flags, `(ab){2}` (a counted capturing group), and the
+  escapes `\B`, `\A`, `\z`, `\Z`, `\G`, `\p{..}`, `\Q`, `\c` and every
+  other letter escape not listed above. Each of these raises an error when
+  the `EReg` is created.
+- Back references compare exactly, even with `i`: `~/(a)\1/i` does not match
+  `"aA"`, while upstream does.
 - `^` and `$` always match at line boundaries, as if `m` were set.
 - Ranges with more than 12288 code points are not case folded under `i`.
 - Ill-formed UTF-8 (possible only from OCaml file or process input): a stray

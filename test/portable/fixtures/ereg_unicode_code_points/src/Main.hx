@@ -92,6 +92,41 @@ class Main {
 		needle.match(text);
 		Sys.println("long=" + pos(needle) + " " + text.substr(needle.matchedPos().pos) + " dots=" + ~/😀./g.map(text, m -> "").length);
 
+		final back = ~/([^,]+),\1/;
+		Sys.println("backref="
+			+ back.match("x,é漢,é漢,y")
+			+ " "
+			+ back.matched(1)
+			+ " "
+			+ pos(back)
+			+ " caseless="
+			+ ~/([^,]+),\1/.match("é,É"));
+		final alt = ~/(é|a)+(b)/;
+		alt.match("xaéab");
+		Sys.println("alternation=" + alt.matched(0) + "|" + alt.matched(1) + "|" + alt.matched(2) + "|" + pos(alt));
+		final nc = ~/(?:漢|x)+(é)(.)/;
+		nc.match("a漢x漢éb");
+		Sys.println("non-capturing first=" + nc.matched(1) + "|" + nc.matched(2) + "|" + pos(nc));
+		Sys.println("counted=" + ~/^[0-9a-f]{4}$/.match("0a9f") + "," + ~/^[0-9a-f]{4}$/.match("0{4}") + "," + ~/^.{3}$/.match("é漢😀") + ","
+			+ ~/^.{4}$/.match("é漢😀") + " ranges=" + each(~/é{2,3}/g, "éééééé") + "," + each(~/漢{2,}/g, "漢漢漢x漢") + "," + each(~/(?:é漢){2}/g, "é漢é漢é漢") + ","
+			+ each(~/x{0}y/g, "xy") + " literal=" + each(~/a{,2}/g, "a{,2}"));
+		final mixed = ~/(é|o)l/;
+		Sys.println("modes=" + mixed.match("olx") + " " + pos(mixed) + "," + mixed.match("漢él") + " " + pos(mixed) + "," + mixed.match("xol") + " "
+			+ pos(mixed));
+		final edge = ~/$/;
+		Sys.println("matchSub end="
+			+ edge.matchSub("é漢", 2)
+			+ " "
+			+ pos(edge)
+			+ " zero="
+			+ ~/x*/.matchSub("é漢", 1, 0)
+			+ ","
+			+ ~/漢/.matchSub("é漢", 1, 0));
+		Sys.println("not digit=" + each(~/\D+/g, "1é漢2") + " not space=" + each(~/\S+/g, "é漢 😀"));
+		final kept = ~/(漢)/g;
+		kept.match("a漢b");
+		final replaced = kept.replace("漢x漢", "<$1>");
+		Sys.println("replace keeps match=" + replaced + " " + kept.matched(1) + " " + pos(kept));
 		Sys.println("escape=" + EReg.escape("é.漢+"));
 	}
 }
