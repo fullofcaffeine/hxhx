@@ -142,6 +142,10 @@ class Stage3OcamlCallableFunction {
 		// It can enter Dynamic unchanged; it does not authorize a nullable callback.
 		if (actual.isNullLiteral() && expected.isDynamic())
 			return value;
+		// A null literal cannot enter an unboxed Int, Float or Bool parameter; the call raises Null Access.
+		final concrete = actual.isNullLiteral() ? Stage3OcamlNullablePrimitive.concreteDestination(expected, false) : null;
+		if (concrete != null)
+			return Stage3OcamlNullablePrimitive.nullLiteralArgumentSyntax(concrete);
 		final conversion = crossing(shape(actual), shape(expected));
 		if (conversion == null)
 			throw "Native callback occurrence lacks a selected conversion";

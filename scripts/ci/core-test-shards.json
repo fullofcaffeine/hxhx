@@ -247,6 +247,7 @@
     "test:m14:untyped-indexed-assignment": "compiler-foundation",
     "test:m14:untyped-indexed-update": "compiler-foundation",
     "test:m14:indexed-null-setter": "compiler-foundation",
+    "test:m14:null-basic-call-argument": "compiler-foundation",
     "test:m14:conditional-abstract-result": "compiler-focused-2",
     "test:m14:js-abstract-values": "compiler-focused-2",
     "test:m14:abstract-unary-cross-backend": "compiler-focused-2",
