@@ -80,7 +80,7 @@ Matrix status taxonomy:
 | `sys.FileSystem` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/sys/FileSystem.hx` + `packages/reflaxe.ocaml/std/runtime/HxFileSystem.ml` |
 | `sys.io.File` | ✅ | Runtime subset exercised by fixtures/examples |
 | `haxe.ds.Map` / `haxe.ds.*` | ✅ | Runtime `HxMap.ml` + codegen lowering |
-| `EReg` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/EReg.hx` + `packages/reflaxe.ocaml/std/runtime/EReg.ml` |
+| `EReg` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/EReg.hx` + `packages/reflaxe.ocaml/std/runtime/EReg.ml`, built on OCaml `Str`. Positions (`matchedPos`, `matchSub`) count Unicode code points like `String`, and `.` and classes match whole characters (`~/l+/` on `"héllo"` gives `pos == 2`). Not yet supported: Unicode `\w` `\d` `\s`, `{m,n}`, lazy quantifiers, lookaround. See `EREG_STRATEGY.md`. |
 | `Math` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/Math.hx` + `packages/reflaxe.ocaml/std/runtime/Math.ml` |
 
 ## OCaml-native surface (`ocaml.*`)

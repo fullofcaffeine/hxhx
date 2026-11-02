@@ -1,0 +1,25 @@
+matchedPos=2+2 left=hé right=o😀漢l substr=ll charAt=l
+after multibyte=7+1 l left=héllo😀漢
+emoji run=1+2 😀😀 right=x
+dot=[é][漢][😀][a] anchored=true,false
+dot newline=[é]\n[漢] dotall=[é][\n][漢]
+dot plus=h[éllo😀漢l] star=héll[o😀漢l]
+star groups=é😀|漢|ab😀|0+6
+groups=é|😀|null|1+2
+negated=a[é][b][漢] members=x[é漢é]y[漢] range=a[é]x[ü]ÿ
+negated members=aé[😀b]漢[c] negated star=[xé漢],[x😀]
+optional=[hél] [hl] hé literal plus=a[漢漢]b[漢]
+non-capturing=x[é漢é漢😀]y escaped=a[é][	]b
+caseless=1+3 éÉé cyrillic=true greek=true range=x[ÀÉ]y ascii=é[ABC][abc] class=e[É][é]
+caseless no full folding=false negated=Éé[xEe],AA[bb]A
+split=é/漢/😀 once=é/漢,😀 spaced=漢/é/😀
+replace=hé[l][l]o😀漢[l] once=héllo😀<漢>l multibyte=héłło😀漢ł
+map positions=hé2+13+1o😀漢7+1 map left=héllo5漢l
+matchSub ascii prefix=true 3+1 bounded=false,true
+matchSub first=2+1 left=hé
+empty ascii map=-a-b replace=-a-b- split=/a/
+long=150+6 needle dots=56
+escape=é\.漢\+
+matchSub loop=2:l,3:l,7:l
+matchSub code points=true,false,true true len=1
+empty unicode map=-é-漢 replace=-é-漢-😀- split=/é/漢/

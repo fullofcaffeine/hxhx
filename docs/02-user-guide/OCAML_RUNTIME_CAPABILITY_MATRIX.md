@@ -98,7 +98,7 @@ used for ordinary external OCaml libraries.
 | Runtime module (`std/runtime/*.ml`) | Portable | Metal | Notes / migration |
 |---|---|---|---|
 | `Date` | yes | `metal-supported` | Keep as typed date/time usage. |
-| `EReg` | yes | `metal-supported` | Regex support is allowed; keep typed call sites. |
+| `EReg` | yes | `metal-supported` | Regex support is allowed; keep typed call sites. Positions count Unicode code points; ASCII subjects use a byte fast path. |
 | `HxAnon` | yes | `metal-forbidden (current)` | Dynamic anonymous-object reflection path (portable uses shape/slot runtime with explicit presence tracking + repeated-field cache); migrate to typed records/classes for metal. |
 | `HxArray` | yes | `metal-supported` | Arrays are supported; future metal specialization may reduce runtime dependence. |
 | `HxBacktrace` | yes | `metal-supported` | Stack capture reached through checked `haxe-stack-traces` typed externs. |
