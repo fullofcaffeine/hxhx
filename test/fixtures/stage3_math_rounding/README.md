@@ -27,7 +27,7 @@ Before the fix:
 Now the runtime implements eval's rule (`Math.int_of_rounded`), and Stage3
 calls the runtime `Math` functions, as it already did for `Math.ceil`.
 
-`Main.hx` covers ties, signed zero, NaN, the infinities, and values around
+`Main.hx` covers Int arguments, ties, signed zero, NaN, the infinities, and values around
 `±2^31`, `2^32`, `3e9`, `1e10`, `2^53`, and `1e20`. The Float variants are
 compared with the expected value in the table, including NaN and the sign of
 zero. They are not printed, because native printing of whole-number Floats
@@ -48,7 +48,15 @@ upstream targets: neko saturates to the Int32 range (`Math.floor(2^31)` is
 2147483647, and `±Infinity` gives `±2^31`), while eval gives 0. The fixture
 matches eval.
 
-For NaN and the infinities, eval computes `Int32.of_float` of NaN, which is
-the CPU's conversion (0 on arm64 and x86-64). The native code uses the same
-OCaml primitive. The python target cannot run this program, because its
-`Math.floor(NaN)` raises.
+For NaN and the infinities, eval computes `Int32.of_float` of NaN (`mod_float`
+of an infinity is NaN). `Int32.of_float` is the C stub `caml_int32_of_float`,
+which does `(int32_t) x`, so the result is the CPU's conversion: 0 on arm64
+and -2147483648 on x86-64. Eval and the native code use the same stub, so
+they agree on the same host, but the value differs between hosts. The
+fixture therefore prints `cpu-defined` for those Int results and still
+checks the Float variants, which are host-independent. The python target
+cannot run this program, because its `Math.floor(NaN)` raises.
+
+The first line passes Int arguments (`Math.round(7)`, `Math.floor(-3)`,
+`Math.ceil(7)`). The removed Stage3 `Math.round` intrinsic used to convert
+an Int argument itself; the ordinary call path now does it.

@@ -267,7 +267,7 @@
     {
       "module": "Math",
       "scope": "application",
-      "files": [{ "path": "Math.ml", "sha256": "c7404ed3389ec9d451e72541e5dbda97983b54c49026e642bef71daaa943712e" }],
+      "files": [{ "path": "Math.ml", "sha256": "577161786b2799ae38b1c9bde8aa8cfc561be4d22dbb1b124d27d22d1fc96fe6" }],
       "dependencies": [],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],

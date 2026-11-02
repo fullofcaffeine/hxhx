@@ -1,6 +1,7 @@
-nan floor=0 ceil=0 round=0 floats=ok
-+inf floor=0 ceil=0 round=0 floats=ok
--inf floor=0 ceil=0 round=0 floats=ok
+int argument round=7 floor=-3 ceil=7
+nan floor=cpu-defined ceil=cpu-defined round=cpu-defined floats=ok
++inf floor=cpu-defined ceil=cpu-defined round=cpu-defined floats=ok
+-inf floor=cpu-defined ceil=cpu-defined round=cpu-defined floats=ok
 0.5 floor=0 ceil=1 round=1 floats=ok
 -0.5 floor=-1 ceil=0 round=0 floats=ok
 1.5 floor=1 ceil=2 round=2 floats=ok
