@@ -44,8 +44,11 @@ function render(input:FunctionRenderInput):String {
 		final parameter = parameters[index];
 		if (parameter.type.hasUnknownComponent() || parameter.isRest)
 			throw "OCaml block function requires complete fixed required parameters";
-		// An optional or nullable Int/Float parameter receives the nullable carrier;
-		// an omitted argument arrives as the null sentinel.
+		// An omitted argument arrives as the null sentinel, so an optional or
+		// defaulted parameter needs a slot that can hold it. Int and Float use the
+		// nullable carrier.
+		if (parameter.isOptional)
+			Stage3OcamlLocalCallOmissions.requireSentinelSlot(parameter, {isEnumBox: input.isEnumBox, referenceCarrier: input.referenceCarrier});
 		final carrier = Stage3OcamlNullablePrimitive.destinationCarrier(parameter.type, parameter.isOptional) != null;
 		renderedArguments.push("(" + input.names.targetName(arguments[index]) + " : " + (carrier ? "Obj.t" : input.renderType(parameter.type)) + ")");
 	}
