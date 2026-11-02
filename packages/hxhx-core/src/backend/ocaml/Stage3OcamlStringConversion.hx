@@ -24,3 +24,27 @@ function convert(type:TyType, value:String, names:Stage3OcamlLocalNames):String 
 	final carrier:OcamlDynamicArgumentCarrier = type.getSemanticKey() == "primitive:Bool" ? ExactBool : type.isDynamic() ? DynamicValue : ConcreteValue;
 	return "HxDynamic.toStdString (" + OcamlDynamicOperatorLowering.callArgument("Dynamic", carrier, value) + ")";
 }
+
+/**
+	Render one non-String operand of a String concatenation (`"n=" + value`).
+
+	Why: OCaml's `^` accepts only `string`. Earlier, an operand whose exact typed
+	result was not a primitive the emitter's name heuristics recognized (for
+	example `"x" + (i32 + 1)`, which the typer encodes as a cast of an
+	`haxe.Int32` temporary to `Int`) was passed to `^` unchanged. The OCaml
+	program still compiled because that temporary was declared with a
+	placeholder value, and at run time `^` read an integer as a string pointer
+	and crashed with SIGSEGV.
+
+	What: return `null` when the exact type is unknown (the caller keeps its
+	older rendering) or is `String` (no conversion). Every other exact type goes
+	through `convert`, which is the same runtime `Std.string` path used for
+	explicit `Std.string(value)` calls.
+**/
+function concatOperand(type:Null<TyType>, value:String, names:Stage3OcamlLocalNames):Null<String> {
+	if (type == null || type.isUnknown() || type.isUnresolved())
+		return null;
+	if (TyAliasExpansion.reveal(type).getSemanticKey() == "primitive:String")
+		return null;
+	return convert(type, value, names);
+}

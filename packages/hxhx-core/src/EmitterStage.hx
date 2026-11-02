@@ -2179,6 +2179,12 @@ class EmitterStage {
 		};
 	}
 
+	/** The typed nominal field occurrence owned by the active typed body. */
+	static function stage3FieldOccurrence(expr:HxExpr):Null<TypedBackendFieldOccurrence> {
+		return
+			currentTypedInitializer != null ? currentTypedInitializer.findField(expr) : currentTypedFunction == null ? null : currentTypedFunction.findField(expr);
+	}
+
 	/** The typed result of a nominal field read owned by the active typed body. */
 	static function stage3FieldOccurrenceType(expr:HxExpr):Null<TyType> {
 		final field = currentTypedInitializer != null ? currentTypedInitializer.findField(expr) : currentTypedFunction == null ? null : currentTypedFunction.findField(expr);
@@ -2764,7 +2770,9 @@ class EmitterStage {
 					|| stage3IsBoolExpr(expr, tyByIdent)):
 				exprToOcamlString(expr, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 			case _:
-				exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				final rendered = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				final converted = backend.ocaml.Stage3OcamlStringConversion.concatOperand(stage3ExactExprType(expr), rendered, currentFunctionLocalOcamlNames);
+				converted == null ? rendered : converted;
 		}
 	}
 
@@ -3679,6 +3687,12 @@ class EmitterStage {
 			final staticRead = field == null ? null : currentClassStorage.statics.read(field, currentOcamlModuleName);
 			if (staticRead != null)
 				return staticRead;
+			switch e {
+				case EField(receiver, name) if (backend.ocaml.Stage3OcamlInt64Words.isWordField(field)):
+					return backend.ocaml.Stage3OcamlInt64Words.read(name,
+						exprToOcaml(receiver, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
+				case _:
+			}
 			if (field != null) {
 				final rendered = currentClassStorage.read(field,
 					value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
@@ -5098,6 +5112,8 @@ class EmitterStage {
 									callSigByCallee);
 								final rhsCode = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 									callSigByCallee);
+								if (backend.ocaml.Stage3OcamlInt64Words.isWordField(stage3FieldOccurrence(a)))
+									return backend.ocaml.Stage3OcamlInt64Words.write(field, objCode, rhsCode);
 								"(let __hx_obj = ("
 								+ objCode
 								+ ") in let __hx_v = ("
@@ -5105,6 +5121,14 @@ class EmitterStage {
 								+ ") in (HxAnon.set (Obj.repr __hx_obj) "
 								+ escapeOcamlString(field)
 								+ " (Obj.repr __hx_v); __hx_v))";
+							// A local assignment used as a value, such as the `this = clamp(this)`
+							// writeback of an inlined abstract increment, stores and yields its value.
+							case EIdent(name) if (isMutableLocalRefIdent(name) && exactFunctionLocalType(name) != null):
+								final rhsCode = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+									callSigByCallee);
+								backend.ocaml.Stage3OcamlLocalStorage.assignValue(requireOcamlFunctionLocalValueIdent(name),
+									localStorageValue(name, b, stage3Int64CarrierValue(exactFunctionLocalType(name).toString(), b, rhsCode, tyByIdentRaw)),
+									currentFunctionLocalOcamlNames);
 							case _:
 								"(Obj.magic 0)";
 						}
@@ -5642,6 +5666,9 @@ class EmitterStage {
 						case "=":
 							switch (a) {
 								case EField(obj, _): hasBringupPoison(obj) || hasBringupPoison(b);
+								// `exprToOcaml` stores a value-position write to a typed mutable local.
+								case EIdent(name) if (isMutableLocalRefIdent(name) && exactFunctionLocalType(name) != null):
+									hasBringupPoison(b);
 								case EIdent(_):
 									// A lowered expression can write an implicit receiver field.
 									// Require its exact storage declaration before admitting the write.

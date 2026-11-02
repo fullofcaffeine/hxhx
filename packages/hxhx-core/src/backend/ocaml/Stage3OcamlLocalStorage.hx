@@ -45,3 +45,22 @@ function compound(write:TypedBackendLocalWrite, op:String, left:String, right:St
 		+ operation
 		+ ")";
 }
+
+/**
+	Store an already converted value in a mutable local and yield that stored value.
+
+	Haxe `local = value` is an expression whose result is the assigned value.
+	Statement assignments use their own unit-returning form; this form serves an
+	assignment inside a larger expression. Inlined abstract operators produce
+	such assignments: `counter++` on a `haxe.Int32` local expands to a body that
+	writes `this = clamp(this)` back to `counter`. Earlier that value-position
+	write rendered as the `(Obj.magic 0)` placeholder, so the increment was lost.
+	`ident` is the OCaml `ref` cell; `stored` occurs once and already has the
+	local's representation.
+ */
+function assignValue(ident:String, stored:String, names:Stage3OcamlLocalNames):String {
+	if (names == null)
+		throw "OCaml local assignment value requires its exact local naming owner";
+	final value = names.internalName("__hx_assigned");
+	return "(let " + value + " = (" + stored + ") in (" + ident + " := " + value + "; " + value + "))";
+}
