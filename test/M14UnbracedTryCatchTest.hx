@@ -52,6 +52,24 @@ class M14UnbracedTryCatchTest {
 			case other:
 				throw "unbraced try did not parse as a try statement: " + other;
 		}
+		// Statements that resynchronize on their own must also stop at `catch`.
+		for (source in [
+			"try return f() catch (e:Dynamic) return 0;",
+			"try throw \"x\" catch (e:String) rejected = true;",
+			"while (true) try break catch (e:Dynamic) g();",
+			"while (true) try continue catch (e:Dynamic) g();"
+		]) {
+			final parsed = body(source);
+			final statement = switch parsed[0] {
+				case SWhile(_, loopBody, _): loopBody;
+				case other: other;
+			};
+			switch statement {
+				case STry(_, catches, _) if (catches.length == 1):
+				case other:
+					throw "unbraced control statement lost its catch clause in <" + source + ">: " + other;
+			}
+		}
 		var rejected:Null<String> = null;
 		try {
 			body("try a(); catch (e:String) b();");

@@ -3455,7 +3455,11 @@ class HxParser {
 		}
 	}
 
-	function parseReturnStmt(pos:HxPos):HxStmt {
+	/**
+		`stop` ends the statement early, as inside an unbraced try body, where the
+		statement must end before `catch`: `try return f() catch (e:Dynamic) return 0;`.
+	**/
+	function parseReturnStmt(pos:HxPos, ?stop:() -> Bool):HxStmt {
 		// `return;` or `return <expr>;`
 		if (cur.kind.match(TSemicolon)) {
 			bump();
@@ -3546,8 +3550,9 @@ class HxParser {
 			}
 		}
 
-		final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
-		syncToStmtEnd();
+		final ends = stop == null ? () -> false : stop;
+		final expr = parseExpr(() -> ends() || cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+		syncToStmtEndUntil(ends);
 		return SReturn(expr, pos);
 	}
 
@@ -3795,7 +3800,7 @@ class HxParser {
 				SExpr(expr, pos);
 			case TKeyword(KReturn):
 				bump();
-				parseReturnStmt(pos);
+				parseReturnStmt(pos, stop);
 			case TKeyword(KInline):
 				// Keep the written inline flag on the authored named function.
 				bump();
@@ -4102,18 +4107,20 @@ class HxParser {
 					bump();
 				syncToStmtEnd();
 				SDoWhile(body, cond, pos);
+			// These statements end at the caller's stop too, so an unbraced try body
+			// such as `try throw "x" catch (e:String) ...` keeps its catch clause.
 			case TKeyword(KThrow):
 				bump();
-				final thrown = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
-				syncToStmtEnd();
+				final thrown = parseExpr(() -> stop() || cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+				syncToStmtEndUntil(stop);
 				SThrow(thrown, pos);
 			case TKeyword(KBreak):
 				bump();
-				syncToStmtEnd();
+				syncToStmtEndUntil(stop);
 				SBreak(pos);
 			case TKeyword(KContinue):
 				bump();
-				syncToStmtEnd();
+				syncToStmtEndUntil(stop);
 				SContinue(pos);
 			case _:
 				final expr = parseExpr(() -> stop() || cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
