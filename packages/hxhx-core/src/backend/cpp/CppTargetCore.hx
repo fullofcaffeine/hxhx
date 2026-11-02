@@ -20241,6 +20241,7 @@ class CppTargetCore {
 			case PBool(_): "PBool";
 			case PString(_): "PString";
 			case PInt(_): "PInt";
+			case PFloat(_): "PFloat";
 			case PEnumValue(_): "PEnumValue";
 			case PEnumExtract(_, _): "PEnumExtract";
 			case PObject(_, _): "PObject";
@@ -20268,6 +20269,8 @@ class CppTargetCore {
 			case PInt(value):
 				switchPatternEqCond(switchValue, switchValueType,
 					switchValueType == "std::string" ? "std::string(" + quoteString(Std.string(value)) + ")" : Std.string(value));
+			case PFloat(text):
+				switchPatternEqCond(switchValue, switchValueType, text);
 			case PEnumValue(name):
 				isCppEnumCarrierReferenceType(switchValueType, scope) ? "__hxhx_enum_constructor("
 				+ switchValue

@@ -32,6 +32,7 @@ function render(input:GuardedSwitchInput):String {
 			case IsNull: input.dialect.runtimeIsNull(value);
 			case IsBool(literal): input.dialect.runtimeDynamicEquals(value, literal ? "true" : "false");
 			case IsInt(literal): input.dialect.runtimeDynamicEquals(value, Std.string(literal));
+			case IsFloat(literal): input.dialect.runtimeDynamicEquals(value, Stage3OcamlFloatConstant.render(literal));
 			case IsString(literal): input.dialect.runtimeDynamicEquals(value, input.quote(literal));
 			case ArrayLength(length): "(HxArray.length (Obj.magic " + value + ") = " + length + ")";
 			case EnumConstructor(_, selection):

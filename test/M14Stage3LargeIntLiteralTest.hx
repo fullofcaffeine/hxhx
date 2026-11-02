@@ -82,20 +82,34 @@ class M14Stage3LargeIntLiteralTest {
 	}
 
 	/**
-		HxParser has no Float switch pattern yet (Bead haxe_ocaml-1rhgo). An
-		out-of-range integer pattern is a Float constant, so it must be rejected
-		by name rather than parsed as a wildcard that matches every value.
+		An integer pattern outside the Int range is a Float constant. Upstream Haxe 4.3.7
+		matches `case 2147483648:` against a Float subject by value, and rejects it on an
+		Int subject with "Float should be Int". It must never parse as a wildcard that
+		matches every value. `case -2147483648:` is the minimum Int, as in expressions.
 	**/
-	static function rejectOutOfRangePattern():Void {
-		final message = try {
-			HxParser.parseCompleteExprText("switch x { case 2147483648: 1; case _: 0; }");
-			null;
-		} catch (error:haxe.Exception) {
-			error.message;
+	static function outOfRangePatterns():Void {
+		function firstPattern(source:String):HxSwitchPattern {
+			return switch HxParser.parseCompleteExprText(source) {
+				case ESwitch(_, patterns, _): patterns[0];
+				case other: throw "out_of_range_pattern: expected a switch, got " + Std.string(other);
+			};
 		}
-		if (message == null || message.indexOf("Float constant patterns are not supported yet: 2147483648") < 0)
-			throw "out_of_range_pattern: the parser must reject the pattern by name, got: " + message;
-		Sys.println("M14_STAGE3_LARGE_INT_LITERALS_REJECT_OUT_OF_RANGE_PATTERN:PASS");
+		switch firstPattern("switch x { case 2147483648: 1; case _: 0; }") {
+			case PFloat("2147483648.0"):
+			case other:
+				throw "out_of_range_pattern: 2147483648 must be the Float constant 2147483648.0, got " + Std.string(other);
+		}
+		switch firstPattern("switch x { case -2147483649: 1; case _: 0; }") {
+			case PFloat("-2147483649.0"):
+			case other:
+				throw "out_of_range_pattern: -2147483649 must be the Float constant -2147483649.0, got " + Std.string(other);
+		}
+		switch firstPattern("switch x { case -2147483648: 1; case _: 0; }") {
+			case PInt(value) if (value == -2147483647 - 1):
+			case other:
+				throw "out_of_range_pattern: -2147483648 must be the minimum Int, got " + Std.string(other);
+		}
+		Sys.println("M14_STAGE3_LARGE_INT_LITERALS_OUT_OF_RANGE_PATTERN:PASS");
 	}
 
 	static function requireEqual(actual:Null<Int>, expected:Null<Int>, label:String):Void {
@@ -140,7 +154,7 @@ class M14Stage3LargeIntLiteralTest {
 	static function main():Void {
 		literalBoundaries();
 		acceptWideHexInMetadata();
-		rejectOutOfRangePattern();
+		outOfRangePatterns();
 		rejectLikeUpstream("wide_hexadecimal", 'class Main {\n\tstatic function main() {\n\t\tvar x = 0x100000000;\n\t\tSys.println(x);\n\t}\n}\n',
 			"Invalid hexadecimal integer", "Invalid hexadecimal integer");
 		compareWithUpstream("test/fixtures/stage3_large_int_literals", "WHOLE_FILE");
