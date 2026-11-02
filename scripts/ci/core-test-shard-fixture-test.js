@@ -52,11 +52,12 @@ function requireIncludes(content, snippet, label) {
 function checkCommandFailureReporting() {
   const source = fs.readFileSync(path.join(__dirname, 'core-test-shard.js'), 'utf8')
   const commands = ['test:first', 'test:middle', 'test:last']
-  function observe(outcomes, shared = false, corrupt = false) {
+  function observe(outcomes, shared = false, corrupt = false, env = {}) {
     const invoked = []
+    const options = []
     const lines = []
     const artifactResults = []
-    const runtime = { argv: ['node', 'core-test-shard.js', '--shard', 'fixture'], platform: 'linux', env: {}, cwd: () => repoRoot }
+    const runtime = { argv: ['node', 'core-test-shard.js', '--shard', 'fixture'], platform: 'linux', env, cwd: () => repoRoot }
     const artifact = {
       environment: {},
       verify: () => { if (corrupt) throw new Error('artifact changed') },
@@ -69,9 +70,10 @@ function checkCommandFailureReporting() {
       console: { log: line => lines.push(line), error: line => lines.push(line) },
       require: name => {
         if (name === 'child_process') return {
-          spawnSync: (executable, args) => {
+          spawnSync: (executable, args, spawnOptions) => {
             assert(executable === 'npm' && args[0] === 'run', 'runner changed npm invocation')
             invoked.push(args[1])
+            options.push(spawnOptions)
             return outcomes[invoked.length - 1] || { status: 0 }
           }
         }
@@ -80,7 +82,7 @@ function checkCommandFailureReporting() {
         throw new Error(`unexpected runner dependency: ${name}`)
       }
     }, { filename: 'core-test-shard.js' })
-    return { invoked, lines: lines.join('\n'), status: runtime.exitCode || 0, artifactResults }
+    return { invoked, options, lines: lines.join('\n'), status: runtime.exitCode || 0, artifactResults }
   }
   const success = observe([])
   assert(success.status === 0 && success.invoked.join() === commands.join(), 'successful commands must run once in order')
@@ -98,6 +100,22 @@ function checkCommandFailureReporting() {
     assert(aborted.status === 1 && aborted.invoked.join() === commands.slice(0, 2).join(), 'execution failure must abort immediately')
     assert(!aborted.lines.includes('PASS shard=fixture'), 'aborted shard must not report success')
   }
+  // A per-command limit names the starved command instead of letting the job time out.
+  const unbounded = observe([])
+  assert(unbounded.options.every(option => option.timeout === undefined), 'commands must stay unbounded without a limit')
+  const timedOut = observe(
+    [{ status: 0 }, { status: null, signal: 'SIGKILL', error: Object.assign(new Error('spawnSync npm ETIMEDOUT'), { code: 'ETIMEDOUT' }) }],
+    false,
+    false,
+    { CORE_TEST_COMMAND_TIMEOUT_SECONDS: '5' }
+  )
+  assert(timedOut.options[0].timeout === 5000 && timedOut.options[0].killSignal === 'SIGKILL', 'command limit must reach spawnSync')
+  assert(timedOut.status === 1 && timedOut.invoked.join() === commands.slice(0, 2).join(), 'a timed-out command must stop the shard')
+  requireIncludes(timedOut.lines, 'test:middle timed out after 5s', 'command timeout report')
+  expectThrow(() => {
+    const invalid = observe([], false, false, { CORE_TEST_COMMAND_TIMEOUT_SECONDS: 'soon' })
+    if (invalid.status !== 0) throw new Error(invalid.lines)
+  }, 'CORE_TEST_COMMAND_TIMEOUT_SECONDS must be a positive number', 'invalid command limit')
   const sharedFailure = observe([{ status: 4 }], true)
   assert(sharedFailure.status === 1 && sharedFailure.invoked.length === 1, 'shared-artifact failure must stop dependent commands')
   assert(sharedFailure.artifactResults.join() === 'fail:test:first,finish:failed', 'shared artifact must record failure')
@@ -150,7 +168,7 @@ function checkRuntimeTypeCoverage(packageJson, plan, expected) {
 function main() {
   checkCommandFailureReporting()
   const plan = loadPlan(repoRoot)
-  assert(plan.aggregateCommands.length === 286, `expected 286 npm test commands, found ${plan.aggregateCommands.length}`)
+  assert(plan.aggregateCommands.length === 294, `expected 294 npm test commands, found ${plan.aggregateCommands.length}`)
 
   const expectedAggregateJobs = [
     'guards',
@@ -160,7 +178,8 @@ function main() {
     'plugin-matrix',
     'native-plugin-happy-path',
     'test-shards',
-    'hxhx-e2e'
+    'hxhx-e2e',
+    'slow-test-shards'
   ]
   assert(
     JSON.stringify(plan.manifest.aggregateJobs) === JSON.stringify(expectedAggregateJobs),
@@ -179,9 +198,10 @@ function main() {
     'compiler-focused-4': 7,
     'compiler-focused-cpp-closure-storage': 2,
     'compiler-focused-5': 23,
-    'compiler-focused-audit-1': 26,
-    'compiler-focused-audit-2': 33,
-    'compiler-focused-audit-3': 26,
+    'compiler-focused-audit': 76,
+    'compiler-focused-audit-slow': 10,
+    'compiler-focused-audit-slow-neko': 4,
+    'compiler-focused-audit-slow-memory': 3,
     'macro-host-integration': 3,
     portable: 1,
     'target-packages': 2,
@@ -199,9 +219,10 @@ function main() {
     'compiler-focused-4': 'Q2',
     'compiler-focused-cpp-closure-storage': 'Q2',
     'compiler-focused-5': 'Q2',
-    'compiler-focused-audit-1': 'Q2',
-    'compiler-focused-audit-2': 'Q2',
-    'compiler-focused-audit-3': 'Q2',
+    'compiler-focused-audit': 'Q2',
+    'compiler-focused-audit-slow': 'Q3',
+    'compiler-focused-audit-slow-neko': 'Q3',
+    'compiler-focused-audit-slow-memory': 'Q3',
     'macro-host-integration': 'Q2',
     portable: 'Q2',
     'target-packages': 'Q2',
@@ -215,7 +236,8 @@ function main() {
     'plugin-matrix': 'Q2',
     'native-plugin-happy-path': 'Q2',
     'test-shards': 'Q2',
-    'hxhx-e2e': 'Q3'
+    'hxhx-e2e': 'Q3',
+    'slow-test-shards': 'Q3'
   }
   assert(
     JSON.stringify(plan.manifest.aggregateJobMinimumTiers) === JSON.stringify(expectedJobMinimumTiers),
@@ -445,13 +467,14 @@ function main() {
 
   const q2Needs = structuredClone(successNeeds)
   q2Needs['hxhx-e2e'].result = 'skipped'
+  q2Needs['slow-test-shards'].result = 'skipped'
   const aggregateQ2 = runScript('scripts/ci/core-test-aggregate.js', [], {
     ...process.env,
     CORE_TEST_NEEDS_JSON: JSON.stringify({ ...alwaysNeeds, ...q2Needs }),
     CORE_TEST_QA_TIER: 'Q2'
   })
   assert(aggregateQ2.status === 0, `aggregate CLI rejected the policy-authorized Q2 hxhx skip\n${aggregateQ2.stderr}`)
-  assert(aggregateQ2.stdout.includes('required=7 skipped=1'), 'aggregate Q2 receipt omits its required/skip counts')
+  assert(aggregateQ2.stdout.includes('required=7 skipped=2'), 'aggregate Q2 receipt omits its required/skip counts')
 
   const aggregateQ3MissingHxhx = runScript('scripts/ci/core-test-aggregate.js', [], {
     ...process.env,
@@ -459,6 +482,15 @@ function main() {
     CORE_TEST_QA_TIER: 'Q3'
   })
   assert(aggregateQ3MissingHxhx.status !== 0, 'aggregate CLI accepted a skipped hxhx E2E at Q3')
+
+  const q3MissingSlow = structuredClone(successNeeds)
+  q3MissingSlow['slow-test-shards'].result = 'skipped'
+  const aggregateQ3MissingSlow = runScript('scripts/ci/core-test-aggregate.js', [], {
+    ...process.env,
+    CORE_TEST_NEEDS_JSON: JSON.stringify({ ...alwaysNeeds, ...q3MissingSlow }),
+    CORE_TEST_QA_TIER: 'Q3'
+  })
+  assert(aggregateQ3MissingSlow.status !== 0, 'aggregate CLI accepted skipped slow test shards at Q3')
 
   const q0Needs = Object.fromEntries(plan.manifest.aggregateJobs.map(job => [job, { result: 'skipped' }]))
   const aggregateQ0 = runScript('scripts/ci/core-test-aggregate.js', [], {
@@ -582,9 +614,7 @@ function main() {
     ['compiler-focused-4', 'C++ arithmetic and control regressions'],
     ['compiler-focused-cpp-closure-storage', 'C++ closures and inherited storage'],
     ['compiler-focused-5', 'C++ runtime type and Map regressions'],
-    ['compiler-focused-audit-1', 'Regressions found outside CI (1/3)'],
-    ['compiler-focused-audit-2', 'Regressions found outside CI (2/3)'],
-    ['compiler-focused-audit-3', 'Regressions found outside CI (3/3)'],
+    ['compiler-focused-audit', 'Regressions found outside CI'],
     ['macro-host-integration', 'Macro-host integration'],
     ['target-packages', 'Snapshots and examples']
   ]
@@ -643,6 +673,21 @@ function main() {
   requireIncludes(e2eStep, 'HXHX_FORCE_STAGE0: "0"', 'Q3 snapshot compiler selection')
   requireIncludes(e2eStep, 'HXHX_BOOTSTRAP_PREFER_NATIVE: "1"', 'Q3 native bootstrap preference')
   requireIncludes(e2eStep, 'npm run test:ci:shard -- --shard hxhx-targets', 'Q3 hxhx E2E runner')
+  const slowStart = workflow.indexOf('  slow-test-shards:\n')
+  assert(slowStart > q3HxhxStart, 'Q3 slow test shard job is missing')
+  const slowJob = workflow.slice(slowStart, workflow.indexOf('\n  test:', slowStart))
+  requireIncludes(slowJob, "needs.route.outputs.run_q3 == 'true'", 'Q3 slow test shard condition')
+  requireIncludes(slowJob, 'npm run test:ci:shard -- --shard "${{ matrix.shard }}"', 'Q3 slow test shard runner')
+  for (const shard of plan.shards) {
+    const row = `          - shard: ${shard.id}\n            label: ${shard.label}\n`
+    if (shard.id === 'hxhx-targets' || shard.id === 'portable') continue
+    if (shard.minimumTier === 'Q3') {
+      requireIncludes(slowJob, row, `Q3 shard ${shard.id} row`)
+      assert(!q2Matrix.includes(`- shard: ${shard.id}\n`), `Q3 shard ${shard.id} must not run in the Q2 matrix`)
+    } else {
+      requireIncludes(q2Matrix, row, `Q2 shard ${shard.id} row`)
+    }
+  }
   requireIncludes(workflow, '  test:\n    name: Tests\n    if: ${{ always() }}', 'stable Tests aggregate')
   requireIncludes(
     workflow,

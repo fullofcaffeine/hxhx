@@ -27,8 +27,22 @@ function parseArgs(argv) {
   return { listOnly, shardId }
 }
 
+/**
+ * Reads the optional per-command limit. A command that exceeds it is killed
+ * and reported by name, instead of the whole CI job hitting its own timeout
+ * with no hint of which command was starved. Unset means no limit.
+ */
+function commandTimeoutMs() {
+  const value = process.env.CORE_TEST_COMMAND_TIMEOUT_SECONDS
+  if (value === undefined || value === '') return undefined
+  const seconds = Number(value)
+  if (!Number.isFinite(seconds) || seconds <= 0) fail('CORE_TEST_COMMAND_TIMEOUT_SECONDS must be a positive number of seconds')
+  return seconds * 1000
+}
+
 function main() {
   const { listOnly, shardId } = parseArgs(process.argv.slice(2))
+  const timeoutMs = commandTimeoutMs()
   let plan
   try {
     plan = loadPlan()
@@ -66,12 +80,16 @@ function main() {
         }
       }
       const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm'
-      const result = childProcess.spawnSync(npm, ['run', command], {
-        cwd: process.cwd(),
-        env: commandEnv,
-        stdio: 'inherit'
-      })
+      const spawnOptions = { cwd: process.cwd(), env: commandEnv, stdio: 'inherit' }
+      if (timeoutMs !== undefined) Object.assign(spawnOptions, { timeout: timeoutMs, killSignal: 'SIGKILL' })
+      const result = childProcess.spawnSync(npm, ['run', command], spawnOptions)
       const elapsedSeconds = (Date.now() - commandStartedAt) / 1000
+      if (result.error && result.error.code === 'ETIMEDOUT') {
+        const message = `${command} timed out after ${timeoutMs / 1000}s (CORE_TEST_COMMAND_TIMEOUT_SECONDS)`
+        if (sharedArtifact) sharedArtifact.failConsumer(command, elapsedSeconds, message)
+        // Its child processes may still run, so stop the shard here.
+        fail(message)
+      }
       if (result.error) {
         if (sharedArtifact) sharedArtifact.failConsumer(command, elapsedSeconds, result.error.message)
         fail(`${command} could not start: ${result.error.message}`)

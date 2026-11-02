@@ -57,12 +57,18 @@ npm test
 `npm test` is the complete serialized regression inventory, not the command to
 rerun after every small edit. Core CI routes that inventory by change risk and
 then reports one `Tests` result that fails when any required check fails or is
-incomplete. The inventory has 286 named commands. Q2 target/compiler changes
+incomplete. The inventory has 294 named commands. Q2 target/compiler changes
 run compiler foundations, packaging, five focused groups, two dedicated Neko groups,
-three groups of tests that CI did not run before the reachability audit,
-macro-host integration, portable fixtures, and snapshots/examples, plus native/plugin smoke checks.
+a group of fast tests that CI did not run before the reachability audit
+(`compiler-focused-audit`), macro-host integration, portable fixtures, and
+snapshots/examples, plus native/plugin smoke checks.
 Q3 high-risk, scheduled, manual, and release work also runs `hxhx-targets`,
-which treats the compiler as a large application. To reproduce a group locally:
+which treats the compiler as a large application, and
+the `compiler-focused-audit-slow*` shards, the slow tests from that audit (dune-building
+`reflaxe.ocaml` checks, long Neko, JS and call-conversion runs, and the target-reuse memory modes). The
+semantic-diff tool tests run in the scheduled `Stdlib / Semantic Diff`
+workflow instead. A shard row may set `command_timeout_seconds`; a command
+that runs longer is stopped and reported by name, before the job limit. To reproduce a group locally:
 
 ```bash
 npm run test:ci:shard -- --shard compiler-foundation

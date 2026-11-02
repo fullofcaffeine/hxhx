@@ -670,17 +670,13 @@ jobs:
           - shard: compiler-focused-5
             label: C++ runtime type and Map regressions
             timeout_minutes: 40
-          # Tests that no CI job ran before haxe_ocaml-k86ww. Durations are not
-          # yet measured on hosted runners; a busy local machine took about 77 minutes.
-          - shard: compiler-focused-audit-1
-            label: Regressions found outside CI (1/3)
+          # Fast tests that no CI job ran before haxe_ocaml-k86ww. Slow ones run
+          # in the Q3 slow-test-shards job below.
+          - shard: compiler-focused-audit
+            label: Regressions found outside CI
             timeout_minutes: 40
-          - shard: compiler-focused-audit-2
-            label: Regressions found outside CI (2/3)
-            timeout_minutes: 40
-          - shard: compiler-focused-audit-3
-            label: Regressions found outside CI (3/3)
-            timeout_minutes: 40
+            # Report a starved command by name before the job limit.
+            command_timeout_seconds: "900"
           - shard: macro-host-integration
             label: Macro-host integration
             timeout_minutes: 40
@@ -814,6 +810,7 @@ jobs:
           HXHX_FORCE_STAGE0: "0"
           HXHX_STAGE0_HEARTBEAT: "30"
           HXHX_STAGE0_FAILFAST_SECS: "7200"
+          CORE_TEST_COMMAND_TIMEOUT_SECONDS: ${{ matrix.command_timeout_seconds }}
           PORTABLE_SHARD_INDEX: ${{ matrix.portable_shard_index }}
           PORTABLE_SHARD_COUNT: ${{ matrix.portable_shard_count }}
           PORTABLE_JOBS: ${{ matrix.portable_jobs }}
@@ -893,11 +890,138 @@ jobs:
           HXHX_STAGE0_FAILFAST_SECS: "7200"
         run: npm run test:ci:shard -- --shard hxhx-targets
 
+  slow-test-shards:
+    name: Tests / ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    needs: [route]
+    if: ${{ needs.route.outputs.run_q3 == 'true' }}
+    # Slow tests that no CI job ran before haxe_ocaml-k86ww: dune-building
+    # reflaxe.ocaml checks, long Neko, JS and call-conversion runs, and the
+    # target-reuse memory modes. Like hxhx-e2e, they run for Q3 high-risk,
+    # scheduled, manual and release work. Durations are not yet measured on
+    # hosted runners.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: compiler-focused-audit-slow
+            label: Slow regressions found outside CI
+            timeout_minutes: 40
+            command_timeout_seconds: "1500"
+          - shard: compiler-focused-audit-slow-neko
+            label: Slow Neko regressions found outside CI
+            timeout_minutes: 40
+            command_timeout_seconds: "1500"
+          - shard: compiler-focused-audit-slow-memory
+            label: Target reuse memory checks found outside CI
+            timeout_minutes: 40
+            command_timeout_seconds: "1500"
+    timeout-minutes: ${{ matrix.timeout_minutes }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Setup OCaml toolchain (OCaml 5.2.1)
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.1
+          dune-cache: true
+      - name: Install OCaml packages
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          opam install -y dune ocamlfind
+          eval "$(opam env)"
+          dune --version
+          ocamlc -version
+      - name: Export OCaml switch binaries to PATH
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          # `npm ci --ignore-scripts` skips postinstall; fetch the toolchain explicitly (incl. neko).
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+      - name: Ensure PHP, Mono and Lua are available for focused runtime tests
+        if: ${{ startsWith(matrix.shard, 'compiler-focused-') && matrix.shard != 'compiler-focused-4' }}
+        run: |
+          set -euo pipefail
+          runtime_packages=()
+          if ! command -v php >/dev/null 2>&1; then
+            runtime_packages+=(php-cli)
+          fi
+          if ! command -v mcs >/dev/null 2>&1 || ! command -v mono >/dev/null 2>&1; then
+            runtime_packages+=(mono-devel)
+          fi
+          if ! command -v lua >/dev/null 2>&1; then
+            runtime_packages+=(lua5.4)
+          fi
+          if [ "${#runtime_packages[@]}" -gt 0 ]; then
+            sudo apt-get update
+            sudo apt-get install -y "${runtime_packages[@]}"
+          fi
+          php --version
+          mcs --version
+          mono --version
+          lua -v
+      - name: Expose the Neko compiler for focused tests
+        if: ${{ startsWith(matrix.shard, 'compiler-focused-') }}
+        run: |
+          set -euo pipefail
+          # Lix 16.0.2 downloads Neko 2.4.0, but npm exposes only its VM shim.
+          # This job uses ubuntu-latest (x64); keep the compiler and VM together.
+          neko -version
+          neko_root="$HOME/haxe/neko/versions/2.4.0-linux64"
+          test -x "$neko_root/nekoc"
+          echo "$neko_root" >> "$GITHUB_PATH"
+          echo "LD_LIBRARY_PATH=$neko_root${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+          echo "NEKOPATH=$neko_root" >> "$GITHUB_ENV"
+          export PATH="$neko_root:$PATH"
+          export LD_LIBRARY_PATH="$neko_root${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          export NEKOPATH="$neko_root"
+          smoke_dir="$(mktemp -d)"
+          trap 'rm -rf "$smoke_dir"' EXIT
+          printf '$print("NEKO_TOOLCHAIN:PASS")\n' > "$smoke_dir/main.neko"
+          nekoc "$smoke_dir/main.neko"
+          test "$(neko "$smoke_dir/main.n")" = "NEKO_TOOLCHAIN:PASS"
+      - name: Run test shard
+        env:
+          HXHX_FORCE_STAGE0: "0"
+          HXHX_STAGE0_HEARTBEAT: "30"
+          HXHX_STAGE0_FAILFAST_SECS: "7200"
+          CORE_TEST_COMMAND_TIMEOUT_SECONDS: ${{ matrix.command_timeout_seconds }}
+        run: npm run test:ci:shard -- --shard "${{ matrix.shard }}"
+
   test:
     name: Tests
     if: ${{ always() }}
     runs-on: ubuntu-latest
-    needs: [route, secret-scan, guards, standalone-guards, stage0-free-smoke, js-native-smoke, plugin-matrix, native-plugin-happy-path, test-shards, hxhx-e2e]
+    needs: [route, secret-scan, guards, standalone-guards, stage0-free-smoke, js-native-smoke, plugin-matrix, native-plugin-happy-path, test-shards, hxhx-e2e, slow-test-shards]
     timeout-minutes: 5
     steps:
       - name: Checkout
