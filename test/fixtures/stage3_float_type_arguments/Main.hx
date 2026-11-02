@@ -46,7 +46,31 @@ class Cell<T> {
 		this.value = value;
 }
 
+class Other {
+	public var i:Int = 4;
+
+	public function new() {}
+}
+
+class Holder {
+	public var f:Float = 0.5;
+
+	public function new() {}
+
+	public function setLength(values:Array<Int>):Void
+		f = values.length;
+}
+
 class Main {
+	static function firstAsFloat(values:Array<Int>):Float
+		return values[0];
+
+	static function fieldAsFloat(other:Other):Float
+		return other.i;
+
+	static function negatedAsFloat():Float
+		return -count();
+
 	static function second<T>(first:T, next:T):T
 		return next;
 
@@ -117,5 +141,23 @@ class Main {
 		Sys.println("array index write: " + Std.string(list[2] + 0.5));
 		Sys.println("array push: " + Std.string(list[3] + 0.5));
 		Sys.println("array insert: " + Std.string(list[0] + 0.5));
+
+		// Float fields and returns from Int array reads, Int field reads, and negation.
+		final holder = new Holder();
+		holder.setLength([1, 2, 3, 4]);
+		Sys.println("bare field write: " + Std.string(holder.f + 0.25));
+		final values = [5, 6];
+		holder.f = values[0];
+		Sys.println("field from array read: " + Std.string(holder.f + 0.25));
+		final other = new Other();
+		holder.f = other.i;
+		Sys.println("field from Int field: " + Std.string(holder.f + 0.25));
+		holder.f = -count();
+		Sys.println("field from negation: " + Std.string(holder.f + 0.25));
+		Sys.println("return of array read: " + Std.string(firstAsFloat(values) + 0.25));
+		Sys.println("return of Int field: " + Std.string(fieldAsFloat(other) + 0.25));
+		Sys.println("return of negation: " + Std.string(negatedAsFloat() + 0.25));
+		final parsed:Float = Std.parseInt("7");
+		Sys.println("Float local from Null<Int>: " + Std.string(parsed + 0.5));
 	}
 }

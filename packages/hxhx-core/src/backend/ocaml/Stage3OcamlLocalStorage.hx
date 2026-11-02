@@ -7,10 +7,14 @@ package backend.ocaml;
 	A Dynamic source entering a Bool local uses the checked inverse conversion.
 	A nullable Int, Float, or Bool destination uses the shared carrier conversion.
 	An Int value entering a Float local is promoted (`var f:Float = box.get()`
-	where the call returns Int); the operand is rendered as an OCaml int.
+	where the call returns Int); the operand is rendered as an OCaml int. A
+	nullable Int or Float entering a Float local (`final f:Float =
+	Std.parseInt("7")`) is unwrapped from its carrier, and widened for Int.
  */
 function store(write:TypedBackendLocalWrite, rendered:String, names:Null<Stage3OcamlLocalNames>):String {
-	if (Stage3OcamlNullablePrimitive.innerPrimitive(write.binding.getType()) != null)
+	if (Stage3OcamlNullablePrimitive.innerPrimitive(write.binding.getType()) != null
+		|| (Stage3OcamlNumericWidening.isFloatDestination(write.binding.getType())
+			&& Stage3OcamlNullablePrimitive.innerPrimitive(write.sourceType) != null))
 		return Stage3OcamlValueConversion.convert(write.sourceType, write.binding.getType(), rendered, names);
 	if (Stage3OcamlNumericWidening.needsPromotion(write.sourceType, write.binding.getType()))
 		return Stage3OcamlNumericWidening.promote(rendered);

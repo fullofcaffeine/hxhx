@@ -2091,6 +2091,34 @@ class EmitterStage {
 		};
 	}
 
+	/**
+		Whether the Int value `expr` enters the Float `destination` and must be
+		promoted (see Stage3OcamlNumericWidening). The exact typed result of the
+		operand decides when it is retained: array reads, field reads, locals, and
+		calls. Negation follows its operand. Other shapes, such as literals and
+		Int arithmetic, use the Int expression test.
+	**/
+	static function stage3PromotesToFloat(expr:HxExpr, destination:Null<TyType>, ?tyByIdent:Map<String, TyType>, ?callSigByCallee:Map<String, EmitterCallSig>,
+			?staticImportByIdent:Map<String, String>):Bool {
+		if (!backend.ocaml.Stage3OcamlNumericWidening.isFloatDestination(destination))
+			return false;
+		final exact = stage3ExactExprType(expr);
+		if (exact != null)
+			return backend.ocaml.Stage3OcamlNumericWidening.needsPromotion(exact, destination);
+		return switch expr {
+			case EUnop(op, fixity, inner) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
+				stage3PromotesToFloat(inner, destination, tyByIdent, callSigByCallee, staticImportByIdent);
+			case _: stage3IsIntExpr(expr, tyByIdent) && !stage3IsFloatExpr(expr, tyByIdent, callSigByCallee, staticImportByIdent);
+		};
+	}
+
+	/** A field typed Float (also `Cell<Float>.value:T`) stores an Int operand promoted. */
+	static function stage3FieldStoredValue(target:HxExpr, value:HxExpr, rendered:String, ?tyByIdent:Map<String, TyType>,
+			?callSigByCallee:Map<String, EmitterCallSig>, ?staticImportByIdent:Map<String, String>):String {
+		return stage3PromotesToFloat(value, stage3FieldOccurrenceType(target), tyByIdent, callSigByCallee,
+			staticImportByIdent) ? backend.ocaml.Stage3OcamlNumericWidening.promote(rendered) : rendered;
+	}
+
 	/** The typed result of a nominal field read owned by the active typed body. */
 	static function stage3FieldOccurrenceType(expr:HxExpr):Null<TyType> {
 		final field = currentTypedInitializer != null ? currentTypedInitializer.findField(expr) : currentTypedFunction == null ? null : currentTypedFunction.findField(expr);
@@ -4841,13 +4869,8 @@ class EmitterStage {
 						});
 					case _:
 				}
-				// A field typed Float (also `Cell<Float>.value:T`) stores an Int operand promoted.
-				function fieldStoredValue(target:HxExpr, rendered:String):String {
-					return backend.ocaml.Stage3OcamlNumericWidening.isFloatDestination(stage3FieldOccurrenceType(target))
-						&& stage3IsIntExpr(b, tyByIdentRaw)
-						&& !stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw,
-							staticImportByIdentRaw) ? backend.ocaml.Stage3OcamlNumericWidening.promote(rendered) : rendered;
-				}
+				function fieldStoredValue(target:HxExpr, rendered:String):String
+					return stage3FieldStoredValue(target, b, rendered, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw);
 				switch (op) {
 					case "=":
 						switch (a) {
@@ -6878,9 +6901,7 @@ class EmitterStage {
 					if (renderReturn == null
 						&& currentTypedInitializer == null
 						&& currentTypedFunction != null
-						&& backend.ocaml.Stage3OcamlNumericWidening.isFloatDestination(currentTypedFunction.getReturnType())
-						&& stage3IsIntExpr(expr, cast tyCtx)
-						&& !stage3IsFloatExpr(expr, cast tyCtx, callSigByCallee, staticImportByIdent))
+						&& stage3PromotesToFloat(expr, currentTypedFunction.getReturnType(), cast tyCtx, callSigByCallee, staticImportByIdent))
 						rendered = backend.ocaml.Stage3OcamlNumericWidening.promote(rendered);
 					final declaredReturn = currentFunctionName == null
 						|| fnReturnTypesMap == null ? null : fnReturnTypesMap.get(currentFunctionName);
@@ -6919,8 +6940,15 @@ class EmitterStage {
 							final isThisField = stage3HasThisBinding(cast tyCtx) && hasCurrentInstanceField(name) && !stage3HasTyIdent(name, cast tyCtx)
 								&& !isMutableLocalRefIdent(name);
 							if (isThisField && op == "=") {
-								final rhsCode = returnExprToOcaml(rhs, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
-									currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+								// The field fact belongs to the original target node, not a rebuilt one.
+								final target = switch (expr) {
+									case EBinop(_, original, _): original;
+									case _: throw "instance field assignment lost its target";
+								};
+								final rhsCode = stage3FieldStoredValue(target, rhs,
+									returnExprToOcaml(rhs, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
+										moduleNameByPkgAndClass, callSigByCallee),
+									cast tyCtx, callSigByCallee, staticImportByIdent);
 								"ignore (" + stage3ThisFieldAssign(name, rhsCode) + ")";
 							} else if (op == "=") {
 								final lowered = mutableAssignmentStmtToUnit(op, name, rhs, tyCtx);
