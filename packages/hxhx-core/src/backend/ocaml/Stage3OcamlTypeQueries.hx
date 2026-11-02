@@ -4,8 +4,10 @@ package backend.ocaml;
 	Read existing runtime descriptors through exact standard Type declarations.
 	Generated class instances already carry their descriptor in private HxAnon
 	storage. These calls retain that value; they do not create a class from a name
-	or admit first-class class literals. Other instance representations must prove
-	their Type.getClass contract before using this path.
+	or admit first-class class literals. `Type.getClass` on an operand that is not
+	statically a generated class goes to `HxReflect.value_class`, which answers
+	`String` for strings, `Array` for arrays, the class of a class instance, and
+	null for every other value.
  */
 function render(input:{
 	expression:HxExpr,
@@ -45,9 +47,11 @@ function render(input:{
 			|| result.getTypeArguments().length != 1
 			|| result.getTypeArguments()[0].getSemanticKey() != signature.getArgs()[0].getSemanticKey())
 			throw "OCaml class query has an unsupported provider signature";
+		// Any other operand, such as a Dynamic value, a string, or an array, is
+		// classified by the runtime, which reads only layouts it knows.
 		final operand = fact.getExpressions()[1].getType();
 		if (!operand.isNullLiteral() && input.classes.nominalName(operand) == null)
-			throw "OCaml Type.getClass requires an admitted generated class operand: " + operand.getSemanticKey();
+			return "HxReflect.value_class (" + dynamicOperand(operand, input.emit(call.arguments[0])) + ")";
 	} else {
 		final argument = signature.getArgs()[0];
 		final nominal = argument.getNominalIdentity();
@@ -60,4 +64,12 @@ function render(input:{
 	}
 	// Obj.repr preserves the existing carrier. The single operand executes once.
 	return "HxType." + call.method + " (Obj.repr (" + input.emit(call.arguments[0]) + "))";
+}
+
+/** A raw Bool needs the runtime Bool box; every other Stage3 carrier is already an `Obj.t` value. */
+private function dynamicOperand(type:TyType, rendered:String):String {
+	final revealed = TyAliasExpansion.reveal(type);
+	if (revealed.unwrapNull().getSemanticKey() == "primitive:Bool" && !revealed.isNullable())
+		return "HxRuntime.box_bool (" + rendered + ")";
+	return "Obj.repr (" + rendered + ")";
 }

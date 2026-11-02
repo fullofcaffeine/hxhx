@@ -122,7 +122,61 @@ class Stage3OcamlClassStorage {
 			visited.set(owner, true);
 		}
 		visit(identity);
-		return "let () = HxType.register_class_tags " + quote(names[0]) + " [" + names.map(quote).join("; ") + "]";
+		final registration = [
+			"let () = HxType.register_class_tags " + quote(names[0]) + " [" + names.map(quote).join("; ") + "]"
+		];
+		return registration.concat(reflectionRegistration(identity, quote)).join("\n");
+	}
+
+	/**
+		Register what `Type.getInstanceFields`, `Type.getSuperClass`, and
+		`Reflect.field` need at run time. Instance fields are the stored fields
+		and the instance methods of the class and its superclasses; properties
+		without storage are not fields, as in Haxe. Method names are registered
+		separately so reflection can tell a method from a missing field.
+	 */
+	function reflectionRegistration(identity:String, quote:String->String):Array<String> {
+		final fields = new Array<String>();
+		final methods = new Array<String>();
+		final seen:Map<String, Bool> = [];
+		final visited:Map<String, Bool> = [];
+		var owner:Null<String> = identity;
+		while (owner != null) {
+			if (visited.exists(owner))
+				throw "native class registration has cyclic ancestry: " + owner;
+			visited.set(owner, true);
+			final facts = ancestry.get(owner);
+			if (facts == null)
+				throw "native class registration lacks exact ancestor facts: " + owner;
+			for (field in facts.copyFields())
+				if (!field.isStatic && field.hasStorage && !seen.exists(field.name)) {
+					seen.set(field.name, true);
+					fields.push(field.name);
+				}
+			for (method in facts.copyMethods())
+				if (!method.isStatic && method.name != "new" && !seen.exists(method.name)) {
+					seen.set(method.name, true);
+					fields.push(method.name);
+					methods.push(method.name);
+				}
+			owner = facts.getSuperClassIdentity();
+		}
+		final facts = ancestry.get(identity);
+		final name = quote(facts.requirePublicReflectionName());
+		final list = (values:Array<String>) -> "[" + values.map(quote).join("; ") + "]";
+		final result = ["let () = HxType.register_class_instance_fields " + name + " " + list(fields),
+			"let () = HxReflect.register_instance_method_names "
+			+ name
+			+ " "
+			+ list(methods)];
+		final parent = facts.getSuperClassIdentity();
+		if (parent != null)
+			result.push("let () = HxType.register_class_super "
+				+ name
+				+ " (HxType.class_ "
+				+ quote(ancestry.get(parent).requirePublicReflectionName())
+				+ ")");
+		return result;
 	}
 
 	/** Whether this class is an interface whose bodiless methods become runtime dispatchers. */
