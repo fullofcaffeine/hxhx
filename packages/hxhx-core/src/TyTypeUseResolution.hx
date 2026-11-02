@@ -187,8 +187,12 @@ class TyTypeUseResolution {
 	 */
 	function resolveStructuralHint(text:String, context:TyTypeResolutionContext):TyType {
 		final syntax = try HxTypedefParser.parseTypeHint(text) catch (error:Dynamic) throw new TyperError(context.filePath, context.position,
-			"Invalid structural type annotation: " + text);
-		return resolveSyntax(syntax, context, "inline-structure:" + context.modulePath + ":" + text);
+			"Invalid structural type annotation " + text + ": " + Std.string(error));
+		// Positions inside the re-read text are relative to the annotation, not the
+		// source file, so report every rejection at the annotation's declaration.
+		return try resolveSyntax(syntax, context,
+			"inline-structure:" + context.modulePath + ":" + text) catch (error:TyperError) throw new TyperError(context.filePath, context.position,
+			error.message);
 	}
 
 	function resolvePath(path:String, args:Array<TyType>, context:TyTypeResolutionContext, required:Bool, ?display:String):TyType {

@@ -17,7 +17,11 @@ import sys.FileSystem;
 	  of inline structure types, filled by object literals and by class
 	  instances (including an overriding subclass), plus a variable field that
 	  holds a function and a named typedef for comparison.
+	- It also reads a `dynamic` method, a stored function field, and a method
+	  of a null receiver, which must raise the catchable "Null Access".
 	- The native executable must print exactly what upstream Haxe 4.3.7 prints.
+	- A method that a structural read cannot bind yet (an optional argument, or
+	  a method of a runtime-provided String) must raise a catchable named error.
 **/
 class M14Stage3InlineStructuralMethodsTest {
 	static function deleteRecursive(path:String):Void {
@@ -32,6 +36,53 @@ class M14Stage3InlineStructuralMethodsTest {
 		FileSystem.deleteFile(path);
 	}
 
+	/**
+		Methods that a structural read cannot bind yet must fail as catchable Haxe
+		errors, never as an OCaml abort or a crash.
+
+		Upstream accepts both programs, so only the native result is checked: a
+		method with an optional argument (structural call sites do not pad an
+		omitted argument yet) and a method of a runtime-provided String.
+	**/
+	static function unsupportedReadsAreCatchable():Void {
+		final root = ".tmp/m14_stage3_inline_structural_methods_unsupported";
+		deleteRecursive(root);
+		FileSystem.createDirectory(root + "/src");
+		final path = root + "/src/Main.hx";
+		final source = "class Optional {\n"
+			+ "\tpublic function new() {}\n"
+			+ "\tpublic function pick(?x:Int):Int return x == null ? -1 : x;\n"
+			+ "}\n"
+			+ "class Main {\n"
+			+ "\tstatic function main():Void {\n"
+			+ "\t\tfinal optional:{ function pick(?x:Int):Int; } = new Optional();\n"
+			+ "\t\ttry {\n"
+			+ "\t\t\tSys.println(optional.pick());\n"
+			+ "\t\t} catch (e:String) {\n"
+			+ "\t\t\tSys.println(\"optional: \" + e);\n"
+			+ "\t\t}\n"
+			+ "\t\tfinal text:{ function charAt(i:Int):String; } = \"abc\";\n"
+			+ "\t\ttry {\n"
+			+ "\t\t\tSys.println(text.charAt(1));\n"
+			+ "\t\t} catch (e:String) {\n"
+			+ "\t\t\tSys.println(\"runtime-provided: \" + e);\n"
+			+ "\t\t}\n"
+			+ "\t}\n"
+			+ "}\n";
+		sys.io.File.saveContent(path, source);
+		final program = M14Stage3RuntimeFixture.prepareProgram({source: source, path: path, root: root + "/src"});
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram(program, false), root + "/out");
+		M14Stage3RuntimeFixture.observe({
+			command: executable,
+			arguments: [],
+			expected: "optional: Stage3 cannot call method pick of class Optional through a structure type" +
+			" (methods with type parameters, optional or rest arguments, or without a generated body are not supported)\n" +
+			"runtime-provided: Stage3 cannot call method charAt of a runtime-provided value through a structure type\n"
+		});
+		deleteRecursive(root);
+		Sys.println("M14_STAGE3_INLINE_STRUCTURAL_METHODS_UNSUPPORTED_CATCHABLE:PASS");
+	}
+
 	static function main():Void {
 		final source = "test/fixtures/stage3_inline_structural_methods";
 		final path = source + "/Main.hx";
@@ -44,5 +95,6 @@ class M14Stage3InlineStructuralMethodsTest {
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		deleteRecursive(outDir);
 		Sys.println("M14_STAGE3_INLINE_STRUCTURAL_METHODS:PASS");
+		unsupportedReadsAreCatchable();
 	}
 }

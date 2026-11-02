@@ -18,6 +18,19 @@ class Answer {
 		return a + b + 100;
 }
 
+class Tuned {
+	public function new() {}
+
+	public dynamic function level():Int
+		return 4;
+}
+
+class Holder {
+	public var value:Void->Int = () -> 5;
+
+	public function new() {}
+}
+
 class LateAnswer extends Answer {
 	public var count:Int = 3;
 
@@ -80,5 +93,15 @@ class Main {
 		for (reader in readers)
 			values += reader.value() + ";";
 		Sys.println("array: " + values);
+
+		final tuned:{function level():Int;} = new Tuned();
+		Sys.println("dynamic method: " + tuned.level());
+		final holder:{var value:Void->Int;} = new Holder();
+		Sys.println("stored function field: " + holder.value());
+		try {
+			read(null);
+		} catch (e:String) {
+			Sys.println("null receiver: " + e);
+		}
 	}
 }
