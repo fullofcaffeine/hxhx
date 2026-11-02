@@ -1,0 +1,10 @@
+abs 2.5 7 3.25
+minmax 3.5 1.5 -0.5
+round 2 3 -2
+roots 4.5 1024.5 9.5
+exp 1.5 0.5 0.5 1.5
+checks false true
+local 3.5 3.5
+write 1,5,7
+read 5 6
+compound 1,15,7 11
