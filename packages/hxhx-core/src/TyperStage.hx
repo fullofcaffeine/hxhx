@@ -1323,6 +1323,10 @@ class TyperStage {
 				case SReturn(e, pos):
 					final expected = scope.getReturnType();
 					final t = inferExprType(e, scope, ctx, pos, expected.isUnknown() ? null : expected);
+					// A declared return type is an authored destination: `return x + y` must fit `String`.
+					if (!expected.isUnknown())
+						TyAuthoredAssignmentCheck.check(expected, t, scope.isUntypedContext() || TyFieldAssignment.explicitlyUntyped(e), ctx.getFilePath(),
+							pos);
 					final term = scope.getInference().sourceTerm(e, scope);
 					controls.currentReturns().record(term == null ? Known(t) : term, pos);
 				case SExpr(e, pos):
@@ -3059,8 +3063,12 @@ class TyperStage {
 
 	/** Untyped local annotations may reinterpret complete values, but still solve compatible omitted type arguments. */
 	static function inferLocalInitializer(initializer:HxExpr, expected:Null<TyType>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyType {
-		if (expected == null || !scope.isUntypedContext())
-			return inferExprType(initializer, scope, ctx, pos, expected);
+		if (expected == null || !scope.isUntypedContext()) {
+			final actual = inferExprType(initializer, scope, ctx, pos, expected);
+			// A written local type is an authored destination: `var g:Float->Int = f` must fit.
+			TyAuthoredAssignmentCheck.check(expected, actual, TyFieldAssignment.explicitlyUntyped(initializer), ctx.getFilePath(), pos);
+			return actual;
+		}
 		final actual = inferExprType(initializer, scope, ctx, pos);
 		// A rejected candidate leaves the initializer's original constraints intact.
 		if (actual.hasUnknownComponent()
@@ -3217,7 +3225,7 @@ class TyperStage {
 			&& !expectedResult.hasUnknownComponent()
 			&& !result.hasUnknownComponent()
 			&& (selectedGenericResult || scope.getInference().canReceiveContext(expr, scope))
-			&& overloadArgScore(expectedResult, result, [], ctx.getIndex()) < 0)
+			&& !functionValueFits(expectedResult, result, ctx.getIndex()))
 			throw new TyperError(ctx.getFilePath(), pos, "inferred value "
 				+ result.getDisplay()
 				+ " is not compatible with "
@@ -3241,6 +3249,36 @@ class TyperStage {
 		if (expectedResult != null)
 			TyLambdaResultContract.check(result, expectedResult, ctx.getFilePath(), pos, isStrict());
 		return result;
+	}
+
+	/**
+		Whether a value of type `actual` can enter `expected`. Function values are
+		compared by Haxe's variance: each expected argument must fit the supplied
+		function's argument (`(Animal)->Void` can serve as `(Dog)->Void`), and the
+		supplied result must fit the expected result unless that result is Void.
+		Other values use the ordinary overload score.
+	 */
+	static function functionValueFits(expected:TyType, actual:TyType, index:TyperIndex):Bool {
+		if (!expected.isFunction() || !actual.isFunction() || expected.isNullable() || actual.isNullable())
+			return overloadArgScore(expected, actual, [], index) >= 0;
+		final wanted = expected.getFunctionParameters();
+		final supplied = actual.getFunctionParameters();
+		if (wanted.length != supplied.length)
+			return false;
+		for (position in 0...wanted.length) {
+			if (wanted[position].isRest || supplied[position].isRest)
+				return overloadArgScore(expected, actual, [], index) >= 0;
+			if (wanted[position].isOptional && !supplied[position].isOptional)
+				return false;
+			if (!functionValueFits(supplied[position].type, wanted[position].type, index))
+				return false;
+		}
+		final wantedResult = expected.getFunctionReturn();
+		final suppliedResult = actual.getFunctionReturn();
+		return wantedResult == null
+			|| suppliedResult == null
+			|| wantedResult.isVoid()
+			|| functionValueFits(wantedResult, suppliedResult, index);
 	}
 
 	/** Retain an ephemeral selection from this traversal; this is not a cache or another overload query. */
