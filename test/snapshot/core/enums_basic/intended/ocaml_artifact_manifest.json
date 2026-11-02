@@ -6,7 +6,7 @@
       "model": "checked-runtime-source-selection-v1",
       "status": "complete",
       "message": "Every packaged runtime source is manifest-checked, and the selected runtime closure is revisioned for source replay.",
-      "revision": "sha256:7f4ab523b18c1c989583096deed13d9e84c5d09dc2b109a148c3ac16e12372ea"
+      "revision": "sha256:7e565e74a7f5ea50825ade08c0bf0f671bead4ccee31055471deb47bdf3b59c2"
     },
     "nativeDependencies": {
       "model": "normalized-native-source-declarations-v2",
@@ -28,11 +28,11 @@
   "summary": {
     "entryCount": 67,
     "volatileEvidenceEntryCount": 0,
-    "sourceBundleRevision": "sha256:a68275bfc52b50663405313bbd532ebb920ae04ebd30d97d8c10cc7e7a135305",
+    "sourceBundleRevision": "sha256:7214793c07ad4b91e429e40ff0b1dfc63a639455b23a31b3ac3fab78c9e22827",
     "completeForSourceBundle": true,
     "sourceBundleEntryCount": 63,
     "blockers": [],
-    "artifactSetRevision": "sha256:cf000df5fea586919fa0b47004caf1654c61d11faa68bfc559c58583a4034987"
+    "artifactSetRevision": "sha256:0e875f8ee9d9fafe508a7f01c403fa9b81a47e4fa5a99ff0fc411c6b3b80054e"
   },
   "entries": [
     {
@@ -570,7 +570,7 @@
       "sourcePath": null,
       "stability": "stable",
       "path": "ocaml_runtime_requirement_report.json",
-      "sha256": "sha256:8241bb074d2d86e9baf12e64c099bf9fb83e9b2a927ef978b739b68f7be90c05",
+      "sha256": "sha256:40256939e558af647236fb1ba02388978fce2ea96c7f02ad0dc8947c013990fd",
       "kind": "compiler-report",
       "profileEligibility": [
         "metal",
@@ -586,7 +586,7 @@
       "sourcePath": null,
       "stability": "stable",
       "path": "ocaml_runtime_selection_shadow_report.json",
-      "sha256": "sha256:249317aa2a12818806bd09a96e4d90d9d6332bd72d2f4ae3aca7951a06f07e45",
+      "sha256": "sha256:2d2121d0961782d0b7dc60f221515c6945dc7c6378d54cfbf9a6f6b0f1dba16e",
       "kind": "compiler-report",
       "profileEligibility": [
         "metal",
@@ -858,14 +858,14 @@
       "sourcePath": "std/runtime/HxMethodDispatch.ml",
       "stability": "stable",
       "path": "runtime/HxMethodDispatch.ml",
-      "sha256": "sha256:7c94120a38177e2fa81178024c6c401ad55108179ae8a628695103e24d3e8949",
+      "sha256": "sha256:3930888f461aa173a54eadbd6f9a204a34a2a6f27360769262ee71b11401ef33",
       "kind": "runtime-source",
       "profileEligibility": [
         "metal",
         "portable"
       ],
       "owner": "runtime-copier",
-      "bytes": 7552,
+      "bytes": 8780,
       "sourceKind": "copied-runtime",
       "license": "MIT",
       "includeInSourceBundle": true

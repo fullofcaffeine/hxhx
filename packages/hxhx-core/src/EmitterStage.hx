@@ -4569,7 +4569,7 @@ class EmitterStage {
 							final renderedArg = "(" + renderCallArgForSignature(fullArgs[argIndex], argIndex + firstRenderedParam, sig) + ")";
 							renderedArgs.push(renderedArg);
 						}
-						final isHxAnonDynamicCall = c.indexOf("HxAnon.get") != -1;
+						final isHxAnonDynamicCall = c.indexOf("HxAnon.get") != -1 || c.indexOf("HxMethodDispatch.structural_field") != -1;
 						final canonicalCallee = isLocalCall ? c : canonicalCallTargetForStage3(c, arityByIdentRaw);
 						final isContextLoadFlattenedCall = canonicalCallee == "Haxe_macro_Context.load" && renderedArgs.length > 2;
 

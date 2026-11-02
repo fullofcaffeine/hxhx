@@ -152,3 +152,25 @@ let class_method receiver key =
       match Hashtbl.find_opt methods key with
       | None -> fail ("class " ^ name ^ " has no interface method " ^ key)
       | Some fn -> fn)
+
+(* Read a function-typed field through a structural (anonymous) type.
+
+   A Haxe class instance can be used where a structure is expected, for
+   example `function provide():{ function value():Int; } return new Answer();`.
+   Stage3 stores the instance's variables in its HxAnon storage, but its methods
+   are module-level OCaml functions that take the receiver first. So a stored
+   field is returned as it is, and a missing field on a class instance is taken
+   from the class's method table and bound to this receiver.
+
+   `arity` is the number of Haxe arguments, chosen by the typed field read. A
+   method without arguments is bound as `fun () -> ...`, the shape of a
+   zero-argument Haxe closure; other methods are partially applied to the
+   receiver, which leaves the remaining arguments in order. *)
+let structural_field receiver field arity =
+  if HxAnon.is_anon receiver && HxAnon.has receiver field then
+    HxAnon.get receiver field
+  else if HxAnon.is_anon receiver && not (HxRuntime.is_null (HxAnon.class_value receiver)) then (
+    let fn : Obj.t -> Obj.t = Obj.obj (class_method receiver field) in
+    if arity = 0 then Obj.repr (fun () -> fn receiver) else fn receiver)
+  else
+    HxAnon.get receiver field
