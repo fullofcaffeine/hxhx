@@ -5,6 +5,7 @@
    Std.string and Haxe's print facades:
 
    - null, Bool, Int, String, and Float use their exact runtime tags;
+   - boxed enum values print their constructor name and arguments;
    - anonymous structures enumerate their stable HxAnon fields recursively;
    - generated classes may register their real zero-argument toString method,
      whether they are native records or Stage3's class-tagged HxAnon objects;
@@ -148,6 +149,8 @@ let rec toStdString (value : Obj.t) : string =
       if string_value == hx_null_string then "null" else string_value
     else if tag = Obj.double_tag then
       HxRuntime.float_toStdString (Obj.obj value)
+    else if HxEnum.is_box value then
+      enumToStdString value
     else if HxArray.is_value value then
       HxArray.to_dynamic_string (Obj.obj value) toStdString
     else if HxAnon.is_anon value then
@@ -160,6 +163,25 @@ let rec toStdString (value : Obj.t) : string =
         classToStdString value
     else
       classToStdString value
+
+(* A boxed enum value prints as Haxe does: its constructor name, followed by
+   its arguments in parentheses when it has any (`Red`, `Rgb(1,2,3)`). An
+   argument is converted by its runtime shape, so a Bool argument stored as a
+   raw OCaml bool prints as 1 or 0. *)
+and enumToStdString (value : Obj.t) : string =
+  let name = HxType.enumConstructor value in
+  if HxRuntime.is_null (Obj.repr name) then
+    "<object>"
+  else
+    let parameters = HxType.enumParameters value in
+    if HxArray.length parameters = 0 then
+      name
+    else
+      let parts = ref [] in
+      for index = HxArray.length parameters - 1 downto 0 do
+        parts := toStdString (HxArray.get parameters index) :: !parts
+      done;
+      name ^ "(" ^ Stdlib.String.concat "," !parts ^ ")"
 
 and anonymousToStdString (value : Obj.t) : string =
   let fields = HxAnon.fields value in
