@@ -23,8 +23,12 @@ import sys.io.File;
 	  print exactly what upstream Haxe 4.3.7 prints.
 	- `stage3_reflect_type_user_class` calls a project class `tools.Reflect`
 	  through the short name `Reflect`; its own methods must run.
-	- Reading a method through `Reflect.field` raises a named Haxe exception,
-	  because Stage3 cannot build a bound method value from a name yet.
+	  The fixture also reads methods and accessor properties by name, calls
+	  `Reflect.field` and `Reflect.setField` as function values, and uses a
+	  static import and `using Type`.
+	- `Reflect.callMethod` with a null argument array calls the function with
+	  no arguments. Upstream `--interp` raises Null Access there, so this is a
+	  native-only check of the documented Stage3 choice.
 	- `Type` methods that need class data Stage3 does not register stop the
 	  build with a named error.
 **/
@@ -72,34 +76,25 @@ class M14Stage3ReflectTypeTest {
 		}
 	}
 
-	/** Reading a method by name must raise a named exception, never return null. */
-	static function methodFieldRaises():Void {
-		final emitted = emitInline("method_field",
+	/** A null argument array is an empty argument list on the native target. */
+	static function callMethodNullArguments():Void {
+		final emitted = emitInline("call_method_null",
 			"class Point {\n"
-			+ "\tpublic var x:Int = 1;\n"
+			+ "\tpublic var x:Int = 4;\n"
 			+ "\tpublic function new() {}\n"
-			+ "\tpublic function sum():Int\n\t\treturn x;\n"
+			+ "\tpublic function twice():Int\n\t\treturn x * 2;\n"
 			+ "}\n"
 			+ "class Main {\n"
 			+ "\tstatic function main():Void {\n"
 			+ "\t\tfinal point = new Point();\n"
-			+ "\t\ttry {\n"
-			+ "\t\t\tSys.println(Reflect.field(point, \"sum\"));\n"
-			+ "\t\t} catch (error:String) {\n"
-			+ "\t\t\tSys.println(error);\n"
-			+ "\t\t}\n"
-			+ "\t\tSys.println(Reflect.field(point, \"x\"));\n"
+			+ "\t\tSys.println(Reflect.callMethod(point, Reflect.field(point, \"twice\"), null));\n"
 			+ "\t}\n"
 			+ "}\n");
 		if (emitted.executable == null)
-			throw "method field program failed to emit: " + emitted.error;
-		M14Stage3RuntimeFixture.observe({
-			command: emitted.executable,
-			arguments: [],
-			expected: "Reflect.field cannot use method Point.sum on the Stage3 native target yet\n1\n"
-		});
+			throw "callMethod program failed to emit: " + emitted.error;
+		M14Stage3RuntimeFixture.observe({command: emitted.executable, arguments: [], expected: "8\n"});
 		deleteRecursive(emitted.root);
-		Sys.println("M14_STAGE3_REFLECT_TYPE_METHOD_FIELD:PASS");
+		Sys.println("M14_STAGE3_REFLECT_TYPE_CALL_METHOD_NULL:PASS");
 	}
 
 	static function rejectUnregistered(method:String, call:String, expected:String):Void {
@@ -125,7 +120,7 @@ class M14Stage3ReflectTypeTest {
 	static function main():Void {
 		compareWithUpstream("runtime", "test/fixtures/stage3_reflect_type");
 		compareWithUpstream("user_class", "test/fixtures/stage3_reflect_type_user_class");
-		methodFieldRaises();
+		callMethodNullArguments();
 		rejectUnregistered("getClassFields", "Type.getClassFields(c)",
 			"Type.getClassFields is not supported natively yet; Stage3 does not register static field lists");
 		rejectUnregistered("createEmptyInstance", "Type.createEmptyInstance(c)",

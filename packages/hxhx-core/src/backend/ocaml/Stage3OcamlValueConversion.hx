@@ -21,8 +21,7 @@ function convert(actual:TyType, expected:TyType, value:String, names:Null<Stage3
 	final destination = expected.getSemanticKey();
 	if (expected.isDynamic())
 		return switch source {
-			case "primitive:Bool": "HxRuntime.box_bool (" + value + ")";
-			case "primitive:Int" | "primitive:String": "Obj.repr (" + value + ")";
+			case "primitive:Bool" | "primitive:Int" | "primitive:String": dynamicValue(actual, value, "OCaml value input");
 			case _: throw "unsupported OCaml value input carrier: " + source;
 		};
 	if (actual.isDynamic())
@@ -33,6 +32,24 @@ function convert(actual:TyType, expected:TyType, value:String, names:Null<Stage3
 			case _: throw "unsupported OCaml value result carrier: " + destination;
 		};
 	throw "unsupported OCaml value representation change: " + source + " to " + destination;
+}
+
+/**
+	Pass one Stage3 value of the exact type `type` where the runtime expects
+	`Obj.t`. A Bool needs the runtime Bool box, because a raw OCaml `true` has
+	the same bits as the integer 1. Every other Stage3 carrier is already a
+	valid `Obj.t` and only needs `Obj.repr`, which does not change its bits.
+	`Null<Bool>` has no settled carrier yet, so `context` names the operation
+	in the emit-time error.
+ */
+function dynamicValue(type:TyType, value:String, context:String):String {
+	final revealed = TyAliasExpansion.reveal(type);
+	if (revealed.unwrapNull().getSemanticKey() == "primitive:Bool") {
+		if (revealed.isNullable())
+			throw context + " does not support a Null<Bool> value yet";
+		return "HxRuntime.box_bool (" + value + ")";
+	}
+	return "Obj.repr (" + value + ")";
 }
 
 /** Evaluate once and reject a foreign category before interpreting native bits. */

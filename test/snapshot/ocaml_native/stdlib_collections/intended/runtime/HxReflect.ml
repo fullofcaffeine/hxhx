@@ -100,6 +100,8 @@ let makeVarArgsVoid (f : Obj.t) : Obj.t =
   mk_varargs varargs_void_marker f
 
 let callMethod (_obj : Obj.t) (fn : Obj.t) (args : Obj.t HxArray.t) : Obj.t =
+  (* A null argument array calls the function with no arguments. *)
+  let args = if HxRuntime.is_null (Obj.repr args) then HxArray.create () else args in
   if is_varargs varargs_marker fn then
     let f = Obj.field fn 1 in
     (Obj.magic f : Obj.t HxArray.t -> Obj.t) args
@@ -220,18 +222,21 @@ let isObject (v : Obj.t) : bool =
    Stage3 stores a class instance as an `HxAnon` object that carries its class
    descriptor. Its stored fields are ordinary `HxAnon` slots, so `HxAnon.get`,
    `HxAnon.has`, and `HxAnon.fields` already answer for them. Its methods are
-   module-level OCaml functions, not slots.
+   module-level OCaml functions that take the receiver first, not slots.
 
-   The compiler registers, for each generated class, the names of its instance
-   methods, including inherited ones. With that list `field` can tell a method
-   name apart from a missing field. Building a bound method value from a name
-   is not implemented, so reading a method raises a Haxe exception that names
-   it instead of returning null. The same holds for `getProperty` and
-   `setProperty` when the class declares the property's accessor method. *)
-let instance_method_names : (string, string list) Hashtbl.t = Hashtbl.create 31
+   For each generated class the compiler registers one binder per instance
+   method, including inherited ones; an override replaces its parent's binder.
+   A binder receives the instance and returns the method bound to it, as a
+   method value `instance.method` would be. `field` uses it when the name is
+   not a stored field, and `getProperty` / `setProperty` use it to call a
+   declared `get_` / `set_` accessor. A method the compiler cannot bind (for
+   example a `dynamic` method) has no binder, so reading it returns null. *)
+let instance_method_binders : (string, (string, Obj.t -> Obj.t) Hashtbl.t) Hashtbl.t = Hashtbl.create 31
 
-let register_instance_method_names (name : string) (methods : string list) : unit =
-  Hashtbl.replace instance_method_names name methods
+let register_instance_methods (name : string) (binders : (string * (Obj.t -> Obj.t)) list) : unit =
+  let table = Hashtbl.create (Stdlib.List.length binders) in
+  Stdlib.List.iter (fun (method_name, binder) -> Hashtbl.replace table method_name binder) binders;
+  Hashtbl.replace instance_method_binders name table
 
 let class_instance_name (o : Obj.t) : string option =
   if HxAnon.is_anon o then
@@ -240,29 +245,30 @@ let class_instance_name (o : Obj.t) : string option =
   else
     None
 
-let unsupported_method (o : Obj.t) (operation : string) (method_name : string) : bool =
+let bound_method (o : Obj.t) (method_name : string) : Obj.t option =
   match class_instance_name o with
-  | None -> false
+  | None -> None
   | Some class_name -> (
-      match Hashtbl.find_opt instance_method_names class_name with
-      | Some methods when Stdlib.List.mem method_name methods ->
-          HxRuntime.hx_throw_typed
-            (Obj.repr
-               ("Reflect." ^ operation ^ " cannot use method " ^ class_name ^ "." ^ method_name
-              ^ " on the Stage3 native target yet"))
-            [ "String"; "Dynamic" ]
-      | _ -> false)
+      match Hashtbl.find_opt instance_method_binders class_name with
+      | None -> None
+      | Some table -> (
+          match Hashtbl.find_opt table method_name with
+          | Some binder -> Some (binder o)
+          | None -> None))
 
 let field (o : Obj.t) (name : string) : Obj.t =
   if HxAnon.has o name then HxAnon.get o name
-  else if unsupported_method o "field" name then HxRuntime.hx_null
-  else HxAnon.get o name
+  else match bound_method o name with Some value -> value | None -> HxAnon.get o name
 
 let getProperty (o : Obj.t) (name : string) : Obj.t =
-  if unsupported_method o "getProperty" ("get_" ^ name) then HxRuntime.hx_null else field o name
+  match bound_method o ("get_" ^ name) with
+  | Some getter -> (Obj.obj getter : unit -> Obj.t) ()
+  | None -> field o name
 
 let setProperty (o : Obj.t) (name : string) (value : Obj.t) : unit =
-  if not (unsupported_method o "setProperty" ("set_" ^ name)) then HxAnon.set o name value
+  match bound_method o ("set_" ^ name) with
+  | Some setter -> ignore ((Obj.obj setter : Obj.t -> Obj.t) value)
+  | None -> HxAnon.set o name value
 
 (* Haxe deletes fields only from anonymous structures; a class instance keeps
    its declared fields. *)
