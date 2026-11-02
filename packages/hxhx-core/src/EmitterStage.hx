@@ -1035,13 +1035,14 @@ class EmitterStage {
 	static function exprToOcamlString(e:HxExpr, ?tyByIdent:Map<String, TyType>, ?arityByIdent:Map<String, Int>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
 		// Preserve checked scalar results before rendering them as text. Boolean
-		// bits must not become 1, and Int or Float addition (`floats[0] + floats[1]`)
-		// must not become concatenation.
+		// bits must not become 1, and Int, Float, or Dynamic addition
+		// (`floats[0] + floats[1]`, `boxed + 1`) must not become concatenation.
 		final operand = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(e) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(e);
 		if (operand != null
 			&& (operand.type.getSemanticKey() == "primitive:Bool"
 				|| operand.type.getSemanticKey() == "primitive:Int"
-				|| operand.type.getSemanticKey() == "primitive:Float"))
+				|| operand.type.getSemanticKey() == "primitive:Float"
+				|| (operand.type.isDynamic() && e.match(EBinop(_, _, _)))))
 			return backend.ocaml.Stage3OcamlStringConversion.convert(operand.type,
 				exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 				currentFunctionLocalOcamlNames);
@@ -4754,6 +4755,11 @@ class EmitterStage {
 					// parent addition uses OCaml's typed string concatenation.
 					if (op == "+" && (stage3IsStringExpr(a, tyByIdentRaw) || stage3IsStringExpr(b, tyByIdentRaw)))
 						return "HxDynamic.toStdString (" + dynamicBinary + ")";
+					// `boxed * 2` is a Float in Haxe: read the runtime result as the checked Float.
+					if (recordedArithmetic != null
+						&& !recordedArithmetic.resultType.isNullable()
+						&& recordedArithmetic.resultType.getSemanticKey() == "primitive:Float")
+						return "HxDynamic.floatValue (" + dynamicBinary + ")";
 					return dynamicBinary;
 				}
 				// Stage 3 expansion: support a small set of binary ops so `if` conditions can

@@ -4164,9 +4164,14 @@ class TyperStage {
 						if (bound != null) bound.getOperatorInfo().getResultType(); else {
 							final integer = op == "/" ? null : TyNullableIntegerResult.result(ta, tb);
 							final unified = integer == null ? TyType.unify(ta.unwrapNull(), tb.unwrapNull()) : integer;
+							// A Dynamic operand of `- * / %` gives Float in Haxe (`boxed * 2` is a
+							// Float), unlike `+`, which stays Dynamic because it may concatenate.
+							final dynamicOperand = (ta.unwrapNull().isDynamic()
+								&& (tb.unwrapNull().isDynamic() || tb.unwrapNull().isNumeric()))
+								|| (tb.unwrapNull().isDynamic() && ta.unwrapNull().isNumeric());
 							// Haxe division always produces Float, also for two Int operands (`7 / 2` is 3.5).
-							unified != null
-							&& unified.isNumeric() ? (op == "/" ? TyType.fromHintText("Float") : unified) : TyType.unknown();
+							if (dynamicOperand)
+								TyType.fromHintText("Float"); else unified != null && unified.isNumeric() ? (op == "/" ? TyType.fromHintText("Float") : unified) : TyType.unknown();
 						}
 					case _:
 						inferExprType(a, scope, ctx, pos);
