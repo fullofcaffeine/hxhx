@@ -3,7 +3,18 @@ enum Color {
 	Rgb(r:Int, g:Int, b:Int);
 }
 
+enum Shape {
+	Named(name:String);
+	Painted(color:Color);
+	Sized(size:{w:Int});
+}
+
 class Holder {
+	public static var slabel:String;
+	public static var scount:Null<Int>;
+	public static var sflag:Null<Bool>;
+	public static var sitems:Array<Int>;
+
 	public var label:String;
 
 	public function new() {}
@@ -65,5 +76,13 @@ class Main {
 		Sys.println(Std.string(color) + " " + Std.string(Red));
 		Sys.println([Red, Rgb(7, 8, 9)].join(" "));
 		Sys.println(Std.string([Red, color]));
+		// Null enum values and enum arguments of other types.
+		final noColor:Color = null;
+		Sys.println("none " + noColor + " " + Std.string(noColor));
+		Sys.println(Std.string(Named("n")) + " " + Named(null) + " " + Painted(Rgb(1, 2, 3)) + " " + Painted(null));
+		Sys.println(Std.string(Sized({w: 2})));
+		// Statics without an initializer hold null.
+		Sys.println(Holder.slabel);
+		Sys.println("statics " + Holder.slabel + " " + Holder.scount + " " + Holder.sflag + " " + Holder.sitems);
 	}
 }
