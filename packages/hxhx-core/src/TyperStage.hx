@@ -2168,7 +2168,8 @@ class TyperStage {
 			declaration.getIsStatic() ? null : inference.expressionType(receiver, revealed, scope), declaration.getSignature());
 		final parameters = TyMethodGenericBinding.specializeParameters(declaration, signature, selection.order.rankedTypes(selection.actual), ctx.getIndex());
 		if (value != null && parameters.length > 0)
-			TyIndexedNullValue.checkTarget(actual[actual.length - 1], parameters[parameters.length - 1], ctx, pos);
+			TyIndexedNullValue.checkTarget(actual[actual.length - 1], parameters[parameters.length - 1],
+				TyBasicNullArgument.sourceHint(declaration, declaration.getSignature().getArgs().length - 1), ctx, pos);
 		if ((retained != null && inference.sourceTerm(source, scope) == null)
 			|| declaration.getTypeParameterIds().length > 0
 			&& (result.hasUnknownComponent() || parameters.filter(type -> type.hasUnknownComponent()).length > 0)) {
@@ -2329,7 +2330,8 @@ class TyperStage {
 			throw "call selection requires one retained type per source argument";
 		// One declared candidate: apply the upstream per-target rule for null at a basic parameter.
 		if (candidates.length == 1)
-			TyBasicNullArgument.admit(callable(candidates[0], receiver == null ? null : receiver.type), argTypes, ctx, pos);
+			TyBasicNullArgument.admit(callable(candidates[0], receiver == null ? null : receiver.type), c.declarationForSignature(candidates[0]), argTypes,
+				ctx, pos);
 		// Candidate trials must not commit context to the caller's inference state.
 		function literalType(source:HxExpr, expected:TyType):Null<TyType> {
 			if (retainedUpdateOperands)

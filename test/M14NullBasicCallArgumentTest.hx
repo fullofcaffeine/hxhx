@@ -21,26 +21,47 @@ import hxhx.Stage3SetupSupport;
 	dynamic targets, but a native unboxed `int`, `float` or `bool` parameter cannot
 	hold null. The call raises the catchable "Null Access" at the argument instead,
 	as passing a null `Null<Int>` already does. The upstream interpreter passes null
-	through. The native observer checks both. A basic abstract parameter such as
-	`q(v:Abs)` is typed correctly but not yet converted natively (haxe_ocaml-8gouw).
+	through. The native observer checks both. A parameter written as an abstract or
+	typedef over a basic type (`q(v:Abs)`) stops with a named native error instead,
+	because the backend cannot convert its written null yet (haxe_ocaml-8gouw).
 **/
 class M14NullBasicCallArgumentTest {
-	static final declarations = 'abstract Abs(Int) from Int{}'
+	static final declarations = 'abstract Abs(Int) from Int to Int{}typedef MyInt = Int;'
 		+ 'class C{public function new(v:Int){} public function m(v:Int):Void{}}'
-		+ 'class O{public function new(?v:Int){}}';
+		+ 'class CA{public function new(v:Abs){}}'
+		+ 'class O{public function new(?v:Int){}}'
+		+ 'abstract SA(Array<Int>){public inline function new(){this=[1];}'
+		+ '@:arrayAccess public function get(i:Int):Abs return this[i];'
+		+ '@:arrayAccess public function set(i:Int,v:Abs):Abs{this[i]=v;return v;}}';
 	static final helpers = 'static function f(v:Int):Int return 0;static function g(v:Float):Float return 0;static function h(v:Bool):Bool return true;'
-		+ 'static function q(v:Abs):Void{}static function o(?v:Int):Int return 0;';
+		+ 'static function q(v:Abs):Void{}static function a(v:MyInt):Void{}static function o(?v:Int):Int return 0;';
 
 	/** Each case is accepted on dynamic targets and rejected on static targets. */
 	static final required = [
 		{name: "static_int", body: 'f(null);'},
 		{name: "static_float", body: 'g(null);'},
 		{name: "static_bool", body: 'h(null);'},
-		{name: "basic_abstract", body: 'q(null);'},
 		{name: "instance_method", body: 'var c=new C(1);c.m(null);'},
 		{name: "constructor", body: 'new C(null);'},
 		{name: "function_value", body: 'var fn=f;fn(null);'}
 	];
+
+	/**
+		Parameters written as an abstract or typedef over a basic type. Upstream treats
+		them like `Int`. Native OCaml cannot convert their written null yet, so hxhx
+		stops with a named error there (haxe_ocaml-8gouw) instead of passing a
+		reinterpreted null into an unboxed slot. `staticRejects` is false for the
+		indexed setter, which upstream rejects only on C# (see M14IndexedNullSetterTest).
+	**/
+	static final indirect = [
+		{name: "basic_abstract", body: 'q(null);', staticRejects: true},
+		{name: "basic_typedef", body: 'a(null);', staticRejects: true},
+		{name: "abstract_constructor", body: 'new CA(null);', staticRejects: true},
+		{name: "abstract_function_value", body: 'var fn=q;fn(null);', staticRejects: true},
+		{name: "abstract_indexed_setter", body: 'var s=new SA();s[0]=null;', staticRejects: false}
+	];
+
+	static final nativeUnsupported = "is not yet supported on the native OCaml target (haxe_ocaml-8gouw)";
 
 	/** Accepted on every target. */
 	static final optional = 'o(null);o();new O(null);';
@@ -64,6 +85,9 @@ class M14NullBasicCallArgumentTest {
 		final methods = new StringBuf();
 		for (index in 0...required.length)
 			methods.add('static function case' + index + '():Void{' + required[index].body + '}');
+		final direct = program(methods.toString() + 'static function optional():Void{' + optional + '}');
+		for (index in 0...indirect.length)
+			methods.add('static function indirect' + index + '():Void{' + indirect[index].body + '}');
 		final accepted = program(methods.toString() + 'static function optional():Void{' + optional + '}');
 		requireUpstream(accepted, ["--interp"], true, "interp");
 		for (target in dynamicTargets) {
@@ -71,13 +95,16 @@ class M14NullBasicCallArgumentTest {
 			requireLocal(accepted, target.local, null, target.local);
 			Sys.println("NULL_BASIC_CALL_ARGUMENT:PASS dynamic_" + target.local);
 		}
-		requireLocal(accepted, "ocaml", null, "ocaml");
+		requireLocal(direct, "ocaml", null, "ocaml");
 		Sys.println("NULL_BASIC_CALL_ARGUMENT:PASS ocaml_accepts");
+		for (entry in indirect)
+			requireLocal(program('static function single():Void{' + entry.body + '}'), "ocaml", nativeUnsupported, "ocaml " + entry.name);
+		Sys.println("NULL_BASIC_CALL_ARGUMENT:PASS ocaml_indirect_rejected");
 		final optionalOnly = program('static function optional():Void{' + optional + '}');
 		for (target in staticTargets) {
 			requireUpstream(optionalOnly, target.upstream, true, target.local + " optional");
 			requireLocal(optionalOnly, target.local, null, target.local + " optional");
-			for (entry in required) {
+			for (entry in required.concat(indirect.filter(entry -> entry.staticRejects).map(entry -> {name: entry.name, body: entry.body}))) {
 				final source = program('static function single():Void{' + entry.body + '}');
 				requireUpstream(source, target.upstream, false, target.local + " " + entry.name);
 				requireLocal(source, target.local, "On static platforms, null can't be used as basic type", target.local + " " + entry.name);
@@ -144,8 +171,6 @@ class M14NullBasicCallArgumentTest {
 			{label: "int", call: 'Main.show(f(null));'},
 			{label: "float", call: 'Main.show(g(null));'},
 			{label: "bool", call: 'Main.show(h(null));'},
-			// A basic abstract (`q(v:Abs)`) is accepted, but its native boundary is not
-			// covered yet: null-literal facts are ambiguous by identity (haxe_ocaml-8gouw).
 			{label: "method", call: 'var c=new C(1);c.m(null);Main.show(0);'},
 			{label: "constructor", call: 'new C(null);Main.show(0);'},
 			{label: "function_value", call: 'var fn=f;Main.show(fn(null));'}

@@ -12,8 +12,8 @@
 	`TyNullArgument.acceptsLiteral` rejects: `Int`, `Float`, `Bool` and abstracts over
 	them. `admit` lets declared-method selection score such a null as
 	`Null<parameter>`, so the declared parameter and the generated call stay as
-	written; `check` applies only the static-target rejection on paths that already
-	accept the null. The native OCaml target is not static here, as upstream's
+	written; `check` applies only the rejections on paths that already accept the
+	null. The native OCaml target is not static here, as upstream's
 	custom targets are not; its backend raises the catchable Null Access at the call
 	boundary because an unboxed parameter cannot hold null. Indexed setters follow a
 	different upstream rule (`TyIndexedNullValue`).
@@ -37,6 +37,65 @@ function requiresValue(parameter:Null<TyType>, optional:Bool, index:TyperIndex):
 		&& !TyNullArgument.acceptsLiteral(parameter, index);
 }
 
+/**
+	The primitive key of a parameter type written as `Int`, `Float` or `Bool`
+	(optionally `StdTypes.`-qualified), or null for any other written type. The
+	native OCaml backend reads exactly this to convert a written null argument, so
+	the typer and the backend share one definition.
+**/
+function basicHintKey(hint:Null<String>):Null<String> {
+	if (hint == null)
+		return null;
+	return switch StringTools.replace(StringTools.trim(hint), " ", "") {
+		case "Int" | "StdTypes.Int": "primitive:Int";
+		case "Float" | "StdTypes.Float": "primitive:Float";
+		case "Bool" | "StdTypes.Bool": "primitive:Bool";
+		case _: null;
+	};
+}
+
+/**
+	The written type of a declared parameter, as the native backend's call signature
+	records it. Returns null when there is no declaration or when the declared
+	parameter is a type parameter: a generic native slot holds the null sentinel, as
+	a `Map` value does, so only its typed facts matter.
+**/
+function sourceHint(declaration:Null<TyDeclarationInfo>, index:Int):Null<String> {
+	if (declaration == null)
+		return null;
+	final declared = declaration.getSignature().getArgs();
+	if (index >= 0 && index < declared.length && declared[index].isTypeParameter())
+		return null;
+	final arguments = HxFunctionDecl.getArgs(declaration.getSourceDeclaration());
+	return index >= 0 && index < arguments.length ? HxFunctionArg.getTypeHint(arguments[index]) : null;
+}
+
+/**
+	True when the native OCaml backend cannot convert a written null for this
+	parameter, so a call would pass a reinterpreted null into an unboxed slot.
+
+	A declared method's written null reaches the backend without an exact per-call
+	fact (every parsed `null` is the same value), so the backend reads the written
+	parameter type: only `Int`, `Float` and `Bool` are converted (`hint`). Paths
+	with exact typed facts, such as constructors and function values, convert any
+	parameter whose alias-expanded type is one of those (`hint` null). An abstract
+	over a basic type is not converted on either path. These calls stop with a
+	named error until the backend keys null facts by call occurrence
+	(haxe_ocaml-8gouw).
+**/
+function nativeUnsupported(parameter:TyType, hint:Null<String>, ctx:TyperContext):Bool {
+	if (!ctx.hasDefine("ocaml"))
+		return false;
+	if (hint != null)
+		return basicHintKey(hint) == null;
+	final key = TyAliasExpansion.reveal(parameter).getSemanticKey();
+	return key != "primitive:Int" && key != "primitive:Float" && key != "primitive:Bool";
+}
+
+function nativeUnsupportedError(parameter:TyType, ctx:TyperContext, pos:HxPos):TyperError
+	return new TyperError(ctx.getFilePath(), pos,
+		"A null literal for basic parameter type " + parameter.getDisplay() + " is not yet supported on the native OCaml target (haxe_ocaml-8gouw)");
+
 function staticPlatformError(parameter:TyType, ctx:TyperContext, pos:HxPos):TyperError
 	return new TyperError(ctx.getFilePath(), pos, "On static platforms, null can't be used as basic type " + parameter.getDisplay());
 
@@ -46,11 +105,14 @@ function staticPlatformError(parameter:TyType, ctx:TyperContext, pos:HxPos):Type
 	upstream diagnostic on static targets. `types` is updated in place; arguments
 	past the fixed parameters (rest values) are left alone.
 **/
-function admit(signature:TyFunSig, types:Array<TyType>, ctx:TyperContext, pos:HxPos):Void {
+function admit(signature:TyFunSig, declaration:Null<TyDeclarationInfo>, types:Array<TyType>, ctx:TyperContext, pos:HxPos):Void {
 	for (index in basicNullPositions(signature, types, ctx.getIndex())) {
+		final parameter = signature.getArgs()[index];
 		if (isStaticTarget(ctx))
-			throw staticPlatformError(signature.getArgs()[index], ctx, pos);
-		types[index] = TyType.nullable(signature.getArgs()[index]);
+			throw staticPlatformError(parameter, ctx, pos);
+		if (nativeUnsupported(parameter, sourceHint(declaration, index), ctx))
+			throw nativeUnsupportedError(parameter, ctx, pos);
+		types[index] = TyType.nullable(parameter);
 	}
 }
 
@@ -86,13 +148,18 @@ private function basicNullPositions(signature:TyFunSig, types:Array<TyType>, ind
 	return positions;
 }
 
-/** Reject a null literal at a basic parameter on static targets; paths that already accept it call this. */
+/**
+	Reject a null literal at a basic parameter on static targets, and where the
+	native OCaml backend cannot convert it; paths that already accept it call this.
+**/
 function check(parameters:Array<Null<TyType>>, optional:Array<Bool>, types:Array<TyType>, ctx:TyperContext, pos:HxPos):Void {
-	if (!isStaticTarget(ctx))
-		return;
 	for (index in 0...types.length)
 		if (index < parameters.length
 			&& types[index].isNullLiteral()
-			&& requiresValue(parameters[index], index < optional.length && optional[index], ctx.getIndex()))
-			throw staticPlatformError(parameters[index], ctx, pos);
+			&& requiresValue(parameters[index], index < optional.length && optional[index], ctx.getIndex())) {
+			if (isStaticTarget(ctx))
+				throw staticPlatformError(parameters[index], ctx, pos);
+			if (nativeUnsupported(parameters[index], null, ctx))
+				throw nativeUnsupportedError(parameters[index], ctx, pos);
+		}
 }

@@ -290,14 +290,8 @@ function crossesBoundary(actual:TyType, expected:TyType, expectedIsOptional:Bool
  */
 function nullLiteralForCall(signature:Null<EmitterCallSig>, index:Int, hint:Null<String>, rendered:String):String {
 	final optional = signature != null && index >= 0 && index < signature.paramFillable.length && signature.paramFillable[index];
-	if (hint == null || optional)
-		return rendered;
-	return switch StringTools.replace(StringTools.trim(hint), " ", "") {
-		case "Int" | "StdTypes.Int": nullLiteralArgument(INT);
-		case "Float" | "StdTypes.Float": nullLiteralArgument(FLOAT);
-		case "Bool" | "StdTypes.Bool": nullLiteralArgument(BOOL);
-		case _: rendered;
-	};
+	final key = optional ? null : TyBasicNullArgument.basicHintKey(hint);
+	return key == null ? rendered : nullLiteralArgument(key);
 }
 
 /** True when the argument crosses the nullable boundary in either direction. */
