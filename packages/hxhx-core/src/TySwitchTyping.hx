@@ -9,6 +9,8 @@ import TySwitchAnalysis.TySwitchCoverageResult;
 function check(scrutinee:TyType, patterns:Array<HxSwitchPattern>, bodyCount:Int, ctx:TyperContext, pos:HxPos):Void {
 	if (patterns == null || patterns.length != bodyCount)
 		throw new TyperError(ctx.getFilePath(), pos, "switch pattern/body count differs");
+	// Constants are typed first, as upstream reports `Float should be Int` before coverage.
+	TySwitchConstantPatterns.check(scrutinee, patterns, ctx, pos);
 	final result = analyze(scrutinee, patterns, ctx, false);
 	if (result == null)
 		return;
