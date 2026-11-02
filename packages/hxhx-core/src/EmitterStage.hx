@@ -1039,8 +1039,10 @@ class EmitterStage {
 		// Preserve checked scalar results before rendering them as text. Boolean
 		// bits must not become 1, and integer addition must not become concatenation.
 		final operand = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(e) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(e);
-		if (operand != null && (operand.type.getSemanticKey() == "primitive:Bool" || operand.type.getSemanticKey() == "primitive:Int"))
-			return backend.ocaml.Stage3OcamlStringConversion.convert(operand.type,
+		if (operand != null
+			&& (operand.type.getSemanticKey() == "primitive:Int"
+				|| backend.ocaml.Stage3OcamlStringConversion.isBoolText(operand.type, stage3AbstractUnderlying)))
+			return backend.ocaml.Stage3OcamlStringConversion.convert(backend.ocaml.Stage3OcamlStringConversion.textType(operand.type, stage3AbstractUnderlying),
 				exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 				currentFunctionLocalOcamlNames);
 		final tyByIdentRaw = tyByIdent;
@@ -1114,8 +1116,9 @@ class EmitterStage {
 		var emitStringExpr:HxExpr->String = null;
 		emitStringExpr = function(expr:HxExpr):String {
 			final concatType = currentTypedInitializer != null ? currentTypedInitializer.findStringConcatOperandType(expr) : currentTypedFunction == null ? null : currentTypedFunction.findStringConcatOperandType(expr);
-			if (backend.ocaml.Stage3OcamlStringConversion.isBoolText(concatType))
-				return backend.ocaml.Stage3OcamlStringConversion.convert(concatType,
+			final boolText = backend.ocaml.Stage3OcamlStringConversion.boolTextType(concatType, stage3AbstractUnderlying);
+			if (boolText != null)
+				return backend.ocaml.Stage3OcamlStringConversion.convert(boolText,
 					exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 					currentFunctionLocalOcamlNames);
 			return switch (expr) {
@@ -1132,7 +1135,8 @@ class EmitterStage {
 					// - Do not inline this as `emitStringExpr(arg)`:
 					//   - it would degrade complex values (arrays, tagged values) to `<unsupported>`,
 					//   - and it would diverge from the target runtime’s own stringification behavior.
-					backend.ocaml.Stage3OcamlStringConversion.convert(callArgumentType(arg),
+					backend.ocaml.Stage3OcamlStringConversion.convert(backend.ocaml.Stage3OcamlStringConversion.textType(callArgumentType(arg),
+						stage3AbstractUnderlying),
 						exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 						currentFunctionLocalOcamlNames);
 				case ECall(EField(_obj, "join"), [_sep]):
@@ -2217,9 +2221,17 @@ class EmitterStage {
 		operand already emitted as a value. String and other operands keep the
 		concatenation renderer.
 	**/
+	/** The backing type of a generated abstract in this request, for Bool text selection. */
+	static function stage3AbstractUnderlying(identity:String):Null<TyType>
+		return currentClassStorage == null ? null : currentClassStorage.abstracts.underlyingOf(identity);
+
 	static function localCompoundStringOperand(value:HxExpr, rendered:String, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
 			?callSigByCallee:Map<String, EmitterCallSig>):String {
+		final recorded = currentTypedInitializer != null ? currentTypedInitializer.findStringConcatOperandType(value) : currentTypedFunction == null ? null : currentTypedFunction.findStringConcatOperandType(value);
+		final boolText = backend.ocaml.Stage3OcamlStringConversion.boolTextType(recorded, stage3AbstractUnderlying);
+		if (boolText != null)
+			return backend.ocaml.Stage3OcamlStringConversion.convert(boolText, rendered, currentFunctionLocalOcamlNames);
 		final scalar = if (stage3IsIntExpr(value, tyByIdent)) {
 			"Int";
 		} else if (stage3IsFloatExpr(value, tyByIdent, callSigByCallee, staticImportByIdent)) {
@@ -3109,7 +3121,8 @@ class EmitterStage {
 			case ECall(EField(EIdent("StringTools"), "replace"), [_s, _sub, _by]):
 				return escapeOcamlString("");
 			case ECall(EField(EIdent("Std"), "string"), [arg]):
-				return backend.ocaml.Stage3OcamlStringConversion.convert(callArgumentType(arg),
+				return backend.ocaml.Stage3OcamlStringConversion.convert(backend.ocaml.Stage3OcamlStringConversion.textType(callArgumentType(arg),
+					stage3AbstractUnderlying),
 					exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 					currentFunctionLocalOcamlNames);
 			// Typed standard type tests and downcasts are rendered by

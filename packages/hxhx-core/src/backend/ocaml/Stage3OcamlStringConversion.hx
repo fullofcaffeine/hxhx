@@ -8,8 +8,37 @@ import backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier;
 	`bool` and `int` share one runtime shape, so the runtime alone would print
 	`true` as `1` (haxe_ocaml-agc6n, haxe_ocaml-caxgt).
 **/
-function isBoolText(type:Null<TyType>):Bool
-	return type != null && !type.isUnknown() && !type.isUnresolved() && type.unwrapNull().getSemanticKey() == "primitive:Bool";
+function isBoolText(type:Null<TyType>, ?underlying:String->Null<TyType>):Bool
+	return boolTextType(type, underlying) != null;
+
+/**
+	The Bool or `Null<Bool>` type whose text a value of `type` has, or null.
+	`underlying` returns the backing type of a generated abstract by its
+	identity, so `abstract Flag(Bool)` (and `Null<Flag>`) print like a Bool.
+**/
+function boolTextType(type:Null<TyType>, ?underlying:String->Null<TyType>):Null<TyType> {
+	if (type == null || type.isUnknown() || type.isUnresolved())
+		return null;
+	var current = type.unwrapNull();
+	final seen:Map<String, Bool> = [];
+	while (current.getSemanticKey() != "primitive:Bool") {
+		final identity = current.getNominalIdentity();
+		final backing = identity == null || underlying == null ? null : underlying(identity.getCanonicalName());
+		if (backing == null || seen.exists(identity.getCanonicalName()))
+			return null;
+		seen.set(identity.getCanonicalName(), true);
+		current = backing.unwrapNull();
+	}
+	if (current == type.unwrapNull())
+		return type;
+	return TyType.fromHintText(type.isNullable() ? "Null<Bool>" : "Bool");
+}
+
+/** `type`, or Bool / `Null<Bool>` when it is an abstract over Bool. */
+function textType(type:TyType, ?underlying:String->Null<TyType>):TyType {
+	final boolText = boolTextType(type, underlying);
+	return boolText == null ? type : boolText;
+}
 
 /** Pass the original typed value to runtime string conversion exactly once. */
 function convert(type:TyType, value:String, names:Stage3OcamlLocalNames):String {

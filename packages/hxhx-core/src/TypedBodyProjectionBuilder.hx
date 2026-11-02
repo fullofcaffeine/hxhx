@@ -158,9 +158,21 @@ class TypedBodyProjectionBuilder {
 				source: source,
 				expression: expression
 			}));
-		// Record only a projection that kept the addition's source shape; other
-		// projections keep the generic string conversion.
-		if (TypedBackendStringConcatOccurrence.supports(source) && expression.match(EBinop("+", _, _)))
+		if (TypedBackendStringConcatOccurrence.supports(source))
+			stringConcats.push(new TypedBackendStringConcatOccurrence({
+				owner: ownerIdentity,
+				revision: bodyRevision,
+				source: source,
+				expression: expression
+			}));
+		return expression;
+	}
+
+	/** Keep the operand types of a String `+=`, which is projected outside `projectBinary`. */
+	public function projectStringCompound(source:TypedExpr, expression:HxExpr):HxExpr {
+		if (sealed)
+			throw "cannot add string concatenation facts to a sealed projection";
+		if (TypedBackendStringConcatOccurrence.supports(source))
 			stringConcats.push(new TypedBackendStringConcatOccurrence({
 				owner: ownerIdentity,
 				revision: bodyRevision,

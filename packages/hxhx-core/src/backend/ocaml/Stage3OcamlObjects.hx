@@ -4,6 +4,13 @@ package backend.ocaml;
 function store(type:TyType, value:String):String {
 	if (type.isUnknown())
 		throw "OCaml object storage requires an exact value type";
+	// A Null<Bool> carrier holds a raw OCaml bool, which Dynamic storage would
+	// later print as 1 or 0. Box a present value; null and an existing box stay.
+	if (type.isNullable() && type.unwrapNull().getSemanticKey() == "primitive:Bool")
+		return "(let __hx_nullable_bool = Obj.repr ("
+			+ value
+			+
+			") in if HxRuntime.is_null __hx_nullable_bool || HxRuntime.is_boxed_bool __hx_nullable_bool then __hx_nullable_bool else HxRuntime.box_bool (Obj.obj __hx_nullable_bool))";
 	final carrier = type.getSemanticKey() == "primitive:Bool" ? OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ExactBool : type.isDynamic() ? OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.DynamicValue : OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ConcreteValue;
 	return OcamlDynamicOperatorLowering.callArgument("Dynamic", carrier, value);
 }
