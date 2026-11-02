@@ -188,7 +188,15 @@ class TyTypeUseResolution {
 		}
 		remember(declaration);
 		return switch (declaration.getKind()) {
-			case Nominal(identity): TyType.nominal(identity, args, display);
+			case Nominal(identity):
+				// An explicit application must match the declared parameters, as in Haxe
+				// 4.3.7. A use with no arguments is left alone: `new Box()` infers them.
+				final arity = declaration.getNominalArity();
+				if (arity != null && args.length > arity.total)
+					throw new TyperError(context.filePath, context.position, "Too many type parameters for " + declaration.getShortName());
+				if (arity != null && args.length > 0 && args.length < arity.required)
+					throw new TyperError(context.filePath, context.position, "Not enough type parameters for " + declaration.getShortName());
+				TyType.nominal(identity, args, display);
 			case Alias(source):
 				final defining = declaration.getContext();
 				final key = declaration.getCanonicalName();
