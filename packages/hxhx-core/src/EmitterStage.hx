@@ -2238,6 +2238,10 @@ class EmitterStage {
 		concatenation renderer.
 	**/
 	/** The backing type of a generated abstract in this request, for Bool text selection. */
+	/** The typed facts of this exact `trace(...)` call, or null outside a typed body. */
+	static function stage3TraceFact(call:HxExpr):Null<TypedBackendTraceOccurrence>
+		return currentTypedInitializer != null ? currentTypedInitializer.findTrace(call) : currentTypedFunction == null ? null : currentTypedFunction.findTrace(call);
+
 	static function stage3AbstractUnderlying(identity:String):Null<TyType>
 		return currentClassStorage == null ? null : currentClassStorage.abstracts.underlyingOf(identity);
 
@@ -3169,6 +3173,14 @@ class EmitterStage {
 				return "(Obj.magic 0)";
 			case ECall(EField(_obj, "isDirectory"), []):
 				return "false";
+			case ECall(EIdent("trace"), traceArguments) if (stage3TraceFact(e) != null):
+				return backend.ocaml.Stage3OcamlTrace.render(stage3TraceFact(e),
+					backend.ocaml.Stage3OcamlTrace.displayFileName(currentModuleFilePath, Sys.getCwd()),
+					(argument,
+							type) -> backend.ocaml.Stage3OcamlTrace.argumentText(argument, type,
+							exprToOcaml(argument, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+							stage3AbstractUnderlying, currentFunctionLocalOcamlNames),
+					escapeOcamlString);
 			case ECall(EIdent("trace"), [arg]):
 				return "print_endline ("
 					+ exprToOcamlString(arg, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)

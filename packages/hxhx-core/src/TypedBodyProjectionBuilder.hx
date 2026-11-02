@@ -24,6 +24,7 @@ class TypedBodyProjectionBuilder {
 	final collectionControls:Array<TypedBackendCollectionControl> = [];
 	final equalities:Array<TypedBackendEqualityOccurrence> = [];
 	final stringConcats:Array<TypedBackendStringConcatOccurrence> = [];
+	final traces:Array<TypedBackendTraceOccurrence> = [];
 	final bitwiseOperations:Array<TypedBackendBitwiseOccurrence> = [];
 	final conditions:Array<TypedBackendCondition> = [];
 	final callArguments:Array<TypedBackendCallArgument> = [];
@@ -180,6 +181,25 @@ class TypedBodyProjectionBuilder {
 				expression: expression
 			}));
 		return expression;
+	}
+
+	/** Keep a trace call's line and argument types before the source-shaped call loses them. */
+	public function projectTrace(source:TypedExpr, expression:HxExpr):HxExpr {
+		if (sealed)
+			throw "cannot add trace facts to a sealed projection";
+		traces.push(new TypedBackendTraceOccurrence({
+			owner: ownerIdentity,
+			revision: bodyRevision,
+			source: source,
+			expression: expression
+		}));
+		return expression;
+	}
+
+	public function getTraces():Array<TypedBackendTraceOccurrence> {
+		if (!sealed)
+			throw "trace facts require a sealed projection";
+		return traces.copy();
 	}
 
 	public function getStringConcats():Array<TypedBackendStringConcatOccurrence> {

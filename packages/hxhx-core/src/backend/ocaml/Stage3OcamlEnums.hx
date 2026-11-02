@@ -83,6 +83,14 @@ class Stage3OcamlEnums {
 		};
 	}
 
+	static function isBoolPayload(payload:Stage3OcamlEnumPayload):Bool {
+		return switch payload {
+			case NativeBool: true;
+			case NullableValue(value): isBoolPayload(value);
+			case _: false;
+		};
+	}
+
 	/** Reject erased or unmodeled payloads instead of claiming a native variant exists. */
 	function payloadTypes(constructor:Stage3OcamlEnumConstructor):Array<String> {
 		return [
@@ -141,6 +149,14 @@ class Stage3OcamlEnums {
 			final layout = types.length == 0 ? "HxType.EnumImmediate " + immediateTag++ : "HxType.EnumBlock " + blockTag++;
 			out.push("let () = HxType.register_enum_ctor_layout " + quote(owner.runtimeName) + " " + quote(constructor.name) + " " + constructor.index
 				+ " (" + layout + ")");
+			// A Bool payload is a raw OCaml bool; tell enum text which positions hold one.
+			final bools = [
+				for (index in 0...constructor.payloads.length)
+					if (isBoolPayload(constructor.payloads[index].storage)) Std.string(index)
+			];
+			if (bools.length > 0)
+				out.push("let () = HxDynamic.register_enum_bool_arguments " + quote(owner.runtimeName) + " " + quote(constructor.name) + " ["
+					+ bools.join("; ") + "]");
 		}
 		out.push("let () = ignore (HxType.enum_ " + quote(owner.runtimeName) + ")");
 		return out.join("\n") + "\n";
