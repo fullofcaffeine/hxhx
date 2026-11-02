@@ -288,7 +288,7 @@ class OcamlCallPlan {
 			final exact = Lambda.find(candidates, existing -> existing.id == decision.id);
 			if (exact != null) {
 				if (decisionFingerprint(exact) != decisionFingerprint(decision))
-					throw 'reflaxe.ocaml [ocaml-call:conflicting-source-occurrence]: call identity "${decision.id}" selects two different plans';
+					throw conflictingSourceOccurrence(key, exact, decision);
 				continue;
 			}
 			if (Lambda.exists(candidates,
@@ -308,16 +308,23 @@ class OcamlCallPlan {
 		revision = "sha256:" + Sha256.encode(ordered.map(decisionFingerprint).join("\n"));
 	}
 
-	/** Returns one admitted call by its exact final-body source occurrence. */
-	public function decisionFor(expression:TypedExpr):Null<OcamlCallDecision> {
+	/**
+		Returns one admitted call by its exact final-body source occurrence.
+
+		`stableLocalId` maps a Haxe host local to its stable lexical identity in
+		this function body. Pass it whenever it is available: Haxe can emit one
+		source call more than once with a different local callee in each copy,
+		and only the local identity tells those calls apart.
+	**/
+	public function decisionFor(expression:TypedExpr, ?stableLocalId:(hostLocalId:Int) -> Null<String>):Null<OcamlCallDecision> {
 		final candidates = bySourceKey.get(sourceKey(OcamlLoweredOrigin.sourceSpan(expression.pos))) ?? [];
-		final matching = candidates.filter(decision -> matchesTypedOccurrence(decision, expression));
+		final matching = candidates.filter(decision -> matchesTypedOccurrence(decision, expression, stableLocalId));
 		if (matching.length > 1)
 			throw 'reflaxe.ocaml [ocaml-call:ambiguous-source-occurrence]: ${matching.length} sealed calls match one typed occurrence at ${sourceKey(OcamlLoweredOrigin.sourceSpan(expression.pos))}';
 		return matching.length == 0 ? null : copyDecision(matching[0]);
 	}
 
-	static function matchesTypedOccurrence(decision:OcamlCallDecision, expression:TypedExpr):Bool {
+	static function matchesTypedOccurrence(decision:OcamlCallDecision, expression:TypedExpr, stableLocalId:Null<(hostLocalId:Int) -> Null<String>>):Bool {
 		if (decision.kind == OcamlCallKind.GenericInstanceHaxeMethod)
 			return decision.genericInstanceTarget != null && genericCallMatches(decision.genericInstanceTarget, expression);
 		return switch (expression.expr) {
@@ -355,17 +362,27 @@ class OcamlCallPlan {
 				if (decision.kind == OcamlCallKind.StructuralIteratorMethod
 					&& decision.structuralIteratorTarget != null): OcamlStructuralIteratorCallContract.matches(decision.structuralIteratorTarget, receiver,
 					fieldRef.get(), arguments, expression.t);
-			case TCall(callee, arguments) if (decision.kind == OcamlCallKind.TypedFunctionValue): final binding:OcamlFunctionPlanBinding = {
+			case TCall(callee, arguments) if (decision.kind == OcamlCallKind.TypedFunctionValue):
+				final binding:OcamlFunctionPlanBinding = {
 					functionId: decision.functionId,
 					programRevision: decision.programRevision,
 					bodyRevision: decision.bodyRevision,
 					pipelineRevision: decision.pipelineRevision
-				}; final signatureId = decision.callbackInvocation == null ? OcamlCallPlanner.functionValueSignatureIdForDecision(callee, arguments,
-					expression.t,
-					decision.result) : reflaxe.ocaml.lowered.OcamlGenericCallConversion.callableShape(callee.t) == null ? null : reflaxe.ocaml.lowered.OcamlGenericCallConversion.shapeId(reflaxe.ocaml.lowered.OcamlGenericCallConversion.callableShape(callee.t)); signatureId != null && (decision.callbackInvocation == null
-					|| (signatureId == decision.callbackInvocation.layout.semanticTypeId
-						&& arguments.length == decision.arguments.length)) && OcamlCallPlanner.functionValueCalleeId(callee, binding,
-					signatureId) == decision.calleeId;
+				};
+				final invocation = decision.callbackInvocation;
+				if (invocation == null) {
+					final signatureId = OcamlCallPlanner.functionValueSignatureIdForDecision(callee, arguments, expression.t, decision.result);
+					signatureId != null
+					&& OcamlCallPlanner.functionValueCalleeId(callee, binding, signatureId) == decision.calleeId;
+				} else {
+					final shape = reflaxe.ocaml.lowered.OcamlGenericCallConversion.callableShape(callee.t);
+					shape != null
+					&& reflaxe.ocaml.lowered.OcamlGenericCallConversion.shapeId(shape) == invocation.layout.semanticTypeId
+					&& arguments.length == decision.arguments.length
+					&& OcamlCallableInvocationContract.matchesCallee(invocation, callee, stableLocalId)
+					&& OcamlCallableInvocationContract.calleeId(invocation, binding) == decision.calleeId
+					;
+				}
 			case _:
 				false;
 		}
@@ -489,6 +506,28 @@ class OcamlCallPlan {
 	public function runtimeUsePlanFor(callId:String):Null<OcamlCallRuntimeUsePlan> {
 		final plan = runtimeUsesByCallId.get(callId);
 		return plan == null ? null : OcamlCallRuntimeUseContract.copy(plan);
+	}
+
+	/**
+		Describes two sealed plans that claim one call identity.
+
+		A call identity hashes the caller body, the source span, and the callee.
+		Two plans with that identity mean that one source span reached the
+		planner twice with different typed facts, for example when Haxe inlines
+		the same function body twice into one caller. The message names the
+		source span, the caller, the callee, and the first plan field that
+		differs, so a maintainer can find the call without rerunning the build.
+	**/
+	static function conflictingSourceOccurrence(key:String, existing:OcamlCallDecision, decision:OcamlCallDecision):String {
+		final left = decisionFingerprint(existing).split("|");
+		final right = decisionFingerprint(decision).split("|");
+		var index = 0;
+		while (index < left.length && index < right.length && left[index] == right[index])
+			index++;
+		final differs = index < left.length
+			|| index < right.length ? 'first differing plan field ${index}: "${index < left.length ? left[index] : ""}" vs "${index < right.length ? right[index] : ""}"' : "plans differ";
+		return
+			'reflaxe.ocaml [ocaml-call:conflicting-source-occurrence]: call identity "${decision.id}" selects two different plans at source occurrence "$key" in function "${decision.functionId}" for ${decision.kind}/${decision.calleeId}; $differs';
 	}
 
 	public static function sourceKey(source:OcamlLoweredSourceSpan):String {

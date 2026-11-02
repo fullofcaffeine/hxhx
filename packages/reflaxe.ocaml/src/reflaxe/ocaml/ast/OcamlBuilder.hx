@@ -515,6 +515,15 @@ class OcamlBuilder {
 	}
 
 	/** Resolves one request-local Haxe binding to the identity used by sealed plans. */
+	/**
+		The host-to-lexical local lookup that call-plan matching needs to tell two
+		emitted copies of one source call apart, or null outside a function body.
+	**/
+	function callLocalIdentity():Null<(hostLocalId:Int) -> Null<String>> {
+		final identities = currentLocalIdentities;
+		return identities == null ? null : hostLocalId -> identities.requireHostId(hostLocalId).id;
+	}
+
 	function stableLocalId(hostLocalId:Int, position:Position):String {
 		final identities = currentLocalIdentities;
 		if (identities == null)
@@ -3355,7 +3364,7 @@ class OcamlBuilder {
 					callPlanInvariant("callback value lost its published method", expression.pos);
 				reflaxe.ocaml.lowered.OcamlCallableDeclarationCarrier.requireSignature(declaration.layout, published.arguments, published.result);
 			case CallResult(source):
-				final selected = currentCallPlan == null ? null : currentCallPlan.decisionFor(unwrap(expression));
+				final selected = currentCallPlan == null ? null : currentCallPlan.decisionFor(unwrap(expression), callLocalIdentity());
 				if (selected == null
 					|| selected.result == null
 					|| selected.source.file != source.file
@@ -3377,7 +3386,7 @@ class OcamlBuilder {
 			if (isCallableViewLocal(left) || isCallableViewLocal(right))
 				return callPlanInvariant("callback comparison has no exact producer decision", source.pos);
 			for (value in [left, right]) {
-				final call = currentCallPlan == null ? null : currentCallPlan.decisionFor(unwrap(value));
+				final call = currentCallPlan == null ? null : currentCallPlan.decisionFor(unwrap(value), callLocalIdentity());
 				if (call != null && call.result != null && call.result.callableView != null)
 					return callPlanInvariant("returned callback comparison has no exact producer decision", source.pos);
 			}
@@ -4374,7 +4383,7 @@ class OcamlBuilder {
 		final plannedIMapStorageAliasUse = currentIMapInterfacePlan == null ? null : currentIMapInterfacePlan.storageAliasUseFor(e);
 		final iMapInterfaceCallCandidate = isExactIMapInterfaceCall(e);
 		final plannedIMapInterfaceCall = currentIMapInterfacePlan == null ? null : currentIMapInterfacePlan.callFor(e);
-		final plannedCall = currentCallPlan == null ? null : currentCallPlan.decisionFor(e);
+		final plannedCall = currentCallPlan == null ? null : currentCallPlan.decisionFor(e, callLocalIdentity());
 		final plannedReflectCompareValue = currentReflectComparePlan == null ? null : currentReflectComparePlan.decisionForValue(e);
 		final plannedReflectCompareCall = currentReflectComparePlan == null ? null : currentReflectComparePlan.decisionForCall(e);
 		final stringFromCharCodeCandidate = OcamlStringFromCharCodePlanner.isResolvedIntrinsic(e) || switch (e.expr) {

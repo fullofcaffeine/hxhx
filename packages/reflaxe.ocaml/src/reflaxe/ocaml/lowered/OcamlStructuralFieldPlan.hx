@@ -698,7 +698,7 @@ class OcamlStructuralFieldPlanner {
 			final currentOrdinal = ordinal++;
 			switch (expression.expr) {
 				case TCall({expr: TField(receiver, _)}, arguments):
-					final call = calls.decisionFor(expression);
+					final call = calls.decisionFor(expression, hostLocalId -> localIdentities.requireHostId(hostLocalId).id);
 					if (call != null && call.kind == OcamlCallKind.StructuralIteratorMethod) {
 						visit(receiver);
 						for (argument in arguments)
@@ -913,7 +913,7 @@ class OcamlStructuralFieldPlanner {
 				continue;
 			final expression = transparentExpression(provenLocalSource(localSources, initializer.expression));
 			final interfaceCall = iMapInterfaces.callFor(expression);
-			final call = calls.decisionFor(expression);
+			final call = calls.decisionFor(expression, hostLocalId -> localIdentities.requireHostId(hostLocalId).id);
 			final target = call == null ? null : call.standardIMapTarget;
 			var proof:Null<OcamlTupleIteratorLocalProof> = null;
 			if (interfaceCall != null
@@ -965,7 +965,7 @@ class OcamlStructuralFieldPlanner {
 			if (reassigned.exists(initializer.hostLocalId))
 				continue;
 			final expression = transparentExpression(initializer.expression);
-			final call = calls.decisionFor(expression);
+			final call = calls.decisionFor(expression, hostLocalId -> localIdentities.requireHostId(hostLocalId).id);
 			final target = call == null ? null : call.structuralIteratorTarget;
 			if (call == null
 				|| call.kind != OcamlCallKind.StructuralIteratorMethod

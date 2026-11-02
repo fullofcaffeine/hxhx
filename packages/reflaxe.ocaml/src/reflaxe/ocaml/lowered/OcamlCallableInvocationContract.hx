@@ -49,11 +49,31 @@ function fingerprint(value:OcamlCallableInvocationPlan):String {
 	].join("\n");
 }
 
-/** Reproduce the computed-callee identity from its source and complete final-body binding. */
+/**
+	Reproduce the computed-callee identity from its source and complete final-body binding.
+
+	A local callee also contributes its stable lexical local identity. Haxe can
+	copy one source block into a function body more than once. For example, the
+	pattern matcher emits a `switch` case body once for each decision path that
+	reaches it, and it gives the locals declared in each copy fresh variables:
+
+	```haxe
+	switch e {
+		case Pair(op, This, value) if (allowThis): op;
+		case Pair(op, left, right):
+			function wrap(text:String):String return "(" + text + ")";
+			wrap(op); // emitted twice, once per copy of `wrap`
+	}
+	```
+
+	Both copies of `wrap(op)` have the same source span, but each calls its own
+	local. Without the local identity, the two invocations would share one call
+	identity and the plan would reject them as conflicting.
+**/
 function calleeId(value:OcamlCallableInvocationPlan, binding:OcamlFunctionPlanBinding):String {
 	requireInvocation(value);
 	final form = switch (value.input) {
-		case ExistingView(_): "local-function-value";
+		case ExistingView(reference): "local-function-value\n" + reference.localId;
 		case CallResult(_): "call-result";
 		case _: throw "Callback invocation has no computed callee identity.";
 	};
@@ -67,3 +87,23 @@ function calleeId(value:OcamlCallableInvocationPlan, binding:OcamlFunctionPlanBi
 		value.layout.semanticTypeId
 	].join("|")).substr(0, 32);
 }
+
+#if (macro || reflaxe_runtime || eval)
+/**
+	Whether one fresh typed callee is the exact producer this invocation selected.
+
+	`stableLocalId` maps a Haxe host local to its stable lexical identity in the
+	current function body. It is required to tell two copies of one source call
+	apart (see `calleeId`); without it, only the callee form is checked.
+**/
+function matchesCallee(value:OcamlCallableInvocationPlan, callee:haxe.macro.Type.TypedExpr, ?stableLocalId:(hostLocalId:Int) -> Null<String>):Bool {
+	final actual = OcamlLoweredOrigin.sourceSpan(callee.pos);
+	if (actual.file != value.source.file || actual.min != value.source.min || actual.max != value.source.max)
+		return false;
+	return switch [value.input, callee.expr] {
+		case [ExistingView(reference), TLocal(local)]: stableLocalId == null || stableLocalId(local.id) == reference.localId;
+		case [CallResult(_), TCall(_, _)]: true;
+		case _: false;
+	};
+}
+#end
