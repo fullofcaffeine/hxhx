@@ -54,9 +54,11 @@ let stat (path : string) : file_stat =
     mode = s.st_perm;
   }
 
-(* Upstream Haxe reports every failed `fullPath` with the same fixed text. *)
+(* Upstream Haxe reports every failed `fullPath` with the same fixed text,
+   `Failure("get_full_path")`. Raise it as a `Sys_error` so Haxe code can
+   catch it; a real OCaml `Failure` is reserved for runtime invariants. *)
 let fullPath (relPath : string) : string =
-  try Unix.realpath relPath with Unix.Unix_error _ -> failwith "get_full_path"
+  try Unix.realpath relPath with Unix.Unix_error _ -> raise (Sys_error "Failure(\"get_full_path\")")
 
 let normalize_sep (p : string) : string =
   Stdlib.String.map (fun c -> if c = '\\' then '/' else c) p

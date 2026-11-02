@@ -2,10 +2,23 @@ dynamic: Could not read file .tmp/stage3_runtime_exception_catch_scratch/missing
 string: Could not read file .tmp/stage3_runtime_exception_catch_scratch/missing.txt
 exception: Could not read file .tmp/stage3_runtime_exception_catch_scratch/missing.txt / Could not read file .tmp/stage3_runtime_exception_catch_scratch/missing.txt
 thrown string as exception: plain
+subclass as exception: local failure
+subclass as itself: local failure
+subclass reached outer: local failure
+thrown int as exception: 42
+thrown float as exception: 1.5
+thrown bool as exception: true
 outer: Could not read file .tmp/stage3_runtime_exception_catch_scratch/missing.txt
+try as value: value fallback
+block value: Could not read file .tmp/stage3_runtime_exception_catch_scratch/missing.txt
+try as argument: message
 fallback: fallback
 first readable: present
 attempt 0 failed
+caught after continue: 2
+closure gave up after 1
+break from exception handler at 0
+exception stack available: true
 directory read: Could not read file .tmp/stage3_runtime_exception_catch_scratch
 rmdir missing: No such file or directory(rmdir, .tmp/stage3_runtime_exception_catch_scratch/missing-dir)
 rmdir file: Not a directory(rmdir, .tmp/stage3_runtime_exception_catch_scratch/present.txt)

@@ -126,15 +126,14 @@ What happens at each Stage3 `try`:
 - `Sys_error` becomes its message text. The file-system runtime
   (`HxFile`, `HxFileSystem`, `HxSys.setCwd`) shapes that text to match
   upstream, for example `No such file or directory(rmdir, missing)`.
-- `Failure`, `Invalid_argument`, `Not_found`, `End_of_file`, and
-  `Division_by_zero` become their printed OCaml form, for example
-  `Failure("get_full_path")`.
 - Each such value matches `catch (e:Dynamic)`, `catch (e:String)`, and
   `catch (e:haxe.Exception)`. A `haxe.Exception` handler receives an
   exception object whose `message` is the text.
 - Everything else passes through unchanged: loop `break`/`continue`, each
-  function's private early-return signal, and fatal conditions such as
-  `Stack_overflow`.
+  function's private early-return signal, fatal conditions such as
+  `Stack_overflow`, and the runtime's own invariant failures (`Failure`,
+  `Invalid_argument`). A backend bug therefore stops the program instead of
+  being swallowed by `catch (e:Dynamic)`.
 
 Known gaps: the `haxe.Exception` object is a plain `haxe.Exception`, not a
 `haxe.ValueException` (`haxe_ocaml-du1j7`), and `Std.string(e)` on it does not

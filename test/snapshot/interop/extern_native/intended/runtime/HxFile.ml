@@ -8,12 +8,15 @@
    a directory path, with one message: `Could not read file <path>`. Haxe code
    catches it through `HxRuntime.catchable_exception`. *)
 let read_whole_file (path : string) (read : in_channel -> int -> 'a) : 'a =
+  let failed () = raise (Sys_error ("Could not read file " ^ path)) in
+  (* A directory can open as a channel on some hosts; reject it first. *)
+  if Stdlib.Sys.file_exists path && Stdlib.Sys.is_directory path then failed ();
   try
     let ic = open_in_bin path in
     Fun.protect
       ~finally:(fun () -> close_in_noerr ic)
       (fun () -> read ic (in_channel_length ic))
-  with Sys_error _ | End_of_file -> raise (Sys_error ("Could not read file " ^ path))
+  with Sys_error _ | End_of_file -> failed ()
 
 let getContent (path : string) : string =
   read_whole_file path really_input_string

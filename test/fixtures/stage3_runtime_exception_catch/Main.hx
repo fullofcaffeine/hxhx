@@ -7,6 +7,12 @@
 	upstream Haxe. A handler for another type must let the failure reach an
 	outer handler, and `return` and `break` inside a `try` must keep working.
 **/
+class LocalFailure extends haxe.Exception {
+	public function new() {
+		super("local failure");
+	}
+}
+
 class Main {
 	static final scratch = ".tmp/stage3_runtime_exception_catch_scratch";
 
@@ -25,6 +31,21 @@ class Main {
 			} catch (e:String) {}
 		}
 		return "none";
+	}
+
+	static function closureInLoop():String {
+		for (attempt in 0...3) {
+			try {
+				final read = () -> {
+					return sys.io.File.getContent(scratch + "/missing.txt");
+				};
+				return read();
+			} catch (e:Dynamic) {
+				if (attempt == 1)
+					return "closure gave up after " + attempt;
+			}
+		}
+		return "unreachable";
 	}
 
 	static function main():Void {
@@ -57,6 +78,40 @@ class Main {
 			Sys.println("thrown string as exception: " + e.message);
 		}
 		try {
+			throw new LocalFailure();
+		} catch (e:haxe.Exception) {
+			Sys.println("subclass as exception: " + e.message);
+		}
+		try {
+			throw new LocalFailure();
+		} catch (e:LocalFailure) {
+			Sys.println("subclass as itself: " + e.message);
+		}
+		try {
+			try {
+				throw new LocalFailure();
+			} catch (e:String) {
+				Sys.println("wrong handler");
+			}
+		} catch (e:haxe.Exception) {
+			Sys.println("subclass reached outer: " + e.message);
+		}
+		try {
+			throw 42;
+		} catch (e:haxe.Exception) {
+			Sys.println("thrown int as exception: " + e.message);
+		}
+		try {
+			throw 1.5;
+		} catch (e:haxe.Exception) {
+			Sys.println("thrown float as exception: " + e.message);
+		}
+		try {
+			throw true;
+		} catch (e:haxe.Exception) {
+			Sys.println("thrown bool as exception: " + e.message);
+		}
+		try {
 			try {
 				sys.io.File.getContent(missing);
 			} catch (e:Int) {
@@ -65,6 +120,15 @@ class Main {
 		} catch (e:String) {
 			Sys.println("outer: " + e);
 		}
+		final asValue = try sys.io.File.getContent(missing) catch (e:Dynamic) "value fallback";
+		Sys.println("try as value: " + asValue);
+		final asBlockValue = try {
+			sys.io.File.getContent(missing);
+		} catch (e:String) {
+			"block value: " + e;
+		}
+		Sys.println(asBlockValue);
+		Sys.println("try as argument: " + (try sys.io.File.getContent(missing) catch (e:String) e.length > 0 ? "message" : "empty"));
 		Sys.println("fallback: " + readOrFallback(missing));
 		Sys.println("first readable: " + firstReadable([missing, file]));
 		for (attempt in 0...3) {
@@ -75,6 +139,35 @@ class Main {
 			} catch (e:Dynamic) {
 				Sys.println("attempt " + attempt + " failed");
 			}
+		}
+
+		var continued = 0;
+		for (attempt in 0...3) {
+			try {
+				if (attempt == 0)
+					continue;
+				sys.io.File.getContent(missing);
+			} catch (e:String) {
+				continued++;
+			}
+		}
+		Sys.println("caught after continue: " + continued);
+		Sys.println(closureInLoop());
+		var stopped = -1;
+		for (attempt in 0...3) {
+			try {
+				sys.io.File.getContent(missing);
+			} catch (e:haxe.Exception) {
+				stopped = attempt;
+				break;
+			}
+		}
+		Sys.println("break from exception handler at " + stopped);
+		try {
+			sys.io.File.getContent(missing);
+		} catch (e:Dynamic) {
+			final stack = haxe.CallStack.exceptionStack();
+			Sys.println("exception stack available: " + (stack != null));
 		}
 
 		try {
