@@ -15,7 +15,7 @@
     {
       "module": "EReg",
       "scope": "application",
-      "files": [{ "path": "EReg.ml", "sha256": "c8938f47c40905a871b1d64d31294e63ca376dd4e080ee036b036cc753ce3ea2" }],
+      "files": [{ "path": "EReg.ml", "sha256": "324942643ba19a617be61e834bde6fc84905fab501686bb79df823a7dd9cf6f3" }],
       "dependencies": ["HxAnon", "HxArray", "HxRuntime", "HxString"],
       "duneLibraries": ["str"],
       "profiles": ["metal", "portable"],
@@ -24,7 +24,7 @@
     {
       "module": "HxAnon",
       "scope": "application",
-      "files": [{ "path": "HxAnon.ml", "sha256": "71e2e763978ba8a1664fc7fdb0973c96c895e4e16bb548fcba62a4b0bd07e25d" }],
+      "files": [{ "path": "HxAnon.ml", "sha256": "428b5cb030fb568b94f4eae120fc25f19998c7057c616690b60a4441b7f10106" }],
       "dependencies": ["HxArray", "HxIterator", "HxRuntime", "HxString"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],

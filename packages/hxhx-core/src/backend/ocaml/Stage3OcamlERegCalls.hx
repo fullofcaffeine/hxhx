@@ -56,6 +56,22 @@ function renderConstruction(input:{
 }
 
 /**
+	The `EReg.ml` export and the accepted source argument count for one EReg
+	instance method. A method without an adapter is an emit-time error.
+**/
+function instanceMethod(method:String):{export:String, min:Int, max:Int} {
+	return switch method {
+		case "match": {export: "hx_match", min: 1, max: 1};
+		case "matched": {export: "matched", min: 1, max: 1};
+		case "matchedLeft" | "matchedRight" | "matchedPos": {export: method, min: 0, max: 0};
+		case "matchSub": {export: "matchSub", min: 2, max: 3};
+		case "split": {export: "split", min: 1, max: 1};
+		case "replace" | "map": {export: method, min: 2, max: 2};
+		case _: throw "stage3 emitter: EReg." + method + " has no native adapter in Stage3OcamlERegCalls";
+	};
+}
+
+/**
 	Render one typed `EReg` instance call, or return `null` when the declaration
 	is not the standard `EReg` class. An `EReg` method without an adapter is an
 	emit-time error.
@@ -80,15 +96,7 @@ function render(input:{
 	if (!ownsName(occurrence.getDeclaration().getOwner().getCanonicalName()))
 		return null;
 	final call = occurrence.getCall();
-	final range:{export:String, min:Int, max:Int} = switch call.method {
-		case "match": {export: "hx_match", min: 1, max: 1};
-		case "matched": {export: "matched", min: 1, max: 1};
-		case "matchedLeft" | "matchedRight" | "matchedPos": {export: call.method, min: 0, max: 0};
-		case "matchSub": {export: "matchSub", min: 2, max: 3};
-		case "split": {export: "split", min: 1, max: 1};
-		case "replace" | "map": {export: call.method, min: 2, max: 2};
-		case _: throw "stage3 emitter: EReg." + call.method + " has no native adapter in Stage3OcamlERegCalls";
-	};
+	final range = instanceMethod(call.method);
 	if (call.arguments.length < range.min || call.arguments.length > range.max)
 		throw "stage3 emitter: EReg."
 			+ call.method

@@ -526,13 +526,21 @@ let compile ~(utf8 : bool) ~(casefold : bool) ((source, group_map) : string * in
 let create (r : string) (opt : string) : t =
   let pattern = Stdlib.Array.init (HxString.length r) (fun i -> HxString.cca r i) in
   let casefold = Stdlib.String.contains opt 'i' and dotall = Stdlib.String.contains opt 's' in
-  { global = Stdlib.String.contains opt 'g'
-  ; casefold
-  ; ascii_mode = compile ~utf8:false ~casefold (translate ~utf8:false ~casefold ~dotall pattern)
-  ; utf8_source = translate ~utf8:true ~casefold ~dotall pattern
-  ; utf8_mode = None
-  ; last = None
-  }
+  (* Translation and `Str` report an invalid pattern with an OCaml `Failure`,
+     which Haxe `catch` cannot see. Throw a Haxe String instead. Upstream's
+     message text differs per target, so this keeps the reason. *)
+  try
+    { global = Stdlib.String.contains opt 'g'
+    ; casefold
+    ; ascii_mode = compile ~utf8:false ~casefold (translate ~utf8:false ~casefold ~dotall pattern)
+    ; utf8_source = translate ~utf8:true ~casefold ~dotall pattern
+    ; utf8_mode = None
+    ; last = None
+    }
+  with Failure reason ->
+    HxRuntime.hx_throw_typed
+      (Obj.repr ("EReg: invalid regular expression \"" ^ r ^ "\": " ^ reason))
+      [ "String"; "Dynamic" ]
 
 let compiled_for (self : t) (l : HxString.layout) : compiled =
   if l.HxString.ascii then self.ascii_mode
