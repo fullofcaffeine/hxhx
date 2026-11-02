@@ -34,8 +34,8 @@ class M14UntypedIndexedAssignmentTest {
 		check("result_to_call", getter + setter, take + 'static function w(b:B):Void{take(untyped b[0]=1);}', true);
 		check("result_to_typed_setter", getter + setter, 'static function w(b:B):Void{b[1]=untyped b[0]=1;}', true);
 		check("result_local_to_untyped_setter", getter + setter, 'static function w(b:B):Void{var x=untyped b[0]=1;untyped b[0]=x;}', true);
-		// Update forms stay rejected for a getter-only abstract; real untyped update
-		// support with a declared setter is owned by haxe_ocaml-2hkru.
+		// Update forms stay rejected for a getter-only abstract. Untyped updates with a
+		// declared setter are covered by M14UntypedIndexedUpdateTest.
 		check("compound_getter_only", getter, 'static function w(b:B):Void{untyped b[0]+=1;}', false);
 		check("null_coalescing_getter_only", getter, 'static function w(b:B):Void{untyped b[0]??=1;}', false);
 		check("parenthesized_untyped_place", getter + setter, 'static function w(b:B):Void{(untyped b[0])=9;}', false);

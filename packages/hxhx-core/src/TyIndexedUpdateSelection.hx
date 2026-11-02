@@ -8,6 +8,14 @@ enum TyIndexedUpdateKind {
 typedef TyIndexedUpdateQueryInput = {
 	final owner:String;
 	final source:HxExpr;
+
+	/**
+		The authored occurrence the typed-body builder looks up. It is `source` except
+		for `(untyped b[i]) op= v`: that authored node carries the open untyped result,
+		while `source` is a same-operand copy that carries the setter's result.
+	**/
+	final ?authored:HxExpr;
+
 	final kind:TyIndexedUpdateKind;
 	final getterSource:HxExpr;
 	final computedSource:HxExpr;
@@ -20,6 +28,7 @@ typedef TyIndexedUpdateQueryInput = {
 class TyIndexedUpdateQuery {
 	public final owner:String;
 	public final source:HxExpr;
+	public final authored:HxExpr;
 	public final kind:TyIndexedUpdateKind;
 	public final getterSource:HxExpr;
 	public final computedSource:HxExpr;
@@ -32,6 +41,7 @@ class TyIndexedUpdateQuery {
 	public function new(input:TyIndexedUpdateQueryInput) {
 		owner = input.owner;
 		source = input.source;
+		authored = input.authored == null ? input.source : input.authored;
 		kind = input.kind;
 		getterSource = input.getterSource;
 		computedSource = input.computedSource;
@@ -48,6 +58,8 @@ class TyIndexedUpdateQuery {
 				if (queries[index] == queries[prior])
 					throw "indexed update results require distinct source queries";
 		fingerprints = queries.map(TypedBodyFingerprint.exactExpression);
+		if (TypedBodyFingerprint.exactExpression(authored) != fingerprints[0])
+			throw "indexed update query must share its authored operands";
 	}
 
 	function matchesSource():Bool {
@@ -57,7 +69,7 @@ class TyIndexedUpdateQuery {
 					case _: false;
 				};
 			case Compound(op): HxBinaryOperatorTools.isCompoundAssignment(op) && switch source {
-					case EBinop(actual, EArrayAccess(_, _), _): actual == op;
+					case EBinop(actual, EArrayAccess(_, _) | EUntyped(EArrayAccess(_, _)), _): actual == op;
 					case _: false;
 				};
 		};
@@ -81,6 +93,8 @@ class TyIndexedUpdateQuery {
 		for (index in 0...queries.length)
 			if (fingerprints[index] != TypedBodyFingerprint.exactExpression(queries[index]))
 				throw "indexed update source or query changed";
+		if (TypedBodyFingerprint.exactExpression(authored) != fingerprints[0])
+			throw "indexed update authored source changed";
 		if (!matchesSource())
 			throw "indexed update kind disagrees with its source";
 	}
