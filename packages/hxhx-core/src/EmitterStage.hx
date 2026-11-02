@@ -3032,14 +3032,17 @@ class EmitterStage {
 				+ exprToOcamlAsFloatValueStage3(continuation, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 					callSigByCallee, checkedInt)
 				+ ")";
+			// A negative literal is parenthesized: `float_of_int -2147483648` would
+			// parse as a subtraction.
 			case EInt(v):
-				"float_of_int " + Std.string(v);
+				v < 0 ? "(float_of_int (" + Std.string(v) + "))" : "float_of_int " + Std.string(v);
 			case EUnop(op, fixity, inner) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
 				"(-.(" + exprToOcamlAsFloatValueStage3(inner, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 					callSigByCallee, checkedInt) + "))";
 			// Promote when the caller proved the value is an Int (`checkedInt`), or when
-			// the typer recorded an exact Int for this local or field read.
-			case _ if (checkedInt || (expr.match(EIdent(_) | EField(_, _)) && stage3ExactPrimitiveKey(expr) == "primitive:Int")):
+			// the typer recorded an exact Int result, even one the caller did not check:
+			// a call, a binop or a field, as in `Math.round(id(4))` and `Math.round(w * 2)`.
+			case _ if (checkedInt || stage3ExactPrimitiveKey(expr) == "primitive:Int"):
 				backend.ocaml.Stage3OcamlNumericWidening.promote(exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
 					moduleNameByPkgAndClass, callSigByCallee));
 			case EIdent(name) if (stage3TyForIdent(name, tyByIdent) == "Int"):
