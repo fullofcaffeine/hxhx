@@ -520,7 +520,8 @@ class TyperStage {
 			if (abstractInfo != null && !abstractInfo.getUnderlyingType().isUnknown())
 				for (fn in HxClassDecl.getFunctions(classDeclaration))
 					if (HxFunctionDecl.getName(fn) == "new" && !HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getHasBody(fn))
-						TyAbstractConstructorInitialization.require(HxFunctionDecl.getBody(fn), parsed.getFilePath(), HxFunctionDecl.getPos(fn));
+						TyAbstractConstructorInitialization.require(HxFunctionDecl.getBody(fn), parsed.getFilePath(), HxFunctionDecl.getPos(fn),
+							[for (argument in HxFunctionDecl.getArgs(fn)) HxFunctionArg.getName(argument)]);
 			final headerTypes = resolveClassHeaderTypes(classDeclaration, context);
 			final typedFunctions = new Array<TypedFunction>();
 			final typedFieldInitializers = new Array<TypedFieldInitializer>();

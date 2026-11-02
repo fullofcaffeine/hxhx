@@ -13,7 +13,7 @@ for case in json.loads((root / "cases.json").read_text()):
     folder.mkdir(exist_ok=True)
     source = ('class Main { static function main():Void { new Result(false); } }\n'
               'abstract Result(Int) { public function new(flag:Bool) { '
-              + case["body"] + ' } }\n')
+              + case["body"] + ' } static inline final COUNT = 3; }\n')
     (folder / "Main.hx").write_text(source)
     command = ["haxe", "-cp", str(folder), "-main", "Main", "--js",
                str(folder / "unused.js"), "--no-output"]

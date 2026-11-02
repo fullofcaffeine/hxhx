@@ -44,9 +44,19 @@ class TyAbstractConstructorInitialization {
 		this.filePath = filePath;
 	}
 
+	/**
+		Names declared by the constructor itself: its parameters and its local
+		variables. A range bound that names one of them is a run-time value, so
+		upstream does not unroll that loop.
+	**/
+	final runtimeNames = new Map<String, Bool>();
+
 	/** Throw upstream's diagnostic when `body` can complete without assigning `this`. */
-	public static function require(body:Array<HxStmt>, filePath:String, constructorPos:HxPos):Void {
+	public static function require(body:Array<HxStmt>, filePath:String, constructorPos:HxPos, ?parameterNames:Array<String>):Void {
 		final checker = new TyAbstractConstructorInitialization(filePath);
+		for (name in (parameterNames == null ? [] : parameterNames))
+			checker.runtimeNames.set(name, true);
+		checker.collectLocals(body);
 		if (!checker.statements(body, false, constructorPos))
 			throw new TyperError(filePath, constructorPos, MESSAGE);
 	}
@@ -64,6 +74,29 @@ class TyAbstractConstructorInitialization {
 	**/
 	function ends(assigned:Bool):Bool
 		return nested ? assigned : true;
+
+	function collectLocals(body:Array<HxStmt>):Void {
+		for (s in body)
+			switch (s) {
+				case SVar(name, _, _, _):
+					runtimeNames.set(name, true);
+				case SBlock(children, _):
+					collectLocals(children);
+				case SIf(_, whenTrue, whenFalse, _):
+					collectLocals([whenTrue]);
+					if (whenFalse != null)
+						collectLocals([whenFalse]);
+				case SWhile(_, child, _) | SDoWhile(child, _, _) | SForIn(_, _, child, _) | SForKeyValue(_, _, _, child, _) | STargetScope(_, child, _):
+					collectLocals([child]);
+				case STry(child, catches, _):
+					collectLocals([child]);
+					for (handler in catches)
+						collectLocals([handler.body]);
+				case SSwitch(_, _, bodies, _, _) | SGuardedSwitch(_, _, _, bodies, _):
+					collectLocals(bodies);
+				case _:
+			}
+	}
 
 	function statements(body:Array<HxStmt>, assigned:Bool, pos:HxPos):Bool {
 		var state = assigned;
@@ -136,11 +169,39 @@ class TyAbstractConstructorInitialization {
 		unrolls only within a cost limit (`0...1000` is not unrolled); this check
 		accepts every non-empty constant range rather than model that limit.
 	**/
-	static function runsAtLeastOnce(iterable:HxExpr):Bool {
+	function runsAtLeastOnce(iterable:HxExpr):Bool {
 		return switch (iterable) {
 			case EParenthesized(inner, _): runsAtLeastOnce(inner);
-			case ERange(EInt(start), EInt(end)): end > start;
+			case ERange(start, end):
+				final first = constantInt(start);
+				final last = constantInt(end);
+				if (first != null && last != null) last > first; else // A bound that is no literal: a constructor parameter or local is a
+					// run-time value (no unrolling). Anything else, such as an inline
+					// constant, may be unrolled by upstream, so do not reject it.
+					!(mentionsRuntimeName(start) || mentionsRuntimeName(end));
 			case EArrayDecl(values): values.length > 0;
+			case _: false;
+		};
+	}
+
+	static function constantInt(e:HxExpr):Null<Int> {
+		return switch (e) {
+			case EInt(value): value;
+			case EParenthesized(inner, _): constantInt(inner);
+			case EUnop(Negate, _, inner):
+				final value = constantInt(inner);
+				value == null ? null : -value;
+			case _: null;
+		};
+	}
+
+	function mentionsRuntimeName(e:HxExpr):Bool {
+		return switch (e) {
+			case EIdent(name): runtimeNames.exists(name);
+			case EParenthesized(inner, _) | EUnop(_, _, inner) | EField(inner, _): mentionsRuntimeName(inner);
+			case EBinop(_, left, right): mentionsRuntimeName(left) || mentionsRuntimeName(right);
+			case ETernary(condition, whenTrue, whenFalse): mentionsRuntimeName(condition) || mentionsRuntimeName(whenTrue) || mentionsRuntimeName(whenFalse);
+			case ECall(callee, arguments): true;
 			case _: false;
 		};
 	}
@@ -168,6 +229,10 @@ class TyAbstractConstructorInitialization {
 					sawFalse = true;
 					onlyConstructors = false;
 				case PEnumValue(_) | PEnumExtract(_, _):
+				case PGuard(_, _):
+					// A guarded case never covers its values, and it does not stop the
+					// unguarded cases from covering the switch (upstream accepts
+					// `case Some(v) if (v > 0): ... case Some(_): ... case None: ...`).
 				case _:
 					onlyConstructors = false;
 			}
@@ -184,7 +249,8 @@ class TyAbstractConstructorInitialization {
 		return switch (e) {
 			case EThis:
 				assigned ? true : fail(pos);
-			case EBinop("=", EThis, value):
+			case EBinop("=", EThis | EUntyped(EThis) | EParenthesized(EThis, _), value):
+				// `untyped this = value` parses with the untyped marker on the destination.
 				expression(value, assigned, pos);
 				true;
 			case EBinop(op, EThis, value) if (StringTools.endsWith(op, "=") && op != "==" && op != "!=" && op != "<=" && op != ">="):
