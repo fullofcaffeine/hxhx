@@ -72,8 +72,9 @@ private function constant(expected:Null<TyType>, actual:TyType, literal:HxExpr, 
 }
 
 /**
-	Whether a constant reaches an abstract through one of its declared `from` or `to`
-	types, as upstream's unification allows. For example, `case 1:` matches
+	Whether a constant reaches an abstract through one of its declared `from` types, as
+	upstream's unification allows. A `to` type is no path: `case 1:` on
+	`abstract TO(Int) to Int` fails with `Int should be TO`. For example, `case 1:` matches
 	`abstract M(Float) from Int to Float`, `abstract N(Null<Int>) from Int`, and cpp's
 	`Single` (`from Float`, so an Int widens first). The underlying type alone is not
 	a path: `case 1:` on `enum abstract EA(Int)` without `from Int` is rejected. A
@@ -86,7 +87,7 @@ private function abstractPath(expected:TyType, actual:TyType, literal:HxExpr, in
 	if (owner == null || seen.indexOf(identity.getCanonicalName()) >= 0)
 		return false;
 	final next = seen.concat([identity.getCanonicalName()]);
-	for (path in owner.getImplicitFromTypes().concat(owner.getImplicitToTypes())) {
+	for (path in owner.getImplicitFromTypes()) {
 		if (path.hasTypeParameter() || path.isTypeParameter())
 			return true;
 		if (TyValueCompatibility.accepts(index, path, actual, literal)

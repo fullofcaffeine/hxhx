@@ -1,3 +1,4 @@
+import TyFieldConstant.TyFieldConstantKind;
 import TySwitchAnalysis.TySwitchCaseCoverage;
 import TySwitchAnalysis.TySwitchCoverageResult;
 
@@ -76,9 +77,30 @@ private function analyze(scrutinee:TyType, patterns:Array<HxSwitchPattern>, ctx:
 		final own = info.fieldInfo(name);
 		return own != null ? own : ctx.importedStaticField(name);
 	}
+	// A constant covers the member with the same backing value, as upstream compares values:
+	// `case 1:` on `enum abstract EB(Int) from Int { var One = 1; }` covers One.
+	function constantMember(matches:TyFieldConstantKind->Bool):TySwitchCaseCoverage {
+		for (member in domain.getMembers())
+			if (matches(member.field.getConstant().getKind()))
+				return Member(member.field);
+		return UnmatchedConstant;
+	}
 	function resolve(pattern:HxSwitchPattern):TySwitchCaseCoverage {
 		return switch (pattern) {
 			case PNull: NullOnly;
+			case PInt(value): constantMember(kind -> switch kind {
+					case IntValue(other): other == value;
+					case _: false;
+				});
+			case PString(value): constantMember(kind -> switch kind {
+					case StringValue(other): other == value;
+					case _: false;
+				});
+			case PBool(value): constantMember(kind -> switch kind {
+					case BoolValue(other): other == value;
+					case _: false;
+				});
+			case PFloat(_): UnmatchedConstant;
 			case PWildcard: CatchAll;
 			case PBind(name):
 				final field = resolveMember(name);

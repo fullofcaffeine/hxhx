@@ -24,6 +24,8 @@ class M14PatternCompoundKindsTest {
 		+ "enum E { A(i:Int); B(f:Float, s:String); }\n"
 		+ "class Pt { public var x:Int; public function new() x = 1; }\n"
 		+ "class Box { public var x:Int = 1; public var f:Float = 1.5; public var i32:haxe.Int32 = 1; public function new() {} }\n"
+		+ "enum abstract EB(Int) from Int { var Eins = 1; var Zwei = 2; }\n"
+		+ "abstract TO(Int) to Int {}\n"
 		+ "abstract M(Float) from Int to Float {}\n"
 		+ "abstract N(Null<Int>) from Int {}\n"
 		+ "class H { public static function half(i:Int) return i / 2; }\n";
@@ -79,7 +81,13 @@ class M14PatternCompoundKindsTest {
 			// A bare enum-abstract value has the abstract's type, so its underlying Int is no path.
 			{name: "BareEnumAbstractInt", body: "var e = One; switch (e) { case 1: case _: }", diagnostic: "Int should be EA"},
 			// Upstream names a nullable place's own type for a bitwise operator.
-			{name: "NullFloatBitwise", body: "var n:Null<Float> = 1.5; n |= 1;", diagnostic: "Null<Float> should be Int"}
+			{name: "NullFloatBitwise", body: "var n:Null<Float> = 1.5; n |= 1;", diagnostic: "Null<Float> should be Int"},
+			// A `to` type is no path for a constant.
+			{name: "ToOnlyAbstractInt", body: "var t:TO = cast 1; switch (t) { case 1: case _: }", diagnostic: "Int should be TO"},
+			// A constant covers the enum-abstract member with the same value; coverage names the rest.
+			{name: "EnumAbstractConstantPartial", body: "var e = Eins; switch (e) { case 1: }", diagnostic: "Unmatched patterns: Zwei"},
+			{name: "EnumAbstractConstantNoMember", body: "var e = Eins; switch (e) { case 3: }", diagnostic: "Unmatched patterns: Eins | Zwei"},
+			{name: "EnumAbstractMemberAndConstant", body: "var e = Eins; switch (e) { case Eins: case 3: }", diagnostic: "Unmatched patterns: Zwei"}
 		])
 			reject("Pattern" + entry.name, entry.body, entry.diagnostic);
 		accept("PatternAccepted", [
@@ -104,7 +112,12 @@ class M14PatternCompoundKindsTest {
 			"var x = null; x = 1.5; switch (x) { case 1.5: case _: }",
 			// Declared `from` types are paths for a constant.
 			"var m:M = 1; switch (m) { case 1: case _: }",
-			"var n:N = 1; switch (n) { case 1: case _: }"
+			"var n:N = 1; switch (n) { case 1: case _: }",
+			// Constants on a `from Int` enum abstract cover its members by value.
+			"var e = Eins; switch (e) { case 1: case _: }",
+			"var e:EB = Eins; switch (e) { case 1: case _: }",
+			"var e = Eins; switch (e) { case 1: case 2: }",
+			"var e = Eins; switch (e) { case 1: case Zwei: }"
 		]);
 		for (row in [
 			"IntLocal += 1.5 Float should be Int",

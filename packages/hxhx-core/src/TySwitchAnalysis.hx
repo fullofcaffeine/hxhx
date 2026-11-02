@@ -7,6 +7,14 @@ enum TySwitchCaseCoverage {
 	NullOnly;
 	Guarded(pattern:TySwitchCaseCoverage);
 	Alternatives(cases:Array<TySwitchCaseCoverage>);
+
+	/**
+		A constant such as `case 3:` that equals no declared member. It covers nothing, but
+		like a member pattern it makes the missing members the diagnostic, as upstream's
+		`Unmatched patterns: One | Two` does, instead of `_`.
+	**/
+	UnmatchedConstant;
+
 	Unsupported(reason:String);
 }
 
@@ -61,6 +69,8 @@ class TySwitchAnalysis {
 				case Alternatives(items):
 					for (item in items)
 						visit(item, contributes);
+				case UnmatchedConstant:
+					hasMemberPattern = true;
 				case Unsupported(reason):
 					unsupported = reason;
 			}
