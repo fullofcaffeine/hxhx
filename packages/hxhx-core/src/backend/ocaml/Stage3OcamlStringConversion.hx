@@ -34,6 +34,29 @@ function boolTextType(type:Null<TyType>, ?underlying:String->Null<TyType>):Null<
 	return TyType.fromHintText(type.isNullable() ? "Null<Bool>" : "Bool");
 }
 
+/** Whether a value of this checked type is a String, which may be null at run time. */
+function isStringText(type:Null<TyType>):Bool
+	return type != null && !type.isUnknown() && !type.isUnresolved() && type.unwrapNull().getSemanticKey() == "primitive:String";
+
+/**
+	Whether `expr` can never produce a null String: a literal, or a String
+	concatenation (its result is always a real string). Every other String
+	expression may be null and must print `null` (haxe_ocaml-txs4e,
+	haxe_ocaml-aib5d).
+**/
+function nonNullText(expr:HxExpr):Bool {
+	return switch expr {
+		case EString(_): true;
+		case EBinop("+", _, _): true;
+		case EParenthesized(inner, _): nonNullText(inner);
+		case _: false;
+	};
+}
+
+/** A String value as text: `null` prints `null`. Literals and concatenations need no check. */
+function stringText(expr:HxExpr, rendered:String):String
+	return nonNullText(expr) ? rendered : "HxString.toStdString (" + rendered + ")";
+
 /** `type`, or Bool / `Null<Bool>` when it is an abstract over Bool. */
 function textType(type:TyType, ?underlying:String->Null<TyType>):TyType {
 	final boolText = boolTextType(type, underlying);

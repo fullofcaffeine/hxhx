@@ -120,7 +120,8 @@ function arithmetic(kind:Stage3OcamlLocalCompoundKind, op:String):(String, Strin
 		case [FloatUpdate, "*="]: (left, right) -> "((" + left + ") *. (" + right + "))";
 		case [FloatUpdate, "/="]: (left, right) -> "((" + left + ") /. (" + right + "))";
 		case [FloatUpdate, "%="]: (left, right) -> "(mod_float (" + left + ") (" + right + "))";
-		case [StringUpdate, "+="]: (left, right) -> "((" + left + ") ^ (" + right + "))";
+		// A null String local appends to the text "null", as in Haxe.
+		case [StringUpdate, "+="]: (left, right) -> "((HxString.toStdString (" + left + ")) ^ (" + right + "))";
 		case _: throw "unsupported OCaml local compound assignment value: " + op + " on " + kind.getName();
 	};
 }
