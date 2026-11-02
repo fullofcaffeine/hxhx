@@ -1,0 +1,24 @@
+literal true false
+local true false
+compare true false
+call true
+static true true
+is true true
+int 1 0
+true,false,true
+[true,false,true] [true,false,true]
+nullable true true
+nullable false
+nullable null true
+condition true
+omitted on off
+echo null echo true echo false
+map true false
+{ok: true} true
+dynamic false false
+[true,1,false]
+true false
+interpolated true true
+result true null
+true|null|false
+ternary true
