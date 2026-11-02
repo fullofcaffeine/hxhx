@@ -1175,7 +1175,7 @@ class TyperStage {
 				case SSwitch(scrutinee, patterns, bodies, pos):
 					// Check the finite source domain before accepting any case body.
 					final scrutTy = inferSwitchInput(scrutinee, patterns, scope, ctx, pos);
-					TySwitchTyping.check(scrutTy, patterns, bodies == null ? -1 : bodies.length, ctx, pos);
+					TySwitchTyping.check(scrutTy, patterns, bodies == null ? -1 : bodies.length, ctx, pos, scope.isUntypedContext());
 					if (patterns != null && bodies != null) {
 						final count = patterns.length < bodies.length ? patterns.length : bodies.length;
 						for (i in 0...count) {
@@ -3401,6 +3401,8 @@ class TyperStage {
 						// Runtime class values were resolved above. Preserve the existing enum
 						// constructor path until its separate typed-enum owner replaces it.
 						switch (expr) {
+							// A bare enum-abstract value of this module has that abstract's type.
+							case EEnumValue(name) if (ctx.moduleEnumAbstractValueField(name) != null): ctx.moduleEnumAbstractValueField(name).getType();
 							case EEnumValue(_): TyType.fromHintText("String");
 							// Only an unresolved host name under authored untyped syntax
 							// gets a retained inference occurrence. Known lexical/member
@@ -3855,7 +3857,7 @@ class TyperStage {
 				// Bring-up: type the scrutinee and unify case-expression types best-effort.
 				// This is intentionally permissive; if unification fails we widen to Dynamic.
 				final scrutTy = inferSwitchInput(scrutinee, patterns, scope, ctx, pos);
-				TySwitchTyping.check(scrutTy, patterns, exprs == null ? -1 : exprs.length, ctx, pos);
+				TySwitchTyping.check(scrutTy, patterns, exprs == null ? -1 : exprs.length, ctx, pos, scope.isUntypedContext());
 				var out:TyType = TyType.unknown();
 				if (patterns != null && exprs != null) {
 					final count = patterns.length < exprs.length ? patterns.length : exprs.length;
@@ -4104,12 +4106,15 @@ class TyperStage {
 						final bound = try TyAbstractBinaryBinding.select(ctx.getIndex(), leftType, rightType, op, ctx.getFilePath(),
 							pos) catch (error:TyperError) {
 							// Report a failed abstract lookup with a numeric value as upstream does.
-							final reworded = StringTools.startsWith(error.getMessage(),
-								"No applicable abstract binary operator ") ? TyCompoundAssignmentKinds.abstractFailure(op, leftType, rightType,
+							final reworded = !scope.isUntypedContext()
+								&& StringTools.startsWith(error.getMessage(),
+									"No applicable abstract binary operator ") ? TyCompoundAssignmentKinds.abstractFailure(op, leftType, rightType,
 									ctx.getIndex()) : null;
 							throw reworded == null ? error : new TyperError(ctx.getFilePath(), pos, reworded);
 						};
-						final kindFailure = bound == null ? TyCompoundAssignmentKinds.primitive(op, leftType, rightType) : null;
+						// Inside `untyped`, upstream does not report these kind errors.
+						final kindFailure = bound == null
+							&& !scope.isUntypedContext() ? TyCompoundAssignmentKinds.primitive(op, leftType, rightType) : null;
 						if (kindFailure != null)
 							throw new TyperError(ctx.getFilePath(), pos, kindFailure);
 						if (bound != null) {
@@ -4188,8 +4193,9 @@ class TyperStage {
 						if (bound != null) bound.getOperatorInfo().getResultType(); else {
 							final integer = op == "/" ? null : TyNullableIntegerResult.result(ta, tb);
 							final unified = integer == null ? TyType.unify(ta, tb) : integer;
+							// Haxe's `/` always produces Float, even for two Int operands.
 							unified != null
-							&& unified.isNumeric() ? unified : TyType.unknown();
+							&& unified.isNumeric() ? (op == "/" ? TyType.fromHintText("Float") : unified) : TyType.unknown();
 						}
 					case _:
 						inferExprType(a, scope, ctx, pos);

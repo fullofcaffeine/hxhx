@@ -161,6 +161,19 @@ class TyAbstractBinaryBinding {
 			+ detail);
 	}
 
+	/**
+		Whether an abstract operand declares an operator for `op` or for its base operator
+		(`+` for `+=`). A compound failure on such an abstract comes from that declaration,
+		as for `haxe.Int32`; an abstract without one fails for another reason.
+	**/
+	public static function declaresOperator(index:TyperIndex, leftType:TyType, rightType:TyType, op:String):Bool {
+		if (index == null || leftType == null || rightType == null)
+			return false;
+		final baseOperator = HxBinaryOperatorTools.baseOperator(op);
+		return collect(index, leftType, rightType, op).length > 0
+			|| (baseOperator != null && collect(index, leftType, rightType, baseOperator).length > 0);
+	}
+
 	/** Ordinary Haxe operations that remain legal after overload lookup misses. **/
 	public static function permitsOrdinaryFallback(op:String, leftType:TyType, rightType:TyType):Bool {
 		if (HxBinaryOperatorTools.permitsOrdinaryAbstractFallback(op))

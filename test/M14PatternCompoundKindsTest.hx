@@ -2,7 +2,9 @@
 	Constant patterns and compound assignments must check value kinds as Haxe 4.3.7 does.
 
 	Before this test, hxhx accepted `switch (i:Int) { case 1.5: }`, `anon.f |= 1` on a
-	Float field and `b.x /= 2` on an Int field. Upstream rejects each with
+	Float field and `b.x /= 2` on an Int field. The accepted groups also hold forms that
+	a first version of these checks rejected by mistake: code inside `untyped`, the Float
+	result of `/`, locals first assigned `null`, and abstracts reached through `from`. Upstream rejects each with
 	`Float should be Int`. Every case below is first checked with upstream Haxe, then
 	typed by hxhx with the production class paths. Rejected cases must give upstream's
 	first-line message; accepted cases share one module per group.
@@ -21,7 +23,10 @@ class M14PatternCompoundKindsTest {
 		+ "abstract Money(Int) from Int to Int { @:op(A / B) static function div(a:Money, b:Int):Money return Std.int((a:Int) / b); }\n"
 		+ "enum E { A(i:Int); B(f:Float, s:String); }\n"
 		+ "class Pt { public var x:Int; public function new() x = 1; }\n"
-		+ "class Box { public var x:Int = 1; public var f:Float = 1.5; public var i32:haxe.Int32 = 1; public function new() {} }\n";
+		+ "class Box { public var x:Int = 1; public var f:Float = 1.5; public var i32:haxe.Int32 = 1; public function new() {} }\n"
+		+ "abstract M(Float) from Int to Float {}\n"
+		+ "abstract N(Null<Int>) from Int {}\n"
+		+ "class H { public static function half(i:Int) return i / 2; }\n";
 
 	/** `name -> [declaration, place]` for the compound matrix. */
 	static final places = [
@@ -70,7 +75,11 @@ class M14PatternCompoundKindsTest {
 			},
 			{name: "CaptureFloat", body: "var i = 1; switch (i) { case (x = 1.5): case _: }", diagnostic: "Float should be Int"},
 			{name: "GuardedFloat", body: "var i:Int = 1; switch (i) { case 1.5 if (true): case _: }", diagnostic: "Float should be Int"},
-			{name: "SwitchExpressionFloat", body: "var i:Int = 1; var r = switch (i) { case 1.5: 1; case _: 2; }", diagnostic: "Float should be Int"}
+			{name: "SwitchExpressionFloat", body: "var i:Int = 1; var r = switch (i) { case 1.5: 1; case _: 2; }", diagnostic: "Float should be Int"},
+			// A bare enum-abstract value has the abstract's type, so its underlying Int is no path.
+			{name: "BareEnumAbstractInt", body: "var e = One; switch (e) { case 1: case _: }", diagnostic: "Int should be EA"},
+			// Upstream names a nullable place's own type for a bitwise operator.
+			{name: "NullFloatBitwise", body: "var n:Null<Float> = 1.5; n |= 1;", diagnostic: "Null<Float> should be Int"}
 		])
 			reject("Pattern" + entry.name, entry.body, entry.diagnostic);
 		accept("PatternAccepted", [
@@ -85,7 +94,17 @@ class M14PatternCompoundKindsTest {
 			"var a:Array<Float> = [1.5]; switch (a) { case [1, 2.5]: case _: }",
 			"var s = \"a\"; switch (s) { case \"a\" | \"b\": case _: }",
 			"var c = \"x\".code; switch (c) { case \"x\".code: case _: }",
-			"var i:Int = 1; switch (i) { case v if (v > 1.5): case _: }"
+			"var i:Int = 1; switch (i) { case v if (v > 1.5): case _: }",
+			// Inside `untyped`, upstream does not report a constant's kind.
+			"var i:Int = 1; untyped switch (i) { case 1.5: case _: }",
+			// `/` always produces Float, so these subjects are Float.
+			"var i:Int = 3; switch (i / 2) { case 0.5: case _: }",
+			"switch (H.half(2)) { case 0.5: case _: }",
+			// A local first assigned `null` has no known type for the constant to fail against.
+			"var x = null; x = 1.5; switch (x) { case 1.5: case _: }",
+			// Declared `from` types are paths for a constant.
+			"var m:M = 1; switch (m) { case 1: case _: }",
+			"var n:N = 1; switch (n) { case 1: case _: }"
 		]);
 		for (row in [
 			"IntLocal += 1.5 Float should be Int",
@@ -366,7 +385,11 @@ class M14PatternCompoundKindsTest {
 			"var u:UInt = 1; u += 1; u <<= 1;",
 			"var i = 1; i >>>= 1; i ^= 3; i %= 2;",
 			"var c = \"a\".code; c += 1;",
-			"var i:Int = 1; i += untyped 1.5;"
+			"var i:Int = 1; i += untyped 1.5;",
+			"untyped { var i:Int = 1; i |= 1.5; }",
+			"untyped { var i:Int = 1; i += 1.5; }",
+			"untyped { var i:Int = 1; i /= 2; }",
+			"var i:Int = 3; var r = i / 2; r += 0.5;"
 		].map(body -> "{ " + body + " }"));
 		Sys.println("PATTERN_COMPOUND_KINDS:PASS");
 	}
