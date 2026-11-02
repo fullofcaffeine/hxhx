@@ -6,4 +6,6 @@ loops: 7
 lambdas: 1 2 3 4
 methods: 1 6
 local: 7
+static field: 11 12
+operator names: 9 1 2 3 4 5
 pattern wildcard: 2

@@ -12,9 +12,6 @@ import haxe.ds.StringMap;
 	supply their own catalog; this pass never recovers bindings from source text.
 **/
 class Stage3OcamlLocalNames {
-	/** The OCaml base name for a Haxe local named `_`. */
-	static inline final UNDERSCORE_LOCAL = "_hx_underscore";
-
 	final byProjectedName:StringMap<String>;
 	final localCatalog:TypedBackendLocalCatalog;
 
@@ -35,7 +32,7 @@ class Stage3OcamlLocalNames {
 			// but OCaml `_` is a wildcard pattern that cannot be read. Give it a
 			// real OCaml name; the leading underscore keeps OCaml's unused-variable
 			// warning quiet, as `_` does in Haxe intent.
-			final base = normalized == "_" ? UNDERSCORE_LOCAL : normalized;
+			final base = normalized == "_" ? Stage3OcamlIdentifiers.UNDERSCORE : normalized;
 			if (base == null || base.length == 0)
 				throw "Stage3 OCaml local naming cannot render exact binding " + entry.getBinding().getIdentity().getCanonicalKey();
 			var targetName = base;
