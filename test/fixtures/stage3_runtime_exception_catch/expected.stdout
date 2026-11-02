@@ -1,0 +1,21 @@
+dynamic: Could not read file .tmp/stage3_runtime_exception_catch_scratch/missing.txt
+string: Could not read file .tmp/stage3_runtime_exception_catch_scratch/missing.txt
+exception: Could not read file .tmp/stage3_runtime_exception_catch_scratch/missing.txt / Could not read file .tmp/stage3_runtime_exception_catch_scratch/missing.txt
+thrown string as exception: plain
+outer: Could not read file .tmp/stage3_runtime_exception_catch_scratch/missing.txt
+fallback: fallback
+first readable: present
+attempt 0 failed
+directory read: Could not read file .tmp/stage3_runtime_exception_catch_scratch
+rmdir missing: No such file or directory(rmdir, .tmp/stage3_runtime_exception_catch_scratch/missing-dir)
+rmdir file: Not a directory(rmdir, .tmp/stage3_runtime_exception_catch_scratch/present.txt)
+rename: No such file or directory
+save: .tmp/stage3_runtime_exception_catch_scratch/missing-dir/x.txt: No such file or directory
+copy: .tmp/stage3_runtime_exception_catch_scratch/missing.txt: No such file or directory
+delete: .tmp/stage3_runtime_exception_catch_scratch/missing.txt: No such file or directory
+list missing: .tmp/stage3_runtime_exception_catch_scratch/missing-dir: No such file or directory
+list file: No such directory
+full path: Failure("get_full_path")
+set cwd: No such file or directory(chdir, .tmp/stage3_runtime_exception_catch_scratch/missing-dir)
+create existing file: ok
+create below file: Not a directory(mkdir, .tmp/stage3_runtime_exception_catch_scratch/present.txt/sub)

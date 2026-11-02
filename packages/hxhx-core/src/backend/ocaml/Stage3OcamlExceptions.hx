@@ -36,7 +36,22 @@ function throwValue(value:TypedBackendThrownValue, rendered:String, classes:Stag
 	return "HxType.hx_throw_typed_rtti (" + payload + ") [\"Dynamic\"]";
 }
 
-/** Catch only language exceptions; native returns and loop signals retain their destinations. */
+/**
+	Catch Haxe-visible failures; native returns and loop signals retain their destinations.
+
+	Two kinds of OCaml exception are Haxe-visible. A Haxe `throw` raises
+	`HxRuntime.Hx_exception`. The OCaml runtime can also raise ordinary OCaml
+	exceptions, for example `Sys_error` when `sys.io.File.getContent` opens a
+	missing file. Upstream Haxe lets `catch (e:Dynamic)`, `catch (e:String)`,
+	and `catch (e:haxe.Exception)` handle such a failure as a `String` message.
+	`HxRuntime.catchable_exception` is the one runtime place that converts both
+	kinds into a value and its type tags; it answers `None` for every exception
+	that must pass through, such as each function's early-return signal.
+
+	`catch (e:haxe.Exception)` matches every Haxe-visible value, as upstream does:
+	a value that is not already an exception object is wrapped by the emitted
+	`haxe.Exception.caught` helper, which keeps `Std.string(value)` as the message.
+ */
 function tryStatement(body:String, catches:Array<Stage3OcamlCatch>, names:Stage3OcamlLocalNames, classes:Stage3OcamlClassStorage, enums:Stage3OcamlEnums,
 		quote:String->String):String {
 	final value = names.internalName("__hx_thrown_value");
@@ -47,19 +62,21 @@ function tryStatement(body:String, catches:Array<Stage3OcamlCatch>, names:Stage3
 		final entry = catches[catches.length - offset - 1];
 		final nominal = classes.nominalName(entry.type);
 		final enumName = enums.runtimeName(entry.type);
+		final wrapper = nominal == "haxe.Exception" ? classes.outputModule(entry.type) : null;
 		final converted = switch entry.type.getSemanticKey() {
 			case "primitive:Bool": "HxRuntime.unbox_bool_or_obj " + value;
 			case "primitive:Int": "(Obj.obj " + value + " : int)";
 			case "primitive:Float": "(Obj.obj " + value + " : float)";
 			case "primitive:String": "(Obj.obj " + value + " : string)";
 			case _ if (entry.type.isDynamic()): value;
+			case _ if (wrapper != null): wrapper + ".caught " + value;
 			case _ if (nominal != null): value;
 			case _ if (enumName != null): value;
 			case _: throw "Stage3 OCaml catch requires a supported exact runtime carrier: " + entry.type.getSemanticKey();
 		};
 		final bound = entry.mutable ? "ref (" + converted + ")" : converted;
 		final selected = "(let " + entry.targetName + " = " + bound + " in ignore " + entry.targetName + "; " + entry.body + ")";
-		if (entry.type.isDynamic()) {
+		if (entry.type.isDynamic() || wrapper != null) {
 			handlers = selected;
 		} else if (enumName != null) {
 			// Test the original enum box, not a class tag with coincidentally equal text.
@@ -69,7 +86,8 @@ function tryStatement(body:String, catches:Array<Stage3OcamlCatch>, names:Stage3
 			handlers = "(if HxRuntime.tags_has " + tags + " " + quote(tag) + " then " + selected + " else " + handlers + ")";
 		}
 	}
-	return "(try (" + body + ") with HxRuntime.Hx_exception (" + value + ", " + tags + ") as " + original + " -> " + handlers + ")";
+	return "(try (" + body + ") with " + original + " -> (match HxRuntime.catchable_exception " + original + " with None -> raise " + original + " | Some ("
+		+ value + ", " + tags + ") -> " + handlers + "))";
 }
 
 /** Each loop catches its own nearest break and resumes after a continue. */
