@@ -2082,6 +2082,9 @@ class EmitterStage {
 			case EArrayAccess(_, _):
 				final indexed = arrayAccess(expr);
 				indexed == null ? null : indexed.resultType;
+			// Every `this` in one function has the same type; inside an abstract's
+			// method it is the underlying type (Int for `abstract Score(Int)`).
+			case EThis: currentTypedInitializer == null && currentTypedFunction != null ? currentTypedFunction.getThisType() : null;
 			case ECast(_, _) | ECheckType(_, _):
 				final conversion = currentTypedInitializer != null ? currentTypedInitializer.findCast(expr) : currentTypedFunction == null ? null : currentTypedFunction.findCast(expr);
 				conversion == null ? null : conversion.getTargetType();
@@ -2486,8 +2489,10 @@ class EmitterStage {
 	/**
 		The semantic key of the typer's recorded type for this exact operand, after
 		expanding typedefs, or null without a fact. Arithmetic uses it next to the
-		older shape-based checks, so an operand such as `this` inside an Int
-		abstract still selects Int operators when its spelling reveals nothing.
+		older shape-based checks, so an operand still selects Int or Float
+		operators when its spelling reveals nothing: `this` inside
+		`abstract Score(Int)`, or a call such as `Std.int(x)` that the Float
+		promotion must widen.
 	 */
 	static function stage3ExactPrimitiveKey(expr:HxExpr):Null<String> {
 		final type = stage3ExactExprType(expr);
@@ -4639,7 +4644,17 @@ class EmitterStage {
 							// Defaulting unknown expressions to float (`-.`) can break integer call sites
 							// (e.g. `addSuccesses(-x)` where `x` is currently lowered through Obj.magic).
 							final renderedExpr = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
-							if (forceFloatUnop || stage3IsFloatExpr(expr, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)) {
+							// A nullable operand (`-s.charCodeAt(i)`) is read through the checked
+							// unwrap, so a null raises instead of negating the sentinel's bits.
+							final nullableOperand = stage3NullableNumericOperand(expr);
+							final operandKey = stage3ExactPrimitiveKey(expr);
+							if (nullableOperand == "primitive:Int") {
+								"(HxInt.neg (" + backend.ocaml.Stage3OcamlNullablePrimitive.unwrap(nullableOperand, renderedExpr) + "))";
+							} else if (nullableOperand == "primitive:Float") {
+								"(-.(" + backend.ocaml.Stage3OcamlNullablePrimitive.unwrap(nullableOperand, renderedExpr) + "))";
+							} else if (forceFloatUnop
+								|| operandKey == "primitive:Float"
+								|| stage3IsFloatExpr(expr, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)) {
 								"(-.(" + renderedExpr + "))";
 							} else if (stage3IsIntExpr(expr, tyByIdentRaw)) {
 								"(HxInt.neg (" + renderedExpr + "))";
@@ -4737,6 +4752,11 @@ class EmitterStage {
 							final unwrapped = backend.ocaml.Stage3OcamlNullablePrimitive.unwrap(inner,
 								exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
 							inner == "primitive:Int" ? "float_of_int (" + unwrapped + ")" : unwrapped;
+						// The recorded Int type that selected Float arithmetic also selects the
+						// widening, so `Std.int(x) + 1.5` and `s.indexOf(t) + 0.5` stay well typed.
+						case _ if (stage3ExactPrimitiveKey(e) == "primitive:Int"):
+							"float_of_int (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee) + ")";
 						case _ if (isLocalCompoundValueOf(e, "primitive:Int")):
 							"float_of_int (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee) + ")";

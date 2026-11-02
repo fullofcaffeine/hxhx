@@ -15,6 +15,23 @@ class Holder {
 	}
 }
 
+/** `this` has the underlying Int or Float type inside an abstract's methods. */
+abstract Score(Int) from Int to Int {
+	public function twice():Int
+		return this + this;
+
+	public function plusHalf():Float
+		return this + 0.5;
+}
+
+abstract Meters(Float) from Float to Float {
+	public function plusInt(n:Int):Float
+		return this + n;
+
+	public function half():Float
+		return this / 4;
+}
+
 class Main {
 	static var digits:String = "9073";
 
@@ -69,6 +86,25 @@ class Main {
 		Sys.println("optional " + optionalPlus(3, 4) + " " + optionalOrDefault(5) + " " + optionalOrDefault());
 		final values:Array<Null<Int>> = [3, null];
 		Sys.println("array " + (values[0] + 2));
+		final floats = new Map<String, Float>();
+		floats.set("x", 1.25);
+		Sys.println("float map " + (floats.get("x") + 1) + " " + (floats.get("x") * floats.get("x")));
+		Sys.println("divide " + (s.charCodeAt(1) / 2) + " " + (9 / s.charCodeAt(0)));
+		Sys.println("negate " + (-s.charCodeAt(0)) + " " + (-counts.get("a")));
+		final fa:Array<Float> = [1.5, 2.25];
+		Sys.println("float array " + (fa[0] + fa[1]) + " " + (fa[1] - fa[0]) + " " + (fa[0] * fa[1]) + " " + (fa[1] / fa[0]));
+		Sys.println("float compare "
+			+ (fa[0] < fa[1])
+			+ " "
+			+ (fa[1] <= fa[0])
+			+ " "
+			+ (fa[1] > Math.sqrt(4.0))
+			+ " "
+			+ (fa[0] * Math.sqrt(0.25)));
+		Sys.println("promote " + (Std.int(2.9) + 1.5) + " " + ("abc".indexOf("b") + 0.5) + " " + (0.25 * "abc".length));
+		final score:Score = 3;
+		final meters:Meters = 2.5;
+		Sys.println("abstract " + score.twice() + " " + score.plusHalf() + " " + meters.plusInt(2) + " " + meters.half());
 		try {
 			Sys.println("null charCodeAt " + ("abc".charCodeAt(10) - 48));
 		} catch (e:Dynamic) {
@@ -78,6 +114,16 @@ class Main {
 			Sys.println("null map " + (counts.get("missing") + 1));
 		} catch (e:Dynamic) {
 			Sys.println("null map raised");
+		}
+		try {
+			Sys.println("null float map " + (floats.get("missing") * 2));
+		} catch (e:Dynamic) {
+			Sys.println("null float map raised");
+		}
+		try {
+			Sys.println("null negate " + (-"abc".charCodeAt(10)));
+		} catch (e:Dynamic) {
+			Sys.println("null negate raised");
 		}
 		try {
 			Sys.println("null optional " + optionalPlus(3));
