@@ -37,6 +37,20 @@ class Main {
 		log.splice(0, log.length);
 	}
 
+	static function tryReturn():Int {
+		try
+			return fail("return")
+		catch (e:Dynamic)
+			return 7;
+	}
+
+	static function plainReturn():Int {
+		try
+			return 3
+		catch (e:Dynamic)
+			return -1;
+	}
+
 	static function main():Void {
 		// One catch, statement form. A `;` after the whole statement is optional only before `}`.
 		try
@@ -130,6 +144,44 @@ class Main {
 				throw e + "!";
 		} catch (e:String)
 			note("rethrow reached " + e);
+		flush();
+
+		// return, throw, break, and continue as unbraced bodies and handlers.
+		note("return " + tryReturn() + " " + plainReturn());
+		var rejected = false;
+		try
+			throw "x"
+		catch (e:String)
+			rejected = true;
+		note("throw handled " + rejected);
+		var visited = 0;
+		for (index in 0...5)
+			try {
+				visited++;
+				if (index == 2)
+					throw "stop";
+			} catch (e:String)
+				break;
+		note("break from handler after " + visited);
+		var loops = 0;
+		while (true)
+			try
+				break
+				catch (e:Dynamic)
+		note("wrong");
+		for (index in 0...3)
+			try {
+				if (index == 1)
+					throw "skip";
+				loops++;
+			} catch (e:String)
+				continue;
+		for (index in 0...3)
+			try
+				continue
+				catch (e:Dynamic)
+		note("wrong");
+		note("continue loops " + loops);
 		flush();
 
 		// Unbraced catch bodies after braced try bodies, and a statement after them.
