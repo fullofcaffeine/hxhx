@@ -15,6 +15,11 @@ class M14DowncastDynamicConstraintTest {
 		reject("InvalidSibling", "Constraint check failure for downcast.S");
 		reject("InvalidDynamicBound", "Constraint check failure for pick.T");
 		reject("InvalidCastBound", "Constraint check failure for pick.T");
+		// A null `T` is a wildcard inside another bound, never a reason to skip that bound.
+		reject("InvalidNullArrayBound", "Constraint check failure for pick.S");
+		reject("InvalidNullBoundedArrayBound", "Constraint check failure for pick.S");
+		reject("InvalidNullRecordBound", "Constraint check failure for pick.S", "{ y : Int } should be { x : Null<Unknown<0>> }");
+		reject("InvalidNullClassBound", "Constraint check failure for pick.S");
 		Sys.println("DOWNCAST_DYNAMIC_CONSTRAINT:PASS");
 	}
 
@@ -37,13 +42,18 @@ class M14DowncastDynamicConstraintTest {
 	static function accept():Void {
 		upstream("Main", null);
 		final typed = load("Main").main;
-		final results = new Array<String>();
+		// Count each result so repeated calls with the same type cannot hide a missing one.
+		final counts = new haxe.ds.StringMap<Int>();
 		function inspect(node:TypedExpr):Void {
 			final declaration = node.getDeclaration();
 			if (node.getTag() == Call && declaration != null) {
 				final name = declaration.getSignature().getName();
-				if (name == "downcast" || name == "open")
-					results.push(name + "=" + node.getType().getSemanticKey());
+				if (name == "downcast" || name == "open" || name == "arrayOf") {
+					final key = node.getType().getSemanticKey();
+					// A `cast null` class argument leaves the result as this call's own open `S`.
+					final entry = name + "=" + (StringTools.startsWith(key, "open-method-parameter:") ? "open-method-parameter" : key);
+					counts.set(entry, (counts.exists(entry) ? counts.get(entry) : 0) + 1);
+				}
 			}
 			for (child in node.getExpressions())
 				inspect(child);
@@ -55,24 +65,24 @@ class M14DowncastDynamicConstraintTest {
 						for (node in statement.getExpressions())
 							inspect(node);
 		final expected = [
-			"downcast=nominal:Shapes.Sub",
-			"downcast=nominal:Shapes.Sub",
-			"downcast=nominal:Shapes.Sub",
-			"downcast=nominal:Shapes.Sub",
-			"downcast=nominal:Shapes.Base",
-			"open=primitive:String"
+			"downcast=nominal:Shapes.Sub" => 5,
+			"downcast=open-method-parameter" => 2,
+			"downcast=nominal:Shapes.Base" => 1,
+			"open=primitive:String" => 1,
+			"arrayOf=nominal:Array<primitive:Int>" => 1
 		];
-		for (entry in expected)
-			if (results.indexOf(entry) < 0)
-				throw "valid dependent-bound call lost its result type " + entry + ": " + results.join("|");
-		if (results.filter(entry -> StringTools.startsWith(entry, "downcast=")).length != 7)
-			throw "every downcast call must type: " + results.join("|");
+		final actual = [for (entry in counts.keys()) entry + "*" + counts.get(entry)];
+		actual.sort(Reflect.compare);
+		final wanted = [for (entry in expected.keys()) entry + "*" + expected.get(entry)];
+		wanted.sort(Reflect.compare);
+		if (actual.join("|") != wanted.join("|"))
+			throw "valid dependent-bound calls lost their result types: " + actual.join("|");
 		Sys.println("DOWNCAST_DYNAMIC_CONSTRAINT_ACCEPT:PASS");
 	}
 
-	/** A dependent bound that upstream rejects must still fail with the same parameter name. */
-	static function reject(module:String, diagnostic:String):Void {
-		upstream(module, diagnostic);
+	/** A dependent bound that upstream rejects must still fail; hxhx names the failing parameter. */
+	static function reject(module:String, diagnostic:String, ?upstreamDiagnostic:String):Void {
+		upstream(module, upstreamDiagnostic == null ? diagnostic : upstreamDiagnostic);
 		var rejected = false;
 		try
 			load(module)

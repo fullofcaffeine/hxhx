@@ -2346,15 +2346,15 @@ class TyperStage {
 				final boundReceiver = receiver == null ? (isStatic ? null : currentThisType(ctx)) : candidateInference.expressionType(receiver.expression,
 					receiver.type, scope);
 				// An unchecked `cast null` whose slot names a still-open parameter fixes no
-				// type, like upstream's fresh monomorph. Pass it to the bound check as Dynamic,
-				// the typer's no-evidence argument, instead of the Unknown slot placeholder.
-				final boundEvidence = order.rankedTypes([
-					for (index in 0...contextual.length)
-						index < args.length && TypedCastExpectation.isUnchecked(args[index]) && contextual[index].isUnknown() ? TyType.fromHintText("Dynamic") : contextual[index]
-				]);
-				final failure = TyMethodGenericBinding.constraintFailure(declaration, applied, boundEvidence,
+				// type, like upstream's fresh monomorph. Mark it instead of passing its
+				// Unknown slot placeholder as unresolved evidence.
+				final unconstrainedSlots = [
+					for (source in order.rankedSources())
+						source >= 0 && TypedCastExpectation.isUnchecked(args[source]) && contextual[source].isUnknown()
+				];
+				final failure = TyMethodGenericBinding.constraintFailure(declaration, applied, contextualRanked,
 					bound -> TyNominalApplication.applyType(ctx.getIndex(), c, boundReceiver, bound),
-					(expected, supplied) -> constraintAccepts(expected, supplied, ctx.getIndex()), ctx.getIndex());
+					(expected, supplied) -> constraintAccepts(expected, supplied, ctx.getIndex()), ctx.getIndex(), unconstrainedSlots);
 				if (failure != null) {
 					rejectedMethodConstraint = failure;
 					continue;

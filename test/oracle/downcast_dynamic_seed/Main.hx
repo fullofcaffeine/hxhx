@@ -14,16 +14,23 @@ class Main {
 		trace(Std.downcast(null, Sub) == null);
 		Std.downcast(base, cast null);
 		Std.downcast(dynamicBase, cast null);
+		Std.downcast(cast null, Sub);
 		trace(Std.downcast(base, Base) == base);
 		trace(open(dynamicSub, "text"));
 		final anyNumber:Any = 3;
 		trace(requireInt(anyNumber));
 		trace(make(Base) != null);
 		trace(pick(null, 5));
+		trace(arrayOf(null, [5]));
 	}
 
 	/** A null literal leaves `T` as a nullable monomorph, so upstream accepts `S:T` for any `S`. */
 	static function pick<T:String, S:T>(value:T, fallback:S):S {
+		return fallback;
+	}
+
+	/** A null `T` matches structurally inside `S:Array<T>`: here `T` is read as Int. */
+	static function arrayOf<T, S:Array<T>>(value:T, fallback:S):S {
 		return fallback;
 	}
 
