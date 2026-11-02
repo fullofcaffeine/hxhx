@@ -19,7 +19,7 @@ package backend.ocaml;
 	  skipped an optional parameter by type, or that omits a required parameter,
 	  stops emission instead of shifting arguments.
  */
-function omitted(call:Null<TypedExpr>, supplied:Array<Null<TypedBackendCallArgument>>):Array<String> {
+function omitted(call:Null<TypedExpr>, supplied:Array<Null<TypedBackendCallArgument>>, slots:SentinelSlots):Array<String> {
 	// Supplied arguments are only inspected when some parameter is omitted.
 	if (call == null || call.getTag() != Call || call.getExpressions().length == 0)
 		throw "OCaml local function call requires its exact typed call";
@@ -44,7 +44,42 @@ function omitted(call:Null<TypedExpr>, supplied:Array<Null<TypedBackendCallArgum
 		final parameter = parameters[index];
 		if (parameter.isRest || !parameter.isOptional)
 			throw "OCaml local function call omits a required parameter";
+		requireSentinelSlot(parameter, slots);
 		sentinels.push("(Obj.magic HxRuntime.hx_null)");
 	}
 	return sentinels;
+}
+
+/** Request facts that say which native slots are pointers. */
+typedef SentinelSlots = {
+	/** Answers whether a type is an enum value stored as an `Obj.t` box. */
+	final isEnumBox:TyType->Bool;
+
+	/** Answers a carrier for an Array, program class instance, anonymous structure or function value, else null. */
+	final referenceCarrier:TyType->Null<String>;
+}
+
+/**
+	True when the native slot of an optional or defaulted parameter can hold the
+	null sentinel. Int and Float use the nullable carrier. String, Dynamic, enum
+	boxes and references are pointers, so null is a valid value there. A Bool is
+	an unboxed OCaml `bool` and an abstract uses its backing value, so neither
+	can tell null apart from a real value.
+ */
+function acceptsSentinel(parameter:TyFunctionParameter, slots:SentinelSlots):Bool {
+	if (Stage3OcamlNullablePrimitive.destinationCarrier(parameter.type, parameter.isOptional) != null)
+		return true;
+	final value = TyAliasExpansion.revealNonNullable(TyAliasExpansion.reveal(parameter.type));
+	if (value.isDynamic() || value.getSemanticKey() == "primitive:String")
+		return true;
+	if (slots == null)
+		return false;
+	return (slots.isEnumBox != null && slots.isEnumBox(value))
+		|| (slots.referenceCarrier != null && slots.referenceCarrier(value) != null);
+}
+
+/** Stop emission for an optional or defaulted parameter whose slot cannot hold null. */
+function requireSentinelSlot(parameter:TyFunctionParameter, slots:SentinelSlots):Void {
+	if (!acceptsSentinel(parameter, slots))
+		throw "OCaml local function optional parameter has no native null slot: " + parameter.type.getDisplay();
 }

@@ -25,5 +25,30 @@ class M14Stage3LocalFunctionOptionalArgumentsTest {
 		final artifact = EmitterStage.emitToDir(new MacroExpandedProgram([prepared], false), ".tmp/ocaml_local_function_optional_arguments", true);
 		M14Stage3RuntimeFixture.observe({command: artifact, arguments: [], expected: expected});
 		Sys.println("M14_STAGE3_LOCAL_FUNCTION_OPTIONAL_ARGUMENTS_NATIVE:PASS");
+		// An omitted argument arrives as null. A Bool is an unboxed native bool and an
+		// abstract uses its backing value, so neither slot can hold null; emission must
+		// stop instead of reading null as a real value. Upstream prints 0/1 and -1/4.
+		requireUnsupportedEmitFailure(root, "bool_optional",
+			"class Main { static function main():Void { function f(?flag:Bool):Int { return flag == null ? 0 : 1; } Sys.println(f()); } }", "Null<Bool>");
+		requireUnsupportedEmitFailure(root, "bool_default",
+			"class Main { static function main():Void { function g(on:Bool = false):Int { return on ? 1 : 2; } Sys.println(g()); } }", "Bool");
+		requireUnsupportedEmitFailure(root, "abstract_optional",
+			"abstract Id(Int) { public function new(v:Int) this = v; public function get():Int return this; }\n" +
+			"class Main { static function main():Void { function show(?id:Id):Int { return id == null ? -1 : id.get(); } Sys.println(show()); } }",
+			"Id");
+		Sys.println("M14_STAGE3_LOCAL_FUNCTION_OPTIONAL_ARGUMENTS_UNSUPPORTED:PASS");
+	}
+
+	static function requireUnsupportedEmitFailure(root:String, label:String, source:String, typeText:String):Void {
+		final typed = M14Stage3RuntimeFixture.typeMain({source: source, path: root + "/Main.hx", root: root});
+		final message = try {
+			EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/ocaml_local_function_optional_" + label, true);
+			null;
+		} catch (error:String) {
+			error;
+		}
+		final expected = "OCaml local function optional parameter has no native null slot: ";
+		if (message == null || message.indexOf(expected) < 0 || message.indexOf(typeText) < 0)
+			throw label + ": an optional parameter without a null slot must fail at emit time, got: " + message;
 	}
 }
