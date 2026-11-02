@@ -539,7 +539,7 @@ class TyperStage {
 		final resolvedDirectives = resolveModuleDirectives(directives, packagePath, modulePath, index, loader);
 		// A root-only index, or a loader without the standard library, cannot prove
 		// that an import names nothing; see TyperContext.hasDeclarationLoader.
-		if (index != null && loader != null && loader.hasModuleSource("StdTypes"))
+		if (index != null && loader != null && loader.hasStandardLibrary())
 			requireResolvedDirectives(parsed, resolvedDirectives, packagePath, index, loader);
 		TyClassArgumentBounds.validateDeclarations(parsed, modulePath, index, (expected, supplied) -> constraintAccepts(expected, supplied, index));
 		final mainClass = HxModuleDecl.getMainClass(declaration);

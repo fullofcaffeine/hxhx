@@ -108,12 +108,8 @@ class TyperContext {
 	public function hasDeclarationLoader():Bool {
 		if (loader == null)
 			return false;
-		if (completeLoader == null)
-			completeLoader = loader.hasModuleSource("StdTypes");
-		return completeLoader;
+		return loader.hasStandardLibrary();
 	}
-
-	var completeLoader:Null<Bool> = null;
 
 	/**
 		Whether an import directive of this module introduces `name`, as
@@ -122,23 +118,50 @@ class TyperContext {
 		example a macro-only module referenced from `#if macro` code.
 	**/
 	/**
-		Whether `name` names a module in this package or the root package, such
-		as a module that declares only module-level functions (`CounterOps.total`).
+		Whether `name` names a module in this package, such as a module that
+		declares only module-level functions (`CounterOps.total`).
 	**/
 	public function namesModule(name:String):Bool {
 		if (loader == null)
 			return false;
+		// Only a module of the current package: upstream accepts `CounterOps.total()`
+		// for a same-package module of module-level functions, but rejects an
+		// imported one (`import pack.Ops; Ops.total()`: "Type not found : Ops").
 		final qualified = packagePath == null || packagePath.length == 0 ? name : packagePath + "." + name;
-		return loader.hasModuleSource(qualified) || loader.hasModuleSource(name);
+		return loader.hasModuleSource(qualified);
 	}
 
 	public function importsLocalName(name:String):Bool {
 		if (directives == null)
 			return false;
 		for (directive in directives)
-			if (HxModuleDirective.getImportedLocalName(directive) == name)
+			if (HxModuleDirective.getImportedLocalName(directive) == name
+				&& !importedModuleLacksType(HxModuleDirective.getPath(directive), name))
 				return true;
 		return false;
+	}
+
+	/**
+		Whether `import path` loaded a module that declares no type named `name`.
+		Upstream rejects `import pack.Ops; Ops.total()` with "Type not found : Ops"
+		when `pack.Ops` holds only module-level functions. A module this request
+		did not load (for example a macro-only module referenced from `#if macro`
+		code) cannot prove that, so it still counts as introducing the name.
+	**/
+	public function importedModuleLacksType(path:String, name:String):Bool {
+		if (index == null || index.getRegisteredModule(path) == null)
+			return false;
+		for (info in index.getByModulePath(path))
+			if (info.getShortName() == name)
+				return false;
+		return index.resolveTypeDeclaration(path, {
+			packagePath: packagePath,
+			modulePath: modulePath,
+			directives: [],
+			filePath: filePath,
+			position: HxPos.unknown(),
+			parameters: []
+		}) == null;
 	}
 
 	public function resolveType(typePath:String):Null<TyNominalInfo> {

@@ -223,6 +223,22 @@ class TyperIndex {
 
 	final undeclaredNamesByFile = new StringMap<TyUndeclaredName.TyUndeclaredValueNames>();
 
+	/**
+		The raw text of a source file, read once per index. The undeclared-name
+		check scans it for imports in every conditional branch.
+	**/
+	public function rawSourceText(filePath:String):Null<String> {
+		if (rawSources.exists(filePath))
+			return rawSources.get(filePath);
+		final text = filePath == null
+			|| !sys.FileSystem.exists(filePath)
+			|| sys.FileSystem.isDirectory(filePath) ? null : sys.io.File.getContent(filePath);
+		rawSources.set(filePath, text);
+		return text;
+	}
+
+	final rawSources = new StringMap<Null<String>>();
+
 	public function declaresEnumMember(name:String):Bool {
 		for (fullName => info in byFullName)
 			// A constructor with arguments is a static method, not a field.
