@@ -15,6 +15,13 @@ import hxhx.Stage3SetupSupport;
 	then hxhx types it for the JavaScript and OCaml targets. Each C# case runs alone,
 	because typing stops at the first rejection. A JavaScript runtime observer checks
 	the stored value and the setter result against upstream output.
+
+	Native OCaml divergence (documented): the interpreter and JavaScript store null.
+	A native `Int`, `Float` or `Bool` parameter is an unboxed OCaml value that cannot
+	hold null, so the native setter call raises the catchable "Null Access" exception,
+	exactly as passing a null `Null<Int>` already does. It never stores a
+	reinterpreted pointer. A `Map<String,Int>` value is a generic slot and stores null
+	natively too. The native observer checks both behaviours.
 **/
 class M14IndexedNullSetterTest {
 	static final declarations = 'abstract B(Array<Int>){public inline function new(){this=[1];}'
@@ -63,7 +70,41 @@ class M14IndexedNullSetterTest {
 			Sys.println("INDEXED_NULL_SETTER:PASS cs_" + entry.name);
 		}
 		checkRuntime();
+		checkNative();
 		Sys.println("INDEXED_NULL_SETTER:PASS");
+	}
+
+	/** Upstream's interpreter stores null; native unboxed setter slots raise a catchable Null Access instead. */
+	static function checkNative():Void {
+		final source = declarations
+			+ 'abstract Z(Array<Bool>){public inline function new(){this=[true];}'
+			+ '@:arrayAccess public function get(i:Int):Bool return this[i];'
+			+ '@:arrayAccess public function set(i:Int,v:Bool):Bool{this[i]=v;return v;}}'
+			+ 'class Main{'
+			+ 'static function intCase():Void{var b=new B();try{b[0]=null;Sys.println("int:stored");}catch(e:String){Sys.println("int:"+e);}}'
+			+
+			'static function resultCase():Void{var b=new B();try{var r:Int=b[0]=null;Sys.println("result:stored");}catch(e:String){Sys.println("result:"+e);}}'
+			+ 'static function floatCase():Void{var f=new F();try{f[0]=null;Sys.println("float:stored");}catch(e:String){Sys.println("float:"+e);}}'
+			+ 'static function boolCase():Void{var z=new Z();try{z[0]=null;Sys.println("bool:stored");}catch(e:String){Sys.println("bool:"+e);}}'
+			+
+			'static function mapCase():Void{var m:Map<String,Int>=new Map();try{m["k"]=null;Sys.println("map:stored:"+m.exists("k"));}catch(e:String){Sys.println("map:"+e);}}'
+			+ 'static function main():Void{intCase();resultCase();floatCase();boolCase();mapCase();}}';
+		final root = JsRuntimeFixture.reserveOutput();
+		final path = root + "/Main.hx";
+		sys.io.File.saveContent(path, source);
+		M14Stage3RuntimeFixture.observe({
+			command: "node_modules/.bin/haxe",
+			arguments: ["-cp", root, "-main", "Main", "--interp"],
+			expected: "int:stored\nresult:stored\nfloat:stored\nbool:stored\nmap:stored:true\n"
+		});
+		final prepared = M14Stage3RuntimeFixture.prepareProgram({source: source, path: path, root: root});
+		final artifact = EmitterStage.emitToDir(new MacroExpandedProgram(prepared, false), root + "/ocaml", true);
+		M14Stage3RuntimeFixture.observe({
+			command: artifact,
+			arguments: [],
+			expected: "int:Null Access\nresult:Null Access\nfloat:Null Access\nbool:Null Access\nmap:stored:true\n"
+		});
+		Sys.println("INDEXED_NULL_SETTER:PASS native_null_access");
 	}
 
 	static function program(members:String):String
