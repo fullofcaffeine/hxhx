@@ -6,7 +6,7 @@
       "model": "checked-runtime-source-selection-v1",
       "status": "complete",
       "message": "Every packaged runtime source is manifest-checked, and the selected runtime closure is revisioned for source replay.",
-      "revision": "sha256:fa95d463a604855209a60d80f68e3822c1017ec32a5cdd78d5d2968d964a2fa7"
+      "revision": "sha256:b502e344efc437e9958b67da478b433cad97a88b37bc79c87e04d889ddb1c3bb"
     },
     "nativeDependencies": {
       "model": "normalized-native-source-declarations-v2",
@@ -28,11 +28,11 @@
   "summary": {
     "entryCount": 74,
     "volatileEvidenceEntryCount": 0,
-    "sourceBundleRevision": "sha256:43015851bfe01f05bffb63a5eb88ae3cb33a20b127f62d97198c4f6141e19bb8",
+    "sourceBundleRevision": "sha256:b971df91346d09def586cdeea95daff2ff949e65212da6e3b4e8e3036b4e1b6c",
     "completeForSourceBundle": true,
     "sourceBundleEntryCount": 70,
     "blockers": [],
-    "artifactSetRevision": "sha256:73d9d436892e1b0f2ced02a11fc7577ab2d59f60112eba1f4a8d81a2159e6365"
+    "artifactSetRevision": "sha256:d48a39290a38562914b6321f7bb3a6f9878df9c294c5b45a753c18e6e0299118"
   },
   "entries": [
     {
@@ -679,7 +679,7 @@
       "sourcePath": null,
       "stability": "stable",
       "path": "ocaml_runtime_requirement_report.json",
-      "sha256": "sha256:71ac70a0644e731afcb3d0a668a2b22785db5146dc9c23df7d3241847751d511",
+      "sha256": "sha256:f0d4495b3fd1e7c965c7c47069baeb129a924fc63656e0fad269220b703a5d23",
       "kind": "compiler-report",
       "profileEligibility": [
         "metal",
@@ -695,7 +695,7 @@
       "sourcePath": null,
       "stability": "stable",
       "path": "ocaml_runtime_selection_shadow_report.json",
-      "sha256": "sha256:64acb4334bd1a627fc7d4049edb10a8805d5e289b6264d5ac260ab4f209d5917",
+      "sha256": "sha256:b3f46fef6b1df7eeed0d76f93a48f65dbd66d056608b3255cefa51de3433228f",
       "kind": "compiler-report",
       "profileEligibility": [
         "metal",
@@ -1111,14 +1111,14 @@
       "sourcePath": "std/runtime/Math.ml",
       "stability": "stable",
       "path": "runtime/Math.ml",
-      "sha256": "sha256:c7404ed3389ec9d451e72541e5dbda97983b54c49026e642bef71daaa943712e",
+      "sha256": "sha256:577161786b2799ae38b1c9bde8aa8cfc561be4d22dbb1b124d27d22d1fc96fe6",
       "kind": "runtime-source",
       "profileEligibility": [
         "metal",
         "portable"
       ],
       "owner": "runtime-copier",
-      "bytes": 2891,
+      "bytes": 3014,
       "sourceKind": "copied-runtime",
       "license": "MIT",
       "includeInSourceBundle": true

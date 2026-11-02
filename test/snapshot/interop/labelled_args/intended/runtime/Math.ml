@@ -47,8 +47,10 @@ let sqrt (v : float) : float = Stdlib.sqrt v
    `Int32.of_float (mod_float r 2147483648.0)`. `Float.rem` keeps the sign of
    `r`, so results lie in (-2^31, 2^31): floor(2^31) is 0 and floor(1e10) is
    1410065408. This is not the Std.int rule. NaN and the infinities reach
-   `Int32.of_float` as NaN, whose result is the CPU's conversion (0 on arm64
-   and x86-64), as on eval. Reviewed under the gate in
+   `Int32.of_float` as NaN. That is the C stub `caml_int32_of_float`
+   (`(int32_t) x`), so the result is the CPU's conversion: 0 on arm64 and
+   -2147483648 on x86-64. Eval uses the same stub, so it agrees on the same
+   host. Reviewed under the gate in
    docs/00-project/FLOAT_NUMERIC_REVIEW_GATE.md; the answers are recorded on
    Bead haxe_ocaml-32vsc. *)
 let int_of_rounded (r : float) : int =

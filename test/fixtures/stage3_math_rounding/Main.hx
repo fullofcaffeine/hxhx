@@ -8,6 +8,7 @@
 	unbounded Float result. They are checked against the expected value in the
 	table, including NaN, the infinities, and the sign of zero, because
 	native printing of whole-number Floats differs (Bead haxe_ocaml-iffj5).
+	For NaN and the infinities the Int results are CPU-defined (see `intText`).
 	See README.md for the target differences.
 **/
 class Main {
@@ -28,11 +29,29 @@ class Main {
 		final ceil = Math.ceil(value);
 		final round = Math.round(value);
 		final floats = check("ffloor", Math.ffloor(value), ffloor) + check("fceil", Math.fceil(value), fceil) + check("fround", Math.fround(value), fround);
-		Sys.println(label + " floor=" + Std.string(floor) + " ceil=" + Std.string(ceil) + " round=" + Std.string(round)
+		final special = Math.isNaN(value) || !Math.isFinite(value);
+		Sys.println(label + " floor=" + intText(floor, special) + " ceil=" + intText(ceil, special) + " round=" + intText(round, special)
 			+ (floats == "" ? " floats=ok" : floats));
 	}
 
+	/**
+		For NaN and the infinities, the Int result is the CPU's float-to-int32
+		conversion of NaN, on eval and natively alike: 0 on arm64 and
+		-2147483648 on x86-64. Print a host-independent token for those two
+		values, and the value itself otherwise.
+	**/
+	static function intText(value:Int, special:Bool):String {
+		if (special && (value == 0 || value == -2147483647 - 1))
+			return "cpu-defined";
+		return Std.string(value);
+	}
+
 	static function main():Void {
+		// An Int argument reaches the Float parameter of Math.round, Math.floor, and Math.ceil.
+		final whole = 7;
+		final negative = -3;
+		Sys.println("int argument round=" + Std.string(Math.round(whole)) + " floor=" + Std.string(Math.floor(negative)) + " ceil="
+			+ Std.string(Math.ceil(whole)));
 		row("nan", Math.NaN, Math.NaN, Math.NaN, Math.NaN);
 		row("+inf", Math.POSITIVE_INFINITY, Math.POSITIVE_INFINITY, Math.POSITIVE_INFINITY, Math.POSITIVE_INFINITY);
 		row("-inf", Math.NEGATIVE_INFINITY, Math.NEGATIVE_INFINITY, Math.NEGATIVE_INFINITY, Math.NEGATIVE_INFINITY);
