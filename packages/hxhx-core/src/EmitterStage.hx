@@ -3103,14 +3103,21 @@ class EmitterStage {
 					+ ")";
 			case ECall(EField(EIdent("StringTools"), "replace"), [_s, _sub, _by]):
 				return escapeOcamlString("");
-			case ECall(EField(EIdent("Std"), "is"), [_v, _t]):
-				return "true";
 			case ECall(EField(EIdent("Std"), "string"), [arg]):
 				return backend.ocaml.Stage3OcamlStringConversion.convert(callArgumentType(arg),
 					exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 					currentFunctionLocalOcamlNames);
-			case ECall(EField(EIdent("Std"), "downcast"), [_value, _cls]):
-				return "(Obj.magic HxRuntime.hx_null)";
+			// Typed standard type tests and downcasts are rendered by
+			// Stage3OcamlRuntimeTypes before this helper runs. Reaching this
+			// spelling means the call lost its typed declaration; a constant
+			// answer here would make every test pass and every downcast fail.
+			case ECall(EField(EIdent("Std"), method), [_, _]) if (method == "is" || method == "downcast" || method == "instance"):
+				throw "stage3 emitter: Std."
+					+ method
+					+ " requires its exact typed standard call in "
+					+ (currentOcamlModuleName == null ? "<module>" : currentOcamlModuleName)
+					+ "."
+					+ (currentFunctionName == null ? "<init>" : currentFunctionName);
 			case _:
 		}
 		return null;

@@ -1,14 +1,60 @@
 package backend.ocaml;
 
+/**
+	What a selected standard call returns. `Std.is` and `Std.isOfType` return
+	the Bool test. `Std.downcast` and the deprecated `Std.instance` return the
+	value itself when it belongs to the class, and null otherwise.
+ */
+private enum Stage3OcamlStandardTypeOperation {
+	Test;
+	Downcast;
+}
+
 /** A standard predicate keeps its value operand and exact declaration-selected type argument. */
 private typedef Stage3OcamlNominalCall = {
 	final target:TypedBackendRuntimeTypeOccurrence;
 	final value:HxExpr;
+	final operation:Stage3OcamlStandardTypeOperation;
+}
+
+/** The canonical key of a bodiless generic `Std` narrowing method (`downcast<T:{}, S:T>(value:T, c:Class<S>):S`). */
+private function narrowingKey(method:String):String {
+	final owner = new TyNominalTypeId("Std");
+	final source = TyType.typeParameter(TyTypeParameterId.method(owner, true, method, 0, 0, "T"));
+	final result = TyType.typeParameter(TyTypeParameterId.method(owner, true, method, 0, 1, "S"));
+	final target = TyType.nominal(new TyNominalTypeId("Class"), [result]);
+	return "Std#static:"
+		+ method
+		+ "(required:"
+		+ source.getSemanticKey()
+		+ ",required:"
+		+ target.getSemanticKey()
+		+ ")->"
+		+ result.getSemanticKey()
+		+ "#0";
+}
+
+/**
+	Select a standard type operation by the exact declaration the typer chose,
+	never by the spelling at the call site. A user class named `Std`, or another
+	overload, has a different key and stays an ordinary call.
+ */
+private function standardOperation(declaration:String):Null<Stage3OcamlStandardTypeOperation> {
+	return switch declaration {
+		case "Std#static:isOfType(required:dynamic,required:dynamic)->primitive:Bool#0" | "Std#static:is(required:dynamic,required:dynamic)->primitive:Bool#0":
+			Test;
+		case _ if (declaration == narrowingKey("downcast") || declaration == narrowingKey("instance")):
+			Downcast;
+		case _:
+			null;
+	};
 }
 
 /**
 	Check class predicates against the exact declarations and executable projections
-	of one native request. Generated Haxe objects carry a private descriptor;
+	of one native request. A predicate is `(value is T)`, `Std.isOfType`,
+	`Std.is`, or the narrowing `Std.downcast` / `Std.instance`, which returns the
+	value when the same test passes and null otherwise. Generated Haxe objects carry a private descriptor;
 	Array uses the existing HxArray marker. Other runtime-owned classes and type
 	values need separate representations.
 	Validation precedes output so unsupported operations cannot replace an artifact.
@@ -91,13 +137,20 @@ class Stage3OcamlRuntimeTypes {
 		return name;
 	}
 
-	/** Std.isOfType is an ordinary typed call; its exact second argument supplies the class value. */
+	/**
+		`Std.isOfType`, `Std.is`, `Std.downcast`, and `Std.instance` are ordinary
+		typed calls; their exact second argument supplies the class value. A type
+		argument that is not a checked class marker, such as a `Dynamic` local
+		holding a class, is rejected at emit time: there is no runtime class value
+		to test against.
+	 */
 	function selectCall(expression:HxExpr, fn:Null<TypedBackendFunctionProjection>,
 			field:Null<TypedBackendFieldInitializerProjection>):Null<Stage3OcamlNominalCall> {
 		final call = TypedExactStaticCallSource.decode(expression);
-		final identity = "Std#static:isOfType(required:dynamic,required:dynamic)->primitive:Bool#0";
-		if (call == null || call.declaration != identity)
+		final operation = call == null ? null : standardOperation(call.declaration);
+		if (operation == null)
 			return null;
+		final identity = call.declaration;
 		if (field == null && (fn == null || !functions.exists(fn)) || field != null && !initializers.exists(field))
 			throw "OCaml class predicate has a foreign executable projection";
 		final fact = field != null ? field.findCallableExpression(expression) : fn.findCallableExpression(expression);
@@ -133,14 +186,19 @@ class Stage3OcamlRuntimeTypes {
 		final valueType = fact.getExpressions()[1].getType();
 		if (valueType.hasUnknownComponent())
 			throw "OCaml class predicate requires its complete operand type";
-		return {target: entry, value: call.arguments[0]};
+		return {target: entry, value: call.arguments[0], operation: operation};
 	}
 
 	/** Consume the call before ordinary call rendering can reinterpret its class argument. */
 	public function renderCall(expression:HxExpr, fn:Null<TypedBackendFunctionProjection>, field:Null<TypedBackendFieldInitializerProjection>,
 			emit:HxExpr->String, names:Stage3OcamlLocalNames, quote:String->String):Null<String> {
 		final call = selectCall(expression, fn, field);
-		return call == null ? null : predicate(call.target, emit(call.value), names, quote);
+		if (call == null)
+			return null;
+		return switch call.operation {
+			case Test: predicate(call.target, emit(call.value), names, quote);
+			case Downcast: downcast(call.target, emit(call.value), names, quote);
+		};
 	}
 
 	/** Resolve only an occurrence owned by the current request's exact executable. */
@@ -179,15 +237,40 @@ class Stage3OcamlRuntimeTypes {
 	}
 
 	function predicate(entry:TypedBackendRuntimeTypeOccurrence, rendered:String, names:Stage3OcamlLocalNames, quote:String->String):String {
-		if (!occurrences.exists(entry))
-			throw "OCaml runtime type rendering has a foreign occurrence";
-		final target = reference(entry);
+		final target = checkedTarget(entry);
+		final value = testedValue(names);
+		return "(let " + value + " = Obj.repr (" + rendered + ") in " + membership(entry, target, value, quote) + ")";
+	}
+
+	/**
+		Evaluate the operand once, then return that same value when it belongs to
+		the class, or the null sentinel otherwise. `Obj.obj` hands back the
+		original carrier unchanged; the typer already checked that the class is a
+		subtype of the operand's static type.
+	 */
+	function downcast(entry:TypedBackendRuntimeTypeOccurrence, rendered:String, names:Stage3OcamlLocalNames, quote:String->String):String {
+		final target = checkedTarget(entry);
+		final value = testedValue(names);
+		return "(let " + value + " = Obj.repr (" + rendered + ") in if " + membership(entry, target, value, quote) + " then Obj.obj " + value
+			+ " else Obj.magic HxRuntime.hx_null)";
+	}
+
+	function testedValue(names:Stage3OcamlLocalNames):String {
 		if (names == null)
 			throw "OCaml class predicate requires exact local naming ownership";
-		final value = names.internalName("__hx_type_test_value");
+		return names.internalName("__hx_type_test_value");
+	}
+
+	function checkedTarget(entry:TypedBackendRuntimeTypeOccurrence):String {
+		if (!occurrences.exists(entry))
+			throw "OCaml runtime type rendering has a foreign occurrence";
+		return reference(entry);
+	}
+
+	/** The Bool test on an already evaluated `Obj.t` local. */
+	function membership(entry:TypedBackendRuntimeTypeOccurrence, target:String, value:String, quote:String->String):String {
 		if (entry.getTarget().getKind().match(ArrayCore))
-			return "(let " + value + " = Obj.repr (" + rendered + ") in HxArray.is_value " + value + ")";
-		return "(let " + value + " = Obj.repr (" + rendered + ") in HxAnon.is_anon " + value + " && HxType.isOfType " + value + " (HxType.class_ "
-			+ quote(target) + "))";
+			return "HxArray.is_value " + value;
+		return "HxAnon.is_anon " + value + " && HxType.isOfType " + value + " (HxType.class_ " + quote(target) + ")";
 	}
 }
