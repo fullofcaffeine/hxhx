@@ -4385,6 +4385,7 @@ class TyperStage {
 			case EArrayDecl(values):
 				final acceptsArrayElement = (expected:TyType,
 					actual:TyType) -> actual.isDynamic()
+						|| TyFunctionConstraint.accepts(expected.unwrapNull(), actual)
 						|| TyStructuralArgument.compatibility(ctx.getIndex(), expected, actual) == Compatible
 						|| TyImplicitConversionPlan.select(ctx.getIndex(), expected.unwrapNull(), actual.unwrapNull()) != null
 						|| (actual.isNullLiteral() && TyNullArgument.acceptsLiteral(expected, ctx.getIndex()));
