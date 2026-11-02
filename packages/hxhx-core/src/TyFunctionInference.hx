@@ -1144,6 +1144,14 @@ class TyFunctionInference {
 					collections.set(occurrenceIndex, term);
 				}
 			}
+			// Any function value unifies with haxe.Constraints.Function. The
+			// destination supplies no argument or result types, and nothing else
+			// can later: the callee only sees an untyped Function. An untyped
+			// lambda's omitted inputs and its result therefore fall back to Dynamic.
+			if (term != null && TyFunctionConstraint.accepts(expectedType.unwrapNull(), candidate.preview(term))) {
+				candidate.observeDynamicUse(term, false);
+				continue;
+			}
 			if (expectedType.isDynamic()) {
 				// A Dynamic destination accepts the value without supplying a type
 				// for an omitted parameter. Explicitly untyped results still need
@@ -1176,10 +1184,6 @@ class TyFunctionInference {
 				// Preview follows explicit solutions but leaves deferred fallback holes
 				// unknown, so those variables still receive their concrete constraints.
 				if (candidate.preview(value).isDynamic())
-					continue;
-				// Any function value unifies with haxe.Constraints.Function. The
-				// destination supplies no argument or result types to solve.
-				if (TyFunctionConstraint.accepts(context, candidate.preview(value)))
 					continue;
 				final projected = TyInferenceNominalContext.view(semanticIndex, value, context);
 				// Callable assignment uses the existing parameter/result compatibility

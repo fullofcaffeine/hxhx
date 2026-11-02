@@ -21,6 +21,11 @@ function classify(expected:TyType, actual:TyType, nullPolicy:TyAssignmentNullPol
 	// those inference variables; unresolved named types are still invalid.
 	if (expected != null && expected.isDynamic() && actual != null && !actual.isUnknown() && !incomplete(actual, true))
 		return actual.isVoid() ? Incompatible : Compatible;
+	// Every function value unifies with haxe.Constraints.Function, including a
+	// lambda whose inputs are still unknown: the destination promises nothing
+	// about them.
+	if (TyFunctionConstraint.accepts(expected, actual))
+		return Compatible;
 	if (incomplete(expected) || incomplete(actual))
 		return Unknown;
 	if (expected.isVoid() || actual.isVoid() || expected.isNoNormalCompletion())
@@ -45,9 +50,6 @@ function classify(expected:TyType, actual:TyType, nullPolicy:TyAssignmentNullPol
 		return Compatible;
 	if (expected.isFunction() && actual.isFunction())
 		return functions(expected, actual, nullPolicy);
-	// Every function value unifies with haxe.Constraints.Function.
-	if (TyFunctionConstraint.accepts(expected, actual))
-		return Compatible;
 	if (expected.isPrimitive() && actual.isPrimitive())
 		return expected.isNumeric() && actual.isNumeric() && expected.getDisplay() == "Float" ? Compatible : Incompatible;
 	return nominalArguments(expected, actual);

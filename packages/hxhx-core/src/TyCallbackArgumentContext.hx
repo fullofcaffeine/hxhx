@@ -42,6 +42,9 @@ private function compatible(index:TyperIndex, expression:HxExpr, expected:TyType
 		return TyAssignmentCompatibility.classifyRestSpread(expected, actual);
 	if (!TyStructuralArgument.literalFits(expression, expected))
 		return Incompatible;
+	// A function value, even one with omitted inputs, satisfies haxe.Constraints.Function.
+	if (TyFunctionConstraint.accepts(expected.unwrapNull(), actual))
+		return Compatible;
 	final structural = TyStructuralArgument.compatibility(index, expected, actual);
 	if (structural != null)
 		return structural;
