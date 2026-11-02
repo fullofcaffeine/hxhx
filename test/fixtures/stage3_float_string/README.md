@@ -19,11 +19,12 @@ Both native routes (Stage3 and `reflaxe.ocaml`) now call one runtime helper,
 fewest of 12, 15 or 18 significant digits whose text reads back as the same
 value. This rule matched upstream `haxe --interp` on 20000 random doubles.
 
-The fixture covers whole numbers, signed zero, values that need more than 12
+The fixture covers whole numbers on both sides of 1e12 (the bound of the
+helper's integer path), signed zero, values that need more than 12
 digits, short values, exponent forms, the smallest subnormal value, a parsed
 value, Float literals in concatenation, and Floats stored in Dynamic,
 `Null<Float>`, arrays, anonymous objects, and `StringBuf`.
 
-Not covered: `NaN` and the infinities still print OCaml's `nan`, `inf` and
+Not covered: `NaN` prints `nan` and the infinities print OCaml's `inf` and
 `-inf`. Upstream targets disagree on this text (eval prints `nan`, `infinity`
 and `neg_infinity`), so it needs its own decision. Bead: haxe_ocaml-iffj5.
