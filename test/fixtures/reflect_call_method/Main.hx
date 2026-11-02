@@ -50,12 +50,16 @@ class Main {
 		Sys.println(Reflect.callMethod(holder, stored, [3]));
 		Sys.println(callThrough(Holder.twice));
 		// Lambdas whose inputs are not annotated take Dynamic inputs.
-		// (The listeners print `d` directly: `"text" + d` makes hxhx infer
-		// String for `d`, which upstream does not; see haxe_ocaml-lizwb.)
 		listen("a", [7], function(d) {
 			Sys.println(d);
 		});
 		listen("b", [8], d -> Sys.println(d));
+		// `"listener " + d` types `d` as String (upstream too). Reflect.callMethod
+		// still passes whatever the arguments are: an Int prints as its text.
+		listen("c", [9], function(d) Sys.println("listener " + d));
+		listen("d", ["text"], function(d) Sys.println("listener " + d));
+		// A null `d` is passed as null; printing it in a concatenation needs the
+		// null-String text fix of PR #160 (haxe_ocaml-txs4e), so it is not here.
 		Sys.println(compute([3, 4], (a, b) -> a));
 		Sys.println(Reflect.callMethod(null, (x) -> x, [1]));
 		final identity = (x) -> x;
