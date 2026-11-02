@@ -79,6 +79,8 @@ class CppManagedPatternObservations {
 			case IsBool(literal): value + ".kind() == hxhx::managed::ValueKind::Boolean && " + value + ".asBoolean() == " + literal;
 			case IsInt(literal): value + ".kind() == hxhx::managed::ValueKind::Integer && " + value + ".asInteger() == static_cast<std::int32_t>(" + literal
 				+ "LL)";
+			case IsFloat(_):
+				throw "managed guarded switch does not support Float constant patterns yet (Bead haxe_ocaml-0ep0d)";
 			case IsString(literal): value
 				+ ".kind() == hxhx::managed::ValueKind::String && "
 				+ value
