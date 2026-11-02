@@ -11,11 +11,15 @@
   operands, `compare`, `ucompare`, `<`, `==`, the `high`/`low` words,
   `Std.string`, and postfix `++`/`--`, including a carry from the low word
   into the high word and an alias that keeps its old value.
+- `text += (i32 + 1)`, a user class whose own fields are named `high` and
+  `low`, an Int64 word write whose receiver and value both print, and local
+  assignments used as values, including an Int stored in a `Float` local.
 
 Before the fix, the native program crashed with SIGSEGV on the first line:
 an Int32 value inside a string concatenation reached OCaml's `^` without
 conversion to a string. `++` on Int32 and Int64 locals also left the value
 unchanged, and `Int64.compare` returned only the sign of the difference.
+Storing an Int in a `Float` local (`ratio = 3`) failed to compile.
 
 `npm run test:m14:stage3-int32-int64-arithmetic` checks that upstream Haxe
 4.3.7 prints `expected.stdout`. It then builds the program with Stage3 and

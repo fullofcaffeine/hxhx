@@ -26,6 +26,9 @@ import sys.io.File;
 	  shifts, bitwise operators, comparisons, 32-bit wraparound, increment and
 	  decrement, mixed `Int`/`Int32` operands, and Int64
 	  make/add/sub/mul/div/mod/compare/ucompare/toStr/ofInt/toInt/increment.
+	- The fixture also covers `text += (i32 + 1)`, a user class with its own
+	  `high`/`low` fields, and local assignments used as values, including an
+	  Int stored in a `Float` local.
 	- The native executable must print exactly what upstream Haxe prints.
 	- Prefix `++value`/`--value` on an Int64 is not supported yet: its inline
 	  body contains an `if` statement that shared preparation cannot place in an
@@ -77,6 +80,11 @@ class M14Stage3Int32Int64ArithmeticTest {
 		final program = M14Stage3RuntimeFixture.prepareProgram({source: File.getContent(path), path: path, root: source});
 		final executable = EmitterStage.emitToDir(new MacroExpandedProgram(program, false), outDir);
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
+		// OCaml evaluates application arguments right to left. A word write must bind
+		// its receiver before its value, like every other ordered Stage3 call.
+		final generated = File.getContent(outDir + "/Main.ml");
+		if (generated.indexOf("(Haxe_Int64.set_low) in let __hx_call_argument") < 0)
+			throw "Stage3 Int64 word writes must evaluate the receiver before the value";
 		deleteRecursive(outDir);
 		Sys.println("M14_STAGE3_INT32_INT64_ARITHMETIC_NATIVE:PASS");
 		rejectPrefixInt64Update();

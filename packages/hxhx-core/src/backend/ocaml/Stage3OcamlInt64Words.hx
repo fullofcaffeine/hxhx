@@ -18,8 +18,9 @@ package backend.ocaml;
 	- `isWordField` is true only when the typed field occurrence selects the
 	  `high` or `low` field of the exact private Int64 storage class through a
 	  value receiver (`value.low`, not an implicit `low` inside that class).
-	- `read` and `write` call the provider's typed accessors. `write` yields the
-	  stored word, like a Haxe assignment expression.
+	- `read` and `write` call the provider's typed accessors. `write` evaluates the
+	  receiver before the value (OCaml evaluates arguments right to left) and
+	  yields the stored word, like a Haxe assignment expression.
 **/
 inline final INT64_STORAGE_CLASS = "haxe.Int64.___Int64";
 
@@ -36,6 +37,7 @@ function read(field:String, receiver:String):String {
 	return "(Haxe_Int64.get_" + field + " (" + receiver + "))";
 }
 
-function write(field:String, receiver:String, value:String):String {
-	return "(Haxe_Int64.set_" + field + " (" + receiver + ") (" + value + "))";
+/** Evaluate the receiver before the value, as Haxe does, then store and yield the word. */
+function write(field:String, receiver:String, value:String, names:Stage3OcamlLocalNames):String {
+	return Stage3OcamlCallOrder.render({callee: "Haxe_Int64.set_" + field, arguments: [receiver, value], names: names});
 }

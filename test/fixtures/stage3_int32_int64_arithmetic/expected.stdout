@@ -21,3 +21,9 @@ i64 conv -42 -42 0 5
 i64 str 9223372036854775807 5 1
 i64 inc 10 9 10 11 10
 i64 carry 4294967296 1 0
+receiver value set 7
+text -2147483648
+words 2 3
+float 3.25 5.25
+total 9
+total after 9

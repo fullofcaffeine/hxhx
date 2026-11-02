@@ -1,7 +1,28 @@
 import haxe.Int32;
 import haxe.Int64;
 
+/** A user class whose fields are also named `high` and `low`; it must keep ordinary field storage. */
+class Words {
+	public var high:Int;
+	public var low:Int;
+
+	public function new(high:Int, low:Int) {
+		this.high = high;
+		this.low = low;
+	}
+}
+
 class Main {
+	static function next():Int64 {
+		Sys.print("receiver ");
+		return Int64.make(0, 1);
+	}
+
+	static function value():Int {
+		Sys.print("value ");
+		return 7;
+	}
+
 	static function main():Void {
 		final max:Int32 = 2147483647;
 		final min:Int32 = -2147483648;
@@ -55,5 +76,26 @@ class Main {
 		var edge = Int64.make(0, 0xffffffff);
 		edge++;
 		Sys.println("i64 carry " + Int64.toStr(edge) + " " + edge.high + " " + edge.low);
+		final word = @:privateAccess next().set_low(value());
+		Sys.println("set " + word);
+
+		var text = "text ";
+		text += (max + 1);
+		Sys.println(text);
+		final words = new Words(1, 2);
+		words.low = words.low + words.high;
+		words.high++;
+		Sys.println("words " + words.high + " " + words.low);
+
+		// Assignments used as values: an Int stored in a Float local is widened.
+		var ratio:Float = 0.5;
+		ratio = 3;
+		final afterStatement = ratio + 0.25;
+		final afterValue = (ratio = 5) + 0.25;
+		Sys.println("float " + afterStatement + " " + afterValue);
+		var total = 0;
+		final shown = "total " + (total = 9);
+		Sys.println(shown);
+		Sys.println("total after " + total);
 	}
 }

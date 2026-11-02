@@ -64,3 +64,17 @@ function assignValue(ident:String, stored:String, names:Stage3OcamlLocalNames):S
 	final value = names.internalName("__hx_assigned");
 	return "(let " + value + " = (" + stored + ") in (" + ident + " := " + value + "; " + value + "))";
 }
+
+/**
+	Widen an Int operand stored in a `Float` local, as Haxe does for `f = 3`.
+
+	OCaml keeps `int` and `float` apart, so storing the Int literal `3` in a
+	`float ref` fails to compile. Only an exact, non-nullable `Float`
+	destination with an operand known to be Int is widened; every other
+	assignment keeps its rendered value.
+ */
+function widenIntToFloat(destination:Null<TyType>, operandIsInt:Bool, rendered:String):String {
+	if (!operandIsInt || destination == null || destination.isNullable())
+		return rendered;
+	return TyAliasExpansion.reveal(destination).getSemanticKey() == "primitive:Float" ? "float_of_int (" + rendered + ")" : rendered;
+}
