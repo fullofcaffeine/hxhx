@@ -4707,17 +4707,22 @@ class TyperStage {
 										// so widening it to Dynamic here would erase exact written or
 										// inferred facts before a backend can apply the required
 										// assignment conversion.
-										rhs;
+										//
+										// Haxe types `local = value` as the local's type (after the
+										// value's conversion), not the value's: `(ratio = 5)` with
+										// `ratio:Float` is a Float. An unknown local keeps the value's type.
+										sym.getType().isUnknown() ? rhs : sym.getType();
 									} else {
 										// An assignment used as a value has the local's type, as in Haxe.
 										sym.setType(u);
-										sym.getType();
+										u.isUnknown() ? rhs : u;
 									}
 								} else {
 									rhs;
 								}
+							// An element or other place: the assignment has the place's type.
 							case _:
-								rhs;
+								destination.hasUnknownComponent() ? rhs : destination;
 						}
 					case _ if (HxBinaryOperatorTools.isCompoundAssignment(op)):
 						assertWritableLocal(a, scope, ctx, pos);

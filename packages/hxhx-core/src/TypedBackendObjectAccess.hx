@@ -21,8 +21,9 @@ class TypedBackendObjectAccess {
 
 	/**
 		The checked type of the written field place (`p.x` in `p.x = v`), or
-		null for a read. The assignment's own type is not reliable for this:
-		it can follow the written value's type.
+		null for a read. A field write's own result type is the place's type
+		too; this names the place itself, so the storage conversion does not
+		depend on how the typer types the whole assignment.
 	**/
 	public final placeType:Null<TyType>;
 
