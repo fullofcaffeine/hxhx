@@ -244,6 +244,7 @@
     "test:m14:python-static-fields": "compiler-focused-1",
     "test:m14:typed-abstract-unary": "compiler-focused-2",
     "test:m14:typed-abstract-binary": "compiler-focused-2",
+    "test:m14:untyped-indexed-assignment": "compiler-foundation",
     "test:m14:conditional-abstract-result": "compiler-focused-2",
     "test:m14:js-abstract-values": "compiler-focused-2",
     "test:m14:abstract-unary-cross-backend": "compiler-focused-2",
