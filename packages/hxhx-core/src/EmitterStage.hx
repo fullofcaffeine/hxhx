@@ -562,6 +562,9 @@ class EmitterStage {
 				return converted;
 		}
 		final destination = exactFunctionLocalType(name);
+		final unwrapped = backend.ocaml.Stage3OcamlLocalStorage.concreteFromCarrier(stage3ExactExprType(operand), destination, rendered);
+		if (unwrapped != null)
+			return unwrapped;
 		if (destination == null
 			|| (!destination.isDynamic()
 				&& destination.getSemanticKey() != "primitive:Bool"
@@ -3744,6 +3747,7 @@ class EmitterStage {
 					names: currentFunctionLocalOcamlNames,
 					renderType: ocamlTypeFromTy,
 					isEnumBox: type -> currentEnums != null && currentEnums.runtimeName(type) != null,
+					referenceCarrier: type -> backend.ocaml.Stage3OcamlReferenceCarrier.select(type, currentClassStorage, ocamlTypeFromTy),
 					renderStatements: (statements,
 						renderReturn) -> stmtListToOcaml(statements, allowed, "HxBlockReturn", arityByIdent, hints, staticImportByIdent, currentPackagePath,
 							moduleNameByPkgAndClass, callSigByCallee, hints, new Map(), null, arguments, renderReturn)
@@ -4956,6 +4960,15 @@ class EmitterStage {
 						for (argIndex in 0...fullArgs.length) {
 							final renderedArg = "(" + renderCallArgForSignature(fullArgs[argIndex], argIndex + firstRenderedParam, sig) + ")";
 							renderedArgs.push(renderedArg);
+						}
+						if (isLocalCall) {
+							final typedCall = currentTypedInitializer != null ? currentTypedInitializer.findCallableExpression(e) : currentTypedFunction == null ? null : currentTypedFunction.findCallableExpression(e);
+							final supplied = [
+								for (argument in fullArgs)
+									currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(argument) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(argument)
+							];
+							for (sentinel in backend.ocaml.Stage3OcamlLocalCallOmissions.omitted(typedCall, supplied))
+								renderedArgs.push(sentinel);
 						}
 						final isHxAnonDynamicCall = c.indexOf("HxAnon.get") != -1 || c.indexOf("HxMethodDispatch.structural_field") != -1;
 						final canonicalCallee = isLocalCall ? c : canonicalCallTargetForStage3(c, arityByIdentRaw);
