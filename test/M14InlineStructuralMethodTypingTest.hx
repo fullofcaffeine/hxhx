@@ -14,7 +14,9 @@
 	- Each inline form below must resolve to exactly the semantic type of its
 	  named typedef twin: a method without arguments, a method with arguments,
 	  a variable field holding a function, and a mixed structure.
-	- A duplicate field in an inline structure is still rejected.
+	- `@:optional` makes a declaration-form field optional, like `?`.
+	- A duplicate field and a structure that mixes `x:Int,` with `var y:Int;`
+	  are rejected, as upstream does, at the declaration in the source file.
 **/
 class M14InlineStructuralMethodTypingTest {
 	static function check(condition:Bool, message:String):Void {
@@ -33,6 +35,15 @@ class M14InlineStructuralMethodTypingTest {
 			for (fn in typedClass.getFunctions())
 				result.set(fn.getEnvironment().getName(), fn.getEnvironment().getReturnType().getSemanticKey());
 		return result;
+	}
+
+	static function rejection(source:String):String {
+		try {
+			typeSource(source);
+		} catch (error:Dynamic) {
+			return Std.string(error);
+		}
+		return "<accepted>";
 	}
 
 	static function main():Void {
@@ -66,14 +77,25 @@ class M14InlineStructuralMethodTypingTest {
 		check(types.get("inlineReader") == "anonymous:{value:method<0>:function:()->primitive:Int}",
 			"inline method field lost its method contract: " + types.get("inlineReader"));
 
-		var rejected:Null<String> = null;
-		try {
-			typeSource("class Main {\n\tstatic function twice():{ function value():Int; function value():Int; } return null;\n}\n");
-		} catch (error:Dynamic) {
-			rejected = Std.string(error);
-		}
-		check(rejected != null && rejected.indexOf("Duplicate field declaration : value") >= 0,
-			"duplicate inline structural field was not rejected: " + rejected);
+		final optional = returnTypes(typeSource("typedef Maybe = { ?x:Int }\n"
+			+ "class Main {\n"
+			+ "\tstatic function written():{ @:optional var x:Int; } return null;\n"
+			+ "\tstatic function named():Maybe return null;\n"
+			+ "}\n"));
+		check(optional.get("written") == optional.get("named") && optional.get("written").indexOf("?x") >= 0,
+			"@:optional did not make the field optional: "
+			+ optional.get("written")
+			+ " vs "
+			+ optional.get("named"));
+
+		// Rejections must name the declaration in Main.hx, not an internal placeholder file.
+		final duplicate = rejection("class Main {\n\tstatic function twice():{ function value():Int; function value():Int; } return null;\n}\n");
+		check(duplicate.indexOf("Duplicate field declaration : value") >= 0 && duplicate.indexOf("Main.hx:2") >= 0,
+			"duplicate inline structural field was not rejected at its declaration: " + duplicate);
+		// Upstream: Unexpected keyword "var". One structure cannot mix the two field forms.
+		final mixed = rejection("class Main {\n\tstatic function mixed():{ x:Int, var y:Int; } return null;\n}\n");
+		check(mixed.indexOf("Unexpected keyword \"var\"") >= 0
+			&& mixed.indexOf("Main.hx:2") >= 0, "mixed structure forms were accepted: " + mixed);
 		Sys.println("M14_INLINE_STRUCTURAL_METHOD_TYPING:PASS");
 	}
 }
