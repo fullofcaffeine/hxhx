@@ -161,12 +161,23 @@ let dynamic_equals (a : Obj.t) (b : Obj.t) : bool =
      `2`, `-0.0` prints `-0`, `0.1` prints `0.1`, `1e15` prints `1e+15`,
      `0.1 + 0.2` prints `0.300000000000000044`, and the smallest subnormal
      prints `4.94065645841e-324`.
-   - NaN and the infinities keep OCaml's `nan`, `inf` and `-inf`. Upstream
-     targets disagree on this text (eval prints `nan`, `infinity` and
-     `neg_infinity`), so that choice is outside this conversion. *)
+   - A whole number below 1e12 in magnitude, other than `-0.0`, takes a
+     faster integer path. `%.12g` prints such a value as its plain digits, so
+     the text is the same. From 1e12 up, `%.12g` switches to exponent form
+     (`1e+12`), so the bound must stay at 1e12.
+   - NaN always prints `nan`. C printf would print `-nan` on glibc for a NaN
+     whose sign bit is set. The infinities keep OCaml's `inf` and `-inf`.
+     Upstream targets disagree on this text (eval prints `nan`, `infinity`
+     and `neg_infinity`), so that choice is outside this conversion. *)
 let float_toStdString (value : float) : string =
   match Stdlib.classify_float value with
-  | Stdlib.FP_nan | Stdlib.FP_infinite -> Stdlib.string_of_float value
+  | Stdlib.FP_nan -> "nan"
+  | Stdlib.FP_infinite -> Stdlib.string_of_float value
+  | Stdlib.FP_normal | Stdlib.FP_subnormal | Stdlib.FP_zero
+    when Stdlib.Float.is_integer value
+         && Stdlib.Float.abs value < 1e12
+         && not (Stdlib.Float.sign_bit value && value = 0.0) ->
+      Stdlib.string_of_int (Stdlib.int_of_float value)
   | Stdlib.FP_normal | Stdlib.FP_subnormal | Stdlib.FP_zero ->
       let text = Printf.sprintf "%.12g" value in
       if Stdlib.float_of_string text = value then text

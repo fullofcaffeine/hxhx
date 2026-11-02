@@ -24,6 +24,7 @@ class Main {
 		Sys.println("concat=" + whole + "/" + field + "/" + half(200));
 		Sys.println("literal=" + 2.0 + "/" + 0.5);
 		Sys.println("signed=" + 0.0 + "/" + (-0.0));
+		Sys.println("bound=" + 999999999999.0 + "/" + (-999999999999.0) + "/" + 1e12 + "/" + 1000000000001.0);
 		Sys.println("digits=" + seven / 3 + "/" + (0.1 + 0.2) + "/" + 1234567890123.0);
 		Sys.println("exponent=" + 1e15 + "/" + 1e21 + "/" + 1e-5 + "/" + 5e-324);
 		Sys.println("short=" + 0.1 + "/" + 1.5 + "/" + 12345.678);
