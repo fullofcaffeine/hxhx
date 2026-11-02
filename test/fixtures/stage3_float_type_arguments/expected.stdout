@@ -17,3 +17,13 @@ array literal: 1.5
 array index write: 3.5
 array push: 5.5
 array insert: 8.5
+bare field write: 4.25
+field from array read: 5.25
+field from Int field: 4.25
+field from negation: -2.75
+return of array read: 5.25
+return of Int field: 4.25
+return of negation: -2.75
+Float local from Null<Int>: 7.5
+Float local from Int division: 3.5
+argument from Int division: 0.75

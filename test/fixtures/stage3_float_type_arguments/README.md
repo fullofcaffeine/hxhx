@@ -14,6 +14,10 @@ prints what upstream Haxe 4.3.7 prints. It covers:
 - a `Null<Float>` type argument, including null;
 - `Array<Float>` writes from Int values: an array literal, an index write,
   `push`, and `insert`;
+- Float field writes and Float returns whose value is an Int array read, an
+  Int field read, or a negated Int call, and a field write by its bare name
+  inside the class (`f = values.length`);
+- a `Null<Int>` value (`Std.parseInt("7")`) stored in a Float local;
 - `Cell<Int>` and `Cell<Dynamic>`, which must keep the Int value.
 
 Before the fix, Stage3 promoted only Int literals and Int locals, and only
