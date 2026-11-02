@@ -32,8 +32,10 @@ import sys.io.File;
 	  a supported exact destination".
 	- The native executable must print exactly what upstream Haxe 4.3.7 prints.
 	- A constructor that never assigns `this`, and `this = value` in a
-	  non-inline method, are rejected by upstream Haxe. Stage3 must reject
-	  both at emit time with a named error instead of emitting a placeholder.
+	  non-inline method, are rejected by upstream Haxe. hxhx must reject both
+	  with a named error instead of emitting a placeholder: typing rejects the
+	  first with upstream's "Missing this = value", and Stage3 rejects the
+	  second at emit time.
 	- A control-valued `this` write in an inline method must also be
 	  rejected with a named error. Upstream runs the abstract case, but Stage3
 	  would drop the write (Bead haxe_ocaml-rs48f); upstream rejects the class case.
@@ -84,16 +86,20 @@ class M14Stage3AbstractThisConstructorTest {
 		final upstream = upstreamDiagnostic(root);
 		if (upstream == null || upstream.indexOf(upstreamText) < 0)
 			throw name + ": upstream Haxe must reject the program with <" + upstreamText + ">, got: " + upstream;
-		final program = M14Stage3RuntimeFixture.prepareProgram({source: source, path: path, root: root});
+		// Typing may reject first: the typer now owns definite assignment of
+		// `this` (TyAbstractConstructorInitialization) with upstream's message.
 		final message = try {
+			final program = M14Stage3RuntimeFixture.prepareProgram({source: source, path: path, root: root});
 			EmitterStage.emitToDir(new MacroExpandedProgram(program, false), root + "/out");
 			null;
+		} catch (error:TyperError) {
+			error.message;
 		} catch (error:haxe.Exception) {
 			error.message;
 		}
 		deleteRecursive(root);
 		if (message == null || message.indexOf(stage3Text) < 0)
-			throw name + ": Stage3 must reject the program at emit time with <" + stage3Text + ">, got: " + message;
+			throw name + ": Stage3 must reject the program with <" + stage3Text + ">, got: " + message;
 		Sys.println("M14_STAGE3_ABSTRACT_THIS_CONSTRUCTOR_REJECT_" + name.toUpperCase() + ":PASS");
 	}
 
@@ -123,7 +129,7 @@ class M14Stage3AbstractThisConstructorTest {
 		rejectLikeUpstream("unassigned",
 			'abstract Mark(Int) {\n\tpublic function new() {\n\t\tSys.println("made");\n\t}\n}\n' +
 			'class Main {\n\tstatic function main() {\n\t\tnew Mark();\n\t}\n}\n',
-			"Missing this = value", "abstract constructor Main.Mark.new never assigns this");
+			"Missing this = value", "Missing this = value");
 		rejectLikeUpstream("method_assignment",
 			'abstract Mark(Int) {\n\tpublic function new()\n\t\tthis = 1;\n\n\tpublic function reset():Int {\n\t\tthis = 5;\n\t\treturn this;\n\t}\n}\n' +
 			'class Main {\n\tstatic function main() {\n\t\tSys.println(new Mark().reset());\n\t}\n}\n',

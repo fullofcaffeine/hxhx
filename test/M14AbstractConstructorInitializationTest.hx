@@ -36,9 +36,13 @@ class M14AbstractConstructorInitializationTest {
 				+ entry.body
 				+ ' } }\n';
 			var diagnostic:Null<String> = null;
+			// Type with the production declaration loader: loops over ranges need
+			// the standard IntIterator, which a root-only index omits.
+			final root = ".tmp/abstract_constructor_initialization/" + entry.name;
+			sys.FileSystem.createDirectory(root);
+			sys.io.File.saveContent(root + "/Main.hx", source);
 			try {
-				final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
-				TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+				M14Stage3RuntimeFixture.typeMain({source: source, path: root + "/Main.hx", root: root});
 			} catch (error:haxe.Exception) {
 				diagnostic = error.message;
 			}

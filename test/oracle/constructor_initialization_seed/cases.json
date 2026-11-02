@@ -18,5 +18,17 @@
   {"name":"short_circuit", "body":"flag && ((this = 3) == 3);", "accepted":true},
   {"name":"ternary_both", "body":"flag ? (this = 3) : (this = 4);", "accepted":true},
   {"name":"capture_before_assignment", "body":"var read = function():Int { return this; }; this = 3;", "accepted":true},
-  {"name":"capture_after_assignment", "body":"this = 3; var read = function():Int { return this; };", "accepted":true}
+  {"name":"capture_after_assignment", "body":"this = 3; var read = function():Int { return this; };", "accepted":true},
+  {"name":"for_may_skip", "body":"var n = 2; for (i in 0...n) this = 3;", "accepted":false},
+  {"name":"for_unrolled_range", "body":"for (i in 0...3) this = 3;", "accepted":true},
+  {"name":"for_empty_range", "body":"for (i in 0...0) this = 3;", "accepted":false},
+  {"name":"switch_partial", "body":"switch (flag) { case true: this = 3; }", "accepted":false},
+  {"name":"switch_default", "body":"switch (flag) { case true: this = 3; default: this = 4; }", "accepted":true},
+  {"name":"return_after_assignment", "body":"this = 3; if (flag) return;", "accepted":true},
+  {"name":"compound_before_assignment", "body":"this += 1;", "accepted":false},
+  {"name":"nested_branches", "body":"if (flag) { if (!flag) this = 1; else this = 2; } else this = 3;", "accepted":true},
+  {"name":"loop_continue_then_assign", "body":"while (flag) { if (flag) continue; this = 3; } this = 4;", "accepted":true},
+  {"name":"closure_assigns", "body":"var set = (v:Int) -> this = v; set(3);", "accepted":true},
+  {"name":"closure_assigns_one_branch", "body":"var set = function() { if (flag) this = 3; }; set();", "accepted":false},
+  {"name":"closure_returns_only", "body":"var get = function():Int { return 1; }; get();", "accepted":false}
 ]
