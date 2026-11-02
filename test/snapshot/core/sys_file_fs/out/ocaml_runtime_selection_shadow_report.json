@@ -1,6 +1,6 @@
 {
   "model": "requirements-only-runtime-selection-shadow",
-  "runtimeSourceRevision": "sha256:193cd3554c6a2f402e0b640e94d7546bc9f95650f06c77038ec92e2d63d03960",
+  "runtimeSourceRevision": "sha256:ee268e478ea11eb8f5a374c1a3ba41847a192ecef15f4bb090e1361311f66e11",
   "requirementRevision": "sha256:fbb8cfb06c0fd022fa01ae0b624e12ed71586e2a40595fa6a568ab019a551412",
   "schemaVersion": 1,
   "selectionMode": "full",
@@ -41,8 +41,8 @@
       {
         "module": "HxDynamic",
         "path": "HxDynamic.ml",
-        "sha256": "sha256:91c5a3c2d50e6852d3dd71797f7209a13d5c90ad2c94934ec5545f26aebf53c5",
-        "bytes": 8944
+        "sha256": "sha256:2ff8192d67aab7575d44b4df2b5460b2497e9b65608611c5e032fd2729e5ed98",
+        "bytes": 9844
       },
       {
         "module": "HxEnum",
@@ -347,6 +347,7 @@
           "requirement:control:throw:f43ba7d20da22c67015e5aae:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
           "requirement:control:throw:f55c2a2fc646332cab61bdbc:runtime:haxe-enum-dynamic-box",
           "requirement:control:throw:f55c2a2fc646332cab61bdbc:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
+          "transitive:HxDynamic",
           "transitive:HxType"
         ]
       },
@@ -732,7 +733,7 @@
       "HxSys",
       "HxType"
     ],
-    "revision": "sha256:c009e7a4a2552193ee08fe2dfb842d8e53c132318e566d7c931152f2851081ce"
+    "revision": "sha256:c6d59126b91876c8915fc56e9c56fd23de6a444f99cf02fa14c5319df0801b9d"
   },
   "profile": "portable",
   "message": "Explicit requirements do not yet select the same checked runtime source bytes. This mismatch blocks a hard cut, while the current compiler selection remains authoritative.",
@@ -778,8 +779,8 @@
       {
         "module": "HxDynamic",
         "path": "HxDynamic.ml",
-        "sha256": "sha256:91c5a3c2d50e6852d3dd71797f7209a13d5c90ad2c94934ec5545f26aebf53c5",
-        "bytes": 8944
+        "sha256": "sha256:2ff8192d67aab7575d44b4df2b5460b2497e9b65608611c5e032fd2729e5ed98",
+        "bytes": 9844
       },
       {
         "module": "HxEnum",
@@ -1124,9 +1125,9 @@
       "Std",
       "haxe_CallStack"
     ],
-    "revision": "sha256:467c18bfca61813d2a7425429806c787ade8392133eb202f9e91ab5455be76ea"
+    "revision": "sha256:02e656ed43d1b57ca396a98c427424b7b7976eaabe9a06e1b60afff9c54a6583"
   },
-  "reportRevision": "sha256:31c33320213b692a69736ccf60cbfabe06d5c44bf41b5a09258097c2f157e9ad",
+  "reportRevision": "sha256:8743a4e471ac14e05aafb76ccfb9020a31b4581d3547d18aba4f744f1530074a",
   "differences": {
     "currentOnlyRoots": [
       "Date",
@@ -2013,6 +2014,10 @@
       {
         "module": "HxEnum",
         "reason": "requirement:control:throw:f55c2a2fc646332cab61bdbc:runtime:hxhx-runtime:typed-haxe-exception-signal-v1"
+      },
+      {
+        "module": "HxEnum",
+        "reason": "transitive:HxDynamic"
       },
       {
         "module": "HxEnum",

@@ -1045,6 +1045,11 @@ class EmitterStage {
 			return backend.ocaml.Stage3OcamlStringConversion.convert(backend.ocaml.Stage3OcamlStringConversion.textType(operand.type, stage3AbstractUnderlying),
 				exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 				currentFunctionLocalOcamlNames);
+		if (operand != null
+			&& backend.ocaml.Stage3OcamlStringConversion.isStringText(operand.type)
+			&& !backend.ocaml.Stage3OcamlStringConversion.nonNullText(e))
+			return backend.ocaml.Stage3OcamlStringConversion.stringText(e,
+				exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
 		final tyByIdentRaw = tyByIdent;
 
 		function tyLookup(name:String):Null<TyType> {
@@ -1121,6 +1126,17 @@ class EmitterStage {
 				return backend.ocaml.Stage3OcamlStringConversion.convert(boolText,
 					exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 					currentFunctionLocalOcamlNames);
+			switch expr {
+				// A parenthesized String concatenation keeps its typed operands; a
+				// parenthesized Int addition is not a concatenation.
+				case EParenthesized(inner = EBinop("+", _, _), _) if (backend.ocaml.Stage3OcamlStringConversion.isStringText(concatType)):
+					return "(" + emitStringExpr(inner) + ")";
+				case _ if (backend.ocaml.Stage3OcamlStringConversion.isStringText(concatType)
+					&& !backend.ocaml.Stage3OcamlStringConversion.nonNullText(expr)):
+					return backend.ocaml.Stage3OcamlStringConversion.stringText(expr,
+						exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
+				case _:
+			}
 			return switch (expr) {
 				case EString(v): escapeOcamlString(v);
 				case EEnumValue(name): escapeOcamlString(name);
@@ -2232,6 +2248,8 @@ class EmitterStage {
 		final boolText = backend.ocaml.Stage3OcamlStringConversion.boolTextType(recorded, stage3AbstractUnderlying);
 		if (boolText != null)
 			return backend.ocaml.Stage3OcamlStringConversion.convert(boolText, rendered, currentFunctionLocalOcamlNames);
+		if (backend.ocaml.Stage3OcamlStringConversion.isStringText(recorded))
+			return backend.ocaml.Stage3OcamlStringConversion.stringText(value, rendered);
 		final scalar = if (stage3IsIntExpr(value, tyByIdent)) {
 			"Int";
 		} else if (stage3IsFloatExpr(value, tyByIdent, callSigByCallee, staticImportByIdent)) {
@@ -9472,8 +9490,9 @@ class EmitterStage {
 							staticTyByIdent.set(nameRaw, inferredType);
 						final init = HxFieldDecl.getInit(f);
 						installFieldLocalNames(classProjection, f);
-						final initOcaml = init == null ? "(Obj.magic 0)" : exprToOcaml(init, arityByName, staticTyByIdent, staticImportByIdent,
-							HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
+						final initOcaml = init == null ? currentClassStorage.staticDefault(classProjection,
+							nameRaw) : exprToOcaml(init, arityByName, staticTyByIdent, staticImportByIdent, HxModuleDecl.getPackagePath(decl),
+								moduleNameByPkgAndClass, callSigByCallee);
 						currentFunctionLocalOcamlNames = null;
 						currentTypedInitializer = null;
 						out.push("let " + ocamlValueIdent(nameRaw) + " = " + initOcaml);

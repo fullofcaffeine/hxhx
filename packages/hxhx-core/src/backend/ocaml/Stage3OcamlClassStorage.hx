@@ -13,6 +13,9 @@ class Stage3OcamlClassStorage {
 	// Every exact class declaration can describe ancestry. Only admitted generated
 	// declarations below may select object storage or typed-catch representations.
 	final ancestry:Map<String, TypedBackendClassSemanticFacts> = [];
+	// The nominal kind of every declaration in this request, including
+	// runtime-provided and extern ones, for static default selection.
+	final nominalKinds:Map<String, TypedBackendClassSemanticFacts.TypedBackendNominalKind> = [];
 	final nominals:Map<String, TypedBackendClassSemanticFacts> = [];
 	final owners:Map<String, TypedBackendClassSemanticFacts> = [];
 	final projections:Map<String, TypedBackendClassProjection> = [];
@@ -37,6 +40,7 @@ class Stage3OcamlClassStorage {
 	 */
 	public function add(projection:TypedBackendClassProjection, runtimeProvided:Bool, ?outputModule:String):Void {
 		final facts = projection.requireSemanticFacts();
+		nominalKinds.set(facts.getClassIdentity(), facts.getNominalKind());
 		switch facts.getNominalKind() {
 			case AbstractValue(underlying):
 				if (!runtimeProvided && !facts.getIsExtern() && outputModule != null)
@@ -134,6 +138,23 @@ class Stage3OcamlClassStorage {
 	public function stringifierRegistration(projection:TypedBackendClassProjection, currentModule:String, ident:(String, String) -> String,
 			quote:String->String):Null<String>
 		return projection.hasSemanticFacts() ? stringifiers.registration(projection.requireSemanticFacts(), currentModule, ident, quote) : null;
+
+	/**
+		The checked declared type of the static field `name` of this class, or
+		null when the class has no typed facts for it. Stage3 uses it to choose
+		the default of a static field without an initializer.
+	**/
+	public function staticDefault(projection:TypedBackendClassProjection, name:String):String
+		return Stage3OcamlStaticDefault.value(staticFieldType(projection, name), identity -> nominalKinds.get(identity));
+
+	public function staticFieldType(projection:TypedBackendClassProjection, name:String):Null<TyType> {
+		if (projection == null || !projection.hasSemanticFacts())
+			return null;
+		for (field in projection.requireSemanticFacts().copyFields())
+			if (field.isStatic && field.name == name)
+				return field.semanticType;
+		return null;
+	}
 
 	/** Return field execution only for the exact emitted class that owns it. */
 	public function instanceInitializers(projection:TypedBackendClassProjection):Null<Stage3OcamlInstanceInitializers> {
