@@ -119,112 +119,112 @@ let rec parse = fun token -> (try let tempMaybeString = ref (Obj.magic (HxRuntim
 ) with
   | HxRuntime.Hx_return __ret_31 -> (Obj.obj __ret_31 : Haxe_macro_Expr.binop) : Haxe_macro_Expr.binop)
 
-let rec renderOperation = fun operation makeEnum -> let tempResult = ref (HxString.hx_null_string : string) in (
+let rec renderOperation = fun operation makeEnum -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
   ignore (match operation with
-    | Haxe_macro_Expr.OpAdd -> let __assign_32 = (makeEnum ("OpAdd" : string) (Obj.magic (let __represented_array_33 = HxArray.create () in __represented_array_33)) : string) in (
+    | Haxe_macro_Expr.OpAdd -> let __assign_32 = Obj.magic (makeEnum ("OpAdd" : string) (Obj.magic (let __arr_33 = HxArray.create () in __arr_33))) in (
       tempResult := __assign_32;
       __assign_32
     )
-    | Haxe_macro_Expr.OpMult -> let __assign_34 = (makeEnum ("OpMult" : string) (Obj.magic (let __represented_array_35 = HxArray.create () in __represented_array_35)) : string) in (
+    | Haxe_macro_Expr.OpMult -> let __assign_34 = Obj.magic (makeEnum ("OpMult" : string) (Obj.magic (let __arr_35 = HxArray.create () in __arr_35))) in (
       tempResult := __assign_34;
       __assign_34
     )
-    | Haxe_macro_Expr.OpDiv -> let __assign_36 = (makeEnum ("OpDiv" : string) (Obj.magic (let __represented_array_37 = HxArray.create () in __represented_array_37)) : string) in (
+    | Haxe_macro_Expr.OpDiv -> let __assign_36 = Obj.magic (makeEnum ("OpDiv" : string) (Obj.magic (let __arr_37 = HxArray.create () in __arr_37))) in (
       tempResult := __assign_36;
       __assign_36
     )
-    | Haxe_macro_Expr.OpSub -> let __assign_38 = (makeEnum ("OpSub" : string) (Obj.magic (let __represented_array_39 = HxArray.create () in __represented_array_39)) : string) in (
+    | Haxe_macro_Expr.OpSub -> let __assign_38 = Obj.magic (makeEnum ("OpSub" : string) (Obj.magic (let __arr_39 = HxArray.create () in __arr_39))) in (
       tempResult := __assign_38;
       __assign_38
     )
-    | Haxe_macro_Expr.OpAssign -> let __assign_40 = (makeEnum ("OpAssign" : string) (Obj.magic (let __represented_array_41 = HxArray.create () in __represented_array_41)) : string) in (
+    | Haxe_macro_Expr.OpAssign -> let __assign_40 = Obj.magic (makeEnum ("OpAssign" : string) (Obj.magic (let __arr_41 = HxArray.create () in __arr_41))) in (
       tempResult := __assign_40;
       __assign_40
     )
-    | Haxe_macro_Expr.OpEq -> let __assign_42 = (makeEnum ("OpEq" : string) (Obj.magic (let __represented_array_43 = HxArray.create () in __represented_array_43)) : string) in (
+    | Haxe_macro_Expr.OpEq -> let __assign_42 = Obj.magic (makeEnum ("OpEq" : string) (Obj.magic (let __arr_43 = HxArray.create () in __arr_43))) in (
       tempResult := __assign_42;
       __assign_42
     )
-    | Haxe_macro_Expr.OpNotEq -> let __assign_44 = (makeEnum ("OpNotEq" : string) (Obj.magic (let __represented_array_45 = HxArray.create () in __represented_array_45)) : string) in (
+    | Haxe_macro_Expr.OpNotEq -> let __assign_44 = Obj.magic (makeEnum ("OpNotEq" : string) (Obj.magic (let __arr_45 = HxArray.create () in __arr_45))) in (
       tempResult := __assign_44;
       __assign_44
     )
-    | Haxe_macro_Expr.OpGt -> let __assign_46 = (makeEnum ("OpGt" : string) (Obj.magic (let __represented_array_47 = HxArray.create () in __represented_array_47)) : string) in (
+    | Haxe_macro_Expr.OpGt -> let __assign_46 = Obj.magic (makeEnum ("OpGt" : string) (Obj.magic (let __arr_47 = HxArray.create () in __arr_47))) in (
       tempResult := __assign_46;
       __assign_46
     )
-    | Haxe_macro_Expr.OpGte -> let __assign_48 = (makeEnum ("OpGte" : string) (Obj.magic (let __represented_array_49 = HxArray.create () in __represented_array_49)) : string) in (
+    | Haxe_macro_Expr.OpGte -> let __assign_48 = Obj.magic (makeEnum ("OpGte" : string) (Obj.magic (let __arr_49 = HxArray.create () in __arr_49))) in (
       tempResult := __assign_48;
       __assign_48
     )
-    | Haxe_macro_Expr.OpLt -> let __assign_50 = (makeEnum ("OpLt" : string) (Obj.magic (let __represented_array_51 = HxArray.create () in __represented_array_51)) : string) in (
+    | Haxe_macro_Expr.OpLt -> let __assign_50 = Obj.magic (makeEnum ("OpLt" : string) (Obj.magic (let __arr_51 = HxArray.create () in __arr_51))) in (
       tempResult := __assign_50;
       __assign_50
     )
-    | Haxe_macro_Expr.OpLte -> let __assign_52 = (makeEnum ("OpLte" : string) (Obj.magic (let __represented_array_53 = HxArray.create () in __represented_array_53)) : string) in (
+    | Haxe_macro_Expr.OpLte -> let __assign_52 = Obj.magic (makeEnum ("OpLte" : string) (Obj.magic (let __arr_53 = HxArray.create () in __arr_53))) in (
       tempResult := __assign_52;
       __assign_52
     )
-    | Haxe_macro_Expr.OpAnd -> let __assign_54 = (makeEnum ("OpAnd" : string) (Obj.magic (let __represented_array_55 = HxArray.create () in __represented_array_55)) : string) in (
+    | Haxe_macro_Expr.OpAnd -> let __assign_54 = Obj.magic (makeEnum ("OpAnd" : string) (Obj.magic (let __arr_55 = HxArray.create () in __arr_55))) in (
       tempResult := __assign_54;
       __assign_54
     )
-    | Haxe_macro_Expr.OpOr -> let __assign_56 = (makeEnum ("OpOr" : string) (Obj.magic (let __represented_array_57 = HxArray.create () in __represented_array_57)) : string) in (
+    | Haxe_macro_Expr.OpOr -> let __assign_56 = Obj.magic (makeEnum ("OpOr" : string) (Obj.magic (let __arr_57 = HxArray.create () in __arr_57))) in (
       tempResult := __assign_56;
       __assign_56
     )
-    | Haxe_macro_Expr.OpXor -> let __assign_58 = (makeEnum ("OpXor" : string) (Obj.magic (let __represented_array_59 = HxArray.create () in __represented_array_59)) : string) in (
+    | Haxe_macro_Expr.OpXor -> let __assign_58 = Obj.magic (makeEnum ("OpXor" : string) (Obj.magic (let __arr_59 = HxArray.create () in __arr_59))) in (
       tempResult := __assign_58;
       __assign_58
     )
-    | Haxe_macro_Expr.OpBoolAnd -> let __assign_60 = (makeEnum ("OpBoolAnd" : string) (Obj.magic (let __represented_array_61 = HxArray.create () in __represented_array_61)) : string) in (
+    | Haxe_macro_Expr.OpBoolAnd -> let __assign_60 = Obj.magic (makeEnum ("OpBoolAnd" : string) (Obj.magic (let __arr_61 = HxArray.create () in __arr_61))) in (
       tempResult := __assign_60;
       __assign_60
     )
-    | Haxe_macro_Expr.OpBoolOr -> let __assign_62 = (makeEnum ("OpBoolOr" : string) (Obj.magic (let __represented_array_63 = HxArray.create () in __represented_array_63)) : string) in (
+    | Haxe_macro_Expr.OpBoolOr -> let __assign_62 = Obj.magic (makeEnum ("OpBoolOr" : string) (Obj.magic (let __arr_63 = HxArray.create () in __arr_63))) in (
       tempResult := __assign_62;
       __assign_62
     )
-    | Haxe_macro_Expr.OpShl -> let __assign_64 = (makeEnum ("OpShl" : string) (Obj.magic (let __represented_array_65 = HxArray.create () in __represented_array_65)) : string) in (
+    | Haxe_macro_Expr.OpShl -> let __assign_64 = Obj.magic (makeEnum ("OpShl" : string) (Obj.magic (let __arr_65 = HxArray.create () in __arr_65))) in (
       tempResult := __assign_64;
       __assign_64
     )
-    | Haxe_macro_Expr.OpShr -> let __assign_66 = (makeEnum ("OpShr" : string) (Obj.magic (let __represented_array_67 = HxArray.create () in __represented_array_67)) : string) in (
+    | Haxe_macro_Expr.OpShr -> let __assign_66 = Obj.magic (makeEnum ("OpShr" : string) (Obj.magic (let __arr_67 = HxArray.create () in __arr_67))) in (
       tempResult := __assign_66;
       __assign_66
     )
-    | Haxe_macro_Expr.OpUShr -> let __assign_68 = (makeEnum ("OpUShr" : string) (Obj.magic (let __represented_array_69 = HxArray.create () in __represented_array_69)) : string) in (
+    | Haxe_macro_Expr.OpUShr -> let __assign_68 = Obj.magic (makeEnum ("OpUShr" : string) (Obj.magic (let __arr_69 = HxArray.create () in __arr_69))) in (
       tempResult := __assign_68;
       __assign_68
     )
-    | Haxe_macro_Expr.OpMod -> let __assign_70 = (makeEnum ("OpMod" : string) (Obj.magic (let __represented_array_71 = HxArray.create () in __represented_array_71)) : string) in (
+    | Haxe_macro_Expr.OpMod -> let __assign_70 = Obj.magic (makeEnum ("OpMod" : string) (Obj.magic (let __arr_71 = HxArray.create () in __arr_71))) in (
       tempResult := __assign_70;
       __assign_70
     )
-    | Haxe_macro_Expr.OpAssignOp _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_72 = (makeEnum ("OpAssignOp" : string) (Obj.magic (let __represented_array_73 = HxArray.create () in let __represented_array_element_0_74 = renderOperation (Obj.magic inner) makeEnum in (
-      ignore (HxArray.push __represented_array_73 __represented_array_element_0_74);
-      __represented_array_73
-    ))) : string) in (
+    | Haxe_macro_Expr.OpAssignOp _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_72 = Obj.magic (makeEnum ("OpAssignOp" : string) (Obj.magic (let __arr_73 = HxArray.create () in (
+      ignore (HxArray.push __arr_73 (renderOperation (Obj.magic inner) makeEnum));
+      __arr_73
+    )))) in (
       tempResult := __assign_72;
       __assign_72
     )
-    | Haxe_macro_Expr.OpInterval -> let __assign_75 = (makeEnum ("OpInterval" : string) (Obj.magic (let __represented_array_76 = HxArray.create () in __represented_array_76)) : string) in (
-      tempResult := __assign_75;
-      __assign_75
+    | Haxe_macro_Expr.OpInterval -> let __assign_74 = Obj.magic (makeEnum ("OpInterval" : string) (Obj.magic (let __arr_75 = HxArray.create () in __arr_75))) in (
+      tempResult := __assign_74;
+      __assign_74
     )
-    | Haxe_macro_Expr.OpArrow -> let __assign_77 = (makeEnum ("OpArrow" : string) (Obj.magic (let __represented_array_78 = HxArray.create () in __represented_array_78)) : string) in (
-      tempResult := __assign_77;
-      __assign_77
+    | Haxe_macro_Expr.OpArrow -> let __assign_76 = Obj.magic (makeEnum ("OpArrow" : string) (Obj.magic (let __arr_77 = HxArray.create () in __arr_77))) in (
+      tempResult := __assign_76;
+      __assign_76
     )
-    | Haxe_macro_Expr.OpIn -> let __assign_79 = (makeEnum ("OpIn" : string) (Obj.magic (let __represented_array_80 = HxArray.create () in __represented_array_80)) : string) in (
-      tempResult := __assign_79;
-      __assign_79
+    | Haxe_macro_Expr.OpIn -> let __assign_78 = Obj.magic (makeEnum ("OpIn" : string) (Obj.magic (let __arr_79 = HxArray.create () in __arr_79))) in (
+      tempResult := __assign_78;
+      __assign_78
     )
-    | Haxe_macro_Expr.OpNullCoal -> let __assign_81 = (makeEnum ("OpNullCoal" : string) (Obj.magic (let __represented_array_82 = HxArray.create () in __represented_array_82)) : string) in (
-      tempResult := __assign_81;
-      __assign_81
+    | Haxe_macro_Expr.OpNullCoal -> let __assign_80 = Obj.magic (makeEnum ("OpNullCoal" : string) (Obj.magic (let __arr_81 = HxArray.create () in __arr_81))) in (
+      tempResult := __assign_80;
+      __assign_80
     ));
-  !tempResult
+  Obj.magic (!tempResult)
 )
 
 let render = fun token makeEnum -> renderOperation (Obj.magic (parse (token : string))) makeEnum
