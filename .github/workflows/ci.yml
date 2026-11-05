@@ -637,7 +637,7 @@ jobs:
         include:
           - shard: compiler-foundation
             label: Compiler foundations and runtime
-            timeout_minutes: 40
+            timeout_minutes: 60
           - shard: compiler-packaging
             label: OCaml packaging and metal profile
             timeout_minutes: 40

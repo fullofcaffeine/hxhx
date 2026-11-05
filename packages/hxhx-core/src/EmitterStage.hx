@@ -545,6 +545,17 @@ class EmitterStage {
 	}
 
 	/** Local storage uses declared types, including generated control-result bindings. */
+	/**
+		The value that `name = operand` stores, shared by statement and value-position assignments.
+		It widens an Int operand stored in a Float local, applies the Int64 carrier conversion, and
+		then uses the local's Dynamic, Bool, or nullable storage representation.
+	**/
+	static function localAssignmentStoredValue(name:String, declaredType:String, operand:HxExpr, rendered:String, ?tyByIdent:Map<String, TyType>):String {
+		final operandIsInt = operand.match(EInt(_)) || stage3ExactPrimitiveKey(operand) == "primitive:Int";
+		final widened = backend.ocaml.Stage3OcamlLocalStorage.widenIntToFloat(exactFunctionLocalType(name), operandIsInt, rendered);
+		return localStorageValue(name, operand, stage3Int64CarrierValue(declaredType, operand, widened, tyByIdent));
+	}
+
 	static function localStorageValue(name:String, operand:HxExpr, rendered:String):String {
 		if (currentCallableFunction != null && currentTypedInitializer == null) {
 			final converted = currentCallableFunction.local(name, operand, rendered);
@@ -2171,6 +2182,8 @@ class EmitterStage {
 			// Every `this` in one function has the same type; inside an abstract's
 			// method it is the underlying type (Int for `abstract Score(Int)`).
 			case EThis: currentTypedInitializer == null && currentTypedFunction != null ? currentTypedFunction.getThisType() : null;
+			// `(local = value)` yields the value stored in the local, so it has the local's type.
+			case EBinop("=", EIdent(name), _): exactFunctionLocalType(name);
 			case ECast(_, _) | ECheckType(_, _):
 				final conversion = currentTypedInitializer != null ? currentTypedInitializer.findCast(expr) : currentTypedFunction == null ? null : currentTypedFunction.findCast(expr);
 				conversion == null ? null : conversion.getTargetType();
@@ -2764,7 +2777,9 @@ class EmitterStage {
 					|| stage3IsBoolExpr(expr, tyByIdent)):
 				exprToOcamlString(expr, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 			case _:
-				exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				final rendered = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				final converted = backend.ocaml.Stage3OcamlStringConversion.concatOperand(stage3ExactExprType(expr), rendered, currentFunctionLocalOcamlNames);
+				converted == null ? rendered : converted;
 		}
 	}
 
@@ -3679,6 +3694,12 @@ class EmitterStage {
 			final staticRead = field == null ? null : currentClassStorage.statics.read(field, currentOcamlModuleName);
 			if (staticRead != null)
 				return staticRead;
+			switch e {
+				case EField(receiver, name) if (backend.ocaml.Stage3OcamlInt64Words.isWordField(field)):
+					return backend.ocaml.Stage3OcamlInt64Words.read(name,
+						exprToOcaml(receiver, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
+				case _:
+			}
 			if (field != null) {
 				final rendered = currentClassStorage.read(field,
 					value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
@@ -5098,6 +5119,8 @@ class EmitterStage {
 									callSigByCallee);
 								final rhsCode = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 									callSigByCallee);
+								if (backend.ocaml.Stage3OcamlInt64Words.isWordField(stage3FieldOccurrence(a)))
+									return backend.ocaml.Stage3OcamlInt64Words.write(field, objCode, rhsCode, currentFunctionLocalOcamlNames);
 								"(let __hx_obj = ("
 								+ objCode
 								+ ") in let __hx_v = ("
@@ -5105,6 +5128,14 @@ class EmitterStage {
 								+ ") in (HxAnon.set (Obj.repr __hx_obj) "
 								+ escapeOcamlString(field)
 								+ " (Obj.repr __hx_v); __hx_v))";
+							// A local assignment used as a value, such as the `this = clamp(this)`
+							// writeback of an inlined abstract increment, stores and yields its value.
+							case EIdent(name) if (isMutableLocalRefIdent(name) && exactFunctionLocalType(name) != null):
+								final rhsCode = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+									callSigByCallee);
+								backend.ocaml.Stage3OcamlLocalStorage.assignValue(requireOcamlFunctionLocalValueIdent(name),
+									localAssignmentStoredValue(name, exactFunctionLocalType(name).toString(), b, rhsCode, tyByIdentRaw),
+									currentFunctionLocalOcamlNames);
 							case _:
 								"(Obj.magic 0)";
 						}
@@ -5642,6 +5673,9 @@ class EmitterStage {
 						case "=":
 							switch (a) {
 								case EField(obj, _): hasBringupPoison(obj) || hasBringupPoison(b);
+								// `exprToOcaml` stores a value-position write to a typed mutable local.
+								case EIdent(name) if (isMutableLocalRefIdent(name) && exactFunctionLocalType(name) != null):
+									hasBringupPoison(b);
 								case EIdent(_):
 									// A lowered expression can write an implicit receiver field.
 									// Require its exact storage declaration before admitting the write.
@@ -6699,11 +6733,10 @@ class EmitterStage {
 			}
 			var rhsCode:Null<String> = switch (op) {
 				case "=":
-					localStorageValue(name, rhs,
-						stage3Int64CarrierValue(lhsTy, rhs,
-							returnExprToOcaml(rhs, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
-								moduleNameByPkgAndClass, callSigByCallee),
-							cast tyCtx));
+					localAssignmentStoredValue(name, lhsTy, rhs,
+						returnExprToOcaml(rhs, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
+							moduleNameByPkgAndClass, callSigByCallee),
+						cast tyCtx);
 				case "+=":
 					returnExprToOcaml(EBinop("+", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
 						currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);

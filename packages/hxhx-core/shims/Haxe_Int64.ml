@@ -157,13 +157,27 @@ let isNeg (value : t) : bool =
 let isZero (value : t) : bool =
   value.high = 0 && value.low = 0
 
+(* Haxe 4.3.7 returns the word difference itself, not only its sign:
+   [Int64.compare(make(0, 5), make(0x7fffffff, -1))] is -2147483647. Callers
+   can print or store that number, so keep the exact upstream formula, with
+   32-bit wrapping subtraction on the stored signed words.
+
+   [ucompare_word] is [haxe.Int32.ucompare] on two signed 32-bit words. *)
+let ucompare_word (left : int) (right : int) : int =
+  if left < 0 then (if right < 0 then HxInt.sub (lnot right) (lnot left) else 1)
+  else if right < 0 then -1
+  else HxInt.sub left right
+
 let compare (left : t) (right : t) : int =
-  Stdlib.Int64.compare (to_native left) (to_native right)
+  let high = HxInt.sub left.high right.high in
+  let difference = if high <> 0 then high else ucompare_word left.low right.low in
+  if left.high < 0 then (if right.high < 0 then difference else -1)
+  else if right.high >= 0 then difference
+  else 1
 
 let ucompare (left : t) (right : t) : int =
-  Stdlib.Int64.compare
-    (Stdlib.Int64.logxor (to_native left) Stdlib.Int64.min_int)
-    (Stdlib.Int64.logxor (to_native right) Stdlib.Int64.min_int)
+  let high = ucompare_word left.high right.high in
+  if high <> 0 then high else ucompare_word left.low right.low
 
 let add (left : t) (right : t) : t =
   lift2 Stdlib.Int64.add left right
