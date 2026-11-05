@@ -1126,6 +1126,17 @@ class EmitterStage {
 		}
 
 		var emitStringExpr:HxExpr->String = null;
+		// A `UInt` concatenation operand prints its unsigned value, as upstream's
+		// `UInt.toString` does. A bare `UInt` passed to `Sys.println(v:Dynamic)` is
+		// erased to its Int on upstream too, so only operands are converted.
+		function emitConcatOperand(operand:HxExpr):String {
+			final exact = stage3ExactExprType(operand);
+			if (!backend.ocaml.Stage3OcamlStringConversion.isUnsigned(exact))
+				return emitStringExpr(operand);
+			return backend.ocaml.Stage3OcamlStringConversion.convert(exact,
+				exprToOcaml(operand, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				currentFunctionLocalOcamlNames);
+		}
 		emitStringExpr = function(expr:HxExpr):String {
 			final staticRead = stage3StoredStaticRead(expr);
 			if (staticRead != null)
@@ -1138,7 +1149,7 @@ class EmitterStage {
 				// When an expression is demanded as a string (e.g. trace/println), treat `+` as
 				// string concatenation and lower it to OCaml's `^`.
 				case EBinop("+", a, b):
-					"(" + emitStringExpr(a) + " ^ " + emitStringExpr(b) + ")";
+					"(" + emitConcatOperand(a) + " ^ " + emitConcatOperand(b) + ")";
 				case ECall(EField(EIdent("Std"), "string"), [arg]):
 					// String interpolation lowering uses `Std.string(...)` to force stringification.
 					//
@@ -2767,6 +2778,12 @@ class EmitterStage {
 	static function exprToOcamlForConcatStage3(expr:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
 			?callSigByCallee:Map<String, EmitterCallSig>):String {
+		// A `UInt` operand prints its unsigned value, as upstream's `UInt.toString` does.
+		final exact = stage3ExactExprType(expr);
+		if (backend.ocaml.Stage3OcamlStringConversion.isUnsigned(exact))
+			return backend.ocaml.Stage3OcamlStringConversion.convert(exact,
+				exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				currentFunctionLocalOcamlNames);
 		// Best-effort: keep concatenation type-safe by stringifying obvious primitives.
 		return switch (expr) {
 			case EInt(_), EFloat(_), EBool(_), EIdent(_):
@@ -3253,6 +3270,13 @@ class EmitterStage {
 				return "(Obj.magic 0)";
 			case ECall(EField(_obj, "isDirectory"), []):
 				return "false";
+			case ECall(EIdent("trace"), [arg]) if (backend.ocaml.Stage3OcamlStringConversion.isUnsigned(stage3ExactExprType(arg))):
+				// Upstream `trace` prints a `UInt` argument through `UInt.toString`, as its unsigned value.
+				return "print_endline ("
+					+ backend.ocaml.Stage3OcamlStringConversion.convert(stage3ExactExprType(arg),
+						exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+						currentFunctionLocalOcamlNames)
+					+ ")";
 			case ECall(EIdent("trace"), [arg]):
 				return "print_endline ("
 					+ exprToOcamlString(arg, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)

@@ -1,0 +1,28 @@
+int32 local: 6
+int32 postfix: 6
+int32 after: 5
+int32 prefix: 6
+int32 wrap: -2147483648
+int32 parameter: 10
+int32 field: 2
+4294967295
+concat 4294967295
+concat mid 2147483648
+-1
+field 4294967295
+element 2147483648
+4294967295
+-1,-2147483648,7
+[-1,-2147483648,7]
+big > small true
+mid > small true
+small < mid true
+big >= mid true
+division 2147483647.5
+remainder 5
+wrap 0
+decrement 4294967295
+increment 0
+element decrement 6
+null null
+nullable 4294967295
