@@ -420,7 +420,41 @@ class M14MacroSyntaxRoundTripTest {
 			() -> MacroSyntaxWire.decodeResult(MacroSyntaxWire.VERSION + "\nRS5:ENope"));
 	}
 
+	/**
+		A macro may return an integer constant that does not fit Int. Upstream
+		types `CInt("2147483648")` and `CInt("-2147483649")` as Float, keeps the
+		32-bit bits of `CInt("0xFFFFFFFF")`, and rejects a wider hex constant.
+		Import must classify them like the parser does (`HxIntegerLiteral`).
+	**/
+	static function integerConstantImport():Void {
+		final file = "test/fixtures/project-macro-identity/src/Main.hx";
+		final p:Position = {file: file, min: 0, max: 0};
+		function imported(text:String):String
+			return TypedBodyFingerprint.exactExpression(new MacroSyntaxImport(new MacroSyntaxPositions(file)).result({expr: EConst(CInt(text, null)), pos: p}));
+		function expected(expression:HxExpr):String
+			return TypedBodyFingerprint.exactExpression(expression);
+		require(imported("2147483647") == expected(EInt(2147483647)), "the maximum Int must import as Int");
+		require(imported("-2147483648") == expected(EInt(-2147483647 - 1)), "the minimum Int must import as one Int");
+		require(imported("2147483648") == expected(EFloat(2147483648.0)), "an Int above the range must import as Float");
+		require(imported("-2147483649") == expected(EFloat(-2147483649.0)), "an Int below the range must import as Float");
+		require(imported("2_147_483_648") == expected(EFloat(2147483648.0)), "separators must not change the classification");
+		require(imported("0xFFFFFFFF") == expected(EInt(-1)), "a 32-bit hex constant must keep its bits");
+		// Upstream: CInt("-0x80000000") is -2147483648 and CInt("-0xFFFFFFFF") is 1.
+		require(imported("-0x80000000") == expected(EInt(-2147483647 - 1)), "a negated minimum-Int hex constant must stay the minimum Int");
+		require(imported("-0xFFFFFFFF") == expected(EInt(1)), "a negated hex constant must negate its 32-bit value");
+		requireFailure("leading-zero wide hex", "", "invalid hexadecimal integer", () -> {
+			imported("0x000000001");
+		});
+		requireFailure("wide hex", "", "invalid hexadecimal integer", () -> {
+			imported("0x100000000");
+		});
+		requireFailure("non-digit", "", "is not a valid Int", () -> {
+			imported("12abc");
+		});
+	}
+
 	static function main():Void {
+		integerConstantImport();
 		identityShape();
 		whileShape();
 		positionsAndRejections();

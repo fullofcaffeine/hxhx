@@ -177,16 +177,43 @@ class MacroSyntaxImport {
 		};
 	}
 
+	/**
+		Import an unsuffixed `CInt` with the parser's classification
+		(`HxIntegerLiteral`). A macro can build `CInt("2147483648")` or
+		`CInt("-2147483649")`; upstream types such a value as Float, so it
+		imports as `EFloat`. A hex literal keeps its 32-bit bits, and a wider
+		one is rejected as upstream rejects it.
+	**/
+	static function integerConstant(written:String):HxExpr {
+		final text = StringTools.replace(written, "_", "");
+		final negative = StringTools.startsWith(text, "-");
+		final magnitude = negative ? text.substr(1) : text;
+		if (StringTools.startsWith(magnitude, "0x") || StringTools.startsWith(magnitude, "0X")) {
+			final value = HxIntegerLiteral.hexadecimal(magnitude);
+			if (value == null)
+				throw failure("integer literal `" + written + "` is an invalid hexadecimal integer");
+			// Negate within 32 bits: `-0x80000000` stays the minimum Int (a native host
+			// with wider integers must not produce 2147483648).
+			return EInt(negative && value != -2147483647 - 1 ? -value : value);
+		}
+		if (negative && magnitude == "2147483648")
+			return EInt(-2147483647 - 1);
+		final value = HxIntegerLiteral.decimal(magnitude);
+		if (value != null)
+			return EInt(negative ? -value : value);
+		if (!HxIntegerLiteral.isDecimalDigits(magnitude))
+			throw failure("integer literal `" + written + "` is not a valid Int");
+		final number = Std.parseFloat(magnitude);
+		return EFloat(negative ? -number : number);
+	}
+
 	/** Match the parser: `true`, `false`, `null`, `this`, `super` are literals; `Upper` names alone are enum values. */
 	static function constantOf(constant:Constant, fieldOwner:Bool):HxExpr {
 		return switch constant {
 			case CInt(text, suffix):
 				if (suffix != null)
 					throw failure("integer literal suffix `" + suffix + "` is not imported yet");
-				final value = Std.parseInt(text);
-				if (value == null)
-					throw failure("integer literal `" + text + "` is not a valid Int");
-				EInt(value);
+				integerConstant(text);
 			case CFloat(text, suffix):
 				if (suffix != null)
 					throw failure("float literal suffix `" + suffix + "` is not imported yet");
