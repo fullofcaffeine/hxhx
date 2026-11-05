@@ -1,3 +1,12 @@
+## [0.43.3](https://github.com/fullofcaffeine/hxhx/compare/v0.43.2...v0.43.3) (2026-11-05)
+
+
+### Bug Fixes
+
+* **stage3:** keep one stage3FieldOccurrence after rebasing onto static writes ([6312b56](https://github.com/fullofcaffeine/hxhx/commit/6312b5654337a0ec8b9a049fa65c2d435edf4547)), closes [#131](https://github.com/fullofcaffeine/hxhx/issues/131)
+* **stage3:** order Int64 word writes and widen Int stored in Float locals ([e3369a0](https://github.com/fullofcaffeine/hxhx/commit/e3369a049316e9ed85fa03c07f0f8255c4e7f659))
+* **stage3:** stop Int32 concatenation crashes and lost Int32/Int64 updates ([ed06239](https://github.com/fullofcaffeine/hxhx/commit/ed06239caf63b46c450d1c0fc829e446b30fa7b7))
+
 ## [0.43.2](https://github.com/fullofcaffeine/hxhx/compare/v0.43.1...v0.43.2) (2026-11-05)
 
 
