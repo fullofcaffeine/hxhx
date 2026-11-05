@@ -1,3 +1,26 @@
+# [0.43.0](https://github.com/fullofcaffeine/hxhx/compare/v0.42.0...v0.43.0) (2026-11-05)
+
+
+### Bug Fixes
+
+* **ci:** let the emit-only self-compile run without OCaml tools ([8e3b558](https://github.com/fullofcaffeine/hxhx/commit/8e3b558575349c79d05ff32418cb06620e205bc4))
+* **hxhx:** exempt only hxhx's own bundled-source macro by its file ([5394397](https://github.com/fullofcaffeine/hxhx/commit/5394397e9b7df9665532d7cd58b2557913ac9f2d))
+* **hxhx:** keep standard-library macros out of the selected-macro error ([02b0b19](https://github.com/fullofcaffeine/hxhx/commit/02b0b195b072da48c150ca12789785bb6574a969)), closes [#111](https://github.com/fullofcaffeine/hxhx/issues/111)
+* **macro:** keep user names from capturing lowered quotation paths ([403e032](https://github.com/fullofcaffeine/hxhx/commit/403e0322aa500fdf1d5285042af895dba89a5fa8))
+* **macro:** name unresolved rooted paths and keep them out of backends ([6f44b78](https://github.com/fullofcaffeine/hxhx/commit/6f44b788eab986059c25e51fcd81c06981c6f5e1)), closes [#125](https://github.com/fullofcaffeine/hxhx/issues/125)
+* **ocaml:** keep one call plan per emitted copy of a local callee call ([499c066](https://github.com/fullofcaffeine/hxhx/commit/499c06635250d7e82955834d7771a1930f3ca98b)), closes [#117](https://github.com/fullofcaffeine/hxhx/issues/117)
+* **ocaml:** select copied local-callee calls on every call-plan lookup ([b433140](https://github.com/fullofcaffeine/hxhx/commit/b43314067959baf6173fe0f42ac78d1d14a1943c))
+* **parser:** end return type hints at expression-start keywords ([29e39b7](https://github.com/fullofcaffeine/hxhx/commit/29e39b758b346cd1b868257aa2db7a4e235229d6))
+* **reflaxe.ocaml:** keep null in IMap locals that are not single-use receivers ([b18b949](https://github.com/fullofcaffeine/hxhx/commit/b18b949b071a86aa40eac010baf58218256b5497))
+* **reflaxe.ocaml:** lower Map methods on Null<Map> receivers ([c2e3dd6](https://github.com/fullofcaffeine/hxhx/commit/c2e3dd6f333cab8663fdc3feba9551413899745c)), closes [pre-#118](https://github.com/pre-/issues/118)
+* **stage3:** dispatch overridden methods and lower super calls ([61bfc0c](https://github.com/fullofcaffeine/hxhx/commit/61bfc0c38784a170891b62809e4b0c8743e98264)), closes [#116](https://github.com/fullofcaffeine/hxhx/issues/116)
+* **stage3:** require the module loader before typing a request ([fa5ef28](https://github.com/fullofcaffeine/hxhx/commit/fa5ef2850bd43c34885b77f776bc40be84eab949))
+
+
+### Features
+
+* **hxhx:** fail the compile when a selected macro cannot run ([3292c7f](https://github.com/fullofcaffeine/hxhx/commit/3292c7fe072e2848f233ac6c254d5b4e46b41ee0))
+
 # [0.42.0](https://github.com/fullofcaffeine/hxhx/compare/v0.41.3...v0.42.0) (2026-11-02)
 
 
