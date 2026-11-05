@@ -169,14 +169,14 @@ function main() {
   )
 
   const expectedCounts = {
-    'compiler-foundation': 22,
+    'compiler-foundation': 24,
     'compiler-packaging': 15,
     'compiler-focused-1': 45,
     'compiler-focused-call-arguments': 1,
     'compiler-focused-2': 68,
     'compiler-focused-neko-runtime': 1,
     'compiler-focused-neko-locals': 3,
-    'compiler-focused-3': 14,
+    'compiler-focused-3': 12,
     'compiler-focused-4': 7,
     'compiler-focused-cpp-closure-storage': 2,
     'compiler-focused-5': 24,
