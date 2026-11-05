@@ -567,7 +567,7 @@ function main() {
   )
   const q2Matrix = workflow.slice(q2MatrixStart, q3HxhxStart)
   const expectedBoundedRows = [
-    ['compiler-foundation', 'Compiler foundations and runtime'],
+    ['compiler-foundation', 'Compiler foundations and runtime', 60],
     ['compiler-packaging', 'OCaml packaging and metal profile'],
     ['compiler-focused-1', 'Focused compiler regressions (1/5)'],
     ['compiler-focused-call-arguments', 'Native call arguments and inference'],
