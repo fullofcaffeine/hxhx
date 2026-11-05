@@ -246,7 +246,7 @@
     "test:m14:abstract-binary-cross-backend": "compiler-focused-2",
     "test:m14:ocaml-int-field-update": "compiler-focused-1",
     "test:m14:stage3-int64-add-int": "compiler-focused-2",
-    "test:m14:stage3-int32-int64-arithmetic": "compiler-focused-4",
+    "test:m14:stage3-int32-int64-arithmetic": "compiler-foundation",
     "test:m14:cpp-abstract-unary": "compiler-focused-3",
     "test:m14:cpp-abstract-binary": "compiler-focused-3",
     "test:m14:cpp-int64-equality": "compiler-focused-3",
