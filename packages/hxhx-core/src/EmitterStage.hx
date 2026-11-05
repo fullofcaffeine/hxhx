@@ -1037,9 +1037,12 @@ class EmitterStage {
 	static function exprToOcamlString(e:HxExpr, ?tyByIdent:Map<String, TyType>, ?arityByIdent:Map<String, Int>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
 		// Preserve checked scalar results before rendering them as text. Boolean
-		// bits must not become 1, and integer addition must not become concatenation.
+		// bits must not become 1, and numeric addition must not become concatenation.
 		final operand = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(e) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(e);
-		if (operand != null && (operand.type.getSemanticKey() == "primitive:Bool" || operand.type.getSemanticKey() == "primitive:Int"))
+		final operandKey = operand == null ? null : operand.type.getSemanticKey();
+		if (operandKey == "primitive:Bool"
+			|| operandKey == "primitive:Int"
+			|| (operandKey == "primitive:Float" && e.match(EBinop("+", _, _))))
 			return backend.ocaml.Stage3OcamlStringConversion.convert(operand.type,
 				exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 				currentFunctionLocalOcamlNames);
@@ -1113,6 +1116,11 @@ class EmitterStage {
 
 		var emitStringExpr:HxExpr->String = null;
 		emitStringExpr = function(expr:HxExpr):String {
+			final staticRead = stage3StoredStaticRead(expr);
+			if (staticRead != null)
+				return backend.ocaml.Stage3OcamlStringConversion.convert(staticRead.getType(),
+					exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+					currentFunctionLocalOcamlNames);
 			return switch (expr) {
 				case EString(v): escapeOcamlString(v);
 				case EEnumValue(name): escapeOcamlString(name);
@@ -1837,7 +1845,9 @@ class EmitterStage {
 		function ctorArgToOcaml(a:HxExpr):String {
 			return switch (a) {
 				case EIdent(name)
-					if (stage3HasTyIdent(name, tyByIdent) || stage3HasStmtValueIdent(name) || stage3HasLocalValueIdent(name) || isMutableLocalRefIdent(name)):
+					if (stage3StoredStaticRead(a) == null
+						&& (stage3HasTyIdent(name, tyByIdent) || stage3HasStmtValueIdent(name) || stage3HasLocalValueIdent(name)
+							|| isMutableLocalRefIdent(name))):
 					ocamlReadValueIdent(name);
 				case _:
 					exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
@@ -2175,6 +2185,59 @@ class EmitterStage {
 		return field == null ? null : field.getType();
 	}
 
+	/** The exact typed field occurrence of `e` in the active body, or null. */
+	static function stage3FieldOccurrence(e:HxExpr):Null<TypedBackendFieldOccurrence>
+		return currentTypedInitializer != null ? currentTypedInitializer.findField(e) : currentTypedFunction == null ? null : currentTypedFunction.findField(e);
+
+	/** Split a typed static field write; `Stage3OcamlStaticStorage` owns its storage and value. */
+	static function stage3StaticFieldWriteParts(e:HxExpr):Null<backend.ocaml.Stage3OcamlStaticStorage.Stage3OcamlStaticWrite>
+		return currentClassStorage == null ? null : currentClassStorage.statics.split(e, stage3FieldOccurrence);
+
+	/** A read of a stored static field, which renderers that spell bare names must send through `exprToOcaml`. */
+	static function stage3StoredStaticRead(e:HxExpr):Null<TypedBackendFieldOccurrence>
+		return currentClassStorage == null ? null : currentClassStorage.statics.storedRead(e, stage3FieldOccurrence);
+
+	/** Render a typed static field write, or return null for any other expression. */
+	static function stage3StaticFieldWrite(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>,
+			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
+		final update = stage3StaticFieldWriteParts(e);
+		if (update == null)
+			return null;
+		final value = update.value;
+		final right = value == null ? null : stage3StaticOperand(update.operand, value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
+			moduleNameByPkgAndClass, callSigByCallee);
+		return currentClassStorage.statics.write(update, right, value == null ? null : stage3NullableNumericOperand(value), currentOcamlModuleName,
+			currentFunctionLocalOcamlNames);
+	}
+
+	/** Render the right operand of a static write in the representation its storage asks for. */
+	static function stage3StaticOperand(operand:backend.ocaml.Stage3OcamlStaticStorage.Stage3OcamlStaticOperand, value:HxExpr, ?arityByIdent:Map<String, Int>,
+			?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>, ?currentPackagePath:String,
+			?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
+		// A Float destination promotes an Int selected by the typer's fact for this operand,
+		// or by its shape when it has none; other values render as floats.
+		final exactKey = stage3ExactPrimitiveKey(value);
+		final promoted = operand == FloatValue && (exactKey == null ? stage3IsIntExpr(value, tyByIdent) : exactKey == "primitive:Int");
+		if (operand == FloatValue && !promoted)
+			return exprToOcamlAsFloatValueStage3(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+				callSigByCallee);
+		final rendered = exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+		return switch operand {
+			// `text += [1]` appends the value's Haxe string form, as `Std.string` would.
+			case StringAppend
+				if (exactKey != null
+					&& exactKey != "primitive:String"
+					&& !stage3ExactExprType(value).isUnknown()
+					&& !stage3ExactExprType(value).isUnresolved()):
+				backend.ocaml.Stage3OcamlStringConversion.convert(stage3ExactExprType(value), rendered, currentFunctionLocalOcamlNames);
+			case StringAppend:
+				localCompoundStringOperand(value, rendered, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+					callSigByCallee);
+			case FloatValue: "(float_of_int (" + rendered + "))";
+			case Plain: rendered;
+		};
+	}
+
 	/** Allocation and parent calls retain their original typed occurrence through emission. */
 	static function exactConstructor(expr:HxExpr):Null<TypedBackendConstructorOccurrence> {
 		if (!expr.match(ENew(_, _)) && !expr.match(ECall(ESuper, _)))
@@ -2202,8 +2265,21 @@ class EmitterStage {
 		return switch expr {
 			case EParenthesized(inner, _): localCompoundValueType(inner);
 			case EBinop(op, target = EIdent(name), _) if (isLocalCompoundValue(op, target)): exactFunctionLocalType(name);
-			case _: null;
+			case _: stage3StaticUpdateValueType(expr);
 		};
+	}
+
+	/**
+		The type of the value a static field compound assignment or `++`/`--` produces,
+		or null for any other expression. A compound update produces the stored value
+		(a nullable static's carrier); an increment produces the plain number.
+	**/
+	static function stage3StaticUpdateValueType(expr:HxExpr):Null<TyType> {
+		final update = expr.match(EBinop(_, _, _) | EUnop(_, _, _)) ? stage3StaticFieldWriteParts(expr) : null;
+		if (update == null || update.op == "=")
+			return null;
+		final type = update.target.getType();
+		return update.value == null ? TyAliasExpansion.revealNonNullable(type) : type;
 	}
 
 	/**
@@ -2268,7 +2344,8 @@ class EmitterStage {
 			case EField(inner, "high" | "low"):
 				stage3IsInt64Expr(inner, tyByIdent);
 			// Arithmetic unwraps a nullable Int operand, so its result is a concrete Int.
-			case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%"): (stage3IsIntExpr(a, tyByIdent)
+			// Haxe `/` always produces a Float, even for two Int operands.
+			case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*" || op == "%"): (stage3IsIntExpr(a, tyByIdent)
 					|| stage3NullableNumericOperand(a) == "primitive:Int") && (stage3IsIntExpr(b, tyByIdent)
 					|| stage3NullableNumericOperand(b) == "primitive:Int");
 			case ETernary(_cond, thenExpr, elseExpr): stage3IsIntExpr(thenExpr, tyByIdent) && stage3IsIntExpr(elseExpr, tyByIdent);
@@ -2776,6 +2853,9 @@ class EmitterStage {
 			case EUnop(op, fixity, inner) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
 				"(-.(" + exprToOcamlAsFloatValueStage3(inner, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 					callSigByCallee) + "))";
+			case EIdent(_) | EField(_, _) if (stage3ExactPrimitiveKey(expr) == "primitive:Int"):
+				"float_of_int (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+					callSigByCallee) + ")";
 			case EIdent(name) if (stage3TyForIdent(name, tyByIdent) == "Int"):
 				"float_of_int " + ocamlReadValueIdent(name);
 			case _ if (stage3IsDynamicExpr(expr, tyByIdent, callSigByCallee)):
@@ -3590,8 +3670,15 @@ class EmitterStage {
 				return rendered;
 			requireNoUnownedAbstractConstruction(construction);
 		}
+		final staticWrite = stage3StaticFieldWrite(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+			callSigByCallee);
+		if (staticWrite != null)
+			return staticWrite;
 		if (currentClassStorage != null && (e.match(EField(_, _)) || e.match(EIdent(_)))) {
-			final field = currentTypedInitializer != null ? currentTypedInitializer.findField(e) : currentTypedFunction == null ? null : currentTypedFunction.findField(e);
+			final field = stage3FieldOccurrence(e);
+			final staticRead = field == null ? null : currentClassStorage.statics.read(field, currentOcamlModuleName);
+			if (staticRead != null)
+				return staticRead;
 			if (field != null) {
 				final rendered = currentClassStorage.read(field,
 					value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
@@ -4894,6 +4981,10 @@ class EmitterStage {
 						case EField(_obj, "length"):
 							"float_of_int (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee) + ")";
+						// Int arithmetic such as `counter * 2` in `counter * 2 / 3` renders an OCaml int.
+						case _ if (stage3IsIntExpr(e, tyByIdentRaw)):
+							"float_of_int (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee) + ")";
 						case _:
 							exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 					}
@@ -5432,6 +5523,9 @@ class EmitterStage {
 		//   upstream-shaped code without having to implement full typing/emission yet.
 		// - it is *not* semantically correct; it is only for bring-up.
 		function hasBringupPoison(e:HxExpr):Bool {
+			// A typed static field write is rendered by its storage owner or fails at emit time.
+			if (stage3StaticFieldWriteParts(e) != null)
+				return false;
 			if (TypedRuntimeTypeSource.isMarker(e)) {
 				if (currentRuntimeTypes == null)
 					throw "OCaml runtime type validation requires its exact program plan";
@@ -5751,6 +5845,9 @@ class EmitterStage {
 				return switch (e) {
 					case EInt(v):
 						"float_of_int " + Std.string(v);
+					case EIdent(_) | EField(_, _) if (stage3ExactPrimitiveKey(e) == "primitive:Int"):
+						"float_of_int (" + exprToOcaml(e, arityByIdentRaw, emissionTyByIdent, staticImportByIdentRaw, currentPackagePath,
+							moduleNameByPkgAndClassRaw, callSigByCalleeRaw) + ")";
 					case EIdent(name) if (tyForIdent(name) == "Int"):
 						"float_of_int " + ocamlReadValueIdent(name);
 					case EField(_, field) if (field == "iNF" || field == "INF" || field == "inf" || field == "nAN" || field == "NAN" || field == "NaN"):
@@ -7076,6 +7173,9 @@ class EmitterStage {
 					// Avoid emitting invalid OCaml for unsupported assignment lvalues while still
 					// allowing modeled instance-field assignment side effects.
 					switch (expr) {
+						case _ if (stage3StaticFieldWriteParts(expr) != null):
+							"ignore (" + exprToOcaml(expr, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee) + ")";
 						case EBinop(op, EIdent(name), rhs):
 							final isThisField = stage3HasThisBinding(cast tyCtx) && hasCurrentInstanceField(name) && !stage3HasTyIdent(name, cast tyCtx)
 								&& !isMutableLocalRefIdent(name);
@@ -8021,14 +8121,6 @@ class EmitterStage {
 		return lines.length == 2 && lines[0] == placeholder && StringTools.startsWith(lines[1], "[@@@warning");
 	}
 
-	static function shouldEmitParsedStaticFields(moduleName:String):Bool {
-		if (StringTools.startsWith(moduleName, "Haxe_Int64"))
-			return false;
-		if (moduleName == "Haxe_ds_Vector")
-			return false;
-		return true;
-	}
-
 	/**
 		Retains the existing native DateTools duration overrides used by unit statics.
 		Removing partial-body emission does not change these numeric operations.
@@ -8945,7 +9037,7 @@ class EmitterStage {
 					}
 					final parsedFields = HxClassDecl.getFields(emittedClass);
 					final instanceInitializers = classProjection.hasSemanticFacts() ? currentClassStorage.instanceInitializers(classProjection) : null;
-					final emitParsedStaticFields = shouldEmitParsedStaticFields(outputModuleName);
+					final emitParsedStaticFields = backend.ocaml.Stage3OcamlStaticStorage.emitsDeclaredStatics(outputModuleName);
 					final staticFieldTypeByName:Map<String, TyType> = new Map();
 					for (f in parsedFields) {
 						if (!emitParsedStaticFields)
@@ -9565,11 +9657,14 @@ class EmitterStage {
 							staticTyByIdent.set(nameRaw, inferredType);
 						final init = HxFieldDecl.getInit(f);
 						installFieldLocalNames(classProjection, f);
-						final initOcaml = init == null ? "(Obj.magic 0)" : exprToOcaml(init, arityByName, staticTyByIdent, staticImportByIdent,
-							HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
+						final storedOperand = init == null
+							|| currentClassStorage == null ? null : currentClassStorage.statics.initializerOperand(outputModuleName, nameRaw, init);
+						final initOcaml = init == null ? null : stage3StaticOperand(storedOperand == null ? Plain : storedOperand, init, arityByName,
+							staticTyByIdent, staticImportByIdent, HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
 						currentFunctionLocalOcamlNames = null;
 						currentTypedInitializer = null;
-						out.push("let " + ocamlValueIdent(nameRaw) + " = " + initOcaml);
+						final stored = currentClassStorage == null ? null : currentClassStorage.statics.declaration(outputModuleName, nameRaw, initOcaml);
+						out.push(stored != null ? stored : "let " + ocamlValueIdent(nameRaw) + " = " + (initOcaml == null ? "(Obj.magic 0)" : initOcaml));
 						if (staticTyByIdent.get(nameRaw) == null)
 							staticTyByIdent.set(nameRaw, TyType.unknown());
 					}

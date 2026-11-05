@@ -28,6 +28,9 @@ class Stage3OcamlClassStorage {
 	/** Overridden-method dispatchers and `super` targets for the same classes. */
 	public final virtuals = new Stage3OcamlVirtualDispatch();
 
+	/** Mutable static field cells for the same request, selected before any module is emitted. */
+	public final statics = new Stage3OcamlStaticStorage();
+
 	public function new() {}
 
 	/**
@@ -56,6 +59,7 @@ class Stage3OcamlClassStorage {
 			throw "native class storage owner registered twice: " + identity;
 		ancestry.set(identity, facts);
 		if (outputModule != null) {
+			statics.add(facts, runtimeProvided, outputModule);
 			interfaces.add(facts, !runtimeProvided, outputModule);
 			virtuals.add(facts, !runtimeProvided, outputModule);
 		}
