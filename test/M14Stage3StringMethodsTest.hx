@@ -27,6 +27,14 @@ import sys.io.File;
 	  have a native adapter. The emitter rejects a typed String call without one
 	  instead of calling the stub, so this check keeps that rejection
 	  unreachable for valid programs.
+	- `stage3_string_tools_replace` calls `StringTools.replace` with single,
+	  multiple, overlapping, empty, and missing matches, in the static and
+	  `using` forms. Stage3 used to emit every such call as `""`.
+	- `stage3_nullable_int_arithmetic` uses `Null<Int>` values from
+	  `charCodeAt`, `Map.get`, array reads, and optional arguments directly in
+	  Int arithmetic. Stage3 used to emit such sums as the placeholder
+	  `(Obj.magic 0)`, so the program silently computed `0`. A null operand
+	  must raise a catchable error, as upstream `--interp` does.
 **/
 class M14Stage3StringMethodsTest {
 	static function deleteRecursive(path:String):Void {
@@ -86,5 +94,8 @@ class M14Stage3StringMethodsTest {
 	static function main():Void {
 		final program = compareWithUpstream("whole_file", "test/fixtures/stage3_string_methods", "test/fixtures/stage3_string_methods/expected.stdout");
 		requireAdapterForEveryStringMethod(program);
+		compareWithUpstream("string_tools_replace", "test/fixtures/stage3_string_tools_replace", "test/fixtures/stage3_string_tools_replace/expected.stdout");
+		compareWithUpstream("nullable_int_arithmetic", "test/fixtures/stage3_nullable_int_arithmetic",
+			"test/fixtures/stage3_nullable_int_arithmetic/expected.stdout");
 	}
 }

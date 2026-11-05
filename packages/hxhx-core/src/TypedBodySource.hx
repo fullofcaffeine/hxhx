@@ -580,7 +580,7 @@ class TypedBodySource {
 				final value = typedExpression.getTag() == RuntimeTypeTest ? expression(expressions[0], catalog, projectionFacts) : null;
 				final valueType = typedExpression.getTag() == RuntimeTypeTest ? expressions[0].getType() : null;
 				projectionFacts.projectRuntimeType(typedExpression.getRuntimeTypeTarget(), value, valueType);
-			case ThisValue: EThis;
+			case ThisValue: projectionFacts == null ? EThis : projectionFacts.projectThis(typedExpression);
 			case SuperValue: ESuper;
 			case LocalRead: EIdent(exactProjectedName(catalog, typedExpression.getLocalBindings(), texts[0], "typed local read"));
 			case NameRead:
@@ -956,7 +956,8 @@ class TypedBodySource {
 				equalities: projectionFacts.getEqualities(),
 				bitwiseOperations: projectionFacts.getBitwiseOperations(),
 				conditions: projectionFacts.getConditions(),
-				namedPatterns: projectionFacts.getNamedPatterns()
+				namedPatterns: projectionFacts.getNamedPatterns(),
+				thisType: projectionFacts.getThisType()
 			});
 	}
 

@@ -30,7 +30,41 @@ class TypedBodyProjectionBuilder {
 	final returns:Array<TypedBackendReturnOccurrence> = [];
 	final statementControls:Array<TypedBackendStatementControl> = [];
 	final namedPatterns:Array<TypedBackendNamedPattern> = [];
+	var thisType:Null<TyType> = null;
+	var thisTypeConflict:Bool = false;
 	var sealed:Bool = false;
+
+	/**
+		Record the type of a `this` read. Every `this` in one body has the same
+		type: the class for an instance method, or the underlying type inside an
+		abstract's method (Int for `abstract Score(Int)`). The rebuilt syntax node
+		`EThis` carries no identity, so the body keeps this one type instead.
+		If two different types appear (for example through inlined code), the
+		body publishes no `this` type.
+	 */
+	public function projectThis(source:TypedExpr):HxExpr {
+		if (sealed)
+			throw "cannot add this reads to a sealed projection";
+		final type = source.getType();
+		if (thisTypeConflict)
+			return EThis;
+		if (thisType == null) {
+			thisType = type;
+		} else if (thisType.getSemanticKey() != type.getSemanticKey()) {
+			// Two different `this` types cannot be told apart once projected, so
+			// publish no fact rather than a wrong one.
+			thisType = null;
+			thisTypeConflict = true;
+		}
+		return EThis;
+	}
+
+	/** The type recorded for `this` reads in this body, or null when it has none or two different ones. */
+	public function getThisType():Null<TyType> {
+		if (!sealed)
+			throw "this type requires a sealed projection";
+		return thisType;
+	}
 
 	/** Local renaming preserves pattern order, so each selected case keeps its exact projected object. */
 	public function projectNamedPatterns(facts:Null<TypedSwitchPatterns>, patterns:Array<HxSwitchPattern>):Void {
