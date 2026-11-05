@@ -2192,12 +2192,6 @@ class EmitterStage {
 		};
 	}
 
-	/** The typed nominal field occurrence owned by the active typed body. */
-	static function stage3FieldOccurrence(expr:HxExpr):Null<TypedBackendFieldOccurrence> {
-		return
-			currentTypedInitializer != null ? currentTypedInitializer.findField(expr) : currentTypedFunction == null ? null : currentTypedFunction.findField(expr);
-	}
-
 	/** The typed result of a nominal field read owned by the active typed body. */
 	static function stage3FieldOccurrenceType(expr:HxExpr):Null<TyType> {
 		final field = currentTypedInitializer != null ? currentTypedInitializer.findField(expr) : currentTypedFunction == null ? null : currentTypedFunction.findField(expr);
