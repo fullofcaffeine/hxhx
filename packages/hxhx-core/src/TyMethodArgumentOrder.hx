@@ -77,6 +77,25 @@ class TyMethodArgumentOrder {
 	}
 
 	/**
+		Name the authored argument behind each position of `rankedTypes`, or -1 for an
+		omitted one, so a caller can attach a per-argument fact to the ranked types.
+	 */
+	public function rankedSources():Array<Int> {
+		final result = new Array<Int>();
+		for (slot in slots)
+			switch slot {
+				case Omitted:
+					result.push(-1);
+				case Supplied(source) | RestSpread(source):
+					result.push(source);
+				case RestElements(sources):
+					for (source in sources)
+						result.push(source);
+			}
+		return result;
+	}
+
+	/**
 		Methods and constructors score the same already-aligned argument slots.
 		Alignment must first validate spread containers; scoring then compares their
 		element types with rest elements without changing the original operands.
