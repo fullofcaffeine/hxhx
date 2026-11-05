@@ -1,3 +1,11 @@
+## [0.43.2](https://github.com/fullofcaffeine/hxhx/compare/v0.43.1...v0.43.2) (2026-11-05)
+
+
+### Bug Fixes
+
+* **stage3:** keep static cells apart from locals and type static updates ([1f3d605](https://github.com/fullofcaffeine/hxhx/commit/1f3d605e27d197c61c4ce8e4c4a52d7812e701fa))
+* **stage3:** store writes to static fields in native OCaml ([6cfefb3](https://github.com/fullofcaffeine/hxhx/commit/6cfefb31b9705d30bc65d0640dc2c5e4f958004b))
+
 ## [0.43.1](https://github.com/fullofcaffeine/hxhx/compare/v0.43.0...v0.43.1) (2026-11-05)
 
 
