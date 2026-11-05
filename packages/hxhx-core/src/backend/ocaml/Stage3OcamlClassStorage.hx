@@ -25,6 +25,9 @@ class Stage3OcamlClassStorage {
 	/** Generated abstracts whose constructor builds the backing value with `this = value`. */
 	public final abstracts = new Stage3OcamlAbstractConstructors();
 
+	/** Overridden-method dispatchers and `super` targets for the same classes. */
+	public final virtuals = new Stage3OcamlVirtualDispatch();
+
 	public function new() {}
 
 	/**
@@ -52,8 +55,10 @@ class Stage3OcamlClassStorage {
 		if (ancestry.exists(identity))
 			throw "native class storage owner registered twice: " + identity;
 		ancestry.set(identity, facts);
-		if (outputModule != null)
+		if (outputModule != null) {
 			interfaces.add(facts, !runtimeProvided, outputModule);
+			virtuals.add(facts, !runtimeProvided, outputModule);
+		}
 		if (runtimeProvided || facts.getIsExtern())
 			return;
 		if (facts.getIsInterface()) {
@@ -120,10 +125,39 @@ class Stage3OcamlClassStorage {
 	public function dispatchesInterfaceMethods(projection:TypedBackendClassProjection):Bool
 		return projection.hasSemanticFacts() && interfaces.ownsInterfaceMethod(projection.requireSemanticFacts().getClassIdentity());
 
-	/** The interface method table this class registers after its functions, or null. */
-	public function interfaceMethodTable(projection:TypedBackendClassProjection, currentModule:String, ident:(String, String) -> String,
-			quote:String->String):Null<String>
-		return projection.hasSemanticFacts() ? interfaces.registration(projection.requireSemanticFacts(), currentModule, ident, quote) : null;
+	/**
+		The dispatcher definition (`and name ... = ...`) that follows an overridden
+		method's direct function, or null when no subclass overrides the method.
+		`head` and `resultType` are the method's own OCaml parameters and result.
+	**/
+	public function virtualDispatcher(projection:TypedBackendClassProjection, method:String, input:{
+		name:String,
+		head:String,
+		resultType:String,
+		arguments:Array<String>,
+		quote:String->String
+	}):Null<String> {
+		if (!projection.hasSemanticFacts() || !virtuals.dispatches(projection.requireSemanticFacts().getClassIdentity(), method))
+			return null;
+		// The same body as an interface method's dispatcher: look up the receiver's class.
+		return "and "
+			+ input.name
+			+ " "
+			+ input.head
+			+ " : "
+			+ input.resultType
+			+ " = "
+			+ interfaces.dispatcherBody(method, input.arguments, input.resultType, input.quote);
+	}
+
+	/** The virtual and interface method table this class registers after its functions, or null. */
+	public function methodTable(projection:TypedBackendClassProjection, currentModule:String, ident:(String, String) -> String,
+			quote:String->String):Null<String> {
+		if (!projection.hasSemanticFacts())
+			return null;
+		final facts = projection.requireSemanticFacts();
+		return virtuals.registration(facts, interfaces.entries(facts), currentModule, ident, quote);
+	}
 
 	/** Return field execution only for the exact emitted class that owns it. */
 	public function instanceInitializers(projection:TypedBackendClassProjection):Null<Stage3OcamlInstanceInitializers> {
