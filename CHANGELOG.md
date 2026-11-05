@@ -1,3 +1,12 @@
+## [0.43.1](https://github.com/fullofcaffeine/hxhx/compare/v0.43.0...v0.43.1) (2026-11-05)
+
+
+### Bug Fixes
+
+* **stage3:** emit StringTools.replace calls instead of an empty string ([d895c97](https://github.com/fullofcaffeine/hxhx/commit/d895c9799be38ffcfdef8bbe093e626f66f74797))
+* **stage3:** type abstract this and widen Int operands in Float arithmetic ([b17660b](https://github.com/fullofcaffeine/hxhx/commit/b17660b2b453c1edf56db41bf9004206ac5cf878))
+* **stage3:** unwrap Null<Int> operands in native arithmetic ([74fb6b3](https://github.com/fullofcaffeine/hxhx/commit/74fb6b3abfdfa760cce8895f4c829d17cd2ef0a7))
+
 # [0.43.0](https://github.com/fullofcaffeine/hxhx/compare/v0.42.0...v0.43.0) (2026-11-05)
 
 
