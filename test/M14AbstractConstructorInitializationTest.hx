@@ -34,11 +34,15 @@ class M14AbstractConstructorInitializationTest {
 			final source = 'class Main { static function main():Void { new Result(false); } }\n'
 				+ 'abstract Result(Int) { public function new(flag:Bool) { '
 				+ entry.body
-				+ ' } }\n';
+				+ ' } static inline final COUNT = 3; static inline function count():Int return 3; static var STATIC_N = 3; }\n';
 			var diagnostic:Null<String> = null;
+			// Type with the production declaration loader: loops over ranges need
+			// the standard IntIterator, which a root-only index omits.
+			final root = ".tmp/abstract_constructor_initialization/" + entry.name;
+			sys.FileSystem.createDirectory(root);
+			sys.io.File.saveContent(root + "/Main.hx", source);
 			try {
-				final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(source, "Main.hx"));
-				TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]));
+				M14Stage3RuntimeFixture.typeMain({source: source, path: root + "/Main.hx", root: root});
 			} catch (error:haxe.Exception) {
 				diagnostic = error.message;
 			}

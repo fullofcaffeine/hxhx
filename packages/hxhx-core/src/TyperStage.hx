@@ -513,6 +513,20 @@ class TyperStage {
 				+ "."
 				+ className) : semanticInfo.getFullName();
 			final context = new TyperContext(index, parsed.getFilePath(), modulePath, packagePath, directives, classFullName, loader, resolvedDirectives);
+			// An abstract constructor must assign `this` on every completing path (haxe_ocaml-vitgz).
+			// An abstract declares its underlying type. A parsed abstract without one is
+			// not an authored `abstract X(T)` (see haxe_ocaml-ey6o2: `@:abstract class` metadata parses as one), so it is skipped.
+			final abstractInfo = index == null ? null : index.getAbstractByFullName(classFullName);
+			if (abstractInfo != null && !abstractInfo.getUnderlyingType().isUnknown())
+				for (fn in HxClassDecl.getFunctions(classDeclaration))
+					if (HxFunctionDecl.getName(fn) == "new" && !HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getHasBody(fn))
+						// Parameters and the abstract's mutable static fields are run-time
+						// values as range bounds; an inline constant is not.
+						TyAbstractConstructorInitialization.require(HxFunctionDecl.getBody(fn), parsed.getFilePath(), HxFunctionDecl.getPos(fn),
+							[for (argument in HxFunctionDecl.getArgs(fn)) HxFunctionArg.getName(argument)].concat([
+								for (field in HxClassDecl.getFields(classDeclaration))
+									if (HxFieldDecl.getIsStatic(field) && !HxFieldDecl.getIsFinal(field)) HxFieldDecl.getName(field)
+							]));
 			final headerTypes = resolveClassHeaderTypes(classDeclaration, context);
 			final typedFunctions = new Array<TypedFunction>();
 			final typedFieldInitializers = new Array<TypedFieldInitializer>();
