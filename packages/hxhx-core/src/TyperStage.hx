@@ -660,7 +660,9 @@ class TyperStage {
 				},
 				constructorApplication: function(constructed, arguments, sources) {
 					return TypedConstructorSelection.select(context.getIndex(), constructed, arguments, sources,
-						(signature, actual, parameters) -> overloadCandidateScore(signature, actual, actual.length, parameters, context.getIndex()));
+						(signature, actual,
+								parameters) -> overloadCandidateScore(signature, TyBasicNullArgument.scoringTypes(signature, actual, context), actual.length,
+								parameters, context.getIndex()));
 				},
 				constructorArgumentContexts: function(path, sources, environment) {
 					return constructorArgumentContexts(path, constructorPathType(path, context, environment, null).contextual, sources, environment,
@@ -2166,7 +2168,8 @@ class TyperStage {
 			declaration.getIsStatic() ? null : inference.expressionType(receiver, revealed, scope), declaration.getSignature());
 		final parameters = TyMethodGenericBinding.specializeParameters(declaration, signature, selection.order.rankedTypes(selection.actual), ctx.getIndex());
 		if (value != null && parameters.length > 0)
-			TyIndexedNullValue.checkTarget(actual[actual.length - 1], parameters[parameters.length - 1], ctx, pos);
+			TyIndexedNullValue.checkTarget(actual[actual.length - 1], parameters[parameters.length - 1],
+				TyBasicNullArgument.sourceHint(declaration, declaration.getSignature().getArgs().length - 1), ctx, pos);
 		if ((retained != null && inference.sourceTerm(source, scope) == null)
 			|| declaration.getTypeParameterIds().length > 0
 			&& (result.hasUnknownComponent() || parameters.filter(type -> type.hasUnknownComponent()).length > 0)) {
@@ -2325,6 +2328,10 @@ class TyperStage {
 		];
 		if (argTypes.length != args.length)
 			throw "call selection requires one retained type per source argument";
+		// One declared candidate: apply the upstream per-target rule for null at a basic parameter.
+		if (candidates.length == 1)
+			TyBasicNullArgument.admit(callable(candidates[0], receiver == null ? null : receiver.type), c.declarationForSignature(candidates[0]), argTypes,
+				ctx, pos);
 		// Candidate trials must not commit context to the caller's inference state.
 		function literalType(source:HxExpr, expected:TyType):Null<TyType> {
 			if (retainedUpdateOperands)
@@ -2696,6 +2703,9 @@ class TyperStage {
 		if (!calleeType.isFunction())
 			return TyType.unknown();
 		final signature = TyCallableSignature.fromFunctionValue(calleeType);
+		final parameters = signature.getParameters().filter(parameter -> !parameter.isRest);
+		TyBasicNullArgument.check(parameters.map(parameter -> parameter.type), parameters.map(parameter -> parameter.isOptional), argumentTypes, ctx, pos,
+			false);
 		final kinds:Array<TyCallAlignment.TyCallOperandKind> = [
 			for (argument in args)
 				argument.match(ECall(EIdent("__hxhx_spread"), [_])) ? Spread : Value
@@ -4039,6 +4049,13 @@ class TyperStage {
 						}, argumentTypes);
 				}
 				validateClassArguments(applied, ctx, pos);
+				final selectedConstructor = TypedConstructorPath.select(ctx.getIndex(), applied);
+				final constructors = selectedConstructor == null ? [] : selectedConstructor.getOwner().instanceMethodCandidates("new");
+				if (constructors.length == 1) {
+					final signature = TyNominalApplication.signature(ctx.getIndex(), selectedConstructor.getOwner(), selectedConstructor.getOwnerType(),
+						constructors[0]);
+					TyBasicNullArgument.check(signature.getArgs(), signature.getArgOptional(), argumentTypes, ctx, pos);
+				}
 				applied;
 			case EUnop(_op, _fixity, e):
 				if (_op == Increment || _op == Decrement) {

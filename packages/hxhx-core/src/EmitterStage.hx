@@ -3701,8 +3701,7 @@ class EmitterStage {
 						callSigByCallee);
 				final argument = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(expression) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(expression);
 				// Nullable Int/Float/Bool arguments convert from the plain rendering, as in ordinary calls.
-				if (backend.ocaml.Stage3OcamlNullablePrimitive.innerPrimitive(actual) != null
-					|| backend.ocaml.Stage3OcamlNullablePrimitive.destinationCarrier(expected, expectedIsOptional) != null) {
+				if (backend.ocaml.Stage3OcamlNullablePrimitive.crossesBoundary(actual, expected, expectedIsOptional)) {
 					final nullableArgument = backend.ocaml.Stage3OcamlNullablePrimitive.convertArgument(actual, expected, expectedIsOptional,
 						exprToOcaml(expression, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
 					if (nullableArgument != null)
@@ -4011,7 +4010,8 @@ class EmitterStage {
 						|| argIndex < 0
 						|| argIndex >= signature.paramTypeHints.length ? "" : signature.paramTypeHints[argIndex];
 					final isReceiver = signature != null && signature.needsReceiver && argIndex == 0;
-					final argument = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(arg) : currentTypedFunction != null ? currentTypedFunction.findCallArgument(arg) : null;
+					// Every parsed `null` is one shared value, so its identity-keyed fact may belong to another call.
+					final argument = arg.match(ENull) ? null : currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(arg) : currentTypedFunction != null ? currentTypedFunction.findCallArgument(arg) : null;
 					// A nullable Int/Float/Bool argument is unwrapped from its plain rendering
 					// before any Float or Int64 parameter coercion could read the carrier.
 					if (!isReceiver && backend.ocaml.Stage3OcamlNullablePrimitive.isCarrierBoundary(argument)) {
@@ -4021,8 +4021,8 @@ class EmitterStage {
 							return converted;
 					}
 					final rendered = switch (arg) {
-						case ENull:
-							exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+						case ENull: backend.ocaml.Stage3OcamlNullablePrimitive.nullLiteralForCall(signature, argIndex, hint,
+								exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
 						case _ if (stage3IsFloatParamHint(hint)):
 							exprToOcamlAsFloatValueStage3(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee);

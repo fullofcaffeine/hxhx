@@ -23,7 +23,12 @@ function admits(actual:TyType, parameter:Null<TyType>, index:TyperIndex):Bool {
 }
 
 /** Throw the upstream C# diagnostic when a null literal reaches a basic-type setter parameter. */
-function checkTarget(actual:TyType, parameter:Null<TyType>, ctx:TyperContext, pos:HxPos):Void {
-	if (ctx.hasDefine("cs") && admits(actual, parameter, ctx.getIndex()))
+function checkTarget(actual:TyType, parameter:Null<TyType>, hint:Null<String>, ctx:TyperContext, pos:HxPos):Void {
+	if (!admits(actual, parameter, ctx.getIndex()))
+		return;
+	if (ctx.hasDefine("cs"))
 		throw new TyperError(ctx.getFilePath(), pos, "On static platforms, null can't be used as basic type " + parameter.getDisplay());
+	// The native setter call reads the same written parameter type as an ordinary call.
+	if (TyBasicNullArgument.nativeUnsupported(parameter, hint, ctx))
+		throw TyBasicNullArgument.nativeUnsupportedError(parameter, ctx, pos);
 }
