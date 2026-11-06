@@ -335,7 +335,7 @@ class TyIndexedComputedResult {
 						throw "indexed builtin operand changed after selection";
 			case SelectedCall(binding, operands, left, right):
 				final rightSource = switch query.source {
-					case EBinop(_, EArrayAccess(_, _), right): right;
+					case EBinop(_, EArrayAccess(_, _) | EUntyped(EArrayAccess(_, _)), right): right;
 					case _: throw "indexed selected call lost its compound source";
 				};
 				if (binding.getSourceLeftArgument() != left

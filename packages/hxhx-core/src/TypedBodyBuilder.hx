@@ -67,7 +67,7 @@ class TypedBodyBuilder {
 			memberResolver:Null<TypedMemberDeclarationResolver>):Null<TypedExpr> {
 		if (typeResolver == null || environment == null)
 			return null;
-		return TypedIndexedUpdateLowering.build({
+		final lower = () -> TypedIndexedUpdateLowering.build({
 			expression: source,
 			type: type,
 			position: position,
@@ -76,6 +76,12 @@ class TypedBodyBuilder {
 			resolver: typeResolver,
 			buildChild: child -> buildExpr(child, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver)
 		});
+		// `(untyped b[i]) op= v` lowers its getter/step/setter block in the untyped scope;
+		// the block keeps the setter's type and the wrapper carries the open result.
+		if (!source.match(EBinop(_, EUntyped(_), _)))
+			return lower();
+		final update = environment.withUntyped(lower);
+		return update == null ? null : TypedExpr.untypedValue(TypedFeatureIntrinsic.capture(update), type, position);
 	}
 
 	/**

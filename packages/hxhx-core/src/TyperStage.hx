@@ -1850,8 +1850,8 @@ class TyperStage {
 		check: upstream and `assertWritableLocal` both reject it with "Invalid assign". A
 		`@:privateAccess` wrapper around a declared place is writable but is not the direct
 		`a[i]` occurrence the selected schedule is keyed on, so it stays an explicit
-		diagnostic. `untyped values["x"] += 2` parses as an untyped place; it is an
-		explicit diagnostic too, rather than a getter read with no setter check.
+		diagnostic. `untyped values["x"] += 2` parses as `(untyped values["x"]) += 2`;
+		that untyped place is a declared update place too, selected in the untyped scope.
 	 */
 	static function isDeclaredIndexedUpdatePlace(place:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Bool {
 		if (ctx.getIndex() == null)
@@ -1862,9 +1862,7 @@ class TyperStage {
 					throw new TyperError(ctx.getFilePath(), pos, "Private-access abstract indexed updates are not yet supported (haxe_ocaml-rgmu4)");
 				false;
 			case EUntyped(inner):
-				if (scope.withUntyped(() -> isDeclaredIndexedUpdatePlace(inner, scope, ctx, pos)))
-					throw new TyperError(ctx.getFilePath(), pos, "Untyped abstract indexed updates are not yet supported (haxe_ocaml-2hkru)");
-				false;
+				scope.withUntyped(() -> inner.match(EArrayAccess(_, _)) && isDeclaredIndexedUpdatePlace(inner, scope, ctx, pos));
 			case EArrayAccess(receiver, _): final type = TyAliasExpansion.revealNonNullable(inferExprType(receiver, scope.copyForInference(), ctx,
 					pos)); final identity = type.getNominalIdentity(); final owner = identity == null ? null : ctx.getIndex()
 					.getAbstractByFullName(identity.getCanonicalName()); owner != null && owner.getIndexedDeclarations().length > 0;
@@ -1878,12 +1876,18 @@ class TyperStage {
 		Authored operand traversal stays in the owning lexical catalog. The candidate
 		selects helpers and conversions over those facts and publishes them atomically.
 	 */
-	static function selectIndexedUpdate(source:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyIndexedUpdateOutcome {
-		final existing = scope.getInference().indexedUpdateOutcome(source, scope);
+	static function selectIndexedUpdate(authored:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyIndexedUpdateOutcome {
+		final existing = scope.getInference().indexedUpdateOutcome(authored, scope);
 		if (existing != null)
 			return existing;
 		if (scope.getInference().isSealed())
 			throw "indexed update outcome is absent from sealed inference";
+		// `(untyped b[i]) op= v` gives its authored node the open untyped result, so the
+		// setter-typed update result needs its own query identity over the same operands.
+		final source = switch authored {
+			case EBinop(op, left, right) if (left.match(EUntyped(_))): HxExpr.EBinop(op, left, right);
+			case _: authored;
+		};
 		final operands = switch source {
 			case EUnop(op, fixity, EArrayAccess(receiver, subscript)):
 				{
@@ -1892,7 +1896,7 @@ class TyperStage {
 					right: null,
 					kind: TyIndexedUpdateSelection.TyIndexedUpdateKind.Unary(op, fixity)
 				};
-			case EBinop(op, EArrayAccess(receiver, subscript), right):
+			case EBinop(op, EArrayAccess(receiver, subscript) | EUntyped(EArrayAccess(receiver, subscript)), right):
 				{
 					receiver: receiver,
 					subscript: subscript,
@@ -1910,6 +1914,7 @@ class TyperStage {
 		final query = new TyIndexedUpdateSelection.TyIndexedUpdateQuery({
 			owner: scope.getOwnerIdentity(),
 			source: source,
+			authored: authored,
 			kind: operands.kind,
 			getterSource: EArrayAccess(operands.receiver, operands.subscript),
 			computedSource: freshQuery(),
@@ -4030,6 +4035,11 @@ class TyperStage {
 					// A declared indexed place follows the measured getter/step/setter schedule;
 					// the completed outcome owns the static type (the setter's return type).
 					if (isDeclaredIndexedUpdatePlace(e, scope, ctx, pos)) {
+						// `++untyped b[i]` parses as an update of an untyped place. Upstream
+						// increments the inlined getter place without a setter call, which
+						// the declared update schedule does not model.
+						if (e.match(EUntyped(_)))
+							throw new TyperError(ctx.getFilePath(), pos, "Untyped prefix indexed increment/decrement is not yet supported (haxe_ocaml-9f5qd)");
 						// The receiver is evaluated once for the getter and once for the setter.
 						switch e {
 							case EArrayAccess(receiver, _) if (!TypedIndexedUpdateLowering.repeatableReceiver(receiver)):
@@ -4207,8 +4217,15 @@ class TyperStage {
 						}
 					case _ if (HxBinaryOperatorTools.isCompoundAssignment(op)):
 						assertWritableLocal(a, scope, ctx, pos);
-						if (isDeclaredIndexedUpdatePlace(a, scope, ctx, pos))
-							return selectIndexedUpdate(expr, scope, ctx, pos).getStaticType(scope);
+						if (isDeclaredIndexedUpdatePlace(a, scope, ctx, pos)) {
+							if (!a.match(EUntyped(_)))
+								return selectIndexedUpdate(expr, scope, ctx, pos).getStaticType(scope);
+							// `untyped b[i] += v` parses as `(untyped b[i]) += v`; upstream applies
+							// `untyped` to the whole update. The getter, step and setter are still
+							// selected and checked, in the untyped scope; only the result is open.
+							scope.withUntyped(() -> selectIndexedUpdate(expr, scope, ctx, pos).getStaticType(scope));
+							return scope.getInference().untypedResult(expr);
+						}
 						final leftType = inferExprType(a, scope, ctx, pos);
 						final rightType = inferExprType(b, scope, ctx, pos);
 						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), leftType, rightType, op, ctx.getFilePath(), pos);

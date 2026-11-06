@@ -16,7 +16,7 @@ private function validateInputs(input:{
 	plans:Array<TyAbstractBinaryArgument>
 }):Void {
 	final right = switch input.query.source {
-		case EBinop(_, EArrayAccess(_, _), right): right;
+		case EBinop(_, EArrayAccess(_, _) | EUntyped(EArrayAccess(_, _)), right): right;
 		case _: throw "indexed binary input proof requires its compound source";
 	};
 	final binding = input.binding;
