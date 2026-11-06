@@ -1968,6 +1968,28 @@ class EmitterStage {
 				+ "() constructs an abstract whose constructor this request does not emit, so it has no native value";
 	}
 
+	/**
+		Convert one rendered call operand to the carrier of the parameter it was aligned to.
+
+		Typing records each call operand with its own type and its parameter type
+		(`TypedBackendCallArgument`). A `Null<Int>` or `Null<Float>`
+		value lives in a nullable carrier (`Obj.t`), while a concrete `Int` parameter
+		takes a native `int`. Ordinary calls already convert at that boundary in
+		`renderCallArgForSignature`; native call adapters (standard static calls,
+		Array calls) use this same conversion for their operands. A null value passed
+		to a concrete parameter throws the Haxe "Null Access" error from
+		`HxRuntime.nullable_int_unwrap` and its siblings. An operand without typing
+		facts, or one whose parameter is open (a type parameter or Dynamic), is
+		returned unchanged.
+	**/
+	static function exactCallArgumentValue(value:HxExpr, rendered:String):String {
+		final argument = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(value) : currentTypedFunction != null ? currentTypedFunction.findCallArgument(value) : null;
+		if (!backend.ocaml.Stage3OcamlNullablePrimitive.isCarrierBoundary(argument))
+			return rendered;
+		final converted = backend.ocaml.Stage3OcamlNullablePrimitive.callArgument(argument, rendered);
+		return converted == null ? rendered : converted;
+	}
+
 	/** A `Map<K, V>` literal in a portable executable body, with its typed arrow entries. */
 	static function stage3MapLiteral(expr:HxExpr):Null<TypedBackendAggregateOccurrence> {
 		if (!expr.match(EArrayDecl(_)) || isMetalProfileActive() || (currentTypedFunction == null && currentTypedInitializer == null))
@@ -2906,12 +2928,14 @@ class EmitterStage {
 			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
 		switch (e) {
 			case ECall(EField(EIdent("Math"), "abs"), [arg]):
+				final plain = exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				final converted = exactCallArgumentValue(arg, plain);
+				// A nullable operand is converted to the Float parameter it was aligned to.
+				if (converted != plain)
+					return "abs_float (" + converted + ")";
 				final absFn = stage3IsFloatExpr(arg, tyByIdent, callSigByCallee,
 					staticImportByIdent) ? "abs_float " : (stage3IsIntExpr(arg, tyByIdent) ? "abs " : "abs_float ");
-				return absFn
-					+ "("
-					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-					+ ")";
+				return absFn + "(" + plain + ")";
 			case ECall(EField(EIdent("Math"), "round"), [arg]):
 				return "(int_of_float (floor (("
 					+ exprToOcamlAsFloatValueStage3(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
@@ -3756,8 +3780,9 @@ class EmitterStage {
 		if (staticCall != null) {
 			final stdStaticCall = backend.ocaml.Stage3OcamlStdStaticCalls.render({
 				call: staticCall,
-				emit: value -> exprToOcaml(value, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
-					callSigByCalleeRaw),
+				emit: value -> exactCallArgumentValue(value,
+					exprToOcaml(value, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+						callSigByCalleeRaw)),
 				names: currentFunctionLocalOcamlNames
 			});
 			if (stdStaticCall != null)
@@ -3789,6 +3814,9 @@ class EmitterStage {
 					autoMetal: isPortableAutoMetalizedRegionActive(),
 					emit: value -> exprToOcaml(value, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
 						callSigByCalleeRaw),
+					argument: value -> exactCallArgumentValue(value,
+						exprToOcaml(value, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+							callSigByCalleeRaw)),
 					names: currentFunctionLocalOcamlNames,
 					mark: markPortableAutoMetalizedLoweringUse
 				});
