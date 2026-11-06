@@ -19,9 +19,9 @@ import sys.io.File;
 	  `(null, set)` properties, `return field = value`, writes from inside and
 	  outside the class, `++`, and compound assignment through the property.
 	  The native executable must print exactly what upstream Haxe 4.3.7 prints.
-	- `stage3_isvar_properties_static` is known failing until PR #131 adds
-	  native static field storage (Bead haxe_ocaml-nq65n). The test requires
-	  that it still differs, so the fix is noticed and its lines are folded in.
+	- `stage3_isvar_properties_static` covers the same writes on static
+	  `@:isVar` properties. It needs native static field storage (PR #131,
+	  Bead haxe_ocaml-nq65n) and must match upstream too.
 **/
 class M14Stage3IsVarPropertiesTest {
 	static function deleteRecursive(path:String):Void {
@@ -52,15 +52,9 @@ class M14Stage3IsVarPropertiesTest {
 		M14Stage3RuntimeFixture.observe({command: instance.executable, arguments: [], expected: instance.expected});
 		deleteRecursive(instance.outDir);
 		Sys.println("M14_STAGE3_ISVAR_PROPERTIES:PASS");
-		final known = build("test/fixtures/stage3_isvar_properties_static", "static");
-		var nowPasses = false;
-		try {
-			M14Stage3RuntimeFixture.observe({command: known.executable, arguments: [], expected: known.expected});
-			nowPasses = true;
-		} catch (_:Dynamic) {}
-		deleteRecursive(known.outDir);
-		if (nowPasses)
-			throw "stage3_isvar_properties_static now matches upstream: move its lines into stage3_isvar_properties and remove the known-failing check";
-		Sys.println("M14_STAGE3_ISVAR_PROPERTIES_STATIC:KNOWN_FAILING (PR #131, haxe_ocaml-nq65n)");
+		final statics = build("test/fixtures/stage3_isvar_properties_static", "static");
+		M14Stage3RuntimeFixture.observe({command: statics.executable, arguments: [], expected: statics.expected});
+		deleteRecursive(statics.outDir);
+		Sys.println("M14_STAGE3_ISVAR_PROPERTIES_STATIC:PASS");
 	}
 }
