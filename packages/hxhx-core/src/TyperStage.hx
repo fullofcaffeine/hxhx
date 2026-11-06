@@ -614,14 +614,22 @@ class TyperStage {
 						return {binding: binding, call: null};
 					final declaration = binding.declaration;
 					final replay = environment.copyForInference();
-					final receiverType = inferExprType(binding.receiver, replay, context, position);
-					final indexed = switch expression {
-						case EArrayAccess(receiver,
-							subscript): resolveIndexedAccess(expression, receiver, subscript, null, receiverType, replay, context, position);
-						case EBinop("=", EArrayAccess(receiver, subscript),
-							value): resolveIndexedAccess(expression, receiver, subscript, value, receiverType, replay, context, position);
-						case _: throw "indexed binding lost its source form";
+					// `(untyped b[i]) = v` replays in the untyped scope it was typed in.
+					final untypedPlace = expression.match(EBinop("=", EUntyped(EArrayAccess(_, _)), _));
+					final replayAccess = () -> {
+						final receiverType = inferExprType(binding.receiver, replay, context, position);
+						final indexed = switch expression {
+							case EArrayAccess(receiver,
+								subscript): resolveIndexedAccess(expression, receiver, subscript, null, receiverType, replay, context, position);
+							case EBinop("=", EArrayAccess(receiver, subscript) | EUntyped(EArrayAccess(receiver, subscript)),
+								value): resolveIndexedAccess(expression, receiver, subscript, value, receiverType, replay, context, position);
+							case _: throw "indexed binding lost its source form";
+						};
+						return {receiverType: receiverType, indexed: indexed};
 					};
+					final replayed = untypedPlace ? replay.withUntyped(replayAccess) : replayAccess();
+					final receiverType = replayed.receiverType;
+					final indexed = replayed.indexed;
 					final owner = context.getIndex().getByFullName(declaration.getOwner().getCanonicalName());
 					final signature = TyNominalApplication.signature(context.getIndex(), owner, declaration.getIsStatic() ? null : receiverType,
 						declaration.getSignature());
@@ -644,7 +652,11 @@ class TyperStage {
 						for (i in 0...expected.length)
 							TyImplicitConversionPlan.select(context.getIndex(), expected[i], indexed.actual[i])
 					];
-					return {binding: binding, call: new TypedCallResolution(declaration, declaration.getIsStatic(), null, conversions, expected, named)};
+					return {
+						binding: binding,
+						call: new TypedCallResolution(declaration, declaration.getIsStatic(), null, conversions, expected, named),
+						result: indexed.type
+					};
 				},
 				constructorApplication: function(constructed, arguments, sources) {
 					return TypedConstructorSelection.select(context.getIndex(), constructed, arguments, sources,
@@ -1838,7 +1850,8 @@ class TyperStage {
 		check: upstream and `assertWritableLocal` both reject it with "Invalid assign". A
 		`@:privateAccess` wrapper around a declared place is writable but is not the direct
 		`a[i]` occurrence the selected schedule is keyed on, so it stays an explicit
-		diagnostic.
+		diagnostic. `untyped values["x"] += 2` parses as an untyped place; it is an
+		explicit diagnostic too, rather than a getter read with no setter check.
 	 */
 	static function isDeclaredIndexedUpdatePlace(place:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Bool {
 		if (ctx.getIndex() == null)
@@ -1847,6 +1860,10 @@ class TyperStage {
 			case EPrivateAccess(inner, _):
 				if (isDeclaredIndexedUpdatePlace(inner, scope, ctx, pos))
 					throw new TyperError(ctx.getFilePath(), pos, "Private-access abstract indexed updates are not yet supported (haxe_ocaml-rgmu4)");
+				false;
+			case EUntyped(inner):
+				if (scope.withUntyped(() -> isDeclaredIndexedUpdatePlace(inner, scope, ctx, pos)))
+					throw new TyperError(ctx.getFilePath(), pos, "Untyped abstract indexed updates are not yet supported (haxe_ocaml-2hkru)");
 				false;
 			case EArrayAccess(receiver, _): final type = TyAliasExpansion.revealNonNullable(inferExprType(receiver, scope.copyForInference(), ctx,
 					pos)); final identity = type.getNominalIdentity(); final owner = identity == null ? null : ctx.getIndex()
@@ -4093,6 +4110,23 @@ class TyperStage {
 								if (indexed != null)
 									return indexed.type;
 								indexedDestination = ordinaryIndexedElement(a, receiver, subscript, receiverType, scope, ctx, pos);
+							case EUntyped(place = EArrayAccess(receiver, subscript)):
+								// HxParser binds `untyped b[i] = v` as `(untyped b[i]) = v`; upstream
+								// applies `untyped` to the whole assignment. Either way the write
+								// selects the declared setter, and only the result is unconstrained.
+								final indexed = scope.withUntyped(() -> {
+									final receiverType = inferExprType(receiver, scope, ctx, pos);
+									final selected = resolveIndexedAccess(expr, receiver, subscript, b, receiverType, scope, ctx, pos);
+									if (selected == null)
+										ordinaryIndexedElement(place, receiver, subscript, receiverType, scope, ctx, pos);
+									return selected;
+								});
+								// The setter-selected result is keyed on the whole assignment, so
+								// a call argument, local or outer assignment that consumes it reads
+								// this term. Without a declared setter the place is the raw wrapper.
+								if (indexed != null)
+									return scope.getInference().untypedResult(expr);
+								indexedDestination = scope.getInference().untypedResult(a);
 							case _:
 						}
 						// Assignment as expression.
