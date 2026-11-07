@@ -1,3 +1,22 @@
+## [0.43.4](https://github.com/fullofcaffeine/hxhx/compare/v0.43.3...v0.43.4) (2026-11-07)
+
+
+### Bug Fixes
+
+* **ocaml:** convert nullable call operands in Stage3 native adapters ([#151](https://github.com/fullofcaffeine/hxhx/issues/151)) ([1765cea](https://github.com/fullofcaffeine/hxhx/commit/1765cea7eba76a002ac13f2abfb5f24152101bc6))
+* **ocaml:** lower ++ and -- on array elements and fields natively ([#154](https://github.com/fullofcaffeine/hxhx/issues/154)) ([ec76fb5](https://github.com/fullofcaffeine/hxhx/commit/ec76fb55bbf9abac716ebdf006c5f02cda90987d)), closes [#131](https://github.com/fullofcaffeine/hxhx/issues/131) [#123](https://github.com/fullofcaffeine/hxhx/issues/123)
+* **ocaml:** print UInt values unsigned and pin Int32 updates natively ([8fa7d45](https://github.com/fullofcaffeine/hxhx/commit/8fa7d455f63a694fcc598da4b804286a49febce1)), closes [#136](https://github.com/fullofcaffeine/hxhx/issues/136)
+* **ocaml:** store @:isVar writes made in value position inside accessors ([#157](https://github.com/fullofcaffeine/hxhx/issues/157)) ([3462325](https://github.com/fullofcaffeine/hxhx/commit/346232516777b595ae1541aa0f889b97159b9cb8)), closes [#131](https://github.com/fullofcaffeine/hxhx/issues/131) [#131](https://github.com/fullofcaffeine/hxhx/issues/131) [#131](https://github.com/fullofcaffeine/hxhx/issues/131)
+* **parser:** keep @:abstract class metadata from creating an abstract ([#165](https://github.com/fullofcaffeine/hxhx/issues/165)) ([8e12a6b](https://github.com/fullofcaffeine/hxhx/commit/8e12a6b43c5826a81c504e9859addbb29eeb5522))
+* **parser:** type out-of-range integer literals as Float like upstream ([#144](https://github.com/fullofcaffeine/hxhx/issues/144)) ([6319e3f](https://github.com/fullofcaffeine/hxhx/commit/6319e3f90f7118c2eb80903f6f7db67fc86317d2))
+* **typer:** accept downcasts whose source type is left open ([#138](https://github.com/fullofcaffeine/hxhx/issues/138)) ([eb0a1cb](https://github.com/fullofcaffeine/hxhx/commit/eb0a1cb663861f8a3d803dd73633dc846ef96bca)), closes [#130](https://github.com/fullofcaffeine/hxhx/issues/130)
+* **typer:** accept null through declared basic-type indexed setters ([#175](https://github.com/fullofcaffeine/hxhx/issues/175)) ([0c25995](https://github.com/fullofcaffeine/hxhx/commit/0c259953d29bd50306fe39d6ac89bf5c331bbe55)), closes [#170](https://github.com/fullofcaffeine/hxhx/issues/170)
+* **typer:** apply upstream per-target null rules to basic call arguments ([#180](https://github.com/fullofcaffeine/hxhx/issues/180)) ([c143330](https://github.com/fullofcaffeine/hxhx/commit/c1433302f7e3e392bc0d25738259ce1c1bd4bf16))
+* **typer:** require abstract constructors to assign this like upstream ([#163](https://github.com/fullofcaffeine/hxhx/issues/163)) ([b342e7b](https://github.com/fullofcaffeine/hxhx/commit/b342e7b12960cc193e63c6b56f7194f74ade7996))
+* **typer:** run declared helpers for untyped indexed updates ([#172](https://github.com/fullofcaffeine/hxhx/issues/172)) ([51e6c46](https://github.com/fullofcaffeine/hxhx/commit/51e6c464263271001f5f0b838337555eb67aa9d7)), closes [#170](https://github.com/fullofcaffeine/hxhx/issues/170)
+* **typer:** select declared setters for untyped indexed assignments ([#170](https://github.com/fullofcaffeine/hxhx/issues/170)) ([17f8ed2](https://github.com/fullofcaffeine/hxhx/commit/17f8ed2b61a4d5671e876d2b7ef0220c8760a91f))
+* **typer:** split intersection class bounds and wire unrun bound tests into CI ([#140](https://github.com/fullofcaffeine/hxhx/issues/140)) ([e2a360f](https://github.com/fullofcaffeine/hxhx/commit/e2a360ff2805d2c7149f30fffc9e0a0b3b80b2f2))
+
 ## [0.43.3](https://github.com/fullofcaffeine/hxhx/compare/v0.43.2...v0.43.3) (2026-11-05)
 
 
