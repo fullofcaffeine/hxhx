@@ -1,3 +1,10 @@
+## [0.43.8](https://github.com/fullofcaffeine/hxhx/compare/v0.43.7...v0.43.8) (2026-11-07)
+
+
+### Bug Fixes
+
+* **ocaml:** wrap native Std.int results into the 32-bit Int range ([#164](https://github.com/fullofcaffeine/hxhx/issues/164)) ([d8aa556](https://github.com/fullofcaffeine/hxhx/commit/d8aa556726ae2cd06615d1098f2fb3a5a19fd8d8))
+
 ## [0.43.7](https://github.com/fullofcaffeine/hxhx/compare/v0.43.6...v0.43.7) (2026-11-07)
 
 
