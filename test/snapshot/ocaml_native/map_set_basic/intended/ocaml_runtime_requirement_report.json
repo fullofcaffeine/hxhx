@@ -1,7 +1,7 @@
 {
   "model": "recorded-ocaml-runtime-requirements",
   "runtimeVersion": "1",
-  "runtimeSourceRevision": "sha256:e237e7746949c755f1799021ee00e791e9d23561b2840f27325b9e7c45cd4987",
+  "runtimeSourceRevision": "sha256:f56bee2ec23ec7b55ba2185ac151895952d8f15ef33f39402aea5c05b1469271",
   "compilerObservationGranularity": "module-name-only",
   "runtimeSources": [
     {
@@ -17,8 +17,8 @@
       "files": [
         {
           "path": "HxAnon.ml",
-          "sha256": "sha256:d3e4bf7c5e907e0f3e96d4b4a58fb5324278ed78033d984414b39e748852afe4",
-          "bytes": 8969
+          "sha256": "sha256:3afce8b63469f742fe5627a8146bcf8c6d6c420b933aac218e24fa4776da4c4f",
+          "bytes": 9044
         }
       ],
       "profiles": [
@@ -93,6 +93,7 @@
       "dependencies": [
         "HxAnon",
         "HxArray",
+        "HxEnum",
         "HxRuntime",
         "HxType"
       ],
@@ -100,8 +101,8 @@
       "files": [
         {
           "path": "HxDynamic.ml",
-          "sha256": "sha256:6195c08972146061d8cc50408de2bcc8b6fa04667f538f108b9ed0f453ebc39a",
-          "bytes": 8538
+          "sha256": "sha256:dd53458f9d7c7dd64129195251d6110c5cbe8f35562aeb19f666005adcbf971e",
+          "bytes": 9583
         }
       ],
       "profiles": [
@@ -10118,7 +10119,7 @@
     "HxString",
     "HxType"
   ],
-  "reportRevision": "sha256:a28b3eecbff056b6bdf613c887a1d64facef0c2ad2d172b3fd1248a549f0be4b",
+  "reportRevision": "sha256:9148e44faa7271a6ce09b3e5fd09ba3b448ab9cbd009906965ccc955177216c9",
   "runtimeMode": "full",
   "recordedRequirementSourceKinds": [
     "compiler-infrastructure",
