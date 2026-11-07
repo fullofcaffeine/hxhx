@@ -97,3 +97,8 @@ OCaml exceptions raised by OCaml stdlib code are not tagged as Haxe types.
 
 - `catch (e:Dynamic)` can catch them.
 - Typed catches (`catch (e:T)`) are not expected to match them.
+
+Exception: native Int `%` by zero (and `haxe.Int32` `%` by zero) does not raise
+OCaml's `Division_by_zero`. The runtime throws the tagged Haxe String
+`"Division by zero"`, so `catch (e:String)` matches it. See
+`NUMERIC_SEMANTICS.md`.

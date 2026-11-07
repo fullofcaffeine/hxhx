@@ -37,6 +37,18 @@ Int32 range (e.g. `Math.floor()` on very large values, converting infinities to
 `Int`). We do not try to define additional guarantees there beyond “does not
 crash in normal ranges”.
 
+### Int modulo by zero
+
+Haxe leaves Int division by zero target-specific. On this target, `a % 0`,
+`a %= 0`, and `haxe.Int32` `%` by zero throw the Haxe String
+`"Division by zero"`. Catch it with `catch (e:String)` or
+`catch (e:Dynamic)`. Other targets differ: upstream eval returns the Float
+`NaN`, and Neko throws `"Invalid operation (%)"`. An OCaml `int` cannot hold
+`NaN`, so this target follows the static targets and throws.
+
+See fixtures: `test/portable/fixtures/int_modulo_by_zero/` and
+`test/fixtures/stage3_int_modulo_by_zero/`.
+
 ## `Float`
 
 Haxe `Float` maps directly to OCaml `float` (IEEE-754 double precision).

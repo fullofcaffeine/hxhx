@@ -159,8 +159,8 @@
     {
       "module": "HxInt",
       "scope": "application",
-      "files": [{ "path": "HxInt.ml", "sha256": "3f85900b52dd4b082a5fc11db1d59125b16bf5f38d3959ffe5dc5686fdd04f2b" }],
-      "dependencies": [],
+      "files": [{ "path": "HxInt.ml", "sha256": "b99cbf3eee8ac437f1312a0685ca9b1bc4e93fe112d8f04ea680f64efe84d4d1" }],
+      "dependencies": ["HxRuntime"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],
       "license": "MIT"
