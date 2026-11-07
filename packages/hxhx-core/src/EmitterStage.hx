@@ -3581,6 +3581,12 @@ class EmitterStage {
 		return exprToOcamlRaw(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 	}
 
+	/** The local catalog of the typed initializer or function being emitted, if any. */
+	static function currentLocalCatalog():Null<TypedBackendLocalCatalog> {
+		return
+			currentTypedInitializer != null ? currentTypedInitializer.getLocalCatalog() : currentTypedFunction == null ? null : currentTypedFunction.getLocalCatalog();
+	}
+
 	/** Callback plans consume exact projected occurrences before legacy call adaptation rebuilds them. */
 	static function exprToOcamlRaw(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
@@ -3610,7 +3616,9 @@ class EmitterStage {
 				final facts = currentTypedInitializer != null ? currentTypedInitializer.findLambda(e) : currentTypedFunction == null ? null : currentTypedFunction.findLambda(e);
 				if (facts == null)
 					throw "OCaml block function requires its exact lambda facts";
-				final locals = currentTypedInitializer != null ? currentTypedInitializer.getLocalCatalog() : currentTypedFunction.getLocalCatalog();
+				final locals = currentLocalCatalog();
+				if (locals == null)
+					throw "OCaml block function requires its typed local catalog";
 				// A closure remains in its creator's lexical receiver context. Exact
 				// local bindings below refine this copy without dropping the receiver.
 				final hints = tyByIdent == null ? new Map<String, TyType>() : tyByIdent.copy();
@@ -7204,7 +7212,8 @@ class EmitterStage {
 					if (isMutableLocalRefIdent(name)) {
 						wrapStatement("let " + ident + " = ref (" + rhs + ") in (ignore " + ident + "; (", "))");
 					} else {
-						wrapStatement("let " + ident + " = " + rhs + " in (ignore " + ident + "; (", "))");
+						final keyword = backend.ocaml.Stage3OcamlRecursiveLocalFunction.bindingKeyword(name, init, currentLocalCatalog());
+						wrapStatement(keyword + ident + " = " + rhs + " in (ignore " + ident + "; (", "))");
 					}
 				case SIf(cond, thenBranch, elseBranch, _pos):
 					// Stage 3 bring-up: recognize and SSA-lower the common "null-coalescing assignment"
