@@ -100,6 +100,8 @@ let makeVarArgsVoid (f : Obj.t) : Obj.t =
   mk_varargs varargs_void_marker f
 
 let callMethod (_obj : Obj.t) (fn : Obj.t) (args : Obj.t HxArray.t) : Obj.t =
+  (* A null argument array calls the function with no arguments. *)
+  let args = if HxRuntime.is_null (Obj.repr args) then HxArray.create () else args in
   if is_varargs varargs_marker fn then
     let f = Obj.field fn 1 in
     (Obj.magic f : Obj.t HxArray.t -> Obj.t) args
@@ -214,3 +216,92 @@ let isObject (v : Obj.t) : bool =
       else
         let en = HxType.getEnumName v in
         en != hx_null_string
+
+(* Reflection over class instances built by the hxhx Stage3 native emitter.
+
+   Stage3 stores a class instance as an `HxAnon` object that carries its class
+   descriptor. Its stored fields are ordinary `HxAnon` slots, so `HxAnon.get`,
+   `HxAnon.has`, and `HxAnon.fields` already answer for them. Its methods are
+   module-level OCaml functions that take the receiver first, not slots.
+
+   For each generated class the compiler registers one binder per instance
+   method, including inherited ones; an override replaces its parent's binder.
+   A binder receives the instance and returns the method bound to it, as a
+   method value `instance.method` would be. `field` uses it when the name is
+   not a stored field, and `getProperty` / `setProperty` use it to call a
+   declared `get_` / `set_` accessor. A method the compiler cannot bind (for
+   example a `dynamic` method) has no binder, so reading it returns null. *)
+let instance_method_binders : (string, (string, Obj.t -> Obj.t) Hashtbl.t) Hashtbl.t = Hashtbl.create 31
+
+let register_instance_methods (name : string) (binders : (string * (Obj.t -> Obj.t)) list) : unit =
+  let table = Hashtbl.create (Stdlib.List.length binders) in
+  Stdlib.List.iter (fun (method_name, binder) -> Hashtbl.replace table method_name binder) binders;
+  Hashtbl.replace instance_method_binders name table
+
+let class_instance_name (o : Obj.t) : string option =
+  if HxAnon.is_anon o then
+    let c = HxAnon.class_value o in
+    if HxType.is_type_value HxType.class_marker c then Some (HxType.getClassName c) else None
+  else
+    None
+
+let bound_method (o : Obj.t) (method_name : string) : Obj.t option =
+  match class_instance_name o with
+  | None -> None
+  | Some class_name -> (
+      match Hashtbl.find_opt instance_method_binders class_name with
+      | None -> None
+      | Some table -> (
+          match Hashtbl.find_opt table method_name with
+          | Some binder -> Some (binder o)
+          | None -> None))
+
+let field (o : Obj.t) (name : string) : Obj.t =
+  if HxAnon.has o name then HxAnon.get o name
+  else match bound_method o name with Some value -> value | None -> HxAnon.get o name
+
+let getProperty (o : Obj.t) (name : string) : Obj.t =
+  match bound_method o ("get_" ^ name) with
+  | Some getter -> (Obj.obj getter : unit -> Obj.t) ()
+  | None -> field o name
+
+let setProperty (o : Obj.t) (name : string) (value : Obj.t) : unit =
+  match bound_method o ("set_" ^ name) with
+  | Some setter -> ignore ((Obj.obj setter : Obj.t -> Obj.t) value)
+  | None -> HxAnon.set o name value
+
+(* Haxe deletes fields only from anonymous structures; a class instance keeps
+   its declared fields. *)
+let deleteField (o : Obj.t) (name : string) : bool =
+  match class_instance_name o with
+  | Some _ -> false
+  | None -> HxAnon.delete o name
+
+(* `Type.getClass` for a value of any static type. Strings and arrays are
+   instances of `String` and `Array`, a class instance answers its class, and
+   every other value (null, numbers, Bools, functions, enum values, anonymous
+   objects, and type values) has no class. Only these known layouts are read. *)
+let value_class (v : Obj.t) : Obj.t =
+  if HxRuntime.is_null v || Obj.is_int v then HxRuntime.hx_null
+  else if Obj.tag v = Obj.string_tag then HxType.class_ "String"
+  else if HxArray.is_value v then HxType.class_ "Array"
+  else if HxAnon.is_anon v then
+    let c = HxAnon.class_value v in
+    if HxType.is_type_value HxType.class_marker c then c else HxRuntime.hx_null
+  else HxRuntime.hx_null
+
+(* `Type.typeof`: the index of the `ValueType` constructor for `v`, in its
+   declaration order: TNull, TInt, TFloat, TBool, TObject, TFunction, TClass,
+   TEnum, TUnknown. The compiler builds the constructor from this index.
+   Class and enum type values are objects, as in Haxe. *)
+let value_type_index (v : Obj.t) : int =
+  if HxRuntime.is_null v then 0
+  else if HxRuntime.is_boxed_bool v then 3
+  else if Obj.is_int v then 1
+  else if Obj.tag v = Obj.double_tag then 2
+  else if isFunction v then 5
+  else if isEnumValue v then 7
+  else if not (HxRuntime.is_null (value_class v)) then 6
+  else if HxAnon.is_anon v then 4
+  else if HxType.is_type_value HxType.class_marker v || HxType.is_type_value HxType.enum_marker v then 4
+  else 8

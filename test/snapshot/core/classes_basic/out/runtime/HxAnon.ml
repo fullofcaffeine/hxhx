@@ -235,7 +235,8 @@ let copy (o : Obj.t) : Obj.t =
     o
   else
     let src = anon_of_obj o in
-    let out = create () in
+    (* A copied class instance keeps its class. *)
+    let out = create_with_class src.class_value in
     let dst = anon_of_obj out in
     if src.shape.size > 0 then (
       ensure_shape_capacity dst.shape src.shape.size;

@@ -6,6 +6,8 @@
 
    - null, Bool, Int, String, and Float use their exact runtime tags;
    - anonymous structures enumerate their stable HxAnon fields recursively;
+   - boxed enum values print their constructor and arguments, and class and
+     enum type values print as `Class<Name>` and `Enum<Name>`;
    - generated classes may register their real zero-argument toString method;
    - other reference-bearing values use the conservative "<object>" fallback.
 
@@ -149,10 +151,30 @@ let rec toStdString (value : Obj.t) : string =
       string_of_float (Obj.obj value)
     else if HxArray.is_value value then
       HxArray.to_dynamic_string (Obj.obj value) toStdString
+    else if HxEnum.is_box value then
+      enumToStdString value
+    else if HxType.is_type_value HxType.class_marker value then
+      "Class<" ^ HxType.getClassName value ^ ">"
+    else if HxType.is_type_value HxType.enum_marker value then
+      "Enum<" ^ HxType.getEnumName value ^ ">"
     else if HxAnon.is_anon value then
       anonymousToStdString value
     else
       classToStdString value
+
+(* A boxed enum value prints as its constructor name, followed by its
+   arguments in parentheses when it has any: `Rgb(1,2,3)`. *)
+and enumToStdString (value : Obj.t) : string =
+  let name = HxType.enumConstructor value in
+  let parameters = HxType.enumParameters value in
+  if HxRuntime.is_null (Obj.repr name) then "<object>"
+  else if HxArray.length parameters = 0 then name
+  else
+    let parts = ref [] in
+    for index = 0 to HxArray.length parameters - 1 do
+      parts := toStdString (HxArray.get parameters index) :: !parts
+    done;
+    name ^ "(" ^ Stdlib.String.concat "," (Stdlib.List.rev !parts) ^ ")"
 
 and anonymousToStdString (value : Obj.t) : string =
   let fields = HxAnon.fields value in
