@@ -1,0 +1,12 @@
+2
+null
+7
+ints 100,2,3,4 a 1,2,5 b 30
+self -1,2,5,1,2,5 a 1,2,5
+empty 8,9 | 0,2,5 | 1 | 0 a 1,2,5
+floats 1.5,0.125,-0.5 length 3
+strings w,y,z
+objects 99,2 original 10
+nested 3 1,9 4 0 inner 1,9
+nullable 4 null 1 null
+effects left,right 1,2,3
