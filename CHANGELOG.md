@@ -1,3 +1,10 @@
+## [0.43.6](https://github.com/fullofcaffeine/hxhx/compare/v0.43.5...v0.43.6) (2026-11-07)
+
+
+### Bug Fixes
+
+* **ocaml:** bind recursive local functions with let rec ([#179](https://github.com/fullofcaffeine/hxhx/issues/179)) ([50f884a](https://github.com/fullofcaffeine/hxhx/commit/50f884a7ba253a1a29b1fbf383466c6c31b29cb1))
+
 ## [0.43.5](https://github.com/fullofcaffeine/hxhx/compare/v0.43.4...v0.43.5) (2026-11-07)
 
 
