@@ -1,3 +1,10 @@
+## [0.43.5](https://github.com/fullofcaffeine/hxhx/compare/v0.43.4...v0.43.5) (2026-11-07)
+
+
+### Bug Fixes
+
+* **ocaml:** keep captured helper methods before static values ([#168](https://github.com/fullofcaffeine/hxhx/issues/168)) ([f53f94c](https://github.com/fullofcaffeine/hxhx/commit/f53f94c4498ebeaaeab70a75deb5a9730a97e7ae))
+
 ## [0.43.4](https://github.com/fullofcaffeine/hxhx/compare/v0.43.3...v0.43.4) (2026-11-07)
 
 
