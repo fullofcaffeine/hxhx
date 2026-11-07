@@ -308,6 +308,7 @@
     "test:m14:stage3-local-compound-value": "compiler-focused-2",
     "test:m14:stage3-static-field-writes": "compiler-foundation",
     "test:m14:stage3-method-reference-order": "compiler-focused-2",
+    "test:m14:stage3-static-init-method-value": "compiler-foundation",
     "test:m14:stage3-bare-alias-constructor": "compiler-focused-2",
     "test:m14:stage3-enum-abstract-value-switch": "compiler-focused-2",
     "test:m14:stage3-enum-constructor-control-arguments": "compiler-focused-2",

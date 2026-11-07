@@ -6091,158 +6091,6 @@ class EmitterStage {
 		}
 	}
 
-	static function scanExprForPreludeDepsRec(e:Null<HxExpr>, locals:Map<String, Bool>, calls:Map<String, Bool>, idents:Map<String, Bool>):Void {
-		if (e == null)
-			return;
-		final enumCall = TypedExactEnumConstructorSource.decode(e);
-		if (enumCall != null) {
-			for (argument in enumCall.arguments)
-				scanExprForPreludeDepsRec(argument, locals, calls, idents);
-			return;
-		}
-		final exactCall = TypedExactStaticCallSource.decode(e);
-		if (exactCall != null) {
-			scanExprForPreludeDepsRec(TypedExactStaticCallSource.ordinaryCall(exactCall), locals, calls, idents);
-			return;
-		}
-		switch (e) {
-			case EDiscardThen(effect, continuation):
-				scanExprForPreludeDepsRec(effect, locals, calls, idents);
-				scanExprForPreludeDepsRec(continuation, locals, calls, idents);
-			case EIdent(name):
-				if (name != null && name.length > 0 && !locals.exists(name))
-					idents.set(name, true);
-			case EField(obj, _):
-				scanExprForPreludeDepsRec(obj, locals, calls, idents);
-			case ECall(callee, args):
-				switch (callee) {
-					case EIdent(name):
-						if (name != null && name.length > 0 && !locals.exists(name)) calls.set(name, true);
-					case EField(_obj, field):
-						if (field != null && field.length > 0 && !locals.exists(field)) calls.set(field, true);
-					case _:
-				}
-				scanExprForPreludeDepsRec(callee, locals, calls, idents);
-				if (args != null)
-					for (a in args)
-						scanExprForPreludeDepsRec(a, locals, calls, idents);
-			case ELambda(args, body):
-				final nestedLocals:Map<String, Bool> = new Map();
-				for (k in locals.keys())
-					nestedLocals.set(k, true);
-				if (args != null)
-					for (a in args)
-						if (a != null && a.length > 0)
-							nestedLocals.set(a, true);
-				scanExprForPreludeDepsRec(body, nestedLocals, calls, idents);
-			case ETernary(cond, thenExpr, elseExpr):
-				scanExprForPreludeDepsRec(cond, locals, calls, idents);
-				scanExprForPreludeDepsRec(thenExpr, locals, calls, idents);
-				scanExprForPreludeDepsRec(elseExpr, locals, calls, idents);
-			case EAnon(_, values):
-				if (values != null)
-					for (v in values)
-						scanExprForPreludeDepsRec(v, locals, calls, idents);
-			case ESwitch(scrutinee, _patterns, exprs):
-				scanExprForPreludeDepsRec(scrutinee, locals, calls, idents);
-				if (exprs != null)
-					for (branchExpr in exprs)
-						scanExprForPreludeDepsRec(branchExpr, locals, calls, idents);
-			case ENew(_, args):
-				if (args != null)
-					for (a in args)
-						scanExprForPreludeDepsRec(a, locals, calls, idents);
-			case EUnop(_, _, expr):
-				scanExprForPreludeDepsRec(expr, locals, calls, idents);
-			case EBinop(_, left, right):
-				scanExprForPreludeDepsRec(left, locals, calls, idents);
-				scanExprForPreludeDepsRec(right, locals, calls, idents);
-			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
-				final nestedLocals:Map<String, Bool> = new Map();
-				for (k in locals.keys())
-					nestedLocals.set(k, true);
-				if (name != null && name.length > 0)
-					nestedLocals.set(name, true);
-				scanExprForPreludeDepsRec(iterable, locals, calls, idents);
-				if (guardExpr != null)
-					scanExprForPreludeDepsRec(guardExpr, nestedLocals, calls, idents);
-				scanExprForPreludeDepsRec(yieldExpr, nestedLocals, calls, idents);
-			case EArrayDecl(values):
-				if (values != null)
-					for (v in values)
-						scanExprForPreludeDepsRec(v, locals, calls, idents);
-			case EArrayAccess(array, index):
-				scanExprForPreludeDepsRec(array, locals, calls, idents);
-				scanExprForPreludeDepsRec(index, locals, calls, idents);
-			case ERange(start, end):
-				scanExprForPreludeDepsRec(start, locals, calls, idents);
-				scanExprForPreludeDepsRec(end, locals, calls, idents);
-			case ECast(expr, _) | ECheckType(expr, _):
-				scanExprForPreludeDepsRec(expr, locals, calls, idents);
-			case EParenthesized(expr, _) | EUntyped(expr):
-				scanExprForPreludeDepsRec(expr, locals, calls, idents);
-			case EVars(values) | ELoweredControl(_, _, values, _):
-				for (value in values)
-					scanExprForPreludeDepsRec(value, locals, calls, idents);
-			case EVariableDeclaration(name, _, value, _, _, _):
-				scanExprForPreludeDepsRec(value, locals, calls, idents);
-				locals.set(name, true);
-			case _:
-		}
-	}
-
-	static function scanStmtForPreludeDepsRec(s:HxStmt, locals:Map<String, Bool>, calls:Map<String, Bool>, idents:Map<String, Bool>):Void {
-		if (s == null)
-			return;
-		switch (s) {
-			case SBlock(stmts, _):
-				if (stmts != null)
-					for (ss in stmts)
-						scanStmtForPreludeDepsRec(ss, locals, calls, idents);
-			case SVar(_name, _typeHint, init, _):
-				scanExprForPreludeDepsRec(init, locals, calls, idents);
-			case SIf(cond, thenBranch, elseBranch, _):
-				scanExprForPreludeDepsRec(cond, locals, calls, idents);
-				scanStmtForPreludeDepsRec(thenBranch, locals, calls, idents);
-				if (elseBranch != null)
-					scanStmtForPreludeDepsRec(elseBranch, locals, calls, idents);
-			case SWhile(cond, body, _):
-				scanExprForPreludeDepsRec(cond, locals, calls, idents);
-				scanStmtForPreludeDepsRec(body, locals, calls, idents);
-			case SDoWhile(body, cond, _):
-				scanStmtForPreludeDepsRec(body, locals, calls, idents);
-				scanExprForPreludeDepsRec(cond, locals, calls, idents);
-			case SForIn(_name, iterable, body, _):
-				scanExprForPreludeDepsRec(iterable, locals, calls, idents);
-				scanStmtForPreludeDepsRec(body, locals, calls, idents);
-			case SForKeyValue(keyName, valueName, iterable, body, _):
-				final nestedLocals:Map<String, Bool> = new Map();
-				for (k in locals.keys())
-					nestedLocals.set(k, true);
-				if (keyName != null && keyName.length > 0)
-					nestedLocals.set(keyName, true);
-				if (valueName != null && valueName.length > 0)
-					nestedLocals.set(valueName, true);
-				scanExprForPreludeDepsRec(iterable, locals, calls, idents);
-				scanStmtForPreludeDepsRec(body, nestedLocals, calls, idents);
-			case SGuardedSwitch(scrutinee, enabled, _, bodies, _):
-				scanExprForPreludeDepsRec(scrutinee, locals, calls, idents);
-				scanExprForPreludeDepsRec(enabled, locals, calls, idents);
-				for (body in bodies)
-					scanStmtForPreludeDepsRec(body, locals, calls, idents);
-			case SSwitch(scrutinee, _patterns, bodies, _):
-				scanExprForPreludeDepsRec(scrutinee, locals, calls, idents);
-				if (bodies != null)
-					for (body in bodies)
-						scanStmtForPreludeDepsRec(body, locals, calls, idents);
-			case SReturn(expr, _):
-				scanExprForPreludeDepsRec(expr, locals, calls, idents);
-			case SExpr(expr, _):
-				scanExprForPreludeDepsRec(expr, locals, calls, idents);
-			case _:
-		}
-	}
-
 	static function stmtListToOcaml(stmts:Array<HxStmt>, allowedValueIdents:Map<String, Bool>, returnExc:String, arityByIdent:Map<String, Int>,
 			tyByIdent:Map<String, TyType>, staticImportByIdent:Map<String, String>, currentPackagePath:String, moduleNameByPkgAndClass:Map<String, String>,
 			callSigByCallee:Map<String, EmitterCallSig>, localTypeHints:Map<String, TyType>, fnReturnTypes:Map<String, TyType>, ?finalValue:HxExpr,
@@ -9148,7 +8996,8 @@ class EmitterStage {
 					//   to reference a later `let rec` function group.
 					//
 					// How
-					// - Detect unqualified function calls used by static initializers.
+					// - Detect the methods static initializers call or read as values
+					//   (`backend.ocaml.OcamlPreludeReferences`), then follow those methods' references.
 					// - Emit a small "prelude" `let rec ... and ...` group for those helper functions
 					//   *before* emitting static `let` values.
 					//
@@ -9165,126 +9014,20 @@ class EmitterStage {
 							staticFieldNames.set(n, true);
 					}
 
+					// Method values count as well as calls: `map(shout)` needs `shout` before the static values.
+					final ownsMethod = (method:TypedBackendMethodOccurrence) -> ocamlModuleNameFromTypePath(method.getDeclaration()
+						.getOwner()
+						.getCanonicalName()) == outputModuleName;
 					final staticInitCalls:Map<String, Bool> = new Map();
-					// Use an explicit stack instead of a recursive local function.
-					//
-					// Why
-					// - This code runs inside `hxhx` itself, which is compiled by our OCaml backend.
-					// - Recursive local functions are a known source of instability during bring-up,
-					//   so we prefer an explicit worklist here.
-					final staticInitWorklist = new Array<HxExpr>();
 					for (f in parsedFields) {
-						if (!emitParsedStaticFields)
+						if (!emitParsedStaticFields || !HxFieldDecl.getIsStatic(f) || HxFieldDecl.getInit(f) == null)
 							continue;
-						if (!HxFieldDecl.getIsStatic(f))
-							continue;
-						final init = HxFieldDecl.getInit(f);
-						if (init != null)
-							staticInitWorklist.push(init);
-					}
-					while (staticInitWorklist.length > 0) {
-						final e = staticInitWorklist.pop();
-						if (e == null)
-							continue;
-						final enumCall = TypedExactEnumConstructorSource.decode(e);
-						if (enumCall != null) {
-							for (argument in enumCall.arguments)
-								staticInitWorklist.push(argument);
-							continue;
-						}
-						final exactCall = TypedExactStaticCallSource.decode(e);
-						if (exactCall != null) {
-							staticInitWorklist.push(TypedExactStaticCallSource.ordinaryCall(exactCall));
-							continue;
-						}
-						switch (e) {
-							case ECall(callee, args):
-								switch (callee) {
-									case EIdent(name):
-										if (name != null && name.length > 0) staticInitCalls.set(name, true);
-									case EField(_obj, field):
-										if (field != null && field.length > 0) staticInitCalls.set(field, true);
-									case _:
-								}
-								if (callee != null)
-									staticInitWorklist.push(callee);
-								if (args != null)
-									for (a in args)
-										if (a != null)
-											staticInitWorklist.push(a);
-							case EField(obj, _):
-								if (obj != null)
-									staticInitWorklist.push(obj);
-							case ELambda(_, body):
-								if (body != null)
-									staticInitWorklist.push(body);
-							case ETernary(cond, thenExpr, elseExpr):
-								if (cond != null)
-									staticInitWorklist.push(cond);
-								if (thenExpr != null)
-									staticInitWorklist.push(thenExpr);
-								if (elseExpr != null)
-									staticInitWorklist.push(elseExpr);
-							case EAnon(_, values):
-								if (values != null)
-									for (v in values)
-										if (v != null)
-											staticInitWorklist.push(v);
-							case ESwitch(scrutinee, _patterns, exprs):
-								if (scrutinee != null)
-									staticInitWorklist.push(scrutinee);
-								if (exprs != null)
-									for (branchExpr in exprs)
-										if (branchExpr != null)
-											staticInitWorklist.push(branchExpr);
-							case ENew(_, args):
-								if (args != null)
-									for (a in args)
-										if (a != null)
-											staticInitWorklist.push(a);
-							case EUnop(_, _, expr):
-								if (expr != null)
-									staticInitWorklist.push(expr);
-							case EBinop(_, left, right) | EDiscardThen(left, right):
-								if (left != null)
-									staticInitWorklist.push(left);
-								if (right != null)
-									staticInitWorklist.push(right);
-							case EArrayComprehension(_, iterable, guardExpr, yieldExpr):
-								if (iterable != null)
-									staticInitWorklist.push(iterable);
-								if (guardExpr != null)
-									staticInitWorklist.push(guardExpr);
-								if (yieldExpr != null)
-									staticInitWorklist.push(yieldExpr);
-							case EArrayDecl(values):
-								if (values != null)
-									for (v in values)
-										if (v != null)
-											staticInitWorklist.push(v);
-							case EArrayAccess(array, index):
-								if (array != null)
-									staticInitWorklist.push(array);
-								if (index != null)
-									staticInitWorklist.push(index);
-							case ERange(start, end):
-								if (start != null)
-									staticInitWorklist.push(start);
-								if (end != null)
-									staticInitWorklist.push(end);
-							case ECast(expr, _) | ECheckType(expr, _):
-								if (expr != null)
-									staticInitWorklist.push(expr);
-							case EParenthesized(expr, _) | EUntyped(expr):
-								if (expr != null)
-									staticInitWorklist.push(expr);
-							case EVars(values) | ELoweredControl(_, _, values, _):
-								for (value in values)
-									staticInitWorklist.push(value);
-							case EVariableDeclaration(_, _, value, _, _, _) if (value != null):
-								staticInitWorklist.push(value);
-							case _:
-						}
+						var initializer:Null<TypedBackendFieldInitializerProjection> = null;
+						for (candidate in classProjection.getFieldInitializers())
+							if (candidate.getDeclaration() == f)
+								initializer = candidate;
+						for (name in backend.ocaml.OcamlPreludeReferences.ofInitializer(HxFieldDecl.getInit(f), initializer, ownsMethod).calls.keys())
+							staticInitCalls.set(name, true);
 					}
 
 					final fnNames:Map<String, Bool> = new Map();
@@ -9331,13 +9074,10 @@ class EmitterStage {
 							if (instanceInitializers != null)
 								for (dependency in currentClassStorage.constructorDependencies(tf.getConstructorCatalog(), outputModuleName))
 									calls.set(dependency, true);
-							final locals:Map<String, Bool> = new Map();
-							for (local in tf.getLocalCatalog().getEntries())
-								locals.set(local.getProjectedName(), true);
-							final idents:Map<String, Bool> = new Map();
-							for (s in HxFunctionDecl.getBody(parsedFn))
-								scanStmtForPreludeDepsRec(s, locals, calls, idents);
-							for (n in idents.keys()) {
+							final references = backend.ocaml.OcamlPreludeReferences.ofFunction(tf, ownsMethod);
+							for (n in references.calls.keys())
+								calls.set(n, true);
+							for (n in references.idents.keys()) {
 								if (staticFieldNames.exists(n)) {
 									refsStatic = true;
 									break;
