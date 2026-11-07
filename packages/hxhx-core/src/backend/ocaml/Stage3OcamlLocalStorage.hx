@@ -78,3 +78,20 @@ function widenIntToFloat(destination:Null<TyType>, operandIsInt:Bool, rendered:S
 		return rendered;
 	return TyAliasExpansion.reveal(destination).getSemanticKey() == "primitive:Float" ? "float_of_int (" + rendered + ")" : rendered;
 }
+
+/**
+	Unwrap a nullable Int or Float value stored into a concrete Int or Float local.
+	A local function's defaulted parameter arrives in the nullable carrier, and its
+	entry binds the concrete body local from it. Returns null for every other pair.
+ */
+function concreteFromCarrier(source:Null<TyType>, destination:Null<TyType>, rendered:String):Null<String> {
+	if (source == null || destination == null)
+		return null;
+	final inner = Stage3OcamlNullablePrimitive.innerPrimitive(source);
+	if (inner == null || Stage3OcamlNullablePrimitive.innerPrimitive(destination) != null)
+		return null;
+	final key = TyAliasExpansion.reveal(destination).getSemanticKey();
+	if (key != Stage3OcamlNullablePrimitive.INT && key != Stage3OcamlNullablePrimitive.FLOAT)
+		return null;
+	return Stage3OcamlNullablePrimitive.load(inner, destination, rendered);
+}
