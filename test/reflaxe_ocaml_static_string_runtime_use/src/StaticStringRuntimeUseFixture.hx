@@ -40,6 +40,7 @@ class StaticStringRuntimeUseFixture {
 			final nullableFloat:Null<Float> = null;
 			final nullableBool:Null<Bool> = null;
 			final directInt:Int = 1;
+			final directFloat:Float = 2.0;
 			final value:Dynamic = text;
 			final inferredNullable = if (value == null) text else null;
 			Std.string(nullable);
@@ -49,7 +50,9 @@ class StaticStringRuntimeUseFixture {
 			Std.string(nullableFloat);
 			Std.string(nullableBool);
 			Std.string(directInt);
+			Std.string(directFloat);
 			text + nullable;
+			text + directFloat;
 			text + inferredNullable;
 			var assigned:Null<String> = nullable;
 			assigned += text;
@@ -61,16 +64,18 @@ class StaticStringRuntimeUseFixture {
 
 		final plan = new OcamlStaticStringPlanner(binding).plan(typed);
 		final decisions = plan.decisions();
-		assertKindCount(decisions, OcamlStaticStringSourceKind.StdString, 6);
-		assertKindCount(decisions, OcamlStaticStringSourceKind.StringConcat, 4);
+		assertKindCount(decisions, OcamlStaticStringSourceKind.StdString, 7);
+		assertKindCount(decisions, OcamlStaticStringSourceKind.StringConcat, 6);
 		assertKindCount(decisions, OcamlStaticStringSourceKind.StringCompoundLeft, 1);
 		assertKindCount(decisions, OcamlStaticStringSourceKind.StringCompoundRight, 1);
 		assertKindCount(decisions, OcamlStaticStringSourceKind.ReflectFieldName, 1);
 		assertSemanticTypeCount(decisions, "Null<Int>", 1);
 		assertSemanticTypeCount(decisions, "Null<Float>", 1);
 		assertSemanticTypeCount(decisions, "Null<Bool>", 1);
-		if (decisions.length != 13)
-			throw 'Expected thirteen outer static string decisions, received ${decisions.length}.';
+		// A non-null Float owns the runtime helper that prints Floats like upstream Haxe.
+		assertSemanticTypeCount(decisions, "Float", 2);
+		if (decisions.length != 16)
+			throw 'Expected sixteen outer static string decisions, received ${decisions.length}.';
 
 		for (decision in decisions)
 			proveRuntimeUse(decision);

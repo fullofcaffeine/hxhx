@@ -409,8 +409,6 @@ class OcamlIMapInterfaceSyntax {
 				OcamlExpr.EApp(runtimeIdentifier(decision, role, "HxString.toStdString", runtimeAuthority, runtimeReferences), [value]);
 			case ExactInt:
 				OcamlExpr.EApp(OcamlExpr.EIdent("string_of_int"), [value]);
-			case ExactFloat:
-				OcamlExpr.EApp(OcamlExpr.EIdent("string_of_float"), [value]);
 			case ExactBool:
 				OcamlExpr.EApp(OcamlExpr.EIdent("string_of_bool"), [value]);
 			case DynamicObject:
