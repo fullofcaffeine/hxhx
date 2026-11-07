@@ -1,6 +1,6 @@
 {
   "model": "requirements-only-runtime-selection-shadow",
-  "runtimeSourceRevision": "sha256:59ddb46220d9dc18580dc341724b788df3004ea0b201dc1acfe26e5ad231cb9e",
+  "runtimeSourceRevision": "sha256:c8383e238d547f04378018fa0e33b2ae092947780bdd9add92119d854294b289",
   "requirementRevision": "sha256:01749692cc823c49875a531eb0428405338d33bb23b4ee71b9815b529a4fb1ef",
   "schemaVersion": 1,
   "selectionMode": "full",
@@ -53,8 +53,8 @@
       {
         "module": "HxInt",
         "path": "HxInt.ml",
-        "sha256": "sha256:3f85900b52dd4b082a5fc11db1d59125b16bf5f38d3959ffe5dc5686fdd04f2b",
-        "bytes": 2078
+        "sha256": "sha256:b99cbf3eee8ac437f1312a0685ca9b1bc4e93fe112d8f04ea680f64efe84d4d1",
+        "bytes": 2667
       },
       {
         "module": "HxIterator",
@@ -378,6 +378,7 @@
           "transitive:HxBytes",
           "transitive:HxDynamic",
           "transitive:HxEnum",
+          "transitive:HxInt",
           "transitive:HxStdio",
           "transitive:HxString",
           "transitive:HxType"
@@ -591,7 +592,7 @@
       "HxString",
       "HxType"
     ],
-    "revision": "sha256:9462c0ffd5fe5454b4a93622ab84cec430ec824d0e6ee8c366560fc2df2ea90c"
+    "revision": "sha256:12e4f7ed0768074d6c553b658d06b09aa22aecdef23822b768b84ca9f2eaba0b"
   },
   "profile": "portable",
   "message": "Explicit requirements do not yet select the same checked runtime source bytes. This mismatch blocks a hard cut, while the current compiler selection remains authoritative.",
@@ -673,8 +674,8 @@
       {
         "module": "HxInt",
         "path": "HxInt.ml",
-        "sha256": "sha256:3f85900b52dd4b082a5fc11db1d59125b16bf5f38d3959ffe5dc5686fdd04f2b",
-        "bytes": 2078
+        "sha256": "sha256:b99cbf3eee8ac437f1312a0685ca9b1bc4e93fe112d8f04ea680f64efe84d4d1",
+        "bytes": 2667
       },
       {
         "module": "HxIterator",
@@ -983,9 +984,9 @@
       "Std",
       "haxe_CallStack"
     ],
-    "revision": "sha256:df79466ffc1734426b1aea8bb5cff906afa711291cb135302c22496bd5bff955"
+    "revision": "sha256:20b0abf16cca30860c039dc11b8e1f34013d1e82eb58d169175a9f3db020f81d"
   },
-  "reportRevision": "sha256:0f0f041590498bf253ab2b147510c9817568e4720d2c3f515f9bb846d5d235c8",
+  "reportRevision": "sha256:fe4078b5903f95aa37572a956f0a9fd60f749c5fd882a9e1b0558af8e642acbe",
   "differences": {
     "currentOnlyRoots": [
       "Date",
@@ -2084,6 +2085,10 @@
       {
         "module": "HxRuntime",
         "reason": "transitive:HxEnum"
+      },
+      {
+        "module": "HxRuntime",
+        "reason": "transitive:HxInt"
       },
       {
         "module": "HxRuntime",
