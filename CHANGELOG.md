@@ -1,3 +1,10 @@
+## [0.43.7](https://github.com/fullofcaffeine/hxhx/compare/v0.43.6...v0.43.7) (2026-11-07)
+
+
+### Bug Fixes
+
+* **ocaml:** make Int division by zero a catchable Haxe exception ([#174](https://github.com/fullofcaffeine/hxhx/issues/174)) ([0c69373](https://github.com/fullofcaffeine/hxhx/commit/0c693732144c5d6a9f17bb6bc4a4b513a426b043))
+
 ## [0.43.6](https://github.com/fullofcaffeine/hxhx/compare/v0.43.5...v0.43.6) (2026-11-07)
 
 
