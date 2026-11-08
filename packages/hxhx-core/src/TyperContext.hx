@@ -392,8 +392,9 @@ class TyperContext {
 		for (provider in index.getDeclaredByModulePath(modulePath)) {
 			if (!Std.isOfType(provider, TyAbstractInfo) || (cast provider : TyAbstractInfo).getEnumDomain() == null)
 				continue;
+			// Only declared values resolve bare: `public static var util` on the abstract does not.
 			final field = provider.fieldInfo(name);
-			if (field == null || !field.getIsStatic())
+			if (field == null || !field.getIsStatic() || !field.getConstant().isEnumValue())
 				continue;
 			if (selected != null)
 				return null;

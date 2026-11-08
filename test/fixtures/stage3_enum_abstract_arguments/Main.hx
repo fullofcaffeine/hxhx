@@ -6,8 +6,13 @@
 	`TypedOnly.hx` holds forms that are checked by typing only, because Stage3 cannot
 	build them natively yet: a function-value call with an enum-abstract argument,
 	`Map<EA, Int>` keys (haxe_ocaml-njq5n), Float arithmetic with an enum-abstract
-	value, and bitwise compound assignment.
+	value, and bitwise operators (`|=` builds but keeps the old value,
+	haxe_ocaml-sq6ii).
 **/
+
+// A module's own enum-abstract value comes before an imported static of the same name.
+import Other.T1;
+
 enum abstract ET(Int) to Int {
 	var T1 = 1;
 	var T2 = 2;
@@ -54,5 +59,9 @@ class Main {
 		Sys.println(takesString(SA));
 		// An operator on a `to Int` enum abstract uses its Int value.
 		Sys.println(T1 + 1);
+		Sys.println(T1 - T2);
+		Sys.println(T1 * T2);
+		Sys.println(T2 % T1);
+		Sys.println(-T1);
 	}
 }

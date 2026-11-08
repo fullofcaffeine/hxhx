@@ -3097,10 +3097,11 @@ class TyperStage {
 					} else {
 						final contextual = ctx.expectedEnumConstructorField(name, expected);
 						final enumField = contextual == null ? ctx.moduleEnumConstructorField(name) : contextual;
-						final imported = enumField != null ? enumField : ctx.importedStaticField(name);
 						// A bare value of an enum abstract in this module, such as `T1` for
 						// `enum abstract ET(Int) to Int { var T1 = 1; }`, is that abstract's field.
-						imported != null ? imported : ctx.moduleEnumAbstractValueField(name);
+						// Like upstream, it comes before an imported static of the same name.
+						final moduleValue = enumField != null ? enumField : ctx.moduleEnumAbstractValueField(name);
+						moduleValue != null ? moduleValue : ctx.importedStaticField(name);
 					}
 				}
 			case EField(object, field):
@@ -4114,8 +4115,15 @@ class TyperStage {
 				// Haxe 4.3.7 updates explicit properties through their getter/setter
 				// contract; it does not select the abstract value's increment helper.
 				final bound = isPropertyUpdate ? null : TyAbstractUnaryBinding.select(semanticIndex, inner, _op, _fixity, ctx.getFilePath(), pos);
+				// Without a declared operator, `-` and `~` act through a `to Int` conversion.
+				final viewedUnary = bound == null
+					&& (_op == Negate || _op == BitwiseNot) ? TyAbstractPrimitiveOperation.unary(semanticIndex, inner) : null;
+				if (viewedUnary != null && viewedUnary.failure != null)
+					throw new TyperError(ctx.getFilePath(), pos, viewedUnary.failure);
 				if (bound != null) {
 					bound.getResultType();
+				} else if (viewedUnary != null) {
+					viewedUnary.result;
 				} else {
 					if (_op == LogicalNot)
 						TyType.fromHintText("Bool");

@@ -414,8 +414,14 @@ class TypedAbstractUnaryLowering {
 		}
 		final selected = TyAbstractUnaryBinding.select(index, operand.getType(), op, fixity, filePath,
 			rebuilt.getPosition() == null ? HxPos.unknown() : rebuilt.getPosition());
-		if (selected == null)
-			return rebuilt;
+		if (selected == null) {
+			// `-T1` on a `to Int` abstract: make the conversion explicit for backends.
+			final target = TyAbstractPrimitiveOperation.view(index, operand.getType());
+			final conversion = target == null ? null : TyImplicitConversionPlan.select(index, target, operand.getType());
+			return conversion != null
+				&& conversion.isAbstractTo()
+				&& conversion.isRepresentationPreservingAbstractConversion() ? rebuilt.withExpressions([conversion.apply(operand)]) : rebuilt;
+		}
 		final declaration = selected.getDeclaration();
 		if (!declaration.getHasBody())
 			return nativeBodylessOperation(selected, operand, abstractInfo, filePath);

@@ -28,6 +28,11 @@ class M14PatternCompoundKindsTest {
 		+ "abstract TO(Int) to Int {}\n"
 		+ "abstract S(String) from String to String {}\n"
 		+ "enum abstract ETo(Int) to Int { var TOne = 1; var TTwo = 2; }\n"
+		+ "abstract IFloat(Int) from Int to Float {}\n"
+		+ "abstract B(Bool) from Bool to Bool {}\n"
+		+ "abstract Multi1(Int) from Int to Float to Int {}\n"
+		+ "enum abstract WithStatic(Int) to Int { var W1 = 1; public static var util = 2; }\n"
+		+ "class Takes { public static function int(v:Int):Int return v; }\n"
 		+ "abstract M(Float) from Int to Float {}\n"
 		+ "abstract N(Null<Int>) from Int {}\n"
 		+ "class H { public static function half(i:Int) return i / 2; }\n";
@@ -87,6 +92,19 @@ class M14PatternCompoundKindsTest {
 			// An operator-less abstract value acts through its `to` type.
 			{name: "ToStringAbstractPlusInt", body: "var s:S = \"a\"; var x = s + 1;", diagnostic: "S should be Int"},
 			{name: "ToFloatAbstractOperandInt", body: "var m:M = 1; var x = m + 1;", diagnostic: "M should be Int"},
+			// `- * / %` need Int, Float, Dynamic or a `to Int` abstract; the first other operand fails.
+			{name: "ToStringMinusString", body: "var s:S = \"a\"; var x = s - \"a\";", diagnostic: "S should be Int"},
+			{name: "StringMinusToString", body: "var s:S = \"a\"; var x = \"a\" - s;", diagnostic: "String should be Int"},
+			{name: "ToBoolMinusBool", body: "var b:B = true; var x = b - true;", diagnostic: "B should be Int"},
+			{name: "ToFloatTimesFloat", body: "var m:M = 1; var x = m * 2.0;", diagnostic: "M should be Int"},
+			{name: "FloatTimesToFloat", body: "var m:M = 1; var x = 2.0 * m;", diagnostic: "M should be Int"},
+			{name: "IntToFloatTimesFloat", body: "var iff:IFloat = 1; var x = iff * 2.0;", diagnostic: "IFloat should be Int"},
+			{name: "ToIntMinusBool", body: "var x = TOne - true;", diagnostic: "Bool should be Int"},
+			{name: "ToFloatNegated", body: "var m:M = 1; var x = -m;", diagnostic: "M should be Int"},
+			// `+` with Bool or a second abstract cannot add.
+			{name: "ToBoolPlusBool", body: "var b:B = true; var x = b + true;", diagnostic: "Cannot add B and Bool"},
+			{name: "ToIntPlusBool", body: "var x = TOne + true;", diagnostic: "Cannot add ETo and Bool"},
+			{name: "TwoToIntPlus", body: "var x = TOne + TTwo;", diagnostic: "Cannot add ETo and ETo"},
 			// A `to` type is no path for a constant.
 			{name: "ToOnlyAbstractInt", body: "var t:TO = cast 1; switch (t) { case 1: case _: }", diagnostic: "Int should be TO"},
 			// A constant covers the enum-abstract member with the same value; coverage names the rest.
@@ -410,8 +428,16 @@ class M14PatternCompoundKindsTest {
 			"var i:Int = 3; var r = i / 2; r += 0.5;",
 			"var x = TOne + 1; var y = TOne * 1.5; var i = 0; i += TOne; i |= TTwo; var f = 1.5; f += TOne;",
 			"var s:S = \"a\"; var t = s + \"c\"; var u = \"n=\" + TOne;",
-			"var m:M = 1; var x = m + 1.5;"
+			"var m:M = 1; var x = m + 1.5;",
+			"var x:Int = TOne - TTwo; var y:Int = TOne * TTwo; var z:Float = TOne / TTwo; var w:Int = TOne | TTwo; var v:Int = TTwo % TOne;",
+			"var d:Dynamic = 5; var a = TOne + d; var b = TOne - d; var c = TOne * d; var e = TOne | d;",
+			"var d:Dynamic = 5; var a = d + TOne; var b = d - TOne; d += TOne; d |= TOne;",
+			"var x:Int = -TOne; var y:Int = ~TOne;",
+			"var mu:Multi1 = 1; var x:Int = mu * 2; var y:Int = mu | 1; var z:Int = mu + 1;"
 		].map(body -> "{ " + body + " }"));
+		// Only declared enum-abstract values resolve bare, not other statics. hxhx has no
+		// "Unknown identifier" diagnostic yet (haxe_ocaml-pv0vn), so require only that it fails.
+		mustNotType("BareNonValueStatic", "Takes.int(util);", "Unknown identifier : util");
 		Sys.println("PATTERN_COMPOUND_KINDS:PASS");
 	}
 
@@ -453,6 +479,21 @@ class M14PatternCompoundKindsTest {
 			message = error.getMessage();
 		if (message != diagnostic)
 			throw "kind diagnostic differs for " + name + ": " + message + ", upstream " + diagnostic;
+		Sys.println("PATTERN_COMPOUND_KINDS_REJECT:PASS " + name);
+	}
+
+	/** Upstream rejects with `diagnostic`; hxhx must stop too, whatever its message. */
+	static function mustNotType(name:String, body:String, diagnostic:String):Void {
+		final directory = write(name, [body]);
+		upstream(directory, diagnostic);
+		var typed = true;
+		try {
+			CppResolvedFixture.load({sourceRoot: directory, mainModule: "Main", requiredModules: []});
+		} catch (_:haxe.Exception) {
+			typed = false;
+		}
+		if (typed)
+			throw "program upstream rejects was accepted: " + name;
 		Sys.println("PATTERN_COMPOUND_KINDS_REJECT:PASS " + name);
 	}
 
