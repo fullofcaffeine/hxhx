@@ -4971,7 +4971,11 @@ class EmitterStage {
 								isEnumBox: type -> currentEnums != null && currentEnums.runtimeName(type) != null,
 								referenceCarrier: type -> backend.ocaml.Stage3OcamlReferenceCarrier.select(type, currentClassStorage, ocamlTypeFromTy)
 							};
-							for (sentinel in backend.ocaml.Stage3OcamlLocalCallOmissions.omitted(typedCall, supplied, slots))
+							final localType = switch callee {
+								case EIdent(name): exactFunctionLocalType(name);
+								case _: null;
+							};
+							for (sentinel in backend.ocaml.Stage3OcamlLocalCallOmissions.omitted(localType, typedCall, supplied, slots))
 								renderedArgs.push(sentinel);
 						}
 						final isHxAnonDynamicCall = c.indexOf("HxAnon.get") != -1 || c.indexOf("HxMethodDispatch.structural_field") != -1;
