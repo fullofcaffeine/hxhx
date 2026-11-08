@@ -13,6 +13,8 @@ class LocalFailure extends haxe.Exception {
 	}
 }
 
+class NativeCarryingFailure extends haxe.Exception {}
+
 enum RethrownColor {
 	Red;
 	Green(n:Int);
@@ -20,6 +22,64 @@ enum RethrownColor {
 
 class Main {
 	static final scratch = ".tmp/stage3_runtime_exception_catch_scratch";
+
+	static final heldWithNative = new haxe.Exception("static", null, "static native");
+
+	static function makeWithNative():haxe.Exception {
+		return new haxe.Exception("returned", null, "returned native");
+	}
+
+	/** Prints which handler receives the value that `thrower` throws. */
+	static function reportHandler(label:String, thrower:() -> Void):Void {
+		try {
+			thrower();
+		} catch (e:NativeCarryingFailure) {
+			Sys.println(label + ": subclass " + e.message);
+		} catch (e:String) {
+			Sys.println(label + ": String " + e);
+		} catch (e:Int) {
+			Sys.println(label + ": Int " + e);
+		} catch (e:Dynamic) {
+			Sys.println(label + ": Dynamic");
+		}
+	}
+
+	/**
+		An exception the program built with a `native` value is not a wrapper, even
+		though `e.native` is set. Throwing it must keep the exception object, so
+		neither `catch (e:String)` nor the loss of its subclass may result. Only a
+		wrapper made by `catch (e:haxe.Exception)` around a plain value unwraps.
+	**/
+	static function nativeValueStaysAnException():Void {
+		reportHandler("native direct", function():Void {
+			throw new haxe.Exception("direct", null, "direct native");
+		});
+		reportHandler("native local", function():Void {
+			final held = new haxe.Exception("local", null, "local native");
+			throw held;
+		});
+		reportHandler("native static", function():Void {
+			throw heldWithNative;
+		});
+		reportHandler("native returned", function():Void {
+			throw makeWithNative();
+		});
+		reportHandler("native as Dynamic", function():Void {
+			final held:Dynamic = new haxe.Exception("dynamic", null, "dynamic native");
+			throw held;
+		});
+		reportHandler("subclass with native", function():Void {
+			final held:haxe.Exception = new NativeCarryingFailure("sub", null, "sub native");
+			throw held;
+		});
+		reportHandler("native caught and rethrown", function():Void {
+			try {
+				throw new haxe.Exception("caught", null, "caught native");
+			} catch (e:haxe.Exception) {
+				throw e;
+			}
+		});
+	}
 
 	static function readOrFallback(path:String):String {
 		try {
@@ -356,6 +416,7 @@ class Main {
 			Sys.println("create below file with trailing slash: " + Std.string(e));
 		}
 		rethrowKeepsOriginal(missing);
+		nativeValueStaysAnException();
 
 		sys.FileSystem.deleteFile(file);
 		sys.FileSystem.deleteDirectory(scratch);
