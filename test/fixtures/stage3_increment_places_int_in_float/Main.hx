@@ -1,13 +1,13 @@
 /**
-	Known failing until PR #123 (Bead haxe_ocaml-ljotn) lands.
+	Known failing until whole-number Float printing matches upstream
+	(Bead haxe_ocaml-vzr17).
 
 	An Int literal stored into a Float slot (`[1, 2]` as `Array<Float>`, or
-	`box.v = 3` for a `Float` field) is not widened natively: the slot holds
-	an Int representation. Reading it back as a Float for `++` then crashes
-	the native process (exit 139). `fl[0] = fl[0] + 1.0` crashes the same way
-	on main without any `++`, so the bug is in the store, not in the update.
-	The test runs this program and requires that it still differs from
-	upstream. Once it matches, fold these lines into `stage3_increment_places`.
+	`box.v = 3` for a `Float` field) is promoted natively since PR #123, so
+	`++` on it no longer crashes. A whole-number Float still prints as `2.`
+	where upstream prints `2`. The test requires a clean exit and an output
+	that still differs from upstream. Once it matches, fold these lines into
+	`stage3_increment_places`.
 **/
 class Box {
 	public var v:Float = 0.5;

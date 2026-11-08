@@ -4333,8 +4333,9 @@ class TyperStage {
 						if (bound != null) bound.getOperatorInfo().getResultType(); else {
 							final integer = op == "/" ? null : TyNullableIntegerResult.result(ta, tb);
 							final unified = integer == null ? TyType.unify(ta, tb) : integer;
+							// Haxe division yields Float even for two Int operands.
 							unified != null
-							&& unified.isNumeric() ? unified : TyType.unknown();
+							&& unified.isNumeric() ? (op == "/" ? TyType.fromHintText("Float") : unified) : TyType.unknown();
 						}
 					case _:
 						inferExprType(a, scope, ctx, pos);

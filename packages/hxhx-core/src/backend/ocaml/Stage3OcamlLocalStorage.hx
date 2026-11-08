@@ -6,10 +6,18 @@ package backend.ocaml;
 	operand occurs once; this boundary never evaluates or reconstructs source.
 	A Dynamic source entering a Bool local uses the checked inverse conversion.
 	A nullable Int, Float, or Bool destination uses the shared carrier conversion.
+	An Int value entering a Float local is promoted (`var f:Float = box.get()`
+	where the call returns Int); the operand is rendered as an OCaml int. A
+	nullable Int or Float entering a Float local (`final f:Float =
+	Std.parseInt("7")`) is unwrapped from its carrier, and widened for Int.
  */
 function store(write:TypedBackendLocalWrite, rendered:String, names:Null<Stage3OcamlLocalNames>):String {
-	if (Stage3OcamlNullablePrimitive.innerPrimitive(write.binding.getType()) != null)
+	if (Stage3OcamlNullablePrimitive.innerPrimitive(write.binding.getType()) != null
+		|| (Stage3OcamlNumericWidening.isFloatDestination(write.binding.getType())
+			&& Stage3OcamlNullablePrimitive.innerPrimitive(write.sourceType) != null))
 		return Stage3OcamlValueConversion.convert(write.sourceType, write.binding.getType(), rendered, names);
+	if (Stage3OcamlNumericWidening.needsPromotion(write.sourceType, write.binding.getType()))
+		return Stage3OcamlNumericWidening.promote(rendered);
 	if (write.binding.getType().getSemanticKey() == "primitive:Bool" && write.sourceType.isDynamic())
 		return "HxDynamic.booleanValue (" + rendered + ")";
 	if (!write.binding.getType().isDynamic())
@@ -63,18 +71,4 @@ function assignValue(ident:String, stored:String, names:Stage3OcamlLocalNames):S
 		throw "OCaml local assignment value requires its exact local naming owner";
 	final value = names.internalName("__hx_assigned");
 	return "(let " + value + " = (" + stored + ") in (" + ident + " := " + value + "; " + value + "))";
-}
-
-/**
-	Widen an Int operand stored in a `Float` local, as Haxe does for `f = 3`.
-
-	OCaml keeps `int` and `float` apart, so storing the Int literal `3` in a
-	`float ref` fails to compile. Only an exact, non-nullable `Float`
-	destination with an operand known to be Int is widened; every other
-	assignment keeps its rendered value.
- */
-function widenIntToFloat(destination:Null<TyType>, operandIsInt:Bool, rendered:String):String {
-	if (!operandIsInt || destination == null || destination.isNullable())
-		return rendered;
-	return TyAliasExpansion.reveal(destination).getSemanticKey() == "primitive:Float" ? "float_of_int (" + rendered + ")" : rendered;
 }

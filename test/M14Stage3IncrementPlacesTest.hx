@@ -18,10 +18,12 @@ import sys.io.File;
 	  elements, Int and Float instance fields, and anonymous-structure fields.
 	  It also checks that the array and index expressions run once, in order.
 	- The native executable must print exactly what upstream Haxe 4.3.7 prints.
-	- `stage3_increment_places_int_in_float` is known failing: an Int literal
-	  stored into a Float slot is not widened natively, so `++` on it crashes
-	  (Bead haxe_ocaml-ljotn, PR #123). The test requires that it still
-	  differs, so the fix is noticed and the lines move into the main fixture.
+	- `stage3_increment_places_int_in_float` is known failing for one remaining
+	  reason: an Int literal stored into a Float slot is now promoted, so `++`
+	  no longer crashes, but a whole-number Float prints as `2.` where upstream
+	  prints `2` (Bead haxe_ocaml-vzr17). The test requires a clean exit and a
+	  differing output, so a new crash or the formatting fix is noticed. Once
+	  the output matches, the lines move into the main fixture.
 **/
 class M14Stage3IncrementPlacesTest {
 	static function deleteRecursive(path:String):Void {
@@ -52,18 +54,18 @@ class M14Stage3IncrementPlacesTest {
 		M14Stage3RuntimeFixture.observe({command: main.executable, arguments: [], expected: main.expected});
 		deleteRecursive(main.outDir);
 		Sys.println("M14_STAGE3_INCREMENT_PLACES:PASS");
-		// Known failing until Int literals stored into Float slots are widened (PR #123,
-		// Bead haxe_ocaml-ljotn). Upstream and the native build must succeed; only the
-		// native run may still fail, so a fix is noticed and these lines are folded in.
+		// Int literals stored into Float slots are promoted, so the native run must exit cleanly.
+		// Only whole-number Float printing still differs from upstream (Bead haxe_ocaml-vzr17).
 		final known = build("test/fixtures/stage3_increment_places_int_in_float", "int_in_float");
-		var nowPasses = false;
-		try {
-			M14Stage3RuntimeFixture.observe({command: known.executable, arguments: [], expected: known.expected});
-			nowPasses = true;
-		} catch (_:Dynamic) {}
+		final process = new sys.io.Process(known.executable, []);
+		final stdout = process.stdout.readAll().toString();
+		final code = process.exitCode();
+		process.close();
 		deleteRecursive(known.outDir);
-		if (nowPasses)
+		if (code != 0)
+			throw "stage3_increment_places_int_in_float must exit cleanly: exit=" + code + " stdout=" + stdout;
+		if (stdout == known.expected)
 			throw "stage3_increment_places_int_in_float now matches upstream: move its lines into stage3_increment_places and remove the known-failing check";
-		Sys.println("M14_STAGE3_INCREMENT_PLACES_INT_IN_FLOAT:KNOWN_FAILING (haxe_ocaml-ljotn)");
+		Sys.println("M14_STAGE3_INCREMENT_PLACES_INT_IN_FLOAT:KNOWN_FAILING (haxe_ocaml-vzr17)");
 	}
 }

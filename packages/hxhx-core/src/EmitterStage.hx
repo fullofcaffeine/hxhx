@@ -547,13 +547,12 @@ class EmitterStage {
 	/** Local storage uses declared types, including generated control-result bindings. */
 	/**
 		The value that `name = operand` stores, shared by statement and value-position assignments.
-		It widens an Int operand stored in a Float local, applies the Int64 carrier conversion, and
-		then uses the local's Dynamic, Bool, or nullable storage representation.
+		It applies the Int64 carrier conversion, then uses the local's Dynamic, Bool, Float, or
+		nullable storage representation. An Int operand stored in a Float local is promoted there,
+		from the typed local write (see Stage3OcamlLocalStorage.store).
 	**/
 	static function localAssignmentStoredValue(name:String, declaredType:String, operand:HxExpr, rendered:String, ?tyByIdent:Map<String, TyType>):String {
-		final operandIsInt = operand.match(EInt(_)) || stage3ExactPrimitiveKey(operand) == "primitive:Int";
-		final widened = backend.ocaml.Stage3OcamlLocalStorage.widenIntToFloat(exactFunctionLocalType(name), operandIsInt, rendered);
-		return localStorageValue(name, operand, stage3Int64CarrierValue(declaredType, operand, widened, tyByIdent));
+		return localStorageValue(name, operand, stage3Int64CarrierValue(declaredType, operand, rendered, tyByIdent));
 	}
 
 	static function localStorageValue(name:String, operand:HxExpr, rendered:String):String {
@@ -566,6 +565,7 @@ class EmitterStage {
 		if (destination == null
 			|| (!destination.isDynamic()
 				&& destination.getSemanticKey() != "primitive:Bool"
+				&& TyAliasExpansion.reveal(destination).getSemanticKey() != "primitive:Float"
 				&& backend.ocaml.Stage3OcamlNullablePrimitive.innerPrimitive(destination) == null))
 			return rendered;
 		return backend.ocaml.Stage3OcamlLocalStorage.store(requireLocalStorageWrite(name, operand), rendered, currentFunctionLocalOcamlNames);
@@ -2225,6 +2225,34 @@ class EmitterStage {
 		};
 	}
 
+	/**
+		Whether the Int value `expr` enters the Float `destination` and must be
+		promoted (see Stage3OcamlNumericWidening). The exact typed result of the
+		operand decides when it is retained: array reads, field reads, locals, and
+		calls. Negation follows its operand. Other shapes, such as literals and
+		Int arithmetic, use the Int expression test.
+	**/
+	static function stage3PromotesToFloat(expr:HxExpr, destination:Null<TyType>, ?tyByIdent:Map<String, TyType>, ?callSigByCallee:Map<String, EmitterCallSig>,
+			?staticImportByIdent:Map<String, String>):Bool {
+		if (!backend.ocaml.Stage3OcamlNumericWidening.isFloatDestination(destination))
+			return false;
+		final exact = stage3ExactExprType(expr);
+		if (exact != null)
+			return backend.ocaml.Stage3OcamlNumericWidening.needsPromotion(exact, destination);
+		return switch expr {
+			case EUnop(op, fixity, inner) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
+				stage3PromotesToFloat(inner, destination, tyByIdent, callSigByCallee, staticImportByIdent);
+			case _: stage3IsIntExpr(expr, tyByIdent) && !stage3IsFloatExpr(expr, tyByIdent, callSigByCallee, staticImportByIdent);
+		};
+	}
+
+	/** A field typed Float (also `Cell<Float>.value:T`) stores an Int operand promoted. */
+	static function stage3FieldStoredValue(target:HxExpr, value:HxExpr, rendered:String, ?tyByIdent:Map<String, TyType>,
+			?callSigByCallee:Map<String, EmitterCallSig>, ?staticImportByIdent:Map<String, String>):String {
+		return stage3PromotesToFloat(value, stage3FieldOccurrenceType(target), tyByIdent, callSigByCallee,
+			staticImportByIdent) ? backend.ocaml.Stage3OcamlNumericWidening.promote(rendered) : rendered;
+	}
+
 	/** The typed result of a nominal field read owned by the active typed body. */
 	static function stage3FieldOccurrenceType(expr:HxExpr):Null<TyType> {
 		final field = currentTypedInitializer != null ? currentTypedInitializer.findField(expr) : currentTypedFunction == null ? null : currentTypedFunction.findField(expr);
@@ -2891,25 +2919,34 @@ class EmitterStage {
 		return "";
 	}
 
+	/**
+		Render `expr` for a Float destination. Int literals, negated literals,
+		locals and field reads the typer recorded as exactly Int, and locals whose
+		type text is `Int` are promoted. `checkedInt` says the caller proved `expr`
+		is an Int (see Stage3OcamlNumericWidening), so any other shape, such as a
+		call result or Int arithmetic, is promoted too.
+	**/
 	static function exprToOcamlAsFloatValueStage3(expr:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
-			?callSigByCallee:Map<String, EmitterCallSig>):String {
+			?callSigByCallee:Map<String, EmitterCallSig>, checkedInt:Bool = false):String {
 		return switch (expr) {
 			case EDiscardThen(effect, continuation):
 				"(let _ = "
 				+ exprToOcaml(effect, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 				+ " in "
 				+ exprToOcamlAsFloatValueStage3(continuation, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-					callSigByCallee)
+					callSigByCallee, checkedInt)
 				+ ")";
 			case EInt(v):
 				"float_of_int " + Std.string(v);
 			case EUnop(op, fixity, inner) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
 				"(-.(" + exprToOcamlAsFloatValueStage3(inner, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-					callSigByCallee) + "))";
-			case EIdent(_) | EField(_, _) if (stage3ExactPrimitiveKey(expr) == "primitive:Int"):
-				"float_of_int (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-					callSigByCallee) + ")";
+					callSigByCallee, checkedInt) + "))";
+			// Promote when the caller proved the value is an Int (`checkedInt`), or when
+			// the typer recorded an exact Int for this local or field read.
+			case _ if (checkedInt || (expr.match(EIdent(_) | EField(_, _)) && stage3ExactPrimitiveKey(expr) == "primitive:Int")):
+				backend.ocaml.Stage3OcamlNumericWidening.promote(exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
+					moduleNameByPkgAndClass, callSigByCallee));
 			case EIdent(name) if (stage3TyForIdent(name, tyByIdent) == "Int"):
 				"float_of_int " + ocamlReadValueIdent(name);
 			case _ if (stage3IsDynamicExpr(expr, tyByIdent, callSigByCallee)):
@@ -3703,9 +3740,12 @@ class EmitterStage {
 		final construction = exactConstructor(e);
 		if (construction != null && currentClassStorage != null) {
 			final emitArgument = (expression:HxExpr, actual:TyType, expected:TyType, expectedIsOptional:Bool) -> {
-				final value = stage3IsFloatParamHint(expected.getDisplay()) ? exprToOcamlAsFloatValueStage3(expression, arityByIdent, tyByIdent,
-					staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-					callSigByCallee) : exprToOcaml(expression, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+				// The checked parameter type decides promotion, so `new Cell<Float>(1)` promotes even when the parameter is written `T`.
+				final promoted = backend.ocaml.Stage3OcamlNumericWidening.needsPromotion(actual, expected);
+				final value = promoted
+					|| stage3IsFloatParamHint(expected.getDisplay()) ? exprToOcamlAsFloatValueStage3(expression, arityByIdent, tyByIdent, staticImportByIdent,
+						currentPackagePath, moduleNameByPkgAndClass, callSigByCallee,
+						promoted) : exprToOcaml(expression, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 						callSigByCallee);
 				final argument = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(expression) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(expression);
 				// Nullable Int/Float/Bool arguments convert from the plain rendering, as in ordinary calls.
@@ -4031,6 +4071,13 @@ class EmitterStage {
 					final rendered = switch (arg) {
 						case ENull: backend.ocaml.Stage3OcamlNullablePrimitive.nullLiteralForCall(signature, argIndex, hint,
 								exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
+						case _
+							if (!isReceiver
+								&& argument != null
+								&& backend.ocaml.Stage3OcamlNumericWidening.needsPromotion(argument.type, argument.expectedType)):
+							// The checked destination is Float even when the parameter is written `T`.
+							exprToOcamlAsFloatValueStage3(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee, true);
 						case _ if (stage3IsFloatParamHint(hint)):
 							exprToOcamlAsFloatValueStage3(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee);
@@ -5163,6 +5210,8 @@ class EmitterStage {
 						});
 					case _:
 				}
+				function fieldStoredValue(target:HxExpr, rendered:String):String
+					return stage3FieldStoredValue(target, b, rendered, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw);
 				switch (op) {
 					case "=":
 						switch (a) {
@@ -5171,14 +5220,14 @@ class EmitterStage {
 									&& hasCurrentInstanceField(name)
 									&& !stage3HasTyIdent(name, tyByIdentRaw)
 									&& !isMutableLocalRefIdent(name)):
-								final rhsCode = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-									callSigByCallee);
+								final rhsCode = fieldStoredValue(a,
+									exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
 								stage3ThisFieldAssign(name, rhsCode);
 							case EField(obj, field):
 								final objCode = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 									callSigByCallee);
-								final rhsCode = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-									callSigByCallee);
+								final rhsCode = fieldStoredValue(a,
+									exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
 								if (backend.ocaml.Stage3OcamlInt64Words.isWordField(stage3FieldOccurrence(a)))
 									return backend.ocaml.Stage3OcamlInt64Words.write(field, objCode, rhsCode, currentFunctionLocalOcamlNames);
 								"(let __hx_obj = ("
@@ -7084,6 +7133,12 @@ class EmitterStage {
 						if (converted != null)
 							rendered = converted;
 					}
+					// `function f():Float return count;` returns the Int value promoted to Float.
+					if (renderReturn == null
+						&& currentTypedInitializer == null
+						&& currentTypedFunction != null
+						&& stage3PromotesToFloat(expr, currentTypedFunction.getReturnType(), cast tyCtx, callSigByCallee, staticImportByIdent))
+						rendered = backend.ocaml.Stage3OcamlNumericWidening.promote(rendered);
 					final declaredReturn = currentFunctionName == null
 						|| fnReturnTypesMap == null ? null : fnReturnTypesMap.get(currentFunctionName);
 					final dynamicReturn = declaredReturn != null
@@ -7124,8 +7179,15 @@ class EmitterStage {
 							final isThisField = stage3HasThisBinding(cast tyCtx) && hasCurrentInstanceField(name) && !stage3HasTyIdent(name, cast tyCtx)
 								&& !isMutableLocalRefIdent(name);
 							if (isThisField && op == "=") {
-								final rhsCode = returnExprToOcaml(rhs, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
-									currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+								// The field fact belongs to the original target node, not a rebuilt one.
+								final target = switch (expr) {
+									case EBinop(_, original, _): original;
+									case _: throw "instance field assignment lost its target";
+								};
+								final rhsCode = stage3FieldStoredValue(target, rhs,
+									returnExprToOcaml(rhs, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
+										moduleNameByPkgAndClass, callSigByCallee),
+									cast tyCtx, callSigByCallee, staticImportByIdent);
 								"ignore (" + stage3ThisFieldAssign(name, rhsCode) + ")";
 							} else if (op == "=") {
 								final lowered = mutableAssignmentStmtToUnit(op, name, rhs, tyCtx);
