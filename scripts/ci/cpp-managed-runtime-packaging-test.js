@@ -81,6 +81,10 @@ function observe(binary, directory, expected) {
 async function main() {
   try {
     fs.mkdirSync(launch, { recursive: true })
+    // The Lix launcher reads `.haxerc` from its working directory. Without this
+    // pin it falls back to the user-wide `~/haxe/.haxerc` ("stable" on hosted
+    // runners) and tries to download that compiler while the test waits.
+    copy('.haxerc', path.join(launch, '.haxerc'))
     for (const file of ['CppManagedRuntime.hx', 'CppManagedRuntimeMacro.hx']) {
       copy(`packages/hxhx-core/src/backend/cpp/${file}`, path.join(source, 'backend/cpp', file))
     }
