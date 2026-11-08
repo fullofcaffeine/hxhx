@@ -544,10 +544,13 @@ class Stage3Compiler {
 		// allowlisted. The scope-gap count describes the walker's coverage (standard-library switch
 		// scopes produce gaps in every program), so it is printed only under HXHX_TRACE_EXPR_MACROS.
 		function openModuleLoader(index:TyperIndex):ModuleLoader {
-			return new ModuleLoader(classPaths, definesMap, index, function(typePath:String):Bool {
+			final loader = new ModuleLoader(classPaths, definesMap, index, function(typePath:String):Bool {
 				return dispatchOnTypeNotFoundHooks(buildMacroPreparer.getSession(), typePath, requestOutput);
 			}, !noEmit, requestContext.sourceProvider, buildMacroPreparer.prepare,
 				macroContext);
+			if (parsedMacros.length > 0 || libMacros.length > 0)
+				loader.noteInitializationMacros();
+			return loader;
 		}
 		final expansionRequested = !typeOnly && exprMacros.length > 0;
 		final expressionMacroSession = expansionRequested ? buildMacroPreparer.getSession() : null;

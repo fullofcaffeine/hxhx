@@ -203,6 +203,60 @@ class TyperIndex {
 		return null;
 	}
 
+	/** The title-case value names that typing could not resolve in one module source file. */
+	public function undeclaredValueNames(filePath:String):TyUndeclaredName.TyUndeclaredValueNames {
+		final key = filePath == null ? "" : filePath;
+		var names = undeclaredNamesByFile.get(key);
+		if (names == null) {
+			names = new TyUndeclaredName.TyUndeclaredValueNames(key);
+			undeclaredNamesByFile.set(key, names);
+		}
+		return names;
+	}
+
+	final undeclaredNamesByFile = new StringMap<TyUndeclaredName.TyUndeclaredValueNames>();
+
+	/**
+		The raw text of a source file, read once per index. The undeclared-name
+		check scans it for imports in every conditional branch.
+	**/
+	public function rawSourceText(filePath:String):Null<String> {
+		if (rawSources.exists(filePath))
+			return rawSources.get(filePath);
+		final text = filePath == null
+			|| !sys.FileSystem.exists(filePath)
+			|| sys.FileSystem.isDirectory(filePath) ? null : sys.io.File.getContent(filePath);
+		rawSources.set(filePath, text);
+		return text;
+	}
+
+	final rawSources = new StringMap<Null<String>>();
+
+	/**
+		Whether any loaded enum or abstract declares a member with this name.
+		Upstream resolves a bare constructor or enum-abstract value such as
+		`Element` from the expected type, for example the other operand of
+		`node.nodeType != Element`. The bring-up typer does not always carry that
+		type, so `TyUndeclaredName` treats such a name as possibly declared.
+	**/
+	public function declaresEnumMember(name:String):Bool {
+		for (fullName => info in byFullName)
+			// A constructor with arguments is a static method, not a field.
+			if ((info.getIsEnum() || getAbstractByFullName(fullName) != null)
+				&& (info.fieldInfo(name) != null || info.staticMethod(name) != null))
+				return true;
+		return false;
+	}
+
+	/** Whether any loaded type declares a `macro` function with this name. */
+	public function declaresMacroFunction(name:String):Bool {
+		for (info in byFullName)
+			for (declaration in info.getDeclarations())
+				if (declaration.getSignature().getName() == name && TyMacroCallSignature.isMacro(declaration))
+					return true;
+		return false;
+	}
+
 	public function addNominal(info:TyNominalInfo):Void {
 		if (info == null)
 			return;

@@ -260,6 +260,43 @@ class ModuleLoader extends LazyTypeLoader {
 	override public function isMacroModule(modulePath:String, filePath:String):Bool
 		return macroContext.isMacroModule(modulePath, filePath);
 
+	/**
+		Whether the class path includes the standard library (it can find
+		`StdTypes`). Asked once per loader, because each module query is also
+		recorded as a dependency observation.
+	**/
+	override public function hasStandardLibrary():Bool {
+		if (standardLibrary == null)
+			standardLibrary = hasModuleSource("StdTypes");
+		return standardLibrary;
+	}
+
+	var standardLibrary:Null<Bool> = null;
+
+	/**
+		Record that this request runs `--macro` initializers (its own or a
+		library's). Such a macro can define a type or attach build metadata, and
+		those declarations do not reach this typer's index yet, so a missing name
+		proves nothing for the whole request.
+	**/
+	public function noteInitializationMacros():Void
+		initializationMacros = true;
+
+	var initializationMacros = false;
+
+	/** See `LazyTypeLoader.declarationsAreComplete`. */
+	override public function declarationsAreComplete():Bool
+		return !initializationMacros && hasStandardLibrary();
+
+	/**
+		Whether a module source exists on the class path. A module can exist
+		without a type of its own name, for example `StdTypes`, or define no type
+		under the current defines, as `haxe.http.HttpJs` does outside JS.
+		Upstream accepts an import of such a module.
+	**/
+	override public function hasModuleSource(modulePath:String):Bool
+		return sourceProvider.resolveModuleFile(classPaths, modulePath) != null;
+
 	public function drainNewModules():Array<ResolvedModule> {
 		if (pending.length == 0)
 			return [];
