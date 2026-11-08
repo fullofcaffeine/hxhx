@@ -30,18 +30,29 @@
 **/
 class TyAuthoredAssignmentCheck {
 	/** Throw the upstream diagnostic when `actual` provably cannot enter `expected`. */
-	public static function check(expected:Null<TyType>, actual:Null<TyType>, untypedContext:Bool, filePath:String, position:HxPos):Void {
+	public static function check(expected:Null<TyType>, actual:Null<TyType>, untypedContext:Bool, filePath:String, position:HxPos, ?writtenExpected:String,
+			?writtenExpectedLater:Void->Null<String>):Void {
 		if (expected == null || actual == null || untypedContext)
 			return;
 		if (expected.hasUnknownComponent() || actual.hasUnknownComponent())
 			return;
-		final mismatch = describe(expected, actual);
-		if (mismatch != null)
-			throw new TyperError(filePath, position, mismatch);
+		if (describe(expected, actual) == null)
+			return;
+		// Name the destination as written only once a mismatch is certain; finding
+		// that name may resolve a type hint, which a passing check never needs.
+		final written = writtenExpected != null ? writtenExpected : writtenExpectedLater == null ? null : writtenExpectedLater();
+		throw new TyperError(filePath, position, describe(expected, actual, written));
 	}
 
-	/** The upstream "A should be B" text for the first incompatible component, or null. */
-	static function describe(expected:TyType, actual:TyType):Null<String> {
+	/**
+		The upstream "A should be B" text for the first incompatible component, or null.
+		Types are compared after typedefs are expanded, but the text names the
+		destination as written, like upstream: `String should be R` for
+		`typedef R = Int`. `writtenExpected` is that written type, when known.
+	 */
+	static function describe(expected:TyType, actual:TyType, ?writtenExpected:String):Null<String> {
+		final expectedText = writtenExpected == null
+			|| StringTools.trim(writtenExpected).length == 0 ? expected.getDisplay() : StringTools.trim(writtenExpected);
 		final wanted = TyAliasExpansion.reveal(expected);
 		final supplied = TyAliasExpansion.reveal(actual);
 		if (wanted.isDynamic() || supplied.isDynamic())
@@ -51,14 +62,14 @@ class TyAuthoredAssignmentCheck {
 				return null;
 			if (wanted.getSemanticKey() == "primitive:Float" && supplied.getSemanticKey() == "primitive:Int")
 				return null;
-			return supplied.getDisplay() + " should be " + wanted.getDisplay();
+			return actual.getDisplay() + " should be " + expectedText;
 		}
 		if (wanted.isFunction() && supplied.isFunction() && !wanted.isNullable() && !supplied.isNullable())
-			return describeFunction(wanted, supplied);
+			return describeFunction(wanted, supplied, actual.getDisplay() + " should be " + expectedText);
 		return null;
 	}
 
-	static function describeFunction(wanted:TyType, supplied:TyType):Null<String> {
+	static function describeFunction(wanted:TyType, supplied:TyType, wholeMismatch:String):Null<String> {
 		final wantedArguments = wanted.getFunctionArguments();
 		final suppliedArguments = supplied.getFunctionArguments();
 		final wantedResult = wanted.getFunctionReturn();
@@ -72,7 +83,7 @@ class TyAuthoredAssignmentCheck {
 			if (parameter.isRest)
 				return null;
 		if (wantedArguments.length != suppliedArguments.length)
-			return supplied.getDisplay() + " should be " + wanted.getDisplay();
+			return wholeMismatch;
 		for (index in 0...wantedArguments.length) {
 			if (wanted.getFunctionParameters()[index].isOptional != supplied.getFunctionParameters()[index].isOptional)
 				return null;
@@ -84,7 +95,7 @@ class TyAuthoredAssignmentCheck {
 		if (wantedResult.isVoid())
 			return null;
 		if (suppliedResult.isVoid())
-			return supplied.getDisplay() + " should be " + wanted.getDisplay();
+			return wholeMismatch;
 		return describe(wantedResult, suppliedResult);
 	}
 

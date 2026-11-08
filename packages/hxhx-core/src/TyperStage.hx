@@ -1323,7 +1323,7 @@ class TyperStage {
 					if (init != null) {
 						// The new declaration is not visible in its own initializer.
 						// A same-name read therefore selects the nearest outer local.
-						initializerType = inferLocalInitializer(init, hasWrittenType ? hinted : null, scope, ctx, pos);
+						initializerType = inferLocalInitializer(init, hasWrittenType ? hinted : null, scope, ctx, pos, typeHint);
 					}
 					final initializerTerm = init == null ? null : scope.getInference().sourceTerm(init, scope);
 					final sym = scope.declareLocal(name, hinted, Variable);
@@ -1365,7 +1365,7 @@ class TyperStage {
 					// A declared return type is an authored destination: `return x + y` must fit `String`.
 					if (!expected.isUnknown())
 						TyAuthoredAssignmentCheck.check(expected, t, scope.isUntypedContext() || TyFieldAssignment.explicitlyUntyped(e), ctx.getFilePath(),
-							pos);
+							pos, null, () -> writtenReturnDisplay(expected, scope, ctx));
 					final term = scope.getInference().sourceTerm(e, scope);
 					controls.currentReturns().record(term == null ? Known(t) : term, pos);
 				case SExpr(e, pos):
@@ -3140,11 +3140,12 @@ class TyperStage {
 	}
 
 	/** Untyped local annotations may reinterpret complete values, but still solve compatible omitted type arguments. */
-	static function inferLocalInitializer(initializer:HxExpr, expected:Null<TyType>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyType {
+	static function inferLocalInitializer(initializer:HxExpr, expected:Null<TyType>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos,
+			?writtenType:String):TyType {
 		if (expected == null || !scope.isUntypedContext()) {
 			final actual = inferExprType(initializer, scope, ctx, pos, expected);
 			// A written local type is an authored destination: `var g:Float->Int = f` must fit.
-			TyAuthoredAssignmentCheck.check(expected, actual, TyFieldAssignment.explicitlyUntyped(initializer), ctx.getFilePath(), pos);
+			TyAuthoredAssignmentCheck.check(expected, actual, TyFieldAssignment.explicitlyUntyped(initializer), ctx.getFilePath(), pos, writtenType);
 			return actual;
 		}
 		final actual = inferExprType(initializer, scope, ctx, pos);
@@ -3357,6 +3358,25 @@ class TyperStage {
 			|| suppliedResult == null
 			|| wantedResult.isVoid()
 			|| functionValueFits(wantedResult, suppliedResult, index);
+	}
+
+	/**
+		The declared return type as written, for diagnostics that name it like upstream
+		(`String should be R`), or null when this scope's written return type is not
+		the type being checked (a lambda body, or no written return type).
+	 */
+	static function writtenReturnDisplay(expected:TyType, scope:TyFunctionEnv, ctx:TyperContext):Null<String> {
+		final written = scope.writtenReturnTypeHint();
+		if (written == null || StringTools.trim(written).length == 0)
+			return null;
+		try {
+			final resolved = typeFromHintInContext(written, ctx, scope);
+			return resolved != null
+				&& TyAliasExpansion.reveal(resolved).getSemanticKey() == TyAliasExpansion.reveal(expected).getSemanticKey() ? written : null;
+		} catch (_:Dynamic) {
+			// The name is only for the message; an unresolvable hint keeps the checked type's name.
+			return null;
+		}
 	}
 
 	/** Retain an ephemeral selection from this traversal; this is not a cache or another overload query. */
@@ -3931,7 +3951,7 @@ class TyperStage {
 					final writtenType = StringTools.trim(HxExprVarDecl.getTypeHint(declaration));
 					final hinted = writtenType.length == 0 ? null : typeFromHintInContext(writtenType, ctx, scope, pos);
 					final initializerType = initializer == null ? TyType.unknown() : inferLocalInitializer(initializer, hinted, scope, ctx,
-						HxExprVarDecl.getPosition(declaration));
+						HxExprVarDecl.getPosition(declaration), writtenType);
 					final initializerTerm = initializer == null ? null : scope.getInference().sourceTerm(initializer, scope);
 					if (initializerType.isNoNormalCompletion())
 						completesNormally = false;
