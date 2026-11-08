@@ -94,10 +94,20 @@ let absolutePath (relPath : string) : string =
 let isDirectory (path : string) : bool =
   Stdlib.Sys.file_exists path && Stdlib.Sys.is_directory path
 
+(* Drop trailing `/` characters, keeping a root `/`. Upstream's `mkdir` error
+   names the directory without them. *)
+let rec strip_trailing_slashes (path : string) : string =
+  let n = Stdlib.String.length path in
+  if n > 1 && Stdlib.String.get path (n - 1) = '/' then
+    strip_trailing_slashes (Stdlib.String.sub path 0 (n - 1))
+  else
+    path
+
 (* Haxe `createDirectory` creates missing parents first and does nothing for a
    path that already exists, even a regular file. A path below a regular file
    fails in `mkdir`, for example `Not a directory(mkdir, file/sub)`. *)
 let rec createDirectory (path : string) : unit =
+  let path = strip_trailing_slashes path in
   if path = "" || path = "." || Stdlib.Sys.file_exists path then
     ()
   else (

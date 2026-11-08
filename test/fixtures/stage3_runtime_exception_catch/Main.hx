@@ -13,6 +13,11 @@ class LocalFailure extends haxe.Exception {
 	}
 }
 
+enum RethrownColor {
+	Red;
+	Green(n:Int);
+}
+
 class Main {
 	static final scratch = ".tmp/stage3_runtime_exception_catch_scratch";
 
@@ -46,6 +51,118 @@ class Main {
 			}
 		}
 		return "unreachable";
+	}
+
+	/**
+		`throw e` on a value that `catch (e:haxe.Exception)` wrapped must raise
+		the original value again, so an outer handler for the original type
+		runs. Upstream reaches the original through `e.native`; the same applies
+		when the wrapper is held as `Dynamic`.
+	**/
+	static function rethrowKeepsOriginal(missing:String):Void {
+		try {
+			try {
+				throw "plain";
+			} catch (e:haxe.Exception) {
+				throw e;
+			}
+		} catch (e:String) {
+			Sys.println("rethrown string: " + e);
+		}
+		try {
+			try {
+				sys.io.File.getContent(missing);
+			} catch (e:haxe.Exception) {
+				throw e;
+			}
+		} catch (e:String) {
+			Sys.println("rethrown runtime failure: " + e);
+		}
+		try {
+			try {
+				throw 3;
+			} catch (e:haxe.Exception) {
+				throw e;
+			}
+		} catch (e:Int) {
+			Sys.println("rethrown int: " + (e + 1));
+		}
+		try {
+			try {
+				throw 1.5;
+			} catch (e:haxe.Exception) {
+				throw e;
+			}
+		} catch (e:Float) {
+			Sys.println("rethrown float: " + e);
+		}
+		try {
+			try {
+				throw true;
+			} catch (e:haxe.Exception) {
+				throw e;
+			}
+		} catch (e:Bool) {
+			Sys.println("rethrown bool: " + e);
+		}
+		try {
+			try {
+				throw Green(2);
+			} catch (e:haxe.Exception) {
+				throw e;
+			}
+		} catch (e:RethrownColor) {
+			switch e {
+				case Green(n):
+					Sys.println("rethrown enum: green " + n);
+				case Red:
+					Sys.println("rethrown enum: red");
+			}
+		}
+		try {
+			try {
+				throw "as dynamic";
+			} catch (e:haxe.Exception) {
+				final held:Dynamic = e;
+				throw held;
+			}
+		} catch (e:String) {
+			Sys.println("rethrown through Dynamic: " + e);
+		}
+		try {
+			try {
+				try {
+					throw "twice";
+				} catch (e:haxe.Exception) {
+					throw e;
+				}
+			} catch (e:haxe.Exception) {
+				throw e;
+			}
+		} catch (e:String) {
+			Sys.println("rethrown twice: " + e);
+		}
+		try {
+			try {
+				throw new LocalFailure();
+			} catch (e:haxe.Exception) {
+				throw e;
+			}
+		} catch (e:LocalFailure) {
+			Sys.println("rethrown subclass: " + e.message);
+		}
+		try {
+			try {
+				throw "replaced";
+			} catch (e:haxe.Exception) {
+				throw new haxe.Exception("new from " + e.message, e);
+			}
+		} catch (e:String) {
+			Sys.println("replacement must not match String");
+		} catch (e:haxe.Exception) {
+			Sys.println("replacement: " + e.message + ", previous " + e.previous.message);
+		}
+		Sys.println("after rethrows");
 	}
 
 	static function main():Void {
@@ -232,6 +349,13 @@ class Main {
 		} catch (e:Dynamic) {
 			Sys.println("create below file: " + Std.string(e));
 		}
+
+		try {
+			sys.FileSystem.createDirectory(file + "/sub/");
+		} catch (e:Dynamic) {
+			Sys.println("create below file with trailing slash: " + Std.string(e));
+		}
+		rethrowKeepsOriginal(missing);
 
 		sys.FileSystem.deleteFile(file);
 		sys.FileSystem.deleteDirectory(scratch);

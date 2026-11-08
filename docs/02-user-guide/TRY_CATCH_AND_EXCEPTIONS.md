@@ -129,6 +129,9 @@ What happens at each Stage3 `try`:
 - Each such value matches `catch (e:Dynamic)`, `catch (e:String)`, and
   `catch (e:haxe.Exception)`. A `haxe.Exception` handler receives an
   exception object whose `message` is the text.
+- `throw e` from a `haxe.Exception` handler raises the original value again,
+  even when `e` is held as `Dynamic`. An outer `catch (e:String)` still runs
+  for a thrown `String` or a failed file read.
 - Everything else passes through unchanged: loop `break`/`continue`, each
   function's private early-return signal, fatal conditions such as
   `Stack_overflow`, and the runtime's own invariant failures (`Failure`,

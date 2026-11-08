@@ -22,6 +22,15 @@ typedef Stage3OcamlCatch = {
 	under their own boundaries instead of borrowing a static throw-site tag.
 	Registered enums retain their existing boxes, including constructor payloads.
 	Enum handlers check the box's runtime enum identity before binding that value.
+
+	A value caught as `haxe.Exception` may be a wrapper around a plain value, such
+	as the `String` from `throw "text"` or a failed file read. Throwing it again
+	must raise the plain value, so an outer `catch (e:String)` still runs, as in
+	upstream Haxe. The emitted `haxe.Exception.thrown` helper does this at run
+	time: it returns the wrapped value for a wrapper and the same object for any
+	other exception. Only `haxe.Exception` and `Dynamic` expressions can hold a
+	wrapper, so other throws do not call it. A program with no emitted
+	`haxe.Exception` module has no wrappers.
  */
 function throwValue(value:TypedBackendThrownValue, rendered:String, classes:Stage3OcamlClassStorage, enums:Stage3OcamlEnums):String {
 	final type = value.type;
@@ -33,7 +42,10 @@ function throwValue(value:TypedBackendThrownValue, rendered:String, classes:Stag
 		case _ if (enums.runtimeName(type) != null): rendered;
 		case _: throw "Stage3 OCaml throw requires a supported exact runtime carrier: " + type.getSemanticKey();
 	};
-	return "HxType.hx_throw_typed_rtti (" + payload + ") [\"Dynamic\"]";
+	final exception = classes.exceptionModule();
+	final mayHoldWrapper = exception != null && (type.isDynamic() || classes.nominalName(type) == "haxe.Exception");
+	final original = mayHoldWrapper ? exception + ".thrown (" + payload + ")" : payload;
+	return "HxType.hx_throw_typed_rtti (" + original + ") [\"Dynamic\"]";
 }
 
 /**
@@ -52,6 +64,7 @@ function throwValue(value:TypedBackendThrownValue, rendered:String, classes:Stag
 	`catch (e:haxe.Exception)` matches every Haxe-visible value, as upstream does:
 	a value that is not already an exception object is wrapped by the emitted
 	`haxe.Exception.caught` helper, which keeps `Std.string(value)` as the message.
+	`throwValue` raises the wrapped value again when such a handler rethrows.
  */
 function tryStatement(body:String, catches:Array<Stage3OcamlCatch>, names:Stage3OcamlLocalNames, classes:Stage3OcamlClassStorage, enums:Stage3OcamlEnums,
 		quote:String->String):String {
