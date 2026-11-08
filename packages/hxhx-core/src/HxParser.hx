@@ -983,9 +983,9 @@ class HxParser {
 				PInt(v);
 			case TFloat(v):
 				// A Float constant, matched by value. This includes an integer spelling outside
-				// the Int range, such as `2147483648`: upstream types it as a Float constant,
-				// so it matches a Float subject and fails on an Int subject ("Float should be
-				// Int"). It must never fall through to a wildcard that matches every value.
+				// the Int range, such as `2147483648`. In upstream Haxe 4.3.7 that spelling is
+				// a Float constant: it matches a Float subject by value and is rejected on an
+				// Int subject ("Float should be Int"). It must never become a wildcard.
 				final pattern = HxSwitchPattern.PFloat(HxFloatPatternText.of(cur.numericText, v, false));
 				bump();
 				pattern;

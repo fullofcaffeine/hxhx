@@ -19,6 +19,9 @@ class Main {
 			case -4: "minus four (Int pattern)";
 			case 7 | 8.5: "seven or eight and a half";
 			case 0.1 | 0.2: "a tenth or two tenths";
+			// Integer spellings outside the Int range are Float constants.
+			case 2147483648: "two to the thirty-first";
+			case -2147483649: "below the Int minimum";
 			case v if (v > 100): "large";
 			case 42.0 if (false): "never";
 			case 42.0: "forty-two";
@@ -44,6 +47,7 @@ class Main {
 
 	static function integer(x:Int):String {
 		return switch x {
+			case -2147483648: "Int minimum";
 			case -1: "minus one";
 			case 0: "zero";
 			case 1 | 2: "one or two";
@@ -87,14 +91,16 @@ class Main {
 			101.0,
 			42.0,
 			9.0,
-			1.4999999999999998
+			1.4999999999999998,
+			2147483648.0,
+			-2147483649.0
 		])
 			Sys.println(float(x));
 		for (x in [0.0, -0.0, 1.0, Math.NaN])
 			Sys.println(special(x));
 		for (x in [0.0, -0.0, Math.NaN])
 			Sys.println(negativeZero(x));
-		for (x in [-1, 0, 1, 2, -7, 9])
+		for (x in [-1, 0, 1, 2, -7, 9, -2147483647 - 1])
 			Sys.println(integer(x));
 		for (s in [null, "", "a", "b", "long text", "xy"])
 			Sys.println(text(s));
