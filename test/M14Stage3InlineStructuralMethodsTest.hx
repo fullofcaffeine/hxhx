@@ -42,7 +42,9 @@ class M14Stage3InlineStructuralMethodsTest {
 
 		Upstream accepts both programs, so only the native result is checked: a
 		method with an optional argument (structural call sites do not pad an
-		omitted argument yet) and a method of a runtime-provided String.
+		omitted argument yet), the same method when a subclass overrides it (the
+		override's dispatch table holds it for ordinary calls), and a method of a
+		runtime-provided String.
 	**/
 	static function unsupportedReadsAreCatchable():Void {
 		final root = ".tmp/m14_stage3_inline_structural_methods_unsupported";
@@ -53,8 +55,22 @@ class M14Stage3InlineStructuralMethodsTest {
 			+ "\tpublic function new() {}\n"
 			+ "\tpublic function pick(?x:Int):Int return x == null ? -1 : x;\n"
 			+ "}\n"
+			+ "class OptionalBase {\n"
+			+ "\tpublic function new() {}\n"
+			+ "\tpublic function pick(?x:Int):String return \"base:\" + (x == null ? \"null\" : Std.string(x));\n"
+			+ "}\n"
+			+ "class OptionalLate extends OptionalBase {\n"
+			+ "\tpublic function new() super();\n"
+			+ "\toverride public function pick(?x:Int):String return \"late:\" + (x == null ? \"null\" : Std.string(x));\n"
+			+ "}\n"
 			+ "class Main {\n"
 			+ "\tstatic function main():Void {\n"
+			+ "\t\tfinal picker:{ function pick(?x:Int):String; } = new OptionalLate();\n"
+			+ "\t\ttry {\n"
+			+ "\t\t\tSys.println(picker.pick());\n"
+			+ "\t\t} catch (e:String) {\n"
+			+ "\t\t\tSys.println(\"overridden: \" + e);\n"
+			+ "\t\t}\n"
 			+ "\t\tfinal optional:{ function pick(?x:Int):Int; } = new Optional();\n"
 			+ "\t\ttry {\n"
 			+ "\t\t\tSys.println(optional.pick());\n"
@@ -72,13 +88,13 @@ class M14Stage3InlineStructuralMethodsTest {
 		sys.io.File.saveContent(path, source);
 		final program = M14Stage3RuntimeFixture.prepareProgram({source: source, path: path, root: root + "/src"});
 		final executable = EmitterStage.emitToDir(new MacroExpandedProgram(program, false), root + "/out");
-		M14Stage3RuntimeFixture.observe({
-			command: executable,
+		M14Stage3RuntimeFixture.observe({command: executable,
 			arguments: [],
-			expected: "optional: Stage3 cannot call method pick of class Optional through a structure type" +
-			" (methods with type parameters, optional or rest arguments, or without a generated body are not supported)\n" +
-			"runtime-provided: Stage3 cannot call method charAt of a runtime-provided value through a structure type\n"
-		});
+			expected: "overridden: Stage3 cannot call method pick of class OptionalLate through a structure type"
+			+ " (methods with type parameters, optional or rest arguments, or without a generated body are not supported)\n"
+			+ "optional: Stage3 cannot call method pick of class Optional through a structure type"
+			+ " (methods with type parameters, optional or rest arguments, or without a generated body are not supported)\n"
+			+ "runtime-provided: Stage3 cannot call method charAt of a runtime-provided value through a structure type\n"});
 		deleteRecursive(root);
 		Sys.println("M14_STAGE3_INLINE_STRUCTURAL_METHODS_UNSUPPORTED_CATCHABLE:PASS");
 	}

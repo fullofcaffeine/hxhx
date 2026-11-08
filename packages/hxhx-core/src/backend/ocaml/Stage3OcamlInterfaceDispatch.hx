@@ -202,7 +202,12 @@ class Stage3OcamlInterfaceDispatch {
 				if (seen.exists(declared.method.name))
 					continue;
 				seen.set(declared.method.name, true);
-				entries.push({method: declared.method.name, owner: implementation.owner.facts.getClassIdentity(), module: implementation.owner.module});
+				entries.push({
+					method: declared.method.name,
+					owner: implementation.owner.facts.getClassIdentity(),
+					module: implementation.owner.module,
+					structurallyBindable: true
+				});
 			}
 			// Every other instance method too, so a structural field read can bind a
 			// method of a class instance (`HxMethodDispatch.structural_field`).
@@ -219,28 +224,23 @@ class Stage3OcamlInterfaceDispatch {
 					if (method.isStatic || method.name == "new" || seen.exists(method.name))
 						continue;
 					final implementation = implementationFor(identity, method.name);
-					if (implementation == null || !implementation.owner.generated || !structurallyBindable(implementation.method))
+					if (implementation == null
+						|| !implementation.owner.generated
+						|| !Stage3OcamlVirtualDispatch.structurallyBindable(implementation.method))
 						continue;
 					seen.set(method.name, true);
-					entries.push({method: method.name, owner: implementation.owner.facts.getClassIdentity(), module: implementation.owner.module});
+					entries.push({
+						method: method.name,
+						owner: implementation.owner.facts.getClassIdentity(),
+						module: implementation.owner.module,
+						structurallyBindable: true
+					});
 				}
 				current = owner.facts.getSuperClassIdentity();
 			}
 			if (entries.length > 0)
 				selected.set(identity, entries);
 		}
-	}
-
-	/** Whether a structural read can bind this method to its receiver unchanged. */
-	static function structurallyBindable(method:TypedBackendClassMethodFact):Bool {
-		if (method.typeParameters.length > 0)
-			return false;
-		// A structural call site does not pad an omitted optional argument yet, so
-		// binding such a method would read OCaml's `()` as the argument value.
-		for (argument in method.arguments)
-			if (argument.isRest || argument.isOptional)
-				return false;
-		return true;
 	}
 
 	/** A method shape whose OCaml calling convention this table cannot forward unchanged. */
