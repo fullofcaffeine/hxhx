@@ -61,7 +61,10 @@ let () =
   let anonymous = HxAnon.create () in
   HxAnon.set anonymous "__hx_type" child;
   require (no_class anonymous) "public field forged class identity";
-  require (no_class (HxAnon.copy anonymous)) "field copy forged a class instance";
+  let anonymous_copy = HxAnon.copy anonymous in
+  require (no_class anonymous_copy) "field copy forged a class instance";
+  require (not (HxType.isOfType anonymous_copy child))
+    "field copy forged a runtime tag";
   (* Upstream `--interp` keeps a class instance's class in `Reflect.copy`. *)
   let copied = HxAnon.copy value in
   require (copied != value && HxType.getClass copied == child

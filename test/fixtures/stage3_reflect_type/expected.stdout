@@ -29,6 +29,10 @@ override field 500 label,scaled,sum,x,y,z
 accessor 6 null
 accessor set 21 7
 copy class Point 30
+copy distinct true
+copy write 30 99
+copy method 990 990
+copy superclass true 500
 null null true false
 method value 5 30
 static import label,x,y,z

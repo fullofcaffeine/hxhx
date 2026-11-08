@@ -135,9 +135,13 @@ let anon_of_obj (o : Obj.t) : t =
   Obj.obj (Obj.field o 1)
 
 (* Public fields and deletion cannot install or replace this value. `copy`
-   passes the source's value to the new object, because upstream `--interp`
-   keeps a class instance's class in `Reflect.copy`. Retaining it in the object
-   gives it the same ordinary GC lifetime. *)
+   passes it to the new object, so a Stage3 class instance (an HxAnon object
+   with a class) keeps its class when copied. Upstream documents `Reflect.copy`
+   only for anonymous objects and targets differ for class instances: this
+   deliberately matches `--interp` and Neko, while JS and Python drop the class.
+   Native reflaxe.ocaml class instances are records, not HxAnon objects, so
+   `copy` still returns the same record for them.
+   Retaining the value in the object gives it the same ordinary GC lifetime. *)
 let class_value (o : Obj.t) : Obj.t =
   if is_anon o then (anon_of_obj o).class_value else HxRuntime.hx_null
 

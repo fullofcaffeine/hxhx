@@ -164,6 +164,13 @@ class Main {
 		Sys.println("accessor set " + box.size + " " + Reflect.field(box, "stored"));
 		final copiedPoint:Dynamic = Reflect.copy(point);
 		Sys.println("copy class " + Type.getClassName(Type.getClass(copiedPoint)) + " " + Reflect.field(copiedPoint, "x"));
+		Sys.println("copy distinct " + (copiedPoint != point));
+		Reflect.setField(copiedPoint, "x", 99);
+		final typedCopy:Point = copiedPoint;
+		Sys.println("copy write " + point.x + " " + typedCopy.x);
+		Sys.println("copy method " + typedCopy.sum() + " " + Reflect.callMethod(copiedPoint, Reflect.field(copiedPoint, "sum"), []));
+		final copiedPoint3:Point3 = Reflect.copy(point3);
+		Sys.println("copy superclass " + Std.isOfType(copiedPoint3, Point) + " " + copiedPoint3.sum());
 		Sys.println("null " + Reflect.field(null, "x") + " " + (Type.getClass(null) == null) + " " + Reflect.hasField(null, "x"));
 		final read = Reflect.field;
 		final write = Reflect.setField;
