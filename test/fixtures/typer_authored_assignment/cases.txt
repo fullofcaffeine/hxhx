@@ -37,3 +37,6 @@ POS||static function apply<T>(f:T->T, v:T):T return f(v); static function main()
 POS||static function main() { var p:{x:Int} = {x: 1}; var q:{x:Int, y:Int} = {x: 1, y: 2}; var r:{x:Int} = q; }|
 POS||static function main() { var n:Null<Int> = null; var f:Float = 1; var d:Dynamic = "s"; var i:Int = d; }|
 POS||static function count():Int return 3; static function main() { var f:Float = count(); var c:Void->Float = count; }|
+NEG|String should be R|static function f():R return "s"; static function main() { f(); }|typedef R = Int;
+NEG|String should be Count|static function main() { var c:Count = "s"; }|typedef Count = Int;
+POS||static function f():R return 3; static function main() { var c:R = f(); var d:Float = c; }|typedef R = Int;
