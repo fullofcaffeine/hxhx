@@ -4052,8 +4052,10 @@ class EmitterStage {
 					final functionValue = argument != null
 						&& TyFunctionConstraint.isFunctionConstraint(argument.expectedType) ? backend.ocaml.Stage3OcamlFunctionBoundary.adapt(argument.type,
 							rendered, currentFunctionLocalOcamlNames) : null;
-					if (functionValue != null)
+					if (functionValue != null) {
+						currentClassStorage.adaptedFunctionArguments.push(arg);
 						return functionValue;
+					}
 					final carrier = stage3DynamicArgumentCarrier(arg, tyByIdentRaw, callSigByCalleeRaw);
 					// Stored callbacks have checked argument destinations even without a
 					// method signature. Preserve Dynamic boxing at that exact call boundary.
@@ -4838,7 +4840,12 @@ class EmitterStage {
 							// Emit explicit arity casts for common call arities so OCaml treats these
 							// as intentional dynamic calls (matching Stage3 bring-up semantics) rather
 							// than "ignored extra argument" over-application.
-							if (renderedArgs.length == 0) {
+							//
+							// With a local naming owner the call goes through HxReflect.callMethod,
+							// because the value may be a `Function` wrapper, which is a data block.
+							if (renderedArgs.length <= 5 && currentFunctionLocalOcamlNames != null) {
+								backend.ocaml.Stage3OcamlFunctionBoundary.dynamicCall(c, renderedArgs, currentFunctionLocalOcamlNames);
+							} else if (renderedArgs.length == 0) {
 								"(Obj.magic ((Obj.magic (" + c + ") : unit -> Obj.t) ()))";
 							} else if (renderedArgs.length <= 5) {
 								var fnTy = "Obj.t";
@@ -8854,6 +8861,11 @@ class EmitterStage {
 				currentImportInt64 = importInt64;
 				try {
 					final typedFns = classProjection.getFunctions();
+					// Refuse an unadapted haxe.Constraints.Function destination before any body is emitted.
+					for (typedFunction in typedFns)
+						backend.ocaml.Stage3OcamlFunctionBoundary.requireAdapted(typedFunction.getFunctionConstraintFlows(), [], [], moduleFilePath);
+					for (typedInitializer in classProjection.getFieldInitializers())
+						backend.ocaml.Stage3OcamlFunctionBoundary.requireAdapted(typedInitializer.getFunctionConstraintFlows(), [], [], moduleFilePath);
 					final parsedFns = [for (projection in typedFns) projection.getDeclaration()];
 					final projectionByName = new Map<String, TypedBackendFunctionProjection>();
 					for (projection in typedFns) {
@@ -9800,6 +9812,14 @@ class EmitterStage {
 						// Prepend exceptions so the `try ... with` clauses can reference them.
 						out.insert(2, exceptions.join("\n") + "\n");
 					}
+
+					// Every function value passed as haxe.Constraints.Function was adapted.
+					for (typedFunction in classProjection.getFunctions())
+						backend.ocaml.Stage3OcamlFunctionBoundary.requireAdapted([], typedFunction.getFunctionConstraintArguments(),
+							currentClassStorage.adaptedFunctionArguments, moduleFilePath);
+					for (typedInitializer in classProjection.getFieldInitializers())
+						backend.ocaml.Stage3OcamlFunctionBoundary.requireAdapted([], typedInitializer.getFunctionConstraintArguments(),
+							currentClassStorage.adaptedFunctionArguments, moduleFilePath);
 
 					// After every method is defined, and before `main` can allocate an instance.
 					final methodTable = currentClassStorage.methodTable(classProjection, outputModuleName, ocamlModuleValueIdent, escapeOcamlString);

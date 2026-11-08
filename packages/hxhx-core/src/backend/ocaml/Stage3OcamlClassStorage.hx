@@ -22,6 +22,9 @@ class Stage3OcamlClassStorage {
 	/** Interface method tables for the same classes, selected from the same typed facts. */
 	public final interfaces = new Stage3OcamlInterfaceDispatch();
 
+	/** Call arguments that were wrapped for a `haxe.Constraints.Function` parameter. */
+	public final adaptedFunctionArguments = new Array<HxExpr>();
+
 	/** Generated abstracts whose constructor builds the backing value with `this = value`. */
 	public final abstracts = new Stage3OcamlAbstractConstructors();
 

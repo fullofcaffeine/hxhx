@@ -20,7 +20,18 @@ class Holder {
 	}
 }
 
+class DynamicHolder {
+	public var d:Dynamic;
+
+	public function new() {}
+}
+
 class Main {
+	static function runOptional(?callback:haxe.Constraints.Function):Void {
+		if (callback != null)
+			Reflect.callMethod(null, callback, [5]);
+	}
+
 	static function callThrough(f:haxe.Constraints.Function):Dynamic {
 		return Reflect.callMethod(null, f, [5]);
 	}
@@ -83,6 +94,22 @@ class Main {
 		} catch (error:Dynamic) {
 			Sys.println("too many arguments rejected");
 		}
+		// Nullable and optional Function destinations are adapted too.
+		final maybe:Null<haxe.Constraints.Function> = function(s:String) Sys.println("maybe " + s);
+		Reflect.callMethod(null, maybe, [4]);
+		runOptional(function(s:String) Sys.println("optional " + s));
+		runOptional();
+		// A conditional whose branches are functions, stored in a Function local.
+		final chosen:haxe.Constraints.Function = Sys.args()
+			.length == 0 ? function(s:String) Sys.println("first " + s) : function(s:String) Sys.println("second " + s);
+		Reflect.callMethod(null, chosen, [6]);
+		// A wrapped Function called through Dynamic member access.
+		final plusOne:haxe.Constraints.Function = function(x:Int):Int return x + 1;
+		final dynamicObject:Dynamic = {f: plusOne};
+		Sys.println(dynamicObject.f(1));
+		final dynamicHolder = new DynamicHolder();
+		dynamicHolder.d = plusOne;
+		Sys.println(dynamicHolder.d(2));
 		// Array<Function> elements: Bool parameters and results keep their meaning.
 		final checks:Array<haxe.Constraints.Function> = [function(b:Bool) Sys.println("b=" + b), function(x:Int) return x > 1];
 		Reflect.callMethod(null, checks[0], [false]);

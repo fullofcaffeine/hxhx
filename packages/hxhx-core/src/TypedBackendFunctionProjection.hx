@@ -33,6 +33,7 @@ class TypedBackendFunctionProjection {
 	final arrayAccesses:Array<TypedBackendArrayAccess>;
 	final collectionControls:Array<TypedBackendCollectionControl>;
 	final equalities:Array<TypedBackendEqualityOccurrence>;
+	final functionConstraintFlows:Array<TypedBackendFunctionConstraintFlow>;
 	final bitwiseOperations:Array<TypedBackendBitwiseOccurrence>;
 	final conditions:Array<TypedBackendCondition>;
 	final namedPatterns:Array<TypedBackendNamedPattern>;
@@ -52,6 +53,7 @@ class TypedBackendFunctionProjection {
 			arrays:Array<TypedBackendArrayAccess>,
 			?collectionControls:Array<TypedBackendCollectionControl>,
 			?equalities:Array<TypedBackendEqualityOccurrence>,
+			?functionConstraintFlows:Array<TypedBackendFunctionConstraintFlow>,
 			?bitwiseOperations:Array<TypedBackendBitwiseOccurrence>,
 			?conditions:Array<TypedBackendCondition>,
 			?namedPatterns:Array<TypedBackendNamedPattern>,
@@ -111,6 +113,8 @@ class TypedBackendFunctionProjection {
 		for (entry in this.collectionControls)
 			entry.assertCurrent(stableIdentity, bodyRevision);
 		this.equalities = indexedAccesses == null || indexedAccesses.equalities == null ? [] : indexedAccesses.equalities.copy();
+		this.functionConstraintFlows = indexedAccesses == null
+			|| indexedAccesses.functionConstraintFlows == null ? [] : indexedAccesses.functionConstraintFlows.copy();
 		this.bitwiseOperations = indexedAccesses == null
 			|| indexedAccesses.bitwiseOperations == null ? [] : indexedAccesses.bitwiseOperations.copy();
 		for (entry in this.bitwiseOperations)
@@ -472,6 +476,14 @@ class TypedBackendFunctionProjection {
 			}
 		return null;
 	}
+
+	/** Every place typing let a function value enter a `Function` slot other than a call argument or a plain local. */
+	public function getFunctionConstraintFlows():Array<TypedBackendFunctionConstraintFlow>
+		return functionConstraintFlows.copy();
+
+	/** The call arguments of this executable that pass a function value to a `Function` slot. */
+	public function getFunctionConstraintArguments():Array<TypedBackendCallArgument>
+		return callArguments.filter(argument -> TyFunctionConstraint.reaches(argument.expectedType, argument.type));
 
 	/** Equality facts require the exact expression in the current function revision. */
 	public function findEquality(expression:HxExpr):Null<TypedBackendEqualityOccurrence> {
