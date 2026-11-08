@@ -9,16 +9,16 @@ let rec validate = fun statement -> let tempResult = ref (0 : int) in (
     | HxStmt.SBlock (_p0, _p1) -> let _g = Obj.magic _p0 in (
       ignore _p1;
       let entries = Obj.magic _g in let count = ref 0 in let _g2 = ref 0 in (
-        ignore (while !_g2 < HxArray.length entries do ignore (let entry = Obj.magic (let __array_read_receiver_65 = entries in let __array_read_index_66 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_65) __array_read_index_66) in (
-          ignore (let __old_67 = !_g2 in let __new_68 = HxInt.add __old_67 1 in (
-            ignore (_g2 := __new_68);
-            __new_68
+        ignore (while !_g2 < HxArray.length entries do ignore (let entry = Obj.magic (let __array_read_receiver_69 = entries in let __array_read_index_70 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_69) __array_read_index_70) in (
+          ignore (let __old_71 = !_g2 in let __new_72 = HxInt.add __old_71 1 in (
+            ignore (_g2 := __new_72);
+            __new_72
           ));
           count := HxInt.add (!count) (validate (Obj.magic entry))
         )) done);
-        let __assign_69 = !count in (
-          tempResult := __assign_69;
-          __assign_69
+        let __assign_73 = !count in (
+          tempResult := __assign_73;
+          __assign_73
         )
       )
     )
@@ -28,9 +28,9 @@ let rec validate = fun statement -> let tempResult = ref (0 : int) in (
       ignore _p2;
       ignore _p3;
       ignore _p4;
-      let __assign_70 = 0 in (
-        tempResult := __assign_70;
-        __assign_70
+      let __assign_74 = 0 in (
+        tempResult := __assign_74;
+        __assign_74
       )
     )
     | HxStmt.SIf (_p0, _p1, _p2, _p3) -> (
@@ -38,16 +38,16 @@ let rec validate = fun statement -> let tempResult = ref (0 : int) in (
       let _g2 = Obj.magic _p1 in let _g1 = _p2 in (
         ignore _p3;
         let yes = Obj.magic _g2 in let no = _g1 in let tempNumber = ref (0 : int) in (
-          ignore (if no == Obj.magic (HxRuntime.hx_null) then let __assign_71 = 0 in (
-            tempNumber := __assign_71;
-            __assign_71
-          ) else let __assign_72 = validate (Obj.obj (HxEnum.unbox_or_obj "HxStmt" no)) in (
-            tempNumber := __assign_72;
-            __assign_72
+          ignore (if no == Obj.magic (HxRuntime.hx_null) then let __assign_75 = 0 in (
+            tempNumber := __assign_75;
+            __assign_75
+          ) else let __assign_76 = validate (Obj.obj (HxEnum.unbox_or_obj "HxStmt" no)) in (
+            tempNumber := __assign_76;
+            __assign_76
           ));
-          let __assign_73 = HxInt.add (validate (Obj.magic yes)) (!tempNumber) in (
-            tempResult := __assign_73;
-            __assign_73
+          let __assign_77 = HxInt.add (validate (Obj.magic yes)) (!tempNumber) in (
+            tempResult := __assign_77;
+            __assign_77
           )
         )
       )
@@ -105,14 +105,14 @@ let rec validate = fun statement -> let tempResult = ref (0 : int) in (
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
           | HxExpr.EPrivateAccess (_, _) -> 46) = 32 then (
           ignore (match _g2 with
-            | HxExpr.ERange (__enum_param_74, _) -> __enum_param_74
+            | HxExpr.ERange (__enum_param_78, _) -> __enum_param_78
             | _ -> failwith "Unexpected enum parameter");
           ignore (match _g2 with
-            | HxExpr.ERange (_, __enum_param_75) -> __enum_param_75
+            | HxExpr.ERange (_, __enum_param_79) -> __enum_param_79
             | _ -> failwith "Unexpected enum parameter");
-          let body = Obj.magic _g1 in let __assign_76 = validate (Obj.magic body) in (
-            tempResult := __assign_76;
-            __assign_76
+          let body = Obj.magic _g1 in let __assign_80 = validate (Obj.magic body) in (
+            tempResult := __assign_80;
+            __assign_80
           )
         ) else HxType.hx_throw_typed_rtti (Obj.repr "OCaml block function requires a validated adapter for this control form") ["Dynamic"]
       )
@@ -121,18 +121,18 @@ let rec validate = fun statement -> let tempResult = ref (0 : int) in (
       ignore _p0;
       let _g2 = Obj.magic _p1 in (
         ignore _p2;
-        let body = Obj.magic _g2 in let __assign_77 = validate (Obj.magic body) in (
-          tempResult := __assign_77;
-          __assign_77
+        let body = Obj.magic _g2 in let __assign_81 = validate (Obj.magic body) in (
+          tempResult := __assign_81;
+          __assign_81
         )
       )
     )
     | HxStmt.SDoWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in (
       ignore _p1;
       ignore _p2;
-      let body = Obj.magic _g in let __assign_78 = validate (Obj.magic body) in (
-        tempResult := __assign_78;
-        __assign_78
+      let body = Obj.magic _g in let __assign_82 = validate (Obj.magic body) in (
+        tempResult := __assign_82;
+        __assign_82
       )
     )
     | HxStmt.SSwitch (_p0, _p1, _p2, _p3, _p4) -> (
@@ -142,16 +142,16 @@ let rec validate = fun statement -> let tempResult = ref (0 : int) in (
         ignore _p3;
         ignore _p4;
         let branches = Obj.magic _g3 in let count = ref 0 in let _g5 = ref 0 in (
-          ignore (while !_g5 < HxArray.length branches do ignore (let branch = Obj.magic (let __array_read_receiver_79 = branches in let __array_read_index_80 = !_g5 in HxArray.get (Obj.magic __array_read_receiver_79) __array_read_index_80) in (
-            ignore (let __old_81 = !_g5 in let __new_82 = HxInt.add __old_81 1 in (
-              ignore (_g5 := __new_82);
-              __new_82
+          ignore (while !_g5 < HxArray.length branches do ignore (let branch = Obj.magic (let __array_read_receiver_83 = branches in let __array_read_index_84 = !_g5 in HxArray.get (Obj.magic __array_read_receiver_83) __array_read_index_84) in (
+            ignore (let __old_85 = !_g5 in let __new_86 = HxInt.add __old_85 1 in (
+              ignore (_g5 := __new_86);
+              __new_86
             ));
             count := HxInt.add (!count) (validate (Obj.magic branch))
           )) done);
-          let __assign_83 = !count in (
-            tempResult := __assign_83;
-            __assign_83
+          let __assign_87 = !count in (
+            tempResult := __assign_87;
+            __assign_87
           )
         )
       )
@@ -163,16 +163,16 @@ let rec validate = fun statement -> let tempResult = ref (0 : int) in (
       let _g4 = Obj.magic _p3 in (
         ignore _p4;
         let branches = Obj.magic _g4 in let count = ref 0 in let _g5 = ref 0 in (
-          ignore (while !_g5 < HxArray.length branches do ignore (let branch = Obj.magic (let __array_read_receiver_84 = branches in let __array_read_index_85 = !_g5 in HxArray.get (Obj.magic __array_read_receiver_84) __array_read_index_85) in (
-            ignore (let __old_86 = !_g5 in let __new_87 = HxInt.add __old_86 1 in (
-              ignore (_g5 := __new_87);
-              __new_87
+          ignore (while !_g5 < HxArray.length branches do ignore (let branch = Obj.magic (let __array_read_receiver_88 = branches in let __array_read_index_89 = !_g5 in HxArray.get (Obj.magic __array_read_receiver_88) __array_read_index_89) in (
+            ignore (let __old_90 = !_g5 in let __new_91 = HxInt.add __old_90 1 in (
+              ignore (_g5 := __new_91);
+              __new_91
             ));
             count := HxInt.add (!count) (validate (Obj.magic branch))
           )) done);
-          let __assign_88 = !count in (
-            tempResult := __assign_88;
-            __assign_88
+          let __assign_92 = !count in (
+            tempResult := __assign_92;
+            __assign_92
           )
         )
       )
@@ -180,69 +180,69 @@ let rec validate = fun statement -> let tempResult = ref (0 : int) in (
     | HxStmt.STry (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
       ignore _p2;
       let body = Obj.magic _g in let catches = Obj.magic _g1 in let count = ref (validate (Obj.magic body)) in let _g3 = ref 0 in (
-        ignore (while !_g3 < HxArray.length catches do ignore (let handler = let __array_read_receiver_89 = catches in let __array_read_index_90 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_89) __array_read_index_90 in (
-          ignore (let __old_91 = !_g3 in let __new_92 = HxInt.add __old_91 1 in (
-            ignore (_g3 := __new_92);
-            __new_92
+        ignore (while !_g3 < HxArray.length catches do ignore (let handler = let __array_read_receiver_93 = catches in let __array_read_index_94 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_93) __array_read_index_94 in (
+          ignore (let __old_95 = !_g3 in let __new_96 = HxInt.add __old_95 1 in (
+            ignore (_g3 := __new_96);
+            __new_96
           ));
           count := HxInt.add (!count) (validate (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get handler "body")))))
         )) done);
-        let __assign_93 = !count in (
-          tempResult := __assign_93;
-          __assign_93
+        let __assign_97 = !count in (
+          tempResult := __assign_97;
+          __assign_97
         )
       )
     )
     | HxStmt.SBreak _p0 -> (
       ignore _p0;
-      let __assign_94 = 0 in (
-        tempResult := __assign_94;
-        __assign_94
+      let __assign_98 = 0 in (
+        tempResult := __assign_98;
+        __assign_98
       )
     )
     | HxStmt.SContinue _p0 -> (
       ignore _p0;
-      let __assign_95 = 0 in (
-        tempResult := __assign_95;
-        __assign_95
+      let __assign_99 = 0 in (
+        tempResult := __assign_99;
+        __assign_99
       )
     )
     | HxStmt.SThrow (_p0, _p1) -> (
       ignore _p0;
       ignore _p1;
-      let __assign_96 = 0 in (
-        tempResult := __assign_96;
-        __assign_96
+      let __assign_100 = 0 in (
+        tempResult := __assign_100;
+        __assign_100
       )
     )
     | HxStmt.SReturnVoid _p0 -> (
       ignore _p0;
-      let __assign_97 = 1 in (
-        tempResult := __assign_97;
-        __assign_97
+      let __assign_101 = 1 in (
+        tempResult := __assign_101;
+        __assign_101
       )
     )
     | HxStmt.SReturn (_p0, _p1) -> (
       ignore _p0;
       ignore _p1;
-      let __assign_98 = 1 in (
-        tempResult := __assign_98;
-        __assign_98
+      let __assign_102 = 1 in (
+        tempResult := __assign_102;
+        __assign_102
       )
     )
     | HxStmt.SExpr (_p0, _p1) -> (
       ignore _p0;
       ignore _p1;
-      let __assign_99 = 0 in (
-        tempResult := __assign_99;
-        __assign_99
+      let __assign_103 = 0 in (
+        tempResult := __assign_103;
+        __assign_103
       )
     )
     | _ -> HxType.hx_throw_typed_rtti (Obj.repr "OCaml block function requires a validated adapter for this control form") ["Dynamic"]);
   !tempResult
 )
 
-let plan = fun facts body -> (
+let plan = fun facts body isEnumBox -> (
   ignore (if facts == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml block function requires its exact lambda facts") ["Dynamic"] else ());
   ignore (let _g = Obj.magic ((Obj.magic facts : TypedBackendLambdaOccurrence.t).expression) in if (match _g with
     | HxExpr.EParenthesized (_, _) -> 0
@@ -306,61 +306,64 @@ let plan = fun facts body -> (
   )) else HxType.hx_throw_typed_rtti (Obj.repr "OCaml block function body is not its exact projected occurrence") ["Dynamic"]);
   let result = Obj.magic (TyType.getFunctionReturn (Obj.magic ((Obj.magic facts : TypedBackendLambdaOccurrence.t).callableType)) ()) in let tempString = ref (HxString.hx_null_string : string) in (
     ignore (let _g = (TyType.getSemanticKey (Obj.magic result) () : string) in match _g with
-      | "dynamic" -> let __assign_47 = "Obj.t" in (
-        tempString := __assign_47;
-        __assign_47
-      )
-      | "primitive:Bool" -> let __assign_48 = "bool" in (
-        tempString := __assign_48;
-        __assign_48
-      )
-      | "primitive:Int" -> let __assign_49 = "int" in (
-        tempString := __assign_49;
-        __assign_49
-      )
-      | "primitive:String" -> let __assign_50 = "string" in (
-        tempString := __assign_50;
-        __assign_50
-      )
-      | "primitive:Void" -> let __assign_51 = "unit" in (
+      | "dynamic" -> let __assign_51 = "Obj.t" in (
         tempString := __assign_51;
         __assign_51
       )
-      | _ -> HxType.hx_throw_typed_rtti (Obj.repr "OCaml block function requires a supported concrete return carrier") ["Dynamic"]);
+      | "primitive:Bool" -> let __assign_52 = "bool" in (
+        tempString := __assign_52;
+        __assign_52
+      )
+      | "primitive:Int" -> let __assign_53 = "int" in (
+        tempString := __assign_53;
+        __assign_53
+      )
+      | "primitive:String" -> let __assign_54 = "string" in (
+        tempString := __assign_54;
+        __assign_54
+      )
+      | "primitive:Void" -> let __assign_55 = "unit" in (
+        tempString := __assign_55;
+        __assign_55
+      )
+      | _ -> if isEnumBox != Obj.magic (HxRuntime.hx_null) && (let __nullable_function_47 = isEnumBox in let __nullable_argument_48 = Obj.magic result in (let __nullable_callee_49 = __nullable_function_47 in if Obj.is_block __nullable_callee_49 && (Obj.tag __nullable_callee_49 = Obj.closure_tag || Obj.tag __nullable_callee_49 = Obj.infix_tag) then (Obj.obj __nullable_callee_49 : TyType.t -> bool) else invalid_arg "Cannot call null") __nullable_argument_48) then let __assign_50 = "Obj.t" in (
+        tempString := __assign_50;
+        __assign_50
+      ) else HxType.hx_throw_typed_rtti (Obj.repr "OCaml block function requires a supported concrete return carrier") ["Dynamic"]);
     let carrier = !tempString in let _g = ref 0 in let _g1 = Obj.magic (TypedBackendLambdaOccurrence.getReturnTypes (Obj.magic facts) ()) in (
-      ignore (while !_g < HxArray.length _g1 do ignore (let hx_type = Obj.magic (let __array_read_receiver_52 = _g1 in let __array_read_index_53 = !_g in HxArray.get (Obj.magic __array_read_receiver_52) __array_read_index_53) in (
-        ignore (let __old_54 = !_g in let __new_55 = HxInt.add __old_54 1 in (
-          ignore (_g := __new_55);
-          __new_55
+      ignore (while !_g < HxArray.length _g1 do ignore (let hx_type = Obj.magic (let __array_read_receiver_56 = _g1 in let __array_read_index_57 = !_g in HxArray.get (Obj.magic __array_read_receiver_56) __array_read_index_57) in (
+        ignore (let __old_58 = !_g in let __new_59 = HxInt.add __old_58 1 in (
+          ignore (_g := __new_59);
+          __new_59
         ));
         Backend_ocaml_Stage3OcamlCallableConversion.validateReturn (Obj.magic hx_type) (Obj.magic result)
       )) done);
-      let mapped = Obj.magic (let __arr_56 = HxArray.create () in __arr_56) in let statements = Obj.magic (TypedControlStatements.functionBody (Obj.magic body) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.repr (fun expression statement -> ignore (let __array_receiver_57 = Obj.magic mapped in let __array_arg_0_58 = let __anon_59 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_59 "statement" (HxEnum.box_if_needed "HxStmt" (Obj.repr statement)));
-        ignore (HxAnon.set __anon_59 "fact" (Obj.repr (TypedBackendLambdaOccurrence.requireReturn (Obj.magic facts) (Obj.magic expression))));
-        __anon_59
-      ) in HxArray.push __array_receiver_57 __array_arg_0_58)))) in let returns = ref 0 in let _g = ref 0 in (
-        ignore (while !_g < HxArray.length statements do ignore (let statement = Obj.magic (let __array_read_receiver_60 = statements in let __array_read_index_61 = !_g in HxArray.get (Obj.magic __array_read_receiver_60) __array_read_index_61) in (
-          ignore (let __old_62 = !_g in let __new_63 = HxInt.add __old_62 1 in (
-            ignore (_g := __new_63);
-            __new_63
+      let mapped = Obj.magic (let __arr_60 = HxArray.create () in __arr_60) in let statements = Obj.magic (TypedControlStatements.functionBody (Obj.magic body) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.repr (fun expression statement -> ignore (let __array_receiver_61 = Obj.magic mapped in let __array_arg_0_62 = let __anon_63 = HxAnon.create () in (
+        ignore (HxAnon.set __anon_63 "statement" (HxEnum.box_if_needed "HxStmt" (Obj.repr statement)));
+        ignore (HxAnon.set __anon_63 "fact" (Obj.repr (TypedBackendLambdaOccurrence.requireReturn (Obj.magic facts) (Obj.magic expression))));
+        __anon_63
+      ) in HxArray.push __array_receiver_61 __array_arg_0_62)))) in let returns = ref 0 in let _g = ref 0 in (
+        ignore (while !_g < HxArray.length statements do ignore (let statement = Obj.magic (let __array_read_receiver_64 = statements in let __array_read_index_65 = !_g in HxArray.get (Obj.magic __array_read_receiver_64) __array_read_index_65) in (
+          ignore (let __old_66 = !_g in let __new_67 = HxInt.add __old_66 1 in (
+            ignore (_g := __new_67);
+            __new_67
           ));
           returns := HxInt.add (!returns) (validate (Obj.magic statement))
         )) done);
         ignore (if !returns <> HxArray.length (TypedBackendLambdaOccurrence.getReturnTypes (Obj.magic facts) ()) || !returns <> HxArray.length mapped then HxType.hx_throw_typed_rtti (Obj.repr "OCaml block function lost its typed return operands") ["Dynamic"] else ());
-        let __anon_64 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_64 "statements" (Obj.repr statements));
-          ignore (HxAnon.set __anon_64 "carrier" (Obj.repr carrier));
-          ignore (HxAnon.set __anon_64 "isVoid" (HxRuntime.box_bool (TyType.isVoid (Obj.magic result) ())));
-          ignore (HxAnon.set __anon_64 "returns" (Obj.repr mapped));
-          __anon_64
+        let __anon_68 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_68 "statements" (Obj.repr statements));
+          ignore (HxAnon.set __anon_68 "carrier" (Obj.repr carrier));
+          ignore (HxAnon.set __anon_68 "isVoid" (HxRuntime.box_bool (TyType.isVoid (Obj.magic result) ())));
+          ignore (HxAnon.set __anon_68 "returns" (Obj.repr mapped));
+          __anon_68
         )
       )
     )
   )
 )
 
-let render = fun input -> let selected = plan (Obj.magic (Obj.obj (HxAnon.get input "facts"))) (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get input "body")))) in (
+let render = fun input -> let selected = plan (Obj.magic (Obj.obj (HxAnon.get input "facts"))) (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get input "body")))) (Obj.obj (HxAnon.get input "isEnumBox")) in (
   ignore (if Obj.obj (HxAnon.get input "names") == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml block function requires its local naming owner") ["Dynamic"] else ());
   let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
     ignore (let _g = Obj.magic ((Obj.magic (Obj.obj (HxAnon.get input "facts")) : TypedBackendLambdaOccurrence.t).expression) in if (match _g with

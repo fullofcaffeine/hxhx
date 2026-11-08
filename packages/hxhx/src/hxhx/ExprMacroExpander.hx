@@ -24,6 +24,9 @@ typedef ExprMacroUnexecutedCall = {
 	final filePath:String;
 	final declaration:String;
 	final reason:String;
+
+	/** The source file of the declaration's module, or empty when the index does not know it. */
+	final ownerFilePath:String;
 }
 
 /** Result of one expansion pass over a module list. */
@@ -104,7 +107,13 @@ class ExprMacroExpander {
 						count++;
 						return Consume(expression);
 					case Unavailable(reason):
-						unexecuted.push({filePath: context.filePath, declaration: describeDeclaration(selected.getDeclaration()), reason: reason});
+						final owner = selection.index.getRegisteredModule(selected.getDeclaration().getModulePath());
+						unexecuted.push({
+							filePath: context.filePath,
+							declaration: describeDeclaration(selected.getDeclaration()),
+							reason: reason,
+							ownerFilePath: owner == null ? "" : ResolvedModule.getFilePath(owner)
+						});
 				}
 			}
 			return Recurse(call -> {

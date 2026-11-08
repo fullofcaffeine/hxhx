@@ -22,7 +22,7 @@ class M14SourceGroupMacroAdapterTest {
 		// must keep the authored grouping (`{ { 1; 2; } 3; }` is two nested `EBlock`s).
 		final lowered = [
 			for (source in sources) {
-				final typed = TyperStage.typeModule(ParserStage.parse(wrap(source), "Main.hx"));
+				final typed = typeWithStandardLibrary(source);
 				typed.getBackendProjection();
 				loweredShape(typed.getTypedClasses()[0].getFunctions()[0].getBody().getStatements()[0].getExpressions()[0]);
 			}
@@ -89,6 +89,18 @@ class M14SourceGroupMacroAdapterTest {
 		Sys.println("SOURCE_GROUP_MACRO_ADAPTERS:PASS");
 	}
 
+	/** A quotation lowers to `haxe.macro.Expr` constructors, which must resolve: type against the standard library. */
+	static function typeWithStandardLibrary(source:String):TypedModule {
+		final resolved = new ResolvedModule("Main", "Main.hx", ParserStage.parse(wrap(source), "Main.hx"));
+		final args = hxhx.Stage1Compiler.Stage1Args.parse(["-main", "Main"], true);
+		if (args == null)
+			throw "source group fixture could not locate its standard library";
+		final index = TyperIndex.buildHeaders([resolved]);
+		final loader = new ModuleLoader([hxhx.Stage1Compiler.Stage1Args.getStandardLibraryRoot(args)], new haxe.ds.StringMap<String>(), index, null, false);
+		loader.markResolvedAlready([resolved]);
+		return TyperStage.typeResolvedModule(resolved, index, loader);
+	}
+
 	static function wrap(source:String):String
 		return "class Main { static function main() { var quoted = macro " + source + "; } }";
 
@@ -108,10 +120,10 @@ class M14SourceGroupMacroAdapterTest {
 		};
 	}
 
-	/** The constructor a lowered call names; `typeModule` loads no `haxe.macro.Expr`, so read the callee's last segment. */
+	/** The `haxe.macro.Expr` enum constructor a lowered call selects. */
 	static function constructorName(call:TypedExpr):String {
-		final callee = call.getTag() == Call ? call.getExpressions()[0] : null;
-		return callee != null && callee.getTag() == FieldRead ? callee.getTexts()[0] : "";
+		final constructor = call.getTag() == Call ? call.getDeclaration() : null;
+		return constructor != null && constructor.getIsEnumConstructor() ? constructor.getSignature().getName() : "";
 	}
 
 	static function check(executable:String, arguments:Array<String>, expected:String):Void {

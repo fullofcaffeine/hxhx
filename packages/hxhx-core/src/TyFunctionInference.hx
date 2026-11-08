@@ -171,7 +171,7 @@ class TyFunctionInference {
 	/** Identity-only foundation selections are deliberately absent from this checked-result lookup. */
 	public function indexedUpdateOutcome(source:HxExpr, environment:TyFunctionEnv):Null<TyIndexedUpdateOutcome> {
 		for (outcome in indexedUpdateOutcomes)
-			if (outcome.selection.query.source == source) {
+			if (outcome.selection.query.authored == source) {
 				outcome.selection.query.validate(environment.getOwnerIdentity());
 				outcome.validate(this);
 				return outcome;

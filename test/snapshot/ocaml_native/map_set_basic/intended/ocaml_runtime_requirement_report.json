@@ -1,7 +1,7 @@
 {
   "model": "recorded-ocaml-runtime-requirements",
   "runtimeVersion": "1",
-  "runtimeSourceRevision": "sha256:6035421ba258562dad0086aee429c3fcef0298e7bc1720f9519e83e01883c9bd",
+  "runtimeSourceRevision": "sha256:e237e7746949c755f1799021ee00e791e9d23561b2840f27325b9e7c45cd4987",
   "compilerObservationGranularity": "module-name-only",
   "runtimeSources": [
     {
@@ -153,13 +153,15 @@
     {
       "module": "HxInt",
       "duneLibraries": [],
-      "dependencies": [],
+      "dependencies": [
+        "HxRuntime"
+      ],
       "scope": "application",
       "files": [
         {
           "path": "HxInt.ml",
-          "sha256": "sha256:3f85900b52dd4b082a5fc11db1d59125b16bf5f38d3959ffe5dc5686fdd04f2b",
-          "bytes": 2078
+          "sha256": "sha256:b99cbf3eee8ac437f1312a0685ca9b1bc4e93fe112d8f04ea680f64efe84d4d1",
+          "bytes": 2667
         }
       ],
       "profiles": [
@@ -10116,7 +10118,7 @@
     "HxString",
     "HxType"
   ],
-  "reportRevision": "sha256:50a273a0806a2e0193a7a64b5ea72b0e5bf183059eaab69cc076ba8660448a2e",
+  "reportRevision": "sha256:a28b3eecbff056b6bdf613c887a1d64facef0c2ad2d172b3fd1248a549f0be4b",
   "runtimeMode": "full",
   "recordedRequirementSourceKinds": [
     "compiler-infrastructure",
@@ -12144,37 +12146,43 @@
     },
     {
       "resolvedModules": [
-        "HxInt"
+        "HxInt",
+        "HxRuntime"
       ],
       "requirementId": "place:30fa308cdc7ec8c6d826e2e6:runtime:haxe-int32-add"
     },
     {
       "resolvedModules": [
-        "HxInt"
+        "HxInt",
+        "HxRuntime"
       ],
       "requirementId": "place:679d3dcf75c00870a09bbf35:runtime:haxe-int32-add"
     },
     {
       "resolvedModules": [
-        "HxInt"
+        "HxInt",
+        "HxRuntime"
       ],
       "requirementId": "place:77c74800343eb34a92873ce2:runtime:haxe-int32-add"
     },
     {
       "resolvedModules": [
-        "HxInt"
+        "HxInt",
+        "HxRuntime"
       ],
       "requirementId": "place:94301da0451ef1a395ad77d2:runtime:haxe-int32-add"
     },
     {
       "resolvedModules": [
-        "HxInt"
+        "HxInt",
+        "HxRuntime"
       ],
       "requirementId": "place:95193526fb860c26a611d33a:runtime:haxe-int32-add"
     },
     {
       "resolvedModules": [
-        "HxInt"
+        "HxInt",
+        "HxRuntime"
       ],
       "requirementId": "place:dec92a2b556c52c6d3f7a441:runtime:haxe-int32-add"
     },

@@ -74,6 +74,32 @@ class M14ParserStageScanExpressionBodyIntegrationTest {
 			{hint: "{value:Int}", body: "return {value: 1};"},
 			{hint: "haxe.io.Bytes", body: "return null;"}
 		];
+		// A keyword that can start an expression can never continue a type. An
+		// expression body such as `super.put(v)` must not become return-type text,
+		// or the method silently loses its body (an override then disappears).
+		for (body in [
+			"super.put(1);",
+			"new Base();",
+			"cast null;",
+			"function() {};",
+			"null;",
+			"true;",
+			"false;",
+			"break;",
+			"continue;",
+			"var x = 1;",
+			"final x = 1;",
+			"this.value = 1;",
+			"throw \"x\";",
+			"untyped x;",
+			"if (b) f();",
+			"while (b) f();",
+			"for (i in a) f();",
+			"do { f(); } while (b);",
+			"try f() catch (e:Dynamic) {}",
+			"switch b { case _: }"
+		])
+			typeCases.push({hint: "Void", body: body});
 		for (testCase in typeCases) {
 			final text = "class TypeBoundary { static function probe():"
 				+ testCase.hint

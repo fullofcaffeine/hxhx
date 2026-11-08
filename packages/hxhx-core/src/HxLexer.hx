@@ -233,7 +233,13 @@ class HxLexer {
 			final numericEnd = index;
 			final suffix = consumeNumericSuffix();
 			final text = normalizeNumberText(src.substring(start, numericEnd));
-			final value = Std.parseInt(text);
+			// A suffixed literal keeps its raw text for `HxParser.intLiteralExpr`.
+			if (suffix.length > 0)
+				return suffixedIntToken(text, suffix, startPos);
+			// An invalid wide literal keeps its text; `HxParser` rejects it only where it
+			// parses an expression or pattern, so skipped regions such as metadata
+			// arguments stay tolerant, as upstream does.
+			final value = HxIntegerLiteral.hexadecimal(text);
 			return token(TInt(value == null ? 0 : value), startPos, text, suffix);
 		}
 
@@ -273,6 +279,17 @@ class HxLexer {
 			final value = Std.parseFloat(text);
 			return token(TFloat(value), startPos, text, suffix);
 		}
+		// A suffixed literal keeps its raw text for `HxParser.intLiteralExpr`.
+		if (suffix.length > 0)
+			return suffixedIntToken(text, suffix, startPos);
+		// Upstream types a decimal literal outside the signed 32-bit range as Float.
+		// Keep the raw text: the parser folds `-2147483648` back into the minimum Int.
+		final value = HxIntegerLiteral.decimal(text);
+		return value == null ? token(TFloat(Std.parseFloat(text)), startPos, text, suffix) : token(TInt(value), startPos, text, suffix);
+	}
+
+	/** A suffixed integer such as `10i64` keeps its raw text; the parser selects its type from the suffix. */
+	function suffixedIntToken(text:String, suffix:String, startPos:HxPos):HxToken {
 		final value = Std.parseInt(text);
 		return token(TInt(value == null ? 0 : value), startPos, text, suffix);
 	}

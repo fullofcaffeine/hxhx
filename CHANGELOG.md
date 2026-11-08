@@ -1,3 +1,99 @@
+## [0.43.8](https://github.com/fullofcaffeine/hxhx/compare/v0.43.7...v0.43.8) (2026-11-07)
+
+
+### Bug Fixes
+
+* **ocaml:** wrap native Std.int results into the 32-bit Int range ([#164](https://github.com/fullofcaffeine/hxhx/issues/164)) ([d8aa556](https://github.com/fullofcaffeine/hxhx/commit/d8aa556726ae2cd06615d1098f2fb3a5a19fd8d8))
+
+## [0.43.7](https://github.com/fullofcaffeine/hxhx/compare/v0.43.6...v0.43.7) (2026-11-07)
+
+
+### Bug Fixes
+
+* **ocaml:** make Int division by zero a catchable Haxe exception ([#174](https://github.com/fullofcaffeine/hxhx/issues/174)) ([0c69373](https://github.com/fullofcaffeine/hxhx/commit/0c693732144c5d6a9f17bb6bc4a4b513a426b043))
+
+## [0.43.6](https://github.com/fullofcaffeine/hxhx/compare/v0.43.5...v0.43.6) (2026-11-07)
+
+
+### Bug Fixes
+
+* **ocaml:** bind recursive local functions with let rec ([#179](https://github.com/fullofcaffeine/hxhx/issues/179)) ([50f884a](https://github.com/fullofcaffeine/hxhx/commit/50f884a7ba253a1a29b1fbf383466c6c31b29cb1))
+
+## [0.43.5](https://github.com/fullofcaffeine/hxhx/compare/v0.43.4...v0.43.5) (2026-11-07)
+
+
+### Bug Fixes
+
+* **ocaml:** keep captured helper methods before static values ([#168](https://github.com/fullofcaffeine/hxhx/issues/168)) ([f53f94c](https://github.com/fullofcaffeine/hxhx/commit/f53f94c4498ebeaaeab70a75deb5a9730a97e7ae))
+
+## [0.43.4](https://github.com/fullofcaffeine/hxhx/compare/v0.43.3...v0.43.4) (2026-11-07)
+
+
+### Bug Fixes
+
+* **ocaml:** convert nullable call operands in Stage3 native adapters ([#151](https://github.com/fullofcaffeine/hxhx/issues/151)) ([1765cea](https://github.com/fullofcaffeine/hxhx/commit/1765cea7eba76a002ac13f2abfb5f24152101bc6))
+* **ocaml:** lower ++ and -- on array elements and fields natively ([#154](https://github.com/fullofcaffeine/hxhx/issues/154)) ([ec76fb5](https://github.com/fullofcaffeine/hxhx/commit/ec76fb55bbf9abac716ebdf006c5f02cda90987d)), closes [#131](https://github.com/fullofcaffeine/hxhx/issues/131) [#123](https://github.com/fullofcaffeine/hxhx/issues/123)
+* **ocaml:** print UInt values unsigned and pin Int32 updates natively ([8fa7d45](https://github.com/fullofcaffeine/hxhx/commit/8fa7d455f63a694fcc598da4b804286a49febce1)), closes [#136](https://github.com/fullofcaffeine/hxhx/issues/136)
+* **ocaml:** store @:isVar writes made in value position inside accessors ([#157](https://github.com/fullofcaffeine/hxhx/issues/157)) ([3462325](https://github.com/fullofcaffeine/hxhx/commit/346232516777b595ae1541aa0f889b97159b9cb8)), closes [#131](https://github.com/fullofcaffeine/hxhx/issues/131) [#131](https://github.com/fullofcaffeine/hxhx/issues/131) [#131](https://github.com/fullofcaffeine/hxhx/issues/131)
+* **parser:** keep @:abstract class metadata from creating an abstract ([#165](https://github.com/fullofcaffeine/hxhx/issues/165)) ([8e12a6b](https://github.com/fullofcaffeine/hxhx/commit/8e12a6b43c5826a81c504e9859addbb29eeb5522))
+* **parser:** type out-of-range integer literals as Float like upstream ([#144](https://github.com/fullofcaffeine/hxhx/issues/144)) ([6319e3f](https://github.com/fullofcaffeine/hxhx/commit/6319e3f90f7118c2eb80903f6f7db67fc86317d2))
+* **typer:** accept downcasts whose source type is left open ([#138](https://github.com/fullofcaffeine/hxhx/issues/138)) ([eb0a1cb](https://github.com/fullofcaffeine/hxhx/commit/eb0a1cb663861f8a3d803dd73633dc846ef96bca)), closes [#130](https://github.com/fullofcaffeine/hxhx/issues/130)
+* **typer:** accept null through declared basic-type indexed setters ([#175](https://github.com/fullofcaffeine/hxhx/issues/175)) ([0c25995](https://github.com/fullofcaffeine/hxhx/commit/0c259953d29bd50306fe39d6ac89bf5c331bbe55)), closes [#170](https://github.com/fullofcaffeine/hxhx/issues/170)
+* **typer:** apply upstream per-target null rules to basic call arguments ([#180](https://github.com/fullofcaffeine/hxhx/issues/180)) ([c143330](https://github.com/fullofcaffeine/hxhx/commit/c1433302f7e3e392bc0d25738259ce1c1bd4bf16))
+* **typer:** require abstract constructors to assign this like upstream ([#163](https://github.com/fullofcaffeine/hxhx/issues/163)) ([b342e7b](https://github.com/fullofcaffeine/hxhx/commit/b342e7b12960cc193e63c6b56f7194f74ade7996))
+* **typer:** run declared helpers for untyped indexed updates ([#172](https://github.com/fullofcaffeine/hxhx/issues/172)) ([51e6c46](https://github.com/fullofcaffeine/hxhx/commit/51e6c464263271001f5f0b838337555eb67aa9d7)), closes [#170](https://github.com/fullofcaffeine/hxhx/issues/170)
+* **typer:** select declared setters for untyped indexed assignments ([#170](https://github.com/fullofcaffeine/hxhx/issues/170)) ([17f8ed2](https://github.com/fullofcaffeine/hxhx/commit/17f8ed2b61a4d5671e876d2b7ef0220c8760a91f))
+* **typer:** split intersection class bounds and wire unrun bound tests into CI ([#140](https://github.com/fullofcaffeine/hxhx/issues/140)) ([e2a360f](https://github.com/fullofcaffeine/hxhx/commit/e2a360ff2805d2c7149f30fffc9e0a0b3b80b2f2))
+
+## [0.43.3](https://github.com/fullofcaffeine/hxhx/compare/v0.43.2...v0.43.3) (2026-11-05)
+
+
+### Bug Fixes
+
+* **stage3:** keep one stage3FieldOccurrence after rebasing onto static writes ([6312b56](https://github.com/fullofcaffeine/hxhx/commit/6312b5654337a0ec8b9a049fa65c2d435edf4547)), closes [#131](https://github.com/fullofcaffeine/hxhx/issues/131)
+* **stage3:** order Int64 word writes and widen Int stored in Float locals ([e3369a0](https://github.com/fullofcaffeine/hxhx/commit/e3369a049316e9ed85fa03c07f0f8255c4e7f659))
+* **stage3:** stop Int32 concatenation crashes and lost Int32/Int64 updates ([ed06239](https://github.com/fullofcaffeine/hxhx/commit/ed06239caf63b46c450d1c0fc829e446b30fa7b7))
+
+## [0.43.2](https://github.com/fullofcaffeine/hxhx/compare/v0.43.1...v0.43.2) (2026-11-05)
+
+
+### Bug Fixes
+
+* **stage3:** keep static cells apart from locals and type static updates ([1f3d605](https://github.com/fullofcaffeine/hxhx/commit/1f3d605e27d197c61c4ce8e4c4a52d7812e701fa))
+* **stage3:** store writes to static fields in native OCaml ([6cfefb3](https://github.com/fullofcaffeine/hxhx/commit/6cfefb31b9705d30bc65d0640dc2c5e4f958004b))
+
+## [0.43.1](https://github.com/fullofcaffeine/hxhx/compare/v0.43.0...v0.43.1) (2026-11-05)
+
+
+### Bug Fixes
+
+* **stage3:** emit StringTools.replace calls instead of an empty string ([d895c97](https://github.com/fullofcaffeine/hxhx/commit/d895c9799be38ffcfdef8bbe093e626f66f74797))
+* **stage3:** type abstract this and widen Int operands in Float arithmetic ([b17660b](https://github.com/fullofcaffeine/hxhx/commit/b17660b2b453c1edf56db41bf9004206ac5cf878))
+* **stage3:** unwrap Null<Int> operands in native arithmetic ([74fb6b3](https://github.com/fullofcaffeine/hxhx/commit/74fb6b3abfdfa760cce8895f4c829d17cd2ef0a7))
+
+# [0.43.0](https://github.com/fullofcaffeine/hxhx/compare/v0.42.0...v0.43.0) (2026-11-05)
+
+
+### Bug Fixes
+
+* **ci:** let the emit-only self-compile run without OCaml tools ([8e3b558](https://github.com/fullofcaffeine/hxhx/commit/8e3b558575349c79d05ff32418cb06620e205bc4))
+* **hxhx:** exempt only hxhx's own bundled-source macro by its file ([5394397](https://github.com/fullofcaffeine/hxhx/commit/5394397e9b7df9665532d7cd58b2557913ac9f2d))
+* **hxhx:** keep standard-library macros out of the selected-macro error ([02b0b19](https://github.com/fullofcaffeine/hxhx/commit/02b0b195b072da48c150ca12789785bb6574a969)), closes [#111](https://github.com/fullofcaffeine/hxhx/issues/111)
+* **macro:** keep user names from capturing lowered quotation paths ([403e032](https://github.com/fullofcaffeine/hxhx/commit/403e0322aa500fdf1d5285042af895dba89a5fa8))
+* **macro:** name unresolved rooted paths and keep them out of backends ([6f44b78](https://github.com/fullofcaffeine/hxhx/commit/6f44b788eab986059c25e51fcd81c06981c6f5e1)), closes [#125](https://github.com/fullofcaffeine/hxhx/issues/125)
+* **ocaml:** keep one call plan per emitted copy of a local callee call ([499c066](https://github.com/fullofcaffeine/hxhx/commit/499c06635250d7e82955834d7771a1930f3ca98b)), closes [#117](https://github.com/fullofcaffeine/hxhx/issues/117)
+* **ocaml:** select copied local-callee calls on every call-plan lookup ([b433140](https://github.com/fullofcaffeine/hxhx/commit/b43314067959baf6173fe0f42ac78d1d14a1943c))
+* **parser:** end return type hints at expression-start keywords ([29e39b7](https://github.com/fullofcaffeine/hxhx/commit/29e39b758b346cd1b868257aa2db7a4e235229d6))
+* **reflaxe.ocaml:** keep null in IMap locals that are not single-use receivers ([b18b949](https://github.com/fullofcaffeine/hxhx/commit/b18b949b071a86aa40eac010baf58218256b5497))
+* **reflaxe.ocaml:** lower Map methods on Null<Map> receivers ([c2e3dd6](https://github.com/fullofcaffeine/hxhx/commit/c2e3dd6f333cab8663fdc3feba9551413899745c)), closes [pre-#118](https://github.com/pre-/issues/118)
+* **stage3:** dispatch overridden methods and lower super calls ([61bfc0c](https://github.com/fullofcaffeine/hxhx/commit/61bfc0c38784a170891b62809e4b0c8743e98264)), closes [#116](https://github.com/fullofcaffeine/hxhx/issues/116)
+* **stage3:** require the module loader before typing a request ([fa5ef28](https://github.com/fullofcaffeine/hxhx/commit/fa5ef2850bd43c34885b77f776bc40be84eab949))
+
+
+### Features
+
+* **hxhx:** fail the compile when a selected macro cannot run ([3292c7f](https://github.com/fullofcaffeine/hxhx/commit/3292c7fe072e2848f233ac6c254d5b4e46b41ee0))
+
 # [0.42.0](https://github.com/fullofcaffeine/hxhx/compare/v0.41.3...v0.42.0) (2026-11-02)
 
 

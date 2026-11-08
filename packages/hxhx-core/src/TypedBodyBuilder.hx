@@ -29,6 +29,24 @@ class TypedBodyBuilder {
 				typeResolver.convertValue(buildExpr(sources[1], null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, type), type),
 				type, position);
 		}
+		// `untyped b[i] = v` keeps the setter call and its declared result inside
+		// the untyped scope; the wrapper alone carries the unconstrained result.
+		if (source.match(EBinop("=", EUntyped(_), _))) {
+			if (selected.result == null)
+				throw "untyped indexed setter lost its declared result";
+			final call = environment.withUntyped(() -> buildIndexedCall(selected, selected.result, position, diagnosticPosition, environment, typeResolver,
+				callResolver, memberResolver));
+			return TypedExpr.untypedValue(TypedFeatureIntrinsic.capture(call), type, position);
+		}
+		return buildIndexedCall(selected, type, position, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);
+	}
+
+	/** Build the selected helper call with receiver-first operands and the replayed call argument plan. */
+	static function buildIndexedCall(selected:TypedIndexedAccessResolution, type:TyType, position:Null<HxPos>, diagnosticPosition:HxPos,
+			environment:TyFunctionEnv, typeResolver:TypedExprTypeResolver, callResolver:Null<TypedCallDeclarationResolver>,
+			memberResolver:Null<TypedMemberDeclarationResolver>):TypedExpr {
+		final binding = selected.binding;
+		final sources = binding.getArguments();
 		final resolution = selected.call;
 		final declaration = binding.declaration;
 		final callable = TyType.functionType(resolution.getExpectedArguments(), type);
@@ -49,7 +67,7 @@ class TypedBodyBuilder {
 			memberResolver:Null<TypedMemberDeclarationResolver>):Null<TypedExpr> {
 		if (typeResolver == null || environment == null)
 			return null;
-		return TypedIndexedUpdateLowering.build({
+		final lower = () -> TypedIndexedUpdateLowering.build({
 			expression: source,
 			type: type,
 			position: position,
@@ -58,6 +76,12 @@ class TypedBodyBuilder {
 			resolver: typeResolver,
 			buildChild: child -> buildExpr(child, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver)
 		});
+		// `(untyped b[i]) op= v` lowers its getter/step/setter block in the untyped scope;
+		// the block keeps the setter's type and the wrapper carries the open result.
+		if (!source.match(EBinop(_, EUntyped(_), _)))
+			return lower();
+		final update = environment.withUntyped(lower);
+		return update == null ? null : TypedExpr.untypedValue(TypedFeatureIntrinsic.capture(update), type, position);
 	}
 
 	/**

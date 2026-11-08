@@ -201,6 +201,39 @@ deliberately does not claim enum-key maps, structural or type-parameter keys,
 or arbitrary user implementations of `IMap`; those need a typed interface
 conversion and dispatch contract instead of the `HxMap` carrier.
 
+Map methods also work on a value whose type is `Null<Map<K,V>>`, such as a
+lazily filled field:
+
+```haxe
+var names:Null<Map<String, String>> = null;
+function name(key:String) return names.get(key);
+```
+
+This works when the nullable Map comes from a class or anonymous-structure
+field, a static field, or a method declared to return `Null<Map<K,V>>`. For
+these sources, the generated code checks the value for null once, before the
+call. A present Map behaves normally. A null Map throws a catchable
+`Null Access` error before the call arguments are evaluated, as
+`haxe --interp` does.
+
+Some shapes are not finished yet:
+
+- A method call on a nullable Map held in a *local variable*
+  (`final m:Null<Map<String, Int>> = f(); m.get(k)`) works for a present Map.
+  The target does not check it for null yet, so the behavior with a null
+  local is not defined.
+- A nullable Map from another kind of expression, such as
+  `(flag ? a : b).get(k)`, is rejected with
+  `[ocaml-imap-interface:unproven-nullable-producer]`. Store the value in a
+  field, or return it from a method, first.
+- A variable typed `haxe.Constraints.IMap<K,V>` may hold a nullable Map, and
+  it can be compared with null or passed on. A method call on such a variable
+  is accepted only in the statement directly after the declaration, and only
+  if the variable is not used again (`final view:IMap<String, Int> = m;
+  view.get(k);`). Any other call reports
+  `[ocaml-imap-interface:nullable-receiver-unsupported]`. Check the Map for
+  null first, or call the method on the Map itself.
+
 The same report inventories mutable static fields
 before code generation, including where each OCaml `ref` cell is declared and
 where its Haxe initializer runs. It also records direct dependencies between

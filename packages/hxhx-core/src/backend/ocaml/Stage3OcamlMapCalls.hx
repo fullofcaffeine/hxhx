@@ -211,8 +211,16 @@ function render(input:{
 			input.names.internalName("__hx_map_argument_" + index)
 	];
 	final bindings = ["let " + receiver + " = (" + input.emit(call.receiver) + ") in "];
-	for (index in 0...arguments.length)
-		bindings.push("let " + arguments[index] + " = (" + input.emit(call.arguments[index]) + ") in ");
+	for (index in 0...arguments.length) {
+		final rendered = input.emit(call.arguments[index]);
+		// The key slot takes the table's native key (an `int` for Int keys), so a
+		// `Null<Int>` key is unwrapped like any other call operand. Values keep the
+		// operand's own carrier; `stored` boxes them for the table below.
+		final actual = occurrence.getProjectedArgumentTypes()[index];
+		final key = index == 0
+			&& actual != null ? Stage3OcamlNullablePrimitive.convertArgument(actual, selected.keyType, false, rendered) : null;
+		bindings.push("let " + arguments[index] + " = (" + (key == null ? rendered : key) + ") in ");
+	}
 	final table = "(Obj.magic " + receiver + ")";
 	final operation = (name:String) -> "HxMap." + name + "_" + suffix(selected.keys) + " " + table;
 	// A Dynamic value keeps the carrier that every other Dynamic slot stores.

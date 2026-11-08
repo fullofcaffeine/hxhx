@@ -1,0 +1,15 @@
+int statements: 2,3,4
+int values: 2 2 1,2,4
+float: 2.5 1.5 1.5
+int32: 8,7 8
+null element: 6,7 7
+evaluated once: 10,21 array,index
+fields: 1 2 0.5 0.5
+nullable fields: 42 42 -0.75
+receiver once: 2 owner
+nested index: 2,5,7
+postfix then read: 7 4
+overflow wrap: -2147483648 2147483647
+null element: threw
+anonymous: 3 3 1.25
+loop: 7 2,3,5

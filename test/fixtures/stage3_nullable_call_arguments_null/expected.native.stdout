@@ -1,0 +1,15 @@
+fromCharCode: Null Access
+static: Null Access
+map get: Null Access
+map set: Null Access
+map exists: Null Access
+math abs: Null Access
+slice optional end: 2,3
+indexOf optional start: 1
+push: Null Access
+insert: Null Access
+unshift: Null Access
+indexOf: Null Access
+contains: Null Access
+remove: Null Access
+after: 1,2,3

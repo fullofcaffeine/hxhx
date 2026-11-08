@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/fullofcaffeine/hxhx/actions/workflows/ci.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.42.0-blue)](https://github.com/fullofcaffeine/hxhx/releases)
+[![Version](https://img.shields.io/badge/version-0.43.8-blue)](https://github.com/fullofcaffeine/hxhx/releases)
 
 `hxhx` is a Haxe-in-Haxe compiler stack that is working toward Haxe `4.3.7`
 compatibility. This repo also contains `reflaxe.ocaml`, a Reflaxe target for
@@ -283,8 +283,8 @@ For full command reference (tests, gates, promotion, plugin matrix):
 Focused compiler runtime tests also require PHP, Neko, and Mono (`mcs` and
 `mono`). CI installs missing PHP and Mono packages and exposes the Neko compiler
 from the pinned Lix toolchain before running these tests.
-The pinned `hxcs` library supplies upstream Haxe's C# build support; `npx lix
-download` installs it with the other repository libraries.
+The pinned `hxcs` and `hxjava` libraries supply upstream Haxe's C# and Java build
+support; `npx lix download` installs them with the other repository libraries.
 
 macOS:
 

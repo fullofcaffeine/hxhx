@@ -1691,6 +1691,7 @@ class CallPlanFixture {
 
 	public static macro function run():Expr {
 		IntegerCallArgumentChecks.run();
+		CallableInvocationCalleeChecks.run();
 		EnumFunctionProducerFixture.checkMutation();
 		EnumFunctionProducerFixture.checkDeclarationOrder();
 		assertFunctionSyntaxInputUsesOneObservation();

@@ -945,11 +945,17 @@ class ParserStageScanHelpers {
 		var braceDepth = 0;
 		var i = 0;
 		var pendingTypeVisibility = HxVisibility.Public;
+		// The two tokens before the current one, to recognize a metadata name.
+		var previous = "";
+		var beforePrevious = "";
 		while (true) {
 			final t = scanNextToken(source, i);
 			i = t.nextPos;
 			if (t.text.length == 0)
 				break;
+			final metadataName = t.isIdent && (previous == "@" || (previous == ":" && beforePrevious == "@"));
+			beforePrevious = previous;
+			previous = t.text;
 
 			if (!t.isIdent) {
 				if (t.text == "{")
@@ -960,6 +966,12 @@ class ParserStageScanHelpers {
 			}
 
 			if (braceDepth != 0)
+				continue;
+			// A metadata name such as `@:abstract` or `@:final` is not a keyword:
+			// `@:abstract class Function {}` declares a class, not an abstract
+			// (haxe_ocaml-ey6o2). Legacy `@:enum abstract X(T)` keeps its enum
+			// abstract reading, because upstream treats it as one.
+			if (metadataName && t.text != "enum")
 				continue;
 			if (t.text == "private") {
 				pendingTypeVisibility = HxVisibility.Private;

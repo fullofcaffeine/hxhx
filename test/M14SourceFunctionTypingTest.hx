@@ -45,7 +45,14 @@ class M14SourceFunctionTypingTest {
 		});
 		HxFunctionDecl.getBody(declaration)[0] = SVar("callback", "", ESourceFunction(facts, body, [], position), position);
 		final resolved = new ResolvedModule("SourceControlFixture", "SourceControlFixture.hx", parsed);
-		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]), null, true);
+		// A quotation lowers to `haxe.macro.Expr` constructors, which must resolve: load the standard library.
+		final args = hxhx.Stage1Compiler.Stage1Args.parse(["-main", "SourceControlFixture"], true);
+		if (args == null)
+			throw "source function fixture could not locate its standard library";
+		final index = TyperIndex.buildHeaders([resolved]);
+		final loader = new ModuleLoader([hxhx.Stage1Compiler.Stage1Args.getStandardLibraryRoot(args)], new haxe.ds.StringMap<String>(), index, null, false);
+		loader.markResolvedAlready([resolved]);
+		final typed = TyperStage.typeResolvedModule(resolved, index, loader, true);
 		return typed.getTypedClasses()[0].getFunctions()[0].getBody().getStatements()[0].getExpressions()[0];
 	}
 
@@ -70,10 +77,10 @@ class M14SourceFunctionTypingTest {
 		return true;
 	}
 
-	/** The lowered call `<owner>.<name>(...)`; this fixture loads no `haxe.macro.Expr`, so the callee spelling identifies it. */
+	/** The lowered call of the `haxe.macro.Expr` enum constructor `name`. */
 	static function constructorCall(node:TypedExpr, name:String):TypedExpr {
-		final callee = node.getTag() == Call ? node.getExpressions()[0] : null;
-		if (callee == null || callee.getTag() != FieldRead || callee.getTexts()[0] != name)
+		final constructor = node.getTag() == Call ? node.getDeclaration() : null;
+		if (constructor == null || !constructor.getIsEnumConstructor() || constructor.getSignature().getName() != name)
 			throw "quoted return: expected a lowered `" + name + "` construction";
 		return node;
 	}

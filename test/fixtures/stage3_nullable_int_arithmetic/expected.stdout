@@ -1,0 +1,25 @@
+local 53
+sum 173
+mixed 222
+case 307
+field 91 9
+condition eq
+condition gt
+parse 9073 42
+loop 6
+scan 3
+map 6 25
+optional 7 10 -1
+array 5
+float map 2.25 1.5625
+divide 50.5 0.125
+negate -72 -5
+float array 3.75 0.75 3.375 1.5
+float compare true false true 0.75
+promote 3.5 1.5 0.75
+abstract 6 3.5 4.5 0.625
+null charCodeAt raised
+null map raised
+null float map raised
+null negate raised
+null optional raised

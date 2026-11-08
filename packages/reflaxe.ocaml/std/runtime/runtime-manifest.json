@@ -159,8 +159,8 @@
     {
       "module": "HxInt",
       "scope": "application",
-      "files": [{ "path": "HxInt.ml", "sha256": "3f85900b52dd4b082a5fc11db1d59125b16bf5f38d3959ffe5dc5686fdd04f2b" }],
-      "dependencies": [],
+      "files": [{ "path": "HxInt.ml", "sha256": "b99cbf3eee8ac437f1312a0685ca9b1bc4e93fe112d8f04ea680f64efe84d4d1" }],
+      "dependencies": ["HxRuntime"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],
       "license": "MIT"
@@ -186,7 +186,7 @@
     {
       "module": "HxMethodDispatch",
       "scope": "application",
-      "files": [{ "path": "HxMethodDispatch.ml", "sha256": "7c94120a38177e2fa81178024c6c401ad55108179ae8a628695103e24d3e8949" }],
+      "files": [{ "path": "HxMethodDispatch.ml", "sha256": "6ae5f56c144a0be5e8422f775d2ce2475f4ce85429d6353c802c9aee43eed2fa" }],
       "dependencies": ["HxAnon", "HxRuntime", "HxType"],
       "duneLibraries": ["threads"],
       "profiles": ["metal", "portable"],
@@ -276,7 +276,7 @@
     {
       "module": "Std",
       "scope": "application",
-      "files": [{ "path": "Std.ml", "sha256": "86e3b4e1b69864cdf07fe05f4242b2635f16eb3fcfbbc87d540ad97c23b540ac" }],
+      "files": [{ "path": "Std.ml", "sha256": "1c873704a5dff18f14d5abf5a8289829502498580f3ba0281f5378953414955a" }],
       "dependencies": ["HxDynamic", "HxRuntime", "HxType"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],

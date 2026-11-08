@@ -27,7 +27,11 @@ class Stage3OcamlLocalNames {
 			used.set("this_", true);
 		for (entry in localCatalog.getEntries()) {
 			final projectedName = entry.getProjectedName();
-			final base = normalize(projectedName);
+			final normalized = normalize(projectedName);
+			// Native static field cells own every name with this prefix, so a local spelled
+			// like one is renamed instead of shadowing the cell.
+			final base = normalized != null
+				&& StringTools.startsWith(normalized, Stage3OcamlStaticStorage.CELL_PREFIX) ? "local" + normalized : normalized;
 			if (base == null || base.length == 0 || base == "_")
 				throw "Stage3 OCaml local naming cannot render exact binding " + entry.getBinding().getIdentity().getCanonicalKey();
 			var targetName = base;

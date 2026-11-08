@@ -33,6 +33,19 @@ enum abstract OcamlIMapInterfaceConversionRole(String) from String to String {
 	final CallArgument = "call-argument";
 	final ReturnValue = "return-value";
 	final LocalInitializer = "local-initializer";
+
+	/**
+		An `IMap` local initialized from `Null<Map<K,V>>` and read exactly once, as
+		the receiver of a direct `IMap` call in the next statement of the same block.
+
+		This is the shape of Haxe's own inline expansion of a Map method,
+		`{ var this1:IMap<K,V> = source; this1.get(key); }`. A null source throws
+		Haxe `Null Access` at the initializer. Nothing runs between the initializer
+		and the call's receiver read, and Haxe 4.3.7 eval also fails before it
+		evaluates the call arguments, so the observable order is the same.
+	**/
+	final ReceiverLocalInitializer = "receiver-local-initializer";
+
 	final Assignment = "assignment";
 }
 
@@ -170,9 +183,13 @@ class OcamlIMapInterfaceContract {
 	public static inline final CALL_PROOF_ID = "typed-imap-interface-dispatch-v1";
 	public static inline final STORAGE_ALIAS_PROOF_ID = "typed-standard-map-storage-alias-v3";
 	public static inline final TARGET_CARRIER_ID = "Obj.t(haxe_Constraints.imap_t)";
+
+	/** Carrier of a `Null<Map<K,V>>` conversion source: the map reference or the Haxe null sentinel. */
+	public static inline final NULLABLE_SOURCE_CARRIER_ID = "Obj.t";
+
 	public static inline final CONVERSION_PROOF_CLAIM = "The final typed Haxe occurrence converts either a canonical standard Map declaration or a class proven to implement the exact haxe.Constraints.IMap<K,V> interface into one dispatch record. Standard storage and user methods remain distinct; a key type never proves the runtime receiver implementation.";
 	public static inline final CALL_PROOF_CLAIM = "The final typed Haxe call resolves to one method on the exact haxe.Constraints.IMap<K,V> declaration. The receiver is already the sealed interface carrier, so target syntax evaluates it once, evaluates arguments in source order, and invokes only the recorded dispatch field.";
-	public static inline final STORAGE_ALIAS_PROOF_CLAIM = "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field or a target-authored NativeHxMap getter whose applied receiver stores that Map type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.";
+	public static inline final STORAGE_ALIAS_PROOF_CLAIM = "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field, a target-authored NativeHxMap getter whose applied receiver stores that Map type, a plain variable field of a non-extern class or anonymous structure declared with that exact nullable type, or a call to a non-extern method whose declared result is that exact nullable type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.";
 
 	public static final REQUIRED_METHODS = [
 		"get",
@@ -213,14 +230,16 @@ class OcamlIMapInterfaceContract {
 			|| !validConversionRole(decision.role, decision.roleIdentity)) {
 			throw "reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: conversion has incomplete type, source, proof, or revision facts";
 		}
+		if (decision.role == OcamlIMapInterfaceConversionRole.ReceiverLocalInitializer && !hasNullableStandardSource(decision))
+			throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: conversion "${decision.id}" uses the receiver-local role without a Null<Map<K,V>> source';
 		final expectedKeyKind = standardKeyKind(decision.sourceKind);
 		final standard = expectedKeyKind != null;
 		if (!standard && decision.sourceKind != OcamlIMapInterfaceSourceKind.UserImplementation)
 			throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: conversion "${decision.id}" has an unknown source kind';
 		final expectedKeyStringifier = standard ? OcamlStandardIMapCallContract.stringifierForSemanticTypeId(decision.keySemanticTypeId) : null;
 		final expectedValueStringifier = standard ? OcamlStandardIMapCallContract.stringifierForSemanticTypeId(decision.valueSemanticTypeId) : null;
-		final expectedCapabilities = adapterRuntimeCapabilities(decision.sourceKind, decision.keySemanticTypeId, decision.valueSemanticTypeId,
-			decision.methods);
+		final expectedCapabilities = conversionRuntimeCapabilities(decision.sourceKind, decision.sourceSemanticTypeId, decision.keySemanticTypeId,
+			decision.valueSemanticTypeId, decision.methods);
 		if (decision.standardKeyKind != expectedKeyKind
 			|| decision.keyStringifier != expectedKeyStringifier
 			|| decision.valueStringifier != expectedValueStringifier
@@ -229,15 +248,16 @@ class OcamlIMapInterfaceContract {
 		}
 		if (expectedKeyKind != null) {
 			final keyKind:OcamlStandardIMapKeyKind = expectedKeyKind;
+			final nullable = hasNullableStandardSource(decision);
 			final sourceMatches = switch (decision.sourceKind) {
 				case StandardStringMapAbstract, StandardIntMapAbstract, StandardObjectMapAbstract:
-					standardMapSourceMatches(decision.sourceSemanticTypeId, decision.keySemanticTypeId, decision.valueSemanticTypeId, false);
+					standardMapSourceMatches(decision.sourceSemanticTypeId, decision.keySemanticTypeId, decision.valueSemanticTypeId, nullable);
 				case _:
 					decision.sourceSemanticTypeId == standardSourceSemanticTypeId(decision.sourceKind, decision.keySemanticTypeId,
 						decision.valueSemanticTypeId);
 			};
 			if (!OcamlStandardIMapCallContract.keyKindMatchesSemanticType(keyKind, decision.keySemanticTypeId)
-				|| decision.sourceCarrierTypeId != OcamlStandardIMapCallContract.carrierId(keyKind)
+				|| decision.sourceCarrierTypeId != (nullable ? NULLABLE_SOURCE_CARRIER_ID : OcamlStandardIMapCallContract.carrierId(keyKind))
 				|| !sourceMatches) {
 				throw 'reflaxe.ocaml [ocaml-imap-interface:invalid-conversion]: conversion "${decision.id}" disagrees with its standard Map source and key carrier';
 			}
@@ -429,9 +449,64 @@ class OcamlIMapInterfaceContract {
 		return out;
 	}
 
+	/**
+		Returns the runtime capabilities of one conversion, including its null check.
+
+		A conversion from `Null<Map<K,V>>` first tests the `Obj.t` source with
+		`HxRuntime.is_null`, so it also needs the core runtime module.
+	**/
+	public static function conversionRuntimeCapabilities(sourceKind:OcamlIMapInterfaceSourceKind, sourceSemanticTypeId:String, keySemanticTypeId:String,
+			valueSemanticTypeId:String, methods:Array<OcamlIMapInterfaceMethodDecision>):Array<String> {
+		final out = adapterRuntimeCapabilities(sourceKind, keySemanticTypeId, valueSemanticTypeId, methods);
+		if (standardKeyKind(sourceKind) != null
+			&& StringTools.startsWith(sourceSemanticTypeId, "Null<")
+			&& !out.contains(OcamlStandardIMapCallContract.CORE_RUNTIME_CAPABILITY))
+			out.push(OcamlStandardIMapCallContract.CORE_RUNTIME_CAPABILITY);
+		return out;
+	}
+
+	/**
+		Whether this conversion starts from a value typed `Null<Map<K,V>>`.
+
+		Such a value is stored as `Obj.t`: either the map reference or the Haxe null
+		sentinel. The conversion must test it before building the dispatch record.
+	**/
+	public static function hasNullableStandardSource(decision:OcamlIMapInterfaceConversionDecision):Bool {
+		return switch (decision.sourceKind) {
+			case StandardStringMapAbstract, StandardIntMapAbstract, StandardObjectMapAbstract:
+				standardMapSourceMatches(decision.sourceSemanticTypeId, decision.keySemanticTypeId, decision.valueSemanticTypeId, true);
+			case _:
+				false;
+		};
+	}
+
+	/**
+		Whether a null source throws Haxe `Null Access` instead of staying null.
+
+		The policy follows from the conversion role, so saved reports can be checked
+		without extra fields:
+
+		- `ReceiverLocalInitializer` throws. The planner selects that role only for
+		  the single-use shape described on the role, which is how Haxe expands a
+		  Map method call on a non-local receiver.
+		- Every other role keeps null as null, because Haxe allows passing, storing,
+		  returning, or comparing a null `IMap` value. The planner rejects a method
+		  call on such a local, because the target does not yet check a null `IMap`
+		  receiver before dispatch.
+	**/
+	public static function throwsOnNullSource(decision:OcamlIMapInterfaceConversionDecision):Bool {
+		return hasNullableStandardSource(decision) && decision.role == OcamlIMapInterfaceConversionRole.ReceiverLocalInitializer;
+	}
+
 	/** Recomputes the ordered private names inserted by one adapter conversion. */
 	public static function runtimeUseOccurrencesFor(decision:OcamlIMapInterfaceConversionDecision):Array<OcamlRuntimeUseOccurrence> {
-		final planned:Array<{role:String, symbol:String}> = [{role: "type-marker", symbol: "HxType.instance_marker"}];
+		final planned:Array<{role:String, symbol:String}> = [];
+		if (hasNullableStandardSource(decision)) {
+			planned.push({role: "check-null", symbol: "HxRuntime.is_null"});
+			if (throwsOnNullSource(decision))
+				planned.push({role: "throw-null-access", symbol: "HxRuntime.hx_throw_typed"});
+		}
+		planned.push({role: "type-marker", symbol: "HxType.instance_marker"});
 		final keyKind = standardKeyKind(decision.sourceKind);
 		for (method in decision.methods) {
 			final operation = operationForMethod(method.name);
@@ -545,7 +620,7 @@ class OcamlIMapInterfaceContract {
 	static function validConversionRole(role:OcamlIMapInterfaceConversionRole, roleIdentity:String):Bool {
 		return switch (role) {
 			case CallArgument: StringTools.startsWith(roleIdentity, "call-argument:") && validNonNegativeIndex(roleIdentity.substr("call-argument:".length));
-			case LocalInitializer:
+			case LocalInitializer, ReceiverLocalInitializer:
 				isReusableLexicalLocalId(roleIdentity);
 			case ReturnValue:
 				roleIdentity == "return-value";

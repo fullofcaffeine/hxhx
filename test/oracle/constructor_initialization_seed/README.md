@@ -1,6 +1,6 @@
 # Abstract constructor initialization
 
-These twenty cases record Haxe 4.3.7 constructor-initialization diagnostics.
+These forty-nine cases record Haxe 4.3.7 constructor-initialization diagnostics.
 They cover branches, throws, loops, catches, short-circuit expressions, and
 nested functions. The accepted set is not proof of definite initialization:
 Haxe accepts a short-circuit assignment and a do-loop with an early break.

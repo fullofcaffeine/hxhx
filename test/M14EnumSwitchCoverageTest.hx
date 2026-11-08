@@ -26,8 +26,10 @@ class M14EnumSwitchCoverageTest {
 			throw 'native enum coverage differs: ' + output + errors;
 		Sys.println('OCAML_ENUM_COVERAGE:PASS');
 		#else
+		// The Neko renderer needs the complete provider graph (for example the
+		// standard Array class), not one isolated typed module.
 		final context = new backend.BackendContext(root, root + '/local.n', 'Main', false, HxDefineMap.fromRawDefines(['neko=1']));
-		final generated = @:privateAccess backend.vm.NekoTargetCore.renderProgram(new MacroExpandedProgram([typed], false), context);
+		final generated = @:privateAccess backend.vm.NekoTargetCore.renderProgram(NekoSourceProgramFixture.build([{path: 'Main.hx', source: source}]), context);
 		sys.io.File.saveContent(root + '/local.neko', generated);
 		if (Sys.command('nekoc', [root + '/local.neko']) != 0)
 			throw 'local enum coverage compilation failed';

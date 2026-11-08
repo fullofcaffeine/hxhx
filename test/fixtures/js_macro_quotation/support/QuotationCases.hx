@@ -82,6 +82,7 @@ class QuotationCases {
 		splices();
 		positions();
 		forms();
+		QuotationShadowCases.run();
 	}
 
 	/** Expression, block, array, field, and type-path splices. */
@@ -243,5 +244,74 @@ class QuotationCases {
 			case _:
 				throw "anonymous type form";
 		}
+	}
+}
+
+/**
+	Quotations whose surrounding scope declares the names `haxe`, `Std`, and `hxhxmacrohost`.
+
+	Upstream builds the quoted tree inside the compiler, so a user local, parameter, or field with
+	one of those names never changes what `macro ...` produces. The authored splice payloads still
+	read the user's own bindings.
+**/
+class QuotationShadowCases {
+	static var haxe = 7;
+	static var Std = 8;
+	static var hxhxmacrohost = 9;
+
+	static function check(condition:Bool, message:String):Void {
+		if (!condition)
+			throw message;
+	}
+
+	static function intText(value:Expr):String
+		return switch value.expr {
+			case EConst(CInt(text, _)): text;
+			case _: "";
+		};
+
+	public static function run():Void {
+		check(intText(fields()) == "1", "field shadow");
+		check(intText(local()) == "1", "local haxe shadow");
+		check(intText(parameters(1, 2, 3)) == "2", "parameter shadow");
+		switch rootLocals().expr {
+			case ECall({expr: EConst(CIdent("f"))}, [{expr: EConst(CIdent("haxe"))}, value, {pos: at}]):
+				final facts:{file:String, min:Int, max:Int} = cast at;
+				check(intText(value) == "3" && facts.file.length > 0, "shadowed root splice");
+			case _:
+				throw "shadowed root splice";
+		}
+		ordinary();
+	}
+
+	/** Ordinary code that declares a root name keeps reading its own binding. */
+	static function ordinary():Void {
+		final haxe = {ds: {Expr: 3}};
+		final hxhxmacrohost = {MacroReificationValues: 4};
+		check(haxe.ds.Expr + hxhxmacrohost.MacroReificationValues == 7, "ordinary locals named like roots");
+	}
+
+	static function fields():Expr {
+		check(haxe + Std + hxhxmacrohost == 24, "shadowing fields");
+		return macro 1;
+	}
+
+	static function local():Expr {
+		var haxe = 42;
+		check(haxe == 42, "shadowing local");
+		return macro 1;
+	}
+
+	static function parameters(Std:Int, hxhxmacrohost:Int, haxe:Int):Expr {
+		check(Std + hxhxmacrohost + haxe == 6, "shadowing parameters");
+		return macro 2;
+	}
+
+	/** A payload named like a root still means the user's binding. */
+	static function rootLocals():Expr {
+		final haxe = "haxe";
+		final Std = macro 3;
+		final hxhxmacrohost = macro 4;
+		return macro f($i{haxe}, $Std, $hxhxmacrohost);
 	}
 }

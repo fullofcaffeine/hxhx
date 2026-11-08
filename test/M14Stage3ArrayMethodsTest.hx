@@ -22,6 +22,9 @@ import sys.io.File;
 	  comparator, and uses the utest-style `String` comparator.
 	- `stage3_array_methods` prints the return value and the resulting array
 	  for every bodiless Array method, so a no-op is visible.
+	- `stage3_array_concat` checks that `concat` returns independent storage
+	  for aliased, empty, nested, nullable, and Int, Float, String, object, and
+	  `Dynamic` element arrays, and evaluates its operands left to right.
 	- Each native executable must print exactly what upstream Haxe 4.3.7 prints.
 	- A method without an adapter must stop emission with a named error rather
 	  than reach a stub.
@@ -55,5 +58,6 @@ class M14Stage3ArrayMethodsTest {
 	static function main():Void {
 		compareWithUpstream("sort_callbacks", "test/portable/fixtures/sort_callback_shapes/src", "test/portable/fixtures/sort_callback_shapes/expected.stdout");
 		compareWithUpstream("bodiless", "test/fixtures/stage3_array_methods", "test/fixtures/stage3_array_methods/expected.stdout");
+		compareWithUpstream("concat", "test/fixtures/stage3_array_concat", "test/fixtures/stage3_array_concat/expected.stdout");
 	}
 }

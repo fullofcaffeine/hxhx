@@ -1,3 +1,5 @@
+import backend.BackendContext;
+import backend.BackendRegistry;
 import haxe.io.Path;
 import sys.io.File;
 
@@ -43,8 +45,29 @@ class M14Stage3NestedPatternsTest {
 		}
 	}
 
+	/**
+		Guards on enum, constant, array, and anonymous-structure patterns, including
+		nested patterns, captured locals, and side-effect order. A false guard must
+		fall through to the next matching case on upstream Haxe, native OCaml, and JS.
+	 */
+	static function checkCaseGuards():Void {
+		final guardRoot = "test/fixtures/stage3_case_guards";
+		final expected = File.getContent(Path.join([guardRoot, "expected.stdout"]));
+		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", guardRoot, "--run", "Main"], expected: expected});
+		final path = Path.join([guardRoot, "Main.hx"]);
+		final typed = M14Stage3RuntimeFixture.typeMain({source: File.getContent(path), path: path, root: guardRoot});
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/stage3-case-guards");
+		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
+		final result = BackendRegistry.requireForTarget("js-native")
+			.emit(MacroStage.expandProgram([typed], []),
+				new BackendContext(".tmp/stage3-case-guards-js-native", null, "Main", false, new haxe.ds.StringMap<String>()));
+		M14Stage3RuntimeFixture.observe({command: "node", arguments: [result.entryPath], expected: expected});
+		Sys.println("M14_STAGE3_CASE_GUARDS:PASS");
+	}
+
 	static function main():Void {
 		checkUnprovenCoverage();
+		checkCaseGuards();
 		observe("haxe", ["-cp", root, "--run", "Main"]);
 		final path = Path.join([root, "Main.hx"]);
 		final typed = M14Stage3RuntimeFixture.typeMain({source: File.getContent(path), path: path, root: root});

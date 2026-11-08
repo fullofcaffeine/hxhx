@@ -545,6 +545,17 @@ class EmitterStage {
 	}
 
 	/** Local storage uses declared types, including generated control-result bindings. */
+	/**
+		The value that `name = operand` stores, shared by statement and value-position assignments.
+		It widens an Int operand stored in a Float local, applies the Int64 carrier conversion, and
+		then uses the local's Dynamic, Bool, or nullable storage representation.
+	**/
+	static function localAssignmentStoredValue(name:String, declaredType:String, operand:HxExpr, rendered:String, ?tyByIdent:Map<String, TyType>):String {
+		final operandIsInt = operand.match(EInt(_)) || stage3ExactPrimitiveKey(operand) == "primitive:Int";
+		final widened = backend.ocaml.Stage3OcamlLocalStorage.widenIntToFloat(exactFunctionLocalType(name), operandIsInt, rendered);
+		return localStorageValue(name, operand, stage3Int64CarrierValue(declaredType, operand, widened, tyByIdent));
+	}
+
 	static function localStorageValue(name:String, operand:HxExpr, rendered:String):String {
 		if (currentCallableFunction != null && currentTypedInitializer == null) {
 			final converted = currentCallableFunction.local(name, operand, rendered);
@@ -1037,9 +1048,12 @@ class EmitterStage {
 	static function exprToOcamlString(e:HxExpr, ?tyByIdent:Map<String, TyType>, ?arityByIdent:Map<String, Int>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
 		// Preserve checked scalar results before rendering them as text. Boolean
-		// bits must not become 1, and integer addition must not become concatenation.
+		// bits must not become 1, and numeric addition must not become concatenation.
 		final operand = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(e) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(e);
-		if (operand != null && (operand.type.getSemanticKey() == "primitive:Bool" || operand.type.getSemanticKey() == "primitive:Int"))
+		final operandKey = operand == null ? null : operand.type.getSemanticKey();
+		if (operandKey == "primitive:Bool"
+			|| operandKey == "primitive:Int"
+			|| (operandKey == "primitive:Float" && e.match(EBinop("+", _, _))))
 			return backend.ocaml.Stage3OcamlStringConversion.convert(operand.type,
 				exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 				currentFunctionLocalOcamlNames);
@@ -1112,14 +1126,30 @@ class EmitterStage {
 		}
 
 		var emitStringExpr:HxExpr->String = null;
+		// A `UInt` concatenation operand prints its unsigned value, as upstream's
+		// `UInt.toString` does. A bare `UInt` passed to `Sys.println(v:Dynamic)` is
+		// erased to its Int on upstream too, so only operands are converted.
+		function emitConcatOperand(operand:HxExpr):String {
+			final exact = stage3ExactExprType(operand);
+			if (!backend.ocaml.Stage3OcamlStringConversion.isUnsigned(exact))
+				return emitStringExpr(operand);
+			return backend.ocaml.Stage3OcamlStringConversion.convert(exact,
+				exprToOcaml(operand, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				currentFunctionLocalOcamlNames);
+		}
 		emitStringExpr = function(expr:HxExpr):String {
+			final staticRead = stage3StoredStaticRead(expr);
+			if (staticRead != null)
+				return backend.ocaml.Stage3OcamlStringConversion.convert(staticRead.getType(),
+					exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+					currentFunctionLocalOcamlNames);
 			return switch (expr) {
 				case EString(v): escapeOcamlString(v);
 				case EEnumValue(name): escapeOcamlString(name);
 				// When an expression is demanded as a string (e.g. trace/println), treat `+` as
 				// string concatenation and lower it to OCaml's `^`.
 				case EBinop("+", a, b):
-					"(" + emitStringExpr(a) + " ^ " + emitStringExpr(b) + ")";
+					"(" + emitConcatOperand(a) + " ^ " + emitConcatOperand(b) + ")";
 				case ECall(EField(EIdent("Std"), "string"), [arg]):
 					// String interpolation lowering uses `Std.string(...)` to force stringification.
 					//
@@ -1837,7 +1867,9 @@ class EmitterStage {
 		function ctorArgToOcaml(a:HxExpr):String {
 			return switch (a) {
 				case EIdent(name)
-					if (stage3HasTyIdent(name, tyByIdent) || stage3HasStmtValueIdent(name) || stage3HasLocalValueIdent(name) || isMutableLocalRefIdent(name)):
+					if (stage3StoredStaticRead(a) == null
+						&& (stage3HasTyIdent(name, tyByIdent) || stage3HasStmtValueIdent(name) || stage3HasLocalValueIdent(name)
+							|| isMutableLocalRefIdent(name))):
 					ocamlReadValueIdent(name);
 				case _:
 					exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
@@ -1934,6 +1966,28 @@ class EmitterStage {
 			throw "stage3 emitter: new "
 				+ construction.getConstructedType().getDisplay()
 				+ "() constructs an abstract whose constructor this request does not emit, so it has no native value";
+	}
+
+	/**
+		Convert one rendered call operand to the carrier of the parameter it was aligned to.
+
+		Typing records each call operand with its own type and its parameter type
+		(`TypedBackendCallArgument`). A `Null<Int>` or `Null<Float>`
+		value lives in a nullable carrier (`Obj.t`), while a concrete `Int` parameter
+		takes a native `int`. Ordinary calls already convert at that boundary in
+		`renderCallArgForSignature`; native call adapters (standard static calls,
+		Array calls) use this same conversion for their operands. A null value passed
+		to a concrete parameter throws the Haxe "Null Access" error from
+		`HxRuntime.nullable_int_unwrap` and its siblings. An operand without typing
+		facts, or one whose parameter is open (a type parameter or Dynamic), is
+		returned unchanged.
+	**/
+	static function exactCallArgumentValue(value:HxExpr, rendered:String):String {
+		final argument = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(value) : currentTypedFunction != null ? currentTypedFunction.findCallArgument(value) : null;
+		if (!backend.ocaml.Stage3OcamlNullablePrimitive.isCarrierBoundary(argument))
+			return rendered;
+		final converted = backend.ocaml.Stage3OcamlNullablePrimitive.callArgument(argument, rendered);
+		return converted == null ? rendered : converted;
 	}
 
 	/** A `Map<K, V>` literal in a portable executable body, with its typed arrow entries. */
@@ -2158,6 +2212,11 @@ class EmitterStage {
 			case EArrayAccess(_, _):
 				final indexed = arrayAccess(expr);
 				indexed == null ? null : indexed.resultType;
+			// Every `this` in one function has the same type; inside an abstract's
+			// method it is the underlying type (Int for `abstract Score(Int)`).
+			case EThis: currentTypedInitializer == null && currentTypedFunction != null ? currentTypedFunction.getThisType() : null;
+			// `(local = value)` yields the value stored in the local, so it has the local's type.
+			case EBinop("=", EIdent(name), _): exactFunctionLocalType(name);
 			case ECast(_, _) | ECheckType(_, _):
 				final conversion = currentTypedInitializer != null ? currentTypedInitializer.findCast(expr) : currentTypedFunction == null ? null : currentTypedFunction.findCast(expr);
 				conversion == null ? null : conversion.getTargetType();
@@ -2170,6 +2229,59 @@ class EmitterStage {
 	static function stage3FieldOccurrenceType(expr:HxExpr):Null<TyType> {
 		final field = currentTypedInitializer != null ? currentTypedInitializer.findField(expr) : currentTypedFunction == null ? null : currentTypedFunction.findField(expr);
 		return field == null ? null : field.getType();
+	}
+
+	/** The exact typed field occurrence of `e` in the active body, or null. */
+	static function stage3FieldOccurrence(e:HxExpr):Null<TypedBackendFieldOccurrence>
+		return currentTypedInitializer != null ? currentTypedInitializer.findField(e) : currentTypedFunction == null ? null : currentTypedFunction.findField(e);
+
+	/** Split a typed static field write; `Stage3OcamlStaticStorage` owns its storage and value. */
+	static function stage3StaticFieldWriteParts(e:HxExpr):Null<backend.ocaml.Stage3OcamlStaticStorage.Stage3OcamlStaticWrite>
+		return currentClassStorage == null ? null : currentClassStorage.statics.split(e, stage3FieldOccurrence);
+
+	/** A read of a stored static field, which renderers that spell bare names must send through `exprToOcaml`. */
+	static function stage3StoredStaticRead(e:HxExpr):Null<TypedBackendFieldOccurrence>
+		return currentClassStorage == null ? null : currentClassStorage.statics.storedRead(e, stage3FieldOccurrence);
+
+	/** Render a typed static field write, or return null for any other expression. */
+	static function stage3StaticFieldWrite(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>,
+			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
+		final update = stage3StaticFieldWriteParts(e);
+		if (update == null)
+			return null;
+		final value = update.value;
+		final right = value == null ? null : stage3StaticOperand(update.operand, value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
+			moduleNameByPkgAndClass, callSigByCallee);
+		return currentClassStorage.statics.write(update, right, value == null ? null : stage3NullableNumericOperand(value), currentOcamlModuleName,
+			currentFunctionLocalOcamlNames);
+	}
+
+	/** Render the right operand of a static write in the representation its storage asks for. */
+	static function stage3StaticOperand(operand:backend.ocaml.Stage3OcamlStaticStorage.Stage3OcamlStaticOperand, value:HxExpr, ?arityByIdent:Map<String, Int>,
+			?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>, ?currentPackagePath:String,
+			?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
+		// A Float destination promotes an Int selected by the typer's fact for this operand,
+		// or by its shape when it has none; other values render as floats.
+		final exactKey = stage3ExactPrimitiveKey(value);
+		final promoted = operand == FloatValue && (exactKey == null ? stage3IsIntExpr(value, tyByIdent) : exactKey == "primitive:Int");
+		if (operand == FloatValue && !promoted)
+			return exprToOcamlAsFloatValueStage3(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+				callSigByCallee);
+		final rendered = exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+		return switch operand {
+			// `text += [1]` appends the value's Haxe string form, as `Std.string` would.
+			case StringAppend
+				if (exactKey != null
+					&& exactKey != "primitive:String"
+					&& !stage3ExactExprType(value).isUnknown()
+					&& !stage3ExactExprType(value).isUnresolved()):
+				backend.ocaml.Stage3OcamlStringConversion.convert(stage3ExactExprType(value), rendered, currentFunctionLocalOcamlNames);
+			case StringAppend:
+				localCompoundStringOperand(value, rendered, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+					callSigByCallee);
+			case FloatValue: "(float_of_int (" + rendered + "))";
+			case Plain: rendered;
+		};
 	}
 
 	/** Allocation and parent calls retain their original typed occurrence through emission. */
@@ -2199,8 +2311,21 @@ class EmitterStage {
 		return switch expr {
 			case EParenthesized(inner, _): localCompoundValueType(inner);
 			case EBinop(op, target = EIdent(name), _) if (isLocalCompoundValue(op, target)): exactFunctionLocalType(name);
-			case _: null;
+			case _: stage3StaticUpdateValueType(expr);
 		};
+	}
+
+	/**
+		The type of the value a static field compound assignment or `++`/`--` produces,
+		or null for any other expression. A compound update produces the stored value
+		(a nullable static's carrier); an increment produces the plain number.
+	**/
+	static function stage3StaticUpdateValueType(expr:HxExpr):Null<TyType> {
+		final update = expr.match(EBinop(_, _, _) | EUnop(_, _, _)) ? stage3StaticFieldWriteParts(expr) : null;
+		if (update == null || update.op == "=")
+			return null;
+		final type = update.target.getType();
+		return update.value == null ? TyAliasExpansion.revealNonNullable(type) : type;
 	}
 
 	/**
@@ -2265,9 +2390,10 @@ class EmitterStage {
 			case EField(inner, "high" | "low"):
 				stage3IsInt64Expr(inner, tyByIdent);
 			// Arithmetic unwraps a nullable Int operand, so its result is a concrete Int.
-			case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%"): (stage3IsIntExpr(a, tyByIdent)
-					|| stage3NullableNumericLocal(a) == "primitive:Int") && (stage3IsIntExpr(b, tyByIdent)
-					|| stage3NullableNumericLocal(b) == "primitive:Int");
+			// Haxe `/` always produces a Float, even for two Int operands.
+			case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*" || op == "%"): (stage3IsIntExpr(a, tyByIdent)
+					|| stage3NullableNumericOperand(a) == "primitive:Int") && (stage3IsIntExpr(b, tyByIdent)
+					|| stage3NullableNumericOperand(b) == "primitive:Int");
 			case ETernary(_cond, thenExpr, elseExpr): stage3IsIntExpr(thenExpr, tyByIdent) && stage3IsIntExpr(elseExpr, tyByIdent);
 			case _:
 				false;
@@ -2320,8 +2446,8 @@ class EmitterStage {
 			case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*"):
 				stage3IsFloatExpr(a, tyByIdent, callSigByCallee, staticImportByIdent)
 				|| stage3IsFloatExpr(b, tyByIdent, callSigByCallee, staticImportByIdent)
-				|| stage3NullableNumericLocal(a) == "primitive:Float"
-				|| stage3NullableNumericLocal(b) == "primitive:Float";
+				|| stage3NullableNumericOperand(a) == "primitive:Float"
+				|| stage3NullableNumericOperand(b) == "primitive:Float";
 			case ETernary(_cond, thenExpr, elseExpr): stage3IsFloatExpr(thenExpr, tyByIdent, callSigByCallee,
 					staticImportByIdent) && stage3IsFloatExpr(elseExpr, tyByIdent, callSigByCallee, staticImportByIdent);
 			case _:
@@ -2560,19 +2686,43 @@ class EmitterStage {
 	}
 
 	/**
-		Return the inner primitive key ("primitive:Int" or "primitive:Float") when
-		the expression reads an exact local whose declared type is nullable. Native
-		arithmetic unwraps such operands through the carrier contract; other
-		expression shapes keep their existing numeric classification.
+		The semantic key of the typer's recorded type for this exact operand, after
+		expanding typedefs, or null without a fact. Arithmetic uses it next to the
+		older shape-based checks, so an operand still selects Int or Float
+		operators when its spelling reveals nothing: `this` inside
+		`abstract Score(Int)`, or a call such as `Std.int(x)` that the Float
+		promotion must widen.
 	 */
-	static function stage3NullableNumericLocal(expr:HxExpr):Null<String> {
+	static function stage3ExactPrimitiveKey(expr:HxExpr):Null<String> {
+		final type = stage3ExactExprType(expr);
+		return type == null ? null : TyAliasExpansion.reveal(type).getSemanticKey();
+	}
+
+	/** The generated module and function being emitted, for emit-time error messages. */
+	static function stage3EmitLocation():String {
+		return (currentOcamlModuleName == null ? "<module>" : currentOcamlModuleName) + "." + (currentFunctionName == null ? "<init>" : currentFunctionName);
+	}
+
+	/**
+		Return the inner primitive key ("primitive:Int" or "primitive:Float") when
+		the typer recorded a nullable Int or Float type for this exact operand.
+
+		The operand can be any expression with a typed fact: a local, a field
+		read, an index, or a call result such as `s.charCodeAt(i)` or
+		`map.get(key)`. Each of these produces the nullable carrier, so native
+		arithmetic and ordered comparisons unwrap it through the checked carrier
+		contract (a null raises a catchable error). Earlier only locals were
+		recognized here, so `s.charCodeAt(0) + s.charCodeAt(1)` matched no
+		numeric case and became the `(Obj.magic 0)` placeholder.
+	 */
+	static function stage3NullableNumericOperand(expr:HxExpr):Null<String> {
 		return switch (expr) {
-			case EParenthesized(inner, _): stage3NullableNumericLocal(inner);
-			case EIdent(name): backend.ocaml.Stage3OcamlNullablePrimitive.numericInner(exactFunctionLocalType(name));
-			// A nullable local's compound value is the stored carrier.
+			case EParenthesized(inner, _): stage3NullableNumericOperand(inner);
+			// A nullable local's compound value is the stored carrier; other
+			// operators produce concrete values and have no recorded type here.
 			case EBinop(_, _, _): backend.ocaml.Stage3OcamlNullablePrimitive.numericInner(localCompoundValueType(expr));
 			case _:
-				null;
+				backend.ocaml.Stage3OcamlNullablePrimitive.numericInner(stage3ExactExprType(expr));
 		}
 	}
 
@@ -2650,6 +2800,12 @@ class EmitterStage {
 	static function exprToOcamlForConcatStage3(expr:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
 			?callSigByCallee:Map<String, EmitterCallSig>):String {
+		// A `UInt` operand prints its unsigned value, as upstream's `UInt.toString` does.
+		final exact = stage3ExactExprType(expr);
+		if (backend.ocaml.Stage3OcamlStringConversion.isUnsigned(exact))
+			return backend.ocaml.Stage3OcamlStringConversion.convert(exact,
+				exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				currentFunctionLocalOcamlNames);
 		// Best-effort: keep concatenation type-safe by stringifying obvious primitives.
 		return switch (expr) {
 			case EInt(_), EFloat(_), EBool(_), EIdent(_):
@@ -2660,7 +2816,9 @@ class EmitterStage {
 					|| stage3IsBoolExpr(expr, tyByIdent)):
 				exprToOcamlString(expr, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 			case _:
-				exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				final rendered = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				final converted = backend.ocaml.Stage3OcamlStringConversion.concatOperand(stage3ExactExprType(expr), rendered, currentFunctionLocalOcamlNames);
+				converted == null ? rendered : converted;
 		}
 	}
 
@@ -2749,6 +2907,9 @@ class EmitterStage {
 			case EUnop(op, fixity, inner) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
 				"(-.(" + exprToOcamlAsFloatValueStage3(inner, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 					callSigByCallee) + "))";
+			case EIdent(_) | EField(_, _) if (stage3ExactPrimitiveKey(expr) == "primitive:Int"):
+				"float_of_int (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+					callSigByCallee) + ")";
 			case EIdent(name) if (stage3TyForIdent(name, tyByIdent) == "Int"):
 				"float_of_int " + ocamlReadValueIdent(name);
 			case _ if (stage3IsDynamicExpr(expr, tyByIdent, callSigByCallee)):
@@ -2767,12 +2928,14 @@ class EmitterStage {
 			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
 		switch (e) {
 			case ECall(EField(EIdent("Math"), "abs"), [arg]):
+				final plain = exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				final converted = exactCallArgumentValue(arg, plain);
+				// A nullable operand is converted to the Float parameter it was aligned to.
+				if (converted != plain)
+					return "abs_float (" + converted + ")";
 				final absFn = stage3IsFloatExpr(arg, tyByIdent, callSigByCallee,
 					staticImportByIdent) ? "abs_float " : (stage3IsIntExpr(arg, tyByIdent) ? "abs " : "abs_float ");
-				return absFn
-					+ "("
-					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-					+ ")";
+				return absFn + "(" + plain + ")";
 			case ECall(EField(EIdent("Math"), "round"), [arg]):
 				return "(int_of_float (floor (("
 					+ exprToOcamlAsFloatValueStage3(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
@@ -3101,8 +3264,6 @@ class EmitterStage {
 					+ ") ("
 					+ digitsOcaml
 					+ ")";
-			case ECall(EField(EIdent("StringTools"), "replace"), [_s, _sub, _by]):
-				return escapeOcamlString("");
 			case ECall(EField(EIdent("Std"), "string"), [arg]):
 				return backend.ocaml.Stage3OcamlStringConversion.convert(callArgumentType(arg),
 					exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
@@ -3133,6 +3294,13 @@ class EmitterStage {
 				return "(Obj.magic 0)";
 			case ECall(EField(_obj, "isDirectory"), []):
 				return "false";
+			case ECall(EIdent("trace"), [arg]) if (backend.ocaml.Stage3OcamlStringConversion.isUnsigned(stage3ExactExprType(arg))):
+				// Upstream `trace` prints a `UInt` argument through `UInt.toString`, as its unsigned value.
+				return "print_endline ("
+					+ backend.ocaml.Stage3OcamlStringConversion.convert(stage3ExactExprType(arg),
+						exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+						currentFunctionLocalOcamlNames)
+					+ ")";
 			case ECall(EIdent("trace"), [arg]):
 				return "print_endline ("
 					+ exprToOcamlString(arg, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
@@ -3347,6 +3515,15 @@ class EmitterStage {
 		return owner == currentOcamlModuleName ? name : owner + "." + name;
 	}
 
+	/** The direct function that `super.method(...)` reaches for this ancestor declaration. */
+	static function superDeclarationReference(declaration:TyDeclarationInfo):String {
+		final owner = ocamlModuleNameFromTypePath(declaration.getOwner().getCanonicalName());
+		final method = currentClassStorage == null ? declaration.getSignature()
+			.getName() : currentClassStorage.virtuals.superCallTarget(declaration.getOwner().getCanonicalName(), declaration.getSignature().getName());
+		final name = ocamlModuleValueIdent(owner, method);
+		return owner == currentOcamlModuleName ? name : owner + "." + name;
+	}
+
 	/** Convert a direct method return through its typed owner when callback layout selection applies. */
 	static function callableDirectReturn(expression:HxExpr, rendered:String):String {
 		if (currentCallableFunction == null || currentTypedInitializer != null)
@@ -3387,6 +3564,7 @@ class EmitterStage {
 				lookup: currentTypedInitializer != null ? currentTypedInitializer.findCallableExpression : currentTypedFunction == null ? null : currentTypedFunction.findCallableExpression,
 				emit: value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 				reference: callableDeclarationReference,
+				superReference: superDeclarationReference,
 				names: currentFunctionLocalOcamlNames
 			});
 			if (generic != null)
@@ -3401,6 +3579,12 @@ class EmitterStage {
 				return rendered;
 		}
 		return exprToOcamlRaw(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+	}
+
+	/** The local catalog of the typed initializer or function being emitted, if any. */
+	static function currentLocalCatalog():Null<TypedBackendLocalCatalog> {
+		return
+			currentTypedInitializer != null ? currentTypedInitializer.getLocalCatalog() : currentTypedFunction == null ? null : currentTypedFunction.getLocalCatalog();
 	}
 
 	/** Callback plans consume exact projected occurrences before legacy call adaptation rebuilds them. */
@@ -3432,7 +3616,9 @@ class EmitterStage {
 				final facts = currentTypedInitializer != null ? currentTypedInitializer.findLambda(e) : currentTypedFunction == null ? null : currentTypedFunction.findLambda(e);
 				if (facts == null)
 					throw "OCaml block function requires its exact lambda facts";
-				final locals = currentTypedInitializer != null ? currentTypedInitializer.getLocalCatalog() : currentTypedFunction.getLocalCatalog();
+				final locals = currentLocalCatalog();
+				if (locals == null)
+					throw "OCaml block function requires its typed local catalog";
 				// A closure remains in its creator's lexical receiver context. Exact
 				// local bindings below refine this copy without dropping the receiver.
 				final hints = tyByIdent == null ? new Map<String, TyType>() : tyByIdent.copy();
@@ -3494,7 +3680,14 @@ class EmitterStage {
 				return arrayMethod;
 			final declaration = methodValue.getDeclaration();
 			final ownerModule = ocamlModuleNameFromTypePath(declaration.getOwner().getCanonicalName());
-			final methodName = ocamlModuleValueIdent(ownerModule, declaration.getSignature().getName());
+			// A method value binds the dispatcher of an overridden method, or its
+			// direct function when the receiver type proves that no override applies.
+			final receiverType = methodValue.getReceiverType().unwrapNull().getNominalIdentity();
+			final selectedMethod = currentClassStorage == null
+				|| declaration.getIsStatic() ? declaration.getSignature()
+					.getName() : currentClassStorage.virtuals.requireCallTarget(declaration.getOwner().getCanonicalName(),
+					declaration.getSignature().getName(), receiverType == null ? null : receiverType.getCanonicalName(), currentOcamlModuleName);
+			final methodName = ocamlModuleValueIdent(ownerModule, selectedMethod);
 			final qualified = ownerModule + "." + methodName;
 			return backend.ocaml.Stage3OcamlMethodValue.render({
 				occurrence: methodValue,
@@ -3516,8 +3709,7 @@ class EmitterStage {
 						callSigByCallee);
 				final argument = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(expression) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(expression);
 				// Nullable Int/Float/Bool arguments convert from the plain rendering, as in ordinary calls.
-				if (backend.ocaml.Stage3OcamlNullablePrimitive.innerPrimitive(actual) != null
-					|| backend.ocaml.Stage3OcamlNullablePrimitive.destinationCarrier(expected, expectedIsOptional) != null) {
+				if (backend.ocaml.Stage3OcamlNullablePrimitive.crossesBoundary(actual, expected, expectedIsOptional)) {
 					final nullableArgument = backend.ocaml.Stage3OcamlNullablePrimitive.convertArgument(actual, expected, expectedIsOptional,
 						exprToOcaml(expression, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
 					if (nullableArgument != null)
@@ -3548,8 +3740,21 @@ class EmitterStage {
 				return rendered;
 			requireNoUnownedAbstractConstruction(construction);
 		}
+		final staticWrite = stage3StaticFieldWrite(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+			callSigByCallee);
+		if (staticWrite != null)
+			return staticWrite;
 		if (currentClassStorage != null && (e.match(EField(_, _)) || e.match(EIdent(_)))) {
-			final field = currentTypedInitializer != null ? currentTypedInitializer.findField(e) : currentTypedFunction == null ? null : currentTypedFunction.findField(e);
+			final field = stage3FieldOccurrence(e);
+			final staticRead = field == null ? null : currentClassStorage.statics.read(field, currentOcamlModuleName);
+			if (staticRead != null)
+				return staticRead;
+			switch e {
+				case EField(receiver, name) if (backend.ocaml.Stage3OcamlInt64Words.isWordField(field)):
+					return backend.ocaml.Stage3OcamlInt64Words.read(name,
+						exprToOcaml(receiver, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
+				case _:
+			}
 			if (field != null) {
 				final rendered = currentClassStorage.read(field,
 					value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
@@ -3582,8 +3787,9 @@ class EmitterStage {
 		if (staticCall != null) {
 			final stdStaticCall = backend.ocaml.Stage3OcamlStdStaticCalls.render({
 				call: staticCall,
-				emit: value -> exprToOcaml(value, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
-					callSigByCalleeRaw),
+				emit: value -> exactCallArgumentValue(value,
+					exprToOcaml(value, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+						callSigByCalleeRaw)),
 				names: currentFunctionLocalOcamlNames
 			});
 			if (stdStaticCall != null)
@@ -3615,6 +3821,9 @@ class EmitterStage {
 					autoMetal: isPortableAutoMetalizedRegionActive(),
 					emit: value -> exprToOcaml(value, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
 						callSigByCalleeRaw),
+					argument: value -> exactCallArgumentValue(value,
+						exprToOcaml(value, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+							callSigByCalleeRaw)),
 					names: currentFunctionLocalOcamlNames,
 					mark: markPortableAutoMetalizedLoweringUse
 				});
@@ -3644,6 +3853,16 @@ class EmitterStage {
 			if (currentClassStorage != null)
 				currentClassStorage.interfaces.requireCall(exactCall.owner, exactCall.method);
 			final ownerModule = ocamlModuleNameFromTypePath(exactCall.owner);
+			// An overridden method's own name is its dispatcher. A super call, or a
+			// call whose receiver type no override can reach, names the direct function.
+			final virtualCall = currentClassStorage == null ? null : backend.ocaml.Stage3OcamlVirtualCalls.select({
+				call: exactCall,
+				occurrence: currentTypedInitializer != null ? currentTypedInitializer.findInstanceCall(e) : currentTypedFunction == null ? null : currentTypedFunction.findInstanceCall(e),
+				virtuals: currentClassStorage.virtuals,
+				currentModule: currentOcamlModuleName
+			});
+			final receiver = virtualCall == null ? exactCall.receiver : virtualCall.receiver;
+			final method = virtualCall == null ? exactCall.method : virtualCall.method;
 			if (ownerModule.length > 0 && ownerModule != currentOcamlModuleName) {
 				final ownerParts = exactCall.owner.split(".");
 				var ownerExpression:HxExpr = EIdent(ownerParts[0]);
@@ -3651,7 +3870,7 @@ class EmitterStage {
 					ownerExpression = EField(ownerExpression, ownerParts[partIndex]);
 				// Keep the typed owner and explicit receiver together through call
 				// planning. Rebuilding receiver.method would rediscover it by name.
-				e = ECall(EField(ownerExpression, exactCall.method), [exactCall.receiver].concat(exactCall.arguments));
+				e = ECall(EField(ownerExpression, method), [receiver].concat(exactCall.arguments));
 			} else {
 				return exprToOcaml(TypedExactCallSource.ordinaryInstanceCall(exactCall), arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw,
 					currentPackagePath, moduleNameByPkgAndClassRaw, callSigByCalleeRaw);
@@ -3717,8 +3936,9 @@ class EmitterStage {
 				// If we are outside that context, conservatively collapse to poison.
 				stage3HasThisBinding(tyByIdentRaw) ? "this_" : "(Obj.magic 0)";
 			case ESuper:
-				// Stage 3 bring-up: no class hierarchy semantics yet.
-				"(Obj.magic 0)";
+				// `super.method(...)` calls and `super(...)` constructor calls are selected
+				// before this point. Any other use of `super` has no native lowering.
+				throw "stage3 emitter: super is supported only in super(...) and super.method(...) calls (haxe_ocaml-37rs6)";
 			case ENull:
 				// Stage 3 bring-up: represent `null` as the runtime sentinel and cast it as needed.
 				"(Obj.magic HxRuntime.hx_null)";
@@ -3798,7 +4018,8 @@ class EmitterStage {
 						|| argIndex < 0
 						|| argIndex >= signature.paramTypeHints.length ? "" : signature.paramTypeHints[argIndex];
 					final isReceiver = signature != null && signature.needsReceiver && argIndex == 0;
-					final argument = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(arg) : currentTypedFunction != null ? currentTypedFunction.findCallArgument(arg) : null;
+					// Every parsed `null` is one shared value, so its identity-keyed fact may belong to another call.
+					final argument = arg.match(ENull) ? null : currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(arg) : currentTypedFunction != null ? currentTypedFunction.findCallArgument(arg) : null;
 					// A nullable Int/Float/Bool argument is unwrapped from its plain rendering
 					// before any Float or Int64 parameter coercion could read the carrier.
 					if (!isReceiver && backend.ocaml.Stage3OcamlNullablePrimitive.isCarrierBoundary(argument)) {
@@ -3808,8 +4029,8 @@ class EmitterStage {
 							return converted;
 					}
 					final rendered = switch (arg) {
-						case ENull:
-							exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+						case ENull: backend.ocaml.Stage3OcamlNullablePrimitive.nullLiteralForCall(signature, argIndex, hint,
+								exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
 						case _ if (stage3IsFloatParamHint(hint)):
 							exprToOcamlAsFloatValueStage3(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee);
@@ -4668,7 +4889,7 @@ class EmitterStage {
 				if (op == HxUnaryOperator.Increment || op == HxUnaryOperator.Decrement) {
 					switch (expr) {
 						case EIdent(name) if (isMutableLocalRefIdent(name)):
-							final carrier = stage3NullableNumericLocal(expr);
+							final carrier = stage3NullableNumericOperand(expr);
 							final exact = exactFunctionLocalType(name);
 							final kind = if (stage3IsInt64Expr(expr, tyByIdentRaw)) {
 								EmitterNumericUpdate.EmitterNumericUpdateKind.Int64Step;
@@ -4714,7 +4935,17 @@ class EmitterStage {
 							// Defaulting unknown expressions to float (`-.`) can break integer call sites
 							// (e.g. `addSuccesses(-x)` where `x` is currently lowered through Obj.magic).
 							final renderedExpr = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
-							if (forceFloatUnop || stage3IsFloatExpr(expr, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)) {
+							// A nullable operand (`-s.charCodeAt(i)`) is read through the checked
+							// unwrap, so a null raises instead of negating the sentinel's bits.
+							final nullableOperand = stage3NullableNumericOperand(expr);
+							final operandKey = stage3ExactPrimitiveKey(expr);
+							if (nullableOperand == "primitive:Int") {
+								"(HxInt.neg (" + backend.ocaml.Stage3OcamlNullablePrimitive.unwrap(nullableOperand, renderedExpr) + "))";
+							} else if (nullableOperand == "primitive:Float") {
+								"(-.(" + backend.ocaml.Stage3OcamlNullablePrimitive.unwrap(nullableOperand, renderedExpr) + "))";
+							} else if (forceFloatUnop
+								|| operandKey == "primitive:Float"
+								|| stage3IsFloatExpr(expr, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)) {
 								"(-.(" + renderedExpr + "))";
 							} else if (stage3IsIntExpr(expr, tyByIdentRaw)) {
 								"(HxInt.neg (" + renderedExpr + "))";
@@ -4785,8 +5016,8 @@ class EmitterStage {
 				final rb = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 				// Nullable Int/Float locals carry Obj.t; arithmetic reads them through the
 				// checked unwrap while equality keeps the carrier (see Stage3OcamlNullablePrimitive).
-				final nullableLeft = stage3NullableNumericLocal(a);
-				final nullableRight = stage3NullableNumericLocal(b);
+				final nullableLeft = stage3NullableNumericOperand(a);
+				final nullableRight = stage3NullableNumericOperand(b);
 				final laInt = nullableLeft == "primitive:Int" ? backend.ocaml.Stage3OcamlNullablePrimitive.unwrap(nullableLeft, la) : la;
 				final rbInt = nullableRight == "primitive:Int" ? backend.ocaml.Stage3OcamlNullablePrimitive.unwrap(nullableRight, rb) : rb;
 				final nullableEquality = (equality == null || (op != "==" && op != "!=")) ? null : backend.ocaml.Stage3OcamlNullablePrimitive.equality(equality,
@@ -4813,17 +5044,26 @@ class EmitterStage {
 						case EUnop(op, fixity, inner) if (op == HxUnaryOperator.Negate && fixity == HxUnaryFixity.Prefix):
 							// Promote negative int literals/expressions to float too.
 							"(-.(" + exprToOcamlAsFloat(inner) + "))";
-						case EIdent(_) | EParenthesized(_, _) | EBinop(_, _, _) if (stage3NullableNumericLocal(e) != null):
-							final inner = stage3NullableNumericLocal(e);
+						case _ if (stage3NullableNumericOperand(e) != null):
+							final inner = stage3NullableNumericOperand(e);
 							final unwrapped = backend.ocaml.Stage3OcamlNullablePrimitive.unwrap(inner,
 								exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee));
 							inner == "primitive:Int" ? "float_of_int (" + unwrapped + ")" : unwrapped;
+						// The recorded Int type that selected Float arithmetic also selects the
+						// widening, so `Std.int(x) + 1.5` and `s.indexOf(t) + 0.5` stay well typed.
+						case _ if (stage3ExactPrimitiveKey(e) == "primitive:Int"):
+							"float_of_int (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee) + ")";
 						case _ if (isLocalCompoundValueOf(e, "primitive:Int")):
 							"float_of_int (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee) + ")";
 						case EIdent(name) if (stage3TyForIdent(name, tyByIdentRaw) == "Int"):
 							"float_of_int " + ocamlReadValueIdent(name);
 						case EField(_obj, "length"):
+							"float_of_int (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee) + ")";
+						// Int arithmetic such as `counter * 2` in `counter * 2 / 3` renders an OCaml int.
+						case _ if (stage3IsIntExpr(e, tyByIdentRaw)):
 							"float_of_int (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee) + ")";
 						case _:
@@ -4939,6 +5179,8 @@ class EmitterStage {
 									callSigByCallee);
 								final rhsCode = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 									callSigByCallee);
+								if (backend.ocaml.Stage3OcamlInt64Words.isWordField(stage3FieldOccurrence(a)))
+									return backend.ocaml.Stage3OcamlInt64Words.write(field, objCode, rhsCode, currentFunctionLocalOcamlNames);
 								"(let __hx_obj = ("
 								+ objCode
 								+ ") in let __hx_v = ("
@@ -4946,6 +5188,14 @@ class EmitterStage {
 								+ ") in (HxAnon.set (Obj.repr __hx_obj) "
 								+ escapeOcamlString(field)
 								+ " (Obj.repr __hx_v); __hx_v))";
+							// A local assignment used as a value, such as the `this = clamp(this)`
+							// writeback of an inlined abstract increment, stores and yields its value.
+							case EIdent(name) if (isMutableLocalRefIdent(name) && exactFunctionLocalType(name) != null):
+								final rhsCode = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+									callSigByCallee);
+								backend.ocaml.Stage3OcamlLocalStorage.assignValue(requireOcamlFunctionLocalValueIdent(name),
+									localAssignmentStoredValue(name, exactFunctionLocalType(name).toString(), b, rhsCode, tyByIdentRaw),
+									currentFunctionLocalOcamlNames);
 							case _:
 								"(Obj.magic 0)";
 						}
@@ -4966,11 +5216,17 @@ class EmitterStage {
 							// - Otherwise, collapse to bring-up poison to avoid type errors for abstract/operator-
 							//   overloaded cases (e.g. upstream Int64 tests).
 							final aIsF = stage3IsFloatExpr(a, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)
-								|| nullableLeft == "primitive:Float";
+								|| nullableLeft == "primitive:Float"
+								|| stage3ExactPrimitiveKey(a) == "primitive:Float";
 							final bIsF = stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)
-								|| nullableRight == "primitive:Float";
-							final aIsI = stage3IsIntExpr(a, tyByIdentRaw) || nullableLeft == "primitive:Int";
-							final bIsI = stage3IsIntExpr(b, tyByIdentRaw) || nullableRight == "primitive:Int";
+								|| nullableRight == "primitive:Float"
+								|| stage3ExactPrimitiveKey(b) == "primitive:Float";
+							final aIsI = stage3IsIntExpr(a, tyByIdentRaw)
+								|| nullableLeft == "primitive:Int"
+								|| stage3ExactPrimitiveKey(a) == "primitive:Int";
+							final bIsI = stage3IsIntExpr(b, tyByIdentRaw)
+								|| nullableRight == "primitive:Int"
+								|| stage3ExactPrimitiveKey(b) == "primitive:Int";
 							final hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI;
 							final allowMetalFallback = metalNumeric
 								&& hasKnownNumericSide
@@ -4979,7 +5235,9 @@ class EmitterStage {
 							if (allowMetalFallback && portableAutoMetalizedRegion && !isMetalProfileActive())
 								markPortableAutoMetalizedLoweringUse("numeric_division_fallback");
 							final allowNumericDivision = (aIsF || bIsF) || (aIsI && bIsI) || allowMetalFallback;
-							allowNumericDivision ? "((" + exprToOcamlAsFloat(a) + ") /. (" + exprToOcamlAsFloat(b) + "))" : "(Obj.magic 0)";
+							allowNumericDivision ? "((" + exprToOcamlAsFloat(a) + ") /. (" + exprToOcamlAsFloat(b) +
+							"))" : backend.ocaml.Stage3OcamlArithmeticOperands.unclassified(stage3EmitLocation(), op, stage3ExactExprType(a),
+									stage3ExactExprType(b));
 						}
 					case "+" | "-" | "*" | "%":
 						if (stage3IsInt64Expr(a, tyByIdentRaw) || stage3IsInt64Expr(b, tyByIdentRaw)) {
@@ -4997,11 +5255,17 @@ class EmitterStage {
 							// - if both sides look like ints, use OCaml int operators,
 							// - otherwise, collapse to bring-up poison to avoid type errors.
 							final aIsF = stage3IsFloatExpr(a, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)
-								|| nullableLeft == "primitive:Float";
+								|| nullableLeft == "primitive:Float"
+								|| stage3ExactPrimitiveKey(a) == "primitive:Float";
 							final bIsF = stage3IsFloatExpr(b, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw)
-								|| nullableRight == "primitive:Float";
-							final aIsI = stage3IsIntExpr(a, tyByIdentRaw) || nullableLeft == "primitive:Int";
-							final bIsI = stage3IsIntExpr(b, tyByIdentRaw) || nullableRight == "primitive:Int";
+								|| nullableRight == "primitive:Float"
+								|| stage3ExactPrimitiveKey(b) == "primitive:Float";
+							final aIsI = stage3IsIntExpr(a, tyByIdentRaw)
+								|| nullableLeft == "primitive:Int"
+								|| stage3ExactPrimitiveKey(a) == "primitive:Int";
+							final bIsI = stage3IsIntExpr(b, tyByIdentRaw)
+								|| nullableRight == "primitive:Int"
+								|| stage3ExactPrimitiveKey(b) == "primitive:Int";
 							final hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI;
 							// Portable lane parity: when one side is confidently numeric and the other side
 							// is an expression the current heuristic cannot classify, prefer numeric lowering
@@ -5024,7 +5288,8 @@ class EmitterStage {
 								} else if (allowNumericFallback) {
 									intArithmetic("%");
 								} else {
-									"(Obj.magic 0)";
+									backend.ocaml.Stage3OcamlArithmeticOperands.unclassified(stage3EmitLocation(), op, stage3ExactExprType(a),
+										stage3ExactExprType(b));
 								}
 							} else if ((aIsF || bIsF) && canFloat) {
 								final fop = switch (op) {
@@ -5043,7 +5308,8 @@ class EmitterStage {
 							} else if (allowNumericFallback) {
 								intArithmetic(op);
 							} else {
-								"(Obj.magic 0)";
+								backend.ocaml.Stage3OcamlArithmeticOperands.unclassified(stage3EmitLocation(), op, stage3ExactExprType(a),
+									stage3ExactExprType(b));
 							}
 						}
 					case "==" | "!=" if (nullableEquality != null):
@@ -5348,6 +5614,9 @@ class EmitterStage {
 		//   upstream-shaped code without having to implement full typing/emission yet.
 		// - it is *not* semantically correct; it is only for bring-up.
 		function hasBringupPoison(e:HxExpr):Bool {
+			// A typed static field write is rendered by its storage owner or fails at emit time.
+			if (stage3StaticFieldWriteParts(e) != null)
+				return false;
 			if (TypedRuntimeTypeSource.isMarker(e)) {
 				if (currentRuntimeTypes == null)
 					throw "OCaml runtime type validation requires its exact program plan";
@@ -5395,7 +5664,8 @@ class EmitterStage {
 				return hasBringupPoison(TypedExactStaticCallSource.ordinaryCall(staticCall));
 			final exactCall = TypedExactCallSource.decodeInstance(e);
 			if (exactCall != null) {
-				if (hasBringupPoison(exactCall.receiver))
+				// `super.method()` is a direct call on this instance; Stage3OcamlVirtualCalls selects it.
+				if (!(exactCall.receiver.match(ESuper) && hasThisBinding()) && hasBringupPoison(exactCall.receiver))
 					return true;
 				for (argument in exactCall.arguments)
 					if (hasBringupPoison(argument))
@@ -5414,7 +5684,9 @@ class EmitterStage {
 					// Instance context only: static functions still collapse `this` to poison.
 					!hasThisBinding();
 				case ESuper:
-					true;
+					// Supported super calls are selected above. Other uses reach the
+					// named emit error instead of collapsing to a placeholder.
+					!hasThisBinding();
 				case ENew(typePath, args):
 					// Stage 3 bring-up: allow a tiny subset of allocations that we can lower
 					// deterministically in `exprToOcaml`.
@@ -5461,6 +5733,9 @@ class EmitterStage {
 						case "=":
 							switch (a) {
 								case EField(obj, _): hasBringupPoison(obj) || hasBringupPoison(b);
+								// `exprToOcaml` stores a value-position write to a typed mutable local.
+								case EIdent(name) if (isMutableLocalRefIdent(name) && exactFunctionLocalType(name) != null):
+									hasBringupPoison(b);
 								case EIdent(_):
 									// A lowered expression can write an implicit receiver field.
 									// Require its exact storage declaration before admitting the write.
@@ -5469,8 +5744,11 @@ class EmitterStage {
 									|| selected.getReceiver() != ImplicitOwner
 									|| selected.getField().getIsStatic()
 									|| selected.getField().getIsFinal()
-									|| !selected.getField().getHasStorage()
-									|| (selected.getField().getPropertySet() != "" && selected.getField().getPropertySet() != "default")
+									|| !selected.getField().getHasStorage() // Inside a property's own accessor, typing marks the write as
+										// physical storage access (`@:isVar`), not a setter call.
+									|| (selected.getField().getPropertySet() != ""
+										&& selected.getField().getPropertySet() != "default"
+										&& !selected.getHasPropertyStorageAccess())
 									|| hasBringupPoison(b);
 								case _:
 									true;
@@ -5664,6 +5942,9 @@ class EmitterStage {
 				return switch (e) {
 					case EInt(v):
 						"float_of_int " + Std.string(v);
+					case EIdent(_) | EField(_, _) if (stage3ExactPrimitiveKey(e) == "primitive:Int"):
+						"float_of_int (" + exprToOcaml(e, arityByIdentRaw, emissionTyByIdent, staticImportByIdentRaw, currentPackagePath,
+							moduleNameByPkgAndClassRaw, callSigByCalleeRaw) + ")";
 					case EIdent(name) if (tyForIdent(name) == "Int"):
 						"float_of_int " + ocamlReadValueIdent(name);
 					case EField(_, field) if (field == "iNF" || field == "INF" || field == "inf" || field == "nAN" || field == "NAN" || field == "NaN"):
@@ -5814,158 +6095,6 @@ class EmitterStage {
 				collectAssignedNamesInExprRec(expr, out);
 			case SReturn(expr, _pos):
 				collectAssignedNamesInExprRec(expr, out);
-			case _:
-		}
-	}
-
-	static function scanExprForPreludeDepsRec(e:Null<HxExpr>, locals:Map<String, Bool>, calls:Map<String, Bool>, idents:Map<String, Bool>):Void {
-		if (e == null)
-			return;
-		final enumCall = TypedExactEnumConstructorSource.decode(e);
-		if (enumCall != null) {
-			for (argument in enumCall.arguments)
-				scanExprForPreludeDepsRec(argument, locals, calls, idents);
-			return;
-		}
-		final exactCall = TypedExactStaticCallSource.decode(e);
-		if (exactCall != null) {
-			scanExprForPreludeDepsRec(TypedExactStaticCallSource.ordinaryCall(exactCall), locals, calls, idents);
-			return;
-		}
-		switch (e) {
-			case EDiscardThen(effect, continuation):
-				scanExprForPreludeDepsRec(effect, locals, calls, idents);
-				scanExprForPreludeDepsRec(continuation, locals, calls, idents);
-			case EIdent(name):
-				if (name != null && name.length > 0 && !locals.exists(name))
-					idents.set(name, true);
-			case EField(obj, _):
-				scanExprForPreludeDepsRec(obj, locals, calls, idents);
-			case ECall(callee, args):
-				switch (callee) {
-					case EIdent(name):
-						if (name != null && name.length > 0 && !locals.exists(name)) calls.set(name, true);
-					case EField(_obj, field):
-						if (field != null && field.length > 0 && !locals.exists(field)) calls.set(field, true);
-					case _:
-				}
-				scanExprForPreludeDepsRec(callee, locals, calls, idents);
-				if (args != null)
-					for (a in args)
-						scanExprForPreludeDepsRec(a, locals, calls, idents);
-			case ELambda(args, body):
-				final nestedLocals:Map<String, Bool> = new Map();
-				for (k in locals.keys())
-					nestedLocals.set(k, true);
-				if (args != null)
-					for (a in args)
-						if (a != null && a.length > 0)
-							nestedLocals.set(a, true);
-				scanExprForPreludeDepsRec(body, nestedLocals, calls, idents);
-			case ETernary(cond, thenExpr, elseExpr):
-				scanExprForPreludeDepsRec(cond, locals, calls, idents);
-				scanExprForPreludeDepsRec(thenExpr, locals, calls, idents);
-				scanExprForPreludeDepsRec(elseExpr, locals, calls, idents);
-			case EAnon(_, values):
-				if (values != null)
-					for (v in values)
-						scanExprForPreludeDepsRec(v, locals, calls, idents);
-			case ESwitch(scrutinee, _patterns, exprs):
-				scanExprForPreludeDepsRec(scrutinee, locals, calls, idents);
-				if (exprs != null)
-					for (branchExpr in exprs)
-						scanExprForPreludeDepsRec(branchExpr, locals, calls, idents);
-			case ENew(_, args):
-				if (args != null)
-					for (a in args)
-						scanExprForPreludeDepsRec(a, locals, calls, idents);
-			case EUnop(_, _, expr):
-				scanExprForPreludeDepsRec(expr, locals, calls, idents);
-			case EBinop(_, left, right):
-				scanExprForPreludeDepsRec(left, locals, calls, idents);
-				scanExprForPreludeDepsRec(right, locals, calls, idents);
-			case EArrayComprehension(name, iterable, guardExpr, yieldExpr):
-				final nestedLocals:Map<String, Bool> = new Map();
-				for (k in locals.keys())
-					nestedLocals.set(k, true);
-				if (name != null && name.length > 0)
-					nestedLocals.set(name, true);
-				scanExprForPreludeDepsRec(iterable, locals, calls, idents);
-				if (guardExpr != null)
-					scanExprForPreludeDepsRec(guardExpr, nestedLocals, calls, idents);
-				scanExprForPreludeDepsRec(yieldExpr, nestedLocals, calls, idents);
-			case EArrayDecl(values):
-				if (values != null)
-					for (v in values)
-						scanExprForPreludeDepsRec(v, locals, calls, idents);
-			case EArrayAccess(array, index):
-				scanExprForPreludeDepsRec(array, locals, calls, idents);
-				scanExprForPreludeDepsRec(index, locals, calls, idents);
-			case ERange(start, end):
-				scanExprForPreludeDepsRec(start, locals, calls, idents);
-				scanExprForPreludeDepsRec(end, locals, calls, idents);
-			case ECast(expr, _) | ECheckType(expr, _):
-				scanExprForPreludeDepsRec(expr, locals, calls, idents);
-			case EParenthesized(expr, _) | EUntyped(expr):
-				scanExprForPreludeDepsRec(expr, locals, calls, idents);
-			case EVars(values) | ELoweredControl(_, _, values, _):
-				for (value in values)
-					scanExprForPreludeDepsRec(value, locals, calls, idents);
-			case EVariableDeclaration(name, _, value, _, _, _):
-				scanExprForPreludeDepsRec(value, locals, calls, idents);
-				locals.set(name, true);
-			case _:
-		}
-	}
-
-	static function scanStmtForPreludeDepsRec(s:HxStmt, locals:Map<String, Bool>, calls:Map<String, Bool>, idents:Map<String, Bool>):Void {
-		if (s == null)
-			return;
-		switch (s) {
-			case SBlock(stmts, _):
-				if (stmts != null)
-					for (ss in stmts)
-						scanStmtForPreludeDepsRec(ss, locals, calls, idents);
-			case SVar(_name, _typeHint, init, _):
-				scanExprForPreludeDepsRec(init, locals, calls, idents);
-			case SIf(cond, thenBranch, elseBranch, _):
-				scanExprForPreludeDepsRec(cond, locals, calls, idents);
-				scanStmtForPreludeDepsRec(thenBranch, locals, calls, idents);
-				if (elseBranch != null)
-					scanStmtForPreludeDepsRec(elseBranch, locals, calls, idents);
-			case SWhile(cond, body, _):
-				scanExprForPreludeDepsRec(cond, locals, calls, idents);
-				scanStmtForPreludeDepsRec(body, locals, calls, idents);
-			case SDoWhile(body, cond, _):
-				scanStmtForPreludeDepsRec(body, locals, calls, idents);
-				scanExprForPreludeDepsRec(cond, locals, calls, idents);
-			case SForIn(_name, iterable, body, _):
-				scanExprForPreludeDepsRec(iterable, locals, calls, idents);
-				scanStmtForPreludeDepsRec(body, locals, calls, idents);
-			case SForKeyValue(keyName, valueName, iterable, body, _):
-				final nestedLocals:Map<String, Bool> = new Map();
-				for (k in locals.keys())
-					nestedLocals.set(k, true);
-				if (keyName != null && keyName.length > 0)
-					nestedLocals.set(keyName, true);
-				if (valueName != null && valueName.length > 0)
-					nestedLocals.set(valueName, true);
-				scanExprForPreludeDepsRec(iterable, locals, calls, idents);
-				scanStmtForPreludeDepsRec(body, nestedLocals, calls, idents);
-			case SGuardedSwitch(scrutinee, enabled, _, bodies, _):
-				scanExprForPreludeDepsRec(scrutinee, locals, calls, idents);
-				scanExprForPreludeDepsRec(enabled, locals, calls, idents);
-				for (body in bodies)
-					scanStmtForPreludeDepsRec(body, locals, calls, idents);
-			case SSwitch(scrutinee, _patterns, bodies, _):
-				scanExprForPreludeDepsRec(scrutinee, locals, calls, idents);
-				if (bodies != null)
-					for (body in bodies)
-						scanStmtForPreludeDepsRec(body, locals, calls, idents);
-			case SReturn(expr, _):
-				scanExprForPreludeDepsRec(expr, locals, calls, idents);
-			case SExpr(expr, _):
-				scanExprForPreludeDepsRec(expr, locals, calls, idents);
 			case _:
 		}
 	}
@@ -6515,11 +6644,10 @@ class EmitterStage {
 			}
 			var rhsCode:Null<String> = switch (op) {
 				case "=":
-					localStorageValue(name, rhs,
-						stage3Int64CarrierValue(lhsTy, rhs,
-							returnExprToOcaml(rhs, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
-								moduleNameByPkgAndClass, callSigByCallee),
-							cast tyCtx));
+					localAssignmentStoredValue(name, lhsTy, rhs,
+						returnExprToOcaml(rhs, allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent, currentPackagePath,
+							moduleNameByPkgAndClass, callSigByCallee),
+						cast tyCtx);
 				case "+=":
 					returnExprToOcaml(EBinop("+", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, erasedReturnTyCtx, staticImportByIdent,
 						currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
@@ -6989,6 +7117,9 @@ class EmitterStage {
 					// Avoid emitting invalid OCaml for unsupported assignment lvalues while still
 					// allowing modeled instance-field assignment side effects.
 					switch (expr) {
+						case _ if (stage3StaticFieldWriteParts(expr) != null):
+							"ignore (" + exprToOcaml(expr, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee) + ")";
 						case EBinop(op, EIdent(name), rhs):
 							final isThisField = stage3HasThisBinding(cast tyCtx) && hasCurrentInstanceField(name) && !stage3HasTyIdent(name, cast tyCtx)
 								&& !isMutableLocalRefIdent(name);
@@ -7081,7 +7212,8 @@ class EmitterStage {
 					if (isMutableLocalRefIdent(name)) {
 						wrapStatement("let " + ident + " = ref (" + rhs + ") in (ignore " + ident + "; (", "))");
 					} else {
-						wrapStatement("let " + ident + " = " + rhs + " in (ignore " + ident + "; (", "))");
+						final keyword = backend.ocaml.Stage3OcamlRecursiveLocalFunction.bindingKeyword(name, init, currentLocalCatalog());
+						wrapStatement(keyword + ident + " = " + rhs + " in (ignore " + ident + "; (", "))");
 					}
 				case SIf(cond, thenBranch, elseBranch, _pos):
 					// Stage 3 bring-up: recognize and SSA-lower the common "null-coalescing assignment"
@@ -7934,14 +8066,6 @@ class EmitterStage {
 		return lines.length == 2 && lines[0] == placeholder && StringTools.startsWith(lines[1], "[@@@warning");
 	}
 
-	static function shouldEmitParsedStaticFields(moduleName:String):Bool {
-		if (StringTools.startsWith(moduleName, "Haxe_Int64"))
-			return false;
-		if (moduleName == "Haxe_ds_Vector")
-			return false;
-		return true;
-	}
-
 	/**
 		Retains the existing native DateTools duration overrides used by unit statics.
 		Removing partial-body emission does not change these numeric operations.
@@ -8470,6 +8594,12 @@ class EmitterStage {
 			final memberName = ocamlModuleValueIdent(modName, fnNameRaw);
 			final key0 = modName + "." + memberName;
 			globalCallSigByCallee.set(key0, sig0);
+			// A super call or an exact-type call names the direct function of an
+			// overridden method; it takes the same arguments as the dispatcher.
+			if (currentClassStorage.virtuals.dispatchesInModule(modName, fnNameRaw))
+				globalCallSigByCallee.set(modName
+					+ "."
+					+ ocamlModuleValueIdent(modName, backend.ocaml.Stage3OcamlVirtualDispatch.directName(fnNameRaw)), sig0);
 			final aliasShorts = aliasShortsByTarget.get(modName);
 			if (aliasShorts != null) {
 				for (short in aliasShorts)
@@ -8852,7 +8982,7 @@ class EmitterStage {
 					}
 					final parsedFields = HxClassDecl.getFields(emittedClass);
 					final instanceInitializers = classProjection.hasSemanticFacts() ? currentClassStorage.instanceInitializers(classProjection) : null;
-					final emitParsedStaticFields = shouldEmitParsedStaticFields(outputModuleName);
+					final emitParsedStaticFields = backend.ocaml.Stage3OcamlStaticStorage.emitsDeclaredStatics(outputModuleName);
 					final staticFieldTypeByName:Map<String, TyType> = new Map();
 					for (f in parsedFields) {
 						if (!emitParsedStaticFields)
@@ -8875,7 +9005,8 @@ class EmitterStage {
 					//   to reference a later `let rec` function group.
 					//
 					// How
-					// - Detect unqualified function calls used by static initializers.
+					// - Detect the methods static initializers call or read as values
+					//   (`backend.ocaml.OcamlPreludeReferences`), then follow those methods' references.
 					// - Emit a small "prelude" `let rec ... and ...` group for those helper functions
 					//   *before* emitting static `let` values.
 					//
@@ -8892,126 +9023,20 @@ class EmitterStage {
 							staticFieldNames.set(n, true);
 					}
 
+					// Method values count as well as calls: `map(shout)` needs `shout` before the static values.
+					final ownsMethod = (method:TypedBackendMethodOccurrence) -> ocamlModuleNameFromTypePath(method.getDeclaration()
+						.getOwner()
+						.getCanonicalName()) == outputModuleName;
 					final staticInitCalls:Map<String, Bool> = new Map();
-					// Use an explicit stack instead of a recursive local function.
-					//
-					// Why
-					// - This code runs inside `hxhx` itself, which is compiled by our OCaml backend.
-					// - Recursive local functions are a known source of instability during bring-up,
-					//   so we prefer an explicit worklist here.
-					final staticInitWorklist = new Array<HxExpr>();
 					for (f in parsedFields) {
-						if (!emitParsedStaticFields)
+						if (!emitParsedStaticFields || !HxFieldDecl.getIsStatic(f) || HxFieldDecl.getInit(f) == null)
 							continue;
-						if (!HxFieldDecl.getIsStatic(f))
-							continue;
-						final init = HxFieldDecl.getInit(f);
-						if (init != null)
-							staticInitWorklist.push(init);
-					}
-					while (staticInitWorklist.length > 0) {
-						final e = staticInitWorklist.pop();
-						if (e == null)
-							continue;
-						final enumCall = TypedExactEnumConstructorSource.decode(e);
-						if (enumCall != null) {
-							for (argument in enumCall.arguments)
-								staticInitWorklist.push(argument);
-							continue;
-						}
-						final exactCall = TypedExactStaticCallSource.decode(e);
-						if (exactCall != null) {
-							staticInitWorklist.push(TypedExactStaticCallSource.ordinaryCall(exactCall));
-							continue;
-						}
-						switch (e) {
-							case ECall(callee, args):
-								switch (callee) {
-									case EIdent(name):
-										if (name != null && name.length > 0) staticInitCalls.set(name, true);
-									case EField(_obj, field):
-										if (field != null && field.length > 0) staticInitCalls.set(field, true);
-									case _:
-								}
-								if (callee != null)
-									staticInitWorklist.push(callee);
-								if (args != null)
-									for (a in args)
-										if (a != null)
-											staticInitWorklist.push(a);
-							case EField(obj, _):
-								if (obj != null)
-									staticInitWorklist.push(obj);
-							case ELambda(_, body):
-								if (body != null)
-									staticInitWorklist.push(body);
-							case ETernary(cond, thenExpr, elseExpr):
-								if (cond != null)
-									staticInitWorklist.push(cond);
-								if (thenExpr != null)
-									staticInitWorklist.push(thenExpr);
-								if (elseExpr != null)
-									staticInitWorklist.push(elseExpr);
-							case EAnon(_, values):
-								if (values != null)
-									for (v in values)
-										if (v != null)
-											staticInitWorklist.push(v);
-							case ESwitch(scrutinee, _patterns, exprs):
-								if (scrutinee != null)
-									staticInitWorklist.push(scrutinee);
-								if (exprs != null)
-									for (branchExpr in exprs)
-										if (branchExpr != null)
-											staticInitWorklist.push(branchExpr);
-							case ENew(_, args):
-								if (args != null)
-									for (a in args)
-										if (a != null)
-											staticInitWorklist.push(a);
-							case EUnop(_, _, expr):
-								if (expr != null)
-									staticInitWorklist.push(expr);
-							case EBinop(_, left, right) | EDiscardThen(left, right):
-								if (left != null)
-									staticInitWorklist.push(left);
-								if (right != null)
-									staticInitWorklist.push(right);
-							case EArrayComprehension(_, iterable, guardExpr, yieldExpr):
-								if (iterable != null)
-									staticInitWorklist.push(iterable);
-								if (guardExpr != null)
-									staticInitWorklist.push(guardExpr);
-								if (yieldExpr != null)
-									staticInitWorklist.push(yieldExpr);
-							case EArrayDecl(values):
-								if (values != null)
-									for (v in values)
-										if (v != null)
-											staticInitWorklist.push(v);
-							case EArrayAccess(array, index):
-								if (array != null)
-									staticInitWorklist.push(array);
-								if (index != null)
-									staticInitWorklist.push(index);
-							case ERange(start, end):
-								if (start != null)
-									staticInitWorklist.push(start);
-								if (end != null)
-									staticInitWorklist.push(end);
-							case ECast(expr, _) | ECheckType(expr, _):
-								if (expr != null)
-									staticInitWorklist.push(expr);
-							case EParenthesized(expr, _) | EUntyped(expr):
-								if (expr != null)
-									staticInitWorklist.push(expr);
-							case EVars(values) | ELoweredControl(_, _, values, _):
-								for (value in values)
-									staticInitWorklist.push(value);
-							case EVariableDeclaration(_, _, value, _, _, _) if (value != null):
-								staticInitWorklist.push(value);
-							case _:
-						}
+						var initializer:Null<TypedBackendFieldInitializerProjection> = null;
+						for (candidate in classProjection.getFieldInitializers())
+							if (candidate.getDeclaration() == f)
+								initializer = candidate;
+						for (name in backend.ocaml.OcamlPreludeReferences.ofInitializer(HxFieldDecl.getInit(f), initializer, ownsMethod).calls.keys())
+							staticInitCalls.set(name, true);
 					}
 
 					final fnNames:Map<String, Bool> = new Map();
@@ -9058,13 +9083,10 @@ class EmitterStage {
 							if (instanceInitializers != null)
 								for (dependency in currentClassStorage.constructorDependencies(tf.getConstructorCatalog(), outputModuleName))
 									calls.set(dependency, true);
-							final locals:Map<String, Bool> = new Map();
-							for (local in tf.getLocalCatalog().getEntries())
-								locals.set(local.getProjectedName(), true);
-							final idents:Map<String, Bool> = new Map();
-							for (s in HxFunctionDecl.getBody(parsedFn))
-								scanStmtForPreludeDepsRec(s, locals, calls, idents);
-							for (n in idents.keys()) {
+							final references = backend.ocaml.OcamlPreludeReferences.ofFunction(tf, ownsMethod);
+							for (n in references.calls.keys())
+								calls.set(n, true);
+							for (n in references.idents.keys()) {
 								if (staticFieldNames.exists(n)) {
 									refsStatic = true;
 									break;
@@ -9356,6 +9378,19 @@ class EmitterStage {
 							final interfaceDispatcher = !isStaticFn
 								&& !HxFunctionDecl.getHasBody(parsedFn)
 								&& currentClassStorage.dispatchesInterfaceMethods(classProjection);
+							// A method that a subclass overrides keeps its body in a direct
+							// function and gets a dispatcher under its own name.
+							final virtualDispatcher = isStaticFn
+								|| !HxFunctionDecl.getHasBody(parsedFn) ? null : currentClassStorage.virtualDispatcher(classProjection, nameRaw, {
+									name: name,
+									head: ocamlArgs,
+									resultType: retTy,
+									arguments: [
+										for (argument in args)
+											requireOcamlFunctionLocalValueIdent(argument.getProjectedName())
+									],
+									quote: escapeOcamlString
+								});
 							var body = if (interfaceDispatcher) {
 								currentClassStorage.interfaces.dispatcherBody(nameRaw, [
 									for (argument in args)
@@ -9415,7 +9450,12 @@ class EmitterStage {
 							});
 
 							final kw = i == 0 && !includeInitializers ? "let rec" : "and";
-							out.push(kw + " " + name + " " + ocamlArgs + " : " + retTy + " = " + body);
+							final emittedName = virtualDispatcher == null ? name : ocamlValueIdent(backend.ocaml.Stage3OcamlVirtualDispatch.directName(nameRaw));
+							out.push(kw + " " + emittedName + " " + ocamlArgs + " : " + retTy + " = " + body);
+							if (virtualDispatcher != null) {
+								out.push("");
+								out.push(virtualDispatcher);
+							}
 							out.push("");
 							EmitterStageDebug.traceStage3Phase("emit_fn_done:" + outputModuleName + ":" + nameRaw);
 							currentFunctionName = previousFunctionName;
@@ -9454,11 +9494,14 @@ class EmitterStage {
 							staticTyByIdent.set(nameRaw, inferredType);
 						final init = HxFieldDecl.getInit(f);
 						installFieldLocalNames(classProjection, f);
-						final initOcaml = init == null ? "(Obj.magic 0)" : exprToOcaml(init, arityByName, staticTyByIdent, staticImportByIdent,
-							HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
+						final storedOperand = init == null
+							|| currentClassStorage == null ? null : currentClassStorage.statics.initializerOperand(outputModuleName, nameRaw, init);
+						final initOcaml = init == null ? null : stage3StaticOperand(storedOperand == null ? Plain : storedOperand, init, arityByName,
+							staticTyByIdent, staticImportByIdent, HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
 						currentFunctionLocalOcamlNames = null;
 						currentTypedInitializer = null;
-						out.push("let " + ocamlValueIdent(nameRaw) + " = " + initOcaml);
+						final stored = currentClassStorage == null ? null : currentClassStorage.statics.declaration(outputModuleName, nameRaw, initOcaml);
+						out.push(stored != null ? stored : "let " + ocamlValueIdent(nameRaw) + " = " + (initOcaml == null ? "(Obj.magic 0)" : initOcaml));
 						if (staticTyByIdent.get(nameRaw) == null)
 							staticTyByIdent.set(nameRaw, TyType.unknown());
 					}
@@ -9748,7 +9791,7 @@ class EmitterStage {
 					}
 
 					// After every method is defined, and before `main` can allocate an instance.
-					final methodTable = currentClassStorage.interfaceMethodTable(classProjection, outputModuleName, ocamlModuleValueIdent, escapeOcamlString);
+					final methodTable = currentClassStorage.methodTable(classProjection, outputModuleName, ocamlModuleValueIdent, escapeOcamlString);
 					if (methodTable != null) {
 						out.push(methodTable);
 						out.push("");
