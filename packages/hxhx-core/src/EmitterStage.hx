@@ -566,6 +566,7 @@ class EmitterStage {
 			|| (!destination.isDynamic()
 				&& destination.getSemanticKey() != "primitive:Bool"
 				&& TyAliasExpansion.reveal(destination).getSemanticKey() != "primitive:Float"
+				&& !TyFunctionConstraint.isFunctionConstraint(destination)
 				&& backend.ocaml.Stage3OcamlNullablePrimitive.innerPrimitive(destination) == null))
 			return rendered;
 		return backend.ocaml.Stage3OcamlLocalStorage.store(requireLocalStorageWrite(name, operand), rendered, currentFunctionLocalOcamlNames);

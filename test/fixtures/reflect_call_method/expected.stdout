@@ -17,4 +17,13 @@ listener text
 3
 1
 2
+1.5 2.5
+shout hey
+shout 7
+listen f
+a=1
+too many arguments rejected
+b=false
+b=true
+true false
 11 6 8

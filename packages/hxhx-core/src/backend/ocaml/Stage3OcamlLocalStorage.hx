@@ -12,6 +12,13 @@ package backend.ocaml;
 	Std.parseInt("7")`) is unwrapped from its carrier, and widened for Int.
  */
 function store(write:TypedBackendLocalWrite, rendered:String, names:Null<Stage3OcamlLocalNames>):String {
+	// A function stored as haxe.Constraints.Function is later called through
+	// the Dynamic convention.
+	if (TyFunctionConstraint.isFunctionConstraint(write.binding.getType())) {
+		final adapted = Stage3OcamlFunctionBoundary.adapt(write.sourceType, rendered, names);
+		if (adapted != null)
+			return adapted;
+	}
 	if (Stage3OcamlNullablePrimitive.innerPrimitive(write.binding.getType()) != null
 		|| (Stage3OcamlNumericWidening.isFloatDestination(write.binding.getType())
 			&& Stage3OcamlNullablePrimitive.innerPrimitive(write.sourceType) != null))

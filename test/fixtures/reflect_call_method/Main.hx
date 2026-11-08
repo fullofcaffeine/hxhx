@@ -11,6 +11,10 @@ class Holder {
 		return prefix + value + "x" + count;
 	}
 
+	public function half(x:Float):Float {
+		return x / 2;
+	}
+
 	public static function twice(amount:Int):Int {
 		return amount * 2;
 	}
@@ -64,6 +68,26 @@ class Main {
 		Sys.println(Reflect.callMethod(null, (x) -> x, [1]));
 		final identity = (x) -> x;
 		Sys.println(Reflect.callMethod(null, identity, [2]));
+		// Float parameters accept an Int argument, as in eval.
+		Sys.println(Reflect.callMethod(holder, holder.half, [3]) + " " + Reflect.callMethod(holder, holder.half, [5.0]));
+		// Functions stored in a Function local follow the same convention.
+		final shout:haxe.Constraints.Function = function(s:String) Sys.println("shout " + s);
+		Reflect.callMethod(null, shout, ["hey"]);
+		Reflect.callMethod(null, shout, [7]);
+		// A missing argument is null for a reference parameter, as in eval.
+		listen("f", [1], function(a:Int, b:String) Sys.println("a=" + a));
+		// More arguments than parameters raise a catchable error, as in eval.
+		try {
+			Reflect.callMethod(null, shout, ["one", "two"]);
+			Sys.println("no error");
+		} catch (error:Dynamic) {
+			Sys.println("too many arguments rejected");
+		}
+		// Array<Function> elements: Bool parameters and results keep their meaning.
+		final checks:Array<haxe.Constraints.Function> = [function(b:Bool) Sys.println("b=" + b), function(x:Int) return x > 1];
+		Reflect.callMethod(null, checks[0], [false]);
+		Reflect.callMethod(null, checks[0], [true]);
+		Sys.println(Reflect.callMethod(null, checks[1], [2]) + " " + Reflect.callMethod(null, checks[1], [0]));
 		// Array<Function> literal elements.
 		final handlers:Array<haxe.Constraints.Function> = [holder.add, function(x:Int):Int return x * 3, Holder.twice];
 		Sys.println(Reflect.callMethod(holder, handlers[0], [1]) + " " + Reflect.callMethod(null, handlers[1], [2]) + " "
