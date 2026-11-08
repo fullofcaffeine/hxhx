@@ -168,6 +168,17 @@ let class_method receiver key =
    method without arguments is bound as `fun () -> ...`, the shape of a
    zero-argument Haxe closure; other methods are partially applied to the
    receiver, which leaves the remaining arguments in order. *)
+let structural_exclusions : (string * string, unit) Hashtbl.t = Hashtbl.create 31
+
+(* Called by a class module, after its table, for overridden methods that stay
+   in the table for ordinary dispatch but must not be bound by a structural
+   read (see `structural_field`). *)
+let exclude_structural_methods name keys =
+  synchronized (fun () ->
+      Stdlib.List.iter
+        (fun key -> Hashtbl.replace structural_exclusions (name, key) ())
+        keys)
+
 let structural_field receiver field arity =
   (* Reading a field of null is a Haxe error that `try`/`catch` can handle;
      upstream reports it as the String "Null Access". *)
@@ -178,9 +189,11 @@ let structural_field receiver field arity =
   else if HxAnon.is_anon receiver && not (HxRuntime.is_null (HxAnon.class_value receiver)) then (
     let name = descriptor_name (HxAnon.class_value receiver) in
     let entry =
-      match Hashtbl.find_opt anon_classes name with
-      | None -> None
-      | Some methods -> Hashtbl.find_opt methods field
+      if Hashtbl.mem structural_exclusions (name, field) then None
+      else
+        match Hashtbl.find_opt anon_classes name with
+        | None -> None
+        | Some methods -> Hashtbl.find_opt methods field
     in
     match entry with
     | Some method_value ->
