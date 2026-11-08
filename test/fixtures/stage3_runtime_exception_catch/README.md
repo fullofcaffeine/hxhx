@@ -30,6 +30,11 @@ The fixture also rethrows from `catch (e:haxe.Exception)`. The outer handler
 must see the original value, not the exception object that wrapped it, for a
 thrown `String`, `Int`, `Float`, `Bool`, or enum and for a runtime failure.
 
+An exception the program builds with a third `native` constructor argument is
+not such a wrapper. Throwing one keeps the exception object and its subclass,
+whether it is thrown directly, from a local, a static field, a call result, or
+a `Dynamic` value, or after being caught and rethrown.
+
 A statement `try` whose body is not a block (`try f() catch (e:String) g();`)
 still loses its handlers in the parser. That is owned by `haxe_ocaml-2aql5`.
 

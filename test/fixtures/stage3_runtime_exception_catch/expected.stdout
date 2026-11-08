@@ -44,3 +44,10 @@ rethrown twice: twice
 rethrown subclass: local failure
 replacement: new from replaced, previous replaced
 after rethrows
+native direct: Dynamic
+native local: Dynamic
+native static: Dynamic
+native returned: Dynamic
+native as Dynamic: Dynamic
+subclass with native: subclass sub
+native caught and rethrown: Dynamic

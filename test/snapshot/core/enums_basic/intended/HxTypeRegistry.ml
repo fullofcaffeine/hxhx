@@ -139,11 +139,11 @@ let init () : unit =
   HxType.register_class_static_fields "StringBuf" [];
   HxType.register_class_instance_fields "StringTools" [];
   HxType.register_class_static_fields "StringTools" [ "_hexUpper"; "_hexValue"; "_isUrlUnreserved"; "_quoteUnixArgOcaml"; "_quoteWinArgOcaml"; "_urlDecodeOcaml"; "_urlEncodeOcaml"; "_winMetaCharactersOcaml"; "contains"; "endsWith"; "fastCodeAt"; "hex"; "htmlEscape"; "htmlUnescape"; "isEof"; "isSpace"; "iterator"; "keyValueIterator"; "lpad"; "ltrim"; "quoteUnixArg"; "quoteWinArg"; "replace"; "rpad"; "rtrim"; "startsWith"; "trim"; "unsafeCodeAt"; "urlDecode"; "urlEncode"; "utf16CodePointAt"; "winMetaCharacters" ];
-  HxType.register_class_instance_fields "haxe.Exception" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap" ];
+  HxType.register_class_instance_fields "haxe.Exception" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "__wrapsCaughtValue"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap" ];
   HxType.register_class_static_fields "haxe.Exception" [ "caught"; "thrown" ];
   HxType.register_class_instance_fields "haxe.NativeStackTrace" [];
   HxType.register_class_static_fields "haxe.NativeStackTrace" [ "callStack"; "exceptionStack"; "parseFileLine"; "saveStack"; "toHaxe" ];
-  HxType.register_class_instance_fields "haxe.ValueException" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap"; "value" ];
+  HxType.register_class_instance_fields "haxe.ValueException" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "__wrapsCaughtValue"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap"; "value" ];
   HxType.register_class_static_fields "haxe.ValueException" [];
   HxType.register_class_instance_fields "haxe._CallStack.CallStack_Impl_" [];
   HxType.register_class_static_fields "haxe._CallStack.CallStack_Impl_" [ "asArray"; "callStack"; "copy"; "equalItems"; "exceptionStack"; "get"; "get_length"; "itemToString"; "nativeToHaxe"; "parseFileLine"; "subtract"; "toString" ];

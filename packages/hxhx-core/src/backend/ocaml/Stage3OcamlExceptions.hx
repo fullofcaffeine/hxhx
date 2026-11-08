@@ -27,8 +27,9 @@ typedef Stage3OcamlCatch = {
 	as the `String` from `throw "text"` or a failed file read. Throwing it again
 	must raise the plain value, so an outer `catch (e:String)` still runs, as in
 	upstream Haxe. The emitted `haxe.Exception.thrown` helper does this at run
-	time: it returns the wrapped value for a wrapper and the same object for any
-	other exception. Only `haxe.Exception` and `Dynamic` expressions can hold a
+	time: it returns the wrapped value for a wrapper made by `caught` and the same
+	object for any other exception, including one the program built with its own
+	`native` value. Only `haxe.Exception` and `Dynamic` expressions can hold a
 	wrapper, so other throws do not call it. A program with no emitted
 	`haxe.Exception` module has no wrappers.
  */
