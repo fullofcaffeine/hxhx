@@ -8137,6 +8137,8 @@ class SourceTargetCommon {
 				equalityCond(target, scrutinee, quoteString(value));
 			case PInt(value):
 				equalityCond(target, scrutinee, Std.string(value));
+			case PFloat(text):
+				equalityCond(target, scrutinee, text);
 			case PEnumValue(name):
 				equalityCond(target, scrutinee, quoteString(name));
 			case PEnumExtract(name, _args):
@@ -8205,6 +8207,7 @@ class SourceTargetCommon {
 			case PBool(_): "PBool";
 			case PString(_): "PString";
 			case PInt(_): "PInt";
+			case PFloat(_): "PFloat";
 			case PEnumValue(_): "PEnumValue";
 			case PEnumExtract(_, _): "PEnumExtract";
 			case PObject(_, _): "PObject";
@@ -11429,6 +11432,8 @@ class SourceTargetCommon {
 				{cond: equalityCond(target, scrutinee, quoteString(value)), bindings: []};
 			case PInt(value):
 				{cond: equalityCond(target, scrutinee, Std.string(value)), bindings: []};
+			case PFloat(text):
+				{cond: equalityCond(target, scrutinee, text), bindings: []};
 			case PEnumValue(name):
 				{cond: sourceEnumValueCond(target, scrutinee, name, frame), bindings: []};
 			case PEnumExtract(name, args):
