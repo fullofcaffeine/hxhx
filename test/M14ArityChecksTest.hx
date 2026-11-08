@@ -44,6 +44,7 @@ class M14ArityChecksTest {
 				module: "DisplayTooFew",
 				diagnostic: "Not enough arguments, expected f:Int -> Void, g:(Int, String) -> Bool, h:() -> Void, a:{ b : String, a : Int }, z:Int, o:Null<Int>, k:(Int -> Void) -> Int"
 			},
+			{module: "DynamicTooManyTypes", diagnostic: "Too many parameters for Dynamic"},
 			{module: "FieldTooFewTypes", diagnostic: "Not enough type parameters for Box"},
 			{module: "GenericCtorTooManyTypes", diagnostic: "Too many type parameters for G"},
 			{module: "GenericInheritedTooFew", diagnostic: "Not enough arguments, expected v:Int"},
