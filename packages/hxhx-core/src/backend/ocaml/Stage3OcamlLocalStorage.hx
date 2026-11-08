@@ -8,6 +8,13 @@ package backend.ocaml;
 	A nullable Int, Float, or Bool destination uses the shared carrier conversion.
  */
 function store(write:TypedBackendLocalWrite, rendered:String, names:Null<Stage3OcamlLocalNames>):String {
+	// A function stored as haxe.Constraints.Function is later called through
+	// the Dynamic convention.
+	if (TyFunctionConstraint.isFunctionConstraint(write.binding.getType())) {
+		final adapted = Stage3OcamlFunctionBoundary.adapt(write.sourceType, rendered, names);
+		if (adapted != null)
+			return adapted;
+	}
 	if (Stage3OcamlNullablePrimitive.innerPrimitive(write.binding.getType()) != null)
 		return Stage3OcamlValueConversion.convert(write.sourceType, write.binding.getType(), rendered, names);
 	if (write.binding.getType().getSemanticKey() == "primitive:Bool" && write.sourceType.isDynamic())

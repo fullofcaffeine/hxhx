@@ -157,7 +157,8 @@ function literal(occurrence:TypedBackendAggregateOccurrence, emit:HxExpr->String
 	for (index in 0...children.length) {
 		final name = names.internalName("__hx_array_element_" + index);
 		final value = emit(children[index]);
-		final stored = arguments[0].isDynamic() ? Stage3OcamlObjects.store(types[index], value) : value;
+		final adapted = TyFunctionConstraint.isFunctionConstraint(arguments[0]) ? Stage3OcamlFunctionBoundary.adapt(types[index], value, names) : null;
+		final stored = adapted != null ? adapted : arguments[0].isDynamic() ? Stage3OcamlObjects.store(types[index], value) : value;
 		bindings.push("let " + name + " = (" + stored + ") in ");
 		// HxArray's polymorphic container also carries the target null sentinel.
 		// The typed element contract above owns each value before that erasure.
