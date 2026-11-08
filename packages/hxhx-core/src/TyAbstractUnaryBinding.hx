@@ -55,6 +55,11 @@ class TyAbstractUnaryBinding {
 			return null;
 
 		final candidates = abstractInfo.getUnaryOperators(op, fixity);
+		// With no declared operator, `-` and `~` act through a primitive `to` type; the typer checks it.
+		if (candidates.length == 0
+			&& (op == HxUnaryOperator.Negate || op == HxUnaryOperator.BitwiseNot)
+			&& TyAbstractPrimitiveOperation.view(index, operandType) != null)
+			return null;
 		if (candidates.length == 0)
 			throw new TyperError(filePath, position, "No applicable abstract unary operator "
 				+ operatorLabel(op, fixity)

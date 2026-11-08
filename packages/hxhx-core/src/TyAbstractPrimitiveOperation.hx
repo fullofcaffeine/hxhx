@@ -1,101 +1,187 @@
 /**
 	Type an operator on an abstract that declares no matching `@:op`, through the
-	abstract's `to` primitive, as Haxe 4.3.7 does.
+	abstract's primitive `to` types, as Haxe 4.3.7 does.
 
-	Upstream lets such an operator proceed when exactly one operand is an abstract with a
-	primitive `to` type and the other operand is a primitive. The abstract must convert to
-	the other operand's type, Int also widening to Float:
+	The rule depends on the operator. Operands are checked left to right.
 
-		enum abstract ET(Int) to Int { var T1 = 1; }
-		T1 + 1;      // Int
-		T1 * 1.5;    // Float
-		abstract S(String) from String to String {}
-		s + "b";     // String
-		s + 1;       // error: S should be Int
-		"n=" + int32;  // String: `+` with a String concatenates any value
+	- `- * / %`: each operand must be Int, Float, Dynamic, or an abstract with `to Int`.
+	  The first other operand fails with `X should be Int`, so `m * 2.0` on an
+	  `abstract M(Float) to Float` fails with `M should be Int`. The result is Float
+	  when a Float or Dynamic operand is involved, and always for `/`; otherwise Int.
+	- `& | ^ << >> >>>`: each operand must be Int, Dynamic, or an abstract with `to Int`.
+	  The result is Int.
+	- `+`: with a String the result is String, and with Dynamic it is Dynamic. Bool or a
+	  second abstract fails with `Cannot add A and B`. With Int the abstract needs
+	  `to Int` (`A should be Int`). With Float it needs `to Int` or `to Float`
+	  (`A should be Float`), and the result is Float.
+	- Unary `-` and `~`: the abstract needs `to Int`; the result is Int.
 
-	The result has the other operand's type (`/` always gives Float). A compound
-	assignment uses the rule only for an abstract value, as in `i |= FA`. An abstract
-	place would also need its result stored back through `from`, which shared lowering
-	does not do yet (haxe_ocaml-efodd), so such places keep the declared-operator rules.
+	A core type such as cpp's `Single` has no underlying type and counts as a Float
+	operand of its own, except for bitwise operators, which it fails.
 
-	Two abstract operands, or a non-primitive operand, are left to the declared-operator
-	rules, which reject them as before.
+	The rule applies when at least one operand is such an abstract and the other is a
+	primitive, Dynamic, or such an abstract. Any other shape returns null and stays with
+	the declared-operator rules.
+
+	A compound assignment uses the rule only for an abstract value, as in `i |= FA`. An
+	abstract place would also need its result stored back through `from`, which shared
+	lowering does not do yet (haxe_ocaml-efodd), so such places keep the
+	declared-operator rules.
 **/
 typedef TyAbstractPrimitiveResult = {
 	final failure:Null<String>;
 	final result:Null<TyType>;
 };
 
-/** The primitive `to` type of a non-generic abstract, or null. */
-function view(index:Null<TyperIndex>, type:TyType):Null<TyType> {
+private enum TyOperandKind {
+	IntValue;
+	FloatValue;
+	DynamicValue;
+	StringValue;
+	BoolValue;
+
+	/** An abstract with `to Int`. **/
+	IntAbstract;
+
+	/** A core type such as `Single`, which has a primitive Float `to` type and no underlying type. **/
+	CoreFloatAbstract;
+
+	/** An abstract with `to Float` but no `to Int`. **/
+	FloatAbstract;
+
+	/** An abstract whose only primitive `to` types are neither Int nor Float. **/
+	OtherAbstract;
+}
+
+private function abstractInfo(index:Null<TyperIndex>, type:TyType):Null<TyAbstractInfo> {
 	if (index == null || type == null)
 		return null;
 	final identity = type.unwrapNull().getNominalIdentity();
 	final info = identity == null ? null : index.getAbstractByFullName(identity.getCanonicalName());
-	if (info == null || info.getTypeParameterIds().length != 0)
-		return null;
-	for (target in info.getImplicitToTypes())
-		if (target.isPrimitive() && !target.isVoid())
-			return target;
-	return null;
+	return info == null || info.getTypeParameterIds().length != 0 ? null : info;
 }
 
-/** Type `left op right` through one abstract's `to` primitive, or null when that rule does not apply. */
+private function primitiveTargets(index:Null<TyperIndex>, type:TyType):Array<TyType> {
+	final info = abstractInfo(index, type);
+	return info == null ? [] : info.getImplicitToTypes().filter(target -> target.isPrimitive() && !target.isVoid());
+}
+
+/**
+	The primitive `to` type an operator uses, or null when there is none. Int wins when an
+	abstract declares several, because every operator rule accepts it, whatever the order
+	in which the `to` types were written.
+**/
+function view(index:Null<TyperIndex>, type:TyType):Null<TyType> {
+	final targets = primitiveTargets(index, type);
+	for (target in targets)
+		if (target.getDisplay() == "Int")
+			return target;
+	return targets.length == 0 ? null : targets[0];
+}
+
+private function kindOf(index:Null<TyperIndex>, type:TyType):Null<TyOperandKind> {
+	final value = type.unwrapNull();
+	if (value.isDynamic())
+		return DynamicValue;
+	final targets = primitiveTargets(index, type);
+	if (targets.length != 0) {
+		final names = targets.map(target -> target.getDisplay());
+		if (names.indexOf("Int") >= 0)
+			return IntAbstract;
+		if (names.indexOf("Float") < 0)
+			return OtherAbstract;
+		return abstractInfo(index, type).getUnderlyingType().isUnknown() ? CoreFloatAbstract : FloatAbstract;
+	}
+	if (!value.isPrimitive())
+		return null;
+	return switch value.getDisplay() {
+		case "Int": IntValue;
+		case "Float": FloatValue;
+		case "String": StringValue;
+		case "Bool": BoolValue;
+		case _: null;
+	};
+}
+
+private function isAbstractKind(kind:TyOperandKind):Bool {
+	return switch kind {
+		case IntAbstract | CoreFloatAbstract | FloatAbstract | OtherAbstract: true;
+		case _: false;
+	};
+}
+
+private function failure(message:String):TyAbstractPrimitiveResult
+	return {failure: message, result: null};
+
+private function success(name:String):TyAbstractPrimitiveResult
+	return {failure: null, result: TyType.fromHintText(name)};
+
+/** Type `left op right` through primitive `to` types, or null when that rule does not apply. */
 function operation(index:Null<TyperIndex>, op:String, left:TyType, right:TyType):Null<TyAbstractPrimitiveResult> {
 	if (left == null || right == null)
 		return null;
-	final leftView = view(index, left);
-	final rightView = view(index, right);
-	if ((leftView == null) == (rightView == null))
+	final leftKind = kindOf(index, left);
+	final rightKind = kindOf(index, right);
+	if (leftKind == null || rightKind == null || (!isAbstractKind(leftKind) && !isAbstractKind(rightKind)))
 		return null;
-	final abstractType = leftView != null ? left : right;
-	final primitive = leftView != null ? leftView : rightView;
-	final other = (leftView != null ? right : left).unwrapNull();
-	if (!isOperand(other))
-		return null;
-	// `+` with a String concatenates any value, as in `"n=" + int32`.
-	if (op == "+" && other.getDisplay() == "String")
-		return {failure: null, result: other};
-	// Bitwise operators need Int on both sides: `s |= 1` on cpp's `Single` fails.
-	if (isBitwise(op)) {
-		if (primitive.getDisplay() != "Int")
-			return {failure: display(abstractType, index) + " should be Int", result: null};
-		return other.getDisplay() == "Int" ? {failure: null, result: other} : {failure: other.getDisplay() + " should be Int", result: null};
+	final shown = [display(left, index), display(right, index)];
+	final kinds = [leftKind, rightKind];
+	return switch op {
+		case "+": addition(kinds, shown);
+		case "-" | "*" | "/" | "%": arithmetic(op, kinds, shown);
+		case "&" | "|" | "^" | "<<" | ">>" | ">>>": bitwise(kinds, shown);
+		case _: null;
+	};
+}
+
+private function addition(kinds:Array<TyOperandKind>, shown:Array<String>):TyAbstractPrimitiveResult {
+	final abstractSide = isAbstractKind(kinds[0]) ? 0 : 1;
+	final otherSide = 1 - abstractSide;
+	final other = kinds[otherSide];
+	if (other.match(StringValue))
+		return success("String");
+	if (other.match(DynamicValue))
+		return success("Dynamic");
+	if (other.match(BoolValue) || isAbstractKind(other))
+		return failure("Cannot add " + shown[0] + " and " + shown[1]);
+	final subject = kinds[abstractSide];
+	if (other.match(IntValue)) {
+		if (subject.match(CoreFloatAbstract))
+			return success("Float");
+		return subject.match(IntAbstract) ? success("Int") : failure(shown[abstractSide] + " should be Int");
 	}
-	// A core type such as `Single` (no underlying type) is a number of its own, so an
-	// Int operand widens to it; an ordinary abstract must convert to the other side.
-	final core = isCoreType(index, abstractType);
-	if (!fits(primitive, other) && !(core && fits(other, primitive)))
-		return {failure: display(abstractType, index) + " should be " + other.getDisplay(), result: null};
-	final floating = op == "/" || primitive.getDisplay() == "Float" || other.getDisplay() == "Float";
-	return {failure: null, result: floating && isNumber(other) ? TyType.fromHintText("Float") : other};
+	return subject.match(OtherAbstract) ? failure(shown[abstractSide] + " should be Float") : success("Float");
 }
 
-private function isBitwise(op:String):Bool
-	return op == "&" || op == "|" || op == "^" || op == "<<" || op == ">>" || op == ">>>";
-
-private function isNumber(type:TyType):Bool
-	return type.getDisplay() == "Int" || type.getDisplay() == "Float";
-
-private function isCoreType(index:Null<TyperIndex>, type:TyType):Bool {
-	final identity = type.unwrapNull().getNominalIdentity();
-	final info = identity == null || index == null ? null : index.getAbstractByFullName(identity.getCanonicalName());
-	return info != null && info.getUnderlyingType().isUnknown();
+private function arithmetic(op:String, kinds:Array<TyOperandKind>, shown:Array<String>):TyAbstractPrimitiveResult {
+	var floating = op == "/";
+	for (side in 0...2)
+		switch kinds[side] {
+			case IntValue | IntAbstract:
+			case FloatValue | DynamicValue | CoreFloatAbstract:
+				floating = true;
+			case _:
+				return failure(shown[side] + " should be Int");
+		}
+	return success(floating ? "Float" : "Int");
 }
 
-private function isOperand(type:TyType):Bool {
-	if (!type.isPrimitive())
-		return false;
-	final name = type.getDisplay();
-	return name == "Int" || name == "Float" || name == "String" || name == "Bool";
+private function bitwise(kinds:Array<TyOperandKind>, shown:Array<String>):TyAbstractPrimitiveResult {
+	for (side in 0...2)
+		switch kinds[side] {
+			case IntValue | IntAbstract | DynamicValue:
+			case _:
+				return failure(shown[side] + " should be Int");
+		}
+	return success("Int");
 }
 
-/** Whether a value of `actual` primitive type can be used as `expected`: equal, or Int widening to Float. */
-private function fits(actual:TyType, expected:TyType):Bool {
-	final value = actual.unwrapNull();
-	final target = expected.unwrapNull();
-	return value.getSemanticKey() == target.getSemanticKey() || (value.getDisplay() == "Int" && target.getDisplay() == "Float");
+/** Type unary `-` or `~` on such an abstract, or null when the operand is not one. */
+function unary(index:Null<TyperIndex>, operand:TyType):Null<TyAbstractPrimitiveResult> {
+	final kind = kindOf(index, operand);
+	if (kind == null || !isAbstractKind(kind))
+		return null;
+	return kind.match(IntAbstract) ? success("Int") : failure(display(operand, index) + " should be Int");
 }
 
 /** Upstream prints an abstract by package path and name, without its declaring module. */
@@ -103,7 +189,7 @@ private function display(type:TyType, index:Null<TyperIndex>):String {
 	final identity = type.unwrapNull().getNominalIdentity();
 	final owner = identity == null || index == null ? null : index.getByFullName(identity.getCanonicalName());
 	if (owner == null)
-		return type.getDisplay();
+		return type.unwrapNull().getDisplay();
 	final module = owner.getModulePath();
 	final dot = module.lastIndexOf(".");
 	return (dot < 0 ? "" : module.substr(0, dot + 1)) + owner.getShortName();

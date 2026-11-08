@@ -24,6 +24,10 @@ class TypedOnly {
 		var bits = 0;
 		bits |= T2;
 		Sys.println(bits);
+		Sys.println(T2 | 1);
+		final dynamicValue:Dynamic = 5;
+		Sys.println(T2 + dynamicValue);
+		Sys.println(dynamicValue - T2);
 		final counts = new Map<EA, Int>();
 		counts.set(Uno, 1);
 		counts.set(Dos, 2);

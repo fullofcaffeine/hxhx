@@ -27,7 +27,11 @@ class M14Stage3EnumAbstractArgumentsTest {
 		Sys.println("M14_STAGE3_ENUM_ABSTRACT_ARGUMENTS_NATIVE:PASS");
 
 		// These forms are checked by typing only; Stage3 cannot build them natively yet.
-		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", root, "--run", "TypedOnly"], expected: "20\n3\n2\n11 2 true\n"});
+		M14Stage3RuntimeFixture.observe({
+			command: "node_modules/.bin/haxe",
+			arguments: ["-cp", root, "--run", "TypedOnly"],
+			expected: "20\n3\n2\n3\n7\n3\n11 2 true\n"
+		});
 		// Load it under its own module name, with the production class paths.
 		CppResolvedFixture.load({sourceRoot: root, mainModule: "TypedOnly", requiredModules: []});
 		Sys.println("M14_STAGE3_ENUM_ABSTRACT_ARGUMENTS_TYPED_ONLY:PASS");
