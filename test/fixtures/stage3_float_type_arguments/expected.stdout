@@ -27,3 +27,7 @@ return of negation: -2.75
 Float local from Null<Int>: 7.5
 Float local from Int division: 3.5
 argument from Int division: 0.75
+argument from assignment: 1.5
+local from assignment: 3.25
+generic literal into Float: 1.25
+generic call into Float: 3.25

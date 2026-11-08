@@ -21,9 +21,9 @@ import sys.io.File;
 	- `stage3_increment_places_int_in_float` is known failing for one remaining
 	  reason: an Int literal stored into a Float slot is now promoted, so `++`
 	  no longer crashes, but a whole-number Float prints as `2.` where upstream
-	  prints `2` (Bead haxe_ocaml-vzr17). The test requires a clean exit and a
-	  differing output, so a new crash or the formatting fix is noticed. Once
-	  the output matches, the lines move into the main fixture.
+	  prints `2` (Bead haxe_ocaml-vzr17). The test requires exactly that known
+	  output, so a crash, a wrong number, or the formatting fix is noticed. Once
+	  the output matches upstream, the lines move into the main fixture.
 **/
 class M14Stage3IncrementPlacesTest {
 	static function deleteRecursive(path:String):Void {
@@ -57,15 +57,9 @@ class M14Stage3IncrementPlacesTest {
 		// Int literals stored into Float slots are promoted, so the native run must exit cleanly.
 		// Only whole-number Float printing still differs from upstream (Bead haxe_ocaml-vzr17).
 		final known = build("test/fixtures/stage3_increment_places_int_in_float", "int_in_float");
-		final process = new sys.io.Process(known.executable, []);
-		final stdout = process.stdout.readAll().toString();
-		final code = process.exitCode();
-		process.close();
+		// When vzr17 lands this observation fails: fold the fixture into stage3_increment_places.
+		M14Stage3RuntimeFixture.observe({command: known.executable, arguments: [], expected: "int literal element: 2.,2.\nint literal field: 4.\n"});
 		deleteRecursive(known.outDir);
-		if (code != 0)
-			throw "stage3_increment_places_int_in_float must exit cleanly: exit=" + code + " stdout=" + stdout;
-		if (stdout == known.expected)
-			throw "stage3_increment_places_int_in_float now matches upstream: move its lines into stage3_increment_places and remove the known-failing check";
 		Sys.println("M14_STAGE3_INCREMENT_PLACES_INT_IN_FLOAT:KNOWN_FAILING (haxe_ocaml-vzr17)");
 	}
 }

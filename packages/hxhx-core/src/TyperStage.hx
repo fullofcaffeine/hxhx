@@ -4234,8 +4234,9 @@ class TyperStage {
 										// assignment conversion.
 										rhs;
 									} else {
+										// An assignment used as a value has the local's type, as in Haxe.
 										sym.setType(u);
-										rhs;
+										sym.getType();
 									}
 								} else {
 									rhs;

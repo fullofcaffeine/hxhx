@@ -5,8 +5,8 @@
 	An Int literal stored into a Float slot (`[1, 2]` as `Array<Float>`, or
 	`box.v = 3` for a `Float` field) is promoted natively since PR #123, so
 	`++` on it no longer crashes. A whole-number Float still prints as `2.`
-	where upstream prints `2`. The test requires a clean exit and an output
-	that still differs from upstream. Once it matches, fold these lines into
+	where upstream prints `2`. The test requires exactly that known output.
+	Once the output matches upstream, fold these lines into
 	`stage3_increment_places`.
 **/
 class Box {

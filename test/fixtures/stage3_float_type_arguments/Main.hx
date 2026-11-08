@@ -77,6 +77,9 @@ class Main {
 	static function half(x:Float):Float
 		return x / 2;
 
+	static function pick<T>(value:T):T
+		return value;
+
 	static function count():Int
 		return 3;
 
@@ -163,5 +166,15 @@ class Main {
 		final quotient:Float = 7 / 2;
 		Sys.println("Float local from Int division: " + Std.string(quotient));
 		Sys.println("argument from Int division: " + Std.string(half(3 / 2)));
+		// An assignment used as a value has the local's type, so only the write promotes.
+		var assigned:Float = 0.5;
+		final assignedInt = 3;
+		Sys.println("argument from assignment: " + Std.string(half(assigned = assignedInt)));
+		final fromAssignment:Float = (assigned = assignedInt);
+		Sys.println("local from assignment: " + Std.string(fromAssignment + 0.25));
+		final picked:Float = pick(1);
+		Sys.println("generic literal into Float: " + Std.string(picked + 0.25));
+		final pickedCall:Float = pick(count());
+		Sys.println("generic call into Float: " + Std.string(pickedCall + 0.25));
 	}
 }
