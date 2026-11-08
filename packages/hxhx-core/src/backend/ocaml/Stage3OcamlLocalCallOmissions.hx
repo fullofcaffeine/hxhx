@@ -21,16 +21,22 @@ package backend.ocaml;
 	- `localType` is the declared type of the local that names the callee. A
 	  Dynamic local (such as a `load:Dynamic` parameter called as
 	  `load("x", 2)`) has no declared parameter list, so the call applies its
-	  arguments exactly as written and nothing is filled. The typed tree records
-	  no checked call for such a callee, so the call is not required here.
+	  arguments exactly as written and nothing is filled.
+	- The typed tree records a checked call only when the callee's own type is a
+	  function. A `Null<Int->Int>` local, which includes a `?g:Int->Int`
+	  parameter, is called without such a record, so its declared type supplies
+	  the parameter list. Any other callee type stops emission.
  */
 function omitted(localType:Null<TyType>, call:Null<TypedExpr>, supplied:Array<Null<TypedBackendCallArgument>>, slots:SentinelSlots):Array<String> {
-	if (localType != null && !TyAliasExpansion.revealNonNullable(TyAliasExpansion.reveal(localType)).isFunction())
+	if (localType != null && TyAliasExpansion.revealNonNullable(TyAliasExpansion.reveal(localType)).isDynamic())
 		return [];
-	// Supplied arguments are only inspected when some parameter is omitted.
-	if (call == null || call.getTag() != Call || call.getExpressions().length == 0)
+	final typedCallee = call == null
+		|| call.getTag() != Call
+		|| call.getExpressions().length == 0 ? null : call.getExpressions()[0].getType();
+	if (typedCallee == null && localType == null)
 		throw "OCaml local function call requires its exact typed call";
-	final calleeType = TyAliasExpansion.reveal(call.getExpressions()[0].getType());
+	// Supplied arguments are only inspected when some parameter is omitted.
+	final calleeType = TyAliasExpansion.revealNonNullable(TyAliasExpansion.reveal(typedCallee != null ? typedCallee : localType));
 	if (!calleeType.isFunction())
 		throw "OCaml local function call requires a function-typed callee";
 	final parameters = calleeType.getFunctionParameters();

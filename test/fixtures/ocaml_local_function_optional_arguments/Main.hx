@@ -2,8 +2,16 @@
 	Local functions with optional and defaulted parameters, compared with
 	upstream Haxe 4.3.7 `--run`. Each one is called with and without the
 	argument. Omitted arguments arrive as null and select the default.
+
+	The last cases call through nullable function locals (`?g:Int->Int`,
+	`Null<Int->Int>`). The typed tree records no checked call for such a callee,
+	so the declared local type supplies the parameter list.
 **/
 class Main {
+	static function apply(?g:Int->Int):Int {
+		return g == null ? 0 : g(3);
+	}
+
 	static function main():Void {
 		function pick(?x:Int):Int {
 			if (x == null)
@@ -48,5 +56,21 @@ class Main {
 		final arrow = (?n:Int) -> n == null ? 0 : n * 2;
 		Sys.println(arrow());
 		Sys.println(arrow(5));
+
+		Sys.println(apply());
+		Sys.println(apply(v -> v + 1));
+
+		function local(h:Null<Int->Int>):Int {
+			return h(4);
+		}
+		Sys.println(local(v -> v * 2));
+
+		final show = (v:Int) -> "v" + v;
+		var g:Null<Int->String> = null;
+		g = show;
+		Sys.println(g(3));
+
+		final nullablePick:Null<(?x:Int) -> Int> = pick;
+		Sys.println(nullablePick());
 	}
 }
