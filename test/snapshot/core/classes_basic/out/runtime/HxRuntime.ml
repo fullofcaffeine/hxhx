@@ -207,6 +207,24 @@ let hx_throw_typed (v : Obj.t) (tags : string list) : 'a =
 let hx_throw (v : Obj.t) : 'a =
   hx_throw_typed v [ "Dynamic" ]
 
+(* Stage3 `try`/`catch` boundaries call this for every OCaml exception that
+   reaches them. It decides which exceptions Haxe code can catch.
+
+   - A Haxe `throw` keeps its payload and type tags.
+   - `Sys_error` becomes its message as a Haxe `String`. Only the sys runtime
+     modules (`HxFile`, `HxFileSystem`, `HxSys`) raise it toward Haxe code,
+     and they shape the text to match upstream Haxe.
+   - Every other exception answers `None` and keeps travelling. That includes
+     loop `break`/`continue` signals, each function's private early-return
+     exception, fatal conditions such as `Stack_overflow`, and the runtime's
+     own invariant failures (`Failure`, `Invalid_argument`). A backend bug
+     therefore stops the program instead of reaching a Haxe `catch`. *)
+let catchable_exception (exn : exn) : (Obj.t * string list) option =
+  match exn with
+  | Hx_exception (v, tags) -> Some (v, tags)
+  | Sys_error message -> Some (Obj.repr message, [ "String"; "Dynamic" ])
+  | _ -> None
+
 let hx_try (f : unit -> 'a) (handler : Obj.t -> 'a) : 'a =
   try f () with
   | Hx_exception (v, _tags) -> handler v

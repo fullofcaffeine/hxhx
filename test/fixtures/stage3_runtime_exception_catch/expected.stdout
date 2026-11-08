@@ -1,0 +1,53 @@
+dynamic: Could not read file .tmp/stage3_runtime_exception_catch_scratch/missing.txt
+string: Could not read file .tmp/stage3_runtime_exception_catch_scratch/missing.txt
+exception: Could not read file .tmp/stage3_runtime_exception_catch_scratch/missing.txt / Could not read file .tmp/stage3_runtime_exception_catch_scratch/missing.txt
+thrown string as exception: plain
+subclass as exception: local failure
+subclass as itself: local failure
+subclass reached outer: local failure
+thrown int as exception: 42
+thrown float as exception: 1.5
+thrown bool as exception: true
+outer: Could not read file .tmp/stage3_runtime_exception_catch_scratch/missing.txt
+try as value: value fallback
+block value: Could not read file .tmp/stage3_runtime_exception_catch_scratch/missing.txt
+try as argument: message
+fallback: fallback
+first readable: present
+attempt 0 failed
+caught after continue: 2
+closure gave up after 1
+break from exception handler at 0
+exception stack available: true
+directory read: Could not read file .tmp/stage3_runtime_exception_catch_scratch
+rmdir missing: No such file or directory(rmdir, .tmp/stage3_runtime_exception_catch_scratch/missing-dir)
+rmdir file: Not a directory(rmdir, .tmp/stage3_runtime_exception_catch_scratch/present.txt)
+rename: No such file or directory
+save: .tmp/stage3_runtime_exception_catch_scratch/missing-dir/x.txt: No such file or directory
+copy: .tmp/stage3_runtime_exception_catch_scratch/missing.txt: No such file or directory
+delete: .tmp/stage3_runtime_exception_catch_scratch/missing.txt: No such file or directory
+list missing: .tmp/stage3_runtime_exception_catch_scratch/missing-dir: No such file or directory
+list file: No such directory
+full path: Failure("get_full_path")
+set cwd: No such file or directory(chdir, .tmp/stage3_runtime_exception_catch_scratch/missing-dir)
+create existing file: ok
+create below file: Not a directory(mkdir, .tmp/stage3_runtime_exception_catch_scratch/present.txt/sub)
+create below file with trailing slash: Not a directory(mkdir, .tmp/stage3_runtime_exception_catch_scratch/present.txt/sub)
+rethrown string: plain
+rethrown runtime failure: Could not read file .tmp/stage3_runtime_exception_catch_scratch/missing.txt
+rethrown int: 4
+rethrown float: 1.5
+rethrown bool: true
+rethrown enum: green 2
+rethrown through Dynamic: as dynamic
+rethrown twice: twice
+rethrown subclass: local failure
+replacement: new from replaced, previous replaced
+after rethrows
+native direct: Dynamic
+native local: Dynamic
+native static: Dynamic
+native returned: Dynamic
+native as Dynamic: Dynamic
+subclass with native: subclass sub
+native caught and rethrown: Dynamic

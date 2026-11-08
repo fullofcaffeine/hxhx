@@ -4,14 +4,22 @@
    The initial implementation focuses on whole-file operations used by
    bootstrapping (read/write String + Bytes, plus copy). *)
 
+(* Upstream Haxe reports any failed whole-file read, such as a missing file or
+   a directory path, with one message: `Could not read file <path>`. Haxe code
+   catches it through `HxRuntime.catchable_exception`. *)
+let read_whole_file (path : string) (read : in_channel -> int -> 'a) : 'a =
+  let failed () = raise (Sys_error ("Could not read file " ^ path)) in
+  (* A directory can open as a channel on some hosts; reject it first. *)
+  if Stdlib.Sys.file_exists path && Stdlib.Sys.is_directory path then failed ();
+  try
+    let ic = open_in_bin path in
+    Fun.protect
+      ~finally:(fun () -> close_in_noerr ic)
+      (fun () -> read ic (in_channel_length ic))
+  with Sys_error _ | End_of_file -> failed ()
+
 let getContent (path : string) : string =
-  let ic = open_in_bin path in
-  Fun.protect
-    ~finally:(fun () -> close_in_noerr ic)
-    (fun () ->
-      let len = in_channel_length ic in
-      really_input_string ic len
-    )
+  read_whole_file path really_input_string
 
 let saveContent (path : string) (content : string) : unit =
   let oc = open_out_bin path in
@@ -20,15 +28,10 @@ let saveContent (path : string) (content : string) : unit =
     (fun () -> output_string oc content)
 
 let getBytes (path : string) : HxBytes.data =
-  let ic = open_in_bin path in
-  Fun.protect
-    ~finally:(fun () -> close_in_noerr ic)
-    (fun () ->
-      let len = in_channel_length ic in
+  read_whole_file path (fun ic len ->
       let b = Bytes.create len in
       really_input ic b 0 len;
-      b
-    )
+      b)
 
 let saveBytes (path : string) (bytes : HxBytes.data) : unit =
   let oc = open_out_bin path in

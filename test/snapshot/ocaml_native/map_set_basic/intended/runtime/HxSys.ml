@@ -85,8 +85,12 @@ let sleep (seconds : float) : unit =
 let getCwd () : string =
   Stdlib.Sys.getcwd ()
 
+(* A failed change reports `<error text>(chdir, <path>)`, as upstream Haxe
+   does; `HxFileSystem.unix_call` documents the same message shape. *)
 let setCwd (s : string) : unit =
-  Stdlib.Sys.chdir s
+  try Unix.chdir s with
+  | Unix.Unix_error (error, operation, argument) ->
+      raise (Sys_error (Unix.error_message error ^ "(" ^ operation ^ ", " ^ argument ^ ")"))
 
 let systemName () : string =
   match Stdlib.Sys.os_type with
