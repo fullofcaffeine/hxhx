@@ -13,3 +13,6 @@ overflow wrap: -2147483648 2147483647
 null element: threw
 anonymous: 3 3 1.25
 loop: 7 2,3,5
+null element postfix: 5 6 6,5
+null float element: 2.5 1.5 0.5,2.5
+nullable field results: 42 43 0.25 0.25 -0.75
