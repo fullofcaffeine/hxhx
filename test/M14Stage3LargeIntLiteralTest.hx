@@ -82,10 +82,11 @@ class M14Stage3LargeIntLiteralTest {
 	}
 
 	/**
-		An integer pattern outside the Int range is a Float constant. Upstream Haxe 4.3.7
-		matches `case 2147483648:` against a Float subject by value, and rejects it on an
-		Int subject with "Float should be Int". It must never parse as a wildcard that
-		matches every value. `case -2147483648:` is the minimum Int, as in expressions.
+		Check the parser's output for integer patterns outside the Int range. They must
+		parse as Float constants (`2147483648` and `-2147483649` become `PFloat`), never as
+		a wildcard that matches every value. `-2147483648` must fold to the minimum Int
+		(`PInt`), as it does in expressions. This test does not run upstream; the native
+		Float-pattern fixture compares these cases with upstream Haxe at run time.
 	**/
 	static function outOfRangePatterns():Void {
 		function firstPattern(source:String):HxSwitchPattern {

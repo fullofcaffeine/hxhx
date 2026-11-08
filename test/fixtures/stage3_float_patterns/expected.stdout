@@ -14,6 +14,8 @@ large
 forty-two
 other
 other
+two to the thirty-first
+below the Int minimum
 zero
 zero
 one
@@ -27,6 +29,7 @@ one or two
 one or two
 negative
 positive
+Int minimum
 null
 empty
 a or b
