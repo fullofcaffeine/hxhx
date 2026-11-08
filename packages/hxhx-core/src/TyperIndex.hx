@@ -203,13 +203,6 @@ class TyperIndex {
 		return null;
 	}
 
-	/**
-		Whether any loaded enum or abstract declares a member with this name.
-		Upstream resolves a bare constructor or enum-abstract value such as
-		`Element` from the expected type, for example the other operand of
-		`node.nodeType != Element`. The bring-up typer does not always carry that
-		type, so `TyUndeclaredName` treats such a name as possibly declared.
-	**/
 	/** The title-case value names that typing could not resolve in one module source file. */
 	public function undeclaredValueNames(filePath:String):TyUndeclaredName.TyUndeclaredValueNames {
 		final key = filePath == null ? "" : filePath;
@@ -239,12 +232,28 @@ class TyperIndex {
 
 	final rawSources = new StringMap<Null<String>>();
 
+	/**
+		Whether any loaded enum or abstract declares a member with this name.
+		Upstream resolves a bare constructor or enum-abstract value such as
+		`Element` from the expected type, for example the other operand of
+		`node.nodeType != Element`. The bring-up typer does not always carry that
+		type, so `TyUndeclaredName` treats such a name as possibly declared.
+	**/
 	public function declaresEnumMember(name:String):Bool {
 		for (fullName => info in byFullName)
 			// A constructor with arguments is a static method, not a field.
 			if ((info.getIsEnum() || getAbstractByFullName(fullName) != null)
 				&& (info.fieldInfo(name) != null || info.staticMethod(name) != null))
 				return true;
+		return false;
+	}
+
+	/** Whether any loaded type declares a `macro` function with this name. */
+	public function declaresMacroFunction(name:String):Bool {
+		for (info in byFullName)
+			for (declaration in info.getDeclarations())
+				if (declaration.getSignature().getName() == name && TyMacroCallSignature.isMacro(declaration))
+					return true;
 		return false;
 	}
 

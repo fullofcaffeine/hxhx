@@ -98,6 +98,85 @@ class M14UndeclaredNameDiagnosticTest {
 		Sys.println("M14_UNDECLARED_NAMES_NO_EMIT_" + name.toUpperCase() + ":PASS");
 	}
 
+	/** One program file written under a test root, relative to that root. */
+	static function writeProgram(root:String, source:String, files:Array<{path:String, source:String}>):Void {
+		deleteRecursive(root);
+		FileSystem.createDirectory(root);
+		File.saveContent(root + "/Main.hx", source);
+		for (file in files) {
+			FileSystem.createDirectory(haxe.io.Path.directory(root + "/" + file.path));
+			File.saveContent(root + "/" + file.path, file.source);
+		}
+	}
+
+	/** Run the `--hxhx-no-emit` driver lane and return its exit code. */
+	static function driverExitCode(root:String, extra:Array<String>):Int {
+		return hxhx.Stage3Compiler.run([
+			"-cp",
+			root,
+			"-main",
+			"Main",
+			"--hxhx-no-run",
+			"--hxhx-no-emit",
+			"--hxhx-out",
+			root + "/out"
+		].concat(extra));
+	}
+
+	/**
+		A program that upstream accepts, but whose declarations hxhx cannot fully
+		see (a macro can add them, or `import.hx` can bring them in), must not be
+		reported as naming something undeclared. `extra` holds driver-only flags
+		such as `--macro`.
+	**/
+	static function accept(name:String, source:String, files:Array<{path:String, source:String}>, ?extra:Array<String>):Void {
+		final root = ".tmp/m14_undeclared_names_open_" + name;
+		writeProgram(root, source, files);
+		final flags = extra == null ? [] : extra;
+		final process = new sys.io.Process("node_modules/.bin/haxe", ["-cp", root, "-main", "Main", "--no-output"].concat(flags));
+		process.stdout.readAll();
+		final upstream = process.stderr.readAll().toString();
+		if (process.exitCode() != 0)
+			throw name + ": upstream must accept the program, got: " + upstream;
+		process.close();
+		if (flags.length == 0) {
+			final typed = hxhxDiagnostic(root);
+			if (typed != null)
+				throw name + ": hxhx typing must accept the program, got: " + typed;
+		}
+		final code = driverExitCode(root, flags);
+		if (code != 0)
+			throw name + ": the no-emit driver must accept the program, exit " + code;
+		deleteRecursive(root);
+		Sys.println("M14_UNDECLARED_NAMES_FAIL_OPEN_" + name.toUpperCase() + ":PASS");
+	}
+
+	/**
+		An expression macro receives its arguments as syntax, so `Nope` in
+		`M.name(Nope.foo)` is not a name lookup and the undeclared-name check must
+		not report it. Macro calls cannot expand in this interpreted test, so only
+		that one diagnostic is asserted.
+	**/
+	static function macroArgumentIsNotChecked():Void {
+		final root = ".tmp/m14_undeclared_names_open_macro_argument";
+		writeProgram(root, "class Main {\n\tstatic function main():Void {\n\t\ttrace(M.name(Nope.foo));\n\t}\n}\n", [
+			{path: "M.hx", source: "class M {\n\tpublic static macro function name(e:haxe.macro.Expr):haxe.macro.Expr\n\t\treturn macro \"x\";\n}\n"}
+		]);
+		final process = new sys.io.Process("node_modules/.bin/haxe", ["-cp", root, "-main", "Main", "--no-output"]);
+		process.stdout.readAll();
+		final upstream = process.stderr.readAll().toString();
+		if (process.exitCode() != 0)
+			throw "macro_argument: upstream must accept the program, got: " + upstream;
+		process.close();
+		// Typing still stops later on the unexpanded call, with an internal
+		// error that main reports too; only the name check is under test here.
+		final typed = try hxhxDiagnostic(root) catch (error:Dynamic) Std.string(error);
+		if (typed != null && typed.indexOf("Nope") >= 0)
+			throw "macro_argument: a macro argument must not be name-checked, got: " + typed;
+		deleteRecursive(root);
+		Sys.println("M14_UNDECLARED_NAMES_FAIL_OPEN_MACRO_ARGUMENT:PASS");
+	}
+
 	static function main():Void {
 		final main = (body:String) -> "class Main {\n\tstatic function main():Void {\n\t\t" + body + "\n\t}\n}\n";
 		reject("static_call", main("Nope.foo();"), "Type not found : Nope", 3);
@@ -113,6 +192,38 @@ class M14UndeclaredNameDiagnosticTest {
 		rejectNoEmit("static_call", main("Nope.foo();"));
 		rejectNoEmit("missing_import", "import does.not.Exist;\n" + main(""));
 		rejectNoEmit("enum_like_value", main("var mode = Run;"));
+		final buildMacro = {path: "Macros.hx",
+			source: "import haxe.macro.Context;\nimport haxe.macro.Expr;\nclass Macros {\n"
+			+ "\tpublic static macro function build():Array<Field> {\n"
+			+ "\t\tfinal fields = Context.getBuildFields();\n"
+			+ "\t\tfields.push({name: \"Generated\", pos: Context.currentPos(), access: [AStatic, APublic], kind: FVar(null, macro ({Foo: 1}))});\n"
+			+ "\t\treturn fields;\n\t}\n}\n"};
+		final parent = {path: "Parent.hx", source: "@:autoBuild(Macros.build()) class Parent {\n\tpublic function new() {}\n}\n"};
+		final tagged = {path: "Tagged.hx", source: "@:autoBuild(Macros.build()) interface Tagged {}\n"};
+		accept("autobuild_parent", "class Main extends Parent {\n\tstatic function main():Void {\n\t\ttrace(Generated);\n\t}\n}\n", [buildMacro, parent]);
+		accept("autobuild_receiver", "class Main extends Parent {\n\tstatic function main():Void {\n\t\ttrace(Generated.Foo);\n\t}\n}\n", [buildMacro, parent]);
+		accept("autobuild_interface", "class Main implements Tagged {\n\tstatic function main():Void {\n\t\ttrace(Generated);\n\t}\n}\n", [buildMacro, tagged]);
+		accept("cli_add_metadata", main("trace(Generated);"), [buildMacro], ["--macro", "addMetadata('@:build(Macros.build())', 'Main')"]);
+		accept("init_macro_define_type", main("trace(Generated.hi());"), [
+			{
+				path: "Init.hx",
+				source: "import haxe.macro.Context;\nclass Init {\n\tpublic static function run():Void {\n" +
+				"\t\tContext.onAfterInitMacros(() -> Context.defineType(macro class Generated {\n" +
+				"\t\t\tpublic static function hi():Int return 1;\n\t\t}));\n\t}\n}\n"
+			}
+		], ["--macro", "Init.run()"]);
+		accept("import_hx", main("trace(ViaImportHx.fn());"), [
+			{path: "import.hx", source: "import pack.Cfg as ViaImportHx;\n"},
+			{path: "pack/Cfg.hx", source: "package pack;\nclass Cfg {\n\tpublic static function fn():Int return 1;\n}\n"}
+		]);
+		macroArgumentIsNotChecked();
+		reject("not_exempted_by_unrelated_parent", "class Main extends Parent {\n\tstatic function main():Void {\n\t\tvar mode = Run;\n\t}\n}\n",
+			"Unknown identifier : Run", 3, [
+			{
+				path: "Parent.hx",
+				source: "class Parent {\n\tpublic function new() {}\n}\n"
+			}
+		]);
 		final valid = "test/fixtures/undeclared_names_valid";
 		M14Stage3RuntimeFixture.observe({
 			command: "node_modules/.bin/haxe",

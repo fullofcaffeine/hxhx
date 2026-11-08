@@ -551,9 +551,10 @@ class TyperStage {
 		final packagePath = HxModuleDecl.getPackagePath(declaration);
 		final directives = HxModuleDecl.getDirectives(declaration);
 		final resolvedDirectives = resolveModuleDirectives(directives, packagePath, modulePath, index, loader);
-		// A root-only index, or a loader without the standard library, cannot prove
-		// that an import names nothing; see TyperContext.hasDeclarationLoader.
-		if (index != null && loader != null && loader.hasStandardLibrary())
+		// A root-only index, a loader without the standard library, or a request with
+		// `--macro` initializers cannot prove that an import names nothing; see
+		// TyperContext.hasDeclarationLoader.
+		if (index != null && loader != null && loader.declarationsAreComplete())
 			requireResolvedDirectives(parsed, resolvedDirectives, packagePath, index, loader);
 		TyClassArgumentBounds.validateDeclarations(parsed, modulePath, index, (expected, supplied) -> constraintAccepts(expected, supplied, index));
 		final mainClass = HxModuleDecl.getMainClass(declaration);
@@ -3108,13 +3109,6 @@ class TyperStage {
 	}
 
 	/**
-		Resolve the exact field declaration selected by the current typed subset.
-
-		This follows the same current-class, fully qualified static, and typed receiver
-		paths as expression typing. The immutable field record then travels with the
-		typed read so later analyses do not have to reconstruct the receiver path.
-	**/
-	/**
 		Whether a bare name denotes a value in this scope: a local, a member, an
 		enum constructor, an imported static, a method value, or a runtime type
 		value. `TyUndeclaredName` uses this before it reports an unknown name.
@@ -3129,6 +3123,13 @@ class TyperStage {
 			|| TypedRuntimeTypeResolver.resolve(expression, scope, ctx, ValueExpression) != null;
 	}
 
+	/**
+		Resolve the exact field declaration selected by the current typed subset.
+
+		This follows the same current-class, fully qualified static, and typed receiver
+		paths as expression typing. The immutable field record then travels with the
+		typed read so later analyses do not have to reconstruct the receiver path.
+	**/
 	static function resolveFieldDeclaration(expression:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos, ?expected:TyType):Null<TyFieldInfo> {
 		return switch (expression) {
 			case EIdent(name) | EEnumValue(name):
