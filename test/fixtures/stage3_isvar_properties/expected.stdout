@@ -1,0 +1,14 @@
+level: 5
+level++: 6
+postfix value: 6
+prefix value: 8
+level +=: 18
+assignment value: 3
+scale: 8
+scale++: 18
+scale *=: 72
+secret: 31
+inside level: 10
+inside scale: 6
+inside secret: 41
+setter calls: level=5,level=6,level=7,level=8,level=18,level=3,level=7,level=8,level=10

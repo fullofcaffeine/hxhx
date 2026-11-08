@@ -100,22 +100,24 @@ let bind_structural receiver field key =
   else
     bind receiver key
 
-(* Interface calls on class-backed HxAnon carriers.
+(* Interface and overridden-method calls on class-backed HxAnon carriers.
 
    The hxhx Stage3 native emitter stores class instances as HxAnon objects that
    carry their class descriptor (`HxAnon.create_with_class`). Their methods are
    module-level OCaml functions that take the receiver first, so a call through
-   an interface type cannot name the implementing function statically.
+   an interface type, or a call of a method that a subclass overrides, cannot
+   name the right function statically.
 
    Haxe selects, for each generated class, the function that implements each
-   interface method (its own or an inherited superclass method). The class
-   module registers those functions here at the end of its initialization, so
-   code in modules that use the class runs after it. A static initializer in the
-   class's own module runs before it; see Stage3OcamlInterfaceDispatch. The
-   interface module's
-   method then looks the function up by the receiver's class and calls it with
-   the same receiver and arguments. Keys are opaque method names; this module
-   never inspects a Haxe signature.
+   interface method and each overridden method (its own or an inherited
+   superclass method). The class module registers those functions here at the
+   end of its initialization, so code in modules that use the class runs after
+   it. A static initializer in the class's own module runs before it; see
+   Stage3OcamlVirtualDispatch. The generated dispatcher (in the interface's
+   module, or in the module of the class that declares the overridden method)
+   looks the function up by the receiver's class and calls it with the same
+   receiver and arguments. Keys are opaque method names; this module never
+   inspects a Haxe signature.
 
    Tables are written only during module initialization and are not changed
    afterwards, so lookups read them without the lock. *)
@@ -129,7 +131,7 @@ let register_class_methods name entries =
       Stdlib.List.iter
         (fun (key, fn) ->
           if key = "" || Hashtbl.mem methods key then
-            fail ("invalid or duplicate interface method: " ^ name);
+            fail ("invalid or duplicate method table entry: " ^ name);
           Hashtbl.add methods key (require_closure fn))
         entries;
       Hashtbl.add anon_classes name methods)
@@ -140,15 +142,15 @@ let class_method receiver key =
      failures below are compiler or runtime contract violations. *)
   if HxRuntime.is_null receiver then
     HxRuntime.hx_throw_typed
-      (Obj.repr ("Null object reference: interface method " ^ key))
+      (Obj.repr ("Null object reference: method " ^ key))
       [ "String"; "Dynamic" ];
   if not (HxAnon.is_anon receiver) then fail ("receiver is not a class instance: " ^ key);
   let descriptor = HxAnon.class_value receiver in
   if HxRuntime.is_null descriptor then fail ("receiver has no class: " ^ key);
   let name = descriptor_name descriptor in
   match Hashtbl.find_opt anon_classes name with
-  | None -> fail ("class has no interface method table: " ^ name)
+  | None -> fail ("class has no method table: " ^ name)
   | Some methods -> (
       match Hashtbl.find_opt methods key with
-      | None -> fail ("class " ^ name ^ " has no interface method " ^ key)
+      | None -> fail ("class " ^ name ^ " has no method table entry " ^ key)
       | Some fn -> fn)

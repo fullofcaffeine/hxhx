@@ -1,0 +1,14 @@
+single heLLo
+multiple a;b;c;d
+overlapping bb
+overlapping3 <><>a
+missing hello
+empty-by bnn
+empty-input []
+empty-sub a-b-c
+whole xyz
+longer a::b
+using 1 two 1
+using-chain x/y/z
+order a=b s,sub,by
+length 4

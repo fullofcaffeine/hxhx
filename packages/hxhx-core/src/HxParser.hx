@@ -978,8 +978,14 @@ class HxParser {
 					PString(s);
 				}
 			case TInt(v):
+				requireValidHexLiteral();
 				bump();
 				PInt(v);
+			case TFloat(_) if (cur.numericText != null):
+				// An integer spelling outside the Int range is a Float constant. HxParser
+				// has no Float pattern yet (Bead haxe_ocaml-1rhgo), so reject it instead of
+				// letting it fall through to a wildcard.
+				fail("Float constant patterns are not supported yet: " + cur.numericText);
 			case TIdent(name) if (name == "macro" && peekKind().match(TColon)):
 				parseMacroTypeSwitchPattern();
 			case TIdent(name) if (name == "macro"):
@@ -1207,6 +1213,21 @@ class HxParser {
 	inline function nextIsAdjacentDot():Bool {
 		final next = peek();
 		return next.kind.match(TDot) && next.pos.getIndex() == cur.pos.getIndex() + 1;
+	}
+
+	/**
+		Reject an unsuffixed hex literal wider than 32 bits where it is used as a
+		value or pattern, as upstream does ("Invalid hexadecimal integer"). The
+		lexer keeps such a token (see `HxLexer.readNumber`), so text the parser
+		only skips, such as metadata arguments, is still accepted.
+	**/
+	function requireValidHexLiteral():Void {
+		final text = cur.numericText;
+		if (text != null
+			&& (cur.numericSuffix == null || cur.numericSuffix.length == 0)
+			&& (StringTools.startsWith(text, "0x") || StringTools.startsWith(text, "0X"))
+			&& HxIntegerLiteral.hexadecimal(text) == null)
+			fail("Invalid hexadecimal integer");
 	}
 
 	function fail<T>(message:String):T {
@@ -1511,7 +1532,8 @@ class HxParser {
 					parts.push(cur.numericText != null ? cur.numericText + (cur.numericSuffix == null ? "" : cur.numericSuffix) : Std.string(v));
 					bump();
 				case TFloat(v):
-					parts.push(Std.string(v));
+					// An out-of-range integer literal keeps its source spelling.
+					parts.push(cur.numericText != null ? cur.numericText : Std.string(v));
 					bump();
 				case TRegex(pattern, flags):
 					parts.push("~/" + pattern + "/" + flags);
@@ -1571,6 +1593,16 @@ class HxParser {
 		return parts.join("");
 	}
 
+	/** Whether the current keyword starts an expression and so ends a return type hint. */
+	function startsExpressionBody():Bool {
+		return switch cur.kind {
+			case TKeyword(KUntyped | KThis | KSuper | KNew | KCast | KFunction | KSwitch | KIf | KFor | KWhile | KDo | KTry | KReturn | KThrow | KBreak | KContinue | KVar | KFinal | KNull | KTrue | KFalse):
+				true;
+			case _:
+				false;
+		};
+	}
+
 	function readFunctionReturnTypeHint(stop:() -> Bool):String {
 		// In signatures like `function f():Bytes untyped { ... }`, `untyped`
 		// modifies the function body. Leave the token for the body parser so
@@ -1578,10 +1610,11 @@ class HxParser {
 		// Abstract constructors may use a semicolonless `this = value` body, so
 		// `this` is also a body boundary and can never be part of a type hint.
 		// Body metadata must reach the statement parser with its permission scope intact.
-		final hint = readTypeHintText(() -> stop() || isOtherChar("@") || cur.kind.match(TKeyword(KUntyped)) || cur.kind.match(TKeyword(KThis))
-			|| cur.kind.match(TKeyword(KSwitch)) || cur.kind.match(TKeyword(KIf)) || cur.kind.match(TKeyword(KFor)) || cur.kind.match(TKeyword(KWhile))
-			|| cur.kind.match(TKeyword(KDo)) || cur.kind.match(TKeyword(KTry)),
-			true);
+		// More generally, no keyword that can start an expression can continue a
+		// type. Without these stops `function put(v:Int):Void super.put(v);` read
+		// `Voidsuper.put(v)` as its return type and lost its body, so an override
+		// silently disappeared.
+		final hint = readTypeHintText(() -> stop() || isOtherChar("@") || startsExpressionBody(), true);
 		return hint;
 	}
 
@@ -1690,13 +1723,21 @@ class HxParser {
 				// Keep its field-access syntax intact for macro quotation and later typing.
 				final literalCode = cur.kind.match(TDot) && peekKind().match(TIdent("code")); interpolate && !literalCode ? parseInterpolatedStringExpr(s) : EString(s);
 			case TInt(v):
+				requireValidHexLiteral();
 				final raw = cur.numericText;
 				final suffix = cur.numericSuffix;
 				bump();
 				intLiteralExpr(v, raw, suffix);
 			case TFloat(v):
+				final raw = cur.numericText;
+				final suffix = cur.numericSuffix;
 				bump();
-				EFloat(v);
+				// Ordinary code reads the value; a quotation must keep the written suffix
+				// (`1.5f64`), which only `MacroSyntaxExport` consumes.
+				inMacroQuote
+				&& raw != null
+				&& suffix != null
+				&& suffix.length > 0 ? ECall(EIdent("__hxhx_float_literal"), [EString(raw), EString(suffix)]) : EFloat(v);
 			case TRegex(pattern, flags):
 				bump();
 				ENew("EReg", [EString(pattern), EString(flags)]);
@@ -2732,11 +2773,12 @@ class HxParser {
 					case _: throw "unreachable unary operator";
 				};
 				bump();
-				// The minimum Int has an unsigned magnitude that the host's parseInt
-				// cannot represent. Upstream also exposes this signed literal as one
-				// CInt constant to macros, so retain its value before parsing an operand.
+				// The minimum Int has an unsigned magnitude outside the Int range, so the
+				// lexer reads `2147483648` as a Float. Upstream exposes `-2147483648` as
+				// one Int literal (CInt to macros), so fold that exact spelling here.
+				// `-(2147483648)` and `-2147483649` stay Float negations.
 				if (op == HxUnaryOperator.Negate
-					&& cur.kind.match(TInt(_))
+					&& cur.kind.match(TFloat(_))
 					&& cur.numericText == "2147483648"
 					&& (cur.numericSuffix == null || cur.numericSuffix.length == 0)) {
 					bump();
@@ -2811,6 +2853,8 @@ class HxParser {
 		// `macro class Name ... { ... }` produces a `haxe.macro.TypeDefinition`, not
 		// a normal expression quote. Stage3 only needs to consume the balanced class
 		// quote and expose the object fields used by generator code (`name`, `fields`).
+		// The placeholder is wrapped as a quotation with the `class` marker so the typer
+		// can reject it where a real definition is required (`MacroReificationLowering`).
 		if (!acceptKeyword(KClass))
 			fail("Expected 'class'");
 
@@ -2839,7 +2883,7 @@ class HxParser {
 			skipBalancedBraces();
 		}
 
-		return EAnon(["pack", "name", "pos", "meta", "params", "isExtern", "kind", "fields"], [
+		return EMacroExpr(EAnon(["pack", "name", "pos", "meta", "params", "isExtern", "kind", "fields"], [
 			EArrayDecl([]),
 			EString(className),
 			ENull,
@@ -2852,7 +2896,7 @@ class HxParser {
 				EArrayDecl([ENull, EArrayDecl([]), EBool(false), EBool(false), EBool(false)])
 			]),
 			EArrayDecl([])
-		]);
+		]), ["class"]);
 	}
 
 	function parseMacroQuotePayload(stop:() -> Bool):HxExpr {

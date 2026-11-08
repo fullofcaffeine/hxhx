@@ -1,0 +1,9 @@
+{{Sys.println((((((("ALPHA" + ":") + 0) + ":") + 1) + ":") + false)); Sys.println((((((("BETA" + ":") + 1) + ":") + 2) + ":") + true))}; var seen = ["alpha", "beta"]; Sys.println(("seen=" + seen.length)); if true Sys.println("many") else Sys.println("few"); Sys.println(join("tail", 2)); 2}
+h(((haxe + Std) + hxhxmacrohost))
+(1 + 2)
+f(2, "two")
+[5, 1.5, 3, ["a", "b"]]
+g(named, 3, [4, 5])
+7
+(marker + 2)
+2.5

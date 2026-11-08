@@ -1,6 +1,7 @@
 package backend.ocaml;
 
 import TypedBackendClassSemanticFacts.TypedBackendClassMethodFact;
+import backend.ocaml.Stage3OcamlVirtualDispatch.Stage3OcamlMethodTableEntry;
 
 /** One class that the native request knows about, with its exact typed facts. */
 private typedef InterfaceDispatchClass = {
@@ -10,10 +11,7 @@ private typedef InterfaceDispatchClass = {
 }
 
 /** The function that implements one interface method for one class. */
-private typedef InterfaceDispatchEntry = {
-	final method:String;
-	final module:String;
-}
+private typedef InterfaceDispatchEntry = Stage3OcamlMethodTableEntry;
 
 /**
 	Calls through an interface type in Stage3 native OCaml output.
@@ -39,7 +37,9 @@ private typedef InterfaceDispatchEntry = {
 	  superclass, or through an interface that extends another, registers one
 	  table in the `HxMethodDispatch` runtime. The table maps every interface
 	  method name to the function that implements it for that class: the class's
-	  own method, or the nearest superclass method it inherits.
+	  own method, or the nearest superclass method it inherits. When a subclass
+	  overrides that method, the entry names its direct function, not its
+	  dispatcher.
 	- The interface module's method is no longer a stub. It reads the receiver's
 	  class, takes that class's function from the table, and calls it with the
 	  same receiver and arguments. Existing calls and method values that name
@@ -74,15 +74,20 @@ private typedef InterfaceDispatchEntry = {
 	  `HxMethodDispatch` error. In neither case does a call reach a placeholder.
 	- A static initializer in the class's own module runs before the table is
 	  registered. If it allocates an instance of the class and calls an interface
-	  method on it, the dispatcher stops with a named "class has no interface
-	  method table" error (haxe_ocaml-j6aof).
-	- Overridden class methods called on a superclass-typed value still bind to
-	  the superclass function (haxe_ocaml-tcf2h).
+	  method on it, the dispatcher stops with a named "class has no method
+	  table" error (haxe_ocaml-j6aof).
+	- Overridden class methods use the same per-class table, through
+	  dispatchers in the declaring class's module; see
+	  `Stage3OcamlVirtualDispatch`, which also renders the table.
 **/
 class Stage3OcamlInterfaceDispatch {
 	final classes:Map<String, InterfaceDispatchClass> = [];
-	var tables:Null<Map<String, Array<InterfaceDispatchEntry>>> = null;
-	var gaps:Null<Map<String, String>> = null;
+	// The planned tables stay non-null maps, filled once by `plan()`. hxhx itself
+	// is compiled by reflaxe.ocaml, which has no conversion from a
+	// `Null<Map<K, V>>` receiver to `haxe.IMap` (haxe_ocaml-f5jcm).
+	final tables:Map<String, Array<InterfaceDispatchEntry>> = [];
+	final gaps:Map<String, String> = [];
+	var planned = false;
 
 	public function new() {}
 
@@ -90,7 +95,7 @@ class Stage3OcamlInterfaceDispatch {
 	public function add(facts:TypedBackendClassSemanticFacts, generated:Bool, module:String):Void {
 		if (!facts.getNominalKind().match(ClassInstance))
 			return;
-		if (tables != null)
+		if (planned)
 			throw "native interface dispatch received a class after planning: " + facts.getClassIdentity();
 		classes.set(facts.getClassIdentity(), {facts: facts, generated: generated && !facts.getIsExtern(), module: module});
 	}
@@ -143,37 +148,22 @@ class Stage3OcamlInterfaceDispatch {
 	}
 
 	/**
-		The OCaml statement that registers this class's interface method table, or
-		null when the class implements no interface. `ident` names a function
-		exported by an OCaml module, exactly as the emitter names it.
+		The interface methods this class answers, each with the class whose method
+		implements it. `Stage3OcamlVirtualDispatch.registration` renders them in
+		the class's method table together with its overridden methods.
 	**/
-	public function registration(facts:TypedBackendClassSemanticFacts, currentModule:String, ident:(String, String) -> String,
-			quote:String->String):Null<String> {
+	public function entries(facts:TypedBackendClassSemanticFacts):Array<Stage3OcamlMethodTableEntry> {
 		plan();
-		final entries = tables.get(facts.getClassIdentity());
-		if (entries == null || entries.length == 0)
-			return null;
-		final rendered = [
-			for (entry in entries) {final name = ident(entry.module, entry.method);
-				"("
-				+ quote(entry.method)
-				+ ", Obj.repr "
-				+ (entry.module == currentModule ? name : entry.module + "." + name)
-				+ ")";
-			}
-		];
-		return "let () = HxMethodDispatch.register_class_methods "
-			+ quote(facts.requirePublicReflectionName())
-			+ " ["
-			+ rendered.join("; ")
-			+ "]";
+		final selected = tables.get(facts.getClassIdentity());
+		return selected == null ? [] : selected.copy();
 	}
 
 	function plan():Void {
-		if (tables != null)
+		if (planned)
 			return;
-		final selected:Map<String, Array<InterfaceDispatchEntry>> = [];
-		final missing:Map<String, String> = [];
+		planned = true;
+		final selected = tables;
+		final missing = gaps;
 		final identities = [for (identity in classes.keys()) identity];
 		identities.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
 		for (identity in identities) {
@@ -207,13 +197,11 @@ class Stage3OcamlInterfaceDispatch {
 				if (seen.exists(declared.method.name))
 					continue;
 				seen.set(declared.method.name, true);
-				entries.push({method: declared.method.name, module: implementation.owner.module});
+				entries.push({method: declared.method.name, owner: implementation.owner.facts.getClassIdentity(), module: implementation.owner.module});
 			}
 			if (entries.length > 0)
 				selected.set(identity, entries);
 		}
-		tables = selected;
-		gaps = missing;
 	}
 
 	/** A method shape whose OCaml calling convention this table cannot forward unchanged. */

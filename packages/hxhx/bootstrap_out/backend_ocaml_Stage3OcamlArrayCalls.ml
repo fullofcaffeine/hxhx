@@ -115,207 +115,216 @@ let renderMethodValue = fun input -> (try let occurrence = Obj.magic (Obj.obj (H
 
 let render = fun input -> (try let occurrence = Obj.magic (Obj.obj (HxAnon.get input "occurrence")) in let call = TypedBackendInstanceCallOccurrence.getCall (Obj.magic occurrence) () in (
   ignore (if (let __string_eq_left_43 = TyNominalTypeId.getCanonicalName (Obj.magic (TyDeclarationInfo.getOwner (Obj.magic (TypedBackendInstanceCallOccurrence.getDeclaration (Obj.magic occurrence) ())) ())) () in let __string_eq_right_44 = "Array" in not (HxString.equals __string_eq_left_43 __string_eq_right_44)) || not (supports (Obj.obj (HxAnon.get call "method") : string)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let receiverType = Obj.magic (TypedBackendInstanceCallOccurrence.getReceiverType (Obj.magic occurrence) ()) in (
-    ignore (if receiverType == Obj.magic (HxRuntime.hx_null) || TyType.getNominalIdentity (Obj.magic receiverType) () == Obj.magic (HxRuntime.hx_null) || (let __string_eq_left_45 = TyNominalTypeId.getCanonicalName (Obj.magic (TyType.getNominalIdentity (Obj.magic receiverType) ())) () in let __string_eq_right_46 = "Array" in not (HxString.equals __string_eq_left_45 __string_eq_right_46)) || HxArray.length (TyType.getTypeArguments (Obj.magic receiverType) ()) <> 1 then HxType.hx_throw_typed_rtti (Obj.repr "selected OCaml array call requires its exact Array receiver type") ["Dynamic"] else ());
-    let tempNumber = ref (0 : int) in (
-      ignore (let _g = (Obj.obj (HxAnon.get call "method") : string) in match _g with
-        | "insert" | "splice" -> let __assign_48 = 2 in (
-          tempNumber := __assign_48;
-          __assign_48
-        )
-        | "indexOf" | "lastIndexOf" | "slice" -> if HxArray.length (Obj.obj (HxAnon.get call "arguments")) = 1 then let __assign_49 = 1 in (
-          tempNumber := __assign_49;
-          __assign_49
-        ) else let __assign_50 = 2 in (
-          tempNumber := __assign_50;
-          __assign_50
-        )
-        | "copy" | "pop" | "reverse" | "shift" | "toString" -> let __assign_51 = 0 in (
-          tempNumber := __assign_51;
-          __assign_51
-        )
-        | _ -> let __assign_47 = 1 in (
-          tempNumber := __assign_47;
-          __assign_47
-        ));
-      let expectedCount = !tempNumber in (
-        ignore (if HxArray.length (Obj.obj (HxAnon.get call "arguments")) <> expectedCount || Obj.obj (HxAnon.get input "names") == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "selected OCaml array call requires its argument and local naming owner") ["Dynamic"] else ());
-        let strings = let __string_eq_left_52 = TyType.getSemanticKey (Obj.magic (let __array_read_receiver_54 = TyType.getTypeArguments (Obj.magic receiverType) () in let __array_read_index_55 = 0 in HxArray.get (Obj.magic __array_read_receiver_54) __array_read_index_55)) () in let __string_eq_right_53 = "primitive:String" in HxString.equals __string_eq_left_52 __string_eq_right_53 in let autoTyped = HxRuntime.unbox_bool_or_obj (HxAnon.get input "autoMetal") && strings in let receiver = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic (Obj.obj (HxAnon.get input "names"))) ("__hx_array_receiver" : string) : string) in let tempString = ref (HxString.hx_null_string : string) in (
-          ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get input "metal") then let __assign_56 = (receiver : string) in (
-            tempString := __assign_56;
-            __assign_56
-          ) else let __assign_57 = (("(Obj.magic " ^ HxString.toStdString receiver) ^ ")" : string) in (
-            tempString := __assign_57;
-            __assign_57
+  let tempMaybeTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+    ignore (if TypedBackendInstanceCallOccurrence.getReceiverType (Obj.magic occurrence) () == Obj.magic (HxRuntime.hx_null) then let __assign_45 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+      tempMaybeTyType := __assign_45;
+      __assign_45
+    ) else let __assign_46 = Obj.magic (Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic (TypedBackendInstanceCallOccurrence.getReceiverType (Obj.magic occurrence) ())))) in (
+      tempMaybeTyType := __assign_46;
+      __assign_46
+    ));
+    let receiverType = Obj.magic (!tempMaybeTyType) in (
+      ignore (if receiverType == Obj.magic (HxRuntime.hx_null) || TyType.getNominalIdentity (Obj.magic receiverType) () == Obj.magic (HxRuntime.hx_null) || (let __string_eq_left_47 = TyNominalTypeId.getCanonicalName (Obj.magic (TyType.getNominalIdentity (Obj.magic receiverType) ())) () in let __string_eq_right_48 = "Array" in not (HxString.equals __string_eq_left_47 __string_eq_right_48)) || HxArray.length (TyType.getTypeArguments (Obj.magic receiverType) ()) <> 1 then HxType.hx_throw_typed_rtti (Obj.repr "selected OCaml array call requires its exact Array receiver type") ["Dynamic"] else ());
+      let tempNumber = ref (0 : int) in (
+        ignore (let _g = (Obj.obj (HxAnon.get call "method") : string) in match _g with
+          | "insert" | "splice" -> let __assign_50 = 2 in (
+            tempNumber := __assign_50;
+            __assign_50
+          )
+          | "indexOf" | "lastIndexOf" | "slice" -> if HxArray.length (Obj.obj (HxAnon.get call "arguments")) = 1 then let __assign_51 = 1 in (
+            tempNumber := __assign_51;
+            __assign_51
+          ) else let __assign_52 = 2 in (
+            tempNumber := __assign_52;
+            __assign_52
+          )
+          | "copy" | "pop" | "reverse" | "shift" | "toString" -> let __assign_53 = 0 in (
+            tempNumber := __assign_53;
+            __assign_53
+          )
+          | _ -> let __assign_49 = 1 in (
+            tempNumber := __assign_49;
+            __assign_49
           ));
-          let runtimeReceiver = (!tempString : string) in let _g = Obj.magic (let __represented_array_58 = HxArray.create () in __represented_array_58) in let _g1 = ref 0 in let _g2 = HxArray.length (Obj.obj (HxAnon.get call "arguments")) in (
-            ignore (while !_g1 < _g2 do ignore (let index = let __old_59 = !_g1 in let __new_60 = HxInt.add __old_59 1 in (
-              ignore (_g1 := __new_60);
-              __old_59
-            ) in let __array_receiver_61 = Obj.magic _g in let __array_arg_0_62 = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic (Obj.obj (HxAnon.get input "names"))) ("__hx_array_argument_" ^ string_of_int index : string) : string) in HxArray.push __array_receiver_61 __array_arg_0_62) done);
-            let tempArray = Obj.magic _g in let arguments = Obj.magic tempArray in let tempString1 = ref (HxString.hx_null_string : string) in (
-              ignore (if HxArray.length arguments = 0 then let __assign_63 = ("" : string) in (
-                tempString1 := __assign_63;
-                __assign_63
-              ) else let __assign_64 = (let __array_read_receiver_65 = arguments in let __array_read_index_66 = 0 in HxArray.get (Obj.magic __array_read_receiver_65) __array_read_index_66 : string) in (
-                tempString1 := __assign_64;
-                __assign_64
-              ));
-              let argument = (!tempString1 : string) in let element = Obj.magic (let __array_read_receiver_67 = TyType.getTypeArguments (Obj.magic receiverType) () in let __array_read_index_68 = 0 in HxArray.get (Obj.magic __array_read_receiver_67) __array_read_index_68) in let stored = let __callback_input_80 = fun index -> let tempResult = ref (HxString.hx_null_string : string) in (
-                ignore (if TyType.isDynamic (Obj.magic element) () then let __assign_69 = (let __string_part_74 = "(Obj.magic (" in let __string_part_75 = HxString.toStdString (Backend_ocaml_Stage3OcamlObjects.store (Obj.magic (let __array_read_receiver_70 = TypedBackendInstanceCallOccurrence.getProjectedArgumentTypes (Obj.magic occurrence) () in let __array_read_index_71 = index in HxArray.get (Obj.magic __array_read_receiver_70) __array_read_index_71)) (let __array_read_receiver_72 = arguments in let __array_read_index_73 = index in HxArray.get (Obj.magic __array_read_receiver_72) __array_read_index_73 : string)) in let __string_part_76 = "))" in (__string_part_74 ^ __string_part_75) ^ __string_part_76 : string) in (
-                  tempResult := __assign_69;
-                  __assign_69
-                ) else let __assign_77 = (let __array_read_receiver_78 = arguments in let __array_read_index_79 = index in HxArray.get (Obj.magic __array_read_receiver_78) __array_read_index_79 : string) in (
-                  tempResult := __assign_77;
-                  __assign_77
+        let expectedCount = !tempNumber in (
+          ignore (if HxArray.length (Obj.obj (HxAnon.get call "arguments")) <> expectedCount || Obj.obj (HxAnon.get input "names") == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "selected OCaml array call requires its argument and local naming owner") ["Dynamic"] else ());
+          let strings = let __string_eq_left_54 = TyType.getSemanticKey (Obj.magic (let __array_read_receiver_56 = TyType.getTypeArguments (Obj.magic receiverType) () in let __array_read_index_57 = 0 in HxArray.get (Obj.magic __array_read_receiver_56) __array_read_index_57)) () in let __string_eq_right_55 = "primitive:String" in HxString.equals __string_eq_left_54 __string_eq_right_55 in let autoTyped = HxRuntime.unbox_bool_or_obj (HxAnon.get input "autoMetal") && strings in let receiver = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic (Obj.obj (HxAnon.get input "names"))) ("__hx_array_receiver" : string) : string) in let tempString = ref (HxString.hx_null_string : string) in (
+            ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get input "metal") then let __assign_58 = (receiver : string) in (
+              tempString := __assign_58;
+              __assign_58
+            ) else let __assign_59 = (("(Obj.magic " ^ HxString.toStdString receiver) ^ ")" : string) in (
+              tempString := __assign_59;
+              __assign_59
+            ));
+            let runtimeReceiver = (!tempString : string) in let _g = Obj.magic (let __represented_array_60 = HxArray.create () in __represented_array_60) in let _g1 = ref 0 in let _g2 = HxArray.length (Obj.obj (HxAnon.get call "arguments")) in (
+              ignore (while !_g1 < _g2 do ignore (let index = let __old_61 = !_g1 in let __new_62 = HxInt.add __old_61 1 in (
+                ignore (_g1 := __new_62);
+                __old_61
+              ) in let __array_receiver_63 = Obj.magic _g in let __array_arg_0_64 = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic (Obj.obj (HxAnon.get input "names"))) ("__hx_array_argument_" ^ string_of_int index : string) : string) in HxArray.push __array_receiver_63 __array_arg_0_64) done);
+              let tempArray = Obj.magic _g in let arguments = Obj.magic tempArray in let tempString1 = ref (HxString.hx_null_string : string) in (
+                ignore (if HxArray.length arguments = 0 then let __assign_65 = ("" : string) in (
+                  tempString1 := __assign_65;
+                  __assign_65
+                ) else let __assign_66 = (let __array_read_receiver_67 = arguments in let __array_read_index_68 = 0 in HxArray.get (Obj.magic __array_read_receiver_67) __array_read_index_68 : string) in (
+                  tempString1 := __assign_66;
+                  __assign_66
                 ));
-                !tempResult
-              ) in let __callable_origin_81 = __callback_input_80 in (__callable_origin_81, Obj.repr (ref ())) in let tempString2 = ref (HxString.hx_null_string : string) in (
-                ignore (let _g = (Obj.obj (HxAnon.get call "method") : string) in match _g with
-                  | "concat" -> let __assign_82 = ((("HxArray.concat " ^ HxString.toStdString runtimeReceiver) ^ " ") ^ HxString.toStdString argument : string) in (
-                    tempString2 := __assign_82;
-                    __assign_82
-                  )
-                  | "contains" | "remove" -> let __assign_83 = (let __string_part_86 = "HxArray." in let __string_part_87 = HxString.toStdString (Obj.obj (HxAnon.get call "method")) in let __string_part_88 = " " in let __string_part_89 = HxString.toStdString runtimeReceiver in let __string_part_90 = " " in let __string_part_91 = HxString.toStdString (let __call_callee_84 = stored in let __call_arg_0_85 = 0 in Stdlib.fst __call_callee_84 __call_arg_0_85) in ((((__string_part_86 ^ __string_part_87) ^ __string_part_88) ^ __string_part_89) ^ __string_part_90) ^ __string_part_91 : string) in (
-                    tempString2 := __assign_83;
-                    __assign_83
-                  )
-                  | "copy" -> let __assign_92 = ("HxArray.copy " ^ HxString.toStdString runtimeReceiver : string) in (
-                    tempString2 := __assign_92;
-                    __assign_92
-                  )
-                  | "filter" -> let __assign_93 = ((("HxArray.filter " ^ HxString.toStdString runtimeReceiver) ^ " ") ^ HxString.toStdString argument : string) in (
-                    tempString2 := __assign_93;
-                    __assign_93
-                  )
-                  | "insert" -> let __assign_94 = (let __string_part_99 = "HxArray.insert " in let __string_part_100 = HxString.toStdString runtimeReceiver in let __string_part_101 = " " in let __string_part_102 = HxString.toStdString (let __array_read_receiver_95 = arguments in let __array_read_index_96 = 0 in HxArray.get (Obj.magic __array_read_receiver_95) __array_read_index_96) in let __string_part_103 = " " in let __string_part_104 = HxString.toStdString (let __call_callee_97 = stored in let __call_arg_0_98 = 1 in Stdlib.fst __call_callee_97 __call_arg_0_98) in ((((__string_part_99 ^ __string_part_100) ^ __string_part_101) ^ __string_part_102) ^ __string_part_103) ^ __string_part_104 : string) in (
-                    tempString2 := __assign_94;
-                    __assign_94
-                  )
-                  | "join" -> (
-                    ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get input "metal") && not (strings) then HxType.hx_throw_typed_rtti (Obj.repr "stage3 emitter: metal profile unsupported semantics: Array.join requires Array<String> receiver") ["Dynamic"] else ());
-                    ignore (if autoTyped then ignore ((Obj.obj (HxAnon.get input "mark") : _ -> _) ("array_join_typed" : string)) else ());
-                    if HxRuntime.unbox_bool_or_obj (HxAnon.get input "metal") || autoTyped then let __assign_105 = (((("HxBootArray.join_strict (" ^ HxString.toStdString receiver) ^ ") (") ^ HxString.toStdString argument) ^ ") (fun (s : string) -> s)" : string) in (
-                      tempString2 := __assign_105;
-                      __assign_105
-                    ) else if strings then let __assign_106 = (((("HxBootArray.join (" ^ HxString.toStdString receiver) ^ ") (") ^ HxString.toStdString argument) ^ ") (fun (s : string) -> s)" : string) in (
-                      tempString2 := __assign_106;
-                      __assign_106
-                    ) else let __assign_107 = (((("HxBootArray.join_dyn (Obj.magic (" ^ HxString.toStdString receiver) ^ ")) (") ^ HxString.toStdString argument) ^ ")" : string) in (
-                      tempString2 := __assign_107;
-                      __assign_107
+                let argument = (!tempString1 : string) in let element = Obj.magic (let __array_read_receiver_69 = TyType.getTypeArguments (Obj.magic receiverType) () in let __array_read_index_70 = 0 in HxArray.get (Obj.magic __array_read_receiver_69) __array_read_index_70) in let stored = let __callback_input_82 = fun index -> let tempResult = ref (HxString.hx_null_string : string) in (
+                  ignore (if TyType.isDynamic (Obj.magic element) () then let __assign_71 = (let __string_part_76 = "(Obj.magic (" in let __string_part_77 = HxString.toStdString (Backend_ocaml_Stage3OcamlObjects.store (Obj.magic (let __array_read_receiver_72 = TypedBackendInstanceCallOccurrence.getProjectedArgumentTypes (Obj.magic occurrence) () in let __array_read_index_73 = index in HxArray.get (Obj.magic __array_read_receiver_72) __array_read_index_73)) (let __array_read_receiver_74 = arguments in let __array_read_index_75 = index in HxArray.get (Obj.magic __array_read_receiver_74) __array_read_index_75 : string)) in let __string_part_78 = "))" in (__string_part_76 ^ __string_part_77) ^ __string_part_78 : string) in (
+                    tempResult := __assign_71;
+                    __assign_71
+                  ) else let __assign_79 = (let __array_read_receiver_80 = arguments in let __array_read_index_81 = index in HxArray.get (Obj.magic __array_read_receiver_80) __array_read_index_81 : string) in (
+                    tempResult := __assign_79;
+                    __assign_79
+                  ));
+                  !tempResult
+                ) in let __callable_origin_83 = __callback_input_82 in (__callable_origin_83, Obj.repr (ref ())) in let tempString2 = ref (HxString.hx_null_string : string) in (
+                  ignore (let _g = (Obj.obj (HxAnon.get call "method") : string) in match _g with
+                    | "concat" -> let __assign_84 = ((("HxArray.concat " ^ HxString.toStdString runtimeReceiver) ^ " ") ^ HxString.toStdString argument : string) in (
+                      tempString2 := __assign_84;
+                      __assign_84
                     )
-                  )
-                  | "indexOf" | "lastIndexOf" -> let searched = let __call_callee_108 = stored in let __call_arg_0_109 = 0 in Stdlib.fst __call_callee_108 __call_arg_0_109 in let tempString3 = ref (HxString.hx_null_string : string) in (
-                    ignore (if HxArray.length arguments = 1 then let __assign_110 = "_default" in (
-                      tempString3 := __assign_110;
-                      __assign_110
-                    ) else let __assign_111 = "" in (
-                      tempString3 := __assign_111;
-                      __assign_111
-                    ));
-                    let tempString4 = ref (HxString.hx_null_string : string) in (
-                      ignore (if HxArray.length arguments = 1 then let __assign_112 = "" in (
-                        tempString4 := __assign_112;
-                        __assign_112
-                      ) else let __assign_113 = let __string_part_116 = " " in let __string_part_117 = HxString.toStdString (let __array_read_receiver_114 = arguments in let __array_read_index_115 = 1 in HxArray.get (Obj.magic __array_read_receiver_114) __array_read_index_115) in __string_part_116 ^ __string_part_117 in (
-                        tempString4 := __assign_113;
-                        __assign_113
-                      ));
-                      let __assign_118 = (let __string_part_119 = "HxArray." in let __string_part_120 = HxString.toStdString (Obj.obj (HxAnon.get call "method")) in let __string_part_121 = HxString.toStdString (!tempString3) in let __string_part_122 = " " in let __string_part_123 = HxString.toStdString runtimeReceiver in let __string_part_124 = " " in let __string_part_125 = HxString.toStdString searched in let __string_part_126 = HxString.toStdString (!tempString4) in ((((((__string_part_119 ^ __string_part_120) ^ __string_part_121) ^ __string_part_122) ^ __string_part_123) ^ __string_part_124) ^ __string_part_125) ^ __string_part_126 : string) in (
-                        tempString2 := __assign_118;
-                        __assign_118
+                    | "contains" | "remove" -> let __assign_85 = (let __string_part_88 = "HxArray." in let __string_part_89 = HxString.toStdString (Obj.obj (HxAnon.get call "method")) in let __string_part_90 = " " in let __string_part_91 = HxString.toStdString runtimeReceiver in let __string_part_92 = " " in let __string_part_93 = HxString.toStdString (let __call_callee_86 = stored in let __call_arg_0_87 = 0 in Stdlib.fst __call_callee_86 __call_arg_0_87) in ((((__string_part_88 ^ __string_part_89) ^ __string_part_90) ^ __string_part_91) ^ __string_part_92) ^ __string_part_93 : string) in (
+                      tempString2 := __assign_85;
+                      __assign_85
+                    )
+                    | "copy" -> let __assign_94 = ("HxArray.copy " ^ HxString.toStdString runtimeReceiver : string) in (
+                      tempString2 := __assign_94;
+                      __assign_94
+                    )
+                    | "filter" -> let __assign_95 = ((("HxArray.filter " ^ HxString.toStdString runtimeReceiver) ^ " ") ^ HxString.toStdString argument : string) in (
+                      tempString2 := __assign_95;
+                      __assign_95
+                    )
+                    | "insert" -> let __assign_96 = (let __string_part_101 = "HxArray.insert " in let __string_part_102 = HxString.toStdString runtimeReceiver in let __string_part_103 = " " in let __string_part_104 = HxString.toStdString (let __array_read_receiver_97 = arguments in let __array_read_index_98 = 0 in HxArray.get (Obj.magic __array_read_receiver_97) __array_read_index_98) in let __string_part_105 = " " in let __string_part_106 = HxString.toStdString (let __call_callee_99 = stored in let __call_arg_0_100 = 1 in Stdlib.fst __call_callee_99 __call_arg_0_100) in ((((__string_part_101 ^ __string_part_102) ^ __string_part_103) ^ __string_part_104) ^ __string_part_105) ^ __string_part_106 : string) in (
+                      tempString2 := __assign_96;
+                      __assign_96
+                    )
+                    | "join" -> (
+                      ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get input "metal") && not (strings) then HxType.hx_throw_typed_rtti (Obj.repr "stage3 emitter: metal profile unsupported semantics: Array.join requires Array<String> receiver") ["Dynamic"] else ());
+                      ignore (if autoTyped then ignore ((Obj.obj (HxAnon.get input "mark") : _ -> _) ("array_join_typed" : string)) else ());
+                      if HxRuntime.unbox_bool_or_obj (HxAnon.get input "metal") || autoTyped then let __assign_107 = (((("HxBootArray.join_strict (" ^ HxString.toStdString receiver) ^ ") (") ^ HxString.toStdString argument) ^ ") (fun (s : string) -> s)" : string) in (
+                        tempString2 := __assign_107;
+                        __assign_107
+                      ) else if strings then let __assign_108 = (((("HxBootArray.join (" ^ HxString.toStdString receiver) ^ ") (") ^ HxString.toStdString argument) ^ ") (fun (s : string) -> s)" : string) in (
+                        tempString2 := __assign_108;
+                        __assign_108
+                      ) else let __assign_109 = (((("HxBootArray.join_dyn (Obj.magic (" ^ HxString.toStdString receiver) ^ ")) (") ^ HxString.toStdString argument) ^ ")" : string) in (
+                        tempString2 := __assign_109;
+                        __assign_109
                       )
                     )
-                  )
-                  | "map" -> (
-                    ignore (if autoTyped then ignore ((Obj.obj (HxAnon.get input "mark") : _ -> _) ("array_map_typed" : string)) else ());
-                    if HxRuntime.unbox_bool_or_obj (HxAnon.get input "metal") || autoTyped then let __assign_127 = (((("HxBootArray.map (" ^ HxString.toStdString receiver) ^ ") (") ^ HxString.toStdString argument) ^ ")" : string) in (
-                      tempString2 := __assign_127;
-                      __assign_127
-                    ) else let __assign_128 = (((("HxBootArray.map_dyn (Obj.magic (" ^ HxString.toStdString receiver) ^ ")) (Obj.repr (") ^ HxString.toStdString argument) ^ "))" : string) in (
-                      tempString2 := __assign_128;
-                      __assign_128
-                    )
-                  )
-                  | "push" -> let __assign_129 = (push (Obj.magic receiverType) (Obj.magic (let __array_read_receiver_130 = TypedBackendInstanceCallOccurrence.getProjectedArgumentTypes (Obj.magic occurrence) () in let __array_read_index_131 = 0 in HxArray.get (Obj.magic __array_read_receiver_130) __array_read_index_131)) (runtimeReceiver : string) (argument : string) : string) in (
-                    tempString2 := __assign_129;
-                    __assign_129
-                  )
-                  | "resize" -> let __assign_132 = ((("HxArray.resize " ^ HxString.toStdString runtimeReceiver) ^ " ") ^ HxString.toStdString argument : string) in (
-                    tempString2 := __assign_132;
-                    __assign_132
-                  )
-                  | "reverse" -> let __assign_133 = (("HxArray.reverse " ^ HxString.toStdString runtimeReceiver) ^ " ()" : string) in (
-                    tempString2 := __assign_133;
-                    __assign_133
-                  )
-                  | "pop" | "shift" -> (
-                    ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get input "metal") then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_134 = "stage3 emitter: metal profile unsupported semantics: Array." in let __string_part_135 = HxString.toStdString (Obj.obj (HxAnon.get call "method")) in let __string_part_136 = " returns Null<T>" in (__string_part_134 ^ __string_part_135) ^ __string_part_136)) ["Dynamic"] else ());
-                    let __assign_137 = (let __string_part_138 = "HxArray." in let __string_part_139 = HxString.toStdString (Obj.obj (HxAnon.get call "method")) in let __string_part_140 = " " in let __string_part_141 = HxString.toStdString runtimeReceiver in let __string_part_142 = " ()" in (((__string_part_138 ^ __string_part_139) ^ __string_part_140) ^ __string_part_141) ^ __string_part_142 : string) in (
-                      tempString2 := __assign_137;
-                      __assign_137
-                    )
-                  )
-                  | "slice" -> if HxArray.length arguments = 1 then let __assign_143 = ((("HxArray.slice_default " ^ HxString.toStdString runtimeReceiver) ^ " ") ^ HxString.toStdString argument : string) in (
-                    tempString2 := __assign_143;
-                    __assign_143
-                  ) else let __assign_144 = (let __string_part_145 = "HxArray.slice " in let __string_part_146 = HxString.toStdString runtimeReceiver in let __string_part_147 = " " in let __string_part_148 = HxString.toStdString (HxArray.join arguments " " (fun x -> x)) in ((__string_part_145 ^ __string_part_146) ^ __string_part_147) ^ __string_part_148 : string) in (
-                    tempString2 := __assign_144;
-                    __assign_144
-                  )
-                  | "sort" -> let __assign_149 = ((("HxArray.sort " ^ HxString.toStdString runtimeReceiver) ^ " ") ^ HxString.toStdString argument : string) in (
-                    tempString2 := __assign_149;
-                    __assign_149
-                  )
-                  | "splice" -> let __assign_150 = (let __string_part_151 = "HxArray.splice " in let __string_part_152 = HxString.toStdString runtimeReceiver in let __string_part_153 = " " in let __string_part_154 = HxString.toStdString (HxArray.join arguments " " (fun x -> x)) in ((__string_part_151 ^ __string_part_152) ^ __string_part_153) ^ __string_part_154 : string) in (
-                    tempString2 := __assign_150;
-                    __assign_150
-                  )
-                  | "toString" -> (
-                    ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get input "metal") then HxType.hx_throw_typed_rtti (Obj.repr "stage3 emitter: metal profile unsupported semantics: Array.toString requires a Dynamic element stringifier") ["Dynamic"] else ());
-                    let __assign_155 = (("HxDynamic.toStdString (Obj.repr " ^ HxString.toStdString receiver) ^ ")" : string) in (
-                      tempString2 := __assign_155;
-                      __assign_155
-                    )
-                  )
-                  | "unshift" -> let __assign_156 = (let __string_part_159 = "HxArray.unshift " in let __string_part_160 = HxString.toStdString runtimeReceiver in let __string_part_161 = " " in let __string_part_162 = HxString.toStdString (let __call_callee_157 = stored in let __call_arg_0_158 = 0 in Stdlib.fst __call_callee_157 __call_arg_0_158) in ((__string_part_159 ^ __string_part_160) ^ __string_part_161) ^ __string_part_162 : string) in (
-                    tempString2 := __assign_156;
-                    __assign_156
-                  )
-                  | _ -> HxType.hx_throw_typed_rtti (Obj.repr "unexpected selected array operation") ["Dynamic"]);
-                let operation = (!tempString2 : string) in let tempString5 = ref (HxString.hx_null_string : string) in (
-                  ignore (if (let __string_eq_left_163 = Obj.obj (HxAnon.get call "method") in let __string_eq_right_164 = "map" in HxString.equals __string_eq_left_163 __string_eq_right_164) && not (HxRuntime.unbox_bool_or_obj (HxAnon.get input "metal")) then let __assign_165 = (Backend_ocaml_Stage3OcamlArrays.retainStringifier (Obj.magic (TypedBackendInstanceCallOccurrence.getResultType (Obj.magic occurrence) ())) (operation : string) (Obj.magic (Obj.obj (HxAnon.get input "names"))) : string) in (
-                    tempString5 := __assign_165;
-                    __assign_165
-                  ) else let __assign_166 = (operation : string) in (
-                    tempString5 := __assign_166;
-                    __assign_166
-                  ));
-                  let result = (!tempString5 : string) in let bindings = Obj.magic (let __represented_array_167 = HxArray.create () in let __represented_array_element_0_168 = let __string_part_169 = "let " in let __string_part_170 = HxString.toStdString receiver in let __string_part_171 = " = (" in let __string_part_172 = HxString.toStdString ((Obj.obj (HxAnon.get input "emit") : _ -> _) (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get call "receiver"))))) in let __string_part_173 = ") in " in (((__string_part_169 ^ __string_part_170) ^ __string_part_171) ^ __string_part_172) ^ __string_part_173 in (
-                    ignore (HxArray.push __represented_array_167 __represented_array_element_0_168);
-                    __represented_array_167
-                  )) in let argumentTypes = Obj.magic (TypedBackendInstanceCallOccurrence.getArgumentTypes (Obj.magic occurrence) ()) in let _g = ref 0 in let _g1 = HxArray.length arguments in (
-                    ignore (while !_g < _g1 do ignore (let index = let __old_174 = !_g in let __new_175 = HxInt.add __old_174 1 in (
-                      ignore (_g := __new_175);
-                      __old_174
-                    ) in let rendered = ((Obj.obj (HxAnon.get input "emit") : _ -> _) (Obj.magic (let __array_read_receiver_176 = Obj.obj (HxAnon.get call "arguments") in let __array_read_index_177 = index in HxArray.get (Obj.magic __array_read_receiver_176) __array_read_index_177)) : string) in let nullableInt = index < HxArray.length argumentTypes && (let __string_eq_left_178 = Backend_ocaml_Stage3OcamlNullablePrimitive.innerPrimitive (Obj.magic (let __array_read_receiver_180 = argumentTypes in let __array_read_index_181 = index in HxArray.get (Obj.magic __array_read_receiver_180) __array_read_index_181)) in let __string_eq_right_179 = "primitive:Int" in HxString.equals __string_eq_left_178 __string_eq_right_179) in let optionalSlot = index = 1 && ((let __string_eq_left_182 = Obj.obj (HxAnon.get call "method") in let __string_eq_right_183 = "slice" in HxString.equals __string_eq_left_182 __string_eq_right_183) || (let __string_eq_left_184 = Obj.obj (HxAnon.get call "method") in let __string_eq_right_185 = "indexOf" in HxString.equals __string_eq_left_184 __string_eq_right_185) || (let __string_eq_left_186 = Obj.obj (HxAnon.get call "method") in let __string_eq_right_187 = "lastIndexOf" in HxString.equals __string_eq_left_186 __string_eq_right_187)) in let requiredSlot = index = 0 && (let __string_eq_left_188 = Obj.obj (HxAnon.get call "method") in let __string_eq_right_189 = "slice" in HxString.equals __string_eq_left_188 __string_eq_right_189) in let tempString6 = ref (HxString.hx_null_string : string) in (
-                      ignore (if not (nullableInt) then let __assign_190 = (rendered : string) in (
-                        tempString6 := __assign_190;
-                        __assign_190
-                      ) else if optionalSlot then let __assign_191 = (Backend_ocaml_Stage3OcamlNullablePrimitive.intrinsicOptionalInt (rendered : string) : string) in (
-                        tempString6 := __assign_191;
-                        __assign_191
-                      ) else if requiredSlot then let __assign_192 = (Backend_ocaml_Stage3OcamlNullablePrimitive.unwrap ("primitive:Int" : string) (rendered : string) : string) in (
-                        tempString6 := __assign_192;
-                        __assign_192
-                      ) else let __assign_193 = (rendered : string) in (
-                        tempString6 := __assign_193;
-                        __assign_193
+                    | "indexOf" | "lastIndexOf" -> let searched = let __call_callee_110 = stored in let __call_arg_0_111 = 0 in Stdlib.fst __call_callee_110 __call_arg_0_111 in let tempString3 = ref (HxString.hx_null_string : string) in (
+                      ignore (if HxArray.length arguments = 1 then let __assign_112 = "_default" in (
+                        tempString3 := __assign_112;
+                        __assign_112
+                      ) else let __assign_113 = "" in (
+                        tempString3 := __assign_113;
+                        __assign_113
                       ));
-                      let value = (!tempString6 : string) in let __array_receiver_194 = Obj.magic bindings in let __array_arg_0_195 = (let __string_part_198 = "let " in let __string_part_199 = HxString.toStdString (let __array_read_receiver_196 = arguments in let __array_read_index_197 = index in HxArray.get (Obj.magic __array_read_receiver_196) __array_read_index_197) in let __string_part_200 = " = (" in let __string_part_201 = HxString.toStdString value in let __string_part_202 = ") in " in (((__string_part_198 ^ __string_part_199) ^ __string_part_200) ^ __string_part_201) ^ __string_part_202 : string) in HxArray.push __array_receiver_194 __array_arg_0_195
-                    )) done);
-                    let __string_part_203 = "(" in let __string_part_204 = HxString.toStdString (HxArray.join bindings "" (fun x -> x)) in let __string_part_205 = HxString.toStdString result in let __string_part_206 = ")" in ((__string_part_203 ^ __string_part_204) ^ __string_part_205) ^ __string_part_206
+                      let tempString4 = ref (HxString.hx_null_string : string) in (
+                        ignore (if HxArray.length arguments = 1 then let __assign_114 = "" in (
+                          tempString4 := __assign_114;
+                          __assign_114
+                        ) else let __assign_115 = let __string_part_118 = " " in let __string_part_119 = HxString.toStdString (let __array_read_receiver_116 = arguments in let __array_read_index_117 = 1 in HxArray.get (Obj.magic __array_read_receiver_116) __array_read_index_117) in __string_part_118 ^ __string_part_119 in (
+                          tempString4 := __assign_115;
+                          __assign_115
+                        ));
+                        let __assign_120 = (let __string_part_121 = "HxArray." in let __string_part_122 = HxString.toStdString (Obj.obj (HxAnon.get call "method")) in let __string_part_123 = HxString.toStdString (!tempString3) in let __string_part_124 = " " in let __string_part_125 = HxString.toStdString runtimeReceiver in let __string_part_126 = " " in let __string_part_127 = HxString.toStdString searched in let __string_part_128 = HxString.toStdString (!tempString4) in ((((((__string_part_121 ^ __string_part_122) ^ __string_part_123) ^ __string_part_124) ^ __string_part_125) ^ __string_part_126) ^ __string_part_127) ^ __string_part_128 : string) in (
+                          tempString2 := __assign_120;
+                          __assign_120
+                        )
+                      )
+                    )
+                    | "map" -> (
+                      ignore (if autoTyped then ignore ((Obj.obj (HxAnon.get input "mark") : _ -> _) ("array_map_typed" : string)) else ());
+                      if HxRuntime.unbox_bool_or_obj (HxAnon.get input "metal") || autoTyped then let __assign_129 = (((("HxBootArray.map (" ^ HxString.toStdString receiver) ^ ") (") ^ HxString.toStdString argument) ^ ")" : string) in (
+                        tempString2 := __assign_129;
+                        __assign_129
+                      ) else let __assign_130 = (((("HxBootArray.map_dyn (Obj.magic (" ^ HxString.toStdString receiver) ^ ")) (Obj.repr (") ^ HxString.toStdString argument) ^ "))" : string) in (
+                        tempString2 := __assign_130;
+                        __assign_130
+                      )
+                    )
+                    | "push" -> let __assign_131 = (push (Obj.magic receiverType) (Obj.magic (let __array_read_receiver_132 = TypedBackendInstanceCallOccurrence.getProjectedArgumentTypes (Obj.magic occurrence) () in let __array_read_index_133 = 0 in HxArray.get (Obj.magic __array_read_receiver_132) __array_read_index_133)) (runtimeReceiver : string) (argument : string) : string) in (
+                      tempString2 := __assign_131;
+                      __assign_131
+                    )
+                    | "resize" -> let __assign_134 = ((("HxArray.resize " ^ HxString.toStdString runtimeReceiver) ^ " ") ^ HxString.toStdString argument : string) in (
+                      tempString2 := __assign_134;
+                      __assign_134
+                    )
+                    | "reverse" -> let __assign_135 = (("HxArray.reverse " ^ HxString.toStdString runtimeReceiver) ^ " ()" : string) in (
+                      tempString2 := __assign_135;
+                      __assign_135
+                    )
+                    | "pop" | "shift" -> (
+                      ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get input "metal") then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_136 = "stage3 emitter: metal profile unsupported semantics: Array." in let __string_part_137 = HxString.toStdString (Obj.obj (HxAnon.get call "method")) in let __string_part_138 = " returns Null<T>" in (__string_part_136 ^ __string_part_137) ^ __string_part_138)) ["Dynamic"] else ());
+                      let __assign_139 = (let __string_part_140 = "HxArray." in let __string_part_141 = HxString.toStdString (Obj.obj (HxAnon.get call "method")) in let __string_part_142 = " " in let __string_part_143 = HxString.toStdString runtimeReceiver in let __string_part_144 = " ()" in (((__string_part_140 ^ __string_part_141) ^ __string_part_142) ^ __string_part_143) ^ __string_part_144 : string) in (
+                        tempString2 := __assign_139;
+                        __assign_139
+                      )
+                    )
+                    | "slice" -> if HxArray.length arguments = 1 then let __assign_145 = ((("HxArray.slice_default " ^ HxString.toStdString runtimeReceiver) ^ " ") ^ HxString.toStdString argument : string) in (
+                      tempString2 := __assign_145;
+                      __assign_145
+                    ) else let __assign_146 = (let __string_part_147 = "HxArray.slice " in let __string_part_148 = HxString.toStdString runtimeReceiver in let __string_part_149 = " " in let __string_part_150 = HxString.toStdString (HxArray.join arguments " " (fun x -> x)) in ((__string_part_147 ^ __string_part_148) ^ __string_part_149) ^ __string_part_150 : string) in (
+                      tempString2 := __assign_146;
+                      __assign_146
+                    )
+                    | "sort" -> let __assign_151 = ((("HxArray.sort " ^ HxString.toStdString runtimeReceiver) ^ " ") ^ HxString.toStdString argument : string) in (
+                      tempString2 := __assign_151;
+                      __assign_151
+                    )
+                    | "splice" -> let __assign_152 = (let __string_part_153 = "HxArray.splice " in let __string_part_154 = HxString.toStdString runtimeReceiver in let __string_part_155 = " " in let __string_part_156 = HxString.toStdString (HxArray.join arguments " " (fun x -> x)) in ((__string_part_153 ^ __string_part_154) ^ __string_part_155) ^ __string_part_156 : string) in (
+                      tempString2 := __assign_152;
+                      __assign_152
+                    )
+                    | "toString" -> (
+                      ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get input "metal") then HxType.hx_throw_typed_rtti (Obj.repr "stage3 emitter: metal profile unsupported semantics: Array.toString requires a Dynamic element stringifier") ["Dynamic"] else ());
+                      let __assign_157 = (("HxDynamic.toStdString (Obj.repr " ^ HxString.toStdString receiver) ^ ")" : string) in (
+                        tempString2 := __assign_157;
+                        __assign_157
+                      )
+                    )
+                    | "unshift" -> let __assign_158 = (let __string_part_161 = "HxArray.unshift " in let __string_part_162 = HxString.toStdString runtimeReceiver in let __string_part_163 = " " in let __string_part_164 = HxString.toStdString (let __call_callee_159 = stored in let __call_arg_0_160 = 0 in Stdlib.fst __call_callee_159 __call_arg_0_160) in ((__string_part_161 ^ __string_part_162) ^ __string_part_163) ^ __string_part_164 : string) in (
+                      tempString2 := __assign_158;
+                      __assign_158
+                    )
+                    | _ -> HxType.hx_throw_typed_rtti (Obj.repr "unexpected selected array operation") ["Dynamic"]);
+                  let operation = (!tempString2 : string) in let tempString5 = ref (HxString.hx_null_string : string) in (
+                    ignore (if (let __string_eq_left_165 = Obj.obj (HxAnon.get call "method") in let __string_eq_right_166 = "map" in HxString.equals __string_eq_left_165 __string_eq_right_166) && not (HxRuntime.unbox_bool_or_obj (HxAnon.get input "metal")) then let __assign_167 = (Backend_ocaml_Stage3OcamlArrays.retainStringifier (Obj.magic (TypedBackendInstanceCallOccurrence.getResultType (Obj.magic occurrence) ())) (operation : string) (Obj.magic (Obj.obj (HxAnon.get input "names"))) : string) in (
+                      tempString5 := __assign_167;
+                      __assign_167
+                    ) else let __assign_168 = (operation : string) in (
+                      tempString5 := __assign_168;
+                      __assign_168
+                    ));
+                    let result = (!tempString5 : string) in let bindings = Obj.magic (let __represented_array_169 = HxArray.create () in let __represented_array_element_0_170 = let __string_part_171 = "let " in let __string_part_172 = HxString.toStdString receiver in let __string_part_173 = " = (" in let __string_part_174 = HxString.toStdString ((Obj.obj (HxAnon.get input "emit") : _ -> _) (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get call "receiver"))))) in let __string_part_175 = ") in " in (((__string_part_171 ^ __string_part_172) ^ __string_part_173) ^ __string_part_174) ^ __string_part_175 in (
+                      ignore (HxArray.push __represented_array_169 __represented_array_element_0_170);
+                      __represented_array_169
+                    )) in let argumentTypes = Obj.magic (TypedBackendInstanceCallOccurrence.getArgumentTypes (Obj.magic occurrence) ()) in let _g = ref 0 in let _g1 = HxArray.length arguments in (
+                      ignore (while !_g < _g1 do ignore (let index = let __old_176 = !_g in let __new_177 = HxInt.add __old_176 1 in (
+                        ignore (_g := __new_177);
+                        __old_176
+                      ) in let rendered = ((Obj.obj (HxAnon.get input "emit") : _ -> _) (Obj.magic (let __array_read_receiver_178 = Obj.obj (HxAnon.get call "arguments") in let __array_read_index_179 = index in HxArray.get (Obj.magic __array_read_receiver_178) __array_read_index_179)) : string) in let nullableInt = index < HxArray.length argumentTypes && (let __string_eq_left_180 = Backend_ocaml_Stage3OcamlNullablePrimitive.innerPrimitive (Obj.magic (let __array_read_receiver_182 = argumentTypes in let __array_read_index_183 = index in HxArray.get (Obj.magic __array_read_receiver_182) __array_read_index_183)) in let __string_eq_right_181 = "primitive:Int" in HxString.equals __string_eq_left_180 __string_eq_right_181) in let optionalSlot = index = 1 && ((let __string_eq_left_184 = Obj.obj (HxAnon.get call "method") in let __string_eq_right_185 = "slice" in HxString.equals __string_eq_left_184 __string_eq_right_185) || (let __string_eq_left_186 = Obj.obj (HxAnon.get call "method") in let __string_eq_right_187 = "indexOf" in HxString.equals __string_eq_left_186 __string_eq_right_187) || (let __string_eq_left_188 = Obj.obj (HxAnon.get call "method") in let __string_eq_right_189 = "lastIndexOf" in HxString.equals __string_eq_left_188 __string_eq_right_189)) in let requiredSlot = index = 0 && (let __string_eq_left_190 = Obj.obj (HxAnon.get call "method") in let __string_eq_right_191 = "slice" in HxString.equals __string_eq_left_190 __string_eq_right_191) in let tempString6 = ref (HxString.hx_null_string : string) in (
+                        ignore (if not (nullableInt) then let __assign_192 = (rendered : string) in (
+                          tempString6 := __assign_192;
+                          __assign_192
+                        ) else if optionalSlot then let __assign_193 = (Backend_ocaml_Stage3OcamlNullablePrimitive.intrinsicOptionalInt (rendered : string) : string) in (
+                          tempString6 := __assign_193;
+                          __assign_193
+                        ) else if requiredSlot then let __assign_194 = (Backend_ocaml_Stage3OcamlNullablePrimitive.unwrap ("primitive:Int" : string) (rendered : string) : string) in (
+                          tempString6 := __assign_194;
+                          __assign_194
+                        ) else let __assign_195 = (rendered : string) in (
+                          tempString6 := __assign_195;
+                          __assign_195
+                        ));
+                        let value = (!tempString6 : string) in let __array_receiver_196 = Obj.magic bindings in let __array_arg_0_197 = (let __string_part_200 = "let " in let __string_part_201 = HxString.toStdString (let __array_read_receiver_198 = arguments in let __array_read_index_199 = index in HxArray.get (Obj.magic __array_read_receiver_198) __array_read_index_199) in let __string_part_202 = " = (" in let __string_part_203 = HxString.toStdString value in let __string_part_204 = ") in " in (((__string_part_200 ^ __string_part_201) ^ __string_part_202) ^ __string_part_203) ^ __string_part_204 : string) in HxArray.push __array_receiver_196 __array_arg_0_197
+                      )) done);
+                      let __string_part_205 = "(" in let __string_part_206 = HxString.toStdString (HxArray.join bindings "" (fun x -> x)) in let __string_part_207 = HxString.toStdString result in let __string_part_208 = ")" in ((__string_part_205 ^ __string_part_206) ^ __string_part_207) ^ __string_part_208
+                    )
                   )
                 )
               )
@@ -326,4 +335,4 @@ let render = fun input -> (try let occurrence = Obj.magic (Obj.obj (HxAnon.get i
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_207 -> (Obj.obj __ret_207 : string) : string)
+  | HxRuntime.Hx_return __ret_209 -> (Obj.obj __ret_209 : string) : string)

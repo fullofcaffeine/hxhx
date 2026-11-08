@@ -1,6 +1,6 @@
 {
   "model": "requirements-only-runtime-selection-shadow",
-  "runtimeSourceRevision": "sha256:e38944dd2978840bd403cef8f64944bf9fc319ef9626bb46b0c35048b0eeeb63",
+  "runtimeSourceRevision": "sha256:fac1eca64d2a7b7f647299ed1831dc034acb87310e0818f7bad34f1068f6f601",
   "requirementRevision": "sha256:f01af91530e9fa750d67bb264a27d613e8a5042a5b02f952e2c4513c3df9cb5b",
   "schemaVersion": 1,
   "selectionMode": "full",
@@ -53,8 +53,8 @@
       {
         "module": "HxInt",
         "path": "HxInt.ml",
-        "sha256": "sha256:3f85900b52dd4b082a5fc11db1d59125b16bf5f38d3959ffe5dc5686fdd04f2b",
-        "bytes": 2078
+        "sha256": "sha256:b99cbf3eee8ac437f1312a0685ca9b1bc4e93fe112d8f04ea680f64efe84d4d1",
+        "bytes": 2667
       },
       {
         "module": "HxIterator",
@@ -378,6 +378,7 @@
           "transitive:HxBytes",
           "transitive:HxDynamic",
           "transitive:HxEnum",
+          "transitive:HxInt",
           "transitive:HxStdio",
           "transitive:HxString",
           "transitive:HxType"
@@ -592,7 +593,7 @@
       "HxString",
       "HxType"
     ],
-    "revision": "sha256:34ac6d6c4f335062910068e32e6695e900382910ffe8da3181316c18fd353c3f"
+    "revision": "sha256:41faa45c5e103f6b700349b2a4670518ed4532d7d09f912df4fdbc77a530a520"
   },
   "profile": "portable",
   "message": "Explicit requirements do not yet select the same checked runtime source bytes. This mismatch blocks a hard cut, while the current compiler selection remains authoritative.",
@@ -674,8 +675,8 @@
       {
         "module": "HxInt",
         "path": "HxInt.ml",
-        "sha256": "sha256:3f85900b52dd4b082a5fc11db1d59125b16bf5f38d3959ffe5dc5686fdd04f2b",
-        "bytes": 2078
+        "sha256": "sha256:b99cbf3eee8ac437f1312a0685ca9b1bc4e93fe112d8f04ea680f64efe84d4d1",
+        "bytes": 2667
       },
       {
         "module": "HxIterator",
@@ -692,8 +693,8 @@
       {
         "module": "HxMethodDispatch",
         "path": "HxMethodDispatch.ml",
-        "sha256": "sha256:7c94120a38177e2fa81178024c6c401ad55108179ae8a628695103e24d3e8949",
-        "bytes": 7552
+        "sha256": "sha256:6ae5f56c144a0be5e8422f775d2ce2475f4ce85429d6353c802c9aee43eed2fa",
+        "bytes": 7717
       },
       {
         "module": "HxProcess",
@@ -752,8 +753,8 @@
       {
         "module": "Std",
         "path": "Std.ml",
-        "sha256": "sha256:86e3b4e1b69864cdf07fe05f4242b2635f16eb3fcfbbc87d540ad97c23b540ac",
-        "bytes": 5226
+        "sha256": "sha256:1c873704a5dff18f14d5abf5a8289829502498580f3ba0281f5378953414955a",
+        "bytes": 5744
       },
       {
         "module": "haxe_CallStack",
@@ -984,9 +985,9 @@
       "Std",
       "haxe_CallStack"
     ],
-    "revision": "sha256:38c0955c4919873e342a688712b1bdf83325b50b9136dbeb3342357278e404bc"
+    "revision": "sha256:0179ea9b117955ac42c7048f1c4fb3afd1b4172e4a3a24042fcbb131c76a3066"
   },
-  "reportRevision": "sha256:714cdb7d2c1c6a23620c7dc85b4dfedcbf58872d5b78265b7faab0972b77e59c",
+  "reportRevision": "sha256:62de0b92fd88251c32b309b82a11a4a20712c86014d7800e1707cadb66429568",
   "differences": {
     "currentOnlyRoots": [
       "Date",
@@ -2088,6 +2089,10 @@
       },
       {
         "module": "HxRuntime",
+        "reason": "transitive:HxInt"
+      },
+      {
+        "module": "HxRuntime",
         "reason": "transitive:HxStdio"
       },
       {
@@ -2811,8 +2816,8 @@
       {
         "module": "HxMethodDispatch",
         "path": "HxMethodDispatch.ml",
-        "sha256": "sha256:7c94120a38177e2fa81178024c6c401ad55108179ae8a628695103e24d3e8949",
-        "bytes": 7552
+        "sha256": "sha256:6ae5f56c144a0be5e8422f775d2ce2475f4ce85429d6353c802c9aee43eed2fa",
+        "bytes": 7717
       },
       {
         "module": "HxProcess",
@@ -2847,8 +2852,8 @@
       {
         "module": "Std",
         "path": "Std.ml",
-        "sha256": "sha256:86e3b4e1b69864cdf07fe05f4242b2635f16eb3fcfbbc87d540ad97c23b540ac",
-        "bytes": 5226
+        "sha256": "sha256:1c873704a5dff18f14d5abf5a8289829502498580f3ba0281f5378953414955a",
+        "bytes": 5744
       },
       {
         "module": "haxe_CallStack",

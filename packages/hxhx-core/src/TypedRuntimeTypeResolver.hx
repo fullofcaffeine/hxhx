@@ -72,10 +72,12 @@ class TypedRuntimeTypeResolver {
 	/** Returns no class fallback when ordinary value lookup already owns the name. */
 	public static function resolve(expression:HxExpr, environment:TyFunctionEnv, context:TyperContext,
 			namespace:TypedRuntimeTypeNamespace):Null<TypedRuntimeTypeTarget> {
-		final name = visiblePath(expression, environment, context, namespace);
-		if (name == null)
+		final path = visiblePath(expression, environment, context, namespace);
+		if (path == null)
 			return null;
-		final selected = context.resolveType(name);
+		final selected = context.resolveType(path);
+		// A rooted path (`HxRootedPath`) is resolved above; targets read the ordinary spelling.
+		final name = HxRootedPath.unrooted(path);
 		// Core names are language-defined. A resolved package or secondary type
 		// with the same short spelling remains nominal; ordinary values won above.
 		final canonical = selected == null ? name : selected.getIdentity().getCanonicalName();

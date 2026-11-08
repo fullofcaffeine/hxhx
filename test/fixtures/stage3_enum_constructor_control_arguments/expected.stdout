@@ -1,0 +1,28 @@
+Branch[Leaf(10),Leaf(20),Leaf(30)]
+Branch[Leaf(1),Leaf(3)]
+Leaf(5)
+Named(long)
+Leaf(100)
+Leaf(-1)
+Leaf(1)
+Leaf(6)
+Pair(Leaf(1),Named(n1)) Pair(Leaf(2),Named(n2)) Pair(Leaf(3),Named(n3))
+eval first
+block second
+eval second
+eval third
+Triple(1,second,3)
+eval left
+eval item1
+eval item2
+eval item3
+Pair(Leaf(1),Branch[Leaf(1),Leaf(2),Leaf(3)])
+nested block
+Pair(Branch[Pair(Leaf(1),Branch[Named(x1),Named(x2),Named(x3)])],Leaf(7))
+array[text:a,text:b]
+call text:f(array[number:a,number:b])
+number:1 number:2
+array[string:a,string:b]
+array[ident:a,ident:b]
+call ident:f(array[string:a,string:b])
+int:1 int:2

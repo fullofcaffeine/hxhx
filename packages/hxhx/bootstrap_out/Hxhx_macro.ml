@@ -11,4 +11,5 @@ module MacroProtocol = Hxhx_macro_MacroProtocol
 module MacroResolvedModuleScanner = Hxhx_macro_MacroResolvedModuleScanner
 module MacroRuntimeMode = Hxhx_macro_MacroRuntimeMode
 module MacroState = Hxhx_macro_MacroState
-module NativeMacroModuleRuntimeLoader = Hxhx_macro_NativeMacroModuleRuntimeLoader
+module ProjectMacroPluginCache = Hxhx_macro_ProjectMacroPluginCache
+module ProjectMacroPluginProcess = Hxhx_macro_ProjectMacroPluginProcess

@@ -1897,7 +1897,7 @@
   ],
   "callCount": 94,
   "callModel": "typed-ocaml-directional-call-boundary-v35",
-  "callRevision": "sha256:6fa7848267fec850a0375482db39caf44c9c61d0e4506993b72ef0a983938bde",
+  "callRevision": "sha256:8fb5d43e87db27317b1c6a14feb53e09170f4cf0927d4817c1d178ae322c8a3f",
   "callableBoundaries": [
     {
       "arguments": [
@@ -7777,133 +7777,6 @@
           "outputRepresentationId": "representation:String:internal-value",
           "outputSemanticTypeId": "String",
           "parameterOptional": false,
-          "proofClaim": "The selected scalar already uses its declared native carrier.",
-          "proofId": "identity-call-carrier-v1"
-        }
-      ],
-      "bodyRevision": "12:dc6e5e118ef887f17406db365c8428ed846e7c693d876e6024a82e2d8a886ed6",
-      "callbackInvocation": {
-        "input": {
-          "callSource": null,
-          "calleeId": null,
-          "declaration": null,
-          "kind": "existing-view",
-          "reference": {
-            "domain": "internal-value",
-            "localId": "lexical-local-v1:c4097ddb9ba1bdff193d84f4765015a1fa37ef4ceb8b46d832a6dc0c1ff0a141",
-            "representationId": "representation:(String)->Bool:internal-value",
-            "representationRevision": "sha256:5088ca59c182ce68fc66fbb5bacfd4dd4231fd2cb39b38f6e5a202413aac759f",
-            "semanticTypeId": "(String)->Bool"
-          }
-        },
-        "layout": {
-          "carrierTypeId": "callable-view<(String)->Bool>",
-          "revision": "sha256:cd770ce711339b5bb25b415806116f866ba6bcedeaeedc57741cf2e1242c0271",
-          "semanticTypeId": "(String)->Bool",
-          "shape": {
-            "children": [
-              {
-                "children": [],
-                "kind": "string",
-                "parameter": null
-              },
-              {
-                "children": [],
-                "kind": "bool",
-                "parameter": null
-              }
-            ],
-            "kind": "function",
-            "parameter": null
-          }
-        },
-        "source": {
-          "file": "src/Main.hx",
-          "max": 4636,
-          "min": 4630
-        }
-      },
-      "calleeId": "function-value:b0968d53db10708e8eaa6b8c1b32dbce",
-      "dynamicFunctionTarget": null,
-      "evaluationSchedule": [
-        {
-          "argumentIndex": null,
-          "kind": "materialize-callee",
-          "slotId": "call-callee-slot:52ccaa6d8420430dfa484ac6",
-          "sourceArgumentIndex": null
-        },
-        {
-          "argumentIndex": 0,
-          "kind": "materialize-argument",
-          "slotId": "call-argument-slot:5a5697cae10f97fc0fa4b7f3",
-          "sourceArgumentIndex": 0
-        },
-        {
-          "argumentIndex": null,
-          "kind": "invoke-callee",
-          "slotId": null,
-          "sourceArgumentIndex": null
-        }
-      ],
-      "functionId": "Main|Main|static|function|runNested|generics:0|->Void",
-      "genericInstanceTarget": null,
-      "id": "call:a06e7632c2299bd490d61ba3",
-      "kind": "typed-function-value",
-      "pipelineRevision": "ocaml-function-plans-v119",
-      "profileEligibility": [
-        "metal",
-        "portable"
-      ],
-      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The exact local or call-result view supplies this invocation layout; every callback argument owns its producer and directional conversion.",
-      "proofId": "typed-callable-view-invocation-v1",
-      "reason": "The selected callback view owns a recursive invocation signature. Evaluate the callee once, prepare each source argument once in order, and preserve its result carrier.",
-      "receiver": null,
-      "result": {
-        "callableView": null,
-        "callbackArgument": null,
-        "conversion": "identity",
-        "index": -1,
-        "inputCarrierTypeId": "bool",
-        "inputRepresentationId": "representation:Bool:internal-value",
-        "inputSemanticTypeId": "Bool",
-        "nullableEnumCarrier": null,
-        "outputCarrierTypeId": "bool",
-        "outputRepresentationId": "representation:Bool:internal-value",
-        "outputSemanticTypeId": "Bool",
-        "parameterOptional": false,
-        "proofClaim": "The selected scalar already uses its declared native carrier.",
-        "proofId": "identity-call-carrier-v1"
-      },
-      "resultKind": "value",
-      "resultMaterialization": null,
-      "source": {
-        "file": "src/Main.hx",
-        "max": 4646,
-        "min": 4630
-      },
-      "sourceFieldName": "",
-      "sourceModuleId": "",
-      "sourceTypeName": "",
-      "standardArrayTarget": null,
-      "standardIMapTarget": null,
-      "structuralIteratorTarget": null
-    },
-    {
-      "arguments": [
-        {
-          "callableView": null,
-          "callbackArgument": null,
-          "conversion": "identity",
-          "index": 0,
-          "inputCarrierTypeId": "string",
-          "inputRepresentationId": "representation:String:internal-value",
-          "inputSemanticTypeId": "String",
-          "nullableEnumCarrier": null,
-          "outputCarrierTypeId": "string",
-          "outputRepresentationId": "representation:String:internal-value",
-          "outputSemanticTypeId": "String",
-          "parameterOptional": false,
           "proofClaim": "The typed value already uses the callable boundary representation, so syntax preserves its carrier without a target conversion.",
           "proofId": "identity-call-carrier-v1"
         }
@@ -9910,6 +9783,133 @@
         "runtimeModule": "HxArray",
         "runtimeTakesUnitArgument": false
       },
+      "standardIMapTarget": null,
+      "structuralIteratorTarget": null
+    },
+    {
+      "arguments": [
+        {
+          "callableView": null,
+          "callbackArgument": null,
+          "conversion": "identity",
+          "index": 0,
+          "inputCarrierTypeId": "string",
+          "inputRepresentationId": "representation:String:internal-value",
+          "inputSemanticTypeId": "String",
+          "nullableEnumCarrier": null,
+          "outputCarrierTypeId": "string",
+          "outputRepresentationId": "representation:String:internal-value",
+          "outputSemanticTypeId": "String",
+          "parameterOptional": false,
+          "proofClaim": "The selected scalar already uses its declared native carrier.",
+          "proofId": "identity-call-carrier-v1"
+        }
+      ],
+      "bodyRevision": "12:dc6e5e118ef887f17406db365c8428ed846e7c693d876e6024a82e2d8a886ed6",
+      "callbackInvocation": {
+        "input": {
+          "callSource": null,
+          "calleeId": null,
+          "declaration": null,
+          "kind": "existing-view",
+          "reference": {
+            "domain": "internal-value",
+            "localId": "lexical-local-v1:c4097ddb9ba1bdff193d84f4765015a1fa37ef4ceb8b46d832a6dc0c1ff0a141",
+            "representationId": "representation:(String)->Bool:internal-value",
+            "representationRevision": "sha256:5088ca59c182ce68fc66fbb5bacfd4dd4231fd2cb39b38f6e5a202413aac759f",
+            "semanticTypeId": "(String)->Bool"
+          }
+        },
+        "layout": {
+          "carrierTypeId": "callable-view<(String)->Bool>",
+          "revision": "sha256:cd770ce711339b5bb25b415806116f866ba6bcedeaeedc57741cf2e1242c0271",
+          "semanticTypeId": "(String)->Bool",
+          "shape": {
+            "children": [
+              {
+                "children": [],
+                "kind": "string",
+                "parameter": null
+              },
+              {
+                "children": [],
+                "kind": "bool",
+                "parameter": null
+              }
+            ],
+            "kind": "function",
+            "parameter": null
+          }
+        },
+        "source": {
+          "file": "src/Main.hx",
+          "max": 4636,
+          "min": 4630
+        }
+      },
+      "calleeId": "function-value:049e4dff797110c05e7103d9d9cf2d38",
+      "dynamicFunctionTarget": null,
+      "evaluationSchedule": [
+        {
+          "argumentIndex": null,
+          "kind": "materialize-callee",
+          "slotId": "call-callee-slot:ff1f84ff85e415f92ff4151b",
+          "sourceArgumentIndex": null
+        },
+        {
+          "argumentIndex": 0,
+          "kind": "materialize-argument",
+          "slotId": "call-argument-slot:5b6c86c8d02166a016b675a4",
+          "sourceArgumentIndex": 0
+        },
+        {
+          "argumentIndex": null,
+          "kind": "invoke-callee",
+          "slotId": null,
+          "sourceArgumentIndex": null
+        }
+      ],
+      "functionId": "Main|Main|static|function|runNested|generics:0|->Void",
+      "genericInstanceTarget": null,
+      "id": "call:f32ae6e045e44b6bbdfcecb9",
+      "kind": "typed-function-value",
+      "pipelineRevision": "ocaml-function-plans-v119",
+      "profileEligibility": [
+        "metal",
+        "portable"
+      ],
+      "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
+      "proofClaim": "The exact local or call-result view supplies this invocation layout; every callback argument owns its producer and directional conversion.",
+      "proofId": "typed-callable-view-invocation-v1",
+      "reason": "The selected callback view owns a recursive invocation signature. Evaluate the callee once, prepare each source argument once in order, and preserve its result carrier.",
+      "receiver": null,
+      "result": {
+        "callableView": null,
+        "callbackArgument": null,
+        "conversion": "identity",
+        "index": -1,
+        "inputCarrierTypeId": "bool",
+        "inputRepresentationId": "representation:Bool:internal-value",
+        "inputSemanticTypeId": "Bool",
+        "nullableEnumCarrier": null,
+        "outputCarrierTypeId": "bool",
+        "outputRepresentationId": "representation:Bool:internal-value",
+        "outputSemanticTypeId": "Bool",
+        "parameterOptional": false,
+        "proofClaim": "The selected scalar already uses its declared native carrier.",
+        "proofId": "identity-call-carrier-v1"
+      },
+      "resultKind": "value",
+      "resultMaterialization": null,
+      "source": {
+        "file": "src/Main.hx",
+        "max": 4646,
+        "min": 4630
+      },
+      "sourceFieldName": "",
+      "sourceModuleId": "",
+      "sourceTypeName": "",
+      "standardArrayTarget": null,
       "standardIMapTarget": null,
       "structuralIteratorTarget": null
     },
@@ -24032,7 +24032,7 @@
     }
   ],
   "iMapInterfaceModel": "typed-imap-interface-adapter-v7",
-  "iMapInterfaceRevision": "sha256:52bdf3b9fb43d692629943ab7a8184c90600e04d4881d1434edb4f8c022dff98",
+  "iMapInterfaceRevision": "sha256:6d377431e46f2a30bcbb1053e035fe9c93674ab2fbf448c006e33fe5cf57440b",
   "iMapStorageAliasCount": 6,
   "iMapStorageAliases": [
     {
@@ -24044,7 +24044,7 @@
       "pipelineRevision": "ocaml-nested-function-plans-v37",
       "preservedCarrierTypeId": "HxMap.obj_map",
       "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field or a target-authored NativeHxMap getter whose applied receiver stores that Map type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
+      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field, a target-authored NativeHxMap getter whose applied receiver stores that Map type, a plain variable field of a non-extern class or anonymous structure declared with that exact nullable type, or a call to a non-extern method whose declared result is that exact nullable type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
       "proofId": "typed-standard-map-storage-alias-v3",
       "runtimeRequirementIds": [],
       "runtimeUseOccurrences": [],
@@ -24079,7 +24079,7 @@
       "pipelineRevision": "ocaml-function-plans-v119",
       "preservedCarrierTypeId": "HxMap.int_map",
       "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field or a target-authored NativeHxMap getter whose applied receiver stores that Map type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
+      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field, a target-authored NativeHxMap getter whose applied receiver stores that Map type, a plain variable field of a non-extern class or anonymous structure declared with that exact nullable type, or a call to a non-extern method whose declared result is that exact nullable type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
       "proofId": "typed-standard-map-storage-alias-v3",
       "runtimeRequirementIds": [],
       "runtimeUseOccurrences": [],
@@ -24114,7 +24114,7 @@
       "pipelineRevision": "ocaml-function-plans-v119",
       "preservedCarrierTypeId": "HxMap.obj_map",
       "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field or a target-authored NativeHxMap getter whose applied receiver stores that Map type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
+      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field, a target-authored NativeHxMap getter whose applied receiver stores that Map type, a plain variable field of a non-extern class or anonymous structure declared with that exact nullable type, or a call to a non-extern method whose declared result is that exact nullable type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
       "proofId": "typed-standard-map-storage-alias-v3",
       "runtimeRequirementIds": [],
       "runtimeUseOccurrences": [],
@@ -24149,7 +24149,7 @@
       "pipelineRevision": "ocaml-nested-function-plans-v37",
       "preservedCarrierTypeId": "HxMap.int_map",
       "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field or a target-authored NativeHxMap getter whose applied receiver stores that Map type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
+      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field, a target-authored NativeHxMap getter whose applied receiver stores that Map type, a plain variable field of a non-extern class or anonymous structure declared with that exact nullable type, or a call to a non-extern method whose declared result is that exact nullable type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
       "proofId": "typed-standard-map-storage-alias-v3",
       "runtimeRequirementIds": [],
       "runtimeUseOccurrences": [],
@@ -24184,7 +24184,7 @@
       "pipelineRevision": "ocaml-nested-function-plans-v37",
       "preservedCarrierTypeId": "HxMap.string_map",
       "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field or a target-authored NativeHxMap getter whose applied receiver stores that Map type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
+      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field, a target-authored NativeHxMap getter whose applied receiver stores that Map type, a plain variable field of a non-extern class or anonymous structure declared with that exact nullable type, or a call to a non-extern method whose declared result is that exact nullable type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
       "proofId": "typed-standard-map-storage-alias-v3",
       "runtimeRequirementIds": [],
       "runtimeUseOccurrences": [],
@@ -24219,7 +24219,7 @@
       "pipelineRevision": "ocaml-function-plans-v119",
       "preservedCarrierTypeId": "HxMap.string_map",
       "programRevision": "1e18cfd159fdd4da13d94e731414deeab03269f43accda78ca57d3c271382165",
-      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field or a target-authored NativeHxMap getter whose applied receiver stores that Map type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
+      "proofClaim": "The final typed local has exact haxe.Constraints.IMap<K,V> type. Its initializer is either an exact haxe.ds.Map<K,V> value or a proven Null<Map<K,V>> producer with Obj.t storage: an exact sealed static field, a target-authored NativeHxMap getter whose applied receiver stores that Map type, a plain variable field of a non-extern class or anonymous structure declared with that exact nullable type, or a call to a non-extern method whose declared result is that exact nullable type. A getter result may pass through a non-captured local with exactly one write before its read in the same statement block. A nullable source is evaluated once, checked for Haxe null, and recovered with checked Obj.obj into the exact standard Map carrier; null throws Haxe Null Access before native Map use. Every read of the local is the first argument of a matching target-authored haxe.ds.NativeHxMap operation behind the matching standard-map cast. The local has at least one such use and is never assigned, captured, returned, compared, dispatched through IMap, or consumed by another operation.",
       "proofId": "typed-standard-map-storage-alias-v3",
       "runtimeRequirementIds": [],
       "runtimeUseOccurrences": [],

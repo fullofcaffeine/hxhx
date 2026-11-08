@@ -26,6 +26,7 @@ package backend.ocaml;
 final INT = "primitive:Int";
 
 final FLOAT = "primitive:Float";
+final BOOL = "primitive:Bool";
 
 /**
 	Return the inner primitive key when the exact type is a nullable Int or Float.
@@ -220,6 +221,79 @@ function carrierDestination(argument:Null<TypedBackendCallArgument>):Null<String
 	return argument == null ? null : destinationCarrier(argument.expectedType, argument.expectedIsOptional);
 }
 
+/**
+	The concrete primitive key of a required `Int`, `Float` or `Bool` parameter, or
+	null. Such a native parameter is an unboxed OCaml `int`, `float` or `bool`, so it
+	can never hold the null sentinel.
+ */
+function concreteDestination(expected:Null<TyType>, expectedIsOptional:Bool):Null<String> {
+	if (expected == null || expectedIsOptional)
+		return null;
+	final revealed = TyAliasExpansion.reveal(expected);
+	if (revealed.isNullable())
+		return null;
+	final key = revealed.getSemanticKey();
+	return key == INT || key == FLOAT || key == BOOL ? key : null;
+}
+
+/**
+	Render a `null` literal passed to a required `Int`, `Float` or `Bool` parameter.
+
+	Haxe 4.3.7 accepts `b[i] = null` through `set(i:Int, v:Int)` on most targets; the
+	interpreter and JavaScript then store null. A native unboxed slot cannot hold
+	null, so the call raises the runtime's catchable Null Access exception at the
+	argument instead, as unwrapping a null `Null<Int>` already does. The literal has
+	no effects, and the emitter binds call arguments in source order, so earlier
+	arguments still run first. This is a documented native-target divergence:
+	storing a reinterpreted pointer would silently produce garbage numbers.
+ */
+function nullLiteralArgument(key:String):String {
+	final native = key == INT ? "int" : key == FLOAT ? "float" : "bool";
+	return "(HxRuntime.hx_throw_typed (Obj.repr \"Null Access\") [\"String\"; \"Dynamic\"] : " + native + ")";
+}
+
+/** The same Null Access raise as `nullLiteralArgument`, as structured syntax for emitters that build OCaml ASTs. */
+function nullLiteralArgumentSyntax(key:String):reflaxe.ocaml.ast.OcamlExpr {
+	final native = key == INT ? "int" : key == FLOAT ? "float" : "bool";
+	final payload = reflaxe.ocaml.ast.OcamlExpr.EApp(reflaxe.ocaml.ast.OcamlExpr.EField(reflaxe.ocaml.ast.OcamlExpr.EIdent("Obj"), "repr"), [
+		reflaxe.ocaml.ast.OcamlExpr.EConst(reflaxe.ocaml.ast.OcamlConst.CString("Null Access"))
+	]);
+	final tags = reflaxe.ocaml.ast.OcamlExpr.EList([
+		reflaxe.ocaml.ast.OcamlExpr.EConst(reflaxe.ocaml.ast.OcamlConst.CString("String")),
+		reflaxe.ocaml.ast.OcamlExpr.EConst(reflaxe.ocaml.ast.OcamlConst.CString("Dynamic"))
+	]);
+	final raise = reflaxe.ocaml.ast.OcamlExpr.EApp(reflaxe.ocaml.ast.OcamlExpr.EField(reflaxe.ocaml.ast.OcamlExpr.EIdent("HxRuntime"), "hx_throw_typed"),
+		[payload, tags]);
+	return reflaxe.ocaml.ast.OcamlExpr.EAnnot(raise, reflaxe.ocaml.ast.OcamlTypeExpr.TIdent(native));
+}
+
+/**
+	Whether one explicit operand/parameter pair crosses the nullable boundary, including
+	a null literal reaching a required Int, Float or Bool parameter. Constructor
+	applications ask this before calling `convertArgument`.
+ */
+function crossesBoundary(actual:TyType, expected:TyType, expectedIsOptional:Bool):Bool {
+	return innerPrimitive(actual) != null
+		|| destinationCarrier(expected, expectedIsOptional) != null
+		|| (actual.isNullLiteral() && concreteDestination(expected, expectedIsOptional) != null);
+}
+
+/**
+	Render a written `null` call argument from its call's own parameter hint.
+
+	Every parsed `null` literal is the same `ENull` value, so a call-argument fact
+	looked up by expression identity can belong to another call in the function.
+	The hint comes from the callee's own signature at this call, so it is exact.
+	A required `Int`, `Float` or `Bool` parameter raises Null Access as in
+	`nullLiteralArgument`; an optional or any other parameter keeps `rendered`, the
+	ordinary null rendering.
+ */
+function nullLiteralForCall(signature:Null<EmitterCallSig>, index:Int, hint:Null<String>, rendered:String):String {
+	final optional = signature != null && index >= 0 && index < signature.paramFillable.length && signature.paramFillable[index];
+	final key = optional ? null : TyBasicNullArgument.basicHintKey(hint);
+	return key == null ? rendered : nullLiteralArgument(key);
+}
+
 /** True when the argument crosses the nullable boundary in either direction. */
 function isCarrierBoundary(argument:Null<TypedBackendCallArgument>):Bool {
 	return argument != null && (innerPrimitive(argument.type) != null || carrierDestination(argument) != null);
@@ -242,6 +316,11 @@ function callArgument(argument:Null<TypedBackendCallArgument>, rendered:String):
 
 /** The same conversion from explicit operand and parameter facts, as a constructor application supplies them. */
 function convertArgument(actual:TyType, expected:TyType, expectedIsOptional:Bool, rendered:String):Null<String> {
+	if (actual.isNullLiteral()) {
+		final concrete = concreteDestination(expected, expectedIsOptional);
+		if (concrete != null)
+			return nullLiteralArgument(concrete);
+	}
 	final actualInner = innerPrimitive(actual);
 	final expectedInner = destinationCarrier(expected, expectedIsOptional);
 	if (actualInner == null && expectedInner == null)

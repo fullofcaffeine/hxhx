@@ -24,6 +24,7 @@ class TyperContext {
 	final resolvedDirectives:Array<TyModuleDirective>;
 	final classFullName:String;
 	final inferredReturnTypes:haxe.ds.StringMap<TyType>;
+	final loweredQuotations:Array<{quote:HxExpr, lowered:HxExpr}>;
 
 	public function new(index:TyperIndex, filePath:String, modulePath:String, packagePath:String, directives:Array<HxModuleDirective>, classFullName:String,
 			?loader:LazyTypeLoader, ?resolvedDirectives:Array<TyModuleDirective>) {
@@ -36,6 +37,27 @@ class TyperContext {
 		this.resolvedDirectives = resolvedDirectives == null ? [] : resolvedDirectives.copy();
 		this.classFullName = classFullName == null ? "" : classFullName;
 		this.inferredReturnTypes = new haxe.ds.StringMap<TyType>();
+		this.loweredQuotations = [];
+	}
+
+	/**
+		The ordinary syntax of one macro quotation, lowered once per quote node.
+
+		Function inference records its facts by expression identity and replays the same nodes
+		when the typed body is built, so a quote must lower to one tree that both passes share.
+		`quote` is the parser's `EMacroExpr`/`EMacroType` node; `lower` runs on the first request.
+		Entries are matched by node identity: `==` on enum values is physical equality on every
+		route that compiles hxhx (the OCaml target's `OcamlEnumIdentityPlan`, eval in tests), so
+		two identical quotes never share a tree or a position. The list is scanned linearly; it
+		holds the quotes of one class, a few dozen at most in upstream's macro code.
+	**/
+	public function loweredQuotation(quote:HxExpr, lower:() -> HxExpr):HxExpr {
+		for (entry in loweredQuotations)
+			if (entry.quote == quote)
+				return entry.lowered;
+		final lowered = lower();
+		loweredQuotations.push({quote: quote, lowered: lowered});
+		return lowered;
 	}
 
 	/**
@@ -56,6 +78,10 @@ class TyperContext {
 	public function getFilePath():String
 		return filePath;
 
+	/** Whether this module is compiled as macro code (a plugin build or `haxe.macro.*`). */
+	public function isMacroModule():Bool
+		return loader != null && loader.isMacroModule(modulePath, filePath);
+
 	public function getModulePath():String
 		return modulePath;
 
@@ -72,9 +98,16 @@ class TyperContext {
 		return classFullName;
 
 	/** Load a requested declaration before resolving its nominal provider; generic aliases retain their own binders. */
+	/** Whether this module is typed with a module loader, that is, against a classpath. */
+	public function hasLoader():Bool
+		return loader != null;
+
 	public function resolveType(typePath:String):Null<TyNominalInfo> {
 		if (index == null)
 			return null;
+		// A rooted path (`HxRootedPath`) names a top-level type; imports and the current package do not apply.
+		if (HxRootedPath.isRooted(typePath))
+			return resolveCoreProvider(HxRootedPath.unrooted(typePath));
 		final context:TyTypeDeclaration.TyTypeResolutionContext = {
 			packagePath: packagePath,
 			modulePath: modulePath,
@@ -96,17 +129,20 @@ class TyperContext {
 	public function resolveTypeDeclaration(typePath:String, ?position:HxPos):Null<TyTypeDeclaration> {
 		if (index == null)
 			return null;
+		// A rooted path (`HxRootedPath`) names a top-level type; imports and the current package do not apply.
+		final rooted = HxRootedPath.isRooted(typePath);
+		final path = HxRootedPath.unrooted(typePath);
 		final context:TyTypeDeclaration.TyTypeResolutionContext = {
-			packagePath: packagePath,
-			modulePath: modulePath,
-			directives: directives,
+			packagePath: rooted ? "" : packagePath,
+			modulePath: rooted ? "" : modulePath,
+			directives: rooted ? [] : directives,
 			filePath: filePath,
 			position: position == null ? HxPos.unknown() : position,
 			parameters: []
 		};
 		if (loader != null)
-			loader.ensureDeclarationAvailable(typePath, context);
-		return index.resolveTypeDeclaration(typePath, context);
+			loader.ensureDeclarationAvailable(path, context);
+		return index.resolveTypeDeclaration(path, context);
 	}
 
 	/**

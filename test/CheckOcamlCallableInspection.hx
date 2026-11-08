@@ -27,6 +27,7 @@ class CheckOcamlCallableInspection {
 			"argument-local",
 			"invocation-source",
 			"invocation-local",
+			"invocation-local-identity",
 			"invocation-missing",
 			"return-owner",
 			"return-call",
@@ -61,8 +62,23 @@ class CheckOcamlCallableInspection {
 					Reflect.setField(invoked.callbackInvocation.source, "min", 0);
 					expected = "computed call signature";
 				case "invocation-local":
+					// The callee identity includes the called local, so a consistent
+					// forgery must also recompute it. The storage check must still
+					// reject a call through a local that no selected storage owns.
 					Reflect.setField(invoked.callbackInvocation.input.reference, "localId", "lexical-local-v1:" + haxe.crypto.Sha256.encode("foreign-local"));
+					Reflect.setField(invoked, "calleeId",
+						reflaxe.ocaml.lowered.OcamlCallableInvocationContract.calleeId(reflaxe.ocaml.reports.OcamlCallableCallReport.calleeFromReport(invoked.callbackInvocation),
+							{
+							functionId: invoked.functionId,
+							programRevision: invoked.programRevision,
+							bodyRevision: invoked.bodyRevision,
+							pipelineRevision: invoked.pipelineRevision
+						}));
 					expected = "selected storage";
+				case "invocation-local-identity":
+					// Changing only the called local leaves the callee identity of another local.
+					Reflect.setField(invoked.callbackInvocation.input.reference, "localId", "lexical-local-v1:" + haxe.crypto.Sha256.encode("foreign-local"));
+					expected = "computed call signature";
 				case "invocation-missing":
 					Reflect.setField(invoked, "callbackInvocation", null);
 					expected = "lost its recursive signature";

@@ -27,6 +27,28 @@ class M14SequencingMacroBoundaryTest {
 		};
 	}
 
+	/** The `block(...)`/integer shape of a lowered `{expr: <ExprDef>, pos: <Position>}` construction. */
+	static function loweredShape(record:TypedExpr):String {
+		if (record.getTag() != Anonymous || record.getTexts().join(",") != "expr,pos")
+			throw "quotation was not lowered to an Expr record";
+		final definition = record.getExpressions()[0];
+		return switch constructorName(definition) {
+			case "EBlock": "block(" + [for (item in definition.getExpressions()[1].getExpressions()) loweredShape(item)].join(",") + ")";
+			case "EConst":
+				final constant = definition.getExpressions()[1];
+				if (constructorName(constant) != "CInt")
+					throw "lowered constant is not an integer";
+				constant.getExpressions()[1].getTexts()[0];
+			case name: throw "unexpected lowered constructor `" + name + "`";
+		};
+	}
+
+	/** The constructor a lowered call names; `typeModule` loads no `haxe.macro.Expr`, so read the callee's last segment. */
+	static function constructorName(call:TypedExpr):String {
+		final callee = call.getTag() == Call ? call.getExpressions()[0] : null;
+		return callee != null && callee.getTag() == FieldRead ? callee.getTexts()[0] : "";
+	}
+
 	static function main():Void {
 		final sources = ["{ 1; 2; }", "{ { 1; 2; } 3; }", "{ 1; { 2; 3; } }"];
 		final expected = ["block(1,2)", "block(block(1,2),3)", "block(1,block(2,3))"];
@@ -36,10 +58,19 @@ class M14SequencingMacroBoundaryTest {
 				throw "runtime expression parser changed source brace grouping";
 			if (shape(RuntimeMacroExprs.parseFunctionBodyText(source, null)) != "block(" + expected[index] + ")")
 				throw "function-body parser lost an existing source brace group";
-			final parsed = ParserStage.parse("class Main { static function main() { var quoted = macro " + source + "; } }");
-			final module = TyperStage.typeModule(parsed);
+			final text = "class Main { static function main() { var quoted = macro " + source + "; } }";
+			// The typer lowers the quote to the construction of its `Expr` value; that construction
+			// keeps the authored grouping.
+			final module = TyperStage.typeModule(ParserStage.parse(text));
 			module.getBackendProjection();
-			final quote = module.getTypedClasses()[0].getFunctions()[0].getBody().getStatements()[0].getExpressions()[0];
+			if (loweredShape(module.getTypedClasses()[0].getFunctions()[0].getBody().getStatements()[0].getExpressions()[0]) != expected[index])
+				throw "typed quotation lowering changed source brace grouping";
+			// The runtime converter reads quote syntax, which only a module built without the typer
+			// still carries (`TypedBodyBuilder.buildFallbackModule`).
+			final quote = TypedBodyBuilder.buildFallbackModule(ParserStage.parse(text),
+				null)[0].getFunctions()[0].getBody().getStatements()[0].getExpressions()[0];
+			if (quote.getTag() != MacroExpr)
+				throw "fallback module lost its quotation node";
 			final projected = TypedSourceSyntax.expression(quote.getExpressions()[0]);
 			final macroValue = @:privateAccess RuntimeMacroExprs.convert(projected, null);
 			if (shape(macroValue) != expected[index])

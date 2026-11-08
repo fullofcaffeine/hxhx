@@ -257,6 +257,9 @@ class ModuleLoader extends LazyTypeLoader {
 	override public function hasDefine(name:String):Bool
 		return defines.exists(name);
 
+	override public function isMacroModule(modulePath:String, filePath:String):Bool
+		return macroContext.isMacroModule(modulePath, filePath);
+
 	public function drainNewModules():Array<ResolvedModule> {
 		if (pending.length == 0)
 			return [];

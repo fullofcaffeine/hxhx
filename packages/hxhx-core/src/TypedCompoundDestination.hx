@@ -11,6 +11,9 @@ function retain(destination:TypedExpr, capture:TypedExpr->TypedExpr):TypedExpr {
 	return switch destination.getTag() {
 		case LocalRead if (destination.getLocalBindings().length == 1): destination;
 		case NameRead if (destination.getFieldInfo() != null): destination;
+		// `this` has no address operand. Whether it may be written is checked by the
+		// caller (`TypedControlLowering.requireThisDestination`) and by the target.
+		case ThisValue: destination;
 		case Parenthesized | Untyped if (children.length == 1):
 			destination.withExpressions([retain(children[0], capture)]);
 		case FieldRead if (children.length == 1):
@@ -19,6 +22,6 @@ function retain(destination:TypedExpr, capture:TypedExpr->TypedExpr):TypedExpr {
 		case ArrayAccess if (children.length == 2):
 			destination.withExpressions([capture(children[0]), capture(children[1])]);
 		case _:
-			throw "control-valued compound assignment requires a supported exact destination";
+			throw "control-valued compound assignment requires a supported exact destination (" + Std.string(destination.getTag()) + ")";
 	};
 }

@@ -69,6 +69,12 @@ class TypedBackendConstructorOccurrence {
 		return arguments.copy();
 	}
 
+	/** The selected application, or null when typing left this construction unresolved. */
+	public function findApplication():Null<TypedConstructorApplication> {
+		assertCurrent();
+		return application;
+	}
+
 	/** Missing or implicit selection stays explicit until a consumer implements that construction path. */
 	public function requireApplication():TypedConstructorApplication {
 		assertCurrent();

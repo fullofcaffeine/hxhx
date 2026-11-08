@@ -1,7 +1,9 @@
 package backend.ocaml;
 
 /**
-	Makes ordinary Int field updates and String field appends explicit for native OCaml.
+	Makes ordinary Int field updates, String field appends, and `++`/`--` on
+	Int and Float fields, anonymous-structure fields, and array elements
+	explicit for native OCaml.
 
 	One receiver capture and one old-value capture preserve effects and postfix
 	results. Exact field facts restrict this pass to ordinary instance storage;
@@ -21,33 +23,110 @@ private function lowerExpression(expression:TypedExpr, allocator:TyCompilerTempo
 	if (op != HxUnaryOperator.Increment && op != HxUnaryOperator.Decrement)
 		return rebuilt;
 	final operand = children[0];
+	if (operand.getTag() == ArrayAccess)
+		return lowerIndexedStep(rebuilt, operand, allocator);
 	final field = operand.getFieldInfo();
-	final intType = TyType.fromHintText("Int");
-	if ((operand.getTag() != FieldRead && operand.getTag() != NameRead)
-		|| field == null
-		|| field.getIsStatic()
-		|| field.getIsFinal()
-		|| field.getType().getSemanticKey() != intType.getSemanticKey()
-		|| (field.getPropertyGet() != "" && field.getPropertyGet() != "default")
-		|| (field.getPropertySet() != "" && field.getPropertySet() != "default"))
+	final valueType = operand.getType();
+	final stepType = steppedType(valueType);
+	if (stepType == null)
+		return rebuilt;
+	final key = stepType.getSemanticKey();
+	// A field of an anonymous structure (`{k: 1}`) has no declared field facts.
+	// Its read and write already lower through the structural object path.
+	final structural = field == null
+		&& operand.getTag() == FieldRead
+		&& TyAliasExpansion.revealNonNullable(operand.getExpressions()[0].getType()).isAnonymous();
+	if (structural && valueType.isNullable())
+		return rebuilt;
+	if (!structural
+		&& ((operand.getTag() != FieldRead && operand.getTag() != NameRead)
+			|| field == null
+			|| field.getIsStatic()
+			|| field.getIsFinal()
+			|| field.getType().getSemanticKey() != valueType.getSemanticKey()
+			|| (field.getPropertyGet() != "" && field.getPropertyGet() != "default")
+			|| (field.getPropertySet() != "" && field.getPropertySet() != "default")))
 		return rebuilt;
 	final position = expression.getPosition();
 	final receiver = operand.getTag() == FieldRead ? operand.getExpressions()[0] : null;
+	final fieldName = structural ? operand.getTexts()[0] : field.getName();
 	final receiverBinding = receiver == null ? null : allocator.allocate("receiver", receiver.getType());
-	final oldBinding = allocator.allocate("old", intType);
-	final nextBinding = allocator.allocate("next", intType);
+	final oldBinding = allocator.allocate("old", valueType);
+	final nextBinding = allocator.allocate("next", valueType);
 	function read(binding:TyLocalBinding):TypedExpr
 		return TypedExpr.localRead(binding.getSourceName(), binding.getType(), position, binding);
 	function capture(binding:TyLocalBinding, value:TypedExpr):TypedExpr
 		return TypedExpr.temporary(binding.getSourceName(), binding.getType().getCanonicalDisplay(), value, TyType.fromHintText("Void"), position, binding);
-	final place = receiverBinding == null ? operand : TypedExpr.fieldRead(read(receiverBinding), field.getName(), intType, position, field);
-	final next = TypedExpr.binary(op == HxUnaryOperator.Increment ? "+" : "-", read(oldBinding), TypedExpr.intLiteral(1, intType, position), intType, position);
+	final place = receiverBinding == null ? operand : TypedExpr.fieldRead(read(receiverBinding), fieldName, valueType, position, field);
+	final one = key == "primitive:Int" ? TypedExpr.intLiteral(1, stepType, position) : TypedExpr.floatLiteral(1.0, stepType, position);
+	final next = TypedExpr.binary(op == HxUnaryOperator.Increment ? "+" : "-", read(oldBinding), one, stepType, position);
 	final sequence = receiverBinding == null ? [] : [capture(receiverBinding, receiver)];
 	return TypedExpr.block(sequence.concat([
 		capture(oldBinding, place),
-		capture(nextBinding, TypedExpr.assign(place, next, intType, position)),
+		capture(nextBinding, TypedExpr.assign(place, next, valueType, position)),
 		read(rebuilt.getUnaryFixity() == HxUnaryFixity.Postfix ? oldBinding : nextBinding)
-	]), intType, position);
+	]), valueType, position);
+}
+
+/**
+	The type `++`/`--` computes in for a slot of type `type`: `Int` or `Float`,
+	also when the slot is `Null<Int>` or `Null<Float>`. The new value is stored
+	back with the slot's own type, so a nullable slot is re-boxed by the
+	ordinary assignment. A null value throws "Null Access" when it is read for
+	the arithmetic. Returns null for every other type.
+**/
+private function steppedType(type:TyType):Null<TyType> {
+	final inner = type.isNullable() ? type.unwrapNull() : type;
+	final key = inner.getSemanticKey();
+	return key == "primitive:Int" || key == "primitive:Float" ? inner : null;
+}
+
+/**
+	Lower `a[i]++`, `++a[i]`, `a[i]--`, and `--a[i]` on an `Array<Int>` or `Array<Float>`.
+
+	Stage3 had no lowering for an indexed operand, so the whole update became a
+	placeholder and was dropped. This rewrites it into operations Stage3 already
+	emits: bind the array and the index once, read the old element, store
+	old plus or minus 1, then yield the old value (postfix) or the new value
+	(prefix). The array and index expressions run once, in source order.
+	`Int`, `Float`, `Null<Int>`, and `Null<Float>` elements are lowered (see
+	`steppedType`); other element types, and other indexed receivers such as
+	abstracts with `@:arrayAccess`, keep their existing owners.
+ */
+private function lowerIndexedStep(expression:TypedExpr, operand:TypedExpr, allocator:TyCompilerTemporaryAllocator):TypedExpr {
+	final parts = operand.getExpressions();
+	if (parts.length != 2)
+		return expression;
+	final array = parts[0];
+	final index = parts[1];
+	final arrayType = TyAliasExpansion.reveal(array.getType());
+	final identity = arrayType.getNominalIdentity();
+	if (identity == null || identity.getCanonicalName() != "Array" || arrayType.getTypeArguments().length != 1)
+		return expression;
+	final elementType = operand.getType();
+	final stepType = steppedType(elementType);
+	if (stepType == null)
+		return expression;
+	final key = stepType.getSemanticKey();
+	final position = expression.getPosition();
+	function read(binding:TyLocalBinding):TypedExpr
+		return TypedExpr.localRead(binding.getSourceName(), binding.getType(), position, binding);
+	function capture(binding:TyLocalBinding, value:TypedExpr):TypedExpr
+		return TypedExpr.temporary(binding.getSourceName(), binding.getType().getCanonicalDisplay(), value, TyType.fromHintText("Void"), position, binding);
+	final arrayBinding = allocator.allocate("array", array.getType());
+	final indexBinding = allocator.allocate("index", index.getType());
+	final oldBinding = allocator.allocate("old", elementType);
+	final nextBinding = allocator.allocate("next", elementType);
+	final place = TypedExpr.arrayAccess(read(arrayBinding), read(indexBinding), elementType, position);
+	final one = key == "primitive:Int" ? TypedExpr.intLiteral(1, stepType, position) : TypedExpr.floatLiteral(1.0, stepType, position);
+	final next = TypedExpr.binary(expression.getUnaryOperator() == HxUnaryOperator.Increment ? "+" : "-", read(oldBinding), one, stepType, position);
+	return TypedExpr.block([
+		capture(arrayBinding, array),
+		capture(indexBinding, index),
+		capture(oldBinding, place),
+		capture(nextBinding, TypedExpr.assign(place, next, elementType, position)),
+		read(expression.getUnaryFixity() == HxUnaryFixity.Postfix ? oldBinding : nextBinding)
+	], elementType, position);
 }
 
 /**

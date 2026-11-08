@@ -1,0 +1,12 @@
+fromCharCode: HA
+static: 3
+constructor and instance: 2 4
+array index: 30
+array push and insert: 10,20,5,30,2
+array indexOf: 4
+array slice: 5,30,2
+map: two true
+string: c cd
+math abs: 3
+float: 1.75 -1.5
+bool: yes

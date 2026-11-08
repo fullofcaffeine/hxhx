@@ -637,7 +637,7 @@ jobs:
         include:
           - shard: compiler-foundation
             label: Compiler foundations and runtime
-            timeout_minutes: 40
+            timeout_minutes: 60
           - shard: compiler-packaging
             label: OCaml packaging and metal profile
             timeout_minutes: 40
@@ -882,11 +882,74 @@ jobs:
           HXHX_STAGE0_FAILFAST_SECS: "7200"
         run: npm run test:ci:shard -- --shard hxhx-targets
 
+  # The other jobs build hxhx from the committed bootstrap snapshot, so none of
+  # them shows whether reflaxe.ocaml still accepts the current hxhx sources.
+  # This job runs that stage0 emit (lowering and printing every hxhx class, no
+  # dune build). It starts right after routing and runs beside the longer test
+  # shards. PR #116 merged code that failed only here.
+  reflaxe-self-compile:
+    name: hxhx self-compile through reflaxe.ocaml
+    runs-on: ubuntu-latest
+    needs: [route]
+    if: ${{ needs.route.outputs.run_q2 == 'true' }}
+    # The full emit takes about an hour on a hosted runner and peaks near 10 GB.
+    timeout-minutes: 100
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+      - name: Emit hxhx through reflaxe.ocaml
+        env:
+          HXHX_STAGE0_PROGRESS: "1"
+          HXHX_STAGE0_HEARTBEAT: "60"
+          HXHX_STAGE0_FAILFAST_SECS: "5400"
+          HXHX_KEEP_LOGS: "1"
+          HXHX_LOG_DIR: ${{ runner.temp }}/reflaxe-self-compile/stage0-logs
+          REFLAXE_OCAML_PROGRESS_FILE: ${{ runner.temp }}/reflaxe-self-compile/stage0-progress.log
+          HXHX_BOOTSTRAP_REPORT_JSON: ${{ runner.temp }}/reflaxe-self-compile/report.json
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/reflaxe-self-compile"
+          npm run hxhx:check:reflaxe-self-compile
+      - name: Upload self-compile evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: reflaxe-self-compile-${{ github.sha }}
+          path: ${{ runner.temp }}/reflaxe-self-compile
+          if-no-files-found: warn
+          retention-days: 14
+
   test:
     name: Tests
     if: ${{ always() }}
     runs-on: ubuntu-latest
-    needs: [route, secret-scan, guards, standalone-guards, stage0-free-smoke, js-native-smoke, plugin-matrix, native-plugin-happy-path, test-shards, hxhx-e2e]
+    needs: [route, secret-scan, guards, standalone-guards, stage0-free-smoke, js-native-smoke, plugin-matrix, native-plugin-happy-path, test-shards, hxhx-e2e, reflaxe-self-compile]
     timeout-minutes: 5
     steps:
       - name: Checkout

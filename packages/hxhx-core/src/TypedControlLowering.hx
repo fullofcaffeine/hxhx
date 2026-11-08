@@ -40,14 +40,23 @@ class TypedControlLowering {
 
 	final rootTarget:Null<TyControlTarget>;
 
-	function new(owner:String, rootTarget:Null<TyControlTarget>) {
+	/**
+		Whether a control-valued right side may write `this` here: only in an
+		instance constructor. See `requireThisDestination`.
+	**/
+	final constructorBody:Bool;
+
+	function new(owner:String, rootTarget:Null<TyControlTarget>, constructorBody:Bool) {
 		this.owner = owner;
 		this.rootTarget = rootTarget;
+		this.constructorBody = constructorBody;
 	}
 
 	public static function functionBody(fn:TypedFunction):TypedFunction {
 		final environment = fn.getEnvironment();
-		final lowerer = new TypedControlLowering(fn.getStableIdentity(), environment == null ? null : environment.getRootControlTarget());
+		final declaration = fn.getSourceDeclaration();
+		final constructorBody = HxFunctionDecl.getName(declaration) == "new" && !HxFunctionDecl.getIsStatic(declaration);
+		final lowerer = new TypedControlLowering(fn.getStableIdentity(), environment == null ? null : environment.getRootControlTarget(), constructorBody);
 		final defaults = [
 			for (value in fn.getDefaults()) {
 				final expression = value.getExpression();
@@ -73,7 +82,7 @@ class TypedControlLowering {
 
 	/** Lower under the exact field owner without introducing a function return target. */
 	public static function fieldInitializer(initializer:TypedFieldInitializer):LoweredFieldInitializer {
-		final lowerer = new TypedControlLowering(initializer.getField().getCanonicalKey(), null);
+		final lowerer = new TypedControlLowering(initializer.getField().getCanonicalKey(), null, false);
 		final plan = lowerer.value(initializer.getExpression(), null);
 		return {steps: plan.steps, value: plan.value, completes: plan.completes};
 	}
@@ -671,6 +680,14 @@ class TypedControlLowering {
 		Haxe saves array addresses before a control-valued right side, but evaluates
 		a field receiver after that side's statements. Preserve this measured order;
 		never materialize the stored field/element value as the write destination.
+
+		`this` is accepted here only in an instance constructor (see
+		`requireThisDestination`). Like a local, it has no receiver or index to
+		evaluate, so the lowered tree runs the right side's statements and then
+		writes the final value with one ordinary `this = value`. Each target
+		renders that write through its own `this` storage; Stage3 uses the
+		abstract constructor's mutable slot
+		(`backend.ocaml.Stage3OcamlAbstractConstructors`).
 	 */
 	function retainDestination(destination:TypedExpr, steps:Array<TypedExpr>):TypedExpr {
 		final children = destination.getExpressions();
@@ -679,14 +696,42 @@ class TypedControlLowering {
 				return destination;
 			case FieldRead:
 				return destination;
+			case ThisValue:
+				requireThisDestination();
+				return destination;
 			case ArrayAccess:
 				final retained = new Array<TypedExpr>();
 				for (operand in children)
 					retained.push(retainAddressOperand(operand, steps));
 				return destination.withExpressions(retained);
 			case _:
-				throw "control-valued assignment requires a supported exact destination";
+				throw "control-valued assignment requires a supported exact destination in "
+					+ owner
+					+ " ("
+					+ Std.string(destination.getTag())
+					+ ")";
 		}
+	}
+
+	/**
+		Reject a control-valued `this` write outside an instance constructor.
+
+		The typer does not decide whether `this` may be assigned: the hxhx typer
+		accepts `this` as an assignment target in any function. Upstream Haxe
+		allows it only in abstract constructors and inline abstract methods.
+		Stage3 checks the rest when it renders the write
+		(`EmitterStage.abstractThisAssignment`): an abstract constructor stores
+		into its `this` slot, and any other constructor is rejected there.
+
+		An inline abstract method is refused here. Its own body cannot write the
+		caller's value back yet (Bead haxe_ocaml-rs48f), and once the right
+		side's statements are lowered the write looks like a plain `this = value`,
+		which Stage3 would silently drop. A plain `this = value` in an inline
+		method never comes through this check and keeps its existing behavior.
+	**/
+	function requireThisDestination():Void {
+		if (!constructorBody)
+			throw "control-valued assignment to this is supported only in constructors; " + owner + " assigns this from an if, switch, try, or comprehension";
 	}
 
 	/**
@@ -759,6 +804,8 @@ class TypedControlLowering {
 			steps.push(declaration(binding, operand, operand.getPosition()));
 			return TypedExpr.localRead(binding.getSourceName(), binding.getType(), operand.getPosition(), binding);
 		}
+		if (address.value.getTag() == ThisValue)
+			requireThisDestination();
 		final destination = TypedCompoundDestination.retain(address.value, capture);
 		final previous = capture(destination);
 		for (step in right.steps)
@@ -794,6 +841,8 @@ class TypedControlLowering {
 			&& ((callee.getTag() == NameRead && children.length == 0)
 				|| (callee.getTag() == FieldRead && children.length == 1 && children[0].getTag() == RuntimeTypeValue)))
 			return callee;
+		if (selected != null && selected.getIsEnumConstructor() && isEnumConstructorSelection(callee))
+			return callee;
 		switch callee.getTag() {
 			case Parenthesized | Untyped:
 				final inner = retainInvocationCallee(call, children[0], admitted || callee.getTag() == Untyped, steps);
@@ -812,6 +861,24 @@ class TypedControlLowering {
 				]);
 			case _:
 				return null;
+		}
+	}
+
+	/**
+		An enum constructor named directly (`Leaf`) or through its enum type
+		(`Tree.Leaf`, `pack.Module.Tree.Leaf`) cannot be rebound, has no receiver,
+		and reads no runtime state. Haxe evaluates nothing when it selects the
+		constructor, so argument statements may run first and the call can stay
+		an exact enum construction. Capturing the selection into a temporary would
+		instead turn the constructor, or its enum type, into a first-class value.
+	 */
+	static function isEnumConstructorSelection(callee:TypedExpr):Bool {
+		final children = callee.getExpressions();
+		return switch callee.getTag() {
+			case EnumValue | NameRead: children.length == 0;
+			case FieldRead: children.length == 1 && children[0].getTag() == RuntimeTypeValue;
+			case Parenthesized: children.length == 1 && isEnumConstructorSelection(children[0]);
+			case _: false;
 		}
 	}
 

@@ -670,7 +670,7 @@ class TyperIndex {
 					throw "parsed class parameters differ from indexed binder identities";
 				final key = parameterIds[ordinal].getCanonicalKey();
 				parameterBounds.set(key, [
-					for (bound in parameter.constraints)
+					for (bound in HxTypeSyntax.constraintMembers(parameter.constraints))
 						typeUseResolver.resolveParsed(bound, {
 							packagePath: packagePath,
 							modulePath: semanticModulePath,

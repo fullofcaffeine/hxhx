@@ -207,12 +207,20 @@ class TyperStage {
 		Use one bound relation during selection, publication, and class application.
 		Ordinary enum values satisfy the core EnumValue abstract without a class
 		inheritance edge. Other nominal bounds still require exact ancestry, and
-		empty records retain their object-only meaning.
+		empty records retain their object-only meaning. The core `Any` abstract
+		satisfies every bound, as in upstream Haxe: its generic `@:to` conversion
+		promotes an `Any` value to whatever type the bound names. An `Any` bound,
+		such as `S:T` after `T` was inferred from an `Any` argument, accepts every type.
+		A parameter that this call's inference left open (`Open<S>`, for example from
+		`Std.downcast(value, cast null)`) is upstream's unbound monomorph: it fixes no
+		type, so it cannot violate a bound.
 	 */
 	static function constraintAccepts(expected:TyType, supplied:TyType, index:TyperIndex):Bool {
-		if (supplied.isDynamic())
+		if (supplied.isDynamic() || supplied.isOpenMethodParameter() || isCoreAny(expected, index))
 			return true;
 		return TyCallerConstraintProof.accepts(expected, supplied, index.getParameterBounds, (target, actual) -> {
+			if (isCoreAny(actual, index))
+				return true;
 			if (TyEnumValueCompatibility.accepts(index, target, actual))
 				return true;
 			if (target.isAnonymous() && target.getAnonymousFieldNames().length == 0)
@@ -224,6 +232,12 @@ class TyperStage {
 			}
 			return overloadArgScore(target, actual, [], index) >= 0;
 		});
+	}
+
+	/** The top-level `Any` abstract from the standard library, not a user type spelled `pkg.Any`. */
+	static function isCoreAny(type:TyType, index:TyperIndex):Bool {
+		final identity = type.getNominalIdentity();
+		return identity != null && identity.getCanonicalName() == "Any" && index.getAbstractByFullName("Any") != null;
 	}
 
 	static function nominalInfoForType(index:TyperIndex, type:TyType):Null<TyNominalInfo> {
@@ -499,6 +513,17 @@ class TyperStage {
 				+ "."
 				+ className) : semanticInfo.getFullName();
 			final context = new TyperContext(index, parsed.getFilePath(), modulePath, packagePath, directives, classFullName, loader, resolvedDirectives);
+			// An abstract constructor must assign `this` on every completing path (haxe_ocaml-vitgz).
+			if (index != null && index.getAbstractByFullName(classFullName) != null)
+				for (fn in HxClassDecl.getFunctions(classDeclaration))
+					if (HxFunctionDecl.getName(fn) == "new" && !HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getHasBody(fn))
+						// Parameters and the abstract's mutable static fields are run-time
+						// values as range bounds; an inline constant is not.
+						TyAbstractConstructorInitialization.require(HxFunctionDecl.getBody(fn), parsed.getFilePath(), HxFunctionDecl.getPos(fn),
+							[for (argument in HxFunctionDecl.getArgs(fn)) HxFunctionArg.getName(argument)].concat([
+								for (field in HxClassDecl.getFields(classDeclaration))
+									if (HxFieldDecl.getIsStatic(field) && !HxFieldDecl.getIsFinal(field)) HxFieldDecl.getName(field)
+							]));
 			final headerTypes = resolveClassHeaderTypes(classDeclaration, context);
 			final typedFunctions = new Array<TypedFunction>();
 			final typedFieldInitializers = new Array<TypedFieldInitializer>();
@@ -510,6 +535,9 @@ class TyperStage {
 				},
 				expressionType: function(expression, position, lexicalEnvironment, expected) {
 					return inferExprType(expression, lexicalEnvironment.copyForInference(), context, position, expected);
+				},
+				macroQuotation: function(quote, position, lexicalEnvironment) {
+					return lowerMacroQuotation(quote, lexicalEnvironment.copyForInference(), context, position);
 				},
 				callTargetType: function(expression, position, lexicalEnvironment) {
 					final scope = lexicalEnvironment.copyForInference();
@@ -586,14 +614,22 @@ class TyperStage {
 						return {binding: binding, call: null};
 					final declaration = binding.declaration;
 					final replay = environment.copyForInference();
-					final receiverType = inferExprType(binding.receiver, replay, context, position);
-					final indexed = switch expression {
-						case EArrayAccess(receiver,
-							subscript): resolveIndexedAccess(expression, receiver, subscript, null, receiverType, replay, context, position);
-						case EBinop("=", EArrayAccess(receiver, subscript),
-							value): resolveIndexedAccess(expression, receiver, subscript, value, receiverType, replay, context, position);
-						case _: throw "indexed binding lost its source form";
+					// `(untyped b[i]) = v` replays in the untyped scope it was typed in.
+					final untypedPlace = expression.match(EBinop("=", EUntyped(EArrayAccess(_, _)), _));
+					final replayAccess = () -> {
+						final receiverType = inferExprType(binding.receiver, replay, context, position);
+						final indexed = switch expression {
+							case EArrayAccess(receiver,
+								subscript): resolveIndexedAccess(expression, receiver, subscript, null, receiverType, replay, context, position);
+							case EBinop("=", EArrayAccess(receiver, subscript) | EUntyped(EArrayAccess(receiver, subscript)),
+								value): resolveIndexedAccess(expression, receiver, subscript, value, receiverType, replay, context, position);
+							case _: throw "indexed binding lost its source form";
+						};
+						return {receiverType: receiverType, indexed: indexed};
 					};
+					final replayed = untypedPlace ? replay.withUntyped(replayAccess) : replayAccess();
+					final receiverType = replayed.receiverType;
+					final indexed = replayed.indexed;
 					final owner = context.getIndex().getByFullName(declaration.getOwner().getCanonicalName());
 					final signature = TyNominalApplication.signature(context.getIndex(), owner, declaration.getIsStatic() ? null : receiverType,
 						declaration.getSignature());
@@ -616,11 +652,17 @@ class TyperStage {
 						for (i in 0...expected.length)
 							TyImplicitConversionPlan.select(context.getIndex(), expected[i], indexed.actual[i])
 					];
-					return {binding: binding, call: new TypedCallResolution(declaration, declaration.getIsStatic(), null, conversions, expected, named)};
+					return {
+						binding: binding,
+						call: new TypedCallResolution(declaration, declaration.getIsStatic(), null, conversions, expected, named),
+						result: indexed.type
+					};
 				},
 				constructorApplication: function(constructed, arguments, sources) {
 					return TypedConstructorSelection.select(context.getIndex(), constructed, arguments, sources,
-						(signature, actual, parameters) -> overloadCandidateScore(signature, actual, actual.length, parameters, context.getIndex()));
+						(signature, actual,
+								parameters) -> overloadCandidateScore(signature, TyBasicNullArgument.scoringTypes(signature, actual, context), actual.length,
+								parameters, context.getIndex()));
 				},
 				constructorArgumentContexts: function(path, sources, environment) {
 					return constructorArgumentContexts(path, constructorPathType(path, context, environment, null).contextual, sources, environment,
@@ -1392,9 +1434,12 @@ class TyperStage {
 		macro selection uses the same rule so both phases ask the loader the same questions.
 	**/
 	public static function isUpperStartName(name:String):Bool {
-		if (name == null || name.length == 0)
+		if (name == null)
 			return false;
-		final c = name.charCodeAt(0);
+		final segment = HxRootedPath.unrooted(name);
+		if (segment.length == 0)
+			return false;
+		final c = segment.charCodeAt(0);
 		return c >= "A".code && c <= "Z".code;
 	}
 
@@ -1807,7 +1852,8 @@ class TyperStage {
 		check: upstream and `assertWritableLocal` both reject it with "Invalid assign". A
 		`@:privateAccess` wrapper around a declared place is writable but is not the direct
 		`a[i]` occurrence the selected schedule is keyed on, so it stays an explicit
-		diagnostic.
+		diagnostic. `untyped values["x"] += 2` parses as `(untyped values["x"]) += 2`;
+		that untyped place is a declared update place too, selected in the untyped scope.
 	 */
 	static function isDeclaredIndexedUpdatePlace(place:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Bool {
 		if (ctx.getIndex() == null)
@@ -1817,6 +1863,8 @@ class TyperStage {
 				if (isDeclaredIndexedUpdatePlace(inner, scope, ctx, pos))
 					throw new TyperError(ctx.getFilePath(), pos, "Private-access abstract indexed updates are not yet supported (haxe_ocaml-rgmu4)");
 				false;
+			case EUntyped(inner):
+				scope.withUntyped(() -> inner.match(EArrayAccess(_, _)) && isDeclaredIndexedUpdatePlace(inner, scope, ctx, pos));
 			case EArrayAccess(receiver, _): final type = TyAliasExpansion.revealNonNullable(inferExprType(receiver, scope.copyForInference(), ctx,
 					pos)); final identity = type.getNominalIdentity(); final owner = identity == null ? null : ctx.getIndex()
 					.getAbstractByFullName(identity.getCanonicalName()); owner != null && owner.getIndexedDeclarations().length > 0;
@@ -1830,12 +1878,18 @@ class TyperStage {
 		Authored operand traversal stays in the owning lexical catalog. The candidate
 		selects helpers and conversions over those facts and publishes them atomically.
 	 */
-	static function selectIndexedUpdate(source:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyIndexedUpdateOutcome {
-		final existing = scope.getInference().indexedUpdateOutcome(source, scope);
+	static function selectIndexedUpdate(authored:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyIndexedUpdateOutcome {
+		final existing = scope.getInference().indexedUpdateOutcome(authored, scope);
 		if (existing != null)
 			return existing;
 		if (scope.getInference().isSealed())
 			throw "indexed update outcome is absent from sealed inference";
+		// `(untyped b[i]) op= v` gives its authored node the open untyped result, so the
+		// setter-typed update result needs its own query identity over the same operands.
+		final source = switch authored {
+			case EBinop(op, left, right) if (left.match(EUntyped(_))): HxExpr.EBinop(op, left, right);
+			case _: authored;
+		};
 		final operands = switch source {
 			case EUnop(op, fixity, EArrayAccess(receiver, subscript)):
 				{
@@ -1844,7 +1898,7 @@ class TyperStage {
 					right: null,
 					kind: TyIndexedUpdateSelection.TyIndexedUpdateKind.Unary(op, fixity)
 				};
-			case EBinop(op, EArrayAccess(receiver, subscript), right):
+			case EBinop(op, EArrayAccess(receiver, subscript) | EUntyped(EArrayAccess(receiver, subscript)), right):
 				{
 					receiver: receiver,
 					subscript: subscript,
@@ -1862,6 +1916,7 @@ class TyperStage {
 		final query = new TyIndexedUpdateSelection.TyIndexedUpdateQuery({
 			owner: scope.getOwnerIdentity(),
 			source: source,
+			authored: authored,
 			kind: operands.kind,
 			getterSource: EArrayAccess(operands.receiver, operands.subscript),
 			computedSource: freshQuery(),
@@ -2070,12 +2125,21 @@ class TyperStage {
 			throw "indexed selection requires one retained type per operand";
 		function select(declaration:TyDeclarationInfo, environment:TyFunctionEnv, probe:Bool):TyMethodCallResolution {
 			final arguments = declaration.getIsStatic() ? [receiver].concat(operands) : operands;
+			final supplied = declaration.getIsStatic() ? [receiverType].concat(actual) : actual.copy();
+			if (value != null) {
+				final signature = TyNominalApplication.signature(ctx.getIndex(), owner, declaration.getIsStatic() ? null : revealed,
+					declaration.getSignature());
+				final parameters = signature.getArgs();
+				final last = supplied.length - 1;
+				if (parameters.length == supplied.length && TyIndexedNullValue.admits(supplied[last], parameters[last], ctx.getIndex())) {
+					supplied[last] = TyType.nullable(parameters[last]);
+				}
+			}
 			return resolveMethodCall(owner, declaration.getSignature().getName(), declaration.getIsStatic(), arguments, environment, ctx, pos,
 				[declaration.getSignature()], declaration.getIsStatic() ? null : {
 					expression: receiver,
 					type: revealed
-				},
-				declaration.getIsStatic() ? [receiverType].concat(actual) : actual, probe, retained != null);
+				}, supplied, probe, retained != null);
 		}
 		if (binding == null) {
 			for (candidate in candidates) {
@@ -2103,6 +2167,9 @@ class TyperStage {
 		final signature = TyNominalApplication.signature(ctx.getIndex(), owner,
 			declaration.getIsStatic() ? null : inference.expressionType(receiver, revealed, scope), declaration.getSignature());
 		final parameters = TyMethodGenericBinding.specializeParameters(declaration, signature, selection.order.rankedTypes(selection.actual), ctx.getIndex());
+		if (value != null && parameters.length > 0)
+			TyIndexedNullValue.checkTarget(actual[actual.length - 1], parameters[parameters.length - 1],
+				TyBasicNullArgument.sourceHint(declaration, declaration.getSignature().getArgs().length - 1), ctx, pos);
 		if ((retained != null && inference.sourceTerm(source, scope) == null)
 			|| declaration.getTypeParameterIds().length > 0
 			&& (result.hasUnknownComponent() || parameters.filter(type -> type.hasUnknownComponent()).length > 0)) {
@@ -2261,6 +2328,10 @@ class TyperStage {
 		];
 		if (argTypes.length != args.length)
 			throw "call selection requires one retained type per source argument";
+		// One declared candidate: apply the upstream per-target rule for null at a basic parameter.
+		if (candidates.length == 1)
+			TyBasicNullArgument.admit(callable(candidates[0], receiver == null ? null : receiver.type), c.declarationForSignature(candidates[0]), argTypes,
+				ctx, pos);
 		// Candidate trials must not commit context to the caller's inference state.
 		function literalType(source:HxExpr, expected:TyType):Null<TyType> {
 			if (retainedUpdateOperands)
@@ -2331,9 +2402,16 @@ class TyperStage {
 			if (declaration != null && applied.acceptsArity(args.length)) {
 				final boundReceiver = receiver == null ? (isStatic ? null : currentThisType(ctx)) : candidateInference.expressionType(receiver.expression,
 					receiver.type, scope);
+				// An unchecked `cast null` whose slot names a still-open parameter fixes no
+				// type, like upstream's fresh monomorph. Mark it instead of passing its
+				// Unknown slot placeholder as unresolved evidence.
+				final unconstrainedSlots = [
+					for (source in order.rankedSources())
+						source >= 0 && TypedCastExpectation.isUnchecked(args[source]) && contextual[source].isUnknown()
+				];
 				final failure = TyMethodGenericBinding.constraintFailure(declaration, applied, contextualRanked,
 					bound -> TyNominalApplication.applyType(ctx.getIndex(), c, boundReceiver, bound),
-					(expected, supplied) -> constraintAccepts(expected, supplied, ctx.getIndex()), ctx.getIndex());
+					(expected, supplied) -> constraintAccepts(expected, supplied, ctx.getIndex()), ctx.getIndex(), unconstrainedSlots);
 				if (failure != null) {
 					rejectedMethodConstraint = failure;
 					continue;
@@ -2625,6 +2703,9 @@ class TyperStage {
 		if (!calleeType.isFunction())
 			return TyType.unknown();
 		final signature = TyCallableSignature.fromFunctionValue(calleeType);
+		final parameters = signature.getParameters().filter(parameter -> !parameter.isRest);
+		TyBasicNullArgument.check(parameters.map(parameter -> parameter.type), parameters.map(parameter -> parameter.isOptional), argumentTypes, ctx, pos,
+			false);
 		final kinds:Array<TyCallAlignment.TyCallOperandKind> = [
 			for (argument in args)
 				argument.match(ECall(EIdent("__hxhx_spread"), [_])) ? Spread : Value
@@ -3247,6 +3328,67 @@ class TyperStage {
 		return selection.type;
 	}
 
+	/**
+		The ordinary syntax of a quotation node, lowered once per node (`TyperContext.loweredQuotation`)
+		so inference and typed-body replay share it; `$v{}` payloads are typed in `scope`.
+	**/
+	static function lowerMacroQuotation(quote:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):HxExpr {
+		return ctx.loweredQuotation(quote, () -> {
+			final lowered = try {
+				switch quote {
+					case EMacroExpr(inner, wrappers):
+						MacroReificationLowering.lowerExpression(inner, wrappers, ctx.getFilePath(), pos, payload -> inferExprType(payload, scope, ctx, pos),
+							ctx.isMacroModule(), ctx.hasLoader());
+					case EMacroType(typeText):
+						MacroReificationLowering.lowerType(typeText, ctx.getFilePath(), pos, ctx.hasLoader());
+					case _:
+						throw "macro reification: not a quotation";
+				}
+			} catch (message:String) {
+				throw new TyperError(ctx.getFilePath(), pos, message);
+			};
+			if (ctx.hasLoader())
+				requireRootedOwners(lowered, ctx, pos);
+			lowered;
+		});
+	}
+
+	/**
+		Every type a lowered quotation names through a rooted path (`HxRootedPath`) must resolve.
+
+		An unresolved rooted path would otherwise stay a plain name in the typed body and reach a
+		backend with its `::` prefix. Each owner (`haxe.macro.Expr.ExprDef`, `Std`,
+		`hxhxmacrohost.MacroReificationValues`) is resolved once per quotation.
+	**/
+	static function requireRootedOwners(lowered:HxExpr, ctx:TyperContext, pos:HxPos):Void {
+		// In `::haxe.macro.Expr.ExprDef.EConst` the owner is `::haxe.macro.Expr.ExprDef`: the receiver
+		// of a field whose own access is not the receiver of another field.
+		final receivers = new Array<String>();
+		final inner = new Array<String>();
+		TypedBackendSourceWalk.expression(lowered, node -> switch node {
+			case EField(owner, _):
+				final path = dottedFieldPath(owner);
+				if (HxRootedPath.isRooted(path) && receivers.indexOf(path) < 0)
+					receivers.push(path);
+				switch owner {
+					case EField(receiver, _):
+						final prefix = dottedFieldPath(receiver);
+						if (HxRootedPath.isRooted(prefix) && inner.indexOf(prefix) < 0) inner.push(prefix);
+					case _:
+				}
+			case _:
+		});
+		for (owner in receivers)
+			if (inner.indexOf(owner) < 0 && ctx.resolveType(owner) == null) {
+				final name = HxRootedPath.unrooted(owner);
+				throw new TyperError(ctx.getFilePath(), pos,
+					StringTools.startsWith(name,
+						"hxhxmacrohost.") ? "macro reification: the support module " + name +
+						" is not on the classpath (a project-macro plugin build adds it)" : "macro reification: the lowered quotation needs `" + name +
+						"`, which is not on the classpath");
+			}
+	}
+
 	static function inferExprValueType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos, expectedResult:Null<TyType>,
 			?capture:TyMethodCallCapture):TyType {
 		switch HxLiteralCharacterCode.resolve(expr) {
@@ -3788,12 +3930,10 @@ class TyperStage {
 					&& expectedResult.getFunctionArguments().length == argNames.length ? expectedResult : null;
 				inferLambdaType(argNames, body, context == null ? [for (_ in argNames) TyType.unknown()] : context.getFunctionArguments(), scope, ctx, pos,
 					signature, context == null ? null : context.getFunctionReturn());
-			case EMacroExpr(inner, _wrappers):
-				// Resolve the public quotation type so fields such as expr retain
-				// their declared enum type without typing the quoted source as code.
-				typeFromHintInContext("haxe.macro.Expr", ctx, scope);
-			case EMacroType(_typeText):
-				typeFromHintInContext("haxe.macro.Expr.ComplexType", ctx, scope);
+			case EMacroExpr(_, _) | EMacroType(_):
+				// A quotation is sugar for the expression that builds its `haxe.macro.Expr`;
+				// type that expression, so splice payloads are checked in this scope.
+				inferExprValueType(lowerMacroQuotation(expr, scope, ctx, pos), scope, ctx, pos, expectedResult, capture);
 			case ETryCatchRaw(raw):
 				final recovered = TypedBodyBuilder.recoveredOpaqueBlockStatements(raw);
 				if (recovered == null) {
@@ -3909,6 +4049,13 @@ class TyperStage {
 						}, argumentTypes);
 				}
 				validateClassArguments(applied, ctx, pos);
+				final selectedConstructor = TypedConstructorPath.select(ctx.getIndex(), applied);
+				final constructors = selectedConstructor == null ? [] : selectedConstructor.getOwner().instanceMethodCandidates("new");
+				if (constructors.length == 1) {
+					final signature = TyNominalApplication.signature(ctx.getIndex(), selectedConstructor.getOwner(), selectedConstructor.getOwnerType(),
+						constructors[0]);
+					TyBasicNullArgument.check(signature.getArgs(), signature.getArgOptional(), argumentTypes, ctx, pos);
+				}
 				applied;
 			case EUnop(_op, _fixity, e):
 				if (_op == Increment || _op == Decrement) {
@@ -3916,6 +4063,11 @@ class TyperStage {
 					// A declared indexed place follows the measured getter/step/setter schedule;
 					// the completed outcome owns the static type (the setter's return type).
 					if (isDeclaredIndexedUpdatePlace(e, scope, ctx, pos)) {
+						// `++untyped b[i]` parses as an update of an untyped place. Upstream
+						// increments the inlined getter place without a setter call, which
+						// the declared update schedule does not model.
+						if (e.match(EUntyped(_)))
+							throw new TyperError(ctx.getFilePath(), pos, "Untyped prefix indexed increment/decrement is not yet supported (haxe_ocaml-9f5qd)");
 						// The receiver is evaluated once for the getter and once for the setter.
 						switch e {
 							case EArrayAccess(receiver, _) if (!TypedIndexedUpdateLowering.repeatableReceiver(receiver)):
@@ -3996,6 +4148,23 @@ class TyperStage {
 								if (indexed != null)
 									return indexed.type;
 								indexedDestination = ordinaryIndexedElement(a, receiver, subscript, receiverType, scope, ctx, pos);
+							case EUntyped(place = EArrayAccess(receiver, subscript)):
+								// HxParser binds `untyped b[i] = v` as `(untyped b[i]) = v`; upstream
+								// applies `untyped` to the whole assignment. Either way the write
+								// selects the declared setter, and only the result is unconstrained.
+								final indexed = scope.withUntyped(() -> {
+									final receiverType = inferExprType(receiver, scope, ctx, pos);
+									final selected = resolveIndexedAccess(expr, receiver, subscript, b, receiverType, scope, ctx, pos);
+									if (selected == null)
+										ordinaryIndexedElement(place, receiver, subscript, receiverType, scope, ctx, pos);
+									return selected;
+								});
+								// The setter-selected result is keyed on the whole assignment, so
+								// a call argument, local or outer assignment that consumes it reads
+								// this term. Without a declared setter the place is the raw wrapper.
+								if (indexed != null)
+									return scope.getInference().untypedResult(expr);
+								indexedDestination = scope.getInference().untypedResult(a);
 							case _:
 						}
 						// Assignment as expression.
@@ -4076,8 +4245,15 @@ class TyperStage {
 						}
 					case _ if (HxBinaryOperatorTools.isCompoundAssignment(op)):
 						assertWritableLocal(a, scope, ctx, pos);
-						if (isDeclaredIndexedUpdatePlace(a, scope, ctx, pos))
-							return selectIndexedUpdate(expr, scope, ctx, pos).getStaticType(scope);
+						if (isDeclaredIndexedUpdatePlace(a, scope, ctx, pos)) {
+							if (!a.match(EUntyped(_)))
+								return selectIndexedUpdate(expr, scope, ctx, pos).getStaticType(scope);
+							// `untyped b[i] += v` parses as `(untyped b[i]) += v`; upstream applies
+							// `untyped` to the whole update. The getter, step and setter are still
+							// selected and checked, in the untyped scope; only the result is open.
+							scope.withUntyped(() -> selectIndexedUpdate(expr, scope, ctx, pos).getStaticType(scope));
+							return scope.getInference().untypedResult(expr);
+						}
 						final leftType = inferExprType(a, scope, ctx, pos);
 						final rightType = inferExprType(b, scope, ctx, pos);
 						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), leftType, rightType, op, ctx.getFilePath(), pos);

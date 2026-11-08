@@ -45,7 +45,14 @@ class M14SourceFunctionTypingTest {
 		});
 		HxFunctionDecl.getBody(declaration)[0] = SVar("callback", "", ESourceFunction(facts, body, [], position), position);
 		final resolved = new ResolvedModule("SourceControlFixture", "SourceControlFixture.hx", parsed);
-		final typed = TyperStage.typeResolvedModule(resolved, TyperIndex.build([resolved]), null, true);
+		// A quotation lowers to `haxe.macro.Expr` constructors, which must resolve: load the standard library.
+		final args = hxhx.Stage1Compiler.Stage1Args.parse(["-main", "SourceControlFixture"], true);
+		if (args == null)
+			throw "source function fixture could not locate its standard library";
+		final index = TyperIndex.buildHeaders([resolved]);
+		final loader = new ModuleLoader([hxhx.Stage1Compiler.Stage1Args.getStandardLibraryRoot(args)], new haxe.ds.StringMap<String>(), index, null, false);
+		loader.markResolvedAlready([resolved]);
+		final typed = TyperStage.typeResolvedModule(resolved, index, loader, true);
 		return typed.getTypedClasses()[0].getFunctions()[0].getBody().getStatements()[0].getExpressions()[0];
 	}
 
@@ -58,6 +65,24 @@ class M14SourceFunctionTypingTest {
 			throw error;
 		}
 		throw "source function accepted invalid return contract";
+	}
+
+	/** Whether no node below `node` is a return or carries a control destination. */
+	static function controlFree(node:TypedExpr):Bool {
+		if (node.getTag() == ReturnExpr || node.getControlTarget() != null)
+			return false;
+		for (child in node.getExpressions())
+			if (!controlFree(child))
+				return false;
+		return true;
+	}
+
+	/** The lowered call of the `haxe.macro.Expr` enum constructor `name`. */
+	static function constructorCall(node:TypedExpr, name:String):TypedExpr {
+		final constructor = node.getTag() == Call ? node.getDeclaration() : null;
+		if (constructor == null || !constructor.getIsEnumConstructor() || constructor.getSignature().getName() != name)
+			throw "quoted return: expected a lowered `" + name + "` construction";
+		return node;
 	}
 
 	static function main():Void {
@@ -80,15 +105,23 @@ class M14SourceFunctionTypingTest {
 			throw "source function return lost its exact parameter binding";
 		reject(ESourceGroup([EInt(7)], position), "Int", "Missing return");
 		reject(ESourceGroup([EReturn(EInt(7))], position), "Void", "lambda result");
+		// The typer lowers a quotation to the construction of its `haxe.macro.Expr` value, so the
+		// quoted `return` is the data `{expr: EReturn({expr: EConst(CInt("7"))}), pos}`, not a
+		// return statement: nothing inside it may target the enclosing function.
 		final quoted = typeBody(ESourceGroup([EMacroExpr(EReturn(EInt(7)), []), EReturn(null)], position), "Void");
-		final quote = quoted.getExpressions()[0].getExpressions()[0];
-		if (quote.getTag() != MacroExpr || quote.getExpressions()[0].getControlTarget() != null)
+		final group = quoted.getExpressions()[0];
+		final quote = group.getExpressions()[0];
+		if (quote.getTag() != Anonymous || quote.getTexts().join(",") != "expr,pos")
+			throw "quoted return was not lowered to an Expr record";
+		if (!controlFree(quote))
 			throw "quoted return acquired an executing function target";
-		switch TypedSourceSyntax.expression(quote.getExpressions()[0]) {
-			case EReturn(EInt(7)):
-			case _:
-				throw "quoted return lost its authored value";
-		}
+		final returned = constructorCall(quote.getExpressions()[0], "EReturn");
+		final value = constructorCall(constructorCall(returned.getExpressions()[1].getExpressions()[0], "EConst").getExpressions()[1], "CInt");
+		if (value.getExpressions()[1].getTag() != StringValue || value.getExpressions()[1].getTexts()[0] != "7")
+			throw "quoted return lost its authored value";
+		final real = group.getExpressions()[1];
+		if (real.getTag() != ReturnExpr || real.getControlTarget() != quoted.getControlTarget())
+			throw "the unquoted return no longer targets its function";
 		reject(ESourceGroup([EMacroExpr(EReturn(EInt(7)), [])], position), "Int", "Missing return");
 		Sys.putEnv("HXHX_TYPER_STRICT", oldStrict == null ? "" : oldStrict);
 		Sys.println("SOURCE_FUNCTION_TYPING:PASS");

@@ -11,8 +11,11 @@ What works today, in short:
   See "Project macro plugins" below.
 - hxhx builds and caches that plugin by itself, so a plain `hxhx --hxhx-stage3 -cp src -main Main` runs the macro.
   This needs `dune` and the matching OCaml compiler on `PATH`.
-- Macros that need `haxe.macro.Context`, reification (`macro ...`), or the external macro host are not executed yet;
-  such calls are reported as unexecuted.
+- A macro body may build its result with reification (`macro { ... }`, `$v{}`, `$i{}`, `$e{}`, `$a{}`, `$b{}`,
+  `@:pos`, `macro :Type`); see "Reification in macro bodies" below for the exact scope.
+- Macros that need `haxe.macro.Context` or the external macro host are not executed yet.
+  A selected call that cannot run is a compile error at the call, as it would be wrong to compile it as an ordinary
+  call (upstream Haxe would have run it).
 
 The older, explicit rung of this feature still exists for Gate1 bring-up:
 
@@ -57,26 +60,34 @@ structured request (`MacroRuntimeSession.expandSelected`) carrying the selected 
 syntax. An allowlisted exact call text always keeps the allowlist route, even if its callee is a macro.
 
 The in-process session runs a selected declaration through the project macro plugin that hxhx builds or reuses for the
-compile (next section). When the call cannot run, the call is reported with the reason on stdout and then typed as
-before, so a later failure is attributable. Reasons include an unsupported declaration shape, a plugin that cannot be
-built, the external-host mode (which has no structured dispatch method yet), and the compilation server:
+compile (next section). When the call cannot run, the compile fails before typing. The call is reported on stdout, and
+the error names the file, the declaration, and the reason. Reasons include an unsupported declaration shape, a plugin
+that cannot be built, the external-host mode (which has no structured dispatch method yet), and the compilation server:
 
 ```
 expr_macros_unexecuted=1
 expr_macro_unexecuted[0]=Main.hx: macros.Macros.items: project macro declaration `macros.Macros.items` parameter `n` must be a required haxe.macro.Expr; other parameter kinds are not supported yet
+hxhx(stage3): Main.hx: expression macro macros.Macros.items was not executed: project macro declaration `macros.Macros.items` parameter `n` must be a required haxe.macro.Expr; other parameter kinds are not supported yet
 ```
 
-An unexpanded macro call is typed by the macro call-site contract (`TyMacroCallSignature`), not as an ordinary call:
-any expression is accepted at an `Expr` parameter, a trailing `Array<Expr>` parameter collects the remaining arguments,
-and the call's value is `Dynamic`, because its real type would come from the expansion. The report precedes whatever that
-typing produces; for example, `for (v in macros.Macros.items())` still stops with
-`value loop requires a resolved iterator protocol`, since a `Dynamic` value has no known iterator. With `HXHX_TRACE_EXPR_MACROS=1`, `expr_macro_scope_gaps=N` also counts call sites the walker could not prove names for;
+One declaration is exempt for now: hxhx's own `CompilerBundledSourcesMacro.files()` (only the one in the hxhx
+checkout, `packages/hxhx-core/src/CompilerBundledSourcesMacro.hx`), which embeds standard-library
+sources when hxhx compiles itself and needs `haxe.macro.Context` and reification. It is still reported, and its call is
+then typed by the macro call-site contract (`TyMacroCallSignature`): any expression is accepted at an `Expr` parameter,
+a trailing `Array<Expr>` parameter collects the remaining arguments, and the value is `Dynamic`.
+
+Macros declared in the standard library are not project macros, so they never fail the compile either. Target syntax
+helpers such as `python.Syntax.arrayAccess(x, rest:Array<Expr>)` and `python.Syntax.tuple(...)` are called from the
+standard library itself (`haxe.io.Bytes`, `python.Tuple`). Their calls are reported with the reason `standard-library
+macro ... is not a project macro`, typed by the same call-site contract, and lowered by the target backend. hxhx
+decides by the declaration's file: under the standard-library root (with its `_std` overlays) or in the sources
+bundled into hxhx. With `HXHX_TRACE_EXPR_MACROS=1`, `expr_macro_scope_gaps=N` also counts call sites the walker could not prove names for;
 nothing is selected there. It is a trace line only, because standard-library switch scopes produce gaps in every program.
 
 Important constraints:
 
 - A selected `macro function` declaration runs only through a loaded project-macro plugin in the in-process mode.
-  Otherwise it is reported and then typed by the macro call-site contract described above.
+  Otherwise the compile fails at the call (except standard-library macros and the bundled-source declaration described above).
 - For the exact-text allowlist route below:
   - we do **not** type-check the returned expression snippet yet; we just parse it into the bootstrap `HxExpr` subset;
   - the returned snippet must be parsable by `HxParser.parseExprText` (tiny expression grammar).
@@ -117,11 +128,12 @@ fresh plugin id (`hxhx.project-macro.<build id>`), so two plugin builds never sh
 
 Projects that call expression macros need `dune` and `ocamlopt` on `PATH`, and `ocamlopt` must be the same OCaml
 version that built the hxhx binary (a plugin is linked against the binary's own runtime). Without them the call cannot
-run, and hxhx says why:
+run, and the compile fails with one diagnostic that says why:
 
 ```
-expr_macro_unexecuted[0]=.../Main.hx: Identity.preserve: the project macro plugin is unavailable: project macros need
-`dune` and the OCaml native compiler (`ocamlopt`) on PATH to build their native plugin; `ocamlopt -version` failed: ...
+hxhx(stage3): .../Main.hx: expression macro Identity.preserve was not executed: the project macro plugin is unavailable:
+project macros need `dune` and the OCaml native compiler (`ocamlopt`) on PATH to build their native plugin;
+`ocamlopt -version` failed: ...
 ```
 
 A different OCaml version is rejected the same way, before anything is built.
@@ -149,10 +161,10 @@ On Windows, and on a POSIX host whose `/bin/sh` has neither `setsid` nor job con
 
 #### Current limits
 
-- Only one-shot in-process compiles run project macros. The external macro host and the compilation server report the
-  calls as unexecuted, with that reason.
+- Only one-shot in-process compiles run project macros. In the external macro host and the compilation server, a
+  selected call fails the compile with that reason.
 - Macro code that calls another macro function (directly or through a helper) is "macro-in-macro". Upstream Haxe 4.3.7
-  rejects it when the call runs; a plugin build reports a helper's call with that reason when the plugin is compiled,
+  rejects it when the call runs; a plugin build fails at a helper's call with that reason when the plugin is compiled,
   even if the helper would never run, which is stricter than upstream. A call written directly in a macro function's
   body is not detected yet and runs as an ordinary call (`haxe_ocaml-48uwv`).
 - The plugin compilation keeps the `ocaml` target define in macro classes, while upstream's eval macro context does
@@ -181,6 +193,49 @@ Positions are approximate: a node that the parser gave a start position receives
 the call file; other nodes reuse their nearest enclosing node's position. Exact source ranges are tracked separately.
 
 The working example is `test/fixtures/project-macro-identity`, checked by `npm run test:macro-runtime:project-module`.
+
+#### Reification in macro bodies
+
+A quotation such as `macro Sys.println($v{text})` is ordinary Haxe syntax for "build this `haxe.macro.Expr` value".
+hxhx lowers every quotation while typing the macro's module into the expression that constructs the value, for every
+target, so the plugin's Stage3 emitter never meets a quote. Splice payloads are typed in the macro's own scope, and
+upstream Haxe 4.3.7 is the behavior reference for every form:
+
+| Written | Lowered to |
+| --- | --- |
+| `macro 1 + x`, `macro { a; b; }`, `macro function(a:Int) ...`, loops, branches, `var`, `return`, `new`, literals, casts, `try`, `throw` | the public `ExprDef` tree, as `MacroSyntaxExport` maps a macro argument |
+| `$e{e}`, `${e}`, bare `$e` | the `Expr` value `e` in place |
+| `$i{name}` | `EConst(CIdent(name))` |
+| `$a{list}` as the only call argument, array element, or block entry | the `Array<Expr>` as that list; elsewhere `EArrayDecl(list)` |
+| `$b{list}` | `EBlock(list)` |
+| `$v{value}` | a constant chosen from the payload's static type: `Int`, `Float`, `Bool`, `String`, and `Null<T>` or `Array<T>` of those four (`Null` and arrays go through `hxhxmacrohost.MacroReificationValues`, which every plugin build has on its classpath; the payload is read once and null is decided when the macro runs) |
+| `f(...xs)`, `1i32`, `1.5f64` | `EUnop(OpSpread, ...)`, `CInt("1", "i32")`, `CFloat("1.5", "f64")` |
+| `o.$name`, `new $tp(...)` | the `String` field name, the `TypePath` value |
+| `@:pos(p) e` | every position inside `e` is `p` |
+| `macro :Array<Int>`, `macro :X->Y`, `macro :{a:Int}` | the `ComplexType` value |
+
+Names: the lowered expression names `haxe.macro.Expr`, `Std`, and `hxhxmacrohost` through a rooted path that no local,
+parameter, or field can capture (imports and the current package do not apply to it either), so `{ var haxe = 42;
+macro 1; }` returns `CInt("1", null)` as upstream does. A splice payload with one of those names (`$v{Std}`,
+`$i{haxe}`) still reads your own binding. The root marker is internal syntax (`HxRootedPath`); source and macro
+results cannot write it (a macro that returns `$i{"::Std"}` gets a named error). If a rooted type is not on the
+classpath, the quotation is a compile error that names it, for example the `$v{}` support module
+`hxhxmacrohost.MacroReificationValues` outside a project-macro plugin build.
+
+Positions: every quoted node gets a zero-width position in the macro's source file, the same approximation macro
+arguments receive (a node that starts a group, function, loop, branch, or declaration gets its own start; other nodes
+the nearest enclosing one). Exact ranges are tracked separately.
+
+Not lowered yet, each a compile error naming the form: `$p{}`, expression metadata other than `@:pos` and
+`@:privateAccess`, `switch` inside a quote, `$v{}` on anonymous structures, enum values, or nested arrays, and
+`macro class` in a macro module (a plugin build). Outside a macro module `macro class` keeps the parser's placeholder
+object (a `TypeDefinition` with the name and no fields) for bring-up code. The negative-literal and quote-kind spelling
+of constants follows the parser (`macro -1` is `EUnop(OpNeg, ...)`, `macro 'x'` is reported as double-quoted).
+
+The example is `test/fixtures/project-macro-reification`: `Macros.tally(["alpha", "beta"])` expands to a block that
+prints one line per label and evaluates to the count. `npm run test:m14:macro-reification-lowering` checks the lowered
+syntax, and `npm run test:m14:project-macro-reification` builds the plugin through the cache driver and compares the
+natively computed expression with upstream.
 
 ### Macro-host-side: `macro.expandExpr`
 

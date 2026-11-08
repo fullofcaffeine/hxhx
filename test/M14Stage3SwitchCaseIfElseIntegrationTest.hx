@@ -1,81 +1,79 @@
-import sys.FileSystem;
+import backend.BackendContext;
+import backend.BackendRegistry;
 import sys.io.File;
 
+/**
+	Prove that an `if`/`else` written inside a switch case keeps both branches.
+
+	The parser represents a case body as a source group whose expressions keep
+	their authored shape (`ESourceIf`, `ETernary`), so this test first checks that
+	shape directly. It then runs one fixture through upstream Haxe (`--interp`),
+	native Stage3 OCaml, and the native JavaScript backend, and requires the same
+	independently recorded stdout from all three. A lost else branch changes the
+	printed value, so it cannot hide behind generated-text differences.
+ */
 class M14Stage3SwitchCaseIfElseIntegrationTest {
+	static final root = "test/fixtures/stage3_switch_case_if_else";
+
 	static function assertTrue(cond:Bool, message:String):Void {
 		if (!cond)
 			throw message;
 	}
 
-	static function deleteRecursive(path:String):Void {
-		if (!FileSystem.exists(path))
-			return;
-		if (FileSystem.isDirectory(path)) {
-			for (entry in FileSystem.readDirectory(path))
-				deleteRecursive(haxe.io.Path.join([path, entry]));
-			FileSystem.deleteDirectory(path);
-		} else {
-			FileSystem.deleteFile(path);
-		}
+	static function isStdString(expr:HxExpr):Bool {
+		return switch expr {
+			case ECall(EField(EIdent("Std"), "string"), [EIdent("t")]): true;
+			case _: false;
+		};
 	}
 
+	/** The expression-if after a local declaration is the shape DateTools uses. */
 	static function assertParserKeepsElseBranch():Void {
-		final expr = HxParser.parseExprText('switch (e) { case "u": var t = d.getDay(); if (t == 0) "7" else Std.string(t); }');
-		final ok = switch (expr) {
-			case ESwitch(_, _, [
-				ECall(ELambda(["t"], ETernary(_, EString("7"), ECall(EField(EIdent("Std"), "string"), [EIdent("t")]))), _)
-			]):
-				true;
+		final expr = HxParser.parseCompleteExprText('switch (e) { case "u": var t = d.getDay(); if (t == 0) "7" else Std.string(t); }');
+		final ok = switch expr {
+			case ESwitch(_, [PString("u")], [ESourceGroup([EVars(_), ESourceIf(_, EString("7"), elseBranch, _)], _)]):
+				isStdString(elseBranch);
 			case _:
 				false;
 		}
-		assertTrue(ok, 'Parser dropped the expression-if else branch inside a switch case.');
+		assertTrue(ok, 'Parser dropped the expression-if else branch inside a switch case: ' + Std.string(expr));
+	}
+
+	/** A semicolon before `else` is accepted in a case body exactly as in a block. */
+	static function assertParserKeepsStatementElse():Void {
+		final inCase = HxParser.parseCompleteExprText('switch x { case 1: if (c) a(); else Std.string(t); case _: }');
+		final caseOk = switch inCase {
+			case ESwitch(_, _, [ESourceGroup([ESourceIf(_, ECall(EIdent("a"), []), elseBranch, _)], _), _]): isStdString(elseBranch);
+			case _: false;
+		}
+		assertTrue(caseOk, 'Parser dropped a statement else branch inside a switch case: ' + Std.string(inCase));
+		final inBlock = HxParser.parseCompleteExprText('{ if (c) a(); else Std.string(t); }');
+		final blockOk = switch inBlock {
+			case ESourceGroup([ESourceIf(_, ECall(EIdent("a"), []), elseBranch, _)], _): isStdString(elseBranch);
+			case _: false;
+		}
+		assertTrue(blockOk, 'Parser dropped a statement else branch inside a block: ' + Std.string(inBlock));
 	}
 
 	static function main():Void {
 		assertParserKeepsElseBranch();
+		assertParserKeepsStatementElse();
+		Sys.println("SWITCH_CASE_IF_ELSE_PARSER:PASS");
 
-		final tmpRoot = haxe.io.Path.normalize('.tmp/m14_stage3_switch_case_if_else_' + Std.string(Date.now().getTime()));
-		final outDir = haxe.io.Path.join([tmpRoot, 'out']);
-		deleteRecursive(tmpRoot);
-		FileSystem.createDirectory(tmpRoot);
+		final expected = File.getContent(root + "/expected.stdout");
+		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", root, "--run", "Main"], expected: expected});
+		Sys.println("SWITCH_CASE_IF_ELSE_UPSTREAM:PASS");
 
-		final sourcePath = haxe.io.Path.join([tmpRoot, 'DateTools.hx']);
-		final src = [
-			'class DateTools {',
-			'  static function __format_get(d:Dynamic, e:String):String {',
-			'    return switch (e) {',
-			'      case "u":',
-			'        var t = d.getDay();',
-			'        if (t == 0) "7" else Std.string(t);',
-			'      default:',
-			'        "";',
-			'    }',
-			'  }',
-			'}',
-		].join("\n");
-		File.saveContent(sourcePath, src);
+		final path = root + "/Main.hx";
+		final typed = M14Stage3RuntimeFixture.typeMain({source: File.getContent(path), path: path, root: root});
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram([typed], false), ".tmp/stage3-switch-case-if-else");
+		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
+		Sys.println("SWITCH_CASE_IF_ELSE_NATIVE:PASS");
 
-		var thrown:Dynamic = null;
-		try {
-			final parsed = ParserStage.parse(src, sourcePath);
-			final typed = TyperStage.typeModule(parsed);
-			final expanded = MacroStage.expandProgram([typed], []);
-			EmitterStage.emitToDir(expanded, outDir, false);
-
-			final mlPath = haxe.io.Path.join([outDir, 'DateTools.ml']);
-			assertTrue(FileSystem.exists(mlPath), 'Expected DateTools.ml in emitted output.');
-			final ocaml = File.getContent(mlPath);
-			assertTrue(ocaml.indexOf('Std.string') >= 0, 'Stage3 switch case if/else regression: else Std.string branch was not emitted.');
-			assertTrue(ocaml.indexOf('else (HxRuntime.hx_null)') < 0, 'Stage3 switch case if/else regression: else branch was lowered as null.');
-		} catch (e:Dynamic) {
-			thrown = e;
-		}
-
-		if (thrown != null) {
-			Sys.println('debug_out=' + tmpRoot);
-			throw thrown;
-		}
-		deleteRecursive(tmpRoot);
+		final result = BackendRegistry.requireForTarget("js-native")
+			.emit(MacroStage.expandProgram([typed], []),
+				new BackendContext(".tmp/switch-case-if-else-js-native", null, "Main", false, new haxe.ds.StringMap<String>()));
+		M14Stage3RuntimeFixture.observe({command: "node", arguments: [result.entryPath], expected: expected});
+		Sys.println("SWITCH_CASE_IF_ELSE_JS:PASS");
 	}
 }

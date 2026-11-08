@@ -136,7 +136,7 @@ class MacroSyntaxImport {
 				final handlers = new Array<HxSourceCatch>();
 				final bodies = [convert(body, false)];
 				for (entry in catches) {
-					handlers.push(new HxSourceCatch(entry.name, entry.type == null ? "" : typeText(entry.type), position(entry.expr)));
+					handlers.push(new HxSourceCatch(identifier(entry.name), entry.type == null ? "" : typeText(entry.type), position(entry.expr)));
 					bodies.push(convert(entry.expr, false));
 				}
 				ESourceTry(handlers, bodies, position(expression));
@@ -177,16 +177,43 @@ class MacroSyntaxImport {
 		};
 	}
 
+	/**
+		Import an unsuffixed `CInt` with the parser's classification
+		(`HxIntegerLiteral`). A macro can build `CInt("2147483648")` or
+		`CInt("-2147483649")`; upstream types such a value as Float, so it
+		imports as `EFloat`. A hex literal keeps its 32-bit bits, and a wider
+		one is rejected as upstream rejects it.
+	**/
+	static function integerConstant(written:String):HxExpr {
+		final text = StringTools.replace(written, "_", "");
+		final negative = StringTools.startsWith(text, "-");
+		final magnitude = negative ? text.substr(1) : text;
+		if (StringTools.startsWith(magnitude, "0x") || StringTools.startsWith(magnitude, "0X")) {
+			final value = HxIntegerLiteral.hexadecimal(magnitude);
+			if (value == null)
+				throw failure("integer literal `" + written + "` is an invalid hexadecimal integer");
+			// Negate within 32 bits: `-0x80000000` stays the minimum Int (a native host
+			// with wider integers must not produce 2147483648).
+			return EInt(negative && value != -2147483647 - 1 ? -value : value);
+		}
+		if (negative && magnitude == "2147483648")
+			return EInt(-2147483647 - 1);
+		final value = HxIntegerLiteral.decimal(magnitude);
+		if (value != null)
+			return EInt(negative ? -value : value);
+		if (!HxIntegerLiteral.isDecimalDigits(magnitude))
+			throw failure("integer literal `" + written + "` is not a valid Int");
+		final number = Std.parseFloat(magnitude);
+		return EFloat(negative ? -number : number);
+	}
+
 	/** Match the parser: `true`, `false`, `null`, `this`, `super` are literals; `Upper` names alone are enum values. */
 	static function constantOf(constant:Constant, fieldOwner:Bool):HxExpr {
 		return switch constant {
 			case CInt(text, suffix):
 				if (suffix != null)
 					throw failure("integer literal suffix `" + suffix + "` is not imported yet");
-				final value = Std.parseInt(text);
-				if (value == null)
-					throw failure("integer literal `" + text + "` is not a valid Int");
-				EInt(value);
+				integerConstant(text);
 			case CFloat(text, suffix):
 				if (suffix != null)
 					throw failure("float literal suffix `" + suffix + "` is not imported yet");
@@ -207,7 +234,7 @@ class MacroSyntaxImport {
 					case "false": EBool(false);
 					case "this": EThis;
 					case "super": ESuper;
-					case _: !fieldOwner && isEnumValueName(name) ? EEnumValue(name) : EIdent(name);
+					case _: !fieldOwner && isEnumValueName(identifier(name)) ? EEnumValue(name) : EIdent(name);
 				}
 		};
 	}
@@ -232,7 +259,7 @@ class MacroSyntaxImport {
 			throw failure("metadata on local variable `" + variable.name + "` is not imported yet");
 		final restored = positions.resolve(variable.namePos);
 		final declared = restored == null ? position(owner) : restored;
-		return HxExprVarDecl.make(variable.name, variable.type == null ? "" : typeText(variable.type), optional(variable.expr), declared,
+		return HxExprVarDecl.make(identifier(variable.name), variable.type == null ? "" : typeText(variable.type), optional(variable.expr), declared,
 			variable.isFinal == true, variable.isStatic == true);
 	}
 
@@ -260,7 +287,7 @@ class MacroSyntaxImport {
 			final hasDefault = argument.value != null;
 			// Export marks a defaulted arrow parameter optional, as upstream does; only the default is written.
 			final optional = argument.opt == true && !(sourceKind == Arrow && hasDefault);
-			names.push(argument.name);
+			names.push(identifier(argument.name));
 			parameters.push({
 				typeHint: written == null ? null : typeText(written),
 				isOptional: optional,
@@ -339,7 +366,7 @@ class MacroSyntaxImport {
 			throw failure("a for loop binding is missing");
 		final shape:ExprDef = binding.expr;
 		return switch shape {
-			case EConst(CIdent(name)): name;
+			case EConst(CIdent(name)): identifier(name);
 			case _: throw failure("a for loop binding must be an identifier");
 		};
 	}
@@ -446,8 +473,8 @@ class MacroSyntaxImport {
 	public static function typePathText(path:TypePath):String {
 		if (path == null || path.name == null || path.name.length == 0)
 			throw failure("a type path has no name");
-		final segments = path.pack == null ? [] : path.pack.copy();
-		segments.push(path.name);
+		final segments = path.pack == null ? [] : [for (segment in path.pack) identifier(segment)];
+		segments.push(identifier(path.name));
 		if (path.sub != null)
 			segments.push(path.sub);
 		final parameters = path.params == null ? [] : path.params;
@@ -462,6 +489,18 @@ class MacroSyntaxImport {
 						throw failure("expression type parameters are not imported yet");
 				}
 		].join(",") + ">";
+	}
+
+	/**
+		A name from a macro result, refused when no source text could spell it.
+
+		The compiler's rooted paths start with `HxRootedPath.PREFIX` (`::Std`); a result such as
+		`$i{"::Std"}` must not reach the typer as one. Upstream reports it as an unknown identifier.
+	**/
+	static function identifier(name:String):String {
+		if (HxRootedPath.isRooted(name))
+			throw failure("`" + name + "` is not a valid identifier");
+		return name;
 	}
 
 	static function failure(message:String):String
