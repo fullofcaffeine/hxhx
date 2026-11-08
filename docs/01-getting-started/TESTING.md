@@ -66,6 +66,7 @@ which treats the compiler as a large application. To reproduce a group locally:
 ```bash
 npm run test:ci:shard -- --shard compiler-foundation
 npm run test:ci:shard -- --shard compiler-focused-5
+npm run test:ci:shard -- --shard compiler-focused-macro-plugins
 npm run test:ci:shard -- --shard compiler-focused-neko-runtime
 npm run test:ci:shard -- --shard compiler-focused-neko-locals
 npm run test:ci:shard -- --shard macro-host-integration
@@ -78,6 +79,10 @@ most of a general compiler job's budget. Runtime-type and target-admission tests
 have a 60-minute ceiling; local-binding and constructor tests have a 40-minute
 ceiling. These limits include setup and do not represent measured completion times.
 Every original command remains required once, and a timeout still fails `Tests`.
+The five project-macro and syntax-wire commands run in their own
+`compiler-focused-macro-plugins` group. They used to share
+`compiler-focused-5` with the C++ runtime-type checks, and that job needed
+28-39 minutes of its 40-minute limit.
 
 `test:m14:runtime-type-operands` remains the full serial command for its 52
 checks. CI schedules its shared and Neko groups separately and gives each C++
