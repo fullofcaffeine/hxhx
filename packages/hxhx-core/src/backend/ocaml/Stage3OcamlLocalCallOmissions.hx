@@ -18,8 +18,15 @@ package backend.ocaml;
 	  argument must align with the parameter at its own position. A call that
 	  skipped an optional parameter by type, or that omits a required parameter,
 	  stops emission instead of shifting arguments.
+	- `localType` is the declared type of the local that names the callee. A
+	  Dynamic local (such as a `load:Dynamic` parameter called as
+	  `load("x", 2)`) has no declared parameter list, so the call applies its
+	  arguments exactly as written and nothing is filled. The typed tree records
+	  no checked call for such a callee, so the call is not required here.
  */
-function omitted(call:Null<TypedExpr>, supplied:Array<Null<TypedBackendCallArgument>>, slots:SentinelSlots):Array<String> {
+function omitted(localType:Null<TyType>, call:Null<TypedExpr>, supplied:Array<Null<TypedBackendCallArgument>>, slots:SentinelSlots):Array<String> {
+	if (localType != null && !TyAliasExpansion.revealNonNullable(TyAliasExpansion.reveal(localType)).isFunction())
+		return [];
 	// Supplied arguments are only inspected when some parameter is omitted.
 	if (call == null || call.getTag() != Call || call.getExpressions().length == 0)
 		throw "OCaml local function call requires its exact typed call";
