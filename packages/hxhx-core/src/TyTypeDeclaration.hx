@@ -31,6 +31,7 @@ typedef TyTypeDeclarationInput = {
 	final kind:TyTypeDeclarationKind;
 	final context:TyTypeResolutionContext;
 	final ?nominalArity:TyNominalArity;
+	final ?usesBuildMacro:Bool;
 };
 
 /**
@@ -47,10 +48,12 @@ class TyTypeDeclaration {
 	final context:TyTypeResolutionContext;
 	final parameterIds:Array<TyTypeParameterId>;
 	final nominalArity:Null<TyNominalArity>;
+	final usesBuildMacro:Bool;
 
 	public function new(input:TyTypeDeclarationInput) {
 		canonicalName = input.canonicalName;
 		nominalArity = input.nominalArity == null ? null : {total: input.nominalArity.total, required: input.nominalArity.required};
+		usesBuildMacro = input.usesBuildMacro == true;
 		visibility = input.visibility;
 		kind = input.kind;
 		context = copyContext(input.context);
@@ -90,6 +93,10 @@ class TyTypeDeclaration {
 	/** Type-argument counts for a nominal declaration; null for an alias or an unknown header. **/
 	public function getNominalArity():Null<TyNominalArity>
 		return nominalArity;
+
+	/** Whether `@:build`, `@:autoBuild` or `@:genericBuild` can change this declaration's members. **/
+	public function getUsesBuildMacro():Bool
+		return usesBuildMacro;
 
 	/** Exact alias binders are available with the header, before target resolution. */
 	public function getParameterIds():Array<TyTypeParameterId>

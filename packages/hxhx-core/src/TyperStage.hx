@@ -1,3 +1,9 @@
+/** A constructor type parameter that an already supplied argument has fixed, for the "expected" list. */
+private typedef TyBoundDisplayParameter = {
+	final parameter:TyTypeParameterId;
+	final type:TyType;
+};
+
 private typedef TyMethodCallResolution = {
 	final type:TyType;
 	final declaration:Null<TyDeclarationInfo>;
@@ -258,11 +264,16 @@ class TyperStage {
 		inapplicable constructor never falls through to a more distant one. With
 		overloaded constructors, any overload that accepts the count is enough. A
 		spread argument (`...values`) has no fixed count, so it is left to selection.
-		When the type arguments were omitted (`new Box(1)`), the owner's parameters
-		are still open; they are shown as `Unknown<0>`, `Unknown<1>` and so on.
+		When the type arguments were omitted, the arguments that were supplied fix the
+		parameters they mention (`new G(1)` for `new(v:T, w:T)` expects `w:Int`). A
+		parameter nothing has fixed is shown as `Unknown<0>`, `Unknown<1>` and so on.
+		`suppliedType` reads a supplied argument's type, or null when it has none on its own.
 	**/
-	static function constructorArityFailure(index:TyperIndex, owner:Null<TyNominalInfo>, written:TyType, args:Array<HxExpr>):Null<String> {
+	static function constructorArityFailure(index:TyperIndex, owner:Null<TyNominalInfo>, written:TyType, args:Array<HxExpr>,
+			suppliedType:Int->Null<TyType>):Null<String> {
 		if (index == null || owner == null || owner.getIsEnum())
+			return null;
+		if (constructorMayComeFromBuildMacro(index, owner, new haxe.ds.StringMap()))
 			return null;
 		for (argument in args)
 			if (argument.match(ECall(EIdent("__hxhx_spread"), [_])))
@@ -317,6 +328,13 @@ class TyperStage {
 		final declaration = current.declarationForSignature(signature);
 		final source = declaration == null ? [] : HxFunctionDecl.getArgs(declaration.getSourceDeclaration());
 		final open = new Array<TyTypeParameterId>();
+		final bound = new Array<TyBoundDisplayParameter>();
+		if (bindings == null)
+			for (slot in 0...Std.int(Math.min(args.length, types.length))) {
+				final supplied = suppliedType(slot);
+				if (supplied != null)
+					bindSuppliedParameter(types[slot], supplied, currentParameters, bound);
+			}
 		final missing = [
 			for (slot in args.length...types.length) {
 				final declared = bindings == null ? types[slot] : TyTypeSubstitution.apply(types[slot], bindings);
@@ -324,7 +342,7 @@ class TyperStage {
 				final isQuestion = source.length == types.length ? HxFunctionArg.getIsOptional(source[slot]) : slot < optional.length && optional[slot];
 				final display = upstreamTypeDisplay(!isRest
 					&& isQuestion
-					&& !declared.isNullable() ? TyType.nullable(declared) : declared, open);
+					&& !declared.isNullable() ? TyType.nullable(declared) : declared, open, bound);
 				// A rest parameter may already be typed `haxe.Rest<T>`; otherwise upstream wraps its element type.
 				final shown = isRest && !StringTools.startsWith(display, "haxe.Rest<") ? "haxe.Rest<"
 					+ display
@@ -351,82 +369,71 @@ class TyperStage {
 			|| current.instanceMethodCandidates("new").length == 0 ? -1 : current.instanceMethodCandidates("new")[0].getArgs().length;
 	}
 
-	/**
-		Place a diagnostic on argument `surplus` (0-based) of the `new` expression at `pos`.
-
-		Call arguments carry no positions of their own, so this reads the module source: it
-		finds `new` at or after `pos`, skips the type path to its `(`, and counts top-level
-		commas, ignoring brackets, braces, parentheses and string literals. Upstream points
-		"Too many arguments" at the first argument that does not fit. When the source is
-		unavailable or the text does not line up, `pos` is kept.
-	**/
-	static function surplusArgumentPosition(ctx:TyperContext, pos:HxPos, surplus:Int):HxPos {
+	/** Place "Too many arguments" on the first argument that does not fit, when it can be identified. **/
+	static function surplusArgumentPosition(ctx:TyperContext, pos:HxPos, typePath:String, argumentCount:Int, surplus:Int):HxPos {
 		final module = ctx.getIndex() == null ? null : ctx.getIndex().getRegisteredModule(ctx.getModulePath());
 		final parsed = module == null ? null : ResolvedModule.getParsed(module);
-		final source = parsed == null ? null : parsed.getSource();
-		if (source == null || surplus < 0 || pos == null || pos.getIndex() < 0)
-			return pos;
-		var cursor = source.indexOf("new", pos.getIndex());
-		if (cursor < 0)
-			return pos;
-		cursor += 3;
-		var angle = 0;
-		while (cursor < source.length) {
-			final ch = source.charAt(cursor);
-			if (ch == "<")
-				angle++;
-			else if (ch == ">" && source.charAt(cursor - 1) != "-")
-				angle--;
-			else if (ch == "(" && angle <= 0)
-				break;
-			cursor++;
+		return TySourceTokenPosition.surplusConstructorArgument(TySourceTokenPosition.tokens(parsed == null ? null : parsed.getSource()), pos, typePath,
+			argumentCount, surplus);
+	}
+
+	/**
+		Whether a build macro may add or replace `owner`'s constructor.
+
+		`@:autoBuild` reaches a class through its superclasses and interfaces, so the whole
+		ancestry counts. `--hxhx-type-only` skips build macros, and the typer cannot tell
+		whether they ran, so the declared members of these classes do not prove anything
+		about the count: the check stays silent for them, as it did before this diagnostic.
+	**/
+	static function constructorMayComeFromBuildMacro(index:TyperIndex, owner:TyNominalInfo, visited:haxe.ds.StringMap<Bool>):Bool {
+		if (owner == null || visited.exists(owner.getFullName()))
+			return false;
+		visited.set(owner.getFullName(), true);
+		if (index.declarationUsesBuildMacro(owner.getFullName()))
+			return true;
+		if (!Std.isOfType(owner, TyClassInfo))
+			return false;
+		final info:TyClassInfo = cast owner;
+		final parents = info.getDeclaredInterfaceTypes();
+		if (info.getSuperType() != null)
+			parents.push(info.getSuperType());
+		for (parent in parents) {
+			final identity = parent.getNominalIdentity();
+			if (identity != null && constructorMayComeFromBuildMacro(index, index.getByFullName(identity.getCanonicalName()), visited))
+				return true;
 		}
-		if (cursor >= source.length)
-			return pos;
-		var depth = 0;
-		var argument = 0;
-		var quote = "";
-		var index = cursor + 1;
-		while (index < source.length) {
-			final ch = source.charAt(index);
-			if (quote != "") {
-				if (ch == "\\")
-					index++;
-				else if (ch == quote)
-					quote = "";
-			} else if (ch == "\"" || ch == "'") {
-				quote = ch;
-			} else if (ch == "(" || ch == "[" || ch == "{") {
-				depth++;
-			} else if (ch == ")" || ch == "]" || ch == "}") {
-				if (depth == 0)
-					return pos;
-				depth--;
-			} else if (ch == "," && depth == 0) {
-				argument++;
-				if (argument == surplus) {
-					var start = index + 1;
-					while (start < source.length && StringTools.isSpace(source, start))
-						start++;
-					var line = 1;
-					var lineStart = 0;
-					for (offset in 0...start)
-						if (source.charAt(offset) == "\n") {
-							line++;
-							lineStart = offset + 1;
-						}
-					return new HxPos(start, line, start - lineStart + 1);
-				}
-			}
-			index++;
+		return false;
+	}
+
+	/** Record what a supplied argument fixes in a still-open declared type: `v:T` given `1` fixes `T` to `Int`. **/
+	static function bindSuppliedParameter(declared:TyType, supplied:TyType, parameters:Array<TyTypeParameterId>, bound:Array<TyBoundDisplayParameter>):Void {
+		if (declared.isNullable())
+			declared = declared.unwrapNull();
+		final parameter = declared.getTypeParameterIdentity();
+		if (parameter != null) {
+			if (supplied.isUnknown() || parameters.filter(candidate -> candidate.equals(parameter)).length == 0)
+				return;
+			if (bound.filter(entry -> entry.parameter.equals(parameter)).length == 0)
+				bound.push({parameter: parameter, type: supplied});
+			return;
 		}
-		return pos;
+		final declaredOwner = declared.getNominalIdentity();
+		final suppliedOwner = supplied.getNominalIdentity();
+		final declaredArguments = declared.getTypeArguments();
+		final suppliedArguments = supplied.getTypeArguments();
+		if (declaredOwner != null
+			&& suppliedOwner != null
+			&& declaredOwner.equals(suppliedOwner)
+			&& declaredArguments.length == suppliedArguments.length)
+			for (index in 0...declaredArguments.length)
+				bindSuppliedParameter(declaredArguments[index], suppliedArguments[index], parameters, bound);
 	}
 
 	/**
 		Print a type the way Haxe 4.3.7's diagnostics do.
 
 		- Nominal types use their full path (`haxe.Exception`); an alias keeps its own name (`Map`).
+		- A type parameter listed in `bound` prints as the type it was fixed to.
 		- A type parameter that is still open prints as upstream's monomorph, `Unknown<0>`,
 		  numbered by first appearance in one message.
 		- Functions print as `Int -> Void`, `() -> Void` and `(Int, String) -> Bool`, with a
@@ -434,12 +441,17 @@ class TyperStage {
 		- Anonymous structures print as `{ b : String, a : Int }`, fields in descending
 		  name order as upstream lists them, and an optional field as `?q : Null<Int>`.
 	**/
-	static function upstreamTypeDisplay(type:TyType, ?open:Array<TyTypeParameterId>):String {
+	static function upstreamTypeDisplay(type:TyType, ?open:Array<TyTypeParameterId>, ?bound:Array<TyBoundDisplayParameter>):String {
 		if (open == null)
 			open = [];
+		if (bound == null)
+			bound = [];
 		function show(type:TyType):String {
 			final parameter = type.getTypeParameterIdentity();
 			if (parameter != null) {
+				for (entry in bound)
+					if (entry.parameter.equals(parameter))
+						return show(entry.type);
 				var position = -1;
 				for (known in 0...open.length)
 					if (open[known].equals(parameter))
@@ -4261,10 +4273,17 @@ class TyperStage {
 				final written = path.written;
 				final owner = nominalInfoForType(ctx.getIndex(), written);
 				final arity = owner == null ? 0 : TyNominalApplication.parameterIds(owner).length;
-				final arityFailure = constructorArityFailure(ctx.getIndex(), owner, written, args);
+				final arityFailure = constructorArityFailure(ctx.getIndex(), owner, written, args, slot -> {
+					// Only for the message; an argument that needs an expected type has none here.
+					try
+						inferExprType(args[slot], scope, ctx, pos, null)
+					catch (_:TyperError)
+						null;
+				});
 				if (arityFailure != null)
 					throw new TyperError(ctx.getFilePath(),
-						arityFailure == "Too many arguments" ? surplusArgumentPosition(ctx, pos, constructorParameterLimit(ctx.getIndex(), owner)) : pos,
+						arityFailure == "Too many arguments" ? surplusArgumentPosition(ctx, pos, _typePath, args.length,
+							constructorParameterLimit(ctx.getIndex(), owner)) : pos,
 						arityFailure);
 				final contexts = constructorArgumentContexts(_typePath, path.contextual, args, scope, ctx);
 				final argumentTypes = [

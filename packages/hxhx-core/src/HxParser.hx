@@ -1231,20 +1231,51 @@ class HxParser {
 	}
 
 	/**
-		Whether a constructor's type-argument text has an empty slot, such as `<>`,
-		`<Int,>` or `<,Int>`. An arrow `->` is not a closing bracket.
+		Reject an empty type-argument slot after `new Path`, as Haxe 4.3.7 does:
+		`new Box<>()`, `new Box<Int,>()` and `new Box<,Int>()` name the offending token.
+
+		`cur` must be the opening `<`. Only slots directly inside angle brackets count, so
+		`new B<{>S1, >S2, z:Int}>()` is valid, and a string constant is a single token.
+		Nothing is consumed.
 	**/
-	static function hasEmptyTypeArgument(text:String):Bool {
-		var previous = "";
-		for (index in 0...text.length) {
-			final ch = text.charAt(index);
-			if (ch == " " || ch == "\t" || ch == "\r" || ch == "\n")
-				continue;
-			if ((ch == ">" || ch == ",") && (previous == "<" || previous == ","))
-				return true;
-			previous = ch;
+	function requireNonEmptyTypeArguments():Void {
+		final pending = [cur];
+		for (token in [peeked1, peeked2, peeked3])
+			if (token != null)
+				pending.push(token);
+		final lookahead = lex.fork();
+		var index = 0;
+		final open = new Array<Int>();
+		var previous:HxTokenKind = HxTokenKind.TEof;
+		while (true) {
+			final token = index < pending.length ? pending[index++] : lookahead.next();
+			final top = open.length == 0 ? -1 : open[open.length - 1];
+			final emptySlot = top == "<".code && (previous.match(TOther("<".code)) || previous.match(TComma));
+			switch (token.kind) {
+				case TEof:
+					return;
+				case TLParen:
+					open.push("(".code);
+				case TLBrace:
+					open.push("{".code);
+				case TOther("[".code):
+					open.push("[".code);
+				case TOther("<".code):
+					open.push("<".code);
+				case TRParen | TRBrace | TOther("]".code):
+					open.pop();
+				case TComma if (emptySlot):
+					throw new HxParseError("Unexpected ,", token.pos);
+				case TOther(">".code) if (top == "<".code && !previous.match(TOther("-".code))):
+					if (emptySlot)
+						throw new HxParseError("Unexpected >", token.pos);
+					open.pop();
+					if (open.length == 0)
+						return;
+				case _:
+			}
+			previous = token.kind;
 		}
-		return false;
 	}
 
 	function fail<T>(message:String):T {
@@ -1692,10 +1723,8 @@ class HxParser {
 					bump();
 					var typePath = readConstructorTypePath();
 					if (isOtherChar("<")) {
+						requireNonEmptyTypeArguments();
 						final typeArgs = readTypeHintText(() -> cur.kind.match(TLParen) || cur.kind.match(TEof));
-						// `new Box<>()` and `new Box<Int,>()` are syntax errors in Haxe 4.3.7.
-						if (hasEmptyTypeArgument(typeArgs))
-							fail("Unexpected >");
 						if (typeArgs.length > 0)
 							typePath += typeArgs;
 					}

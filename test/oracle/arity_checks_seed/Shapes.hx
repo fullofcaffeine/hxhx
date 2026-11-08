@@ -47,3 +47,37 @@ extern class Ext {
 class Shown {
 	public function new(x:Int, f:Int->Void, g:(Int, String) -> Bool, h:() -> Void, a:{a:Int, b:String}, z:Int = 2, ?o:Int, k:(Int->Void)->Int) {}
 }
+
+class NoArg {
+	public function new() {}
+}
+
+class Pair2<T> {
+	public function new(v:T, w:T) {}
+}
+
+class Q {
+	public function new(a:P, b:Int) {}
+}
+
+typedef S1 = {x:Int};
+typedef S2 = {y:Int};
+
+class Holder<T> {
+	public function new() {}
+}
+
+@:generic class Const<@:const T> {
+	public function new() {}
+}
+
+@:genericBuild(ArityMacros.anyArguments())
+class Multi<Rest> {}
+
+@:build(ArityMacros.addConstructor())
+class Built {}
+
+@:autoBuild(ArityMacros.addConstructor())
+class AutoBase {}
+
+class AutoChild extends AutoBase {}

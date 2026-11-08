@@ -16,6 +16,7 @@ class M14ArityChecksTest {
 		Cases whose hxhx column differs from upstream's; only the line is compared.
 		A type-argument count inside a body points at the statement, not the hint.
 		A return hint points at the hint, where upstream points at the surplus argument.
+		Two identical `new` expressions in one statement are reported at the statement.
 	**/
 	static final lineOnly = [
 		"AbstractTooManyTypes",
@@ -24,6 +25,7 @@ class M14ArityChecksTest {
 		"NewTooFewTypes",
 		"NewTooManyTypes",
 		"ReturnTooManyTypes",
+		"SurplusAmbiguous",
 		"TypedefTooFewTypes",
 		"TypedefTooManyTypes"
 	];
@@ -45,6 +47,15 @@ class M14ArityChecksTest {
 				diagnostic: "Not enough arguments, expected f:Int -> Void, g:(Int, String) -> Bool, h:() -> Void, a:{ b : String, a : Int }, z:Int, o:Null<Int>, k:(Int -> Void) -> Int"
 			},
 			{module: "DynamicTooManyTypes", diagnostic: "Too many parameters for Dynamic"},
+			{module: "FieldHintAfterComment", diagnostic: "Not enough type parameters for Box"},
+			{module: "GenericFixedByArgument", diagnostic: "Not enough arguments, expected w:Int"},
+			{module: "NewLeadingTypeComma", diagnostic: "Unexpected ,"},
+			{module: "NewNestedEmptyTypes", diagnostic: "Unexpected >"},
+			{module: "NoArgSurplus", diagnostic: "Too many arguments"},
+			{module: "SurplusAfterComment", diagnostic: "Too many arguments"},
+			{module: "SurplusAmbiguous", diagnostic: "Too many arguments"},
+			{module: "SurplusAfterStringNew", diagnostic: "Too many arguments"},
+			{module: "SurplusNested", diagnostic: "Too many arguments"},
 			{module: "FieldTooFewTypes", diagnostic: "Not enough type parameters for Box"},
 			{module: "GenericCtorTooManyTypes", diagnostic: "Too many type parameters for G"},
 			{module: "GenericInheritedTooFew", diagnostic: "Not enough arguments, expected v:Int"},
