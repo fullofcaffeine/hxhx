@@ -15,6 +15,7 @@ class TyClassInfo extends TyNominalInfo {
 	final dynamicMemberType:Null<TyType>;
 	final publicReflectionName:TyPublicReflectionName;
 	final nativeName:TyNativeName;
+	final declaresBuildMacro:Bool;
 
 	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyFieldInfo>,
 			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
@@ -34,9 +35,15 @@ class TyClassInfo extends TyNominalInfo {
 		this.dynamicMemberType = relationships.dynamicMemberType;
 		if (this.isInterface && superType != null)
 			throw "an interface cannot own a superclass constructor edge";
+		this.declaresBuildMacro = metadata != null
+			&& Lambda.exists(metadata, entry -> StringTools.startsWith(entry, "@:build") || StringTools.startsWith(entry, "@:autoBuild"));
 		this.nativeName = new TyNativeName(metadata);
 		this.publicReflectionName = new TyPublicReflectionName(this, metadata == null ? [] : metadata);
 	}
+
+	/** Whether this class carries `@:build` or `@:autoBuild` metadata. */
+	public function getDeclaresBuildMacro():Bool
+		return declaresBuildMacro;
 
 	/** Target linkage is independent of whether this class has a reflected runtime identity. */
 	public function getNativeName():TyNativeName

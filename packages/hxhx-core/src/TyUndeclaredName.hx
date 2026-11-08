@@ -23,9 +23,21 @@
 	  is exempt, as upstream defers it to run time.
 
 	Only title-case bare names are checked. An unresolved lowercase name stays
-	on the existing inference path for now. Both checks need a declaration
-	loader: a root-only index (used by focused tests) omits the standard
-	library, so a missing name there proves nothing.
+	on the existing inference path for now.
+
+	Limits (the checks stay silent; a missing name proves nothing here)
+	- No declaration loader: a root-only index, used by focused tests, omits the
+	  standard library.
+	- A request with `--macro` initializers, which can define types or attach
+	  build metadata (`ModuleLoader.noteInitializationMacros`).
+	- A class whose ancestry carries `@:build` or `@:autoBuild`, because a macro
+	  can add the field the name refers to.
+	- An `import.hx` on the module's directory path, because hxhx does not read
+	  those files yet.
+	- A name inside an argument of a `macro` call, which Haxe passes as syntax
+	  instead of looking it up.
+	This typer does not run those macros or apply `import.hx`, so it stays
+	silent rather than rejecting a valid program.
 **/
 class TyUndeclaredName {
 	public static function namesType(name:String, ctx:TyperContext):Bool {
@@ -40,8 +52,8 @@ class TyUndeclaredName {
 		decides in `TyUndeclaredValueNames.requireDeclared` after typing.
 	**/
 	public static function recordValueName(name:String, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Void {
-		if (!ctx.hasDeclarationLoader() || scope.isUntypedContext() || ctx.importsLocalName(name) || namesType(name, ctx) || runsBuildMacro(ctx)
-			|| sourceImportsName(ctx, name))
+		if (!ctx.hasDeclarationLoader() || scope.isUntypedContext() || ctx.importsLocalName(name) || namesType(name, ctx) || sourceImportsName(ctx, name)
+			|| !declarationsVisible(name, ctx))
 			return;
 		ctx.getIndex().undeclaredValueNames(ctx.getFilePath()).record(name, pos);
 	}
@@ -59,7 +71,7 @@ class TyUndeclaredName {
 			|| resolvesValue(name, scope, ctx, pos)
 			|| namesType(name, ctx)
 			|| ctx.namesModule(name)
-			|| runsBuildMacro(ctx))
+			|| !declarationsVisible(name, ctx))
 			return;
 		if (sourceImportsName(ctx, name) || declaredBySameFile(name, ctx))
 			return;
@@ -161,6 +173,105 @@ class TyUndeclaredName {
 	static function runsBuildMacro(ctx:TyperContext):Bool {
 		final text = ctx.getIndex().rawSourceText(ctx.getFilePath());
 		return text != null && (text.indexOf("@:build(") >= 0 || text.indexOf("@:autoBuild(") >= 0);
+	}
+
+	/** Whether this typer sees everything that could give `name` a meaning here; see the class limits. */
+	static function declarationsVisible(name:String, ctx:TyperContext):Bool
+		return !runsBuildMacro(ctx) && !inheritsBuildMacro(ctx) && !importHxApplies(ctx) && !namedInMacroArgument(name, ctx);
+
+	/** Whether the current class, a superclass, or an interface carries build metadata. An ancestor not loaded yet counts. */
+	static function inheritsBuildMacro(ctx:TyperContext):Bool {
+		final index = ctx.getIndex();
+		final seen = new Map<String, Bool>();
+		function visit(info:Null<TyNominalInfo>):Bool {
+			if (info == null)
+				return true;
+			if (seen.exists(info.getFullName()) || !Std.isOfType(info, TyClassInfo))
+				return false;
+			seen.set(info.getFullName(), true);
+			final cls:TyClassInfo = cast info;
+			if (cls.getDeclaresBuildMacro())
+				return true;
+			final parents = cls.getInterfaceTypes().copy();
+			if (cls.getSuperType() != null)
+				parents.push(cls.getSuperType());
+			for (parent in parents) {
+				final identity = parent.getNominalIdentity();
+				if (identity == null || visit(index.getByFullName(identity.getCanonicalName())))
+					return true;
+			}
+			return false;
+		}
+		final current = ctx.currentClass();
+		return current != null && visit(current);
+	}
+
+	/** Whether an `import.hx` exists in the module's directory or a parent, up to its class-path root. */
+	static function importHxApplies(ctx:TyperContext):Bool {
+		final file = ctx.getFilePath();
+		if (file == null)
+			return false;
+		final packagePath = ctx.getPackagePath();
+		var levels = packagePath == null || packagePath.length == 0 ? 0 : packagePath.split(".").length;
+		var directory = haxe.io.Path.directory(file);
+		while (levels >= 0) {
+			if (sys.FileSystem.exists(haxe.io.Path.join([directory, "import.hx"])))
+				return true;
+			levels--;
+			directory = haxe.io.Path.directory(directory);
+		}
+		return false;
+	}
+
+	/** Whether this module passes `name` inside an argument of a call to a `macro` function. */
+	static function namedInMacroArgument(name:String, ctx:TyperContext):Bool {
+		final resolved = ctx.getIndex().getRegisteredModule(ctx.getModulePath());
+		if (resolved == null)
+			return false;
+		var found = false;
+		function inspect(node:HxExpr):Void {
+			switch (node) {
+				case ECall(callee, arguments) if (!found && isMacroCallee(callee, ctx)):
+					for (argument in arguments)
+						TypedBackendSourceWalk.expression(argument, inner -> switch (inner) {
+							case EIdent(value) | EEnumValue(value) if (value == name): found = true;
+							case _:
+						});
+				case _:
+			}
+		}
+		for (declaration in HxModuleDecl.getClasses(ResolvedModule.getParsed(resolved).getDecl())) {
+			for (method in HxClassDecl.getFunctions(declaration))
+				TypedBackendSourceWalk.functionDeclaration(method, inspect, _ -> {});
+			for (field in HxClassDecl.getFields(declaration))
+				TypedBackendSourceWalk.expression(HxFieldDecl.getInit(field), inspect);
+		}
+		return found;
+	}
+
+	/** By name across loaded types, so `using` and inherited macro calls count; a false match only keeps the check silent. */
+	static function isMacroCallee(callee:HxExpr, ctx:TyperContext):Bool {
+		final name = switch (callee) {
+			case EIdent(value): value;
+			case EField(receiver, value):
+				// Typing visits arguments before it may have loaded the macro's owner.
+				final path = dottedPath(receiver);
+				if (path != null)
+					ctx.resolveType(path);
+				value;
+			case _: return false;
+		};
+		return ctx.getIndex().declaresMacroFunction(name);
+	}
+
+	static function dottedPath(node:HxExpr):Null<String> {
+		return switch (node) {
+			case EIdent(value) | EEnumValue(value): value;
+			case EField(inner, value):
+				final prefix = dottedPath(inner);
+				prefix == null ? null : prefix + "." + value;
+			case _: null;
+		};
 	}
 
 	static function isUpperStart(name:String):Bool {

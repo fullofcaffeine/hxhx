@@ -103,24 +103,19 @@ class TyperContext {
 		return loader != null;
 
 	/**
-		Whether typing can load any declaration it needs: a loader whose class
-		path includes the standard library (it can find `StdTypes`). A root-only
-		index, or a loader over only a test's own sources, omits the standard
-		library, so an unresolved name there is no evidence that the program is
-		wrong.
+		Whether typing can prove that a name is missing: a loader whose class
+		path includes the standard library (it can find `StdTypes`), in a request
+		without `--macro` initializers. A root-only index, or a loader over only a
+		test's own sources, omits the standard library, and an initializer can
+		define types this typer does not see, so an unresolved name there is no
+		evidence that the program is wrong.
 	**/
 	public function hasDeclarationLoader():Bool {
 		if (loader == null)
 			return false;
-		return loader.hasStandardLibrary();
+		return loader.declarationsAreComplete();
 	}
 
-	/**
-		Whether an import directive of this module introduces `name`, as
-		`import haxe.macro.Context;` introduces `Context`. Such a name is
-		declared by the import even when typing cannot load its module here, for
-		example a macro-only module referenced from `#if macro` code.
-	**/
 	/**
 		Whether `name` names a module in this package, such as a module that
 		declares only module-level functions (`CounterOps.total`).
@@ -135,6 +130,12 @@ class TyperContext {
 		return loader.hasModuleSource(qualified);
 	}
 
+	/**
+		Whether an import directive of this module introduces `name`, as
+		`import haxe.macro.Context;` introduces `Context`. Such a name is
+		declared by the import even when typing cannot load its module here, for
+		example a macro-only module referenced from `#if macro` code.
+	**/
 	public function importsLocalName(name:String):Bool {
 		if (directives == null)
 			return false;
