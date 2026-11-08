@@ -1,6 +1,6 @@
 {
   "model": "requirements-only-runtime-selection-shadow",
-  "runtimeSourceRevision": "sha256:e237e7746949c755f1799021ee00e791e9d23561b2840f27325b9e7c45cd4987",
+  "runtimeSourceRevision": "sha256:30c7e621ac124128549933b337cf2949bd68c32589e2cee44f3cfc02d40abff3",
   "requirementRevision": "sha256:4f8525e36bf16c39cea5b004b384335a80d62e14c0fa05ea74eb8d8ca53f213f",
   "schemaVersion": 1,
   "selectionMode": "full",
@@ -17,8 +17,8 @@
       {
         "module": "HxAnon",
         "path": "HxAnon.ml",
-        "sha256": "sha256:d3e4bf7c5e907e0f3e96d4b4a58fb5324278ed78033d984414b39e748852afe4",
-        "bytes": 8969
+        "sha256": "sha256:71e2e763978ba8a1664fc7fdb0973c96c895e4e16bb548fcba62a4b0bd07e25d",
+        "bytes": 9567
       },
       {
         "module": "HxArray",
@@ -41,8 +41,8 @@
       {
         "module": "HxDynamic",
         "path": "HxDynamic.ml",
-        "sha256": "sha256:6195c08972146061d8cc50408de2bcc8b6fa04667f538f108b9ed0f453ebc39a",
-        "bytes": 8538
+        "sha256": "sha256:dd53458f9d7c7dd64129195251d6110c5cbe8f35562aeb19f666005adcbf971e",
+        "bytes": 9583
       },
       {
         "module": "HxEnum",
@@ -347,6 +347,7 @@
           "requirement:control:throw:f43ba7d20da22c67015e5aae:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
           "requirement:control:throw:f55c2a2fc646332cab61bdbc:runtime:haxe-enum-dynamic-box",
           "requirement:control:throw:f55c2a2fc646332cab61bdbc:runtime:hxhx-runtime:typed-haxe-exception-signal-v1",
+          "transitive:HxDynamic",
           "transitive:HxType"
         ]
       },
@@ -733,7 +734,7 @@
       "HxSys",
       "HxType"
     ],
-    "revision": "sha256:7a04a5e1ac54cbdde3ea498d6fe0e20c5aed2c6b8997217a5f4f8ed23326a8b1"
+    "revision": "sha256:0a3e0db9e4852ae20e2d0f8d34d0e0a832e4f247b8907045777e77713d57139c"
   },
   "profile": "portable",
   "message": "Explicit requirements do not yet select the same checked runtime source bytes. This mismatch blocks a hard cut, while the current compiler selection remains authoritative.",
@@ -755,8 +756,8 @@
       {
         "module": "HxAnon",
         "path": "HxAnon.ml",
-        "sha256": "sha256:d3e4bf7c5e907e0f3e96d4b4a58fb5324278ed78033d984414b39e748852afe4",
-        "bytes": 8969
+        "sha256": "sha256:71e2e763978ba8a1664fc7fdb0973c96c895e4e16bb548fcba62a4b0bd07e25d",
+        "bytes": 9567
       },
       {
         "module": "HxArray",
@@ -779,8 +780,8 @@
       {
         "module": "HxDynamic",
         "path": "HxDynamic.ml",
-        "sha256": "sha256:6195c08972146061d8cc50408de2bcc8b6fa04667f538f108b9ed0f453ebc39a",
-        "bytes": 8538
+        "sha256": "sha256:dd53458f9d7c7dd64129195251d6110c5cbe8f35562aeb19f666005adcbf971e",
+        "bytes": 9583
       },
       {
         "module": "HxEnum",
@@ -845,8 +846,8 @@
       {
         "module": "HxReflect",
         "path": "HxReflect.ml",
-        "sha256": "sha256:21d5ed38bb8c4a5de47f184fd2f8750f01e703aa9c29dd08ae5988e4949e5e6e",
-        "bytes": 7657
+        "sha256": "sha256:aebdfd3f23e5eee235e22a7c22a2e3abaa8f0b6f1467436e85bd61e202e4ea1e",
+        "bytes": 12042
       },
       {
         "module": "HxRuntime",
@@ -1125,9 +1126,9 @@
       "Std",
       "haxe_CallStack"
     ],
-    "revision": "sha256:c142a41b8b70fc2428b2705c13552c28540c274a7bf1185864bb958c87dd326f"
+    "revision": "sha256:53027809788f8536df07a59397f4cc10fb0f47cb62bec2c554a88f589470101c"
   },
-  "reportRevision": "sha256:74a12d773fa3ce7b8dd087b621823afe5f9162cc9ba31f9f2f618e7da23109b0",
+  "reportRevision": "sha256:af220bd31d0d8da2ca2e50354aced2530e767bf7d8375643cab990044705e86c",
   "differences": {
     "currentOnlyRoots": [
       "Date",
@@ -2014,6 +2015,10 @@
       {
         "module": "HxEnum",
         "reason": "requirement:control:throw:f55c2a2fc646332cab61bdbc:runtime:hxhx-runtime:typed-haxe-exception-signal-v1"
+      },
+      {
+        "module": "HxEnum",
+        "reason": "transitive:HxDynamic"
       },
       {
         "module": "HxEnum",
@@ -3184,8 +3189,8 @@
       {
         "module": "HxReflect",
         "path": "HxReflect.ml",
-        "sha256": "sha256:21d5ed38bb8c4a5de47f184fd2f8750f01e703aa9c29dd08ae5988e4949e5e6e",
-        "bytes": 7657
+        "sha256": "sha256:aebdfd3f23e5eee235e22a7c22a2e3abaa8f0b6f1467436e85bd61e202e4ea1e",
+        "bytes": 12042
       },
       {
         "module": "HxThread",

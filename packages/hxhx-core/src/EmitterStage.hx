@@ -2159,10 +2159,11 @@ class EmitterStage {
 	}
 
 	/** Conversion facts belong to the active initializer or function, never another body. */
-	static function callArgumentType(expression:HxExpr):TyType {
+	/** The typed type of one call argument; `purpose` names the caller in the error when the fact is missing. */
+	static function callArgumentType(expression:HxExpr, purpose:String = "OCaml string conversion"):TyType {
 		final type = currentTypedInitializer != null ? currentTypedInitializer.findCallArgumentType(expression) : currentTypedFunction != null ? currentTypedFunction.findCallArgumentType(expression) : null;
 		if (type == null)
-			throw "OCaml string conversion is missing its typed call argument";
+			throw purpose + " is missing its typed call argument";
 		return type;
 	}
 
@@ -3205,31 +3206,6 @@ class EmitterStage {
 		return backend.ocaml.Stage3OcamlCallableConversion.lambdaResult(facts, value, currentFunctionLocalOcamlNames);
 	}
 
-	static function tryExprToOcamlStage3ReflectTypeIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
-			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
-			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
-		switch (e) {
-			case ECall(EField(EIdent("Reflect"), "fields"), [_obj]):
-				return "(Obj.magic 0)";
-			case ECall(EField(EIdent("Reflect"), "field"), [_obj, _name]):
-				return "(Obj.magic 0)";
-			case ECall(EField(EIdent("Reflect"), "getProperty"), [_obj, _name]):
-				return "(Obj.magic 0)";
-			case ECall(EField(EIdent("Reflect"), "setProperty"), [_obj, _name, _value]):
-				return "(Obj.magic 0)";
-			case ECall(EField(EIdent("Reflect"), "hasField"), [_obj, _name]):
-				return "false";
-			case ECall(EField(EIdent("Reflect"), "isFunction"), [_obj]):
-				return "true";
-			case ECall(EField(EIdent("Type"), "getInstanceFields"), [_cls]):
-				return "(Obj.magic 0)";
-			case ECall(EField(EIdent("Type"), "typeof"), [_v]):
-				return "(Obj.magic 0)";
-			case _:
-		}
-		return null;
-	}
-
 	static function tryExprToOcamlStage3StdStringIntrinsic(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>,
 			?staticImportByIdent:Map<String, String>, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>,
 			?callSigByCallee:Map<String, EmitterCallSig>):Null<String> {
@@ -3337,10 +3313,6 @@ class EmitterStage {
 		if (code != null)
 			return code;
 		code = tryExprToOcamlStage3LambdaTryIntrinsic(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-			callSigByCallee);
-		if (code != null)
-			return code;
-		code = tryExprToOcamlStage3ReflectTypeIntrinsic(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 			callSigByCallee);
 		if (code != null)
 			return code;
@@ -3794,6 +3766,22 @@ class EmitterStage {
 			});
 			if (stdStaticCall != null)
 				return stdStaticCall;
+			final reflectCall = backend.ocaml.Stage3OcamlReflectCalls.render({
+				call: staticCall,
+				emit: value -> exprToOcaml(value, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+					callSigByCalleeRaw),
+				// A static extension receiver (`using Type; value.enumIndex()`) has
+				// no call-argument fact; its own expression fact holds its type.
+				argumentType: argument -> {
+					final exact = stage3ExactExprType(argument);
+					exact != null ? exact : callArgumentType(argument, "stage3 emitter: " + staticCall.owner + "." + staticCall.method);
+				},
+				names: currentFunctionLocalOcamlNames,
+				valueTypeConstructor: (name,
+					index) -> currentEnums.constructorValue(backend.ocaml.Stage3OcamlReflectCalls.VALUE_TYPE_OWNER, name, index, currentOcamlModuleName)
+			});
+			if (reflectCall != null)
+				return reflectCall;
 			e = TypedExactStaticCallSource.ordinaryCall(staticCall);
 		}
 		final exactCall = TypedExactCallSource.decodeInstance(e);
@@ -7699,13 +7687,19 @@ class EmitterStage {
 		// b:T)`, unchanged. A shim for a generic function must therefore accept
 		// any OCaml value and box it itself. A fixed `Obj.t` parameter fails when
 		// a sort callback also passes the same parameter where a `String` is needed.
-		generatedPaths.push(writeStage3ShimIfMissing(outAbs, "Reflect",
+		// Typed calls render through Stage3OcamlReflectCalls; this module serves
+		// `Reflect.field` used as a value and untyped bring-up calls. Each entry
+		// delegates to the same runtime function, so both forms behave alike.
+		// Always rewrite it: a stale copy in a reused output directory would keep
+		// an older behavior.
+		generatedPaths.push(writeStage3Shim(outAbs, "Reflect",
 			"(* hxhx(stage3) bootstrap shim: Reflect *)\n"
-			+ "let field o f = HxAnon.get o f\n"
-			+ "let fields o = HxAnon.fields o\n"
-			+ "let getProperty o f = HxAnon.get o f\n"
-			+ "let setProperty o f v = HxAnon.set o f v\n"
-			+ "let hasField o f = HxAnon.has o f\n"
+			+ "let field o f = HxReflect.field (Obj.repr o) f\n"
+			+ "let setField o f v = HxAnon.set (Obj.repr o) f (Obj.repr v)\n"
+			+ "let fields o = HxAnon.fields (Obj.repr o)\n"
+			+ "let getProperty o f = HxReflect.getProperty (Obj.repr o) f\n"
+			+ "let setProperty o f v = HxReflect.setProperty (Obj.repr o) f (Obj.repr v)\n"
+			+ "let hasField o f = HxAnon.has (Obj.repr o) f\n"
 			+ "let isFunction = HxReflect.isFunction\n"
 			+ "let isEnumValue = HxReflect.isEnumValue\n"
 			+ "let isObject = HxReflect.isObject\n"
@@ -7714,8 +7708,8 @@ class EmitterStage {
 			+ "let callMethod = HxReflect.callMethod\n"
 			+ "let makeVarArgs = HxReflect.makeVarArgs\n"
 			+ "let makeVarArgsVoid = HxReflect.makeVarArgsVoid\n"
-			+ "let deleteField o f = HxAnon.delete o f\n"
-			+ "let copy = HxAnon.copy\n"));
+			+ "let deleteField o f = HxReflect.deleteField (Obj.repr o) f\n"
+			+ "let copy o = Obj.obj (HxAnon.copy (Obj.repr o))\n"));
 
 		generatedPaths.push(writeStage3ShimIfMissing(outAbs, "HxPosInfos",
 			"(* hxhx(stage3) bootstrap shim: haxe.PosInfos *)\n"
@@ -9794,6 +9788,12 @@ class EmitterStage {
 					final methodTable = currentClassStorage.methodTable(classProjection, outputModuleName, ocamlModuleValueIdent, escapeOcamlString);
 					if (methodTable != null) {
 						out.push(methodTable);
+						out.push("");
+					}
+					final reflectionTable = classProjection.hasSemanticFacts() ? currentClassStorage.reflectionMethodTable(classProjection, outputModuleName,
+						ocamlModuleValueIdent, escapeOcamlString) : null;
+					if (reflectionTable != null) {
+						out.push(reflectionTable);
 						out.push("");
 					}
 
