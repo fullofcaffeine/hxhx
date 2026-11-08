@@ -24,6 +24,16 @@ class Accepted {
 		final map = new Map<String, Int>();
 		final error = new haxe.Exception("x");
 		final buffer = new StringBuf();
+		// A `,` or `>` inside a structure extension or a string constant is not an empty slot.
+		final extended = new Holder<{ > S1, > S2, z:Int}>();
+		final arrow = new Box<Int->Int, String>();
+		final commas = new Const<"a,,b">();
+		final brackets = new Const<"<>">();
+		final comma = new Const<",">();
+		// Macros own the arguments of a generic-build class and the members of a built one.
+		final multi = new Multi<Int, String, Bool>();
+		final built = new Built(1);
+		final autoBuilt = new AutoChild(1);
 		trace(make(explicit) == explicit);
 	}
 

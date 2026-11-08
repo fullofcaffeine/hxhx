@@ -29,6 +29,9 @@ class TyperIndex {
 	/** That file's text, used to place a diagnostic on the written type hint. **/
 	var signatureSource:String = "";
 
+	/** Tokens of `signatureSource`, read once per module when a hint is first placed. **/
+	var signatureTokens:Null<Array<HxToken>> = null;
+
 	final byFullName:StringMap<TyNominalInfo>;
 	final byShortName:StringMap<Array<TyNominalInfo>>;
 	final identityByFullName:StringMap<TyNominalTypeId>;
@@ -289,14 +292,41 @@ class TyperIndex {
 		return false;
 	}
 
+	/** Whether metadata names `name`, with or without arguments: `@:build(Macro.run())`. **/
+	static function hasMetadataNamed(metadata:Array<String>, name:String):Bool {
+		if (metadata == null)
+			return false;
+		for (entry in metadata) {
+			var clean = entry == null ? "" : StringTools.trim(entry);
+			while (StringTools.startsWith(clean, "@") || StringTools.startsWith(clean, ":"))
+				clean = clean.substr(1);
+			final call = clean.indexOf("(");
+			if (StringTools.trim(call < 0 ? clean : clean.substring(0, call)) == name)
+				return true;
+		}
+		return false;
+	}
+
+	/** Build macros can add, replace or (for `@:genericBuild`) entirely define a declaration. **/
+	static function usesBuildMacro(metadata:Array<String>):Bool {
+		return hasMetadataNamed(metadata, "build")
+			|| hasMetadataNamed(metadata, "autoBuild")
+			|| hasMetadataNamed(metadata, "genericBuild");
+	}
+
 	/**
-		Count the type arguments a class-like declaration accepts.
+		Count the type arguments a class-like declaration accepts, or null when no count applies.
+
+		A `@:genericBuild` macro receives whatever arguments were written, so its class's
+		declared parameters (often a single `Rest`) do not limit them.
 
 		The indexed binders come from `__hxhx_type_params`. Defaults come from the
 		parsed parameters, and only when those parameters match the binders name for
 		name; otherwise every parameter counts as required.
 	**/
-	static function nominalArity(classDeclaration:HxClassDecl):TyTypeDeclaration.TyNominalArity {
+	static function nominalArity(classDeclaration:HxClassDecl):Null<TyTypeDeclaration.TyNominalArity> {
+		if (hasMetadataNamed(HxClassDecl.getMetadata(classDeclaration), "genericBuild"))
+			return null;
 		final names = typeParameters(HxClassDecl.getMetadata(classDeclaration));
 		final parsed = HxClassDecl.getTypeParameters(classDeclaration);
 		var required = names.length;
@@ -354,7 +384,8 @@ class TyperIndex {
 				visibility: HxClassDecl.getVisibility(classDeclaration),
 				kind: Nominal(identity),
 				context: context,
-				nominalArity: nominalArity(classDeclaration)
+				nominalArity: nominalArity(classDeclaration),
+				usesBuildMacro: usesBuildMacro(HxClassDecl.getMetadata(classDeclaration))
 			}));
 			visibilityByFullName.set(identity.getCanonicalName(), HxClassDecl.getVisibility(classDeclaration));
 			final moduleIdentities = identitiesByModulePath.exists(modulePath) ? identitiesByModulePath.get(modulePath) : [];
@@ -458,68 +489,24 @@ class TyperIndex {
 		}).getType();
 	}
 
+	function signatureTokenList():Array<HxToken> {
+		if (signatureTokens == null)
+			signatureTokens = TySourceTokenPosition.tokens(signatureSource);
+		return signatureTokens;
+	}
+
 	/** Anchor a return hint after the parameter list, so it is not confused with an argument hint. **/
 	function returnHintAnchor(functionDeclaration:HxFunctionDecl):HxPos {
-		final start = HxFunctionDecl.getPos(functionDeclaration);
-		final open = start.getIndex() < 0 ? -1 : signatureSource.indexOf("(", start.getIndex());
-		if (open < 0)
-			return start;
-		var depth = 0;
-		for (index in open...signatureSource.length) {
-			final ch = signatureSource.charAt(index);
-			if (ch == "(")
-				depth++;
-			else if (ch == ")" && --depth == 0)
-				return new HxPos(index, start.getLine(), start.getColumn());
-		}
-		return start;
+		return TySourceTokenPosition.afterParameterList(signatureTokenList(), HxFunctionDecl.getPos(functionDeclaration));
 	}
 
 	/**
-		Find where a type hint is written, searching forward from its declaration.
-
-		Hints are stored as text with whitespace removed (`Box<Int,String>`), so the
-		search skips whitespace in the source. For `static var field:Box<Int>` the
-		diagnostic then points at `Box<Int>`, as upstream's does. Without an anchor, or
-		when the text is not found, the declaration position (or unknown) is used.
+		Find where a type hint is written, searching forward from its declaration, so
+		`static var field:Box<Int>` reports the hint as upstream's message does. Without
+		an anchor, or when the hint is not found, the declaration position (or unknown) is used.
 	**/
 	function hintPosition(hint:String, anchor:Null<HxPos>):HxPos {
-		if (anchor == null || anchor.getIndex() < 0 || hint == null || hint.length == 0 || signatureSource.length == 0)
-			return anchor == null ? HxPos.unknown() : anchor;
-		final wanted = StringTools.replace(StringTools.replace(StringTools.replace(hint, " ", ""), "\t", ""), "\n", "");
-		function isSpace(ch:String):Bool
-			return ch == " " || ch == "\t" || ch == "\r" || ch == "\n";
-		var start = anchor.getIndex();
-		while (start < signatureSource.length) {
-			final found = signatureSource.indexOf(wanted.charAt(0), start);
-			if (found < 0)
-				break;
-			var cursor = found;
-			var matched = 0;
-			while (matched < wanted.length && cursor < signatureSource.length) {
-				final ch = signatureSource.charAt(cursor);
-				if (isSpace(ch) && matched > 0) {
-					cursor++;
-					continue;
-				}
-				if (ch != wanted.charAt(matched))
-					break;
-				matched++;
-				cursor++;
-			}
-			if (matched == wanted.length) {
-				var line = 1;
-				var lineStart = 0;
-				for (index in 0...found)
-					if (signatureSource.charAt(index) == "\n") {
-						line++;
-						lineStart = index + 1;
-					}
-				return new HxPos(found, line, found - lineStart + 1);
-			}
-			start = found + 1;
-		}
-		return anchor;
+		return anchor == null ? HxPos.unknown() : TySourceTokenPosition.typeHint(signatureTokenList(), signatureSource, hint, anchor);
 	}
 
 	static function addMethod(primary:StringMap<TyFunSig>, all:StringMap<Array<TyFunSig>>, signature:TyFunSig):Void {
@@ -738,6 +725,7 @@ class TyperIndex {
 		// A signature hint such as `static var field:Box<Int>` reports this file.
 		signatureFilePath = ResolvedModule.getFilePath(module);
 		signatureSource = parsedModule.getSource() == null ? "" : parsedModule.getSource();
+		signatureTokens = null;
 		final semanticModulePath = canonicalModulePath(packagePath, moduleName);
 		final directives = HxModuleDecl.getDirectives(moduleDeclaration);
 		final completed = new Array<{source:HxClassDecl, info:TyNominalInfo}>();
@@ -938,6 +926,12 @@ class TyperIndex {
 			addNominal(entry.info);
 			bySourceClass.set(entry.source, entry.info);
 		}
+	}
+
+	/** Whether a build macro can change this declaration's members. **/
+	public function declarationUsesBuildMacro(fullName:String):Bool {
+		final declaration = typeDeclarations.get(fullName);
+		return declaration != null && declaration.getUsesBuildMacro();
 	}
 
 	/** Register and publish one complete module. Loaders register dependency headers first. */

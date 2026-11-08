@@ -572,8 +572,14 @@ class TyType {
 		var bracketDepth = 0;
 		var braceDepth = 0;
 		var start = 0;
+		// A `@:const` type argument can be a string; its text is not type punctuation.
+		var inString = false;
 		for (i in 0...text.length) {
 			final ch = text.charAt(i);
+			if (ch == '"')
+				inString = !inString;
+			if (inString)
+				continue;
 			switch (ch) {
 				case "(":
 					parenDepth++;
