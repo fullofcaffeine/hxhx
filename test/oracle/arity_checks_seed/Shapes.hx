@@ -71,8 +71,23 @@ class Holder<T> {
 	public function new() {}
 }
 
+@:generic class Const2<@:const A, @:const B> {
+	public function new() {}
+}
+
+class One<T> {
+	public function new() {}
+}
+
 @:genericBuild(ArityMacros.anyArguments())
 class Multi<Rest> {}
+
+@:genericBuild(ArityMacros.anyArguments())
+class TwoBuilt<A, B> {}
+
+class NullablePair<T> {
+	public function new(v:Null<T>, w:T) {}
+}
 
 @:build(ArityMacros.addConstructor())
 class Built {}

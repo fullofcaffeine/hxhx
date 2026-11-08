@@ -317,17 +317,18 @@ class TyperIndex {
 	/**
 		Count the type arguments a class-like declaration accepts, or null when no count applies.
 
-		A `@:genericBuild` macro receives whatever arguments were written, so its class's
-		declared parameters (often a single `Rest`) do not limit them.
+		A `@:genericBuild` class whose only parameter is named `Rest` passes whatever
+		arguments were written to its macro, so no count applies to it. Any other
+		parameter list is counted as usual.
 
 		The indexed binders come from `__hxhx_type_params`. Defaults come from the
 		parsed parameters, and only when those parameters match the binders name for
 		name; otherwise every parameter counts as required.
 	**/
 	static function nominalArity(classDeclaration:HxClassDecl):Null<TyTypeDeclaration.TyNominalArity> {
-		if (hasMetadataNamed(HxClassDecl.getMetadata(classDeclaration), "genericBuild"))
-			return null;
 		final names = typeParameters(HxClassDecl.getMetadata(classDeclaration));
+		if (hasMetadataNamed(HxClassDecl.getMetadata(classDeclaration), "genericBuild") && names.length == 1 && names[0] == "Rest")
+			return null;
 		final parsed = HxClassDecl.getTypeParameters(classDeclaration);
 		var required = names.length;
 		if (parsed.length == names.length) {

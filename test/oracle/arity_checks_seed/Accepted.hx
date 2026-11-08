@@ -3,6 +3,7 @@ import Shapes;
 /** Calls that upstream Haxe 4.3.7 accepts and that the arity checks must keep accepting. */
 class Accepted {
 	static var field:Box<Int, String>;
+	static var constantField:Const<"a\",b">;
 
 	static function main():Void {
 		final explicit = new Box<Int, String>();
@@ -30,6 +31,11 @@ class Accepted {
 		final commas = new Const<"a,,b">();
 		final brackets = new Const<"<>">();
 		final comma = new Const<",">();
+		final escapedQuote = new Const<"a\"b,c">();
+		final backslash = new Const<"a\\,b">();
+		final singleQuoted = new Const<'a",b'>();
+		final twoConstants = new Const2<'"', "c">();
+		final nestedConstant = new One<Const<"a\",b">>();
 		// Macros own the arguments of a generic-build class and the members of a built one.
 		final multi = new Multi<Int, String, Bool>();
 		final built = new Built(1);
