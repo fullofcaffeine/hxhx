@@ -30,10 +30,17 @@ package backend.ocaml;
 
 	A function with optional or rest parameters is rejected at emit time with
 	a named error: the adapter has no storage plan for them yet.
+
+	Destinations are deny-by-default. Only call arguments, `Function` and
+	`Null<Function>` locals and `Array<Function>` literal elements are adapted.
+	`requireAdapted` stops emission with a named error for every other place
+	typing let a function value enter a `Function` slot.
 **/
 function adapt(actual:TyType, value:String, names:Null<Stage3OcamlLocalNames>):Null<String> {
-	if (names == null || actual == null || !actual.isFunction() || actual.hasUnknownComponent())
+	if (actual == null || !actual.isFunction())
 		return null;
+	if (names == null || actual.hasUnknownComponent())
+		throw "stage3 emitter: a function with an incomplete type cannot be stored as haxe.Constraints.Function yet";
 	final parameters = actual.getFunctionParameters();
 	for (parameter in parameters)
 		if (parameter.isOptional || parameter.isRest)
@@ -139,4 +146,52 @@ function result(type:TyType, call:String):String {
 		case "primitive:Bool": "HxRuntime.box_bool (" + call + ")";
 		case _: "Obj.repr (" + call + ")";
 	};
+}
+
+/**
+	Refuse every `Function` destination that was not adapted.
+
+	This is deny-by-default on purpose. Typing accepts a function value at every
+	`haxe.Constraints.Function` destination, but only call arguments, plain
+	`Function` locals and `Array<Function>` literal elements are adapted. Any
+	other destination would hold a raw typed closure, which crashes when
+	`Reflect.callMethod` hands it arguments of another category or count.
+**/
+function requireAdapted(flows:Array<TypedBackendFunctionConstraintFlow>, arguments:Array<TypedBackendCallArgument>, adapted:Array<HxExpr>,
+		file:Null<String>):Void {
+	function at(position:Null<HxPos>):String
+		return (file == null ? "" : file + ":") + (position == null ? "" : position.getLine() + ": ");
+	for (flow in flows)
+		throw "stage3 emitter: "
+			+ at(flow.position)
+			+ "a function value cannot be stored as haxe.Constraints.Function in this "
+			+ flow.site
+			+ " on the native OCaml route yet (haxe_ocaml-h9dw9)";
+	for (argument in arguments)
+		if (!Lambda.exists(adapted, claimed -> claimed == argument.expression))
+			throw "stage3 emitter: "
+				+ at(null)
+				+ "a function value cannot be passed as haxe.Constraints.Function to this call on the native OCaml route yet (haxe_ocaml-h9dw9)";
+}
+
+/**
+	Call a value read from Dynamic storage. It may be a plain closure or a
+	`Function` wrapper, which is an `HxReflect.makeVarArgs` data block and cannot
+	be applied directly. `HxReflect.callMethod` accepts both. The callee and each
+	argument are evaluated once, in Haxe's left-to-right order.
+**/
+function dynamicCall(callee:String, arguments:Array<String>, names:Stage3OcamlLocalNames):String {
+	final closure = names.internalName("__hx_dynamic_callee");
+	final bound = [
+		for (index in 0...arguments.length)
+			names.internalName("__hx_dynamic_argument_" + index)
+	];
+	var body = "HxReflect.callMethod HxRuntime.hx_null "
+		+ closure
+		+ " (HxBootArray.of_list ["
+		+ [for (name in bound) "Obj.repr " + name].join("; ") + "])";
+	var index = bound.length;
+	while (index-- > 0)
+		body = "let " + bound[index] + " = (" + arguments[index] + ") in " + body;
+	return "(Obj.magic (let " + closure + " = (Obj.repr (" + callee + ")) in " + body + "))";
 }

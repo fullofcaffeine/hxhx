@@ -6,7 +6,7 @@ native OCaml route and for the Neko route. Every program must print
 `expected.stdout` exactly.
 
 `Reflect.callMethod(o, func, args)` takes `func:haxe.Constraints.Function`.
-`Function` is declared as `abstract Function(Dynamic) {}` with no `@:from`
+`Function` is declared as `@:callable abstract Function(Dynamic) {}` with no `@:from`
 conversion, but upstream Haxe lets every function value unify with it.
 Before this change, typing rejected the program before either target could
 emit it:
@@ -33,11 +33,27 @@ non-callable value is not accepted. Three typing owners use it:
 - Array literal element checks, so `[holder.add, Holder.twice]` is a valid
   `Array<haxe.Constraints.Function>`.
 
-Stage3 stores a function value as a `Function` (a call argument, a local, or
-an `Array<Function>` element) through the Dynamic calling convention
-(`backend/ocaml/Stage3OcamlFunctionBoundary.hx`), because `Reflect.callMethod`
-later hands it the raw `Obj.t` elements of its argument array, whatever their
-number and category:
+On the Stage3 route, a function value stored as a `Function` is adapted to the
+Dynamic calling convention (`backend/ocaml/Stage3OcamlFunctionBoundary.hx`) at
+these destinations:
+
+- call arguments, including optional `?f:Function` parameters;
+- `Function` and `Null<Function>` locals, at declaration and assignment;
+- elements of an `Array<Function>` literal.
+
+Every other destination stops native emission with a named error, because a raw
+typed closure there would crash when `Reflect.callMethod` calls it. Typing
+records each such place as a `TypedBackendFunctionConstraintFlow`, and
+`Stage3OcamlFunctionBoundary.requireAdapted` refuses anything not adapted. That
+covers instance and static fields, field initializers, function and lambda
+results, structure fields, `Array.push`, array index assignment, `Map.set`,
+enum and constructor arguments, and type-check or cast results.
+`npm run test:m14:reflect-call-method` also runs
+`M14Stage3FunctionDestinationTest`, which checks each of these. The JS and Neko
+routes keep accepting them, and haxe_ocaml-h9dw9 tracks adapting them on Stage3.
+
+`Reflect.callMethod` later hands the wrapped function the raw `Obj.t` elements
+of its argument array, whatever their number and category:
 - more arguments than parameters raise a catchable error, as in eval; a
   missing argument is null for a reference or nullable parameter, as in eval,
   and 0, 0.0 or false for a non-null Int, Float or Bool parameter;
@@ -67,8 +83,11 @@ Stage3 test also requires upstream and Stage3 to reject an Int literal and a
 String local passed as `Function`.
 
 Not covered:
-- A function stored as a `Function` in a field or returned from a function is
-  not wrapped yet (haxe_ocaml-h9dw9).
+- Calling a `Function` directly (`f(1)`) stops while typing on the Stage3 route
+  with "selected call conversion does not satisfy its retained parameter",
+  although upstream allows it because `Function` is `@:callable`. Calling a
+  wrapped value through a Dynamic field or structure (`o.f(1)`) works; other
+  direct Dynamic calls fail in `ocamlopt` with a type error.
 - A null String argument concatenated in a listener needs the null-String
   text fix of PR #160 (haxe_ocaml-txs4e) on the Stage3 route.
 - A `Function` is accepted where a concrete function type is expected

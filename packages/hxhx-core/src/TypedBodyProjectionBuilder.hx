@@ -25,6 +25,8 @@ class TypedBodyProjectionBuilder {
 	final equalities:Array<TypedBackendEqualityOccurrence> = [];
 	final stringConcats:Array<TypedBackendStringConcatOccurrence> = [];
 	final traces:Array<TypedBackendTraceOccurrence> = [];
+	final functionConstraintFlows:Array<TypedBackendFunctionConstraintFlow> = [];
+	final callableReturnTypes:Array<Null<TyType>> = [];
 	final bitwiseOperations:Array<TypedBackendBitwiseOccurrence> = [];
 	final arithmeticOperations:Array<TypedBackendArithmeticOccurrence> = [];
 	final conditions:Array<TypedBackendCondition> = [];
@@ -248,6 +250,38 @@ class TypedBodyProjectionBuilder {
 		if (!sealed)
 			throw "string concatenation facts require a sealed projection";
 		return stringConcats.copy();
+	}
+
+	/** Enter a function or lambda body, so a `return` inside it knows its destination type. */
+	public function enterCallable(returnType:Null<TyType>):Void
+		callableReturnTypes.push(returnType);
+
+	public function exitCallable():Void
+		callableReturnTypes.pop();
+
+	/** The result type of the innermost function or lambda being projected. */
+	public function currentReturnType():Null<TyType>
+		return callableReturnTypes.length == 0 ? null : callableReturnTypes[callableReturnTypes.length - 1];
+
+	/** Record the `haxe.Constraints.Function` flows of one typed expression. */
+	public function observeFunctionConstraintFlows(node:TypedExpr):Void {
+		if (sealed)
+			throw "cannot add function flows to a sealed projection";
+		for (flow in TypedFunctionConstraintFlows.ofNode(node, currentReturnType()))
+			functionConstraintFlows.push(flow);
+	}
+
+	/** Record one flow whose destination the projection knows directly. */
+	public function observeFunctionConstraintFlow(site:String, position:Null<HxPos>):Void {
+		if (sealed)
+			throw "cannot add function flows to a sealed projection";
+		functionConstraintFlows.push({site: site, position: position});
+	}
+
+	public function getFunctionConstraintFlows():Array<TypedBackendFunctionConstraintFlow> {
+		if (!sealed)
+			throw "function flows require a sealed projection";
+		return functionConstraintFlows.copy();
 	}
 
 	public function getEqualities():Array<TypedBackendEqualityOccurrence> {

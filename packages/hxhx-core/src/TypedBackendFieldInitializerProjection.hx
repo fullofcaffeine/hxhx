@@ -28,6 +28,7 @@ class TypedBackendFieldInitializerProjection {
 	final stringConcats:Array<TypedBackendStringConcatOccurrence>;
 	final traces:Array<TypedBackendTraceOccurrence>;
 	final verifiedStringConcats:Array<Bool>;
+	final functionConstraintFlows:Array<TypedBackendFunctionConstraintFlow>;
 	final bitwiseOperations:Array<TypedBackendBitwiseOccurrence>;
 	final arithmeticOperations:Array<TypedBackendArithmeticOccurrence>;
 	final verifiedArithmetic:Array<Bool>;
@@ -53,6 +54,7 @@ class TypedBackendFieldInitializerProjection {
 			?equalities:Array<TypedBackendEqualityOccurrence>,
 			?stringConcats:Array<TypedBackendStringConcatOccurrence>,
 			?traces:Array<TypedBackendTraceOccurrence>,
+			?functionConstraintFlows:Array<TypedBackendFunctionConstraintFlow>,
 			?bitwiseOperations:Array<TypedBackendBitwiseOccurrence>,
 			?arithmeticOperations:Array<TypedBackendArithmeticOccurrence>,
 			?conditions:Array<TypedBackendCondition>,
@@ -105,6 +107,8 @@ class TypedBackendFieldInitializerProjection {
 		this.traces = indexedAccesses == null || indexedAccesses.traces == null ? [] : indexedAccesses.traces.copy();
 		for (entry in this.traces)
 			entry.assertCurrent(stableIdentity, bodyRevision);
+		this.functionConstraintFlows = indexedAccesses == null
+			|| indexedAccesses.functionConstraintFlows == null ? [] : indexedAccesses.functionConstraintFlows.copy();
 		this.bitwiseOperations = indexedAccesses == null
 			|| indexedAccesses.bitwiseOperations == null ? [] : indexedAccesses.bitwiseOperations.copy();
 		for (entry in this.bitwiseOperations)
@@ -427,6 +431,14 @@ class TypedBackendFieldInitializerProjection {
 		}
 		return null;
 	}
+
+	/** Every place typing let a function value enter a `Function` slot other than a call argument or a plain local. */
+	public function getFunctionConstraintFlows():Array<TypedBackendFunctionConstraintFlow>
+		return functionConstraintFlows.copy();
+
+	/** The call arguments of this executable that pass a function value to a `Function` slot. */
+	public function getFunctionConstraintArguments():Array<TypedBackendCallArgument>
+		return callArguments.filter(argument -> TyFunctionConstraint.reaches(argument.expectedType, argument.type));
 
 	/** Initializer equality cannot borrow facts from a method or another field. */
 	public function findEquality(expression:HxExpr):Null<TypedBackendEqualityOccurrence> {
