@@ -191,9 +191,14 @@ class TyTypeUseResolution {
 			case Nominal(identity):
 				// An explicit application must match the declared parameters, as in Haxe
 				// 4.3.7. A use with no arguments is left alone: `new Box()` infers them.
+				// Upstream words the `Dynamic<A,B>` case differently, both in type hints
+				// and in `implements Dynamic<A,B>`, so keep its message.
 				final arity = declaration.getNominalArity();
-				if (arity != null && args.length > arity.total)
-					throw new TyperError(context.filePath, context.position, "Too many type parameters for " + declaration.getShortName());
+				if (arity != null && args.length > arity.total) {
+					final message = declaration.getCanonicalName() == "StdTypes.Dynamic" ? "Too many parameters for Dynamic" : "Too many type parameters for "
+						+ declaration.getShortName();
+					throw new TyperError(context.filePath, context.position, message);
+				}
 				if (arity != null && args.length > 0 && args.length < arity.required)
 					throw new TyperError(context.filePath, context.position, "Not enough type parameters for " + declaration.getShortName());
 				TyType.nominal(identity, args, display);
