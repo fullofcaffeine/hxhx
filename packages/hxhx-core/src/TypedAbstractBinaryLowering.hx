@@ -533,7 +533,13 @@ class TypedAbstractBinaryLowering {
 					rebuilt.getTag() == TypedExprTag.CompoundAssign ? left : TypedStringOperand.lower(left, index),
 					TypedStringOperand.lower(right, index)
 				]);
-			return rebuilt;
+			// An operator-less abstract value takes part through its `to` primitive, as the
+			// typer selected (`T1 + 1`, `i |= FA`). Make that conversion explicit so a backend
+			// sees primitive operands. A compound place is never converted.
+			return rebuilt.withExpressions([
+				rebuilt.getTag() == TypedExprTag.CompoundAssign ? left : primitiveOperand(left, index),
+				primitiveOperand(right, index)
+			]);
 		}
 		final declaration = selected.getOperatorInfo().getDeclaration();
 		// A bodyless fallback still owns a primitive operation plus writeback;
@@ -561,6 +567,17 @@ class TypedAbstractBinaryLowering {
 				lowerStatement(child, helpers, index, filePath, allocator)
 		];
 		return statement.withChildren(expressions, statements);
+	}
+
+	/** Apply an abstract value's representation-preserving `to` conversion to its primitive view. */
+	static function primitiveOperand(value:TypedExpr, index:TyperIndex):TypedExpr {
+		final target = TyAbstractPrimitiveOperation.view(index, value.getType());
+		if (target == null)
+			return value;
+		final conversion = TyImplicitConversionPlan.select(index, target, value.getType());
+		return conversion != null
+			&& conversion.isAbstractTo()
+			&& conversion.isRepresentationPreservingAbstractConversion() ? conversion.apply(value) : value;
 	}
 
 	static function assertNoAbstractBinaryExpression(expression:TypedExpr, index:TyperIndex, owner:String):Void {

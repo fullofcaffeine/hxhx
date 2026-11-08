@@ -248,6 +248,16 @@ class TyAbstractBinaryBinding {
 
 		if (permitsOrdinaryFallback(op, leftType, rightType))
 			return null;
+		// No declared operator at all: one abstract operand may act through its `to`
+		// primitive, as upstream allows; the caller then types the operation.
+		// A compound whose place is the abstract would also need a write-back through
+		// `from`; that is not lowered yet, so only a value operand may use this rule.
+		final base = baseOperator == null ? op : baseOperator;
+		final abstractPlace = baseOperator != null && TyAbstractPrimitiveOperation.view(index, lookupLeft) != null;
+		if (explicitCandidates.length == 0
+			&& !abstractPlace
+			&& TyAbstractPrimitiveOperation.operation(index, base, lookupLeft, rightType) != null)
+			return null;
 		throw noApplicable(op, leftType, rightType, explicitCandidates, filePath, position);
 	}
 }

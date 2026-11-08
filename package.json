@@ -799,7 +799,7 @@
     "test:m14:stage3-static-init-method-value": "haxe test/m14_stage3_static_init_method_value_test.hxml",
     "test:m14:stage3-bare-alias-constructor": "haxe test/m14_stage3_bare_alias_constructor_test.hxml",
     "test:m14:stage3-enum-constructor-control-arguments": "haxe test/m14_stage3_enum_constructor_control_arguments_test.hxml",
-    "test:m14:stage3-enum-abstract-value-switch": "haxe test/m14_stage3_enum_abstract_value_switch_test.hxml",
+    "test:m14:stage3-enum-abstract-value-switch": "haxe test/m14_stage3_enum_abstract_value_switch_test.hxml && haxe test/m14_stage3_enum_abstract_arguments_test.hxml",
     "test:m14:stage3-field-cursor-string-scan": "haxe test/m14_stage3_field_cursor_string_scan_test.hxml",
     "test:m14:resolver-requested-root": "haxe test/m14_resolver_requested_root_test.hxml",
     "test:m14:stage3-xml-shim-family": "haxe test/m14_stage3_xml_shim_family_test.hxml",
