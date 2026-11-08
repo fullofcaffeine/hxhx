@@ -4,8 +4,9 @@ import haxe.Int32;
 	`++` and `--` on array elements, instance fields, and anonymous-structure fields.
 
 	Covers prefix and postfix forms, statement and value positions, `Int`,
-	`Float`, `Int32`, and `Null<Int>` array elements, `Null<Int>` and
-	`Null<Float>` fields, a nested index, Int overflow wrap, and a null element
+	`Float`, `Int32`, `Null<Int>`, and `Null<Float>` array elements, `Null<Int>`
+	and `Null<Float>` fields (including the postfix and prefix results of
+	nullable slots), a nested index, Int overflow wrap, and a null element
 	(which throws, as on upstream eval). The array and index
 	expressions, and a field receiver call, must run exactly once, in source
 	order. The receiver check records calls in an array, because `++` on a
@@ -121,5 +122,22 @@ class Main {
 		for (i in 0...ints.length)
 			total += ints[i]++;
 		Sys.println("loop: " + total + " " + ints.join(","));
+
+		final nullableOld:Array<Null<Int>> = [5, 6];
+		final firstOld = nullableOld[0]++;
+		final secondOld = nullableOld[1]--;
+		Sys.println("null element postfix: " + firstOld + " " + secondOld + " " + nullableOld.join(","));
+
+		final ratios:Array<Null<Float>> = [0.5, 1.5];
+		ratios[0]++;
+		final ratioPrefix = ++ratios[1];
+		final ratioPostfix = ratios[0]--;
+		Sys.println("null float element: " + ratioPrefix + " " + ratioPostfix + " " + ratios.join(","));
+
+		final maybePostfix = counter.maybe++;
+		final ratioFieldPrefix = ++counter.maybeRatio;
+		final ratioFieldPostfix = counter.maybeRatio--;
+		Sys.println("nullable field results: " + maybePostfix + " " + counter.maybe + " " + ratioFieldPrefix + " " + ratioFieldPostfix + " "
+			+ counter.maybeRatio);
 	}
 }

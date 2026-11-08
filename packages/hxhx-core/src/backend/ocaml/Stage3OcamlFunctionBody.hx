@@ -18,11 +18,18 @@ typedef FunctionRenderInput = {
 
 	/** Answers whether a typed result is an enum value this request stores as an `Obj.t` box. */
 	final ?isEnumBox:TyType->Bool;
+
+	/**
+		Answers the OCaml carrier of a reference result (an Array, a program class
+		instance, an anonymous structure or a function value), or null for any other
+		type. The value keeps its own representation inside the `Obj.t` payload.
+	**/
+	final ?referenceCarrier:TyType->Null<String>;
 }
 
 /** Each closure owns a return exception; the nearest invocation catches its own exit. */
 function render(input:FunctionRenderInput):String {
-	final selected = plan(input.facts, input.body, input.isEnumBox);
+	final selected = plan(input.facts, input.body, input.isEnumBox, input.referenceCarrier);
 	if (input.names == null)
 		throw "OCaml block function requires its local naming owner";
 	final arguments = switch input.facts.expression {
@@ -35,9 +42,15 @@ function render(input:FunctionRenderInput):String {
 	final renderedArguments = new Array<String>();
 	for (index in 0...arguments.length) {
 		final parameter = parameters[index];
-		if (parameter.type.hasUnknownComponent() || parameter.isOptional || parameter.isRest)
+		if (parameter.type.hasUnknownComponent() || parameter.isRest)
 			throw "OCaml block function requires complete fixed required parameters";
-		renderedArguments.push("(" + input.names.targetName(arguments[index]) + " : " + input.renderType(parameter.type) + ")");
+		// An omitted argument arrives as the null sentinel, so an optional or
+		// defaulted parameter needs a slot that can hold it. Int and Float use the
+		// nullable carrier.
+		if (parameter.isOptional)
+			Stage3OcamlLocalCallOmissions.requireSentinelSlot(parameter, {isEnumBox: input.isEnumBox, referenceCarrier: input.referenceCarrier});
+		final carrier = Stage3OcamlNullablePrimitive.destinationCarrier(parameter.type, parameter.isOptional) != null;
+		renderedArguments.push("(" + input.names.targetName(arguments[index]) + " : " + (carrier ? "Obj.t" : input.renderType(parameter.type)) + ")");
 	}
 	final rendered = input.renderStatements(selected.statements, (statement, value) -> {
 		for (entry in selected.returns)
@@ -74,8 +87,9 @@ function render(input:FunctionRenderInput):String {
 	adaptation. Conversion happens before its value enters the return exception.
 	An enum result uses the `Obj.t` box that its generated constructors return;
 	`isEnumBox` must answer from the request's registered enum declarations.
+	A reference result uses the carrier `referenceCarrier` selects for it.
  */
-function plan(facts:TypedBackendLambdaOccurrence, body:HxExpr, ?isEnumBox:TyType->Bool):FunctionStatements {
+function plan(facts:TypedBackendLambdaOccurrence, body:HxExpr, ?isEnumBox:TyType->Bool, ?referenceCarrier:TyType->Null<String>):FunctionStatements {
 	if (facts == null)
 		throw "OCaml block function requires its exact lambda facts";
 	switch facts.expression {
@@ -91,6 +105,7 @@ function plan(facts:TypedBackendLambdaOccurrence, body:HxExpr, ?isEnumBox:TyType
 		case "primitive:Void": "unit";
 		case "dynamic": "Obj.t";
 		case _ if (isEnumBox != null && isEnumBox(result)): "Obj.t";
+		case _ if (referenceCarrier != null && referenceCarrier(result) != null): referenceCarrier(result);
 		case _: throw "OCaml block function requires a supported concrete return carrier";
 	};
 	for (type in facts.getReturnTypes())

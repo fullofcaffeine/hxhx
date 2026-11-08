@@ -52,7 +52,7 @@ private function lowerExpression(expression:TypedExpr, allocator:TyCompilerTempo
 	final fieldName = structural ? operand.getTexts()[0] : field.getName();
 	final receiverBinding = receiver == null ? null : allocator.allocate("receiver", receiver.getType());
 	final oldBinding = allocator.allocate("old", valueType);
-	final nextBinding = allocator.allocate("next", valueType);
+	final nextBinding = allocator.allocate("next", stepType);
 	function read(binding:TyLocalBinding):TypedExpr
 		return TypedExpr.localRead(binding.getSourceName(), binding.getType(), position, binding);
 	function capture(binding:TyLocalBinding, value:TypedExpr):TypedExpr
@@ -61,19 +61,29 @@ private function lowerExpression(expression:TypedExpr, allocator:TyCompilerTempo
 	final one = key == "primitive:Int" ? TypedExpr.intLiteral(1, stepType, position) : TypedExpr.floatLiteral(1.0, stepType, position);
 	final next = TypedExpr.binary(op == HxUnaryOperator.Increment ? "+" : "-", read(oldBinding), one, stepType, position);
 	final sequence = receiverBinding == null ? [] : [capture(receiverBinding, receiver)];
+	final result = read(rebuilt.getUnaryFixity() == HxUnaryFixity.Postfix ? oldBinding : nextBinding);
 	return TypedExpr.block(sequence.concat([
 		capture(oldBinding, place),
-		capture(nextBinding, TypedExpr.assign(place, next, valueType, position)),
-		read(rebuilt.getUnaryFixity() == HxUnaryFixity.Postfix ? oldBinding : nextBinding)
-	]), valueType, position);
+		capture(nextBinding, TypedExpr.assign(place, next, stepType, position)),
+		result
+	]), result.getType(), position);
 }
 
 /**
 	The type `++`/`--` computes in for a slot of type `type`: `Int` or `Float`,
-	also when the slot is `Null<Int>` or `Null<Float>`. The new value is stored
-	back with the slot's own type, so a nullable slot is re-boxed by the
-	ordinary assignment. A null value throws "Null Access" when it is read for
-	the arithmetic. Returns null for every other type.
+	also when the slot is `Null<Int>` or `Null<Float>`. Returns null for every
+	other type. A null value throws "Null Access" when it is read for the
+	arithmetic.
+
+	Each lowered binding keeps the type of the value it actually holds. The old
+	value is read from the slot, so it has the slot type: for a `Null<Int>` slot
+	it is the nullable carrier (`Obj.t` natively). The new value is computed in
+	the stepped type, and the assignment that stores it yields that same plain
+	`int` or `float`, so the assignment and the `next` binding have the stepped
+	type. The block then has the type of the binding it yields: the slot type for
+	postfix and the stepped type for prefix. Typing the prefix result as
+	`Null<Int>` while it held a plain `int` made a later read into an `Int`
+	local unwrap a value that was never boxed, which OCaml rejects.
 **/
 private function steppedType(type:TyType):Null<TyType> {
 	final inner = type.isNullable() ? type.unwrapNull() : type;
@@ -116,17 +126,19 @@ private function lowerIndexedStep(expression:TypedExpr, operand:TypedExpr, alloc
 	final arrayBinding = allocator.allocate("array", array.getType());
 	final indexBinding = allocator.allocate("index", index.getType());
 	final oldBinding = allocator.allocate("old", elementType);
-	final nextBinding = allocator.allocate("next", elementType);
+	final nextBinding = allocator.allocate("next", stepType);
 	final place = TypedExpr.arrayAccess(read(arrayBinding), read(indexBinding), elementType, position);
 	final one = key == "primitive:Int" ? TypedExpr.intLiteral(1, stepType, position) : TypedExpr.floatLiteral(1.0, stepType, position);
 	final next = TypedExpr.binary(expression.getUnaryOperator() == HxUnaryOperator.Increment ? "+" : "-", read(oldBinding), one, stepType, position);
+	final result = read(expression.getUnaryFixity() == HxUnaryFixity.Postfix ? oldBinding : nextBinding);
+	// Binding types follow the values they hold; see `steppedType`.
 	return TypedExpr.block([
 		capture(arrayBinding, array),
 		capture(indexBinding, index),
 		capture(oldBinding, place),
-		capture(nextBinding, TypedExpr.assign(place, next, elementType, position)),
-		read(expression.getUnaryFixity() == HxUnaryFixity.Postfix ? oldBinding : nextBinding)
-	], elementType, position);
+		capture(nextBinding, TypedExpr.assign(place, next, stepType, position)),
+		result
+	], result.getType(), position);
 }
 
 /**
