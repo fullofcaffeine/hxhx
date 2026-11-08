@@ -644,7 +644,7 @@ class M14CompilationServerDependencyObservationIntegrationTest {
 			"import Api;",
 			"class Main {",
 			"  public static function main():Void {",
-			"    var answer:Int = Api.answer();",
+			"    var answer = Api.answer();",
 			"  }",
 			"}"
 		].join("\n"));
@@ -718,6 +718,14 @@ class M14CompilationServerDependencyObservationIntegrationTest {
 			final signatureWire = wire(compile(sourceCache, dependencyCatalog, args));
 			assertTrue(reportInt(signatureWire, "hxhx_server_report.dependency_public_changes") == 1, "return-type edit should change Api's public interface");
 			assertTrue(signatureWire.indexOf(".module=Main") >= 0, "public-interface edit should predict that Main must be checked again");
+
+			// A caller that wrote the old result type no longer type-checks after the edit.
+			final inferredMain = File.getContent(mainPath);
+			File.saveContent(mainPath, StringTools.replace(inferredMain, "var answer = Api.answer();", "var answer:Int = Api.answer();"));
+			final rejected = compile(sourceCache, dependencyCatalog, args);
+			assertTrue(rejected.isError, "a caller's written Int local should reject Api's String result");
+			assertTrue(wire(rejected).indexOf("String should be Int") >= 0, "the rejected caller should report Haxe's message: " + wire(rejected));
+			File.saveContent(mainPath, inferredMain);
 
 			verifyFailedPublication(dependencyCatalog);
 			verifyOutputFailurePublication(dependencyCatalog, root);

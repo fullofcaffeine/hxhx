@@ -3337,9 +3337,12 @@ class TyperStage {
 		supplied result must fit the expected result unless that result is Void.
 		Other values use the ordinary overload score.
 	 */
-	static function functionValueFits(expected:TyType, actual:TyType, index:TyperIndex):Bool {
-		if (!expected.isFunction() || !actual.isFunction() || expected.isNullable() || actual.isNullable())
+	static function functionValueFits(expected:TyType, actual:TyType, index:TyperIndex, depth:Int = 0):Bool {
+		// Recursive function typedefs unfold forever; the bound hands them to the ordinary score.
+		if (depth > 16 || !expected.isFunction() || !actual.isFunction() || expected.isNullable() || actual.isNullable())
 			return overloadArgScore(expected, actual, [], index) >= 0;
+		if (expected.getSemanticKey() == actual.getSemanticKey())
+			return true;
 		final wanted = expected.getFunctionParameters();
 		final supplied = actual.getFunctionParameters();
 		if (wanted.length != supplied.length)
@@ -3349,7 +3352,7 @@ class TyperStage {
 				return overloadArgScore(expected, actual, [], index) >= 0;
 			if (wanted[position].isOptional && !supplied[position].isOptional)
 				return false;
-			if (!functionValueFits(supplied[position].type, wanted[position].type, index))
+			if (!functionValueFits(supplied[position].type, wanted[position].type, index, depth + 1))
 				return false;
 		}
 		final wantedResult = expected.getFunctionReturn();
@@ -3357,7 +3360,7 @@ class TyperStage {
 		return wantedResult == null
 			|| suppliedResult == null
 			|| wantedResult.isVoid()
-			|| functionValueFits(wantedResult, suppliedResult, index);
+			|| functionValueFits(wantedResult, suppliedResult, index, depth + 1);
 	}
 
 	/**

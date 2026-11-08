@@ -40,3 +40,6 @@ POS||static function count():Int return 3; static function main() { var f:Float 
 NEG|String should be R|static function f():R return "s"; static function main() { f(); }|typedef R = Int;
 NEG|String should be Count|static function main() { var c:Count = "s"; }|typedef Count = Int;
 POS||static function f():R return 3; static function main() { var c:R = f(); var d:Float = c; }|typedef R = Int;
+POS||static function s(x:Int):Step return s; static function main() { var g:Step = s; var h:Int->Step = s; var o:Other = s; }|typedef Step = Int->Step; typedef Other = Int->Other;
+NEG|String should be Int|static function s(x:Int):Step return s; static function main() { var g:String->Step = s; }|typedef Step = Int->Step;
+POS||static function s(x:Int):Step return s; static function main() { var f = s; var g:Step = f; var other:Other = f; }|typedef Step = Int->Step; typedef Other = Int->Other;
