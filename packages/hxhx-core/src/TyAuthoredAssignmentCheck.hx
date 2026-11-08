@@ -29,6 +29,8 @@
 	  prove incompatible.
 **/
 class TyAuthoredAssignmentCheck {
+	static inline final MAX_FUNCTION_DEPTH = 16;
+
 	/** Throw the upstream diagnostic when `actual` provably cannot enter `expected`. */
 	public static function check(expected:Null<TyType>, actual:Null<TyType>, untypedContext:Bool, filePath:String, position:HxPos, ?writtenExpected:String,
 			?writtenExpectedLater:Void->Null<String>):Void {
@@ -50,7 +52,11 @@ class TyAuthoredAssignmentCheck {
 		destination as written, like upstream: `String should be R` for
 		`typedef R = Int`. `writtenExpected` is that written type, when known.
 	 */
-	static function describe(expected:TyType, actual:TyType, ?writtenExpected:String):Null<String> {
+	static function describe(expected:TyType, actual:TyType, ?writtenExpected:String, depth:Int = 0):Null<String> {
+		// A recursive typedef such as `typedef Step = Int->Step` unfolds forever. Equal
+		// types stop here; unequal recursive types stop at the limit, unproven.
+		if (depth > MAX_FUNCTION_DEPTH || expected.getSemanticKey() == actual.getSemanticKey())
+			return null;
 		final expectedText = writtenExpected == null
 			|| StringTools.trim(writtenExpected).length == 0 ? expected.getDisplay() : StringTools.trim(writtenExpected);
 		final wanted = TyAliasExpansion.reveal(expected);
@@ -65,11 +71,11 @@ class TyAuthoredAssignmentCheck {
 			return actual.getDisplay() + " should be " + expectedText;
 		}
 		if (wanted.isFunction() && supplied.isFunction() && !wanted.isNullable() && !supplied.isNullable())
-			return describeFunction(wanted, supplied, actual.getDisplay() + " should be " + expectedText);
+			return describeFunction(wanted, supplied, actual.getDisplay() + " should be " + expectedText, depth);
 		return null;
 	}
 
-	static function describeFunction(wanted:TyType, supplied:TyType, wholeMismatch:String):Null<String> {
+	static function describeFunction(wanted:TyType, supplied:TyType, wholeMismatch:String, depth:Int):Null<String> {
 		final wantedArguments = wanted.getFunctionArguments();
 		final suppliedArguments = supplied.getFunctionArguments();
 		final wantedResult = wanted.getFunctionReturn();
@@ -88,7 +94,7 @@ class TyAuthoredAssignmentCheck {
 			if (wanted.getFunctionParameters()[index].isOptional != supplied.getFunctionParameters()[index].isOptional)
 				return null;
 			// Arguments flow from the caller of the expected type into the supplied function.
-			final argument = describe(suppliedArguments[index], wantedArguments[index]);
+			final argument = describe(suppliedArguments[index], wantedArguments[index], null, depth + 1);
 			if (argument != null)
 				return argument;
 		}
@@ -96,7 +102,7 @@ class TyAuthoredAssignmentCheck {
 			return null;
 		if (suppliedResult.isVoid())
 			return wholeMismatch;
-		return describe(wantedResult, suppliedResult);
+		return describe(wantedResult, suppliedResult, null, depth + 1);
 	}
 
 	/** Int, Float, String, or Bool, not wrapped in Null. */
