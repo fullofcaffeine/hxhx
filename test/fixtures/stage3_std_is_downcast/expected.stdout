@@ -11,5 +11,6 @@ narrowed square true
 missing true
 downcast-null true
 downcast-interface square true
+downcast-dynamic square null tile null
 instance tile null
 order true null tile is,downcast,downcast-hit
