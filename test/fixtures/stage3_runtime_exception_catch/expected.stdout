@@ -32,3 +32,15 @@ full path: Failure("get_full_path")
 set cwd: No such file or directory(chdir, .tmp/stage3_runtime_exception_catch_scratch/missing-dir)
 create existing file: ok
 create below file: Not a directory(mkdir, .tmp/stage3_runtime_exception_catch_scratch/present.txt/sub)
+create below file with trailing slash: Not a directory(mkdir, .tmp/stage3_runtime_exception_catch_scratch/present.txt/sub)
+rethrown string: plain
+rethrown runtime failure: Could not read file .tmp/stage3_runtime_exception_catch_scratch/missing.txt
+rethrown int: 4
+rethrown float: 1.5
+rethrown bool: true
+rethrown enum: green 2
+rethrown through Dynamic: as dynamic
+rethrown twice: twice
+rethrown subclass: local failure
+replacement: new from replaced, previous replaced
+after rethrows

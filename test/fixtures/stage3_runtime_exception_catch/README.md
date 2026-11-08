@@ -26,6 +26,10 @@ a user subclass of `haxe.Exception` caught as `haxe.Exception`, as its own
 type, and by an outer handler after a non-matching inner one. It also uses
 `try` as a value (`final x = try read() catch (e:Dynamic) "fallback";`).
 
+The fixture also rethrows from `catch (e:haxe.Exception)`. The outer handler
+must see the original value, not the exception object that wrapped it, for a
+thrown `String`, `Int`, `Float`, `Bool`, or enum and for a runtime failure.
+
 A statement `try` whose body is not a block (`try f() catch (e:String) g();`)
 still loses its handlers in the parser. That is owned by `haxe_ocaml-2aql5`.
 

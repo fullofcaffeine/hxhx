@@ -105,7 +105,7 @@
     {
       "module": "HxFileSystem",
       "scope": "application",
-      "files": [{ "path": "HxFileSystem.ml", "sha256": "a5e06ba24cbb81b6db22ffaaa929894eda80de24470dbfc74b8133f777d6c3dd" }],
+      "files": [{ "path": "HxFileSystem.ml", "sha256": "655182f0acda42144c0f3fb45c0354a4cf34c9fc92bb19e525ff394da7122895" }],
       "dependencies": ["Date", "HxArray"],
       "duneLibraries": ["unix"],
       "profiles": ["metal", "portable"],
