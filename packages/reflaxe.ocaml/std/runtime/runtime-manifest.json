@@ -24,7 +24,7 @@
     {
       "module": "HxAnon",
       "scope": "application",
-      "files": [{ "path": "HxAnon.ml", "sha256": "3afce8b63469f742fe5627a8146bcf8c6d6c420b933aac218e24fa4776da4c4f" }],
+      "files": [{ "path": "HxAnon.ml", "sha256": "44dca608eee9d204452d36abee746dc5215f0ab8b888c4bfc502ec2a847f6a9a" }],
       "dependencies": ["HxArray", "HxIterator", "HxRuntime", "HxString"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],

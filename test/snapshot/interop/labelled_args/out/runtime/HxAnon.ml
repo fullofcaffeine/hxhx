@@ -134,8 +134,10 @@ let create () : Obj.t =
 let anon_of_obj (o : Obj.t) : t =
   Obj.obj (Obj.field o 1)
 
-(* Public fields, deletion, and copying cannot install or replace this value.
-   Retaining it in the object gives it the same ordinary GC lifetime. *)
+(* Public fields and deletion cannot install or replace this value. `copy`
+   passes the source's value to the new object, because upstream `--interp`
+   keeps a class instance's class in `Reflect.copy`. Retaining it in the object
+   gives it the same ordinary GC lifetime. *)
 let class_value (o : Obj.t) : Obj.t =
   if is_anon o then (anon_of_obj o).class_value else HxRuntime.hx_null
 
@@ -235,7 +237,8 @@ let copy (o : Obj.t) : Obj.t =
     o
   else
     let src = anon_of_obj o in
-    (* A copied class instance keeps its class. *)
+    (* A copied class instance keeps its class; plain anonymous objects carry
+       null here, so their copies stay classless. *)
     let out = create_with_class src.class_value in
     let dst = anon_of_obj out in
     if src.shape.size > 0 then (

@@ -6,7 +6,7 @@
       "model": "checked-runtime-source-selection-v1",
       "status": "complete",
       "message": "Every packaged runtime source is manifest-checked, and the selected runtime closure is revisioned for source replay.",
-      "revision": "sha256:30540da089b45f87439356fdfae31a2e8273ea8615b9a99e2ec4ea6c6306fda7"
+      "revision": "sha256:06bae2e26d6e86192a7f00ada9485f7e68cd8b4cdc7a58a5e012e83cf2b1153c"
     },
     "nativeDependencies": {
       "model": "normalized-native-source-declarations-v2",
@@ -28,11 +28,11 @@
   "summary": {
     "entryCount": 66,
     "volatileEvidenceEntryCount": 0,
-    "sourceBundleRevision": "sha256:829196f4786be3cb9983736e1b243ea1b854f35c82eddc3155cfe9f3fa4da489",
+    "sourceBundleRevision": "sha256:f4973e97a527b2adabe98c2ba2a07e9e0ece3e8b6ef649ada4e61f72835de6bf",
     "completeForSourceBundle": true,
     "sourceBundleEntryCount": 62,
     "blockers": [],
-    "artifactSetRevision": "sha256:6600b2247c7a6ed0ef915eb0b0228353c87d7b7cfd1718bce670dbfd93acadb6"
+    "artifactSetRevision": "sha256:7421180a0c4c8ff32b16b5e7d9dd2bb1f480eee89c5a7cbfa93756d71d69a917"
   },
   "entries": [
     {
@@ -555,7 +555,7 @@
       "sourcePath": null,
       "stability": "stable",
       "path": "ocaml_runtime_requirement_report.json",
-      "sha256": "sha256:809672eba6d862b82a22254bdd992dda37efce05778ac91d4e981ef4d4098bb1",
+      "sha256": "sha256:ba154e0f21e2d59ff2c41ad7acb786c6f275a6bf38fe6c62b92709505674b842",
       "kind": "compiler-report",
       "profileEligibility": [
         "metal",
@@ -571,7 +571,7 @@
       "sourcePath": null,
       "stability": "stable",
       "path": "ocaml_runtime_selection_shadow_report.json",
-      "sha256": "sha256:f20c72760726f72b49e3152195e484a8e60a9e40e1bdb43f6e81a76cf686cf1c",
+      "sha256": "sha256:980eb9c4d9357495443039f0c4141acaf85ceac38f55c62efe1383e85285d969",
       "kind": "compiler-report",
       "profileEligibility": [
         "metal",
@@ -635,14 +635,14 @@
       "sourcePath": "std/runtime/HxAnon.ml",
       "stability": "stable",
       "path": "runtime/HxAnon.ml",
-      "sha256": "sha256:3afce8b63469f742fe5627a8146bcf8c6d6c420b933aac218e24fa4776da4c4f",
+      "sha256": "sha256:44dca608eee9d204452d36abee746dc5215f0ab8b888c4bfc502ec2a847f6a9a",
       "kind": "runtime-source",
       "profileEligibility": [
         "metal",
         "portable"
       ],
       "owner": "runtime-copier",
-      "bytes": 9044,
+      "bytes": 9250,
       "sourceKind": "copied-runtime",
       "license": "MIT",
       "includeInSourceBundle": true

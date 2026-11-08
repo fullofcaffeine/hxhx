@@ -13,7 +13,9 @@ The observer has a 30-second runtime limit.
 The observer checks lookup after ordinary, nested and anonymous-cache mutation,
 GC requests, physical distinction, replacement, map copying, removal and clear.
 It checks fresh headers for empty records, anonymous copies and concurrent native
-allocations. It also checks false markers, descriptor-only records, deliberate
+allocations. A copy of a class-backed object keeps its class, as upstream
+`--interp` does for `Reflect.copy` of a class instance; a plain anonymous copy
+stays classless. It also checks false markers, descriptor-only records, deliberate
 hash collisions and mixed managed/opaque keys. A normal lazy-value force changes
 an opaque key's native tag while its map association must remain accessible.
 
