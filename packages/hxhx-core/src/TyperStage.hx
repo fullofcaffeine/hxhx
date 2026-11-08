@@ -240,6 +240,28 @@ class TyperStage {
 		return identity != null && identity.getCanonicalName() == "Any" && index.getAbstractByFullName("Any") != null;
 	}
 
+	/**
+		Kind errors for `place op= value` without a declared abstract operator.
+
+		When the value is an abstract acting through its `to` primitive (`i |= FA` for
+		`enum abstract Flags(Int) to Int`), the operation is typed as upstream types it.
+		An abstract place without a declared operator is still rejected by the operator
+		lookup: it would need a write-back through `from`, which is not lowered yet
+		(haxe_ocaml-efodd). Otherwise the primitive Int/Float rules apply.
+	**/
+	static function compoundKindFailure(op:String, place:TyType, value:TyType, index:TyperIndex):Null<String> {
+		final base = HxBinaryOperatorTools.baseOperator(op);
+		// An abstract place reaches here only when its own operator lookup already
+		// passed; the `to` rule covers an abstract value with a primitive place.
+		final viewed = base == null
+			|| TyAbstractPrimitiveOperation.view(index, place) != null ? null : TyAbstractPrimitiveOperation.operation(index, base, place, value);
+		if (viewed == null)
+			return TyCompoundAssignmentKinds.primitive(op, place, value);
+		if (viewed.failure != null)
+			return viewed.failure;
+		return TyCompoundAssignmentKinds.primitive(op, place, viewed.result);
+	}
+
 	static function nominalInfoForType(index:TyperIndex, type:TyType):Null<TyNominalInfo> {
 		if (index == null || type == null)
 			return null;
@@ -818,6 +840,7 @@ class TyperStage {
 					case EIdent(name) | EEnumValue(name) if (lexicalEnvironment.resolveSymbol(name) == null): final current = context.currentClass(); (current == null
 							|| current.fieldInfo(name) == null) && (context.importedStaticField(name) == field
 							|| context.moduleEnumConstructorField(name) == field
+							|| context.moduleEnumAbstractValueField(name) == field
 							|| context.expectedEnumConstructorField(name, expected) == field);
 					case _: false;
 				};
@@ -3074,7 +3097,10 @@ class TyperStage {
 					} else {
 						final contextual = ctx.expectedEnumConstructorField(name, expected);
 						final enumField = contextual == null ? ctx.moduleEnumConstructorField(name) : contextual;
-						enumField != null ? enumField : ctx.importedStaticField(name);
+						final imported = enumField != null ? enumField : ctx.importedStaticField(name);
+						// A bare value of an enum abstract in this module, such as `T1` for
+						// `enum abstract ET(Int) to Int { var T1 = 1; }`, is that abstract's field.
+						imported != null ? imported : ctx.moduleEnumAbstractValueField(name);
 					}
 				}
 			case EField(object, field):
@@ -3520,8 +3546,6 @@ class TyperStage {
 						// Runtime class values were resolved above. Preserve the existing enum
 						// constructor path until its separate typed-enum owner replaces it.
 						switch (expr) {
-							// A bare enum-abstract value of this module has that abstract's type.
-							case EEnumValue(name) if (ctx.moduleEnumAbstractValueField(name) != null): ctx.moduleEnumAbstractValueField(name).getType();
 							case EEnumValue(_): TyType.fromHintText("String");
 							// Only an unresolved host name under authored untyped syntax
 							// gets a retained inference occurrence. Known lexical/member
@@ -4269,7 +4293,7 @@ class TyperStage {
 						};
 						// Inside `untyped`, upstream does not report these kind errors.
 						final kindFailure = bound == null
-							&& !scope.isUntypedContext() ? TyCompoundAssignmentKinds.primitive(op, leftType, rightType) : null;
+							&& !scope.isUntypedContext() ? compoundKindFailure(op, leftType, rightType, ctx.getIndex()) : null;
 						if (kindFailure != null)
 							throw new TyperError(ctx.getFilePath(), pos, kindFailure);
 						if (bound != null) {
@@ -4300,6 +4324,10 @@ class TyperStage {
 						final ta = inferExprType(a, scope, ctx, pos);
 						final tb = inferExprType(b, scope, ctx, pos);
 						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), ta, tb, op, ctx.getFilePath(), pos);
+						// Without a declared operator, one abstract operand may act through its `to` primitive.
+						final viewed = bound == null ? TyAbstractPrimitiveOperation.operation(ctx.getIndex(), op, ta, tb) : null;
+						if (viewed != null && viewed.failure != null)
+							throw new TyperError(ctx.getFilePath(), pos, viewed.failure);
 						if (bound != null) {
 							bound.getOperatorInfo().getResultType();
 						} else {
@@ -4311,7 +4339,7 @@ class TyperStage {
 								filePath: ctx.getFilePath(),
 								position: pos
 							});
-							(ta.getDisplay() == "Bool" && tb.getDisplay() == "Bool") ? TyType.fromHintText("Bool") : TyType.fromHintText("Int");
+							viewed != null ? viewed.result : (ta.getDisplay() == "Bool" && tb.getDisplay() == "Bool") ? TyType.fromHintText("Bool") : TyType.fromHintText("Int");
 						}
 					case "+":
 						final operands = TyAdditionOperandInference.constrain({
@@ -4327,8 +4355,14 @@ class TyperStage {
 						final ta = operands.left;
 						final tb = operands.right;
 						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), ta, tb, op, ctx.getFilePath(), pos);
+						// Without a declared operator, one abstract operand may act through its `to` primitive.
+						final viewed = bound == null ? TyAbstractPrimitiveOperation.operation(ctx.getIndex(), op, ta, tb) : null;
+						if (viewed != null && viewed.failure != null)
+							throw new TyperError(ctx.getFilePath(), pos, viewed.failure);
 						if (bound != null) {
 							bound.getOperatorInfo().getResultType();
+						} else if (viewed != null) {
+							viewed.result;
 						} else if (ta.getDisplay() == "String" || tb.getDisplay() == "String") {
 							TyType.fromHintText("String");
 						} else if (ta.isDynamic() || tb.isDynamic()) {
@@ -4345,7 +4379,11 @@ class TyperStage {
 						final ta = inferExprType(a, scope, ctx, pos);
 						final tb = inferExprType(b, scope, ctx, pos);
 						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), ta, tb, op, ctx.getFilePath(), pos);
-						if (bound != null) bound.getOperatorInfo().getResultType(); else {
+						// Without a declared operator, one abstract operand may act through its `to` primitive.
+						final viewed = bound == null ? TyAbstractPrimitiveOperation.operation(ctx.getIndex(), op, ta, tb) : null;
+						if (viewed != null && viewed.failure != null)
+							throw new TyperError(ctx.getFilePath(), pos, viewed.failure);
+						if (bound != null) bound.getOperatorInfo().getResultType(); else if (viewed != null) viewed.result; else {
 							final integer = op == "/" ? null : TyNullableIntegerResult.result(ta, tb);
 							final unified = integer == null ? TyType.unify(ta, tb) : integer;
 							// Haxe's `/` always produces Float, even for two Int operands.

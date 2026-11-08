@@ -26,6 +26,8 @@ class M14PatternCompoundKindsTest {
 		+ "class Box { public var x:Int = 1; public var f:Float = 1.5; public var i32:haxe.Int32 = 1; public function new() {} }\n"
 		+ "enum abstract EB(Int) from Int { var Eins = 1; var Zwei = 2; }\n"
 		+ "abstract TO(Int) to Int {}\n"
+		+ "abstract S(String) from String to String {}\n"
+		+ "enum abstract ETo(Int) to Int { var TOne = 1; var TTwo = 2; }\n"
 		+ "abstract M(Float) from Int to Float {}\n"
 		+ "abstract N(Null<Int>) from Int {}\n"
 		+ "class H { public static function half(i:Int) return i / 2; }\n";
@@ -82,6 +84,9 @@ class M14PatternCompoundKindsTest {
 			{name: "BareEnumAbstractInt", body: "var e = One; switch (e) { case 1: case _: }", diagnostic: "Int should be EA"},
 			// Upstream names a nullable place's own type for a bitwise operator.
 			{name: "NullFloatBitwise", body: "var n:Null<Float> = 1.5; n |= 1;", diagnostic: "Null<Float> should be Int"},
+			// An operator-less abstract value acts through its `to` type.
+			{name: "ToStringAbstractPlusInt", body: "var s:S = \"a\"; var x = s + 1;", diagnostic: "S should be Int"},
+			{name: "ToFloatAbstractOperandInt", body: "var m:M = 1; var x = m + 1;", diagnostic: "M should be Int"},
 			// A `to` type is no path for a constant.
 			{name: "ToOnlyAbstractInt", body: "var t:TO = cast 1; switch (t) { case 1: case _: }", diagnostic: "Int should be TO"},
 			// A constant covers the enum-abstract member with the same value; coverage names the rest.
@@ -402,7 +407,10 @@ class M14PatternCompoundKindsTest {
 			"untyped { var i:Int = 1; i |= 1.5; }",
 			"untyped { var i:Int = 1; i += 1.5; }",
 			"untyped { var i:Int = 1; i /= 2; }",
-			"var i:Int = 3; var r = i / 2; r += 0.5;"
+			"var i:Int = 3; var r = i / 2; r += 0.5;",
+			"var x = TOne + 1; var y = TOne * 1.5; var i = 0; i += TOne; i |= TTwo; var f = 1.5; f += TOne;",
+			"var s:S = \"a\"; var t = s + \"c\"; var u = \"n=\" + TOne;",
+			"var m:M = 1; var x = m + 1.5;"
 		].map(body -> "{ " + body + " }"));
 		Sys.println("PATTERN_COMPOUND_KINDS:PASS");
 	}
