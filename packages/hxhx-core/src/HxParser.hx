@@ -1574,7 +1574,8 @@ class HxParser {
 					parts.push(keywordText(k));
 					bump();
 				case TString(s, _):
-					parts.push('"' + s + '"');
+					// The hint stores the decoded value, so re-escape what would end the quotes.
+					parts.push('"' + StringTools.replace(StringTools.replace(s, "\\", "\\\\"), '"', '\\"') + '"');
 					bump();
 				case TInt(v):
 					parts.push(cur.numericText != null ? cur.numericText + (cur.numericSuffix == null ? "" : cur.numericSuffix) : Std.string(v));

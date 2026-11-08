@@ -1,7 +1,9 @@
 /** A constructor type parameter that an already supplied argument has fixed, for the "expected" list. */
 private typedef TyBoundDisplayParameter = {
 	final parameter:TyTypeParameterId;
-	final type:TyType;
+
+	/** The fixed type; null when a `null` argument fixed only nullability, printed `Null<Unknown<0>>`. */
+	final type:Null<TyType>;
 };
 
 private typedef TyMethodCallResolution = {
@@ -407,14 +409,19 @@ class TyperStage {
 
 	/** Record what a supplied argument fixes in a still-open declared type: `v:T` given `1` fixes `T` to `Int`. **/
 	static function bindSuppliedParameter(declared:TyType, supplied:TyType, parameters:Array<TyTypeParameterId>, bound:Array<TyBoundDisplayParameter>):Void {
-		if (declared.isNullable())
+		final suppliedNull = supplied.isNullLiteral();
+		if (declared.isNullable()) {
+			// `null` already fits `Null<T>`, so it says nothing about `T`.
+			if (suppliedNull)
+				return;
 			declared = declared.unwrapNull();
+		}
 		final parameter = declared.getTypeParameterIdentity();
 		if (parameter != null) {
 			if (supplied.isUnknown() || parameters.filter(candidate -> candidate.equals(parameter)).length == 0)
 				return;
 			if (bound.filter(entry -> entry.parameter.equals(parameter)).length == 0)
-				bound.push({parameter: parameter, type: supplied});
+				bound.push({parameter: parameter, type: suppliedNull ? null : supplied});
 			return;
 		}
 		final declaredOwner = declared.getNominalIdentity();
@@ -449,18 +456,21 @@ class TyperStage {
 		function show(type:TyType):String {
 			final parameter = type.getTypeParameterIdentity();
 			if (parameter != null) {
+				function unknown():String {
+					var position = -1;
+					for (known in 0...open.length)
+						if (open[known].equals(parameter))
+							position = known;
+					if (position < 0) {
+						open.push(parameter);
+						position = open.length - 1;
+					}
+					return "Unknown<" + position + ">";
+				}
 				for (entry in bound)
 					if (entry.parameter.equals(parameter))
-						return show(entry.type);
-				var position = -1;
-				for (known in 0...open.length)
-					if (open[known].equals(parameter))
-						position = known;
-				if (position < 0) {
-					open.push(parameter);
-					position = open.length - 1;
-				}
-				return "Unknown<" + position + ">";
+						return entry.type == null ? "Null<" + unknown() + ">" : show(entry.type);
+				return unknown();
 			}
 			if (type.isNullable())
 				return "Null<" + show(type.unwrapNull()) + ">";
