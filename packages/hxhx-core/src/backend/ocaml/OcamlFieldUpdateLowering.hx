@@ -141,6 +141,13 @@ private function lowerIndexedStep(expression:TypedExpr, operand:TypedExpr, alloc
 	], result.getType(), position);
 }
 
+private function isBitwiseAssignment(assignment:String):Bool {
+	return switch assignment {
+		case "|=" | "&=" | "^=" | "<<=" | ">>=" | ">>>=": true;
+		case _: false;
+	};
+}
+
 /**
 	Capture the receiver and old value before the RHS, then return the written value.
 	Admits String `+=` appends, Int `+=`, `-=`, `*=`, `%=` and bitwise
@@ -159,13 +166,18 @@ private function lowerIndexedStep(expression:TypedExpr, operand:TypedExpr, alloc
 	Whether a compound update that this pass did not admit would otherwise reach
 	the emitter's `(Obj.magic 0)` placeholder, silently dropping the store.
 
-	Only arithmetic `+=`, `-=`, `*=`, `/=`, `%=` count, on a field of an
-	anonymous structure holding `Int`, `Float`, `String`, or a nullable of those,
-	or on a `Float` instance field. Bitwise compounds and abstract-typed fields
-	keep their existing owners.
+	Arithmetic `+=`, `-=`, `*=`, `/=`, `%=` count on a field of an anonymous
+	structure holding `Int`, `Float`, `String`, or a nullable of those, and on a
+	`Float` instance field. The six bitwise operators count on the same
+	anonymous-structure fields only. Abstract-typed fields are left alone because
+	operator overloads have their own lowering. Bitwise updates on instance
+	fields are not refused here: they are still dropped, as a known gap.
  */
 private function isRefusedFieldCompound(assignment:String, valueType:TyType, structural:Bool):Bool {
-	if (assignment != "+=" && assignment != "-=" && assignment != "*=" && assignment != "/=" && assignment != "%=")
+	final bitwise = isBitwiseAssignment(assignment);
+	if (!bitwise && assignment != "+=" && assignment != "-=" && assignment != "*=" && assignment != "/=" && assignment != "%=")
+		return false;
+	if (bitwise && !structural)
 		return false;
 	final inner = valueType.isNullable() ? valueType.unwrapNull() : valueType;
 	final key = inner.getSemanticKey();
@@ -174,6 +186,24 @@ private function isRefusedFieldCompound(assignment:String, valueType:TyType, str
 	return valueType.getSemanticKey() == "primitive:Float";
 }
 
+/**
+	Capture the receiver and old value before the RHS, then return the written value.
+
+	Admits these updates on a mutable instance field or on a field of an anonymous
+	structure:
+
+	- String `+=` appends;
+	- Int `+=`, `-=`, `*=`, `%=` with an Int operand, such as `state.index += value.length`;
+	- Float `+=`, `-=`, `*=`, `/=`, `%=` with an Int or Float operand, such as
+	  `h.ratio -= 0.5` or `o.total += count()`;
+	- on an anonymous-structure Int field only, the bitwise `|=`, `&=`, `^=`,
+	  `<<=`, `>>=`, `>>>=` with an Int operand, such as `flags.mask |= 2`.
+
+	Plain-storage compound updates on those places that are still unsupported,
+	such as a `Dynamic` right operand, stop compilation with a named error
+	(`isRefusedFieldCompound`). Other places, types, and operators keep their
+	existing owners.
+ */
 private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTemporaryAllocator):TypedExpr {
 	final children = expression.getExpressions();
 	if (children.length != 2)
@@ -226,7 +256,13 @@ private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTe
 		&& (field.getPropertySet() == "" || field.getPropertySet() == "default");
 	if ((operand.getTag() != FieldRead && operand.getTag() != NameRead) || (!structural && !plainInstanceField))
 		return expression;
-	if ((!stringAppend && !intUpdate && !floatUpdate) || expression.getType().getSemanticKey() != key) {
+	// Bitwise operators require an exact Int operand: `old op right` is only emitted
+	// through the Int runtime when both operands are concrete Ints.
+	final bitwiseUpdate = structural
+		&& isBitwiseAssignment(assignment)
+		&& key == "primitive:Int"
+		&& rightType.getSemanticKey() == "primitive:Int";
+	if ((!stringAppend && !intUpdate && !floatUpdate && !bitwiseUpdate) || expression.getType().getSemanticKey() != key) {
 		if (isRefusedFieldCompound(assignment, operand.getType(), structural))
 			throw "unsupported native OCaml compound assignment "
 				+ assignment

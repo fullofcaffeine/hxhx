@@ -15,7 +15,8 @@ import sys.io.File;
 	- `stage3_field_compound_updates` covers statement and value positions,
 	  Int and Float right operands, receivers and right operands that record
 	  their evaluation order, a right operand that updates the same field, and
-	  a field declared with a type parameter.
+	  a field declared with a type parameter. Anonymous Int fields also cover the
+	  six bitwise compound operators.
 	- The native executable must print exactly what upstream Haxe 4.3.7 prints.
 **/
 class M14Stage3FieldCompoundUpdatesTest {
@@ -46,6 +47,7 @@ class M14Stage3FieldCompoundUpdatesTest {
 		expectRefused("class H { public var f:Float = 1.5; public function new() {} }\n"
 			+ "class Main { static function main() { final h = new H(); final d:Dynamic = 2; h.f += d; } }",
 			source, "`f`");
+		expectRefused("class Main { static function main() { final o = {n: 1}; final d:Dynamic = 2; o.n |= d; } }", source, "`n`");
 		Sys.println("M14_STAGE3_FIELD_COMPOUND_UPDATES:PASS");
 	}
 
