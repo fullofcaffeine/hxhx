@@ -6,7 +6,7 @@
       "model": "checked-runtime-source-selection-v1",
       "status": "complete",
       "message": "Every packaged runtime source is manifest-checked, and the selected runtime closure is revisioned for source replay.",
-      "revision": "sha256:d18c2cab12ca8baef15a1b9dad4fde6cbcd8650b6f6d0175549b67b66f0ef2a1"
+      "revision": "sha256:8632ce1624646eb928f93b2ec66092efd1d3eda84ef44b0e77471fba6d53a3b1"
     },
     "nativeDependencies": {
       "model": "normalized-native-source-declarations-v2",
@@ -28,11 +28,11 @@
   "summary": {
     "entryCount": 66,
     "volatileEvidenceEntryCount": 0,
-    "sourceBundleRevision": "sha256:0f24e61f6bcab28efcdca521035fdecff63d927611d5d796750ecf042f6759cb",
+    "sourceBundleRevision": "sha256:db484d84f74d2e4e61f63cfcbeecf50081e3d50630f903aa89fc98bb32c7a52d",
     "completeForSourceBundle": true,
     "sourceBundleEntryCount": 62,
     "blockers": [],
-    "artifactSetRevision": "sha256:1f9c69bdf1fc18121476b7121e4b5aa5d1ab30187b64a34af96db6106adbd6ea"
+    "artifactSetRevision": "sha256:8a0be555fed6eeaf5805874b53e3c93e698762fc386e7e2d4287d4a2eb15f421"
   },
   "entries": [
     {
@@ -555,7 +555,7 @@
       "sourcePath": null,
       "stability": "stable",
       "path": "ocaml_runtime_requirement_report.json",
-      "sha256": "sha256:a3d6aeb88e8331c05cc8e2fe9194157b9de5085ae9fe45e224a499db1c7ac35d",
+      "sha256": "sha256:7515cbe5d021cada56895f9f2390e004c992c2a92f8e29faa440b41d2eb1802c",
       "kind": "compiler-report",
       "profileEligibility": [
         "metal",
@@ -571,14 +571,14 @@
       "sourcePath": null,
       "stability": "stable",
       "path": "ocaml_runtime_selection_shadow_report.json",
-      "sha256": "sha256:44dd3c48e36cfee295bf8807befe2cf089d6ed16815915da3d3f9c578823a3cc",
+      "sha256": "sha256:f1b6f200922a9be20cf5adb83349cd39a2c58709a92c3a75b43eecd7d6983a8b",
       "kind": "compiler-report",
       "profileEligibility": [
         "metal",
         "portable"
       ],
       "owner": "runtime-copier",
-      "bytes": 121291,
+      "bytes": 121293,
       "sourceKind": "generated",
       "license": "generated-output",
       "includeInSourceBundle": false
@@ -875,14 +875,14 @@
       "sourcePath": "std/runtime/HxReflect.ml",
       "stability": "stable",
       "path": "runtime/HxReflect.ml",
-      "sha256": "sha256:21d5ed38bb8c4a5de47f184fd2f8750f01e703aa9c29dd08ae5988e4949e5e6e",
+      "sha256": "sha256:aefe00df7c264e7f1d986ab30d471b7f368ecb5d3a4349b1dc0501224d314f4b",
       "kind": "runtime-source",
       "profileEligibility": [
         "metal",
         "portable"
       ],
       "owner": "runtime-copier",
-      "bytes": 7657,
+      "bytes": 11368,
       "sourceKind": "copied-runtime",
       "license": "MIT",
       "includeInSourceBundle": true
