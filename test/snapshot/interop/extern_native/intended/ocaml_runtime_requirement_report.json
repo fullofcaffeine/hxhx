@@ -1,7 +1,7 @@
 {
   "model": "recorded-ocaml-runtime-requirements",
   "runtimeVersion": "1",
-  "runtimeSourceRevision": "sha256:d71fc7b18c050d35dba8a10a9a6081025a2d40f22601bfa21af0f70eb89cbe40",
+  "runtimeSourceRevision": "sha256:7bfe871a4723800b9e08120e7afb8a0f0e274aa610867826132d1957c7d77398",
   "compilerObservationGranularity": "module-name-only",
   "runtimeSources": [
     {
@@ -100,8 +100,8 @@
       "files": [
         {
           "path": "HxDynamic.ml",
-          "sha256": "sha256:6195c08972146061d8cc50408de2bcc8b6fa04667f538f108b9ed0f453ebc39a",
-          "bytes": 8538
+          "sha256": "sha256:b1c4a0c6584d4a1571476011f61efb1631e264c679147ac3a6eeee2d6a817771",
+          "bytes": 8550
         }
       ],
       "profiles": [
@@ -198,8 +198,8 @@
       "files": [
         {
           "path": "HxRuntime.ml",
-          "sha256": "sha256:cf93455d87ba06d275143f5a598e76e36b388d358bf4ac1771cdf86a6da2515c",
-          "bytes": 8725
+          "sha256": "sha256:8ae7d5482aaa4cb7560a9edb737380340d9857abe8234e97deb6e86106be029f",
+          "bytes": 10789
         }
       ],
       "profiles": [
@@ -288,7 +288,7 @@
     "HxString",
     "HxType"
   ],
-  "requirementRevision": "sha256:97aa07509ed06fa800123985bf8da7fd460feaa35bb2c8e55f21970cd77eeb31",
+  "requirementRevision": "sha256:9bb7f70ba54229220ef463ae043270b5e5c144e0c49345b6646ea23809021139",
   "schemaVersion": 5,
   "selectionMode": "full",
   "authorityStatus": "partial",
@@ -7770,7 +7770,7 @@
       "sourceKind": "representation-decision"
     },
     {
-      "implementationFeature": "haxe-static-string-conversion-v2",
+      "implementationFeature": "haxe-static-string-conversion-v3",
       "subject": {
         "id": "String -> String",
         "kind": "haxe-type"
@@ -7796,7 +7796,7 @@
       "sourceKind": "haxe-expression"
     },
     {
-      "implementationFeature": "haxe-static-string-conversion-v2",
+      "implementationFeature": "haxe-static-string-conversion-v3",
       "subject": {
         "id": "String -> String",
         "kind": "haxe-type"
@@ -7822,7 +7822,7 @@
       "sourceKind": "haxe-expression"
     },
     {
-      "implementationFeature": "haxe-static-string-conversion-v2",
+      "implementationFeature": "haxe-static-string-conversion-v3",
       "subject": {
         "id": "String -> String",
         "kind": "haxe-type"
@@ -7848,7 +7848,7 @@
       "sourceKind": "haxe-expression"
     },
     {
-      "implementationFeature": "haxe-static-string-conversion-v2",
+      "implementationFeature": "haxe-static-string-conversion-v3",
       "subject": {
         "id": "String -> String",
         "kind": "haxe-type"
@@ -7874,7 +7874,7 @@
       "sourceKind": "haxe-expression"
     },
     {
-      "implementationFeature": "haxe-static-string-conversion-v2",
+      "implementationFeature": "haxe-static-string-conversion-v3",
       "subject": {
         "id": "String -> String",
         "kind": "haxe-type"
@@ -7900,7 +7900,7 @@
       "sourceKind": "haxe-expression"
     },
     {
-      "implementationFeature": "haxe-static-string-conversion-v2",
+      "implementationFeature": "haxe-static-string-conversion-v3",
       "subject": {
         "id": "String -> String",
         "kind": "haxe-type"
@@ -7926,7 +7926,7 @@
       "sourceKind": "haxe-expression"
     },
     {
-      "implementationFeature": "haxe-static-string-conversion-v2",
+      "implementationFeature": "haxe-static-string-conversion-v3",
       "subject": {
         "id": "String -> String",
         "kind": "haxe-type"
@@ -7952,7 +7952,7 @@
       "sourceKind": "haxe-expression"
     },
     {
-      "implementationFeature": "haxe-static-string-conversion-v2",
+      "implementationFeature": "haxe-static-string-conversion-v3",
       "subject": {
         "id": "String -> String",
         "kind": "haxe-type"
@@ -7978,7 +7978,7 @@
       "sourceKind": "haxe-expression"
     },
     {
-      "implementationFeature": "haxe-static-string-conversion-v2",
+      "implementationFeature": "haxe-static-string-conversion-v3",
       "subject": {
         "id": "String -> String",
         "kind": "haxe-type"
@@ -8004,7 +8004,7 @@
       "sourceKind": "haxe-expression"
     },
     {
-      "implementationFeature": "haxe-static-string-conversion-v2",
+      "implementationFeature": "haxe-static-string-conversion-v3",
       "subject": {
         "id": "String -> String",
         "kind": "haxe-type"
@@ -8030,7 +8030,7 @@
       "sourceKind": "haxe-expression"
     },
     {
-      "implementationFeature": "haxe-static-string-conversion-v2",
+      "implementationFeature": "haxe-static-string-conversion-v3",
       "subject": {
         "id": "String -> String",
         "kind": "haxe-type"
@@ -8056,7 +8056,7 @@
       "sourceKind": "haxe-expression"
     },
     {
-      "implementationFeature": "haxe-static-string-conversion-v2",
+      "implementationFeature": "haxe-static-string-conversion-v3",
       "subject": {
         "id": "String -> String",
         "kind": "haxe-type"
@@ -8082,7 +8082,7 @@
       "sourceKind": "haxe-expression"
     },
     {
-      "implementationFeature": "haxe-static-string-conversion-v2",
+      "implementationFeature": "haxe-static-string-conversion-v3",
       "subject": {
         "id": "String -> String",
         "kind": "haxe-type"
@@ -8108,7 +8108,7 @@
       "sourceKind": "haxe-expression"
     },
     {
-      "implementationFeature": "haxe-static-string-conversion-v2",
+      "implementationFeature": "haxe-static-string-conversion-v3",
       "subject": {
         "id": "String -> String",
         "kind": "haxe-type"
@@ -8134,7 +8134,7 @@
       "sourceKind": "haxe-expression"
     },
     {
-      "implementationFeature": "haxe-static-string-conversion-v2",
+      "implementationFeature": "haxe-static-string-conversion-v3",
       "subject": {
         "id": "String -> String",
         "kind": "haxe-type"
@@ -8160,7 +8160,7 @@
       "sourceKind": "haxe-expression"
     },
     {
-      "implementationFeature": "haxe-static-string-conversion-v2",
+      "implementationFeature": "haxe-static-string-conversion-v3",
       "subject": {
         "id": "String -> String",
         "kind": "haxe-type"
@@ -8186,7 +8186,7 @@
       "sourceKind": "haxe-expression"
     },
     {
-      "implementationFeature": "haxe-static-string-conversion-v2",
+      "implementationFeature": "haxe-static-string-conversion-v3",
       "subject": {
         "id": "String -> String",
         "kind": "haxe-type"
@@ -8212,7 +8212,7 @@
       "sourceKind": "haxe-expression"
     },
     {
-      "implementationFeature": "haxe-static-string-conversion-v2",
+      "implementationFeature": "haxe-static-string-conversion-v3",
       "subject": {
         "id": "String -> String",
         "kind": "haxe-type"
@@ -10144,7 +10144,7 @@
     "HxString",
     "HxType"
   ],
-  "reportRevision": "sha256:d66fa256623669c88cc0be214b276e925e0edc6af8b36e71a413004c1d0ad0fd",
+  "reportRevision": "sha256:9809c63cdbb842c5b3690650ba2db50e2239d051e96930f2f7ae7499f6579bb9",
   "runtimeMode": "full",
   "recordedRequirementSourceKinds": [
     "compiler-infrastructure",

@@ -1,4 +1,4 @@
-pi=3.14159265359
+pi=3.14159265358979312
 roundNegHalf=0
 isNaN=true
 isFiniteInf=false

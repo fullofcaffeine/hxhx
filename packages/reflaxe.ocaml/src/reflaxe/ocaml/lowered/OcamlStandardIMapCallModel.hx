@@ -37,11 +37,15 @@ enum abstract OcamlStandardIMapResultForm(String) from String to String {
 	final FormattedEntries = "formatted-entries";
 }
 
-/** The exact Haxe value-to-text family selected for one formatted Map entry. */
+/**
+	The exact Haxe value-to-text family selected for one formatted Map entry.
+
+	Float entries use `DynamicObject`: the shared runtime conversion prints
+	Floats the way upstream Haxe does (`2`, not OCaml's `2.`).
+**/
 enum abstract OcamlStandardIMapStringifier(String) from String to String {
 	final ExactString = "exact-string";
 	final ExactInt = "exact-int";
-	final ExactFloat = "exact-float";
 	final ExactBool = "exact-bool";
 	final DynamicObject = "dynamic-object";
 }
@@ -428,8 +432,6 @@ class OcamlStandardIMapCallContract {
 			return OcamlStandardIMapStringifier.ExactString;
 		if (OcamlRepresentationRegistry.isExactInt(type))
 			return OcamlStandardIMapStringifier.ExactInt;
-		if (OcamlRepresentationRegistry.isExactFloat(type))
-			return OcamlStandardIMapStringifier.ExactFloat;
 		if (OcamlRepresentationRegistry.isExactBool(type))
 			return OcamlStandardIMapStringifier.ExactBool;
 		return OcamlStandardIMapStringifier.DynamicObject;
@@ -441,7 +443,6 @@ class OcamlStandardIMapCallContract {
 		return switch (semanticTypeId) {
 			case "String": OcamlStandardIMapStringifier.ExactString;
 			case "Int": OcamlStandardIMapStringifier.ExactInt;
-			case "Float": OcamlStandardIMapStringifier.ExactFloat;
 			case "Bool": OcamlStandardIMapStringifier.ExactBool;
 			case _: OcamlStandardIMapStringifier.DynamicObject;
 		}
