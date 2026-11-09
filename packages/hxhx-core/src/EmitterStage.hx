@@ -1178,7 +1178,7 @@ class EmitterStage {
 					+ ")";
 				case EInt(v): "string_of_int " + Std.string(v);
 				case EBool(v): "string_of_bool " + (v ? "true" : "false");
-				case EFloat(v): "string_of_float " + Std.string(v);
+				case EFloat(v): "HxRuntime.float_toStdString (" + ocamlFloatLiteral(v) + ")";
 				case EIdent(name) if (tyForIdent(name) == "Int"):
 					// Stage3 local type hints are best-effort during upstream-suite bring-up.
 					// Use the runtime `Std.string` path for identifiers so stale numeric hints
