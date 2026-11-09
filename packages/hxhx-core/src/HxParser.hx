@@ -1525,10 +1525,10 @@ class HxParser {
 				case TEof:
 					break;
 				case TIdent(name):
-					parts.push(name);
+					pushTypeHintWord(parts, name);
 					bump();
 				case TKeyword(k):
-					parts.push(keywordText(k));
+					pushTypeHintWord(parts, keywordText(k));
 					bump();
 				case TString(s, _):
 					parts.push('"' + s + '"');
@@ -1606,6 +1606,20 @@ class HxParser {
 			case _:
 				false;
 		};
+	}
+
+	/**
+		Append one name or keyword to compact type-hint text.
+
+		Hint text drops whitespace (`Map<String,Int>`), but two adjacent words
+		need one space to stay separate. Without it, the structural annotation
+		`{ function value():Int; }` became `{functionvalue():Int;}`, which no
+		type grammar can read back.
+	**/
+	static function pushTypeHintWord(parts:Array<String>, word:String):Void {
+		if (parts.length > 0 && ~/[A-Za-z0-9_]$/.match(parts[parts.length - 1]))
+			parts.push(" ");
+		parts.push(word);
 	}
 
 	function readFunctionReturnTypeHint(stop:() -> Bool):String {

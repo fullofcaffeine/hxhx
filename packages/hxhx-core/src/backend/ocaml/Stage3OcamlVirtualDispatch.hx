@@ -14,6 +14,14 @@ typedef Stage3OcamlMethodTableEntry = {
 	final method:String;
 	final owner:String;
 	final module:String;
+
+	/**
+		Whether a read through a structure type may bind this method to its
+		receiver. False for a method with its own type parameters, an optional
+		argument, or a rest argument: the table still dispatches ordinary calls to
+		it, but a structural read raises a named, catchable error instead.
+	**/
+	final structurallyBindable:Bool;
 }
 
 /**
@@ -178,7 +186,17 @@ class Stage3OcamlVirtualDispatch {
 				if (!seen.exists(method.name) && dispatches(current, method.name)) {
 					seen.set(method.name, true);
 					final implementation = nearestDeclaration(identity, method.name);
-					result.push({method: method.name, owner: implementation, module: classes.get(implementation).module});
+					final implementing = classes.get(implementation);
+					final declared = [
+						for (candidate in declaredMethods(implementing))
+							if (candidate.name == method.name) candidate
+					][0];
+					result.push({
+						method: method.name,
+						owner: implementation,
+						module: implementing.module,
+						structurallyBindable: structurallyBindable(declared)
+					});
 				}
 			current = ancestor.facts.getSuperClassIdentity();
 		}
@@ -217,11 +235,34 @@ class Stage3OcamlVirtualDispatch {
 				+ ")";
 			}
 		];
-		return "let () = HxMethodDispatch.register_class_methods "
+		final table = "let () = HxMethodDispatch.register_class_methods "
 			+ quote(facts.requirePublicReflectionName())
 			+ " ["
 			+ rendered.join("; ")
 			+ "]";
+		final excluded = [for (entry in selected) if (!entry.structurallyBindable) quote(entry.method)];
+		if (excluded.length == 0)
+			return table;
+		return table
+			+ "\nlet () = HxMethodDispatch.exclude_structural_methods "
+			+ quote(facts.requirePublicReflectionName())
+			+ " ["
+			+ excluded.join("; ")
+			+ "]";
+	}
+
+	/**
+		Whether a structural read can bind this method to its receiver unchanged.
+		A structural call site does not pad an omitted optional argument yet, so
+		binding such a method would read OCaml's `()` as the argument value.
+	**/
+	public static function structurallyBindable(method:TypedBackendClassMethodFact):Bool {
+		if (method.typeParameters.length > 0)
+			return false;
+		for (argument in method.arguments)
+			if (argument.isRest || argument.isOptional)
+				return false;
+		return true;
 	}
 
 	function plan():Void {

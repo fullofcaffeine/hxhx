@@ -40,6 +40,11 @@ private typedef InterfaceDispatchEntry = Stage3OcamlMethodTableEntry;
 	  own method, or the nearest superclass method it inherits. When a subclass
 	  overrides that method, the entry names its direct function, not its
 	  dispatcher.
+	- The same table also holds every other instance method whose calling
+	  convention it can forward. A class instance used through a structure
+	  type, such as `{ function value():Int; }`, keeps its methods outside its
+	  field storage, so `HxMethodDispatch.structural_field` binds a method read
+	  through that type from this table (haxe_ocaml-idcbb).
 	- The interface module's method is no longer a stub. It reads the receiver's
 	  class, takes that class's function from the table, and calls it with the
 	  same receiver and arguments. Existing calls and method values that name
@@ -197,7 +202,41 @@ class Stage3OcamlInterfaceDispatch {
 				if (seen.exists(declared.method.name))
 					continue;
 				seen.set(declared.method.name, true);
-				entries.push({method: declared.method.name, owner: implementation.owner.facts.getClassIdentity(), module: implementation.owner.module});
+				entries.push({
+					method: declared.method.name,
+					owner: implementation.owner.facts.getClassIdentity(),
+					module: implementation.owner.module,
+					structurallyBindable: true
+				});
+			}
+			// Every other instance method too, so a structural field read can bind a
+			// method of a class instance (`HxMethodDispatch.structural_field`).
+			// That read binds only the receiver, so a `dynamic` method keeps the
+			// calling convention of an ordinary method value. A method with its own
+			// type parameters, an optional argument, or a rest argument stays out;
+			// a structural read of it raises a catchable named error at run time.
+			var current:Null<String> = identity;
+			while (current != null) {
+				final owner = classes.get(current);
+				if (owner == null)
+					break;
+				for (method in owner.facts.copyMethods()) {
+					if (method.isStatic || method.name == "new" || seen.exists(method.name))
+						continue;
+					final implementation = implementationFor(identity, method.name);
+					if (implementation == null
+						|| !implementation.owner.generated
+						|| !Stage3OcamlVirtualDispatch.structurallyBindable(implementation.method))
+						continue;
+					seen.set(method.name, true);
+					entries.push({
+						method: method.name,
+						owner: implementation.owner.facts.getClassIdentity(),
+						module: implementation.owner.module,
+						structurallyBindable: true
+					});
+				}
+				current = owner.facts.getSuperClassIdentity();
 			}
 			if (entries.length > 0)
 				selected.set(identity, entries);

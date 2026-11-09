@@ -421,14 +421,15 @@ class TyperIndex {
 		return false;
 	}
 
-	function semanticType(hint:String, packagePath:String, moduleName:Null<String>, directives:Array<HxModuleDirective>,
-			typeParams:Array<TyTypeParameterId>):TyType {
+	/** `filePath` and `position` name the declaration, so a rejected annotation reports a real location. */
+	function semanticType(hint:String, packagePath:String, moduleName:Null<String>, directives:Array<HxModuleDirective>, typeParams:Array<TyTypeParameterId>,
+			?filePath:String, ?position:HxPos):TyType {
 		return resolveTypeUse(TyType.fromHintText(hint), {
 			packagePath: packagePath,
 			modulePath: canonicalModulePath(packagePath, moduleName),
 			directives: directives,
-			filePath: "<signature>",
-			position: HxPos.unknown(),
+			filePath: filePath == null ? "<signature>" : filePath,
+			position: position == null ? HxPos.unknown() : position,
 			parameters: typeParams
 		}).getType();
 	}
@@ -697,7 +698,7 @@ class TyperIndex {
 					&& hasMetadata(HxFieldDecl.getMetadata(field), "__hxhx_enum_abstract_value");
 				final fieldType = isEnumValue ? TyType.nominal(identity,
 					[for (parameter in parameterIds) TyType.typeParameter(parameter)]) : semanticType(HxFieldDecl.getTypeHint(field), packagePath, moduleName,
-						directives, parameterIds);
+						directives, parameterIds, ResolvedModule.getFilePath(module), HxFieldDecl.getPos(field));
 				final fieldName = HxFieldDecl.getName(field);
 				fields.set(fieldName,
 					new TyFieldInfo(identity, semanticModulePath, fieldName, fieldType, HxFieldDecl.getIsStatic(field),
@@ -763,7 +764,8 @@ class TyperIndex {
 				final argRest = new Array<Bool>();
 				for (argument in HxFunctionDecl.getArgs(functionDeclaration)) {
 					argNames.push(HxFunctionArg.getName(argument));
-					args.push(semanticType(HxFunctionArg.getTypeHint(argument), packagePath, moduleName, directives, functionParams));
+					args.push(semanticType(HxFunctionArg.getTypeHint(argument), packagePath, moduleName, directives, functionParams,
+						ResolvedModule.getFilePath(module), HxFunctionDecl.getPos(functionDeclaration)));
 					// Omission is allowed by a default as well as by ?. The declared value type stays unchanged.
 					final hasDefault = switch (HxFunctionArg.getDefaultValue(argument)) {
 						case Default(_): true;
@@ -775,7 +777,7 @@ class TyperIndex {
 
 				final returnType = functionName == "new" ? TyType.nominal(identity,
 					[for (parameter in parameterIds) TyType.typeParameter(parameter)]) : semanticType(HxFunctionDecl.getReturnTypeHint(functionDeclaration),
-						packagePath, moduleName, directives, functionParams);
+						packagePath, moduleName, directives, functionParams, ResolvedModule.getFilePath(module), HxFunctionDecl.getPos(functionDeclaration));
 				final signature = new TyFunSig(functionName, isStatic, argNames, args, argOptional, argRest, returnType,
 					HxFunctionDecl.getPos(functionDeclaration));
 				if (isStatic)

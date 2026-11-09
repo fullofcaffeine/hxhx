@@ -166,11 +166,33 @@ class TyTypeUseResolution {
 			]);
 		if (!type.isUnresolved())
 			return type;
+		if (type.getTypeArguments().length == 0 && StringTools.startsWith(StringTools.trim(type.getUnresolvedPath()), "{"))
+			return resolveStructuralHint(type.getUnresolvedPath(), context);
 		final args = [
 			for (arg in type.getTypeArguments())
 				normalize(arg, context)
 		];
 		return resolvePath(type.getUnresolvedPath(), args, context, false, type.getDisplay());
+	}
+
+	/**
+		Resolve a structural annotation that `TyType.fromHintText` could not read.
+
+		The short form `{name:Type}` already becomes an anonymous type. The
+		declaration form, such as `{ function value():Int; var count:Int; }`,
+		reaches this point as unresolved hint text. Read that text with the same
+		type grammar as typedef declarations and resolve the parsed fields here,
+		so an inline annotation and an equivalent named typedef get the same
+		field contracts, including method fields.
+	 */
+	function resolveStructuralHint(text:String, context:TyTypeResolutionContext):TyType {
+		final syntax = try HxTypedefParser.parseTypeHint(text) catch (error:Dynamic) throw new TyperError(context.filePath, context.position,
+			"Invalid structural type annotation " + text + ": " + Std.string(error));
+		// Positions inside the re-read text are relative to the annotation, not the
+		// source file, so report every rejection at the annotation's declaration.
+		return try resolveSyntax(syntax, context,
+			"inline-structure:" + context.modulePath + ":" + text) catch (error:TyperError) throw new TyperError(context.filePath, context.position,
+			error.message);
 	}
 
 	function resolvePath(path:String, args:Array<TyType>, context:TyTypeResolutionContext, required:Bool, ?display:String):TyType {

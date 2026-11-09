@@ -154,3 +154,69 @@ let class_method receiver key =
       match Hashtbl.find_opt methods key with
       | None -> fail ("class " ^ name ^ " has no method table entry " ^ key)
       | Some fn -> fn)
+
+(* Read a function-typed field through a structural (anonymous) type.
+
+   A Haxe class instance can be used where a structure is expected, for
+   example `function provide():{ function value():Int; } return new Answer();`.
+   Stage3 stores the instance's variables in its HxAnon storage, but its methods
+   are module-level OCaml functions that take the receiver first. So a stored
+   field is returned as it is, and a missing field on a class instance is taken
+   from the class's method table and bound to this receiver.
+
+   `arity` is the number of Haxe arguments, chosen by the typed field read. A
+   method without arguments is bound as `fun () -> ...`, the shape of a
+   zero-argument Haxe closure; other methods are partially applied to the
+   receiver, which leaves the remaining arguments in order. *)
+let structural_exclusions : (string * string, unit) Hashtbl.t = Hashtbl.create 31
+
+(* Called by a class module, after its table, for overridden methods that stay
+   in the table for ordinary dispatch but must not be bound by a structural
+   read (see `structural_field`). *)
+let exclude_structural_methods name keys =
+  synchronized (fun () ->
+      Stdlib.List.iter
+        (fun key -> Hashtbl.replace structural_exclusions (name, key) ())
+        keys)
+
+let structural_field receiver field arity =
+  (* Reading a field of null is a Haxe error that `try`/`catch` can handle;
+     upstream reports it as the String "Null Access". *)
+  if HxRuntime.is_null receiver then
+    HxRuntime.hx_throw_typed (Obj.repr "Null Access") [ "String"; "Dynamic" ];
+  if HxAnon.is_anon receiver && HxAnon.has receiver field then
+    HxAnon.get receiver field
+  else if HxAnon.is_anon receiver && not (HxRuntime.is_null (HxAnon.class_value receiver)) then (
+    let name = descriptor_name (HxAnon.class_value receiver) in
+    let entry =
+      if Hashtbl.mem structural_exclusions (name, field) then None
+      else
+        match Hashtbl.find_opt anon_classes name with
+        | None -> None
+        | Some methods -> Hashtbl.find_opt methods field
+    in
+    match entry with
+    | Some method_value ->
+        let fn : Obj.t -> Obj.t = Obj.obj method_value in
+        if arity = 0 then Obj.repr (fun () -> fn receiver) else fn receiver
+    | None ->
+        (* The class has no bindable method of this name: a method with its own
+           type parameters, an optional or a rest argument, or a class whose
+           methods are not generated from Haxe bodies. Report it as a Haxe
+           error so the program can still handle it. *)
+        HxRuntime.hx_throw_typed
+          (Obj.repr
+             ("Stage3 cannot call method " ^ field ^ " of class " ^ name
+            ^ " through a structure type (methods with type parameters, optional or rest arguments, or without a generated body are not supported)"))
+          [ "String"; "Dynamic" ])
+  else if HxAnon.is_anon receiver then
+    (* A missing optional field of an anonymous object reads as null. *)
+    HxAnon.get receiver field
+  else
+    (* A runtime-provided value, such as a String, Array, or native map. *)
+    let value = HxAnon.get receiver field in
+    if HxRuntime.is_null value then
+      HxRuntime.hx_throw_typed
+        (Obj.repr ("Stage3 cannot call method " ^ field ^ " of a runtime-provided value through a structure type"))
+        [ "String"; "Dynamic" ]
+    else value

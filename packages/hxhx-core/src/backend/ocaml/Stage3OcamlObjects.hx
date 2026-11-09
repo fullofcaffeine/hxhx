@@ -50,7 +50,18 @@ function literal(occurrence:TypedBackendAggregateOccurrence, emit:HxExpr->String
 function access(occurrence:TypedBackendObjectAccess, emit:HxExpr->String, names:Stage3OcamlLocalNames, quote:String->String):String {
 	return switch occurrence.kind {
 		case Read:
-			final stored = "HxAnon.get (Obj.repr (" + emit(occurrence.receiver) + ")) " + quote(occurrence.field);
+			// A function-typed field may be a method of a class instance used as a
+			// structure. That method is not in the instance's field storage, so the
+			// runtime binds it from the class's method table instead.
+			final stored = occurrence.resultType.isFunction() ? "HxMethodDispatch.structural_field (Obj.repr ("
+				+ emit(occurrence.receiver)
+				+ ")) "
+				+ quote(occurrence.field)
+				+ " "
+				+ occurrence.resultType.getFunctionArguments().length : "HxAnon.get (Obj.repr ("
+				+ emit(occurrence.receiver)
+				+ ")) "
+				+ quote(occurrence.field);
 			// This owned access reads the runtime's Obj.t field storage. An open
 			// field type keeps that carrier intact; only a concrete result permits
 			// unboxing. This does not admit an arbitrary Unknown expression or store.
