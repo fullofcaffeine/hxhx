@@ -53,26 +53,30 @@ class TyAuthoredAssignmentCheck {
 		`typedef R = Int`. `writtenExpected` is that written type, when known.
 	 */
 	static function describe(expected:TyType, actual:TyType, ?writtenExpected:String):Null<String>
-		return describeWalk(expected, actual, writtenExpected, 0, new haxe.ds.StringMap<Bool>());
+		return describeWalk(expected, actual, writtenExpected, 0, new haxe.ds.StringMap<Int>());
 
 	/**
-		Compare one pair of types. `visited` holds every (expected, actual) pair this
-		walk has entered. A recursive typedef such as `typedef Step = Int->Step`
-		unfolds forever, and two same-shaped typedefs with different names reach the
-		same pairs through every recursive occurrence. A pair seen again is treated
-		as fitting: if it had not fit, the walk would already have stopped. That
-		keeps the work proportional to the number of distinct pairs. The depth limit
-		remains for generic typedefs whose arguments grow, where no pair repeats.
+		Compare one pair of types. `visited` holds, for every (expected, actual) pair
+		this walk has entered, the shallowest depth it was entered at. A recursive
+		typedef such as `typedef Step = Int->Step` unfolds forever, and two same-shaped
+		typedefs with different names reach the same pairs through every recursive
+		occurrence. A pair seen again at the same or a greater depth is treated as
+		fitting: the earlier visit had at least as much depth left, and a mismatch
+		would already have ended the walk. A pair seen again nearer the top is compared
+		again, because the earlier visit may have stopped at the depth limit. Each pair
+		is therefore walked at most once per depth, which bounds the work. The depth
+		limit remains for generic typedefs whose arguments grow, where no pair repeats.
 	 */
-	static function describeWalk(expected:TyType, actual:TyType, writtenExpected:Null<String>, depth:Int, visited:haxe.ds.StringMap<Bool>):Null<String> {
+	static function describeWalk(expected:TyType, actual:TyType, writtenExpected:Null<String>, depth:Int, visited:haxe.ds.StringMap<Int>):Null<String> {
 		final expectedKey = expected.getSemanticKey();
 		final actualKey = actual.getSemanticKey();
 		if (depth > MAX_FUNCTION_DEPTH || expectedKey == actualKey)
 			return null;
 		final pair = expectedKey + "\n" + actualKey;
-		if (visited.exists(pair))
+		final enteredAt = visited.get(pair);
+		if (enteredAt != null && enteredAt <= depth)
 			return null;
-		visited.set(pair, true);
+		visited.set(pair, depth);
 		final expectedText = writtenExpected == null
 			|| StringTools.trim(writtenExpected).length == 0 ? expected.getDisplay() : StringTools.trim(writtenExpected);
 		final wanted = TyAliasExpansion.reveal(expected);
@@ -89,11 +93,12 @@ class TyAuthoredAssignmentCheck {
 		if (wanted.isFunction() && supplied.isFunction() && !wanted.isNullable() && !supplied.isNullable())
 			// A written function spelling is normalized; a typedef name stays as written.
 			return describeFunction(wanted, supplied,
-				upstreamDisplay(supplied) + " should be " + (expectedText.indexOf("->") >= 0 ? upstreamDisplay(wanted) : expectedText), depth, visited);
+				upstreamDisplay(supplied, true) + " should be " + (expectedText.indexOf("->") >= 0 ? upstreamDisplay(wanted, false) : expectedText), depth,
+				visited);
 		return null;
 	}
 
-	static function describeFunction(wanted:TyType, supplied:TyType, wholeMismatch:String, depth:Int, visited:haxe.ds.StringMap<Bool>):Null<String> {
+	static function describeFunction(wanted:TyType, supplied:TyType, wholeMismatch:String, depth:Int, visited:haxe.ds.StringMap<Int>):Null<String> {
 		final wantedArguments = wanted.getFunctionArguments();
 		final suppliedArguments = supplied.getFunctionArguments();
 		final wantedResult = wanted.getFunctionReturn();
@@ -129,37 +134,40 @@ class TyAuthoredAssignmentCheck {
 
 	/**
 		A function type as upstream prints it in `A should be B`: `() -> Int`,
-		`Int -> Int`, or `(x : Int, ?y : Null<Int>) -> Int` once an argument is named
-		or optional. Other types keep their ordinary display.
+		`Int -> Int`, `(Int, String) -> Int`, `?Int -> Int`, or
+		`(x : Int, ?y : Null<Int>) -> Int` once an argument is named. A method value's
+		named optional argument prints as `Null<...>` and a written function type's
+		does not, so `suppliedValue` says which side is being printed.
 	 */
-	static function upstreamDisplay(type:TyType):String {
+	static function upstreamDisplay(type:TyType, suppliedValue:Bool):String {
 		if (!type.isFunction() || type.isNullable() || type.getFunctionReturn() == null)
 			return type.getDisplay();
 		final parameters = type.getFunctionParameters();
-		final result = grouped(type.getFunctionReturn());
+		final result = grouped(type.getFunctionReturn(), suppliedValue);
 		if (parameters.length == 0)
 			return "() -> " + result;
-		var labelled = false;
+		var named = false;
 		for (parameter in parameters)
-			if (parameter.isOptional || (parameter.name != null && parameter.name.length > 0))
-				labelled = true;
+			if (parameter.name != null && parameter.name.length > 0)
+				named = true;
 		final parts = new Array<String>();
 		for (parameter in parameters) {
-			final shown = grouped(parameter.type);
-			if (!labelled) {
-				parts.push(shown);
+			final shown = grouped(parameter.type, suppliedValue);
+			final prefix = parameter.isOptional ? "?" : "";
+			if (!named) {
+				parts.push(prefix + shown);
 				continue;
 			}
-			final inner = parameter.isOptional && !parameter.type.isNullable() ? "Null<" + shown + ">" : shown;
-			final prefix = parameter.isOptional ? "?" : "";
+			final inner = suppliedValue && parameter.isOptional && !parameter.type.isNullable() ? "Null<" + shown + ">" : shown;
 			parts.push(parameter.name != null && parameter.name.length > 0 ? prefix + parameter.name + " : " + inner : prefix + inner);
 		}
-		return labelled ? "(" + parts.join(", ") + ") -> " + result : parts.join(" -> ") + " -> " + result;
+		return !named && parts.length == 1 ? parts[0] + " -> " + result : "(" + parts.join(", ") + ") -> " + result;
 	}
 
 	/** A function type nested in another function type prints inside parentheses. */
-	static function grouped(type:TyType):String
-		return type.isFunction() && !type.isNullable() ? "(" + upstreamDisplay(type) + ")" : upstreamDisplay(type);
+	static function grouped(type:TyType, suppliedValue:Bool):String
+		return type.isFunction()
+			&& !type.isNullable() ? "(" + upstreamDisplay(type, suppliedValue) + ")" : upstreamDisplay(type, suppliedValue);
 
 	/** Int, Float, String, or Bool, not wrapped in Null. */
 	static function isPlainPrimitive(type:TyType):Bool {

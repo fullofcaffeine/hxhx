@@ -3338,15 +3338,18 @@ class TyperStage {
 		Other values use the ordinary overload score.
 	 */
 	static function functionValueFits(expected:TyType, actual:TyType, index:TyperIndex):Bool
-		return functionValueWalk(expected, actual, index, 0, new haxe.ds.StringMap<Bool>());
+		return functionValueWalk(expected, actual, index, 0, new haxe.ds.StringMap<Int>());
 
 	/**
-		One step of `functionValueFits`. `visited` holds the (expected, actual) pairs
-		already entered, so recursive function typedefs cost one visit per distinct
-		pair. A pair seen again fits, because a mismatch would already have ended the
-		walk. The depth limit hands growing generic typedefs to the ordinary score.
+		One step of `functionValueFits`. `visited` holds each (expected, actual) pair
+		already entered and the shallowest depth it was entered at, so recursive
+		function typedefs are walked at most once per pair and depth. A pair seen again
+		at the same or a greater depth fits, because that visit had at least as much
+		depth left and a mismatch would already have ended the walk. A pair seen nearer
+		the top is compared again, since the earlier visit may have stopped at the
+		limit. The limit hands growing generic typedefs to the ordinary score.
 	 */
-	static function functionValueWalk(expected:TyType, actual:TyType, index:TyperIndex, depth:Int, visited:haxe.ds.StringMap<Bool>):Bool {
+	static function functionValueWalk(expected:TyType, actual:TyType, index:TyperIndex, depth:Int, visited:haxe.ds.StringMap<Int>):Bool {
 		if (depth > 16 || !expected.isFunction() || !actual.isFunction() || expected.isNullable() || actual.isNullable())
 			return overloadArgScore(expected, actual, [], index) >= 0;
 		final expectedKey = expected.getSemanticKey();
@@ -3354,9 +3357,10 @@ class TyperStage {
 		if (expectedKey == actualKey)
 			return true;
 		final pair = expectedKey + "\n" + actualKey;
-		if (visited.exists(pair))
+		final enteredAt = visited.get(pair);
+		if (enteredAt != null && enteredAt <= depth)
 			return true;
-		visited.set(pair, true);
+		visited.set(pair, depth);
 		final wanted = expected.getFunctionParameters();
 		final supplied = actual.getFunctionParameters();
 		if (wanted.length != supplied.length)
