@@ -315,6 +315,7 @@
     "test:m14:stage3-isvar-properties": "compiler-foundation",
     "test:m14:stage3-increment-places": "compiler-foundation",
     "test:m14:stage3-std-int-wrap": "compiler-foundation",
+    "test:m14:stage3-dynamic-method-call": "compiler-foundation",
     "test:m14:stage3-nullable-int-carrier": "compiler-focused-2",
     "test:m14:stage3-nullable-local-update": "compiler-focused-2",
     "test:m14:stage3-local-compound-value": "compiler-focused-2",

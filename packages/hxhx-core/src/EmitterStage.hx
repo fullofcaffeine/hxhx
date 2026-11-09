@@ -2527,6 +2527,14 @@ class EmitterStage {
 		}
 	}
 
+	/** Whether a member call on this expression must find the member when the program runs. */
+	static function stage3HasDynamicReceiver(expr:HxExpr, ?tyByIdent:Map<String, TyType>, ?callSigByCallee:Map<String, EmitterCallSig>):Bool {
+		if (stage3IsDynamicExpr(expr, tyByIdent, callSigByCallee))
+			return true;
+		final exact = stage3ExactExprType(expr);
+		return exact != null && exact.isDynamic();
+	}
+
 	/** Reports whether an expression produces the reviewed `Obj.t` Dynamic carrier. */
 	static function stage3IsDynamicExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>, ?callSigByCallee:Map<String, EmitterCallSig>):Bool {
 		final exact = objectAccessType(expr);
@@ -2549,6 +2557,10 @@ class EmitterStage {
 				backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(stage3TyForIdent(name, tyByIdent));
 			case ECall(EIdent(name), _): final signature = callSigForStage3(name,
 					callSigByCallee); signature != null && backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(signature.resultTypeHint);
+			// A method called through a Dynamic receiver returns a Dynamic value.
+			case ECall(EField(receiver, _), _) if (!isTypePathExpr(receiver)
+				&& stage3HasDynamicReceiver(receiver, tyByIdent, callSigByCallee)):
+				true;
 			case ECall(EField(_, name), _): var signature = callSigForStage3(name,
 					callSigByCallee); if (signature == null) signature = callSigForStage3(ocamlValueIdent(name),
 					callSigByCallee); signature != null && backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(signature.resultTypeHint);
@@ -4367,6 +4379,30 @@ class EmitterStage {
 							+ ") ("
 							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 							+ ")";
+					case _:
+				}
+
+				// A method of a `Dynamic` receiver is found at run time. Do this before the
+				// rewrite below, which would call a same-named method of the current class,
+				// and before signature lookup by the bare field name.
+				switch (callee) {
+					case EField(obj, field) if (staticCall == null
+						&& !isTypePathExpr(obj)
+						&& stage3HasDynamicReceiver(obj, tyByIdentRaw, callSigByCalleeRaw)):
+						final receiver = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+							callSigByCallee);
+						final arguments = new Array<String>();
+						final exactBools = new Array<Int>();
+						for (index in 0...args.length) {
+							final carrier = stage3DynamicArgumentCarrier(args[index], tyByIdentRaw, callSigByCalleeRaw);
+							if (carrier == backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ExactBool)
+								exactBools.push(index);
+							arguments.push(backend.ocaml.OcamlDynamicOperatorLowering.callArgument("Dynamic", carrier,
+								exprToOcaml(args[index], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+									callSigByCallee)));
+						}
+						return backend.ocaml.Stage3OcamlDynamicMethods.call(receiver, field, arguments, exactBools, currentFunctionLocalOcamlNames,
+							escapeOcamlString);
 					case _:
 				}
 

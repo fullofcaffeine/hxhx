@@ -1,6 +1,6 @@
 {
   "model": "requirements-only-runtime-selection-shadow",
-  "runtimeSourceRevision": "sha256:e237e7746949c755f1799021ee00e791e9d23561b2840f27325b9e7c45cd4987",
+  "runtimeSourceRevision": "sha256:5f0a3313e24cb19485a22b9d7c29b2926d03062fe66e54e2bbd10e115b41e80f",
   "requirementRevision": "sha256:01749692cc823c49875a531eb0428405338d33bb23b4ee71b9815b529a4fb1ef",
   "schemaVersion": 1,
   "selectionMode": "full",
@@ -642,6 +642,12 @@
         "bytes": 8538
       },
       {
+        "module": "HxDynamicMethods",
+        "path": "HxDynamicMethods.ml",
+        "sha256": "sha256:ce0a5b3b5d762bfade00fc471bc614dcc1ce9e830aa577d25f8801dfea104b6c",
+        "bytes": 6524
+      },
+      {
         "module": "HxEnum",
         "path": "HxEnum.ml",
         "sha256": "sha256:09105ff1f110b16ed5cc879b9ea4c7c5d9ba97eb9b6a89871f0dc007c031e019",
@@ -806,6 +812,12 @@
         ]
       },
       {
+        "module": "HxDynamicMethods",
+        "reasons": [
+          "full_runtime_mode"
+        ]
+      },
+      {
         "module": "HxEnum",
         "reasons": [
           "full_runtime_mode"
@@ -934,6 +946,7 @@
       "HxBacktrace",
       "HxBytes",
       "HxDynamic",
+      "HxDynamicMethods",
       "HxEnum",
       "HxFPHelper",
       "HxFile",
@@ -963,6 +976,7 @@
       "HxBacktrace",
       "HxBytes",
       "HxDynamic",
+      "HxDynamicMethods",
       "HxEnum",
       "HxFPHelper",
       "HxFile",
@@ -984,13 +998,14 @@
       "Std",
       "haxe_CallStack"
     ],
-    "revision": "sha256:c142a41b8b70fc2428b2705c13552c28540c274a7bf1185864bb958c87dd326f"
+    "revision": "sha256:1ac5d81a8aaf89305d601bde15c01b05c2db5935a4fb450dfbe377cd04c8554d"
   },
-  "reportRevision": "sha256:ff566bf4ce4f02ab435a6eba2c1eda9f033f3d81d8c4ab9bd2819c38c88e5783",
+  "reportRevision": "sha256:0a3131d570eae4d58ffc20464ee57fa39c9c20dc9adff9c11227df96f8206558",
   "differences": {
     "currentOnlyRoots": [
       "Date",
       "EReg",
+      "HxDynamicMethods",
       "HxFile",
       "HxFileStream",
       "HxFileSystem",
@@ -1034,6 +1049,10 @@
       },
       {
         "module": "HxDynamic",
+        "reason": "full_runtime_mode"
+      },
+      {
+        "module": "HxDynamicMethods",
         "reason": "full_runtime_mode"
       },
       {
@@ -2758,6 +2777,7 @@
     "currentOnlyClosureModules": [
       "Date",
       "EReg",
+      "HxDynamicMethods",
       "HxFile",
       "HxFileStream",
       "HxFileSystem",
@@ -2783,6 +2803,12 @@
         "path": "EReg.ml",
         "sha256": "sha256:1983649d740c3ce94bfd7ff1c940384921b7892ac2bf590ab945e732b064173b",
         "bytes": 9276
+      },
+      {
+        "module": "HxDynamicMethods",
+        "path": "HxDynamicMethods.ml",
+        "sha256": "sha256:ce0a5b3b5d762bfade00fc471bc614dcc1ce9e830aa577d25f8801dfea104b6c",
+        "bytes": 6524
       },
       {
         "module": "HxFile",
