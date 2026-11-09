@@ -3337,12 +3337,26 @@ class TyperStage {
 		supplied result must fit the expected result unless that result is Void.
 		Other values use the ordinary overload score.
 	 */
-	static function functionValueFits(expected:TyType, actual:TyType, index:TyperIndex, depth:Int = 0):Bool {
-		// Recursive function typedefs unfold forever; the bound hands them to the ordinary score.
+	static function functionValueFits(expected:TyType, actual:TyType, index:TyperIndex):Bool
+		return functionValueWalk(expected, actual, index, 0, new haxe.ds.StringMap<Bool>());
+
+	/**
+		One step of `functionValueFits`. `visited` holds the (expected, actual) pairs
+		already entered, so recursive function typedefs cost one visit per distinct
+		pair. A pair seen again fits, because a mismatch would already have ended the
+		walk. The depth limit hands growing generic typedefs to the ordinary score.
+	 */
+	static function functionValueWalk(expected:TyType, actual:TyType, index:TyperIndex, depth:Int, visited:haxe.ds.StringMap<Bool>):Bool {
 		if (depth > 16 || !expected.isFunction() || !actual.isFunction() || expected.isNullable() || actual.isNullable())
 			return overloadArgScore(expected, actual, [], index) >= 0;
-		if (expected.getSemanticKey() == actual.getSemanticKey())
+		final expectedKey = expected.getSemanticKey();
+		final actualKey = actual.getSemanticKey();
+		if (expectedKey == actualKey)
 			return true;
+		final pair = expectedKey + "\n" + actualKey;
+		if (visited.exists(pair))
+			return true;
+		visited.set(pair, true);
 		final wanted = expected.getFunctionParameters();
 		final supplied = actual.getFunctionParameters();
 		if (wanted.length != supplied.length)
@@ -3352,7 +3366,7 @@ class TyperStage {
 				return overloadArgScore(expected, actual, [], index) >= 0;
 			if (wanted[position].isOptional && !supplied[position].isOptional)
 				return false;
-			if (!functionValueFits(supplied[position].type, wanted[position].type, index, depth + 1))
+			if (!functionValueWalk(supplied[position].type, wanted[position].type, index, depth + 1, visited))
 				return false;
 		}
 		final wantedResult = expected.getFunctionReturn();
@@ -3360,7 +3374,7 @@ class TyperStage {
 		return wantedResult == null
 			|| suppliedResult == null
 			|| wantedResult.isVoid()
-			|| functionValueFits(wantedResult, suppliedResult, index, depth + 1);
+			|| functionValueWalk(wantedResult, suppliedResult, index, depth + 1, visited);
 	}
 
 	/**
