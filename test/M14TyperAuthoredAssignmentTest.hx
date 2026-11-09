@@ -16,6 +16,8 @@ import sys.io.File;
 	  `POS||...`. Upstream Haxe must reject each NEG program with that message and
 	  accept each POS program. The hxhx typer, with the production standard-library
 	  providers, must do the same.
+	- Two same-shaped recursive typedefs must be accepted without exponential
+	  work.
 	- The POS lines guard against false rejections: function argument
 	  contravariance and result covariance, Int widening to Float, Void results,
 	  Dynamic, optional arguments, generic methods, abstracts with `from`/`to`
@@ -53,6 +55,29 @@ class M14TyperAuthoredAssignmentTest {
 		}
 	}
 
+	/**
+		Two same-shaped recursive typedefs with different names reach the same type
+		pairs through every recursive occurrence. Comparing them must take one visit
+		per distinct pair: without that, five occurrences would need about 5^16 steps.
+		The bound is far above the normal cost of typing this program.
+	 */
+	static function checkRecursiveTwinsStayFast(failures:Array<String>):Void {
+		final program = source("static function s(a:Int->T, b:Int->T, c:Int->T, d:Int->T):T return s; "
+			+ "static function main() { var direct:U = s; var local = s; var viaLocal:U = local; }",
+			"typedef T = (Int->T, Int->T, Int->T, Int->T)->T; typedef U = (Int->U, Int->U, Int->U, Int->U)->U;");
+		final oracle = upstream(program);
+		if (oracle != "accepted")
+			failures.push("upstream disagrees with the recursive twin program: " + oracle);
+		final started = Sys.time();
+		final actual = hxhx(program);
+		final elapsed = Sys.time() - started;
+		Sys.println("M14_TYPER_AUTHORED_ASSIGNMENT_RECURSIVE_TWINS seconds=" + Math.round(elapsed * 10) / 10);
+		if (actual != "accepted")
+			failures.push("false rejection of the recursive twin program: " + actual);
+		if (elapsed > 30)
+			failures.push("recursive twin typedefs took " + elapsed + " seconds");
+	}
+
 	static function main():Void {
 		sys.FileSystem.createDirectory(root);
 		final failures = new Array<String>();
@@ -76,6 +101,7 @@ class M14TyperAuthoredAssignmentTest {
 					+ " -> "
 					+ actual);
 		}
+		checkRecursiveTwinsStayFast(failures);
 		if (failures.length > 0)
 			throw failures.join("\n");
 		Sys.println("M14_TYPER_AUTHORED_ASSIGNMENT:PASS cases=" + count);

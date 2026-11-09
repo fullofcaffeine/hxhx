@@ -8,7 +8,7 @@ NEG|String should be Int|static function main() { var x:Int = "s"; }|
 NEG|Float should be Int|static function main() { var x:Int = 1.5; }|
 NEG|Bool should be String|static function main() { final x:String = true; }|
 NEG|Float should be Int|static function f(x:Float):Float return x; static function main() { var g:Int->Int = f; }|
-NEG|should be|static function f(x:Int, ?y:Int):Int return 1; static function main() { var g:Int->Int = f; }|
+NEG|(x : Int, ?y : Null<Int>) -> Int should be Int -> Int|static function f(x:Int, ?y:Int):Int return 1; static function main() { var g:Int->Int = f; }|
 NEG|Int should be String|static function f(x:Int):Int return x; static function main() { var g:Int->String; g = f; var h:Int->String = f; }|
 POS||static function f(x:Float):Int return 1; static function main() { var g:Int->Int = f; }|
 POS||static function f(x:Int):Int return x; static function main() { var g:Int->Float = f; }|
@@ -43,3 +43,13 @@ POS||static function f():R return 3; static function main() { var c:R = f(); var
 POS||static function s(x:Int):Step return s; static function main() { var g:Step = s; var h:Int->Step = s; var o:Other = s; }|typedef Step = Int->Step; typedef Other = Int->Other;
 NEG|String should be Int|static function s(x:Int):Step return s; static function main() { var g:String->Step = s; }|typedef Step = Int->Step;
 POS||static function s(x:Int):Step return s; static function main() { var f = s; var g:Step = f; var other:Other = f; }|typedef Step = Int->Step; typedef Other = Int->Other;
+NEG|Void should be Int|static function f():Void {} static function main() { var g:Void->Int = f; }|
+NEG|(?x : Null<Int>) -> Int should be () -> Int|static function f(?x:Int):Int return 1; static function main() { var e:Void->Int = f; }|
+NEG|() -> Int should be Int -> Int|static function f():Int return 1; static function main() { var e:Int->Int = f; }|
+NEG|(x : Int, y : Int) -> Int should be Int -> Int|static function f(x:Int, y:Int):Int return 1; static function main() { var e:Int->Int = f; }|
+NEG|(x : (Int -> Int)) -> Int should be () -> Int|static function f(x:Int->Int):Int return 1; static function main() { var e:Void->Int = f; }|
+POS||static function s(f:Int->T, g:Int->T):T return s; static function main() { var o:U = s; var l = s; var m:U = l; }|typedef T = (Int->T, Int->T)->T; typedef U = (Int->U, Int->U)->U;
+NEG|(x : Int) -> (Int -> Int) should be () -> Int|static function f(x:Int):Int->Int return null; static function main() { var e:Void->Int = f; }|
+NEG|(x : Int) -> Int should be F|static function f(x:Int):Int return 1; static function main() { var e:F = f; }|typedef F = Void->Int;
+NEG|String should be Int|static function s(f:Int->T):T return s; static function main() { var o:U = s; }|typedef T = (Int->T)->T; typedef U = (String->U)->U;
+NEG|Int should be String|static function f(x:Int):Int return 1; static function main() { var g:String->String = f; }|
