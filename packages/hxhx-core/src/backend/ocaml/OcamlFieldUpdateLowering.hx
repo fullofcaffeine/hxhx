@@ -1,9 +1,9 @@
 package backend.ocaml;
 
 /**
-	Makes ordinary Int field updates, String field appends, and `++`/`--` on
-	Int and Float fields, anonymous-structure fields, and array elements
-	explicit for native OCaml.
+	Makes ordinary Int and Float field updates, String field appends, and
+	`++`/`--` on Int and Float fields, on anonymous-structure fields, and on
+	array elements explicit for native OCaml.
 
 	One receiver capture and one old-value capture preserve effects and postfix
 	results. Exact field facts restrict this pass to ordinary instance storage;
@@ -131,9 +131,39 @@ private function lowerIndexedStep(expression:TypedExpr, operand:TypedExpr, alloc
 
 /**
 	Capture the receiver and old value before the RHS, then return the written value.
-	Admits String `+=` appends and Int `+=`, `-=`, `*=` updates with an Int operand,
-	such as `state.index += value.length`; other operand types keep their owners.
+
+	Admits three kinds of update on a mutable instance field or on a field of an
+	anonymous structure:
+
+	- String `+=` appends;
+	- Int `+=`, `-=`, `*=` with an Int operand, such as `state.index += value.length`;
+	- Float `+=`, `-=`, `*=`, `/=`, `%=` with an Int or Float operand, such as
+	  `h.ratio -= 0.5` or `o.total += count()`.
+
+	Plain-storage compound updates on those places that are still unsupported,
+	such as a `Dynamic` right operand, stop compilation with a named error
+	(`isRefusedFieldCompound`). Other places, types, and operators keep their
+	existing owners.
  */
+/**
+	Whether a compound update that this pass did not admit would otherwise reach
+	the emitter's `(Obj.magic 0)` placeholder, silently dropping the store.
+
+	Only arithmetic `+=`, `-=`, `*=`, `/=`, `%=` count, on a field of an
+	anonymous structure holding `Int`, `Float`, `String`, or a nullable of those,
+	or on a `Float` instance field. Bitwise compounds and abstract-typed fields
+	keep their existing owners.
+ */
+private function isRefusedFieldCompound(assignment:String, valueType:TyType, structural:Bool):Bool {
+	if (assignment != "+=" && assignment != "-=" && assignment != "*=" && assignment != "/=" && assignment != "%=")
+		return false;
+	final inner = valueType.isNullable() ? valueType.unwrapNull() : valueType;
+	final key = inner.getSemanticKey();
+	if (structural)
+		return key == "primitive:Int" || key == "primitive:Float" || key == "primitive:String";
+	return valueType.getSemanticKey() == "primitive:Float";
+}
+
 private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTemporaryAllocator):TypedExpr {
 	final children = expression.getExpressions();
 	if (children.length != 2)
@@ -141,20 +171,44 @@ private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTe
 	final assignment = expression.getTexts()[0];
 	final operand = children[0];
 	final field = operand.getFieldInfo();
+	// A field of an anonymous structure (`{n: 1}`) has no declared field facts; its
+	// read and write already lower through the structural object path.
+	final structural = field == null
+		&& operand.getTag() == FieldRead
+		&& TyAliasExpansion.revealNonNullable(operand.getExpressions()[0].getType()).isAnonymous();
 	final key = operand.getType().getSemanticKey();
 	final stringAppend = assignment == "+=" && key == "primitive:String";
-	final intUpdate = (assignment == "+=" || assignment == "-=" || assignment == "*=")
+	// The stored value keeps its type: `old op right` holds both checked types, so
+	// an Int or `Null<...>` operand is converted where the arithmetic is emitted.
+	final rightType = children[1].getType();
+	final rightKey = (rightType.isNullable() ? rightType.unwrapNull() : rightType).getSemanticKey();
+	final intUpdate = (assignment == "+=" || assignment == "-=" || assignment == "*=" || assignment == "%=")
 		&& key == "primitive:Int"
-		&& children[1].getType().getSemanticKey() == "primitive:Int";
-	if ((!stringAppend && !intUpdate)
-		|| (operand.getTag() != FieldRead && operand.getTag() != NameRead)
-		|| field == null
-		|| field.getIsStatic()
-		|| field.getIsFinal()
-		|| expression.getType().getSemanticKey() != key
-		|| (field.getPropertyGet() != "" && field.getPropertyGet() != "default")
-		|| (field.getPropertySet() != "" && field.getPropertySet() != "default"))
+		&& rightKey == "primitive:Int";
+	final floatUpdate = (assignment == "+=" || assignment == "-=" || assignment == "*=" || assignment == "/=" || assignment == "%=")
+		&& key == "primitive:Float"
+		&& (rightKey == "primitive:Float" || rightKey == "primitive:Int");
+	final plainInstanceField = field != null
+		&& !field.getIsStatic()
+		&& !field.getIsFinal()
+		&& (field.getPropertyGet() == "" || field.getPropertyGet() == "default")
+		&& (field.getPropertySet() == "" || field.getPropertySet() == "default");
+	if ((operand.getTag() != FieldRead && operand.getTag() != NameRead) || (!structural && !plainInstanceField))
 		return expression;
+	if ((!stringAppend && !intUpdate && !floatUpdate) || expression.getType().getSemanticKey() != key) {
+		if (isRefusedFieldCompound(assignment, operand.getType(), structural))
+			throw "unsupported native OCaml compound assignment "
+				+ assignment
+				+ " on field `"
+				+ (structural ? operand.getTexts()[0] : field.getName())
+				+ "` of type "
+				+ operand.getType().getDisplay()
+				+ " with a right operand of type "
+				+ rightType.getDisplay()
+				+ (expression.getPosition() == null ? "" : " at " + expression.getPosition().toString())
+				+ " (refusing to emit a placeholder that would drop the update)";
+		return expression;
+	}
 	final valueType = operand.getType();
 	final position = expression.getPosition();
 	function read(binding:TyLocalBinding):TypedExpr
@@ -167,7 +221,8 @@ private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTe
 		final receiver = operand.getExpressions()[0];
 		final receiverBinding = allocator.allocate("receiver", receiver.getType());
 		sequence.push(capture(receiverBinding, receiver));
-		place = TypedExpr.fieldRead(read(receiverBinding), field.getName(), valueType, position, field);
+		place = structural ? TypedExpr.fieldRead(read(receiverBinding), operand.getTexts()[0], valueType,
+			position) : TypedExpr.fieldRead(read(receiverBinding), field.getName(), valueType, position, field);
 	}
 	final oldBinding = allocator.allocate("old", valueType);
 	final rightBinding = allocator.allocate("right", children[1].getType());
