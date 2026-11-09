@@ -35,8 +35,8 @@ null `Null<Float>` unwrap also raised an uncatchable OCaml `Failure` instead of
 the Haxe Null Access exception, and a nullable Int operand was unwrapped before
 the right operand ran.
 
-Values are chosen so no whole-number Float is printed: `Std.string` of such a
-Float still prints `6.` natively (haxe_ocaml-l26hl). The helper calls are
+Values are chosen so no whole-number Float is printed. Whole-number Float
+text is covered by `test/fixtures/stage3_float_string` (haxe_ocaml-iffj5). The helper calls are
 counted through an array because native static variable increments are a
 separate gap (haxe_ocaml-nq65n).
 

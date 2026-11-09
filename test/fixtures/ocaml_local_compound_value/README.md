@@ -42,8 +42,8 @@ printed `0 4` for `var r = (x -= 2)`, skipped the store, and looped forever on
 ran the right operand before reading the old value (`y += (y += 5);` gave 30),
 and `text += 1 + 2;` appended "12".
 
-Values are chosen so no whole-number Float is printed: `Std.string` of such a
-Float still prints `6.` natively (haxe_ocaml-iffj5). Each value is bound to a
+Values are chosen so no whole-number Float is printed. Whole-number Float
+text is covered by `test/fixtures/stage3_float_string` (haxe_ocaml-iffj5). Each value is bound to a
 local before it is printed, because native String concatenation runs its
 operands right to left (haxe_ocaml-5of2v).
 
