@@ -1,0 +1,34 @@
+mixed length=7 upper=HÉLLO😀漢 lower=héllo😀漢
+mixed charAt=é|😀|漢||
+mixed charCodeAt=233,128512,28450,null
+mixed indexOf=2,3,5,6,3,-1
+mixed lastIndexOf=3,2,1,5
+mixed substr=éll|😀漢|😀漢|😀
+mixed substring=o😀|éllo😀|😀漢
+mixed split=hé//o😀漢|h/é/l/l/o/😀/漢|héllo/漢
+mixed codes=104,233,108,108,111,128512,28450
+fromCharCode=é漢😀 length=1
+case=àéîõü ÀÉÎÕÜ ΑΒΓ ΣΣ джя ß ǅ i
+fastCodeAt=128512,28450,true unsafeCodeAt=233
+tools=üüé|漢😀😀|é😀|true|true|true|true|é&lt;😀&gt;
+compare=false,true,true,true,true
+buf=é😀xél length=5
+case-table changed=2224 checksum=39197224
+long length=160 at=233,28450,128512 index=157 sub=漢😀aé
+ascii length=100 at=106 index=19,90 sub=ij|ello|hij
+iterator=104,233,108,108,111,128512,28450
+keyValueIterator=0:104,1:233,2:108,3:108,4:111,5:128512,6:28450
+replace=héLLo😀漢|héllo-漢
+ereg-two-byte=1:1 substr=[b] rest=[b] left=[é] right=[]
+ereg-mixed=2:2 substr=[ll] rest=[llo😀漢l] left=[hé] right=[o😀漢l]
+ereg-wide=2:1 substr=[x] rest=[xé] left=[漢😀] right=[é]
+ereg-literal=1:1 substr=[é] rest=[éb] left=[a] right=[b]
+ereg-any=0:1
+ereg-sub-start=1:1 substr=[b] rest=[béb] left=[é] right=[éb]
+ereg-sub-ascii-prefix=3:1 substr=[b] rest=[b] left=[abé] right=[]
+ereg-split=é|漢|😀 once=é|éb
+ereg-map=é<1:1>é<3:1>
+ereg-sub-after=3:1 left=[ébé]
+ereg-sub-window=false,true
+ereg-sub-scan=1:1,3:1
+invalid length=4 codes=255,195,98 upper=41ffc342 indexOf=3

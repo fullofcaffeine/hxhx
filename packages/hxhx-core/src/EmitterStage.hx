@@ -3237,17 +3237,13 @@ class EmitterStage {
 			case ECall(EField(EIdent("Array"), "wrap"), [arg]):
 				return "(Obj.magic (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + "))";
 			case EField(EIdent("String"), "fromCharCode"):
-				return "(fun i -> Stdlib.String.make 1 (Char.chr i))";
+				// HxString encodes the code point as UTF-8, matching the String API's code-point unit.
+				return "HxString.fromCharCode";
 			case ECall(EField(EIdent("StringTools"), "fastCodeAt"), [s, idx]) | ECall(EField(EIdent("StringTools"), "unsafeCodeAt"), [s, idx]):
 				final s2 = exprToOcaml(s, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 				final i2 = exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
-				return "(let __s = ("
-					+ s2
-					+ ") in "
-					+ "let __i = ("
-					+ i2
-					+ ") in "
-					+ "if (__i < 0) || (__i >= Stdlib.String.length __s) then (-1) else (Char.code (Stdlib.String.get __s __i)))";
+				// `HxString.cca` reads a code point and returns -1 outside the String.
+				return "(HxString.cca (" + s2 + ") (" + i2 + "))";
 			case ECall(EField(EIdent("StringTools"), "hex"), [n]):
 				return "StringTools.hex ("
 					+ exprToOcaml(n, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
@@ -8021,18 +8017,23 @@ class EmitterStage {
 			"  while !i >= 0 && isSpace s !i do decr i done;",
 			"  if !i = len - 1 then s else HxString.substr s 0 (!i + 1)",
 			"let trim (s : string) : string = ltrim (rtrim s)",
+			// Padding counts code points, as String.length does; Buffer.length counts bytes.
 			"let lpad (s : string) (c : string) (l : int) : string =",
-			"  if HxString.length c <= 0 then s else",
+			"  let clen = HxString.length c in",
+			"  if clen <= 0 then s else",
 			"  let buf = Stdlib.Buffer.create l in",
 			"  let target = l - HxString.length s in",
-			"  while Stdlib.Buffer.length buf < target do Stdlib.Buffer.add_string buf c done;",
+			"  let n = ref 0 in",
+			"  while !n < target do Stdlib.Buffer.add_string buf c; n := !n + clen done;",
 			"  Stdlib.Buffer.add_string buf s;",
 			"  Stdlib.Buffer.contents buf",
 			"let rpad (s : string) (c : string) (l : int) : string =",
-			"  if HxString.length c <= 0 then s else",
+			"  let clen = HxString.length c in",
+			"  if clen <= 0 then s else",
 			"  let buf = Stdlib.Buffer.create l in",
 			"  Stdlib.Buffer.add_string buf s;",
-			"  while Stdlib.Buffer.length buf < l do Stdlib.Buffer.add_string buf c done;",
+			"  let n = ref (HxString.length s) in",
+			"  while !n < l do Stdlib.Buffer.add_string buf c; n := !n + clen done;",
 			"  Stdlib.Buffer.contents buf",
 			"let replace (s : string) (sub : string) (by : string) : string = HxArray.join (HxString.split s sub) by (fun x -> x)",
 			"let hex (n : int) (digits : Obj.t) : string =",
@@ -8051,8 +8052,7 @@ class EmitterStage {
 			"    if Stdlib.String.length s0 < digits_i then pad (\"0\" ^ s0) else s0",
 			"  in",
 			"  pad s",
-			"let fastCodeAt (s : string) (index : int) : int =",
-			"  if index < 0 || index >= Stdlib.String.length s then -1 else Char.code (Stdlib.String.get s index)",
+			"let fastCodeAt (s : string) (index : int) : int = HxString.cca s index",
 			"let unsafeCodeAt = fastCodeAt"
 		].join("\n");
 	}

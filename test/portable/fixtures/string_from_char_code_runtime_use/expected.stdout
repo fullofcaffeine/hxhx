@@ -1,7 +1,7 @@
 zero=1:0
 byte=1:255
 negative=0
-overflow=0
+overflow=1
 side=C
 calls=1
 value=B
