@@ -20,6 +20,8 @@ import sys.io.File;
 	- `stage3_int_modulo_by_zero` catches `%` and `%=` by zero and prints normal
 	  and negative modulo values. The native executable must print exactly what
 	  upstream Neko prints.
+	- `stage3_int32_min_modulo_minus_one` checks `-2147483648 % -1` against
+	  upstream eval, because Neko crashes on that case on x86-64 Linux.
 	- Upstream eval must still print `nan` for the bare case, which keeps the
 	  documented divergence visible if eval ever changes.
 **/
@@ -49,6 +51,21 @@ class M14Stage3IntModuloByZeroTest {
 		return File.getContent(stdoutPath);
 	}
 
+	/**
+		Compares `-2147483648 % -1` with upstream eval instead of Neko. The Neko VM
+		dies with SIGFPE on this operand pair on x86-64 Linux, so it is not a
+		portable oracle here; eval and native both print 0.
+	**/
+	static function observeMinimumModuloMinusOne(outDir:String):Void {
+		final source = "test/fixtures/stage3_int32_min_modulo_minus_one";
+		final path = source + "/Main.hx";
+		final expected = File.getContent(source + "/expected.stdout");
+		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", source, "--run", "Main"], expected: expected});
+		final program = M14Stage3RuntimeFixture.prepareProgram({source: File.getContent(path), path: path, root: source});
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram(program, false), outDir + "/native_minimum");
+		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
+	}
+
 	static function main():Void {
 		final source = "test/fixtures/stage3_int_modulo_by_zero";
 		final path = source + "/Main.hx";
@@ -65,6 +82,7 @@ class M14Stage3IntModuloByZeroTest {
 		final program = M14Stage3RuntimeFixture.prepareProgram({source: File.getContent(path), path: path, root: source});
 		final executable = EmitterStage.emitToDir(new MacroExpandedProgram(program, false), outDir + "/native");
 		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
+		observeMinimumModuloMinusOne(outDir);
 		deleteRecursive(outDir);
 		Sys.println("M14_STAGE3_INT_MODULO_BY_ZERO:PASS");
 	}

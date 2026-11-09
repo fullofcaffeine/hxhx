@@ -9,7 +9,6 @@ caught compound modulo as String
 7 % -3 = 1
 -7 % -3 = -1
 -2147483648 % 7 = -2
--2147483648 % -1 = 0
 7 % 0 caught as String
 -7 % 0 caught as String
 mixed 1 -3
