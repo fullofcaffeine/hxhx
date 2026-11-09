@@ -87,6 +87,10 @@ class M14Stage3LargeIntLiteralTest {
 		a wildcard that matches every value. `-2147483648` must fold to the minimum Int
 		(`PInt`), as it does in expressions. This test does not run upstream; the native
 		Float-pattern fixture compares these cases with upstream Haxe at run time.
+
+		Not implemented yet: on an Int subject, upstream rejects a Float constant pattern
+		with `Float should be Int`. hxhx still compiles such a pattern (`haxe_ocaml-b193e`).
+		A suffixed pattern such as `2147483648i64` is a separate gap (`haxe_ocaml-9s22b`).
 	**/
 	static function outOfRangePatterns():Void {
 		function firstPattern(source:String):HxSwitchPattern {
