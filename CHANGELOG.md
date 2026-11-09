@@ -1,3 +1,11 @@
+## [0.43.11](https://github.com/fullofcaffeine/hxhx/compare/v0.43.10...v0.43.11) (2026-11-09)
+
+
+### Bug Fixes
+
+* **ocaml:** print Floats like upstream Haxe ([#146](https://github.com/fullofcaffeine/hxhx/issues/146)) ([9b87795](https://github.com/fullofcaffeine/hxhx/commit/9b87795fe5a62369117a12099dd337714c3b6f15))
+* **ocaml:** wrap inlined Std.int in the reflaxe.ocaml backend ([#177](https://github.com/fullofcaffeine/hxhx/issues/177)) ([ab419c5](https://github.com/fullofcaffeine/hxhx/commit/ab419c57e96589fcd8b264db449f64417146b9a9)), closes [#164](https://github.com/fullofcaffeine/hxhx/issues/164)
+
 ## [0.43.10](https://github.com/fullofcaffeine/hxhx/compare/v0.43.9...v0.43.10) (2026-11-09)
 
 
