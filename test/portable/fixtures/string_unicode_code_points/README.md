@@ -6,12 +6,21 @@ offsets. Before this fixture, `"héllo😀".length` printed 10 instead of 6.
 
 `PortableMain` runs the shared checks in
 `test/fixtures/stage3_string_unicode/Main.hx` through ordinary `reflaxe.ocaml`
-output. It then checks String iteration, key-value iteration and
-`StringTools.replace`, which the Stage3 fixture cannot run yet.
+output. It then checks String iteration, key-value iteration,
+`StringTools.replace` and the positions `EReg` reports, which the Stage3
+fixture cannot run yet. For example, after `~/b/` matches `"éb"`,
+`matchedPos().pos` is 1 and `"éb".substr(1)` is `b`.
 
-Every line except the last matches upstream `haxe --interp` output. The last
-line is OCaml-only: upstream cannot create a String from ill-formed UTF-8, and
-the runtime counts each such byte as one character whose code is the byte.
+Every line except the last four matches upstream `haxe --interp` output. Those
+four are OCaml-only:
+
+- The three `ereg-sub-*` lines after `ereg-map` show `matchSub` counting code
+  points, so it agrees with `matchedPos` and `String`. Upstream eval reads `pos`
+  and `len` as bytes, so its `matchedPos` scan loop never ends on this text
+  (`haxe_ocaml-4aoh2`).
+- The `invalid` line covers ill-formed UTF-8. Upstream cannot create such a
+  String, and the runtime counts each such byte as one character whose code is
+  the byte.
 
 Run it from the repository root:
 

@@ -5,8 +5,19 @@
    - Translate the most common Haxe/PCRE-ish regex syntax into `Str`'s Emacs-style
      regex syntax at construction time.
 
+   Positions:
+   - `Str` works on UTF-8 bytes, but a Haxe `String` counts Unicode code points.
+     Stored match offsets stay in bytes; `matchedPos` and `matchSub` convert at
+     the Haxe boundary with the `HxString` layout helpers. For example, after
+     `~/b/` matches "éb", `matchedPos().pos` is 1, so `"éb".substr(1)` is "b".
+   - `matchSub` deliberately reads `pos` and `len` as code points. Upstream eval
+     reads them as bytes while its `matchedPos` returns code points, so feeding
+     one into the other loops forever there (haxe_ocaml-4aoh2).
+
    Important limitations:
    - This is not a full PCRE implementation.
+   - Matching itself is still byte-wise: `.` and character classes can match one
+     byte of a multi-byte character (haxe_ocaml-1w6os).
    - Advanced constructs like lookahead/lookbehind, named groups, and many
      unicode character classes are not supported.
    - When an unsupported pattern is used, behavior is "best effort" and may
@@ -124,11 +135,16 @@ let matchSub (self : t) (s : string) (pos : int) (len : int) : bool =
     let raw : Obj.t = Obj.magic len in
     if raw == HxRuntime.hx_null then -1 else len
   in
+  let l = HxString.layout s in
+  (* A position past the text raises, as Str does for a bad byte offset. *)
+  if pos < 0 || pos > l.HxString.count then invalid_arg "EReg.matchSub";
+  let start = HxString.byte_offset l pos in
   let limit =
-    if len < 0 then Stdlib.String.length s else min (Stdlib.String.length s) (pos + len)
+    if len < 0 then Stdlib.String.length s
+    else min (Stdlib.String.length s) (HxString.byte_offset l (pos + len))
   in
   try
-    ignore (Str.search_forward self.re s pos);
+    ignore (Str.search_forward self.re s start);
     let e = Str.group_end 0 in
     if e <= limit then (
       set_last self s;
@@ -168,6 +184,14 @@ let matchedRight (self : t) () : string =
         if e >= Stdlib.String.length st.src then ""
         else Stdlib.String.sub st.src e (Stdlib.String.length st.src - e)
 
+(* Code-point index for a byte offset that Str reported. Byte-wise matching can
+   end inside a multi-byte character, where `HxString.index_of_byte` answers -1.
+   [step] moves to the nearest character boundary: -1 for the character holding
+   the offset, 1 for the one after it. *)
+let rec code_point_near (l : HxString.layout) (b : int) (step : int) : int =
+  let i = HxString.index_of_byte l b in
+  if i >= 0 then i else code_point_near l (b + step) step
+
 let matchedPos (self : t) () : Obj.t =
   match self.last with
   | None -> HxRuntime.hx_null
@@ -175,9 +199,12 @@ let matchedPos (self : t) () : Obj.t =
       if Stdlib.Array.length st.groups = 0 then HxRuntime.hx_null
       else
         let b, e = Stdlib.Array.get st.groups 0 in
+        let l = HxString.layout st.src in
+        let first = code_point_near l b (-1) in
+        let after = if e = b then first else code_point_near l e 1 in
         let o = HxAnon.create () in
-        ignore (HxAnon.set o "pos" (Obj.repr b));
-        ignore (HxAnon.set o "len" (Obj.repr (e - b)));
+        ignore (HxAnon.set o "pos" (Obj.repr first));
+        ignore (HxAnon.set o "len" (Obj.repr (after - first)));
         o
 
 let split (self : t) (s : string) : string HxArray.t =

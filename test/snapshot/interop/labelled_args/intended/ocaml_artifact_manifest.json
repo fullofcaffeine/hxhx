@@ -6,7 +6,7 @@
       "model": "checked-runtime-source-selection-v1",
       "status": "complete",
       "message": "Every packaged runtime source is manifest-checked, and the selected runtime closure is revisioned for source replay.",
-      "revision": "sha256:0c3db6ab1ae41157c291c876ca9ea3ecb7054b5180e7c5d8dc1ec9d14fb4f14f"
+      "revision": "sha256:d99dc6bdc6ef5de1ef9e18e4640c0c3ce253545fd5cab32895a46c7966eb71d7"
     },
     "nativeDependencies": {
       "model": "normalized-native-source-declarations-v2",
@@ -28,11 +28,11 @@
   "summary": {
     "entryCount": 66,
     "volatileEvidenceEntryCount": 0,
-    "sourceBundleRevision": "sha256:664badcf9ea6a1c759f52e9e5ae55f814e02e1e9eb804b548af647ad67777709",
+    "sourceBundleRevision": "sha256:87459770584f653a77e297b27be010d20c78c87e44d78cfe3617b11234972bf2",
     "completeForSourceBundle": true,
     "sourceBundleEntryCount": 62,
     "blockers": [],
-    "artifactSetRevision": "sha256:2038a5b6962e515e703eb74bda2e39afc4c70a8d09428e11a1ddda712646de11"
+    "artifactSetRevision": "sha256:d6d0da8ad96dbcbf9fe7b363d21e0c778d8c275351e13a9c60d134a0bd18cf2e"
   },
   "entries": [
     {
@@ -555,7 +555,7 @@
       "sourcePath": null,
       "stability": "stable",
       "path": "ocaml_runtime_requirement_report.json",
-      "sha256": "sha256:6e14da45b77e56d31af8030a9f3872f7e2ad75680b4766110ae9cb1aa1d5e5c1",
+      "sha256": "sha256:8eb4a06612db4a88fb34f19099fb43a3662ab3239e4b98ff261f2930929a9850",
       "kind": "compiler-report",
       "profileEligibility": [
         "metal",
@@ -571,14 +571,14 @@
       "sourcePath": null,
       "stability": "stable",
       "path": "ocaml_runtime_selection_shadow_report.json",
-      "sha256": "sha256:84d02244484bed738be2dd3191f55ccf100b5df1d1b9fea1590ff37e7af07cd3",
+      "sha256": "sha256:374897dfaeb3a4a3fa5598aa44ec98aebcf202d1229f8be98e3d1c9d8566b317",
       "kind": "compiler-report",
       "profileEligibility": [
         "metal",
         "portable"
       ],
       "owner": "runtime-copier",
-      "bytes": 121535,
+      "bytes": 121537,
       "sourceKind": "generated",
       "license": "generated-output",
       "includeInSourceBundle": false
@@ -619,14 +619,14 @@
       "sourcePath": "std/runtime/EReg.ml",
       "stability": "stable",
       "path": "runtime/EReg.ml",
-      "sha256": "sha256:1983649d740c3ce94bfd7ff1c940384921b7892ac2bf590ab945e732b064173b",
+      "sha256": "sha256:1cde69960014bd12af142904c04e321efc5153eb24735bf3c7734c7d4dcb565e",
       "kind": "runtime-source",
       "profileEligibility": [
         "metal",
         "portable"
       ],
       "owner": "runtime-copier",
-      "bytes": 9276,
+      "bytes": 10859,
       "sourceKind": "copied-runtime",
       "license": "MIT",
       "includeInSourceBundle": true
