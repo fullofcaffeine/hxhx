@@ -25,6 +25,10 @@ class HxParser {
 	final source:String;
 	final lex:HxLexer;
 	var cur:HxToken;
+
+	/** Whether the last consumed token was `;`, so a statement can tell how it ended. */
+	var consumedSemicolon = false;
+
 	var peeked1:Null<HxToken> = null;
 	var peeked2:Null<HxToken> = null;
 	var peeked3:Null<HxToken> = null;
@@ -815,6 +819,7 @@ class HxParser {
 	}
 
 	inline function bump():Void {
+		consumedSemicolon = cur.kind.match(TSemicolon);
 		if (peeked1 != null) {
 			cur = peeked1;
 			peeked1 = peeked2;
@@ -3107,10 +3112,8 @@ class HxParser {
 		// - Treating `try` as unsupported causes the parser to drift early in otherwise parseable
 		//   bodies, which then shows up as noisy `unsupported_exprs_total` in Gate2 diagnostics.
 		//
-		// Bring-up scope
-		// - Only supports block-form try bodies and catch bodies:
-		//     `try { <stmts> } catch(e:Dynamic) { <stmts> }`
-		// - Does not yet support `try expr catch ...` or multiple catches with advanced patterns.
+		// `parseSourceTryExpr` accepts braced and unbraced bodies and handlers, and any number
+		// of catches: `var x = try f() catch (e:String) 0 catch (e:Dynamic) 1;`.
 		if (!stop() && cur.kind.match(TKeyword(KTry))) {
 			return parseSourceTryExpr(stop);
 		}
@@ -3487,7 +3490,11 @@ class HxParser {
 		}
 	}
 
-	function parseReturnStmt(pos:HxPos):HxStmt {
+	/**
+		`stop` ends the statement early, as inside an unbraced try body, where the
+		statement must end before `catch`: `try return f() catch (e:Dynamic) return 0;`.
+	**/
+	function parseReturnStmt(pos:HxPos, ?stop:() -> Bool):HxStmt {
 		// `return;` or `return <expr>;`
 		if (cur.kind.match(TSemicolon)) {
 			bump();
@@ -3578,8 +3585,9 @@ class HxParser {
 			}
 		}
 
-		final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
-		syncToStmtEnd();
+		final ends = stop == null ? () -> false : stop;
+		final expr = parseExpr(() -> ends() || cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+		syncToStmtEndUntil(ends);
 		return SReturn(expr, pos);
 	}
 
@@ -3827,7 +3835,7 @@ class HxParser {
 				SExpr(expr, pos);
 			case TKeyword(KReturn):
 				bump();
-				parseReturnStmt(pos);
+				parseReturnStmt(pos, stop);
 			case TKeyword(KInline):
 				// Keep the written inline flag on the authored named function.
 				bump();
@@ -3945,6 +3953,7 @@ class HxParser {
 				// Parse the following statement now that metadata is consumed.
 				parseStmt(stop);
 			case TKeyword(KTry):
+				final stopAtCatch = () -> stop() || cur.kind.match(TKeyword(KCatch));
 				bump();
 
 				final tryBody:HxStmt = if (cur.kind.match(TLBrace)) {
@@ -3957,9 +3966,16 @@ class HxParser {
 						bump();
 					SBlock(stmts, pos);
 				} else {
-					// Best-effort: allow a single-statement try body even though upstream-style
-					// harnesses always use the block form.
-					parseStmt(stop);
+					// An unbraced body is one statement that ends where its first `catch`
+					// begins: `try f() catch (e:String) g();`. The caller's stop alone
+					// would let statement recovery skip past `catch` to the next `;`
+					// and silently drop every handler.
+					final body = parseStmt(stopAtCatch);
+					// Upstream rejects `try f(); catch ...`: the `;` ends the whole
+					// statement, so a following `catch` has no `try` to attach to.
+					if (consumedSemicolon && cur.kind.match(TKeyword(KCatch)))
+						fail("Unexpected catch: a try body that ends with ';' needs braces");
+					body;
 				};
 
 				final catches = new Array<{name:String, typeHint:String, body:HxStmt}>();
@@ -3995,7 +4011,8 @@ class HxParser {
 							bump();
 						SBlock(stmts, pos);
 					} else {
-						parseStmt(stop);
+						// An unbraced handler also ends before the next `catch` clause.
+						parseStmt(stopAtCatch);
 					};
 					catches.push({name: catchName, typeHint: catchTypeHint, body: catchBody});
 				}
@@ -4125,18 +4142,20 @@ class HxParser {
 					bump();
 				syncToStmtEnd();
 				SDoWhile(body, cond, pos);
+			// These statements end at the caller's stop too, so an unbraced try body
+			// such as `try throw "x" catch (e:String) ...` keeps its catch clause.
 			case TKeyword(KThrow):
 				bump();
-				final thrown = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
-				syncToStmtEnd();
+				final thrown = parseExpr(() -> stop() || cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+				syncToStmtEndUntil(stop);
 				SThrow(thrown, pos);
 			case TKeyword(KBreak):
 				bump();
-				syncToStmtEnd();
+				syncToStmtEndUntil(stop);
 				SBreak(pos);
 			case TKeyword(KContinue):
 				bump();
-				syncToStmtEnd();
+				syncToStmtEndUntil(stop);
 				SContinue(pos);
 			case _:
 				final expr = parseExpr(() -> stop() || cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));

@@ -1,0 +1,7 @@
+caught one | no failure | after
+int 42 | failure typed | dynamic 1.5
+else other 0 | then branch 1 | else other 2 | while loop 1 | while loop 2 | for 0 | for 1
+value 5 -1 5 | argument argument
+innermost got inner | inner got handled | outer got escapes | rethrow reached rethrown!
+return 7 3 | throw handled true | break from handler after 3 | continue loops 2
+unbraced handler braced body | braced handler braced handler | done

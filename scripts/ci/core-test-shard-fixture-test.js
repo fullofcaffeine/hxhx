@@ -150,7 +150,7 @@ function checkRuntimeTypeCoverage(packageJson, plan, expected) {
 function main() {
   checkCommandFailureReporting()
   const plan = loadPlan(repoRoot)
-  assert(plan.aggregateCommands.length === 230, `expected 230 npm test commands, found ${plan.aggregateCommands.length}`)
+  assert(plan.aggregateCommands.length === 231, `expected 231 npm test commands, found ${plan.aggregateCommands.length}`)
 
   const expectedAggregateJobs = [
     'guards',
@@ -171,7 +171,7 @@ function main() {
   const expectedCounts = {
     'compiler-foundation': 42,
     'compiler-packaging': 15,
-    'compiler-focused-1': 45,
+    'compiler-focused-1': 46,
     'compiler-focused-call-arguments': 1,
     'compiler-focused-2': 68,
     'compiler-focused-neko-runtime': 2,
@@ -179,7 +179,8 @@ function main() {
     'compiler-focused-3': 12,
     'compiler-focused-4': 7,
     'compiler-focused-cpp-closure-storage': 2,
-    'compiler-focused-5': 24,
+    'compiler-focused-5': 19,
+    'compiler-focused-macro-plugins': 5,
     'macro-host-integration': 3,
     portable: 1,
     'target-packages': 2,
@@ -197,6 +198,7 @@ function main() {
     'compiler-focused-4': 'Q2',
     'compiler-focused-cpp-closure-storage': 'Q2',
     'compiler-focused-5': 'Q2',
+    'compiler-focused-macro-plugins': 'Q2',
     'macro-host-integration': 'Q2',
     portable: 'Q2',
     'target-packages': 'Q2',
@@ -578,6 +580,7 @@ function main() {
     ['compiler-focused-4', 'C++ arithmetic and control regressions'],
     ['compiler-focused-cpp-closure-storage', 'C++ closures and inherited storage'],
     ['compiler-focused-5', 'C++ runtime type and Map regressions'],
+    ['compiler-focused-macro-plugins', 'Project macro plugins and syntax wire'],
     ['macro-host-integration', 'Macro-host integration'],
     ['target-packages', 'Snapshots and examples']
   ]

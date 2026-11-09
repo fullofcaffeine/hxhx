@@ -1,3 +1,10 @@
+## [0.43.9](https://github.com/fullofcaffeine/hxhx/compare/v0.43.8...v0.43.9) (2026-11-08)
+
+
+### Bug Fixes
+
+* **ci:** cache apt downloads and split the C++ runtime-type shard ([#187](https://github.com/fullofcaffeine/hxhx/issues/187)) ([cd9dfad](https://github.com/fullofcaffeine/hxhx/commit/cd9dfadec53a6b90e06d6cad41a4c7c701cb1728))
+
 ## [0.43.8](https://github.com/fullofcaffeine/hxhx/compare/v0.43.7...v0.43.8) (2026-11-07)
 
 
