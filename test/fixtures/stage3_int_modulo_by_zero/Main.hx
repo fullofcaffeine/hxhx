@@ -30,11 +30,68 @@ class Main {
 		} catch (e:Dynamic) {
 			Sys.println("caught compound modulo as Dynamic");
 		}
-		// haxe.Int32 `%` is covered by the portable fixture int_modulo_by_zero only:
-		// Stage3 currently lowers Int32 arithmetic wrongly (haxe_ocaml-ah89c).
 		Sys.println(x);
 		Sys.println(7 % 3);
 		Sys.println(-7 % 3);
 		Sys.println(7 % -3);
+		int32Modulo();
+	}
+
+	/** Keeps operands out of constant folding: Int32 `%` must reach the runtime check. */
+	static function int32(value:Int):haxe.Int32 {
+		return value;
+	}
+
+	static function int(value:Int):Int {
+		return value;
+	}
+
+	/** Prints one `haxe.Int32` modulo, or the catch clause that handled a zero divisor. */
+	static function printInt32Modulo(left:haxe.Int32, right:haxe.Int32):Void {
+		try {
+			Sys.println(left + " % " + right + " = " + (left % right));
+		} catch (e:String) {
+			Sys.println(left + " % " + right + " caught as String");
+		} catch (e:haxe.Exception) {
+			Sys.println(left + " % " + right + " caught as haxe.Exception");
+		} catch (e:Dynamic) {
+			Sys.println(left + " % " + right + " caught as Dynamic");
+		}
+	}
+
+	/**
+		`haxe.Int32` modulo used to print 0 on Stage3 because the whole operation
+		was replaced by a placeholder (haxe_ocaml-lxj68). It shares the Int
+		zero-divisor behavior above.
+	**/
+	static function int32Modulo():Void {
+		printInt32Modulo(int32(7), int32(3));
+		printInt32Modulo(int32(-7), int32(3));
+		printInt32Modulo(int32(7), int32(-3));
+		printInt32Modulo(int32(-7), int32(-3));
+		printInt32Modulo(int32(-2147483648), int32(7));
+		printInt32Modulo(int32(-2147483648), int32(-1));
+		printInt32Modulo(int32(7), int32(0));
+		printInt32Modulo(int32(-7), int32(0));
+		Sys.println("mixed " + (int32(7) % int(-3)) + " " + (int(-3) % int32(7)));
+		try {
+			Sys.println(int32(7) % int(0));
+		} catch (e:Dynamic) {
+			Sys.println("caught Int32 % Int");
+		}
+		try {
+			Sys.println(int(7) % int32(0));
+		} catch (e:Dynamic) {
+			Sys.println("caught Int % Int32");
+		}
+		var updated = int32(-17);
+		updated %= 5;
+		Sys.println("compound " + updated);
+		try {
+			updated %= int32(0);
+			Sys.println(updated);
+		} catch (e:Dynamic) {
+			Sys.println("caught compound Int32");
+		}
 	}
 }
