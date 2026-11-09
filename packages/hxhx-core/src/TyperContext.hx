@@ -105,15 +105,15 @@ class TyperContext {
 	/**
 		Whether typing can prove that a name is missing: a loader whose class
 		path includes the standard library (it can find `StdTypes`), in a request
-		without `--macro` initializers. A root-only index, or a loader over only a
-		test's own sources, omits the standard library, and an initializer can
-		define types this typer does not see, so an unresolved name there is no
-		evidence that the program is wrong.
+		without `--macro` initializers or loaded build macros. A root-only index,
+		or a loader over only a test's own sources, omits the standard library, and
+		a macro can define types this typer does not see, so an unresolved name
+		there is no evidence that the program is wrong.
 	**/
 	public function hasDeclarationLoader():Bool {
 		if (loader == null)
 			return false;
-		return loader.declarationsAreComplete();
+		return loader.declarationsAreComplete() && (index == null || !index.hasBuildMacro());
 	}
 
 	/**

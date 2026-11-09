@@ -30,10 +30,13 @@
 	  standard library.
 	- A request with `--macro` initializers, which can define types or attach
 	  build metadata (`ModuleLoader.noteInitializationMacros`).
-	- A class whose ancestry carries `@:build` or `@:autoBuild`, because a macro
-	  can add the field the name refers to.
-	- An `import.hx` on the module's directory path, because hxhx does not read
-	  those files yet.
+	- Any loaded type that carries `@:build` or `@:autoBuild`, even on an
+	  unrelated class: a macro can add the field a name refers to, or define a
+	  new type with `Context.defineType` (`TyperIndex.hasBuildMacro`). A real
+	  typo elsewhere in such a compilation is reported later or not at all.
+	- A class with an ancestor that is not loaded yet.
+	- A non-empty `import.hx` on the module's directory path, because hxhx does
+	  not read those files yet.
 	- A name inside an argument of a `macro` call, which Haxe passes as syntax
 	  instead of looking it up.
 	This typer does not run those macros or apply `import.hx`, so it stays
@@ -109,7 +112,7 @@ class TyUndeclaredName {
 		final text = ctx.getIndex().rawSourceText(ctx.getFilePath());
 		if (text == null)
 			return false;
-		for (directive in importDirectives(text))
+		for (directive in importDirectives(TyDirectivePosition.mask(text)))
 			if (directive.local == name && !ctx.importedModuleLacksType(directive.path, name))
 				return true;
 		return false;
@@ -163,24 +166,12 @@ class TyUndeclaredName {
 	static function isSpaceCode(code:Int):Bool
 		return code == " ".code || code == "\t".code || code == "\n".code || code == "\r".code;
 
-	/**
-		Whether a class of this module declares a build macro (`@:build`,
-		`@:autoBuild`). Such a macro can add fields that use or declare the name.
-		The native in-process lane does not apply build fields yet, so reporting
-		the name would blame the program for a missing macro result. The
-		module is left to the build-macro owner instead.
-	**/
-	static function runsBuildMacro(ctx:TyperContext):Bool {
-		final text = ctx.getIndex().rawSourceText(ctx.getFilePath());
-		return text != null && (text.indexOf("@:build(") >= 0 || text.indexOf("@:autoBuild(") >= 0);
-	}
-
 	/** Whether this typer sees everything that could give `name` a meaning here; see the class limits. */
 	static function declarationsVisible(name:String, ctx:TyperContext):Bool
-		return !runsBuildMacro(ctx) && !inheritsBuildMacro(ctx) && !importHxApplies(ctx) && !namedInMacroArgument(name, ctx);
+		return !hasUnloadedAncestor(ctx) && !importHxApplies(ctx) && !namedInMacroArgument(name, ctx);
 
-	/** Whether the current class, a superclass, or an interface carries build metadata. An ancestor not loaded yet counts. */
-	static function inheritsBuildMacro(ctx:TyperContext):Bool {
+	/** Whether the current class has a superclass or interface that is not loaded yet, whose metadata this typer cannot read. */
+	static function hasUnloadedAncestor(ctx:TyperContext):Bool {
 		final index = ctx.getIndex();
 		final seen = new Map<String, Bool>();
 		function visit(info:Null<TyNominalInfo>):Bool {
@@ -190,8 +181,6 @@ class TyUndeclaredName {
 				return false;
 			seen.set(info.getFullName(), true);
 			final cls:TyClassInfo = cast info;
-			if (cls.getDeclaresBuildMacro())
-				return true;
 			final parents = cls.getInterfaceTypes().copy();
 			if (cls.getSuperType() != null)
 				parents.push(cls.getSuperType());
@@ -215,7 +204,8 @@ class TyUndeclaredName {
 		var levels = packagePath == null || packagePath.length == 0 ? 0 : packagePath.split(".").length;
 		var directory = haxe.io.Path.directory(file);
 		while (levels >= 0) {
-			if (sys.FileSystem.exists(haxe.io.Path.join([directory, "import.hx"])))
+			final path = haxe.io.Path.join([directory, "import.hx"]);
+			if (sys.FileSystem.exists(path) && StringTools.trim(TyDirectivePosition.mask(sys.io.File.getContent(path))).length > 0)
 				return true;
 			levels--;
 			directory = haxe.io.Path.directory(directory);
