@@ -194,7 +194,7 @@ class TyTypeUseResolution {
 				// Upstream words the `Dynamic<A,B>` case differently, both in type hints
 				// and in `implements Dynamic<A,B>`, so keep its message.
 				final arity = declaration.getNominalArity();
-				if (arity != null && args.length > arity.total) {
+				if (arity != null && !arity.unbounded && args.length > arity.total) {
 					final message = declaration.getCanonicalName() == "StdTypes.Dynamic" ? "Too many parameters for Dynamic" : "Too many type parameters for "
 						+ declaration.getShortName();
 					throw new TyperError(context.filePath, context.position, message);

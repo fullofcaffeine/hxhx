@@ -85,6 +85,21 @@ class Multi<Rest> {}
 @:genericBuild(ArityMacros.anyArguments())
 class TwoBuilt<A, B> {}
 
+@:genericBuild(ArityMacros.anyArguments())
+class Lead<B, Rest> {}
+
+@:genericBuild(ArityMacros.anyArguments())
+class Tail<Rest, B> {}
+
+@:genericBuild(ArityMacros.anyArguments())
+class Mid<A, Rest, B> {}
+
+@:genericBuild(ArityMacros.anyArguments())
+class DefaultBeforeRest<A, B = Int, Rest> {}
+
+@:genericBuild(ArityMacros.anyArguments())
+class DefaultAfterRest<A, Rest, C = Int> {}
+
 class NullablePair<T> {
 	public function new(v:Null<T>, w:T) {}
 }

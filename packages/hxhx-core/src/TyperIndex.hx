@@ -315,27 +315,32 @@ class TyperIndex {
 	}
 
 	/**
-		Count the type arguments a class-like declaration accepts, or null when no count applies.
+		Count the type arguments a class-like declaration accepts.
 
-		A `@:genericBuild` class whose only parameter is named `Rest` passes whatever
-		arguments were written to its macro, so no count applies to it. Any other
-		parameter list is counted as usual.
+		A `@:genericBuild` class hands its arguments to a macro, and Haxe 4.3.7 gives a
+		parameter named `Rest` a special meaning there. Once the arguments reach `Rest`
+		any number of further ones are allowed, so the count has no upper limit. A `Rest`
+		in last place may also be left out: `class T<B, Rest>` accepts `T<Int>`, while
+		`class T<Rest, B>` needs at least two arguments. Every other parameter list,
+		including a `Rest` parameter on a class without `@:genericBuild`, is counted as usual.
 
 		The indexed binders come from `__hxhx_type_params`. Defaults come from the
 		parsed parameters, and only when those parameters match the binders name for
 		name; otherwise every parameter counts as required.
 	**/
-	static function nominalArity(classDeclaration:HxClassDecl):Null<TyTypeDeclaration.TyNominalArity> {
-		final names = typeParameters(HxClassDecl.getMetadata(classDeclaration));
-		if (hasMetadataNamed(HxClassDecl.getMetadata(classDeclaration), "genericBuild") && names.length == 1 && names[0] == "Rest")
-			return null;
+	static function nominalArity(classDeclaration:HxClassDecl):TyTypeDeclaration.TyNominalArity {
+		final metadata = HxClassDecl.getMetadata(classDeclaration);
+		final names = typeParameters(metadata);
+		final hasRest = hasMetadataNamed(metadata, "genericBuild") && names.indexOf("Rest") >= 0;
 		final parsed = HxClassDecl.getTypeParameters(classDeclaration);
 		var required = names.length;
+		if (hasRest && names[names.length - 1] == "Rest")
+			required--;
 		if (parsed.length == names.length) {
 			while (required > 0 && parsed[required - 1].name == names[required - 1] && parsed[required - 1].defaultType != null)
 				required--;
 		}
-		return {total: names.length, required: required};
+		return {total: names.length, required: required, unbounded: hasRest};
 	}
 
 	static function typeParameters(metadata:Array<String>):Array<String> {

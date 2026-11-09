@@ -18,10 +18,14 @@ typedef TyTypeResolutionContext = {
 	How many type arguments an explicit application of a class, interface, enum or
 	abstract may supply. `required` excludes trailing parameters with a default, so
 	`class Def<A, B = String>` accepts `Def<Int>` and `Def<Int, Bool>`.
+	`unbounded` removes the upper limit `total` would otherwise set, for a
+	`@:genericBuild` class with a parameter named `Rest`: `class T<B, Rest>` accepts
+	`T<Int>` and `T<Int, String, Bool>`, because its build macro receives the arguments.
 **/
 typedef TyNominalArity = {
 	final total:Int;
 	final required:Int;
+	final unbounded:Bool;
 };
 
 /** Named header facts shared by declaration lookup and type instantiation. */
@@ -52,7 +56,7 @@ class TyTypeDeclaration {
 
 	public function new(input:TyTypeDeclarationInput) {
 		canonicalName = input.canonicalName;
-		nominalArity = input.nominalArity == null ? null : {total: input.nominalArity.total, required: input.nominalArity.required};
+		nominalArity = input.nominalArity;
 		usesBuildMacro = input.usesBuildMacro == true;
 		visibility = input.visibility;
 		kind = input.kind;
