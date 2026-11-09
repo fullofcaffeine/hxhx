@@ -30,7 +30,7 @@ class Base {
 		Sys.println("touched");
 
 	public function optionalPair(?x:Float, ?y:Bool):String
-		return x + "/" + y;
+		return x + "/" + (y == null ? "null" : (y ? "T" : "F"));
 
 	public inline function inlined():String
 		return "inlined";
@@ -38,6 +38,10 @@ class Base {
 	public dynamic function replaceable():String
 		return "replaceable";
 }
+
+abstract Meters(Float) from Float to Float {}
+abstract Count(Int) from Int to Int {}
+abstract Flag(Bool) from Bool to Bool {}
 
 class Late extends Base {
 	public function new() {
@@ -49,6 +53,42 @@ class Late extends Base {
 
 	public function own():String
 		return "own";
+
+	public function me():Late
+		return this;
+
+	public function yes(flag:Bool):Bool
+		return flag;
+
+	public function defaultBool(flag:Bool = true):Bool
+		return flag;
+
+	public function defaultQuarter(value:Float = 1.5):Float
+		return value * 0.25;
+
+	public function nullableBool(?flag:Bool):String
+		return flag == null ? "null" : (flag ? "T" : "F");
+
+	public function meters(value:Meters):Float
+		return (value : Float) * 0.25;
+
+	public function count(value:Count):Int
+		return (value : Int) + 1;
+
+	public function flagged(value:Flag):String
+		return (value : Bool) ? "T" : "F";
+
+	public function same<T>(value:T):T
+		return value;
+
+	public function sameGeneric(other:Dynamic):Int
+		return other.same(3);
+
+	public function secondOf<T>(value:T, second:Int):Int
+		return second;
+
+	public function describe(value:Dynamic):String
+		return Std.string(value);
 }
 
 class Leaf extends Late {
@@ -82,7 +122,17 @@ class Person implements Named {
 		return "person";
 }
 
+class Holder {
+	public function new() {}
+
+	public function flag(value:Bool):String
+		return value ? "T" : "F";
+}
+
 class Main {
+	static function sameFlag(value:Bool):String
+		return value ? "T" : "F";
+
 	static function attempt(label:String, action:() -> Void):Void {
 		try {
 			action();
@@ -146,6 +196,48 @@ class Main {
 		final stored:Dynamic = {answer: () -> 42, plus: (value:Int) -> value + 1};
 		Sys.println(stored.answer());
 		Sys.println(stored.plus(1));
+
+		final storedFlags:Dynamic = {flag: sameFlag, bound: new Holder().flag};
+		Sys.println(storedFlags.flag(false));
+		Sys.println(storedFlags.flag(true));
+		Sys.println(storedFlags.bound(false));
+
+		Sys.println(late.defaultBool());
+		Sys.println(late.defaultBool(false));
+		Sys.println(late.defaultBool(true));
+		Sys.println(late.defaultQuarter());
+		Sys.println(late.defaultQuarter(3));
+		Sys.println(late.nullableBool());
+		Sys.println(late.nullableBool(false));
+		Sys.println(late.nullableBool(true));
+
+		Sys.println(late.me().own());
+		Sys.println(late.me().me().pick());
+		if (!late.yes(false))
+			Sys.println("branch taken");
+		else
+			Sys.println("branch skipped");
+		Sys.println(!late.yes(true));
+		Sys.println(late.yes(false) && true);
+		Sys.println(late.yes(false) || false);
+		Sys.println(late.yes(true) == true);
+		Sys.println(late.yes(false) == false);
+		Sys.println(late.half(2) == 1);
+		Sys.println(late.add(1, 2) == 3.0);
+
+		Sys.println(late.meters(3));
+		Sys.println(late.meters(1.5));
+		Sys.println(late.count(3));
+		Sys.println(late.flagged(false));
+
+		Sys.println(late.same(3));
+		Sys.println(late.same("text"));
+		Sys.println(late.same(1.5));
+		Sys.println(late.same(true));
+		Sys.println(late.secondOf("first", 4));
+		Sys.println(new Late().sameGeneric(late));
+		Sys.println(late.describe(true));
+		Sys.println(late.describe(false));
 
 		attempt("missing method", () -> late.absent());
 		attempt("not a function", () -> {

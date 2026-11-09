@@ -13,8 +13,8 @@ false
 yes
 touched
 null/null
-2.5/true
-1.5/false
+2.5/T
+1.5/F
 inlined
 replaceable
 first
@@ -32,6 +32,39 @@ person
 101
 42
 2
+F
+T
+F
+true
+false
+true
+0.375
+0.75
+null
+F
+T
+own
+late:null
+branch taken
+false
+false
+false
+true
+true
+true
+true
+0.75
+0.375
+4
+F
+3
+text
+1.5
+true
+4
+3
+true
+false
 missing method: caught
 not a function: caught
 missing field: caught
