@@ -1,0 +1,11 @@
+Stage3 cannot call method generic of class Box through a Dynamic value (no such method, or it has type parameters, a rest argument, or no generated body)
+Stage3 cannot call method rest of class Box through a Dynamic value (no such method, or it has type parameters, a rest argument, or no generated body)
+Stage3 cannot call method absent of class Box through a Dynamic value (no such method, or it has type parameters, a rest argument, or no generated body)
+Stage3 cannot call method add of class Box through a Dynamic value: too many arguments
+Stage3 cannot call method add through a Dynamic value: argument 2 must be an Int
+Stage3 cannot call method half through a Dynamic value: argument 1 must be a Float
+Stage3 cannot call method greet through a Dynamic value: argument 1 must be a String
+Null Access
+Stage3 cannot call method absent through a Dynamic value: the value has no such method
+Stage3 cannot call method absent through a Dynamic value: the value has no such method
+Stage3 cannot call value through a Dynamic value: it is not a function

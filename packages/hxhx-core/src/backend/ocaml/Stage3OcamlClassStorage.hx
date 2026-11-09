@@ -281,7 +281,11 @@ class Stage3OcamlClassStorage {
 		if (!projection.hasSemanticFacts())
 			return null;
 		final facts = projection.requireSemanticFacts();
-		return virtuals.registration(facts, interfaces.entries(facts), currentModule, ident, quote);
+		final tables = [
+			virtuals.registration(facts, interfaces.entries(facts), currentModule, ident, quote),
+			Stage3OcamlDynamicMethods.registration(facts, virtuals, currentModule, ident, quote)
+		].filter(table -> table != null);
+		return tables.length == 0 ? null : tables.join("\n");
 	}
 
 	/** The statement that registers this class's `toString()` adapter for runtime string conversion, or null. */

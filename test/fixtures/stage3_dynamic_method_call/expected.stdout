@@ -1,0 +1,38 @@
+late:null
+late:4
+inherited
+own
+5
+14
+10
+a/null
+a/b
+1.5
+1.5
+false
+yes
+touched
+null/null
+2.5/true
+1.5/false
+inlined
+replaceable
+first
+second
+3
+true
+late:null
+inherited
+late:null
+late:null
+late:null
+late:null
+base:null
+person
+101
+42
+2
+missing method: caught
+not a function: caught
+missing field: caught
+null receiver: caught

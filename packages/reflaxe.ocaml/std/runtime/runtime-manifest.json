@@ -67,6 +67,15 @@
       "license": "MIT"
     },
     {
+      "module": "HxDynamicMethods",
+      "scope": "application",
+      "files": [{ "path": "HxDynamicMethods.ml", "sha256": "baa94757d288f0949dc2bf9f8360d2d485f04d2ed8305f60b936a49df5297461" }],
+      "dependencies": ["HxAnon", "HxRuntime", "HxType"],
+      "duneLibraries": [],
+      "profiles": ["metal", "portable"],
+      "license": "MIT"
+    },
+    {
       "module": "HxEnum",
       "scope": "application",
       "files": [{ "path": "HxEnum.ml", "sha256": "09105ff1f110b16ed5cc879b9ea4c7c5d9ba97eb9b6a89871f0dc007c031e019" }],
