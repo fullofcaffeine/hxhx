@@ -117,6 +117,8 @@ class Main {
 			+ (asShape == null ? "null" : asShape.name())
 			+ " "
 			+ show(Std.downcast(baseShape, Polygon) == null));
+		Sys.println("downcast-dynamic " + describe(Std.downcast(dynamicSquare, Square)) + " " + describe(Std.downcast(other, Base)) + " "
+			+ describe(Std.downcast(anyTile, Tile)) + " " + describe(Std.downcast(nothing, Square)));
 		Sys.println("instance " + describe(Std.instance(tile, Square)) + " " + describe(Std.instance(base, Tile)));
 
 		final checked = Std.is(observed("is", square), Square);
