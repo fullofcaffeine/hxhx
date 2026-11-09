@@ -1,0 +1,61 @@
+NEG|Float should be Int|static function f(x):Int return x + 1; static function main() { var g:Float->Int = f; }|
+NEG|Float should be Int|static function f(x:Int):Int return x + 1; static function main() { var g:Float->Int = f; }|
+NEG|Int should be String|static function f(x:Int):Int return x; static function main() { var g:Int->String = f; }|
+NEG|String should be Int|static function f(x:Int, y:Int):Int return x; static function main() { var g:Int->String->Int = f; }|
+NEG|Int should be String|static function h(x:Int, y:Int):String return x + y; static function main() { h(1, 2); }|
+NEG|String should be Int|static function h():Int return "s"; static function main() { h(); }|
+NEG|String should be Int|static function main() { var x:Int = "s"; }|
+NEG|Float should be Int|static function main() { var x:Int = 1.5; }|
+NEG|Bool should be String|static function main() { final x:String = true; }|
+NEG|Float should be Int|static function f(x:Float):Float return x; static function main() { var g:Int->Int = f; }|
+NEG|(x : Int, ?y : Null<Int>) -> Int should be Int -> Int|static function f(x:Int, ?y:Int):Int return 1; static function main() { var g:Int->Int = f; }|
+NEG|Int should be String|static function f(x:Int):Int return x; static function main() { var g:Int->String; g = f; var h:Int->String = f; }|
+POS||static function f(x:Float):Int return 1; static function main() { var g:Int->Int = f; }|
+POS||static function f(x:Int):Int return x; static function main() { var g:Int->Float = f; }|
+POS||static function f(x:Int):Int return x; static function main() { var g:Int->Void = f; }|
+POS||static function f(x:Int):Int return x; static function main() { var g:Dynamic = f; }|
+POS||static function f(x:Dynamic):Int return 1; static function main() { var g:String->Int = f; }|
+POS||static function f(x:Int):Dynamic return x; static function main() { var g:Int->String = f; }|
+POS||static function f(?x:Int):Int return 1; static function main() { var g:Int->Int = f; }|
+POS||static function f<T>(x:T):T return x; static function main() { var g:Int->Int = f; var k:String->String = f; }|
+POS||static function f(x):Int return x + 1; static function main() { var g:Int->Int = f; }|
+POS||static function f(x:Array<Int>):Int return 1; static function main() { var g:Array<Int>->Int = f; }|
+POS||static function h(x:Int, y:Int):Float return x + y; static function main() { h(1, 2); }|
+POS||static function h(x:Int, y:Int):Float return x / y; static function main() { h(1, 2); }|
+POS||static function h():Dynamic return "s"; static function main() { h(); }|
+POS||static function h(x:Int):String return x > 0 ? "a" : "b"; static function main() { h(1); }|
+POS||static function h(x:Int):Null<Int> return x; static function main() { h(1); }|
+POS||static function h(x:Int):Float return x; static function main() { var f:Float = 1; h(1); }|
+POS||static function main() { var g:Array<Int>->Void = function(a) {}; var k:(Int, Int) -> Int = (a, b) -> a + b; }|
+POS||static function main() { var a = [3, 1, 2]; a.sort((x, y) -> x - y); var c:Int->Int->Int = Reflect.compare; }|
+POS||static function main() { var m:Meters = 2.5; var f:Float = m; var g:Meters->Float = x -> x; var back:Meters = f; }|abstract Meters(Float) from Float to Float {}
+POS||static function main() { var s:Label = "a"; var t:String = s; var n:Label = 3; }|abstract Label(String) from String to String { @:from static function fromInt(i:Int):Label return new Label("" + i); inline function new(s:String) this = s; }
+POS||static function main() { var k:Kind = A; var i:Int = k; }|enum abstract Kind(Int) to Int { var A = 1; }
+POS||static function main() { var a:Animal = new Dog(); var f:Dog->Animal = d -> d; var g:Animal->Void = (a:Animal) -> {}; var h:Dog->Void = g; }|class Animal { public function new() {} } class Dog extends Animal {}
+POS||static function main() { var s:Shape = new Square(); var f:Void->Shape = () -> new Square(); }|interface Shape {} class Square implements Shape { public function new() {} }
+POS||static function apply<T>(f:T->T, v:T):T return f(v); static function main() { var g:Int->Int = x -> x; apply(g, 1); var r:Float = apply((x:Float) -> x * 2.0, 1.5); }|
+POS||static function main() { var p:{x:Int} = {x: 1}; var q:{x:Int, y:Int} = {x: 1, y: 2}; var r:{x:Int} = q; }|
+POS||static function main() { var n:Null<Int> = null; var f:Float = 1; var d:Dynamic = "s"; var i:Int = d; }|
+POS||static function count():Int return 3; static function main() { var f:Float = count(); var c:Void->Float = count; }|
+NEG|String should be R|static function f():R return "s"; static function main() { f(); }|typedef R = Int;
+NEG|String should be Count|static function main() { var c:Count = "s"; }|typedef Count = Int;
+POS||static function f():R return 3; static function main() { var c:R = f(); var d:Float = c; }|typedef R = Int;
+POS||static function s(x:Int):Step return s; static function main() { var g:Step = s; var h:Int->Step = s; var o:Other = s; }|typedef Step = Int->Step; typedef Other = Int->Other;
+NEG|String should be Int|static function s(x:Int):Step return s; static function main() { var g:String->Step = s; }|typedef Step = Int->Step;
+POS||static function s(x:Int):Step return s; static function main() { var f = s; var g:Step = f; var other:Other = f; }|typedef Step = Int->Step; typedef Other = Int->Other;
+NEG|Void should be Int|static function f():Void {} static function main() { var g:Void->Int = f; }|
+NEG|(?x : Null<Int>) -> Int should be () -> Int|static function f(?x:Int):Int return 1; static function main() { var e:Void->Int = f; }|
+NEG|() -> Int should be Int -> Int|static function f():Int return 1; static function main() { var e:Int->Int = f; }|
+NEG|(x : Int, y : Int) -> Int should be Int -> Int|static function f(x:Int, y:Int):Int return 1; static function main() { var e:Int->Int = f; }|
+NEG|(x : (Int -> Int)) -> Int should be () -> Int|static function f(x:Int->Int):Int return 1; static function main() { var e:Void->Int = f; }|
+POS||static function s(f:Int->T, g:Int->T):T return s; static function main() { var o:U = s; var l = s; var m:U = l; }|typedef T = (Int->T, Int->T)->T; typedef U = (Int->U, Int->U)->U;
+NEG|(x : Int) -> (Int -> Int) should be () -> Int|static function f(x:Int):Int->Int return null; static function main() { var e:Void->Int = f; }|
+NEG|(x : Int) -> Int should be F|static function f(x:Int):Int return 1; static function main() { var e:F = f; }|typedef F = Void->Int;
+NEG|String should be Int|static function s(f:Int->T):T return s; static function main() { var o:U = s; }|typedef T = (Int->T)->T; typedef U = (String->U)->U;
+NEG|Int should be String|static function f(x:Int):Int return 1; static function main() { var g:String->String = f; }|
+NEG|Int should be String|static function f(a:A15, b:A0):Void {} static function main() { var g:(B15, B0)->Void = f; }|typedef A0 = Int->String; typedef A1 = Int->A0; typedef A2 = Int->A1; typedef A3 = Int->A2; typedef A4 = Int->A3; typedef A5 = Int->A4; typedef A6 = Int->A5; typedef A7 = Int->A6; typedef A8 = Int->A7; typedef A9 = Int->A8; typedef A10 = Int->A9; typedef A11 = Int->A10; typedef A12 = Int->A11; typedef A13 = Int->A12; typedef A14 = Int->A13; typedef A15 = Int->A14; typedef B0 = Int->Int; typedef B1 = Int->B0; typedef B2 = Int->B1; typedef B3 = Int->B2; typedef B4 = Int->B3; typedef B5 = Int->B4; typedef B6 = Int->B5; typedef B7 = Int->B6; typedef B8 = Int->B7; typedef B9 = Int->B8; typedef B10 = Int->B9; typedef B11 = Int->B10; typedef B12 = Int->B11; typedef B13 = Int->B12; typedef B14 = Int->B13; typedef B15 = Int->B14;
+NEG|Int should be String|static function f(a:A0, b:A15):Void {} static function main() { var g:(B0, B15)->Void = f; }|typedef A0 = Int->String; typedef A1 = Int->A0; typedef A2 = Int->A1; typedef A3 = Int->A2; typedef A4 = Int->A3; typedef A5 = Int->A4; typedef A6 = Int->A5; typedef A7 = Int->A6; typedef A8 = Int->A7; typedef A9 = Int->A8; typedef A10 = Int->A9; typedef A11 = Int->A10; typedef A12 = Int->A11; typedef A13 = Int->A12; typedef A14 = Int->A13; typedef A15 = Int->A14; typedef B0 = Int->Int; typedef B1 = Int->B0; typedef B2 = Int->B1; typedef B3 = Int->B2; typedef B4 = Int->B3; typedef B5 = Int->B4; typedef B6 = Int->B5; typedef B7 = Int->B6; typedef B8 = Int->B7; typedef B9 = Int->B8; typedef B10 = Int->B9; typedef B11 = Int->B10; typedef B12 = Int->B11; typedef B13 = Int->B12; typedef B14 = Int->B13; typedef B15 = Int->B14;
+NEG|() -> Int should be (Int, String) -> Int|static function f():Int return 1; static function main() { var g:Int->String->Int = f; }|
+NEG|(Int, Int) -> Int should be Int -> Int|static function f(cb:Int->Int):Void {} static function main() { var g:(Int->Int->Int)->Void = f; }|
+NEG|() -> Int should be (?a : Int) -> Int|static function f():Int return 1; static function main() { var e:(?a:Int)->Int = f; }|
+NEG|?Int -> Int should be () -> Int|static function h():(?Int)->Int return null; static function main() { var e:Void->Int = h(); }|
