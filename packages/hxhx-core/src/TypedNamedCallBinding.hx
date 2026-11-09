@@ -18,6 +18,10 @@ class TypedNamedCallBinding {
 	public function getArguments():TyCallArgumentBinding
 		return arguments;
 
+	/** The selected declaration, whose parameters include an extension method's receiver. */
+	public function getDeclaration():TyDeclarationInfo
+		return declaration;
+
 	/** The selected declaration stays fixed while its invocation facts follow the enclosing inline specialization. */
 	@:allow(TypedExpr)
 	function substituteTypes(bindings:haxe.ds.StringMap<TyType>):TypedNamedCallBinding
