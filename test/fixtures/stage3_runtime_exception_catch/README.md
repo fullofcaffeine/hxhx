@@ -36,7 +36,7 @@ whether it is thrown directly, from a local, a static field, a call result, or
 a `Dynamic` value, or after being caught and rethrown.
 
 A statement `try` whose body is not a block (`try f() catch (e:String) g();`)
-still loses its handlers in the parser. That is owned by `haxe_ocaml-2aql5`.
+keeps its handlers as well. `npm run test:m14:unbraced-try-catch` covers that form.
 
 The test also builds a native-only program that raises an OCaml `Failure`,
 the runtime's report for its own bugs, inside `catch (e:Dynamic)`. That
