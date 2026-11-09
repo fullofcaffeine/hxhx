@@ -2557,6 +2557,10 @@ class EmitterStage {
 				backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(stage3TyForIdent(name, tyByIdent));
 			case ECall(EIdent(name), _): final signature = callSigForStage3(name,
 					callSigByCallee); signature != null && backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(signature.resultTypeHint);
+			// A method called through a Dynamic receiver returns a Dynamic value.
+			case ECall(EField(receiver, _), _) if (!isTypePathExpr(receiver)
+				&& stage3HasDynamicReceiver(receiver, tyByIdent, callSigByCallee)):
+				true;
 			case ECall(EField(_, name), _): var signature = callSigForStage3(name,
 					callSigByCallee); if (signature == null) signature = callSigForStage3(ocamlValueIdent(name),
 					callSigByCallee); signature != null && backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(signature.resultTypeHint);
@@ -4387,14 +4391,18 @@ class EmitterStage {
 						&& stage3HasDynamicReceiver(obj, tyByIdentRaw, callSigByCalleeRaw)):
 						final receiver = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 							callSigByCallee);
-						final arguments = [
-							for (arg in args)
-								backend.ocaml.OcamlDynamicOperatorLowering.callArgument("Dynamic",
-									stage3DynamicArgumentCarrier(arg, tyByIdentRaw, callSigByCalleeRaw),
-									exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-										callSigByCallee))
-						];
-						return backend.ocaml.Stage3OcamlDynamicMethods.call(receiver, field, arguments, currentFunctionLocalOcamlNames, escapeOcamlString);
+						final arguments = new Array<String>();
+						final exactBools = new Array<Int>();
+						for (index in 0...args.length) {
+							final carrier = stage3DynamicArgumentCarrier(args[index], tyByIdentRaw, callSigByCalleeRaw);
+							if (carrier == backend.ocaml.OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ExactBool)
+								exactBools.push(index);
+							arguments.push(backend.ocaml.OcamlDynamicOperatorLowering.callArgument("Dynamic", carrier,
+								exprToOcaml(args[index], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+									callSigByCallee)));
+						}
+						return backend.ocaml.Stage3OcamlDynamicMethods.call(receiver, field, arguments, exactBools, currentFunctionLocalOcamlNames,
+							escapeOcamlString);
 					case _:
 				}
 

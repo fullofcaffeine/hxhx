@@ -19,6 +19,9 @@ import sys.io.File;
 	  in fields. The native executable must print exactly what upstream prints.
 	- A call that cannot reach a method must raise an error that `try`/`catch`
 	  can handle, and that error must name the method.
+	- Arguments and results keep their real values: a Bool passed to a stored
+	  function, a `flag:Bool = true` parameter, an abstract over Float given an
+	  Int, and the result of a Dynamic call used in a condition or comparison.
 **/
 class M14Stage3DynamicMethodCallTest {
 	static final fixture = "test/fixtures/stage3_dynamic_method_call";
@@ -53,8 +56,9 @@ class M14Stage3DynamicMethodCallTest {
 	}
 
 	/**
-		Upstream either runs these calls or stops with its own text, so only the
-		native program's named errors are compared here. Each must be catchable.
+		Upstream either stops on these calls or reports its own text, so they
+		are compared with the recorded native output. Each named error must be
+		catchable.
 	**/
 	static function namedErrors():Void {
 		final fixtureErrors = "test/fixtures/stage3_dynamic_method_call_errors";

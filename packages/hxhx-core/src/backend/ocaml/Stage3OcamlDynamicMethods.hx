@@ -20,14 +20,16 @@ import TypedBackendClassSemanticFacts.TypedBackendClassMethodArgumentFact;
 	- Each generated class registers one adapter per method it declares. The
 	  adapter reads each `Dynamic` argument into the representation the method's
 	  OCaml function expects, then boxes the result as a `Dynamic` value:
-	  - an `Int`, `Float`, or `Bool` parameter needs a real OCaml number or
-		Boolean, so an `Int` argument for a `Float` parameter is converted and a
-		wrong value raises a named error instead of being read as memory;
+	  - an `Int`, `Float`, or `String` parameter needs a real OCaml value, so an
+		`Int` argument for a `Float` parameter is converted and a wrong value
+		raises a named error instead of being read as memory. An abstract
+		parameter follows its backing type;
+	  - a `Bool` parameter is read as a plain OCaml Boolean, as a direct call
+		passes it. An optional one may also receive null;
+	  - a rest parameter collects the remaining arguments into one array;
 	  - a `Bool` result is boxed so it still prints as `true` or `false`.
 
 	Limits
-	- A method with its own type parameters or a rest argument gets no adapter.
-	  Calling one through `Dynamic` raises a named, catchable error.
 	- Only the methods of generated classes are reachable. `String`, `Array`,
 	  and other runtime values answer only the fields `HxAnon.get` provides, and
 	  a missing one raises a named error (haxe_ocaml-9sa52).
@@ -40,7 +42,7 @@ class Stage3OcamlDynamicMethods {
 		overridden method: the override chain is already resolved by the runtime,
 		so the dispatcher would only repeat that lookup.
 	**/
-	public static function registration(facts:TypedBackendClassSemanticFacts, virtuals:Stage3OcamlVirtualDispatch, module:String,
+	public static function registration(facts:TypedBackendClassSemanticFacts, virtuals:Stage3OcamlVirtualDispatch, backing:TyType->TyType, module:String,
 			ident:(String, String) -> String, quote:String->String):Null<String> {
 		if (facts.getIsExtern() || facts.getIsInterface() || !facts.getNominalKind().match(ClassInstance))
 			return null;
@@ -49,8 +51,13 @@ class Stage3OcamlDynamicMethods {
 			if (!adapterAvailable(method))
 				continue;
 			final name = ident(module, virtuals.superCallTarget(facts.getClassIdentity(), method.name));
-			entries.push("(" + quote(method.name) + ", " + method.arguments.length + ", fun (__hx_this : Obj.t) (__hx_args : Obj.t list) -> "
-				+ adapterBody(method, name, quote) + ")");
+			entries.push("("
+				+ quote(method.name)
+				+ ", "
+				+ (hasRest(method) ? "Stdlib.max_int" : Std.string(method.arguments.length))
+				+ ", fun (__hx_this : Obj.t) (__hx_args : Obj.t list) -> "
+				+ adapterBody(method, name, backing, quote)
+				+ ")");
 		}
 		if (entries.length == 0)
 			return null;
@@ -58,13 +65,22 @@ class Stage3OcamlDynamicMethods {
 	}
 
 	/** The expression for one Dynamic call, evaluating the receiver and then the arguments in Haxe order. */
-	public static function call(receiver:String, field:String, arguments:Array<String>, names:Stage3OcamlLocalNames, quote:String->String):String {
+	public static function call(receiver:String, field:String, arguments:Array<String>, exactBools:Array<Int>, names:Stage3OcamlLocalNames,
+			quote:String->String):String {
 		final receiverName = names.internalName("__hx_dynamic_receiver");
 		final argumentNames = [
 			for (index in 0...arguments.length)
 				names.internalName("__hx_dynamic_argument_" + index)
 		];
-		var body = "(HxDynamicMethods.call " + receiverName + " " + quote(field) + " [" + argumentNames.join("; ") + "])";
+		var body = "(HxDynamicMethods.call "
+			+ receiverName
+			+ " "
+			+ quote(field)
+			+ " ["
+			+ argumentNames.join("; ")
+			+ "] ["
+			+ exactBools.join("; ")
+			+ "])";
 		var index = arguments.length;
 		while (index-- > 0)
 			body = "let " + argumentNames[index] + " = (" + arguments[index] + ") in " + body;
@@ -73,42 +89,64 @@ class Stage3OcamlDynamicMethods {
 
 	/** A method whose OCaml function a Dynamic call can reach with converted arguments. */
 	static function adapterAvailable(method:TypedBackendClassMethodFact):Bool {
-		if (method.isStatic || !method.hasBody || method.name == "new" || method.typeParameters.length > 0)
-			return false;
-		for (argument in method.arguments)
-			if (argument.isRest)
-				return false;
-		return true;
+		return !method.isStatic && method.hasBody && method.name != "new";
 	}
 
-	static function adapterBody(method:TypedBackendClassMethodFact, name:String, quote:String->String):String {
+	static function hasRest(method:TypedBackendClassMethodFact):Bool {
+		return Lambda.exists(method.arguments, argument -> argument.isRest);
+	}
+
+	static function adapterBody(method:TypedBackendClassMethodFact, name:String, backing:TyType->TyType, quote:String->String):String {
 		final arguments = [
-			for (index in 0...method.arguments.length)
-				" (Obj.magic (HxDynamicMethods.argument "
-				+ quote(method.name)
-				+ " "
-				+ index
-				+ " HxDynamicMethods."
-				+ argumentKind(method.arguments[index])
-				+ " __hx_args))"];
+			for (index in 0...method.arguments.length) {
+				final parameter = method.arguments[index];
+				final read = (parameter.isRest ? "HxDynamicMethods.rest_arguments " : "HxDynamicMethods.argument ")
+					+ quote(method.name)
+					+ " "
+					+ index
+					+ " HxDynamicMethods."
+					+ (parameter.isRest ? restElementKind(parameter, backing) : argumentKind(parameter, backing))
+					+ " __hx_args";
+				parameter.isRest ? " (HxBootArray.of_list (Obj.magic (" + read + ")))" : " (Obj.magic (" + read + "))";
+			}
+		];
 		final call = name + " (Obj.magic __hx_this)" + arguments.join("");
-		final result = TyAliasExpansion.reveal(method.returnSemanticType);
+		final result = backing(TyAliasExpansion.reveal(method.returnSemanticType));
 		if (result.isVoid())
 			return "ignore (" + call + "); HxRuntime.hx_null";
 		return result.isUnknown() ? "Obj.repr (" + call + ")" : Stage3OcamlObjects.store(result, call);
 	}
 
 	/** The runtime argument kind that matches how the method's OCaml function reads this parameter. */
-	static function argumentKind(argument:TypedBackendClassMethodArgumentFact):String {
+	static function argumentKind(argument:TypedBackendClassMethodArgumentFact, backing:TyType->TyType):String {
 		final revealed = TyAliasExpansion.reveal(argument.semanticType);
-		final key = TyAliasExpansion.revealNonNullable(revealed).getSemanticKey();
-		final nullable = argument.isOptional || revealed.isNullable();
-		return switch key {
-			case "primitive:Int": nullable ? "Nullable_int_argument" : "Int_argument";
-			case "primitive:Float": nullable ? "Nullable_float_argument" : "Float_argument";
-			case "primitive:Bool": nullable ? "Nullable_bool_argument" : "Bool_argument";
-			case _ if (revealed.getCanonicalDisplay() == "String" || revealed.getCanonicalDisplay() == "Null<String>"): "String_argument";
+		final declaredNullable = revealed.isNullable();
+		return switch valueKey(revealed, backing) {
+			case "primitive:Int": declaredNullable || argument.isOptional ? "Nullable_int_argument" : "Int_argument";
+			case "primitive:Float": declaredNullable || argument.isOptional ? "Nullable_float_argument" : "Float_argument";
+			// Every Bool parameter reads a plain OCaml bool, and null also selects a default.
+			case "primitive:Bool": declaredNullable || argument.isOptional ? "Optional_bool_argument" : "Bool_argument";
+			case "String": "String_argument";
 			case _: "Value_argument";
 		};
+	}
+
+	/** A rest parameter's type is its element type, or `haxe.Rest<Element>`. */
+	static function restElementKind(argument:TypedBackendClassMethodArgumentFact, backing:TyType->TyType):String {
+		final parameters = argument.semanticType.getTypeArguments();
+		final element = parameters.length == 1 ? parameters[0] : argument.semanticType;
+		return switch valueKey(TyAliasExpansion.reveal(element), backing) {
+			case "primitive:Int": "Int_argument";
+			case "primitive:Float": "Float_argument";
+			case "primitive:Bool": "Bool_argument";
+			case "String": "String_argument";
+			case _: "Value_argument";
+		};
+	}
+
+	/** The primitive or String that holds this type's values, following abstracts to their backing type. */
+	static function valueKey(type:TyType, backing:TyType->TyType):String {
+		final value = TyAliasExpansion.revealNonNullable(backing(TyAliasExpansion.revealNonNullable(type)));
+		return value.getCanonicalDisplay() == "String" ? "String" : value.getSemanticKey();
 	}
 }

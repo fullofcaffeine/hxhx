@@ -1,15 +1,20 @@
 /**
-	Each call below cannot reach a method natively. The program must catch a
-	named error and keep running, rather than stop with a crash.
+	The rest calls run natively. Upstream's interpreter stops on them, so they
+	cannot be compared with upstream. Every other call below cannot reach a
+	method. The program must catch a named error and keep running.
 **/
 class Box {
 	public function new() {}
 
-	public function generic<T>(value:T):T
-		return value;
+	public function rest(first:Int, ...more:Int):Int {
+		var total = first;
+		for (value in more)
+			total += value;
+		return total;
+	}
 
-	public function rest(first:Int, ...more:Int):Int
-		return first;
+	public function callRest(other:Dynamic):Int
+		return other.rest(1, 2);
 
 	public function add(a:Int, b:Int):Int
 		return a + b;
@@ -32,8 +37,9 @@ class Main {
 
 	static function main() {
 		final box:Dynamic = new Box();
-		report(() -> box.generic(1));
-		report(() -> box.rest(1, 2));
+		report(() -> box.rest(1, 2, 3));
+		report(() -> box.rest(1));
+		report(() -> new Box().callRest(box));
 		report(() -> box.absent());
 		report(() -> box.add(1, 2, 3));
 		report(() -> box.add(1));

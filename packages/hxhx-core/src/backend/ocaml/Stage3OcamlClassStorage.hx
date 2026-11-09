@@ -31,6 +31,8 @@ class Stage3OcamlClassStorage {
 	/** Mutable static field cells for the same request, selected before any module is emitted. */
 	public final statics = new Stage3OcamlStaticStorage();
 
+	final abstractBackings:Map<String, TyType> = [];
+
 	public function new() {}
 
 	/**
@@ -42,6 +44,7 @@ class Stage3OcamlClassStorage {
 		final facts = projection.requireSemanticFacts();
 		switch facts.getNominalKind() {
 			case AbstractValue(underlying):
+				abstractBackings.set(facts.getClassIdentity(), underlying);
 				if (!runtimeProvided && !facts.getIsExtern() && outputModule != null)
 					abstracts.add({
 						projection: projection,
@@ -84,6 +87,20 @@ class Stage3OcamlClassStorage {
 		initializers.set(identity, initializer);
 		if (outputModule != null)
 			modules.set(identity, outputModule);
+	}
+
+	/** Follow abstracts to the type that holds their values at run time. */
+	function backingType(type:TyType):TyType {
+		final seen:Map<String, Bool> = [];
+		var current = type;
+		while (true) {
+			final identity = current.getNominalIdentity();
+			final name = identity == null ? null : identity.getCanonicalName();
+			if (name == null || !abstractBackings.exists(name) || seen.exists(name))
+				return current;
+			seen.set(name, true);
+			current = TyAliasExpansion.revealNonNullable(abstractBackings.get(name));
+		}
 	}
 
 	/** Runtime catch names come from admitted declarations, never aliases or printed type hints. */
@@ -162,7 +179,7 @@ class Stage3OcamlClassStorage {
 		final facts = projection.requireSemanticFacts();
 		final tables = [
 			virtuals.registration(facts, interfaces.entries(facts), currentModule, ident, quote),
-			Stage3OcamlDynamicMethods.registration(facts, virtuals, currentModule, ident, quote)
+			Stage3OcamlDynamicMethods.registration(facts, virtuals, backingType, currentModule, ident, quote)
 		].filter(table -> table != null);
 		return tables.length == 0 ? null : tables.join("\n");
 	}
