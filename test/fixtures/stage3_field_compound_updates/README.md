@@ -23,6 +23,7 @@ run the right operand, store the result, and yield the stored value.
 - Float instance fields written as `this.f`, a bare `f`, and `h.f`
 - Int right operands of a Float field, such as `h.f += count()`
 - `Null<Int>` and `Null<Float>` right operands, and Int field `%=`
+- `|=`, `&=`, `^=`, `<<=`, `>>=`, and `>>>=` on anonymous Int fields, in both positions
 - a Float instance field declared with a type parameter (`Cell<Float>`)
 - receivers and right operands that record their evaluation order, and a right
   operand that updates the same field

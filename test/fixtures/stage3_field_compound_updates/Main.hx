@@ -153,6 +153,27 @@ class Main {
 		Sys.println(h.ratio);
 		Sys.println(h.ratio += ni);
 
+		// Bitwise updates on an anonymous Int field.
+		final bits = {n: 12};
+		bits.n |= 3;
+		Sys.println(bits.n);
+		bits.n &= 13;
+		Sys.println(bits.n);
+		bits.n ^= 6;
+		Sys.println(bits.n);
+		bits.n <<= 4;
+		Sys.println(bits.n);
+		bits.n >>= 2;
+		Sys.println(bits.n);
+		bits.n = -16;
+		bits.n >>>= 28;
+		Sys.println(bits.n);
+		Sys.println(bits.n |= 16);
+		Sys.println((bits.n &= 21) + 100);
+		point(p).x <<= count();
+		Sys.println(p.x);
+		flushLog();
+
 		// The right operand sees the old stored value read first.
 		final self = {n: 10};
 		self.n += (self.n += 5);
