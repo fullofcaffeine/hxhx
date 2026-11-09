@@ -569,6 +569,9 @@ class EmitterStage {
 				&& !TyFunctionConstraint.isFunctionConstraint(destination)
 				&& backend.ocaml.Stage3OcamlNullablePrimitive.innerPrimitive(destination) == null))
 			return rendered;
+		// Record the adapted write; the end-of-class check refuses any it did not see.
+		if (TyFunctionConstraint.isFunctionConstraint(destination) && currentClassStorage != null)
+			currentClassStorage.adaptedFunctionArguments.push(operand);
 		return backend.ocaml.Stage3OcamlLocalStorage.store(requireLocalStorageWrite(name, operand), rendered, currentFunctionLocalOcamlNames);
 	}
 
@@ -9816,10 +9819,10 @@ class EmitterStage {
 					// Every function value passed as haxe.Constraints.Function was adapted.
 					for (typedFunction in classProjection.getFunctions())
 						backend.ocaml.Stage3OcamlFunctionBoundary.requireAdapted([], typedFunction.getFunctionConstraintArguments(),
-							currentClassStorage.adaptedFunctionArguments, moduleFilePath);
+							currentClassStorage.adaptedFunctionArguments, moduleFilePath, typedFunction.getFunctionConstraintLocalWrites());
 					for (typedInitializer in classProjection.getFieldInitializers())
 						backend.ocaml.Stage3OcamlFunctionBoundary.requireAdapted([], typedInitializer.getFunctionConstraintArguments(),
-							currentClassStorage.adaptedFunctionArguments, moduleFilePath);
+							currentClassStorage.adaptedFunctionArguments, moduleFilePath, typedInitializer.getFunctionConstraintLocalWrites());
 
 					// After every method is defined, and before `main` can allocate an instance.
 					final methodTable = currentClassStorage.methodTable(classProjection, outputModuleName, ocamlModuleValueIdent, escapeOcamlString);

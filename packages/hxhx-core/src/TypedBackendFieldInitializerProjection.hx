@@ -360,6 +360,10 @@ class TypedBackendFieldInitializerProjection {
 	public function getFunctionConstraintFlows():Array<TypedBackendFunctionConstraintFlow>
 		return functionConstraintFlows.copy();
 
+	/** The local writes of this executable, including generated result locals, that store a function value in a `Function` slot. */
+	public function getFunctionConstraintLocalWrites():Array<TypedBackendLocalWrite>
+		return localWrites.filter(write -> TyFunctionConstraint.reaches(write.binding.getType(), write.sourceType));
+
 	/** The call arguments of this executable that pass a function value to a `Function` slot. */
 	public function getFunctionConstraintArguments():Array<TypedBackendCallArgument>
 		return callArguments.filter(argument -> TyFunctionConstraint.reaches(argument.expectedType, argument.type));
