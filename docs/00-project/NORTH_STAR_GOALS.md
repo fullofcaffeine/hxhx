@@ -246,6 +246,18 @@ the relevant bead/checkpoint note.
 The README keeps only the current readiness review. Older reviews move here so
 their evidence links stay findable. Newest entries come first.
 
+#### 2026-11-08: progress bars unchanged
+
+Evidence since 2026-11-01:
+
+- PR #122 closes `haxe_ocaml-tcf2h` (virtual dispatch for overrides) and `haxe_ocaml-37rs6` (`super.method()`) in Stage3 native output. PRs #127, #131, #136, #151, #154, #157, #161, #168, and #179 fix further Stage3 native behaviors with focused upstream-compared fixtures. Silent wrong results and crashes remain open, for example `haxe_ocaml-a57y5`, `haxe_ocaml-w89g9`, `haxe_ocaml-9sa52`, and `haxe_ocaml-z473l`.
+- PRs #125 and #133 lower macro reification before backend emission; the deferred forms are the open children of `haxe_ocaml-9sj5p.5`. PR #111 makes a selected macro that cannot run a compile error. `haxe.macro.Context` (`haxe_ocaml-9sj5p.6`) and `--macro` init macros (`haxe_ocaml-9sj5p.7`) remain open.
+- PR #119 (`haxe_ocaml-e9mgv`) adds the `hxhx self-compile through reflaxe.ocaml` pull-request job. Regeneration run 41480160788 from `498b75981` is imported in #173. The committed snapshot does not carry compiler changes merged after that commit, including #133 and #122.
+- PRs #138, #140, #144, #163, #165, #170, #172, #175, #176, and #180 align individual parser and typer decisions with upstream Haxe 4.3.7. PRs #124, #146, #164, #174, and #177 fix `reflaxe.ocaml` lowering and runtime behavior. The private runtime reference inventory stays at 207 legacy helper sites.
+- The Gate 1 Lite upstream macro unit smoke still fails at `TestMain.hx:122` (run 42556613940 on `9b87795fe`), and the latest Full1 strict matrix run failed (run 42392845615 on `37d0cd80a`).
+
+Why no bar changes: reification and the override fixes remove named blockers, but no owner Bead that controls a user-facing claim closed. `haxe_ocaml-9sj5p`, `haxe_ocaml-38gsp.1`, `haxe.ocaml-f1cl.3`, and `haxe_ocaml-u6esu` are still unfinished.
+
 #### 2026-11-01: progress bars unchanged
 
 Evidence since 2026-10-30:
