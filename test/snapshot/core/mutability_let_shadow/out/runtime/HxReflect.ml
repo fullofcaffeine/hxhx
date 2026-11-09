@@ -36,6 +36,75 @@ let is_varargs (marker : Obj.t) (v : Obj.t) : bool =
   && Obj.size v = 2
   && Obj.field v 0 == marker
 
+(* A typed function stored as `haxe.Constraints.Function`.
+
+   Why:
+   - A `Function` is called through the Dynamic convention, with arguments of any
+     category and count. The compiler wraps the typed closure in a function that
+     takes the whole argument array and converts each value.
+   - The value must still be directly callable, because a `Function` can flow
+     into Dynamic storage and be called there. So `functionValue` returns a real
+     closure of the function's arity. The array entry point lives in a marked
+     record, which is that closure's only captured value, so `callMethod` can
+     find it and pass the whole argument array. *)
+let function_value_marker : Obj.t = Obj.repr (ref 0)
+
+type function_value = { marker : Obj.t; call : Obj.t HxArray.t -> Obj.t }
+
+let arguments_of (items : Obj.t list) : Obj.t HxArray.t =
+  let out = HxArray.create () in
+  Stdlib.List.iter (fun item -> ignore (HxArray.push out item)) items;
+  out
+
+let functionValue (arity : int) (call : Obj.t HxArray.t -> Obj.t) : Obj.t =
+  let data = { marker = function_value_marker; call } in
+  match arity with
+  | 0 -> Obj.repr (fun () -> data.call (arguments_of []))
+  | 1 -> Obj.repr (fun (a : Obj.t) -> data.call (arguments_of [ a ]))
+  | 2 -> Obj.repr (fun (a : Obj.t) (b : Obj.t) -> data.call (arguments_of [ a; b ]))
+  | 3 -> Obj.repr (fun (a : Obj.t) (b : Obj.t) (c : Obj.t) -> data.call (arguments_of [ a; b; c ]))
+  | 4 ->
+      Obj.repr (fun (a : Obj.t) (b : Obj.t) (c : Obj.t) (d : Obj.t) ->
+          data.call (arguments_of [ a; b; c; d ]))
+  | 5 ->
+      Obj.repr (fun (a : Obj.t) (b : Obj.t) (c : Obj.t) (d : Obj.t) (e : Obj.t) ->
+          data.call (arguments_of [ a; b; c; d; e ]))
+  | _ -> invalid_arg "HxReflect.functionValue: unsupported arity"
+
+(* Finding the record reads the closure's info word, whose layout is defined
+   by OCaml's runtime headers (caml/mlvalues.h, since OCaml 4.12). The read is
+   limited to the OCaml versions that use that layout. On any other version a
+   wrapper is still a real closure, and it is called like one. *)
+let closure_info_supported : bool =
+  match Stdlib.String.split_on_char '.' Sys.ocaml_version with
+  | major :: minor :: _ -> (
+      match (Stdlib.int_of_string_opt major, Stdlib.int_of_string_opt minor) with
+      | Some 4, Some minor -> minor >= 12
+      | Some 5, Some _ -> true
+      | _ -> false)
+  | _ -> false
+
+(* The record of a closure made by `functionValue`, if `fn` is one. Any other
+   closure's first captured value is only inspected, never followed. *)
+let function_value_of (fn : Obj.t) : function_value option =
+  if (not closure_info_supported) || Obj.is_int fn || Obj.tag fn <> Obj.closure_tag then
+    None
+  else
+    (* Field 1 of a closure is its closure info. This is OCaml's documented
+       Start_env_closinfo layout from caml/mlvalues.h. *)
+    let info = Obj.raw_field fn 1 in
+    let start = Nativeint.to_int (Nativeint.shift_right_logical (Nativeint.shift_left info 8) 9) in
+    if start < 1 || start >= Obj.size fn then
+      None
+    else
+      let captured = Obj.field fn start in
+      if (not (Obj.is_int captured))
+         && Obj.tag captured = 0
+         && Obj.size captured = 2
+         && Obj.field captured 0 == function_value_marker
+      then Some (Obj.obj captured)
+      else None
+
 let isFunction (v : Obj.t) : bool =
   if HxRuntime.is_null v then
     false
@@ -108,6 +177,15 @@ let callMethod (_obj : Obj.t) (fn : Obj.t) (args : Obj.t HxArray.t) : Obj.t =
     ignore ((Obj.magic f : Obj.t HxArray.t -> unit) args);
     HxRuntime.hx_null
   ) else
+  match function_value_of fn with
+  | Some value -> value.call args
+  | None ->
+  (* A null or non-function value raises a catchable error instead of being
+     entered as code. *)
+  if HxRuntime.is_null fn || Obj.is_int fn
+     || (Obj.tag fn <> Obj.closure_tag && Obj.tag fn <> Obj.infix_tag) then
+    HxRuntime.hx_throw_typed (Obj.repr "Reflect.callMethod: value is not a function") [ "String"; "Dynamic" ]
+  else
   let len = HxArray.length args in
   let a i = HxArray.get args i in
   match len with

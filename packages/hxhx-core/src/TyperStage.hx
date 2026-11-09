@@ -1608,6 +1608,10 @@ class TyperStage {
 		final structural = TyStructuralArgument.compatibility(semanticIndex, expected, actual, methodTypeParameters);
 		if (structural != null)
 			return structural == Compatible ? 3 : -1;
+		// Any function value unifies with haxe.Constraints.Function. It ranks like
+		// an abstract conversion, below an exact or concrete signature match.
+		if (TyFunctionConstraint.accepts(expected, actual))
+			return 1;
 		if (expected.isFunction() || actual.isFunction()) {
 			// Explicit Dynamic admits callable values in either direction, but must
 			// not outrank a concrete signature or erase that signature's argument facts.
@@ -4381,6 +4385,7 @@ class TyperStage {
 			case EArrayDecl(values):
 				final acceptsArrayElement = (expected:TyType,
 					actual:TyType) -> actual.isDynamic()
+						|| TyFunctionConstraint.accepts(expected.unwrapNull(), actual)
 						|| TyStructuralArgument.compatibility(ctx.getIndex(), expected, actual) == Compatible
 						|| TyImplicitConversionPlan.select(ctx.getIndex(), expected.unwrapNull(), actual.unwrapNull()) != null
 						|| (actual.isNullLiteral() && TyNullArgument.acceptsLiteral(expected, ctx.getIndex()));
