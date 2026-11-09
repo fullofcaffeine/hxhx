@@ -41,13 +41,23 @@ these destinations:
 - `Function` and `Null<Function>` locals, at declaration and assignment;
 - elements of an `Array<Function>` literal.
 
+The wrapper is a real OCaml closure of the function's arity, so a call through
+a Dynamic value just applies it. `HxReflect.callMethod` also recognizes it, so
+it can pass the whole argument array and apply the rules below. Recognizing it
+reads the closure's info word, whose layout is defined by OCaml's runtime
+headers since 4.12. That read is limited to OCaml 4.12 through 5.x. On any other
+version the wrapper is called like a plain closure, without the argument-count
+check.
+
 Every other destination stops native emission with a named error, because a raw
 typed closure there would crash when `Reflect.callMethod` calls it. Typing
 records each such place as a `TypedBackendFunctionConstraintFlow`, and
 `Stage3OcamlFunctionBoundary.requireAdapted` refuses anything not adapted. That
 covers instance and static fields, field initializers, function and lambda
 results, structure fields, `Array.push`, array index assignment, `Map.set`,
-enum and constructor arguments, and type-check or cast results.
+enum, constructor, `super(...)` and `using` extension arguments, and type-check,
+cast, `??` or mixed conditional results. A nullable function value
+(`?cb:String->Void`) follows the same rules, and stays null when wrapped.
 `npm run test:m14:reflect-call-method` also runs
 `M14Stage3FunctionDestinationTest`, which checks each of these. The JS and Neko
 routes keep accepting them, and haxe_ocaml-h9dw9 tracks adapting them on Stage3.
@@ -86,8 +96,8 @@ Not covered:
 - Calling a `Function` directly (`f(1)`) stops while typing on the Stage3 route
   with "selected call conversion does not satisfy its retained parameter",
   although upstream allows it because `Function` is `@:callable`. Calling a
-  wrapped value through a Dynamic field or structure (`o.f(1)`) works; other
-  direct Dynamic calls fail in `ocamlopt` with a type error.
+  wrapped value through Dynamic storage works: a field or structure (`o.f(1)`),
+  an array element (`a[0](1)`), a local, or a call result (`getD(f)(1)`).
 - A null String argument concatenated in a listener needs the null-String
   text fix of PR #160 (haxe_ocaml-txs4e) on the Stage3 route.
 - A `Function` is accepted where a concrete function type is expected

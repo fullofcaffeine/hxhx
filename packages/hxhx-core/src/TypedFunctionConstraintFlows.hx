@@ -13,7 +13,23 @@ class TypedFunctionConstraintFlows {
 			flows.push({site: site, position: position});
 		final children = node.getExpressions();
 		switch node.getTag() {
-			case Call | TraceCall | Lambda | FieldRead | NullSafeFieldRead | ArrayAccess | Binary | Unary | LocalRead | NameRead | VariableDeclarations:
+			case Call if (children.length > 0 && children[0].getTag() == SuperValue):
+				// `super(...)` is projected as a constructor occurrence and has no call-argument facts.
+				final application = node.getConstructorApplication();
+				final parameters = application == null ? [] : application.getParameterTypes();
+				for (index in 1...children.length)
+					if (index - 1 < parameters.length && TyFunctionConstraint.reaches(parameters[index - 1], children[index].getType()))
+						add("constructor argument");
+			case Call if (node.getExtensionProvider() != null):
+				// A `using` call keeps its receiver under the callee, and its parameters only in the named binding.
+				final named = node.getNamedArguments();
+				final callable = named == null ? null : TyAliasExpansion.revealNonNullable(named.getArguments().getFunctionType());
+				final parameters = callable == null || !callable.isFunction() ? [] : callable.getFunctionArguments();
+				final values = children[0].getExpressions().concat(children.slice(1));
+				for (value in values)
+					if (Lambda.exists(parameters, parameter -> TyFunctionConstraint.reaches(parameter, value.getType())))
+						add("extension method argument");
+			case Call | TraceCall | Lambda | FieldRead | NullSafeFieldRead | ArrayAccess | LocalRead | NameRead | VariableDeclarations:
 			case NewValue:
 				final application = node.getConstructorApplication();
 				final parameters = application == null ? [] : application.getParameterTypes();
@@ -52,16 +68,24 @@ class TypedFunctionConstraintFlows {
 				var hasFunction = false;
 				for (child in children) {
 					mentioned = mentioned || TyFunctionConstraint.mentions(child.getType());
-					hasFunction = hasFunction || child.getType().isFunction();
+					hasFunction = hasFunction || TyFunctionConstraint.isFunctionValue(child.getType());
 				}
 				if (mentioned && hasFunction)
 					add("collection element");
+			case Binary if (node.getTexts()[0] != "??"):
+				// Other operators read their operands; they do not store them.
 			case _:
-				for (child in children)
-					if (TyFunctionConstraint.reaches(node.getType(), child.getType())) {
-						add("expression result");
-						break;
-					}
+				// A `??`, conditional or switch can mix a `Function` operand with a plain function value.
+				var hasConstraint = false;
+				var hasFunction = false;
+				var reached = false;
+				for (child in children) {
+					reached = reached || TyFunctionConstraint.reaches(node.getType(), child.getType());
+					hasConstraint = hasConstraint || TyFunctionConstraint.isFunctionConstraint(child.getType());
+					hasFunction = hasFunction || TyFunctionConstraint.isFunctionValue(child.getType());
+				}
+				if (reached || (hasConstraint && hasFunction))
+					add("expression result");
 		}
 		return flows;
 	}

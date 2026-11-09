@@ -24,7 +24,11 @@ class TyFunctionConstraint {
 
 	/** Whether a value of type `actual` may be assigned to `expected` by this rule. */
 	public static function accepts(expected:Null<TyType>, actual:Null<TyType>):Bool
-		return isFunctionConstraint(expected) && actual != null && actual.isFunction();
+		return isFunctionConstraint(expected) && isFunctionValue(actual);
+
+	/** Whether `type` is a function type, or `Null` of one. */
+	public static function isFunctionValue(type:Null<TyType>):Bool
+		return type != null && type.unwrapNull().isFunction();
 
 	/** Whether `type` mentions `Function` directly, as a type argument, or as a structure field. */
 	public static function mentions(type:Null<TyType>):Bool {
