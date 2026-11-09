@@ -166,8 +166,8 @@ function result(type:TyType, call:String):String {
 	other destination would hold a raw typed closure, which crashes when
 	`Reflect.callMethod` hands it arguments of another category or count.
 **/
-function requireAdapted(flows:Array<TypedBackendFunctionConstraintFlow>, arguments:Array<TypedBackendCallArgument>, adapted:Array<HxExpr>,
-		file:Null<String>):Void {
+function requireAdapted(flows:Array<TypedBackendFunctionConstraintFlow>, arguments:Array<TypedBackendCallArgument>, adapted:Array<HxExpr>, file:Null<String>,
+		?writes:Array<TypedBackendLocalWrite>):Void {
 	function at(position:Null<HxPos>):String
 		return (file == null ? "" : file + ":") + (position == null ? "" : position.getLine() + ": ");
 	for (flow in flows)
@@ -181,6 +181,14 @@ function requireAdapted(flows:Array<TypedBackendFunctionConstraintFlow>, argumen
 			throw "stage3 emitter: "
 				+ at(null)
 				+ "a function value cannot be passed as haxe.Constraints.Function to this call on the native OCaml route yet (haxe_ocaml-h9dw9)";
+	// A generated result local (a lowered conditional, for example) can receive
+	// a function value without going through the local storage adapter.
+	if (writes != null)
+		for (write in writes)
+			if (!Lambda.exists(adapted, claimed -> claimed == write.expression))
+				throw "stage3 emitter: "
+					+ at(null)
+					+ "a function value cannot be stored as haxe.Constraints.Function in this local value on the native OCaml route yet (haxe_ocaml-h9dw9)";
 }
 
 /**

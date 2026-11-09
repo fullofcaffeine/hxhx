@@ -111,6 +111,10 @@ class Main {
 		final chosen:haxe.Constraints.Function = Sys.args()
 			.length == 0 ? function(s:String) Sys.println("first " + s) : function(s:String) Sys.println("second " + s);
 		Reflect.callMethod(null, chosen, [6]);
+		// A conditional mixing a Function with a plain function has a Function result.
+		final noFunction:Null<haxe.Constraints.Function> = null;
+		final fallback:haxe.Constraints.Function = noFunction != null ? noFunction : function(s:String) Sys.println("fallback " + s);
+		Reflect.callMethod(null, fallback, ["value"]);
 		// A wrapped Function called through Dynamic member access.
 		final plusOne:haxe.Constraints.Function = function(x:Int):Int return x + 1;
 		final dynamicObject:Dynamic = {f: plusOne};

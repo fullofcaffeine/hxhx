@@ -19,10 +19,20 @@ function join(left:TyType, right:TyType, ?expected:TyType, ?index:TyperIndex):Nu
 		&& converts(left, expected, index)
 		&& converts(right, expected, index))
 		selected = expected;
+	// Unification has no rule for a `Function` branch beside a plain function
+	// value. A declared `Function` result holds either, so it stays the result.
+	if ((selected == null || selected.isDynamic())
+		&& TyFunctionConstraint.isFunctionConstraint(expected)
+		&& isFunctionBranch(left)
+		&& isFunctionBranch(right))
+		selected = expected;
 	if (selected == null || selected.isNullLiteral() || selected.isNullable() || selected.isDynamic() || selected.isVoid() || selected.isNoNormalCompletion())
 		return selected;
 	return left.isNullLiteral() || right.isNullLiteral() ? TyType.nullable(selected) : selected;
 }
+
+private function isFunctionBranch(type:TyType):Bool
+	return TyFunctionConstraint.isFunctionConstraint(type) || TyFunctionConstraint.isFunctionValue(type);
 
 /** Equal backing storage is insufficient: an abstract must declare the selected conversion. */
 private function converts(source:TyType, target:TyType, index:TyperIndex):Bool {

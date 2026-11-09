@@ -83,8 +83,6 @@ class M14Stage3FunctionDestinationTest {
 		requireRejected("nullable_function_result", program('get();', '\tstatic function get(?cb:String->Void):$T\n\t\treturn cb;\n'),
 			stored + "function result");
 		requireRejected("null_coalescing", program('final g:Null<$T> = null;\n\t\tfinal f:$T = g ?? $FN;'), stored);
-		requireRejected("conditional_mixed_function", program('final g:Null<$T> = null;\n\t\tfinal f:$T = g != null ? g : $FN;'), stored
-			+ "expression result");
 		// A `using` call keeps its receiver under the callee.
 		requireRejected("using_extension",
 			'using Main.Ex;\n\nclass Ex {\n\tpublic static function keep(f:$T):$T\n\t\treturn f;\n}\n\nclass Main {\n\tstatic function main() {\n\t\tfinal fn = $FN;\n\t\tfn.keep();\n\t}\n}\n',

@@ -56,7 +56,7 @@ records each such place as a `TypedBackendFunctionConstraintFlow`, and
 covers instance and static fields, field initializers, function and lambda
 results, structure fields, `Array.push`, array index assignment, `Map.set`,
 enum, constructor, `super(...)` and `using` extension arguments, and type-check,
-cast, `??` or mixed conditional results. A nullable function value
+cast or `??` results. A nullable function value
 (`?cb:String->Void`) follows the same rules, and stays null when wrapped.
 `npm run test:m14:reflect-call-method` also runs
 `M14Stage3FunctionDestinationTest`, which checks each of these. The JS and Neko
