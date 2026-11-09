@@ -23,8 +23,7 @@ class TypedFunctionConstraintFlows {
 			case Call if (node.getExtensionProvider() != null):
 				// A `using` call keeps its receiver under the callee, and its parameters only in the named binding.
 				final named = node.getNamedArguments();
-				final callable = named == null ? null : TyAliasExpansion.revealNonNullable(named.getArguments().getFunctionType());
-				final parameters = callable == null || !callable.isFunction() ? [] : callable.getFunctionArguments();
+				final parameters = named == null ? [] : named.getDeclaration().getSignature().getArgs();
 				final values = children[0].getExpressions().concat(children.slice(1));
 				for (value in values)
 					if (Lambda.exists(parameters, parameter -> TyFunctionConstraint.reaches(parameter, value.getType())))
