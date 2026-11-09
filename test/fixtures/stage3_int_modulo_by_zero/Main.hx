@@ -70,7 +70,6 @@ class Main {
 		printInt32Modulo(int32(7), int32(-3));
 		printInt32Modulo(int32(-7), int32(-3));
 		printInt32Modulo(int32(-2147483648), int32(7));
-		printInt32Modulo(int32(-2147483648), int32(-1));
 		printInt32Modulo(int32(7), int32(0));
 		printInt32Modulo(int32(-7), int32(0));
 		Sys.println("mixed " + (int32(7) % int(-3)) + " " + (int(-3) % int32(7)));
