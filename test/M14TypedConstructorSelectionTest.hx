@@ -3,7 +3,10 @@ import TypedExpr.TypedExprTag;
 /** Construction must retain its selected declaration through typed replay and exact generic application. */
 class M14TypedConstructorSelectionTest {
 	static function main():Void {
-		final source = 'class Main { static function main() { var a = new First(2); var b = new Second(3); var c = new Box<String>("word"); var bad = new Box<Int>("wrong"); var ordinary = new Plain(); var badArity = new First();'
+		// `bad` and `badSpread` are type mismatches the typer still tolerates here, so they
+		// must stay without a declaration. A missing argument such as `new First()` is now a
+		// hard error, as in Haxe 4.3.7 ("Not enough arguments"); M14ArityChecksTest owns it.
+		final source = 'class Main { static function main() { var a = new First(2); var b = new Second(3); var c = new Box<String>("word"); var bad = new Box<Int>("wrong"); var ordinary = new Plain();'
 			+ ' var spread = new Many(...[1, 2]); var rest = new Many(3, 4); var empty = new Many(); var badSpread = new Many(...["wrong"]); } }'
 			+ ' abstract First(Int) { public function new(value:Int) { this = value; } }'
 			+ ' abstract Second(Int) { public function new(value:Int) { this = value + 1; } }'
@@ -30,9 +33,7 @@ class M14TypedConstructorSelectionTest {
 						continue;
 					final expression = expressions[0];
 					final declaration = expression.getDeclaration();
-					if (statement.getNames()[0] == "bad"
-						|| statement.getNames()[0] == "badArity"
-						|| statement.getNames()[0] == "badSpread") {
+					if (statement.getNames()[0] == "bad" || statement.getNames()[0] == "badSpread") {
 						if (declaration != null)
 							throw "inapplicable generic constructor acquired a declaration";
 					} else {
@@ -83,7 +84,7 @@ class M14TypedConstructorSelectionTest {
 				}
 				TypedBodyInvariant.assertFunction(fn);
 			}
-		if (checked != 10)
+		if (checked != 9)
 			throw "constructor selection fixture lost a source occurrence";
 		final first = index.getByFullName("Main.First");
 		final second = index.getByFullName("Main.Second");
