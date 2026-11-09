@@ -75,6 +75,26 @@ class M14Stage3FunctionDestinationTest {
 		requireRejected("structure_field", program('final o:{f:$T} = {f: $FN};'), stored);
 		requireRejected("array_index", program('final a:Array<$T> = [];\n\t\ta[0] = $FN;'), stored + "array element");
 		requireRejected("type_check", program('final g = ($FN : $T);'), stored + "expression result");
+		// The stored value's type is Null<function>, which must count as a function value.
+		requireRejected("optional_callback_field",
+			program('set(new Holder(), function(s:String) Sys.println(s));', '\tstatic function set(h:Holder, ?cb:String->Void) {\n\t\th.f = cb;\n\t}\n'),
+			stored + "field");
+		requireRejected("nullable_conditional_field", program('final h = new Holder();\n\t\th.f = Sys.args().length == 0 ? $FN : null;'), stored + "field");
+		requireRejected("nullable_function_result", program('get();', '\tstatic function get(?cb:String->Void):$T\n\t\treturn cb;\n'),
+			stored + "function result");
+		requireRejected("null_coalescing", program('final g:Null<$T> = null;\n\t\tfinal f:$T = g ?? $FN;'), stored);
+		requireRejected("conditional_mixed_function", program('final g:Null<$T> = null;\n\t\tfinal f:$T = g != null ? g : $FN;'), stored
+			+ "expression result");
+		// A `using` call keeps its receiver under the callee.
+		requireRejected("using_extension",
+			'using Main.Ex;\n\nclass Ex {\n\tpublic static function keep(f:$T):$T\n\t\treturn f;\n}\n\nclass Main {\n\tstatic function main() {\n\t\tfinal fn = $FN;\n\t\tfn.keep();\n\t}\n}\n',
+			stored + "extension method argument");
+		// `super(...)` is a constructor occurrence with no call-argument facts.
+		final base = 'class K {\n\tpublic function new(f:$T) {}\n}\n\nclass L extends K {\n\tpublic function new()\n\t\tsuper($FN);\n}\n';
+		requireRejected("super_argument", base + 'class Main {\n\tstatic function main() {\n\t\tnew L();\n\t}\n}\n', stored + "constructor argument");
+		final generic = 'class Box<T> {\n\tpublic var v:T;\n\n\tpublic function new(v:T)\n\t\tthis.v = v;\n}\n\nclass B extends Box<$T> {\n\tpublic function new()\n\t\tsuper($FN);\n}\n';
+		requireRejected("generic_super_argument", generic + 'class Main {\n\tstatic function main() {\n\t\tnew B();\n\t}\n}\n',
+			stored + "constructor argument");
 		final passed = "passed as haxe.Constraints.Function";
 		requireRejected("array_push", program('final a:Array<$T> = [];\n\t\ta.push($FN);'), passed);
 		requireRejected("map_set", program('final m = new Map<String, $T>();\n\t\tm.set("a", $FN);'), passed);

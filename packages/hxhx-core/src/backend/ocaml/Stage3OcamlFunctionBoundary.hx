@@ -10,8 +10,10 @@ package backend.ocaml;
 	d)` is typed `String -> Void` (upstream infers String for `d` too), and an
 	Int arriving in its `string` slot crashed the native program.
 
-	The adapter wraps the closure in an `HxReflect.makeVarArgs` function that
-	receives the whole argument array:
+	The adapter wraps the closure with `HxReflect.functionValue`. The wrapper is
+	a real OCaml closure of the function's arity, so a direct call through a
+	Dynamic value works. `HxReflect.callMethod` recognizes it and hands it the
+	whole argument array, which gives these rules:
 	- More arguments than parameters raise a catchable error, as eval does. A
 	  missing argument is null for a reference or nullable parameter, as in
 	  eval, and the static default (0, 0.0, false) for a non-null Int, Float or
@@ -36,15 +38,21 @@ package backend.ocaml;
 	`requireAdapted` stops emission with a named error for every other place
 	typing let a function value enter a `Function` slot.
 **/
+/** The most parameters `HxReflect.functionValue` and `HxReflect.callMethod` support. */
+inline final MAX_ARITY = 5;
+
 function adapt(actual:TyType, value:String, names:Null<Stage3OcamlLocalNames>):Null<String> {
-	if (actual == null || !actual.isFunction())
+	if (!TyFunctionConstraint.isFunctionValue(actual))
 		return null;
-	if (names == null || actual.hasUnknownComponent())
+	final functionType = actual.unwrapNull();
+	if (names == null || functionType.hasUnknownComponent())
 		throw "stage3 emitter: a function with an incomplete type cannot be stored as haxe.Constraints.Function yet";
-	final parameters = actual.getFunctionParameters();
+	final parameters = functionType.getFunctionParameters();
 	for (parameter in parameters)
 		if (parameter.isOptional || parameter.isRest)
 			throw "stage3 emitter: a function with optional or rest parameters cannot be stored as haxe.Constraints.Function yet";
+	if (parameters.length > MAX_ARITY)
+		throw "stage3 emitter: a function with more than " + MAX_ARITY + " parameters cannot be stored as haxe.Constraints.Function yet";
 	final closure = names.internalName("__hx_function_value");
 	final arguments = names.internalName("__hx_function_arguments");
 	final count = names.internalName("__hx_function_count");
@@ -69,11 +77,9 @@ function adapt(actual:TyType, value:String, names:Null<Stage3OcamlLocalNames>):N
 		converted.push("(" + (missing == null ? read : "if " + count + " > " + index + " then " + read + " else " + missing) + ")");
 	}
 	final call = closure + (converted.length == 0 ? " ()" : " " + converted.join(" "));
-	return "(let "
-		+ closure
-		+ " = ("
-		+ value
-		+ ") in HxReflect.makeVarArgs (Obj.repr (fun ("
+	final wrapper = "HxReflect.functionValue "
+		+ parameters.length
+		+ " (fun ("
 		+ arguments
 		+ " : Obj.t HxArray.t) -> let "
 		+ count
@@ -85,8 +91,11 @@ function adapt(actual:TyType, value:String, names:Null<Stage3OcamlLocalNames>):N
 		+ parameters.length
 		+ " then HxRuntime.hx_throw_typed (Obj.repr \"Invalid number of arguments\") [\"String\"; \"Dynamic\"] else "
 		+ bindings.join("")
-		+ result(actual.getFunctionReturn(), call)
-		+ ")))";
+		+ result(functionType.getFunctionReturn(), call)
+		+ ")";
+	// A nullable function value stays null instead of being wrapped.
+	final guarded = actual.isNullable() ? "if HxRuntime.is_null (Obj.repr " + closure + ") then HxRuntime.hx_null else " + wrapper : wrapper;
+	return "(let " + closure + " = (" + value + ") in " + guarded + ")";
 }
 
 /** The value of a missing argument for a parameter that cannot hold null, or null when null itself is passed. */
@@ -175,10 +184,10 @@ function requireAdapted(flows:Array<TypedBackendFunctionConstraintFlow>, argumen
 }
 
 /**
-	Call a value read from Dynamic storage. It may be a plain closure or a
-	`Function` wrapper, which is an `HxReflect.makeVarArgs` data block and cannot
-	be applied directly. `HxReflect.callMethod` accepts both. The callee and each
-	argument are evaluated once, in Haxe's left-to-right order.
+	Call a value read from a Dynamic field or structure through
+	`HxReflect.callMethod`, which checks a `Function` wrapper's argument count
+	and rejects a value that is not a function. The callee and each argument are
+	evaluated once, in Haxe's left-to-right order.
 **/
 function dynamicCall(callee:String, arguments:Array<String>, names:Stage3OcamlLocalNames):String {
 	final closure = names.internalName("__hx_dynamic_callee");

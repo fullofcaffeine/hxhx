@@ -27,6 +27,14 @@ class DynamicHolder {
 }
 
 class Main {
+	static function asDynamic(value:Dynamic):Dynamic {
+		return value;
+	}
+
+	static function forwardOptional(?callback:String->Void):Void {
+		runOptional(callback);
+	}
+
 	static function runOptional(?callback:haxe.Constraints.Function):Void {
 		if (callback != null)
 			Reflect.callMethod(null, callback, [5]);
@@ -110,6 +118,17 @@ class Main {
 		final dynamicHolder = new DynamicHolder();
 		dynamicHolder.d = plusOne;
 		Sys.println(dynamicHolder.d(2));
+		// A wrapped Function called through other Dynamic values.
+		final dynamicArray:Array<Dynamic> = [plusOne];
+		Sys.println(dynamicArray[0](3));
+		final dynamicElement:Dynamic = dynamicArray[0];
+		Sys.println(dynamicElement(4));
+		Sys.println(asDynamic(plusOne)(5));
+		// A nullable function value passed to and stored in a Function slot.
+		forwardOptional(function(s:String) Sys.println("forwarded " + s));
+		forwardOptional();
+		final present:haxe.Constraints.Function = Sys.args().length == 0 ? function(s:String) Sys.println("present " + s) : null;
+		Reflect.callMethod(null, present, [8]);
 		// Array<Function> elements: Bool parameters and results keep their meaning.
 		final checks:Array<haxe.Constraints.Function> = [function(b:Bool) Sys.println("b=" + b), function(x:Int) return x > 1];
 		Reflect.callMethod(null, checks[0], [false]);
