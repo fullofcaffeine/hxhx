@@ -147,6 +147,45 @@ let dynamic_equals (a : Obj.t) (b : Obj.t) : bool =
   else
     a == b
 
+(* Float to String, matching upstream Haxe 4.3.7 `--interp` output.
+
+   Why:
+   - OCaml's `string_of_float` keeps only 12 significant digits and adds a
+     trailing `.` to whole numbers, so `Std.string(2.0)` printed `2.` and
+     `7 / 3` printed `2.33333333333`. Upstream Haxe prints `2` and
+     `2.33333333333333348`.
+
+   What (observed with upstream `haxe --interp` on 20000 random doubles):
+   - A finite value prints in C `%g` form with the fewest of 12, 15 or 18
+     significant digits whose text reads back as the same value. `2.0` prints
+     `2`, `-0.0` prints `-0`, `0.1` prints `0.1`, `1e15` prints `1e+15`,
+     `0.1 + 0.2` prints `0.300000000000000044`, and the smallest subnormal
+     prints `4.94065645841e-324`.
+   - A whole number below 1e12 in magnitude, other than `-0.0`, takes a
+     faster integer path. `%.12g` prints such a value as its plain digits, so
+     the text is the same. From 1e12 up, `%.12g` switches to exponent form
+     (`1e+12`), so the bound must stay at 1e12.
+   - NaN always prints `nan`. C printf would print `-nan` on glibc for a NaN
+     whose sign bit is set. The infinities keep OCaml's `inf` and `-inf`.
+     Upstream targets disagree on this text (eval prints `nan`, `infinity`
+     and `neg_infinity`), so that choice is outside this conversion. *)
+let float_toStdString (value : float) : string =
+  match Stdlib.classify_float value with
+  | Stdlib.FP_nan -> "nan"
+  | Stdlib.FP_infinite -> Stdlib.string_of_float value
+  | Stdlib.FP_normal | Stdlib.FP_subnormal | Stdlib.FP_zero
+    when Stdlib.Float.is_integer value
+         && Stdlib.Float.abs value < 1e12
+         && not (Stdlib.Float.sign_bit value && value = 0.0) ->
+      Stdlib.string_of_int (Stdlib.int_of_float value)
+  | Stdlib.FP_normal | Stdlib.FP_subnormal | Stdlib.FP_zero ->
+      let text = Printf.sprintf "%.12g" value in
+      if Stdlib.float_of_string text = value then text
+      else
+        let text = Printf.sprintf "%.15g" value in
+        if Stdlib.float_of_string text = value then text
+        else Printf.sprintf "%.18g" value
+
 (* Nullable primitives
 
    Haxe allows `Null<Int>`, `Null<Float>`, and `Null<Bool>` to represent either:
@@ -172,7 +211,7 @@ let nullable_float_toStdString (v : Obj.t) : string =
   if is_null v then
     "null"
   else
-    string_of_float (Obj.obj v)
+    float_toStdString (Obj.obj v)
 
 let nullable_bool_toStdString (v : Obj.t) : string =
   if is_null v then

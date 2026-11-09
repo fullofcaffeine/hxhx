@@ -37,8 +37,8 @@ const stringRequirements = requirements.filter(entry =>
 if (stringRequirements.length !== 20 || stringRequirements.some(entry => entry.rootModules.join(',') !== 'HxString')) {
 	throw new Error(`String-carrier decisions must keep their HxString owner: ${JSON.stringify(stringRequirements)}`)
 }
-if (requirements.some(entry => entry.implementationFeature !== 'haxe-static-string-conversion-v2')) {
-	throw new Error(`Static string decisions must use the v2 type-to-helper contract: ${JSON.stringify(requirements)}`)
+if (requirements.some(entry => entry.implementationFeature !== 'haxe-static-string-conversion-v3')) {
+	throw new Error(`Static string decisions must use the v3 type-to-helper contract: ${JSON.stringify(requirements)}`)
 }
 if (dynamicRequirements.length !== 3 || dynamicRequirements.some(entry => entry.rootModules.join(',') !== 'HxDynamic')) {
 	throw new Error(`Dynamic conversion must keep its separate HxDynamic authority: ${JSON.stringify(dynamicRequirements)}`)

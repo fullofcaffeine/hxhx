@@ -54,16 +54,17 @@ typedef OcamlStaticStringDecision = {
 /**
 	Validates the standard-string conversions selected from one final typed root.
 
-	String values use the OCaml `string` carrier. Nullable primitives use `Obj.t`
-	and select one type-specific null-aware helper. This plan keeps both statically
-	known paths separate from Dynamic string conversion.
+	String values use the OCaml `string` carrier and Float values use `float`.
+	Nullable primitives use `Obj.t` and select one type-specific null-aware
+	helper. This plan keeps these statically known paths separate from Dynamic
+	string conversion.
 **/
 class OcamlStaticStringPlan {
-	public static inline final MODEL_REVISION = "ocaml-static-string-runtime-use-v2";
-	public static inline final PROOF_ID = "static-string-runtime-use-v2";
-	public static inline final PROOF_CLAIM = "One final statically typed String, Null<String>, or nullable primitive occurrence authorizes exactly one helper selected by its semantic type. Literal strings, literal nulls, completed concatenations, non-null primitives, and Dynamic values do not receive this authority.";
+	public static inline final MODEL_REVISION = "ocaml-static-string-runtime-use-v3";
+	public static inline final PROOF_ID = "static-string-runtime-use-v3";
+	public static inline final PROOF_CLAIM = "One final statically typed String, Null<String>, Float, or nullable primitive occurrence authorizes exactly one helper selected by its semantic type. Literal strings, literal nulls, completed concatenations, non-null Int and Bool values, and Dynamic values do not receive this authority.";
 	public static inline final RUNTIME_CAPABILITY = "haxe-static-string-conversion";
-	public static inline final IMPLEMENTATION_FEATURE = "haxe-static-string-conversion-v2";
+	public static inline final IMPLEMENTATION_FEATURE = "haxe-static-string-conversion-v3";
 
 	final ordered:Array<OcamlStaticStringDecision>;
 	final byId:Map<String, OcamlStaticStringDecision> = [];
@@ -162,6 +163,13 @@ class OcamlStaticStringPlan {
 					inputCarrierTypeId: "string",
 					exactSymbol: "HxString.toStdString",
 					rootModule: "HxString"
+				};
+			// OCaml's `string_of_float` prints `2.` and keeps 12 digits; the
+			// runtime helper prints Floats the way upstream Haxe does.
+			case "Float": {
+					inputCarrierTypeId: "float",
+					exactSymbol: "HxRuntime.float_toStdString",
+					rootModule: "HxRuntime"
 				};
 			case "Null<Int>": {
 					inputCarrierTypeId: "Obj.t",
@@ -452,8 +460,10 @@ class OcamlStaticStringPlanner {
 		A typedef changes how source code names a type, but it does not create a
 		new runtime carrier. Haxe can also infer nested nullable wrappers from an
 		expression that already permits null. This helper follows typedefs and
-		collapses only repeated nullable String, Int, Float, or Bool shapes. It
-		returns null for non-null primitives and every other unowned type.
+		collapses only repeated nullable String, Int, Float, or Bool shapes. A
+		non-null Float is owned too, so it reaches the runtime helper that prints
+		Floats like upstream Haxe. It returns null for non-null Int and Bool and
+		every other unowned type.
 	**/
 	public static function semanticTypeId(type:Type):Null<String> {
 		return switch (followNoAbstracts(type)) {
@@ -464,6 +474,7 @@ class OcamlStaticStringPlanner {
 				} else {
 					nullableSemanticTypeId(inner);
 				}
+			case TAbstract(abstractRef, []): final abstractType = abstractRef.get(); abstractType.pack.length == 0 && abstractType.name == "Float" ? "Float" : null;
 			case TInst(classRef, _): final classType = classRef.get(); classType.pack.length == 0 && classType.name == "String" ? "String" : null;
 			case _:
 				null;

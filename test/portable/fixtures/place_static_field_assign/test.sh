@@ -12,13 +12,13 @@ if [ ! -f "$source_file" ] || [ ! -f "$external_source_file" ] || [ ! -f "$repor
 fi
 
 # Installed Haxe 4.3.7 is the independent behavior oracle. Its eval target
-# exposes omitted non-null Int/Bool statics as null and formats whole-number
-# Floats differently, while this target's separately tested carrier policy uses
-# zero/false and OCaml Float formatting. Exclude only those known target-policy
-# lines; the nullable defaults and every mutation/result must still agree.
+# exposes omitted non-null Int/Bool statics as null, while this target's
+# separately tested carrier policy uses zero/false. Exclude only those known
+# target-policy lines; the nullable defaults, the whole-number Float text
+# (haxe_ocaml-iffj5), and every mutation/result must still agree.
 haxe -cp src --run Main >"$oracle_dir/eval.stdout"
-grep -vE '^(omitted=|omitted_bool=|float=|float_postfix=)' expected.stdout >"$oracle_dir/expected-comparable.stdout"
-grep -vE '^(omitted=|omitted_bool=|float=|float_postfix=)' "$oracle_dir/eval.stdout" >"$oracle_dir/eval-comparable.stdout"
+grep -vE '^(omitted=|omitted_bool=)' expected.stdout >"$oracle_dir/expected-comparable.stdout"
+grep -vE '^(omitted=|omitted_bool=)' "$oracle_dir/eval.stdout" >"$oracle_dir/eval-comparable.stdout"
 diff -u "$oracle_dir/expected-comparable.stdout" "$oracle_dir/eval-comparable.stdout"
 
 declaration_count="$(grep -c '^let sameModuleValue = ref ' "$source_file" || true)"

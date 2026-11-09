@@ -670,6 +670,12 @@ jobs:
           - shard: compiler-focused-5
             label: C++ runtime type and Map regressions
             timeout_minutes: 40
+          # compiler-focused-5 ran 24 commands in 28-39 minutes against its
+          # 40-minute budget (haxe_ocaml-bfcjp). Its five project-macro
+          # commands (about 9 minutes) run here instead.
+          - shard: compiler-focused-macro-plugins
+            label: Project macro plugins and syntax wire
+            timeout_minutes: 40
           - shard: macro-host-integration
             label: Macro-host integration
             timeout_minutes: 40
@@ -711,6 +717,42 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      # Some hosted runners download Ubuntu packages at about 30 kB/s. Then
+      # setup-ocaml's system packages and the focused runtimes below each took
+      # 16-20 minutes before a test ran (haxe_ocaml-bfcjp). Keep the downloaded
+      # .deb files between runs; apt still checks each file against its index
+      # and downloads only what is missing or changed.
+      - name: Select apt package cache
+        id: apt-cache-key
+        env:
+          RUNTIME_PACKAGES: ${{ startsWith(matrix.shard, 'compiler-focused-') && matrix.shard != 'compiler-focused-4' }}
+        run: |
+          set -euo pipefail
+          package_set=base
+          if [ "$RUNTIME_PACKAGES" = "true" ]; then
+            package_set=runtimes
+          fi
+          prefix="${RUNNER_OS}-apt-${package_set}-v1-${ImageOS:-unknown}-"
+          echo "prefix=${prefix}" >> "$GITHUB_OUTPUT"
+          echo "key=${prefix}${ImageVersion:-unknown}-$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+      - name: Restore downloaded apt packages
+        id: apt-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/hxhx-apt-archives
+          key: ${{ steps.apt-cache-key.outputs.key }}
+          restore-keys: |
+            ${{ steps.apt-cache-key.outputs.prefix }}
+      - name: Seed apt with cached packages
+        run: |
+          set -euo pipefail
+          cache_dir="$HOME/.cache/hxhx-apt-archives"
+          mkdir -p "$cache_dir"
+          count="$(find "$cache_dir" -maxdepth 1 -name '*.deb' | wc -l)"
+          if [ "$count" -gt 0 ]; then
+            sudo cp "$cache_dir"/*.deb /var/cache/apt/archives/
+          fi
+          echo "Seeded ${count} cached apt packages"
       - name: Setup OCaml toolchain (OCaml 5.2.1)
         uses: ocaml/setup-ocaml@v3
         with:
@@ -778,6 +820,22 @@ jobs:
           mcs --version
           mono --version
           lua -v
+      - name: Collect downloaded apt packages
+        if: ${{ steps.apt-cache.outputs.cache-hit != 'true' }}
+        run: |
+          set -euo pipefail
+          cache_dir="$HOME/.cache/hxhx-apt-archives"
+          # Drop package versions that the current indexes no longer list.
+          sudo apt-get autoclean -qq
+          find "$cache_dir" -maxdepth 1 -name '*.deb' -delete
+          find /var/cache/apt/archives -maxdepth 1 -name '*.deb' -exec cp -t "$cache_dir" {} +
+          du -sh "$cache_dir"
+      - name: Save downloaded apt packages
+        if: ${{ steps.apt-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.cache/hxhx-apt-archives
+          key: ${{ steps.apt-cache-key.outputs.key }}
       - name: Expose the Neko compiler for focused tests
         if: ${{ startsWith(matrix.shard, 'compiler-focused-') }}
         run: |
