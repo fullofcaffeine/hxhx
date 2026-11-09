@@ -217,6 +217,23 @@ class M14UndeclaredNameDiagnosticTest {
 			{path: "pack/Cfg.hx", source: "package pack;\nclass Cfg {\n\tpublic static function fn():Int return 1;\n}\n"}
 		]);
 		macroArgumentIsNotChecked();
+		accept("build_macro_defines_type", "class Main {\n\tstatic function main():Void {\n\t\tOther.x;\n\t\ttrace(Generated.hi());\n\t}\n}\n", [
+			{path: "Macros.hx",
+				source: "import haxe.macro.Context;\nimport haxe.macro.Expr;\nclass Macros {\n"
+				+ "\tpublic static macro function build():Array<Field> {\n"
+				+ "\t\tContext.defineType(macro class Generated {\n\t\t\tpublic static function hi():Int return 1;\n\t\t});\n"
+				+ "\t\treturn Context.getBuildFields();\n\t}\n}\n"},
+			{path: "Other.hx", source: "@:build(Macros.build()) class Other {\n\tpublic static var x = 1;\n}\n"}
+		]);
+		final classWith = (meta:String, body:String) -> meta + " class Main {\n\tstatic function main():Void {\n\t\t" + body + "\n\t}\n}\n";
+		reject("similar_metadata_build_version", classWith("@:buildVersion(\"1\")", "trace(Run);"), "Unknown identifier : Run", 3);
+		reject("similar_metadata_builder", classWith("@:builder", "Nope.foo();"), "Type not found : Nope", 3);
+		reject("similar_metadata_auto_builder", classWith("@:autoBuilder", "trace(Run);"), "Unknown identifier : Run", 3);
+		reject("build_in_line_comment", "// @:build(Macros.build()) was removed\n" + main("trace(Run);"), "Unknown identifier : Run", 4);
+		reject("build_in_block_comment", "/* @:build(Macros.build()) */\n" + main("trace(Run);"), "Unknown identifier : Run", 4);
+		reject("build_in_string", main("trace(\"@:build(\"); trace(Run);"), "Unknown identifier : Run", 3);
+		reject("import_in_comment", "// import Run;\n" + main("trace(Run);"), "Unknown identifier : Run", 4);
+		reject("empty_import_hx", main("trace(Run);"), "Unknown identifier : Run", 3, [{path: "import.hx", source: ""}]);
 		reject("not_exempted_by_unrelated_parent", "class Main extends Parent {\n\tstatic function main():Void {\n\t\tvar mode = Run;\n\t}\n}\n",
 			"Unknown identifier : Run", 3, [
 			{

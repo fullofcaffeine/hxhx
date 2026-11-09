@@ -248,6 +248,25 @@ class TyperIndex {
 		return false;
 	}
 
+	/**
+		Whether any loaded type carries `@:build` or `@:autoBuild`. A build macro
+		can define a new type, not only add fields to its own class, so a name
+		that nothing declares proves nothing once one is in play.
+	**/
+	public function hasBuildMacro():Bool
+		return buildMacroSeen;
+
+	var buildMacroSeen = false;
+
+	/** Metadata is kept as written, for example `@:autoBuild(Macros.build())`. Compares the exact name. */
+	static function isBuildMacroMetadata(entry:String):Bool {
+		if (!StringTools.startsWith(entry, "@:"))
+			return false;
+		final open = entry.indexOf("(");
+		final name = StringTools.trim(open < 0 ? entry.substr(2) : entry.substring(2, open));
+		return name == "build" || name == "autoBuild";
+	}
+
 	/** Whether any loaded type declares a `macro` function with this name. */
 	public function declaresMacroFunction(name:String):Bool {
 		for (info in byFullName)
@@ -711,6 +730,8 @@ class TyperIndex {
 			final fullName = classFullNameInModule(packagePath, moduleName, shortName);
 			final identity = identityByFullName.get(fullName);
 			final classMetadata = HxClassDecl.getMetadata(classDeclaration);
+			if (Lambda.exists(classMetadata, isBuildMacroMetadata))
+				buildMacroSeen = true;
 			final params = typeParameters(classMetadata);
 			final parameterIds = [
 				for (index in 0...params.length)

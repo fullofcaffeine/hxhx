@@ -551,10 +551,10 @@ class TyperStage {
 		final packagePath = HxModuleDecl.getPackagePath(declaration);
 		final directives = HxModuleDecl.getDirectives(declaration);
 		final resolvedDirectives = resolveModuleDirectives(directives, packagePath, modulePath, index, loader);
-		// A root-only index, a loader without the standard library, or a request with
-		// `--macro` initializers cannot prove that an import names nothing; see
-		// TyperContext.hasDeclarationLoader.
-		if (index != null && loader != null && loader.declarationsAreComplete())
+		// A root-only index, a loader without the standard library, a request with
+		// `--macro` initializers, or a loaded build macro cannot prove that an import
+		// names nothing; see TyperContext.hasDeclarationLoader.
+		if (index != null && loader != null && loader.declarationsAreComplete() && !index.hasBuildMacro())
 			requireResolvedDirectives(parsed, resolvedDirectives, packagePath, index, loader);
 		TyClassArgumentBounds.validateDeclarations(parsed, modulePath, index, (expected, supplied) -> constraintAccepts(expected, supplied, index));
 		final mainClass = HxModuleDecl.getMainClass(declaration);

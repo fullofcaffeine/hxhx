@@ -21,7 +21,7 @@ class TyDirectivePosition {
 	}
 
 	/** Replace comment text with spaces so the offsets stay the same. */
-	static function mask(source:String):String {
+	public static function mask(source:String):String {
 		final out = new StringBuf();
 		var index = 0;
 		while (index < source.length) {
