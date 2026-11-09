@@ -160,7 +160,11 @@ class Stage3OcamlClassStorage {
 		if (!projection.hasSemanticFacts())
 			return null;
 		final facts = projection.requireSemanticFacts();
-		return virtuals.registration(facts, interfaces.entries(facts), currentModule, ident, quote);
+		final tables = [
+			virtuals.registration(facts, interfaces.entries(facts), currentModule, ident, quote),
+			Stage3OcamlDynamicMethods.registration(facts, virtuals, currentModule, ident, quote)
+		].filter(table -> table != null);
+		return tables.length == 0 ? null : tables.join("\n");
 	}
 
 	/** Return field execution only for the exact emitted class that owns it. */

@@ -1,7 +1,7 @@
 {
   "model": "recorded-ocaml-runtime-requirements",
   "runtimeVersion": "1",
-  "runtimeSourceRevision": "sha256:e237e7746949c755f1799021ee00e791e9d23561b2840f27325b9e7c45cd4987",
+  "runtimeSourceRevision": "sha256:8b5e6053c6d354f8a150cfa9d8486f76673415458296f8f29a21a418b1386ec5",
   "compilerObservationGranularity": "module-name-only",
   "runtimeSources": [
     {
@@ -10331,6 +10331,7 @@
     "HxBacktrace",
     "HxBytes",
     "HxDynamic",
+    "HxDynamicMethods",
     "HxEnum",
     "HxFPHelper",
     "HxFile",
@@ -10404,7 +10405,7 @@
     "HxSys",
     "HxType"
   ],
-  "reportRevision": "sha256:f8b25847f5f330e7fc4a6095f83113461e99f1c21de68d006903c018f55d129a",
+  "reportRevision": "sha256:f79e19ea5d1d6943a024e2cbf37379905d3140d652bfa593292a0807a59e1a3f",
   "runtimeMode": "full",
   "recordedRequirementSourceKinds": [
     "compiler-infrastructure",

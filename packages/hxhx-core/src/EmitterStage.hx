@@ -2527,6 +2527,14 @@ class EmitterStage {
 		}
 	}
 
+	/** Whether a member call on this expression must find the member when the program runs. */
+	static function stage3HasDynamicReceiver(expr:HxExpr, ?tyByIdent:Map<String, TyType>, ?callSigByCallee:Map<String, EmitterCallSig>):Bool {
+		if (stage3IsDynamicExpr(expr, tyByIdent, callSigByCallee))
+			return true;
+		final exact = stage3ExactExprType(expr);
+		return exact != null && exact.isDynamic();
+	}
+
 	/** Reports whether an expression produces the reviewed `Obj.t` Dynamic carrier. */
 	static function stage3IsDynamicExpr(expr:HxExpr, ?tyByIdent:Map<String, TyType>, ?callSigByCallee:Map<String, EmitterCallSig>):Bool {
 		final exact = objectAccessType(expr);
@@ -4367,6 +4375,26 @@ class EmitterStage {
 							+ ") ("
 							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 							+ ")";
+					case _:
+				}
+
+				// A method of a `Dynamic` receiver is found at run time. Do this before the
+				// rewrite below, which would call a same-named method of the current class,
+				// and before signature lookup by the bare field name.
+				switch (callee) {
+					case EField(obj, field) if (staticCall == null
+						&& !isTypePathExpr(obj)
+						&& stage3HasDynamicReceiver(obj, tyByIdentRaw, callSigByCalleeRaw)):
+						final receiver = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+							callSigByCallee);
+						final arguments = [
+							for (arg in args)
+								backend.ocaml.OcamlDynamicOperatorLowering.callArgument("Dynamic",
+									stage3DynamicArgumentCarrier(arg, tyByIdentRaw, callSigByCalleeRaw),
+									exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+										callSigByCallee))
+						];
+						return backend.ocaml.Stage3OcamlDynamicMethods.call(receiver, field, arguments, currentFunctionLocalOcamlNames, escapeOcamlString);
 					case _:
 				}
 
