@@ -14,9 +14,12 @@ import TypedBackendClassSemanticFacts.TypedBackendClassMethodArgumentFact;
 	  stopped with exit 138 (SIGBUS). Upstream Haxe 4.3.7 calls the method.
 
 	What
-	- A Dynamic call now goes through `HxDynamicMethods.call`. The runtime
-	  applies a function stored in the receiver, or otherwise finds this class's
-	  method adapter on the receiver's class or nearest ancestor.
+	- The type of the receiver decides that a call is a Dynamic member call. The
+	  receiver and arguments are evaluated once, then the program chooses a path
+	  at run time. A class instance uses its method adapters. Any other receiver,
+	  and a function stored in an instance's field, uses the stored-function
+	  path, which keeps the arguments it always received. Only that path reads a
+	  same-named function's signature, and only to convert arguments.
 	- Each generated class registers one adapter per method it declares. The
 	  adapter reads each `Dynamic` argument into the representation the method's
 	  OCaml function expects, then boxes the result as a `Dynamic` value:
@@ -64,27 +67,33 @@ class Stage3OcamlDynamicMethods {
 		return "let () = HxDynamicMethods.register " + quote(facts.requirePublicReflectionName()) + " [" + entries.join("; ") + "]";
 	}
 
-	/** The expression for one Dynamic call, evaluating the receiver and then the arguments in Haxe order. */
-	public static function call(receiver:String, field:String, arguments:Array<String>, exactBools:Array<Int>, names:Stage3OcamlLocalNames,
-			quote:String->String):String {
-		final receiverName = names.internalName("__hx_dynamic_receiver");
-		final argumentNames = [
-			for (index in 0...arguments.length)
-				names.internalName("__hx_dynamic_argument_" + index)
+	/**
+		The expression for one Dynamic call. The receiver and arguments are bound
+		once, in Haxe order, before the run-time path is chosen. `stored` builds
+		the stored-function argument list from the bound names, so nested calls
+		stay linear in size.
+	**/
+	public static function call(input:{
+		receiver:String,
+		field:String,
+		arguments:Array<String>,
+		stored:Array<String>->Array<String>,
+		names:Stage3OcamlLocalNames,
+		quote:String->String
+	}):String {
+		final receiverName = input.names.internalName("__hx_dynamic_receiver");
+		final bound = [
+			for (index in 0...input.arguments.length)
+				input.names.internalName("__hx_dynamic_argument_" + index)
 		];
-		var body = "(HxDynamicMethods.call "
-			+ receiverName
-			+ " "
-			+ quote(field)
-			+ " ["
-			+ argumentNames.join("; ")
-			+ "] ["
-			+ exactBools.join("; ")
-			+ "])";
-		var index = arguments.length;
+		final field = input.quote(input.field);
+		final target = receiverName + " " + field + " [";
+		var body = "(if HxDynamicMethods.is_method " + receiverName + " " + field + " then HxDynamicMethods.call_method " + target + bound.join("; ")
+			+ "] else HxDynamicMethods.apply_stored " + target + input.stored(bound).join("; ") + "])";
+		var index = input.arguments.length;
 		while (index-- > 0)
-			body = "let " + argumentNames[index] + " = (" + arguments[index] + ") in " + body;
-		return "(Obj.magic (let " + receiverName + " = (Obj.repr (" + receiver + ")) in " + body + "))";
+			body = "let " + bound[index] + " = (" + input.arguments[index] + ") in " + body;
+		return "(Obj.magic (let " + receiverName + " = (Obj.repr (" + input.receiver + ")) in " + body + "))";
 	}
 
 	/** A method whose OCaml function a Dynamic call can reach with converted arguments. */

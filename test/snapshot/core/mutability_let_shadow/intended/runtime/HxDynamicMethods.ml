@@ -90,19 +90,9 @@ let rest_arguments name position kind arguments =
     (Stdlib.List.filteri (fun index _ -> index >= position) arguments)
 
 (* Apply a stored function value. A function of no arguments takes OCaml's `()`.
-   The function's parameter types are unknown here. A Bool written at the call
-   site is boxed for class adapters and Dynamic parameters, but stored functions
-   read a plain OCaml bool, so `exact_bools` lists the positions to unbox. *)
-let apply name callable arguments exact_bools =
-  let arguments =
-    if exact_bools = [] then arguments
-    else
-      Stdlib.List.mapi
-        (fun index value ->
-          if Stdlib.List.mem index exact_bools then Obj.repr (HxRuntime.unbox_bool_or_obj value)
-          else value)
-        arguments
-  in
+   The compiler converts the arguments of this path, because a stored function
+   keeps its typed OCaml parameters and its parameter types are unknown here. *)
+let apply name callable arguments =
   if Obj.is_int callable || (Obj.tag callable <> Obj.closure_tag && Obj.tag callable <> Obj.infix_tag)
   then fail ("Stage3 cannot call " ^ name ^ " through a Dynamic value: it is not a function")
   else if arguments = [] then (Obj.obj callable : unit -> Obj.t) ()
@@ -130,14 +120,34 @@ let call_class_method receiver class_name field arguments =
         ("Stage3 cannot call method " ^ field ^ " of class " ^ class_name
        ^ " through a Dynamic value (no such method, or it has no generated body)")
 
-let call receiver field arguments exact_bools =
+(* A class instance answers through its method adapters, unless the object
+   stores a function under this field. A replaced `dynamic` method is one such
+   stored function. Every other receiver uses `apply_stored`. *)
+let is_method receiver field =
+  HxAnon.is_anon receiver
+  && (not (HxAnon.has receiver field))
+  && not (HxRuntime.is_null (HxAnon.class_value receiver))
+
+let call_method receiver field arguments =
+  call_class_method receiver (HxType.getClassName (HxAnon.class_value receiver)) field arguments
+
+let apply_stored receiver field arguments =
   if HxRuntime.is_null receiver then fail "Null Access"
-  else if HxAnon.is_anon receiver && HxAnon.has receiver field then
-    apply field (HxAnon.get receiver field) arguments exact_bools
-  else if HxAnon.is_anon receiver && not (HxRuntime.is_null (HxAnon.class_value receiver)) then
-    call_class_method receiver (HxType.getClassName (HxAnon.class_value receiver)) field arguments
   else
     let callable = HxAnon.get receiver field in
     if HxRuntime.is_null callable then
       fail ("Stage3 cannot call method " ^ field ^ " through a Dynamic value: the value has no such method")
-    else apply field callable arguments exact_bools
+    else apply field callable arguments
+
+(* An Int argument for a stored function's Float parameter. *)
+let stored_float_argument value =
+  if Obj.is_int value then Obj.repr (float_of_int (Obj.obj value : int)) else value
+
+(* A Dynamic call result has two Bool forms: class adapters box it, and a stored
+   function returns a plain OCaml bool. Convert either to the Dynamic box where
+   the result enters a Bool use. A stored function's 0 or 1 cannot be told from
+   a Bool here, so an Int result of 0 or 1 is read as a Bool. *)
+let bool_carrier value =
+  if Obj.is_int value && ((Obj.obj value : int) = 0 || (Obj.obj value : int) = 1) then
+    HxRuntime.box_bool (Obj.obj value : bool)
+  else value

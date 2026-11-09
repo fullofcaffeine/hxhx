@@ -44,7 +44,9 @@ class Stage3OcamlClassStorage {
 		final facts = projection.requireSemanticFacts();
 		switch facts.getNominalKind() {
 			case AbstractValue(underlying):
-				abstractBackings.set(facts.getClassIdentity(), underlying);
+				// An enum abstract's values do not use its backing type's carrier here.
+				if (HxClassDecl.getMetadata(projection.getDeclaration()).indexOf("__hxhx_enum_abstract") < 0)
+					abstractBackings.set(facts.getClassIdentity(), underlying);
 				if (!runtimeProvided && !facts.getIsExtern() && outputModule != null)
 					abstracts.add({
 						projection: projection,

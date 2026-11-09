@@ -6,7 +6,7 @@
       "model": "checked-runtime-source-selection-v1",
       "status": "complete",
       "message": "Every packaged runtime source is manifest-checked, and the selected runtime closure is revisioned for source replay.",
-      "revision": "sha256:b392bf843011c8ca39c8e24af2506cf08c8eb134816772704d8f252a902d657d"
+      "revision": "sha256:c43456dfb79ddf75caaf2b09fe1e868c7b5fe3903f631071bbd7a97ceadcb53f"
     },
     "nativeDependencies": {
       "model": "normalized-native-source-declarations-v2",
@@ -28,11 +28,11 @@
   "summary": {
     "entryCount": 76,
     "volatileEvidenceEntryCount": 0,
-    "sourceBundleRevision": "sha256:eda0aa078df1f58be51b8f560cd6d60e20b499682424b00a90fe01094784ab4c",
+    "sourceBundleRevision": "sha256:b88621ed7ce5a1f6b74f73e27f2c5092725af1d244bed6992d841039ec9f6880",
     "completeForSourceBundle": true,
     "sourceBundleEntryCount": 72,
     "blockers": [],
-    "artifactSetRevision": "sha256:d30fd4d6b3286ec28eb33e4a13e40763c84e0e6b4efb2d7abd7c05a7f2662c13"
+    "artifactSetRevision": "sha256:7dc9325e2448854bf8cfe85c675aa083bf38bc4f18d0897f3d08f94d812fed96"
   },
   "entries": [
     {
@@ -630,7 +630,7 @@
       "sourcePath": null,
       "stability": "stable",
       "path": "ocaml_runtime_requirement_report.json",
-      "sha256": "sha256:f47973d26656284029cd40115a38fc3c41d7f1a2dd75f2fe9ed7dc22b494a8a0",
+      "sha256": "sha256:64e7398e1ca04fcf2587f97c942c1cb9f6ba6fe761aa47089f990cdd1beabf99",
       "kind": "compiler-report",
       "profileEligibility": [
         "metal",
@@ -646,7 +646,7 @@
       "sourcePath": null,
       "stability": "stable",
       "path": "ocaml_runtime_selection_shadow_report.json",
-      "sha256": "sha256:01a51b9b82ced6933cc174e9b60d50b3d71535ea654dac5ca0c205f2894551ff",
+      "sha256": "sha256:83a6cc7240ad84851a6ac45de43a74ec5ccb3cf7597fadd41c662a05d0e90825",
       "kind": "compiler-report",
       "profileEligibility": [
         "metal",
@@ -790,14 +790,14 @@
       "sourcePath": "std/runtime/HxDynamicMethods.ml",
       "stability": "stable",
       "path": "runtime/HxDynamicMethods.ml",
-      "sha256": "sha256:ce0a5b3b5d762bfade00fc471bc614dcc1ce9e830aa577d25f8801dfea104b6c",
+      "sha256": "sha256:533224aec23cfba3391c52a15598019a565eb04943c1773022256eda8afc393b",
       "kind": "runtime-source",
       "profileEligibility": [
         "metal",
         "portable"
       ],
       "owner": "runtime-copier",
-      "bytes": 6524,
+      "bytes": 7006,
       "sourceKind": "copied-runtime",
       "license": "MIT",
       "includeInSourceBundle": true

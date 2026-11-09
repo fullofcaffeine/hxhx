@@ -568,7 +568,9 @@ class EmitterStage {
 				&& destination.getSemanticKey() != "primitive:Bool"
 				&& backend.ocaml.Stage3OcamlNullablePrimitive.innerPrimitive(destination) == null))
 			return rendered;
-		return backend.ocaml.Stage3OcamlLocalStorage.store(requireLocalStorageWrite(name, operand), rendered, currentFunctionLocalOcamlNames);
+		final stored = destination.getSemanticKey() == "primitive:Bool"
+			&& stage3IsDynamicMemberCall(operand) ? stage3DynamicCallBoolCarrier(rendered) : rendered;
+		return backend.ocaml.Stage3OcamlLocalStorage.store(requireLocalStorageWrite(name, operand), stored, currentFunctionLocalOcamlNames);
 	}
 
 	/** Convert an exact condition once, without replacing unsupported values with true. */
@@ -577,7 +579,7 @@ class EmitterStage {
 		if (rendered == "(Obj.magic 0)")
 			throw "OCaml condition has no supported value emission";
 		if (fact != null && fact.type.isDynamic())
-			return "HxDynamic.booleanValue (" + rendered + ")";
+			return "HxDynamic.booleanValue (" + (stage3IsDynamicMemberCall(expression) ? stage3DynamicCallBoolCarrier(rendered) : rendered) + ")";
 		return rendered;
 	}
 
@@ -2505,6 +2507,8 @@ class EmitterStage {
 		final instanceCall = TypedExactCallSource.decodeInstance(expr);
 		if (instanceCall != null)
 			return instanceCall.resultType == "Bool";
+		if (stage3IsDynamicMemberCall(expr, tyByIdent, callSigByCallee))
+			return false;
 		return switch (expr) {
 			case EParenthesized(inner, _): stage3IsBoolExpr(inner, tyByIdent, callSigByCallee);
 			case EDiscardThen(_, continuation): stage3IsBoolExpr(continuation, tyByIdent, callSigByCallee);
@@ -2525,6 +2529,76 @@ class EmitterStage {
 			case _:
 				false;
 		}
+	}
+
+	/** Whether this is a member call whose receiver's type is Dynamic. Same-named methods in scope never decide this. */
+	static function stage3IsDynamicMemberCall(expr:HxExpr, ?tyByIdent:Map<String, TyType>, ?callSigByCallee:Map<String, EmitterCallSig>):Bool {
+		return switch (expr) {
+			case EParenthesized(inner, _): stage3IsDynamicMemberCall(inner, tyByIdent, callSigByCallee);
+			case ECall(EField(receiver, _), _): !isTypePathExpr(receiver) && stage3HasDynamicReceiver(receiver, tyByIdent, callSigByCallee);
+			case _: false;
+		};
+	}
+
+	/**
+		The Dynamic Bool box for a Dynamic member call's result. A class method
+		boxes its Bool and a stored function returns a plain one, so the result is
+		normalized once where it enters a Bool use. See HxDynamicMethods.bool_carrier.
+	**/
+	static function stage3DynamicCallBoolCarrier(rendered:String):String {
+		return "HxDynamicMethods.bool_carrier (Obj.repr (" + rendered + "))";
+	}
+
+	/** A Dynamic member call's result for a destination typed `Bool`, or the value unchanged for other expressions. */
+	static function stage3DynamicCallTypedBool(expr:HxExpr, rendered:String, ?tyByIdent:Map<String, TyType>,
+			?callSigByCallee:Map<String, EmitterCallSig>):String {
+		return stage3IsDynamicMemberCall(expr, tyByIdent, callSigByCallee) ? "HxDynamic.booleanValue ("
+			+ stage3DynamicCallBoolCarrier(rendered)
+			+ ")" : rendered;
+	}
+
+	/**
+		The stored-function arguments of one Dynamic call, built from names already
+		bound to Dynamic carriers. Without a signature each value passes as it is,
+		with a Bool written at the call site unboxed, because stored functions read
+		a plain OCaml bool. A same-named function's signature converts Float and
+		Dynamic parameters and fills omitted arguments, as these calls always did.
+	**/
+	static function stage3StoredDynamicArguments(field:String, args:Array<HxExpr>, bound:Array<String>, exactBools:Array<Int>,
+			callSigByCallee:Map<String, EmitterCallSig>,
+			compatible:(sourceIndex:Int, paramIndex:Int, signature:EmitterCallSig) -> TyCallArgumentCompatibility):Array<String> {
+		function plain(index:Int):String {
+			return exactBools.indexOf(index) >= 0 ? "Obj.repr (HxRuntime.unbox_bool_or_obj " + bound[index] + ")" : bound[index];
+		}
+		final byLowered = callSigForStage3(ocamlValueIdent(field), callSigByCallee);
+		final signature = byLowered != null ? byLowered : callSigForStage3(field, callSigByCallee);
+		if (signature == null || signature.needsReceiver)
+			return [for (index in 0...bound.length) plain(index)];
+		return switch (TyCallArgumentPolicy.plan(signature, args.length, 0, (source, param) -> compatible(source, param, signature))) {
+			case MissingRequired(_, _, _):
+				[for (index in 0...bound.length) plain(index)];
+			case Planned(plan):
+				final sources = plan.getFixedSourceIndices();
+				final rendered = new Array<String>();
+				for (paramIndex in plan.getFirstRenderedParam()...signature.fixed) {
+					final source = sources[paramIndex];
+					final hint = signature.paramTypeHints == null ? "" : signature.paramTypeHints[paramIndex];
+					rendered.push(if (source == null) {
+						"HxRuntime.hx_null";
+					} else if (stage3IsFloatParamHint(hint)) {
+						"HxDynamicMethods.stored_float_argument " + bound[source];
+					} else if (backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(hint)) {
+						bound[source];
+					} else {
+						plain(source);
+					});
+				}
+				if (signature.hasRest) {
+					final rest = [for (index in plan.getRestSourceStart()...bound.length) plain(index)];
+					rendered.push(rest.length == 0 ? "Obj.repr (HxBootArray.create ())" : "Obj.repr (HxBootArray.of_list [" + rest.join("; ") + "])");
+				}
+				rendered;
+		};
 	}
 
 	/** Whether a member call on this expression must find the member when the program runs. */
@@ -2558,8 +2632,7 @@ class EmitterStage {
 			case ECall(EIdent(name), _): final signature = callSigForStage3(name,
 					callSigByCallee); signature != null && backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(signature.resultTypeHint);
 			// A method called through a Dynamic receiver returns a Dynamic value.
-			case ECall(EField(receiver, _), _) if (!isTypePathExpr(receiver)
-				&& stage3HasDynamicReceiver(receiver, tyByIdent, callSigByCallee)):
+			case ECall(EField(_, _), _) if (stage3IsDynamicMemberCall(expr, tyByIdent, callSigByCallee)):
 				true;
 			case ECall(EField(_, name), _): var signature = callSigForStage3(name,
 					callSigByCallee); if (signature == null) signature = callSigForStage3(ocamlValueIdent(name),
@@ -4030,6 +4103,12 @@ class EmitterStage {
 						|| argIndex < 0
 						|| argIndex >= signature.paramTypeHints.length ? "" : signature.paramTypeHints[argIndex];
 					final isReceiver = signature != null && signature.needsReceiver && argIndex == 0;
+					if (!isReceiver
+						&& StringTools.trim(hint) == "Bool"
+						&& stage3IsDynamicMemberCall(arg, tyByIdentRaw, callSigByCalleeRaw))
+						return stage3DynamicCallTypedBool(arg,
+							exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+							tyByIdentRaw, callSigByCalleeRaw);
 					// Every parsed `null` is one shared value, so its identity-keyed fact may belong to another call.
 					final argument = arg.match(ENull) ? null : currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(arg) : currentTypedFunction != null ? currentTypedFunction.findCallArgument(arg) : null;
 					// A nullable Int/Float/Bool argument is unwrapped from its plain rendering
@@ -4401,8 +4480,23 @@ class EmitterStage {
 								exprToOcaml(args[index], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 									callSigByCallee)));
 						}
-						return backend.ocaml.Stage3OcamlDynamicMethods.call(receiver, field, arguments, exactBools, currentFunctionLocalOcamlNames,
-							escapeOcamlString);
+						return backend.ocaml.Stage3OcamlDynamicMethods.call({
+							receiver: receiver,
+							field: field,
+							arguments: arguments,
+							stored: bound -> stage3StoredDynamicArguments(field, args, bound, exactBools, callSigByCalleeRaw, (source, param, signature) -> {
+								final fillable = signature.paramFillable != null
+									&& param >= 0
+									&& param < signature.paramFillable.length
+									&& signature.paramFillable[param];
+								final hint = signature.paramTypeHints == null
+									|| param < 0
+									|| param >= signature.paramTypeHints.length ? "" : signature.paramTypeHints[param];
+								return stage3CallArgumentCompatibility(args[source], hint, fillable, tyByIdentRaw, callSigByCalleeRaw, staticImportByIdentRaw);
+							}),
+							names: currentFunctionLocalOcamlNames,
+							quote: escapeOcamlString
+						});
 					case _:
 				}
 
@@ -4911,8 +5005,10 @@ class EmitterStage {
 				}
 			case EUnop(op, fixity, expr):
 				HxUnaryOperatorTools.requireValidFixity(op, fixity);
-				final renderedUnaryOperand = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+				var renderedUnaryOperand = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 					callSigByCallee);
+				if (op == HxUnaryOperator.LogicalNot && stage3IsDynamicMemberCall(expr, tyByIdentRaw, callSigByCalleeRaw))
+					renderedUnaryOperand = stage3DynamicCallBoolCarrier(renderedUnaryOperand);
 				final dynamicUnary = backend.ocaml.OcamlDynamicOperatorLowering.unary(op, stage3IsDynamicExpr(expr, tyByIdentRaw, callSigByCalleeRaw),
 					renderedUnaryOperand);
 				if (dynamicUnary != null)
@@ -5030,10 +5126,18 @@ class EmitterStage {
 				// The Dynamic helper rejects concrete operands without using their
 				// rendered text. Do not traverse those subtrees for a discarded result:
 				// repeating that work at each nested operator grows exponentially.
+				// `&&`, `||`, and comparison with a Bool are Bool uses of a Dynamic call result.
+				function dynamicOperand(value:HxExpr, other:HxExpr):String {
+					final rendered = exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+						callSigByCallee);
+					final booleanUse = op == "&&"
+						|| op == "||"
+						|| ((op == "==" || op == "!=") && stage3IsBoolExpr(other, tyByIdentRaw, callSigByCalleeRaw));
+					return booleanUse
+						&& stage3IsDynamicMemberCall(value, tyByIdentRaw, callSigByCalleeRaw) ? stage3DynamicCallBoolCarrier(rendered) : rendered;
+				}
 				final dynamicBinary = (dynamicLeft || dynamicRight) ? backend.ocaml.OcamlDynamicOperatorLowering.binary(op, dynamicCarrier(a, dynamicLeft),
-					dynamicCarrier(b, dynamicRight), dynamicLeft, dynamicRight,
-					exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
-					exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)) : null;
+					dynamicCarrier(b, dynamicRight), dynamicLeft, dynamicRight, dynamicOperand(a, b), dynamicOperand(b, a)) : null;
 				if (dynamicBinary != null) {
 					// A String-led Haxe addition stays String even when a Dynamic operand
 					// selects runtime dispatch. Restore that concrete result before a
@@ -5509,9 +5613,13 @@ class EmitterStage {
 					if (currentFunctionLocalOcamlNames == null || (currentTypedFunction == null && currentTypedInitializer == null))
 						throw "array literal requires its exact executable projection";
 					final aggregate = currentTypedFunction != null ? currentTypedFunction.requireAggregate(e) : currentTypedInitializer.requireAggregate(e);
-					backend.ocaml.Stage3OcamlArrays.literal(aggregate,
-						value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
-						currentFunctionLocalOcamlNames);
+					final boolElements = aggregate.getType().getTypeArguments().length == 1
+						&& aggregate.getType().getTypeArguments()[0].getSemanticKey() == "primitive:Bool";
+					backend.ocaml.Stage3OcamlArrays.literal(aggregate, value -> {
+						final element = exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+							callSigByCallee);
+						return boolElements ? stage3DynamicCallTypedBool(value, element, tyByIdentRaw, callSigByCalleeRaw) : element;
+					}, currentFunctionLocalOcamlNames);
 				}
 			case EArrayAccess(arr, idx):
 				// Stage 3 bring-up: Haxe `obj[key]` is used both for array indexing and dynamic
@@ -7124,6 +7232,8 @@ class EmitterStage {
 						|| fnReturnTypesMap == null ? null : fnReturnTypesMap.get(currentFunctionName);
 					final dynamicReturn = declaredReturn != null
 						&& backend.ocaml.OcamlDynamicOperatorLowering.isDynamicTypeHint(declaredReturn.toString());
+					if (declaredReturn != null && declaredReturn.toString() == "Bool")
+						rendered = stage3DynamicCallTypedBool(expr, rendered, cast tyCtx, callSigByCallee);
 					final payload = if (renderReturn != null) {
 						renderReturn(s, rendered);
 					} else if (dynamicReturn) {
