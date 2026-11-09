@@ -65,6 +65,38 @@ true
 3
 true
 false
+stored branch taken
+false
+false
+true
+true
+true
+false
+F
+true
+F
+H
+H
+false
+F
+F
+x=null
+x=4
+8
+2
+1.125
+1.5
+false
+receiver method
+method a
+method b
+3
+receiver stored
+stored a
+stored b
+7
+8
+9
 missing method: caught
 not a function: caught
 missing field: caught

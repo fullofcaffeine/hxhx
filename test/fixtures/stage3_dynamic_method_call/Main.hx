@@ -122,6 +122,34 @@ class Person implements Named {
 		return "person";
 }
 
+enum abstract Level(Int) {
+	var Low = 0;
+	var High = 1;
+}
+
+/** Calls inside a class that has same-named methods. The receiver's type decides the call. */
+class Scoped {
+	public function new() {}
+
+	public function flag(value:Bool):String
+		return value ? "T" : "F";
+
+	public function yes(value:Bool):Bool
+		return value;
+
+	public function nested(other:Dynamic):String
+		return other.flag(other.yes(false));
+
+	public function compared(other:Dynamic):Bool
+		return other.yes(false) == false;
+
+	public function direct(other:Dynamic):String
+		return flag(other.yes(false));
+
+	public function level(value:Level):String
+		return value == High ? "H" : "L";
+}
+
 class Holder {
 	public function new() {}
 
@@ -130,6 +158,38 @@ class Holder {
 }
 
 class Main {
+	static function no():Bool
+		return false;
+
+	static function always():Bool
+		return true;
+
+	static function dflt(?x:Int):String
+		return "x=" + x;
+
+	static function defI(x:Int = 7):Int
+		return x + 1;
+
+	static function twice(x:Float):Float
+		return x * 0.5;
+
+	static function show(x:Dynamic):String
+		return Std.string(x);
+
+	static function viaReturn(value:Dynamic):Bool
+		return value.yes(false);
+
+	static function takeB(value:Bool):String
+		return value ? "T" : "F";
+
+	static function logged(label:String, value:Dynamic):Dynamic {
+		Sys.println("receiver " + label);
+		return value;
+	}
+
+	static function nest(value:Int):Int
+		return value + 1;
+
 	static function sameFlag(value:Bool):String
 		return value ? "T" : "F";
 
@@ -238,6 +298,53 @@ class Main {
 		Sys.println(new Late().sameGeneric(late));
 		Sys.println(late.describe(true));
 		Sys.println(late.describe(false));
+
+		final storedBools:Dynamic = {n: no, y: always};
+		if (!storedBools.n())
+			Sys.println("stored branch taken");
+		Sys.println(!storedBools.y());
+		Sys.println(storedBools.n() && true);
+		Sys.println(storedBools.y() || false);
+		Sys.println(storedBools.y() == true);
+		Sys.println(storedBools.n() == false);
+		final fromStored:Bool = storedBools.n();
+		Sys.println(fromStored);
+
+		final scoped:Dynamic = new Scoped();
+		final inScope = new Scoped();
+		Sys.println(inScope.nested(scoped));
+		Sys.println(inScope.compared(scoped));
+		Sys.println(inScope.direct(scoped));
+		final highest:Level = High;
+		Sys.println(scoped.level(highest));
+		Sys.println(scoped.level(High));
+
+		Sys.println(viaReturn(late));
+		Sys.println(takeB(late.yes(false)));
+		final flags:Array<Bool> = [late.yes(false)];
+		Sys.println(flags[0] ? "T" : "F");
+
+		final sameNames:Dynamic = {
+			dflt: dflt,
+			defI: defI,
+			twice: twice,
+			show: show
+		};
+		Sys.println(sameNames.dflt());
+		Sys.println(sameNames.dflt(4));
+		Sys.println(sameNames.defI());
+		Sys.println(sameNames.defI(1));
+		Sys.println(sameNames.twice(2.25));
+		Sys.println(sameNames.twice(3));
+		Sys.println(sameNames.show(false));
+
+		Sys.println(logged("method", late).add(tick("method a", 1), tick("method b", 2)));
+		final tickers:Dynamic = {add: (a:Int, b:Int) -> a + b};
+		Sys.println(logged("stored", tickers).add(tick("stored a", 3), tick("stored b", 4)));
+
+		final nesting:Dynamic = {nest: nest};
+		Sys.println(nesting.nest(nesting.nest(nesting.nest(nesting.nest(nesting.nest(nesting.nest(nesting.nest(nesting.nest(0)))))))));
+		Sys.println(late.add(late.add(late.add(late.add(late.add(late.add(late.add(late.add(1, 1), 1), 1), 1), 1), 1), 1), 1));
 
 		attempt("missing method", () -> late.absent());
 		attempt("not a function", () -> {
