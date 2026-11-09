@@ -38,6 +38,16 @@ class Accepted {
 		final nestedConstant = new One<Const<"a\",b">>();
 		// Macros own the arguments of a generic-build class and the members of a built one.
 		final multi = new Multi<Int, String, Bool>();
+		// A parameter named `Rest` at any position lifts the upper limit, and a last `Rest` may be omitted.
+		final leadOne:Lead<Int> = null;
+		final leadTwo:Lead<Int, String> = null;
+		final leadThree:Lead<Int, String, Bool> = null;
+		final tailTwo:Tail<Int, String> = null;
+		final tailThree:Tail<Int, String, Bool> = null;
+		final midThree:Mid<Int, String, Bool> = null;
+		final midFour:Mid<Int, String, Bool, Float> = null;
+		final defaultBeforeRest:DefaultBeforeRest<Int> = null;
+		final defaultAfterRest:DefaultAfterRest<Int, String> = null;
 		final built = new Built(1);
 		final autoBuilt = new AutoChild(1);
 		trace(make(explicit) == explicit);

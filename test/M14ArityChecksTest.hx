@@ -20,6 +20,9 @@ class M14ArityChecksTest {
 	**/
 	static final lineOnly = [
 		"AbstractTooManyTypes",
+		"GenericBuildRestFirstTooFew",
+		"GenericBuildRestMiddleTooFew",
+		"GenericBuildRestThenDefaultTooFew",
 		"GenericBuildTooFew",
 		"GenericBuildTooMany",
 		"GenericCtorTooManyTypes",
@@ -50,6 +53,9 @@ class M14ArityChecksTest {
 			},
 			{module: "DynamicTooManyTypes", diagnostic: "Too many parameters for Dynamic"},
 			{module: "FieldHintAfterComment", diagnostic: "Not enough type parameters for Box"},
+			{module: "GenericBuildRestFirstTooFew", diagnostic: "Not enough type parameters for Tail"},
+			{module: "GenericBuildRestMiddleTooFew", diagnostic: "Not enough type parameters for Mid"},
+			{module: "GenericBuildRestThenDefaultTooFew", diagnostic: "Not enough type parameters for DefaultAfterRest"},
 			{module: "GenericBuildTooFew", diagnostic: "Not enough type parameters for TwoBuilt"},
 			{module: "GenericBuildTooMany", diagnostic: "Too many type parameters for TwoBuilt"},
 			{module: "GenericFixedByArgument", diagnostic: "Not enough arguments, expected w:Int"},
