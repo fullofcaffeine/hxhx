@@ -447,6 +447,8 @@ let translate ~(utf8 : bool) ~(casefold : bool) ~(dotall : bool) (p : int array)
           Stdlib.Buffer.add_string tr.buf "\\)";
           let capture = Stdlib.List.length tr.haxe_groups > haxe_before in
           loop (i + 1) (Unit { start; inner = tr.str_groups - str_before; capture })
+      (* PCRE rejects a `)` without an open group, as upstream does. *)
+      | ')' -> failwith "spurious \\) in regular expression"
       | '|' ->
           Stdlib.Buffer.add_string tr.buf "\\|";
           loop (i + 1) No_atom

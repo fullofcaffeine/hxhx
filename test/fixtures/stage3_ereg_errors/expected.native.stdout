@@ -1,4 +1,4 @@
 invalid pattern: EReg: invalid regular expression "(": \( group not closed by \)
 invalid pattern as String: EReg: invalid regular expression "a)": spurious \) in regular expression
-dynamic call: Cannot call null: Dynamic field match is not a function on this value
+dynamic call: Stage3 cannot call method match through a Dynamic value: the value has no such method
 after
