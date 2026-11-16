@@ -3736,7 +3736,7 @@ class EmitterStage {
 						else
 							throw "no current executable";
 						true;
-					} catch (_:Dynamic)
+					} catch (_:String)
 						false;
 				}
 			});
