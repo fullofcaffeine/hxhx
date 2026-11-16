@@ -634,6 +634,13 @@ The architecture remains accepted, but `haxe_ocaml-h5jta` and
 shared-target hard cut. Their documents remain planning inputs, not current
 product capability.
 
+A first research consumer of this model is the opt-in, Bend2-inspired "hxb"
+dialect: a checked subset of Haxe for solver-proved laws and explicit parallel
+execution. It is lower priority than all compiler-foundations work and changes
+no baseline behavior. See
+`docs/00-project/BEND2_INSPIRED_DIALECT_DECISION_2026_11_16.md` (epic
+`haxe_ocaml-frrmo`).
+
 ## Goal 5: Haxe-family compiler variations
 
 Sometimes a project needs more than a plugin: it may need a custom Haxe-family language, policy set, target bundle, or distribution.
