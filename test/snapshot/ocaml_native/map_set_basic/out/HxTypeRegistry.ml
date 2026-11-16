@@ -121,7 +121,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "sys.io._Stdio.OcamlStdioOutput" (fun () -> Obj.repr (Sys_io_Stdio.ocamlstdiooutput___empty ()));
   HxType.register_class_instance_fields "Main" [];
   HxType.register_class_static_fields "Main" [ "main" ];
-  HxType.register_class_instance_fields "StringBuf" [ "add"; "addChar"; "addSub"; "buf"; "get_length"; "toString" ];
+  HxType.register_class_instance_fields "StringBuf" [ "add"; "addChar"; "addSub"; "append"; "buf"; "characters"; "get_length"; "toString" ];
   HxType.register_class_static_fields "StringBuf" [];
   HxType.register_class_instance_fields "StringTools" [];
   HxType.register_class_static_fields "StringTools" [ "_hexUpper"; "_hexValue"; "_isUrlUnreserved"; "_quoteUnixArgOcaml"; "_quoteWinArgOcaml"; "_urlDecodeOcaml"; "_urlEncodeOcaml"; "_winMetaCharactersOcaml"; "contains"; "endsWith"; "fastCodeAt"; "hex"; "htmlEscape"; "htmlUnescape"; "isEof"; "isSpace"; "iterator"; "keyValueIterator"; "lpad"; "ltrim"; "quoteUnixArg"; "quoteWinArg"; "replace"; "rpad"; "rtrim"; "startsWith"; "trim"; "unsafeCodeAt"; "urlDecode"; "urlEncode"; "utf16CodePointAt"; "winMetaCharacters" ];

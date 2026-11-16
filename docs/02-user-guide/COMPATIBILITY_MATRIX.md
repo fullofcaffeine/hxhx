@@ -72,7 +72,7 @@ Matrix status taxonomy:
 | Module / Area | Status | Notes |
 |---|---:|---|
 | `Array<T>` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/Array.hx` + `packages/reflaxe.ocaml/std/runtime/HxArray.ml` |
-| `String` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/String.hx` + `packages/reflaxe.ocaml/std/runtime/HxString.ml` |
+| `String` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/String.hx` + `packages/reflaxe.ocaml/std/runtime/HxString.ml`. Stored as UTF-8; `length`, indices and character codes count Unicode code points, as upstream eval does (`"héllo😀".length == 6`). Case conversion uses eval's one-to-one mapping. |
 | `haxe.io.Bytes` | ✅ | Runtime-backed (lowered in codegen) |
 | `Date` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/Date.hx` + `packages/reflaxe.ocaml/std/runtime/Date.ml` |
 | `Sys` | ✅ | `packages/reflaxe.ocaml/std/ocaml/_std/Sys.hx` + `packages/reflaxe.ocaml/std/runtime/HxSys.ml` |

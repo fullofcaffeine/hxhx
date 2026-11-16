@@ -120,7 +120,7 @@ used for ordinary external OCaml libraries.
 | `HxReflect` | yes | `metal-forbidden (current)` | Reflection-heavy APIs are blocked by MetalProfileVerifier (`Reflect.*`). |
 | `HxRuntime` | yes | `metal-required` | Core runtime module; always linked in metal mode. |
 | `HxStdio` | yes | `metal-supported` | stdio helpers (`stdin/stdout/stderr`) when referenced. |
-| `HxString` | yes | `metal-supported` | String helpers. |
+| `HxString` | yes | `metal-supported` | String helpers. Indices and lengths count Unicode code points over UTF-8 storage; ASCII strings index bytes directly. |
 | `HxSys` | yes | `metal-supported` | `Sys.*` host interaction helpers. |
 | `HxThread` | yes | `metal-supported` | Thread primitives for `sys.thread.*` (locks, mutexes, conditions, semaphores, deque, TLS, thread messaging). |
 | `HxType` | yes | `metal-forbidden (current)` | Reflection-style `Type.*` flows are blocked by verifier today. |

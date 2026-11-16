@@ -188,6 +188,18 @@
   ],
   "testFixtures": [
     {
+      "path": "test/reflaxe_ocaml_hxstring_runtime/cache_contract.ml",
+      "kind": "native-target-test-observer",
+      "productionModule": "HxString",
+      "whyOcaml": "An independent native consumer reads HxString's work counters to check the cost contract deterministically (cached long strings are scanned once each in rotation, short non-ASCII loops stay linear) and asserts edge cases for cached ASCII and ill-formed text. Haxe owns which String operation is called; this file owns assertions only."
+    },
+    {
+      "path": "test/reflaxe_ocaml_hxstring_runtime/differential.ml",
+      "kind": "native-target-test-observer",
+      "productionModule": "HxString",
+      "whyOcaml": "A seeded differential test compares every HxString operation with an independent naive reference decoder over mixed, ill-formed, short and cached strings. It owns assertions only; upstream Haxe output stays the behavior oracle through the Stage3 and portable fixtures."
+    },
+    {
       "path": "test/object_map_identity_runtime/Observer.ml",
       "kind": "native-target-test-observer",
       "productionModule": "HxRuntime / HxMap / HxAnon / HxType",
