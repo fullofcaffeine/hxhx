@@ -684,6 +684,11 @@ jobs:
           - shard: compiler-focused-7
             label: Stage3 file system, reflection and structural methods
             timeout_minutes: 40
+          # Commands the consolidation added to compiler-foundation, which then
+          # exceeded its 60-minute budget.
+          - shard: compiler-focused-8
+            label: Consolidated Stage3 text, typing and runtime regressions
+            timeout_minutes: 40
           # Fast tests that no CI job ran before haxe_ocaml-k86ww. Slow ones run
           # in the Q3 slow-test-shards job below.
           - shard: compiler-focused-audit

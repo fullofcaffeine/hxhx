@@ -188,7 +188,7 @@ function main() {
   )
 
   const expectedCounts = {
-    'compiler-foundation': 56,
+    'compiler-foundation': 42,
     'compiler-packaging': 15,
     'compiler-focused-1': 45,
     'compiler-focused-call-arguments': 1,
@@ -202,6 +202,7 @@ function main() {
     'compiler-focused-macro-plugins': 5,
     'compiler-focused-6': 11,
     'compiler-focused-7': 4,
+    'compiler-focused-8': 14,
     'compiler-focused-audit': 76,
     'compiler-focused-audit-slow': 10,
     'compiler-focused-audit-slow-neko': 4,
@@ -226,6 +227,7 @@ function main() {
     'compiler-focused-macro-plugins': 'Q2',
     'compiler-focused-6': 'Q2',
     'compiler-focused-7': 'Q2',
+    'compiler-focused-8': 'Q2',
     'compiler-focused-audit': 'Q2',
     'compiler-focused-audit-slow': 'Q3',
     'compiler-focused-audit-slow-neko': 'Q3',
@@ -625,6 +627,7 @@ function main() {
     ['compiler-focused-macro-plugins', 'Project macro plugins and syntax wire'],
     ['compiler-focused-6', 'Consolidated Stage3 numeric and text regressions'],
     ['compiler-focused-7', 'Stage3 file system, reflection and structural methods'],
+    ['compiler-focused-8', 'Consolidated Stage3 text, typing and runtime regressions'],
     ['compiler-focused-audit', 'Regressions found outside CI'],
     ['macro-host-integration', 'Macro-host integration'],
     ['target-packages', 'Snapshots and examples']

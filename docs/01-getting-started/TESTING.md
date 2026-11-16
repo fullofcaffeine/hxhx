@@ -76,6 +76,7 @@ npm run test:ci:shard -- --shard compiler-focused-5
 npm run test:ci:shard -- --shard compiler-focused-macro-plugins
 npm run test:ci:shard -- --shard compiler-focused-6
 npm run test:ci:shard -- --shard compiler-focused-7
+npm run test:ci:shard -- --shard compiler-focused-8
 npm run test:ci:shard -- --shard compiler-focused-neko-runtime
 npm run test:ci:shard -- --shard compiler-focused-neko-locals
 npm run test:ci:shard -- --shard macro-host-integration
@@ -99,6 +100,9 @@ to `compiler-focused-1`, which then reached their 40-minute limits. Those
 commands run in `compiler-focused-6`, and `compiler-focused-7` holds the three
 structural-method commands plus `test:m14:stage3-sys-file-ops`, which grew when
 the Stage3 Reflect and Type checks joined it.
+The fourteen Stage3 text, typing and runtime commands that the consolidation
+added to `compiler-foundation` run in `compiler-focused-8`, so the foundation
+group stays within its 60-minute limit.
 
 `test:m14:runtime-type-operands` remains the full serial command for its 52
 checks. CI schedules its shared and Neko groups separately and gives each C++
