@@ -70,7 +70,7 @@ class M14Stage3FloatCallArgIntegrationTest {
 				'}',
 			].join("\n");
 			final upstreamLikePath = haxe.io.Path.normalize('vendor/haxe/tests/unit/src/unit/MyClass.hx');
-			final stdDateToolsPath = haxe.io.Path.normalize('vendor/haxe/std/DateTools.hx');
+			final stdDateToolsPath = haxe.io.Path.join([M14Stage0StdPath.locate(), 'DateTools.hx']);
 			final parsedUpstreamLike = ParserStage.parse(upstreamLikeSrc, upstreamLikePath);
 			final parsedStdDateTools = ParserStage.parse(File.getContent(stdDateToolsPath), stdDateToolsPath);
 			final typedUpstreamLike = TyperStage.typeModule(parsedUpstreamLike);
