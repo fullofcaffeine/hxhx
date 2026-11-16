@@ -65,8 +65,17 @@ function renderMethodValue(input:{
 
 /** Exact element and operand types select the same storage representation for calls and saved methods. */
 private function push(receiverType:TyType, argumentType:TyType, receiver:String, argument:String):String {
-	final stored = receiverType.getTypeArguments()[0].isDynamic() ? "(Obj.magic (" + Stage3OcamlObjects.store(argumentType, argument) + "))" : argument;
-	return "HxArray.push " + receiver + " " + stored;
+	return "HxArray.push " + receiver + " " + element(receiverType.getTypeArguments()[0], argumentType, argument);
+}
+
+/**
+	Store one operand in an array slot. Dynamic slots hold the boxed value; an
+	Int operand entering a Float slot (`floats.push(count)`) is promoted.
+ */
+private function element(slot:TyType, argumentType:Null<TyType>, argument:String):String {
+	if (slot.isDynamic())
+		return "(Obj.magic (" + Stage3OcamlObjects.store(argumentType, argument) + "))";
+	return Stage3OcamlNumericWidening.needsPromotion(argumentType, slot) ? Stage3OcamlNumericWidening.promote(argument) : argument;
 }
 
 /**
@@ -118,10 +127,8 @@ function render(input:{
 	final argument = arguments.length == 0 ? "" : arguments[0];
 	// Dynamic arrays store boxed values. Inserted and searched values must use
 	// the same representation as push, including boxed Bool and Float values.
-	final element = receiverType.getTypeArguments()[0];
-	final stored = (index:Int) -> element.isDynamic() ? "(Obj.magic ("
-		+ Stage3OcamlObjects.store(occurrence.getProjectedArgumentTypes()[index], arguments[index])
-		+ "))" : arguments[index];
+	final elementType = receiverType.getTypeArguments()[0];
+	final stored = (index:Int) -> element(elementType, occurrence.getProjectedArgumentTypes()[index], arguments[index]);
 	final operation = switch (call.method) {
 		case "map": if (autoTyped) input.mark("array_map_typed"); input.metal || autoTyped ? "HxBootArray.map (" + receiver + ") (" + argument + ")" : "HxBootArray.map_dyn (Obj.magic (" + receiver + ")) (Obj.repr (" + argument + "))";
 		case "join":

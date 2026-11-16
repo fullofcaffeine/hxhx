@@ -80,11 +80,14 @@ function access(occurrence:TypedBackendArrayAccess, emit:HxExpr->String, names:S
 			final value = names.internalName("__hx_indexed_value");
 			final dynamicSlot = type.isDynamic() || (type.getTypeArguments().length == 1 && type.getTypeArguments()[0].isDynamic());
 			final stored = dynamicSlot ? "(Obj.magic (" + Stage3OcamlObjects.store(occurrence.valueType, value) + "))" : value;
+			// `floats[i] = count` stores, and returns, the Int value promoted to Float.
+			final element = type.getTypeArguments().length == 1 ? type.getTypeArguments()[0] : null;
+			final rendered = emit(occurrence.value);
 			prefix
 			+ "let "
 			+ value
 			+ " = ("
-			+ emit(occurrence.value)
+			+ (Stage3OcamlNumericWidening.needsPromotion(occurrence.valueType, element) ? Stage3OcamlNumericWidening.promote(rendered) : rendered)
 			+ ") in ignore (HxBootArray.set "
 			+ receiver
 			+ " "
@@ -157,7 +160,9 @@ function literal(occurrence:TypedBackendAggregateOccurrence, emit:HxExpr->String
 	for (index in 0...children.length) {
 		final name = names.internalName("__hx_array_element_" + index);
 		final value = emit(children[index]);
-		final stored = arguments[0].isDynamic() ? Stage3OcamlObjects.store(types[index], value) : value;
+		// `[1, 2.5]` is an Array<Float>: its Int element is promoted before storage.
+		final stored = arguments[0].isDynamic() ? Stage3OcamlObjects.store(types[index],
+			value) : Stage3OcamlNumericWidening.needsPromotion(types[index], arguments[0]) ? Stage3OcamlNumericWidening.promote(value) : value;
 		bindings.push("let " + name + " = (" + stored + ") in ");
 		// HxArray's polymorphic container also carries the target null sentinel.
 		// The typed element contract above owns each value before that erasure.
