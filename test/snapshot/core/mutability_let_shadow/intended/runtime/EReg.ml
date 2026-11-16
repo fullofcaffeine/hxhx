@@ -39,9 +39,11 @@
    Known limitations: lazy quantifiers (matched greedily), Unicode properties
    for `\w` `\d` `\s` `\b` (ASCII only here), case-insensitive back
    references, and PCRE `^`/`$` (here they always match at line boundaries).
-   Syntax that cannot be translated (lookaround, named groups, `\B`, `\A`,
-   unknown letter escapes, a counted capturing group) raises `Failure` when
-   the EReg is created: both translations run in [create]. *)
+   An invalid pattern throws a Haxe String when the EReg is created. Valid
+   syntax this runtime cannot translate (lookaround, named groups, `\B`, `\A`,
+   unknown letter escapes, a counted capturing group) throws the same kind of
+   error at the EReg's first match instead, so a class whose static
+   initializer builds such a pattern (`haxe.Template`) still loads. *)
 
 type match_result =
   { src : string
@@ -60,6 +62,7 @@ type t =
   ; utf8_source : string * int array (* UTF-8 translation, compiled on first use *)
   ; mutable utf8_mode : compiled option
   ; mutable last : match_result option
+  ; unsupported : string option (* deferred error for valid but untranslatable syntax *)
   }
 
 (* ---- Code-point sets ----------------------------------------------------
@@ -520,9 +523,9 @@ let compile ~(utf8 : bool) ~(casefold : bool) ((source, group_map) : string * in
   let re = if casefold && not utf8 then Str.regexp_case_fold source else Str.regexp source in
   { re; group_map }
 
-(* Both translations run here, so every unsupported-syntax failure happens
-   when the EReg is created, not at its first non-ASCII subject. Only the
-   UTF-8 Str compilation is deferred. *)
+(* Both translations run here, so every translation failure is known when
+   the EReg is created, not at its first non-ASCII subject. Only the UTF-8
+   Str compilation is deferred. *)
 let create (r : string) (opt : string) : t =
   let pattern = Stdlib.Array.init (HxString.length r) (fun i -> HxString.cca r i) in
   let casefold = Stdlib.String.contains opt 'i' and dotall = Stdlib.String.contains opt 's' in
@@ -536,13 +539,30 @@ let create (r : string) (opt : string) : t =
     ; utf8_source = translate ~utf8:true ~casefold ~dotall pattern
     ; utf8_mode = None
     ; last = None
+    ; unsupported = None
     }
   with Failure reason ->
-    HxRuntime.hx_throw_typed
-      (Obj.repr ("EReg: invalid regular expression \"" ^ r ^ "\": " ^ reason))
-      [ "String"; "Dynamic" ]
+    let message = "EReg: invalid regular expression \"" ^ r ^ "\": " ^ reason in
+    let rec mentions_unsupported i =
+      i + 11 <= Stdlib.String.length reason
+      && (Stdlib.String.sub reason i 11 = "unsupported" || mentions_unsupported (i + 1))
+    in
+    if mentions_unsupported 0 then
+      let never = compile ~utf8:false ~casefold:false ("a\\`", [| 0 |]) in
+      { global = Stdlib.String.contains opt 'g'
+      ; casefold
+      ; ascii_mode = never
+      ; utf8_source = ("", [| 0 |])
+      ; utf8_mode = Some never
+      ; last = None
+      ; unsupported = Some message
+      }
+    else HxRuntime.hx_throw_typed (Obj.repr message) [ "String"; "Dynamic" ]
 
 let compiled_for (self : t) (l : HxString.layout) : compiled =
+  (match self.unsupported with
+   | Some message -> HxRuntime.hx_throw_typed (Obj.repr message) [ "String"; "Dynamic" ]
+   | None -> ());
   if l.HxString.ascii then self.ascii_mode
   else
     match self.utf8_mode with

@@ -15,7 +15,7 @@
     {
       "module": "EReg",
       "scope": "application",
-      "files": [{ "path": "EReg.ml", "sha256": "324942643ba19a617be61e834bde6fc84905fab501686bb79df823a7dd9cf6f3" }],
+      "files": [{ "path": "EReg.ml", "sha256": "f79324590e43e8f117c2a1aeea1a5384af2d358724019c5ed895793e8ad40848" }],
       "dependencies": ["HxAnon", "HxArray", "HxRuntime", "HxString"],
       "duneLibraries": ["str"],
       "profiles": ["metal", "portable"],

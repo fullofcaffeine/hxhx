@@ -249,8 +249,8 @@ if (writeStringStart < 0
 }
 
 const returnControls = report.controls.filter(control => control.kind === 'return')
-if (returnControls.length !== 59) {
-	fail(`expected 59 represented return decisions, including the three parser-shaped switch returns, eight nullable anonymous parse returns, StringTools._hexValue, the three stdio instance methods, and Exception.details, got ${returnControls.length}`)
+if (returnControls.length !== 60) {
+	fail(`expected 60 represented return decisions, including the three parser-shaped switch returns, eight nullable anonymous parse returns, StringTools._hexValue, the three stdio instance methods, Exception.details, and the early return in Exception.caught, got ${returnControls.length}`)
 }
 const expectedByFunction = new Map([
 	['branch', 1],
@@ -698,8 +698,19 @@ for (const control of returnControls) {
 		&& nominal?.targetTypeName === 'nestedreturnbox_t'
 		&& /^sha256:[0-9a-f]{64}$/.test(nominal?.layoutRevision ?? '')
 		&& nominal?.representationProofId === `whole-program-monomorphic-nominal-record-v1:${nominal.layoutRevision}`
+	// A non-primitive typed result returned early, such as the `return value`
+	// branch of haxe.Exception.caught, keeps the function result's own carrier.
+	const typedFunctionResult = control.proofId === 'typed-function-result-early-return-control-v1'
+		&& payload.proofId === control.proofId
+		&& payload.conversion === 'box-and-recover-typed-function-result'
+		&& payload.inputCarrierTypeId === 'ocaml-inferred-function-result'
+		&& payload.outputCarrierTypeId === 'ocaml-inferred-function-result'
+		&& payload.outputSemanticTypeId === payload.inputSemanticTypeId
+		&& /^control-representation:typed-function-result-v1:[0-9a-f]+$/.test(payload.inputRepresentationId ?? '')
+		&& /^control-representation:typed-function-result-v1:[0-9a-f]+$/.test(payload.outputRepresentationId ?? '')
+		&& payload.nominalRepresentation == null
 	if (payload.signalCarrierTypeId !== 'Obj.t'
-		|| (!exactValue && !nullableInt && !nullableBool && !dynamicCarrier && !anonymousCarrier && !nominalValue)
+		|| (!exactValue && !nullableInt && !nullableBool && !dynamicCarrier && !anonymousCarrier && !nominalValue && !typedFunctionResult)
 		|| !payload.proofClaim) {
 		fail(`control decision ${control.id} has an incomplete represented return payload crossing`)
 	}
@@ -975,9 +986,9 @@ if (report.schemaVersion !== 53
 	|| report.summary.functionResultBoundaryCount === 0
 	|| report.summary.arrayLiteralProducerCount !== report.lowering.arrayLiteralProducers.length
 	|| report.summary.arrayLiteralProducerCount !== 4
-	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 59
+	|| report.lowering.controls.filter(control => control.kind === 'return').length !== 60
 	|| report.lowering.scope !== 'typed-place-anonymous-object-call-and-function-loop-throw-catch-control-families') {
-	throw new Error('public inspection did not expose the 59 returns, their function-result owners, and four direct represented-array literal producers')
+	throw new Error('public inspection did not expose the 60 returns, their function-result owners, and four direct represented-array literal producers')
 }
 const hexValueResult = report.lowering.functionResultBoundaries.find(boundary =>
 	boundary.functionId.includes('StringTools|StringTools|static|function|_hexValue|'))
@@ -1504,5 +1515,5 @@ done
 node - "$REPORT_FILE" <<'NODE'
 const report = JSON.parse(require('fs').readFileSync(process.argv[2], 'utf8'))
 console.log('EARLY_RETURN_CORRUPTION_GROUP:PASS string-literal-producer cases=2')
-console.log(`REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=59 function_results=${report.functionResultBoundaryCount} producers=4`)
+console.log(`REFLAXE_OCAML_EARLY_RETURN_CONTROL_FIXTURE:PASS controls=60 function_results=${report.functionResultBoundaryCount} producers=4`)
 NODE

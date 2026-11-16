@@ -49,8 +49,10 @@ s.substr(r.matchedPos().pos); // "llo😀漢l"
 - An unmatched optional group gives `null` from `matched(n)`, as upstream.
 - `replace` leaves the previous `match` result in place, as upstream does;
   `map` clears it.
-- Every pattern is translated in full when the `EReg` is created, so
-  unsupported syntax fails there and never at a later call.
+- Every pattern is translated in full when the `EReg` is created. An invalid
+  pattern throws there. Valid syntax that the runtime cannot translate throws
+  the same catchable error at the first match instead, so a class whose static
+  initializer builds such a pattern (such as `haxe.Template`) still loads.
 
 The portable fixture `test/portable/fixtures/ereg_unicode_code_points` checks
 all of this against upstream output.
@@ -108,8 +110,8 @@ Tracked by `haxe_ocaml-2lqqu`:
 - Lazy quantifiers (`*?` is matched greedily), lookahead/lookbehind, named
   groups, inline flags, `(ab){2}` (a counted capturing group), and the
   escapes `\B`, `\A`, `\z`, `\Z`, `\G`, `\p{..}`, `\Q`, `\c` and every
-  other letter escape not listed above. Each of these raises an error when
-  the `EReg` is created.
+  other letter escape not listed above. Each of these raises a catchable
+  error at the `EReg`'s first match.
 - Back references compare exactly, even with `i`: `~/(a)\1/i` does not match
   `"aA"`, while upstream does.
 - `^` and `$` always match at line boundaries, as if `m` were set.

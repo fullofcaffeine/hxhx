@@ -35,7 +35,9 @@ differs:
   last character here, exactly as upstream does on ASCII (`/a/` for `"ab"`).
 - Syntax the runtime cannot translate (`(?=`, `\A`, `\B`, unknown letter
   escapes, a counted capturing group, or a back reference that needs more
-  than nine internal groups) raises when the `EReg` is created. Upstream
+  than nine internal groups) raises a catchable error at the first match;
+  creating the `EReg` still succeeds, so a static initializer that builds
+  such a pattern does not stop the program. Upstream
   supports most of these, so there is no upstream value.
 - `\W` matches `é` here: `\w`, `\d` and `\s` are ASCII sets, while upstream
   uses Unicode properties (`haxe_ocaml-2lqqu`). `matchSub` out of range

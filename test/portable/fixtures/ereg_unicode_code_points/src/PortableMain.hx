@@ -18,9 +18,11 @@
 	  stops the program.
 **/
 class PortableMain {
+	// Unsupported but valid syntax is a catchable error at the first match, so a
+	// class that builds such a pattern in a static initializer still loads.
 	static function rejected(pattern:String):String {
 		return try {
-			new EReg(pattern, "");
+			new EReg(pattern, "").match("ab");
 			"created";
 		} catch (e:Dynamic)
 			"rejected";
