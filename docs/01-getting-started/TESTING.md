@@ -74,6 +74,8 @@ that runs longer is stopped and reported by name, before the job limit. To repro
 npm run test:ci:shard -- --shard compiler-foundation
 npm run test:ci:shard -- --shard compiler-focused-5
 npm run test:ci:shard -- --shard compiler-focused-macro-plugins
+npm run test:ci:shard -- --shard compiler-focused-6
+npm run test:ci:shard -- --shard compiler-focused-7
 npm run test:ci:shard -- --shard compiler-focused-neko-runtime
 npm run test:ci:shard -- --shard compiler-focused-neko-locals
 npm run test:ci:shard -- --shard macro-host-integration
@@ -90,6 +92,13 @@ The five project-macro and syntax-wire commands run in their own
 `compiler-focused-macro-plugins` group. They used to share
 `compiler-focused-5` with the C++ runtime-type checks, and that job needed
 28-39 minutes of its 40-minute limit.
+
+The November 2026 consolidation (PR #193) added eleven Stage3 numeric, text
+and EReg commands to `compiler-focused-2` and three structural-method commands
+to `compiler-focused-1`, which then reached their 40-minute limits. Those
+commands run in `compiler-focused-6`, and `compiler-focused-7` holds the three
+structural-method commands plus `test:m14:stage3-sys-file-ops`, which grew when
+the Stage3 Reflect and Type checks joined it.
 
 `test:m14:runtime-type-operands` remains the full serial command for its 52
 checks. CI schedules its shared and Neko groups separately and gives each C++
