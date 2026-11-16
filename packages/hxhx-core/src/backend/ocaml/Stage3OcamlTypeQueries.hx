@@ -4,8 +4,10 @@ package backend.ocaml;
 	Read existing runtime descriptors through exact standard Type declarations.
 	Generated class instances already carry their descriptor in private HxAnon
 	storage. These calls retain that value; they do not create a class from a name
-	or admit first-class class literals. Other instance representations must prove
-	their Type.getClass contract before using this path.
+	or admit first-class class literals. `Type.getClass` on an operand that is not
+	statically a generated class goes to `HxReflect.value_class`, which answers
+	`String` for strings, `Array` for arrays, the class of a class instance, and
+	null for every other value.
  */
 function render(input:{
 	expression:HxExpr,
@@ -22,6 +24,19 @@ function render(input:{
 			return null;
 	}
 	final fact = input.lookup == null ? null : input.lookup(input.expression);
+	// A static extension call (`using Type; value.getClass()`) keeps its exact
+	// declaration in the encoded call, but its callable-expression fact is
+	// missing or holds only the callee, with the receiver inside it. The
+	// typer already selected the bodiless standard declaration, and every
+	// runtime function below accepts any `Obj.t`, so it needs no operand type.
+	final extension = fact == null || fact.getTag() == Call && fact.getExpressions().length == 1;
+	if (extension
+		&& !call.hasBody
+		&& call.arguments.length == 1
+		&& call.declaration.indexOf("Type#static:" + call.method + "(") == 0) {
+		final operand = "Obj.repr (" + input.emit(call.arguments[0]) + ")";
+		return call.method == "getClass" ? "HxReflect.value_class (" + operand + ")" : "HxType." + call.method + " (" + operand + ")";
+	}
 	if (fact == null || fact.getTag() != Call || fact.getExpressions().length != 2 || call.arguments.length != 1)
 		throw "OCaml type query requires its exact typed call";
 	final declaration = fact.getExpressions()[0].getDeclaration();
@@ -45,9 +60,13 @@ function render(input:{
 			|| result.getTypeArguments().length != 1
 			|| result.getTypeArguments()[0].getSemanticKey() != signature.getArgs()[0].getSemanticKey())
 			throw "OCaml class query has an unsupported provider signature";
+		// Any other operand, such as a Dynamic value, a string, or an array, is
+		// classified by the runtime, which reads only layouts it knows.
 		final operand = fact.getExpressions()[1].getType();
 		if (!operand.isNullLiteral() && input.classes.nominalName(operand) == null)
-			throw "OCaml Type.getClass requires an admitted generated class operand: " + operand.getSemanticKey();
+			return "HxReflect.value_class ("
+				+ Stage3OcamlValueConversion.dynamicValue(operand, input.emit(call.arguments[0]), "stage3 emitter: Type.getClass")
+				+ ")";
 	} else {
 		final argument = signature.getArgs()[0];
 		final nominal = argument.getNominalIdentity();

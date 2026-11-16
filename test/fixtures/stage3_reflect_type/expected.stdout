@@ -1,0 +1,40 @@
+hasField anon true false
+hasField class true true true false
+isFunction false true false
+field anon 1 two null
+field class 3 5 1 null
+setField 3 true 40
+getProperty two 3
+setProperty 30 dee
+fields anon a,b,c,d,flag
+fields class label,x,y,z
+deleteField true false false false
+isObject true true false true
+isEnumValue true false
+compare -1 1 0
+callMethod 42
+copy 100 1
+typeof anon TObject
+typeof int TInt float TFloat bool TBool
+typeof null TNull function TFunction
+typeof class TClass(Class<Point>) enum TEnum(Enum<Color>) string TClass(Class<String>)
+enum value Rgb(1,2,3) Red
+describe TClass Point; TClass Point3; TClass String; TClass Array
+describe TEnum Color; TObject; TBool; TNull
+getClassName Point3 true
+getSuperClass Point true
+getInstanceFields label,scaled,sum,x,y,z
+method field true 300 1640
+override field 500 label,scaled,sum,x,y,z
+accessor 6 null
+accessor set 21 7
+copy class Point 30
+copy distinct true
+copy write 30 99
+copy method 990 990
+copy superclass true 500
+null null true false
+method value 5 30
+static import label,x,y,z
+using Point3 0
+enumIndex 0 1

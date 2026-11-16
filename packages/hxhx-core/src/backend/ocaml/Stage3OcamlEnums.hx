@@ -60,6 +60,25 @@ class Stage3OcamlEnums {
 		return owner == null ? null : owner.runtimeName;
 	}
 
+	/**
+		The OCaml value of one constructor of an enum emitted by this request:
+		the singleton value, or the function that builds a payload constructor.
+		The constructor must be at its declared Haxe index, so a runtime that
+		classifies values by index builds the constructor it means.
+	 */
+	public function constructorValue(owner:String, constructor:String, index:Int, currentModule:String):String {
+		final plan = owners.get(owner);
+		if (plan == null)
+			throw "OCaml enum constructor requires its emitted enum: " + owner;
+		for (candidate in plan.constructors)
+			if (candidate.name == constructor) {
+				if (candidate.index != index)
+					throw "OCaml enum constructor " + owner + "." + constructor + " is not at index " + index;
+				return (plan.outputModule == currentModule ? "" : plan.outputModule + ".") + candidate.targetName;
+			}
+		throw "OCaml enum " + owner + " has no constructor " + constructor;
+	}
+
 	/** Match only the enum and constructor admitted from the selected typed declaration. */
 	public function patternCondition(selected:TypedNamedPattern, value:String):String {
 		return switch selected.getKind() {
