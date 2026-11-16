@@ -3424,7 +3424,9 @@ class EmitterStage {
 				final s2 = exprToOcaml(s, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 				final i2 = exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 				// `HxString.cca` reads a code point and returns -1 outside the String.
-				return "(HxString.cca (" + s2 + ") (" + i2 + "))";
+				// Bind the operands first: OCaml evaluates application arguments right
+				// to left, but Haxe evaluates `fastCodeAt(text(), index())` left to right.
+				return "(let __hx_code_at_s = (" + s2 + ") in let __hx_code_at_i = (" + i2 + ") in HxString.cca __hx_code_at_s __hx_code_at_i)";
 			case ECall(EField(EIdent("StringTools"), "hex"), [n]):
 				return "StringTools.hex ("
 					+ exprToOcaml(n, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)

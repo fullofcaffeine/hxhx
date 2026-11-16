@@ -75,7 +75,10 @@ class M14Stage3WarningCleanShadowTraceIntegrationTest {
 			final shadowMl = haxe.io.Path.join([shadowOutDir, 'AsyncLike.ml']);
 			assertTrue(FileSystem.exists(shadowMl), 'Expected AsyncLike.ml in emitted output.');
 			final shadowOcaml = File.getContent(shadowMl);
-			assertTrue(shadowOcaml.indexOf('then_ (branch)') >= 0, 'Expected local branch value to shadow the same-named instance method.');
+			// `branch` is a Dynamic local, so `branch.then(...)` dispatches on that value (#191);
+			// the receiver must be the local, never the same-named instance method.
+			assertTrue(shadowOcaml.indexOf('let __hx_dynamic_receiver = (Obj.repr (branch))') >= 0,
+				'Expected local branch value to shadow the same-named instance method.');
 			assertTrue(shadowOcaml.indexOf('branch (this_)') < 0, 'Expected local branch value not to lower as an instance method call.');
 		} catch (e:Dynamic) {
 			thrown = e;
