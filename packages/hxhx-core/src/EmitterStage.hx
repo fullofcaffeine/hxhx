@@ -3726,7 +3726,19 @@ class EmitterStage {
 				expression: e,
 				lookup: currentTypedInitializer != null ? currentTypedInitializer.findCallableExpression : currentTypedFunction == null ? null : currentTypedFunction.findCallableExpression,
 				classes: currentClassStorage,
-				emit: value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+				emit: value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
+				owns: expression -> {
+					try {
+						if (currentTypedInitializer != null)
+							currentTypedInitializer.requireExpression(expression);
+						else if (currentTypedFunction != null)
+							currentTypedFunction.requireExpression(expression);
+						else
+							throw "no current executable";
+						true;
+					} catch (_:Dynamic)
+						false;
+				}
 			});
 			if (query != null)
 				return query;

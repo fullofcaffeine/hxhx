@@ -13,7 +13,8 @@ function render(input:{
 	expression:HxExpr,
 	lookup:HxExpr->Null<TypedExpr>,
 	classes:Stage3OcamlClassStorage,
-	emit:HxExpr->String
+	emit:HxExpr->String,
+	?owns:HxExpr->Bool
 }):Null<String> {
 	final call = TypedExactStaticCallSource.decode(input.expression);
 	if (call == null || call.owner != "Type")
@@ -29,7 +30,10 @@ function render(input:{
 	// missing or holds only the callee, with the receiver inside it. The
 	// typer already selected the bodiless standard declaration, and every
 	// runtime function below accepts any `Obj.t`, so it needs no operand type.
-	final extension = fact == null || fact.getTag() == Call && fact.getExpressions().length == 1;
+	// A missing fact counts only for an expression of the current body (`owns`),
+	// so a copied call cannot borrow the executable's ownership.
+	final extension = (fact == null && input.owns != null && input.owns(input.expression))
+		|| (fact != null && fact.getTag() == Call && fact.getExpressions().length == 1);
 	if (extension
 		&& !call.hasBody
 		&& call.arguments.length == 1
