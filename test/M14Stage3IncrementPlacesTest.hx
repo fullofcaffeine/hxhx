@@ -18,12 +18,10 @@ import sys.io.File;
 	  elements, Int and Float instance fields, and anonymous-structure fields.
 	  It also checks that the array and index expressions run once, in order.
 	- The native executable must print exactly what upstream Haxe 4.3.7 prints.
-	- `stage3_increment_places_int_in_float` is known failing for one remaining
-	  reason: an Int literal stored into a Float slot is now promoted, so `++`
-	  no longer crashes, but a whole-number Float prints as `2.` where upstream
-	  prints `2` (Bead haxe_ocaml-vzr17). The test requires exactly that known
-	  output, so a crash, a wrong number, or the formatting fix is noticed. Once
-	  the output matches upstream, the lines move into the main fixture.
+	- `stage3_increment_places_int_in_float` increments an Int literal stored in
+	  a Float slot. Since the November 2026 consolidation (PR #193) whole-number
+	  Floats print as upstream does (`2`, not `2.`; haxe_ocaml-vzr17), so the
+	  native output must equal the fixture's upstream expectation.
 **/
 class M14Stage3IncrementPlacesTest {
 	static function deleteRecursive(path:String):Void {
@@ -54,12 +52,13 @@ class M14Stage3IncrementPlacesTest {
 		M14Stage3RuntimeFixture.observe({command: main.executable, arguments: [], expected: main.expected});
 		deleteRecursive(main.outDir);
 		Sys.println("M14_STAGE3_INCREMENT_PLACES:PASS");
-		// Int literals stored into Float slots are promoted, so the native run must exit cleanly.
-		// Only whole-number Float printing still differs from upstream (Bead haxe_ocaml-vzr17).
-		final known = build("test/fixtures/stage3_increment_places_int_in_float", "int_in_float");
-		// When vzr17 lands this observation fails: fold the fixture into stage3_increment_places.
-		M14Stage3RuntimeFixture.observe({command: known.executable, arguments: [], expected: "int literal element: 2.,2.\nint literal field: 4.\n"});
+		// Int literals stored into Float slots are promoted, and whole-number Floats print as upstream.
+		final intInFloat = "test/fixtures/stage3_increment_places_int_in_float";
+		final upstream = File.getContent(intInFloat + "/expected.stdout");
+		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", intInFloat, "--run", "Main"], expected: upstream});
+		final known = build(intInFloat, "int_in_float");
+		M14Stage3RuntimeFixture.observe({command: known.executable, arguments: [], expected: upstream});
 		deleteRecursive(known.outDir);
-		Sys.println("M14_STAGE3_INCREMENT_PLACES_INT_IN_FLOAT:KNOWN_FAILING (haxe_ocaml-vzr17)");
+		Sys.println("M14_STAGE3_INCREMENT_PLACES_INT_IN_FLOAT:PASS");
 	}
 }

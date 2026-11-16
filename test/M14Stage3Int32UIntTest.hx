@@ -62,7 +62,8 @@ class M14Stage3Int32UIntTest {
 			'}',
 			''
 		].join("\n"), "Main.hx", ".", "trace");
-		M14Stage3RuntimeFixture.observe({command: traced, arguments: [], expected: "4294967295\n"});
+		// trace prints its position, as upstream does (#169).
+		M14Stage3RuntimeFixture.observe({command: traced, arguments: [], expected: "Main.hx:4: 4294967295\n"});
 		deleteRecursive(".tmp/m14_stage3_int32_uint_fixture");
 		deleteRecursive(".tmp/m14_stage3_int32_uint_trace");
 		Sys.println("M14_STAGE3_UINT_TRACE:PASS");

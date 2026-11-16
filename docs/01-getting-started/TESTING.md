@@ -97,7 +97,9 @@ The five project-macro and syntax-wire commands run in their own
 The November 2026 consolidation (PR #193) added eleven Stage3 numeric, text
 and EReg commands to `compiler-focused-2` and three structural-method commands
 to `compiler-focused-1`, which then reached their 40-minute limits. Those
-commands run in `compiler-focused-6`, and `compiler-focused-7` holds the three
+commands, plus the two slowest original `compiler-focused-2` commands
+(`test:m14:python-runtime-type-operands` and `test:m14:stage3-interface-calls`),
+run in `compiler-focused-6`, and `compiler-focused-7` holds the three
 structural-method commands plus `test:m14:stage3-sys-file-ops`, which grew when
 the Stage3 Reflect and Type checks joined it.
 The fourteen Stage3 text, typing and runtime commands that the consolidation

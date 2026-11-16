@@ -1174,9 +1174,10 @@ class EmitterStage {
 				// When an expression is demanded as a string (e.g. trace/println), treat `+` as
 				// string concatenation and lower it to OCaml's `^`.
 				// The typed result decides: `ratio + 0.25` stays Float addition.
+				// Operands go through emitConcatOperand, which prints a UInt unsigned.
 				case EBinop("+", a, b) if (stage3IsStringExpr(expr, tyByIdent)):
-					backend.ocaml.Stage3OcamlOrderedOperands.concat(emitStringExpr(a), emitStringExpr(b), stage3OperandIsStable(a), stage3OperandIsStable(b),
-						currentFunctionLocalOcamlNames);
+					backend.ocaml.Stage3OcamlOrderedOperands.concat(emitConcatOperand(a), emitConcatOperand(b), stage3OperandIsStable(a),
+						stage3OperandIsStable(b), currentFunctionLocalOcamlNames);
 				case EBinop("+", _, _) if (stage3ExactExprType(expr) != null):
 					backend.ocaml.Stage3OcamlStringConversion.convert(stage3ExactExprType(expr),
 						exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
