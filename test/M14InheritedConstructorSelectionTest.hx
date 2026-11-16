@@ -42,8 +42,11 @@ class M14InheritedConstructorSelectionTest {
 		final shorter = type(StringTools.replace(source, "class Child extends Middle", "class Child extends Base"));
 		if (construction(shorter.typed, "explicit").getConstructorApplication().getSemanticKey() == application.getSemanticKey())
 			throw "constructor revision ignored an intermediate initializer owner";
+		// A class with no constructor anywhere in its chain is rejected, as in Haxe 4.3.7.
+		reject(() -> type('class Main { static function main() { var bad = new Empty(); } } class Empty {}'), "Empty does not have a constructor");
+		// An inapplicable nearest constructor is still tolerated by this typer, so it must not
+		// borrow an ancestor constructor as a fallback.
 		for (entry in [
-			'class Main { static function main() { var bad = new Empty(); } } class Empty {}',
 			'class Main { static function main() { var bad = new Child(3); } } class Base { public function new(value:Int) {} } class Child extends Base { public function new(value:String) { super(1); } }'
 		]) {
 			final invalid = type(entry);
@@ -84,6 +87,6 @@ class M14InheritedConstructorSelectionTest {
 				return;
 			throw failure;
 		}
-		throw "foreign inherited constructor proof was accepted";
+		throw "expected rejection was accepted: " + message;
 	}
 }

@@ -18,6 +18,67 @@ function isUnsigned(type:Null<TyType>):Bool {
 	return identity != null && identity.getCanonicalName() == "UInt" && type.unwrapNull().getTypeArguments().length == 0;
 }
 
+/**
+	Whether a checked String-concatenation operand of this type is a Bool or
+	`Null<Bool>`. Such an operand must reach `convert` with its type: an OCaml
+	`bool` and `int` share one runtime shape, so the runtime alone would print
+	`true` as `1` (haxe_ocaml-agc6n, haxe_ocaml-caxgt).
+**/
+function isBoolText(type:Null<TyType>, ?underlying:String->Null<TyType>):Bool
+	return boolTextType(type, underlying) != null;
+
+/**
+	The Bool or `Null<Bool>` type whose text a value of `type` has, or null.
+	`underlying` returns the backing type of a generated abstract by its
+	identity, so `abstract Flag(Bool)` (and `Null<Flag>`) print like a Bool.
+**/
+function boolTextType(type:Null<TyType>, ?underlying:String->Null<TyType>):Null<TyType> {
+	if (type == null || type.isUnknown() || type.isUnresolved())
+		return null;
+	var current = type.unwrapNull();
+	final seen:Map<String, Bool> = [];
+	while (current.getSemanticKey() != "primitive:Bool") {
+		final identity = current.getNominalIdentity();
+		final backing = identity == null || underlying == null ? null : underlying(identity.getCanonicalName());
+		if (backing == null || seen.exists(identity.getCanonicalName()))
+			return null;
+		seen.set(identity.getCanonicalName(), true);
+		current = backing.unwrapNull();
+	}
+	if (current == type.unwrapNull())
+		return type;
+	return TyType.fromHintText(type.isNullable() ? "Null<Bool>" : "Bool");
+}
+
+/** Whether a value of this checked type is a String, which may be null at run time. */
+function isStringText(type:Null<TyType>):Bool
+	return type != null && !type.isUnknown() && !type.isUnresolved() && type.unwrapNull().getSemanticKey() == "primitive:String";
+
+/**
+	Whether `expr` can never produce a null String: a literal, or a String
+	concatenation (its result is always a real string). Every other String
+	expression may be null and must print `null` (haxe_ocaml-txs4e,
+	haxe_ocaml-aib5d).
+**/
+function nonNullText(expr:HxExpr):Bool {
+	return switch expr {
+		case EString(_): true;
+		case EBinop("+", _, _): true;
+		case EParenthesized(inner, _): nonNullText(inner);
+		case _: false;
+	};
+}
+
+/** A String value as text: `null` prints `null`. Literals and concatenations need no check. */
+function stringText(expr:HxExpr, rendered:String):String
+	return nonNullText(expr) ? rendered : "HxString.toStdString (" + rendered + ")";
+
+/** `type`, or Bool / `Null<Bool>` when it is an abstract over Bool. */
+function textType(type:TyType, ?underlying:String->Null<TyType>):TyType {
+	final boolText = boolTextType(type, underlying);
+	return boolText == null ? type : boolText;
+}
+
 /** Pass the original typed value to runtime string conversion exactly once. */
 function convert(type:TyType, value:String, names:Stage3OcamlLocalNames, insideArray:Bool = false):String {
 	if (type == null || type.isUnknown() || type.isUnresolved())

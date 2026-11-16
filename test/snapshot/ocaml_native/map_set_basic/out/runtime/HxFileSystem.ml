@@ -21,6 +21,16 @@ type file_stat = {
   mode : int;
 }
 
+(* Run one `Unix` call and report its failure the way upstream Haxe does:
+   `<error text>(<call>, <path>)`, for example
+   `No such file or directory(rmdir, missing)`. The result is a `Sys_error`,
+   which Haxe code catches as a `String` through
+   `HxRuntime.catchable_exception`. *)
+let unix_call (f : unit -> 'a) : 'a =
+  try f () with
+  | Unix.Unix_error (error, operation, argument) ->
+      raise (Sys_error (Unix.error_message error ^ "(" ^ operation ^ ", " ^ argument ^ ")"))
+
 let exists (path : string) : bool =
   Stdlib.Sys.file_exists path
 
@@ -28,7 +38,7 @@ let rename (path : string) (newPath : string) : unit =
   Stdlib.Sys.rename path newPath
 
 let stat (path : string) : file_stat =
-  let s = Unix.stat path in
+  let s = unix_call (fun () -> Unix.stat path) in
   let to_date (seconds : float) : Date.t = Date.fromTime (seconds *. 1000.0) in
   {
     gid = s.st_gid;
@@ -44,8 +54,11 @@ let stat (path : string) : file_stat =
     mode = s.st_perm;
   }
 
+(* Upstream Haxe reports every failed `fullPath` with the same fixed text,
+   `Failure("get_full_path")`. Raise it as a `Sys_error` so Haxe code can
+   catch it; a real OCaml `Failure` is reserved for runtime invariants. *)
 let fullPath (relPath : string) : string =
-  Unix.realpath relPath
+  try Unix.realpath relPath with Unix.Unix_error _ -> raise (Sys_error "Failure(\"get_full_path\")")
 
 let normalize_sep (p : string) : string =
   Stdlib.String.map (fun c -> if c = '\\' then '/' else c) p
@@ -81,25 +94,39 @@ let absolutePath (relPath : string) : string =
 let isDirectory (path : string) : bool =
   Stdlib.Sys.file_exists path && Stdlib.Sys.is_directory path
 
+(* Drop trailing `/` characters, keeping a root `/`. Upstream's `mkdir` error
+   names the directory without them. *)
+let rec strip_trailing_slashes (path : string) : string =
+  let n = Stdlib.String.length path in
+  if n > 1 && Stdlib.String.get path (n - 1) = '/' then
+    strip_trailing_slashes (Stdlib.String.sub path 0 (n - 1))
+  else
+    path
+
+(* Haxe `createDirectory` creates missing parents first and does nothing for a
+   path that already exists, even a regular file. A path below a regular file
+   fails in `mkdir`, for example `Not a directory(mkdir, file/sub)`. *)
 let rec createDirectory (path : string) : unit =
-  if path = "" || path = "." then
+  let path = strip_trailing_slashes path in
+  if path = "" || path = "." || Stdlib.Sys.file_exists path then
     ()
-  else if Stdlib.Sys.file_exists path then (
-    if Stdlib.Sys.is_directory path then () else raise (Sys_error ("Not a directory: " ^ path))
-  ) else (
+  else (
     let parent = Filename.dirname path in
     if parent <> path && parent <> "." then createDirectory parent;
-    Stdlib.Sys.mkdir path 0o755
+    unix_call (fun () -> Unix.mkdir path 0o755)
   )
 
 let deleteFile (path : string) : unit =
   Stdlib.Sys.remove path
 
 let deleteDirectory (path : string) : unit =
-  Stdlib.Sys.rmdir path
+  unix_call (fun () -> Unix.rmdir path)
 
+(* A missing path keeps the host `<path>: <error text>` message; an existing
+   path that is not a directory reports `No such directory`, as upstream does. *)
 let readDirectory (path : string) : string HxArray.t =
   let out = HxArray.create () in
+  if not (Stdlib.Sys.is_directory path) then raise (Sys_error "No such directory");
   let entries = Stdlib.Sys.readdir path in
   Stdlib.Array.iter (fun name -> ignore (HxArray.push out name)) entries;
   out

@@ -327,7 +327,8 @@ class Stage3OcamlStaticStorage {
 			};
 			return "(let " + bound + " = (" + right + ") in (" + cell + " := " + kept + "; " + bound + "))";
 		}
-		final kind = Stage3OcamlLocalCompoundValue.isArithmeticOperator(update.op) ? Stage3OcamlLocalCompoundValue.kindOf(stored.type) : null;
+		final kind = (Stage3OcamlLocalCompoundValue.isCompoundOperator(update.op)
+			&& !Stage3OcamlLocalCompoundValue.isBitwiseOperator(update.op)) ? Stage3OcamlLocalCompoundValue.kindOf(stored.type) : null;
 		// An erased cell holds the nullable carrier directly; any other erased type has no arithmetic form.
 		if (kind == null || (stored.cell.match(Erased) && carrier == null))
 			throw unsupported(update.op, stored);

@@ -226,7 +226,17 @@ class M14HxhxStage3DynamicFloatBoundaryIntegrationTest {
 		assertDynamicFloatCall(findFunctionCall(findFunction(typed, "DynamicFloatBoundary", "direct"), "takeFloat"), "direct");
 		assertDynamicFloatCall(findFunctionCall(findFunction(typed, "DynamicFloatBoundary", "guarded"), "takeFloat"), "guarded");
 
-		final executable = EmitterStage.emitToDir(MacroStage.expandProgram([typed], []), outDir);
+		// Type.typeof builds the program's generated ValueType enum, so emit every
+		// module the loader reached, as a driver request does.
+		final program = [typed];
+		var pending = loader.drainNewModules();
+		while (pending.length > 0) {
+			for (module in pending)
+				program.push(TyperStage.typeResolvedModule(module, index, loader, true));
+			pending = loader.drainNewModules();
+		}
+		final lowered = TypedAbstractOperatorLowering.lowerModules(program, index, backend.ocaml.Stage3OcamlNativeCallPolicy.retain);
+		final executable = EmitterStage.emitToDir(MacroStage.expandProgram(lowered, []), outDir);
 		final generated = File.getContent(haxe.io.Path.join([outDir, "DynamicFloatBoundary.ml"]));
 		// Match the complete ordered call, including the nested producer, so each
 		// checked conversion remains attached to the argument that requires it.

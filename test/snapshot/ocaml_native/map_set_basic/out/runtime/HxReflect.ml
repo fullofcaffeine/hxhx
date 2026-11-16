@@ -36,6 +36,75 @@ let is_varargs (marker : Obj.t) (v : Obj.t) : bool =
   && Obj.size v = 2
   && Obj.field v 0 == marker
 
+(* A typed function stored as `haxe.Constraints.Function`.
+
+   Why:
+   - A `Function` is called through the Dynamic convention, with arguments of any
+     category and count. The compiler wraps the typed closure in a function that
+     takes the whole argument array and converts each value.
+   - The value must still be directly callable, because a `Function` can flow
+     into Dynamic storage and be called there. So `functionValue` returns a real
+     closure of the function's arity. The array entry point lives in a marked
+     record, which is that closure's only captured value, so `callMethod` can
+     find it and pass the whole argument array. *)
+let function_value_marker : Obj.t = Obj.repr (ref 0)
+
+type function_value = { marker : Obj.t; call : Obj.t HxArray.t -> Obj.t }
+
+let arguments_of (items : Obj.t list) : Obj.t HxArray.t =
+  let out = HxArray.create () in
+  Stdlib.List.iter (fun item -> ignore (HxArray.push out item)) items;
+  out
+
+let functionValue (arity : int) (call : Obj.t HxArray.t -> Obj.t) : Obj.t =
+  let data = { marker = function_value_marker; call } in
+  match arity with
+  | 0 -> Obj.repr (fun () -> data.call (arguments_of []))
+  | 1 -> Obj.repr (fun (a : Obj.t) -> data.call (arguments_of [ a ]))
+  | 2 -> Obj.repr (fun (a : Obj.t) (b : Obj.t) -> data.call (arguments_of [ a; b ]))
+  | 3 -> Obj.repr (fun (a : Obj.t) (b : Obj.t) (c : Obj.t) -> data.call (arguments_of [ a; b; c ]))
+  | 4 ->
+      Obj.repr (fun (a : Obj.t) (b : Obj.t) (c : Obj.t) (d : Obj.t) ->
+          data.call (arguments_of [ a; b; c; d ]))
+  | 5 ->
+      Obj.repr (fun (a : Obj.t) (b : Obj.t) (c : Obj.t) (d : Obj.t) (e : Obj.t) ->
+          data.call (arguments_of [ a; b; c; d; e ]))
+  | _ -> invalid_arg "HxReflect.functionValue: unsupported arity"
+
+(* Finding the record reads the closure's info word, whose layout is defined
+   by OCaml's runtime headers (caml/mlvalues.h, since OCaml 4.12). The read is
+   limited to the OCaml versions that use that layout. On any other version a
+   wrapper is still a real closure, and it is called like one. *)
+let closure_info_supported : bool =
+  match Stdlib.String.split_on_char '.' Sys.ocaml_version with
+  | major :: minor :: _ -> (
+      match (Stdlib.int_of_string_opt major, Stdlib.int_of_string_opt minor) with
+      | Some 4, Some minor -> minor >= 12
+      | Some 5, Some _ -> true
+      | _ -> false)
+  | _ -> false
+
+(* The record of a closure made by `functionValue`, if `fn` is one. Any other
+   closure's first captured value is only inspected, never followed. *)
+let function_value_of (fn : Obj.t) : function_value option =
+  if (not closure_info_supported) || Obj.is_int fn || Obj.tag fn <> Obj.closure_tag then
+    None
+  else
+    (* Field 1 of a closure is its closure info. This is OCaml's documented
+       Start_env_closinfo layout from caml/mlvalues.h. *)
+    let info = Obj.raw_field fn 1 in
+    let start = Nativeint.to_int (Nativeint.shift_right_logical (Nativeint.shift_left info 8) 9) in
+    if start < 1 || start >= Obj.size fn then
+      None
+    else
+      let captured = Obj.field fn start in
+      if (not (Obj.is_int captured))
+         && Obj.tag captured = 0
+         && Obj.size captured = 2
+         && Obj.field captured 0 == function_value_marker
+      then Some (Obj.obj captured)
+      else None
+
 let isFunction (v : Obj.t) : bool =
   if HxRuntime.is_null v then
     false
@@ -100,6 +169,8 @@ let makeVarArgsVoid (f : Obj.t) : Obj.t =
   mk_varargs varargs_void_marker f
 
 let callMethod (_obj : Obj.t) (fn : Obj.t) (args : Obj.t HxArray.t) : Obj.t =
+  (* A null argument array calls the function with no arguments. *)
+  let args = if HxRuntime.is_null (Obj.repr args) then HxArray.create () else args in
   if is_varargs varargs_marker fn then
     let f = Obj.field fn 1 in
     (Obj.magic f : Obj.t HxArray.t -> Obj.t) args
@@ -108,6 +179,15 @@ let callMethod (_obj : Obj.t) (fn : Obj.t) (args : Obj.t HxArray.t) : Obj.t =
     ignore ((Obj.magic f : Obj.t HxArray.t -> unit) args);
     HxRuntime.hx_null
   ) else
+  match function_value_of fn with
+  | Some value -> value.call args
+  | None ->
+  (* A null or non-function value raises a catchable error instead of being
+     entered as code. *)
+  if HxRuntime.is_null fn || Obj.is_int fn
+     || (Obj.tag fn <> Obj.closure_tag && Obj.tag fn <> Obj.infix_tag) then
+    HxRuntime.hx_throw_typed (Obj.repr "Reflect.callMethod: value is not a function") [ "String"; "Dynamic" ]
+  else
   let len = HxArray.length args in
   let a i = HxArray.get args i in
   match len with
@@ -214,3 +294,92 @@ let isObject (v : Obj.t) : bool =
       else
         let en = HxType.getEnumName v in
         en != hx_null_string
+
+(* Reflection over class instances built by the hxhx Stage3 native emitter.
+
+   Stage3 stores a class instance as an `HxAnon` object that carries its class
+   descriptor. Its stored fields are ordinary `HxAnon` slots, so `HxAnon.get`,
+   `HxAnon.has`, and `HxAnon.fields` already answer for them. Its methods are
+   module-level OCaml functions that take the receiver first, not slots.
+
+   For each generated class the compiler registers one binder per instance
+   method, including inherited ones; an override replaces its parent's binder.
+   A binder receives the instance and returns the method bound to it, as a
+   method value `instance.method` would be. `field` uses it when the name is
+   not a stored field, and `getProperty` / `setProperty` use it to call a
+   declared `get_` / `set_` accessor. A method the compiler cannot bind (for
+   example a `dynamic` method) has no binder, so reading it returns null. *)
+let instance_method_binders : (string, (string, Obj.t -> Obj.t) Hashtbl.t) Hashtbl.t = Hashtbl.create 31
+
+let register_instance_methods (name : string) (binders : (string * (Obj.t -> Obj.t)) list) : unit =
+  let table = Hashtbl.create (Stdlib.List.length binders) in
+  Stdlib.List.iter (fun (method_name, binder) -> Hashtbl.replace table method_name binder) binders;
+  Hashtbl.replace instance_method_binders name table
+
+let class_instance_name (o : Obj.t) : string option =
+  if HxAnon.is_anon o then
+    let c = HxAnon.class_value o in
+    if HxType.is_type_value HxType.class_marker c then Some (HxType.getClassName c) else None
+  else
+    None
+
+let bound_method (o : Obj.t) (method_name : string) : Obj.t option =
+  match class_instance_name o with
+  | None -> None
+  | Some class_name -> (
+      match Hashtbl.find_opt instance_method_binders class_name with
+      | None -> None
+      | Some table -> (
+          match Hashtbl.find_opt table method_name with
+          | Some binder -> Some (binder o)
+          | None -> None))
+
+let field (o : Obj.t) (name : string) : Obj.t =
+  if HxAnon.has o name then HxAnon.get o name
+  else match bound_method o name with Some value -> value | None -> HxAnon.get o name
+
+let getProperty (o : Obj.t) (name : string) : Obj.t =
+  match bound_method o ("get_" ^ name) with
+  | Some getter -> (Obj.obj getter : unit -> Obj.t) ()
+  | None -> field o name
+
+let setProperty (o : Obj.t) (name : string) (value : Obj.t) : unit =
+  match bound_method o ("set_" ^ name) with
+  | Some setter -> ignore ((Obj.obj setter : Obj.t -> Obj.t) value)
+  | None -> HxAnon.set o name value
+
+(* Haxe deletes fields only from anonymous structures; a class instance keeps
+   its declared fields. *)
+let deleteField (o : Obj.t) (name : string) : bool =
+  match class_instance_name o with
+  | Some _ -> false
+  | None -> HxAnon.delete o name
+
+(* `Type.getClass` for a value of any static type. Strings and arrays are
+   instances of `String` and `Array`, a class instance answers its class, and
+   every other value (null, numbers, Bools, functions, enum values, anonymous
+   objects, and type values) has no class. Only these known layouts are read. *)
+let value_class (v : Obj.t) : Obj.t =
+  if HxRuntime.is_null v || Obj.is_int v then HxRuntime.hx_null
+  else if Obj.tag v = Obj.string_tag then HxType.class_ "String"
+  else if HxArray.is_value v then HxType.class_ "Array"
+  else if HxAnon.is_anon v then
+    let c = HxAnon.class_value v in
+    if HxType.is_type_value HxType.class_marker c then c else HxRuntime.hx_null
+  else HxRuntime.hx_null
+
+(* `Type.typeof`: the index of the `ValueType` constructor for `v`, in its
+   declaration order: TNull, TInt, TFloat, TBool, TObject, TFunction, TClass,
+   TEnum, TUnknown. The compiler builds the constructor from this index.
+   Class and enum type values are objects, as in Haxe. *)
+let value_type_index (v : Obj.t) : int =
+  if HxRuntime.is_null v then 0
+  else if HxRuntime.is_boxed_bool v then 3
+  else if Obj.is_int v then 1
+  else if Obj.tag v = Obj.double_tag then 2
+  else if isFunction v then 5
+  else if isEnumValue v then 7
+  else if not (HxRuntime.is_null (value_class v)) then 6
+  else if HxAnon.is_anon v then 4
+  else if HxType.is_type_value HxType.class_marker v || HxType.is_type_value HxType.enum_marker v then 4
+  else 8

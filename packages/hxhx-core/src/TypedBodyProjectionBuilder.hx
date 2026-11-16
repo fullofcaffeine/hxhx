@@ -23,7 +23,12 @@ class TypedBodyProjectionBuilder {
 	final arrayAccesses:Array<TypedBackendArrayAccess> = [];
 	final collectionControls:Array<TypedBackendCollectionControl> = [];
 	final equalities:Array<TypedBackendEqualityOccurrence> = [];
+	final stringConcats:Array<TypedBackendStringConcatOccurrence> = [];
+	final traces:Array<TypedBackendTraceOccurrence> = [];
+	final functionConstraintFlows:Array<TypedBackendFunctionConstraintFlow> = [];
+	final callableReturnTypes:Array<Null<TyType>> = [];
 	final bitwiseOperations:Array<TypedBackendBitwiseOccurrence> = [];
+	final arithmeticOperations:Array<TypedBackendArithmeticOccurrence> = [];
 	final conditions:Array<TypedBackendCondition> = [];
 	final callArguments:Array<TypedBackendCallArgument> = [];
 	final lambdas:Array<TypedBackendLambdaOccurrence> = [];
@@ -184,6 +189,13 @@ class TypedBodyProjectionBuilder {
 				source: source,
 				expression: expression
 			}));
+		if (TypedBackendArithmeticOccurrence.supports(source.getTexts()[0]))
+			arithmeticOperations.push(new TypedBackendArithmeticOccurrence({
+				owner: ownerIdentity,
+				revision: bodyRevision,
+				source: source,
+				expression: expression
+			}));
 		if (source.getTexts()[0] == "==" || source.getTexts()[0] == "!=")
 			equalities.push(new TypedBackendEqualityOccurrence({
 				owner: ownerIdentity,
@@ -191,7 +203,85 @@ class TypedBodyProjectionBuilder {
 				source: source,
 				expression: expression
 			}));
+		if (TypedBackendStringConcatOccurrence.supports(source))
+			stringConcats.push(new TypedBackendStringConcatOccurrence({
+				owner: ownerIdentity,
+				revision: bodyRevision,
+				source: source,
+				expression: expression
+			}));
 		return expression;
+	}
+
+	/** Keep the operand types of a String `+=`, which is projected outside `projectBinary`. */
+	public function projectStringCompound(source:TypedExpr, expression:HxExpr):HxExpr {
+		if (sealed)
+			throw "cannot add string concatenation facts to a sealed projection";
+		if (TypedBackendStringConcatOccurrence.supports(source))
+			stringConcats.push(new TypedBackendStringConcatOccurrence({
+				owner: ownerIdentity,
+				revision: bodyRevision,
+				source: source,
+				expression: expression
+			}));
+		return expression;
+	}
+
+	/** Keep a trace call's line and argument types before the source-shaped call loses them. */
+	public function projectTrace(source:TypedExpr, expression:HxExpr):HxExpr {
+		if (sealed)
+			throw "cannot add trace facts to a sealed projection";
+		traces.push(new TypedBackendTraceOccurrence({
+			owner: ownerIdentity,
+			revision: bodyRevision,
+			source: source,
+			expression: expression
+		}));
+		return expression;
+	}
+
+	public function getTraces():Array<TypedBackendTraceOccurrence> {
+		if (!sealed)
+			throw "trace facts require a sealed projection";
+		return traces.copy();
+	}
+
+	public function getStringConcats():Array<TypedBackendStringConcatOccurrence> {
+		if (!sealed)
+			throw "string concatenation facts require a sealed projection";
+		return stringConcats.copy();
+	}
+
+	/** Enter a function or lambda body, so a `return` inside it knows its destination type. */
+	public function enterCallable(returnType:Null<TyType>):Void
+		callableReturnTypes.push(returnType);
+
+	public function exitCallable():Void
+		callableReturnTypes.pop();
+
+	/** The result type of the innermost function or lambda being projected. */
+	public function currentReturnType():Null<TyType>
+		return callableReturnTypes.length == 0 ? null : callableReturnTypes[callableReturnTypes.length - 1];
+
+	/** Record the `haxe.Constraints.Function` flows of one typed expression. */
+	public function observeFunctionConstraintFlows(node:TypedExpr):Void {
+		if (sealed)
+			throw "cannot add function flows to a sealed projection";
+		for (flow in TypedFunctionConstraintFlows.ofNode(node, currentReturnType()))
+			functionConstraintFlows.push(flow);
+	}
+
+	/** Record one flow whose destination the projection knows directly. */
+	public function observeFunctionConstraintFlow(site:String, position:Null<HxPos>):Void {
+		if (sealed)
+			throw "cannot add function flows to a sealed projection";
+		functionConstraintFlows.push({site: site, position: position});
+	}
+
+	public function getFunctionConstraintFlows():Array<TypedBackendFunctionConstraintFlow> {
+		if (!sealed)
+			throw "function flows require a sealed projection";
+		return functionConstraintFlows.copy();
 	}
 
 	public function getEqualities():Array<TypedBackendEqualityOccurrence> {
@@ -204,6 +294,12 @@ class TypedBodyProjectionBuilder {
 		if (!sealed)
 			throw "bitwise facts require a sealed projection";
 		return bitwiseOperations.copy();
+	}
+
+	public function getArithmeticOperations():Array<TypedBackendArithmeticOccurrence> {
+		if (!sealed)
+			throw "arithmetic facts require a sealed projection";
+		return arithmeticOperations.copy();
 	}
 
 	/** Retain typed callback producers, uses and comparisons before source projection loses their meaning. */

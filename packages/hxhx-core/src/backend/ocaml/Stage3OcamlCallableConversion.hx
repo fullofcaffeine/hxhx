@@ -67,6 +67,9 @@ function returnValue(actual:TyType, expected:TyType, value:String, names:Stage3O
 	if (expected.isVoid())
 		return "ignore (" + value + ")";
 	validateReturn(actual, expected);
+	// Haxe widens an Int result to a declared Float result (`return 1;`).
+	if (Stage3OcamlNumericWidening.needsPromotion(actual, expected))
+		return Stage3OcamlNumericWidening.promote(value);
 	return convert(actual, expected, value, names);
 }
 
@@ -74,10 +77,16 @@ function returnValue(actual:TyType, expected:TyType, value:String, names:Stage3O
 function validateReturn(actual:TyType, expected:TyType):Void {
 	if (actual.hasUnknownComponent() || expected.hasUnknownComponent())
 		throw "OCaml lambda return conversion requires complete types";
-	if (actual.getSemanticKey() == expected.getSemanticKey() || expected.isVoid())
+	if (actual.getSemanticKey() == expected.getSemanticKey()
+		|| expected.isVoid()
+		|| Stage3OcamlNumericWidening.needsPromotion(actual, expected))
 		return;
 	if (TyAssignmentCompatibility.classify(expected, actual, Unchecked) != Compatible)
 		throw "OCaml lambda body does not satisfy its return contract";
+	// Nullable Int and Float carriers convert through Stage3OcamlNullablePrimitive,
+	// which rejects every pair it does not own.
+	if (Stage3OcamlNullablePrimitive.innerPrimitive(actual) != null || Stage3OcamlNullablePrimitive.innerPrimitive(expected) != null)
+		return;
 	final scalar = actual.isDynamic() ? expected : actual;
 	if (!(actual.isDynamic() || expected.isDynamic())
 		|| !["primitive:Bool", "primitive:Int", "primitive:String"].contains(scalar.getSemanticKey()))

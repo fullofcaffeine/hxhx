@@ -23,8 +23,10 @@
 	## Compatibility notes
 	The runtime implementation uses OCaml's `Str` library with a best-effort
 	translation layer from Haxe's common regex syntax. It is intentionally not a
-	full PCRE engine. See `docs/02-user-guide/EREG_STRATEGY.md` for details and
-	known limitations.
+	full PCRE engine. Positions (`matchedPos`, and the `pos`/`len` arguments of
+	`matchSub`) count Unicode code points, the same unit `String` uses, and `.`
+	and character classes match whole characters. See
+	`docs/02-user-guide/EREG_STRATEGY.md` for details and known limitations.
 **/
 extern class EReg {
 	public function new(r:String, opt:String):Void;

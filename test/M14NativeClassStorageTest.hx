@@ -38,7 +38,9 @@ class M14NativeClassStorageTest {
 				reject(() -> storage.classRegistration(child, quote), "extern reflection requires a target-owned runtime identity");
 			else
 				require(storage.classRegistration(child,
-					quote) == 'let () = HxType.register_class_tags "Main" ["Main"; "Parent"; "ParentMarker"; "Root"; "ChildMarker"]',
+					quote) == 'let () = HxType.register_class_tags "Main" ["Main"; "Parent"; "ParentMarker"; "Root"; "ChildMarker"]\n'
+					+ 'let () = HxType.register_class_instance_fields "Main" []\n'
+					+ 'let () = HxType.register_class_super "Main" (HxType.class_ "Parent")',
 					"provider ancestry lost an exact parent or repeated a shared interface");
 			final parentInfo = typed.getTypedClasses().filter(owner -> owner.getSemanticInfo().getShortName() == "Parent")[0];
 			final parentType = TyType.nominal(parentInfo.getSemanticInfo().getIdentity(), []);

@@ -65,8 +65,22 @@ function renderMethodValue(input:{
 
 /** Exact element and operand types select the same storage representation for calls and saved methods. */
 private function push(receiverType:TyType, argumentType:TyType, receiver:String, argument:String):String {
-	final stored = receiverType.getTypeArguments()[0].isDynamic() ? "(Obj.magic (" + Stage3OcamlObjects.store(argumentType, argument) + "))" : argument;
-	return "HxArray.push " + receiver + " " + stored;
+	return "HxArray.push " + receiver + " " + element(receiverType.getTypeArguments()[0], argumentType, argument);
+}
+
+/**
+	Store one operand in an array slot. Dynamic slots hold the boxed value; an
+	Int operand entering a Float slot (`floats.push(count)`) is converted to
+	Float. A `Null<Int>` or `Null<Float>` operand was already converted to the
+	parameter carrier where the argument was bound (exactCallArgumentValue), so
+	converting it again here would unwrap a Float as an Int carrier.
+ */
+private function element(slot:TyType, argumentType:Null<TyType>, argument:String):String {
+	if (slot.isDynamic())
+		return "(Obj.magic (" + Stage3OcamlObjects.store(argumentType, argument) + "))";
+	if (argumentType != null && Stage3OcamlNullablePrimitive.innerPrimitive(argumentType) != null)
+		return argument;
+	return Stage3OcamlNumericWidening.toFloatDestination(argumentType, slot, argument);
 }
 
 /**
@@ -118,10 +132,8 @@ function render(input:{
 	final argument = arguments.length == 0 ? "" : arguments[0];
 	// Dynamic arrays store boxed values. Inserted and searched values must use
 	// the same representation as push, including boxed Bool and Float values.
-	final element = receiverType.getTypeArguments()[0];
-	final stored = (index:Int) -> element.isDynamic() ? "(Obj.magic ("
-		+ Stage3OcamlObjects.store(occurrence.getProjectedArgumentTypes()[index], arguments[index])
-		+ "))" : arguments[index];
+	final elementType = receiverType.getTypeArguments()[0];
+	final stored = (index:Int) -> element(elementType, occurrence.getProjectedArgumentTypes()[index], arguments[index]);
 	final operation = switch (call.method) {
 		case "map": if (autoTyped) input.mark("array_map_typed"); input.metal || autoTyped ? "HxBootArray.map (" + receiver + ") (" + argument + ")" : "HxBootArray.map_dyn (Obj.magic (" + receiver + ")) (Obj.repr (" + argument + "))";
 		case "join":
@@ -129,9 +141,21 @@ function render(input:{
 				throw "stage3 emitter: metal profile unsupported semantics: Array.join requires Array<String> receiver";
 			if (autoTyped)
 				input.mark("array_join_typed");
-			if (input.metal || autoTyped) "HxBootArray.join_strict (" + receiver + ") (" + argument + ") (fun (s : string) -> s)"; else if (strings)
-				"HxBootArray.join ("
-				+ receiver + ") (" + argument + ") (fun (s : string) -> s)"; else "HxBootArray.join_dyn (Obj.magic (" + receiver + ")) (" + argument + ")";
+			if (input.metal || autoTyped) "HxBootArray.join_strict (" + receiver + ") (" + argument + ") (fun (s : string) -> s)"; else
+				if (Stage3OcamlStringConversion.isBoolText(elementType)) { // The generic join cannot tell a stored Bool from an Int, so the
+				// checked element type selects the Bool text (haxe_ocaml-caxgt).
+				final value = input.names.internalName("__hx_join_element");
+				"HxArray.join (Obj.magic "
+				+ receiver
+				+ ") ("
+				+ argument
+				+ ") (fun "
+				+ value
+				+ " -> "
+				+ Stage3OcamlStringConversion.convert(elementType, value, input.names)
+				+ ")";
+			} else if (strings) "HxBootArray.join (" + receiver + ") (" + argument + ") (fun (s : string) -> s)"; else "HxBootArray.join_dyn (Obj.magic ("
+				+ receiver + ")) (" + argument + ")";
 		case "push":
 			push(receiverType, occurrence.getProjectedArgumentTypes()[0], runtimeReceiver, argument);
 		case "copy": "HxArray.copy " + runtimeReceiver;

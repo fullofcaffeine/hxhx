@@ -720,7 +720,10 @@ class M14TypedBodyBoundaryIntegrationTest {
 		}
 		EmitterStage.resetRequestState();
 		// Native execution in M14Stage3ExceptionIntegrationTest proves handler selection and control propagation.
-		assertTrue(ocaml.indexOf("with HxRuntime.Hx_exception") >= 0, "OCaml backend did not emit exception handling for the projected try/catch: " + ocaml);
+		// Handlers either match Hx_exception directly or classify every OCaml exception
+		// through HxRuntime.catchable_exception, which also admits runtime Sys_error (#143).
+		assertTrue(ocaml.indexOf("with HxRuntime.Hx_exception") >= 0 || ocaml.indexOf("match HxRuntime.catchable_exception ") >= 0,
+			"OCaml backend did not emit exception handling for the projected try/catch: " + ocaml);
 		assertTrue(ocaml.indexOf("__hxhx_try") < 0, "OCaml backend leaked the shared structural sentinel into generated source");
 	}
 

@@ -257,6 +257,16 @@ jobs:
           set -euo pipefail
           bash scripts/test-stdlib-semantic-diff-lane.sh
 
+      - name: Run semantic-diff tool tests
+        # The seed, comparator, generator and minimizer checks take about
+        # 12 minutes together, so they run here instead of on every PR.
+        run: |
+          set -euo pipefail
+          npm run test:stdlib:semantic-diff:seed
+          npm run test:stdlib:semantic-diff:comparator
+          npm run test:stdlib:semantic-diff:generator
+          npm run test:stdlib:semantic-diff:minimizer
+
       - name: Emit semantic-diff nightly marker
         run: echo "SEMANTIC_DIFF_NIGHTLY:PASS"
 

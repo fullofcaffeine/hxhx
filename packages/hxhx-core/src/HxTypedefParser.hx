@@ -187,6 +187,9 @@ class HxTypedefParser {
 	function anonymous(pos:HxPos):HxTypeSyntax {
 		final fields = new Array<HxTypeSyntaxField>();
 		final extensions = new Array<HxTypeSyntax>();
+		// Haxe has two structure forms, and one structure cannot mix them:
+		// short `{x:Int, ?y:String}` and declaration `{ var x:Int; function f():Void; }`.
+		var declarationForm:Null<Bool> = null;
 		while (!parser.cur.kind.match(TRBrace)) {
 			if (parser.cur.kind.match(TEof))
 				parser.fail("Unclosed anonymous typedef structure");
@@ -204,11 +207,23 @@ class HxTypedefParser {
 			final publicWritten = take(TKeyword(KPublic));
 			final visibility:HxVisibility = privateWritten ? Private : Public;
 			var optional = other("?");
+			final keyword = parser.cur.kind.match(TKeyword(KFunction)) ? "function" : parser.cur.kind.match(TKeyword(KFinal)) ? "final" : parser.cur.kind.match(TKeyword(KVar)) ? "var" : null;
 			final method = take(TKeyword(KFunction));
 			final isFinal = !method && take(TKeyword(KFinal));
 			if (!method && !isFinal)
 				take(TKeyword(KVar));
+			final declares = keyword != null || privateWritten || publicWritten;
+			if (declarationForm == null)
+				declarationForm = declares;
+			else if (declarationForm != declares)
+				parser.fail(declares ? "Unexpected keyword \""
+					+ (keyword == null ? (privateWritten ? "private" : "public") : keyword)
+					+ "\"" : "Expected var, final, or function in a declaration-form structure");
 			optional = other("?") || optional;
+			// `@:optional` marks a declaration-form field optional, like `?` in the short form.
+			for (annotation in annotations)
+				if (StringTools.startsWith(StringTools.trim(annotation), "@:optional"))
+					optional = true;
 			final fieldName = name();
 			final kind:HxTypeSyntaxFieldKind = if (method) {
 				final binders = parameters();

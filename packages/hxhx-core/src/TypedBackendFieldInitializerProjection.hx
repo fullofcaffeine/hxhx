@@ -25,7 +25,13 @@ class TypedBackendFieldInitializerProjection {
 	final arrayAccesses:Array<TypedBackendArrayAccess>;
 	final collectionControls:Array<TypedBackendCollectionControl>;
 	final equalities:Array<TypedBackendEqualityOccurrence>;
+	final stringConcats:Array<TypedBackendStringConcatOccurrence>;
+	final traces:Array<TypedBackendTraceOccurrence>;
+	final verifiedStringConcats:Array<Bool>;
+	final functionConstraintFlows:Array<TypedBackendFunctionConstraintFlow>;
 	final bitwiseOperations:Array<TypedBackendBitwiseOccurrence>;
+	final arithmeticOperations:Array<TypedBackendArithmeticOccurrence>;
+	final verifiedArithmetic:Array<Bool>;
 	final conditions:Array<TypedBackendCondition>;
 	final namedPatterns:Array<TypedBackendNamedPattern>;
 	final localWrites:Array<TypedBackendLocalWrite>;
@@ -46,7 +52,11 @@ class TypedBackendFieldInitializerProjection {
 			arrays:Array<TypedBackendArrayAccess>,
 			?collectionControls:Array<TypedBackendCollectionControl>,
 			?equalities:Array<TypedBackendEqualityOccurrence>,
+			?stringConcats:Array<TypedBackendStringConcatOccurrence>,
+			?traces:Array<TypedBackendTraceOccurrence>,
+			?functionConstraintFlows:Array<TypedBackendFunctionConstraintFlow>,
 			?bitwiseOperations:Array<TypedBackendBitwiseOccurrence>,
+			?arithmeticOperations:Array<TypedBackendArithmeticOccurrence>,
 			?conditions:Array<TypedBackendCondition>,
 			?namedPatterns:Array<TypedBackendNamedPattern>
 		}) {
@@ -90,10 +100,24 @@ class TypedBackendFieldInitializerProjection {
 		for (entry in this.collectionControls)
 			entry.assertCurrent(stableIdentity, bodyRevision);
 		this.equalities = indexedAccesses == null || indexedAccesses.equalities == null ? [] : indexedAccesses.equalities.copy();
+		this.stringConcats = indexedAccesses == null || indexedAccesses.stringConcats == null ? [] : indexedAccesses.stringConcats.copy();
+		for (entry in this.stringConcats)
+			entry.assertCurrent(stableIdentity, bodyRevision);
+		this.verifiedStringConcats = [for (_ in this.stringConcats) false];
+		this.traces = indexedAccesses == null || indexedAccesses.traces == null ? [] : indexedAccesses.traces.copy();
+		for (entry in this.traces)
+			entry.assertCurrent(stableIdentity, bodyRevision);
+		this.functionConstraintFlows = indexedAccesses == null
+			|| indexedAccesses.functionConstraintFlows == null ? [] : indexedAccesses.functionConstraintFlows.copy();
 		this.bitwiseOperations = indexedAccesses == null
 			|| indexedAccesses.bitwiseOperations == null ? [] : indexedAccesses.bitwiseOperations.copy();
 		for (entry in this.bitwiseOperations)
 			entry.assertCurrent(stableIdentity, bodyRevision);
+		this.arithmeticOperations = indexedAccesses == null
+			|| indexedAccesses.arithmeticOperations == null ? [] : indexedAccesses.arithmeticOperations.copy();
+		for (entry in this.arithmeticOperations)
+			entry.assertCurrent(stableIdentity, bodyRevision);
+		this.verifiedArithmetic = [for (_ in this.arithmeticOperations) false];
 		this.conditions = indexedAccesses == null || indexedAccesses.conditions == null ? [] : indexedAccesses.conditions.copy();
 		this.namedPatterns = indexedAccesses == null || indexedAccesses.namedPatterns == null ? [] : indexedAccesses.namedPatterns.copy();
 		for (entry in this.namedPatterns)
@@ -351,6 +375,74 @@ class TypedBackendFieldInitializerProjection {
 			}
 		return null;
 	}
+
+	/** Initializer arithmetic cannot borrow facts from a method or another field. */
+	public function findArithmetic(expression:HxExpr):Null<TypedBackendArithmeticOccurrence> {
+		for (index in 0...arithmeticOperations.length) {
+			final entry = arithmeticOperations[index];
+			if (entry.expression == expression) {
+				// The emitter asks for the same operator many times while it classifies
+				// nested operands. The projected body cannot change, so walking it once
+				// per entry proves membership; later lookups reuse that proof.
+				if (!verifiedArithmetic[index]) {
+					requireCaptureCatalog();
+					requireExpression(expression);
+					entry.assertCurrent(stableIdentity, bodyRevision);
+					verifiedArithmetic[index] = true;
+				}
+				return entry;
+			}
+		}
+		return null;
+	}
+
+	/** The line and argument facts of this exact `trace(...)` call in this executable, or null. */
+	public function findTrace(expression:HxExpr):Null<TypedBackendTraceOccurrence> {
+		for (entry in traces)
+			if (entry.expression == expression) {
+				requireCaptureCatalog();
+				requireExpression(expression);
+				entry.assertCurrent(stableIdentity, bodyRevision);
+				return entry;
+			}
+		return null;
+	}
+
+	/**
+		The checked type of `operand` when it is one side of a String
+		concatenation in this executable, or null. Only the original operand
+		object qualifies; an equal copy cannot borrow its type.
+	**/
+	public function findStringConcatOperandType(operand:HxExpr):Null<TyType> {
+		for (index in 0...stringConcats.length) {
+			final entry = stringConcats[index];
+			final type = entry.operandType(operand);
+			if (type != null) {
+				// The emitter asks for every operand of long chains. The projected
+				// body cannot change, so one membership walk per entry suffices.
+				if (!verifiedStringConcats[index]) {
+					requireCaptureCatalog();
+					requireExpression(entry.expression);
+					entry.assertCurrent(stableIdentity, bodyRevision);
+					verifiedStringConcats[index] = true;
+				}
+				return type;
+			}
+		}
+		return null;
+	}
+
+	/** Every place typing let a function value enter a `Function` slot other than a call argument or a plain local. */
+	public function getFunctionConstraintFlows():Array<TypedBackendFunctionConstraintFlow>
+		return functionConstraintFlows.copy();
+
+	/** The local writes of this executable, including generated result locals, that store a function value in a `Function` slot. */
+	public function getFunctionConstraintLocalWrites():Array<TypedBackendLocalWrite>
+		return localWrites.filter(write -> TyFunctionConstraint.reaches(write.binding.getType(), write.sourceType));
+
+	/** The call arguments of this executable that pass a function value to a `Function` slot. */
+	public function getFunctionConstraintArguments():Array<TypedBackendCallArgument>
+		return callArguments.filter(argument -> TyFunctionConstraint.reaches(argument.expectedType, argument.type));
 
 	/** Initializer equality cannot borrow facts from a method or another field. */
 	public function findEquality(expression:HxExpr):Null<TypedBackendEqualityOccurrence> {

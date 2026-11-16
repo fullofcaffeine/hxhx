@@ -69,6 +69,18 @@ class HxLexer {
 		}
 	}
 
+	/** Every token of `source`, ending with `TEof`. Comments and whitespace are not tokens. **/
+	public static function tokenize(source:String):Array<HxToken> {
+		final lexer = new HxLexer(source);
+		final tokens = new Array<HxToken>();
+		while (true) {
+			final token = lexer.next();
+			tokens.push(token);
+			if (token.kind == TEof)
+				return tokens;
+		}
+	}
+
 	inline function eof():Bool {
 		return index >= src.length;
 	}
@@ -315,9 +327,9 @@ class HxLexer {
 		}
 
 		final numericEnd = index;
-		consumeNumericSuffix();
+		final suffix = consumeNumericSuffix();
 		final text = normalizeNumberText(src.substring(start, numericEnd));
-		return token(TFloat(Std.parseFloat(text)), startPos);
+		return token(TFloat(Std.parseFloat(text)), startPos, text, suffix);
 	}
 
 	function consumeNumericSuffix():String {

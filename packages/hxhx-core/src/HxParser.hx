@@ -986,11 +986,32 @@ class HxParser {
 				requireValidHexLiteral();
 				bump();
 				PInt(v);
-			case TFloat(_) if (cur.numericText != null):
-				// An integer spelling outside the Int range is a Float constant. HxParser
-				// has no Float pattern yet (Bead haxe_ocaml-1rhgo), so reject it instead of
-				// letting it fall through to a wildcard.
-				fail("Float constant patterns are not supported yet: " + cur.numericText);
+			case TFloat(v):
+				// A Float constant, matched by value. This includes an integer spelling outside
+				// the Int range, such as `2147483648`. In upstream Haxe 4.3.7 that spelling is
+				// a Float constant: it matches a Float subject by value and is rejected on an
+				// Int subject ("Float should be Int"). It must never become a wildcard.
+				final pattern = HxSwitchPattern.PFloat(HxFloatPatternText.of(cur.numericText, v, false));
+				bump();
+				pattern;
+			case TOther(c) if (c == "-".code && (peekKind().match(TInt(_)) || peekKind().match(TFloat(_)))):
+				// A negative numeric constant, such as `case -1:` or `case -2.5:`.
+				bump();
+				switch (cur.kind) {
+					case TInt(v):
+						bump();
+						PInt(-v);
+					case TFloat(_) if (cur.numericText == "2147483648" && (cur.numericSuffix == null || cur.numericSuffix.length == 0)):
+						// `-2147483648` is the minimum Int, as in expressions (see parseUnaryExpr).
+						bump();
+						PInt(-2147483647 - 1);
+					case TFloat(v):
+						final pattern = HxSwitchPattern.PFloat(HxFloatPatternText.of(cur.numericText, v, true));
+						bump();
+						pattern;
+					case _:
+						fail("Expected a number after '-' in a pattern");
+				}
 			case TIdent(name) if (name == "macro" && peekKind().match(TColon)):
 				parseMacroTypeSwitchPattern();
 			case TIdent(name) if (name == "macro"):
@@ -1036,10 +1057,20 @@ class HxParser {
 					|| isUpperStart(name) ? PEnumValue(patternName) : PBind(name);
 				}
 			case _:
-				// Best-effort: consume one token and treat it as a wildcard.
-				bump();
-				PWildcard;
+				// Upstream rejects every other expression as a pattern (for example a
+				// regular expression literal). Turning it into a wildcard would make the
+				// case match every value.
+				fail("Unrecognized pattern: " + patternTokenText(cur.kind));
 		}
+	}
+
+	static function patternTokenText(kind:HxTokenKind):String {
+		return switch (kind) {
+			case TRegex(pattern, flags): "~/" + pattern + "/" + flags;
+			case TOther(c): String.fromCharCode(c);
+			case TKeyword(keyword): keywordText(keyword);
+			case _: Std.string(kind);
+		};
 	}
 
 	function parseMacroTypeSwitchPattern():HxSwitchPattern {
@@ -1233,6 +1264,54 @@ class HxParser {
 			&& (StringTools.startsWith(text, "0x") || StringTools.startsWith(text, "0X"))
 			&& HxIntegerLiteral.hexadecimal(text) == null)
 			fail("Invalid hexadecimal integer");
+	}
+
+	/**
+		Reject an empty type-argument slot after `new Path`, as Haxe 4.3.7 does:
+		`new Box<>()`, `new Box<Int,>()` and `new Box<,Int>()` name the offending token.
+
+		`cur` must be the opening `<`. Only slots directly inside angle brackets count, so
+		`new B<{>S1, >S2, z:Int}>()` is valid, and a string constant is a single token.
+		Nothing is consumed.
+	**/
+	function requireNonEmptyTypeArguments():Void {
+		final pending = [cur];
+		for (token in [peeked1, peeked2, peeked3])
+			if (token != null)
+				pending.push(token);
+		final lookahead = lex.fork();
+		var index = 0;
+		final open = new Array<Int>();
+		var previous:HxTokenKind = HxTokenKind.TEof;
+		while (true) {
+			final token = index < pending.length ? pending[index++] : lookahead.next();
+			final top = open.length == 0 ? -1 : open[open.length - 1];
+			final emptySlot = top == "<".code && (previous.match(TOther("<".code)) || previous.match(TComma));
+			switch (token.kind) {
+				case TEof:
+					return;
+				case TLParen:
+					open.push("(".code);
+				case TLBrace:
+					open.push("{".code);
+				case TOther("[".code):
+					open.push("[".code);
+				case TOther("<".code):
+					open.push("<".code);
+				case TRParen | TRBrace | TOther("]".code):
+					open.pop();
+				case TComma if (emptySlot):
+					throw new HxParseError("Unexpected ,", token.pos);
+				case TOther(">".code) if (top == "<".code && !previous.match(TOther("-".code))):
+					if (emptySlot)
+						throw new HxParseError("Unexpected >", token.pos);
+					open.pop();
+					if (open.length == 0)
+						return;
+				case _:
+			}
+			previous = token.kind;
+		}
 	}
 
 	function fail<T>(message:String):T {
@@ -1525,13 +1604,14 @@ class HxParser {
 				case TEof:
 					break;
 				case TIdent(name):
-					parts.push(name);
+					pushTypeHintWord(parts, name);
 					bump();
 				case TKeyword(k):
-					parts.push(keywordText(k));
+					pushTypeHintWord(parts, keywordText(k));
 					bump();
 				case TString(s, _):
-					parts.push('"' + s + '"');
+					// The hint stores the decoded value, so re-escape what would end the quotes.
+					parts.push('"' + StringTools.replace(StringTools.replace(s, "\\", "\\\\"), '"', '\\"') + '"');
 					bump();
 				case TInt(v):
 					parts.push(cur.numericText != null ? cur.numericText + (cur.numericSuffix == null ? "" : cur.numericSuffix) : Std.string(v));
@@ -1608,6 +1688,20 @@ class HxParser {
 		};
 	}
 
+	/**
+		Append one name or keyword to compact type-hint text.
+
+		Hint text drops whitespace (`Map<String,Int>`), but two adjacent words
+		need one space to stay separate. Without it, the structural annotation
+		`{ function value():Int; }` became `{functionvalue():Int;}`, which no
+		type grammar can read back.
+	**/
+	static function pushTypeHintWord(parts:Array<String>, word:String):Void {
+		if (parts.length > 0 && ~/[A-Za-z0-9_]$/.match(parts[parts.length - 1]))
+			parts.push(" ");
+		parts.push(word);
+	}
+
 	function readFunctionReturnTypeHint(stop:() -> Bool):String {
 		// In signatures like `function f():Bytes untyped { ... }`, `untyped`
 		// modifies the function body. Leave the token for the body parser so
@@ -1680,6 +1774,7 @@ class HxParser {
 					bump();
 					var typePath = readConstructorTypePath();
 					if (isOtherChar("<")) {
+						requireNonEmptyTypeArguments();
 						final typeArgs = readTypeHintText(() -> cur.kind.match(TLParen) || cur.kind.match(TEof));
 						if (typeArgs.length > 0)
 							typePath += typeArgs;

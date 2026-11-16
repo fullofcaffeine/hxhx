@@ -11,6 +11,13 @@ The notices below document third-party sources used as compatibility references 
 - **Use:** development formatting only. Setup fetches the original sources and their notices into an ignored build directory. The generated formatter stays in an ignored local tool directory. Compiler packages do not include these checkouts or this formatter.
 - **Identity:** `scripts/lint/formatter-toolchain.lock.json` records source revisions and exact patch and generated-artifact digests. The formatter release supplies its locked build dependencies.
 
+## Unicode Character Database (case-mapping tables)
+
+- **Project:** Unicode Character Database, `UnicodeData.txt` version 8.0.0 (`https://www.unicode.org/Public/8.0.0/ucd/`).
+- **License:** Unicode License V3 (`https://www.unicode.org/license.txt`).
+- **What was used:** the simple upper- and lower-case mappings for U+0000..U+FFFF, compressed into the `upper_runs` and `lower_runs` tables in `packages/reflaxe.ocaml/std/runtime/HxString.ml`.
+- **How:** `scripts/reflaxe-ocaml/generate-hxstring-case-table.js` reads the data file and prints the tables. It writes the full Unicode copyright and permission notice above them. That runtime file is copied into every generated OCaml program, so the notice ships with each copy, as the license requires.
+
 ## Haxe Standard Library (`std`)
 
 - **Project:** Haxe

@@ -29,10 +29,14 @@ class Stage3OcamlLocalNames {
 			final projectedName = entry.getProjectedName();
 			final normalized = normalize(projectedName);
 			// Native static field cells own every name with this prefix, so a local spelled
-			// like one is renamed instead of shadowing the cell.
-			final base = normalized != null
-				&& StringTools.startsWith(normalized, Stage3OcamlStaticStorage.CELL_PREFIX) ? "local" + normalized : normalized;
-			if (base == null || base.length == 0 || base == "_")
+			// like one is renamed instead of shadowing the cell. Haxe `_` is an ordinary,
+			// readable local (`catch (_:String) trace(_)`), but OCaml `_` is a wildcard
+			// pattern that cannot be read, so it gets a real OCaml name; the leading
+			// underscore keeps OCaml's unused-variable warning quiet.
+			final base = normalized == "_" ? Stage3OcamlIdentifiers.UNDERSCORE : normalized != null
+				&& StringTools.startsWith(normalized, Stage3OcamlStaticStorage.CELL_PREFIX) ? "local"
+					+ normalized : normalized;
+			if (base == null || base.length == 0)
 				throw "Stage3 OCaml local naming cannot render exact binding " + entry.getBinding().getIdentity().getCanonicalKey();
 			var targetName = base;
 			var suffix = 0;

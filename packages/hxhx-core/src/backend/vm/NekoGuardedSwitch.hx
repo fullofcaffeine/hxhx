@@ -29,6 +29,7 @@ function render(input:NekoGuardedSwitchInput):String {
 			case IsNull: value + " == null";
 			case IsBool(literal): value + " == " + (literal ? "true" : "false");
 			case IsInt(literal): value + " == " + literal;
+			case IsFloat(literal): value + " == " + NekoTargetCore.floatPatternLiteral(literal);
 			case IsString(literal): value + " == " + input.quote(literal);
 			case ArrayLength(length): NekoArrayProvider.matchesLength(program, value, length);
 			case EnumConstructor(source, selected): enumCondition(input, source, selected, value);

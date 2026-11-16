@@ -100,10 +100,20 @@ let () =
            && Obj.field anon_copy 0 != Obj.field anon 0
            && (Obj.obj (HxAnon.get anon_copy "field") : int) = 7)
     "anonymous copy lost fields or fresh identity";
+  (* Upstream `--interp` and Neko keep a class instance's class when
+     `Reflect.copy` copies it, while plain anonymous objects stay classless.
+     The copy must still be a distinct object with its own identity header. *)
+  require (HxType.getClass anon_copy == HxRuntime.hx_null)
+    "anonymous copy gained a class";
   let backed = HxAnon.create_with_class descriptor in
+  HxAnon.set backed "field" (Obj.repr 11);
+  let backed_copy = HxAnon.copy backed in
   require (HxType.getClass backed == descriptor
-           && HxType.getClass (HxAnon.copy backed) == HxRuntime.hx_null)
-    "anonymous copy changed class-backing behavior";
+           && backed_copy != backed
+           && HxType.getClass backed_copy == descriptor
+           && Obj.field backed_copy 0 != Obj.field backed 0
+           && (Obj.obj (HxAnon.get backed_copy "field") : int) = 11)
+    "class-backed copy lost its class, fields or fresh identity";
 
   (* Ordinary lazy evaluation supplies a tag-changing opaque carrier without
      forging allocator headers or changing tags through unsafe native writes. *)

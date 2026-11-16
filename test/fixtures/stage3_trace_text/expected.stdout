@@ -1,0 +1,14 @@
+test/fixtures/stage3_trace_text/Main.hx:28: hello
+test/fixtures/stage3_trace_text/Main.hx:29: true
+test/fixtures/stage3_trace_text/Main.hx:30: 42,extra,true
+test/fixtures/stage3_trace_text/Main.hx:31: null
+test/fixtures/stage3_trace_text/Main.hx:33: null
+test/fixtures/stage3_trace_text/Main.hx:34: Flagged(true),Pair(false,p)
+test/fixtures/stage3_trace_text/Helper.hx:4: helper,7
+test/fixtures/stage3_trace_text/Main.hx:37: 0,1,2
+direct
+Flagged(true) Pair(false,x)
+Flagged(false),Flagged(true)
+Maybe(true) Maybe(null)
+nullx
+nullxnull

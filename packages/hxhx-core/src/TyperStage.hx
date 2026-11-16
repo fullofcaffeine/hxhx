@@ -1,3 +1,11 @@
+/** A constructor type parameter that an already supplied argument has fixed, for the "expected" list. */
+private typedef TyBoundDisplayParameter = {
+	final parameter:TyTypeParameterId;
+
+	/** The fixed type; null when a `null` argument fixed only nullability, printed `Null<Unknown<0>>`. */
+	final type:Null<TyType>;
+};
+
 private typedef TyMethodCallResolution = {
 	final type:TyType;
 	final declaration:Null<TyDeclarationInfo>;
@@ -240,6 +248,287 @@ class TyperStage {
 		return identity != null && identity.getCanonicalName() == "Any" && index.getAbstractByFullName("Any") != null;
 	}
 
+	/**
+		Kind errors for `place op= value` without a declared abstract operator.
+
+		When the value is an abstract acting through its `to` primitive (`i |= FA` for
+		`enum abstract Flags(Int) to Int`), the operation is typed as upstream types it.
+		An abstract place without a declared operator is still rejected by the operator
+		lookup: it would need a write-back through `from`, which is not lowered yet
+		(haxe_ocaml-efodd). Otherwise the primitive Int/Float rules apply.
+	**/
+	static function compoundKindFailure(op:String, place:TyType, value:TyType, index:TyperIndex):Null<String> {
+		final base = HxBinaryOperatorTools.baseOperator(op);
+		// An abstract place reaches here only when its own operator lookup already
+		// passed; the `to` rule covers an abstract value with a primitive place.
+		final viewed = base == null
+			|| TyAbstractPrimitiveOperation.view(index, place) != null ? null : TyAbstractPrimitiveOperation.operation(index, base, place, value);
+		if (viewed == null)
+			return TyCompoundAssignmentKinds.primitive(op, place, value);
+		if (viewed.failure != null)
+			return viewed.failure;
+		return TyCompoundAssignmentKinds.primitive(op, place, viewed.result);
+	}
+
+	/**
+		Check the number of `new` arguments against the nearest declared constructor.
+
+		This follows Haxe 4.3.7's messages:
+		- a class with no constructor of its own or inherited, an interface, or an abstract
+		  without `new`: `NoCtor does not have a constructor`;
+		- several overloads, none of which accepts the count: `Could not find a suitable
+		  overload, reasons follow` (upstream then lists each overload's reason);
+		- too few arguments: `Not enough arguments, expected y:Int`, listing every
+		  parameter from the first missing one, with optional ones as `Null<T>` and a
+		  rest parameter as `haxe.Rest<T>`;
+		- too many arguments: `Too many arguments`.
+
+		The nearest declaration owns the decision, as in `TypedConstructorPath`: a
+		subclass without its own constructor uses its superclass constructor, and an
+		inapplicable constructor never falls through to a more distant one. With
+		overloaded constructors, any overload that accepts the count is enough. A
+		spread argument (`...values`) has no fixed count, so it is left to selection.
+		When the type arguments were omitted, the arguments that were supplied fix the
+		parameters they mention (`new G(1)` for `new(v:T, w:T)` expects `w:Int`). A
+		parameter nothing has fixed is shown as `Unknown<0>`, `Unknown<1>` and so on.
+		`suppliedType` reads a supplied argument's type, or null when it has none on its own.
+	**/
+	static function constructorArityFailure(index:TyperIndex, owner:Null<TyNominalInfo>, written:TyType, args:Array<HxExpr>,
+			suppliedType:Int->Null<TyType>):Null<String> {
+		if (index == null || owner == null || owner.getIsEnum())
+			return null;
+		if (constructorMayComeFromBuildMacro(index, owner, new haxe.ds.StringMap()))
+			return null;
+		for (argument in args)
+			if (argument.match(ECall(EIdent("__hxhx_spread"), [_])))
+				return null;
+		final parameters = TyNominalApplication.parameterIds(owner);
+		var current:TyNominalInfo = owner;
+		var currentParameters = parameters;
+		var applied:Null<TyType> = written.getTypeArguments().length == parameters.length ? written : null;
+		final visited = new haxe.ds.StringMap<Bool>();
+		while (current.instanceMethodCandidates("new").length == 0) {
+			// Interfaces and abstracts never inherit a constructor.
+			if (!Std.isOfType(current, TyClassInfo) || (cast current : TyClassInfo).getIsInterface())
+				return owner.getShortName() + " does not have a constructor";
+			visited.set(current.getFullName(), true);
+			final superType = (cast current : TyClassInfo).getSuperType();
+			if (superType == null)
+				return owner.getShortName() + " does not have a constructor";
+			final superIdentity = superType.getNominalIdentity();
+			final next = superIdentity == null ? null : index.getByFullName(superIdentity.getCanonicalName());
+			if (next == null || visited.exists(next.getFullName()))
+				return null;
+			applied = applied == null ? null : TyTypeSubstitution.apply(superType,
+				TyTypeSubstitution.bind(currentParameters, applied.getTypeArguments(), current.getFullName()));
+			current = next;
+			currentParameters = TyNominalApplication.parameterIds(current);
+		}
+		final candidates = current.instanceMethodCandidates("new");
+		for (candidate in candidates)
+			if (candidate.acceptsArity(args.length))
+				return null;
+		if (candidates.length > 1)
+			return "Could not find a suitable overload, reasons follow";
+		final signature = candidates[0];
+		final types = signature.getArgs();
+		final rest = signature.getArgRest();
+		final optional = signature.getArgOptional();
+		var required = 0;
+		var hasRest = false;
+		for (slot in 0...types.length) {
+			if (slot < rest.length && rest[slot])
+				hasRest = true;
+			else if (!(slot < optional.length && optional[slot]))
+				required = slot + 1;
+		}
+		if (args.length >= required)
+			return hasRest ? null : "Too many arguments";
+		final bindings = applied == null
+			|| applied.getTypeArguments()
+				.length != currentParameters.length ? null : TyTypeSubstitution.bind(currentParameters, applied.getTypeArguments(), current.getFullName());
+		final names = signature.getArgNames();
+		// Only `?y` is shown as `Null<T>`; a default value (`y:Int = 2`) keeps the written type.
+		final declaration = current.declarationForSignature(signature);
+		final source = declaration == null ? [] : HxFunctionDecl.getArgs(declaration.getSourceDeclaration());
+		final open = new Array<TyTypeParameterId>();
+		final bound = new Array<TyBoundDisplayParameter>();
+		if (bindings == null)
+			for (slot in 0...Std.int(Math.min(args.length, types.length))) {
+				final supplied = suppliedType(slot);
+				if (supplied != null)
+					bindSuppliedParameter(types[slot], supplied, currentParameters, bound);
+			}
+		final missing = [
+			for (slot in args.length...types.length) {
+				final declared = bindings == null ? types[slot] : TyTypeSubstitution.apply(types[slot], bindings);
+				final isRest = slot < rest.length && rest[slot];
+				final isQuestion = source.length == types.length ? HxFunctionArg.getIsOptional(source[slot]) : slot < optional.length && optional[slot];
+				final display = upstreamTypeDisplay(!isRest
+					&& isQuestion
+					&& !declared.isNullable() ? TyType.nullable(declared) : declared, open, bound);
+				// A rest parameter may already be typed `haxe.Rest<T>`; otherwise upstream wraps its element type.
+				final shown = isRest && !StringTools.startsWith(display, "haxe.Rest<") ? "haxe.Rest<"
+					+ display
+					+ ">" : display; (slot < names.length ? names[slot] : "arg" + slot)
+					+ ":"
+					+ shown;
+			}
+		];
+		return "Not enough arguments, expected " + missing.join(", ");
+	}
+
+	/** The fixed parameter count of the nearest declared constructor, for placing "Too many arguments". **/
+	static function constructorParameterLimit(index:TyperIndex, owner:TyNominalInfo):Int {
+		var current = owner;
+		final visited = new haxe.ds.StringMap<Bool>();
+		while (current != null && current.instanceMethodCandidates("new").length == 0 && Std.isOfType(current, TyClassInfo)) {
+			visited.set(current.getFullName(), true);
+			final superType = (cast current : TyClassInfo).getSuperType();
+			final identity = superType == null ? null : superType.getNominalIdentity();
+			current = identity == null
+				|| visited.exists(identity.getCanonicalName()) ? null : index.getByFullName(identity.getCanonicalName());
+		}
+		return current == null
+			|| current.instanceMethodCandidates("new").length == 0 ? -1 : current.instanceMethodCandidates("new")[0].getArgs().length;
+	}
+
+	/** Place "Too many arguments" on the first argument that does not fit, when it can be identified. **/
+	static function surplusArgumentPosition(ctx:TyperContext, pos:HxPos, typePath:String, argumentCount:Int, surplus:Int):HxPos {
+		final module = ctx.getIndex() == null ? null : ctx.getIndex().getRegisteredModule(ctx.getModulePath());
+		final parsed = module == null ? null : ResolvedModule.getParsed(module);
+		return TySourceTokenPosition.surplusConstructorArgument(TySourceTokenPosition.tokens(parsed == null ? null : parsed.getSource()), pos, typePath,
+			argumentCount, surplus);
+	}
+
+	/**
+		Whether a build macro may add or replace `owner`'s constructor.
+
+		`@:autoBuild` reaches a class through its superclasses and interfaces, so the whole
+		ancestry counts. `--hxhx-type-only` skips build macros, and the typer cannot tell
+		whether they ran, so the declared members of these classes do not prove anything
+		about the count: the check stays silent for them, as it did before this diagnostic.
+	**/
+	static function constructorMayComeFromBuildMacro(index:TyperIndex, owner:TyNominalInfo, visited:haxe.ds.StringMap<Bool>):Bool {
+		if (owner == null || visited.exists(owner.getFullName()))
+			return false;
+		visited.set(owner.getFullName(), true);
+		if (index.declarationUsesBuildMacro(owner.getFullName()))
+			return true;
+		if (!Std.isOfType(owner, TyClassInfo))
+			return false;
+		final info:TyClassInfo = cast owner;
+		final parents = info.getDeclaredInterfaceTypes();
+		if (info.getSuperType() != null)
+			parents.push(info.getSuperType());
+		for (parent in parents) {
+			final identity = parent.getNominalIdentity();
+			if (identity != null && constructorMayComeFromBuildMacro(index, index.getByFullName(identity.getCanonicalName()), visited))
+				return true;
+		}
+		return false;
+	}
+
+	/** Record what a supplied argument fixes in a still-open declared type: `v:T` given `1` fixes `T` to `Int`. **/
+	static function bindSuppliedParameter(declared:TyType, supplied:TyType, parameters:Array<TyTypeParameterId>, bound:Array<TyBoundDisplayParameter>):Void {
+		final suppliedNull = supplied.isNullLiteral();
+		if (declared.isNullable()) {
+			// `null` already fits `Null<T>`, so it says nothing about `T`.
+			if (suppliedNull)
+				return;
+			declared = declared.unwrapNull();
+		}
+		final parameter = declared.getTypeParameterIdentity();
+		if (parameter != null) {
+			if (supplied.isUnknown() || parameters.filter(candidate -> candidate.equals(parameter)).length == 0)
+				return;
+			if (bound.filter(entry -> entry.parameter.equals(parameter)).length == 0)
+				bound.push({parameter: parameter, type: suppliedNull ? null : supplied});
+			return;
+		}
+		final declaredOwner = declared.getNominalIdentity();
+		final suppliedOwner = supplied.getNominalIdentity();
+		final declaredArguments = declared.getTypeArguments();
+		final suppliedArguments = supplied.getTypeArguments();
+		if (declaredOwner != null
+			&& suppliedOwner != null
+			&& declaredOwner.equals(suppliedOwner)
+			&& declaredArguments.length == suppliedArguments.length)
+			for (index in 0...declaredArguments.length)
+				bindSuppliedParameter(declaredArguments[index], suppliedArguments[index], parameters, bound);
+	}
+
+	/**
+		Print a type the way Haxe 4.3.7's diagnostics do.
+
+		- Nominal types use their full path (`haxe.Exception`); an alias keeps its own name (`Map`).
+		- A type parameter listed in `bound` prints as the type it was fixed to.
+		- A type parameter that is still open prints as upstream's monomorph, `Unknown<0>`,
+		  numbered by first appearance in one message.
+		- Functions print as `Int -> Void`, `() -> Void` and `(Int, String) -> Bool`, with a
+		  function argument in parentheses: `(Int -> Void) -> Int`.
+		- Anonymous structures print as `{ b : String, a : Int }`, fields in descending
+		  name order as upstream lists them, and an optional field as `?q : Null<Int>`.
+	**/
+	static function upstreamTypeDisplay(type:TyType, ?open:Array<TyTypeParameterId>, ?bound:Array<TyBoundDisplayParameter>):String {
+		if (open == null)
+			open = [];
+		if (bound == null)
+			bound = [];
+		function show(type:TyType):String {
+			final parameter = type.getTypeParameterIdentity();
+			if (parameter != null) {
+				function unknown():String {
+					var position = -1;
+					for (known in 0...open.length)
+						if (open[known].equals(parameter))
+							position = known;
+					if (position < 0) {
+						open.push(parameter);
+						position = open.length - 1;
+					}
+					return "Unknown<" + position + ">";
+				}
+				for (entry in bound)
+					if (entry.parameter.equals(parameter))
+						return entry.type == null ? "Null<" + unknown() + ">" : show(entry.type);
+				return unknown();
+			}
+			if (type.isNullable())
+				return "Null<" + show(type.unwrapNull()) + ">";
+			final alias = type.getAliasDefinition();
+			if (alias != null) {
+				final aliasArguments = type.getTypeArguments();
+				return alias.getCanonicalName() + (aliasArguments.length == 0 ? "" : "<" + [for (argument in aliasArguments) show(argument)].join(", ") + ">");
+			}
+			if (type.isFunction()) {
+				final inputs = type.getFunctionArguments();
+				final result = type.getFunctionReturn() == null ? "Void" : show(type.getFunctionReturn());
+				if (inputs.length == 1)
+					return (inputs[0].isFunction() ? "(" + show(inputs[0]) + ")" : show(inputs[0])) + " -> " + result;
+				return "(" + [for (input in inputs) show(input)].join(", ") + ") -> " + result;
+			}
+			if (type.isAnonymous()) {
+				final fields = type.getAnonymousFields();
+				if (fields.length == 0)
+					return "{ }";
+				fields.sort((left, right) -> left.name < right.name ? 1 : left.name > right.name ? -1 : 0);
+				return "{ " + [
+					for (field in fields)
+						(field.isOptional ? "?" : "")
+						+ field.name
+						+ " : "
+						+ show(field.isOptional && !field.type.isNullable() ? TyType.nullable(field.type) : field.type)].join(", ") + " }";
+			}
+			final identity = type.getNominalIdentity();
+			if (identity == null)
+				return type.getDisplay();
+			final arguments = type.getTypeArguments();
+			return identity.getCanonicalName() + (arguments.length == 0 ? "" : "<" + [for (argument in arguments) show(argument)].join(", ") + ">");
+		}
+		return show(type);
+	}
+
 	static function nominalInfoForType(index:TyperIndex, type:TyType):Null<TyNominalInfo> {
 		if (index == null || type == null)
 			return null;
@@ -313,6 +602,56 @@ class TyperStage {
 
 	static function providerIdentities(providers:Array<TyNominalInfo>):Array<TyNominalTypeId> {
 		return providers == null ? [] : [for (provider in providers) provider.getIdentity()];
+	}
+
+	/**
+		Reject an import or `using` directive that names nothing, as upstream does
+		(haxe_ocaml-db83a). Upstream reports `import does.not.Exist;` as
+		"Type not found : does.not.Exist", and a missing member of an existing
+		class as "Class<haxe.Json> has no field nope". Package wildcards
+		(`import pkg.*`) stay lenient: upstream accepts an empty package.
+	**/
+	static function requireResolvedDirectives(parsed:ParsedModule, resolved:Array<TyModuleDirective>, packagePath:String, index:TyperIndex,
+			loader:ModuleLoader):Void {
+		final sourceDirectives = [for (directive in resolved) directive.getSource()];
+		for (directive in resolved) {
+			if (!directive.getKind().match(Unresolved))
+				continue;
+			final source = directive.getSource();
+			final path = HxModuleDirective.getPath(source);
+			// Nominal resolution does not select type aliases, such as the
+			// `haxe.macro.Type.TypedExpr` typedef that std `Context` imports.
+			final context:TyTypeDeclaration.TyTypeResolutionContext = {
+				packagePath: packagePath,
+				modulePath: "",
+				directives: [],
+				filePath: parsed.getFilePath(),
+				position: HxPos.unknown(),
+				parameters: []
+			};
+			final separator = path.lastIndexOf(".");
+			final member = separator > 0 ? path.substr(separator + 1) : "";
+			final ownerPath = separator > 0 ? path.substr(0, separator) : "";
+			// `import haxe.Json.nope`: a lowercase member of an existing class that declares no such field.
+			if (member.length > 0 && !isUpperStartName(member) && !HxModuleDirective.getKind(source).match(Using)) {
+				final owner = exactDirectiveProvider(ownerPath, packagePath, sourceDirectives, index, loader);
+				if (owner != null && !owner.getIsEnum())
+					throw new TyperError(parsed.getFilePath(), TyDirectivePosition.find(parsed.getSource(), path),
+						"Class<"
+						+ owner.getFullName()
+						+ "> has no field "
+						+ member);
+			}
+			if (loader.hasModuleSource(path)
+				|| loader.ensureDeclarationAvailable(path, context) != null
+				|| index.resolveTypeDeclaration(path, context) != null)
+				continue;
+			// A sub-type or member of a module that exists: leave its selection to typing.
+			if (ownerPath.length > 0 && loader.hasModuleSource(ownerPath))
+				continue;
+			final message = "Type not found : " + path;
+			throw new TyperError(parsed.getFilePath(), TyDirectivePosition.find(parsed.getSource(), path), message);
+		}
 	}
 
 	/**
@@ -501,6 +840,11 @@ class TyperStage {
 		final packagePath = HxModuleDecl.getPackagePath(declaration);
 		final directives = HxModuleDecl.getDirectives(declaration);
 		final resolvedDirectives = resolveModuleDirectives(directives, packagePath, modulePath, index, loader);
+		// A root-only index, a loader without the standard library, a request with
+		// `--macro` initializers, or a loaded build macro cannot prove that an import
+		// names nothing; see TyperContext.hasDeclarationLoader.
+		if (index != null && loader != null && loader.declarationsAreComplete() && !index.hasBuildMacro())
+			requireResolvedDirectives(parsed, resolvedDirectives, packagePath, index, loader);
 		TyClassArgumentBounds.validateDeclarations(parsed, modulePath, index, (expected, supplied) -> constraintAccepts(expected, supplied, index));
 		final mainClass = HxModuleDecl.getMainClass(declaration);
 		final typedClasses = new Array<TypedClass>();
@@ -818,6 +1162,7 @@ class TyperStage {
 					case EIdent(name) | EEnumValue(name) if (lexicalEnvironment.resolveSymbol(name) == null): final current = context.currentClass(); (current == null
 							|| current.fieldInfo(name) == null) && (context.importedStaticField(name) == field
 							|| context.moduleEnumConstructorField(name) == field
+							|| context.moduleEnumAbstractValueField(name) == field
 							|| context.expectedEnumConstructorField(name, expected) == field);
 					case _: false;
 				};
@@ -913,6 +1258,8 @@ class TyperStage {
 
 		// JavaScript uses authored Map providers. Resolve collection syntax while
 		// declarations are indexed; other targets retain their physical-storage passes.
+		if (index != null)
+			index.undeclaredValueNames(parsed.getFilePath()).requireDeclared(index);
 		final collections = index != null
 			&& loader != null
 			&& loader.hasDefine("js") ? TypedMapProviderLowering.lowerClasses(typedClasses, index) : typedClasses;
@@ -1214,7 +1561,7 @@ class TyperStage {
 				case SSwitch(scrutinee, patterns, bodies, pos):
 					// Check the finite source domain before accepting any case body.
 					final scrutTy = inferSwitchInput(scrutinee, patterns, scope, ctx, pos);
-					TySwitchTyping.check(scrutTy, patterns, bodies == null ? -1 : bodies.length, ctx, pos);
+					TySwitchTyping.check(scrutTy, patterns, bodies == null ? -1 : bodies.length, ctx, pos, scope.isUntypedContext());
 					if (patterns != null && bodies != null) {
 						final count = patterns.length < bodies.length ? patterns.length : bodies.length;
 						for (i in 0...count) {
@@ -1323,7 +1670,7 @@ class TyperStage {
 					if (init != null) {
 						// The new declaration is not visible in its own initializer.
 						// A same-name read therefore selects the nearest outer local.
-						initializerType = inferLocalInitializer(init, hasWrittenType ? hinted : null, scope, ctx, pos);
+						initializerType = inferLocalInitializer(init, hasWrittenType ? hinted : null, scope, ctx, pos, typeHint);
 					}
 					final initializerTerm = init == null ? null : scope.getInference().sourceTerm(init, scope);
 					final sym = scope.declareLocal(name, hinted, Variable);
@@ -1362,6 +1709,10 @@ class TyperStage {
 				case SReturn(e, pos):
 					final expected = scope.getReturnType();
 					final t = inferExprType(e, scope, ctx, pos, expected.isUnknown() ? null : expected);
+					// A declared return type is an authored destination: `return x + y` must fit `String`.
+					if (!expected.isUnknown())
+						TyAuthoredAssignmentCheck.check(expected, t, scope.isUntypedContext() || TyFieldAssignment.explicitlyUntyped(e), ctx.getFilePath(),
+							pos, null, () -> writtenReturnDisplay(expected, scope, ctx));
 					final term = scope.getInference().sourceTerm(e, scope);
 					controls.currentReturns().record(term == null ? Known(t) : term, pos);
 				case SExpr(e, pos):
@@ -1608,6 +1959,10 @@ class TyperStage {
 		final structural = TyStructuralArgument.compatibility(semanticIndex, expected, actual, methodTypeParameters);
 		if (structural != null)
 			return structural == Compatible ? 3 : -1;
+		// Any function value unifies with haxe.Constraints.Function. It ranks like
+		// an abstract conversion, below an exact or concrete signature match.
+		if (TyFunctionConstraint.accepts(expected, actual))
+			return 1;
 		if (expected.isFunction() || actual.isFunction()) {
 			// Explicit Dynamic admits callable values in either direction, but must
 			// not outrank a concrete signature or erase that signature's argument facts.
@@ -3052,6 +3407,21 @@ class TyperStage {
 	}
 
 	/**
+		Whether a bare name denotes a value in this scope: a local, a member, an
+		enum constructor, an imported static, a method value, or a runtime type
+		value. `TyUndeclaredName` uses this before it reports an unknown name.
+	**/
+	static function resolvesValueName(name:String, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Bool {
+		final expression = HxExpr.EIdent(name);
+		return scope.resolveSymbol(name) != null
+			|| resolveFieldDeclaration(expression, scope, ctx, pos) != null
+			|| currentInstanceMethodReferenceType(name, scope, ctx) != null
+			|| currentStaticMethodReferenceType(name, ctx) != null
+			|| importedStaticMethodReferenceType(name, ctx) != null
+			|| TypedRuntimeTypeResolver.resolve(expression, scope, ctx, ValueExpression) != null;
+	}
+
+	/**
 		Resolve the exact field declaration selected by the current typed subset.
 
 		This follows the same current-class, fully qualified static, and typed receiver
@@ -3074,7 +3444,11 @@ class TyperStage {
 					} else {
 						final contextual = ctx.expectedEnumConstructorField(name, expected);
 						final enumField = contextual == null ? ctx.moduleEnumConstructorField(name) : contextual;
-						enumField != null ? enumField : ctx.importedStaticField(name);
+						// A bare value of an enum abstract in this module, such as `T1` for
+						// `enum abstract ET(Int) to Int { var T1 = 1; }`, is that abstract's field.
+						// Like upstream, it comes before an imported static of the same name.
+						final moduleValue = enumField != null ? enumField : ctx.moduleEnumAbstractValueField(name);
+						moduleValue != null ? moduleValue : ctx.importedStaticField(name);
 					}
 				}
 			case EField(object, field):
@@ -3136,9 +3510,14 @@ class TyperStage {
 	}
 
 	/** Untyped local annotations may reinterpret complete values, but still solve compatible omitted type arguments. */
-	static function inferLocalInitializer(initializer:HxExpr, expected:Null<TyType>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyType {
-		if (expected == null || !scope.isUntypedContext())
-			return inferExprType(initializer, scope, ctx, pos, expected);
+	static function inferLocalInitializer(initializer:HxExpr, expected:Null<TyType>, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos,
+			?writtenType:String):TyType {
+		if (expected == null || !scope.isUntypedContext()) {
+			final actual = inferExprType(initializer, scope, ctx, pos, expected);
+			// A written local type is an authored destination: `var g:Float->Int = f` must fit.
+			TyAuthoredAssignmentCheck.check(expected, actual, TyFieldAssignment.explicitlyUntyped(initializer), ctx.getFilePath(), pos, writtenType);
+			return actual;
+		}
 		final actual = inferExprType(initializer, scope, ctx, pos);
 		// A rejected candidate leaves the initializer's original constraints intact.
 		if (actual.hasUnknownComponent()
@@ -3295,7 +3674,7 @@ class TyperStage {
 			&& !expectedResult.hasUnknownComponent()
 			&& !result.hasUnknownComponent()
 			&& (selectedGenericResult || scope.getInference().canReceiveContext(expr, scope))
-			&& overloadArgScore(expectedResult, result, [], ctx.getIndex()) < 0)
+			&& !functionValueFits(expectedResult, result, ctx.getIndex()))
 			throw new TyperError(ctx.getFilePath(), pos, "inferred value "
 				+ result.getDisplay()
 				+ " is not compatible with "
@@ -3319,6 +3698,76 @@ class TyperStage {
 		if (expectedResult != null)
 			TyLambdaResultContract.check(result, expectedResult, ctx.getFilePath(), pos, isStrict());
 		return result;
+	}
+
+	/**
+		Whether a value of type `actual` can enter `expected`. Function values are
+		compared by Haxe's variance: each expected argument must fit the supplied
+		function's argument (`(Animal)->Void` can serve as `(Dog)->Void`), and the
+		supplied result must fit the expected result unless that result is Void.
+		Other values use the ordinary overload score.
+	 */
+	static function functionValueFits(expected:TyType, actual:TyType, index:TyperIndex):Bool
+		return functionValueWalk(expected, actual, index, 0, new haxe.ds.StringMap<Int>());
+
+	/**
+		One step of `functionValueFits`. `visited` holds each (expected, actual) pair
+		already entered and the shallowest depth it was entered at, so recursive
+		function typedefs are walked at most once per pair and depth. A pair seen again
+		at the same or a greater depth fits, because that visit had at least as much
+		depth left and a mismatch would already have ended the walk. A pair seen nearer
+		the top is compared again, since the earlier visit may have stopped at the
+		limit. The limit hands growing generic typedefs to the ordinary score.
+	 */
+	static function functionValueWalk(expected:TyType, actual:TyType, index:TyperIndex, depth:Int, visited:haxe.ds.StringMap<Int>):Bool {
+		if (depth > 16 || !expected.isFunction() || !actual.isFunction() || expected.isNullable() || actual.isNullable())
+			return overloadArgScore(expected, actual, [], index) >= 0;
+		final expectedKey = expected.getSemanticKey();
+		final actualKey = actual.getSemanticKey();
+		if (expectedKey == actualKey)
+			return true;
+		final pair = expectedKey + "\n" + actualKey;
+		final enteredAt = visited.get(pair);
+		if (enteredAt != null && enteredAt <= depth)
+			return true;
+		visited.set(pair, depth);
+		final wanted = expected.getFunctionParameters();
+		final supplied = actual.getFunctionParameters();
+		if (wanted.length != supplied.length)
+			return false;
+		for (position in 0...wanted.length) {
+			if (wanted[position].isRest || supplied[position].isRest)
+				return overloadArgScore(expected, actual, [], index) >= 0;
+			if (wanted[position].isOptional && !supplied[position].isOptional)
+				return false;
+			if (!functionValueWalk(supplied[position].type, wanted[position].type, index, depth + 1, visited))
+				return false;
+		}
+		final wantedResult = expected.getFunctionReturn();
+		final suppliedResult = actual.getFunctionReturn();
+		return wantedResult == null
+			|| suppliedResult == null
+			|| wantedResult.isVoid()
+			|| functionValueWalk(wantedResult, suppliedResult, index, depth + 1, visited);
+	}
+
+	/**
+		The declared return type as written, for diagnostics that name it like upstream
+		(`String should be R`), or null when this scope's written return type is not
+		the type being checked (a lambda body, or no written return type).
+	 */
+	static function writtenReturnDisplay(expected:TyType, scope:TyFunctionEnv, ctx:TyperContext):Null<String> {
+		final written = scope.writtenReturnTypeHint();
+		if (written == null || StringTools.trim(written).length == 0)
+			return null;
+		try {
+			final resolved = typeFromHintInContext(written, ctx, scope);
+			return resolved != null
+				&& TyAliasExpansion.reveal(resolved).getSemanticKey() == TyAliasExpansion.reveal(expected).getSemanticKey() ? written : null;
+		} catch (_:Dynamic) {
+			// The name is only for the message; an unresolvable hint keeps the checked type's name.
+			return null;
+		}
 	}
 
 	/** Retain an ephemeral selection from this traversal; this is not a cache or another overload query. */
@@ -3520,7 +3969,13 @@ class TyperStage {
 						// Runtime class values were resolved above. Preserve the existing enum
 						// constructor path until its separate typed-enum owner replaces it.
 						switch (expr) {
-							case EEnumValue(_): TyType.fromHintText("String");
+							case EEnumValue(name):
+								// Upstream rejects a name that is no local, member, enum
+								// constructor, import or type (haxe_ocaml-ikrmd). This
+								// occurrence may still be resolved from an expected type
+								// elsewhere, so the module decides after typing.
+								TyUndeclaredName.recordValueName(name, scope, ctx, pos);
+								TyType.fromHintText("String");
 							// Only an unresolved host name under authored untyped syntax
 							// gets a retained inference occurrence. Known lexical/member
 							// bindings were resolved above and keep their own constraints.
@@ -3586,6 +4041,7 @@ class TyperStage {
 						}
 					}
 				}
+				TyUndeclaredName.requireStaticReceiver(obj, scope, ctx, pos, resolvesValueName);
 				switch (obj) {
 					case _:
 						// Best-effort: infer child for locals; actual field typing depends on the index.
@@ -3893,7 +4349,7 @@ class TyperStage {
 					final writtenType = StringTools.trim(HxExprVarDecl.getTypeHint(declaration));
 					final hinted = writtenType.length == 0 ? null : typeFromHintInContext(writtenType, ctx, scope, pos);
 					final initializerType = initializer == null ? TyType.unknown() : inferLocalInitializer(initializer, hinted, scope, ctx,
-						HxExprVarDecl.getPosition(declaration));
+						HxExprVarDecl.getPosition(declaration), writtenType);
 					final initializerTerm = initializer == null ? null : scope.getInference().sourceTerm(initializer, scope);
 					if (initializerType.isNoNormalCompletion())
 						completesNormally = false;
@@ -3974,7 +4430,7 @@ class TyperStage {
 				// Bring-up: type the scrutinee and unify case-expression types best-effort.
 				// This is intentionally permissive; if unification fails we widen to Dynamic.
 				final scrutTy = inferSwitchInput(scrutinee, patterns, scope, ctx, pos);
-				TySwitchTyping.check(scrutTy, patterns, exprs == null ? -1 : exprs.length, ctx, pos);
+				TySwitchTyping.check(scrutTy, patterns, exprs == null ? -1 : exprs.length, ctx, pos, scope.isUntypedContext());
 				var out:TyType = TyType.unknown();
 				if (patterns != null && exprs != null) {
 					final count = patterns.length < exprs.length ? patterns.length : exprs.length;
@@ -4016,6 +4472,18 @@ class TyperStage {
 				final written = path.written;
 				final owner = nominalInfoForType(ctx.getIndex(), written);
 				final arity = owner == null ? 0 : TyNominalApplication.parameterIds(owner).length;
+				final arityFailure = constructorArityFailure(ctx.getIndex(), owner, written, args, slot -> {
+					// Only for the message; an argument that needs an expected type has none here.
+					try
+						inferExprType(args[slot], scope, ctx, pos, null)
+					catch (_:TyperError)
+						null;
+				});
+				if (arityFailure != null)
+					throw new TyperError(ctx.getFilePath(),
+						arityFailure == "Too many arguments" ? surplusArgumentPosition(ctx, pos, _typePath, args.length,
+							constructorParameterLimit(ctx.getIndex(), owner)) : pos,
+						arityFailure);
 				final contexts = constructorArgumentContexts(_typePath, path.contextual, args, scope, ctx);
 				final argumentTypes = [
 					for (index in 0...args.length) {
@@ -4088,8 +4556,15 @@ class TyperStage {
 				// Haxe 4.3.7 updates explicit properties through their getter/setter
 				// contract; it does not select the abstract value's increment helper.
 				final bound = isPropertyUpdate ? null : TyAbstractUnaryBinding.select(semanticIndex, inner, _op, _fixity, ctx.getFilePath(), pos);
+				// Without a declared operator, `-` and `~` act through a `to Int` conversion.
+				final viewedUnary = bound == null
+					&& (_op == Negate || _op == BitwiseNot) ? TyAbstractPrimitiveOperation.unary(semanticIndex, inner) : null;
+				if (viewedUnary != null && viewedUnary.failure != null)
+					throw new TyperError(ctx.getFilePath(), pos, viewedUnary.failure);
 				if (bound != null) {
 					bound.getResultType();
+				} else if (viewedUnary != null) {
+					viewedUnary.result;
 				} else {
 					if (_op == LogicalNot)
 						TyType.fromHintText("Bool");
@@ -4232,16 +4707,23 @@ class TyperStage {
 										// so widening it to Dynamic here would erase exact written or
 										// inferred facts before a backend can apply the required
 										// assignment conversion.
-										rhs;
+										//
+										// Haxe types `local = value` as the local's type (after the
+										// value's conversion), not the value's: `(ratio = 5)` with
+										// `ratio:Float` is a Float. A local whose type is still unknown, or
+										// only the type of a bare `null` initializer, keeps the value's type.
+										(sym.getType().isUnknown() || sym.getType().isNullLiteral()) ? rhs : sym.getType();
 									} else {
+										// An assignment used as a value has the local's type, as in Haxe.
 										sym.setType(u);
-										rhs;
+										(u.isUnknown() || u.isNullLiteral()) ? rhs : u;
 									}
 								} else {
 									rhs;
 								}
+							// An element or other place: the assignment has the place's type.
 							case _:
-								rhs;
+								destination.hasUnknownComponent() ? rhs : destination;
 						}
 					case _ if (HxBinaryOperatorTools.isCompoundAssignment(op)):
 						assertWritableLocal(a, scope, ctx, pos);
@@ -4256,10 +4738,31 @@ class TyperStage {
 						}
 						final leftType = inferExprType(a, scope, ctx, pos);
 						final rightType = inferExprType(b, scope, ctx, pos);
-						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), leftType, rightType, op, ctx.getFilePath(), pos);
+						final bound = try TyAbstractBinaryBinding.select(ctx.getIndex(), leftType, rightType, op, ctx.getFilePath(),
+							pos) catch (error:TyperError) {
+							// Report a failed abstract lookup with a numeric value as upstream does.
+							final reworded = !scope.isUntypedContext()
+								&& StringTools.startsWith(error.getMessage(),
+									"No applicable abstract binary operator ") ? TyCompoundAssignmentKinds.abstractFailure(op, leftType, rightType,
+									ctx.getIndex()) : null;
+							throw reworded == null ? error : new TyperError(ctx.getFilePath(), pos, reworded);
+						};
+						// Inside `untyped`, upstream does not report these kind errors.
+						final kindFailure = bound == null
+							&& !scope.isUntypedContext() ? compoundKindFailure(op, leftType, rightType, ctx.getIndex()) : null;
+						if (kindFailure != null)
+							throw new TyperError(ctx.getFilePath(), pos, kindFailure);
 						if (bound != null) {
 							bound.getRequiresWriteback() ? leftType : bound.getOperatorInfo().getResultType();
 						} else {
+							// `count += 1.5` and `count /= 2` would store a Float into an Int place.
+							// Inside `untyped`, upstream accepts them, as for the kind errors above.
+							if (!scope.isUntypedContext()
+								&& leftType.unwrapNull().getSemanticKey() == "primitive:Int"
+								&& (op == "/="
+									|| ((op == "+=" || op == "-=" || op == "*=" || op == "%=")
+										&& rightType.unwrapNull().getSemanticKey() == "primitive:Float")))
+								throw new TyperError(ctx.getFilePath(), pos, "Float should be Int");
 							switch (a) {
 								case EIdent(name):
 									final symbol = scope.resolveSymbol(name);
@@ -4285,6 +4788,10 @@ class TyperStage {
 						final ta = inferExprType(a, scope, ctx, pos);
 						final tb = inferExprType(b, scope, ctx, pos);
 						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), ta, tb, op, ctx.getFilePath(), pos);
+						// Without a declared operator, one abstract operand may act through its `to` primitive.
+						final viewed = bound == null ? TyAbstractPrimitiveOperation.operation(ctx.getIndex(), op, ta, tb) : null;
+						if (viewed != null && viewed.failure != null)
+							throw new TyperError(ctx.getFilePath(), pos, viewed.failure);
 						if (bound != null) {
 							bound.getOperatorInfo().getResultType();
 						} else {
@@ -4296,7 +4803,7 @@ class TyperStage {
 								filePath: ctx.getFilePath(),
 								position: pos
 							});
-							(ta.getDisplay() == "Bool" && tb.getDisplay() == "Bool") ? TyType.fromHintText("Bool") : TyType.fromHintText("Int");
+							viewed != null ? viewed.result : (ta.getDisplay() == "Bool" && tb.getDisplay() == "Bool") ? TyType.fromHintText("Bool") : TyType.fromHintText("Int");
 						}
 					case "+":
 						final operands = TyAdditionOperandInference.constrain({
@@ -4312,8 +4819,14 @@ class TyperStage {
 						final ta = operands.left;
 						final tb = operands.right;
 						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), ta, tb, op, ctx.getFilePath(), pos);
+						// Without a declared operator, one abstract operand may act through its `to` primitive.
+						final viewed = bound == null ? TyAbstractPrimitiveOperation.operation(ctx.getIndex(), op, ta, tb) : null;
+						if (viewed != null && viewed.failure != null)
+							throw new TyperError(ctx.getFilePath(), pos, viewed.failure);
 						if (bound != null) {
 							bound.getOperatorInfo().getResultType();
+						} else if (viewed != null) {
+							viewed.result;
 						} else if (ta.getDisplay() == "String" || tb.getDisplay() == "String") {
 							TyType.fromHintText("String");
 						} else if (ta.isDynamic() || tb.isDynamic()) {
@@ -4322,7 +4835,8 @@ class TyperStage {
 							TyType.fromHintText("Dynamic");
 						} else {
 							final integer = TyNullableIntegerResult.result(ta, tb);
-							final u = integer == null ? TyType.unify(ta, tb) : integer;
+							// Arithmetic reads a nullable operand's value: `Null<Float> + 1` is Float.
+							final u = integer == null ? TyType.unify(ta.unwrapNull(), tb.unwrapNull()) : integer;
 							u != null
 							&& u.isNumeric() ? u : TyType.unknown();
 						}
@@ -4330,11 +4844,21 @@ class TyperStage {
 						final ta = inferExprType(a, scope, ctx, pos);
 						final tb = inferExprType(b, scope, ctx, pos);
 						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), ta, tb, op, ctx.getFilePath(), pos);
-						if (bound != null) bound.getOperatorInfo().getResultType(); else {
+						// Without a declared operator, one abstract operand may act through its `to` primitive.
+						final viewed = bound == null ? TyAbstractPrimitiveOperation.operation(ctx.getIndex(), op, ta, tb) : null;
+						if (viewed != null && viewed.failure != null)
+							throw new TyperError(ctx.getFilePath(), pos, viewed.failure);
+						if (bound != null) bound.getOperatorInfo().getResultType(); else if (viewed != null) viewed.result; else {
 							final integer = op == "/" ? null : TyNullableIntegerResult.result(ta, tb);
-							final unified = integer == null ? TyType.unify(ta, tb) : integer;
-							unified != null
-							&& unified.isNumeric() ? unified : TyType.unknown();
+							final unified = integer == null ? TyType.unify(ta.unwrapNull(), tb.unwrapNull()) : integer;
+							// A Dynamic operand of `- * / %` gives Float in Haxe (`boxed * 2` is a
+							// Float), unlike `+`, which stays Dynamic because it may concatenate.
+							final dynamicOperand = (ta.unwrapNull().isDynamic()
+								&& (tb.unwrapNull().isDynamic() || tb.unwrapNull().isNumeric()))
+								|| (tb.unwrapNull().isDynamic() && ta.unwrapNull().isNumeric());
+							// Haxe division always produces Float, also for two Int operands (`7 / 2` is 3.5).
+							if (dynamicOperand)
+								TyType.fromHintText("Float"); else unified != null && unified.isNumeric() ? (op == "/" ? TyType.fromHintText("Float") : unified) : TyType.unknown();
 						}
 					case _:
 						inferExprType(a, scope, ctx, pos);
@@ -4381,6 +4905,7 @@ class TyperStage {
 			case EArrayDecl(values):
 				final acceptsArrayElement = (expected:TyType,
 					actual:TyType) -> actual.isDynamic()
+						|| TyFunctionConstraint.accepts(expected.unwrapNull(), actual)
 						|| TyStructuralArgument.compatibility(ctx.getIndex(), expected, actual) == Compatible
 						|| TyImplicitConversionPlan.select(ctx.getIndex(), expected.unwrapNull(), actual.unwrapNull()) != null
 						|| (actual.isNullLiteral() && TyNullArgument.acceptsLiteral(expected, ctx.getIndex()));

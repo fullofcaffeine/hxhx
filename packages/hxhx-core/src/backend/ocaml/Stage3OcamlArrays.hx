@@ -18,13 +18,19 @@ function callArgument(argument:Null<TypedBackendCallArgument>, value:String):Nul
 	return "(Obj.obj (" + value + ") : _ HxBootArray.t)";
 }
 
-/** Limit indexed lowering to the runtime array carrier and an exact integer index. */
+/**
+	Limit indexed lowering to the runtime array carrier and an Int index. A
+	`Null<Int>` index is admitted too; `access` unwraps it (null raises Null
+	Access). Before, such an index fell outside this lowering and a write
+	`a[i] = 5` was dropped.
+ */
 function supportsAccess(occurrence:TypedBackendArrayAccess):Bool {
 	final type = TyAliasExpansion.revealNonNullable(occurrence.receiverType);
 	final identity = type.getNominalIdentity();
 	return ((identity != null && identity.getCanonicalName() == "Array")
 		|| type.isDynamic())
-		&& occurrence.indexType.getSemanticKey() == "primitive:Int";
+		&& (occurrence.indexType.getSemanticKey() == "primitive:Int"
+			|| Stage3OcamlNullablePrimitive.innerPrimitive(occurrence.indexType) == Stage3OcamlNullablePrimitive.INT);
 }
 
 /**
@@ -80,11 +86,14 @@ function access(occurrence:TypedBackendArrayAccess, emit:HxExpr->String, names:S
 			final value = names.internalName("__hx_indexed_value");
 			final dynamicSlot = type.isDynamic() || (type.getTypeArguments().length == 1 && type.getTypeArguments()[0].isDynamic());
 			final stored = dynamicSlot ? "(Obj.magic (" + Stage3OcamlObjects.store(occurrence.valueType, value) + "))" : value;
+			// `floats[i] = count` stores, and returns, the Int value promoted to Float.
+			final element = type.getTypeArguments().length == 1 ? type.getTypeArguments()[0] : null;
+			final rendered = emit(occurrence.value);
 			prefix
 			+ "let "
 			+ value
 			+ " = ("
-			+ emit(occurrence.value)
+			+ Stage3OcamlNumericWidening.toFloatDestination(occurrence.valueType, element, rendered)
 			+ ") in ignore (HxBootArray.set "
 			+ receiver
 			+ " "
@@ -95,17 +104,42 @@ function access(occurrence:TypedBackendArrayAccess, emit:HxExpr->String, names:S
 			+ value
 			+ ")";
 		case Compound(op):
-			if (occurrence.resultType.getSemanticKey() != "primitive:Int" || occurrence.valueType.getSemanticKey() != "primitive:Int")
+			// `ints[i] += n` keeps Int arithmetic. `floats[i] += n` uses Float
+			// arithmetic and promotes an Int right operand (`floats[0] += count()`).
+			final valueKey = occurrence.valueType.getSemanticKey();
+			final floatUpdate = occurrence.resultType.getSemanticKey() == "primitive:Float"
+				&& (valueKey == "primitive:Float" || valueKey == "primitive:Int");
+			if (!floatUpdate && (occurrence.resultType.getSemanticKey() != "primitive:Int" || valueKey != "primitive:Int"))
 				throw "OCaml indexed compound update requires a supported exact numeric operation";
-			final operation = switch op {
-				case "+=": "HxInt.add";
-				case "-=": "HxInt.sub";
-				case "*=": "HxInt.mul";
-				case _: throw "unsupported OCaml indexed compound operation: " + op;
-			};
 			final old = names.internalName("__hx_indexed_old");
 			final right = names.internalName("__hx_indexed_right");
 			final result = names.internalName("__hx_indexed_result");
+			final combined = if (floatUpdate) {
+				switch op {
+					case "+=": old + " +. " + right;
+					case "-=": old + " -. " + right;
+					case "*=": old + " *. " + right;
+					case "/=": old + " /. " + right;
+					case "%=": "mod_float " + old + " " + right;
+					case _: throw "unsupported OCaml indexed Float compound operation: " + op;
+				}
+			} else {
+				switch op {
+					case "+=": "HxInt.add " + old + " " + right;
+					case "-=": "HxInt.sub " + old + " " + right;
+					case "*=": "HxInt.mul " + old + " " + right;
+					// Haxe Int `%` keeps the sign of the dividend, like OCaml's `rem`.
+					case "%=": "HxInt.rem " + old + " " + right;
+					case _ if (Stage3OcamlLocalCompoundValue.bitwiseFunction(op) != null):
+						Stage3OcamlLocalCompoundValue.bitwiseFunction(op)
+						+ " "
+						+ old
+						+ " "
+						+ right;
+					case _: throw "unsupported OCaml indexed compound operation: " + op;
+				}
+			};
+			final rendered = emit(occurrence.value);
 			prefix
 			+ "let "
 			+ old
@@ -116,15 +150,11 @@ function access(occurrence:TypedBackendArrayAccess, emit:HxExpr->String, names:S
 			+ " in let "
 			+ right
 			+ " = ("
-			+ emit(occurrence.value)
+			+ (floatUpdate && valueKey == "primitive:Int" ? Stage3OcamlNumericWidening.promote(rendered) : rendered)
 			+ ") in let "
 			+ result
 			+ " = "
-			+ operation
-			+ " "
-			+ old
-			+ " "
-			+ right
+			+ combined
 			+ " in HxBootArray.set "
 			+ receiver
 			+ " "
@@ -157,7 +187,10 @@ function literal(occurrence:TypedBackendAggregateOccurrence, emit:HxExpr->String
 	for (index in 0...children.length) {
 		final name = names.internalName("__hx_array_element_" + index);
 		final value = emit(children[index]);
-		final stored = arguments[0].isDynamic() ? Stage3OcamlObjects.store(types[index], value) : value;
+		// `[1, 2.5]` is an Array<Float>: its Int element is promoted before storage.
+		final adapted = TyFunctionConstraint.isFunctionConstraint(arguments[0]) ? Stage3OcamlFunctionBoundary.adapt(types[index], value, names) : null;
+		final stored = adapted != null ? adapted : arguments[0].isDynamic() ? Stage3OcamlObjects.store(types[index],
+			value) : Stage3OcamlNumericWidening.toFloatDestination(types[index], arguments[0], value);
 		bindings.push("let " + name + " = (" + stored + ") in ");
 		// HxArray's polymorphic container also carries the target null sentinel.
 		// The typed element contract above owns each value before that erasure.

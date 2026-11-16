@@ -102,6 +102,73 @@ class TyperContext {
 	public function hasLoader():Bool
 		return loader != null;
 
+	/**
+		Whether typing can prove that a name is missing: a loader whose class
+		path includes the standard library (it can find `StdTypes`), in a request
+		without `--macro` initializers or loaded build macros. A root-only index,
+		or a loader over only a test's own sources, omits the standard library, and
+		a macro can define types this typer does not see, so an unresolved name
+		there is no evidence that the program is wrong.
+	**/
+	public function hasDeclarationLoader():Bool {
+		if (loader == null)
+			return false;
+		return loader.declarationsAreComplete() && (index == null || !index.hasBuildMacro());
+	}
+
+	/**
+		Whether `name` names a module in this package, such as a module that
+		declares only module-level functions (`CounterOps.total`).
+	**/
+	public function namesModule(name:String):Bool {
+		if (loader == null)
+			return false;
+		// Only a module of the current package: upstream accepts `CounterOps.total()`
+		// for a same-package module of module-level functions, but rejects an
+		// imported one (`import pack.Ops; Ops.total()`: "Type not found : Ops").
+		final qualified = packagePath == null || packagePath.length == 0 ? name : packagePath + "." + name;
+		return loader.hasModuleSource(qualified);
+	}
+
+	/**
+		Whether an import directive of this module introduces `name`, as
+		`import haxe.macro.Context;` introduces `Context`. Such a name is
+		declared by the import even when typing cannot load its module here, for
+		example a macro-only module referenced from `#if macro` code.
+	**/
+	public function importsLocalName(name:String):Bool {
+		if (directives == null)
+			return false;
+		for (directive in directives)
+			if (HxModuleDirective.getImportedLocalName(directive) == name
+				&& !importedModuleLacksType(HxModuleDirective.getPath(directive), name))
+				return true;
+		return false;
+	}
+
+	/**
+		Whether `import path` loaded a module that declares no type named `name`.
+		Upstream rejects `import pack.Ops; Ops.total()` with "Type not found : Ops"
+		when `pack.Ops` holds only module-level functions. A module this request
+		did not load (for example a macro-only module referenced from `#if macro`
+		code) cannot prove that, so it still counts as introducing the name.
+	**/
+	public function importedModuleLacksType(path:String, name:String):Bool {
+		if (index == null || index.getRegisteredModule(path) == null)
+			return false;
+		for (info in index.getByModulePath(path))
+			if (info.getShortName() == name)
+				return false;
+		return index.resolveTypeDeclaration(path, {
+			packagePath: packagePath,
+			modulePath: modulePath,
+			directives: [],
+			filePath: filePath,
+			position: HxPos.unknown(),
+			parameters: []
+		}) == null;
+	}
+
 	public function resolveType(typePath:String):Null<TyNominalInfo> {
 		if (index == null)
 			return null;
@@ -323,11 +390,15 @@ class TyperContext {
 		final provider = expected == null || expected.hasUnknownComponent() ? null : expectedEnumOwner(index, expected);
 		final field = provider == null ? null : provider.fieldInfo(name);
 		final identity = field == null ? null : field.getType().getNominalIdentity();
-		return field != null
+		final selected = field != null
 			&& field.getIsStatic()
 			&& field.getIsPublic()
 			&& identity != null
 			&& identity.getCanonicalName() == provider.getIdentity().getCanonicalName() ? field : null;
+		// A name typed elsewhere without this context is still declared (see TyUndeclaredName).
+		if (selected != null && index != null)
+			index.undeclaredValueNames(filePath).markContextual(name);
+		return selected;
 	}
 
 	/**
@@ -371,6 +442,30 @@ class TyperContext {
 				continue;
 			final field = provider.fieldInfo(name);
 			if (field == null || !field.getIsStatic() || !field.getIsPublic())
+				continue;
+			if (selected != null)
+				return null;
+			selected = field;
+		}
+		return selected;
+	}
+
+	/**
+		A bare value of an enum abstract declared in the current module, such as `One` for
+		`enum abstract EA(Int) { var One = 1; }`. Upstream Haxe 4.3.7 resolves it to type `EA`
+		without qualification. A name that two such abstracts both declare is ambiguous and
+		gives null.
+	**/
+	public function moduleEnumAbstractValueField(name:String):Null<TyFieldInfo> {
+		if (index == null || name == null || name.length == 0)
+			return null;
+		var selected:Null<TyFieldInfo> = null;
+		for (provider in index.getDeclaredByModulePath(modulePath)) {
+			if (!Std.isOfType(provider, TyAbstractInfo) || (cast provider : TyAbstractInfo).getEnumDomain() == null)
+				continue;
+			// Only declared values resolve bare: `public static var util` on the abstract does not.
+			final field = provider.fieldInfo(name);
+			if (field == null || !field.getIsStatic() || !field.getConstant().isEnumValue())
 				continue;
 			if (selected != null)
 				return null;

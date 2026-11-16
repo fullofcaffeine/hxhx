@@ -127,7 +127,7 @@ class TypedSwitchPatterns {
 						visit(child);
 				case PGuard(child, _) | PCapture(_, child) | PExtractor(_, child) | PUnsupportedPattern(child):
 					visit(child);
-				case PNull | PWildcard | PBool(_) | PString(_) | PInt(_) | PBind(_):
+				case PNull | PWildcard | PBool(_) | PString(_) | PInt(_) | PFloat(_) | PBind(_):
 			}
 		}
 		for (pattern in patterns)

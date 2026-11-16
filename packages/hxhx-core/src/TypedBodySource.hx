@@ -320,6 +320,7 @@ class TypedBodySource {
 			case PBool(value): PBool(value);
 			case PString(value): PString(value);
 			case PInt(value): PInt(value);
+			case PFloat(value): PFloat(value);
 			case PEnumValue(name): PEnumValue(name);
 		};
 	}
@@ -481,6 +482,8 @@ class TypedBodySource {
 
 	public static function expression(typedExpression:TypedExpr, ?catalog:TypedBackendLocalCatalog, ?projectionFacts:TypedBodyProjectionBuilder,
 			suppressCallableAscription:Bool = false, use:TypedBackendMethodOccurrence.TypedMethodUse = ValueRead):HxExpr {
+		if (projectionFacts != null)
+			projectionFacts.observeFunctionConstraintFlows(typedExpression);
 		final projected = projectExpression(typedExpression, catalog, projectionFacts, suppressCallableAscription, use);
 		if (projectionFacts != null)
 			projectionFacts.projectCollectionControl(typedExpression, projected);
@@ -603,7 +606,8 @@ class TypedBodySource {
 			case FieldRead: projectFieldRead(typedExpression, catalog, projectionFacts, use);
 			case NullSafeFieldRead: ENullSafeField(expression(expressions[0], catalog, projectionFacts), texts[0]);
 			case TraceCall:
-				ECall(EIdent("trace"), expressionTail(expressions, 0, catalog, projectionFacts));
+				final call:HxExpr = ECall(EIdent("trace"), expressionTail(expressions, 0, catalog, projectionFacts));
+				projectionFacts == null ? call : projectionFacts.projectTrace(typedExpression, call);
 			case Call:
 				if (expressions.length > 0 && expressions[0].getTag() == SuperValue) {
 					final arguments = expressionTail(expressions, 1, catalog, projectionFacts);
@@ -729,8 +733,17 @@ class TypedBodySource {
 			case MacroExpr: EMacroExpr(TypedSourceSyntax.expression(expressions[0]), texts.copy());
 			case MacroType: EMacroType(texts[0]);
 			case Lambda:
-				final lambda:HxExpr = ELambda(exactProjectedNames(catalog, typedExpression.getLocalBindings(), texts, "typed lambda"),
-					expression(expressions[0], catalog, projectionFacts), typedExpression.getLambdaSignature());
+				if (projectionFacts != null) {
+					final lambdaResult = typedExpression.getType().isFunction() ? typedExpression.getType().getFunctionReturn() : null;
+					projectionFacts.enterCallable(lambdaResult);
+					if (TyFunctionConstraint.reaches(lambdaResult, expressions[0].getType()))
+						projectionFacts.observeFunctionConstraintFlow("function result", typedExpression.getPosition());
+				}
+				final lambdaBody = expression(expressions[0], catalog, projectionFacts);
+				if (projectionFacts != null)
+					projectionFacts.exitCallable();
+				final lambda:HxExpr = ELambda(exactProjectedNames(catalog, typedExpression.getLocalBindings(), texts, "typed lambda"), lambdaBody,
+					typedExpression.getLambdaSignature());
 				ascribeCallable(projectionFacts == null ? lambda : projectionFacts.projectLambda(typedExpression, lambda), typedExpression,
 					suppressCallableAscription, projectionFacts);
 			case SwitchExpr:
@@ -762,8 +775,8 @@ class TypedBodySource {
 					value = projectionFacts.projectLocalWrite(catalog.projectedName(binding), binding, expressions[1], value);
 				}
 				final assignment:HxExpr = EBinop(typedExpression.getTag() == Assign ? "=" : texts[0], target, value);
-				projectionFacts == null ? assignment : projectionFacts.projectArrayAccess(typedExpression,
-					projectionFacts.projectObjectAccess(typedExpression, assignment));
+				projectionFacts == null ? assignment : projectionFacts.projectStringCompound(typedExpression,
+					projectionFacts.projectArrayAccess(typedExpression, projectionFacts.projectObjectAccess(typedExpression, assignment)));
 			case Ternary:
 				ETernary(condition(expressions[0], catalog, projectionFacts), expression(expressions[1], catalog, projectionFacts),
 					expression(expressions[2], catalog, projectionFacts));
@@ -827,6 +840,10 @@ class TypedBodySource {
 					&& !storageType.hasUnknownComponent() ? callableTypeHint(storageType,
 						typedInitializer == null ? null : callableSignature(typedInitializer)) : variableTypeHint(names[1], typedInitializer);
 				var initializer:Null<HxExpr> = null;
+				if (projectionFacts != null
+					&& expressions.length == 1
+					&& TypedFunctionConstraintFlows.localFlow(storageType, expressions[0].getType()))
+					projectionFacts.observeFunctionConstraintFlow("local variable", typedStatement.getPosition());
 				if (expressions.length > 0)
 					initializer = expression(expressions[0], catalog, projectionFacts);
 				final projectedName = exactProjectedName(catalog, typedStatement.getLocalBindings(), names[0], "typed variable statement");
@@ -871,7 +888,10 @@ class TypedBodySource {
 				final operand = expression(expressions[0], catalog, projectionFacts);
 				SThrow(projectionFacts == null ? operand : projectionFacts.projectThrownValue(expressions[0], operand), position);
 			case ReturnVoid: SReturnVoid(position);
-			case Return: SReturn(expression(expressions[0], catalog, projectionFacts), position);
+			case Return:
+				if (projectionFacts != null && TyFunctionConstraint.reaches(projectionFacts.currentReturnType(), expressions[0].getType()))
+					projectionFacts.observeFunctionConstraintFlow("function result", typedStatement.getPosition());
+				SReturn(expression(expressions[0], catalog, projectionFacts), position);
 			case Expression: SExpr(expression(expressions[0], catalog, projectionFacts), position);
 		};
 		return projectionFacts == null ? projected : projectionFacts.projectStatementControl(typedStatement, projected);
@@ -945,7 +965,9 @@ class TypedBodySource {
 			declaration == null ? TyType.fromHintText(HxFunctionDecl.getReturnTypeHint(typedFunction.getSourceDeclaration())) : declaration.getSignature()
 				.getReturnType();
 		};
+		projectionFacts.enterCallable(returnType);
 		final projectedDeclaration = functionDeclaration(typedFunction, locals, projectionFacts);
+		projectionFacts.exitCallable();
 		final facts = projectionFacts.seal(TypedRuntimeTypeSource.inFunction(projectedDeclaration), TypedConstructorSource.inFunction(projectedDeclaration));
 		return new TypedBackendFunctionProjection(source, typedFunction, projectedDeclaration, locals, returnType, fields, parameterBindingIdentities,
 			facts.runtimeTypes, facts.constructors, projectionFacts.getAggregates(), projectionFacts.getFields(), projectionFacts.getCasts(),
@@ -954,7 +976,11 @@ class TypedBodySource {
 				arrays: projectionFacts.getArrayAccesses(),
 				collectionControls: projectionFacts.getCollectionControls(),
 				equalities: projectionFacts.getEqualities(),
+				stringConcats: projectionFacts.getStringConcats(),
+				traces: projectionFacts.getTraces(),
+				functionConstraintFlows: projectionFacts.getFunctionConstraintFlows(),
 				bitwiseOperations: projectionFacts.getBitwiseOperations(),
+				arithmeticOperations: projectionFacts.getArithmeticOperations(),
 				conditions: projectionFacts.getConditions(),
 				namedPatterns: projectionFacts.getNamedPatterns(),
 				thisType: projectionFacts.getThisType()
@@ -998,6 +1024,8 @@ class TypedBodySource {
 		final identity = field.getCanonicalKey();
 		final revision = CompilerTypedTreeRevision.expression(field.getCanonicalKey(), typedExpression);
 		final projectionFacts = new TypedBodyProjectionBuilder(identity, revision);
+		if (TyFunctionConstraint.reaches(field.getType(), typedExpression.getType()))
+			projectionFacts.observeFunctionConstraintFlow("field initializer", typedExpression.getPosition());
 		final projected = [for (entry in entries) expression(entry, locals, projectionFacts)];
 		final body:HxExpr = lowered.steps.length == 0
 			&& lowered.value != null ? projected[0] : ELoweredControl(Initializer(lowered.value != null), identity, projected,
@@ -1011,7 +1039,11 @@ class TypedBodySource {
 				arrays: projectionFacts.getArrayAccesses(),
 				collectionControls: projectionFacts.getCollectionControls(),
 				equalities: projectionFacts.getEqualities(),
+				stringConcats: projectionFacts.getStringConcats(),
+				traces: projectionFacts.getTraces(),
+				functionConstraintFlows: projectionFacts.getFunctionConstraintFlows(),
 				bitwiseOperations: projectionFacts.getBitwiseOperations(),
+				arithmeticOperations: projectionFacts.getArithmeticOperations(),
 				conditions: projectionFacts.getConditions(),
 				namedPatterns: projectionFacts.getNamedPatterns()
 			});

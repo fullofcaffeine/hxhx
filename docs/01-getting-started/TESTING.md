@@ -57,16 +57,26 @@ npm test
 `npm test` is the complete serialized regression inventory, not the command to
 rerun after every small edit. Core CI routes that inventory by change risk and
 then reports one `Tests` result that fails when any required check fails or is
-incomplete. The inventory has 177 named commands. Q2 target/compiler changes
+incomplete. The inventory has 294 named commands. Q2 target/compiler changes
 run compiler foundations, packaging, five focused groups, two dedicated Neko groups,
-macro-host integration, portable fixtures, and snapshots/examples, plus native/plugin smoke checks.
+a group of fast tests that CI did not run before the reachability audit
+(`compiler-focused-audit`), macro-host integration, portable fixtures, and
+snapshots/examples, plus native/plugin smoke checks.
 Q3 high-risk, scheduled, manual, and release work also runs `hxhx-targets`,
-which treats the compiler as a large application. To reproduce a group locally:
+which treats the compiler as a large application, and
+the `compiler-focused-audit-slow*` shards, the slow tests from that audit (dune-building
+`reflaxe.ocaml` checks, long Neko, JS and call-conversion runs, and the target-reuse memory modes). The
+semantic-diff tool tests run in the scheduled `Stdlib / Semantic Diff`
+workflow instead. A shard row may set `command_timeout_seconds`; a command
+that runs longer is stopped and reported by name, before the job limit. To reproduce a group locally:
 
 ```bash
 npm run test:ci:shard -- --shard compiler-foundation
 npm run test:ci:shard -- --shard compiler-focused-5
 npm run test:ci:shard -- --shard compiler-focused-macro-plugins
+npm run test:ci:shard -- --shard compiler-focused-6
+npm run test:ci:shard -- --shard compiler-focused-7
+npm run test:ci:shard -- --shard compiler-focused-8
 npm run test:ci:shard -- --shard compiler-focused-neko-runtime
 npm run test:ci:shard -- --shard compiler-focused-neko-locals
 npm run test:ci:shard -- --shard macro-host-integration
@@ -84,6 +94,18 @@ The five project-macro and syntax-wire commands run in their own
 `compiler-focused-5` with the C++ runtime-type checks, and that job needed
 28-39 minutes of its 40-minute limit.
 
+The November 2026 consolidation (PR #193) added eleven Stage3 numeric, text
+and EReg commands to `compiler-focused-2` and three structural-method commands
+to `compiler-focused-1`, which then reached their 40-minute limits. Those
+commands, plus the two slowest original `compiler-focused-2` commands
+(`test:m14:python-runtime-type-operands` and `test:m14:stage3-interface-calls`),
+run in `compiler-focused-6`, and `compiler-focused-7` holds the three
+structural-method commands plus `test:m14:stage3-sys-file-ops`, which grew when
+the Stage3 Reflect and Type checks joined it.
+The fourteen Stage3 text, typing and runtime commands that the consolidation
+added to `compiler-foundation` run in `compiler-focused-8`, so the foundation
+group stays within its 60-minute limit.
+
 `test:m14:runtime-type-operands` remains the full serial command for its 52
 checks. CI schedules its shared and Neko groups separately and gives each C++
 runtime-type check its own command. A failed Map test therefore does not hide
@@ -93,6 +115,34 @@ The inventory guard compares this split with the original command list and
 rejects missing, duplicated, or reordered checks. New runner durations remain
 unmeasured until a complete hosted run finishes; every focused job keeps its
 40-minute limit.
+
+### Every test must be reachable from CI
+
+A test that CI never runs breaks without anyone noticing. `npm run
+guard:test-entry-reachability` lists every test entry point: each top-level
+`test/*.hxml` file, each `test:*` npm script, each `scripts/ci/*-test.js` file,
+and each portable fixture directory. It then follows references from the CI
+starting points: the `npm test` commands, and the scripts and files that the
+`.github/workflows/*.yml` jobs name. A reference is an `npm run <name>` call, a
+quoted script name, or a repository path such as `test/foo.hxml`. A wrapper
+script counts as reachable only when CI runs its exact commands: a copy that
+adds an environment variable, define, or argument is a variant CI never runs.
+
+When you add a test, do one of these:
+
+- add its `npm run <script>` to the `npm test` aggregate and assign it to a
+  shard in `scripts/ci/core-test-shards.json`;
+- run it from another reachable script, runner, or `.hxml` file; or
+- if it must stay out of CI (for example, it needs a sibling checkout, hxcpp,
+  or a full upstream suite), list it in
+  `scripts/ci/test-entry-reachability.json` with a reason and an owning Bead.
+  A file that only a listed script runs, such as its `.hxml` file, shares that
+  entry and needs no entry of its own. A script always needs its own entry.
+
+The guard also fails when a listed test becomes reachable, when a listed test
+no longer exists, and when an npm script runs a `test/` or `scripts/` file that
+does not exist. Run `node scripts/ci/test-entry-reachability.js
+--list-unreachable` to print the current unreachable entries.
 
 For the ordinary inner loop, prefer the narrow `test:*` or `guard:*` command
 that owns the behavior you changed, then broaden to its shard and finally to

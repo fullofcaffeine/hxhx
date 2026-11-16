@@ -92,7 +92,7 @@ class RuntimeSourceManifestFixture {
 	static function testValidManifest(runtimeDirectory:String):Void {
 		final first = RuntimeSourceManifest.load(runtimeDirectory);
 		final second = RuntimeSourceManifest.load(runtimeDirectory);
-		assertTrue(first.modules.length == 32, "the locked catalog should own all 32 runtime modules");
+		assertTrue(first.modules.length == 33, "the locked catalog should own all 33 runtime modules");
 		assertTrue(first.revision == second.revision, "unchanged runtime sources should have one deterministic revision");
 		assertTrue(first.revision.startsWith("sha256:"), "the runtime revision should identify its digest algorithm");
 		final dispatchClosure = RuntimeSourceManifest.resolveClosure(first, ["HxMethodDispatch"], "portable", false);
@@ -138,8 +138,8 @@ class RuntimeSourceManifestFixture {
 		],
 			[for (entry in dynamicClosure) entry.module],
 			"Dynamic text behavior should receive the anonymous-value and class-registry runtime owners it calls");
-		assertTrue(RuntimeSourceManifest.fullRoots(first, "portable", false).length == 27,
-			"application builds should include all 27 application modules and exclude the five tooling modules");
+		assertTrue(RuntimeSourceManifest.fullRoots(first, "portable", false).length == 28,
+			"application builds should include all 28 application modules and exclude the five tooling modules");
 	}
 
 	static function testChangedSource(runtimeDirectory:String, root:String):Void {

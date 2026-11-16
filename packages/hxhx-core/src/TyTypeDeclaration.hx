@@ -14,12 +14,28 @@ typedef TyTypeResolutionContext = {
 	final parameters:Array<TyTypeParameterId>;
 };
 
+/**
+	How many type arguments an explicit application of a class, interface, enum or
+	abstract may supply. `required` excludes trailing parameters with a default, so
+	`class Def<A, B = String>` accepts `Def<Int>` and `Def<Int, Bool>`.
+	`unbounded` removes the upper limit `total` would otherwise set, for a
+	`@:genericBuild` class with a parameter named `Rest`: `class T<B, Rest>` accepts
+	`T<Int>` and `T<Int, String, Bool>`, because its build macro receives the arguments.
+**/
+typedef TyNominalArity = {
+	final total:Int;
+	final required:Int;
+	final unbounded:Bool;
+};
+
 /** Named header facts shared by declaration lookup and type instantiation. */
 typedef TyTypeDeclarationInput = {
 	final canonicalName:String;
 	final visibility:HxVisibility;
 	final kind:TyTypeDeclarationKind;
 	final context:TyTypeResolutionContext;
+	final ?nominalArity:TyNominalArity;
+	final ?usesBuildMacro:Bool;
 };
 
 /**
@@ -35,9 +51,13 @@ class TyTypeDeclaration {
 	final kind:TyTypeDeclarationKind;
 	final context:TyTypeResolutionContext;
 	final parameterIds:Array<TyTypeParameterId>;
+	final nominalArity:Null<TyNominalArity>;
+	final usesBuildMacro:Bool;
 
 	public function new(input:TyTypeDeclarationInput) {
 		canonicalName = input.canonicalName;
+		nominalArity = input.nominalArity;
+		usesBuildMacro = input.usesBuildMacro == true;
 		visibility = input.visibility;
 		kind = input.kind;
 		context = copyContext(input.context);
@@ -73,6 +93,14 @@ class TyTypeDeclaration {
 
 	public function getContext():TyTypeResolutionContext
 		return copyContext(context);
+
+	/** Type-argument counts for a nominal declaration; null for an alias or an unknown header. **/
+	public function getNominalArity():Null<TyNominalArity>
+		return nominalArity;
+
+	/** Whether `@:build`, `@:autoBuild` or `@:genericBuild` can change this declaration's members. **/
+	public function getUsesBuildMacro():Bool
+		return usesBuildMacro;
 
 	/** Exact alias binders are available with the header, before target resolution. */
 	public function getParameterIds():Array<TyTypeParameterId>

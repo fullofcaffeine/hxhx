@@ -1,9 +1,9 @@
 package backend.ocaml;
 
 /**
-	Makes ordinary Int field updates, String field appends, and `++`/`--` on
-	Int and Float fields, anonymous-structure fields, and array elements
-	explicit for native OCaml.
+	Makes ordinary Int and Float field updates, String field appends, and
+	`++`/`--` on Int and Float fields, on anonymous-structure fields, and on
+	array elements explicit for native OCaml.
 
 	One receiver capture and one old-value capture preserve effects and postfix
 	results. Exact field facts restrict this pass to ordinary instance storage;
@@ -52,7 +52,7 @@ private function lowerExpression(expression:TypedExpr, allocator:TyCompilerTempo
 	final fieldName = structural ? operand.getTexts()[0] : field.getName();
 	final receiverBinding = receiver == null ? null : allocator.allocate("receiver", receiver.getType());
 	final oldBinding = allocator.allocate("old", valueType);
-	final nextBinding = allocator.allocate("next", valueType);
+	final nextBinding = allocator.allocate("next", stepType);
 	function read(binding:TyLocalBinding):TypedExpr
 		return TypedExpr.localRead(binding.getSourceName(), binding.getType(), position, binding);
 	function capture(binding:TyLocalBinding, value:TypedExpr):TypedExpr
@@ -61,19 +61,29 @@ private function lowerExpression(expression:TypedExpr, allocator:TyCompilerTempo
 	final one = key == "primitive:Int" ? TypedExpr.intLiteral(1, stepType, position) : TypedExpr.floatLiteral(1.0, stepType, position);
 	final next = TypedExpr.binary(op == HxUnaryOperator.Increment ? "+" : "-", read(oldBinding), one, stepType, position);
 	final sequence = receiverBinding == null ? [] : [capture(receiverBinding, receiver)];
+	final result = read(rebuilt.getUnaryFixity() == HxUnaryFixity.Postfix ? oldBinding : nextBinding);
 	return TypedExpr.block(sequence.concat([
 		capture(oldBinding, place),
-		capture(nextBinding, TypedExpr.assign(place, next, valueType, position)),
-		read(rebuilt.getUnaryFixity() == HxUnaryFixity.Postfix ? oldBinding : nextBinding)
-	]), valueType, position);
+		capture(nextBinding, TypedExpr.assign(place, next, stepType, position)),
+		result
+	]), result.getType(), position);
 }
 
 /**
 	The type `++`/`--` computes in for a slot of type `type`: `Int` or `Float`,
-	also when the slot is `Null<Int>` or `Null<Float>`. The new value is stored
-	back with the slot's own type, so a nullable slot is re-boxed by the
-	ordinary assignment. A null value throws "Null Access" when it is read for
-	the arithmetic. Returns null for every other type.
+	also when the slot is `Null<Int>` or `Null<Float>`. Returns null for every
+	other type. A null value throws "Null Access" when it is read for the
+	arithmetic.
+
+	Each lowered binding keeps the type of the value it actually holds. The old
+	value is read from the slot, so it has the slot type: for a `Null<Int>` slot
+	it is the nullable carrier (`Obj.t` natively). The new value is computed in
+	the stepped type, and the assignment that stores it yields that same plain
+	`int` or `float`, so the assignment and the `next` binding have the stepped
+	type. The block then has the type of the binding it yields: the slot type for
+	postfix and the stepped type for prefix. Typing the prefix result as
+	`Null<Int>` while it held a plain `int` made a later read into an `Int`
+	local unwrap a value that was never boxed, which OCaml rejects.
 **/
 private function steppedType(type:TyType):Null<TyType> {
 	final inner = type.isNullable() ? type.unwrapNull() : type;
@@ -116,23 +126,83 @@ private function lowerIndexedStep(expression:TypedExpr, operand:TypedExpr, alloc
 	final arrayBinding = allocator.allocate("array", array.getType());
 	final indexBinding = allocator.allocate("index", index.getType());
 	final oldBinding = allocator.allocate("old", elementType);
-	final nextBinding = allocator.allocate("next", elementType);
+	final nextBinding = allocator.allocate("next", stepType);
 	final place = TypedExpr.arrayAccess(read(arrayBinding), read(indexBinding), elementType, position);
 	final one = key == "primitive:Int" ? TypedExpr.intLiteral(1, stepType, position) : TypedExpr.floatLiteral(1.0, stepType, position);
 	final next = TypedExpr.binary(expression.getUnaryOperator() == HxUnaryOperator.Increment ? "+" : "-", read(oldBinding), one, stepType, position);
+	final result = read(expression.getUnaryFixity() == HxUnaryFixity.Postfix ? oldBinding : nextBinding);
+	// Binding types follow the values they hold; see `steppedType`.
 	return TypedExpr.block([
 		capture(arrayBinding, array),
 		capture(indexBinding, index),
 		capture(oldBinding, place),
-		capture(nextBinding, TypedExpr.assign(place, next, elementType, position)),
-		read(expression.getUnaryFixity() == HxUnaryFixity.Postfix ? oldBinding : nextBinding)
-	], elementType, position);
+		capture(nextBinding, TypedExpr.assign(place, next, stepType, position)),
+		result
+	], result.getType(), position);
+}
+
+private function isBitwiseAssignment(assignment:String):Bool {
+	return switch assignment {
+		case "|=" | "&=" | "^=" | "<<=" | ">>=" | ">>>=": true;
+		case _: false;
+	};
 }
 
 /**
 	Capture the receiver and old value before the RHS, then return the written value.
-	Admits String `+=` appends and Int `+=`, `-=`, `*=` updates with an Int operand,
-	such as `state.index += value.length`; other operand types keep their owners.
+	Admits String `+=` appends, Int `+=`, `-=`, `*=`, `%=` and bitwise
+	`|= &= ^= <<= >>= >>>=` updates with an Int operand, such as
+	`state.index += value.length` or `flags.bits |= 2`, and Float `+=`, `-=`, `*=`, `/=`, `%=`
+	updates with an Int or Float operand, such as `cell.total += count()`. A
+	`Null<Int>` or `Null<Float>` operand counts as its inner type. The same forms
+	apply to a field of an anonymous structure.
+
+	Plain-storage compound updates on those places that are still unsupported,
+	such as a `Dynamic` right operand, stop compilation with a named error
+	(`isRefusedFieldCompound`). Other places, types, and operators keep their
+	existing owners.
+ */
+/**
+	Whether a compound update that this pass did not admit would otherwise reach
+	the emitter's `(Obj.magic 0)` placeholder, silently dropping the store.
+
+	Arithmetic `+=`, `-=`, `*=`, `/=`, `%=` count on a field of an anonymous
+	structure holding `Int`, `Float`, `String`, or a nullable of those, and on a
+	`Float` instance field. The six bitwise operators count on the same
+	anonymous-structure fields only. Abstract-typed fields are left alone because
+	operator overloads have their own lowering. Bitwise updates on instance
+	fields are not refused here: they are still dropped, as a known gap.
+ */
+private function isRefusedFieldCompound(assignment:String, valueType:TyType, structural:Bool):Bool {
+	final bitwise = isBitwiseAssignment(assignment);
+	if (!bitwise && assignment != "+=" && assignment != "-=" && assignment != "*=" && assignment != "/=" && assignment != "%=")
+		return false;
+	if (bitwise && !structural)
+		return false;
+	final inner = valueType.isNullable() ? valueType.unwrapNull() : valueType;
+	final key = inner.getSemanticKey();
+	if (structural)
+		return key == "primitive:Int" || key == "primitive:Float" || key == "primitive:String";
+	return valueType.getSemanticKey() == "primitive:Float";
+}
+
+/**
+	Capture the receiver and old value before the RHS, then return the written value.
+
+	Admits these updates on a mutable instance field or on a field of an anonymous
+	structure:
+
+	- String `+=` appends;
+	- Int `+=`, `-=`, `*=`, `%=` with an Int operand, such as `state.index += value.length`;
+	- Float `+=`, `-=`, `*=`, `/=`, `%=` with an Int or Float operand, such as
+	  `h.ratio -= 0.5` or `o.total += count()`;
+	- on an anonymous-structure Int field only, the bitwise `|=`, `&=`, `^=`,
+	  `<<=`, `>>=`, `>>>=` with an Int operand, such as `flags.mask |= 2`.
+
+	Plain-storage compound updates on those places that are still unsupported,
+	such as a `Dynamic` right operand, stop compilation with a named error
+	(`isRefusedFieldCompound`). Other places, types, and operators keep their
+	existing owners.
  */
 private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTemporaryAllocator):TypedExpr {
 	final children = expression.getExpressions();
@@ -141,20 +211,71 @@ private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTe
 	final assignment = expression.getTexts()[0];
 	final operand = children[0];
 	final field = operand.getFieldInfo();
+	// A field of an anonymous structure (`{n: 1}`) has no declared field facts; its
+	// read and write already lower through the structural object path.
+	final structural = field == null
+		&& operand.getTag() == FieldRead
+		&& TyAliasExpansion.revealNonNullable(operand.getExpressions()[0].getType()).isAnonymous();
 	final key = operand.getType().getSemanticKey();
 	final stringAppend = assignment == "+=" && key == "primitive:String";
-	final intUpdate = (assignment == "+=" || assignment == "-=" || assignment == "*=")
+	// The stored value keeps its type: `old op right` holds both checked types, so
+	// an Int or `Null<...>` operand is converted where the arithmetic is emitted.
+	final rightType = children[1].getType();
+	final rightKey = (rightType.isNullable() ? rightType.unwrapNull() : rightType).getSemanticKey();
+	final intUpdate = (assignment == "+="
+		|| assignment == "-="
+		|| assignment == "*="
+		|| assignment == "%="
+		|| Stage3OcamlLocalCompoundValue.isBitwiseOperator(assignment))
 		&& key == "primitive:Int"
-		&& children[1].getType().getSemanticKey() == "primitive:Int";
-	if ((!stringAppend && !intUpdate)
-		|| (operand.getTag() != FieldRead && operand.getTag() != NameRead)
-		|| field == null
-		|| field.getIsStatic()
-		|| field.getIsFinal()
-		|| expression.getType().getSemanticKey() != key
-		|| (field.getPropertyGet() != "" && field.getPropertyGet() != "default")
-		|| (field.getPropertySet() != "" && field.getPropertySet() != "default"))
+		&& rightKey == "primitive:Int";
+	final floatUpdate = (assignment == "+=" || assignment == "-=" || assignment == "*=" || assignment == "/=" || assignment == "%=")
+		&& key == "primitive:Float"
+		&& (rightKey == "primitive:Float" || rightKey == "primitive:Int");
+	// An optional structure field (`{?x:Int}`) has no native compound lowering:
+	// the typer leaves such a structure type unresolved, and the field holds a
+	// nullable value. Stop with a named error; before, the backend silently
+	// dropped the statement.
+	final receiverType = operand.getTag() == FieldRead ? TyAliasExpansion.revealNonNullable(operand.getExpressions()[0].getType()) : null;
+	final unresolvedStructure = receiverType != null
+		&& receiverType.isUnresolved()
+		&& StringTools.startsWith(receiverType.getDisplay(), "{");
+	if (field == null && ((structural && operand.getType().isNullable()) || unresolvedStructure))
+		throw "unsupported native OCaml compound assignment "
+			+ assignment
+			+ " on optional structure field `"
+			+ operand.getTexts()[0]
+			+ "` of "
+			+ (receiverType == null ? "an unknown structure" : receiverType.getDisplay())
+			+ (expression.getPosition() == null ? "" : " at " + expression.getPosition().toString())
+			+ " (haxe_ocaml-gaa3a)";
+	final plainInstanceField = field != null
+		&& !field.getIsStatic()
+		&& !field.getIsFinal()
+		&& (field.getPropertyGet() == "" || field.getPropertyGet() == "default")
+		&& (field.getPropertySet() == "" || field.getPropertySet() == "default");
+	if ((operand.getTag() != FieldRead && operand.getTag() != NameRead) || (!structural && !plainInstanceField))
 		return expression;
+	// Bitwise operators require an exact Int operand: `old op right` is only emitted
+	// through the Int runtime when both operands are concrete Ints.
+	final bitwiseUpdate = structural
+		&& isBitwiseAssignment(assignment)
+		&& key == "primitive:Int"
+		&& rightType.getSemanticKey() == "primitive:Int";
+	if ((!stringAppend && !intUpdate && !floatUpdate && !bitwiseUpdate) || expression.getType().getSemanticKey() != key) {
+		if (isRefusedFieldCompound(assignment, operand.getType(), structural))
+			throw "unsupported native OCaml compound assignment "
+				+ assignment
+				+ " on field `"
+				+ (structural ? operand.getTexts()[0] : field.getName())
+				+ "` of type "
+				+ operand.getType().getDisplay()
+				+ " with a right operand of type "
+				+ rightType.getDisplay()
+				+ (expression.getPosition() == null ? "" : " at " + expression.getPosition().toString())
+				+ " (refusing to emit a placeholder that would drop the update)";
+		return expression;
+	}
 	final valueType = operand.getType();
 	final position = expression.getPosition();
 	function read(binding:TyLocalBinding):TypedExpr
@@ -167,14 +288,15 @@ private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTe
 		final receiver = operand.getExpressions()[0];
 		final receiverBinding = allocator.allocate("receiver", receiver.getType());
 		sequence.push(capture(receiverBinding, receiver));
-		place = TypedExpr.fieldRead(read(receiverBinding), field.getName(), valueType, position, field);
+		place = structural ? TypedExpr.fieldRead(read(receiverBinding), operand.getTexts()[0], valueType,
+			position) : TypedExpr.fieldRead(read(receiverBinding), field.getName(), valueType, position, field);
 	}
 	final oldBinding = allocator.allocate("old", valueType);
 	final rightBinding = allocator.allocate("right", children[1].getType());
 	final nextBinding = allocator.allocate("next", valueType);
 	sequence.push(capture(oldBinding, place));
 	sequence.push(capture(rightBinding, children[1]));
-	final next = TypedExpr.binary(assignment.substr(0, 1), read(oldBinding), read(rightBinding), valueType, position);
+	final next = TypedExpr.binary(assignment.substr(0, assignment.length - 1), read(oldBinding), read(rightBinding), valueType, position);
 	sequence.push(capture(nextBinding, TypedExpr.assign(place, next, valueType, position)));
 	sequence.push(read(nextBinding));
 	return TypedExpr.block(sequence, valueType, position);

@@ -29,6 +29,22 @@ class LazyTypeLoader {
 	public function isMacroModule(_modulePath:String, _filePath:String):Bool
 		return false;
 
+	/** Whether a module source exists on the class path; false without a request. */
+	public function hasModuleSource(_modulePath:String):Bool
+		return false;
+
+	/** Whether the class path includes the standard library; false without a request. */
+	public function hasStandardLibrary():Bool
+		return false;
+
+	/**
+		Whether a failed name lookup proves the name is undeclared: the class path
+		includes the standard library and no initialization macro can add
+		declarations that typing would not see. False without a request.
+	**/
+	public function declarationsAreComplete():Bool
+		return false;
+
 	/** Make a source declaration available without promising that it denotes a class. */
 	public function ensureDeclarationAvailable(_path:String, _context:TyTypeDeclaration.TyTypeResolutionContext):Null<TyTypeDeclaration>
 		return null;

@@ -163,6 +163,9 @@ class CompilerTypedTreeRevision {
 			case PInt(value):
 				out.push("pattern:int");
 				out.push(Std.string(value));
+			case PFloat(value):
+				out.push("pattern:float");
+				out.push(value);
 			case PEnumValue(name):
 				out.push("pattern:enum-value");
 				out.push(name);

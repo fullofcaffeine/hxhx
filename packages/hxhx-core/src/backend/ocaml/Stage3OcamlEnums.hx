@@ -60,6 +60,25 @@ class Stage3OcamlEnums {
 		return owner == null ? null : owner.runtimeName;
 	}
 
+	/**
+		The OCaml value of one constructor of an enum emitted by this request:
+		the singleton value, or the function that builds a payload constructor.
+		The constructor must be at its declared Haxe index, so a runtime that
+		classifies values by index builds the constructor it means.
+	 */
+	public function constructorValue(owner:String, constructor:String, index:Int, currentModule:String):String {
+		final plan = owners.get(owner);
+		if (plan == null)
+			throw "OCaml enum constructor requires its emitted enum: " + owner;
+		for (candidate in plan.constructors)
+			if (candidate.name == constructor) {
+				if (candidate.index != index)
+					throw "OCaml enum constructor " + owner + "." + constructor + " is not at index " + index;
+				return (plan.outputModule == currentModule ? "" : plan.outputModule + ".") + candidate.targetName;
+			}
+		throw "OCaml enum " + owner + " has no constructor " + constructor;
+	}
+
 	/** Match only the enum and constructor admitted from the selected typed declaration. */
 	public function patternCondition(selected:TypedNamedPattern, value:String):String {
 		return switch selected.getKind() {
@@ -80,6 +99,14 @@ class Stage3OcamlEnums {
 				+ index
 				+ ")";
 			case _: throw "OCaml guarded constructor test requires an ordinary enum";
+		};
+	}
+
+	static function isBoolPayload(payload:Stage3OcamlEnumPayload):Bool {
+		return switch payload {
+			case NativeBool: true;
+			case NullableValue(value): isBoolPayload(value);
+			case _: false;
 		};
 	}
 
@@ -141,6 +168,14 @@ class Stage3OcamlEnums {
 			final layout = types.length == 0 ? "HxType.EnumImmediate " + immediateTag++ : "HxType.EnumBlock " + blockTag++;
 			out.push("let () = HxType.register_enum_ctor_layout " + quote(owner.runtimeName) + " " + quote(constructor.name) + " " + constructor.index
 				+ " (" + layout + ")");
+			// A Bool payload is a raw OCaml bool; tell enum text which positions hold one.
+			final bools = [
+				for (index in 0...constructor.payloads.length)
+					if (isBoolPayload(constructor.payloads[index].storage)) Std.string(index)
+			];
+			if (bools.length > 0)
+				out.push("let () = HxDynamic.register_enum_bool_arguments " + quote(owner.runtimeName) + " " + quote(constructor.name) + " ["
+					+ bools.join("; ") + "]");
 		}
 		out.push("let () = ignore (HxType.enum_ " + quote(owner.runtimeName) + ")");
 		return out.join("\n") + "\n";

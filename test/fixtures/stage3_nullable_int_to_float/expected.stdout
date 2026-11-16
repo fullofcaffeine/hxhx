@@ -1,0 +1,23 @@
+field 3.25
+nullable float field 1.75
+push 3.25 1.75
+index write 3.5
+return 3.25
+argument 1.5
+local 3.5
+literal 4.5
+write 6.5
+nullable literal 6.5
+optional literal true
+optional write true
+optional present 3.25
+nullable array 3.25 true
+nullable array write 3.5 3.5
+nullable field 3.25
+nullable field null true
+nullable field int 4.5
+nullable anon 3.25
+nullable anon null true
+nullable local 3.25
+int literal element 2.5 2.5
+int literal field 3.5

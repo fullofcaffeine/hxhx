@@ -4,6 +4,13 @@ package backend.ocaml;
 function store(type:TyType, value:String):String {
 	if (type.isUnknown())
 		throw "OCaml object storage requires an exact value type";
+	// A Null<Bool> carrier holds a raw OCaml bool, which Dynamic storage would
+	// later print as 1 or 0. Box a present value; null and an existing box stay.
+	if (type.isNullable() && type.unwrapNull().getSemanticKey() == "primitive:Bool")
+		return "(let __hx_nullable_bool = Obj.repr ("
+			+ value
+			+
+			") in if HxRuntime.is_null __hx_nullable_bool || HxRuntime.is_boxed_bool __hx_nullable_bool then __hx_nullable_bool else HxRuntime.box_bool (Obj.obj __hx_nullable_bool))";
 	final carrier = type.getSemanticKey() == "primitive:Bool" ? OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ExactBool : type.isDynamic() ? OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.DynamicValue : OcamlDynamicOperatorLowering.OcamlDynamicArgumentCarrier.ConcreteValue;
 	return OcamlDynamicOperatorLowering.callArgument("Dynamic", carrier, value);
 }
@@ -25,6 +32,19 @@ function equality(equal:Bool, left:String, right:String, names:Stage3OcamlLocalN
 		+ " (Obj.repr " + rightName + "))";
 }
 
+/**
+	The representation a structure field stores a value in. Structure fields
+	are erased `Obj.t` slots, so a nullable value entering a Float field keeps
+	the nullable Float carrier (null stays null; a present Int becomes a boxed
+	Float), as upstream stores null without throwing. The record's field type
+	may not mark an optional field, so this does not depend on that marker.
+ */
+function storageDestination(actual:Null<TyType>, field:Null<TyType>):Null<TyType> {
+	if (actual == null || field == null || Stage3OcamlNullablePrimitive.innerPrimitive(actual) == null)
+		return field;
+	return Stage3OcamlNumericWidening.isFloatDestination(field) ? TyType.nullable(field) : field;
+}
+
 /** Allocate once and initialize written fields in order through existing runtime primitives. */
 function literal(occurrence:TypedBackendAggregateOccurrence, emit:HxExpr->String, names:Stage3OcamlLocalNames, quote:String->String):String {
 	final fields = switch occurrence.getExpression() {
@@ -34,6 +54,19 @@ function literal(occurrence:TypedBackendAggregateOccurrence, emit:HxExpr->String
 	final values = occurrence.getChildren();
 	final types = occurrence.getChildTypes();
 	final object = names.internalName("__hx_object");
+	// A Float field stores its value as a Float, also from an Int value
+	// (`final p:{x:Float} = {x: 1}`). See `storageDestination` for nullable values.
+	final structure = TyAliasExpansion.revealNonNullable(occurrence.getType());
+	final structureFields = structure.isAnonymous() ? structure.getAnonymousFields() : [];
+	function stored(index:Int):String {
+		var expected:Null<TyType> = null;
+		for (field in structureFields)
+			if (field.name == fields[index])
+				expected = storageDestination(types[index], TypedBackendObjectAccess.fieldDestination(field));
+		final rendered = emit(values[index]);
+		return Stage3OcamlNumericWidening.convertsToFloat(types[index],
+			expected) ? store(expected, Stage3OcamlNumericWidening.toFloatDestination(types[index], expected, rendered)) : store(types[index], rendered);
+	}
 	final writes = [
 		for (index in 0...fields.length)
 			"HxAnon.set (Obj.repr "
@@ -41,7 +74,7 @@ function literal(occurrence:TypedBackendAggregateOccurrence, emit:HxExpr->String
 			+ ") "
 			+ quote(fields[index])
 			+ " ("
-			+ store(types[index], emit(values[index]))
+			+ stored(index)
 			+ "); "];
 	return "(let " + object + " = HxAnon.create () in " + writes.join("") + object + ")";
 }
@@ -50,7 +83,18 @@ function literal(occurrence:TypedBackendAggregateOccurrence, emit:HxExpr->String
 function access(occurrence:TypedBackendObjectAccess, emit:HxExpr->String, names:Stage3OcamlLocalNames, quote:String->String):String {
 	return switch occurrence.kind {
 		case Read:
-			final stored = "HxAnon.get (Obj.repr (" + emit(occurrence.receiver) + ")) " + quote(occurrence.field);
+			// A function-typed field may be a method of a class instance used as a
+			// structure. That method is not in the instance's field storage, so the
+			// runtime binds it from the class's method table instead.
+			final stored = occurrence.resultType.isFunction() ? "HxMethodDispatch.structural_field (Obj.repr ("
+				+ emit(occurrence.receiver)
+				+ ")) "
+				+ quote(occurrence.field)
+				+ " "
+				+ occurrence.resultType.getFunctionArguments().length : "HxAnon.get (Obj.repr ("
+				+ emit(occurrence.receiver)
+				+ ")) "
+				+ quote(occurrence.field);
 			// This owned access reads the runtime's Obj.t field storage. An open
 			// field type keeps that carrier intact; only a concrete result permits
 			// unboxing. This does not admit an arbitrary Unknown expression or store.
@@ -60,6 +104,11 @@ function access(occurrence:TypedBackendObjectAccess, emit:HxExpr->String, names:
 				throw "object assignment lost its typed operand";
 			final object = names.internalName("__hx_object");
 			final value = names.internalName("__hx_field_value");
+			// A Float field converts an Int or Null<Int> value, and the assignment
+			// then yields the stored Float.
+			final destination = storageDestination(occurrence.valueType, occurrence.placeType);
+			final converts = Stage3OcamlNumericWidening.convertsToFloat(occurrence.valueType, destination);
+			final rendered = emit(occurrence.value);
 			"(let "
 			+ object
 			+ " = ("
@@ -67,13 +116,13 @@ function access(occurrence:TypedBackendObjectAccess, emit:HxExpr->String, names:
 			+ ") in let "
 			+ value
 			+ " = ("
-			+ emit(occurrence.value)
+			+ (converts ? Stage3OcamlNumericWidening.toFloatDestination(occurrence.valueType, destination, rendered) : rendered)
 			+ ") in HxAnon.set (Obj.repr "
 			+ object
 			+ ") "
 			+ quote(occurrence.field)
 			+ " ("
-			+ store(occurrence.valueType, value)
+			+ store(converts ? destination : occurrence.valueType, value)
 			+ "); "
 			+ value
 			+ ")";

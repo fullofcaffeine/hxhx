@@ -13,7 +13,12 @@ The observer has a 30-second runtime limit.
 The observer checks lookup after ordinary, nested and anonymous-cache mutation,
 GC requests, physical distinction, replacement, map copying, removal and clear.
 It checks fresh headers for empty records, anonymous copies and concurrent native
-allocations. It also checks false markers, descriptor-only records, deliberate
+allocations. A copy of a class-backed HxAnon object (how Stage3 stores class
+instances) keeps its class, and a plain anonymous copy stays classless. Upstream
+documents `Reflect.copy` only for anonymous objects and targets differ for class
+instances, so this is a deliberate match with `--interp` and Neko; JS and Python
+drop the class. Native reflaxe.ocaml class instances are records, and
+`Reflect.copy` still returns the same record for them. It also checks false markers, descriptor-only records, deliberate
 hash collisions and mixed managed/opaque keys. A normal lazy-value force changes
 an opaque key's native tag while its map association must remain accessible.
 

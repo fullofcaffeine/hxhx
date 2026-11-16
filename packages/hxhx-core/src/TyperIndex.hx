@@ -23,6 +23,15 @@ private typedef TyParsedAbstractOperatorMetadata = {
 	an overload, inline a body, decide mutation, or expose target carriers.
 **/
 class TyperIndex {
+	/** The source file whose signatures `indexModule` is resolving, for type-use diagnostics. **/
+	var signatureFilePath:String = "<signature>";
+
+	/** That file's text, used to place a diagnostic on the written type hint. **/
+	var signatureSource:String = "";
+
+	/** Tokens of `signatureSource`, read once per module when a hint is first placed. **/
+	var signatureTokens:Null<Array<HxToken>> = null;
+
 	final byFullName:StringMap<TyNominalInfo>;
 	final byShortName:StringMap<Array<TyNominalInfo>>;
 	final identityByFullName:StringMap<TyNominalTypeId>;
@@ -203,6 +212,79 @@ class TyperIndex {
 		return null;
 	}
 
+	/** The title-case value names that typing could not resolve in one module source file. */
+	public function undeclaredValueNames(filePath:String):TyUndeclaredName.TyUndeclaredValueNames {
+		final key = filePath == null ? "" : filePath;
+		var names = undeclaredNamesByFile.get(key);
+		if (names == null) {
+			names = new TyUndeclaredName.TyUndeclaredValueNames(key);
+			undeclaredNamesByFile.set(key, names);
+		}
+		return names;
+	}
+
+	final undeclaredNamesByFile = new StringMap<TyUndeclaredName.TyUndeclaredValueNames>();
+
+	/**
+		The raw text of a source file, read once per index. The undeclared-name
+		check scans it for imports in every conditional branch.
+	**/
+	public function rawSourceText(filePath:String):Null<String> {
+		if (rawSources.exists(filePath))
+			return rawSources.get(filePath);
+		final text = filePath == null
+			|| !sys.FileSystem.exists(filePath)
+			|| sys.FileSystem.isDirectory(filePath) ? null : sys.io.File.getContent(filePath);
+		rawSources.set(filePath, text);
+		return text;
+	}
+
+	final rawSources = new StringMap<Null<String>>();
+
+	/**
+		Whether any loaded enum or abstract declares a member with this name.
+		Upstream resolves a bare constructor or enum-abstract value such as
+		`Element` from the expected type, for example the other operand of
+		`node.nodeType != Element`. The bring-up typer does not always carry that
+		type, so `TyUndeclaredName` treats such a name as possibly declared.
+	**/
+	public function declaresEnumMember(name:String):Bool {
+		for (fullName => info in byFullName)
+			// A constructor with arguments is a static method, not a field.
+			if ((info.getIsEnum() || getAbstractByFullName(fullName) != null)
+				&& (info.fieldInfo(name) != null || info.staticMethod(name) != null))
+				return true;
+		return false;
+	}
+
+	/**
+		Whether any loaded type carries `@:build` or `@:autoBuild`. A build macro
+		can define a new type, not only add fields to its own class, so a name
+		that nothing declares proves nothing once one is in play.
+	**/
+	public function hasBuildMacro():Bool
+		return buildMacroSeen;
+
+	var buildMacroSeen = false;
+
+	/** Metadata is kept as written, for example `@:autoBuild(Macros.build())`. Compares the exact name. */
+	static function isBuildMacroMetadata(entry:String):Bool {
+		if (!StringTools.startsWith(entry, "@:"))
+			return false;
+		final open = entry.indexOf("(");
+		final name = StringTools.trim(open < 0 ? entry.substr(2) : entry.substring(2, open));
+		return name == "build" || name == "autoBuild";
+	}
+
+	/** Whether any loaded type declares a `macro` function with this name. */
+	public function declaresMacroFunction(name:String):Bool {
+		for (info in byFullName)
+			for (declaration in info.getDeclarations())
+				if (declaration.getSignature().getName() == name && TyMacroCallSignature.isMacro(declaration))
+					return true;
+		return false;
+	}
+
 	public function addNominal(info:TyNominalInfo):Void {
 		if (info == null)
 			return;
@@ -283,6 +365,57 @@ class TyperIndex {
 		return false;
 	}
 
+	/** Whether metadata names `name`, with or without arguments: `@:build(Macro.run())`. **/
+	static function hasMetadataNamed(metadata:Array<String>, name:String):Bool {
+		if (metadata == null)
+			return false;
+		for (entry in metadata) {
+			var clean = entry == null ? "" : StringTools.trim(entry);
+			while (StringTools.startsWith(clean, "@") || StringTools.startsWith(clean, ":"))
+				clean = clean.substr(1);
+			final call = clean.indexOf("(");
+			if (StringTools.trim(call < 0 ? clean : clean.substring(0, call)) == name)
+				return true;
+		}
+		return false;
+	}
+
+	/** Build macros can add, replace or (for `@:genericBuild`) entirely define a declaration. **/
+	static function usesBuildMacro(metadata:Array<String>):Bool {
+		return hasMetadataNamed(metadata, "build")
+			|| hasMetadataNamed(metadata, "autoBuild")
+			|| hasMetadataNamed(metadata, "genericBuild");
+	}
+
+	/**
+		Count the type arguments a class-like declaration accepts.
+
+		A `@:genericBuild` class hands its arguments to a macro, and Haxe 4.3.7 gives a
+		parameter named `Rest` a special meaning there. Once the arguments reach `Rest`
+		any number of further ones are allowed, so the count has no upper limit. A `Rest`
+		in last place may also be left out: `class T<B, Rest>` accepts `T<Int>`, while
+		`class T<Rest, B>` needs at least two arguments. Every other parameter list,
+		including a `Rest` parameter on a class without `@:genericBuild`, is counted as usual.
+
+		The indexed binders come from `__hxhx_type_params`. Defaults come from the
+		parsed parameters, and only when those parameters match the binders name for
+		name; otherwise every parameter counts as required.
+	**/
+	static function nominalArity(classDeclaration:HxClassDecl):TyTypeDeclaration.TyNominalArity {
+		final metadata = HxClassDecl.getMetadata(classDeclaration);
+		final names = typeParameters(metadata);
+		final hasRest = hasMetadataNamed(metadata, "genericBuild") && names.indexOf("Rest") >= 0;
+		final parsed = HxClassDecl.getTypeParameters(classDeclaration);
+		var required = names.length;
+		if (hasRest && names[names.length - 1] == "Rest")
+			required--;
+		if (parsed.length == names.length) {
+			while (required > 0 && parsed[required - 1].name == names[required - 1] && parsed[required - 1].defaultType != null)
+				required--;
+		}
+		return {total: names.length, required: required, unbounded: hasRest};
+	}
+
 	static function typeParameters(metadata:Array<String>):Array<String> {
 		final encoded = metadataValue(metadata, "__hxhx_type_params");
 		if (encoded == null || StringTools.trim(encoded).length == 0)
@@ -329,7 +462,9 @@ class TyperIndex {
 				canonicalName: identity.getCanonicalName(),
 				visibility: HxClassDecl.getVisibility(classDeclaration),
 				kind: Nominal(identity),
-				context: context
+				context: context,
+				nominalArity: nominalArity(classDeclaration),
+				usesBuildMacro: usesBuildMacro(HxClassDecl.getMetadata(classDeclaration))
 			}));
 			visibilityByFullName.set(identity.getCanonicalName(), HxClassDecl.getVisibility(classDeclaration));
 			final moduleIdentities = identitiesByModulePath.exists(modulePath) ? identitiesByModulePath.get(modulePath) : [];
@@ -421,16 +556,36 @@ class TyperIndex {
 		return false;
 	}
 
-	function semanticType(hint:String, packagePath:String, moduleName:Null<String>, directives:Array<HxModuleDirective>,
-			typeParams:Array<TyTypeParameterId>):TyType {
+	function semanticType(hint:String, packagePath:String, moduleName:Null<String>, directives:Array<HxModuleDirective>, typeParams:Array<TyTypeParameterId>,
+			?anchor:HxPos):TyType {
 		return resolveTypeUse(TyType.fromHintText(hint), {
 			packagePath: packagePath,
 			modulePath: canonicalModulePath(packagePath, moduleName),
 			directives: directives,
-			filePath: "<signature>",
-			position: HxPos.unknown(),
+			filePath: signatureFilePath,
+			position: hintPosition(hint, anchor),
 			parameters: typeParams
 		}).getType();
+	}
+
+	function signatureTokenList():Array<HxToken> {
+		if (signatureTokens == null)
+			signatureTokens = TySourceTokenPosition.tokens(signatureSource);
+		return signatureTokens;
+	}
+
+	/** Anchor a return hint after the parameter list, so it is not confused with an argument hint. **/
+	function returnHintAnchor(functionDeclaration:HxFunctionDecl):HxPos {
+		return TySourceTokenPosition.afterParameterList(signatureTokenList(), HxFunctionDecl.getPos(functionDeclaration));
+	}
+
+	/**
+		Find where a type hint is written, searching forward from its declaration, so
+		`static var field:Box<Int>` reports the hint as upstream's message does. Without
+		an anchor, or when the hint is not found, the declaration position (or unknown) is used.
+	**/
+	function hintPosition(hint:String, anchor:Null<HxPos>):HxPos {
+		return anchor == null ? HxPos.unknown() : TySourceTokenPosition.typeHint(signatureTokenList(), signatureSource, hint, anchor);
 	}
 
 	static function addMethod(primary:StringMap<TyFunSig>, all:StringMap<Array<TyFunSig>>, signature:TyFunSig):Void {
@@ -646,6 +801,10 @@ class TyperIndex {
 		final moduleDeclaration = parsedModule.getDecl();
 		final packagePath = HxModuleDecl.getPackagePath(moduleDeclaration);
 		final moduleName = expectedModuleNameFromFile(ResolvedModule.getFilePath(module));
+		// A signature hint such as `static var field:Box<Int>` reports this file.
+		signatureFilePath = ResolvedModule.getFilePath(module);
+		signatureSource = parsedModule.getSource() == null ? "" : parsedModule.getSource();
+		signatureTokens = null;
 		final semanticModulePath = canonicalModulePath(packagePath, moduleName);
 		final directives = HxModuleDecl.getDirectives(moduleDeclaration);
 		final completed = new Array<{source:HxClassDecl, info:TyNominalInfo}>();
@@ -657,6 +816,8 @@ class TyperIndex {
 			final fullName = classFullNameInModule(packagePath, moduleName, shortName);
 			final identity = identityByFullName.get(fullName);
 			final classMetadata = HxClassDecl.getMetadata(classDeclaration);
+			if (Lambda.exists(classMetadata, isBuildMacroMetadata))
+				buildMacroSeen = true;
 			final params = typeParameters(classMetadata);
 			final parameterIds = [
 				for (index in 0...params.length)
@@ -697,7 +858,7 @@ class TyperIndex {
 					&& hasMetadata(HxFieldDecl.getMetadata(field), "__hxhx_enum_abstract_value");
 				final fieldType = isEnumValue ? TyType.nominal(identity,
 					[for (parameter in parameterIds) TyType.typeParameter(parameter)]) : semanticType(HxFieldDecl.getTypeHint(field), packagePath, moduleName,
-						directives, parameterIds);
+						directives, parameterIds, HxFieldDecl.getPos(field));
 				final fieldName = HxFieldDecl.getName(field);
 				fields.set(fieldName,
 					new TyFieldInfo(identity, semanticModulePath, fieldName, fieldType, HxFieldDecl.getIsStatic(field),
@@ -761,9 +922,15 @@ class TyperIndex {
 				final argNames = new Array<String>();
 				final argOptional = new Array<Bool>();
 				final argRest = new Array<Bool>();
+				// Each argument hint is searched after the previous one, so `(a:Box<Int>, b:Box<Int>)` points at b's own hint.
+				var argumentAnchor = HxFunctionDecl.getPos(functionDeclaration);
 				for (argument in HxFunctionDecl.getArgs(functionDeclaration)) {
 					argNames.push(HxFunctionArg.getName(argument));
-					args.push(semanticType(HxFunctionArg.getTypeHint(argument), packagePath, moduleName, directives, functionParams));
+					final hint = HxFunctionArg.getTypeHint(argument);
+					final written = hintPosition(hint, argumentAnchor);
+					args.push(semanticType(hint, packagePath, moduleName, directives, functionParams, written));
+					if (written.getIndex() >= 0)
+						argumentAnchor = new HxPos(written.getIndex() + 1, written.getLine(), written.getColumn() + 1);
 					// Omission is allowed by a default as well as by ?. The declared value type stays unchanged.
 					final hasDefault = switch (HxFunctionArg.getDefaultValue(argument)) {
 						case Default(_): true;
@@ -775,7 +942,7 @@ class TyperIndex {
 
 				final returnType = functionName == "new" ? TyType.nominal(identity,
 					[for (parameter in parameterIds) TyType.typeParameter(parameter)]) : semanticType(HxFunctionDecl.getReturnTypeHint(functionDeclaration),
-						packagePath, moduleName, directives, functionParams);
+						packagePath, moduleName, directives, functionParams, returnHintAnchor(functionDeclaration));
 				final signature = new TyFunSig(functionName, isStatic, argNames, args, argOptional, argRest, returnType,
 					HxFunctionDecl.getPos(functionDeclaration));
 				if (isStatic)
@@ -840,6 +1007,12 @@ class TyperIndex {
 			addNominal(entry.info);
 			bySourceClass.set(entry.source, entry.info);
 		}
+	}
+
+	/** Whether a build macro can change this declaration's members. **/
+	public function declarationUsesBuildMacro(fullName:String):Bool {
+		final declaration = typeDeclarations.get(fullName);
+		return declaration != null && declaration.getUsesBuildMacro();
 	}
 
 	/** Register and publish one complete module. Loaders register dependency headers first. */

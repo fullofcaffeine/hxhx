@@ -13,6 +13,9 @@ class Stage3OcamlClassStorage {
 	// Every exact class declaration can describe ancestry. Only admitted generated
 	// declarations below may select object storage or typed-catch representations.
 	final ancestry:Map<String, TypedBackendClassSemanticFacts> = [];
+	// The nominal kind of every declaration in this request, including
+	// runtime-provided and extern ones, for static default selection.
+	final nominalKinds:Map<String, TypedBackendClassSemanticFacts.TypedBackendNominalKind> = [];
 	final nominals:Map<String, TypedBackendClassSemanticFacts> = [];
 	final owners:Map<String, TypedBackendClassSemanticFacts> = [];
 	final projections:Map<String, TypedBackendClassProjection> = [];
@@ -21,6 +24,12 @@ class Stage3OcamlClassStorage {
 
 	/** Interface method tables for the same classes, selected from the same typed facts. */
 	public final interfaces = new Stage3OcamlInterfaceDispatch();
+
+	/** `toString()` adapters for the same classes, selected from the same typed facts. */
+	public final stringifiers = new Stage3OcamlClassStringifiers();
+
+	/** Call arguments that were wrapped for a `haxe.Constraints.Function` parameter. */
+	public final adaptedFunctionArguments = new Array<HxExpr>();
 
 	/** Generated abstracts whose constructor builds the backing value with `this = value`. */
 	public final abstracts = new Stage3OcamlAbstractConstructors();
@@ -31,6 +40,8 @@ class Stage3OcamlClassStorage {
 	/** Mutable static field cells for the same request, selected before any module is emitted. */
 	public final statics = new Stage3OcamlStaticStorage();
 
+	final abstractBackings:Map<String, TyType> = [];
+
 	public function new() {}
 
 	/**
@@ -40,8 +51,12 @@ class Stage3OcamlClassStorage {
 	 */
 	public function add(projection:TypedBackendClassProjection, runtimeProvided:Bool, ?outputModule:String):Void {
 		final facts = projection.requireSemanticFacts();
+		nominalKinds.set(facts.getClassIdentity(), facts.getNominalKind());
 		switch facts.getNominalKind() {
 			case AbstractValue(underlying):
+				// An enum abstract's values do not use its backing type's carrier here.
+				if (HxClassDecl.getMetadata(projection.getDeclaration()).indexOf("__hxhx_enum_abstract") < 0)
+					abstractBackings.set(facts.getClassIdentity(), underlying);
 				if (!runtimeProvided && !facts.getIsExtern() && outputModule != null)
 					abstracts.add({
 						projection: projection,
@@ -62,6 +77,7 @@ class Stage3OcamlClassStorage {
 			statics.add(facts, runtimeProvided, outputModule);
 			interfaces.add(facts, !runtimeProvided, outputModule);
 			virtuals.add(facts, !runtimeProvided, outputModule);
+			stringifiers.add(facts, !runtimeProvided, outputModule);
 		}
 		if (runtimeProvided || facts.getIsExtern())
 			return;
@@ -84,6 +100,30 @@ class Stage3OcamlClassStorage {
 		initializers.set(identity, initializer);
 		if (outputModule != null)
 			modules.set(identity, outputModule);
+	}
+
+	/** The module this request emits for an admitted generated class, or null when another owner supplies the class. */
+	public function outputModule(type:TyType):Null<String> {
+		final identity = type.unwrapNull().getNominalIdentity();
+		return identity == null ? null : modules.get(identity.getCanonicalName());
+	}
+
+	/** The module this request emits for `haxe.Exception`, or null when the program has none and no value can be wrapped by it. */
+	public function exceptionModule():Null<String>
+		return modules.get("haxe.Exception");
+
+	/** Follow abstracts to the type that holds their values at run time. */
+	function backingType(type:TyType):TyType {
+		final seen:Map<String, Bool> = [];
+		var current = type;
+		while (true) {
+			final identity = current.getNominalIdentity();
+			final name = identity == null ? null : identity.getCanonicalName();
+			if (name == null || !abstractBackings.exists(name) || seen.exists(name))
+				return current;
+			seen.set(name, true);
+			current = TyAliasExpansion.revealNonNullable(abstractBackings.get(name));
+		}
 	}
 
 	/** Runtime catch names come from admitted declarations, never aliases or printed type hints. */
@@ -122,7 +162,108 @@ class Stage3OcamlClassStorage {
 			visited.set(owner, true);
 		}
 		visit(identity);
-		return "let () = HxType.register_class_tags " + quote(names[0]) + " [" + names.map(quote).join("; ") + "]";
+		final registration = [
+			"let () = HxType.register_class_tags " + quote(names[0]) + " [" + names.map(quote).join("; ") + "]"
+		];
+		return registration.concat(reflectionRegistration(identity, quote)).join("\n");
+	}
+
+	/**
+		Register what `Type.getInstanceFields`, `Type.getSuperClass`, and
+		`Reflect` need before the class's functions exist. Instance fields are
+		the stored fields and the instance methods of the class and its
+		superclasses; properties without storage are not fields, as in Haxe.
+		The method binders follow later, in `reflectionMethodTable`.
+	 */
+	function reflectionRegistration(identity:String, quote:String->String):Array<String> {
+		final fields = new Array<String>();
+		final seen:Map<String, Bool> = [];
+		final visited:Map<String, Bool> = [];
+		var owner:Null<String> = identity;
+		while (owner != null) {
+			if (visited.exists(owner))
+				throw "native class registration has cyclic ancestry: " + owner;
+			visited.set(owner, true);
+			final facts = ancestry.get(owner);
+			if (facts == null)
+				throw "native class registration lacks exact ancestor facts: " + owner;
+			for (field in facts.copyFields())
+				if (!field.isStatic && field.hasStorage && !seen.exists(field.name)) {
+					seen.set(field.name, true);
+					fields.push(field.name);
+				}
+			for (method in facts.copyMethods())
+				if (!method.isStatic && method.name != "new" && !seen.exists(method.name)) {
+					seen.set(method.name, true);
+					fields.push(method.name);
+				}
+			owner = facts.getSuperClassIdentity();
+		}
+		final facts = ancestry.get(identity);
+		final name = quote(facts.requirePublicReflectionName());
+		final list = (values:Array<String>) -> "[" + values.map(quote).join("; ") + "]";
+		final result = ["let () = HxType.register_class_instance_fields " + name + " " + list(fields)];
+		final parent = facts.getSuperClassIdentity();
+		if (parent != null)
+			result.push("let () = HxType.register_class_super "
+				+ name
+				+ " (HxType.class_ "
+				+ quote(ancestry.get(parent).requirePublicReflectionName())
+				+ ")");
+		return result;
+	}
+
+	/**
+		The OCaml statement that registers this class's reflection method
+		binders, or null when the class has no bindable instance method. It runs
+		after the class's functions are defined.
+
+		Each binder receives an instance and returns the method bound to it,
+		with the same calling convention as a Stage3 method value: a method
+		without parameters becomes `fun () -> method receiver`, and any other
+		method is partially applied to the receiver. The nearest declaration
+		wins, so an override replaces its parent. A `dynamic` method, a method
+		without a body, and a method of a class whose functions Stage3 does not
+		generate get no binder; `Reflect.field` then returns null for it.
+	 */
+	public function reflectionMethodTable(projection:TypedBackendClassProjection, currentModule:String, ident:(String, String) -> String,
+			quote:String->String):Null<String> {
+		final identity = projection.requireSemanticFacts().getClassIdentity();
+		if (!owners.exists(identity))
+			return null;
+		final binders = new Array<String>();
+		final seen:Map<String, Bool> = [];
+		final visited:Map<String, Bool> = [];
+		var owner:Null<String> = identity;
+		while (owner != null) {
+			if (visited.exists(owner))
+				throw "native class registration has cyclic ancestry: " + owner;
+			visited.set(owner, true);
+			final facts = ancestry.get(owner);
+			if (facts == null)
+				throw "native class registration lacks exact ancestor facts: " + owner;
+			final module = modules.get(owner);
+			for (method in facts.copyMethods()) {
+				if (method.isStatic || method.name == "new" || seen.exists(method.name))
+					continue;
+				seen.set(method.name, true);
+				if (module == null || !owners.exists(owner) || method.isDynamic || !method.hasBody)
+					continue;
+				final name = ident(module, method.name);
+				final reference = module == currentModule ? name : module + "." + name;
+				final receiver = "(Obj.obj __hx_reflect_receiver)";
+				final bound = method.arguments.length == 0 ? "fun () -> " + reference + " " + receiver : reference + " " + receiver;
+				binders.push("(" + quote(method.name) + ", fun __hx_reflect_receiver -> Obj.repr (" + bound + "))");
+			}
+			owner = facts.getSuperClassIdentity();
+		}
+		if (binders.length == 0)
+			return null;
+		return "let () = HxReflect.register_instance_methods "
+			+ quote(owners.get(identity).requirePublicReflectionName())
+			+ " ["
+			+ binders.join("; ")
+			+ "]";
 	}
 
 	/** Whether this class is an interface whose bodiless methods become runtime dispatchers. */
@@ -160,7 +301,33 @@ class Stage3OcamlClassStorage {
 		if (!projection.hasSemanticFacts())
 			return null;
 		final facts = projection.requireSemanticFacts();
-		return virtuals.registration(facts, interfaces.entries(facts), currentModule, ident, quote);
+		final tables = [
+			virtuals.registration(facts, interfaces.entries(facts), currentModule, ident, quote),
+			Stage3OcamlDynamicMethods.registration(facts, virtuals, backingType, currentModule, ident, quote)
+		].filter(table -> table != null);
+		return tables.length == 0 ? null : tables.join("\n");
+	}
+
+	/** The statement that registers this class's `toString()` adapter for runtime string conversion, or null. */
+	public function stringifierRegistration(projection:TypedBackendClassProjection, currentModule:String, ident:(String, String) -> String,
+			quote:String->String):Null<String>
+		return projection.hasSemanticFacts() ? stringifiers.registration(projection.requireSemanticFacts(), currentModule, ident, quote) : null;
+
+	/**
+		The checked declared type of the static field `name` of this class, or
+		null when the class has no typed facts for it. Stage3 uses it to choose
+		the default of a static field without an initializer.
+	**/
+	public function staticDefault(projection:TypedBackendClassProjection, name:String):String
+		return Stage3OcamlStaticDefault.value(staticFieldType(projection, name), identity -> nominalKinds.get(identity));
+
+	public function staticFieldType(projection:TypedBackendClassProjection, name:String):Null<TyType> {
+		if (projection == null || !projection.hasSemanticFacts())
+			return null;
+		for (field in projection.requireSemanticFacts().copyFields())
+			if (field.isStatic && field.name == name)
+				return field.semanticType;
+		return null;
 	}
 
 	/** Return field execution only for the exact emitted class that owns it. */
@@ -268,6 +435,8 @@ class Stage3OcamlClassStorage {
 					throw "native construction has cyclic class storage";
 				visited.set(identity, true);
 				final facts = owners.get(identity);
+				if (facts == null && identity == "EReg")
+					throw "stage3 emitter: EReg is an extern runtime class and cannot be extended natively yet";
 				if (facts == null)
 					throw "native construction lacks inherited storage: " + identity;
 				for (field in facts.copyFields())

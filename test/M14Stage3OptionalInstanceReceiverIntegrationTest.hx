@@ -8,7 +8,9 @@ import sys.io.File;
 
 	The typed call can already contain an explicit `this` argument. Stage3 must
 	reuse that receiver, append only the omitted optional argument, and emit an
-	OCaml call whose arity matches the instance method definition.
+	OCaml call whose arity matches the instance method definition. A wrong
+	arity either fails the OCaml build or leaves a partial application that
+	never prints, so the executable output is the main proof.
 **/
 class M14Stage3OptionalInstanceReceiverIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
@@ -76,8 +78,11 @@ class M14Stage3OptionalInstanceReceiverIntegrationTest {
 			final generated = File.getContent(Path.join([outDir, "Main.ml"]));
 			assertTrue(generated.indexOf("deq (this_) (this_)") < 0,
 				"Stage3 emitted the already-forwarded instance receiver twice when an optional argument was omitted");
-			assertTrue(generated.indexOf("deq (this_) (Obj.repr (0)) (Obj.repr (numericCast (0))) ((Obj.magic HxRuntime.hx_null))") >= 0,
-				"Stage3 did not preserve one receiver and append only the omitted optional position argument");
+			// Stage3 may bind the callee and each argument before the application
+			// (see Stage3OcamlCallOrder), so do not match one exact call text. The
+			// OCaml build above checks the call arity against `deq`'s definition,
+			// and the executable output below proves that the call ran.
+			assertTrue(generated.indexOf("HxRuntime.hx_null") >= 0, "Stage3 did not pass null for the omitted optional position argument");
 
 			final executed = commandOutput(executable);
 			assertTrue(executed.code == 0, "focused optional-instance-call executable failed: " + executed.stderr);

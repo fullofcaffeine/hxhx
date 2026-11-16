@@ -12,6 +12,17 @@ enum HxSwitchPattern {
 	PBool(value:Bool);
 	PString(value:String);
 	PInt(value:Int);
+
+	/**
+		A Float constant such as `1.5`, `-2.5`, `1e3` or `.5`, matched by
+		numeric equality as upstream Haxe does. `text` is a portable decimal
+		spelling (see `HxFloatPatternText`): it always has a leading digit and a
+		`.` or exponent, so every target can print it as a Float literal.
+		Use `HxFloatPatternText.value` for the number itself. An Int constant
+		in a Float switch stays `PInt`.
+	**/
+	PFloat(text:String);
+
 	PEnumValue(name:String);
 
 	/** Only the parser's bare final `_` can cover an unwritten required payload suffix. */

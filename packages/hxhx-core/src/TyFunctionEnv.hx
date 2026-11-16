@@ -125,6 +125,10 @@ class TyFunctionEnv {
 		};
 	}
 
+	/** The return type as the author wrote it on the retained declaration, or null. */
+	public function writtenReturnTypeHint():Null<String>
+		return retainedBody == null ? null : HxFunctionDecl.getReturnTypeHint(retainedBody.declaration);
+
 	/** Replay consumes the compiler-owned expansion only while its authored declaration remains unchanged. */
 	public function functionBodyForReplay(declaration:HxFunctionDecl):Array<HxStmt> {
 		if (retainedBody == null

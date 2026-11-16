@@ -116,7 +116,7 @@ function resolve(input:TyType, patterns:Array<HxSwitchPattern>, context:TyperCon
 				visit(child, type);
 			case PExtractor(_, child):
 				visit(child, TyType.unknown());
-			case PNull | PWildcard | PBool(_) | PString(_) | PInt(_) | PBind(_):
+			case PNull | PWildcard | PBool(_) | PString(_) | PInt(_) | PFloat(_) | PBind(_):
 		}
 	}
 	for (pattern in patterns)

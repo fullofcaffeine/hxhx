@@ -165,6 +165,6 @@ private function patternNames(pattern:HxSwitchPattern, names:Array<String>):Void
 				patternNames(child, names);
 		case PExtractor(_, inner) | PGuard(inner, _) | PUnsupportedPattern(inner):
 			patternNames(inner, names);
-		case PNull | PWildcard | PBool(_) | PString(_) | PInt(_) | PEnumValue(_):
+		case PNull | PWildcard | PBool(_) | PString(_) | PInt(_) | PFloat(_) | PEnumValue(_):
 	}
 }

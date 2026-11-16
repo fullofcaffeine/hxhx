@@ -36,17 +36,28 @@ class Exception {
 	@:noCompletion var __nativeException:Any;
 	@:noCompletion var __previousException:Null<Exception>;
 
+	/**
+		True only for the wrapper `caught` builds around a plain value. A program can
+		also pass its own `native` value to the constructor, but throwing that object
+		must keep the exception, so `native` alone cannot identify a wrapper.
+	**/
+	@:noCompletion var __wrapsCaughtValue:Bool = false;
+
 	static function caught(value:Any):Exception {
 		// NOTE: We intentionally avoid referencing `haxe.ValueException` here to prevent
 		// an OCaml module dependency cycle (`haxe.ValueException` extends `haxe.Exception`).
 		//
 		// The OCaml backend itself wraps non-Exception throws into `haxe.ValueException`
 		// when lowering `catch(e:haxe.Exception)` / `catch(e:haxe.ValueException)`.
-		return Std.isOfType(value, Exception) ? (value : Exception) : new Exception(Std.string(value), null, value);
+		if (Std.isOfType(value, Exception))
+			return (value : Exception);
+		final wrapper = new Exception(Std.string(value), null, value);
+		wrapper.__wrapsCaughtValue = true;
+		return wrapper;
 	}
 
 	static function thrown(value:Any):Any {
-		return Std.isOfType(value, Exception) ? (value : Exception).native : value;
+		return Std.isOfType(value, Exception) && (value : Exception).__wrapsCaughtValue ? (value : Exception).native : value;
 	}
 
 	public function new(message:String, ?previous:Exception, ?native:Any) {

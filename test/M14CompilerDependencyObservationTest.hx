@@ -482,7 +482,7 @@ class M14CompilerDependencyObservationTest {
 			"import Api;",
 			"class Main {",
 			"  public static function main():Void {",
-			"    var answer:Int = Api.answer();",
+			"    var answer = Api.answer();",
 			"  }",
 			"}"
 		].join("\n");
@@ -506,7 +506,7 @@ class M14CompilerDependencyObservationTest {
 		assertTrue(!importOnlyInlineComparison.isAffected("Main"),
 			"an inline body edit should not invalidate a module that imports Api but never calls the inline function");
 
-		final apiSignatureChanged = apiA.split("answer():Int").join("answer():String");
+		final apiSignatureChanged = apiA.split("answer():Int return 42").join("answer():String return \"42\"");
 		final signatureAfter = typedProgram(apiSignatureChanged, ordinaryOnlyMain);
 		final signatureComparison = CompilerDependencyInvalidator.compare(CompilerDependencyCollector.collect(ordinaryBefore.modules, ordinaryBefore.index),
 			CompilerDependencyCollector.collect(signatureAfter.modules, signatureAfter.index));

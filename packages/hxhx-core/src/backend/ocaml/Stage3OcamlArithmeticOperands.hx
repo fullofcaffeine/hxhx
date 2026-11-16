@@ -37,3 +37,53 @@ function unclassified(location:String, op:String, leftType:Null<TyType>, rightTy
 		+ rightType.getDisplay()
 		+ " (no Int or Float lowering applies; refusing to emit a placeholder)";
 }
+
+/**
+	How the typer classified both operands of one arithmetic or ordering
+	expression. `leftFloat`/`leftInt` (and the right-hand pair) are true for a
+	`Float`/`Int` operand or its `Null<...>` carrier; `concatenates` is true when
+	the checked result is `String`.
+**/
+typedef Stage3RecordedArithmeticSides = {
+	leftFloat:Bool,
+	leftInt:Bool,
+	rightFloat:Bool,
+	rightInt:Bool,
+	concatenates:Bool
+}
+
+/**
+	The recorded operand classification for `facts`, or null when the emitter
+	must keep its shape-based checks.
+
+	The record decides only when it is complete: both operands are Int or Float
+	(plain or nullable), or the result is String. Abstract operands with their own
+	carrier, Dynamic operands, and expressions without a record return null, so a
+	missing fact never turns a working fallback into a different operator.
+**/
+function sides(facts:Null<TypedBackendArithmeticOccurrence>):Null<Stage3RecordedArithmeticSides> {
+	if (facts == null)
+		return null;
+	final left = numericKey(facts.leftType);
+	final right = numericKey(facts.rightType);
+	final concatenates = !facts.resultType.isNullable()
+		&& TyAliasExpansion.reveal(facts.resultType).getSemanticKey() == "primitive:String";
+	if (!concatenates && (left == null || right == null))
+		return null;
+	return {
+		leftFloat: left == "primitive:Float",
+		leftInt: left == "primitive:Int",
+		rightFloat: right == "primitive:Float",
+		rightInt: right == "primitive:Int",
+		concatenates: concatenates
+	};
+}
+
+/** `primitive:Int` or `primitive:Float` for that type or its `Null<...>` carrier, otherwise null. */
+private function numericKey(type:TyType):Null<String> {
+	final carrier = Stage3OcamlNullablePrimitive.innerPrimitive(type);
+	if (carrier != null)
+		return carrier;
+	final key = TyAliasExpansion.reveal(type).getSemanticKey();
+	return key == "primitive:Int" || key == "primitive:Float" ? key : null;
+}
