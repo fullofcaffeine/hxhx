@@ -75,7 +75,7 @@ if [ ! -f "$feature_trace" ]; then
   exit 1
 fi
 node "$ROOT/scripts/reflaxe-ocaml/verify-semantic-lifecycle-trace.js" "$feature_trace" "$feature_function" "$pipeline_revision"
-if ! rg -Fq 'let featuregate_gatedUpdate =' "$feature_fixture_dir/out/Main.ml"; then
+if ! grep -Fq 'let featuregate_gatedUpdate =' "$feature_fixture_dir/out/Main.ml"; then
   echo "DCE did not retain the feature-gated update in generated OCaml." >&2
   exit 1
 fi
@@ -122,12 +122,12 @@ if "$HAXE_BIN" \
   echo "Late body mutation unexpectedly reached OCaml output." >&2
   exit 1
 fi
-if ! rg -Fq '[reflaxe:planned-body-revision-mismatch]' "$negative_log"; then
+if ! grep -Fq '[reflaxe:planned-body-revision-mismatch]' "$negative_log"; then
   echo "Late body mutation did not report the expected revision mismatch." >&2
   cat "$negative_log" >&2
   exit 1
 fi
-if find "$negative_output" -type f -name '*.ml' -print -quit | rg -q .; then
+if find "$negative_output" -type f -name '*.ml' -print -quit | grep -q .; then
   echo "Late body mutation wrote OCaml source before reporting the mismatch." >&2
   exit 1
 fi

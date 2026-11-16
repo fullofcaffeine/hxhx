@@ -116,6 +116,14 @@ typedef ReflectCallInput = {
 
 	/** The OCaml value for a `ValueType` constructor name and index, qualified for the current module. */
 	final valueTypeConstructor:(String, Int) -> String;
+
+	/**
+		The wrapped value for an argument that passes a function value to a
+		`haxe.Constraints.Function` parameter (`Reflect.callMethod(o, o.add, a)`),
+		or null. The emitter records the wrapped argument, so its end-of-class
+		Function check accepts it.
+	**/
+	@:optional final adaptFunction:HxExpr->Null<String>;
 }
 
 /** Whether a typed call is a bodiless static method of the standard `Reflect` or `Type` class. */
@@ -156,6 +164,11 @@ function render(input:ReflectCallInput):Null<String> {
 
 /** Pass one argument unchanged, or as the runtime's `Obj.t` carrier. */
 private function argument(input:ReflectCallInput, expression:HxExpr, kind:ReflectArgument):String {
+	if (kind != Plain && input.adaptFunction != null) {
+		final adapted = input.adaptFunction(expression);
+		if (adapted != null)
+			return adapted;
+	}
 	final rendered = input.emit(expression);
 	if (kind == Plain)
 		return rendered;

@@ -60,13 +60,32 @@ class M14Stage3NullTextTest {
 			"let sflag = (Obj.magic HxRuntime.hx_null)",
 			"let sitems = (Obj.magic HxRuntime.hx_null)"
 		];
-		for (line in expected)
-			if (source.indexOf("\n" + line + "\n") < 0)
-				throw "missing static default: " + line;
+		// A static is either a plain binding (`let kind = 0`) or, with native static
+		// storage, a cell holding the same initial value
+		// (`let __hx_static_kind : Obj.t ref = ref (Obj.repr (0))`).
+		function initialValue(name:String):Null<String> {
+			final plain = source.indexOf("\nlet " + name + " = ");
+			if (plain >= 0) {
+				final start = plain + ("\nlet " + name + " = ").length;
+				return source.substring(start, source.indexOf("\n", start));
+			}
+			final cell = source.indexOf("\nlet __hx_static_" + name + " : ");
+			if (cell < 0)
+				return null;
+			final line = source.substring(cell + 1, source.indexOf("\n", cell + 1));
+			var value = line.substr(line.indexOf(" = ref (") + " = ref (".length);
+			value = value.substr(0, value.length - 1);
+			return StringTools.startsWith(value, "Obj.repr (") ? value.substring("Obj.repr (".length, value.length - 1) : value;
+		}
+		for (line in expected) {
+			final name = line.substring("let ".length, line.indexOf(" = "));
+			final value = line.substr(line.indexOf(" = ") + 3);
+			if (initialValue(name) != value)
+				throw "missing static default: " + line + " (found " + initialValue(name) + ")";
+		}
 		for (name in ["unsigned", "int32"]) {
-			final at = source.indexOf("\nlet " + name + " = ");
-			if (at < 0
-				|| source.substr(at + 1, ("let " + name + " = (Obj.magic HxRuntime.hx_null)").length) == "let " + name + " = (Obj.magic HxRuntime.hx_null)")
+			final value = initialValue(name);
+			if (value == null || value.indexOf("HxRuntime.hx_null") >= 0)
 				throw "an Int-backed static must not hold the null sentinel: " + name;
 		}
 	}

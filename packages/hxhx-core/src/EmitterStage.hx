@@ -4009,7 +4009,21 @@ class EmitterStage {
 				},
 				names: currentFunctionLocalOcamlNames,
 				valueTypeConstructor: (name,
-					index) -> currentEnums.constructorValue(backend.ocaml.Stage3OcamlReflectCalls.VALUE_TYPE_OWNER, name, index, currentOcamlModuleName)
+					index) -> currentEnums.constructorValue(backend.ocaml.Stage3OcamlReflectCalls.VALUE_TYPE_OWNER, name, index, currentOcamlModuleName),
+				// A function value passed to a Function parameter uses the same
+				// Dynamic-convention wrapper as an ordinary call argument.
+				adaptFunction: value -> {
+					final argument = currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(value) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(value);
+					if (argument == null || !TyFunctionConstraint.isFunctionConstraint(argument.expectedType))
+						return null;
+					final adapted = backend.ocaml.Stage3OcamlFunctionBoundary.adapt(argument.type,
+						exprToOcaml(value, arityByIdentRaw, tyByIdentRaw, staticImportByIdentRaw, currentPackagePath, moduleNameByPkgAndClassRaw,
+							callSigByCalleeRaw),
+						currentFunctionLocalOcamlNames);
+					if (adapted != null && currentClassStorage != null)
+						currentClassStorage.adaptedFunctionArguments.push(value);
+					return adapted;
+				}
 			});
 			if (reflectCall != null)
 				return reflectCall;
