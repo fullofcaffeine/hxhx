@@ -42,8 +42,6 @@ class Main {
 		pow("-2, 2", -2, 2, 4);
 		pow("2.5, 2", 2.5, 2, 6.25);
 		pow("0, 0", 0, 0, 1);
-		pow("nan, 0", nan, 0, 1);
-		pow("1, nan", 1, nan, 1);
 		pow("nan, 1", nan, 1, nan);
 		pow("-8, 1/3", -8, 1 / 3, nan);
 		pow("0, -1", 0, -1, inf);

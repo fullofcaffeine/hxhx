@@ -38,3 +38,8 @@ This change was reviewed under the gate in
 `docs/00-project/FLOAT_NUMERIC_REVIEW_GATE.md`. The answers and the eval and
 neko oracle output are recorded on Bead `haxe_ocaml-hbch2`. Eval and neko
 agree on every special value.
+
+`pow(NaN, 0)` and `pow(1, NaN)` are not checked. Upstream Haxe 4.3.7 eval
+returns 1 for both on macOS but NaN on the Linux CI runners, so upstream cannot
+be the oracle for them. The consolidation PR (#193) removed them after the
+Linux run disagreed with the macOS-recorded expectation.

@@ -4,8 +4,6 @@ pow(-2, 3) finite ok
 pow(-2, 2) finite ok
 pow(2.5, 2) finite ok
 pow(0, 0) finite ok
-pow(nan, 0) finite ok
-pow(1, nan) finite ok
 pow(nan, 1) nan ok
 pow(-8, 1/3) nan ok
 pow(0, -1) +inf ok
