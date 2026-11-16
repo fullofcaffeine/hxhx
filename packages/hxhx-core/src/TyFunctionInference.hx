@@ -997,7 +997,11 @@ class TyFunctionInference {
 						// Once inference has fixed a parameter, ordinary call compatibility
 						// decides admissible subtypes and conversions without rebinding it.
 						final expected = candidate.preview(parameters[index]);
-						final supplied = argument == null ? actual[index] : candidate.preview(argument);
+						// A complete object literal was typed against this parameter, so its
+						// `actual` type holds the field destinations; its source term still
+						// holds each value's own type, such as Int for a Float field.
+						final fromContext = TypedAnonymousLiteral.isLiteral(arguments[index]) && !actual[index].hasUnknownComponent();
+						final supplied = argument == null || fromContext ? actual[index] : candidate.preview(argument);
 						if (!expected.hasUnknownComponent() && !supplied.hasUnknownComponent()) {
 							if (!accepts(expected, supplied))
 								throw "captured callback argument conflicts with its inferred type";

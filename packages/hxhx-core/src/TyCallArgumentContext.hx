@@ -29,11 +29,21 @@ function shared(signatures:Array<TyFunSig>, arity:Int, ?methodParameters:Array<A
 }
 
 /** A known function value supplies its existing parameter row; omission and rest selection stay with call alignment. */
-function functionValue(signature:TyCallableSignature, arity:Int, declarationIndex:TyperIndex):Array<Null<TyType>> {
+function functionValue(signature:TyCallableSignature, arguments:Array<HxExpr>, declarationIndex:TyperIndex):Array<Null<TyType>> {
+	final arity = arguments.length;
 	final parameters = signature.getParameters();
 	if (parameters.length != arity || parameters.filter(parameter -> parameter.isRest).length > 0)
 		return [for (_ in 0...arity) null];
-	return agreed([parameters.map(parameter -> parameter.type)], arity, declarationIndex);
+	final contexts = agreed([parameters.map(parameter -> parameter.type)], arity, declarationIndex);
+	// An object literal takes its field destinations from a complete written
+	// structure parameter, as it does in a direct method call.
+	for (index in 0...arity)
+		if (contexts[index] == null
+			&& TypedAnonymousLiteral.isLiteral(arguments[index])
+			&& !parameters[index].type.hasUnknownComponent()
+			&& TyAliasExpansion.revealNonNullable(parameters[index].type).isAnonymous())
+			contexts[index] = parameters[index].type;
+	return contexts;
 }
 
 /** Share the same admission and equality rules after each callable owner supplies its own binder view. */

@@ -1,0 +1,47 @@
+decl multiply: 1000
+decl update: 1.5
+decl negative: -3
+int expressions: 38.5
+written order: 32 ticks 3
+mixed literal: 3.25
+conditional field: 4
+assign local: 1002
+field initializer: 3004
+static initializer: 1002
+constructor assign: 12014
+method assign: 10012
+receiver assign: 13014
+static assign: 15016
+assign value: 17018
+static call: 1002
+method call: 7.5
+optional argument: 5.5 -1.5
+local function: 25
+generic typedef argument: 3000
+return: 1002
+return branch: 3004 7008
+return generic typedef: 9000
+nested: 4.5
+nested typedef: 4006 typedef
+array literal: 1002 3504
+array push: 5006
+array write: 7008
+array of arrays: 3004
+array inside structure: 6007
+map: 1002 3004
+typedef alias: 1002
+generic typedef: 5
+optional field: 2.5
+optional metadata field: 5
+omitted optional field: null 3
+nullable field: 7.5
+nullable field from Int: 10
+null field: null
+nullable structure: 1002
+conditional structure: 2003
+if value: 6007
+mixed controls: 2.5 3 4
+Int division stays Float: 0.5
+inferred Int field: 2 5
+Int box: 8
+Dynamic box: 8

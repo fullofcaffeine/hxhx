@@ -2656,7 +2656,7 @@ class TyperStage {
 		final contextType = TyAliasExpansion.revealNonNullable(scope.getInference().expressionType(callee, calleeType, scope));
 		final hasSpread = args.filter(argument -> argument.match(ECall(EIdent("__hxhx_spread"), [_]))).length > 0;
 		final contexts:Array<Null<TyType>> = contextType.isFunction()
-			&& !hasSpread ? TyCallArgumentContext.functionValue(TyCallableSignature.fromFunctionValue(contextType), args.length,
+			&& !hasSpread ? TyCallArgumentContext.functionValue(TyCallableSignature.fromFunctionValue(contextType), args,
 				ctx.getIndex()) : [for (_ in args) null];
 		final argumentTypes = [
 			for (index in 0...args.length)
