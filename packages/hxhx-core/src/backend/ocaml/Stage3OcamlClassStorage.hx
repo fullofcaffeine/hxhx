@@ -27,6 +27,7 @@ class Stage3OcamlClassStorage {
 
 	/** `toString()` adapters for the same classes, selected from the same typed facts. */
 	public final stringifiers = new Stage3OcamlClassStringifiers();
+
 	/** Call arguments that were wrapped for a `haxe.Constraints.Function` parameter. */
 	public final adaptedFunctionArguments = new Array<HxExpr>();
 

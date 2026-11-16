@@ -1182,8 +1182,8 @@ class EmitterStage {
 						exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 						currentFunctionLocalOcamlNames);
 				case EBinop("+", a, b):
-					backend.ocaml.Stage3OcamlOrderedOperands.concat(emitConcatOperand(a), emitConcatOperand(b), stage3OperandIsStable(a), stage3OperandIsStable(b),
-						currentFunctionLocalOcamlNames);
+					backend.ocaml.Stage3OcamlOrderedOperands.concat(emitConcatOperand(a), emitConcatOperand(b), stage3OperandIsStable(a),
+						stage3OperandIsStable(b), currentFunctionLocalOcamlNames);
 				case ECall(EField(EIdent("Std"), "string"), [arg]):
 					// String interpolation lowering uses `Std.string(...)` to force stringification.
 					//

@@ -34,7 +34,8 @@ class Stage3OcamlLocalNames {
 			// pattern that cannot be read, so it gets a real OCaml name; the leading
 			// underscore keeps OCaml's unused-variable warning quiet.
 			final base = normalized == "_" ? Stage3OcamlIdentifiers.UNDERSCORE : normalized != null
-				&& StringTools.startsWith(normalized, Stage3OcamlStaticStorage.CELL_PREFIX) ? "local" + normalized : normalized;
+				&& StringTools.startsWith(normalized, Stage3OcamlStaticStorage.CELL_PREFIX) ? "local"
+					+ normalized : normalized;
 			if (base == null || base.length == 0)
 				throw "Stage3 OCaml local naming cannot render exact binding " + entry.getBinding().getIdentity().getCanonicalKey();
 			var targetName = base;
