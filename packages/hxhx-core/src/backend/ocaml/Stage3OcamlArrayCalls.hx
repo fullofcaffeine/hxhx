@@ -70,12 +70,16 @@ private function push(receiverType:TyType, argumentType:TyType, receiver:String,
 
 /**
 	Store one operand in an array slot. Dynamic slots hold the boxed value; an
-	Int or `Null<Int>` operand entering a Float slot (`floats.push(count)`) is
-	converted to Float.
+	Int operand entering a Float slot (`floats.push(count)`) is converted to
+	Float. A `Null<Int>` or `Null<Float>` operand was already converted to the
+	parameter carrier where the argument was bound (exactCallArgumentValue), so
+	converting it again here would unwrap a Float as an Int carrier.
  */
 private function element(slot:TyType, argumentType:Null<TyType>, argument:String):String {
 	if (slot.isDynamic())
 		return "(Obj.magic (" + Stage3OcamlObjects.store(argumentType, argument) + "))";
+	if (argumentType != null && Stage3OcamlNullablePrimitive.innerPrimitive(argumentType) != null)
+		return argument;
 	return Stage3OcamlNumericWidening.toFloatDestination(argumentType, slot, argument);
 }
 

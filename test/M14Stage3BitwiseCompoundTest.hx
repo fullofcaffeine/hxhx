@@ -37,27 +37,24 @@ class M14Stage3BitwiseCompoundTest {
 	}
 
 	/**
-		A compound update of an optional structure field has no native lowering yet
-		(haxe_ocaml-gaa3a). It must stop with a named error, not drop the statement.
+		A compound update of an optional structure field (haxe_ocaml-gaa3a) used to
+		stop with a named error. The consolidated anonymous-field and nullable-carrier
+		lowering now stores it natively, so the result must match upstream Haxe.
 	**/
-	static function rejectOptionalStructureField():Void {
+	static function optionalStructureField():Void {
 		final source = ".tmp/m14_stage3_bitwise_compound_optional";
 		deleteRecursive(source);
 		FileSystem.createDirectory(source);
 		final path = source + "/Main.hx";
-		File.saveContent(path, "class Main { static function main():Void { final opt:{?x:Int} = {x: 4}; opt.x <<= 1; Sys.println(\"x \" + opt.x); } }\n");
-		var message:Null<String> = null;
-		try {
-			final program = M14Stage3RuntimeFixture.prepareProgram({source: File.getContent(path), path: path, root: source});
-			EmitterStage.emitToDir(new MacroExpandedProgram(program, false), source + "/out");
-		} catch (error:Dynamic) {
-			message = Std.string(error);
-		}
+		File.saveContent(path,
+			"class Main { static function main():Void { final opt:{?x:Int} = {x: 4}; opt.x <<= 1; Sys.println(\"x \" + opt.x); final none:{?x:Int} = {}; Sys.println(\"none \" + none.x); } }\n");
+		final expected = "x 8\nnone null\n";
+		M14Stage3RuntimeFixture.observe({command: "node_modules/.bin/haxe", arguments: ["-cp", source, "--run", "Main"], expected: expected});
+		final program = M14Stage3RuntimeFixture.prepareProgram({source: File.getContent(path), path: path, root: source});
+		final executable = EmitterStage.emitToDir(new MacroExpandedProgram(program, false), source + "/out");
+		M14Stage3RuntimeFixture.observe({command: executable, arguments: [], expected: expected});
 		deleteRecursive(source);
-		final expected = "unsupported native OCaml compound assignment <<= on optional structure field `x`";
-		if (message == null || message.indexOf(expected) < 0)
-			throw "expected <" + expected + ">, got <" + message + ">";
-		Sys.println("M14_STAGE3_BITWISE_COMPOUND_OPTIONAL_FIELD_REJECTED:PASS");
+		Sys.println("M14_STAGE3_BITWISE_COMPOUND_OPTIONAL_FIELD:PASS");
 	}
 
 	static function main():Void {
@@ -76,6 +73,6 @@ class M14Stage3BitwiseCompoundTest {
 			throw "Stage3 replaced a compound assignment with the placeholder";
 		deleteRecursive(outDir);
 		Sys.println("M14_STAGE3_BITWISE_COMPOUND_NATIVE:PASS");
-		rejectOptionalStructureField();
+		optionalStructureField();
 	}
 }

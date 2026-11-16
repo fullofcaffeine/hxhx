@@ -27,9 +27,9 @@ It also covers Int `%=` on instance fields, structure fields, array elements
 and locals. Haxe's `%` keeps the sign of the dividend (`-7 % 3` is `-1`).
 Before, `%=` on fields was dropped and on array elements stopped emission.
 
-Compound updates of optional structure fields (`{?x:Int}`) are not lowered
-yet (haxe_ocaml-gaa3a). They stop emission with a named error, which the test
-checks.
+Compound updates of optional structure fields (`{?x:Int}`, haxe_ocaml-gaa3a)
+now lower natively. The test compiles `opt.x <<= 1` on such a field and
+compares the native output with upstream Haxe 4.3.7.
 
 Static fields are not covered. Stage3 has no mutable static storage yet
 (haxe_ocaml-nq65n), and static bitwise updates are tracked in

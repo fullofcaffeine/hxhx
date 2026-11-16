@@ -50,13 +50,17 @@ class M14Stage3ConcatOrderTest {
 		final generated = File.getContent(outDir + "/Main.ml");
 		if (generated.indexOf("let __hx_ordered_left") < 0)
 			throw "Stage3 must bind effectful concatenation operands left to right";
-		if (generated.indexOf("((\"[\") ^ (name))") < 0)
+		// String operands may be wrapped in HxString.toStdString, which prints null as "null" (#160).
+		final has = (plain:String, wrapped:String) -> generated.indexOf(plain) >= 0 || generated.indexOf(wrapped) >= 0;
+		if (!has("((\"[\") ^ (name))", "((\"[\") ^ (HxString.toStdString (name)))"))
 			throw "Stage3 added ordering bindings to a concatenation whose order cannot be observed";
 		// An immutable local cannot change while the other operand runs, so it stays unbound.
-		if (generated.indexOf("((fixedLabel) ^ (") < 0 || generated.indexOf("= (fixedLabel) in") >= 0)
+		if (!has("((fixedLabel) ^ (", "((HxString.toStdString (fixedLabel)) ^ (")
+			|| generated.indexOf("= (fixedLabel) in") >= 0
+			|| generated.indexOf("= (HxString.toStdString (fixedLabel)) in") >= 0)
 			throw "Stage3 bound an immutable-local concatenation operand";
 		// A mutable local can change, so it is read before the other operand runs.
-		if (generated.indexOf("let __hx_ordered_left = ((!runningLabel)) in") < 0)
+		if (!has("let __hx_ordered_left = ((!runningLabel)) in", "let __hx_ordered_left = (HxString.toStdString ((!runningLabel))) in"))
 			throw "Stage3 must bind a mutable-local concatenation operand before the other operand";
 		deleteRecursive(outDir);
 		Sys.println("M14_STAGE3_CONCAT_ORDER_NATIVE:PASS");
