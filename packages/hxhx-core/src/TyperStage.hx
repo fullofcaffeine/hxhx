@@ -4756,7 +4756,9 @@ class TyperStage {
 							bound.getRequiresWriteback() ? leftType : bound.getOperatorInfo().getResultType();
 						} else {
 							// `count += 1.5` and `count /= 2` would store a Float into an Int place.
-							if (leftType.unwrapNull().getSemanticKey() == "primitive:Int"
+							// Inside `untyped`, upstream accepts them, as for the kind errors above.
+							if (!scope.isUntypedContext()
+								&& leftType.unwrapNull().getSemanticKey() == "primitive:Int"
 								&& (op == "/="
 									|| ((op == "+=" || op == "-=" || op == "*=" || op == "%=")
 										&& rightType.unwrapNull().getSemanticKey() == "primitive:Float")))
