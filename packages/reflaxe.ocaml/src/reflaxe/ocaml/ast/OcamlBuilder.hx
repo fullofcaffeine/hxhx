@@ -11228,20 +11228,20 @@ class OcamlBuilder {
 	}
 
 	/**
-		Forward the parameters of a bound method closure to the method.
-
-		Why
-		- A method value can be passed where the expected function type has a non-null
-		  enum parameter (`Expr->Void`) while the method declares `Null<Expr>`.
-		  `Null<Enum>` is carried as `Obj.t`, so the plain enum value must be boxed
-		  before the call. Without it, OCaml rejects the call when the callback type
-		  is fixed by a signature, as in a recursive module group.
-
-		How
-		- `Obj.repr` changes only the OCaml static type. It matches the conversion that
-		  lambda callback adapters use, keeps the value unboxed for `switch`, and is the
-		  identity when the caller already passes a `Null<Enum>` (`Obj.t`) value.
-	**/
+			Forward the parameters of a bound method closure to the method.
+	
+			Why
+			- A method value can be passed where the expected function type has a non-null
+			  enum parameter (`Expr->Void`) while the method declares `Null<Expr>`.
+			  `Null<Enum>` is carried as `Obj.t`, so the plain enum value must be boxed
+			  before the call. Without it, OCaml rejects the call when the callback type
+			  is fixed by a signature, as in a recursive module group.
+	
+			How
+			- `Obj.repr` changes only the OCaml static type. It matches the conversion that
+			  lambda callback adapters use, keeps the value unboxed for `switch`, and is the
+			  identity when the caller already passes a `Null<Enum>` (`Obj.t`) value.
+		**/
 	function boundMethodClosureArguments(expectedArgs:Null<Array<{name:String, opt:Bool, t:Type}>>, paramNames:Array<String>):Array<OcamlExpr> {
 		return [
 			for (i in 0...paramNames.length) {
