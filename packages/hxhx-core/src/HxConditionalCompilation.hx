@@ -757,11 +757,22 @@ private class ExprLexer {
 			i++;
 	}
 
+	/**
+		Read a define name. A dot followed by a name start continues the same name, so
+		`target.threaded` and `target.name` are single defines, as in upstream Haxe 4.3.7.
+	**/
 	function readIdent():String {
 		final start = i;
 		bump();
-		while (!eof() && isIdentCont(peek()))
-			bump();
+		while (!eof()) {
+			if (isIdentCont(peek())) {
+				bump();
+			} else if (peek() == ".".code && i + 1 < s.length && isIdentStart(s.charCodeAt(i + 1))) {
+				bump();
+			} else {
+				break;
+			}
+		}
 		return s.substr(start, i - start);
 	}
 

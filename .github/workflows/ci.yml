@@ -635,9 +635,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Main run 43959120906 needed 49.3 minutes for this shard; slower
+          # runners crossed the old 60-minute limit (PRs #195 and #201).
           - shard: compiler-foundation
             label: Compiler foundations and runtime
-            timeout_minutes: 60
+            timeout_minutes: 80
           - shard: compiler-packaging
             label: OCaml packaging and metal profile
             timeout_minutes: 40
@@ -691,9 +693,11 @@ jobs:
             timeout_minutes: 40
           # Fast tests that no CI job ran before haxe_ocaml-k86ww. Slow ones run
           # in the Q3 slow-test-shards job below.
+          # Main run 43959120906 needed 39.4 minutes for this shard; slower
+          # runners crossed the old 40-minute limit after every command passed.
           - shard: compiler-focused-audit
             label: Regressions found outside CI
-            timeout_minutes: 40
+            timeout_minutes: 55
             # Report a starved command by name before the job limit.
             command_timeout_seconds: "900"
           - shard: macro-host-integration
