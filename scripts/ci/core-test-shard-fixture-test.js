@@ -628,7 +628,7 @@ function main() {
     ['compiler-focused-6', 'Consolidated Stage3 numeric and text regressions'],
     ['compiler-focused-7', 'Stage3 file system, reflection and structural methods'],
     ['compiler-focused-8', 'Consolidated Stage3 text, typing and runtime regressions'],
-    ['compiler-focused-audit', 'Regressions found outside CI'],
+    ['compiler-focused-audit', 'Regressions found outside CI', 55],
     ['macro-host-integration', 'Macro-host integration'],
     ['target-packages', 'Snapshots and examples']
   ]
