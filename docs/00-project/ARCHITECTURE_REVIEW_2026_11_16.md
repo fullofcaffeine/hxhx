@@ -1,8 +1,9 @@
 # Architecture Review, 2026-11-16
 
-Status: **findings recorded; owner decisions open.** Nothing in this document
-changes a goal, a priority, or a README readiness bar by itself. Section 9 lists
-the decisions that do.
+Status: **accepted by the owner on 2026-11-16** (decisions D1, D2, D4, D6, D7,
+and the freeze in the stop list). Decisions D3, D5, and D8 wait for the
+measurements named in section 9. The goals and README framing follow in a
+separate change.
 
 Reviewed revision: `main` at `02cae08a1`.
 
@@ -308,16 +309,19 @@ exact totals.
 
 ## 9. Owner decisions
 
-| ID | Decision | Recommendation |
+The owner answered on 2026-11-16. D0 for the plan in section 6 is 2026-11-16.
+
+| ID | Decision | Outcome |
 |---|---|---|
-| D1 | First product: `reflaxe.ocaml` with upstream Haxe 4.3.7, for a declared scope. | Yes. |
-| D2 | Nearer finish lines for `hxhx`: F1 frontend parity (parse and typed oracles), F2 upstream unit suite on JavaScript, F3 two native generations with stage0 forbidden. Full1 stays the long-term contract, unchanged. | Yes. |
-| D3 | The interface between the hosts and the one OCaml lowering: `haxe.macro.Type` typed AST, or the `target/` fact schema. | Freeze `target/` now; decide at B2 with the numbers; leaning `haxe.macro.Type`. |
-| D4 | Defer the M22 pilot, SDK, customization, and variations until F2; freeze new work on non-JavaScript `hxhx` backends. | Yes. |
-| D5 | Frontend data models: evolve or re-base on the `haxe.macro` shapes. | Decide at B2 from the numbers. |
-| D6 | Authorize the Beads triage in section 8, coordinated with the Codex agent's claims. | Yes. |
-| D7 | Process reset: a short `AGENTS.md`, small pull requests merged daily (no routine consolidations), the 14-day rule for red checks, and archiving the Full1 release-candidate machinery until F2. | Yes. |
-| D8 | Macro executor: native plugins or a typed-tree interpreter. | After `9sj5p.6`. The executor must not depend on the Stage3 emitter at the hard cut. |
+| D1 | First product: `reflaxe.ocaml` with upstream Haxe 4.3.7, for a declared scope. | **Accepted.** |
+| D2 | Nearer finish lines for `hxhx`: F1 frontend parity (parse and typed oracles), F2 upstream unit suite on JavaScript, F3 two native generations with stage0 forbidden. Full1 stays the long-term contract, unchanged. | **Accepted.** |
+| D3 | The interface between the hosts and the one OCaml lowering: `haxe.macro.Type` typed AST, or the `target/` fact schema. | **Open until milestone B2.** `target/` is frozen now (accepted). Recommendation: `haxe.macro.Type`. |
+| D4 | Defer the M22 pilot, SDK, customization, and variations until F2; freeze new work on non-JavaScript `hxhx` backends; fix compile cost directly first. | **Accepted** ("defer all of it"). |
+| D5 | Frontend data models: evolve or re-base on the `haxe.macro` shapes. | **Open until milestone B2.** |
+| D6 | Beads triage per section 8, coordinated with the Codex agent's claims. | **Accepted.** |
+| D7 | Process reset: a short `AGENTS.md`, small pull requests merged daily (no routine consolidations), the 14-day rule for red checks, and archiving the Full1 release-candidate machinery until F2. | **Accepted.** |
+| D8 | Macro executor: native plugins or a typed-tree interpreter. | **Open until `9sj5p.6` lands.** The executor must not depend on the Stage3 emitter at the hard cut. |
+| Freeze | No new semantics in the Stage3 OCaml emitter and no new node kinds under `target/`, except fixes that keep the bootstrap and the macro-plugin path working. | **Accepted** ("freeze both"). |
 
 ## 10. What would change this verdict
 
@@ -333,5 +337,5 @@ exact totals.
   the backlog is real unfinished work.
 - A user needs a non-JavaScript `hxhx` target now. Then that one target joins F2.
 
-README readiness bars and the north-star goals are unchanged by this review until
-the owner takes decisions D1, D2, and D4.
+README readiness bars are unchanged by this record. The goals and README framing
+for D1, D2, and D4 change in a separate pull request.
