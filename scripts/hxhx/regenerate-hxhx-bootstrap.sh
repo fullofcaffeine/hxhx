@@ -35,6 +35,9 @@ Options:
                              emit into packages/hxhx/out, then stop. Leaves bootstrap_out, the regen
                              fingerprint, and the verify build untouched. Used by the pre-merge
                              `check:hxhx-reflaxe-self-compile` gate.
+  --emit-build               With --emit-only, also build the emitted OCaml (`dune build ./out.bc`
+                             in packages/hxhx/out). Emission alone cannot see type errors in the
+                             generated OCaml; this step costs about 80 seconds on CI.
   --server-preflight         Check for stale haxe --wait/--server-connect processes before emit (default).
   --no-server-preflight      Skip stale haxe server preflight checks.
   --kill-repo-server         Stop only the repo-owned haxe --wait server before emit.
@@ -84,6 +87,7 @@ Environment knobs (all optional):
   HXHX_BOOTSTRAP_CLEAN_OUT=0        Reuse packages/hxhx/out (incremental).
   HXHX_BOOTSTRAP_VERIFY=0           Skip verify step.
   HXHX_BOOTSTRAP_EMIT_ONLY=1        Same effect as --emit-only.
+  HXHX_BOOTSTRAP_EMIT_BUILD=1       Same effect as --emit-build.
   HXHX_HAXE_SERVER_PREFLIGHT=1      Enable stale haxe server preflight.
   HXHX_KILL_STALE_HAXE_SERVERS=1    Kill all local haxe servers in preflight (unsafe).
   HXHX_KILL_REPO_HAXE_SERVER=1      Kill only repo-owned haxe server in preflight.
@@ -204,6 +208,7 @@ HXHX_BOOTSTRAP_FAST="${HXHX_BOOTSTRAP_FAST:-0}"
 HXHX_BOOTSTRAP_CLEAN_OUT="${HXHX_BOOTSTRAP_CLEAN_OUT:-}"
 HXHX_BOOTSTRAP_VERIFY="${HXHX_BOOTSTRAP_VERIFY:-}"
 HXHX_BOOTSTRAP_EMIT_ONLY="${HXHX_BOOTSTRAP_EMIT_ONLY:-0}"
+HXHX_BOOTSTRAP_EMIT_BUILD="${HXHX_BOOTSTRAP_EMIT_BUILD:-0}"
 HXHX_HAXE_SERVER_PREFLIGHT="${HXHX_HAXE_SERVER_PREFLIGHT:-1}"
 HXHX_KILL_STALE_HAXE_SERVERS="${HXHX_KILL_STALE_HAXE_SERVERS:-0}"
 HXHX_KILL_REPO_HAXE_SERVER="${HXHX_KILL_REPO_HAXE_SERVER:-0}"
@@ -239,6 +244,9 @@ while [ $# -gt 0 ]; do
 			;;
 		--verify)
 			HXHX_BOOTSTRAP_VERIFY=1
+			;;
+		--emit-build)
+			HXHX_BOOTSTRAP_EMIT_BUILD=1
 			;;
 		--emit-only)
 			HXHX_BOOTSTRAP_EMIT_ONLY=1
@@ -387,6 +395,11 @@ done
 
 assert_bool_01 "HXHX_BOOTSTRAP_FAST" "$HXHX_BOOTSTRAP_FAST"
 assert_bool_01 "HXHX_BOOTSTRAP_EMIT_ONLY" "$HXHX_BOOTSTRAP_EMIT_ONLY"
+assert_bool_01 "HXHX_BOOTSTRAP_EMIT_BUILD" "$HXHX_BOOTSTRAP_EMIT_BUILD"
+if [ "$HXHX_BOOTSTRAP_EMIT_BUILD" = "1" ] && [ "$HXHX_BOOTSTRAP_EMIT_ONLY" != "1" ]; then
+	echo "--emit-build requires --emit-only; the full regeneration already verifies its snapshot build." >&2
+	exit 2
+fi
 if [ "$HXHX_BOOTSTRAP_EMIT_ONLY" = "1" ]; then
 	# An acceptance check must always run the emit, and it never produces a
 	# snapshot to verify.
@@ -1439,6 +1452,19 @@ if [ "$skipped_emit" = "0" ]; then
 		# reflaxe.ocaml lowered and printed every hxhx class without an error.
 		# That is the whole claim of this mode; the committed snapshot is a
 		# separate maintenance step.
+		if [ "$HXHX_BOOTSTRAP_EMIT_BUILD" = "1" ]; then
+			# Emission cannot see OCaml type errors in the generated compiler.
+			# PR #168 broke regeneration that way for ten days, so build it here.
+			build_start="$(now_ts)"
+			echo "== Building the emitted OCaml (dune build ./out.bc)"
+			if [ "$HXHX_DUNE_JOBS" != "auto" ]; then
+				(cd "$OUT_DIR" && dune build -j "$HXHX_DUNE_JOBS" ./out.bc)
+			else
+				(cd "$OUT_DIR" && dune build ./out.bc)
+			fi
+			echo "== Emitted OCaml build duration: $(( $(now_ts) - build_start ))s"
+			echo "HXHX_REFLAXE_SELF_COMPILE_BUILD:PASS"
+		fi
 		total_sec="$(( $(now_ts) - total_start ))"
 		echo "== Total emit-only duration: ${total_sec}s"
 		write_report_json "$HXHX_BOOTSTRAP_REPORT_JSON"

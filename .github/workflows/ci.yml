@@ -1090,9 +1090,12 @@ jobs:
 
   # The other jobs build hxhx from the committed bootstrap snapshot, so none of
   # them shows whether reflaxe.ocaml still accepts the current hxhx sources.
-  # This job runs that stage0 emit (lowering and printing every hxhx class, no
-  # dune build). It starts right after routing and runs beside the longer test
-  # shards. PR #116 merged code that failed only here.
+  # This job runs that stage0 emit (lowering and printing every hxhx class) and
+  # then builds the emitted OCaml. The build costs about 80 seconds and catches
+  # type errors in the generated compiler, which the emit cannot see: PR #168
+  # broke bootstrap regeneration that way for ten days. The job starts right
+  # after routing and runs beside the longer test shards. PR #116 merged code
+  # that failed only here.
   reflaxe-self-compile:
     name: hxhx self-compile through reflaxe.ocaml
     runs-on: ubuntu-latest
@@ -1130,7 +1133,46 @@ jobs:
           haxe -version
       - name: Download Haxe libraries (lix)
         run: npx lix download
-      - name: Emit hxhx through reflaxe.ocaml
+      - name: Install OCaml toolchain for the emitted compiler build
+        run: |
+          set -euo pipefail
+          retry_apt() {
+            local max_attempts=4
+            local attempt=1
+            while true; do
+              if "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "APT command failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "APT command failed (attempt ${attempt}/${max_attempts}): $*" >&2
+              attempt=$((attempt + 1))
+              sleep 5
+            done
+          }
+
+          # These packages come from Ubuntu. Unrelated preinstalled repositories
+          # must not block compiler checks when their package indexes are broken.
+          test -s /etc/apt/sources.list.d/ubuntu.sources
+          apt_sources=(
+            -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/ubuntu.sources
+            -o Dir::Etc::sourceparts=/dev/null
+          )
+          retry_apt sudo apt-get "${apt_sources[@]}" update
+
+          dune_candidate="$(apt-cache "${apt_sources[@]}" policy dune | awk '/Candidate:/ { print $2; exit }')"
+          if [ -n "${dune_candidate:-}" ] && [ "${dune_candidate}" != "(none)" ]; then
+            dune_pkg="dune"
+          else
+            dune_pkg="ocaml-dune"
+          fi
+
+          retry_apt sudo apt-get "${apt_sources[@]}" install -y ocaml ocaml-findlib "${dune_pkg}"
+          dune --version
+          ocamlc -version
+      - name: Emit and build hxhx through reflaxe.ocaml
         env:
           HXHX_STAGE0_PROGRESS: "1"
           HXHX_STAGE0_HEARTBEAT: "60"
@@ -1139,6 +1181,7 @@ jobs:
           HXHX_LOG_DIR: ${{ runner.temp }}/reflaxe-self-compile/stage0-logs
           REFLAXE_OCAML_PROGRESS_FILE: ${{ runner.temp }}/reflaxe-self-compile/stage0-progress.log
           HXHX_BOOTSTRAP_REPORT_JSON: ${{ runner.temp }}/reflaxe-self-compile/report.json
+          HXHX_DUNE_JOBS: "2"
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/reflaxe-self-compile"
