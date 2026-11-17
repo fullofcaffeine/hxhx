@@ -6474,6 +6474,10 @@ class OcamlBuilder {
 			final built = buildExpr(inner);
 			final carrier = switch (dynamicStrategy) {
 				case DirectCarrier: built;
+				// Enums need their name in the box: a constant constructor is an OCaml immediate
+				// and would otherwise print as an Int (haxe_ocaml-oxjcd).
+				case BoxWithObjRepr if (fullNameOfTypeEnum(inner.t) != null || isNullableEnumType(inner.t) != null):
+					coerceToObjCarrier(inner.t, built);
 				case BoxWithObjRepr: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 			};
 			return OcamlExpr.EApp(dynamicStringFunction(inner, dynamicStrategy), [carrier]);
@@ -7790,6 +7794,7 @@ class OcamlBuilder {
 
 		final nullableEnumName = isNullableEnumType(valueType);
 		if (nullableEnumName != null) {
+			registerBoxedEnum(nullableEnumName);
 			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
 				[OcamlExpr.EConst(OcamlConst.CString(nullableEnumName)), value]);
 		}
@@ -7799,10 +7804,21 @@ class OcamlBuilder {
 
 		final enumName = fullNameOfTypeEnum(valueType);
 		if (enumName != null) {
+			registerBoxedEnum(enumName);
 			obj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"), [OcamlExpr.EConst(OcamlConst.CString(enumName)), obj]);
 		}
 
 		return obj;
+	}
+
+	/**
+		 * A boxed enum value can be printed or inspected through Dynamic, which reads its
+		 * constructor names from the runtime type registry. Standard-library enums are left out
+		 * of that registry by default, so a boxed `haxe.io.Encoding` printed as `<object>`.
+		 * Every enum that this target boxes is therefore registered.
+		 */
+	function registerBoxedEnum(enumName:String):Void {
+		ctx.nonStdTypeRegistryEnums.set(enumName, true);
 	}
 
 	inline function toObjValueExpr(e:TypedExpr):OcamlExpr {
