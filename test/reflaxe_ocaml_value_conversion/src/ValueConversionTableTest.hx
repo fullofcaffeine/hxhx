@@ -140,6 +140,9 @@ class ValueConversionTableTest {
 			if (actual != read.expected)
 				failures.push('ConversionHolder.value read as ${ComplexTypeTools.toString(read.actual)}: expected ${read.expected}, got $actual');
 		}
+		final dynamicToParameter = Std.string(OcamlValueConversion.between(DynamicObj, OcamlValueConversion.carrierOf(holderValue)));
+		if (dynamicToParameter != "UnboxObj")
+			failures.push('Dynamic -> ConversionHolder.T: expected UnboxObj, got $dynamicToParameter');
 		final plainRead = Std.string(OcamlValueConversion.decideGenericRead(ComplexTypeTools.toType(macro :Int), ComplexTypeTools.toType(macro :Int)));
 		if (plainRead != "null")
 			failures.push('a field declared Int is not a generic read: expected null, got $plainRead');

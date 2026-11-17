@@ -172,6 +172,11 @@ class OcamlValueConversion {
 				UnboxObj;
 			case [NullablePrimitive(BoolCarrier), DynamicObj]:
 				TagNullableBool;
+			case [DynamicObj, TypeParameterValue]:
+				// Generic code such as `get_value():T return cast stored;` relies on this
+				// `Obj.obj`: it gives the method the polymorphic OCaml result type `'a`, so a
+				// caller at a concrete type uses the result without a conversion.
+				UnboxObj;
 			case [TypeParameterValue, NativePrimitive(primitive)]:
 				UnboxNullablePrimitive(primitive);
 			case [TypeParameterValue, ObjectReference] | [TypeParameterValue, FunctionValue]:
