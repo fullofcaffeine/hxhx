@@ -89,44 +89,43 @@ The checked disposition is in
 The 2026-11-16 architecture review found that this ownership problem has grown:
 the Stage3 OCaml path more than doubled after July, and the planned shared core
 is still a small subset. It also found that conversions in `reflaxe.ocaml` lack a
-single owner, that checks pass without compiling the generated compiler, and that
-the Beads plan no longer shows active work. It proposes `reflaxe.ocaml` as the
-first product, measured frontend parity on one lane, and one OCaml lowering. The
-owner accepted its main decisions on 2026-11-16, and the Stage3 emitter and the
-`target/` fact schema are frozen for new semantics. The priorities below are
-being rewritten to match in a follow-up change. See
-`docs/00-project/ARCHITECTURE_REVIEW_2026_11_16.md`.
+single owner, that checks passed without compiling the generated compiler, and
+that the Beads plan no longer showed active work. The owner accepted its main
+decisions on 2026-11-16. See `docs/00-project/ARCHITECTURE_REVIEW_2026_11_16.md`.
 
 The convergence priorities are:
 
-1. trustworthy frontend identities, source facts, request isolation, and
-   dependency observation;
-2. fail-closed standalone `reflaxe.ocaml` representation, calls, control,
-   runtime, and output ownership;
-3. native `hxhx` feeding that same standalone target implementation for the
-   combined product;
-4. Full1 closure by root semantic family on one exact candidate, independently
-   of the OCaml hard cut because OCaml output is not in the declared Full1
-   target scope;
-5. typed-module reuse after its direct clean-build differential and memory
-   gates, without waiting for unrelated Full1 target closure; and
-6. M22 and general customization implementation.
+1. **`reflaxe.ocaml` 1.0 on upstream Haxe 4.3.7, for a declared scope.** This is
+   the first product, and it is also the compiler that builds `hxhx`. It needs
+   one typed owner for value conversions (`haxe_ocaml-9cqxj`), a compile-cost
+   budget, and checks that build and run what ships (`haxe_ocaml-s7jry`).
+2. **F1, `hxhx` frontend parity, measured.** The parse oracle (`scripts/oracle`)
+   and the typed oracle compare `hxhx` with upstream on the standard library and
+   `tests/unit`. Strict checking becomes the default, and `hxhx` type-checks its
+   own sources.
+3. **F2, the upstream unit suite on JavaScript,** with macros that `hxhx`
+   executes through the real typer (`haxe_ocaml-9sj5p.6` to `.8`).
+4. **One OCaml lowering.** Native `hxhx` feeds the standalone `reflaxe.ocaml`
+   lowering. The Stage3 OCaml emitter and the `target/` fact schema are frozen for
+   new semantics now and are deleted after the migration. The interface between
+   the hosts and that lowering is decision D3 of the review, taken from the oracle
+   numbers.
+5. **F3, two native generations with stage0 forbidden** (`haxe_ocaml-38gsp.2`).
+6. **Full1** stays the unchanged long-term contract. Further targets join it one
+   at a time after F2, each with its upstream target suite.
 
-The first two fronts can proceed in parallel, and Full1 continues through its
-own declared target matrix without waiting for step 3. Stage3 remains useful
-for bootstrap and diagnosis, but new Stage3-only OCaml semantic repairs cannot
-earn standalone or shared-target readiness. If a Stage3-generated artifact is
-used in a Full1 behavior test, that behavior still has to pass its exact
-Full1 gate; the repair is not evidence by itself. An unsafe OCaml boundary is
-not forbidden merely because it uses `Obj.magic`; it must have an explicit
-typed representation reason, validation, and tests rather than serving as a
-placeholder or silent fallback.
+Deferred until F2: the M22 pilot, the plugin SDK, customization and Haxe-family
+variations (including the hxb dialect), and new feature work on the
+non-JavaScript `hxhx` backends. Those backends get regression fixes only. Their
+beads are deferred in the tracker.
 
-Until step 3 is complete, no more than three P0 implementation fronts should be
-active at once: frontend/request/dependency facts, standalone target safety,
-and the current integration or Full1 root-family owner. Product aggregates and
-deferred planning records may remain open without authorizing simultaneous
-implementation.
+No more than three implementation fronts are active at once: `reflaxe.ocaml`
+soundness, frontend parity, and integration (bootstrap and the current gate).
+The frozen Stage3 emitter keeps only fixes that keep the bootstrap and the
+macro-plugin path working; such a repair cannot earn readiness. An unsafe OCaml
+boundary is not forbidden merely because it uses `Obj.magic`; it must have an
+explicit typed representation reason, validation, and tests rather than serving
+as a placeholder or silent fallback.
 
 Full1 is not a technical cache-key input. Typed-reuse implementation may start
 before Full1 closes once lexical identity, request isolation, dependency
