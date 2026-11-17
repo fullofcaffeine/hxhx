@@ -7754,6 +7754,10 @@ class OcamlBuilder {
 						OcamlExpr.EApp(OcamlExpr.EField(runtime, "box_bool"), [
 							OcamlExpr.EApp(OcamlExpr.EField(runtime, "unbox_bool_or_obj"), [OcamlExpr.EIdent(tmp)])
 						])), false);
+			case UnboxDynamicEnum(semanticTypeId):
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "unbox_or_obj"), [OcamlExpr.EConst(OcamlConst.CString(semanticTypeId)), value])
+				]);
 		}
 	}
 
