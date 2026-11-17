@@ -85,8 +85,8 @@ class ValueConversionTableTest {
 			{from: macro :Null<ConversionColor>, to: macro :ConversionColor, expected: "UnboxObj"},
 			{from: macro :ConversionMaybeColor, to: macro :ConversionColor, expected: "UnboxObj"},
 			// A Dynamic value gives a typed reference or enum.
-			{from: macro :Dynamic, to: macro :ConversionColor, expected: "UnboxObj"},
-			{from: macro :Dynamic, to: macro :Null<ConversionColor>, expected: "UnboxObj"},
+			{from: macro :Dynamic, to: macro :ConversionColor, expected: "UnboxDynamicEnum(ConversionColor)"},
+			{from: macro :Dynamic, to: macro :Null<ConversionColor>, expected: "UnboxDynamicEnum(ConversionColor)"},
 			{from: macro :Dynamic, to: macro :ConversionBox, expected: "UnboxObj"},
 			{from: macro :Any, to: macro :String, expected: "UnboxObj"},
 			{from: macro :Dynamic, to: macro :ConversionList, expected: "UnboxObj"},

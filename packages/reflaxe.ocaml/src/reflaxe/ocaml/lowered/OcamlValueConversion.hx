@@ -59,6 +59,12 @@ enum OcamlValueConversionKind {
 
 	/** Read the value that an `Obj.t` carrier holds, with `Obj.obj`. */
 	UnboxObj;
+
+	/**
+		Read a Haxe enum value out of `Dynamic`. A Dynamic enum is boxed with its enum
+		name (`HxEnum.box_if_needed`), so it needs `HxEnum.unbox_or_obj`, not `Obj.obj`.
+	**/
+	UnboxDynamicEnum(semanticTypeId:String);
 }
 
 /**
@@ -139,6 +145,8 @@ class OcamlValueConversion {
 				BoxNullable;
 			case [NullableEnum(source), NativeEnum(target)] if (source == target):
 				UnboxObj;
+			case [DynamicObj, NativeEnum(target)] | [DynamicObj, NullableEnum(target)] if (usesHaxeEnumRuntime(target)):
+				UnboxDynamicEnum(target);
 			case [DynamicObj, NativeEnum(_)] | [DynamicObj, NullableEnum(_)] | [DynamicObj, ObjectReference]:
 				UnboxObj;
 			case _:

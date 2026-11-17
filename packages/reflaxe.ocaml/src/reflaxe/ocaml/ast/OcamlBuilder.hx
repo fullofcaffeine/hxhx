@@ -7746,6 +7746,10 @@ class OcamlBuilder {
 				safeUnboxNullableBool(value);
 			case UnboxObj:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [value]);
+			case UnboxDynamicEnum(semanticTypeId):
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "unbox_or_obj"), [OcamlExpr.EConst(OcamlConst.CString(semanticTypeId)), value])
+				]);
 		}
 	}
 
