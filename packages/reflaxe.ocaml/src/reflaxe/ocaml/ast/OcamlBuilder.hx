@@ -11182,9 +11182,7 @@ class OcamlBuilder {
 		}
 		final recvVar = tmpName == null ? recvExpr : OcamlExpr.EIdent(tmpName);
 
-		final argExprs:Array<OcamlExpr> = [];
-		for (n in paramNames)
-			argExprs.push(OcamlExpr.EIdent(n));
+		final argExprs = boundMethodClosureArguments(expectedArgs, paramNames);
 
 		final unwrappedObj = unwrap(objExpr);
 		final isSuperReceiver = switch (unwrappedObj.expr) {
@@ -11230,6 +11228,31 @@ class OcamlBuilder {
 	}
 
 	/**
+		 * Forward the parameters of a bound method closure to the method.
+		 *
+		 * Why:
+		 * - A method value can be passed where the expected function type has a non-null
+		 *   enum parameter (`Expr->Void`) while the method declares `Null<Expr>`.
+		 *   `Null<Enum>` is carried as `Obj.t`, so the plain enum value must be converted
+		 *   before the call. Without it, OCaml rejects the call when the callback type
+		 *   is fixed by a signature, as in a recursive module group.
+		 *
+		 * How:
+		 * - `Obj.repr` changes only the OCaml static type. It matches the conversion that
+		 *   lambda callback adapters use, keeps the value unboxed for `switch`, and is the
+		 *   identity when the caller already passes a `Null<Enum>` (`Obj.t`) value.
+		 */
+	function boundMethodClosureArguments(expectedArgs:Null<Array<{name:String, opt:Bool, t:Type}>>, paramNames:Array<String>):Array<OcamlExpr> {
+		return [
+			for (i in 0...paramNames.length) {
+				final value = OcamlExpr.EIdent(paramNames[i]);
+				final nullableEnum = expectedArgs != null && isNullableEnumType(expectedArgs[i].t) != null;
+				nullableEnum ? OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [value]) : value;
+			}
+		];
+	}
+
+	/**
 		 * Builds a bound method closure when the receiver is already available as an OCaml expression.
 		 *
 		 * Why:
@@ -11264,9 +11287,7 @@ class OcamlBuilder {
 			out;
 		};
 
-		final argExprs:Array<OcamlExpr> = [];
-		for (n in paramNames)
-			argExprs.push(OcamlExpr.EIdent(n));
+		final argExprs = boundMethodClosureArguments(expectedArgs, paramNames);
 
 		final recvFullName = classFullNameFromType(recvType);
 		final isDispatchRecv = recvFullName != null && (ctx.dispatchTypes.exists(recvFullName) || ctx.interfaceTypes.exists(recvFullName));
