@@ -14,7 +14,10 @@ if (role === 'parent') {
 	const child = spawn(process.execPath, [__filename, 'child', readyPath, startupDelay], {
 		stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
 	})
-	fs.writeFileSync(readyPath + '.created', String(child.pid))
+	// Publish the grandchild id atomically. The runner can kill this parent at any time,
+	// and a plain write could leave an empty file that the fixture reads as pid 0.
+	fs.writeFileSync(readyPath + '.created.pending', String(child.pid))
+	fs.renameSync(readyPath + '.created.pending', readyPath + '.created')
 	child.once('message', message => {
 		assert.equal(message, 'ready')
 		// Atomic publication lets the watcher read only a complete readiness record.
