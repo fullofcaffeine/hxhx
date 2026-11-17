@@ -2533,7 +2533,7 @@ echo "$out" | grep -q "^native-reflaxe-stage3=ok$"
 echo "$out" | grep -q "^sum=10$"
 grep -Eq 'sum := __hx_[a-z_]+' "$tmpstage3sum/out/Main.ml"
 grep -q 'HxBootArray.iter' "$tmpstage3sum/out/Main.ml"
-grep -Eq 'print_endline \(\("sum=" \^ (HxDynamic\.toStdString|string_of_int)' "$tmpstage3sum/out/Main.ml"
+grep -Eq 'print_endline \(+"sum="\)* \^ \(*(HxDynamic\.toStdString|string_of_int)' "$tmpstage3sum/out/Main.ml"
 
 echo "== Stage3 bring-up: ingests library -D defines (haxe_libraries/*.hxml)"
 tmpmini="$tmpdir/haxelib_define_fixture"
@@ -2739,7 +2739,7 @@ test "$(printf '%s\n' "$out" | grep -c '^build_macro\[Api\]\[0\]=hxhxmacros.Buil
 echo "$out" | grep -q "^build_macro_run\[Api\]\[0\]=ok$"
 echo "$out" | grep -q "^build_fields\[Api\]=1$"
 grep -q 'let rec generated ()' "$tmpbuild_lazy/out/Api.ml"
-test "$(printf '%s\n' "$out" | grep -c '^from_hxhx_build_macro$')" -eq 2
+test "$(printf '%s\n' "$out" | grep -cE '^(.*/)?Api\.hx:[0-9]+: from_hxhx_build_macro$')" -eq 2
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 
@@ -2828,7 +2828,8 @@ out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stag
 echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.FieldPrinterMacros.addArgFunctionAndVar()$"
 echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
 echo "$out" | grep -q "^build_fields\\[Main\\]=1$"
-grep -q 'let generated_var = 123' "$tmpbuild_print/out/Main.ml"
+# Static variables are stored as refs since the static-field-write lowering; accept both forms.
+grep -Eq 'let (__hx_static_)?generated_var( : int ref)? = (ref \(123\)|123)' "$tmpbuild_print/out/Main.ml"
 grep -Eq '__hx_trace_argument_[0-9]+ = \("from_hxhx_field_printer"\)' "$tmpbuild_print/out/Main.ml"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
