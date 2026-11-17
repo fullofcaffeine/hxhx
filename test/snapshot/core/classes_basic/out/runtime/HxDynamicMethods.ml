@@ -106,7 +106,7 @@ let call_class_method receiver class_name field arguments =
   in
   let found =
     Stdlib.List.find_map
-      (fun owner -> Option.bind (Hashtbl.find_opt tables owner) (fun methods -> Hashtbl.find_opt methods field))
+      (fun owner -> Stdlib.Option.bind (Hashtbl.find_opt tables owner) (fun methods -> Hashtbl.find_opt methods field))
       classes
   in
   match found with
