@@ -466,7 +466,7 @@ class OcamlStaticStringPlanner {
 		every other unowned type.
 	**/
 	public static function semanticTypeId(type:Type):Null<String> {
-		return switch (followNoAbstracts(type)) {
+		return switch (followValueAbstracts(type)) {
 			case TAbstract(abstractRef, [inner]):
 				final abstractType = abstractRef.get();
 				if (abstractType.pack.length != 0 || abstractType.name != "Null") {
@@ -498,6 +498,29 @@ class OcamlStaticStringPlanner {
 			case _:
 				null;
 		};
+	}
+
+	/**
+		Follows typedefs and abstracts that are not core types to the type that
+		carries their value. `enum abstract Mime(String)` and `abstract Ratio(Float)`
+		are stored as their underlying `String` and `Float`, and `Std.string` prints
+		that value, as in upstream Haxe (haxe_ocaml-trjbi). Core types, including
+		`Null<T>`, `Int`, `Float`, and `Bool`, stop the walk.
+	**/
+	public static function followValueAbstracts(type:Type):Type {
+		var current = followNoAbstracts(type);
+		for (_ in 0...32) {
+			switch (current) {
+				case TAbstract(abstractRef, parameters):
+					final abstractType = abstractRef.get();
+					if (abstractType.meta.has(":coreType"))
+						return current;
+					current = followNoAbstracts(TypeTools.applyTypeParameters(abstractType.type, abstractType.params, parameters));
+				case _:
+					return current;
+			}
+		}
+		return current;
 	}
 
 	static function followNoAbstracts(type:Type):Type {

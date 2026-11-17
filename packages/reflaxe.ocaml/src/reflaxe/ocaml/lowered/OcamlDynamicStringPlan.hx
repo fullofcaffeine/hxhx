@@ -82,6 +82,11 @@ class OcamlDynamicStringModel {
 			// Dynamic path, like a plain enum; the static path has no enum printer.
 			case TAbstract(abstractRef, [inner]) if (isNullAbstract(abstractRef.get()) && isEnumType(inner)):
 				OcamlDynamicStringStrategy.BoxWithObjRepr;
+			// Null<A> for an abstract that is not a core type, such as Null<Mime> with
+			// `enum abstract Mime(String)`, is stored as Obj.t. It prints through the Dynamic
+			// path, which also prints null (haxe_ocaml-trjbi).
+			case TAbstract(abstractRef, [inner]) if (isNullAbstract(abstractRef.get()) && isValueAbstract(inner)):
+				OcamlDynamicStringStrategy.DirectCarrier;
 			case TAbstract(_, _):
 				null;
 			case TInst(classRef, _):
@@ -98,6 +103,13 @@ class OcamlDynamicStringModel {
 				OcamlDynamicStringStrategy.DirectCarrier;
 			case _:
 				OcamlDynamicStringStrategy.BoxWithObjRepr;
+		};
+	}
+
+	static function isValueAbstract(type:Type):Bool {
+		return switch (followNoAbstracts(type)) {
+			case TAbstract(abstractRef, _): !abstractRef.get().meta.has(":coreType");
+			case _: false;
 		};
 	}
 

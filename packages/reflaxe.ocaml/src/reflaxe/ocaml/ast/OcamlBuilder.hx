@@ -6466,6 +6466,18 @@ class OcamlBuilder {
 		}
 	}
 
+	// An abstract that is not a core type stores its underlying value, such as
+	// `enum abstract Code(Int)`. String and Float values reach the static string
+	// plan before this point; Int and Bool print here (haxe_ocaml-trjbi).
+	function buildValueAbstractString(inner:TypedExpr, abstractType:Type):OcamlExpr {
+		final valueType = OcamlStaticStringPlanner.followValueAbstracts(abstractType);
+		if (isIntType(valueType))
+			return OcamlExpr.EApp(OcamlExpr.EIdent("string_of_int"), [buildExpr(inner)]);
+		if (isBoolType(valueType))
+			return OcamlExpr.EApp(OcamlExpr.EIdent("string_of_bool"), [buildExpr(inner)]);
+		return OcamlExpr.EConst(OcamlConst.CString("<unsupported>"));
+	}
+
 	/** Inspects unwrapped syntax but evaluates the original expression so semantic metadata remains authoritative. */
 	function buildStdString(inner:TypedExpr, sourceKind:OcamlStaticStringSourceKind):OcamlExpr {
 		final e = unwrap(inner);
@@ -6527,7 +6539,7 @@ class OcamlBuilder {
 							OcamlExpr.EConst(OcamlConst.CString("<unsupported>"));
 						}
 					default:
-						OcamlExpr.EConst(OcamlConst.CString("<unsupported>"));
+						buildValueAbstractString(inner, e.t);
 				}
 			case TInst(cRef, _):
 				final c = cRef.get();
