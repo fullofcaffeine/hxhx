@@ -1,0 +1,7 @@
+yes=true bool=true int=false
+no=false bool=true int=false
+none=true
+any=true
+back=true
+plain=false
+cast=true

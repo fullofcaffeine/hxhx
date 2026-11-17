@@ -59,6 +59,13 @@ enum OcamlValueConversionKind {
 
 	/** Read the value that an `Obj.t` carrier holds, with `Obj.obj`. */
 	UnboxObj;
+
+	/**
+		Give a `Null<Bool>` value the tagged Boolean form of `Dynamic`. `hx_null`
+		stays `hx_null`. Without the tag, `true` is the same immediate as the
+		integer `1`, and a `Dynamic` reader prints or tests it as an `Int`.
+	**/
+	TagNullableBool;
 }
 
 /**
@@ -141,6 +148,8 @@ class OcamlValueConversion {
 				UnboxObj;
 			case [DynamicObj, NativeEnum(_)] | [DynamicObj, NullableEnum(_)] | [DynamicObj, ObjectReference]:
 				UnboxObj;
+			case [NullablePrimitive(BoolCarrier), DynamicObj]:
+				TagNullableBool;
 			case _:
 				null;
 		}

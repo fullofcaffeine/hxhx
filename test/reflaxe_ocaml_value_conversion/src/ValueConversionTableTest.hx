@@ -90,11 +90,13 @@ class ValueConversionTableTest {
 			{from: macro :Dynamic, to: macro :ConversionBox, expected: "UnboxObj"},
 			{from: macro :Any, to: macro :String, expected: "UnboxObj"},
 			{from: macro :Dynamic, to: macro :ConversionList, expected: "UnboxObj"},
+			// A nullable Boolean enters Dynamic with its tag.
+			{from: macro :Null<Bool>, to: macro :Dynamic, expected: "TagNullableBool"},
+			{from: macro :Null<Bool>, to: macro :Any, expected: "TagNullableBool"},
 			// Pairs that the table does not list yet.
 			{from: macro :ConversionColor, to: macro :Null<ConversionShape>, expected: "null"},
 			{from: macro :ConversionShape, to: macro :ConversionColor, expected: "null"},
 			{from: macro :Null<Int>, to: macro :Float, expected: "null"},
-			{from: macro :Null<Bool>, to: macro :Dynamic, expected: "null"},
 			{from: macro :Dynamic, to: macro :Int, expected: "null"},
 			{from: macro :Int, to: macro :Dynamic, expected: "null"},
 		];

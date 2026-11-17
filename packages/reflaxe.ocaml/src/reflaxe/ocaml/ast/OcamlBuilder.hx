@@ -7746,6 +7746,14 @@ class OcamlBuilder {
 				safeUnboxNullableBool(value);
 			case UnboxObj:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [value]);
+			case TagNullableBool:
+				final tmp = freshTmp("nullable_bool");
+				final runtime = OcamlExpr.EIdent("HxRuntime");
+				OcamlExpr.ELet(tmp, value,
+					OcamlExpr.EIf(OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EIdent(tmp), OcamlExpr.EField(runtime, "hx_null")), OcamlExpr.EIdent(tmp),
+						OcamlExpr.EApp(OcamlExpr.EField(runtime, "box_bool"), [
+							OcamlExpr.EApp(OcamlExpr.EField(runtime, "unbox_bool_or_obj"), [OcamlExpr.EIdent(tmp)])
+						])), false);
 		}
 	}
 
@@ -7806,10 +7814,11 @@ class OcamlBuilder {
 		// Null<Bool> holds an ordinary bool behind Obj.t, and Null<Enum> holds the
 		// native variant, like sealed nullable results. Select these before the
 		// generic abstract branch, which uses tagged Dynamic storage that typed
-		// constructor matches cannot consume. Casts use the same table.
+		// constructor matches cannot consume. A Null<Bool> that enters Dynamic or
+		// Any gets the Boolean tag that Dynamic readers need. Casts use the same table.
 		switch [OcamlValueConversion.carrierOf(lhsType), OcamlValueConversion.carrierOf(rhs.t)] {
 			case [target = NullablePrimitive(BoolCarrier), source = NativePrimitive(BoolCarrier)] | [target = NullableEnum(_), source = NativeEnum(_)] |
-				[target = NullableEnum(_), source = NullableEnum(_)]:
+				[target = NullableEnum(_), source = NullableEnum(_)] | [target = DynamicObj, source = NullablePrimitive(BoolCarrier)]:
 				final conversion = OcamlValueConversion.between(source, target);
 				if (conversion != null)
 					return buildValueConversion(conversion, rhs);
