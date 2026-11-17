@@ -24,71 +24,95 @@ let throwValue = fun value rendered classes enums -> let hx_type = Obj.magic ((O
       tempString := __assign_3;
       __assign_3
     ) else HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_4 = "Stage3 OCaml throw requires a supported exact runtime carrier: " in let __string_part_5 = HxString.toStdString (TyType.getSemanticKey (Obj.magic hx_type) ()) in __string_part_4 ^ __string_part_5)) ["Dynamic"]);
-  let payload = (!tempString : string) in ("HxType.hx_throw_typed_rtti (" ^ HxString.toStdString payload) ^ ") [\"Dynamic\"]"
+  let payload = (!tempString : string) in let hx_exception = (Backend_ocaml_Stage3OcamlClassStorage.exceptionModule (Obj.magic classes) () : string) in let mayHoldWrapper = hx_exception != Obj.magic (HxRuntime.hx_null) && (TyType.isDynamic (Obj.magic hx_type) () || (let __string_eq_left_8 = Backend_ocaml_Stage3OcamlClassStorage.nominalName (Obj.magic classes) (Obj.magic hx_type) in let __string_eq_right_9 = "haxe.Exception" in HxString.equals __string_eq_left_8 __string_eq_right_9)) in let tempString1 = ref (HxString.hx_null_string : string) in (
+    ignore (if mayHoldWrapper then let __assign_10 = (((HxString.toStdString hx_exception ^ ".thrown (") ^ HxString.toStdString payload) ^ ")" : string) in (
+      tempString1 := __assign_10;
+      __assign_10
+    ) else let __assign_11 = (payload : string) in (
+      tempString1 := __assign_11;
+      __assign_11
+    ));
+    let original = (!tempString1 : string) in ("HxType.hx_throw_typed_rtti (" ^ HxString.toStdString original) ^ ") [\"Dynamic\"]"
+  )
 )
 
 let tryStatement = fun body catches names classes enums quote -> let value = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_thrown_value" : string) : string) in let tags = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_thrown_tags" : string) : string) in let original = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_original_exception" : string) : string) in let handlers = ref ("raise " ^ HxString.toStdString original) in let _g = ref 0 in let _g1 = HxArray.length catches in (
-  ignore (while !_g < _g1 do ignore (let offset = let __old_8 = !_g in let __new_9 = HxInt.add __old_8 1 in (
-    ignore (_g := __new_9);
-    __old_8
-  ) in let entry = let __array_read_receiver_10 = catches in let __array_read_index_11 = HxInt.sub (HxInt.sub (HxArray.length catches) offset) 1 in HxArray.get (Obj.magic __array_read_receiver_10) __array_read_index_11 in let nominal = (Backend_ocaml_Stage3OcamlClassStorage.nominalName (Obj.magic classes) (Obj.magic (Obj.obj (HxAnon.get entry "type"))) : string) in let enumName = (Backend_ocaml_Stage3OcamlEnums.runtimeName (Obj.magic enums) (Obj.magic (Obj.obj (HxAnon.get entry "type"))) : string) in let tempString = ref (HxString.hx_null_string : string) in (
-    ignore (let _g2 = (TyType.getSemanticKey (Obj.magic (Obj.obj (HxAnon.get entry "type"))) () : string) in match _g2 with
-      | "primitive:Bool" -> let __assign_17 = ("HxRuntime.unbox_bool_or_obj " ^ HxString.toStdString value : string) in (
-        tempString := __assign_17;
-        __assign_17
-      )
-      | "primitive:Float" -> let __assign_18 = (("(Obj.obj " ^ HxString.toStdString value) ^ " : float)" : string) in (
-        tempString := __assign_18;
-        __assign_18
-      )
-      | "primitive:Int" -> let __assign_19 = (("(Obj.obj " ^ HxString.toStdString value) ^ " : int)" : string) in (
-        tempString := __assign_19;
-        __assign_19
-      )
-      | "primitive:String" -> let __assign_20 = (("(Obj.obj " ^ HxString.toStdString value) ^ " : string)" : string) in (
-        tempString := __assign_20;
-        __assign_20
-      )
-      | _ -> if TyType.isDynamic (Obj.magic (Obj.obj (HxAnon.get entry "type"))) () then let __assign_12 = (value : string) in (
-        tempString := __assign_12;
-        __assign_12
-      ) else if nominal != Obj.magic (HxRuntime.hx_null) then let __assign_13 = (value : string) in (
-        tempString := __assign_13;
-        __assign_13
-      ) else if enumName != Obj.magic (HxRuntime.hx_null) then let __assign_14 = (value : string) in (
-        tempString := __assign_14;
-        __assign_14
-      ) else HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_15 = "Stage3 OCaml catch requires a supported exact runtime carrier: " in let __string_part_16 = HxString.toStdString (TyType.getSemanticKey (Obj.magic (Obj.obj (HxAnon.get entry "type"))) ()) in __string_part_15 ^ __string_part_16)) ["Dynamic"]);
-    let converted = (!tempString : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
-      ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get entry "mutable") then let __assign_21 = (("ref (" ^ HxString.toStdString converted) ^ ")" : string) in (
-        tempString1 := __assign_21;
-        __assign_21
-      ) else let __assign_22 = (converted : string) in (
-        tempString1 := __assign_22;
-        __assign_22
-      ));
-      let bound = (!tempString1 : string) in let selected = let __string_part_23 = "(let " in let __string_part_24 = HxString.toStdString (Obj.obj (HxAnon.get entry "targetName")) in let __string_part_25 = " = " in let __string_part_26 = HxString.toStdString bound in let __string_part_27 = " in ignore " in let __string_part_28 = HxString.toStdString (Obj.obj (HxAnon.get entry "targetName")) in let __string_part_29 = "; " in let __string_part_30 = HxString.toStdString (Obj.obj (HxAnon.get entry "body")) in let __string_part_31 = ")" in (((((((__string_part_23 ^ __string_part_24) ^ __string_part_25) ^ __string_part_26) ^ __string_part_27) ^ __string_part_28) ^ __string_part_29) ^ __string_part_30) ^ __string_part_31 in if TyType.isDynamic (Obj.magic (Obj.obj (HxAnon.get entry "type"))) () then ignore (let __assign_32 = selected in (
-        handlers := __assign_32;
-        __assign_32
-      )) else ignore (if enumName != Obj.magic (HxRuntime.hx_null) then ignore (let __assign_33 = let __string_part_36 = "(if HxEnum.name_opt " in let __string_part_37 = HxString.toStdString value in let __string_part_38 = " = Some " in let __string_part_39 = HxString.toStdString (let __call_callee_34 = quote in let __call_arg_0_35 = enumName in __call_callee_34 __call_arg_0_35) in let __string_part_40 = " then " in let __string_part_41 = HxString.toStdString selected in let __string_part_42 = " else " in let __string_part_43 = HxString.toStdString (!handlers) in let __string_part_44 = ")" in (((((((__string_part_36 ^ __string_part_37) ^ __string_part_38) ^ __string_part_39) ^ __string_part_40) ^ __string_part_41) ^ __string_part_42) ^ __string_part_43) ^ __string_part_44 in (
-        handlers := __assign_33;
-        __assign_33
-      )) else ignore (let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-        ignore (if nominal == Obj.magic (HxRuntime.hx_null) then let __assign_45 = Obj.magic (TyType.getDisplay (Obj.magic (Obj.obj (HxAnon.get entry "type"))) () : string) in (
-          tempMaybeString := __assign_45;
-          __assign_45
-        ) else let __assign_46 = Obj.magic (nominal : string) in (
-          tempMaybeString := __assign_46;
-          __assign_46
-        ));
-        let tag = (!tempMaybeString : string) in let __assign_47 = let __string_part_50 = "(if HxRuntime.tags_has " in let __string_part_51 = HxString.toStdString tags in let __string_part_52 = " " in let __string_part_53 = HxString.toStdString (let __call_callee_48 = quote in let __call_arg_0_49 = tag in __call_callee_48 __call_arg_0_49) in let __string_part_54 = " then " in let __string_part_55 = HxString.toStdString selected in let __string_part_56 = " else " in let __string_part_57 = HxString.toStdString (!handlers) in let __string_part_58 = ")" in (((((((__string_part_50 ^ __string_part_51) ^ __string_part_52) ^ __string_part_53) ^ __string_part_54) ^ __string_part_55) ^ __string_part_56) ^ __string_part_57) ^ __string_part_58 in (
-          handlers := __assign_47;
-          __assign_47
+  ignore (while !_g < _g1 do ignore (let offset = let __old_12 = !_g in let __new_13 = HxInt.add __old_12 1 in (
+    ignore (_g := __new_13);
+    __old_12
+  ) in let entry = let __array_read_receiver_14 = catches in let __array_read_index_15 = HxInt.sub (HxInt.sub (HxArray.length catches) offset) 1 in HxArray.get (Obj.magic __array_read_receiver_14) __array_read_index_15 in let nominal = (Backend_ocaml_Stage3OcamlClassStorage.nominalName (Obj.magic classes) (Obj.magic (Obj.obj (HxAnon.get entry "type"))) : string) in let enumName = (Backend_ocaml_Stage3OcamlEnums.runtimeName (Obj.magic enums) (Obj.magic (Obj.obj (HxAnon.get entry "type"))) : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+    ignore (if let __string_eq_left_16 = nominal in let __string_eq_right_17 = "haxe.Exception" in HxString.equals __string_eq_left_16 __string_eq_right_17 then let __assign_18 = Obj.magic (Backend_ocaml_Stage3OcamlClassStorage.outputModule (Obj.magic classes) (Obj.magic (Obj.obj (HxAnon.get entry "type"))) : string) in (
+      tempMaybeString := __assign_18;
+      __assign_18
+    ) else let __assign_19 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempMaybeString := __assign_19;
+      __assign_19
+    ));
+    let wrapper = (!tempMaybeString : string) in (
+      ignore (if (let __string_eq_left_20 = nominal in let __string_eq_right_21 = "haxe.Exception" in HxString.equals __string_eq_left_20 __string_eq_right_21) && wrapper == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "Stage3 OCaml catch (e:haxe.Exception) requires the emitted haxe.Exception module for its caught wrapper") ["Dynamic"] else ());
+      let tempString = ref (HxString.hx_null_string : string) in (
+        ignore (let _g2 = (TyType.getSemanticKey (Obj.magic (Obj.obj (HxAnon.get entry "type"))) () : string) in match _g2 with
+          | "primitive:Bool" -> let __assign_28 = ("HxRuntime.unbox_bool_or_obj " ^ HxString.toStdString value : string) in (
+            tempString := __assign_28;
+            __assign_28
+          )
+          | "primitive:Float" -> let __assign_29 = (("(Obj.obj " ^ HxString.toStdString value) ^ " : float)" : string) in (
+            tempString := __assign_29;
+            __assign_29
+          )
+          | "primitive:Int" -> let __assign_30 = (("(Obj.obj " ^ HxString.toStdString value) ^ " : int)" : string) in (
+            tempString := __assign_30;
+            __assign_30
+          )
+          | "primitive:String" -> let __assign_31 = (("(Obj.obj " ^ HxString.toStdString value) ^ " : string)" : string) in (
+            tempString := __assign_31;
+            __assign_31
+          )
+          | _ -> if TyType.isDynamic (Obj.magic (Obj.obj (HxAnon.get entry "type"))) () then let __assign_22 = (value : string) in (
+            tempString := __assign_22;
+            __assign_22
+          ) else if wrapper != Obj.magic (HxRuntime.hx_null) then let __assign_23 = ((HxString.toStdString wrapper ^ ".caught ") ^ HxString.toStdString value : string) in (
+            tempString := __assign_23;
+            __assign_23
+          ) else if nominal != Obj.magic (HxRuntime.hx_null) then let __assign_24 = (value : string) in (
+            tempString := __assign_24;
+            __assign_24
+          ) else if enumName != Obj.magic (HxRuntime.hx_null) then let __assign_25 = (value : string) in (
+            tempString := __assign_25;
+            __assign_25
+          ) else HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_26 = "Stage3 OCaml catch requires a supported exact runtime carrier: " in let __string_part_27 = HxString.toStdString (TyType.getSemanticKey (Obj.magic (Obj.obj (HxAnon.get entry "type"))) ()) in __string_part_26 ^ __string_part_27)) ["Dynamic"]);
+        let converted = (!tempString : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
+          ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get entry "mutable") then let __assign_32 = (("ref (" ^ HxString.toStdString converted) ^ ")" : string) in (
+            tempString1 := __assign_32;
+            __assign_32
+          ) else let __assign_33 = (converted : string) in (
+            tempString1 := __assign_33;
+            __assign_33
+          ));
+          let bound = (!tempString1 : string) in let selected = let __string_part_34 = "(let " in let __string_part_35 = HxString.toStdString (Obj.obj (HxAnon.get entry "targetName")) in let __string_part_36 = " = " in let __string_part_37 = HxString.toStdString bound in let __string_part_38 = " in ignore " in let __string_part_39 = HxString.toStdString (Obj.obj (HxAnon.get entry "targetName")) in let __string_part_40 = "; " in let __string_part_41 = HxString.toStdString (Obj.obj (HxAnon.get entry "body")) in let __string_part_42 = ")" in (((((((__string_part_34 ^ __string_part_35) ^ __string_part_36) ^ __string_part_37) ^ __string_part_38) ^ __string_part_39) ^ __string_part_40) ^ __string_part_41) ^ __string_part_42 in if TyType.isDynamic (Obj.magic (Obj.obj (HxAnon.get entry "type"))) () || wrapper != Obj.magic (HxRuntime.hx_null) then ignore (let __assign_43 = selected in (
+            handlers := __assign_43;
+            __assign_43
+          )) else ignore (if enumName != Obj.magic (HxRuntime.hx_null) then ignore (let __assign_44 = let __string_part_47 = "(if HxEnum.name_opt " in let __string_part_48 = HxString.toStdString value in let __string_part_49 = " = Some " in let __string_part_50 = HxString.toStdString (let __call_callee_45 = quote in let __call_arg_0_46 = enumName in __call_callee_45 __call_arg_0_46) in let __string_part_51 = " then " in let __string_part_52 = HxString.toStdString selected in let __string_part_53 = " else " in let __string_part_54 = HxString.toStdString (!handlers) in let __string_part_55 = ")" in (((((((__string_part_47 ^ __string_part_48) ^ __string_part_49) ^ __string_part_50) ^ __string_part_51) ^ __string_part_52) ^ __string_part_53) ^ __string_part_54) ^ __string_part_55 in (
+            handlers := __assign_44;
+            __assign_44
+          )) else ignore (let tempMaybeString1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+            ignore (if nominal == Obj.magic (HxRuntime.hx_null) then let __assign_56 = Obj.magic (TyType.getDisplay (Obj.magic (Obj.obj (HxAnon.get entry "type"))) () : string) in (
+              tempMaybeString1 := __assign_56;
+              __assign_56
+            ) else let __assign_57 = Obj.magic (nominal : string) in (
+              tempMaybeString1 := __assign_57;
+              __assign_57
+            ));
+            let tag = (!tempMaybeString1 : string) in let __assign_58 = let __string_part_61 = "(if HxRuntime.tags_has " in let __string_part_62 = HxString.toStdString tags in let __string_part_63 = " " in let __string_part_64 = HxString.toStdString (let __call_callee_59 = quote in let __call_arg_0_60 = tag in __call_callee_59 __call_arg_0_60) in let __string_part_65 = " then " in let __string_part_66 = HxString.toStdString selected in let __string_part_67 = " else " in let __string_part_68 = HxString.toStdString (!handlers) in let __string_part_69 = ")" in (((((((__string_part_61 ^ __string_part_62) ^ __string_part_63) ^ __string_part_64) ^ __string_part_65) ^ __string_part_66) ^ __string_part_67) ^ __string_part_68) ^ __string_part_69 in (
+              handlers := __assign_58;
+              __assign_58
+            )
+          )))
         )
-      )))
+      )
     )
   )) done);
-  ((((((((("(try (" ^ HxString.toStdString body) ^ ") with HxRuntime.Hx_exception (") ^ HxString.toStdString value) ^ ", ") ^ HxString.toStdString tags) ^ ") as ") ^ HxString.toStdString original) ^ " -> ") ^ HxString.toStdString (!handlers)) ^ ")"
+  ((((((((((((("(try (" ^ HxString.toStdString body) ^ ") with ") ^ HxString.toStdString original) ^ " -> (match HxRuntime.catchable_exception ") ^ HxString.toStdString original) ^ " with None -> raise ") ^ HxString.toStdString original) ^ " | Some (") ^ HxString.toStdString value) ^ ", ") ^ HxString.toStdString tags) ^ ") -> ") ^ HxString.toStdString (!handlers)) ^ "))"
 )
 
 let loopBody = fun body -> ("(try (" ^ HxString.toStdString body) ^ ") with HxRuntime.Hx_continue -> ())"

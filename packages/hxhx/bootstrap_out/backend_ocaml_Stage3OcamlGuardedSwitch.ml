@@ -36,21 +36,25 @@ let render = fun input -> (
           tempResult := __assign_21;
           __assign_21
         )
-        | TypedGuardedPatternPlan.IsString _p0 -> let _g = (_p0 : string) in let literal = (_g : string) in let __assign_26 = (let __method_receiver_27 = Obj.obj (HxAnon.get input "dialect") in let __method_callable_28 = (Obj.obj (HxMethodDispatch.bind (Obj.repr __method_receiver_27) "method-dispatch:f865bd3087290d3ca64dfef45347fbe4fb79c24cdfbd629858ba3fc6955f4b2a") : string -> string -> string) in let __method_argument_29 = (value : string) in let __method_argument_30 = ((Obj.obj (HxAnon.get input "quote") : _ -> _) (literal : string) : string) in __method_callable_28 __method_argument_29 __method_argument_30 : string) in (
+        | TypedGuardedPatternPlan.IsFloat _p0 -> let _g = (_p0 : string) in let literal = (_g : string) in let __assign_26 = (let __method_receiver_27 = Obj.obj (HxAnon.get input "dialect") in let __method_callable_28 = (Obj.obj (HxMethodDispatch.bind (Obj.repr __method_receiver_27) "method-dispatch:f865bd3087290d3ca64dfef45347fbe4fb79c24cdfbd629858ba3fc6955f4b2a") : string -> string -> string) in let __method_argument_29 = (value : string) in let __method_argument_30 = (let __call_arg_0_31 = literal in Backend_ocaml_Stage3OcamlFloatConstant.render __call_arg_0_31 : string) in __method_callable_28 __method_argument_29 __method_argument_30 : string) in (
           tempResult := __assign_26;
           __assign_26
         )
-        | TypedGuardedPatternPlan.ArrayLength _p0 -> let _g = _p0 in let length = _g in let __assign_31 = (((("(HxArray.length (Obj.magic " ^ HxString.toStdString value) ^ ") = ") ^ string_of_int length) ^ ")" : string) in (
-          tempResult := __assign_31;
-          __assign_31
+        | TypedGuardedPatternPlan.IsString _p0 -> let _g = (_p0 : string) in let literal = (_g : string) in let __assign_32 = (let __method_receiver_33 = Obj.obj (HxAnon.get input "dialect") in let __method_callable_34 = (Obj.obj (HxMethodDispatch.bind (Obj.repr __method_receiver_33) "method-dispatch:f865bd3087290d3ca64dfef45347fbe4fb79c24cdfbd629858ba3fc6955f4b2a") : string -> string -> string) in let __method_argument_35 = (value : string) in let __method_argument_36 = ((Obj.obj (HxAnon.get input "quote") : _ -> _) (literal : string) : string) in __method_callable_34 __method_argument_35 __method_argument_36 : string) in (
+          tempResult := __assign_32;
+          __assign_32
+        )
+        | TypedGuardedPatternPlan.ArrayLength _p0 -> let _g = _p0 in let length = _g in let __assign_37 = (((("(HxArray.length (Obj.magic " ^ HxString.toStdString value) ^ ") = ") ^ string_of_int length) ^ ")" : string) in (
+          tempResult := __assign_37;
+          __assign_37
         )
         | TypedGuardedPatternPlan.EnumConstructor (_p0, _p1) -> (
           ignore _p0;
           let _g2 = Obj.magic _p1 in let selection = Obj.magic _g2 in (
             ignore (if Obj.obj (HxAnon.get input "enums") == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml guarded enum requires its exact program provider") ["Dynamic"] else ());
-            let __assign_32 = (Backend_ocaml_Stage3OcamlEnums.patternCondition (Obj.magic (Obj.obj (HxAnon.get input "enums"))) (Obj.magic selection) (value : string) : string) in (
-              tempResult := __assign_32;
-              __assign_32
+            let __assign_38 = (Backend_ocaml_Stage3OcamlEnums.patternCondition (Obj.magic (Obj.obj (HxAnon.get input "enums"))) (Obj.magic selection) (value : string) : string) in (
+              tempResult := __assign_38;
+              __assign_38
             )
           )
         ));
@@ -59,19 +63,19 @@ let render = fun input -> (
     ignore (HxAnon.set __anon_2 "read" (Obj.repr (fun read value -> let tempResult1 = ref (HxString.hx_null_string : string) in (
       ignore (match read with
         | TypedGuardedPatternPlan.Input -> HxType.hx_throw_typed_rtti (Obj.repr "OCaml guarded switch cannot read its input twice") ["Dynamic"]
-        | TypedGuardedPatternPlan.ArrayItem (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let parent = _g in let index = _g1 in let __assign_33 = let __string_part_36 = "HxArray.get (Obj.magic " in let __string_part_37 = HxString.toStdString (let __call_callee_34 = value in let __call_arg_0_35 = parent in __call_callee_34 __call_arg_0_35) in let __string_part_38 = ") " in let __string_part_39 = string_of_int index in ((__string_part_36 ^ __string_part_37) ^ __string_part_38) ^ __string_part_39 in (
-          tempResult1 := __assign_33;
-          __assign_33
+        | TypedGuardedPatternPlan.ArrayItem (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let parent = _g in let index = _g1 in let __assign_39 = let __string_part_42 = "HxArray.get (Obj.magic " in let __string_part_43 = HxString.toStdString (let __call_callee_40 = value in let __call_arg_0_41 = parent in __call_callee_40 __call_arg_0_41) in let __string_part_44 = ") " in let __string_part_45 = string_of_int index in ((__string_part_42 ^ __string_part_43) ^ __string_part_44) ^ __string_part_45 in (
+          tempResult1 := __assign_39;
+          __assign_39
         )
-        | TypedGuardedPatternPlan.ObjectField (_p0, _p1) -> let _g = _p0 in let _g1 = (_p1 : string) in let parent = _g in let name = (_g1 : string) in let __assign_40 = let __string_part_43 = "HxAnon.get (Obj.repr " in let __string_part_44 = HxString.toStdString (let __call_callee_41 = value in let __call_arg_0_42 = parent in __call_callee_41 __call_arg_0_42) in let __string_part_45 = ") " in let __string_part_46 = HxString.toStdString ((Obj.obj (HxAnon.get input "quote") : _ -> _) (name : string)) in ((__string_part_43 ^ __string_part_44) ^ __string_part_45) ^ __string_part_46 in (
-          tempResult1 := __assign_40;
-          __assign_40
+        | TypedGuardedPatternPlan.ObjectField (_p0, _p1) -> let _g = _p0 in let _g1 = (_p1 : string) in let parent = _g in let name = (_g1 : string) in let __assign_46 = let __string_part_49 = "HxAnon.get (Obj.repr " in let __string_part_50 = HxString.toStdString (let __call_callee_47 = value in let __call_arg_0_48 = parent in __call_callee_47 __call_arg_0_48) in let __string_part_51 = ") " in let __string_part_52 = HxString.toStdString ((Obj.obj (HxAnon.get input "quote") : _ -> _) (name : string)) in ((__string_part_49 ^ __string_part_50) ^ __string_part_51) ^ __string_part_52 in (
+          tempResult1 := __assign_46;
+          __assign_46
         )
         | TypedGuardedPatternPlan.EnumArgument (_p0, _p1, _p2) -> let _g = _p0 in (
           ignore _p1;
-          let _g2 = _p2 in let parent = _g in let index = _g2 in let __assign_47 = let __string_part_50 = "HxArray.get (HxType.enumParameters (Obj.repr " in let __string_part_51 = HxString.toStdString (let __call_callee_48 = value in let __call_arg_0_49 = parent in __call_callee_48 __call_arg_0_49) in let __string_part_52 = ")) " in let __string_part_53 = string_of_int index in ((__string_part_50 ^ __string_part_51) ^ __string_part_52) ^ __string_part_53 in (
-            tempResult1 := __assign_47;
-            __assign_47
+          let _g2 = _p2 in let parent = _g in let index = _g2 in let __assign_53 = let __string_part_56 = "HxArray.get (HxType.enumParameters (Obj.repr " in let __string_part_57 = HxString.toStdString (let __call_callee_54 = value in let __call_arg_0_55 = parent in __call_callee_54 __call_arg_0_55) in let __string_part_58 = ")) " in let __string_part_59 = string_of_int index in ((__string_part_56 ^ __string_part_57) ^ __string_part_58) ^ __string_part_59 in (
+            tempResult1 := __assign_53;
+            __assign_53
           )
         ));
       !tempResult1
@@ -79,50 +83,50 @@ let render = fun input -> (
     ignore (HxAnon.set __anon_2 "observe" (Obj.repr (fun name value next -> ((((("(let " ^ HxString.toStdString name) ^ " = (") ^ HxString.toStdString value) ^ ") in ") ^ HxString.toStdString next) ^ ")")));
     ignore (HxAnon.set __anon_2 "branch" (Obj.repr (fun condition yes no -> ((((("(if " ^ HxString.toStdString condition) ^ " then ") ^ HxString.toStdString yes) ^ " else ") ^ HxString.toStdString no) ^ ")")));
     ignore (HxAnon.set __anon_2 "attempt" (Obj.repr (fun index captures rejected -> let body = ref ((Obj.obj (HxAnon.get input "body") : _ -> _) index : string) in let _g = ref 0 in (
-      ignore (while !_g < HxArray.length captures do ignore (let capture = let __array_read_receiver_54 = captures in let __array_read_index_55 = !_g in HxArray.get (Obj.magic __array_read_receiver_54) __array_read_index_55 in (
-        ignore (let __old_56 = !_g in let __new_57 = HxInt.add __old_56 1 in (
-          ignore (_g := __new_57);
-          __new_57
+      ignore (while !_g < HxArray.length captures do ignore (let capture = let __array_read_receiver_60 = captures in let __array_read_index_61 = !_g in HxArray.get (Obj.magic __array_read_receiver_60) __array_read_index_61 in (
+        ignore (let __old_62 = !_g in let __new_63 = HxInt.add __old_62 1 in (
+          ignore (_g := __new_63);
+          __new_63
         ));
         let tempString1 = ref (HxString.hx_null_string : string) in (
           ignore (let _g2 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxSwitchPattern" (HxAnon.get capture "source"))) in match _g2 with
             | HxSwitchPattern.PCapture (_p0, _p1) -> let _g1 = (_p0 : string) in (
               ignore _p1;
-              let name = (_g1 : string) in let __assign_58 = (name : string) in (
-                tempString1 := __assign_58;
-                __assign_58
+              let name = (_g1 : string) in let __assign_64 = (name : string) in (
+                tempString1 := __assign_64;
+                __assign_64
               )
             )
-            | HxSwitchPattern.PBind _p0 -> let _g3 = (_p0 : string) in let name = (_g3 : string) in let __assign_59 = (name : string) in (
-              tempString1 := __assign_59;
-              __assign_59
+            | HxSwitchPattern.PBind _p0 -> let _g3 = (_p0 : string) in let name = (_g3 : string) in let __assign_65 = (name : string) in (
+              tempString1 := __assign_65;
+              __assign_65
             )
             | _ -> HxType.hx_throw_typed_rtti (Obj.repr "OCaml guarded capture requires its exact binding occurrence") ["Dynamic"]);
           let name = (!tempString1 : string) in let hx_type = Obj.magic (Backend_ocaml_Stage3OcamlLocalNames.findType (Obj.magic (Obj.obj (HxAnon.get input "names"))) (name : string)) in (
             ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml guarded capture requires its exact local type") ["Dynamic"] else ());
             let tempString2 = ref (HxString.hx_null_string : string) in (
-              ignore (if let __string_eq_left_60 = TyType.getSemanticKey (Obj.magic hx_type) () in let __string_eq_right_61 = "primitive:Bool" in HxString.equals __string_eq_left_60 __string_eq_right_61 then let __assign_62 = let __string_part_64 = "HxRuntime.unbox_bool_or_obj (Obj.repr " in let __string_part_65 = HxString.toStdString (let __structural_receiver_63 = capture in Obj.obj (HxAnon.get __structural_receiver_63 "value")) in let __string_part_66 = ")" in (__string_part_64 ^ __string_part_65) ^ __string_part_66 in (
-                tempString2 := __assign_62;
-                __assign_62
-              ) else let __assign_67 = let __string_part_69 = "Obj.magic " in let __string_part_70 = HxString.toStdString (let __structural_receiver_68 = capture in Obj.obj (HxAnon.get __structural_receiver_68 "value")) in __string_part_69 ^ __string_part_70 in (
-                tempString2 := __assign_67;
-                __assign_67
+              ignore (if let __string_eq_left_66 = TyType.getSemanticKey (Obj.magic hx_type) () in let __string_eq_right_67 = "primitive:Bool" in HxString.equals __string_eq_left_66 __string_eq_right_67 then let __assign_68 = let __string_part_70 = "HxRuntime.unbox_bool_or_obj (Obj.repr " in let __string_part_71 = HxString.toStdString (let __structural_receiver_69 = capture in Obj.obj (HxAnon.get __structural_receiver_69 "value")) in let __string_part_72 = ")" in (__string_part_70 ^ __string_part_71) ^ __string_part_72 in (
+                tempString2 := __assign_68;
+                __assign_68
+              ) else let __assign_73 = let __string_part_75 = "Obj.magic " in let __string_part_76 = HxString.toStdString (let __structural_receiver_74 = capture in Obj.obj (HxAnon.get __structural_receiver_74 "value")) in __string_part_75 ^ __string_part_76 in (
+                tempString2 := __assign_73;
+                __assign_73
               ));
               let value = ref (!tempString2) in (
-                ignore (if (Obj.obj (HxAnon.get input "mutable") : _ -> _) (name : string) then ignore (let __assign_71 = ("ref (" ^ HxString.toStdString (!value)) ^ ")" in (
-                  value := __assign_71;
-                  __assign_71
+                ignore (if (Obj.obj (HxAnon.get input "mutable") : _ -> _) (name : string) then ignore (let __assign_77 = ("ref (" ^ HxString.toStdString (!value)) ^ ")" in (
+                  value := __assign_77;
+                  __assign_77
                 )) else ());
-                let __assign_72 = (let __string_part_73 = "(let " in let __string_part_74 = HxString.toStdString (Backend_ocaml_Stage3OcamlLocalNames.targetName (Obj.magic (Obj.obj (HxAnon.get input "names"))) (name : string)) in let __string_part_75 = " = " in let __string_part_76 = HxString.toStdString (!value) in let __string_part_77 = " in " in let __string_part_78 = HxString.toStdString (!body) in let __string_part_79 = ")" in (((((__string_part_73 ^ __string_part_74) ^ __string_part_75) ^ __string_part_76) ^ __string_part_77) ^ __string_part_78) ^ __string_part_79 : string) in (
-                  body := __assign_72;
-                  __assign_72
+                let __assign_78 = (let __string_part_79 = "(let " in let __string_part_80 = HxString.toStdString (Backend_ocaml_Stage3OcamlLocalNames.targetName (Obj.magic (Obj.obj (HxAnon.get input "names"))) (name : string)) in let __string_part_81 = " = " in let __string_part_82 = HxString.toStdString (!value) in let __string_part_83 = " in " in let __string_part_84 = HxString.toStdString (!body) in let __string_part_85 = ")" in (((((__string_part_79 ^ __string_part_80) ^ __string_part_81) ^ __string_part_82) ^ __string_part_83) ^ __string_part_84) ^ __string_part_85 : string) in (
+                  body := __assign_78;
+                  __assign_78
                 )
               )
             )
           )
         )
       )) done);
-      let tempResult2 = let __string_part_80 = "(let () = " in let __string_part_81 = HxString.toStdString (!body) in let __string_part_82 = " in if " in let __string_part_83 = HxString.toStdString (Obj.obj (HxAnon.get input "enabled")) in let __string_part_84 = " then " in let __string_part_85 = HxString.toStdString rejected in let __string_part_86 = " else ())" in (((((__string_part_80 ^ __string_part_81) ^ __string_part_82) ^ __string_part_83) ^ __string_part_84) ^ __string_part_85) ^ __string_part_86 in tempResult2
+      let tempResult2 = let __string_part_86 = "(let () = " in let __string_part_87 = HxString.toStdString (!body) in let __string_part_88 = " in if " in let __string_part_89 = HxString.toStdString (Obj.obj (HxAnon.get input "enabled")) in let __string_part_90 = " then " in let __string_part_91 = HxString.toStdString rejected in let __string_part_92 = " else ())" in (((((__string_part_86 ^ __string_part_87) ^ __string_part_88) ^ __string_part_89) ^ __string_part_90) ^ __string_part_91) ^ __string_part_92 in tempResult2
     ))));
     __anon_2
   ))

@@ -182,7 +182,7 @@ let requireString = fun value fieldPath sourceLabel -> let tempString = ref (HxS
 let requireInt = fun value fieldPath sourceLabel -> (try (
   ignore (match value with
     | Hxhx_CompilerJsonValue.JsonInt _p0 -> let _g = _p0 in let number = _g in Stdlib.raise (HxRuntime.Hx_return (Obj.repr number))
-    | Hxhx_CompilerJsonValue.JsonFloat _p0 -> ignore (let _g = _p0 in let number = _g in let i = int_of_float number in let iAsFloat = float_of_int i in if iAsFloat = number then Stdlib.raise (HxRuntime.Hx_return (Obj.repr i)) else ())
+    | Hxhx_CompilerJsonValue.JsonFloat _p0 -> ignore (let _g = _p0 in let number = _g in let i = Stdlib.Int32.to_int (Stdlib.Int32.of_int (int_of_float number)) in let iAsFloat = float_of_int i in if iAsFloat = number then Stdlib.raise (HxRuntime.Hx_return (Obj.repr i)) else ())
     | _ -> ignore ());
   let tempRight = ref (HxString.hx_null_string : string) in let tempString = ref (HxString.hx_null_string : string) in (
     ignore (if sourceLabel == HxString.hx_null_string then let __assign_48 = "" in (

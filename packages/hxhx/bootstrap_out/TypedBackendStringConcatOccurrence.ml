@@ -1,0 +1,2 @@
+# 1 "TypedBackendStringConcatOccurrence.ml"
+include CompilerDiagnosticProbe.TypedBackendStringConcatOccurrence

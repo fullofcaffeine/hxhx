@@ -205,7 +205,7 @@ let finishActivePhase = fun self () -> ignore (ignore (let now = HxSys.time () i
   )
 )))
 
-let emitBaselineReport = fun self () -> ignore (ignore (let elapsedMs = int_of_float (Math.max (float_of_int 0) ((HxSys.time () -. (Obj.magic self : t).startedAtSeconds) *. float_of_int 1000)) in let sourceReport = Obj.magic (CompilerSourceProvider.report (Obj.magic ((Obj.magic self : t).sourceProvider)) ()) in (
+let emitBaselineReport = fun self () -> ignore (ignore (let elapsedMs = Stdlib.Int32.to_int (Stdlib.Int32.of_int (int_of_float (Math.max (float_of_int 0) ((HxSys.time () -. (Obj.magic self : t).startedAtSeconds) *. float_of_int 1000)))) in let sourceReport = Obj.magic (CompilerSourceProvider.report (Obj.magic ((Obj.magic self : t).sourceProvider)) ()) in (
   ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) (let __string_part_112 = "hxhx_server_report.request_id=" in let __string_part_113 = string_of_int ((Obj.magic self : t).requestId) in __string_part_112 ^ __string_part_113 : string));
   let tempString = ref (HxString.hx_null_string : string) in (
     ignore (if (Obj.magic self : t).isServerRequest then let __assign_114 = "1" in (
@@ -411,7 +411,7 @@ let emitBaselineReport = fun self () -> ignore (ignore (let elapsedMs = int_of_f
                                                     tempMaybeNumber1 := __assign_242;
                                                     __assign_242
                                                   ));
-                                                  let phaseMs = int_of_float (Math.max (float_of_int 0) ((let __nullable_float_243 = Obj.magic (!tempMaybeNumber1) in if __nullable_float_243 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_243) *. float_of_int 1000)) in (
+                                                  let phaseMs = Stdlib.Int32.to_int (Stdlib.Int32.of_int (int_of_float (Math.max (float_of_int 0) ((let __nullable_float_243 = Obj.magic (!tempMaybeNumber1) in if __nullable_float_243 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_243) *. float_of_int 1000)))) in (
                                                     ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ((("hxhx_server_report.phase[" ^ string_of_int index) ^ "].name=") ^ HxString.toStdString phase : string));
                                                     Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ((("hxhx_server_report.phase[" ^ string_of_int index) ^ "].elapsed_ms=") ^ string_of_int phaseMs : string)
                                                   )

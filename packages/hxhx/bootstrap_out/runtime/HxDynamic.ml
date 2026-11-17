@@ -5,8 +5,12 @@
    Std.string and Haxe's print facades:
 
    - null, Bool, Int, String, and Float use their exact runtime tags;
+   - boxed enum values print their constructor name and arguments;
    - anonymous structures enumerate their stable HxAnon fields recursively;
-   - generated classes may register their real zero-argument toString method;
+   - boxed enum values print their constructor and arguments, and class and
+     enum type values print as `Class<Name>` and `Enum<Name>`;
+   - generated classes may register their real zero-argument toString method,
+     whether they are native records or Stage3's class-tagged HxAnon objects;
    - other reference-bearing values use the conservative "<object>" fallback.
 
    Generated class registrations carry only a class name and a typed adapter.
@@ -16,6 +20,15 @@ let class_stringifiers : (string, Obj.t -> string) Hashtbl.t = Hashtbl.create 31
 
 let register_class_stringifier (name : string) (stringifier : Obj.t -> string) : unit =
   Hashtbl.replace class_stringifiers name stringifier
+
+(* Enum payloads store a Bool argument as a raw OCaml bool, which has the same
+   runtime shape as an int. Generated enum modules register which argument
+   positions of each constructor are Bool (or Null<Bool>), so enum text prints
+   `Flagged(true)`, not `Flagged(1)`. *)
+let enum_bool_arguments : (string * string, int list) Hashtbl.t = Hashtbl.create 31
+
+let register_enum_bool_arguments (enum_name : string) (constructor : string) (positions : int list) : unit =
+  Hashtbl.replace enum_bool_arguments (enum_name, constructor) positions
 
 (* Checked unary operations for values that cross Haxe's Dynamic boundary.
 
@@ -146,13 +159,58 @@ let rec toStdString (value : Obj.t) : string =
       let string_value : string = Obj.obj value in
       if string_value == hx_null_string then "null" else string_value
     else if tag = Obj.double_tag then
-      string_of_float (Obj.obj value)
+      HxRuntime.float_toStdString (Obj.obj value)
+    else if HxEnum.is_box value then
+      enumToStdString value
     else if HxArray.is_value value then
       HxArray.to_dynamic_string (Obj.obj value) toStdString
+    else if HxEnum.is_box value then
+      enumToStdString value
+    else if HxType.is_type_value HxType.class_marker value then
+      "Class<" ^ HxType.getClassName value ^ ">"
+    else if HxType.is_type_value HxType.enum_marker value then
+      "Enum<" ^ HxType.getEnumName value ^ ">"
     else if HxAnon.is_anon value then
-      anonymousToStdString value
+      (* Stage3 stores a class instance as an HxAnon object tagged with its
+         class. It prints through the class's registered toString adapter,
+         or its class name, like any other class instance. *)
+      if HxRuntime.is_null (HxAnon.class_value value) then
+        anonymousToStdString value
+      else
+        classToStdString value
     else
       classToStdString value
+
+(* A boxed enum value prints as Haxe does: its constructor name, followed by
+   its arguments in parentheses when it has any (`Red`, `Rgb(1,2,3)`). An
+   argument is converted by its runtime shape, except the Bool positions that
+   the enum module registered with register_enum_bool_arguments. *)
+and enumToStdString (value : Obj.t) : string =
+  let name = HxType.enumConstructor value in
+  let parameters = HxType.enumParameters value in
+  if HxRuntime.is_null (Obj.repr name) then "<object>"
+  else if HxArray.length parameters = 0 then name
+  else
+    let bools =
+      match HxEnum.name_opt value with
+      | Some enum_name -> (
+          match Hashtbl.find_opt enum_bool_arguments (enum_name, name) with
+          | Some positions -> positions
+          | None -> [])
+      | None -> []
+    in
+    let argument index =
+      let raw = HxArray.get parameters index in
+      if Stdlib.List.mem index bools && not (HxRuntime.is_null raw || HxRuntime.is_boxed_bool raw) then
+        HxRuntime.box_bool (Obj.obj raw)
+      else
+        raw
+    in
+    let parts = ref [] in
+    for index = HxArray.length parameters - 1 downto 0 do
+      parts := toStdString (argument index) :: !parts
+    done;
+    name ^ "(" ^ Stdlib.String.concat "," !parts ^ ")"
 
 and anonymousToStdString (value : Obj.t) : string =
   let fields = HxAnon.fields value in
