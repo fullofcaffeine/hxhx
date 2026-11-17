@@ -340,6 +340,34 @@ The owner answered on 2026-11-16. D0 for the plan in section 6 is 2026-11-16.
 | D8 | Macro executor: native plugins or a typed-tree interpreter. | **Open until `9sj5p.6` lands.** The executor must not depend on the Stage3 emitter at the hard cut. |
 | Freeze | No new semantics in the Stage3 OCaml emitter and no new node kinds under `target/`, except fixes that keep the bootstrap and the macro-plugin path working. | **Accepted** ("freeze both"). |
 
+### Decisions made on 2026-11-17
+
+The owner asked an independent Claude Fable review to decide the open questions below and to
+choose good defaults. The evidence is in the notes of bead `haxe_ocaml-9cqxj`.
+
+**Null to a basic type (bead `haxe_ocaml-9cqxj`): decided.** In `reflaxe.ocaml`, a null
+`Null<Int>`, `Null<Float>`, or `Null<Bool>` that moves into a non-null `Int`, `Float`, or `Bool`
+gives the default value (`0`, `0.0`, `false`) and does not raise. This applies to every place
+where a value only moves: assignments and local initializers, returns, call arguments, casts,
+generic reads, branch joins, and arithmetic and Boolean operands.
+
+- Why: upstream Haxe 4.3.7 already types a `reflaxe.ocaml` build as a static platform. The
+  JVM, Java, C#, and C++ targets all give the default on 42 probe programs. The Haxe manual
+  states the same rule for static targets.
+- Exceptions that keep raising: a call on a null receiver, and a null `Null<Int>` used as an
+  array index or a `Bytes` position or value. The interpreter raises in those cases too.
+- The frozen Stage3 emitter keeps its "Null Access" behavior until it is deleted.
+
+**Working defaults for D3, D5, and D8.** These decisions stay open until their evidence
+exists (milestone B2 for D3 and D5, bead `9sj5p.6` for D8). Until then, work follows these
+defaults, so that interim work does not close off the likely answer:
+
+| ID | Working default | Avoid until decided | Evidence that confirms or reverses it |
+|---|---|---|---|
+| D3 | Treat `haxe.macro.Type` and `TypedExpr` as the interface. New `reflaxe.ocaml` lowering code takes `haxe.macro.Type` inputs and nothing specific to one host. | New consumers of the `target/` fact schema, and `hxhx`-only typed shapes that have no `haxe.macro.Type` equivalent. | Confirms: the typed oracle shows `hxhx` producing `haxe.macro.Type` for a useful share of the standard library, and milestone C4 lowers a small `hxhx`-typed program through `reflaxe.ocaml`. Reverses: the conditions for `target/` in section 10. |
+| D5 | Evolve the frontend data models in place, but give every new or changed structure the `haxe.macro` shape: a position on every node, structured types instead of strings, and one directional `unify`. This work is needed under either answer. | A complete re-base before the oracle numbers exist, new places that re-parse type hints from strings, new side catalogs keyed by strings, and more opaque or placeholder paths. | The typed oracle: 60% or more of standard-library modules identical supports "evolve"; a lower number, with failures concentrated in type representation and unification, supports "re-base". |
+| D8 | Native plugins stay the only macro executor for now. Build `9sj5p.6` (`Context` served from the real typer) behind an interface that works for any executor: a typed callback record in process and the existing RPC out of process. | Starting an interpreter now, macro features that make the plugin build depend more on the Stage3 emitter, `Context` services that assume a compiled plugin, and more simulated macro APIs. | Confirms plugins: after `9sj5p.6`, plugins build through `reflaxe.ocaml` at an acceptable compile cost. Confirms an interpreter: they cannot, or F2 and Full1 need an interpreter for `--interp` and `--run` anyway. |
+
 ## 10. What would change this verdict
 
 - The typed oracle shows 60% or more of standard-library modules already

@@ -1,5 +1,5 @@
 arraysort=1,1,2,3
-either=<object>
+either=Left(7)
 option.none=true
 readonly.len=2
 readonly.concat=4,5,6
