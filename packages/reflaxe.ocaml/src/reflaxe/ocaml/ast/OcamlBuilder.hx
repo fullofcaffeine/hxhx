@@ -8217,14 +8217,12 @@ class OcamlBuilder {
 			}
 		}
 		if (rhsDynamicCarrier) {
-			if (isIntType(lhsType)) {
-				return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [buildExpr(rhs)]);
-			}
-			if (isFloatType(lhsType)) {
-				return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [buildExpr(rhs)]);
-			}
-			if (isBoolType(lhsType)) {
-				return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "unbox_bool_or_obj"), [buildExpr(rhs)]);
+			// A null Dynamic gives the default value; the table owns that rule.
+			final conversion = OcamlValueConversion.between(DynamicObj, OcamlValueConversion.carrierOf(lhsType));
+			switch (conversion) {
+				case UnboxNullablePrimitive(_):
+					return buildValueConversion(conversion, rhs);
+				case _:
 			}
 		}
 

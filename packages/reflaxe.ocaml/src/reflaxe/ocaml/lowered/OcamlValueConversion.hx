@@ -170,6 +170,10 @@ class OcamlValueConversion {
 				UnboxObj;
 			case [DynamicObj, NativeEnum(_)] | [DynamicObj, NullableEnum(_)] | [DynamicObj, ObjectReference]:
 				UnboxObj;
+			case [DynamicObj, NativePrimitive(primitive)]:
+				// A Dynamic value may be null. Null gives the default value, as on static
+				// targets (decision of 2026-11-17 in haxe_ocaml-9cqxj); Bool accepts the tag.
+				UnboxNullablePrimitive(primitive);
 			case [NullablePrimitive(BoolCarrier), DynamicObj]:
 				TagNullableBool;
 			case [DynamicObj, TypeParameterValue]:

@@ -99,6 +99,10 @@ class ValueConversionTableTest {
 			{from: macro :Dynamic, to: macro :ConversionBox, expected: "UnboxObj"},
 			{from: macro :Any, to: macro :String, expected: "UnboxObj"},
 			{from: macro :Dynamic, to: macro :ConversionList, expected: "UnboxObj"},
+			// A Dynamic value read as a basic type; null gives the default value.
+			{from: macro :Dynamic, to: macro :Int, expected: "UnboxNullablePrimitive(int)"},
+			{from: macro :Dynamic, to: macro :Float, expected: "UnboxNullablePrimitive(float)"},
+			{from: macro :Any, to: macro :Bool, expected: "UnboxNullablePrimitive(bool)"},
 			// A nullable Boolean enters Dynamic with its tag.
 			{from: macro :Null<Bool>, to: macro :Dynamic, expected: "TagNullableBool"},
 			{from: macro :Null<Bool>, to: macro :Any, expected: "TagNullableBool"},
@@ -106,7 +110,6 @@ class ValueConversionTableTest {
 			{from: macro :ConversionColor, to: macro :Null<ConversionShape>, expected: "null"},
 			{from: macro :ConversionShape, to: macro :ConversionColor, expected: "null"},
 			{from: macro :Null<Int>, to: macro :Float, expected: "null"},
-			{from: macro :Dynamic, to: macro :Int, expected: "null"},
 			{from: macro :Int, to: macro :Dynamic, expected: "null"},
 		];
 		for (pair in pairs) {
