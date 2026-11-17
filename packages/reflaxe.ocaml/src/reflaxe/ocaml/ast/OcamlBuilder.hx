@@ -5959,7 +5959,20 @@ class OcamlBuilder {
 						}
 				}
 			case TField(obj, fa):
-				buildField(e, obj, fa, e.pos);
+				// A field declared with a class type parameter stores the generic Obj.t
+				// carrier. A read at a concrete type, such as `Holder<Int>.value`, takes
+				// that value out with the conversion from the same table.
+				final read = buildField(e, obj, fa, e.pos);
+				final conversion = switch (fa) {
+					case FInstance(_, _, fieldRef): OcamlValueConversion.decideGenericRead(fieldRef.get().type, e.t);
+					case _: null;
+				}
+				if (conversion == null)
+					return read;
+				final converted = applyValueConversion(conversion, read);
+				// `Obj.obj` gives `'a`; applying it directly triggers warning 20.
+				// Name the function type so the read behaves like a typed function value.
+				OcamlValueConversion.carrierOf(e.t) == FunctionValue ? OcamlExpr.EAnnot(converted, typeExprFromHaxeType(e.t)) : converted;
 			case TMeta(metadata, e1):
 				OcamlLoweredOrigin.readPlaceId(metadata) != null ? buildPreservedPlaceOperation(metadata, e1) : buildExpr(e1);
 			case TCast(e1, _):
@@ -7729,7 +7742,11 @@ class OcamlBuilder {
 	// not wrap a value that is already boxed, because `Obj.repr (Obj.repr x)`
 	// is not a valid nullable value.
 	function buildValueConversion(conversion:OcamlValueConversionKind, source:TypedExpr):OcamlExpr {
-		final value = buildExpr(source);
+		return applyValueConversion(conversion, buildExpr(source));
+	}
+
+	// Applies a conversion from `OcamlValueConversion` to an already built value.
+	function applyValueConversion(conversion:OcamlValueConversionKind, value:OcamlExpr):OcamlExpr {
 		final alreadyBoxed = value.match(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [_]));
 		return switch (conversion) {
 			case SameCarrier:

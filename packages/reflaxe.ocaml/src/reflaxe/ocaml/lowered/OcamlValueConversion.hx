@@ -36,8 +36,17 @@ enum OcamlValueCarrier {
 	/** `Dynamic`, `Any`, or an anonymous structure stored in `HxAnon`: the general-purpose `Obj.t`. */
 	DynamicObj;
 
-	/** A class instance, a type parameter, or an array-backed abstract, nullable or not. */
+	/** A class instance, a string, or an array-backed abstract, nullable or not. */
 	ObjectReference;
+
+	/**
+		A value of a type parameter: an `Obj.t` that holds the boxed value. Generic
+		code writes `Bool` with `HxRuntime.box_bool` and other values with `Obj.repr`.
+	**/
+	TypeParameterValue;
+
+	/** A function value. */
+	FunctionValue;
 
 	/** A type that this model does not classify yet. */
 	UnclassifiedCarrier;
@@ -109,13 +118,26 @@ class OcamlValueConversion {
 		if (OcamlDynamicCarrierModel.usesDynamicCarrier(type))
 			return DynamicObj;
 		return switch (OcamlDynamicCarrierModel.followNoAbstracts(OcamlDynamicCarrierModel.unwrapNullType(followed))) {
+			case TInst(classRef, _) if (classRef.get().kind.match(KTypeParameter(_))):
+				TypeParameterValue;
 			case TInst(_, _):
 				ObjectReference;
+			case TFun(_, _):
+				FunctionValue;
 			case abstractType = TAbstract(_, _) if (OcamlArrayCastCarrier.isArrayBackedAbstract(abstractType)):
 				ObjectReference;
 			case _:
 				UnclassifiedCarrier;
 		}
+	}
+
+	/**
+		Returns the conversion for a read of a field whose declared type is a type
+		parameter, at the concrete type `actual`, such as `Holder<Int>.value`.
+		Returns `null` when the declared type is not a type parameter.
+	**/
+	public static function decideGenericRead(declared:Type, actual:Type):Null<OcamlValueConversionKind> {
+		return carrierOf(declared) == TypeParameterValue ? between(TypeParameterValue, carrierOf(actual)) : null;
 	}
 
 	/** Returns the conversion from a value of type `from` to type `to`, or `null` for a pair that the table does not list. */
@@ -134,7 +156,7 @@ class OcamlValueConversion {
 				SameCarrier;
 			case [NullableEnum(source), NullableEnum(target)] if (source == target):
 				SameCarrier;
-			case [DynamicObj, DynamicObj] | [ObjectReference, ObjectReference]:
+			case [DynamicObj, DynamicObj] | [ObjectReference, ObjectReference] | [TypeParameterValue, TypeParameterValue]:
 				SameCarrier;
 			case [NativePrimitive(source), NullablePrimitive(target)] if (source == target):
 				BoxNullable;
@@ -150,6 +172,10 @@ class OcamlValueConversion {
 				UnboxObj;
 			case [NullablePrimitive(BoolCarrier), DynamicObj]:
 				TagNullableBool;
+			case [TypeParameterValue, NativePrimitive(primitive)]:
+				UnboxNullablePrimitive(primitive);
+			case [TypeParameterValue, ObjectReference] | [TypeParameterValue, FunctionValue]:
+				UnboxObj;
 			case _:
 				null;
 		}
