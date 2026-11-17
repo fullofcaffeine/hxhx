@@ -184,10 +184,12 @@ bootstrap, native-runtime, and example results remain separate.
 - **Q2:** target/compiler changes add the bounded Stage0-free, JS-native,
   plugin, and Core test-shard canaries. They also add the
   `hxhx self-compile through reflaxe.ocaml` job, which runs the stage0 emit of
-  all `hxhx` sources (`npm run hxhx:check:reflaxe-self-compile`). The other
-  jobs build `hxhx` from the committed bootstrap snapshot, so only this job
-  fails when a change adds `hxhx` code that `reflaxe.ocaml` rejects. It takes
-  about an hour and runs beside the longer test shards.
+  all `hxhx` sources and builds the emitted OCaml
+  (`npm run hxhx:check:reflaxe-self-compile`). The other jobs build `hxhx`
+  from the committed bootstrap snapshot, so only this job fails when a change
+  adds `hxhx` code that `reflaxe.ocaml` rejects or lowers into OCaml that does
+  not type-check. It takes about an hour and runs beside the longer test
+  shards.
 - **Q3:** central representation/runtime, bootstrap, plugin ABI, workflow, and
   toolchain changes are marked for the large `hxhx` consumer and authentic
   compiler-promotion evidence at their owning workflow boundaries. Core

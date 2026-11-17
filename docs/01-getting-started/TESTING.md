@@ -807,12 +807,15 @@ Use this when you want the repo to function as a compiler-bootstrap example:
       `hxhx` code that `reflaxe.ocaml` would reject. PR #116 merged such code (a `.get` call on a
       `Null<Map<String, String>>` field), and the next bootstrap regeneration failed after 34
       minutes with `[ocaml-imap-interface:missing-conversion]`.
-    - What it runs: `regenerate-hxhx-bootstrap.sh --emit-only`. This is the same stage0 emit as a
-      regeneration: Haxe types all of `hxhx`, then `reflaxe.ocaml` lowers and prints every class
-      into `packages/hxhx/out`. It then stops. It does not change `bootstrap_out` or the regen
-      fingerprint, and it does not run dune. It prints `HXHX_REFLAXE_SELF_COMPILE:PASS` on success.
+    - What it runs: `regenerate-hxhx-bootstrap.sh --emit-only --emit-build`. This is the same
+      stage0 emit as a regeneration: Haxe types all of `hxhx`, then `reflaxe.ocaml` lowers and
+      prints every class into `packages/hxhx/out`. It then runs `dune build ./out.bc` on that
+      output, because the emit cannot see OCaml type errors in the generated compiler (PR #168
+      broke regeneration that way). It does not change `bootstrap_out` or the regen fingerprint.
+      It prints `HXHX_REFLAXE_SELF_COMPILE_BUILD:PASS` and `HXHX_REFLAXE_SELF_COMPILE:PASS` on
+      success. It needs `dune` and an OCaml 5 compiler on the path.
     - Cost: about an hour and about 10 GB of memory on a GitHub-hosted runner. Typing takes about
-      4 minutes; the rest is per-class lowering. Run it locally only when no other heavy stage0
+      4 minutes; the OCaml build about 80 seconds; the rest is per-class lowering. Run it locally only when no other heavy stage0
       build is running.
     - In CI: the `hxhx self-compile through reflaxe.ocaml` job in `CI / Core PR Checks` runs it
       for every Q2-or-higher change, beside the test shards, and the `Tests` aggregate requires it.
