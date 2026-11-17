@@ -1,4 +1,4 @@
-# Frontend parse oracle
+# Frontend parse and typed oracles
 
 This tool measures how closely the `hxhx` parser matches the upstream Haxe 4.3.7 parser.
 It parses the same files with both compilers and compares the parsed body of every field.
@@ -50,3 +50,38 @@ The default corpus is the `haxe` package of the upstream standard library, exclu
 `parse-oracle-baseline.json` records the matching field and file counts for the default
 corpus. The test fails when a change lowers either count. When a change raises a count, the
 tool prints the new numbers. Raise the baseline in the same pull request.
+
+## Typed oracle
+
+The typed oracle compares how the two compilers type the same modules. This first version
+compares method signatures after typing: each parameter's name, optional flag, and type, and the
+return type, with inferred types filled in.
+
+```sh
+npm run oracle:typed            # print the numbers and write .tmp/typed-oracle/
+npm run test:oracle:typed       # the same, and fail if the count falls below the baseline
+```
+
+- Upstream Haxe records each typed method signature after typing
+  (`upstream/TypedOracleUpstream.hx`).
+- `TypedOracleHxhx.hx` parses every module of the same corpus with the same defines. It builds
+  one typer index and types each module through one shared module loader with the interp
+  standard-library class paths.
+- Both sides print types in one canonical form:
+  - types are named by module (`haxe.Constraints.IMap`, `haxe.ds.List.ListNode`), and core types
+    keep their bare names (`Int`, `Null<T>`);
+  - typedefs are expanded;
+  - function types print as `(A,B)->R`, and anonymous structures print their fields sorted by
+    name;
+  - an unresolved monomorph prints as `?`;
+  - an abstract's methods drop the implicit `this` parameter, and its constructor returns `Void`.
+
+The output line looks like this:
+
+```
+TYPED_ORACLE: methods=1671 match=1365 (81.7%) mismatch=48 missing=258 hxhx_error=0 module_errors=19
+```
+
+A method is missing when `hxhx` could not type its module; `report.json` lists those module
+errors. `typed-oracle-baseline.json` holds the matching count for the default corpus, with the
+same raise-on-improvement rule as the parse oracle.
