@@ -69,7 +69,7 @@
     {
       "module": "HxDynamicMethods",
       "scope": "application",
-      "files": [{ "path": "HxDynamicMethods.ml", "sha256": "533224aec23cfba3391c52a15598019a565eb04943c1773022256eda8afc393b" }],
+      "files": [{ "path": "HxDynamicMethods.ml", "sha256": "4b2d588c13cf4f34cae8c41548b9b161c8aed86fcb5c23e1f558667ca2ee49a3" }],
       "dependencies": ["HxAnon", "HxRuntime", "HxType"],
       "duneLibraries": [],
       "profiles": ["metal", "portable"],
