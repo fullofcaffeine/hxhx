@@ -4,8 +4,16 @@ Recorded on 2026-11-16 with `node scripts/reflaxe-ocaml/representation-matrix.js
 (`reflaxe.ocaml` hosted by upstream Haxe 4.3.7, macOS, OCaml 5.4.0). The run was split into
 three passes while the generator was corrected; this table merges them.
 
-**203 of 239 cells pass (84.9%).** 1 cell prints a wrong value, 19 cells produce OCaml that
-does not build, and 16 cells are refused by `reflaxe.ocaml` with a named "unsupported" error.
+**212 of 239 cells pass (88.7%)** after the first step of the conversion table (update of
+2026-11-17, below). 1 cell prints a wrong value, 10 cells produce OCaml that does not build,
+and 16 cells are refused by `reflaxe.ocaml` with a named "unsupported" error.
+
+The first recording passed 203 of 239 cells (84.9%), with 19 cells that did not build.
+
+**Update 2026-11-17 (`haxe_ocaml-9cqxj`, step 1).** Casts and nullable assignments take their
+conversion from one table, `OcamlValueConversion`. The cast `(Green : Null<Color>)` now
+builds, so the `null_enum` row goes from 6 to 14 passing cells. No other cell changed. The
+table below is the full run after that change.
 
 Each row passes one value type through each boundary and prints the result. A cell passes when
 the native program prints the same line as `haxe --interp`.
@@ -30,7 +38,7 @@ the native program prints the same line as `haxe --interp`.
 | `null_bool` | ok | ok | ok | ok | ok | ok | refused | ok | ok | **WRONG** | ok | ok | ok | ok | ok |
 | `enum_const` | ok | ok | ok | ok | ok | ok | refused | ok | ok | ok | ok | ok | ok | ok | ok |
 | `enum_args` | ok | ok | ok | ok | ok | ok | refused | ok | ok | ok | ok | ok | ok | ok | ok |
-| `null_enum` | build | ok | ok | build | build | build | refused | ok | ok | build | ok | build | build | build | build |
+| `null_enum` | ok | ok | ok | ok | ok | ok | refused | ok | ok | ok | ok | ok | ok | ok | ok |
 | `class` | ok | ok | ok | ok | ok | ok | refused | ok | ok | ok | ok | ok | ok | ok | ok |
 | `anon` | ok | ok | ok | ok | ok | ok | refused | ok | ok | ok | ok | ok | ok | ok | ok |
 | `array` | ok | ok | ok | ok | ok | ok | refused | build | ok | ok | ok | ok | ok | ok | ok |
@@ -41,8 +49,8 @@ the native program prints the same line as `haxe --interp`.
 
 - **Silent wrong output:** a `Null<Bool>` value observed through `Dynamic` prints `1` instead of
   `true` (`dynamic_observed`).
-- **`Null<Enum>` crossings do not build:** a plain enum value reaches a `Null<Color>` place
-  without conversion. This happens even through `(Green : Null<Color>)` in a local declaration.
+- **`Null<Enum>` crossings (fixed 2026-11-17):** a plain enum value reached a `Null<Color>`
+  place without conversion, even through `(Green : Null<Color>)` in a local declaration.
 - **Generic class fields do not build:** reading `Holder<T>.value` as `Int`, `Float`, `Bool`,
   `String`, an array, or a function leaves the value as `Obj.t`.
 - **Optional arguments:** `Float` and function optional arguments do not build; `Bool` and
