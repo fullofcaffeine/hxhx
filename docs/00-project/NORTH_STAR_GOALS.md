@@ -86,6 +86,17 @@ independent Stage3 `EmitterStage`; it does not yet run the standalone
 The checked disposition is in
 `docs/00-project/ORACLE_CHECKPOINT_SIX_MONTH_ARCHITECTURE_2026_07_23.md`.
 
+The 2026-11-16 architecture review found that this ownership problem has grown:
+the Stage3 OCaml path more than doubled after July, and the planned shared core
+is still a small subset. It also found that conversions in `reflaxe.ocaml` lack a
+single owner, that checks pass without compiling the generated compiler, and that
+the Beads plan no longer shows active work. It proposes `reflaxe.ocaml` as the
+first product, measured frontend parity on one lane, and one OCaml lowering. The
+owner accepted its main decisions on 2026-11-16, and the Stage3 emitter and the
+`target/` fact schema are frozen for new semantics. The priorities below are
+being rewritten to match in a follow-up change. See
+`docs/00-project/ARCHITECTURE_REVIEW_2026_11_16.md`.
+
 The convergence priorities are:
 
 1. trustworthy frontend identities, source facts, request isolation, and
