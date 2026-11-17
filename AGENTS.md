@@ -102,7 +102,15 @@ Items 3 and 4 hold until F2. No more than three implementation fronts are active
   contract in the bead: outcome, evidence, required checks, and exclusions. Keep the pull
   request description aligned with it. Review the scope when a change passes 500 authored
   lines or 20 authored files. Details: "Bounded Pull Requests".
-- Merge on the day the required checks and any required approval pass.
+- Merge on the day the required checks pass. An agent may merge its own pull request, except
+  one that changes `AGENTS.md`, the agent policies, or an owner decision; removes, loosens, or
+  re-routes a CI check (including its time limits); touches provenance or licensing files; or
+  makes a release or version change. Those need the owner's approval on the pull request. If
+  unsure, ask.
+- "Checks pass" means every required job is green on the head commit. A `Tests` summary job
+  that is still queued counts as passed once every other job in its run has succeeded or was
+  skipped by the route. Before a self-merge, comment with the head commit, the run link, and
+  the bead.
 - No required workflow stays red for more than 14 days. Fix it, or the owner disables it with
   a named owner and a re-enable condition recorded in a bead. Apart from that recorded
   decision, never weaken an assertion, disable a check, or hide a regression to make a change
