@@ -178,7 +178,7 @@ These fix verified defects or protect evidence. Both reviews support them.
 | I1 | Land PR #195 (bound-method `Null<Enum>` fix). Regenerate the bootstrap snapshot and import it. Make the self-compile pull-request check also compile the emitted OCaml. | `haxe_ocaml-j091x` |
 | I2 | Land PR #196 (a flaky guard that read an empty process-ID file). | `haxe_ocaml-ldyzi` |
 | I3 | Make test observation fail closed when a signal kills the observed process. | `haxe_ocaml-anhiz` (P1) |
-| I4 | Qualify `Stdlib.Option.bind` in `HxDynamicMethods.ml`. Today OCaml ExtLib's `Option` module shadows it, and the Gate 2 acceptance examples fail. | new, small |
+| I4 | Qualify `Stdlib.Option.bind` in `HxDynamicMethods.ml`. Today OCaml ExtLib's `Option` module shadows it, and the Gate 2 acceptance examples fail. | `haxe_ocaml-jr6l3` |
 | I5 | Repair or retire the daily stage0 source smoke. It has failed 119 times in a row (a 300-second fail-fast on an hour-long emit). | `haxe_ocaml-4wb9k` |
 
 ### Track A: `reflaxe.ocaml` sound, fast, and shippable
@@ -265,11 +265,28 @@ which `hxhx` does not execute. Gate 1 Lite was green before the iterator diagnos
 was added in October. **Inference:** it passed by typing an unknown iterable
 permissively. The current red is the more honest state.
 
-## 8. Beads triage proposal (needs owner approval)
+## 8. Beads triage
 
-**Caution:** another agent identity (`codex-continuation-agent`) holds 270 of
-the in-progress beads, and a Codex session is active in the primary checkout. Bulk
-changes must be coordinated with that work first.
+**Applied on 2026-11-16 (decision D6).** The owner transferred the Codex-held
+claims to Claude Code. These steps were applied:
+
+- **Unclaimed:** 425 in-progress beads without a live lease returned to open.
+  Each received a note with the reason and how to reclaim it.
+- **Deferred:** 106 beads for M22, Genes, customization, the hxb dialect, and
+  non-JavaScript backends were deferred. The deferred former P0 beads moved to P4.
+  `haxe_ocaml-jrxbc` (a parser bug found through Neko) was kept, because it is
+  frontend work.
+- **P0 reset:** P0 is now `haxe_ocaml-j091x`, `haxe_ocaml-anhiz`,
+  `haxe_ocaml-9cqxj`, `haxe_ocaml-s7jry`, and the new `haxe_ocaml-7cxgt` (parse
+  and typed oracles). The other former P0 beads are P1 or P2.
+- **New beads for this plan:** `haxe_ocaml-t6y93` (self-compile check compiles
+  OCaml), `haxe_ocaml-jr6l3` (`Option.bind`), `haxe_ocaml-oq5z6` (verify-and-close
+  batch), `haxe_ocaml-n8yhf` (goals and README framing), and `haxe_ocaml-zikyf`
+  (process reset).
+
+The verify-and-close batch, the conversion of Stage3 reproducers, and the grouping
+under root epics are still to do. The policy table below remains the rule for
+them.
 
 | Action | Rule | Approximate count |
 |---|---|---|
@@ -288,13 +305,13 @@ exact totals.
 
 | Order | Outcome | Bead(s) |
 |---|---|---|
-| 1 | Bootstrap fixed, snapshot imported, self-compile check compiles OCaml | `haxe_ocaml-j091x` and a successor |
+| 1 | Bootstrap fixed, snapshot imported, self-compile check compiles OCaml | `haxe_ocaml-j091x`, `haxe_ocaml-t6y93` |
 | 2 | Test observation fails closed on signal deaths | `haxe_ocaml-anhiz` |
 | 3 | Tests that CI never runs are reached | `haxe_ocaml-wis3l`, `haxe_ocaml-k86ww` |
 | 4 | Typed conversion authority in `reflaxe.ocaml` | `haxe_ocaml-9cqxj`, `haxe_ocaml-0uwin` |
 | 5 | `reflaxe.ocaml` compile-cost budget | `haxe_ocaml-xsg6m`, `haxe_ocaml-r49eq` |
 | 6 | Version identity and first-release scope | `haxe_ocaml-ftrhr`, `haxe_ocaml-s7jry` |
-| 7 | Parse oracle and typed oracle | new |
+| 7 | Parse oracle and typed oracle | `haxe_ocaml-7cxgt` |
 | 8 | Strict checking by default; no placeholder success | new epic |
 | 9 | `hxhx` type-checks its own sources | new |
 | 10 | Structured types and one `unify` | new epic |
