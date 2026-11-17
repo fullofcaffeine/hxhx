@@ -635,9 +635,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Main run 43959120906 needed 49.3 minutes for this shard; slower
+          # runners crossed the old 60-minute limit (PRs #195 and #201).
           - shard: compiler-foundation
             label: Compiler foundations and runtime
-            timeout_minutes: 60
+            timeout_minutes: 80
           - shard: compiler-packaging
             label: OCaml packaging and metal profile
             timeout_minutes: 40
