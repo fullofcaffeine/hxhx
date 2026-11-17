@@ -16,7 +16,7 @@ also list the upstream Haxe `4.3.7` oracle cases and local target validation
 that will prove the change.
 
 If the behavior is broad, unclear, or cross-target, stop before implementation
-and use the `thinking:xhigh` second-pass review path described in `AGENTS.md`.
+and use the `thinking:xhigh` second-pass review path described under "Thinking Levels" in `docs/00-project/AGENT_POLICIES.md`.
 
 Accepted checkpoint: the 2026-07-04 Cpp `TestJson` review
 [`ORACLE_CHECKPOINT_CPP_TESTJSON_DYNAMIC_NUMERIC_2026_07_04.md`](ORACLE_CHECKPOINT_CPP_TESTJSON_DYNAMIC_NUMERIC_2026_07_04.md)
