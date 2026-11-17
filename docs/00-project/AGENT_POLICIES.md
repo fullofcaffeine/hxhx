@@ -2,9 +2,9 @@
 
 These are the detailed working policies for agents and contributors in this repository.
 `AGENTS.md` at the repository root is the short core: read it first, in full. Then read the
-sections here that match the files and the task you touch. Where the core and this file
-differ, the core and the decisions in `docs/00-project/ARCHITECTURE_REVIEW_2026_11_16.md`
-apply.
+sections here that match the files and the task you touch. When rules differ, this order
+decides: the owner decisions (section 9) and the stop list (section 6) of
+`docs/00-project/ARCHITECTURE_REVIEW_2026_11_16.md`, then `AGENTS.md`, then this file.
 
 The sections below moved here unchanged from `AGENTS.md` on 2026-11-17 (bead
 `haxe_ocaml-zikyf`, decision D7 of the architecture review). Later changes remove repeated
