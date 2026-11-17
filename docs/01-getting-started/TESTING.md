@@ -613,6 +613,27 @@ Notes:
   - markers: `SEMANTIC_DIFF_LITE_SCOPE:RUN` then `SEMANTIC_DIFF_LITE:PASS`
   - artifact bundle: `semantic-diff-pr-artifacts`
 
+## reflaxe.ocaml representation matrix
+
+`reflaxe.ocaml` carries some Haxe values as native OCaml values and others as `Obj.t`. A value
+that crosses from one kind of place to another may need a conversion. This matrix checks those
+crossings directly. Each value type (for example `Int`, `Null<Bool>`, an enum, a class, or a
+function) passes through each kind of boundary (for example a field, an argument, a generic
+class, `Dynamic`, or a method value). The native result is compared with `haxe --interp`.
+
+```bash
+node scripts/reflaxe-ocaml/representation-matrix.js --jobs 3
+node scripts/reflaxe-ocaml/representation-matrix.js --only null_bool --boundary dynamic_observed
+```
+
+- It writes `.tmp/representation-matrix/matrix.md` and `report.json`.
+- A row that does not build is split into one program per cell, so one failure does not hide
+  the others.
+- A full run compiles many programs and takes about an hour on a loaded machine, so it is not
+  part of the pull-request checks.
+- The current result is in `scripts/reflaxe-ocaml/representation-matrix-baseline.md`. It is
+  the acceptance measure for the typed conversion authority (`haxe_ocaml-9cqxj`).
+
 ## Cleanup after heavy runs
 
 Long upstream/gate/bootstrap runs can leave sizeable temp/build artifacts.
