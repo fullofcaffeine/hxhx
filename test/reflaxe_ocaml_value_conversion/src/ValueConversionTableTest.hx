@@ -94,14 +94,17 @@ class ValueConversionTableTest {
 			{from: macro :Null<ConversionColor>, to: macro :ConversionColor, expected: "UnboxObj"},
 			{from: macro :ConversionMaybeColor, to: macro :ConversionColor, expected: "UnboxObj"},
 			// A Dynamic value gives a typed reference or enum.
-			{from: macro :Dynamic, to: macro :ConversionColor, expected: "UnboxObj"},
-			{from: macro :Dynamic, to: macro :Null<ConversionColor>, expected: "UnboxObj"},
+			{from: macro :Dynamic, to: macro :ConversionColor, expected: "UnboxDynamicEnum(ConversionColor)"},
+			{from: macro :Dynamic, to: macro :Null<ConversionColor>, expected: "UnboxDynamicEnum(ConversionColor)"},
 			{from: macro :Dynamic, to: macro :ConversionBox, expected: "UnboxObj"},
 			{from: macro :Any, to: macro :String, expected: "UnboxObj"},
 			{from: macro :Dynamic, to: macro :ConversionList, expected: "UnboxObj"},
 			// A nullable Boolean enters Dynamic with its tag.
 			{from: macro :Null<Bool>, to: macro :Dynamic, expected: "TagNullableBool"},
 			{from: macro :Null<Bool>, to: macro :Any, expected: "TagNullableBool"},
+			// A Boolean read out of Dynamic accepts the tag.
+			{from: macro :Dynamic, to: macro :Null<Bool>, expected: "UntagNullableBool"},
+			{from: macro :Dynamic, to: macro :Bool, expected: "UnboxNullablePrimitive(bool)"},
 			// Pairs that the table does not list yet.
 			{from: macro :ConversionColor, to: macro :Null<ConversionShape>, expected: "null"},
 			{from: macro :ConversionShape, to: macro :ConversionColor, expected: "null"},
