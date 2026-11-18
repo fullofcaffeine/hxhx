@@ -10,6 +10,7 @@ import haxe.macro.Type.TypedExpr;
 import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
 import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan.OcamlDynamicCarrierModel;
+import reflaxe.ocaml.lowered.OcamlStaticStringPlan.OcamlStaticStringPlanner;
 #end
 import reflaxe.ocaml.lowered.OcamlLoweredOrigin.OcamlLoweredSourceSpan;
 import reflaxe.ocaml.runtimegen.OcamlRuntimeUseModel.OcamlRuntimeUseDomain;
@@ -85,7 +86,10 @@ class OcamlDynamicStringModel {
 			// Null<A> for an abstract that is not a core type, such as Null<Mime> with
 			// `enum abstract Mime(String)`, is stored as Obj.t. It prints through the Dynamic
 			// path, which also prints null (haxe_ocaml-trjbi).
-			case TAbstract(abstractRef, [inner]) if (isNullAbstract(abstractRef.get()) && isValueAbstract(inner)):
+			case TAbstract(abstractRef, [inner]) if (isNullAbstract(abstractRef.get()) && isValueAbstract(inner) && !isOverBasicType(inner)):
+				OcamlDynamicStringStrategy.DirectCarrier;
+			// An abstract over its own type parameter stores the generic Obj.t carrier.
+			case TAbstract(abstractRef, _) if (isTypeParameterAbstract(abstractRef.get())):
 				OcamlDynamicStringStrategy.DirectCarrier;
 			case TAbstract(_, _):
 				null;
@@ -103,6 +107,24 @@ class OcamlDynamicStringModel {
 				OcamlDynamicStringStrategy.DirectCarrier;
 			case _:
 				OcamlDynamicStringStrategy.BoxWithObjRepr;
+		};
+	}
+
+	/** Whether a value abstract stores Int, Float, or Bool; their Null<A> prints like Null<Int>. */
+	static function isOverBasicType(type:Type):Bool {
+		return switch (OcamlStaticStringPlanner.followValueAbstracts(type)) {
+			case TAbstract(abstractRef, []): final abstractType = abstractRef.get(); abstractType.pack.length == 0 && (abstractType.name == "Int"
+					|| abstractType.name == "Float" || abstractType.name == "Bool");
+			case _: false;
+		};
+	}
+
+	static function isTypeParameterAbstract(abstractType:AbstractType):Bool {
+		if (abstractType.meta.has(":coreType"))
+			return false;
+		return switch (followNoAbstracts(abstractType.type)) {
+			case TInst(classRef, _): classRef.get().kind.match(KTypeParameter(_));
+			case _: false;
 		};
 	}
 

@@ -482,7 +482,15 @@ class OcamlStaticStringPlanner {
 	}
 
 	static function nullableSemanticTypeId(type:Type):Null<String> {
-		return switch (followNoAbstracts(type)) {
+		// Null<A> of an abstract over Int, Float, or Bool uses the same Obj.t carrier as
+		// Null<Int>, Null<Float>, or Null<Bool>, so it takes their printer. Null<String> is
+		// a plain string with a null sentinel, which Null<A> over String is not.
+		final valueType = followValueAbstracts(type);
+		final underlying = switch (valueType) {
+			case TInst(_, _): followNoAbstracts(type);
+			case _: valueType;
+		}
+		return switch (underlying) {
 			case TAbstract(abstractRef, [inner]): final abstractType = abstractRef.get(); abstractType.pack.length == 0 && abstractType.name == "Null" ? nullableSemanticTypeId(inner) : null;
 			case TAbstract(abstractRef, _):
 				final abstractType = abstractRef.get();
@@ -513,7 +521,9 @@ class OcamlStaticStringPlanner {
 			switch (current) {
 				case TAbstract(abstractRef, parameters):
 					final abstractType = abstractRef.get();
-					if (abstractType.meta.has(":coreType"))
+					// A core type is its own carrier. An abstract over its own type parameter,
+					// such as `abstract Tagged<T>(T)`, stores the generic Obj.t carrier.
+					if (abstractType.meta.has(":coreType") || isTypeParameter(abstractType.type))
 						return current;
 					current = followNoAbstracts(TypeTools.applyTypeParameters(abstractType.type, abstractType.params, parameters));
 				case _:
@@ -521,6 +531,13 @@ class OcamlStaticStringPlanner {
 			}
 		}
 		return current;
+	}
+
+	static function isTypeParameter(type:Type):Bool {
+		return switch (followNoAbstracts(type)) {
+			case TInst(classRef, _): classRef.get().kind.match(KTypeParameter(_));
+			case _: false;
+		};
 	}
 
 	static function followNoAbstracts(type:Type):Type {
