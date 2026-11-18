@@ -29,7 +29,10 @@ class HxParser {
 	/** Whether the last consumed token was `;`, so a statement can tell how it ended. */
 	var consumedSemicolon = false;
 
-	/** Whether the last consumed token was `}`. A field initializer that ends with `}` needs no `;`. */
+	/**
+		Whether the last consumed token was `}`. Haxe 4.3.7 does not require `;` after a field
+		initializer or a block element whose last token is `}`, whatever the expression is.
+	**/
 	var consumedRBrace = false;
 
 	var peeked1:Null<HxToken> = null;
@@ -1932,7 +1935,7 @@ class HxParser {
 				body.push(entry);
 				if (cur.kind.match(TSemicolon)) {
 					bump();
-				} else if (!cur.kind.match(TRBrace) && !endsWithSourceBrace(entry)) {
+				} else if (!cur.kind.match(TRBrace) && !consumedRBrace) {
 					fail("Expected ';' or '}' after while body expression");
 				}
 			}
@@ -2544,29 +2547,11 @@ class HxParser {
 				fail("Expected source group expression");
 			if (cur.kind.match(TSemicolon))
 				bump();
-			else if (!cur.kind.match(TRBrace)) {
-				if (!endsWithSourceBrace(child))
-					fail("Expected ';' after source group expression");
-			}
+			else if (!cur.kind.match(TRBrace) && !consumedRBrace)
+				fail("Expected ';' after source group expression");
 		}
 		expect(TRBrace, "'}' after source group");
 		return ESourceGroup(children, position);
-	}
-
-	/** A final source brace terminates an expression, including a function's returned block; parentheses do not. */
-	static function endsWithSourceBrace(expression:HxExpr):Bool {
-		return switch expression {
-			case ESourceTry(_, bodies, _): bodies.length > 0 && endsWithSourceBrace(bodies[bodies.length - 1]);
-			case ESourceGroup(_, _) | ESwitch(_, _, _): true;
-			case ESourceFunction(_, body, _, _): endsWithSourceBrace(body);
-			case EReturn(value): value != null && endsWithSourceBrace(value);
-			case ESourceIf(_, whenTrue, whenFalse, _): endsWithSourceBrace(whenFalse == null ? whenTrue : whenFalse);
-			case EWhile(_, body, bodyIsBlock, _, loopKind): loopKind == Normal && (bodyIsBlock
-					|| (body.length == 1 && endsWithSourceBrace(body[0])));
-			case ESourceFor(_, _, body, _): endsWithSourceBrace(body);
-			case EVars(declarations): final initializer = declarations.length == 0 ? null : HxExprVarDecl.getInitializer(declarations[declarations.length - 1]); initializer != null && endsWithSourceBrace(initializer);
-			case _: false;
-		};
 	}
 
 	/** Preserve a named function's declaration placement when it appears as a body entry. */
@@ -3457,8 +3442,7 @@ class HxParser {
 				armExpressions.push(expression);
 				if (cur.kind.match(TSemicolon))
 					bump();
-				else if (!cur.kind.match(TRBrace) && !cur.kind.match(TKeyword(KCase)) && !cur.kind.match(TKeyword(KDefault))
-					&& !endsWithSourceBrace(expression))
+				else if (!cur.kind.match(TRBrace) && !cur.kind.match(TKeyword(KCase)) && !cur.kind.match(TKeyword(KDefault)) && !consumedRBrace)
 					fail("Expected ';' after switch arm expression");
 			}
 			patterns.push(pat);

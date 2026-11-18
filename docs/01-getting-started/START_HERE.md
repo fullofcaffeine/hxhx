@@ -31,18 +31,14 @@ Canonical definitions for all paths:
 
 ### 1) I want to compile Haxe code right now
 
-Use `hxhx` first.
+Use upstream Haxe with `reflaxe.ocaml`. It is the first product (decision D1) and the
+most complete path. Follow [Compile Haxe to OCaml](../../README.md#compile-haxe-to-ocaml).
 
-```bash
-npm install
-npx lix download
-bash scripts/hxhx/build-hxhx.sh
-```
-
-Then run `hxhx` with your preferred target.
+To try the experimental `hxhx` compiler instead, follow [Try hxhx](../../README.md#try-hxhx).
 
 Start here next:
 - `README.md`
+- `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md`
 - `docs/01-getting-started/QUICKSTART_COMPAT.md`
 - `docs/01-getting-started/QUICKSTART_NATIVE.md`
 - `docs/01-getting-started/TESTING.md`

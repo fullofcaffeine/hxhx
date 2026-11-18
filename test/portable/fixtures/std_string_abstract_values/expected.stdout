@@ -1,0 +1,12 @@
+mime=application/json
+scheme=https
+code=404
+flag=true
+ratio=1.5
+nullable=text/plain
+missing=null
+nullable code=404
+named=named:x
+toggle=true,false interpolated=true
+nullable flag=false
+tagged=5,five
