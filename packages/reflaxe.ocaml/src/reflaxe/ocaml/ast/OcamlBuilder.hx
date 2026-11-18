@@ -124,6 +124,7 @@ import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedNestedFunctionPlan;
 import reflaxe.ocaml.lowered.OcamlFunctionPlanRegistry.OcamlSealedStandaloneExpressionPlan;
 import reflaxe.ocaml.lowered.OcamlEnumDynamicCarrier;
+import reflaxe.ocaml.lowered.OcamlValueConversion;
 import reflaxe.ocaml.lowered.OcamlNullableEnumCarrier;
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan;
 import reflaxe.ocaml.lowered.OcamlIMapInterfacePlan.OcamlIMapInterfacePlanner;
@@ -5978,98 +5979,12 @@ class OcamlBuilder {
 						}
 					case _:
 				}
-				// Haxe uses casts for nullable primitive flows (boxing/unboxing + flow typing).
-				//
-				// We represent:
-				// - `Null<Int>/Null<Float>/Null<Bool>` as `Obj.t` (null is `HxRuntime.hx_null`).
-				// - Non-null primitives as `Obj.repr <prim>` when assigned to nullable slots.
-				//
-				// So we must explicitly box/unbox at cast boundaries.
-				switch ({
-					from:nullablePrimitiveKind(e1.t), to:nullablePrimitiveKind(e.t)
-				}) {
-					case {from: null, to: "int"} if (isIntType(e1.t)):
-						{
-							final inner = buildExpr(e1);
-							// Avoid double-boxing: `Obj.repr (Obj.repr x)` is not a valid `Null<Int>` value.
-							switch (inner) {
-								case OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [_]):
-									inner;
-								case _:
-									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [inner]);
-							}
-						}
-					case {from: null, to: "float"} if (isFloatType(e1.t)):
-						{
-							final inner = buildExpr(e1);
-							switch (inner) {
-								case OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [_]):
-									inner;
-								case _:
-									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [inner]);
-							}
-						}
-					case {from: null, to: "float"} if (isIntType(e1.t)):
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [buildExpr(e1)])]);
-					case {from: null, to: "bool"} if (isBoolType(e1.t)):
-						{
-							final inner = buildExpr(e1);
-							switch (inner) {
-								case OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [_]):
-									inner;
-								case _:
-									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [inner]);
-							}
-						}
-					case {from: "int", to: null} if (isIntType(e.t)):
-						safeUnboxNullableInt(buildExpr(e1));
-					case {from: "float", to: null} if (isFloatType(e.t)):
-						safeUnboxNullableFloat(buildExpr(e1));
-					case {from: "bool", to: null} if (isBoolType(e.t)):
-						safeUnboxNullableBool(buildExpr(e1));
-					case _:
-						{
-							// `Null<Enum>` is represented as `Obj.t` (null is `HxRuntime.hx_null`).
-							// When Haxe inserts a cast to a non-null enum (often after a null-check),
-							// we must unbox explicitly so downstream pattern matches typecheck.
-							final fromU = unwrapNullType(e1.t);
-							final toU = unwrapNullType(e.t);
-							final nullableEnumCast = (fromU != e1.t) && (switch (TypeTools.follow(fromU)) {
-								case TEnum(_, _): true;
-								case _: false;
-							}) && (switch (TypeTools.follow(toU)) {
-								case TEnum(_, _): true;
-								case _: false;
-							});
-							if (nullableEnumCast) {
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [buildExpr(e1)]);
-							} else {
-								// Dynamic-like -> concrete casts: `Any` / `Dynamic` / HxAnon-backed `TAnonymous`
-								// values are represented as `Obj.t`. To cast to a concrete OCaml type we must
-								// unbox with `Obj.obj`.
-								final fromDynLike = switch (followNoAbstracts(unwrapNullType(e1.t))) {
-									case TDynamic(_):
-										true;
-									case TAbstract(_, _) if (isStdAnyAbstract(e1.t)):
-										true;
-									case TAnonymous(_) if (shouldAnonUseHxAnon(e1.t)):
-										true;
-									case _:
-										false;
-								}
-								final toConcrete = switch (followNoAbstracts(unwrapNullType(e.t))) {
-									case TInst(_, _), TEnum(_, _):
-										true;
-									case type = TAbstract(_, _):
-										reflaxe.ocaml.lowered.OcamlArrayCastCarrier.isArrayBackedAbstract(type);
-									case _:
-										false;
-								}
-									(fromDynLike && toConcrete) ? OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
-										[buildExpr(e1)]) : buildExpr(e1);
-							}
-						}
-				}
+				// A cast moves a value from the carrier of its source type to the carrier
+				// of its result type, for example `(Green : Null<Color>)`. One table decides
+				// that conversion for casts and for assignments (haxe_ocaml-9cqxj). A pair
+				// that the table does not list keeps the value unchanged, as before.
+				final conversion = OcamlValueConversion.decide(e1.t, e.t);
+				conversion == null ? buildExpr(e1) : buildValueConversion(conversion, e1);
 			case TEnumParameter(enumValueExpr, ef, index):
 				final key = ef.name + ":" + index;
 				final scrutId = enumParamScrutineeLocalId(enumValueExpr);
@@ -7837,6 +7752,35 @@ class OcamlBuilder {
 		return coerceToObjCarrier(e.t, buildExpr(e));
 	}
 
+	// Emits one conversion that `OcamlValueConversion` selected for `source`.
+	// This is the only emitter for the conversions in that table. Boxing does
+	// not wrap a value that is already boxed, because `Obj.repr (Obj.repr x)`
+	// is not a valid nullable value.
+	function buildValueConversion(conversion:OcamlValueConversionKind, source:TypedExpr):OcamlExpr {
+		final value = buildExpr(source);
+		final alreadyBoxed = value.match(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [_]));
+		return switch (conversion) {
+			case SameCarrier:
+				value;
+			case BoxNullable:
+				alreadyBoxed ? value : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [value]);
+			case BoxIntAsNullableFloat:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [value])]);
+			case UnboxNullablePrimitive(IntCarrier):
+				safeUnboxNullableInt(value);
+			case UnboxNullablePrimitive(FloatCarrier):
+				safeUnboxNullableFloat(value);
+			case UnboxNullablePrimitive(BoolCarrier):
+				safeUnboxNullableBool(value);
+			case UnboxObj:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [value]);
+			case UnboxDynamicEnum(semanticTypeId):
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "unbox_or_obj"), [OcamlExpr.EConst(OcamlConst.CString(semanticTypeId)), value])
+				]);
+		}
+	}
+
 	function coerceForAssignment(lhsType:Type, rhs:TypedExpr):OcamlExpr {
 		if (OcamlMethodViewConversionPlan.select(rhs, lhsType) != null) {
 			if (currentMethodDispatchRoot == null)
@@ -7891,21 +7835,18 @@ class OcamlBuilder {
 		}
 		final lhsKind = nullablePrimitiveKind(lhsType);
 		final rhsKind = nullablePrimitiveKind(rhs.t);
-		// Nullable Bool uses an ordinary bool behind Obj.t. Select it before
-		// the generic abstract branch, which uses tagged Dynamic Boolean storage.
-		if (lhsKind == "bool" && rhsKind == null && isBoolType(rhs.t))
-			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
-		// Null<Enum> keeps the native variant behind Obj.t, just like sealed
-		// nullable results. Select this before generic abstract storage can add
-		// a Dynamic enum box that typed constructor matches cannot consume.
-		final nullableEnumName = isNullableEnumType(lhsType);
-		// Resolve a nullable source through typedefs before comparing identities.
-		// Its value already has nullable storage and must not gain a Dynamic box.
-		final nullableSourceEnumName = isNullableEnumType(rhs.t);
-		if (nullableEnumName != null
-			&& OcamlEnumDynamicCarrier.fromType(unwrapNullType(lhsType)) != null
-			&& nullableEnumName == (nullableSourceEnumName ?? fullNameOfTypeEnum(rhs.t)))
-			return nullableSourceEnumName != null ? buildExpr(rhs) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
+		// Null<Bool> holds an ordinary bool behind Obj.t, and Null<Enum> holds the
+		// native variant, like sealed nullable results. Select these before the
+		// generic abstract branch, which uses tagged Dynamic storage that typed
+		// constructor matches cannot consume. Casts use the same table.
+		switch [OcamlValueConversion.carrierOf(lhsType), OcamlValueConversion.carrierOf(rhs.t)] {
+			case [target = NullablePrimitive(BoolCarrier), source = NativePrimitive(BoolCarrier)] | [target = NullableEnum(_), source = NativeEnum(_)] |
+				[target = NullableEnum(_), source = NullableEnum(_)]:
+				final conversion = OcamlValueConversion.between(source, target);
+				if (conversion != null)
+					return buildValueConversion(conversion, rhs);
+			case _:
+		}
 		final rhsDynamicCarrier = switch (followNoAbstracts(unwrapNullType(rhs.t))) {
 			case TDynamic(_):
 				true;

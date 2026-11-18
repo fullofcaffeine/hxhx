@@ -1,0 +1,8 @@
+local=Green
+argument=Red
+return=Blue(2)
+alias=Blue(3)
+capture=Green
+field=Red
+dynamic=set
+none=null

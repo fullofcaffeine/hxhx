@@ -155,7 +155,8 @@ class OcamlDynamicCarrierModel {
 		}
 	}
 
-	static function unwrapNullType(type:Type):Type {
+	/** Removes one outer `Null<T>` without following typedefs. */
+	public static function unwrapNullType(type:Type):Type {
 		return switch (type) {
 			case TAbstract(abstractRef, [inner]): final abstractType = abstractRef.get(); abstractType.pack.length == 0 && abstractType.name == "Null" ? inner : type;
 			case _:
@@ -163,7 +164,8 @@ class OcamlDynamicCarrierModel {
 		}
 	}
 
-	static function followNoAbstracts(type:Type):Type {
+	/** Follows monomorphs, lazy types, and typedefs, but keeps abstracts, including `Null<T>`. */
+	public static function followNoAbstracts(type:Type):Type {
 		var current = type;
 		while (true) {
 			final next = switch (current) {
