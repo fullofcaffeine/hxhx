@@ -78,6 +78,10 @@ class OcamlDynamicStringModel {
 		}
 
 		return switch (followNoAbstracts(unwrapped.t)) {
+			// Null<Enum> keeps the native variant behind Obj.t. It prints through the boxed
+			// Dynamic path, like a plain enum; the static path has no enum printer.
+			case TAbstract(abstractRef, [inner]) if (isNullAbstract(abstractRef.get()) && isEnumType(inner)):
+				OcamlDynamicStringStrategy.BoxWithObjRepr;
 			case TAbstract(_, _):
 				null;
 			case TInst(classRef, _):
@@ -119,6 +123,17 @@ class OcamlDynamicStringModel {
 					return true;
 		} catch (_:Dynamic) {}
 		return false;
+	}
+
+	static function isNullAbstract(abstractType:AbstractType):Bool {
+		return abstractType.pack.length == 0 && abstractType.name == "Null";
+	}
+
+	static function isEnumType(type:Type):Bool {
+		return switch (followNoAbstracts(type)) {
+			case TEnum(_, _): true;
+			case _: false;
+		};
 	}
 
 	static function isStdStringClass(classType:ClassType):Bool {

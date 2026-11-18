@@ -4067,6 +4067,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 					final useIdPrefix = "constructor:enum:" + name + ":" + layout.name;
 					programIdentifiers.push({id: useIdPrefix + ":program-module", exactIdentifier: moduleName});
 					programIdentifiers.push({id: useIdPrefix + ":program-constructor", exactIdentifier: layout.name});
+					final ocamlType = ctx.enumOcamlTypeByFullName.get(name);
+					if (ocamlType != null) {
+						programIdentifiers.push({id: useIdPrefix + ":program-type-module", exactIdentifier: moduleName});
+						programIdentifiers.push({id: useIdPrefix + ":program-type", exactIdentifier: ocamlType.name});
+					}
 					addConstructorRuntimeUse(useIdPrefix + ":register", "HxType.register_enum_ctor", OcamlRuntimeRequirementLedger.TYPE_REGISTRY);
 					addConstructorRuntimeUse(useIdPrefix + ":array-type", "HxArray.t", OcamlRuntimeRequirementLedger.TYPE_REGISTRY_DYNAMIC_ARGS);
 					final expected = ctx.enumCtorArgsByFullNameAndCtor.get(name + ":" + layout.name);
@@ -4195,10 +4200,23 @@ class OcamlCompiler extends DirectToStringCompiler {
 						typeRegistry.addTemplate("  " + registerConstructor + " " + ocamlStringLiteral(n) + " " + ocamlStringLiteral(ctorName) + " (fun ("
 							+ argsName + " : Obj.t " + dynamicArrayType + ") ->\n");
 						usesDynamicArgArrays = true;
+						// Annotate the constructor with its enum type: another enum of the same module
+						// can declare a constructor with the same name, which would shadow this one.
+						final ocamlType = ctx.enumOcamlTypeByFullName.get(n);
+						function annotated(constructorExpression:String):String {
+							if (ocamlType == null)
+								return "(" + constructorExpression + ")";
+							// Each planned identifier is constructed once, so the type path has its own module identifier.
+							final typeModule = typeRegistry.programIdentifierToken(useIdPrefix + ":program-type-module", modName);
+							final programType = typeRegistry.programIdentifierToken(useIdPrefix + ":program-type", ocamlType.name);
+							final parameters = ocamlType.params == 0 ? "" : ocamlType.params == 1 ? "_ " : "("
+								+ [for (_ in 0...ocamlType.params) "_"].join(", ") + ") ";
+							return "(" + constructorExpression + " : " + parameters + typeModule + "." + programType + ")";
+						}
 						if (argsInfo.length == 0) {
 							final programModule = typeRegistry.programIdentifierToken(useIdPrefix + ":program-module", modName);
 							final programConstructor = typeRegistry.programIdentifierToken(useIdPrefix + ":program-constructor", ctorName);
-							typeRegistry.addTemplate("    Obj.repr (" + programModule + "." + programConstructor + ")\n");
+							typeRegistry.addTemplate("    Obj.repr " + annotated(programModule + "." + programConstructor) + "\n");
 						} else {
 							final arrayLength = typeRegistry.runtimeToken(useIdPrefix + ":array-length", "HxArray.length");
 							typeRegistry.addTemplate("    let len = " + arrayLength + " args in\n");
@@ -4219,7 +4237,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 							final programConstructor = typeRegistry.programIdentifierToken(useIdPrefix + ":program-constructor", ctorName);
 							final ctorCall = argsInfo.length > 1 ? (programModule + "." + programConstructor + " (" + argList.join(", ") + ")") : (programModule
 								+ "." + programConstructor + " " + argList[0]);
-							typeRegistry.addTemplate("    Obj.repr (" + ctorCall + ")\n");
+							typeRegistry.addTemplate("    Obj.repr " + annotated(ctorCall) + "\n");
 						}
 						typeRegistry.addLiteral("  );\n");
 					}
@@ -4664,6 +4682,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 		final typeName = ocamlTypeName(enumType.name);
 		final typeParams = enumType.params.map(p -> ocamlTypeParam(p.name));
+		#if macro
+		ctx.enumOcamlTypeByFullName.set(runtimeName, {name: typeName, params: typeParams.length});
+		#end
 
 		final ctors:Array<OcamlVariantConstructor> = [];
 		for (opt in options) {
