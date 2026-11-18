@@ -1,0 +1,11 @@
+element.index=Int
+element.values=Array<Int>
+nested.column=Int
+nested.row=Int
+nested.rows=Array<Array<String>>
+pair.index=Int
+pair.values=Array<Int>
+readTyped.index=Int
+readTyped.values=Array<String>
+write.index=Int
+write.values=Array<Int>

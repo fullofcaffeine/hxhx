@@ -361,13 +361,31 @@ class TyFunctionInference {
 	}
 
 	/** Indexing retains the allocation's element variable; declared ancestry only supplies a view of that same child. */
+	/**
+		Bind omitted inputs from builtin array access, as in Haxe 4.3.7: an unresolved receiver
+		becomes an Array whose element later uses bind, and an unresolved subscript becomes Int.
+	**/
+	public function constrainIndexedAccess(receiver:HxExpr, receiverType:TyType, subscript:HxExpr, subscriptType:TyType, environment:TyFunctionEnv,
+			index:TyperIndex):Void {
+		if (solver.isSealed())
+			return;
+		if (receiverType.isUnknown() && canReceiveContext(receiver, environment)) {
+			final term = sourceTerm(receiver, environment);
+			if (term != null)
+				solver.indexedElement(term, new TyNominalTypeId("Array"));
+		}
+		if (subscriptType.isUnknown() && canReceiveContext(subscript, environment))
+			constrain([subscript], [TyType.fromHintText("Int")], environment, index);
+	}
+
 	public function recordIndexedResult(source:HxExpr, receiver:HxExpr, environment:TyFunctionEnv, index:TyperIndex):Void {
 		if (index == null || occurrence(source) != null)
 			return;
 		final original = sourceTerm(receiver, environment);
 		if (original == null)
 			return;
-		final viewedReceiver = nonNullableReceiver(original);
+		// A receiver that array access made an Array is a solved variable; view its solution.
+		final viewedReceiver = solver.follow(nonNullableReceiver(solver.follow(original)));
 		final provider = switch viewedReceiver {
 			case Nominal(identity, _): index.getByFullName(identity.getCanonicalName());
 			case _: null;
