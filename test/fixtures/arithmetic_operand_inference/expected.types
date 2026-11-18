@@ -1,0 +1,14 @@
+alias.value=Int
+div.value=Int
+dynamicPeer.other=Dynamic
+dynamicPeer.value=Int
+explicit.value=Dynamic
+firstUse.value=Int
+floatLeft.value=Int
+mod.value=Int
+mul.value=Int
+pair.left=Int
+pair.right=Int
+sub.value=Int
+subFloat.value=Int
+unused.value=Unknown
