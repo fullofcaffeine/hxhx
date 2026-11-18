@@ -7,7 +7,9 @@ must print what upstream Haxe 4.3.7 prints. Before the fix, the value came back 
 so `back == true` was false and `d == nb` compared a tagged and a plain Boolean
 (`haxe_ocaml-9cqxj`, found by an independent review of PR #212).
 
-Comparing a Dynamic map value with a Bool (`map.get(k) == true`) is still wrong natively, for
-plain and nullable Booleans; it is tracked in `haxe_ocaml-9cqxj.6` and is not in this fixture.
+The fixture also compares a `Map<String, Dynamic>` value with `true` (`map.get(k) == true`).
+The inlined `get` leaves an unbound type variable, which the comparison did not treat as
+Dynamic, so it used OCaml's structural `=` against the tagged Boolean (`haxe_ocaml-9cqxj.6`,
+wrong on main for plain Booleans too).
 
 Run `PORTABLE_FIXTURE_ALLOWLIST=null_bool_dynamic_roundtrip bash scripts/test-portable.sh`.
