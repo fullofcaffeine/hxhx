@@ -7,8 +7,8 @@ Short version:
 
 - use upstream `haxe + reflaxe.ocaml` for the production-candidate OCaml output path today
 - use `hxhx + reflaxe.ocaml` when you are validating native `hxhx` compiler behavior, plugin hosting, or promotion infrastructure
-- understand that the current native `hxhx --ocaml` target calls the separate
-  Stage3 emitter; it does not yet execute standalone `reflaxe.ocaml`
+- understand that the native `hxhx --ocaml` target runs the shared `reflaxe.ocaml`
+  target core, which accepts only a small subset of Haxe and is frozen until decision D3
 - do not treat `hxhx + reflaxe.ocaml` as the default production route until the Full 1.0 gates pass
 - do not enable warm Reflaxe compilation-server reuse; see
   `docs/01-getting-started/COMPILATION_SERVER.md` for the current safe workflows
@@ -18,12 +18,15 @@ Short version:
 The supported `hxhx + reflaxe.ocaml` surface today is an experimental validation
 surface, not the default production route.
 
-The name describes the intended product direction, not current implementation
-convergence. Native `hxhx` currently enters `OcamlTargetCore`, which delegates
-target behavior to Stage3 `EmitterStage`. Standalone `reflaxe.ocaml` owns a
-different lowering/runtime/output pipeline. Until `haxe_ocaml-38gsp.1` removes
-that split, the native route is bootstrap and diagnostic evidence rather than
-proof that one target implementation serves both hosts.
+The name describes the intended product direction, not one shared implementation.
+Native `hxhx --ocaml` enters `OcamlNativeTargetCore`. That adapter calls the shared
+target core in `packages/reflaxe.ocaml/src/reflaxe/ocaml/target/`, which needs
+`-D reflaxe_ocaml_runtime_directory=<dir>` and accepts only a small subset of Haxe.
+Upstream Haxe with `reflaxe.ocaml` uses a different lowering pipeline (`OcamlBuilder`).
+The two hosts do not share one target implementation yet (`haxe_ocaml-38gsp.1`,
+decision D3). Thus, the native route is evidence for bootstrap and diagnostics, not
+for production output. The Stage3 OCaml emitter (`OcamlTargetCore`, `EmitterStage`) is
+a separate path for the `--hxhx-stage3` lanes and the macro-plugin path. It is frozen.
 
 It is useful for:
 

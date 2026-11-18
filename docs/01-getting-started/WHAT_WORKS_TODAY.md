@@ -11,10 +11,9 @@ If you need deeper architectural details, use:
 
 | Workflow | Command shape | Current status | Notes |
 | --- | --- | --- | --- |
-| Upstream Haxe + `reflaxe.ocaml` | `haxe -lib reflaxe.ocaml ...` | Working | Compatibility-first baseline path. |
-| `hxhx` + `reflaxe.ocaml` | `hxhx --ocaml ...` with `reflaxe.ocaml` validation/promotion docs | Experimental | The current target wrapper delegates to the separate Stage3 emitter, not standalone `reflaxe.ocaml`; use it for native compiler and hosting evidence, not as the default production route. |
+| Upstream Haxe + `reflaxe.ocaml` | `haxe -lib reflaxe.ocaml ...` | Preview | The most complete path. Read [Compile Haxe to OCaml](../../README.md#compile-haxe-to-ocaml) and the [measured progress](../../README.md#measured-progress). |
 | `hxhx` compat lane | `hxhx --ocaml-eval ...` / `hxhx --compat --js out.js ...` | Working | Delegates runtime compile to stage0 upstream `haxe`. |
-| `hxhx` native OCaml lane | `hxhx --ocaml ...` | Working (scoped bootstrap lane) | Non-delegating runtime lane through Stage3 OCaml emission; use `HXHX_FORBID_STAGE0=1` for strict checks. This is not yet the standalone target hard cut. |
+| `hxhx` native OCaml lane | `hxhx --ocaml ...` | Experimental, small subset | `--ocaml` runs the shared `reflaxe.ocaml` target core through `OcamlNativeTargetCore`. That core accepts only a small subset of Haxe and is frozen until decision D3. It does not call upstream Haxe; set `HXHX_FORBID_STAGE0=1` to make sure. |
 | `hxhx` native JS lane | `hxhx --js out.js ...` | Working (scoped MVP) | Scope is intentionally bounded; see `docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md`. |
 | Native backend plugin loading | `-D hxhx_backend_plugin_manifest=...` | Working | Uses `ocaml-dynlink` manifest kind (`.cmxs` / `.cma`). |
 | One native Reflaxe target core for stock Haxe and `hxhx` | Planned M22 semantic ABI | Deferred | Current stock-Haxe eval-host and `hxhx` artifacts are host-specific. M22 waits for Full1, the authentic target hard cut, and two-generation self-promotion. It requires one semantic core and contract; one combined `.cmxs` is a feasibility experiment, while exact generated host shells are allowed. |
