@@ -122,6 +122,10 @@ let resolve = fun input patterns context position -> (try (
         ignore _p0;
         ()
       ))
+      | HxSwitchPattern.PFloat _p0 -> ignore ((
+        ignore _p0;
+        ()
+      ))
       | HxSwitchPattern.PEnumValue _p0 -> ignore (let _g = (_p0 : string) in let name = (_g : string) in let __array_receiver_51 = Obj.magic selections in let __array_arg_0_52 = Obj.magic (select (Obj.magic hx_type) (name : string) 0 false (Obj.magic (HxRuntime.hx_null))) in HxArray.push __array_receiver_51 __array_arg_0_52)
       | HxSwitchPattern.PEnumExtract (_p0, _p1, _p2) -> ignore (let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = _p2 in let name = (_g : string) in let children = Obj.magic _g1 in let provenance = _g2 in let suffix = TyEnumPatternArguments.hasWildcardSuffix (Obj.magic children) provenance in let selection = Obj.magic (select (Obj.magic hx_type) (name : string) (HxArray.length children) true suffix) in (
         ignore (let __array_receiver_53 = Obj.magic selections in let __array_arg_0_54 = Obj.magic selection in HxArray.push __array_receiver_53 __array_arg_0_54);

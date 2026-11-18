@@ -7,6 +7,7 @@ type tyswitchcasecoverage =
 | NullOnly
 | Guarded of tyswitchcasecoverage
 | Alternatives of tyswitchcasecoverage HxArray.t
+| UnmatchedConstant
 | Unsupported of string
 
 type tyswitchcoverageresult =
@@ -96,42 +97,46 @@ let analyze = fun self (cases : tyswitchcasecoverage HxArray.t) (requireNullCove
       ));
       (!visit) (Obj.magic item) contributes
     )) done)
-    | Unsupported _p0 -> ignore (let _g = (_p0 : string) in let reason = (_g : string) in let __assign_15 = Obj.magic (reason : string) in (
-      unsupported := __assign_15;
+    | UnmatchedConstant -> ignore (let __assign_15 = true in (
+      hasMemberPattern := __assign_15;
       __assign_15
+    ))
+    | Unsupported _p0 -> ignore (let _g = (_p0 : string) in let reason = (_g : string) in let __assign_16 = Obj.magic (reason : string) in (
+      unsupported := __assign_16;
+      __assign_16
     )))) in (
     visit := __assign_2;
     __assign_2
   ));
   let _g = ref 0 in (
-    ignore (while !_g < HxArray.length cases do ignore (let pattern = Obj.magic (let __array_read_receiver_16 = cases in let __array_read_index_17 = !_g in HxArray.get (Obj.magic __array_read_receiver_16) __array_read_index_17) in (
-      ignore (let __old_18 = !_g in let __new_19 = HxInt.add __old_18 1 in (
-        ignore (_g := __new_19);
-        __new_19
+    ignore (while !_g < HxArray.length cases do ignore (let pattern = Obj.magic (let __array_read_receiver_17 = cases in let __array_read_index_18 = !_g in HxArray.get (Obj.magic __array_read_receiver_17) __array_read_index_18) in (
+      ignore (let __old_19 = !_g in let __new_20 = HxInt.add __old_19 1 in (
+        ignore (_g := __new_20);
+        __new_20
       ));
       (!visit) (Obj.magic pattern) true
     )) done);
-    ignore (if !unsupported != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __enum_arg_20 = (!unsupported : string) in Indeterminate (Stdlib.Sys.opaque_identity __enum_arg_20)))) else ());
+    ignore (if !unsupported != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __enum_arg_21 = (!unsupported : string) in Indeterminate (Stdlib.Sys.opaque_identity __enum_arg_21)))) else ());
     ignore (if !catchAll then Stdlib.raise (HxRuntime.Hx_return (Obj.repr Exhaustive)) else ());
     let tempShortCircuit = ref (false : bool) in (
-      ignore (if requireNullCoverage then let key = (TyFieldConstant.getCanonicalIdentity (Obj.magic (TyFieldConstant.create (Obj.magic (TyFieldConstant.NullValue)))) () : string) in let tempBool = HxMap.exists_string (Obj.magic covered) (key : string) in let __assign_21 = not (tempBool) in (
-        tempShortCircuit := __assign_21;
-        __assign_21
-      ) else let __assign_22 = false in (
+      ignore (if requireNullCoverage then let key = (TyFieldConstant.getCanonicalIdentity (Obj.magic (TyFieldConstant.create (Obj.magic (TyFieldConstant.NullValue)))) () : string) in let tempBool = HxMap.exists_string (Obj.magic covered) (key : string) in let __assign_22 = not (tempBool) in (
         tempShortCircuit := __assign_22;
         __assign_22
+      ) else let __assign_23 = false in (
+        tempShortCircuit := __assign_23;
+        __assign_23
       ));
       ignore (if !tempShortCircuit then Stdlib.raise (HxRuntime.Hx_return (Obj.repr NonExhaustiveWildcard)) else ());
       let seen = Obj.magic (HxMap.create_string ()) in let missing = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (TyEnumAbstractDomain.getMembers (Obj.magic ((Obj.magic self : t).domain)) ()) in (
-        ignore (while !_g < HxArray.length _g1 do try ignore (let member = let __array_read_receiver_23 = _g1 in let __array_read_index_24 = !_g in HxArray.get (Obj.magic __array_read_receiver_23) __array_read_index_24 in (
-          ignore (let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
-            ignore (_g := __new_26);
-            __new_26
+        ignore (while !_g < HxArray.length _g1 do try ignore (let member = let __array_read_receiver_24 = _g1 in let __array_read_index_25 = !_g in HxArray.get (Obj.magic __array_read_receiver_24) __array_read_index_25 in (
+          ignore (let __old_26 = !_g in let __new_27 = HxInt.add __old_26 1 in (
+            ignore (_g := __new_27);
+            __new_27
           ));
           let constant = Obj.magic (TyFieldInfo.getConstant (Obj.magic (Obj.obj (HxAnon.get member "field"))) ()) in (
             ignore (let _g2 = Obj.magic (TyFieldConstant.getKind (Obj.magic constant) ()) in match _g2 with
-              | TyFieldConstant.Ordinary -> Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __enum_arg_27 = ("enum domain contains an ordinary field" : string) in Indeterminate (Stdlib.Sys.opaque_identity __enum_arg_27))))
-              | TyFieldConstant.Unresolved _p0 -> let _g3 = (_p0 : string) in let reason = (_g3 : string) in Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __enum_arg_28 = (reason : string) in Indeterminate (Stdlib.Sys.opaque_identity __enum_arg_28))))
+              | TyFieldConstant.Ordinary -> Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __enum_arg_28 = ("enum domain contains an ordinary field" : string) in Indeterminate (Stdlib.Sys.opaque_identity __enum_arg_28))))
+              | TyFieldConstant.Unresolved _p0 -> let _g3 = (_p0 : string) in let reason = (_g3 : string) in Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __enum_arg_29 = (reason : string) in Indeterminate (Stdlib.Sys.opaque_identity __enum_arg_29))))
               | TyFieldConstant.NullValue -> ignore (if not (requireNullCoverage) then Stdlib.raise (HxRuntime.Hx_continue) else ())
               | TyFieldConstant.IntValue _p0 -> ignore ((
                 ignore _p0;
@@ -146,7 +151,7 @@ let analyze = fun self (cases : tyswitchcasecoverage HxArray.t) (requireNullCove
                 ()
               )));
             let key = (TyFieldConstant.getCanonicalIdentity (Obj.magic constant) () : string) in (
-              ignore (if not (HxMap.exists_string (Obj.magic seen) (key : string)) && not (HxMap.exists_string (Obj.magic covered) (key : string)) then ignore (let __array_receiver_29 = Obj.magic missing in let __array_arg_0_30 = Obj.magic (Obj.obj (HxAnon.get member "field")) in HxArray.push __array_receiver_29 __array_arg_0_30) else ());
+              ignore (if not (HxMap.exists_string (Obj.magic seen) (key : string)) && not (HxMap.exists_string (Obj.magic covered) (key : string)) then ignore (let __array_receiver_30 = Obj.magic missing in let __array_arg_0_31 = Obj.magic (Obj.obj (HxAnon.get member "field")) in HxArray.push __array_receiver_30 __array_arg_0_31) else ());
               HxMap.set_string (Obj.magic seen) (key : string) true
             )
           )
@@ -154,12 +159,12 @@ let analyze = fun self (cases : tyswitchcasecoverage HxArray.t) (requireNullCove
           | HxRuntime.Hx_continue -> () done);
         ignore (if HxArray.length missing = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr Exhaustive)) else ());
         let tempResult = ref (Obj.magic (HxRuntime.hx_null) : tyswitchcoverageresult) in (
-          ignore (if !hasMemberPattern then let __assign_31 = Obj.magic (let __enum_arg_32 = Obj.magic missing in NonExhaustive (Stdlib.Sys.opaque_identity __enum_arg_32)) in (
-            tempResult := __assign_31;
-            __assign_31
-          ) else let __assign_33 = Obj.magic NonExhaustiveWildcard in (
-            tempResult := __assign_33;
-            __assign_33
+          ignore (if !hasMemberPattern then let __assign_32 = Obj.magic (let __enum_arg_33 = Obj.magic missing in NonExhaustive (Stdlib.Sys.opaque_identity __enum_arg_33)) in (
+            tempResult := __assign_32;
+            __assign_32
+          ) else let __assign_34 = Obj.magic NonExhaustiveWildcard in (
+            tempResult := __assign_34;
+            __assign_34
           ));
           !tempResult
         )
@@ -167,4 +172,4 @@ let analyze = fun self (cases : tyswitchcasecoverage HxArray.t) (requireNullCove
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_34 -> (Obj.obj __ret_34 : tyswitchcoverageresult) : tyswitchcoverageresult)
+  | HxRuntime.Hx_return __ret_35 -> (Obj.obj __ret_35 : tyswitchcoverageresult) : tyswitchcoverageresult)

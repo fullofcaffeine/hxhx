@@ -5,7 +5,9 @@
 let __reflaxe_ocaml__ = ()
 
 let store = fun write rendered names -> (try (
-  ignore (if Backend_ocaml_Stage3OcamlNullablePrimitive.innerPrimitive (Obj.magic (TyLocalBinding.getType (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).binding)) ())) != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Backend_ocaml_Stage3OcamlValueConversion.convert (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).sourceType)) (Obj.magic (TyLocalBinding.getType (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).binding)) ())) (rendered : string) (Obj.magic names)))) else ());
+  ignore (if TyFunctionConstraint.isFunctionConstraint (Obj.magic (TyLocalBinding.getType (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).binding)) ())) then ignore (let adapted = (Backend_ocaml_Stage3OcamlFunctionBoundary.adapt (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).sourceType)) (rendered : string) (Obj.magic names) : string) in if adapted != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr adapted)) else ()) else ());
+  ignore (if Backend_ocaml_Stage3OcamlNullablePrimitive.innerPrimitive (Obj.magic (TyLocalBinding.getType (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).binding)) ())) != Obj.magic (HxRuntime.hx_null) || Backend_ocaml_Stage3OcamlNumericWidening.isFloatDestination (Obj.magic (TyLocalBinding.getType (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).binding)) ())) && Backend_ocaml_Stage3OcamlNullablePrimitive.innerPrimitive (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).sourceType)) != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Backend_ocaml_Stage3OcamlValueConversion.convert (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).sourceType)) (Obj.magic (TyLocalBinding.getType (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).binding)) ())) (rendered : string) (Obj.magic names)))) else ());
+  ignore (if Backend_ocaml_Stage3OcamlNumericWidening.convertsToFloat (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).sourceType)) (Obj.magic (TyLocalBinding.getType (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).binding)) ())) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Backend_ocaml_Stage3OcamlNumericWidening.toFloatDestination (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).sourceType)) (Obj.magic (TyLocalBinding.getType (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).binding)) ())) (rendered : string)))) else ());
   ignore (if (let __string_eq_left_1 = TyType.getSemanticKey (Obj.magic (TyLocalBinding.getType (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).binding)) ())) () in let __string_eq_right_2 = "primitive:Bool" in HxString.equals __string_eq_left_1 __string_eq_right_2) && TyType.isDynamic (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).sourceType)) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (("HxDynamic.booleanValue (" ^ HxString.toStdString rendered) ^ ")"))) else ());
   ignore (if not (TyType.isDynamic (Obj.magic (TyLocalBinding.getType (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).binding)) ())) ()) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr rendered)) else ());
   let tempOcamlDynamicArgumentCarrier = ref (Obj.magic (HxRuntime.hx_null) : Backend_ocaml_OcamlDynamicOperatorLowering.ocamldynamicargumentcarrier) in (
@@ -31,3 +33,20 @@ let compound = fun write op left right names -> (
     let __string_part_17 = "(let " in let __string_part_18 = HxString.toStdString leftName in let __string_part_19 = " = (" in let __string_part_20 = HxString.toStdString left in let __string_part_21 = ") in let " in let __string_part_22 = HxString.toStdString rightName in let __string_part_23 = " = (" in let __string_part_24 = HxString.toStdString (store (Obj.magic write) (right : string) (Obj.magic names)) in let __string_part_25 = ") in " in let __string_part_26 = HxString.toStdString operation in let __string_part_27 = ")" in (((((((((__string_part_17 ^ __string_part_18) ^ __string_part_19) ^ __string_part_20) ^ __string_part_21) ^ __string_part_22) ^ __string_part_23) ^ __string_part_24) ^ __string_part_25) ^ __string_part_26) ^ __string_part_27
   )
 )
+
+let assignValue = fun ident stored names -> (
+  ignore (if names == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml local assignment value requires its exact local naming owner") ["Dynamic"] else ());
+  let value = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_assigned" : string) : string) in ((((((((("(let " ^ HxString.toStdString value) ^ " = (") ^ HxString.toStdString stored) ^ ") in (") ^ HxString.toStdString ident) ^ " := ") ^ HxString.toStdString value) ^ "; ") ^ HxString.toStdString value) ^ "))"
+)
+
+let concreteFromCarrier = fun source destination rendered -> (try (
+  ignore (if source == Obj.magic (HxRuntime.hx_null) || destination == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  let inner = (Backend_ocaml_Stage3OcamlNullablePrimitive.innerPrimitive (Obj.magic source) : string) in (
+    ignore (if inner == Obj.magic (HxRuntime.hx_null) || Backend_ocaml_Stage3OcamlNullablePrimitive.innerPrimitive (Obj.magic destination) != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+    let key = (TyType.getSemanticKey (Obj.magic (TyAliasExpansion.reveal (Obj.magic destination))) () : string) in (
+      ignore (if (let __string_eq_left_28 = key in let __string_eq_right_29 = Backend_ocaml_Stage3OcamlNullablePrimitive.hx_INT in not (HxString.equals __string_eq_left_28 __string_eq_right_29)) && (let __string_eq_left_30 = key in let __string_eq_right_31 = Backend_ocaml_Stage3OcamlNullablePrimitive.hx_FLOAT in not (HxString.equals __string_eq_left_30 __string_eq_right_31)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+      Backend_ocaml_Stage3OcamlNullablePrimitive.load (inner : string) (Obj.magic destination) (rendered : string)
+    )
+  )
+) with
+  | HxRuntime.Hx_return __ret_32 -> (Obj.obj __ret_32 : string) : string)

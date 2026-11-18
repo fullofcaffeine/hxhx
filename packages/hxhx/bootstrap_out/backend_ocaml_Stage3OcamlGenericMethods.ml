@@ -23,69 +23,69 @@ let convert = fun self (source : Reflaxe_ocaml_lowered_OcamlGenericCallConversio
 )
 
 let rec needsErasedBoundary = fun input owned -> (try let hx_type = Obj.magic (TyAliasExpansion.reveal (Obj.magic input)) in (
-  ignore (if TyType.isTypeParameter (Obj.magic hx_type) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __array_receiver_128 = Obj.magic owned in let __array_arg_0_129 = (TyTypeParameterId.getCanonicalKey (Obj.magic (TyType.getTypeParameterIdentity (Obj.magic hx_type) ())) () : string) in HxArray.contains __array_receiver_128 __array_arg_0_129))) else ());
+  ignore (if TyType.isTypeParameter (Obj.magic hx_type) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __array_receiver_141 = Obj.magic owned in let __array_arg_0_142 = (TyTypeParameterId.getCanonicalKey (Obj.magic (TyType.getTypeParameterIdentity (Obj.magic hx_type) ())) () : string) in HxArray.contains __array_receiver_141 __array_arg_0_142))) else ());
   ignore (if TyType.isNullable (Obj.magic hx_type) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (needsErasedBoundary (Obj.magic (TyType.unwrapNull (Obj.magic hx_type) ())) (Obj.magic owned)))) else ());
   let tempShortCircuit = ref (false : bool) in (
     ignore (if TyType.isFunction (Obj.magic hx_type) () then let tempShortCircuit1 = ref (false : bool) in (
-      ignore (if needsErasedBoundary (Obj.magic (TyType.getFunctionReturn (Obj.magic hx_type) ())) (Obj.magic owned) then let __assign_130 = true in (
-        tempShortCircuit1 := __assign_130;
-        __assign_130
-      ) else let __assign_131 = Lambda.exists (let __struct_obj_132 = TyType.getFunctionParameters (Obj.magic hx_type) () in let __struct_anon_133 = HxAnon.create () in (
-        ignore (HxAnon.set __struct_anon_133 "iterator" (Obj.repr (fun () -> HxIterator.of_array __struct_obj_132)));
-        __struct_anon_133
+      ignore (if needsErasedBoundary (Obj.magic (TyType.getFunctionReturn (Obj.magic hx_type) ())) (Obj.magic owned) then let __assign_143 = true in (
+        tempShortCircuit1 := __assign_143;
+        __assign_143
+      ) else let __assign_144 = Lambda.exists (let __struct_obj_145 = TyType.getFunctionParameters (Obj.magic hx_type) () in let __struct_anon_146 = HxAnon.create () in (
+        ignore (HxAnon.set __struct_anon_146 "iterator" (Obj.repr (fun () -> HxIterator.of_array __struct_obj_145)));
+        __struct_anon_146
       )) (fun parameter -> needsErasedBoundary (Obj.magic (Obj.obj (HxAnon.get parameter "type"))) (Obj.magic owned)) in (
-        tempShortCircuit1 := __assign_131;
-        __assign_131
+        tempShortCircuit1 := __assign_144;
+        __assign_144
       ));
-      let __assign_134 = !tempShortCircuit1 in (
-        tempShortCircuit := __assign_134;
-        __assign_134
+      let __assign_147 = !tempShortCircuit1 in (
+        tempShortCircuit := __assign_147;
+        __assign_147
       )
-    ) else let __assign_135 = false in (
-      tempShortCircuit := __assign_135;
-      __assign_135
+    ) else let __assign_148 = false in (
+      tempShortCircuit := __assign_148;
+      __assign_148
     ));
     !tempShortCircuit
   )
 ) with
-  | HxRuntime.Hx_return __ret_136 -> (Obj.obj __ret_136 : bool) : bool)
+  | HxRuntime.Hx_return __ret_149 -> (Obj.obj __ret_149 : bool) : bool)
 
 let rec shape = fun input -> (try let hx_type = Obj.magic (TyAliasExpansion.reveal (Obj.magic input)) in (
-  ignore (if TyType.isTypeParameter (Obj.magic hx_type) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __enum_arg_137 = (TyTypeParameterId.getCanonicalKey (Obj.magic (TyType.getTypeParameterIdentity (Obj.magic hx_type) ())) () : string) in Reflaxe_ocaml_lowered_OcamlGenericCallConversion.Erased (Stdlib.Sys.opaque_identity __enum_arg_137)))) else ());
-  ignore (if TyType.isFunction (Obj.magic hx_type) () then let parameters = Obj.magic (let __arr_138 = HxArray.create () in __arr_138) in let _g = ref 0 in let _g1 = Obj.magic (TyType.getFunctionParameters (Obj.magic hx_type) ()) in (
-    ignore (while !_g < HxArray.length _g1 do ignore (let parameter = let __array_read_receiver_139 = _g1 in let __array_read_index_140 = !_g in HxArray.get (Obj.magic __array_read_receiver_139) __array_read_index_140 in (
-      ignore (let __old_141 = !_g in let __new_142 = HxInt.add __old_141 1 in (
-        ignore (_g := __new_142);
-        __new_142
+  ignore (if TyType.isTypeParameter (Obj.magic hx_type) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __enum_arg_150 = (TyTypeParameterId.getCanonicalKey (Obj.magic (TyType.getTypeParameterIdentity (Obj.magic hx_type) ())) () : string) in Reflaxe_ocaml_lowered_OcamlGenericCallConversion.Erased (Stdlib.Sys.opaque_identity __enum_arg_150)))) else ());
+  ignore (if TyType.isFunction (Obj.magic hx_type) () then let parameters = Obj.magic (let __arr_151 = HxArray.create () in __arr_151) in let _g = ref 0 in let _g1 = Obj.magic (TyType.getFunctionParameters (Obj.magic hx_type) ()) in (
+    ignore (while !_g < HxArray.length _g1 do ignore (let parameter = let __array_read_receiver_152 = _g1 in let __array_read_index_153 = !_g in HxArray.get (Obj.magic __array_read_receiver_152) __array_read_index_153 in (
+      ignore (let __old_154 = !_g in let __new_155 = HxInt.add __old_154 1 in (
+        ignore (_g := __new_155);
+        __new_155
       ));
       let value = shape (Obj.magic (Obj.obj (HxAnon.get parameter "type"))) in (
-        ignore (if value == Obj.magic (HxRuntime.hx_null) || HxRuntime.unbox_bool_or_obj (HxAnon.get parameter "isOptional") || HxRuntime.unbox_bool_or_obj (HxAnon.get parameter "isRest") || (let __enum_eq_left_143 = value in let __enum_eq_right_144 = Reflaxe_ocaml_lowered_OcamlGenericCallConversion.EffectOnly in HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" (Obj.repr __enum_eq_left_143) == HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" (Obj.repr __enum_eq_right_144)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-        let __array_receiver_145 = Obj.magic parameters in let __array_arg_0_146 = Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" value) in HxArray.push __array_receiver_145 __array_arg_0_146
+        ignore (if value == Obj.magic (HxRuntime.hx_null) || HxRuntime.unbox_bool_or_obj (HxAnon.get parameter "isOptional") || HxRuntime.unbox_bool_or_obj (HxAnon.get parameter "isRest") || (let __enum_eq_left_156 = value in let __enum_eq_right_157 = Reflaxe_ocaml_lowered_OcamlGenericCallConversion.EffectOnly in HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" (Obj.repr __enum_eq_left_156) == HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" (Obj.repr __enum_eq_right_157)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+        let __array_receiver_158 = Obj.magic parameters in let __array_arg_0_159 = Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" value) in HxArray.push __array_receiver_158 __array_arg_0_159
       )
     )) done);
     let result = shape (Obj.magic (TyType.getFunctionReturn (Obj.magic hx_type) ())) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-      ignore (if result == Obj.magic (HxRuntime.hx_null) then let __assign_147 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-        tempResult := __assign_147;
-        __assign_147
-      ) else let __assign_148 = Obj.magic (Obj.repr (let __enum_arg_149 = Obj.magic parameters in let __enum_arg_150 = Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" result) in Reflaxe_ocaml_lowered_OcamlGenericCallConversion.FunctionValue (Stdlib.Sys.opaque_identity __enum_arg_149, __enum_arg_150))) in (
-        tempResult := __assign_148;
-        __assign_148
+      ignore (if result == Obj.magic (HxRuntime.hx_null) then let __assign_160 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+        tempResult := __assign_160;
+        __assign_160
+      ) else let __assign_161 = Obj.magic (Obj.repr (let __enum_arg_162 = Obj.magic parameters in let __enum_arg_163 = Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" result) in Reflaxe_ocaml_lowered_OcamlGenericCallConversion.FunctionValue (Stdlib.Sys.opaque_identity __enum_arg_162, __enum_arg_163))) in (
+        tempResult := __assign_161;
+        __assign_161
       ));
       Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (!tempResult))))
     )
   ) else ());
   let tempResult1 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-    ignore (if let __string_eq_left_151 = TyType.getSemanticKey (Obj.magic hx_type) () in let __string_eq_right_152 = "primitive:Float" in HxString.equals __string_eq_left_151 __string_eq_right_152 then let __assign_153 = Obj.magic (Obj.repr (Reflaxe_ocaml_lowered_OcamlGenericCallConversion.Floating)) in (
-      tempResult1 := __assign_153;
-      __assign_153
-    ) else let __assign_154 = Obj.magic (Backend_ocaml_Stage3OcamlCallableSelection.valueShape (Obj.magic hx_type)) in (
-      tempResult1 := __assign_154;
-      __assign_154
+    ignore (if let __string_eq_left_164 = TyType.getSemanticKey (Obj.magic hx_type) () in let __string_eq_right_165 = "primitive:Float" in HxString.equals __string_eq_left_164 __string_eq_right_165 then let __assign_166 = Obj.magic (Obj.repr (Reflaxe_ocaml_lowered_OcamlGenericCallConversion.Floating)) in (
+      tempResult1 := __assign_166;
+      __assign_166
+    ) else let __assign_167 = Obj.magic (Backend_ocaml_Stage3OcamlCallableSelection.valueShape (Obj.magic hx_type)) in (
+      tempResult1 := __assign_167;
+      __assign_167
     ));
     Obj.magic (!tempResult1)
   )
 ) with
-  | HxRuntime.Hx_return __ret_155 -> (Obj.obj __ret_155 : Obj.t) : Obj.t)
+  | HxRuntime.Hx_return __ret_168 -> (Obj.obj __ret_168 : Obj.t) : Obj.t)
 
 let create = fun modules -> let self = ({ __hx_type = HxType.instance_marker "backend.ocaml.Stage3OcamlGenericMethods"; methods = Obj.magic HxRuntime.hx_null; printer = Obj.magic HxRuntime.hx_null; nextName = 0; methodCount = 0 } : t) in (
   ignore (ignore ((
@@ -170,10 +170,10 @@ let create = fun modules -> let self = ({ __hx_type = HxType.instance_marker "ba
 )
 
 let requireOwner = fun hx_method declaration -> ignore ((
-  ignore (if Obj.repr (Obj.obj (HxAnon.get hx_method "declaration")) != Obj.repr declaration || (let __string_eq_left_156 = Obj.obj (HxAnon.get hx_method "declarationSignature") in let __string_eq_right_157 = TyType.getSemanticKey (Obj.magic (TyCallableSignature.getFunctionType (Obj.magic (TyCallableSignature.fromDeclaration (Obj.magic declaration) (Obj.magic (HxRuntime.hx_null)))) ())) () in not (HxString.equals __string_eq_left_156 __string_eq_right_157)) then HxType.hx_throw_typed_rtti (Obj.repr "native generic use belongs to another declaration") ["Dynamic"] else ());
+  ignore (if Obj.repr (Obj.obj (HxAnon.get hx_method "declaration")) != Obj.repr declaration || (let __string_eq_left_169 = Obj.obj (HxAnon.get hx_method "declarationSignature") in let __string_eq_right_170 = TyType.getSemanticKey (Obj.magic (TyCallableSignature.getFunctionType (Obj.magic (TyCallableSignature.fromDeclaration (Obj.magic declaration) (Obj.magic (HxRuntime.hx_null)))) ())) () in not (HxString.equals __string_eq_left_169 __string_eq_right_170)) then HxType.hx_throw_typed_rtti (Obj.repr "native generic use belongs to another declaration") ["Dynamic"] else ());
   ignore (TypedFunction.assertParsedBodyCurrent (Obj.magic (Obj.obj (HxAnon.get hx_method "functionBody"))) ());
   ignore (TyDeclarationInfo.requireSupportedImplementation (Obj.magic declaration) ());
-  if Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" (HxAnon.get hx_method "signature")) == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_158 = "native generic method requires a supported ordinary signature: " in let __string_part_159 = HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()) in __string_part_158 ^ __string_part_159)) ["Dynamic"] else ()
+  if Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" (HxAnon.get hx_method "signature")) == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_171 = "native generic method requires a supported ordinary signature: " in let __string_part_172 = HxString.toStdString (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) ()) in __string_part_171 ^ __string_part_172)) ["Dynamic"] else ()
 ))
 
 let isErased = fun self (projection : TypedBackendFunctionProjection.t) (input : TyType.t) -> (try let tempMaybeTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
@@ -305,35 +305,130 @@ let render = fun self (input : Obj.t) -> (try let _gthis = Obj.magic self in (
                   ) else HxType.hx_throw_typed_rtti (Obj.repr "native generic declaration is not callable") ["Dynamic"]);
                   let signature = Obj.magic (!tempStruct) in (
                     ignore (if HxArray.length arguments <> HxArray.length (Obj.obj (HxAnon.get signature "parameters")) || HxArray.length (TypedExpr.getExpressions (Obj.magic source) ()) <> HxInt.add (HxArray.length arguments) 1 then HxType.hx_throw_typed_rtti (Obj.repr "native generic call changed its argument count") ["Dynamic"] else ());
-                    let values = Obj.magic (let __represented_array_87 = HxArray.create () in __represented_array_87) in (
-                      ignore (if not (TyDeclarationInfo.getIsStatic (Obj.magic declaration) ()) then ignore ((
-                        ignore (if instanceCall == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "native generic instance call lost its receiver") ["Dynamic"] else ());
-                        let __array_receiver_88 = Obj.magic values in let __array_arg_0_89 = ((Obj.obj (HxAnon.get input "emit") : _ -> _) (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get instanceCall "receiver")))) : string) in HxArray.push __array_receiver_88 __array_arg_0_89
-                      )) else ());
-                      let _g = ref 0 in let _g1 = HxArray.length arguments in (
-                        ignore (while !_g < _g1 do ignore (let index = let __old_90 = !_g in let __new_91 = HxInt.add __old_90 1 in (
-                          ignore (_g := __new_91);
-                          __old_90
-                        ) in let actual = shape (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_92 = TypedExpr.getExpressions (Obj.magic source) () in let __array_read_index_93 = HxInt.add index 1 in HxArray.get (Obj.magic __array_read_receiver_92) __array_read_index_93)) ())) in (
-                          ignore (if actual == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "native generic argument has no shared storage shape") ["Dynamic"] else ());
-                          let __array_receiver_94 = Obj.magic values in let __array_arg_0_95 = (convert (Obj.magic self) (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" actual)) (Obj.magic (let __array_read_receiver_96 = Obj.obj (HxAnon.get signature "parameters") in let __array_read_index_97 = index in HxArray.get (Obj.magic __array_read_receiver_96) __array_read_index_97)) ((Obj.obj (HxAnon.get input "emit") : _ -> _) (Obj.magic (let __array_read_receiver_98 = arguments in let __array_read_index_99 = index in HxArray.get (Obj.magic __array_read_receiver_98) __array_read_index_99)) : string) (Obj.magic (Obj.obj (HxAnon.get input "names"))) : string) in HxArray.push __array_receiver_94 __array_arg_0_95
-                        )) done);
-                        let result = shape (Obj.magic (TypedExpr.getType (Obj.magic source) ())) in (
-                          ignore (if result == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "native generic result has no shared storage shape") ["Dynamic"] else ());
-                          let tempString = ref (HxString.hx_null_string : string) in (
-                            ignore (if HxArray.length values = 0 then let __assign_100 = (let __string_part_101 = HxString.toStdString ((Obj.obj (HxAnon.get input "reference") : _ -> _) (Obj.magic declaration)) in let __string_part_102 = " ()" in __string_part_101 ^ __string_part_102 : string) in (
-                              tempString := __assign_100;
-                              __assign_100
-                            ) else let __assign_103 = (Backend_ocaml_Stage3OcamlCallOrder.render (let __anon_104 = HxAnon.create () in (
-                              ignore (HxAnon.set __anon_104 "callee" (Obj.repr ((Obj.obj (HxAnon.get input "reference") : _ -> _) (Obj.magic declaration))));
-                              ignore (HxAnon.set __anon_104 "arguments" (Obj.repr values));
-                              ignore (HxAnon.set __anon_104 "names" (Obj.repr (Obj.obj (HxAnon.get input "names"))));
-                              __anon_104
-                            )) : string) in (
-                              tempString := __assign_103;
-                              __assign_103
+                    let values = Obj.magic (let __represented_array_87 = HxArray.create () in __represented_array_87) in let tempShortCircuit1 = ref (false : bool) in (
+                      ignore (if instanceCall != Obj.magic (HxRuntime.hx_null) then let _g = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get instanceCall "receiver"))) in if (match _g with
+                        | HxExpr.EParenthesized (_, _) -> 0
+                        | HxExpr.ESourceTry (_, _, _) -> 1
+                        | HxExpr.ESourceFor (_, _, _, _) -> 2
+                        | HxExpr.ELoweredControl (_, _, _, _) -> 3
+                        | HxExpr.ENull -> 4
+                        | HxExpr.EBool _ -> 5
+                        | HxExpr.EString _ -> 6
+                        | HxExpr.EInt _ -> 7
+                        | HxExpr.EFloat _ -> 8
+                        | HxExpr.EEnumValue _ -> 9
+                        | HxExpr.EThis -> 10
+                        | HxExpr.ESuper -> 11
+                        | HxExpr.EIdent _ -> 12
+                        | HxExpr.EField (_, _) -> 13
+                        | HxExpr.ENullSafeField (_, _) -> 14
+                        | HxExpr.ECall (_, _) -> 15
+                        | HxExpr.EMacroExpr (_, _) -> 16
+                        | HxExpr.EMacroType _ -> 17
+                        | HxExpr.ELambda (_, _, _) -> 18
+                        | HxExpr.ETryCatchRaw _ -> 19
+                        | HxExpr.ESwitchRaw _ -> 20
+                        | HxExpr.ESwitch (_, _, _) -> 21
+                        | HxExpr.ENew (_, _) -> 22
+                        | HxExpr.EUnop (_, _, _) -> 23
+                        | HxExpr.EBinop (_, _, _) -> 24
+                        | HxExpr.ETernary (_, _, _) -> 25
+                        | HxExpr.ESourceIf (_, _, _, _) -> 26
+                        | HxExpr.EThrow (_, _) -> 27
+                        | HxExpr.EAnon (_, _) -> 28
+                        | HxExpr.EArrayComprehension (_, _, _, _) -> 29
+                        | HxExpr.EArrayDecl _ -> 30
+                        | HxExpr.EArrayAccess (_, _) -> 31
+                        | HxExpr.ERange (_, _) -> 32
+                        | HxExpr.ECast (_, _) -> 33
+                        | HxExpr.ECheckType (_, _) -> 34
+                        | HxExpr.EUntyped _ -> 35
+                        | HxExpr.EUnsupported _ -> 36
+                        | HxExpr.EReturn _ -> 37
+                        | HxExpr.EVars _ -> 38
+                        | HxExpr.EVariableDeclaration (_, _, _, _, _, _) -> 39
+                        | HxExpr.EWhile (_, _, _, _, _) -> 40
+                        | HxExpr.EBreak _ -> 41
+                        | HxExpr.EContinue _ -> 42
+                        | HxExpr.EDiscardThen (_, _) -> 43
+                        | HxExpr.ESourceGroup (_, _) -> 44
+                        | HxExpr.ESourceFunction (_, _, _, _) -> 45
+                        | HxExpr.EPrivateAccess (_, _) -> 46) = 11 then let __assign_88 = true in (
+                        tempShortCircuit1 := __assign_88;
+                        __assign_88
+                      ) else let __assign_89 = false in (
+                        tempShortCircuit1 := __assign_89;
+                        __assign_89
+                      ) else let __assign_90 = false in (
+                        tempShortCircuit1 := __assign_90;
+                        __assign_90
+                      ));
+                      let superCall = !tempShortCircuit1 in (
+                        ignore (if not (TyDeclarationInfo.getIsStatic (Obj.magic declaration) ()) then ignore ((
+                          ignore (if instanceCall == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "native generic instance call lost its receiver") ["Dynamic"] else ());
+                          let tempHxExpr = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
+                            ignore (if superCall then let __assign_91 = Obj.magic (HxExpr.EThis) in (
+                              tempHxExpr := __assign_91;
+                              __assign_91
+                            ) else let __assign_92 = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get instanceCall "receiver"))) in (
+                              tempHxExpr := __assign_92;
+                              __assign_92
                             ));
-                            let called = (!tempString : string) in Stdlib.raise (HxRuntime.Hx_return (Obj.repr (convert (Obj.magic self) (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" (HxAnon.get signature "result")))) (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" result)) (called : string) (Obj.magic (Obj.obj (HxAnon.get input "names"))))))
+                            let __array_receiver_93 = Obj.magic values in let __array_arg_0_94 = ((Obj.obj (HxAnon.get input "emit") : _ -> _) (Obj.magic (!tempHxExpr)) : string) in HxArray.push __array_receiver_93 __array_arg_0_94
+                          )
+                        )) else ());
+                        let appliedParameters = Obj.magic (TyType.getFunctionParameters (Obj.magic applied) ()) in let _g = ref 0 in let _g1 = HxArray.length arguments in (
+                          ignore (while !_g < _g1 do ignore (let index = let __old_95 = !_g in let __new_96 = HxInt.add __old_95 1 in (
+                            ignore (_g := __new_96);
+                            __old_95
+                          ) in let argumentType = Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_97 = TypedExpr.getExpressions (Obj.magic source) () in let __array_read_index_98 = HxInt.add index 1 in HxArray.get (Obj.magic __array_read_receiver_97) __array_read_index_98)) ()) in let promoted = index < HxArray.length appliedParameters && Backend_ocaml_Stage3OcamlNumericWidening.needsPromotion (Obj.magic argumentType) (Obj.magic (Obj.obj (HxAnon.get (let __array_read_receiver_99 = appliedParameters in let __array_read_index_100 = index in HxArray.get (Obj.magic __array_read_receiver_99) __array_read_index_100) "type"))) in let tempTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+                            ignore (if promoted then let __assign_101 = Obj.magic (Obj.obj (HxAnon.get (let __array_read_receiver_102 = appliedParameters in let __array_read_index_103 = index in HxArray.get (Obj.magic __array_read_receiver_102) __array_read_index_103) "type")) in (
+                              tempTyType := __assign_101;
+                              __assign_101
+                            ) else let __assign_104 = Obj.magic argumentType in (
+                              tempTyType := __assign_104;
+                              __assign_104
+                            ));
+                            let actual = shape (Obj.magic (!tempTyType)) in (
+                              ignore (if actual == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "native generic argument has no shared storage shape") ["Dynamic"] else ());
+                              let rendered = ((Obj.obj (HxAnon.get input "emit") : _ -> _) (Obj.magic (let __array_read_receiver_105 = arguments in let __array_read_index_106 = index in HxArray.get (Obj.magic __array_read_receiver_105) __array_read_index_106)) : string) in let tempString = ref (HxString.hx_null_string : string) in (
+                                ignore (if promoted then let __assign_107 = (Backend_ocaml_Stage3OcamlNumericWidening.promote (rendered : string) : string) in (
+                                  tempString := __assign_107;
+                                  __assign_107
+                                ) else let __assign_108 = (rendered : string) in (
+                                  tempString := __assign_108;
+                                  __assign_108
+                                ));
+                                let __array_receiver_109 = Obj.magic values in let __array_arg_0_110 = (convert (Obj.magic self) (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" actual)) (Obj.magic (let __array_read_receiver_111 = Obj.obj (HxAnon.get signature "parameters") in let __array_read_index_112 = index in HxArray.get (Obj.magic __array_read_receiver_111) __array_read_index_112)) (!tempString : string) (Obj.magic (Obj.obj (HxAnon.get input "names"))) : string) in HxArray.push __array_receiver_109 __array_arg_0_110
+                              )
+                            )
+                          )) done);
+                          let result = shape (Obj.magic (TypedExpr.getType (Obj.magic source) ())) in (
+                            ignore (if result == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "native generic result has no shared storage shape") ["Dynamic"] else ());
+                            let tempString1 = ref (HxString.hx_null_string : string) in (
+                              ignore (if superCall then let __assign_113 = ((Obj.obj (HxAnon.get input "superReference") : _ -> _) (Obj.magic declaration) : string) in (
+                                tempString1 := __assign_113;
+                                __assign_113
+                              ) else let __assign_114 = ((Obj.obj (HxAnon.get input "reference") : _ -> _) (Obj.magic declaration) : string) in (
+                                tempString1 := __assign_114;
+                                __assign_114
+                              ));
+                              let callee = (!tempString1 : string) in let tempString2 = ref (HxString.hx_null_string : string) in (
+                                ignore (if HxArray.length values = 0 then let __assign_115 = (HxString.toStdString callee ^ " ()" : string) in (
+                                  tempString2 := __assign_115;
+                                  __assign_115
+                                ) else let __assign_116 = (Backend_ocaml_Stage3OcamlCallOrder.render (let __anon_117 = HxAnon.create () in (
+                                  ignore (HxAnon.set __anon_117 "callee" (Obj.repr callee));
+                                  ignore (HxAnon.set __anon_117 "arguments" (Obj.repr values));
+                                  ignore (HxAnon.set __anon_117 "names" (Obj.repr (Obj.obj (HxAnon.get input "names"))));
+                                  __anon_117
+                                )) : string) in (
+                                  tempString2 := __assign_116;
+                                  __assign_116
+                                ));
+                                let called = (!tempString2 : string) in Stdlib.raise (HxRuntime.Hx_return (Obj.repr (convert (Obj.magic self) (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" (HxAnon.get signature "result")))) (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" result)) (called : string) (Obj.magic (Obj.obj (HxAnon.get input "names"))))))
+                              )
+                            )
                           )
                         )
                       )
@@ -344,14 +439,14 @@ let render = fun self (input : Obj.t) -> (try let _gthis = Obj.magic self in (
             )
           )
         ) else ());
-        ignore (if (let __enum_eq_left_105 = TypedExpr.getTag (Obj.magic source) () in let __enum_eq_right_106 = TypedExpr.FieldRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_105) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_106)) && (let __enum_eq_left_107 = TypedExpr.getTag (Obj.magic source) () in let __enum_eq_right_108 = TypedExpr.NameRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_107) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_108)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+        ignore (if (let __enum_eq_left_118 = TypedExpr.getTag (Obj.magic source) () in let __enum_eq_right_119 = TypedExpr.FieldRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_118) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_119)) && (let __enum_eq_left_120 = TypedExpr.getTag (Obj.magic source) () in let __enum_eq_right_121 = TypedExpr.NameRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_120) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_121)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
         let instantiated = shape (Obj.magic (TypedExpr.getType (Obj.magic source) ())) in (
           ignore (if instantiated == Obj.magic (HxRuntime.hx_null) || not (Reflaxe_ocaml_lowered_OcamlGenericCallConversion.matchInstantiation (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" (HxAnon.get hx_method "signature"))))) (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" instantiated)) (Obj.magic (Obj.obj (HxAnon.get hx_method "owned"))) (HxMap.create_string ())) then HxType.hx_throw_typed_rtti (Obj.repr "native generic capture has an inconsistent instantiation") ["Dynamic"] else ());
           ignore (if TyDeclarationInfo.getIsStatic (Obj.magic declaration) () then (
-            ignore (if (let __enum_eq_left_109 = TypedExpr.getTag (Obj.magic source) () in let __enum_eq_right_110 = TypedExpr.FieldRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_109) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_110)) && HxArray.length (TypedExpr.getExpressions (Obj.magic source) ()) > 0 && ((let __enum_eq_left_111 = TypedExpr.getTag (Obj.magic (let __array_read_receiver_113 = TypedExpr.getExpressions (Obj.magic source) () in let __array_read_index_114 = 0 in HxArray.get (Obj.magic __array_read_receiver_113) __array_read_index_114)) () in let __enum_eq_right_112 = TypedExpr.NameRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_111) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_112)) || TypedExpr.getFieldInfo (Obj.magic (let __array_read_receiver_115 = TypedExpr.getExpressions (Obj.magic source) () in let __array_read_index_116 = 0 in HxArray.get (Obj.magic __array_read_receiver_115) __array_read_index_116)) () != Obj.magic (HxRuntime.hx_null)) then HxType.hx_throw_typed_rtti (Obj.repr "native generic static capture requires a type receiver") ["Dynamic"] else ());
+            ignore (if (let __enum_eq_left_122 = TypedExpr.getTag (Obj.magic source) () in let __enum_eq_right_123 = TypedExpr.FieldRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_122) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_123)) && HxArray.length (TypedExpr.getExpressions (Obj.magic source) ()) > 0 && ((let __enum_eq_left_124 = TypedExpr.getTag (Obj.magic (let __array_read_receiver_126 = TypedExpr.getExpressions (Obj.magic source) () in let __array_read_index_127 = 0 in HxArray.get (Obj.magic __array_read_receiver_126) __array_read_index_127)) () in let __enum_eq_right_125 = TypedExpr.NameRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_124) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_125)) || TypedExpr.getFieldInfo (Obj.magic (let __array_read_receiver_128 = TypedExpr.getExpressions (Obj.magic source) () in let __array_read_index_129 = 0 in HxArray.get (Obj.magic __array_read_receiver_128) __array_read_index_129)) () != Obj.magic (HxRuntime.hx_null)) then HxType.hx_throw_typed_rtti (Obj.repr "native generic static capture requires a type receiver") ["Dynamic"] else ());
             Stdlib.raise (HxRuntime.Hx_return (Obj.repr (convert (Obj.magic self) (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" (HxAnon.get hx_method "signature"))))) (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" instantiated)) ((Obj.obj (HxAnon.get input "reference") : _ -> _) (Obj.magic declaration) : string) (Obj.magic (Obj.obj (HxAnon.get input "names"))))))
           ) else ());
-          let tempHxExpr = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
+          let tempHxExpr1 = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
             ignore (let _g = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get input "expression"))) in if (match _g with
               | HxExpr.EParenthesized (_, _) -> 0
               | HxExpr.ESourceTry (_, _, _) -> 1
@@ -400,31 +495,31 @@ let render = fun self (input : Obj.t) -> (try let _gthis = Obj.magic self in (
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
               | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g1 = Obj.magic (match _g with
-              | HxExpr.EField (__enum_param_117, _) -> __enum_param_117
+              | HxExpr.EField (__enum_param_130, _) -> __enum_param_130
               | _ -> failwith "Unexpected enum parameter") in (
               ignore (match _g with
-                | HxExpr.EField (_, __enum_param_118) -> __enum_param_118
+                | HxExpr.EField (_, __enum_param_131) -> __enum_param_131
                 | _ -> failwith "Unexpected enum parameter");
-              let receiver = Obj.magic _g1 in let __assign_119 = Obj.magic receiver in (
-                tempHxExpr := __assign_119;
-                __assign_119
+              let receiver = Obj.magic _g1 in let __assign_132 = Obj.magic receiver in (
+                tempHxExpr1 := __assign_132;
+                __assign_132
               )
             ) else HxType.hx_throw_typed_rtti (Obj.repr "native generic method capture lost its receiver") ["Dynamic"]);
-            let receiver = Obj.magic (!tempHxExpr) in Backend_ocaml_Stage3OcamlMethodValue.captureReceiver (let __anon_120 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_120 "receiver" (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)));
-              ignore (HxAnon.set __anon_120 "emit" (Obj.repr (Obj.obj (HxAnon.get input "emit") : _ -> _)));
-              ignore (HxAnon.set __anon_120 "names" (Obj.repr (Obj.obj (HxAnon.get input "names"))));
-              ignore (HxAnon.set __anon_120 "bind" (Obj.repr (fun value -> let applied = let __string_part_121 = HxString.toStdString ((Obj.obj (HxAnon.get input "reference") : _ -> _) (Obj.magic declaration)) in let __string_part_122 = " (" in let __string_part_123 = HxString.toStdString value in let __string_part_124 = ")" in ((__string_part_121 ^ __string_part_122) ^ __string_part_123) ^ __string_part_124 in let tempString1 = ref (HxString.hx_null_string : string) in (
-                ignore (if HxArray.length (TyFunSig.getArgs (Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration) ())) ()) = 0 then let __assign_125 = ("(fun () -> " ^ HxString.toStdString applied) ^ ")" in (
-                  tempString1 := __assign_125;
-                  __assign_125
-                ) else let __assign_126 = applied in (
-                  tempString1 := __assign_126;
-                  __assign_126
+            let receiver = Obj.magic (!tempHxExpr1) in Backend_ocaml_Stage3OcamlMethodValue.captureReceiver (let __anon_133 = HxAnon.create () in (
+              ignore (HxAnon.set __anon_133 "receiver" (HxEnum.box_if_needed "HxExpr" (Obj.repr receiver)));
+              ignore (HxAnon.set __anon_133 "emit" (Obj.repr (Obj.obj (HxAnon.get input "emit") : _ -> _)));
+              ignore (HxAnon.set __anon_133 "names" (Obj.repr (Obj.obj (HxAnon.get input "names"))));
+              ignore (HxAnon.set __anon_133 "bind" (Obj.repr (fun value -> let applied = let __string_part_134 = HxString.toStdString ((Obj.obj (HxAnon.get input "reference") : _ -> _) (Obj.magic declaration)) in let __string_part_135 = " (" in let __string_part_136 = HxString.toStdString value in let __string_part_137 = ")" in ((__string_part_134 ^ __string_part_135) ^ __string_part_136) ^ __string_part_137 in let tempString3 = ref (HxString.hx_null_string : string) in (
+                ignore (if HxArray.length (TyFunSig.getArgs (Obj.magic (TyDeclarationInfo.getSignature (Obj.magic declaration) ())) ()) = 0 then let __assign_138 = ("(fun () -> " ^ HxString.toStdString applied) ^ ")" in (
+                  tempString3 := __assign_138;
+                  __assign_138
+                ) else let __assign_139 = applied in (
+                  tempString3 := __assign_139;
+                  __assign_139
                 ));
-                convert (Obj.magic _gthis) (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" (HxAnon.get hx_method "signature"))))) (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" instantiated)) (!tempString1 : string) (Obj.magic (Obj.obj (HxAnon.get input "names")))
+                convert (Obj.magic _gthis) (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" (HxAnon.get hx_method "signature"))))) (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueShape" instantiated)) (!tempString3 : string) (Obj.magic (Obj.obj (HxAnon.get input "names")))
               ))));
-              __anon_120
+              __anon_133
             ))
           )
         )
@@ -432,4 +527,4 @@ let render = fun self (input : Obj.t) -> (try let _gthis = Obj.magic self in (
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_127 -> (Obj.obj __ret_127 : string) : string)
+  | HxRuntime.Hx_return __ret_140 -> (Obj.obj __ret_140 : string) : string)

@@ -79,18 +79,18 @@ let resolveQualifier = fun expression environment context -> let name = (visible
   !tempResult
 )
 
-let resolve = fun expression environment context namespace -> (try let name = (visiblePath (Obj.magic expression) (Obj.magic environment) (Obj.magic context) (Obj.magic namespace) : string) in (
-  ignore (if name == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let selected = Obj.magic (TyperContext.resolveType (Obj.magic context) (name : string)) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-    ignore (if selected == Obj.magic (HxRuntime.hx_null) then let __assign_22 = Obj.magic (name : string) in (
-      tempMaybeString := __assign_22;
-      __assign_22
-    ) else let __assign_23 = Obj.magic (TyNominalTypeId.getCanonicalName (Obj.magic ((Obj.magic selected : TyNominalInfo.t).getIdentity (Obj.magic selected) ())) () : string) in (
-      tempMaybeString := __assign_23;
+let resolve = fun expression environment context namespace -> (try let path__local = (visiblePath (Obj.magic expression) (Obj.magic environment) (Obj.magic context) (Obj.magic namespace) : string) in (
+  ignore (if path__local == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  let selected = Obj.magic (TyperContext.resolveType (Obj.magic context) (path__local : string)) in let name = let __call_arg_0_22 = path__local in HxRootedPath.unrooted __call_arg_0_22 in let tempString = ref (HxString.hx_null_string : string) in (
+    ignore (if selected == Obj.magic (HxRuntime.hx_null) then let __assign_23 = (name : string) in (
+      tempString := __assign_23;
       __assign_23
+    ) else let __assign_24 = (TyNominalTypeId.getCanonicalName (Obj.magic ((Obj.magic selected : TyNominalInfo.t).getIdentity (Obj.magic selected) ())) () : string) in (
+      tempString := __assign_24;
+      __assign_24
     ));
-    let canonical = (!tempMaybeString : string) in (
-      ignore (if canonical == Obj.magic (HxRuntime.hx_null) then ignore () else ignore (match canonical with
+    let canonical = (!tempString : string) in (
+      ignore (match canonical with
         | "Array" -> Stdlib.raise (HxRuntime.Hx_return (Obj.repr (TypedRuntimeTypeTarget.create (Obj.magic (TypedRuntimeTypeKind.ArrayCore)) (name : string))))
         | "Class" -> Stdlib.raise (HxRuntime.Hx_return (Obj.repr (TypedRuntimeTypeTarget.create (Obj.magic (TypedRuntimeTypeKind.ClassCore)) (name : string))))
         | "Enum" -> Stdlib.raise (HxRuntime.Hx_return (Obj.repr (TypedRuntimeTypeTarget.create (Obj.magic (TypedRuntimeTypeKind.EnumCore)) (name : string))))
@@ -99,15 +99,15 @@ let resolve = fun expression environment context namespace -> (try let name = (v
         | "Float" | "StdTypes.Float" -> Stdlib.raise (HxRuntime.Hx_return (Obj.repr (TypedRuntimeTypeTarget.create (Obj.magic (TypedRuntimeTypeKind.FloatCore)) (name : string))))
         | "Int" | "StdTypes.Int" -> Stdlib.raise (HxRuntime.Hx_return (Obj.repr (TypedRuntimeTypeTarget.create (Obj.magic (TypedRuntimeTypeKind.IntCore)) (name : string))))
         | "String" -> Stdlib.raise (HxRuntime.Hx_return (Obj.repr (TypedRuntimeTypeTarget.create (Obj.magic (TypedRuntimeTypeKind.StringCore)) (name : string))))
-        | _ -> ignore ()));
+        | _ -> ignore ());
       ignore (if selected == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-      ignore (if (Obj.magic selected : TyNominalInfo.t).getIsEnum (Obj.magic selected) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (TypedRuntimeTypeTarget.create (Obj.magic (let __enum_arg_24 = Obj.magic ((Obj.magic selected : TyNominalInfo.t).getIdentity (Obj.magic selected) ()) in TypedRuntimeTypeKind.EnumDeclaration (Stdlib.Sys.opaque_identity __enum_arg_24))) (name : string)))) else ());
-      ignore (if not (let __isOfTypeValue_25 = Obj.repr selected in HxType.isOfType __isOfTypeValue_25 (HxType.class_ "TyClassInfo")) || (Obj.magic selected : TyNominalInfo.t).getIsEnum (Obj.magic selected) () then (
-        ignore (if let __enum_eq_left_26 = namespace in let __enum_eq_right_27 = TypedRuntimeTypeNamespace.TypeOperand in HxEnum.unbox_or_obj "TypedRuntimeTypeNamespace" (Obj.repr __enum_eq_left_26) == HxEnum.unbox_or_obj "TypedRuntimeTypeNamespace" (Obj.repr __enum_eq_right_27) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_28 = "unsupported runtime type target: " in let __string_part_29 = HxString.toStdString ((Obj.magic selected : TyNominalInfo.t).getFullName (Obj.magic selected) ()) in __string_part_28 ^ __string_part_29)) ["Dynamic"] else ());
+      ignore (if (Obj.magic selected : TyNominalInfo.t).getIsEnum (Obj.magic selected) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (TypedRuntimeTypeTarget.create (Obj.magic (let __enum_arg_25 = Obj.magic ((Obj.magic selected : TyNominalInfo.t).getIdentity (Obj.magic selected) ()) in TypedRuntimeTypeKind.EnumDeclaration (Stdlib.Sys.opaque_identity __enum_arg_25))) (name : string)))) else ());
+      ignore (if not (let __isOfTypeValue_26 = Obj.repr selected in HxType.isOfType __isOfTypeValue_26 (HxType.class_ "TyClassInfo")) || (Obj.magic selected : TyNominalInfo.t).getIsEnum (Obj.magic selected) () then (
+        ignore (if let __enum_eq_left_27 = namespace in let __enum_eq_right_28 = TypedRuntimeTypeNamespace.TypeOperand in HxEnum.unbox_or_obj "TypedRuntimeTypeNamespace" (Obj.repr __enum_eq_left_27) == HxEnum.unbox_or_obj "TypedRuntimeTypeNamespace" (Obj.repr __enum_eq_right_28) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_29 = "unsupported runtime type target: " in let __string_part_30 = HxString.toStdString ((Obj.magic selected : TyNominalInfo.t).getFullName (Obj.magic selected) ()) in __string_part_29 ^ __string_part_30)) ["Dynamic"] else ());
         Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
       ) else ());
-      TypedRuntimeTypeTarget.create (Obj.magic (let __enum_arg_30 = Obj.magic ((Obj.magic selected : TyNominalInfo.t).getIdentity (Obj.magic selected) ()) in TypedRuntimeTypeKind.Nominal (Stdlib.Sys.opaque_identity __enum_arg_30))) (name : string)
+      TypedRuntimeTypeTarget.create (Obj.magic (let __enum_arg_31 = Obj.magic ((Obj.magic selected : TyNominalInfo.t).getIdentity (Obj.magic selected) ()) in TypedRuntimeTypeKind.Nominal (Stdlib.Sys.opaque_identity __enum_arg_31))) (name : string)
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_31 -> (Obj.obj __ret_31 : TypedRuntimeTypeTarget.t) : TypedRuntimeTypeTarget.t)
+  | HxRuntime.Hx_return __ret_32 -> (Obj.obj __ret_32 : TypedRuntimeTypeTarget.t) : TypedRuntimeTypeTarget.t)

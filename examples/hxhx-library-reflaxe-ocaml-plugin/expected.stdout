@@ -1,3 +1,3 @@
-plugin_define=ok
-plugin_cp=ok
-main=ok
+src/Main.hx:6: plugin_define=ok
+plugin_cp/AddedFromPlugin.hx:3: plugin_cp=ok
+src/Main.hx:12: main=ok
