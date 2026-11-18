@@ -74,7 +74,7 @@ The plugin SDK, compiler customization, and new features for backends other than
 - `reflaxe.ocaml` can generate OCaml that does not build. Without `-D ocaml_build=native`, a failed OCaml build is only a warning, and `haxe` exits with 0.
 - `hxhx` does not run all macros. The run of the upstream unit suite stops at a macro call.
 - The `hxhx` typer rejects some valid programs.
-- `hxhx --ocaml` accepts only a small subset of Haxe.
+- `hxhx --ocaml` does not compile ordinary programs yet. On 2026-11-18, it rejected a program with an empty `main`.
 - The `hxhx` build uses a committed OCaml snapshot. Upstream Haxe and `reflaxe.ocaml` generate that snapshot from the `hxhx` sources.
 - On `main`, the Gate 1 Lite check and the weekly upstream gates fail. The Full1 gate failed on each recent scheduled run.
 
@@ -199,7 +199,7 @@ These use cases are experimental or deferred.
 
 | Use case | State | Guide |
 | --- | --- | --- |
-| Run `reflaxe.ocaml` through `hxhx` | Experimental, small subset | [reflaxe.ocaml with hxhx](docs/01-getting-started/REFLAXE_OCAML_WITH_HXHX.md) |
+| Run `reflaxe.ocaml` through `hxhx` | Not usable yet. Ordinary programs fail. | [reflaxe.ocaml with hxhx](docs/01-getting-started/REFLAXE_OCAML_WITH_HXHX.md) |
 | Embed `hxhx` in a tool as a subprocess | Experimental | [Embedding](docs/02-user-guide/EMBEDDING.md) |
 | Package a Reflaxe target as a native `hxhx` plugin | Experimental. New work waits for F2. | [Promote a Reflaxe target](docs/01-getting-started/PROMOTE_REFLAXE_TO_NATIVE.md) |
 | Run Haxe macros with `hxhx` | Partial. The upstream unit suite stops at a macro call. | [Expression macros](docs/02-user-guide/HXHX_EXPRESSION_MACROS.md) |

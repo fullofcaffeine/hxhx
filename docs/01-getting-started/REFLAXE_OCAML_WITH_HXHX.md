@@ -5,10 +5,10 @@ This guide explains the current status of using `reflaxe.ocaml` through
 
 Short version:
 
-- use upstream `haxe + reflaxe.ocaml` for the production-candidate OCaml output path today
+- use upstream `haxe + reflaxe.ocaml` for OCaml output today. It is the most complete path, but it is a preview and not ready for production
 - use `hxhx + reflaxe.ocaml` when you are validating native `hxhx` compiler behavior, plugin hosting, or promotion infrastructure
 - understand that the native `hxhx --ocaml` target runs the shared `reflaxe.ocaml`
-  target core, which accepts only a small subset of Haxe and is frozen until decision D3
+  target core, which does not compile ordinary programs yet and is frozen until decision D3
 - do not treat `hxhx + reflaxe.ocaml` as the default production route until the Full 1.0 gates pass
 - do not enable warm Reflaxe compilation-server reuse; see
   `docs/01-getting-started/COMPILATION_SERVER.md` for the current safe workflows
@@ -21,7 +21,9 @@ surface, not the default production route.
 The name describes the intended product direction, not one shared implementation.
 Native `hxhx --ocaml` enters `OcamlNativeTargetCore`. That adapter calls the shared
 target core in `packages/reflaxe.ocaml/src/reflaxe/ocaml/target/`, which needs
-`-D reflaxe_ocaml_runtime_directory=<dir>` and accepts only a small subset of Haxe.
+`-D reflaxe_ocaml_runtime_directory=<dir>`. It does not compile ordinary programs yet: on 2026-11-18,
+the `hxhx` from `build-hxhx.sh` rejected a program with an empty `main`. The repository tests
+run this core only under the upstream interpreter.
 Upstream Haxe with `reflaxe.ocaml` uses a different lowering pipeline (`OcamlBuilder`).
 The two hosts do not share one target implementation yet (`haxe_ocaml-38gsp.1`,
 decision D3). Thus, the native route is evidence for bootstrap and diagnostics, not

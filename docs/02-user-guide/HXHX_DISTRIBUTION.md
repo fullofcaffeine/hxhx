@@ -17,7 +17,7 @@ Canonical lane truth table (delegation + stage0 requirements):
 
 - **stage0 `haxe`**: your already-installed upstream Haxe compiler binary.
 - **`hxhx --ocaml-eval`**: compatibility-friendly delegated OCaml lane with reflaxe.ocaml injection.
-- **`hxhx --ocaml`**: linked Stage3 backend path. This is the native/non-delegating direction of travel.
+- **`hxhx --ocaml`**: native OCaml lane. `hxhx` parses and types the program itself, then runs the shared `reflaxe.ocaml` target core. It does not compile ordinary programs yet.
 
 ## Version reporting (current behavior)
 
