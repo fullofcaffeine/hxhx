@@ -43,26 +43,40 @@ let log (v : float) : float = Stdlib.log v
 let pow (v : float) (e : float) : float = v ** e
 let sqrt (v : float) : float = Stdlib.sqrt v
 
+(* Haxe Int result of floor/ceil/round, as upstream eval computes it:
+   `Int32.of_float (mod_float r 2147483648.0)`. `Float.rem` keeps the sign of
+   `r`, so results lie in (-2^31, 2^31): floor(2^31) is 0 and floor(1e10) is
+   1410065408. This is not the Std.int rule. NaN and the infinities reach
+   `Int32.of_float` as NaN. That is the C stub `caml_int32_of_float`
+   (`(int32_t) x`), so the result is the CPU's conversion: 0 on arm64 and
+   -2147483648 on x86-64. Eval uses the same stub, so it agrees on the same
+   host. Reviewed under the gate in
+   docs/00-project/FLOAT_NUMERIC_REVIEW_GATE.md; the answers are recorded on
+   Bead haxe_ocaml-32vsc. *)
+let int_of_rounded (r : float) : int =
+  Int32.to_int (Int32.of_float (Float.rem r 2147483648.0))
+
 let round (v : float) : int =
   (* Haxe: ties are rounded up (towards +infinity). *)
-  int_of_float (Stdlib.floor (v +. 0.5))
+  int_of_rounded (Stdlib.floor (v +. 0.5))
 
 let floor (v : float) : int =
-  int_of_float (Stdlib.floor v)
+  int_of_rounded (Stdlib.floor v)
 
 let ceil (v : float) : int =
-  int_of_float (Stdlib.ceil v)
+  int_of_rounded (Stdlib.ceil v)
 
+(* The Float variants return the unbounded Float result: NaN, the infinities,
+   values beyond the Int range, and the sign of zero pass through. *)
 let ffloor (v : float) : float =
-  float_of_int (floor v)
+  Stdlib.floor v
 
 let fceil (v : float) : float =
-  float_of_int (ceil v)
+  Stdlib.ceil v
 
 let fround (v : float) : float =
-  (* TODO(M11): Implement IEEE-754 float32 rounding.
-     OCaml's `float` is a 64-bit double; for now keep as identity. *)
-  v
+  (* Haxe: ties are rounded up (towards +infinity), as in `round`. *)
+  Stdlib.floor (v +. 0.5)
 
 let isNaN (v : float) : bool =
   Float.is_nan v

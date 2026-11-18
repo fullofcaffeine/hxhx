@@ -100,22 +100,24 @@ let bind_structural receiver field key =
   else
     bind receiver key
 
-(* Interface calls on class-backed HxAnon carriers.
+(* Interface and overridden-method calls on class-backed HxAnon carriers.
 
    The hxhx Stage3 native emitter stores class instances as HxAnon objects that
    carry their class descriptor (`HxAnon.create_with_class`). Their methods are
    module-level OCaml functions that take the receiver first, so a call through
-   an interface type cannot name the implementing function statically.
+   an interface type, or a call of a method that a subclass overrides, cannot
+   name the right function statically.
 
    Haxe selects, for each generated class, the function that implements each
-   interface method (its own or an inherited superclass method). The class
-   module registers those functions here at the end of its initialization, so
-   code in modules that use the class runs after it. A static initializer in the
-   class's own module runs before it; see Stage3OcamlInterfaceDispatch. The
-   interface module's
-   method then looks the function up by the receiver's class and calls it with
-   the same receiver and arguments. Keys are opaque method names; this module
-   never inspects a Haxe signature.
+   interface method and each overridden method (its own or an inherited
+   superclass method). The class module registers those functions here at the
+   end of its initialization, so code in modules that use the class runs after
+   it. A static initializer in the class's own module runs before it; see
+   Stage3OcamlVirtualDispatch. The generated dispatcher (in the interface's
+   module, or in the module of the class that declares the overridden method)
+   looks the function up by the receiver's class and calls it with the same
+   receiver and arguments. Keys are opaque method names; this module never
+   inspects a Haxe signature.
 
    Tables are written only during module initialization and are not changed
    afterwards, so lookups read them without the lock. *)
@@ -129,7 +131,7 @@ let register_class_methods name entries =
       Stdlib.List.iter
         (fun (key, fn) ->
           if key = "" || Hashtbl.mem methods key then
-            fail ("invalid or duplicate interface method: " ^ name);
+            fail ("invalid or duplicate method table entry: " ^ name);
           Hashtbl.add methods key (require_closure fn))
         entries;
       Hashtbl.add anon_classes name methods)
@@ -140,15 +142,81 @@ let class_method receiver key =
      failures below are compiler or runtime contract violations. *)
   if HxRuntime.is_null receiver then
     HxRuntime.hx_throw_typed
-      (Obj.repr ("Null object reference: interface method " ^ key))
+      (Obj.repr ("Null object reference: method " ^ key))
       [ "String"; "Dynamic" ];
   if not (HxAnon.is_anon receiver) then fail ("receiver is not a class instance: " ^ key);
   let descriptor = HxAnon.class_value receiver in
   if HxRuntime.is_null descriptor then fail ("receiver has no class: " ^ key);
   let name = descriptor_name descriptor in
   match Hashtbl.find_opt anon_classes name with
-  | None -> fail ("class has no interface method table: " ^ name)
+  | None -> fail ("class has no method table: " ^ name)
   | Some methods -> (
       match Hashtbl.find_opt methods key with
-      | None -> fail ("class " ^ name ^ " has no interface method " ^ key)
+      | None -> fail ("class " ^ name ^ " has no method table entry " ^ key)
       | Some fn -> fn)
+
+(* Read a function-typed field through a structural (anonymous) type.
+
+   A Haxe class instance can be used where a structure is expected, for
+   example `function provide():{ function value():Int; } return new Answer();`.
+   Stage3 stores the instance's variables in its HxAnon storage, but its methods
+   are module-level OCaml functions that take the receiver first. So a stored
+   field is returned as it is, and a missing field on a class instance is taken
+   from the class's method table and bound to this receiver.
+
+   `arity` is the number of Haxe arguments, chosen by the typed field read. A
+   method without arguments is bound as `fun () -> ...`, the shape of a
+   zero-argument Haxe closure; other methods are partially applied to the
+   receiver, which leaves the remaining arguments in order. *)
+let structural_exclusions : (string * string, unit) Hashtbl.t = Hashtbl.create 31
+
+(* Called by a class module, after its table, for overridden methods that stay
+   in the table for ordinary dispatch but must not be bound by a structural
+   read (see `structural_field`). *)
+let exclude_structural_methods name keys =
+  synchronized (fun () ->
+      Stdlib.List.iter
+        (fun key -> Hashtbl.replace structural_exclusions (name, key) ())
+        keys)
+
+let structural_field receiver field arity =
+  (* Reading a field of null is a Haxe error that `try`/`catch` can handle;
+     upstream reports it as the String "Null Access". *)
+  if HxRuntime.is_null receiver then
+    HxRuntime.hx_throw_typed (Obj.repr "Null Access") [ "String"; "Dynamic" ];
+  if HxAnon.is_anon receiver && HxAnon.has receiver field then
+    HxAnon.get receiver field
+  else if HxAnon.is_anon receiver && not (HxRuntime.is_null (HxAnon.class_value receiver)) then (
+    let name = descriptor_name (HxAnon.class_value receiver) in
+    let entry =
+      if Hashtbl.mem structural_exclusions (name, field) then None
+      else
+        match Hashtbl.find_opt anon_classes name with
+        | None -> None
+        | Some methods -> Hashtbl.find_opt methods field
+    in
+    match entry with
+    | Some method_value ->
+        let fn : Obj.t -> Obj.t = Obj.obj method_value in
+        if arity = 0 then Obj.repr (fun () -> fn receiver) else fn receiver
+    | None ->
+        (* The class has no bindable method of this name: a method with its own
+           type parameters, an optional or a rest argument, or a class whose
+           methods are not generated from Haxe bodies. Report it as a Haxe
+           error so the program can still handle it. *)
+        HxRuntime.hx_throw_typed
+          (Obj.repr
+             ("Stage3 cannot call method " ^ field ^ " of class " ^ name
+            ^ " through a structure type (methods with type parameters, optional or rest arguments, or without a generated body are not supported)"))
+          [ "String"; "Dynamic" ])
+  else if HxAnon.is_anon receiver then
+    (* A missing optional field of an anonymous object reads as null. *)
+    HxAnon.get receiver field
+  else
+    (* A runtime-provided value, such as a String, Array, or native map. *)
+    let value = HxAnon.get receiver field in
+    if HxRuntime.is_null value then
+      HxRuntime.hx_throw_typed
+        (Obj.repr ("Stage3 cannot call method " ^ field ^ " of a runtime-provided value through a structure type"))
+        [ "String"; "Dynamic" ]
+    else value

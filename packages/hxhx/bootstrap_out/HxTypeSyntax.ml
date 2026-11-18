@@ -31,101 +31,101 @@ let getPos = fun self () -> (Obj.magic self : t).pos
 
 let getEndPos = fun self () -> (Obj.magic self : t).endPos
 
-let copyParameters = fun parameters -> let _g = Obj.magic (let __arr_4 = HxArray.create () in __arr_4) in let _g1 = ref 0 in (
-  ignore (while !_g1 < HxArray.length parameters do ignore (let parameter = let __array_read_receiver_5 = parameters in let __array_read_index_6 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_5) __array_read_index_6 in (
-    ignore (let __old_7 = !_g1 in let __new_8 = HxInt.add __old_7 1 in (
-      ignore (_g1 := __new_8);
-      __new_8
+let copyParameters = fun parameters -> let _g = Obj.magic (let __arr_20 = HxArray.create () in __arr_20) in let _g1 = ref 0 in (
+  ignore (while !_g1 < HxArray.length parameters do ignore (let parameter = let __array_read_receiver_21 = parameters in let __array_read_index_22 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_21) __array_read_index_22 in (
+    ignore (let __old_23 = !_g1 in let __new_24 = HxInt.add __old_23 1 in (
+      ignore (_g1 := __new_24);
+      __new_24
     ));
-    let __array_receiver_9 = Obj.magic _g in let __array_arg_0_10 = let __anon_11 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_11 "name" (Obj.repr (Obj.obj (HxAnon.get parameter "name"))));
-      ignore (HxAnon.set __anon_11 "constraints" (Obj.repr (let __array_receiver_12 = Obj.magic (Obj.obj (HxAnon.get parameter "constraints")) in HxArray.copy __array_receiver_12)));
-      ignore (HxAnon.set __anon_11 "defaultType" (Obj.repr (Obj.obj (HxAnon.get parameter "defaultType"))));
-      ignore (HxAnon.set __anon_11 "metadata" (Obj.repr (let __array_receiver_13 = Obj.magic (Obj.obj (HxAnon.get parameter "metadata")) in HxArray.copy __array_receiver_13)));
-      ignore (HxAnon.set __anon_11 "pos" (Obj.repr (Obj.obj (HxAnon.get parameter "pos"))));
-      ignore (HxAnon.set __anon_11 "endPos" (Obj.repr (Obj.obj (HxAnon.get parameter "endPos"))));
-      __anon_11
-    ) in HxArray.push __array_receiver_9 __array_arg_0_10
+    let __array_receiver_25 = Obj.magic _g in let __array_arg_0_26 = let __anon_27 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_27 "name" (Obj.repr (Obj.obj (HxAnon.get parameter "name"))));
+      ignore (HxAnon.set __anon_27 "constraints" (Obj.repr (let __array_receiver_28 = Obj.magic (Obj.obj (HxAnon.get parameter "constraints")) in HxArray.copy __array_receiver_28)));
+      ignore (HxAnon.set __anon_27 "defaultType" (Obj.repr (Obj.obj (HxAnon.get parameter "defaultType"))));
+      ignore (HxAnon.set __anon_27 "metadata" (Obj.repr (let __array_receiver_29 = Obj.magic (Obj.obj (HxAnon.get parameter "metadata")) in HxArray.copy __array_receiver_29)));
+      ignore (HxAnon.set __anon_27 "pos" (Obj.repr (Obj.obj (HxAnon.get parameter "pos"))));
+      ignore (HxAnon.set __anon_27 "endPos" (Obj.repr (Obj.obj (HxAnon.get parameter "endPos"))));
+      __anon_27
+    ) in HxArray.push __array_receiver_25 __array_arg_0_26
   )) done);
   _g
 )
 
-let copyArguments = fun arguments -> let _g = Obj.magic (let __arr_14 = HxArray.create () in __arr_14) in let _g1 = ref 0 in (
-  ignore (while !_g1 < HxArray.length arguments do ignore (let argument = let __array_read_receiver_15 = arguments in let __array_read_index_16 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_15) __array_read_index_16 in (
-    ignore (let __old_17 = !_g1 in let __new_18 = HxInt.add __old_17 1 in (
-      ignore (_g1 := __new_18);
-      __new_18
+let copyArguments = fun arguments -> let _g = Obj.magic (let __arr_30 = HxArray.create () in __arr_30) in let _g1 = ref 0 in (
+  ignore (while !_g1 < HxArray.length arguments do ignore (let argument = let __array_read_receiver_31 = arguments in let __array_read_index_32 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_31) __array_read_index_32 in (
+    ignore (let __old_33 = !_g1 in let __new_34 = HxInt.add __old_33 1 in (
+      ignore (_g1 := __new_34);
+      __new_34
     ));
-    let __array_receiver_19 = Obj.magic _g in let __array_arg_0_20 = let __anon_21 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_21 "name" (Obj.repr (Obj.obj (HxAnon.get argument "name"))));
-      ignore (HxAnon.set __anon_21 "type" (Obj.repr (Obj.obj (HxAnon.get argument "type"))));
-      ignore (HxAnon.set __anon_21 "isOptional" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isOptional"))));
-      ignore (HxAnon.set __anon_21 "isRest" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isRest"))));
-      ignore (HxAnon.set __anon_21 "metadata" (Obj.repr (let __array_receiver_22 = Obj.magic (Obj.obj (HxAnon.get argument "metadata")) in HxArray.copy __array_receiver_22)));
-      ignore (HxAnon.set __anon_21 "pos" (Obj.repr (Obj.obj (HxAnon.get argument "pos"))));
-      ignore (HxAnon.set __anon_21 "endPos" (Obj.repr (Obj.obj (HxAnon.get argument "endPos"))));
-      __anon_21
-    ) in HxArray.push __array_receiver_19 __array_arg_0_20
+    let __array_receiver_35 = Obj.magic _g in let __array_arg_0_36 = let __anon_37 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_37 "name" (Obj.repr (Obj.obj (HxAnon.get argument "name"))));
+      ignore (HxAnon.set __anon_37 "type" (Obj.repr (Obj.obj (HxAnon.get argument "type"))));
+      ignore (HxAnon.set __anon_37 "isOptional" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isOptional"))));
+      ignore (HxAnon.set __anon_37 "isRest" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isRest"))));
+      ignore (HxAnon.set __anon_37 "metadata" (Obj.repr (let __array_receiver_38 = Obj.magic (Obj.obj (HxAnon.get argument "metadata")) in HxArray.copy __array_receiver_38)));
+      ignore (HxAnon.set __anon_37 "pos" (Obj.repr (Obj.obj (HxAnon.get argument "pos"))));
+      ignore (HxAnon.set __anon_37 "endPos" (Obj.repr (Obj.obj (HxAnon.get argument "endPos"))));
+      __anon_37
+    ) in HxArray.push __array_receiver_35 __array_arg_0_36
   )) done);
   _g
 )
 
 let copyFieldKind = fun kind2 -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : hxtypesyntaxfieldkind) in (
   ignore (match kind2 with
-    | Variable (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = _p1 in let _g2 = (_p2 : string) in let _g3 = (_p3 : string) in let hx_type = Obj.magic _g in let isFinal = _g1 in let get = (_g2 : string) in let set = (_g3 : string) in let __assign_23 = Obj.magic (let __enum_arg_24 = Obj.magic hx_type in let __enum_arg_25 = isFinal in let __enum_arg_26 = (get : string) in let __enum_arg_27 = (set : string) in Variable (Stdlib.Sys.opaque_identity __enum_arg_24, __enum_arg_25, __enum_arg_26, __enum_arg_27)) in (
-      tempResult := __assign_23;
-      __assign_23
+    | Variable (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = _p1 in let _g2 = (_p2 : string) in let _g3 = (_p3 : string) in let hx_type = Obj.magic _g in let isFinal = _g1 in let get = (_g2 : string) in let set = (_g3 : string) in let __assign_39 = Obj.magic (let __enum_arg_40 = Obj.magic hx_type in let __enum_arg_41 = isFinal in let __enum_arg_42 = (get : string) in let __enum_arg_43 = (set : string) in Variable (Stdlib.Sys.opaque_identity __enum_arg_40, __enum_arg_41, __enum_arg_42, __enum_arg_43)) in (
+      tempResult := __assign_39;
+      __assign_39
     )
-    | Method (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let parameters = Obj.magic _g in let arguments = Obj.magic _g1 in let result = Obj.magic _g2 in let __assign_28 = Obj.magic (let __enum_arg_29 = Obj.magic (copyParameters (Obj.magic parameters)) in let __enum_arg_30 = Obj.magic (copyArguments (Obj.magic arguments)) in let __enum_arg_31 = Obj.magic result in Method (Stdlib.Sys.opaque_identity __enum_arg_29, __enum_arg_30, __enum_arg_31)) in (
-      tempResult := __assign_28;
-      __assign_28
+    | Method (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let parameters = Obj.magic _g in let arguments = Obj.magic _g1 in let result = Obj.magic _g2 in let __assign_44 = Obj.magic (let __enum_arg_45 = Obj.magic (copyParameters (Obj.magic parameters)) in let __enum_arg_46 = Obj.magic (copyArguments (Obj.magic arguments)) in let __enum_arg_47 = Obj.magic result in Method (Stdlib.Sys.opaque_identity __enum_arg_45, __enum_arg_46, __enum_arg_47)) in (
+      tempResult := __assign_44;
+      __assign_44
     ));
   !tempResult
 )
 
 let copyKind = fun kind2 -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : hxtypesyntaxkind) in (
   ignore (match kind2 with
-    | TypePath (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let segments = Obj.magic _g in let arguments = Obj.magic _g1 in let __assign_32 = Obj.magic (let __enum_arg_35 = Obj.magic (let __array_receiver_33 = Obj.magic segments in HxArray.copy __array_receiver_33) in let __enum_arg_36 = Obj.magic (let __array_receiver_34 = Obj.magic arguments in HxArray.copy __array_receiver_34) in TypePath (Stdlib.Sys.opaque_identity __enum_arg_35, __enum_arg_36)) in (
-      tempResult := __assign_32;
-      __assign_32
+    | TypePath (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let segments = Obj.magic _g in let arguments = Obj.magic _g1 in let __assign_48 = Obj.magic (let __enum_arg_51 = Obj.magic (let __array_receiver_49 = Obj.magic segments in HxArray.copy __array_receiver_49) in let __enum_arg_52 = Obj.magic (let __array_receiver_50 = Obj.magic arguments in HxArray.copy __array_receiver_50) in TypePath (Stdlib.Sys.opaque_identity __enum_arg_51, __enum_arg_52)) in (
+      tempResult := __assign_48;
+      __assign_48
     )
-    | FunctionType (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let arguments = Obj.magic _g in let result = Obj.magic _g1 in let __assign_37 = Obj.magic (let __enum_arg_38 = Obj.magic (copyArguments (Obj.magic arguments)) in let __enum_arg_39 = Obj.magic result in FunctionType (Stdlib.Sys.opaque_identity __enum_arg_38, __enum_arg_39)) in (
-      tempResult := __assign_37;
-      __assign_37
+    | FunctionType (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let arguments = Obj.magic _g in let result = Obj.magic _g1 in let __assign_53 = Obj.magic (let __enum_arg_54 = Obj.magic (copyArguments (Obj.magic arguments)) in let __enum_arg_55 = Obj.magic result in FunctionType (Stdlib.Sys.opaque_identity __enum_arg_54, __enum_arg_55)) in (
+      tempResult := __assign_53;
+      __assign_53
     )
-    | ArrowType (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let argument = Obj.magic _g in let result = Obj.magic _g1 in let __assign_40 = Obj.magic (let __enum_arg_41 = Obj.magic argument in let __enum_arg_42 = Obj.magic result in ArrowType (Stdlib.Sys.opaque_identity __enum_arg_41, __enum_arg_42)) in (
-      tempResult := __assign_40;
-      __assign_40
+    | ArrowType (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let argument = Obj.magic _g in let result = Obj.magic _g1 in let __assign_56 = Obj.magic (let __enum_arg_57 = Obj.magic argument in let __enum_arg_58 = Obj.magic result in ArrowType (Stdlib.Sys.opaque_identity __enum_arg_57, __enum_arg_58)) in (
+      tempResult := __assign_56;
+      __assign_56
     )
-    | GroupedType _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_43 = Obj.magic (let __enum_arg_44 = Obj.magic inner in GroupedType (Stdlib.Sys.opaque_identity __enum_arg_44)) in (
-      tempResult := __assign_43;
-      __assign_43
+    | GroupedType _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_59 = Obj.magic (let __enum_arg_60 = Obj.magic inner in GroupedType (Stdlib.Sys.opaque_identity __enum_arg_60)) in (
+      tempResult := __assign_59;
+      __assign_59
     )
-    | IntersectionType _p0 -> let _g = Obj.magic _p0 in let members = Obj.magic _g in let __assign_45 = Obj.magic (let __enum_arg_47 = Obj.magic (let __array_receiver_46 = Obj.magic members in HxArray.copy __array_receiver_46) in IntersectionType (Stdlib.Sys.opaque_identity __enum_arg_47)) in (
-      tempResult := __assign_45;
-      __assign_45
+    | IntersectionType _p0 -> let _g = Obj.magic _p0 in let members = Obj.magic _g in let __assign_61 = Obj.magic (let __enum_arg_63 = Obj.magic (let __array_receiver_62 = Obj.magic members in HxArray.copy __array_receiver_62) in IntersectionType (Stdlib.Sys.opaque_identity __enum_arg_63)) in (
+      tempResult := __assign_61;
+      __assign_61
     )
-    | AnonymousType (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let fields = Obj.magic _g in let extensions = Obj.magic _g1 in let _g2 = Obj.magic (let __arr_48 = HxArray.create () in __arr_48) in let _g3 = ref 0 in (
-      ignore (while !_g3 < HxArray.length fields do ignore (let field = let __array_read_receiver_49 = fields in let __array_read_index_50 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_49) __array_read_index_50 in (
-        ignore (let __old_51 = !_g3 in let __new_52 = HxInt.add __old_51 1 in (
-          ignore (_g3 := __new_52);
-          __new_52
+    | AnonymousType (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let fields = Obj.magic _g in let extensions = Obj.magic _g1 in let _g2 = Obj.magic (let __arr_64 = HxArray.create () in __arr_64) in let _g3 = ref 0 in (
+      ignore (while !_g3 < HxArray.length fields do ignore (let field = let __array_read_receiver_65 = fields in let __array_read_index_66 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_65) __array_read_index_66 in (
+        ignore (let __old_67 = !_g3 in let __new_68 = HxInt.add __old_67 1 in (
+          ignore (_g3 := __new_68);
+          __new_68
         ));
-        let __array_receiver_53 = Obj.magic _g2 in let __array_arg_0_54 = let __anon_55 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_55 "name" (Obj.repr (Obj.obj (HxAnon.get field "name"))));
-          ignore (HxAnon.set __anon_55 "kind" (HxEnum.box_if_needed "HxTypeSyntaxFieldKind" (Obj.repr (copyFieldKind (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxTypeSyntaxFieldKind" (HxAnon.get field "kind"))))))));
-          ignore (HxAnon.set __anon_55 "isOptional" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isOptional"))));
-          ignore (HxAnon.set __anon_55 "visibility" (HxEnum.box_if_needed "HxVisibility" (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "HxVisibility" (HxAnon.get field "visibility"))))));
-          ignore (HxAnon.set __anon_55 "isVisibilityExplicit" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isVisibilityExplicit"))));
-          ignore (HxAnon.set __anon_55 "metadata" (Obj.repr (let __array_receiver_56 = Obj.magic (Obj.obj (HxAnon.get field "metadata")) in HxArray.copy __array_receiver_56)));
-          ignore (HxAnon.set __anon_55 "pos" (Obj.repr (Obj.obj (HxAnon.get field "pos"))));
-          ignore (HxAnon.set __anon_55 "endPos" (Obj.repr (Obj.obj (HxAnon.get field "endPos"))));
-          __anon_55
-        ) in HxArray.push __array_receiver_53 __array_arg_0_54
+        let __array_receiver_69 = Obj.magic _g2 in let __array_arg_0_70 = let __anon_71 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_71 "name" (Obj.repr (Obj.obj (HxAnon.get field "name"))));
+          ignore (HxAnon.set __anon_71 "kind" (HxEnum.box_if_needed "HxTypeSyntaxFieldKind" (Obj.repr (copyFieldKind (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxTypeSyntaxFieldKind" (HxAnon.get field "kind"))))))));
+          ignore (HxAnon.set __anon_71 "isOptional" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isOptional"))));
+          ignore (HxAnon.set __anon_71 "visibility" (HxEnum.box_if_needed "HxVisibility" (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "HxVisibility" (HxAnon.get field "visibility"))))));
+          ignore (HxAnon.set __anon_71 "isVisibilityExplicit" (HxRuntime.box_bool (HxRuntime.unbox_bool_or_obj (HxAnon.get field "isVisibilityExplicit"))));
+          ignore (HxAnon.set __anon_71 "metadata" (Obj.repr (let __array_receiver_72 = Obj.magic (Obj.obj (HxAnon.get field "metadata")) in HxArray.copy __array_receiver_72)));
+          ignore (HxAnon.set __anon_71 "pos" (Obj.repr (Obj.obj (HxAnon.get field "pos"))));
+          ignore (HxAnon.set __anon_71 "endPos" (Obj.repr (Obj.obj (HxAnon.get field "endPos"))));
+          __anon_71
+        ) in HxArray.push __array_receiver_69 __array_arg_0_70
       )) done);
-      let tempArray = Obj.magic _g2 in let __assign_57 = Obj.magic (let __enum_arg_59 = Obj.magic tempArray in let __enum_arg_60 = Obj.magic (let __array_receiver_58 = Obj.magic extensions in HxArray.copy __array_receiver_58) in AnonymousType (Stdlib.Sys.opaque_identity __enum_arg_59, __enum_arg_60)) in (
-        tempResult := __assign_57;
-        __assign_57
+      let tempArray = Obj.magic _g2 in let __assign_73 = Obj.magic (let __enum_arg_75 = Obj.magic tempArray in let __enum_arg_76 = Obj.magic (let __array_receiver_74 = Obj.magic extensions in HxArray.copy __array_receiver_74) in AnonymousType (Stdlib.Sys.opaque_identity __enum_arg_75, __enum_arg_76)) in (
+        tempResult := __assign_73;
+        __assign_73
       )
     ));
   !tempResult
@@ -150,3 +150,47 @@ let create = fun kind2 pos2 endPos2 -> let self = ({ __hx_type = HxType.instance
 )
 
 let getKind = fun self () -> copyKind (Obj.magic ((Obj.magic self : t).kind))
+
+let rec ungroup = fun syntax -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : t) in (
+  ignore (let _g = Obj.magic (getKind (Obj.magic syntax) ()) in if (match _g with
+    | TypePath (_, _) -> 0
+    | FunctionType (_, _) -> 1
+    | ArrowType (_, _) -> 2
+    | GroupedType _ -> 3
+    | IntersectionType _ -> 4
+    | AnonymousType (_, _) -> 5) = 3 then let _g2 = Obj.magic (match _g with
+    | GroupedType __enum_param_17 -> __enum_param_17
+    | _ -> failwith "Unexpected enum parameter") in let inner = Obj.magic _g2 in let __assign_18 = Obj.magic (ungroup (Obj.magic inner)) in (
+    tempResult := __assign_18;
+    __assign_18
+  ) else let __assign_19 = Obj.magic syntax in (
+    tempResult := __assign_19;
+    __assign_19
+  ));
+  !tempResult
+)
+
+let constraintMembers = fun constraints -> let members = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
+  ignore (while !_g < HxArray.length constraints do ignore (let hx_constraint = Obj.magic (let __array_read_receiver_4 = constraints in let __array_read_index_5 = !_g in HxArray.get (Obj.magic __array_read_receiver_4) __array_read_index_5) in (
+    ignore (let __old_6 = !_g in let __new_7 = HxInt.add __old_6 1 in (
+      ignore (_g := __new_7);
+      __new_7
+    ));
+    let _g2 = Obj.magic (getKind (Obj.magic (ungroup (Obj.magic hx_constraint))) ()) in if (match _g2 with
+      | TypePath (_, _) -> 0
+      | FunctionType (_, _) -> 1
+      | ArrowType (_, _) -> 2
+      | GroupedType _ -> 3
+      | IntersectionType _ -> 4
+      | AnonymousType (_, _) -> 5) = 4 then ignore (let _g3 = Obj.magic (match _g2 with
+      | IntersectionType __enum_param_8 -> __enum_param_8
+      | _ -> failwith "Unexpected enum parameter") in let parts = Obj.magic _g3 in let _g4 = ref 0 in while !_g4 < HxArray.length parts do ignore (let part = Obj.magic (let __array_read_receiver_9 = parts in let __array_read_index_10 = !_g4 in HxArray.get (Obj.magic __array_read_receiver_9) __array_read_index_10) in (
+      ignore (let __old_11 = !_g4 in let __new_12 = HxInt.add __old_11 1 in (
+        ignore (_g4 := __new_12);
+        __new_12
+      ));
+      let __array_receiver_13 = Obj.magic members in let __array_arg_0_14 = Obj.magic part in HxArray.push __array_receiver_13 __array_arg_0_14
+    )) done) else ignore (let __array_receiver_15 = Obj.magic members in let __array_arg_0_16 = Obj.magic hx_constraint in HxArray.push __array_receiver_15 __array_arg_0_16)
+  )) done);
+  members
+)

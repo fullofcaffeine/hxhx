@@ -60,33 +60,34 @@ let select = fun index operandType op fixity filePath position -> (try (
     let abstractInfo = Obj.magic (TyperIndex.getAbstractByFullName (Obj.magic index) (TyNominalTypeId.getCanonicalName (Obj.magic identity) () : string)) in (
       ignore (if abstractInfo == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
       let candidates = Obj.magic ((Obj.magic abstractInfo : TyAbstractInfo.t).getUnaryOperators (Obj.magic abstractInfo) (Obj.magic op) (Obj.magic fixity)) in (
-        ignore (if HxArray.length candidates = 0 then HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic position) (let __string_part_20 = "No applicable abstract unary operator " in let __string_part_21 = HxString.toStdString (operatorLabel (Obj.magic op) (Obj.magic fixity)) in let __string_part_22 = " for " in let __string_part_23 = HxString.toStdString (TyType.getDisplay (Obj.magic operandType) ()) in ((__string_part_20 ^ __string_part_21) ^ __string_part_22) ^ __string_part_23 : string))) ["Dynamic"] else ());
+        ignore (if HxArray.length candidates = 0 && ((let __enum_eq_left_20 = op in let __enum_eq_right_21 = HxUnaryOperator.Negate in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_20) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_21)) || (let __enum_eq_left_22 = op in let __enum_eq_right_23 = HxUnaryOperator.BitwiseNot in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_22) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_23))) && TyAbstractPrimitiveOperation.view (Obj.magic index) (Obj.magic operandType) != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+        ignore (if HxArray.length candidates = 0 then HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic position) (let __string_part_24 = "No applicable abstract unary operator " in let __string_part_25 = HxString.toStdString (operatorLabel (Obj.magic op) (Obj.magic fixity)) in let __string_part_26 = " for " in let __string_part_27 = HxString.toStdString (TyType.getDisplay (Obj.magic operandType) ()) in ((__string_part_24 ^ __string_part_25) ^ __string_part_26) ^ __string_part_27 : string))) ["Dynamic"] else ());
         let applicable = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
-          ignore (while !_g < HxArray.length candidates do ignore (let candidate = Obj.magic (let __array_read_receiver_24 = candidates in let __array_read_index_25 = !_g in HxArray.get (Obj.magic __array_read_receiver_24) __array_read_index_25) in (
-            ignore (let __old_26 = !_g in let __new_27 = HxInt.add __old_26 1 in (
-              ignore (_g := __new_27);
-              __new_27
+          ignore (while !_g < HxArray.length candidates do ignore (let candidate = Obj.magic (let __array_read_receiver_28 = candidates in let __array_read_index_29 = !_g in HxArray.get (Obj.magic __array_read_receiver_28) __array_read_index_29) in (
+            ignore (let __old_30 = !_g in let __new_31 = HxInt.add __old_30 1 in (
+              ignore (_g := __new_31);
+              __new_31
             ));
             let declaration = Obj.magic (TyAbstractOperatorInfo.getDeclaration (Obj.magic candidate) ()) in (
               ignore (if HxArray.length ((Obj.magic abstractInfo : TyAbstractInfo.t).getTypeParameters (Obj.magic abstractInfo) ()) > 0 || HxArray.length (TyDeclarationInfo.getTypeParameters (Obj.magic declaration) ()) > 0 || containsTypeParameter (Obj.magic (TyAbstractOperatorInfo.getOperandType (Obj.magic candidate) ())) || containsTypeParameter (Obj.magic (TyAbstractOperatorInfo.getResultType (Obj.magic candidate) ())) then HxType.hx_throw_typed_rtti (Obj.repr (unsupportedGeneric (filePath : string) (Obj.magic position) (Obj.magic operandType) (Obj.magic declaration))) ["Dynamic"] else ());
-              if let __string_eq_left_28 = TyType.getSemanticKey (Obj.magic (TyAbstractOperatorInfo.getOperandType (Obj.magic candidate) ())) () in let __string_eq_right_29 = TyType.getSemanticKey (Obj.magic operandType) () in HxString.equals __string_eq_left_28 __string_eq_right_29 then ignore (let __array_receiver_30 = Obj.magic applicable in let __array_arg_0_31 = Obj.magic candidate in HxArray.push __array_receiver_30 __array_arg_0_31) else ()
+              if let __string_eq_left_32 = TyType.getSemanticKey (Obj.magic (TyAbstractOperatorInfo.getOperandType (Obj.magic candidate) ())) () in let __string_eq_right_33 = TyType.getSemanticKey (Obj.magic operandType) () in HxString.equals __string_eq_left_32 __string_eq_right_33 then ignore (let __array_receiver_34 = Obj.magic applicable in let __array_arg_0_35 = Obj.magic candidate in HxArray.push __array_receiver_34 __array_arg_0_35) else ()
             )
           )) done);
-          ignore (if HxArray.length applicable = 0 then HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic position) (let __string_part_32 = "No applicable abstract unary operator " in let __string_part_33 = HxString.toStdString (operatorLabel (Obj.magic op) (Obj.magic fixity)) in let __string_part_34 = " for " in let __string_part_35 = HxString.toStdString (TyType.getDisplay (Obj.magic operandType) ()) in ((__string_part_32 ^ __string_part_33) ^ __string_part_34) ^ __string_part_35 : string))) ["Dynamic"] else ());
-          ignore (if HxArray.length applicable > 1 then let _g = Obj.magic (let __represented_array_36 = HxArray.create () in __represented_array_36) in let _g1 = ref 0 in (
-            ignore (while !_g1 < HxArray.length applicable do ignore (let candidate = Obj.magic (let __array_read_receiver_37 = applicable in let __array_read_index_38 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_37) __array_read_index_38) in (
-              ignore (let __old_39 = !_g1 in let __new_40 = HxInt.add __old_39 1 in (
-                ignore (_g1 := __new_40);
-                __new_40
+          ignore (if HxArray.length applicable = 0 then HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic position) (let __string_part_36 = "No applicable abstract unary operator " in let __string_part_37 = HxString.toStdString (operatorLabel (Obj.magic op) (Obj.magic fixity)) in let __string_part_38 = " for " in let __string_part_39 = HxString.toStdString (TyType.getDisplay (Obj.magic operandType) ()) in ((__string_part_36 ^ __string_part_37) ^ __string_part_38) ^ __string_part_39 : string))) ["Dynamic"] else ());
+          ignore (if HxArray.length applicable > 1 then let _g = Obj.magic (let __represented_array_40 = HxArray.create () in __represented_array_40) in let _g1 = ref 0 in (
+            ignore (while !_g1 < HxArray.length applicable do ignore (let candidate = Obj.magic (let __array_read_receiver_41 = applicable in let __array_read_index_42 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_41) __array_read_index_42) in (
+              ignore (let __old_43 = !_g1 in let __new_44 = HxInt.add __old_43 1 in (
+                ignore (_g1 := __new_44);
+                __new_44
               ));
-              let __array_receiver_41 = Obj.magic _g in let __array_arg_0_42 = (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic (TyAbstractOperatorInfo.getDeclaration (Obj.magic candidate) ())) ())) () : string) in HxArray.push __array_receiver_41 __array_arg_0_42
+              let __array_receiver_45 = Obj.magic _g in let __array_arg_0_46 = (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic (TyAbstractOperatorInfo.getDeclaration (Obj.magic candidate) ())) ())) () : string) in HxArray.push __array_receiver_45 __array_arg_0_46
             )) done);
-            let tempArray = Obj.magic _g in let identities = Obj.magic tempArray in HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic position) (let __string_part_43 = "Ambiguous abstract unary operator " in let __string_part_44 = HxString.toStdString (operatorLabel (Obj.magic op) (Obj.magic fixity)) in let __string_part_45 = " for " in let __string_part_46 = HxString.toStdString (TyType.getDisplay (Obj.magic operandType) ()) in let __string_part_47 = "; candidates: " in let __string_part_48 = HxString.toStdString (HxArray.join identities ", " (fun x -> x)) in ((((__string_part_43 ^ __string_part_44) ^ __string_part_45) ^ __string_part_46) ^ __string_part_47) ^ __string_part_48 : string))) ["Dynamic"]
+            let tempArray = Obj.magic _g in let identities = Obj.magic tempArray in HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (filePath : string) (Obj.magic position) (let __string_part_47 = "Ambiguous abstract unary operator " in let __string_part_48 = HxString.toStdString (operatorLabel (Obj.magic op) (Obj.magic fixity)) in let __string_part_49 = " for " in let __string_part_50 = HxString.toStdString (TyType.getDisplay (Obj.magic operandType) ()) in let __string_part_51 = "; candidates: " in let __string_part_52 = HxString.toStdString (HxArray.join identities ", " (fun x -> x)) in ((((__string_part_47 ^ __string_part_48) ^ __string_part_49) ^ __string_part_50) ^ __string_part_51) ^ __string_part_52 : string))) ["Dynamic"]
           ) else ());
-          let __array_read_receiver_49 = applicable in let __array_read_index_50 = 0 in HxArray.get (Obj.magic __array_read_receiver_49) __array_read_index_50
+          let __array_read_receiver_53 = applicable in let __array_read_index_54 = 0 in HxArray.get (Obj.magic __array_read_receiver_53) __array_read_index_54
         )
       )
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_51 -> (Obj.obj __ret_51 : TyAbstractOperatorInfo.t) : TyAbstractOperatorInfo.t)
+  | HxRuntime.Hx_return __ret_55 -> (Obj.obj __ret_55 : TyAbstractOperatorInfo.t) : TyAbstractOperatorInfo.t)

@@ -42,7 +42,7 @@ let requiredInt = fun value field -> (try (
   ignore (match value with
     | Hxhx_CompilerJsonValue.JsonNull -> HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_155 = HxString.toStdString field ^ " is required" in failureMessage __call_arg_0_155)) ["Dynamic"]
     | Hxhx_CompilerJsonValue.JsonInt _p0 -> let _g = _p0 in let number = _g in Stdlib.raise (HxRuntime.Hx_return (Obj.repr number))
-    | Hxhx_CompilerJsonValue.JsonFloat _p0 -> ignore (let _g = _p0 in let number = _g in let integer = int_of_float number in let asFloat = float_of_int integer in if asFloat = number then Stdlib.raise (HxRuntime.Hx_return (Obj.repr integer)) else ())
+    | Hxhx_CompilerJsonValue.JsonFloat _p0 -> ignore (let _g = _p0 in let number = _g in let integer = Stdlib.Int32.to_int (Stdlib.Int32.of_int (int_of_float number)) in let asFloat = float_of_int integer in if asFloat = number then Stdlib.raise (HxRuntime.Hx_return (Obj.repr integer)) else ())
     | _ -> ignore ());
   HxType.hx_throw_typed_rtti (Obj.repr (let __call_arg_0_156 = HxString.toStdString field ^ " must be an integer" in failureMessage __call_arg_0_156)) ["Dynamic"]
 ) with

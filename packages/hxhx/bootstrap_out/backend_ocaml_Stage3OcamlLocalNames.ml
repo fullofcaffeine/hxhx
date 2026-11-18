@@ -25,21 +25,33 @@ let create = fun localCatalog2 hasInstanceReceiver normalize -> let self = ({ __
           ignore (_g := __new_6);
           __new_6
         ));
-        let projectedName = (TypedBackendLocalProjection.getProjectedName (Obj.magic entry) () : string) in let base = let __call_callee_7 = normalize in let __call_arg_0_8 = projectedName in __call_callee_7 __call_arg_0_8 in (
-          ignore (if base == HxString.hx_null_string || (let __string_receiver_9 = base in HxString.length __string_receiver_9) = 0 || (let __string_eq_left_10 = base in let __string_eq_right_11 = "_" in HxString.equals __string_eq_left_10 __string_eq_right_11) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_12 = "Stage3 OCaml local naming cannot render exact binding " in let __string_part_13 = HxString.toStdString (TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic (TypedBackendLocalProjection.getBinding (Obj.magic entry) ())) ())) ()) in __string_part_12 ^ __string_part_13)) ["Dynamic"] else ());
-          let targetName__local = ref base in let suffix = ref 0 in (
-            ignore (while HxMap.exists_string (Obj.magic used) (!targetName__local : string) do ignore ((
-              ignore (let __old_14 = !suffix in let __new_15 = HxInt.add __old_14 1 in (
-                ignore (suffix := __new_15);
-                __old_14
-              ));
-              let __assign_16 = (HxString.toStdString base ^ "_") ^ string_of_int (!suffix) in (
-                targetName__local := __assign_16;
-                __assign_16
-              )
-            )) done);
-            ignore (HxMap.set_string (Obj.magic used) (!targetName__local : string) true);
-            let _this = Obj.magic ((Obj.magic self : t).byProjectedName) in HxMap.set_string (Obj.magic _this) (projectedName : string) (!targetName__local)
+        let projectedName = (TypedBackendLocalProjection.getProjectedName (Obj.magic entry) () : string) in let normalized = let __call_callee_7 = normalize in let __call_arg_0_8 = projectedName in __call_callee_7 __call_arg_0_8 in let tempString = ref (HxString.hx_null_string : string) in (
+          ignore (if let __string_eq_left_9 = normalized in let __string_eq_right_10 = "_" in HxString.equals __string_eq_left_9 __string_eq_right_10 then let __assign_11 = "_hx_underscore" in (
+            tempString := __assign_11;
+            __assign_11
+          ) else if normalized != HxString.hx_null_string && (let __call_arg_0_12 = normalized in let __call_arg_1_13 = "__hx_static_" in StringTools.startsWith __call_arg_0_12 __call_arg_1_13) then let __assign_14 = "local" ^ HxString.toStdString normalized in (
+            tempString := __assign_14;
+            __assign_14
+          ) else let __assign_15 = normalized in (
+            tempString := __assign_15;
+            __assign_15
+          ));
+          let base = !tempString in (
+            ignore (if base == HxString.hx_null_string || (let __string_receiver_16 = base in HxString.length __string_receiver_16) = 0 then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_17 = "Stage3 OCaml local naming cannot render exact binding " in let __string_part_18 = HxString.toStdString (TyLocalId.getCanonicalKey (Obj.magic (TyLocalBinding.getIdentity (Obj.magic (TypedBackendLocalProjection.getBinding (Obj.magic entry) ())) ())) ()) in __string_part_17 ^ __string_part_18)) ["Dynamic"] else ());
+            let targetName__local = ref base in let suffix = ref 0 in (
+              ignore (while HxMap.exists_string (Obj.magic used) (!targetName__local : string) do ignore ((
+                ignore (let __old_19 = !suffix in let __new_20 = HxInt.add __old_19 1 in (
+                  ignore (suffix := __new_20);
+                  __old_19
+                ));
+                let __assign_21 = (HxString.toStdString base ^ "_") ^ string_of_int (!suffix) in (
+                  targetName__local := __assign_21;
+                  __assign_21
+                )
+              )) done);
+              ignore (HxMap.set_string (Obj.magic used) (!targetName__local : string) true);
+              let _this = Obj.magic ((Obj.magic self : t).byProjectedName) in HxMap.set_string (Obj.magic _this) (projectedName : string) (!targetName__local)
+            )
           )
         )
       )) done
@@ -53,35 +65,35 @@ let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.ocaml.Sta
 let requireOwner = fun self (catalog : TypedBackendLocalCatalog.t) -> ignore (ignore (if Obj.repr ((Obj.magic self : t).localCatalog) != Obj.repr catalog then HxType.hx_throw_typed_rtti (Obj.repr "Native callback names belong to another local catalog") ["Dynamic"] else ()))
 
 let findTargetName = fun self (projectedName : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-  ignore (if projectedName == HxString.hx_null_string then let __assign_17 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-    tempResult := __assign_17;
-    __assign_17
-  ) else let _this = Obj.magic ((Obj.magic self : t).byProjectedName) in let __assign_18 = Obj.magic (HxMap.get_string (Obj.magic _this) (projectedName : string) : string) in (
-    tempResult := __assign_18;
-    __assign_18
+  ignore (if projectedName == HxString.hx_null_string then let __assign_22 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempResult := __assign_22;
+    __assign_22
+  ) else let _this = Obj.magic ((Obj.magic self : t).byProjectedName) in let __assign_23 = Obj.magic (HxMap.get_string (Obj.magic _this) (projectedName : string) : string) in (
+    tempResult := __assign_23;
+    __assign_23
   ));
   !tempResult
 )
 
 let findType = fun self (projectedName : string) -> let local = Obj.magic (TypedBackendLocalCatalog.findByProjectedName (Obj.magic ((Obj.magic self : t).localCatalog)) (projectedName : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-  ignore (if local == Obj.magic (HxRuntime.hx_null) then let __assign_19 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-    tempResult := __assign_19;
-    __assign_19
-  ) else let __assign_20 = Obj.magic (Obj.magic (TyLocalBinding.getType (Obj.magic (TypedBackendLocalProjection.getBinding (Obj.magic local) ())) ())) in (
-    tempResult := __assign_20;
-    __assign_20
+  ignore (if local == Obj.magic (HxRuntime.hx_null) then let __assign_24 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+    tempResult := __assign_24;
+    __assign_24
+  ) else let __assign_25 = Obj.magic (Obj.magic (TyLocalBinding.getType (Obj.magic (TypedBackendLocalProjection.getBinding (Obj.magic local) ())) ())) in (
+    tempResult := __assign_25;
+    __assign_25
   ));
   !tempResult
 )
 
-let internalName = fun self (base : string) -> let selected = ref (base : string) in let suffix = ref 0 in let _g = Obj.magic (let __represented_array_21 = HxArray.create () in __represented_array_21) in let _this = Obj.magic ((Obj.magic self : t).byProjectedName) in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.values_string (Obj.magic _this))) in (
-  ignore (while let __iterator_receiver_22 = tempIterator in HxIterator.hasNext __iterator_receiver_22 do ignore (let name2 = (let __iterator_receiver_23 = tempIterator in HxIterator.next __iterator_receiver_23 : string) in let __array_receiver_24 = Obj.magic _g in let __array_arg_0_25 = (name2 : string) in HxArray.push __array_receiver_24 __array_arg_0_25) done);
-  ignore (while (let __array_receiver_26 = Obj.magic _g in let __array_arg_0_27 = (!selected : string) in HxArray.indexOf_default __array_receiver_26 __array_arg_0_27) >= 0 do ignore (let __assign_28 = (let __string_part_31 = HxString.toStdString base in let __string_part_32 = "_" in let __string_part_33 = string_of_int (let __old_29 = !suffix in let __new_30 = HxInt.add __old_29 1 in (
-    ignore (suffix := __new_30);
-    __new_30
-  )) in (__string_part_31 ^ __string_part_32) ^ __string_part_33 : string) in (
-    selected := __assign_28;
-    __assign_28
+let internalName = fun self (base : string) -> let selected = ref (base : string) in let suffix = ref 0 in let _g = Obj.magic (let __represented_array_26 = HxArray.create () in __represented_array_26) in let _this = Obj.magic ((Obj.magic self : t).byProjectedName) in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.values_string (Obj.magic _this))) in (
+  ignore (while let __iterator_receiver_27 = tempIterator in HxIterator.hasNext __iterator_receiver_27 do ignore (let name2 = (let __iterator_receiver_28 = tempIterator in HxIterator.next __iterator_receiver_28 : string) in let __array_receiver_29 = Obj.magic _g in let __array_arg_0_30 = (name2 : string) in HxArray.push __array_receiver_29 __array_arg_0_30) done);
+  ignore (while (let __array_receiver_31 = Obj.magic _g in let __array_arg_0_32 = (!selected : string) in HxArray.indexOf_default __array_receiver_31 __array_arg_0_32) >= 0 do ignore (let __assign_33 = (let __string_part_36 = HxString.toStdString base in let __string_part_37 = "_" in let __string_part_38 = string_of_int (let __old_34 = !suffix in let __new_35 = HxInt.add __old_34 1 in (
+    ignore (suffix := __new_35);
+    __new_35
+  )) in (__string_part_36 ^ __string_part_37) ^ __string_part_38 : string) in (
+    selected := __assign_33;
+    __assign_33
   )) done);
   !selected
 )

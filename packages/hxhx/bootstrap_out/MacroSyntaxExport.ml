@@ -349,7 +349,7 @@ and definition = fun self (expression : HxExpr.hxexpr) (position : Obj.t) -> (tr
         tempResult := __assign_33;
         __assign_33
       )
-      | HxExpr.EFloat _p0 -> let _g = _p0 in let value = _g in let __assign_37 = Obj.magic (let __enum_arg_40 = Obj.magic (let __enum_arg_38 = (string_of_float value : string) in let __enum_arg_39 = Obj.magic (HxRuntime.hx_null) in Haxe_macro_Expr.CFloat (Stdlib.Sys.opaque_identity __enum_arg_38, __enum_arg_39)) in Haxe_macro_Expr.EConst (Stdlib.Sys.opaque_identity __enum_arg_40)) in (
+      | HxExpr.EFloat _p0 -> let _g = _p0 in let value = _g in let __assign_37 = Obj.magic (let __enum_arg_40 = Obj.magic (let __enum_arg_38 = (HxRuntime.float_toStdString value : string) in let __enum_arg_39 = Obj.magic (HxRuntime.hx_null) in Haxe_macro_Expr.CFloat (Stdlib.Sys.opaque_identity __enum_arg_38, __enum_arg_39)) in Haxe_macro_Expr.EConst (Stdlib.Sys.opaque_identity __enum_arg_40)) in (
         tempResult := __assign_37;
         __assign_37
       )

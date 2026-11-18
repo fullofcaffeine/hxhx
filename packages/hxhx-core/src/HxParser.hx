@@ -4222,7 +4222,9 @@ class HxParser {
 			case TKeyword(KDo):
 				// Stage 3 bring-up: structured do/while support.
 				bump(); // `do`
-				final body = parseStmt(stop);
+				// An unbraced body (`do t++ while (t < 3);`) ends at the `while` keyword,
+				// as in upstream Haxe; without this stop it consumed the condition too.
+				final body = parseStmt(() -> stop() || cur.kind.match(TKeyword(KWhile)));
 				if (!acceptKeyword(KWhile)) {
 					syncToStmtEnd();
 					return SExpr(EUnsupported("do"), pos);

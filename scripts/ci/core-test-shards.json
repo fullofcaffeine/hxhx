@@ -391,6 +391,7 @@
     "test:m14:runtime-observation-signal": "compiler-focused-2",
     "test:m14:macro-body-export": "compiler-focused-2",
     "test:oracle:parse": "compiler-focused-2",
+    "test:oracle:typed": "compiler-focused-2",
     "test:m14:stage3-static-field-writes": "compiler-foundation",
     "test:m14:stage3-local-recursive-functions": "compiler-foundation",
     "test:m14:stage3-float-block-function": "compiler-focused-6",

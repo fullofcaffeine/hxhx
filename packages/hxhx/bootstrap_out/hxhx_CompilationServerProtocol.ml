@@ -28,7 +28,7 @@ let parseRequestTimeoutMs = fun (value : string) -> (try Obj.repr ((
       __old_4
     ) in let digit = HxInt.sub (let __nullable_int_8 = let __string_receiver_6 = value in let __string_argument_0_7 = index in HxString.charCodeAt __string_receiver_6 __string_argument_0_7 in if __nullable_int_8 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_8) 48 in (
       ignore (if digit < 0 || digit > 9 then Stdlib.raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
-      ignore (if !result > HxInt.sub 86400000 digit / 10 then Stdlib.raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
+      ignore (if !result > Stdlib.Int32.to_int (Stdlib.Int32.of_int (int_of_float (float_of_int (HxInt.sub 86400000 digit) /. float_of_int 10))) then Stdlib.raise (HxRuntime.Hx_return (HxRuntime.hx_null)) else ());
       let __assign_9 = HxInt.add (HxInt.mul (!result) 10) digit in (
         result := __assign_9;
         __assign_9
