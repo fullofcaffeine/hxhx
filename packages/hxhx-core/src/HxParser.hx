@@ -2902,6 +2902,9 @@ class HxParser {
 			final name = readIdent("field splice name");
 			return "__hxhx_macro_field_splice:" + name;
 		}
+		// `A.new` reads the constructor as a function value.
+		if (acceptKeyword(KNew))
+			return "new";
 		return readIdent("field name");
 	}
 
