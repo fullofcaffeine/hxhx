@@ -2046,6 +2046,7 @@ class ParserStageScanHelpers {
 						i = scannedReturn.nextPos;
 					}
 
+					final bodyBraced = scanNextToken(source, i).text == "{";
 					final bodyCapture = scanFunctionBody(source, i, true);
 					// Parsing owns the authored body, including branches and unsupported
 					// syntax nodes. Typing and target checks must see those nodes rather
@@ -2067,7 +2068,7 @@ class ParserStageScanHelpers {
 						if (sawDynamic)
 							metadata.push("dynamic");
 						functions.push(new HxFunctionDecl(fnName, fnVis, wantStaticFn, args, returnType, body, "", metadata,
-							posFromIndex(source, declarationStart), posFromIndex(source, i), bodyText, bodyCapture.hasBody));
+							posFromIndex(source, declarationStart), posFromIndex(source, i), bodyText, bodyCapture.hasBody, false, bodyBraced));
 					}
 
 					sawStatic = false;

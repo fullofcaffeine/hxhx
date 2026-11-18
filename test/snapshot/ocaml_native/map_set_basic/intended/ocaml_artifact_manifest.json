@@ -28,11 +28,11 @@
   "summary": {
     "entryCount": 75,
     "volatileEvidenceEntryCount": 0,
-    "sourceBundleRevision": "sha256:e4188b0ef8b37147674b6ab6f082f0c3d5784d997c5ea4d61719df1310b1d3f7",
+    "sourceBundleRevision": "sha256:d302072007d1b5e01c5e6222a0cd8b85625f6e7baccf422800945b880aedb009",
     "completeForSourceBundle": true,
     "sourceBundleEntryCount": 71,
     "blockers": [],
-    "artifactSetRevision": "sha256:fd404a401d458fcfcba385a78bbb1bc6057212f00ad891aa24aaf1db015bb41d"
+    "artifactSetRevision": "sha256:3a50ef982865674e4b1434769b4610b6c51c98a0cf317ad70bbb480fdd93cac2"
   },
   "entries": [
     {
@@ -85,14 +85,14 @@
       "sourcePath": null,
       "stability": "stable",
       "path": "HxTypeRegistry.ml",
-      "sha256": "sha256:beccd2a4e01043130bbfb1421880ec50e3bd4cbbd63228a6a6987f67897f710f",
+      "sha256": "sha256:134ed069d2720d066ffacb18baf7d4662033db4937c9485fb319221a17340f30",
       "kind": "type-registry-source",
       "profileEligibility": [
         "metal",
         "portable"
       ],
       "owner": "ocaml-compiler",
-      "bytes": 16791,
+      "bytes": 16926,
       "sourceKind": "generated",
       "license": "generated-output",
       "includeInSourceBundle": true
