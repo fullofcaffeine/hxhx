@@ -29,6 +29,9 @@ class HxParser {
 	/** Whether the last consumed token was `;`, so a statement can tell how it ended. */
 	var consumedSemicolon = false;
 
+	/** Whether the last consumed token was `}`. A field initializer that ends with `}` needs no `;`. */
+	var consumedRBrace = false;
+
 	var peeked1:Null<HxToken> = null;
 	var peeked2:Null<HxToken> = null;
 	var peeked3:Null<HxToken> = null;
@@ -820,6 +823,7 @@ class HxParser {
 
 	inline function bump():Void {
 		consumedSemicolon = cur.kind.match(TSemicolon);
+		consumedRBrace = cur.kind.match(TRBrace);
 		if (peeked1 != null) {
 			cur = peeked1;
 			peeked1 = peeked2;
@@ -4665,11 +4669,13 @@ class HxParser {
 						}
 						if (cur.kind.match(TSemicolon)) {
 							bump();
-						} else if (init != null && isSemicolonlessFieldInitializer(init, initText) && isClassMemberBoundary()) {
-							// Haxe permits semicolonless block-expression field initializers:
-							// `var x = switch (...) { ... }` followed by the next member.
-							// Accept that form so switch field initializers do not absorb the
-							// rest of the class during Stage3 bring-up parsing.
+						} else if (init != null
+							&& (consumedRBrace || isSemicolonlessFieldInitializer(init, initText))
+							&& isClassMemberBoundary()) {
+							// Like upstream Haxe, a field initializer whose last token is `}` needs
+							// no `;`: `static final noop = function() {}`, a block, an object
+							// literal, `if ... else { }`, or `switch (...) { ... }`, followed by
+							// the next member (haxe_ocaml-ac5i9.8).
 						} else {
 							expect(TSemicolon, "';'");
 						}
