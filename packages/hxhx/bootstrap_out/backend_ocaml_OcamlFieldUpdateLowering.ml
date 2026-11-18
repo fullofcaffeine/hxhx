@@ -4,31 +4,201 @@
 
 let __reflaxe_ocaml__ = ()
 
-let lowerFieldCompound = fun expression allocator -> (try let children = Obj.magic (TypedExpr.getExpressions (Obj.magic expression) ()) in (
-  ignore (if HxArray.length children <> 2 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr expression)) else ());
-  let assignment = (let __array_read_receiver_62 = TypedExpr.getTexts (Obj.magic expression) () in let __array_read_index_63 = 0 in HxArray.get (Obj.magic __array_read_receiver_62) __array_read_index_63 : string) in let operand = Obj.magic (let __array_read_receiver_64 = children in let __array_read_index_65 = 0 in HxArray.get (Obj.magic __array_read_receiver_64) __array_read_index_65) in let field = Obj.magic (TypedExpr.getFieldInfo (Obj.magic operand) ()) in let key = (TyType.getSemanticKey (Obj.magic (TypedExpr.getType (Obj.magic operand) ())) () : string) in let stringAppend = (let __string_eq_left_66 = assignment in let __string_eq_right_67 = "+=" in HxString.equals __string_eq_left_66 __string_eq_right_67) && (let __string_eq_left_68 = key in let __string_eq_right_69 = "primitive:String" in HxString.equals __string_eq_left_68 __string_eq_right_69) in let intUpdate = ((let __string_eq_left_70 = assignment in let __string_eq_right_71 = "+=" in HxString.equals __string_eq_left_70 __string_eq_right_71) || (let __string_eq_left_72 = assignment in let __string_eq_right_73 = "-=" in HxString.equals __string_eq_left_72 __string_eq_right_73) || (let __string_eq_left_74 = assignment in let __string_eq_right_75 = "*=" in HxString.equals __string_eq_left_74 __string_eq_right_75)) && (let __string_eq_left_76 = key in let __string_eq_right_77 = "primitive:Int" in HxString.equals __string_eq_left_76 __string_eq_right_77) && (let __string_eq_left_78 = TyType.getSemanticKey (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_80 = children in let __array_read_index_81 = 1 in HxArray.get (Obj.magic __array_read_receiver_80) __array_read_index_81)) ())) () in let __string_eq_right_79 = "primitive:Int" in HxString.equals __string_eq_left_78 __string_eq_right_79) in (
-    ignore (if not (stringAppend) && not (intUpdate) || (let __enum_eq_left_82 = TypedExpr.getTag (Obj.magic operand) () in let __enum_eq_right_83 = TypedExpr.FieldRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_82) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_83)) && (let __enum_eq_left_84 = TypedExpr.getTag (Obj.magic operand) () in let __enum_eq_right_85 = TypedExpr.NameRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_84) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_85)) || field == Obj.magic (HxRuntime.hx_null) || TyFieldInfo.getIsStatic (Obj.magic field) () || TyFieldInfo.getIsFinal (Obj.magic field) () || (let __string_eq_left_86 = TyType.getSemanticKey (Obj.magic (TypedExpr.getType (Obj.magic expression) ())) () in let __string_eq_right_87 = key in not (HxString.equals __string_eq_left_86 __string_eq_right_87)) || (let __string_eq_left_88 = TyFieldInfo.getPropertyGet (Obj.magic field) () in let __string_eq_right_89 = "" in not (HxString.equals __string_eq_left_88 __string_eq_right_89)) && (let __string_eq_left_90 = TyFieldInfo.getPropertyGet (Obj.magic field) () in let __string_eq_right_91 = "default" in not (HxString.equals __string_eq_left_90 __string_eq_right_91)) || (let __string_eq_left_92 = TyFieldInfo.getPropertySet (Obj.magic field) () in let __string_eq_right_93 = "" in not (HxString.equals __string_eq_left_92 __string_eq_right_93)) && (let __string_eq_left_94 = TyFieldInfo.getPropertySet (Obj.magic field) () in let __string_eq_right_95 = "default" in not (HxString.equals __string_eq_left_94 __string_eq_right_95)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr expression)) else ());
-    let valueType = Obj.magic (TypedExpr.getType (Obj.magic operand) ()) in let position = Obj.magic (TypedExpr.getPosition (Obj.magic expression) ()) in let read = fun binding -> TypedExpr.localRead (TyLocalBinding.getSourceName (Obj.magic binding) () : string) (Obj.magic (TyLocalBinding.getType (Obj.magic binding) ())) (Obj.magic position) (Obj.magic binding) in let capture = fun binding value -> TypedExpr.temporary (TyLocalBinding.getSourceName (Obj.magic binding) () : string) (TyType.getCanonicalDisplay (Obj.magic (TyLocalBinding.getType (Obj.magic binding) ())) () : string) (Obj.magic value) (Obj.magic (TyType.fromHintText ("Void" : string))) (Obj.magic position) (Obj.magic binding) in let sequence = Obj.magic (HxArray.create ()) in let place = ref (Obj.magic operand) in (
-      ignore (if let __enum_eq_left_96 = TypedExpr.getTag (Obj.magic operand) () in let __enum_eq_right_97 = TypedExpr.FieldRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_96) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_97) then ignore (let receiver = Obj.magic (let __array_read_receiver_98 = TypedExpr.getExpressions (Obj.magic operand) () in let __array_read_index_99 = 0 in HxArray.get (Obj.magic __array_read_receiver_98) __array_read_index_99) in let receiverBinding = Obj.magic (TyCompilerTemporaryAllocator.allocate (Obj.magic allocator) ("receiver" : string) (Obj.magic (TypedExpr.getType (Obj.magic receiver) ()))) in (
-        ignore (let __array_receiver_100 = Obj.magic sequence in let __array_arg_0_101 = Obj.magic (capture (Obj.magic receiverBinding) (Obj.magic receiver)) in HxArray.push __array_receiver_100 __array_arg_0_101);
-        let __assign_102 = Obj.magic (TypedExpr.fieldRead (Obj.magic (read (Obj.magic receiverBinding))) (TyFieldInfo.getName (Obj.magic field) () : string) (Obj.magic valueType) (Obj.magic position) (Obj.magic field)) in (
-          place := __assign_102;
-          __assign_102
-        )
-      )) else ());
-      let oldBinding = Obj.magic (TyCompilerTemporaryAllocator.allocate (Obj.magic allocator) ("old" : string) (Obj.magic valueType)) in let rightBinding = Obj.magic (TyCompilerTemporaryAllocator.allocate (Obj.magic allocator) ("right" : string) (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_103 = children in let __array_read_index_104 = 1 in HxArray.get (Obj.magic __array_read_receiver_103) __array_read_index_104)) ()))) in let nextBinding = Obj.magic (TyCompilerTemporaryAllocator.allocate (Obj.magic allocator) ("next" : string) (Obj.magic valueType)) in (
-        ignore (let __array_receiver_105 = Obj.magic sequence in let __array_arg_0_106 = Obj.magic (capture (Obj.magic oldBinding) (Obj.magic (!place))) in HxArray.push __array_receiver_105 __array_arg_0_106);
-        ignore (let __array_receiver_107 = Obj.magic sequence in let __array_arg_0_108 = Obj.magic (capture (Obj.magic rightBinding) (Obj.magic (let __array_read_receiver_109 = children in let __array_read_index_110 = 1 in HxArray.get (Obj.magic __array_read_receiver_109) __array_read_index_110))) in HxArray.push __array_receiver_107 __array_arg_0_108);
-        let next = Obj.magic (TypedExpr.binary (let __string_receiver_111 = assignment in let __string_argument_0_112 = 0 in let __string_argument_1_113 = 1 in HxString.substr __string_receiver_111 __string_argument_0_112 __string_argument_1_113 : string) (Obj.magic (read (Obj.magic oldBinding))) (Obj.magic (read (Obj.magic rightBinding))) (Obj.magic valueType) (Obj.magic position)) in (
-          ignore (let __array_receiver_114 = Obj.magic sequence in let __array_arg_0_115 = Obj.magic (capture (Obj.magic nextBinding) (Obj.magic (TypedExpr.assign (Obj.magic (!place)) (Obj.magic next) (Obj.magic valueType) (Obj.magic position)))) in HxArray.push __array_receiver_114 __array_arg_0_115);
-          ignore (let __array_receiver_116 = Obj.magic sequence in let __array_arg_0_117 = Obj.magic (read (Obj.magic nextBinding)) in HxArray.push __array_receiver_116 __array_arg_0_117);
-          TypedExpr.block (Obj.magic sequence) (Obj.magic valueType) (Obj.magic position)
+let steppedType = fun hx_type -> let tempTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+  ignore (if TyType.isNullable (Obj.magic hx_type) () then let __assign_76 = Obj.magic (TyType.unwrapNull (Obj.magic hx_type) ()) in (
+    tempTyType := __assign_76;
+    __assign_76
+  ) else let __assign_77 = Obj.magic hx_type in (
+    tempTyType := __assign_77;
+    __assign_77
+  ));
+  let inner = Obj.magic (!tempTyType) in let key = (TyType.getSemanticKey (Obj.magic inner) () : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+    ignore (if (let __string_eq_left_78 = key in let __string_eq_right_79 = "primitive:Int" in HxString.equals __string_eq_left_78 __string_eq_right_79) || (let __string_eq_left_80 = key in let __string_eq_right_81 = "primitive:Float" in HxString.equals __string_eq_left_80 __string_eq_right_81) then let __assign_82 = Obj.magic (Obj.magic inner) in (
+      tempResult := __assign_82;
+      __assign_82
+    ) else let __assign_83 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+      tempResult := __assign_83;
+      __assign_83
+    ));
+    !tempResult
+  )
+)
+
+let lowerIndexedStep = fun expression operand allocator -> (try let parts = Obj.magic (TypedExpr.getExpressions (Obj.magic operand) ()) in (
+  ignore (if HxArray.length parts <> 2 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr expression)) else ());
+  let array = Obj.magic (let __array_read_receiver_84 = parts in let __array_read_index_85 = 0 in HxArray.get (Obj.magic __array_read_receiver_84) __array_read_index_85) in let index = Obj.magic (let __array_read_receiver_86 = parts in let __array_read_index_87 = 1 in HxArray.get (Obj.magic __array_read_receiver_86) __array_read_index_87) in let arrayType = Obj.magic (TyAliasExpansion.reveal (Obj.magic (TypedExpr.getType (Obj.magic array) ()))) in let identity = Obj.magic (TyType.getNominalIdentity (Obj.magic arrayType) ()) in (
+    ignore (if identity == Obj.magic (HxRuntime.hx_null) || (let __string_eq_left_88 = TyNominalTypeId.getCanonicalName (Obj.magic identity) () in let __string_eq_right_89 = "Array" in not (HxString.equals __string_eq_left_88 __string_eq_right_89)) || HxArray.length (TyType.getTypeArguments (Obj.magic arrayType) ()) <> 1 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr expression)) else ());
+    let elementType = Obj.magic (TypedExpr.getType (Obj.magic operand) ()) in let stepType = Obj.magic (steppedType (Obj.magic elementType)) in (
+      ignore (if stepType == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr expression)) else ());
+      let key = (TyType.getSemanticKey (Obj.magic stepType) () : string) in let position = Obj.magic (TypedExpr.getPosition (Obj.magic expression) ()) in let read = fun binding -> TypedExpr.localRead (TyLocalBinding.getSourceName (Obj.magic binding) () : string) (Obj.magic (TyLocalBinding.getType (Obj.magic binding) ())) (Obj.magic position) (Obj.magic binding) in let capture = fun binding value -> TypedExpr.temporary (TyLocalBinding.getSourceName (Obj.magic binding) () : string) (TyType.getCanonicalDisplay (Obj.magic (TyLocalBinding.getType (Obj.magic binding) ())) () : string) (Obj.magic value) (Obj.magic (TyType.fromHintText ("Void" : string))) (Obj.magic position) (Obj.magic binding) in let arrayBinding = Obj.magic (TyCompilerTemporaryAllocator.allocate (Obj.magic allocator) ("array" : string) (Obj.magic (TypedExpr.getType (Obj.magic array) ()))) in let indexBinding = Obj.magic (TyCompilerTemporaryAllocator.allocate (Obj.magic allocator) ("index" : string) (Obj.magic (TypedExpr.getType (Obj.magic index) ()))) in let oldBinding = Obj.magic (TyCompilerTemporaryAllocator.allocate (Obj.magic allocator) ("old" : string) (Obj.magic elementType)) in let nextBinding = Obj.magic (TyCompilerTemporaryAllocator.allocate (Obj.magic allocator) ("next" : string) (Obj.magic stepType)) in let place = Obj.magic (TypedExpr.arrayAccess (Obj.magic (read (Obj.magic arrayBinding))) (Obj.magic (read (Obj.magic indexBinding))) (Obj.magic elementType) (Obj.magic position)) in let tempTypedExpr = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t) in (
+        ignore (if let __string_eq_left_90 = key in let __string_eq_right_91 = "primitive:Int" in HxString.equals __string_eq_left_90 __string_eq_right_91 then let __assign_92 = Obj.magic (TypedExpr.intLiteral 1 (Obj.magic stepType) (Obj.magic position)) in (
+          tempTypedExpr := __assign_92;
+          __assign_92
+        ) else let __assign_93 = Obj.magic (TypedExpr.floatLiteral 1.0 (Obj.magic stepType) (Obj.magic position)) in (
+          tempTypedExpr := __assign_93;
+          __assign_93
+        ));
+        let one = Obj.magic (!tempTypedExpr) in let tempString = ref (HxString.hx_null_string : string) in (
+          ignore (if let __enum_eq_left_94 = TypedExpr.getUnaryOperator (Obj.magic expression) () in let __enum_eq_right_95 = HxUnaryOperator.Increment in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_94) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_95) then let __assign_96 = "+" in (
+            tempString := __assign_96;
+            __assign_96
+          ) else let __assign_97 = "-" in (
+            tempString := __assign_97;
+            __assign_97
+          ));
+          let next = Obj.magic (TypedExpr.binary (!tempString : string) (Obj.magic (read (Obj.magic oldBinding))) (Obj.magic one) (Obj.magic stepType) (Obj.magic position)) in let tempTyLocalBinding = ref (Obj.magic (HxRuntime.hx_null) : TyLocalBinding.t) in (
+            ignore (if let __enum_eq_left_98 = TypedExpr.getUnaryFixity (Obj.magic expression) () in let __enum_eq_right_99 = HxUnaryFixity.Postfix in HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.repr __enum_eq_left_98) == HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.repr __enum_eq_right_99) then let __assign_100 = Obj.magic oldBinding in (
+              tempTyLocalBinding := __assign_100;
+              __assign_100
+            ) else let __assign_101 = Obj.magic nextBinding in (
+              tempTyLocalBinding := __assign_101;
+              __assign_101
+            ));
+            let result = Obj.magic (read (Obj.magic (!tempTyLocalBinding))) in TypedExpr.block (Obj.magic (let __arr_102 = HxArray.create () in (
+              ignore (HxArray.push __arr_102 (capture (Obj.magic arrayBinding) (Obj.magic array)));
+              ignore (HxArray.push __arr_102 (capture (Obj.magic indexBinding) (Obj.magic index)));
+              ignore (HxArray.push __arr_102 (capture (Obj.magic oldBinding) (Obj.magic place)));
+              ignore (HxArray.push __arr_102 (capture (Obj.magic nextBinding) (Obj.magic (TypedExpr.assign (Obj.magic place) (Obj.magic next) (Obj.magic stepType) (Obj.magic position)))));
+              ignore (HxArray.push __arr_102 result);
+              __arr_102
+            ))) (Obj.magic (TypedExpr.getType (Obj.magic result) ())) (Obj.magic position)
+          )
         )
       )
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_118 -> (Obj.obj __ret_118 : TypedExpr.t) : TypedExpr.t)
+  | HxRuntime.Hx_return __ret_103 -> (Obj.obj __ret_103 : TypedExpr.t) : TypedExpr.t)
+
+let isBitwiseAssignment = fun assignment -> let tempResult = ref (false : bool) in (
+  ignore (match assignment with
+    | "&=" | "<<=" | ">>=" | ">>>=" | "^=" | "|=" -> let __assign_105 = true in (
+      tempResult := __assign_105;
+      __assign_105
+    )
+    | _ -> let __assign_104 = false in (
+      tempResult := __assign_104;
+      __assign_104
+    ));
+  !tempResult
+)
+
+let isRefusedFieldCompound = fun assignment valueType structural -> (try let bitwise = isBitwiseAssignment (assignment : string) in (
+  ignore (if not (bitwise) && (let __string_eq_left_106 = assignment in let __string_eq_right_107 = "+=" in not (HxString.equals __string_eq_left_106 __string_eq_right_107)) && (let __string_eq_left_108 = assignment in let __string_eq_right_109 = "-=" in not (HxString.equals __string_eq_left_108 __string_eq_right_109)) && (let __string_eq_left_110 = assignment in let __string_eq_right_111 = "*=" in not (HxString.equals __string_eq_left_110 __string_eq_right_111)) && (let __string_eq_left_112 = assignment in let __string_eq_right_113 = "/=" in not (HxString.equals __string_eq_left_112 __string_eq_right_113)) && (let __string_eq_left_114 = assignment in let __string_eq_right_115 = "%=" in not (HxString.equals __string_eq_left_114 __string_eq_right_115)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if bitwise && not (structural) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  let tempTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+    ignore (if TyType.isNullable (Obj.magic valueType) () then let __assign_116 = Obj.magic (TyType.unwrapNull (Obj.magic valueType) ()) in (
+      tempTyType := __assign_116;
+      __assign_116
+    ) else let __assign_117 = Obj.magic valueType in (
+      tempTyType := __assign_117;
+      __assign_117
+    ));
+    let inner = Obj.magic (!tempTyType) in let key = (TyType.getSemanticKey (Obj.magic inner) () : string) in (
+      ignore (if structural then Stdlib.raise (HxRuntime.Hx_return (Obj.repr ((let __string_eq_left_118 = key in let __string_eq_right_119 = "primitive:Int" in HxString.equals __string_eq_left_118 __string_eq_right_119) || (let __string_eq_left_120 = key in let __string_eq_right_121 = "primitive:Float" in HxString.equals __string_eq_left_120 __string_eq_right_121) || (let __string_eq_left_122 = key in let __string_eq_right_123 = "primitive:String" in HxString.equals __string_eq_left_122 __string_eq_right_123)))) else ());
+      let __string_eq_left_124 = TyType.getSemanticKey (Obj.magic valueType) () in let __string_eq_right_125 = "primitive:Float" in HxString.equals __string_eq_left_124 __string_eq_right_125
+    )
+  )
+) with
+  | HxRuntime.Hx_return __ret_126 -> (Obj.obj __ret_126 : bool) : bool)
+
+let lowerFieldCompound = fun expression allocator -> (try let children = Obj.magic (TypedExpr.getExpressions (Obj.magic expression) ()) in (
+  ignore (if HxArray.length children <> 2 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr expression)) else ());
+  let assignment = (let __array_read_receiver_127 = TypedExpr.getTexts (Obj.magic expression) () in let __array_read_index_128 = 0 in HxArray.get (Obj.magic __array_read_receiver_127) __array_read_index_128 : string) in let operand = Obj.magic (let __array_read_receiver_129 = children in let __array_read_index_130 = 0 in HxArray.get (Obj.magic __array_read_receiver_129) __array_read_index_130) in let field = Obj.magic (TypedExpr.getFieldInfo (Obj.magic operand) ()) in let structural = field == Obj.magic (HxRuntime.hx_null) && (let __enum_eq_left_131 = TypedExpr.getTag (Obj.magic operand) () in let __enum_eq_right_132 = TypedExpr.FieldRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_131) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_132)) && TyType.isAnonymous (Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_133 = TypedExpr.getExpressions (Obj.magic operand) () in let __array_read_index_134 = 0 in HxArray.get (Obj.magic __array_read_receiver_133) __array_read_index_134)) ())))) () in let key = (TyType.getSemanticKey (Obj.magic (TypedExpr.getType (Obj.magic operand) ())) () : string) in let stringAppend = (let __string_eq_left_135 = assignment in let __string_eq_right_136 = "+=" in HxString.equals __string_eq_left_135 __string_eq_right_136) && (let __string_eq_left_137 = key in let __string_eq_right_138 = "primitive:String" in HxString.equals __string_eq_left_137 __string_eq_right_138) in let rightType = Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_139 = children in let __array_read_index_140 = 1 in HxArray.get (Obj.magic __array_read_receiver_139) __array_read_index_140)) ()) in let tempTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+    ignore (if TyType.isNullable (Obj.magic rightType) () then let __assign_141 = Obj.magic (TyType.unwrapNull (Obj.magic rightType) ()) in (
+      tempTyType := __assign_141;
+      __assign_141
+    ) else let __assign_142 = Obj.magic rightType in (
+      tempTyType := __assign_142;
+      __assign_142
+    ));
+    let rightKey = (TyType.getSemanticKey (Obj.magic (!tempTyType)) () : string) in let intUpdate = ((let __string_eq_left_143 = assignment in let __string_eq_right_144 = "+=" in HxString.equals __string_eq_left_143 __string_eq_right_144) || (let __string_eq_left_145 = assignment in let __string_eq_right_146 = "-=" in HxString.equals __string_eq_left_145 __string_eq_right_146) || (let __string_eq_left_147 = assignment in let __string_eq_right_148 = "*=" in HxString.equals __string_eq_left_147 __string_eq_right_148) || (let __string_eq_left_149 = assignment in let __string_eq_right_150 = "%=" in HxString.equals __string_eq_left_149 __string_eq_right_150) || Backend_ocaml_Stage3OcamlLocalCompoundValue.isBitwiseOperator (assignment : string)) && (let __string_eq_left_151 = key in let __string_eq_right_152 = "primitive:Int" in HxString.equals __string_eq_left_151 __string_eq_right_152) && (let __string_eq_left_153 = rightKey in let __string_eq_right_154 = "primitive:Int" in HxString.equals __string_eq_left_153 __string_eq_right_154) in let floatUpdate = ((let __string_eq_left_155 = assignment in let __string_eq_right_156 = "+=" in HxString.equals __string_eq_left_155 __string_eq_right_156) || (let __string_eq_left_157 = assignment in let __string_eq_right_158 = "-=" in HxString.equals __string_eq_left_157 __string_eq_right_158) || (let __string_eq_left_159 = assignment in let __string_eq_right_160 = "*=" in HxString.equals __string_eq_left_159 __string_eq_right_160) || (let __string_eq_left_161 = assignment in let __string_eq_right_162 = "/=" in HxString.equals __string_eq_left_161 __string_eq_right_162) || (let __string_eq_left_163 = assignment in let __string_eq_right_164 = "%=" in HxString.equals __string_eq_left_163 __string_eq_right_164)) && (let __string_eq_left_165 = key in let __string_eq_right_166 = "primitive:Float" in HxString.equals __string_eq_left_165 __string_eq_right_166) && ((let __string_eq_left_167 = rightKey in let __string_eq_right_168 = "primitive:Float" in HxString.equals __string_eq_left_167 __string_eq_right_168) || (let __string_eq_left_169 = rightKey in let __string_eq_right_170 = "primitive:Int" in HxString.equals __string_eq_left_169 __string_eq_right_170)) in let tempMaybeTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+      ignore (if let __enum_eq_left_171 = TypedExpr.getTag (Obj.magic operand) () in let __enum_eq_right_172 = TypedExpr.FieldRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_171) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_172) then let __assign_173 = Obj.magic (Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_174 = TypedExpr.getExpressions (Obj.magic operand) () in let __array_read_index_175 = 0 in HxArray.get (Obj.magic __array_read_receiver_174) __array_read_index_175)) ())))) in (
+        tempMaybeTyType := __assign_173;
+        __assign_173
+      ) else let __assign_176 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+        tempMaybeTyType := __assign_176;
+        __assign_176
+      ));
+      let receiverType = Obj.magic (!tempMaybeTyType) in let unresolvedStructure = receiverType != Obj.magic (HxRuntime.hx_null) && TyType.isUnresolved (Obj.magic receiverType) () && (let __call_arg_0_177 = TyType.getDisplay (Obj.magic receiverType) () in let __call_arg_1_178 = "{" in StringTools.startsWith __call_arg_0_177 __call_arg_1_178) in (
+        ignore (if field == Obj.magic (HxRuntime.hx_null) && (structural && TyType.isNullable (Obj.magic (TypedExpr.getType (Obj.magic operand) ())) () || unresolvedStructure) then let tempString = ref (HxString.hx_null_string : string) in (
+          ignore (if receiverType == Obj.magic (HxRuntime.hx_null) then let __assign_179 = ("an unknown structure" : string) in (
+            tempString := __assign_179;
+            __assign_179
+          ) else let __assign_180 = (TyType.getDisplay (Obj.magic receiverType) () : string) in (
+            tempString := __assign_180;
+            __assign_180
+          ));
+          let tempString1 = ref (HxString.hx_null_string : string) in (
+            ignore (if TypedExpr.getPosition (Obj.magic expression) () == Obj.magic (HxRuntime.hx_null) then let __assign_181 = "" in (
+              tempString1 := __assign_181;
+              __assign_181
+            ) else let __assign_182 = let __string_part_183 = " at " in let __string_part_184 = HxString.toStdString (HxPos.toString (Obj.magic (TypedExpr.getPosition (Obj.magic expression) ())) ()) in __string_part_183 ^ __string_part_184 in (
+              tempString1 := __assign_182;
+              __assign_182
+            ));
+            HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_187 = "unsupported native OCaml compound assignment " in let __string_part_188 = HxString.toStdString assignment in let __string_part_189 = " on optional structure field `" in let __string_part_190 = HxString.toStdString (let __array_read_receiver_185 = TypedExpr.getTexts (Obj.magic operand) () in let __array_read_index_186 = 0 in HxArray.get (Obj.magic __array_read_receiver_185) __array_read_index_186) in let __string_part_191 = "` of " in let __string_part_192 = HxString.toStdString (!tempString) in let __string_part_193 = HxString.toStdString (!tempString1) in let __string_part_194 = " (haxe_ocaml-gaa3a)" in ((((((__string_part_187 ^ __string_part_188) ^ __string_part_189) ^ __string_part_190) ^ __string_part_191) ^ __string_part_192) ^ __string_part_193) ^ __string_part_194)) ["Dynamic"]
+          )
+        ) else ());
+        let plainInstanceField = field != Obj.magic (HxRuntime.hx_null) && not (TyFieldInfo.getIsStatic (Obj.magic field) ()) && not (TyFieldInfo.getIsFinal (Obj.magic field) ()) && ((let __string_eq_left_195 = TyFieldInfo.getPropertyGet (Obj.magic field) () in let __string_eq_right_196 = "" in HxString.equals __string_eq_left_195 __string_eq_right_196) || (let __string_eq_left_197 = TyFieldInfo.getPropertyGet (Obj.magic field) () in let __string_eq_right_198 = "default" in HxString.equals __string_eq_left_197 __string_eq_right_198)) && ((let __string_eq_left_199 = TyFieldInfo.getPropertySet (Obj.magic field) () in let __string_eq_right_200 = "" in HxString.equals __string_eq_left_199 __string_eq_right_200) || (let __string_eq_left_201 = TyFieldInfo.getPropertySet (Obj.magic field) () in let __string_eq_right_202 = "default" in HxString.equals __string_eq_left_201 __string_eq_right_202)) in (
+          ignore (if (let __enum_eq_left_203 = TypedExpr.getTag (Obj.magic operand) () in let __enum_eq_right_204 = TypedExpr.FieldRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_203) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_204)) && (let __enum_eq_left_205 = TypedExpr.getTag (Obj.magic operand) () in let __enum_eq_right_206 = TypedExpr.NameRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_205) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_206)) || not (structural) && not (plainInstanceField) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr expression)) else ());
+          let bitwiseUpdate = structural && isBitwiseAssignment (assignment : string) && (let __string_eq_left_207 = key in let __string_eq_right_208 = "primitive:Int" in HxString.equals __string_eq_left_207 __string_eq_right_208) && (let __string_eq_left_209 = TyType.getSemanticKey (Obj.magic rightType) () in let __string_eq_right_210 = "primitive:Int" in HxString.equals __string_eq_left_209 __string_eq_right_210) in (
+            ignore (if not (stringAppend) && not (intUpdate) && not (floatUpdate) && not (bitwiseUpdate) || (let __string_eq_left_211 = TyType.getSemanticKey (Obj.magic (TypedExpr.getType (Obj.magic expression) ())) () in let __string_eq_right_212 = key in not (HxString.equals __string_eq_left_211 __string_eq_right_212)) then (
+              ignore (if isRefusedFieldCompound (assignment : string) (Obj.magic (TypedExpr.getType (Obj.magic operand) ())) structural then let tempString2 = ref (HxString.hx_null_string : string) in (
+                ignore (if structural then let __assign_213 = (let __array_read_receiver_214 = TypedExpr.getTexts (Obj.magic operand) () in let __array_read_index_215 = 0 in HxArray.get (Obj.magic __array_read_receiver_214) __array_read_index_215 : string) in (
+                  tempString2 := __assign_213;
+                  __assign_213
+                ) else let __assign_216 = (TyFieldInfo.getName (Obj.magic field) () : string) in (
+                  tempString2 := __assign_216;
+                  __assign_216
+                ));
+                let tempString3 = ref (HxString.hx_null_string : string) in (
+                  ignore (if TypedExpr.getPosition (Obj.magic expression) () == Obj.magic (HxRuntime.hx_null) then let __assign_217 = "" in (
+                    tempString3 := __assign_217;
+                    __assign_217
+                  ) else let __assign_218 = let __string_part_219 = " at " in let __string_part_220 = HxString.toStdString (HxPos.toString (Obj.magic (TypedExpr.getPosition (Obj.magic expression) ())) ()) in __string_part_219 ^ __string_part_220 in (
+                    tempString3 := __assign_218;
+                    __assign_218
+                  ));
+                  HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_221 = "unsupported native OCaml compound assignment " in let __string_part_222 = HxString.toStdString assignment in let __string_part_223 = " on field `" in let __string_part_224 = HxString.toStdString (!tempString2) in let __string_part_225 = "` of type " in let __string_part_226 = HxString.toStdString (TyType.getDisplay (Obj.magic (TypedExpr.getType (Obj.magic operand) ())) ()) in let __string_part_227 = " with a right operand of type " in let __string_part_228 = HxString.toStdString (TyType.getDisplay (Obj.magic rightType) ()) in let __string_part_229 = HxString.toStdString (!tempString3) in let __string_part_230 = " (refusing to emit a placeholder that would drop the update)" in ((((((((__string_part_221 ^ __string_part_222) ^ __string_part_223) ^ __string_part_224) ^ __string_part_225) ^ __string_part_226) ^ __string_part_227) ^ __string_part_228) ^ __string_part_229) ^ __string_part_230)) ["Dynamic"]
+                )
+              ) else ());
+              Stdlib.raise (HxRuntime.Hx_return (Obj.repr expression))
+            ) else ());
+            let valueType = Obj.magic (TypedExpr.getType (Obj.magic operand) ()) in let position = Obj.magic (TypedExpr.getPosition (Obj.magic expression) ()) in let read = fun binding -> TypedExpr.localRead (TyLocalBinding.getSourceName (Obj.magic binding) () : string) (Obj.magic (TyLocalBinding.getType (Obj.magic binding) ())) (Obj.magic position) (Obj.magic binding) in let capture = fun binding value -> TypedExpr.temporary (TyLocalBinding.getSourceName (Obj.magic binding) () : string) (TyType.getCanonicalDisplay (Obj.magic (TyLocalBinding.getType (Obj.magic binding) ())) () : string) (Obj.magic value) (Obj.magic (TyType.fromHintText ("Void" : string))) (Obj.magic position) (Obj.magic binding) in let sequence = Obj.magic (HxArray.create ()) in let place = ref (Obj.magic operand) in (
+              ignore (if let __enum_eq_left_231 = TypedExpr.getTag (Obj.magic operand) () in let __enum_eq_right_232 = TypedExpr.FieldRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_231) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_232) then ignore (let receiver = Obj.magic (let __array_read_receiver_233 = TypedExpr.getExpressions (Obj.magic operand) () in let __array_read_index_234 = 0 in HxArray.get (Obj.magic __array_read_receiver_233) __array_read_index_234) in let receiverBinding = Obj.magic (TyCompilerTemporaryAllocator.allocate (Obj.magic allocator) ("receiver" : string) (Obj.magic (TypedExpr.getType (Obj.magic receiver) ()))) in (
+                ignore (let __array_receiver_235 = Obj.magic sequence in let __array_arg_0_236 = Obj.magic (capture (Obj.magic receiverBinding) (Obj.magic receiver)) in HxArray.push __array_receiver_235 __array_arg_0_236);
+                let tempRight = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t) in (
+                  ignore (if structural then let __assign_237 = Obj.magic (TypedExpr.fieldRead (Obj.magic (read (Obj.magic receiverBinding))) (let __array_read_receiver_238 = TypedExpr.getTexts (Obj.magic operand) () in let __array_read_index_239 = 0 in HxArray.get (Obj.magic __array_read_receiver_238) __array_read_index_239 : string) (Obj.magic valueType) (Obj.magic position) (Obj.magic (HxRuntime.hx_null))) in (
+                    tempRight := __assign_237;
+                    __assign_237
+                  ) else let __assign_240 = Obj.magic (TypedExpr.fieldRead (Obj.magic (read (Obj.magic receiverBinding))) (TyFieldInfo.getName (Obj.magic field) () : string) (Obj.magic valueType) (Obj.magic position) (Obj.magic field)) in (
+                    tempRight := __assign_240;
+                    __assign_240
+                  ));
+                  let __assign_241 = Obj.magic (!tempRight) in (
+                    place := __assign_241;
+                    __assign_241
+                  )
+                )
+              )) else ());
+              let oldBinding = Obj.magic (TyCompilerTemporaryAllocator.allocate (Obj.magic allocator) ("old" : string) (Obj.magic valueType)) in let rightBinding = Obj.magic (TyCompilerTemporaryAllocator.allocate (Obj.magic allocator) ("right" : string) (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_242 = children in let __array_read_index_243 = 1 in HxArray.get (Obj.magic __array_read_receiver_242) __array_read_index_243)) ()))) in let nextBinding = Obj.magic (TyCompilerTemporaryAllocator.allocate (Obj.magic allocator) ("next" : string) (Obj.magic valueType)) in (
+                ignore (let __array_receiver_244 = Obj.magic sequence in let __array_arg_0_245 = Obj.magic (capture (Obj.magic oldBinding) (Obj.magic (!place))) in HxArray.push __array_receiver_244 __array_arg_0_245);
+                ignore (let __array_receiver_246 = Obj.magic sequence in let __array_arg_0_247 = Obj.magic (capture (Obj.magic rightBinding) (Obj.magic (let __array_read_receiver_248 = children in let __array_read_index_249 = 1 in HxArray.get (Obj.magic __array_read_receiver_248) __array_read_index_249))) in HxArray.push __array_receiver_246 __array_arg_0_247);
+                let next = Obj.magic (TypedExpr.binary (let __string_receiver_250 = assignment in let __string_argument_0_251 = 0 in let __string_argument_1_252 = HxInt.sub (let __string_receiver_253 = assignment in HxString.length __string_receiver_253) 1 in HxString.substr __string_receiver_250 __string_argument_0_251 __string_argument_1_252 : string) (Obj.magic (read (Obj.magic oldBinding))) (Obj.magic (read (Obj.magic rightBinding))) (Obj.magic valueType) (Obj.magic position)) in (
+                  ignore (let __array_receiver_254 = Obj.magic sequence in let __array_arg_0_255 = Obj.magic (capture (Obj.magic nextBinding) (Obj.magic (TypedExpr.assign (Obj.magic (!place)) (Obj.magic next) (Obj.magic valueType) (Obj.magic position)))) in HxArray.push __array_receiver_254 __array_arg_0_255);
+                  ignore (let __array_receiver_256 = Obj.magic sequence in let __array_arg_0_257 = Obj.magic (read (Obj.magic nextBinding)) in HxArray.push __array_receiver_256 __array_arg_0_257);
+                  TypedExpr.block (Obj.magic sequence) (Obj.magic valueType) (Obj.magic position)
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+) with
+  | HxRuntime.Hx_return __ret_258 -> (Obj.obj __ret_258 : TypedExpr.t) : TypedExpr.t)
 
 let rec lowerExpression = fun expression allocator -> (try (
   ignore (if (let __enum_eq_left_1 = TypedExpr.getTag (Obj.magic expression) () in let __enum_eq_right_2 = TypedExpr.MacroExpr in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_1) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_2)) || (let __enum_eq_left_3 = TypedExpr.getTag (Obj.magic expression) () in let __enum_eq_right_4 = TypedExpr.MacroType in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_3) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_4)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr expression)) else ());
@@ -45,65 +215,90 @@ let rec lowerExpression = fun expression allocator -> (try (
       ignore (if (let __enum_eq_left_14 = TypedExpr.getTag (Obj.magic rebuilt) () in let __enum_eq_right_15 = TypedExpr.Unary in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_14) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_15)) || HxArray.length _g <> 1 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr rebuilt)) else ());
       let op = TypedExpr.getUnaryOperator (Obj.magic rebuilt) () in (
         ignore (if (let __enum_eq_left_16 = op in let __enum_eq_right_17 = HxUnaryOperator.Increment in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_16) != HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_17)) && (let __enum_eq_left_18 = op in let __enum_eq_right_19 = HxUnaryOperator.Decrement in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_18) != HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_19)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr rebuilt)) else ());
-        let operand = Obj.magic (let __array_read_receiver_20 = _g in let __array_read_index_21 = 0 in HxArray.get (Obj.magic __array_read_receiver_20) __array_read_index_21) in let field = Obj.magic (TypedExpr.getFieldInfo (Obj.magic operand) ()) in let intType = Obj.magic (TyType.fromHintText ("Int" : string)) in (
-          ignore (if (let __enum_eq_left_22 = TypedExpr.getTag (Obj.magic operand) () in let __enum_eq_right_23 = TypedExpr.FieldRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_22) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_23)) && (let __enum_eq_left_24 = TypedExpr.getTag (Obj.magic operand) () in let __enum_eq_right_25 = TypedExpr.NameRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_24) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_25)) || field == Obj.magic (HxRuntime.hx_null) || TyFieldInfo.getIsStatic (Obj.magic field) () || TyFieldInfo.getIsFinal (Obj.magic field) () || (let __string_eq_left_26 = TyType.getSemanticKey (Obj.magic (TyFieldInfo.getType (Obj.magic field) ())) () in let __string_eq_right_27 = TyType.getSemanticKey (Obj.magic intType) () in not (HxString.equals __string_eq_left_26 __string_eq_right_27)) || (let __string_eq_left_28 = TyFieldInfo.getPropertyGet (Obj.magic field) () in let __string_eq_right_29 = "" in not (HxString.equals __string_eq_left_28 __string_eq_right_29)) && (let __string_eq_left_30 = TyFieldInfo.getPropertyGet (Obj.magic field) () in let __string_eq_right_31 = "default" in not (HxString.equals __string_eq_left_30 __string_eq_right_31)) || (let __string_eq_left_32 = TyFieldInfo.getPropertySet (Obj.magic field) () in let __string_eq_right_33 = "" in not (HxString.equals __string_eq_left_32 __string_eq_right_33)) && (let __string_eq_left_34 = TyFieldInfo.getPropertySet (Obj.magic field) () in let __string_eq_right_35 = "default" in not (HxString.equals __string_eq_left_34 __string_eq_right_35)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr rebuilt)) else ());
-          let position = Obj.magic (TypedExpr.getPosition (Obj.magic expression) ()) in let tempMaybeTypedExpr = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t) in (
-            ignore (if let __enum_eq_left_36 = TypedExpr.getTag (Obj.magic operand) () in let __enum_eq_right_37 = TypedExpr.FieldRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_36) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_37) then let __assign_38 = Obj.magic (Obj.magic (let __array_read_receiver_39 = TypedExpr.getExpressions (Obj.magic operand) () in let __array_read_index_40 = 0 in HxArray.get (Obj.magic __array_read_receiver_39) __array_read_index_40)) in (
-              tempMaybeTypedExpr := __assign_38;
-              __assign_38
-            ) else let __assign_41 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-              tempMaybeTypedExpr := __assign_41;
-              __assign_41
-            ));
-            let receiver = Obj.magic (!tempMaybeTypedExpr) in let tempMaybeTyLocalBinding = ref (Obj.magic (HxRuntime.hx_null) : TyLocalBinding.t) in (
-              ignore (if receiver == Obj.magic (HxRuntime.hx_null) then let __assign_42 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-                tempMaybeTyLocalBinding := __assign_42;
-                __assign_42
-              ) else let __assign_43 = Obj.magic (Obj.magic (TyCompilerTemporaryAllocator.allocate (Obj.magic allocator) ("receiver" : string) (Obj.magic (TypedExpr.getType (Obj.magic receiver) ())))) in (
-                tempMaybeTyLocalBinding := __assign_43;
-                __assign_43
-              ));
-              let receiverBinding = Obj.magic (!tempMaybeTyLocalBinding) in let oldBinding = Obj.magic (TyCompilerTemporaryAllocator.allocate (Obj.magic allocator) ("old" : string) (Obj.magic intType)) in let nextBinding = Obj.magic (TyCompilerTemporaryAllocator.allocate (Obj.magic allocator) ("next" : string) (Obj.magic intType)) in let read = fun binding -> TypedExpr.localRead (TyLocalBinding.getSourceName (Obj.magic binding) () : string) (Obj.magic (TyLocalBinding.getType (Obj.magic binding) ())) (Obj.magic position) (Obj.magic binding) in let capture = fun binding value -> TypedExpr.temporary (TyLocalBinding.getSourceName (Obj.magic binding) () : string) (TyType.getCanonicalDisplay (Obj.magic (TyLocalBinding.getType (Obj.magic binding) ())) () : string) (Obj.magic value) (Obj.magic (TyType.fromHintText ("Void" : string))) (Obj.magic position) (Obj.magic binding) in let tempTypedExpr = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t) in (
-                ignore (if receiverBinding == Obj.magic (HxRuntime.hx_null) then let __assign_44 = Obj.magic operand in (
-                  tempTypedExpr := __assign_44;
+        let operand = Obj.magic (let __array_read_receiver_20 = _g in let __array_read_index_21 = 0 in HxArray.get (Obj.magic __array_read_receiver_20) __array_read_index_21) in (
+          ignore (if let __enum_eq_left_22 = TypedExpr.getTag (Obj.magic operand) () in let __enum_eq_right_23 = TypedExpr.ArrayAccess in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_22) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_23) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (lowerIndexedStep (Obj.magic rebuilt) (Obj.magic operand) (Obj.magic allocator)))) else ());
+          let field = Obj.magic (TypedExpr.getFieldInfo (Obj.magic operand) ()) in let valueType = Obj.magic (TypedExpr.getType (Obj.magic operand) ()) in let stepType = Obj.magic (steppedType (Obj.magic valueType)) in (
+            ignore (if stepType == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr rebuilt)) else ());
+            let key = (TyType.getSemanticKey (Obj.magic stepType) () : string) in let structural = field == Obj.magic (HxRuntime.hx_null) && (let __enum_eq_left_24 = TypedExpr.getTag (Obj.magic operand) () in let __enum_eq_right_25 = TypedExpr.FieldRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_24) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_25)) && TyType.isAnonymous (Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_26 = TypedExpr.getExpressions (Obj.magic operand) () in let __array_read_index_27 = 0 in HxArray.get (Obj.magic __array_read_receiver_26) __array_read_index_27)) ())))) () in (
+              ignore (if structural && TyType.isNullable (Obj.magic valueType) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr rebuilt)) else ());
+              ignore (if not (structural) && ((let __enum_eq_left_28 = TypedExpr.getTag (Obj.magic operand) () in let __enum_eq_right_29 = TypedExpr.FieldRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_28) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_29)) && (let __enum_eq_left_30 = TypedExpr.getTag (Obj.magic operand) () in let __enum_eq_right_31 = TypedExpr.NameRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_30) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_31)) || field == Obj.magic (HxRuntime.hx_null) || TyFieldInfo.getIsStatic (Obj.magic field) () || TyFieldInfo.getIsFinal (Obj.magic field) () || (let __string_eq_left_32 = TyType.getSemanticKey (Obj.magic (TyFieldInfo.getType (Obj.magic field) ())) () in let __string_eq_right_33 = TyType.getSemanticKey (Obj.magic valueType) () in not (HxString.equals __string_eq_left_32 __string_eq_right_33)) || (let __string_eq_left_34 = TyFieldInfo.getPropertyGet (Obj.magic field) () in let __string_eq_right_35 = "" in not (HxString.equals __string_eq_left_34 __string_eq_right_35)) && (let __string_eq_left_36 = TyFieldInfo.getPropertyGet (Obj.magic field) () in let __string_eq_right_37 = "default" in not (HxString.equals __string_eq_left_36 __string_eq_right_37)) || (let __string_eq_left_38 = TyFieldInfo.getPropertySet (Obj.magic field) () in let __string_eq_right_39 = "" in not (HxString.equals __string_eq_left_38 __string_eq_right_39)) && (let __string_eq_left_40 = TyFieldInfo.getPropertySet (Obj.magic field) () in let __string_eq_right_41 = "default" in not (HxString.equals __string_eq_left_40 __string_eq_right_41))) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr rebuilt)) else ());
+              let position = Obj.magic (TypedExpr.getPosition (Obj.magic expression) ()) in let tempMaybeTypedExpr = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t) in (
+                ignore (if let __enum_eq_left_42 = TypedExpr.getTag (Obj.magic operand) () in let __enum_eq_right_43 = TypedExpr.FieldRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_42) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_43) then let __assign_44 = Obj.magic (Obj.magic (let __array_read_receiver_45 = TypedExpr.getExpressions (Obj.magic operand) () in let __array_read_index_46 = 0 in HxArray.get (Obj.magic __array_read_receiver_45) __array_read_index_46)) in (
+                  tempMaybeTypedExpr := __assign_44;
                   __assign_44
-                ) else let __assign_45 = Obj.magic (TypedExpr.fieldRead (Obj.magic (read (Obj.magic receiverBinding))) (TyFieldInfo.getName (Obj.magic field) () : string) (Obj.magic intType) (Obj.magic position) (Obj.magic field)) in (
-                  tempTypedExpr := __assign_45;
-                  __assign_45
+                ) else let __assign_47 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+                  tempMaybeTypedExpr := __assign_47;
+                  __assign_47
                 ));
-                let place = Obj.magic (!tempTypedExpr) in let tempString = ref (HxString.hx_null_string : string) in (
-                  ignore (if let __enum_eq_left_46 = op in let __enum_eq_right_47 = HxUnaryOperator.Increment in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_46) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_47) then let __assign_48 = "+" in (
+                let receiver = Obj.magic (!tempMaybeTypedExpr) in let tempString = ref (HxString.hx_null_string : string) in (
+                  ignore (if structural then let __assign_48 = (let __array_read_receiver_49 = TypedExpr.getTexts (Obj.magic operand) () in let __array_read_index_50 = 0 in HxArray.get (Obj.magic __array_read_receiver_49) __array_read_index_50 : string) in (
                     tempString := __assign_48;
                     __assign_48
-                  ) else let __assign_49 = "-" in (
-                    tempString := __assign_49;
-                    __assign_49
+                  ) else let __assign_51 = (TyFieldInfo.getName (Obj.magic field) () : string) in (
+                    tempString := __assign_51;
+                    __assign_51
                   ));
-                  let next = Obj.magic (TypedExpr.binary (!tempString : string) (Obj.magic (read (Obj.magic oldBinding))) (Obj.magic (TypedExpr.intLiteral 1 (Obj.magic intType) (Obj.magic position))) (Obj.magic intType) (Obj.magic position)) in let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t HxArray.t) in (
-                    ignore (if receiverBinding == Obj.magic (HxRuntime.hx_null) then let __assign_50 = Obj.magic (let __arr_51 = HxArray.create () in __arr_51) in (
-                      tempArray1 := __assign_50;
-                      __assign_50
-                    ) else let __assign_52 = Obj.magic (let __arr_53 = HxArray.create () in (
-                      ignore (HxArray.push __arr_53 (capture (Obj.magic receiverBinding) (Obj.magic receiver)));
-                      __arr_53
-                    )) in (
-                      tempArray1 := __assign_52;
+                  let fieldName = (!tempString : string) in let tempMaybeTyLocalBinding = ref (Obj.magic (HxRuntime.hx_null) : TyLocalBinding.t) in (
+                    ignore (if receiver == Obj.magic (HxRuntime.hx_null) then let __assign_52 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+                      tempMaybeTyLocalBinding := __assign_52;
                       __assign_52
+                    ) else let __assign_53 = Obj.magic (Obj.magic (TyCompilerTemporaryAllocator.allocate (Obj.magic allocator) ("receiver" : string) (Obj.magic (TypedExpr.getType (Obj.magic receiver) ())))) in (
+                      tempMaybeTyLocalBinding := __assign_53;
+                      __assign_53
                     ));
-                    let sequence = Obj.magic (!tempArray1) in let tempTyLocalBinding = ref (Obj.magic (HxRuntime.hx_null) : TyLocalBinding.t) in (
-                      ignore (if let __enum_eq_left_54 = TypedExpr.getUnaryFixity (Obj.magic rebuilt) () in let __enum_eq_right_55 = HxUnaryFixity.Postfix in HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.repr __enum_eq_left_54) == HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.repr __enum_eq_right_55) then let __assign_56 = Obj.magic oldBinding in (
-                        tempTyLocalBinding := __assign_56;
-                        __assign_56
-                      ) else let __assign_57 = Obj.magic nextBinding in (
-                        tempTyLocalBinding := __assign_57;
-                        __assign_57
+                    let receiverBinding = Obj.magic (!tempMaybeTyLocalBinding) in let oldBinding = Obj.magic (TyCompilerTemporaryAllocator.allocate (Obj.magic allocator) ("old" : string) (Obj.magic valueType)) in let nextBinding = Obj.magic (TyCompilerTemporaryAllocator.allocate (Obj.magic allocator) ("next" : string) (Obj.magic stepType)) in let read = fun binding -> TypedExpr.localRead (TyLocalBinding.getSourceName (Obj.magic binding) () : string) (Obj.magic (TyLocalBinding.getType (Obj.magic binding) ())) (Obj.magic position) (Obj.magic binding) in let capture = fun binding value -> TypedExpr.temporary (TyLocalBinding.getSourceName (Obj.magic binding) () : string) (TyType.getCanonicalDisplay (Obj.magic (TyLocalBinding.getType (Obj.magic binding) ())) () : string) (Obj.magic value) (Obj.magic (TyType.fromHintText ("Void" : string))) (Obj.magic position) (Obj.magic binding) in let tempTypedExpr = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t) in (
+                      ignore (if receiverBinding == Obj.magic (HxRuntime.hx_null) then let __assign_54 = Obj.magic operand in (
+                        tempTypedExpr := __assign_54;
+                        __assign_54
+                      ) else let __assign_55 = Obj.magic (TypedExpr.fieldRead (Obj.magic (read (Obj.magic receiverBinding))) (fieldName : string) (Obj.magic valueType) (Obj.magic position) (Obj.magic field)) in (
+                        tempTypedExpr := __assign_55;
+                        __assign_55
                       ));
-                      TypedExpr.block (Obj.magic (let __array_receiver_58 = Obj.magic sequence in let __array_arg_0_59 = Obj.magic (let __arr_60 = HxArray.create () in (
-                        ignore (HxArray.push __arr_60 (capture (Obj.magic oldBinding) (Obj.magic place)));
-                        ignore (HxArray.push __arr_60 (capture (Obj.magic nextBinding) (Obj.magic (TypedExpr.assign (Obj.magic place) (Obj.magic next) (Obj.magic intType) (Obj.magic position)))));
-                        ignore (HxArray.push __arr_60 (read (Obj.magic (!tempTyLocalBinding))));
-                        __arr_60
-                      )) in HxArray.concat __array_receiver_58 __array_arg_0_59)) (Obj.magic intType) (Obj.magic position)
+                      let place = Obj.magic (!tempTypedExpr) in let tempTypedExpr1 = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t) in (
+                        ignore (if let __string_eq_left_56 = key in let __string_eq_right_57 = "primitive:Int" in HxString.equals __string_eq_left_56 __string_eq_right_57 then let __assign_58 = Obj.magic (TypedExpr.intLiteral 1 (Obj.magic stepType) (Obj.magic position)) in (
+                          tempTypedExpr1 := __assign_58;
+                          __assign_58
+                        ) else let __assign_59 = Obj.magic (TypedExpr.floatLiteral 1.0 (Obj.magic stepType) (Obj.magic position)) in (
+                          tempTypedExpr1 := __assign_59;
+                          __assign_59
+                        ));
+                        let one = Obj.magic (!tempTypedExpr1) in let tempString1 = ref (HxString.hx_null_string : string) in (
+                          ignore (if let __enum_eq_left_60 = op in let __enum_eq_right_61 = HxUnaryOperator.Increment in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_60) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_61) then let __assign_62 = "+" in (
+                            tempString1 := __assign_62;
+                            __assign_62
+                          ) else let __assign_63 = "-" in (
+                            tempString1 := __assign_63;
+                            __assign_63
+                          ));
+                          let next = Obj.magic (TypedExpr.binary (!tempString1 : string) (Obj.magic (read (Obj.magic oldBinding))) (Obj.magic one) (Obj.magic stepType) (Obj.magic position)) in let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t HxArray.t) in (
+                            ignore (if receiverBinding == Obj.magic (HxRuntime.hx_null) then let __assign_64 = Obj.magic (let __arr_65 = HxArray.create () in __arr_65) in (
+                              tempArray1 := __assign_64;
+                              __assign_64
+                            ) else let __assign_66 = Obj.magic (let __arr_67 = HxArray.create () in (
+                              ignore (HxArray.push __arr_67 (capture (Obj.magic receiverBinding) (Obj.magic receiver)));
+                              __arr_67
+                            )) in (
+                              tempArray1 := __assign_66;
+                              __assign_66
+                            ));
+                            let sequence = Obj.magic (!tempArray1) in let tempTyLocalBinding = ref (Obj.magic (HxRuntime.hx_null) : TyLocalBinding.t) in (
+                              ignore (if let __enum_eq_left_68 = TypedExpr.getUnaryFixity (Obj.magic rebuilt) () in let __enum_eq_right_69 = HxUnaryFixity.Postfix in HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.repr __enum_eq_left_68) == HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.repr __enum_eq_right_69) then let __assign_70 = Obj.magic oldBinding in (
+                                tempTyLocalBinding := __assign_70;
+                                __assign_70
+                              ) else let __assign_71 = Obj.magic nextBinding in (
+                                tempTyLocalBinding := __assign_71;
+                                __assign_71
+                              ));
+                              let result = Obj.magic (read (Obj.magic (!tempTyLocalBinding))) in TypedExpr.block (Obj.magic (let __array_receiver_72 = Obj.magic sequence in let __array_arg_0_73 = Obj.magic (let __arr_74 = HxArray.create () in (
+                                ignore (HxArray.push __arr_74 (capture (Obj.magic oldBinding) (Obj.magic place)));
+                                ignore (HxArray.push __arr_74 (capture (Obj.magic nextBinding) (Obj.magic (TypedExpr.assign (Obj.magic place) (Obj.magic next) (Obj.magic stepType) (Obj.magic position)))));
+                                ignore (HxArray.push __arr_74 result);
+                                __arr_74
+                              )) in HxArray.concat __array_receiver_72 __array_arg_0_73)) (Obj.magic (TypedExpr.getType (Obj.magic result) ())) (Obj.magic position)
+                            )
+                          )
+                        )
+                      )
                     )
                   )
                 )
@@ -115,90 +310,90 @@ let rec lowerExpression = fun expression allocator -> (try (
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_61 -> (Obj.obj __ret_61 : TypedExpr.t) : TypedExpr.t)
+  | HxRuntime.Hx_return __ret_75 -> (Obj.obj __ret_75 : TypedExpr.t) : TypedExpr.t)
 
-let rec lowerStatement = fun statement allocator -> let _g = Obj.magic (let __arr_119 = HxArray.create () in __arr_119) in let _g1 = ref 0 in let _g2 = Obj.magic (TypedStmt.getExpressions (Obj.magic statement) ()) in (
-  ignore (while !_g1 < HxArray.length _g2 do ignore (let expression = Obj.magic (let __array_read_receiver_120 = _g2 in let __array_read_index_121 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_120) __array_read_index_121) in (
-    ignore (let __old_122 = !_g1 in let __new_123 = HxInt.add __old_122 1 in (
-      ignore (_g1 := __new_123);
-      __new_123
+let rec lowerStatement = fun statement allocator -> let _g = Obj.magic (let __arr_259 = HxArray.create () in __arr_259) in let _g1 = ref 0 in let _g2 = Obj.magic (TypedStmt.getExpressions (Obj.magic statement) ()) in (
+  ignore (while !_g1 < HxArray.length _g2 do ignore (let expression = Obj.magic (let __array_read_receiver_260 = _g2 in let __array_read_index_261 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_260) __array_read_index_261) in (
+    ignore (let __old_262 = !_g1 in let __new_263 = HxInt.add __old_262 1 in (
+      ignore (_g1 := __new_263);
+      __new_263
     ));
-    let __array_receiver_124 = Obj.magic _g in let __array_arg_0_125 = Obj.magic (lowerExpression (Obj.magic expression) (Obj.magic allocator)) in HxArray.push __array_receiver_124 __array_arg_0_125
+    let __array_receiver_264 = Obj.magic _g in let __array_arg_0_265 = Obj.magic (lowerExpression (Obj.magic expression) (Obj.magic allocator)) in HxArray.push __array_receiver_264 __array_arg_0_265
   )) done);
-  let tempArray = Obj.magic _g in let _g = Obj.magic (let __arr_126 = HxArray.create () in __arr_126) in let _g1 = ref 0 in let _g2 = Obj.magic (TypedStmt.getStatements (Obj.magic statement) ()) in (
-    ignore (while !_g1 < HxArray.length _g2 do ignore (let child = Obj.magic (let __array_read_receiver_127 = _g2 in let __array_read_index_128 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_127) __array_read_index_128) in (
-      ignore (let __old_129 = !_g1 in let __new_130 = HxInt.add __old_129 1 in (
-        ignore (_g1 := __new_130);
-        __new_130
+  let tempArray = Obj.magic _g in let _g = Obj.magic (let __arr_266 = HxArray.create () in __arr_266) in let _g1 = ref 0 in let _g2 = Obj.magic (TypedStmt.getStatements (Obj.magic statement) ()) in (
+    ignore (while !_g1 < HxArray.length _g2 do ignore (let child = Obj.magic (let __array_read_receiver_267 = _g2 in let __array_read_index_268 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_267) __array_read_index_268) in (
+      ignore (let __old_269 = !_g1 in let __new_270 = HxInt.add __old_269 1 in (
+        ignore (_g1 := __new_270);
+        __new_270
       ));
-      let __array_receiver_131 = Obj.magic _g in let __array_arg_0_132 = Obj.magic (lowerStatement (Obj.magic child) (Obj.magic allocator)) in HxArray.push __array_receiver_131 __array_arg_0_132
+      let __array_receiver_271 = Obj.magic _g in let __array_arg_0_272 = Obj.magic (lowerStatement (Obj.magic child) (Obj.magic allocator)) in HxArray.push __array_receiver_271 __array_arg_0_272
     )) done);
     let tempArray1 = Obj.magic _g in TypedStmt.withChildren (Obj.magic statement) (Obj.magic tempArray) (Obj.magic tempArray1)
   )
 )
 
-let lowerClasses = fun classes -> let _g = Obj.magic (let __arr_133 = HxArray.create () in __arr_133) in let _g1 = ref 0 in (
-  ignore (while !_g1 < HxArray.length classes do ignore (let typedClass = Obj.magic (let __array_read_receiver_134 = classes in let __array_read_index_135 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_134) __array_read_index_135) in (
-    ignore (let __old_136 = !_g1 in let __new_137 = HxInt.add __old_136 1 in (
-      ignore (_g1 := __new_137);
-      __new_137
+let lowerClasses = fun classes -> let _g = Obj.magic (let __arr_273 = HxArray.create () in __arr_273) in let _g1 = ref 0 in (
+  ignore (while !_g1 < HxArray.length classes do ignore (let typedClass = Obj.magic (let __array_read_receiver_274 = classes in let __array_read_index_275 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_274) __array_read_index_275) in (
+    ignore (let __old_276 = !_g1 in let __new_277 = HxInt.add __old_276 1 in (
+      ignore (_g1 := __new_277);
+      __new_277
     ));
-    let tempArray = ref (Obj.magic (HxRuntime.hx_null) : TypedFunction.t HxArray.t) in let _g2 = Obj.magic (let __arr_138 = HxArray.create () in __arr_138) in let _g3 = ref 0 in let _g4 = Obj.magic (TypedClass.getFunctions (Obj.magic typedClass) ()) in (
-      ignore (while !_g3 < HxArray.length _g4 do ignore (let fn = Obj.magic (let __array_read_receiver_139 = _g4 in let __array_read_index_140 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_139) __array_read_index_140) in (
-        ignore (let __old_141 = !_g3 in let __new_142 = HxInt.add __old_141 1 in (
-          ignore (_g3 := __new_142);
-          __new_142
+    let tempArray = ref (Obj.magic (HxRuntime.hx_null) : TypedFunction.t HxArray.t) in let _g2 = Obj.magic (let __arr_278 = HxArray.create () in __arr_278) in let _g3 = ref 0 in let _g4 = Obj.magic (TypedClass.getFunctions (Obj.magic typedClass) ()) in (
+      ignore (while !_g3 < HxArray.length _g4 do ignore (let fn = Obj.magic (let __array_read_receiver_279 = _g4 in let __array_read_index_280 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_279) __array_read_index_280) in (
+        ignore (let __old_281 = !_g3 in let __new_282 = HxInt.add __old_281 1 in (
+          ignore (_g3 := __new_282);
+          __new_282
         ));
-        let allocator = TyCompilerTemporaryAllocator.create (TypedFunction.getStableIdentity (Obj.magic fn) () : string) ("typed-int-field-update-v1" : string) ("__hxhx_int_field_" : string) in let body = Obj.magic (TypedFunction.getBody (Obj.magic fn) ()) in let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : TypedStmt.t HxArray.t) in let _g5 = Obj.magic (let __arr_143 = HxArray.create () in __arr_143) in let _g6 = ref 0 in let _g7 = Obj.magic (TypedFunctionBody.getStatements (Obj.magic body) ()) in (
-          ignore (while !_g6 < HxArray.length _g7 do ignore (let statement = Obj.magic (let __array_read_receiver_144 = _g7 in let __array_read_index_145 = !_g6 in HxArray.get (Obj.magic __array_read_receiver_144) __array_read_index_145) in (
-            ignore (let __old_146 = !_g6 in let __new_147 = HxInt.add __old_146 1 in (
-              ignore (_g6 := __new_147);
-              __new_147
+        let allocator = TyCompilerTemporaryAllocator.create (TypedFunction.getStableIdentity (Obj.magic fn) () : string) ("typed-int-field-update-v1" : string) ("__hxhx_int_field_" : string) in let body = Obj.magic (TypedFunction.getBody (Obj.magic fn) ()) in let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : TypedStmt.t HxArray.t) in let _g5 = Obj.magic (let __arr_283 = HxArray.create () in __arr_283) in let _g6 = ref 0 in let _g7 = Obj.magic (TypedFunctionBody.getStatements (Obj.magic body) ()) in (
+          ignore (while !_g6 < HxArray.length _g7 do ignore (let statement = Obj.magic (let __array_read_receiver_284 = _g7 in let __array_read_index_285 = !_g6 in HxArray.get (Obj.magic __array_read_receiver_284) __array_read_index_285) in (
+            ignore (let __old_286 = !_g6 in let __new_287 = HxInt.add __old_286 1 in (
+              ignore (_g6 := __new_287);
+              __new_287
             ));
-            let __array_receiver_148 = Obj.magic _g5 in let __array_arg_0_149 = Obj.magic (lowerStatement (Obj.magic statement) (Obj.magic allocator)) in HxArray.push __array_receiver_148 __array_arg_0_149
+            let __array_receiver_288 = Obj.magic _g5 in let __array_arg_0_289 = Obj.magic (lowerStatement (Obj.magic statement) (Obj.magic allocator)) in HxArray.push __array_receiver_288 __array_arg_0_289
           )) done);
-          ignore (let __assign_150 = Obj.magic _g5 in (
-            tempArray1 := __assign_150;
-            __assign_150
+          ignore (let __assign_290 = Obj.magic _g5 in (
+            tempArray1 := __assign_290;
+            __assign_290
           ));
-          let __array_receiver_151 = Obj.magic _g2 in let __array_arg_0_152 = Obj.magic (TypedFunction.withBody (Obj.magic fn) (Obj.magic (TypedFunctionBody.create (Obj.magic (!tempArray1)) (TypedFunctionBody.getSourceFingerprint (Obj.magic body) () : string))) (Obj.magic (HxRuntime.hx_null))) in HxArray.push __array_receiver_151 __array_arg_0_152
+          let __array_receiver_291 = Obj.magic _g2 in let __array_arg_0_292 = Obj.magic (TypedFunction.withBody (Obj.magic fn) (Obj.magic (TypedFunctionBody.create (Obj.magic (!tempArray1)) (TypedFunctionBody.getSourceFingerprint (Obj.magic body) () : string))) (Obj.magic (HxRuntime.hx_null))) in HxArray.push __array_receiver_291 __array_arg_0_292
         )
       )) done);
-      ignore (let __assign_153 = Obj.magic _g2 in (
-        tempArray := __assign_153;
-        __assign_153
+      ignore (let __assign_293 = Obj.magic _g2 in (
+        tempArray := __assign_293;
+        __assign_293
       ));
-      let functions = Obj.magic (!tempArray) in let tempArray2 = ref (Obj.magic (HxRuntime.hx_null) : TypedFieldInitializer.t HxArray.t) in let _g2 = Obj.magic (let __arr_154 = HxArray.create () in __arr_154) in let _g3 = ref 0 in let _g4 = Obj.magic (TypedClass.getFieldInitializers (Obj.magic typedClass) ()) in (
-        ignore (while !_g3 < HxArray.length _g4 do ignore (let hx_initializer = Obj.magic (let __array_read_receiver_155 = _g4 in let __array_read_index_156 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_155) __array_read_index_156) in (
-          ignore (let __old_157 = !_g3 in let __new_158 = HxInt.add __old_157 1 in (
-            ignore (_g3 := __new_158);
-            __new_158
+      let functions = Obj.magic (!tempArray) in let tempArray2 = ref (Obj.magic (HxRuntime.hx_null) : TypedFieldInitializer.t HxArray.t) in let _g2 = Obj.magic (let __arr_294 = HxArray.create () in __arr_294) in let _g3 = ref 0 in let _g4 = Obj.magic (TypedClass.getFieldInitializers (Obj.magic typedClass) ()) in (
+        ignore (while !_g3 < HxArray.length _g4 do ignore (let hx_initializer = Obj.magic (let __array_read_receiver_295 = _g4 in let __array_read_index_296 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_295) __array_read_index_296) in (
+          ignore (let __old_297 = !_g3 in let __new_298 = HxInt.add __old_297 1 in (
+            ignore (_g3 := __new_298);
+            __new_298
           ));
-          let field = Obj.magic (TypedFieldInitializer.getField (Obj.magic hx_initializer) ()) in let allocator = TyCompilerTemporaryAllocator.create (TyFieldInfo.getCanonicalKey (Obj.magic field) () : string) ("typed-int-field-update-v1" : string) ("__hxhx_int_field_" : string) in let __array_receiver_159 = Obj.magic _g2 in let __array_arg_0_160 = Obj.magic (TypedFieldInitializer.create (Obj.magic field) (Obj.magic (lowerExpression (Obj.magic (TypedFieldInitializer.getExpression (Obj.magic hx_initializer) ())) (Obj.magic allocator)))) in HxArray.push __array_receiver_159 __array_arg_0_160
+          let field = Obj.magic (TypedFieldInitializer.getField (Obj.magic hx_initializer) ()) in let allocator = TyCompilerTemporaryAllocator.create (TyFieldInfo.getCanonicalKey (Obj.magic field) () : string) ("typed-int-field-update-v1" : string) ("__hxhx_int_field_" : string) in let __array_receiver_299 = Obj.magic _g2 in let __array_arg_0_300 = Obj.magic (TypedFieldInitializer.create (Obj.magic field) (Obj.magic (lowerExpression (Obj.magic (TypedFieldInitializer.getExpression (Obj.magic hx_initializer) ())) (Obj.magic allocator)))) in HxArray.push __array_receiver_299 __array_arg_0_300
         )) done);
-        ignore (let __assign_161 = Obj.magic _g2 in (
-          tempArray2 := __assign_161;
-          __assign_161
+        ignore (let __assign_301 = Obj.magic _g2 in (
+          tempArray2 := __assign_301;
+          __assign_301
         ));
-        let initializers = Obj.magic (!tempArray2) in let __array_receiver_162 = Obj.magic _g in let __array_arg_0_163 = Obj.magic (TypedClass.withMembers (Obj.magic typedClass) (let __anon_164 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_164 "functions" (Obj.repr functions));
-          ignore (HxAnon.set __anon_164 "fields" (Obj.repr (TypedClass.getFields (Obj.magic typedClass) ())));
-          ignore (HxAnon.set __anon_164 "initializers" (Obj.repr initializers));
-          __anon_164
-        ))) in HxArray.push __array_receiver_162 __array_arg_0_163
+        let initializers = Obj.magic (!tempArray2) in let __array_receiver_302 = Obj.magic _g in let __array_arg_0_303 = Obj.magic (TypedClass.withMembers (Obj.magic typedClass) (let __anon_304 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_304 "functions" (Obj.repr functions));
+          ignore (HxAnon.set __anon_304 "fields" (Obj.repr (TypedClass.getFields (Obj.magic typedClass) ())));
+          ignore (HxAnon.set __anon_304 "initializers" (Obj.repr initializers));
+          __anon_304
+        ))) in HxArray.push __array_receiver_302 __array_arg_0_303
       )
     )
   )) done);
   _g
 )
 
-let lowerModules = fun modules -> let _g = Obj.magic (let __arr_165 = HxArray.create () in __arr_165) in let _g1 = ref 0 in (
-  ignore (while !_g1 < HxArray.length modules do ignore (let hx_module = Obj.magic (let __array_read_receiver_166 = modules in let __array_read_index_167 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_166) __array_read_index_167) in (
-    ignore (let __old_168 = !_g1 in let __new_169 = HxInt.add __old_168 1 in (
-      ignore (_g1 := __new_169);
-      __new_169
+let lowerModules = fun modules -> let _g = Obj.magic (let __arr_305 = HxArray.create () in __arr_305) in let _g1 = ref 0 in (
+  ignore (while !_g1 < HxArray.length modules do ignore (let hx_module = Obj.magic (let __array_read_receiver_306 = modules in let __array_read_index_307 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_306) __array_read_index_307) in (
+    ignore (let __old_308 = !_g1 in let __new_309 = HxInt.add __old_308 1 in (
+      ignore (_g1 := __new_309);
+      __new_309
     ));
-    let __array_receiver_170 = Obj.magic _g in let __array_arg_0_171 = Obj.magic (TypedModule.withTypedClasses (Obj.magic hx_module) (Obj.magic (lowerClasses (Obj.magic (TypedModule.getTypedClasses (Obj.magic hx_module) ()))))) in HxArray.push __array_receiver_170 __array_arg_0_171
+    let __array_receiver_310 = Obj.magic _g in let __array_arg_0_311 = Obj.magic (TypedModule.withTypedClasses (Obj.magic hx_module) (Obj.magic (lowerClasses (Obj.magic (TypedModule.getTypedClasses (Obj.magic hx_module) ()))))) in HxArray.push __array_receiver_310 __array_arg_0_311
   )) done);
   _g
 )

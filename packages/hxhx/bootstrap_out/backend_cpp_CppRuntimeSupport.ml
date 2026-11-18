@@ -37,7 +37,7 @@ let quoteCppString = fun (value : string) -> (try (
           | 92 -> ignore (StringBuf.add (Obj.magic out) (Obj.repr "\\\\"))
           | _ -> ignore (if code < 32 || code = 127 then ignore ((
             ignore (StringBuf.add (Obj.magic out) (Obj.repr "\\"));
-            let hundreds = code / 64 in let tens = HxInt.rem code 64 / 8 in let ones = HxInt.rem code 8 in (
+            let hundreds = Stdlib.Int32.to_int (Stdlib.Int32.of_int (int_of_float (float_of_int code /. float_of_int 64))) in let tens = Stdlib.Int32.to_int (Stdlib.Int32.of_int (int_of_float (float_of_int (HxInt.rem code 64) /. float_of_int 8))) in let ones = HxInt.rem code 8 in (
               ignore (StringBuf.add (Obj.magic out) (Obj.repr (string_of_int hundreds)));
               ignore (StringBuf.add (Obj.magic out) (Obj.repr (string_of_int tens)));
               StringBuf.add (Obj.magic out) (Obj.repr (string_of_int ones))

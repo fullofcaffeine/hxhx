@@ -13,13 +13,48 @@ type stage3ocamllocalcompoundkind =
 
 let __reflaxe_ocaml__ = ()
 
-let isArithmeticOperator = fun op -> let tempResult = ref (false : bool) in (
+let bitwiseFunction = fun op -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+  ignore (match op with
+    | "&=" -> let __assign_4 = Obj.magic ("HxInt.logand" : string) in (
+      tempResult := __assign_4;
+      __assign_4
+    )
+    | "<<=" -> let __assign_5 = Obj.magic ("HxInt.shl" : string) in (
+      tempResult := __assign_5;
+      __assign_5
+    )
+    | ">>=" -> let __assign_6 = Obj.magic ("HxInt.shr" : string) in (
+      tempResult := __assign_6;
+      __assign_6
+    )
+    | ">>>=" -> let __assign_7 = Obj.magic ("HxInt.ushr" : string) in (
+      tempResult := __assign_7;
+      __assign_7
+    )
+    | "^=" -> let __assign_8 = Obj.magic ("HxInt.logxor" : string) in (
+      tempResult := __assign_8;
+      __assign_8
+    )
+    | "|=" -> let __assign_9 = Obj.magic ("HxInt.logor" : string) in (
+      tempResult := __assign_9;
+      __assign_9
+    )
+    | _ -> let __assign_3 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempResult := __assign_3;
+      __assign_3
+    ));
+  !tempResult
+)
+
+let isBitwiseOperator = fun op -> bitwiseFunction (op : string) != Obj.magic (HxRuntime.hx_null)
+
+let isCompoundOperator = fun op -> let tempResult = ref (false : bool) in (
   ignore (match op with
     | "%=" | "*=" | "+=" | "-=" | "/=" -> let __assign_2 = true in (
       tempResult := __assign_2;
       __assign_2
     )
-    | _ -> let __assign_1 = false in (
+    | _ -> let __assign_1 = isBitwiseOperator (op : string) in (
       tempResult := __assign_1;
       __assign_1
     ));
@@ -28,32 +63,32 @@ let isArithmeticOperator = fun op -> let tempResult = ref (false : bool) in (
 
 let kindOf = fun hx_type -> let carrier = (Backend_ocaml_Stage3OcamlNullablePrimitive.innerPrimitive (Obj.magic hx_type) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
   ignore (let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-    ignore (if carrier != Obj.magic (HxRuntime.hx_null) then let __assign_3 = Obj.magic (carrier : string) in (
-      tempMaybeString := __assign_3;
-      __assign_3
-    ) else let __assign_4 = Obj.magic (TyType.getSemanticKey (Obj.magic (TyAliasExpansion.reveal (Obj.magic hx_type))) () : string) in (
-      tempMaybeString := __assign_4;
-      __assign_4
+    ignore (if carrier != Obj.magic (HxRuntime.hx_null) then let __assign_10 = Obj.magic (carrier : string) in (
+      tempMaybeString := __assign_10;
+      __assign_10
+    ) else let __assign_11 = Obj.magic (TyType.getSemanticKey (Obj.magic (TyAliasExpansion.reveal (Obj.magic hx_type))) () : string) in (
+      tempMaybeString := __assign_11;
+      __assign_11
     ));
-    let _g = (!tempMaybeString : string) in if _g == Obj.magic (HxRuntime.hx_null) then let __assign_5 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-      tempResult := __assign_5;
-      __assign_5
+    let _g = (!tempMaybeString : string) in if _g == Obj.magic (HxRuntime.hx_null) then let __assign_12 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempResult := __assign_12;
+      __assign_12
     ) else match _g with
-      | "primitive:Float" -> let __assign_7 = Obj.magic (Obj.repr FloatUpdate) in (
-        tempResult := __assign_7;
-        __assign_7
+      | "primitive:Float" -> let __assign_14 = Obj.magic (Obj.repr FloatUpdate) in (
+        tempResult := __assign_14;
+        __assign_14
       )
-      | "primitive:Int" -> let __assign_8 = Obj.magic (Obj.repr IntUpdate) in (
-        tempResult := __assign_8;
-        __assign_8
+      | "primitive:Int" -> let __assign_15 = Obj.magic (Obj.repr IntUpdate) in (
+        tempResult := __assign_15;
+        __assign_15
       )
-      | "primitive:String" -> let __assign_9 = Obj.magic (Obj.repr StringUpdate) in (
-        tempResult := __assign_9;
-        __assign_9
+      | "primitive:String" -> let __assign_16 = Obj.magic (Obj.repr StringUpdate) in (
+        tempResult := __assign_16;
+        __assign_16
       )
-      | _ -> let __assign_6 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-        tempResult := __assign_6;
-        __assign_6
+      | _ -> let __assign_13 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+        tempResult := __assign_13;
+        __assign_13
       )
   ));
   Obj.magic (!tempResult)
@@ -62,12 +97,12 @@ let kindOf = fun hx_type -> let carrier = (Backend_ocaml_Stage3OcamlNullablePrim
 let hasValueForm = fun hx_type -> TyType.isDynamic (Obj.magic hx_type) () || kindOf (Obj.magic hx_type) != Obj.magic (HxRuntime.hx_null)
 
 let store = fun ident next carrier names -> let bound = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_compound_value" : string) : string) in let tempString = ref (HxString.hx_null_string : string) in (
-  ignore (if carrier == Obj.magic (HxRuntime.hx_null) then let __assign_13 = (("(" ^ HxString.toStdString next) ^ ")" : string) in (
-    tempString := __assign_13;
-    __assign_13
-  ) else let __assign_14 = (Backend_ocaml_Stage3OcamlNullablePrimitive.box (carrier : string) (next : string) : string) in (
-    tempString := __assign_14;
-    __assign_14
+  ignore (if carrier == Obj.magic (HxRuntime.hx_null) then let __assign_20 = (("(" ^ HxString.toStdString next) ^ ")" : string) in (
+    tempString := __assign_20;
+    __assign_20
+  ) else let __assign_21 = (Backend_ocaml_Stage3OcamlNullablePrimitive.box (carrier : string) (next : string) : string) in (
+    tempString := __assign_21;
+    __assign_21
   ));
   let stored = (!tempString : string) in ((((((((("(let " ^ HxString.toStdString bound) ^ " = ") ^ HxString.toStdString stored) ^ " in (") ^ HxString.toStdString ident) ^ " := ") ^ HxString.toStdString bound) ^ "; ") ^ HxString.toStdString bound) ^ "))"
 )
@@ -75,71 +110,74 @@ let store = fun ident next carrier names -> let bound = (Backend_ocaml_Stage3Oca
 let arithmetic = fun kind op -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string -> string -> string) in (
   ignore (match kind with
     | IntUpdate -> (match op with
-      | "%=" -> let __assign_20 = Obj.magic (fun left right -> ((("(HxInt.rem (" ^ HxString.toStdString left) ^ ") (") ^ HxString.toStdString right) ^ "))") in (
-        tempResult := __assign_20;
-        __assign_20
+      | "%=" -> let __assign_35 = Obj.magic (fun left right -> ((("(HxInt.rem (" ^ HxString.toStdString left) ^ ") (") ^ HxString.toStdString right) ^ "))") in (
+        tempResult := __assign_35;
+        __assign_35
       )
-      | "*=" -> let __assign_21 = Obj.magic (fun left right -> ((("(HxInt.mul (" ^ HxString.toStdString left) ^ ") (") ^ HxString.toStdString right) ^ "))") in (
-        tempResult := __assign_21;
-        __assign_21
+      | "*=" -> let __assign_36 = Obj.magic (fun left right -> ((("(HxInt.mul (" ^ HxString.toStdString left) ^ ") (") ^ HxString.toStdString right) ^ "))") in (
+        tempResult := __assign_36;
+        __assign_36
       )
-      | "+=" -> let __assign_22 = Obj.magic (fun left right -> ((("(HxInt.add (" ^ HxString.toStdString left) ^ ") (") ^ HxString.toStdString right) ^ "))") in (
+      | "+=" -> let __assign_37 = Obj.magic (fun left right -> ((("(HxInt.add (" ^ HxString.toStdString left) ^ ") (") ^ HxString.toStdString right) ^ "))") in (
+        tempResult := __assign_37;
+        __assign_37
+      )
+      | "-=" -> let __assign_38 = Obj.magic (fun left right -> ((("(HxInt.sub (" ^ HxString.toStdString left) ^ ") (") ^ HxString.toStdString right) ^ "))") in (
+        tempResult := __assign_38;
+        __assign_38
+      )
+      | _ -> if bitwiseFunction (op : string) != Obj.magic (HxRuntime.hx_null) then let __assign_22 = Obj.magic (fun left right -> let __string_part_23 = "(" in let __string_part_24 = HxString.toStdString (bitwiseFunction (op : string)) in let __string_part_25 = " (" in let __string_part_26 = HxString.toStdString left in let __string_part_27 = ") (" in let __string_part_28 = HxString.toStdString right in let __string_part_29 = "))" in (((((__string_part_23 ^ __string_part_24) ^ __string_part_25) ^ __string_part_26) ^ __string_part_27) ^ __string_part_28) ^ __string_part_29) in (
         tempResult := __assign_22;
         __assign_22
-      )
-      | "-=" -> let __assign_23 = Obj.magic (fun left right -> ((("(HxInt.sub (" ^ HxString.toStdString left) ^ ") (") ^ HxString.toStdString right) ^ "))") in (
-        tempResult := __assign_23;
-        __assign_23
-      )
-      | _ -> HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_16 = "unsupported OCaml local compound assignment value: " in let __string_part_17 = HxString.toStdString op in let __string_part_18 = " on " in let __string_part_19 = HxString.toStdString (let __enum_ctor_15 = Obj.repr kind in if __enum_ctor_15 == HxRuntime.hx_null then Obj.magic (HxRuntime.hx_null) else match Obj.obj __enum_ctor_15 with
+      ) else HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_31 = "unsupported OCaml local compound assignment value: " in let __string_part_32 = HxString.toStdString op in let __string_part_33 = " on " in let __string_part_34 = HxString.toStdString (let __enum_ctor_30 = Obj.repr kind in if __enum_ctor_30 == HxRuntime.hx_null then Obj.magic (HxRuntime.hx_null) else match Obj.obj __enum_ctor_30 with
         | IntUpdate -> "IntUpdate"
         | FloatUpdate -> "FloatUpdate"
-        | StringUpdate -> "StringUpdate") in ((__string_part_16 ^ __string_part_17) ^ __string_part_18) ^ __string_part_19)) ["Dynamic"])
+        | StringUpdate -> "StringUpdate") in ((__string_part_31 ^ __string_part_32) ^ __string_part_33) ^ __string_part_34)) ["Dynamic"])
     | FloatUpdate -> (match op with
-      | "%=" -> let __assign_29 = Obj.magic (fun left right -> ((("(mod_float (" ^ HxString.toStdString left) ^ ") (") ^ HxString.toStdString right) ^ "))") in (
-        tempResult := __assign_29;
-        __assign_29
+      | "%=" -> let __assign_44 = Obj.magic (fun left right -> ((("(mod_float (" ^ HxString.toStdString left) ^ ") (") ^ HxString.toStdString right) ^ "))") in (
+        tempResult := __assign_44;
+        __assign_44
       )
-      | "*=" -> let __assign_30 = Obj.magic (fun left right -> ((("((" ^ HxString.toStdString left) ^ ") *. (") ^ HxString.toStdString right) ^ "))") in (
-        tempResult := __assign_30;
-        __assign_30
+      | "*=" -> let __assign_45 = Obj.magic (fun left right -> ((("((" ^ HxString.toStdString left) ^ ") *. (") ^ HxString.toStdString right) ^ "))") in (
+        tempResult := __assign_45;
+        __assign_45
       )
-      | "+=" -> let __assign_31 = Obj.magic (fun left right -> ((("((" ^ HxString.toStdString left) ^ ") +. (") ^ HxString.toStdString right) ^ "))") in (
-        tempResult := __assign_31;
-        __assign_31
+      | "+=" -> let __assign_46 = Obj.magic (fun left right -> ((("((" ^ HxString.toStdString left) ^ ") +. (") ^ HxString.toStdString right) ^ "))") in (
+        tempResult := __assign_46;
+        __assign_46
       )
-      | "-=" -> let __assign_32 = Obj.magic (fun left right -> ((("((" ^ HxString.toStdString left) ^ ") -. (") ^ HxString.toStdString right) ^ "))") in (
-        tempResult := __assign_32;
-        __assign_32
+      | "-=" -> let __assign_47 = Obj.magic (fun left right -> ((("((" ^ HxString.toStdString left) ^ ") -. (") ^ HxString.toStdString right) ^ "))") in (
+        tempResult := __assign_47;
+        __assign_47
       )
-      | "/=" -> let __assign_33 = Obj.magic (fun left right -> ((("((" ^ HxString.toStdString left) ^ ") /. (") ^ HxString.toStdString right) ^ "))") in (
-        tempResult := __assign_33;
-        __assign_33
+      | "/=" -> let __assign_48 = Obj.magic (fun left right -> ((("((" ^ HxString.toStdString left) ^ ") /. (") ^ HxString.toStdString right) ^ "))") in (
+        tempResult := __assign_48;
+        __assign_48
       )
-      | _ -> HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_25 = "unsupported OCaml local compound assignment value: " in let __string_part_26 = HxString.toStdString op in let __string_part_27 = " on " in let __string_part_28 = HxString.toStdString (let __enum_ctor_24 = Obj.repr kind in if __enum_ctor_24 == HxRuntime.hx_null then Obj.magic (HxRuntime.hx_null) else match Obj.obj __enum_ctor_24 with
+      | _ -> HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_40 = "unsupported OCaml local compound assignment value: " in let __string_part_41 = HxString.toStdString op in let __string_part_42 = " on " in let __string_part_43 = HxString.toStdString (let __enum_ctor_39 = Obj.repr kind in if __enum_ctor_39 == HxRuntime.hx_null then Obj.magic (HxRuntime.hx_null) else match Obj.obj __enum_ctor_39 with
         | IntUpdate -> "IntUpdate"
         | FloatUpdate -> "FloatUpdate"
-        | StringUpdate -> "StringUpdate") in ((__string_part_25 ^ __string_part_26) ^ __string_part_27) ^ __string_part_28)) ["Dynamic"])
-    | StringUpdate -> if let __string_eq_left_34 = op in let __string_eq_right_35 = "+=" in HxString.equals __string_eq_left_34 __string_eq_right_35 then let __assign_36 = Obj.magic (fun left right -> ((("((" ^ HxString.toStdString left) ^ ") ^ (") ^ HxString.toStdString right) ^ "))") in (
-      tempResult := __assign_36;
-      __assign_36
-    ) else HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_38 = "unsupported OCaml local compound assignment value: " in let __string_part_39 = HxString.toStdString op in let __string_part_40 = " on " in let __string_part_41 = HxString.toStdString (let __enum_ctor_37 = Obj.repr kind in if __enum_ctor_37 == HxRuntime.hx_null then Obj.magic (HxRuntime.hx_null) else match Obj.obj __enum_ctor_37 with
+        | StringUpdate -> "StringUpdate") in ((__string_part_40 ^ __string_part_41) ^ __string_part_42) ^ __string_part_43)) ["Dynamic"])
+    | StringUpdate -> if let __string_eq_left_49 = op in let __string_eq_right_50 = "+=" in HxString.equals __string_eq_left_49 __string_eq_right_50 then let __assign_51 = Obj.magic (fun left right -> ((("((HxString.toStdString (" ^ HxString.toStdString left) ^ ")) ^ (") ^ HxString.toStdString right) ^ "))") in (
+      tempResult := __assign_51;
+      __assign_51
+    ) else HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_53 = "unsupported OCaml local compound assignment value: " in let __string_part_54 = HxString.toStdString op in let __string_part_55 = " on " in let __string_part_56 = HxString.toStdString (let __enum_ctor_52 = Obj.repr kind in if __enum_ctor_52 == HxRuntime.hx_null then Obj.magic (HxRuntime.hx_null) else match Obj.obj __enum_ctor_52 with
       | IntUpdate -> "IntUpdate"
       | FloatUpdate -> "FloatUpdate"
-      | StringUpdate -> "StringUpdate") in ((__string_part_38 ^ __string_part_39) ^ __string_part_40) ^ __string_part_41)) ["Dynamic"]);
+      | StringUpdate -> "StringUpdate") in ((__string_part_53 ^ __string_part_54) ^ __string_part_55) ^ __string_part_56)) ["Dynamic"]);
   !tempResult
 )
 
 let value = fun input -> (
   ignore (if Obj.obj (HxAnon.get input "names") == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml local compound assignment value requires a local naming owner") ["Dynamic"] else ());
-  let operation = arithmetic (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "backend.ocaml.Stage3OcamlLocalCompoundKind" (HxAnon.get input "kind")))) (Obj.obj (HxAnon.get input "op") : string) in let next = (Backend_ocaml_Stage3OcamlNullablePrimitive.orderedArithmetic (let __anon_10 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_10 "left" (Obj.repr (Obj.obj (HxAnon.get input "old"))));
-    ignore (HxAnon.set __anon_10 "leftInner" (Obj.repr (Obj.obj (HxAnon.get input "carrier"))));
-    ignore (HxAnon.set __anon_10 "right" (Obj.repr (Obj.obj (HxAnon.get input "right"))));
-    ignore (HxAnon.set __anon_10 "rightInner" (Obj.repr (Obj.obj (HxAnon.get input "rightCarrier"))));
-    ignore (HxAnon.set __anon_10 "asFloat" (HxRuntime.box_bool (let __enum_eq_left_11 = Obj.obj (HxEnum.unbox_or_obj "backend.ocaml.Stage3OcamlLocalCompoundKind" (HxAnon.get input "kind")) in let __enum_eq_right_12 = FloatUpdate in HxEnum.unbox_or_obj "backend.ocaml.Stage3OcamlLocalCompoundKind" (Obj.repr __enum_eq_left_11) == HxEnum.unbox_or_obj "backend.ocaml.Stage3OcamlLocalCompoundKind" (Obj.repr __enum_eq_right_12))));
-    ignore (HxAnon.set __anon_10 "names" (Obj.repr (Obj.obj (HxAnon.get input "names"))));
-    ignore (HxAnon.set __anon_10 "body" (Obj.repr operation));
-    __anon_10
+  let operation = arithmetic (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "backend.ocaml.Stage3OcamlLocalCompoundKind" (HxAnon.get input "kind")))) (Obj.obj (HxAnon.get input "op") : string) in let next = (Backend_ocaml_Stage3OcamlNullablePrimitive.orderedArithmetic (let __anon_17 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_17 "left" (Obj.repr (Obj.obj (HxAnon.get input "old"))));
+    ignore (HxAnon.set __anon_17 "leftInner" (Obj.repr (Obj.obj (HxAnon.get input "carrier"))));
+    ignore (HxAnon.set __anon_17 "right" (Obj.repr (Obj.obj (HxAnon.get input "right"))));
+    ignore (HxAnon.set __anon_17 "rightInner" (Obj.repr (Obj.obj (HxAnon.get input "rightCarrier"))));
+    ignore (HxAnon.set __anon_17 "asFloat" (HxRuntime.box_bool (let __enum_eq_left_18 = Obj.obj (HxEnum.unbox_or_obj "backend.ocaml.Stage3OcamlLocalCompoundKind" (HxAnon.get input "kind")) in let __enum_eq_right_19 = FloatUpdate in HxEnum.unbox_or_obj "backend.ocaml.Stage3OcamlLocalCompoundKind" (Obj.repr __enum_eq_left_18) == HxEnum.unbox_or_obj "backend.ocaml.Stage3OcamlLocalCompoundKind" (Obj.repr __enum_eq_right_19))));
+    ignore (HxAnon.set __anon_17 "names" (Obj.repr (Obj.obj (HxAnon.get input "names"))));
+    ignore (HxAnon.set __anon_17 "body" (Obj.repr operation));
+    __anon_17
   )) : string) in store (Obj.obj (HxAnon.get input "ident") : string) (next : string) (Obj.obj (HxAnon.get input "carrier") : string) (Obj.magic (Obj.obj (HxAnon.get input "names")))
 )

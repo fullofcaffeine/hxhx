@@ -33,13 +33,23 @@ let sub (a : int) (b : int) : int =
 let mul (a : int) (b : int) : int =
   to_int (Int32.mul (of_int a) (of_int b))
 
+(* Int division or modulo by zero.
+
+   Haxe leaves this target-specific. Upstream eval returns the Float NaN even
+   for an Int-typed `%`, but this runtime stores Int as an unboxed 32-bit
+   value that cannot hold NaN. Like the static targets (Neko, JVM, C#), it
+   throws a catchable Haxe exception instead of OCaml's `Division_by_zero`,
+   which no Haxe `catch` can handle (haxe_ocaml-7g1qx). *)
+let division_by_zero () : 'a =
+  HxRuntime.hx_throw_typed (Obj.repr "Division by zero") [ "String"; "Dynamic" ]
+
 let div (a : int) (b : int) : int =
   (* Division overflows are unspecified in Haxe beyond the Int32 range; we keep
      the Int32 round-to-zero behavior by operating in Int32 space. *)
-  to_int (Int32.div (of_int a) (of_int b))
+  if b = 0 then division_by_zero () else to_int (Int32.div (of_int a) (of_int b))
 
 let rem (a : int) (b : int) : int =
-  to_int (Int32.rem (of_int a) (of_int b))
+  if b = 0 then division_by_zero () else to_int (Int32.rem (of_int a) (of_int b))
 
 let neg (a : int) : int =
   to_int (Int32.neg (of_int a))

@@ -68,16 +68,17 @@ let render = fun input indent -> let tempTyType = ref (Obj.magic (HxRuntime.hx_n
         | HxSwitchPattern.PBool _ -> 2
         | HxSwitchPattern.PString _ -> 3
         | HxSwitchPattern.PInt _ -> 4
-        | HxSwitchPattern.PEnumValue _ -> 5
-        | HxSwitchPattern.PEnumExtract (_, _, _) -> 6
-        | HxSwitchPattern.PObject (_, _) -> 7
-        | HxSwitchPattern.PCapture (_, _) -> 8
-        | HxSwitchPattern.PArray _ -> 9
-        | HxSwitchPattern.PExtractor (_, _) -> 10
-        | HxSwitchPattern.PGuard (_, _) -> 11
-        | HxSwitchPattern.PUnsupportedPattern _ -> 12
-        | HxSwitchPattern.PBind _ -> 13
-        | HxSwitchPattern.POr _ -> 14) = 1 then ignore ((
+        | HxSwitchPattern.PFloat _ -> 5
+        | HxSwitchPattern.PEnumValue _ -> 6
+        | HxSwitchPattern.PEnumExtract (_, _, _) -> 7
+        | HxSwitchPattern.PObject (_, _) -> 8
+        | HxSwitchPattern.PCapture (_, _) -> 9
+        | HxSwitchPattern.PArray _ -> 10
+        | HxSwitchPattern.PExtractor (_, _) -> 11
+        | HxSwitchPattern.PGuard (_, _) -> 12
+        | HxSwitchPattern.PUnsupportedPattern _ -> 13
+        | HxSwitchPattern.PBind _ -> 14
+        | HxSwitchPattern.POr _ -> 15) = 1 then ignore ((
         ignore (if !fallback >= 0 then HxType.hx_throw_typed_rtti (Obj.repr "managed switch repeats its default arm") ["Dynamic"] else ());
         let __assign_23 = index in (
           fallback := __assign_23;
