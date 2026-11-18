@@ -61,6 +61,11 @@ class OcamlDynamicCarrierModel {
 				true;
 			case TAnonymous(_) if (anonymousUsesHxAnon(type)):
 				true;
+			// An unbound type variable left after typing, such as the result of an inlined
+			// `Map<String, Dynamic>.get`, holds a Dynamic value; the string model already
+			// prints it through the Dynamic path (haxe_ocaml-9cqxj.6).
+			case TMono(_):
+				true;
 			case _:
 				false;
 		}
