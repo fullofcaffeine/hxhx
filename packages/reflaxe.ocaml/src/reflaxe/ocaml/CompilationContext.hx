@@ -217,6 +217,17 @@ class CompilationContext {
 	public final enumModuleIdByFullName:Map<String, String> = [];
 
 	/**
+	 * OCaml type name and type-parameter count of each compiled enum (`pack.Enum`).
+	 *
+	 * Why
+	 * - Two enums in one Haxe module can share a constructor name, as `haxe.macro.Type.TAbstract`
+	 *   and `haxe.macro.ModuleType.TAbstract` do. In the generated OCaml module the later
+	 *   constructor shadows the earlier one, so `HxTypeRegistry.ml` annotates each constructor it
+	 *   builds with its enum's type to let OCaml pick the right one.
+	 */
+	public final enumOcamlTypeByFullName:Map<String, {name:String, params:Int}> = [];
+
+	/**
 	 * Constructor signatures by enum+constructor (`pack.Enum:Ctor`).
 	 *
 	 * Why

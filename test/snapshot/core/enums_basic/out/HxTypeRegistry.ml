@@ -29,26 +29,26 @@ let init () : unit =
   HxType.register_enum_ctor_layout "haxe.StackItem" "Method" 3 (HxType.EnumBlock 2);
   HxType.register_enum_ctor_layout "haxe.StackItem" "LocalFunction" 4 (HxType.EnumBlock 3);
   HxType.register_enum_ctor "MyEnum" "A" (fun (_args : Obj.t HxArray.t) ->
-    Obj.repr (MyEnum.A)
+    Obj.repr (MyEnum.A : MyEnum.myenum)
   );
   HxType.register_enum_ctor "MyEnum" "B" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'i' for MyEnum.B" in
-    Obj.repr (MyEnum.B a0)
+    Obj.repr (MyEnum.B a0 : MyEnum.myenum)
   );
   HxType.register_enum_ctor "MyEnum" "C" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'i' for MyEnum.C" in
     let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 's' for MyEnum.C" in
-    Obj.repr (MyEnum.C (a0, a1))
+    Obj.repr (MyEnum.C (a0, a1) : MyEnum.myenum)
   );
   HxType.register_enum_ctor "haxe.StackItem" "CFunction" (fun (_args : Obj.t HxArray.t) ->
-    Obj.repr (Haxe_CallStack.CFunction)
+    Obj.repr (Haxe_CallStack.CFunction : Haxe_CallStack.stackitem)
   );
   HxType.register_enum_ctor "haxe.StackItem" "Module" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'm' for haxe.StackItem.Module" in
-    Obj.repr (Haxe_CallStack.Module a0)
+    Obj.repr (Haxe_CallStack.Module a0 : Haxe_CallStack.stackitem)
   );
   HxType.register_enum_ctor "haxe.StackItem" "FilePos" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -56,18 +56,18 @@ let init () : unit =
     let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'file' for haxe.StackItem.FilePos" in
     let a2 = if len > 2 then Obj.obj ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'line' for haxe.StackItem.FilePos" in
     let a3 = if len > 3 then (HxArray.get args 3) else HxRuntime.hx_null in
-    Obj.repr (Haxe_CallStack.FilePos (a0, a1, a2, a3))
+    Obj.repr (Haxe_CallStack.FilePos (a0, a1, a2, a3) : Haxe_CallStack.stackitem)
   );
   HxType.register_enum_ctor "haxe.StackItem" "Method" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'classname' for haxe.StackItem.Method" in
     let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'method' for haxe.StackItem.Method" in
-    Obj.repr (Haxe_CallStack.Method (a0, a1))
+    Obj.repr (Haxe_CallStack.Method (a0, a1) : Haxe_CallStack.stackitem)
   );
   HxType.register_enum_ctor "haxe.StackItem" "LocalFunction" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then (HxArray.get args 0) else HxRuntime.hx_null in
-    Obj.repr (Haxe_CallStack.LocalFunction a0)
+    Obj.repr (Haxe_CallStack.LocalFunction a0 : Haxe_CallStack.stackitem)
   );
   HxType.register_class_ctor "Main" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Main.create ())
