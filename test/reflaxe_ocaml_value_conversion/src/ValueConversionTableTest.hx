@@ -135,6 +135,7 @@ class ValueConversionTableTest {
 			{actual: macro :ConversionBox, expected: "UnboxObj"},
 			{actual: macro :Int->Int, expected: "UnboxObj"},
 			{actual: macro :Null<Int>, expected: "null"},
+			{actual: macro :Null<Bool>, expected: "UntagNullableBool"},
 			{actual: macro :Dynamic, expected: "null"},
 			{actual: macro :ConversionColor, expected: "null"},
 		];

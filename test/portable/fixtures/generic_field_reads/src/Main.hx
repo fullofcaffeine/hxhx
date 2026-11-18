@@ -39,6 +39,8 @@ class Main {
 		Sys.println("function=" + step.value(4));
 		final box = new Holder<Box>(new Box(7));
 		Sys.println("class=" + box.value.size);
+		final maybe = new Holder<Null<Bool>>(true);
+		Sys.println("nullable bool=" + (maybe.value == true));
 		final pair = new Pair<String, Int>("left", 2);
 		Sys.println("pair=" + pair.first + ":" + (pair.second * 3));
 	}

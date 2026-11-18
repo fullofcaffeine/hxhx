@@ -7699,13 +7699,18 @@ class OcamlBuilder {
 			false);
 	}
 
+	// A Float behind Obj.t can arrive as an unboxed int: generic code stores
+	// `new Holder<Float>(1)` as `Obj.repr 1`, and a Dynamic can hold an Int. OCaml
+	// floats are always boxed, so `Obj.is_int` tells the two forms apart.
 	function safeUnboxNullableFloat(expr:OcamlExpr):OcamlExpr {
 		final tmp = freshTmp("nullable_float");
 		final hxNull = OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+		final obj = OcamlExpr.EIdent("Obj");
+		final asFloat = OcamlExpr.EIf(OcamlExpr.EApp(OcamlExpr.EField(obj, "is_int"), [OcamlExpr.EIdent(tmp)]),
+			OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [OcamlExpr.EApp(OcamlExpr.EField(obj, "obj"), [OcamlExpr.EIdent(tmp)])]),
+			OcamlExpr.EApp(OcamlExpr.EField(obj, "obj"), [OcamlExpr.EIdent(tmp)]));
 		return OcamlExpr.ELet(tmp, expr,
-			OcamlExpr.EIf(OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EIdent(tmp), hxNull), OcamlExpr.EConst(OcamlConst.CFloat("0.")),
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(tmp)])),
-			false);
+			OcamlExpr.EIf(OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EIdent(tmp), hxNull), OcamlExpr.EConst(OcamlConst.CFloat("0.")), asFloat), false);
 	}
 
 	function safeUnboxNullableBool(expr:OcamlExpr):OcamlExpr {

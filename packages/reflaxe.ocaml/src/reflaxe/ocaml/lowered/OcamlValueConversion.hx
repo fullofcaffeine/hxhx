@@ -199,6 +199,9 @@ class OcamlValueConversion {
 				UnboxObj;
 			case [TypeParameterValue, NativePrimitive(primitive)]:
 				UnboxNullablePrimitive(primitive);
+			case [TypeParameterValue, NullablePrimitive(BoolCarrier)]:
+				// Generic code may store the Boolean tagged; Null<Bool> holds it plain.
+				UntagNullableBool;
 			case [TypeParameterValue, ObjectReference] | [TypeParameterValue, FunctionValue]:
 				UnboxObj;
 			case _:
