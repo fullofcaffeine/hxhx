@@ -15,22 +15,22 @@
     }
   ],
   "counts": {
-    "total": 207,
+    "total": 208,
     "byDomain": {
-      "expression": 207
+      "expression": 208
     },
     "byMigrationFamily": {
       "builder-anon": 12,
       "builder-array": 25,
       "builder-boolean-carriers": 17,
       "builder-dynamic-runtime": 1,
-      "builder-enum": 20,
+      "builder-enum": 21,
       "builder-int": 58,
       "builder-nullable-carriers": 54,
       "builder-type": 20
     }
   },
-  "inventoryRevision": "970ce5986826d493aa93131c850c0899824c906b36804e31ee17b680dd9678b9",
+  "inventoryRevision": "a3284529934c96fe88d663518b7f60a5d1fd6fddd9cf3448e00595e048b6a445",
   "entries": [
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_int_unwrap::1",
@@ -1603,6 +1603,16 @@
       "migrationFamily": "builder-dynamic-runtime"
     },
     {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.unbox_or_obj::2",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EField(EIdent)",
+      "symbol": "HxEnum.unbox_or_obj",
+      "rootModule": "HxEnum",
+      "ordinal": 2,
+      "migrationFamily": "builder-enum"
+    },
+    {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.hx_null::32",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
       "domain": "expression",
@@ -1843,13 +1853,13 @@
       "migrationFamily": "builder-boolean-carriers"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.unbox_or_obj::2",
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.unbox_or_obj::3",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
       "domain": "expression",
       "construction": "EField(EIdent)",
       "symbol": "HxEnum.unbox_or_obj",
       "rootModule": "HxEnum",
-      "ordinal": 2,
+      "ordinal": 3,
       "migrationFamily": "builder-enum"
     },
     {
@@ -1873,13 +1883,13 @@
       "migrationFamily": "builder-enum"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.unbox_or_obj::3",
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.unbox_or_obj::4",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
       "domain": "expression",
       "construction": "EField(EIdent)",
       "symbol": "HxEnum.unbox_or_obj",
       "rootModule": "HxEnum",
-      "ordinal": 3,
+      "ordinal": 4,
       "migrationFamily": "builder-enum"
     },
     {
@@ -2073,13 +2083,13 @@
       "migrationFamily": "builder-boolean-carriers"
     },
     {
-      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.unbox_or_obj::4",
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.unbox_or_obj::5",
       "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
       "domain": "expression",
       "construction": "EField(EIdent)",
       "symbol": "HxEnum.unbox_or_obj",
       "rootModule": "HxEnum",
-      "ordinal": 4,
+      "ordinal": 5,
       "migrationFamily": "builder-enum"
     },
     {

@@ -75,6 +75,19 @@ enum OcamlValueConversionKind {
 		integer `1`, and a `Dynamic` reader prints or tests it as an `Int`.
 	**/
 	TagNullableBool;
+
+	/**
+		Read a `Null<Bool>` out of `Dynamic`. A Dynamic Boolean carries the tag from
+		`TagNullableBool` or `HxRuntime.box_bool`; `Null<Bool>` stores a plain `bool`.
+		`hx_null` stays `hx_null`.
+	**/
+	UntagNullableBool;
+
+	/**
+		Read a Haxe enum value out of `Dynamic`. A Dynamic enum is boxed with its enum
+		name (`HxEnum.box_if_needed`), so it needs `HxEnum.unbox_or_obj`, not `Obj.obj`.
+	**/
+	UnboxDynamicEnum(semanticTypeId:String);
 }
 
 /**
@@ -168,6 +181,8 @@ class OcamlValueConversion {
 				BoxNullable;
 			case [NullableEnum(source), NativeEnum(target)] if (source == target):
 				UnboxObj;
+			case [DynamicObj, NativeEnum(target)] | [DynamicObj, NullableEnum(target)] if (usesHaxeEnumRuntime(target)):
+				UnboxDynamicEnum(target);
 			case [DynamicObj, NativeEnum(_)] | [DynamicObj, NullableEnum(_)] | [DynamicObj, ObjectReference]:
 				UnboxObj;
 			case [DynamicObj, NativePrimitive(primitive)]:
@@ -176,6 +191,11 @@ class OcamlValueConversion {
 				UnboxNullablePrimitive(primitive);
 			case [NullablePrimitive(BoolCarrier), DynamicObj]:
 				TagNullableBool;
+			case [DynamicObj, NullablePrimitive(BoolCarrier)]:
+				UntagNullableBool;
+			case [DynamicObj, NativePrimitive(BoolCarrier)]:
+				// The checked unbox accepts the tagged and the plain form.
+				UnboxNullablePrimitive(BoolCarrier);
 			case [DynamicObj, TypeParameterValue]:
 				// Generic code such as `get_value():T return cast stored;` relies on this
 				// `Obj.obj`: it gives the method the polymorphic OCaml result type `'a`, so a
@@ -183,6 +203,9 @@ class OcamlValueConversion {
 				UnboxObj;
 			case [TypeParameterValue, NativePrimitive(primitive)]:
 				UnboxNullablePrimitive(primitive);
+			case [TypeParameterValue, NullablePrimitive(BoolCarrier)]:
+				// Generic code may store the Boolean tagged; Null<Bool> holds it plain.
+				UntagNullableBool;
 			case [TypeParameterValue, ObjectReference] | [TypeParameterValue, FunctionValue]:
 				UnboxObj;
 			case _:
