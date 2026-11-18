@@ -2564,7 +2564,11 @@ class TyperStage {
 	static function ordinaryIndexedElement(source:HxExpr, receiver:HxExpr, subscript:HxExpr, receiverType:TyType, scope:TyFunctionEnv, ctx:TyperContext,
 			pos:HxPos):TyType {
 		var indexType = inferExprType(subscript, scope, ctx, pos);
-		if (!scope.isUntypedContext() && (receiverType.isUnknown() || indexType.isUnknown())) {
+		// An explicitly untyped operand stays unresolved: it must not acquire inferred storage.
+		if (!scope.isUntypedContext()
+			&& !TyFieldAssignment.explicitlyUntyped(receiver)
+			&& !TyFieldAssignment.explicitlyUntyped(subscript)
+			&& (receiverType.isUnknown() || indexType.isUnknown())) {
 			final inference = scope.getInference();
 			inference.constrainIndexedAccess(receiver, receiverType, subscript, indexType, scope, ctx.getIndex());
 			receiverType = inference.expressionType(receiver, receiverType, scope);
