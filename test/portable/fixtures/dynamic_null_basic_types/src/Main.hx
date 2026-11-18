@@ -1,3 +1,5 @@
+typedef MaybeDynamic = Null<Dynamic>;
+
 class Main {
 	static function emptyValue():Dynamic
 		return null;
@@ -15,5 +17,11 @@ class Main {
 		final ratio:Dynamic = 2.5;
 		final presentFloat:Float = ratio;
 		Sys.println("present int=" + presentInt + " float=" + presentFloat + " bool=" + presentBool);
+		final whole:Dynamic = 1;
+		final widened:Float = whole;
+		Sys.println("int as float=" + (widened + 0.5));
+		final aliased:MaybeDynamic = null;
+		final aliasedInt:Int = aliased;
+		Sys.println("typedef null=" + aliasedInt);
 	}
 }

@@ -14,3 +14,8 @@ conversion from the table `OcamlValueConversion`, which gives the default value 
 compares only the second line, which holds no null, with it.
 
 Run `PORTABLE_FIXTURE_ALLOWLIST=dynamic_null_basic_types bash scripts/test-portable.sh`.
+
+The fixture also reads a Dynamic that holds the Int `1` as `Float` (it crashed natively before
+the checked Float unbox accepted an int carrier), and a null through a typedef of
+`Null<Dynamic>` as `Int` (it printed `null`). Both were found by an independent review of
+PR #216.

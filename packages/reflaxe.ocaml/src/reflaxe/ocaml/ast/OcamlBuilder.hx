@@ -8236,7 +8236,8 @@ class OcamlBuilder {
 					[OcamlExpr.EConst(OcamlConst.CString(lhsEnumName)), buildExpr(rhs)]);
 			}
 		}
-		if (rhsDynamicCarrier) {
+		// The table also recognizes a typedef of Null<Dynamic>, which rhsDynamicCarrier misses.
+		if (rhsDynamicCarrier || OcamlValueConversion.carrierOf(rhs.t) == DynamicObj) {
 			// A null Dynamic gives the default value; the table owns that rule.
 			final conversion = OcamlValueConversion.between(DynamicObj, OcamlValueConversion.carrierOf(lhsType));
 			switch (conversion) {
