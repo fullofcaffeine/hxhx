@@ -64,8 +64,9 @@ let adapt = fun argument value names -> (try (
 
 let validateReturn = fun actual expected -> ignore (try ignore ((
   ignore (if TyType.hasUnknownComponent (Obj.magic actual) () || TyType.hasUnknownComponent (Obj.magic expected) () then HxType.hx_throw_typed_rtti (Obj.repr "OCaml lambda return conversion requires complete types") ["Dynamic"] else ());
-  ignore (if (let __string_eq_left_46 = TyType.getSemanticKey (Obj.magic actual) () in let __string_eq_right_47 = TyType.getSemanticKey (Obj.magic expected) () in HxString.equals __string_eq_left_46 __string_eq_right_47) || TyType.isVoid (Obj.magic expected) () then Stdlib.raise (HxRuntime.Hx_return_void) else ());
+  ignore (if (let __string_eq_left_46 = TyType.getSemanticKey (Obj.magic actual) () in let __string_eq_right_47 = TyType.getSemanticKey (Obj.magic expected) () in HxString.equals __string_eq_left_46 __string_eq_right_47) || TyType.isVoid (Obj.magic expected) () || Backend_ocaml_Stage3OcamlNumericWidening.needsPromotion (Obj.magic actual) (Obj.magic expected) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   ignore (if let __enum_eq_left_48 = TyAssignmentCompatibility.classify (Obj.magic expected) (Obj.magic actual) (Obj.magic (TyAssignmentCompatibility.Unchecked)) in let __enum_eq_right_49 = TyCallArgumentCompatibility.Compatible in HxEnum.unbox_or_obj "TyCallArgumentCompatibility" (Obj.repr __enum_eq_left_48) != HxEnum.unbox_or_obj "TyCallArgumentCompatibility" (Obj.repr __enum_eq_right_49) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml lambda body does not satisfy its return contract") ["Dynamic"] else ());
+  ignore (if Backend_ocaml_Stage3OcamlNullablePrimitive.innerPrimitive (Obj.magic actual) != Obj.magic (HxRuntime.hx_null) || Backend_ocaml_Stage3OcamlNullablePrimitive.innerPrimitive (Obj.magic expected) != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   let tempTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
     ignore (if TyType.isDynamic (Obj.magic actual) () then let __assign_50 = Obj.magic expected in (
       tempTyType := __assign_50;
@@ -92,6 +93,7 @@ let returnValue = fun actual expected value names -> (try (
   ignore (if let __string_eq_left_43 = TyType.getSemanticKey (Obj.magic actual) () in let __string_eq_right_44 = TyType.getSemanticKey (Obj.magic expected) () in HxString.equals __string_eq_left_43 __string_eq_right_44 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr value)) else ());
   ignore (if TyType.isVoid (Obj.magic expected) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (("ignore (" ^ HxString.toStdString value) ^ ")"))) else ());
   ignore (validateReturn (Obj.magic actual) (Obj.magic expected));
+  ignore (if Backend_ocaml_Stage3OcamlNumericWidening.needsPromotion (Obj.magic actual) (Obj.magic expected) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Backend_ocaml_Stage3OcamlNumericWidening.promote (value : string)))) else ());
   Backend_ocaml_Stage3OcamlValueConversion.convert (Obj.magic actual) (Obj.magic expected) (value : string) (Obj.magic names)
 ) with
   | HxRuntime.Hx_return __ret_45 -> (Obj.obj __ret_45 : string) : string)

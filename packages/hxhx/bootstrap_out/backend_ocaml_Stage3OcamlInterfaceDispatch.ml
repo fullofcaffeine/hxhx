@@ -77,59 +77,59 @@ let dispatcherBody = fun self (hx_method : string) (arguments : string HxArray.t
 
 let implementationFor = fun self (identity : string) (name : string) -> (try let current = ref (identity : string) in (
   ignore (while !current != Obj.magic (HxRuntime.hx_null) do ignore (let tempMaybeInterfaceDispatchClass = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let this1 = (Obj.magic self : t).classes in (
-    ignore (let __assign_127 = Obj.magic (HxMap.get_string this1 (!current : string)) in (
-      tempMaybeInterfaceDispatchClass := __assign_127;
-      __assign_127
+    ignore (let __assign_118 = Obj.magic (HxMap.get_string this1 (!current : string)) in (
+      tempMaybeInterfaceDispatchClass := __assign_118;
+      __assign_118
     ));
     let known = Obj.magic (!tempMaybeInterfaceDispatchClass) in (
       ignore (if known == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
       let _g = ref 0 in let _g1 = Obj.magic (TypedBackendClassSemanticFacts.copyMethods (Obj.magic (Obj.obj (HxAnon.get known "facts"))) ()) in (
-        ignore (while !_g < HxArray.length _g1 do ignore (let hx_method = let __array_read_receiver_128 = _g1 in let __array_read_index_129 = !_g in HxArray.get (Obj.magic __array_read_receiver_128) __array_read_index_129 in (
-          ignore (let __old_130 = !_g in let __new_131 = HxInt.add __old_130 1 in (
-            ignore (_g := __new_131);
-            __new_131
+        ignore (while !_g < HxArray.length _g1 do ignore (let hx_method = let __array_read_receiver_119 = _g1 in let __array_read_index_120 = !_g in HxArray.get (Obj.magic __array_read_receiver_119) __array_read_index_120 in (
+          ignore (let __old_121 = !_g in let __new_122 = HxInt.add __old_121 1 in (
+            ignore (_g := __new_122);
+            __new_122
           ));
-          if not (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isStatic")) && (let __string_eq_left_132 = Obj.obj (HxAnon.get hx_method "name") in let __string_eq_right_133 = name in HxString.equals __string_eq_left_132 __string_eq_right_133) then let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-            ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "hasBody") || not (HxRuntime.unbox_bool_or_obj (HxAnon.get known "generated")) then let __assign_134 = Obj.magic (let __anon_135 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_135 "owner" known);
-              ignore (HxAnon.set __anon_135 "method" hx_method);
-              __anon_135
+          if not (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isStatic")) && (let __string_eq_left_123 = Obj.obj (HxAnon.get hx_method "name") in let __string_eq_right_124 = name in HxString.equals __string_eq_left_123 __string_eq_right_124) then let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
+            ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "hasBody") || not (HxRuntime.unbox_bool_or_obj (HxAnon.get known "generated")) then let __assign_125 = Obj.magic (let __anon_126 = HxAnon.create () in (
+              ignore (HxAnon.set __anon_126 "owner" known);
+              ignore (HxAnon.set __anon_126 "method" hx_method);
+              __anon_126
             )) in (
-              tempResult := __assign_134;
-              __assign_134
-            ) else let __assign_136 = Obj.magic (HxRuntime.hx_null) in (
-              tempResult := __assign_136;
-              __assign_136
+              tempResult := __assign_125;
+              __assign_125
+            ) else let __assign_127 = Obj.magic (HxRuntime.hx_null) in (
+              tempResult := __assign_127;
+              __assign_127
             ));
             Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (!tempResult))))
           ) else ()
         )) done);
-        let __assign_137 = Obj.magic (TypedBackendClassSemanticFacts.getSuperClassIdentity (Obj.magic (Obj.obj (HxAnon.get known "facts"))) () : string) in (
-          current := __assign_137;
-          __assign_137
+        let __assign_128 = Obj.magic (TypedBackendClassSemanticFacts.getSuperClassIdentity (Obj.magic (Obj.obj (HxAnon.get known "facts"))) () : string) in (
+          current := __assign_128;
+          __assign_128
         )
       )
     )
   )) done);
   Obj.magic (HxRuntime.hx_null)
 ) with
-  | HxRuntime.Hx_return __ret_138 -> (Obj.obj __ret_138 : Obj.t) : Obj.t)
+  | HxRuntime.Hx_return __ret_129 -> (Obj.obj __ret_129 : Obj.t) : Obj.t)
 
 let methodShapeProblem = fun hx_method subject -> (try (
   ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isDynamic") then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (HxString.toStdString subject ^ " is a dynamic method"))) else ());
   ignore (if HxArray.length (Obj.obj (HxAnon.get hx_method "typeParameters")) > 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (HxString.toStdString subject ^ " has its own type parameters"))) else ());
   let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get hx_method "arguments")) in (
-    ignore (while !_g < HxArray.length _g1 do ignore (let argument = let __array_read_receiver_139 = _g1 in let __array_read_index_140 = !_g in HxArray.get (Obj.magic __array_read_receiver_139) __array_read_index_140 in (
-      ignore (let __old_141 = !_g in let __new_142 = HxInt.add __old_141 1 in (
-        ignore (_g := __new_142);
-        __new_142
+    ignore (while !_g < HxArray.length _g1 do ignore (let argument = let __array_read_receiver_130 = _g1 in let __array_read_index_131 = !_g in HxArray.get (Obj.magic __array_read_receiver_130) __array_read_index_131 in (
+      ignore (let __old_132 = !_g in let __new_133 = HxInt.add __old_132 1 in (
+        ignore (_g := __new_133);
+        __new_133
       ));
       if HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isOptional") || HxRuntime.unbox_bool_or_obj (HxAnon.get argument "isRest") then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (HxString.toStdString subject ^ " has an optional or rest argument"))) else ()
     )) done);
     Obj.magic (HxRuntime.hx_null)
   )
 ) with
-  | HxRuntime.Hx_return __ret_143 -> (Obj.obj __ret_143 : string) : string)
+  | HxRuntime.Hx_return __ret_134 -> (Obj.obj __ret_134 : string) : string)
 
 let requireIdentity = fun hx_type owner -> let identity = Obj.magic (TyType.getNominalIdentity (Obj.magic hx_type) ()) in (
   ignore (if identity == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr ("native interface dispatch requires a resolved interface of " ^ HxString.toStdString owner)) ["Dynamic"] else ());
@@ -137,59 +137,59 @@ let requireIdentity = fun hx_type owner -> let identity = Obj.magic (TyType.getN
 )
 
 let interfaceMethods = fun self (identity : string) -> let _gthis = Obj.magic self in let result = Obj.magic (HxArray.create ()) in let visited = HxMap.create_string () in let visitInterface = ref (Obj.magic (HxRuntime.hx_null) : string -> unit) in (
-  ignore (let __assign_102 = Obj.magic (fun owner -> ignore (try ignore ((
+  ignore (let __assign_93 = Obj.magic (fun owner -> ignore (try ignore ((
     ignore (if HxMap.exists_string (Obj.magic visited) (owner : string) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
     ignore (HxMap.set_string (Obj.magic visited) (owner : string) true);
     let this1 = (Obj.magic _gthis : t).classes in let tempMaybeInterfaceDispatchClass = HxMap.get_string this1 (owner : string) in let known = tempMaybeInterfaceDispatchClass in (
       ignore (if known == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr ("native interface dispatch lacks the exact interface declaration " ^ HxString.toStdString owner)) ["Dynamic"] else ());
       let _g = ref 0 in let _g1 = Obj.magic (TypedBackendClassSemanticFacts.copyMethods (Obj.magic (Obj.obj (HxAnon.get known "facts"))) ()) in (
-        ignore (while !_g < HxArray.length _g1 do ignore (let hx_method = let __array_read_receiver_103 = _g1 in let __array_read_index_104 = !_g in HxArray.get (Obj.magic __array_read_receiver_103) __array_read_index_104 in (
+        ignore (while !_g < HxArray.length _g1 do ignore (let hx_method = let __array_read_receiver_94 = _g1 in let __array_read_index_95 = !_g in HxArray.get (Obj.magic __array_read_receiver_94) __array_read_index_95 in (
+          ignore (let __old_96 = !_g in let __new_97 = HxInt.add __old_96 1 in (
+            ignore (_g := __new_97);
+            __new_97
+          ));
+          if not (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isStatic")) && (let __string_eq_left_98 = Obj.obj (HxAnon.get hx_method "name") in let __string_eq_right_99 = "new" in not (HxString.equals __string_eq_left_98 __string_eq_right_99)) then ignore (let __array_receiver_100 = Obj.magic result in let __array_arg_0_101 = let __anon_102 = HxAnon.create () in (
+            ignore (HxAnon.set __anon_102 "owner" (Obj.repr owner));
+            ignore (HxAnon.set __anon_102 "method" hx_method);
+            __anon_102
+          ) in HxArray.push __array_receiver_100 __array_arg_0_101) else ()
+        )) done);
+        let _g = ref 0 in let _g1 = Obj.magic (TypedBackendClassSemanticFacts.getInterfaceTypes (Obj.magic (Obj.obj (HxAnon.get known "facts"))) ()) in while !_g < HxArray.length _g1 do ignore (let parent = Obj.magic (let __array_read_receiver_103 = _g1 in let __array_read_index_104 = !_g in HxArray.get (Obj.magic __array_read_receiver_103) __array_read_index_104) in (
           ignore (let __old_105 = !_g in let __new_106 = HxInt.add __old_105 1 in (
             ignore (_g := __new_106);
             __new_106
           ));
-          if not (HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isStatic")) && (let __string_eq_left_107 = Obj.obj (HxAnon.get hx_method "name") in let __string_eq_right_108 = "new" in not (HxString.equals __string_eq_left_107 __string_eq_right_108)) then ignore (let __array_receiver_109 = Obj.magic result in let __array_arg_0_110 = let __anon_111 = HxAnon.create () in (
-            ignore (HxAnon.set __anon_111 "owner" (Obj.repr owner));
-            ignore (HxAnon.set __anon_111 "method" hx_method);
-            __anon_111
-          ) in HxArray.push __array_receiver_109 __array_arg_0_110) else ()
-        )) done);
-        let _g = ref 0 in let _g1 = Obj.magic (TypedBackendClassSemanticFacts.getInterfaceTypes (Obj.magic (Obj.obj (HxAnon.get known "facts"))) ()) in while !_g < HxArray.length _g1 do ignore (let parent = Obj.magic (let __array_read_receiver_112 = _g1 in let __array_read_index_113 = !_g in HxArray.get (Obj.magic __array_read_receiver_112) __array_read_index_113) in (
-          ignore (let __old_114 = !_g in let __new_115 = HxInt.add __old_114 1 in (
-            ignore (_g := __new_115);
-            __new_115
-          ));
-          let __call_callee_116 = !visitInterface in let __call_arg_0_117 = requireIdentity (Obj.magic parent) (owner : string) in __call_callee_116 __call_arg_0_117
+          let __call_callee_107 = !visitInterface in let __call_arg_0_108 = requireIdentity (Obj.magic parent) (owner : string) in __call_callee_107 __call_arg_0_108
         )) done
       )
     )
   )) with
     | HxRuntime.Hx_return_void -> ())) in (
-    visitInterface := __assign_102;
-    __assign_102
+    visitInterface := __assign_93;
+    __assign_93
   ));
   let current = ref (identity : string) in let chain = HxMap.create_string () in (
     ignore (while !current != Obj.magic (HxRuntime.hx_null) do ignore ((
       ignore (if HxMap.exists_string (Obj.magic chain) (!current : string) then HxType.hx_throw_typed_rtti (Obj.repr ("native interface dispatch found cyclic ancestry at " ^ HxString.toStdString (!current))) ["Dynamic"] else ());
       ignore (HxMap.set_string (Obj.magic chain) (!current : string) true);
       let tempMaybeInterfaceDispatchClass1 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let this1 = (Obj.magic self : t).classes in (
-        ignore (let __assign_119 = Obj.magic (HxMap.get_string this1 (!current : string)) in (
-          tempMaybeInterfaceDispatchClass1 := __assign_119;
-          __assign_119
+        ignore (let __assign_110 = Obj.magic (HxMap.get_string this1 (!current : string)) in (
+          tempMaybeInterfaceDispatchClass1 := __assign_110;
+          __assign_110
         ));
         let known = Obj.magic (!tempMaybeInterfaceDispatchClass1) in (
           ignore (if known == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr ("native interface dispatch lacks the exact class declaration " ^ HxString.toStdString (!current))) ["Dynamic"] else ());
           let _g = ref 0 in let _g1 = Obj.magic (TypedBackendClassSemanticFacts.getInterfaceTypes (Obj.magic (Obj.obj (HxAnon.get known "facts"))) ()) in (
-            ignore (while !_g < HxArray.length _g1 do ignore (let parent = Obj.magic (let __array_read_receiver_120 = _g1 in let __array_read_index_121 = !_g in HxArray.get (Obj.magic __array_read_receiver_120) __array_read_index_121) in (
-              ignore (let __old_122 = !_g in let __new_123 = HxInt.add __old_122 1 in (
-                ignore (_g := __new_123);
-                __new_123
+            ignore (while !_g < HxArray.length _g1 do ignore (let parent = Obj.magic (let __array_read_receiver_111 = _g1 in let __array_read_index_112 = !_g in HxArray.get (Obj.magic __array_read_receiver_111) __array_read_index_112) in (
+              ignore (let __old_113 = !_g in let __new_114 = HxInt.add __old_113 1 in (
+                ignore (_g := __new_114);
+                __new_114
               ));
-              let __call_callee_124 = !visitInterface in let __call_arg_0_125 = requireIdentity (Obj.magic parent) (!current : string) in __call_callee_124 __call_arg_0_125
+              let __call_callee_115 = !visitInterface in let __call_arg_0_116 = requireIdentity (Obj.magic parent) (!current : string) in __call_callee_115 __call_arg_0_116
             )) done);
-            let __assign_126 = Obj.magic (TypedBackendClassSemanticFacts.getSuperClassIdentity (Obj.magic (Obj.obj (HxAnon.get known "facts"))) () : string) in (
-              current := __assign_126;
-              __assign_126
+            let __assign_117 = Obj.magic (TypedBackendClassSemanticFacts.getSuperClassIdentity (Obj.magic (Obj.obj (HxAnon.get known "facts"))) () : string) in (
+              current := __assign_117;
+              __assign_117
             )
           )
         )
@@ -201,45 +201,45 @@ let interfaceMethods = fun self (identity : string) -> let _gthis = Obj.magic se
 
 let plan = fun self () -> ignore (ignore (try ignore ((
   ignore (if (Obj.magic self : t).planned then Stdlib.raise (HxRuntime.Hx_return_void) else ());
-  ignore (let __place_receiver_69 = self in let __place_rhs_70 = true in (
-    (__place_receiver_69 : t).planned <- __place_rhs_70;
-    __place_rhs_70
+  ignore (let __place_receiver_41 = self in let __place_rhs_42 = true in (
+    (__place_receiver_41 : t).planned <- __place_rhs_42;
+    __place_rhs_42
   ));
-  let selected = (Obj.magic self : t).tables in let missing = (Obj.magic self : t).gaps in let _g = Obj.magic (let __represented_array_71 = HxArray.create () in __represented_array_71) in let this1 = (Obj.magic self : t).classes in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.keys_string this1)) in let identity = tempIterator in (
-    ignore (while let __iterator_receiver_72 = identity in HxIterator.hasNext __iterator_receiver_72 do ignore (let identity2 = (let __iterator_receiver_73 = identity in HxIterator.next __iterator_receiver_73 : string) in let __array_receiver_74 = Obj.magic _g in let __array_arg_0_75 = (identity2 : string) in HxArray.push __array_receiver_74 __array_arg_0_75) done);
+  let selected = (Obj.magic self : t).tables in let missing = (Obj.magic self : t).gaps in let _g = Obj.magic (let __represented_array_43 = HxArray.create () in __represented_array_43) in let this1 = (Obj.magic self : t).classes in let tempIterator = HxIterator.of_array (Obj.magic (HxMap.keys_string this1)) in let identity = tempIterator in (
+    ignore (while let __iterator_receiver_44 = identity in HxIterator.hasNext __iterator_receiver_44 do ignore (let identity2 = (let __iterator_receiver_45 = identity in HxIterator.next __iterator_receiver_45 : string) in let __array_receiver_46 = Obj.magic _g in let __array_arg_0_47 = (identity2 : string) in HxArray.push __array_receiver_46 __array_arg_0_47) done);
     let tempArray = Obj.magic _g in let identities = Obj.magic tempArray in (
-      ignore (let __array_receiver_76 = Obj.magic identities in let __array_arg_0_77 = fun left right -> let tempResult = ref (0 : int) in (
-        ignore (if left < right then let __assign_78 = -1 in (
-          tempResult := __assign_78;
-          __assign_78
-        ) else if left > right then let __assign_79 = 1 in (
-          tempResult := __assign_79;
-          __assign_79
-        ) else let __assign_80 = 0 in (
-          tempResult := __assign_80;
-          __assign_80
+      ignore (let __array_receiver_48 = Obj.magic identities in let __array_arg_0_49 = fun left right -> let tempResult = ref (0 : int) in (
+        ignore (if left < right then let __assign_50 = -1 in (
+          tempResult := __assign_50;
+          __assign_50
+        ) else if left > right then let __assign_51 = 1 in (
+          tempResult := __assign_51;
+          __assign_51
+        ) else let __assign_52 = 0 in (
+          tempResult := __assign_52;
+          __assign_52
         ));
         !tempResult
-      ) in HxArray.sort __array_receiver_76 __array_arg_0_77);
-      let _g = ref 0 in while !_g < HxArray.length identities do try ignore (let identity = (let __array_read_receiver_81 = identities in let __array_read_index_82 = !_g in HxArray.get (Obj.magic __array_read_receiver_81) __array_read_index_82 : string) in (
-        ignore (let __old_83 = !_g in let __new_84 = HxInt.add __old_83 1 in (
-          ignore (_g := __new_84);
-          __new_84
+      ) in HxArray.sort __array_receiver_48 __array_arg_0_49);
+      let _g = ref 0 in while !_g < HxArray.length identities do try ignore (let identity = (let __array_read_receiver_53 = identities in let __array_read_index_54 = !_g in HxArray.get (Obj.magic __array_read_receiver_53) __array_read_index_54 : string) in (
+        ignore (let __old_55 = !_g in let __new_56 = HxInt.add __old_55 1 in (
+          ignore (_g := __new_56);
+          __new_56
         ));
         let tempMaybeInterfaceDispatchClass = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let this1 = (Obj.magic self : t).classes in (
-          ignore (let __assign_85 = Obj.magic (HxMap.get_string this1 (identity : string)) in (
-            tempMaybeInterfaceDispatchClass := __assign_85;
-            __assign_85
+          ignore (let __assign_57 = Obj.magic (HxMap.get_string this1 (identity : string)) in (
+            tempMaybeInterfaceDispatchClass := __assign_57;
+            __assign_57
           ));
           let known = Obj.magic (!tempMaybeInterfaceDispatchClass) in (
             ignore (if TypedBackendClassSemanticFacts.getIsInterface (Obj.magic (Obj.obj (HxAnon.get known "facts"))) () || not (HxRuntime.unbox_bool_or_obj (HxAnon.get known "generated")) then Stdlib.raise (HxRuntime.Hx_continue) else ());
-            let entries = Obj.magic (HxArray.create ()) in let seen = HxMap.create_string () in let _g2 = ref 0 in let _g1 = Obj.magic (interfaceMethods (Obj.magic self) (identity : string)) in (
-              ignore (while !_g2 < HxArray.length _g1 do try ignore (let declared = let __array_read_receiver_86 = _g1 in let __array_read_index_87 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_86) __array_read_index_87 in (
-                ignore (let __old_88 = !_g2 in let __new_89 = HxInt.add __old_88 1 in (
-                  ignore (_g2 := __new_89);
-                  __new_89
+            let entries__local = Obj.magic (HxArray.create ()) in let seen = HxMap.create_string () in let _g2 = ref 0 in let _g1 = Obj.magic (interfaceMethods (Obj.magic self) (identity : string)) in (
+              ignore (while !_g2 < HxArray.length _g1 do try ignore (let declared = let __array_read_receiver_58 = _g1 in let __array_read_index_59 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_58) __array_read_index_59 in (
+                ignore (let __old_60 = !_g2 in let __new_61 = HxInt.add __old_60 1 in (
+                  ignore (_g2 := __new_61);
+                  __new_61
                 ));
-                let key = let __string_part_90 = HxString.toStdString (Obj.obj (HxAnon.get declared "owner")) in let __string_part_91 = "." in let __string_part_92 = HxString.toStdString (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get declared "method")) "name")) in (__string_part_90 ^ __string_part_91) ^ __string_part_92 in let problem = (methodShapeProblem (Obj.obj (HxAnon.get declared "method")) ("the interface method" : string) : string) in (
+                let key = let __string_part_62 = HxString.toStdString (Obj.obj (HxAnon.get declared "owner")) in let __string_part_63 = "." in let __string_part_64 = HxString.toStdString (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get declared "method")) "name")) in (__string_part_62 ^ __string_part_63) ^ __string_part_64 in let problem = (methodShapeProblem (Obj.obj (HxAnon.get declared "method")) ("the interface method" : string) : string) in (
                   ignore (if problem != Obj.magic (HxRuntime.hx_null) then ignore ((
                     ignore (HxMap.set_string (Obj.magic missing) (key : string) problem);
                     Stdlib.raise (HxRuntime.Hx_continue)
@@ -247,12 +247,12 @@ let plan = fun self () -> ignore (ignore (try ignore ((
                   let implementation = implementationFor (Obj.magic self) (identity : string) (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get declared "method")) "name") : string) in (
                     ignore (if implementation != Obj.magic (HxRuntime.hx_null) && not (HxRuntime.unbox_bool_or_obj (HxAnon.get (Obj.obj (HxAnon.get implementation "owner")) "generated")) then Stdlib.raise (HxRuntime.Hx_continue) else ());
                     let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-                      ignore (if implementation == Obj.magic (HxRuntime.hx_null) then let __assign_93 = Obj.magic (HxString.toStdString identity ^ " has no typed implementation" : string) in (
-                        tempMaybeString := __assign_93;
-                        __assign_93
-                      ) else let __assign_94 = Obj.magic (methodShapeProblem (Obj.obj (HxAnon.get implementation "method")) (HxString.toStdString identity ^ "'s implementation" : string) : string) in (
-                        tempMaybeString := __assign_94;
-                        __assign_94
+                      ignore (if implementation == Obj.magic (HxRuntime.hx_null) then let __assign_65 = Obj.magic (HxString.toStdString identity ^ " has no typed implementation" : string) in (
+                        tempMaybeString := __assign_65;
+                        __assign_65
+                      ) else let __assign_66 = Obj.magic (methodShapeProblem (Obj.obj (HxAnon.get implementation "method")) (HxString.toStdString identity ^ "'s implementation" : string) : string) in (
+                        tempMaybeString := __assign_66;
+                        __assign_66
                       ));
                       let failure = (!tempMaybeString : string) in (
                         ignore (if failure != Obj.magic (HxRuntime.hx_null) then ignore ((
@@ -260,18 +260,20 @@ let plan = fun self () -> ignore (ignore (try ignore ((
                           Stdlib.raise (HxRuntime.Hx_continue)
                         )) else ());
                         let tempBool = ref (false : bool) in let key2 = (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get declared "method")) "name") : string) in (
-                          ignore (let __assign_95 = HxMap.exists_string (Obj.magic seen) (key2 : string) in (
-                            tempBool := __assign_95;
-                            __assign_95
+                          ignore (let __assign_67 = HxMap.exists_string (Obj.magic seen) (key2 : string) in (
+                            tempBool := __assign_67;
+                            __assign_67
                           ));
                           ignore (if !tempBool then Stdlib.raise (HxRuntime.Hx_continue) else ());
                           let key2 = (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get declared "method")) "name") : string) in (
                             ignore (HxMap.set_string (Obj.magic seen) (key2 : string) true);
-                            let __array_receiver_96 = Obj.magic entries in let __array_arg_0_97 = let __anonymous_value_98 = HxAnon.create () in (
-                              let __anonymous_field_value_99 = Obj.obj (HxAnon.get (Obj.obj (HxAnon.get declared "method")) "name") in ignore (HxAnon.set __anonymous_value_98 "method" (Obj.repr __anonymous_field_value_99));
-                              let __anonymous_field_value_100 = Obj.obj (HxAnon.get (Obj.obj (HxAnon.get implementation "owner")) "module") in ignore (HxAnon.set __anonymous_value_98 "module" (Obj.repr __anonymous_field_value_100));
-                              __anonymous_value_98
-                            ) in HxArray.push __array_receiver_96 __array_arg_0_97
+                            let __array_receiver_68 = Obj.magic entries__local in let __array_arg_0_69 = let __anonymous_value_70 = HxAnon.create () in (
+                              let __anonymous_field_value_71 = Obj.obj (HxAnon.get (Obj.obj (HxAnon.get declared "method")) "name") in ignore (HxAnon.set __anonymous_value_70 "method" (Obj.repr __anonymous_field_value_71));
+                              let __anonymous_field_value_72 = TypedBackendClassSemanticFacts.getClassIdentity (Obj.magic (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get implementation "owner")) "facts"))) () in ignore (HxAnon.set __anonymous_value_70 "owner" (Obj.repr __anonymous_field_value_72));
+                              let __anonymous_field_value_73 = Obj.obj (HxAnon.get (Obj.obj (HxAnon.get implementation "owner")) "module") in ignore (HxAnon.set __anonymous_value_70 "module" (Obj.repr __anonymous_field_value_73));
+                              let __anonymous_field_value_74 = true in ignore (HxAnon.set __anonymous_value_70 "structurallyBindable" (HxRuntime.box_bool __anonymous_field_value_74));
+                              __anonymous_value_70
+                            ) in HxArray.push __array_receiver_68 __array_arg_0_69
                           )
                         )
                       )
@@ -280,7 +282,55 @@ let plan = fun self () -> ignore (ignore (try ignore ((
                 )
               )) with
                 | HxRuntime.Hx_continue -> () done);
-              if HxArray.length entries > 0 then ignore (HxMap.set_string (Obj.magic selected) (identity : string) entries) else ()
+              let current = ref (identity : string) in (
+                ignore (try while !current != Obj.magic (HxRuntime.hx_null) do ignore (let tempMaybeInterfaceDispatchClass1 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let this1 = (Obj.magic self : t).classes in (
+                  ignore (let __assign_75 = Obj.magic (HxMap.get_string this1 (!current : string)) in (
+                    tempMaybeInterfaceDispatchClass1 := __assign_75;
+                    __assign_75
+                  ));
+                  let owner = Obj.magic (!tempMaybeInterfaceDispatchClass1) in (
+                    ignore (if owner == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_break) else ());
+                    let _g2 = ref 0 in let _g1 = Obj.magic (TypedBackendClassSemanticFacts.copyMethods (Obj.magic (Obj.obj (HxAnon.get owner "facts"))) ()) in (
+                      ignore (while !_g2 < HxArray.length _g1 do try ignore (let hx_method = let __array_read_receiver_76 = _g1 in let __array_read_index_77 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_76) __array_read_index_77 in (
+                        ignore (let __old_78 = !_g2 in let __new_79 = HxInt.add __old_78 1 in (
+                          ignore (_g2 := __new_79);
+                          __new_79
+                        ));
+                        let tempShortCircuit = ref (false : bool) in (
+                          ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get hx_method "isStatic") || (let __string_eq_left_80 = Obj.obj (HxAnon.get hx_method "name") in let __string_eq_right_81 = "new" in HxString.equals __string_eq_left_80 __string_eq_right_81) then let __assign_82 = true in (
+                            tempShortCircuit := __assign_82;
+                            __assign_82
+                          ) else let key = (Obj.obj (HxAnon.get hx_method "name") : string) in let __assign_83 = HxMap.exists_string (Obj.magic seen) (key : string) in (
+                            tempShortCircuit := __assign_83;
+                            __assign_83
+                          ));
+                          ignore (if !tempShortCircuit then Stdlib.raise (HxRuntime.Hx_continue) else ());
+                          let implementation = implementationFor (Obj.magic self) (identity : string) (Obj.obj (HxAnon.get hx_method "name") : string) in (
+                            ignore (if implementation == Obj.magic (HxRuntime.hx_null) || not (HxRuntime.unbox_bool_or_obj (HxAnon.get (Obj.obj (HxAnon.get implementation "owner")) "generated")) || not (Backend_ocaml_Stage3OcamlVirtualDispatch.structurallyBindable (Obj.obj (HxAnon.get implementation "method"))) then Stdlib.raise (HxRuntime.Hx_continue) else ());
+                            let key = (Obj.obj (HxAnon.get hx_method "name") : string) in (
+                              ignore (HxMap.set_string (Obj.magic seen) (key : string) true);
+                              let __array_receiver_84 = Obj.magic entries__local in let __array_arg_0_85 = let __anonymous_value_86 = HxAnon.create () in (
+                                let __anonymous_field_value_87 = Obj.obj (HxAnon.get hx_method "name") in ignore (HxAnon.set __anonymous_value_86 "method" (Obj.repr __anonymous_field_value_87));
+                                let __anonymous_field_value_88 = TypedBackendClassSemanticFacts.getClassIdentity (Obj.magic (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get implementation "owner")) "facts"))) () in ignore (HxAnon.set __anonymous_value_86 "owner" (Obj.repr __anonymous_field_value_88));
+                                let __anonymous_field_value_89 = Obj.obj (HxAnon.get (Obj.obj (HxAnon.get implementation "owner")) "module") in ignore (HxAnon.set __anonymous_value_86 "module" (Obj.repr __anonymous_field_value_89));
+                                let __anonymous_field_value_90 = true in ignore (HxAnon.set __anonymous_value_86 "structurallyBindable" (HxRuntime.box_bool __anonymous_field_value_90));
+                                __anonymous_value_86
+                              ) in HxArray.push __array_receiver_84 __array_arg_0_85
+                            )
+                          )
+                        )
+                      )) with
+                        | HxRuntime.Hx_continue -> () done);
+                      let __assign_91 = Obj.magic (TypedBackendClassSemanticFacts.getSuperClassIdentity (Obj.magic (Obj.obj (HxAnon.get owner "facts"))) () : string) in (
+                        current := __assign_91;
+                        __assign_91
+                      )
+                    )
+                  )
+                )) done with
+                  | HxRuntime.Hx_break -> ());
+                if HxArray.length entries__local > 0 then ignore (HxMap.set_string (Obj.magic selected) (identity : string) entries__local) else ()
+              )
             )
           )
         )
@@ -302,29 +352,16 @@ let requireCall = fun self (owner : string) (hx_method : string) -> (try let thi
 ) with
   | HxRuntime.Hx_return __ret_36 -> (Obj.obj __ret_36 : bool) : bool)
 
-let registration = fun self (facts : TypedBackendClassSemanticFacts.t) (currentModule : string) (ident : string -> string -> string) (quote : string -> string) -> (try (
+let entries = fun self (facts : TypedBackendClassSemanticFacts.t) -> (
   ignore (plan (Obj.magic self) ());
-  let this1 = (Obj.magic self : t).tables in let key = (TypedBackendClassSemanticFacts.getClassIdentity (Obj.magic facts) () : string) in let tempMaybeArray = Obj.magic (HxMap.get_string this1 (key : string)) in (
-    ignore (if tempMaybeArray == Obj.magic (HxRuntime.hx_null) || HxArray.length tempMaybeArray = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-    let _g = Obj.magic (let __represented_array_37 = HxArray.create () in __represented_array_37) in let _g1 = ref 0 in (
-      ignore (while !_g1 < HxArray.length tempMaybeArray do ignore (let entry = let __array_read_receiver_38 = tempMaybeArray in let __array_read_index_39 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_38) __array_read_index_39 in (
-        ignore (let __old_40 = !_g1 in let __new_41 = HxInt.add __old_40 1 in (
-          ignore (_g1 := __new_41);
-          __new_41
-        ));
-        let name = let __call_callee_42 = ident in let __call_arg_0_43 = Obj.obj (HxAnon.get entry "module") in let __call_arg_1_44 = Obj.obj (HxAnon.get entry "method") in __call_callee_42 __call_arg_0_43 __call_arg_1_44 in let tempString = ref (HxString.hx_null_string : string) in (
-          ignore (if let __string_eq_left_45 = Obj.obj (HxAnon.get entry "module") in let __string_eq_right_46 = currentModule in HxString.equals __string_eq_left_45 __string_eq_right_46 then let __assign_47 = name in (
-            tempString := __assign_47;
-            __assign_47
-          ) else let __assign_48 = let __string_part_49 = HxString.toStdString (Obj.obj (HxAnon.get entry "module")) in let __string_part_50 = "." in let __string_part_51 = HxString.toStdString name in (__string_part_49 ^ __string_part_50) ^ __string_part_51 in (
-            tempString := __assign_48;
-            __assign_48
-          ));
-          let __array_receiver_52 = Obj.magic _g in let __array_arg_0_53 = (let __string_part_56 = "(" in let __string_part_57 = HxString.toStdString (let __call_callee_54 = quote in let __call_arg_0_55 = Obj.obj (HxAnon.get entry "method") in __call_callee_54 __call_arg_0_55) in let __string_part_58 = ", Obj.repr " in let __string_part_59 = HxString.toStdString (!tempString) in let __string_part_60 = ")" in (((__string_part_56 ^ __string_part_57) ^ __string_part_58) ^ __string_part_59) ^ __string_part_60 : string) in HxArray.push __array_receiver_52 __array_arg_0_53
-        )
-      )) done);
-      let __string_part_63 = "let () = HxMethodDispatch.register_class_methods " in let __string_part_64 = HxString.toStdString (let __call_callee_61 = quote in let __call_arg_0_62 = TypedBackendClassSemanticFacts.requirePublicReflectionName (Obj.magic facts) () in __call_callee_61 __call_arg_0_62) in let __string_part_65 = " [" in let __string_part_66 = HxString.toStdString (HxArray.join _g "; " (fun x -> x)) in let __string_part_67 = "]" in (((__string_part_63 ^ __string_part_64) ^ __string_part_65) ^ __string_part_66) ^ __string_part_67
-    )
+  let this1 = (Obj.magic self : t).tables in let key = (TypedBackendClassSemanticFacts.getClassIdentity (Obj.magic facts) () : string) in let tempMaybeArray = Obj.magic (HxMap.get_string this1 (key : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
+    ignore (if tempMaybeArray == Obj.magic (HxRuntime.hx_null) then let __assign_37 = Obj.magic (let __arr_38 = HxArray.create () in __arr_38) in (
+      tempResult := __assign_37;
+      __assign_37
+    ) else let __assign_39 = Obj.magic (let __array_receiver_40 = Obj.magic tempMaybeArray in HxArray.copy __array_receiver_40) in (
+      tempResult := __assign_39;
+      __assign_39
+    ));
+    !tempResult
   )
-) with
-  | HxRuntime.Hx_return __ret_68 -> (Obj.obj __ret_68 : string) : string)
+)

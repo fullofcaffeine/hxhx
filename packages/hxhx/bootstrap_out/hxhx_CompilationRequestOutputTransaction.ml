@@ -310,7 +310,7 @@ let pathToken = fun (value : string) -> (let out = Obj.magic (StringBuf.create (
   StringBuf.toString (Obj.magic out) ()
 ) : string)
 
-let hx_PROCESS_TOKEN = (let __call_arg_0_336 = let __string_part_337 = HxString.toStdString (string_of_float (Date.getTime (Obj.magic (Date.now ())) ())) in let __string_part_338 = "-" in let __string_part_339 = HxString.toStdString (string_of_float (HxSys.time ())) in (__string_part_337 ^ __string_part_338) ^ __string_part_339 in pathToken __call_arg_0_336 : string)
+let hx_PROCESS_TOKEN = (let __call_arg_0_336 = let __string_part_337 = HxString.toStdString (HxRuntime.float_toStdString (Date.getTime (Obj.magic (Date.now ())) ())) in let __string_part_338 = "-" in let __string_part_339 = HxString.toStdString (HxRuntime.float_toStdString (HxSys.time ())) in (__string_part_337 ^ __string_part_338) ^ __string_part_339 in pathToken __call_arg_0_336 : string)
 
 let createStagingPath = fun self (preferredParent : string) (index : int) -> let stagingParent = let __call_arg_0_130 = preferredParent in nearestExistingDirectory __call_arg_0_130 in let stagedPath = (Haxe_io_Path.join (Obj.magic (let __represented_array_131 = HxArray.create () in let __represented_array_element_0_132 = stagingParent in (
   ignore (HxArray.push __represented_array_131 __represented_array_element_0_132);

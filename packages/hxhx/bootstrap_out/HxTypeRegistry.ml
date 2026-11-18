@@ -50,10 +50,13 @@ let init () : unit =
   ignore (HxType.class_ "HxDefineMap");
   ignore (HxType.class_ "HxEnumDeclaration");
   ignore (HxType.class_ "HxFieldDecl");
+  ignore (HxType.class_ "HxFloatPatternBits");
+  ignore (HxType.class_ "HxFloatPatternText");
   ignore (HxType.class_ "HxFunctionArg");
   ignore (HxType.class_ "HxFunctionDecl");
   ignore (HxType.class_ "HxFunctionSyntaxParser");
   ignore (HxType.class_ "HxFunctionTypeParamMetadata");
+  ignore (HxType.class_ "HxIntegerLiteral");
   ignore (HxType.class_ "HxLambdaSignature");
   ignore (HxType.class_ "HxLexer");
   ignore (HxType.class_ "HxModuleDecl");
@@ -61,6 +64,7 @@ let init () : unit =
   ignore (HxType.class_ "HxParseError");
   ignore (HxType.class_ "HxParser");
   ignore (HxType.class_ "HxPos");
+  ignore (HxType.class_ "HxRootedPath");
   ignore (HxType.class_ "HxSourceCatch");
   ignore (HxType.class_ "HxSourceFunction");
   ignore (HxType.class_ "HxSourceFunctionGenerics");
@@ -94,12 +98,14 @@ let init () : unit =
   ignore (HxType.class_ "TyAbstractBinaryBinding");
   ignore (HxType.class_ "TyAbstractBinaryConversion");
   ignore (HxType.class_ "TyAbstractBinaryOperatorInfo");
+  ignore (HxType.class_ "TyAbstractConstructorInitialization");
   ignore (HxType.class_ "TyAbstractInfo");
   ignore (HxType.class_ "TyAbstractMethodConversion");
   ignore (HxType.class_ "TyAbstractNativeBinaryOperation");
   ignore (HxType.class_ "TyAbstractOperatorInfo");
   ignore (HxType.class_ "TyAbstractUnaryBinding");
   ignore (HxType.class_ "TyAliasDefinition");
+  ignore (HxType.class_ "TyAuthoredAssignmentCheck");
   ignore (HxType.class_ "TyBoundAbstractBinaryOperator");
   ignore (HxType.class_ "TyCallArgumentBinding");
   ignore (HxType.class_ "TyCallArgumentPlan");
@@ -113,6 +119,7 @@ let init () : unit =
   ignore (HxType.class_ "TyControlTarget");
   ignore (HxType.class_ "TyDeclarationId");
   ignore (HxType.class_ "TyDeclarationInfo");
+  ignore (HxType.class_ "TyDirectivePosition");
   ignore (HxType.class_ "TyEnumAbstractConstants");
   ignore (HxType.class_ "TyEnumAbstractDomain");
   ignore (HxType.class_ "TyExtensionMethod");
@@ -120,6 +127,7 @@ let init () : unit =
   ignore (HxType.class_ "TyFieldInfo");
   ignore (HxType.class_ "TyFieldInitializerTypes");
   ignore (HxType.class_ "TyFunSig");
+  ignore (HxType.class_ "TyFunctionConstraint");
   ignore (HxType.class_ "TyFunctionEnv");
   ignore (HxType.class_ "TyFunctionInference");
   ignore (HxType.class_ "TyFunctionReturnState");
@@ -159,6 +167,7 @@ let init () : unit =
   ignore (HxType.class_ "TyPublicReflectionName");
   ignore (HxType.class_ "TyReceiverCallContext");
   ignore (HxType.class_ "TyResolvedTypeUse");
+  ignore (HxType.class_ "TySourceTokenPosition");
   ignore (HxType.class_ "TySwitchAnalysis");
   ignore (HxType.class_ "TySwitchPatternBindings");
   ignore (HxType.class_ "TySymbol");
@@ -169,10 +178,13 @@ let init () : unit =
   ignore (HxType.class_ "TyTypeSubstitution");
   ignore (HxType.class_ "TyTypeUseResolution");
   ignore (HxType.class_ "TyTypeUseResolver");
+  ignore (HxType.class_ "TyUndeclaredName");
+  ignore (HxType.class_ "TyUndeclaredValueNames");
   ignore (HxType.class_ "TypedAbstractBinaryLowering");
   ignore (HxType.class_ "TypedAbstractOperatorLowering");
   ignore (HxType.class_ "TypedAbstractUnaryLowering");
   ignore (HxType.class_ "TypedBackendAggregateOccurrence");
+  ignore (HxType.class_ "TypedBackendArithmeticOccurrence");
   ignore (HxType.class_ "TypedBackendArrayAccess");
   ignore (HxType.class_ "TypedBackendBitwiseOccurrence");
   ignore (HxType.class_ "TypedBackendCallArgument");
@@ -206,7 +218,9 @@ let init () : unit =
   ignore (HxType.class_ "TypedBackendRuntimeTypeOccurrence");
   ignore (HxType.class_ "TypedBackendSourceWalk");
   ignore (HxType.class_ "TypedBackendStatementControl");
+  ignore (HxType.class_ "TypedBackendStringConcatOccurrence");
   ignore (HxType.class_ "TypedBackendThrownValue");
+  ignore (HxType.class_ "TypedBackendTraceOccurrence");
   ignore (HxType.class_ "TypedBodyBuilder");
   ignore (HxType.class_ "TypedBodyFingerprint");
   ignore (HxType.class_ "TypedBodyInvariant");
@@ -232,6 +246,7 @@ let init () : unit =
   ignore (HxType.class_ "TypedFieldInitializer");
   ignore (HxType.class_ "TypedFunction");
   ignore (HxType.class_ "TypedFunctionBody");
+  ignore (HxType.class_ "TypedFunctionConstraintFlows");
   ignore (HxType.class_ "TypedFunctionDefault");
   ignore (HxType.class_ "TypedGuardedPatternPlan");
   ignore (HxType.class_ "TypedIndexedUpdateLowering");
@@ -279,6 +294,7 @@ let init () : unit =
   ignore (HxType.class_ "_HxSourceMacroSyntax.HxSourceMacroSyntax_Fields_");
   ignore (HxType.class_ "_HxStringEscape.HxStringEscape_Fields_");
   ignore (HxType.class_ "_ParsedTypedefIntegrity.ParsedTypedefIntegrity_Fields_");
+  ignore (HxType.class_ "_TyAbstractPrimitiveOperation.TyAbstractPrimitiveOperation_Fields_");
   ignore (HxType.class_ "_TyAdditionOperandInference.TyAdditionOperandInference_Fields_");
   ignore (HxType.class_ "_TyAliasEquivalence.AliasEquivalenceProof");
   ignore (HxType.class_ "_TyAliasEquivalence.TyAliasEquivalence_Fields_");
@@ -286,6 +302,7 @@ let init () : unit =
   ignore (HxType.class_ "_TyAnonymousField.TyAnonymousField_Fields_");
   ignore (HxType.class_ "_TyArrayComprehension.TyArrayComprehension_Fields_");
   ignore (HxType.class_ "_TyAssignmentCompatibility.TyAssignmentCompatibility_Fields_");
+  ignore (HxType.class_ "_TyBasicNullArgument.TyBasicNullArgument_Fields_");
   ignore (HxType.class_ "_TyBitwiseOperandInference.TyBitwiseOperandInference_Fields_");
   ignore (HxType.class_ "_TyBooleanSwitchCoverage.TyBooleanSwitchCoverage_Fields_");
   ignore (HxType.class_ "_TyCallAlignment.TyCallAlignment_Fields_");
@@ -296,6 +313,7 @@ let init () : unit =
   ignore (HxType.class_ "_TyCallerConstraintProof.TyCallerConstraintProof_Fields_");
   ignore (HxType.class_ "_TyClassArgumentBounds.TyClassArgumentBounds_Fields_");
   ignore (HxType.class_ "_TyClassRelationships.TyClassRelationships_Fields_");
+  ignore (HxType.class_ "_TyCompoundAssignmentKinds.TyCompoundAssignmentKinds_Fields_");
   ignore (HxType.class_ "_TyConditionalResult.TyConditionalResult_Fields_");
   ignore (HxType.class_ "_TyDeclaredArrayAccess.TyDeclaredArrayAccess_Fields_");
   ignore (HxType.class_ "_TyDefaultEnumExtensions.TyDefaultEnumExtensions_Fields_");
@@ -308,6 +326,7 @@ let init () : unit =
   ignore (HxType.class_ "_TyEnumValueCompatibility.TyEnumValueCompatibility_Fields_");
   ignore (HxType.class_ "_TyFieldAssignment.TyFieldAssignment_Fields_");
   ignore (HxType.class_ "_TyFunctionParameter.TyFunctionParameter_Fields_");
+  ignore (HxType.class_ "_TyIndexedNullValue.TyIndexedNullValue_Fields_");
   ignore (HxType.class_ "_TyIndexedUpdateOperation.TyIndexedUpdateOperation_Fields_");
   ignore (HxType.class_ "_TyInferenceAbstractDestination.TyInferenceAbstractDestination_Fields_");
   ignore (HxType.class_ "_TyInferenceAbstractInput.TyInferenceAbstractInput_Fields_");
@@ -316,6 +335,7 @@ let init () : unit =
   ignore (HxType.class_ "_TyInferenceSubstitution.TyInferenceSubstitution_Fields_");
   ignore (HxType.class_ "_TyLambdaResultContract.TyLambdaResultContract_Fields_");
   ignore (HxType.class_ "_TyMetadataOverloadOrder.TyMetadataOverloadOrder_Fields_");
+  ignore (HxType.class_ "_TyMethodGenericBinding.TyBoundArguments");
   ignore (HxType.class_ "_TyMethodInputPublication.TyMethodInputPublication_Fields_");
   ignore (HxType.class_ "_TyNamedPatternResolver.TyNamedPatternResolver_Fields_");
   ignore (HxType.class_ "_TyNekoNativeStringRead.TyNekoNativeStringRead_Fields_");
@@ -332,6 +352,7 @@ let init () : unit =
   ignore (HxType.class_ "_TyStructuralConstraint.TyStructuralConstraint_Fields_");
   ignore (HxType.class_ "_TyStructuralFieldRead.TyStructuralFieldRead_Fields_");
   ignore (HxType.class_ "_TySuperType.TySuperType_Fields_");
+  ignore (HxType.class_ "_TySwitchConstantPatterns.TySwitchConstantPatterns_Fields_");
   ignore (HxType.class_ "_TySwitchIrrefutable.TySwitchIrrefutable_Fields_");
   ignore (HxType.class_ "_TySwitchTyping.TySwitchTyping_Fields_");
   ignore (HxType.class_ "_TyTraceCall.TyTraceCall_Fields_");
@@ -580,6 +601,7 @@ let init () : unit =
   ignore (HxType.class_ "backend.ocaml.OcamlLocalCallDependency");
   ignore (HxType.class_ "backend.ocaml.OcamlNativeBackend");
   ignore (HxType.class_ "backend.ocaml.OcamlNativeTargetCore");
+  ignore (HxType.class_ "backend.ocaml.OcamlPreludeReferences");
   ignore (HxType.class_ "backend.ocaml.OcamlStage3Backend");
   ignore (HxType.class_ "backend.ocaml.OcamlTargetCore");
   ignore (HxType.class_ "backend.ocaml.PortableMetalizationPlan");
@@ -589,19 +611,27 @@ let init () : unit =
   ignore (HxType.class_ "backend.ocaml.Stage3OcamlCallableFunction");
   ignore (HxType.class_ "backend.ocaml.Stage3OcamlCallableProgram");
   ignore (HxType.class_ "backend.ocaml.Stage3OcamlClassStorage");
+  ignore (HxType.class_ "backend.ocaml.Stage3OcamlClassStringifiers");
   ignore (HxType.class_ "backend.ocaml.Stage3OcamlConstructorArguments");
+  ignore (HxType.class_ "backend.ocaml.Stage3OcamlDynamicMethods");
   ignore (HxType.class_ "backend.ocaml.Stage3OcamlEnumPlan");
   ignore (HxType.class_ "backend.ocaml.Stage3OcamlEnums");
   ignore (HxType.class_ "backend.ocaml.Stage3OcamlExternBindings");
+  ignore (HxType.class_ "backend.ocaml.Stage3OcamlFloatConstant");
   ignore (HxType.class_ "backend.ocaml.Stage3OcamlGenericMethods");
+  ignore (HxType.class_ "backend.ocaml.Stage3OcamlIdentifiers");
   ignore (HxType.class_ "backend.ocaml.Stage3OcamlInstanceInitializers");
   ignore (HxType.class_ "backend.ocaml.Stage3OcamlInterfaceDispatch");
   ignore (HxType.class_ "backend.ocaml.Stage3OcamlLocalNames");
   ignore (HxType.class_ "backend.ocaml.Stage3OcamlMacroPluginEntry");
   ignore (HxType.class_ "backend.ocaml.Stage3OcamlNativeCallPolicy");
   ignore (HxType.class_ "backend.ocaml.Stage3OcamlRuntimeTypes");
+  ignore (HxType.class_ "backend.ocaml.Stage3OcamlStaticStorage");
+  ignore (HxType.class_ "backend.ocaml.Stage3OcamlTrace");
+  ignore (HxType.class_ "backend.ocaml.Stage3OcamlVirtualDispatch");
   ignore (HxType.class_ "backend.ocaml._OcamlEntryPointSelection.OcamlEntryPointSelection_Fields_");
   ignore (HxType.class_ "backend.ocaml._OcamlFieldUpdateLowering.OcamlFieldUpdateLowering_Fields_");
+  ignore (HxType.class_ "backend.ocaml._Stage3OcamlArithmeticOperands.Stage3OcamlArithmeticOperands_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlArrayCalls.Stage3OcamlArrayCalls_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlArrays.Stage3OcamlArrays_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlCallOrder.Stage3OcamlCallOrder_Fields_");
@@ -609,28 +639,39 @@ let init () : unit =
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlCallableSelection.CallableUseScan");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlCallableSelection.Stage3OcamlCallableSelection_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlCollectionControl.Stage3OcamlCollectionControl_Fields_");
+  ignore (HxType.class_ "backend.ocaml._Stage3OcamlERegCalls.Stage3OcamlERegCalls_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlExceptions.Stage3OcamlExceptions_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlFunctionBody.Stage3OcamlFunctionBody_Fields_");
+  ignore (HxType.class_ "backend.ocaml._Stage3OcamlFunctionBoundary.Stage3OcamlFunctionBoundary_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlFunctionDefaults.Stage3OcamlFunctionDefaults_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlGuardedSwitch.Stage3OcamlGuardedSwitch_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlInitializer.Stage3OcamlInitializer_Fields_");
+  ignore (HxType.class_ "backend.ocaml._Stage3OcamlInt64Words.Stage3OcamlInt64Words_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlIntBitwise.Stage3OcamlIntBitwise_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlIntrinsicCallable.Stage3OcamlIntrinsicCallable_Fields_");
+  ignore (HxType.class_ "backend.ocaml._Stage3OcamlLocalCallOmissions.Stage3OcamlLocalCallOmissions_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlLocalCompoundValue.Stage3OcamlLocalCompoundValue_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlLocalStorage.Stage3OcamlLocalStorage_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlMapCalls.Stage3OcamlMapCalls_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlMemberLength.Stage3OcamlMemberLength_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlMethodValue.Stage3OcamlMethodValue_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlNullablePrimitive.Stage3OcamlNullablePrimitive_Fields_");
+  ignore (HxType.class_ "backend.ocaml._Stage3OcamlNumericWidening.Stage3OcamlNumericWidening_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlObjects.Stage3OcamlObjects_Fields_");
+  ignore (HxType.class_ "backend.ocaml._Stage3OcamlOrderedOperands.Stage3OcamlOrderedOperands_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlPatternDecision.Stage3OcamlPatternDecision_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlRangeBound.Stage3OcamlRangeBound_Fields_");
+  ignore (HxType.class_ "backend.ocaml._Stage3OcamlRecursiveLocalFunction.Stage3OcamlRecursiveLocalFunction_Fields_");
+  ignore (HxType.class_ "backend.ocaml._Stage3OcamlReferenceCarrier.Stage3OcamlReferenceCarrier_Fields_");
+  ignore (HxType.class_ "backend.ocaml._Stage3OcamlReflectCalls.Stage3OcamlReflectCalls_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlRuntimeTypes.Stage3OcamlRuntimeTypes_Fields_");
+  ignore (HxType.class_ "backend.ocaml._Stage3OcamlStaticDefault.Stage3OcamlStaticDefault_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlStdStaticCalls.Stage3OcamlStdStaticCalls_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlStringCalls.Stage3OcamlStringCalls_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlStringConversion.Stage3OcamlStringConversion_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlTypeQueries.Stage3OcamlTypeQueries_Fields_");
   ignore (HxType.class_ "backend.ocaml._Stage3OcamlValueConversion.Stage3OcamlValueConversion_Fields_");
+  ignore (HxType.class_ "backend.ocaml._Stage3OcamlVirtualCalls.Stage3OcamlVirtualCalls_Fields_");
   ignore (HxType.class_ "backend.plugin.BackendPluginManifestParser");
   ignore (HxType.class_ "backend.reflaxe.ReflaxeTargetAdapter");
   ignore (HxType.class_ "backend.source.CsDynamicLocalCallLowering");
@@ -967,10 +1008,12 @@ let init () : unit =
   ignore (HxType.enum_ "_ModuleLoader.SignaturePreparationState");
   ignore (HxType.enum_ "_TyAbstractBinaryArgument.BinaryArgumentEvidence");
   ignore (HxType.enum_ "_TyAbstractBinaryConversion.BinaryConversionEvidence");
+  ignore (HxType.enum_ "_TyAbstractPrimitiveOperation.TyOperandKind");
   ignore (HxType.enum_ "_TyArrayComprehension.ComprehensionYieldKind");
   ignore (HxType.enum_ "_TyIndexedComputedResult.IndexedArgumentAdmission");
   ignore (HxType.enum_ "_TyIndexedComputedResult.IndexedPlaceAdmission");
   ignore (HxType.enum_ "_TyIndexedComputedResult.IndexedResultEvidence");
+  ignore (HxType.enum_ "_TyMethodGenericBinding.TyParameterEvidence");
   ignore (HxType.enum_ "_TyStructuralConstraint.StructuralDirection");
   ignore (HxType.enum_ "_TypedMemberResolution.MemberValue");
   ignore (HxType.enum_ "backend.cpp.CppCallableDefault");
@@ -1000,6 +1043,9 @@ let init () : unit =
   ignore (HxType.enum_ "backend.ocaml.Stage3OcamlLengthReceiver");
   ignore (HxType.enum_ "backend.ocaml.Stage3OcamlLocalCompoundKind");
   ignore (HxType.enum_ "backend.ocaml.Stage3OcamlMapKeys");
+  ignore (HxType.enum_ "backend.ocaml.Stage3OcamlStaticCell");
+  ignore (HxType.enum_ "backend.ocaml.Stage3OcamlStaticOperand");
+  ignore (HxType.enum_ "backend.ocaml._Stage3OcamlReflectCalls.ReflectArgument");
   ignore (HxType.enum_ "backend.ocaml._Stage3OcamlRuntimeTypes.Stage3OcamlStandardTypeOperation");
   ignore (HxType.enum_ "backend.source.LuaFieldDefault");
   ignore (HxType.enum_ "backend.source.PhpLexicalScopeKind");
@@ -1076,9 +1122,10 @@ let init () : unit =
   HxType.register_enum_ctor_layout "GuardedPatternTest" "IsNull" 0 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "GuardedPatternTest" "IsBool" 1 (HxType.EnumBlock 0);
   HxType.register_enum_ctor_layout "GuardedPatternTest" "IsInt" 2 (HxType.EnumBlock 1);
-  HxType.register_enum_ctor_layout "GuardedPatternTest" "IsString" 3 (HxType.EnumBlock 2);
-  HxType.register_enum_ctor_layout "GuardedPatternTest" "ArrayLength" 4 (HxType.EnumBlock 3);
-  HxType.register_enum_ctor_layout "GuardedPatternTest" "EnumConstructor" 5 (HxType.EnumBlock 4);
+  HxType.register_enum_ctor_layout "GuardedPatternTest" "IsFloat" 3 (HxType.EnumBlock 2);
+  HxType.register_enum_ctor_layout "GuardedPatternTest" "IsString" 4 (HxType.EnumBlock 3);
+  HxType.register_enum_ctor_layout "GuardedPatternTest" "ArrayLength" 5 (HxType.EnumBlock 4);
+  HxType.register_enum_ctor_layout "GuardedPatternTest" "EnumConstructor" 6 (HxType.EnumBlock 5);
   HxType.register_enum_ctor_layout "HxDefaultValue" "NoDefault" 0 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "HxDefaultValue" "Default" 1 (HxType.EnumBlock 0);
   HxType.register_enum_ctor_layout "HxExpr" "EParenthesized" 0 (HxType.EnumBlock 0);
@@ -1221,16 +1268,17 @@ let init () : unit =
   HxType.register_enum_ctor_layout "HxSwitchPattern" "PBool" 2 (HxType.EnumBlock 0);
   HxType.register_enum_ctor_layout "HxSwitchPattern" "PString" 3 (HxType.EnumBlock 1);
   HxType.register_enum_ctor_layout "HxSwitchPattern" "PInt" 4 (HxType.EnumBlock 2);
-  HxType.register_enum_ctor_layout "HxSwitchPattern" "PEnumValue" 5 (HxType.EnumBlock 3);
-  HxType.register_enum_ctor_layout "HxSwitchPattern" "PEnumExtract" 6 (HxType.EnumBlock 4);
-  HxType.register_enum_ctor_layout "HxSwitchPattern" "PObject" 7 (HxType.EnumBlock 5);
-  HxType.register_enum_ctor_layout "HxSwitchPattern" "PCapture" 8 (HxType.EnumBlock 6);
-  HxType.register_enum_ctor_layout "HxSwitchPattern" "PArray" 9 (HxType.EnumBlock 7);
-  HxType.register_enum_ctor_layout "HxSwitchPattern" "PExtractor" 10 (HxType.EnumBlock 8);
-  HxType.register_enum_ctor_layout "HxSwitchPattern" "PGuard" 11 (HxType.EnumBlock 9);
-  HxType.register_enum_ctor_layout "HxSwitchPattern" "PUnsupportedPattern" 12 (HxType.EnumBlock 10);
-  HxType.register_enum_ctor_layout "HxSwitchPattern" "PBind" 13 (HxType.EnumBlock 11);
-  HxType.register_enum_ctor_layout "HxSwitchPattern" "POr" 14 (HxType.EnumBlock 12);
+  HxType.register_enum_ctor_layout "HxSwitchPattern" "PFloat" 5 (HxType.EnumBlock 3);
+  HxType.register_enum_ctor_layout "HxSwitchPattern" "PEnumValue" 6 (HxType.EnumBlock 4);
+  HxType.register_enum_ctor_layout "HxSwitchPattern" "PEnumExtract" 7 (HxType.EnumBlock 5);
+  HxType.register_enum_ctor_layout "HxSwitchPattern" "PObject" 8 (HxType.EnumBlock 6);
+  HxType.register_enum_ctor_layout "HxSwitchPattern" "PCapture" 9 (HxType.EnumBlock 7);
+  HxType.register_enum_ctor_layout "HxSwitchPattern" "PArray" 10 (HxType.EnumBlock 8);
+  HxType.register_enum_ctor_layout "HxSwitchPattern" "PExtractor" 11 (HxType.EnumBlock 9);
+  HxType.register_enum_ctor_layout "HxSwitchPattern" "PGuard" 12 (HxType.EnumBlock 10);
+  HxType.register_enum_ctor_layout "HxSwitchPattern" "PUnsupportedPattern" 13 (HxType.EnumBlock 11);
+  HxType.register_enum_ctor_layout "HxSwitchPattern" "PBind" 14 (HxType.EnumBlock 12);
+  HxType.register_enum_ctor_layout "HxSwitchPattern" "POr" 15 (HxType.EnumBlock 13);
   HxType.register_enum_ctor_layout "HxTargetScopeKind" "CsUnsafe" 0 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "HxTokenKind" "TEof" 0 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "HxTokenKind" "TIdent" 1 (HxType.EnumBlock 0);
@@ -1353,7 +1401,8 @@ let init () : unit =
   HxType.register_enum_ctor_layout "TySwitchCaseCoverage" "NullOnly" 2 (HxType.EnumImmediate 1);
   HxType.register_enum_ctor_layout "TySwitchCaseCoverage" "Guarded" 3 (HxType.EnumBlock 1);
   HxType.register_enum_ctor_layout "TySwitchCaseCoverage" "Alternatives" 4 (HxType.EnumBlock 2);
-  HxType.register_enum_ctor_layout "TySwitchCaseCoverage" "Unsupported" 5 (HxType.EnumBlock 3);
+  HxType.register_enum_ctor_layout "TySwitchCaseCoverage" "UnmatchedConstant" 5 (HxType.EnumImmediate 2);
+  HxType.register_enum_ctor_layout "TySwitchCaseCoverage" "Unsupported" 6 (HxType.EnumBlock 3);
   HxType.register_enum_ctor_layout "TySwitchCoverageResult" "Exhaustive" 0 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "TySwitchCoverageResult" "NonExhaustive" 1 (HxType.EnumBlock 0);
   HxType.register_enum_ctor_layout "TySwitchCoverageResult" "NonExhaustiveWildcard" 2 (HxType.EnumImmediate 1);
@@ -1505,6 +1554,15 @@ let init () : unit =
   HxType.register_enum_ctor_layout "_TyAbstractBinaryArgument.BinaryArgumentEvidence" "IndexedNullableAdmission" 1 (HxType.EnumBlock 1);
   HxType.register_enum_ctor_layout "_TyAbstractBinaryConversion.BinaryConversionEvidence" "Implicit" 0 (HxType.EnumBlock 0);
   HxType.register_enum_ctor_layout "_TyAbstractBinaryConversion.BinaryConversionEvidence" "Method" 1 (HxType.EnumBlock 1);
+  HxType.register_enum_ctor_layout "_TyAbstractPrimitiveOperation.TyOperandKind" "IntValue" 0 (HxType.EnumImmediate 0);
+  HxType.register_enum_ctor_layout "_TyAbstractPrimitiveOperation.TyOperandKind" "FloatValue" 1 (HxType.EnumImmediate 1);
+  HxType.register_enum_ctor_layout "_TyAbstractPrimitiveOperation.TyOperandKind" "DynamicValue" 2 (HxType.EnumImmediate 2);
+  HxType.register_enum_ctor_layout "_TyAbstractPrimitiveOperation.TyOperandKind" "StringValue" 3 (HxType.EnumImmediate 3);
+  HxType.register_enum_ctor_layout "_TyAbstractPrimitiveOperation.TyOperandKind" "BoolValue" 4 (HxType.EnumImmediate 4);
+  HxType.register_enum_ctor_layout "_TyAbstractPrimitiveOperation.TyOperandKind" "IntAbstract" 5 (HxType.EnumImmediate 5);
+  HxType.register_enum_ctor_layout "_TyAbstractPrimitiveOperation.TyOperandKind" "CoreFloatAbstract" 6 (HxType.EnumImmediate 6);
+  HxType.register_enum_ctor_layout "_TyAbstractPrimitiveOperation.TyOperandKind" "FloatAbstract" 7 (HxType.EnumImmediate 7);
+  HxType.register_enum_ctor_layout "_TyAbstractPrimitiveOperation.TyOperandKind" "OtherAbstract" 8 (HxType.EnumImmediate 8);
   HxType.register_enum_ctor_layout "_TyArrayComprehension.ComprehensionYieldKind" "ArrayElement" 0 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "_TyArrayComprehension.ComprehensionYieldKind" "MapEntry" 1 (HxType.EnumImmediate 1);
   HxType.register_enum_ctor_layout "_TyIndexedComputedResult.IndexedArgumentAdmission" "ArgumentAssignment" 0 (HxType.EnumImmediate 0);
@@ -1517,6 +1575,9 @@ let init () : unit =
   HxType.register_enum_ctor_layout "_TyIndexedComputedResult.IndexedResultEvidence" "Converted" 2 (HxType.EnumBlock 2);
   HxType.register_enum_ctor_layout "_TyIndexedComputedResult.IndexedResultEvidence" "CheckedPlace" 3 (HxType.EnumBlock 3);
   HxType.register_enum_ctor_layout "_TyIndexedComputedResult.IndexedResultEvidence" "CheckedArgument" 4 (HxType.EnumBlock 4);
+  HxType.register_enum_ctor_layout "_TyMethodGenericBinding.TyParameterEvidence" "Constraining" 0 (HxType.EnumImmediate 0);
+  HxType.register_enum_ctor_layout "_TyMethodGenericBinding.TyParameterEvidence" "DynamicOnly" 1 (HxType.EnumImmediate 1);
+  HxType.register_enum_ctor_layout "_TyMethodGenericBinding.TyParameterEvidence" "NullOnly" 2 (HxType.EnumImmediate 2);
   HxType.register_enum_ctor_layout "_TyStructuralConstraint.StructuralDirection" "Output" 0 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "_TyStructuralConstraint.StructuralDirection" "Input" 1 (HxType.EnumImmediate 1);
   HxType.register_enum_ctor_layout "_TyStructuralConstraint.StructuralDirection" "Exact" 2 (HxType.EnumImmediate 2);
@@ -1620,6 +1681,13 @@ let init () : unit =
   HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlMapKeys" "StringKeys" 0 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlMapKeys" "IntKeys" 1 (HxType.EnumImmediate 1);
   HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlMapKeys" "ObjectKeys" 2 (HxType.EnumImmediate 2);
+  HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlStaticCell" "Typed" 0 (HxType.EnumBlock 0);
+  HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlStaticCell" "Erased" 1 (HxType.EnumImmediate 0);
+  HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlStaticOperand" "Plain" 0 (HxType.EnumImmediate 0);
+  HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlStaticOperand" "FloatValue" 1 (HxType.EnumImmediate 1);
+  HxType.register_enum_ctor_layout "backend.ocaml.Stage3OcamlStaticOperand" "StringAppend" 2 (HxType.EnumImmediate 2);
+  HxType.register_enum_ctor_layout "backend.ocaml._Stage3OcamlReflectCalls.ReflectArgument" "Value" 0 (HxType.EnumImmediate 0);
+  HxType.register_enum_ctor_layout "backend.ocaml._Stage3OcamlReflectCalls.ReflectArgument" "Plain" 1 (HxType.EnumImmediate 1);
   HxType.register_enum_ctor_layout "backend.ocaml._Stage3OcamlRuntimeTypes.Stage3OcamlStandardTypeOperation" "Test" 0 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "backend.ocaml._Stage3OcamlRuntimeTypes.Stage3OcamlStandardTypeOperation" "Downcast" 1 (HxType.EnumImmediate 1);
   HxType.register_enum_ctor_layout "backend.source.LuaFieldDefault" "Zero" 0 (HxType.EnumImmediate 0);
@@ -1957,6 +2025,11 @@ let init () : unit =
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'value' for GuardedPatternTest.IsInt" in
     Obj.repr (TypedGuardedPatternPlan.IsInt a0)
+  );
+  HxType.register_enum_ctor "GuardedPatternTest" "IsFloat" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'text' for GuardedPatternTest.IsFloat" in
+    Obj.repr (TypedGuardedPatternPlan.IsFloat a0)
   );
   HxType.register_enum_ctor "GuardedPatternTest" "IsString" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -2646,6 +2719,11 @@ let init () : unit =
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'value' for HxSwitchPattern.PInt" in
     Obj.repr (HxSwitchPattern.PInt a0)
   );
+  HxType.register_enum_ctor "HxSwitchPattern" "PFloat" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'text' for HxSwitchPattern.PFloat" in
+    Obj.repr (HxSwitchPattern.PFloat a0)
+  );
   HxType.register_enum_ctor "HxSwitchPattern" "PEnumValue" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'name' for HxSwitchPattern.PEnumValue" in
@@ -3219,6 +3297,9 @@ let init () : unit =
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'cases' for TySwitchCaseCoverage.Alternatives" in
     Obj.repr (TySwitchAnalysis.Alternatives a0)
   );
+  HxType.register_enum_ctor "TySwitchCaseCoverage" "UnmatchedConstant" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TySwitchAnalysis.UnmatchedConstant)
+  );
   HxType.register_enum_ctor "TySwitchCaseCoverage" "Unsupported" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'reason' for TySwitchCaseCoverage.Unsupported" in
@@ -3734,6 +3815,33 @@ let init () : unit =
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'result' for _TyAbstractBinaryConversion.BinaryConversionEvidence.Method" in
     Obj.repr (TyAbstractBinaryConversion.Method (a0, a1))
   );
+  HxType.register_enum_ctor "_TyAbstractPrimitiveOperation.TyOperandKind" "IntValue" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyAbstractPrimitiveOperation.IntValue)
+  );
+  HxType.register_enum_ctor "_TyAbstractPrimitiveOperation.TyOperandKind" "FloatValue" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyAbstractPrimitiveOperation.FloatValue)
+  );
+  HxType.register_enum_ctor "_TyAbstractPrimitiveOperation.TyOperandKind" "DynamicValue" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyAbstractPrimitiveOperation.DynamicValue)
+  );
+  HxType.register_enum_ctor "_TyAbstractPrimitiveOperation.TyOperandKind" "StringValue" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyAbstractPrimitiveOperation.StringValue)
+  );
+  HxType.register_enum_ctor "_TyAbstractPrimitiveOperation.TyOperandKind" "BoolValue" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyAbstractPrimitiveOperation.BoolValue)
+  );
+  HxType.register_enum_ctor "_TyAbstractPrimitiveOperation.TyOperandKind" "IntAbstract" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyAbstractPrimitiveOperation.IntAbstract)
+  );
+  HxType.register_enum_ctor "_TyAbstractPrimitiveOperation.TyOperandKind" "CoreFloatAbstract" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyAbstractPrimitiveOperation.CoreFloatAbstract)
+  );
+  HxType.register_enum_ctor "_TyAbstractPrimitiveOperation.TyOperandKind" "FloatAbstract" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyAbstractPrimitiveOperation.FloatAbstract)
+  );
+  HxType.register_enum_ctor "_TyAbstractPrimitiveOperation.TyOperandKind" "OtherAbstract" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyAbstractPrimitiveOperation.OtherAbstract)
+  );
   HxType.register_enum_ctor "_TyArrayComprehension.ComprehensionYieldKind" "ArrayElement" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (TyArrayComprehension.ArrayElement)
   );
@@ -3793,6 +3901,15 @@ let init () : unit =
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'expected' for _TyIndexedComputedResult.IndexedResultEvidence.CheckedArgument" in
     let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'admission' for _TyIndexedComputedResult.IndexedResultEvidence.CheckedArgument" in
     Obj.repr (TyIndexedComputedResult.CheckedArgument (a0, a1, a2))
+  );
+  HxType.register_enum_ctor "_TyMethodGenericBinding.TyParameterEvidence" "Constraining" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyMethodGenericBinding.Constraining)
+  );
+  HxType.register_enum_ctor "_TyMethodGenericBinding.TyParameterEvidence" "DynamicOnly" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyMethodGenericBinding.DynamicOnly)
+  );
+  HxType.register_enum_ctor "_TyMethodGenericBinding.TyParameterEvidence" "NullOnly" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyMethodGenericBinding.NullOnly)
   );
   HxType.register_enum_ctor "_TyStructuralConstraint.StructuralDirection" "Output" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (TyStructuralConstraint.Output)
@@ -4196,6 +4313,29 @@ let init () : unit =
   );
   HxType.register_enum_ctor "backend.ocaml.Stage3OcamlMapKeys" "ObjectKeys" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_ocaml_Stage3OcamlMapCalls.ObjectKeys)
+  );
+  HxType.register_enum_ctor "backend.ocaml.Stage3OcamlStaticCell" "Typed" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'ocamlType' for backend.ocaml.Stage3OcamlStaticCell.Typed" in
+    Obj.repr (Backend_ocaml_Stage3OcamlStaticStorage.Typed a0)
+  );
+  HxType.register_enum_ctor "backend.ocaml.Stage3OcamlStaticCell" "Erased" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_ocaml_Stage3OcamlStaticStorage.Erased)
+  );
+  HxType.register_enum_ctor "backend.ocaml.Stage3OcamlStaticOperand" "Plain" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_ocaml_Stage3OcamlStaticStorage.Plain)
+  );
+  HxType.register_enum_ctor "backend.ocaml.Stage3OcamlStaticOperand" "FloatValue" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_ocaml_Stage3OcamlStaticStorage.FloatValue)
+  );
+  HxType.register_enum_ctor "backend.ocaml.Stage3OcamlStaticOperand" "StringAppend" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_ocaml_Stage3OcamlStaticStorage.StringAppend)
+  );
+  HxType.register_enum_ctor "backend.ocaml._Stage3OcamlReflectCalls.ReflectArgument" "Value" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_ocaml_Stage3OcamlReflectCalls.Value)
+  );
+  HxType.register_enum_ctor "backend.ocaml._Stage3OcamlReflectCalls.ReflectArgument" "Plain" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_ocaml_Stage3OcamlReflectCalls.Plain)
   );
   HxType.register_enum_ctor "backend.ocaml._Stage3OcamlRuntimeTypes.Stage3OcamlStandardTypeOperation" "Test" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_ocaml_Stage3OcamlRuntimeTypes.Test)
@@ -5395,6 +5535,12 @@ let init () : unit =
     let a11 = if len > 11 then Obj.obj ((HxArray.get args 11)) else Obj.magic HxRuntime.hx_null in
     Obj.repr (HxFieldDecl.create a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11)
   );
+  HxType.register_class_ctor "HxFloatPatternBits" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxFloatPatternBits.create ())
+  );
+  HxType.register_class_ctor "HxFloatPatternText" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxFloatPatternText.create ())
+  );
   HxType.register_class_ctor "HxFunctionArg" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'name' for HxFunctionArg" in
@@ -5430,6 +5576,9 @@ let init () : unit =
   );
   HxType.register_class_ctor "HxFunctionTypeParamMetadata" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (HxFunctionTypeParamMetadata.create ())
+  );
+  HxType.register_class_ctor "HxIntegerLiteral" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxIntegerLiteral.create ())
   );
   HxType.register_class_ctor "HxLambdaSignature" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -5476,6 +5625,9 @@ let init () : unit =
     let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'line' for HxPos" in
     let a2 = if len > 2 then Obj.obj ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'column' for HxPos" in
     Obj.repr (HxPos.create a0 a1 a2)
+  );
+  HxType.register_class_ctor "HxRootedPath" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxRootedPath.create ())
   );
   HxType.register_class_ctor "HxSourceCatch" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -5559,13 +5711,15 @@ let init () : unit =
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'file' for MacroReificationLowering" in
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'anchor' for MacroReificationLowering" in
     let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'valueType' for MacroReificationLowering" in
-    Obj.repr (MacroReificationLowering.create a0 a1 a2)
+    let a3 = if len > 3 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'rooted' for MacroReificationLowering" in
+    Obj.repr (MacroReificationLowering.create a0 a1 a2 a3)
   );
   HxType.register_class_ctor "MacroReificationSyntax" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'holes' for MacroReificationSyntax" in
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'valueSplice' for MacroReificationSyntax" in
-    Obj.repr (MacroReificationSyntax.create a0 a1)
+    let a2 = if len > 2 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'rooted' for MacroReificationSyntax" in
+    Obj.repr (MacroReificationSyntax.create a0 a1 a2)
   );
   HxType.register_class_ctor "MacroStage" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (MacroStage.create ())
@@ -5658,6 +5812,11 @@ let init () : unit =
     let a5 = if len > 5 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 5)) else failwith "Type.createInstance: missing ctor arg 'commutative' for TyAbstractBinaryOperatorInfo" in
     Obj.repr (TyAbstractBinaryOperatorInfo.create a0 a1 a2 a3 a4 a5)
   );
+  HxType.register_class_ctor "TyAbstractConstructorInitialization" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'filePath' for TyAbstractConstructorInitialization" in
+    Obj.repr (TyAbstractConstructorInitialization.create a0)
+  );
   HxType.register_class_ctor "TyAbstractInfo" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'identity' for TyAbstractInfo" in
@@ -5706,6 +5865,9 @@ let init () : unit =
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'declaration' for TyAliasDefinition" in
     let a1 = if len > 1 then (HxArray.get args 1) else HxRuntime.hx_null in
     Obj.repr (TyAliasDefinition.create a0 a1)
+  );
+  HxType.register_class_ctor "TyAuthoredAssignmentCheck" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyAuthoredAssignmentCheck.create ())
   );
   HxType.register_class_ctor "TyBoundAbstractBinaryOperator" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -5818,6 +5980,9 @@ let init () : unit =
     let a12 = if len > 12 then Obj.magic ((HxArray.get args 12)) else Obj.magic HxRuntime.hx_null in
     Obj.repr (TyDeclarationInfo.create a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)
   );
+  HxType.register_class_ctor "TyDirectivePosition" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyDirectivePosition.create ())
+  );
   HxType.register_class_ctor "TyEnumAbstractConstants" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'owner' for TyEnumAbstractConstants" in
@@ -5876,6 +6041,9 @@ let init () : unit =
     let a6 = if len > 6 then Obj.magic ((HxArray.get args 6)) else failwith "Type.createInstance: missing ctor arg 'returnType' for TyFunSig" in
     let a7 = if len > 7 then Obj.magic ((HxArray.get args 7)) else failwith "Type.createInstance: missing ctor arg 'pos' for TyFunSig" in
     Obj.repr (TyFunSig.create a0 a1 a2 a3 a4 a5 a6 a7)
+  );
+  HxType.register_class_ctor "TyFunctionConstraint" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyFunctionConstraint.create ())
   );
   HxType.register_class_ctor "TyFunctionEnv" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -6146,6 +6314,9 @@ let init () : unit =
     let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'position' for TyResolvedTypeUse" in
     Obj.repr (TyResolvedTypeUse.create a0 a1 a2)
   );
+  HxType.register_class_ctor "TySourceTokenPosition" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TySourceTokenPosition.create ())
+  );
   HxType.register_class_ctor "TySwitchAnalysis" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'domain' for TySwitchAnalysis" in
@@ -6195,6 +6366,14 @@ let init () : unit =
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'catalog' for TyTypeUseResolver" in
     Obj.repr (TyTypeUseResolver.create a0)
   );
+  HxType.register_class_ctor "TyUndeclaredName" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TyUndeclaredName.create ())
+  );
+  HxType.register_class_ctor "TyUndeclaredValueNames" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'filePath' for TyUndeclaredValueNames" in
+    Obj.repr (TyUndeclaredName.tyundeclaredvaluenames_create a0)
+  );
   HxType.register_class_ctor "TypedAbstractBinaryLowering" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (TypedAbstractBinaryLowering.create ())
   );
@@ -6208,6 +6387,11 @@ let init () : unit =
     let len = HxArray.length args in
     let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createInstance: missing ctor arg 'input' for TypedBackendAggregateOccurrence" in
     Obj.repr (TypedBackendAggregateOccurrence.create a0)
+  );
+  HxType.register_class_ctor "TypedBackendArithmeticOccurrence" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createInstance: missing ctor arg 'input' for TypedBackendArithmeticOccurrence" in
+    Obj.repr (TypedBackendArithmeticOccurrence.create a0)
   );
   HxType.register_class_ctor "TypedBackendArrayAccess" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -6448,6 +6632,11 @@ let init () : unit =
     let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'statement' for TypedBackendStatementControl" in
     Obj.repr (TypedBackendStatementControl.create a0 a1 a2 a3)
   );
+  HxType.register_class_ctor "TypedBackendStringConcatOccurrence" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createInstance: missing ctor arg 'input' for TypedBackendStringConcatOccurrence" in
+    Obj.repr (TypedBackendStringConcatOccurrence.create a0)
+  );
   HxType.register_class_ctor "TypedBackendThrownValue" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'owner' for TypedBackendThrownValue" in
@@ -6455,6 +6644,11 @@ let init () : unit =
     let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'source' for TypedBackendThrownValue" in
     let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'expression' for TypedBackendThrownValue" in
     Obj.repr (TypedBackendThrownValue.create a0 a1 a2 a3)
+  );
+  HxType.register_class_ctor "TypedBackendTraceOccurrence" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createInstance: missing ctor arg 'input' for TypedBackendTraceOccurrence" in
+    Obj.repr (TypedBackendTraceOccurrence.create a0)
   );
   HxType.register_class_ctor "TypedBodyBuilder" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (TypedBodyBuilder.create ())
@@ -6634,6 +6828,9 @@ let init () : unit =
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'statements' for TypedFunctionBody" in
     let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'sourceFingerprint' for TypedFunctionBody" in
     Obj.repr (TypedFunctionBody.create a0 a1)
+  );
+  HxType.register_class_ctor "TypedFunctionConstraintFlows" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (TypedFunctionConstraintFlows.create ())
   );
   HxType.register_class_ctor "TypedFunctionDefault" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -6856,6 +7053,12 @@ let init () : unit =
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'left' for _TyAliasEquivalence.AliasEquivalenceProof" in
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'right' for _TyAliasEquivalence.AliasEquivalenceProof" in
     Obj.repr (TyAliasEquivalence.aliasequivalenceproof_create a0 a1)
+  );
+  HxType.register_class_ctor "_TyMethodGenericBinding.TyBoundArguments" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'types' for _TyMethodGenericBinding.TyBoundArguments" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'open' for _TyMethodGenericBinding.TyBoundArguments" in
+    Obj.repr (TyMethodGenericBinding.tyboundarguments_create a0 a1)
   );
   HxType.register_class_ctor "_TySignatureDependencies.SignatureDependencyPaths" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (TySignatureDependencies.create ())
@@ -7386,6 +7589,13 @@ let init () : unit =
   HxType.register_class_ctor "backend.ocaml.OcamlNativeTargetCore" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_ocaml_OcamlNativeTargetCore.create ())
   );
+  HxType.register_class_ctor "backend.ocaml.OcamlPreludeReferences" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'locals' for backend.ocaml.OcamlPreludeReferences" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'findMethodUse' for backend.ocaml.OcamlPreludeReferences" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'ownsMethod' for backend.ocaml.OcamlPreludeReferences" in
+    Obj.repr (Backend_ocaml_OcamlPreludeReferences.create a0 a1 a2)
+  );
   HxType.register_class_ctor "backend.ocaml.OcamlStage3Backend" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_ocaml_OcamlStage3Backend.create ())
   );
@@ -7429,10 +7639,16 @@ let init () : unit =
   HxType.register_class_ctor "backend.ocaml.Stage3OcamlClassStorage" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_ocaml_Stage3OcamlClassStorage.create ())
   );
+  HxType.register_class_ctor "backend.ocaml.Stage3OcamlClassStringifiers" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_ocaml_Stage3OcamlClassStringifiers.create ())
+  );
   HxType.register_class_ctor "backend.ocaml.Stage3OcamlConstructorArguments" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createInstance: missing ctor arg 'input' for backend.ocaml.Stage3OcamlConstructorArguments" in
     Obj.repr (Backend_ocaml_Stage3OcamlConstructorArguments.create a0)
+  );
+  HxType.register_class_ctor "backend.ocaml.Stage3OcamlDynamicMethods" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_ocaml_Stage3OcamlDynamicMethods.create ())
   );
   HxType.register_class_ctor "backend.ocaml.Stage3OcamlEnumPlan" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -7454,10 +7670,16 @@ let init () : unit =
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'modules' for backend.ocaml.Stage3OcamlExternBindings" in
     Obj.repr (Backend_ocaml_Stage3OcamlExternBindings.create a0)
   );
+  HxType.register_class_ctor "backend.ocaml.Stage3OcamlFloatConstant" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_ocaml_Stage3OcamlFloatConstant.create ())
+  );
   HxType.register_class_ctor "backend.ocaml.Stage3OcamlGenericMethods" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'modules' for backend.ocaml.Stage3OcamlGenericMethods" in
     Obj.repr (Backend_ocaml_Stage3OcamlGenericMethods.create a0)
+  );
+  HxType.register_class_ctor "backend.ocaml.Stage3OcamlIdentifiers" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_ocaml_Stage3OcamlIdentifiers.create ())
   );
   HxType.register_class_ctor "backend.ocaml.Stage3OcamlInstanceInitializers" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -7485,6 +7707,15 @@ let init () : unit =
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'modules' for backend.ocaml.Stage3OcamlRuntimeTypes" in
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'classes' for backend.ocaml.Stage3OcamlRuntimeTypes" in
     Obj.repr (Backend_ocaml_Stage3OcamlRuntimeTypes.create a0 a1)
+  );
+  HxType.register_class_ctor "backend.ocaml.Stage3OcamlStaticStorage" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_ocaml_Stage3OcamlStaticStorage.create ())
+  );
+  HxType.register_class_ctor "backend.ocaml.Stage3OcamlTrace" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_ocaml_Stage3OcamlTrace.create ())
+  );
+  HxType.register_class_ctor "backend.ocaml.Stage3OcamlVirtualDispatch" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_ocaml_Stage3OcamlVirtualDispatch.create ())
   );
   HxType.register_class_ctor "backend.ocaml._Stage3OcamlCallableSelection.CallableUseScan" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -8580,10 +8811,13 @@ let init () : unit =
   HxType.register_class_empty_ctor "HxDefineMap" (fun () -> Obj.repr (HxDefineMap.__empty ()));
   HxType.register_class_empty_ctor "HxEnumDeclaration" (fun () -> Obj.repr (HxEnumDeclaration.__empty ()));
   HxType.register_class_empty_ctor "HxFieldDecl" (fun () -> Obj.repr (HxFieldDecl.__empty ()));
+  HxType.register_class_empty_ctor "HxFloatPatternBits" (fun () -> Obj.repr (HxFloatPatternBits.__empty ()));
+  HxType.register_class_empty_ctor "HxFloatPatternText" (fun () -> Obj.repr (HxFloatPatternText.__empty ()));
   HxType.register_class_empty_ctor "HxFunctionArg" (fun () -> Obj.repr (HxFunctionArg.__empty ()));
   HxType.register_class_empty_ctor "HxFunctionDecl" (fun () -> Obj.repr (HxFunctionDecl.__empty ()));
   HxType.register_class_empty_ctor "HxFunctionSyntaxParser" (fun () -> Obj.repr (HxFunctionSyntaxParser.__empty ()));
   HxType.register_class_empty_ctor "HxFunctionTypeParamMetadata" (fun () -> Obj.repr (HxFunctionTypeParamMetadata.__empty ()));
+  HxType.register_class_empty_ctor "HxIntegerLiteral" (fun () -> Obj.repr (HxIntegerLiteral.__empty ()));
   HxType.register_class_empty_ctor "HxLambdaSignature" (fun () -> Obj.repr (HxLambdaSignature.__empty ()));
   HxType.register_class_empty_ctor "HxLexer" (fun () -> Obj.repr (HxLexer.__empty ()));
   HxType.register_class_empty_ctor "HxModuleDecl" (fun () -> Obj.repr (HxModuleDecl.__empty ()));
@@ -8591,6 +8825,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "HxParseError" (fun () -> Obj.repr (HxParseError.__empty ()));
   HxType.register_class_empty_ctor "HxParser" (fun () -> Obj.repr (HxParser.__empty ()));
   HxType.register_class_empty_ctor "HxPos" (fun () -> Obj.repr (HxPos.__empty ()));
+  HxType.register_class_empty_ctor "HxRootedPath" (fun () -> Obj.repr (HxRootedPath.__empty ()));
   HxType.register_class_empty_ctor "HxSourceCatch" (fun () -> Obj.repr (HxSourceCatch.__empty ()));
   HxType.register_class_empty_ctor "HxSourceFunction" (fun () -> Obj.repr (HxSourceFunction.__empty ()));
   HxType.register_class_empty_ctor "HxSourceFunctionGenerics" (fun () -> Obj.repr (HxSourceFunctionGenerics.__empty ()));
@@ -8624,12 +8859,14 @@ let init () : unit =
   HxType.register_class_empty_ctor "TyAbstractBinaryBinding" (fun () -> Obj.repr (TyAbstractBinaryBinding.__empty ()));
   HxType.register_class_empty_ctor "TyAbstractBinaryConversion" (fun () -> Obj.repr (TyAbstractBinaryConversion.__empty ()));
   HxType.register_class_empty_ctor "TyAbstractBinaryOperatorInfo" (fun () -> Obj.repr (TyAbstractBinaryOperatorInfo.__empty ()));
+  HxType.register_class_empty_ctor "TyAbstractConstructorInitialization" (fun () -> Obj.repr (TyAbstractConstructorInitialization.__empty ()));
   HxType.register_class_empty_ctor "TyAbstractInfo" (fun () -> Obj.repr (TyAbstractInfo.__empty ()));
   HxType.register_class_empty_ctor "TyAbstractMethodConversion" (fun () -> Obj.repr (TyAbstractMethodConversion.__empty ()));
   HxType.register_class_empty_ctor "TyAbstractNativeBinaryOperation" (fun () -> Obj.repr (TyAbstractNativeBinaryOperation.__empty ()));
   HxType.register_class_empty_ctor "TyAbstractOperatorInfo" (fun () -> Obj.repr (TyAbstractOperatorInfo.__empty ()));
   HxType.register_class_empty_ctor "TyAbstractUnaryBinding" (fun () -> Obj.repr (TyAbstractUnaryBinding.__empty ()));
   HxType.register_class_empty_ctor "TyAliasDefinition" (fun () -> Obj.repr (TyAliasDefinition.__empty ()));
+  HxType.register_class_empty_ctor "TyAuthoredAssignmentCheck" (fun () -> Obj.repr (TyAuthoredAssignmentCheck.__empty ()));
   HxType.register_class_empty_ctor "TyBoundAbstractBinaryOperator" (fun () -> Obj.repr (TyBoundAbstractBinaryOperator.__empty ()));
   HxType.register_class_empty_ctor "TyCallArgumentBinding" (fun () -> Obj.repr (TyCallArgumentBinding.__empty ()));
   HxType.register_class_empty_ctor "TyCallArgumentPlan" (fun () -> Obj.repr (TyCallArgumentPlan.__empty ()));
@@ -8643,6 +8880,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "TyControlTarget" (fun () -> Obj.repr (TyControlTarget.__empty ()));
   HxType.register_class_empty_ctor "TyDeclarationId" (fun () -> Obj.repr (TyDeclarationId.__empty ()));
   HxType.register_class_empty_ctor "TyDeclarationInfo" (fun () -> Obj.repr (TyDeclarationInfo.__empty ()));
+  HxType.register_class_empty_ctor "TyDirectivePosition" (fun () -> Obj.repr (TyDirectivePosition.__empty ()));
   HxType.register_class_empty_ctor "TyEnumAbstractConstants" (fun () -> Obj.repr (TyEnumAbstractConstants.__empty ()));
   HxType.register_class_empty_ctor "TyEnumAbstractDomain" (fun () -> Obj.repr (TyEnumAbstractDomain.__empty ()));
   HxType.register_class_empty_ctor "TyExtensionMethod" (fun () -> Obj.repr (TyExtensionMethod.__empty ()));
@@ -8650,6 +8888,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "TyFieldInfo" (fun () -> Obj.repr (TyFieldInfo.__empty ()));
   HxType.register_class_empty_ctor "TyFieldInitializerTypes" (fun () -> Obj.repr (TyFieldInitializerTypes.__empty ()));
   HxType.register_class_empty_ctor "TyFunSig" (fun () -> Obj.repr (TyFunSig.__empty ()));
+  HxType.register_class_empty_ctor "TyFunctionConstraint" (fun () -> Obj.repr (TyFunctionConstraint.__empty ()));
   HxType.register_class_empty_ctor "TyFunctionEnv" (fun () -> Obj.repr (TyFunctionEnv.__empty ()));
   HxType.register_class_empty_ctor "TyFunctionInference" (fun () -> Obj.repr (TyFunctionInference.__empty ()));
   HxType.register_class_empty_ctor "TyFunctionReturnState" (fun () -> Obj.repr (TyFunctionReturnState.__empty ()));
@@ -8689,6 +8928,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "TyPublicReflectionName" (fun () -> Obj.repr (TyPublicReflectionName.__empty ()));
   HxType.register_class_empty_ctor "TyReceiverCallContext" (fun () -> Obj.repr (TyReceiverCallContext.__empty ()));
   HxType.register_class_empty_ctor "TyResolvedTypeUse" (fun () -> Obj.repr (TyResolvedTypeUse.__empty ()));
+  HxType.register_class_empty_ctor "TySourceTokenPosition" (fun () -> Obj.repr (TySourceTokenPosition.__empty ()));
   HxType.register_class_empty_ctor "TySwitchAnalysis" (fun () -> Obj.repr (TySwitchAnalysis.__empty ()));
   HxType.register_class_empty_ctor "TySwitchPatternBindings" (fun () -> Obj.repr (TySwitchPatternBindings.__empty ()));
   HxType.register_class_empty_ctor "TySymbol" (fun () -> Obj.repr (TySymbol.__empty ()));
@@ -8699,10 +8939,13 @@ let init () : unit =
   HxType.register_class_empty_ctor "TyTypeSubstitution" (fun () -> Obj.repr (TyTypeSubstitution.__empty ()));
   HxType.register_class_empty_ctor "TyTypeUseResolution" (fun () -> Obj.repr (TyTypeUseResolution.__empty ()));
   HxType.register_class_empty_ctor "TyTypeUseResolver" (fun () -> Obj.repr (TyTypeUseResolver.__empty ()));
+  HxType.register_class_empty_ctor "TyUndeclaredName" (fun () -> Obj.repr (TyUndeclaredName.__empty ()));
+  HxType.register_class_empty_ctor "TyUndeclaredValueNames" (fun () -> Obj.repr (TyUndeclaredName.tyundeclaredvaluenames___empty ()));
   HxType.register_class_empty_ctor "TypedAbstractBinaryLowering" (fun () -> Obj.repr (TypedAbstractBinaryLowering.__empty ()));
   HxType.register_class_empty_ctor "TypedAbstractOperatorLowering" (fun () -> Obj.repr (TypedAbstractOperatorLowering.__empty ()));
   HxType.register_class_empty_ctor "TypedAbstractUnaryLowering" (fun () -> Obj.repr (TypedAbstractUnaryLowering.__empty ()));
   HxType.register_class_empty_ctor "TypedBackendAggregateOccurrence" (fun () -> Obj.repr (TypedBackendAggregateOccurrence.__empty ()));
+  HxType.register_class_empty_ctor "TypedBackendArithmeticOccurrence" (fun () -> Obj.repr (TypedBackendArithmeticOccurrence.__empty ()));
   HxType.register_class_empty_ctor "TypedBackendArrayAccess" (fun () -> Obj.repr (TypedBackendArrayAccess.__empty ()));
   HxType.register_class_empty_ctor "TypedBackendBitwiseOccurrence" (fun () -> Obj.repr (TypedBackendBitwiseOccurrence.__empty ()));
   HxType.register_class_empty_ctor "TypedBackendCallArgument" (fun () -> Obj.repr (TypedBackendCallArgument.__empty ()));
@@ -8736,7 +8979,9 @@ let init () : unit =
   HxType.register_class_empty_ctor "TypedBackendRuntimeTypeOccurrence" (fun () -> Obj.repr (TypedBackendRuntimeTypeOccurrence.__empty ()));
   HxType.register_class_empty_ctor "TypedBackendSourceWalk" (fun () -> Obj.repr (TypedBackendSourceWalk.__empty ()));
   HxType.register_class_empty_ctor "TypedBackendStatementControl" (fun () -> Obj.repr (TypedBackendStatementControl.__empty ()));
+  HxType.register_class_empty_ctor "TypedBackendStringConcatOccurrence" (fun () -> Obj.repr (TypedBackendStringConcatOccurrence.__empty ()));
   HxType.register_class_empty_ctor "TypedBackendThrownValue" (fun () -> Obj.repr (TypedBackendThrownValue.__empty ()));
+  HxType.register_class_empty_ctor "TypedBackendTraceOccurrence" (fun () -> Obj.repr (TypedBackendTraceOccurrence.__empty ()));
   HxType.register_class_empty_ctor "TypedBodyBuilder" (fun () -> Obj.repr (TypedBodyBuilder.__empty ()));
   HxType.register_class_empty_ctor "TypedBodyFingerprint" (fun () -> Obj.repr (TypedBodyFingerprint.__empty ()));
   HxType.register_class_empty_ctor "TypedBodyInvariant" (fun () -> Obj.repr (TypedBodyInvariant.__empty ()));
@@ -8762,6 +9007,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "TypedFieldInitializer" (fun () -> Obj.repr (TypedFieldInitializer.__empty ()));
   HxType.register_class_empty_ctor "TypedFunction" (fun () -> Obj.repr (TypedFunction.__empty ()));
   HxType.register_class_empty_ctor "TypedFunctionBody" (fun () -> Obj.repr (TypedFunctionBody.__empty ()));
+  HxType.register_class_empty_ctor "TypedFunctionConstraintFlows" (fun () -> Obj.repr (TypedFunctionConstraintFlows.__empty ()));
   HxType.register_class_empty_ctor "TypedFunctionDefault" (fun () -> Obj.repr (TypedFunctionDefault.__empty ()));
   HxType.register_class_empty_ctor "TypedGuardedPatternPlan" (fun () -> Obj.repr (TypedGuardedPatternPlan.__empty ()));
   HxType.register_class_empty_ctor "TypedIndexedUpdateLowering" (fun () -> Obj.repr (TypedIndexedUpdateLowering.__empty ()));
@@ -8797,6 +9043,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "_HxConditionalCompilation.ExprLexer" (fun () -> Obj.repr (HxConditionalCompilation.exprlexer___empty ()));
   HxType.register_class_empty_ctor "_HxConditionalCompilation.ExprParser" (fun () -> Obj.repr (HxConditionalCompilation.exprparser___empty ()));
   HxType.register_class_empty_ctor "_TyAliasEquivalence.AliasEquivalenceProof" (fun () -> Obj.repr (TyAliasEquivalence.aliasequivalenceproof___empty ()));
+  HxType.register_class_empty_ctor "_TyMethodGenericBinding.TyBoundArguments" (fun () -> Obj.repr (TyMethodGenericBinding.tyboundarguments___empty ()));
   HxType.register_class_empty_ctor "_TySignatureDependencies.SignatureDependencyPaths" (fun () -> Obj.repr (TySignatureDependencies.__empty ()));
   HxType.register_class_empty_ctor "_TypedBodyFingerprint.BodyIdentityState" (fun () -> Obj.repr (TypedBodyFingerprint.bodyidentitystate___empty ()));
   HxType.register_class_empty_ctor "_TypedCapturePlan.CaptureAnalysis" (fun () -> Obj.repr (TypedCapturePlan.captureanalysis___empty ()));
@@ -8902,6 +9149,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "backend.ocaml.OcamlLocalCallDependency" (fun () -> Obj.repr (Backend_ocaml_OcamlLocalCallDependency.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.OcamlNativeBackend" (fun () -> Obj.repr (Backend_ocaml_OcamlNativeBackend.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.OcamlNativeTargetCore" (fun () -> Obj.repr (Backend_ocaml_OcamlNativeTargetCore.__empty ()));
+  HxType.register_class_empty_ctor "backend.ocaml.OcamlPreludeReferences" (fun () -> Obj.repr (Backend_ocaml_OcamlPreludeReferences.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.OcamlStage3Backend" (fun () -> Obj.repr (Backend_ocaml_OcamlStage3Backend.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.OcamlTargetCore" (fun () -> Obj.repr (Backend_ocaml_OcamlTargetCore.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.PortableMetalizationPlan" (fun () -> Obj.repr (Backend_ocaml_PortableMetalizationPlan.__empty ()));
@@ -8911,17 +9159,24 @@ let init () : unit =
   HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlCallableFunction" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlCallableProgram.stage3ocamlcallablefunction___empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlCallableProgram" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlCallableProgram.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlClassStorage" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlClassStorage.__empty ()));
+  HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlClassStringifiers" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlClassStringifiers.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlConstructorArguments" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlConstructorArguments.__empty ()));
+  HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlDynamicMethods" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlDynamicMethods.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlEnumPlan" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlEnumPlan.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlEnums" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlEnums.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlExternBindings" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlExternBindings.__empty ()));
+  HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlFloatConstant" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlFloatConstant.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlGenericMethods" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlGenericMethods.__empty ()));
+  HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlIdentifiers" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlIdentifiers.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlInstanceInitializers" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlInstanceInitializers.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlInterfaceDispatch" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlInterfaceDispatch.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlLocalNames" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlLocalNames.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlMacroPluginEntry" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlMacroPluginEntry.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlNativeCallPolicy" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlNativeCallPolicy.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlRuntimeTypes" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlRuntimeTypes.__empty ()));
+  HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlStaticStorage" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlStaticStorage.__empty ()));
+  HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlTrace" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlTrace.__empty ()));
+  HxType.register_class_empty_ctor "backend.ocaml.Stage3OcamlVirtualDispatch" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlVirtualDispatch.__empty ()));
   HxType.register_class_empty_ctor "backend.ocaml._Stage3OcamlCallableSelection.CallableUseScan" (fun () -> Obj.repr (Backend_ocaml_Stage3OcamlCallableSelection.callableusescan___empty ()));
   HxType.register_class_empty_ctor "backend.plugin.BackendPluginManifestParser" (fun () -> Obj.repr (Backend_plugin_BackendPluginManifestParser.__empty ()));
   HxType.register_class_empty_ctor "backend.reflaxe.ReflaxeTargetAdapter" (fun () -> Obj.repr (Backend_reflaxe_ReflaxeTargetAdapter.__empty ()));
@@ -9206,7 +9461,7 @@ let init () : unit =
   HxType.register_class_instance_fields "EmitterNumericUpdate" [];
   HxType.register_class_static_fields "EmitterNumericUpdate" [ "isStandardInt64Provider"; "local"; "one"; "operation" ];
   HxType.register_class_instance_fields "EmitterStage" [];
-  HxType.register_class_static_fields "EmitterStage" [ "abstractThisAssignment"; "arrayAccess"; "backendDialect"; "baseModuleName"; "callArgumentType"; "callSigForStage3"; "callSigFromFunction"; "callableDeclarationReference"; "callableDirectReturn"; "canonicalCallTargetForStage3"; "collectAssignedNamesInExprRec"; "collectAssignedNamesInStmtRec"; "collectStage3PatternBindingNames"; "conditionValue"; "constFoldString"; "copyStage3RuntimeForStage3"; "currentAbstractConstructor"; "currentCallableFunction"; "currentCallables"; "currentClassStorage"; "currentEnums"; "currentFunctionLocalOcamlNames"; "currentFunctionLocalTypeHints"; "currentFunctionName"; "currentFunctionShadowingValueNames"; "currentGlobalImportAliasByIdent"; "currentImportInt64"; "currentInstanceFieldsByTypePath"; "currentInstanceFieldsFor"; "currentInstanceMethodsByTypePath"; "currentInstanceMethodsFor"; "currentKnownModuleNames"; "currentLocalCallSigCache"; "currentModuleFilePath"; "currentModuleNameEntries"; "currentModuleShortNameForStage3"; "currentMutableLocalRefNames"; "currentNonGeneratedModuleNames"; "currentOcamlModuleName"; "currentOcamlProfile"; "currentPortableMetalizationPlan"; "currentPortableMetalizationRegionKey"; "currentRuntimeOcamlModuleNames"; "currentRuntimeTypes"; "currentStmtTyEntries"; "currentTypedFunction"; "currentTypedInitializer"; "emit"; "emitGeneratedOcamlModulesForStage3"; "emitPluginDuneLayoutIfRequestedForStage3"; "emitStage3BootstrapShimsForStage3"; "emitToDir"; "emitToDirWithEnumOwner"; "emitToDirWithPortableMetalizationPlan"; "emitUnknownLengthStage3"; "ensureEmitToDirOutDir"; "eraseBoundary"; "escapeOcamlIdentPart"; "escapeOcamlString"; "escapeOcamlStringLiteralForStage3"; "exactConstructor"; "exactFunctionLocalType"; "expectedMainClassFromFile"; "expectedMainClassFromFilePath"; "exprToOcaml"; "exprToOcamlArrayComprehension"; "exprToOcamlAsFloatValueStage3"; "exprToOcamlForConcatStage3"; "exprToOcamlIdentStage3"; "exprToOcamlNewStage3"; "exprToOcamlNullableIntStage3"; "exprToOcamlRaw"; "exprToOcamlStage3FieldAccess"; "exprToOcamlString"; "extendTyByIdentForStage3"; "extendTyByIdentManyForStage3"; "hasCurrentInstanceField"; "hasCurrentInstanceMethod"; "hasMethodName"; "hxhxMainShouldRouteStandardJsToNativeStage3OcamlBody"; "hxhxStage3ReadConnectDisplayStdinStage3OcamlBody"; "hxhxStage3RunWaitStdioStage3OcamlBody"; "hxhxStage3WriteWaitStdioReplyStage3OcamlBody"; "inferRepoRootForStage3Shims"; "installEmitToDirProfile"; "installPortableMetalizationPlan"; "intBinopCallStage3"; "intBitwise"; "isAssignmentOpToken"; "isKnownModuleNameForStage3"; "isLocalCompoundValue"; "isLocalCompoundValueOf"; "isMetalProfileActive"; "isMutableLocalRefIdent"; "isOcamlKeyword"; "isPortableAutoMetalizedRegionActive"; "isRestLikeArg"; "isRootSysReceiverExpr"; "isStage3StdArrayCtorTypePath"; "isStage3StringToolsPlaceholder"; "isTypePathExpr"; "isUnknownTypeName"; "isUpperStart"; "localCompoundStringOperand"; "localCompoundValueType"; "localStorageValue"; "lowerFirst"; "macroContextLoadShimSourceForStage3"; "mapGetRaw"; "markPortableAutoMetalizedLoweringUse"; "moduleInitTrace"; "moduleNameForScannedDecl"; "moduleNameForStage3Key"; "moduleTypeNameFor"; "moduleTypeNameForStage3OcamlBody"; "objectAccess"; "objectAccessType"; "ocamlFloatLiteral"; "ocamlFunctionLocalValueIdent"; "ocamlModuleNameFromTypePath"; "ocamlModuleNameFromTypePathParts"; "ocamlModuleValueIdent"; "ocamlProfileBootstrapShimSourceForStage3"; "ocamlReadValueIdent"; "ocamlTypeFromTy"; "ocamlValueIdent"; "ownsThisAssignment"; "patchStage3MacroContextLoadShimForStage3"; "patchStage3OcamlProfileShimForStage3"; "patchStage3StringToolsShimForStage3"; "pluginRegistrationEntrySourceForStage3"; "qualifiedCallSigForStage3"; "rangeBoundCarrier"; "readStage3ShimTemplate"; "requireEmitToDirOutAbs"; "requireEmittedMethodBody"; "requireEmittedStdInstanceMethodBody"; "requireLocalStorageWrite"; "requireNoUnownedAbstractConstruction"; "requireOcamlFunctionLocalValueIdent"; "requireStage3XmlShimSurface"; "resetRequestState"; "resolveImportedModuleFileFromContext"; "resolveQualifiedModuleCallSig"; "resolveQualifiedModuleCallSigByEmittedModuleNameForStage3"; "resolveQualifiedModuleFileFromContext"; "restorePortableMetalizationPlan"; "returnExprToOcaml"; "runtimeModuleNameFromPath"; "runtimeModuleNamesForStage3"; "scanExprForPreludeDepsRec"; "scanStmtForPreludeDepsRec"; "shouldEmitParsedStaticFields"; "stage3ArityFor"; "stage3BootstrapDefineValue"; "stage3BootstrapWantsPluginDuneLayout"; "stage3CallArgumentCompatibility"; "stage3CallArgumentType"; "stage3CallDiagnosticName"; "stage3DateToolsDurationBody"; "stage3DynamicArgumentCarrier"; "stage3ExactExprType"; "stage3FieldOccurrenceType"; "stage3HasArity"; "stage3HasLocalValueIdent"; "stage3HasStmtValueIdent"; "stage3HasThisBinding"; "stage3HasTyIdent"; "stage3Int64CarrierValue"; "stage3IsBoolExpr"; "stage3IsDynamicExpr"; "stage3IsFloatExpr"; "stage3IsFloatParamHint"; "stage3IsInfNanFieldExpr"; "stage3IsInt64Expr"; "stage3IsInt64TypeName"; "stage3IsIntExpr"; "stage3IsLikelyArrayExpr"; "stage3IsLikelyStringArrayExpr"; "stage3IsNullableIntExpr"; "stage3IsPositiveInfinityFieldExpr"; "stage3IsPrimitiveParamHint"; "stage3IsStringArrayTypeText"; "stage3IsStringExpr"; "stage3IsSysIoProcessExpr"; "stage3IsUnknownNumericIdent"; "stage3LambdaReturn"; "stage3LocalHintLookup"; "stage3MapConstruction"; "stage3MapLiteral"; "stage3MetalArrayLiteralCategory"; "stage3MissingCallArgumentDiagnostic"; "stage3NullableNumericLocal"; "stage3OcamlCall1"; "stage3OcamlCall2"; "stage3OcamlCall3"; "stage3ReturnTypeNeedsObjBranches"; "stage3ReturnTypeOverride"; "stage3RootCallArgs"; "stage3RootField"; "stage3RuntimePaths"; "stage3RuntimeSourceDirectories"; "stage3RuntimeSourceDirectory"; "stage3StmtTyLookup"; "stage3ThisFieldAssign"; "stage3ThisFieldRead"; "stage3TyForIdent"; "stage3TyLookup"; "stage3TypedLambdaArgumentTypes"; "stage3XmlShimFamily"; "staticImportModuleForStage3"; "stmtListToOcaml"; "stringToolsBootstrapShimSourceForStage3"; "traceEmitToDirEntry"; "traceModuleInit"; "tryExprToOcamlStage3CoreIntrinsic"; "tryExprToOcamlStage3FsPrintIntrinsic"; "tryExprToOcamlStage3Int64Intrinsic"; "tryExprToOcamlStage3LambdaTryIntrinsic"; "tryExprToOcamlStage3MathCallIntrinsic"; "tryExprToOcamlStage3MathFieldIntrinsic"; "tryExprToOcamlStage3MathIntrinsic"; "tryExprToOcamlStage3NumericStringIntrinsic"; "tryExprToOcamlStage3ReflectTypeIntrinsic"; "tryExprToOcamlStage3RuntimeIntrinsic"; "tryExprToOcamlStage3StaticField"; "tryExprToOcamlStage3StdStringIntrinsic"; "tryExprToOcamlStage3StringCallIntrinsic"; "tryExtractTypePathPartsFromExpr"; "upperFirst"; "withStage3TemporaryTypeEntries"; "writeStage3Shim"; "writeStage3ShimIfMissing"; "writeStage3TemplateShimIfMissing" ];
+  HxType.register_class_static_fields "EmitterStage" [ "abstractThisAssignment"; "arrayAccess"; "backendDialect"; "baseModuleName"; "callArgumentType"; "callSigForStage3"; "callSigFromFunction"; "callableDeclarationReference"; "callableDirectReturn"; "canonicalCallTargetForStage3"; "collectAssignedNamesInExprRec"; "collectAssignedNamesInStmtRec"; "collectStage3PatternBindingNames"; "conditionValue"; "constFoldString"; "copyStage3RuntimeForStage3"; "currentAbstractConstructor"; "currentCallableFunction"; "currentCallables"; "currentClassStorage"; "currentEnums"; "currentFunctionLocalOcamlNames"; "currentFunctionLocalTypeHints"; "currentFunctionName"; "currentFunctionShadowingValueNames"; "currentGlobalImportAliasByIdent"; "currentImportInt64"; "currentInstanceFieldsByTypePath"; "currentInstanceFieldsFor"; "currentInstanceMethodsByTypePath"; "currentInstanceMethodsFor"; "currentKnownModuleNames"; "currentLocalCallSigCache"; "currentLocalCatalog"; "currentModuleFilePath"; "currentModuleNameEntries"; "currentModuleShortNameForStage3"; "currentMutableLocalRefNames"; "currentNonGeneratedModuleNames"; "currentOcamlModuleName"; "currentOcamlProfile"; "currentPortableMetalizationPlan"; "currentPortableMetalizationRegionKey"; "currentRuntimeOcamlModuleNames"; "currentRuntimeTypes"; "currentStmtTyEntries"; "currentTypedFunction"; "currentTypedInitializer"; "emit"; "emitGeneratedOcamlModulesForStage3"; "emitPluginDuneLayoutIfRequestedForStage3"; "emitStage3BootstrapShimsForStage3"; "emitToDir"; "emitToDirWithEnumOwner"; "emitToDirWithPortableMetalizationPlan"; "emitUnknownLengthStage3"; "ensureEmitToDirOutDir"; "eraseBoundary"; "escapeOcamlIdentPart"; "escapeOcamlString"; "escapeOcamlStringLiteralForStage3"; "exactCallArgumentValue"; "exactConstructor"; "exactFunctionLocalType"; "expectedMainClassFromFile"; "expectedMainClassFromFilePath"; "exprToOcaml"; "exprToOcamlArrayComprehension"; "exprToOcamlAsFloatValueStage3"; "exprToOcamlForConcatStage3"; "exprToOcamlIdentStage3"; "exprToOcamlNewStage3"; "exprToOcamlNullableIntStage3"; "exprToOcamlRaw"; "exprToOcamlStage3FieldAccess"; "exprToOcamlString"; "extendTyByIdentForStage3"; "extendTyByIdentManyForStage3"; "hasCurrentInstanceField"; "hasCurrentInstanceMethod"; "hasMethodName"; "hxhxMainShouldRouteStandardJsToNativeStage3OcamlBody"; "hxhxStage3ReadConnectDisplayStdinStage3OcamlBody"; "hxhxStage3RunWaitStdioStage3OcamlBody"; "hxhxStage3WriteWaitStdioReplyStage3OcamlBody"; "inferRepoRootForStage3Shims"; "installEmitToDirProfile"; "installPortableMetalizationPlan"; "intBinopCallStage3"; "intBitwise"; "isAssignmentOpToken"; "isKnownModuleNameForStage3"; "isLocalCompoundValue"; "isLocalCompoundValueOf"; "isMetalProfileActive"; "isMutableLocalRefIdent"; "isOcamlKeyword"; "isPortableAutoMetalizedRegionActive"; "isRestLikeArg"; "isRootSysReceiverExpr"; "isStage3StdArrayCtorTypePath"; "isStage3StringToolsPlaceholder"; "isTypePathExpr"; "isUnknownTypeName"; "isUpperStart"; "localAssignmentStoredValue"; "localCompoundStringOperand"; "localCompoundValueType"; "localStorageValue"; "lowerFirst"; "macroContextLoadShimSourceForStage3"; "mapGetRaw"; "markPortableAutoMetalizedLoweringUse"; "moduleInitTrace"; "moduleNameForScannedDecl"; "moduleNameForStage3Key"; "moduleTypeNameFor"; "moduleTypeNameForStage3OcamlBody"; "objectAccess"; "objectAccessType"; "ocamlFloatLiteral"; "ocamlFunctionLocalValueIdent"; "ocamlModuleNameFromTypePath"; "ocamlModuleNameFromTypePathParts"; "ocamlModuleValueIdent"; "ocamlProfileBootstrapShimSourceForStage3"; "ocamlReadValueIdent"; "ocamlTypeFromTy"; "ocamlValueIdent"; "ownsThisAssignment"; "patchStage3MacroContextLoadShimForStage3"; "patchStage3OcamlProfileShimForStage3"; "patchStage3StringToolsShimForStage3"; "pluginRegistrationEntrySourceForStage3"; "qualifiedCallSigForStage3"; "rangeBoundCarrier"; "readStage3ShimTemplate"; "requireEmitToDirOutAbs"; "requireEmittedMethodBody"; "requireEmittedStdInstanceMethodBody"; "requireLocalStorageWrite"; "requireNoUnownedAbstractConstruction"; "requireOcamlFunctionLocalValueIdent"; "requireStage3XmlShimSurface"; "resetRequestState"; "resolveImportedModuleFileFromContext"; "resolveQualifiedModuleCallSig"; "resolveQualifiedModuleCallSigByEmittedModuleNameForStage3"; "resolveQualifiedModuleFileFromContext"; "restorePortableMetalizationPlan"; "returnExprToOcaml"; "runtimeModuleNameFromPath"; "runtimeModuleNamesForStage3"; "stage3AbstractUnderlying"; "stage3Arithmetic"; "stage3ArityFor"; "stage3BootstrapDefineValue"; "stage3BootstrapWantsPluginDuneLayout"; "stage3CallArgumentCompatibility"; "stage3CallArgumentType"; "stage3CallDiagnosticName"; "stage3DateToolsDurationBody"; "stage3DynamicArgumentCarrier"; "stage3DynamicCallBoolCarrier"; "stage3DynamicCallTypedBool"; "stage3ERegConstruction"; "stage3EmitLocation"; "stage3ExactExprType"; "stage3ExactPrimitiveKey"; "stage3FieldOccurrence"; "stage3FieldOccurrenceType"; "stage3FieldStoredValue"; "stage3HasArity"; "stage3HasDynamicReceiver"; "stage3HasLocalValueIdent"; "stage3HasStmtValueIdent"; "stage3HasThisBinding"; "stage3HasTyIdent"; "stage3Int64CarrierValue"; "stage3IsBoolExpr"; "stage3IsDynamicExpr"; "stage3IsDynamicMemberCall"; "stage3IsFloatExpr"; "stage3IsFloatParamHint"; "stage3IsInfNanFieldExpr"; "stage3IsInt64Expr"; "stage3IsInt64TypeName"; "stage3IsIntExpr"; "stage3IsLikelyArrayExpr"; "stage3IsLikelyStringArrayExpr"; "stage3IsNullableIntExpr"; "stage3IsPositiveInfinityFieldExpr"; "stage3IsPrimitiveParamHint"; "stage3IsStringArrayTypeText"; "stage3IsStringExpr"; "stage3IsSysIoProcessExpr"; "stage3IsUnknownNumericIdent"; "stage3LambdaReturn"; "stage3LocalHintLookup"; "stage3MapConstruction"; "stage3MapLiteral"; "stage3MetalArrayLiteralCategory"; "stage3MissingCallArgumentDiagnostic"; "stage3NullableNumericOperand"; "stage3OcamlCall1"; "stage3OcamlCall2"; "stage3OcamlCall3"; "stage3OperandIsStable"; "stage3PromotesToFloat"; "stage3ReturnTypeNeedsObjBranches"; "stage3ReturnTypeOverride"; "stage3RootCallArgs"; "stage3RootField"; "stage3RuntimePaths"; "stage3RuntimeSourceDirectories"; "stage3RuntimeSourceDirectory"; "stage3StaticFieldWrite"; "stage3StaticFieldWriteParts"; "stage3StaticOperand"; "stage3StaticUpdateValueType"; "stage3StmtTyLookup"; "stage3StoredDynamicArguments"; "stage3StoredStaticRead"; "stage3ThisFieldAssign"; "stage3ThisFieldRead"; "stage3TraceFact"; "stage3TyForIdent"; "stage3TyLookup"; "stage3TypedLambdaArgumentTypes"; "stage3XmlShimFamily"; "staticImportModuleForStage3"; "stmtListToOcaml"; "stringToolsBootstrapShimSourceForStage3"; "superDeclarationReference"; "traceEmitToDirEntry"; "traceModuleInit"; "tryExprToOcamlStage3CoreIntrinsic"; "tryExprToOcamlStage3FsPrintIntrinsic"; "tryExprToOcamlStage3Int64Intrinsic"; "tryExprToOcamlStage3LambdaTryIntrinsic"; "tryExprToOcamlStage3MathCallIntrinsic"; "tryExprToOcamlStage3MathFieldIntrinsic"; "tryExprToOcamlStage3MathIntrinsic"; "tryExprToOcamlStage3NumericStringIntrinsic"; "tryExprToOcamlStage3RuntimeIntrinsic"; "tryExprToOcamlStage3StaticField"; "tryExprToOcamlStage3StdStringIntrinsic"; "tryExprToOcamlStage3StringCallIntrinsic"; "tryExtractTypePathPartsFromExpr"; "upperFirst"; "withStage3TemporaryTypeEntries"; "writeStage3Shim"; "writeStage3ShimIfMissing"; "writeStage3TemplateShimIfMissing" ];
   HxType.register_class_instance_fields "EmitterStageBuildSupport" [];
   HxType.register_class_static_fields "EmitterStageBuildSupport" [ "buildNativeExecutable"; "expectedExePath"; "ocamldepSort"; "uniqStrings" ];
   HxType.register_class_instance_fields "EmitterStageDebug" [];
@@ -9231,6 +9486,10 @@ let init () : unit =
   HxType.register_class_static_fields "HxEnumDeclaration" [];
   HxType.register_class_instance_fields "HxFieldDecl" [ "endPos"; "init"; "initText"; "isFinal"; "isStatic"; "metadata"; "name"; "pos"; "propertyGet"; "propertySet"; "typeHint"; "visibility" ];
   HxType.register_class_static_fields "HxFieldDecl" [ "getEndPos"; "getInit"; "getInitText"; "getIsFinal"; "getIsStatic"; "getMetadata"; "getName"; "getPos"; "getPropertyGet"; "getPropertySet"; "getTypeHint"; "getVisibility" ];
+  HxType.register_class_instance_fields "HxFloatPatternBits" [];
+  HxType.register_class_static_fields "HxFloatPatternBits" [ "of" ];
+  HxType.register_class_instance_fields "HxFloatPatternText" [];
+  HxType.register_class_static_fields "HxFloatPatternText" [ "of"; "value" ];
   HxType.register_class_instance_fields "HxFunctionArg" [ "defaultValue"; "defaultValueText"; "isOptional"; "isRest"; "metadata"; "name"; "typeHint" ];
   HxType.register_class_static_fields "HxFunctionArg" [ "getDefaultValue"; "getDefaultValueText"; "getIsOptional"; "getIsRest"; "getMetadata"; "getName"; "getTypeHint" ];
   HxType.register_class_instance_fields "HxFunctionDecl" [ "args"; "body"; "bodyText"; "endPos"; "getFirstReturnExpr"; "hasBody"; "isModuleLevel"; "isStatic"; "metadata"; "name"; "pos"; "returnStringLiteral"; "returnTypeHint"; "visibility" ];
@@ -9239,20 +9498,24 @@ let init () : unit =
   HxType.register_class_static_fields "HxFunctionSyntaxParser" [ "methodArgument"; "parse"; "parseOverloadMetadata" ];
   HxType.register_class_instance_fields "HxFunctionTypeParamMetadata" [];
   HxType.register_class_static_fields "HxFunctionTypeParamMetadata" [ "compactTypeHint"; "constraintHints"; "constraints"; "fromGenericText"; "fromParameters"; "splitTopLevel"; "splitTopLevelComma"; "topLevelColon"; "typeParamNames" ];
+  HxType.register_class_instance_fields "HxIntegerLiteral" [];
+  HxType.register_class_static_fields "HxIntegerLiteral" [ "decimal"; "hexDigit"; "hexadecimal"; "isDecimalDigits" ];
   HxType.register_class_instance_fields "HxLambdaSignature" [ "getCanonicalIdentity"; "getParameters"; "getReturnTypeHint"; "parameters"; "returnTypeHint" ];
   HxType.register_class_static_fields "HxLambdaSignature" [ "copyParameter" ];
-  HxType.register_class_instance_fields "HxLexer" [ "bump"; "column"; "consumeNumericSuffix"; "copyInterpolationBracePayload"; "copyQuotedInterpolationPart"; "eof"; "fork"; "index"; "isLeadingDotNumberStart"; "line"; "next"; "peek"; "pos"; "readIdent"; "readLeadingDotNumber"; "readNumber"; "readRegexLiteral"; "readSingleQuotedString"; "readString"; "skipWhitespaceAndComments"; "src"; "token" ];
-  HxType.register_class_static_fields "HxLexer" [ "isDigit"; "isHexDigit"; "isIdentCont"; "isIdentStart"; "isNumericSeparator"; "isNumericSuffixStart"; "isSpace"; "maskComments"; "normalizeNumberText" ];
+  HxType.register_class_instance_fields "HxLexer" [ "bump"; "column"; "consumeNumericSuffix"; "copyInterpolationBracePayload"; "copyQuotedInterpolationPart"; "eof"; "fork"; "index"; "isLeadingDotNumberStart"; "line"; "next"; "peek"; "pos"; "readIdent"; "readLeadingDotNumber"; "readNumber"; "readRegexLiteral"; "readSingleQuotedString"; "readString"; "skipWhitespaceAndComments"; "src"; "suffixedIntToken"; "token" ];
+  HxType.register_class_static_fields "HxLexer" [ "isDigit"; "isHexDigit"; "isIdentCont"; "isIdentStart"; "isNumericSeparator"; "isNumericSuffixStart"; "isSpace"; "maskComments"; "normalizeNumberText"; "tokenize" ];
   HxType.register_class_instance_fields "HxModuleDecl" [ "classes"; "directives"; "hasToplevelMain"; "headerOnly"; "mainClass"; "packagePath"; "typedefs" ];
   HxType.register_class_static_fields "HxModuleDecl" [ "getClasses"; "getDirectives"; "getHasToplevelMain"; "getHeaderOnly"; "getMainClass"; "getPackagePath"; "getTypedefs" ];
   HxType.register_class_instance_fields "HxModuleDirective" [ "kind"; "path" ];
   HxType.register_class_static_fields "HxModuleDirective" [ "aliasImport"; "canonicalIdentity"; "getImportedLocalName"; "getKind"; "getPath"; "isBootstrapIdentifier"; "isImport"; "normalImport"; "usingDirective"; "wildcardImport" ];
   HxType.register_class_instance_fields "HxParseError" [ "message"; "pos"; "toString" ];
   HxType.register_class_static_fields "HxParseError" [];
-  HxType.register_class_instance_fields "HxParser" [ "acceptKeyword"; "acceptOtherChar"; "binaryExpression"; "blockExprFromStmts"; "braceStartsAnonLiteral"; "bump"; "capturedReturnStringLiteral"; "consumeBalancedBracesForExpr"; "consumeBalancedParensForExpr"; "consumeBinop"; "consumePreprocessorLine"; "cur"; "currentIndex"; "expect"; "fail"; "hasAttachedMetadataArgs"; "inMacroQuote"; "intLiteralExpr"; "isAssignmentExpression"; "isClassMemberBoundary"; "isLikelyExtractorPatternStart"; "isLocalStaticVarDecl"; "isOtherChar"; "isSemicolonlessFieldInitializer"; "isSemicolonlessStatementBoundary"; "lambdaBodyExprFromStmts"; "lex"; "nextIsAdjacentDot"; "nextIsAdjacentOther"; "parenthesizedArrowAhead"; "parseAnonExpr"; "parseAnonExprAfterOpen"; "parseArrayDeclExpr"; "parseAuthoredControl"; "parseBinaryExpr"; "parseBraceExpr"; "parseCallArg"; "parseClassMembers"; "parseDoWhileExpr"; "parseDollarExpression"; "parseExpr"; "parseExpressionVariableDeclarations"; "parseFunctionBodyStatements"; "parseFunctionBodyStatementsBestEffort"; "parseFunctionDecl"; "parseFunctionExpr"; "parseIfExpr"; "parseInterpolatedStringExpr"; "parseLocalFunctionStmt"; "parseMacroClassQuoteExpr"; "parseMacroExprSwitchPattern"; "parseMacroQuoteContents"; "parseMacroQuoteExpr"; "parseMacroQuoteIfPayload"; "parseMacroQuotePayload"; "parseMacroTypeSwitchPattern"; "parseMetadataText"; "parseModule"; "parsePostfixExpr"; "parsePostfixSuffix"; "parsePrimaryExpr"; "parseRecoveredCaseFragmentStmt"; "parseReturnStmt"; "parseSourceForExpr"; "parseSourceFunctionParameters"; "parseSourceTryExpr"; "parseStmt"; "parseStmtInto"; "parseSwitchExpr"; "parseSwitchPattern"; "parseSwitchPatternAtom"; "parseSwitchPatternCaseGroup"; "parseSwitchPatternOr"; "parseThrowExpr"; "parseUnaryExpr"; "parseVarDecls"; "parseVarStmt"; "parseWhileBody"; "parseWhileExpr"; "peek"; "peek2"; "peek3"; "peekBinop"; "peekKind"; "peekKind2"; "peekKind3"; "peeked1"; "peeked2"; "peeked3"; "posIndex"; "readAnonFieldName"; "readBalancedParenBodyText"; "readConstructorTypePath"; "readDottedPath"; "readFunctionReturnTypeHint"; "readHeaderTypePath"; "readIdent"; "readImportPath"; "readMetadataHead"; "readPostfixFieldName"; "readPropertyAccessorText"; "readTypeHintText"; "skipBalancedAngles"; "skipBalancedBraces"; "skipBalancedParens"; "skipConditionalStaticModifier"; "skipHeaderTypeParameters"; "sliceSource"; "source"; "syncToStmtEnd"; "syncToStmtEndUntil"; "ternaryExpression"; "tryParseInlineNekoElseThrowStmt"; "tryParseSwitchExtractorPattern"; "tryReadArrowLambdaExpr"; "unsupportedKeywordDetail"; "withMacroQuoteContext" ];
-  HxType.register_class_static_fields "HxParser" [ "binopPrec"; "declsCanEndBeforeIdentifier"; "endsWithSourceBrace"; "isAssignmentBinop"; "isRestTypeHintText"; "isRightAssoc"; "isUpperStart"; "keywordText"; "markTraceExpressionLine"; "normalizeInlineJsConditionalMarkers"; "normalizeInlineNekoElseConditionalMarkers"; "normalizeInlineStdClassSwitchConditionalMarkers"; "normalizeInlineStdCppLengthConditionalMarkers"; "normalizeInlineStdHxSerializeConditionalMarkers"; "offsetFunctionBodyColumns"; "offsetFunctionBodyExprColumns"; "offsetFunctionBodyPosColumn"; "offsetFunctionBodyStmtColumns"; "parseCompleteExprText"; "parseExprText"; "parseFunctionBodyText"; "parseFunctionBodyTextAt"; "parseStructuralExprText"; "parseUnbracedFunctionBodyAt"; "rebaseFunctionBodyExpr"; "rebaseFunctionBodyExprValue"; "rebaseFunctionBodyPos"; "rebaseFunctionBodyStmt"; "sourcePosAt"; "tokenCanStartStatement" ];
+  HxType.register_class_instance_fields "HxParser" [ "acceptKeyword"; "acceptOtherChar"; "binaryExpression"; "blockExprFromStmts"; "braceStartsAnonLiteral"; "bump"; "capturedReturnStringLiteral"; "consumeBalancedBracesForExpr"; "consumeBalancedParensForExpr"; "consumeBinop"; "consumePreprocessorLine"; "consumedSemicolon"; "cur"; "currentIndex"; "expect"; "fail"; "hasAttachedMetadataArgs"; "inMacroQuote"; "intLiteralExpr"; "isAssignmentExpression"; "isClassMemberBoundary"; "isLikelyExtractorPatternStart"; "isLocalStaticVarDecl"; "isOtherChar"; "isSemicolonlessFieldInitializer"; "isSemicolonlessStatementBoundary"; "lambdaBodyExprFromStmts"; "lex"; "nextIsAdjacentDot"; "nextIsAdjacentOther"; "parenthesizedArrowAhead"; "parseAnonExpr"; "parseAnonExprAfterOpen"; "parseArrayDeclExpr"; "parseAuthoredControl"; "parseBinaryExpr"; "parseBraceExpr"; "parseCallArg"; "parseClassMembers"; "parseDoWhileExpr"; "parseDollarExpression"; "parseExpr"; "parseExpressionVariableDeclarations"; "parseFunctionBodyStatements"; "parseFunctionBodyStatementsBestEffort"; "parseFunctionDecl"; "parseFunctionExpr"; "parseIfExpr"; "parseInterpolatedStringExpr"; "parseLocalFunctionStmt"; "parseMacroClassQuoteExpr"; "parseMacroExprSwitchPattern"; "parseMacroQuoteContents"; "parseMacroQuoteExpr"; "parseMacroQuoteIfPayload"; "parseMacroQuotePayload"; "parseMacroTypeSwitchPattern"; "parseMetadataText"; "parseModule"; "parsePostfixExpr"; "parsePostfixSuffix"; "parsePrimaryExpr"; "parseRecoveredCaseFragmentStmt"; "parseReturnStmt"; "parseSourceForExpr"; "parseSourceFunctionParameters"; "parseSourceTryExpr"; "parseStmt"; "parseStmtInto"; "parseSwitchExpr"; "parseSwitchPattern"; "parseSwitchPatternAtom"; "parseSwitchPatternCaseGroup"; "parseSwitchPatternOr"; "parseThrowExpr"; "parseUnaryExpr"; "parseVarDecls"; "parseVarStmt"; "parseWhileBody"; "parseWhileExpr"; "peek"; "peek2"; "peek3"; "peekBinop"; "peekKind"; "peekKind2"; "peekKind3"; "peeked1"; "peeked2"; "peeked3"; "posIndex"; "readAnonFieldName"; "readBalancedParenBodyText"; "readConstructorTypePath"; "readDottedPath"; "readFunctionReturnTypeHint"; "readHeaderTypePath"; "readIdent"; "readImportPath"; "readMetadataHead"; "readPostfixFieldName"; "readPropertyAccessorText"; "readTypeHintText"; "requireNonEmptyTypeArguments"; "requireValidHexLiteral"; "skipBalancedAngles"; "skipBalancedBraces"; "skipBalancedParens"; "skipConditionalStaticModifier"; "skipHeaderTypeParameters"; "sliceSource"; "source"; "startsExpressionBody"; "syncToStmtEnd"; "syncToStmtEndUntil"; "ternaryExpression"; "tryParseInlineNekoElseThrowStmt"; "tryParseSwitchExtractorPattern"; "tryReadArrowLambdaExpr"; "unsupportedKeywordDetail"; "withMacroQuoteContext" ];
+  HxType.register_class_static_fields "HxParser" [ "binopPrec"; "declsCanEndBeforeIdentifier"; "endsWithSourceBrace"; "isAssignmentBinop"; "isRestTypeHintText"; "isRightAssoc"; "isUpperStart"; "keywordText"; "markTraceExpressionLine"; "normalizeInlineJsConditionalMarkers"; "normalizeInlineNekoElseConditionalMarkers"; "normalizeInlineStdClassSwitchConditionalMarkers"; "normalizeInlineStdCppLengthConditionalMarkers"; "normalizeInlineStdHxSerializeConditionalMarkers"; "offsetFunctionBodyColumns"; "offsetFunctionBodyExprColumns"; "offsetFunctionBodyPosColumn"; "offsetFunctionBodyStmtColumns"; "parseCompleteExprText"; "parseExprText"; "parseFunctionBodyText"; "parseFunctionBodyTextAt"; "parseStructuralExprText"; "parseUnbracedFunctionBodyAt"; "patternTokenText"; "pushTypeHintWord"; "rebaseFunctionBodyExpr"; "rebaseFunctionBodyExprValue"; "rebaseFunctionBodyPos"; "rebaseFunctionBodyStmt"; "sourcePosAt"; "tokenCanStartStatement" ];
   HxType.register_class_instance_fields "HxPos" [ "column"; "getColumn"; "getIndex"; "getLine"; "index"; "line"; "toString" ];
   HxType.register_class_static_fields "HxPos" [ "unknown" ];
+  HxType.register_class_instance_fields "HxRootedPath" [];
+  HxType.register_class_static_fields "HxRootedPath" [ "assertResolved"; "expression"; "isRooted"; "unrooted" ];
   HxType.register_class_instance_fields "HxSourceCatch" [ "getCanonicalIdentity"; "getName"; "getPosition"; "getTypeHint"; "name"; "position"; "typeHint" ];
   HxType.register_class_static_fields "HxSourceCatch" [];
   HxType.register_class_instance_fields "HxSourceFunction" [ "arguments"; "assertDefaultCount"; "defaultParameterIndexes"; "generics"; "getArguments"; "getBindingNames"; "getCanonicalIdentity"; "getDeclaredName"; "getDefaultParameterIndexes"; "getGenerics"; "getKind"; "getPlacement"; "getSignature"; "kind"; "placement"; "signature" ];
@@ -9264,7 +9527,7 @@ let init () : unit =
   HxType.register_class_instance_fields "HxToken" [ "endIndex"; "getKind"; "getPos"; "kind"; "numericSuffix"; "numericText"; "pos" ];
   HxType.register_class_static_fields "HxToken" [];
   HxType.register_class_instance_fields "HxTypeSyntax" [ "endPos"; "getEndPos"; "getKind"; "getPos"; "kind"; "pos" ];
-  HxType.register_class_static_fields "HxTypeSyntax" [ "copyArguments"; "copyFieldKind"; "copyKind"; "copyParameters" ];
+  HxType.register_class_static_fields "HxTypeSyntax" [ "constraintMembers"; "copyArguments"; "copyFieldKind"; "copyKind"; "copyParameters"; "ungroup" ];
   HxType.register_class_instance_fields "HxTypedefDecl" [ "endPos"; "getEndPos"; "getIsExtern"; "getMetadata"; "getName"; "getParameters"; "getPos"; "getTarget"; "getVisibility"; "isExtern"; "metadata"; "name"; "parameters"; "pos"; "target"; "visibility" ];
   HxType.register_class_static_fields "HxTypedefDecl" [];
   HxType.register_class_instance_fields "HxTypedefParser" [ "accessor"; "advance"; "anonymous"; "arguments"; "arrow"; "declaration"; "end"; "metadata"; "name"; "other"; "parameters"; "parser"; "require"; "take"; "type" ];
@@ -9273,7 +9536,7 @@ let init () : unit =
   HxType.register_class_static_fields "HxUnaryOperatorTools" [ "macroConstructor"; "requireValidFixity"; "sourceToken"; "supportsPostfix" ];
   HxType.register_class_instance_fields "JavaNoEmitDiagnostics" [];
   HxType.register_class_static_fields "JavaNoEmitDiagnostics" [ "abstractOverloadImplementationDiagnostic"; "abstractOverloadImplementationDiagnosticForParsed"; "appendInheritedImplementations"; "appendInheritedRequirements"; "appendUniqueRequirements"; "braceDelta"; "cleanJavaNoEmitWord"; "compactArgs"; "diagnosticFileName"; "functionDeclarationEndLine"; "hasEarlierDifferentRawSignature"; "hasOverloadMetadata"; "inheritedImplementations"; "inheritedRequirements"; "isAbstractClassChain"; "isExternClass"; "isExternFunctionLine"; "javaErasedOverloadArg"; "javaErasedOverloadSignature"; "javaNoEmitOverloadInfo"; "javaRawOverloadSignature"; "jvmAnnotationMetadataDiagnostic"; "jvmAnnotationMetadataDiagnosticForParsed"; "metadataFieldEnd"; "overloadCollisionDiagnostic"; "overloadCollisionDiagnosticForParsed"; "overloadCollisionDiagnosticForResolved"; "overloadDeclarationColumn"; "parseJavaNoEmitClassLine"; "parseJavaNoEmitMethodLine"; "renderMissingAbstractOverloads"; "renderOverloadCollisions"; "renderOverloadSpan"; "scanJavaNoEmitClasses"; "sourcePosition"; "stripTrailingCarriage" ];
-  HxType.register_class_instance_fields "LazyTypeLoader" [ "ensureDeclarationAvailable"; "ensureTypeAvailable"; "hasDefine"; "isMacroModule" ];
+  HxType.register_class_instance_fields "LazyTypeLoader" [ "declarationsAreComplete"; "ensureDeclarationAvailable"; "ensureTypeAvailable"; "hasDefine"; "hasModuleSource"; "hasStandardLibrary"; "isMacroModule" ];
   HxType.register_class_static_fields "LazyTypeLoader" [];
   HxType.register_class_instance_fields "MacroCompilationContext" [ "definesFor"; "isMacroModule"; "roots" ];
   HxType.register_class_static_fields "MacroCompilationContext" [ "directoryKey"; "forMacroClassPaths"; "slashes"; "standardMacroModulesOnly" ];
@@ -9281,19 +9544,19 @@ let init () : unit =
   HxType.register_class_static_fields "MacroExpandedModule" [];
   HxType.register_class_instance_fields "MacroExpandedProgram" [ "assertTypedBodyRevisionsCurrent"; "generatedOcamlModules"; "getGeneratedOcamlModules"; "getSelectedRuntimeFeatures"; "getTypedModules"; "getTypedProgramRevision"; "macroMode"; "selectedRuntimeFeatures"; "typedModules"; "typedProgramRevision" ];
   HxType.register_class_static_fields "MacroExpandedProgram" [];
-  HxType.register_class_instance_fields "MacroReificationLowering" [ "anchor"; "file"; "hole"; "holeName"; "holes"; "metadata"; "positions"; "root"; "splice"; "syntax"; "value"; "valueOfType"; "valueType" ];
-  HxType.register_class_static_fields "MacroReificationLowering" [ "arrayElementType"; "constantExpr"; "failure"; "lowerExpression"; "lowerType"; "payload"; "valuesHelper" ];
-  HxType.register_class_instance_fields "MacroReificationSyntax" [ "access"; "arrayHolePayload"; "binop"; "catchClause"; "complexType"; "constant"; "def"; "expr"; "exprDef"; "expression"; "exprs"; "field"; "fieldKind"; "fieldName"; "fieldType"; "func"; "functionArg"; "functionKind"; "holeOf"; "holes"; "metadataEntry"; "objectField"; "optionalExpr"; "optionalMetadata"; "optionalPosition"; "optionalType"; "position"; "positionOverride"; "quoteStatus"; "stringKind"; "switchCase"; "type"; "typeParam"; "typeParamDecl"; "typePath"; "unop"; "valueSplice"; "variable" ];
-  HxType.register_class_static_fields "MacroReificationSyntax" [ "bool"; "constantHoleName"; "ctor"; "enumPath"; "exprRecord"; "list"; "optionalBool"; "optionalString"; "qualified"; "record"; "str" ];
+  HxType.register_class_instance_fields "MacroReificationLowering" [ "anchor"; "constantExpr"; "file"; "hole"; "holeName"; "holes"; "metadata"; "positions"; "root"; "rooted"; "splice"; "syntax"; "value"; "valueOfType"; "valueType"; "valuesHelper" ];
+  HxType.register_class_static_fields "MacroReificationLowering" [ "arrayElementType"; "failure"; "lowerExpression"; "lowerType"; "payload" ];
+  HxType.register_class_instance_fields "MacroReificationSyntax" [ "access"; "arrayHolePayload"; "binop"; "catchClause"; "complexType"; "constant"; "ctor"; "def"; "enumPath"; "expr"; "exprDef"; "expression"; "exprs"; "field"; "fieldKind"; "fieldName"; "fieldType"; "func"; "functionArg"; "functionKind"; "holeOf"; "holes"; "metadataEntry"; "objectField"; "optionalExpr"; "optionalMetadata"; "optionalPosition"; "optionalType"; "position"; "positionOverride"; "quoteStatus"; "rooted"; "stringKind"; "switchCase"; "type"; "typeParam"; "typeParamDecl"; "typePath"; "unop"; "valueSplice"; "variable" ];
+  HxType.register_class_static_fields "MacroReificationSyntax" [ "bool"; "constantHoleName"; "exprRecord"; "list"; "optionalBool"; "optionalString"; "record"; "str" ];
   HxType.register_class_instance_fields "MacroStage" [];
   HxType.register_class_static_fields "MacroStage" [ "expand"; "expandProgram" ];
   HxType.register_class_instance_fields "MacroSyntaxExport" [ "argument"; "child"; "convert"; "definition"; "optionalChild"; "positions"; "quotation"; "splice"; "variable" ];
   HxType.register_class_static_fields "MacroSyntaxExport" [ "binop"; "failure"; "ownPosition"; "typeOrNull"; "typePathOf"; "unop"; "writtenMetadata" ];
   HxType.register_class_instance_fields "MacroSyntaxImport" [ "convert"; "declaration"; "fieldOwner"; "optional"; "position"; "positions"; "result"; "sourceFor"; "sourceFunction"; "statements"; "values" ];
-  HxType.register_class_static_fields "MacroSyntaxImport" [ "anonymousField"; "binopToken"; "constantOf"; "failure"; "functionKind"; "isEnumValueName"; "loopName"; "restElement"; "restElementOf"; "typePathText"; "typeText"; "unop" ];
+  HxType.register_class_static_fields "MacroSyntaxImport" [ "anonymousField"; "binopToken"; "constantOf"; "failure"; "functionKind"; "identifier"; "integerConstant"; "isEnumValueName"; "loopName"; "restElement"; "restElementOf"; "typePathText"; "typeText"; "unop" ];
   HxType.register_class_instance_fields "MacroSyntaxPositions" [ "export"; "exported"; "file"; "first"; "getAnchor"; "getFile"; "resolve" ];
   HxType.register_class_static_fields "MacroSyntaxPositions" [ "isKnown" ];
-  HxType.register_class_instance_fields "ModuleLoader" [ "candidateModulePaths"; "classPaths"; "declarationHeadersAvailable"; "defines"; "depsForParsedModule"; "drainNewModules"; "ensureDeclarationAvailable"; "ensureTypeAvailable"; "expandDependencies"; "hasDefine"; "index"; "inheritTypeNotFoundAttempts"; "invokeOnMissingType"; "isMacroModule"; "loadModuleByPath"; "loadModuleHeadersByPath"; "macroContext"; "markResolvedAlready"; "moduleDefines"; "onMissingType"; "pending"; "prepareModule"; "prepareResolvedModule"; "prepareSignatureDependencies"; "resolveModuleFile"; "signatureStates"; "sourceProvider"; "typeNotFoundTried"; "visited"; "visitedSourceFiles" ];
+  HxType.register_class_instance_fields "ModuleLoader" [ "candidateModulePaths"; "classPaths"; "declarationHeadersAvailable"; "declarationsAreComplete"; "defines"; "depsForParsedModule"; "drainNewModules"; "ensureDeclarationAvailable"; "ensureTypeAvailable"; "expandDependencies"; "hasDefine"; "hasModuleSource"; "hasStandardLibrary"; "index"; "inheritTypeNotFoundAttempts"; "initializationMacros"; "invokeOnMissingType"; "isMacroModule"; "loadModuleByPath"; "loadModuleHeadersByPath"; "macroContext"; "markResolvedAlready"; "moduleDefines"; "noteInitializationMacros"; "onMissingType"; "pending"; "prepareModule"; "prepareResolvedModule"; "prepareSignatureDependencies"; "resolveModuleFile"; "signatureStates"; "sourceProvider"; "standardLibrary"; "typeNotFoundTried"; "visited"; "visitedSourceFiles" ];
   HxType.register_class_static_fields "ModuleLoader" [ "implicitQualifiedTypeDeps" ];
   HxType.register_class_instance_fields "ParsedModule" [ "decl"; "filePath"; "getDecl"; "getFilePath"; "getSource"; "source" ];
   HxType.register_class_static_fields "ParsedModule" [];
@@ -9307,18 +9570,20 @@ let init () : unit =
   HxType.register_class_static_fields "ResolvedModule" [ "getConditionalCompilation"; "getFilePath"; "getGeneratedDeclarations"; "getModulePath"; "getParsed"; "getSourceOrigin" ];
   HxType.register_class_instance_fields "ResolverStage" [];
   HxType.register_class_static_fields "ResolverStage" [ "implicitQualifiedTypeDeps"; "implicitSamePackageDeps"; "implicitUtestAddCasesDeps"; "parseProject"; "parseProjectRoots"; "parseProjectRootsShallow"; "requestedRoot"; "resolveImplicitSamePackageTypesEnabled"; "traceResolverDepsEnabled"; "withImplicitCwdClassPath"; "withStandardTypesRoots" ];
-  HxType.register_class_instance_fields "StringBuf" [ "add"; "addChar"; "addSub"; "buf"; "get_length"; "toString" ];
+  HxType.register_class_instance_fields "StringBuf" [ "add"; "addChar"; "addSub"; "append"; "buf"; "characters"; "get_length"; "toString" ];
   HxType.register_class_static_fields "StringBuf" [];
   HxType.register_class_instance_fields "StringTools" [];
   HxType.register_class_static_fields "StringTools" [ "_hexUpper"; "_hexValue"; "_isUrlUnreserved"; "_quoteUnixArgOcaml"; "_quoteWinArgOcaml"; "_urlDecodeOcaml"; "_urlEncodeOcaml"; "_winMetaCharactersOcaml"; "contains"; "endsWith"; "fastCodeAt"; "hex"; "htmlEscape"; "htmlUnescape"; "isEof"; "isSpace"; "iterator"; "keyValueIterator"; "lpad"; "ltrim"; "quoteUnixArg"; "quoteWinArg"; "replace"; "rpad"; "rtrim"; "startsWith"; "trim"; "unsafeCodeAt"; "urlDecode"; "urlEncode"; "utf16CodePointAt"; "winMetaCharacters" ];
   HxType.register_class_instance_fields "TyAbstractBinaryArgument" [ "admitsSource"; "evidence"; "executableConversion"; "getActualType"; "getExpectedType"; "getScore"; "requireConversion"; "validateSource" ];
   HxType.register_class_static_fields "TyAbstractBinaryArgument" [ "converted"; "indexed" ];
   HxType.register_class_instance_fields "TyAbstractBinaryBinding" [];
-  HxType.register_class_static_fields "TyAbstractBinaryBinding" [ "argument"; "bind"; "collect"; "containsTypeParameter"; "ensureNonGeneric"; "firstMatch"; "hasAbstractOperand"; "noApplicable"; "permitsOrdinaryFallback"; "select"; "selectIndexed"; "selectWithOperand"; "validateBodyless" ];
+  HxType.register_class_static_fields "TyAbstractBinaryBinding" [ "argument"; "bind"; "collect"; "containsTypeParameter"; "declaresOperator"; "ensureNonGeneric"; "firstMatch"; "hasAbstractOperand"; "noApplicable"; "permitsOrdinaryFallback"; "select"; "selectIndexed"; "selectWithOperand"; "validateBodyless" ];
   HxType.register_class_instance_fields "TyAbstractBinaryConversion" [ "actual"; "apply"; "evidence"; "expected"; "getActualType"; "getExpectedType"; "getScore" ];
   HxType.register_class_static_fields "TyAbstractBinaryConversion" [ "select" ];
   HxType.register_class_instance_fields "TyAbstractBinaryOperatorInfo" [ "commutative"; "declaration"; "getDeclaration"; "getIsCommutative"; "getLeftType"; "getOperator"; "getResultType"; "getRightType"; "leftType"; "op"; "resultType"; "rightType" ];
   HxType.register_class_static_fields "TyAbstractBinaryOperatorInfo" [];
+  HxType.register_class_instance_fields "TyAbstractConstructorInitialization" [ "ends"; "expression"; "fail"; "filePath"; "nested"; "notUnrolled"; "runsAtLeastOnce"; "runtimeNames"; "scoped"; "statement"; "statements" ];
+  HxType.register_class_static_fields "TyAbstractConstructorInitialization" [ "covers"; "literalBound"; "require" ];
   HxType.register_class_instance_fields "TyAbstractInfo" [ "addBinaryOperator"; "addIndexedDeclaration"; "addUnaryOperator"; "binaryOperators"; "declarationForSignature"; "declarationForSource"; "declarations"; "enumDeclaration"; "enumDomain"; "fieldInfo"; "fieldType"; "fields"; "getAllBinaryOperators"; "getAllUnaryOperators"; "getBinaryOperators"; "getDeclarations"; "getEnumDeclaration"; "getEnumDomain"; "getFieldInfos"; "getFullName"; "getIdentity"; "getImplicitFromTypes"; "getImplicitToTypes"; "getIndexedDeclarations"; "getIsEnum"; "getModulePath"; "getMultiTypePolicy"; "getShortName"; "getTypeParameterIds"; "getTypeParameters"; "getUnaryOperators"; "getUnderlyingType"; "getVisibility"; "hasField"; "identity"; "implicitFromTypes"; "implicitToTypes"; "indexedDeclarations"; "instanceMethod"; "instanceMethodCandidates"; "instanceMethodLists"; "instanceMethods"; "isEnum"; "modulePath"; "multiTypePolicy"; "properties"; "propertyInfo"; "shortName"; "staticMethod"; "staticMethodCandidates"; "staticMethodLists"; "staticMethods"; "typeParameters"; "unaryOperators"; "underlyingType"; "visibility" ];
   HxType.register_class_static_fields "TyAbstractInfo" [ "unaryKey" ];
   HxType.register_class_instance_fields "TyAbstractMethodConversion" [ "actual"; "apply"; "callable"; "declaration"; "getDeclaration"; "getInputType"; "getResultType"; "index" ];
@@ -9331,6 +9596,8 @@ let init () : unit =
   HxType.register_class_static_fields "TyAbstractUnaryBinding" [ "containsTypeParameter"; "operatorLabel"; "select"; "unsupportedGeneric" ];
   HxType.register_class_instance_fields "TyAliasDefinition" [ "bind"; "body"; "declaration"; "defaultIndex"; "getBody"; "getBoundBody"; "getCanonicalName"; "getDeclaration"; "getParameterIds"; "getSourceSyntax"; "instantiate"; "sealed" ];
   HxType.register_class_static_fields "TyAliasDefinition" [ "seal" ];
+  HxType.register_class_instance_fields "TyAuthoredAssignmentCheck" [];
+  HxType.register_class_static_fields "TyAuthoredAssignmentCheck" [ "check"; "describe"; "describeFunction"; "describeWalk"; "grouped"; "isPlainPrimitive"; "upstreamDisplay" ];
   HxType.register_class_instance_fields "TyBoundAbstractBinaryOperator" [ "getOperatorInfo"; "getRequiresWriteback"; "getResultConversion"; "getReverseArguments"; "getSourceLeftArgument"; "getSourceLeftParameterType"; "getSourceOperator"; "getSourceRightArgument"; "getSourceRightParameterType"; "operatorInfo"; "requiresWriteback"; "resultConversion"; "reverseArguments"; "sourceLeftArgument"; "sourceOperator"; "sourceRightArgument" ];
   HxType.register_class_static_fields "TyBoundAbstractBinaryOperator" [];
   HxType.register_class_instance_fields "TyCallArgumentBinding" [ "assertCurrent"; "functionType"; "getExpectedArguments"; "getFunctionType"; "getOperandKinds"; "getOperandTypes"; "getSemanticKey"; "getSlots"; "nullPolicy"; "operandKinds"; "operandTypes"; "slots"; "substituteTypes" ];
@@ -9357,6 +9624,8 @@ let init () : unit =
   HxType.register_class_static_fields "TyDeclarationId" [];
   HxType.register_class_instance_fields "TyDeclarationInfo" [ "getHasBody"; "getIdentity"; "getImplementation"; "getIsDynamic"; "getIsEnumConstructor"; "getIsExtern"; "getIsInline"; "getIsModuleLevel"; "getIsPublic"; "getIsStatic"; "getMetadata"; "getModulePath"; "getNativeName"; "getNoImportGlobal"; "getOwner"; "getPosition"; "getResolvedTypeParameterConstraints"; "getSignature"; "getSourceDeclaration"; "getTypeParameterConstraints"; "getTypeParameterIds"; "getTypeParameters"; "identity"; "implementation"; "isEnumConstructor"; "isInline"; "isModuleLevel"; "isPublic"; "metadata"; "modulePath"; "nativeName"; "owner"; "position"; "requireSupportedImplementation"; "resolvedConstraints"; "signature"; "sourceDeclaration"; "typeParameters" ];
   HxType.register_class_static_fields "TyDeclarationInfo" [];
+  HxType.register_class_instance_fields "TyDirectivePosition" [];
+  HxType.register_class_static_fields "TyDirectivePosition" [ "find"; "mask"; "position" ];
   HxType.register_class_instance_fields "TyEnumAbstractConstants" [ "active"; "declarations"; "evaluate"; "owner"; "previous"; "resolve"; "resolved"; "underlying"; "unresolved" ];
   HxType.register_class_static_fields "TyEnumAbstractConstants" [];
   HxType.register_class_instance_fields "TyEnumAbstractDomain" [ "getMembers"; "getOwner"; "members"; "owner" ];
@@ -9371,7 +9640,9 @@ let init () : unit =
   HxType.register_class_static_fields "TyFieldInitializerTypes" [];
   HxType.register_class_instance_fields "TyFunSig" [ "acceptsArity"; "argNames"; "argOptional"; "argRest"; "args"; "getArgNames"; "getArgOptional"; "getArgRest"; "getArgs"; "getIsStatic"; "getName"; "getPos"; "getReturnType"; "isStatic"; "name"; "pos"; "returnType" ];
   HxType.register_class_static_fields "TyFunSig" [];
-  HxType.register_class_instance_fields "TyFunctionEnv" [ "assertReplayComplete"; "controlScope"; "copyForIndexedSelection"; "copyForInference"; "copyWithInference"; "createBodyReplay"; "createNestedFunction"; "currentSourceReturns"; "declareLocal"; "enclosingSymbols"; "enterLexicalScope"; "exitLexicalScope"; "functionBodyForReplay"; "getInference"; "getLocals"; "getName"; "getOwnerIdentity"; "getParams"; "getReturnExprType"; "getReturnType"; "getRootControlTarget"; "getTypeParameters"; "indexedUpdateAllocator"; "indexedUpdateTemporaries"; "inference"; "isSpeculative"; "isStaticContext"; "isUntypedContext"; "locals"; "matchesProtocolSource"; "name"; "ownerIdentity"; "params"; "protocolSource"; "protocolSourceExpression"; "protocolSourceType"; "replayCursor"; "replayLocal"; "replayMode"; "requireControlScope"; "resolveLocal"; "resolveSymbol"; "retainFunctionBody"; "retainedBody"; "returnExprType"; "returnType"; "scopes"; "sealInference"; "speculative"; "staticContext"; "typeParameters"; "unchangedForIndexedSelection"; "untypedContext"; "withEnclosingSymbolsFrom"; "withProtocolSource"; "withReturnTypes"; "withUntyped" ];
+  HxType.register_class_instance_fields "TyFunctionConstraint" [];
+  HxType.register_class_static_fields "TyFunctionConstraint" [ "accepts"; "isFunctionConstraint"; "isFunctionValue"; "mentions"; "reaches" ];
+  HxType.register_class_instance_fields "TyFunctionEnv" [ "assertReplayComplete"; "controlScope"; "copyForIndexedSelection"; "copyForInference"; "copyWithInference"; "createBodyReplay"; "createNestedFunction"; "currentSourceReturns"; "declareLocal"; "enclosingSymbols"; "enterLexicalScope"; "exitLexicalScope"; "functionBodyForReplay"; "getInference"; "getLocals"; "getName"; "getOwnerIdentity"; "getParams"; "getReturnExprType"; "getReturnType"; "getRootControlTarget"; "getTypeParameters"; "indexedUpdateAllocator"; "indexedUpdateTemporaries"; "inference"; "isSpeculative"; "isStaticContext"; "isUntypedContext"; "locals"; "matchesProtocolSource"; "name"; "ownerIdentity"; "params"; "protocolSource"; "protocolSourceExpression"; "protocolSourceType"; "replayCursor"; "replayLocal"; "replayMode"; "requireControlScope"; "resolveLocal"; "resolveSymbol"; "retainFunctionBody"; "retainedBody"; "returnExprType"; "returnType"; "scopes"; "sealInference"; "speculative"; "staticContext"; "typeParameters"; "unchangedForIndexedSelection"; "untypedContext"; "withEnclosingSymbolsFrom"; "withProtocolSource"; "withReturnTypes"; "withUntyped"; "writtenReturnTypeHint" ];
   HxType.register_class_static_fields "TyFunctionEnv" [];
   HxType.register_class_instance_fields "TyFunctionInference" [ "beginIndexedUpdate"; "callCaptured"; "callbackArguments"; "callbackBinding"; "callbackContextType"; "canReceiveContext"; "captureMethod"; "capturedCalls"; "classValueTerm"; "classValueUses"; "commitIndexedUpdate"; "conditionalArrayResult"; "constrain"; "constrainConstructor"; "constrainInferredCallable"; "constrainMember"; "construct"; "contextParameter"; "contextualCollection"; "diagnosticProbe"; "diagnosticProbes"; "directCallType"; "directCalls"; "emptyLiteralOccurrence"; "expressionType"; "fork"; "indexedAccess"; "indexedAccesses"; "indexedUpdateOutcome"; "indexedUpdateOutcomes"; "indexedUpdates"; "inferDirectCall"; "inferredArray"; "instantiate"; "instantiateMethod"; "isSealed"; "isUncheckedCallable"; "isUnresolvedInput"; "iteratorProtocolSource"; "iteratorProtocols"; "localType"; "locals"; "occurrence"; "occurrences"; "owner"; "receiverCallParameters"; "receiverCalls"; "recordCallbackAlignment"; "recordIndexedComputed"; "recordIndexedOutcome"; "recordIndexedResult"; "recordLocal"; "recordReceiverCall"; "recordReceiverResult"; "recordSourceFunction"; "registerOmittedParameter"; "requireDiagnosticProbe"; "seal"; "solver"; "sourceFunctionResult"; "sourceFunctionType"; "sourceFunctions"; "sourceTerm"; "speculativeReplay"; "termType"; "unchangedFacts"; "uncheckedCastResult"; "untypedResult" ];
   HxType.register_class_static_fields "TyFunctionInference" [ "classValueSourceKey"; "nonNullableReceiver"; "unchangedArray" ];
@@ -9391,7 +9662,7 @@ let init () : unit =
   HxType.register_class_static_fields "TyIndexedUpdateOutcome" [];
   HxType.register_class_instance_fields "TyIndexedUpdatePlan" [ "getterType"; "kind"; "payload"; "placeConversion"; "query"; "setterCall"; "setterConversion"; "setterDeclaration"; "setterSources"; "staticType"; "step" ];
   HxType.register_class_static_fields "TyIndexedUpdatePlan" [];
-  HxType.register_class_instance_fields "TyIndexedUpdateQuery" [ "computedSource"; "fingerprints"; "getterSource"; "kind"; "matchesSource"; "owner"; "placeResultSource"; "setterInputSource"; "setterSource"; "source"; "sources"; "validate" ];
+  HxType.register_class_instance_fields "TyIndexedUpdateQuery" [ "authored"; "computedSource"; "fingerprints"; "getterSource"; "kind"; "matchesSource"; "owner"; "placeResultSource"; "setterInputSource"; "setterSource"; "source"; "sources"; "validate" ];
   HxType.register_class_static_fields "TyIndexedUpdateQuery" [];
   HxType.register_class_instance_fields "TyIndexedUpdateSelection" [ "binary"; "declarationKeys"; "declarations"; "getter"; "query"; "setter"; "validate" ];
   HxType.register_class_static_fields "TyIndexedUpdateSelection" [];
@@ -9411,12 +9682,12 @@ let init () : unit =
   HxType.register_class_static_fields "TyLocalId" [ "forCompilerTemporary"; "forLoweredDeclaration"; "forSourceDeclaration" ];
   HxType.register_class_instance_fields "TyMacroCallSignature" [];
   HxType.register_class_static_fields "TyMacroCallSignature" [ "callSite"; "isExprArray"; "isMacro" ];
-  HxType.register_class_instance_fields "TyMethodArgumentOrder" [ "getSlots"; "parameterIndex"; "rankedTypes"; "slots"; "sourceContexts"; "sourceCount"; "withoutReceiver" ];
+  HxType.register_class_instance_fields "TyMethodArgumentOrder" [ "getSlots"; "parameterIndex"; "rankedSources"; "rankedTypes"; "slots"; "sourceContexts"; "sourceCount"; "withoutReceiver" ];
   HxType.register_class_static_fields "TyMethodArgumentOrder" [ "rankSelectedSlots"; "select" ];
   HxType.register_class_instance_fields "TyMethodBodyResults" [ "active"; "checked"; "checkedResult"; "configure"; "infer"; "inputRevision"; "methodInputs"; "parameters"; "recordAssumptions"; "result"; "signature" ];
   HxType.register_class_static_fields "TyMethodBodyResults" [ "sourceFingerprint" ];
   HxType.register_class_instance_fields "TyMethodGenericBinding" [];
-  HxType.register_class_static_fields "TyMethodGenericBinding" [ "argumentsAreConsistent"; "bindings"; "collect"; "constraintFailure"; "hasOnlyUnconstrainingEvidence"; "hasUnbound"; "inferableTypeParameters"; "inferenceCallable"; "inlineBindings"; "isInferableParameter"; "parameterIdentity"; "sameTypeConstructor"; "specializeParameters"; "specializeResult"; "structuralArgument"; "substitute"; "substitutedGenericDisplay" ];
+  HxType.register_class_static_fields "TyMethodGenericBinding" [ "argumentsAreConsistent"; "bindings"; "closeFromDependentBounds"; "collect"; "constraintFailure"; "evidence"; "failure"; "hasUnbound"; "inferableTypeParameters"; "inferenceCallable"; "inlineBindings"; "isInferableParameter"; "maskWildcards"; "parameterIdentity"; "sameTypeConstructor"; "specializeParameters"; "specializeResult"; "structuralArgument"; "substitute"; "substitutedGenericDisplay" ];
   HxType.register_class_instance_fields "TyMethodInputBatch" [ "changes"; "owner"; "revision"; "trials" ];
   HxType.register_class_static_fields "TyMethodInputBatch" [];
   HxType.register_class_instance_fields "TyMethodInputState" [ "commit"; "commitBatch"; "getRevision"; "prepareBatch"; "publishBatch"; "revision"; "signature"; "solutions"; "trial"; "validateBatch"; "validateTrial" ];
@@ -9449,6 +9720,8 @@ let init () : unit =
   HxType.register_class_static_fields "TyReceiverCallContext" [ "dynamicContext"; "select" ];
   HxType.register_class_instance_fields "TyResolvedTypeUse" [ "declarations"; "getDeclarations"; "getPosition"; "getType"; "position"; "type" ];
   HxType.register_class_static_fields "TyResolvedTypeUse" [];
+  HxType.register_class_instance_fields "TySourceTokenPosition" [];
+  HxType.register_class_static_fields "TySourceTokenPosition" [ "afterParameterList"; "argumentStarts"; "constructorArgumentsOpen"; "firstAtOrAfter"; "hintStartsAt"; "surplusConstructorArgument"; "tokens"; "typeHint" ];
   HxType.register_class_instance_fields "TySwitchAnalysis" [ "analyze"; "domain" ];
   HxType.register_class_static_fields "TySwitchAnalysis" [];
   HxType.register_class_instance_fields "TySwitchPatternBindings" [];
@@ -9457,7 +9730,7 @@ let init () : unit =
   HxType.register_class_static_fields "TySymbol" [];
   HxType.register_class_instance_fields "TyType" [ "aliasDefinition"; "anonymousFields"; "classValueScheme"; "containsComponent"; "display"; "functionParameters"; "functionReturn"; "getAliasDefinition"; "getAnonymousFieldNames"; "getAnonymousFieldTypes"; "getAnonymousFields"; "getCanonicalDisplay"; "getClassValueScheme"; "getDisplay"; "getFunctionArguments"; "getFunctionParameters"; "getFunctionReturn"; "getNominalIdentity"; "getNullableInner"; "getSemanticKey"; "getTypeArguments"; "getTypeParameterIdentity"; "getTypeParameterName"; "getUnresolvedPath"; "hasOpenMethodParameter"; "hasTypeParameter"; "hasUnknownComponent"; "isAbstractMeta"; "isAnonymous"; "isDynamic"; "isFunction"; "isNoNormalCompletion"; "isNullLiteral"; "isNullWrapped"; "isNullable"; "isNumeric"; "isOpenMethodParameter"; "isPrimitive"; "isTypeParameter"; "isUnknown"; "isUnresolved"; "isVoid"; "kind"; "nominalIdentity"; "nullableInner"; "openMethodParameterIdentity"; "semanticKeyInScopes"; "toString"; "typeArguments"; "typeParameterIdentity"; "unresolvedPath"; "unwrapNull"; "withAnonymousTypes"; "withFunctionTypes" ];
   HxType.register_class_static_fields "TyType" [ "KIND_ABSTRACT_META"; "KIND_ALIAS_APPLICATION"; "KIND_ANONYMOUS"; "KIND_CLASS_VALUE"; "KIND_DYNAMIC"; "KIND_FUNCTION"; "KIND_NOMINAL"; "KIND_NO_NORMAL_COMPLETION"; "KIND_NULL"; "KIND_NULLABLE"; "KIND_OPEN_METHOD_PARAMETER"; "KIND_PRIMITIVE"; "KIND_TYPE_PARAMETER"; "KIND_UNKNOWN"; "KIND_UNRESOLVED"; "abstractMeta"; "aliasApplication"; "anonymous"; "classValue"; "declaredAnonymous"; "dynamicType"; "fromHintText"; "functionParameterFromHint"; "functionSignature"; "functionType"; "genericStart"; "hasWrappingParentheses"; "noNormalCompletion"; "nominal"; "nullType"; "nullable"; "openMethodParameter"; "parseAnonymousType"; "parseFunctionType"; "primitive"; "splitFunctionSegments"; "splitTopLevel"; "splitTypeArguments"; "typeParameter"; "unify"; "unknown"; "unresolved" ];
-  HxType.register_class_instance_fields "TyTypeDeclaration" [ "canonicalName"; "context"; "getCanonicalName"; "getContext"; "getKind"; "getModulePath"; "getParameterIds"; "getShortName"; "getVisibility"; "kind"; "parameterIds"; "visibility" ];
+  HxType.register_class_instance_fields "TyTypeDeclaration" [ "canonicalName"; "context"; "getCanonicalName"; "getContext"; "getKind"; "getModulePath"; "getNominalArity"; "getParameterIds"; "getShortName"; "getUsesBuildMacro"; "getVisibility"; "kind"; "nominalArity"; "parameterIds"; "usesBuildMacro"; "visibility" ];
   HxType.register_class_static_fields "TyTypeDeclaration" [ "copyContext" ];
   HxType.register_class_instance_fields "TyTypeDeclarationCatalog" [ "add"; "byModule"; "byName"; "get"; "moduleMember"; "resolve"; "visible" ];
   HxType.register_class_static_fields "TyTypeDeclarationCatalog" [ "rootQualifiedPath" ];
@@ -9465,18 +9738,24 @@ let init () : unit =
   HxType.register_class_static_fields "TyTypeParameterId" [ "method"; "nestedFunction"; "nominal"; "normalize" ];
   HxType.register_class_instance_fields "TyTypeSubstitution" [];
   HxType.register_class_static_fields "TyTypeSubstitution" [ "apply"; "bind"; "collectParameters"; "freeParameterIdentities"; "identity"; "normalize"; "parameterIdentities"; "parameterNames" ];
-  HxType.register_class_instance_fields "TyTypeUseResolution" [ "buildDefinition"; "catalog"; "comparisons"; "constructing"; "declarations"; "definitionFor"; "definitions"; "finish"; "materialize"; "normalize"; "pending"; "remember"; "resolve"; "resolveArrow"; "resolveParsed"; "resolvePath"; "resolveStructure"; "resolveSyntax"; "validateDeclaration" ];
+  HxType.register_class_instance_fields "TyTypeUseResolution" [ "buildDefinition"; "catalog"; "comparisons"; "constructing"; "declarations"; "definitionFor"; "definitions"; "finish"; "materialize"; "normalize"; "pending"; "remember"; "resolve"; "resolveArrow"; "resolveParsed"; "resolvePath"; "resolveStructuralHint"; "resolveStructure"; "resolveSyntax"; "validateDeclaration" ];
   HxType.register_class_static_fields "TyTypeUseResolution" [];
   HxType.register_class_instance_fields "TyTypeUseResolver" [ "catalog"; "resolve"; "resolveParsed"; "validateDeclaration" ];
   HxType.register_class_static_fields "TyTypeUseResolver" [];
+  HxType.register_class_instance_fields "TyUndeclaredName" [];
+  HxType.register_class_static_fields "TyUndeclaredName" [ "declarationsVisible"; "declaredBySameFile"; "dottedPath"; "hasUnloadedAncestor"; "importDirectives"; "importHxApplies"; "isIdentifierCode"; "isMacroCallee"; "isSpaceCode"; "isUpperStart"; "namedInMacroArgument"; "namesType"; "recordValueName"; "requireStaticReceiver"; "sourceImportsName" ];
+  HxType.register_class_instance_fields "TyUndeclaredValueNames" [ "contextual"; "filePath"; "firstPosition"; "markContextual"; "order"; "record"; "requireDeclared" ];
+  HxType.register_class_static_fields "TyUndeclaredValueNames" [];
   HxType.register_class_instance_fields "TypedAbstractBinaryLowering" [];
-  HxType.register_class_static_fields "TypedAbstractBinaryLowering" [ "accessorDeclaration"; "assertNoAbstractBinary"; "assertNoAbstractBinaryExpression"; "assertNoAbstractBinaryStatements"; "callArguments"; "carrierType"; "carrierValue"; "collectHelpers"; "convert"; "directPlace"; "fallbackWriteback"; "helperKey"; "inlineCall"; "instanceCall"; "lowerClasses"; "lowerClassesWithHelpers"; "lowerExpression"; "lowerInlineStatements"; "lowerModules"; "lowerStatement"; "nativeBodylessCompound"; "nativeBodylessValue"; "nativeOperand"; "nativeResult"; "orderedValues"; "placeFor"; "propertyPlaceFor"; "semanticResult"; "staticCall"; "substituteExpression"; "voidType" ];
+  HxType.register_class_static_fields "TypedAbstractBinaryLowering" [ "accessorDeclaration"; "assertNoAbstractBinary"; "assertNoAbstractBinaryExpression"; "assertNoAbstractBinaryStatements"; "callArguments"; "carrierType"; "carrierValue"; "collectHelpers"; "convert"; "directPlace"; "fallbackWriteback"; "helperKey"; "inlineCall"; "instanceCall"; "lowerClasses"; "lowerClassesWithHelpers"; "lowerExpression"; "lowerInlineStatements"; "lowerModules"; "lowerStatement"; "nativeBodylessCompound"; "nativeBodylessValue"; "nativeOperand"; "nativeResult"; "orderedValues"; "placeFor"; "primitiveOperand"; "propertyPlaceFor"; "semanticResult"; "staticCall"; "substituteExpression"; "voidType" ];
   HxType.register_class_instance_fields "TypedAbstractOperatorLowering" [];
   HxType.register_class_static_fields "TypedAbstractOperatorLowering" [ "lowerClasses"; "lowerModules" ];
   HxType.register_class_instance_fields "TypedAbstractUnaryLowering" [];
   HxType.register_class_static_fields "TypedAbstractUnaryLowering" [ "accessorDeclaration"; "assertNoAbstractUnary"; "assertNoAbstractUnaryExpression"; "assertNoAbstractUnaryStatements"; "collectHelpers"; "directPlace"; "helperKey"; "inlineCall"; "instanceCall"; "lowerClasses"; "lowerClassesWithHelpers"; "lowerExpression"; "lowerInlineStatements"; "lowerModules"; "lowerStatement"; "nativeBodylessOperation"; "placeFor"; "propertyPlaceFor"; "propertyUpdate"; "staticCall"; "substituteExpression"; "voidType" ];
   HxType.register_class_instance_fields "TypedBackendAggregateOccurrence" [ "assertCurrent"; "bodyRevision"; "childTypes"; "children"; "expression"; "fingerprint"; "getChildTypes"; "getChildren"; "getExpression"; "getMapEntries"; "getType"; "mapEntries"; "ownerIdentity"; "type" ];
   HxType.register_class_static_fields "TypedBackendAggregateOccurrence" [];
+  HxType.register_class_instance_fields "TypedBackendArithmeticOccurrence" [ "assertCurrent"; "expression"; "fingerprint"; "left"; "leftType"; "operation"; "owner"; "resultType"; "revision"; "right"; "rightType" ];
+  HxType.register_class_static_fields "TypedBackendArithmeticOccurrence" [ "supports" ];
   HxType.register_class_instance_fields "TypedBackendArrayAccess" [ "assertCurrent"; "expression"; "fingerprint"; "index"; "indexType"; "kind"; "owner"; "receiver"; "receiverType"; "resultType"; "revision"; "value"; "valueType" ];
   HxType.register_class_static_fields "TypedBackendArrayAccess" [ "supports" ];
   HxType.register_class_instance_fields "TypedBackendBitwiseOccurrence" [ "assertCurrent"; "expression"; "fingerprint"; "isConcreteInt"; "left"; "leftType"; "operation"; "owner"; "resultType"; "revision"; "right"; "rightType" ];
@@ -9505,7 +9784,7 @@ let init () : unit =
   HxType.register_class_static_fields "TypedBackendDeclarationCatalog" [];
   HxType.register_class_instance_fields "TypedBackendEqualityOccurrence" [ "assertCurrent"; "equal"; "expression"; "fingerprint"; "left"; "leftType"; "owner"; "revision"; "right"; "rightType" ];
   HxType.register_class_static_fields "TypedBackendEqualityOccurrence" [];
-  HxType.register_class_instance_fields "TypedBackendFieldInitializerProjection" [ "aggregates"; "arrayAccesses"; "assertCurrent"; "assertUninitializedLocal"; "bitwiseOperations"; "bodyRevision"; "callArguments"; "captureCatalog"; "captureCatalogForLookup"; "casts"; "collectionControls"; "conditions"; "constructorCatalog"; "declaration"; "equalities"; "field"; "fieldReadCatalog"; "fields"; "findArrayAccess"; "findBitwise"; "findCallArgument"; "findCallArgumentType"; "findCallableExpression"; "findCast"; "findCondition"; "findConversion"; "findEquality"; "findField"; "findInstanceCall"; "findLambda"; "findMethodUse"; "findNamedPattern"; "findObjectAccess"; "findUntyped"; "fingerprint"; "getBodyRevision"; "getConstructorCatalog"; "getDeclaration"; "getExpression"; "getField"; "getFieldReadCatalog"; "getLocalCatalog"; "getResultType"; "getRuntimeTypeCatalog"; "getStableIdentity"; "instanceCalls"; "lambdas"; "localCatalog"; "localWrites"; "lowered"; "methods"; "namedPatterns"; "objectAccesses"; "requireAggregate"; "requireCaptureCatalog"; "requireCollectionControl"; "requireConstructor"; "requireExpression"; "requireLocalWrite"; "requireRuntimeType"; "runtimeTypeCatalog"; "source"; "stableIdentity" ];
+  HxType.register_class_instance_fields "TypedBackendFieldInitializerProjection" [ "aggregates"; "arithmeticOperations"; "arrayAccesses"; "assertCurrent"; "assertUninitializedLocal"; "bitwiseOperations"; "bodyRevision"; "callArguments"; "captureCatalog"; "captureCatalogForLookup"; "casts"; "collectionControls"; "conditions"; "constructorCatalog"; "declaration"; "equalities"; "field"; "fieldReadCatalog"; "fields"; "findArithmetic"; "findArrayAccess"; "findBitwise"; "findCallArgument"; "findCallArgumentType"; "findCallableExpression"; "findCast"; "findCondition"; "findConversion"; "findEquality"; "findField"; "findInstanceCall"; "findLambda"; "findMethodUse"; "findNamedPattern"; "findObjectAccess"; "findStringConcatOperandType"; "findTrace"; "findUntyped"; "fingerprint"; "functionConstraintFlows"; "getBodyRevision"; "getConstructorCatalog"; "getDeclaration"; "getExpression"; "getField"; "getFieldReadCatalog"; "getFunctionConstraintArguments"; "getFunctionConstraintFlows"; "getFunctionConstraintLocalWrites"; "getLocalCatalog"; "getResultType"; "getRuntimeTypeCatalog"; "getStableIdentity"; "instanceCalls"; "lambdas"; "localCatalog"; "localWrites"; "lowered"; "methods"; "namedPatterns"; "objectAccesses"; "requireAggregate"; "requireCaptureCatalog"; "requireCollectionControl"; "requireConstructor"; "requireExpression"; "requireLocalWrite"; "requireRuntimeType"; "runtimeTypeCatalog"; "source"; "stableIdentity"; "stringConcats"; "traces"; "verifiedArithmetic"; "verifiedStringConcats" ];
   HxType.register_class_static_fields "TypedBackendFieldInitializerProjection" [];
   HxType.register_class_instance_fields "TypedBackendFieldOccurrence" [ "assertCurrent"; "bodyRevision"; "expression"; "field"; "fingerprint"; "getExpression"; "getField"; "getHasPropertyStorageAccess"; "getReceiver"; "getType"; "ownerIdentity"; "propertyStorageAccess"; "receiver"; "type" ];
   HxType.register_class_static_fields "TypedBackendFieldOccurrence" [];
@@ -9513,7 +9792,7 @@ let init () : unit =
   HxType.register_class_static_fields "TypedBackendFieldReadCatalog" [];
   HxType.register_class_instance_fields "TypedBackendFieldReadProjection" [ "canonicalIdentity"; "field"; "getCanonicalIdentity"; "getField"; "getProjectedName"; "projectedName" ];
   HxType.register_class_static_fields "TypedBackendFieldReadProjection" [];
-  HxType.register_class_instance_fields "TypedBackendFunctionProjection" [ "aggregates"; "arrayAccesses"; "assertUninitializedLocal"; "bitwiseOperations"; "bodyRevision"; "callArguments"; "captureCatalog"; "captureCatalogForLookup"; "casts"; "collectionControls"; "conditions"; "constructorCatalog"; "declaration"; "defaults"; "equalities"; "fieldReadCatalog"; "fields"; "findArrayAccess"; "findBitwise"; "findCallArgument"; "findCallArgumentType"; "findCallableExpression"; "findCast"; "findCondition"; "findConversion"; "findEquality"; "findField"; "findInstanceCall"; "findLambda"; "findMethodUse"; "findNamedPattern"; "findObjectAccess"; "findUntyped"; "getBody"; "getBodyRevision"; "getConstructorCatalog"; "getDeclaration"; "getDefaults"; "getFieldReadCatalog"; "getLocalCatalog"; "getParameterBindingIdentities"; "getParameters"; "getReturnType"; "getRuntimeTypeCatalog"; "getStableIdentity"; "hasDefaults"; "instanceCalls"; "lambdas"; "localCatalog"; "localWrites"; "lowered"; "methods"; "namedPatterns"; "objectAccesses"; "parameterBindingIdentities"; "requireAggregate"; "requireCaptureCatalog"; "requireCollectionControl"; "requireConstructor"; "requireExpression"; "requireLocalWrite"; "requireRootControlIdentity"; "requireRuntimeType"; "requireSemanticDeclaration"; "requireStatementControl"; "requireThrownValue"; "returnType"; "runtimeTypeCatalog"; "source"; "stableIdentity"; "statementControls"; "thrownValues" ];
+  HxType.register_class_instance_fields "TypedBackendFunctionProjection" [ "aggregates"; "arithmeticOperations"; "arrayAccesses"; "assertUninitializedLocal"; "bitwiseOperations"; "bodyRevision"; "callArguments"; "captureCatalog"; "captureCatalogForLookup"; "casts"; "collectionControls"; "conditions"; "constructorCatalog"; "declaration"; "defaults"; "equalities"; "fieldReadCatalog"; "fields"; "findArithmetic"; "findArrayAccess"; "findBitwise"; "findCallArgument"; "findCallArgumentType"; "findCallableExpression"; "findCast"; "findCondition"; "findConversion"; "findEquality"; "findField"; "findInstanceCall"; "findLambda"; "findMethodUse"; "findNamedPattern"; "findObjectAccess"; "findStringConcatOperandType"; "findTrace"; "findUntyped"; "functionConstraintFlows"; "getBody"; "getBodyRevision"; "getConstructorCatalog"; "getDeclaration"; "getDefaults"; "getFieldReadCatalog"; "getFunctionConstraintArguments"; "getFunctionConstraintFlows"; "getFunctionConstraintLocalWrites"; "getLocalCatalog"; "getParameterBindingIdentities"; "getParameters"; "getReturnType"; "getRuntimeTypeCatalog"; "getStableIdentity"; "getThisType"; "hasDefaults"; "instanceCalls"; "lambdas"; "localCatalog"; "localWrites"; "lowered"; "methods"; "namedPatterns"; "objectAccesses"; "parameterBindingIdentities"; "requireAggregate"; "requireCaptureCatalog"; "requireCollectionControl"; "requireConstructor"; "requireExpression"; "requireLocalWrite"; "requireRootControlIdentity"; "requireRuntimeType"; "requireSemanticDeclaration"; "requireStatementControl"; "requireThrownValue"; "returnType"; "runtimeTypeCatalog"; "source"; "stableIdentity"; "statementControls"; "stringConcats"; "thisType"; "thrownValues"; "traces"; "verifiedArithmetic"; "verifiedStringConcats" ];
   HxType.register_class_static_fields "TypedBackendFunctionProjection" [];
   HxType.register_class_instance_fields "TypedBackendInstanceCallOccurrence" [ "argumentTypes"; "assertCurrent"; "declaration"; "expression"; "fingerprint"; "getArgumentTypes"; "getCall"; "getDeclaration"; "getExpression"; "getProjectedArgumentTypes"; "getReceiverType"; "getResultType"; "owner"; "projectedArgumentTypes"; "receiverType"; "resultType"; "revision" ];
   HxType.register_class_static_fields "TypedBackendInstanceCallOccurrence" [];
@@ -9531,8 +9810,8 @@ let init () : unit =
   HxType.register_class_static_fields "TypedBackendModuleProjection" [];
   HxType.register_class_instance_fields "TypedBackendNamedPattern" [ "assertCurrent"; "identity"; "owner"; "pattern"; "revision"; "selection" ];
   HxType.register_class_static_fields "TypedBackendNamedPattern" [ "inExpression"; "inStatement" ];
-  HxType.register_class_instance_fields "TypedBackendObjectAccess" [ "assertCurrent"; "expression"; "field"; "fingerprint"; "kind"; "owner"; "receiver"; "resultType"; "revision"; "value"; "valueType" ];
-  HxType.register_class_static_fields "TypedBackendObjectAccess" [ "supports" ];
+  HxType.register_class_instance_fields "TypedBackendObjectAccess" [ "assertCurrent"; "expression"; "field"; "fingerprint"; "kind"; "owner"; "placeType"; "receiver"; "resultType"; "revision"; "value"; "valueType" ];
+  HxType.register_class_static_fields "TypedBackendObjectAccess" [ "fieldDestination"; "supports"; "writtenPlaceType" ];
   HxType.register_class_instance_fields "TypedBackendReturnOccurrence" [ "assertCurrent"; "belongsTo"; "expression"; "fingerprint"; "owner"; "revision"; "source"; "type" ];
   HxType.register_class_static_fields "TypedBackendReturnOccurrence" [];
   HxType.register_class_instance_fields "TypedBackendRuntimeTypeCatalog" [ "assertMarkers"; "assertOwner"; "assertUnsupportedAbsent"; "bodyRevision"; "entries"; "getEntries"; "ownerIdentity"; "require" ];
@@ -9543,15 +9822,19 @@ let init () : unit =
   HxType.register_class_static_fields "TypedBackendSourceWalk" [ "expression"; "expressionChildren"; "functionDeclaration"; "statement"; "statementChildren" ];
   HxType.register_class_instance_fields "TypedBackendStatementControl" [ "assertCurrent"; "binding"; "destination"; "fingerprint"; "owner"; "revision"; "statement" ];
   HxType.register_class_static_fields "TypedBackendStatementControl" [];
+  HxType.register_class_instance_fields "TypedBackendStringConcatOccurrence" [ "assertCurrent"; "expression"; "fingerprint"; "left"; "leftType"; "operandType"; "operation"; "owner"; "revision"; "right"; "rightType" ];
+  HxType.register_class_static_fields "TypedBackendStringConcatOccurrence" [ "supports" ];
   HxType.register_class_instance_fields "TypedBackendThrownValue" [ "assertCurrent"; "expression"; "fingerprint"; "owner"; "revision"; "type" ];
   HxType.register_class_static_fields "TypedBackendThrownValue" [];
+  HxType.register_class_instance_fields "TypedBackendTraceOccurrence" [ "argumentTypes"; "arguments"; "assertCurrent"; "expression"; "fingerprint"; "line"; "owner"; "revision" ];
+  HxType.register_class_static_fields "TypedBackendTraceOccurrence" [];
   HxType.register_class_instance_fields "TypedBodyBuilder" [];
-  HxType.register_class_static_fields "TypedBodyBuilder" [ "alignStructuralTryCatchResults"; "applyCallArgumentConversions"; "buildExpr"; "buildExpression"; "buildExpressions"; "buildFallbackModule"; "buildFunction"; "buildIndexedAccess"; "buildIndexedUpdate"; "buildIterable"; "buildLambda"; "buildStatements"; "buildStmt"; "buildStructuralTryArguments"; "compileTimeProbe"; "conditionalBranch"; "convertCallValues"; "declarePatternBindings"; "exactPosition"; "expandStatement"; "expandStructuralStatements"; "expressionPath"; "expressionType"; "fallbackType"; "isCompoundAssignment"; "normalizeProbeText"; "opaqueBlockBody"; "opaqueBlockProbeResult"; "parsedOpaqueBlockStatements"; "recoveredOpaqueBlockStatements"; "recoveredStructuralExpression"; "statementAlwaysExits"; "structuralOpaqueBlock"; "structuralTryCatch"; "successfulProbeInferenceIsDecisive"; "untypedExpression"; "untypedStatement" ];
+  HxType.register_class_static_fields "TypedBodyBuilder" [ "alignStructuralTryCatchResults"; "applyCallArgumentConversions"; "buildExpr"; "buildExpression"; "buildExpressions"; "buildFallbackModule"; "buildFunction"; "buildIndexedAccess"; "buildIndexedCall"; "buildIndexedUpdate"; "buildIterable"; "buildLambda"; "buildStatements"; "buildStmt"; "buildStructuralTryArguments"; "compileTimeProbe"; "conditionalBranch"; "convertCallValues"; "declarePatternBindings"; "exactPosition"; "expandStatement"; "expandStructuralStatements"; "expressionPath"; "expressionType"; "fallbackType"; "isCompoundAssignment"; "normalizeProbeText"; "opaqueBlockBody"; "opaqueBlockProbeResult"; "parsedOpaqueBlockStatements"; "recoveredOpaqueBlockStatements"; "recoveredStructuralExpression"; "statementAlwaysExits"; "structuralOpaqueBlock"; "structuralTryCatch"; "successfulProbeInferenceIsDecisive"; "untypedExpression"; "untypedStatement" ];
   HxType.register_class_instance_fields "TypedBodyFingerprint" [];
   HxType.register_class_static_fields "TypedBodyFingerprint" [ "addExpression"; "addExpressions"; "addInt"; "addPattern"; "addPatterns"; "addPosition"; "addStatement"; "addStatements"; "addString"; "addStrings"; "addUnaryFixity"; "addUnaryOperator"; "exactExpression"; "exactStatements"; "forExpression"; "forStatements"; "loweredControlName" ];
   HxType.register_class_instance_fields "TypedBodyInvariant" [];
   HxType.register_class_static_fields "TypedBodyInvariant" [ "assertBinding"; "assertBindingNames"; "assertCatchUses"; "assertClasses"; "assertExpr"; "assertFunction"; "assertStmt"; "opaqueContainsSemanticSyntax"; "scrubQuotedAndCommentText" ];
-  HxType.register_class_instance_fields "TypedBodyProjectionBuilder" [ "aggregates"; "arrayAccesses"; "ascribeCallable"; "bitwiseOperations"; "bodyRevision"; "callArguments"; "callableAscriptions"; "callableExpressions"; "casts"; "collectionControls"; "conditions"; "constructors"; "equalities"; "fields"; "getAggregates"; "getArrayAccesses"; "getBitwiseOperations"; "getCallArguments"; "getCallableAscriptions"; "getCallableExpressions"; "getCasts"; "getCollectionControls"; "getConditions"; "getEqualities"; "getFields"; "getInstanceCalls"; "getLambdas"; "getLocalWrites"; "getMethods"; "getNamedPatterns"; "getObjectAccesses"; "getStatementControls"; "getThrownValues"; "instanceCalls"; "lambdas"; "localWrites"; "methods"; "namedPatterns"; "objectAccesses"; "ownerIdentity"; "projectAggregate"; "projectArrayAccess"; "projectBinary"; "projectCallArguments"; "projectCallableExpression"; "projectCast"; "projectCollectionControl"; "projectCondition"; "projectConstructor"; "projectField"; "projectInstanceCall"; "projectLambda"; "projectLocalWrite"; "projectMethod"; "projectNamedPatterns"; "projectObjectAccess"; "projectReturn"; "projectRuntimeType"; "projectStatementControl"; "projectThrownValue"; "returns"; "runtimeTypes"; "seal"; "sealed"; "statementControls"; "thrownValues" ];
+  HxType.register_class_instance_fields "TypedBodyProjectionBuilder" [ "aggregates"; "arithmeticOperations"; "arrayAccesses"; "ascribeCallable"; "bitwiseOperations"; "bodyRevision"; "callArguments"; "callableAscriptions"; "callableExpressions"; "callableReturnTypes"; "casts"; "collectionControls"; "conditions"; "constructors"; "currentReturnType"; "enterCallable"; "equalities"; "exitCallable"; "fields"; "functionConstraintFlows"; "getAggregates"; "getArithmeticOperations"; "getArrayAccesses"; "getBitwiseOperations"; "getCallArguments"; "getCallableAscriptions"; "getCallableExpressions"; "getCasts"; "getCollectionControls"; "getConditions"; "getEqualities"; "getFields"; "getFunctionConstraintFlows"; "getInstanceCalls"; "getLambdas"; "getLocalWrites"; "getMethods"; "getNamedPatterns"; "getObjectAccesses"; "getStatementControls"; "getStringConcats"; "getThisType"; "getThrownValues"; "getTraces"; "instanceCalls"; "lambdas"; "localWrites"; "methods"; "namedPatterns"; "objectAccesses"; "observeFunctionConstraintFlow"; "observeFunctionConstraintFlows"; "ownerIdentity"; "projectAggregate"; "projectArrayAccess"; "projectBinary"; "projectCallArguments"; "projectCallableExpression"; "projectCast"; "projectCollectionControl"; "projectCondition"; "projectConstructor"; "projectField"; "projectInstanceCall"; "projectLambda"; "projectLocalWrite"; "projectMethod"; "projectNamedPatterns"; "projectObjectAccess"; "projectReturn"; "projectRuntimeType"; "projectStatementControl"; "projectStringCompound"; "projectThis"; "projectThrownValue"; "projectTrace"; "returns"; "runtimeTypes"; "seal"; "sealed"; "statementControls"; "stringConcats"; "thisType"; "thisTypeConflict"; "thrownValues"; "traces" ];
   HxType.register_class_static_fields "TypedBodyProjectionBuilder" [];
   HxType.register_class_instance_fields "TypedBodySource" [];
   HxType.register_class_static_fields "TypedBodySource" [ "addBinding"; "ascribeCallable"; "blockExpression"; "callableSignature"; "callableTypeHint"; "canonicalTypeHint"; "classDeclaration"; "classProjection"; "collectExpressionBindings"; "collectExpressionFieldReads"; "collectStatementBindings"; "collectStatementFieldReads"; "condition"; "constantTypeReceiver"; "containsAliasSpelling"; "containsNominalType"; "exactProjectedName"; "exactProjectedNames"; "expression"; "expressionTail"; "fieldDeclaration"; "fieldInitializerProjection"; "fieldReadCatalog"; "functionDeclaration"; "functionProjection"; "localCatalog"; "moduleDeclarationCatalog"; "moduleProjection"; "optionalLambdaCall"; "projectExpression"; "projectFieldRead"; "projectPattern"; "projectPatterns"; "projectedClassDeclaration"; "projectedModuleDeclaration"; "projectedPatternBinding"; "projectedTypeHint"; "resolvedNameWhenAliased"; "resolvedTypeExpression"; "simpleTypeName"; "sourcePosition"; "sourceTypeBase"; "statement"; "statements"; "variableTypeHint" ];
@@ -9595,6 +9878,8 @@ let init () : unit =
   HxType.register_class_static_fields "TypedFunction" [ "stableIdentityFor" ];
   HxType.register_class_instance_fields "TypedFunctionBody" [ "getSourceFingerprint"; "getStatements"; "sourceFingerprint"; "statements" ];
   HxType.register_class_static_fields "TypedFunctionBody" [];
+  HxType.register_class_instance_fields "TypedFunctionConstraintFlows" [];
+  HxType.register_class_static_fields "TypedFunctionConstraintFlows" [ "isExactFunctionArray"; "localFlow"; "ofNode" ];
   HxType.register_class_instance_fields "TypedFunctionDefault" [ "expression"; "getExpression"; "getParameterIndex"; "parameterIndex" ];
   HxType.register_class_static_fields "TypedFunctionDefault" [];
   HxType.register_class_instance_fields "TypedGuardedPatternPlan" [ "addColumn"; "canCompleteNormally"; "caseCanCompleteNormally"; "caseCompletion"; "columns"; "compile"; "exhaustive"; "getCanCompleteNormally"; "getColumns"; "getHasExhaustiveCoverage"; "getPatterns"; "getRoot"; "getSemanticKey"; "namedPatterns"; "namedSelections"; "observe"; "patterns"; "root"; "test" ];
@@ -9611,7 +9896,7 @@ let init () : unit =
   HxType.register_class_static_fields "TypedModule" [ "syntheticSourceOrigin" ];
   HxType.register_class_instance_fields "TypedMultiTypeConstruction" [ "apply"; "binding"; "getSemanticKey"; "selection" ];
   HxType.register_class_static_fields "TypedMultiTypeConstruction" [];
-  HxType.register_class_instance_fields "TypedNamedCallBinding" [ "arguments"; "assertCurrent"; "declaration"; "declarationSignature"; "extensionProvider"; "getArguments"; "getSemanticKey"; "substituteTypes" ];
+  HxType.register_class_instance_fields "TypedNamedCallBinding" [ "arguments"; "assertCurrent"; "declaration"; "declarationSignature"; "extensionProvider"; "getArguments"; "getDeclaration"; "getSemanticKey"; "substituteTypes" ];
   HxType.register_class_static_fields "TypedNamedCallBinding" [];
   HxType.register_class_instance_fields "TypedNamedCallPlan" [ "declaration"; "extensionProvider"; "getExpectedArguments"; "index"; "order"; "parameterTypes"; "publish"; "signature"; "sources" ];
   HxType.register_class_static_fields "TypedNamedCallPlan" [];
@@ -9641,14 +9926,14 @@ let init () : unit =
   HxType.register_class_static_fields "TypedStructuralRetention" [];
   HxType.register_class_instance_fields "TypedSwitchPatterns" [ "assertInput"; "getSelections"; "getSemanticKey"; "input"; "inputKey"; "projectPayloads"; "selections"; "sourceIdentity"; "substituteTypes"; "writtenShapes" ];
   HxType.register_class_static_fields "TypedSwitchPatterns" [ "identity"; "named"; "writtenShape" ];
-  HxType.register_class_instance_fields "TyperContext" [ "classFullName"; "classIsOrExtends"; "currentClass"; "directives"; "expectedEnumConstructorField"; "expectedEnumConstructorMethod"; "extensionMethods"; "filePath"; "getClassFullName"; "getDirectives"; "getFilePath"; "getIndex"; "getModulePath"; "getPackagePath"; "getResolvedDirectives"; "hasDefine"; "importedEnums"; "importedModuleFunction"; "importedStaticField"; "importedStaticMethod"; "index"; "inferredReturnTypes"; "instanceField"; "instanceMethodOwner"; "isMacroModule"; "loader"; "loweredQuotation"; "loweredQuotations"; "moduleEnumConstructorField"; "moduleEnumConstructorMethod"; "modulePath"; "packagePath"; "recordInferredReturnType"; "refinedMethodReturnType"; "resolveCoreProvider"; "resolvePrimitiveProvider"; "resolveType"; "resolveTypeDeclaration"; "resolveTypeUse"; "resolvedDirectives"; "resolvedProvider"; "superclass" ];
+  HxType.register_class_instance_fields "TyperContext" [ "classFullName"; "classIsOrExtends"; "currentClass"; "directives"; "expectedEnumConstructorField"; "expectedEnumConstructorMethod"; "extensionMethods"; "filePath"; "getClassFullName"; "getDirectives"; "getFilePath"; "getIndex"; "getModulePath"; "getPackagePath"; "getResolvedDirectives"; "hasDeclarationLoader"; "hasDefine"; "hasLoader"; "importedEnums"; "importedModuleFunction"; "importedModuleLacksType"; "importedStaticField"; "importedStaticMethod"; "importsLocalName"; "index"; "inferredReturnTypes"; "instanceField"; "instanceMethodOwner"; "isMacroModule"; "loader"; "loweredQuotation"; "loweredQuotations"; "moduleEnumAbstractValueField"; "moduleEnumConstructorField"; "moduleEnumConstructorMethod"; "modulePath"; "namesModule"; "packagePath"; "recordInferredReturnType"; "refinedMethodReturnType"; "resolveCoreProvider"; "resolvePrimitiveProvider"; "resolveType"; "resolveTypeDeclaration"; "resolveTypeUse"; "resolvedDirectives"; "resolvedProvider"; "superclass" ];
   HxType.register_class_static_fields "TyperContext" [ "asClass"; "expectedEnumOwner" ];
   HxType.register_class_instance_fields "TyperError" [ "filePath"; "getFilePath"; "getMessage"; "getPos"; "message"; "pos"; "toString" ];
   HxType.register_class_static_fields "TyperError" [];
-  HxType.register_class_instance_fields "TyperIndex" [ "addNominal"; "addResolvedModule"; "addResolvedModules"; "byFullName"; "byShortName"; "bySourceClass"; "catalogOperators"; "fieldInitializerTypes"; "getAbstractByFullName"; "getBinaryOperators"; "getByFullName"; "getByModulePath"; "getByShortName"; "getDeclaredByModulePath"; "getFieldInitializerTypes"; "getForSourceClass"; "getMethodBodyResults"; "getMethodInputs"; "getParameterBounds"; "getRegisteredModule"; "getTypedInputRevision"; "getUnaryOperators"; "identitiesByModulePath"; "identityByFullName"; "identityFromModuleByShortName"; "identityIsPublic"; "indexModule"; "isModulePublished"; "methodBodyResults"; "methodInputs"; "parameterBounds"; "publishResolvedModule"; "publishedModules"; "rawStaticWildcardHidesType"; "recordTypedInputRevision"; "registerIdentity"; "registerModuleIdentities"; "registerResolvedModules"; "registeredModules"; "resolveNominalProvider"; "resolveTypeDeclaration"; "resolveTypePath"; "resolveTypeUse"; "resolvedStaticWildcardHidesType"; "semanticDump"; "semanticType"; "typeDeclarations"; "typeUseResolver"; "typedInputRevisions"; "visibilityByFullName" ];
-  HxType.register_class_static_fields "TyperIndex" [ "addMethod"; "build"; "buildHeaders"; "canonicalModulePath"; "classFullNameInModule"; "classifyOperatorExpression"; "compareText"; "declarationSignatureKey"; "expectedModuleNameFromFile"; "hasMetadata"; "hidesOriginalNameBehindAlias"; "malformedOperator"; "metadataValue"; "metadataValues"; "parseOperatorMetadata"; "typeParameters"; "typeVisibleFromModule" ];
+  HxType.register_class_instance_fields "TyperIndex" [ "addNominal"; "addResolvedModule"; "addResolvedModules"; "buildMacroSeen"; "byFullName"; "byShortName"; "bySourceClass"; "catalogOperators"; "declarationUsesBuildMacro"; "declaresEnumMember"; "declaresMacroFunction"; "fieldInitializerTypes"; "getAbstractByFullName"; "getBinaryOperators"; "getByFullName"; "getByModulePath"; "getByShortName"; "getDeclaredByModulePath"; "getFieldInitializerTypes"; "getForSourceClass"; "getMethodBodyResults"; "getMethodInputs"; "getParameterBounds"; "getRegisteredModule"; "getTypedInputRevision"; "getUnaryOperators"; "hasBuildMacro"; "hintPosition"; "identitiesByModulePath"; "identityByFullName"; "identityFromModuleByShortName"; "identityIsPublic"; "indexModule"; "isModulePublished"; "methodBodyResults"; "methodInputs"; "parameterBounds"; "publishResolvedModule"; "publishedModules"; "rawSourceText"; "rawSources"; "rawStaticWildcardHidesType"; "recordTypedInputRevision"; "registerIdentity"; "registerModuleIdentities"; "registerResolvedModules"; "registeredModules"; "resolveNominalProvider"; "resolveTypeDeclaration"; "resolveTypePath"; "resolveTypeUse"; "resolvedStaticWildcardHidesType"; "returnHintAnchor"; "semanticDump"; "semanticType"; "signatureFilePath"; "signatureSource"; "signatureTokenList"; "signatureTokens"; "typeDeclarations"; "typeUseResolver"; "typedInputRevisions"; "undeclaredNamesByFile"; "undeclaredValueNames"; "visibilityByFullName" ];
+  HxType.register_class_static_fields "TyperIndex" [ "addMethod"; "build"; "buildHeaders"; "canonicalModulePath"; "classFullNameInModule"; "classifyOperatorExpression"; "compareText"; "declarationSignatureKey"; "expectedModuleNameFromFile"; "hasMetadata"; "hasMetadataNamed"; "hidesOriginalNameBehindAlias"; "isBuildMacroMetadata"; "malformedOperator"; "metadataValue"; "metadataValues"; "nominalArity"; "parseOperatorMetadata"; "typeParameters"; "typeVisibleFromModule"; "usesBuildMacro" ];
   HxType.register_class_instance_fields "TyperStage" [];
-  HxType.register_class_static_fields "TyperStage" [ "accessorPropertyForAccess"; "appliedCallSignature"; "arrayElementType"; "assertWritableLocal"; "assignedLocalType"; "buildTypedClasses"; "callArgumentConversions"; "callArgumentExpectedTypes"; "callRange"; "callReceiverType"; "constraintAccepts"; "constructorArgumentContexts"; "constructorPathType"; "currentFieldReferenceType"; "currentInstanceMethodReferenceType"; "currentMethodShadowsExpectedEnum"; "currentStaticMethodReferenceType"; "currentThisType"; "declarationLineRange"; "declarePatternBindings"; "declaredMemberReadType"; "diagnosticFileName"; "dottedFieldPath"; "dynamicMemberWriteName"; "exactDirectiveProvider"; "extractRawDiagnostic"; "flatOverloadTypeScore"; "functionNameRange"; "functionReferenceType"; "helperCompileTimeProbeName"; "hintTypeParameters"; "importedStaticMethodReferenceType"; "indexedArgumentContexts"; "inferDeclaredFieldType"; "inferDeclaredMethodResult"; "inferExprType"; "inferExprValueType"; "inferFunctionValueCall"; "inferLambdaType"; "inferLocalInitializer"; "inferNullCoalesceType"; "inferReturnType"; "inferSourceFunctionType"; "inferStructuralTryResult"; "inferSwitchGuard"; "inferSwitchInput"; "isDeclaredIndexedUpdatePlace"; "isRangeIdentCode"; "isStrict"; "isUpperStartName"; "lowerMacroQuotation"; "macroCallSignature"; "methodArgumentOrder"; "moduleDirectiveProviders"; "nominalInfoForType"; "normalizeOverloadTypeName"; "ordinaryIndexedElement"; "overloadArgScore"; "overloadCandidateScore"; "providerDefinesStaticMember"; "providerIdentities"; "renderArgType"; "renderOverloadCandidate"; "resolveCallSelection"; "resolveCallSelectionCandidate"; "resolveClassHeaderTypes"; "resolveExtensionCall"; "resolveFieldDeclaration"; "resolveIndexedAccess"; "resolveInstanceMethodValue"; "resolveMethodCall"; "resolveModuleDirectives"; "resolveStaticMethodValue"; "resolveTypeInContext"; "selectIndexedUpdate"; "selectedCallType"; "selectedFieldType"; "selectedMethodCallResolution"; "sourceLine"; "typeErrorProbe"; "typeFromHintInContext"; "typeFunction"; "typeModule"; "typeResolvedModule"; "usingDirectiveProvider"; "validateClassArguments" ];
+  HxType.register_class_static_fields "TyperStage" [ "accessorPropertyForAccess"; "appliedCallSignature"; "arrayElementType"; "assertWritableLocal"; "assignedLocalType"; "bindSuppliedParameter"; "buildTypedClasses"; "callArgumentConversions"; "callArgumentExpectedTypes"; "callRange"; "callReceiverType"; "compoundKindFailure"; "constraintAccepts"; "constructorArgumentContexts"; "constructorArityFailure"; "constructorMayComeFromBuildMacro"; "constructorParameterLimit"; "constructorPathType"; "currentFieldReferenceType"; "currentInstanceMethodReferenceType"; "currentMethodShadowsExpectedEnum"; "currentStaticMethodReferenceType"; "currentThisType"; "declarationLineRange"; "declarePatternBindings"; "declaredMemberReadType"; "diagnosticFileName"; "dottedFieldPath"; "dynamicMemberWriteName"; "exactDirectiveProvider"; "extractRawDiagnostic"; "flatOverloadTypeScore"; "functionNameRange"; "functionReferenceType"; "functionValueFits"; "functionValueWalk"; "helperCompileTimeProbeName"; "hintTypeParameters"; "importedStaticMethodReferenceType"; "indexedArgumentContexts"; "inferDeclaredFieldType"; "inferDeclaredMethodResult"; "inferExprType"; "inferExprValueType"; "inferFunctionValueCall"; "inferLambdaType"; "inferLocalInitializer"; "inferNullCoalesceType"; "inferReturnType"; "inferSourceFunctionType"; "inferStructuralTryResult"; "inferSwitchGuard"; "inferSwitchInput"; "isCoreAny"; "isDeclaredIndexedUpdatePlace"; "isRangeIdentCode"; "isStrict"; "isUpperStartName"; "lowerMacroQuotation"; "macroCallSignature"; "methodArgumentOrder"; "moduleDirectiveProviders"; "nominalInfoForType"; "normalizeOverloadTypeName"; "ordinaryIndexedElement"; "overloadArgScore"; "overloadCandidateScore"; "providerDefinesStaticMember"; "providerIdentities"; "renderArgType"; "renderOverloadCandidate"; "requireResolvedDirectives"; "requireRootedOwners"; "resolveCallSelection"; "resolveCallSelectionCandidate"; "resolveClassHeaderTypes"; "resolveExtensionCall"; "resolveFieldDeclaration"; "resolveIndexedAccess"; "resolveInstanceMethodValue"; "resolveMethodCall"; "resolveModuleDirectives"; "resolveStaticMethodValue"; "resolveTypeInContext"; "resolvesValueName"; "selectIndexedUpdate"; "selectedCallType"; "selectedFieldType"; "selectedMethodCallResolution"; "sourceLine"; "surplusArgumentPosition"; "typeErrorProbe"; "typeFromHintInContext"; "typeFunction"; "typeModule"; "typeResolvedModule"; "upstreamTypeDisplay"; "usingDirectiveProvider"; "validateClassArguments"; "writtenReturnDisplay" ];
   HxType.register_class_instance_fields "_CompilerBundledSources.CompilerBundledSources_Fields_" [];
   HxType.register_class_static_fields "_CompilerBundledSources.CompilerBundledSources_Fields_" [ "files"; "isFile"; "namespace"; "owns"; "readBytes"; "readDirectory"; "root"; "targetRoot" ];
   HxType.register_class_instance_fields "_EmitterStage._InstanceFieldEntry" [ "fields"; "key" ];
@@ -9689,6 +9974,8 @@ let init () : unit =
   HxType.register_class_static_fields "_HxStringEscape.HxStringEscape_Fields_" [ "read" ];
   HxType.register_class_instance_fields "_ParsedTypedefIntegrity.ParsedTypedefIntegrity_Fields_" [];
   HxType.register_class_static_fields "_ParsedTypedefIntegrity.ParsedTypedefIntegrity_Fields_" [ "appendDeclaration"; "appendParameters"; "appendType"; "arguments"; "position"; "strings"; "text" ];
+  HxType.register_class_instance_fields "_TyAbstractPrimitiveOperation.TyAbstractPrimitiveOperation_Fields_" [];
+  HxType.register_class_static_fields "_TyAbstractPrimitiveOperation.TyAbstractPrimitiveOperation_Fields_" [ "abstractInfo"; "addition"; "arithmetic"; "bitwise"; "display"; "failure"; "isAbstractKind"; "kindOf"; "operation"; "primitiveTargets"; "success"; "unary"; "view" ];
   HxType.register_class_instance_fields "_TyAdditionOperandInference.TyAdditionOperandInference_Fields_" [];
   HxType.register_class_static_fields "_TyAdditionOperandInference.TyAdditionOperandInference_Fields_" [ "constrain" ];
   HxType.register_class_instance_fields "_TyAliasEquivalence.AliasEquivalenceProof" [ "collect"; "compare"; "definitions"; "used" ];
@@ -9703,6 +9990,8 @@ let init () : unit =
   HxType.register_class_static_fields "_TyArrayComprehension.TyArrayComprehension_Fields_" [ "infer" ];
   HxType.register_class_instance_fields "_TyAssignmentCompatibility.TyAssignmentCompatibility_Fields_" [];
   HxType.register_class_static_fields "_TyAssignmentCompatibility.TyAssignmentCompatibility_Fields_" [ "classify"; "classifyRestSpread"; "functions"; "incomplete"; "nominalArguments"; "restParameter" ];
+  HxType.register_class_instance_fields "_TyBasicNullArgument.TyBasicNullArgument_Fields_" [];
+  HxType.register_class_static_fields "_TyBasicNullArgument.TyBasicNullArgument_Fields_" [ "STATIC_TARGETS"; "admit"; "basicHintKey"; "basicNullPositions"; "check"; "isStaticTarget"; "nativeUnsupported"; "nativeUnsupportedError"; "requiresValue"; "scoringTypes"; "sourceHint"; "staticPlatformError" ];
   HxType.register_class_instance_fields "_TyBitwiseOperandInference.TyBitwiseOperandInference_Fields_" [];
   HxType.register_class_static_fields "_TyBitwiseOperandInference.TyBitwiseOperandInference_Fields_" [ "constrain" ];
   HxType.register_class_instance_fields "_TyBooleanSwitchCoverage.TyBooleanSwitchCoverage_Fields_" [];
@@ -9723,8 +10012,10 @@ let init () : unit =
   HxType.register_class_static_fields "_TyClassArgumentBounds.TyClassArgumentBounds_Fields_" [ "validate"; "validateDeclarations" ];
   HxType.register_class_instance_fields "_TyClassRelationships.TyClassRelationships_Fields_" [];
   HxType.register_class_static_fields "_TyClassRelationships.TyClassRelationships_Fields_" [ "resolve" ];
+  HxType.register_class_instance_fields "_TyCompoundAssignmentKinds.TyCompoundAssignmentKinds_Fields_" [];
+  HxType.register_class_static_fields "_TyCompoundAssignmentKinds.TyCompoundAssignmentKinds_Fields_" [ "abstractDisplay"; "abstractFailure"; "display"; "isBitwise"; "isFloat"; "isNumber"; "primitive" ];
   HxType.register_class_instance_fields "_TyConditionalResult.TyConditionalResult_Fields_" [];
-  HxType.register_class_static_fields "_TyConditionalResult.TyConditionalResult_Fields_" [ "converts"; "join" ];
+  HxType.register_class_static_fields "_TyConditionalResult.TyConditionalResult_Fields_" [ "converts"; "isFunctionBranch"; "join" ];
   HxType.register_class_instance_fields "_TyDeclaredArrayAccess.TyDeclaredArrayAccess_Fields_" [];
   HxType.register_class_static_fields "_TyDeclaredArrayAccess.TyDeclaredArrayAccess_Fields_" [ "element"; "isClass" ];
   HxType.register_class_instance_fields "_TyDefaultEnumExtensions.TyDefaultEnumExtensions_Fields_" [];
@@ -9747,6 +10038,8 @@ let init () : unit =
   HxType.register_class_static_fields "_TyFieldAssignment.TyFieldAssignment_Fields_" [ "check"; "explicitlyUntyped" ];
   HxType.register_class_instance_fields "_TyFunctionParameter.TyFunctionParameter_Fields_" [];
   HxType.register_class_static_fields "_TyFunctionParameter.TyFunctionParameter_Fields_" [ "copy"; "declarationBodyType"; "isNullDefault"; "normalizeRest"; "withType" ];
+  HxType.register_class_instance_fields "_TyIndexedNullValue.TyIndexedNullValue_Fields_" [];
+  HxType.register_class_static_fields "_TyIndexedNullValue.TyIndexedNullValue_Fields_" [ "admits"; "checkTarget" ];
   HxType.register_class_instance_fields "_TyIndexedUpdateOperation.TyIndexedUpdateOperation_Fields_" [];
   HxType.register_class_static_fields "_TyIndexedUpdateOperation.TyIndexedUpdateOperation_Fields_" [ "select"; "validateInputs" ];
   HxType.register_class_instance_fields "_TyInferenceAbstractDestination.TyInferenceAbstractDestination_Fields_" [];
@@ -9763,6 +10056,8 @@ let init () : unit =
   HxType.register_class_static_fields "_TyLambdaResultContract.TyLambdaResultContract_Fields_" [ "check" ];
   HxType.register_class_instance_fields "_TyMetadataOverloadOrder.TyMetadataOverloadOrder_Fields_" [];
   HxType.register_class_static_fields "_TyMetadataOverloadOrder.TyMetadataOverloadOrder_Fields_" [ "accept" ];
+  HxType.register_class_instance_fields "_TyMethodGenericBinding.TyBoundArguments" [ "open"; "types" ];
+  HxType.register_class_static_fields "_TyMethodGenericBinding.TyBoundArguments" [];
   HxType.register_class_instance_fields "_TyMethodInputPublication.TyMethodInputPublication_Fields_" [];
   HxType.register_class_static_fields "_TyMethodInputPublication.TyMethodInputPublication_Fields_" [ "finish" ];
   HxType.register_class_instance_fields "_TyNamedPatternResolver.TyNamedPatternResolver_Fields_" [];
@@ -9795,6 +10090,8 @@ let init () : unit =
   HxType.register_class_static_fields "_TyStructuralFieldRead.TyStructuralFieldRead_Fields_" [ "resolve" ];
   HxType.register_class_instance_fields "_TySuperType.TySuperType_Fields_" [];
   HxType.register_class_static_fields "_TySuperType.TySuperType_Fields_" [ "resolve" ];
+  HxType.register_class_instance_fields "_TySwitchConstantPatterns.TySwitchConstantPatterns_Fields_" [];
+  HxType.register_class_static_fields "_TySwitchConstantPatterns.TySwitchConstantPatterns_Fields_" [ "abstractPath"; "anonymousFields"; "arrayItem"; "check"; "classField"; "constant"; "display"; "known"; "visit" ];
   HxType.register_class_instance_fields "_TySwitchIrrefutable.TySwitchIrrefutable_Fields_" [];
   HxType.register_class_static_fields "_TySwitchIrrefutable.TySwitchIrrefutable_Fields_" [ "proves" ];
   HxType.register_class_instance_fields "_TySwitchTyping.TySwitchTyping_Fields_" [];
@@ -10291,6 +10588,8 @@ let init () : unit =
   HxType.register_class_static_fields "backend.ocaml.OcamlNativeBackend" [ "capabilities"; "descriptor"; "registration"; "targetCore" ];
   HxType.register_class_instance_fields "backend.ocaml.OcamlNativeTargetCore" [ "coreId"; "emit" ];
   HxType.register_class_static_fields "backend.ocaml.OcamlNativeTargetCore" [ "emitBridge" ];
+  HxType.register_class_instance_fields "backend.ocaml.OcamlPreludeReferences" [ "calls"; "expression"; "findMethodUse"; "idents"; "isLocal"; "locals"; "ownsMethod"; "reference"; "statement" ];
+  HxType.register_class_static_fields "backend.ocaml.OcamlPreludeReferences" [ "ofFunction"; "ofInitializer" ];
   HxType.register_class_instance_fields "backend.ocaml.OcamlStage3Backend" [ "capabilities"; "delegate"; "describe"; "emit"; "id" ];
   HxType.register_class_static_fields "backend.ocaml.OcamlStage3Backend" [ "capabilitiesStatic"; "descriptor"; "emitBridge"; "targetCore"; "targetCoreEmit"; "traceEnabled" ];
   HxType.register_class_instance_fields "backend.ocaml.OcamlTargetCore" [ "coreId"; "emit" ];
@@ -10301,27 +10600,35 @@ let init () : unit =
   HxType.register_class_static_fields "backend.ocaml.PortableMetalizationPlanner" [ "appendExclusion"; "buildPlan"; "collectFunctionRegions"; "contextName"; "functionRegionKey"; "isFunctionContext"; "normalizeClassName"; "normalizeContext"; "normalizeFilePath"; "normalizeFunctionName"; "normalizeReason"; "normalizeToken"; "regionKeyFromContext"; "writeReport" ];
   HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlAbstractConstructorBody" [ "assign"; "assignments"; "getUnderlyingType"; "owner"; "read"; "render"; "underlying"; "valueName" ];
   HxType.register_class_static_fields "backend.ocaml.Stage3OcamlAbstractConstructorBody" [];
-  HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlAbstractConstructors" [ "add"; "body"; "construct"; "constructors"; "modules"; "ownsConstruction"; "underlyings" ];
+  HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlAbstractConstructors" [ "add"; "body"; "construct"; "constructors"; "modules"; "ownsConstruction"; "underlyingOf"; "underlyings" ];
   HxType.register_class_static_fields "backend.ocaml.Stage3OcamlAbstractConstructors" [];
   HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlCallableFunction" [ "bindValues"; "call"; "catalog"; "convert"; "current"; "fresh"; "generated"; "local"; "names"; "next"; "printer"; "program"; "projection"; "render"; "returned"; "returnedExpression"; "shape"; "source"; "staticCallee"; "type" ];
   HxType.register_class_static_fields "backend.ocaml.Stage3OcamlCallableFunction" [];
   HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlCallableProgram" [ "assertCurrent"; "bind"; "carrier"; "currentRevision"; "externs"; "generics"; "modules"; "registry"; "revision"; "selected" ];
   HxType.register_class_static_fields "backend.ocaml.Stage3OcamlCallableProgram" [];
-  HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlClassStorage" [ "abstracts"; "add"; "ancestry"; "argumentValues"; "classRegistration"; "construct"; "constructorDependencies"; "dispatchesInterfaceMethods"; "initializerOwners"; "initializers"; "instanceInitializers"; "interfaceMethodTable"; "interfaces"; "modules"; "nominalName"; "nominals"; "owners"; "ownsConstruction"; "projections"; "read"; "usesIdentity" ];
+  HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlClassStorage" [ "abstractBackings"; "abstracts"; "adaptedFunctionArguments"; "add"; "ancestry"; "argumentValues"; "backingType"; "classRegistration"; "construct"; "constructorDependencies"; "dispatchesInterfaceMethods"; "exceptionModule"; "initializerOwners"; "initializers"; "instanceInitializers"; "interfaces"; "methodTable"; "modules"; "nominalKinds"; "nominalName"; "nominals"; "outputModule"; "owners"; "ownsConstruction"; "projections"; "read"; "reflectionMethodTable"; "reflectionRegistration"; "staticDefault"; "staticFieldType"; "statics"; "stringifierRegistration"; "stringifiers"; "usesIdentity"; "virtualDispatcher"; "virtuals" ];
   HxType.register_class_static_fields "backend.ocaml.Stage3OcamlClassStorage" [];
+  HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlClassStringifiers" [ "add"; "classes"; "registration"; "toStringOwner" ];
+  HxType.register_class_static_fields "backend.ocaml.Stage3OcamlClassStringifiers" [ "usable" ];
   HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlConstructorArguments" [ "evaluateBefore"; "locals"; "parameters"; "rendered" ];
   HxType.register_class_static_fields "backend.ocaml.Stage3OcamlConstructorArguments" [ "values" ];
+  HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlDynamicMethods" [];
+  HxType.register_class_static_fields "backend.ocaml.Stage3OcamlDynamicMethods" [ "adapterAvailable"; "adapterBody"; "argumentKind"; "call"; "hasRest"; "registration"; "restElementKind"; "valueKey" ];
   HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlEnumPlan" [ "constructors"; "moduleIdentity"; "outputModule"; "owner"; "runtimeName" ];
   HxType.register_class_static_fields "backend.ocaml.Stage3OcamlEnumPlan" [ "fromProjection"; "payload"; "requiredPayload" ];
-  HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlEnums" [ "add"; "byDeclaration"; "call"; "nextCall"; "owners"; "patternCondition"; "payloadType"; "payloadTypes"; "quote"; "render"; "runtimeName"; "validate"; "valueName" ];
-  HxType.register_class_static_fields "backend.ocaml.Stage3OcamlEnums" [];
+  HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlEnums" [ "add"; "byDeclaration"; "call"; "constructorValue"; "nextCall"; "owners"; "patternCondition"; "payloadType"; "payloadTypes"; "quote"; "render"; "runtimeName"; "validate"; "valueName" ];
+  HxType.register_class_static_fields "backend.ocaml.Stage3OcamlEnums" [ "isBoolPayload" ];
   HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlExternBindings" [ "admit"; "classes"; "functions"; "initializers"; "ownsClass"; "reference"; "renderCall"; "selectCall"; "source"; "value"; "values" ];
   HxType.register_class_static_fields "backend.ocaml.Stage3OcamlExternBindings" [ "memberName"; "moduleName"; "nativeType" ];
+  HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlFloatConstant" [];
+  HxType.register_class_static_fields "backend.ocaml.Stage3OcamlFloatConstant" [ "render" ];
   HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlGenericMethods" [ "convert"; "isErased"; "methodCount"; "methods"; "nextName"; "printer"; "render" ];
   HxType.register_class_static_fields "backend.ocaml.Stage3OcamlGenericMethods" [ "needsErasedBoundary"; "requireOwner"; "shape" ];
+  HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlIdentifiers" [];
+  HxType.register_class_static_fields "backend.ocaml.Stage3OcamlIdentifiers" [ "isKeyword" ];
   HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlInstanceInitializers" [ "assertOwner"; "fields"; "getFields"; "getName"; "hasFields"; "methodDependencies"; "name"; "owner"; "projection"; "referencesOwnStatics"; "render" ];
   HxType.register_class_static_fields "backend.ocaml.Stage3OcamlInstanceInitializers" [];
-  HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlInterfaceDispatch" [ "add"; "classes"; "dispatcherBody"; "gaps"; "implementationFor"; "interfaceMethods"; "ownsInterfaceMethod"; "plan"; "planned"; "registration"; "requireCall"; "tables" ];
+  HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlInterfaceDispatch" [ "add"; "classes"; "dispatcherBody"; "entries"; "gaps"; "implementationFor"; "interfaceMethods"; "ownsInterfaceMethod"; "plan"; "planned"; "requireCall"; "tables" ];
   HxType.register_class_static_fields "backend.ocaml.Stage3OcamlInterfaceDispatch" [ "methodShapeProblem"; "requireIdentity" ];
   HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlLocalNames" [ "byProjectedName"; "findTargetName"; "findType"; "internalName"; "localCatalog"; "requireOwner"; "targetName" ];
   HxType.register_class_static_fields "backend.ocaml.Stage3OcamlLocalNames" [];
@@ -10331,12 +10638,20 @@ let init () : unit =
   HxType.register_class_static_fields "backend.ocaml.Stage3OcamlNativeCallPolicy" [ "forBackend"; "retain"; "supportsMapMethod" ];
   HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlRuntimeTypes" [ "checkedTarget"; "checkedValue"; "classes"; "downcast"; "functions"; "initializers"; "membership"; "occurrence"; "occurrences"; "predicate"; "predicateArguments"; "reference"; "render"; "renderCall"; "selectCall"; "testedValue" ];
   HxType.register_class_static_fields "backend.ocaml.Stage3OcamlRuntimeTypes" [];
+  HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlStaticStorage" [ "add"; "byDeclaration"; "byField"; "declaration"; "find"; "initializerOperand"; "read"; "requireWritable"; "split"; "storedRead"; "write" ];
+  HxType.register_class_static_fields "backend.ocaml.Stage3OcamlStaticStorage" [ "cellFor"; "emitsDeclaredStatics"; "operandFor"; "reference"; "typedDefault"; "unsupported" ];
+  HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlTrace" [];
+  HxType.register_class_static_fields "backend.ocaml.Stage3OcamlTrace" [ "argumentText"; "displayFileName"; "hasCompleteTypes"; "render" ];
+  HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlVirtualDispatch" [ "add"; "classes"; "dispatches"; "dispatchesInModule"; "entries"; "gaps"; "identitiesByModule"; "nearestDeclaration"; "overridden"; "overriddenBelow"; "overridesBelow"; "plan"; "planned"; "registration"; "requireCallTarget"; "subclasses"; "superCallTarget" ];
+  HxType.register_class_static_fields "backend.ocaml.Stage3OcamlVirtualDispatch" [ "declaredMethods"; "directName"; "shapeProblem"; "structurallyBindable" ];
   HxType.register_class_instance_fields "backend.ocaml._OcamlEntryPointSelection.OcamlEntryPointSelection_Fields_" [];
   HxType.register_class_static_fields "backend.ocaml._OcamlEntryPointSelection.OcamlEntryPointSelection_Fields_" [ "rootFirst" ];
   HxType.register_class_instance_fields "backend.ocaml._OcamlFieldUpdateLowering.OcamlFieldUpdateLowering_Fields_" [];
-  HxType.register_class_static_fields "backend.ocaml._OcamlFieldUpdateLowering.OcamlFieldUpdateLowering_Fields_" [ "lowerClasses"; "lowerExpression"; "lowerFieldCompound"; "lowerModules"; "lowerStatement" ];
+  HxType.register_class_static_fields "backend.ocaml._OcamlFieldUpdateLowering.OcamlFieldUpdateLowering_Fields_" [ "isBitwiseAssignment"; "isRefusedFieldCompound"; "lowerClasses"; "lowerExpression"; "lowerFieldCompound"; "lowerIndexedStep"; "lowerModules"; "lowerStatement"; "steppedType" ];
+  HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlArithmeticOperands.Stage3OcamlArithmeticOperands_Fields_" [];
+  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlArithmeticOperands.Stage3OcamlArithmeticOperands_Fields_" [ "numericKey"; "sides"; "unclassified" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlArrayCalls.Stage3OcamlArrayCalls_Fields_" [];
-  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlArrayCalls.Stage3OcamlArrayCalls_Fields_" [ "push"; "render"; "renderMethodValue"; "supports" ];
+  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlArrayCalls.Stage3OcamlArrayCalls_Fields_" [ "element"; "push"; "render"; "renderMethodValue"; "supports" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlArrays.Stage3OcamlArrays_Fields_" [];
   HxType.register_class_static_fields "backend.ocaml._Stage3OcamlArrays.Stage3OcamlArrays_Fields_" [ "access"; "callArgument"; "literal"; "retainStringifier"; "supportsAccess" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlCallOrder.Stage3OcamlCallOrder_Fields_" [];
@@ -10349,24 +10664,32 @@ let init () : unit =
   HxType.register_class_static_fields "backend.ocaml._Stage3OcamlCallableSelection.Stage3OcamlCallableSelection_Fields_" [ "declarationShape"; "hasMetadata"; "isFunction"; "select"; "unwrap"; "valueShape" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlCollectionControl.Stage3OcamlCollectionControl_Fields_" [];
   HxType.register_class_static_fields "backend.ocaml._Stage3OcamlCollectionControl.Stage3OcamlCollectionControl_Fields_" [ "append"; "arrayElement"; "statement"; "validate" ];
+  HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlERegCalls.Stage3OcamlERegCalls_Fields_" [];
+  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlERegCalls.Stage3OcamlERegCalls_Fields_" [ "instanceMethod"; "ownsConstruction"; "ownsName"; "render"; "renderConstruction" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlExceptions.Stage3OcamlExceptions_Fields_" [];
   HxType.register_class_static_fields "backend.ocaml._Stage3OcamlExceptions.Stage3OcamlExceptions_Fields_" [ "loop"; "loopBody"; "throwValue"; "tryStatement" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlFunctionBody.Stage3OcamlFunctionBody_Fields_" [];
   HxType.register_class_static_fields "backend.ocaml._Stage3OcamlFunctionBody.Stage3OcamlFunctionBody_Fields_" [ "plan"; "render"; "validate" ];
+  HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlFunctionBoundary.Stage3OcamlFunctionBoundary_Fields_" [];
+  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlFunctionBoundary.Stage3OcamlFunctionBoundary_Fields_" [ "adapt"; "dynamicCall"; "input"; "missingValue"; "requireAdapted"; "result" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlFunctionDefaults.Stage3OcamlFunctionDefaults_Fields_" [];
   HxType.register_class_static_fields "backend.ocaml._Stage3OcamlFunctionDefaults.Stage3OcamlFunctionDefaults_Fields_" [ "render" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlGuardedSwitch.Stage3OcamlGuardedSwitch_Fields_" [];
   HxType.register_class_static_fields "backend.ocaml._Stage3OcamlGuardedSwitch.Stage3OcamlGuardedSwitch_Fields_" [ "render" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlInitializer.Stage3OcamlInitializer_Fields_" [];
   HxType.register_class_static_fields "backend.ocaml._Stage3OcamlInitializer.Stage3OcamlInitializer_Fields_" [ "plan"; "statements" ];
+  HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlInt64Words.Stage3OcamlInt64Words_Fields_" [];
+  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlInt64Words.Stage3OcamlInt64Words_Fields_" [ "isWordField"; "read"; "write" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlIntBitwise.Stage3OcamlIntBitwise_Fields_" [];
   HxType.register_class_static_fields "backend.ocaml._Stage3OcamlIntBitwise.Stage3OcamlIntBitwise_Fields_" [ "render" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlIntrinsicCallable.Stage3OcamlIntrinsicCallable_Fields_" [];
   HxType.register_class_static_fields "backend.ocaml._Stage3OcamlIntrinsicCallable.Stage3OcamlIntrinsicCallable_Fields_" [ "emitValue"; "reference" ];
+  HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlLocalCallOmissions.Stage3OcamlLocalCallOmissions_Fields_" [];
+  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlLocalCallOmissions.Stage3OcamlLocalCallOmissions_Fields_" [ "acceptsSentinel"; "omitted"; "requireSentinelSlot" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlLocalCompoundValue.Stage3OcamlLocalCompoundValue_Fields_" [];
-  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlLocalCompoundValue.Stage3OcamlLocalCompoundValue_Fields_" [ "arithmetic"; "hasValueForm"; "isArithmeticOperator"; "kindOf"; "store"; "value" ];
+  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlLocalCompoundValue.Stage3OcamlLocalCompoundValue_Fields_" [ "arithmetic"; "bitwiseFunction"; "hasValueForm"; "isBitwiseOperator"; "isCompoundOperator"; "kindOf"; "store"; "value" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlLocalStorage.Stage3OcamlLocalStorage_Fields_" [];
-  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlLocalStorage.Stage3OcamlLocalStorage_Fields_" [ "compound"; "store" ];
+  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlLocalStorage.Stage3OcamlLocalStorage_Fields_" [ "assignValue"; "compound"; "concreteFromCarrier"; "store" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlMapCalls.Stage3OcamlMapCalls_Fields_" [];
   HxType.register_class_static_fields "backend.ocaml._Stage3OcamlMapCalls.Stage3OcamlMapCalls_Fields_" [ "iterator"; "ownerKeys"; "ownsInstanceCall"; "pairObject"; "render"; "renderConstruction"; "renderLiteral"; "retainsAbstractDeclaration"; "storage"; "suffix"; "supports"; "text" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlMemberLength.Stage3OcamlMemberLength_Fields_" [];
@@ -10374,25 +10697,39 @@ let init () : unit =
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlMethodValue.Stage3OcamlMethodValue_Fields_" [];
   HxType.register_class_static_fields "backend.ocaml._Stage3OcamlMethodValue.Stage3OcamlMethodValue_Fields_" [ "captureReceiver"; "render" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlNullablePrimitive.Stage3OcamlNullablePrimitive_Fields_" [];
-  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlNullablePrimitive.Stage3OcamlNullablePrimitive_Fields_" [ "FLOAT"; "INT"; "box"; "callArgument"; "carrierDestination"; "carrierOperand"; "convertArgument"; "destinationCarrier"; "equality"; "innerPrimitive"; "intValue"; "intrinsicOptionalInt"; "isCarrierBoundary"; "isCarrierParameter"; "load"; "numericInner"; "orderedArithmetic"; "parameterEntry"; "store"; "unwrap" ];
+  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlNullablePrimitive.Stage3OcamlNullablePrimitive_Fields_" [ "BOOL"; "FLOAT"; "INT"; "box"; "callArgument"; "carrierDestination"; "carrierOperand"; "concreteDestination"; "convertArgument"; "crossesBoundary"; "destinationCarrier"; "equality"; "innerPrimitive"; "intValue"; "intrinsicOptionalInt"; "isCarrierBoundary"; "isCarrierParameter"; "load"; "nullLiteralArgument"; "nullLiteralArgumentSyntax"; "nullLiteralForCall"; "nullableIntToNullableFloat"; "numericInner"; "orderedArithmetic"; "parameterEntry"; "store"; "unwrap" ];
+  HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlNumericWidening.Stage3OcamlNumericWidening_Fields_" [];
+  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlNumericWidening.Stage3OcamlNumericWidening_Fields_" [ "convertsToFloat"; "isExactly"; "isFloatDestination"; "needsPromotion"; "promote"; "toFloatDestination"; "toNullableFloatDestination" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlObjects.Stage3OcamlObjects_Fields_" [];
-  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlObjects.Stage3OcamlObjects_Fields_" [ "access"; "equality"; "literal"; "read"; "store" ];
+  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlObjects.Stage3OcamlObjects_Fields_" [ "access"; "equality"; "literal"; "read"; "storageDestination"; "store" ];
+  HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlOrderedOperands.Stage3OcamlOrderedOperands_Fields_" [];
+  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlOrderedOperands.Stage3OcamlOrderedOperands_Fields_" [ "apply"; "concat" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlPatternDecision.Stage3OcamlPatternDecision_Fields_" [];
   HxType.register_class_static_fields "backend.ocaml._Stage3OcamlPatternDecision.Stage3OcamlPatternDecision_Fields_" [ "captureBindings"; "compileRows"; "constantPattern"; "expandAlternative"; "head"; "replaceColumn"; "replaceRow"; "sameTest"; "select"; "wildcard" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlRangeBound.Stage3OcamlRangeBound_Fields_" [];
   HxType.register_class_static_fields "backend.ocaml._Stage3OcamlRangeBound.Stage3OcamlRangeBound_Fields_" [ "adapt" ];
+  HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlRecursiveLocalFunction.Stage3OcamlRecursiveLocalFunction_Fields_" [];
+  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlRecursiveLocalFunction.Stage3OcamlRecursiveLocalFunction_Fields_" [ "bindingKeyword" ];
+  HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlReferenceCarrier.Stage3OcamlReferenceCarrier_Fields_" [];
+  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlReferenceCarrier.Stage3OcamlReferenceCarrier_Fields_" [ "functionCarrier"; "select" ];
+  HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlReflectCalls.Stage3OcamlReflectCalls_Fields_" [];
+  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlReflectCalls.Stage3OcamlReflectCalls_Fields_" [ "VALUE_TYPE_CONSTRUCTORS"; "VALUE_TYPE_OWNER"; "argument"; "owns"; "reflectOperation"; "render"; "typeOperation"; "unregisteredTypeData"; "valueType" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlRuntimeTypes.Stage3OcamlRuntimeTypes_Fields_" [];
   HxType.register_class_static_fields "backend.ocaml._Stage3OcamlRuntimeTypes.Stage3OcamlRuntimeTypes_Fields_" [ "narrowingKey"; "standardOperation" ];
+  HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlStaticDefault.Stage3OcamlStaticDefault_Fields_" [];
+  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlStaticDefault.Stage3OcamlStaticDefault_Fields_" [ "value" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlStdStaticCalls.Stage3OcamlStdStaticCalls_Fields_" [];
   HxType.register_class_static_fields "backend.ocaml._Stage3OcamlStdStaticCalls.Stage3OcamlStdStaticCalls_Fields_" [ "operation"; "render" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlStringCalls.Stage3OcamlStringCalls_Fields_" [];
   HxType.register_class_static_fields "backend.ocaml._Stage3OcamlStringCalls.Stage3OcamlStringCalls_Fields_" [ "argumentRange"; "render"; "supports" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlStringConversion.Stage3OcamlStringConversion_Fields_" [];
-  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlStringConversion.Stage3OcamlStringConversion_Fields_" [ "convert" ];
+  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlStringConversion.Stage3OcamlStringConversion_Fields_" [ "boolTextType"; "concatOperand"; "convert"; "isBoolText"; "isStringText"; "isUnsigned"; "nonNullText"; "stringText"; "textType" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlTypeQueries.Stage3OcamlTypeQueries_Fields_" [];
   HxType.register_class_static_fields "backend.ocaml._Stage3OcamlTypeQueries.Stage3OcamlTypeQueries_Fields_" [ "render" ];
   HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlValueConversion.Stage3OcamlValueConversion_Fields_" [];
-  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlValueConversion.Stage3OcamlValueConversion_Fields_" [ "checkedExtraction"; "convert"; "untypedValue" ];
+  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlValueConversion.Stage3OcamlValueConversion_Fields_" [ "checkedExtraction"; "convert"; "dynamicValue"; "untypedValue" ];
+  HxType.register_class_instance_fields "backend.ocaml._Stage3OcamlVirtualCalls.Stage3OcamlVirtualCalls_Fields_" [];
+  HxType.register_class_static_fields "backend.ocaml._Stage3OcamlVirtualCalls.Stage3OcamlVirtualCalls_Fields_" [ "select" ];
   HxType.register_class_instance_fields "backend.plugin.BackendPluginManifestParser" [];
   HxType.register_class_static_fields "backend.plugin.BackendPluginManifestParser" [ "failureMessage"; "normalizeSourceLabel"; "parse"; "parseKind"; "requireField"; "requireInt"; "requireObject"; "requireString"; "requireStringArray"; "validate" ];
   HxType.register_class_instance_fields "backend.reflaxe.ReflaxeTargetAdapter" [];
@@ -10548,7 +10885,7 @@ let init () : unit =
   HxType.register_class_instance_fields "backend.vm.NekoStringRuntimeSource" [];
   HxType.register_class_static_fields "backend.vm.NekoStringRuntimeSource" [ "render" ];
   HxType.register_class_instance_fields "backend.vm.NekoTargetCore" [];
-  HxType.register_class_static_fields "backend.vm.NekoTargetCore" [ "buildClassMap"; "buildRuntimeClassMeta"; "bytecodePathForSource"; "captureInitializer"; "catchCarrier"; "childContext"; "cloneLocals"; "collectCallRefs"; "collectCatchRefs"; "collectExprRefs"; "collectReachable"; "collectRuntimeFields"; "collectStmtRefs"; "commandWorks"; "compileNekoSource"; "constructionClass"; "constructionPlan"; "containsUnsafeNekoSourceByte"; "emit"; "emptyLocals"; "ensureDirectory"; "exactClassInfo"; "exactHelperClass"; "exactHelperRef"; "exprTag"; "findFunction"; "findMain"; "isAbstractInfo"; "isCompoundAssignmentOp"; "isCurrentInstanceField"; "isCurrentInstanceMethod"; "isCurrentStaticFunction"; "isDynamicStaticFunction"; "isListTypePath"; "isLocalName"; "isMacroFunction"; "isMapLiteral"; "isNekoLoaderLocalGetPathCall"; "isNekoNumericLiteralText"; "isSimpleIdent"; "isSysIoProcessTypePath"; "isUpperStart"; "lookupBytesClass"; "lookupClass"; "lookupMutableStaticMemberOwner"; "lowerNekoArrayPattern"; "lowerNekoEnumExtractPattern"; "lowerNekoExtractorPattern"; "lowerNekoObjectPattern"; "lowerNekoOrPattern"; "lowerNekoSwitchPattern"; "mangleConstructor"; "mangleFunction"; "mangleInitializer"; "mapKindForTypePath"; "matchesMain"; "minInt"; "moduleLoadName"; "needsTestLocalStaticBasicSlot"; "nekoEnumCtorCond"; "nekoStdParseIntExpr"; "outputBytecodePath"; "parseBytesSubTryRaw"; "parseFieldReadCatchStringRaw"; "parseHxcppAndroidPlatformMinTryRaw"; "parseMethodCallCatchStringRaw"; "parseNestedMethodCallCatchStringRaw"; "parseOpaqueObjectLocalRaw"; "parseOpaqueTypedLocalInitRaw"; "parseOpaqueTypedLocalRefRaw"; "parseSimpleCallCatchValueRaw"; "parseStringSubTryRaw"; "parseSysPutEnvBoolTryRaw"; "patternKind"; "patternNeedsNekoIfLowering"; "quote"; "registerLocal"; "renderAnon"; "renderArray"; "renderArrayComprehension"; "renderAssignExpr"; "renderAssignableExpr"; "renderBytesConstructorCall"; "renderCall"; "renderCaptureParameters"; "renderCatchDispatch"; "renderCompoundAssignExpr"; "renderConditionalExpr"; "renderConstructorDefinitionPrefix"; "renderConstructorRef"; "renderControlBlock"; "renderDeclaredConstructorRef"; "renderEnumCtorCall"; "renderExactAbstractHelper"; "renderExpr"; "renderFloatLiteral"; "renderForInStmt"; "renderForKeyValueStmt"; "renderFunction"; "renderFunctionDefinitionPrefix"; "renderFunctionEnd"; "renderFunctionRef"; "renderFunctionStart"; "renderIdent"; "renderInitializerRef"; "renderLambda"; "renderLoaderPathPrelude"; "renderMapLiteral"; "renderNekoSwitchBindings"; "renderNew"; "renderNullCoalesceAssignExpr"; "renderNullCoalesceExpr"; "renderOpaqueMainLoopNestedEventRaw"; "renderParameterDefaults"; "renderPostfixIncDecExpr"; "renderProcessConstructorArgs"; "renderProcessConstructorFactory"; "renderProgram"; "renderPrototypeMethod"; "renderRangeExpr"; "renderRuntimeForwarder"; "renderSpecialFunction"; "renderSpecialInstanceMethod"; "renderSplitAssignmentStmt"; "renderSplitProgram"; "renderStaticFunctionValue"; "renderStaticMethodBinding"; "renderStaticObjectRef"; "renderStmt"; "renderStructuralTryCatchExpr"; "renderSwitchCase"; "renderSwitchExpr"; "renderSwitchIfExpr"; "renderSwitchIfStmt"; "renderSwitchPatternValue"; "renderSwitchStmt"; "renderThisExpr"; "renderThisValueSlotExpr"; "renderTryCatchRaw"; "renderTrySafeWhileStmt"; "renderTryStmt"; "renderTypeTestExpr"; "renderUnsupportedNumericLiteral"; "renderUnsupportedRecoveryLiteral"; "renderUtestAddCasesStmt"; "renderVarArgBindings"; "resolveNekoc"; "restConstructorArguments"; "retainRestFactory"; "safeIdent"; "sanitizeNekoValueExpr"; "shellQuote"; "shouldSplitStatementAssignmentRhs"; "shouldUseVarArgs"; "sourcePathForBytecode"; "splitChunkHeader"; "stmtContainsBreak"; "stmtTag"; "strictModuleProjections"; "switchNeedsIfLowering"; "testLocalStaticBasicSlotName"; "typePathText"; "unsupported"; "unsupportedExpr"; "unsupportedSwitchPatternLowering"; "utestAddCasesCandidates"; "utestAddCasesPackageArg"; "validateRuntimeTypeOperands"; "withBreakFlag"; "withCurrentClass"; "withFieldInitializer"; "withFunctionArgs"; "withInsideTry"; "withLocal"; "withLocals"; "withSelf" ];
+  HxType.register_class_static_fields "backend.vm.NekoTargetCore" [ "buildClassMap"; "buildRuntimeClassMeta"; "bytecodePathForSource"; "captureInitializer"; "catchCarrier"; "childContext"; "cloneLocals"; "collectCallRefs"; "collectCatchRefs"; "collectExprRefs"; "collectReachable"; "collectRuntimeFields"; "collectStmtRefs"; "commandWorks"; "compileNekoSource"; "constructionClass"; "constructionPlan"; "containsUnsafeNekoSourceByte"; "emit"; "emptyLocals"; "ensureDirectory"; "exactClassInfo"; "exactHelperClass"; "exactHelperRef"; "exprTag"; "findFunction"; "findMain"; "floatPatternLiteral"; "isAbstractInfo"; "isCompoundAssignmentOp"; "isCurrentInstanceField"; "isCurrentInstanceMethod"; "isCurrentStaticFunction"; "isDynamicStaticFunction"; "isListTypePath"; "isLocalName"; "isMacroFunction"; "isMapLiteral"; "isNekoLoaderLocalGetPathCall"; "isNekoNumericLiteralText"; "isSimpleIdent"; "isSysIoProcessTypePath"; "isUpperStart"; "lookupBytesClass"; "lookupClass"; "lookupMutableStaticMemberOwner"; "lowerNekoArrayPattern"; "lowerNekoEnumExtractPattern"; "lowerNekoExtractorPattern"; "lowerNekoObjectPattern"; "lowerNekoOrPattern"; "lowerNekoSwitchPattern"; "mangleConstructor"; "mangleFunction"; "mangleInitializer"; "mapKindForTypePath"; "matchesMain"; "minInt"; "moduleLoadName"; "needsTestLocalStaticBasicSlot"; "nekoEnumCtorCond"; "nekoFloatLiteral"; "nekoStdParseIntExpr"; "outputBytecodePath"; "parseBytesSubTryRaw"; "parseFieldReadCatchStringRaw"; "parseHxcppAndroidPlatformMinTryRaw"; "parseMethodCallCatchStringRaw"; "parseNestedMethodCallCatchStringRaw"; "parseOpaqueObjectLocalRaw"; "parseOpaqueTypedLocalInitRaw"; "parseOpaqueTypedLocalRefRaw"; "parseSimpleCallCatchValueRaw"; "parseStringSubTryRaw"; "parseSysPutEnvBoolTryRaw"; "patternKind"; "patternNeedsNekoIfLowering"; "quote"; "registerLocal"; "renderAnon"; "renderArray"; "renderArrayComprehension"; "renderAssignExpr"; "renderAssignableExpr"; "renderBytesConstructorCall"; "renderCall"; "renderCaptureParameters"; "renderCatchDispatch"; "renderCompoundAssignExpr"; "renderConditionalExpr"; "renderConstructorDefinitionPrefix"; "renderConstructorRef"; "renderControlBlock"; "renderDeclaredConstructorRef"; "renderEnumCtorCall"; "renderExactAbstractHelper"; "renderExpr"; "renderFloatLiteral"; "renderForInStmt"; "renderForKeyValueStmt"; "renderFunction"; "renderFunctionDefinitionPrefix"; "renderFunctionEnd"; "renderFunctionRef"; "renderFunctionStart"; "renderIdent"; "renderInitializerRef"; "renderLambda"; "renderLoaderPathPrelude"; "renderMapLiteral"; "renderNekoSwitchBindings"; "renderNew"; "renderNullCoalesceAssignExpr"; "renderNullCoalesceExpr"; "renderOpaqueMainLoopNestedEventRaw"; "renderParameterDefaults"; "renderPostfixIncDecExpr"; "renderProcessConstructorArgs"; "renderProcessConstructorFactory"; "renderProgram"; "renderPrototypeMethod"; "renderRangeExpr"; "renderRuntimeForwarder"; "renderSpecialFunction"; "renderSpecialInstanceMethod"; "renderSplitAssignmentStmt"; "renderSplitProgram"; "renderStaticFunctionValue"; "renderStaticMethodBinding"; "renderStaticObjectRef"; "renderStmt"; "renderStructuralTryCatchExpr"; "renderSwitchCase"; "renderSwitchExpr"; "renderSwitchIfExpr"; "renderSwitchIfStmt"; "renderSwitchPatternValue"; "renderSwitchStmt"; "renderThisExpr"; "renderThisValueSlotExpr"; "renderTryCatchRaw"; "renderTrySafeWhileStmt"; "renderTryStmt"; "renderTypeTestExpr"; "renderUnsupportedNumericLiteral"; "renderUnsupportedRecoveryLiteral"; "renderUtestAddCasesStmt"; "renderVarArgBindings"; "resolveNekoc"; "restConstructorArguments"; "retainRestFactory"; "safeIdent"; "sanitizeNekoValueExpr"; "shellQuote"; "shouldSplitStatementAssignmentRhs"; "shouldUseVarArgs"; "sourcePathForBytecode"; "splitChunkHeader"; "stmtContainsBreak"; "stmtTag"; "strictModuleProjections"; "switchNeedsIfLowering"; "testLocalStaticBasicSlotName"; "typePathText"; "unsupported"; "unsupportedExpr"; "unsupportedSwitchPatternLowering"; "utestAddCasesCandidates"; "utestAddCasesPackageArg"; "validateRuntimeTypeOperands"; "withBreakFlag"; "withCurrentClass"; "withFieldInitializer"; "withFunctionArgs"; "withInsideTry"; "withLocal"; "withLocals"; "withSelf" ];
   HxType.register_class_instance_fields "backend.vm.NekoTypedProgramProjection" [ "catchCatalogs"; "classGraph"; "classIdentities"; "classes"; "constructionReceiverName"; "constructorReturnsBackingValue"; "exactHelperTableName"; "functionDeclarations"; "functions"; "initializers"; "occupiedNames"; "requireCatchCatalog"; "requireClass"; "requireClassIdentity"; "requireDeclaredFunction"; "requireDeclaredInitializer"; "requireFunction"; "reserveGeneratedSymbols"; "runtimeHelperName"; "symbols" ];
   HxType.register_class_static_fields "backend.vm.NekoTypedProgramProjection" [];
   HxType.register_class_instance_fields "backend.vm.VmNativeBackend" [];
@@ -10595,11 +10932,11 @@ let init () : unit =
   HxType.register_class_static_fields "backend.vm._NekoValueCall.NekoValueCall_Fields_" [ "render" ];
   HxType.register_class_instance_fields "backend.vm._NekoVmLoader.NekoVmLoader_Fields_" [];
   HxType.register_class_static_fields "backend.vm._NekoVmLoader.NekoVmLoader_Fields_" [ "renderEntryExports"; "renderValue" ];
-  HxType.register_class_instance_fields "haxe.Exception" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap" ];
+  HxType.register_class_instance_fields "haxe.Exception" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "__wrapsCaughtValue"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap" ];
   HxType.register_class_static_fields "haxe.Exception" [ "caught"; "thrown" ];
   HxType.register_class_instance_fields "haxe.NativeStackTrace" [];
   HxType.register_class_static_fields "haxe.NativeStackTrace" [ "callStack"; "exceptionStack"; "parseFileLine"; "saveStack"; "toHaxe" ];
-  HxType.register_class_instance_fields "haxe.ValueException" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap"; "value" ];
+  HxType.register_class_instance_fields "haxe.ValueException" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "__wrapsCaughtValue"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap"; "value" ];
   HxType.register_class_static_fields "haxe.ValueException" [];
   HxType.register_class_instance_fields "haxe._CallStack.CallStack_Impl_" [];
   HxType.register_class_static_fields "haxe._CallStack.CallStack_Impl_" [ "asArray"; "callStack"; "copy"; "equalItems"; "exceptionStack"; "get"; "get_length"; "itemToString"; "nativeToHaxe"; "parseFileLine"; "subtract"; "toString" ];
@@ -10697,7 +11034,7 @@ let init () : unit =
   HxType.register_class_static_fields "hxhx.Stage3Args" [ "findFlagValue"; "findManyFlagValues"; "findTargetOutputDirectoryHint"; "findTargetOutputFileHint"; "hasFlag"; "initialRoots"; "parseGlobalStage3Flags"; "summarizeArgs"; "targetDefineForBackend"; "targetOutputDirectoryFlags"; "targetOutputFlags" ];
   HxType.register_class_instance_fields "hxhx.Stage3BackendPluginSupport" [];
   HxType.register_class_static_fields "hxhx.Stage3BackendPluginSupport" [ "appendManifestRequests"; "appendPluginLoadRequest"; "appendProviderRequests"; "buildProviderDefines"; "collectBundledBackendPluginManifestPaths"; "collectBundledBackendProviderTypeNames"; "collectDeclarationValues"; "collectExplicitBackendPluginManifestPaths"; "collectExplicitBackendProviderTypeNames"; "isTrueEnv"; "loadDynamicBackendProviders"; "parseDelimitedList"; "resetRequestState"; "retainNativeCall"; "selectBackend"; "trim" ];
-  HxType.register_class_instance_fields "hxhx.Stage3BuildMacroPreparationError" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "cancelled"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap" ];
+  HxType.register_class_instance_fields "hxhx.Stage3BuildMacroPreparationError" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "__wrapsCaughtValue"; "cancelled"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap" ];
   HxType.register_class_static_fields "hxhx.Stage3BuildMacroPreparationError" [];
   HxType.register_class_instance_fields "hxhx.Stage3BuildMacroPreparer" [ "autoBuiltEntrypoints"; "autoBuiltExternalHost"; "close"; "closed"; "ensureRequestMayRunMacros"; "ensureSession"; "expressionsFor"; "getSession"; "hadConfiguredExternalHost"; "macroHostClassPaths"; "output"; "prepare"; "prepareAll"; "prepared"; "requestContext"; "runtimeMode"; "session"; "skippedIndex"; "typeOnly"; "validateAutoBuiltEntrypoints" ];
   HxType.register_class_static_fields "hxhx.Stage3BuildMacroPreparer" [ "nonBuiltinEntrypoints" ];
@@ -10911,7 +11248,7 @@ let init () : unit =
   HxType.register_class_static_fields "sys.thread.Lock" [];
   HxType.register_class_instance_fields "sys.thread.Mutex" [ "acquire"; "handle"; "release"; "tryAcquire" ];
   HxType.register_class_static_fields "sys.thread.Mutex" [];
-  HxType.register_class_instance_fields "sys.thread.NoEventLoopException" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap" ];
+  HxType.register_class_instance_fields "sys.thread.NoEventLoopException" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "__wrapsCaughtValue"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap" ];
   HxType.register_class_static_fields "sys.thread.NoEventLoopException" [];
   HxType.register_class_instance_fields "sys.thread.RegularEvent" [ "callback"; "cancelled"; "intervalSeconds"; "nextRunAt" ];
   HxType.register_class_static_fields "sys.thread.RegularEvent" [];
@@ -10992,10 +11329,13 @@ let init () : unit =
   HxType.register_class_tags "HxDefineMap" [ "HxDefineMap" ];
   HxType.register_class_tags "HxEnumDeclaration" [ "HxEnumDeclaration" ];
   HxType.register_class_tags "HxFieldDecl" [ "HxFieldDecl" ];
+  HxType.register_class_tags "HxFloatPatternBits" [ "HxFloatPatternBits" ];
+  HxType.register_class_tags "HxFloatPatternText" [ "HxFloatPatternText" ];
   HxType.register_class_tags "HxFunctionArg" [ "HxFunctionArg" ];
   HxType.register_class_tags "HxFunctionDecl" [ "HxFunctionDecl" ];
   HxType.register_class_tags "HxFunctionSyntaxParser" [ "HxFunctionSyntaxParser" ];
   HxType.register_class_tags "HxFunctionTypeParamMetadata" [ "HxFunctionTypeParamMetadata" ];
+  HxType.register_class_tags "HxIntegerLiteral" [ "HxIntegerLiteral" ];
   HxType.register_class_tags "HxLambdaSignature" [ "HxLambdaSignature" ];
   HxType.register_class_tags "HxLexer" [ "HxLexer" ];
   HxType.register_class_tags "HxModuleDecl" [ "HxModuleDecl" ];
@@ -11003,6 +11343,7 @@ let init () : unit =
   HxType.register_class_tags "HxParseError" [ "HxParseError" ];
   HxType.register_class_tags "HxParser" [ "HxParser" ];
   HxType.register_class_tags "HxPos" [ "HxPos" ];
+  HxType.register_class_tags "HxRootedPath" [ "HxRootedPath" ];
   HxType.register_class_tags "HxSourceCatch" [ "HxSourceCatch" ];
   HxType.register_class_tags "HxSourceFunction" [ "HxSourceFunction" ];
   HxType.register_class_tags "HxSourceFunctionGenerics" [ "HxSourceFunctionGenerics" ];
@@ -11038,12 +11379,14 @@ let init () : unit =
   HxType.register_class_tags "TyAbstractBinaryBinding" [ "TyAbstractBinaryBinding" ];
   HxType.register_class_tags "TyAbstractBinaryConversion" [ "TyAbstractBinaryConversion" ];
   HxType.register_class_tags "TyAbstractBinaryOperatorInfo" [ "TyAbstractBinaryOperatorInfo" ];
+  HxType.register_class_tags "TyAbstractConstructorInitialization" [ "TyAbstractConstructorInitialization" ];
   HxType.register_class_tags "TyAbstractInfo" [ "TyAbstractInfo"; "TyNominalInfo" ];
   HxType.register_class_tags "TyAbstractMethodConversion" [ "TyAbstractMethodConversion" ];
   HxType.register_class_tags "TyAbstractNativeBinaryOperation" [ "TyAbstractNativeBinaryOperation" ];
   HxType.register_class_tags "TyAbstractOperatorInfo" [ "TyAbstractOperatorInfo" ];
   HxType.register_class_tags "TyAbstractUnaryBinding" [ "TyAbstractUnaryBinding" ];
   HxType.register_class_tags "TyAliasDefinition" [ "TyAliasDefinition" ];
+  HxType.register_class_tags "TyAuthoredAssignmentCheck" [ "TyAuthoredAssignmentCheck" ];
   HxType.register_class_tags "TyBoundAbstractBinaryOperator" [ "TyBoundAbstractBinaryOperator" ];
   HxType.register_class_tags "TyCallArgumentBinding" [ "TyCallArgumentBinding" ];
   HxType.register_class_tags "TyCallArgumentPlan" [ "TyCallArgumentPlan" ];
@@ -11057,6 +11400,7 @@ let init () : unit =
   HxType.register_class_tags "TyControlTarget" [ "TyControlTarget" ];
   HxType.register_class_tags "TyDeclarationId" [ "TyDeclarationId" ];
   HxType.register_class_tags "TyDeclarationInfo" [ "TyDeclarationInfo" ];
+  HxType.register_class_tags "TyDirectivePosition" [ "TyDirectivePosition" ];
   HxType.register_class_tags "TyEnumAbstractConstants" [ "TyEnumAbstractConstants" ];
   HxType.register_class_tags "TyEnumAbstractDomain" [ "TyEnumAbstractDomain" ];
   HxType.register_class_tags "TyExtensionMethod" [ "TyExtensionMethod" ];
@@ -11064,6 +11408,7 @@ let init () : unit =
   HxType.register_class_tags "TyFieldInfo" [ "TyFieldInfo" ];
   HxType.register_class_tags "TyFieldInitializerTypes" [ "TyFieldInitializerTypes" ];
   HxType.register_class_tags "TyFunSig" [ "TyFunSig" ];
+  HxType.register_class_tags "TyFunctionConstraint" [ "TyFunctionConstraint" ];
   HxType.register_class_tags "TyFunctionEnv" [ "TyFunctionEnv" ];
   HxType.register_class_tags "TyFunctionInference" [ "TyFunctionInference" ];
   HxType.register_class_tags "TyFunctionReturnState" [ "TyFunctionReturnState" ];
@@ -11103,6 +11448,7 @@ let init () : unit =
   HxType.register_class_tags "TyPublicReflectionName" [ "TyPublicReflectionName" ];
   HxType.register_class_tags "TyReceiverCallContext" [ "TyReceiverCallContext" ];
   HxType.register_class_tags "TyResolvedTypeUse" [ "TyResolvedTypeUse" ];
+  HxType.register_class_tags "TySourceTokenPosition" [ "TySourceTokenPosition" ];
   HxType.register_class_tags "TySwitchAnalysis" [ "TySwitchAnalysis" ];
   HxType.register_class_tags "TySwitchPatternBindings" [ "TySwitchPatternBindings" ];
   HxType.register_class_tags "TySymbol" [ "TySymbol" ];
@@ -11113,10 +11459,13 @@ let init () : unit =
   HxType.register_class_tags "TyTypeSubstitution" [ "TyTypeSubstitution" ];
   HxType.register_class_tags "TyTypeUseResolution" [ "TyTypeUseResolution" ];
   HxType.register_class_tags "TyTypeUseResolver" [ "TyTypeUseResolver" ];
+  HxType.register_class_tags "TyUndeclaredName" [ "TyUndeclaredName" ];
+  HxType.register_class_tags "TyUndeclaredValueNames" [ "TyUndeclaredValueNames" ];
   HxType.register_class_tags "TypedAbstractBinaryLowering" [ "TypedAbstractBinaryLowering" ];
   HxType.register_class_tags "TypedAbstractOperatorLowering" [ "TypedAbstractOperatorLowering" ];
   HxType.register_class_tags "TypedAbstractUnaryLowering" [ "TypedAbstractUnaryLowering" ];
   HxType.register_class_tags "TypedBackendAggregateOccurrence" [ "TypedBackendAggregateOccurrence" ];
+  HxType.register_class_tags "TypedBackendArithmeticOccurrence" [ "TypedBackendArithmeticOccurrence" ];
   HxType.register_class_tags "TypedBackendArrayAccess" [ "TypedBackendArrayAccess" ];
   HxType.register_class_tags "TypedBackendBitwiseOccurrence" [ "TypedBackendBitwiseOccurrence" ];
   HxType.register_class_tags "TypedBackendCallArgument" [ "TypedBackendCallArgument" ];
@@ -11150,7 +11499,9 @@ let init () : unit =
   HxType.register_class_tags "TypedBackendRuntimeTypeOccurrence" [ "TypedBackendRuntimeTypeOccurrence" ];
   HxType.register_class_tags "TypedBackendSourceWalk" [ "TypedBackendSourceWalk" ];
   HxType.register_class_tags "TypedBackendStatementControl" [ "TypedBackendStatementControl" ];
+  HxType.register_class_tags "TypedBackendStringConcatOccurrence" [ "TypedBackendStringConcatOccurrence" ];
   HxType.register_class_tags "TypedBackendThrownValue" [ "TypedBackendThrownValue" ];
+  HxType.register_class_tags "TypedBackendTraceOccurrence" [ "TypedBackendTraceOccurrence" ];
   HxType.register_class_tags "TypedBodyBuilder" [ "TypedBodyBuilder" ];
   HxType.register_class_tags "TypedBodyFingerprint" [ "TypedBodyFingerprint" ];
   HxType.register_class_tags "TypedBodyInvariant" [ "TypedBodyInvariant" ];
@@ -11176,6 +11527,7 @@ let init () : unit =
   HxType.register_class_tags "TypedFieldInitializer" [ "TypedFieldInitializer" ];
   HxType.register_class_tags "TypedFunction" [ "TypedFunction" ];
   HxType.register_class_tags "TypedFunctionBody" [ "TypedFunctionBody" ];
+  HxType.register_class_tags "TypedFunctionConstraintFlows" [ "TypedFunctionConstraintFlows" ];
   HxType.register_class_tags "TypedFunctionDefault" [ "TypedFunctionDefault" ];
   HxType.register_class_tags "TypedGuardedPatternPlan" [ "TypedGuardedPatternPlan" ];
   HxType.register_class_tags "TypedIndexedUpdateLowering" [ "TypedIndexedUpdateLowering" ];
@@ -11225,6 +11577,7 @@ let init () : unit =
   HxType.register_class_tags "_HxSourceMacroSyntax.HxSourceMacroSyntax_Fields_" [ "_HxSourceMacroSyntax.HxSourceMacroSyntax_Fields_" ];
   HxType.register_class_tags "_HxStringEscape.HxStringEscape_Fields_" [ "_HxStringEscape.HxStringEscape_Fields_" ];
   HxType.register_class_tags "_ParsedTypedefIntegrity.ParsedTypedefIntegrity_Fields_" [ "_ParsedTypedefIntegrity.ParsedTypedefIntegrity_Fields_" ];
+  HxType.register_class_tags "_TyAbstractPrimitiveOperation.TyAbstractPrimitiveOperation_Fields_" [ "_TyAbstractPrimitiveOperation.TyAbstractPrimitiveOperation_Fields_" ];
   HxType.register_class_tags "_TyAdditionOperandInference.TyAdditionOperandInference_Fields_" [ "_TyAdditionOperandInference.TyAdditionOperandInference_Fields_" ];
   HxType.register_class_tags "_TyAliasEquivalence.AliasEquivalenceProof" [ "_TyAliasEquivalence.AliasEquivalenceProof" ];
   HxType.register_class_tags "_TyAliasEquivalence.TyAliasEquivalence_Fields_" [ "_TyAliasEquivalence.TyAliasEquivalence_Fields_" ];
@@ -11232,6 +11585,7 @@ let init () : unit =
   HxType.register_class_tags "_TyAnonymousField.TyAnonymousField_Fields_" [ "_TyAnonymousField.TyAnonymousField_Fields_" ];
   HxType.register_class_tags "_TyArrayComprehension.TyArrayComprehension_Fields_" [ "_TyArrayComprehension.TyArrayComprehension_Fields_" ];
   HxType.register_class_tags "_TyAssignmentCompatibility.TyAssignmentCompatibility_Fields_" [ "_TyAssignmentCompatibility.TyAssignmentCompatibility_Fields_" ];
+  HxType.register_class_tags "_TyBasicNullArgument.TyBasicNullArgument_Fields_" [ "_TyBasicNullArgument.TyBasicNullArgument_Fields_" ];
   HxType.register_class_tags "_TyBitwiseOperandInference.TyBitwiseOperandInference_Fields_" [ "_TyBitwiseOperandInference.TyBitwiseOperandInference_Fields_" ];
   HxType.register_class_tags "_TyBooleanSwitchCoverage.TyBooleanSwitchCoverage_Fields_" [ "_TyBooleanSwitchCoverage.TyBooleanSwitchCoverage_Fields_" ];
   HxType.register_class_tags "_TyCallAlignment.TyCallAlignment_Fields_" [ "_TyCallAlignment.TyCallAlignment_Fields_" ];
@@ -11242,6 +11596,7 @@ let init () : unit =
   HxType.register_class_tags "_TyCallerConstraintProof.TyCallerConstraintProof_Fields_" [ "_TyCallerConstraintProof.TyCallerConstraintProof_Fields_" ];
   HxType.register_class_tags "_TyClassArgumentBounds.TyClassArgumentBounds_Fields_" [ "_TyClassArgumentBounds.TyClassArgumentBounds_Fields_" ];
   HxType.register_class_tags "_TyClassRelationships.TyClassRelationships_Fields_" [ "_TyClassRelationships.TyClassRelationships_Fields_" ];
+  HxType.register_class_tags "_TyCompoundAssignmentKinds.TyCompoundAssignmentKinds_Fields_" [ "_TyCompoundAssignmentKinds.TyCompoundAssignmentKinds_Fields_" ];
   HxType.register_class_tags "_TyConditionalResult.TyConditionalResult_Fields_" [ "_TyConditionalResult.TyConditionalResult_Fields_" ];
   HxType.register_class_tags "_TyDeclaredArrayAccess.TyDeclaredArrayAccess_Fields_" [ "_TyDeclaredArrayAccess.TyDeclaredArrayAccess_Fields_" ];
   HxType.register_class_tags "_TyDefaultEnumExtensions.TyDefaultEnumExtensions_Fields_" [ "_TyDefaultEnumExtensions.TyDefaultEnumExtensions_Fields_" ];
@@ -11254,6 +11609,7 @@ let init () : unit =
   HxType.register_class_tags "_TyEnumValueCompatibility.TyEnumValueCompatibility_Fields_" [ "_TyEnumValueCompatibility.TyEnumValueCompatibility_Fields_" ];
   HxType.register_class_tags "_TyFieldAssignment.TyFieldAssignment_Fields_" [ "_TyFieldAssignment.TyFieldAssignment_Fields_" ];
   HxType.register_class_tags "_TyFunctionParameter.TyFunctionParameter_Fields_" [ "_TyFunctionParameter.TyFunctionParameter_Fields_" ];
+  HxType.register_class_tags "_TyIndexedNullValue.TyIndexedNullValue_Fields_" [ "_TyIndexedNullValue.TyIndexedNullValue_Fields_" ];
   HxType.register_class_tags "_TyIndexedUpdateOperation.TyIndexedUpdateOperation_Fields_" [ "_TyIndexedUpdateOperation.TyIndexedUpdateOperation_Fields_" ];
   HxType.register_class_tags "_TyInferenceAbstractDestination.TyInferenceAbstractDestination_Fields_" [ "_TyInferenceAbstractDestination.TyInferenceAbstractDestination_Fields_" ];
   HxType.register_class_tags "_TyInferenceAbstractInput.TyInferenceAbstractInput_Fields_" [ "_TyInferenceAbstractInput.TyInferenceAbstractInput_Fields_" ];
@@ -11262,6 +11618,7 @@ let init () : unit =
   HxType.register_class_tags "_TyInferenceSubstitution.TyInferenceSubstitution_Fields_" [ "_TyInferenceSubstitution.TyInferenceSubstitution_Fields_" ];
   HxType.register_class_tags "_TyLambdaResultContract.TyLambdaResultContract_Fields_" [ "_TyLambdaResultContract.TyLambdaResultContract_Fields_" ];
   HxType.register_class_tags "_TyMetadataOverloadOrder.TyMetadataOverloadOrder_Fields_" [ "_TyMetadataOverloadOrder.TyMetadataOverloadOrder_Fields_" ];
+  HxType.register_class_tags "_TyMethodGenericBinding.TyBoundArguments" [ "_TyMethodGenericBinding.TyBoundArguments" ];
   HxType.register_class_tags "_TyMethodInputPublication.TyMethodInputPublication_Fields_" [ "_TyMethodInputPublication.TyMethodInputPublication_Fields_" ];
   HxType.register_class_tags "_TyNamedPatternResolver.TyNamedPatternResolver_Fields_" [ "_TyNamedPatternResolver.TyNamedPatternResolver_Fields_" ];
   HxType.register_class_tags "_TyNekoNativeStringRead.TyNekoNativeStringRead_Fields_" [ "_TyNekoNativeStringRead.TyNekoNativeStringRead_Fields_" ];
@@ -11278,6 +11635,7 @@ let init () : unit =
   HxType.register_class_tags "_TyStructuralConstraint.TyStructuralConstraint_Fields_" [ "_TyStructuralConstraint.TyStructuralConstraint_Fields_" ];
   HxType.register_class_tags "_TyStructuralFieldRead.TyStructuralFieldRead_Fields_" [ "_TyStructuralFieldRead.TyStructuralFieldRead_Fields_" ];
   HxType.register_class_tags "_TySuperType.TySuperType_Fields_" [ "_TySuperType.TySuperType_Fields_" ];
+  HxType.register_class_tags "_TySwitchConstantPatterns.TySwitchConstantPatterns_Fields_" [ "_TySwitchConstantPatterns.TySwitchConstantPatterns_Fields_" ];
   HxType.register_class_tags "_TySwitchIrrefutable.TySwitchIrrefutable_Fields_" [ "_TySwitchIrrefutable.TySwitchIrrefutable_Fields_" ];
   HxType.register_class_tags "_TySwitchTyping.TySwitchTyping_Fields_" [ "_TySwitchTyping.TySwitchTyping_Fields_" ];
   HxType.register_class_tags "_TyTraceCall.TyTraceCall_Fields_" [ "_TyTraceCall.TyTraceCall_Fields_" ];
@@ -11526,6 +11884,7 @@ let init () : unit =
   HxType.register_class_tags "backend.ocaml.OcamlLocalCallDependency" [ "backend.ocaml.OcamlLocalCallDependency" ];
   HxType.register_class_tags "backend.ocaml.OcamlNativeBackend" [ "backend.ocaml.OcamlNativeBackend" ];
   HxType.register_class_tags "backend.ocaml.OcamlNativeTargetCore" [ "backend.ITargetCore"; "backend.ocaml.OcamlNativeTargetCore" ];
+  HxType.register_class_tags "backend.ocaml.OcamlPreludeReferences" [ "backend.ocaml.OcamlPreludeReferences" ];
   HxType.register_class_tags "backend.ocaml.OcamlStage3Backend" [ "backend.IBackend"; "backend.ocaml.OcamlStage3Backend" ];
   HxType.register_class_tags "backend.ocaml.OcamlTargetCore" [ "backend.ITargetCore"; "backend.ocaml.OcamlTargetCore" ];
   HxType.register_class_tags "backend.ocaml.PortableMetalizationPlan" [ "backend.ocaml.PortableMetalizationPlan" ];
@@ -11535,19 +11894,27 @@ let init () : unit =
   HxType.register_class_tags "backend.ocaml.Stage3OcamlCallableFunction" [ "backend.ocaml.Stage3OcamlCallableFunction" ];
   HxType.register_class_tags "backend.ocaml.Stage3OcamlCallableProgram" [ "backend.ocaml.Stage3OcamlCallableProgram" ];
   HxType.register_class_tags "backend.ocaml.Stage3OcamlClassStorage" [ "backend.ocaml.Stage3OcamlClassStorage" ];
+  HxType.register_class_tags "backend.ocaml.Stage3OcamlClassStringifiers" [ "backend.ocaml.Stage3OcamlClassStringifiers" ];
   HxType.register_class_tags "backend.ocaml.Stage3OcamlConstructorArguments" [ "backend.ocaml.Stage3OcamlConstructorArguments" ];
+  HxType.register_class_tags "backend.ocaml.Stage3OcamlDynamicMethods" [ "backend.ocaml.Stage3OcamlDynamicMethods" ];
   HxType.register_class_tags "backend.ocaml.Stage3OcamlEnumPlan" [ "backend.ocaml.Stage3OcamlEnumPlan" ];
   HxType.register_class_tags "backend.ocaml.Stage3OcamlEnums" [ "backend.ocaml.Stage3OcamlEnums" ];
   HxType.register_class_tags "backend.ocaml.Stage3OcamlExternBindings" [ "backend.ocaml.Stage3OcamlExternBindings" ];
+  HxType.register_class_tags "backend.ocaml.Stage3OcamlFloatConstant" [ "backend.ocaml.Stage3OcamlFloatConstant" ];
   HxType.register_class_tags "backend.ocaml.Stage3OcamlGenericMethods" [ "backend.ocaml.Stage3OcamlGenericMethods" ];
+  HxType.register_class_tags "backend.ocaml.Stage3OcamlIdentifiers" [ "backend.ocaml.Stage3OcamlIdentifiers" ];
   HxType.register_class_tags "backend.ocaml.Stage3OcamlInstanceInitializers" [ "backend.ocaml.Stage3OcamlInstanceInitializers" ];
   HxType.register_class_tags "backend.ocaml.Stage3OcamlInterfaceDispatch" [ "backend.ocaml.Stage3OcamlInterfaceDispatch" ];
   HxType.register_class_tags "backend.ocaml.Stage3OcamlLocalNames" [ "backend.ocaml.Stage3OcamlLocalNames" ];
   HxType.register_class_tags "backend.ocaml.Stage3OcamlMacroPluginEntry" [ "backend.ocaml.Stage3OcamlMacroPluginEntry" ];
   HxType.register_class_tags "backend.ocaml.Stage3OcamlNativeCallPolicy" [ "backend.ocaml.Stage3OcamlNativeCallPolicy" ];
   HxType.register_class_tags "backend.ocaml.Stage3OcamlRuntimeTypes" [ "backend.ocaml.Stage3OcamlRuntimeTypes" ];
+  HxType.register_class_tags "backend.ocaml.Stage3OcamlStaticStorage" [ "backend.ocaml.Stage3OcamlStaticStorage" ];
+  HxType.register_class_tags "backend.ocaml.Stage3OcamlTrace" [ "backend.ocaml.Stage3OcamlTrace" ];
+  HxType.register_class_tags "backend.ocaml.Stage3OcamlVirtualDispatch" [ "backend.ocaml.Stage3OcamlVirtualDispatch" ];
   HxType.register_class_tags "backend.ocaml._OcamlEntryPointSelection.OcamlEntryPointSelection_Fields_" [ "backend.ocaml._OcamlEntryPointSelection.OcamlEntryPointSelection_Fields_" ];
   HxType.register_class_tags "backend.ocaml._OcamlFieldUpdateLowering.OcamlFieldUpdateLowering_Fields_" [ "backend.ocaml._OcamlFieldUpdateLowering.OcamlFieldUpdateLowering_Fields_" ];
+  HxType.register_class_tags "backend.ocaml._Stage3OcamlArithmeticOperands.Stage3OcamlArithmeticOperands_Fields_" [ "backend.ocaml._Stage3OcamlArithmeticOperands.Stage3OcamlArithmeticOperands_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlArrayCalls.Stage3OcamlArrayCalls_Fields_" [ "backend.ocaml._Stage3OcamlArrayCalls.Stage3OcamlArrayCalls_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlArrays.Stage3OcamlArrays_Fields_" [ "backend.ocaml._Stage3OcamlArrays.Stage3OcamlArrays_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlCallOrder.Stage3OcamlCallOrder_Fields_" [ "backend.ocaml._Stage3OcamlCallOrder.Stage3OcamlCallOrder_Fields_" ];
@@ -11555,28 +11922,39 @@ let init () : unit =
   HxType.register_class_tags "backend.ocaml._Stage3OcamlCallableSelection.CallableUseScan" [ "backend.ocaml._Stage3OcamlCallableSelection.CallableUseScan" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlCallableSelection.Stage3OcamlCallableSelection_Fields_" [ "backend.ocaml._Stage3OcamlCallableSelection.Stage3OcamlCallableSelection_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlCollectionControl.Stage3OcamlCollectionControl_Fields_" [ "backend.ocaml._Stage3OcamlCollectionControl.Stage3OcamlCollectionControl_Fields_" ];
+  HxType.register_class_tags "backend.ocaml._Stage3OcamlERegCalls.Stage3OcamlERegCalls_Fields_" [ "backend.ocaml._Stage3OcamlERegCalls.Stage3OcamlERegCalls_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlExceptions.Stage3OcamlExceptions_Fields_" [ "backend.ocaml._Stage3OcamlExceptions.Stage3OcamlExceptions_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlFunctionBody.Stage3OcamlFunctionBody_Fields_" [ "backend.ocaml._Stage3OcamlFunctionBody.Stage3OcamlFunctionBody_Fields_" ];
+  HxType.register_class_tags "backend.ocaml._Stage3OcamlFunctionBoundary.Stage3OcamlFunctionBoundary_Fields_" [ "backend.ocaml._Stage3OcamlFunctionBoundary.Stage3OcamlFunctionBoundary_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlFunctionDefaults.Stage3OcamlFunctionDefaults_Fields_" [ "backend.ocaml._Stage3OcamlFunctionDefaults.Stage3OcamlFunctionDefaults_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlGuardedSwitch.Stage3OcamlGuardedSwitch_Fields_" [ "backend.ocaml._Stage3OcamlGuardedSwitch.Stage3OcamlGuardedSwitch_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlInitializer.Stage3OcamlInitializer_Fields_" [ "backend.ocaml._Stage3OcamlInitializer.Stage3OcamlInitializer_Fields_" ];
+  HxType.register_class_tags "backend.ocaml._Stage3OcamlInt64Words.Stage3OcamlInt64Words_Fields_" [ "backend.ocaml._Stage3OcamlInt64Words.Stage3OcamlInt64Words_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlIntBitwise.Stage3OcamlIntBitwise_Fields_" [ "backend.ocaml._Stage3OcamlIntBitwise.Stage3OcamlIntBitwise_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlIntrinsicCallable.Stage3OcamlIntrinsicCallable_Fields_" [ "backend.ocaml._Stage3OcamlIntrinsicCallable.Stage3OcamlIntrinsicCallable_Fields_" ];
+  HxType.register_class_tags "backend.ocaml._Stage3OcamlLocalCallOmissions.Stage3OcamlLocalCallOmissions_Fields_" [ "backend.ocaml._Stage3OcamlLocalCallOmissions.Stage3OcamlLocalCallOmissions_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlLocalCompoundValue.Stage3OcamlLocalCompoundValue_Fields_" [ "backend.ocaml._Stage3OcamlLocalCompoundValue.Stage3OcamlLocalCompoundValue_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlLocalStorage.Stage3OcamlLocalStorage_Fields_" [ "backend.ocaml._Stage3OcamlLocalStorage.Stage3OcamlLocalStorage_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlMapCalls.Stage3OcamlMapCalls_Fields_" [ "backend.ocaml._Stage3OcamlMapCalls.Stage3OcamlMapCalls_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlMemberLength.Stage3OcamlMemberLength_Fields_" [ "backend.ocaml._Stage3OcamlMemberLength.Stage3OcamlMemberLength_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlMethodValue.Stage3OcamlMethodValue_Fields_" [ "backend.ocaml._Stage3OcamlMethodValue.Stage3OcamlMethodValue_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlNullablePrimitive.Stage3OcamlNullablePrimitive_Fields_" [ "backend.ocaml._Stage3OcamlNullablePrimitive.Stage3OcamlNullablePrimitive_Fields_" ];
+  HxType.register_class_tags "backend.ocaml._Stage3OcamlNumericWidening.Stage3OcamlNumericWidening_Fields_" [ "backend.ocaml._Stage3OcamlNumericWidening.Stage3OcamlNumericWidening_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlObjects.Stage3OcamlObjects_Fields_" [ "backend.ocaml._Stage3OcamlObjects.Stage3OcamlObjects_Fields_" ];
+  HxType.register_class_tags "backend.ocaml._Stage3OcamlOrderedOperands.Stage3OcamlOrderedOperands_Fields_" [ "backend.ocaml._Stage3OcamlOrderedOperands.Stage3OcamlOrderedOperands_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlPatternDecision.Stage3OcamlPatternDecision_Fields_" [ "backend.ocaml._Stage3OcamlPatternDecision.Stage3OcamlPatternDecision_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlRangeBound.Stage3OcamlRangeBound_Fields_" [ "backend.ocaml._Stage3OcamlRangeBound.Stage3OcamlRangeBound_Fields_" ];
+  HxType.register_class_tags "backend.ocaml._Stage3OcamlRecursiveLocalFunction.Stage3OcamlRecursiveLocalFunction_Fields_" [ "backend.ocaml._Stage3OcamlRecursiveLocalFunction.Stage3OcamlRecursiveLocalFunction_Fields_" ];
+  HxType.register_class_tags "backend.ocaml._Stage3OcamlReferenceCarrier.Stage3OcamlReferenceCarrier_Fields_" [ "backend.ocaml._Stage3OcamlReferenceCarrier.Stage3OcamlReferenceCarrier_Fields_" ];
+  HxType.register_class_tags "backend.ocaml._Stage3OcamlReflectCalls.Stage3OcamlReflectCalls_Fields_" [ "backend.ocaml._Stage3OcamlReflectCalls.Stage3OcamlReflectCalls_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlRuntimeTypes.Stage3OcamlRuntimeTypes_Fields_" [ "backend.ocaml._Stage3OcamlRuntimeTypes.Stage3OcamlRuntimeTypes_Fields_" ];
+  HxType.register_class_tags "backend.ocaml._Stage3OcamlStaticDefault.Stage3OcamlStaticDefault_Fields_" [ "backend.ocaml._Stage3OcamlStaticDefault.Stage3OcamlStaticDefault_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlStdStaticCalls.Stage3OcamlStdStaticCalls_Fields_" [ "backend.ocaml._Stage3OcamlStdStaticCalls.Stage3OcamlStdStaticCalls_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlStringCalls.Stage3OcamlStringCalls_Fields_" [ "backend.ocaml._Stage3OcamlStringCalls.Stage3OcamlStringCalls_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlStringConversion.Stage3OcamlStringConversion_Fields_" [ "backend.ocaml._Stage3OcamlStringConversion.Stage3OcamlStringConversion_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlTypeQueries.Stage3OcamlTypeQueries_Fields_" [ "backend.ocaml._Stage3OcamlTypeQueries.Stage3OcamlTypeQueries_Fields_" ];
   HxType.register_class_tags "backend.ocaml._Stage3OcamlValueConversion.Stage3OcamlValueConversion_Fields_" [ "backend.ocaml._Stage3OcamlValueConversion.Stage3OcamlValueConversion_Fields_" ];
+  HxType.register_class_tags "backend.ocaml._Stage3OcamlVirtualCalls.Stage3OcamlVirtualCalls_Fields_" [ "backend.ocaml._Stage3OcamlVirtualCalls.Stage3OcamlVirtualCalls_Fields_" ];
   HxType.register_class_tags "backend.plugin.BackendPluginManifestParser" [ "backend.plugin.BackendPluginManifestParser" ];
   HxType.register_class_tags "backend.reflaxe.ReflaxeTargetAdapter" [ "backend.reflaxe.ReflaxeTargetAdapter" ];
   HxType.register_class_tags "backend.source.CsDynamicLocalCallLowering" [ "backend.source.CsDynamicLocalCallLowering" ];
