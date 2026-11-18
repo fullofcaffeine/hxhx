@@ -13,7 +13,7 @@ This repository contains two products. Both have the MIT license.
 - **`reflaxe.ocaml`** compiles Haxe 4.3.7 code to OCaml. The upstream Haxe compiler runs it as a [Reflaxe](https://github.com/SomeRanDev/reflaxe) target.
 - **`hxhx`** is a Haxe compiler that is written in Haxe. Its goal is compatibility with Haxe 4.3.7.
 
-The two products depend on each other. `reflaxe.ocaml` compiles the `hxhx` sources to OCaml, and that OCaml code becomes the `hxhx` binary.
+`hxhx` depends on `reflaxe.ocaml`. Upstream Haxe and `reflaxe.ocaml` compile the `hxhx` sources to OCaml, and that OCaml code becomes the `hxhx` binary.
 
 The project treats practical edit-compile-test latency as a product goal. A faster native build or a compiler-server cache counts as progress only when repeated builds give the same output as clean builds.
 
@@ -23,31 +23,37 @@ Last update: 2026-11-18. Neither product is ready for production.
 
 | Product | Status today | Use it for |
 | --- | --- | --- |
-| `reflaxe.ocaml` with upstream Haxe | Preview. This is the most complete path. | OCaml output from Haxe programs. Compare the results with upstream Haxe. |
-| `hxhx` | Experimental. JavaScript output works for a [declared scope](docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md). | Compiler experiments and contributions. |
+| `reflaxe.ocaml` with upstream Haxe | Preview. This is the most complete path. | OCaml output from Haxe programs, with results that you compare with upstream Haxe. |
+| `hxhx` | Experimental. JavaScript output works for a [declared scope](docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md) (a written list of supported features). | Compiler experiments and contributions. |
 
 ### Measured progress
 
 <!--
 Update rule: change a number here only when its source changes.
-- Parse oracle: scripts/oracle/parse-oracle-baseline.json (npm run oracle:parse prints the totals)
-- Typed oracle: scripts/oracle/typed-oracle-baseline.json (npm run oracle:typed prints the totals)
+- Parse oracle: npm run oracle:parse on main prints the totals. The baseline file scripts/oracle/parse-oracle-baseline.json can be lower.
+- Typed oracle: npm run oracle:typed on main prints the totals. The baseline file is scripts/oracle/typed-oracle-baseline.json.
 - Representation matrix: scripts/reflaxe-ocaml/representation-matrix-baseline.md
 - Gate rows: the GitHub Actions history of the named workflow on main
 Also change the "Last update" date.
 -->
 
-| Measure | Product | On `main` | In open pull requests |
-| --- | --- | --- | --- |
-| Parse oracle: field bodies that `hxhx` parses the same as upstream | `hxhx` | 1687 of 1850 (91.2%) | 1716 of 1850 (92.8%), PR #219 |
-| Parse oracle: files where each body matches | `hxhx` | 78 of 138 | 83 of 138, PR #219 |
-| Typed oracle: method signatures that `hxhx` types the same as upstream | `hxhx` | 1365 of 1671 (81.7%) | No change |
-| Representation matrix: cells with the same output as upstream | `reflaxe.ocaml` | 203 of 239 (84.9%) | 219 of 239 (91.6%), PRs #211 to #216 |
-| Upstream unit suite (milestone F2) | `hxhx` | No pass count. The run stops at a macro call. | No change |
+| Measure | Product | On `main` |
+| --- | --- | --- |
+| Parse oracle: field bodies that `hxhx` parses the same as upstream | `hxhx` | 1716 of 1850 (92.8%) |
+| Parse oracle: files where each body matches | `hxhx` | 83 of 138 |
+| Typed oracle: method signatures that `hxhx` types the same as upstream | `hxhx` | 1365 of 1671 (81.7%) |
+| Representation matrix: cells with the same output as upstream | `reflaxe.ocaml` | 203 of 239 (84.9%) |
+| Upstream unit suite (milestone F2) | `hxhx` | There is no pass count yet. The run stops at a macro call. |
 
 The two oracles compare `hxhx` with upstream Haxe 4.3.7 on the `haxe` package of the standard library. [`scripts/oracle/README.md`](scripts/oracle/README.md) gives the method.
 
-The representation matrix moves 16 value types through 15 boundaries. On `main`, 19 of the 36 failed cells do not build, 16 stop with a named error, and 1 prints a wrong value. [The baseline](scripts/reflaxe-ocaml/representation-matrix-baseline.md) shows each cell.
+The representation matrix moves 16 value types through 15 boundaries. On `main`, 36 cells fail:
+
+- 19 cells give OCaml that does not build.
+- 16 cells stop with a named error.
+- 1 cell prints a wrong value.
+
+[The baseline](scripts/reflaxe-ocaml/representation-matrix-baseline.md) shows each cell.
 
 ### Roadmap
 
@@ -55,17 +61,17 @@ The owner set these priorities on 2026-11-16. Work goes in this order.
 
 | Order | Milestone | Exit condition | State |
 | --- | --- | --- | --- |
-| 1 | `reflaxe.ocaml` 1.0 | A declared scope works on upstream Haxe 4.3.7 with no known silent wrong output. | In work |
-| 2 | F1: frontend parity | The parse oracle and the typed oracle show that `hxhx` agrees with upstream. | In work, measured |
+| 1 | `reflaxe.ocaml` 1.0 | A declared scope works on upstream Haxe 4.3.7 with no known silent wrong output. | In progress |
+| 2 | F1: frontend parity | The parse oracle and the typed oracle show that `hxhx` agrees with upstream. | In progress, measured |
 | 3 | F2: unit suite on JavaScript | `hxhx` passes the upstream unit suite on the JavaScript target. | Not reached. Macro support blocks it. |
 | 4 | F3: self-hosting | `hxhx` builds two native generations of `hxhx` and does not use upstream Haxe. | Not reached |
-| 5 | Full1 | `hxhx` passes the upstream suites for [each target in the Full1 scope](docs/02-user-guide/compat/FULL1_TARGET_SCOPE.md). | Long-term contract |
+| 5 | Full1 | `hxhx` passes the upstream suites for [each target in the Full1 scope](docs/02-user-guide/compat/FULL1_TARGET_SCOPE.md). | Not started |
 
 The plugin SDK, compiler customization, and new features for backends other than JavaScript wait for F2.
 
 ### Known limits
 
-- `reflaxe.ocaml` can generate OCaml that does not build, and `haxe` can still exit with 0. The 2026-11-16 review measured this. After each build, make sure that the executable exists.
+- `reflaxe.ocaml` can generate OCaml that does not build. Without `-D ocaml_build=native`, a failed OCaml build is only a warning, and `haxe` exits with 0.
 - `hxhx` does not run all macros. The run of the upstream unit suite stops at a macro call.
 - The `hxhx` typer rejects some valid programs.
 - `hxhx --ocaml` accepts only a small subset of Haxe.
@@ -108,7 +114,7 @@ npx lix download
 npx haxe -version
 ```
 
-The last command prints `4.3.7`. If it does not, run `npx lix download haxe 4.3.7` and then `npx lix use haxe 4.3.7`.
+The last command prints `4.3.7`. If it prints a different version, run `npx lix download haxe 4.3.7`. Then run `npx lix use haxe 4.3.7`.
 
 ## Compile Haxe to OCaml
 
@@ -143,9 +149,9 @@ This procedure uses `reflaxe.ocaml` with upstream Haxe. It compiles one Haxe pro
    /tmp/hello/out/_build/default/out.exe
    ```
 
-The program prints `Main.hx:3: Hello from OCaml`. In a test on macOS, the compile took approximately 20 seconds.
+The program prints `Main.hx:3: Hello from OCaml`. In a test on macOS, the compilation took approximately 20 seconds.
 
-`-D ocaml_output=<dir>` is mandatory. It selects the directory for the generated OCaml. If you remove `-D ocaml_build=native`, the compiler writes the OCaml sources and does not build them.
+`-D ocaml_output=<dir>` is mandatory. It selects the directory for the generated OCaml. With `-D ocaml_build=native`, a failed OCaml build stops the compilation with an error. Without it, the compiler still builds, but a failed build is only a warning. To write the OCaml sources only, add `-D ocaml_no_build`.
 
 In the repository, [`haxe_libraries/reflaxe.ocaml.hxml`](haxe_libraries/reflaxe.ocaml.hxml) connects `-lib reflaxe.ocaml` to the sources. Thus, run `npx haxe` from the repository root.
 
@@ -154,6 +160,7 @@ Next steps:
 - To use `reflaxe.ocaml` from a project in a different directory, read [reflaxe.ocaml with upstream Haxe](docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md).
 - For the options, the `doctor` command, and the build and watch commands, read the [package README](packages/reflaxe.ocaml/README.md).
 - For the supported scope, read the [1.0 contract](docs/00-project/REFLAXE_OCAML_1_0_CONTRACT.md).
+- To call OCaml libraries from Haxe, read [OCaml-native mode](docs/02-user-guide/OCAML_NATIVE_MODE.md).
 
 ## Try hxhx
 
@@ -172,36 +179,38 @@ This procedure builds the `hxhx` binary and compiles a program to JavaScript.
    HXHX_FORBID_STAGE0=1 "$HXHX_BIN" --js /tmp/hello/main.js -cp /tmp/hello/src -main Main
    ```
 
-`hxhx` writes `main.js` and runs it with Node.js. It prints some status lines, then the output of the program (`Hello from OCaml`), and then `run=ok`. In a test on macOS, the build took approximately 45 seconds and the compile took 1 second.
+`hxhx` writes `main.js` and runs it with Node.js. It prints some status lines, then the output of the program (`Hello from OCaml`), and then `run=ok`. In a test on macOS, the build took approximately 45 seconds and the compilation took 1 second.
 
 To write the file only, add `--hxhx-no-run`. `hxhx` also writes work files to `out_stage3` in the current directory.
 
-If `hxhx` tries to call upstream Haxe, `HXHX_FORBID_STAGE0=1` stops the compile. Thus, a successful compile shows that `hxhx` did all the work. In this project, "stage0" is the name for upstream Haxe.
+If `hxhx` tries to call upstream Haxe, `HXHX_FORBID_STAGE0=1` stops the compilation. Thus, a successful compilation shows that `hxhx` did all the work. In this project, "stage0" is the name for upstream Haxe.
 
 If `hxhx` rejects your program, compare the code with the [JavaScript scope](docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md). An error for a valid program is a known limit.
 
 Next steps:
 
-- [Quickstart: native lane](docs/01-getting-started/QUICKSTART_NATIVE.md) shows the modes in which `hxhx` does the compile work.
-- [Quickstart: compat lane](docs/01-getting-started/QUICKSTART_COMPAT.md) shows the modes in which `hxhx` sends the work to upstream Haxe.
-- [What works today](docs/01-getting-started/WHAT_WORKS_TODAY.md) lists each mode and its status.
+- [Quickstart: native lane](docs/01-getting-started/QUICKSTART_NATIVE.md) shows the lanes in which `hxhx` does all the compilation work.
+- [Quickstart: compat lane](docs/01-getting-started/QUICKSTART_COMPAT.md) shows the lanes in which `hxhx` sends the work to upstream Haxe.
+- [What works today](docs/01-getting-started/WHAT_WORKS_TODAY.md) lists each lane and its status.
 
 ## Other use cases
 
-These paths are experimental or deferred.
+These use cases are experimental or deferred.
 
 | Use case | State | Guide |
 | --- | --- | --- |
 | Run `reflaxe.ocaml` through `hxhx` | Experimental, small subset | [reflaxe.ocaml with hxhx](docs/01-getting-started/REFLAXE_OCAML_WITH_HXHX.md) |
 | Embed `hxhx` in a tool as a subprocess | Experimental | [Embedding](docs/02-user-guide/EMBEDDING.md) |
 | Package a Reflaxe target as a native `hxhx` plugin | Experimental. New work waits for F2. | [Promote a Reflaxe target](docs/01-getting-started/PROMOTE_REFLAXE_TO_NATIVE.md) |
-| One native target core for upstream Haxe and `hxhx` | Planned. Waits for F2. | [Goals](docs/00-project/NORTH_STAR_GOALS.md) |
+| Run Haxe macros with `hxhx` | Partial. The upstream unit suite stops at a macro call. | [Expression macros](docs/02-user-guide/HXHX_EXPRESSION_MACROS.md) |
+| Compile to other targets with `hxhx` | Experimental. New features wait for F2. | [Builtin backends](docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md) |
+| One native target core for upstream Haxe and `hxhx` | Planned. This work waits for F2. | [Goals](docs/00-project/NORTH_STAR_GOALS.md) |
 
 ## Where to go next
 
 | Question | Document |
 | --- | --- |
-| Which path fits my goal? | [Choose your lane](docs/01-getting-started/CHOOSE_YOUR_LANE.md) |
+| Which lane fits my goal? | [Choose your lane](docs/01-getting-started/CHOOSE_YOUR_LANE.md) |
 | What does this term mean? | [Terms you must know](docs/01-getting-started/TERMS_YOU_MUST_KNOW.md), [Glossary](docs/00-project/GLOSSARY.md) |
 | What are the goals and the priorities? | [Goals](docs/00-project/NORTH_STAR_GOALS.md), [Architecture review](docs/00-project/ARCHITECTURE_REVIEW_2026_11_16.md) |
 | What does each CI gate show? | [CI gates](docs/00-project/CI_GATES.md) |
@@ -232,8 +241,8 @@ These paths are experimental or deferred.
 
 Keep each pull request small. For the test commands, read [Testing](docs/01-getting-started/TESTING.md) and [Fast local validation](docs/01-getting-started/FAST_LOCAL_VALIDATION.md).
 
-The project compares its behavior with upstream Haxe and does not copy upstream compiler sources. Read the [provenance policy](docs/00-project/PROVENANCE_POLICY.md) before you contribute compiler code.
+The project compares its behavior with upstream Haxe and does not copy upstream compiler sources. Before you contribute compiler code, read the [provenance policy](docs/00-project/PROVENANCE_POLICY.md).
 
 ## License
 
-MIT. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+The license is MIT. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
