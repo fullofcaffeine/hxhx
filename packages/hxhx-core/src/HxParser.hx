@@ -1145,13 +1145,54 @@ class HxParser {
 
 	function isLikelyExtractorPatternStart():Bool {
 		return switch (cur.kind) {
-			case TIdent("_"):
-				peekKind().match(TDot);
+			case TIdent("_"): peekKind().match(TDot) || hasTopLevelExtractorArrow();
 			case TIdent(name): final nextKind = peekKind(); // Qualified static extractors such as `Std.parseInt(_) => code`
 				// appear inside upstream sys switch patterns.
-				nextKind.match(TDot) || (!isUpperStart(name) && nextKind.match(TLParen));
+				nextKind.match(TDot) || (!isUpperStart(name) && nextKind.match(TLParen)) || hasTopLevelExtractorArrow();
 			case _:
-				false;
+				hasTopLevelExtractorArrow();
+		}
+	}
+
+	/**
+		Whether `=>` follows at the top level of this pattern. Haxe 4.3.7 reads any pattern
+		followed by `=>` as an extractor, such as `_ + "," + _ => "abc,abc"` or
+		`(_ : Array<Dynamic>) => []`.
+
+		The scan stops at the end of the pattern: `:`, `,`, `|`, or `if` at the top level, or a
+		closing bracket of an enclosing pattern. Nothing is consumed.
+	**/
+	function hasTopLevelExtractorArrow():Bool {
+		final pending = [cur];
+		for (token in [peeked1, peeked2, peeked3])
+			if (token != null)
+				pending.push(token);
+		final lookahead = lex.fork();
+		var index = 0;
+		final nextToken = () -> index < pending.length ? pending[index++] : lookahead.next();
+		var depth = 0;
+		var previousWasEquals = false;
+		while (true) {
+			final token = nextToken();
+			final equalsBefore = previousWasEquals;
+			previousWasEquals = false;
+			switch (token.kind) {
+				case TEof:
+					return false;
+				case TLParen | TLBrace | TOther("[".code):
+					depth++;
+				case TRParen | TRBrace | TOther("]".code):
+					if (depth == 0)
+						return false;
+					depth--;
+				case TColon | TComma | TKeyword(KIf) | TOther("|".code) if (depth == 0):
+					return false;
+				case TOther(">".code) if (depth == 0 && equalsBefore):
+					return true;
+				case TOther("=".code):
+					previousWasEquals = true;
+				case _:
+			}
 		}
 	}
 
