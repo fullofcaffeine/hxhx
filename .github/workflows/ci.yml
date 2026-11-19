@@ -1042,8 +1042,10 @@ jobs:
           haxe -version
       - name: Download Haxe libraries (lix)
         run: npx lix download
+      # The memory shard runs only OCaml target-reuse checks. This job has no apt cache, so the
+      # PHP, Mono and Lua install took 21 minutes of its 40-minute budget (haxe_ocaml-vxnea).
       - name: Ensure PHP, Mono and Lua are available for focused runtime tests
-        if: ${{ startsWith(matrix.shard, 'compiler-focused-') && matrix.shard != 'compiler-focused-4' }}
+        if: ${{ startsWith(matrix.shard, 'compiler-focused-') && matrix.shard != 'compiler-focused-4' && matrix.shard != 'compiler-focused-audit-slow-memory' }}
         run: |
           set -euo pipefail
           runtime_packages=()

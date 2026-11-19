@@ -8,24 +8,22 @@ import hxhx.Stage3SetupSupport;
 	use the same providers and keep their own registered Main declaration.
  */
 class M14Stage3RuntimeFixture {
-	/** Require the same observable output from upstream and native programs, including successful exit. */
+	/**
+		Require the same observable output from upstream and native programs, including successful exit.
+		`ObservedProcess` reads the status from the shell, so a signal death fails on every platform.
+	**/
 	public static function observe(input:{
 		command:String,
 		arguments:Array<String>,
 		expected:String,
 		?timeoutSeconds:Int
 	}):Void {
-		final timeout = Sys.systemName() == "Mac" ? "gtimeout" : "timeout";
 		final seconds = input.timeoutSeconds == null ? 30 : input.timeoutSeconds;
 		if (seconds <= 0)
 			throw "runtime fixture observation requires a positive timeout";
-		final process = new sys.io.Process(timeout, [Std.string(seconds), input.command].concat(input.arguments));
-		final stdout = process.stdout.readAll().toString();
-		final stderr = process.stderr.readAll().toString();
-		final code = process.exitCode();
-		process.close();
-		if (code != 0 || stdout != input.expected || stderr != "")
-			throw "runtime fixture observation failed: exit=" + code + " stdout=" + stdout + " stderr=" + stderr;
+		final observed = ObservedProcess.run(input.command, input.arguments, seconds);
+		if (!observed.succeeded() || observed.stdout != input.expected || observed.stderr != "")
+			throw "runtime fixture observation failed: " + observed.status() + " stdout=" + observed.stdout + " stderr=" + observed.stderr;
 	}
 
 	public static function typeMain(input:{source:String, path:String, root:String}):TypedModule {
