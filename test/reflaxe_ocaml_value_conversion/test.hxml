@@ -1,0 +1,5 @@
+-cp packages/reflaxe.ocaml/src
+-cp test/reflaxe_ocaml_value_conversion/src
+-lib reflaxe
+--main ValueConversionTableTest
+--interp
