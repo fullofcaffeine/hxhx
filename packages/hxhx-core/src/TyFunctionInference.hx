@@ -960,6 +960,39 @@ class TyFunctionInference {
 		return complete;
 	}
 
+	/**
+		A callback whose untyped inputs only carry field requirements, as in
+		`Lambda.exists(headers, function(h) return h.name == "x")`, has no closed input type yet.
+		For candidate scoring and generic binding, show those inputs as unknown, so the binding
+		comes from the other arguments (Haxe 4.3.7; sys.Http). The selected parameter type later
+		constrains the callback's own terms, where the solver checks the field requirements.
+		Returns null when no input is open.
+	 */
+	public function openCallbackInputs(expression:HxExpr, type:TyType):Null<TyType> {
+		// Read-only: sealed replay must select the same candidate as the first traversal.
+		if (type == null || !type.isFunction())
+			return null;
+		for (entry in sourceFunctions)
+			if (entry.source == expression) {
+				final parameters = type.getFunctionArguments();
+				if (parameters.length != entry.arguments.length)
+					return null;
+				var changed = false;
+				final opened = new Array<TyType>();
+				for (index in 0...parameters.length) {
+					final open = switch solver.follow(entry.arguments[index]) {
+						case Variable(_): true;
+						case Nullable(inner): solver.follow(inner).match(Variable(_));
+						case _: false;
+					};
+					changed = changed || open;
+					opened.push(open ? TyType.unknown() : parameters[index]);
+				}
+				return changed ? type.withFunctionTypes(opened, type.getFunctionReturn()) : null;
+			}
+		return null;
+	}
+
 	/** Each generic method capture owns fresh variables; aliases keep the same function term. */
 	public function captureMethod(expression:HxExpr, type:TyType, parameters:Array<TyTypeParameterId>, signature:TyFunSig):TyType {
 		if (parameters.length == 0)

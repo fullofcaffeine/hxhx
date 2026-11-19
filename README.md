@@ -41,7 +41,7 @@ Also change the "Last update" date.
 | --- | --- | --- |
 | Parse oracle: field bodies that `hxhx` parses the same as upstream | `hxhx` | 1720 of 1850 (93.0%) |
 | Parse oracle: files where each body matches | `hxhx` | 83 of 138 |
-| Typed oracle: method signatures that `hxhx` types the same as upstream | `hxhx` | 1477 of 1671 (88.4%) |
+| Typed oracle: method signatures that `hxhx` types the same as upstream | `hxhx` | 1487 of 1671 (89.0%) |
 | Representation matrix: cells with the same output as upstream | `reflaxe.ocaml` | 213 of 239 (89.1%) |
 | Upstream unit suite (milestone F2) | `hxhx` | There is no pass count yet. The run stops at a macro call. |
 

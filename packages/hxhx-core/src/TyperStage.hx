@@ -1061,9 +1061,13 @@ class TyperStage {
 							case _:
 								throw "selected extension lost its receiver";
 						}
+					// Open callback inputs as selection did, so generic bindings come from the same evidence.
 					final actual = [
-						for (argument in supplied)
-							inferExprType(argument, inferenceEnvironment, context, position)
+						for (argument in supplied) {
+							final type = inferExprType(argument, inferenceEnvironment, context, position);
+							final opened = lexicalEnvironment.getInference().openCallbackInputs(argument, type);
+							opened == null ? type : opened;
+						}
 					];
 					var signature = appliedCallSignature(declaration, callee, inferenceEnvironment, context, position);
 					// Local callable inference can finish after its first use as an
@@ -2661,8 +2665,11 @@ class TyperStage {
 				}
 			}
 			final solved = [
-				for (index in 0...args.length)
-					scope.getInference().expressionType(args[index], actual[index], scope)
+				for (index in 0...args.length) {
+					final type = scope.getInference().expressionType(args[index], actual[index], scope);
+					final opened = scope.getInference().openCallbackInputs(args[index], type);
+					opened == null ? type : opened;
+				}
 			];
 			if (trial != null && !scope.isSpeculative() && !inference.isSealed())
 				ctx.getIndex().getMethodInputs().commit(trial);
@@ -2773,6 +2780,12 @@ class TyperStage {
 						if (selected != null)
 							contextual[index] = selected;
 					}
+			}
+			// An untyped callback input that only carries field requirements binds no type parameter.
+			for (index in 0...args.length) {
+				final opened = candidateInference.openCallbackInputs(args[index], contextual[index]);
+				if (opened != null)
+					contextual[index] = opened;
 			}
 			final contextualRanked = order.rankedTypes(contextual);
 			if (declaration != null && applied.acceptsArity(args.length)) {
