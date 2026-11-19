@@ -5,6 +5,12 @@ on:
     branches: [ master, main ]
   pull_request:
     branches: [ master, main ]
+  # One full run of main each night. A push to main cancels the previous push run,
+  # so most main runs never finish (45 of 60 on 2026-11-18/19); this run checks the
+  # merged result of the day's PRs and saves fresh caches (bead haxe_ocaml-vxnea).
+  # 02:00 UTC is outside the 05:00-14:00 UTC peak measured in that bead.
+  schedule:
+    - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
       qa_tier:
@@ -17,7 +23,9 @@ on:
           - Q4
 
 concurrency:
-  group: ci-${{ github.ref }}
+  # The event name keeps the nightly run in its own group: a push to main still
+  # cancels the previous push run, but not the scheduled run.
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -873,8 +881,11 @@ jobs:
           mcs --version
           mono --version
           lua -v
+      # Only main saves the weekly package cache. Pull requests restore it (or an
+      # older week's by prefix); saving from each pull request stored one copy per
+      # branch (29 copies of one key, about 1 GB, in bead haxe_ocaml-vxnea).
       - name: Collect downloaded apt packages
-        if: ${{ steps.apt-cache.outputs.cache-hit != 'true' }}
+        if: ${{ steps.apt-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main' }}
         run: |
           set -euo pipefail
           cache_dir="$HOME/.cache/hxhx-apt-archives"
@@ -884,7 +895,7 @@ jobs:
           find /var/cache/apt/archives -maxdepth 1 -name '*.deb' -exec cp -t "$cache_dir" {} +
           du -sh "$cache_dir"
       - name: Save downloaded apt packages
-        if: ${{ steps.apt-cache.outputs.cache-hit != 'true' }}
+        if: ${{ steps.apt-cache.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main' }}
         uses: actions/cache/save@v5
         with:
           path: ~/.cache/hxhx-apt-archives

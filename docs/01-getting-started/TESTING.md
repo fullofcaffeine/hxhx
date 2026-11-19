@@ -62,6 +62,10 @@ run compiler foundations, packaging, five focused groups, two dedicated Neko gro
 a group of fast tests that CI did not run before the reachability audit
 (`compiler-focused-audit`), macro-host integration, portable fixtures, and
 snapshots/examples, plus native/plugin smoke checks.
+Core CI also runs once each night on `main` (02:00 UTC). A push to `main` cancels
+the previous push run, so this scheduled run is the one that checks the merged
+result of the day's pull requests; pushes cannot cancel it. Only runs on `main`
+save the weekly apt package cache; pull requests restore it.
 Q3 high-risk, scheduled, manual, and release work also runs `hxhx-targets`,
 which treats the compiler as a large application, and
 the `compiler-focused-audit-slow*` shards, the slow tests from that audit (dune-building
