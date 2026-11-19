@@ -47,6 +47,32 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Restore the .deb files that the Core test-shards job saves on main, so setup-ocaml does
+      # not download them again from a slow mirror (haxe_ocaml-vxnea). Restore only.
+      - name: Select apt package cache
+        id: apt-cache-key
+        run: |
+          set -euo pipefail
+          prefix="${RUNNER_OS}-apt-base-v1-${ImageOS:-unknown}-"
+          echo "prefix=${prefix}" >> "$GITHUB_OUTPUT"
+          echo "key=${prefix}${ImageVersion:-unknown}-$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+      - name: Restore downloaded apt packages
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/hxhx-apt-archives
+          key: ${{ steps.apt-cache-key.outputs.key }}
+          restore-keys: |
+            ${{ steps.apt-cache-key.outputs.prefix }}
+      - name: Seed apt with cached packages
+        run: |
+          set -euo pipefail
+          cache_dir="$HOME/.cache/hxhx-apt-archives"
+          mkdir -p "$cache_dir"
+          count="$(find "$cache_dir" -maxdepth 1 -name '*.deb' | wc -l)"
+          if [ "$count" -gt 0 ]; then
+            sudo cp "$cache_dir"/*.deb /var/cache/apt/archives/
+          fi
+          echo "Seeded ${count} cached apt packages"
       - name: Setup OCaml toolchain (OCaml 5.2.1)
         uses: ocaml/setup-ocaml@v3
         with:
