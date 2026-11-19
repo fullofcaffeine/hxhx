@@ -486,7 +486,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [route]
     if: ${{ needs.route.outputs.run_q2 == 'true' }}
-    timeout-minutes: 40
+    # Successful runs on 17-18 November took 19.4-32.9 minutes in the test step and up to 40.0
+    # minutes in total; four PR runs were cancelled at the old 40-minute limit (haxe_ocaml-vxnea).
+    timeout-minutes: 55
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -906,8 +908,10 @@ jobs:
     needs: [route]
     if: ${{ needs.route.outputs.run_q3 == 'true' }}
     # Repeated compiler invocations amortize the native bootstrap build cost.
-    # Keep the complete Q3 workload within the existing job budget.
-    timeout-minutes: 40
+    # Successful test steps took 16.6-30.8 minutes; jobs 135073634790 and 134901666678 were still
+    # progressing when the old 40-minute limit cancelled them after 3-4 minutes of setup
+    # (haxe_ocaml-vxnea).
+    timeout-minutes: 55
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -987,9 +991,10 @@ jobs:
             label: Slow Neko regressions found outside CI
             timeout_minutes: 40
             command_timeout_seconds: "1500"
+          # Test step median 28.5, max 35.0 minutes; successful totals reach 38.2 (haxe_ocaml-vxnea).
           - shard: compiler-focused-audit-slow-memory
             label: Target reuse memory checks found outside CI
-            timeout_minutes: 40
+            timeout_minutes: 50
             command_timeout_seconds: "1500"
     timeout-minutes: ${{ matrix.timeout_minutes }}
     steps:
