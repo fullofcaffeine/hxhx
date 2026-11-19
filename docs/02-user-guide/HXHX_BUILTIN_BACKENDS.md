@@ -21,7 +21,8 @@ This page defines how backend selection works **after the CLI cutover**.
 
 Current builtin backend IDs in `hxhx`:
 
-- `ocaml-stage3` (selected by `--ocaml`)
+- `ocaml-native` (selected by `--ocaml`; runs the shared `reflaxe.ocaml` target core, which does not compile ordinary programs yet)
+- `ocaml-stage3` (the Stage3 OCaml emitter, used by the Stage3 bootstrap and macro-plugin lanes; frozen)
 - `js-native` (selected by `--js <file>`)
 - `neko-native` (selected by `--neko <file>`, target bring-up)
 - `hl-native` (selected by `--hl <file>`, bytecode boundary only)
