@@ -1938,6 +1938,14 @@ class TyperStage {
 			return overloadArgScore(expected, classScheme.preview(), methodTypeParameters, semanticIndex);
 		if (TyMethodGenericBinding.isInferableParameter(expected, methodTypeParameters))
 			return actual.isUnknown() || actual.isDynamic() || actual.isNullLiteral() ? 0 : 1;
+		// An omitted input that is still unknown takes a generic parameter's type from the
+		// binding that the other arguments choose, as in `apply(x, cmp)` with
+		// `apply<T>(x:T, cmp:T->Int)` (haxe.ds.ArraySort passes its omitted `cmp` this way).
+		if (actual.isUnknown()
+			&& TyTypeSubstitution.parameterIdentities(expected)
+				.filter(parameter -> methodTypeParameters.filter(owned -> owned.equals(parameter)).length > 0)
+				.length > 0)
+			return 0;
 		if (expected != null && actual != null && expected.getSemanticKey() == actual.getSemanticKey())
 			return 4;
 		if (TyEnumValueCompatibility.accepts(semanticIndex, expected, actual))
