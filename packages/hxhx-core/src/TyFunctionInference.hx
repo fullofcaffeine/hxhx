@@ -455,6 +455,46 @@ class TyFunctionInference {
 		return result;
 	}
 
+	/**
+		A named local function can call itself before its body has chosen a result, as in
+		`function loop(n:Int) { if (n > 0) loop(n - 1); }`. Give its symbol a callable term with a
+		result variable while the body is typed, so recursive calls share that variable instead of
+		freezing the temporary Unknown result. `settleNamedFunction` binds the variable to the
+		selected result after the body. Sealed replay reuses the original term.
+	 */
+	public function declareNamedFunction(symbol:TySymbol, parameters:Array<TySymbol>):Void {
+		if (solver.isSealed())
+			return;
+		final key = symbol.getIdentity().getCanonicalKey();
+		if (locals.exists(key))
+			throw "named local function was declared twice";
+		final type = symbol.getType();
+		if (!type.isFunction() || !type.getFunctionReturn().isUnknown())
+			throw "named local function inference requires an unknown result";
+		final arguments = [
+			for (parameter in parameters) {
+				final term = locals.get(parameter.getIdentity().getCanonicalKey());
+				term == null ? TyInferenceSolver.fromType(parameter.getType()) : term;
+			}
+		];
+		locals.set(key, Function(arguments, solver.fresh(), type));
+	}
+
+	/** Bind a named local function's result variable to the result its body selected. */
+	public function settleNamedFunction(symbol:TySymbol, result:TyType, ?resultTerm:TyInferenceTerm):Bool {
+		if (solver.isSealed())
+			return true;
+		return switch locals.get(symbol.getIdentity().getCanonicalKey()) {
+			case Function(_, pending, _):
+				final candidate = solver.fork();
+				final accepted = candidate.constrain(pending, resultTerm == null ? TyInferenceSolver.fromType(result) : resultTerm);
+				if (accepted)
+					solver.commit(candidate);
+				accepted;
+			case _: throw "named local function result was not declared";
+		};
+	}
+
 	/** Retain parameter and result terms so replay observes constraints supplied after an earlier body call. */
 	public function recordSourceFunction(source:HxExpr, type:TyType, parameters:Array<TySymbol>, ?result:TyInferenceTerm):Void {
 		if (solver.isSealed())

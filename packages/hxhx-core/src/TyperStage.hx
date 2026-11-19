@@ -3170,6 +3170,10 @@ class TyperStage {
 		for (parameter in parameterSymbols)
 			if (parameter.getType().unwrapNull().isUnknown())
 				scope.getInference().registerOmittedParameter(parameter);
+		// Recursive calls in the body share the result that the body selects.
+		final namedResult = declared != null && expected == null;
+		if (namedResult)
+			scope.getInference().declareNamedFunction(declared, parameterSymbols);
 		controls.beginReturns(target, expected);
 		final bodyType = TyEmptySourceGroup.isEmpty(body) ? TyType.fromHintText("Void") : inferExprType(body, scope, ctx, pos,
 			facts.getKind() == Arrow ? expected : null);
@@ -3211,6 +3215,8 @@ class TyperStage {
 		// annotation must constrain their original lexical inputs together.
 		final resultTerm = expected == null
 			&& selected.hasUnknownComponent() ? scope.getInference().sourceFunctionResult(returnTerms) : null;
+		if (namedResult && !scope.getInference().settleNamedFunction(declared, selected, resultTerm))
+			throw new TyperError(ctx.getFilePath(), pos, "recursive call result conflicts with the function result");
 		scope.getInference().recordSourceFunction(source, callableType, parameterSymbols, resultTerm);
 		return callableType;
 	}
