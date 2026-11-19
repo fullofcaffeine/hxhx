@@ -4841,13 +4841,27 @@ class TyperStage {
 							&& u.isNumeric() ? u : TyType.unknown();
 						}
 					case "-" | "*" | "/" | "%":
-						final ta = inferExprType(a, scope, ctx, pos);
-						final tb = inferExprType(b, scope, ctx, pos);
-						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), ta, tb, op, ctx.getFilePath(), pos);
+						final inferredLeft = inferExprType(a, scope, ctx, pos);
+						final inferredRight = inferExprType(b, scope, ctx, pos);
+						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), inferredLeft, inferredRight, op, ctx.getFilePath(), pos);
 						// Without a declared operator, one abstract operand may act through its `to` primitive.
-						final viewed = bound == null ? TyAbstractPrimitiveOperation.operation(ctx.getIndex(), op, ta, tb) : null;
+						final viewed = bound == null ? TyAbstractPrimitiveOperation.operation(ctx.getIndex(), op, inferredLeft, inferredRight) : null;
 						if (viewed != null && viewed.failure != null)
 							throw new TyperError(ctx.getFilePath(), pos, viewed.failure);
+						// Builtin arithmetic binds unresolved inputs to Int, as in Haxe 4.3.7.
+						final operands = bound != null
+							|| viewed != null ? {left: inferredLeft, right: inferredRight} : TyArithmeticOperandInference.constrain({
+								left: a,
+								right: b,
+								leftType: inferredLeft,
+								rightType: inferredRight,
+								scope: scope,
+								index: ctx.getIndex(),
+								filePath: ctx.getFilePath(),
+								position: pos
+							});
+						final ta = operands.left;
+						final tb = operands.right;
 						if (bound != null) bound.getOperatorInfo().getResultType(); else if (viewed != null) viewed.result; else {
 							final integer = op == "/" ? null : TyNullableIntegerResult.result(ta, tb);
 							final unified = integer == null ? TyType.unify(ta.unwrapNull(), tb.unwrapNull()) : integer;
