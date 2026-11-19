@@ -56,15 +56,19 @@ function classify(expected:TyType, actual:TyType, nullPolicy:TyAssignmentNullPol
 }
 
 /**
-	A recursive typedef can reach one side expanded and the other as its alias, as in
-	`d.params.map(show)` with `typedef Decl = {?params:Array<Decl>}`. Exact template
+	A recursive typedef can reach one side expanded and the other as its alias, at any
+	depth, as in `d.params.map(show)` with `typedef Decl = {?params:Array<Decl>}`. Exact template
 	equivalence proves the same storage type, so it also satisfies invariant type arguments.
 	It grants no structural width, variance, or conversion.
  */
-private function sameType(expected:TyType, actual:TyType):Bool {
-	if (expected.getSemanticKey() == actual.getSemanticKey())
+function sameType(expected:TyType, actual:TyType):Bool {
+	final expectedKey = expected.getSemanticKey();
+	final actualKey = actual.getSemanticKey();
+	if (expectedKey == actualKey)
 		return true;
-	return (expected.getAliasDefinition() != null || actual.getAliasDefinition() != null)
+	// Only a type that names an alias somewhere (its key spells `alias:`) can have
+	// another expansion depth; the proof is skipped for every other pair.
+	return (expectedKey.indexOf("alias:") >= 0 || actualKey.indexOf("alias:") >= 0)
 		&& TyAliasEquivalence.equivalentTypes(expected, actual);
 }
 

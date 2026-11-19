@@ -4968,8 +4968,11 @@ class TyperStage {
 				scope.exitLexicalScope();
 				TyType.fromHintText("Array<Dynamic>");
 			case EArrayDecl(values):
+				// An enum constructor's payload literal (`[items]`) can see a recursive
+				// typedef expanded on one side and as its alias on the other.
 				final acceptsArrayElement = (expected:TyType,
 					actual:TyType) -> actual.isDynamic()
+						|| TyAssignmentCompatibility.sameType(expected, actual)
 						|| TyFunctionConstraint.accepts(expected.unwrapNull(), actual)
 						|| TyStructuralArgument.compatibility(ctx.getIndex(), expected, actual) == Compatible
 						|| TyImplicitConversionPlan.select(ctx.getIndex(), expected.unwrapNull(), actual.unwrapNull()) != null
