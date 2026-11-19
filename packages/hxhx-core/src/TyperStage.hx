@@ -1447,6 +1447,9 @@ class TyperStage {
 		for (argumentIndex in 0...functionArgs.length) {
 			switch HxFunctionArg.getDefaultValue(functionArgs[argumentIndex]) {
 				case NoDefault:
+				case Default(ENull) if (scope.getInference().localType(params[argumentIndex]).unwrapNull().isUnknown()):
+					// A `null` default only makes an omitted input optional and nullable, as in
+					// Haxe 4.3.7: later uses still choose its type (`?p = null; p = 5` gives Null<Int>).
 				case Default(expression):
 					final parameter = params[argumentIndex];
 					final expected = scope.getInference().localType(parameter);
@@ -3144,7 +3147,14 @@ class TyperStage {
 			final parameterType = argumentTypes[parameterIndex];
 			if (isStrict() && !parameterType.unwrapNull().isUnknown() && TyType.unify(parameterType, valueType) == null)
 				throw new TyperError(ctx.getFilePath(), pos, "function default is not compatible with its parameter");
-			if (parameterType.unwrapNull().isUnknown()) {
+			if (parameterType.unwrapNull().isUnknown() && valueType.isNullLiteral()) {
+				// A `null` default only makes an omitted input optional and nullable, as in Haxe
+				// 4.3.7; later uses still choose its type, so it stays an inference variable.
+				if (!parameterType.isNullable()) {
+					argumentTypes[parameterIndex] = TyType.nullable(parameterType);
+					parameterSymbols[parameterIndex].setType(argumentTypes[parameterIndex]);
+				}
+			} else if (parameterType.unwrapNull().isUnknown()) {
 				final selected = parameterType.isNullable() && !valueType.isNullable() ? TyType.nullable(valueType) : valueType;
 				argumentTypes[parameterIndex] = selected;
 				parameterSymbols[parameterIndex].setType(selected);
