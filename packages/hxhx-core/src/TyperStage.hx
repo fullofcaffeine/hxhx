@@ -4466,6 +4466,9 @@ class TyperStage {
 				final scrutTy = inferSwitchInput(scrutinee, patterns, scope, ctx, pos);
 				TySwitchTyping.check(scrutTy, patterns, exprs == null ? -1 : exprs.length, ctx, pos, scope.isUntypedContext());
 				var out:TyType = TyType.unknown();
+				var joinFailed = false;
+				final branchTypes = new Array<TyType>();
+				final branchTerms = new Array<Null<TyInferenceTerm>>();
 				if (patterns != null && exprs != null) {
 					final count = patterns.length < exprs.length ? patterns.length : exprs.length;
 					for (i in 0...count) {
@@ -4485,6 +4488,13 @@ class TyperStage {
 							throw error;
 						}
 						scope.exitLexicalScope();
+						branchTypes.push(branchTy);
+						// A case body is a source group; its value is the last expression.
+						final branchValue = switch branchExpr {
+							case ESourceGroup(values, _) if (values.length > 0): values[values.length - 1];
+							case _: branchExpr;
+						};
+						branchTerms.push(scope.getInference().sourceTerm(branchValue, scope));
 
 						if (out.isUnknown())
 							out = branchTy;
@@ -4492,10 +4502,19 @@ class TyperStage {
 							final u = TyType.unify(out, branchTy);
 							if (u != null)
 								out = u;
-							else if (!isStrict())
-								out = TyType.fromHintText("Dynamic");
+							else {
+								joinFailed = true;
+								if (!isStrict())
+									out = TyType.fromHintText("Dynamic");
+							}
 						}
 					}
+				}
+				// Empty array branches take the element type the complete branches share.
+				if (joinFailed || out.hasUnknownComponent()) {
+					final arrays = scope.getInference().completeArrayBranches(branchTypes, branchTerms, ctx.getIndex());
+					if (arrays != null)
+						out = arrays;
 				}
 				out.isUnknown() ? TyType.fromHintText("Dynamic") : out;
 			case ENew(_typePath, args):

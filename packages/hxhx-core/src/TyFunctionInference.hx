@@ -908,6 +908,58 @@ class TyFunctionInference {
 		return result;
 	}
 
+	/**
+		A switch expression whose branches are arrays can mix complete arrays with empty literals,
+		as in `switch (name) { case "a": ["x"]; default: []; }`. Haxe 4.3.7 gives the whole switch the
+		complete element type. Constrain every incomplete branch's own array term to the one complete
+		type all other branches agree on, and commit only when every branch accepts it. The solved
+		literal terms keep the result for sealed replay. Returns null when this rule does not apply.
+	 */
+	public function completeArrayBranches(types:Array<TyType>, terms:Array<Null<TyInferenceTerm>>, index:TyperIndex):Null<TyType> {
+		if (solver.isSealed() || index == null || types.length < 2 || types.length != terms.length)
+			return null;
+		final array = index.getByFullName("Array");
+		if (!Std.isOfType(array, TyClassInfo))
+			return null;
+		var complete:Null<TyType> = null;
+		final incomplete = new Array<TyInferenceTerm>();
+		for (branch in 0...types.length) {
+			final type = TyAliasExpansion.reveal(types[branch]);
+			if (type.isNoNormalCompletion())
+				continue;
+			if (type.isNullable()
+				|| type.getNominalIdentity() == null
+				|| !type.getNominalIdentity().equals(array.getIdentity())
+				|| type.getTypeArguments().length != 1)
+				return null;
+			if (!type.hasUnknownComponent()) {
+				if (complete == null)
+					complete = type;
+				else if (complete.getSemanticKey() != type.getSemanticKey() && !TyAliasEquivalence.equivalentTypes(complete, type))
+					return null;
+				continue;
+			}
+			switch terms[branch] {
+				case Nominal(identity, [_]) if (identity.equals(array.getIdentity())):
+					incomplete.push(terms[branch]);
+				case _:
+					return null;
+			}
+		}
+		if (complete == null || incomplete.length == 0)
+			return null;
+		final candidate = solver.fork();
+		for (term in incomplete) {
+			if (!TyStructuralConstraint.constrainTerms(index, candidate, term, TyInferenceSolver.fromType(complete)))
+				return null;
+			final result = candidate.preview(term);
+			if (result.hasUnknownComponent() || !TyAliasEquivalence.equivalentTypes(result, complete))
+				return null;
+		}
+		solver.commit(candidate);
+		return complete;
+	}
+
 	/** Each generic method capture owns fresh variables; aliases keep the same function term. */
 	public function captureMethod(expression:HxExpr, type:TyType, parameters:Array<TyTypeParameterId>, signature:TyFunSig):TyType {
 		if (parameters.length == 0)
