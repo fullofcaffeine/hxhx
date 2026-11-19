@@ -1,0 +1,6 @@
+assigned.value=Int
+fallback.value=String
+implicitOptional.value=Int
+local.base=Int
+scaled.factor=Float
+scaled.label=String
