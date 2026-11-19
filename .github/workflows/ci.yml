@@ -492,6 +492,33 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      # Restore the .deb files that test-shards saves on main, so setup-ocaml and the runtime
+      # installs do not download them again from a slow mirror (haxe_ocaml-vxnea). Restore only.
+      - name: Select apt package cache
+        id: apt-cache-key
+        run: |
+          set -euo pipefail
+          package_set=base
+          prefix="${RUNNER_OS}-apt-${package_set}-v1-${ImageOS:-unknown}-"
+          echo "prefix=${prefix}" >> "$GITHUB_OUTPUT"
+          echo "key=${prefix}${ImageVersion:-unknown}-$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+      - name: Restore downloaded apt packages
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/hxhx-apt-archives
+          key: ${{ steps.apt-cache-key.outputs.key }}
+          restore-keys: |
+            ${{ steps.apt-cache-key.outputs.prefix }}
+      - name: Seed apt with cached packages
+        run: |
+          set -euo pipefail
+          cache_dir="$HOME/.cache/hxhx-apt-archives"
+          mkdir -p "$cache_dir"
+          count="$(find "$cache_dir" -maxdepth 1 -name '*.deb' | wc -l)"
+          if [ "$count" -gt 0 ]; then
+            sudo cp "$cache_dir"/*.deb /var/cache/apt/archives/
+          fi
+          echo "Seeded ${count} cached apt packages"
       - name: Setup OCaml toolchain (OCaml 5.2.1)
         uses: ocaml/setup-ocaml@v3
         with:
@@ -913,6 +940,33 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      # Restore the .deb files that test-shards saves on main, so setup-ocaml and the runtime
+      # installs do not download them again from a slow mirror (haxe_ocaml-vxnea). Restore only.
+      - name: Select apt package cache
+        id: apt-cache-key
+        run: |
+          set -euo pipefail
+          package_set=base
+          prefix="${RUNNER_OS}-apt-${package_set}-v1-${ImageOS:-unknown}-"
+          echo "prefix=${prefix}" >> "$GITHUB_OUTPUT"
+          echo "key=${prefix}${ImageVersion:-unknown}-$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+      - name: Restore downloaded apt packages
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/hxhx-apt-archives
+          key: ${{ steps.apt-cache-key.outputs.key }}
+          restore-keys: |
+            ${{ steps.apt-cache-key.outputs.prefix }}
+      - name: Seed apt with cached packages
+        run: |
+          set -euo pipefail
+          cache_dir="$HOME/.cache/hxhx-apt-archives"
+          mkdir -p "$cache_dir"
+          count="$(find "$cache_dir" -maxdepth 1 -name '*.deb' | wc -l)"
+          if [ "$count" -gt 0 ]; then
+            sudo cp "$cache_dir"/*.deb /var/cache/apt/archives/
+          fi
+          echo "Seeded ${count} cached apt packages"
       - name: Setup OCaml toolchain (OCaml 5.2.1)
         uses: ocaml/setup-ocaml@v3
         with:
@@ -997,6 +1051,39 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      # Restore the .deb files that test-shards saves on main, so setup-ocaml and the runtime
+      # installs do not download them again from a slow mirror (haxe_ocaml-vxnea). Restore only; the
+      # memory shard uses the base set because it skips the runtimes.
+      - name: Select apt package cache
+        id: apt-cache-key
+        env:
+          RUNTIME_PACKAGES: ${{ startsWith(matrix.shard, 'compiler-focused-') && matrix.shard != 'compiler-focused-4' && matrix.shard != 'compiler-focused-audit-slow-memory' }}
+        run: |
+          set -euo pipefail
+          package_set=base
+          if [ "$RUNTIME_PACKAGES" = "true" ]; then
+            package_set=runtimes
+          fi
+          prefix="${RUNNER_OS}-apt-${package_set}-v1-${ImageOS:-unknown}-"
+          echo "prefix=${prefix}" >> "$GITHUB_OUTPUT"
+          echo "key=${prefix}${ImageVersion:-unknown}-$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+      - name: Restore downloaded apt packages
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/hxhx-apt-archives
+          key: ${{ steps.apt-cache-key.outputs.key }}
+          restore-keys: |
+            ${{ steps.apt-cache-key.outputs.prefix }}
+      - name: Seed apt with cached packages
+        run: |
+          set -euo pipefail
+          cache_dir="$HOME/.cache/hxhx-apt-archives"
+          mkdir -p "$cache_dir"
+          count="$(find "$cache_dir" -maxdepth 1 -name '*.deb' | wc -l)"
+          if [ "$count" -gt 0 ]; then
+            sudo cp "$cache_dir"/*.deb /var/cache/apt/archives/
+          fi
+          echo "Seeded ${count} cached apt packages"
       - name: Setup OCaml toolchain (OCaml 5.2.1)
         uses: ocaml/setup-ocaml@v3
         with:
