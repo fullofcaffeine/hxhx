@@ -248,7 +248,15 @@ class TyType {
 
 	/** Build a structural declaration after duplicate and extension validation. */
 	public static function declaredAnonymous(fields:Array<TyAnonymousField>):TyType {
-		final sorted = [for (field in fields) TyAnonymousField.copy(field)];
+		// An optional structure field holds null when absent, so Haxe 4.3.7 gives it `Null<T>`:
+		// reading `?crc:Int` yields `Null<Int>`. Unknown inference holes stay as they are, and
+		// Dynamic already holds null.
+		final sorted = [
+			for (field in fields)
+				field.isOptional
+			&& !field.type.isNullable()
+			&& !field.type.isUnknown()
+			&& !field.type.isDynamic() ? TyAnonymousField.withType(field, nullable(field.type)) : TyAnonymousField.copy(field)];
 		sorted.sort((left, right) -> left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
 		for (index in 1...sorted.length)
 			if (sorted[index - 1].name == sorted[index].name)
