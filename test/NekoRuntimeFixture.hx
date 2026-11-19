@@ -7,14 +7,10 @@ import sys.io.File;
 
 /** Shared upstream and native Neko observer using production provider resolution. */
 private function run(command:String, arguments:Array<String>):String {
-	final process = new sys.io.Process(command, arguments);
-	final output = process.stdout.readAll().toString();
-	final errors = process.stderr.readAll().toString();
-	final code = process.exitCode();
-	process.close();
-	if (code != 0)
-		throw command + " failed: " + errors;
-	return output;
+	final observed = ObservedProcess.run(command, arguments);
+	if (!observed.succeeded())
+		throw command + " failed (" + observed.status() + "): " + observed.stderr;
+	return observed.stdout;
 }
 
 /** Loads authored source through production target selection and retains both runtime outcomes. */
@@ -125,16 +121,13 @@ function exercise(fixture:String, requireExceptionProvider:Bool, upstreamNeko:Bo
 	completed("compile-native;next=execute");
 	var failed = false;
 	for (layout in ["main", "single"]) {
-		final process = new sys.io.Process("neko", [root + "/" + layout + ".n"].concat(executableArguments));
-		final actual = process.stdout.readAll().toString();
-		final errors = process.stderr.readAll().toString();
-		final code = process.exitCode();
-		process.close();
+		final observed = ObservedProcess.run("neko", [root + "/" + layout + ".n"].concat(executableArguments));
+		final actual = observed.stdout;
 		File.saveContent(root + "/" + layout + ".stdout", actual);
-		File.saveContent(root + "/" + layout + ".stderr", errors);
-		if (code != 0 || actual != upstream) {
+		File.saveContent(root + "/" + layout + ".stderr", observed.stderr);
+		if (!observed.succeeded() || actual != upstream) {
 			failed = true;
-			Sys.println("NEKO_RUNTIME_FIXTURE:FAIL fixture=" + fixture + " layout=" + layout + " exit=" + code);
+			Sys.println("NEKO_RUNTIME_FIXTURE:FAIL fixture=" + fixture + " layout=" + layout + " " + observed.status());
 		} else {
 			Sys.println("NEKO_RUNTIME_FIXTURE:PASS fixture=" + fixture + " layout=" + layout);
 		}

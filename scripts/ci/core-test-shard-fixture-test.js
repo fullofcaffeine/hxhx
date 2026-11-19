@@ -168,7 +168,7 @@ function checkRuntimeTypeCoverage(packageJson, plan, expected) {
 function main() {
   checkCommandFailureReporting()
   const plan = loadPlan(repoRoot)
-  assert(plan.aggregateCommands.length === 356, `expected 356 npm test commands, found ${plan.aggregateCommands.length}`)
+  assert(plan.aggregateCommands.length === 357, `expected 357 npm test commands, found ${plan.aggregateCommands.length}`)
 
   const expectedAggregateJobs = [
     'guards',
@@ -192,7 +192,7 @@ function main() {
     'compiler-packaging': 15,
     'compiler-focused-1': 45,
     'compiler-focused-call-arguments': 1,
-    'compiler-focused-2': 69,
+    'compiler-focused-2': 70,
     'compiler-focused-neko-runtime': 2,
     'compiler-focused-neko-locals': 5,
     'compiler-focused-3': 12,
@@ -583,11 +583,11 @@ function main() {
   const strictPluginBlock = workflow.slice(workflow.indexOf('  plugin-matrix:'), workflow.indexOf('  native-plugin-happy-path:'))
   const happyPluginBlock = workflow.slice(workflow.indexOf('  native-plugin-happy-path:'), workflow.indexOf('  test-shards:'))
   requireIncludes(strictPluginBlock, '    name: Plugin matrix (strict)\n', 'stable strict plugin check name')
-  for (const [block, command] of [
-    [strictPluginBlock, 'npm run -s test:plugins:strict-matrix'],
-    [happyPluginBlock, 'npm run -s test:hxhx:native-plugin-happy-path']
+  for (const [block, command, budget] of [
+    [strictPluginBlock, 'npm run -s test:plugins:strict-matrix', 55],
+    [happyPluginBlock, 'npm run -s test:hxhx:native-plugin-happy-path', 40]
   ]) {
-    requireIncludes(block, '    timeout-minutes: 40\n', 'unchanged plugin job budget')
+    requireIncludes(block, `    timeout-minutes: ${budget}\n`, 'plugin job budget')
     requireIncludes(block, command, 'independent plugin command')
     assert(workflow.split(command).length === 2, `${command} must run exactly once in Core`)
   }
@@ -680,7 +680,7 @@ function main() {
   requireIncludes(workflow, '  hxhx-e2e:\n    name: Tests / hxhx target end-to-end', 'Q3 hxhx E2E job')
   const e2eJob = workflow.slice(q3HxhxStart, workflow.indexOf('\n  test:', q3HxhxStart))
   requireIncludes(e2eJob, "needs.route.outputs.run_q3 == 'true'", 'Q3 hxhx E2E condition')
-  requireIncludes(e2eJob, '    timeout-minutes: 40', 'Q3 hxhx E2E budget')
+  requireIncludes(e2eJob, '    timeout-minutes: 55', 'Q3 hxhx E2E budget')
   const e2eStepStart = e2eJob.indexOf('      - name: Run hxhx target end-to-end shard\n')
   assert(e2eStepStart >= 0, 'Q3 hxhx E2E step is missing')
   const e2eStep = e2eJob.slice(e2eStepStart)

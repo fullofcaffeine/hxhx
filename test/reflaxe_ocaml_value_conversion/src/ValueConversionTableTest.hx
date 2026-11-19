@@ -62,6 +62,16 @@ class ValueConversionTableTest {
 				failures.push('carrier of ${ComplexTypeTools.toString(entry.type)}: expected ${entry.expected}, got $actual');
 		}
 
+		// An unresolved type variable (here the type of `null`, `Null<Unknown>`) has no known
+		// runtime carrier, so a cast from it, such as `cast(__ocaml__(...))`, converts nothing.
+		final unresolved = haxe.macro.Context.typeof(macro null);
+		final unresolvedCarrier = Std.string(OcamlValueConversion.carrierOf(unresolved));
+		if (unresolvedCarrier != "UnclassifiedCarrier")
+			failures.push('carrier of an unresolved type: expected UnclassifiedCarrier, got $unresolvedCarrier');
+		final fromUnresolved = OcamlValueConversion.decide(unresolved, ComplexTypeTools.toType(macro :Null<String>));
+		if (fromUnresolved != null)
+			failures.push('cast from an unresolved type to Null<String>: expected no conversion, got $fromUnresolved');
+
 		final pairs:Array<{from:ComplexType, to:ComplexType, expected:String}> = [
 			// Same carrier.
 			{from: macro :Int, to: macro :Int, expected: "SameCarrier"},
@@ -90,11 +100,16 @@ class ValueConversionTableTest {
 			{from: macro :Dynamic, to: macro :ConversionBox, expected: "UnboxObj"},
 			{from: macro :Any, to: macro :String, expected: "UnboxObj"},
 			{from: macro :Dynamic, to: macro :ConversionList, expected: "UnboxObj"},
+			// A nullable Boolean enters Dynamic with its tag.
+			{from: macro :Null<Bool>, to: macro :Dynamic, expected: "TagNullableBool"},
+			{from: macro :Null<Bool>, to: macro :Any, expected: "TagNullableBool"},
+			// A Boolean read out of Dynamic accepts the tag.
+			{from: macro :Dynamic, to: macro :Null<Bool>, expected: "UntagNullableBool"},
+			{from: macro :Dynamic, to: macro :Bool, expected: "UnboxNullablePrimitive(bool)"},
 			// Pairs that the table does not list yet.
 			{from: macro :ConversionColor, to: macro :Null<ConversionShape>, expected: "null"},
 			{from: macro :ConversionShape, to: macro :ConversionColor, expected: "null"},
 			{from: macro :Null<Int>, to: macro :Float, expected: "null"},
-			{from: macro :Null<Bool>, to: macro :Dynamic, expected: "null"},
 			{from: macro :Dynamic, to: macro :Int, expected: "null"},
 			{from: macro :Int, to: macro :Dynamic, expected: "null"},
 		];

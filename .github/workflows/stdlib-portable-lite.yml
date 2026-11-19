@@ -34,7 +34,9 @@ jobs:
   stdlib_portable_tier1:
     name: Stdlib portable tier1 (shard ${{ matrix.shard_index }}/3)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Shard 0/3 test step: median 28.1, max 35.6 minutes; jobs 135192348760 and 134949663107 were
+    # cancelled at the old 45-minute limit after 3-4 minutes of setup (haxe_ocaml-vxnea).
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:

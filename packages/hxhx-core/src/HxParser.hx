@@ -1148,13 +1148,54 @@ class HxParser {
 
 	function isLikelyExtractorPatternStart():Bool {
 		return switch (cur.kind) {
-			case TIdent("_"):
-				peekKind().match(TDot);
+			case TIdent("_"): peekKind().match(TDot) || hasTopLevelExtractorArrow();
 			case TIdent(name): final nextKind = peekKind(); // Qualified static extractors such as `Std.parseInt(_) => code`
 				// appear inside upstream sys switch patterns.
-				nextKind.match(TDot) || (!isUpperStart(name) && nextKind.match(TLParen));
+				nextKind.match(TDot) || (!isUpperStart(name) && nextKind.match(TLParen)) || hasTopLevelExtractorArrow();
 			case _:
-				false;
+				hasTopLevelExtractorArrow();
+		}
+	}
+
+	/**
+		Whether `=>` follows at the top level of this pattern. Haxe 4.3.7 reads any pattern
+		followed by `=>` as an extractor, such as `_ + "," + _ => "abc,abc"` or
+		`(_ : Array<Dynamic>) => []`.
+
+		The scan stops at the end of the pattern: `:`, `,`, `|`, or `if` at the top level, or a
+		closing bracket of an enclosing pattern. Nothing is consumed.
+	**/
+	function hasTopLevelExtractorArrow():Bool {
+		final pending = [cur];
+		for (token in [peeked1, peeked2, peeked3])
+			if (token != null)
+				pending.push(token);
+		final lookahead = lex.fork();
+		var index = 0;
+		final nextToken = () -> index < pending.length ? pending[index++] : lookahead.next();
+		var depth = 0;
+		var previousWasEquals = false;
+		while (true) {
+			final token = nextToken();
+			final equalsBefore = previousWasEquals;
+			previousWasEquals = false;
+			switch (token.kind) {
+				case TEof:
+					return false;
+				case TLParen | TLBrace | TOther("[".code):
+					depth++;
+				case TRParen | TRBrace | TOther("]".code):
+					if (depth == 0)
+						return false;
+					depth--;
+				case TColon | TComma | TKeyword(KIf) | TOther("|".code) if (depth == 0):
+					return false;
+				case TOther(">".code) if (depth == 0 && equalsBefore):
+					return true;
+				case TOther("=".code):
+					previousWasEquals = true;
+				case _:
+			}
 		}
 	}
 
@@ -2887,6 +2928,9 @@ class HxParser {
 			final name = readIdent("field splice name");
 			return "__hxhx_macro_field_splice:" + name;
 		}
+		// `A.new` reads the constructor as a function value.
+		if (acceptKeyword(KNew))
+			return "new";
 		return readIdent("field name");
 	}
 
@@ -3681,6 +3725,12 @@ class HxParser {
 		// - Our expression grammar is intentionally incomplete; it may stop before `;`.
 		// - If we don't advance to the end of the statement, parsing can get stuck on
 		//   the same token forever.
+		//
+		// Haxe 4.3.7 does not require `;` after a statement whose last token is `}`, so the
+		// statement ends there. Skipping on would drop the next member or statement without
+		// an error, such as the method after `function f() return switch (x) { ... }`.
+		if (consumedRBrace && !cur.kind.match(TSemicolon))
+			return;
 		while (!stop() && !cur.kind.match(TSemicolon) && !cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
 			if (isSemicolonlessStatementBoundary())
 				return;
