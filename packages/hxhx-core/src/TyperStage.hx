@@ -2563,7 +2563,17 @@ class TyperStage {
 	/** Reuse the inferred receiver: lexical declarations inside it must not be visited twice during indexed dispatch. */
 	static function ordinaryIndexedElement(source:HxExpr, receiver:HxExpr, subscript:HxExpr, receiverType:TyType, scope:TyFunctionEnv, ctx:TyperContext,
 			pos:HxPos):TyType {
-		final indexType = inferExprType(subscript, scope, ctx, pos);
+		var indexType = inferExprType(subscript, scope, ctx, pos);
+		// An explicitly untyped operand stays unresolved: it must not acquire inferred storage.
+		if (!scope.isUntypedContext()
+			&& !TyFieldAssignment.explicitlyUntyped(receiver)
+			&& !TyFieldAssignment.explicitlyUntyped(subscript)
+			&& (receiverType.isUnknown() || indexType.isUnknown())) {
+			final inference = scope.getInference();
+			inference.constrainIndexedAccess(receiver, receiverType, subscript, indexType, scope, ctx.getIndex());
+			receiverType = inference.expressionType(receiver, receiverType, scope);
+			indexType = inference.expressionType(subscript, indexType, scope);
+		}
 		var elementType = arrayElementType(receiverType.unwrapNull());
 		if (elementType == null) {
 			final ancestor = TyNominalAncestor.view(ctx.getIndex(), receiverType.unwrapNull(), new TyNominalTypeId("Array"));
