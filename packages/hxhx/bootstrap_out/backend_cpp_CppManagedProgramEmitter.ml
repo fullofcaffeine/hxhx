@@ -295,7 +295,7 @@ let create = fun program -> let self = ({ __hx_type = HxType.instance_marker "ba
                   ignore (HxAnon.set __anon_93 "enums" (Obj.repr ((Obj.magic self : t).enums)));
                   ignore (HxAnon.set __anon_93 "defaultValue" (Obj.repr ((Obj.magic self : t).defaultValue)));
                   ignore (HxAnon.set __anon_93 "resolveConstructor" (Obj.repr (fun a0 -> resolveConstructor self a0)));
-                  ignore (HxAnon.set __anon_93 "resolveInstance" (Obj.repr (fun a0 a1 -> resolveInstance self a0 a1)));
+                  ignore (HxAnon.set __anon_93 "resolveInstance" (Obj.repr (fun a0 a1 -> resolveInstance self a0 (Obj.repr a1))));
                   __anon_93
                 ))) in HxArray.push __array_receiver_91 __array_arg_0_92
               )) done
@@ -322,7 +322,7 @@ let renderInitializer = fun self (projection : TypedBackendFieldInitializerProje
       ignore (HxAnon.set __anon_115 "enums" (Obj.repr ((Obj.magic self : t).enums)));
       ignore (HxAnon.set __anon_115 "defaultValue" (Obj.repr ((Obj.magic self : t).defaultValue)));
       ignore (HxAnon.set __anon_115 "resolveConstructor" (Obj.repr (fun a0 -> resolveConstructor self a0)));
-      ignore (HxAnon.set __anon_115 "resolveInstance" (Obj.repr (fun a0 a1 -> resolveInstance self a0 a1)));
+      ignore (HxAnon.set __anon_115 "resolveInstance" (Obj.repr (fun a0 a1 -> resolveInstance self a0 (Obj.repr a1))));
       __anon_115
     )) : string) in (
       tempResult := __assign_114;

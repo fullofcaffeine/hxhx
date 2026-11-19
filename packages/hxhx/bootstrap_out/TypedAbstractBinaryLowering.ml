@@ -431,6 +431,21 @@ let rec substituteExpression = fun expression place parameters renamedLocals -> 
   !tempResult
 )
 
+let primitiveOperand = fun value index -> (try let target = Obj.magic (TyAbstractPrimitiveOperation.view (Obj.magic index) (Obj.magic (TypedExpr.getType (Obj.magic value) ()))) in (
+  ignore (if target == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr value)) else ());
+  let conversion = Obj.magic (TyImplicitConversionPlan.select (Obj.magic index) (Obj.magic target) (Obj.magic (TypedExpr.getType (Obj.magic value) ()))) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t) in (
+    ignore (if conversion != Obj.magic (HxRuntime.hx_null) && TyImplicitConversionPlan.isAbstractTo (Obj.magic conversion) () && TyImplicitConversionPlan.isRepresentationPreservingAbstractConversion (Obj.magic conversion) () then let __assign_398 = Obj.magic (TyImplicitConversionPlan.apply (Obj.magic conversion) (Obj.magic value)) in (
+      tempResult := __assign_398;
+      __assign_398
+    ) else let __assign_399 = Obj.magic value in (
+      tempResult := __assign_399;
+      __assign_399
+    ));
+    !tempResult
+  )
+) with
+  | HxRuntime.Hx_return __ret_400 -> (Obj.obj __ret_400 : TypedExpr.t) : TypedExpr.t)
+
 let rec lowerInlineStatements = fun statements place parameters renamedLocals state helpers index filePath allocator declaration -> ignore (try ignore (let _g = ref 0 in while !_g < HxArray.length statements do ignore (let statement = Obj.magic (let __array_read_receiver_257 = statements in let __array_read_index_258 = !_g in HxArray.get (Obj.magic __array_read_receiver_257) __array_read_index_258) in (
   ignore (let __old_259 = !_g in let __new_260 = HxInt.add __old_259 1 in (
     ignore (_g := __new_260);
@@ -639,17 +654,30 @@ and lowerExpression = fun expression helpers index filePath allocator -> (try le
                 __arr_374
               ))))))
             ) else ());
-            Stdlib.raise (HxRuntime.Hx_return (Obj.repr rebuilt))
+            let tempTypedExpr1 = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t) in (
+              ignore (if let __enum_eq_left_375 = TypedExpr.getTag (Obj.magic rebuilt) () in let __enum_eq_right_376 = TypedExpr.CompoundAssign in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_375) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_376) then let __assign_377 = Obj.magic left in (
+                tempTypedExpr1 := __assign_377;
+                __assign_377
+              ) else let __assign_378 = Obj.magic (primitiveOperand (Obj.magic left) (Obj.magic index)) in (
+                tempTypedExpr1 := __assign_378;
+                __assign_378
+              ));
+              Stdlib.raise (HxRuntime.Hx_return (Obj.repr (TypedExpr.withExpressions (Obj.magic rebuilt) (Obj.magic (let __arr_379 = HxArray.create () in (
+                ignore (HxArray.push __arr_379 (!tempTypedExpr1));
+                ignore (HxArray.push __arr_379 (primitiveOperand (Obj.magic right) (Obj.magic index)));
+                __arr_379
+              ))))))
+            )
           ) else ());
           let declaration = Obj.magic (TyAbstractBinaryOperatorInfo.getDeclaration (Obj.magic (TyBoundAbstractBinaryOperator.getOperatorInfo (Obj.magic selected) ())) ()) in (
             ignore (if TyBoundAbstractBinaryOperator.getRequiresWriteback (Obj.magic selected) () && TyDeclarationInfo.getHasBody (Obj.magic declaration) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (fallbackWriteback (Obj.magic selected) (Obj.magic left) (Obj.magic right) (Obj.magic index) (filePath : string) (Obj.magic allocator)))) else ());
             ignore (if not (TyDeclarationInfo.getHasBody (Obj.magic declaration) ()) then let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TypedExpr.t) in (
-              ignore (if let __call_arg_0_375 = TyBoundAbstractBinaryOperator.getSourceOperator (Obj.magic selected) () in HxBinaryOperatorTools.isCompoundAssignment __call_arg_0_375 then let __assign_376 = Obj.magic (nativeBodylessCompound (Obj.magic selected) (Obj.magic left) (Obj.magic right) (Obj.magic index) (filePath : string) (Obj.magic allocator)) in (
-                tempResult := __assign_376;
-                __assign_376
-              ) else let __assign_377 = Obj.magic (nativeBodylessValue (Obj.magic selected) (Obj.magic left) (Obj.magic right) (Obj.magic index) (filePath : string) (Obj.magic allocator)) in (
-                tempResult := __assign_377;
-                __assign_377
+              ignore (if let __call_arg_0_380 = TyBoundAbstractBinaryOperator.getSourceOperator (Obj.magic selected) () in HxBinaryOperatorTools.isCompoundAssignment __call_arg_0_380 then let __assign_381 = Obj.magic (nativeBodylessCompound (Obj.magic selected) (Obj.magic left) (Obj.magic right) (Obj.magic index) (filePath : string) (Obj.magic allocator)) in (
+                tempResult := __assign_381;
+                __assign_381
+              ) else let __assign_382 = Obj.magic (nativeBodylessValue (Obj.magic selected) (Obj.magic left) (Obj.magic right) (Obj.magic index) (filePath : string) (Obj.magic allocator)) in (
+                tempResult := __assign_382;
+                __assign_382
               ));
               Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
             ) else ());
@@ -662,62 +690,62 @@ and lowerExpression = fun expression helpers index filePath allocator -> (try le
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_378 -> (Obj.obj __ret_378 : TypedExpr.t) : TypedExpr.t)
+  | HxRuntime.Hx_return __ret_383 -> (Obj.obj __ret_383 : TypedExpr.t) : TypedExpr.t)
 
-let rec lowerStatement = fun statement helpers index filePath allocator -> let _g = Obj.magic (let __arr_379 = HxArray.create () in __arr_379) in let _g1 = ref 0 in let _g2 = Obj.magic (TypedStmt.getExpressions (Obj.magic statement) ()) in (
-  ignore (while !_g1 < HxArray.length _g2 do ignore (let expression = Obj.magic (let __array_read_receiver_380 = _g2 in let __array_read_index_381 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_380) __array_read_index_381) in (
-    ignore (let __old_382 = !_g1 in let __new_383 = HxInt.add __old_382 1 in (
-      ignore (_g1 := __new_383);
-      __new_383
+let rec lowerStatement = fun statement helpers index filePath allocator -> let _g = Obj.magic (let __arr_384 = HxArray.create () in __arr_384) in let _g1 = ref 0 in let _g2 = Obj.magic (TypedStmt.getExpressions (Obj.magic statement) ()) in (
+  ignore (while !_g1 < HxArray.length _g2 do ignore (let expression = Obj.magic (let __array_read_receiver_385 = _g2 in let __array_read_index_386 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_385) __array_read_index_386) in (
+    ignore (let __old_387 = !_g1 in let __new_388 = HxInt.add __old_387 1 in (
+      ignore (_g1 := __new_388);
+      __new_388
     ));
-    let __array_receiver_384 = Obj.magic _g in let __array_arg_0_385 = Obj.magic (lowerExpression (Obj.magic expression) (Obj.magic helpers) (Obj.magic index) (filePath : string) (Obj.magic allocator)) in HxArray.push __array_receiver_384 __array_arg_0_385
+    let __array_receiver_389 = Obj.magic _g in let __array_arg_0_390 = Obj.magic (lowerExpression (Obj.magic expression) (Obj.magic helpers) (Obj.magic index) (filePath : string) (Obj.magic allocator)) in HxArray.push __array_receiver_389 __array_arg_0_390
   )) done);
-  let tempArray = Obj.magic _g in let expressions = Obj.magic tempArray in let _g = Obj.magic (let __arr_386 = HxArray.create () in __arr_386) in let _g1 = ref 0 in let _g2 = Obj.magic (TypedStmt.getStatements (Obj.magic statement) ()) in (
-    ignore (while !_g1 < HxArray.length _g2 do ignore (let child = Obj.magic (let __array_read_receiver_387 = _g2 in let __array_read_index_388 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_387) __array_read_index_388) in (
-      ignore (let __old_389 = !_g1 in let __new_390 = HxInt.add __old_389 1 in (
-        ignore (_g1 := __new_390);
-        __new_390
+  let tempArray = Obj.magic _g in let expressions = Obj.magic tempArray in let _g = Obj.magic (let __arr_391 = HxArray.create () in __arr_391) in let _g1 = ref 0 in let _g2 = Obj.magic (TypedStmt.getStatements (Obj.magic statement) ()) in (
+    ignore (while !_g1 < HxArray.length _g2 do ignore (let child = Obj.magic (let __array_read_receiver_392 = _g2 in let __array_read_index_393 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_392) __array_read_index_393) in (
+      ignore (let __old_394 = !_g1 in let __new_395 = HxInt.add __old_394 1 in (
+        ignore (_g1 := __new_395);
+        __new_395
       ));
-      let __array_receiver_391 = Obj.magic _g in let __array_arg_0_392 = Obj.magic (lowerStatement (Obj.magic child) (Obj.magic helpers) (Obj.magic index) (filePath : string) (Obj.magic allocator)) in HxArray.push __array_receiver_391 __array_arg_0_392
+      let __array_receiver_396 = Obj.magic _g in let __array_arg_0_397 = Obj.magic (lowerStatement (Obj.magic child) (Obj.magic helpers) (Obj.magic index) (filePath : string) (Obj.magic allocator)) in HxArray.push __array_receiver_396 __array_arg_0_397
     )) done);
     let tempArray1 = Obj.magic _g in let statements = Obj.magic tempArray1 in TypedStmt.withChildren (Obj.magic statement) (Obj.magic expressions) (Obj.magic statements)
   )
 )
 
 let rec assertNoAbstractBinaryExpression = fun expression index owner -> ignore (try ignore (let _g = ref 0 in let _g1 = Obj.magic (TypedExpr.getExpressions (Obj.magic expression) ()) in (
-  ignore (while !_g < HxArray.length _g1 do ignore (let child = Obj.magic (let __array_read_receiver_393 = _g1 in let __array_read_index_394 = !_g in HxArray.get (Obj.magic __array_read_receiver_393) __array_read_index_394) in (
-    ignore (let __old_395 = !_g in let __new_396 = HxInt.add __old_395 1 in (
-      ignore (_g := __new_396);
-      __new_396
+  ignore (while !_g < HxArray.length _g1 do ignore (let child = Obj.magic (let __array_read_receiver_401 = _g1 in let __array_read_index_402 = !_g in HxArray.get (Obj.magic __array_read_receiver_401) __array_read_index_402) in (
+    ignore (let __old_403 = !_g in let __new_404 = HxInt.add __old_403 1 in (
+      ignore (_g := __new_404);
+      __new_404
     ));
     assertNoAbstractBinaryExpression (Obj.magic child) (Obj.magic index) (owner : string)
   )) done);
-  ignore (if (let __enum_eq_left_397 = TypedExpr.getTag (Obj.magic expression) () in let __enum_eq_right_398 = TypedExpr.Binary in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_397) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_398)) && (let __enum_eq_left_399 = TypedExpr.getTag (Obj.magic expression) () in let __enum_eq_right_400 = TypedExpr.CompoundAssign in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_399) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_400)) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
+  ignore (if (let __enum_eq_left_405 = TypedExpr.getTag (Obj.magic expression) () in let __enum_eq_right_406 = TypedExpr.Binary in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_405) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_406)) && (let __enum_eq_left_407 = TypedExpr.getTag (Obj.magic expression) () in let __enum_eq_right_408 = TypedExpr.CompoundAssign in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_407) != HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_408)) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   let texts = Obj.magic (TypedExpr.getTexts (Obj.magic expression) ()) in let children = Obj.magic (TypedExpr.getExpressions (Obj.magic expression) ()) in (
     ignore (if HxArray.length texts <> 1 || HxArray.length children <> 2 then HxType.hx_throw_typed_rtti (Obj.repr ("lowered typed binary expression has an invalid structural payload in " ^ HxString.toStdString owner)) ["Dynamic"] else ());
-    ignore (if not (let __call_arg_0_401 = let __array_read_receiver_402 = texts in let __array_read_index_403 = 0 in HxArray.get (Obj.magic __array_read_receiver_402) __array_read_index_403 in HxBinaryOperatorTools.isAbstractOverloadable __call_arg_0_401) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
-    ignore (if TyAbstractBinaryBinding.permitsOrdinaryFallback (let __array_read_receiver_404 = texts in let __array_read_index_405 = 0 in HxArray.get (Obj.magic __array_read_receiver_404) __array_read_index_405 : string) (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_406 = children in let __array_read_index_407 = 0 in HxArray.get (Obj.magic __array_read_receiver_406) __array_read_index_407)) ())) (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_408 = children in let __array_read_index_409 = 1 in HxArray.get (Obj.magic __array_read_receiver_408) __array_read_index_409)) ())) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
-    let _g = ref 0 in while !_g < HxArray.length children do ignore (let child = Obj.magic (let __array_read_receiver_410 = children in let __array_read_index_411 = !_g in HxArray.get (Obj.magic __array_read_receiver_410) __array_read_index_411) in (
-      ignore (let __old_412 = !_g in let __new_413 = HxInt.add __old_412 1 in (
-        ignore (_g := __new_413);
-        __new_413
+    ignore (if not (let __call_arg_0_409 = let __array_read_receiver_410 = texts in let __array_read_index_411 = 0 in HxArray.get (Obj.magic __array_read_receiver_410) __array_read_index_411 in HxBinaryOperatorTools.isAbstractOverloadable __call_arg_0_409) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
+    ignore (if TyAbstractBinaryBinding.permitsOrdinaryFallback (let __array_read_receiver_412 = texts in let __array_read_index_413 = 0 in HxArray.get (Obj.magic __array_read_receiver_412) __array_read_index_413 : string) (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_414 = children in let __array_read_index_415 = 0 in HxArray.get (Obj.magic __array_read_receiver_414) __array_read_index_415)) ())) (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_416 = children in let __array_read_index_417 = 1 in HxArray.get (Obj.magic __array_read_receiver_416) __array_read_index_417)) ())) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
+    let _g = ref 0 in while !_g < HxArray.length children do ignore (let child = Obj.magic (let __array_read_receiver_418 = children in let __array_read_index_419 = !_g in HxArray.get (Obj.magic __array_read_receiver_418) __array_read_index_419) in (
+      ignore (let __old_420 = !_g in let __new_421 = HxInt.add __old_420 1 in (
+        ignore (_g := __new_421);
+        __new_421
       ));
-      let identity = Obj.magic (TyType.getNominalIdentity (Obj.magic (TypedExpr.getType (Obj.magic child) ())) ()) in if identity != Obj.magic (HxRuntime.hx_null) && TyperIndex.getAbstractByFullName (Obj.magic index) (TyNominalTypeId.getCanonicalName (Obj.magic identity) () : string) != Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_416 = "abstract binary operation survived shared typed lowering in " in let __string_part_417 = HxString.toStdString owner in let __string_part_418 = ": " in let __string_part_419 = HxString.toStdString (TyNominalTypeId.getCanonicalName (Obj.magic identity) ()) in let __string_part_420 = " " in let __string_part_421 = HxString.toStdString (let __array_read_receiver_414 = texts in let __array_read_index_415 = 0 in HxArray.get (Obj.magic __array_read_receiver_414) __array_read_index_415) in ((((__string_part_416 ^ __string_part_417) ^ __string_part_418) ^ __string_part_419) ^ __string_part_420) ^ __string_part_421)) ["Dynamic"] else ()
+      let identity = Obj.magic (TyType.getNominalIdentity (Obj.magic (TypedExpr.getType (Obj.magic child) ())) ()) in if identity != Obj.magic (HxRuntime.hx_null) && TyperIndex.getAbstractByFullName (Obj.magic index) (TyNominalTypeId.getCanonicalName (Obj.magic identity) () : string) != Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_424 = "abstract binary operation survived shared typed lowering in " in let __string_part_425 = HxString.toStdString owner in let __string_part_426 = ": " in let __string_part_427 = HxString.toStdString (TyNominalTypeId.getCanonicalName (Obj.magic identity) ()) in let __string_part_428 = " " in let __string_part_429 = HxString.toStdString (let __array_read_receiver_422 = texts in let __array_read_index_423 = 0 in HxArray.get (Obj.magic __array_read_receiver_422) __array_read_index_423) in ((((__string_part_424 ^ __string_part_425) ^ __string_part_426) ^ __string_part_427) ^ __string_part_428) ^ __string_part_429)) ["Dynamic"] else ()
     )) done
   )
 )) with
   | HxRuntime.Hx_return_void -> ())
 
-let rec assertNoAbstractBinaryStatements = fun statements index owner -> ignore (let _g = ref 0 in while !_g < HxArray.length statements do ignore (let statement = Obj.magic (let __array_read_receiver_423 = statements in let __array_read_index_424 = !_g in HxArray.get (Obj.magic __array_read_receiver_423) __array_read_index_424) in (
-  ignore (let __old_425 = !_g in let __new_426 = HxInt.add __old_425 1 in (
-    ignore (_g := __new_426);
-    __new_426
+let rec assertNoAbstractBinaryStatements = fun statements index owner -> ignore (let _g = ref 0 in while !_g < HxArray.length statements do ignore (let statement = Obj.magic (let __array_read_receiver_431 = statements in let __array_read_index_432 = !_g in HxArray.get (Obj.magic __array_read_receiver_431) __array_read_index_432) in (
+  ignore (let __old_433 = !_g in let __new_434 = HxInt.add __old_433 1 in (
+    ignore (_g := __new_434);
+    __new_434
   ));
   let _g2 = ref 0 in let _g1 = Obj.magic (TypedStmt.getExpressions (Obj.magic statement) ()) in (
-    ignore (while !_g2 < HxArray.length _g1 do ignore (let expression = Obj.magic (let __array_read_receiver_427 = _g1 in let __array_read_index_428 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_427) __array_read_index_428) in (
-      ignore (let __old_429 = !_g2 in let __new_430 = HxInt.add __old_429 1 in (
-        ignore (_g2 := __new_430);
-        __new_430
+    ignore (while !_g2 < HxArray.length _g1 do ignore (let expression = Obj.magic (let __array_read_receiver_435 = _g1 in let __array_read_index_436 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_435) __array_read_index_436) in (
+      ignore (let __old_437 = !_g2 in let __new_438 = HxInt.add __old_437 1 in (
+        ignore (_g2 := __new_438);
+        __new_438
       ));
       assertNoAbstractBinaryExpression (Obj.magic expression) (Obj.magic index) (owner : string)
     )) done);
@@ -725,34 +753,34 @@ let rec assertNoAbstractBinaryStatements = fun statements index owner -> ignore 
   )
 )) done)
 
-let assertNoAbstractBinary = fun classes index -> ignore (let _g = ref 0 in while !_g < HxArray.length classes do ignore (let typedClass = Obj.magic (let __array_read_receiver_431 = classes in let __array_read_index_432 = !_g in HxArray.get (Obj.magic __array_read_receiver_431) __array_read_index_432) in (
-  ignore (let __old_433 = !_g in let __new_434 = HxInt.add __old_433 1 in (
-    ignore (_g := __new_434);
-    __new_434
+let assertNoAbstractBinary = fun classes index -> ignore (let _g = ref 0 in while !_g < HxArray.length classes do ignore (let typedClass = Obj.magic (let __array_read_receiver_439 = classes in let __array_read_index_440 = !_g in HxArray.get (Obj.magic __array_read_receiver_439) __array_read_index_440) in (
+  ignore (let __old_441 = !_g in let __new_442 = HxInt.add __old_441 1 in (
+    ignore (_g := __new_442);
+    __new_442
   ));
-  let _g2 = ref 0 in let _g1 = Obj.magic (TypedClass.getFunctions (Obj.magic typedClass) ()) in while !_g2 < HxArray.length _g1 do ignore (let typedFunction = Obj.magic (let __array_read_receiver_435 = _g1 in let __array_read_index_436 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_435) __array_read_index_436) in (
-    ignore (let __old_437 = !_g2 in let __new_438 = HxInt.add __old_437 1 in (
-      ignore (_g2 := __new_438);
-      __new_438
+  let _g2 = ref 0 in let _g1 = Obj.magic (TypedClass.getFunctions (Obj.magic typedClass) ()) in while !_g2 < HxArray.length _g1 do ignore (let typedFunction = Obj.magic (let __array_read_receiver_443 = _g1 in let __array_read_index_444 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_443) __array_read_index_444) in (
+    ignore (let __old_445 = !_g2 in let __new_446 = HxInt.add __old_445 1 in (
+      ignore (_g2 := __new_446);
+      __new_446
     ));
     let owner = (TypedFunction.getStableIdentity (Obj.magic typedFunction) () : string) in let _g3 = ref 0 in let _g4 = Obj.magic (TypedFunction.getDefaults (Obj.magic typedFunction) ()) in (
-      ignore (while !_g3 < HxArray.length _g4 do ignore (let value = Obj.magic (let __array_read_receiver_439 = _g4 in let __array_read_index_440 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_439) __array_read_index_440) in (
-        ignore (let __old_441 = !_g3 in let __new_442 = HxInt.add __old_441 1 in (
-          ignore (_g3 := __new_442);
-          __new_442
+      ignore (while !_g3 < HxArray.length _g4 do ignore (let value = Obj.magic (let __array_read_receiver_447 = _g4 in let __array_read_index_448 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_447) __array_read_index_448) in (
+        ignore (let __old_449 = !_g3 in let __new_450 = HxInt.add __old_449 1 in (
+          ignore (_g3 := __new_450);
+          __new_450
         ));
         assertNoAbstractBinaryExpression (Obj.magic (TypedFunctionDefault.getExpression (Obj.magic value) ())) (Obj.magic index) (owner : string)
       )) done);
-      let _g3 = ref 0 in let _g4 = Obj.magic (TypedFunctionBody.getStatements (Obj.magic (TypedFunction.getBody (Obj.magic typedFunction) ())) ()) in while !_g3 < HxArray.length _g4 do ignore (let statement = Obj.magic (let __array_read_receiver_443 = _g4 in let __array_read_index_444 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_443) __array_read_index_444) in (
-        ignore (let __old_445 = !_g3 in let __new_446 = HxInt.add __old_445 1 in (
-          ignore (_g3 := __new_446);
-          __new_446
+      let _g3 = ref 0 in let _g4 = Obj.magic (TypedFunctionBody.getStatements (Obj.magic (TypedFunction.getBody (Obj.magic typedFunction) ())) ()) in while !_g3 < HxArray.length _g4 do ignore (let statement = Obj.magic (let __array_read_receiver_451 = _g4 in let __array_read_index_452 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_451) __array_read_index_452) in (
+        ignore (let __old_453 = !_g3 in let __new_454 = HxInt.add __old_453 1 in (
+          ignore (_g3 := __new_454);
+          __new_454
         ));
         let _g5 = ref 0 in let _g6 = Obj.magic (TypedStmt.getExpressions (Obj.magic statement) ()) in (
-          ignore (while !_g5 < HxArray.length _g6 do ignore (let expression = Obj.magic (let __array_read_receiver_447 = _g6 in let __array_read_index_448 = !_g5 in HxArray.get (Obj.magic __array_read_receiver_447) __array_read_index_448) in (
-            ignore (let __old_449 = !_g5 in let __new_450 = HxInt.add __old_449 1 in (
-              ignore (_g5 := __new_450);
-              __new_450
+          ignore (while !_g5 < HxArray.length _g6 do ignore (let expression = Obj.magic (let __array_read_receiver_455 = _g6 in let __array_read_index_456 = !_g5 in HxArray.get (Obj.magic __array_read_receiver_455) __array_read_index_456) in (
+            ignore (let __old_457 = !_g5 in let __new_458 = HxInt.add __old_457 1 in (
+              ignore (_g5 := __new_458);
+              __new_458
             ));
             assertNoAbstractBinaryExpression (Obj.magic expression) (Obj.magic index) (owner : string)
           )) done);
@@ -765,15 +793,15 @@ let assertNoAbstractBinary = fun classes index -> ignore (let _g = ref 0 in whil
 
 let collectHelpers = fun classes helpers -> ignore (try ignore ((
   ignore (if classes == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
-  let _g = ref 0 in while !_g < HxArray.length classes do ignore (let typedClass = Obj.magic (let __array_read_receiver_451 = classes in let __array_read_index_452 = !_g in HxArray.get (Obj.magic __array_read_receiver_451) __array_read_index_452) in (
-    ignore (let __old_453 = !_g in let __new_454 = HxInt.add __old_453 1 in (
-      ignore (_g := __new_454);
-      __new_454
+  let _g = ref 0 in while !_g < HxArray.length classes do ignore (let typedClass = Obj.magic (let __array_read_receiver_459 = classes in let __array_read_index_460 = !_g in HxArray.get (Obj.magic __array_read_receiver_459) __array_read_index_460) in (
+    ignore (let __old_461 = !_g in let __new_462 = HxInt.add __old_461 1 in (
+      ignore (_g := __new_462);
+      __new_462
     ));
-    let _g2 = ref 0 in let _g1 = Obj.magic (TypedClass.getFunctions (Obj.magic typedClass) ()) in while !_g2 < HxArray.length _g1 do ignore (let typedFunction = Obj.magic (let __array_read_receiver_455 = _g1 in let __array_read_index_456 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_455) __array_read_index_456) in (
-      ignore (let __old_457 = !_g2 in let __new_458 = HxInt.add __old_457 1 in (
-        ignore (_g2 := __new_458);
-        __new_458
+    let _g2 = ref 0 in let _g1 = Obj.magic (TypedClass.getFunctions (Obj.magic typedClass) ()) in while !_g2 < HxArray.length _g1 do ignore (let typedFunction = Obj.magic (let __array_read_receiver_463 = _g1 in let __array_read_index_464 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_463) __array_read_index_464) in (
+      ignore (let __old_465 = !_g2 in let __new_466 = HxInt.add __old_465 1 in (
+        ignore (_g2 := __new_466);
+        __new_466
       ));
       let declaration = Obj.magic (TypedFunction.getDeclaration (Obj.magic typedFunction) ()) in if declaration != Obj.magic (HxRuntime.hx_null) then ignore (let key = (helperKey (Obj.magic declaration) : string) in HxMap.set_string (Obj.magic helpers) (key : string) typedFunction) else ()
     )) done
@@ -783,67 +811,67 @@ let collectHelpers = fun classes helpers -> ignore (try ignore ((
 
 let lowerClassesWithHelpers = fun classes index filePath helpers -> (try (
   ignore (if classes == Obj.magic (HxRuntime.hx_null) || index == Obj.magic (HxRuntime.hx_null) then let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TypedClass.t HxArray.t) in (
-    ignore (if classes == Obj.magic (HxRuntime.hx_null) then let __assign_460 = Obj.magic (let __arr_461 = HxArray.create () in __arr_461) in (
-      tempResult := __assign_460;
-      __assign_460
-    ) else let __assign_462 = Obj.magic (let __array_receiver_463 = Obj.magic classes in HxArray.copy __array_receiver_463) in (
-      tempResult := __assign_462;
-      __assign_462
+    ignore (if classes == Obj.magic (HxRuntime.hx_null) then let __assign_468 = Obj.magic (let __arr_469 = HxArray.create () in __arr_469) in (
+      tempResult := __assign_468;
+      __assign_468
+    ) else let __assign_470 = Obj.magic (let __array_receiver_471 = Obj.magic classes in HxArray.copy __array_receiver_471) in (
+      tempResult := __assign_470;
+      __assign_470
     ));
     Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
   ) else ());
-  let _g = Obj.magic (let __arr_464 = HxArray.create () in __arr_464) in let _g1 = ref 0 in (
-    ignore (while !_g1 < HxArray.length classes do ignore (let typedClass = Obj.magic (let __array_read_receiver_465 = classes in let __array_read_index_466 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_465) __array_read_index_466) in (
-      ignore (let __old_467 = !_g1 in let __new_468 = HxInt.add __old_467 1 in (
-        ignore (_g1 := __new_468);
-        __new_468
+  let _g = Obj.magic (let __arr_472 = HxArray.create () in __arr_472) in let _g1 = ref 0 in (
+    ignore (while !_g1 < HxArray.length classes do ignore (let typedClass = Obj.magic (let __array_read_receiver_473 = classes in let __array_read_index_474 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_473) __array_read_index_474) in (
+      ignore (let __old_475 = !_g1 in let __new_476 = HxInt.add __old_475 1 in (
+        ignore (_g1 := __new_476);
+        __new_476
       ));
-      let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : TypedFunction.t HxArray.t) in let _g2 = Obj.magic (let __arr_469 = HxArray.create () in __arr_469) in let _g3 = ref 0 in let _g4 = Obj.magic (TypedClass.getFunctions (Obj.magic typedClass) ()) in (
-        ignore (while !_g3 < HxArray.length _g4 do ignore (let typedFunction = Obj.magic (let __array_read_receiver_470 = _g4 in let __array_read_index_471 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_470) __array_read_index_471) in (
-          ignore (let __old_472 = !_g3 in let __new_473 = HxInt.add __old_472 1 in (
-            ignore (_g3 := __new_473);
-            __new_473
+      let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : TypedFunction.t HxArray.t) in let _g2 = Obj.magic (let __arr_477 = HxArray.create () in __arr_477) in let _g3 = ref 0 in let _g4 = Obj.magic (TypedClass.getFunctions (Obj.magic typedClass) ()) in (
+        ignore (while !_g3 < HxArray.length _g4 do ignore (let typedFunction = Obj.magic (let __array_read_receiver_478 = _g4 in let __array_read_index_479 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_478) __array_read_index_479) in (
+          ignore (let __old_480 = !_g3 in let __new_481 = HxInt.add __old_480 1 in (
+            ignore (_g3 := __new_481);
+            __new_481
           ));
-          let body = Obj.magic (TypedFunction.getBody (Obj.magic typedFunction) ()) in let allocator = TyCompilerTemporaryAllocator.create (TypedFunction.getStableIdentity (Obj.magic typedFunction) () : string) ("typed-abstract-binary-v3" : string) ("__hxhx_abstract_binary_" : string) in let tempArray2 = ref (Obj.magic (HxRuntime.hx_null) : TypedStmt.t HxArray.t) in let _g5 = Obj.magic (let __arr_474 = HxArray.create () in __arr_474) in let _g6 = ref 0 in let _g7 = Obj.magic (TypedFunctionBody.getStatements (Obj.magic body) ()) in (
-            ignore (while !_g6 < HxArray.length _g7 do ignore (let statement = Obj.magic (let __array_read_receiver_475 = _g7 in let __array_read_index_476 = !_g6 in HxArray.get (Obj.magic __array_read_receiver_475) __array_read_index_476) in (
-              ignore (let __old_477 = !_g6 in let __new_478 = HxInt.add __old_477 1 in (
-                ignore (_g6 := __new_478);
-                __new_478
+          let body = Obj.magic (TypedFunction.getBody (Obj.magic typedFunction) ()) in let allocator = TyCompilerTemporaryAllocator.create (TypedFunction.getStableIdentity (Obj.magic typedFunction) () : string) ("typed-abstract-binary-v3" : string) ("__hxhx_abstract_binary_" : string) in let tempArray2 = ref (Obj.magic (HxRuntime.hx_null) : TypedStmt.t HxArray.t) in let _g5 = Obj.magic (let __arr_482 = HxArray.create () in __arr_482) in let _g6 = ref 0 in let _g7 = Obj.magic (TypedFunctionBody.getStatements (Obj.magic body) ()) in (
+            ignore (while !_g6 < HxArray.length _g7 do ignore (let statement = Obj.magic (let __array_read_receiver_483 = _g7 in let __array_read_index_484 = !_g6 in HxArray.get (Obj.magic __array_read_receiver_483) __array_read_index_484) in (
+              ignore (let __old_485 = !_g6 in let __new_486 = HxInt.add __old_485 1 in (
+                ignore (_g6 := __new_486);
+                __new_486
               ));
-              let __array_receiver_479 = Obj.magic _g5 in let __array_arg_0_480 = Obj.magic (lowerStatement (Obj.magic statement) (Obj.magic helpers) (Obj.magic index) (filePath : string) (Obj.magic allocator)) in HxArray.push __array_receiver_479 __array_arg_0_480
+              let __array_receiver_487 = Obj.magic _g5 in let __array_arg_0_488 = Obj.magic (lowerStatement (Obj.magic statement) (Obj.magic helpers) (Obj.magic index) (filePath : string) (Obj.magic allocator)) in HxArray.push __array_receiver_487 __array_arg_0_488
             )) done);
-            ignore (let __assign_481 = Obj.magic _g5 in (
-              tempArray2 := __assign_481;
-              __assign_481
+            ignore (let __assign_489 = Obj.magic _g5 in (
+              tempArray2 := __assign_489;
+              __assign_489
             ));
-            let statements = Obj.magic (!tempArray2) in let tempArray3 = ref (Obj.magic (HxRuntime.hx_null) : TypedFunctionDefault.t HxArray.t) in let _g5 = Obj.magic (let __arr_482 = HxArray.create () in __arr_482) in let _g6 = ref 0 in let _g7 = Obj.magic (TypedFunction.getDefaults (Obj.magic typedFunction) ()) in (
-              ignore (while !_g6 < HxArray.length _g7 do ignore (let value = Obj.magic (let __array_read_receiver_483 = _g7 in let __array_read_index_484 = !_g6 in HxArray.get (Obj.magic __array_read_receiver_483) __array_read_index_484) in (
-                ignore (let __old_485 = !_g6 in let __new_486 = HxInt.add __old_485 1 in (
-                  ignore (_g6 := __new_486);
-                  __new_486
+            let statements = Obj.magic (!tempArray2) in let tempArray3 = ref (Obj.magic (HxRuntime.hx_null) : TypedFunctionDefault.t HxArray.t) in let _g5 = Obj.magic (let __arr_490 = HxArray.create () in __arr_490) in let _g6 = ref 0 in let _g7 = Obj.magic (TypedFunction.getDefaults (Obj.magic typedFunction) ()) in (
+              ignore (while !_g6 < HxArray.length _g7 do ignore (let value = Obj.magic (let __array_read_receiver_491 = _g7 in let __array_read_index_492 = !_g6 in HxArray.get (Obj.magic __array_read_receiver_491) __array_read_index_492) in (
+                ignore (let __old_493 = !_g6 in let __new_494 = HxInt.add __old_493 1 in (
+                  ignore (_g6 := __new_494);
+                  __new_494
                 ));
-                let __array_receiver_487 = Obj.magic _g5 in let __array_arg_0_488 = Obj.magic (TypedFunctionDefault.create (TypedFunctionDefault.getParameterIndex (Obj.magic value) ()) (Obj.magic (lowerExpression (Obj.magic (TypedFunctionDefault.getExpression (Obj.magic value) ())) (Obj.magic helpers) (Obj.magic index) (filePath : string) (Obj.magic allocator)))) in HxArray.push __array_receiver_487 __array_arg_0_488
+                let __array_receiver_495 = Obj.magic _g5 in let __array_arg_0_496 = Obj.magic (TypedFunctionDefault.create (TypedFunctionDefault.getParameterIndex (Obj.magic value) ()) (Obj.magic (lowerExpression (Obj.magic (TypedFunctionDefault.getExpression (Obj.magic value) ())) (Obj.magic helpers) (Obj.magic index) (filePath : string) (Obj.magic allocator)))) in HxArray.push __array_receiver_495 __array_arg_0_496
               )) done);
-              ignore (let __assign_489 = Obj.magic _g5 in (
-                tempArray3 := __assign_489;
-                __assign_489
+              ignore (let __assign_497 = Obj.magic _g5 in (
+                tempArray3 := __assign_497;
+                __assign_497
               ));
-              let __array_receiver_490 = Obj.magic _g2 in let __array_arg_0_491 = Obj.magic (TypedFunction.withBody (Obj.magic typedFunction) (Obj.magic (TypedFunctionBody.create (Obj.magic statements) (TypedFunctionBody.getSourceFingerprint (Obj.magic body) () : string))) (Obj.magic (!tempArray3))) in HxArray.push __array_receiver_490 __array_arg_0_491
+              let __array_receiver_498 = Obj.magic _g2 in let __array_arg_0_499 = Obj.magic (TypedFunction.withBody (Obj.magic typedFunction) (Obj.magic (TypedFunctionBody.create (Obj.magic statements) (TypedFunctionBody.getSourceFingerprint (Obj.magic body) () : string))) (Obj.magic (!tempArray3))) in HxArray.push __array_receiver_498 __array_arg_0_499
             )
           )
         )) done);
-        ignore (let __assign_492 = Obj.magic _g2 in (
-          tempArray1 := __assign_492;
-          __assign_492
+        ignore (let __assign_500 = Obj.magic _g2 in (
+          tempArray1 := __assign_500;
+          __assign_500
         ));
-        let __array_receiver_493 = Obj.magic _g in let __array_arg_0_494 = Obj.magic (TypedClass.withFunctions (Obj.magic typedClass) (Obj.magic (!tempArray1))) in HxArray.push __array_receiver_493 __array_arg_0_494
+        let __array_receiver_501 = Obj.magic _g in let __array_arg_0_502 = Obj.magic (TypedClass.withFunctions (Obj.magic typedClass) (Obj.magic (!tempArray1))) in HxArray.push __array_receiver_501 __array_arg_0_502
       )
     )) done);
     ignore (assertNoAbstractBinary (Obj.magic _g) (Obj.magic index));
     _g
   )
 ) with
-  | HxRuntime.Hx_return __ret_495 -> (Obj.obj __ret_495 : TypedClass.t HxArray.t) : TypedClass.t HxArray.t)
+  | HxRuntime.Hx_return __ret_503 -> (Obj.obj __ret_503 : TypedClass.t HxArray.t) : TypedClass.t HxArray.t)
 
 let lowerClasses = fun classes index filePath -> let helpers = Obj.magic (HxMap.create_string ()) in (
   ignore (collectHelpers (Obj.magic classes) (Obj.magic helpers));
@@ -852,33 +880,33 @@ let lowerClasses = fun classes index filePath -> let helpers = Obj.magic (HxMap.
 
 let lowerModules = fun modules index -> (try (
   ignore (if modules == Obj.magic (HxRuntime.hx_null) || index == Obj.magic (HxRuntime.hx_null) then let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TypedModule.t HxArray.t) in (
-    ignore (if modules == Obj.magic (HxRuntime.hx_null) then let __assign_496 = Obj.magic (let __arr_497 = HxArray.create () in __arr_497) in (
-      tempResult := __assign_496;
-      __assign_496
-    ) else let __assign_498 = Obj.magic (let __array_receiver_499 = Obj.magic modules in HxArray.copy __array_receiver_499) in (
-      tempResult := __assign_498;
-      __assign_498
+    ignore (if modules == Obj.magic (HxRuntime.hx_null) then let __assign_504 = Obj.magic (let __arr_505 = HxArray.create () in __arr_505) in (
+      tempResult := __assign_504;
+      __assign_504
+    ) else let __assign_506 = Obj.magic (let __array_receiver_507 = Obj.magic modules in HxArray.copy __array_receiver_507) in (
+      tempResult := __assign_506;
+      __assign_506
     ));
     Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
   ) else ());
   let helpers = Obj.magic (HxMap.create_string ()) in let _g = ref 0 in (
-    ignore (while !_g < HxArray.length modules do ignore (let typedModule = Obj.magic (let __array_read_receiver_500 = modules in let __array_read_index_501 = !_g in HxArray.get (Obj.magic __array_read_receiver_500) __array_read_index_501) in (
-      ignore (let __old_502 = !_g in let __new_503 = HxInt.add __old_502 1 in (
-        ignore (_g := __new_503);
-        __new_503
+    ignore (while !_g < HxArray.length modules do ignore (let typedModule = Obj.magic (let __array_read_receiver_508 = modules in let __array_read_index_509 = !_g in HxArray.get (Obj.magic __array_read_receiver_508) __array_read_index_509) in (
+      ignore (let __old_510 = !_g in let __new_511 = HxInt.add __old_510 1 in (
+        ignore (_g := __new_511);
+        __new_511
       ));
       collectHelpers (Obj.magic (TypedModule.getTypedClasses (Obj.magic typedModule) ())) (Obj.magic helpers)
     )) done);
-    let _g = Obj.magic (let __arr_504 = HxArray.create () in __arr_504) in let _g1 = ref 0 in (
-      ignore (while !_g1 < HxArray.length modules do ignore (let typedModule = Obj.magic (let __array_read_receiver_505 = modules in let __array_read_index_506 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_505) __array_read_index_506) in (
-        ignore (let __old_507 = !_g1 in let __new_508 = HxInt.add __old_507 1 in (
-          ignore (_g1 := __new_508);
-          __new_508
+    let _g = Obj.magic (let __arr_512 = HxArray.create () in __arr_512) in let _g1 = ref 0 in (
+      ignore (while !_g1 < HxArray.length modules do ignore (let typedModule = Obj.magic (let __array_read_receiver_513 = modules in let __array_read_index_514 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_513) __array_read_index_514) in (
+        ignore (let __old_515 = !_g1 in let __new_516 = HxInt.add __old_515 1 in (
+          ignore (_g1 := __new_516);
+          __new_516
         ));
-        let __array_receiver_509 = Obj.magic _g in let __array_arg_0_510 = Obj.magic (TypedModule.withTypedClasses (Obj.magic typedModule) (Obj.magic (lowerClassesWithHelpers (Obj.magic (TypedModule.getTypedClasses (Obj.magic typedModule) ())) (Obj.magic index) (ParsedModule.getFilePath (Obj.magic (TypedModule.getParsed (Obj.magic typedModule) ())) () : string) (Obj.magic helpers)))) in HxArray.push __array_receiver_509 __array_arg_0_510
+        let __array_receiver_517 = Obj.magic _g in let __array_arg_0_518 = Obj.magic (TypedModule.withTypedClasses (Obj.magic typedModule) (Obj.magic (lowerClassesWithHelpers (Obj.magic (TypedModule.getTypedClasses (Obj.magic typedModule) ())) (Obj.magic index) (ParsedModule.getFilePath (Obj.magic (TypedModule.getParsed (Obj.magic typedModule) ())) () : string) (Obj.magic helpers)))) in HxArray.push __array_receiver_517 __array_arg_0_518
       )) done);
       let tempResult1 = Obj.magic _g in tempResult1
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_511 -> (Obj.obj __ret_511 : TypedModule.t HxArray.t) : TypedModule.t HxArray.t)
+  | HxRuntime.Hx_return __ret_519 -> (Obj.obj __ret_519 : TypedModule.t HxArray.t) : TypedModule.t HxArray.t)

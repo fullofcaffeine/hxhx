@@ -29,6 +29,12 @@ class HxParser {
 	/** Whether the last consumed token was `;`, so a statement can tell how it ended. */
 	var consumedSemicolon = false;
 
+	/**
+		Whether the last consumed token was `}`. Haxe 4.3.7 does not require `;` after a field
+		initializer or a block element whose last token is `}`, whatever the expression is.
+	**/
+	var consumedRBrace = false;
+
 	var peeked1:Null<HxToken> = null;
 	var peeked2:Null<HxToken> = null;
 	var peeked3:Null<HxToken> = null;
@@ -820,6 +826,7 @@ class HxParser {
 
 	inline function bump():Void {
 		consumedSemicolon = cur.kind.match(TSemicolon);
+		consumedRBrace = cur.kind.match(TRBrace);
 		if (peeked1 != null) {
 			cur = peeked1;
 			peeked1 = peeked2;
@@ -1928,7 +1935,7 @@ class HxParser {
 				body.push(entry);
 				if (cur.kind.match(TSemicolon)) {
 					bump();
-				} else if (!cur.kind.match(TRBrace) && !endsWithSourceBrace(entry)) {
+				} else if (!cur.kind.match(TRBrace) && !consumedRBrace) {
 					fail("Expected ';' or '}' after while body expression");
 				}
 			}
@@ -2540,29 +2547,11 @@ class HxParser {
 				fail("Expected source group expression");
 			if (cur.kind.match(TSemicolon))
 				bump();
-			else if (!cur.kind.match(TRBrace)) {
-				if (!endsWithSourceBrace(child))
-					fail("Expected ';' after source group expression");
-			}
+			else if (!cur.kind.match(TRBrace) && !consumedRBrace)
+				fail("Expected ';' after source group expression");
 		}
 		expect(TRBrace, "'}' after source group");
 		return ESourceGroup(children, position);
-	}
-
-	/** A final source brace terminates an expression, including a function's returned block; parentheses do not. */
-	static function endsWithSourceBrace(expression:HxExpr):Bool {
-		return switch expression {
-			case ESourceTry(_, bodies, _): bodies.length > 0 && endsWithSourceBrace(bodies[bodies.length - 1]);
-			case ESourceGroup(_, _) | ESwitch(_, _, _): true;
-			case ESourceFunction(_, body, _, _): endsWithSourceBrace(body);
-			case EReturn(value): value != null && endsWithSourceBrace(value);
-			case ESourceIf(_, whenTrue, whenFalse, _): endsWithSourceBrace(whenFalse == null ? whenTrue : whenFalse);
-			case EWhile(_, body, bodyIsBlock, _, loopKind): loopKind == Normal && (bodyIsBlock
-					|| (body.length == 1 && endsWithSourceBrace(body[0])));
-			case ESourceFor(_, _, body, _): endsWithSourceBrace(body);
-			case EVars(declarations): final initializer = declarations.length == 0 ? null : HxExprVarDecl.getInitializer(declarations[declarations.length - 1]); initializer != null && endsWithSourceBrace(initializer);
-			case _: false;
-		};
 	}
 
 	/** Preserve a named function's declaration placement when it appears as a body entry. */
@@ -3453,8 +3442,7 @@ class HxParser {
 				armExpressions.push(expression);
 				if (cur.kind.match(TSemicolon))
 					bump();
-				else if (!cur.kind.match(TRBrace) && !cur.kind.match(TKeyword(KCase)) && !cur.kind.match(TKeyword(KDefault))
-					&& !endsWithSourceBrace(expression))
+				else if (!cur.kind.match(TRBrace) && !cur.kind.match(TKeyword(KCase)) && !cur.kind.match(TKeyword(KDefault)) && !consumedRBrace)
 					fail("Expected ';' after switch arm expression");
 			}
 			patterns.push(pat);
@@ -4218,7 +4206,9 @@ class HxParser {
 			case TKeyword(KDo):
 				// Stage 3 bring-up: structured do/while support.
 				bump(); // `do`
-				final body = parseStmt(stop);
+				// An unbraced body (`do t++ while (t < 3);`) ends at the `while` keyword,
+				// as in upstream Haxe; without this stop it consumed the condition too.
+				final body = parseStmt(() -> stop() || cur.kind.match(TKeyword(KWhile)));
 				if (!acceptKeyword(KWhile)) {
 					syncToStmtEnd();
 					return SExpr(EUnsupported("do"), pos);
@@ -4482,11 +4472,13 @@ class HxParser {
 		final body = new Array<HxStmt>();
 		var bodyText = "";
 		var hasBody = false;
+		var bodyBraced = false;
 		switch (cur.kind) {
 			case TSemicolon:
 				bump();
 			case TLBrace:
 				hasBody = true;
+				bodyBraced = true;
 				bump();
 				final bodyStart = currentIndex();
 				for (s in parseFunctionBodyStatements())
@@ -4514,7 +4506,7 @@ class HxParser {
 		}
 
 		return new HxFunctionDecl(name, visibility, isStatic, args, returnType, body, capturedReturnStringLiteral, metadata.concat(functionTypeMetadata),
-			startPos, cur.getPos(), bodyText, hasBody);
+			startPos, cur.getPos(), bodyText, hasBody, false, bodyBraced);
 	}
 
 	/**
@@ -4663,11 +4655,13 @@ class HxParser {
 						}
 						if (cur.kind.match(TSemicolon)) {
 							bump();
-						} else if (init != null && isSemicolonlessFieldInitializer(init, initText) && isClassMemberBoundary()) {
-							// Haxe permits semicolonless block-expression field initializers:
-							// `var x = switch (...) { ... }` followed by the next member.
-							// Accept that form so switch field initializers do not absorb the
-							// rest of the class during Stage3 bring-up parsing.
+						} else if (init != null
+							&& (consumedRBrace || isSemicolonlessFieldInitializer(init, initText))
+							&& isClassMemberBoundary()) {
+							// Like upstream Haxe, a field initializer whose last token is `}` needs
+							// no `;`: `static final noop = function() {}`, a block, an object
+							// literal, `if ... else { }`, or `switch (...) { ... }`, followed by
+							// the next member (haxe_ocaml-ac5i9.8).
 						} else {
 							expect(TSemicolon, "';'");
 						}
@@ -5051,7 +5045,7 @@ class HxParser {
 						HxFunctionDecl.getIsStatic(parsedFn), HxFunctionDecl.getArgs(parsedFn), HxFunctionDecl.getReturnTypeHint(parsedFn),
 						offsetFunctionBodyColumns(HxFunctionDecl.getBody(parsedFn), 1), HxFunctionDecl.getReturnStringLiteral(parsedFn),
 						HxFunctionDecl.getMetadata(parsedFn), HxFunctionDecl.getPos(parsedFn), HxFunctionDecl.getEndPos(parsedFn),
-						HxFunctionDecl.getBodyText(parsedFn), HxFunctionDecl.getHasBody(parsedFn), true);
+						HxFunctionDecl.getBodyText(parsedFn), HxFunctionDecl.getHasBody(parsedFn), true, HxFunctionDecl.getBodyBraced(parsedFn));
 					if (HxFunctionDecl.getName(fn) == "main")
 						hasToplevelMain = true;
 					moduleFunctions.push(fn);

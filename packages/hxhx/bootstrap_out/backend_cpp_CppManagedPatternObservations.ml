@@ -146,6 +146,10 @@ let test = fun self (root : string) (test__local : TypedGuardedPatternPlan.guard
       tempResult := __assign_28;
       __assign_28
     )
+    | TypedGuardedPatternPlan.IsFloat _p0 -> (
+      ignore _p0;
+      HxType.hx_throw_typed_rtti (Obj.repr "managed guarded switch does not support Float constant patterns yet (Bead haxe_ocaml-0ep0d)") ["Dynamic"]
+    )
     | TypedGuardedPatternPlan.IsString _p0 -> let _g = (_p0 : string) in let literal = (_g : string) in let __assign_29 = let __string_part_30 = HxString.toStdString value in let __string_part_31 = ".kind() == hxhx::managed::ValueKind::String && " in let __string_part_32 = HxString.toStdString value in let __string_part_33 = ".asString() == " in let __string_part_34 = HxString.toStdString (Backend_cpp_CppManagedText.literal (literal : string)) in (((__string_part_30 ^ __string_part_31) ^ __string_part_32) ^ __string_part_33) ^ __string_part_34 in (
       tempResult := __assign_29;
       __assign_29

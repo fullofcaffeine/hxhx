@@ -128,6 +128,14 @@ class OcamlValueConversion {
 				if (enumId != null)
 					return NativeEnum(enumId);
 		}
+		// An unresolved type variable has no known runtime carrier: `cast(__ocaml__(...))` returns
+		// whatever native value the injection produces. Leave it unconverted. The equality plan
+		// still treats such an operand as Dynamic for runtime comparison.
+		switch (OcamlDynamicCarrierModel.followNoAbstracts(OcamlDynamicCarrierModel.unwrapNullType(followed))) {
+			case TMono(_):
+				return UnclassifiedCarrier;
+			case _:
+		}
 		if (OcamlDynamicCarrierModel.usesDynamicCarrier(type))
 			return DynamicObj;
 		return switch (OcamlDynamicCarrierModel.followNoAbstracts(OcamlDynamicCarrierModel.unwrapNullType(followed))) {

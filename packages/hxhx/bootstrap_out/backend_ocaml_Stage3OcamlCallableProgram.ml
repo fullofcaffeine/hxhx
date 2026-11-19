@@ -71,32 +71,32 @@ let stage3ocamlcallablefunction_fresh = fun self (role : string) -> let name = r
   )
 )
 
-let stage3ocamlcallablefunction_bindValues = fun self (values : string HxArray.t) (body : Reflaxe_ocaml_ast_OcamlExpr.ocamlexpr HxArray.t -> Reflaxe_ocaml_ast_OcamlExpr.ocamlexpr) -> let _g = Obj.magic (let __represented_array_39 = HxArray.create () in __represented_array_39) in let _g1 = ref 0 in (
+let stage3ocamlcallablefunction_bindValues = fun self (values : string HxArray.t) (body : Reflaxe_ocaml_ast_OcamlExpr.ocamlexpr HxArray.t -> Reflaxe_ocaml_ast_OcamlExpr.ocamlexpr) -> let _g = Obj.magic (let __represented_array_41 = HxArray.create () in __represented_array_41) in let _g1 = ref 0 in (
   ignore (while !_g1 < HxArray.length values do ignore ((
-    ignore (let __array_read_receiver_40 = values in let __array_read_index_41 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_40) __array_read_index_41);
-    ignore (let __old_42 = !_g1 in let __new_43 = HxInt.add __old_42 1 in (
-      ignore (_g1 := __new_43);
-      __new_43
+    ignore (let __array_read_receiver_42 = values in let __array_read_index_43 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_42) __array_read_index_43);
+    ignore (let __old_44 = !_g1 in let __new_45 = HxInt.add __old_44 1 in (
+      ignore (_g1 := __new_45);
+      __new_45
     ));
-    let __array_receiver_44 = Obj.magic _g in let __array_arg_0_45 = (stage3ocamlcallablefunction_fresh (Obj.magic self) ("operand" : string) : string) in HxArray.push __array_receiver_44 __array_arg_0_45
+    let __array_receiver_46 = Obj.magic _g in let __array_arg_0_47 = (stage3ocamlcallablefunction_fresh (Obj.magic self) ("operand" : string) : string) in HxArray.push __array_receiver_46 __array_arg_0_47
   )) done);
-  let tempArray = Obj.magic _g in let locals = Obj.magic tempArray in let _g = Obj.magic (let __arr_46 = HxArray.create () in __arr_46) in let _g1 = ref 0 in (
-    ignore (while !_g1 < HxArray.length locals do ignore (let name = (let __array_read_receiver_47 = locals in let __array_read_index_48 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_47) __array_read_index_48 : string) in (
-      ignore (let __old_49 = !_g1 in let __new_50 = HxInt.add __old_49 1 in (
-        ignore (_g1 := __new_50);
-        __new_50
+  let tempArray = Obj.magic _g in let locals = Obj.magic tempArray in let _g = Obj.magic (let __arr_48 = HxArray.create () in __arr_48) in let _g1 = ref 0 in (
+    ignore (while !_g1 < HxArray.length locals do ignore (let name = (let __array_read_receiver_49 = locals in let __array_read_index_50 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_49) __array_read_index_50 : string) in (
+      ignore (let __old_51 = !_g1 in let __new_52 = HxInt.add __old_51 1 in (
+        ignore (_g1 := __new_52);
+        __new_52
       ));
-      let __array_receiver_51 = Obj.magic _g in let __array_arg_0_52 = Obj.magic (let __enum_arg_53 = (name : string) in Reflaxe_ocaml_ast_OcamlExpr.EIdent (Stdlib.Sys.opaque_identity __enum_arg_53)) in HxArray.push __array_receiver_51 __array_arg_0_52
+      let __array_receiver_53 = Obj.magic _g in let __array_arg_0_54 = Obj.magic (let __enum_arg_55 = (name : string) in Reflaxe_ocaml_ast_OcamlExpr.EIdent (Stdlib.Sys.opaque_identity __enum_arg_55)) in HxArray.push __array_receiver_53 __array_arg_0_54
     )) done);
     let tempArray1 = Obj.magic _g in let output = ref (Reflaxe_ocaml_ast_OcamlASTPrinter.printExpr (Obj.magic ((Obj.magic self : stage3ocamlcallablefunction_t).printer)) (Obj.magic (body (Obj.magic tempArray1))) : string) in let index = ref (HxArray.length values) in (
       ignore (try while true do ignore ((
-        ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not ((let __old_54 = !index in let __new_55 = HxInt.add __old_54 (-1) in (
-          ignore (index := __new_55);
-          __old_54
+        ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not ((let __old_56 = !index in let __new_57 = HxInt.add __old_56 (-1) in (
+          ignore (index := __new_57);
+          __old_56
         )) > 0))) then Stdlib.raise (HxRuntime.Hx_break) else ());
-        let __assign_56 = (let __string_part_61 = "(let " in let __string_part_62 = HxString.toStdString (let __array_read_receiver_57 = locals in let __array_read_index_58 = !index in HxArray.get (Obj.magic __array_read_receiver_57) __array_read_index_58) in let __string_part_63 = " = (" in let __string_part_64 = HxString.toStdString (let __array_read_receiver_59 = values in let __array_read_index_60 = !index in HxArray.get (Obj.magic __array_read_receiver_59) __array_read_index_60) in let __string_part_65 = ") in " in let __string_part_66 = HxString.toStdString (!output) in let __string_part_67 = ")" in (((((__string_part_61 ^ __string_part_62) ^ __string_part_63) ^ __string_part_64) ^ __string_part_65) ^ __string_part_66) ^ __string_part_67 : string) in (
-          output := __assign_56;
-          __assign_56
+        let __assign_58 = (let __string_part_63 = "(let " in let __string_part_64 = HxString.toStdString (let __array_read_receiver_59 = locals in let __array_read_index_60 = !index in HxArray.get (Obj.magic __array_read_receiver_59) __array_read_index_60) in let __string_part_65 = " = (" in let __string_part_66 = HxString.toStdString (let __array_read_receiver_61 = values in let __array_read_index_62 = !index in HxArray.get (Obj.magic __array_read_receiver_61) __array_read_index_62) in let __string_part_67 = ") in " in let __string_part_68 = HxString.toStdString (!output) in let __string_part_69 = ")" in (((((__string_part_63 ^ __string_part_64) ^ __string_part_65) ^ __string_part_66) ^ __string_part_67) ^ __string_part_68) ^ __string_part_69 : string) in (
+          output := __assign_58;
+          __assign_58
         )
       )) done with
         | HxRuntime.Hx_break -> ());
@@ -192,25 +192,25 @@ let stage3ocamlcallablefunction_source = fun self (expression : HxExpr.hxexpr) -
 )
 
 let stage3ocamlcallablefunction_staticCallee = fun self (expression : HxExpr.hxexpr) -> let fact = ref (Obj.magic (stage3ocamlcallablefunction_source (Obj.magic self) (Obj.magic expression))) in (
-  ignore (while !fact != Obj.magic (HxRuntime.hx_null) && ((let __enum_eq_left_100 = TypedExpr.getTag (Obj.magic (!fact)) () in let __enum_eq_right_101 = TypedExpr.Parenthesized in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_100) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_101)) || (let __enum_eq_left_102 = TypedExpr.getTag (Obj.magic (!fact)) () in let __enum_eq_right_103 = TypedExpr.CheckType in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_102) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_103))) do ignore (let __assign_104 = Obj.magic (Obj.magic (let __array_read_receiver_105 = TypedExpr.getExpressions (Obj.magic (!fact)) () in let __array_read_index_106 = 0 in HxArray.get (Obj.magic __array_read_receiver_105) __array_read_index_106)) in (
-    fact := __assign_104;
-    __assign_104
+  ignore (while !fact != Obj.magic (HxRuntime.hx_null) && ((let __enum_eq_left_102 = TypedExpr.getTag (Obj.magic (!fact)) () in let __enum_eq_right_103 = TypedExpr.Parenthesized in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_102) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_103)) || (let __enum_eq_left_104 = TypedExpr.getTag (Obj.magic (!fact)) () in let __enum_eq_right_105 = TypedExpr.CheckType in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_104) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_105))) do ignore (let __assign_106 = Obj.magic (Obj.magic (let __array_read_receiver_107 = TypedExpr.getExpressions (Obj.magic (!fact)) () in let __array_read_index_108 = 0 in HxArray.get (Obj.magic __array_read_receiver_107) __array_read_index_108)) in (
+    fact := __assign_106;
+    __assign_106
   )) done);
   let tempMaybeTyDeclarationInfo = ref (Obj.magic (HxRuntime.hx_null) : TyDeclarationInfo.t) in (
-    ignore (if !fact == Obj.magic (HxRuntime.hx_null) then let __assign_107 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-      tempMaybeTyDeclarationInfo := __assign_107;
-      __assign_107
-    ) else let __assign_108 = Obj.magic (Obj.magic (TypedExpr.getDeclaration (Obj.magic (!fact)) ())) in (
-      tempMaybeTyDeclarationInfo := __assign_108;
-      __assign_108
+    ignore (if !fact == Obj.magic (HxRuntime.hx_null) then let __assign_109 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+      tempMaybeTyDeclarationInfo := __assign_109;
+      __assign_109
+    ) else let __assign_110 = Obj.magic (Obj.magic (TypedExpr.getDeclaration (Obj.magic (!fact)) ())) in (
+      tempMaybeTyDeclarationInfo := __assign_110;
+      __assign_110
     ));
     let declaration = Obj.magic (!tempMaybeTyDeclarationInfo) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyDeclarationInfo.t) in (
-      ignore (if !fact != Obj.magic (HxRuntime.hx_null) && ((let __enum_eq_left_109 = TypedExpr.getTag (Obj.magic (!fact)) () in let __enum_eq_right_110 = TypedExpr.NameRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_109) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_110)) || (let __enum_eq_left_111 = TypedExpr.getTag (Obj.magic (!fact)) () in let __enum_eq_right_112 = TypedExpr.FieldRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_111) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_112))) && declaration != Obj.magic (HxRuntime.hx_null) && TyDeclarationInfo.getIsStatic (Obj.magic declaration) () then let __assign_113 = Obj.magic (Obj.magic declaration) in (
-        tempResult := __assign_113;
-        __assign_113
-      ) else let __assign_114 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-        tempResult := __assign_114;
-        __assign_114
+      ignore (if !fact != Obj.magic (HxRuntime.hx_null) && ((let __enum_eq_left_111 = TypedExpr.getTag (Obj.magic (!fact)) () in let __enum_eq_right_112 = TypedExpr.NameRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_111) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_112)) || (let __enum_eq_left_113 = TypedExpr.getTag (Obj.magic (!fact)) () in let __enum_eq_right_114 = TypedExpr.FieldRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_113) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_114))) && declaration != Obj.magic (HxRuntime.hx_null) && TyDeclarationInfo.getIsStatic (Obj.magic declaration) () then let __assign_115 = Obj.magic (Obj.magic declaration) in (
+        tempResult := __assign_115;
+        __assign_115
+      ) else let __assign_116 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+        tempResult := __assign_116;
+        __assign_116
       ));
       !tempResult
     )
@@ -290,51 +290,63 @@ let stage3ocamlcallablefunction_type = fun self (hx_type : TyType.t) -> (
 
 let stage3ocamlcallablefunction_convert = fun self (actual : TyType.t) (expected : TyType.t) (value : Reflaxe_ocaml_ast_OcamlExpr.ocamlexpr) -> (try (
   ignore (if TyType.isNullLiteral (Obj.magic actual) () && TyType.isDynamic (Obj.magic expected) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr value)) else ());
-  let conversion = Reflaxe_ocaml_lowered_OcamlGenericCallConversion.crossing (Obj.magic (stage3ocamlcallablefunction_shape (Obj.magic self) (Obj.magic actual))) (Obj.magic (stage3ocamlcallablefunction_shape (Obj.magic self) (Obj.magic expected))) in (
-    ignore (if conversion == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "Native callback occurrence lacks a selected conversion") ["Dynamic"] else ());
-    let helpers = Obj.magic (Reflaxe_ocaml_lowered_OcamlGenericCallConversion.runtimeHelpers (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueConversion" conversion)) ("native-callback" : string)) in Reflaxe_ocaml_ast_OcamlGenericCallEmitter.convertView (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueConversion" conversion)) (Obj.magic value) ("native-callback" : string) (fun a0 -> stage3ocamlcallablefunction_fresh self a0) (fun role symbol -> (
-      ignore (if not (Lambda.exists (let __struct_obj_31 = helpers in let __struct_anon_32 = HxAnon.create () in (
-        ignore (HxAnon.set __struct_anon_32 "iterator" (Obj.repr (fun () -> HxIterator.of_array __struct_obj_31)));
-        __struct_anon_32
-      )) (fun helper -> (let __string_eq_left_33 = Obj.obj (HxAnon.get helper "role") in let __string_eq_right_34 = role in HxString.equals __string_eq_left_33 __string_eq_right_34) && (let __string_eq_left_35 = Obj.obj (HxAnon.get helper "symbol") in let __string_eq_right_36 = symbol in HxString.equals __string_eq_left_35 __string_eq_right_36))) then HxType.hx_throw_typed_rtti (Obj.repr "Native callback syntax requested an unplanned runtime helper") ["Dynamic"] else ());
-      let __enum_arg_37 = (symbol : string) in Reflaxe_ocaml_ast_OcamlExpr.EIdent (Stdlib.Sys.opaque_identity __enum_arg_37)
-    ))
+  let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+    ignore (if TyType.isNullLiteral (Obj.magic actual) () then let __assign_31 = Obj.magic (Backend_ocaml_Stage3OcamlNullablePrimitive.concreteDestination (Obj.magic expected) false : string) in (
+      tempMaybeString := __assign_31;
+      __assign_31
+    ) else let __assign_32 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+      tempMaybeString := __assign_32;
+      __assign_32
+    ));
+    let concrete = (!tempMaybeString : string) in (
+      ignore (if concrete != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Backend_ocaml_Stage3OcamlNullablePrimitive.nullLiteralArgumentSyntax (concrete : string)))) else ());
+      let conversion = Reflaxe_ocaml_lowered_OcamlGenericCallConversion.crossing (Obj.magic (stage3ocamlcallablefunction_shape (Obj.magic self) (Obj.magic actual))) (Obj.magic (stage3ocamlcallablefunction_shape (Obj.magic self) (Obj.magic expected))) in (
+        ignore (if conversion == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "Native callback occurrence lacks a selected conversion") ["Dynamic"] else ());
+        let helpers = Obj.magic (Reflaxe_ocaml_lowered_OcamlGenericCallConversion.runtimeHelpers (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueConversion" conversion)) ("native-callback" : string)) in Reflaxe_ocaml_ast_OcamlGenericCallEmitter.convertView (Obj.obj (HxEnum.unbox_or_obj "reflaxe.ocaml.lowered.OcamlGenericValueConversion" conversion)) (Obj.magic value) ("native-callback" : string) (fun a0 -> stage3ocamlcallablefunction_fresh self a0) (fun role symbol -> (
+          ignore (if not (Lambda.exists (let __struct_obj_33 = helpers in let __struct_anon_34 = HxAnon.create () in (
+            ignore (HxAnon.set __struct_anon_34 "iterator" (Obj.repr (fun () -> HxIterator.of_array __struct_obj_33)));
+            __struct_anon_34
+          )) (fun helper -> (let __string_eq_left_35 = Obj.obj (HxAnon.get helper "role") in let __string_eq_right_36 = role in HxString.equals __string_eq_left_35 __string_eq_right_36) && (let __string_eq_left_37 = Obj.obj (HxAnon.get helper "symbol") in let __string_eq_right_38 = symbol in HxString.equals __string_eq_left_37 __string_eq_right_38))) then HxType.hx_throw_typed_rtti (Obj.repr "Native callback syntax requested an unplanned runtime helper") ["Dynamic"] else ());
+          let __enum_arg_39 = (symbol : string) in Reflaxe_ocaml_ast_OcamlExpr.EIdent (Stdlib.Sys.opaque_identity __enum_arg_39)
+        ))
+      )
+    )
   )
 ) with
-  | HxRuntime.Hx_return __ret_38 -> (Obj.obj __ret_38 : Reflaxe_ocaml_ast_OcamlExpr.ocamlexpr) : Reflaxe_ocaml_ast_OcamlExpr.ocamlexpr)
+  | HxRuntime.Hx_return __ret_40 -> (Obj.obj __ret_40 : Reflaxe_ocaml_ast_OcamlExpr.ocamlexpr) : Reflaxe_ocaml_ast_OcamlExpr.ocamlexpr)
 
 let stage3ocamlcallablefunction_local = fun self (name : string) (expression : HxExpr.hxexpr) (rendered : string) -> (try let _gthis = Obj.magic self in let destination = Obj.magic (Backend_ocaml_Stage3OcamlLocalNames.findType (Obj.magic ((Obj.magic self : stage3ocamlcallablefunction_t).names)) (name : string)) in (
   ignore (if destination == Obj.magic (HxRuntime.hx_null) || not (TyType.isFunction (Obj.magic (TyAliasExpansion.reveal (Obj.magic destination))) ()) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   ignore (stage3ocamlcallablefunction_current (Obj.magic self) ());
-  let write = Obj.magic (TypedBackendFunctionProjection.requireLocalWrite (Obj.magic ((Obj.magic self : stage3ocamlcallablefunction_t).projection)) (name : string) (Obj.magic expression)) in stage3ocamlcallablefunction_bindValues (Obj.magic self) (Obj.magic (let __represented_array_68 = HxArray.create () in let __represented_array_element_0_69 = rendered in (
-    ignore (HxArray.push __represented_array_68 __represented_array_element_0_69);
-    __represented_array_68
-  ))) (fun values -> stage3ocamlcallablefunction_convert (Obj.magic _gthis) (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).sourceType)) (Obj.magic (TyLocalBinding.getType (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).binding)) ())) (Obj.magic (let __array_read_receiver_70 = values in let __array_read_index_71 = 0 in HxArray.get (Obj.magic __array_read_receiver_70) __array_read_index_71)))
+  let write = Obj.magic (TypedBackendFunctionProjection.requireLocalWrite (Obj.magic ((Obj.magic self : stage3ocamlcallablefunction_t).projection)) (name : string) (Obj.magic expression)) in stage3ocamlcallablefunction_bindValues (Obj.magic self) (Obj.magic (let __represented_array_70 = HxArray.create () in let __represented_array_element_0_71 = rendered in (
+    ignore (HxArray.push __represented_array_70 __represented_array_element_0_71);
+    __represented_array_70
+  ))) (fun values -> stage3ocamlcallablefunction_convert (Obj.magic _gthis) (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).sourceType)) (Obj.magic (TyLocalBinding.getType (Obj.magic ((Obj.magic write : TypedBackendLocalWrite.t).binding)) ())) (Obj.magic (let __array_read_receiver_72 = values in let __array_read_index_73 = 0 in HxArray.get (Obj.magic __array_read_receiver_72) __array_read_index_73)))
 ) with
-  | HxRuntime.Hx_return __ret_72 -> (Obj.obj __ret_72 : string) : string)
+  | HxRuntime.Hx_return __ret_74 -> (Obj.obj __ret_74 : string) : string)
 
 let stage3ocamlcallablefunction_returned = fun self (statement : HxStmt.hxstmt) (rendered : string) -> (try let _gthis = Obj.magic self in (
   ignore (if not (TyType.isFunction (Obj.magic (TyAliasExpansion.reveal (Obj.magic (TypedBackendFunctionProjection.getReturnType (Obj.magic ((Obj.magic self : stage3ocamlcallablefunction_t).projection)) ())))) ()) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   ignore (stage3ocamlcallablefunction_current (Obj.magic self) ());
   let present = ref false in let visit = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt -> unit) in (
-    ignore (let __assign_73 = Obj.magic (fun value -> ignore ((
-      ignore (if let __enum_eq_left_74 = value in let __enum_eq_right_75 = statement in HxEnum.unbox_or_obj "HxStmt" (Obj.repr __enum_eq_left_74) == HxEnum.unbox_or_obj "HxStmt" (Obj.repr __enum_eq_right_75) then ignore (let __assign_76 = true in (
-        present := __assign_76;
-        __assign_76
+    ignore (let __assign_75 = Obj.magic (fun value -> ignore ((
+      ignore (if let __enum_eq_left_76 = value in let __enum_eq_right_77 = statement in HxEnum.unbox_or_obj "HxStmt" (Obj.repr __enum_eq_left_76) == HxEnum.unbox_or_obj "HxStmt" (Obj.repr __enum_eq_right_77) then ignore (let __assign_78 = true in (
+        present := __assign_78;
+        __assign_78
       )) else ());
       TypedBackendSourceWalk.statementChildren (Obj.magic value) (fun _hx -> (
         ignore _hx;
         ignore ()
       )) (!visit)
     ))) in (
-      visit := __assign_73;
-      __assign_73
+      visit := __assign_75;
+      __assign_75
     ));
     let _g = ref 0 in let _g1 = Obj.magic (TypedBackendFunctionProjection.getBody (Obj.magic ((Obj.magic self : stage3ocamlcallablefunction_t).projection)) ()) in (
-      ignore (while !_g < HxArray.length _g1 do ignore (let value = Obj.magic (let __array_read_receiver_77 = _g1 in let __array_read_index_78 = !_g in HxArray.get (Obj.magic __array_read_receiver_77) __array_read_index_78) in (
-        ignore (let __old_79 = !_g in let __new_80 = HxInt.add __old_79 1 in (
-          ignore (_g := __new_80);
-          __new_80
+      ignore (while !_g < HxArray.length _g1 do ignore (let value = Obj.magic (let __array_read_receiver_79 = _g1 in let __array_read_index_80 = !_g in HxArray.get (Obj.magic __array_read_receiver_79) __array_read_index_80) in (
+        ignore (let __old_81 = !_g in let __new_82 = HxInt.add __old_81 1 in (
+          ignore (_g := __new_82);
+          __new_82
         ));
         (!visit) (Obj.magic value)
       )) done);
@@ -358,34 +370,34 @@ let stage3ocamlcallablefunction_returned = fun self (statement : HxStmt.hxstmt) 
           | HxStmt.SReturn (_, _) -> 14
           | HxStmt.SExpr (_, _) -> 15
           | HxStmt.STargetScope (_, _, _) -> 16) = 14 then let _g = Obj.magic (match statement with
-          | HxStmt.SReturn (__enum_param_81, _) -> __enum_param_81
+          | HxStmt.SReturn (__enum_param_83, _) -> __enum_param_83
           | _ -> failwith "Unexpected enum parameter") in (
           ignore (match statement with
-            | HxStmt.SReturn (_, __enum_param_82) -> __enum_param_82
+            | HxStmt.SReturn (_, __enum_param_84) -> __enum_param_84
             | _ -> failwith "Unexpected enum parameter");
-          let value = Obj.magic _g in let __assign_83 = Obj.magic value in (
-            tempHxExpr := __assign_83;
-            __assign_83
+          let value = Obj.magic _g in let __assign_85 = Obj.magic value in (
+            tempHxExpr := __assign_85;
+            __assign_85
           )
         ) else HxType.hx_throw_typed_rtti (Obj.repr "Native callback return requires a value return") ["Dynamic"]);
         let expression = Obj.magic (!tempHxExpr) in let fact = Obj.magic (stage3ocamlcallablefunction_source (Obj.magic self) (Obj.magic expression)) in (
           ignore (if fact == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "Native callback return lacks its exact typed occurrence") ["Dynamic"] else ());
-          stage3ocamlcallablefunction_bindValues (Obj.magic self) (Obj.magic (let __represented_array_84 = HxArray.create () in let __represented_array_element_0_85 = rendered in (
-            ignore (HxArray.push __represented_array_84 __represented_array_element_0_85);
-            __represented_array_84
-          ))) (fun values -> stage3ocamlcallablefunction_convert (Obj.magic _gthis) (Obj.magic (TypedExpr.getType (Obj.magic fact) ())) (Obj.magic (TypedBackendFunctionProjection.getReturnType (Obj.magic ((Obj.magic _gthis : stage3ocamlcallablefunction_t).projection)) ())) (Obj.magic (let __array_read_receiver_86 = values in let __array_read_index_87 = 0 in HxArray.get (Obj.magic __array_read_receiver_86) __array_read_index_87)))
+          stage3ocamlcallablefunction_bindValues (Obj.magic self) (Obj.magic (let __represented_array_86 = HxArray.create () in let __represented_array_element_0_87 = rendered in (
+            ignore (HxArray.push __represented_array_86 __represented_array_element_0_87);
+            __represented_array_86
+          ))) (fun values -> stage3ocamlcallablefunction_convert (Obj.magic _gthis) (Obj.magic (TypedExpr.getType (Obj.magic fact) ())) (Obj.magic (TypedBackendFunctionProjection.getReturnType (Obj.magic ((Obj.magic _gthis : stage3ocamlcallablefunction_t).projection)) ())) (Obj.magic (let __array_read_receiver_88 = values in let __array_read_index_89 = 0 in HxArray.get (Obj.magic __array_read_receiver_88) __array_read_index_89)))
         )
       )
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_88 -> (Obj.obj __ret_88 : string) : string)
+  | HxRuntime.Hx_return __ret_90 -> (Obj.obj __ret_90 : string) : string)
 
 let stage3ocamlcallablefunction_returnedExpression = fun self (expression : HxExpr.hxexpr) (rendered : string) -> (try (
   ignore (if not (TyType.isFunction (Obj.magic (TyAliasExpansion.reveal (Obj.magic (TypedBackendFunctionProjection.getReturnType (Obj.magic ((Obj.magic self : stage3ocamlcallablefunction_t).projection)) ())))) ()) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   ignore (stage3ocamlcallablefunction_current (Obj.magic self) ());
   let found = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let visit = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt -> unit) in (
-    ignore (let __assign_89 = Obj.magic (fun statement -> ignore ((
+    ignore (let __assign_91 = Obj.magic (fun statement -> ignore ((
       ignore (if (match statement with
         | HxStmt.SBlock (_, _) -> 0
         | HxStmt.SVar (_, _, _, _, _) -> 1
@@ -404,14 +416,14 @@ let stage3ocamlcallablefunction_returnedExpression = fun self (expression : HxEx
         | HxStmt.SReturn (_, _) -> 14
         | HxStmt.SExpr (_, _) -> 15
         | HxStmt.STargetScope (_, _, _) -> 16) = 14 then ignore (let _g = Obj.magic (match statement with
-        | HxStmt.SReturn (__enum_param_90, _) -> __enum_param_90
+        | HxStmt.SReturn (__enum_param_92, _) -> __enum_param_92
         | _ -> failwith "Unexpected enum parameter") in (
         ignore (match statement with
-          | HxStmt.SReturn (_, __enum_param_91) -> __enum_param_91
+          | HxStmt.SReturn (_, __enum_param_93) -> __enum_param_93
           | _ -> failwith "Unexpected enum parameter");
-        let value = Obj.magic _g in if let __enum_eq_left_92 = value in let __enum_eq_right_93 = expression in HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_left_92) == HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_right_93) then ignore (let __assign_94 = Obj.magic (Obj.repr statement) in (
-          found := __assign_94;
-          __assign_94
+        let value = Obj.magic _g in if let __enum_eq_left_94 = value in let __enum_eq_right_95 = expression in HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_left_94) == HxEnum.unbox_or_obj "HxExpr" (Obj.repr __enum_eq_right_95) then ignore (let __assign_96 = Obj.magic (Obj.repr statement) in (
+          found := __assign_96;
+          __assign_96
         )) else ignore ()
       )) else ignore ());
       TypedBackendSourceWalk.statementChildren (Obj.magic statement) (fun _hx -> (
@@ -419,14 +431,14 @@ let stage3ocamlcallablefunction_returnedExpression = fun self (expression : HxEx
         ignore ()
       )) (!visit)
     ))) in (
-      visit := __assign_89;
-      __assign_89
+      visit := __assign_91;
+      __assign_91
     ));
     let _g = ref 0 in let _g1 = Obj.magic (TypedBackendFunctionProjection.getBody (Obj.magic ((Obj.magic self : stage3ocamlcallablefunction_t).projection)) ()) in (
-      ignore (while !_g < HxArray.length _g1 do ignore (let statement = Obj.magic (let __array_read_receiver_95 = _g1 in let __array_read_index_96 = !_g in HxArray.get (Obj.magic __array_read_receiver_95) __array_read_index_96) in (
-        ignore (let __old_97 = !_g in let __new_98 = HxInt.add __old_97 1 in (
-          ignore (_g := __new_98);
-          __new_98
+      ignore (while !_g < HxArray.length _g1 do ignore (let statement = Obj.magic (let __array_read_receiver_97 = _g1 in let __array_read_index_98 = !_g in HxArray.get (Obj.magic __array_read_receiver_97) __array_read_index_98) in (
+        ignore (let __old_99 = !_g in let __new_100 = HxInt.add __old_99 1 in (
+          ignore (_g := __new_100);
+          __new_100
         ));
         (!visit) (Obj.magic statement)
       )) done);
@@ -435,26 +447,26 @@ let stage3ocamlcallablefunction_returnedExpression = fun self (expression : HxEx
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_99 -> (Obj.obj __ret_99 : string) : string)
+  | HxRuntime.Hx_return __ret_101 -> (Obj.obj __ret_101 : string) : string)
 
-let stage3ocamlcallablefunction_call = fun self (expression : HxExpr.hxexpr) (fact : TypedExpr.t) (emit : HxExpr.hxexpr -> string) (reference : TyDeclarationInfo.t -> string) -> (try let _gthis = Obj.magic self in let children = Obj.magic (TypedExpr.getExpressions (Obj.magic fact) ()) in let callee = ref (Obj.magic (let __array_read_receiver_162 = children in let __array_read_index_163 = 0 in HxArray.get (Obj.magic __array_read_receiver_162) __array_read_index_163)) in (
-  ignore (while (let __enum_eq_left_164 = TypedExpr.getTag (Obj.magic (!callee)) () in let __enum_eq_right_165 = TypedExpr.Parenthesized in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_164) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_165)) || (let __enum_eq_left_166 = TypedExpr.getTag (Obj.magic (!callee)) () in let __enum_eq_right_167 = TypedExpr.CheckType in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_166) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_167)) do ignore (let __assign_168 = Obj.magic (let __array_read_receiver_169 = TypedExpr.getExpressions (Obj.magic (!callee)) () in let __array_read_index_170 = 0 in HxArray.get (Obj.magic __array_read_receiver_169) __array_read_index_170) in (
-    callee := __assign_168;
-    __assign_168
+let stage3ocamlcallablefunction_call = fun self (expression : HxExpr.hxexpr) (fact : TypedExpr.t) (emit : HxExpr.hxexpr -> string) (reference : TyDeclarationInfo.t -> string) -> (try let _gthis = Obj.magic self in let children = Obj.magic (TypedExpr.getExpressions (Obj.magic fact) ()) in let callee = ref (Obj.magic (let __array_read_receiver_164 = children in let __array_read_index_165 = 0 in HxArray.get (Obj.magic __array_read_receiver_164) __array_read_index_165)) in (
+  ignore (while (let __enum_eq_left_166 = TypedExpr.getTag (Obj.magic (!callee)) () in let __enum_eq_right_167 = TypedExpr.Parenthesized in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_166) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_167)) || (let __enum_eq_left_168 = TypedExpr.getTag (Obj.magic (!callee)) () in let __enum_eq_right_169 = TypedExpr.CheckType in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_168) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_169)) do ignore (let __assign_170 = Obj.magic (let __array_read_receiver_171 = TypedExpr.getExpressions (Obj.magic (!callee)) () in let __array_read_index_172 = 0 in HxArray.get (Obj.magic __array_read_receiver_171) __array_read_index_172) in (
+    callee := __assign_170;
+    __assign_170
   )) done);
   let signature = Obj.magic (TyAliasExpansion.reveal (Obj.magic (TypedExpr.getType (Obj.magic (!callee)) ()))) in (
     ignore (if not (TyType.isFunction (Obj.magic signature) ()) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-    let declaration = Obj.magic (TypedExpr.getDeclaration (Obj.magic (!callee)) ()) in let direct = ((let __enum_eq_left_171 = TypedExpr.getTag (Obj.magic (!callee)) () in let __enum_eq_right_172 = TypedExpr.NameRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_171) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_172)) || (let __enum_eq_left_173 = TypedExpr.getTag (Obj.magic (!callee)) () in let __enum_eq_right_174 = TypedExpr.FieldRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_173) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_174))) && declaration != Obj.magic (HxRuntime.hx_null) && TyDeclarationInfo.getIsStatic (Obj.magic declaration) () in (
+    let declaration = Obj.magic (TypedExpr.getDeclaration (Obj.magic (!callee)) ()) in let direct = ((let __enum_eq_left_173 = TypedExpr.getTag (Obj.magic (!callee)) () in let __enum_eq_right_174 = TypedExpr.NameRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_173) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_174)) || (let __enum_eq_left_175 = TypedExpr.getTag (Obj.magic (!callee)) () in let __enum_eq_right_176 = TypedExpr.FieldRead in HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_left_175) == HxEnum.unbox_or_obj "TypedExprTag" (Obj.repr __enum_eq_right_176))) && declaration != Obj.magic (HxRuntime.hx_null) && TyDeclarationInfo.getIsStatic (Obj.magic declaration) () in (
       ignore (if direct && not (Reflaxe_ocaml_lowered_OcamlCallableProgramAdmission.needsBoundary (Backend_ocaml_Stage3OcamlCallableSelection.declarationShape (Obj.magic declaration))) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
       ignore (if TypedExactCallSource.decodeInstance (Obj.magic expression) != Obj.magic (HxRuntime.hx_null) && declaration != Obj.magic (HxRuntime.hx_null) && not (TyDeclarationInfo.getIsStatic (Obj.magic declaration) ()) && not (Reflaxe_ocaml_lowered_OcamlCallableProgramAdmission.needsBoundary (Backend_ocaml_Stage3OcamlCallableSelection.declarationShape (Obj.magic declaration))) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
       let exact = TypedExactStaticCallSource.decode (Obj.magic expression) in let tempStruct = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-        ignore (if exact != Obj.magic (HxRuntime.hx_null) then let __assign_175 = Obj.magic (let __anon_176 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_176 "callee" (HxEnum.box_if_needed "HxExpr" (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get exact "callee"))))));
-          ignore (HxAnon.set __anon_176 "arguments" (Obj.repr (Obj.obj (HxAnon.get exact "arguments"))));
-          __anon_176
+        ignore (if exact != Obj.magic (HxRuntime.hx_null) then let __assign_177 = Obj.magic (let __anon_178 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_178 "callee" (HxEnum.box_if_needed "HxExpr" (Obj.repr (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get exact "callee"))))));
+          ignore (HxAnon.set __anon_178 "arguments" (Obj.repr (Obj.obj (HxAnon.get exact "arguments"))));
+          __anon_178
         )) in (
-          tempStruct := __assign_175;
-          __assign_175
+          tempStruct := __assign_177;
+          __assign_177
         ) else if (match expression with
           | HxExpr.EParenthesized (_, _) -> 0
           | HxExpr.ESourceTry (_, _, _) -> 1
@@ -503,79 +515,79 @@ let stage3ocamlcallablefunction_call = fun self (expression : HxExpr.hxexpr) (fa
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
           | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (match expression with
-          | HxExpr.ECall (__enum_param_177, _) -> __enum_param_177
+          | HxExpr.ECall (__enum_param_179, _) -> __enum_param_179
           | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expression with
-          | HxExpr.ECall (_, __enum_param_178) -> __enum_param_178
-          | _ -> failwith "Unexpected enum parameter") in let target = Obj.magic _g in let arguments = Obj.magic _g1 in let __assign_179 = Obj.magic (let __anon_180 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_180 "callee" (HxEnum.box_if_needed "HxExpr" (Obj.repr target)));
-          ignore (HxAnon.set __anon_180 "arguments" (Obj.repr arguments));
-          __anon_180
+          | HxExpr.ECall (_, __enum_param_180) -> __enum_param_180
+          | _ -> failwith "Unexpected enum parameter") in let target = Obj.magic _g in let arguments = Obj.magic _g1 in let __assign_181 = Obj.magic (let __anon_182 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_182 "callee" (HxEnum.box_if_needed "HxExpr" (Obj.repr target)));
+          ignore (HxAnon.set __anon_182 "arguments" (Obj.repr arguments));
+          __anon_182
         )) in (
-          tempStruct := __assign_179;
-          __assign_179
+          tempStruct := __assign_181;
+          __assign_181
         ) else HxType.hx_throw_typed_rtti (Obj.repr "Native callback call lost its exact projected arguments") ["Dynamic"]);
         let projected = Obj.magic (!tempStruct) in let parameters = Obj.magic (TyType.getFunctionParameters (Obj.magic signature) ()) in (
           ignore (if HxArray.length (Obj.obj (HxAnon.get projected "arguments")) <> HxArray.length parameters || HxArray.length children <> HxInt.add (HxArray.length parameters) 1 then HxType.hx_throw_typed_rtti (Obj.repr "Native callback call lost its fixed argument mapping") ["Dynamic"] else ());
           let tempString = ref (HxString.hx_null_string : string) in (
-            ignore (if direct then let __assign_181 = (reference (Obj.magic declaration) : string) in (
-              tempString := __assign_181;
-              __assign_181
-            ) else let __assign_182 = (emit (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get projected "callee")))) : string) in (
-              tempString := __assign_182;
-              __assign_182
+            ignore (if direct then let __assign_183 = (reference (Obj.magic declaration) : string) in (
+              tempString := __assign_183;
+              __assign_183
+            ) else let __assign_184 = (emit (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get projected "callee")))) : string) in (
+              tempString := __assign_184;
+              __assign_184
             ));
-            let operands = Obj.magic (let __represented_array_183 = HxArray.create () in let __represented_array_element_0_184 = !tempString in (
-              ignore (HxArray.push __represented_array_183 __represented_array_element_0_184);
-              __represented_array_183
+            let operands = Obj.magic (let __represented_array_185 = HxArray.create () in let __represented_array_element_0_186 = !tempString in (
+              ignore (HxArray.push __represented_array_185 __represented_array_element_0_186);
+              __represented_array_185
             )) in let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get projected "arguments")) in (
-              ignore (while !_g < HxArray.length _g1 do ignore (let argument = Obj.magic (let __array_read_receiver_185 = _g1 in let __array_read_index_186 = !_g in HxArray.get (Obj.magic __array_read_receiver_185) __array_read_index_186) in (
-                ignore (let __old_187 = !_g in let __new_188 = HxInt.add __old_187 1 in (
-                  ignore (_g := __new_188);
-                  __new_188
+              ignore (while !_g < HxArray.length _g1 do ignore (let argument = Obj.magic (let __array_read_receiver_187 = _g1 in let __array_read_index_188 = !_g in HxArray.get (Obj.magic __array_read_receiver_187) __array_read_index_188) in (
+                ignore (let __old_189 = !_g in let __new_190 = HxInt.add __old_189 1 in (
+                  ignore (_g := __new_190);
+                  __new_190
                 ));
-                let __array_receiver_189 = Obj.magic operands in let __array_arg_0_190 = (emit (Obj.magic argument) : string) in HxArray.push __array_receiver_189 __array_arg_0_190
+                let __array_receiver_191 = Obj.magic operands in let __array_arg_0_192 = (emit (Obj.magic argument) : string) in HxArray.push __array_receiver_191 __array_arg_0_192
               )) done);
-              stage3ocamlcallablefunction_bindValues (Obj.magic self) (Obj.magic operands) (fun values -> let _g = Obj.magic (let __arr_191 = HxArray.create () in __arr_191) in let _g1 = ref 0 in let _g2 = HxArray.length parameters in (
-                ignore (while !_g1 < _g2 do ignore (let index = let __old_192 = !_g1 in let __new_193 = HxInt.add __old_192 1 in (
-                  ignore (_g1 := __new_193);
-                  __old_192
-                ) in let __array_receiver_194 = Obj.magic _g in let __array_arg_0_195 = Obj.magic (stage3ocamlcallablefunction_convert (Obj.magic _gthis) (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_196 = children in let __array_read_index_197 = HxInt.add index 1 in HxArray.get (Obj.magic __array_read_receiver_196) __array_read_index_197)) ())) (Obj.magic (Obj.obj (HxAnon.get (let __array_read_receiver_198 = parameters in let __array_read_index_199 = index in HxArray.get (Obj.magic __array_read_receiver_198) __array_read_index_199) "type"))) (Obj.magic (let __array_read_receiver_200 = values in let __array_read_index_201 = HxInt.add index 1 in HxArray.get (Obj.magic __array_read_receiver_200) __array_read_index_201))) in HxArray.push __array_receiver_194 __array_arg_0_195) done);
-                let tempArray = Obj.magic _g in let arguments = Obj.magic tempArray in let _g = Obj.magic (let __arr_202 = HxArray.create () in __arr_202) in let _g1 = ref 0 in (
+              stage3ocamlcallablefunction_bindValues (Obj.magic self) (Obj.magic operands) (fun values -> let _g = Obj.magic (let __arr_193 = HxArray.create () in __arr_193) in let _g1 = ref 0 in let _g2 = HxArray.length parameters in (
+                ignore (while !_g1 < _g2 do ignore (let index = let __old_194 = !_g1 in let __new_195 = HxInt.add __old_194 1 in (
+                  ignore (_g1 := __new_195);
+                  __old_194
+                ) in let __array_receiver_196 = Obj.magic _g in let __array_arg_0_197 = Obj.magic (stage3ocamlcallablefunction_convert (Obj.magic _gthis) (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_198 = children in let __array_read_index_199 = HxInt.add index 1 in HxArray.get (Obj.magic __array_read_receiver_198) __array_read_index_199)) ())) (Obj.magic (Obj.obj (HxAnon.get (let __array_read_receiver_200 = parameters in let __array_read_index_201 = index in HxArray.get (Obj.magic __array_read_receiver_200) __array_read_index_201) "type"))) (Obj.magic (let __array_read_receiver_202 = values in let __array_read_index_203 = HxInt.add index 1 in HxArray.get (Obj.magic __array_read_receiver_202) __array_read_index_203))) in HxArray.push __array_receiver_196 __array_arg_0_197) done);
+                let tempArray = Obj.magic _g in let arguments = Obj.magic tempArray in let _g = Obj.magic (let __arr_204 = HxArray.create () in __arr_204) in let _g1 = ref 0 in (
                   ignore (while !_g1 < HxArray.length arguments do ignore ((
-                    ignore (let __array_read_receiver_203 = arguments in let __array_read_index_204 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_203) __array_read_index_204);
-                    ignore (let __old_205 = !_g1 in let __new_206 = HxInt.add __old_205 1 in (
-                      ignore (_g1 := __new_206);
-                      __new_206
+                    ignore (let __array_read_receiver_205 = arguments in let __array_read_index_206 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_205) __array_read_index_206);
+                    ignore (let __old_207 = !_g1 in let __new_208 = HxInt.add __old_207 1 in (
+                      ignore (_g1 := __new_208);
+                      __new_208
                     ));
-                    let __array_receiver_207 = Obj.magic _g in let __array_arg_0_208 = (stage3ocamlcallablefunction_fresh (Obj.magic _gthis) ("argument" : string) : string) in HxArray.push __array_receiver_207 __array_arg_0_208
+                    let __array_receiver_209 = Obj.magic _g in let __array_arg_0_210 = (stage3ocamlcallablefunction_fresh (Obj.magic _gthis) ("argument" : string) : string) in HxArray.push __array_receiver_209 __array_arg_0_210
                   )) done);
-                  let tempArray1 = Obj.magic _g in let argumentNames = Obj.magic tempArray1 in let _g = Obj.magic (let __arr_209 = HxArray.create () in __arr_209) in let _g1 = ref 0 in (
-                    ignore (while !_g1 < HxArray.length argumentNames do ignore (let name = (let __array_read_receiver_210 = argumentNames in let __array_read_index_211 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_210) __array_read_index_211 : string) in (
-                      ignore (let __old_212 = !_g1 in let __new_213 = HxInt.add __old_212 1 in (
-                        ignore (_g1 := __new_213);
-                        __new_213
+                  let tempArray1 = Obj.magic _g in let argumentNames = Obj.magic tempArray1 in let _g = Obj.magic (let __arr_211 = HxArray.create () in __arr_211) in let _g1 = ref 0 in (
+                    ignore (while !_g1 < HxArray.length argumentNames do ignore (let name = (let __array_read_receiver_212 = argumentNames in let __array_read_index_213 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_212) __array_read_index_213 : string) in (
+                      ignore (let __old_214 = !_g1 in let __new_215 = HxInt.add __old_214 1 in (
+                        ignore (_g1 := __new_215);
+                        __new_215
                       ));
-                      let __array_receiver_214 = Obj.magic _g in let __array_arg_0_215 = Obj.magic (let __enum_arg_216 = (name : string) in Reflaxe_ocaml_ast_OcamlExpr.EIdent (Stdlib.Sys.opaque_identity __enum_arg_216)) in HxArray.push __array_receiver_214 __array_arg_0_215
+                      let __array_receiver_216 = Obj.magic _g in let __array_arg_0_217 = Obj.magic (let __enum_arg_218 = (name : string) in Reflaxe_ocaml_ast_OcamlExpr.EIdent (Stdlib.Sys.opaque_identity __enum_arg_218)) in HxArray.push __array_receiver_216 __array_arg_0_217
                     )) done);
                     let tempArray2 = Obj.magic _g in let inputs = Obj.magic tempArray2 in (
-                      ignore (if HxArray.length inputs = 0 then ignore (let __array_receiver_217 = Obj.magic inputs in let __array_arg_0_218 = Obj.magic (let __enum_arg_219 = Obj.magic (Reflaxe_ocaml_ast_OcamlConst.CUnit) in Reflaxe_ocaml_ast_OcamlExpr.EConst (Stdlib.Sys.opaque_identity __enum_arg_219)) in HxArray.push __array_receiver_217 __array_arg_0_218) else ());
+                      ignore (if HxArray.length inputs = 0 then ignore (let __array_receiver_219 = Obj.magic inputs in let __array_arg_0_220 = Obj.magic (let __enum_arg_221 = Obj.magic (Reflaxe_ocaml_ast_OcamlConst.CUnit) in Reflaxe_ocaml_ast_OcamlExpr.EConst (Stdlib.Sys.opaque_identity __enum_arg_221)) in HxArray.push __array_receiver_219 __array_arg_0_220) else ());
                       let tempOcamlExpr = ref (Obj.magic (HxRuntime.hx_null) : Reflaxe_ocaml_ast_OcamlExpr.ocamlexpr) in (
-                        ignore (if direct then let __assign_220 = Obj.magic (let __array_read_receiver_221 = values in let __array_read_index_222 = 0 in HxArray.get (Obj.magic __array_read_receiver_221) __array_read_index_222) in (
-                          tempOcamlExpr := __assign_220;
-                          __assign_220
-                        ) else let __assign_223 = Obj.magic (Reflaxe_ocaml_ast_OcamlCallableViewSyntax.invocation (Obj.magic (let __array_read_receiver_224 = values in let __array_read_index_225 = 0 in HxArray.get (Obj.magic __array_read_receiver_224) __array_read_index_225))) in (
-                          tempOcamlExpr := __assign_223;
-                          __assign_223
+                        ignore (if direct then let __assign_222 = Obj.magic (let __array_read_receiver_223 = values in let __array_read_index_224 = 0 in HxArray.get (Obj.magic __array_read_receiver_223) __array_read_index_224) in (
+                          tempOcamlExpr := __assign_222;
+                          __assign_222
+                        ) else let __assign_225 = Obj.magic (Reflaxe_ocaml_ast_OcamlCallableViewSyntax.invocation (Obj.magic (let __array_read_receiver_226 = values in let __array_read_index_227 = 0 in HxArray.get (Obj.magic __array_read_receiver_226) __array_read_index_227))) in (
+                          tempOcamlExpr := __assign_225;
+                          __assign_225
                         ));
-                        let invocation = Obj.magic (!tempOcamlExpr) in let output = ref (Obj.magic (stage3ocamlcallablefunction_convert (Obj.magic _gthis) (Obj.magic (TyType.getFunctionReturn (Obj.magic signature) ())) (Obj.magic (TypedExpr.getType (Obj.magic fact) ())) (Obj.magic (let __enum_arg_226 = Obj.magic invocation in let __enum_arg_227 = Obj.magic inputs in Reflaxe_ocaml_ast_OcamlExpr.EApp (Stdlib.Sys.opaque_identity __enum_arg_226, __enum_arg_227))))) in let index = ref (HxArray.length arguments) in (
+                        let invocation = Obj.magic (!tempOcamlExpr) in let output = ref (Obj.magic (stage3ocamlcallablefunction_convert (Obj.magic _gthis) (Obj.magic (TyType.getFunctionReturn (Obj.magic signature) ())) (Obj.magic (TypedExpr.getType (Obj.magic fact) ())) (Obj.magic (let __enum_arg_228 = Obj.magic invocation in let __enum_arg_229 = Obj.magic inputs in Reflaxe_ocaml_ast_OcamlExpr.EApp (Stdlib.Sys.opaque_identity __enum_arg_228, __enum_arg_229))))) in let index = ref (HxArray.length arguments) in (
                           ignore (try while true do ignore ((
-                            ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not ((let __old_228 = !index in let __new_229 = HxInt.add __old_228 (-1) in (
-                              ignore (index := __new_229);
-                              __old_228
+                            ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not ((let __old_230 = !index in let __new_231 = HxInt.add __old_230 (-1) in (
+                              ignore (index := __new_231);
+                              __old_230
                             )) > 0))) then Stdlib.raise (HxRuntime.Hx_break) else ());
-                            let __assign_230 = Obj.magic (let __enum_arg_235 = (let __array_read_receiver_231 = argumentNames in let __array_read_index_232 = !index in HxArray.get (Obj.magic __array_read_receiver_231) __array_read_index_232 : string) in let __enum_arg_236 = Obj.magic (let __array_read_receiver_233 = arguments in let __array_read_index_234 = !index in HxArray.get (Obj.magic __array_read_receiver_233) __array_read_index_234) in let __enum_arg_237 = Obj.magic (!output) in let __enum_arg_238 = false in Reflaxe_ocaml_ast_OcamlExpr.ELet (Stdlib.Sys.opaque_identity __enum_arg_235, __enum_arg_236, __enum_arg_237, __enum_arg_238)) in (
-                              output := __assign_230;
-                              __assign_230
+                            let __assign_232 = Obj.magic (let __enum_arg_237 = (let __array_read_receiver_233 = argumentNames in let __array_read_index_234 = !index in HxArray.get (Obj.magic __array_read_receiver_233) __array_read_index_234 : string) in let __enum_arg_238 = Obj.magic (let __array_read_receiver_235 = arguments in let __array_read_index_236 = !index in HxArray.get (Obj.magic __array_read_receiver_235) __array_read_index_236) in let __enum_arg_239 = Obj.magic (!output) in let __enum_arg_240 = false in Reflaxe_ocaml_ast_OcamlExpr.ELet (Stdlib.Sys.opaque_identity __enum_arg_237, __enum_arg_238, __enum_arg_239, __enum_arg_240)) in (
+                              output := __assign_232;
+                              __assign_232
                             )
                           )) done with
                             | HxRuntime.Hx_break -> ());
@@ -593,7 +605,7 @@ let stage3ocamlcallablefunction_call = fun self (expression : HxExpr.hxexpr) (fa
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_239 -> (Obj.obj __ret_239 : string) : string)
+  | HxRuntime.Hx_return __ret_241 -> (Obj.obj __ret_241 : string) : string)
 
 let stage3ocamlcallablefunction_render = fun self (expression : HxExpr.hxexpr) (emit : HxExpr.hxexpr -> string) (raw : HxExpr.hxexpr -> string) (reference : TyDeclarationInfo.t -> string) -> (try let _gthis = Obj.magic self in let fact = Obj.magic (stage3ocamlcallablefunction_source (Obj.magic self) (Obj.magic expression)) in (
   ignore (if fact == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
@@ -601,13 +613,13 @@ let stage3ocamlcallablefunction_render = fun self (expression : HxExpr.hxexpr) (
     | TypedExpr.NameRead | TypedExpr.FieldRead -> if TyType.isFunction (Obj.magic (TyAliasExpansion.reveal (Obj.magic (TypedExpr.getType (Obj.magic fact) ())))) () then let declaration = Obj.magic (TypedExpr.getDeclaration (Obj.magic fact) ()) in (
       ignore (if declaration == Obj.magic (HxRuntime.hx_null) || not (TyDeclarationInfo.getIsStatic (Obj.magic declaration) ()) then HxType.hx_throw_typed_rtti (Obj.repr "Native callback origin lacks its selected static declaration") ["Dynamic"] else ());
       ignore (stage3ocamlcallablefunction_shape (Obj.magic self) (Obj.magic (TypedExpr.getType (Obj.magic fact) ())));
-      Stdlib.raise (HxRuntime.Hx_return (Obj.repr (stage3ocamlcallablefunction_bindValues (Obj.magic self) (Obj.magic (let __represented_array_115 = HxArray.create () in let __represented_array_element_0_116 = reference (Obj.magic declaration) in (
-        ignore (HxArray.push __represented_array_115 __represented_array_element_0_116);
-        __represented_array_115
-      ))) (fun values -> Reflaxe_ocaml_ast_OcamlCallableViewSyntax.produce (Obj.magic (let __enum_arg_117 = (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) () : string) in Reflaxe_ocaml_lowered_OcamlCallableOriginKind.StaticDeclaration (Stdlib.Sys.opaque_identity __enum_arg_117))) (Obj.magic (let __array_read_receiver_118 = values in let __array_read_index_119 = 0 in HxArray.get (Obj.magic __array_read_receiver_118) __array_read_index_119)) (fun a0 -> stage3ocamlcallablefunction_fresh _gthis a0)))))
+      Stdlib.raise (HxRuntime.Hx_return (Obj.repr (stage3ocamlcallablefunction_bindValues (Obj.magic self) (Obj.magic (let __represented_array_117 = HxArray.create () in let __represented_array_element_0_118 = reference (Obj.magic declaration) in (
+        ignore (HxArray.push __represented_array_117 __represented_array_element_0_118);
+        __represented_array_117
+      ))) (fun values -> Reflaxe_ocaml_ast_OcamlCallableViewSyntax.produce (Obj.magic (let __enum_arg_119 = (TyDeclarationId.getCanonicalKey (Obj.magic (TyDeclarationInfo.getIdentity (Obj.magic declaration) ())) () : string) in Reflaxe_ocaml_lowered_OcamlCallableOriginKind.StaticDeclaration (Stdlib.Sys.opaque_identity __enum_arg_119))) (Obj.magic (let __array_read_receiver_120 = values in let __array_read_index_121 = 0 in HxArray.get (Obj.magic __array_read_receiver_120) __array_read_index_121)) (fun a0 -> stage3ocamlcallablefunction_fresh _gthis a0)))))
     ) else Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
     | TypedExpr.Call -> Stdlib.raise (HxRuntime.Hx_return (Obj.repr (stage3ocamlcallablefunction_call (Obj.magic self) (Obj.magic expression) (Obj.magic fact) emit reference)))
-    | TypedExpr.Binary -> if HxArray.length children = 2 && TyType.isFunction (Obj.magic (TyAliasExpansion.reveal (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_120 = children in let __array_read_index_121 = 0 in HxArray.get (Obj.magic __array_read_receiver_120) __array_read_index_121)) ())))) () then let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+    | TypedExpr.Binary -> if HxArray.length children = 2 && TyType.isFunction (Obj.magic (TyAliasExpansion.reveal (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_122 = children in let __array_read_index_123 = 0 in HxArray.get (Obj.magic __array_read_receiver_122) __array_read_index_123)) ())))) () then let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
       ignore (if (match expression with
         | HxExpr.EParenthesized (_, _) -> 0
         | HxExpr.ESourceTry (_, _, _) -> 1
@@ -656,32 +668,32 @@ let stage3ocamlcallablefunction_render = fun self (expression : HxExpr.hxexpr) (
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
         | HxExpr.EPrivateAccess (_, _) -> 46) = 24 then let _g2 = (match expression with
-        | HxExpr.EBinop (__enum_param_122, _, _) -> __enum_param_122
+        | HxExpr.EBinop (__enum_param_124, _, _) -> __enum_param_124
         | _ -> failwith "Unexpected enum parameter" : string) in let _g1 = Obj.magic (match expression with
-        | HxExpr.EBinop (_, __enum_param_123, _) -> __enum_param_123
+        | HxExpr.EBinop (_, __enum_param_125, _) -> __enum_param_125
         | _ -> failwith "Unexpected enum parameter") in let _g3 = Obj.magic (match expression with
-        | HxExpr.EBinop (_, _, __enum_param_124) -> __enum_param_124
-        | _ -> failwith "Unexpected enum parameter") in let op = (_g2 : string) in let left = Obj.magic _g1 in let right = Obj.magic _g3 in if (let __string_eq_left_125 = op in let __string_eq_right_126 = "==" in HxString.equals __string_eq_left_125 __string_eq_right_126) || (let __string_eq_left_127 = op in let __string_eq_right_128 = "!=" in HxString.equals __string_eq_left_127 __string_eq_right_128) then (
-        ignore (stage3ocamlcallablefunction_shape (Obj.magic self) (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_129 = children in let __array_read_index_130 = 0 in HxArray.get (Obj.magic __array_read_receiver_129) __array_read_index_130)) ())));
-        ignore (stage3ocamlcallablefunction_shape (Obj.magic self) (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_131 = children in let __array_read_index_132 = 1 in HxArray.get (Obj.magic __array_read_receiver_131) __array_read_index_132)) ())));
-        let __assign_133 = Obj.magic (stage3ocamlcallablefunction_bindValues (Obj.magic self) (Obj.magic (let __represented_array_134 = HxArray.create () in let __represented_array_element_0_135 = emit (Obj.magic left) in (
-          ignore (HxArray.push __represented_array_134 __represented_array_element_0_135);
-          let __represented_array_element_1_136 = emit (Obj.magic right) in (
-            ignore (HxArray.push __represented_array_134 __represented_array_element_1_136);
-            __represented_array_134
+        | HxExpr.EBinop (_, _, __enum_param_126) -> __enum_param_126
+        | _ -> failwith "Unexpected enum parameter") in let op = (_g2 : string) in let left = Obj.magic _g1 in let right = Obj.magic _g3 in if (let __string_eq_left_127 = op in let __string_eq_right_128 = "==" in HxString.equals __string_eq_left_127 __string_eq_right_128) || (let __string_eq_left_129 = op in let __string_eq_right_130 = "!=" in HxString.equals __string_eq_left_129 __string_eq_right_130) then (
+        ignore (stage3ocamlcallablefunction_shape (Obj.magic self) (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_131 = children in let __array_read_index_132 = 0 in HxArray.get (Obj.magic __array_read_receiver_131) __array_read_index_132)) ())));
+        ignore (stage3ocamlcallablefunction_shape (Obj.magic self) (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_133 = children in let __array_read_index_134 = 1 in HxArray.get (Obj.magic __array_read_receiver_133) __array_read_index_134)) ())));
+        let __assign_135 = Obj.magic (stage3ocamlcallablefunction_bindValues (Obj.magic self) (Obj.magic (let __represented_array_136 = HxArray.create () in let __represented_array_element_0_137 = emit (Obj.magic left) in (
+          ignore (HxArray.push __represented_array_136 __represented_array_element_0_137);
+          let __represented_array_element_1_138 = emit (Obj.magic right) in (
+            ignore (HxArray.push __represented_array_136 __represented_array_element_1_138);
+            __represented_array_136
           )
-        ))) (fun values -> Reflaxe_ocaml_ast_OcamlCallableViewSyntax.compare (Obj.magic (let __array_read_receiver_137 = values in let __array_read_index_138 = 0 in HxArray.get (Obj.magic __array_read_receiver_137) __array_read_index_138)) (Obj.magic (let __array_read_receiver_139 = values in let __array_read_index_140 = 1 in HxArray.get (Obj.magic __array_read_receiver_139) __array_read_index_140)) (fun left right -> let tempOcamlBinop = ref (Obj.magic (HxRuntime.hx_null) : Reflaxe_ocaml_ast_OcamlExpr.ocamlbinop) in (
-          ignore (if let __string_eq_left_141 = op in let __string_eq_right_142 = "==" in HxString.equals __string_eq_left_141 __string_eq_right_142 then let __assign_143 = Obj.magic (Reflaxe_ocaml_ast_OcamlExpr.PhysEq) in (
-            tempOcamlBinop := __assign_143;
-            __assign_143
-          ) else let __assign_144 = Obj.magic (Reflaxe_ocaml_ast_OcamlExpr.PhysNeq) in (
-            tempOcamlBinop := __assign_144;
-            __assign_144
+        ))) (fun values -> Reflaxe_ocaml_ast_OcamlCallableViewSyntax.compare (Obj.magic (let __array_read_receiver_139 = values in let __array_read_index_140 = 0 in HxArray.get (Obj.magic __array_read_receiver_139) __array_read_index_140)) (Obj.magic (let __array_read_receiver_141 = values in let __array_read_index_142 = 1 in HxArray.get (Obj.magic __array_read_receiver_141) __array_read_index_142)) (fun left right -> let tempOcamlBinop = ref (Obj.magic (HxRuntime.hx_null) : Reflaxe_ocaml_ast_OcamlExpr.ocamlbinop) in (
+          ignore (if let __string_eq_left_143 = op in let __string_eq_right_144 = "==" in HxString.equals __string_eq_left_143 __string_eq_right_144 then let __assign_145 = Obj.magic (Reflaxe_ocaml_ast_OcamlExpr.PhysEq) in (
+            tempOcamlBinop := __assign_145;
+            __assign_145
+          ) else let __assign_146 = Obj.magic (Reflaxe_ocaml_ast_OcamlExpr.PhysNeq) in (
+            tempOcamlBinop := __assign_146;
+            __assign_146
           ));
-          let __enum_arg_145 = Obj.magic (!tempOcamlBinop) in let __enum_arg_146 = Obj.magic left in let __enum_arg_147 = Obj.magic right in Reflaxe_ocaml_ast_OcamlExpr.EBinop (Stdlib.Sys.opaque_identity __enum_arg_145, __enum_arg_146, __enum_arg_147)
+          let __enum_arg_147 = Obj.magic (!tempOcamlBinop) in let __enum_arg_148 = Obj.magic left in let __enum_arg_149 = Obj.magic right in Reflaxe_ocaml_ast_OcamlExpr.EBinop (Stdlib.Sys.opaque_identity __enum_arg_147, __enum_arg_148, __enum_arg_149)
         )) (fun a0 -> stage3ocamlcallablefunction_fresh _gthis a0)) : string) in (
-          tempResult := __assign_133;
-          __assign_133
+          tempResult := __assign_135;
+          __assign_135
         )
       ) else HxType.hx_throw_typed_rtti (Obj.repr "Native callback comparison lost its exact operands") ["Dynamic"] else HxType.hx_throw_typed_rtti (Obj.repr "Native callback comparison lost its exact operands") ["Dynamic"]);
       Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
@@ -735,28 +747,28 @@ let stage3ocamlcallablefunction_render = fun self (expression : HxExpr.hxexpr) (
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
         | HxExpr.EPrivateAccess (_, _) -> 46) = 34 then let _g2 = Obj.magic (match expression with
-        | HxExpr.ECheckType (__enum_param_148, _) -> __enum_param_148
+        | HxExpr.ECheckType (__enum_param_150, _) -> __enum_param_150
         | _ -> failwith "Unexpected enum parameter") in (
         ignore (match expression with
-          | HxExpr.ECheckType (_, __enum_param_149) -> __enum_param_149
+          | HxExpr.ECheckType (_, __enum_param_151) -> __enum_param_151
           | _ -> failwith "Unexpected enum parameter");
-        let inner = Obj.magic _g2 in let __assign_150 = Obj.magic inner in (
-          tempHxExpr := __assign_150;
-          __assign_150
+        let inner = Obj.magic _g2 in let __assign_152 = Obj.magic inner in (
+          tempHxExpr := __assign_152;
+          __assign_152
         )
       ) else HxType.hx_throw_typed_rtti (Obj.repr "Native callback annotation lost its projected operand") ["Dynamic"]);
-      let operand = Obj.magic (!tempHxExpr) in Stdlib.raise (HxRuntime.Hx_return (Obj.repr (stage3ocamlcallablefunction_bindValues (Obj.magic self) (Obj.magic (let __represented_array_151 = HxArray.create () in let __represented_array_element_0_152 = emit (Obj.magic operand) in (
-        ignore (HxArray.push __represented_array_151 __represented_array_element_0_152);
-        __represented_array_151
-      ))) (fun values -> stage3ocamlcallablefunction_convert (Obj.magic _gthis) (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_153 = children in let __array_read_index_154 = 0 in HxArray.get (Obj.magic __array_read_receiver_153) __array_read_index_154)) ())) (Obj.magic (TypedExpr.getType (Obj.magic fact) ())) (Obj.magic (let __array_read_receiver_155 = values in let __array_read_index_156 = 0 in HxArray.get (Obj.magic __array_read_receiver_155) __array_read_index_156))))))
+      let operand = Obj.magic (!tempHxExpr) in Stdlib.raise (HxRuntime.Hx_return (Obj.repr (stage3ocamlcallablefunction_bindValues (Obj.magic self) (Obj.magic (let __represented_array_153 = HxArray.create () in let __represented_array_element_0_154 = emit (Obj.magic operand) in (
+        ignore (HxArray.push __represented_array_153 __represented_array_element_0_154);
+        __represented_array_153
+      ))) (fun values -> stage3ocamlcallablefunction_convert (Obj.magic _gthis) (Obj.magic (TypedExpr.getType (Obj.magic (let __array_read_receiver_155 = children in let __array_read_index_156 = 0 in HxArray.get (Obj.magic __array_read_receiver_155) __array_read_index_156)) ())) (Obj.magic (TypedExpr.getType (Obj.magic fact) ())) (Obj.magic (let __array_read_receiver_157 = values in let __array_read_index_158 = 0 in HxArray.get (Obj.magic __array_read_receiver_157) __array_read_index_158))))))
     ) else Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
     | TypedExpr.Lambda | TypedExpr.SourceFunction -> (
       ignore (stage3ocamlcallablefunction_shape (Obj.magic self) (Obj.magic (TypedExpr.getType (Obj.magic fact) ())));
-      Stdlib.raise (HxRuntime.Hx_return (Obj.repr (stage3ocamlcallablefunction_bindValues (Obj.magic self) (Obj.magic (let __represented_array_157 = HxArray.create () in let __represented_array_element_0_158 = raw (Obj.magic expression) in (
-        ignore (HxArray.push __represented_array_157 __represented_array_element_0_158);
-        __represented_array_157
-      ))) (fun values -> Reflaxe_ocaml_ast_OcamlCallableViewSyntax.produce (Obj.magic (Reflaxe_ocaml_lowered_OcamlCallableOriginKind.FreshLiteral)) (Obj.magic (let __array_read_receiver_159 = values in let __array_read_index_160 = 0 in HxArray.get (Obj.magic __array_read_receiver_159) __array_read_index_160)) (fun a0 -> stage3ocamlcallablefunction_fresh _gthis a0)))))
+      Stdlib.raise (HxRuntime.Hx_return (Obj.repr (stage3ocamlcallablefunction_bindValues (Obj.magic self) (Obj.magic (let __represented_array_159 = HxArray.create () in let __represented_array_element_0_160 = raw (Obj.magic expression) in (
+        ignore (HxArray.push __represented_array_159 __represented_array_element_0_160);
+        __represented_array_159
+      ))) (fun values -> Reflaxe_ocaml_ast_OcamlCallableViewSyntax.produce (Obj.magic (Reflaxe_ocaml_lowered_OcamlCallableOriginKind.FreshLiteral)) (Obj.magic (let __array_read_receiver_161 = values in let __array_read_index_162 = 0 in HxArray.get (Obj.magic __array_read_receiver_161) __array_read_index_162)) (fun a0 -> stage3ocamlcallablefunction_fresh _gthis a0)))))
     )
     | _ -> Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
 ) with
-  | HxRuntime.Hx_return __ret_161 -> (Obj.obj __ret_161 : string) : string)
+  | HxRuntime.Hx_return __ret_163 -> (Obj.obj __ret_163 : string) : string)

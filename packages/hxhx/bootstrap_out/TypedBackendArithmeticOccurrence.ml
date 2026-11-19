@@ -1,0 +1,2 @@
+# 1 "TypedBackendArithmeticOccurrence.ml"
+include CompilerDiagnosticProbe.TypedBackendArithmeticOccurrence

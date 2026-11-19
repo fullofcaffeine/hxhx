@@ -196,52 +196,70 @@ let render = fun input -> (try let occurrence = Obj.magic (Obj.obj (HxAnon.get i
             ignore (while !_g < _g1 do ignore (let index = let __old_144 = !_g in let __new_145 = HxInt.add __old_144 1 in (
               ignore (_g := __new_145);
               __old_144
-            ) in let __array_receiver_146 = Obj.magic bindings in let __array_arg_0_147 = (let __string_part_152 = "let " in let __string_part_153 = HxString.toStdString (let __array_read_receiver_148 = arguments in let __array_read_index_149 = index in HxArray.get (Obj.magic __array_read_receiver_148) __array_read_index_149) in let __string_part_154 = " = (" in let __string_part_155 = HxString.toStdString ((Obj.obj (HxAnon.get input "emit") : _ -> _) (Obj.magic (let __array_read_receiver_150 = Obj.obj (HxAnon.get call "arguments") in let __array_read_index_151 = index in HxArray.get (Obj.magic __array_read_receiver_150) __array_read_index_151))) in let __string_part_156 = ") in " in (((__string_part_152 ^ __string_part_153) ^ __string_part_154) ^ __string_part_155) ^ __string_part_156 : string) in HxArray.push __array_receiver_146 __array_arg_0_147) done);
-            let table = ("(Obj.magic " ^ HxString.toStdString receiver) ^ ")" in let operation = let __callback_input_163 = fun name -> let __string_part_157 = "HxMap." in let __string_part_158 = HxString.toStdString name in let __string_part_159 = "_" in let __string_part_160 = HxString.toStdString (suffix (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "backend.ocaml.Stage3OcamlMapKeys" (HxAnon.get selected "keys"))))) in let __string_part_161 = " " in let __string_part_162 = HxString.toStdString table in ((((__string_part_157 ^ __string_part_158) ^ __string_part_159) ^ __string_part_160) ^ __string_part_161) ^ __string_part_162 in let __callable_origin_164 = __callback_input_163 in (__callable_origin_164, Obj.repr (ref ())) in let stored = let __callback_input_176 = fun () -> let tempResult = ref (HxString.hx_null_string : string) in (
-              ignore (if TyType.isDynamic (Obj.magic (Obj.obj (HxAnon.get selected "valueType"))) () then let __assign_165 = (let __string_part_170 = "(Obj.magic (" in let __string_part_171 = HxString.toStdString (Backend_ocaml_Stage3OcamlObjects.store (Obj.magic (let __array_read_receiver_166 = TypedBackendInstanceCallOccurrence.getProjectedArgumentTypes (Obj.magic occurrence) () in let __array_read_index_167 = 1 in HxArray.get (Obj.magic __array_read_receiver_166) __array_read_index_167)) (let __array_read_receiver_168 = arguments in let __array_read_index_169 = 1 in HxArray.get (Obj.magic __array_read_receiver_168) __array_read_index_169 : string)) in let __string_part_172 = "))" in (__string_part_170 ^ __string_part_171) ^ __string_part_172 : string) in (
-                tempResult := __assign_165;
-                __assign_165
-              ) else let __assign_173 = (let __array_read_receiver_174 = arguments in let __array_read_index_175 = 1 in HxArray.get (Obj.magic __array_read_receiver_174) __array_read_index_175 : string) in (
-                tempResult := __assign_173;
-                __assign_173
+            ) in let rendered = ((Obj.obj (HxAnon.get input "emit") : _ -> _) (Obj.magic (let __array_read_receiver_146 = Obj.obj (HxAnon.get call "arguments") in let __array_read_index_147 = index in HxArray.get (Obj.magic __array_read_receiver_146) __array_read_index_147)) : string) in let actual = Obj.magic (let __array_read_receiver_148 = TypedBackendInstanceCallOccurrence.getProjectedArgumentTypes (Obj.magic occurrence) () in let __array_read_index_149 = index in HxArray.get (Obj.magic __array_read_receiver_148) __array_read_index_149) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+              ignore (if index = 0 && actual != Obj.magic (HxRuntime.hx_null) then let __assign_150 = Obj.magic (Backend_ocaml_Stage3OcamlNullablePrimitive.convertArgument (Obj.magic actual) (Obj.magic (Obj.obj (HxAnon.get selected "keyType"))) false (rendered : string) : string) in (
+                tempMaybeString := __assign_150;
+                __assign_150
+              ) else let __assign_151 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+                tempMaybeString := __assign_151;
+                __assign_151
+              ));
+              let key = (!tempMaybeString : string) in let tempMaybeString1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+                ignore (if key == Obj.magic (HxRuntime.hx_null) then let __assign_152 = Obj.magic (rendered : string) in (
+                  tempMaybeString1 := __assign_152;
+                  __assign_152
+                ) else let __assign_153 = Obj.magic (key : string) in (
+                  tempMaybeString1 := __assign_153;
+                  __assign_153
+                ));
+                let __array_receiver_154 = Obj.magic bindings in let __array_arg_0_155 = (let __string_part_158 = "let " in let __string_part_159 = HxString.toStdString (let __array_read_receiver_156 = arguments in let __array_read_index_157 = index in HxArray.get (Obj.magic __array_read_receiver_156) __array_read_index_157) in let __string_part_160 = " = (" in let __string_part_161 = HxString.toStdString (!tempMaybeString1) in let __string_part_162 = ") in " in (((__string_part_158 ^ __string_part_159) ^ __string_part_160) ^ __string_part_161) ^ __string_part_162 : string) in HxArray.push __array_receiver_154 __array_arg_0_155
+              )
+            )) done);
+            let table = ("(Obj.magic " ^ HxString.toStdString receiver) ^ ")" in let operation = let __callback_input_169 = fun name -> let __string_part_163 = "HxMap." in let __string_part_164 = HxString.toStdString name in let __string_part_165 = "_" in let __string_part_166 = HxString.toStdString (suffix (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "backend.ocaml.Stage3OcamlMapKeys" (HxAnon.get selected "keys"))))) in let __string_part_167 = " " in let __string_part_168 = HxString.toStdString table in ((((__string_part_163 ^ __string_part_164) ^ __string_part_165) ^ __string_part_166) ^ __string_part_167) ^ __string_part_168 in let __callable_origin_170 = __callback_input_169 in (__callable_origin_170, Obj.repr (ref ())) in let stored = let __callback_input_182 = fun () -> let tempResult = ref (HxString.hx_null_string : string) in (
+              ignore (if TyType.isDynamic (Obj.magic (Obj.obj (HxAnon.get selected "valueType"))) () then let __assign_171 = (let __string_part_176 = "(Obj.magic (" in let __string_part_177 = HxString.toStdString (Backend_ocaml_Stage3OcamlObjects.store (Obj.magic (let __array_read_receiver_172 = TypedBackendInstanceCallOccurrence.getProjectedArgumentTypes (Obj.magic occurrence) () in let __array_read_index_173 = 1 in HxArray.get (Obj.magic __array_read_receiver_172) __array_read_index_173)) (let __array_read_receiver_174 = arguments in let __array_read_index_175 = 1 in HxArray.get (Obj.magic __array_read_receiver_174) __array_read_index_175 : string)) in let __string_part_178 = "))" in (__string_part_176 ^ __string_part_177) ^ __string_part_178 : string) in (
+                tempResult := __assign_171;
+                __assign_171
+              ) else let __assign_179 = (let __array_read_receiver_180 = arguments in let __array_read_index_181 = 1 in HxArray.get (Obj.magic __array_read_receiver_180) __array_read_index_181 : string) in (
+                tempResult := __assign_179;
+                __assign_179
               ));
               !tempResult
-            ) in let __callable_origin_177 = __callback_input_176 in (__callable_origin_177, Obj.repr (ref ())) in let tempString = ref (HxString.hx_null_string : string) in (
+            ) in let __callable_origin_183 = __callback_input_182 in (__callable_origin_183, Obj.repr (ref ())) in let tempString = ref (HxString.hx_null_string : string) in (
               ignore (match hx_method with
-                | "arrayWrite" -> let __assign_178 = (let __string_part_186 = "(" in let __string_part_187 = HxString.toStdString (let __call_callee_179 = operation in let __call_arg_0_180 = "set" in Stdlib.fst __call_callee_179 __call_arg_0_180) in let __string_part_188 = " " in let __string_part_189 = HxString.toStdString (let __array_read_receiver_181 = arguments in let __array_read_index_182 = 0 in HxArray.get (Obj.magic __array_read_receiver_181) __array_read_index_182) in let __string_part_190 = " " in let __string_part_191 = HxString.toStdString (let __call_callee_183 = stored in Stdlib.fst __call_callee_183 ()) in let __string_part_192 = "; " in let __string_part_193 = HxString.toStdString (let __array_read_receiver_184 = arguments in let __array_read_index_185 = 1 in HxArray.get (Obj.magic __array_read_receiver_184) __array_read_index_185) in let __string_part_194 = ")" in (((((((__string_part_186 ^ __string_part_187) ^ __string_part_188) ^ __string_part_189) ^ __string_part_190) ^ __string_part_191) ^ __string_part_192) ^ __string_part_193) ^ __string_part_194 : string) in (
-                  tempString := __assign_178;
-                  __assign_178
+                | "arrayWrite" -> let __assign_184 = (let __string_part_192 = "(" in let __string_part_193 = HxString.toStdString (let __call_callee_185 = operation in let __call_arg_0_186 = "set" in Stdlib.fst __call_callee_185 __call_arg_0_186) in let __string_part_194 = " " in let __string_part_195 = HxString.toStdString (let __array_read_receiver_187 = arguments in let __array_read_index_188 = 0 in HxArray.get (Obj.magic __array_read_receiver_187) __array_read_index_188) in let __string_part_196 = " " in let __string_part_197 = HxString.toStdString (let __call_callee_189 = stored in Stdlib.fst __call_callee_189 ()) in let __string_part_198 = "; " in let __string_part_199 = HxString.toStdString (let __array_read_receiver_190 = arguments in let __array_read_index_191 = 1 in HxArray.get (Obj.magic __array_read_receiver_190) __array_read_index_191) in let __string_part_200 = ")" in (((((((__string_part_192 ^ __string_part_193) ^ __string_part_194) ^ __string_part_195) ^ __string_part_196) ^ __string_part_197) ^ __string_part_198) ^ __string_part_199) ^ __string_part_200 : string) in (
+                  tempString := __assign_184;
+                  __assign_184
                 )
-                | "clear" | "copy" -> let __assign_195 = (let __call_callee_196 = operation in let __call_arg_0_197 = hx_method in Stdlib.fst __call_callee_196 __call_arg_0_197 : string) in (
-                  tempString := __assign_195;
-                  __assign_195
-                )
-                | "iterator" -> let __assign_198 = (iterator (let __call_callee_199 = operation in let __call_arg_0_200 = "values" in Stdlib.fst __call_callee_199 __call_arg_0_200 : string) (fun item -> item) (Obj.magic (Obj.obj (HxAnon.get input "names"))) : string) in (
-                  tempString := __assign_198;
-                  __assign_198
-                )
-                | "keyValueIterator" -> let __assign_201 = (iterator (let __call_callee_202 = operation in let __call_arg_0_203 = "pairs" in Stdlib.fst __call_callee_202 __call_arg_0_203 : string) (fun item -> pairObject (item : string) selected (Obj.magic (Obj.obj (HxAnon.get input "names"))) (Obj.obj (HxAnon.get input "quote") : _ -> _)) (Obj.magic (Obj.obj (HxAnon.get input "names"))) : string) in (
+                | "clear" | "copy" -> let __assign_201 = (let __call_callee_202 = operation in let __call_arg_0_203 = hx_method in Stdlib.fst __call_callee_202 __call_arg_0_203 : string) in (
                   tempString := __assign_201;
                   __assign_201
                 )
-                | "keys" -> let __assign_204 = (iterator (let __call_callee_205 = operation in let __call_arg_0_206 = "keys" in Stdlib.fst __call_callee_205 __call_arg_0_206 : string) (fun item -> item) (Obj.magic (Obj.obj (HxAnon.get input "names"))) : string) in (
+                | "iterator" -> let __assign_204 = (iterator (let __call_callee_205 = operation in let __call_arg_0_206 = "values" in Stdlib.fst __call_callee_205 __call_arg_0_206 : string) (fun item -> item) (Obj.magic (Obj.obj (HxAnon.get input "names"))) : string) in (
                   tempString := __assign_204;
                   __assign_204
                 )
-                | "exists" | "get" | "remove" -> let __assign_207 = (let __string_part_212 = HxString.toStdString (let __call_callee_208 = operation in let __call_arg_0_209 = hx_method in Stdlib.fst __call_callee_208 __call_arg_0_209) in let __string_part_213 = " " in let __string_part_214 = HxString.toStdString (let __array_read_receiver_210 = arguments in let __array_read_index_211 = 0 in HxArray.get (Obj.magic __array_read_receiver_210) __array_read_index_211) in (__string_part_212 ^ __string_part_213) ^ __string_part_214 : string) in (
+                | "keyValueIterator" -> let __assign_207 = (iterator (let __call_callee_208 = operation in let __call_arg_0_209 = "pairs" in Stdlib.fst __call_callee_208 __call_arg_0_209 : string) (fun item -> pairObject (item : string) selected (Obj.magic (Obj.obj (HxAnon.get input "names"))) (Obj.obj (HxAnon.get input "quote") : _ -> _)) (Obj.magic (Obj.obj (HxAnon.get input "names"))) : string) in (
                   tempString := __assign_207;
                   __assign_207
                 )
-                | "set" -> let __assign_215 = (let __string_part_221 = HxString.toStdString (let __call_callee_216 = operation in let __call_arg_0_217 = "set" in Stdlib.fst __call_callee_216 __call_arg_0_217) in let __string_part_222 = " " in let __string_part_223 = HxString.toStdString (let __array_read_receiver_218 = arguments in let __array_read_index_219 = 0 in HxArray.get (Obj.magic __array_read_receiver_218) __array_read_index_219) in let __string_part_224 = " " in let __string_part_225 = HxString.toStdString (let __call_callee_220 = stored in Stdlib.fst __call_callee_220 ()) in (((__string_part_221 ^ __string_part_222) ^ __string_part_223) ^ __string_part_224) ^ __string_part_225 : string) in (
-                  tempString := __assign_215;
-                  __assign_215
+                | "keys" -> let __assign_210 = (iterator (let __call_callee_211 = operation in let __call_arg_0_212 = "keys" in Stdlib.fst __call_callee_211 __call_arg_0_212 : string) (fun item -> item) (Obj.magic (Obj.obj (HxAnon.get input "names"))) : string) in (
+                  tempString := __assign_210;
+                  __assign_210
                 )
-                | "toString" -> let key = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic (Obj.obj (HxAnon.get input "names"))) ("__hx_map_key" : string) : string) in let value = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic (Obj.obj (HxAnon.get input "names"))) ("__hx_map_value" : string) : string) in let __assign_226 = (let __string_part_229 = "\"[\" ^ HxArray.join (" in let __string_part_230 = HxString.toStdString (let __call_callee_227 = operation in let __call_arg_0_228 = "pairs" in Stdlib.fst __call_callee_227 __call_arg_0_228) in let __string_part_231 = ") \", \" (fun (" in let __string_part_232 = HxString.toStdString key in let __string_part_233 = ", " in let __string_part_234 = HxString.toStdString value in let __string_part_235 = ") -> " in let __string_part_236 = HxString.toStdString (text (Obj.magic (Obj.obj (HxAnon.get selected "keyType"))) (key : string)) in let __string_part_237 = " ^ \" => \" ^ " in let __string_part_238 = HxString.toStdString (text (Obj.magic (Obj.obj (HxAnon.get selected "valueType"))) (value : string)) in let __string_part_239 = ") ^ \"]\"" in (((((((((__string_part_229 ^ __string_part_230) ^ __string_part_231) ^ __string_part_232) ^ __string_part_233) ^ __string_part_234) ^ __string_part_235) ^ __string_part_236) ^ __string_part_237) ^ __string_part_238) ^ __string_part_239 : string) in (
-                  tempString := __assign_226;
-                  __assign_226
+                | "exists" | "get" | "remove" -> let __assign_213 = (let __string_part_218 = HxString.toStdString (let __call_callee_214 = operation in let __call_arg_0_215 = hx_method in Stdlib.fst __call_callee_214 __call_arg_0_215) in let __string_part_219 = " " in let __string_part_220 = HxString.toStdString (let __array_read_receiver_216 = arguments in let __array_read_index_217 = 0 in HxArray.get (Obj.magic __array_read_receiver_216) __array_read_index_217) in (__string_part_218 ^ __string_part_219) ^ __string_part_220 : string) in (
+                  tempString := __assign_213;
+                  __assign_213
+                )
+                | "set" -> let __assign_221 = (let __string_part_227 = HxString.toStdString (let __call_callee_222 = operation in let __call_arg_0_223 = "set" in Stdlib.fst __call_callee_222 __call_arg_0_223) in let __string_part_228 = " " in let __string_part_229 = HxString.toStdString (let __array_read_receiver_224 = arguments in let __array_read_index_225 = 0 in HxArray.get (Obj.magic __array_read_receiver_224) __array_read_index_225) in let __string_part_230 = " " in let __string_part_231 = HxString.toStdString (let __call_callee_226 = stored in Stdlib.fst __call_callee_226 ()) in (((__string_part_227 ^ __string_part_228) ^ __string_part_229) ^ __string_part_230) ^ __string_part_231 : string) in (
+                  tempString := __assign_221;
+                  __assign_221
+                )
+                | "toString" -> let key = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic (Obj.obj (HxAnon.get input "names"))) ("__hx_map_key" : string) : string) in let value = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic (Obj.obj (HxAnon.get input "names"))) ("__hx_map_value" : string) : string) in let __assign_232 = (let __string_part_235 = "\"[\" ^ HxArray.join (" in let __string_part_236 = HxString.toStdString (let __call_callee_233 = operation in let __call_arg_0_234 = "pairs" in Stdlib.fst __call_callee_233 __call_arg_0_234) in let __string_part_237 = ") \", \" (fun (" in let __string_part_238 = HxString.toStdString key in let __string_part_239 = ", " in let __string_part_240 = HxString.toStdString value in let __string_part_241 = ") -> " in let __string_part_242 = HxString.toStdString (text (Obj.magic (Obj.obj (HxAnon.get selected "keyType"))) (key : string)) in let __string_part_243 = " ^ \" => \" ^ " in let __string_part_244 = HxString.toStdString (text (Obj.magic (Obj.obj (HxAnon.get selected "valueType"))) (value : string)) in let __string_part_245 = ") ^ \"]\"" in (((((((((__string_part_235 ^ __string_part_236) ^ __string_part_237) ^ __string_part_238) ^ __string_part_239) ^ __string_part_240) ^ __string_part_241) ^ __string_part_242) ^ __string_part_243) ^ __string_part_244) ^ __string_part_245 : string) in (
+                  tempString := __assign_232;
+                  __assign_232
                 )
                 | _ -> HxType.hx_throw_typed_rtti (Obj.repr ("unexpected selected map operation " ^ HxString.toStdString hx_method)) ["Dynamic"]);
-              let rendered = (!tempString : string) in let __string_part_240 = "(" in let __string_part_241 = HxString.toStdString (HxArray.join bindings "" (fun x -> x)) in let __string_part_242 = HxString.toStdString rendered in let __string_part_243 = ")" in ((__string_part_240 ^ __string_part_241) ^ __string_part_242) ^ __string_part_243
+              let rendered = (!tempString : string) in let __string_part_246 = "(" in let __string_part_247 = HxString.toStdString (HxArray.join bindings "" (fun x -> x)) in let __string_part_248 = HxString.toStdString rendered in let __string_part_249 = ")" in ((__string_part_246 ^ __string_part_247) ^ __string_part_248) ^ __string_part_249
             )
           )
         )
@@ -249,28 +267,28 @@ let render = fun input -> (try let occurrence = Obj.magic (Obj.obj (HxAnon.get i
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_244 -> (Obj.obj __ret_244 : string) : string)
+  | HxRuntime.Hx_return __ret_250 -> (Obj.obj __ret_250 : string) : string)
 
 let renderLiteral = fun aggregate emit names -> (
   ignore (if names == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml map literal requires its local naming owner") ["Dynamic"] else ());
-  let selected = storage ("haxe.ds.Map" : string) (Obj.magic (TypedBackendAggregateOccurrence.getType (Obj.magic aggregate) ())) ("literal" : string) in let table = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_map_literal" : string) : string) in let out = Obj.magic (let __represented_array_245 = HxArray.create () in let __represented_array_element_0_246 = let __string_part_247 = "(let " in let __string_part_248 = HxString.toStdString table in let __string_part_249 = " = HxMap.create_" in let __string_part_250 = HxString.toStdString (suffix (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "backend.ocaml.Stage3OcamlMapKeys" (HxAnon.get selected "keys"))))) in let __string_part_251 = " () in " in (((__string_part_247 ^ __string_part_248) ^ __string_part_249) ^ __string_part_250) ^ __string_part_251 in (
-    ignore (HxArray.push __represented_array_245 __represented_array_element_0_246);
-    __represented_array_245
+  let selected = storage ("haxe.ds.Map" : string) (Obj.magic (TypedBackendAggregateOccurrence.getType (Obj.magic aggregate) ())) ("literal" : string) in let table = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_map_literal" : string) : string) in let out = Obj.magic (let __represented_array_251 = HxArray.create () in let __represented_array_element_0_252 = let __string_part_253 = "(let " in let __string_part_254 = HxString.toStdString table in let __string_part_255 = " = HxMap.create_" in let __string_part_256 = HxString.toStdString (suffix (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "backend.ocaml.Stage3OcamlMapKeys" (HxAnon.get selected "keys"))))) in let __string_part_257 = " () in " in (((__string_part_253 ^ __string_part_254) ^ __string_part_255) ^ __string_part_256) ^ __string_part_257 in (
+    ignore (HxArray.push __represented_array_251 __represented_array_element_0_252);
+    __represented_array_251
   )) in let entries = Obj.magic (TypedBackendAggregateOccurrence.getMapEntries (Obj.magic aggregate) ()) in let _g = ref 0 in let _g1 = HxArray.length entries in (
-    ignore (while !_g < _g1 do ignore (let index = let __old_252 = !_g in let __new_253 = HxInt.add __old_252 1 in (
-      ignore (_g := __new_253);
-      __old_252
-    ) in let entry = let __array_read_receiver_254 = entries in let __array_read_index_255 = index in HxArray.get (Obj.magic __array_read_receiver_254) __array_read_index_255 in let key = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_map_key_" ^ string_of_int index : string) : string) in let value = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_map_value_" ^ string_of_int index : string) : string) in let tempString = ref (HxString.hx_null_string : string) in (
-      ignore (if TyType.isDynamic (Obj.magic (Obj.obj (HxAnon.get selected "valueType"))) () then let __assign_256 = (let __string_part_257 = "(Obj.magic (" in let __string_part_258 = HxString.toStdString (Backend_ocaml_Stage3OcamlObjects.store (Obj.magic (Obj.obj (HxAnon.get entry "valueType"))) (value : string)) in let __string_part_259 = "))" in (__string_part_257 ^ __string_part_258) ^ __string_part_259 : string) in (
-        tempString := __assign_256;
-        __assign_256
-      ) else let __assign_260 = (value : string) in (
-        tempString := __assign_260;
-        __assign_260
+    ignore (while !_g < _g1 do ignore (let index = let __old_258 = !_g in let __new_259 = HxInt.add __old_258 1 in (
+      ignore (_g := __new_259);
+      __old_258
+    ) in let entry = let __array_read_receiver_260 = entries in let __array_read_index_261 = index in HxArray.get (Obj.magic __array_read_receiver_260) __array_read_index_261 in let key = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_map_key_" ^ string_of_int index : string) : string) in let value = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_map_value_" ^ string_of_int index : string) : string) in let tempString = ref (HxString.hx_null_string : string) in (
+      ignore (if TyType.isDynamic (Obj.magic (Obj.obj (HxAnon.get selected "valueType"))) () then let __assign_262 = (let __string_part_263 = "(Obj.magic (" in let __string_part_264 = HxString.toStdString (Backend_ocaml_Stage3OcamlObjects.store (Obj.magic (Obj.obj (HxAnon.get entry "valueType"))) (value : string)) in let __string_part_265 = "))" in (__string_part_263 ^ __string_part_264) ^ __string_part_265 : string) in (
+        tempString := __assign_262;
+        __assign_262
+      ) else let __assign_266 = (value : string) in (
+        tempString := __assign_266;
+        __assign_266
       ));
-      let stored = (!tempString : string) in let __array_receiver_261 = Obj.magic out in let __array_arg_0_262 = (let __string_part_265 = "let " in let __string_part_266 = HxString.toStdString key in let __string_part_267 = " = (" in let __string_part_268 = HxString.toStdString (emit (Obj.magic (let __structural_receiver_263 = entry in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_263 "key"))))) in let __string_part_269 = ") in let " in let __string_part_270 = HxString.toStdString value in let __string_part_271 = " = (" in let __string_part_272 = HxString.toStdString (emit (Obj.magic (let __structural_receiver_264 = entry in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_264 "value"))))) in let __string_part_273 = ") in HxMap.set_" in let __string_part_274 = HxString.toStdString (suffix (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "backend.ocaml.Stage3OcamlMapKeys" (HxAnon.get selected "keys"))))) in let __string_part_275 = " " in let __string_part_276 = HxString.toStdString table in let __string_part_277 = " " in let __string_part_278 = HxString.toStdString key in let __string_part_279 = " " in let __string_part_280 = HxString.toStdString stored in let __string_part_281 = "; " in (((((((((((((((__string_part_265 ^ __string_part_266) ^ __string_part_267) ^ __string_part_268) ^ __string_part_269) ^ __string_part_270) ^ __string_part_271) ^ __string_part_272) ^ __string_part_273) ^ __string_part_274) ^ __string_part_275) ^ __string_part_276) ^ __string_part_277) ^ __string_part_278) ^ __string_part_279) ^ __string_part_280) ^ __string_part_281 : string) in HxArray.push __array_receiver_261 __array_arg_0_262
+      let stored = (!tempString : string) in let __array_receiver_267 = Obj.magic out in let __array_arg_0_268 = (let __string_part_271 = "let " in let __string_part_272 = HxString.toStdString key in let __string_part_273 = " = (" in let __string_part_274 = HxString.toStdString (emit (Obj.magic (let __structural_receiver_269 = entry in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_269 "key"))))) in let __string_part_275 = ") in let " in let __string_part_276 = HxString.toStdString value in let __string_part_277 = " = (" in let __string_part_278 = HxString.toStdString (emit (Obj.magic (let __structural_receiver_270 = entry in Obj.obj (HxEnum.unbox_or_obj "HxExpr" (HxAnon.get __structural_receiver_270 "value"))))) in let __string_part_279 = ") in HxMap.set_" in let __string_part_280 = HxString.toStdString (suffix (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "backend.ocaml.Stage3OcamlMapKeys" (HxAnon.get selected "keys"))))) in let __string_part_281 = " " in let __string_part_282 = HxString.toStdString table in let __string_part_283 = " " in let __string_part_284 = HxString.toStdString key in let __string_part_285 = " " in let __string_part_286 = HxString.toStdString stored in let __string_part_287 = "; " in (((((((((((((((__string_part_271 ^ __string_part_272) ^ __string_part_273) ^ __string_part_274) ^ __string_part_275) ^ __string_part_276) ^ __string_part_277) ^ __string_part_278) ^ __string_part_279) ^ __string_part_280) ^ __string_part_281) ^ __string_part_282) ^ __string_part_283) ^ __string_part_284) ^ __string_part_285) ^ __string_part_286) ^ __string_part_287 : string) in HxArray.push __array_receiver_267 __array_arg_0_268
     )) done);
-    ignore (let __array_receiver_282 = Obj.magic out in let __array_arg_0_283 = (HxString.toStdString table ^ ")" : string) in HxArray.push __array_receiver_282 __array_arg_0_283);
+    ignore (let __array_receiver_288 = Obj.magic out in let __array_arg_0_289 = (HxString.toStdString table ^ ")" : string) in HxArray.push __array_receiver_288 __array_arg_0_289);
     HxArray.join out "" (fun x -> x)
   )
 )

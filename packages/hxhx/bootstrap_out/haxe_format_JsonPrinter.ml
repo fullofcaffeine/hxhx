@@ -116,7 +116,7 @@ let rec writeValue = fun self (key : Obj.t) (value : Obj.t) -> ignore (ignore (t
     Stdlib.raise (HxRuntime.Hx_return_void)
   ) else ());
   ignore (if let __isOfTypeValue_27 = Obj.magic (!resolved) in if __isOfTypeValue_27 == HxRuntime.hx_null then false else Obj.is_int __isOfTypeValue_27 && not (HxRuntime.is_boxed_bool __isOfTypeValue_27) || Obj.tag __isOfTypeValue_27 = Obj.double_tag then let floatValue = Std.parseFloat (HxDynamic.toStdString (Obj.magic (!resolved)) : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
-    ignore (if Math.isFinite floatValue then let __assign_28 = (string_of_float floatValue : string) in (
+    ignore (if Math.isFinite floatValue then let __assign_28 = (HxRuntime.float_toStdString floatValue : string) in (
       tempString1 := __assign_28;
       __assign_28
     ) else let __assign_29 = ("null" : string) in (
