@@ -1,0 +1,3 @@
+check.flag=Bool
+check.name=String
+check.other=Bool
