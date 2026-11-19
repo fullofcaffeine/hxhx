@@ -42,16 +42,15 @@ Also change the "Last update" date.
 | Parse oracle: field bodies that `hxhx` parses the same as upstream | `hxhx` | 1720 of 1850 (93.0%) |
 | Parse oracle: files where each body matches | `hxhx` | 83 of 138 |
 | Typed oracle: method signatures that `hxhx` types the same as upstream | `hxhx` | 1379 of 1671 (82.5%) |
-| Representation matrix: cells with the same output as upstream | `reflaxe.ocaml` | 212 of 239 (88.7%) |
+| Representation matrix: cells with the same output as upstream | `reflaxe.ocaml` | 213 of 239 (89.1%) |
 | Upstream unit suite (milestone F2) | `hxhx` | There is no pass count yet. The run stops at a macro call. |
 
 The two oracles compare `hxhx` with upstream Haxe 4.3.7 on the `haxe` package of the standard library. [`scripts/oracle/README.md`](scripts/oracle/README.md) gives the method.
 
-The representation matrix moves 16 value types through 15 boundaries. On `main`, 27 cells fail:
+The representation matrix moves 16 value types through 15 boundaries. On `main`, 26 cells fail, and no cell prints a wrong value:
 
 - 10 cells give OCaml that does not build.
 - 16 cells stop with a named error.
-- 1 cell prints a wrong value.
 
 [The baseline](scripts/reflaxe-ocaml/representation-matrix-baseline.md) shows each cell.
 
