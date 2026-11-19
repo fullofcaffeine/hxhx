@@ -2928,6 +2928,9 @@ class HxParser {
 			final name = readIdent("field splice name");
 			return "__hxhx_macro_field_splice:" + name;
 		}
+		// `A.new` reads the constructor as a function value.
+		if (acceptKeyword(KNew))
+			return "new";
 		return readIdent("field name");
 	}
 
@@ -3722,6 +3725,12 @@ class HxParser {
 		// - Our expression grammar is intentionally incomplete; it may stop before `;`.
 		// - If we don't advance to the end of the statement, parsing can get stuck on
 		//   the same token forever.
+		//
+		// Haxe 4.3.7 does not require `;` after a statement whose last token is `}`, so the
+		// statement ends there. Skipping on would drop the next member or statement without
+		// an error, such as the method after `function f() return switch (x) { ... }`.
+		if (consumedRBrace && !cur.kind.match(TSemicolon))
+			return;
 		while (!stop() && !cur.kind.match(TSemicolon) && !cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
 			if (isSemicolonlessStatementBoundary())
 				return;
