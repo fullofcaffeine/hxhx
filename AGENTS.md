@@ -27,7 +27,7 @@ The owner accepted these priorities on 2026-11-16 (review decisions D1, D2 and D
    `reflaxe.ocaml` is the Haxe-to-OCaml target.
 2. **`hxhx` milestones, in order:**
    - **F1, frontend parity:** the `hxhx` parser and typer match upstream Haxe 4.3.7, measured by
-     the parse and typed oracles (added under `scripts/oracle/` by `haxe_ocaml-7cxgt` and
+     the parse and typed oracles in `scripts/oracle/` (beads `haxe_ocaml-7cxgt` and
      `haxe_ocaml-rten2`).
    - **F2, the upstream unit suite on JavaScript:** `hxhx` compiles and passes the upstream
      unit suite for the JavaScript target.
@@ -105,8 +105,9 @@ Items 3 and 4 hold until F2. No more than three implementation fronts are active
 - Merge on the day the required checks pass. An agent may merge its own pull request, except
   one that changes `AGENTS.md`, the agent policies, or an owner decision; removes, loosens, or
   re-routes a CI check (including its time limits); touches provenance or licensing files; or
-  makes a release or version change. Those need the owner's approval on the pull request. If
-  unsure, ask.
+  makes a release or version change. Those need the owner's approval on the pull request. The
+  owner can delegate that approval for a named pull request or decision. Then quote the owner's
+  words and the reviewer's verdict on the pull request before the merge. If unsure, ask.
 - "Checks pass" means every required job is green on the head commit. A `Tests` summary job
   that is still queued counts as passed once every other job in its run has succeeded or was
   skipped by the route. Before a self-merge, comment with the head commit, the run link, and
