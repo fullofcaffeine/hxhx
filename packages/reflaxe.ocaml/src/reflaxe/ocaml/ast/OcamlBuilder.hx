@@ -6394,6 +6394,18 @@ class OcamlBuilder {
 		}
 	}
 
+	// An abstract that is not a core type stores its underlying value, such as
+	// `enum abstract Code(Int)`. String and Float values reach the static string
+	// plan before this point; Int and Bool print here (haxe_ocaml-trjbi).
+	function buildValueAbstractString(inner:TypedExpr, abstractType:Type):OcamlExpr {
+		final valueType = OcamlStaticStringPlanner.followValueAbstracts(abstractType);
+		if (isIntType(valueType))
+			return OcamlExpr.EApp(OcamlExpr.EIdent("string_of_int"), [buildExpr(inner)]);
+		if (isBoolType(valueType))
+			return OcamlExpr.EApp(OcamlExpr.EIdent("string_of_bool"), [buildExpr(inner)]);
+		return OcamlExpr.EConst(OcamlConst.CString("<unsupported>"));
+	}
+
 	/** Inspects unwrapped syntax but evaluates the original expression so semantic metadata remains authoritative. */
 	function buildStdString(inner:TypedExpr, sourceKind:OcamlStaticStringSourceKind):OcamlExpr {
 		final e = unwrap(inner);
@@ -6402,6 +6414,10 @@ class OcamlBuilder {
 			final built = buildExpr(inner);
 			final carrier = switch (dynamicStrategy) {
 				case DirectCarrier: built;
+				// Enums need their name in the box: a constant constructor is an OCaml immediate
+				// and would otherwise print as an Int (haxe_ocaml-oxjcd).
+				case BoxWithObjRepr if (fullNameOfTypeEnum(inner.t) != null || isNullableEnumType(inner.t) != null):
+					coerceToObjCarrier(inner.t, built);
 				case BoxWithObjRepr: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 			};
 			return OcamlExpr.EApp(dynamicStringFunction(inner, dynamicStrategy), [carrier]);
@@ -6451,7 +6467,7 @@ class OcamlBuilder {
 							OcamlExpr.EConst(OcamlConst.CString("<unsupported>"));
 						}
 					default:
-						OcamlExpr.EConst(OcamlConst.CString("<unsupported>"));
+						buildValueAbstractString(inner, e.t);
 				}
 			case TInst(cRef, _):
 				final c = cRef.get();
@@ -7729,6 +7745,7 @@ class OcamlBuilder {
 
 		final nullableEnumName = isNullableEnumType(valueType);
 		if (nullableEnumName != null) {
+			registerBoxedEnum(nullableEnumName);
 			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
 				[OcamlExpr.EConst(OcamlConst.CString(nullableEnumName)), value]);
 		}
@@ -7738,10 +7755,21 @@ class OcamlBuilder {
 
 		final enumName = fullNameOfTypeEnum(valueType);
 		if (enumName != null) {
+			registerBoxedEnum(enumName);
 			obj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"), [OcamlExpr.EConst(OcamlConst.CString(enumName)), obj]);
 		}
 
 		return obj;
+	}
+
+	/**
+		 * A boxed enum value can be printed or inspected through Dynamic, which reads its
+		 * constructor names from the runtime type registry. Standard-library enums are left out
+		 * of that registry by default, so a boxed `haxe.io.Encoding` printed as `<object>`.
+		 * Every enum that this target boxes is therefore registered.
+		 */
+	function registerBoxedEnum(enumName:String):Void {
+		ctx.nonStdTypeRegistryEnums.set(enumName, true);
 	}
 
 	inline function toObjValueExpr(e:TypedExpr):OcamlExpr {

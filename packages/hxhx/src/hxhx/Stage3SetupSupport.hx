@@ -315,10 +315,43 @@ class Stage3SetupSupport {
 		return withCwd;
 	}
 
+	/**
+		The `target.*` defines that upstream Haxe 4.3.7 sets for the same output, which the 4.3
+		standard library uses to select code (`haxe.Timer`, `sys.thread`, string and Unicode
+		helpers). The values were observed from upstream Haxe 4.3.7 with
+		`haxe.macro.Context.getDefines()`: `--js` for JavaScript, and stock Haxe with `-lib
+		reflaxe.ocaml` for OCaml, so native hxhx and stock Haxe give the OCaml target the same
+		defines. Other backends are frozen until milestone F2 and keep their current defines
+		(`haxe_ocaml-ac5i9.12`).
+	**/
+	static function upstreamTargetDefines(backendTargetDefine:String):Map<String, String> {
+		return switch (backendTargetDefine) {
+			case "js": [
+					"target.name" => "js",
+					"target.unicode" => "1",
+					"target.utf16" => "1",
+					"target.atomics" => "1"
+				];
+			case "ocaml": [
+					"target.name" => "cross",
+					"target.static" => "1",
+					"target.sys" => "1",
+					"target.threaded" => "1",
+					"target.unicode" => "1",
+					"target.utf16" => "1"
+				];
+			case _: [];
+		};
+	}
+
 	public static function buildDefinesMap(allDefines:Array<String>, backendTargetDefine:String, backendId:String):haxe.ds.StringMap<String> {
 		final definesMap = HxDefineMap.fromRawDefines(allDefines);
 		definesMap.set("sys", "1");
 		definesMap.set(backendTargetDefine, "1");
+		// An explicit -D keeps its value; otherwise the target gets upstream's target.* defines.
+		for (name => value in upstreamTargetDefines(backendTargetDefine))
+			if (!definesMap.exists(name))
+				definesMap.set(name, value);
 		// Native OCaml uses the authored provider branch even without a CLI output path.
 		// An explicit output value remains available to the normal routing owner.
 		if (backendTargetDefine == "ocaml" && !definesMap.exists("ocaml_output"))

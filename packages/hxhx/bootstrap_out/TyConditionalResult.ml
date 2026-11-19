@@ -4,28 +4,34 @@
 
 let __reflaxe_ocaml__ = ()
 
+let isFunctionBranch = fun hx_type -> TyFunctionConstraint.isFunctionConstraint (Obj.magic hx_type) || TyFunctionConstraint.isFunctionValue (Obj.magic hx_type)
+
 let converts = fun source target index -> (try (
   ignore (if TyType.isUnknown (Obj.magic source) () || TyType.isDynamic (Obj.magic source) () || TyType.isVoid (Obj.magic source) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-  ignore (if let __string_eq_left_5 = TyType.getSemanticKey (Obj.magic source) () in let __string_eq_right_6 = TyType.getSemanticKey (Obj.magic target) () in HxString.equals __string_eq_left_5 __string_eq_right_6 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+  ignore (if let __string_eq_left_6 = TyType.getSemanticKey (Obj.magic source) () in let __string_eq_right_7 = TyType.getSemanticKey (Obj.magic target) () in HxString.equals __string_eq_left_6 __string_eq_right_7 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   let storage = Obj.magic (TyImplicitConversionPlan.select (Obj.magic index) (Obj.magic target) (Obj.magic source)) in storage != Obj.magic (HxRuntime.hx_null) && TyImplicitConversionPlan.isRepresentationPreservingAbstractConversion (Obj.magic storage) () || TyAbstractMethodConversion.select (Obj.magic index) (Obj.magic target) (Obj.magic source) != Obj.magic (HxRuntime.hx_null)
 ) with
-  | HxRuntime.Hx_return __ret_7 -> (Obj.obj __ret_7 : bool) : bool)
+  | HxRuntime.Hx_return __ret_8 -> (Obj.obj __ret_8 : bool) : bool)
 
 let join = fun left right expected index -> (try let selected = ref (Obj.magic (TyType.unify (Obj.magic left) (Obj.magic right))) in (
   ignore (if (!selected == Obj.magic (HxRuntime.hx_null) || TyType.isDynamic (Obj.magic (!selected)) ()) && expected != Obj.magic (HxRuntime.hx_null) && index != Obj.magic (HxRuntime.hx_null) && not (TyType.isUnknown (Obj.magic expected) ()) && not (TyType.isDynamic (Obj.magic expected) ()) && not (TyType.isVoid (Obj.magic expected) ()) && converts (Obj.magic left) (Obj.magic expected) (Obj.magic index) && converts (Obj.magic right) (Obj.magic expected) (Obj.magic index) then ignore (let __assign_1 = Obj.magic (Obj.magic expected) in (
     selected := __assign_1;
     __assign_1
   )) else ());
+  ignore (if (!selected == Obj.magic (HxRuntime.hx_null) || TyType.isDynamic (Obj.magic (!selected)) ()) && TyFunctionConstraint.isFunctionConstraint (Obj.magic expected) && isFunctionBranch (Obj.magic left) && isFunctionBranch (Obj.magic right) then ignore (let __assign_2 = Obj.magic (Obj.magic expected) in (
+    selected := __assign_2;
+    __assign_2
+  )) else ());
   ignore (if !selected == Obj.magic (HxRuntime.hx_null) || TyType.isNullLiteral (Obj.magic (!selected)) () || TyType.isNullable (Obj.magic (!selected)) () || TyType.isDynamic (Obj.magic (!selected)) () || TyType.isVoid (Obj.magic (!selected)) () || TyType.isNoNormalCompletion (Obj.magic (!selected)) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!selected))) else ());
   let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-    ignore (if TyType.isNullLiteral (Obj.magic left) () || TyType.isNullLiteral (Obj.magic right) () then let __assign_2 = Obj.magic (Obj.magic (TyType.nullable (Obj.magic (!selected)) (Obj.magic (HxRuntime.hx_null)))) in (
-      tempResult := __assign_2;
-      __assign_2
-    ) else let __assign_3 = Obj.magic (Obj.magic (!selected)) in (
+    ignore (if TyType.isNullLiteral (Obj.magic left) () || TyType.isNullLiteral (Obj.magic right) () then let __assign_3 = Obj.magic (Obj.magic (TyType.nullable (Obj.magic (!selected)) (Obj.magic (HxRuntime.hx_null)))) in (
       tempResult := __assign_3;
       __assign_3
+    ) else let __assign_4 = Obj.magic (Obj.magic (!selected)) in (
+      tempResult := __assign_4;
+      __assign_4
     ));
     !tempResult
   )
 ) with
-  | HxRuntime.Hx_return __ret_4 -> (Obj.obj __ret_4 : TyType.t) : TyType.t)
+  | HxRuntime.Hx_return __ret_5 -> (Obj.obj __ret_5 : TyType.t) : TyType.t)

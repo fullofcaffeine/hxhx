@@ -216,6 +216,23 @@ class TyInferenceSolver {
 		};
 	}
 
+	/**
+		Array access on an unresolved receiver makes it `Array<element>`, as in Haxe 4.3.7, and
+		returns the new element term. Later uses bind the element. A receiver that already has
+		field requirements, or any other term, is left alone and gives `null`.
+	**/
+	public function indexedElement(term:TyInferenceTerm, arrayIdentity:TyNominalTypeId):Null<TyInferenceTerm> {
+		assertOwned(term);
+		if (sealed)
+			return null;
+		return switch follow(term) {
+			case Variable(identity) if (fieldRequirements[identity.ordinal].length == 0):
+				final element = allocate(null, identity.kind);
+				constrain(term, Nominal(arrayIdentity, [element])) ? element : null;
+			case _: null;
+		};
+	}
+
 	/** Failure never retains a binding made while checking an earlier component. */
 	public function constrain(left:TyInferenceTerm, right:TyInferenceTerm, ?resolveMember:TyInferenceMemberResolver):Bool {
 		requireMutable();
@@ -365,7 +382,7 @@ class TyInferenceSolver {
 		};
 	}
 
-	function follow(term:TyInferenceTerm):TyInferenceTerm {
+	public function follow(term:TyInferenceTerm):TyInferenceTerm {
 		return switch term {
 			case Variable(identity) if (solutions[identity.ordinal] != null): follow(solutions[identity.ordinal]);
 			case _: term;

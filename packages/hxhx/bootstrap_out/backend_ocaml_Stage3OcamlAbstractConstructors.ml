@@ -74,6 +74,8 @@ let create = fun () -> let self = ({ __hx_type = HxType.instance_marker "backend
 
 let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.ocaml.Stage3OcamlAbstractConstructors"; constructors = Obj.magic HxRuntime.hx_null; modules = Obj.magic HxRuntime.hx_null; underlyings = Obj.magic HxRuntime.hx_null } : t)
 
+let underlyingOf = fun self (identity : string) -> let this1 = (Obj.magic self : t).underlyings in let tempResult = Obj.magic (HxMap.get_string this1 (identity : string)) in tempResult
+
 let add = fun self (input : Obj.t) -> ignore (ignore (let identity = (Obj.obj (HxAnon.get input "identity") : string) in let this1 = (Obj.magic self : t).modules in let tempBool = HxMap.exists_string this1 (identity : string) in (
   ignore (if tempBool then HxType.hx_throw_typed_rtti (Obj.repr ("native abstract constructor owner registered twice: " ^ HxString.toStdString identity)) ["Dynamic"] else ());
   let this1 = (Obj.magic self : t).modules in let value = (Obj.obj (HxAnon.get input "module") : string) in (

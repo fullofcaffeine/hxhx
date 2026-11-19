@@ -2563,7 +2563,17 @@ class TyperStage {
 	/** Reuse the inferred receiver: lexical declarations inside it must not be visited twice during indexed dispatch. */
 	static function ordinaryIndexedElement(source:HxExpr, receiver:HxExpr, subscript:HxExpr, receiverType:TyType, scope:TyFunctionEnv, ctx:TyperContext,
 			pos:HxPos):TyType {
-		final indexType = inferExprType(subscript, scope, ctx, pos);
+		var indexType = inferExprType(subscript, scope, ctx, pos);
+		// An explicitly untyped operand stays unresolved: it must not acquire inferred storage.
+		if (!scope.isUntypedContext()
+			&& !TyFieldAssignment.explicitlyUntyped(receiver)
+			&& !TyFieldAssignment.explicitlyUntyped(subscript)
+			&& (receiverType.isUnknown() || indexType.isUnknown())) {
+			final inference = scope.getInference();
+			inference.constrainIndexedAccess(receiver, receiverType, subscript, indexType, scope, ctx.getIndex());
+			receiverType = inference.expressionType(receiver, receiverType, scope);
+			indexType = inference.expressionType(subscript, indexType, scope);
+		}
 		var elementType = arrayElementType(receiverType.unwrapNull());
 		if (elementType == null) {
 			final ancestor = TyNominalAncestor.view(ctx.getIndex(), receiverType.unwrapNull(), new TyNominalTypeId("Array"));
@@ -4841,13 +4851,27 @@ class TyperStage {
 							&& u.isNumeric() ? u : TyType.unknown();
 						}
 					case "-" | "*" | "/" | "%":
-						final ta = inferExprType(a, scope, ctx, pos);
-						final tb = inferExprType(b, scope, ctx, pos);
-						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), ta, tb, op, ctx.getFilePath(), pos);
+						final inferredLeft = inferExprType(a, scope, ctx, pos);
+						final inferredRight = inferExprType(b, scope, ctx, pos);
+						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), inferredLeft, inferredRight, op, ctx.getFilePath(), pos);
 						// Without a declared operator, one abstract operand may act through its `to` primitive.
-						final viewed = bound == null ? TyAbstractPrimitiveOperation.operation(ctx.getIndex(), op, ta, tb) : null;
+						final viewed = bound == null ? TyAbstractPrimitiveOperation.operation(ctx.getIndex(), op, inferredLeft, inferredRight) : null;
 						if (viewed != null && viewed.failure != null)
 							throw new TyperError(ctx.getFilePath(), pos, viewed.failure);
+						// Builtin arithmetic binds unresolved inputs to Int, as in Haxe 4.3.7.
+						final operands = bound != null
+							|| viewed != null ? {left: inferredLeft, right: inferredRight} : TyArithmeticOperandInference.constrain({
+								left: a,
+								right: b,
+								leftType: inferredLeft,
+								rightType: inferredRight,
+								scope: scope,
+								index: ctx.getIndex(),
+								filePath: ctx.getFilePath(),
+								position: pos
+							});
+						final ta = operands.left;
+						final tb = operands.right;
 						if (bound != null) bound.getOperatorInfo().getResultType(); else if (viewed != null) viewed.result; else {
 							final integer = op == "/" ? null : TyNullableIntegerResult.result(ta, tb);
 							final unified = integer == null ? TyType.unify(ta.unwrapNull(), tb.unwrapNull()) : integer;

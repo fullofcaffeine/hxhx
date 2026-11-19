@@ -893,7 +893,7 @@ and macroExprDef = fun expr -> let tempResult = ref (HxString.hx_null_string : s
       __assign_181
     )
     | HxExpr.EFloat _p0 -> let _g = _p0 in let value = _g in let __assign_186 = (macroEnum ("EConst" : string) (Obj.magic (let __represented_array_187 = HxArray.create () in let __represented_array_element_0_188 = macroEnum ("CFloat" : string) (Obj.magic (let __arr_189 = HxArray.create () in (
-      ignore (HxArray.push __arr_189 (let __call_arg_0_190 = string_of_float value in macroString __call_arg_0_190));
+      ignore (HxArray.push __arr_189 (let __call_arg_0_190 = HxRuntime.float_toStdString value in macroString __call_arg_0_190));
       __arr_189
     ))) in (
       ignore (HxArray.push __represented_array_187 __represented_array_element_0_188);

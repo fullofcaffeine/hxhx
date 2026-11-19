@@ -25,11 +25,11 @@ let launch = fun program args timeoutSeconds -> let temporary = (HxSys.getEnv ("
   ));
   let marker = (Haxe_io_Path.join (Obj.magic (let __represented_array_4 = HxArray.create () in let __represented_array_element_0_5 = !tempString in (
     ignore (HxArray.push __represented_array_4 __represented_array_element_0_5);
-    let __represented_array_element_1_6 = let __string_part_14 = "hxhx-tool-timeout-" in let __string_part_15 = HxString.toStdString (let __string_receiver_7 = let __call_arg_0_10 = let __string_part_11 = string_of_float (HxSys.time ()) in let __string_part_12 = ":" in let __string_part_13 = string_of_int (Std.random 1073741823) in (__string_part_11 ^ __string_part_12) ^ __string_part_13 in Haxe_crypto_Sha256.encode __call_arg_0_10 in let __string_argument_0_8 = 0 in let __string_argument_1_9 = 12 in HxString.substr __string_receiver_7 __string_argument_0_8 __string_argument_1_9) in __string_part_14 ^ __string_part_15 in (
+    let __represented_array_element_1_6 = let __string_part_14 = "hxhx-tool-timeout-" in let __string_part_15 = HxString.toStdString (let __string_receiver_7 = let __call_arg_0_10 = let __string_part_11 = HxRuntime.float_toStdString (HxSys.time ()) in let __string_part_12 = ":" in let __string_part_13 = string_of_int (Std.random 1073741823) in (__string_part_11 ^ __string_part_12) ^ __string_part_13 in Haxe_crypto_Sha256.encode __call_arg_0_10 in let __string_argument_0_8 = 0 in let __string_argument_1_9 = 12 in HxString.substr __string_receiver_7 __string_argument_0_8 __string_argument_1_9) in __string_part_14 ^ __string_part_15 in (
       ignore (HxArray.push __represented_array_4 __represented_array_element_1_6);
       __represented_array_4
     )
-  ))) : string) in let limit = (string_of_float (Math.max (float_of_int 1) (float_of_int (Math.ceil timeoutSeconds))) : string) in let tempProcess = ref (Obj.magic (HxRuntime.hx_null) : Sys_io_Process.t) in (
+  ))) : string) in let limit = (HxRuntime.float_toStdString (Math.max (float_of_int 1) (float_of_int (Math.ceil timeoutSeconds))) : string) in let tempProcess = ref (Obj.magic (HxRuntime.hx_null) : Sys_io_Process.t) in (
     ignore (if let __string_eq_left_16 = HxSys.systemName () in let __string_eq_right_17 = "Windows" in HxString.equals __string_eq_left_16 __string_eq_right_17 then let __assign_18 = Obj.magic (Sys_io_Process.create (program : string) (Obj.magic args) (HxRuntime.hx_null)) in (
       tempProcess := __assign_18;
       __assign_18

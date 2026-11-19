@@ -71,6 +71,16 @@ class ValueConversionTableTest {
 				failures.push('carrier of ${ComplexTypeTools.toString(entry.type)}: expected ${entry.expected}, got $actual');
 		}
 
+		// An unresolved type variable (here the type of `null`, `Null<Unknown>`) has no known
+		// runtime carrier, so a cast from it, such as `cast(__ocaml__(...))`, converts nothing.
+		final unresolved = haxe.macro.Context.typeof(macro null);
+		final unresolvedCarrier = Std.string(OcamlValueConversion.carrierOf(unresolved));
+		if (unresolvedCarrier != "UnclassifiedCarrier")
+			failures.push('carrier of an unresolved type: expected UnclassifiedCarrier, got $unresolvedCarrier');
+		final fromUnresolved = OcamlValueConversion.decide(unresolved, ComplexTypeTools.toType(macro :Null<String>));
+		if (fromUnresolved != null)
+			failures.push('cast from an unresolved type to Null<String>: expected no conversion, got $fromUnresolved');
+
 		final pairs:Array<{from:ComplexType, to:ComplexType, expected:String}> = [
 			// Same carrier.
 			{from: macro :Int, to: macro :Int, expected: "SameCarrier"},

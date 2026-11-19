@@ -4,15 +4,24 @@
 
 let __reflaxe_ocaml__ = ()
 
+let dynamicValue = fun hx_type value context -> (try let revealed = Obj.magic (TyAliasExpansion.reveal (Obj.magic hx_type)) in (
+  ignore (if let __string_eq_left_8 = TyType.getSemanticKey (Obj.magic (TyType.unwrapNull (Obj.magic revealed) ())) () in let __string_eq_right_9 = "primitive:Bool" in HxString.equals __string_eq_left_8 __string_eq_right_9 then (
+    ignore (if TyType.isNullable (Obj.magic revealed) () then HxType.hx_throw_typed_rtti (Obj.repr (HxString.toStdString context ^ " does not support a Null<Bool> value yet")) ["Dynamic"] else ());
+    Stdlib.raise (HxRuntime.Hx_return (Obj.repr (("HxRuntime.box_bool (" ^ HxString.toStdString value) ^ ")")))
+  ) else ());
+  ("Obj.repr (" ^ HxString.toStdString value) ^ ")"
+) with
+  | HxRuntime.Hx_return __ret_10 -> (Obj.obj __ret_10 : string) : string)
+
 let checkedExtraction = fun value category carrier names -> (
   ignore (if names == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml Dynamic extraction requires its local-name owner") ["Dynamic"] else ());
   let local = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_callback_result" : string) : string) in let tempString = ref (HxString.hx_null_string : string) in (
-    ignore (if let __string_eq_left_9 = category in let __string_eq_right_10 = "Int" in HxString.equals __string_eq_left_9 __string_eq_right_10 then let __assign_11 = ((("Obj.is_int " ^ HxString.toStdString local) ^ " && not (HxRuntime.is_null ") ^ HxString.toStdString local) ^ ")" in (
-      tempString := __assign_11;
-      __assign_11
-    ) else let __assign_12 = ((("not (Obj.is_int " ^ HxString.toStdString local) ^ ") && Obj.tag ") ^ HxString.toStdString local) ^ " = Obj.string_tag" in (
-      tempString := __assign_12;
-      __assign_12
+    ignore (if let __string_eq_left_11 = category in let __string_eq_right_12 = "Int" in HxString.equals __string_eq_left_11 __string_eq_right_12 then let __assign_13 = ((("Obj.is_int " ^ HxString.toStdString local) ^ " && not (HxRuntime.is_null ") ^ HxString.toStdString local) ^ ")" in (
+      tempString := __assign_13;
+      __assign_13
+    ) else let __assign_14 = ((("not (Obj.is_int " ^ HxString.toStdString local) ^ ") && Obj.tag ") ^ HxString.toStdString local) ^ " = Obj.string_tag" in (
+      tempString := __assign_14;
+      __assign_14
     ));
     let check = !tempString in ((((((((((("(let " ^ HxString.toStdString local) ^ " = (") ^ HxString.toStdString value) ^ ") in if ") ^ HxString.toStdString check) ^ " then (Obj.obj ") ^ HxString.toStdString local) ^ " : ") ^ HxString.toStdString carrier) ^ ") else HxRuntime.hx_throw_typed (Obj.repr \"Invalid Dynamic value; expected ") ^ HxString.toStdString category) ^ "\") [\"String\"; \"Dynamic\"])"
   )
@@ -27,30 +36,26 @@ let convert = fun actual expected value names -> (try (
       let source = (TyType.getSemanticKey (Obj.magic actual) () : string) in let destination = (TyType.getSemanticKey (Obj.magic expected) () : string) in (
         ignore (if TyType.isDynamic (Obj.magic expected) () then let tempResult = ref (HxString.hx_null_string : string) in (
           ignore (match source with
-            | "primitive:Bool" -> let __assign_3 = ("HxRuntime.box_bool (" ^ HxString.toStdString value) ^ ")" in (
+            | "primitive:Bool" | "primitive:Int" | "primitive:String" -> let __assign_3 = (dynamicValue (Obj.magic actual) (value : string) ("OCaml value input" : string) : string) in (
               tempResult := __assign_3;
               __assign_3
-            )
-            | "primitive:Int" | "primitive:String" -> let __assign_4 = ("Obj.repr (" ^ HxString.toStdString value) ^ ")" in (
-              tempResult := __assign_4;
-              __assign_4
             )
             | _ -> HxType.hx_throw_typed_rtti (Obj.repr ("unsupported OCaml value input carrier: " ^ HxString.toStdString source)) ["Dynamic"]);
           Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
         ) else ());
         ignore (if TyType.isDynamic (Obj.magic actual) () then let tempResult1 = ref (HxString.hx_null_string : string) in (
           ignore (match destination with
-            | "primitive:Bool" -> let __assign_5 = (("HxDynamic.booleanValue (" ^ HxString.toStdString value) ^ ")" : string) in (
+            | "primitive:Bool" -> let __assign_4 = (("HxDynamic.booleanValue (" ^ HxString.toStdString value) ^ ")" : string) in (
+              tempResult1 := __assign_4;
+              __assign_4
+            )
+            | "primitive:Int" -> let __assign_5 = (checkedExtraction (value : string) ("Int" : string) ("int" : string) (Obj.magic names) : string) in (
               tempResult1 := __assign_5;
               __assign_5
             )
-            | "primitive:Int" -> let __assign_6 = (checkedExtraction (value : string) ("Int" : string) ("int" : string) (Obj.magic names) : string) in (
+            | "primitive:String" -> let __assign_6 = (checkedExtraction (value : string) ("String" : string) ("string" : string) (Obj.magic names) : string) in (
               tempResult1 := __assign_6;
               __assign_6
-            )
-            | "primitive:String" -> let __assign_7 = (checkedExtraction (value : string) ("String" : string) ("string" : string) (Obj.magic names) : string) in (
-              tempResult1 := __assign_7;
-              __assign_7
             )
             | _ -> HxType.hx_throw_typed_rtti (Obj.repr ("unsupported OCaml value result carrier: " ^ HxString.toStdString destination)) ["Dynamic"]);
           Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult1)))
@@ -60,12 +65,12 @@ let convert = fun actual expected value names -> (try (
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_8 -> (Obj.obj __ret_8 : string) : string)
+  | HxRuntime.Hx_return __ret_7 -> (Obj.obj __ret_7 : string) : string)
 
 let untypedValue = fun facts value names -> (try let tempShortCircuit = ref (false : bool) in (
-  ignore (if facts == Obj.magic (HxRuntime.hx_null) then let __assign_13 = true in (
-    tempShortCircuit := __assign_13;
-    __assign_13
+  ignore (if facts == Obj.magic (HxRuntime.hx_null) then let __assign_15 = true in (
+    tempShortCircuit := __assign_15;
+    __assign_15
   ) else let tempBool = ref (false : bool) in let _g = Obj.magic (TypedBackendCastOccurrence.getExpression (Obj.magic facts) ()) in (
     ignore (if (match _g with
       | HxExpr.EParenthesized (_, _) -> 0
@@ -116,23 +121,23 @@ let untypedValue = fun facts value names -> (try let tempShortCircuit = ref (fal
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
       | HxExpr.EPrivateAccess (_, _) -> 46) = 35 then (
       ignore (match _g with
-        | HxExpr.EUntyped __enum_param_14 -> __enum_param_14
+        | HxExpr.EUntyped __enum_param_16 -> __enum_param_16
         | _ -> failwith "Unexpected enum parameter");
-      let __assign_15 = true in (
-        tempBool := __assign_15;
-        __assign_15
+      let __assign_17 = true in (
+        tempBool := __assign_17;
+        __assign_17
       )
-    ) else let __assign_16 = false in (
-      tempBool := __assign_16;
-      __assign_16
+    ) else let __assign_18 = false in (
+      tempBool := __assign_18;
+      __assign_18
     ));
-    let __assign_17 = not (!tempBool) in (
-      tempShortCircuit := __assign_17;
-      __assign_17
+    let __assign_19 = not (!tempBool) in (
+      tempShortCircuit := __assign_19;
+      __assign_19
     )
   ));
   ignore (if !tempShortCircuit then HxType.hx_throw_typed_rtti (Obj.repr "OCaml untyped value requires its exact typed occurrence") ["Dynamic"] else ());
   ignore (if TyType.isUnknown (Obj.magic (TypedBackendCastOccurrence.getTargetType (Obj.magic facts) ())) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr value)) else ());
   convert (Obj.magic (TypedBackendCastOccurrence.getSourceType (Obj.magic facts) ())) (Obj.magic (TypedBackendCastOccurrence.getTargetType (Obj.magic facts) ())) (value : string) (Obj.magic names)
 ) with
-  | HxRuntime.Hx_return __ret_18 -> (Obj.obj __ret_18 : string) : string)
+  | HxRuntime.Hx_return __ret_20 -> (Obj.obj __ret_20 : string) : string)

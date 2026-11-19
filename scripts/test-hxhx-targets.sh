@@ -1413,6 +1413,11 @@ out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmphelper/src" -main Main --hxhx-out "$tm
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 
+# Stage3 `trace` prints `File.hx:LINE: value`, like upstream Haxe 4.3.7 (since 22cd291f8).
+# Upstream names a file under an absolute class path relative to that class path, so
+# `Main.hx:5: ok`. hxhx still prints the absolute path (haxe_ocaml-s69rp), so the trace
+# checks below accept an optional directory before `Main.hx`. Emitted-code checks match the
+# trace argument binding, because the value is no longer passed to print_endline directly.
 echo "== Stage3 bring-up: module-local enum abstract emits provider (Gate1 regression)"
 tmpenumabs="$tmpdir/module_local_enum_abstract"
 mkdir -p "$tmpenumabs/src/pkg"
@@ -1439,7 +1444,7 @@ class Main {
 HX
 out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmpenumabs/src" -main Main --hxhx-out "$tmpenumabs/out")"
 echo "$out" | grep -q "^stage3=ok$"
-echo "$out" | grep -q "^ok$"
+echo "$out" | grep -Eq "^(.*/)?Main\.hx:[0-9]+: ok$"
 echo "$out" | grep -q "^run=ok$"
 
 echo "== Stage3 bring-up: omitted optional args don't partial apply"
@@ -1476,7 +1481,7 @@ class Main {
 HX
 out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmpfull/src" -main Main --hxhx-out "$tmpfull/out")"
 echo "$out" | grep -q "^stage3=ok$"
-echo "$out" | grep -q "^OK$"
+echo "$out" | grep -Eq "^(.*/)?Main\.hx:[0-9]+: OK$"
 echo "$out" | grep -vq "^BAD$"
 echo "$out" | grep -q "^run=ok$"
 
@@ -1786,10 +1791,10 @@ class Main {
 HX
 out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmpbodyrecover/src" -main Main --hxhx-out "$tmpbodyrecover/out")"
 echo "$out" | grep -q "^stage3=ok$"
-echo "$out" | grep -q "^A$"
+echo "$out" | grep -Eq "^(.*/)?Main\.hx:[0-9]+: A$"
 # Current bootstrap snapshot still lowers `for` bodies conservatively in this lane.
 # The regression check here is parse/body recovery: the tail of the function must still run.
-echo "$out" | grep -q "^C$"
+echo "$out" | grep -Eq "^(.*/)?Main\.hx:[0-9]+: C$"
 echo "$out" | grep -q "^run=ok$"
 
 	echo "== Stage3 bring-up: parses try/catch expression initializer"
@@ -1830,9 +1835,9 @@ class Main {
 HX
 out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmptrystmt/src" -main Main --hxhx-out "$tmptrystmt/out")"
 echo "$out" | grep -q "^stage3=ok$"
-echo "$out" | grep -q "^A$"
-echo "$out" | grep -q "^TRY$"
-echo "$out" | grep -q "^C$"
+echo "$out" | grep -Eq "^(.*/)?Main\.hx:[0-9]+: A$"
+echo "$out" | grep -Eq "^(.*/)?Main\.hx:[0-9]+: TRY$"
+echo "$out" | grep -Eq "^(.*/)?Main\.hx:[0-9]+: C$"
 echo "$out" | grep -q "^run=ok$"
 
 echo "== Stage3 bring-up: rest args pack into Array<T>"
@@ -1854,9 +1859,9 @@ class Main {
 HX
 out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmprest/src" -main Main --hxhx-out "$tmprest/out")"
 echo "$out" | grep -q "^stage3=ok$"
-echo "$out" | grep -q "^p:$"
-echo "$out" | grep -q "^p:a$"
-echo "$out" | grep -q "^p:a,b$"
+echo "$out" | grep -Eq "^(.*/)?Main\.hx:[0-9]+: p:$"
+echo "$out" | grep -Eq "^(.*/)?Main\.hx:[0-9]+: p:a$"
+echo "$out" | grep -Eq "^(.*/)?Main\.hx:[0-9]+: p:a,b$"
 echo "$out" | grep -q "^run=ok$"
 
 echo "== Stage3 bring-up: rest-only args (no fixed params) pack into Array<T>"
@@ -1880,9 +1885,9 @@ class Main {
 HX
 out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmprestonly/src" -main Main --hxhx-out "$tmprestonly/out")"
 echo "$out" | grep -q "^stage3=ok$"
-echo "$out" | grep -q "^\[\]$"
-echo "$out" | grep -q "^\[a\]$"
-echo "$out" | grep -q "^\[a,b\]$"
+echo "$out" | grep -Eq "^(.*/)?Main\.hx:[0-9]+: \[\]$"
+echo "$out" | grep -Eq "^(.*/)?Main\.hx:[0-9]+: \[a\]$"
+echo "$out" | grep -Eq "^(.*/)?Main\.hx:[0-9]+: \[a,b\]$"
 echo "$out" | grep -q "^run=ok$"
 
 echo "== Stage3 bring-up: string ternary in println emits"
@@ -2528,7 +2533,7 @@ echo "$out" | grep -q "^native-reflaxe-stage3=ok$"
 echo "$out" | grep -q "^sum=10$"
 grep -Eq 'sum := __hx_[a-z_]+' "$tmpstage3sum/out/Main.ml"
 grep -q 'HxBootArray.iter' "$tmpstage3sum/out/Main.ml"
-grep -Eq 'print_endline \(\("sum=" \^ (HxDynamic\.toStdString|string_of_int)' "$tmpstage3sum/out/Main.ml"
+grep -Eq 'print_endline \(+"sum="\)* \^ \(*(HxDynamic\.toStdString|string_of_int)' "$tmpstage3sum/out/Main.ml"
 
 echo "== Stage3 bring-up: ingests library -D defines (haxe_libraries/*.hxml)"
 tmpmini="$tmpdir/haxelib_define_fixture"
@@ -2592,7 +2597,7 @@ class Main {
 HX
 out="$(HXHX_EXPR_MACROS='hxhxmacros.ExprMacroShim.hello()' HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$tmpexpr/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpexpr/out")"
 echo "$out" | grep -q "^expr_macros_expanded=1$"
-echo "$out" | grep -q "^HELLO$"
+echo "$out" | grep -Eq "^(.*/)?Main\.hx:[0-9]+: HELLO$"
 echo "$out" | grep -q "^run=ok$"
 
 echo "== Contradiction fails fast"
@@ -2709,7 +2714,7 @@ out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stag
 echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.BuildFieldMacros.addGeneratedField()$"
 echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
 echo "$out" | grep -q "^build_fields\\[Main\\]=1$"
-grep -q 'print_endline ("from_hxhx_build_macro")' "$tmpbuild/out/Main.ml"
+grep -Eq '__hx_trace_argument_[0-9]+ = \("from_hxhx_build_macro"\)' "$tmpbuild/out/Main.ml"
 grep -q 'let rec generated ()' "$tmpbuild/out/Main.ml"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
@@ -2734,7 +2739,7 @@ test "$(printf '%s\n' "$out" | grep -c '^build_macro\[Api\]\[0\]=hxhxmacros.Buil
 echo "$out" | grep -q "^build_macro_run\[Api\]\[0\]=ok$"
 echo "$out" | grep -q "^build_fields\[Api\]=1$"
 grep -q 'let rec generated ()' "$tmpbuild_lazy/out/Api.ml"
-test "$(printf '%s\n' "$out" | grep -c '^from_hxhx_build_macro$')" -eq 2
+test "$(printf '%s\n' "$out" | grep -cE '^(.*/)?Api\.hx:[0-9]+: from_hxhx_build_macro$')" -eq 2
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 
@@ -2776,7 +2781,7 @@ out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stag
 echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.ReturnFieldMacros.addGeneratedFieldReturn()$"
 echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
 echo "$out" | grep -q "^build_fields\\[Main\\]=1$"
-grep -q 'print_endline ("from_hxhx_build_macro_return")' "$tmpbuild_ret/out/Main.ml"
+grep -Eq '__hx_trace_argument_[0-9]+ = \("from_hxhx_build_macro_return"\)' "$tmpbuild_ret/out/Main.ml"
 grep -q 'let rec generated_return ()' "$tmpbuild_ret/out/Main.ml"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
@@ -2800,8 +2805,8 @@ out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stag
 echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.ReturnFieldMacros.replaceGeneratedFieldReturn()$"
 echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
 echo "$out" | grep -q "^build_fields\\[Main\\]=1$"
-grep -q 'print_endline ("from_hxhx_build_macro_replaced")' "$tmpbuild_rep/out/Main.ml"
-if grep -q 'print_endline ("ORIG")' "$tmpbuild_rep/out/Main.ml"; then
+grep -Eq '__hx_trace_argument_[0-9]+ = \("from_hxhx_build_macro_replaced"\)' "$tmpbuild_rep/out/Main.ml"
+if grep -q '("ORIG")' "$tmpbuild_rep/out/Main.ml"; then
   echo "Stage3 regression: build macro replacement did not replace original field body." >&2
   exit 1
 fi
@@ -2823,8 +2828,9 @@ out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stag
 echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.FieldPrinterMacros.addArgFunctionAndVar()$"
 echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
 echo "$out" | grep -q "^build_fields\\[Main\\]=1$"
-grep -q 'let generated_var = 123' "$tmpbuild_print/out/Main.ml"
-grep -q 'print_endline ("from_hxhx_field_printer")' "$tmpbuild_print/out/Main.ml"
+# Static variables are stored as refs since the static-field-write lowering; accept both forms.
+grep -Eq 'let (__hx_static_)?generated_var( : int ref)? = (ref \(123\)|123)' "$tmpbuild_print/out/Main.ml"
+grep -Eq '__hx_trace_argument_[0-9]+ = \("from_hxhx_field_printer"\)' "$tmpbuild_print/out/Main.ml"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 

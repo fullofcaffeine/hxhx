@@ -1032,6 +1032,10 @@ class ParserStageScanHelpers {
 				nameTok = scanNextToken(source, nameTok.nextPos);
 			if (!nameTok.isIdent || nameTok.text.length == 0)
 				continue;
+			// `abstract class` and `abstract private class` declare an abstract class, which the
+			// parser reads. Only `abstract Name(...)` declares an abstract type.
+			if (nameTok.text == "class" || nameTok.text == "private" || nameTok.text == "public" || nameTok.text == "final" || nameTok.text == "extern")
+				continue;
 
 			final abstractName = nameTok.text;
 			i = nameTok.nextPos;
@@ -2046,6 +2050,7 @@ class ParserStageScanHelpers {
 						i = scannedReturn.nextPos;
 					}
 
+					final bodyBraced = scanNextToken(source, i).text == "{";
 					final bodyCapture = scanFunctionBody(source, i, true);
 					// Parsing owns the authored body, including branches and unsupported
 					// syntax nodes. Typing and target checks must see those nodes rather
@@ -2067,7 +2072,7 @@ class ParserStageScanHelpers {
 						if (sawDynamic)
 							metadata.push("dynamic");
 						functions.push(new HxFunctionDecl(fnName, fnVis, wantStaticFn, args, returnType, body, "", metadata,
-							posFromIndex(source, declarationStart), posFromIndex(source, i), bodyText, bodyCapture.hasBody));
+							posFromIndex(source, declarationStart), posFromIndex(source, i), bodyText, bodyCapture.hasBody, false, bodyBraced));
 					}
 
 					sawStatic = false;

@@ -34,8 +34,16 @@ class HxFunctionDecl {
 	/** Parser-owned scope: plain module imports expose these functions, but do not expose class static methods. */
 	public final isModuleLevel:Bool;
 
+	/**
+		Whether the source wrote the body inside `{ }`. `function f() return x;` has an unbraced
+		body. The syntax tree is the same either way, but upstream Haxe keeps the difference, and
+		exporters of authored syntax (build macros, the frontend parse oracle) must reproduce it.
+	**/
+	public final bodyBraced:Bool;
+
 	public function new(name:String, visibility:HxVisibility, isStatic:Bool, args:Array<HxFunctionArg>, returnTypeHint:String, body:Array<HxStmt>,
-			returnStringLiteral:String, ?metadata:Array<String>, ?pos:HxPos, ?endPos:HxPos, ?bodyText:String, ?hasBody:Bool, isModuleLevel:Bool = false) {
+			returnStringLiteral:String, ?metadata:Array<String>, ?pos:HxPos, ?endPos:HxPos, ?bodyText:String, ?hasBody:Bool, isModuleLevel:Bool = false,
+			bodyBraced:Bool = false) {
 		this.name = name;
 		this.visibility = visibility;
 		this.isStatic = isStatic;
@@ -51,6 +59,7 @@ class HxFunctionDecl {
 		if (isModuleLevel && !isStatic)
 			throw "module function must retain static holder storage";
 		this.isModuleLevel = isModuleLevel;
+		this.bodyBraced = bodyBraced;
 	}
 
 	/** Read authored declaration scope without inferring it from a holder name or user metadata. */
@@ -158,6 +167,10 @@ class HxFunctionDecl {
 
 	public static function getBodyText(fn:HxFunctionDecl):String
 		return fn.bodyText;
+
+	/** Whether the source wrote the body inside `{ }`; see `bodyBraced`. */
+	public static function getBodyBraced(fn:HxFunctionDecl):Bool
+		return fn.bodyBraced;
 
 	/** Distinguishes a native/extern `;` declaration from an intentionally empty `{}` body. */
 	public static function getHasBody(fn:HxFunctionDecl):Bool

@@ -145,9 +145,10 @@ function validateWiring() {
   requireIncludes(testingDoc, 'EXAMPLE_COVERAGE_CONTRACT:PASS', 'docs/01-getting-started/TESTING.md')
   requireIncludes(testingDoc, 'npm run guard:example-coverage', 'docs/01-getting-started/TESTING.md')
 
-  const agents = read('AGENTS.md')
-  requireIncludes(agents, 'Example Coverage Policy', 'AGENTS.md')
-  requireIncludes(agents, 'EXAMPLE_COVERAGE_CONTRACT:PASS', 'AGENTS.md')
+  // AGENTS.md is the short core; the example policy lives with the other detailed agent policies.
+  const agentPolicies = read('docs/00-project/AGENT_POLICIES.md')
+  requireIncludes(agentPolicies, 'Example Coverage Policy', 'docs/00-project/AGENT_POLICIES.md')
+  requireIncludes(agentPolicies, 'EXAMPLE_COVERAGE_CONTRACT:PASS', 'docs/00-project/AGENT_POLICIES.md')
 }
 
 function validateExampleClaims() {

@@ -4,27 +4,149 @@
 
 let __reflaxe_ocaml__ = ()
 
-let rec convert = fun hx_type value names -> (try (
-  ignore (if hx_type == Obj.magic (HxRuntime.hx_null) || TyType.isUnknown (Obj.magic hx_type) () || TyType.isUnresolved (Obj.magic hx_type) () then HxType.hx_throw_typed_rtti (Obj.repr "OCaml string conversion requires an exact argument type") ["Dynamic"] else ());
-  let concrete = Obj.magic (TyType.unwrapNull (Obj.magic hx_type) ()) in let identity = Obj.magic (TyType.getNominalIdentity (Obj.magic concrete) ()) in (
-    ignore (if identity != Obj.magic (HxRuntime.hx_null) && (let __string_eq_left_1 = TyNominalTypeId.getCanonicalName (Obj.magic identity) () in let __string_eq_right_2 = "Array" in HxString.equals __string_eq_left_1 __string_eq_right_2) then let arguments = Obj.magic (TyType.getTypeArguments (Obj.magic concrete) ()) in (
-      ignore (if HxArray.length arguments <> 1 || names == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml array string conversion requires its element type and local names") ["Dynamic"] else ());
-      let array = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_string_array" : string) : string) in let element = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_string_element" : string) : string) in Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_part_5 = "(let " in let __string_part_6 = HxString.toStdString array in let __string_part_7 = " = (" in let __string_part_8 = HxString.toStdString value in let __string_part_9 = ") in if HxRuntime.is_null (Obj.repr " in let __string_part_10 = HxString.toStdString array in let __string_part_11 = ") then \"null\" else HxArray.toString " in let __string_part_12 = HxString.toStdString array in let __string_part_13 = " (fun " in let __string_part_14 = HxString.toStdString element in let __string_part_15 = " -> " in let __string_part_16 = HxString.toStdString (convert (Obj.magic (let __array_read_receiver_3 = arguments in let __array_read_index_4 = 0 in HxArray.get (Obj.magic __array_read_receiver_3) __array_read_index_4)) (element : string) (Obj.magic names)) in let __string_part_17 = "))" in (((((((((((__string_part_5 ^ __string_part_6) ^ __string_part_7) ^ __string_part_8) ^ __string_part_9) ^ __string_part_10) ^ __string_part_11) ^ __string_part_12) ^ __string_part_13) ^ __string_part_14) ^ __string_part_15) ^ __string_part_16) ^ __string_part_17)))
-    ) else ());
-    ignore (if TyType.isNullable (Obj.magic hx_type) () && (let __string_eq_left_18 = TyType.getSemanticKey (Obj.magic (TyType.unwrapNull (Obj.magic hx_type) ())) () in let __string_eq_right_19 = "primitive:Bool" in HxString.equals __string_eq_left_18 __string_eq_right_19) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (("HxRuntime.nullable_bool_toStdString (Obj.repr (" ^ HxString.toStdString value) ^ "))"))) else ());
-    let tempOcamlDynamicArgumentCarrier = ref (Obj.magic (HxRuntime.hx_null) : Backend_ocaml_OcamlDynamicOperatorLowering.ocamldynamicargumentcarrier) in (
-      ignore (if let __string_eq_left_20 = TyType.getSemanticKey (Obj.magic hx_type) () in let __string_eq_right_21 = "primitive:Bool" in HxString.equals __string_eq_left_20 __string_eq_right_21 then let __assign_22 = Obj.magic (Backend_ocaml_OcamlDynamicOperatorLowering.ExactBool) in (
-        tempOcamlDynamicArgumentCarrier := __assign_22;
-        __assign_22
-      ) else if TyType.isDynamic (Obj.magic hx_type) () then let __assign_23 = Obj.magic (Backend_ocaml_OcamlDynamicOperatorLowering.DynamicValue) in (
-        tempOcamlDynamicArgumentCarrier := __assign_23;
-        __assign_23
-      ) else let __assign_24 = Obj.magic (Backend_ocaml_OcamlDynamicOperatorLowering.ConcreteValue) in (
-        tempOcamlDynamicArgumentCarrier := __assign_24;
-        __assign_24
+let isUnsigned = fun hx_type -> (try (
+  ignore (if hx_type == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  let identity = Obj.magic (TyType.getNominalIdentity (Obj.magic (TyType.unwrapNull (Obj.magic hx_type) ())) ()) in identity != Obj.magic (HxRuntime.hx_null) && (let __string_eq_left_1 = TyNominalTypeId.getCanonicalName (Obj.magic identity) () in let __string_eq_right_2 = "UInt" in HxString.equals __string_eq_left_1 __string_eq_right_2) && HxArray.length (TyType.getTypeArguments (Obj.magic (TyType.unwrapNull (Obj.magic hx_type) ())) ()) = 0
+) with
+  | HxRuntime.Hx_return __ret_3 -> (Obj.obj __ret_3 : bool) : bool)
+
+let boolTextType = fun hx_type underlying -> (try (
+  ignore (if hx_type == Obj.magic (HxRuntime.hx_null) || TyType.isUnknown (Obj.magic hx_type) () || TyType.isUnresolved (Obj.magic hx_type) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  let current = ref (Obj.magic (TyType.unwrapNull (Obj.magic hx_type) ())) in let seen = HxMap.create_string () in (
+    ignore (while let __string_eq_left_4 = TyType.getSemanticKey (Obj.magic (!current)) () in let __string_eq_right_5 = "primitive:Bool" in not (HxString.equals __string_eq_left_4 __string_eq_right_5) do ignore (let identity = Obj.magic (TyType.getNominalIdentity (Obj.magic (!current)) ()) in let tempMaybeTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+      ignore (if identity == Obj.magic (HxRuntime.hx_null) || underlying == Obj.magic (HxRuntime.hx_null) then let __assign_6 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+        tempMaybeTyType := __assign_6;
+        __assign_6
+      ) else let __assign_7 = Obj.magic (Obj.magic (let __nullable_function_8 = underlying in let __nullable_argument_9 = (TyNominalTypeId.getCanonicalName (Obj.magic identity) () : string) in (let __nullable_callee_10 = __nullable_function_8 in if Obj.is_block __nullable_callee_10 && (Obj.tag __nullable_callee_10 = Obj.closure_tag || Obj.tag __nullable_callee_10 = Obj.infix_tag) then (Obj.obj __nullable_callee_10 : string -> TyType.t) else invalid_arg "Cannot call null") __nullable_argument_9)) in (
+        tempMaybeTyType := __assign_7;
+        __assign_7
       ));
-      let carrier = Obj.magic (!tempOcamlDynamicArgumentCarrier) in let __string_part_25 = "HxDynamic.toStdString (" in let __string_part_26 = HxString.toStdString (Backend_ocaml_OcamlDynamicOperatorLowering.callArgument ("Dynamic" : string) (Obj.magic carrier) (value : string)) in let __string_part_27 = ")" in (__string_part_25 ^ __string_part_26) ^ __string_part_27
+      let backing = Obj.magic (!tempMaybeTyType) in let tempShortCircuit = ref (false : bool) in (
+        ignore (if backing == Obj.magic (HxRuntime.hx_null) then let __assign_11 = true in (
+          tempShortCircuit := __assign_11;
+          __assign_11
+        ) else let key = (TyNominalTypeId.getCanonicalName (Obj.magic identity) () : string) in let __assign_12 = HxMap.exists_string (Obj.magic seen) (key : string) in (
+          tempShortCircuit := __assign_12;
+          __assign_12
+        ));
+        ignore (if !tempShortCircuit then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+        let key = (TyNominalTypeId.getCanonicalName (Obj.magic identity) () : string) in (
+          ignore (HxMap.set_string (Obj.magic seen) (key : string) true);
+          let __assign_13 = Obj.magic (TyType.unwrapNull (Obj.magic backing) ()) in (
+            current := __assign_13;
+            __assign_13
+          )
+        )
+      )
+    )) done);
+    ignore (if Obj.repr (!current) == Obj.repr (TyType.unwrapNull (Obj.magic hx_type) ()) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr hx_type)) else ());
+    let tempString = ref (HxString.hx_null_string : string) in (
+      ignore (if TyType.isNullable (Obj.magic hx_type) () then let __assign_14 = "Null<Bool>" in (
+        tempString := __assign_14;
+        __assign_14
+      ) else let __assign_15 = "Bool" in (
+        tempString := __assign_15;
+        __assign_15
+      ));
+      TyType.fromHintText (!tempString : string)
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_28 -> (Obj.obj __ret_28 : string) : string)
+  | HxRuntime.Hx_return __ret_16 -> (Obj.obj __ret_16 : TyType.t) : TyType.t)
+
+let isBoolText = fun hx_type underlying -> boolTextType (Obj.magic hx_type) underlying != Obj.magic (HxRuntime.hx_null)
+
+let isStringText = fun hx_type -> hx_type != Obj.magic (HxRuntime.hx_null) && not (TyType.isUnknown (Obj.magic hx_type) ()) && not (TyType.isUnresolved (Obj.magic hx_type) ()) && (let __string_eq_left_17 = TyType.getSemanticKey (Obj.magic (TyType.unwrapNull (Obj.magic hx_type) ())) () in let __string_eq_right_18 = "primitive:String" in HxString.equals __string_eq_left_17 __string_eq_right_18)
+
+let rec nonNullText = fun expr -> let tempResult = ref (false : bool) in (
+  ignore (match expr with
+    | HxExpr.EParenthesized (_p0, _p1) -> let _g = Obj.magic _p0 in (
+      ignore _p1;
+      let inner = Obj.magic _g in let __assign_20 = nonNullText (Obj.magic inner) in (
+        tempResult := __assign_20;
+        __assign_20
+      )
+    )
+    | HxExpr.EString _p0 -> (
+      ignore _p0;
+      let __assign_21 = true in (
+        tempResult := __assign_21;
+        __assign_21
+      )
+    )
+    | HxExpr.EBinop (_p0, _p1, _p2) -> let _g = (_p0 : string) in (
+      ignore _p1;
+      ignore _p2;
+      if let __string_eq_left_22 = _g in let __string_eq_right_23 = "+" in HxString.equals __string_eq_left_22 __string_eq_right_23 then let __assign_24 = true in (
+        tempResult := __assign_24;
+        __assign_24
+      ) else let __assign_25 = false in (
+        tempResult := __assign_25;
+        __assign_25
+      )
+    )
+    | _ -> let __assign_19 = false in (
+      tempResult := __assign_19;
+      __assign_19
+    ));
+  !tempResult
+)
+
+let stringText = fun expr rendered -> let tempResult = ref (HxString.hx_null_string : string) in (
+  ignore (if nonNullText (Obj.magic expr) then let __assign_26 = (rendered : string) in (
+    tempResult := __assign_26;
+    __assign_26
+  ) else let __assign_27 = (("HxString.toStdString (" ^ HxString.toStdString rendered) ^ ")" : string) in (
+    tempResult := __assign_27;
+    __assign_27
+  ));
+  !tempResult
+)
+
+let textType = fun hx_type underlying -> let boolText = Obj.magic (boolTextType (Obj.magic hx_type) underlying) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+  ignore (if boolText == Obj.magic (HxRuntime.hx_null) then let __assign_28 = Obj.magic hx_type in (
+    tempResult := __assign_28;
+    __assign_28
+  ) else let __assign_29 = Obj.magic boolText in (
+    tempResult := __assign_29;
+    __assign_29
+  ));
+  !tempResult
+)
+
+let rec convert = fun hx_type value names insideArray -> let insideArray = if Obj.repr insideArray == HxRuntime.hx_null then false else insideArray in (try (
+  ignore (if hx_type == Obj.magic (HxRuntime.hx_null) || TyType.isUnknown (Obj.magic hx_type) () || TyType.isUnresolved (Obj.magic hx_type) () then HxType.hx_throw_typed_rtti (Obj.repr "OCaml string conversion requires an exact argument type") ["Dynamic"] else ());
+  let concrete = Obj.magic (TyType.unwrapNull (Obj.magic hx_type) ()) in let identity = Obj.magic (TyType.getNominalIdentity (Obj.magic concrete) ()) in (
+    ignore (if identity != Obj.magic (HxRuntime.hx_null) && (let __string_eq_left_30 = TyNominalTypeId.getCanonicalName (Obj.magic identity) () in let __string_eq_right_31 = "Array" in HxString.equals __string_eq_left_30 __string_eq_right_31) then let arguments = Obj.magic (TyType.getTypeArguments (Obj.magic concrete) ()) in (
+      ignore (if HxArray.length arguments <> 1 || names == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml array string conversion requires its element type and local names") ["Dynamic"] else ());
+      let array = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_string_array" : string) : string) in let element = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_string_element" : string) : string) in Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_part_34 = "(let " in let __string_part_35 = HxString.toStdString array in let __string_part_36 = " = (" in let __string_part_37 = HxString.toStdString value in let __string_part_38 = ") in if HxRuntime.is_null (Obj.repr " in let __string_part_39 = HxString.toStdString array in let __string_part_40 = ") then \"null\" else HxArray.toString " in let __string_part_41 = HxString.toStdString array in let __string_part_42 = " (fun " in let __string_part_43 = HxString.toStdString element in let __string_part_44 = " -> " in let __string_part_45 = HxString.toStdString (convert (Obj.magic (let __array_read_receiver_32 = arguments in let __array_read_index_33 = 0 in HxArray.get (Obj.magic __array_read_receiver_32) __array_read_index_33)) (element : string) (Obj.magic names) true) in let __string_part_46 = "))" in (((((((((((__string_part_34 ^ __string_part_35) ^ __string_part_36) ^ __string_part_37) ^ __string_part_38) ^ __string_part_39) ^ __string_part_40) ^ __string_part_41) ^ __string_part_42) ^ __string_part_43) ^ __string_part_44) ^ __string_part_45) ^ __string_part_46)))
+    ) else ());
+    ignore (if not (insideArray) && isUnsigned (Obj.magic hx_type) then let unsigned = ("(Stdlib.string_of_int ((" ^ HxString.toStdString value) ^ ") land 0xFFFFFFFF))" in (
+      ignore (if not (TyType.isNullable (Obj.magic hx_type) ()) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr unsigned)) else ());
+      ignore (if names == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml nullable UInt string conversion requires local names") ["Dynamic"] else ());
+      let carrier = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_string_uint" : string) : string) in Stdlib.raise (HxRuntime.Hx_return (Obj.repr ((((((((("(let " ^ HxString.toStdString carrier) ^ " = Obj.repr (") ^ HxString.toStdString value) ^ ") in if HxRuntime.is_null ") ^ HxString.toStdString carrier) ^ " then \"null\" else ") ^ "(Stdlib.string_of_int ((Obj.obj ") ^ HxString.toStdString carrier) ^ " : int) land 0xFFFFFFFF)))")))
+    ) else ());
+    ignore (if TyType.isNullable (Obj.magic hx_type) () && (let __string_eq_left_47 = TyType.getSemanticKey (Obj.magic (TyType.unwrapNull (Obj.magic hx_type) ())) () in let __string_eq_right_48 = "primitive:Bool" in HxString.equals __string_eq_left_47 __string_eq_right_48) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (("HxRuntime.nullable_bool_toStdString (Obj.repr (" ^ HxString.toStdString value) ^ "))"))) else ());
+    let tempOcamlDynamicArgumentCarrier = ref (Obj.magic (HxRuntime.hx_null) : Backend_ocaml_OcamlDynamicOperatorLowering.ocamldynamicargumentcarrier) in (
+      ignore (if let __string_eq_left_49 = TyType.getSemanticKey (Obj.magic hx_type) () in let __string_eq_right_50 = "primitive:Bool" in HxString.equals __string_eq_left_49 __string_eq_right_50 then let __assign_51 = Obj.magic (Backend_ocaml_OcamlDynamicOperatorLowering.ExactBool) in (
+        tempOcamlDynamicArgumentCarrier := __assign_51;
+        __assign_51
+      ) else if TyType.isDynamic (Obj.magic hx_type) () then let __assign_52 = Obj.magic (Backend_ocaml_OcamlDynamicOperatorLowering.DynamicValue) in (
+        tempOcamlDynamicArgumentCarrier := __assign_52;
+        __assign_52
+      ) else let __assign_53 = Obj.magic (Backend_ocaml_OcamlDynamicOperatorLowering.ConcreteValue) in (
+        tempOcamlDynamicArgumentCarrier := __assign_53;
+        __assign_53
+      ));
+      let carrier = Obj.magic (!tempOcamlDynamicArgumentCarrier) in let __string_part_54 = "HxDynamic.toStdString (" in let __string_part_55 = HxString.toStdString (Backend_ocaml_OcamlDynamicOperatorLowering.callArgument ("Dynamic" : string) (Obj.magic carrier) (value : string)) in let __string_part_56 = ")" in (__string_part_54 ^ __string_part_55) ^ __string_part_56
+    )
+  )
+) with
+  | HxRuntime.Hx_return __ret_57 -> (Obj.obj __ret_57 : string) : string)
+
+let concatOperand = fun hx_type value names -> (try (
+  ignore (if hx_type == Obj.magic (HxRuntime.hx_null) || TyType.isUnknown (Obj.magic hx_type) () || TyType.isUnresolved (Obj.magic hx_type) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  ignore (if let __string_eq_left_58 = TyType.getSemanticKey (Obj.magic (TyAliasExpansion.reveal (Obj.magic hx_type))) () in let __string_eq_right_59 = "primitive:String" in HxString.equals __string_eq_left_58 __string_eq_right_59 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  convert (Obj.magic hx_type) (value : string) (Obj.magic names) (Obj.magic (HxRuntime.hx_null))
+) with
+  | HxRuntime.Hx_return __ret_60 -> (Obj.obj __ret_60 : string) : string)
