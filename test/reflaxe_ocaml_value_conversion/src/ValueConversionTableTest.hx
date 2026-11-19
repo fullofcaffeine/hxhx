@@ -19,6 +19,14 @@ class ConversionBox {
 }
 
 abstract ConversionList(Array<Int>) {}
+
+class ConversionHolder<T> {
+	public var value:T;
+
+	public function new(value:T)
+		this.value = value;
+}
+
 typedef ConversionMaybeColor = Null<ConversionColor>;
 
 /**
@@ -54,6 +62,7 @@ class ValueConversionTableTest {
 			{type: macro :Null<ConversionBox>, expected: "ObjectReference"},
 			{type: macro :String, expected: "ObjectReference"},
 			{type: macro :ConversionList, expected: "ObjectReference"},
+			{type: macro :Int->Int, expected: "FunctionValue"},
 			{type: macro :Void, expected: "UnclassifiedCarrier"},
 		];
 		for (entry in carriers) {
@@ -119,9 +128,42 @@ class ValueConversionTableTest {
 				failures.push('${ComplexTypeTools.toString(pair.from)} -> ${ComplexTypeTools.toString(pair.to)}: expected ${pair.expected}, got $actual');
 		}
 
+		// A field declared with the class type parameter, read at concrete types.
+		final holderValue = switch (Context.getType("ConversionHolder")) {
+			case TInst(classRef, _): classRef.get().fields.get().filter(field -> field.name == "value")[0].type;
+			case _: throw "ConversionHolder is not a class";
+		}
+		final typeParameterCarrier = Std.string(OcamlValueConversion.carrierOf(holderValue));
+		if (typeParameterCarrier != "TypeParameterValue")
+			failures.push('carrier of ConversionHolder.T: expected TypeParameterValue, got $typeParameterCarrier');
+		final genericReads:Array<{actual:ComplexType, expected:String}> = [
+			{actual: macro :Int, expected: "UnboxNullablePrimitive(int)"},
+			{actual: macro :Float, expected: "UnboxNullablePrimitive(float)"},
+			{actual: macro :Bool, expected: "UnboxNullablePrimitive(bool)"},
+			{actual: macro :String, expected: "UnboxObj"},
+			{actual: macro :Array<Int>, expected: "UnboxObj"},
+			{actual: macro :ConversionBox, expected: "UnboxObj"},
+			{actual: macro :Int->Int, expected: "UnboxObj"},
+			{actual: macro :Null<Int>, expected: "null"},
+			{actual: macro :Null<Bool>, expected: "UntagNullableBool"},
+			{actual: macro :Dynamic, expected: "null"},
+			{actual: macro :ConversionColor, expected: "null"},
+		];
+		for (read in genericReads) {
+			final actual = Std.string(OcamlValueConversion.decideGenericRead(holderValue, ComplexTypeTools.toType(read.actual)));
+			if (actual != read.expected)
+				failures.push('ConversionHolder.value read as ${ComplexTypeTools.toString(read.actual)}: expected ${read.expected}, got $actual');
+		}
+		final dynamicToParameter = Std.string(OcamlValueConversion.between(DynamicObj, OcamlValueConversion.carrierOf(holderValue)));
+		if (dynamicToParameter != "UnboxObj")
+			failures.push('Dynamic -> ConversionHolder.T: expected UnboxObj, got $dynamicToParameter');
+		final plainRead = Std.string(OcamlValueConversion.decideGenericRead(ComplexTypeTools.toType(macro :Int), ComplexTypeTools.toType(macro :Int)));
+		if (plainRead != "null")
+			failures.push('a field declared Int is not a generic read: expected null, got $plainRead');
+
 		if (failures.length > 0)
 			Context.error("VALUE_CONVERSION_TABLE:FAIL\n" + failures.join("\n"), Context.currentPos());
-		final summary = 'VALUE_CONVERSION_TABLE:PASS carriers=${carriers.length} pairs=${pairs.length}';
+		final summary = 'VALUE_CONVERSION_TABLE:PASS carriers=${carriers.length + 1} pairs=${pairs.length} generic_reads=${genericReads.length + 1}';
 		return macro $v{summary};
 	}
 }
