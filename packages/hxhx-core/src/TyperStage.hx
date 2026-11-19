@@ -4799,6 +4799,19 @@ class TyperStage {
 						final leftType = inferExprType(a, scope, ctx, pos);
 						final rightType = inferExprType(b, scope, ctx, pos);
 						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), leftType, rightType, op, ctx.getFilePath(), pos);
+						// Builtin comparison binds unresolved inputs, as in Haxe 4.3.7.
+						if (bound == null && (leftType.isUnknown() || rightType.isUnknown()))
+							TyComparisonOperandInference.constrain({
+								left: a,
+								right: b,
+								leftType: leftType,
+								rightType: rightType,
+								ordering: op != "==" && op != "!=",
+								scope: scope,
+								index: ctx.getIndex(),
+								filePath: ctx.getFilePath(),
+								position: pos
+							});
 						bound == null ? TyType.fromHintText("Bool") : bound.getOperatorInfo().getResultType();
 					case "&&" | "||":
 						inferExprType(a, scope, ctx, pos);
