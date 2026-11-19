@@ -4717,8 +4717,12 @@ class TyperStage {
 									}
 									if (scope.getInference().sourceTerm(a, scope) != null) {
 										final inferred = scope.getInference().expressionType(a, sym.getType(), scope);
-										final compatible = inferred.hasUnknownComponent() ? scope.getInference()
-											.constrain([a], [rhs], scope, ctx.getIndex()) : overloadArgScore(inferred, rhs, [], ctx.getIndex()) >= 0;
+										// A value that still has unknown parts shares its own term, so its
+										// variables (such as `new Array()`'s element) reach the destination.
+										final compatible = inferred.hasUnknownComponent() ? (rhs.hasUnknownComponent() ? scope.getInference()
+											.linkAssignedTerm(a, b,
+												scope) : scope.getInference()
+											.constrain([a], [rhs], scope, ctx.getIndex())) : overloadArgScore(inferred, rhs, [], ctx.getIndex()) >= 0;
 										if (!compatible)
 											throw new TyperError(ctx.getFilePath(), pos, "assignment conflicts with inferred generic result");
 									}

@@ -495,6 +495,23 @@ class TyFunctionInference {
 		};
 	}
 
+	/**
+		Link an assigned value's own inference term into an inferred destination, as in
+		`?path` followed by `path = new Array(); path.push("x");`. Type-based constraints skip a
+		value whose type still has unknown parts (`Array<?>`), which left the constructor's element
+		variable unconnected to the input. A nullable destination keeps its wrapper. Returns false
+		on a conflict; without a value term there is nothing to link.
+	 */
+	public function linkAssignedTerm(destination:HxExpr, value:HxExpr, environment:TyFunctionEnv):Bool {
+		if (solver.isSealed())
+			return true;
+		final target = sourceTerm(destination, environment);
+		final assigned = sourceTerm(value, environment);
+		if (target == null || assigned == null)
+			return true;
+		return solver.constrainNullableInput(target, assigned);
+	}
+
 	/** Retain parameter and result terms so replay observes constraints supplied after an earlier body call. */
 	public function recordSourceFunction(source:HxExpr, type:TyType, parameters:Array<TySymbol>, ?result:TyInferenceTerm):Void {
 		if (solver.isSealed())
@@ -1291,7 +1308,9 @@ class TyFunctionInference {
 		final receiverTerm = sourceTerm(receiver, environment);
 		if (receiverTerm == null)
 			return true;
-		final arguments = switch nonNullableReceiver(receiverTerm) {
+		// An inferred input can reach its container through a solved variable (`?path`
+		// followed by `path = new Array()`), so follow it on both sides of the wrapper.
+		final arguments = switch solver.follow(nonNullableReceiver(solver.follow(receiverTerm))) {
 			case Nominal(identity, arguments) if (identity.equals(provider.getIdentity())): arguments;
 			case _: return true;
 		};
