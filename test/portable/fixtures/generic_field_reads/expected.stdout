@@ -1,0 +1,9 @@
+int=43
+float=3
+bool=yes
+string=HELLO length=5
+array=1,2,3,4
+function=40
+class=7
+nullable bool=true
+pair=left:6
