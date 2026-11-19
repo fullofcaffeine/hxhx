@@ -1032,6 +1032,10 @@ class ParserStageScanHelpers {
 				nameTok = scanNextToken(source, nameTok.nextPos);
 			if (!nameTok.isIdent || nameTok.text.length == 0)
 				continue;
+			// `abstract class` and `abstract private class` declare an abstract class, which the
+			// parser reads. Only `abstract Name(...)` declares an abstract type.
+			if (nameTok.text == "class" || nameTok.text == "private" || nameTok.text == "public" || nameTok.text == "final" || nameTok.text == "extern")
+				continue;
 
 			final abstractName = nameTok.text;
 			i = nameTok.nextPos;
