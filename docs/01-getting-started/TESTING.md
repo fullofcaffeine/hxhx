@@ -354,6 +354,21 @@ Use the full profile when you need full compiler-shaped coverage:
 npm run test:acceptance:full
 ```
 
+## Tools for the full test suite
+
+The [README](../../README.md#prerequisites) lists the tools that you need to compile with
+`reflaxe.ocaml` and to build `hxhx`. The full test suite needs more tools:
+
+- `flock` on Linux or `lockf` on macOS. The repository server helper uses them to serialize
+  server ownership updates and cleanup.
+- PHP, Neko, and Mono (`mcs` and `mono`) for the focused compiler runtime tests. CI installs
+  PHP and Mono if they are missing, and gives the Neko compiler from the pinned Lix toolchain.
+- The pinned `hxcs` and `hxjava` libraries for the C# and Java build support of upstream Haxe.
+  `npx lix download` installs them with the other repository libraries.
+
+Projects that call expression macros also need `dune` and `ocamlopt` on `PATH`. Read the
+[toolchain requirement](../02-user-guide/HXHX_EXPRESSION_MACROS.md#toolchain-requirement).
+
 ## Install the repository Git hooks
 
 Run this once after cloning, and again after upgrading or reinstalling `bd`:

@@ -4547,6 +4547,15 @@ class HxParser {
 	}
 
 	/** Extern members default to public; authored modifiers still override the owning class default. */
+	/** After `abstract`, a class keyword or a class modifier makes an abstract class. */
+	static function isAbstractClassModifier(next:HxTokenKind):Bool {
+		return switch next {
+			case TKeyword(KClass) | TKeyword(KPrivate) | TKeyword(KPublic) | TKeyword(KFinal): true;
+			case TIdent(name): name == "extern";
+			case _: false;
+		};
+	}
+
 	function parseClassMembers(defaultVisibility:HxVisibility):{functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>, end:HxPos} {
 		final funcs = new Array<HxFunctionDecl>();
 		final fields = new Array<HxFieldDecl>();
@@ -4617,6 +4626,11 @@ class HxParser {
 									bump();
 									keep = true;
 								case TIdent(name) if (name == "override"):
+									bump();
+									keep = true;
+								case TIdent(name) if (name == "abstract"):
+									// An abstract member of an abstract class has no body.
+									metadata.push("abstract");
 									bump();
 									keep = true;
 								case TIdent(name) if (name == "overload"):
@@ -4721,7 +4735,7 @@ class HxParser {
 				|| text == "final"
 				|| text == "var"
 				|| text == "function";
-			case TIdent(name): name == "macro" || name == "extern" || name == "override";
+			case TIdent(name): name == "macro" || name == "extern" || name == "override" || name == "abstract";
 			case TOther(c):
 				c == "@".code;
 			case _:
@@ -4929,6 +4943,11 @@ class HxParser {
 						|| peekKind().match(TIdent("extern")))) {
 					// A class modifier precedes class or another class modifier. A module final precedes its field name.
 					pendingTypeMetadata.push("final");
+					bump();
+					keepModuleModifiers = true;
+				} else if (cur.kind.match(TIdent("abstract")) && isAbstractClassModifier(peekKind())) {
+					// `abstract class` declares an abstract class. An abstract type is `abstract Name(...)`, and a type name is never a keyword.
+					pendingTypeMetadata.push("abstract");
 					bump();
 					keepModuleModifiers = true;
 				} else {

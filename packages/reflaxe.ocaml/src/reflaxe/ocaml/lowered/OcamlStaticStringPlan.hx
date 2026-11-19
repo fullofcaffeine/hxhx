@@ -466,7 +466,7 @@ class OcamlStaticStringPlanner {
 		every other unowned type.
 	**/
 	public static function semanticTypeId(type:Type):Null<String> {
-		return switch (followNoAbstracts(type)) {
+		return switch (followValueAbstracts(type)) {
 			case TAbstract(abstractRef, [inner]):
 				final abstractType = abstractRef.get();
 				if (abstractType.pack.length != 0 || abstractType.name != "Null") {
@@ -482,7 +482,15 @@ class OcamlStaticStringPlanner {
 	}
 
 	static function nullableSemanticTypeId(type:Type):Null<String> {
-		return switch (followNoAbstracts(type)) {
+		// Null<A> of an abstract over Int, Float, or Bool uses the same Obj.t carrier as
+		// Null<Int>, Null<Float>, or Null<Bool>, so it takes their printer. Null<String> is
+		// a plain string with a null sentinel, which Null<A> over String is not.
+		final valueType = followValueAbstracts(type);
+		final underlying = switch (valueType) {
+			case TInst(_, _): followNoAbstracts(type);
+			case _: valueType;
+		}
+		return switch (underlying) {
 			case TAbstract(abstractRef, [inner]): final abstractType = abstractRef.get(); abstractType.pack.length == 0 && abstractType.name == "Null" ? nullableSemanticTypeId(inner) : null;
 			case TAbstract(abstractRef, _):
 				final abstractType = abstractRef.get();
@@ -497,6 +505,38 @@ class OcamlStaticStringPlanner {
 			case TInst(classRef, _): final classType = classRef.get(); classType.pack.length == 0 && classType.name == "String" ? "Null<String>" : null;
 			case _:
 				null;
+		};
+	}
+
+	/**
+		Follows typedefs and abstracts that are not core types to the type that
+		carries their value. `enum abstract Mime(String)` and `abstract Ratio(Float)`
+		are stored as their underlying `String` and `Float`, and `Std.string` prints
+		that value, as in upstream Haxe (haxe_ocaml-trjbi). Core types, including
+		`Null<T>`, `Int`, `Float`, and `Bool`, stop the walk.
+	**/
+	public static function followValueAbstracts(type:Type):Type {
+		var current = followNoAbstracts(type);
+		for (_ in 0...32) {
+			switch (current) {
+				case TAbstract(abstractRef, parameters):
+					final abstractType = abstractRef.get();
+					// A core type is its own carrier. An abstract over its own type parameter,
+					// such as `abstract Tagged<T>(T)`, stores the generic Obj.t carrier.
+					if (abstractType.meta.has(":coreType") || isTypeParameter(abstractType.type))
+						return current;
+					current = followNoAbstracts(TypeTools.applyTypeParameters(abstractType.type, abstractType.params, parameters));
+				case _:
+					return current;
+			}
+		}
+		return current;
+	}
+
+	static function isTypeParameter(type:Type):Bool {
+		return switch (followNoAbstracts(type)) {
+			case TInst(classRef, _): classRef.get().kind.match(KTypeParameter(_));
+			case _: false;
 		};
 	}
 
