@@ -15,21 +15,22 @@
     }
   ],
   "counts": {
-    "total": 208,
+    "total": 209,
     "byDomain": {
-      "expression": 208
+      "expression": 209
     },
     "byMigrationFamily": {
       "builder-anon": 12,
       "builder-array": 25,
       "builder-boolean-carriers": 18,
+      "builder-dynamic-runtime": 1,
       "builder-enum": 21,
       "builder-int": 58,
       "builder-nullable-carriers": 54,
       "builder-type": 20
     }
   },
-  "inventoryRevision": "1694272a8081618aa470e78ed5813e49193dae8de225a21c85a3d64dd5332656",
+  "inventoryRevision": "1963ad01ebd1ca944dedf717d8fa66f3883e1c9c0b7b6ab1b2884a255f14d6ff",
   "entries": [
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxRuntime.nullable_int_unwrap::1",
@@ -1590,6 +1591,16 @@
       "rootModule": "HxEnum",
       "ordinal": 6,
       "migrationFamily": "builder-enum"
+    },
+    {
+      "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EIdent::HxRuntime::1",
+      "path": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
+      "domain": "expression",
+      "construction": "EIdent",
+      "symbol": "HxRuntime",
+      "rootModule": "HxRuntime",
+      "ordinal": 1,
+      "migrationFamily": "builder-dynamic-runtime"
     },
     {
       "id": "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx::expression::EField(EIdent)::HxEnum.unbox_or_obj::2",

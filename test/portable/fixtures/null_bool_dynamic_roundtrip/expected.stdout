@@ -1,0 +1,5 @@
+roundtrip=T
+cast=T
+equal=true
+map nullable=true
+map plain=true

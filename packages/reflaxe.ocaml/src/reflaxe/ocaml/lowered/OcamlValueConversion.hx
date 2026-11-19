@@ -61,6 +61,20 @@ enum OcamlValueConversionKind {
 	UnboxObj;
 
 	/**
+		Give a `Null<Bool>` value the tagged Boolean form of `Dynamic`. `hx_null`
+		stays `hx_null`. Without the tag, `true` is the same immediate as the
+		integer `1`, and a `Dynamic` reader prints or tests it as an `Int`.
+	**/
+	TagNullableBool;
+
+	/**
+		Read a `Null<Bool>` out of `Dynamic`. A Dynamic Boolean carries the tag from
+		`TagNullableBool` or `HxRuntime.box_bool`; `Null<Bool>` stores a plain `bool`.
+		`hx_null` stays `hx_null`.
+	**/
+	UntagNullableBool;
+
+	/**
 		Read a Haxe enum value out of `Dynamic`. A Dynamic enum is boxed with its enum
 		name (`HxEnum.box_if_needed`), so it needs `HxEnum.unbox_or_obj`, not `Obj.obj`.
 	**/
@@ -104,6 +118,14 @@ class OcamlValueConversion {
 				final enumId = enumIdOf(followed);
 				if (enumId != null)
 					return NativeEnum(enumId);
+		}
+		// An unresolved type variable has no known runtime carrier: `cast(__ocaml__(...))` returns
+		// whatever native value the injection produces. Leave it unconverted. The equality plan
+		// still treats such an operand as Dynamic for runtime comparison.
+		switch (OcamlDynamicCarrierModel.followNoAbstracts(OcamlDynamicCarrierModel.unwrapNullType(followed))) {
+			case TMono(_):
+				return UnclassifiedCarrier;
+			case _:
 		}
 		if (OcamlDynamicCarrierModel.usesDynamicCarrier(type))
 			return DynamicObj;
@@ -149,6 +171,13 @@ class OcamlValueConversion {
 				UnboxDynamicEnum(target);
 			case [DynamicObj, NativeEnum(_)] | [DynamicObj, NullableEnum(_)] | [DynamicObj, ObjectReference]:
 				UnboxObj;
+			case [NullablePrimitive(BoolCarrier), DynamicObj]:
+				TagNullableBool;
+			case [DynamicObj, NullablePrimitive(BoolCarrier)]:
+				UntagNullableBool;
+			case [DynamicObj, NativePrimitive(BoolCarrier)]:
+				// The checked unbox accepts the tagged and the plain form.
+				UnboxNullablePrimitive(BoolCarrier);
 			case _:
 				null;
 		}
