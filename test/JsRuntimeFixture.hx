@@ -13,14 +13,9 @@ function assertProgramRuntime(program:MacroExpandedProgram, module:String, expec
 	final output = reserveOutput();
 	final script = output + "/main.js";
 	new JsBackend().emit(program, new BackendContext(output, script, module, false, HxDefineMap.fromRawDefines(["js=1", "js-es=5"])));
-	final arguments = ["60", "node"].concat(nodeArguments == null ? [] : nodeArguments).concat([script]);
-	final process = new sys.io.Process(Sys.systemName() == "Mac" ? "gtimeout" : "timeout", arguments);
-	final stdout = process.stdout.readAll().toString();
-	final stderr = process.stderr.readAll().toString();
-	final code = process.exitCode();
-	process.close();
-	if (code != 0 || stdout != expected)
-		throw "JavaScript runtime differs; retained " + output + ": " + stdout + stderr;
+	final observed = ObservedProcess.run("node", (nodeArguments == null ? [] : nodeArguments).concat([script]), 60);
+	if (!observed.succeeded() || observed.stdout != expected)
+		throw "JavaScript runtime differs (" + observed.status() + "); retained " + output + ": " + observed.stdout + observed.stderr;
 	removeOutput(output);
 }
 
