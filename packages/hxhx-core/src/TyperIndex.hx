@@ -51,6 +51,7 @@ class TyperIndex {
 	final methodBodyResults:TyMethodBodyResults;
 	final fieldInitializerTypes = new TyFieldInitializerTypes();
 	final parameterBounds = new StringMap<Array<TyType>>();
+	final typeUsing = new StringMap<TyTypeUsing>();
 
 	/** Bounds belong to exact declared binders and cannot be changed through a caller's returned array. */
 	public function getParameterBounds(parameter:TyTypeParameterId):Array<TyType> {
@@ -364,6 +365,38 @@ class TyperIndex {
 		}
 		return false;
 	}
+
+	/**
+		The type paths of every `@:using(path, ...)` entry, in source order:
+		`@:using(eval.luv.Result.ResultTools)` gives `["eval.luv.Result.ResultTools"]`.
+	**/
+	static function usingPaths(metadata:Array<String>):Array<String> {
+		final paths = new Array<String>();
+		if (metadata == null)
+			return paths;
+		for (entry in metadata) {
+			var clean = entry == null ? "" : StringTools.trim(entry);
+			while (StringTools.startsWith(clean, "@") || StringTools.startsWith(clean, ":"))
+				clean = clean.substr(1);
+			final open = clean.indexOf("(");
+			if (open < 0 || StringTools.trim(clean.substring(0, open)) != "using" || !StringTools.endsWith(clean, ")"))
+				continue;
+			for (path in clean.substring(open + 1, clean.length - 1).split(",")) {
+				final trimmed = StringTools.trim(path);
+				if (trimmed.length > 0)
+					paths.push(trimmed);
+			}
+		}
+		return paths;
+	}
+
+	/**
+		The `@:using` paths a class, enum or abstract declares, with the context of its own
+		module. Haxe 4.3.7 resolves those paths where the type is declared, not where a value
+		of the type is used. Null when the type declares none.
+	**/
+	public function getTypeUsing(fullName:String):Null<TyTypeUsing>
+		return fullName == null ? null : typeUsing.get(fullName);
 
 	/** Whether metadata names `name`, with or without arguments: `@:build(Macro.run())`. **/
 	static function hasMetadataNamed(metadata:Array<String>, name:String):Bool {
@@ -818,6 +851,19 @@ class TyperIndex {
 			final classMetadata = HxClassDecl.getMetadata(classDeclaration);
 			if (Lambda.exists(classMetadata, isBuildMacroMetadata))
 				buildMacroSeen = true;
+			final declaredUsing = usingPaths(classMetadata);
+			if (declaredUsing.length > 0)
+				typeUsing.set(fullName, {
+					paths: declaredUsing,
+					context: {
+						packagePath: packagePath,
+						modulePath: semanticModulePath,
+						directives: directives,
+						filePath: ResolvedModule.getFilePath(module),
+						position: HxPos.unknown(),
+						parameters: []
+					}
+				});
 			final params = typeParameters(classMetadata);
 			final parameterIds = [
 				for (index in 0...params.length)
@@ -1266,3 +1312,9 @@ class TyperIndex {
 		return left < right ? -1 : (left > right ? 1 : 0);
 	}
 }
+
+/** The `@:using` paths of one declaration and the module context that resolves them. **/
+typedef TyTypeUsing = {
+	final paths:Array<String>;
+	final context:TyTypeDeclaration.TyTypeResolutionContext;
+};
