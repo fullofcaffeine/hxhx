@@ -46,6 +46,10 @@ function resolve(input:TyType, patterns:Array<HxSwitchPattern>, context:TyperCon
 		}
 		if (owner == null)
 			return null;
+		// `case cast haxe.ds.StringMap:` on a class value names a type path, not a qualified
+		// constructor; like `case cast Array:` it stays a class-value pattern.
+		if (dot >= 0 && !owner.getIsEnum() && context.resolveType(name) != null)
+			return null;
 		if (dot >= 0) {
 			final qualifier = context.resolveType(name.substr(0, dot));
 			if (qualifier == null || !qualifier.getIdentity().equals(identity))

@@ -119,6 +119,19 @@ private function value(index:TyperIndex, solver:TyInferenceSolver, actual:TyInfe
 		case Known(type) if (type.getAliasDefinition() != null): TyInferenceSolver.fromType(TyAliasExpansion.reveal(type));
 		case _: actual;
 	};
+	// An omitted callback input that is still a variable (it may carry field requirements, as in
+	// `function(h) return h.name == "x"`) takes the type the selected parameter supplies, as a
+	// Haxe 4.3.7 monomorph does; the solver checks the requirements (sys.Http's Lambda.exists).
+	if (direction == Input && !expected.hasUnknownComponent())
+		switch solver.follow(actual) {
+			case Variable(_):
+				final candidate = solver.fork();
+				if (constrainExact(index, candidate, actual, expected)) {
+					solver.commit(candidate);
+					return true;
+				}
+			case _:
+		}
 	final preview = solver.preview(actual);
 	if (!preview.hasUnknownComponent() && !expected.hasUnknownComponent()) {
 		final expectedKey = expected.getSemanticKey();

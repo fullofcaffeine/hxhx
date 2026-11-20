@@ -455,6 +455,63 @@ class TyFunctionInference {
 		return result;
 	}
 
+	/**
+		A named local function can call itself before its body has chosen a result, as in
+		`function loop(n:Int) { if (n > 0) loop(n - 1); }`. Give its symbol a callable term with a
+		result variable while the body is typed, so recursive calls share that variable instead of
+		freezing the temporary Unknown result. `settleNamedFunction` binds the variable to the
+		selected result after the body. Sealed replay reuses the original term.
+	 */
+	public function declareNamedFunction(symbol:TySymbol, parameters:Array<TySymbol>):Void {
+		if (solver.isSealed())
+			return;
+		final key = symbol.getIdentity().getCanonicalKey();
+		if (locals.exists(key))
+			throw "named local function was declared twice";
+		final type = symbol.getType();
+		if (!type.isFunction() || !type.getFunctionReturn().isUnknown())
+			throw "named local function inference requires an unknown result";
+		final arguments = [
+			for (parameter in parameters) {
+				final term = locals.get(parameter.getIdentity().getCanonicalKey());
+				term == null ? TyInferenceSolver.fromType(parameter.getType()) : term;
+			}
+		];
+		locals.set(key, Function(arguments, solver.fresh(), type));
+	}
+
+	/** Bind a named local function's result variable to the result its body selected. */
+	public function settleNamedFunction(symbol:TySymbol, result:TyType, ?resultTerm:TyInferenceTerm):Bool {
+		if (solver.isSealed())
+			return true;
+		return switch locals.get(symbol.getIdentity().getCanonicalKey()) {
+			case Function(_, pending, _):
+				final candidate = solver.fork();
+				final accepted = candidate.constrain(pending, resultTerm == null ? TyInferenceSolver.fromType(result) : resultTerm);
+				if (accepted)
+					solver.commit(candidate);
+				accepted;
+			case _: throw "named local function result was not declared";
+		};
+	}
+
+	/**
+		Link an assigned value's own inference term into an inferred destination, as in
+		`?path` followed by `path = new Array(); path.push("x");`. Type-based constraints skip a
+		value whose type still has unknown parts (`Array<?>`), which left the constructor's element
+		variable unconnected to the input. A nullable destination keeps its wrapper. Returns false
+		on a conflict; without a value term there is nothing to link.
+	 */
+	public function linkAssignedTerm(destination:HxExpr, value:HxExpr, environment:TyFunctionEnv):Bool {
+		if (solver.isSealed())
+			return true;
+		final target = sourceTerm(destination, environment);
+		final assigned = sourceTerm(value, environment);
+		if (target == null || assigned == null)
+			return true;
+		return solver.constrainNullableInput(target, assigned);
+	}
+
 	/** Retain parameter and result terms so replay observes constraints supplied after an earlier body call. */
 	public function recordSourceFunction(source:HxExpr, type:TyType, parameters:Array<TySymbol>, ?result:TyInferenceTerm):Void {
 		if (solver.isSealed())
@@ -849,6 +906,91 @@ class TyFunctionInference {
 		solver.commit(candidate);
 		occurrences.push({expression: expression, term: original, sourceFingerprint: fingerprint});
 		return result;
+	}
+
+	/**
+		A switch expression whose branches are arrays can mix complete arrays with empty literals,
+		as in `switch (name) { case "a": ["x"]; default: []; }`. Haxe 4.3.7 gives the whole switch the
+		complete element type. Constrain every incomplete branch's own array term to the one complete
+		type all other branches agree on, and commit only when every branch accepts it. The solved
+		literal terms keep the result for sealed replay. Returns null when this rule does not apply.
+	 */
+	public function completeArrayBranches(types:Array<TyType>, terms:Array<Null<TyInferenceTerm>>, index:TyperIndex):Null<TyType> {
+		if (solver.isSealed() || index == null || types.length < 2 || types.length != terms.length)
+			return null;
+		final array = index.getByFullName("Array");
+		if (!Std.isOfType(array, TyClassInfo))
+			return null;
+		var complete:Null<TyType> = null;
+		final incomplete = new Array<TyInferenceTerm>();
+		for (branch in 0...types.length) {
+			final type = TyAliasExpansion.reveal(types[branch]);
+			if (type.isNoNormalCompletion())
+				continue;
+			if (type.isNullable()
+				|| type.getNominalIdentity() == null
+				|| !type.getNominalIdentity().equals(array.getIdentity())
+				|| type.getTypeArguments().length != 1)
+				return null;
+			if (!type.hasUnknownComponent()) {
+				if (complete == null)
+					complete = type;
+				else if (complete.getSemanticKey() != type.getSemanticKey() && !TyAliasEquivalence.equivalentTypes(complete, type))
+					return null;
+				continue;
+			}
+			switch terms[branch] {
+				case Nominal(identity, [_]) if (identity.equals(array.getIdentity())):
+					incomplete.push(terms[branch]);
+				case _:
+					return null;
+			}
+		}
+		if (complete == null || incomplete.length == 0)
+			return null;
+		final candidate = solver.fork();
+		for (term in incomplete) {
+			if (!TyStructuralConstraint.constrainTerms(index, candidate, term, TyInferenceSolver.fromType(complete)))
+				return null;
+			final result = candidate.preview(term);
+			if (result.hasUnknownComponent() || !TyAliasEquivalence.equivalentTypes(result, complete))
+				return null;
+		}
+		solver.commit(candidate);
+		return complete;
+	}
+
+	/**
+		A callback whose untyped inputs only carry field requirements, as in
+		`Lambda.exists(headers, function(h) return h.name == "x")`, has no closed input type yet.
+		For candidate scoring and generic binding, show those inputs as unknown, so the binding
+		comes from the other arguments (Haxe 4.3.7; sys.Http). The selected parameter type later
+		constrains the callback's own terms, where the solver checks the field requirements.
+		Returns null when no input is open.
+	 */
+	public function openCallbackInputs(expression:HxExpr, type:TyType):Null<TyType> {
+		// Read-only: sealed replay must select the same candidate as the first traversal.
+		if (type == null || !type.isFunction())
+			return null;
+		for (entry in sourceFunctions)
+			if (entry.source == expression) {
+				final parameters = type.getFunctionArguments();
+				if (parameters.length != entry.arguments.length)
+					return null;
+				var changed = false;
+				final opened = new Array<TyType>();
+				for (index in 0...parameters.length) {
+					final open = switch solver.follow(entry.arguments[index]) {
+						case Variable(_): true;
+						case Nullable(inner): solver.follow(inner).match(Variable(_));
+						case _: false;
+					};
+					changed = changed || open;
+					opened.push(open ? TyType.unknown() : parameters[index]);
+				}
+				return changed ? type.withFunctionTypes(opened, type.getFunctionReturn()) : null;
+			}
+		return null;
 	}
 
 	/** Each generic method capture owns fresh variables; aliases keep the same function term. */
@@ -1251,7 +1393,9 @@ class TyFunctionInference {
 		final receiverTerm = sourceTerm(receiver, environment);
 		if (receiverTerm == null)
 			return true;
-		final arguments = switch nonNullableReceiver(receiverTerm) {
+		// An inferred input can reach its container through a solved variable (`?path`
+		// followed by `path = new Array()`), so follow it on both sides of the wrapper.
+		final arguments = switch solver.follow(nonNullableReceiver(solver.follow(receiverTerm))) {
 			case Nominal(identity, arguments) if (identity.equals(provider.getIdentity())): arguments;
 			case _: return true;
 		};
