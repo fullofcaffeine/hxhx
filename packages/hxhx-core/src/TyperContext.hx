@@ -542,6 +542,30 @@ class TyperContext {
 		checked later by the ordinary overload selector. Standard enum helpers are
 		loaded for enum receivers and follow all explicit using providers.
 	**/
+	/**
+		The static-extension providers that the receiver's own type names with `@:using`,
+		as in Haxe 4.3.7: `@:using(pk.Res.ResTools) enum Res<T>` makes `result.resolve()`
+		call `ResTools.resolve(result)` without a `using` line. Each path resolves in the
+		module that declares the type, and its module loads on demand.
+	**/
+	function typeUsingProviders(receiver:Null<TyType>):Array<TyNominalInfo> {
+		final providers = new Array<TyNominalInfo>();
+		if (index == null || receiver == null)
+			return providers;
+		final identity = TyAliasExpansion.revealNonNullable(receiver).getNominalIdentity();
+		final declared = identity == null ? null : index.getTypeUsing(identity.getCanonicalName());
+		if (declared == null)
+			return providers;
+		for (path in declared.paths) {
+			if (loader != null)
+				loader.ensureDeclarationAvailable(path, declared.context);
+			final provider = index.resolveNominalProvider(path, declared.context);
+			if (provider != null)
+				providers.push(provider);
+		}
+		return providers;
+	}
+
 	public function extensionMethods(name:String, ?receiver:TyType):Array<TyExtensionMethod> {
 		final out = new Array<TyExtensionMethod>();
 		if (index == null || name == null || name.length == 0)
@@ -556,6 +580,11 @@ class TyperContext {
 			for (providerOffset in 0...providers.length)
 				orderedProviders.push(providers[providers.length - 1 - providerOffset]);
 		}
+		// Upstream order: the module's own `using` lines first, then the receiver type's
+		// `@:using` metadata, then the standard enum providers.
+		for (provider in typeUsingProviders(receiver))
+			if (orderedProviders.filter(value -> value.getCanonicalName() == provider.getFullName()).length == 0)
+				orderedProviders.push(provider.getIdentity());
 		final defaultPath = TyDefaultEnumExtensions.providerPath(index, receiver);
 		if (defaultPath != null) {
 			final provider = resolveType(defaultPath);
