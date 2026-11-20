@@ -4023,11 +4023,8 @@ class TyperStage {
 								// constructor, import or type (haxe_ocaml-ikrmd). This
 								// occurrence may still be resolved from an expected type
 								// elsewhere, so the module decides after typing.
-								// Dynamic, not a guessed concrete type: a pass with the expected type can
-								// still resolve the name (an enum-abstract value from another module), and
-								// a name that a build macro adds has a type this typer cannot see.
 								TyUndeclaredName.recordValueName(name, scope, ctx, pos);
-								TyType.fromHintText("Dynamic");
+								TyType.fromHintText("String");
 							// Only an unresolved host name under authored untyped syntax
 							// gets a retained inference occurrence. Known lexical/member
 							// bindings were resolved above and keep their own constraints.
