@@ -1061,9 +1061,13 @@ class TyperStage {
 							case _:
 								throw "selected extension lost its receiver";
 						}
+					// Open callback inputs as selection did, so generic bindings come from the same evidence.
 					final actual = [
-						for (argument in supplied)
-							inferExprType(argument, inferenceEnvironment, context, position)
+						for (argument in supplied) {
+							final type = inferExprType(argument, inferenceEnvironment, context, position);
+							final opened = lexicalEnvironment.getInference().openCallbackInputs(argument, type);
+							opened == null ? type : opened;
+						}
 					];
 					var signature = appliedCallSignature(declaration, callee, inferenceEnvironment, context, position);
 					// Local callable inference can finish after its first use as an
@@ -1938,6 +1942,14 @@ class TyperStage {
 			return overloadArgScore(expected, classScheme.preview(), methodTypeParameters, semanticIndex);
 		if (TyMethodGenericBinding.isInferableParameter(expected, methodTypeParameters))
 			return actual.isUnknown() || actual.isDynamic() || actual.isNullLiteral() ? 0 : 1;
+		// An omitted input that is still unknown takes a generic parameter's type from the
+		// binding that the other arguments choose, as in `apply(x, cmp)` with
+		// `apply<T>(x:T, cmp:T->Int)` (haxe.ds.ArraySort passes its omitted `cmp` this way).
+		if (actual.isUnknown()
+			&& TyTypeSubstitution.parameterIdentities(expected)
+				.filter(parameter -> methodTypeParameters.filter(owned -> owned.equals(parameter)).length > 0)
+				.length > 0)
+			return 0;
 		if (expected != null && actual != null && expected.getSemanticKey() == actual.getSemanticKey())
 			return 4;
 		if (TyEnumValueCompatibility.accepts(semanticIndex, expected, actual))
@@ -2653,8 +2665,11 @@ class TyperStage {
 				}
 			}
 			final solved = [
-				for (index in 0...args.length)
-					scope.getInference().expressionType(args[index], actual[index], scope)
+				for (index in 0...args.length) {
+					final type = scope.getInference().expressionType(args[index], actual[index], scope);
+					final opened = scope.getInference().openCallbackInputs(args[index], type);
+					opened == null ? type : opened;
+				}
 			];
 			if (trial != null && !scope.isSpeculative() && !inference.isSealed())
 				ctx.getIndex().getMethodInputs().commit(trial);
@@ -2765,6 +2780,12 @@ class TyperStage {
 						if (selected != null)
 							contextual[index] = selected;
 					}
+			}
+			// An untyped callback input that only carries field requirements binds no type parameter.
+			for (index in 0...args.length) {
+				final opened = candidateInference.openCallbackInputs(args[index], contextual[index]);
+				if (opened != null)
+					contextual[index] = opened;
 			}
 			final contextualRanked = order.rankedTypes(contextual);
 			if (declaration != null && applied.acceptsArity(args.length)) {
@@ -3170,6 +3191,10 @@ class TyperStage {
 		for (parameter in parameterSymbols)
 			if (parameter.getType().unwrapNull().isUnknown())
 				scope.getInference().registerOmittedParameter(parameter);
+		// Recursive calls in the body share the result that the body selects.
+		final namedResult = declared != null && expected == null;
+		if (namedResult)
+			scope.getInference().declareNamedFunction(declared, parameterSymbols);
 		controls.beginReturns(target, expected);
 		final bodyType = TyEmptySourceGroup.isEmpty(body) ? TyType.fromHintText("Void") : inferExprType(body, scope, ctx, pos,
 			facts.getKind() == Arrow ? expected : null);
@@ -3211,6 +3236,8 @@ class TyperStage {
 		// annotation must constrain their original lexical inputs together.
 		final resultTerm = expected == null
 			&& selected.hasUnknownComponent() ? scope.getInference().sourceFunctionResult(returnTerms) : null;
+		if (namedResult && !scope.getInference().settleNamedFunction(declared, selected, resultTerm))
+			throw new TyperError(ctx.getFilePath(), pos, "recursive call result conflicts with the function result");
 		scope.getInference().recordSourceFunction(source, callableType, parameterSymbols, resultTerm);
 		return callableType;
 	}
@@ -4452,6 +4479,9 @@ class TyperStage {
 				final scrutTy = inferSwitchInput(scrutinee, patterns, scope, ctx, pos);
 				TySwitchTyping.check(scrutTy, patterns, exprs == null ? -1 : exprs.length, ctx, pos, scope.isUntypedContext());
 				var out:TyType = TyType.unknown();
+				var joinFailed = false;
+				final branchTypes = new Array<TyType>();
+				final branchTerms = new Array<Null<TyInferenceTerm>>();
 				if (patterns != null && exprs != null) {
 					final count = patterns.length < exprs.length ? patterns.length : exprs.length;
 					for (i in 0...count) {
@@ -4471,6 +4501,13 @@ class TyperStage {
 							throw error;
 						}
 						scope.exitLexicalScope();
+						branchTypes.push(branchTy);
+						// A case body is a source group; its value is the last expression.
+						final branchValue = switch branchExpr {
+							case ESourceGroup(values, _) if (values.length > 0): values[values.length - 1];
+							case _: branchExpr;
+						};
+						branchTerms.push(scope.getInference().sourceTerm(branchValue, scope));
 
 						if (out.isUnknown())
 							out = branchTy;
@@ -4478,10 +4515,19 @@ class TyperStage {
 							final u = TyType.unify(out, branchTy);
 							if (u != null)
 								out = u;
-							else if (!isStrict())
-								out = TyType.fromHintText("Dynamic");
+							else {
+								joinFailed = true;
+								if (!isStrict())
+									out = TyType.fromHintText("Dynamic");
+							}
 						}
 					}
+				}
+				// Empty array branches take the element type the complete branches share.
+				if (joinFailed || out.hasUnknownComponent()) {
+					final arrays = scope.getInference().completeArrayBranches(branchTypes, branchTerms, ctx.getIndex());
+					if (arrays != null)
+						out = arrays;
 				}
 				out.isUnknown() ? TyType.fromHintText("Dynamic") : out;
 			case ENew(_typePath, args):
@@ -4711,8 +4757,12 @@ class TyperStage {
 									}
 									if (scope.getInference().sourceTerm(a, scope) != null) {
 										final inferred = scope.getInference().expressionType(a, sym.getType(), scope);
-										final compatible = inferred.hasUnknownComponent() ? scope.getInference()
-											.constrain([a], [rhs], scope, ctx.getIndex()) : overloadArgScore(inferred, rhs, [], ctx.getIndex()) >= 0;
+										// A value that still has unknown parts shares its own term, so its
+										// variables (such as `new Array()`'s element) reach the destination.
+										final compatible = inferred.hasUnknownComponent() ? (rhs.hasUnknownComponent() ? scope.getInference()
+											.linkAssignedTerm(a, b,
+												scope) : scope.getInference()
+											.constrain([a], [rhs], scope, ctx.getIndex())) : overloadArgScore(inferred, rhs, [], ctx.getIndex()) >= 0;
 										if (!compatible)
 											throw new TyperError(ctx.getFilePath(), pos, "assignment conflicts with inferred generic result");
 									}
@@ -4950,8 +5000,11 @@ class TyperStage {
 				scope.exitLexicalScope();
 				TyType.fromHintText("Array<Dynamic>");
 			case EArrayDecl(values):
+				// An enum constructor's payload literal (`[items]`) can see a recursive
+				// typedef expanded on one side and as its alias on the other.
 				final acceptsArrayElement = (expected:TyType,
 					actual:TyType) -> actual.isDynamic()
+						|| TyAssignmentCompatibility.sameType(expected, actual)
 						|| TyFunctionConstraint.accepts(expected.unwrapNull(), actual)
 						|| TyStructuralArgument.compatibility(ctx.getIndex(), expected, actual) == Compatible
 						|| TyImplicitConversionPlan.select(ctx.getIndex(), expected.unwrapNull(), actual.unwrapNull()) != null

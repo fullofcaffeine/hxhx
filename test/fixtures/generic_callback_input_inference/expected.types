@@ -1,0 +1,4 @@
+anyPositive.items=Array<Int>
+anyPositive.test=Int -> Bool
+repeat.times=Int
+repeat.value=Int
