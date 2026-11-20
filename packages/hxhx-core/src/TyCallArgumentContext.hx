@@ -39,8 +39,8 @@ function shared(signatures:Array<TyFunSig>, arity:Int, ?methodParameters:Array<A
 
 /**
 	The number of leading arguments that must fill the parameter at their own index.
-	A fully supplied fixed list places all of them. With omitted arguments, an optional
-	parameter can be skipped, so placement stops at the first optional parameter.
+	A fully supplied fixed list places all of them. Omitted arguments must all be optional,
+	and an optional parameter can be skipped, so placement stops at the first optional one.
 **/
 private function positionalArguments(signature:TyFunSig, arity:Int):Int {
 	final parameters = signature.getArgs();
@@ -49,6 +49,10 @@ private function positionalArguments(signature:TyFunSig, arity:Int):Int {
 		return 0;
 	if (parameters.length == arity)
 		return arity;
+	// An omitted required parameter makes the call invalid: it gets no early context.
+	for (index in arity...parameters.length)
+		if (optional[index] != true)
+			return 0;
 	var count = 0;
 	while (count < arity && optional[count] != true)
 		count++;
