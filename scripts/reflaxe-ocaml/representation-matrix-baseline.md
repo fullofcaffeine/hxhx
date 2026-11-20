@@ -4,9 +4,9 @@ Recorded on 2026-11-16 with `node scripts/reflaxe-ocaml/representation-matrix.js
 (`reflaxe.ocaml` hosted by upstream Haxe 4.3.7, macOS, OCaml 5.4.0). The run was split into
 three passes while the generator was corrected; this table merges them.
 
-**219 of 239 cells pass (91.6%)** after the first steps of the conversion table (updates of
-2026-11-17, below). No cell prints a wrong value, 4 cells produce OCaml that does not build,
-and 16 cells are refused by `reflaxe.ocaml` with a named "unsupported" error.
+**220 of 239 cells pass (92.1%)** after the first steps of the conversion table (updates of
+2026-11-17 and 2026-11-19, below). No cell prints a wrong value, 3 cells produce OCaml that does
+not build, and 16 cells are refused by `reflaxe.ocaml` with a named "unsupported" error.
 
 The first recording passed 203 of 239 cells (84.9%), with 19 cells that did not build.
 
@@ -24,6 +24,12 @@ parameter, at a concrete type such as `Holder<Int>.value`, takes its conversion 
 table. The `generic_class` column goes from 10 to 16 passing cells. The table below is the
 full run after this change.
 
+**Update 2026-11-19 (`haxe_ocaml-9cqxj.2`, PR 1).** A `Null<Int>` that moves into a `Float`
+(`UnboxNullableIntAsFloat`), and the other unplanned nullable-primitive moves (assignment tail,
+direct function results, branch joins), take their conversion from the table: null gives the
+default value. The `float` row's `optional_argument` cell now builds and passes. The table below
+is the full run after step 4 with this cell updated from the `float` row run.
+
 Each row passes one value type through each boundary and prints the result. A cell passes when
 the native program prints the same line as `haxe --interp`.
 
@@ -38,7 +44,7 @@ the native program prints the same line as `haxe --interp`.
 | value \ boundary | local | static_field | instance_field | argument | return | optional_argument | generic_function | generic_class | dynamic | dynamic_observed | array_dynamic | anon_field | closure_capture | method_value | callback_argument |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | `int` | ok | ok | ok | ok | ok | ok | ok | ok | ok | ok | ok | ok | ok | ok | ok |
-| `float` | ok | ok | ok | ok | ok | build | refused | ok | ok | ok | ok | ok | ok | ok | ok |
+| `float` | ok | ok | ok | ok | ok | ok | refused | ok | ok | ok | ok | ok | ok | ok | ok |
 | `bool` | ok | ok | ok | ok | ok | refused | ok | ok | ok | ok | ok | ok | ok | ok | ok |
 | `string` | ok | ok | ok | ok | ok | ok | ok | ok | ok | ok | ok | ok | ok | ok | ok |
 | `null_int` | ok | ok | ok | ok | ok | ok | refused | ok | ok | ok | ok | ok | ok | ok | ok |

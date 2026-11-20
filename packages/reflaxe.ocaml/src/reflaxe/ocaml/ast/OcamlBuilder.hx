@@ -4648,16 +4648,14 @@ class OcamlBuilder {
 						final toKind = nullablePrimitiveKind(expected);
 						final fromKind = nullablePrimitiveKind(branch.t);
 
-						// Null<prim> -> prim
-						if (toKind == null) {
-							if (isIntType(expected) && fromKind == "int") {
-								return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [buildExpr(branch)]);
-							}
-							if (isFloatType(expected) && fromKind == "float") {
-								return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_float_unwrap"), [buildExpr(branch)]);
-							}
-							if (isBoolType(expected) && fromKind == "bool") {
-								return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_bool_unwrap"), [buildExpr(branch)]);
+						// Null<prim> -> prim follows the table: null gives the default value
+						// (decision of 2026-11-17, haxe_ocaml-9cqxj).
+						if (toKind == null && fromKind != null) {
+							final conversion = OcamlValueConversion.between(OcamlValueConversion.carrierOf(branch.t), OcamlValueConversion.carrierOf(expected));
+							switch (conversion) {
+								case UnboxNullablePrimitive(_) | UnboxNullableIntAsFloat:
+									return buildValueConversion(conversion, branch);
+								case _:
 							}
 						}
 
@@ -7800,6 +7798,8 @@ class OcamlBuilder {
 				safeUnboxNullableFloat(value);
 			case UnboxNullablePrimitive(BoolCarrier):
 				safeUnboxNullableBool(value);
+			case UnboxNullableIntAsFloat:
+				OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [safeUnboxNullableInt(value)]);
 			case UnboxObj:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [value]);
 			case TagNullableBool | UntagNullableBool:
@@ -8275,8 +8275,15 @@ class OcamlBuilder {
 			}
 		}
 
-		// Non-null primitive slot <- nullable primitive value.
+		// Non-null primitive slot <- nullable primitive value. The table owns the null rule
+		// (null gives the default value, decision of 2026-11-17) and the Null<Int> -> Float move.
 		if (lhsKind == null && rhsKind != null) {
+			final conversion = OcamlValueConversion.between(OcamlValueConversion.carrierOf(rhs.t), OcamlValueConversion.carrierOf(lhsType));
+			switch (conversion) {
+				case UnboxNullablePrimitive(_) | UnboxNullableIntAsFloat:
+					return buildValueConversion(conversion, rhs);
+				case _:
+			}
 			return switch (rhsKind) {
 				case "int" if (isIntType(lhsType)):
 					safeUnboxNullableInt(buildExpr(rhs));
@@ -9447,12 +9454,15 @@ class OcamlBuilder {
 				case _: false;
 			})
 			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(value)]);
-		final valueNullableKind = nullablePrimitiveKind(value.t);
-		if (valueNullableKind == "int" && isIntType(returnType)) {
-			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [buildExpr(value)]);
-		}
-		if (valueNullableKind == "bool" && isBoolType(returnType)) {
-			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_bool_unwrap"), [buildExpr(value)]);
+		// A nullable primitive returned as a non-null primitive follows the table: null gives
+		// the default value (decision of 2026-11-17, haxe_ocaml-9cqxj), never Null Access.
+		if (nullablePrimitiveKind(value.t) != null && nullablePrimitiveKind(returnType) == null) {
+			final conversion = OcamlValueConversion.between(OcamlValueConversion.carrierOf(value.t), OcamlValueConversion.carrierOf(returnType));
+			switch (conversion) {
+				case UnboxNullablePrimitive(_) | UnboxNullableIntAsFloat:
+					return buildValueConversion(conversion, value);
+				case _:
+			}
 		}
 		return buildExpr(value);
 	}
