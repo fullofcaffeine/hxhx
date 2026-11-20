@@ -95,6 +95,7 @@ class ValueConversionTableTest {
 			{from: macro :Float, to: macro :Null<Float>, expected: "BoxNullable"},
 			{from: macro :Bool, to: macro :Null<Bool>, expected: "BoxNullable"},
 			{from: macro :Int, to: macro :Null<Float>, expected: "BoxIntAsNullableFloat"},
+			{from: macro :Null<Int>, to: macro :Float, expected: "UnboxNullableIntAsFloat"},
 			{from: macro :ConversionColor, to: macro :Null<ConversionColor>, expected: "BoxNullable"},
 			{from: macro :ConversionColor, to: macro :ConversionMaybeColor, expected: "BoxNullable"},
 			// A nullable carrier gives its native value.
@@ -122,7 +123,6 @@ class ValueConversionTableTest {
 			// Pairs that the table does not list yet.
 			{from: macro :ConversionColor, to: macro :Null<ConversionShape>, expected: "null"},
 			{from: macro :ConversionShape, to: macro :ConversionColor, expected: "null"},
-			{from: macro :Null<Int>, to: macro :Float, expected: "null"},
 			{from: macro :Int, to: macro :Dynamic, expected: "null"},
 		];
 		for (pair in pairs) {

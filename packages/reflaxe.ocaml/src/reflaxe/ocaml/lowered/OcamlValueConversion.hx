@@ -66,6 +66,9 @@ enum OcamlValueConversionKind {
 	/** Read the native value of a nullable primitive. `hx_null` gives the type's default value, as on static targets. */
 	UnboxNullablePrimitive(kind:OcamlPrimitiveCarrier);
 
+	/** Read a `Null<Int>` as `Float`: `hx_null` gives `0` (as on static targets), then `float_of_int`. */
+	UnboxNullableIntAsFloat;
+
 	/** Read the value that an `Obj.t` carrier holds, with `Obj.obj`. */
 	UnboxObj;
 
@@ -186,6 +189,9 @@ class OcamlValueConversion {
 				BoxIntAsNullableFloat;
 			case [NullablePrimitive(source), NativePrimitive(target)] if (source == target):
 				UnboxNullablePrimitive(target);
+			case [NullablePrimitive(IntCarrier), NativePrimitive(FloatCarrier)]:
+				// Decision of 2026-11-17 (haxe_ocaml-9cqxj): null gives the default value.
+				UnboxNullableIntAsFloat;
 			case [NativeEnum(source), NullableEnum(target)] if (source == target && usesHaxeEnumRuntime(target)):
 				BoxNullable;
 			case [NullableEnum(source), NativeEnum(target)] if (source == target):
