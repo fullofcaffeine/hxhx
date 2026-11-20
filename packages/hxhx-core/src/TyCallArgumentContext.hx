@@ -1,5 +1,7 @@
 /**
-	Find callback, collection, or enum context shared by admitted callable parameters.
+	Find callback, collection, enum or enum-abstract context shared by admitted callable
+	parameters. An enum-abstract parameter lets a bare value such as `Fast` resolve through
+	its expected type before candidate scoring, as an enum parameter does.
 	Collection context reaches empty literals inside branches before inference seals
 	them as Array<Dynamic>. Existing declared values keep their own types.
 	Only fixed, fully supplied parameter lists have an unambiguous source position
@@ -49,7 +51,9 @@ private function agreed(arguments:Array<Array<TyType>>, arity:Int, declarationIn
 			if (expected.getFunctionArguments().filter(type -> type.hasUnknownComponent()).length > 0)
 				continue;
 		} else if (TypedCollectionExpectation.context(expected) == null
-			&& (expected.hasUnknownComponent() || TyperContext.expectedEnumOwner(declarationIndex, expected) == null)) {
+			&& (expected.hasUnknownComponent()
+				|| (TyperContext.expectedEnumOwner(declarationIndex, expected) == null
+					&& TyperContext.expectedEnumAbstract(declarationIndex, expected) == null))) {
 			continue;
 		}
 		var agreed = true;
