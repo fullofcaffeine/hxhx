@@ -19,7 +19,7 @@ The project treats practical edit-compile-test latency as a product goal. A fast
 
 ## Status
 
-Last update: 2026-11-19. Neither product is ready for production.
+Last update: 2026-11-20. Neither product is ready for production.
 
 | Product | Status today | Use it for |
 | --- | --- | --- |
@@ -41,15 +41,15 @@ Also change the "Last update" date.
 | --- | --- | --- |
 | Parse oracle: field bodies that `hxhx` parses the same as upstream | `hxhx` | 1720 of 1850 (93.0%) |
 | Parse oracle: files where each body matches | `hxhx` | 83 of 138 |
-| Typed oracle: method signatures that `hxhx` types the same as upstream | `hxhx` | 1487 of 1671 (89.0%) |
-| Representation matrix: cells with the same output as upstream | `reflaxe.ocaml` | 219 of 239 (91.6%) |
+| Typed oracle: method signatures that `hxhx` types the same as upstream | `hxhx` | 1508 of 1671 (90.2%) |
+| Representation matrix: cells with the same output as upstream | `reflaxe.ocaml` | 220 of 239 (92.1%) |
 | Upstream unit suite (milestone F2) | `hxhx` | There is no pass count yet. The run stops at a macro call. |
 
 The two oracles compare `hxhx` with upstream Haxe 4.3.7 on the `haxe` package of the standard library. [`scripts/oracle/README.md`](scripts/oracle/README.md) gives the method.
 
-The representation matrix moves 16 value types through 15 boundaries. On `main`, 20 cells fail, and no cell prints a wrong value:
+The representation matrix moves 16 value types through 15 boundaries. On `main`, 19 cells fail, and no cell prints a wrong value:
 
-- 4 cells give OCaml that does not build.
+- 3 cells give OCaml that does not build.
 - 16 cells stop with a named error.
 
 [The baseline](scripts/reflaxe-ocaml/representation-matrix-baseline.md) shows each cell.

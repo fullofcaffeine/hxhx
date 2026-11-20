@@ -364,6 +364,15 @@ class TyperContext {
 		Only the exact enum owner contributes candidates. Argument types never
 		search other enums, and callers retain local and current-method precedence.
 	**/
+	/** The enum abstract an expected type names, from any module, or null. **/
+	public static function expectedEnumAbstract(index:TyperIndex, expected:Null<TyType>):Null<TyAbstractInfo> {
+		if (index == null || expected == null || expected.hasUnknownComponent())
+			return null;
+		final identity = TyAliasExpansion.revealNonNullable(expected).getNominalIdentity();
+		final provider = identity == null ? null : index.getByFullName(identity.getCanonicalName());
+		return Std.isOfType(provider, TyAbstractInfo) && (cast provider : TyAbstractInfo).getEnumDomain() != null ? cast provider : null;
+	}
+
 	public static function expectedEnumOwner(index:TyperIndex, expected:Null<TyType>):Null<TyNominalInfo> {
 		if (index == null || expected == null)
 			return null;
@@ -474,6 +483,23 @@ class TyperContext {
 		return selected;
 	}
 
+	/**
+		A checked enum-abstract context exposes the abstract's declared values without an import,
+		as upstream Haxe 4.3.7 does for `use(A)` with `use(m:pk.Mode)` and
+		`enum abstract Mode(Int) { var A = 1; }` in another module (eval's `sys.ssl.Socket` calls
+		`conf.defaults(SSL_IS_CLIENT, ...)` this way). Only declared values resolve.
+	**/
+	public function expectedEnumAbstractValueField(name:String, expected:Null<TyType>):Null<TyFieldInfo> {
+		final provider = expectedEnumAbstract(index, expected);
+		if (provider == null || name == null || name.length == 0)
+			return null;
+		final field = provider.fieldInfo(name);
+		if (field == null || !field.getIsStatic() || !field.getConstant().isEnumValue())
+			return null;
+		index.undeclaredValueNames(filePath).markContextual(name);
+		return field;
+	}
+
 	/** A type or module import exposes constructors only from its selected enum declarations. */
 	function importedEnums(directive:TyModuleDirective):Array<TyNominalInfo> {
 		if (!directive.getKind().match(TypeImport))
@@ -542,6 +568,30 @@ class TyperContext {
 		checked later by the ordinary overload selector. Standard enum helpers are
 		loaded for enum receivers and follow all explicit using providers.
 	**/
+	/**
+		The static-extension providers that the receiver's own type names with `@:using`,
+		as in Haxe 4.3.7: `@:using(pk.Res.ResTools) enum Res<T>` makes `result.resolve()`
+		call `ResTools.resolve(result)` without a `using` line. Each path resolves in the
+		module that declares the type, and its module loads on demand.
+	**/
+	function typeUsingProviders(receiver:Null<TyType>):Array<TyNominalInfo> {
+		final providers = new Array<TyNominalInfo>();
+		if (index == null || receiver == null)
+			return providers;
+		final identity = TyAliasExpansion.revealNonNullable(receiver).getNominalIdentity();
+		final declared = identity == null ? null : index.getTypeUsing(identity.getCanonicalName());
+		if (declared == null)
+			return providers;
+		for (path in declared.paths) {
+			if (loader != null)
+				loader.ensureDeclarationAvailable(path, declared.context);
+			final provider = index.resolveNominalProvider(path, declared.context);
+			if (provider != null)
+				providers.push(provider);
+		}
+		return providers;
+	}
+
 	public function extensionMethods(name:String, ?receiver:TyType):Array<TyExtensionMethod> {
 		final out = new Array<TyExtensionMethod>();
 		if (index == null || name == null || name.length == 0)
@@ -556,6 +606,11 @@ class TyperContext {
 			for (providerOffset in 0...providers.length)
 				orderedProviders.push(providers[providers.length - 1 - providerOffset]);
 		}
+		// Upstream order: the module's own `using` lines first, then the receiver type's
+		// `@:using` metadata, then the standard enum providers.
+		for (provider in typeUsingProviders(receiver))
+			if (orderedProviders.filter(value -> value.getCanonicalName() == provider.getFullName()).length == 0)
+				orderedProviders.push(provider.getIdentity());
 		final defaultPath = TyDefaultEnumExtensions.providerPath(index, receiver);
 		if (defaultPath != null) {
 			final provider = resolveType(defaultPath);

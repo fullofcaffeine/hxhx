@@ -2,6 +2,9 @@
 import haxe.macro.ComplexTypeTools;
 import haxe.macro.Context;
 import haxe.macro.Expr;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationDomain;
+import reflaxe.ocaml.lowered.OcamlNativeEnumRepresentation.OcamlNativeEnumDescriptor;
+import reflaxe.ocaml.lowered.OcamlRepresentationRegistry;
 import reflaxe.ocaml.lowered.OcamlValueConversion;
 #end
 
@@ -95,6 +98,7 @@ class ValueConversionTableTest {
 			{from: macro :Float, to: macro :Null<Float>, expected: "BoxNullable"},
 			{from: macro :Bool, to: macro :Null<Bool>, expected: "BoxNullable"},
 			{from: macro :Int, to: macro :Null<Float>, expected: "BoxIntAsNullableFloat"},
+			{from: macro :Null<Int>, to: macro :Float, expected: "UnboxNullableIntAsFloat"},
 			{from: macro :ConversionColor, to: macro :Null<ConversionColor>, expected: "BoxNullable"},
 			{from: macro :ConversionColor, to: macro :ConversionMaybeColor, expected: "BoxNullable"},
 			// A nullable carrier gives its native value.
@@ -122,7 +126,6 @@ class ValueConversionTableTest {
 			// Pairs that the table does not list yet.
 			{from: macro :ConversionColor, to: macro :Null<ConversionShape>, expected: "null"},
 			{from: macro :ConversionShape, to: macro :ConversionColor, expected: "null"},
-			{from: macro :Null<Int>, to: macro :Float, expected: "null"},
 			{from: macro :Int, to: macro :Dynamic, expected: "null"},
 		];
 		for (pair in pairs) {
@@ -164,9 +167,62 @@ class ValueConversionTableTest {
 		if (plainRead != "null")
 			failures.push('a field declared Int is not a generic read: expected null, got $plainRead');
 
+		// Boxing into Dynamic, as the call and local plans box it; `between` does not return these.
+		final boxes:Array<{type:ComplexType, expected:String}> = [
+			{type: macro :Int, expected: "BoxIntoDynamic"},
+			{type: macro :Float, expected: "BoxIntoDynamic"},
+			{type: macro :Bool, expected: "BoxBoolIntoDynamic"},
+			{type: macro :String, expected: "BoxIntoDynamic"},
+			{type: macro :Dynamic, expected: "SameCarrier"},
+			{type: macro :Null<Int>, expected: "null"},
+		];
+		for (box in boxes) {
+			final actual = Std.string(OcamlValueConversion.boxIntoDynamic(OcamlValueConversion.carrierOf(ComplexTypeTools.toType(box.type))));
+			if (actual != box.expected)
+				failures.push('${ComplexTypeTools.toString(box.type)} into Dynamic: expected ${box.expected}, got $actual');
+		}
+
+		// A plan reads carriers from registry decisions; they must agree with carrierOf.
+		final registry = new OcamlRepresentationRegistry();
+		registry.beginProgram("value-conversion-table-test");
+		final colorFacts:OcamlNativeEnumDescriptor = {
+			semanticTypeId: "ConversionColor",
+			sourceModuleId: "ValueConversionTableTest",
+			sourceTypeName: "ConversionColor",
+			targetModuleName: "ValueConversionTableTest",
+			targetTypeName: reflaxe.ocaml.OcamlNameTools.enumTypeName("ConversionColor"),
+			revision: ""
+		};
+		final colorDescriptor:OcamlNativeEnumDescriptor = {
+			semanticTypeId: colorFacts.semanticTypeId,
+			sourceModuleId: colorFacts.sourceModuleId,
+			sourceTypeName: colorFacts.sourceTypeName,
+			targetModuleName: colorFacts.targetModuleName,
+			targetTypeName: colorFacts.targetTypeName,
+			revision: @:privateAccess reflaxe.ocaml.lowered.OcamlNativeEnumRepresentation.revision(colorFacts)
+		};
+		final decisions:Array<{type:ComplexType, select:() -> Dynamic}> = [
+			{type: macro :Int, select: () -> registry.selectExactInt(OcamlRepresentationDomain.InternalValue)},
+			{type: macro :Float, select: () -> registry.selectExactFloat(OcamlRepresentationDomain.InternalValue)},
+			{type: macro :Bool, select: () -> registry.selectExactBool(OcamlRepresentationDomain.InternalValue)},
+			{type: macro :Null<Int>, select: () -> registry.selectExactNullInt(OcamlRepresentationDomain.InternalValue)},
+			{type: macro :Null<Bool>, select: () -> registry.selectExactNullBool(OcamlRepresentationDomain.InternalValue)},
+			{type: macro :String, select: () -> registry.selectExactString(OcamlRepresentationDomain.InternalValue)},
+			{type: macro :Dynamic, select: () -> registry.selectExactDynamic(OcamlRepresentationDomain.InternalValue)},
+			{type: macro :{name:String}, select: () -> registry.selectAnonymousStructure("anonymous{name:String}")},
+			{type: macro :ConversionColor, select: () -> registry.selectNativeEnum(colorDescriptor)},
+			{type: macro :Null<ConversionColor>, select: () -> registry.selectNullableNativeEnum(colorDescriptor)},
+		];
+		for (entry in decisions) {
+			final expected = Std.string(OcamlValueConversion.carrierOf(ComplexTypeTools.toType(entry.type)));
+			final actual = Std.string(OcamlValueConversion.carrierOfRepresentation(entry.select()));
+			if (actual != expected)
+				failures.push('registry decision for ${ComplexTypeTools.toString(entry.type)}: carrierOf gives $expected, carrierOfRepresentation gives $actual');
+		}
+
 		if (failures.length > 0)
 			Context.error("VALUE_CONVERSION_TABLE:FAIL\n" + failures.join("\n"), Context.currentPos());
-		final summary = 'VALUE_CONVERSION_TABLE:PASS carriers=${carriers.length + 1} pairs=${pairs.length} generic_reads=${genericReads.length + 1}';
+		final summary = 'VALUE_CONVERSION_TABLE:PASS carriers=${carriers.length + 1} pairs=${pairs.length} generic_reads=${genericReads.length + 1} boxes=${boxes.length} registry_decisions=${decisions.length}';
 		return macro $v{summary};
 	}
 }

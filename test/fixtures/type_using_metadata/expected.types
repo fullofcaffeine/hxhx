@@ -1,0 +1,7 @@
+local.suffix=String
+local.text=String
+ready.flag=Bool
+ready.result=pk.Res<Int>
+twice.other=Int
+value.expected=String
+value.result=pk.Res<String>

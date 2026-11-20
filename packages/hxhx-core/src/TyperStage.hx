@@ -3489,7 +3489,9 @@ class TyperStage {
 					} else if (currentMethodShadowsExpectedEnum(name, scope, ctx, expected)) {
 						null;
 					} else {
-						final contextual = ctx.expectedEnumConstructorField(name, expected);
+						final contextualEnum = ctx.expectedEnumConstructorField(name, expected);
+						// An expected enum abstract from any module exposes its declared values too.
+						final contextual = contextualEnum == null ? ctx.expectedEnumAbstractValueField(name, expected) : contextualEnum;
 						final enumField = contextual == null ? ctx.moduleEnumConstructorField(name) : contextual;
 						// A bare value of an enum abstract in this module, such as `T1` for
 						// `enum abstract ET(Int) to Int { var T1 = 1; }`, is that abstract's field.
