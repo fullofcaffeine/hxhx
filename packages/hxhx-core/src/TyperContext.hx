@@ -364,6 +364,15 @@ class TyperContext {
 		Only the exact enum owner contributes candidates. Argument types never
 		search other enums, and callers retain local and current-method precedence.
 	**/
+	/** The enum abstract an expected type names, from any module, or null. **/
+	public static function expectedEnumAbstract(index:TyperIndex, expected:Null<TyType>):Null<TyAbstractInfo> {
+		if (index == null || expected == null || expected.hasUnknownComponent())
+			return null;
+		final identity = TyAliasExpansion.revealNonNullable(expected).getNominalIdentity();
+		final provider = identity == null ? null : index.getByFullName(identity.getCanonicalName());
+		return Std.isOfType(provider, TyAbstractInfo) && (cast provider : TyAbstractInfo).getEnumDomain() != null ? cast provider : null;
+	}
+
 	public static function expectedEnumOwner(index:TyperIndex, expected:Null<TyType>):Null<TyNominalInfo> {
 		if (index == null || expected == null)
 			return null;
@@ -472,6 +481,23 @@ class TyperContext {
 			selected = field;
 		}
 		return selected;
+	}
+
+	/**
+		A checked enum-abstract context exposes the abstract's declared values without an import,
+		as upstream Haxe 4.3.7 does for `use(A)` with `use(m:pk.Mode)` and
+		`enum abstract Mode(Int) { var A = 1; }` in another module (eval's `sys.ssl.Socket` calls
+		`conf.defaults(SSL_IS_CLIENT, ...)` this way). Only declared values resolve.
+	**/
+	public function expectedEnumAbstractValueField(name:String, expected:Null<TyType>):Null<TyFieldInfo> {
+		final provider = expectedEnumAbstract(index, expected);
+		if (provider == null || name == null || name.length == 0)
+			return null;
+		final field = provider.fieldInfo(name);
+		if (field == null || !field.getIsStatic() || !field.getConstant().isEnumValue())
+			return null;
+		index.undeclaredValueNames(filePath).markContextual(name);
+		return field;
 	}
 
 	/** A type or module import exposes constructors only from its selected enum declarations. */
