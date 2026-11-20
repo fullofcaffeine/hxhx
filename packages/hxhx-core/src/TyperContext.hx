@@ -474,6 +474,26 @@ class TyperContext {
 		return selected;
 	}
 
+	/**
+		A checked enum-abstract context exposes the abstract's declared values without an import,
+		as upstream Haxe 4.3.7 does for `use(A)` with `use(m:pk.Mode)` and
+		`enum abstract Mode(Int) { var A = 1; }` in another module (eval's `sys.ssl.Socket` calls
+		`conf.defaults(SSL_IS_CLIENT, ...)` this way). Only declared values resolve.
+	**/
+	public function expectedEnumAbstractValueField(name:String, expected:Null<TyType>):Null<TyFieldInfo> {
+		if (index == null || expected == null || expected.hasUnknownComponent() || name == null || name.length == 0)
+			return null;
+		final identity = TyAliasExpansion.revealNonNullable(expected).getNominalIdentity();
+		final provider = identity == null ? null : index.getByFullName(identity.getCanonicalName());
+		if (!Std.isOfType(provider, TyAbstractInfo) || (cast provider : TyAbstractInfo).getEnumDomain() == null)
+			return null;
+		final field = provider.fieldInfo(name);
+		if (field == null || !field.getIsStatic() || !field.getConstant().isEnumValue())
+			return null;
+		index.undeclaredValueNames(filePath).markContextual(name);
+		return field;
+	}
+
 	/** A type or module import exposes constructors only from its selected enum declarations. */
 	function importedEnums(directive:TyModuleDirective):Array<TyNominalInfo> {
 		if (!directive.getKind().match(TypeImport))

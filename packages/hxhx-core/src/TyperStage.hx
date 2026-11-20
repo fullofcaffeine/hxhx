@@ -3489,7 +3489,9 @@ class TyperStage {
 					} else if (currentMethodShadowsExpectedEnum(name, scope, ctx, expected)) {
 						null;
 					} else {
-						final contextual = ctx.expectedEnumConstructorField(name, expected);
+						final contextualEnum = ctx.expectedEnumConstructorField(name, expected);
+						// An expected enum abstract from any module exposes its declared values too.
+						final contextual = contextualEnum == null ? ctx.expectedEnumAbstractValueField(name, expected) : contextualEnum;
 						final enumField = contextual == null ? ctx.moduleEnumConstructorField(name) : contextual;
 						// A bare value of an enum abstract in this module, such as `T1` for
 						// `enum abstract ET(Int) to Int { var T1 = 1; }`, is that abstract's field.
@@ -4021,8 +4023,11 @@ class TyperStage {
 								// constructor, import or type (haxe_ocaml-ikrmd). This
 								// occurrence may still be resolved from an expected type
 								// elsewhere, so the module decides after typing.
+								// Dynamic, not a guessed concrete type: a pass with the expected type can
+								// still resolve the name (an enum-abstract value from another module), and
+								// a name that a build macro adds has a type this typer cannot see.
 								TyUndeclaredName.recordValueName(name, scope, ctx, pos);
-								TyType.fromHintText("String");
+								TyType.fromHintText("Dynamic");
 							// Only an unresolved host name under authored untyped syntax
 							// gets a retained inference occurrence. Known lexical/member
 							// bindings were resolved above and keep their own constraints.
