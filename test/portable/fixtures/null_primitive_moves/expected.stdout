@@ -1,0 +1,6 @@
+present 4 1.5 true
+assign int=0 float=0 bool=false
+int operand 1
+float operand 0
+bool operand no true
+branch 0
