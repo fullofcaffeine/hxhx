@@ -136,7 +136,8 @@ class OcamlValueConversion {
 				return UnclassifiedCarrier;
 			case _:
 		}
-		if (OcamlDynamicCarrierModel.usesDynamicCarrier(type))
+		// Classify the followed type, so a typedef of `Null<Dynamic>` is Dynamic too.
+		if (OcamlDynamicCarrierModel.usesDynamicCarrier(followed))
 			return DynamicObj;
 		return switch (OcamlDynamicCarrierModel.followNoAbstracts(OcamlDynamicCarrierModel.unwrapNullType(followed))) {
 			case TInst(classRef, _) if (classRef.get().kind.match(KTypeParameter(_))):
@@ -193,13 +194,14 @@ class OcamlValueConversion {
 				UnboxDynamicEnum(target);
 			case [DynamicObj, NativeEnum(_)] | [DynamicObj, NullableEnum(_)] | [DynamicObj, ObjectReference]:
 				UnboxObj;
+			case [DynamicObj, NativePrimitive(primitive)]:
+				// A Dynamic value may be null. Null gives the default value, as on static
+				// targets (decision of 2026-11-17 in haxe_ocaml-9cqxj); Bool accepts the tag.
+				UnboxNullablePrimitive(primitive);
 			case [NullablePrimitive(BoolCarrier), DynamicObj]:
 				TagNullableBool;
 			case [DynamicObj, NullablePrimitive(BoolCarrier)]:
 				UntagNullableBool;
-			case [DynamicObj, NativePrimitive(BoolCarrier)]:
-				// The checked unbox accepts the tagged and the plain form.
-				UnboxNullablePrimitive(BoolCarrier);
 			case [DynamicObj, TypeParameterValue]:
 				// Generic code such as `get_value():T return cast stored;` relies on this
 				// `Obj.obj`: it gives the method the polymorphic OCaml result type `'a`, so a
