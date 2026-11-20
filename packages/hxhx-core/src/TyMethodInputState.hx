@@ -191,8 +191,12 @@ class TyMethodInputState {
 	}
 
 	/** Retain a callback's known shape while leaving unused inputs unresolved until later callers supply evidence. */
-	static function fillOpen(expected:TyType, actual:TyType):TyType {
-		if (actual.isDynamic() || actual.isNullLiteral() || actual.isUnknown() || actual.hasTypeParameter() || actual.hasOpenMethodParameter())
+	static function fillOpen(expected:TyType, actual:TyType, ?own:Array<TyTypeParameterId>):TyType {
+		if (actual.isDynamic()
+			|| actual.isNullLiteral()
+			|| actual.isUnknown()
+			|| (actual.hasTypeParameter() && !ownParametersOnly(actual, own))
+			|| actual.hasOpenMethodParameter())
 			return expected;
 		if (expected.isUnknown())
 			return actual.isFunction() || !actual.hasUnknownComponent() ? actual : expected;
@@ -200,12 +204,26 @@ class TyMethodInputState {
 			final left = expected.getFunctionArguments();
 			final right = actual.getFunctionArguments();
 			if (left.length == right.length)
-				return expected.withFunctionTypes([for (index in 0...left.length) fillOpen(left[index], right[index])],
-					fillOpen(expected.getFunctionReturn(), actual.getFunctionReturn()));
+				return expected.withFunctionTypes([for (index in 0...left.length) fillOpen(left[index], right[index], own)],
+					fillOpen(expected.getFunctionReturn(), actual.getFunctionReturn(), own));
 		}
 		// Established leaves retain their type. Ordinary compatibility, not
 		// inference, decides whether a later argument can convert to that type.
 		return expected;
+	}
+
+	/**
+		A caller's type parameter must not become another method's input type. A recursive call
+		inside a generic method is different: there the argument's `T` is the callee's own `T`, as in
+		`rec<T>(x:T, f, i)` calling `rec(x, f, i - 1)` after `f` became `T->Int` (haxe.ds.ArraySort).
+	 */
+	static function ownParametersOnly(type:TyType, own:Null<Array<TyTypeParameterId>>):Bool {
+		if (own == null || own.length == 0)
+			return false;
+		for (parameter in TyTypeSubstitution.parameterIdentities(type))
+			if (own.filter(candidate -> candidate.equals(parameter)).length == 0)
+				return false;
+		return true;
 	}
 
 	/** Arguments are already aligned to parameter slots; overload selection remains the caller's responsibility. */
@@ -216,7 +234,7 @@ class TyMethodInputState {
 		for (index in 0...inputs.length) {
 			if (index >= arguments.length || !omitted(declaration, index))
 				continue;
-			final selected = fillOpen(inputs[index], arguments[index]);
+			final selected = fillOpen(inputs[index], arguments[index], declaration.getTypeParameterIds());
 			if (selected.getSemanticKey() != inputs[index].getSemanticKey()) {
 				inputs[index] = selected;
 				changed = true;

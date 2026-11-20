@@ -877,6 +877,8 @@ class TyType {
 					}
 			], result);
 		}
+		if (a.isAnonymous() && b.isAnonymous())
+			return unifyStructures(a, b);
 		if (a.display == "Null")
 			return b;
 		if (b.display == "Null")
@@ -900,6 +902,38 @@ class TyType {
 		if (b.display == "Dynamic")
 			return b;
 		return null;
+	}
+
+	/**
+		Structures with the same fields join field by field when one side still has unknown
+		field types, as a callback's provisional input `{name:?, opt:?}` does against
+		`{name:String, opt:Bool}` from a later argument (haxe.rtti.CType passes such a callback
+		to `leq<T>`). Field names, optionality and kinds must match; known field types must be
+		equal or join the same way. No width, variance or numeric widening is granted.
+	**/
+	static function unifyStructures(a:TyType, b:TyType):Null<TyType> {
+		final left = a.getAnonymousFields();
+		final right = b.getAnonymousFields();
+		if (left.length != right.length)
+			return null;
+		final merged = new Array<TyAnonymousField>();
+		for (field in left) {
+			var other:Null<TyAnonymousField> = null;
+			for (candidate in right)
+				if (candidate.name == field.name) {
+					other = candidate;
+					break;
+				}
+			if (other == null || other.isOptional != field.isOptional || !Type.enumEq(other.kind, field.kind))
+				return null;
+			final type = if (field.type.isUnknown()) other.type; else if (other.type.isUnknown()
+				|| field.type.getSemanticKey() == other.type.getSemanticKey()) field.type; else if (field.type.isAnonymous() && other.type.isAnonymous())
+				unifyStructures(field.type, other.type); else null;
+			if (type == null)
+				return null;
+			merged.push(TyAnonymousField.withType(field, type));
+		}
+		return declaredAnonymous(merged);
 	}
 
 	public function toString():String

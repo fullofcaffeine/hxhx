@@ -1,0 +1,5 @@
+collect.path=Array<String>
+literal.names=Array<String>
+replace.items=Array<Int>
+trail.depth=Int
+trail.path=Array<String>

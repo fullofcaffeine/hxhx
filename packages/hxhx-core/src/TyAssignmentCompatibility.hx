@@ -42,7 +42,7 @@ function classify(expected:TyType, actual:TyType, nullPolicy:TyAssignmentNullPol
 		return Incompatible;
 	if (expected.isNullable() || actual.isNullable())
 		return classify(expected.unwrapNull(), actual.unwrapNull(), nullPolicy);
-	if (expected.getSemanticKey() == actual.getSemanticKey())
+	if (sameType(expected, actual))
 		return Compatible;
 	if (expected.getClassValueScheme() != null)
 		return Incompatible;
@@ -53,6 +53,23 @@ function classify(expected:TyType, actual:TyType, nullPolicy:TyAssignmentNullPol
 	if (expected.isPrimitive() && actual.isPrimitive())
 		return expected.isNumeric() && actual.isNumeric() && expected.getDisplay() == "Float" ? Compatible : Incompatible;
 	return nominalArguments(expected, actual);
+}
+
+/**
+	A recursive typedef can reach one side expanded and the other as its alias, at any
+	depth, as in `d.params.map(show)` with `typedef Decl = {?params:Array<Decl>}`. Exact template
+	equivalence proves the same storage type, so it also satisfies invariant type arguments.
+	It grants no structural width, variance, or conversion.
+ */
+function sameType(expected:TyType, actual:TyType):Bool {
+	final expectedKey = expected.getSemanticKey();
+	final actualKey = actual.getSemanticKey();
+	if (expectedKey == actualKey)
+		return true;
+	// Only a type that names an alias somewhere (its key spells `alias:`) can have
+	// another expansion depth; the proof is skipped for every other pair.
+	return (expectedKey.indexOf("alias:") >= 0 || actualKey.indexOf("alias:") >= 0)
+		&& TyAliasEquivalence.equivalentTypes(expected, actual);
 }
 
 /**
@@ -78,7 +95,7 @@ private function nominalArguments(expected:TyType, actual:TyType):TyCallArgument
 		if (target.isNullable()
 			&& (target.unwrapNull().isDynamic() || target.unwrapNull().getSemanticKey() == source.unwrapNull().getSemanticKey()))
 			continue;
-		if (target.getSemanticKey() == source.getSemanticKey() || target.isDynamic())
+		if (sameType(target, source) || target.isDynamic())
 			continue;
 		if (source.isDynamic() || (target.isPrimitive() && source.isPrimitive()))
 			return Incompatible;
