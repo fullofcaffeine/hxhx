@@ -1,0 +1,7 @@
+counted.ms=Int
+counted.timer=Timer
+printed.ms=Int
+printed.timer=Timer
+repeated.ms=Int
+repeated.repeat=Int
+repeated.timer=Timer
