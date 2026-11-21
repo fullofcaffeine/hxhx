@@ -22,6 +22,10 @@ class TypedMemberResolution {
 		return new TypedMemberResolution(UnresolvedAbstractField);
 	}
 
+	/** Whether the receiver is an abstract on which no member of this name was found. */
+	public function isUnresolvedAbstractField():Bool
+		return value.match(UnresolvedAbstractField);
+
 	public static function field(field:TyFieldInfo, qualifyOwner:Bool):TypedMemberResolution {
 		if (field == null || (qualifyOwner && !field.getIsStatic()))
 			throw "member field resolution requires an exact field and a valid qualifier";

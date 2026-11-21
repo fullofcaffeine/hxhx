@@ -1,0 +1,4 @@
+area.scale=Int
+area.table=Table
+missing.fallback=String
+missing.table=Table

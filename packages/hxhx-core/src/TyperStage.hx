@@ -874,6 +874,9 @@ class TyperStage {
 			final functionEnvironments = new Array<TyFunctionEnv>();
 			final typeResolver:TypedExprTypeResolver = {
 				tracesDisabled: context.hasDefine("no-traces"),
+				// Reads the receiver in a copied environment, so the typed-body replay is unchanged.
+				abstractFieldReader: (object, field, position,
+					environment) -> abstractFieldReader(inferExprType(object, environment.copyForInference(), context, position), field, context),
 				lambdaType: function(names, body, argumentTypes, signature, position, lexicalEnvironment) {
 					return inferLambdaType(names, body, argumentTypes, lexicalEnvironment.copyForInference(), context, position, signature);
 				},
@@ -3904,6 +3907,20 @@ class TyperStage {
 		return scope.getInference().constrain([open], [other], scope, ctx.getIndex());
 	}
 
+	/**
+		The `@:op(a.b)` method that reads `field` on a value of an abstract type, when `field` is no
+		member: Haxe 4.3.7 reads `table.width` as `table.resolve("width")`. Null otherwise.
+	**/
+	static function abstractFieldReader(receiverType:TyType, field:String, ctx:TyperContext):Null<String> {
+		final owner = receiverType == null ? null : TyReceiverMemberLookup.owner(receiverType, ctx);
+		if (!Std.isOfType(owner, TyAbstractInfo))
+			return null;
+		final reader = (cast owner : TyAbstractInfo).getFieldReader();
+		if (reader == null || reader.getSignature().getName() == field)
+			return null;
+		return declaredMemberReadType(owner, field, false, ctx, receiverType) == null ? reader.getSignature().getName() : null;
+	}
+
 	static function inferExprValueType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos, expectedResult:Null<TyType>,
 			?capture:TyMethodCallCapture):TyType {
 		switch HxLiteralCharacterCode.resolve(expr) {
@@ -4129,6 +4146,9 @@ class TyperStage {
 						if (_field == "code" && objTy.getSemanticKey() == "primitive:String")
 							throw new TyperError(ctx.getFilePath(), pos, "String has no field code");
 						final c = TyReceiverMemberLookup.owner(objTy, ctx);
+						final reader = abstractFieldReader(objTy, _field, ctx);
+						if (reader != null)
+							return inferExprType(ECall(EField(obj, reader), [EString(_field)]), scope, ctx, pos, expectedResult);
 						if (c != null) {
 							final memberType = declaredMemberReadType(c, _field, false, ctx, objTy);
 							if (memberType != null) {
