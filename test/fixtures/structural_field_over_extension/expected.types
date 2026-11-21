@@ -1,0 +1,4 @@
+marked.flag=Bool
+marked.holder=Holder
+named.holder=Holder
+named.name=String
