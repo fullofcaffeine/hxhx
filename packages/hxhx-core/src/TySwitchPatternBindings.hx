@@ -79,7 +79,9 @@ class TySwitchPatternBindings {
 			?elements:Array<TyType>, ?extractorType:(String, TyType) -> Null<TyType>):TySwitchPatternBindingAnalysis {
 		if (patterns == null || patterns.length == 0)
 			return emptyAnalysis();
-		final alternatives = [for (pattern in patterns) analyze(pattern, baseType, enumArguments, elements, extractorType)];
+		final alternatives = [
+			for (pattern in patterns) analyze(pattern, baseType, enumArguments, elements, extractorType)
+		];
 		final declarations = [
 			for (fact in alternatives[0].declarations)
 				{name: fact.name, type: fact.type}
@@ -136,7 +138,10 @@ class TySwitchPatternBindings {
 			case PBind(name):
 				bindingFact(name, baseType);
 			case PCapture(name, inner):
-				mergeIndependent([bindingFact(name, baseType), analyze(inner, baseType, enumArguments, elements, extractorType)]);
+				mergeIndependent([
+					bindingFact(name, baseType),
+					analyze(inner, baseType, enumArguments, elements, extractorType)
+				]);
 			case PEnumExtract(name, arguments, provenance):
 				final children = arguments == null ? [] : arguments;
 				final types = enumArguments == null ? null : enumArguments(baseType, name, children.length,
@@ -152,7 +157,8 @@ class TySwitchPatternBindings {
 					throw "switch object pattern requires aligned fields";
 				mergeIndependent([
 					for (i in 0...fieldPatterns.length)
-						analyze(fieldPatterns[i], effectiveType(TyStructuralFieldRead.resolve(effectiveType(baseType), fieldNames[i])), enumArguments, null, extractorType)
+						analyze(fieldPatterns[i], effectiveType(TyStructuralFieldRead.resolve(effectiveType(baseType), fieldNames[i])), enumArguments, null,
+							extractorType)
 				]);
 			case PArray(items):
 				final children = items == null ? [] : items;
@@ -161,7 +167,9 @@ class TySwitchPatternBindings {
 						analyze(children[i], elements[i], enumArguments, null, extractorType)
 				]); else {
 					final itemType = arrayItemType(baseType);
-					mergeIndependent([for (item in children) analyze(item, itemType, enumArguments, null, extractorType)]);
+					mergeIndependent([
+						for (item in children) analyze(item, itemType, enumArguments, null, extractorType)
+					]);
 				}
 			case PExtractor(extractorText, resultPattern):
 				// `_.get() => items` binds `items` with the extractor's result, where `_` is the
@@ -179,11 +187,23 @@ class TySwitchPatternBindings {
 
 	/**
 		Type an extractor (`_.get()`) with `_` bound to the matched type. The binding lives in a
-		copied environment, so it never enters the typed-body replay catalog. Null when the text
-		does not parse or its type stays unknown.
+		copied environment, so it never enters the typed-body replay catalog. The function's
+		inference records the result, and the typed-body replay reads it back: parsing the text
+		again would give new syntax with no recorded facts (`_.get()` on a structural `Ref` needs
+		its callback alignment). Null when the text does not parse or its type stays unknown.
 	**/
-	public static function extractorResult(text:String, matched:TyType, environment:TyFunctionEnv, typeOf:(HxExpr, TyFunctionEnv) -> Null<TyType>):Null<TyType> {
+	public static function extractorResult(text:String, matched:TyType, environment:TyFunctionEnv,
+			typeOf:(HxExpr, TyFunctionEnv) -> Null<TyType>):Null<TyType> {
 		if (text == null || environment == null || matched == null || matched.isUnknown())
+			return null;
+		final key = text + "\n" + matched.getSemanticKey();
+		final inference = environment.getInference();
+		final known = inference.knownExtractorResult(key);
+		if (known != null)
+			return known;
+		// After sealing, freshly parsed syntax has no recorded facts to replay; the typing pass
+		// has already recorded every extractor it could type.
+		if (inference.isSealed())
 			return null;
 		final expression = try HxParser.parseExprText(text) catch (_:Dynamic) null;
 		if (expression == null)
@@ -192,7 +212,10 @@ class TySwitchPatternBindings {
 		trial.enterLexicalScope();
 		trial.declareLocal("_", matched, PatternVariable);
 		final result = try typeOf(expression, trial) catch (_:Dynamic) null;
-		return result == null || result.isUnknown() ? null : result;
+		if (result == null || result.isUnknown())
+			return null;
+		inference.recordExtractorResult(key, result);
+		return result;
 	}
 
 	/** The element types of an array-literal switch subject, or null for any other subject. */
