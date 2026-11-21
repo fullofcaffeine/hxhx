@@ -216,7 +216,11 @@ private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTe
 	final structural = field == null
 		&& operand.getTag() == FieldRead
 		&& TyAliasExpansion.revealNonNullable(operand.getExpressions()[0].getType()).isAnonymous();
-	final key = operand.getType().getSemanticKey();
+	// An optional structure field (`{?x:Int}`) is `Null<Int>`, as upstream types it. Its
+	// stored value keeps that type; the arithmetic below reads the inner Int or Float.
+	final operandType = operand.getType();
+	final nullableStructural = structural && operandType.isNullable();
+	final key = (nullableStructural ? operandType.unwrapNull() : operandType).getSemanticKey();
 	final stringAppend = assignment == "+=" && key == "primitive:String";
 	// The stored value keeps its type: `old op right` holds both checked types, so
 	// an Int or `Null<...>` operand is converted where the arithmetic is emitted.
@@ -232,15 +236,17 @@ private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTe
 	final floatUpdate = (assignment == "+=" || assignment == "-=" || assignment == "*=" || assignment == "/=" || assignment == "%=")
 		&& key == "primitive:Float"
 		&& (rightKey == "primitive:Float" || rightKey == "primitive:Int");
-	// An optional structure field (`{?x:Int}`) has no native compound lowering:
-	// the typer leaves such a structure type unresolved, and the field holds a
-	// nullable value. Stop with a named error; before, the backend silently
-	// dropped the statement.
+	// An optional structure field (`{?x:Int}`) holds `Null<Int>`. An Int, Float or
+	// String one is updated through its inner type below. Any other nullable field,
+	// or a field of a structure type the typer left unresolved, has no native
+	// compound lowering: stop with a named error instead of dropping the statement.
 	final receiverType = operand.getTag() == FieldRead ? TyAliasExpansion.revealNonNullable(operand.getExpressions()[0].getType()) : null;
 	final unresolvedStructure = receiverType != null
 		&& receiverType.isUnresolved()
 		&& StringTools.startsWith(receiverType.getDisplay(), "{");
-	if (field == null && ((structural && operand.getType().isNullable()) || unresolvedStructure))
+	if (field == null
+		&& ((nullableStructural && key != "primitive:Int" && key != "primitive:Float" && key != "primitive:String")
+			|| unresolvedStructure))
 		throw "unsupported native OCaml compound assignment "
 			+ assignment
 			+ " on optional structure field `"
@@ -262,7 +268,8 @@ private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTe
 		&& isBitwiseAssignment(assignment)
 		&& key == "primitive:Int"
 		&& rightType.getSemanticKey() == "primitive:Int";
-	if ((!stringAppend && !intUpdate && !floatUpdate && !bitwiseUpdate) || expression.getType().getSemanticKey() != key) {
+	if ((!stringAppend && !intUpdate && !floatUpdate && !bitwiseUpdate)
+		|| expression.getType().getSemanticKey() != operandType.getSemanticKey()) {
 		if (isRefusedFieldCompound(assignment, operand.getType(), structural))
 			throw "unsupported native OCaml compound assignment "
 				+ assignment
@@ -276,7 +283,9 @@ private function lowerFieldCompound(expression:TypedExpr, allocator:TyCompilerTe
 				+ " (refusing to emit a placeholder that would drop the update)";
 		return expression;
 	}
-	final valueType = operand.getType();
+	// A structure field stores an untyped value either way, so a `Null<Int>` field is
+	// read, updated and written as its inner Int, as it was before the typer kept `Null`.
+	final valueType = nullableStructural ? operandType.unwrapNull() : operandType;
 	final position = expression.getPosition();
 	function read(binding:TyLocalBinding):TypedExpr
 		return TypedExpr.localRead(binding.getSourceName(), binding.getType(), position, binding);

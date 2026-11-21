@@ -19,6 +19,13 @@ function store(type:TyType, value:String):String {
 function read(type:TyType, value:String):String {
 	if (type.isUnknown())
 		throw "OCaml object read requires an exact result type";
+	// Object storage tags a Boolean (`box_bool`), as Dynamic does. `Null<Bool>` is the plain
+	// Boolean behind `Obj.t`, so a nullable read keeps null and removes the tag
+	// (`?opt:Bool` reads as `Null<Bool>`).
+	if (type.isNullable() && type.unwrapNull().getSemanticKey() == "primitive:Bool")
+		return "(Obj.magic (let __hx_nullable_bool = Obj.repr ("
+			+ value
+			+ ") in if HxRuntime.is_null __hx_nullable_bool then __hx_nullable_bool else Obj.repr (HxRuntime.unbox_bool_or_obj __hx_nullable_bool)))";
 	return type.getSemanticKey() == "primitive:Bool" ? "HxRuntime.unbox_bool_or_obj (" + value + ")" : type.isDynamic() ? value : "(Obj.magic ("
 		+ value
 		+ "))";

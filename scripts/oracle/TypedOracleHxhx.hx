@@ -126,9 +126,13 @@ class TypedOracleHxhx {
 		if (t.isFunction())
 			return "(" + [for (arg in t.getFunctionArguments()) canonical(arg, depth + 1)].join(",") + ")->" + canonical(t.getFunctionReturn(), depth + 1);
 		if (t.isAnonymous()) {
+			// Haxe 4.3.7 stores `Null<T>` as an optional structure field's type (typeload.ml
+			// `tnull`). hxhx stores `T` and records the absence on the field, so this prints the
+			// field's read type (`readType`), not its stored type. Generic binding still reads the
+			// stored type: haxe_ocaml-3ynni.
 			final fields = [
 				for (field in t.getAnonymousFields())
-					field.name + ":" + canonical(field.type, depth + 1)
+					field.name + ":" + canonical(TyStructuralFieldRead.readType(field), depth + 1)
 			];
 			fields.sort(Reflect.compare);
 			return "{" + fields.join(",") + "}";
