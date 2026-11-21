@@ -2888,6 +2888,10 @@ class TyperStage {
 		final receiverOwner = nominalInfoForType(ctx.getIndex(), receiverType);
 		if (receiverOwner != null && receiverOwner.instanceMethodCandidates(field).length > 0)
 			return null;
+		// A structure's own field wins over a static extension of the same name, as in Haxe 4.3.7:
+		// with `using Lambda;`, `access.has("x")` calls `{function has(name:String):Bool;}`.
+		if (TyStructuralFieldRead.resolve(receiverType, field) != null)
+			return null;
 		final extensionArguments = [receiver].concat(args == null ? [] : args);
 		for (extension in ctx.extensionMethods(field, receiverType)) {
 			final resolution = resolveMethodCall(extension.getDeclaringProvider(), extension.getMemberName(), true, extensionArguments,
