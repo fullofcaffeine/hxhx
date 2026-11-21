@@ -804,9 +804,10 @@ class TyperStage {
 		], current.getFullName());
 	}
 
-	static function declarePatternBindings(scope:TyFunctionEnv, pattern:HxSwitchPattern, baseTy:TyType, ctx:TyperContext, pos:HxPos):Void {
+	static function declarePatternBindings(scope:TyFunctionEnv, pattern:HxSwitchPattern, baseTy:TyType, ctx:TyperContext, pos:HxPos,
+			?elements:Array<TyType>):Void {
 		TySwitchPatternBindings.declare(scope, pattern, baseTy,
-			(input, name, arity, suffix) -> TyEnumPatternArguments.resolve(input, name, arity, ctx, pos, suffix));
+			(input, name, arity, suffix) -> TyEnumPatternArguments.resolve(input, name, arity, ctx, pos, suffix), elements);
 	}
 
 	/** Guards share ordinary expression inference, but must supply a Boolean condition. */
@@ -1569,6 +1570,7 @@ class TyperStage {
 					// Check the finite source domain before accepting any case body.
 					final scrutTy = inferSwitchInput(scrutinee, patterns, scope, ctx, pos);
 					TySwitchTyping.check(scrutTy, patterns, bodies == null ? -1 : bodies.length, ctx, pos, scope.isUntypedContext());
+					final subjectElements = TySwitchPatternBindings.literalElements(scrutinee, value -> inferExprType(value, scope, ctx, pos));
 					if (patterns != null && bodies != null) {
 						final count = patterns.length < bodies.length ? patterns.length : bodies.length;
 						for (i in 0...count) {
@@ -1576,7 +1578,7 @@ class TyperStage {
 							final body = bodies[i];
 							scope.enterLexicalScope();
 							try {
-								declarePatternBindings(scope, pattern, scrutTy, ctx, pos);
+								declarePatternBindings(scope, pattern, scrutTy, ctx, pos, subjectElements);
 								final guard = TypedSwitchGuards.condition(pattern);
 								if (guard != null)
 									inferSwitchGuard(guard, scope, ctx, pos);
@@ -4480,6 +4482,7 @@ class TyperStage {
 				// This is intentionally permissive; if unification fails we widen to Dynamic.
 				final scrutTy = inferSwitchInput(scrutinee, patterns, scope, ctx, pos);
 				TySwitchTyping.check(scrutTy, patterns, exprs == null ? -1 : exprs.length, ctx, pos, scope.isUntypedContext());
+				final subjectElements = TySwitchPatternBindings.literalElements(scrutinee, value -> inferExprType(value, scope, ctx, pos));
 				var out:TyType = TyType.unknown();
 				var joinFailed = false;
 				final branchTypes = new Array<TyType>();
@@ -4492,7 +4495,7 @@ class TyperStage {
 						var branchTy:TyType = TyType.unknown();
 						scope.enterLexicalScope();
 						try {
-							declarePatternBindings(scope, pattern, scrutTy, ctx, pos);
+							declarePatternBindings(scope, pattern, scrutTy, ctx, pos, subjectElements);
 							final guard = TypedSwitchGuards.condition(pattern);
 							if (guard != null)
 								inferSwitchGuard(guard, scope, ctx, pos);
