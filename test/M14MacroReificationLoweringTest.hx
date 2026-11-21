@@ -276,6 +276,11 @@ class M14MacroReificationLoweringTest {
 			+ path("Void")
 			+ ")");
 
+		// `$name` inside a quoted type is a `ComplexType` value (haxe.macro.TypeTools.nullable).
+		expect("type splice", "macro :$t", "t");
+		expect("type splice argument", "macro :Null<$complexType>",
+			' ComplexType.TPath({pack: [], name: "Null", params: [ TypeParam.TPType(complexType)], sub: null})');
+
 		// `macro class` is refused in a macro module and keeps the parser's placeholder elsewhere.
 		switch lower("macro class Foo {}") {
 			case EAnon(names, _) if (names.length == 8 && names[1] == "name"):
