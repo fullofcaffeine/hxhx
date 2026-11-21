@@ -156,8 +156,10 @@ class TySwitchPatternBindings {
 				]);
 			case PArray(items):
 				final children = items == null ? [] : items;
-				if (elements != null && elements.length == children.length) mergeIndependent([for (i in 0...children.length) analyze(children[i], elements[i],
-					enumArguments)]); else {
+				if (elements != null && elements.length == children.length) mergeIndependent([
+					for (i in 0...children.length)
+						analyze(children[i], elements[i], enumArguments)
+				]); else {
 					final itemType = arrayItemType(baseType);
 					mergeIndependent([for (item in children) analyze(item, itemType, enumArguments)]);
 				}
