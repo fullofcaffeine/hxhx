@@ -3891,6 +3891,23 @@ class TyperStage {
 			}
 	}
 
+	/**
+		Constrain an open conditional branch to the other branch's complete type, as upstream
+		Haxe 4.3.7 joins branches (`unify_min`). A null, Dynamic, Void or non-completing other
+		branch fixes no type, and an incompatible pair keeps its ordinary join. Returns whether
+		the open branch now has that type.
+	**/
+	static function joinOpenConditionalBranch(open:HxExpr, openType:TyType, other:TyType, scope:TyFunctionEnv, ctx:TyperContext):Bool {
+		// Only a plain name such as an open parameter or local. A branch block can declare
+		// locals that are out of scope here, so it keeps its ordinary join.
+		if (!open.match(EIdent(_)))
+			return false;
+		if (openType == null || !openType.isUnknown() || other == null || other.hasUnknownComponent() || other.isDynamic() || other.isNullLiteral()
+			|| other.isNoNormalCompletion() || other.isVoid())
+			return false;
+		return scope.getInference().constrain([open], [other], scope, ctx.getIndex());
+	}
+
 	static function inferExprValueType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos, expectedResult:Null<TyType>,
 			?capture:TyMethodCallCapture):TyType {
 		switch HxLiteralCharacterCode.resolve(expr) {
@@ -3948,7 +3965,7 @@ class TyperStage {
 			case ESourceIf(condition, whenTrue, whenFalse, sourcePosition):
 				final conditionType = inferExprType(condition, scope, ctx, sourcePosition, TyType.fromHintText("Bool"));
 				scope.enterLexicalScope();
-				final trueType = inferExprType(whenTrue, scope, ctx, sourcePosition, whenFalse == null ? null : expectedResult);
+				var trueType = inferExprType(whenTrue, scope, ctx, sourcePosition, whenFalse == null ? null : expectedResult);
 				final trueTerm = scope.getInference().sourceTerm(whenTrue, scope);
 				scope.exitLexicalScope();
 				var falseType = TyType.fromHintText("Void");
@@ -3958,6 +3975,12 @@ class TyperStage {
 					falseType = inferExprType(whenFalse, scope, ctx, sourcePosition, expectedResult);
 					falseTerm = scope.getInference().sourceTerm(whenFalse, scope);
 					scope.exitLexicalScope();
+				}
+				if (whenFalse != null) {
+					if (joinOpenConditionalBranch(whenFalse, falseType, trueType, scope, ctx))
+						falseType = trueType;
+					else if (joinOpenConditionalBranch(whenTrue, trueType, falseType, scope, ctx))
+						trueType = falseType;
 				}
 				if (conditionType.isNoNormalCompletion()) {
 					TyType.noNormalCompletion();
@@ -4970,10 +4993,16 @@ class TyperStage {
 				}
 			case ETernary(cond, thenExpr, elseExpr):
 				inferExprType(cond, scope, ctx, pos);
-				final t1 = inferExprType(thenExpr, scope, ctx, pos, expectedResult);
+				var t1 = inferExprType(thenExpr, scope, ctx, pos, expectedResult);
 				final term1 = scope.getInference().sourceTerm(thenExpr, scope);
-				final t2 = inferExprType(elseExpr, scope, ctx, pos, expectedResult);
+				var t2 = inferExprType(elseExpr, scope, ctx, pos, expectedResult);
 				final term2 = scope.getInference().sourceTerm(elseExpr, scope);
+				// Upstream joins the branches (`unify_min`), so an open branch takes the
+				// other branch's type: `flag ? "a" : fallback` makes `fallback` a String.
+				if (joinOpenConditionalBranch(elseExpr, t2, t1, scope, ctx))
+					t2 = t1;
+				else if (joinOpenConditionalBranch(thenExpr, t1, t2, scope, ctx))
+					t1 = t2;
 				final inferred = scope.getInference().conditionalArrayResult(expr, t1, term1, t2, term2, ctx.getIndex());
 				final u = inferred == null ? TyConditionalResult.join(t1, t2, expectedResult, ctx.getIndex()) : inferred;
 				u == null ? TyType.fromHintText("Dynamic") : u;
