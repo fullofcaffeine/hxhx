@@ -23,6 +23,9 @@ enum MacroReificationHole {
 	/** `new $tp(...)`: a `TypePath` value. */
 	TypePathHole(payload:HxExpr);
 
+	/** `macro :Null<$t>`: a `ComplexType` value used in place of a type. */
+	ComplexTypeHole(payload:HxExpr);
+
 	/** `@:pos(p) e`: the `Position` every node of `e` receives. */
 	PositionHole(payload:HxExpr);
 }
@@ -69,6 +72,9 @@ enum MacroReificationHole {
 class MacroReificationLowering {
 	/** Prefix of the identifier the exporter writes where a splice was; the index follows. */
 	public static inline final HOLE_PREFIX = "__hxhx_macro_hole:";
+
+	/** A type hole is written as a type name, so its placeholder must be a plain identifier. */
+	public static inline final TYPE_HOLE_PREFIX = "__hxhx_macro_type_hole_";
 
 	/** The parser's marker for `o.$name`; the name follows. */
 	public static inline final FIELD_SPLICE_PREFIX = "__hxhx_macro_field_splice:";
@@ -138,9 +144,13 @@ class MacroReificationLowering {
 	/** Syntax that builds the `ComplexType` of `macro :<typeText>`. */
 	public static function lowerType(typeText:String, file:String, anchor:HxPos, rooted:Bool = true):HxExpr {
 		final lowering = new MacroReificationLowering(file, anchor, _ -> TyType.unknown(), rooted);
-		final text = typeText == null ? "" : StringTools.trim(typeText);
-		if (text.length == 0)
+		final authored = typeText == null ? "" : StringTools.trim(typeText);
+		if (authored.length == 0)
 			throw failure("`macro :` requires a type");
+		// `$name` stands for a `ComplexType` value, as upstream reads it. A placeholder type
+		// name keeps the text parseable; the syntax builder puts the value in its place.
+		final text = ~/\$([A-Za-z_][A-Za-z0-9_]*)/g.map(authored,
+			splice -> TYPE_HOLE_PREFIX + lowering.holeName(ComplexTypeHole(EIdent(splice.matched(1)))).substr(HOLE_PREFIX.length));
 		final parsed = try {
 			HxTypedefParser.parseTypeHint(text);
 		} catch (error:HxParseError) {
