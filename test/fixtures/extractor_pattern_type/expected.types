@@ -1,0 +1,4 @@
+count.extra=Int
+count.holder=Holder
+names.holder=Holder
+names.suffix=String
