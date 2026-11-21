@@ -1,0 +1,9 @@
+elseOpen.fallback=String
+elseOpen.flag=Bool
+ifExpression.fallback=Float
+ifExpression.flag=Bool
+method.flag=Bool
+method.other=String
+method.text=String
+thenOpen.flag=Bool
+thenOpen.preferred=Int
