@@ -18,6 +18,7 @@ class TyAbstractInfo extends TyNominalInfo {
 	final indexedDeclarations:Array<TyDeclarationInfo>;
 	final enumDomain:Null<TyEnumAbstractDomain>;
 	final multiTypePolicy:Null<TyMultiTypePolicy>;
+	final coreType:Bool;
 
 	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyFieldInfo>,
 			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
@@ -25,7 +26,8 @@ class TyAbstractInfo extends TyNominalInfo {
 			declarations:Array<TyDeclarationInfo>, underlyingType:TyType, typeParameters:Array<TyTypeParameterId>, implicitFromTypes:Array<TyType>,
 			implicitToTypes:Array<TyType>, visibility:HxVisibility, policies:{
 			enumDomain:Null<TyEnumAbstractDomain>,
-			multiType:Null<TyMultiTypePolicy>
+			multiType:Null<TyMultiTypePolicy>,
+			?coreType:Bool
 		}) {
 		super(identity, shortName, modulePath, fields, properties, staticMethods, instanceMethods, staticMethodLists, instanceMethodLists, declarations,
 			visibility);
@@ -38,11 +40,19 @@ class TyAbstractInfo extends TyNominalInfo {
 		this.indexedDeclarations = [];
 		this.enumDomain = policies.enumDomain;
 		this.multiTypePolicy = policies.multiType;
+		this.coreType = policies.coreType == true;
 		}
 
 	/** Null for ordinary abstracts; otherwise retain the exact declaration-bound specialization policy. */
 	public function getMultiTypePolicy():Null<TyMultiTypePolicy>
 		return multiTypePolicy;
+
+	/**
+		Whether the abstract is a `@:coreType`: it has no backing type, and its target defines
+		its representation (eval's `eval.luv.Async`, `Int` in the standard library).
+	**/
+	public function isCoreType():Bool
+		return coreType;
 
 	/** Ordered enum members before backing-value erasure; null for ordinary abstracts. */
 	public function getEnumDomain():Null<TyEnumAbstractDomain>

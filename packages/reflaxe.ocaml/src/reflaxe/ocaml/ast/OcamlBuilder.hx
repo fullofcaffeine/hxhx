@@ -7800,6 +7800,10 @@ class OcamlBuilder {
 				safeUnboxNullableBool(value);
 			case UnboxNullableIntAsFloat:
 				OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [safeUnboxNullableInt(value)]);
+			case BoxIntoDynamic:
+				alreadyBoxed ? value : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [value]);
+			case BoxBoolIntoDynamic:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [value]);
 			case UnboxObj:
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [value]);
 			case TagNullableBool | UntagNullableBool:

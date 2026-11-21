@@ -1,9 +1,16 @@
 package reflaxe.ocaml.lowered;
 
+// The carrier enums, `between`, and `carrierOfRepresentation` are pure, so the call and local
+// planners can use them in the hosted `reflaxe_runtime` build. The functions that read Haxe
+// `Type` values need the macro-only carrier model and stay under `#if macro`.
+#if (macro || reflaxe_runtime)
 #if macro
 import haxe.macro.Type;
 import haxe.macro.TypeTools;
 import reflaxe.ocaml.lowered.OcamlDynamicEqualityPlan.OcamlDynamicCarrierModel;
+#end
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationBoxingPolicy;
+import reflaxe.ocaml.lowered.OcamlRepresentationModel.OcamlRepresentationSelection;
 
 /** The native OCaml value that a primitive carrier holds. */
 enum abstract OcamlPrimitiveCarrier(String) to String {
@@ -87,6 +94,16 @@ enum OcamlValueConversionKind {
 	UntagNullableBool;
 
 	/**
+		Put a concrete value into `Dynamic` with `Obj.repr`. Not returned by `between`:
+		casts and assignments keep their own Dynamic boxing until the call and local
+		planners ask the table (later steps of `haxe_ocaml-9cqxj.2`), see `boxIntoDynamic`.
+	**/
+	BoxIntoDynamic;
+
+	/** Put an exact `Bool` into `Dynamic` with the distinguishable `HxRuntime.box_bool` tag. Not returned by `between`. */
+	BoxBoolIntoDynamic;
+
+	/**
 		Read a Haxe enum value out of `Dynamic`. A Dynamic enum is boxed with its enum
 		name (`HxEnum.box_if_needed`), so it needs `HxEnum.unbox_or_obj`, not `Obj.obj`.
 	**/
@@ -112,6 +129,7 @@ enum OcamlValueConversionKind {
 	carriers a compile error.
 **/
 class OcamlValueConversion {
+	#if macro
 	/** Returns the carrier of a value of `type`. */
 	public static function carrierOf(type:Type):OcamlValueCarrier {
 		final followed = OcamlDynamicCarrierModel.followNoAbstracts(type);
@@ -169,6 +187,7 @@ class OcamlValueConversion {
 	public static function decide(from:Type, to:Type):Null<OcamlValueConversionKind> {
 		return between(carrierOf(from), carrierOf(to));
 	}
+	#end
 
 	/** The conversion table over carriers. */
 	public static function between(from:OcamlValueCarrier, to:OcamlValueCarrier):Null<OcamlValueConversionKind> {
@@ -225,6 +244,62 @@ class OcamlValueConversion {
 		}
 	}
 
+	/**
+		The conversion that puts a concrete value into `Dynamic`, as the call and local
+		plans box it today: an exact `Bool` gets the runtime Boolean tag, other native
+		primitives and references use `Obj.repr`, and a `Dynamic` value stays as it is.
+		Kept apart from `between` so that existing casts and assignments do not change.
+	**/
+	public static function boxIntoDynamic(source:OcamlValueCarrier):Null<OcamlValueConversionKind> {
+		return switch (source) {
+			case NativePrimitive(BoolCarrier): BoxBoolIntoDynamic;
+			case NativePrimitive(_) | ObjectReference: BoxIntoDynamic;
+			case DynamicObj: SameCarrier;
+			case _: null;
+		}
+	}
+
+	/**
+		The carrier that a representation-registry decision selects, so a call or local plan
+		can ask this table about a move without a Haxe `Type`. It must agree with `carrierOf`
+		for the type the decision describes (checked by ValueConversionTableTest).
+	**/
+	public static function carrierOfRepresentation(selection:OcamlRepresentationSelection):OcamlValueCarrier {
+		final semanticTypeId = selection.semanticTypeId;
+		return switch (selection.boxingPolicy) {
+			case DirectUnboxed:
+				switch (semanticTypeId) {
+					case "Int" | "haxe.Int32": NativePrimitive(IntCarrier);
+					case "Float": NativePrimitive(FloatCarrier);
+					case "Bool": NativePrimitive(BoolCarrier);
+					case _: UnclassifiedCarrier;
+				}
+			case NullablePrimitiveCarrier:
+				switch (semanticTypeId) {
+					case "Null<Int>": NullablePrimitive(IntCarrier);
+					case "Null<Float>": NullablePrimitive(FloatCarrier);
+					case "Null<Bool>": NullablePrimitive(BoolCarrier);
+					case _: UnclassifiedCarrier;
+				}
+			case DynamicCarrier:
+				DynamicObj;
+			case DirectNativeEnumCarrier:
+				NativeEnum(semanticTypeId);
+			case CallableIdentityView:
+				FunctionValue;
+			case NullableStringCarrier | NullableNominalRecordCarrier | NullableNominalCallCarrier | DirectNominalValueCarrier:
+				ObjectReference;
+			case DirectRuntimeContainer:
+				if (StringTools.startsWith(semanticTypeId,
+					"anonymous{")) DynamicObj; else if (selection.carrierTypeId == "Obj.t"
+					&& StringTools.startsWith(semanticTypeId, "Null<")
+					&& StringTools.endsWith(semanticTypeId, ">")) NullableEnum(semanticTypeId.substring(5, semanticTypeId.length - 1)); else ObjectReference;
+			case _:
+				UnclassifiedCarrier;
+		}
+	}
+
+	#if macro
 	static function primitiveOf(type:Type):Null<OcamlPrimitiveCarrier> {
 		return switch (OcamlDynamicCarrierModel.followNoAbstracts(type)) {
 			case TAbstract(abstractRef, _):
@@ -253,14 +328,17 @@ class OcamlValueConversion {
 				null;
 		}
 	}
+	#end
 
 	/** Native interop enums in the `ocaml` package do not use the Haxe enum runtime contract. */
 	static function usesHaxeEnumRuntime(semanticTypeId:String):Bool {
 		return !StringTools.startsWith(semanticTypeId, "ocaml.");
 	}
 
+	#if macro
 	static function isCoreNull(abstractType:AbstractType):Bool {
 		return (abstractType.pack ?? []).length == 0 && abstractType.name == "Null";
 	}
+	#end
 }
 #end
