@@ -30,21 +30,58 @@ function constrainExact(index:TyperIndex, solver:TyInferenceSolver, actual:TyInf
 }
 
 /**
-	Accept an inferred Box<Array<T>> at Box<Dynamic> without erasing its Array shape.
-	A fresh variable for each Dynamic destination receives the original argument shape. Its Dynamic
-	fallback applies only to remaining solver-owned holes at seal, so later concrete
-	evidence still wins. Other arguments keep exact unification, including numeric
-	arguments and reverse Dynamic assignments. Failed assignments discard every
-	new variable and fallback together with their speculative bindings.
+	Assign an inferred value to a nominal destination on a caller-owned fork, with the
+	type-argument rules of `assignArguments` (Dynamic and anonymous arguments). Accepts an
+	inferred Box<Array<T>> at Box<Dynamic> without erasing its Array shape.
  */
 function constrainNominalAssignment(index:TyperIndex, solver:TyInferenceSolver, actual:TyInferenceTerm, expected:TyType):Bool {
 	if (expected.getNominalIdentity() == null)
 		return constrainExact(index, solver, actual, expected);
+	return assignArguments(index, solver, actual, expected, []);
+}
+
+/**
+	Whether a complete value assigns to the same nominal constructor through exact or
+	structurally variant anonymous type arguments (see `assignArguments`).
+ */
+function assignsNominalArguments(index:TyperIndex, expected:TyType, actual:TyType):Bool {
+	final target = expected.unwrapNull();
+	final source = actual.unwrapNull();
+	if (target.hasUnknownComponent()
+		|| source.hasUnknownComponent()
+		|| target.getTypeArguments().length == 0
+		|| !TyMethodGenericBinding.sameTypeConstructor(target, source))
+		return false;
+	return assignArguments(index, new TyInferenceSolver("variant-type-arguments"), TyInferenceSolver.fromType(source), target, []);
+}
+
+/**
+	Bind a nominal value to `expected` with the type-argument rules of Haxe 4.3.7.
+
+	- A Dynamic argument receives the original argument shape through a fresh variable. Its
+	  Dynamic fallback applies only to holes left at seal, so later concrete evidence still wins
+	  (`Box<Array<T>>` at `Box<Dynamic>`).
+	- An anonymous argument is also a fresh variable during exact binding. The argument it
+	  receives must then assign to the structure: upstream tries `type_eq` and then
+	  `unify_with_variance`, which checks two structures as an assignment. So an array of
+	  `{name:String}` literals is an `Array<{name:String, ?meta:Metadata}>`
+	  (haxe.macro.ExprTools.map). Field types still compare exactly.
+	- Other arguments, numeric ones included, keep exact unification.
+
+	A failed assignment discards every new variable and fallback with its bindings.
+ */
+private function assignArguments(index:TyperIndex, solver:TyInferenceSolver, actual:TyInferenceTerm, expected:TyType, proof:Array<StructuralComparison>):Bool {
 	final candidate = solver.fork();
+	final structures = new Array<{term:TyInferenceTerm, type:TyType}>();
 	function context(type:TyType):TyInferenceTerm {
 		if (type.isDynamic()) {
 			final destination = candidate.fresh();
 			candidate.observeDynamicUse(destination);
+			return destination;
+		}
+		if (!type.hasUnknownComponent() && TyAliasExpansion.reveal(type).isAnonymous()) {
+			final destination = candidate.fresh();
+			structures.push({term: destination, type: type});
 			return destination;
 		}
 		final identity = type.getNominalIdentity();
@@ -52,8 +89,25 @@ function constrainNominalAssignment(index:TyperIndex, solver:TyInferenceSolver, 
 	}
 	if (!constrainTerms(index, candidate, actual, context(expected)))
 		return false;
+	for (structure in structures) {
+		// Compare the argument the variable received; a variable left open binds exactly.
+		final received = switch candidate.follow(structure.term) {
+			case Known(type) if (type.isAnonymous()): TyInferenceSolver.fromType(type);
+			case term: term;
+		};
+		if (!value(index, candidate, received, structure.type, Output, proof))
+			return false;
+	}
 	solver.commit(candidate);
 	return true;
+}
+
+/** Whether `expected` names a constructor with an anonymous type argument at any depth. */
+private function hasStructuralArgument(expected:TyType):Bool {
+	for (argument in expected.getTypeArguments())
+		if (TyAliasExpansion.reveal(argument).isAnonymous() || hasStructuralArgument(argument))
+			return true;
+	return false;
 }
 
 /** Link existing inference terms while checking any nominal member requirements against their declarations. */
@@ -228,7 +282,8 @@ private function value(index:TyperIndex, solver:TyInferenceSolver, actual:TyInfe
 	final concrete = solver.preview(actual);
 	if (!concrete.hasUnknownComponent()) {
 		if (direction == Exact)
-			return TyAliasEquivalence.equivalentTypes(concrete, expected);
+			return TyAliasEquivalence.equivalentTypes(concrete, expected)
+				|| (hasStructuralArgument(expected) && assignArguments(index, solver, actual, expected, proof));
 		final compatibility = direction == Output ? TyAssignmentCompatibility.classify(expected, concrete,
 			Unchecked) : TyAssignmentCompatibility.classify(concrete, expected, Unchecked);
 		if (compatibility != Unknown)
@@ -239,7 +294,9 @@ private function value(index:TyperIndex, solver:TyInferenceSolver, actual:TyInfe
 			return value(index, solver, TyInferenceSolver.fromType(expected), concrete, Output, proof);
 	}
 	final projected = direction == Input ? actual : TyInferenceNominalContext.view(index, actual, expected);
-	return projected != null && constrainExact(index, solver, projected, expected);
+	return projected != null
+		&& (constrainExact(index, solver, projected, expected)
+			|| (direction != Input && hasStructuralArgument(expected) && assignArguments(index, solver, projected, expected, proof)));
 }
 
 /** Mutable fields require exact value types; methods and read-only fields provide output values. */

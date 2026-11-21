@@ -51,6 +51,10 @@ private function compatible(index:TyperIndex, expression:HxExpr, expected:TyType
 	final basic = TyAssignmentCompatibility.classify(expected, actual, Unchecked);
 	if (basic == Unknown && sourceOmittedInputsMatch(expression, expected, actual))
 		return Compatible;
+	// Anonymous type arguments assign structurally when exact equality fails, as Haxe 4.3.7's
+	// unify_with_variance does (an Array of `{name:String}` literals is an `Array<FunctionArg>`).
+	if (basic == Unknown && TyStructuralConstraint.assignsNominalArguments(index, expected, actual))
+		return Compatible;
 	if (basic != Unknown || expected.hasUnknownComponent() || actual.hasUnknownComponent())
 		return basic;
 	// Selection can prove a caller's declared bound without erasing its type
