@@ -1,0 +1,6 @@
+nested.first=Int
+nested.second=Int
+optional.name=String
+optional.tag=Int
+required.name=String
+required.tag=Int

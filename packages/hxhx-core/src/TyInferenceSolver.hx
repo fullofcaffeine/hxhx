@@ -431,6 +431,10 @@ class TyInferenceSolver {
 			case [Nominal(first, firstArguments), Nominal(second, secondArguments)]: first.equals(second) && unifyArguments(firstArguments, secondArguments,
 					resolveMember);
 			case [Nullable(first), Nullable(second)]: unify(first, second, resolveMember);
+			// Haxe 4.3.7 `type_eq` follows `Null` on either side outside null safety, so `Null<T>`
+			// and a concrete `T` are equal. A variable above still binds the nullable term itself.
+			case [Nullable(first), _]: unify(first, b, resolveMember);
+			case [_, Nullable(second)]: unify(a, second, resolveMember);
 			case [
 				Function(firstArguments, firstResult, firstSignature),
 				Function(secondArguments, secondResult, secondSignature)
@@ -461,10 +465,26 @@ class TyInferenceSolver {
 		if (first.length != second.length)
 			return false;
 		for (index in 0...first.length)
-			if (TyAnonymousField.semanticKey(TyAnonymousField.withType(first[index],
-				TyType.unknown())) != TyAnonymousField.semanticKey(TyAnonymousField.withType(second[index], TyType.unknown())))
+			if (structuralRuleKey(first[index]) != structuralRuleKey(second[index]))
 				return false;
 		return true;
+	}
+
+	/**
+		A field's name, access and visibility without its type or optionality. Haxe 4.3.7 `type_eq`
+		does not compare the optional flag: `?tag:Int` and `tag:Null<Int>` are equal fields.
+	 */
+	static function structuralRuleKey(field:TyAnonymousField):String {
+		final erased = TyAnonymousField.withType(field, TyType.unknown());
+		return TyAnonymousField.semanticKey({
+			name: erased.name,
+			type: erased.type,
+			kind: erased.kind,
+			isOptional: false,
+			visibility: erased.visibility,
+			metadata: erased.metadata,
+			position: erased.position
+		});
 	}
 
 	function unifyArguments(left:Array<TyInferenceTerm>, right:Array<TyInferenceTerm>, ?resolveMember:TyInferenceMemberResolver):Bool {

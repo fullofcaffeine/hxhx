@@ -119,6 +119,21 @@ private function value(index:TyperIndex, solver:TyInferenceSolver, actual:TyInfe
 		case Known(type) if (type.getAliasDefinition() != null): TyInferenceSolver.fromType(TyAliasExpansion.reveal(type));
 		case _: actual;
 	};
+	// Haxe 4.3.7 `type_eq` follows `Null` on either side outside null safety, so `Null<T>` and a
+	// known `T` are equal in invariant positions too: a writable `tag:Null<Int>` field matches
+	// `tag:Int` and `?tag:Int` (haxe.macro.ExprTools.map passes such an array as `EObjectDecl`).
+	// A variable on the actual side keeps the nullable type it would bind.
+	if (direction == Exact) {
+		final actualInner:Null<TyInferenceTerm> = switch solver.follow(actual) {
+			case Nullable(inner): inner;
+			case Known(type) if (type.isNullable()): TyInferenceSolver.fromType(type.unwrapNull());
+			case _: null;
+		};
+		if (actualInner != null && !expected.isNullable())
+			return value(index, solver, actualInner, expected, direction, proof);
+		if (actualInner == null && expected.isNullable() && !solver.preview(actual).hasUnknownComponent())
+			return value(index, solver, actual, expected.unwrapNull(), direction, proof);
+	}
 	// An omitted callback input that is still a variable (it may carry field requirements, as in
 	// `function(h) return h.name == "x"`) takes the type the selected parameter supplies, as a
 	// Haxe 4.3.7 monomorph does; the solver checks the requirements (sys.Http's Lambda.exists).
