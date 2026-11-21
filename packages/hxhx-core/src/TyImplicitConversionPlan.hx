@@ -28,14 +28,16 @@ class TyImplicitConversionPlan {
 	final viaType:Null<TyType>;
 	final score:Int;
 	final backingType:Null<TyType>;
+	final coreTypeCast:Bool;
 
-	function new(kind:String, actualType:TyType, expectedType:TyType, viaType:Null<TyType>, score:Int, ?backingType:TyType) {
+	function new(kind:String, actualType:TyType, expectedType:TyType, viaType:Null<TyType>, score:Int, ?backingType:TyType, coreTypeCast:Bool = false) {
 		this.kind = kind;
 		this.actualType = actualType;
 		this.expectedType = expectedType;
 		this.viaType = viaType;
 		this.score = score;
 		this.backingType = backingType;
+		this.coreTypeCast = coreTypeCast;
 	}
 
 	static function nullableCompatible(expected:TyType, actual:TyType):Bool {
@@ -93,7 +95,7 @@ class TyImplicitConversionPlan {
 			], expected);
 			if (via != null)
 				return new TyImplicitConversionPlan(ABSTRACT_TO, actual, expected, via, 2,
-					TyTypeSubstitution.apply(actualAbstract.getUnderlyingType(), actualBindings));
+					TyTypeSubstitution.apply(actualAbstract.getUnderlyingType(), actualBindings), actualAbstract.isCoreType());
 		}
 
 		final expectedIdentity = expected.getNominalIdentity();
@@ -107,7 +109,7 @@ class TyImplicitConversionPlan {
 			], actual, true);
 			if (via != null)
 				return new TyImplicitConversionPlan(ABSTRACT_FROM, actual, expected, via, via.isDynamic() ? 1 : 2,
-					TyTypeSubstitution.apply(expectedAbstract.getUnderlyingType(), expectedBindings));
+					TyTypeSubstitution.apply(expectedAbstract.getUnderlyingType(), expectedBindings), expectedAbstract.isCoreType());
 		}
 
 		if (expected.isDynamic())
@@ -138,11 +140,16 @@ class TyImplicitConversionPlan {
 		Whether a declared abstract conversion preserves the stored value.
 
 		An output conversion exposes the exact storage type. An input conversion
-		accepts that same type, or stores its value through Dynamic. A different
+		accepts that same type, or stores its value through Dynamic. A core type's header
+		conversion is a cast, because the target owns its representation. A different
 		representation can require executable conversion logic and must not become
 		a plain typed cast here.
 	**/
 	public function isRepresentationPreservingAbstractConversion():Bool {
+		// A `@:coreType` abstract has no backing type: its target defines the representation,
+		// and Haxe 4.3.7 types its header conversion (`abstract Async to Handle`) as a cast.
+		if (coreTypeCast && (isAbstractTo() || kind == ABSTRACT_FROM))
+			return true;
 		if (backingType == null)
 			return false;
 		if (isAbstractTo())
