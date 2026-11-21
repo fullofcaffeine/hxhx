@@ -4,8 +4,11 @@
 	its expected type before candidate scoring, as an enum parameter does.
 	Collection context reaches empty literals inside branches before inference seals
 	them as Array<Dynamic>. Existing declared values keep their own types.
-	Only fixed, fully supplied parameter lists have an unambiguous source position
-	before operand typing. Rest and omitted-argument selection keep their own owner.
+	Only arguments with an unambiguous source position get a context before operand
+	typing: every argument of a fully supplied fixed list, and otherwise each argument
+	whose parameter and all earlier parameters are required. `t.start(() -> trace(1), 1000)`
+	for `start(callback:() -> Void, ms:Int, ?repeat:Int)` gives the callback its context,
+	as upstream Haxe 4.3.7 does. Rest and optional-argument skipping keep their own owner.
  */
 function shared(signatures:Array<TyFunSig>, arity:Int, ?methodParameters:Array<Array<TyTypeParameterId>>, ?declarationIndex:TyperIndex):Array<Null<TyType>> {
 	if (methodParameters != null && methodParameters.length != signatures.length)
@@ -24,10 +27,38 @@ function shared(signatures:Array<TyFunSig>, arity:Int, ?methodParameters:Array<A
 			];
 		}
 	];
-	for (signature in signatures)
-		if (signature.getArgs().length != arity || signature.getArgRest().indexOf(true) >= 0)
-			return [for (_ in 0...arity) null];
-	return agreed(arguments, arity, declarationIndex);
+	var positional = arity;
+	for (signature in signatures) {
+		final count = positionalArguments(signature, arity);
+		if (count < positional)
+			positional = count;
+	}
+	if (positional == 0)
+		return [for (_ in 0...arity) null];
+	final contexts = agreed([for (types in arguments) types.slice(0, positional)], positional, declarationIndex);
+	return [for (index in 0...arity) index < positional ? contexts[index] : null];
+}
+
+/**
+	The number of leading arguments that must fill the parameter at their own index.
+	A fully supplied fixed list places all of them. Omitted arguments must all be optional,
+	and an optional parameter can be skipped, so placement stops at the first optional one.
+**/
+private function positionalArguments(signature:TyFunSig, arity:Int):Int {
+	final parameters = signature.getArgs();
+	final optional = signature.getArgOptional();
+	if (signature.getArgRest().indexOf(true) >= 0 || parameters.length < arity)
+		return 0;
+	if (parameters.length == arity)
+		return arity;
+	// An omitted required parameter makes the call invalid: it gets no early context.
+	for (index in arity...parameters.length)
+		if (optional[index] != true)
+			return 0;
+	var count = 0;
+	while (count < arity && optional[count] != true)
+		count++;
+	return count;
 }
 
 /** A known function value supplies its existing parameter row; omission and rest selection stay with call alignment. */
