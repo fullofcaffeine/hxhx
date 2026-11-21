@@ -142,8 +142,8 @@ class MacroReificationSyntax {
 				case BlockHole(payload): exprRecord(ctor("ExprDef", "EBlock", [payload]), at);
 				case ArrayHole(payload): exprRecord(ctor("ExprDef", "EArrayDecl", [payload]), at);
 				case ValueHole(payload): valueSplice(payload, at);
-				case TypePathHole(_) | PositionHole(_):
-					throw "macro reification: a type path or position splice was written in expression position";
+				case TypePathHole(_) | PositionHole(_) | ComplexTypeHole(_):
+					throw "macro reification: a type, type path or position splice was written in expression position";
 			};
 		}
 		switch value.expr {
@@ -349,6 +349,14 @@ class MacroReificationSyntax {
 
 	function type(value:ComplexType):HxExpr {
 		return switch value {
+			case TPath(p) if (p.pack.length == 0
+				&& (p.params == null || p.params.length == 0)
+				&& p.sub == null
+				&& isComplexTypeHole(p.name)):
+				switch holeOf(typeHoleName(p.name)) {
+					case ComplexTypeHole(payload): payload;
+					case _: throw "macro reification: unexpected type hole";
+				}
 			case TPath(p): ctor("ComplexType", "TPath", [typePath(p)]);
 			case TFunction(args, ret): ctor("ComplexType", "TFunction", [list([for (a in args) type(a)]), type(ret)]);
 			case TAnonymous(fields): ctor("ComplexType", "TAnonymous", [list([for (f in fields) field(f)])]);
@@ -358,6 +366,18 @@ class MacroReificationSyntax {
 			case TNamed(n, t): ctor("ComplexType", "TNamed", [str(n), type(t)]);
 			case TIntersection(tl): ctor("ComplexType", "TIntersection", [list([for (t in tl) type(t)])]);
 		};
+	}
+
+	/** The hole name behind a type placeholder (`MacroReificationLowering.TYPE_HOLE_PREFIX`), or null. */
+	static function typeHoleName(name:String):Null<String>
+		return name != null
+			&& StringTools.startsWith(name,
+				MacroReificationLowering.TYPE_HOLE_PREFIX) ? MacroReificationLowering.HOLE_PREFIX +
+				name.substr(MacroReificationLowering.TYPE_HOLE_PREFIX.length) : null;
+
+	function isComplexTypeHole(name:String):Bool {
+		final hole = typeHoleName(name);
+		return hole != null && holeOf(hole) != null && holeOf(hole).match(ComplexTypeHole(_));
 	}
 
 	/** `new $tp()` names its placeholder in `TypePath.name`; the authored `tp` expression replaces the record. */
