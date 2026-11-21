@@ -58,8 +58,9 @@ class M14RecursiveTypedefRuntimeTest {
 					throw "recursive chained call lost its result or checked arguments";
 				chained++;
 			}
+			// An optional recursive field (`?next:Node`) reads as `Null<Node>`; its record is the alias.
 			if (value.getTag() == FieldRead
-				&& children[0].getType().getAliasDefinition() != null
+				&& children[0].getType().unwrapNull().getAliasDefinition() != null
 				&& TyAliasExpansion.revealNonNullable(children[0].getType()).isAnonymous()) {
 				if (!TypedBackendObjectAccess.supports(value))
 					throw "recursive record lost its backend field access contract";

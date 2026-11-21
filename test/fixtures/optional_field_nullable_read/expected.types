@@ -1,0 +1,3 @@
+describe.name=String
+describe.withCrc=Bool
+label.name=String
