@@ -165,6 +165,7 @@
       "exact": [
         "package-lock.json",
         "package.json",
+        "scripts/test-m14-typed-inference-and-capture.sh",
         "packages/hxhx/src/hxhx/BackendPluginLoadRequest.hx",
         "packages/hxhx/src/hxhx/BackendPluginLoader.hx",
         "packages/hxhx/src/hxhx/BackendPluginManifestResolver.hx",
