@@ -148,8 +148,12 @@ class TypedOracleHxhx {
 		if (t.isPrimitive())
 			return t.getDisplay();
 		final nominal = t.getNominalIdentity();
-		if (nominal != null)
-			return nominal.getCanonicalName() + params(t.getTypeArguments(), depth);
+		if (nominal != null) {
+			// Upstream names every StdTypes type bare (TypedOracleUpstream `path`); a parameterized
+			// Dynamic is the only one hxhx reaches through its module path, so print it bare too.
+			final name = nominal.getCanonicalName() == "StdTypes.Dynamic" ? "Dynamic" : nominal.getCanonicalName();
+			return name + params(t.getTypeArguments(), depth);
+		}
 		if (t.isUnresolved())
 			return "?unresolved:" + t.getUnresolvedPath();
 		return "?" + t.getDisplay();
