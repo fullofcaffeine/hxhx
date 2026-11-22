@@ -36,6 +36,16 @@ function withType(field:TyAnonymousField, type:TyType):TyAnonymousField {
 	};
 }
 
+/**
+	The type a value of this field has: `Null<T>` for an optional field, as Haxe 4.3.7 stores it
+	(typeload `tnull`). hxhx records the absence on the field and keeps `T` as the field type, so
+	this is the one place that rebuilds the value type (haxe_ocaml-203up). Typer reads narrow it:
+	`TyStructuralFieldRead.readType` leaves Dynamic and unknown types unwrapped.
+ */
+function valueType(field:TyAnonymousField):TyType {
+	return field.isOptional && !field.type.isNullable() ? TyType.nullable(field.type) : field.type;
+}
+
 /** Object-literal fields have ordinary public read/write access and no generic method binders. */
 function inferred(name:String, type:TyType):TyAnonymousField {
 	return {
