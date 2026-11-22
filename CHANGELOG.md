@@ -1,3 +1,47 @@
+# [0.45.0](https://github.com/fullofcaffeine/hxhx/compare/v0.44.0...v0.45.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **ci:** publish the runner fixture grandchild pid atomically ([#196](https://github.com/fullofcaffeine/hxhx/issues/196)) ([606fec4](https://github.com/fullofcaffeine/hxhx/commit/606fec4834e540459701417f61cadbce2116f639))
+* **conditional:** treat dotted define names as one define ([#209](https://github.com/fullofcaffeine/hxhx/issues/209)) ([cc6e5f7](https://github.com/fullofcaffeine/hxhx/commit/cc6e5f7ee17f5f2a2eb60aa9cc5a83957b85b8d5)), closes [#if](https://github.com/fullofcaffeine/hxhx/issues/if) [#if](https://github.com/fullofcaffeine/hxhx/issues/if)
+* **hxhx:** accept field initializers that end with } without a semicolon ([#217](https://github.com/fullofcaffeine/hxhx/issues/217)) ([48988db](https://github.com/fullofcaffeine/hxhx/commit/48988db4e4fd794ac574bbf68b6b6c9389a220b0))
+* **hxhx:** set upstream's target.* defines for JavaScript and OCaml ([#210](https://github.com/fullofcaffeine/hxhx/issues/210)) ([1a18eef](https://github.com/fullofcaffeine/hxhx/commit/1a18eefee19c0d1429b5aa319870258555655366)), closes [#if](https://github.com/fullofcaffeine/hxhx/issues/if)
+* **macro:** read $name inside a quoted type as a ComplexType value ([#251](https://github.com/fullofcaffeine/hxhx/issues/251)) ([5dbcaf0](https://github.com/fullofcaffeine/hxhx/commit/5dbcaf0554514e6f2b7497305716fedc8cf78432))
+* **parser:** accept a missing ';' after a block element that ends with '}' ([#222](https://github.com/fullofcaffeine/hxhx/issues/222)) ([620c1ed](https://github.com/fullofcaffeine/hxhx/commit/620c1edceac28110eaa54196dae226fa22dd5882))
+* **parser:** accept do-while loops with an unbraced body ([#208](https://github.com/fullofcaffeine/hxhx/issues/208)) ([75f0378](https://github.com/fullofcaffeine/hxhx/commit/75f0378af53f13a26469f42eb3cde7749f9de2ce))
+* **parser:** keep the member after a method body that ends with } ([#227](https://github.com/fullofcaffeine/hxhx/issues/227)) ([ba2f17c](https://github.com/fullofcaffeine/hxhx/commit/ba2f17c9174e74a149c3b8e07d9c772502b7ff69))
+* **parser:** parse abstract classes and abstract members ([#223](https://github.com/fullofcaffeine/hxhx/issues/223)) ([09247a9](https://github.com/fullofcaffeine/hxhx/commit/09247a96866755a83aeec1d54cc76b5cf4156dcb))
+* **parser:** read A.new as a constructor function value ([#224](https://github.com/fullofcaffeine/hxhx/issues/224)) ([4209152](https://github.com/fullofcaffeine/hxhx/commit/42091526cb08962be3a5a7bf0e8ab7cd55dff0b9))
+* **parser:** read any pattern followed by => as an extractor ([#225](https://github.com/fullofcaffeine/hxhx/issues/225)) ([740733b](https://github.com/fullofcaffeine/hxhx/commit/740733b9f1bdb2aa9222952b8c769942c59141e0))
+* **reflaxe.ocaml:** convert type-parameter field reads at concrete types ([#213](https://github.com/fullofcaffeine/hxhx/issues/213)) ([5442a05](https://github.com/fullofcaffeine/hxhx/commit/5442a058c397f369297d80620c67cc5d1f1c121e))
+* **reflaxe.ocaml:** decide cast and nullable conversions from one table ([#211](https://github.com/fullofcaffeine/hxhx/issues/211)) ([d09cd2b](https://github.com/fullofcaffeine/hxhx/commit/d09cd2b264eae8144566111a6a83fa0bd9511426))
+* **reflaxe.ocaml:** give the default value for a null Dynamic read as a basic type ([#216](https://github.com/fullofcaffeine/hxhx/issues/216)) ([1f9a438](https://github.com/fullofcaffeine/hxhx/commit/1f9a43851e53fc22472a4662b4423d52b2083131)), closes [#213](https://github.com/fullofcaffeine/hxhx/issues/213) [#213](https://github.com/fullofcaffeine/hxhx/issues/213)
+* **reflaxe.ocaml:** give the default value for null in unplanned primitive moves ([#240](https://github.com/fullofcaffeine/hxhx/issues/240)) ([effa689](https://github.com/fullofcaffeine/hxhx/commit/effa6890a67cc0a91b66a0df7bda5b1ec66fe15c))
+* **reflaxe.ocaml:** pass nullable-enum method values as enum callbacks ([#195](https://github.com/fullofcaffeine/hxhx/issues/195)) ([fcdc22f](https://github.com/fullofcaffeine/hxhx/commit/fcdc22f4bcf377230508ea1c542346bcf4bd0bae))
+* **reflaxe.ocaml:** print abstract values with Std.string ([#218](https://github.com/fullofcaffeine/hxhx/issues/218)) ([272ee25](https://github.com/fullofcaffeine/hxhx/commit/272ee25829053fba8356d17a5ec45b9627deb13d))
+* **reflaxe.ocaml:** print enum values with their constructor names ([#204](https://github.com/fullofcaffeine/hxhx/issues/204)) ([98ab2b8](https://github.com/fullofcaffeine/hxhx/commit/98ab2b864c1b54a9258786be1a1f3e5e02c88d5d))
+* **reflaxe.ocaml:** tag Null<Bool> values that enter Dynamic ([#212](https://github.com/fullofcaffeine/hxhx/issues/212)) ([0ce01ef](https://github.com/fullofcaffeine/hxhx/commit/0ce01ef454e0243fa33491dfd79258aa70020f7d))
+* **runtime:** qualify Stdlib.Option.bind in HxDynamicMethods ([#198](https://github.com/fullofcaffeine/hxhx/issues/198)) ([3494750](https://github.com/fullofcaffeine/hxhx/commit/34947504e19d349b3f572364503277af2c879d58))
+* **test:** fail runtime observations on signal deaths ([#200](https://github.com/fullofcaffeine/hxhx/issues/200)) ([66706a8](https://github.com/fullofcaffeine/hxhx/commit/66706a8b8741a3133dd902f14ee2a9cfaa6d8ce6))
+* **typer:** bind omitted inputs of - * / % to Int ([#228](https://github.com/fullofcaffeine/hxhx/issues/228)) ([9e79a3c](https://github.com/fullofcaffeine/hxhx/commit/9e79a3ca3f632e3e6ed71fa244a3ae96b9494174))
+* **typer:** infer Array receivers and Int subscripts from array access ([#229](https://github.com/fullofcaffeine/hxhx/issues/229)) ([965999c](https://github.com/fullofcaffeine/hxhx/commit/965999c2239236875b456d74fad3adbc58ce0a94))
+* **typer:** infer omitted inputs from comparisons ([#230](https://github.com/fullofcaffeine/hxhx/issues/230)) ([107bba3](https://github.com/fullofcaffeine/hxhx/commit/107bba32fa751ce777b26732b80ee585e6a944d9)), closes [#229](https://github.com/fullofcaffeine/hxhx/issues/229)
+* **typer:** join an open conditional branch with the other branch's type ([#249](https://github.com/fullofcaffeine/hxhx/issues/249)) ([0781475](https://github.com/fullofcaffeine/hxhx/commit/0781475cfa63dc7ee2b9e932badc8e256d22a306))
+* **typer:** keep callback context when a later optional argument is omitted ([#243](https://github.com/fullofcaffeine/hxhx/issues/243)) ([6da3dc0](https://github.com/fullofcaffeine/hxhx/commit/6da3dc040f4e2654b16b57a96a875289ae9ea42a))
+* **typer:** let later uses type an input with a null default ([#235](https://github.com/fullofcaffeine/hxhx/issues/235)) ([e3c1131](https://github.com/fullofcaffeine/hxhx/commit/e3c1131d0a33ade3935b06dd7109dcc6114cdad8))
+* **typer:** read optional structure fields as Null<T> ([#246](https://github.com/fullofcaffeine/hxhx/issues/246)) ([e157f50](https://github.com/fullofcaffeine/hxhx/commit/e157f501178f227d8dbfb80ef97716be18af7f52)), closes [#239](https://github.com/fullofcaffeine/hxhx/issues/239) [#242](https://github.com/fullofcaffeine/hxhx/issues/242)
+* **typer:** resolve enum-abstract values from another module by context ([#242](https://github.com/fullofcaffeine/hxhx/issues/242)) ([60ffb81](https://github.com/fullofcaffeine/hxhx/commit/60ffb814642c079c732ccb69477ce34a1ce98853))
+* **typer:** treat a core type's header conversions as casts ([#248](https://github.com/fullofcaffeine/hxhx/issues/248)) ([bc5e8fb](https://github.com/fullofcaffeine/hxhx/commit/bc5e8fb5082e11e40e94124ff6f73dd97b2979b5))
+* **typer:** type eight more std modules (Printer, xml.Check, ArraySort, rtti.CType, sys.ssl, Serializer, Http) ([#236](https://github.com/fullofcaffeine/hxhx/issues/236)) ([40b2f33](https://github.com/fullofcaffeine/hxhx/commit/40b2f33857b1b59c9db09ee11c1ab459f19368a1))
+
+
+### Features
+
+* **oracle:** measure hxhx parser parity against upstream Haxe 4.3.7 ([#201](https://github.com/fullofcaffeine/hxhx/issues/201)) ([b62c894](https://github.com/fullofcaffeine/hxhx/commit/b62c894b382cc18fb1fb081485f2f0a99e4169a2))
+* **oracle:** measure hxhx typing parity against upstream Haxe 4.3.7 ([#205](https://github.com/fullofcaffeine/hxhx/issues/205)) ([a24bd30](https://github.com/fullofcaffeine/hxhx/commit/a24bd30ae4dd52929adb5fc80326f227ce34f0cc))
+* **typer:** support @:using type metadata for static extensions ([#244](https://github.com/fullofcaffeine/hxhx/issues/244)) ([7a83d98](https://github.com/fullofcaffeine/hxhx/commit/7a83d9840c9fdfc69fbc58a0f6222d17360949b2))
+
 # [0.44.0](https://github.com/fullofcaffeine/hxhx/compare/v0.43.11...v0.44.0) (2026-11-16)
 
 
