@@ -1,4 +1,4 @@
 {
   "corpus": "upstream Haxe 4.3.7 std, package haxe (excluding haxe.atomic), interp target",
-  "matchingMethods": 1573
+  "matchingMethods": 1594
 }
