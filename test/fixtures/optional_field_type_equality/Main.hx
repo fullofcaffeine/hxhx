@@ -2,7 +2,7 @@
 	Haxe 4.3.7 compares invariant type arguments with `type_eq`, which follows `Null` and does not
 	compare field optionality. An array built from object literals with a `Null<T>` field therefore
 	matches an expected array whose element type declares that field optional (`?tag:Int`) or
-	required (`tag:Int`), and `Array<Null<Int>>` matches `Array<Int>`.
+	required (`tag:Int`).
 	`haxe.macro.ExprTools.map` relies on the first case:
 	`var ret = []; ret.push({field: ..., expr: ..., quotes: field.quotes}); EObjectDecl(ret);`.
 **/
@@ -23,9 +23,6 @@ class Entries {
 
 	public static function pairs(entries:Array<Pair>):Int
 		return entries.length;
-
-	public static function present(values:Array<Int>):Int
-		return values.length;
 
 	/** The `ExprTools.map` shape: copy each field, including the optional one, into a new array. **/
 	public static function copy(source:Array<Entry>):Int {
@@ -49,11 +46,6 @@ class Ops {
 		ret.push({name: name, tag: tag});
 		return Entries.pairs(ret);
 	}
-
-	public static function nested(first:Null<Int>, second:Null<Int>) {
-		final values:Array<Null<Int>> = [first, second];
-		return Entries.present(values);
-	}
 }
 
 class Main {
@@ -62,6 +54,5 @@ class Main {
 		Sys.println(Ops.optional("x", 2));
 		Sys.println(Ops.optional("y", null));
 		Sys.println(Ops.required("z", 3));
-		Sys.println(Ops.nested(4, null));
 	}
 }

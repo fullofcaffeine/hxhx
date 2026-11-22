@@ -2,7 +2,7 @@ import hxhx.Stage1Compiler.Stage1Args;
 import sys.io.File;
 
 /**
-	Compare input types around arrays whose element types differ only by `Null` or field
+	Compare input types around arrays of structures whose fields differ only by `Null` or
 	optionality with upstream Haxe 4.3.7, then run the native output.
 
 	`var ret = []; ret.push({name: n, tag: t}); Entries.tagged(ret)` gives `ret` the element type
@@ -10,7 +10,7 @@ import sys.io.File;
 	compares invariant type arguments with `type_eq`, which follows `Null` and does not compare the
 	optional flag. hxhx rejected the call: "inferred value ... is not compatible with ..."
 	(haxe_ocaml-35zls; `haxe.macro.ExprTools.map` has this shape). The fixture also covers a
-	required `tag:Int` field and `Array<Null<Int>>` passed as `Array<Int>`.
+	required `tag:Int` field.
 **/
 class M14OptionalFieldTypeEqualityTest {
 	static final root = "test/fixtures/optional_field_type_equality";

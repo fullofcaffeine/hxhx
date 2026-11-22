@@ -111,13 +111,13 @@ private function nominalArguments(expected:TyType, actual:TyType):TyCallArgument
 /**
 	Haxe 4.3.7 compares invariant type arguments with `type_eq`, which follows `Null` and does
 	not compare field optionality: `Array<{tag:Null<Int>}>` is an `Array<{?tag:Int}>`, as
-	`haxe.macro.ExprTools.map` relies on. The solver's exact unification has those rules; it
+	`haxe.macro.ExprTools.map` relies on. `TyInferenceSolver.typeEqual` has those rules; it
 	grants no width, variance, or conversion. Only complete types are compared.
  */
 private function invariantEqual(expected:TyType, actual:TyType):Bool {
 	if (expected.hasUnknownComponent() || actual.hasUnknownComponent())
 		return false;
-	return new TyInferenceSolver("invariant-type-argument").constrain(TyInferenceSolver.fromType(expected), TyInferenceSolver.fromType(actual));
+	return TyInferenceSolver.typeEqual(expected, actual);
 }
 
 /**
