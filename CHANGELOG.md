@@ -1,3 +1,20 @@
+# [0.46.0](https://github.com/fullofcaffeine/hxhx/compare/v0.45.0...v0.46.0) (2026-11-22)
+
+
+### Bug Fixes
+
+* **oracle:** compare signatures at the same structural depth on both sides ([#259](https://github.com/fullofcaffeine/hxhx/issues/259)) ([bd666fa](https://github.com/fullofcaffeine/hxhx/commit/bd666facb6c3e0800ec6b5e744716d056426b8c0))
+* **typer:** accept generic calls whose only evidence is Dynamic ([#239](https://github.com/fullofcaffeine/hxhx/issues/239)) ([0b886e3](https://github.com/fullofcaffeine/hxhx/commit/0b886e3d3bb998982cdb5b34d5c7a886c7b77ee0))
+* **typer:** bind an extractor pattern with the extractor's result type ([#258](https://github.com/fullofcaffeine/hxhx/issues/258)) ([5389b2f](https://github.com/fullofcaffeine/hxhx/commit/5389b2ff53763eb73fa587af0b163d1f01548a2c))
+* **typer:** bind each element of an array-literal switch with its own type ([#252](https://github.com/fullofcaffeine/hxhx/issues/252)) ([fa2dccb](https://github.com/fullofcaffeine/hxhx/commit/fa2dccb17cec0cecb4fae636f20720f828f97d1a))
+* **typer:** let a local declared as null take its first assigned type ([#260](https://github.com/fullofcaffeine/hxhx/issues/260)) ([2812190](https://github.com/fullofcaffeine/hxhx/commit/2812190e4eb01b1b9c319d1133c96a26ae97b227)), closes [#255](https://github.com/fullofcaffeine/hxhx/issues/255)
+* **typer:** let a structure's own method win over a static extension ([#254](https://github.com/fullofcaffeine/hxhx/issues/254)) ([56ffce7](https://github.com/fullofcaffeine/hxhx/commit/56ffce72f25d74ad6426d6f670d282c058f26f87))
+
+
+### Features
+
+* **typer:** read unknown abstract fields through @:op(a.b) ([#255](https://github.com/fullofcaffeine/hxhx/issues/255)) ([0d71dfb](https://github.com/fullofcaffeine/hxhx/commit/0d71dfbc97ec33c98068f84f26c1e18695021826))
+
 # [0.45.0](https://github.com/fullofcaffeine/hxhx/compare/v0.44.0...v0.45.0) (2026-11-22)
 
 
