@@ -1,0 +1,4 @@
+field.fallback=Int
+field.ok=Bool
+local.fallback=Int
+local.ok=Bool
