@@ -83,13 +83,18 @@ function main() {
   const upstream = JSON.parse(fs.readFileSync(upstreamJson, 'utf8'))
   const hxhx = JSON.parse(fs.readFileSync(hxhxJson, 'utf8'))
   const byKey = new Map(hxhx.records.map(record => [record.key, record]))
-  const counts = { match: 0, mismatch: 0, missingInHxhx: 0, hxhxError: 0 }
+  // matchTruncated: matches where a signature was cut at the depth limit ("..."), so the part
+  // below the cut is unproven. It is part of match, not a separate outcome.
+  const counts = { match: 0, matchTruncated: 0, mismatch: 0, missingInHxhx: 0, hxhxError: 0 }
   const mismatches = []
   for (const record of upstream.records) {
     const other = byKey.get(record.key)
     if (!other) counts.missingInHxhx++
     else if (other.error) counts.hxhxError++
-    else if (other.signature === record.signature) counts.match++
+    else if (other.signature === record.signature) {
+      counts.match++
+      if (record.signature.includes('...')) counts.matchTruncated++
+    }
     else {
       counts.mismatch++
       mismatches.push({ key: record.key, upstream: record.signature, hxhx: other.signature })
@@ -108,7 +113,8 @@ function main() {
   fs.writeFileSync(path.join(options.out, 'mismatches.txt'), mismatches.map(item => `${item.key}\n  upstream ${item.upstream}\n  hxhx     ${item.hxhx}\n`).join('\n'))
   console.log(
     `TYPED_ORACLE: methods=${total} match=${counts.match} (${report.matchPercent.toFixed(1)}%) mismatch=${counts.mismatch} ` +
-      `missing=${counts.missingInHxhx} hxhx_error=${counts.hxhxError} module_errors=${hxhx.moduleErrors.length}`
+      `missing=${counts.missingInHxhx} hxhx_error=${counts.hxhxError} module_errors=${hxhx.moduleErrors.length} ` +
+      `match_truncated=${counts.matchTruncated}`
   )
   if (options.checkBaseline) {
     const baseline = JSON.parse(fs.readFileSync(path.join(__dirname, 'typed-oracle-baseline.json'), 'utf8'))

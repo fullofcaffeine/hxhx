@@ -19,6 +19,7 @@ class TyAbstractInfo extends TyNominalInfo {
 	final enumDomain:Null<TyEnumAbstractDomain>;
 	final multiTypePolicy:Null<TyMultiTypePolicy>;
 	final coreType:Bool;
+	var fieldReader:Null<TyDeclarationInfo>;
 
 	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyFieldInfo>,
 			properties:haxe.ds.StringMap<TyPropertyInfo>, staticMethods:haxe.ds.StringMap<TyFunSig>, instanceMethods:haxe.ds.StringMap<TyFunSig>,
@@ -53,6 +54,16 @@ class TyAbstractInfo extends TyNominalInfo {
 	**/
 	public function isCoreType():Bool
 		return coreType;
+
+	/**
+		The `@:op(a.b)` method that reads an unknown field by name (`resolve(name:String):T`), or
+		null. Haxe 4.3.7 turns `value.width` into `value.resolve("width")` when `width` is no member.
+	**/
+	public function getFieldReader():Null<TyDeclarationInfo>
+		return fieldReader;
+
+	public function setFieldReader(declaration:TyDeclarationInfo):Void
+		fieldReader = declaration;
 
 	/** Ordered enum members before backing-value erasure; null for ordinary abstracts. */
 	public function getEnumDomain():Null<TyEnumAbstractDomain>

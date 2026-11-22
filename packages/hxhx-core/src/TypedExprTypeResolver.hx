@@ -3,6 +3,9 @@ typedef TypedExprTypeResolver = {
 	/** Request-local language policy, applied before operand inference and binding replay. */
 	final tracesDisabled:Bool;
 
+	/** The `@:op(a.b)` method name that reads `object.field`, when `field` is no member of its abstract. */
+	final abstractFieldReader:(object:HxExpr, field:String, diagnosticPosition:HxPos, environment:TyFunctionEnv) -> Null<String>;
+
 	/** Select a callable contract with contextual arguments before replaying its body. */
 	final lambdaType:(names:Array<String>, body:HxExpr, argumentTypes:Array<TyType>, signature:Null<HxLambdaSignature>, diagnosticPosition:HxPos,
 		environment:TyFunctionEnv) -> TyType;

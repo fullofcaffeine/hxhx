@@ -676,7 +676,10 @@ class TypedBodyBuilder {
 		final elements = subject.getTag() == ArrayDecl ? [for (element in subject.getExpressions()) element.getType()] : null;
 		return TySwitchPatternBindings.declare(environment, pattern, subject.getType(),
 			resolver == null ? null : (input, name, arity, suffix) ->
-				resolver.enumPatternArguments(input, name, arity, position, suffix), elements != null && elements.length > 0 ? elements : null);
+				resolver.enumPatternArguments(input, name, arity, position, suffix), elements != null && elements.length > 0 ? elements : null,
+			resolver == null ? null : (text,
+				matched) -> TySwitchPatternBindings.extractorResult(text, matched, environment,
+					(expression, trial) -> resolver.expressionType(expression, position, trial, null)));
 	}
 
 	/** Seal lambda bindings with their selected parameter types before typing captured reads. */
@@ -984,6 +987,13 @@ class TypedBodyBuilder {
 			case EField(object, field):
 				final memberResolution = memberResolver == null
 					|| environment == null ? null : memberResolver(expression, diagnosticPosition, environment, expected);
+				// `@:op(a.b)`: an unknown field of an abstract reads through its resolver method.
+				final reader = memberResolution == null
+					|| !memberResolution.isUnresolvedAbstractField()
+					|| typeResolver == null ? null : typeResolver.abstractFieldReader(object, field, diagnosticPosition, environment);
+				if (reader != null)
+					return buildExpr(ECall(EField(object, reader), [EString(field)]), position, diagnosticPosition, environment, typeResolver, callResolver,
+						memberResolver, expected);
 				final qualifier = memberResolution == null ? null : memberResolution.nonRuntimeQualifierRead(field, nodeType, position);
 				if (qualifier != null) {
 					qualifier;

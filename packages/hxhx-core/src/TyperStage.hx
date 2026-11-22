@@ -73,7 +73,12 @@ class TyperStage {
 		if (existing != null && !existing.isUnknown() && !existing.isDynamic() && incoming != null && incoming.isDynamic())
 			return existing;
 		final compatible = TyType.unify(existing, incoming);
-		return compatible != null && !existing.hasUnknownComponent() ? existing : compatible;
+		// A local declared as bare `null` is a nullable monomorph in Haxe 4.3.7: a complete
+		// assigned value binds it (`var t = null; t = xtype(c);` is a Null<CType>). A value with
+		// unknown parts, or an object literal whose fields later uses still check, shares its
+		// inference term instead (`var e = null; e = {expr: ..., pos: pos};` in MacroStringTools).
+		final binds = existing.isNullLiteral() && incoming != null && !incoming.hasUnknownComponent() && !incoming.unwrapNull().isAnonymous();
+		return compatible != null && !existing.hasUnknownComponent() && !binds ? existing : compatible;
 	}
 
 	static function arrayElementType(t:TyType):Null<TyType> {
@@ -807,7 +812,10 @@ class TyperStage {
 	static function declarePatternBindings(scope:TyFunctionEnv, pattern:HxSwitchPattern, baseTy:TyType, ctx:TyperContext, pos:HxPos,
 			?elements:Array<TyType>):Void {
 		TySwitchPatternBindings.declare(scope, pattern, baseTy,
-			(input, name, arity, suffix) -> TyEnumPatternArguments.resolve(input, name, arity, ctx, pos, suffix), elements);
+			(input, name, arity, suffix) -> TyEnumPatternArguments.resolve(input, name, arity, ctx, pos, suffix), elements,
+			(text,
+					matched) -> TySwitchPatternBindings.extractorResult(text, matched, scope, (expression, trial) ->
+					inferExprType(expression, trial, ctx, pos)));
 	}
 
 	/** Guards share ordinary expression inference, but must supply a Boolean condition. */
@@ -875,6 +883,9 @@ class TyperStage {
 			final functionEnvironments = new Array<TyFunctionEnv>();
 			final typeResolver:TypedExprTypeResolver = {
 				tracesDisabled: context.hasDefine("no-traces"),
+				// Reads the receiver in a copied environment, so the typed-body replay is unchanged.
+				abstractFieldReader: (object, field, position,
+					environment) -> abstractFieldReader(inferExprType(object, environment.copyForInference(), context, position), field, context),
 				lambdaType: function(names, body, argumentTypes, signature, position, lexicalEnvironment) {
 					return inferLambdaType(names, body, argumentTypes, lexicalEnvironment.copyForInference(), context, position, signature);
 				},
@@ -2890,6 +2901,10 @@ class TyperStage {
 		final receiverOwner = nominalInfoForType(ctx.getIndex(), receiverType);
 		if (receiverOwner != null && receiverOwner.instanceMethodCandidates(field).length > 0)
 			return null;
+		// A structure's own field wins over a static extension of the same name, as in Haxe 4.3.7:
+		// with `using Lambda;`, `access.has("x")` calls `{function has(name:String):Bool;}`.
+		if (TyStructuralFieldRead.resolve(receiverType, field) != null)
+			return null;
 		final extensionArguments = [receiver].concat(args == null ? [] : args);
 		for (extension in ctx.extensionMethods(field, receiverType)) {
 			final resolution = resolveMethodCall(extension.getDeclaringProvider(), extension.getMemberName(), true, extensionArguments,
@@ -3906,6 +3921,20 @@ class TyperStage {
 		return scope.getInference().constrain([open], [other], scope, ctx.getIndex());
 	}
 
+	/**
+		The `@:op(a.b)` method that reads `field` on a value of an abstract type, when `field` is no
+		member: Haxe 4.3.7 reads `table.width` as `table.resolve("width")`. Null otherwise.
+	**/
+	static function abstractFieldReader(receiverType:TyType, field:String, ctx:TyperContext):Null<String> {
+		final owner = receiverType == null ? null : TyReceiverMemberLookup.owner(receiverType, ctx);
+		if (!Std.isOfType(owner, TyAbstractInfo))
+			return null;
+		final reader = (cast owner : TyAbstractInfo).getFieldReader();
+		if (reader == null || reader.getSignature().getName() == field)
+			return null;
+		return declaredMemberReadType(owner, field, false, ctx, receiverType) == null ? reader.getSignature().getName() : null;
+	}
+
 	static function inferExprValueType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos, expectedResult:Null<TyType>,
 			?capture:TyMethodCallCapture):TyType {
 		switch HxLiteralCharacterCode.resolve(expr) {
@@ -4131,6 +4160,9 @@ class TyperStage {
 						if (_field == "code" && objTy.getSemanticKey() == "primitive:String")
 							throw new TyperError(ctx.getFilePath(), pos, "String has no field code");
 						final c = TyReceiverMemberLookup.owner(objTy, ctx);
+						final reader = abstractFieldReader(objTy, _field, ctx);
+						if (reader != null)
+							return inferExprType(ECall(EField(obj, reader), [EString(_field)]), scope, ctx, pos, expectedResult);
 						if (c != null) {
 							final memberType = declaredMemberReadType(c, _field, false, ctx, objTy);
 							if (memberType != null) {
@@ -4738,7 +4770,10 @@ class TyperStage {
 						}
 						// Assignment as expression.
 						final destination = indexedDestination == null ? inferExprType(a, scope, ctx, pos) : indexedDestination;
-						final rhs = inferExprType(b, scope, ctx, pos, destination);
+						// A local declared as bare `null` is a nullable monomorph in Haxe 4.3.7: it
+						// gives the value no context (`var args = null; args = new Array();`,
+						// haxe.rtti.XmlParser). The value then supplies the local's type.
+						final rhs = inferExprType(b, scope, ctx, pos, destination.isNullLiteral() ? null : destination);
 						if (a.match(EArrayAccess(_, _))
 							&& destination.hasUnknownComponent()
 							&& scope.getInference().canReceiveContext(a, scope)
@@ -4775,10 +4810,12 @@ class TyperStage {
 							case EIdent(name):
 								final sym = scope.resolveSymbol(name);
 								if (sym != null) {
-									// The first assignment to an unannotated, uninitialized
-									// local must retain the RHS inference identity, just as
-									// an initializer does. Later uses constrain that same term.
-									if (sym.getType().isUnknown() && scope.getInference().sourceTerm(a, scope) == null) {
+									// The first assignment to an unannotated local that is
+									// uninitialized or only `null` must retain the RHS inference
+									// identity, just as an initializer does. Later uses constrain
+									// that same term.
+									if ((sym.getType().isUnknown() || sym.getType().isNullLiteral())
+										&& scope.getInference().sourceTerm(a, scope) == null) {
 										final assignedTerm = scope.getInference().sourceTerm(b, scope);
 										if (assignedTerm != null)
 											scope.getInference().recordLocal(sym, assignedTerm);

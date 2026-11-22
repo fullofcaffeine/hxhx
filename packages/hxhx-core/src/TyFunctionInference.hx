@@ -61,6 +61,15 @@ class TyFunctionInference {
 	var locals:StringMap<TyInferenceTerm> = new StringMap();
 	var speculativeReplay:Bool = false;
 	var iteratorProtocols:Array<TyIteratorProtocolSource> = [];
+
+	/**
+		Extractor results (`_.get()` in a pattern) by extractor text and matched type. Typing runs
+		before sealing, in a copied environment; the typed-body replay reuses the result instead of
+		typing freshly parsed syntax that has no recorded facts. A result depends only on its key,
+		so forks share this map rather than copying it.
+	 */
+	var extractorResults = new StringMap<TyType>();
+
 	var indexedAccesses:Array<TyIndexedAccessBinding> = [];
 	var indexedUpdates:Array<TyIndexedUpdateSelection> = [];
 	var indexedUpdateOutcomes:Array<TyIndexedUpdateOutcome> = [];
@@ -274,6 +283,12 @@ class TyFunctionInference {
 			}
 		throw "diagnostic probe is absent from function inference: " + owner;
 	}
+
+	public function knownExtractorResult(key:String):Null<TyType>
+		return extractorResults.get(key);
+
+	public function recordExtractorResult(key:String, type:TyType):Void
+		extractorResults.set(key, type);
 
 	/** Allocate protocol query occurrences before sealing and retain them for exact replay. */
 	public function iteratorProtocolSource(source:HxExpr, ?select:HxExpr->TyIteratorProtocolSource):TyIteratorProtocolSource {
@@ -635,6 +650,7 @@ class TyFunctionInference {
 		candidate.callbackArguments = callbackArguments.copy();
 		candidate.sourceFunctions = sourceFunctions.copy();
 		candidate.iteratorProtocols = iteratorProtocols.copy();
+		candidate.extractorResults = extractorResults;
 		candidate.indexedAccesses = indexedAccesses.copy();
 		candidate.indexedUpdates = indexedUpdates.copy();
 		candidate.indexedUpdateOutcomes = indexedUpdateOutcomes.copy();
