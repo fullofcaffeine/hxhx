@@ -92,16 +92,36 @@ class TypedOracleHxhx {
 		final optional = sig.getArgOptional();
 		final declared = sig.getArgs();
 		final inferred = env == null ? null : env.getParams();
+		final source = HxFunctionDecl.getArgs(fn.getSourceDeclaration());
 		final parts = [
 			for (index in 0...names.length) {
 				final type = inferred != null && index < inferred.length ? inferred[index].getType() : declared[index]; (optional[index] ? "?" : "")
 					+ names[index]
 					+ ":"
-					+ canonical(type);
+					+ canonical(index < source.length ? argumentReadType(source[index], type) : type);
 			}
 		];
 		final ret = env == null ? sig.getReturnType() : env.getReturnType();
 		return "(" + parts.join(",") + ")->" + canonical(ret);
+	}
+
+	/**
+		Haxe 4.3.7 types an argument written `?x:T`, or `x:T = null`, as `Null<T>` (typeload.ml
+		`type_function_arg`); any other default keeps `T`. hxhx stores `T` and records the absence
+		on the argument, so this prints the argument's read type, as `TyStructuralFieldRead.readType`
+		does for an optional structure field. Like `readType`, it deliberately leaves Dynamic and
+		unknown types unwrapped, where upstream prints `Null<Dynamic>` and `Null<?>`: a mismatch
+		there is this printer convention, not a typer fault. The typer should store `Null<T>` itself
+		(haxe_ocaml-1y7dw); until then, do not add more translations here.
+	**/
+	static function argumentReadType(argument:HxFunctionArg, type:TyType):TyType {
+		final nullDefault = switch HxFunctionArg.getDefaultValue(argument) {
+			case Default(ENull): true;
+			case _: false;
+		};
+		if (!HxFunctionArg.getIsOptional(argument) && !nullDefault)
+			return type;
+		return type.isNullable() || type.isUnknown() || type.isDynamic() ? type : TyType.nullable(type);
 	}
 
 	static function params(types:Array<TyType>, depth:Int):String
