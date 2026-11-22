@@ -1,0 +1,6 @@
+labels.count=Int
+labels.paint=Paint
+labels.suffix=String
+wide.limit=Int
+wide.paint=Paint
+wide.shape=Shape

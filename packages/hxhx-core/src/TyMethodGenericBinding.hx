@@ -560,9 +560,50 @@ class TyMethodGenericBinding {
 		if (methodTypeParameters.length == 0)
 			return signature.getReturnType();
 		final inferred = bindings(signature, argTypes, argTypes.length, inferableTypeParameters(declaration), index);
+		if (inferred != null && hasUnbound(signature.getReturnType(), methodTypeParameters, inferred))
+			closeWithDynamicEvidence(signature, argTypes, methodTypeParameters, inferred);
 		if (inferred == null || hasUnbound(signature.getReturnType(), methodTypeParameters, inferred))
 			return TyType.unknown();
 		return substitute(signature.getReturnType(), methodTypeParameters, inferred);
+	}
+
+	/**
+		Dynamic arguments are not binding evidence, so `make<T>(e:Enum<T>, ...)` called with
+		`Enum<Dynamic>` leaves `T` unbound (haxe.Unserializer's `unserializeEnum`). A result that
+		uses such a `T` would stay Unknown and could not reach a Dynamic destination. Close a
+		parameter that is still unbound, and that appears exactly where an argument supplies
+		Dynamic, as Dynamic. Parameters with real evidence keep their binding.
+	 */
+	static function closeWithDynamicEvidence(signature:TyFunSig, argTypes:Array<TyType>, methodTypeParameters:Array<TyTypeParameterId>,
+			inferred:haxe.ds.StringMap<TyType>):Void {
+		function visit(expected:TyType, actual:TyType):Void {
+			if (expected == null || actual == null)
+				return;
+			expected = TyAliasExpansion.reveal(expected);
+			actual = TyAliasExpansion.reveal(actual);
+			final parameter = parameterIdentity(expected, methodTypeParameters);
+			if (parameter != null) {
+				if (actual.isDynamic() && !inferred.exists(parameter.getCanonicalKey()))
+					inferred.set(parameter.getCanonicalKey(), actual);
+				return;
+			}
+			if (expected.isNullable() || actual.isNullable()) {
+				visit(expected.unwrapNull(), actual.unwrapNull());
+				return;
+			}
+			final expectedArguments = expected.getTypeArguments();
+			final actualArguments = actual.getTypeArguments();
+			if (expectedArguments.length > 0
+				&& expectedArguments.length == actualArguments.length
+				&& sameTypeConstructor(expected, actual))
+				for (position in 0...expectedArguments.length)
+					visit(expectedArguments[position], actualArguments[position]);
+		}
+		for (argumentIndex in 0...argTypes.length) {
+			final parameter = TyCallableSignature.argumentParameter(signature, argumentIndex);
+			if (parameter != null)
+				visit(parameter.type, argTypes[argumentIndex]);
+		}
 	}
 
 	/**
