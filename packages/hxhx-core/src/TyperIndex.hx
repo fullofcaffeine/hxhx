@@ -8,6 +8,7 @@ private typedef TyParsedAbstractOperatorMetadata = {
 	final unaryFixity:Null<HxUnaryFixity>;
 	final binaryOperator:Null<String>;
 	final ?indexed:Bool;
+	final ?fieldAccess:Bool;
 };
 
 /**
@@ -666,7 +667,12 @@ class TyperIndex {
 			case EBinop(_, _, _):
 				throw malformedOperator(filePath, position, metadata);
 			case EField(_, _):
-				{unaryOperator: null, unaryFixity: null, binaryOperator: null};
+				{
+					unaryOperator: null,
+					unaryFixity: null,
+					binaryOperator: null,
+					fieldAccess: true
+				};
 			case ECall(_, _):
 				{unaryOperator: null, unaryFixity: null, binaryOperator: null};
 			case EArrayAccess(_, _):
@@ -739,6 +745,12 @@ class TyperIndex {
 					continue;
 				if (parsed.indexed == true)
 					info.addIndexedDeclaration(declaration);
+				// `@:op(a.b) function resolve(name:String):T` reads an unknown field by name.
+				// The two-argument form writes one and is not used for reads.
+				if (parsed.fieldAccess == true
+					&& !declaration.getSignature().getIsStatic()
+					&& declaration.getSignature().getArgs().length == 1)
+					info.setFieldReader(declaration);
 				if (parsed.unaryOperator != null && parsed.unaryFixity != null) {
 					final key = HxUnaryOperatorTools.sourceToken(parsed.unaryOperator)
 						+ "|"

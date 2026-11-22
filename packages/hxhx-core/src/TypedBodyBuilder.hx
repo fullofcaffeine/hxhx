@@ -984,6 +984,13 @@ class TypedBodyBuilder {
 			case EField(object, field):
 				final memberResolution = memberResolver == null
 					|| environment == null ? null : memberResolver(expression, diagnosticPosition, environment, expected);
+				// `@:op(a.b)`: an unknown field of an abstract reads through its resolver method.
+				final reader = memberResolution == null
+					|| !memberResolution.isUnresolvedAbstractField()
+					|| typeResolver == null ? null : typeResolver.abstractFieldReader(object, field, diagnosticPosition, environment);
+				if (reader != null)
+					return buildExpr(ECall(EField(object, reader), [EString(field)]), position, diagnosticPosition, environment, typeResolver, callResolver,
+						memberResolver, expected);
 				final qualifier = memberResolution == null ? null : memberResolution.nonRuntimeQualifierRead(field, nodeType, position);
 				if (qualifier != null) {
 					qualifier;
