@@ -31,6 +31,7 @@ haxe test/m14_bitwise_parameter_inference_test.hxml
 haxe test/m14_class_argument_bounds_test.hxml
 haxe test/m14_compiler_json_value_integration_test.hxml
 haxe test/m14_discarded_control_test.hxml
+haxe test/m14_dynamic_generic_evidence_test.hxml
 haxe test/m14_extern_inline_generic_test.hxml
 haxe test/m14_extern_inline_storage_test.hxml
 haxe test/m14_method_local_construction_test.hxml
