@@ -80,7 +80,8 @@ class TySwitchPatternBindings {
 		if (patterns == null || patterns.length == 0)
 			return emptyAnalysis();
 		final alternatives = [
-			for (pattern in patterns) analyze(pattern, baseType, enumArguments, elements, extractorType)
+			for (pattern in patterns)
+				analyze(pattern, baseType, enumArguments, elements, extractorType)
 		];
 		final declarations = [
 			for (fact in alternatives[0].declarations)
@@ -168,7 +169,8 @@ class TySwitchPatternBindings {
 				]); else {
 					final itemType = arrayItemType(baseType);
 					mergeIndependent([
-						for (item in children) analyze(item, itemType, enumArguments, null, extractorType)
+						for (item in children)
+							analyze(item, itemType, enumArguments, null, extractorType)
 					]);
 				}
 			case PExtractor(extractorText, resultPattern):

@@ -677,8 +677,9 @@ class TypedBodyBuilder {
 		return TySwitchPatternBindings.declare(environment, pattern, subject.getType(),
 			resolver == null ? null : (input, name, arity, suffix) ->
 				resolver.enumPatternArguments(input, name, arity, position, suffix), elements != null && elements.length > 0 ? elements : null,
-			resolver == null ? null : (text, matched) -> TySwitchPatternBindings.extractorResult(text, matched, environment,
-				(expression, trial) -> resolver.expressionType(expression, position, trial, null)));
+			resolver == null ? null : (text,
+				matched) -> TySwitchPatternBindings.extractorResult(text, matched, environment,
+					(expression, trial) -> resolver.expressionType(expression, position, trial, null)));
 	}
 
 	/** Seal lambda bindings with their selected parameter types before typing captured reads. */

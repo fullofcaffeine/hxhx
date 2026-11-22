@@ -808,7 +808,9 @@ class TyperStage {
 			?elements:Array<TyType>):Void {
 		TySwitchPatternBindings.declare(scope, pattern, baseTy,
 			(input, name, arity, suffix) -> TyEnumPatternArguments.resolve(input, name, arity, ctx, pos, suffix), elements,
-			(text, matched) -> TySwitchPatternBindings.extractorResult(text, matched, scope, (expression, trial) -> inferExprType(expression, trial, ctx, pos)));
+			(text,
+					matched) -> TySwitchPatternBindings.extractorResult(text, matched, scope, (expression, trial) ->
+					inferExprType(expression, trial, ctx, pos)));
 	}
 
 	/** Guards share ordinary expression inference, but must supply a Boolean condition. */
