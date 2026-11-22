@@ -670,10 +670,13 @@ class TypedBodyBuilder {
 		];
 	}
 
-	static function declarePatternBindings(environment:Null<TyFunctionEnv>, pattern:HxSwitchPattern, baseType:TyType, resolver:Null<TypedExprTypeResolver>,
+	static function declarePatternBindings(environment:Null<TyFunctionEnv>, pattern:HxSwitchPattern, subject:TypedExpr, resolver:Null<TypedExprTypeResolver>,
 			position:HxPos):Array<TyLocalBinding> {
-		return TySwitchPatternBindings.declare(environment, pattern, baseType,
-			resolver == null ? null : (input, name, arity, suffix) -> resolver.enumPatternArguments(input, name, arity, position, suffix));
+		// An array-literal subject (`switch [a, b]`) binds each element with its own type.
+		final elements = subject.getTag() == ArrayDecl ? [for (element in subject.getExpressions()) element.getType()] : null;
+		return TySwitchPatternBindings.declare(environment, pattern, subject.getType(),
+			resolver == null ? null : (input, name, arity, suffix) ->
+				resolver.enumPatternArguments(input, name, arity, position, suffix), elements != null && elements.length > 0 ? elements : null);
 	}
 
 	/** Seal lambda bindings with their selected parameter types before typing captured reads. */
@@ -1168,7 +1171,7 @@ class TypedBodyBuilder {
 				for (index in 0...count) {
 					if (environment != null)
 						environment.enterLexicalScope();
-					for (binding in declarePatternBindings(environment, patterns[index], typedScrutinee.getType(), typeResolver, diagnosticPosition))
+					for (binding in declarePatternBindings(environment, patterns[index], typedScrutinee, typeResolver, diagnosticPosition))
 						patternBindings.push(binding);
 					if (guarded) {
 						final sourceGuard = TypedSwitchGuards.condition(patterns[index]);
@@ -1515,7 +1518,7 @@ class TypedBodyBuilder {
 				for (index in 0...count) {
 					if (environment != null)
 						environment.enterLexicalScope();
-					for (binding in declarePatternBindings(environment, patterns[index], typedScrutinee.getType(), typeResolver, diagnosticPosition))
+					for (binding in declarePatternBindings(environment, patterns[index], typedScrutinee, typeResolver, diagnosticPosition))
 						bindings.push(binding);
 					if (guarded) {
 						final sourceGuard = TypedSwitchGuards.condition(patterns[index]);
