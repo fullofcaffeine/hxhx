@@ -29,5 +29,5 @@ function resolve(receiver:TyType, name:String):Null<TyType> {
 **/
 function readType(field:TyAnonymousField):TyType {
 	final type = field.type;
-	return field.isOptional && !type.isNullable() && !type.isUnknown() && !type.isDynamic() ? TyType.nullable(type) : type;
+	return type.isUnknown() || type.isDynamic() ? type : TyAnonymousField.valueType(field);
 }
