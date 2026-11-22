@@ -71,6 +71,9 @@ npm run test:oracle:typed       # the same, and fail if the count falls below th
   - types are named by module (`haxe.Constraints.IMap`, `haxe.ds.List.ListNode`), and core types
     keep their bare names (`Int`, `Null<T>`);
   - typedefs are expanded;
+  - a type nested deeper than 12 levels prints as `...`. Only structure counts toward the depth
+    (type arguments, `Null`, function arguments and results, structure fields), not typedef
+    expansion, so both sides cut a type at the same place;
   - function types print as `(A,B)->R`, and anonymous structures print their fields sorted by
     name;
   - an unresolved monomorph prints as `?`;
@@ -79,9 +82,10 @@ npm run test:oracle:typed       # the same, and fail if the count falls below th
 The output line looks like this:
 
 ```
-TYPED_ORACLE: methods=1671 match=1365 (81.7%) mismatch=48 missing=258 hxhx_error=0 module_errors=19
+TYPED_ORACLE: methods=1671 match=1365 (81.7%) mismatch=48 missing=258 hxhx_error=0 module_errors=19 match_truncated=40
 ```
 
 A method is missing when `hxhx` could not type its module; `report.json` lists those module
-errors. `typed-oracle-baseline.json` holds the matching count for the default corpus, with the
+errors. `match_truncated` counts the matches whose signature contains `...`: they are part of
+`match`, but nothing below the cut was compared. `typed-oracle-baseline.json` holds the matching count for the default corpus, with the
 same raise-on-improvement rule as the parse oracle.

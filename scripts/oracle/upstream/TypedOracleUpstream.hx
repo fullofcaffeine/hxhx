@@ -76,7 +76,11 @@ class TypedOracleUpstream {
 	static function params(types:Array<Type>, depth:Int):String
 		return types.length == 0 ? "" : "<" + [for (t in types) canonical(t, depth + 1)].join(",") + ">";
 
-	/** `depth` stops a self-referencing typedef, as on the hxhx side. */
+	/**
+		`depth` counts structural nesting only, as on the hxhx side: a typedef hop adds nothing, so
+		both printers cut a type at the same place even though hxhx expands most typedefs before it
+		prints. It still stops a self-referencing typedef, because every cycle passes a structure.
+	**/
 	public static function canonical(t:Null<Type>, depth:Int = 0):String {
 		if (depth > 12)
 			return "...";
@@ -92,7 +96,7 @@ class TypedOracleUpstream {
 					case _: path(c.module, c.name) + params(ps, depth);
 				}
 			case TEnum(ref, ps): path(ref.get().module, ref.get().name) + params(ps, depth);
-			case TType(_, _): canonical(Context.follow(t, true), depth + 1);
+			case TType(_, _): canonical(Context.follow(t, true), depth);
 			case TAbstract(ref, ps): path(ref.get().module, ref.get().name) + params(ps, depth);
 			case TFun(args, ret): "(" + [for (arg in args) canonical(arg.t, depth + 1)].join(",") + ")->" + canonical(ret, depth + 1);
 			case TAnonymous(ref):

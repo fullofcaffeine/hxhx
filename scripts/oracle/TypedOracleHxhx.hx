@@ -107,7 +107,11 @@ class TypedOracleHxhx {
 	static function params(types:Array<TyType>, depth:Int):String
 		return types.length == 0 ? "" : "<" + [for (t in types) canonical(t, depth + 1)].join(",") + ">";
 
-	/** Typedefs are expanded, as upstream's side does; `depth` stops a self-referencing typedef. */
+	/**
+		Typedefs are expanded, as upstream's side does. `depth` counts structural nesting only: the
+		typer has already expanded most typedefs, so counting the remaining hops would cut a type at
+		a different place than upstream. It still stops a self-referencing typedef.
+	**/
 	public static function canonical(t:Null<TyType>, depth:Int = 0):String {
 		if (depth > 12)
 			return "...";
@@ -115,7 +119,7 @@ class TypedOracleHxhx {
 			return "?";
 		final alias = t.getAliasDefinition();
 		if (alias != null)
-			return canonical(alias.instantiate(t.getTypeArguments()), depth + 1);
+			return canonical(alias.instantiate(t.getTypeArguments()), depth);
 		if (t.isDynamic())
 			return "Dynamic";
 		if (t.isNullWrapped() || t.isNullable()) {
