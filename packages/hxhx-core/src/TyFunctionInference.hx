@@ -384,12 +384,12 @@ class TyFunctionInference {
 			index:TyperIndex):Void {
 		if (solver.isSealed())
 			return;
-		if (receiverType.isUnknown() && canReceiveContext(receiver, environment)) {
+		if (receiverType.isOpenValue() && canReceiveContext(receiver, environment)) {
 			final term = sourceTerm(receiver, environment);
 			if (term != null)
 				solver.indexedElement(term, new TyNominalTypeId("Array"));
 		}
-		if (subscriptType.isUnknown() && canReceiveContext(subscript, environment))
+		if (subscriptType.isOpenValue() && canReceiveContext(subscript, environment))
 			constrain([subscript], [TyType.fromHintText("Int")], environment, index);
 	}
 
@@ -1264,7 +1264,7 @@ class TyFunctionInference {
 		return switch expression {
 			case EParenthesized(inner, _) | EPrivateAccess(inner, _): contextParameter(inner, environment);
 			case EIdent(name): final symbol = environment.resolveSymbol(name); symbol != null && symbol.getKind() == LambdaParameter && symbol.getType()
-					.isUnknown() ? symbol : null;
+					.isOpenValue() ? symbol : null;
 			case _: null;
 		};
 	}
@@ -1532,7 +1532,7 @@ class TyFunctionInference {
 		final type = term == null ? fallback : solver.previewDynamicUses(term);
 		return expected != null
 			&& expected.isDynamic()
-			&& type.isUnknown()
+			&& type.isOpenValue()
 			&& term != null
 			&& solver.hasOmittedInputOrigin(term) ? expected : type;
 	}

@@ -14,8 +14,8 @@ function constrain(input:{
 	position:HxPos
 }):{left:TyType, right:TyType} {
 	final inference = input.scope.getInference();
-	final leftUnknown = input.leftType.isUnknown() && inference.canReceiveContext(input.left, input.scope);
-	final rightUnknown = input.rightType.isUnknown() && inference.canReceiveContext(input.right, input.scope);
+	final leftUnknown = input.leftType.isOpenValue() && inference.canReceiveContext(input.left, input.scope);
+	final rightUnknown = input.rightType.isOpenValue() && inference.canReceiveContext(input.right, input.scope);
 	function primitivePeer(type:TyType):Null<TyType> {
 		final concrete = type.unwrapNull();
 		return switch concrete.getSemanticKey() {

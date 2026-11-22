@@ -18,11 +18,11 @@ function constrain(input:{
 	position:HxPos
 }):{left:TyType, right:TyType} {
 	final inference = input.scope.getInference();
-	final leftUnknown = input.leftType.isUnknown() && inference.canReceiveContext(input.left, input.scope);
-	final rightUnknown = input.rightType.isUnknown() && inference.canReceiveContext(input.right, input.scope);
+	final leftUnknown = input.leftType.isOpenValue() && inference.canReceiveContext(input.left, input.scope);
+	final rightUnknown = input.rightType.isOpenValue() && inference.canReceiveContext(input.right, input.scope);
 	function acceptsIntPeer(type:TyType):Bool {
 		final concrete = type.unwrapNull();
-		return type.isUnknown() || concrete.isDynamic() || concrete.isNumeric();
+		return type.isOpenValue() || concrete.isDynamic() || concrete.isNumeric();
 	}
 	final sources = new Array<HxExpr>();
 	if (leftUnknown && acceptsIntPeer(input.rightType))
